@@ -107,3 +107,51 @@ blender -b --factory-startup --python tools/fp_arms/blender_check.py
 
 Source art is in `art/fp_arms/`: the Tripo model as delivered, the Greatsword from Bellmourn2, and the swing keys from
 Bellmourn.
+
+## Crab monster
+
+`assets/monsters/crab_monster/crab_monster.glb` (5.3 MB) is the Tripo crab monster on its own 70-bone skeleton, with eight
+clips. It faces +z, stands on y = 0 and is about 1 m wide. To watch it, run `crab-player.bat`, which opens `crab.html` on
+`http://localhost:8402/crab.html`.
+
+| Clip | What it is | Frames | Floor speed |
+| --- | --- | --- | --- |
+| `walk_stalk` | Slow, low prowl, one leg at a time | 64 | 0.10 m/s |
+| `walk_skitter` | Fast, rippling leg wave | 20 | 0.32 m/s |
+| `run_scuttle` | Low alternating sprint | 18 | 1.07 m/s |
+| `run_gallop` | Bounding, with the body flexing | 16 | 1.99 m/s |
+| `attack_bite` | Coil, lunge, snap, then shake | 66 | |
+| `attack_claw` | Rear up, then left and right rakes | 72 | |
+| `attack_slam` | Leap and belly slam | 72 | |
+| `jump` | Crouch, launch, land | 58 | |
+
+All clips run at 30 fps and stay in place: `root` never moves. Move the creature at the floor speed during the walks and
+runs, or its planted feet will slide. `clips.json`, next to the model, has the same frames and speeds. The attacks and the
+jump start and end on the same stance.
+
+### The skeleton
+
+`root`, `cog`, `body_front`, `body_rear`, four mouth lips (`mouth_top`, `mouth_bot`, `mouth_L`, `mouth_R`), and for each side
+four legs (`L_leg1_1` to `L_leg4_4`, front to rear), a pincer on the front leg (`L_pincer_1` to `_3`) and a tusk (`L_fang_1`
+to `_3`), plus nine belly tendril clumps (`tendril0_1` to `tendril8_2`). The model is one continuous skin once its UV-seam
+duplicates are welded, so its weights diffuse across that surface and coincident vertices always match. Moving a piece of it
+on its own opens cracks. Only `cog` has a translation track.
+
+### Known limits
+
+- The body sinks up to 57 mm through the floor for about 4 frames at the slam's impact (`attack_slam` f36-39).
+- Tusks, lip, tendrils and claw tips dip up to about 39 mm below the floor for moments in other clips.
+- `run_gallop`'s legs turn about 45 degrees in a single frame at f7 and f16, and a planted foot can drift up to 11 mm per frame
+  at full leg stretch.
+- The clips were reviewed from stills and measurements and in a browser, and haven't been tried in a game engine.
+
+### Rebuilding
+
+Needs Blender (on `PATH`, or in `BLENDER`), and Python to run the build. From the top of the repo:
+
+```bash
+python tools/crab_monster/build.py
+```
+
+The skeleton and weights are in `tools/crab_monster/rig.py`, and the clips, as eased keys, are in `tools/crab_monster/anim.py`.
+Source art and the Blender file are in `art/crab_monster/`.
