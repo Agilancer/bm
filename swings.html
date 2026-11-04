@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07060a">
+<title>Bellmourn Swings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@500;700&family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<!-- The two-handed swings on the new first-person arms (assets/fp/arms_2h.glb, built by tools/fp_arms),
+     in Bellmourn's move-picker scene (moves.html): the training dummy ahead, the X in the middle of the
+     screen, a spark where the blow lands. Served by swings-player.bat. -->
+<style>
+  :root {
+    --gold: #d8b870; --gold-dim: #8a7448; --ink: #07060a; --panel: rgba(16, 12, 18, .96); --edge: #4a3c30;
+    --text: #e8dcc0; --muted: #a8987c; --hit: #ff5a3c; --link: #5aa8ff; --sel: rgba(216, 184, 112, .16); --stage: #0d0b10;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ink); color: var(--text); overflow: hidden;
+               font: 500 14px 'Alegreya Sans', system-ui, sans-serif; }
+  button, select, input { font: inherit; color: inherit; }
+  #panel { position: fixed; left: 0; top: 0; bottom: 0; width: 300px; background: var(--panel); border-right: 1px solid var(--edge);
+           display: flex; flex-direction: column; z-index: 3; }
+  #panel header { padding: 16px 18px 10px; border-bottom: 1px solid var(--edge); }
+  #panel h1 { margin: 0; font: 700 20px Cinzel, Georgia, serif; color: var(--gold); letter-spacing: .06em; }
+  #panel header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.35; }
+  #panel .scroll { overflow-y: auto; padding: 4px 0 18px; flex: 1; }
+  #panel h2 { margin: 16px 18px 6px; font: 700 11px Cinzel, serif; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-dim); }
+  .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 18px; }
+  .buttons button { background: #221a1e; border: 1px solid var(--edge); border-radius: 3px; padding: 7px 8px; cursor: pointer; }
+  .buttons button:hover { border-color: var(--gold-dim); }
+  .buttons button.on { border-color: var(--gold); background: #2e2418; }
+  .buttons button kbd { color: var(--muted); font: 500 11px ui-monospace, monospace; margin-left: 4px; }
+  .wide { grid-column: 1 / 3; }
+  .toggles { display: grid; gap: 6px; padding: 6px 18px; }
+  .toggles label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  .toggles input { accent-color: var(--gold); width: 16px; height: 16px; }
+  .row { display: grid; grid-template-columns: 62px 1fr; align-items: center; gap: 8px; padding: 3px 18px; }
+  .row label { color: var(--muted); font-size: 13px; }
+  select { width: 100%; background: #1a1418; border: 1px solid var(--edge); border-radius: 3px; padding: 5px 6px; }
+  input[type=range] { width: 100%; accent-color: var(--gold); }
+  #readout { margin: 6px 18px; color: var(--muted); font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  #readout b { color: var(--text); font-weight: 700; }
+
+  #stage { position: fixed; left: 300px; right: 0; top: 0; bottom: 0; background: var(--stage); display: grid; place-items: center; }
+  #frame { position: relative; }
+  #view { display: block; width: 100%; height: 100%; cursor: crosshair; }
+  #trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #xhair { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; pointer-events: none; }
+  #xhair::before, #xhair::after { content: ''; position: absolute; background: rgba(255,255,255,.7); }
+  #xhair::before { left: 6px; top: 0; width: 2px; height: 14px; }
+  #xhair::after { top: 6px; left: 0; width: 14px; height: 2px; }
+  #xhair.hit::before, #xhair.hit::after { background: var(--hit); box-shadow: 0 0 6px var(--hit); }
+  #bar { position: absolute; left: 12px; right: 12px; bottom: 10px; pointer-events: none; text-shadow: 0 1px 3px #000; }
+  #bar .names { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: #d8ccb0; margin-bottom: 4px; }
+  #bar .names b { color: var(--gold); font: 700 14px Cinzel, serif; }
+  #track { position: relative; height: 8px; background: rgba(255,255,255,.12); border-radius: 4px; }
+  #track .fill { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(216,184,112,.75); border-radius: 4px; }
+  #track .mark { position: absolute; top: -4px; width: 3px; height: 16px; margin-left: -1px; border-radius: 1px; }
+  #track .hit { background: var(--hit); } #track .through { background: var(--link); }
+  #legend { margin-top: 4px; font-size: 11px; color: var(--muted); }
+  #legend em { font-style: normal; } #legend .h { color: var(--hit); } #legend .l { color: var(--link); }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; background: var(--ink); color: var(--gold); font: 700 18px Cinzel, serif; z-index: 9; }
+  @media (max-width: 760px) {
+    #panel { width: 100%; height: 46%; top: auto; border-right: 0; border-top: 1px solid var(--edge); }
+    #stage { left: 0; bottom: 46%; }
+  }
+</style>
+</head>
+<body>
+<div id="loading">Waking the arms…</div>
+<aside id="panel">
+  <header>
+    <h1>Swings</h1>
+    <p>The two-handed blows on the new arms. Click the view to swing; each blow's tip goes through the X.</p>
+  </header>
+  <div class="scroll">
+    <h2>Try it</h2>
+    <div class="buttons">
+      <button id="bAttack">Attack <kbd>click</kbd></button>
+      <button id="bCombo">Combo ×3 <kbd>space</kbd></button>
+    </div>
+    <h2>One blow</h2>
+    <div class="buttons" id="blows"></div>
+    <div class="toggles">
+      <label><input type="checkbox" id="repeat"> Keep repeating it</label>
+      <label><input type="checkbox" id="showTrail" checked> Draw the tip's path through the swing</label>
+      <label><input type="checkbox" id="showSword" checked> Sword in the hands</label>
+      <label><input type="checkbox" id="showBones"> Show the skeleton</label>
+    </div>
+    <div class="row"><label for="speed">Speed</label><input type="range" id="speed" min="0.1" max="1" step="0.05" value="1"></div>
+    <div class="row"><label for="shape">Screen</label><select id="shape">
+      <option value="1.6">16:10</option><option value="1.7778" selected>16:9 (most monitors)</option>
+      <option value="2.1667">19.5:9 (phone)</option><option value="1.3333">4:3</option></select></div>
+    <div id="readout"></div>
+  </div>
+</aside>
+<main id="stage">
+  <div id="frame">
+    <canvas id="view"></canvas>
+    <canvas id="trail"></canvas>
+    <div id="xhair"></div>
+    <div id="bar">
+      <div class="names"><b id="clipName">—</b><span id="clipTime"></span></div>
+      <div id="track"><div class="fill"></div></div>
+      <div id="legend"><em class="h">■ the tip through the X</em> · <em class="l">■ end of the follow-through</em></div>
+    </div>
+  </div>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const $ = (id) => document.getElementById(id);
+const NICE = { great_cut1: 'Slash, upper right', great_cut2: 'Slash, upper left', great_slam: 'The slam', great_chop: 'Overhead chop',
+  great_rise: 'Rising backhand', great_wide_r: 'Wide, right to left', great_wide_l: 'Wide, left to right' };
+
+// ------------------------------------------------------------------ the scene in front of you (moves.html)
+const canvas = $('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.autoClear = false;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const world = new THREE.Scene();
+world.background = new THREE.Color('#1b1720');
+world.fog = new THREE.Fog('#1b1720', 6, 26);
+world.add(new THREE.HemisphereLight(0xcfc4ff, 0x2a2018, 1.1));
+const sun = new THREE.DirectionalLight(0xffe2b0, 1.6); sun.position.set(-3, 6, 2); world.add(sun);
+const eye = new THREE.PerspectiveCamera(64, 1.6, 0.05, 200);
+eye.position.set(0, 1.62, 0); eye.lookAt(0, 1.52, -4);
+{
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  g.fillStyle = '#4a4238'; g.fillRect(0, 0, 256, 256);
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+    const v = 58 + ((x * 7 + y * 13) % 5) * 6; g.fillStyle = `rgb(${v + 8},${v + 2},${v - 6})`;
+    g.fillRect(x * 64 + 2, y * 64 + 2, 60, 60);
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(30, 30); t.colorSpace = THREE.SRGBColorSpace;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 }));
+  floor.rotation.x = -Math.PI / 2; world.add(floor);
+  const wood = new THREE.MeshStandardMaterial({ color: '#6b4a2c', roughness: 0.9 });
+  const sack = new THREE.MeshStandardMaterial({ color: '#b39a6a', roughness: 1 });
+  const dummy = new THREE.Group();
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 1.5, 10), wood); post.position.y = 0.75;
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.1, 8), wood); bar.rotation.z = Math.PI / 2; bar.position.y = 1.3;
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.7, 12), sack); body.position.y = 1.15;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 10), sack); head.position.y = 1.68;
+  dummy.add(post, bar, body, head); dummy.position.set(0, 0, -2.3); world.add(dummy);
+  for (const [x, z] of [[-3.2, -7], [3.4, -8], [-6, -14], [6.5, -13], [0.8, -18]]) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.42, 4.2, 12), new THREE.MeshStandardMaterial({ color: '#7a7268', roughness: 0.9 }));
+    p.position.set(x, 2.1, z); world.add(p);
+  }
+}
+// a spark where a blow lands
+const fx = [];
+const sparkMat = new THREE.MeshBasicMaterial({ color: '#ffd080', transparent: true });
+function spark() {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), sparkMat.clone());
+  m.position.set(0, 1.4, -2.05); world.add(m); fx.push({ m, t: 0, life: 0.16, grow: 2.2 });
+  $('xhair').classList.add('hit'); setTimeout(() => $('xhair').classList.remove('hit'), 160);
+}
+function stepFx(dt) {
+  for (let i = fx.length - 1; i >= 0; i--) {
+    const f = fx[i]; f.t += dt; const k = f.t / f.life;
+    f.m.scale.setScalar(1 + k * f.grow); f.m.material.opacity = 1 - k;
+    if (k >= 1) { world.remove(f.m); fx.splice(i, 1); }
+  }
+}
+
+// ------------------------------------------------------------------ the arms (viewmodel.js's view and light)
+const vmScene = new THREE.Scene();
+const vmCam = new THREE.PerspectiveCamera(64, 1.6, 0.10, 20);   // (its field of view comes with the model)
+vmScene.add(new THREE.HemisphereLight(0xfff0dd, 0x302838, 0.83));
+const vmSun = new THREE.DirectionalLight(0xffe0b0, 1.12); vmSun.position.set(-0.5, 0.8, 0.4); vmScene.add(vmSun);
+const gltf = await new GLTFLoader().loadAsync('assets/fp/arms_2h.glb');
+const rig = gltf.scene;
+const meta = rig.userData;
+vmCam.fov = meta.view.fov; vmCam.near = meta.view.near; vmCam.updateProjectionMatrix();
+let arms, sword;
+rig.traverse((o) => {
+  if (o.isSkinnedMesh) { arms = o; o.frustumCulled = false; }
+  else if (o.isMesh) { sword = o; o.frustumCulled = false; }
+});
+vmScene.add(rig);
+const tipBone = rig.getObjectByName('weapon_tip');
+const skeletonHelper = new THREE.SkeletonHelper(rig.getObjectByName('root'));
+skeletonHelper.visible = false; skeletonHelper.material.depthTest = false; vmScene.add(skeletonHelper);
+const mixer = new THREE.AnimationMixer(rig);
+const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
+const actions = Object.fromEntries(Object.entries(clips).map(([n, c]) => {
+  const a = mixer.clipAction(c);
+  a.setLoop(n === 'great_idle' ? THREE.LoopRepeat : THREE.LoopOnce); a.clampWhenFinished = true;
+  return [n, a];
+}));
+actions.great_idle.play();
+
+// ------------------------------------------------------------------ one blow, then the next
+let playing = null, hitDone = false, last = null, turn = 0, queue = [], lastSeq = null;
+function blow(name) {
+  const a = actions[name], from = playing || actions.great_idle;
+  a.reset().play();
+  if (from !== a) from.crossFadeTo(a, playing ? 0.04 : 0.1, false);
+  playing = a; hitDone = false; last = name;
+  clearTrail();
+}
+function attack() {
+  if (playing) { if (playing.getClip().duration - playing.time < 0.4 && !queue.length) queue.push('next'); return; }   // (a click near the end is kept)
+  blow(meta.combo[turn++ % meta.combo.length]); lastSeq = 'attack';
+}
+function combo() { queue = [...meta.combo]; if (!playing) blow(queue.shift()); lastSeq = 'combo'; }
+function stepBlow() {
+  if (!playing) return;
+  const name = playing.getClip().name, ev = meta.clips[name];
+  if (!hitDone && playing.time >= ev.hit) { hitDone = true; spark(); }
+  if (playing.time >= ev.duration - 1e-4) {
+    let nx = queue.shift();
+    if (!nx && $('repeat').checked) {
+      if (lastSeq === 'combo') { queue = [...meta.combo]; nx = queue.shift(); }
+      else nx = lastSeq === 'attack' ? 'next' : name;
+    }
+    if (nx) { blow(nx === 'next' ? meta.combo[turn++ % meta.combo.length] : nx); return; }
+    const a = playing;
+    actions.great_idle.reset().play(); a.crossFadeTo(actions.great_idle, 0.15, false);
+    playing = null;
+  }
+}
+$('bAttack').onclick = attack;
+$('bCombo').onclick = combo;
+for (const n of Object.keys(NICE)) {
+  const b = document.createElement('button');
+  b.textContent = NICE[n]; b.onclick = () => { queue = []; blow(n); lastSeq = n; };
+  $('blows').append(b);
+}
+canvas.addEventListener('pointerdown', attack);
+addEventListener('keydown', (e) => { if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'INPUT' && e.code === 'Space') { e.preventDefault(); combo(); } });
+$('showSword').onchange = () => { sword.visible = $('showSword').checked; };
+$('showBones').onchange = () => { skeletonHelper.visible = $('showBones').checked; };
+
+// ------------------------------------------------------------------ the tip's place on the screen
+const v3 = new THREE.Vector3();
+function tipNdc() {
+  rig.updateMatrixWorld(true);
+  return tipBone.getWorldPosition(v3).project(vmCam);
+}
+const tc = $('trail').getContext('2d');
+let trail = [];
+function clearTrail() { trail = []; }
+function drawTrail() {
+  const c = $('trail'), W = c.width, H = c.height;
+  tc.clearRect(0, 0, W, H);
+  if (!$('showTrail').checked) return;
+  const p = tipNdc(), behind = tipBone.getWorldPosition(new THREE.Vector3()).z > -0.1;
+  // (the swing only: wind-up to the end of the follow-through)
+  const ev = playing && meta.clips[playing.getClip().name];
+  if (ev && playing.time >= ev.wind && playing.time <= ev.through) trail.push(behind ? null : [p.x, p.y]);
+  tc.lineWidth = 2 * (W / c.clientWidth); tc.strokeStyle = 'rgba(255,214,120,.8)'; tc.beginPath();
+  let pen = false;
+  for (const q of trail) {
+    if (!q) { pen = false; continue; }
+    const x = (q[0] + 1) / 2 * W, y = (1 - q[1]) / 2 * H;
+    pen ? tc.lineTo(x, y) : tc.moveTo(x, y); pen = true;
+  }
+  tc.stroke();
+}
+
+// ------------------------------------------------------------------ sizing
+let aspect = 1.7778;
+function layout(w = null, h = null) {
+  const box = $('stage').getBoundingClientRect();
+  let W = w ?? box.width - 24, H = h ?? W / aspect;
+  if (!w && H > box.height - 24) { H = box.height - 24; W = H * aspect; }
+  W = Math.max(64, Math.floor(W)); H = Math.max(40, Math.floor(H));
+  $('frame').style.width = W + 'px'; $('frame').style.height = H + 'px';
+  renderer.setSize(W, H, false);
+  eye.aspect = vmCam.aspect = W / H; eye.updateProjectionMatrix(); vmCam.updateProjectionMatrix();
+  const pr = renderer.getPixelRatio();
+  $('trail').width = W * pr; $('trail').height = H * pr;
+  return [W, H];
+}
+addEventListener('resize', () => layout());
+$('shape').onchange = () => { aspect = +$('shape').value; layout(); };
+function draw() {
+  const pr = renderer.getPixelRatio();
+  renderer.setViewport(0, 0, canvas.width / pr, canvas.height / pr);
+  renderer.clear();
+  renderer.render(world, eye);
+  renderer.clearDepth();
+  renderer.render(vmScene, vmCam);
+}
+
+// ------------------------------------------------------------------ the timeline under the view
+function showTrack() {
+  const name = playing?.getClip().name || '', ev = meta.clips[name], track = $('track');
+  if (track.dataset.clip !== name) {
+    track.dataset.clip = name;
+    track.querySelectorAll('.mark').forEach((m) => m.remove());
+    if (ev) for (const [k, cls] of [['hit', 'hit'], ['through', 'through']]) {
+      const m = document.createElement('div'); m.className = 'mark ' + cls; m.style.left = (100 * ev[k] / ev.duration) + '%'; track.append(m);
+    }
+  }
+  const t = playing ? playing.time : 0;
+  track.querySelector('.fill').style.width = (ev ? 100 * t / ev.duration : 0) + '%';
+  $('clipName').textContent = name ? NICE[name] : 'At the guard';
+  $('clipTime').textContent = ev ? `${t.toFixed(2)} / ${ev.duration.toFixed(2)} s` : '';
+}
+
+// ------------------------------------------------------------------ the loop
+let paused = false, prev = performance.now();
+function advance(dt) {
+  mixer.update(dt);
+  stepBlow();
+  stepFx(dt);
+  drawTrail();
+  showTrack();
+  draw();
+}
+function tick(now) {
+  requestAnimationFrame(tick);
+  if (paused) { prev = now; return; }
+  advance(Math.min(0.05, (now - prev) / 1000) * +$('speed').value); prev = now;
+}
+layout();
+mixer.update(0);
+draw();
+$('loading').remove();
+requestAnimationFrame(tick);
+
+// ------------------------------------------------------------------ for checking (tools/fp_arms/check.py)
+/** The rules, measured on the bones as the game's loader sees them, clip by clip. */
+window.measure = () => {
+  paused = true;
+  const out = {};
+  const q = new THREE.Vector3(), w = new THREE.Vector3(), r = new THREE.Vector3(), s = new THREE.Vector3();
+  for (const [name, ev] of Object.entries(meta.clips)) {
+    if (ev.loop) continue;
+    mixer.stopAllAction();
+    const a = actions[name]; a.reset().play(); a.setEffectiveWeight(1); a.paused = true;
+    const N = Math.round(ev.duration * 240);
+    let best = 9, bestT = 0, atHit = null, prevAng = null, prevDir = null, peak = 0, maxStep = 0, prevSpeed = 0, prevTip = null;
+    const handR = rig.getObjectByName('hand_R'), handL = rig.getObjectByName('hand_L'), wep = rig.getObjectByName('weapon');
+    let lockR = [9, 0], lockL = [9, 0];
+    const blade = new THREE.Vector3(), guardA = new THREE.Vector3();
+    for (let i = 0; i <= N; i++) {
+      a.time = ev.duration * i / N; mixer.update(0); rig.updateMatrixWorld(true);
+      const p = tipBone.getWorldPosition(q).clone(), ndc = p.clone().project(vmCam);
+      const inFront = p.z < -0.05;
+      const dist = inFront ? Math.hypot(ndc.x, ndc.y) : 9;
+      if (dist < best) { best = dist; bestT = a.time; }
+      if (Math.abs(a.time - ev.hit) < ev.duration / N / 2) atHit = [ndc.x, ndc.y, dist, p.toArray()];
+      // both fists stay put on the sword
+      wep.updateWorldMatrix(true, false);
+      const inv = wep.matrixWorld.clone().invert();
+      const hr = handR.getWorldPosition(w).clone().applyMatrix4(inv), hl = handL.getWorldPosition(w).clone().applyMatrix4(inv);
+      lockR = [Math.min(lockR[0], hr.length()), Math.max(lockR[1], hr.length())];
+      lockL = [Math.min(lockL[0], hl.length()), Math.max(lockL[1], hl.length())];
+      // how evenly the tip moves
+      if (prevTip) { const sp = p.distanceTo(prevTip) * (N / ev.duration); peak = Math.max(peak, sp); maxStep = Math.max(maxStep, Math.abs(sp - prevSpeed) * (N / ev.duration)); prevSpeed = sp; }
+      prevTip = p;
+    }
+    out[name] = { nearest: best, nearestAt: bestT, atHit, hit: ev.hit, lockR, lockL, peakTipSpeed: peak, maxTipAccel: maxStep };
+  }
+  mixer.stopAllAction(); actions.great_idle.reset().play(); paused = false;
+  return out;
+};
+/** A contact sheet of one blow, saved through the server (development). */
+window.review = async (spec) => {
+  paused = true;
+  const s = { step: 2 / 60, cols: 6, w: 480, h: 270, ...spec }, name = s.clip, ev = meta.clips[name];
+  const until = s.until ?? ev.duration, from = s.from ?? 0, n = Math.floor((until - from) / s.step) + 1, rows = Math.ceil(n / s.cols);
+  const sheet = document.createElement('canvas'); sheet.width = s.cols * s.w; sheet.height = rows * (s.h + 18) + 30;
+  const g = sheet.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, sheet.width, sheet.height);
+  g.font = 'bold 18px sans-serif'; g.fillStyle = '#e8d8a8'; g.fillText(s.title || name, 8, 22);
+  const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); layout(s.w, s.h);
+  mixer.stopAllAction(); const a = actions[name]; a.reset().play(); a.setEffectiveWeight(1); a.paused = true;
+  // (s.cam: from outside, {pos, look, fov} in the view's frame, to see how the skin holds)
+  const out = s.cam && new THREE.PerspectiveCamera(s.cam.fov ?? 45, s.w / s.h, 0.02, 30);
+  if (out) { out.position.fromArray(s.cam.pos); out.lookAt(...s.cam.look); skeletonHelper.visible = !!s.cam.bones; }
+  for (let i = 0; i < n; i++) {
+    const t = from + i * s.step; a.time = t; mixer.update(0); rig.updateMatrixWorld(true);
+    if (out) { renderer.setClearColor('#30343a', 1); renderer.clear(); renderer.render(vmScene, out); } else draw();
+    const x = (i % s.cols) * s.w, y = 30 + Math.floor(i / s.cols) * (s.h + 18);
+    g.drawImage(canvas, x, y, s.w, s.h);
+    g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1.5; g.beginPath();
+    g.moveTo(x + s.w / 2 - 7, y + s.h / 2); g.lineTo(x + s.w / 2 + 7, y + s.h / 2); g.moveTo(x + s.w / 2, y + s.h / 2 - 7); g.lineTo(x + s.w / 2, y + s.h / 2 + 7); g.stroke();
+    const hitHere = ev.hit != null && Math.abs(t - ev.hit) < s.step / 2;
+    g.font = '13px sans-serif'; g.fillStyle = hitHere ? '#ff6a4a' : '#bbb';
+    g.fillText(`${t.toFixed(3)}s${hitHere ? '  ◆ THE X' : ''}`, x + 4, y + s.h + 14);
+  }
+  const blob = await new Promise((r) => sheet.toBlob(r, 'image/png'));
+  const res = await fetch('/shot?name=' + encodeURIComponent(s.name || name), { method: 'POST', body: blob });
+  skeletonHelper.visible = $('showBones').checked;
+  renderer.setPixelRatio(pr); layout(); mixer.stopAllAction(); actions.great_idle.reset().play(); paused = false;
+  return res.ok ? `saved ${s.name || name} (${n} frames)` : `not saved: ${res.status}`;
+};
+window.rigDbg = { THREE, rig, mixer, actions, vmCam, meta, draw, advance, state: () => ({ clip: playing?.getClip().name ?? null, time: playing?.time ?? 0, hitDone, queue: [...queue] }) };
+const want = new URLSearchParams(location.search).get('review');
+if (want) for (const c of want.split(',')) await window.review({ clip: 'great_' + c });
+</script>
+</body>
+</html>
