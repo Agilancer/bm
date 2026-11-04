@@ -11,6 +11,9 @@ the wrist; radius from it).
       upperarm_L  (the same)
       weapon  weapon_tip      (the sword hangs here: origin on the right fist, +y to the tip, z along the guard)
 
+The one-handed model hangs `weapon` from `hand_R` instead, since one fist holds it, and has a `shield`
+on `hand_L` (origin on the grip, +y along it, -z toward the enemy).
+
 Every joint's +y runs down its bone. Frames: `eye` is x right, y ahead, z up, the eye at the origin
 (as Bellmourn's swing keys are written); three.js / glTF is (x, z, -y).
 
@@ -22,22 +25,41 @@ import numpy as np
 
 from repair import BUILD
 
-# the rest pose in the eye's frame: the sculpt, moved so its shoulders sit about where the swing's are
-BIND_OFFSET = np.array([0.0, 0.222, -0.2375])
-
-ARM = {   # model frame, from the cross-sections
-    "R": dict(S=(0.440, -0.365, 0.088), E=(0.238, -0.180, 0.095), W=(0.080, 0.031, 0.272)),
-    "L": dict(S=(-0.430, -0.380, 0.092), E=(-0.231, -0.172, 0.095), W=(-0.072, -0.012, 0.210)),
-}
-FIST_T = {"R": -0.325, "L": -0.440}    # where each fist's middle lies along the old sword's axis
-
-# (t along the axis, angle round it in degrees, radius): MCP, PIP, DIP, tip of each finger; thumbs
-FINGER_T = {"R": dict(index=-0.268, middle=-0.297, ring=-0.325, pinky=-0.352),
-            "L": dict(index=-0.372, middle=-0.402, ring=-0.432, pinky=-0.460)}
-FINGER_ARC = {"R": [(52, 0.044), (103, 0.053), (160, 0.045), (-140, 0.032)],
-              "L": [(-38, 0.058), (-88, 0.074), (-135, 0.053), (-172, 0.030)]}
-THUMB = {"R": [(-0.335, -30, 0.055), (-0.310, -62, 0.058), (-0.285, -95, 0.045), (-0.268, -128, 0.040)],
-         "L": [(-0.445, 22, 0.060), (-0.430, 55, 0.040), (-0.420, 82, 0.030), (-0.410, 108, 0.022)]}
+# Each model: `bind`, the rest pose in the eye's frame (the sculpt, moved so its shoulders sit about where
+# the swing's are); `arm`, shoulder, elbow and wrist in the model's frame, from the cross-sections; `fist_t`,
+# where each fist's middle lies along its grip's axis. Fingers: `finger_t` (t along the axis), `finger_arc`
+# (angle round it in degrees, radius) for MCP, PIP, DIP and tip; `thumb` (t, angle, radius).
+# `grip`: a fist's own axis (point, direction), where it isn't the old sword's.
+TWO_HANDED = dict(
+    bind=np.array([0.0, 0.222, -0.2375]),
+    arm={"R": dict(S=(0.440, -0.365, 0.088), E=(0.238, -0.180, 0.095), W=(0.080, 0.031, 0.272)),
+         "L": dict(S=(-0.430, -0.380, 0.092), E=(-0.231, -0.172, 0.095), W=(-0.072, -0.012, 0.210))},
+    fist_t={"R": -0.325, "L": -0.440},
+    finger_t={"R": dict(index=-0.268, middle=-0.297, ring=-0.325, pinky=-0.352),
+              "L": dict(index=-0.372, middle=-0.402, ring=-0.432, pinky=-0.460)},
+    finger_arc={"R": [(52, 0.044), (103, 0.053), (160, 0.045), (-140, 0.032)],
+                "L": [(-38, 0.058), (-88, 0.074), (-135, 0.053), (-172, 0.030)]},
+    thumb={"R": [(-0.335, -30, 0.055), (-0.310, -62, 0.058), (-0.285, -95, 0.045), (-0.268, -128, 0.040)],
+           "L": [(-0.445, 22, 0.060), (-0.430, 55, 0.040), (-0.420, 82, 0.030), (-0.410, 108, 0.022)]},
+    tip=1.0, weapon_parent="root", grip={}, shield=None)
+SWORD_SHIELD = dict(
+    bind=np.array([0.0, 0.3585, -0.421]),
+    arm={"R": dict(S=(0.408, -0.405, 0.112), E=(0.421, -0.224, 0.066), W=(0.314, -0.061, 0.149)),
+         "L": dict(S=(-0.435, -0.352, 0.130), E=(-0.395, -0.149, 0.099), W=(-0.235, 0.060, 0.200))},
+    fist_t={"R": -0.405, "L": 0.0},
+    finger_t={"R": dict(index=-0.355, middle=-0.385, ring=-0.415, pinky=-0.445),
+              "L": dict(index=0.045, middle=0.015, ring=-0.015, pinky=-0.045)},
+    finger_arc={"R": [(50, 0.045), (105, 0.055), (170, 0.038), (-125, 0.022)],
+                "L": [(-110, 0.045), (-170, 0.042), (140, 0.040), (100, 0.025)]},
+    thumb={"R": [(-0.43, -25, 0.055), (-0.40, -60, 0.050), (-0.37, -90, 0.035), (-0.35, -118, 0.030)],
+           "L": [(0.060, 45, 0.050), (0.050, 85, 0.035), (0.020, 125, 0.040), (-0.020, 130, 0.040)]},
+    # the empty fist's axis runs along its knuckles (thumb side +)
+    grip={"L": ((-0.205, 0.135, 0.195), (0.857, -0.511, -0.060))},
+    # the sculpt's sword arm has a much shorter forearm than the other (0.21 m to 0.28 m): drawn out to match
+    stretch={"R": 1.25},
+    tip=0.60, weapon_parent="hand_R",
+    # the shield: on the left fist's grip, the board on the back of the hand's side, clear of the knuckles
+    shield=dict(back=(0.088, 0.031, 0.996), seat=0.015))
 DIGITS = ("thumb", "index", "middle", "ring", "pinky")
 
 ELBOW_BLEND = 0.060     # half-width of the blend across the elbow (m)
@@ -65,11 +87,33 @@ def smoothstep(a, b, x):
     return t * t * (3 - 2 * t)
 
 
-def joints(d):
+def stretched(d, cfg):
+    """The sculpt with a forearm drawn out along itself: the hand and all past it just move along."""
+    if not cfg.get("stretch"):
+        return d, cfg
+    d = dict(d)
+    cfg = dict(cfg, arm={k: dict(v) for k, v in cfg["arm"].items()})
+    V = d["V"].copy()
+    for s, k in cfg["stretch"].items():
+        J = cfg["arm"][s]
+        E, W = np.array(J["E"]), np.array(J["W"])
+        L = np.linalg.norm(W - E)
+        fd = (W - E) / L
+        m = d["side"] == (1 if s == "R" else -1)
+        V[m] += (k - 1) * np.clip((V[m] - E) @ fd, 0, L)[:, None] * fd
+        J["W"] = tuple(E + fd * L * k)
+        if s == "R":
+            d["sword_c"] = d["sword_c"] + fd * L * (k - 1)
+    d["V"] = V
+    return d, cfg
+
+
+def joints(d, cfg=TWO_HANDED):
     """{bone: dict(parent, p (eye frame), R (rest rotation, eye frame))}; plus the facts the swings need."""
-    ce, ax = d["sword_c"], d["sword_ax"]
+    bind = cfg["bind"]
+    ce0, ax0 = d["sword_c"], d["sword_ax"]
     guard = d["guard"]
-    ce_e = ce + BIND_OFFSET
+    ce_e0 = ce0 + bind
     B = {}
 
     def add(name, parent, p, R):
@@ -77,9 +121,12 @@ def joints(d):
 
     add("root", None, np.zeros(3), np.eye(3))
     info = {}
-    for s, J in ARM.items():
-        S, E, W = (np.array(J[k], float) + BIND_OFFSET for k in "SEW")
-        fist = ce_e + ax * FIST_T[s]
+    for s, J in cfg["arm"].items():
+        S, E, W = (np.array(J[k], float) + bind for k in "SEW")
+        ce_e, ax = ce_e0, ax0
+        if s in cfg["grip"]:
+            ce_e, ax = np.array(cfg["grip"][s][0]) + bind, un(np.array(cfg["grip"][s][1]))
+        fist = ce_e + ax * cfg["fist_t"][s]
         ud, fd = un(E - S), un(W - E)
         hinge = un(np.cross(ud, fd))
         add(f"upperarm_{s}", "root", S, frame(ud, hinge))
@@ -95,9 +142,9 @@ def joints(d):
         at = lambda t, th, r: ce_e + ax * t + r * (np.cos(np.radians(th)) * ref + np.sin(np.radians(th)) * side)
         for dg in DIGITS:
             if dg == "thumb":
-                pts = [at(*q) for q in THUMB[s]]
+                pts = [at(*q) for q in cfg["thumb"][s]]
             else:
-                pts = [at(FINGER_T[s][dg], *q) for q in FINGER_ARC[s]]
+                pts = [at(cfg["finger_t"][s][dg], *q) for q in cfg["finger_arc"][s]]
             parent = f"hand_{s}"
             for i, p in enumerate(pts):
                 nm = f"{dg}_{'end' if i == 3 else f'0{i + 1}'}_{s}"
@@ -105,13 +152,21 @@ def joints(d):
                 add(nm, parent, p, frame(y, ax))
                 parent = nm
         info[s] = dict(S=S, E=E, W=W, fist=fist, U=np.linalg.norm(E - S), F=L, hinge=hinge)
-    y = ax
+    y = ax0
     z = un(guard - y * (guard @ y))
     x = np.cross(y, z)
     Rw = np.c_[x, y, z]
-    add("weapon", "root", info["R"]["fist"], Rw)
-    add("weapon_tip", "weapon", info["R"]["fist"] + y * 1.0, Rw)
+    add("weapon", cfg["weapon_parent"], info["R"]["fist"], Rw)
+    add("weapon_tip", "weapon", info["R"]["fist"] + y * cfg["tip"], Rw)
     info["sword"] = dict(R=Rw, p=info["R"]["fist"])
+    if cfg["shield"]:
+        back = un(np.array(cfg["shield"]["back"], float))
+        zs = -back
+        ys = un(ax - zs * (ax @ zs))          # (ax: the left fist's, the last the arm loop set)
+        Rs = np.c_[np.cross(ys, zs), ys, zs]
+        ps = info["L"]["fist"] + back * cfg["shield"]["seat"]
+        add("shield", "hand_L", ps, Rs)
+        info["shield"] = dict(R=Rs, p=ps)
     return B, info
 
 
@@ -127,12 +182,12 @@ def seg_dist(p, a, b):
     return np.linalg.norm(p - (a + t[:, None] * ab), axis=1), t
 
 
-def skin(d, B, info):
+def skin(d, B, info, cfg=TWO_HANDED):
     """Weights per vertex: joint names to [n, 4] indices and weights. Arms are tubes, so along the
     limb the weights go by planes across the elbow and wrist; the forearm hands off to its twist
     joints on the way to the hand so a turned wrist doesn't pinch; each digit's bones claim the skin
     within reach of them, the palm the rest. Then a little smoothing along the surface."""
-    V = d["V"] + BIND_OFFSET
+    V = d["V"] + cfg["bind"]
     F = d["F"]
     side = d["side"]
     names = list(B)
@@ -208,18 +263,21 @@ def skin(d, B, info):
 
 
 if __name__ == "__main__":
-    d = dict(np.load(os.path.join(BUILD, "repaired.npz")))
-    B, info = joints(d)
-    idx, wts, names = skin(d, B, info)
+    import sys
+    one = "1h" in sys.argv
+    cfg = SWORD_SHIELD if one else TWO_HANDED
+    d, cfg = stretched(dict(np.load(os.path.join(BUILD, "repaired_1h.npz" if one else "repaired.npz"))), cfg)
+    B, info = joints(d, cfg)
+    idx, wts, names = skin(d, B, info, cfg)
     for s in "RL":
         I = info[s]
         print(s, f"upper {I['U']:.3f}  fore {I['F']:.3f}  wrist->fist {np.linalg.norm(I['fist'] - I['W']):.3f}  shoulder {I['S'].round(3)}")
-    print(len(B), "joints; fist spacing", np.linalg.norm(info["R"]["fist"] - info["L"]["fist"]).round(3))
+    print(len(B), "joints; fists apart", np.linalg.norm(info["R"]["fist"] - info["L"]["fist"]).round(3))
     used = np.bincount(idx.ravel(), weights=wts.ravel(), minlength=len(names))
     for n, u in zip(names, used):
-        if not n.endswith(("_end_R", "_end_L")) and n not in ("root", "weapon", "weapon_tip"):
+        if not n.endswith(("_end_R", "_end_L")) and n not in ("root", "weapon", "weapon_tip", "shield"):
             print(f"  {n:22s} {u:8.1f}")
     # for the overlay check
-    np.savez(os.path.join(BUILD, "joints.npz"), names=np.array(names), pos=np.array([B[n]["p"] - BIND_OFFSET for n in names]),
+    np.savez(os.path.join(BUILD, "joints_1h.npz" if one else "joints.npz"), V=d["V"], F=d["F"], names=np.array(names), pos=np.array([B[n]["p"] - cfg["bind"] for n in names]),
              parent=np.array([names.index(B[n]["parent"]) if B[n]["parent"] else -1 for n in names]),
              idx=idx, wts=wts)

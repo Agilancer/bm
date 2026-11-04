@@ -1,21 +1,23 @@
-"""Step 1 of the first-person arms: the Tripo model without its sword, hands made whole.
+"""Step 1 of the first-person arms: a Tripo model without its sword, hands made whole.
 
-art/fp_arms/arms_longsword_source.glb is one fused surface: both arms and a longsword, joined at
-the fists. This takes the sword off (by texture colour and distance from its axis), parts the two
-arms with a minimum cut on the mesh, closes every hole the sword leaves in the hands with a faired
-patch, and repaints: steel left on the skin is inpainted from the skin around it, each patch gets
-its own chart in the atlas (in the room the sword's islands leave) coloured from the skin at its
-rim, darkening toward its middle like the hollow of a closed fist.
+Each model in MODELS has its sword fused into the fists: art/fp_arms/arms_longsword_source.glb is one
+surface, both arms and a longsword joined at the fists; arms_sword_hand_source.glb has the sword in the
+right fist and an empty left. This takes the sword off (by texture colour and distance from its axis),
+parts the arms (with a minimum cut on the mesh, where they touch), closes every hole the sword leaves
+in the hands with a faired patch, and repaints: steel left on the skin is inpainted from the skin
+around it, each patch gets its own chart in the atlas (in the room the sword's islands leave) coloured
+from the skin at its rim, darkening toward its middle like the hollow of a closed fist.
 
 Model frame throughout: x right, y ahead, z up (metres).
 
-    python tools/fp_arms/repair.py            # writes build/repaired.npz and build/*.png, *.jpg
+    python tools/fp_arms/repair.py [2h|1h]    # writes build/repaired*.npz and build/arms*.png, *.jpg
 """
 import collections
 import io
 import json
 import os
 import struct
+import sys
 
 import numpy as np
 import scipy.sparse as sp
@@ -25,7 +27,6 @@ from scipy.sparse.linalg import spsolve
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-SOURCE = os.path.join(ROOT, "art", "fp_arms", "arms_longsword_source.glb")
 BUILD = os.path.join(HERE, "build")
 
 PATCH_EDGE = 0.009      # target edge of a patch's triangles (m)
@@ -59,7 +60,29 @@ def read_glb(path):
                 base=images[0], rm=images[1], normal=images[2])
 
 
-to_model = lambda v: np.stack([-v[..., 2], -v[..., 0], v[..., 1]], -1)    # glTF raw -> x right, y ahead, z up
+# Where each sculpt's sword lies, measured along its axis (t, from the blade's middle toward the tip) and
+# out from it (r): the sword's parts by (t from, t to, r within), `core` taking any colour, `surface`
+# being what faces away from the axis. `grip`: the stretch of the axis the fists are on. `near`: where
+# steel left on the skin gets painted out; `palms`: the same, round another hand (centre, radius).
+MODELS = {
+    "2h": dict(
+        source="arms_longsword_source.glb", prefix="",
+        to_model=lambda v: np.stack([-v[..., 2], -v[..., 0], v[..., 1]], -1),    # glTF raw -> x right, y ahead, z up
+        axis=(0.42, -0.2, 0.17), guard=(-0.275, -0.215, 0.06, 0.15), parts="cut",
+        blade=(-0.215, 0.06), crossguard=(-0.275, -0.215, 0.15), handle=(-0.48, -0.26, 0.04),
+        core=(-0.48, -0.215, 0.012), pommel=(-0.58, -0.46, 0.078), surface=(-0.60, -0.215, 0.03),
+        grip=(-0.62, -0.20), near=(-0.60, -0.20, 0.085), tone_t=None, palms=()),
+    "1h": dict(
+        source="arms_sword_hand_source.glb", prefix="_1h",
+        to_model=lambda v: np.stack([v[..., 0], -v[..., 2], v[..., 1]], -1),
+        axis=(0.30, -0.15, 0.12), guard=(-0.385, -0.30, 0.05, 0.12), parts="apart",
+        # (the wrist lies close along this sword's axis, past the pommel: the cut stops short of it)
+        blade=(-0.30, 0.05), crossguard=(-0.385, -0.30, 0.12), handle=(-0.50, -0.38, 0.04),
+        core=(-0.50, -0.30, 0.012), pommel=(-0.565, -0.47, 0.075), surface=(-0.50, -0.30, 0.03),
+        grip=(-0.57, -0.29), near=(-0.57, -0.29, 0.085), tone_t=(-0.50, -0.38), hollow=0.34,
+        # (the empty hand's palm faces the player behind a shield: its grey, creased fan of faces goes)
+        palms=(((-0.205, 0.135, 0.20), 0.095),), smooth=(((-0.205, 0.130, 0.165), 0.05),)),
+}
 
 
 def texel(img, uv):
@@ -75,16 +98,16 @@ def skin_mask(c):
     return (r > g) & (g >= b * 0.95) & (sat > 0.22) & (mx > 0.18)
 
 
-def sword_axis(W, skin):
+def sword_axis(W, skin, z_min, lo_t, hi_t):
     """A point and direction (toward the tip) along the blade, from its cross-sections' middles."""
-    q = W[(~skin) & (W[:, 2] > 0.42)]
+    q = W[(~skin) & (W[:, 2] > z_min)]
     c = q.mean(0)
     ax = np.linalg.svd(q - c, full_matrices=False)[2][0]
     ax = ax * np.sign(ax[2])
     t = (W - c) @ ax
     r = np.linalg.norm((W - c) - np.outer(t, ax), axis=1)
     cs = []
-    for lo in np.arange(-0.2, 0.17, 0.03):
+    for lo in np.arange(lo_t, hi_t, 0.03):
         m = (t >= lo) & (t < lo + 0.03) & (r < 0.05)
         cs.append((W[m].min(0) + W[m].max(0)) / 2)
     cs = np.array(cs)
@@ -93,16 +116,15 @@ def sword_axis(W, skin):
     return c2, v * np.sign(v @ ax)
 
 
-def sword_faces(W, F, skin, ce, ax):
+def sword_faces(W, F, skin, ce, ax, M):
     """Faces of the sword: blade, guard, pommel by colour and radius; the handle also by facing
     away from the axis (fingers round it face toward it)."""
     t = (W - ce) @ ax
     rad = np.linalg.norm((W - ce) - np.outer(t, ax), axis=1)
-    sw = (t > -0.215) & (rad < 0.06)
-    sw |= (t > -0.275) & (t <= -0.215) & (~skin) & (rad < 0.15)
-    sw |= (t > -0.48) & (t <= -0.26) & (~skin) & (rad < 0.04)
-    sw |= (t > -0.48) & (t <= -0.215) & (rad < 0.012)
-    sw |= (t > -0.58) & (t <= -0.46) & (~skin) & (rad < 0.078)
+    sw = (t > M["blade"][0]) & (rad < M["blade"][1])
+    for part, any_colour in (("crossguard", False), ("handle", False), ("core", True), ("pommel", False)):
+        a, b, rr = M[part]
+        sw |= (t > a) & (t <= b) & (any_colour | (~skin)) & (rad < rr)
     A, B, C = W[F[:, 0]], W[F[:, 1]], W[F[:, 2]]
     fn = np.cross(B - A, C - A)
     fn /= np.maximum(np.linalg.norm(fn, axis=1, keepdims=True), 1e-12)
@@ -111,7 +133,8 @@ def sword_faces(W, F, skin, ce, ax):
     fr = (fc - ce) - np.outer(ft, ax)
     frl = np.linalg.norm(fr, axis=1, keepdims=True)
     out = (fn * fr / np.maximum(frl, 1e-9)).sum(1)
-    return (sw[F].sum(1) >= 2) | ((ft > -0.60) & (ft < -0.215) & (frl[:, 0] < 0.03) & (out > 0.2))
+    a, b, rr = M["surface"]
+    return (sw[F].sum(1) >= 2) | ((ft > a) & (ft < b) & (frl[:, 0] < rr) & (out > 0.2))
 
 
 def steely(c):
@@ -121,13 +144,13 @@ def steely(c):
     return (((sat < 0.27) | (c[..., 2] > c[..., 1] * 1.0)) & (mx > 0.08)) | ((mx < 0.12) & (sat < 0.5))
 
 
-def steel_faces(W, F, UV, base, ce, ax):
+def steel_faces(W, F, UV, base, ce, ax, grip):
     """Faces close round the grip whose texture is mostly the sword's: what the vertex colours
     missed (a face can be steel across its middle with skin at its corners)."""
     fc = W[F].mean(1) - ce
     ft = fc @ ax
     fr = np.linalg.norm(fc - np.outer(ft, ax), axis=1)
-    near = (ft > -0.62) & (ft < -0.20) & (fr < 0.045)
+    near = (ft > grip[0]) & (ft < grip[1]) & (fr < 0.045)
     out = np.zeros(len(F), bool)
     bary = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [.5, .5, 0], [0, .5, .5], [.5, 0, .5], [1 / 3, 1 / 3, 1 / 3],
                      [.7, .15, .15], [.15, .7, .15], [.15, .15, .7]])
@@ -136,7 +159,7 @@ def steel_faces(W, F, UV, base, ce, ax):
     return out
 
 
-def peel_slivers(Fw, idx, Wel, ce, ax, rounds=4, min_angle=20.0):
+def peel_slivers(Fw, idx, Wel, ce, ax, grip, rounds=4, min_angle=20.0):
     """Long thin faces on an open rim near the grip come off, so the rim the patch meets is clean."""
     idx = np.array(idx)
     for _ in range(rounds):
@@ -151,7 +174,7 @@ def peel_slivers(Fw, idx, Wel, ce, ax, rounds=4, min_angle=20.0):
                 continue
             q = Wel[[a, b, c]]
             m = q.mean(0) - ce
-            if np.linalg.norm(m - ax * (m @ ax)) > 0.09 or not -0.62 < m @ ax < -0.20:
+            if np.linalg.norm(m - ax * (m @ ax)) > 0.09 or not grip[0] < m @ ax < grip[1]:
                 continue
             e0, e1, e2 = q[1] - q[0], q[2] - q[1], q[0] - q[2]
             cosines = [-(e0 @ e2), -(e1 @ e0), -(e2 @ e1)]
@@ -437,22 +460,24 @@ def inpaint(img, unknown, diffuse=None, iters=80):
     return out
 
 
-def repair():
+def repair(name="2h"):
+    M = MODELS[name]
     os.makedirs(BUILD, exist_ok=True)
-    g = read_glb(SOURCE)
+    g = read_glb(os.path.join(ROOT, "art", "fp_arms", M["source"]))
     P, UV, F = g["P"], g["UV"], g["F"]
-    Wv = to_model(P)
-    Nv = to_model(g["N"])
+    Wv = M["to_model"](P)
+    Nv = M["to_model"](g["N"])
     base = np.asarray(g["base"]).astype(np.float64) / 255
     rm = np.asarray(g["rm"]).astype(np.float64) / 255
     nrm = np.asarray(g["normal"]).astype(np.float64) / 255
     H, W_, _ = base.shape
     skin = skin_mask(texel(base, UV))
-    ce, ax = sword_axis(Wv, skin)
+    ce, ax = sword_axis(Wv, skin, *M["axis"])
     # the sword as the source has it, for fitting the new one (its guard's line, its reach)
     t = (Wv - ce) @ ax
     rad = np.linalg.norm((Wv - ce) - np.outer(t, ax), axis=1)
-    gm = (t > -0.275) & (t < -0.215) & (rad > 0.06) & (rad < 0.15) & (~skin)
+    gt0, gt1, gr0, gr1 = M["guard"]
+    gm = (t > gt0) & (t < gt1) & (rad > gr0) & (rad < gr1) & (~skin)
     gc = Wv[gm] - ce
     guard = np.linalg.svd(gc - np.outer(gc @ ax, ax) - (gc - np.outer(gc @ ax, ax)).mean(0), full_matrices=False)[2][0]
 
@@ -462,7 +487,7 @@ def repair():
     Wel = np.zeros((wid.max() + 1, 3))
     Wel[wid] = Wv
     Fw = wid[F]
-    gone = sword_faces(Wv, F, skin, ce, ax) | steel_faces(Wv, F, UV, base, ce, ax)
+    gone = sword_faces(Wv, F, skin, ce, ax, M) | steel_faces(Wv, F, UV, base, ce, ax, M["grip"])
     kept = np.where(~gone)[0]
     # only the two arms: not the crumbs of sword the colours left behind
     n = len(Wel)
@@ -471,15 +496,25 @@ def repair():
     _, comp = connected_components(A, directed=False)
     fc = comp[Fw[kept, 0]]
     ids, cnt = np.unique(fc, return_counts=True)
-    kept = kept[fc == ids[np.argmax(cnt)]]
+    # (the arms as one piece, joined at the hands, or as two)
+    kept = kept[np.isin(fc, ids[np.argsort(-cnt)[:1 if M["parts"] == "cut" else 2]])]
     print(f"sword faces off: {gone.sum()}, crumbs off: {(~gone).sum() - len(kept)}, kept {len(kept)}")
-    right = split_arms(Wel, Fw[kept])
+    right = split_arms(Wel, Fw[kept]) if M["parts"] == "cut" else Wel[:, 0] > 0
     vs = right[Fw[kept]].sum(1)
     groups = {"R": kept[vs == 3], "L": kept[vs == 0]}
     print(f"arms parted: R {len(groups['R'])} faces, L {len(groups['L'])}, {((vs > 0) & (vs < 3)).sum()} on the cut dropped")
     for k in groups:
-        groups[k] = make_manifold(Fw, peel_slivers(Fw, make_manifold(Fw, groups[k], Wel, ce, ax), Wel, ce, ax), Wel, ce, ax)
+        groups[k] = make_manifold(Fw, peel_slivers(Fw, make_manifold(Fw, groups[k], Wel, ce, ax), Wel, ce, ax, M["grip"]), Wel, ce, ax)
         relax_rims(Wel, boundary_loops(Fw[groups[k]]), ce, ax)
+    for at_, rr in M.get("smooth", ()):
+        # (down, not along: only the crease's height over the palm goes, its outline stays)
+        e_ = edges_of(np.concatenate([Fw[g_] for g_ in groups.values()]))
+        adj = sp.csr_matrix((np.ones(len(e_) * 2), (np.r_[e_[:, 0], e_[:, 1]], np.r_[e_[:, 1], e_[:, 0]])), shape=(n, n))
+        deg = np.maximum(np.asarray(adj.sum(1)).ravel(), 1)
+        dist = np.linalg.norm(Wel - np.array(at_), axis=1)
+        w_ = np.clip(1 - dist / rr, 0, 1) ** 0.5
+        for _ in range(10):
+            Wel = Wel + 0.5 * w_[:, None] * ((adj @ Wel) / deg[:, None] - Wel)
     Wv = Wel[wid]     # (the rims moved)
 
     # --- texture: steel on the skin near the hands comes off first, so rims sample clean colour
@@ -490,14 +525,21 @@ def repair():
     fw_c = Wv[F[hand_faces]].mean(1) - ce
     fw_t = fw_c @ ax
     fw_r = np.linalg.norm(fw_c - np.outer(fw_t, ax), axis=1)
-    near = (fw_t > -0.60) & (fw_t < -0.20) & (fw_r < 0.085)
-    for fi, is_near in zip(hand_faces, near):
+    near = (fw_t > M["near"][0]) & (fw_t < M["near"][1]) & (fw_r < M["near"][2])
+    palm = np.zeros(len(hand_faces), bool)
+    for at_, rr in M["palms"]:
+        palm |= np.linalg.norm(Wv[F[hand_faces]].mean(1) - np.array(at_), axis=1) < rr
+    near |= palm
+    for fi, is_near, in_palm in zip(hand_faces, near, palm):
         tri = uvp[F[fi]]
         x, y, _ = rasterize(tri)
         x, y = np.clip(x, 0, W_ - 1), np.clip(y, 0, H - 1)
         used[y, x] = True
         if is_near:
             bad = steely(base[y, x])
+            if in_palm:      # (a bare palm: anything washed out, however warm, is the sculpt's grey)
+                c_ = base[y, x]
+                bad = bad | ((c_.max(1) - c_.min(1)) / np.maximum(c_.max(1), 1e-3) < 0.40)
             steel[y[bad], x[bad]] = True
     print(f"steel texels on the hands: {steel.sum()}")
     # grow the steel a little: its halo of JPEG noise goes with it
@@ -512,7 +554,10 @@ def repair():
 
     # --- the holes: faired patches, each with a chart in the atlas's free room
     fc_all = Wv[F[hand_faces]].mean(1) - ce
-    hand_zone = hand_faces[(np.linalg.norm(fc_all - np.outer(fc_all @ ax, ax), axis=1) < 0.09)]
+    in_zone = np.linalg.norm(fc_all - np.outer(fc_all @ ax, ax), axis=1) < 0.09
+    if M["tone_t"]:
+        in_zone &= (fc_all @ ax > M["tone_t"][0]) & (fc_all @ ax < M["tone_t"][1])
+    hand_zone = hand_faces[in_zone]
     hz = texel(base, UV[F[hand_zone].ravel()])
     skin_tone = np.median(hz[skin_mask(hz)], axis=0)
     occupied = used.copy()
@@ -606,7 +651,7 @@ def repair():
                 hollow /= max(hollow.max(), 1e-9)
             # (toward the middle: the hand's own tone, in the shade of the closed fist)
             dp = np.sqrt(np.clip(hollow, 0, 1))[:, None]
-            col = (col * (1 - 0.7 * dp) + skin_tone * 0.7 * dp) * (1 - HOLLOW * dp)
+            col = (col * (1 - 0.7 * dp) + skin_tone * 0.7 * dp) * (1 - M.get("hollow", HOLLOW) * dp)
             # shading: the rim keeps the surface's normals, the middle its own
             nrms = np.zeros((nv, 3))
             for a, b, c in tr:
@@ -683,13 +728,15 @@ def repair():
     bad = (acc[wv] * (N / np.maximum(np.linalg.norm(N, axis=1, keepdims=True), 1e-9))).sum(1) < 0.5
     print(f"normals rebuilt: {bad.sum()} of the old ones were more than 60 degrees off the surface")
     N = acc[wv]
-    np.savez(os.path.join(BUILD, "repaired.npz"), V=V, N=N, UV=UVs, F=Fall, side=side, sword_c=ce, sword_ax=ax, guard=guard)
+    pre = M["prefix"]
+    np.savez(os.path.join(BUILD, f"repaired{pre}.npz"), V=V, N=N, UV=UVs, F=Fall, side=side, sword_c=ce, sword_ax=ax, guard=guard)
     to8 = lambda a: Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
-    to8(base).save(os.path.join(BUILD, "arms_basecolor.jpg"), quality=93, subsampling=0)
-    to8(rm).save(os.path.join(BUILD, "arms_rm.jpg"), quality=90, subsampling=0)
-    to8(nrm).save(os.path.join(BUILD, "arms_normal.png"), optimize=True)
+    to8(base).save(os.path.join(BUILD, f"arms{pre}_basecolor.jpg"), quality=93, subsampling=0)
+    to8(rm).save(os.path.join(BUILD, f"arms{pre}_rm.jpg"), quality=90, subsampling=0)
+    to8(nrm).save(os.path.join(BUILD, f"arms{pre}_normal.png"), optimize=True)
     print(f"repaired: {len(V)} verts, {len(Fall)} faces, sword axis {ax.round(4)} through {ce.round(4)}, guard line {guard.round(3)}")
 
 
 if __name__ == "__main__":
-    repair()
+    for n in sys.argv[1:] or MODELS:
+        repair(n)

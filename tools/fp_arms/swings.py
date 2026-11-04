@@ -268,15 +268,16 @@ def idle_path(half):
 class Arm:
     """One arm of the skeleton: lengths and how its hand sits on the sword, in the sword's frame."""
 
-    def __init__(self, side, info, B):
+    def __init__(self, side, info, B, held="sword", sho=SHO, lift=None):
         from rig import TWIST_AT
         I = info[side]
         self.side, self.U, self.F = side, I["U"], I["F"]
+        self.lift = lift       # (how much of the way up toward a high hand a shoulder may rise: None, all of it)
         self.sign = 1 if side == "R" else -1
-        self.S0 = SHO * np.array([self.sign, 1, 1])
+        self.S0 = sho * np.array([self.sign, 1, 1])
         self.pole = POLE * np.array([self.sign, 1, 1])
         self.pole_up = POLE_UP * np.array([self.sign, 1, 1])
-        Rs0, r0 = info["sword"]["R"], info["sword"]["p"]
+        Rs0, r0 = info[held]["R"], info[held]["p"]
         self.R_h0 = B[f"hand_{side}"]["R"]
         self.R_f0 = B[f"forearm_{side}"]["R"]
         self.rel = Rs0.T @ self.R_h0                     # the hand in the sword's frame
@@ -302,7 +303,14 @@ class Arm:
         Lmax = (self.U + self.F) * 0.992
         knee = Lmax * 0.86
         soft = np.where(D > knee, knee + (Lmax - knee) * (1 - np.exp(-(D - knee) / (Lmax - knee))), D)
-        return W - v / D * soft, soft
+        if self.lift is None:
+            return W - v / D * soft, soft
+        # (eased along a flatter line, so it stays low: the arm's cut end must never come into view)
+        e = v * np.array([1.0, 1.0, self.lift])
+        e = e / np.linalg.norm(e, axis=-1, keepdims=True)
+        ve = (v * e).sum(-1, keepdims=True)
+        k = ve - np.sqrt(np.maximum(ve * ve - D * D + soft * soft, 0))
+        return self.S0 + k * e, soft
 
     def elbow(self, S, W, pole_dir=None):
         d = W - S
