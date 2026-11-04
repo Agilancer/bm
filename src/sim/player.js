@@ -1,14 +1,19 @@
-// The player: first-person body, the greatsword's swings, and where the blade lands. The blade is tested
+// The player: first-person body, the swings of the sword in hand, and where the blade lands. The blade is tested
 // where it appears on screen: each tick its tip and middle are projected through the view model's camera
 // and cast from the eye into the world, so a cut lands exactly under what the player sees.
-import { EV, H, INPUT, VM_PALETTE } from '../core/layout.js';
+import { EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { clamp, damp, wrapAngle } from '../core/math.js';
 import { S } from './knight.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
 const WALK = 4.1, SPRINT = 6.6;
-const REACH = { tip: 2.55, mid: 2.2 };
+// How each rig fights, by how many hands it has on the sword. The swings are solved to that rig's length of sword, so the reach is theirs too.
+const STANCES = {
+  2: { idle: 'great_idle', walk: 'great_walk', combo: ['great_cut1', 'great_cut2', 'great_slam'], wide: ['great_wide_r', 'great_wide_l'], air: 'great_slam', back: 'great_rise', run: 'great_chop', reach: { tip: 2.55, mid: 2.2 } },
+  1: { idle: 'guard_idle', walk: 'guard_walk', combo: ['blade_d1', 'blade_d2', 'blade_over'], wide: ['blade_flat1', 'blade_flat2'], air: 'blade_over', back: 'blade_rise1', run: 'blade_stab', reach: { tip: 2.15, mid: 1.85 } },
+};
+const BASE_HP = 160;
 const PUNCTURE_RADIUS = 0.07;
 const MAX_GASH_LENGTH = 0.55;
 // Each move has its own weight: cuts chain, wide swings cover ground but bite less, slams and chops break a guard.
@@ -20,16 +25,27 @@ const SWING_INFO = {
   great_rise: { heavy: false, fromRight: 0, dmg: 5, poise: 34, stam: 10, width: 1 },
   great_wide_r: { heavy: false, fromRight: 1, dmg: 4, poise: 24, stam: 12, width: 0.8 },
   great_wide_l: { heavy: false, fromRight: -1, dmg: 4, poise: 24, stam: 12, width: 0.8 },
+  // In one hand: quicker and lighter, and it costs less breath.
+  blade_d1: { heavy: false, fromRight: 1, dmg: 4, poise: 24, stam: 8, width: 0.9 },
+  blade_d2: { heavy: false, fromRight: -1, dmg: 4, poise: 24, stam: 8, width: 0.9 },
+  blade_over: { heavy: true, fromRight: 0, dmg: 8, poise: 55, stam: 14, width: 1.25 },
+  blade_rise1: { heavy: false, fromRight: 1, dmg: 4, poise: 26, stam: 8, width: 0.9 },
+  blade_flat1: { heavy: false, fromRight: 1, dmg: 3, poise: 18, stam: 9, width: 0.75 },
+  blade_flat2: { heavy: false, fromRight: -1, dmg: 3, poise: 18, stam: 9, width: 0.75 },
+  blade_stab: { heavy: false, fromRight: 0, dmg: 6, poise: 34, stam: 10, width: 0.8 },
 };
 const DODGE_TIME = 0.3, DODGE_COST = 26, DODGE_SPEED = 9;
 const hit = { t: 0, piece: -1, lx: 0, ly: 0, lz: 0, nx: 0, ny: 0, nz: 0 };
 const tmp = new Float32Array(3), tmp2 = new Float32Array(3), sweepDir = new Float32Array([1, 0, 0]);
 
 export class Player {
-  constructor(arms) {
-    this.arms = arms;
+  // rigs: the arms by how many hands they have on the sword.
+  constructor(rigs) {
+    this.rigs = rigs;
+    this.arms = rigs[1];
+    this.stance = STANCES[1];
     this.vmRatio = 1;
-    const fov = (arms.extras.view?.fov || 76) * Math.PI / 180;
+    const fov = (this.arms.extras.view?.fov || 76) * Math.PI / 180;
     this.vmRatio = Math.tan(WORLD_FOV / 2) / Math.tan(fov / 2);
     this.vmRatio = 1 / this.vmRatio;
     this.reset();
@@ -37,14 +53,41 @@ export class Player {
 
   reset() {
     Object.assign(this, {
-      x: -3.5, z: 40, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, onGround: true, hp: 160, maxHp: 160, dead: false, deadT: 0,
-      clip: 'great_idle', t: 0, fade: 1, rate: 1, queued: null, queuedT: 0, combo: 0, comboT: 0, wide: 0, swinging: false, recovering: false,
+      x: -3.5, z: 40, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, onGround: true, hp: BASE_HP, maxHp: BASE_HP, dead: false, deadT: 0,
+      weapon: -1, clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, queued: null, queuedT: 0, combo: 0, comboT: 0, wide: 0, swinging: false, recovering: false,
       threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
       stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
     });
   }
+
+  // What's in the hand changed: the other rig, if it takes the other number of hands, and nothing left over from the last sword.
+  setWeapon(w) {
+    this.weapon = w;
+    const hands = WEAPONS[w]?.hands || 1;
+    this.arms = this.rigs[hands];
+    this.stance = STANCES[hands];
+    Object.assign(this, {
+      clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, swingRate: 1, queued: null, combo: 0, comboT: 0, swinging: false, recovering: false,
+      threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0,
+    });
+  }
+
+  // The sword's rolls and gems, each tick: they can only change while the game is paused for the pack, but they cost nothing to read.
+  readWeapon(input) {
+    if ((input[INPUT.WEAPON] | 0) !== this.weapon) this.setWeapon(input[INPUT.WEAPON] | 0);
+    this.dmgMin = input[INPUT.W_MIN]; this.dmgMax = input[INPUT.W_MAX];
+    this.pierce = input[INPUT.W_PIERCE]; this.poise = input[INPUT.W_POISE];
+    this.stamSave = input[INPUT.W_STAM]; this.speed = input[INPUT.W_SPEED]; this.leech = input[INPUT.W_LEECH];
+    const maxHp = BASE_HP + input[INPUT.W_LIFE];
+    if (maxHp !== this.maxHp && !this.dead) { this.hp = clamp(this.hp + maxHp - this.maxHp, 1, maxHp); this.maxHp = maxHp; }
+  }
+
+  // A blow's weight against what the swings were balanced on, which is a sword of 20.
+  bite() { return (this.dmgMin + (this.dmgMax - this.dmgMin) * Math.random()) / 20; }
+
+  drink() { if (this.leech) this.hp = Math.min(this.maxHp, this.hp + this.leech); }
 
   // The moment around a swing's hit, when it can meet a blow.
   parryOpen() {
@@ -71,9 +114,9 @@ export class Player {
     this.aggression = this.aggression * 0.8 + 0.2 * clamp(1.4 / Math.max(sim.time - this.lastSwing, 0.2), 0, 1.5);
     this.lastSwing = sim.time;
     for (const k of sim.knights) k.observeSwing(name);
-    this.spend(tag.stam);
+    this.spend(tag.stam * (1 - this.stamSave));
     // Out of breath, the sword comes round slowly.
-    this.rate = this.stamina < 12 ? 0.8 : 1;
+    this.rate = (this.stamina < 12 ? 0.8 : 1) * (1 + this.speed);
     this.swingRate = this.rate;
     sim.event(EV.SWING, this.x, this.y + EYE, this.z, tag.heavy ? 1 : 0);
     // Weight behind the blow.
@@ -82,6 +125,7 @@ export class Player {
   }
 
   update(dt, tdt, input, sim) {
+    this.readWeapon(input);
     if (this.dead) {
       this.deadT += dt;
       this.vx = damp(this.vx, 0, 6, dt); this.vz = damp(this.vz, 0, 6, dt);
@@ -121,7 +165,7 @@ export class Player {
         sim.event(EV.DODGE, this.x, this.y, this.z, lx);
       }
     }
-    const swingDrag = this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== 'great_idle' ? 0.85 : 1;
+    const swingDrag = this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== this.stance.idle ? 0.85 : 1;
     const speed = (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2);
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     // Strafe right is -x when facing +z.
@@ -197,11 +241,17 @@ export class Player {
     this.drag = Math.max(0, this.drag - tdt);
     this.t += tdt * this.rate * dragRate;
     if (this.rate > 0 && this.drag <= 0 && this.swingRate) this.rate = this.swingRate;
+    // The carry rides your steps, played by how fast you go; standing, it's the same sway, smaller and slowed right down.
+    if (this.clip === this.stance.idle) {
+      this.rate = 0.25 + Math.min(1.3, this.groundSpeed / 6.2);
+      const rest = this.groundSpeed > 0.6 ? this.stance.walk : this.stance.idle;
+      if (rest !== this.rest && this.fade >= 1) { arms.capture(); this.rest = rest; this.fade = 0; }
+    }
     if (this.recoilT > 0) {
       this.recoilT -= tdt;
       if (this.recoilT <= 0) this.toIdle();
     }
-    if (this.clip !== 'great_idle') {
+    if (this.clip !== this.stance.idle) {
       if (this.threat) this.threat.t = this.t;
       const active = this.t >= info.wind && this.t <= info.through && this.rate > 0;
       if (active && !this.swinging) { this.swinging = true; sim.event(EV.WHOOSH, this.x, this.y + EYE, this.z, 1); }
@@ -217,17 +267,19 @@ export class Player {
       if (this.comboT <= 0) this.combo = 0;
     }
     // A buffered click starts the next swing at the end of the last one's follow-through.
-    const canStart = this.clip === 'great_idle' || (this.recovering && this.t > info.through + 0.04);
+    if (this.queued && !this.weapon) { this.queued = null; sim.event(EV.EMPTY_HANDS); }
+    const canStart = this.clip === this.stance.idle || (this.recovering && this.t > info.through + 0.04);
     if (this.queued && canStart && this.recoilT <= 0) {
+      const st = this.stance;
       let name;
       if (this.queued === 'R') {
-        name = this.wide++ % 2 ? 'great_wide_l' : 'great_wide_r';
+        name = st.wide[this.wide++ % 2];
       } else {
         const forward = this.vx * Math.sin(this.yaw) + this.vz * Math.cos(this.yaw);
-        if (!this.onGround) name = 'great_slam';
-        else if (forward < -1.6) { name = 'great_rise'; this.combo = 0; }
-        else if (this.sprinting) { name = 'great_chop'; this.combo = 0; }
-        else { name = ['great_cut1', 'great_cut2', 'great_slam'][this.combo]; this.combo = (this.combo + 1) % 3; this.comboT = 1.6; }
+        if (!this.onGround) name = st.air;
+        else if (forward < -1.6) { name = st.back; this.combo = 0; }
+        else if (this.sprinting) { name = st.run; this.combo = 0; }
+        else { name = st.combo[this.combo]; this.combo = (this.combo + 1) % 3; this.comboT = 1.6; }
       }
       this.queued = null;
       this.startSwing(sim, name);
@@ -236,7 +288,7 @@ export class Player {
 
   toIdle() {
     this.arms.capture();
-    this.clip = 'great_idle'; this.t = 0; this.fade = 0; this.rate = 1; this.swingRate = 1;
+    this.clip = this.stance.idle; this.t = 0; this.fade = 0; this.rate = 1; this.swingRate = 1;
     this.swinging = false; this.recovering = false; this.threat = null; this.recoilT = 0;
     this.comboT = Math.max(this.comboT, 0.7);
   }
@@ -273,7 +325,7 @@ export class Player {
       this.swinging = false; this.threat = null;
       sim.event(EV.LOSE, this.x, this.y, this.z);
       sim.gameState = 2; sim.gameT = 0;
-    } else if (amount > 14 && this.clip !== 'great_idle' && !this.swinging) {
+    } else if (amount > 14 && this.clip !== this.stance.idle && !this.swinging) {
       // A hard blow knocks an unfinished wind-up out of your hands.
       this.toIdle();
     }
@@ -282,7 +334,7 @@ export class Player {
   // The view model's solved joints give the blade's tip and middle in view space.
   solveViewModel(snap, sim) {
     const { arms } = this;
-    arms.solve(arms.clips[this.clip], this.t, this.fade, snap, VM_PALETTE);
+    arms.solve(arms.clips[this.clip === this.stance.idle ? this.rest : this.clip], this.t, this.fade, snap, VM_PALETTE);
     const tp = arms.tip * 3, rp = arms.weapon * 3, w = arms.wt;
     snap[H.TIP_X] = w[tp]; snap[H.TIP_Y] = w[tp + 1]; snap[H.TIP_Z] = w[tp + 2];
     snap[H.ROOT_X] = w[rp]; snap[H.ROOT_Y] = w[rp + 1]; snap[H.ROOT_Z] = w[rp + 2];
@@ -312,6 +364,7 @@ export class Player {
     const ey = this.y + EYE;
     this.rayFrom(mx, my, mz, tmp);
     this.bladeA = [this.x + tmp[0] * 0.6, ey + tmp[1] * 0.6, this.z + tmp[2] * 0.6];
+    const REACH = this.stance.reach;
     this.bladeB = [this.x + tmp[0] * REACH.mid, ey + tmp[1] * REACH.mid, this.z + tmp[2] * REACH.mid];
     if (sim.tick % 8 === 0) this.checkAim(snap, sim, ey);
     if (!this.swinging) { this.havePrev = false; return; }
@@ -465,11 +518,12 @@ export class Player {
       g.dir = [tx, ty, tz];
       g.a = [hit.lx - tx * half, hit.ly - ty * half, hit.lz - tz * half];
       g.b = [hit.lx + tx * half, hit.ly + ty * half, hit.lz + tz * half];
-      k.hp -= tag.dmg;
+      k.hp -= tag.dmg * this.bite();
+      this.drink();
       this.hits++;
       sim.event(EV.GASH, wx, wy, wz, -dx, -dy, -dz, k.id);
       sim.firstBlood();
-      if (first) { sim.hitStop(tag.heavy ? 0.085 : 0.055); k.onHit(sim, 'gash', this.x, this.z, tag.poise); }
+      if (first) { sim.hitStop(tag.heavy ? 0.085 : 0.055); k.onHit(sim, 'gash', this.x, this.z, tag.poise * (1 + this.poise)); }
     }
     this.contact = { k, piece: hit.piece, gash: g, count: (sameKnight ? c.count : 0) + 1 };
   }
@@ -495,7 +549,8 @@ export class Player {
     this.punctured = true;
     this.hits++;
     k.puncture(sim, g, hit.lx, hit.ly, hit.lz, hit.nx, hit.ny, hit.nz);
-    k.hp -= wasOpen ? 12 : 26;
+    k.hp -= (wasOpen ? 12 : 26) * this.bite() * (1 + this.pierce);
+    this.drink();
     this.bloodSword = Math.min(1, this.bloodSword + 0.35);
     k.plateTransforms(sim.scratch, sim.charOffset(sim.knights.indexOf(k)), sim.tick);
     k.bindToWorld(tmp2, g.piece, g.n[0] + 0, g.n[1] + 0, g.n[2] + 0);
@@ -504,7 +559,7 @@ export class Player {
     sim.event(EV.PUNCTURE, wx, wy, wz, nx, ny, nz, k.id, wasOpen ? 1 : 0);
     sim.hitStop(0.09);
     this.trauma = Math.min(1, this.trauma + 0.45);
-    k.onHit(sim, wasOpen ? 'reopen' : 'puncture', this.x, this.z, 45);
+    k.onHit(sim, wasOpen ? 'reopen' : 'puncture', this.x, this.z, 45 * (1 + this.poise));
   }
 
   write(snap, sim) {
@@ -515,7 +570,8 @@ export class Player {
     snap[H.DMG_FLASH] = this.flash;
     snap[H.BLOOD_SWORD] = this.bloodSword;
     snap[H.SWINGING] = this.swinging ? 1 : 0;
-    snap[H.SWING_T] = this.clip === 'great_idle' ? 0 : this.t;
+    snap[H.SWING_T] = this.clip === this.stance.idle ? 0 : this.t;
+    snap[H.WEAPON] = this.weapon;
     snap[H.HIT_DIR] = this.hitDir; snap[H.HIT_DIR_T] = this.hitDirT;
     snap[H.GROUND_SPEED] = this.groundSpeed || 0;
     snap[H.ON_GROUND] = this.onGround ? 1 : 0;

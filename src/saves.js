@@ -5,8 +5,8 @@
 //
 //   { v: SAVE_VERSION, at, summary: [lines for the slot list], parts: { player: {...}, stats: {...}, ... } }
 //
-// Today there are two (main.js): `player`, where you stand and which way you face, and `stats`, the time played.
-// Inventory, equipment, quests and the world's own state come in later as parts of their own, with addPart. A part
+// Today there are three (main.js): `player`, where you stand and which way you face, `stats`, the time played, and `pack`,
+// what you carry and have on. Quests and the world's own state come in later as parts of their own, with addPart. A part
 // missing from a save (one made before the part existed) is loaded with null, and starts as in a new game. When a
 // part's shape changes, raise SAVE_VERSION and add a step to MIGRATIONS that brings the older saves up to it.
 

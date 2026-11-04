@@ -111,10 +111,10 @@ def build():
     skins = [dict(name="arms", joints=list(range(len(names))), inverseBindMatrices=a_ibm, skeleton=index["root"])]
 
     fov = 2 * np.degrees(np.arctan(1 / (1.6 * M.ZOOM)))
-    meta = dict(kind="sword_shield", idle="guard_idle", nice=NICE, combos={str(k): [f"blade_{c}" for c in v] for k, v in M.COMBOS.items()},
-                combo=[f"blade_{c}" for c in M.COMBOS[1]], lines={k: v[0] for k, v in M.SWINGS.items()}, clips={},
+    meta = dict(kind="sword_shield", idle="guard_idle", walk="guard_walk", nice=NICE, combos={str(k): [f"blade_{c}" for c in v] for k, v in M.COMBOS.items()},
+                combo=[f"blade_{c}" for c in M.COMBOS[1]], lines=M.LINES, clips={},
                 view=dict(fov=float(fov), near=0.10), block=dict(up="shield_up", hold="shield_hold", down="shield_down", stab="blade_stab_block"),
-                sword=dict(id="arming_sword", tip=M.TIP), shield=dict(id="ironbound"))
+                sword=dict(id="arming_sword", tip=M.TIP, pommel=M.POMMEL), shield=dict(id="ironbound"))
     animations = []
     for cname, (path, sol) in clips.items():
         T = sol["T"]
@@ -140,7 +140,9 @@ def build():
             for k, frac in ((1, 1 / 3), (2, 2 / 3)):
                 rotation(f"forearm_twist{k}_{s}", rot_about((0, 1, 0), A["twist"] * frac))
         animations.append(dict(name=cname, samplers=samplers_, channels=channels))
-        ev = dict(duration=float(T[-1]), loop=cname in ("guard_idle", "shield_hold"))
+        ev = dict(duration=float(T[-1]), loop=cname in ("guard_idle", "guard_walk", "shield_hold"))
+        if ev["loop"]:
+            ev["walk"] = True       # (a carry, standing or on the move: played by how fast you go)
         if path["hit"] is not None:
             ev.update(hit=float(T[path["hit"]]), wind=float(T[path["wind"]]), through=float(T[path["end"]]))
         if path.get("thrust"):

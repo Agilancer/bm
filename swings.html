@@ -95,6 +95,7 @@
     <div class="buttons" id="blows"></div>
     <div class="toggles">
       <label><input type="checkbox" id="repeat"> Keep repeating it</label>
+      <label><input type="checkbox" id="walking"> Walking</label>
       <label><input type="checkbox" id="showTrail" checked> Draw the tip's path through the swing</label>
       <label><input type="checkbox" id="showSword" checked> Sword in the hand</label>
       <label id="shieldToggle" hidden><input type="checkbox" id="showShield" checked> Shield on the arm</label>
@@ -212,13 +213,26 @@ const actions = Object.fromEntries(Object.entries(clips).map(([n, c]) => {
   return [n, a];
 }));
 actions[IDLE].play();
+// A carry that rides your steps is played by how fast you go, slowed right down when you stand still (viewmodel.js's
+// rule; the game's own is in src/sim/player.js). The game's walking speed:
+const WALK_SPEED = 4.1;
+let walking = false;
+function setWalking(on) {
+  walking = on;
+  const rate = 0.25 + Math.min(1.3, (on ? WALK_SPEED : 0) / 6.2);
+  for (const [n, a] of Object.entries(actions)) if (meta.clips[n]?.walk) a.timeScale = rate;
+  const to = resting();
+  if (!playing && to !== atRest) { to.reset().play(); to.time = atRest.time; atRest.crossFadeTo(to, 0.25, false); atRest = to; }   // (the same place in the loop, only bigger or smaller)
+}
+$('walking').onchange = () => setWalking($('walking').checked);
 
 // ------------------------------------------------------------------ one blow, then the next
 let playing = null, hitDone = false, last = null, turn = 0, queue = [], lastSeq = null;
 let blocking = false, comboKey = meta.combos ? '1' : null;
 const chain = () => (comboKey ? meta.combos[comboKey] : meta.combo);
-const resting = () => actions[blocking && BLOCK ? BLOCK.hold : IDLE];
+const resting = () => actions[blocking && BLOCK ? BLOCK.hold : walking && meta.walk ? meta.walk : IDLE];
 let atRest = actions[IDLE];   // (what's actually playing between blows: `blocking` may already have changed)
+setWalking(false);
 function blow(name) {
   const a = actions[name], from = playing || atRest;
   a.reset().play();
@@ -423,6 +437,44 @@ window.measure = () => {
   mixer.stopAllAction(); actions[IDLE].reset().play(); paused = false;
   return out;
 };
+/** How much of the view each clip covers, frame by frame (16:9): the arms' largest share and when, how long the arms
+ * cover the X before the hit, how much sword shows at the hit, and how long the view holds next to nothing of either. */
+window.coverage = () => {
+  paused = true;
+  const W = 320, H = 180, rt = new THREE.WebGLRenderTarget(W, H), buf = new Uint8Array(W * H * 4), out = {};
+  const aspectWas = vmCam.aspect; vmCam.aspect = W / H; vmCam.updateProjectionMatrix();
+  const swordWas = sword.visible, shieldWas = shieldMesh?.visible;
+  renderer.setRenderTarget(rt); renderer.setClearColor(0, 0);
+  const share = () => {
+    renderer.clear(); renderer.render(vmScene, vmCam); renderer.readRenderTargetPixels(rt, 0, 0, W, H, buf);
+    let n = 0, mid = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (buf[(y * W + x) * 4 + 3] > 0) { n++; if (Math.abs(x - W / 2) < 4 && Math.abs(y - H / 2) < 4) mid++; }
+    return [n / (W * H), mid > 0];
+  };
+  for (const [name, ev] of Object.entries(meta.clips)) {
+    mixer.stopAllAction();
+    const a = actions[name]; a.reset().play(); a.setEffectiveWeight(1); a.paused = true;
+    let peak = 0, peakAt = 0, xShut = 0, gone = 0, goneRun = 0, atHit = null;
+    for (let t = 0; t <= ev.duration + 1e-6; t += 1 / 60) {
+      a.time = t; mixer.update(0); rig.updateMatrixWorld(true);
+      sword.visible = false; if (shieldMesh) shieldMesh.visible = false;
+      const [arm, shut] = share();
+      arms.visible = false; sword.visible = true;
+      const [blade] = share();
+      arms.visible = true;
+      if (arm > peak) { peak = arm; peakAt = t; }
+      if (shut && (ev.hit == null || t < ev.hit)) xShut += 1 / 60;
+      goneRun = arm + blade < 0.01 ? goneRun + 1 / 60 : 0; gone = Math.max(gone, goneRun);
+      if (ev.hit != null && atHit == null && t >= ev.hit - 1e-4) atHit = +blade.toFixed(4);
+    }
+    out[name] = { peak: +peak.toFixed(3), peakAt: +peakAt.toFixed(2), xShut: +xShut.toFixed(2), bladeAtHit: atHit, gone: +gone.toFixed(2) };
+  }
+  renderer.setRenderTarget(null); rt.dispose(); renderer.setClearColor(0, 1);
+  sword.visible = swordWas; if (shieldMesh) shieldMesh.visible = shieldWas;
+  vmCam.aspect = aspectWas; vmCam.updateProjectionMatrix();
+  mixer.stopAllAction(); actions[IDLE].reset().play(); paused = false;
+  return out;
+};
 /** A contact sheet of one blow, saved through the server (development). */
 window.review = async (spec) => {
   paused = true;
@@ -443,7 +495,7 @@ window.review = async (spec) => {
     g.drawImage(canvas, x, y, s.w, s.h);
     g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1.5; g.beginPath();
     g.moveTo(x + s.w / 2 - 7, y + s.h / 2); g.lineTo(x + s.w / 2 + 7, y + s.h / 2); g.moveTo(x + s.w / 2, y + s.h / 2 - 7); g.lineTo(x + s.w / 2, y + s.h / 2 + 7); g.stroke();
-    const hitHere = ev.hit != null && Math.abs(t - ev.hit) < s.step / 2 + 1e-6;
+    const hitHere = ev.hit != null && t - ev.hit >= -s.step / 2 - 1e-6 && t - ev.hit < s.step / 2 - 1e-6;
     g.font = '13px sans-serif'; g.fillStyle = hitHere ? '#ff6a4a' : '#bbb';
     g.fillText(`${t.toFixed(3)}s${hitHere ? '  ◆ THE X' : ''}`, x + 4, y + s.h + 14);
   }
@@ -486,15 +538,15 @@ window.playtest = () => {
   return results;
 };
 /** A film of the moves as played, one PNG per 60th of a second through the server (development): script is
- * [[seconds, 'attack'|'combo'|'blockOn'|'blockOff'], ...], name_00001.png and on land in build/shots. */
+ * [[seconds, 'attack'|'combo'|'blockOn'|'blockOff'|'walkOn'|'walkOff'|a clip's name], ...], name_00001.png and on land in build/shots. */
 window.film = async ({ name = 'film', w = 960, h = 540, seconds, script }) => {
   paused = true;
   const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); layout(w, h);
   const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
-  const acts = { attack, combo, blockOn: () => setBlock(true), blockOff: () => setBlock(false) };
+  const acts = { attack, combo, blockOn: () => setBlock(true), blockOff: () => setBlock(false), walkOn: () => setWalking(true), walkOff: () => setWalking(false) };
   const todo = [...script], n = Math.round(seconds * 60);
   for (let i = 0; i < n; i++) {
-    while (todo.length && todo[0][0] <= i / 60) acts[todo.shift()[1]]();
+    while (todo.length && todo[0][0] <= i / 60) { const k = todo.shift()[1]; acts[k] ? acts[k]() : blow(k); }
     advance(1 / 60);
     g.drawImage(canvas, 0, 0); g.drawImage($('trail'), 0, 0, w, h);
     const hit = $('xhair').classList.contains('hit');
@@ -508,7 +560,7 @@ window.film = async ({ name = 'film', w = 960, h = 540, seconds, script }) => {
   renderer.setPixelRatio(pr); layout(); paused = false;
   window.filmDone = n;
 };
-window.rigDbg = { THREE, rig, mixer, actions, vmCam, meta, draw, advance, setBlock, state: () => ({ clip: playing?.getClip().name ?? null, time: playing?.time ?? 0, hitDone, queue: [...queue], blocking }) };
+window.rigDbg = { THREE, rig, mixer, actions, vmCam, meta, draw, advance, setBlock, setWalking, state: () => ({ clip: playing?.getClip().name ?? null, time: playing?.time ?? 0, hitDone, queue: [...queue], blocking }) };
 const want = new URLSearchParams(location.search).get('review');
 if (want) for (const c of want.split(',')) await window.review({ clip: c });
 </script>
