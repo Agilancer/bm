@@ -165,8 +165,12 @@ struct V {
 }
 
 @fragment fn fs(in: V) -> @location(0) vec4f {
-  let scene = textureLoad(depthTex, vec2i(in.pos.xy), 0).r;
-  if (scene < in.viewZ - 0.02) { discard; }
+  // On a phone these are drawn in the world's own pass against its depth, and go without soft edges where they meet it.
+  var scene = 1e6;
+  if (!LEAN) {
+    scene = textureLoad(depthTex, vec2i(in.pos.xy), 0).r;
+    if (scene < in.viewZ - 0.02) { discard; }
+  }
   let r2 = dot(in.uv, in.uv);
   if (r2 > 1.0) { discard; }
   var shape = 1.0 - r2;
@@ -193,11 +197,13 @@ struct V { @builtin(position) pos: vec4f, @location(0) q: vec2f, @location(1) a:
 @vertex fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> V {
   var c = array<vec2f, 6>(vec2f(-1, -1), vec2f(1, -1), vec2f(1, 1), vec2f(-1, -1), vec2f(1, 1), vec2f(-1, 1));
   let s = stains[ii];
-  let w = s.xz + c[vi] * s.size;
+  // (M.map.w: the smallest a stain can be. On a coarser map a drop would otherwise fall between the texels and vanish.
+  // One that's been enlarged counts for less, or a few drops would make a pool.)
+  let w = s.xz + c[vi] * max(s.size, M.map.w);
   let uv = (w - M.map.xy) * M.map.z;
   var o: V;
   o.pos = vec4f(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, 0.0, 1.0);
-  o.q = c[vi]; o.a = s.amount; o.seed = fract(s.xz.x * 13.7 + s.xz.y * 7.3);
+  o.q = c[vi]; o.a = s.amount * clamp(s.size / max(M.map.w, 1e-5), 0.45, 1.0); o.seed = fract(s.xz.x * 13.7 + s.xz.y * 7.3);
   return o;
 }
 @fragment fn fs(in: V) -> @location(0) vec4f {
@@ -241,8 +247,18 @@ struct U { texel: vec2f, mix_: f32, first: f32 };
 @group(0) @binding(1) var smp: sampler;
 @group(0) @binding(2) var<uniform> B: U;
 fn karis(c: vec3f) -> f32 { return 1.0 / (1.0 + dot(c, vec3f(0.2126, 0.7152, 0.0722))); }
+// Four taps each way on a phone.
+fn four(u: vec2f, d: vec2f) -> vec3f {
+  return (textureSampleLevel(src, smp, u + d * vec2f(-1, -1), 0).rgb + textureSampleLevel(src, smp, u + d * vec2f(1, -1), 0).rgb
+    + textureSampleLevel(src, smp, u + d * vec2f(-1, 1), 0).rgb + textureSampleLevel(src, smp, u + d * vec2f(1, 1), 0).rgb) * 0.25;
+}
 @fragment fn down(in: VT) -> @location(0) vec4f {
   let t = B.texel; let u = in.uv;
+  if (LEAN) {
+    var o = four(u, t * 2.0);
+    if (B.first > 0.5) { o = min(max(o - vec3f(1.1), vec3f(0.0)), vec3f(6.0)); }
+    return vec4f(o, 1.0);
+  }
   let a = textureSampleLevel(src, smp, u + t * vec2f(-2, -2), 0).rgb; let b = textureSampleLevel(src, smp, u + t * vec2f(0, -2), 0).rgb;
   let c = textureSampleLevel(src, smp, u + t * vec2f(2, -2), 0).rgb; let d = textureSampleLevel(src, smp, u + t * vec2f(-2, 0), 0).rgb;
   let e = textureSampleLevel(src, smp, u, 0).rgb; let f = textureSampleLevel(src, smp, u + t * vec2f(2, 0), 0).rgb;
@@ -257,6 +273,7 @@ fn karis(c: vec3f) -> f32 { return 1.0 / (1.0 + dot(c, vec3f(0.2126, 0.7152, 0.0
 }
 @fragment fn up(in: VT) -> @location(0) vec4f {
   let t = B.texel; let u = in.uv;
+  if (LEAN) { return vec4f(four(u, t) * B.mix_, 1.0); }
   var c = textureSampleLevel(src, smp, u, 0).rgb * 4.0;
   c += (textureSampleLevel(src, smp, u + t * vec2f(-1, 0), 0).rgb + textureSampleLevel(src, smp, u + t * vec2f(1, 0), 0).rgb + textureSampleLevel(src, smp, u + t * vec2f(0, -1), 0).rgb + textureSampleLevel(src, smp, u + t * vec2f(0, 1), 0).rgb) * 2.0;
   c += textureSampleLevel(src, smp, u + t * vec2f(-1, -1), 0).rgb + textureSampleLevel(src, smp, u + t * vec2f(1, -1), 0).rgb + textureSampleLevel(src, smp, u + t * vec2f(-1, 1), 0).rgb + textureSampleLevel(src, smp, u + t * vec2f(1, 1), 0).rgb;

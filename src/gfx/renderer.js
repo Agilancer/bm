@@ -12,12 +12,32 @@ import { SKIN } from './shaders.js';
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 316;
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 312 };
-const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_SIZE = 1536, BLOOD_HALF = 64;
+const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104 };
 
 const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y * l, z * l]; };
+
+// A coarser index list over the same skinned vertices, by merging everything in a small cell: for shadows on a phone, and
+// for bodies in the distance.
+function clusterIndices(pos, idx, cell) {
+  const first = new Map();
+  const map = new Uint32Array(pos.length / 3);
+  for (let v = 0; v < map.length; v++) {
+    const key = (Math.floor(pos[v * 3] / cell) + 1024) * 4194304 + (Math.floor(pos[v * 3 + 1] / cell) + 1024) * 2048 + Math.floor(pos[v * 3 + 2] / cell) + 1024;
+    let r = first.get(key);
+    if (r === undefined) { r = v; first.set(key, v); }
+    map[v] = r;
+  }
+  const out = new Uint32Array(idx.length);
+  let n = 0;
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = map[idx[i]], b = map[idx[i + 1]], c = map[idx[i + 2]];
+    if (a !== b && b !== c && a !== c) { out[n++] = a; out[n++] = b; out[n++] = c; }
+  }
+  return out.subarray(0, n);
+}
 
 export class Renderer {
   constructor(gpu, canvas, pool) {
@@ -40,9 +60,22 @@ export class Renderer {
     this.flash = 0;
     // Mid-afternoon going gold, over the shoulder as you come up the road, so plate and faces read.
     this.sunDir = norm3(-0.78, 0.5, 0.38);
-    this.splits = [12, 38, 130];
+    this.splits = gpu.tier.splits || [12, 38, 130];
     this.shadowFrame = 0;
-    this.stats = { gpuMs: 0, draws: 0 };
+    this.planes = new Float32Array(20);
+    this.bloodUntil = 0;
+    this.inFlight = 0;
+    this.lastSent = 0;
+    this.onBusy = null;
+    this.stats = { gpuMs: 0, busyMs: 0, draws: 0 };
+  }
+
+  // Every shader is built knowing whether it's for a phone: `if (LEAN)` picks the cheap path, and the compiler drops the
+  // other. A phone also has no second colour target, so the depth that would go in it goes nowhere.
+  shader(code) {
+    let text = `const LEAN = ${!!this.tier.lean};\n${code}`;
+    if (this.tier.lean) text = text.replace('@location(1) depth: f32', '').replace(/o\.depth = [^;]*;/g, '');
+    return this.device.createShaderModule({ code: text });
   }
 
   // ---- loading -------------------------------------------------------------------------------------
@@ -157,7 +190,7 @@ export class Renderer {
 
   buildSamplers() {
     const { device } = this;
-    this.repeatSmp = device.createSampler({ addressModeU: 'repeat', addressModeV: 'repeat', minFilter: 'linear', magFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: 8 });
+    this.repeatSmp = device.createSampler({ addressModeU: 'repeat', addressModeV: 'repeat', minFilter: 'linear', magFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: this.tier.aniso });
     this.clampSmp = device.createSampler({ minFilter: 'linear', magFilter: 'linear', mipmapFilter: 'linear' });
     this.shadowSmp = device.createSampler({ compare: 'less', minFilter: 'linear', magFilter: 'linear' });
     this.frameUBO = device.createBuffer({ size: FRAME_FLOATS * 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -340,6 +373,14 @@ export class Renderer {
     return { count: nv, indices: ni, ranges, sideVB, IB, srcBuf, outBuf, palette, params, bg, jointCount };
   }
 
+  addLod(sk, prim, cell) {
+    sk.lodIB = sk.IB; sk.lodCount = sk.indices;
+    if (!this.tier.lean) return;
+    const idx = clusterIndices(prim.pos, prim.idx, cell);
+    sk.lodIB = makeBuffer(this.device, idx, GPUBufferUsage.INDEX);
+    sk.lodCount = idx.length;
+  }
+
   // Another body on the same mesh: its own pose buffers, sharing the geometry.
   cloneSkinned(base) {
     const { device } = this;
@@ -360,6 +401,7 @@ export class Renderer {
     for (let i = 0; i < pos.length; i++) pos[i] *= scale;
     const prim = { pos, nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices), joints: accessor(glb, a.JOINTS_0), weights: accessor(glb, a.WEIGHTS_0) };
     const base = this.makeSkinned([prim], glb.json.skins[0].joints.length);
+    this.addLod(base, prim, 0.14);
     const mat = glb.json.materials[pr.material];
     const srcOf = (t) => glb.json.textures[t.index].source;
     const texScale = this.tier.texScale;
@@ -389,6 +431,7 @@ export class Renderer {
     };
     const jc = glb.json.skins[0].joints.length;
     const sk = this.makeSkinned([prim], jc);
+    this.addLod(sk, prim, 0.055);
     const scale = this.tier.texScale;
     const [alb, nrm, mr] = await Promise.all([
       this.imageTexture(glb, 0, 'rgba8unorm-srgb', scale), this.imageTexture(glb, 1, 'rgba8unorm', scale), this.imageTexture(glb, 2, 'rgba8unorm', scale),
@@ -442,9 +485,10 @@ export class Renderer {
     for (let i = 0; i < prims.length; i++) {
       const { mat, name } = texOf[i];
       const srcOf = (t) => glb.json.textures[t.index].source;
-      const alb = await this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb');
-      const nrm = mat.normalTexture ? await this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm') : flatNormal;
-      const mr = mat.pbrMetallicRoughness.metallicRoughnessTexture ? await this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm') : flatMR;
+      const texScale = this.tier.texScale;
+      const alb = await this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale);
+      const nrm = mat.normalTexture ? await this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale) : flatNormal;
+      const mr = mat.pbrMetallicRoughness.metallicRoughnessTexture ? await this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale) : flatMR;
       const ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
         { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
@@ -493,11 +537,12 @@ export class Renderer {
     const { device, gpu, tier } = this;
     const hdr = gpu.hdrFormat;
     this.msaa = tier.msaa;
-    const targets = [{ format: hdr }, { format: LINEAR_DEPTH }];
+    const targets = tier.lean ? [{ format: hdr }] : [{ format: hdr }, { format: LINEAR_DEPTH }];
+    this.worldTargets = targets;
     const depth = (write = true, cmp = 'greater') => ({ format: DEPTH, depthWriteEnabled: write, depthCompare: cmp });
     const ms = { count: this.msaa };
     const layout = (...g) => device.createPipelineLayout({ bindGroupLayouts: g });
-    const module = (code) => device.createShaderModule({ code });
+    const module = (code) => this.shader(code);
 
     const terrainMod = module(TERRAIN);
     this.pTerrain = device.createRenderPipeline({
@@ -511,13 +556,17 @@ export class Renderer {
       { shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' },
       { shaderLocation: 2, offset: 24, format: 'float32x2' }, { shaderLocation: 3, offset: 32, format: 'uint32' }] }];
     const staticMod = module(STATIC);
-    this.pStatic = device.createRenderPipeline({
+    const staticPipeline = (mod) => device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglStatic),
-      vertex: { module: staticMod, entryPoint: 'vs', buffers: staticVB },
-      fragment: { module: staticMod, entryPoint: 'fs', targets },
+      vertex: { module: mod, entryPoint: 'vs', buffers: staticVB },
+      fragment: { module: mod, entryPoint: 'fs', targets },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
+    // A shader that can discard turns off the early depth test and a tiled GPU's hidden surface removal, so only the
+    // leaves get one.
+    this.pStaticCut = staticPipeline(staticMod);
+    this.pStatic = staticPipeline(module(STATIC.replace('if (params.x > 0.0 && tex.a < 0.5) { discard; }', '')));
     const armorMod = module(ARMOR);
     const skinnedVB = [
       { arrayStride: 16, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x4' }] },
@@ -564,7 +613,7 @@ export class Renderer {
     this.shadowU = device.createBuffer({ size: 256 * 3, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.bglShadow = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: 80 } }] });
     this.shadowBG = device.createBindGroup({ layout: this.bglShadow, entries: [{ binding: 0, resource: { buffer: this.shadowU, size: 80 } }] });
-    const shMod = module(SHADOW);
+    const shMod = device.createShaderModule({ code: SHADOW });
     const shDepth = { format: DEPTH, depthWriteEnabled: true, depthCompare: 'less', depthBias: 2, depthBiasSlopeScale: 2.0, depthBiasClamp: 0.01 };
     const shLayout = layout(this.bglShadow);
     const posVB = (stride) => [{ arrayStride: stride, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }];
@@ -588,9 +637,12 @@ export class Renderer {
       fragment: { module: shMod, entryPoint: 'fsCut', targets: [] },
       primitive: { cullMode: 'none' }, depthStencil: shDepth,
     });
-    this.shadowTex = device.createTexture({ size: [tier.shadowSize, tier.shadowSize, 3], format: DEPTH, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
-    this.shadowViews = [0, 1, 2].map((i) => this.shadowTex.createView({ dimension: '2d', baseArrayLayer: i, arrayLayerCount: 1 }));
-    this.bloodMap = device.createTexture({ size: [BLOOD_SIZE, BLOOD_SIZE], format: 'rg8unorm', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+    this.shadowTex = device.createTexture({ size: [tier.shadowSize, tier.shadowSize, tier.cascades], format: DEPTH, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+    this.shadowViews = Array.from({ length: tier.cascades }, (_, i) => this.shadowTex.createView({ dimension: '2d', baseArrayLayer: i, arrayLayerCount: 1 }));
+    this.bloodMap = device.createTexture({ size: [tier.bloodSize, tier.bloodSize], format: 'rg8unorm', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+    this.bloodView = null;
+    // Stands in for the targets a phone doesn't have (nothing reads them there, but their bind groups still ask).
+    this.stubView = this.stubView || device.createTexture({ size: [2, 2], format: LINEAR_DEPTH, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT }).createView();
     const enc = device.createCommandEncoder();
     enc.beginRenderPass({ colorAttachments: [{ view: this.bloodMap.createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 0] }] }).end();
     device.queue.submit([enc.finish()]);
@@ -667,7 +719,10 @@ export class Renderer {
       { binding: 3, resource: { buffer: this.pAlive } }, { binding: 4, resource: { buffer: this.stainArgs } }, { binding: 5, resource: { buffer: this.stainList } },
       { binding: 6, resource: this.heightTex.createView() },
     ] });
-    const draw = device.createShaderModule({ code: PARTICLE_DRAW });
+    const draw = this.shader(PARTICLE_DRAW);
+    // A phone draws them inside the world's pass, against its depth. On a tiled GPU another pass means reloading the
+    // whole picture to carry on.
+    const inWorld = (cmp) => (tier.lean ? { depthStencil: { format: DEPTH, depthWriteEnabled: false, depthCompare: cmp }, multisample: { count: this.msaa } } : {});
     this.bglPDraw = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -677,13 +732,15 @@ export class Renderer {
       layout: device.createPipelineLayout({ bindGroupLayouts: [this.bgl0, this.bglPDraw] }),
       vertex: { module: draw, entryPoint: 'vs' },
       fragment: { module: draw, entryPoint: 'fs', targets: [{ format: this.gpu.hdrFormat, blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } } }] },
+      ...inWorld('greater'),
     });
-    const trail = device.createShaderModule({ code: TRAIL });
+    const trail = this.shader(TRAIL);
     this.pTrail = device.createRenderPipeline({
       layout: device.createPipelineLayout({ bindGroupLayouts: [this.bgl0] }),
       vertex: { module: trail, entryPoint: 'vs', buffers: [{ arrayStride: 16, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x4' }] }] },
       fragment: { module: trail, entryPoint: 'fs', targets: [{ format: this.gpu.hdrFormat, blend: { color: { srcFactor: 'one', dstFactor: 'one' }, alpha: { srcFactor: 'one', dstFactor: 'one' } } }] },
       primitive: { topology: 'triangle-strip' },
+      ...inWorld('always'),
     });
     this.trailVB = device.createBuffer({ size: 128 * 16, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.trailData = new Float32Array(128 * 4);
@@ -694,7 +751,7 @@ export class Renderer {
       vertex: { module: stain, entryPoint: 'vs' },
       fragment: { module: stain, entryPoint: 'fs', targets: [{ format: 'rg8unorm', blend: { color: { srcFactor: 'one', dstFactor: 'one' }, alpha: { srcFactor: 'one', dstFactor: 'one' } } }] },
     });
-    const stainU = makeBuffer(device, new Float32Array([-BLOOD_HALF, -BLOOD_HALF, 1 / (2 * BLOOD_HALF), 0]), GPUBufferUsage.UNIFORM);
+    const stainU = makeBuffer(device, new Float32Array([-BLOOD_HALF, -BLOOD_HALF, 1 / (2 * BLOOD_HALF), tier.lean ? 2 * BLOOD_HALF / tier.bloodSize * 0.5 : 0]), GPUBufferUsage.UNIFORM);
     this.stainBG = device.createBindGroup({ layout: this.pStain.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: stainU } }, { binding: 1, resource: { buffer: this.stainList } }] });
     this.emitBuf = new ArrayBuffer(48 * 4096);
     this.emitF = new Float32Array(this.emitBuf);
@@ -705,7 +762,8 @@ export class Renderer {
   buildGrass() {
     const { device, tier } = this;
     this.grassSpacing = tier.grassSpacing; this.grassRadius = tier.grassRadius;
-    this.useShafts = !!tier.shafts; this.useAO = !!tier.ao; this.farShadowEvery = 2;
+    this.useShafts = !!tier.shafts; this.useAO = !!tier.ao; this.useBloom = true; this.grassOn = true;
+    this.farShadowEvery = tier.lean ? 4 : 2;
     this.grassN = Math.ceil(2 * this.grassRadius / this.grassSpacing);
     const near = Math.floor(tier.grassCap * 0.62), far = Math.floor(tier.grassCap * 0.38);
     this.grassNear = device.createBuffer({ size: near * 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX });
@@ -714,16 +772,16 @@ export class Renderer {
     this.grassFarArgs = device.createBuffer({ size: 16, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST });
     this.grassU = device.createBuffer({ size: 192, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.grassData = new Float32Array(48);
-    const cull = device.createShaderModule({ code: GRASS_CULL });
+    const cull = this.shader(GRASS_CULL);
     this.pGrassCull = device.createComputePipeline({ layout: 'auto', compute: { module: cull, entryPoint: 'main' } });
     this.grassBG = device.createBindGroup({ layout: this.pGrassCull.getBindGroupLayout(0), entries: [
       { binding: 0, resource: { buffer: this.grassU } }, { binding: 1, resource: { buffer: this.grassNearArgs } }, { binding: 2, resource: { buffer: this.grassFarArgs } },
       { binding: 3, resource: { buffer: this.grassNear } }, { binding: 4, resource: { buffer: this.grassFar } }, { binding: 5, resource: this.groundMap.createView() }, { binding: 6, resource: this.heightTex.createView() },
     ] });
-    const mod = device.createShaderModule({ code: GRASS });
+    const mod = this.shader(GRASS);
     const vb = [{ arrayStride: 16, stepMode: 'instance', attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'uint32' }] }];
     const layout = device.createPipelineLayout({ bindGroupLayouts: [this.bgl0, this.bglArr2] });
-    const targets = [{ format: this.gpu.hdrFormat }, { format: LINEAR_DEPTH }];
+    const targets = this.worldTargets;
     const depth = { format: DEPTH, depthWriteEnabled: true, depthCompare: 'greater' };
     this.pGrassNear = device.createRenderPipeline({ layout, vertex: { module: mod, entryPoint: 'vsNear', buffers: vb }, fragment: { module: mod, entryPoint: 'fs', targets }, primitive: { topology: 'triangle-strip', cullMode: 'none' }, depthStencil: depth, multisample: { count: this.msaa } });
     this.pGrassFar = device.createRenderPipeline({ layout, vertex: { module: mod, entryPoint: 'vsFar', buffers: vb }, fragment: { module: mod, entryPoint: 'fs', targets }, primitive: { topology: 'triangle-list', cullMode: 'none' }, depthStencil: depth, multisample: { count: this.msaa } });
@@ -735,12 +793,20 @@ export class Renderer {
   resize() {
     const { gpu, canvas, tier } = this;
     const dpr = Math.min(window.devicePixelRatio || 1, gpu.mobile ? 3 : 2);
-    const cw = Math.max(2, Math.floor(canvas.clientWidth * dpr)), ch = Math.max(2, Math.floor(canvas.clientHeight * dpr));
-    if (canvas.width !== cw || canvas.height !== ch) {
-      canvas.width = cw; canvas.height = ch;
-      this.dropTargetSets();
+    let cw = Math.max(2, Math.floor(canvas.clientWidth * dpr)), ch = Math.max(2, Math.floor(canvas.clientHeight * dpr));
+    const screen = `${cw}x${ch}`;
+    if (this.screen !== screen) { this.screen = screen; this.dropTargetSets(); }
+    let W, H_;
+    if (tier.maxPixels) {
+      // The canvas itself is only as big as the picture, and the browser stretches it to the screen for nothing. Scale
+      // over 1 is for the GPUs that have room to spare, as far as the screen's own pixels.
+      const k = Math.min(1, Math.sqrt(tier.maxPixels / (cw * ch)) * this.scale);
+      W = cw = Math.max(2, Math.floor(cw * k)); H_ = ch = Math.max(2, Math.floor(ch * k));
+    } else {
+      const k = Math.min(1, this.scale) * tier.scaleMax;
+      W = Math.max(2, Math.floor(cw * k)); H_ = Math.max(2, Math.floor(ch * k));
     }
-    const W = Math.max(2, Math.floor(cw * this.scale * tier.scaleMax)), H_ = Math.max(2, Math.floor(ch * this.scale * tier.scaleMax));
+    if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
     const key = `${W}x${H_}`;
     if (this.activeKey === key) return;
     if (!this.targetSets) this.targetSets = new Map();
@@ -771,12 +837,19 @@ export class Renderer {
     const { device, gpu, tier } = this;
     const make = (w, h, format, usage, sampleCount = 1) => device.createTexture({ size: [w, h], format, usage, sampleCount });
     const RT = GPUTextureUsage.RENDER_ATTACHMENT, TB = GPUTextureUsage.TEXTURE_BINDING;
-    const hdrMS = make(W, H_, gpu.hdrFormat, RT, this.msaa), hdr = make(W, H_, gpu.hdrFormat, RT | TB);
-    const ldMS = make(W, H_, LINEAR_DEPTH, RT, this.msaa), ld = make(W, H_, LINEAR_DEPTH, RT | TB);
+    const lean = !!tier.lean, multi = this.msaa > 1;
+    const hdr = make(W, H_, gpu.hdrFormat, RT | TB);
+    const hdrMS = multi ? make(W, H_, gpu.hdrFormat, RT, this.msaa) : hdr;
     const depthMS = make(W, H_, DEPTH, RT, this.msaa);
     const hw = Math.max(2, W >> 1), hh = Math.max(2, H_ >> 1);
-    const aoTex = make(hw, hh, 'r8unorm', RT | TB), shaftTex = make(hw, hh, gpu.hdrFormat, RT | TB);
-    const textures = [hdrMS, hdr, ldMS, ld, depthMS, aoTex, shaftTex];
+    const textures = multi ? [hdrMS, hdr, depthMS] : [hdr, depthMS];
+    // Only the full tiers read depth back, for AO, sun shafts and soft particles.
+    let ldMS = null, ld = null, aoTex = null, shaftTex = null;
+    if (!lean) {
+      ldMS = make(W, H_, LINEAR_DEPTH, RT, this.msaa); ld = make(W, H_, LINEAR_DEPTH, RT | TB);
+      aoTex = make(hw, hh, 'r8unorm', RT | TB); shaftTex = make(hw, hh, gpu.hdrFormat, RT | TB);
+      textures.push(ldMS, ld, aoTex, shaftTex);
+    }
     const bloomChain = [];
     let bw = hw, bh = hh;
     for (let i = 0; i < tier.bloom; i++) {
@@ -785,7 +858,15 @@ export class Renderer {
       textures.push(t);
       bw >>= 1; bh >>= 1;
     }
-    const hdrView = hdr.createView(), ldView = ld.createView();
+    const hdrView = hdr.createView(), ldView = lean ? this.stubView : ld.createView();
+    const aoView = lean ? this.stubView : aoTex.createView(), shaftView = lean ? this.stubView : shaftTex.createView();
+    const hdrMSView = multi ? hdrMS.createView() : hdrView;
+    const clear = [0, 0, 0, 1];
+    const worldPass = {
+      colorAttachments: [multi ? { view: hdrMSView, resolveTarget: hdrView, loadOp: 'clear', storeOp: 'discard', clearValue: clear } : { view: hdrView, loadOp: 'clear', storeOp: 'store', clearValue: clear }],
+      depthStencilAttachment: { view: depthMS.createView(), depthLoadOp: 'clear', depthClearValue: 0, depthStoreOp: 'discard' },
+    };
+    if (!lean) worldPass.colorAttachments.push({ view: ldMS.createView(), resolveTarget: ldView, loadOp: 'clear', storeOp: 'discard', clearValue: [4000, 0, 0, 1] });
     const bgFor = (view) => device.createBindGroup({ layout: this.bglBloom, entries: [
       { binding: 0, resource: view }, { binding: 1, resource: this.clampSmp }, { binding: 2, resource: { buffer: this.bloomU, size: 16 } }] });
     const bloomDownBG = [bgFor(hdrView)];
@@ -810,14 +891,13 @@ export class Renderer {
       slot++;
     }
     const fields = {
-      hdrMS, hdr, ldMS, ld, depthMS, aoTex, shaftTex, bloomChain, hdrView, ldView, bloomDownBG, bloomUpBG, bloomSlots,
-      hdrMSView: hdrMS.createView(), ldMSView: ldMS.createView(), depthMSView: depthMS.createView(), aoView: aoTex.createView(), shaftView: shaftTex.createView(),
+      hdr, bloomChain, hdrView, bloomDownBG, bloomUpBG, bloomSlots, aoView, shaftView, worldPass,
       compBG: device.createBindGroup({ layout: this.bglComposite, entries: [
-        { binding: 0, resource: hdrView }, { binding: 1, resource: bloomChain[0].view }, { binding: 2, resource: shaftTex.createView() },
+        { binding: 0, resource: hdrView }, { binding: 1, resource: bloomChain[0].view }, { binding: 2, resource: shaftView },
         { binding: 3, resource: this.clampSmp }, { binding: 4, resource: { buffer: this.compU } },
       ] }),
       depthBG: device.createBindGroup({ layout: this.bglDepthOnly, entries: [{ binding: 0, resource: ldView }] }),
-      aoApplyBG: device.createBindGroup({ layout: this.bglAOApply, entries: [{ binding: 0, resource: ldView }, { binding: 1, resource: aoTex.createView() }] }),
+      aoApplyBG: device.createBindGroup({ layout: this.bglAOApply, entries: [{ binding: 0, resource: ldView }, { binding: 1, resource: aoView }] }),
       pDrawBG: device.createBindGroup({ layout: this.bglPDraw, entries: [
         { binding: 0, resource: { buffer: this.pBuffer } }, { binding: 1, resource: { buffer: this.pAlive } }, { binding: 2, resource: ldView },
       ] }),
@@ -827,6 +907,7 @@ export class Renderer {
 
   // Step quality down when even a lower resolution can't hold the frame rate. Returns false when nothing's left.
   demote() {
+    if ((this.demoted || 0) >= (this.tier.lean ? 7 : 5)) return false;
     this.demoted = (this.demoted || 0) + 1;
     switch (this.demoted) {
       case 1: if (this.useShafts) { this.useShafts = false; return true; } this.demoted = 2; // falls through
@@ -834,12 +915,25 @@ export class Renderer {
       case 3:
         this.grassSpacing *= 1.35; this.grassRadius *= 0.85; this.grassN = Math.ceil(2 * this.grassRadius / this.grassSpacing);
         return true;
-      case 4: this.farShadowEvery = 4; return true;
+      case 4: this.farShadowEvery *= 2; return true;
       case 5:
         this.grassSpacing *= 1.35; this.grassRadius *= 0.8; this.grassN = Math.ceil(2 * this.grassRadius / this.grassSpacing);
         return true;
+      case 6: if (this.tier.lean) { this.useBloom = false; return true; } return false;
+      case 7: if (this.tier.lean) { this.grassOn = false; return true; } return false;
       default: return false;
     }
+  }
+
+  // Multisampling can't be changed in the middle of things, so this is for before anyone's seen a frame.
+  dropMSAA() {
+    this.tier.msaa = 1;
+    this.shadowTex.destroy(); this.bloodMap.destroy();
+    this.buildPipelines();
+    this.buildParticles();
+    this.buildGrass();
+    this.dropTargetSets();
+    this.resize();
   }
 
   clearBlood() {
@@ -853,6 +947,10 @@ export class Renderer {
   // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember.
   emit(kind, count, x, y, z, dx, dy, dz, spread, sp0, sp1, sz0, sz1, life0, life1) {
     const f = this.emitF, u = this.emitU, cap = this.emitF.length / 12;
+    // (Blood is what this game is about, so it's the last thing to go thin.)
+    if (this.tier.emit !== 1) count = Math.floor(count * (kind < 2 ? 0.8 : this.tier.emit) + Math.random());
+    // Blood soaks in when it lands, so the ground needs drawing on until the last of it has (slow motion included).
+    if (kind === 0) this.bloodUntil = performance.now() + (life1 * 4 + 1) * 1000;
     for (let i = 0; i < count; i++) {
       if (this.emitN >= cap) return;
       const o = this.emitN * 12;
@@ -896,6 +994,14 @@ export class Renderer {
     mat4Mul(this.tmpVP, this.tmpP, this.tmpV);
     mat4Invert(this.tmpI, this.tmpVP);
     d.set(this.tmpVP, O.VP); d.set(this.tmpV, O.VIEW); d.set(this.tmpP, O.PROJ); d.set(this.tmpI, O.IVP);
+    // Left, right, bottom, top, near from the combined matrix.
+    const m = this.tmpVP, pl = this.planes;
+    for (let i = 0; i < 5; i++) {
+      const axis = i >> 1, sign = i === 4 ? -1 : (i & 1 ? -1 : 1);
+      const a = m[3] + sign * m[axis], b = m[7] + sign * m[axis + 4], c = m[11] + sign * m[axis + 8], e = m[15] + sign * m[axis + 12];
+      const L = 1 / Math.hypot(a, b, c);
+      pl[i * 4] = a * L; pl[i * 4 + 1] = b * L; pl[i * 4 + 2] = c * L; pl[i * 4 + 3] = e * L;
+    }
     const vmFov = (this.vmFov || 76) * Math.PI / 180;
     mat4Perspective(this.tmpP, vmFov, aspect, 0.05);
     d.set(this.tmpP, O.VMP);
@@ -907,7 +1013,11 @@ export class Renderer {
     const tan = Math.tan(WORLD_FOV / 2);
     const sun = this.sunDir;
     let prev = 0.1;
+    // The far cascade is drawn less often, and keeps the matrix it was drawn with until the next.
+    this.shadowFrame++;
+    this.farNow = this.shadowFrame % this.farShadowEvery === 1 % this.farShadowEvery;
     for (let c = 0; c < n; c++) {
+      if (c === n - 1 && !this.farNow) break;
       const far = this.splits[n === 2 && c === 1 ? 2 : c];
       const mid = (prev + far) / 2;
       const hf = far * tan, wf = hf * aspect, hn = prev * tan, wn = hn * aspect;
@@ -932,13 +1042,13 @@ export class Renderer {
     d.set([0.15, 0.13, 0.09, 0], O.GND);
     d.set([0.52, 0.5, 0.52, 0.0011], O.FOG);
     d.set([0.018, 0.8, 0, 0], O.FOGP);
-    d.set(n === 2 ? [this.splits[2] * 0.3, this.splits[2], this.splits[2], 0] : [this.splits[0], this.splits[1], this.splits[2], 0], O.SPLIT);
+    d.set(n === 2 ? [this.splits[0], this.splits[2], this.splits[2], 0] : [this.splits[0], this.splits[1], this.splits[2], 0], O.SPLIT);
     d.set([W, Ht, 1 / W, 1 / Ht], O.SCREEN);
     const t = d[O.CAM + 3];
     const gust = 0.42 + 0.3 * Math.sin(t * 0.21) + 0.15 * Math.sin(t * 0.67);
     d.set([0.82, gust, 0.57, t], O.WIND);
     d.set([-GROUND_HALF, -GROUND_HALF, 1 / (2 * GROUND_HALF), 0], O.GROUND);
-    d.set([-BLOOD_HALF, -BLOOD_HALF, 1 / (2 * BLOOD_HALF), 0], O.BLOOD);
+    d.set([-BLOOD_HALF, -BLOOD_HALF, 1 / (2 * BLOOD_HALF), this.useBloom ? 1 : 0], O.BLOOD);
     // Bodies in the grass.
     let bi = 0;
     d.set([snap[H.PX], snap[H.PY], snap[H.PZ], 0.45], O.CHARS);
@@ -948,22 +1058,49 @@ export class Renderer {
       if (snap[co + C.ACTIVE] > 0.5) { d.set([snap[co + C.X], snap[co + C.Y], snap[co + C.Z], i < 2 ? 0.6 : 1.5], O.CHARS + bi * 4); bi++; }
     }
     for (; bi < 6; bi++) d[O.CHARS + bi * 4 + 3] = 0;
-    // Lanterns, the nearest to the camera first.
+    // Lanterns, the nearest to the camera first. When there are more than the tier can light, each fades out before the
+    // next one takes its place, so none switches off in view.
     const lights = this.lights;
-    const take = Math.min(lights.length, 12);
+    const take = Math.min(lights.length, this.tier.lights);
+    const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
+    // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
+    for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
+    if (take < lit.length) lit.sort((a, b) => a.d - b.d);
+    const nextD = take < lit.length ? lit[take].d : 1e9;
     for (let i = 0; i < take; i++) {
-      const L = lights[i];
+      const L = lit[i].L;
       const fl = 1 + L.flicker * 0.25 * (Math.sin(t * 9.1 + i * 2.1) * 0.6 + Math.sin(t * 17.3 + i) * 0.4);
-      d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i * fl], O.LIGHTS + i * 8);
+      const fade = Math.min(1, nextD - lit[i].d);
+      d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i * fl * fade], O.LIGHTS + i * 8);
     }
     d.set([take, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9], O.COUNTS);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);
+  }
+
+  // What each body needs this frame. Off the screen it needn't be drawn, and if its shadow can't reach the screen either it
+  // needn't even be skinned. On a phone a body far away is drawn from its coarse index list.
+  cullBodies(cam, snap) {
+    const pl = this.planes;
+    for (let i = 0; i < this.chars.length; i++) {
+      const c = this.chars[i];
+      const co = CHARS_START + i * C_SIZE;
+      if (snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
+      const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
+      const r = i < 2 ? 2.6 : 5;
+      let inside = 1e9;
+      for (let k = 0; k < 5; k++) inside = Math.min(inside, pl[k * 4] * x + pl[k * 4 + 1] * y + pl[k * 4 + 2] * z + pl[k * 4 + 3]);
+      c.seen = inside > -r;
+      c.casts = inside > -(r + 5);
+      // (Different distances each way, so a body standing right at the line doesn't flicker between the two.)
+      c.far = Math.hypot(x - cam.x, z - cam.z) > (c.far ? 14 : 16);
+    }
   }
 
   frame(cam, snap, vmSway, dt) {
     const { device, tier } = this;
     this.resize();
     this.writeFrame(cam, snap);
+    this.cullBodies(cam, snap);
     const time = this.frameData[O.CAM + 3];
 
     // Characters: palettes, wounds, weapons.
@@ -974,7 +1111,7 @@ export class Renderer {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
       if (snap[co + C.ACTIVE] < 0.5) continue;
-      q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
+      if (c.casts) q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
       const ver = snap[co + C.GASH_VERSION];
       if (ver !== this.gashVersions[i]) {
         this.gashVersions[i] = ver;
@@ -1016,19 +1153,21 @@ export class Renderer {
     g[16] = cam.x; g[17] = cam.y; g[18] = cam.z; g[19] = 0;
     g[20] = this.grassN; g[21] = this.grassSpacing; g[22] = this.grassRadius; g[23] = this.grassNearRadius;
     g[24] = -GROUND_HALF; g[25] = -GROUND_HALF; g[26] = 1 / (2 * GROUND_HALF); g[27] = 0;
-    // Left, right, bottom, top, near from the combined matrix.
-    for (let i = 0; i < 5; i++) {
-      const axis = i >> 1, sign = i === 4 ? -1 : (i & 1 ? -1 : 1);
-      const a = m[3] + sign * m[axis], b = m[7] + sign * m[axis + 4], c = m[11] + sign * m[axis + 8], e = m[15] + sign * m[axis + 12];
-      const L = 1 / Math.hypot(a, b, c);
-      g[28 + i * 4] = a * L; g[29 + i * 4] = b * L; g[30 + i * 4] = c * L; g[31 + i * 4] = e * L;
+    g.set(this.planes, 28);
+    if (!this.args7) { this.args7 = new Uint32Array([tier.lean ? 5 : 7, 0, 0, 0]); this.args3 = new Uint32Array([3, 0, 0, 0]); this.args6 = new Uint32Array([6, 0, 0, 0]); }
+    // On a phone the grass is culled every other frame, and its frustum test has a margin that covers the difference.
+    const cullGrass = this.grassOn && (!tier.lean || this.shadowFrame % 2 === 0);
+    if (cullGrass) {
+      q.writeBuffer(this.grassU, 0, g);
+      q.writeBuffer(this.grassNearArgs, 0, this.args7);
+      q.writeBuffer(this.grassFarArgs, 0, this.args3);
     }
-    q.writeBuffer(this.grassU, 0, g);
-    if (!this.args7) { this.args7 = new Uint32Array([7, 0, 0, 0]); this.args3 = new Uint32Array([3, 0, 0, 0]); this.args6 = new Uint32Array([6, 0, 0, 0]); }
-    q.writeBuffer(this.grassNearArgs, 0, this.args7);
-    q.writeBuffer(this.grassFarArgs, 0, this.args3);
     q.writeBuffer(this.pArgs, 0, this.args6);
-    q.writeBuffer(this.stainArgs, 0, this.args6);
+    // On a phone what's landed is soaked in every fourth frame, together, so that pass costs a quarter as much.
+    const bleeding = performance.now() < this.bloodUntil;
+    const soakNow = bleeding && (!tier.lean || this.shadowFrame % 4 === 0);
+    if (this.stainsDone !== false) q.writeBuffer(this.stainArgs, 0, this.args6);
+    this.stainsDone = soakNow || !bleeding;
     this.flushEmits();
     const ps = this.pSimData;
     ps[0] = Math.min(dt, 0.05) * snap[H.TIME_SCALE]; ps[1] = time;
@@ -1044,26 +1183,28 @@ export class Renderer {
     cp.setPipeline(this.skinPipeline);
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
+      if (!c.casts) continue;
       cp.setBindGroup(0, c.bg);
       cp.dispatchWorkgroups(Math.ceil(c.count / 128));
     }
     cp.setBindGroup(0, this.vm.bg);
     cp.dispatchWorkgroups(Math.ceil(this.vm.count / 128));
-    cp.setPipeline(this.pGrassCull);
-    cp.setBindGroup(0, this.grassBG);
-    cp.dispatchWorkgroups(Math.ceil(this.grassN * this.grassN / 64));
+    if (cullGrass) {
+      cp.setPipeline(this.pGrassCull);
+      cp.setBindGroup(0, this.grassBG);
+      cp.dispatchWorkgroups(Math.ceil(this.grassN * this.grassN / 64));
+    }
     cp.setPipeline(this.pSim);
     cp.setBindGroup(0, this.pSimBG);
     cp.dispatchWorkgroups(Math.ceil(this.pCount / 256));
     cp.end();
 
     // ---- shadows, the far cascades on alternating frames ----
-    this.shadowFrame++;
     const shadowData = this.shadowData || (this.shadowData = new Float32Array(64 * 3));
     for (let c = 0; c < tier.cascades; c++) shadowData.set(this.frameData.subarray(O.CASC + c * 16, O.CASC + c * 16 + 16), c * 64);
     q.writeBuffer(this.shadowU, 0, shadowData);
     for (let c = 0; c < tier.cascades; c++) {
-      if (c === 2 && this.shadowFrame % this.farShadowEvery) continue;
+      if (c === tier.cascades - 1 && !this.farNow) continue;
       const sp = enc.beginRenderPass({ colorAttachments: [], depthStencilAttachment: { view: this.shadowViews[c], depthLoadOp: 'clear', depthClearValue: 1, depthStoreOp: 'store' } });
       sp.setBindGroup(0, this.shadowBG, [c * 256]);
       sp.setPipeline(this.pShTerrain);
@@ -1082,9 +1223,10 @@ export class Renderer {
       sp.setPipeline(this.pShSkin);
       for (let i = 0; i < this.chars.length; i++) {
         const ch = this.chars[i];
+        if (!ch.casts) continue;
         sp.setVertexBuffer(0, ch.outBuf);
-        sp.setIndexBuffer(ch.IB, 'uint32');
-        sp.drawIndexed(ch.indices);
+        sp.setIndexBuffer(ch.lodIB, 'uint32');
+        sp.drawIndexed(ch.lodCount);
       }
       sp.setPipeline(this.pShProp);
       sp.setVertexBuffer(1, this.propInstances);
@@ -1097,32 +1239,47 @@ export class Renderer {
     }
 
     // ---- blood soaking into the ground ----
-    this.bloodView = this.bloodView || this.bloodMap.createView();
-    const stainPass = enc.beginRenderPass({ colorAttachments: [{ view: this.bloodView, loadOp: 'load', storeOp: 'store' }] });
-    stainPass.setPipeline(this.pStain);
-    stainPass.setBindGroup(0, this.stainBG);
-    stainPass.drawIndirect(this.stainArgs, 0);
-    stainPass.end();
+    // (Only while there's blood in the air: a pass over the whole map costs a tiled GPU its full size, drawn on or not.)
+    if (soakNow) {
+      this.bloodView = this.bloodView || this.bloodMap.createView();
+      const stainPass = enc.beginRenderPass({ colorAttachments: [{ view: this.bloodView, loadOp: 'load', storeOp: 'store' }] });
+      stainPass.setPipeline(this.pStain);
+      stainPass.setBindGroup(0, this.stainBG);
+      stainPass.drawIndirect(this.stainArgs, 0);
+      stainPass.end();
+    }
 
     // ---- the world ----
-    const mp = enc.beginRenderPass({
-      colorAttachments: [
-        { view: this.hdrMSView, resolveTarget: this.hdrView, loadOp: 'clear', storeOp: 'discard', clearValue: [0, 0, 0, 1] },
-        { view: this.ldMSView, resolveTarget: this.ldView, loadOp: 'clear', storeOp: 'discard', clearValue: [4000, 0, 0, 1] },
-      ],
-      depthStencilAttachment: { view: this.depthMSView, depthLoadOp: 'clear', depthClearValue: 0, depthStoreOp: 'discard' },
-    });
-    mp.setViewport(0, 0, this.W, this.H, 0, 0.96);
+    const mp = enc.beginRenderPass(this.worldPass);
     mp.setBindGroup(0, this.frameBG);
-    // Knights first: they cover the most pixels they can occlude behind them when close.
+    // Nearest first, so what's behind fails the depth test before it's lit: the arms, in front of everything, with their
+    // own camera, and then the knights.
+    if (!this.hideVM) {
+      mp.setViewport(0, 0, this.W, this.H, 0.96, 1);
+      mp.setPipeline(this.pVM);
+      mp.setVertexBuffer(0, this.vm.outBuf);
+      mp.setVertexBuffer(1, this.vm.sideVB);
+      mp.setIndexBuffer(this.vm.IB, 'uint32');
+      for (const part of this.vm.parts) {
+        mp.setBindGroup(1, part.bg);
+        mp.drawIndexed(part.range.count, 1, part.range.first);
+      }
+    }
+    mp.setViewport(0, 0, this.W, this.H, 0, 0.96);
     mp.setPipeline(this.pArmor);
     for (let i = 0; i < this.chars.length; i++) {
       const ch = this.chars[i];
+      if (!ch.seen) continue;
       mp.setBindGroup(1, ch.matBG);
       mp.setVertexBuffer(0, ch.outBuf);
       mp.setVertexBuffer(1, ch.sideVB);
-      mp.setIndexBuffer(ch.IB, 'uint32');
-      mp.drawIndexed(ch.indices);
+      if (tier.lean && ch.far) {
+        mp.setIndexBuffer(ch.lodIB, 'uint32');
+        mp.drawIndexed(ch.lodCount);
+      } else {
+        mp.setIndexBuffer(ch.IB, 'uint32');
+        mp.drawIndexed(ch.indices);
+      }
     }
     mp.setPipeline(this.pProp);
     mp.setVertexBuffer(1, this.propInstances);
@@ -1136,30 +1293,38 @@ export class Renderer {
     mp.setBindGroup(1, this.staticBG);
     mp.setVertexBuffer(0, this.staticVB);
     mp.setIndexBuffer(this.staticIB, 'uint32');
-    mp.drawIndexed(this.staticTotal);
+    mp.drawIndexed(this.staticOpaque);
+    if (this.staticTotal > this.staticOpaque) {
+      mp.setPipeline(this.pStaticCut);
+      mp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
+    }
+    // Grass before the ground it stands on: its shader is next to nothing, and the ground's is the costliest there is.
+    if (this.grassOn) {
+      mp.setBindGroup(1, this.terrainBG);
+      mp.setPipeline(this.pGrassNear);
+      mp.setVertexBuffer(0, this.grassNear);
+      mp.drawIndirect(this.grassNearArgs, 0);
+      mp.setPipeline(this.pGrassFar);
+      mp.setVertexBuffer(0, this.grassFar);
+      mp.drawIndirect(this.grassFarArgs, 0);
+    }
     mp.setPipeline(this.pTerrain);
     mp.setBindGroup(1, this.terrainBG);
     mp.setVertexBuffer(0, this.terrainVB);
     mp.setIndexBuffer(this.terrainIB, 'uint32');
     mp.drawIndexed(this.terrainCount);
-    mp.setPipeline(this.pGrassNear);
-    mp.setVertexBuffer(0, this.grassNear);
-    mp.drawIndirect(this.grassNearArgs, 0);
-    mp.setPipeline(this.pGrassFar);
-    mp.setVertexBuffer(0, this.grassFar);
-    mp.drawIndirect(this.grassFarArgs, 0);
     mp.setPipeline(this.pSky);
     mp.draw(3);
-    // The arms, in front of everything, with their own camera.
-    if (!this.hideVM) {
-      mp.setViewport(0, 0, this.W, this.H, 0.96, 1);
-      mp.setPipeline(this.pVM);
-      mp.setVertexBuffer(0, this.vm.outBuf);
-      mp.setVertexBuffer(1, this.vm.sideVB);
-      mp.setIndexBuffer(this.vm.IB, 'uint32');
-      for (const part of this.vm.parts) {
-        mp.setBindGroup(1, part.bg);
-        mp.drawIndexed(part.range.count, 1, part.range.first);
+    if (tier.lean) {
+      mp.setPipeline(this.pDraw);
+      mp.setBindGroup(1, this.pDrawBG);
+      mp.drawIndirect(this.pArgs, 0);
+      if (this.trailCount >= 4 && !this.hideVM) {
+        q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
+        mp.setViewport(0, 0, this.W, this.H, 0.96, 1);
+        mp.setPipeline(this.pTrail);
+        mp.setVertexBuffer(0, this.trailVB);
+        mp.draw(this.trailCount);
       }
     }
     mp.end();
@@ -1173,22 +1338,24 @@ export class Renderer {
       const sp = enc.beginRenderPass({ colorAttachments: [{ view: this.shaftView, loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
       sp.setPipeline(this.pShafts); sp.setBindGroup(0, this.frameBG); sp.setBindGroup(1, this.depthBG); sp.draw(3); sp.end();
     }
-    const pp = enc.beginRenderPass({ colorAttachments: [{ view: this.hdrView, loadOp: 'load', storeOp: 'store' }] });
-    pp.setBindGroup(0, this.frameBG);
-    if (this.useAO) { pp.setPipeline(this.pAOApply); pp.setBindGroup(1, this.aoApplyBG); pp.draw(3); }
-    pp.setPipeline(this.pDraw);
-    pp.setBindGroup(1, this.pDrawBG);
-    pp.drawIndirect(this.pArgs, 0);
-    if (this.trailCount >= 4 && !this.hideVM) {
-      q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
-      pp.setPipeline(this.pTrail);
-      pp.setVertexBuffer(0, this.trailVB);
-      pp.draw(this.trailCount);
+    if (!tier.lean) {
+      const pp = enc.beginRenderPass({ colorAttachments: [{ view: this.hdrView, loadOp: 'load', storeOp: 'store' }] });
+      pp.setBindGroup(0, this.frameBG);
+      if (this.useAO) { pp.setPipeline(this.pAOApply); pp.setBindGroup(1, this.aoApplyBG); pp.draw(3); }
+      pp.setPipeline(this.pDraw);
+      pp.setBindGroup(1, this.pDrawBG);
+      pp.drawIndirect(this.pArgs, 0);
+      if (this.trailCount >= 4 && !this.hideVM) {
+        q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
+        pp.setPipeline(this.pTrail);
+        pp.setVertexBuffer(0, this.trailVB);
+        pp.draw(this.trailCount);
+      }
+      pp.end();
     }
-    pp.end();
 
     // ---- bloom ----
-    const chain = this.bloomChain;
+    const chain = this.useBloom ? this.bloomChain : [];
     for (let i = 0; i < chain.length; i++) {
       const b = enc.beginRenderPass({ colorAttachments: [{ view: chain[i].view, loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
       b.setPipeline(this.pBloomDown); b.setBindGroup(0, this.bloomDownBG[i], [this.bloomSlots.down[i]]); b.draw(3); b.end();
@@ -1201,8 +1368,8 @@ export class Renderer {
     // ---- to the screen ----
     const cd = this.compData;
     cd[0] = snap[H.DMG_FLASH]; cd[1] = snap[H.WEAK]; cd[2] = time;
-    cd[3] = this.W < this.canvas.width * 0.92 ? 0.55 : 0.18;
-    cd[4] = this.useShafts ? 1 : 0; cd[5] = 0.3; cd[6] = this.fade || 0;
+    cd[3] = tier.lean ? 0 : this.W < this.canvas.width * 0.92 ? 0.55 : 0.18;
+    cd[4] = this.useShafts ? 1 : 0; cd[5] = this.useBloom ? 0.3 : 0; cd[6] = this.fade || 0;
     cd[7] = snap[H.HIT_DIR]; cd[8] = Math.max(0, 1 - snap[H.HIT_DIR_T] * 1.5);
     q.writeBuffer(this.compU, 0, cd);
     const fp = enc.beginRenderPass({
@@ -1227,5 +1394,14 @@ export class Renderer {
     } else {
       q.submit([enc.finish()]);
     }
+    // How long the GPU really took, in any browser. It's also how the game loop knows not to queue up more frames.
+    this.inFlight++;
+    const sent = this.lastSent = performance.now();
+    q.onSubmittedWorkDone().then(() => {
+      this.inFlight--;
+      const ms = performance.now() - sent;
+      this.stats.busyMs = lerp(this.stats.busyMs, ms, 0.1);
+      if (this.onBusy) this.onBusy(ms);
+    });
   }
 }

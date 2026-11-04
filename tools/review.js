@@ -267,7 +267,7 @@ export async function touchTest() {
   const tick0 = b.snap()[H.TICK];
   await wait(250);
   out.pauseFlag = inp[INPUT.PAUSE]; out.pauseShown = el('pause').style.display; out.simHeldTicks = b.snap()[H.TICK] - tick0;
-  el('resume').click();
+  document.querySelector('#pause [data-p="resume"]').click();
   await wait(250);
   out.resumed = inp[INPUT.PAUSE] === 0 && el('pause').style.display === 'none'; out.simRanAfter = b.snap()[H.TICK] - tick0;
   // Restart: a thumb right after the end does nothing, one after a moment restarts
