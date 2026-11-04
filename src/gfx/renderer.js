@@ -1,10 +1,10 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
-import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, VM_PALETTE } from '../core/layout.js';
+import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
 import { MipGen, makeBuffer, mipCountFor, textureArrayFromBitmaps } from './gpu.js';
-import { ARMOR, GRASS, GRASS_CULL, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
+import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { CRAB_SCALE } from '../sim/crab.js';
 import { SKIN } from './shaders.js';
@@ -16,6 +16,7 @@ const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104 };
+const MAX_GROUND = 32;
 
 const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y * l, z * l]; };
 
@@ -82,6 +83,7 @@ export class Renderer {
 
   async load(base, progress) {
     const { device, tier, pool } = this;
+    this.base = base;
     let done = 0, total = 1;
     const tick = () => { done++; progress(done / total); };
     const manifest = await fetch(`${base}assets/game/tex/manifest.json`).then((r) => r.json());
@@ -91,7 +93,7 @@ export class Renderer {
     const tw = Math.round(manifest.size[0] * tier.texScale), th = Math.round(manifest.size[1] * tier.texScale);
     const dw = Math.round(manifest.detail[0] * tier.texScale), dh = Math.round(manifest.detail[1] * tier.texScale);
     const gs = Math.round(1024 * tier.texScale), gd = Math.round(512 * tier.texScale);
-    total = manifest.layers.length * 2 + manifest.ground.length * 2 + 16;
+    total = manifest.layers.length * 2 + manifest.ground.length * 2 + 17;
     const shrink = tier.texScale !== 1;
     const decode = (name, width, height) => pool.run('decode', { url: `${base}assets/game/tex/${name}.webp`, ...(shrink ? { width, height } : {}) }).then((b) => { tick(); return b; });
     const [colorBmps, detailBmps, gColor, gDetail] = await Promise.all([
@@ -129,7 +131,7 @@ export class Renderer {
 
     const buffers = await Promise.all(['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/reliquary_blade.glb', 'assets/game/items/thorned_kite.glb', 'assets/game/items/arming_sword.glb', 'assets/game/items/templar_kite.glb',
-      'assets/monsters/crab_monster/crab_monster.glb']
+      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb']
       .map((p) => fetch(base + p).then((r) => r.arrayBuffer()).then((b) => { tick(); return b; })));
     this.buildSamplers();
     this.buildBaseLayouts();
@@ -141,7 +143,15 @@ export class Renderer {
       ...(await this.buildCrabs(parseGLB(buffers[8]), 3, CRAB_SCALE)),
     ];
     tick();
-    this.vm = await this.buildViewModel(parseGLB(buffers[3]));
+    // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
+    this.vms = { 1: await this.buildViewModel(parseGLB(buffers[9])), 2: await this.buildViewModel(parseGLB(buffers[3])) };
+    this.vm = this.vms[1];
+    // Swords are fetched the first time one is wanted, in the hand or on the ground, and kept: there are too many maps to load them all up front.
+    this.swords = new Map();
+    this.gems = new Map();
+    this.ground = [];
+    this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+    this.itemData = new Float32Array(16 * MAX_GROUND);
     tick();
     this.props = await Promise.all([4, 5, 6, 7].map((i) => this.buildProp(parseGLB(buffers[i]))));
     this.propInstances = device.createBuffer({ size: 64 * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
@@ -447,40 +457,22 @@ export class Renderer {
     const { device } = this;
     const skin = glb.json.skins[0];
     const weaponJoint = skin.joints.findIndex((j) => glb.json.nodes[j].name === 'weapon');
+    const weaponBind = mat4Invert(new Float32Array(16), accessor(glb, skin.inverseBindMatrices).subarray(weaponJoint * 16, weaponJoint * 16 + 16));
     const prims = [];
     const texOf = [];
     for (const node of glb.json.nodes) {
-      if (node.mesh === undefined) continue;
+      // (The one-handed rig's own sword and shield were for working out its swings. The swords come from the pack now.)
+      if (node.mesh === undefined || node.name === 'arming_sword' || node.name === 'ironbound') continue;
       const pr = glb.json.meshes[node.mesh].primitives[0];
       const a = pr.attributes;
       const p = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
-      if (a.JOINTS_0 !== undefined && node.skin !== undefined) { p.joints = accessor(glb, a.JOINTS_0); p.weights = accessor(glb, a.WEIGHTS_0); } else {
-        // A rigid part modelled in the weapon joint's own frame: carry it to bind space for the skinning palette.
-        p.fixedJoint = weaponJoint;
-        const ibm = accessor(glb, skin.inverseBindMatrices).subarray(weaponJoint * 16, weaponJoint * 16 + 16);
-        const bind = mat4Invert(new Float32Array(16), ibm);
-        const pos = new Float32Array(p.pos.length), nrm = new Float32Array(p.nrm.length);
-        for (let v = 0; v < p.pos.length; v += 3) {
-          const x = p.pos[v], y = p.pos[v + 1], z = p.pos[v + 2];
-          pos[v] = bind[0] * x + bind[4] * y + bind[8] * z + bind[12];
-          pos[v + 1] = bind[1] * x + bind[5] * y + bind[9] * z + bind[13];
-          pos[v + 2] = bind[2] * x + bind[6] * y + bind[10] * z + bind[14];
-          const nx = p.nrm[v], ny = p.nrm[v + 1], nz = p.nrm[v + 2];
-          nrm[v] = bind[0] * nx + bind[4] * ny + bind[8] * nz;
-          nrm[v + 1] = bind[1] * nx + bind[5] * ny + bind[9] * nz;
-          nrm[v + 2] = bind[2] * nx + bind[6] * ny + bind[10] * nz;
-        }
-        p.sidePos = p.pos;
-        p.pos = pos; p.nrm = nrm;
-      }
+      if (a.JOINTS_0 !== undefined && node.skin !== undefined) { p.joints = accessor(glb, a.JOINTS_0); p.weights = accessor(glb, a.WEIGHTS_0); } else this.onWeaponJoint(p, weaponJoint, weaponBind);
       prims.push(p);
       texOf.push({ mat: glb.json.materials[pr.material], name: node.name });
     }
     const sk = this.makeSkinned(prims, skin.joints.length);
-    const flatNormal = device.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    device.queue.writeTexture({ texture: flatNormal }, new Uint8Array([128, 128, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
-    const flatMR = device.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    device.queue.writeTexture({ texture: flatMR }, new Uint8Array([255, 128, 128, 255]), { bytesPerRow: 4 }, [1, 1]);
+    const flatNormal = this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255]));
+    const flatMR = this.pixel('rgba8unorm', [255, 128, 128, 255]);
     const parts = [];
     for (let i = 0; i < prims.length; i++) {
       const { mat, name } = texOf[i];
@@ -495,7 +487,113 @@ export class Renderer {
       ] });
       parts.push({ range: sk.ranges[i], bg, ubo, isSword: name === 'greatsword' });
     }
-    return { ...sk, parts };
+    return { ...sk, parts, weaponJoint, weaponBind };
+  }
+
+  pixel(format, rgba) {
+    const tex = this.device.createTexture({ size: [1, 1], format, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    this.device.queue.writeTexture({ texture: tex }, new Uint8Array(rgba), { bytesPerRow: 4 }, [1, 1]);
+    return tex;
+  }
+
+  // A rigid part modelled in the weapon joint's own frame: carries it to bind space for the skinning palette.
+  onWeaponJoint(p, weaponJoint, bind) {
+    p.fixedJoint = weaponJoint;
+    const pos = new Float32Array(p.pos.length), nrm = new Float32Array(p.nrm.length);
+    for (let v = 0; v < p.pos.length; v += 3) {
+      const x = p.pos[v], y = p.pos[v + 1], z = p.pos[v + 2];
+      pos[v] = bind[0] * x + bind[4] * y + bind[8] * z + bind[12];
+      pos[v + 1] = bind[1] * x + bind[5] * y + bind[9] * z + bind[13];
+      pos[v + 2] = bind[2] * x + bind[6] * y + bind[10] * z + bind[14];
+      const nx = p.nrm[v], ny = p.nrm[v + 1], nz = p.nrm[v + 2];
+      nrm[v] = bind[0] * nx + bind[4] * ny + bind[8] * nz;
+      nrm[v + 1] = bind[1] * nx + bind[5] * ny + bind[9] * nz;
+      nrm[v + 2] = bind[2] * nx + bind[6] * ny + bind[10] * nz;
+    }
+    p.sidePos = p.pos;
+    p.pos = pos; p.nrm = nrm;
+  }
+
+  // A sword, by its id: { ready } until its file is in, and then what it takes in the hand and on the ground.
+  sword(id) {
+    let s = this.swords.get(id);
+    if (!s) {
+      s = { ready: false };
+      this.swords.set(id, s);
+      this.buildSword(id, s).catch((e) => console.error(`sword ${id}`, e));
+    }
+    return s;
+  }
+
+  async buildSword(id, s) {
+    const { device } = this;
+    const w = WEAPONS.find((x) => x && x.id === id);
+    const buf = await fetch(`${this.base}assets/game/items/${id}.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+    const glb = parseGLB(buf);
+    const pr = glb.json.meshes[0].primitives[0];
+    const a = pr.attributes;
+    const mat = glb.json.materials[pr.material];
+    const srcOf = (t) => glb.json.textures[t.index].source;
+    const scale = this.tier.texScale;
+    const [alb, nrm, mr] = await Promise.all([
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+    ]);
+    const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+    s.lying = this.lyingModel(prim, alb, nrm, mr, [0, 0, 0, 0]);
+    s.tip = prim.pos.reduce((best, v, i) => (i % 3 === 1 ? Math.max(best, v) : best), 0);
+    const vm = this.vms[w.hands];
+    this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
+    s.hand = this.makeSkinned([prim], vm.jointCount);
+    s.ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
+      { binding: 0, resource: { buffer: s.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
+    ] });
+    s.ready = true;
+  }
+
+  // Something to lay on the ground: positions in the item's own frame, and its maps. glow is added to whatever light it gets.
+  lyingModel(prim, alb, nrm, mr, glow) {
+    const { device } = this;
+    const n = prim.pos.length / 3;
+    const v = new Float32Array(n * 8);
+    const P = prim.sidePos || prim.pos;
+    for (let i = 0; i < n; i++) {
+      v.set(P.subarray(i * 3, i * 3 + 3), i * 8); v.set(prim.nrm.subarray(i * 3, i * 3 + 3), i * 8 + 3); v.set(prim.uv.subarray(i * 2, i * 2 + 2), i * 8 + 6);
+    }
+    const indices = new Uint32Array(prim.idx);
+    const ubo = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(ubo, 0, new Float32Array(glow));
+    const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
+      { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
+    ] });
+    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg };
+  }
+
+  // A gem on the ground: a long-pointed eight-sided stone, flat-shaded, in its one colour and giving off a little of it.
+  gem(hex) {
+    let m = this.gems.get(hex);
+    if (m) return m;
+    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    const lin = c.map((x) => (x / 255) ** 2.2);
+    const R = 0.05, H_ = 0.075;
+    const corners = [[R, 0, 0], [0, 0, R], [-R, 0, 0], [0, 0, -R]];
+    const pos = [], nrm = [], uv = [];
+    for (let i = 0; i < 4; i++) {
+      const a = corners[i], b = corners[(i + 1) % 4];
+      for (const [apex, flip] of [[[0, H_, 0], false], [[0, -H_, 0], true]]) {
+        const t = flip ? [apex, b, a] : [apex, a, b];
+        const u = t[1].map((x, k) => x - t[0][k]), v = t[2].map((x, k) => x - t[0][k]);
+        const nr = norm3(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]);
+        for (const q of t) { pos.push(...q); nrm.push(...nr); uv.push(0.5, 0.5); }
+      }
+    }
+    const idx = new Uint32Array(pos.length / 3).map((_, i) => i);
+    m = this.lyingModel({ pos: new Float32Array(pos), nrm: new Float32Array(nrm), uv: new Float32Array(uv), idx }, this.pixel('rgba8unorm-srgb', [...c, 255]), this.flatNormal, this.pixel('rgba8unorm', [255, 40, 60, 255]),
+      [lin[0] * 1.6, lin[1] * 1.6, lin[2] * 1.6, 0]);
+    this.gems.set(hex, m);
+    return m;
   }
 
   async buildProp(glb) {
@@ -588,6 +686,7 @@ export class Renderer {
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
+    const itemMod = module(ITEM);
     const propMod = module(PROP);
     this.propVB = [
       { arrayStride: 32, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }, { shaderLocation: 2, offset: 24, format: 'float32x2' }] },
@@ -597,6 +696,13 @@ export class Renderer {
       layout: layout(this.bgl0, this.bglProp),
       vertex: { module: propMod, entryPoint: 'vs', buffers: this.propVB },
       fragment: { module: propMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: depth(), multisample: ms,
+    });
+    this.pItem = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArmor),
+      vertex: { module: itemMod, entryPoint: 'vs', buffers: this.propVB },
+      fragment: { module: itemMod, entryPoint: 'fs', targets },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
@@ -1134,17 +1240,41 @@ export class Renderer {
       }
     }
     q.writeBuffer(this.propInstances, 0, this.propData);
-    // View model.
+    // View model: the arms the snapshot posed, and what's in them.
+    const weapon = WEAPONS[snap[H.WEAPON] | 0] || null;
+    this.vm = this.vms[weapon ? weapon.hands : 1];
+    const held = weapon && weapon.id !== 'greatsword' ? this.sword(weapon.id) : null;
+    this.held = held && held.ready ? held : null;
+    this.holdingOld = !!weapon && weapon.id === 'greatsword';
     q.writeBuffer(this.vm.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, this.vm.jointCount * 32);
     skinParamsU[0] = this.vm.count;
     skinParams[1] = 0; skinParams[2] = time;
     q.writeBuffer(this.vm.params, 0, skinParams);
+    const vmData = this.vmData || (this.vmData = new Float32Array(20));
+    vmData.set(vmSway, 0);
+    vmData[16] = snap[H.BLOOD_SWORD];
     for (const part of this.vm.parts) {
-      const data = this.vmData || (this.vmData = new Float32Array(20));
-      data.set(vmSway, 0);
-      data[16] = snap[H.BLOOD_SWORD]; data[17] = part.isSword ? 1 : 0;
-      q.writeBuffer(part.ubo, 0, data);
+      vmData[17] = part.isSword ? 1 : 0; vmData[18] = part.isSword ? 1 : 0; vmData[19] = 1;
+      q.writeBuffer(part.ubo, 0, vmData);
     }
+    if (this.held) {
+      const h = this.held;
+      q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, h.hand.jointCount * 32);
+      skinParamsU[0] = h.hand.count;
+      q.writeBuffer(h.hand.params, 0, skinParams);
+      vmData[17] = 0; vmData[18] = 1; vmData[19] = h.tip;
+      q.writeBuffer(h.ubo, 0, vmData);
+    }
+    // What's lying on the ground.
+    let nGround = 0;
+    for (const g of this.ground) {
+      const model = g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
+      g.model = model;
+      if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
+      g.slot = nGround;
+      this.itemData.set(g.mat, nGround++ * 16);
+    }
+    if (nGround) q.writeBuffer(this.itemInstances, 0, this.itemData, 0, nGround * 16);
 
     // Grass culling input.
     const g = this.grassData;
@@ -1189,6 +1319,10 @@ export class Renderer {
     }
     cp.setBindGroup(0, this.vm.bg);
     cp.dispatchWorkgroups(Math.ceil(this.vm.count / 128));
+    if (this.held) {
+      cp.setBindGroup(0, this.held.hand.bg);
+      cp.dispatchWorkgroups(Math.ceil(this.held.hand.count / 128));
+    }
     if (cullGrass) {
       cp.setPipeline(this.pGrassCull);
       cp.setBindGroup(0, this.grassBG);
@@ -1235,6 +1369,15 @@ export class Renderer {
         sp.setIndexBuffer(pr.IB, 'uint32');
         sp.drawIndexed(pr.count, 1, 0, 0, i);
       });
+      if (nGround) {
+        sp.setVertexBuffer(1, this.itemInstances);
+        for (const g of this.ground) {
+          if (g.slot < 0) continue;
+          sp.setVertexBuffer(0, g.model.VB);
+          sp.setIndexBuffer(g.model.IB, 'uint32');
+          sp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
+        }
+      }
       sp.end();
     }
 
@@ -1261,8 +1404,17 @@ export class Renderer {
       mp.setVertexBuffer(1, this.vm.sideVB);
       mp.setIndexBuffer(this.vm.IB, 'uint32');
       for (const part of this.vm.parts) {
+        if (part.isSword && !this.holdingOld) continue;
         mp.setBindGroup(1, part.bg);
         mp.drawIndexed(part.range.count, 1, part.range.first);
+      }
+      if (this.held) {
+        const h = this.held;
+        mp.setVertexBuffer(0, h.hand.outBuf);
+        mp.setVertexBuffer(1, h.hand.sideVB);
+        mp.setIndexBuffer(h.hand.IB, 'uint32');
+        mp.setBindGroup(1, h.bg);
+        mp.drawIndexed(h.hand.indices);
       }
     }
     mp.setViewport(0, 0, this.W, this.H, 0, 0.96);
@@ -1289,6 +1441,17 @@ export class Renderer {
       mp.setIndexBuffer(pr.IB, 'uint32');
       mp.drawIndexed(pr.count, 1, 0, 0, i);
     });
+    if (nGround) {
+      mp.setPipeline(this.pItem);
+      mp.setVertexBuffer(1, this.itemInstances);
+      for (const g of this.ground) {
+        if (g.slot < 0) continue;
+        mp.setBindGroup(1, g.model.bg);
+        mp.setVertexBuffer(0, g.model.VB);
+        mp.setIndexBuffer(g.model.IB, 'uint32');
+        mp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
+      }
+    }
     mp.setPipeline(this.pStatic);
     mp.setBindGroup(1, this.staticBG);
     mp.setVertexBuffer(0, this.staticVB);

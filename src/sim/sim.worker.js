@@ -87,7 +87,12 @@ class Sim {
     this.tick++;
     this.gameT += dt;
     player.update(dt * (this.slow || 1), tdt, input, this);
-    for (const k of this.knights) k.update(this.frozen ? 0 : tdt, this);
+    for (const k of this.knights) {
+      k.update(this.frozen ? 0 : tdt, this);
+      // Each death leaves its loot once.
+      if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, this.world.height(k.x, k.z), k.z, k.kind); }
+      if (!k.dead) k.looted = false;
+    }
     this.separate();
     const snap = this.scratch;
     player.write(snap, this);
@@ -255,18 +260,19 @@ async function boot(msg) {
     self.addEventListener('message', (e) => { if (e.data.input) sim.input.set(e.data.input); });
   }
   sim.input[INPUT.YAW] = Math.PI;
-  const [clipsMeta, clipsBin, black, silver, armsBuf, village, crabBuf] = await Promise.all([
+  const [clipsMeta, clipsBin, black, silver, arms2h, arms1h, village, crabBuf] = await Promise.all([
     fetch(`${base}assets/game/clips.json`).then((r) => r.json()),
     fetchBuf(`${base}assets/game/clips.bin`),
     fetchBuf(`${base}assets/game/velscour_knight.glb`),
     fetchBuf(`${base}assets/game/silver_knight.glb`),
     fetchBuf(`${base}assets/fp/arms_2h.glb`),
+    fetchBuf(`${base}assets/fp/arms_1h.glb`),
     fetch(`${base}assets/game/village.json`).then((r) => r.json()),
     fetchBuf(`${base}assets/monsters/crab_monster/crab_monster.glb`),
   ]);
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village);
-  sim.player = new Player(new ArmsRig(armsBuf));
+  sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h) });
   sim.knights.push(new Knight(0, 0, new Rig(parseGLB(black), bank), bank, BLACK));
   sim.knights.push(new Knight(1, 1, new Rig(parseGLB(silver), bank), bank, SILVER));
   const crabRig = new ArmsRig(crabBuf, CRAB_SCALE);

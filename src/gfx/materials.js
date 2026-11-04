@@ -487,9 +487,45 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
 }
 `;
 
-// The first-person arms and greatsword, drawn with their own camera over the world.
+// Swords and gems lying in the world, on the same maps as in the hand.
+export const ITEM = COMMON + /* wgsl */ `
+struct IU { glow: vec4f };
+@group(1) @binding(0) var<uniform> I: IU;
+@group(1) @binding(1) var albedoTex: texture_2d<f32>;
+@group(1) @binding(2) var normalTex: texture_2d<f32>;
+@group(1) @binding(3) var mrTex: texture_2d<f32>;
+struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f, @location(3) viewZ: f32 };
+@vertex fn vs(@location(0) pIn: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f, @location(5) a: vec4f, @location(6) b: vec4f, @location(7) c: vec4f, @location(8) d: vec4f) -> V {
+  let m = mat4x4f(a, b, c, d);
+  let w = m * vec4f(pIn, 1.0);
+  var o: V;
+  o.pos = F.viewProj * w; o.p = w.xyz; o.n = (m * vec4f(n, 0.0)).xyz; o.uv = uv;
+  o.viewZ = -(F.view * w).z;
+  return o;
+}
+@fragment fn fs(in: V, @builtin(front_facing) front: bool) -> Out {
+  let toCam = F.camPos.xyz - in.p;
+  let dist = length(toCam);
+  let v = toCam / dist;
+  var n0 = normalize(in.n);
+  if (!front) { n0 = -n0; }
+  let albedo = textureSample(albedoTex, repeatSmp, in.uv).rgb;
+  let nm = textureSample(normalTex, repeatSmp, in.uv);
+  let mr = textureSample(mrTex, repeatSmp, in.uv);
+  let n = perturb(n0, in.p, in.uv, nm.rg, 1.0);
+  let shadow = shadowAt(in.p, n0, in.viewZ, ign(in.pos.xy));
+  var c = shadePBR(in.p, n, v, albedo, mr.g, mr.b, 1.0, shadow) + I.glow.rgb;
+  c = applyFog(c, in.p, -v, dist);
+  var o: Out;
+  o.color = vec4f(c, 1.0);
+  o.depth = in.viewZ;
+  return o;
+}
+`;
+
+// The first-person arms and the sword in hand, drawn with their own camera over the world.
 export const VIEWMODEL = COMMON + /* wgsl */ `
-struct VM { sway: mat4x4f, params: vec4f };  // params: x = blood on the sword, y = is the sword
+struct VM { sway: mat4x4f, params: vec4f };  // params: x = blood on the sword, y = steel by its paint alone, z = takes blood, w = the blade's length
 @group(1) @binding(0) var<uniform> M: VM;
 @group(1) @binding(1) var albedoTex: texture_2d<f32>;
 @group(1) @binding(2) var normalTex: texture_2d<f32>;
@@ -534,8 +570,12 @@ fn vn2(p: vec2f) -> f32 {
     metal = (1.0 - smoothstep(0.14, 0.4, sat)) * smoothstep(0.08, 0.25, mx);
     rough = mix(0.7, 0.24, metal);
     albedo = mix(albedo, albedo * 1.2 + 0.06, metal);
+  } else {
+    n = perturb(n0, in.p, in.uv, nm.rg, 1.0);
+  }
+  if (M.params.z > 0.5) {
     // Blood down the blade after a kill-worthy thrust.
-    let along = in.bind.y;
+    let along = in.bind.y / M.params.w;
     let b = min(M.params.x, 0.62) * smoothstep(0.25, 0.7, along + 0.12);
     // Thin runs along the blade, not blobs.
     let streaks = vn2(vec2f(in.bind.x * 70.0 + in.bind.z * 120.0, along * 3.0)) * 0.65 + vn2(vec2f(in.bind.z * 300.0, along * 12.0)) * 0.35;
@@ -543,8 +583,6 @@ fn vn2(p: vec2f) -> f32 {
     albedo = mix(albedo, vec3f(0.085, 0.003, 0.003), cover);
     rough = mix(rough, 0.3, cover);
     metal = mix(metal, 0.0, cover);
-  } else {
-    n = perturb(n0, in.p, in.uv, nm.rg, 1.0);
   }
   let worldViewZ = -(F.view * vec4f(in.p, 1.0)).z;
   let shadow = shadowAt(in.p, n0, max(worldViewZ, 0.1), ign(in.pos.xy));

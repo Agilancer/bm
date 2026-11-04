@@ -88,7 +88,8 @@ def build():
 
     # --- the swings
     half = np.linalg.norm(info["R"]["fist"] - info["L"]["fist"]) / 2
-    arms = {s: swings.Arm(s, info, B) for s in "RL"}
+    arms = {"R": swings.Arm("R", info, B, lift=swings.LIFT, ahead=swings.AHEAD),
+            "L": swings.Arm("L", info, B, lift=swings.LIFT, ahead=swings.AHEAD, slide=swings.LEFT_SLIDE)}
     guard = swings.guard_rolls(arms, half)
     clips = {}
     report = {}
@@ -100,8 +101,9 @@ def build():
         report[name]["wrist_bend_max"] = {s: float(sol["bend"][s].max()) for s in "RL"}
         report[name]["wrist_twist_max"] = {s: float(np.abs(sol["twist"][s]).max()) for s in "RL"}
         report[name]["shoulder_shift_max"] = {s: float(np.linalg.norm(sol[s]["S"] - arms[s].S0, axis=1).max()) for s in "RL"}
-    path = swings.idle_path(half)
-    clips["great_idle"] = (path, swings.solve_clip(path, arms, half, guard))
+    for cname, amount in (("great_idle", swings.WALK["standing"]), ("great_walk", 1.0)):
+        path = swings.idle_path(half, amount)
+        clips[cname] = (path, swings.solve_clip(path, arms, half, guard))
 
     # --- the GLB
     g = Glb()
@@ -187,7 +189,8 @@ def build():
     # --- the clips
     animations = []
     fov = 2 * np.degrees(np.arctan(1 / (1.6 * swings.ZOOM)))
-    meta = dict(combo=[f"great_{c}" for c in swings.COMBO], lines=swings.LINES, clips={}, view=dict(fov=float(fov), near=0.10))
+    meta = dict(combo=[f"great_{c}" for c in swings.COMBO], lines=swings.LINES, clips={}, view=dict(fov=float(fov), near=0.10),
+                walk="great_walk")
     for cname, (path_, sol) in clips.items():
         T = sol["T"]
         a_t = g.accessor(T, "SCALAR", 5126, minmax=True)
@@ -216,6 +219,8 @@ def build():
                 rotation(f"forearm_twist{k}_{s}", swings.rot_about((0, 1, 0), A["twist"] * frac))
         animations.append(dict(name=cname, samplers=samplers_, channels=channels))
         ev = dict(duration=float(T[-1]), loop=path_["hit"] is None)
+        if path_["hit"] is None:
+            ev["walk"] = True       # (the carry, standing or on the move: played by how fast you go)
         if path_["hit"] is not None:
             ev.update(hit=float(T[path_["hit"]]), wind=float(T[path_["wind"]]), through=float(T[path_["end"]]))
         meta["clips"][cname] = ev

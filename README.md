@@ -16,6 +16,8 @@ Edge and Safari on PC and phones, or Firefox on Windows. On a static host it rea
 | Dodge | `Q` | `DODGE` |
 | Combo: two cuts, then a slam | Left click | `CUT` |
 | Wide swing | Right click | `WIDE` |
+| Pack: swords and gems | `I` | `PACK` |
+| Take up what's on the ground | `E` | `TAKE` |
 
 Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
 
@@ -43,13 +45,14 @@ until you start: the title stays on black.
 
 **New Game**, **Continue**, **Load**, **Settings**, **How to Play**. Esc (or `II`) pauses: **Resume**, **Save Game**,
 **Load Game**, **Settings**, **How to Play**, **Main Menu**. There are ten save slots, and the game keeps itself every 20 s
-of play and whenever you pause; Continue picks up the newest of those. For now a save holds where you stand and which way
-you face, and the time played: loading starts the world fresh and puts you there. Saves live in `localStorage` under
+of play, whenever you pause, and when you close the pack or take something up; Continue picks up the newest of those. A save
+holds where you stand and which way you face, the time played, and your pack and what's on you: loading starts the world
+fresh and puts you there, so whatever was lying on the ground is gone. Saves live in `localStorage` under
 `velscour.*`, so they never meet Bellmourn's on a shared host.
 
-A save is a set of named parts (`src/saves.js`), each written and read by the system it belongs to; `player` and `stats`
-are added in `src/main.js`. Inventory, equipment, quests and the world's own state are meant to come in as parts of their
-own with `addPart`: a save made before a part existed loads it as `null`, as in a new game. When a part's shape changes,
+A save is a set of named parts (`src/saves.js`), each written and read by the system it belongs to; `player`, `stats` and
+`pack` are added in `src/main.js`. Quests and the world's own state are meant to come in as parts of their own with
+`addPart`: a save made before a part existed loads it as `null`, as in a new game. When a part's shape changes,
 raise `SAVE_VERSION` and add a step to `MIGRATIONS`, so older saves are brought up to date as they load.
 
 Settings: volume, music, ambience, look speed, resolution (Auto lets the frame-rate governor choose), graphics (Auto
@@ -58,6 +61,29 @@ readout.
 
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
+
+### Swords, gems and the pack
+
+You start with empty hands and the old greatsword in the pack. `I` (or `PACK`) opens it and holds the fight. Click or drag to
+move things, right-click or double tap to equip or stow, and click outside the panels to drop. A gem set on a sword goes in an
+open socket, for good. Only the Sword slot does anything yet; the others wait for items. The pack stays with you through a new
+fight, and only New Game starts it over.
+
+**`TEST_KIT` in `src/items/pack.js` is on for review**, so the pack starts with every sword and nine gems. Set it false for the
+real start, with the old greatsword alone.
+
+There are twelve swords from three Tripo sheets, 8 one-handed and 4 two-handed. Each is one model, used in the hand and on the
+ground, where it's drawn at the size the knights carry theirs. A sword rolls a rarity (Common 70%, Fine 23%, Rare 6.5%, Peerless
+0.5%), affixes and sockets. Four sockets only come on a Peerless sword, about one sword in 1,150. Gems come in six kinds and three
+grades. The black knight drops a Rare or better sword and a gem, the silver knight a Fine or better sword, and a crab a sword (60%)
+or a gem (40%). Damage is weighed against a sword of 20, which the swings were balanced on, in `Player.bite`.
+
+To change the rolls, see the tables at the top of `src/items/items.js`, and run `node tools/items/check.mjs` to test them. To add
+swords, add the sheet to `tools/swords/sheets.py`, run `separate.py` and `render_icons.py` in Blender and `atlas.py` with Python.
+
+Known limits: a socketed gem only shows on the icon, not on the 3D sword. The two-handers' handles were drawn out ×1.30 to ×1.43
+so both fists fit. The sabre is single-edged, but its swings alternate edges as the other swords' do. Nothing is carried in the off
+hand. There's no punch: with empty hands, a click tells you to open the pack.
 
 ### What has and hasn't been tested
 
@@ -138,6 +164,10 @@ To check it yourself:
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |
+| `src/items/`, `src/ui/inventory.js` | Item rolls and gems, the pack, what's lying on the ground, and the pack's screen |
+| `assets/game/items/`, `art/swords/` | The swords, their icons and `swords.json`, and the sheets they came from |
+| `tools/swords/` | Separates the sheets into swords (in Blender), and renders their icons |
+| `tools/items/check.mjs` | Tests the item rules and rarity odds |
 
 ## First-person arms with a sword and shield
 
@@ -150,46 +180,59 @@ the screen, and a spark where a blow lands. The view shows the path of the blade
 
 | Clip | What it is | Tip through the X at |
 | --- | --- | --- |
-| `blade_d1` | Slash from the upper right | 0.400 s of 1.18 s |
-| `blade_d2` | Slash from the upper left | 0.400 s of 1.18 s |
-| `blade_over` | Overhead cut, straight down | 0.550 s of 1.32 s |
-| `blade_rise1` | Rising cut from the lower right | 0.567 s of 1.33 s |
-| `blade_rise2` | Rising cut from the lower left | 0.567 s of 1.33 s |
-| `blade_flat1` | Flat cut, right to left | 0.383 s of 1.18 s |
-| `blade_flat2` | Flat cut, left to right | 0.383 s of 1.18 s |
-| `blade_stab` | Thrust from the hip | 0.500 s of 1.08 s |
-| `blade_stab_block` | Thrust over the rim, shield up | 0.417 s of 0.92 s |
+| `blade_d1` | Slash from the upper right | 0.450 s of 1.05 s |
+| `blade_d2` | Slash from the upper left | 0.433 s of 1.00 s |
+| `blade_over` | Overhead cut, straight down | 0.533 s of 1.17 s |
+| `blade_rise1` | Rising cut from the lower right | 0.450 s of 1.13 s |
+| `blade_rise2` | Rising cut from the lower left | 0.417 s of 1.05 s |
+| `blade_flat1` | Flat cut, right to left | 0.433 s of 1.10 s |
+| `blade_flat2` | Flat cut, left to right | 0.417 s of 1.02 s |
+| `blade_stab` | Thrust from the hip | 0.467 s of 0.90 s |
+| `blade_stab_block` | Thrust over the rim, shield up | 0.450 s of 0.92 s |
 | `shield_up`, `shield_hold`, `shield_down` | Raising the shield with a shove, holding it (a loop), lowering it | |
-| `guard_idle` | The guard, breathing (a 4 s loop) | |
+| `guard_walk` | The carry on the move, sword and shield swaying in step (a 0.92 s loop) | |
+| `guard_idle` | The carry standing still: the same loop, 40% as big | |
 
 The shield steps aside inside each blow, out and down with its face turned out, and comes back in the recovery, so
 those clips drive both arms. In the viewer, left click cycles the combo (1 to 6 pick from the game's six), holding the
-right button raises the shield, and clicking with it up thrusts over the rim. The clip times, combos and field of view
-are in `gltf.scene.userData`, and blows that start from the guard also end on it, so they chain with no join.
+right button raises the shield, clicking with it up thrusts over the rim, and the **Walking** box plays the carry at walking
+speed. The clip times, combos and field of view are in `gltf.scene.userData`, and blows that start from the guard also end
+on it, so they chain with no join. Play the carries and `shield_hold` at `0.25 + min(1.3, speed / 6.2)` for a ground speed in
+m/s, as the two-hander's.
 
 The skeleton is 54 joints, as the two-hander's below, but `weapon` hangs from `hand_R`, so the sword can't drift in the
 fist, and there's a `shield` joint on `hand_L`, with its origin on the grip, +y along it and -z toward the enemy.
 
 ### What was kept from Bellmourn, and what changed
 
-Kept, from `tools/templates/mocap1h.py` and `moves.py`: the lines through the crosshair, the wind-up and hit places, the
-six combos, and the shield's carry, block and step-aside. The rules are the two-hander's: the tip goes through the X on a
-frame, along its line, the edge leads, every blow starts and ends on one guard, and speed is one bell with no holds.
+Kept, from `tools/templates/mocap1h.py`, `moves.py` and `anims.py`: the lines through the crosshair, the six combos, where
+the sword and shield sit on the screen carried and held up, the shield's step-aside, and the walk's sway and dip, in step.
+The rules are the two-hander's: the tip goes through the X on a frame, along its line, the edge leads, every blow starts and
+ends on one guard, and speed is one bell with no holds.
 
 Changed:
 
-- **More follow-through.** Past the hit, the slashes carry 95 and 98 degrees (50 in the game), the overhead cut 96 (46),
-  the flat cuts 108 (68) and the rising cuts 70 and 73 (38).
-- **No whip.** The game's keys have the fist hang back and then rush, up to half a metre in ten degrees of blade. Here its
-  travel is spread evenly over the blade's turn, and the fastest fist is under 7 m/s.
+- **The arm carries the swing, not the wrist.** As in the video of the swings, a wrist here only cocks in the blade's own plane,
+  back in the wind-up and opening through the cut, and hardly goes sideways. The elbow and the unseen shoulder move to put the
+  forearm there, the torso turning behind the blow. Elbows hang out and down, and the forearm turns as far as it needs to
+  without winding round. The arm reaches out long at the finish, and draws the sword back on the way home.
+- **The follow-through is the arm's.** Past the hit, the slashes' blades carry 51 and 56 degrees (50 in the game), the overhead
+  cut 56 (46), the flat cuts 61 and 64 (68) and the rising cuts 53 and 64 (38), with the hand and blade in sight throughout. So in
+  angle they're about the game's, and the flat cuts fall a little short of it: they used to carry up to 108, but only by breaking
+  the wrist. What's gained is the arm going through with the blade.
+- **Fists laid out on the screen.** Each blow's fist has its own path (`FIST`): low and beside the X at the hit, leading and
+  then slowing, so the blade pivots through the X, and it's under 8 m/s.
+- **A quieter way home.** A blade that ends left of the X comes back by way of a fist out in front and lifts on the right, so it
+  doesn't sweep across the view like a second blow. The blows are also shorter than the two-hander's.
 - **Drawn at full size.** The game shrinks its one-handers toward the bottom of the screen. These use the two-hander's view,
   so the X is simply straight ahead.
 - **A longer sword arm.** The source's right forearm is much shorter than its left (0.21 m to 0.28 m), so it's drawn out 25%
   to match. Without that the arm can't reach through its cuts.
 - **The overhead wind-up** stays lower and further forward than in the video, so the arm's cut-off end never comes into view.
 
-To adjust the feel, change the tables at the top of `tools/fp_arms/swings1h.py`: `THROUGH`, `TIMES`, `WIND_CAP`, `WIND_AT`,
-`BESIDE` and `SHIELD`.
+To adjust the feel, change the tables at the top of `tools/fp_arms/swings1h.py`: `FIST` (the fist's path and the
+follow-through), `COCK` and `COCK_END` (how far the wrist may cock), `SHOULDER_ROOM` (how far the torso carries the shoulder),
+`GUARD`, `BACK`, `WALK`, `TIMES`, `WIND_CAP` and `SHIELD`.
 
 ### The hand repair
 
@@ -200,28 +243,39 @@ creased palm was also repainted and smoothed, since it faces you when the shield
 
 - The fingers are fused here too, so the finger bones can tighten or loosen a grip, not open the hand.
 - The shield is the game's low-poly model, as is the sword, so they differ in style from the detailed arms up close.
+- The sculpt's forearm runs almost along the handle, and the pommel sits just past the wrist, so it's close all the time.
+  `blender_check.py` tests every second frame of the skinned mesh and lists any where it shows through.
+- The sculpt holds its fist a little off the forearm's axis, and its hand is painted dark, so at some angles the fist reads
+  nearly black against the forearm.
+- The backhand's and left-to-right cut's finishes hold the sword like a hammer, standing off the forearm, since their tips have
+  to leave toward the lower right, across the arm's own side.
+- The flat cuts' tip is still gathering speed as it passes the X, and the rising cuts are the softest blows, so these may want
+  a little hit-stop to land.
 
 ## First-person arms with a two-handed sword
 
 `assets/fp/arms_2h.glb` (2.7 MB) is one self-contained model: muscular bare arms on their own skeleton, Bellmourn's
-Greatsword in both fists, and the game's two-handed swings as eight clips.
+Greatsword in both fists, and the game's two-handed swings as nine clips.
 
 | Clip | What it is | Tip through the X at |
 | --- | --- | --- |
-| `great_cut1` | Left click, first: slash from the upper right | 0.517 s of 1.23 s |
-| `great_cut2` | Left click, second: slash from the upper left | 0.517 s of 1.23 s |
-| `great_slam` | Left click, third: the slam, straight down | 0.667 s of 1.40 s |
-| `great_chop` | Overhead chop | 0.633 s of 1.38 s |
-| `great_rise` | Rising backhand | 0.533 s of 1.23 s |
-| `great_wide_r` | Right click: wide, right to left | 0.467 s of 1.22 s |
-| `great_wide_l` | Right click: wide, left to right | 0.467 s of 1.22 s |
-| `great_idle` | The guard, breathing (a 4 s loop) | |
+| `great_cut1` | Left click, first: slash from the upper right | 0.533 s of 1.22 s |
+| `great_cut2` | Left click, second: slash from the upper left | 0.533 s of 1.23 s |
+| `great_slam` | Left click, third: the slam, straight down | 0.683 s of 1.42 s |
+| `great_chop` | Overhead chop | 0.633 s of 1.37 s |
+| `great_rise` | Rising backhand | 0.433 s of 1.22 s |
+| `great_wide_r` | Right click: wide, right to left | 0.517 s of 1.22 s |
+| `great_wide_l` | Right click: wide, left to right | 0.517 s of 1.23 s |
+| `great_walk` | The carry on the move, a smooth figure of eight (a 0.92 s loop) | |
+| `great_idle` | The carry standing still: the same loop, 40% as big | |
 
 These timings are in the model too, in `gltf.scene.userData` (`clips[name]`: `hit`, `wind`, `through`, `duration`),
 along with `combo`, the cut lines, and `view` (the view model's field of view).
 
 Every swing starts and ends on the same guard, so any clip can follow any other with no join. Play them at normal
-speed: unlike the game's rig, these already have their final timing, so the game's `PACE` slowdown doesn't apply. Draw
+speed: unlike the game's rig, these already have their final timing, so the game's `PACE` slowdown doesn't apply. Play the
+two carries at `0.25 + min(1.3, speed / 6.2)` for a ground speed in m/s, as `viewmodel.js` does, which is a quarter speed
+when standing and about 0.9 at a walk. Both start on the guard, and they stay in step, so one can fade to the other. Draw
 the arms with their own camera over the world, as `viewmodel.js` does: origin at the eye, looking down -z, with the
 field of view from `view.fov` (76 degrees vertically). That is wider than the world camera's 64 degrees, and it turns
 about the middle of the screen, so the X stays where it is.
@@ -240,26 +294,32 @@ about the middle of the screen, so the X stays where it is.
 
 ### What was kept from Bellmourn, and what changed
 
-Kept, from `tools/templates/mocap2h.py`: the keys from the swing video (`art/fp_arms/mocap2h_keys.json`), the lines
-through the crosshair, and the order of the combo. The tip runs along its line and goes through the X at the hit. The
-edge leads the cut, and the sword doesn't turn in the right fist.
+Kept, from `tools/templates/mocap2h.py`: the lines through the crosshair from the swing video, and the order of the
+combo. The tip runs along its line and goes through the X at the hit. The edge leads the cut, and the sword doesn't turn
+in the right fist. Kept from `anims.py` and `moves.py`: where the greatsword is carried on the screen, and the walk's sway
+and dip, with its size on the screen matched.
 
 Changed:
 
 - **Smooth motion.** The game plays one pose per tic with holds, then smooths it. Here the blade's angle drives the
   swing, the fists are a continuous curve of that angle, and its speed is a single bell, baked at 60 Hz with a frame
   exactly on the hit.
-- **More follow-through.** The blade carries 62 degrees past the hit on the cuts and 71 on the slam, up from about 33 and
-  24 in the game. The slam also drives the fists off the bottom of the screen.
+- **More follow-through.** The blade carries about 60 degrees past the hit on every blow, up from about 33 on the cuts and
+  24 on the slam in the game. The arms drive forward and down, so it continues the forearms' line.
 - **Further from the eye.** These arms are much bulkier than the game's gauntlets, so the shoulders are wider, lower and
-  further forward, the fists are further out along the same lines, and the view model has a wider field of view.
-- **Fists beside the line.** The fists run a little to one side of the line, so they clear the X. Only the tip stays
-  exactly on it, turned there by the blade's angle.
+  further forward, and the view model has a wider field of view.
+- **Fists laid out on the screen.** The game's gauntlets can run right along the line. These would wall off the view, so
+  each blow's right fist has its own path on the screen (`FIST`): low and beside the X at the hit, with both hands in sight.
+  The fist leads and slows as the blade comes through, so the blade pivots through the X. Only the tip stays exactly on the
+  line, turned there by the blade's angle.
+- **Smooth carry.** The game's walk bounces at the ends of its sway. Here it's one curve, with the tip following a little
+  behind the fist. Standing still, the sway is 40% as big as the walk's.
 - **Shallower wind-ups.** They go less far back than in the video, to spare the wrists. Where an arm would run out of
-  reach, its unseen shoulder eases toward the hand, so the sword's path is never disturbed.
+  reach, its unseen shoulder comes forward toward the hand, so the sword's path is never disturbed.
 
-To adjust the feel, change the tables at the top of `tools/fp_arms/swings.py`: `THROUGH` (follow-through), `TIMES`,
-`WIND_CAP`, `BESIDE`, and `SHO`, `OUT` and `ZOOM` for the distance from the eye. Then rebuild.
+To adjust the feel, change the tables at the top of `tools/fp_arms/swings.py`: `FIST` (the fist's path and the
+follow-through), `CARRY` (the guard), `WALK` (the sway), `TIMES`, `BELLS`, `WIND_CAP`, and `SHO` and `ZOOM` for the distance
+from the eye. Then rebuild. In the viewer, the **Walking** box plays the carry at walking speed.
 
 ### The hand repair
 
@@ -272,10 +332,12 @@ sword left free in the atlas, and normals are rebuilt across the whole surface.
 
 - The sculpted fingers are fused side by side. The finger bones can tighten or loosen a grip, but a fully open hand comes
   out as a webbed mitten. Open hands would need the fingers separated first.
-- Each upper arm is cut off flat at its base, with a dark underside. That comes from the source model. `check.py` reports
-  the middle of that end reaching the screen in the overhead wind-ups (23 frames of the slam, 10 of the chop).
+- Each upper arm is cut off flat at its base, with a dark underside. That comes from the source model. `check.py` fails if
+  the middle of that end reaches the screen.
+- The wrist is sculpted a fixed distance from the handle, and at the carry it sits just under the frame. So you see the
+  fist and the heel of the hand, but not the forearm running to the corner as in Bellmourn.
+- In the slam's and chop's last moments before the recovery, the blade is hidden for about 0.15 s behind the left forearm.
 - The arms are detailed PBR and the Greatsword is the game's low-poly retro model, so they differ in style up close.
-- The clips aren't in the game yet: bm has no game code so far, only this model and its viewer.
 
 ## Rebuilding the first-person arms
 
@@ -306,15 +368,17 @@ python tools/fp_arms/check.py
 ```
 
 `repair.py` is only needed once, or when the repair itself changes. `check.py` reads the finished GLBs, using none of the
-solver, and fails if a rule is broken. On the sword and shield that includes a fist over 8 m/s or an arm's cut end on
-screen. For a second opinion from Blender's own importer, with `1h` or `2h` as the last word:
+solver, and fails if a rule is broken, including a fist over 8 m/s, an arm's cut end on screen, a joint jumping in a frame, the
+sculpt's unpainted back filling the view, or on the sword and shield a wrist doing the arm's work.
+For a second opinion from Blender's own importer, which on the sword and shield also tests the skinned mesh for the pommel
+showing through, with `1h` or `2h` as the last word:
 
 ```bash
 blender -b --factory-startup --python tools/fp_arms/blender_check.py -- 1h
 ```
 
 Source art is in `art/fp_arms/`: the Tripo models as delivered, the Greatsword, Arming Sword and Iron-Bound Roundshield
-from Bellmourn2, and the two-hander's swing keys from Bellmourn.
+from Bellmourn2, and the two-hander's original swing keys from Bellmourn (kept for reference: the build no longer reads them).
 
 ## Crab monster
 

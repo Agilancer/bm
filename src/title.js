@@ -72,16 +72,17 @@ const SETTINGS = `
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 
 const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],
-  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the knight\'s thinking']];
+  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the knight\'s thinking']];
 const HOWTO = `
   <h2>How to Play</h2><div class="t-rule"></div>
   <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
   <div class="t-touchkeys">
     <p><b>Left thumb</b> moves (push it right out to run); <b>right thumb</b> looks, on or off the buttons.</p>
-    <p><b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>JUMP</b>, <b>RUN</b>, and <b>II</b> pauses.</p>
+    <p><b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>JUMP</b>, <b>RUN</b>, <b>PACK</b> holds your swords and gems, <b>TAKE</b> takes up what's on the ground, and <b>II</b> pauses.</p>
   </div>
   <h3>Along the way</h3>
   <ul class="t-tips">
+    <li>A gem set on a sword goes in an open socket, for good. Only the rarest swords have four.</li>
     <li>Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.</li>
     <li>A cut opens a gash in the plate. A second blow on that gash goes through, and the knight bleeds from it. Your X turns <b>red</b> over a cut you could go through.</li>
     <li>A blade <b>flashes</b> before it falls: dodge, or swing into it to parry.</li>
