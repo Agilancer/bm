@@ -17,7 +17,7 @@ export function isMobileDevice() {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
 }
 
-export async function initGPU() {
+export async function initGPU(tierOverride = 'auto') {
   if (!navigator.gpu) throw new Error('This browser has no WebGPU.');
   let adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) adapter = await navigator.gpu.requestAdapter();
@@ -40,7 +40,8 @@ export async function initGPU() {
   // Browsers won't say whether a GPU is integrated. Start high on anything that might be a discrete card, and
   // let the renderer step down at runtime when the timings say so (Renderer.demote).
   const discrete = /nvidia|amd|ati/.test(vendor);
-  const tierName = mobile ? 'mobile' : discrete ? 'ultra' : 'high';
+  // The Graphics setting can name a tier outright.
+  const tierName = TIERS[tierOverride] ? tierOverride : mobile ? 'mobile' : discrete ? 'ultra' : 'high';
   return {
     adapter, device, info, mobile, tierName,
     tier: { ...TIERS[tierName] },

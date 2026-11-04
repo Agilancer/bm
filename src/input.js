@@ -13,6 +13,7 @@ export class Input {
     this.moveX = 0; this.moveZ = 0;
     this.sprintToggle = false;
     this.enabled = false;
+    this.sens = 1;   // the Look speed setting
     this.onPauseChange = null;
     this.touch = /Android|iPhone|iPad/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches);
     this.bindMouse();
@@ -34,7 +35,7 @@ export class Input {
     window.addEventListener('blur', () => this.keys.clear());
     document.addEventListener('mousemove', (e) => {
       if (!this.enabled || document.pointerLockElement !== this.canvas) return;
-      this.look(e.movementX * SENS, e.movementY * SENS);
+      this.look(e.movementX * SENS * this.sens, e.movementY * SENS * this.sens);
     });
     this.canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
@@ -92,7 +93,7 @@ export class Input {
           // Pushing all the way forward breaks into a run.
           this.stickRun = this.stickY > 0.9 && L > R * 1.25;
         } else if (t.identifier === this.lookId) {
-          this.look((t.clientX - this.lx) * TOUCH_SENS, (t.clientY - this.ly) * TOUCH_SENS);
+          this.look((t.clientX - this.lx) * TOUCH_SENS * this.sens, (t.clientY - this.ly) * TOUCH_SENS * this.sens);
           this.lx = t.clientX; this.ly = t.clientY;
         }
       }

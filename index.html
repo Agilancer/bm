@@ -9,6 +9,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Bellmourn: The Knight of Velscour</title>
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="assets/title/blastorama.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/title/herrington.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/title/bellmourn.webp" fetchpriority="high">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:ital,wght@0,600;1,600&family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet" crossorigin="anonymous">
+<link rel="stylesheet" href="src/title.css">
 <style>
   :root { --gold: #c9a35c; --gold-dim: #8c7344; --bone: #e9dfc9; --ink: #0b0907; --blood: #8e1a12; --blood-hi: #d23a22; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -108,7 +115,16 @@
 </div>
 
 <div id="rotate">Turn your phone sideways to play.</div>
-<div id="pause"><div class="label" style="font-size:15px">Paused</div><button class="big" id="resume">RESUME</button></div>
+<div id="pause"><div class="p-title">Paused</div><nav class="t-menu">
+  <button class="t-btn" data-p="resume"><span>Resume</span></button>
+  <button class="t-btn" data-p="save"><span>Save Game</span></button>
+  <button class="t-btn" data-p="load"><span>Load Game</span></button>
+  <button class="t-btn" data-p="settings"><span>Settings</span></button>
+  <button class="t-btn" data-p="howto"><span>How to Play</span></button>
+  <button class="t-btn" data-p="menu"><span>Main Menu</span></button>
+</nav></div>
+
+<div id="title"></div>
 
 <div id="gate">
   <h1>BELLMOURN</h1>

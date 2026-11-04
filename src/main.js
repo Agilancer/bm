@@ -5,12 +5,17 @@ import { clamp, damp, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
+import { addPart, capture, restore, saves } from './saves.js';
+import { settings, Title } from './title.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
 const CONSENT_KEY = 'bm-threads-consent';
+const AUTOSAVE_EVERY = 20;   // seconds of play between the saves Continue picks up
+const title = new Title();
+window.bmTitle = title;
 
 // ---- job pool ----------------------------------------------------------------------------------------------
 
@@ -96,41 +101,61 @@ async function main() {
   const mobile = isMobileDevice();
   const plan = threadPlan(mobile);
   if (!navigator.gpu) { showFail('This browser does not offer it.'); return; }
+  if (AUTO) { boot(plan, plan.pool); return; }
+  // The title comes up once the page won't reload under it for shared memory, and the game loads behind it.
+  const go = async (pool) => {
+    if (!window.crossOriginIsolated && (await enableIsolation())) return;
+    $('gate').classList.add('gone');
+    title.start();
+    boot(plan, pool);
+  };
   const consented = localStorage.getItem(CONSENT_KEY);
-  if (AUTO || consented === 'all') { boot(plan, plan.pool); return; }
-  if (consented === 'few') { boot(plan, 1); return; }
+  if (consented === 'all') { go(plan.pool); return; }
+  if (consented === 'few') { go(1); return; }
   $('card').innerHTML = `<b>Bellmourn is asking to use your hardware.</b><br>
     ${plan.usable} of your ${plan.cores} CPU threads${mobile ? ' (some left free, so your phone stays cool)' : ''}, and your GPU at its highest performance setting.
     One thread runs the world, one draws it, and the rest load the game and plan the enemy's moves.
     <div class="small">Browsers have no pop-up for this, so this is the question. Shared memory between threads may need one quick page reload. You can change your mind later by clearing this site's data.</div>`;
   $('buttons').innerHTML = '<button class="big" id="allow">ALLOW</button><button class="alt" id="few">Use fewer threads</button>';
-  $('allow').onclick = async () => {
+  // (the click also lets the title's sound play, so it needn't ask for one)
+  $('allow').onclick = () => {
+    title.unlock();
     localStorage.setItem(CONSENT_KEY, 'all');
     $('card').textContent = 'Preparing...';
     $('buttons').innerHTML = '';
-    if (await enableIsolation()) return;
-    boot(plan, plan.pool);
+    go(plan.pool);
   };
-  $('few').onclick = async () => {
+  $('few').onclick = () => {
+    title.unlock();
     localStorage.setItem(CONSENT_KEY, 'few');
     $('buttons').innerHTML = '';
-    if (await enableIsolation()) return;
-    boot(plan, 1);
+    go(1);
   };
 }
 
+function failOnTitle(message) {
+  title.hide(true);
+  $('gate').classList.remove('gone');
+  $('bar').style.display = 'none';
+  $('card').style.display = '';
+  $('card').textContent = message;
+}
+
 async function boot(plan, poolSize) {
-  if (!AUTO && !window.crossOriginIsolated && (await enableIsolation())) return;
   $('card').style.display = 'none';
   $('buttons').innerHTML = '';
   $('bar').style.display = 'block';
-  const setProgress = (t, msg) => { $('bar').firstElementChild.style.width = `${Math.round(t * 100)}%`; if (msg) $('status').textContent = msg; };
+  const setProgress = (t, msg) => {
+    $('bar').firstElementChild.style.width = `${Math.round(t * 100)}%`;
+    if (msg) $('status').textContent = msg;
+    if (title.up) title.progress(Math.round(t * 100));
+  };
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
-  try { gpu = await initGPU(); } catch (e) { $('bar').style.display = 'none'; $('card').style.display = ''; showFail(e.message); return; }
+  try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
   gpu.device.lost.then((info) => {
     console.error('device lost', info.message);
-    if (info.reason !== 'destroyed') { $('gate').classList.remove('gone'); $('card').style.display = ''; $('card').textContent = 'The GPU reset. Reload the page to continue.'; }
+    if (info.reason !== 'destroyed') failOnTitle('The GPU reset. Reload the page to continue.');
   });
   let gpuErrors = 0;
   gpu.device.addEventListener('uncapturederror', (e) => { window.__gpuErrors = ++gpuErrors; if (gpuErrors < 6) console.error('GPU error:', e.error.message); });
@@ -140,12 +165,22 @@ async function boot(plan, poolSize) {
   const buffer = isolated ? new SharedArrayBuffer(TOTAL_BYTES) : null;
   const shared = buffer ? mapShared(buffer) : mapShared(new ArrayBuffer(TOTAL_BYTES));
   const input = new Input(canvas, shared.input);
+  // The world holds still under the title.
+  if (!AUTO) shared.input[INPUT.PAUSE] = 1;
   setProgress(0.05, `Loading with ${poolSize} threads...`);
 
   const renderer = new Renderer(gpu, canvas, pool);
   const simWorker = new Worker(new URL('./sim/sim.worker.js', import.meta.url), { type: 'module' });
-  const audio = new Audio(BASE);
+  const audio = new Audio(BASE, title.ctx, title.out, settings.ambience);
   let latestSnap = null;
+  // Saves and loads are asked of the simulation thread, and answered by id.
+  const calls = new Map();
+  let callId = 0;
+  const simCall = (type, data) => new Promise((resolve, reject) => {
+    const id = ++callId;
+    calls.set(id, { resolve, reject });
+    simWorker.postMessage({ type, id, data });
+  });
   const simReady = new Promise((resolve, reject) => {
     simWorker.onmessage = (e) => {
       const m = e.data;
@@ -154,6 +189,11 @@ async function boot(plan, poolSize) {
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'restart') { input.yaw = Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); }
+      else if (m.type === 'placed') {
+        const c = calls.get(m.id);
+        calls.delete(m.id);
+        if (c) { if (m.error) c.reject(new Error(m.error)); else c.resolve(m.data); }
+      }
     };
     simWorker.onerror = (e) => { console.error('sim worker', e.message); reject(new Error(e.message)); };
   });
@@ -170,8 +210,7 @@ async function boot(plan, poolSize) {
       audio.load().catch((e) => console.warn('audio', e)),
     ]);
   } catch (e) {
-    $('bar').style.display = 'none';
-    $('card').style.display = ''; $('card').textContent = `Failed to load: ${e.message}`;
+    failOnTitle(`Failed to load: ${e.message}`);
     console.error(e);
     return;
   }
@@ -190,7 +229,13 @@ async function boot(plan, poolSize) {
   game.pendingEvents = pendingEvents;
   game.getNonSharedSnap = () => latestSnap;
 
-  const enter = async () => {
+  const enter = async (fresh = true) => {
+    title.hide();
+    game.idle = false;
+    state.paused = false;
+    $('pause').style.display = 'none';
+    shared.input[INPUT.PAUSE] = 0;
+    audio.setAmbience(settings.ambience);
     $('gate').classList.add('gone');
     $('hud').style.display = 'block';
     if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; }
@@ -202,20 +247,106 @@ async function boot(plan, poolSize) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    hud.intro();
+    if (fresh) hud.intro();
   };
+
+  // ---- saving, loading and the menus ---------------------------------------------------------------------------------
+
+  // What a save holds, part by part (saves.js): for now where you stand and which way you face, and the time played.
+  // Inventory, equipment and quests will be parts of their own.
+  let played = 0, playT = 0;
+  addPart('player', {
+    save: () => { const s = game.currentSnap(); return { x: s[H.PX], y: s[H.PY], z: s[H.PZ], yaw: input.yaw, pitch: input.pitch }; },
+    load: (d) => simCall('place', d),   // (a fresh world, and you where the save says; null: where a new game starts)
+    summary: () => 'Velscour village',
+  });
+  addPart('stats', {
+    save: () => ({ played: Math.round(played) }),
+    load: (d) => { played = d?.played || 0; },
+    summary: (d) => `${Math.floor(d.played / 60)}:${String(d.played % 60).padStart(2, '0')} played`,
+  });
+  // Not while you lie fallen.
+  const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
+  const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
+  // The game keeps itself as it's played: that's Continue.
+  const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
+  game.onTick = (dt) => {
+    if (!input.enabled || state.paused) return;
+    played += dt; playT += dt;
+    if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
+  };
+  const loadInto = async (data) => {
+    try { await restore(data); } catch (e) {
+      await title.confirm({ title: 'Could not load', text: e.message, yes: 'Back', no: false });
+      return false;
+    }
+    hud.reset(); renderer.clearBlood(); playT = 0;
+    return true;
+  };
+  const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
+  const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
+  const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
+  const resume = () => { if (input.touch) input.onPauseChange(false); else input.lock(); };
+  const toTitle = async () => {
+    await autosave();
+    input.enabled = false;
+    state.paused = false;
+    shared.input[INPUT.PAUSE] = 1;
+    if (document.pointerLockElement) document.exitPointerLock();
+    $('pause').style.display = 'none'; $('hud').style.display = 'none'; $('touch').style.display = 'none';
+    document.body.classList.remove('playing');
+    game.idle = true;
+    audio.setAmbience(0);
+    title.toMenu();
+  };
+  title.onMenu = async (a) => {
+    if (a === 'new') {
+      if (saves.auto() && !(await title.confirm({ title: 'New Game', text: 'Start the fight over from the beginning? The game you were playing stays in Continue until you play on.', yes: 'New Game' }))) return;
+      saves.clearAuto();
+      shared.input[INPUT.RESTART] += 1;   // (taken up on the first step after the world is let go)
+      played = 0; playT = 0;
+      enter(true);
+    } else if (a === 'continue') {
+      const d = saves.newest();
+      if (d) startFrom(d);
+    } else if (a === 'load') title.slots('load', slotOptions());
+  };
+  for (const b of $('pause').querySelectorAll('[data-p]')) {
+    b.onclick = () => {
+      title.chime();
+      const a = b.dataset.p;
+      if (a === 'resume') resume();
+      else if (a === 'save' || a === 'load') title.slots(a, slotOptions());
+      else if (a === 'settings' || a === 'howto') title.panel(a, b);
+      else if (a === 'menu') toTitle();
+    };
+  }
+  const applySetting = (k, v) => {
+    if (k === 'look') input.sens = v;
+    else if (k === 'ambience' && input.enabled) audio.setAmbience(v);
+    else if (k === 'res') {
+      game.fixedScale = v !== 'auto';
+      if (game.fixedScale) renderer.scale = Number(v);
+    } else if (k === 'gfx') {
+      title.confirm({ title: 'Restart?', text: 'The graphics setting takes hold when the game restarts. Where you are is kept for Continue.', yes: 'Restart Now', no: 'Later' })
+        .then(async (yes) => { if (yes) { await autosave(); title.reload(); } });
+    }
+  };
+  title.onSetting = applySetting;
+  applySetting('look', settings.look);
+  applySetting('res', settings.res);
   input.onPauseChange = (paused) => {
     if (!input.enabled) return;
+    if (paused && !state.paused) autosave();
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
   };
-  $('resume').onclick = () => { if (input.touch) input.onPauseChange(false); else input.lock(); };
   $('bPause').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); input.onPauseChange(true); }, { passive: false });
   document.addEventListener('visibilitychange', () => {
     const hidden = document.hidden;
     shared.input[INPUT.PAUSE] = hidden || state.paused ? 1 : 0;
-    if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && input.enabled) audio.ctx.resume();
+    if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
   });
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
@@ -229,9 +360,9 @@ async function boot(plan, poolSize) {
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out.'
     : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing';
-  $('gate').classList.add('clear');
-  $('buttons').innerHTML = '<button class="big" id="enter">ENTER THE VILLAGE</button>';
-  $('enter').onclick = enter;
+  // Loaded: the title's menu comes up (once Bellmourn's logo is in).
+  game.idle = !AUTO;
+  title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
   if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
 }
 
@@ -366,6 +497,9 @@ class GameView {
       if (!this.buffer) this.sim.postMessage({ input: this.shared.input.slice() });
       const snap = this.currentSnap();
       if (!snap) return;
+      // Under the title the village isn't drawn: a few frames, so the pipelines are built, then nothing.
+      if (this.idle) { if (this.idleFrames > 3) return; this.idleFrames = (this.idleFrames || 0) + 1; } else this.idleFrames = 0;
+      if (this.onTick) this.onTick(dt);
       if (this.input.touch && this.input.enabled) this.aimAssist(dt, snap);
       this.processEvents(snap);
       this.updateCamera(dt, snap);

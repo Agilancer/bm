@@ -70,7 +70,8 @@ class Sim {
 
   step(dt) {
     const { input, player } = this;
-    if (input[INPUT.PAUSE] > 0.5) { if (this.shared) this.shared.plan[9] = 0; return; }
+    // (The first tick runs even paused, so there's a world to draw under the title.)
+    if (input[INPUT.PAUSE] > 0.5 && this.tick > 0) { if (this.shared) this.shared.plan[9] = 0; return; }
     this.touchAssist = input[INPUT.TOUCH] > 0.5;
     if (this.manual) {
       if (input[INPUT.CMD] !== this.cmdSeen) { this.cmdSeen = input[INPUT.CMD]; this.command(input[INPUT.ASPECT], input[INPUT.CMD_A], input[INPUT.CMD_B], input[INPUT.CMD_C]); }
@@ -225,6 +226,18 @@ class Sim {
   }
 }
 
+// ---- saved games -------------------------------------------------------------------------------------------------
+// A loaded game starts the world fresh and puts the player where the save says (src/saves.js has what a save holds).
+Sim.prototype.place = function (d) {
+  this.restart();
+  if (!d) return;
+  const p = this.player;
+  p.x = d.x; p.z = d.z; p.y = Math.max(d.y, this.world.height(d.x, d.z));
+  p.vx = 0; p.vy = 0; p.vz = 0; p.yaw = d.yaw;
+  this.input[INPUT.YAW] = d.yaw; this.input[INPUT.PITCH] = d.pitch;
+  self.postMessage({ type: 'look', yaw: d.yaw, pitch: d.pitch });
+};
+
 async function fetchBuf(path) {
   const r = await fetch(path);
   if (!r.ok) throw new Error(`${path}: ${r.status}`);
@@ -260,6 +273,15 @@ async function boot(msg) {
   CRABS.forEach((c, i) => sim.knights.push(new Crab(2 + i, 2, crabRig, c)));
   sim.restartSeen = sim.input[INPUT.RESTART];
   sim.cmdSeen = sim.input[INPUT.CMD];
+  // Placing the player from a save, asked for by the render thread.
+  self.addEventListener('message', (e) => {
+    const m = e.data;
+    if (m.type !== 'place') return;
+    try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {
+      console.error(err);
+      self.postMessage({ type: 'placed', id: m.id, error: err.message });
+    }
+  });
   self.postMessage({ type: 'ready', bytes: TOTAL_BYTES });
 
   // Fixed step. In a worker Atomics.wait is an exact sleep; without shared memory fall back to timers.
@@ -284,12 +306,13 @@ ${err.stack}` }); }
     }
   };
   if (sleeper) {
+    let yielded = performance.now();
     for (;;) {
       iterate();
       const wait = next - performance.now();
       if (wait > 0.2) Atomics.wait(sleeper, 0, 0, wait);
-      // Let queued messages through once in a while.
-      if (sim.tick % 240 === 0) await new Promise((r) => setTimeout(r, 0));
+      // Let queued messages through (saves and loads) a few times a second, paused or not.
+      if (performance.now() - yielded > 100) { yielded = performance.now(); await new Promise((r) => setTimeout(r, 0)); }
     }
   } else {
     const loop = () => { iterate(); setTimeout(loop, 2); };

@@ -33,6 +33,28 @@ different sides.
 
 F3 shows frame time, threads and what the knight is thinking.
 
+### The title, saves and settings
+
+`src/title.js`, from Bellmourn's title screen: Blastorama Gaming's card, then Jamie Herrington's, each with glints flaring on
+the edges of its letters, a sheen, gold dust and a tinkle of glass bells for every glint; then Bellmourn's logo with its
+church bells ("Orthodox Church Bells Ringing", Free Sounds Library, CC BY 4.0) and the title's song ("Frozen Hearts", from
+Bellmourn's music). A click, a tap or a key skips a card. The game loads behind the black, and the village isn't drawn
+until you start: the title stays on black.
+
+**New Game**, **Continue**, **Load**, **Settings**, **How to Play**. Esc (or `II`) pauses: **Resume**, **Save Game**,
+**Load Game**, **Settings**, **How to Play**, **Main Menu**. There are ten save slots, and the game keeps itself every 20 s
+of play and whenever you pause; Continue picks up the newest of those. For now a save holds where you stand and which way
+you face, and the time played: loading starts the world fresh and puts you there. Saves live in `localStorage` under
+`velscour.*`, so they never meet Bellmourn's on a shared host.
+
+A save is a set of named parts (`src/saves.js`), each written and read by the system it belongs to; `player` and `stats`
+are added in `src/main.js`. Inventory, equipment, quests and the world's own state are meant to come in as parts of their
+own with `addPart`: a save made before a part existed loads it as `null`, as in a new game. When a part's shape changes,
+raise `SAVE_VERSION` and add a step to `MIGRATIONS`, so older saves are brought up to date as they load.
+
+Settings: volume, music, ambience, look speed, resolution (Auto lets the frame-rate governor choose) and graphics (Auto
+picks from your GPU; changing it restarts the game, back to the menu with your game kept for Continue).
+
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
 
@@ -97,6 +119,8 @@ To check it yourself:
 | `tools/review.js`, `tools/sheet.py` | Stage scenes and screenshots, and run a scripted fight, for reviews |
 | `src/sim/` | The simulation thread: knights, AI, crabs, player, collisions |
 | `src/gfx/` | The renderer and its shaders |
+| `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
+| `src/saves.js` | What a save holds, part by part, and where saves are kept |
 
 ## First-person arms with a sword and shield
 

@@ -15,8 +15,10 @@ const BANKS = {
 };
 
 export class Audio {
-  constructor(base) {
+  // ctx and dest: the title's context and its Volume, so the title and the game share one line out.
+  constructor(base, ctx = null, dest = null, ambience = 1) {
     this.base = base;
+    this.sharedCtx = ctx; this.dest = dest; this.ambienceLevel = ambience;
     this.buffers = {};
     this.ctx = null;
     this.ready = false;
@@ -24,14 +26,17 @@ export class Audio {
 
   async load() {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    this.ctx = new AC({ latencyHint: 'interactive' });
+    if (!AC && !this.sharedCtx) return;
+    this.ctx = this.sharedCtx || new AC({ latencyHint: 'interactive' });
     const { ctx } = this;
     this.master = ctx.createGain();
     this.master.gain.value = 0.9;
     const comp = ctx.createDynamicsCompressor();
     this.master.connect(comp);
-    comp.connect(ctx.destination);
+    comp.connect(this.dest || ctx.destination);
+    this.amb = ctx.createGain();
+    this.amb.gain.value = this.ambienceLevel;
+    this.amb.connect(this.master);
     // A short slap of space, so steel rings off the houses.
     const len = Math.floor(ctx.sampleRate * 0.7);
     const ir = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -72,9 +77,11 @@ export class Audio {
     const g = this.ctx.createGain();
     g.gain.value = gain;
     src.connect(g);
-    g.connect(this.master);
+    g.connect(this.amb);
     src.start();
   }
+
+  setAmbience(v) { this.ambienceLevel = v; if (this.amb) this.amb.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }
 
   listener(x, y, z, fx, fy, fz, ux, uy, uz) {
     if (!this.ready) return;
