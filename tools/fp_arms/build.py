@@ -122,7 +122,7 @@ def build():
         nodes.append(node)
 
     # the arms: positions in the bind pose (glTF frame)
-    V = (d["V"] + rig.BIND_OFFSET) @ C.T
+    V = (d["V"] + rig.TWO_HANDED["bind"]) @ C.T
     Nrm = d["N"] @ C.T
     tris = d["F"]
     a_pos = g.accessor(V, "VEC3", 5126, 34962, minmax=True)

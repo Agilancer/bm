@@ -14,7 +14,7 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
 } }
 </script>
-<!-- The two-handed swings on the new first-person arms (assets/fp/arms_2h.glb, built by tools/fp_arms),
+<!-- The moves on the new first-person arms (assets/fp/arms_1h.glb and arms_2h.glb, built by tools/fp_arms),
      in Bellmourn's move-picker scene (moves.html): the training dummy ahead, the X in the middle of the
      screen, a spark where the blow lands. Served by swings-player.bat. -->
 <style>
@@ -79,20 +79,25 @@
 <aside id="panel">
   <header>
     <h1>Swings</h1>
-    <p>The two-handed blows on the new arms. Click the view to swing; each blow's tip goes through the X.</p>
+    <p id="howto">Click the view to swing; each blow's tip goes through the X.</p>
   </header>
   <div class="scroll">
+    <div class="row"><label for="hands">Hands</label><select id="hands">
+      <option value="1h">Sword and shield</option><option value="2h">Two-handed sword</option></select></div>
     <h2>Try it</h2>
     <div class="buttons">
       <button id="bAttack">Attack <kbd>click</kbd></button>
-      <button id="bCombo">Combo ×3 <kbd>space</kbd></button>
+      <button id="bCombo">Combo <kbd>space</kbd></button>
+      <button id="bBlock" class="wide" hidden>Raise the shield <kbd>right button</kbd></button>
     </div>
+    <div class="row" id="comboRow" hidden><label for="comboPick">Combo</label><select id="comboPick"></select></div>
     <h2>One blow</h2>
     <div class="buttons" id="blows"></div>
     <div class="toggles">
       <label><input type="checkbox" id="repeat"> Keep repeating it</label>
       <label><input type="checkbox" id="showTrail" checked> Draw the tip's path through the swing</label>
-      <label><input type="checkbox" id="showSword" checked> Sword in the hands</label>
+      <label><input type="checkbox" id="showSword" checked> Sword in the hand</label>
+      <label id="shieldToggle" hidden><input type="checkbox" id="showShield" checked> Shield on the arm</label>
       <label><input type="checkbox" id="showBones"> Show the skeleton</label>
     </div>
     <div class="row"><label for="speed">Speed</label><input type="range" id="speed" min="0.1" max="1" step="0.05" value="1"></div>
@@ -119,8 +124,11 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const $ = (id) => document.getElementById(id);
-const NICE = { great_cut1: 'Slash, upper right', great_cut2: 'Slash, upper left', great_slam: 'The slam', great_chop: 'Overhead chop',
+const MODEL = new URLSearchParams(location.search).get('model') === '2h' ? '2h' : '1h';
+const NAMES_2H = { great_cut1: 'Slash, upper right', great_cut2: 'Slash, upper left', great_slam: 'The slam', great_chop: 'Overhead chop',
   great_rise: 'Rising backhand', great_wide_r: 'Wide, right to left', great_wide_l: 'Wide, left to right' };
+$('hands').value = MODEL;
+$('hands').onchange = () => { location.search = '?model=' + $('hands').value; };
 
 // ------------------------------------------------------------------ the scene in front of you (moves.html)
 const canvas = $('view');
@@ -179,14 +187,18 @@ const vmScene = new THREE.Scene();
 const vmCam = new THREE.PerspectiveCamera(64, 1.6, 0.10, 20);   // (its field of view comes with the model)
 vmScene.add(new THREE.HemisphereLight(0xfff0dd, 0x302838, 0.83));
 const vmSun = new THREE.DirectionalLight(0xffe0b0, 1.12); vmSun.position.set(-0.5, 0.8, 0.4); vmScene.add(vmSun);
-const gltf = await new GLTFLoader().loadAsync('assets/fp/arms_2h.glb');
+const gltf = await new GLTFLoader().loadAsync(`assets/fp/arms_${MODEL}.glb`);
 const rig = gltf.scene;
 const meta = rig.userData;
+const NICE = meta.nice || NAMES_2H;
+const IDLE = meta.idle || 'great_idle';
+const BLOCK = meta.block || null;
+const TITLES = { ...NICE, shield_up: 'The shield comes up', shield_down: 'The shield goes down', blade_stab_block: 'Thrust over the rim' };
 vmCam.fov = meta.view.fov; vmCam.near = meta.view.near; vmCam.updateProjectionMatrix();
-let arms, sword;
+let arms, sword, shieldMesh;
 rig.traverse((o) => {
   if (o.isSkinnedMesh) { arms = o; o.frustumCulled = false; }
-  else if (o.isMesh) { sword = o; o.frustumCulled = false; }
+  else if (o.isMesh) { if (o.name === 'ironbound') shieldMesh = o; else sword = o; o.frustumCulled = false; }
 });
 vmScene.add(rig);
 const tipBone = rig.getObjectByName('weapon_tip');
@@ -196,50 +208,91 @@ const mixer = new THREE.AnimationMixer(rig);
 const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
 const actions = Object.fromEntries(Object.entries(clips).map(([n, c]) => {
   const a = mixer.clipAction(c);
-  a.setLoop(n === 'great_idle' ? THREE.LoopRepeat : THREE.LoopOnce); a.clampWhenFinished = true;
+  a.setLoop(meta.clips[n]?.loop ? THREE.LoopRepeat : THREE.LoopOnce); a.clampWhenFinished = true;
   return [n, a];
 }));
-actions.great_idle.play();
+actions[IDLE].play();
 
 // ------------------------------------------------------------------ one blow, then the next
 let playing = null, hitDone = false, last = null, turn = 0, queue = [], lastSeq = null;
+let blocking = false, comboKey = meta.combos ? '1' : null;
+const chain = () => (comboKey ? meta.combos[comboKey] : meta.combo);
+const resting = () => actions[blocking && BLOCK ? BLOCK.hold : IDLE];
+let atRest = actions[IDLE];   // (what's actually playing between blows: `blocking` may already have changed)
 function blow(name) {
-  const a = actions[name], from = playing || actions.great_idle;
+  const a = actions[name], from = playing || atRest;
   a.reset().play();
   if (from !== a) from.crossFadeTo(a, playing ? 0.04 : 0.1, false);
   playing = a; hitDone = false; last = name;
   clearTrail();
 }
 function attack() {
+  if (BLOCK && blocking) { if (!playing) blow(BLOCK.stab); return; }   // (with the shield up: a thrust over the rim)
   if (playing) { if (playing.getClip().duration - playing.time < 0.4 && !queue.length) queue.push('next'); return; }   // (a click near the end is kept)
-  blow(meta.combo[turn++ % meta.combo.length]); lastSeq = 'attack';
+  const c = chain(); blow(c[turn++ % c.length]); lastSeq = 'attack';
 }
-function combo() { queue = [...meta.combo]; if (!playing) blow(queue.shift()); lastSeq = 'combo'; }
+function combo() { queue = [...chain()]; if (!playing) blow(queue.shift()); lastSeq = 'combo'; }
+function setBlock(on) {
+  if (!BLOCK || on === blocking) return;
+  blocking = on;
+  $('bBlock').classList.toggle('on', on);
+  queue = [];
+  if (!playing) blow(on ? BLOCK.up : BLOCK.down);   // (else it follows when what's under way ends)
+}
 function stepBlow() {
   if (!playing) return;
   const name = playing.getClip().name, ev = meta.clips[name];
-  if (!hitDone && playing.time >= ev.hit) { hitDone = true; spark(); }
+  if (ev.hit != null && !hitDone && playing.time >= ev.hit) { hitDone = true; spark(); }
   if (playing.time >= ev.duration - 1e-4) {
-    let nx = queue.shift();
-    if (!nx && $('repeat').checked) {
-      if (lastSeq === 'combo') { queue = [...meta.combo]; nx = queue.shift(); }
-      else nx = lastSeq === 'attack' ? 'next' : name;
+    if (BLOCK) {
+      const up = name === BLOCK.up || name === BLOCK.stab;
+      if (up && !blocking) { blow(BLOCK.down); return; }           // (let go while it was coming up)
+      if (!up && name !== BLOCK.down && blocking) { blow(BLOCK.up); return; }
+      if (name === BLOCK.down && blocking) { blow(BLOCK.up); return; }
     }
-    if (nx) { blow(nx === 'next' ? meta.combo[turn++ % meta.combo.length] : nx); return; }
-    const a = playing;
-    actions.great_idle.reset().play(); a.crossFadeTo(actions.great_idle, 0.15, false);
+    if (!blocking) {
+      let nx = queue.shift();
+      if (!nx && $('repeat').checked) {
+        if (lastSeq === 'combo') { queue = [...chain()]; nx = queue.shift(); }
+        else nx = lastSeq === 'attack' ? 'next' : (lastSeq || name);
+      }
+      if (nx) { const c = chain(); blow(nx === 'next' ? c[turn++ % c.length] : nx); return; }
+    }
+    const a = playing, rest = resting();
+    rest.reset().play(); a.crossFadeTo(rest, 0.15, false);
+    atRest = rest;
     playing = null;
   }
 }
 $('bAttack').onclick = attack;
 $('bCombo').onclick = combo;
 for (const n of Object.keys(NICE)) {
+  if (!actions[n]) continue;
   const b = document.createElement('button');
-  b.textContent = NICE[n]; b.onclick = () => { queue = []; blow(n); lastSeq = n; };
+  b.textContent = NICE[n]; b.onclick = () => { if (blocking) return; queue = []; blow(n); lastSeq = n; };
   $('blows').append(b);
 }
-canvas.addEventListener('pointerdown', attack);
-addEventListener('keydown', (e) => { if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'INPUT' && e.code === 'Space') { e.preventDefault(); combo(); } });
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('pointerdown', (e) => { if (e.button === 2) setBlock(true); else attack(); });
+addEventListener('pointerup', (e) => { if (e.button === 2) setBlock(false); });
+addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); combo(); }
+  const k = /^Digit([1-6])$/.exec(e.code);
+  if (k && meta.combos?.[k[1]]) { comboKey = k[1]; turn = 0; $('comboPick').value = k[1]; }
+});
+if (BLOCK) {
+  $('bBlock').hidden = false;
+  $('shieldToggle').hidden = false;
+  $('howto').textContent += ' Hold the right button to raise the shield; click with it up to thrust over the rim.';
+  $('bBlock').onclick = () => setBlock(!blocking);
+  $('showShield').onchange = () => { shieldMesh.visible = $('showShield').checked; };
+}
+if (meta.combos) {
+  $('comboRow').hidden = false;
+  $('comboPick').innerHTML = Object.entries(meta.combos).map(([k, c]) => `<option value="${k}">${k}: ${c.map((n) => NICE[n]).join(', ')}</option>`).join('');
+  $('comboPick').onchange = () => { comboKey = $('comboPick').value; turn = 0; };
+}
 $('showSword').onchange = () => { sword.visible = $('showSword').checked; };
 $('showBones').onchange = () => { skeletonHelper.visible = $('showBones').checked; };
 
@@ -302,12 +355,13 @@ function showTrack() {
     track.dataset.clip = name;
     track.querySelectorAll('.mark').forEach((m) => m.remove());
     if (ev) for (const [k, cls] of [['hit', 'hit'], ['through', 'through']]) {
+      if (ev[k] == null) continue;
       const m = document.createElement('div'); m.className = 'mark ' + cls; m.style.left = (100 * ev[k] / ev.duration) + '%'; track.append(m);
     }
   }
   const t = playing ? playing.time : 0;
   track.querySelector('.fill').style.width = (ev ? 100 * t / ev.duration : 0) + '%';
-  $('clipName').textContent = name ? NICE[name] : 'At the guard';
+  $('clipName').textContent = name ? TITLES[name] : blocking ? 'Behind the shield' : 'At the guard';
   $('clipTime').textContent = ev ? `${t.toFixed(2)} / ${ev.duration.toFixed(2)} s` : '';
 }
 
@@ -339,7 +393,7 @@ window.measure = () => {
   const out = {};
   const q = new THREE.Vector3(), w = new THREE.Vector3(), r = new THREE.Vector3(), s = new THREE.Vector3();
   for (const [name, ev] of Object.entries(meta.clips)) {
-    if (ev.loop) continue;
+    if (ev.loop || ev.hit == null) continue;
     mixer.stopAllAction();
     const a = actions[name]; a.reset().play(); a.setEffectiveWeight(1); a.paused = true;
     const N = Math.round(ev.duration * 240);
@@ -366,7 +420,7 @@ window.measure = () => {
     }
     out[name] = { nearest: best, nearestAt: bestT, atHit, hit: ev.hit, lockR, lockL, peakTipSpeed: peak, maxTipAccel: maxStep };
   }
-  mixer.stopAllAction(); actions.great_idle.reset().play(); paused = false;
+  mixer.stopAllAction(); actions[IDLE].reset().play(); paused = false;
   return out;
 };
 /** A contact sheet of one blow, saved through the server (development). */
@@ -389,19 +443,74 @@ window.review = async (spec) => {
     g.drawImage(canvas, x, y, s.w, s.h);
     g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1.5; g.beginPath();
     g.moveTo(x + s.w / 2 - 7, y + s.h / 2); g.lineTo(x + s.w / 2 + 7, y + s.h / 2); g.moveTo(x + s.w / 2, y + s.h / 2 - 7); g.lineTo(x + s.w / 2, y + s.h / 2 + 7); g.stroke();
-    const hitHere = ev.hit != null && Math.abs(t - ev.hit) < s.step / 2;
+    const hitHere = ev.hit != null && Math.abs(t - ev.hit) < s.step / 2 + 1e-6;
     g.font = '13px sans-serif'; g.fillStyle = hitHere ? '#ff6a4a' : '#bbb';
     g.fillText(`${t.toFixed(3)}s${hitHere ? '  ◆ THE X' : ''}`, x + 4, y + s.h + 14);
   }
   const blob = await new Promise((r) => sheet.toBlob(r, 'image/png'));
   const res = await fetch('/shot?name=' + encodeURIComponent(s.name || name), { method: 'POST', body: blob });
   skeletonHelper.visible = $('showBones').checked;
-  renderer.setPixelRatio(pr); layout(); mixer.stopAllAction(); actions.great_idle.reset().play(); paused = false;
+  renderer.setPixelRatio(pr); layout(); mixer.stopAllAction(); actions[IDLE].reset().play(); paused = false;
   return res.ok ? `saved ${s.name || name} (${n} frames)` : `not saved: ${res.status}`;
 };
-window.rigDbg = { THREE, rig, mixer, actions, vmCam, meta, draw, advance, state: () => ({ clip: playing?.getClip().name ?? null, time: playing?.time ?? 0, hitDone, queue: [...queue] }) };
+/** The rule through the real sequences, not one clip at a time: plays what a player would (combos, the shield up, a
+ * thrust over the rim, the shield down) as the page plays it, and notes where the tip is on each blow's hit frame. */
+window.playtest = () => {
+  paused = true;
+  const step = (s) => { for (let t = 0; t < s; t += 1 / 60) advance(1 / 60); };
+  const results = [], running = () => Object.entries(actions).filter(([, a]) => a.isRunning() && a.getEffectiveWeight() > 0.001).map(([k]) => k);
+  const hits = (s) => {
+    for (let t = 0; t < s; t += 1 / 60) {
+      const before = playing && playing.time, name = playing?.getClip().name, ev = name && meta.clips[name];
+      advance(1 / 60);
+      if (ev?.hit != null && playing?.getClip().name === name && before < ev.hit - 1e-6 && playing.time >= ev.hit - 1e-6) {
+        const n = tipNdc();
+        results.push({ clip: name, at: +playing.time.toFixed(3), hit: +ev.hit.toFixed(3), miss: +Math.hypot(n.x, n.y).toFixed(4), running: running() });
+      }
+    }
+  };
+  step(0.5);
+  for (const k of Object.keys(meta.combos || { 1: 0 })) {
+    if (meta.combos) { comboKey = k; turn = 0; }
+    combo(); hits(chain().reduce((s, n) => s + meta.clips[n].duration, 0) + 0.3); step(0.4);
+  }
+  if (BLOCK) {
+    setBlock(true); step(1); results.push({ clip: 'shield up', running: running() });
+    attack(); hits(1.1); results.push({ clip: 'back behind the shield', running: running() });
+    setBlock(false); step(0.9); results.push({ clip: 'shield down', running: running() });
+    attack(); step(0.2); setBlock(true); hits(2); setBlock(false); step(1);
+    results.push({ clip: 'after all that', running: running() });
+    if (meta.combos) { comboKey = '1'; turn = 0; }
+  }
+  paused = false;
+  return results;
+};
+/** A film of the moves as played, one PNG per 60th of a second through the server (development): script is
+ * [[seconds, 'attack'|'combo'|'blockOn'|'blockOff'], ...], name_00001.png and on land in build/shots. */
+window.film = async ({ name = 'film', w = 960, h = 540, seconds, script }) => {
+  paused = true;
+  const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); layout(w, h);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  const acts = { attack, combo, blockOn: () => setBlock(true), blockOff: () => setBlock(false) };
+  const todo = [...script], n = Math.round(seconds * 60);
+  for (let i = 0; i < n; i++) {
+    while (todo.length && todo[0][0] <= i / 60) acts[todo.shift()[1]]();
+    advance(1 / 60);
+    g.drawImage(canvas, 0, 0); g.drawImage($('trail'), 0, 0, w, h);
+    const hit = $('xhair').classList.contains('hit');
+    g.strokeStyle = hit ? '#ff5a3c' : 'rgba(255,255,255,.8)'; g.lineWidth = 2; g.beginPath();
+    g.moveTo(w / 2 - 7, h / 2); g.lineTo(w / 2 + 7, h / 2); g.moveTo(w / 2, h / 2 - 7); g.lineTo(w / 2, h / 2 + 7); g.stroke();
+    // (toDataURL, not toBlob: a page in the background gets toBlob's callback only now and then)
+    const bytes = Uint8Array.from(atob(c.toDataURL('image/jpeg', 0.92).split(',')[1]), (x) => x.charCodeAt(0));
+    await fetch(`/shot?name=${name}_${String(i + 1).padStart(5, '0')}`, { method: 'POST', body: bytes });
+    window.filmAt = i + 1;
+  }
+  renderer.setPixelRatio(pr); layout(); paused = false;
+  window.filmDone = n;
+};
+window.rigDbg = { THREE, rig, mixer, actions, vmCam, meta, draw, advance, setBlock, state: () => ({ clip: playing?.getClip().name ?? null, time: playing?.time ?? 0, hitDone, queue: [...queue], blocking }) };
 const want = new URLSearchParams(location.search).get('review');
-if (want) for (const c of want.split(',')) await window.review({ clip: 'great_' + c });
+if (want) for (const c of want.split(',')) await window.review({ clip: c });
 </script>
 </body>
 </html>
