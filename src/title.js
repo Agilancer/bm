@@ -10,6 +10,8 @@
 // The cards, glints and fades are CSS animations of opacity and transform, all set going at one moment, and every
 // sound is booked on the audio clock at that moment, so they keep time however hard the loading holds the thread.
 
+import { SLOT_COUNT, saves } from './saves.js';
+
 const LOGOS = {
   blastorama: 'assets/title/blastorama.webp',
   herrington: 'assets/title/herrington.webp',
@@ -47,39 +49,11 @@ const SETTINGS_KEY = 'velscour.settings';
 export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto' };
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
 
-// ---- saved games: ten slots, and the game as it was last played (Continue) -----------------------------------------
-// The keys are the Knight of Velscour's own, so they never meet Bellmourn's saves on a shared host.
-
-export const SLOT_COUNT = 10;
-const SLOT_KEY = (i) => `velscour.save.${i}`;
-const AUTO_KEY = 'velscour.autosave';
-const parse = (k) => { try { return JSON.parse(store.get(k) || 'null'); } catch { return null; } };
-export const saves = {
-  read: (i) => parse(SLOT_KEY(i)),
-  write: (i, data) => store.set(SLOT_KEY(i), JSON.stringify({ ...data, at: Date.now() })),
-  clear: (i) => store.del(SLOT_KEY(i)),
-  any() { for (let i = 1; i <= SLOT_COUNT; i++) if (store.get(SLOT_KEY(i))) return true; return false; },
-  auto: () => parse(AUTO_KEY),
-  writeAuto: (data) => store.set(AUTO_KEY, JSON.stringify({ ...data, at: Date.now() })),
-  clearAuto: () => store.del(AUTO_KEY),
-  // The newest game there is: the one kept as it was played, or a slot saved after it.
-  newest() {
-    let best = this.auto();
-    for (let i = 1; i <= SLOT_COUNT; i++) { const d = this.read(i); if (d && (!best || d.at > best.at)) best = d; }
-    return best;
-  },
-};
-
 const when = (t) => {
   const d = new Date(t);
   return `${d.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} · ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
 };
-const describe = (s = {}) => {
-  const pct = (x) => `${Math.round((x || 0) * 100)}%`;
-  const fight = s.foe === 0 ? 'The black knight has fallen' : s.fighting ? `Fighting the black knight (${pct(s.foe)})` : 'The black knight on his round';
-  const mins = Math.floor((s.secs || 0) / 60), secs = (s.secs || 0) % 60;
-  return `Life ${pct(s.life)} · ${fight}${s.silver ? ' · the silver knight is against you' : ''}${s.crabs ? ` · ${s.crabs} crab${s.crabs > 1 ? 's' : ''} slain` : ''} · ${mins}:${String(secs).padStart(2, '0')}`;
-};
+const describe = (s) => (Array.isArray(s) ? s.join(' · ') : '');
 
 // ---- the windows' contents ---------------------------------------------------------------------------------------
 
@@ -616,7 +590,7 @@ export class Title {
       list.append(row);
     }
     E.append(list);
-    E.append(el('p', 't-note', save ? 'Ten slots. Each keeps the whole fight: where everyone stands, their wounds, and the clock.' : 'Loading puts you back where that save was made.'));
+    E.append(el('p', 't-note', save ? 'Ten slots. Each keeps where you stand and how long you\'ve played.' : 'Loading puts you back where that save was made.'));
     const done = el('div', 't-dbtns', '<button class="t-btn"><span>Done</span></button>');
     done.firstChild.onclick = () => { this.chime(); this.closeSlots(); };
     E.append(done);

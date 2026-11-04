@@ -5,7 +5,8 @@ import { clamp, damp, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
-import { saves, settings, Title } from './title.js';
+import { addPart, capture, restore, saves } from './saves.js';
+import { settings, Title } from './title.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -188,7 +189,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'restart') { input.yaw = Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); }
-      else if (m.type === 'saved' || m.type === 'loaded') {
+      else if (m.type === 'placed') {
         const c = calls.get(m.id);
         calls.delete(m.id);
         if (c) { if (m.error) c.reject(new Error(m.error)); else c.resolve(m.data); }
@@ -251,23 +252,31 @@ async function boot(plan, poolSize) {
 
   // ---- saving, loading and the menus ---------------------------------------------------------------------------------
 
-  const fightOn = () => game.gameState() === 0;
-  const snapshot = () => (fightOn() ? simCall('save').catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
-  // The game keeps itself as it's played (Continue); a fight that's over is nothing to continue.
-  const autosave = async () => {
-    if (!input.enabled) return;
-    if (!fightOn()) { saves.clearAuto(); return; }
-    const data = await snapshot();
-    if (data) saves.writeAuto(data);
-  };
-  let playT = 0;
+  // What a save holds, part by part (saves.js): for now where you stand and which way you face, and the time played.
+  // Inventory, equipment and quests will be parts of their own.
+  let played = 0, playT = 0;
+  addPart('player', {
+    save: () => { const s = game.currentSnap(); return { x: s[H.PX], y: s[H.PY], z: s[H.PZ], yaw: input.yaw, pitch: input.pitch }; },
+    load: (d) => simCall('place', d),   // (a fresh world, and you where the save says; null: where a new game starts)
+    summary: () => 'Velscour village',
+  });
+  addPart('stats', {
+    save: () => ({ played: Math.round(played) }),
+    load: (d) => { played = d?.played || 0; },
+    summary: (d) => `${Math.floor(d.played / 60)}:${String(d.played % 60).padStart(2, '0')} played`,
+  });
+  // Not while you lie fallen.
+  const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
+  const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
+  // The game keeps itself as it's played: that's Continue.
+  const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
   game.onTick = (dt) => {
     if (!input.enabled || state.paused) return;
-    playT += dt;
+    played += dt; playT += dt;
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
   };
   const loadInto = async (data) => {
-    try { await simCall('load', data); } catch (e) {
+    try { await restore(data); } catch (e) {
       await title.confirm({ title: 'Could not load', text: e.message, yes: 'Back', no: false });
       return false;
     }
@@ -275,7 +284,7 @@ async function boot(plan, poolSize) {
     return true;
   };
   const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
-  const slotOptions = () => ({ canSave: input.enabled && fightOn(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
+  const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
   const resume = () => { if (input.touch) input.onPauseChange(false); else input.lock(); };
   const toTitle = async () => {
@@ -295,7 +304,7 @@ async function boot(plan, poolSize) {
       if (saves.auto() && !(await title.confirm({ title: 'New Game', text: 'Start the fight over from the beginning? The game you were playing stays in Continue until you play on.', yes: 'New Game' }))) return;
       saves.clearAuto();
       shared.input[INPUT.RESTART] += 1;   // (taken up on the first step after the world is let go)
-      playT = 0;
+      played = 0; playT = 0;
       enter(true);
     } else if (a === 'continue') {
       const d = saves.newest();

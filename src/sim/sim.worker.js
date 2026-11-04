@@ -3,7 +3,7 @@
 import { parseGLB } from '../core/glb.js';
 import { CHARS_START, CTRL, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
-import { ATTACKS as CRAB_ATTACKS, CRAB_SCALE, Crab } from './crab.js';
+import { CRAB_SCALE, Crab } from './crab.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
 import { World } from './world.js';
@@ -226,114 +226,17 @@ class Sim {
   }
 }
 
-// ---- saved games ---------------------------------------------------------------------------------------------
-// A save is the moving state of the player, every knight and crab, and the fight's clocks, as JSON. Objects held
-// in two places (a bleed and its gash, the player's last contact) keep their identity through $id and $ref; the
-// game's fixed data (clips, attacks, the bodies themselves) is named, not copied. What an entity was built with
-// (rig, skeleton tables, BVHs) is left out: it's the same in every game.
-const SKIP = new Set(['id', 'kind', 'rig', 'bank', 'opts', 'arms', 'bodyRadius', 'pose', 'rA', 'rB', 'pA', 'pB', 'twist', 'nod', 'upper', 'armR', 'J', 'bvh',
-  'inv', 'invTick', 'swordQ', 'swordT', 'shieldQ', 'shieldT', 'swordFight', 'swordEase', 'shieldFight', 'shieldEase', 'ground', 'fingerJoints', 'fist',
-  'simRef', 'spheres', 'mouth', 'vmRatio', 'gashVersion', 'atkSeen', 'wideSeen', 'jumpSeen', 'dodgeSeen', 'saveKeys']);
-const SIM_KEYS = ['time', 'gameState', 'gameT', 'firstBloodAt', 'crabWoke', 'slowT', 'stopT', 'timeScale', 'tacticWeights'];
-const TYPED = { Float32Array, Float64Array, Int32Array, Uint32Array, Int16Array, Uint16Array, Int8Array, Uint8Array };
-const SAVE_VERSION = 1;
-
-// Seven figures keep a float32 whole, and a save small.
-const short = (x) => (Number.isInteger(x) ? x : +x.toPrecision(7));
-
-function encode(v, reg, seen) {
-  if (typeof v === 'function') return undefined;
-  if (typeof v === 'number') return Number.isFinite(v) ? short(v) : { $n: String(v) };
-  if (v === null || typeof v !== 'object') return v;
-  const name = reg.toName.get(v);
-  if (name) return { $r: name };
-  if (ArrayBuffer.isView(v)) return { $t: v.constructor.name, v: Array.from(v, (x) => (Number.isFinite(x) ? short(x) : 0)) };
-  if (seen.has(v)) return { $ref: seen.get(v) };
-  const proto = Object.getPrototypeOf(v);
-  if (!Array.isArray(v) && proto !== Object.prototype && proto !== null) return undefined;
-  const id = seen.size;
-  seen.set(v, id);
-  if (Array.isArray(v)) return { $id: id, $a: v.map((x) => encode(x, reg, seen) ?? null) };
-  const o = { $id: id };
-  for (const k of Object.keys(v)) { const e = encode(v[k], reg, seen); if (e !== undefined) o[k] = e; }
-  return o;
-}
-
-// `into`: a typed array already in place is filled rather than replaced, so whatever else holds it stays right.
-function decode(e, reg, seen, into) {
-  if (e === null || typeof e !== 'object') return e;
-  if ('$n' in e) return Number(e.$n);
-  if ('$r' in e) return reg.fromName.get(e.$r) ?? null;
-  if ('$t' in e) {
-    if (ArrayBuffer.isView(into) && into.constructor.name === e.$t && into.length === e.v.length) { into.set(e.v); return into; }
-    return new TYPED[e.$t](e.v);
-  }
-  if ('$ref' in e) return seen.get(e.$ref);
-  if ('$a' in e) { const a = []; seen.set(e.$id, a); for (const x of e.$a) a.push(decode(x, reg, seen)); return a; }
-  const o = {};
-  seen.set(e.$id, o);
-  for (const k of Object.keys(e)) if (k !== '$id') o[k] = decode(e[k], reg, seen);
-  return o;
-}
-
-// The pose arrays an entity blends from, so a loaded body doesn't snap on its first frame.
-const poseArrays = (ent) => (ent.pose ? [ent.pose.rot, ent.pose.pelvis, ent.rFrom, ent.pFrom] : ent.rig && Object.hasOwn(ent.rig, 'rot') ? [ent.rig.rot, ent.rig.tr, ent.rig.rot2, ent.rig.tr2] : ent.arms ? [ent.arms.rot, ent.arms.tr, ent.arms.rot2, ent.arms.tr2] : []);
-
-Object.assign(Sim.prototype, {
-  registry() {
-    if (this.reg) return this.reg;
-    const toName = new Map(), fromName = new Map();
-    const add = (name, obj) => { if (obj && typeof obj === 'object' && !toName.has(obj)) { toName.set(obj, name); fromName.set(name, obj); } };
-    add('sim', this); add('world', this.world); add('player', this.player);
-    this.knights.forEach((k, i) => { add(`e${i}`, k); add(`opts${i}`, k.opts); });
-    for (const [n, a] of Object.entries(ATTACKS)) add(`ka:${n}`, a);
-    for (const [n, a] of Object.entries(CRAB_ATTACKS)) add(`ca:${n}`, a);
-    for (const [n, c] of Object.entries(this.knights[0].bank.clips)) add(`clip:${n}`, c);
-    for (const [n, c] of Object.entries(this.player.arms.clips || {})) add(`arms:${n}`, c);
-    return (this.reg = { toName, fromName });
-  },
-
-  save() {
-    const reg = this.registry(), seen = new Map();
-    const ents = [this.player, ...this.knights].map((ent) => {
-      const o = {};
-      for (const k of Object.keys(ent)) {
-        if (SKIP.has(k)) continue;
-        const e = encode(ent[k], reg, seen);
-        if (e !== undefined) o[k] = e;
-      }
-      o.$pose = poseArrays(ent).map((a) => (a ? encode(a, reg, seen) : null));
-      return o;
-    });
-    const sim = {};
-    for (const k of SIM_KEYS) sim[k] = encode(this[k], reg, seen);
-    const p = this.player, k0 = this.knights[0], k1 = this.knights[1];
-    return {
-      v: SAVE_VERSION, ents, sim,
-      look: { yaw: this.input[INPUT.YAW], pitch: this.input[INPUT.PITCH] },
-      // What the slot list shows.
-      summary: { life: p.hp / p.maxHp, foe: k0.dead ? 0 : k0.hp / k0.maxHp, fighting: k0.hostile && k0.state !== S.PATROL, silver: k1.hostile, crabs: this.knights.slice(2).filter((c) => c.dead).length, secs: Math.round(this.time) },
-    };
-  },
-
-  load(data) {
-    if (!data || data.v !== SAVE_VERSION || data.ents?.length !== this.knights.length + 1) throw new Error('This save is from another version of the game.');
-    const reg = this.registry(), seen = new Map();
-    [this.player, ...this.knights].forEach((ent, i) => {
-      const o = data.ents[i];
-      for (const k of Object.keys(o)) if (k !== '$pose') ent[k] = decode(o[k], reg, seen, ent[k]);
-      poseArrays(ent).forEach((a, j) => { const e = o.$pose?.[j]; if (a && e) decode(e, reg, seen, a); });
-      ent.gashVersion = (ent.gashVersion || 0) + 1;
-    });
-    for (const k of SIM_KEYS) if (k in data.sim) this[k] = decode(data.sim[k], reg, seen, this[k]);
-    this.frozen = false; this.slow = 1; this.manual = false;
-    // Clicks made before the load are spent.
-    const p = this.player, inp = this.input;
-    p.atkSeen = inp[INPUT.ATTACK]; p.wideSeen = inp[INPUT.WIDE]; p.jumpSeen = inp[INPUT.JUMP]; p.dodgeSeen = inp[INPUT.DODGE];
-    this.input[INPUT.YAW] = data.look.yaw; this.input[INPUT.PITCH] = data.look.pitch;
-    self.postMessage({ type: 'look', yaw: data.look.yaw, pitch: data.look.pitch });
-  },
-});
+// ---- saved games -------------------------------------------------------------------------------------------------
+// A loaded game starts the world fresh and puts the player where the save says (src/saves.js has what a save holds).
+Sim.prototype.place = function (d) {
+  this.restart();
+  if (!d) return;
+  const p = this.player;
+  p.x = d.x; p.z = d.z; p.y = Math.max(d.y, this.world.height(d.x, d.z));
+  p.vx = 0; p.vy = 0; p.vz = 0; p.yaw = d.yaw;
+  this.input[INPUT.YAW] = d.yaw; this.input[INPUT.PITCH] = d.pitch;
+  self.postMessage({ type: 'look', yaw: d.yaw, pitch: d.pitch });
+};
 
 async function fetchBuf(path) {
   const r = await fetch(path);
@@ -370,16 +273,13 @@ async function boot(msg) {
   CRABS.forEach((c, i) => sim.knights.push(new Crab(2 + i, 2, crabRig, c)));
   sim.restartSeen = sim.input[INPUT.RESTART];
   sim.cmdSeen = sim.input[INPUT.CMD];
-  // Saving and loading, asked for by the render thread.
+  // Placing the player from a save, asked for by the render thread.
   self.addEventListener('message', (e) => {
     const m = e.data;
-    if (m.type !== 'save' && m.type !== 'load') return;
-    try {
-      if (m.type === 'save') self.postMessage({ type: 'saved', id: m.id, data: sim.save() });
-      else { sim.load(m.data); self.postMessage({ type: 'loaded', id: m.id }); }
-    } catch (err) {
+    if (m.type !== 'place') return;
+    try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {
       console.error(err);
-      self.postMessage({ type: m.type === 'save' ? 'saved' : 'loaded', id: m.id, error: err.message });
+      self.postMessage({ type: 'placed', id: m.id, error: err.message });
     }
   });
   self.postMessage({ type: 'ready', bytes: TOTAL_BYTES });

@@ -7,7 +7,7 @@ export const CRAB_SCALE = 2.6;
 const S = CRAB_SCALE;
 // Floor speeds of the clips, from assets/monsters/crab_monster/clips.json, at this size.
 const STRIDE = { walk_stalk: 0.1 * S, walk_skitter: 0.32 * S, run_scuttle: 1.0667 * S, run_gallop: 1.992 * S };
-export const ATTACKS = {
+const ATTACKS = {
   attack_bite: { rate: 1.08, windows: [[0.3, 0.46]], reach: 1.05 * S, dmg: 12, lunge: [0.24, 0.42, 3.4] },
   attack_claw: { rate: 1.0, windows: [[0.28, 0.41], [0.43, 0.56]], reach: 1.0 * S, dmg: 9, lunge: [0.2, 0.34, 1.6] },
   attack_slam: { rate: 0.95, windows: [[0.5, 0.57]], reach: 1.1 * S, dmg: 18, lunge: [0.26, 0.5, 6.2], knock: 6 },
