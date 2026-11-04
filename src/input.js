@@ -13,6 +13,7 @@ export class Input {
     this.moveX = 0; this.moveZ = 0;
     this.sprintToggle = false;
     this.enabled = false;
+    this.menu = false;   // a menu is up: the hands and feet are off duty
     this.onPauseChange = null;
     this.touch = /Android|iPhone|iPad/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches);
     this.bindMouse();
@@ -26,7 +27,7 @@ export class Input {
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       this.keys.add(e.code);
-      if (!this.enabled) return;
+      if (!this.enabled || this.menu) return;
       if (e.code === 'Space') { this.fire(INPUT.JUMP); e.preventDefault(); }
       if (e.code === 'KeyQ') this.fire(INPUT.DODGE);
     });
@@ -52,7 +53,7 @@ export class Input {
   lock() {
     if (this.touch) return;
     const p = this.canvas.requestPointerLock({ unadjustedMovement: true });
-    if (p && p.catch) p.catch(() => { const q = this.canvas.requestPointerLock(); if (q && q.catch) q.catch(() => {}); });
+    if (p && p.catch) p.catch(() => { const q = this.canvas.requestPointerLock(); if (q && q.catch) q.catch(() => { if (this.onLockRefused) this.onLockRefused(); }); });
   }
 
   look(dx, dy) {
@@ -131,7 +132,7 @@ export class Input {
   update() {
     const s = this.s, k = this.keys;
     let mx = 0, mz = 0;
-    if (this.enabled) {
+    if (this.enabled && !this.menu) {
       if (k.has('KeyW') || k.has('ArrowUp')) mz += 1;
       if (k.has('KeyS') || k.has('ArrowDown')) mz -= 1;
       if (k.has('KeyD') || k.has('ArrowRight')) mx += 1;

@@ -1,0 +1,94 @@
+// What the player carries: a grid of cells, and the slots on the body. Items take a footprint of cells. Kept in localStorage,
+// so a pack survives a reload and a new fight.
+import { GEMS, MAX_SOCKETS, makeRng, rollGem, rollWeapon } from './items.js';
+
+export const PACK_W = 12, PACK_H = 8;
+export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'hands', 'ring1', 'feet', 'ring2'];
+const KEY = 'bm-pack-v1';
+
+// One of every sword and a pouch of gems, to try it all out before there is much to fight for. The game proper starts with the
+// old greatsword alone: set this false.
+const TEST_KIT = true;
+
+export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : { w: 1, h: 1 });
+
+export class Pack {
+  constructor() {
+    this.slots = Object.fromEntries(SLOTS.map((s) => [s, null]));
+    this.entries = [];   // { item, x, y }
+  }
+
+  // The entries an item would land on, at (x, y). Null if it would stick out of the grid.
+  under(item, x, y) {
+    const { w, h } = sizeOf(item);
+    if (x < 0 || y < 0 || x + w > PACK_W || y + h > PACK_H) return null;
+    return this.entries.filter((e) => {
+      const o = sizeOf(e.item);
+      return x < e.x + o.w && e.x < x + w && y < e.y + o.h && e.y < y + h;
+    });
+  }
+
+  at(x, y) {
+    return this.entries.find((e) => { const o = sizeOf(e.item); return x >= e.x && x < e.x + o.w && y >= e.y && y < e.y + o.h; }) || null;
+  }
+
+  // Sets an item at (x, y), and hands back what that lifted. False if it can't go there: off the grid, or on more than one thing.
+  place(item, x, y) {
+    const hit = this.under(item, x, y);
+    if (!hit || hit.length > 1) return false;
+    let lifted = null;
+    if (hit.length) { lifted = hit[0].item; this.remove(hit[0]); }
+    this.entries.push({ item, x, y });
+    return lifted;
+  }
+
+  // Into the first room there is, top left first. False if there's none.
+  add(item) {
+    for (let x = 0; x < PACK_W; x++) {
+      for (let y = 0; y < PACK_H; y++) {
+        const hit = this.under(item, x, y);
+        if (hit && !hit.length) { this.entries.push({ item, x, y }); return true; }
+      }
+    }
+    return false;
+  }
+
+  remove(entry) { this.entries.splice(this.entries.indexOf(entry), 1); }
+
+  // A gem into a weapon, for good. False if it has no open socket.
+  socket(weapon, gem) {
+    if (weapon.type !== 'weapon' || gem.type !== 'gem' || weapon.gems.length >= Math.min(weapon.sockets, MAX_SOCKETS) || !GEMS[gem.kind]) return false;
+    weapon.gems.push(gem);
+    return true;
+  }
+
+  save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ slots: this.slots, entries: this.entries })); } catch { /* a private window: this session only */ }
+  }
+
+  static restore(fresh) {
+    const pack = new Pack();
+    try {
+      const saved = !fresh && JSON.parse(localStorage.getItem(KEY));
+      if (saved) { Object.assign(pack.slots, saved.slots); pack.entries = saved.entries; return pack; }
+    } catch { /* unreadable: start over */ }
+    pack.startingKit();
+    return pack;
+  }
+
+  startingKit() {
+    const rng = makeRng(1793);
+    this.add(rollWeapon(rng, { base: 'greatsword', rarity: 0, sockets: 0 }));
+    if (!TEST_KIT) return;
+    const swords = [
+      ['frost_sword', 3, 4], ['crimson_sword', 3, 3], ['gilded_sword', 2, 3], ['thornvine_sword', 2, 2],
+      ['swept_rapier', 2, 1], ['brass_sabre', 1, 2], ['bronze_broadsword', 1, 1], ['ringed_sword', 0, 0],
+      ['fluked_greatsword', 2, 2], ['bluegrip_greatsword', 1, 1], ['wheel_greatsword', 0, 1], ['greengrip_greatsword', 1, 0],
+    ];
+    for (const [base, rarity, sockets] of swords) this.add(rollWeapon(rng, { base, rarity, sockets }));
+    for (const kind of Object.keys(GEMS)) this.add(rollGem(rng, { kind, grade: 1 }));
+    this.add(rollGem(rng, { kind: 'ruby', grade: 0 }));
+    this.add(rollGem(rng, { kind: 'ruby', grade: 2 }));
+    this.add(rollGem(rng, { kind: 'diamond', grade: 2 }));
+  }
+}

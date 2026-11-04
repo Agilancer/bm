@@ -5,6 +5,10 @@ import { clamp, damp, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
+import { Drops } from './items/drops.js';
+import { colorOf, nameOf, rollGem, rollWeapon, makeRng, writeWeapon } from './items/items.js';
+import { Pack } from './items/pack.js';
+import { Inventory } from './ui/inventory.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -153,7 +157,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'error') { console.error(m.message); reject(new Error(m.message)); }
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
-      else if (m.type === 'restart') { input.yaw = Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); }
+      else if (m.type === 'restart') { input.yaw = Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
     };
     simWorker.onerror = (e) => { console.error('sim worker', e.message); reject(new Error(e.message)); };
   });
@@ -163,8 +167,10 @@ async function boot(plan, poolSize) {
 
   const hud = new Hud(gpu, plan, poolSize, isolated, input);
   const start = performance.now();
+  let swordList, game = null;
   try {
     await Promise.all([
+      fetch(`${BASE}assets/game/items/swords.json`).then((r) => r.json()).then((j) => { swordList = j; }),
       renderer.load(BASE, (t) => setProgress(0.05 + t * 0.9, 'Building the village...')),
       simReady,
       audio.load().catch((e) => console.warn('audio', e)),
@@ -185,7 +191,15 @@ async function boot(plan, poolSize) {
 
   // ---- the render thread's loop --------------------------------------------------------------------------------------
 
-  const game = new GameView(renderer, shared, input, audio, hud, gpu, simWorker, buffer);
+  game = new GameView(renderer, shared, input, audio, hud, gpu, simWorker, buffer);
+  const pack = Pack.restore(params.has('freshpack'));
+  const arm = () => { writeWeapon(shared.input, pack.slots.main); pack.save(); };
+  arm();
+  const inventory = new Inventory(pack, swordList, BASE, input.touch, {
+    change: arm,
+    drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); pack.save(); },
+  });
+  Object.assign(game, { pack, inventory });
   window.bm = game.api(shared, simWorker, buffer, pool);
   game.pendingEvents = pendingEvents;
   game.getNonSharedSnap = () => latestSnap;
@@ -202,15 +216,32 @@ async function boot(plan, poolSize) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    hud.intro();
+    hud.intro(!!pack.slots.main);
   };
   input.onPauseChange = (paused) => {
-    if (!input.enabled) return;
+    if (!input.enabled || inventory.open) return;
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
   };
-  $('resume').onclick = () => { if (input.touch) input.onPauseChange(false); else input.lock(); };
+  // Back to the fight, wherever the pointer is free to be locked again.
+  const resume = () => { if (input.touch || AUTO) input.onPauseChange(false); else input.lock(); };
+  input.onLockRefused = () => input.onPauseChange(true);
+  const openPack = () => {
+    state.paused = true;
+    shared.input[INPUT.PAUSE] = 1;
+    input.menu = true;
+    inventory.show();
+    if (document.pointerLockElement) document.exitPointerLock();
+  };
+  // viaEsc: a browser won't lock the pointer again off the Esc key, so that stops at the pause screen, which will on a click.
+  const closePack = (viaEsc) => {
+    inventory.hide();
+    input.menu = false;
+    if (viaEsc && !input.touch && !AUTO) input.onPauseChange(true); else resume();
+  };
+  $('invClose').onclick = () => closePack(false);
+  $('resume').onclick = resume;
   $('bPause').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); input.onPauseChange(true); }, { passive: false });
   document.addEventListener('visibilitychange', () => {
     const hidden = document.hidden;
@@ -218,17 +249,23 @@ async function boot(plan, poolSize) {
     if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && input.enabled) audio.ctx.resume();
   });
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyR' && input.enabled && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
+    if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
+    if (!input.enabled || e.repeat) return;
+    if (e.code === 'KeyI') { if (inventory.open) closePack(false); else if (!state.paused) openPack(); }
+    if (e.code === 'Escape' && inventory.open) closePack(true);
+    if (e.code === 'KeyE' && !input.menu && !state.paused) game.takeNearest();
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
+  $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused) openPack(); }, { passive: false });
+  $('bTake').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused) game.takeNearest(); }, { passive: false });
   $('touch').addEventListener('touchstart', () => {
     const snap = game.currentSnap();
     if (input.enabled && snap && snap[H.GAME] !== 0 && snap[H.GAME_T] > 1.5) shared.input[INPUT.RESTART] += 1;
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing';
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>PACK</b> holds your swords.'
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take';
   $('gate').classList.add('clear');
   $('buttons').innerHTML = '<button class="big" id="enter">ENTER THE VILLAGE</button>';
   $('enter').onclick = enter;
@@ -258,8 +295,8 @@ class Hud {
 
   toggleDebug() { this.debug = !this.debug; $('debug').style.display = this.debug ? 'block' : 'none'; }
 
-  intro() {
-    this.tip('Find the black knight. A cut opens the armour.', 5);
+  intro(armed) {
+    this.tip(armed ? 'Find the black knight. A cut opens the armour.' : `Your hands are empty. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 7);
   }
 
   // Each lesson once, at the moment it means something.
@@ -339,6 +376,29 @@ class GameView {
     this.smokeT = 0; this.moteT = 0; this.overrideCam = null;
     this.govT = 0; this.govMs = 0; this.govN = 0; this.frozenSnap = null;
     this.prevSnap = new Float32Array(SNAP_FLOATS);
+    this.drops = new Drops(renderer, audio);
+    this.nearDrop = null;
+    this.takeShown = null;
+  }
+
+  // The nearest thing on the ground, into the pack if there's room for it.
+  takeNearest() {
+    const d = this.nearDrop;
+    if (!d) return;
+    if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
+    this.drops.take(d);
+    this.nearDrop = null;
+    this.pack.save();
+  }
+
+  updateDrops(dt, snap) {
+    this.nearDrop = this.input.enabled && !this.input.menu ? this.drops.update(dt, snap[H.PX], snap[H.PZ]) : null;
+    const d = this.nearDrop;
+    if (d === this.takeShown) return;
+    this.takeShown = d;
+    $('take').style.display = d ? 'block' : 'none';
+    $('bTake').style.display = d && this.input.touch ? 'flex' : 'none';
+    if (d) $('take').innerHTML = `${this.input.touch ? '' : '<kbd>E</kbd> '}<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>`;
   }
 
   gameState() { const s = this.currentSnap(); return s ? s[H.GAME] : 0; }
@@ -372,6 +432,7 @@ class GameView {
       this.emitAmbient(dt, snap);
       this.emitBleeds(dt, snap);
       this.updateTrail(dt, snap);
+      this.updateDrops(dt, snap);
       const c = this.overrideCam || this.cam;
       this.renderer.frame(c, snap, this.sway, dt);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
@@ -469,12 +530,12 @@ class GameView {
     const eyeY = snap[H.PY] + 1.62 + bobY - snap[H.CAM_DROP] - Math.min(snap[H.DODGE], 0.2) * 0.45;
     const eyeZ = snap[H.PZ] + snap[H.VZ] * age + rz * bobX;
     Object.assign(this.cam, { x: eyeX, y: eyeY, z: eyeZ, fx, fy, fz, ux, uy, uz });
-    // The sword lags your hands a little, and rides with your steps.
+    // The sword lags your hands a little. (It rides your steps in its own clip, great_idle.)
     this.swayX = damp(this.swayX, clamp(inp.yawVel * 1.5, -0.05, 0.05), 11, dt);
     this.swayY = damp(this.swayY, clamp(inp.pitchVel * 1.5, -0.05, 0.05), 11, dt);
     inp.yawVel = 0; inp.pitchVel = 0;
-    const vy = Math.sin(this.bobT * 2) * 0.012 * bobA - Math.min(0, snap[H.VY]) * -0.002 + this.swayY;
-    const vx = Math.cos(this.bobT) * 0.01 * bobA - this.swayX;
+    const vy = Math.min(0, snap[H.VY]) * 0.002 + this.swayY;
+    const vx = -this.swayX;
     const m = this.sway;
     const vmRoll = -this.swayX * 0.6;
     m[0] = Math.cos(vmRoll); m[1] = Math.sin(vmRoll); m[4] = -Math.sin(vmRoll); m[5] = Math.cos(vmRoll);
@@ -652,6 +713,8 @@ class GameView {
       case EV.JUMP: au.play('jump', null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play('run', null, 0, 0, 0.5, 1.15, false); break;
       case EV.CRAB_WAKE: this.hud.once('crab', 'Something is coming out of the fields.'); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); break;
+      case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 3); break;
       case EV.WIN:
         au.play('impact', null, 0, 0, 0.8, 0.45);
         this.hud.tip('', 0.1);
@@ -677,7 +740,19 @@ class GameView {
       shared.input[INPUT.CMD] += 1;
     };
     return {
-      view, renderer: this.renderer, input: this.input, shared, pool,
+      view, renderer: this.renderer, input: this.input, shared, pool, pack: this.pack, inventory: this.inventory, drops: this.drops,
+      // bm.give('frost_sword', { rarity: 3, sockets: 4 }) or bm.give('gem', { kind: 'ruby', grade: 2 }), into the pack.
+      give: (base, opts = {}) => {
+        const rng = makeRng((Math.random() * 4294967296) >>> 0);
+        const item = base === 'gem' ? rollGem(rng, opts) : rollWeapon(rng, { base, ...opts });
+        return view.pack.add(item) ? item : null;
+      },
+      // Lays one on the ground beside the player: bm.lay('fluked_greatsword', { rarity: 2 }).
+      lay: (base, opts = {}) => {
+        const rng = makeRng((Math.random() * 4294967296) >>> 0);
+        const s = view.currentSnap();
+        view.drops.fromPlayer(base === 'gem' ? rollGem(rng, opts) : rollWeapon(rng, { base, ...opts }), s[H.PX], s[H.PY], s[H.PZ], view.input.yaw);
+      },
       snap: () => view.currentSnap(),
       cmd,
       look: (yaw, pitch) => { view.input.yaw = yaw; view.input.pitch = pitch; },
