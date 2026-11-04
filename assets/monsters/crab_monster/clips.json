@@ -1,0 +1,58 @@
+{
+ "walk_stalk": {
+  "frames": 64,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.1,
+  "duration": 2.1333333333333333
+ },
+ "walk_skitter": {
+  "frames": 20,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.32,
+  "duration": 0.6666666666666666
+ },
+ "run_scuttle": {
+  "frames": 18,
+  "loop": true,
+  "fps": 30,
+  "speed": 1.0666666666666667,
+  "duration": 0.6
+ },
+ "run_gallop": {
+  "frames": 16,
+  "loop": true,
+  "fps": 30,
+  "speed": 1.9921875000000002,
+  "duration": 0.5333333333333333
+ },
+ "attack_bite": {
+  "frames": 66,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.2
+ },
+ "attack_claw": {
+  "frames": 72,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.4
+ },
+ "attack_slam": {
+  "frames": 72,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.4
+ },
+ "jump": {
+  "frames": 58,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 1.9333333333333333
+ }
+}
