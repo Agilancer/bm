@@ -140,7 +140,7 @@ sword left free in the atlas, and normals are rebuilt across the whole surface.
 - The arms are detailed PBR and the Greatsword is the game's low-poly retro model, so they differ in style up close.
 - The clips aren't in the game yet: bm has no game code so far, only this model and its viewer.
 
-## Rebuilding
+## Rebuilding the first-person arms
 
 Needs Python with numpy, scipy and Pillow. Run these from the top of the repo, for the sword and shield:
 
@@ -176,12 +176,8 @@ screen. For a second opinion from Blender's own importer, with `1h` or `2h` as t
 blender -b --factory-startup --python tools/fp_arms/blender_check.py -- 1h
 ```
 
-<<<<<<< HEAD
 Source art is in `art/fp_arms/`: the Tripo models as delivered, the Greatsword, Arming Sword and Iron-Bound Roundshield
 from Bellmourn2, and the two-hander's swing keys from Bellmourn.
-=======
-Source art is in `art/fp_arms/`: the Tripo model as delivered, the Greatsword from Bellmourn2, and the swing keys from
-Bellmourn.
 
 ## Crab monster
 
@@ -230,4 +226,3 @@ python tools/crab_monster/build.py
 
 The skeleton and weights are in `tools/crab_monster/rig.py`, and the clips, as eased keys, are in `tools/crab_monster/anim.py`.
 Source art and the Blender file are in `art/crab_monster/`.
->>>>>>> origin/main
