@@ -21,7 +21,7 @@ struct Frame {
   screen: vec4f,          // w, h, 1/w, 1/h
   wind: vec4f,            // xz = direction, y = strength, w = gust phase
   ground: vec4f,          // ground map: min x, min z, 1/size, grass tint
-  blood: vec4f,           // blood map: min x, min z, 1/size, -
+  blood: vec4f,           // blood map: min x, min z, 1/size, whether there's bloom
   chars: array<vec4f, 6>, // bodies pressing the grass
   lights: array<Light, 12>,
   counts: vec4f,          // x = lights, y = cascades, z = pom, w = grass near radius
@@ -67,6 +67,15 @@ fn shadowAt(p: vec3f, n: vec3f, viewZ: f32, seed: f32) -> f32 {
   let offset = n * (0.012 + f32(c) * 0.03);
   let cp = F.cascades[c] * vec4f(p + offset, 1.0);
   let uv = vec2f(cp.x * 0.5 + 0.5, 0.5 - cp.y * 0.5);
+  // On a phone: three taps close up, so leaf shadows stay soft, and one further off, where small pixels hide the edge.
+  if (LEAN) {
+    var s1 = textureSampleCompareLevel(shadowTex, shadowSmp, uv, c, cp.z);
+    if (c == 0) {
+      let k = F.sunDir.w * 0.5;
+      s1 = (s1 + textureSampleCompareLevel(shadowTex, shadowSmp, uv + vec2f(k, k * 0.6), c, cp.z) + textureSampleCompareLevel(shadowTex, shadowSmp, uv + vec2f(-k, k * 0.6), c, cp.z)) / 3.0;
+    }
+    return mix(s1, 1.0, smoothstep(F.splits.z * 0.86, F.splits.z, viewZ));
+  }
   let texel = F.sunDir.w * (1.0 + f32(c) * 0.25);
   let a = seed * 6.2831853;
   let ca = cos(a); let sa = sin(a);
@@ -101,13 +110,16 @@ fn vSmith(nv: f32, nl: f32, a: f32) -> f32 {
 fn fSchlick(f0: vec3f, vh: f32) -> vec3f { return f0 + (vec3f(1.0) - f0) * pow(1.0 - vh, 5.0); }
 
 fn brdf(n: vec3f, v: vec3f, l: vec3f, albedo: vec3f, f0: vec3f, rough: f32, metal: f32) -> vec3f {
-  let h = normalize(v + l);
   let nl = max(dot(n, l), 0.0);
+  // On a phone, earth and plaster are lit as what they nearly are: a highlight that rough is hardly there. It fades out
+  // rather than stopping at a line, or a surface whose paint hovers around that line goes to pepper.
+  if (LEAN && rough > 0.92 && metal < 0.02) { return albedo / PI * nl; }
+  let h = normalize(v + l);
   let nv = max(dot(n, v), 0.02);
   let nh = max(dot(n, h), 0.0);
   let vh = max(dot(v, h), 0.0);
   let a = max(rough * rough, 0.012);
-  let spec = dGGX(nh, a) * vSmith(nv, nl, a) * fSchlick(f0, vh) * sunSpecScale;
+  let spec = dGGX(nh, a) * vSmith(nv, nl, a) * fSchlick(f0, vh) * sunSpecScale * select(1.0, 1.0 - smoothstep(0.75, 0.92, rough), LEAN && metal < 0.02);
   let diff = albedo * (1.0 - metal) / PI;
   return (diff + spec) * nl;
 }
@@ -120,11 +132,18 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   let ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   let nv = max(dot(n, v), 0.0);
   let refl = reflect(-v, n);
-  let lod = rough * 7.0;
-  // Steel takes the sky's brightness more than its colour.
-  let envRaw = envDir(refl, lod);
-  let env = mix(vec3f(dot(envRaw, vec3f(0.2126, 0.7152, 0.0722))), envRaw, 0.62);
-  let fr = f0 + (max(vec3f(1.0 - rough), f0) - f0) * pow(1.0 - nv, 5.0);
+  // On a phone only metal reads the sky's picture. On anything else it's a faint sheen, and this fit to that picture, as
+  // blurred as a rough surface sees it, does as well.
+  let toSun = max(dot(refl, F.sunDir.xyz), 0.0);
+  var env = vec3f(0.08, 0.12, 0.15) + vec3f(0.16, 0.16, 0.15) * toSun * toSun;
+  if (!LEAN || metal > 0.02) {
+    let lod = rough * 7.0;
+    // Steel takes the sky's brightness more than its colour.
+    let envRaw = envDir(refl, lod);
+    env = mix(vec3f(dot(envRaw, vec3f(0.2126, 0.7152, 0.0722))), envRaw, 0.62);
+  }
+  // (On a phone the very edge-on sheen goes: on a plate's thin rim it's a line of bright specks a low resolution can't hold.)
+  let fr = f0 + (max(vec3f(1.0 - rough), f0) - f0) * pow(1.0 - nv, 5.0) * select(1.0, smoothstep(0.0, 0.14, nv), LEAN);
   // The ground's reflection, when the mirror direction looks down, is dim and warm.
   let horizon = smoothstep(-0.25, 0.12, refl.y);
   let reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);

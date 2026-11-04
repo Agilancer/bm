@@ -53,8 +53,12 @@ ELBOW_DROP = 0.15                          # after the hit, how far under the ha
 ELBOW_NEAR = 0.30                          # ...and how near the eye it may come before the forearm swells to a lump (metres)
 ELBOW_BEND = (12.0, 140.0)                 # how straight and how bent an elbow goes (degrees from straight)
 ELBOW_ASTRAY = 0.09                        # how far an elbow may stray the wrong side of the arm's line before the wrist helps out (metres)
-IN_LINE = {}                               # past the hit, how much a cut wants its forearm and blade in one line on the screen (by name)
-FOLD_EASE = 35.0                           # ...and the degrees of fold between them that weigh as much as the rest
+FOLD_EASE = 35.0                           # past the hit, the degrees of fold between forearm and blade on the screen that weigh as much as the rest
+# What a cut's finish asks beyond those, by name. in_line: how much it wants its forearm and blade in one line on the screen. room: in
+# place of SHOULDER_ROOM. (An arm's cut end isn't its shoulder: it's partway up the upper arm, and it rises with the elbow.) drop: in
+# place of ELBOW_DROP. An overhead cut ends with the arm straight and the elbow still up: forearm, fist and blade going down one line.
+# A backhand ends with the forearm swung out across the body from an elbow under the view, the blade going on from it.
+FINISH = {"over": dict(in_line=6.0, room=(0.22, 0.30, 0.24), drop=-0.05), "d2": dict(in_line=6.0)}
 SHO = np.array([0.25, 0.02, -0.32])        # the right shoulder from the eye, the left mirrored
 ZOOM = S.ZOOM
 ROLLS = S.ROLLS
@@ -337,19 +341,20 @@ def solve_sword(path, arm):
     leads = path.get("lead", np.zeros(N))
     cocks = path.get("cock", np.full(N, COCK["wind"]))
     finishes = path.get("finish", np.zeros(N))
+    how = FINISH.get(path["name"], {})
     for i in range(N):
         Rs = sword_frames(np.broadcast_to(D[i], (ROLLS, 3)), np.broadcast_to(X[i], (ROLLS, 3)), grid)
         R_h, W = arm.hand(Rs, np.broadcast_to(G[i], (ROLLS, 3)), np.zeros(ROLLS))
-        Sh, E, bend, _, _, more = arm_on_hand(arm, R_h, W, leads[i], cocks[i], None, finishes[i])
+        Sh, E, bend, _, _, more = arm_on_hand(arm, R_h, W, leads[i], cocks[i], None, finishes[i], how)
         twists[i] = more[0]
         c = (bend / 90) ** 2 + (np.linalg.norm(Sh - arm.S0, axis=-1) / SHOULDER_EASE) ** 2 + (elbow_astray(arm, E, W) / 0.04) ** 2
-        high, near = elbow_on_screen(E, W)
+        high, near = elbow_on_screen(E, W, how)
         c = c + finishes[i] * ((high / 0.2) ** 2 + (near / 0.06) ** 2)
         if finishes[i] > 0:       # (past the hit: the fist on the forearm's line, the blade's flat to the eye)
             to_eye = un(-(G[i] + D[i] * TIP * 0.5))
             flat = np.degrees(np.arcsin(np.clip(np.abs(Rs[:, :, 0] @ to_eye), 0, 1)))
             c = c + finishes[i] * ((hook_on_screen(E, W, G[i]) / HOOK_EASE) ** 2 + 2 * (np.maximum(0, 22 - flat) / 12) ** 2)
-            c = c + finishes[i] * IN_LINE.get(path["name"], 0.0) * (fold_on_screen(E, W, G[i] + D[i] * TIP) / FOLD_EASE) ** 2
+            c = c + finishes[i] * how.get("in_line", 0.0) * (fold_on_screen(E, W, G[i] + D[i] * TIP) / FOLD_EASE) ** 2
         q = G[i] + Rs[:, :, 1] * POMMEL - W
         e = (E - W) / np.linalg.norm(E - W, axis=-1, keepdims=True)
         clear = np.degrees(np.arccos(np.clip((q * e).sum(-1) / np.linalg.norm(q, axis=-1), -1, 1)))
@@ -405,9 +410,9 @@ def forearm_way(arm, R_h, cocks):
     return ((R_h @ np.swapaxes(arm.rel, -1, -2))[..., None, :, :] @ fs[..., None])[..., 0]
 
 
-def _shoulder_fits(arm, S_):
+def _shoulder_fits(arm, S_, how={}):
     """Is this somewhere a shoulder could get to with the torso turning, and is its cut end off the screen?"""
-    d = (S_ - arm.S0) / np.array(SHOULDER_ROOM)
+    d = (S_ - arm.S0) / np.array(how.get("room", SHOULDER_ROOM))
     fy = 1.6 * ZOOM
     fx = fy / S.ASPECT
     y = np.maximum(S_[..., 1], 1e-3)
@@ -431,12 +436,12 @@ def elbow_astray(arm, E, W):
     return np.maximum(0.0, -(off * pole).sum(-1)) * under
 
 
-def elbow_on_screen(E, W):
+def elbow_on_screen(E, W, how={}):
     """After the hit: how far an elbow is from falling well under the hand on the screen (a forearm laid flat across the
     bottom of the view, the fist hooked off its end, reads as a broken wrist), and how near it's come to the eye."""
     fy = 1.6 * ZOOM
     height = lambda P_: fy * P_[..., 2] / np.maximum(P_[..., 1], 0.05)
-    return np.maximum(0.0, height(E) - height(W) + ELBOW_DROP), np.maximum(0.0, ELBOW_NEAR - np.linalg.norm(E, axis=-1))
+    return np.maximum(0.0, height(E) - height(W) + how.get("drop", ELBOW_DROP)), np.maximum(0.0, ELBOW_NEAR - np.linalg.norm(E, axis=-1))
 
 
 def hook_on_screen(E, W, fist):
@@ -456,15 +461,15 @@ def fold_on_screen(E, W, tip):
     return np.degrees(np.arctan2(np.abs(a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]), (a * b).sum(-1)))
 
 
-def best_cock(arm, R_h, W, most, finish=0.0):
+def best_cock(arm, R_h, W, most, finish=0.0, how={}):
     """How far to cock the wrist for this hand: whatever asks least of the shoulder and leaves the elbow hanging naturally,
     within `most` (degrees), and straighter if it's all the same to the arm."""
     ways = forearm_way(arm, R_h, RADIALS)      # (.., K, 3)
     E = W[..., None, :] - ways * arm.F
     S_ = _shoulder_for(arm, E, arm.S0)
     c = (np.linalg.norm(S_ - arm.S0, axis=-1) / 0.12) ** 2 + (RADIALS / 70.0) ** 2 + (elbow_astray(arm, E, W[..., None, :]) / 0.03) ** 2
-    c = c + 40.0 * ~_shoulder_fits(arm, S_) + 400.0 * (RADIALS > np.asarray(most)[..., None])
-    high, near = elbow_on_screen(E, W[..., None, :])
+    c = c + 40.0 * ~_shoulder_fits(arm, S_, how) + 400.0 * (RADIALS > np.asarray(most)[..., None])
+    high, near = elbow_on_screen(E, W[..., None, :], how)
     c = c + np.asarray(finish)[..., None] * ((high / 0.2) ** 2 + (near / 0.06) ** 2)
     return RADIALS[np.argmin(c, axis=-1)]
 
@@ -500,7 +505,7 @@ def _arm_at(arm, R_h, W, Sh, E0, k, cock, keep=None):
     return S_, E, bend, (tau, phi, n, f, ud)
 
 
-def arm_on_hand(arm, R_h, W, lead, most, pole=None, finish=0.0):
+def arm_on_hand(arm, R_h, W, lead, most, pole=None, finish=0.0, how={}):
     """Shoulder, elbow, the wrist's bend, how far the arm leads and how far the wrist is cocked, for a hand. `lead`, from 0 to
     1: how far the arm should carry the swing. At 0 the arm reaches for the wrist as it can and the wrist takes up the rest;
     at 1 the wrist only cocks in the blade's plane, by at most `most`, and the elbow and shoulder go where that puts them.
@@ -508,17 +513,17 @@ def arm_on_hand(arm, R_h, W, lead, most, pole=None, finish=0.0):
     Sh, _ = arm.reach(W)
     E0, _ = arm.elbow(Sh, W, pole)
     lead = np.broadcast_to(np.asarray(lead, float), W.shape[:-1])
-    cock = best_cock(arm, R_h, W, most, finish)
+    cock = best_cock(arm, R_h, W, most, finish, how)
     k = np.zeros_like(lead)
     for a in (1.0, 0.8, 0.6, 0.4, 0.2):      # (from the most it could lead, down)
         try_k = lead * a
         S_, E_, _, _ = _arm_at(arm, R_h, W, Sh, E0, try_k[..., None], cock)
-        k = np.where((k == 0) & _shoulder_fits(arm, S_) & (elbow_astray(arm, E_, W) < ELBOW_ASTRAY), try_k, k)
+        k = np.where((k == 0) & _shoulder_fits(arm, S_, how) & (elbow_astray(arm, E_, W) < ELBOW_ASTRAY), try_k, k)
     S_, E, bend, more = _arm_at(arm, R_h, W, Sh, E0, k[..., None], cock)
     return S_, E, bend, k, cock, more
 
 
-def lead_arm(arm, Rs, r, lead, most=None, finish=None):
+def lead_arm(arm, Rs, r, lead, most=None, finish=None, how={}):
     """The sword arm, carrying the swing: frame by frame, on the hand that holds the sword. Its lead, the wrist's cock, the
     forearm's twist and the elbow's bend all ease from frame to frame, so nothing in the arm can jump."""
     if most is None:
@@ -527,7 +532,7 @@ def lead_arm(arm, Rs, r, lead, most=None, finish=None):
     Sh, _ = arm.reach(W)
     _, p = arm.elbow(Sh, W)
     p = gaussian_filter1d(p, 2.0, axis=0, mode="nearest")
-    _, _, _, k, cock, _ = arm_on_hand(arm, R_h, W, lead, most, p, 0.0 if finish is None else finish)
+    _, _, _, k, cock, _ = arm_on_hand(arm, R_h, W, lead, most, p, 0.0 if finish is None else finish, how)
     k = np.minimum(gaussian_filter1d(k, 3.0, mode="nearest"), lead)       # (no quicker than the arm could turn)
     cock = gaussian_filter1d(cock, 3.0, mode="nearest")
     Sh, _ = arm.reach(W)
@@ -649,7 +654,7 @@ def build_clips(info, B):
 
     def clip(cname, path, shield_keys, weights, off=0.0):
         Rs = solve_sword(path, armR)
-        sol = dict(T=path["T"], sword_R=Rs, sword_p=path["G"], R=lead_arm(armR, Rs, path["G"], path.get("lead", np.zeros(len(path["T"]))), path.get("cock"), path.get("finish")))
+        sol = dict(T=path["T"], sword_R=Rs, sword_p=path["G"], R=lead_arm(armR, Rs, path["G"], path.get("lead", np.zeros(len(path["T"]))), path.get("cock"), path.get("finish"), FINISH.get(path["name"], {})))
         RL, pL = blend_shield(shield_keys, weights)
         sol["L"] = solve_arm(armL, RL, pL + off)
         clips[cname] = (path, sol)

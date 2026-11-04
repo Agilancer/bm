@@ -1,4 +1,9 @@
 // Positional sound on Web Audio. Everything is decoded up front, so a blow is heard the instant it lands.
+import { isMobileDevice } from './gfx/gpu.js';
+
+// Head-related filtering is a convolution for every sound playing, for a phone's speakers to throw away.
+const PHONE = isMobileDevice();
+const PANNING = PHONE ? 'equalpower' : 'HRTF';
 
 const BANKS = {
   attack: ['sword_attack_1', 'sword_attack_2', 'sword_attack_3'],
@@ -15,8 +20,10 @@ const BANKS = {
 };
 
 export class Audio {
-  constructor(base) {
+  // ctx and dest: the title's context and its Volume, so the title and the game share one line out.
+  constructor(base, ctx = null, dest = null, ambience = 1) {
     this.base = base;
+    this.sharedCtx = ctx; this.dest = dest; this.ambienceLevel = ambience;
     this.buffers = {};
     this.ctx = null;
     this.ready = false;
@@ -24,14 +31,17 @@ export class Audio {
 
   async load() {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    this.ctx = new AC({ latencyHint: 'interactive' });
+    if (!AC && !this.sharedCtx) return;
+    this.ctx = this.sharedCtx || new AC({ latencyHint: 'interactive' });
     const { ctx } = this;
     this.master = ctx.createGain();
     this.master.gain.value = 0.9;
     const comp = ctx.createDynamicsCompressor();
     this.master.connect(comp);
-    comp.connect(ctx.destination);
+    comp.connect(this.dest || ctx.destination);
+    this.amb = ctx.createGain();
+    this.amb.gain.value = this.ambienceLevel;
+    this.amb.connect(this.master);
     // A short slap of space, so steel rings off the houses.
     const len = Math.floor(ctx.sampleRate * 0.7);
     const ir = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -72,12 +82,15 @@ export class Audio {
     const g = this.ctx.createGain();
     g.gain.value = gain;
     src.connect(g);
-    g.connect(this.master);
+    g.connect(this.amb);
     src.start();
   }
 
+  setAmbience(v) { this.ambienceLevel = v; if (this.amb) this.amb.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }
+
   listener(x, y, z, fx, fy, fz, ux, uy, uz) {
     if (!this.ready) return;
+    if (PHONE && (this.listenerTurn = (this.listenerTurn + 1 || 0) % 3)) return;
     const l = this.ctx.listener, t = this.ctx.currentTime;
     if (l.positionX) {
       l.positionX.setValueAtTime(x, t); l.positionY.setValueAtTime(y, t); l.positionZ.setValueAtTime(z, t);
@@ -103,7 +116,7 @@ export class Audio {
       if (wet) g.connect(this.reverb);
     } else {
       const p = this.ctx.createPanner();
-      p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = 2.5; p.rolloffFactor = 1.1;
+      p.panningModel = PANNING; p.distanceModel = 'inverse'; p.refDistance = 2.5; p.rolloffFactor = 1.1;
       if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z);
       g.connect(p);
       p.connect(this.master);
@@ -129,7 +142,7 @@ export class Audio {
     g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     const p = ctx.createPanner();
-    p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = 2.5;
+    p.panningModel = PANNING; p.distanceModel = 'inverse'; p.refDistance = 2.5;
     if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z);
     src.connect(f); f.connect(g); g.connect(p); p.connect(this.master);
     src.start(t, Math.random() * 0.5);

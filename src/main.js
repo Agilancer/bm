@@ -3,11 +3,14 @@ import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, mapShared } from './core/layout.js';
 import { clamp, damp, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
+import { Governor } from './gfx/governor.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
 import { Drops } from './items/drops.js';
 import { colorOf, nameOf, rollGem, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { Pack } from './items/pack.js';
+import { addPart, capture, restore, saves } from './saves.js';
+import { settings, Title } from './title.js';
 import { Inventory } from './ui/inventory.js';
 
 const BASE = new URL('..', import.meta.url).href;
@@ -15,6 +18,9 @@ const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
 const CONSENT_KEY = 'bm-threads-consent';
+const AUTOSAVE_EVERY = 20;   // seconds of play between the saves Continue picks up
+const title = new Title();
+window.bmTitle = title;
 
 // ---- job pool ----------------------------------------------------------------------------------------------
 
@@ -47,8 +53,8 @@ class Pool {
     });
   }
 
-  startPlanners(buffer, budget, interval) {
-    this.workers.forEach((w, index) => w.postMessage({ id: 0, type: 'plan', args: { buffer, index: index + 1, budget, interval } }));
+  startPlanners(buffer, budget, interval, threads = this.size) {
+    this.workers.slice(0, threads).forEach((w, index) => w.postMessage({ id: 0, type: 'plan', args: { buffer, index: index + 1, budget, interval } }));
   }
 }
 
@@ -100,41 +106,61 @@ async function main() {
   const mobile = isMobileDevice();
   const plan = threadPlan(mobile);
   if (!navigator.gpu) { showFail('This browser does not offer it.'); return; }
+  if (AUTO) { boot(plan, plan.pool); return; }
+  // The title comes up once the page won't reload under it for shared memory, and the game loads behind it.
+  const go = async (pool) => {
+    if (!window.crossOriginIsolated && (await enableIsolation())) return;
+    $('gate').classList.add('gone');
+    title.start();
+    boot(plan, pool);
+  };
   const consented = localStorage.getItem(CONSENT_KEY);
-  if (AUTO || consented === 'all') { boot(plan, plan.pool); return; }
-  if (consented === 'few') { boot(plan, 1); return; }
+  if (consented === 'all') { go(plan.pool); return; }
+  if (consented === 'few') { go(1); return; }
   $('card').innerHTML = `<b>Bellmourn is asking to use your hardware.</b><br>
     ${plan.usable} of your ${plan.cores} CPU threads${mobile ? ' (some left free, so your phone stays cool)' : ''}, and your GPU at its highest performance setting.
     One thread runs the world, one draws it, and the rest load the game and plan the enemy's moves.
     <div class="small">Browsers have no pop-up for this, so this is the question. Shared memory between threads may need one quick page reload. You can change your mind later by clearing this site's data.</div>`;
   $('buttons').innerHTML = '<button class="big" id="allow">ALLOW</button><button class="alt" id="few">Use fewer threads</button>';
-  $('allow').onclick = async () => {
+  // (the click also lets the title's sound play, so it needn't ask for one)
+  $('allow').onclick = () => {
+    title.unlock();
     localStorage.setItem(CONSENT_KEY, 'all');
     $('card').textContent = 'Preparing...';
     $('buttons').innerHTML = '';
-    if (await enableIsolation()) return;
-    boot(plan, plan.pool);
+    go(plan.pool);
   };
-  $('few').onclick = async () => {
+  $('few').onclick = () => {
+    title.unlock();
     localStorage.setItem(CONSENT_KEY, 'few');
     $('buttons').innerHTML = '';
-    if (await enableIsolation()) return;
-    boot(plan, 1);
+    go(1);
   };
 }
 
+function failOnTitle(message) {
+  title.hide(true);
+  $('gate').classList.remove('gone');
+  $('bar').style.display = 'none';
+  $('card').style.display = '';
+  $('card').textContent = message;
+}
+
 async function boot(plan, poolSize) {
-  if (!AUTO && !window.crossOriginIsolated && (await enableIsolation())) return;
   $('card').style.display = 'none';
   $('buttons').innerHTML = '';
   $('bar').style.display = 'block';
-  const setProgress = (t, msg) => { $('bar').firstElementChild.style.width = `${Math.round(t * 100)}%`; if (msg) $('status').textContent = msg; };
+  const setProgress = (t, msg) => {
+    $('bar').firstElementChild.style.width = `${Math.round(t * 100)}%`;
+    if (msg) $('status').textContent = msg;
+    if (title.up) title.progress(Math.round(t * 100));
+  };
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
-  try { gpu = await initGPU(); } catch (e) { $('bar').style.display = 'none'; $('card').style.display = ''; showFail(e.message); return; }
+  try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
   gpu.device.lost.then((info) => {
     console.error('device lost', info.message);
-    if (info.reason !== 'destroyed') { $('gate').classList.remove('gone'); $('card').style.display = ''; $('card').textContent = 'The GPU reset. Reload the page to continue.'; }
+    if (info.reason !== 'destroyed') failOnTitle('The GPU reset. Reload the page to continue.');
   });
   let gpuErrors = 0;
   gpu.device.addEventListener('uncapturederror', (e) => { window.__gpuErrors = ++gpuErrors; if (gpuErrors < 6) console.error('GPU error:', e.error.message); });
@@ -144,12 +170,22 @@ async function boot(plan, poolSize) {
   const buffer = isolated ? new SharedArrayBuffer(TOTAL_BYTES) : null;
   const shared = buffer ? mapShared(buffer) : mapShared(new ArrayBuffer(TOTAL_BYTES));
   const input = new Input(canvas, shared.input);
+  // The world holds still under the title.
+  if (!AUTO) shared.input[INPUT.PAUSE] = 1;
   setProgress(0.05, `Loading with ${poolSize} threads...`);
 
   const renderer = new Renderer(gpu, canvas, pool);
   const simWorker = new Worker(new URL('./sim/sim.worker.js', import.meta.url), { type: 'module' });
-  const audio = new Audio(BASE);
+  const audio = new Audio(BASE, title.ctx, title.out, settings.ambience);
   let latestSnap = null;
+  // Saves and loads are asked of the simulation thread, and answered by id.
+  const calls = new Map();
+  let callId = 0;
+  const simCall = (type, data) => new Promise((resolve, reject) => {
+    const id = ++callId;
+    calls.set(id, { resolve, reject });
+    simWorker.postMessage({ type, id, data });
+  });
   const simReady = new Promise((resolve, reject) => {
     simWorker.onmessage = (e) => {
       const m = e.data;
@@ -158,6 +194,11 @@ async function boot(plan, poolSize) {
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'restart') { input.yaw = Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
+      else if (m.type === 'placed') {
+        const c = calls.get(m.id);
+        calls.delete(m.id);
+        if (c) { if (m.error) c.reject(new Error(m.error)); else c.resolve(m.data); }
+      }
     };
     simWorker.onerror = (e) => { console.error('sim worker', e.message); reject(new Error(e.message)); };
   });
@@ -176,8 +217,7 @@ async function boot(plan, poolSize) {
       audio.load().catch((e) => console.warn('audio', e)),
     ]);
   } catch (e) {
-    $('bar').style.display = 'none';
-    $('card').style.display = ''; $('card').textContent = `Failed to load: ${e.message}`;
+    failOnTitle(`Failed to load: ${e.message}`);
     console.error(e);
     return;
   }
@@ -186,25 +226,35 @@ async function boot(plan, poolSize) {
   // Tasks for the pool once the load is done: thinking about the fight.
   if (buffer) {
     shared.ctrl[CTRL.PLAN_RUN] = 1;
-    pool.startPlanners(buffer, gpu.mobile ? 2.5 : 4, 40);
+    // On a phone every thread awake is heat the GPU then can't spend, so the planners take far less: the fight doesn't
+    // need many rollouts to read, and they never slowed the frame on a PC.
+    if (gpu.mobile) pool.startPlanners(buffer, 2, 80, 2);
+    else pool.startPlanners(buffer, 4, 40);
   }
 
   // ---- the render thread's loop --------------------------------------------------------------------------------------
 
   game = new GameView(renderer, shared, input, audio, hud, gpu, simWorker, buffer);
-  const pack = Pack.restore(params.has('freshpack'));
-  const arm = () => { writeWeapon(shared.input, pack.slots.main); pack.save(); };
+  const pack = new Pack();
+  pack.load(null);
+  const arm = () => writeWeapon(shared.input, pack.slots.main);
   arm();
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
     change: arm,
-    drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); pack.save(); },
+    drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); },
   });
   Object.assign(game, { pack, inventory });
   window.bm = game.api(shared, simWorker, buffer, pool);
   game.pendingEvents = pendingEvents;
   game.getNonSharedSnap = () => latestSnap;
 
-  const enter = async () => {
+  const enter = async (fresh = true) => {
+    title.hide();
+    game.idle = false;
+    state.paused = false;
+    $('pause').style.display = 'none';
+    shared.input[INPUT.PAUSE] = 0;
+    audio.setAmbience(settings.ambience);
     $('gate').classList.add('gone');
     $('hud').style.display = 'block';
     if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; }
@@ -216,16 +266,111 @@ async function boot(plan, poolSize) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    hud.intro(!!pack.slots.main);
+    if (fresh) hud.intro(!!pack.slots.main);
   };
+
+  // ---- saving, loading and the menus ---------------------------------------------------------------------------------
+
+  // What a save holds, part by part (saves.js): where you stand and which way you face, the time played, and the pack and
+  // what's on the body. Quests will be a part of their own. What's lying on the ground isn't kept: a load starts the world fresh.
+  let played = 0, playT = 0;
+  addPart('player', {
+    save: () => { const s = game.currentSnap(); return { x: s[H.PX], y: s[H.PY], z: s[H.PZ], yaw: input.yaw, pitch: input.pitch }; },
+    load: (d) => simCall('place', d),   // (a fresh world, and you where the save says; null: where a new game starts)
+    summary: () => 'Velscour village',
+  });
+  addPart('stats', {
+    save: () => ({ played: Math.round(played) }),
+    load: (d) => { played = d?.played || 0; },
+    summary: (d) => `${Math.floor(d.played / 60)}:${String(d.played % 60).padStart(2, '0')} played`,
+  });
+  addPart('pack', {
+    save: () => pack.save(),
+    load: (d) => { pack.load(d); arm(); game.drops.clear(); },
+  });
+  // Not while you lie fallen.
+  const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
+  const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
+  // The game keeps itself as it's played: that's Continue.
+  const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
+  game.onTaken = autosave;
+  game.onTick = (dt) => {
+    if (!input.enabled || state.paused) return;
+    played += dt; playT += dt;
+    if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
+  };
+  const loadInto = async (data) => {
+    try { await restore(data); } catch (e) {
+      await title.confirm({ title: 'Could not load', text: e.message, yes: 'Back', no: false });
+      return false;
+    }
+    hud.reset(); renderer.clearBlood(); playT = 0;
+    return true;
+  };
+  const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
+  const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
+  const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
+  const resume = () => { if (input.touch || AUTO) input.onPauseChange(false); else input.lock(); };
+  const toTitle = async () => {
+    await autosave();
+    input.enabled = false;
+    state.paused = false;
+    shared.input[INPUT.PAUSE] = 1;
+    if (document.pointerLockElement) document.exitPointerLock();
+    $('pause').style.display = 'none'; $('hud').style.display = 'none'; $('touch').style.display = 'none';
+    document.body.classList.remove('playing');
+    game.idle = true;
+    audio.setAmbience(0);
+    title.toMenu();
+  };
+  title.onMenu = async (a) => {
+    if (a === 'new') {
+      if (saves.auto() && !(await title.confirm({ title: 'New Game', text: 'Start the fight over from the beginning? The game you were playing stays in Continue until you play on.', yes: 'New Game' }))) return;
+      saves.clearAuto();
+      shared.input[INPUT.RESTART] += 1;   // (taken up on the first step after the world is let go)
+      played = 0; playT = 0;
+      pack.load(null);
+      arm();
+      game.drops.clear();
+      enter(true);
+    } else if (a === 'continue') {
+      const d = saves.newest();
+      if (d) startFrom(d);
+    } else if (a === 'load') title.slots('load', slotOptions());
+  };
+  for (const b of $('pause').querySelectorAll('[data-p]')) {
+    b.onclick = () => {
+      title.chime();
+      const a = b.dataset.p;
+      if (a === 'resume') resume();
+      else if (a === 'save' || a === 'load') title.slots(a, slotOptions());
+      else if (a === 'settings' || a === 'howto') title.panel(a, b);
+      else if (a === 'menu') toTitle();
+    };
+  }
+  const applySetting = (k, v) => {
+    if (k === 'look') input.sens = v;
+    else if (k === 'ambience' && input.enabled) audio.setAmbience(v);
+    else if (k === 'perf') hud.setDebug(v === 'on');
+    else if (k === 'res') {
+      game.fixedScale = v !== 'auto';
+      if (game.fixedScale) renderer.scale = Number(v);
+    } else if (k === 'gfx') {
+      title.confirm({ title: 'Restart?', text: 'The graphics setting takes hold when the game restarts. Where you are is kept for Continue.', yes: 'Restart Now', no: 'Later' })
+        .then(async (yes) => { if (yes) { await autosave(); title.reload(); } });
+    }
+  };
+  title.onSetting = applySetting;
+  applySetting('look', settings.look);
+  applySetting('res', settings.res);
+  if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
     if (!input.enabled || inventory.open) return;
+    if (paused && !state.paused) autosave();
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
   };
-  // Back to the fight, wherever the pointer is free to be locked again.
-  const resume = () => { if (input.touch || AUTO) input.onPauseChange(false); else input.lock(); };
   input.onLockRefused = () => input.onPauseChange(true);
   const openPack = () => {
     state.paused = true;
@@ -238,15 +383,15 @@ async function boot(plan, poolSize) {
   const closePack = (viaEsc) => {
     inventory.hide();
     input.menu = false;
+    autosave();
     if (viaEsc && !input.touch && !AUTO) input.onPauseChange(true); else resume();
   };
   $('invClose').onclick = () => closePack(false);
-  $('resume').onclick = resume;
   $('bPause').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); input.onPauseChange(true); }, { passive: false });
   document.addEventListener('visibilitychange', () => {
     const hidden = document.hidden;
     shared.input[INPUT.PAUSE] = hidden || state.paused ? 1 : 0;
-    if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && input.enabled) audio.ctx.resume();
+    if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
   });
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
@@ -266,9 +411,9 @@ async function boot(plan, poolSize) {
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>PACK</b> holds your swords.'
     : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take';
-  $('gate').classList.add('clear');
-  $('buttons').innerHTML = '<button class="big" id="enter">ENTER THE VILLAGE</button>';
-  $('enter').onclick = enter;
+  // Loaded: the title's menu comes up (once Bellmourn's logo is in).
+  game.idle = !AUTO;
+  title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
   if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
 }
 
@@ -280,6 +425,7 @@ class Hud {
     this.debug = params.has('debug');
     this.t = 0;
     this.frames = 0; this.fps = 0; this.lastFpsT = performance.now();
+    this.worst = 0; this.worstShown = 0;
     $('debug').style.display = this.debug ? 'block' : 'none';
     this.msgShown = 0;
     this.tips = [];
@@ -293,7 +439,17 @@ class Hud {
 
   reset() { this.msgShown = 0; $('msg').style.opacity = 0; $('msg').innerHTML = ''; this.shown = {}; }
 
-  toggleDebug() { this.debug = !this.debug; $('debug').style.display = this.debug ? 'block' : 'none'; }
+  setDebug(on) { this.debug = on; $('debug').style.display = on ? 'block' : 'none'; }
+
+  toggleDebug() { this.setDebug(!this.debug); }
+
+  // A bar is scaled, not resized: that's the compositor's work alone, where a width means layout and paint on the
+  // thread that's drawing the game.
+  setBar(el, v) {
+    if (Math.abs(v - el.shown) < 0.004) return;
+    el.shown = v;
+    el.style.transform = `scaleX(${v.toFixed(3)})`;
+  }
 
   intro(armed) {
     this.tip(armed ? 'Find the black knight. A cut opens the armour.' : `Your hands are empty. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 7);
@@ -326,21 +482,25 @@ class Hud {
     if (now - this.lastFpsT > 500) {
       this.fps = this.frames * 1000 / (now - this.lastFpsT);
       this.frames = 0; this.lastFpsT = now;
+      this.worstShown = this.worst; this.worst = 0;
     }
+    this.worst = Math.max(this.worst, dt * 1000);
     this.t += dt;
-    $('cross').classList.toggle('wound', snap[H.AIM_WOUND] > 0.5);
+    const onWound = snap[H.AIM_WOUND] > 0.5;
+    if (onWound !== this.onWound) { this.onWound = onWound; $('cross').classList.toggle('wound', onWound); }
     if (this.t < 0.08) return;
     this.t = 0;
-    this.stamEl.style.width = `${clamp(snap[H.STAMINA] / 100, 0, 1) * 100}%`;
-    this.hpEl.style.width = `${clamp(snap[H.HP] / snap[H.MAX_HP], 0, 1) * 100}%`;
+    this.setBar(this.stamEl, clamp(snap[H.STAMINA] / 100, 0, 1));
+    this.setBar(this.hpEl, clamp(snap[H.HP] / snap[H.MAX_HP], 0, 1));
     const co = CHARS_START;
     const hostile = snap[co + C.STATE] !== 0 || snap[co + C.GASH_COUNT] > 0;
     const hpf = clamp(snap[co + C.HP] / snap[co + C.MAX_HP], 0, 1);
     $('foe').style.opacity = hostile && snap[co + C.STATE] !== 10 ? 1 : 0;
-    this.foeHp.style.width = `${hpf * 100}%`;
-    this.foeArm.style.width = `${clamp(snap[co + C.ARMOR], 0, 1) * 100}%`;
+    this.setBar(this.foeHp, hpf);
+    this.setBar(this.foeArm, clamp(snap[co + C.ARMOR], 0, 1));
     const bleeds = snap[co + C.N_BLEEDS];
-    $('bleed').textContent = bleeds >= 3 ? 'BLEEDING OUT' : bleeds >= 1 ? 'BLEEDING' : '';
+    const bleedText = bleeds >= 3 ? 'BLEEDING OUT' : bleeds >= 1 ? 'BLEEDING' : '';
+    if (bleedText !== this.bleedText) { this.bleedText = bleedText; $('bleed').textContent = bleedText; }
     const g = snap[H.GAME];
     if (g !== this.msgShown) {
       this.msgShown = g;
@@ -351,9 +511,9 @@ class Hud {
     }
     if (this.debug) {
       const k = this.gpu.tier;
-      $('debug').textContent = `${this.fps.toFixed(0)} fps   gpu ${stats.gpuMs.toFixed(2)} ms
+      $('debug').textContent = `${this.fps.toFixed(0)} fps   worst ${this.worstShown.toFixed(0)} ms   gpu busy ${stats.busyMs.toFixed(1)} ms${stats.gpuMs > 0 ? `   timer ${stats.gpuMs.toFixed(1)} ms` : ''}
 ${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}
-render ${stats.W}x${stats.H}  scale ${stats.scale.toFixed(2)}
+render ${stats.W}x${stats.H}  scale ${stats.scale.toFixed(2)}  msaa ${stats.msaa}  effects -${stats.demoted}  refresh ${stats.vsync.toFixed(1)} ms
 threads ${this.plan.cores} logical, ${this.poolSize + 2} used, shared ${this.isolated ? 'yes' : 'no'}
 sim ${k.sim} Hz  planner rollouts ${(snap[H.ROLLOUTS] / 1000).toFixed(0)}k
 knight ${STATE_NAMES[snap[co + C.STATE]]}  tactic ${TACTICS[snap[H.TACTIC]]}
@@ -379,6 +539,41 @@ class GameView {
     this.drops = new Drops(renderer, audio);
     this.nearDrop = null;
     this.takeShown = null;
+    this.hudStats = { gpuMs: 0, busyMs: 0, W: 0, H: 0, scale: 1, msaa: 1, demoted: 0, vsync: 0 };
+    // Frames queued beyond this are only input lag. A phone's governor, and what it goes by.
+    this.maxInFlight = gpu.tier.lean ? 2 : 3;
+    this.vsyncMs = 1000 / 60; this.rafLast = 0; this.rafGaps = new Float32Array(45); this.rafN = 0; this.rafSkip = 0;
+    if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { renderer.scale = s; }, demote: () => renderer.demote() });
+    this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
+    renderer.onBusy = (ms) => {
+      this.busySum += ms; this.busyN++;
+      if (this.idle && !this.benched) this.timeFrame(ms);
+    };
+  }
+
+  // Under the title, before anyone's looking: what does this GPU make of this village? So the first fight already starts
+  // where it can hold. (The first frames are pipelines being built, so they don't count.)
+  timeFrame(ms) {
+    if (!this.governor || this.fixedScale) { this.benched = true; return; }
+    this.timed.push(ms);
+    if (this.timed.length < 14) return;
+    const typical = this.timed.slice(6).sort((a, b) => a - b)[4];
+    this.timed.length = 0;
+    const r = this.renderer;
+    // Well over budget, multisampling goes (while it still can), and it's timed again without.
+    if (typical > 25 && r.msaa > 1) { r.dropMSAA(); return; }
+    this.governor.seed(typical);
+    r.resize();
+    this.benched = true;
+  }
+
+  // What the display refreshes at, from the time between callbacks.
+  watchRefresh(now) {
+    if (this.rafLast) {
+      this.rafGaps[this.rafN++] = now - this.rafLast;
+      if (this.rafN === this.rafGaps.length) { this.rafN = 0; this.vsyncMs = this.rafGaps.slice().sort()[this.rafGaps.length >> 1]; }
+    }
+    this.rafLast = now;
   }
 
   // The nearest thing on the ground, into the pack if there's room for it.
@@ -388,7 +583,7 @@ class GameView {
     if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
     this.drops.take(d);
     this.nearDrop = null;
-    this.pack.save();
+    if (this.onTaken) this.onTaken();
   }
 
   updateDrops(dt, snap) {
@@ -420,12 +615,22 @@ class GameView {
     const schedule = useTimer ? (f) => setTimeout(() => f(performance.now()), 16) : requestAnimationFrame.bind(window);
     const loop = (now) => {
       schedule(loop);
-      const dt = Math.min((now - this.last) / 1000, 0.1);
-      this.last = now;
+      this.watchRefresh(now);
       this.input.update();
       if (!this.buffer) this.sim.postMessage({ input: this.shared.input.slice() });
+      // A phone on a 120 Hz screen takes every other refresh: a steady 60 is as smooth to the eye, and the battery and the
+      // heat are what would slow it down later.
+      if (this.gpu.mobile && this.vsyncMs < 10 && (this.rafSkip++ & 1)) return;
+      // Don't get ahead of the GPU: what's on its way to the screen is already out of date.
+      // (Unless a browser has stopped saying when the GPU's done, which mustn't freeze the game.)
+      if (this.renderer.inFlight >= (this.idle ? 1 : this.maxInFlight) && performance.now() - this.renderer.lastSent < 1000) return;
+      const dt = Math.min((now - this.last) / 1000, 0.1);
+      this.last = now;
       const snap = this.currentSnap();
       if (!snap) return;
+      // Under the title the village isn't drawn: a few frames, so the pipelines are built (and on a phone, timed), then nothing.
+      if (this.idle) { if (this.idleFrames > (this.governor && !this.benched ? 40 : 3)) return; this.idleFrames = (this.idleFrames || 0) + 1; } else this.idleFrames = 0;
+      if (this.onTick) this.onTick(dt);
       if (this.input.touch && this.input.enabled) this.aimAssist(dt, snap);
       this.processEvents(snap);
       this.updateCamera(dt, snap);
@@ -436,8 +641,10 @@ class GameView {
       const c = this.overrideCam || this.cam;
       this.renderer.frame(c, snap, this.sway, dt);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
-      this.govern(dt);
-      this.hud.update(dt, snap, { gpuMs: this.renderer.stats.gpuMs, W: this.renderer.W, H: this.renderer.H, scale: this.renderer.scale });
+      if (!this.idle) this.govern(dt);
+      const r = this.renderer, hs = this.hudStats;
+      hs.gpuMs = r.stats.gpuMs; hs.busyMs = r.stats.busyMs; hs.W = r.W; hs.H = r.H; hs.scale = r.scale; hs.msaa = r.msaa; hs.demoted = r.demoted || 0; hs.vsync = this.vsyncMs;
+      this.hud.update(dt, snap, hs);
       if (this.onFrame) this.onFrame();
     };
     schedule(loop);
@@ -462,36 +669,34 @@ class GameView {
     inp.pitch += (pitch - inp.pitch) * strength * 0.7;
   }
 
-  // Dynamic resolution: hold the display's refresh rate, spend what's left on pixels.
+  // Dynamic resolution: hold the display's refresh rate, spend what's left on pixels. (Phones: gfx/governor.js.)
   govern(dt) {
     const r = this.renderer;
     this.govT += dt; this.govMs += dt * 1000; this.govN++;
-    if (this.govT < 1.5) return;
+    if (this.govT < (this.governor ? 1 : 1.5)) return;
     const frameMs = this.govMs / this.govN;
-    this.govT = 0; this.govMs = 0; this.govN = 0;
+    const busyMs = this.busyN ? this.busySum / this.busyN : 0;
+    this.govT = 0; this.govMs = 0; this.govN = 0; this.busySum = 0; this.busyN = 0;
     if (document.hidden) return;
     if (this.fixedScale) return;
-    const budget = this.gpu.mobile ? 1000 / 60 : Math.max(1000 / 144, Math.min(frameMs, 1000 / 60));
-    const gpuMs = r.stats.gpuMs;
+    if (this.governor) {
+      // A 90 Hz screen has no 60: it's 90 or 45, and 45 isn't worth a lot of resolution to escape.
+      this.governor.lateMs = this.vsyncMs > 10 && this.vsyncMs < 13.5 ? 24 : 1000 / 60 * 1.14;
+      this.governor.update(frameMs, busyMs, performance.now() / 1000);
+      return;
+    }
+    const budget = Math.max(1000 / 144, Math.min(frameMs, 1000 / 60));
+    const gpuMs = r.stats.gpuMs || busyMs;
     // Resolution moves in fixed steps, so each only has to be built once.
     const STEPS = [1, 0.88, 0.76, 0.66, 0.55];
     let step = STEPS.indexOf(r.scale);
     if (step < 0) step = 0;
-    // A steady 30 Hz with no GPU timings is a browser's low-power cap, not a slow GPU.
-    const capped = gpuMs <= 0 && Math.abs(frameMs - 33.3) < 2.5;
-    const tooSlow = !capped && (gpuMs > 0 ? gpuMs > budget * 0.92 : frameMs > 1000 / 50);
-    const roomy = gpuMs > 0 ? gpuMs < budget * 0.55 : frameMs < 1000 / 58;
+    const tooSlow = gpuMs > budget * 0.92;
+    const roomy = gpuMs < budget * 0.55;
     // Chasing a high-refresh display only ever spends resolution. Effects go only when 60 Hz itself is out of reach.
-    const below60 = !capped && (gpuMs > 0 ? gpuMs > 15.3 : frameMs > 20);
+    const below60 = gpuMs > 15.3;
     this.fastRuns = roomy ? (this.fastRuns || 0) + 1 : 0;
-    // A browser's power cap and a GPU stuck at 30 look alike from here, so try one resolution step and see.
-    if (capped && !this.capProbe) {
-      this.capProbe = { step, frameMs, waiting: true };
-      step = Math.min(step + 1, STEPS.length - 1);
-    } else if (this.capProbe?.waiting) {
-      this.capProbe.waiting = false;
-      if (frameMs > this.capProbe.frameMs - 2) step = this.capProbe.step;
-    } else if (below60) {
+    if (below60) {
       if (step < 2) step++;
       else if (!r.demote()) step = Math.min(step + 1, STEPS.length - 1);
     } else if (tooSlow) {

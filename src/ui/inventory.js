@@ -59,7 +59,6 @@ export class Inventory {
     this.tipEl.style.display = 'none';
     this.carryEl.style.display = 'none';
     this.hover.style.display = 'none';
-    this.pack.save();
   }
 
   // ---- drawing --------------------------------------------------------------------------------
@@ -248,7 +247,6 @@ export class Inventory {
       this.on.drop(item);
     } else return;
     this.render();
-    this.pack.save();
   }
 
   // Equip it, stow it, or socket it, by whichever applies. t: what targetAt gives.
@@ -276,7 +274,6 @@ export class Inventory {
     }
     this.tipFor = null;
     this.render();
-    pack.save();
   }
 
   // Whatever is carried goes back where it came from, or into the first room, or else on the ground.

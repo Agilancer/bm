@@ -1,10 +1,9 @@
-// What the player carries: a grid of cells, and the slots on the body. Items take a footprint of cells. Kept in localStorage,
-// so a pack survives a reload and a new fight.
+// What the player carries: a grid of cells, and the slots on the body. Items take a footprint of cells. It's a part of every save
+// (main.js), and it stays with you through a new fight; only New Game starts it over.
 import { GEMS, MAX_SOCKETS, makeRng, rollGem, rollWeapon } from './items.js';
 
 export const PACK_W = 12, PACK_H = 8;
 export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'hands', 'ring1', 'feet', 'ring2'];
-const KEY = 'bm-pack-v1';
 
 // One of every sword and a pouch of gems, to try it all out before there is much to fight for. The game proper starts with the
 // old greatsword alone: set this false.
@@ -62,18 +61,16 @@ export class Pack {
     return true;
   }
 
-  save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ slots: this.slots, entries: this.entries })); } catch { /* a private window: this session only */ }
-  }
+  // What goes in a save. Items are plain data.
+  save() { return structuredClone({ slots: this.slots, entries: this.entries }); }
 
-  static restore(fresh) {
-    const pack = new Pack();
-    try {
-      const saved = !fresh && JSON.parse(localStorage.getItem(KEY));
-      if (saved) { Object.assign(pack.slots, saved.slots); pack.entries = saved.entries; return pack; }
-    } catch { /* unreadable: start over */ }
-    pack.startingKit();
-    return pack;
+  // A saved pack back in hand, or with null, what a new game starts with.
+  load(d) {
+    this.slots = Object.fromEntries(SLOTS.map((s) => [s, null]));
+    this.entries = [];
+    if (!d) { this.startingKit(); return; }
+    Object.assign(this.slots, d.slots);
+    this.entries = d.entries;
   }
 
   startingKit() {

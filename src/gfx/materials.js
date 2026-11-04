@@ -25,26 +25,40 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let gm = textureSampleLevel(groundMap, clampSmp, gmUv, 0.0);
   let inMap = step(0.0, gmUv.x) * step(gmUv.x, 1.0) * step(0.0, gmUv.y) * step(gmUv.y, 1.0);
   let dirtBase = gm.r * inMap;
-  let macro1 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.0071, 0.0);
   let macro2 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.043 + 0.31, 0.0);
 
-  // Two scales and a rotation on each ground type, so the paintings never read as a grid.
   let uvA = p.xz * 0.2;
-  let uvB = rot(p.xz, 1.1) * 0.13 + 0.37;
-  let dxA = dpdx(uvA); let dyA = dpdy(uvA);
-  let dxB = dpdx(uvB); let dyB = dpdy(uvB);
-  let gPick = macro1.g * 3.0;
-  let g0 = i32(floor(gPick)) % 3;
-  let g1 = (g0 + 1) % 3;
-  let gFade = smoothstep(0.3, 0.7, fract(gPick));
-  let dPick = macro1.r * 3.0;
-  let d0 = i32(floor(dPick)) % 3;
-  let d1 = (d0 + 1) % 3;
-  let dFade = smoothstep(0.3, 0.7, fract(dPick));
-  let grassCol = mix(textureSampleGrad(groundColor, repeatSmp, uvA, 3 + g0, dxA, dyA), textureSampleGrad(groundColor, repeatSmp, uvB, 3 + g1, dxB, dyB), gFade);
-  let grassDet = mix(textureSampleGrad(groundDetail, repeatSmp, uvA, 3 + g0, dxA, dyA), textureSampleGrad(groundDetail, repeatSmp, uvB, 3 + g1, dxB, dyB), gFade);
-  let dirtCol = mix(textureSampleGrad(groundColor, repeatSmp, uvB, d0, dxB, dyB), textureSampleGrad(groundColor, repeatSmp, uvA, d1, dxA, dyA), dFade);
-  let dirtDet = mix(textureSampleGrad(groundDetail, repeatSmp, uvB, d0, dxB, dyB), textureSampleGrad(groundDetail, repeatSmp, uvA, d1, dxA, dyA), dFade);
+  var grassCol: vec4f; var grassDet: vec4f; var dirtCol: vec4f; var dirtDet: vec4f;
+  if (LEAN) {
+    // One painting of each ground and one detail map on a phone (the paintings nearest the average of their kind, and
+    // the relief of whichever ground this mostly is): the ground covers half the screen, so these three reads in place of
+    // eight are the biggest saving in the frame.
+    grassCol = textureSample(groundColor, repeatSmp, uvA, 5);
+    // The patchwork the other paintings gave: warmer and cooler stretches, and dry ones.
+    grassCol = vec4f(grassCol.rgb * mix(vec3f(1.2, 1.02, 0.85), vec3f(0.88, 1.0, 1.08), smoothstep(0.3, 0.7, macro2.g)), grassCol.a);
+    grassCol = vec4f(mix(grassCol.rgb, vec3f(0.24, 0.2, 0.09), smoothstep(0.52, 0.78, macro2.r) * 0.38), grassCol.a);
+    dirtCol = textureSample(groundColor, repeatSmp, uvA, 1);
+    grassDet = textureSample(groundDetail, repeatSmp, uvA, select(3, 1, dirtBase > 0.5));
+    dirtDet = vec4f(grassDet.rgb, 1.0 - grassDet.a);
+  } else {
+    let macro1 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.0071, 0.0);
+    // Two scales and a rotation on each ground type, so the paintings never read as a grid.
+    let uvB = rot(p.xz, 1.1) * 0.13 + 0.37;
+    let dxA = dpdx(uvA); let dyA = dpdy(uvA);
+    let dxB = dpdx(uvB); let dyB = dpdy(uvB);
+    let gPick = macro1.g * 3.0;
+    let g0 = i32(floor(gPick)) % 3;
+    let g1 = (g0 + 1) % 3;
+    let gFade = smoothstep(0.3, 0.7, fract(gPick));
+    let dPick = macro1.r * 3.0;
+    let d0 = i32(floor(dPick)) % 3;
+    let d1 = (d0 + 1) % 3;
+    let dFade = smoothstep(0.3, 0.7, fract(dPick));
+    grassCol = mix(textureSampleGrad(groundColor, repeatSmp, uvA, 3 + g0, dxA, dyA), textureSampleGrad(groundColor, repeatSmp, uvB, 3 + g1, dxB, dyB), gFade);
+    grassDet = mix(textureSampleGrad(groundDetail, repeatSmp, uvA, 3 + g0, dxA, dyA), textureSampleGrad(groundDetail, repeatSmp, uvB, 3 + g1, dxB, dyB), gFade);
+    dirtCol = mix(textureSampleGrad(groundColor, repeatSmp, uvB, d0, dxB, dyB), textureSampleGrad(groundColor, repeatSmp, uvA, d1, dxA, dyA), dFade);
+    dirtDet = mix(textureSampleGrad(groundDetail, repeatSmp, uvB, d0, dxB, dyB), textureSampleGrad(groundDetail, repeatSmp, uvA, d1, dxA, dyA), dFade);
+  }
 
   // Dirt shows through where the grass's own height runs low.
   let edge = clamp(dirtBase * 1.7 - 0.35 + (dirtDet.a - grassDet.a) * 0.9 + (macro2.b - 0.5) * 0.35, 0.0, 1.0);
@@ -68,8 +82,9 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
     bld = textureSampleLevel(bloodMap, clampSmp, bUv, 0.0).r;
   }
   // It soaks in along the grain of the ground, in fingers and islands, and pools shiny where it runs deep.
-  let fine = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.57, 0.0);
-  let soak = bld * (0.55 + 1.1 * fine.g) + (det.a - 0.5) * 0.25 * step(0.01, bld);
+  var fine = vec4f(0.5);
+  if (!LEAN || bld > 0.0) { fine = textureSampleLevel(noiseTex, repeatSmp, p.xz * select(0.57, 1.9, LEAN), 0.0); }
+  let soak = bld * (0.55 + 1.1 * fine.g) + (det.a - 0.5) * select(0.25, 0.55, LEAN) * step(0.01, bld);
   let wet = smoothstep(0.1, 0.32, soak);
   let deep = smoothstep(0.42, 0.85, soak);
   albedo = mix(albedo, mix(vec3f(0.1, 0.006, 0.004), vec3f(0.05, 0.002, 0.002), deep), wet * 0.97);
@@ -175,7 +190,8 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     if (in.layer == 100u) { metal = 0.9; }
     if (in.layer == 101u) {
       let f = 0.85 + 0.15 * sin(F.camPos.w * 11.0 + p.x * 9.0) * sin(F.camPos.w * 7.3);
-      emissive = vec3f(14.0, 7.0, 2.4) * f;
+      // (Without bloom to carry it, that heat would only be a white square, so it's a plain gold instead.)
+      emissive = select(vec3f(14.0, 7.0, 2.4), vec3f(2.2, 1.2, 0.3), F.blood.w < 0.5) * f;
       albedo = vec3f(0.0);
     }
   } else {
@@ -293,8 +309,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     let cut = 1.0 - smoothstep(width * 0.55, width * 0.9, d);
     let lip = (1.0 - smoothstep(width * 0.9, width * 1.2, d)) * (1.0 - cut);
     // Fine scratches beside the cut, which melt to an even scuff once a pixel is wider than they are.
-    let stripes = smoothstep(0.45, 0.8, vn1(dot(p, cross(nn, ab / max(L, 1e-4))) * 520.0 + seed));
-    let scrape = (1.0 - smoothstep(width * 1.6, width * 5.0, d)) * mix(stripes, 0.3, smoothstep(0.001, 0.0025, pxSize));
+    // (Twice as wide on a phone, so its larger pixels can still hold them.)
+    let stripes = smoothstep(0.45, 0.8, vn1(dot(p, cross(nn, ab / max(L, 1e-4))) * select(520.0, 260.0, LEAN) + seed));
+    let scrape = (1.0 - smoothstep(width * 1.6, width * 5.0, d)) * mix(stripes, 0.3, smoothstep(0.001, 0.0025, pxSize * select(1.0, 0.5, LEAN)));
     let age = time - g.b.w;
     w.cut = max(w.cut, cut);
     w.lip = max(w.lip, lip);
@@ -351,7 +368,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   let v = toCam / dist;
   var n0 = normalize(in.n);
   if (!front) { n0 = -n0; }
-  var albedo = textureSample(albedoTex, repeatSmp, in.uv).rgb;
+  // A sharper mip of the paint on a phone, or fine work like the visor's grille averages away at its resolution.
+  var albedo = textureSampleBias(albedoTex, repeatSmp, in.uv, select(0.0, -0.8, LEAN)).rgb;
   let mr = textureSample(mrTex, repeatSmp, in.uv);
   let nm = textureSample(normalTex, repeatSmp, in.uv);
   var rough = mr.g;
@@ -364,7 +382,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   let isMail = in.uv.x > 1.5;
   let ab_ = abs(normalize(in.bindN));
   let qA = select(select(in.bind.xy, in.bind.xz, ab_.y > ab_.z), in.bind.zy, ab_.x > ab_.y && ab_.x > ab_.z);
-  let g_ = qA * vec2f(115.0, 200.0);
+  // (Larger on a phone, or at its resolution they melt away, and a visor's grille with them.)
+  let g_ = qA * vec2f(115.0, 200.0) * select(1.0, 0.5, LEAN);
   let ringFade = 1.0 - smoothstep(0.12, 0.35, max(length(dpdx(g_)), length(dpdy(g_))));
   var mailH = 0.0;
   if (isMail) {
@@ -411,13 +430,15 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   rough = mix(rough, 0.11, blood);
   metal = mix(metal, 0.0, blood);
   albedo = mix(albedo, albedo * vec3f(0.78, 0.5, 0.48), wound.streak * (1.0 - blood));
+  // Plate that turns within one of a phone's pixels can't hold a sharp highlight: it would only sparkle.
+  if (LEAN) { rough = max(rough, min(length(fwidth(n0)) * 1.1, 0.7)); }
   let shadow = shadowAt(p, n0, in.viewZ, ign(in.pos.xy));
   var c = shadePBR(p, n, v, albedo, rough, metal, ao, shadow);
   // Bright torn lips stay findable at fighting range, and flash for an instant as the blade goes by.
   c += vec3f(0.17, 0.165, 0.155) * wound.lip * (0.45 + 0.55 * max(dot(n, F.sunDir.xyz), 0.0));
   c += vec3f(5.0, 2.6, 0.9) * wound.hot;
   // A cool edge of sky around the silhouette separates dark plate from anything behind it.
-  let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0);
+  let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
   c += F.skyAmb.rgb * rimT * 0.32 * (0.35 + 0.65 * metal) * C.info.y;
   c = applyFog(c, p, -v, dist);
   var o: Out;
@@ -447,7 +468,7 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   let v = toCam / dist;
   var n = normalize(in.n);
   if (!front) { n = -n; }
-  let tex = textureSample(albedoTex, repeatSmp, in.uv);
+  let tex = textureSampleBias(albedoTex, repeatSmp, in.uv, select(0.0, -0.8, LEAN));
   var albedo = tex.rgb;
   let mx = max(max(albedo.r, albedo.g), albedo.b);
   let sat = (mx - min(min(albedo.r, albedo.g), albedo.b)) / max(mx, 0.001);
@@ -596,7 +617,7 @@ fn makeBlade(root: vec3f, packed_: u32, t: f32, side: f32, width0: f32) -> V {
   let flutter = sin(time * 5.0 + rnd * 40.0) * 0.05;
   var bend = F.wind.xz * (gust * F.wind.y + 0.08) + facing * (0.14 + rnd * 0.22) + vec2f(flutter);
   // Bodies press it flat.
-  for (var i = 0; i < 6; i++) {
+  for (var i = 0; i < select(6, 3, LEAN); i++) {
     let ch = F.chars[i];
     if (ch.w <= 0.0) { continue; }
     let d = root.xz - ch.xz;
@@ -612,17 +633,22 @@ fn makeBlade(root: vec3f, packed_: u32, t: f32, side: f32, width0: f32) -> V {
   p += side3 * side * w;
   o.pos = F.viewProj * vec4f(p, 1.0);
   o.viewZ = -(F.view * vec4f(p, 1.0)).z;
-  // Colour comes from the same paintings as the ground beneath it.
-  let uv = root.xz * 0.2;
-  let layer = 3 + i32(tint * 2.99);
-  let base0 = textureSampleLevel(groundColor, repeatSmp, uv, layer, 5.0).rgb;
+  // Colour comes from the same paintings as the ground beneath it (their average on a phone, measured from them).
+  var base0 = mix(vec3f(0.053, 0.2, 0.009), vec3f(0.102, 0.213, 0.015), tint);
+  if (!LEAN) {
+    let uv = root.xz * 0.2;
+    let layer = 3 + i32(tint * 2.99);
+    base0 = textureSampleLevel(groundColor, repeatSmp, uv, layer, 5.0).rgb;
+  }
   let base = mix(vec3f(dot(base0, vec3f(0.3, 0.6, 0.1))), base0, 0.72) * vec3f(0.72, 0.68, 0.42);
-  let bUv = (root.xz - F.blood.xy) * F.blood.z;
-  let bl = textureSampleLevel(bloodMap, clampSmp, bUv, 0.0).r;
   let root_ = base * (0.4 + 0.14 * tint);
   let tip = base * (1.0 + 0.35 * rnd) + vec3f(0.05, 0.05, 0.0) * tint;
   var alb = mix(root_, tip, t);
-  alb = mix(alb, vec3f(0.14, 0.008, 0.005), smoothstep(0.03, 0.4, bl));
+  if (!LEAN) {
+    let bUv = (root.xz - F.blood.xy) * F.blood.z;
+    let bl = textureSampleLevel(bloodMap, clampSmp, bUv, 0.0).r;
+    alb = mix(alb, vec3f(0.14, 0.008, 0.005), smoothstep(0.03, 0.4, bl));
+  }
   // Lighting: a soft term from a mostly-up normal, and sun through the leaf.
   let n = normalize(vec3f(bend.x * 0.6, 1.0, bend.y * 0.6) + side3 * side * 0.4);
   let shadow = shadowQuick(p, o.viewZ);
@@ -630,25 +656,26 @@ fn makeBlade(root: vec3f, packed_: u32, t: f32, side: f32, width0: f32) -> V {
   let dist = length(toCam);
   let v = toCam / dist;
   let nl = max(dot(n, F.sunDir.xyz), 0.0);
-  let backlit = pow(max(dot(-v, F.sunDir.xyz), 0.0), 4.0) * t * 1.7;
+  let backlit = pow(max(dot(-v, F.sunDir.xyz), 0.0), 4.0) * t * select(1.7, 0.95, LEAN);
   var c = alb * (F.sunColor.rgb * (nl * 0.28 + backlit * 0.5 + 0.05) * shadow + mix(F.groundAmb.rgb, F.skyAmb.rgb, 0.65 + 0.3 * t) * (0.65 + 0.5 * t));
   c = applyFog(c, p, -v, dist);
   o.color = c;
   return o;
 }
 
-// Near blades: a seven-vertex strip, three segments.
+// Near blades: a seven-vertex strip, three segments (five and two on a phone, a little wider).
 @vertex fn vsNear(@builtin(vertex_index) vi: u32, @location(0) root: vec3f, @location(1) packed_: u32) -> V {
   let row = vi / 2u;
-  let t = f32(row) / 3.0;
+  let t = f32(row) / select(3.0, 2.0, LEAN);
   let side = select(-1.0, 1.0, (vi & 1u) == 1u);
-  return makeBlade(root, packed_, t, side, 0.014);
+  // (On a phone, slight up close and wider further off, where there are fewer of them to fill the view.)
+  return makeBlade(root, packed_, t, side, select(0.014, mix(0.013, 0.02, clamp(distance(root, F.camPos.xyz) / 8.0, 0.0, 1.0)), LEAN));
 }
 // Far blades: one triangle, wider, so a distant field stays full.
 @vertex fn vsFar(@builtin(vertex_index) vi: u32, @location(0) root: vec3f, @location(1) packed_: u32) -> V {
   let t = select(0.0, 1.0, vi == 2u);
   let side = select(select(1.0, -1.0, vi == 0u), 0.0, vi == 2u);
-  return makeBlade(root, packed_, t, side, 0.04);
+  return makeBlade(root, packed_, t, side, select(0.04, 0.036, LEAN));
 }
 @fragment fn fs(in: V) -> Out {
   var o: Out;
@@ -692,7 +719,13 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let cell = vec2i(origin) + vec2i(i32(gx), i32(gz));
   let h = hash3(vec2u(bitcast<u32>(cell.x + 100000), bitcast<u32>(cell.y + 100000)));
   let jitter = vec2f(f32(h.x & 65535u), f32(h.y & 65535u)) / 65535.0;
-  let xz = (vec2f(cell) + jitter) * spacing;
+  var xz = (vec2f(cell) + jitter) * spacing;
+  if (LEAN) {
+    // A phone has too few blades to fill the ground evenly, and evenly they look planted. They gather in tufts instead.
+    let tuft = floor(xz / 0.85);
+    let ht = hash3(vec2u(bitcast<u32>(i32(tuft.x) + 100000), bitcast<u32>(i32(tuft.y) + 100000)));
+    xz = mix(xz, (tuft + vec2f(f32(ht.x & 255u), f32(ht.y & 255u)) / 255.0) * 0.85, 0.6);
+  }
   let d = distance(xz, U.cam.xz);
   let radius = U.grid.z;
   if (d > radius) { return; }
@@ -738,11 +771,11 @@ struct V { @builtin(position) pos: vec4f, @location(0) ndc: vec2f };
 }
 fn fbm(p0: vec2f) -> f32 {
   var p = p0; var a = 0.5; var s = 0.0;
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < select(4, 2, LEAN); i++) {
     s += a * textureSampleLevel(noiseTex, repeatSmp, p, 0.0).r;
     p = p * 2.07 + vec2f(0.13, 0.27); a *= 0.5;
   }
-  return s;
+  return select(s, s * 1.25, LEAN);
 }
 @fragment fn fs(in: V) -> Out {
   let q = F.invViewProj * vec4f(in.ndc, 1e-4, 1.0);
@@ -757,9 +790,10 @@ fn fbm(p0: vec2f) -> f32 {
     let t = F.camPos.w * 0.0035;
     let uv = d.xz / (d.y + 0.18) * 0.085 + vec2f(t, t * 0.4);
     let n = fbm(uv);
-    let n2 = fbm(uv + F.sunDir.xz * 0.03);
     let cover = smoothstep(0.46, 0.74, n);
-    let lit = clamp((n - n2) * 5.0 + 0.55, 0.0, 1.0);
+    // Lit from the low sun's side, or on a phone simply darker where it's thick.
+    var lit = clamp(1.3 - n * 1.25, 0.0, 1.0);
+    if (!LEAN) { lit = clamp((n - fbm(uv + F.sunDir.xz * 0.03)) * 5.0 + 0.55, 0.0, 1.0); }
     let base = mix(vec3f(0.42, 0.38, 0.44), vec3f(1.5, 1.05, 0.7), lit) * mix(0.8, 1.6, pow(max(cs, 0.0), 4.0));
     let fade = smoothstep(0.01, 0.16, d.y);
     c = mix(c, base, cover * fade * 0.9);

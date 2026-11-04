@@ -9,6 +9,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Bellmourn: The Knight of Velscour</title>
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="assets/title/blastorama.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/title/herrington.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/title/bellmourn.webp" fetchpriority="high">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:ital,wght@0,600;1,600&family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet" crossorigin="anonymous">
+<link rel="stylesheet" href="src/title.css">
 <style>
   :root { --gold: #c9a35c; --gold-dim: #8c7344; --bone: #e9dfc9; --ink: #0b0907; --blood: #8e1a12; --blood-hi: #d23a22; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -47,25 +54,25 @@
   #vitals { position: absolute; left: calc(26px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom)); width: min(290px, 44vw); }
   .label { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; opacity: .78; margin-bottom: 4px; text-shadow: 0 1px 3px #000; }
   .meter { height: 8px; background: rgba(0,0,0,.6); border: 1px solid rgba(201,163,92,.55); overflow: hidden; }
-  .meter > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #b82a1d, #6d120b); transition: width .12s; }
+  .meter > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #b82a1d, #6d120b); transform-origin: 0 50%; will-change: transform; transition: transform .12s; }
   #foe { position: absolute; top: calc(18px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(520px, 62vw); padding: 6px 12px 7px; text-align: center; opacity: 0; transition: opacity .4s; background: rgba(8,6,4,.5); }
   #foe .name { font-size: 15px; letter-spacing: .24em; color: var(--gold); margin-bottom: 5px; text-shadow: 0 1px 4px #000; }
   #foeHp > i { background: linear-gradient(180deg, #a0231a, #5b0e08); }
   #foeArmor { height: 3px; margin-top: 3px; background: rgba(0,0,0,.6); }
-  #foeArmor > i { display: block; height: 100%; width: 100%; background: #9aa0a6; transition: width .2s; }
+  #foeArmor > i { display: block; height: 100%; width: 100%; background: #9aa0a6; transform-origin: 0 50%; will-change: transform; transition: transform .2s; }
   #bleed { margin-top: 5px; font-size: 12px; letter-spacing: .16em; color: var(--blood-hi); min-height: 1.3em; text-shadow: 0 1px 3px #000; }
   #msg { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(30px, 6vw, 62px); letter-spacing: .1em; color: var(--gold); text-shadow: 0 2px 22px #000; opacity: 0; transition: opacity .8s; }
   #msg small { display: block; margin-top: 12px; font-size: 16px; letter-spacing: .2em; color: var(--bone); }
   #tip { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); max-width: min(620px, 64vw); text-align: center; font-size: 15px; line-height: 1.4; letter-spacing: .03em; color: var(--bone); background: rgba(8,6,4,.62); padding: 7px 14px; opacity: 0; transition: opacity .5s; }
   #stam { height: 4px; margin-top: 3px; background: rgba(0,0,0,.6); overflow: hidden; }
-  #stam > i { display: block; height: 100%; width: 100%; background: #c9b478; transition: width .08s; }
+  #stam > i { display: block; height: 100%; width: 100%; background: #c9b478; transform-origin: 0 50%; will-change: transform; transition: transform .08s; }
   #debug { position: absolute; right: 12px; top: 12px; font: 12px/1.45 ui-monospace, Consolas, monospace; text-align: right; color: #e6e0d0; text-shadow: 0 1px 2px #000; white-space: pre; display: none; }
   #take { position: absolute; left: 50%; top: 70%; transform: translateX(-50%); max-width: 70vw; text-align: center; font-size: 15px; letter-spacing: .03em; background: rgba(8,6,4,.62); padding: 6px 14px; display: none; }
   #pause { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.55); z-index: 15; }
 
   /* Touch controls */
   #touch { position: fixed; inset: 0; z-index: 6; display: none; }
-  .tbtn { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid rgba(233,223,201,.55); background: rgba(10,8,6,.34); color: var(--bone); font-size: 12px; letter-spacing: .08em; backdrop-filter: blur(2px); }
+  .tbtn { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid rgba(233,223,201,.55); background: rgba(10,8,6,.42); color: var(--bone); font-size: 12px; letter-spacing: .08em; }
   .tbtn.on, .tbtn:active { background: rgba(201,163,92,.45); }
   #bAttack { width: 92px; height: 92px; right: calc(26px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom)); font-size: 13px; }
   #bWide { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); }
@@ -121,6 +128,9 @@
   #invClose { font: inherit; font-size: 12.5px; letter-spacing: .1em; padding: 5px 14px; color: var(--bone); background: transparent; border: 1px solid var(--gold-dim); cursor: pointer; flex: none; }
   #invClose:hover { background: rgba(201,163,92,.2); }
   @media (max-height: 460px) { #invBar { font-size: 10.5px; gap: 10px; } #invNote { min-width: 0; } #inv { gap: 3px; padding: 3px; } #inv .panel { padding: 4px 6px 6px; } #inv .label { margin-bottom: 3px; font-size: 10px; } #invStats { font-size: 11.5px; margin-top: 5px; } }
+  body.touch #foe { background: rgba(8,6,4,.68); }
+  body.touch #bleed { font-size: 14px; color: #ff6a4a; }
+  body.touch #debug { top: calc(56px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); right: auto; text-align: left; font-size: 10px; }
 </style>
 </head>
 <body>
@@ -181,7 +191,16 @@
 <div id="invTip"></div>
 
 <div id="rotate">Turn your phone sideways to play.</div>
-<div id="pause"><div class="label" style="font-size:15px">Paused</div><button class="big" id="resume">RESUME</button></div>
+<div id="pause"><div class="p-title">Paused</div><nav class="t-menu">
+  <button class="t-btn" data-p="resume"><span>Resume</span></button>
+  <button class="t-btn" data-p="save"><span>Save Game</span></button>
+  <button class="t-btn" data-p="load"><span>Load Game</span></button>
+  <button class="t-btn" data-p="settings"><span>Settings</span></button>
+  <button class="t-btn" data-p="howto"><span>How to Play</span></button>
+  <button class="t-btn" data-p="menu"><span>Main Menu</span></button>
+</nav></div>
+
+<div id="title"></div>
 
 <div id="gate">
   <h1>BELLMOURN</h1>
