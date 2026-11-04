@@ -1,0 +1,531 @@
+// The player: first-person body, the greatsword's swings, and where the blade lands. The blade is tested
+// where it appears on screen: each tick its tip and middle are projected through the view model's camera
+// and cast from the eye into the world, so a cut lands exactly under what the player sees.
+import { EV, H, INPUT, VM_PALETTE } from '../core/layout.js';
+import { clamp, damp, wrapAngle } from '../core/math.js';
+import { S } from './knight.js';
+
+const WORLD_FOV = 64 * Math.PI / 180;
+const EYE = 1.62;
+const WALK = 4.1, SPRINT = 6.6;
+const REACH = { tip: 2.55, mid: 2.2 };
+const PUNCTURE_RADIUS = 0.07;
+const MAX_GASH_LENGTH = 0.55;
+// Each move has its own weight: cuts chain, wide swings cover ground but bite less, slams and chops break a guard.
+const SWING_INFO = {
+  great_cut1: { heavy: false, fromRight: 1, dmg: 5, poise: 30, stam: 10, width: 1 },
+  great_cut2: { heavy: false, fromRight: -1, dmg: 5, poise: 30, stam: 10, width: 1 },
+  great_slam: { heavy: true, fromRight: 0, dmg: 11, poise: 75, stam: 20, width: 1.5 },
+  great_chop: { heavy: true, fromRight: 0, dmg: 10, poise: 65, stam: 18, width: 1.45 },
+  great_rise: { heavy: false, fromRight: 0, dmg: 5, poise: 34, stam: 10, width: 1 },
+  great_wide_r: { heavy: false, fromRight: 1, dmg: 4, poise: 24, stam: 12, width: 0.8 },
+  great_wide_l: { heavy: false, fromRight: -1, dmg: 4, poise: 24, stam: 12, width: 0.8 },
+};
+const DODGE_TIME = 0.3, DODGE_COST = 26, DODGE_SPEED = 9;
+const hit = { t: 0, piece: -1, lx: 0, ly: 0, lz: 0, nx: 0, ny: 0, nz: 0 };
+const tmp = new Float32Array(3), tmp2 = new Float32Array(3), sweepDir = new Float32Array([1, 0, 0]);
+
+export class Player {
+  constructor(arms) {
+    this.arms = arms;
+    this.vmRatio = 1;
+    const fov = (arms.extras.view?.fov || 76) * Math.PI / 180;
+    this.vmRatio = Math.tan(WORLD_FOV / 2) / Math.tan(fov / 2);
+    this.vmRatio = 1 / this.vmRatio;
+    this.reset();
+  }
+
+  reset() {
+    Object.assign(this, {
+      x: -3.5, z: 40, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, onGround: true, hp: 160, maxHp: 160, dead: false, deadT: 0,
+      clip: 'great_idle', t: 0, fade: 1, rate: 1, queued: null, queuedT: 0, combo: 0, comboT: 0, wide: 0, swinging: false, recovering: false,
+      threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
+      stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
+      struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
+      stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
+    });
+  }
+
+  // The moment around a swing's hit, when it can meet a blow.
+  parryOpen() {
+    if (!this.swinging || this.rate <= 0 || this.winded) return false;
+    const info = this.arms.clips[this.clip];
+    return Math.abs(this.t - info.hit) < 0.12;
+  }
+
+  spend(cost) {
+    this.stamina = Math.max(0, this.stamina - cost);
+    this.staminaT = 0.7;
+    if (this.stamina <= 0) this.winded = true;
+  }
+
+  startSwing(sim, name) {
+    const { arms } = this;
+    arms.capture();
+    this.clip = name; this.t = 0; this.fade = 0; this.rate = 1;
+    this.contact = null; this.punctured = false; this.whiffed = true; this.struckGround = false; this.struckWall = false; this.drag = 0;
+    this.havePrev = false; this.swinging = false; this.recovering = false;
+    const info = arms.clips[name], tag = SWING_INFO[name];
+    this.threat = { name, t: 0, hit: info.hit, heavy: tag.heavy, fromRight: tag.fromRight };
+    this.swingCount++;
+    this.aggression = this.aggression * 0.8 + 0.2 * clamp(1.4 / Math.max(sim.time - this.lastSwing, 0.2), 0, 1.5);
+    this.lastSwing = sim.time;
+    for (const k of sim.knights) k.observeSwing(name);
+    this.spend(tag.stam);
+    // Out of breath, the sword comes round slowly.
+    this.rate = this.stamina < 12 ? 0.8 : 1;
+    this.swingRate = this.rate;
+    sim.event(EV.SWING, this.x, this.y + EYE, this.z, tag.heavy ? 1 : 0);
+    // Weight behind the blow.
+    const f = 0.75;
+    this.vx += Math.sin(this.yaw) * f; this.vz += Math.cos(this.yaw) * f;
+  }
+
+  update(dt, tdt, input, sim) {
+    if (this.dead) {
+      this.deadT += dt;
+      this.vx = damp(this.vx, 0, 6, dt); this.vz = damp(this.vz, 0, 6, dt);
+      this.x += this.vx * dt; this.z += this.vz * dt;
+      this.t += dt * 0.5;
+      return;
+    }
+    this.yaw = input[INPUT.YAW];
+    this.pitch = input[INPUT.PITCH];
+    // Attack input is a counter, so a click between ticks is never lost.
+    if (input[INPUT.ATTACK] !== this.atkSeen) { this.atkSeen = input[INPUT.ATTACK]; this.queued = 'L'; this.queuedT = 0.5; }
+    if (input[INPUT.WIDE] !== this.wideSeen) { this.wideSeen = input[INPUT.WIDE]; this.queued = 'R'; this.queuedT = 0.5; }
+    this.queuedT -= dt;
+    if (this.queuedT <= 0) this.queued = null;
+    const mx = input[INPUT.MOVE_X], mz = input[INPUT.MOVE_Z];
+    const len = Math.hypot(mx, mz);
+    const sprint = input[INPUT.SPRINT] > 0.5 && mz > 0.3 && !this.winded;
+    this.sprinting = sprint && len > 0.1;
+    // Breath: running and swinging spend it, standing gets it back.
+    this.staminaT -= dt;
+    if (this.sprinting) { this.stamina = Math.max(0, this.stamina - dt * 15); this.staminaT = 0.45; if (this.stamina <= 0) this.winded = true; }
+    else if (this.staminaT <= 0) this.stamina = Math.min(100, this.stamina + dt * 26);
+    if (this.winded && this.stamina > 28) this.winded = false;
+    // A sidestep: quick, cheap, and for its first moments nothing touches you.
+    this.dodgeCd -= dt;
+    this.dodgeT -= dt;
+    this.iframes = this.dodgeT > 0.08;
+    if (input[INPUT.DODGE] !== this.dodgeSeen) {
+      this.dodgeSeen = input[INPUT.DODGE];
+      if (this.dodgeCd <= 0 && this.stamina >= DODGE_COST * 0.6 && this.onGround) {
+        const dl = Math.hypot(mx, mz);
+        const lx = dl > 0.1 ? mx / dl : 0, lz = dl > 0.1 ? mz / dl : -1;
+        const sn = Math.sin(this.yaw), cs = Math.cos(this.yaw);
+        this.dodgeX = lx * -cs + lz * sn; this.dodgeZ = lx * sn + lz * cs;
+        this.dodgeT = DODGE_TIME; this.dodgeCd = 0.62;
+        this.spend(DODGE_COST);
+        sim.event(EV.DODGE, this.x, this.y, this.z, lx);
+      }
+    }
+    const swingDrag = this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== 'great_idle' ? 0.85 : 1;
+    const speed = (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2);
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    // Strafe right is -x when facing +z.
+    const wx = (mx * -c + mz * s) * (len > 1 ? 1 / len : 1) * speed;
+    const wz = (mx * s + mz * c) * (len > 1 ? 1 / len : 1) * speed;
+    const accel = this.onGround ? 42 : 9;
+    const stepV = accel * dt;
+    const ax = wx - this.vx, az = wz - this.vz, al = Math.hypot(ax, az);
+    if (al > 1e-4) { const k = Math.min(1, stepV / al); this.vx += ax * k; this.vz += az * k; }
+    if (this.dodgeT > 0) {
+      const v = DODGE_SPEED * clamp(this.dodgeT / DODGE_TIME + 0.2, 0, 1);
+      this.vx = this.dodgeX * v; this.vz = this.dodgeZ * v;
+    }
+    if (this.onGround && input[INPUT.JUMP] !== this.jumpSeen && this.stamina > 6) {
+      this.spend(8);
+      this.vy = 5.0; this.onGround = false;
+      sim.event(EV.JUMP, this.x, this.y, this.z);
+    }
+    this.jumpSeen = input[INPUT.JUMP];
+    this.vy -= 14 * dt;
+    this.x += this.vx * dt; this.z += this.vz * dt; this.y += this.vy * dt;
+    tmp[0] = this.x; tmp[2] = this.z;
+    sim.world.resolve(tmp, 0.36, this.y + 0.2);
+    this.x = tmp[0]; this.z = tmp[2];
+    // Keep to the land the village owns.
+    const R = 118, rr = Math.hypot(this.x, this.z);
+    if (rr > R) { this.x *= R / rr; this.z *= R / rr; }
+    const g = sim.world.height(this.x, this.z);
+    if (this.y <= g) {
+      if (!this.onGround && this.vy < -2) {
+        sim.event(EV.LAND, this.x, this.y, this.z, clamp(-this.vy / 7, 0, 1));
+        this.landKick = clamp(-this.vy * 0.018, 0, 0.13);
+      }
+      this.y = g; this.vy = 0; this.onGround = true;
+    } else if (this.y > g + 0.06) this.onGround = false;
+    else if (this.onGround) this.y = g;
+    const gs = Math.hypot(this.vx, this.vz);
+    this.groundSpeed = gs;
+    if (this.onGround && gs > 0.5) {
+      this.stride += gs * dt;
+      const stepLen = this.sprinting ? 2.3 : 1.55;
+      if (this.stride > stepLen) { this.stride -= stepLen; sim.event(EV.STEP, this.x, this.y, this.z, clamp(gs / 6, 0.2, 1), 0, -1); }
+    }
+    this.landKick = damp(this.landKick, 0, 9, dt);
+    // Recover from wounds slowly when no one is on top of you.
+    this.regenT += dt;
+    if (this.regenT > 6 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * 1.6);
+    this.weak = damp(this.weak, this.hp < this.maxHp * 0.28 ? 1 : 0, 2, dt);
+    this.flash = Math.max(0, this.flash - dt * 1.4);
+    this.hitDirT += dt;
+    this.bloodSword = Math.max(0, this.bloodSword - dt * 0.012);
+    // Knock.
+    if (this.knockX || this.knockZ) {
+      this.x += this.knockX * dt; this.z += this.knockZ * dt;
+      this.knockX = damp(this.knockX, 0, 8, dt); this.knockZ = damp(this.knockZ, 0, 8, dt);
+      if (Math.abs(this.knockX) + Math.abs(this.knockZ) < 0.05) { this.knockX = 0; this.knockZ = 0; }
+    }
+    // Shake.
+    this.trauma = Math.max(0, this.trauma - dt * 1.9);
+    const tr = this.trauma * this.trauma;
+    const tt = sim.time * 37;
+    this.shakeX = tr * 0.05 * Math.sin(tt * 1.13 + 1.7);
+    this.shakeY = tr * 0.05 * Math.sin(tt * 1.31 + 4.1);
+    this.shakeR = tr * 0.06 * Math.sin(tt * 0.97 + 2.2);
+    this.stepSwing(dt, tdt, sim);
+  }
+
+  stepSwing(dt, tdt, sim) {
+    const { arms } = this;
+    const info = arms.clips[this.clip];
+    this.fade = Math.min(1, this.fade + tdt / 0.1);
+    const dragRate = this.drag > 0 ? 0.42 : 1;
+    this.drag = Math.max(0, this.drag - tdt);
+    this.t += tdt * this.rate * dragRate;
+    if (this.rate > 0 && this.drag <= 0 && this.swingRate) this.rate = this.swingRate;
+    if (this.recoilT > 0) {
+      this.recoilT -= tdt;
+      if (this.recoilT <= 0) this.toIdle();
+    }
+    if (this.clip !== 'great_idle') {
+      if (this.threat) this.threat.t = this.t;
+      const active = this.t >= info.wind && this.t <= info.through && this.rate > 0;
+      if (active && !this.swinging) { this.swinging = true; sim.event(EV.WHOOSH, this.x, this.y + EYE, this.z, 1); }
+      if (!active) this.swinging = false;
+      if (this.t > info.hit) this.threat = null;
+      if (this.t > info.through) {
+        if (this.whiffed && !this.recovering) this.whiffCount++;
+        this.recovering = true;
+      }
+      if (this.t >= info.dur) this.toIdle();
+    } else {
+      this.comboT -= dt;
+      if (this.comboT <= 0) this.combo = 0;
+    }
+    // A buffered click starts the next swing at the end of the last one's follow-through.
+    const canStart = this.clip === 'great_idle' || (this.recovering && this.t > info.through + 0.04);
+    if (this.queued && canStart && this.recoilT <= 0) {
+      let name;
+      if (this.queued === 'R') {
+        name = this.wide++ % 2 ? 'great_wide_l' : 'great_wide_r';
+      } else {
+        const forward = this.vx * Math.sin(this.yaw) + this.vz * Math.cos(this.yaw);
+        if (!this.onGround) name = 'great_slam';
+        else if (forward < -1.6) { name = 'great_rise'; this.combo = 0; }
+        else if (this.sprinting) { name = 'great_chop'; this.combo = 0; }
+        else { name = ['great_cut1', 'great_cut2', 'great_slam'][this.combo]; this.combo = (this.combo + 1) % 3; this.comboT = 1.6; }
+      }
+      this.queued = null;
+      this.startSwing(sim, name);
+    }
+  }
+
+  toIdle() {
+    this.arms.capture();
+    this.clip = 'great_idle'; this.t = 0; this.fade = 0; this.rate = 1; this.swingRate = 1;
+    this.swinging = false; this.recovering = false; this.threat = null; this.recoilT = 0;
+    this.comboT = Math.max(this.comboT, 0.7);
+  }
+
+  // Blade thrown back by something it can't cut.
+  recoil(sim, kick) {
+    this.rate = -0.9;
+    this.recoilT = 0.22;
+    this.swinging = false;
+    this.threat = null;
+    this.trauma = Math.min(1, this.trauma + kick);
+  }
+
+  onParry(sim) {
+    this.recoil(sim, 0.45);
+    this.whiffed = false;
+    this.swinging = false;
+  }
+
+  damage(sim, amount, fromX, fromZ, knock) {
+    // Once the black knight is down, nothing takes the win away.
+    if (sim.gameState !== 0 || sim.knights[0].dead) return;
+    this.hp -= amount;
+    this.regenT = 0;
+    this.flash = Math.min(1, this.flash + 0.55 + amount * 0.012);
+    this.trauma = Math.min(1, this.trauma + 0.55);
+    const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1;
+    // Screen direction of the blow, for the wound marker.
+    this.hitDir = wrapAngle(this.yaw - Math.atan2(-dx, -dz));
+    this.hitDirT = 0;
+    this.knockX = dx / L * (2.2 + knock); this.knockZ = dz / L * (2.2 + knock);
+    if (this.hp <= 0 && !this.dead) {
+      this.hp = 0; this.dead = true; this.deadT = 0;
+      this.swinging = false; this.threat = null;
+      sim.event(EV.LOSE, this.x, this.y, this.z);
+      sim.gameState = 2; sim.gameT = 0;
+    } else if (amount > 14 && this.clip !== 'great_idle' && !this.swinging) {
+      // A hard blow knocks an unfinished wind-up out of your hands.
+      this.toIdle();
+    }
+  }
+
+  // The view model's solved joints give the blade's tip and middle in view space.
+  solveViewModel(snap, sim) {
+    const { arms } = this;
+    arms.solve(arms.clips[this.clip], this.t, this.fade, snap, VM_PALETTE);
+    const tp = arms.tip * 3, rp = arms.weapon * 3, w = arms.wt;
+    snap[H.TIP_X] = w[tp]; snap[H.TIP_Y] = w[tp + 1]; snap[H.TIP_Z] = w[tp + 2];
+    snap[H.ROOT_X] = w[rp]; snap[H.ROOT_Y] = w[rp + 1]; snap[H.ROOT_Z] = w[rp + 2];
+  }
+
+  // View-space blade point to a world ray from the eye. The view model has a wider camera than the world,
+  // so its slope is rescaled to land under the same pixel.
+  rayFrom(px, py, pz, out) {
+    const r = this.vmRatio;
+    const d = Math.max(-pz, 0.05);
+    const vx = (px / d) * r, vy = (py / d) * r;
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw), sp = Math.sin(this.pitch), cp = Math.cos(this.pitch);
+    const fx = s * cp, fy = sp, fz = c * cp;
+    const rx = -c, rz = s;
+    const ux = -s * sp, uy = cp, uz = -c * sp;
+    let x = rx * vx + ux * vy + fx, y = uy * vy + fy, z = rz * vx + uz * vy + fz;
+    const l = 1 / Math.hypot(x, y, z);
+    out[0] = x * l; out[1] = y * l; out[2] = z * l;
+  }
+
+  // Sweep the blade and resolve what it meets this tick.
+  sweep(snap, sim) {
+    const { arms } = this;
+    const w = arms.wt, tp = arms.tip * 3, rp = arms.weapon * 3;
+    const tipX = w[tp], tipY = w[tp + 1], tipZ = w[tp + 2];
+    const mx = w[rp] * 0.25 + tipX * 0.75, my = w[rp + 1] * 0.25 + tipY * 0.75, mz = w[rp + 2] * 0.25 + tipZ * 0.75;
+    const ey = this.y + EYE;
+    this.rayFrom(mx, my, mz, tmp);
+    this.bladeA = [this.x + tmp[0] * 0.6, ey + tmp[1] * 0.6, this.z + tmp[2] * 0.6];
+    this.bladeB = [this.x + tmp[0] * REACH.mid, ey + tmp[1] * REACH.mid, this.z + tmp[2] * REACH.mid];
+    if (sim.tick % 8 === 0) this.checkAim(snap, sim, ey);
+    if (!this.swinging) { this.havePrev = false; return; }
+    // Which way the blade is travelling across the view: a cut is laid along this.
+    if (this.havePrev) {
+      this.rayFrom(this.tipPrev[0], this.tipPrev[1], this.tipPrev[2], tmp2);
+      this.rayFrom(tipX, tipY, tipZ, tmp);
+      const sx = tmp[0] - tmp2[0], sy = tmp[1] - tmp2[1], sz = tmp[2] - tmp2[2], sl = Math.hypot(sx, sy, sz);
+      if (sl > 1e-5) { sweepDir[0] = sx / sl; sweepDir[1] = sy / sl; sweepDir[2] = sz / sl; }
+    }
+    const SUB = 3;
+    for (let i = 1; i <= SUB; i++) {
+      const a = this.havePrev ? i / SUB : 1;
+      const px = this.tipPrev[0] + (tipX - this.tipPrev[0]) * a, py = this.tipPrev[1] + (tipY - this.tipPrev[1]) * a, pz = this.tipPrev[2] + (tipZ - this.tipPrev[2]) * a;
+      const qx = this.midPrev[0] + (mx - this.midPrev[0]) * a, qy = this.midPrev[1] + (my - this.midPrev[1]) * a, qz = this.midPrev[2] + (mz - this.midPrev[2]) * a;
+      this.rayFrom(px, py, pz, tmp);
+      this.castRay(tmp, REACH.tip, ey, snap, sim, true);
+      if (!this.swinging) break;
+      this.rayFrom(qx, qy, qz, tmp);
+      this.castRay(tmp, REACH.mid, ey, snap, sim, false);
+      if (!this.swinging) break;
+      if (!this.havePrev) break;
+    }
+    this.tipPrev[0] = tipX; this.tipPrev[1] = tipY; this.tipPrev[2] = tipZ;
+    this.midPrev[0] = mx; this.midPrev[1] = my; this.midPrev[2] = mz;
+    this.havePrev = true;
+  }
+
+  // Tell the crosshair when it's over a cut that a blow would go through.
+  checkAim(snap, sim, ey) {
+    this.aimWound = false;
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw), sp = Math.sin(this.pitch), cp = Math.cos(this.pitch);
+    const dx = s * cp, dy = sp, dz = c * cp;
+    for (let i = 0; i < sim.knights.length; i++) {
+      const k = sim.knights[i];
+      if (k.dead || !k.gashes.length || Math.hypot(k.x - this.x, k.z - this.z) > 4.2) continue;
+      k.plateTransforms(snap, sim.charOffset(i), sim.tick);
+      if (k.rayPlates(this.x, ey, this.z, dx, dy, dz, 4, hit) && k.nearestGash(hit.piece, hit.lx, hit.ly, hit.lz, this.punctureRadius(sim) * 1.3, -1)) this.aimWound = true;
+    }
+  }
+
+  // Thumbs aim less finely than a mouse, so a cut is a wider target on touch screens.
+  punctureRadius(sim) { return PUNCTURE_RADIUS * (sim.touchAssist ? 2 : 1); }
+
+  castRay(dir, reach, ey, snap, sim, isTip) {
+    const { x, z } = this;
+    const dx = dir[0], dy = dir[1], dz = dir[2];
+    let wallT = sim.world.rayBoxes(x, ey, z, dx, dy, dz, reach);
+    for (let i = 0; i < sim.knights.length; i++) {
+      const k = sim.knights[i];
+      if (k.dead) continue;
+      if (k.iframes) { if (Math.hypot(k.x - x, k.z - z) < reach + 1) this.whiffed = true; continue; }
+      if (Math.hypot(k.x - x, k.z - z) > 4.6) continue;
+      if (wallT > 0 && wallT < Math.hypot(k.x - x, k.z - z) - 0.5) continue;
+      // The shield stands in front of everything when it's up.
+      if (k.shieldUp > 0.55 || k.state === S.BLOCK) {
+        const t = this.rayShield(k, x, ey, z, dx, dy, dz, reach);
+        if (t > 0) {
+          const hx = x + dx * t, hy = ey + dy * t, hz = z + dz * t;
+          sim.event(EV.BLOCK, hx, hy, hz, -dx, -dy, -dz, k.id);
+          sim.hitStop(0.05);
+          k.onBlocked(sim, !!SWING_INFO[this.clip]?.heavy);
+          this.whiffed = false;
+          this.recoil(sim, 0.35);
+          return;
+        }
+      }
+      k.plateTransforms(snap, sim.charOffset(i), sim.tick);
+      if (!k.rayPlates(x, ey, z, dx, dy, dz, reach, hit)) continue;
+      this.onContact(sim, k, i, dx, dy, dz, ey);
+      if (!this.swinging) return;
+    }
+    if (!isTip) return;
+    if (wallT > 0 && !this.struckWall && !this.contact) {
+      this.struckWall = true;
+      const hx = x + dx * wallT, hy = ey + dy * wallT, hz = z + dz * wallT;
+      sim.event(EV.WALL, hx, hy, hz, -dx, -dy, -dz);
+      this.whiffed = false;
+      this.recoil(sim, 0.3);
+      return;
+    }
+    // The point digs in when a slam reaches the ground.
+    const gy = sim.world.height(x + dx * reach, z + dz * reach);
+    if (!this.struckGround && ey + dy * reach < gy) {
+      this.struckGround = true;
+      const tg = (gy - ey) / dy;
+      const hx = x + dx * tg, hz = z + dz * tg;
+      sim.event(EV.GROUND, hx, gy, hz);
+      this.trauma = Math.min(1, this.trauma + 0.25);
+      this.whiffed = false;
+    }
+  }
+
+  rayShield(k, ox, oy, oz, dx, dy, dz, reach) {
+    const s = k.shieldPos, nz = k.shieldAxisZ, ax = k.shieldAxisX, ay = k.shieldAxisY, scale = k.opts.shieldScale;
+    const den = dx * nz[0] + dy * nz[1] + dz * nz[2];
+    if (Math.abs(den) < 1e-4) return -1;
+    const t = ((s[0] - ox) * nz[0] + (s[1] - oy) * nz[1] + (s[2] - oz) * nz[2]) / den;
+    if (t < 0 || t > reach) return -1;
+    const hx = ox + dx * t - s[0], hy = oy + dy * t - s[1], hz = oz + dz * t - s[2];
+    const u = (hx * ax[0] + hy * ax[1] + hz * ax[2]) / (0.3 * scale);
+    const v = (hx * ay[0] + hy * ay[1] + hz * ay[2]) / (0.5 * scale);
+    // A kite: wide at the top, narrowing to its point.
+    const shape = u * u + (v < 0 ? v * v * 0.9 : v * v * 1.6);
+    return shape < 1 ? t : -1;
+  }
+
+  onContact(sim, k, charIndex, dx, dy, dz, ey) {
+    const wx = this.x + dx * hit.t, wy = ey + dy * hit.t, wz = this.z + dz * hit.t;
+    const c = this.contact;
+    const sameKnight = c && c.k === k;
+    if (sameKnight && c.piece === hit.piece && c.gash) {
+      // Same plate still under the blade: the cut runs on, straight, the way the blade is going.
+      const g = c.gash, d = g.dir;
+      const along = (hit.lx - g.a[0]) * d[0] + (hit.ly - g.a[1]) * d[1] + (hit.lz - g.a[2]) * d[2];
+      const L = Math.hypot(g.b[0] - g.a[0], g.b[1] - g.a[1], g.b[2] - g.a[2]);
+      if (along > L && along < MAX_GASH_LENGTH) {
+        g.b[0] = g.a[0] + d[0] * along; g.b[1] = g.a[1] + d[1] * along; g.b[2] = g.a[2] + d[2] * along;
+        k.gashVersion++;
+      }
+      this.tryPuncture(sim, k, wx, wy, wz, g);
+      return;
+    }
+    if (sameKnight && c.count >= 2) return;
+    // First bite of this plate.
+    const open = this.punctured ? null : k.nearestGash(hit.piece, hit.lx, hit.ly, hit.lz, this.punctureRadius(sim), this.swingCount);
+    const first = !sameKnight;
+    if (first) {
+      this.whiffed = false;
+      this.drag = 0.1;
+      this.trauma = Math.min(1, this.trauma + 0.32);
+    }
+    k.plateTransforms(sim.scratch, sim.charOffset(charIndex), sim.tick);
+    k.dirToBind(tmp2, hit.piece, 0, -1, 0);
+    let g = null;
+    if (open) {
+      this.applyPuncture(sim, k, open, wx, wy, wz);
+    } else {
+      g = k.addGash(sim, hit.piece, hit.lx, hit.ly, hit.lz, hit.nx, hit.ny, hit.nz, tmp2[0], tmp2[1], tmp2[2]);
+      g.swing = this.swingCount;
+      const tag = SWING_INFO[this.clip];
+      g.width *= tag.width;
+      // A blow leaves a slash from the moment it lands, however little of the swing the plate was under the blade.
+      k.dirToBind(tmp2, hit.piece, sweepDir[0], sweepDir[1], sweepDir[2]);
+      const along = tmp2[0] * hit.nx + tmp2[1] * hit.ny + tmp2[2] * hit.nz;
+      let tx = tmp2[0] - hit.nx * along, ty = tmp2[1] - hit.ny * along, tz = tmp2[2] - hit.nz * along;
+      let tl = Math.hypot(tx, ty, tz);
+      if (tl < 0.05) { tx = hit.ny; ty = -hit.nx; tz = 0; tl = Math.hypot(tx, ty, tz) || 1; }
+      tx /= tl; ty /= tl; tz /= tl;
+      const half = tag.heavy ? 0.13 : 0.09;
+      g.dir = [tx, ty, tz];
+      g.a = [hit.lx - tx * half, hit.ly - ty * half, hit.lz - tz * half];
+      g.b = [hit.lx + tx * half, hit.ly + ty * half, hit.lz + tz * half];
+      k.hp -= tag.dmg;
+      this.hits++;
+      sim.event(EV.GASH, wx, wy, wz, -dx, -dy, -dz, k.id);
+      sim.firstBlood();
+      if (first) { sim.hitStop(tag.heavy ? 0.085 : 0.055); k.onHit(sim, 'gash', this.x, this.z, tag.poise); }
+    }
+    this.contact = { k, piece: hit.piece, gash: g, count: (sameKnight ? c.count : 0) + 1 };
+  }
+
+  tryPuncture(sim, k, wx, wy, wz, current) {
+    // A running cut that crosses an older wound goes through it.
+    if (this.punctured) return;
+    const open = k.gashes.find((g) => {
+      if (g === current || g.piece !== hit.piece || g.punct >= 0 || g.swing === this.swingCount) return false;
+      const a = g.a, b = g.b;
+      const ex = b[0] - a[0], ey = b[1] - a[1], ez = b[2] - a[2];
+      const L2 = ex * ex + ey * ey + ez * ez;
+      const t = L2 > 1e-8 ? clamp(((hit.lx - a[0]) * ex + (hit.ly - a[1]) * ey + (hit.lz - a[2]) * ez) / L2, 0, 1) : 0;
+      const d = Math.hypot(a[0] + ex * t - hit.lx, a[1] + ey * t - hit.ly, a[2] + ez * t - hit.lz);
+      if (d < this.punctureRadius(sim)) { g.tOn = t; return true; }
+      return false;
+    });
+    if (open) this.applyPuncture(sim, k, open, wx, wy, wz);
+  }
+
+  applyPuncture(sim, k, g, wx, wy, wz) {
+    const wasOpen = g.punct >= 0;
+    this.punctured = true;
+    this.hits++;
+    k.puncture(sim, g, hit.lx, hit.ly, hit.lz, hit.nx, hit.ny, hit.nz);
+    k.hp -= wasOpen ? 12 : 26;
+    this.bloodSword = Math.min(1, this.bloodSword + 0.35);
+    k.plateTransforms(sim.scratch, sim.charOffset(sim.knights.indexOf(k)), sim.tick);
+    k.bindToWorld(tmp2, g.piece, g.n[0] + 0, g.n[1] + 0, g.n[2] + 0);
+    const iv = k.inv[g.piece];
+    const nx = tmp2[0] - iv.t[0], ny = tmp2[1] - iv.t[1], nz = tmp2[2] - iv.t[2];
+    sim.event(EV.PUNCTURE, wx, wy, wz, nx, ny, nz, k.id, wasOpen ? 1 : 0);
+    sim.hitStop(0.09);
+    this.trauma = Math.min(1, this.trauma + 0.45);
+    k.onHit(sim, wasOpen ? 'reopen' : 'puncture', this.x, this.z, 45);
+  }
+
+  write(snap, sim) {
+    snap[H.PX] = this.x; snap[H.PY] = this.y; snap[H.PZ] = this.z;
+    snap[H.VX] = this.vx; snap[H.VY] = this.vy; snap[H.VZ] = this.vz;
+    snap[H.HP] = this.hp; snap[H.MAX_HP] = this.maxHp;
+    snap[H.SHAKE_X] = this.shakeX; snap[H.SHAKE_Y] = this.shakeY; snap[H.SHAKE_R] = this.shakeR;
+    snap[H.DMG_FLASH] = this.flash;
+    snap[H.BLOOD_SWORD] = this.bloodSword;
+    snap[H.SWINGING] = this.swinging ? 1 : 0;
+    snap[H.SWING_T] = this.clip === 'great_idle' ? 0 : this.t;
+    snap[H.HIT_DIR] = this.hitDir; snap[H.HIT_DIR_T] = this.hitDirT;
+    snap[H.GROUND_SPEED] = this.groundSpeed || 0;
+    snap[H.ON_GROUND] = this.onGround ? 1 : 0;
+    snap[H.CAM_DROP] = this.landKick + (this.dead ? Math.min(this.deadT * 0.9, 1.25) : 0);
+    snap[H.WEAK] = this.weak;
+    snap[H.STAMINA] = this.stamina;
+    snap[H.AIM_WOUND] = this.aimWound ? 1 : 0;
+    snap[H.DODGE] = Math.max(0, this.dodgeT);
+    this.solveViewModel(snap, sim);
+  }
+}
+
+export { EYE };

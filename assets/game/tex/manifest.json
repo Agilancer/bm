@@ -1,0 +1,175 @@
+{
+ "size": [
+  1792,
+  1024
+ ],
+ "detail": [
+  896,
+  512
+ ],
+ "layers": [
+  {
+   "name": "wall_07",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_08",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_09",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_10",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_11",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_12",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_13",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_14",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_15",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_16",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_17",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_18",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_19",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "wall_20",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "roof_1",
+   "kind": "roof",
+   "cutout": false
+  },
+  {
+   "name": "roof_2",
+   "kind": "roof",
+   "cutout": false
+  },
+  {
+   "name": "roof_3",
+   "kind": "roof",
+   "cutout": false
+  },
+  {
+   "name": "roof_4",
+   "kind": "roof",
+   "cutout": false
+  },
+  {
+   "name": "door_wall",
+   "kind": "wall",
+   "cutout": false
+  },
+  {
+   "name": "door_1",
+   "kind": "door",
+   "cutout": true
+  },
+  {
+   "name": "door_2",
+   "kind": "door",
+   "cutout": true
+  },
+  {
+   "name": "door_3",
+   "kind": "door",
+   "cutout": true
+  },
+  {
+   "name": "door_4",
+   "kind": "door",
+   "cutout": true
+  },
+  {
+   "name": "door_5",
+   "kind": "door",
+   "cutout": true
+  },
+  {
+   "name": "wood",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "stone",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "rubble",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "leaves",
+   "kind": "other",
+   "cutout": true
+  },
+  {
+   "name": "bark",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "cloth_red",
+   "kind": "other",
+   "cutout": false
+  },
+  {
+   "name": "cloth_oat",
+   "kind": "other",
+   "cutout": false
+  }
+ ],
+ "ground": [
+  "dirt_1",
+  "dirt_2",
+  "dirt_3",
+  "grass_1",
+  "grass_2",
+  "grass_3"
+ ]
+}

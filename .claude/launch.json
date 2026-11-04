@@ -11,6 +11,30 @@
       ],
       "port": 8401,
       "autoPort": false
+    },
+    {
+      "name": "bm-game",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "tools/serve.py",
+        "8402",
+        "--no-open"
+      ],
+      "port": 8402,
+      "autoPort": false
+    },
+    {
+      "name": "bm-static",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8403",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 8403,
+      "autoPort": false
     }
   ]
 }
