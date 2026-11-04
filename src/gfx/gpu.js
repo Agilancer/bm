@@ -7,9 +7,12 @@ const WANTED_FEATURES = [
 ];
 
 export const TIERS = {
-  ultra: { name: 'Ultra', scaleMax: 1.0, shadowSize: 4096, cascades: 3, msaa: 4, grassSpacing: 0.062, grassRadius: 58, grassCap: 1400000, particles: 400000, ao: true, shafts: true, pom: 1, texScale: 1, terrainN: 512, bloom: 6, sim: 120 },
-  high: { name: 'High', scaleMax: 1.0, shadowSize: 2048, cascades: 3, msaa: 4, grassSpacing: 0.1, grassRadius: 42, grassCap: 400000, particles: 150000, ao: true, shafts: true, pom: 0.5, texScale: 1, terrainN: 384, bloom: 5, sim: 120 },
-  mobile: { name: 'Mobile', scaleMax: 0.8, shadowSize: 2048, cascades: 2, msaa: 4, grassSpacing: 0.16, grassRadius: 26, grassCap: 90000, particles: 40000, ao: false, shafts: false, pom: 0, texScale: 0.5, terrainN: 192, bloom: 4, sim: 90 },
+  ultra: { name: 'Ultra', scaleMax: 1.0, shadowSize: 4096, cascades: 3, msaa: 4, grassSpacing: 0.062, grassRadius: 58, grassCap: 1400000, particles: 400000, ao: true, shafts: true, pom: 1, texScale: 1, terrainN: 512, bloom: 6, sim: 120, aniso: 8, lights: 12, bloodSize: 1536, emit: 1 },
+  high: { name: 'High', scaleMax: 1.0, shadowSize: 2048, cascades: 3, msaa: 4, grassSpacing: 0.1, grassRadius: 42, grassCap: 400000, particles: 150000, ao: true, shafts: true, pom: 0.5, texScale: 1, terrainN: 384, bloom: 5, sim: 120, aniso: 8, lights: 12, bloodSize: 1536, emit: 1 },
+  // A phone has a fraction of a PC's GPU, and loses more of it to heat within minutes. So: a set number of pixels whatever
+  // the screen (the browser stretches them, which costs nothing), the shaders' LEAN paths, and few passes, which a tiled
+  // GPU pays dearly for. Also the Low setting on a PC.
+  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 4, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.5, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
 
 export function isMobileDevice() {

@@ -31,7 +31,7 @@ turned away, and when badly hurt fall back behind a house and come around the co
 themselves: bait drops the shield and dares you. Great crabs come out of the fields from 20 seconds after first blood, from
 different sides.
 
-F3 shows frame time, threads and what the knight is thinking.
+F3 shows frame time, threads and what the knight is thinking. On a phone, turn on **Frame rate readout** in Settings.
 
 ### The title, saves and settings
 
@@ -52,16 +52,18 @@ are added in `src/main.js`. Inventory, equipment, quests and the world's own sta
 own with `addPart`: a save made before a part existed loads it as `null`, as in a new game. When a part's shape changes,
 raise `SAVE_VERSION` and add a step to `MIGRATIONS`, so older saves are brought up to date as they load.
 
-Settings: volume, music, ambience, look speed, resolution (Auto lets the frame-rate governor choose) and graphics (Auto
-picks from your GPU; changing it restarts the game, back to the menu with your game kept for Continue).
+Settings: volume, music, ambience, look speed, resolution (Auto lets the frame-rate governor choose), graphics (Auto
+picks from your GPU; changing it restarts the game, back to the menu with your game kept for Continue) and the frame rate
+readout.
 
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
 
 ### What has and hasn't been tested
 
-**No human has played this.** All of it was run on one machine: desktop Chrome on Windows, an AMD RDNA 4 GPU, 16 logical cores.
-Whether it fulfils the aim of running as well as possible on phones and on modest PCs is still unproven.
+The owner's first session on a phone found the frame rate too low, which led to the phone tier below. **That rework hasn't
+been run on a phone yet.** Everything measured here was on one machine: desktop Chrome on Windows, an AMD RDNA 4 GPU, 16 logical
+cores. Whether it holds 60 fps on a given phone is unproven until someone reads the Frame rate readout on one.
 
 | Measured there | Result |
 | --- | --- |
@@ -71,10 +73,12 @@ Whether it fulfils the aim of running as well as possible on phones and on modes
 | Static host with no special headers | One reload, then shared memory and threads |
 | Message-passing fallback (`?nosab=1`) | Runs, without the planner |
 | Touch controls | Synthetic touch events through the real handlers at phone size, including three thumbs at once. No real finger or screen |
-| Quality steps | Each one, called by hand during a fight, with no GPU errors. The governor has never been seen choosing one, because nothing here is slow enough |
-| Mobile tier | Runs on this desktop GPU with a phone's user agent, which says nothing about a phone's speed |
+| Quality steps | Each one, called by hand during a fight, with no GPU errors. The phone governor has been seen choosing them under real load, on a software GPU |
+| Phone tier against the build before it, same scenes at a Pixel 7's screen size | About 3.5x less GPU time on this desktop GPU (1.47 to about 0.4 ms). About 4 to 5.5x less on SwiftShader, a software GPU (3750 to 665 ms in the village, 2880 to 700 ms in a fight with crabs and blood). Neither is a phone: the ratio is the point, not the times, and neither charges for what a phone's tiled GPU pays most for (extra passes, reloading a target), so it says nothing certain about the gain there |
+| Bot fights at phone settings since the rework | 12 full fights: 7 wins, 5 losses (the bot won 5 of 6 at PC settings, but these are too few fights to read much into). Cuts, bleeding, win, restart and the touch test all pass, with no GPU errors. One other run, on a slightly earlier version of this work, had its page crash partway and left no crash report. It hasn't happened again, including with the same script, and its cause is unknown |
+| Phone governor | `node tools/test_governor.mjs` against simulated phones; and for real on SwiftShader through `tools/phone_bench.mjs real`, where it dropped multisampling under the title, started at the lowest step, and stopped frames queueing up: 6 fps steady, with the simulation holding its 90 Hz, where the old build stalled for seconds |
 
-**Never run:** a phone or tablet, an integrated GPU, Safari, Firefox. **Never heard:** the audio.
+**Not run by anyone:** a tablet, an integrated GPU, Safari, Firefox. **Never heard:** the audio, as far as anyone has reported.
 
 To check it yourself:
 
@@ -82,7 +86,8 @@ To check it yourself:
 2. Watch the knights' feet while they circle you, and the fine scratches beside a fresh cut as the knight moves. Only stills
    have been reviewed, so foot sliding and shimmer haven't been judged.
 3. On a phone: `python tools/serve.py 8443 --lan --cert cert.pem --key key.pem`. WebGPU needs HTTPS, so use a certificate your
-   phone trusts, such as one from mkcert. Hold 60 fps for ten minutes, and try the thumbs.
+   phone trusts, such as one from mkcert. Turn on Frame rate readout in Settings, then see whether it holds 60 fps for ten
+   minutes, and try the thumbs.
 4. On a laptop with integrated graphics, press F3 and watch whether the scale and effects step down sensibly.
 5. Turn the difficulty if it needs it, with the numbers above.
 
@@ -94,11 +99,21 @@ To check it yourself:
 - **Threads.** The game asks first, then uses all but one logical core on PC and caps itself on phones. The simulation runs on
   its own thread at 120 Hz (90 on phones) and publishes snapshots through shared memory, so the render thread never waits on
   it. The pool decodes textures and builds the land at load, then spends a few milliseconds of every 40 playing out the duel,
-  and those rollouts weight the knight's tactics. Browsers have no real permission prompt for threads, so that question is the
-  game's own. Without cross-origin isolation it falls back to messages between threads.
+  and those rollouts weight the knight's tactics (on a phone only two threads, 2 ms of every 80, since heat is what limits it).
+  Browsers have no real permission prompt for threads, so that question is the game's own. Without cross-origin isolation it
+  falls back to messages between threads.
 - **GPU.** It takes the high-performance adapter with all of its limits, and picks a tier from what it finds. Resolution then
-  follows GPU timings to hold the display's refresh rate, and effects drop out if 60 fps is out of reach. Chrome on Windows
-  currently ignores the high-performance hint and says so in the console.
+  follows GPU timings to hold the display's refresh rate, and effects drop out if 60 fps is out of reach. The render loop never
+  queues more than a couple of frames ahead of the GPU, since those would only be input lag. Chrome on Windows currently ignores
+  the high-performance hint and says so in the console.
+- **Phones** (also the Low setting on a PC). A set number of pixels whatever the screen (about 0.75 million, which the browser
+  stretches for nothing), a leaner build of every shader (`if (LEAN)`), and few passes, since a tiled GPU pays for each one: no
+  second colour target, particles in the world's own pass, no AO or sun shafts, and the blood map and far shadows drawn only
+  when needed. Bodies off screen aren't skinned, and shadows and distant bodies use a coarse mesh. `src/gfx/governor.js` holds
+  60 fps by how often frames come round and how long the GPU takes over one, which any browser can tell it. The GPU is timed
+  under the title, before anyone's looking, so the first fight starts at a resolution it can hold. A strong phone climbs to as
+  much as 1.7 million pixels; a slow one drops multisampling, then grass and bloom, to as few as 0.23 million, which is the
+  one step that gives up a good deal of the look: the field goes to a flat lawn.
 - **Plates stay plates.** Each armour segment is bound to one joint, or to one constant mix of two joints across its whole
   surface, and blended as dual quaternions, so it moves rigidly. Shells that span a joint are cut along their weights. Only
   fingers and cloth keep soft weights. Because plates are rigid, the blade tests against a bind-space BVH of each plate, and
@@ -117,6 +132,8 @@ To check it yourself:
 | `tools/village/build_textures.py` | Turns the paintings into colour and detail arrays, reading timber, plaster, glass and mortar from the paint |
 | `tools/village/build_village.py` | Builds the village in Blender, including the colliders and lights in `village.json` |
 | `tools/review.js`, `tools/sheet.py` | Stage scenes and screenshots, and run a scripted fight, for reviews |
+| `tools/test_governor.mjs` | The phone governor against simulated phones |
+| `tools/phone_bench.mjs` | The game at a phone's screen size on a software GPU: frame costs, and the governor under real load |
 | `src/sim/` | The simulation thread: knights, AI, crabs, player, collisions |
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |

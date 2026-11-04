@@ -46,7 +46,7 @@ const store = {
 // ---- settings ------------------------------------------------------------------------------------------------------
 
 const SETTINGS_KEY = 'velscour.settings';
-export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto' };
+export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off' };
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
 
 const when = (t) => {
@@ -66,6 +66,7 @@ const SETTINGS = `
     <label><span>Look speed</span><input data-k="look" type="range" min="0.4" max="2.5" step="0.1"></label>
     <label><span>Resolution</span><select data-k="res"><option value="auto">Auto (holds the frame rate)</option><option value="1">Full</option><option value="0.75">75%</option><option value="0.5">Half</option></select></label>
     <label><span>Graphics</span><select data-k="gfx"><option value="auto">Auto (from your GPU)</option><option value="ultra">Ultra</option><option value="high">High</option><option value="mobile">Low</option></select></label>
+    <label><span>Frame rate readout</span><select data-k="perf"><option value="off">Off</option><option value="on">On</option></select></label>
   </div>
   <p class="t-note">Graphics restarts the game to take hold.</p>
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
