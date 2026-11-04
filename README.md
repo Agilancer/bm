@@ -2,14 +2,110 @@
 
 Bellmourn v2.
 
-To watch the first-person arms, run `swings-player.bat`. That opens `swings.html` on
-`http://localhost:8401/swings.html`, which is Bellmourn's move-picker scene: the training dummy, the X in the middle of
-the screen, and a spark where a blow lands. The view shows the path of the blade's tip. Pick the model under **Hands**.
+## Play: The Knight of Velscour
+
+Run `play.bat`, or `python tools/serve.py`, and open `http://localhost:8402/`. It needs a WebGPU browser: current Chrome,
+Edge and Safari on PC and phones, or Firefox on Windows. On a static host it reaches the same state through `coi-sw.js`.
+
+| | PC | Phone |
+| --- | --- | --- |
+| Move | `W` `A` `S` `D` | Left thumb |
+| Look | Mouse | Right thumb |
+| Jump | `Space` | `JUMP` |
+| Run | `Shift` | `RUN`, or push the stick past its edge |
+| Dodge | `Q` | `DODGE` |
+| Combo: two cuts, then a slam | Left click | `CUT` |
+| Wide swing | Right click | `WIDE` |
+
+Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
+
+A cut opens a gash in the plate, exactly where the blade crossed it on screen. A second blow on that gash goes through, and
+the knight bleeds from that spot on every heartbeat. Your X turns red over a cut you could go through. Blood loss weakens
+without finishing the knight, so you still have to land the end of it. A blade flashes before it falls: dodge, or swing into
+it to parry. Slams and chops break a guard faster than cuts, and running, dodging and swinging all spend your breath. Hitting
+the silver knight makes an enemy of them too.
+
+The black knight reads your swings after a human reaction time, and reads the ones you repeat sooner. They answer with the
+shield, a roll to clear ground on your flank, or a step back, and punish whiffs with a lunge. They feint, keep a wounded side
+turned away, and when badly hurt fall back behind a house and come around the corner fast. Their plans show in how they hold
+themselves: bait drops the shield and dares you. Great crabs come out of the fields from 20 seconds after first blood, from
+different sides.
+
+F3 shows frame time, threads and what the knight is thinking.
+
+To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
+`Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
+
+### What has and hasn't been tested
+
+**No human has played this.** All of it was run on one machine: desktop Chrome on Windows, an AMD RDNA 4 GPU, 16 logical cores.
+Whether it fulfils the aim of running as well as possible on phones and on modest PCs is still unproven.
+
+| Measured there | Result |
+| --- | --- |
+| GPU time per frame in a fight, Ultra tier | About 3.2 ms at 1280x720, 5 ms at 2560x1440, 8.3 ms at 3840x2160 |
+| Six full fights by a scripted player that dodges on the blade flash and waits for the red X | 5 wins, 1 loss, 68 to 109 s each. It has perfect aim and steady reactions, so expect a person to find it harder |
+| After a win | Slow motion on the killing blow, the win message, crabs stand down, restart works |
+| Static host with no special headers | One reload, then shared memory and threads |
+| Message-passing fallback (`?nosab=1`) | Runs, without the planner |
+| Touch controls | Synthetic touch events through the real handlers at phone size, including three thumbs at once. No real finger or screen |
+| Quality steps | Each one, called by hand during a fight, with no GPU errors. The governor has never been seen choosing one, because nothing here is slow enough |
+| Mobile tier | Runs on this desktop GPU with a phone's user agent, which says nothing about a phone's speed |
+
+**Never run:** a phone or tablet, an integrated GPU, Safari, Firefox. **Never heard:** the audio.
+
+To check it yourself:
+
+1. Play for ten minutes with the sound on. Does the fight feel fair, and does anything sound wrong?
+2. Watch the knights' feet while they circle you, and the fine scratches beside a fresh cut as the knight moves. Only stills
+   have been reviewed, so foot sliding and shimmer haven't been judged.
+3. On a phone: `python tools/serve.py 8443 --lan --cert cert.pem --key key.pem`. WebGPU needs HTTPS, so use a certificate your
+   phone trusts, such as one from mkcert. Hold 60 fps for ten minutes, and try the thumbs.
+4. On a laptop with integrated graphics, press F3 and watch whether the scale and effects step down sensibly.
+5. Turn the difficulty if it needs it, with the numbers above.
+
+### How it runs
+
+- **WebGPU only, no engine.** A frame is compute (dual-quaternion skinning, grass, particles), then shadows, a forward HDR
+  pass with 4x MSAA, AO and sun shafts at half resolution, full-resolution particles, bloom and a composite. The whole village
+  is one vertex buffer and one draw call against a texture array.
+- **Threads.** The game asks first, then uses all but one logical core on PC and caps itself on phones. The simulation runs on
+  its own thread at 120 Hz (90 on phones) and publishes snapshots through shared memory, so the render thread never waits on
+  it. The pool decodes textures and builds the land at load, then spends a few milliseconds of every 40 playing out the duel,
+  and those rollouts weight the knight's tactics. Browsers have no real permission prompt for threads, so that question is the
+  game's own. Without cross-origin isolation it falls back to messages between threads.
+- **GPU.** It takes the high-performance adapter with all of its limits, and picks a tier from what it finds. Resolution then
+  follows GPU timings to hold the display's refresh rate, and effects drop out if 60 fps is out of reach. Chrome on Windows
+  currently ignores the high-performance hint and says so in the console.
+- **Plates stay plates.** Each armour segment is bound to one joint, or to one constant mix of two joints across its whole
+  surface, and blended as dual quaternions, so it moves rigidly. Shells that span a joint are cut along their weights. Only
+  fingers and cloth keep soft weights. Because plates are rigid, the blade tests against a bind-space BVH of each plate, and
+  wounds are evaluated in bind space, so they ride the plate exactly.
+
+### Files
+
+| Path | What |
+| --- | --- |
+| `assets/armor/` | Both knights on the UAL master skeleton with all 85 clips, for any other use |
+| `assets/game/` | What the game loads: the knights without clips, the 41 clips it uses as a small binary, items, village, textures, audio |
+| `tools/armor/rig_armor.py` | Rigs a segmented Tripo armour on the master skeleton: `python tools/armor/rig_armor.py velscour|silver SOURCE MASTER OUT_FULL OUT_GAME` |
+| `tools/armor/pack_clips.py` | Packs the clips the game uses |
+| `tools/armor/measure_blows.py` | Measures where in each attack clip the blow falls, which sets the knight's hit windows |
+| `tools/armor/fit_shield.py` | Moves a kite shield's handle to where a knight's fist is |
+| `tools/village/build_textures.py` | Turns the paintings into colour and detail arrays, reading timber, plaster, glass and mortar from the paint |
+| `tools/village/build_village.py` | Builds the village in Blender, including the colliders and lights in `village.json` |
+| `tools/review.js`, `tools/sheet.py` | Stage scenes and screenshots, and run a scripted fight, for reviews |
+| `src/sim/` | The simulation thread: knights, AI, crabs, player, collisions |
+| `src/gfx/` | The renderer and its shaders |
 
 ## First-person arms with a sword and shield
 
 `assets/fp/arms_1h.glb` (2.7 MB) is one self-contained model: bare arms on their own skeleton, Bellmourn's Arming Sword in
 the right fist and its Iron-Bound Roundshield on the left, and the game's one-handed moves as thirteen clips.
+
+To watch the first-person arms, run `swings-player.bat`. That opens `swings.html` on
+`http://localhost:8401/swings.html`, which is Bellmourn's move-picker scene: the training dummy, the X in the middle of
+the screen, and a spark where a blow lands. The view shows the path of the blade's tip. Pick the model under **Hands**.
 
 | Clip | What it is | Tip through the X at |
 | --- | --- | --- |

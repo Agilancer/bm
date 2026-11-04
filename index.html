@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0907">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Bellmourn: The Knight of Velscour</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root { --gold: #c9a35c; --gold-dim: #8c7344; --bone: #e9dfc9; --ink: #0b0907; --blood: #8e1a12; --blood-hi: #d23a22; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; overscroll-behavior: none; touch-action: none; user-select: none; -webkit-user-select: none; font-family: Georgia, 'Times New Roman', serif; color: var(--bone); }
+  canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* Title and permission gate */
+  #gate { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(ellipse at 50% 35%, #2a1d12 0%, #0b0907 72%); z-index: 20; transition: opacity .7s; text-align: center; }
+  #gate.clear { background: linear-gradient(180deg, rgba(11,9,7,.55), rgba(11,9,7,.15) 40%, rgba(11,9,7,.75)); }
+  #gate.gone { opacity: 0; pointer-events: none; }
+  h1 { margin: 0; font-size: clamp(38px, 8.5vw, 92px); letter-spacing: .12em; font-weight: normal; color: var(--gold); text-shadow: 0 2px 28px rgba(0,0,0,.9); }
+  h2 { margin: 2px 0 28px; font-size: clamp(14px, 2.4vw, 22px); letter-spacing: .34em; font-weight: normal; color: var(--bone); text-transform: uppercase; opacity: .85; }
+  .card { max-width: 560px; width: 100%; padding: 20px 24px; background: rgba(0,0,0,.5); border: 1px solid var(--gold-dim); backdrop-filter: blur(3px); line-height: 1.55; font-size: 15.5px; }
+  .card b { color: var(--gold); font-weight: normal; }
+  .small { font-size: 13px; opacity: .72; margin-top: 10px; }
+  button.big { margin-top: 18px; padding: 14px 42px; min-height: 48px; font: inherit; font-size: 17px; letter-spacing: .12em; color: #17110a; background: linear-gradient(180deg, #dcbb78, #a9853f); border: 1px solid #efd9a4; cursor: pointer; }
+  button.big:hover { filter: brightness(1.1); }
+  button.big:disabled { opacity: .45; cursor: default; }
+  button.alt { margin: 18px 0 0 10px; padding: 14px 18px; min-height: 48px; font: inherit; font-size: 14px; color: var(--bone); background: transparent; border: 1px solid var(--gold-dim); cursor: pointer; }
+  #bar { width: min(420px, 80vw); height: 6px; margin-top: 18px; background: rgba(255,255,255,.1); display: none; }
+  #bar > i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .15s; }
+  #status { margin-top: 10px; min-height: 1.3em; font-size: 13px; opacity: .78; }
+  #controls { margin-top: 14px; font-size: 13.5px; opacity: .85; line-height: 1.7; }
+  kbd { padding: 1px 6px; border: 1px solid var(--gold-dim); font: inherit; font-size: 12px; color: var(--gold); }
+
+  /* HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; display: none; }
+  #cross { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); opacity: .75; transition: opacity .15s, transform .08s; }
+  #cross::before, #cross::after { content: ''; position: absolute; left: 50%; top: 50%; width: 22px; height: 1.5px; background: var(--bone); box-shadow: 0 0 2px #000; }
+  #cross::before { transform: translate(-50%, -50%) rotate(45deg); }
+  #cross::after { transform: translate(-50%, -50%) rotate(-45deg); }
+  #cross.wound { opacity: 1; transform: translate(-50%, -50%) scale(1.25); }
+  #cross.wound::before, #cross.wound::after { background: var(--blood-hi); box-shadow: 0 0 6px var(--blood-hi); }
+  #cross.hit { transform: translate(-50%, -50%) scale(1.5); }
+  #cross.hit::before, #cross.hit::after { background: var(--blood-hi); }
+  #vitals { position: absolute; left: calc(26px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom)); width: min(290px, 44vw); }
+  .label { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; opacity: .78; margin-bottom: 4px; text-shadow: 0 1px 3px #000; }
+  .meter { height: 8px; background: rgba(0,0,0,.6); border: 1px solid rgba(201,163,92,.55); overflow: hidden; }
+  .meter > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #b82a1d, #6d120b); transition: width .12s; }
+  #foe { position: absolute; top: calc(18px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(520px, 62vw); padding: 6px 12px 7px; text-align: center; opacity: 0; transition: opacity .4s; background: rgba(8,6,4,.5); }
+  #foe .name { font-size: 15px; letter-spacing: .24em; color: var(--gold); margin-bottom: 5px; text-shadow: 0 1px 4px #000; }
+  #foeHp > i { background: linear-gradient(180deg, #a0231a, #5b0e08); }
+  #foeArmor { height: 3px; margin-top: 3px; background: rgba(0,0,0,.6); }
+  #foeArmor > i { display: block; height: 100%; width: 100%; background: #9aa0a6; transition: width .2s; }
+  #bleed { margin-top: 5px; font-size: 12px; letter-spacing: .16em; color: var(--blood-hi); min-height: 1.3em; text-shadow: 0 1px 3px #000; }
+  #msg { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(30px, 6vw, 62px); letter-spacing: .1em; color: var(--gold); text-shadow: 0 2px 22px #000; opacity: 0; transition: opacity .8s; }
+  #msg small { display: block; margin-top: 12px; font-size: 16px; letter-spacing: .2em; color: var(--bone); }
+  #tip { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); max-width: min(620px, 64vw); text-align: center; font-size: 15px; line-height: 1.4; letter-spacing: .03em; color: var(--bone); background: rgba(8,6,4,.62); padding: 7px 14px; opacity: 0; transition: opacity .5s; }
+  #stam { height: 4px; margin-top: 3px; background: rgba(0,0,0,.6); overflow: hidden; }
+  #stam > i { display: block; height: 100%; width: 100%; background: #c9b478; transition: width .08s; }
+  #debug { position: absolute; right: 12px; top: 12px; font: 12px/1.45 ui-monospace, Consolas, monospace; text-align: right; color: #e6e0d0; text-shadow: 0 1px 2px #000; white-space: pre; display: none; }
+  #pause { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.55); z-index: 15; }
+
+  /* Touch controls */
+  #touch { position: fixed; inset: 0; z-index: 6; display: none; }
+  .tbtn { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid rgba(233,223,201,.55); background: rgba(10,8,6,.34); color: var(--bone); font-size: 12px; letter-spacing: .08em; backdrop-filter: blur(2px); }
+  .tbtn.on, .tbtn:active { background: rgba(201,163,92,.45); }
+  #bAttack { width: 92px; height: 92px; right: calc(26px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom)); font-size: 13px; }
+  #bWide { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); }
+  #bJump { width: 66px; height: 66px; right: calc(38px + env(safe-area-inset-right)); bottom: calc(132px + env(safe-area-inset-bottom)); }
+  #bSprint { width: 56px; height: 56px; left: calc(30px + env(safe-area-inset-left)); bottom: calc(190px + env(safe-area-inset-bottom)); }
+  #bDodge { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(112px + env(safe-area-inset-bottom)); }
+  #bPause { width: 40px; height: 40px; left: 50%; margin-left: -20px; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 15px; letter-spacing: 0; }
+  #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #0b0907; z-index: 30; font-size: 18px; text-align: center; padding: 30px; color: var(--gold); }
+  @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
+  #stick { position: absolute; width: 130px; height: 130px; border-radius: 50%; border: 1.5px solid rgba(233,223,201,.4); background: rgba(10,8,6,.2); display: none; }
+  #nub { position: absolute; left: 41px; top: 41px; width: 48px; height: 48px; border-radius: 50%; background: rgba(233,223,201,.45); }
+  body.touch #vitals { bottom: auto; top: calc(14px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); width: 28vw; }
+  body.touch #foe { top: calc(10px + env(safe-area-inset-top)); left: auto; right: calc(14px + env(safe-area-inset-right)); transform: none; width: 44vw; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hud">
+  <div id="cross"></div>
+  <div id="vitals"><div class="label">Life</div><div class="meter" id="hp"><i></i></div><div id="stam"><i></i></div></div>
+  <div id="foe">
+    <div class="name" id="foeName">KNIGHT OF VELSCOUR</div>
+    <div class="meter" id="foeHp"><i></i></div>
+    <div id="foeArmor"><i></i></div>
+    <div id="bleed"></div>
+  </div>
+  <div id="tip"></div>
+  <div id="msg"></div>
+  <div id="debug"></div>
+</div>
+
+<div id="touch">
+  <div id="stick"><div id="nub"></div></div>
+  <div class="tbtn" id="bSprint">RUN</div>
+  <div class="tbtn" id="bWide">WIDE</div>
+  <div class="tbtn" id="bJump">JUMP</div>
+  <div class="tbtn" id="bDodge">DODGE</div>
+  <div class="tbtn" id="bAttack">CUT</div>
+  <div class="tbtn" id="bPause">II</div>
+</div>
+
+<div id="rotate">Turn your phone sideways to play.</div>
+<div id="pause"><div class="label" style="font-size:15px">Paused</div><button class="big" id="resume">RESUME</button></div>
+
+<div id="gate">
+  <h1>BELLMOURN</h1>
+  <h2>The Knight of Velscour</h2>
+  <div class="card" id="card">Checking this device...</div>
+  <div id="buttons"></div>
+  <div id="bar"><i></i></div>
+  <div id="status"></div>
+  <div id="controls"></div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

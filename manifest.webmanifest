@@ -1,0 +1,10 @@
+{
+  "name": "Bellmourn: The Knight of Velscour",
+  "short_name": "Bellmourn",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0907",
+  "theme_color": "#0b0907",
+  "icons": []
+}
