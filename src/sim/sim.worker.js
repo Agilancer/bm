@@ -4,6 +4,8 @@ import { parseGLB } from '../core/glb.js';
 import { CHARS_START, CTRL, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
 import { CRAB_SCALE, Crab } from './crab.js';
+import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
+import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
 import { World } from './world.js';
@@ -16,6 +18,11 @@ const SILVER = {
   spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 1.6, shieldScale: 1.2, bladeLen: 0.6,
   route: [[4, 13], [11, 12], [12, -2], [6, -13], [-6, -13], [-13, -6], [-11, 12]], pauseClip: 'Idle_FoldArms_Loop',
 };
+
+// Keeps to the woods north of the village. hp is how long it fights; territory is how far from spawn it minds you.
+const GRAVEHART = { spawn: [4, -56], lair: [-14, -74], yaw: 0.4, hp: 420, territory: 30 };
+// Lies up in the south, and doesn't go looking for anyone.
+const HYDRA = { spawn: [-6, 92], lair: [12, 106], yaw: 3.1, hp: 900, territory: 30 };
 
 const CRABS = [
   { spawn: [-40, -28], yaw: 1.0, hp: 170, delay: 20, flank: 1.1 },
@@ -59,7 +66,7 @@ class Sim {
     this.player.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.gameState = 0; this.gameT = 0; this.time = 0;
-    this.firstBloodAt = -1; this.crabWoke = false; this.slowT = 0; this.frozen = false; this.slow = 1;
+    this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
     p.atkSeen = inp[INPUT.ATTACK]; p.wideSeen = inp[INPUT.WIDE]; p.jumpSeen = inp[INPUT.JUMP]; p.dodgeSeen = inp[INPUT.DODGE];
@@ -196,6 +203,8 @@ class Sim {
       case 7: k.x = b; k.z = c; k.y = this.world.height(k.x, k.z); break;
       case 8: p.hp = p.maxHp; break;
       case 9: k.hp = 1; break;
+      case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
+      case 18: if (k.force) k.force(this, b | 0); break;
       case 10: k.hostile = true; k.combat = 1; k.combatTarget = 1; k.shieldUp = 1; k.shieldTarget = 1; k.pauseT = 0; break;
       case 11: this.restart(); break;
       case 13: this.slow = b; break;
@@ -255,7 +264,7 @@ async function boot(msg) {
     self.addEventListener('message', (e) => { if (e.data.input) sim.input.set(e.data.input); });
   }
   sim.input[INPUT.YAW] = Math.PI;
-  const [clipsMeta, clipsBin, black, silver, armsBuf, village, crabBuf] = await Promise.all([
+  const [clipsMeta, clipsBin, black, silver, armsBuf, village, crabBuf, heartBuf, hydraBuf] = await Promise.all([
     fetch(`${base}assets/game/clips.json`).then((r) => r.json()),
     fetchBuf(`${base}assets/game/clips.bin`),
     fetchBuf(`${base}assets/game/velscour_knight.glb`),
@@ -263,6 +272,8 @@ async function boot(msg) {
     fetchBuf(`${base}assets/fp/arms_2h.glb`),
     fetch(`${base}assets/game/village.json`).then((r) => r.json()),
     fetchBuf(`${base}assets/monsters/crab_monster/crab_monster.glb`),
+    fetchBuf(`${base}assets/monsters/gravehart/gravehart.glb`),
+    fetchBuf(`${base}assets/monsters/bone_hydra/bone_hydra.glb`),
   ]);
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village);
@@ -271,6 +282,8 @@ async function boot(msg) {
   sim.knights.push(new Knight(1, 1, new Rig(parseGLB(silver), bank), bank, SILVER));
   const crabRig = new ArmsRig(crabBuf, CRAB_SCALE);
   CRABS.forEach((c, i) => sim.knights.push(new Crab(2 + i, 2, crabRig, c)));
+  sim.knights.push(new Gravehart(5, 3, new ArmsRig(heartBuf, GRAVEHART_SCALE), GRAVEHART));
+  sim.knights.push(new Hydra(6, 4, new ArmsRig(hydraBuf, HYDRA_SCALE), HYDRA));
   sim.restartSeen = sim.input[INPUT.RESTART];
   sim.cmdSeen = sim.input[INPUT.CMD];
   // Placing the player from a save, asked for by the render thread.

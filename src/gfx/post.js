@@ -23,7 +23,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   p.life -= S.dt;
   if (p.life <= 0.0) { particles[i].life = 0.0; return; }
   let dt = S.dt;
-  // 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember
+  // 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame
   switch p.kind {
     case 0u: {
       p.vel.y -= 9.8 * dt;
@@ -51,6 +51,12 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
     case 5u: {
       let t = S.time * 0.8 + p.seed * 40.0;
       p.vel = S.wind.xyz * 0.25 + vec3f(sin(t), sin(t * 0.7 + 1.0) * 0.5, cos(t * 1.1)) * 0.11;
+    }
+    case 7u: {
+      // Slows hard as it hits still air, then the heat takes it up, swelling.
+      p.vel *= 1.0 - 2.0 * dt;
+      p.vel.y += 2.6 * dt;
+      p.size += dt * 0.75;
     }
     default: {
       p.vel.y += 0.5 * dt;
@@ -154,6 +160,11 @@ struct V {
       let tw = sin(F.camPos.w * 2.0 + pt.seed * 60.0) * 0.5 + 0.5;
       col = vec4f(vec3f(1.0, 0.86, 0.6) * (sun * 0.45 + amb * 0.2) * (0.5 + tw), 0.0);
       col *= smoothstep(0.0, 0.2, a) * (1.0 - smoothstep(0.85, 1.0, a));
+    }
+    case 7u: {
+      // White at the mouth, through yellow and orange to a dull red that's gone before it reads as a ball.
+      let hot = mix(mix(vec3f(1.5, 0.2, 0.02), vec3f(4.2, 1.45, 0.2), smoothstep(0.2, 0.6, a)), vec3f(4.6, 3.0, 1.0), smoothstep(0.72, 1.0, a));
+      col = vec4f(hot * (0.7 + 0.3 * pt.seed), 0.26 * smoothstep(0.0, 0.3, a));
     }
     default: {
       col = vec4f(vec3f(6.0, 1.6, 0.25) * a, 0.0);

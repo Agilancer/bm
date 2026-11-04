@@ -64,7 +64,7 @@ export function mapShared(buffer) {
 export const EV = {
   SWING: 1, BITE: 2, GASH: 3, PUNCTURE: 4, BLOCK: 5, PARRY: 6, HURT: 7, STEP: 8, ROLL: 9, GRUNT: 10, DEATH: 11, WALL: 12,
   GROUND: 13, GLINT: 14, BLOOD: 15, JUMP: 16, LAND: 17, SHIELD_BREAK: 18, DUST: 19, WHOOSH: 20, ALERT: 21, TAUNT: 22, WIN: 23, LOSE: 24,
-  CRAB_HIT: 25, CRAB_DIE: 26, DODGE: 27, CRAB_WAKE: 28,
+  CRAB_HIT: 25, CRAB_DIE: 26, DODGE: 27, CRAB_WAKE: 28, ROAR: 29, BEAST_NOTICE: 30, FIRE: 31, FIRE_HIT: 32, SEVER: 33, STUMP: 34, CHUNK_LAND: 35, HYDRA_NOTICE: 36, BURN: 37,
 };
 
 export const STATE_NAMES = ['patrol', 'alert', 'approach', 'circle', 'attack', 'block', 'roll', 'stagger', 'retreat', 'break', 'dead', 'taunt', 'feint', 'idle'];

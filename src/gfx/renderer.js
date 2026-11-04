@@ -7,6 +7,8 @@ import { MipGen, makeBuffer, mipCountFor, textureArrayFromBitmaps } from './gpu.
 import { ARMOR, GRASS, GRASS_CULL, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { CRAB_SCALE } from '../sim/crab.js';
+import { GRAVEHART_SCALE } from '../sim/gravehart.js';
+import { HYDRA_SCALE } from '../sim/hydra.js';
 import { SKIN } from './shaders.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
@@ -91,7 +93,7 @@ export class Renderer {
     const tw = Math.round(manifest.size[0] * tier.texScale), th = Math.round(manifest.size[1] * tier.texScale);
     const dw = Math.round(manifest.detail[0] * tier.texScale), dh = Math.round(manifest.detail[1] * tier.texScale);
     const gs = Math.round(1024 * tier.texScale), gd = Math.round(512 * tier.texScale);
-    total = manifest.layers.length * 2 + manifest.ground.length * 2 + 16;
+    total = manifest.layers.length * 2 + manifest.ground.length * 2 + 17;
     const shrink = tier.texScale !== 1;
     const decode = (name, width, height) => pool.run('decode', { url: `${base}assets/game/tex/${name}.webp`, ...(shrink ? { width, height } : {}) }).then((b) => { tick(); return b; });
     const [colorBmps, detailBmps, gColor, gDetail] = await Promise.all([
@@ -129,7 +131,7 @@ export class Renderer {
 
     const buffers = await Promise.all(['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/reliquary_blade.glb', 'assets/game/items/thorned_kite.glb', 'assets/game/items/arming_sword.glb', 'assets/game/items/templar_kite.glb',
-      'assets/monsters/crab_monster/crab_monster.glb']
+      'assets/monsters/crab_monster/crab_monster.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb']
       .map((p) => fetch(base + p).then((r) => r.arrayBuffer()).then((b) => { tick(); return b; })));
     this.buildSamplers();
     this.buildBaseLayouts();
@@ -139,6 +141,8 @@ export class Renderer {
       await this.buildCharacter(parseGLB(buffers[1])),
       await this.buildCharacter(parseGLB(buffers[2])),
       ...(await this.buildCrabs(parseGLB(buffers[8]), 3, CRAB_SCALE)),
+      ...(await this.buildCrabs(parseGLB(buffers[9]), 1, GRAVEHART_SCALE)),
+      ...(await this.buildCrabs(parseGLB(buffers[10]), 1, HYDRA_SCALE)),
     ];
     tick();
     this.vm = await this.buildViewModel(parseGLB(buffers[3]));
@@ -944,7 +948,7 @@ export class Renderer {
 
   // ---- particles from the CPU -------------------------------------------------------------------------
 
-  // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember.
+  // Emit a burst. kind: 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame.
   emit(kind, count, x, y, z, dx, dy, dz, spread, sp0, sp1, sz0, sz1, life0, life1) {
     const f = this.emitF, u = this.emitU, cap = this.emitF.length / 12;
     // (Blood is what this game is about, so it's the last thing to go thin.)
