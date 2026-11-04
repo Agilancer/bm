@@ -2,3 +2,4 @@ tools/fp_arms/build/
 tools/crab_monster/build/
 __pycache__/
 *.pyc
+tools/build/
