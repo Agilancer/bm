@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bm-swings",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "tools/fp_arms/serve.py",
+        "8401",
+        "--no-open"
+      ],
+      "port": 8401,
+      "autoPort": false
+    }
+  ]
+}
