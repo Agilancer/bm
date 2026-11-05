@@ -71,7 +71,10 @@ for (let i = 0; i < 20000; i++) {
     for (const k of [0, 3, 4, 5, 6, 7]) for (const it of rollLoot(rng, k)) if (it.type === 'armor') assert.equal(GEAR[it.base].suit, 'knight', 'nothing of T on the V side');
   }
   assert.ok(seen > 100, 'monsters drop armour now and then');
-  assert.ok(rollChest(rng).some((x) => x.type === 'armor'));
+  const chests = Array.from({ length: 3000 }, (_, i) => [i % 3, rollChest(rng, i % 3).filter((x) => x.type === 'armor')]);
+  for (const tier of [0, 1, 2]) assert.ok(chests.some(([t, a]) => t === tier && a.length), 'a chest can hold armour');
+  assert.ok(chests.some(([t, a]) => t === 0 && a.some((x) => GEAR[x.base].suit !== 'knight')), 'a house can keep a piece of a good suit');
+  for (const [t, a] of chests) if (t) for (const x of a) assert.equal(GEAR[x.base].suit, 'knight', 'nothing of T in his church or under it');
   const t = gearTotals({ hands: rollArmor(rng, { base: 'knight_hands', rarity: 0 }), head: rollArmor(rng, { base: 't_purple_head', rarity: 2 }), main: null });
   assert.ok(t.armor > 0);
 }

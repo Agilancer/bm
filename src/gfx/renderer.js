@@ -1,5 +1,8 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
+import { FOREST_REACH } from '../core/forest.js';
+import { SECONDS_PER_HOUR, daylight } from './daylight.js';
+import { Pines } from './pines.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
@@ -21,11 +24,12 @@ const FRAME_FLOATS = 444;
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
 // The kite shield on the arm turned about its grip, so its point is straight down the screen as guard_idle carries it (measured on the rig's shield joint).
 const KITE_TURN = 27 * Math.PI / 180;
+const FAR_HALF = 1024;       // What the coarse map of the land covers, either way.
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104 };
-const MAX_GROUND = 32;
+const MAX_GROUND = 48;
 
 const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y * l, z * l]; };
 
@@ -69,6 +73,8 @@ export class Renderer {
     this.prevTip = [];
     this.flash = 0;
     // Mid-afternoon going gold, over the shoulder as you come up the road, so plate and faces read.
+    this.hour = 15;
+    this.farSize = gpu.tier.lean ? 512 : 1024;
     this.sunDir = norm3(-0.78, 0.5, 0.38);
     this.splits = gpu.tier.splits || [12, 38, 130];
     this.shadowFrame = 0;
@@ -120,9 +126,16 @@ export class Renderer {
     const rowsEach = Math.ceil(GROUND_SIZE / Math.max(1, pool.size));
     const groundJobs = [];
     for (let r = 0; r < GROUND_SIZE; r += rowsEach) {
-      groundJobs.push(pool.run('ground', { size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat([{ x: 90, z: 0, hx: 34, hz: 22, yaw: 0, h: 9 }]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
+      groundJobs.push(pool.run('ground', { size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat(village.footprints || [], [{ x: 90, z: 0, hx: 34, hz: 22, yaw: 0, h: 9 }]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
     }
-    const [terrain, ...rows] = await Promise.all([pool.run('terrain', { n: tier.terrainN, extent: 2400 }), ...groundJobs]);
+    const farEach = Math.ceil(this.farSize / Math.max(1, pool.size));
+    const farJobs = [];
+    for (let r = 0; r < this.farSize; r += farEach) farJobs.push(pool.run('farground', { size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + farEach) }));
+    const patch = { x0: -614, x1: -90, z0: -44, z1: 344, cell: tier.lean ? 4 : 2 };
+    const [terrain, forest, ...rest] = await Promise.all([pool.run('terrain', { n: tier.terrainN, extent: 2400, patch }), pool.run('forest', { reach: FOREST_REACH }), ...farJobs, ...groundJobs]);
+    const farRows = rest.slice(0, farJobs.length), rows = rest.slice(farJobs.length);
+    this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    for (const row of farRows) device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, row.data.length / 4 / this.farSize]);
     tick();
     this.groundMap = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.heightTex = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'r32float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
@@ -146,6 +159,7 @@ export class Renderer {
     this.buildSamplers();
     this.buildBaseLayouts();
     this.buildStatics(parseGLB(buffers[0]), layerNames, manifest.layers);
+    this.pines = new Pines(this, forest.trees, layerNames);
     this.interior = await loadInterior(this, base, pool, tier);
     tick();
     this.chars = [
@@ -170,6 +184,8 @@ export class Renderer {
     this.gems = new Map();
     this.ground = [];
     this.gauntletSets = new Map();
+    this.chests = [];
+    this.things = (village.things || []).concat(this.interior.data.things || []);
     this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.itemData = new Float32Array(16 * MAX_GROUND);
@@ -244,6 +260,7 @@ export class Renderer {
     this.bglArr2 = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 1, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
+      { binding: 2, visibility: VF, texture: { sampleType: 'float' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -270,6 +287,7 @@ export class Renderer {
     this.terrainBG = device.createBindGroup({ layout: this.bglArr2, entries: [
       { binding: 0, resource: this.groundColor.createView({ dimension: '2d-array' }) },
       { binding: 1, resource: this.groundDetail.createView({ dimension: '2d-array' }) },
+      { binding: 2, resource: this.farMap.createView() },
     ] });
     this.skinModule = device.createShaderModule({ code: SKIN });
     this.skinPipeline = device.createComputePipeline({ layout: device.createPipelineLayout({ bindGroupLayouts: [this.bglSkin] }), compute: { module: this.skinModule, entryPoint: 'main' } });
@@ -321,7 +339,7 @@ export class Renderer {
       params[i * 4] = l.cutout ? 1 : 0;
       params[i * 4 + 1] = pomDepth * ({ wall: 0.011, roof: 0.022, stone: 0.02, door: 0.012 }[l.kind] || 0);
       params[i * 4 + 2] = l.kind === 'wall' ? 1 : 0;
-      params[i * 4 + 3] = l.name === 'leaves' ? 1 : 0;
+      params[i * 4 + 3] = l.name === 'leaves' || l.name === 'pine' || l.name === 'pine_far' ? 1 : 0;
     });
     const layerUBO = makeBuffer(device, params, GPUBufferUsage.UNIFORM);
     this.staticBG = device.createBindGroup({ layout: this.bglStatic, entries: [
@@ -737,6 +755,53 @@ export class Renderer {
     return m;
   }
 
+  // A heap of coins on the ground, each an eight-sided disc lying as it fell.
+  coins() {
+    if (this.coinHeap) return this.coinHeap;
+    const R = 0.034, T = 0.005;
+    const pos = [], nrm = [], uv = [];
+    const tri = (o, a, b, c, n) => { for (const q of [a, b, c]) { pos.push(o[0] + q[0], o[1] + q[1], o[2] + q[2]); nrm.push(...n); uv.push(0.5, 0.5); } };
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let i = 0; i < 18; i++) {
+      const a = rnd() * 6.283, r = Math.sqrt(i / 18) * 0.11, o = [Math.cos(a) * r, 0.006 + (1 - r / 0.11) * 0.03 * rnd() + (i < 6 ? 0.012 : 0), Math.sin(a) * r];
+      const tx = (rnd() - 0.5) * 0.35, tz = (rnd() - 0.5) * 0.35;   // its tilt
+      const up = norm3(tx, 1, tz), at = (b, y) => { const x = Math.cos(b) * R, z = Math.sin(b) * R; return [x, y - x * tx - z * tz, z]; };
+      for (let k = 0; k < 8; k++) {
+        const b0 = k / 8 * 6.283, b1 = (k + 1) / 8 * 6.283, bm = (b0 + b1) / 2, side = [Math.cos(bm), 0, Math.sin(bm)];
+        tri(o, [0, T, 0], at(b1, T), at(b0, T), up);
+        tri(o, at(b0, T), at(b1, T), at(b1, -T), side);
+        tri(o, at(b0, T), at(b1, -T), at(b0, -T), side);
+      }
+    }
+    const idx = new Uint32Array(pos.length / 3).map((_, i) => i);
+    this.coinHeap = this.lyingModel({ pos: new Float32Array(pos), nrm: new Float32Array(nrm), uv: new Float32Array(uv), idx }, this.pixel('rgba8unorm-srgb', [232, 186, 74, 255]), this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255])),
+      this.pixel('rgba8unorm', [255, 90, 255, 255]), [0.2, 0.13, 0.03, 0]);
+    return this.coinHeap;
+  }
+
+  // The chest, the first time one comes near: its box and its lid, the lid's frame on the hinge. See src/items/chests.js.
+  chestModel() {
+    this.chestModels = {};
+    (async () => {
+      const buf = await fetch(`${this.base}assets/game/items/chest.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+      const glb = parseGLB(buf);
+      const prim = (name) => {
+        const pr = glb.json.meshes[glb.json.nodes.find((n) => n.name === name).mesh].primitives[0], a = pr.attributes;
+        return { pr, pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+      };
+      const body = prim('chest_body'), lid = prim('chest_lid');
+      const mat = glb.json.materials[body.pr.material], scale = this.tier.texScale;
+      const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
+      const [alb, nrm, mr] = await Promise.all([
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
+        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+      ]);
+      this.chestModels = { body: this.lyingModel(body, alb, nrm, mr, [0, 0, 0, 0]), lid: this.lyingModel(lid, alb, nrm, mr, [0, 0, 0, 0]) };
+    })().catch((e) => console.error('chest', e));
+  }
+
   async buildProp(glb) {
     const { device } = this;
     const pr = glb.json.meshes[0].primitives[0];
@@ -761,15 +826,48 @@ export class Renderer {
     const W = tier.texScale < 1 ? 512 : 1024, H_ = W / 2;
     const mips = mipCountFor(W, H_);
     this.envTex = device.createTexture({ size: [W, H_], format: 'rgba16float', mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT });
+    this.envMips = mips;
     const mod = device.createShaderModule({ code: SKY_BAKE });
-    const pipe = device.createRenderPipeline({ layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] } });
-    const ubo = makeBuffer(device, new Float32Array([...this.sunDir, 0, 0.1, 0.09, 0.06, 0]), GPUBufferUsage.UNIFORM);
-    const bg = device.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubo } }] });
+    this.bakePipe = device.createRenderPipeline({ layout: 'auto', vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] } });
+    this.bakeU = device.createBuffer({ size: 48, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    this.bakeBG = device.createBindGroup({ layout: this.bakePipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: this.bakeU } }] });
+    this.setHour(this.hour);
+  }
+
+  // The sky, painted again for the hour. It lights every reflection and fills the view, so it's not done often.
+  bakeSky() {
+    const { device, light } = this;
+    device.queue.writeBuffer(this.bakeU, 0, new Float32Array([...light.trueSun, light.day, ...light.gnd, 0, ...light.sky, light.day]));
     const enc = device.createCommandEncoder();
     const pass = enc.beginRenderPass({ colorAttachments: [{ view: this.envTex.createView({ baseMipLevel: 0, mipLevelCount: 1 }), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
-    pass.setPipeline(pipe); pass.setBindGroup(0, bg); pass.draw(3); pass.end();
-    this.mip.generate(this.envTex, 'rgba16float', 1, mips, enc);
+    pass.setPipeline(this.bakePipe); pass.setBindGroup(0, this.bakeBG); pass.draw(3); pass.end();
+    this.mip.generate(this.envTex, 'rgba16float', 1, this.envMips, enc);
     device.queue.submit([enc.finish()]);
+    this.bakeAge = 0;
+  }
+
+  // Straight to an hour, and everything lit for it.
+  setHour(h) {
+    this.hour = ((h % 24) + 24) % 24;
+    this.light = daylight(this.hour);
+    this.sunDir = this.light.dir;
+    this.lightAge = 0;
+    this.bakeSky();
+  }
+
+  // On with the clock, as far as the world's time has gone. (The sun's only moved twice a second: a shadow that crept every frame would shimmer.)
+  turnDay(time) {
+    const dt = time - (this.dayTime ?? time);
+    this.dayTime = time;
+    if (dt <= 0 || dt > 2) return;
+    this.hour = (this.hour + dt / SECONDS_PER_HOUR) % 24;
+    this.lightAge += dt; this.bakeAge += dt;
+    if (this.lightAge >= 0.5) {
+      this.lightAge = 0;
+      this.light = daylight(this.hour);
+      this.sunDir = this.light.dir;
+    }
+    if (this.bakeAge >= (this.tier.lean ? 30 : 10)) this.bakeSky();
   }
 
   buildPipelines() {
@@ -807,6 +905,8 @@ export class Renderer {
     // leaves get one.
     this.pStaticCut = staticPipeline(staticMod);
     this.pStatic = staticPipeline(module(STATIC.replace('if (params.x > 0.0 && tex.a < 0.5) { discard; }', '')));
+    this.staticVBLayout = staticVB;
+    this.pineArgs = [layout, targets, depth, ms, staticVB];
     const armorMod = module(ARMOR);
     const skinnedVB = [
       { arrayStride: 16, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x4' }] },
@@ -880,6 +980,7 @@ export class Renderer {
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
     ] });
     this.shCutBG = device.createBindGroup({ layout: this.bglShCut, entries: [{ binding: 0, resource: this.colorArr.createView({ dimension: '2d-array' }) }, { binding: 1, resource: this.repeatSmp }] });
+    this.pines.buildPipelines(...this.pineArgs, shDepth, this.bglShadow, this.bglShCut);
     this.pShCut = device.createRenderPipeline({
       layout: layout(this.bglShadow, this.bglShCut),
       vertex: { module: shMod, entryPoint: 'vsCut', buffers: [{ arrayStride: 36, attributes: [
@@ -1261,9 +1362,11 @@ export class Renderer {
     const rx = cam.fy * cam.uz - cam.fz * cam.uy, ry = cam.fz * cam.ux - cam.fx * cam.uz, rz = cam.fx * cam.uy - cam.fy * cam.ux;
     d.set([rx, ry, rz, 0, cam.ux, cam.uy, cam.uz, 0, -cam.fx, -cam.fy, -cam.fz, 0, cam.x, cam.y, cam.z, 1], O.VMW);
     // Cascades.
+    this.turnDay(snap[H.TIME]);
     const n = this.tier.cascades;
     const tan = Math.tan(WORLD_FOV / 2);
     const sun = this.sunDir;
+    this.pines.update(cam, aspect, tan);
     let prev = 0.1;
     // The far cascade is drawn less often, and keeps the matrix it was drawn with until the next.
     this.shadowFrame++;
@@ -1290,10 +1393,11 @@ export class Renderer {
     this.camNow = cam;
     d[O.CAM] = cam.x; d[O.CAM + 1] = cam.y; d[O.CAM + 2] = cam.z; d[O.CAM + 3] = snap[H.TIME] + (this.renderTimeOffset || 0);
     d[O.SUN] = sun[0]; d[O.SUN + 1] = sun[1]; d[O.SUN + 2] = sun[2]; d[O.SUN + 3] = 2.4 / this.tier.shadowSize;
-    d.set([5.0, 3.75, 2.55, 0], O.SUNC);
-    d.set([0.34, 0.42, 0.58, 0], O.SKY);
-    d.set([0.15, 0.13, 0.09, 0], O.GND);
-    d.set([0.52, 0.5, 0.52, 0.0011], O.FOG);
+    const day = this.light;
+    d.set([day.sun[0], day.sun[1], day.sun[2], day.glass], O.SUNC);
+    d.set([day.sky[0], day.sky[1], day.sky[2], day.day], O.SKY);
+    d.set([day.gnd[0], day.gnd[1], day.gnd[2], 0], O.GND);
+    d.set(day.fog, O.FOG);
     d.set([0.018, 0.8, 0, 0], O.FOGP);
     d.set(n === 2 ? [this.splits[0], this.splits[2], this.splits[2], 0] : [this.splits[0], this.splits[1], this.splits[2], 0], O.SPLIT);
     d.set([W, Ht, 1 / W, 1 / Ht], O.SCREEN);
@@ -1465,9 +1569,11 @@ export class Renderer {
     const drawn = this.drawnItems || (this.drawnItems = []);
     drawn.length = 0;
     for (const g of this.ground) drawn.push(g);
+    if (this.chests.length && !this.chestModels) this.chestModel();
+    for (const g of this.chests) drawn.push(g);
     if (snap[H.SURF] > 0.5 && this.board.sword) drawn.push(this.board);
     for (const g of drawn) {
-      let model = g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
+      let model = g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
       if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
@@ -1568,6 +1674,7 @@ export class Renderer {
       sp.setBindGroup(1, this.shCutBG);
       sp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
       // (The cathedral's shell shades the green. What's under the ground has no sun to shade.)
+      if (this.camNow.y > -6) this.pines.drawShadow(sp, c, c === tier.cascades - 1, this.shCutBG);
       sp.setPipeline(this.pShStatic);
       sp.setVertexBuffer(0, this.interior.tiles.VB);
       sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
@@ -1729,6 +1836,7 @@ export class Renderer {
       mp.setPipeline(this.pStaticCut);
       mp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
     }
+    this.pines.draw(mp);
     // Grass before the ground it stands on: its shader is next to nothing, and the ground's is the costliest there is.
     if (this.grassOn) {
       mp.setBindGroup(1, this.terrainBG);

@@ -37,7 +37,7 @@ export class Casting {
 
   reset() {
     Object.assign(this, {
-      mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0,
+      mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0, armOnly: false, armLower: 0, asked: 0,
       gathered: false, charge: 0, held: 0, tickT: 0, fizzleT: 0, selected: 0, summonT: 0, launchT: 0, heldNow: false, flip: false,
       bolts: [], zones: [], bursts: [], missiles: [], spikes: [], blades: null, wisp: null,
     });
@@ -45,6 +45,8 @@ export class Casting {
   }
 
   get busy() { return this.state !== 'idle'; }
+  // How far the sword arm alone has gone down, for a shield that stays up.
+  get armDown() { return smooth(this.armLower); }
   // What a spell does to how fast its target runs: frozen stops, chilled drags.
   rate(k) { const a = this.aff.get(k); return !a ? 1 : a.freeze > 0 ? 0 : a.slow > 0 ? 0.5 : 1; }
   // And to how fast you walk with your hands up.
@@ -61,11 +63,13 @@ export class Casting {
     if (this.castSeen < 0) this.castSeen = input[INPUT.CAST_N];
     const tapped = input[INPUT.CAST_N] !== this.castSeen;
     this.castSeen = input[INPUT.CAST_N];
+    // (A press made mid-swing waits for the swing, a moment.)
+    this.asked = tapped ? 0.35 : Math.max(0, this.asked - dt);
     const held = input[INPUT.CAST] > 0.5;
     this.selected = clamp(input[INPUT.SPELL] | 0, 0, SPELLS.length - 1);
     if (this.state !== 'hold') this.mana = Math.min(MAX_MANA, this.mana + MANA_REGEN * dt);
     this.fizzleT -= dt;
-    this.stepHands(dt, held || tapped, held, sim);
+    this.stepHands(dt, held || this.asked > 0, held, sim);
     this.stepBolts(tdt, sim);
     this.stepZones(tdt, sim);
     this.stepMissiles(tdt, sim);
@@ -135,10 +139,13 @@ export class Casting {
       return;
     }
     this.mana -= def.mana;
-    const swordHands = WEAPONS[p.weapon]?.hands || 0;
-    // A free hand beside a one-handed sword casts, and the sword stays up. Otherwise whatever's held goes down.
-    this.side = def.hands === 2 ? 'both' : swordHands === 1 ? 'L' : 'R';
-    this.keep = def.hands === 1 && swordHands === 1;
+    this.asked = 0;
+    const swordHands = WEAPONS[p.weapon]?.hands || 0, shield = swordHands === 1 && p.hasShield;
+    // A free hand beside a one-handed sword casts, and the sword stays up. With a shield on the other arm the sword goes away and the sword hand casts,
+    // and the shield stays where it is. Otherwise whatever's held goes down.
+    this.side = def.hands === 2 ? 'both' : swordHands === 1 && !shield ? 'L' : 'R';
+    this.keep = def.hands === 1 && swordHands === 1 && !shield;
+    this.armOnly = def.hands === 1 && shield;
     this.def = def;
     this.rig = this.rigs[def.rig];
     this.clip = null;
@@ -155,12 +162,14 @@ export class Casting {
     if (this.state === 'idle') {
       if (p.stance.shoots) this.stepStaff(sim);
       this.lower = Math.max(0, this.lower - dt * 3.2);
-      if (want && !p.dead && !p.swinging && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
+      this.armLower = Math.max(0, this.armLower - dt * 3.2);
+      if (want && !p.dead && !p.swinging && !p.guard && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
       if (this.state === 'idle') return;
     }
     const def = this.def;
     const clip = this.rig.clips[this.clip];
-    this.lower = this.keep ? Math.max(0, this.lower - dt * 5) : Math.min(1, this.lower + dt * 6);
+    this.lower = this.keep || this.armOnly ? Math.max(0, this.lower - dt * 5) : Math.min(1, this.lower + dt * 6);
+    if (this.armOnly) this.armLower = Math.min(1, this.armLower + dt * 6);
     if (this.fade < 1) this.fade = Math.min(1, this.fade + dt * this.fadeRate);
     if (p.dead) { this.endCast(); return; }
     switch (this.state) {
