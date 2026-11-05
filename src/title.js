@@ -200,7 +200,6 @@ export class Title {
     this.main = el('div', 't-main', `
       <div class="t-logo t-mainlogo"><img alt="Bellmourn" src="${LOGOS.bellmourn}" draggable="false">
         <div class="t-shine" style="--m:url(${LOGOS.bellmourn})"><i></i></div><div class="t-glints"></div><div class="t-motes"></div></div>
-      <div class="t-sub">The Knight of Velscour</div>
       <div class="t-under"><div class="t-status"><span></span><div class="t-bar"><i></i></div></div><nav class="t-menu"></nav></div>`);
     this.mainLogo = this.main.querySelector('.t-mainlogo');
     this.statusEl = this.main.querySelector('.t-status');
@@ -378,11 +377,10 @@ export class Title {
 
   /** Bellmourn's logo coming up `at` seconds on: its bells, the song, then a couple of tinkles. */
   beginMain(at, at0) {
-    const L = this.mainLogo, taken = [], shine = L.querySelector('.t-shine i'), sub = this.main.querySelector('.t-sub');
-    for (const e of [L, this.statusEl, shine, sub]) e.style.animation = 'none';
+    const L = this.mainLogo, taken = [], shine = L.querySelector('.t-shine i');
+    for (const e of [L, this.statusEl, shine]) e.style.animation = 'none';
     void L.offsetWidth;
     L.style.animation = `t-main ${MAIN_IN}s cubic-bezier(.25,.6,.3,1) ${at}s both`;
-    sub.style.animation = `t-fade 1.4s ease ${at + 0.9}s both`;
     this.statusEl.style.animation = `t-fade 1.2s ease ${at + 1.2}s both`;
     shine.style.animation = `t-shine 1.7s ease-in-out ${at + 0.9}s both`;
     const glints = L.querySelector('.t-glints');
@@ -476,7 +474,7 @@ export class Title {
     void this.screen.offsetWidth;
     this.screen.classList.remove('out');
     this.mode = 'main';
-    for (const e of [this.mainLogo, this.statusEl, this.main.querySelector('.t-sub')]) { e.style.animation = 'none'; e.style.opacity = '1'; }
+    for (const e of [this.mainLogo, this.statusEl]) { e.style.animation = 'none'; e.style.opacity = '1'; }
     this.menuOn = false;
     this.logoIn = true;
     const c = this.audio();
