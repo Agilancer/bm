@@ -19,9 +19,10 @@ const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a 
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
 const TO_WORLD = Math.tan(32 * Math.PI / 180) / Math.tan(38 * Math.PI / 180);
 
-const chestOf = (k) => k.y + [1.25, 1.25, 0.55, 1.3, 1.4][k.kind];
-const radiusOf = (k) => [0.55, 0.55, 1.15, 1.5, 1.7][k.kind];
-const heightOf = (k) => [2, 2, 1.2, 2.2, 3.1][k.kind];
+// (5 is a zombie or a caster, 6 the ogre.)
+const chestOf = (k) => k.y + (k.crawling ? 0.35 : [1.25, 1.25, 0.55, 1.3, 1.4, 1.2, 1.9][k.kind]);
+const radiusOf = (k) => [0.55, 0.55, 1.15, 1.5, 1.7, 0.5, 0.8][k.kind];
+const heightOf = (k) => (k.crawling ? 0.7 : [2, 2, 1.2, 2.2, 3.1, 1.9, 2.9][k.kind]);
 
 export class Casting {
   constructor(rigs) {

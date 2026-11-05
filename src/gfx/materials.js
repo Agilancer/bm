@@ -295,6 +295,18 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     let ab = g.b.xyz - a;
     let L2 = dot(ab, ab);
     let rel = p - a;
+    if (g.a.w < 0.0) {
+      // Where a limb came away: blood thrown over the skin all round the joint, on both sides of it.
+      let rr = length(rel);
+      let q = rel / max(rr, 1e-4);
+      let turn = atan2(q.x, q.z) * 3.0 + q.y * 7.0;
+      let edge = -g.a.w * (0.5 + 0.7 * vn1(turn + f32(bi)) + 0.3 * vn1(turn * 3.7 + f32(bi)));
+      let flecks = step(0.46, vn1(p.x * 70.0 + p.y * 31.0) * vn1(p.z * 70.0 - p.y * 43.0));
+      let thrown = max(1.0 - smoothstep(edge * 0.8, edge, rr), flecks * (1.0 - smoothstep(edge, edge * 1.9, rr)));
+      w.blood = max(w.blood, thrown);
+      w.h += thrown * 0.0012;
+      continue;
+    }
     let t = clamp(dot(rel, ab) / max(L2, 1e-6), 0.0, 1.0);
     let dv = rel - ab * t;
     let dn = dot(dv, nn);
@@ -305,7 +317,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     let seed = f32(bi) * 7.3;
     // A sword's tear: narrow at both ends, ragged along its edges.
     let env = sqrt(max(sin(3.14159 * clamp(t, 0.015, 0.985)), 0.0));
-    let width = g.a.w * (0.3 + 1.1 * env) * (1.0 + smoothstep(0.0, 0.1, L));
+    // (Flesh, info.w, opens wider than plate.)
+    let width = g.a.w * (0.3 + 1.1 * env) * (1.0 + smoothstep(0.0, 0.1, L)) * (1.0 + C.info.w * 1.3);
     // Each side of a tear has its own edge: a mirrored one reads as teeth.
     let sideS = select(0.0, 19.0, dot(dv, cross(nn, ab / max(L, 1e-4))) > 0.0);
     let jag = (vn1(along * 30.0 + seed + sideS) - 0.5) * 0.7 * width + (vn1(along * 170.0 + seed + sideS) - 0.5) * 0.22 * width;
@@ -327,6 +340,19 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     let tang0 = ab / max(L, 1e-4);
     let side0 = dot(dv, cross(nn, tang0));
     w.wall = max(w.wall, cut * smoothstep(-0.1 * width, width * 0.5, side0));
+    // On flesh the blow throws a splat of blood out round the slash, with flecks beyond it.
+    if (C.info.w > 0.5) {
+      let mid = rel - ab * 0.5;
+      let su = dot(mid, tang0);
+      let sv = dot(mid, cross(nn, tang0));
+      let sr = length(vec2f(su * 0.75, sv));
+      let turn = atan2(sv, su);
+      let reach = (0.035 + 0.025 * h1(seed)) * (0.55 + 0.75 * vn1(turn * 2.7 + seed) + 0.35 * vn1(turn * 8.3 + seed));
+      let flecks = step(0.46, vn1(su * 85.0 + seed) * vn1(sv * 85.0 + seed * 1.7));
+      let splat = max(1.0 - smoothstep(reach * 0.8, reach, sr), flecks * (1.0 - smoothstep(reach, reach * 2.1, sr)));
+      w.blood = max(w.blood, splat * smoothstep(0.0, 0.05, age));
+      w.h += splat * 0.0012;
+    }
     // A hole where the blade went through, and what comes out of it.
     if (g.n.w >= 0.0) {
       let t0 = g.f.w / max(L2, 1e-6);
@@ -401,6 +427,14 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     metal = 1.0;
     n = n0;
   }
+  if (in.uv.x < -1.5) {
+    // A stump: the cap inside a limb that shows once what was beyond it has gone. Bone at the middle, meat round it, blackening at the rim.
+    let rad = -2.0 - in.uv.x;
+    albedo = mix(mix(vec3f(0.62, 0.56, 0.45), vec3f(0.3, 0.025, 0.025), smoothstep(0.16, 0.24, rad)), vec3f(0.06, 0.008, 0.008), smoothstep(0.72, 1.0, rad));
+    rough = mix(0.45, 0.28, smoothstep(0.16, 0.24, rad));
+    metal = 0.0;
+    n = n0;
+  }
   n = bumpNormal(n, p, wound.h + mailH);
   // Metals take their reflection tint from the paint. Even blackened steel reflects at about a fifth, which keeps the
   // plates' shapes readable against a bright sky instead of leaving a cutout.
@@ -415,9 +449,10 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   albedo *= C.info.y;
   // Bright scraped steel at the cut's lips and scratches.
   let bare = max(wound.lip, wound.torn);
-  albedo = mix(albedo, vec3f(0.72, 0.7, 0.67), bare * 0.9);
+  // (On anything with no steel on it, info.w, the lips of the cut are wet meat.)
+  albedo = mix(albedo, mix(vec3f(0.72, 0.7, 0.67), vec3f(0.26, 0.025, 0.025), C.info.w), bare * 0.9);
   rough = mix(rough, 0.26, bare);
-  metal = mix(metal, 1.0, bare);
+  metal = mix(metal, 1.0 - C.info.w, bare);
   // Inside the cut: a dark slit, with one torn inner wall catching the light.
   albedo = mix(albedo, mix(vec3f(0.012), vec3f(0.2, 0.19, 0.18), wound.wall * 0.7), wound.cut * 0.97);
   rough = mix(rough, 0.6, wound.cut);
@@ -429,7 +464,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   metal = mix(metal, 0.0, wound.hole);
   ao *= 1.0 - wound.hole * 0.6;
   // Blood over everything else.
-  let blood = max(wound.blood, wound.streak * 0.0);
+  // (Not on a stump's cut face: that keeps its bone.)
+  let blood = select(max(wound.blood, wound.streak * 0.0), 0.0, in.uv.x < -1.5);
   albedo = mix(albedo, vec3f(0.20, 0.006, 0.006), blood);
   rough = mix(rough, 0.11, blood);
   metal = mix(metal, 0.0, blood);

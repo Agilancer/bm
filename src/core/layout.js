@@ -1,7 +1,7 @@
 // What the threads share. The sim thread writes whole snapshots into one of three slots and publishes
 // the slot index; the render thread reads the newest. Input flows the other way as a small block.
 
-export const MAX_CHARS = 8;
+export const MAX_CHARS = 36;
 export const MAX_JOINTS = 72;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;
@@ -31,7 +31,7 @@ export const H = {
 // Per-character block
 export const C = {
   ACTIVE: 0, KIND: 1, X: 2, Y: 3, Z: 4, YAW: 5, HP: 6, MAX_HP: 7, BLEED: 8, STATE: 9, GASH_VERSION: 10, GASH_COUNT: 11,
-  N_BLEEDS: 12, HOSTILE: 13, STAM: 14, SPEED: 15, GLINT: 16, HEART: 17, ARMOR: 18, LANDED: 19, SIZE_HEAD: 20,
+  N_BLEEDS: 12, HOSTILE: 13, STAM: 14, SPEED: 15, GLINT: 16, HEART: 17, ARMOR: 18, LANDED: 19, CUT: 20, SIZE_HEAD: 21,
 };
 export const C_PALETTE = C.SIZE_HEAD;
 export const C_PROPS = C_PALETTE + MAX_JOINTS * 8;
@@ -76,6 +76,7 @@ export const EV = {
   GROUND: 13, GLINT: 14, BLOOD: 15, JUMP: 16, LAND: 17, SHIELD_BREAK: 18, DUST: 19, WHOOSH: 20, ALERT: 21, TAUNT: 22, WIN: 23, LOSE: 24,
   CRAB_HIT: 25, CRAB_DIE: 26, DODGE: 27, CRAB_WAKE: 28, ROAR: 29, BEAST_NOTICE: 30, FIRE: 31, FIRE_HIT: 32, SEVER: 33, STUMP: 34, CHUNK_LAND: 35, HYDRA_NOTICE: 36, BURN: 37, LOOT: 38, EMPTY_HANDS: 39,
   SPELL_CAST: 40, SPELL_LOOSE: 41, SPELL_HIT: 42, SPELL_BOOM: 43, SPELL_FIZZLE: 44,
+  GROAN: 45, DIRT: 46, CHANT: 47, BLINK: 48, UNDEAD_DIE: 49,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.
