@@ -9,6 +9,7 @@ import { MipGen, makeBuffer, mipCountFor, textureArrayFromBitmaps } from './gpu.
 import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
+import { buildGlowPipeline, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
 import { CRAB_SCALE } from '../sim/crab.js';
 import { GRAVEHART_SCALE } from '../sim/gravehart.js';
 import { HYDRA_SCALE } from '../sim/hydra.js';
@@ -116,7 +117,7 @@ export class Renderer {
     const rowsEach = Math.ceil(GROUND_SIZE / Math.max(1, pool.size));
     const groundJobs = [];
     for (let r = 0; r < GROUND_SIZE; r += rowsEach) {
-      groundJobs.push(pool.run('ground', { size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders, rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
+      groundJobs.push(pool.run('ground', { size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat([{ x: 90, z: 0, hx: 34, hz: 22, yaw: 0, h: 9 }]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
     }
     const [terrain, ...rows] = await Promise.all([pool.run('terrain', { n: tier.terrainN, extent: 2400 }), ...groundJobs]);
     tick();
@@ -142,6 +143,7 @@ export class Renderer {
     this.buildSamplers();
     this.buildBaseLayouts();
     this.buildStatics(parseGLB(buffers[0]), layerNames, manifest.layers);
+    this.interior = await loadInterior(this, base, pool, tier);
     tick();
     this.chars = [
       await this.buildCharacter(parseGLB(buffers[1])),
@@ -175,7 +177,7 @@ export class Renderer {
     this.buildPipelines();
     this.buildParticles();
     this.buildGrass();
-    this.lights = village.lights;
+    this.lights = village.lights.concat(this.interior.data.lights);
     this.smokeT = 0;
     this.moteT = 0;
     this.resize();
@@ -668,6 +670,7 @@ export class Renderer {
     const staticVB = [{ arrayStride: 36, attributes: [
       { shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' },
       { shaderLocation: 2, offset: 24, format: 'float32x2' }, { shaderLocation: 3, offset: 32, format: 'uint32' }] }];
+    this.pGlow = buildGlowPipeline(this, module, layout, DEPTH, ms);
     const staticMod = module(STATIC);
     const staticPipeline = (mod) => device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglStatic),
@@ -1160,6 +1163,7 @@ export class Renderer {
       d.set(this.tmpVP, O.CASC + c * 16);
       prev = far;
     }
+    this.camNow = cam;
     d[O.CAM] = cam.x; d[O.CAM + 1] = cam.y; d[O.CAM + 2] = cam.z; d[O.CAM + 3] = snap[H.TIME] + (this.renderTimeOffset || 0);
     d[O.SUN] = sun[0]; d[O.SUN + 1] = sun[1]; d[O.SUN + 2] = sun[2]; d[O.SUN + 3] = 2.4 / this.tier.shadowSize;
     d.set([5.0, 3.75, 2.55, 0], O.SUNC);
@@ -1394,6 +1398,11 @@ export class Renderer {
       sp.setPipeline(this.pShCut);
       sp.setBindGroup(1, this.shCutBG);
       sp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
+      // (The cathedral's shell shades the green. What's under the ground has no sun to shade.)
+      sp.setPipeline(this.pShStatic);
+      sp.setVertexBuffer(0, this.interior.tiles.VB);
+      sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
+      sp.drawIndexed(this.interior.tiles.cath);
       sp.setPipeline(this.pShSkin);
       for (let i = 0; i < this.chars.length; i++) {
         const ch = this.chars[i];
@@ -1503,6 +1512,10 @@ export class Renderer {
         mp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
       }
     }
+    const vis = visibility(this.interior.data.f0, this.camNow);
+    drawOpaque(this, mp, this.interior, vis);
+    // (From under the ground, none of the world above can be seen.)
+    if (!vis.deep) {
     mp.setPipeline(this.pStatic);
     mp.setBindGroup(1, this.staticBG);
     mp.setVertexBuffer(0, this.staticVB);
@@ -1527,8 +1540,10 @@ export class Renderer {
     mp.setVertexBuffer(0, this.terrainVB);
     mp.setIndexBuffer(this.terrainIB, 'uint32');
     mp.drawIndexed(this.terrainCount);
+    }
     mp.setPipeline(this.pSky);
     mp.draw(3);
+    if (vis.hall || vis.deep) drawGlow(this, mp, this.interior);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);
       mp.setBindGroup(1, this.pDrawBG);

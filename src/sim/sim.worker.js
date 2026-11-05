@@ -7,7 +7,7 @@ import { Casting } from './casting.js';
 import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
-import { addUndead, raiseZombie, stepFoeSpells } from './undead.js';
+import { addUndead, raiseZombie, stepCatacombs, stepFoeSpells } from './undead.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
 import { World } from './world.js';
@@ -110,6 +110,7 @@ class Sim {
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     stepFoeSpells(tdt, this);
+    stepCatacombs(this);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
@@ -212,6 +213,7 @@ class Sim {
       case 5: k.startRoll(this, p, false); break;
       case 6: k.startAttack(this, Object.values(ATTACKS)[b | 0]); break;
       case 7: k.x = b; k.z = c; k.y = this.world.height(k.x, k.z); break;
+      case 19: p.x = b; p.z = c; p.y = this.world.height(p.x, p.z); break;
       case 8: p.hp = p.maxHp; break;
       case 9: k.hp = 1; break;
       case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
@@ -293,7 +295,7 @@ async function boot(msg) {
     fetchBuf(`${base}assets/fp/arms_staff.glb`),
   ]);
   const bank = new ClipBank(clipsMeta, clipsBin);
-  sim.world = new World(village);
+  sim.world = new World(village, await fetch(`${base}assets/game/interior/interior.json`).then((r) => r.json()));
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
   sim.casting = new Casting({ attack: new ArmsRig(spellAttack), raise: new ArmsRig(spellRaise) });
   sim.knights.push(new Knight(0, 0, new Rig(parseGLB(black), bank), bank, BLACK));

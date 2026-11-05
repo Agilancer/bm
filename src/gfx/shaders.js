@@ -124,12 +124,25 @@ fn brdf(n: vec3f, v: vec3f, l: vec3f, albedo: vec3f, f0: vec3f, rough: f32, meta
   return (diff + spec) * nl;
 }
 
+// Indoors the sky doesn't reach. 0 outside, 1 in the cathedral, 2 below. The boxes are the inside of tools/interior/build_interior.py's walls.
+fn indoorAt(p: vec3f) -> f32 {
+  if (p.x < 65.9) { return 0.0; }
+  if (p.x < 113.0) { return select(0.0, 1.0, abs(p.z) < 13.9 && p.y < 24.0); }
+  if (p.x < 125.0) { return select(0.0, 1.0, abs(p.z) < 7.2 && p.y < 9.5); }
+  // (The land above is out here too, and never as low as the catacombs' ceilings.)
+  if (p.x < 176.0 && abs(p.z) < 3.0 && p.y < 9.5) { return 2.0; }
+  return select(0.0, 2.0, p.x < 262.0 && p.z > -108.0 && p.z < 45.0 && p.y < -6.0);
+}
+
 fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32, ao: f32, shadow: f32) -> vec3f {
   let f0 = mix(vec3f(0.04), albedo, metal);
-  var c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow;
+  let indoor = indoorAt(p);
+  var c = vec3f(0.0);
+  if (indoor < 0.5) { c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow; }
   // Ambient: the sky's hemisphere for diffuse, its picture for reflections.
   let up = n.y * 0.5 + 0.5;
-  let ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
+  var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
+  if (indoor > 1.5) { ambient = vec3f(0.085, 0.072, 0.06); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   let nv = max(dot(n, v), 0.0);
   let refl = reflect(-v, n);
   // On a phone only metal reads the sky's picture. On anything else it's a faint sheen, and this fit to that picture, as
@@ -146,7 +159,8 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   let fr = f0 + (max(vec3f(1.0 - rough), f0) - f0) * pow(1.0 - nv, 5.0) * select(1.0, smoothstep(0.0, 0.14, nv), LEAN);
   // The ground's reflection, when the mirror direction looks down, is dim and warm.
   let horizon = smoothstep(-0.25, 0.12, refl.y);
-  let reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
+  var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
+  if (indoor > 0.5) { reflected *= select(0.22, 0.05, indoor > 1.5); }
   let sunOcc = mix(0.55, 1.0, shadow);
   c += albedo * (1.0 - metal) * ambient * ao;
   c += reflected * fr * ao * sunOcc * envBoost;
@@ -165,6 +179,12 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
 }
 
 fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
+  let indoor = indoorAt(p);
+  if (indoor > 0.5) {
+    // Dust, and at the bottom of the stair a damp that swallows the far end of a long gallery.
+    let inside = select(vec3f(0.05, 0.045, 0.04), vec3f(0.012, 0.007, 0.0045), indoor > 1.5);
+    return mix(c, inside, clamp(1.0 - exp(-dist * select(0.005, 0.0055, indoor > 1.5)), 0.0, 1.0));
+  }
   let h = max(p.y, -5.0);
   let density = F.fogColor.a * exp(-max(h, 0.0) * F.fogParams.x);
   let f = 1.0 - exp(-dist * density);
