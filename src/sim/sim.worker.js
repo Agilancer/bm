@@ -13,13 +13,14 @@ import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
 import { World } from './world.js';
 
+// (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Just another man out walking his round. He'll fight you if you come near, and when he's down the world goes on.
 const BLACK = {
-  spawn: [-7, -7], yaw: 1.2, hostile: true, hp: 480, walk: 1.5, swordScale: 1.75, shieldScale: 1.3, bladeLen: 0.62,
+  spawn: [-7, -7], yaw: 1.2, hostile: true, hp: 480, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
   route: [[-8, -6], [7, -8], [10, 8], [-6, 11], [-11, 4]], pauseClip: null,
 };
 const SILVER = {
-  spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 1.6, shieldScale: 1.2, bladeLen: 0.6,
+  spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
   route: [[4, 13], [11, 12], [12, -2], [6, -13], [-6, -13], [-13, -6], [-11, 12]], pauseClip: 'Idle_FoldArms_Loop',
 };
 

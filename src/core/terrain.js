@@ -41,6 +41,9 @@ export function terrainHeight(x, z) {
   return site >= 14 ? land : land + (2.7 - land) * (1 - sstep(0, 14, site));
 }
 
+// How far the land goes, either way along x and z: the grass ends at 128 (GROUND_HALF in src/gfx/renderer.js), and an unseen wall stands just inside it.
+export const LAND_EDGE = 127.6;
+
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.
 export const PATHS = [
   { pts: [[-1, -14.5], [-1.2, -8], [-1.5, -2], [-1.5, 1]], w: 2.0 },

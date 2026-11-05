@@ -18,6 +18,8 @@ import { SKIN } from './shaders.js';
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 444;
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
+// The kite shield on the arm turned about its grip, so its point is straight down the screen as guard_idle carries it (measured on the rig's shield joint).
+const KITE_TURN = 27 * Math.PI / 180;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
@@ -136,7 +138,7 @@ export class Renderer {
     this.noiseTex = this.makeNoise();
 
     const buffers = await Promise.all(['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
-      'assets/game/items/reliquary_blade.glb', 'assets/game/items/thorned_kite.glb', 'assets/game/items/arming_sword.glb', 'assets/game/items/templar_kite.glb',
+      'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
       'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
       ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`)]
       .map((p) => fetch(base + p).then((r) => r.arrayBuffer()).then((b) => { tick(); return b; })));
@@ -166,6 +168,7 @@ export class Renderer {
     this.swords = new Map();
     this.gems = new Map();
     this.ground = [];
+    this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.itemData = new Float32Array(16 * MAX_GROUND);
     tick();
@@ -504,7 +507,9 @@ export class Renderer {
       ] });
       parts.push({ range: sk.ranges[i], bg, ubo, isSword: name === 'greatsword' });
     }
-    return { ...sk, parts, weaponJoint, weaponBind };
+    const shieldJoint = skin.joints.findIndex((j) => glb.json.nodes[j].name === 'shield');
+    const shieldBind = shieldJoint < 0 ? null : mat4Invert(new Float32Array(16), accessor(glb, skin.inverseBindMatrices).subarray(shieldJoint * 16, shieldJoint * 16 + 16));
+    return { ...sk, parts, weaponJoint, weaponBind, shieldJoint, shieldBind };
   }
 
   pixel(format, rgba) {
@@ -560,8 +565,18 @@ export class Renderer {
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
     s.lying = this.lyingModel(prim, alb, nrm, mr, [0, 0, 0, 0]);
     s.tip = prim.pos.reduce((best, v, i) => (i % 3 === 1 ? Math.max(best, v) : best), 0);
-    const vm = this.vms[w.hands];
-    this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
+    const vm = this.vms[w ? w.hands : 1];
+    if (w) this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
+    else {
+      // (Not a weapon: a shield, on the arm's shield joint.)
+      const c = Math.cos(KITE_TURN), sn = Math.sin(KITE_TURN), pos = new Float32Array(prim.pos), nrm = new Float32Array(prim.nrm);
+      for (let v = 0; v < pos.length; v += 3) {
+        pos[v] = prim.pos[v] * c - prim.pos[v + 1] * sn; pos[v + 1] = prim.pos[v] * sn + prim.pos[v + 1] * c;
+        nrm[v] = prim.nrm[v] * c - prim.nrm[v + 1] * sn; nrm[v + 1] = prim.nrm[v] * sn + prim.nrm[v + 1] * c;
+      }
+      prim.pos = pos; prim.nrm = nrm;
+      this.onWeaponJoint(prim, vm.shieldJoint, vm.shieldBind);
+    }
     s.hand = this.makeSkinned([prim], vm.jointCount);
     s.ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
@@ -1272,6 +1287,9 @@ export class Renderer {
     const held = weapon && weapon.id !== 'greatsword' ? this.sword(weapon.id) : null;
     this.held = held && held.ready ? held : null;
     this.holdingOld = !!weapon && weapon.id === 'greatsword';
+    // The shield on the arm, if the arms in view have a place for one and it isn't under your feet.
+    const onArm = this.offHand && this.vm === this.vms[1] && snap[H.SURF] < 0.5 ? this.sword(this.offHand) : null;
+    this.onArm = onArm && onArm.ready ? onArm : null;
     q.writeBuffer(this.vm.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, this.vm.jointCount * 32);
     skinParamsU[0] = this.vm.count;
     skinParams[1] = 0; skinParams[2] = time; skinParamsU[3] = 0;
@@ -1295,6 +1313,14 @@ export class Renderer {
       vmData[17] = 0; vmData[18] = 1; vmData[19] = h.tip;
       q.writeBuffer(h.ubo, 0, vmData);
     }
+    if (this.onArm) {
+      const h = this.onArm;
+      q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, h.hand.jointCount * 32);
+      skinParamsU[0] = h.hand.count;
+      q.writeBuffer(h.hand.params, 0, skinParams);
+      vmData[17] = 0; vmData[18] = 0; vmData[19] = 1;
+      q.writeBuffer(h.ubo, 0, vmData);
+    }
     // The spell hands, when they're up, with their own pose.
     this.spellVM = this.spellVMs[snap[H.SPELL_RIG] | 0] || null;
     if (this.spellVM) {
@@ -1308,7 +1334,11 @@ export class Renderer {
     }
     // What's lying on the ground.
     let nGround = 0;
-    for (const g of this.ground) {
+    const drawn = this.drawnItems || (this.drawnItems = []);
+    drawn.length = 0;
+    for (const g of this.ground) drawn.push(g);
+    if (snap[H.SURF] > 0.5 && this.board.sword) drawn.push(this.board);
+    for (const g of drawn) {
       const model = g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
@@ -1363,6 +1393,10 @@ export class Renderer {
     if (this.held) {
       cp.setBindGroup(0, this.held.hand.bg);
       cp.dispatchWorkgroups(Math.ceil(this.held.hand.count / 128));
+    }
+    if (this.onArm) {
+      cp.setBindGroup(0, this.onArm.hand.bg);
+      cp.dispatchWorkgroups(Math.ceil(this.onArm.hand.count / 128));
     }
     if (this.spellVM) {
       cp.setBindGroup(0, this.spellVM.bg);
@@ -1421,7 +1455,7 @@ export class Renderer {
       });
       if (nGround) {
         sp.setVertexBuffer(1, this.itemInstances);
-        for (const g of this.ground) {
+        for (const g of drawn) {
           if (g.slot < 0) continue;
           sp.setVertexBuffer(0, g.model.VB);
           sp.setIndexBuffer(g.model.IB, 'uint32');
@@ -1476,6 +1510,14 @@ export class Renderer {
         mp.setBindGroup(1, h.bg);
         mp.drawIndexed(h.hand.indices);
       }
+      if (this.onArm && !this.vmDown) {
+        const h = this.onArm;
+        mp.setVertexBuffer(0, h.hand.outBuf);
+        mp.setVertexBuffer(1, h.hand.sideVB);
+        mp.setIndexBuffer(h.hand.IB, 'uint32');
+        mp.setBindGroup(1, h.bg);
+        mp.drawIndexed(h.hand.indices);
+      }
     }
     mp.setViewport(0, 0, this.W, this.H, 0, 0.96);
     this.spellfx.drawSolid(mp);
@@ -1505,7 +1547,7 @@ export class Renderer {
     if (nGround) {
       mp.setPipeline(this.pItem);
       mp.setVertexBuffer(1, this.itemInstances);
-      for (const g of this.ground) {
+      for (const g of drawn) {
         if (g.slot < 0) continue;
         mp.setBindGroup(1, g.model.bg);
         mp.setVertexBuffer(0, g.model.VB);

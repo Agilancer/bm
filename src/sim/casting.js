@@ -14,6 +14,8 @@ const TICK = 0.18;     // how often a held spell bites
 const tmp = [0, 0, 0], out3 = [0, 0, 0];
 // What each staff fires, a spell's bolt from its head. It costs what the spell costs.
 const STAFF_BOLT = { crystal_staff: 'frost', greenwood_staff: 'plague', skullhorn_staff: 'firebolt', gnarled_crook: 'lightning' };
+// A staff fights from far off, so it bites for far less than a blade up close: what a bolt's spell does, times this, times the staff's roll against a sword of 20.
+const STAFF_BITE = 0.04;
 const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a palm's does
 
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
@@ -251,7 +253,8 @@ export class Casting {
     }
     this.mana -= def.mana;
     this.charge = def.gather || 0;
-    this.cast_bolt(def, sim, [from[0], from[1], from[2]]);
+    const k = STAFF_BITE * p.bite();
+    this.cast_bolt({ ...def, staff: true, dmg: def.dmg * k, lash: def.lash * k, dps: def.dps * k }, sim, [from[0], from[1], from[2]]);
     sim.event(EV.SPELL_CAST, def.elem, SPELLS.indexOf(def), p.x, p.y + EYE, p.z);
   }
 
@@ -574,7 +577,7 @@ export class Casting {
     switch (def.key) {
       case 'firebolt':
         this.explode(sim, x, y, z, def.radius * (0.55 + 0.45 * b.power), def.dmg * (0.3 + 0.7 * b.power), elem, 6 * b.power);
-        if (foe) this.affOf(foe).burn = Math.max(this.affOf(foe).burn, 3);
+        if (foe && !def.staff) this.affOf(foe).burn = Math.max(this.affOf(foe).burn, 3);
         break;
       case 'frost':
         if (foe) { this.hurt(sim, foe, def.dmg, elem, x, y, z, x - b.vx * 0.01, z - b.vz * 0.01, 14); this.affOf(foe).slow = Math.max(this.affOf(foe).slow, def.chill); }
@@ -961,7 +964,8 @@ export class Casting {
       if (f.dead || Math.hypot(f.x - z.x, f.z - z.z) > R + radiusOf(f) * 0.5) continue;
       this.hurt(sim, f, def.dps * 0.5, e, f.x, chestOf(f), f.z, f.x, f.z, 2);
       const a = this.affOf(f);
-      a.rot = Math.max(a.rot, 1.6); a.slow = Math.max(a.slow, 1.2);
+      if (!def.staff) a.rot = Math.max(a.rot, 1.6);
+      a.slow = Math.max(a.slow, 1.2);
     }
   }
 

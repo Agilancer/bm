@@ -128,7 +128,10 @@ export class Input {
     };
     btn('bAttack', () => this.fire(INPUT.ATTACK));
     btn('bWide', () => this.fire(INPUT.WIDE));
-    btn('bJump', () => this.fire(INPUT.JUMP));
+    btn('bJump', () => { this.jumpTouch = true; this.fire(INPUT.JUMP); });
+    const letGo = () => { this.jumpTouch = false; };
+    document.getElementById('bJump').addEventListener('touchend', letGo);
+    document.getElementById('bJump').addEventListener('touchcancel', letGo);
     btn('bDodge', () => this.fire(INPUT.DODGE));
     btn('bCast', () => { this.castTouch = true; this.fire(INPUT.CAST_N); });
     const lift = () => { this.castTouch = false; };
@@ -153,6 +156,7 @@ export class Input {
     s[INPUT.YAW] = this.yaw;
     s[INPUT.PITCH] = this.pitch;
     s[INPUT.SPRINT] = (k.has('ShiftLeft') || k.has('ShiftRight') || this.sprintToggle || this.stickRun) ? 1 : 0;
+    s[INPUT.JUMP_HELD] = this.enabled && !this.menu && (k.has('Space') || this.jumpTouch) ? 1 : 0;
     s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch) ? 1 : 0;
   }
 }

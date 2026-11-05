@@ -297,6 +297,8 @@ export class Knight {
     quatRotate(t, 0, pose.wq, J.handL * 4, this.shieldT, 0);
     t[0] += pose.wt[J.handL * 3]; t[1] += pose.wt[J.handL * 3 + 1]; t[2] += pose.wt[J.handL * 3 + 2];
     mat4FromQT(tmpM, q, 0, t, 0);
+    // The arm stands off the back of the board: the grip in the file is on it.
+    for (let i = 0; i < 3; i++) { t[i] -= tmpM[8 + i] * SHIELD_OFF; tmpM[12 + i] = t[i]; }
     this.shieldPos = [t[0], t[1], t[2]];
     this.shieldAxisX = [tmpM[0], tmpM[1], tmpM[2]];
     this.shieldAxisY = [tmpM[4], tmpM[5], tmpM[6]];
@@ -1091,6 +1093,7 @@ export class Knight {
 
 // Cross-module helpers.
 const tv = new Float32Array(3), lo = new Float32Array(3), ld = new Float32Array(3), hn = new Float32Array(3), tmp3 = new Float32Array(3);
+const SHIELD_OFF = 0.065;
 const armQ = new Float32Array(4), weaponQ = new Float32Array(4), weaponT = new Float32Array(3), tmpM = new Float32Array(16), flowDir = new Float32Array(2);
 
 function turn(a, b, step) {

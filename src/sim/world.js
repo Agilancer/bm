@@ -1,10 +1,10 @@
 // Collision and navigation against the village: oriented boxes on a height function, a flat ground grid
 // for the flow field, and rays against the plates of a rigid armour.
 import { floorAt, setFloors } from '../core/interior.js';
-import { terrainHeight } from '../core/terrain.js';
+import { LAND_EDGE, terrainHeight } from '../core/terrain.js';
 
 // (Big enough to reach the catacombs. Cells nobody can stand on are walled off, so the search stays small.)
-const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_LAND = 118, NAV_REACH = 150;
+const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_REACH = 150;
 
 export class World {
   constructor(data, interior) {
@@ -20,7 +20,7 @@ export class World {
     for (let j = 0; j < NAV_SIZE; j++) {
       for (let i = 0; i < NAV_SIZE; i++) {
         const x = (i + 0.5) * NAV_CELL - NAV_HALF, z = (j + 0.5) * NAV_CELL - NAV_HALF;
-        this.grid[j * NAV_SIZE + i] = (Math.hypot(x, z) > NAV_LAND && floorAt(x, z) === null) || this.inside(x, z, 0.55) ? 1 : 0;
+        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > LAND_EDGE || Math.abs(z) > LAND_EDGE) && floorAt(x, z) === null) || this.inside(x, z, 0.55) ? 1 : 0;
       }
     }
   }

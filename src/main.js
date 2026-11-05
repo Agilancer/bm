@@ -6,8 +6,8 @@ import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
-import { Drops } from './items/drops.js';
-import { colorOf, nameOf, rollGem, rollWeapon, makeRng, writeWeapon } from './items/items.js';
+import { Drops, boardPose } from './items/drops.js';
+import { SHIELDS, colorOf, nameOf, rollGem, rollShield, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { settings, Title } from './title.js';
@@ -242,7 +242,13 @@ async function boot(plan, poolSize) {
   game = new GameView(renderer, shared, input, audio, hud, gpu, simWorker, buffer);
   const pack = new Pack();
   pack.load(null);
-  const arm = () => writeWeapon(shared.input, pack.slots.main);
+  const arm = () => {
+    writeWeapon(shared.input, pack.slots.main);
+    const off = pack.slots.off;
+    shared.input[INPUT.SHIELD] = off ? 1 : 0;
+    renderer.offHand = off ? off.base : null;
+    renderer.board.sword = renderer.offHand;
+  };
   arm();
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
     change: arm,
@@ -434,7 +440,7 @@ async function boot(plan, poolSize) {
   game.run();
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>CAST</b> casts, hold it to keep casting. Tap the spell at the top for the book, or either side of it to turn it. <b>PACK</b> holds your swords.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>F</kbd> cast &nbsp; <kbd>Wheel</kbd> or <kbd>B</kbd> spells &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take';
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>F</kbd> cast &nbsp; <kbd>Wheel</kbd> or <kbd>B</kbd> spells &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
@@ -767,6 +773,11 @@ class GameView {
     const eyeX = snap[H.PX] + snap[H.VX] * age + rx * bobX;
     const eyeY = snap[H.PY] + 1.62 + bobY - snap[H.CAM_DROP] - Math.min(snap[H.DODGE], 0.2) * 0.45;
     const eyeZ = snap[H.PZ] + snap[H.VZ] * age + rz * bobX;
+    if (snap[H.SURF] > 0.5) {
+      const hs = Math.hypot(snap[H.VX], snap[H.VZ]);
+      if (hs > 0.5) { this.boardX = snap[H.VX] / hs; this.boardZ = snap[H.VZ] / hs; } else if (this.boardX === undefined) { this.boardX = 0; this.boardZ = 1; }
+      boardPose(this.renderer.board.mat, snap[H.PX] + snap[H.VX] * age, snap[H.PY], snap[H.PZ] + snap[H.VZ] * age, this.boardX, this.boardZ, snap[H.ON_GROUND] > 0.5);
+    }
     Object.assign(this.cam, { x: eyeX, y: eyeY, z: eyeZ, fx, fy, fz, ux, uy, uz });
     // The sword lags your hands a little. (It rides your steps in its own clip, great_idle.)
     this.swayX = damp(this.swayX, clamp(inp.yawVel * 1.5, -0.05, 0.05), 11, dt);
@@ -1069,14 +1080,14 @@ class GameView {
       // bm.give('frost_sword', { rarity: 3, sockets: 4 }) or bm.give('gem', { kind: 'ruby', grade: 2 }), into the pack.
       give: (base, opts = {}) => {
         const rng = makeRng((Math.random() * 4294967296) >>> 0);
-        const item = base === 'gem' ? rollGem(rng, opts) : rollWeapon(rng, { base, ...opts });
+        const item = base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base }) : rollWeapon(rng, { base, ...opts });
         return view.pack.add(item) ? item : null;
       },
       // Lays one on the ground beside the player: bm.lay('fluked_greatsword', { rarity: 2 }).
       lay: (base, opts = {}) => {
         const rng = makeRng((Math.random() * 4294967296) >>> 0);
         const s = view.currentSnap();
-        view.drops.fromPlayer(base === 'gem' ? rollGem(rng, opts) : rollWeapon(rng, { base, ...opts }), s[H.PX], s[H.PY], s[H.PZ], view.input.yaw);
+        view.drops.fromPlayer(base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base }) : rollWeapon(rng, { base, ...opts }), s[H.PX], s[H.PY], s[H.PZ], view.input.yaw);
       },
       snap: () => view.currentSnap(),
       cmd,
