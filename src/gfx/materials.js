@@ -218,18 +218,22 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     if (params.x > 0.0 && tex.a < 0.5) { discard; }
     albedo = tex.rgb;
     rough = det.b;
-    n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, 1.4, params.z < 0.0));
+    n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
     if (params.z < 0.0) {
       // What the damp has done, in world space, so it runs on across every tile and joint. Mortar and hollows first.
       let cav = smoothstep(0.08, 0.5, det.a);
-      albedo *= mix(0.6, 1.0, cav);
-      ao *= mix(0.6, 1.0, cav);
+      albedo *= mix(0.42, 1.0, cav);
+      ao *= mix(0.5, 1.0, cav);
+      // Grey stone. The warmth is the flames', so what they don't reach falls away cold, and a lit pool stands off its shadow.
+      albedo = mix(vec3f(dot(albedo, vec3f(0.3, 0.55, 0.15))), albedo, 0.62);
       let level = select(-16.25, -24.25, p.z < -54.0);   // (the catacombs' two floors: north of the Sexton's Stair is the lower)
       let q = select(vec2f(p.x + p.z, p.y), p.xz, abs(n0.y) > 0.6);
       let m = textureSampleLevel(noiseTex, repeatSmp, q * 0.047, 0.0);
       // Old stone is never one colour: blotches of dark, and a drift between ochre and grey.
-      albedo *= 0.58 + 0.84 * m.r;
+      albedo *= 0.72 + 0.56 * m.r;
       albedo = mix(albedo, albedo * vec3f(1.1, 0.96, 0.78), smoothstep(0.42, 0.58, m.g));
+      // (Far off, a sharp highlight on bumpy stone is only sparkle.)
+      rough = max(rough, 0.62 * smoothstep(7.0, 20.0, dist));
       if (!LEAN) {
         if (n0.y > 0.6) {
           // Where a floor dips, water stands: dark, smooth, and holding the flames.
@@ -243,7 +247,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
           let run = textureSampleLevel(noiseTex, repeatSmp, vec2f((p.x + p.z) * 0.29, p.y * 0.012), 0.0).b;
           let wet = smoothstep(0.54, 0.64, run);
           albedo *= 1.0 - 0.42 * wet;
-          rough = mix(rough, 0.26, wet);
+          rough = mix(rough, 0.42, wet);
           let tide = smoothstep(0.0, 1.5, p.y - level + (m.a - 0.5) * 2.2);
           albedo *= mix(0.4, 1.0, tide);
           rough = mix(0.34, rough, tide);

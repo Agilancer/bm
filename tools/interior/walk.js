@@ -13,6 +13,7 @@ const ROUTE = [
 
 export async function go({ start = 0, keep = true, shots = true, swing = true } = {}) {
   const b = window.bm;
+  window.__reviewShots = true;
   const log = window.__walk = { legs: [], stuck: [], hits: 0, lowest: 1e9, worstStep: 0, done: false };
   const keys = b.input.keys;
   const [sx, sz] = ROUTE[start];

@@ -750,6 +750,12 @@ def run_corridor(a, b, w, ya, yb, spring, apex, wall_mat, floor_mat, roof_mat, d
             if o.get('blocked'):
                 continue
             wall_op_trim(trim or seq(wall_mat)[0], p0, p1, o, inward, 0.12)
+        if trim and bay:   # a buttress at each seam, unless a door's there
+            for k in range(1, nb):
+                t = k * L / nb
+                if all(abs(t - o['t']) > o['w'] / 2 + 0.5 for o in ops) and bay < 7.0:
+                    c = P(t, s * (hw - 0.14) / hw, fy(t) + spring / 2 - 0.3)
+                    obox(trim, c, (ux, 0.0, uz), (nx * s, 0.0, nz * s), 0.34, spring / 2 + 0.3, 0.15, 2.2)
         if trim:   # a cornice where the vault springs
             for t0, t1 in clear_runs(L, [o for o in ops if o['apex'] > spring]):
                 q0, q1 = P(t0, s * 0.985, fy(t0) + spring), P(t1, s * 0.985, fy(t1) + spring)
@@ -782,6 +788,9 @@ def run_corridor(a, b, w, ya, yb, spring, apex, wall_mat, floor_mat, roof_mat, d
             t = i * L / n
             pts = [P(t, -1 + 2 * k / 14, fy(t) + spring + pointed((-1 + 2 * k / 14) * hw, hw, apex - spring)) for k in range(15)]
             tube(rib_m, pts, 0.14, ref=(ux, 0.0, uz))
+            if trim and w >= 4.5 and ya == yb:
+                cr = P(t, 0, fy(t) + spring + pointed(0, hw, apex - spring))
+                lathe(rib_m, cr[0], cr[2], [(0.0, cr[1] - 0.22), (0.2, cr[1] - 0.16), (0.3, cr[1] - 0.05), (0.2, cr[1] + 0.06)], 8)
             for s in (-1, 1):
                 q = P(t, s, 0)
                 tube(rib_m, [(q[0] - nx * s * 0.02, fy(t), q[2] - nz * s * 0.02), (q[0] - nx * s * 0.02, fy(t) + spring, q[2] - nz * s * 0.02)], 0.13, ref=(ux, 0.0, uz))
@@ -1143,13 +1152,14 @@ def wall_frame(a, b, inward):
     return L, ux, uz, nx, nz
 
 
-def loculi(a, b, y, inward, rows=4, h=3.0, depth=0.34, mat='cata_block', seed=0):
+def loculi(a, b, y, inward, rows=4, h=3.0, depth=0.5, mat='cata_block', seed=0):
     """A pila, what makes a catacomb a catacomb: body-length graves cut one over another up the wall. Most still sealed
     with a slab; some cracked open or robbed, with what was in them lying in the hole."""
     L, ux, uz, nx, nz = wall_frame(a, b, inward)
     rng = random.Random(seed + int(a[0] * 7 + a[1] * 13))
     u, n = (ux, 0.0, uz), (nx, 0.0, nz)
-    cols = max(1, int(round(L / 2.0)))
+    rows = rng.choice((3, 4, 4, 5))
+    cols = max(1, int(round(L / rng.choice((1.7, 2.0, 2.4)))))
     cw, ch = L / cols, h / rows
     O = lambda t, d: (a[0] + ux * t + nx * d, a[1] + uz * t + nz * d)
     # The dark behind.
@@ -1169,22 +1179,22 @@ def loculi(a, b, y, inward, rows=4, h=3.0, depth=0.34, mat='cata_block', seed=0)
             what = rng.random()
             hu, hv = cw / 2 - fr * 1.15, ch / 2 - fr
             slab = rng.choice(('cata_wall3', 'cata_block', 'cata_floor3', 'cata_floor', 'cata_rubble'))
-            front = depth * rng.uniform(0.62, 0.86)
-            if what < 0.42:     # sealed
+            front = depth * rng.uniform(0.3, 0.58)
+            if what < 0.26:     # sealed
                 c = O(t, front)
                 obox(slab, (c[0], cy, c[1]), u, n, hu, hv, 0.03, 1.6)
-            elif what < 0.6:    # sealed with three tiles, as the poor were
+            elif what < 0.42:    # sealed with three tiles, as the poor were
                 for s in (-1, 0, 1):
                     if rng.random() < 0.82:
                         c = O(t + s * hu * 2 / 3, front + s * 0.01)
                         obox(slab, (c[0], cy, c[1]), u, n, hu / 3 - 0.012, hv - 0.006, 0.026, 1.6)
-            elif what < 0.76:   # broken: half a slab left, the rest in the hole
+            elif what < 0.58:   # broken: half a slab left, the rest in the hole
                 s = rng.choice((-1, 1))
                 c = O(t + s * hu * 0.45, front)
                 obox(slab, (c[0], cy, c[1]), u, n, hu * 0.55, hv, 0.03, 1.6)
                 c = O(t - s * hu * 0.5, depth * 0.45)
                 skull(c[0], cy - hv, c[1], nx, nz, 0.095)
-            elif what < 0.9:    # a body still in its shroud, drawn half out by whoever came for it
+            elif what < 0.86:    # a body still in its shroud, drawn half out by whoever came for it
                 s = rng.choice((-1, 1))
                 q0, q1, q2 = O(t - s * hu * 0.85, depth * 0.45), O(t, depth * 0.55), O(t + s * hu * 0.62, depth * 0.62)
                 base = cy - hv + 0.09
@@ -1346,6 +1356,78 @@ def skull_column(x, z, y, h=3.8, rings=8):
     W.collide(x - 0.72, z - 0.72, x + 0.72, z + 0.72, h)
 
 
+def lane(x0, z0, x1, z1, y, hw=1.7, step=2.2):
+    """One lit way across a room: a run of pale slabs between kerbs, a candle every couple of paces each side of it."""
+    L = math.hypot(x1 - x0, z1 - z0)
+    ux, uz = (x1 - x0) / L, (z1 - z0) / L
+    nx, nz = -uz, ux
+    for s in (-1, 1):
+        strip('cata_block', (x0 + nx * s * hw, z0 + nz * s * hw), (x1 + nx * s * hw, z1 + nz * s * hw), y, 0.26, 0.08)
+    A, C = (x0 - nx * hw, z0 - nz * hw), (x1 + nx * hw, z1 + nz * hw)
+    floor_rect('cata_floor2', min(A[0], C[0]), min(A[1], C[1]), max(A[0], C[0]), max(A[1], C[1]), y + 0.012)
+    rl = random.Random(int(x0 + z0))
+    t = 2.0
+    while t < L - 1.2:
+        grave(x0 + ux * t, z0 + uz * t, y + 0.012, ux, uz, 0.95, hw * 0.46)
+        for k in range(3):
+            d, o = rl.uniform(-1.2, 1.2), rl.uniform(-hw, hw)
+            long_bone(x0 + ux * (t + d) + nx * o, y + 0.05, z0 + uz * (t + d) + nz * o, rl.uniform(0, math.pi), rl.uniform(0.28, 0.44))
+        for k in range(3):
+            s_, d, o = rl.uniform(0.05, 0.16), rl.uniform(-1.4, 1.4), rl.uniform(-hw, hw)
+            bx('cata_wall2', x0 + ux * (t + d) + nx * o, y + 0.02 + s_ * 0.5, z0 + uz * (t + d) + nz * o, s_, s_ * 0.5, s_ * 0.8, 1.8)
+        t += 3.3
+    n = int(L / step)
+    for k in range(n + 1):
+        t = k * L / max(n, 1)
+        for s in (-1, 1):
+            px, pz = x0 + ux * t + nx * s * (hw + 0.24), z0 + uz * t + nz * s * (hw + 0.24)
+            candle(px, y + 0.03, pz, 0.15 + (k % 3) * 0.05)
+            halo(px, y + 0.3, pz, 0.34, (0.12, 0.06, 0.024))
+    for k in range(n // 2 + 1):
+        t = (k + 0.5) * L / (n // 2 + 1)
+        W.light(x0 + ux * t, y + 1.0, z0 + uz * t, (1.0, 0.62, 0.3), 6.5, 7.0, 0.8)
+        pool_of_light(x0 + ux * t, z0 + uz * t, y + 0.012, 2.6, (0.09, 0.05, 0.022))
+
+
+def bone_chandelier(x, z, y, top, rad=1.5, n=12):
+    """A wheel hung with the dead: skulls round its rim, long bones raying out, candles standing on them."""
+    corona(x, z, y, top, rad, 6, 20.0, 13.0)
+    for k in range(n):
+        a = k / n * math.tau
+        ca, sa = math.cos(a), math.sin(a)
+        skull(x + ca * rad, y - 0.3, z + sa * rad, ca, sa, 0.115)
+        tube('iron', [(x + ca * rad, y, z + sa * rad), (x + ca * rad, y - 0.1, z + sa * rad)], 0.01, sides=3)
+        if k % 2 == 0:
+            long_bone(x + ca * rad * 0.62, y - 0.02, z + sa * rad * 0.62, a, rad * 0.72, 0.024)
+
+
+def fallen_vault(x, z, y, seed=0):
+    """Where the roof came down: blocks in a heap with a broken rib lying across them, and the ground around it dusty and pale."""
+    rng = random.Random(seed + 7)
+    for k in range(22):
+        a, d = rng.uniform(0, math.tau), rng.uniform(0, 2.3) ** 1.1
+        s = rng.uniform(0.2, 0.62) * (1.2 - d / 3.2)
+        n = (math.cos(a + k), 0.0, math.sin(a + k))
+        u = (n[2], 0.0, -n[0])
+        obox(rng.choice(('cata_block', 'cata_wall3', 'cata_wall2')), (x + math.cos(a) * d, y + s * 0.55 + max(0.0, 1.05 - d) * 0.7, z + math.sin(a) * d), u, n, s * rng.uniform(0.9, 1.4), s * 0.55, s, 1.8)
+    for s, h in ((-1, 0.5), (1, 1.5)):
+        a = 0.7 + s * 0.3 + seed
+        tube('cata_block', [(x + math.cos(a) * 2.6 * k, y + h * (1 - abs(k)) + 0.4, z + math.sin(a) * 2.6 * k) for k in (-1, -0.5, 0, 0.5, 1)], 0.22, ref=(0.0, 1.0, 0.0), sides=6)
+    pool_of_light(x, z, y, 4.2, (0.05, 0.042, 0.03))
+    W.collide(x - 1.3, z - 1.3, x + 1.3, z + 1.3, 1.6)
+
+
+def glow_v(x, y, z, nx, nz, h=2.6, w=1.3):
+    """His mark, burning on a wall, from y up: what you walk towards. Red, because it's the one place red belongs."""
+    sx, sz = -nz, nx
+    ox, oz = x + nx * 0.3, z + nz * 0.3   # (clear of the wall's mouldings, or they cut it in two)
+    for s in (-1, 1):
+        for g, tint in ((h * 0.055, (1.1, 0.075, 0.03)), (h * 0.2, (0.24, 0.016, 0.008))):
+            tx0, tz0 = ox + sx * s * w, oz + sz * s * w
+            W.glowquad((ox - sx * g, y, oz - sz * g), (ox + sx * g, y, oz + sz * g), (tx0 + sx * g, y + h, tz0 + sz * g), (tx0 - sx * g, y + h, tz0 - sz * g), 100, (0, 0, 1, 1), tint)
+    W.light(x + nx * 1.2, y + h * 0.5, z + nz * 1.2, (1.0, 0.13, 0.07), 6.0, 8.0, 0.25)
+
+
 def spawn(x, z, which=None, yaw=None, y=None):
     W.spawns.append({'x': round(x, 2), 'z': round(z, 2), 'yaw': round(R.uniform(0, 6.28) if yaw is None else yaw, 3), 'which': (R.randint(1, 6) if which is None else which)})
 
@@ -1373,7 +1455,8 @@ def below():
         y1 = y - steps * RISE
         run_corridor((x, 0.0), (x1, 0.0), w, y, y1, 4.2, 6.2, stair_walls[f], ('cata_floor2', 'cata_floor3'), 'cata_roof', ribs=2.5, bay=3.3, trim='cata_block')
         sw = 1 if f % 2 else -1
-        torch((x + x1) / 2, (y + y1) / 2 + 2.6, sw * hw, 0.0, -sw, i=8.0)
+        for e, side in ((0.2, -sw), (0.5, sw), (0.8, -sw)):
+            torch(x + (x1 - x) * e, y + (y1 - y) * e + 2.6, side * (hw - 0.3), 0.0, -side, i=6.0, r=9.0)
         x = x1
         y = y1
         if f < flights - 1:
@@ -1456,7 +1539,8 @@ def below():
     for s in (-1, 1):
         candelabra(relc[0] + s * 5.0, relc[1] + 0.8, Y1, i=12.0, r=10.0)
     sarcophagus(relc[0], Y1, relc[1] + 3.2, True, 'wall_ashlar', 'cata_wall2', 1.1, 0.6)
-    W.light(relc[0], Y1 + 3.0, relc[1], (1.0, 0.3, 0.18), 13.0, 30.0, 0.4)
+    W.light(relc[0], Y1 + 3.0, relc[1], (1.0, 0.58, 0.3), 13.0, 26.0, 0.4)
+    glow_v(relc[0], Y1 + 3.5, relc[1] + 6.02, 0.0, -1.0, 2.8, 1.3)
     banner('vel_b_1', relc[0] + 3.5, Y1 + 5.0, relc[1] + 6.0, 0.0, -1.0, 3.6, 0.22)
     banner('vel_d_0', relc[0] - 3.5, Y1 + 5.0, relc[1] + 6.0, 0.0, -1.0, 3.6, 0.22)
     spawn(relc[0] - 3.0, relc[1] - 1.5)
@@ -1477,7 +1561,7 @@ def below():
     for sign, gz in ((1, -13.4), (-1, -19.0), (1, -26.0), (-1, -33.0), (-1, -40.0), (1, -47.0), (-1, -52.5)):
         candelabra(gx + sign * 2.15, gz, Y1, i=13.0, r=10.0)
     for gz in (-15.5, -22.5, -29.5, -36.5, -43.5, -50.5):
-        grave(gx, gz, Y1, 0.0, 1.0)
+        grave(gx, gz, Y1, 0.0, -1.0)
     for sign, gz, h in ((1, -19.0, 3.1), (-1, -26.0, 2.5), (1, -40.0, 3.1), (-1, -47.0, 2.5)):
         sconce(gx + sign * 2.48, Y1 + h, gz, -sign, 0.0)
     # Coffins that never got a grave, stacked at the door.
@@ -1502,6 +1586,7 @@ def below():
             back = recess_op(3.0, Y1, 3.0)
             room(cub, Y1, 3.2, 5.2, 'cata_wall4', 'cata_floor3', 'cata_roof', dado='cata_rubble', ops={1: [cub_door], 3: [back]}, rib='cata_block', trim='cata_block', inner='cata_floor4', ring=0.5)
             arcosolium(cub[3], cub[0], back, (xe, cz0), Y1, seed=11, lit=True)
+            glow_v(xw + 0.0, Y1 + 3.4, cz0, 1.0, 0.0, 1.5, 0.75)
             sarcophagus((xw + xe) / 2, Y1, cz0, False, 'wall_ashlar', 'cata_rubble', 0.9, 1.2)
             candelabra(xe - 0.8, cz0 + 2.4, Y1, i=16.0, r=11.0)
             candelabra(xw + 0.9, cz0 + 2.4, Y1, i=9.0, r=8.0)
@@ -1511,8 +1596,16 @@ def below():
             room(cub, Y1, 3.2, 5.2, ('femurs', 'skulls3'), ('cata_earth', 'cata_bones'), 'cata_roof', dado=('skulls2', 'skulls'), ops={1: [cub_door]}, rib='cata_wall2', trim='cata_wall2', inner='cata_earth', ring=0.5)
             for hx_, hz_ in ((1.0, -2.1), (1.0, 2.1), (2.9, -2.2), (2.9, 2.2), (0.8, 0.2)):
                 heap(xw + hx_, cz0 + hz_, Y1, 16, 0.7, seed=k)
-            candelabra(xw + 3.2, cz0, Y1, i=11.0, r=9.0)
-            spawn(xw + 1.6, cz0 + 0.8)
+            candelabra(xw + 3.2, cz0 + 2.2, Y1, i=11.0, r=9.0)
+            bx('cata_block', xw + 0.55, Y1 + 0.5, cz0, 0.5, 0.5, 1.0, 2.0)
+            for j in range(5):
+                skull(xw + 1.1, Y1, cz0 + (j - 2) * 0.38, 1.0, 0.0, 0.11)
+                skull(xw + 0.5, Y1 + 1.0, cz0 + (j - 2) * 0.38, 1.0, 0.0, 0.11)
+            floor_candles(xw + 1.5, cz0 - 1.3, Y1, 5, lit=True)
+            floor_candles(xw + 1.5, cz0 + 1.3, Y1, 5)
+            glow_v(xw, Y1 + 1.9, cz0, 1.0, 0.0, 2.2, 1.0)
+            W.collide(xw, cz0 - 1.0, xw + 1.05, cz0 + 1.0, 1.0)
+            spawn(xw + 3.0, cz0 - 1.4)
     # (East side, x+, is which of run_corridor's walls? Going north, its right hand faces east.)
     OZ = nz - G_L / 2
     oss_x = gx + 3.0 + 8.0
@@ -1598,9 +1691,8 @@ def below():
     shaft(tx, tz, Y2 + 1.52, Y2 + 17.7, 1.1, tint=(0.045, 0.037, 0.027), i=70.0)
     for sx, sz in ((-13.0, 8.0), (-13.0, -8.0), (13.0, -10.5), (4.2, -15.0), (-4.2, -15.0), (12.5, 10.5), (-4.2, 14.6), (4.2, 14.6)):
         candelabra(tx + sx, tz + sz, Y2, h=2.5, i=16.0, r=13.0)
-    for k, d in enumerate((14.0, 11.2, 8.4, 6.2)):
-        for s in (-1, 1):
-            floor_candles(tx + s * 2.4, tz + d, Y2, 5, seed=k, lit=k % 2 == 1)
+    lane(tx, tz + 16.2, tx, tz + 5.4, Y2, 1.5)
+    fallen_vault(tx - 11.5, tz - 11.0, Y2, 1)
     for s in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
         px, pz = tx + s[0] * 5.6, tz + s[1] * 5.6
         chain(px, pz, Y2 + 5.6, Y2 + 16.2)
@@ -1635,12 +1727,12 @@ def below():
     brazier(tx - 8.0, tz + 12.0 - 13.0 - 3.0)
     brazier(tx + 3.0, tz + 12.0)
     brazier(tx + 12.0, tz - 7.0)
-    ruin(tx - 12.5, tz + 3.0, column=False)
+    ruin(tx - 13.0, tz + 3.0, column=False)
     ruin(tx + 11.5, tz + 6.5, column=False)
     ruin(tx + 2.0, tz - 13.0)
     ruin(tx - 8.0, tz + 11.5)
     ruin(tx + 13.5, tz - 5.0)
-    ruin(tx - 5.0, tz - 14.0)
+    ruin(tx + 7.0, tz - 14.0, column=False)
     ruin(tx + 6.0, tz + 14.0, column=False)
     ruin(tx - 15.0, tz - 3.0, column=False)
     sarcophagus(tx - 12.0, Y2, tz - 6.0, False, 'wall_ashlar', 'wall_rough')
@@ -1667,6 +1759,7 @@ def below():
             arcosolium((ax0, tz + s * 3.5), (ax0 + AL, tz + s * 3.5), op, (ax0 + AL / 2, tz), Y2, seed=k + s, lit=(k + s) % 2 == 0)
     for t in (9.3, 17.3):
         grave(ax0 + t, tz, Y2, 1.0, 0.0)
+    bone_chandelier(ax0 + 13.0, tz, Y2 + 3.7, Y2 + 7.1)
     for s in (-1, 1):
         candelabra(ax0 + 1.6, tz + s * 3.0, Y2, i=12.0, r=10.0)
         candelabra(ax0 + AL - 1.4, tz + s * 3.0, Y2, i=12.0, r=10.0)
@@ -1706,6 +1799,15 @@ def below():
         bx('cata_block', tx_ - 0.02, Y2 + 2.3, tcz + s * 1.0, 0.85, 0.42, 0.2, 2.6)
     bx('cata_block', tx_ + 0.95, Y2 + 3.8, tcz, 0.25, 2.6, 1.15, 2.6)
     tube('cata_block', [(tx_ + 0.9, Y2 + 9.4, tcz - 2.1), (tx_ + 0.9, Y2 + 6.2, tcz), (tx_ + 0.9, Y2 + 9.4, tcz + 2.1)], 0.28, ref=(1.0, 0.0, 0.0), sides=6)
+    # Finials on the throne's shoulders, and iron stakes round the dais with what was left on them.
+    for s in (-1, 1):
+        lathe('cata_block', tx_ + 0.95, tcz + s * 1.15, [(0.3, Y2 + 1.2), (0.26, Y2 + 6.4), (0.36, Y2 + 6.6), (0.14, Y2 + 7.0), (0.0, Y2 + 8.2)], 8)
+        for dx_ in (-3.2, 3.2):
+            sx_, sz_ = tcx + 7.0 + dx_, tcz + s * 3.8
+            lathe('iron', sx_, sz_, [(0.07, Y2 + 0.6), (0.05, Y2 + 2.8), (0.0, Y2 + 4.6)], 5)
+            skull(sx_, Y2 + 3.55, sz_, -1.0, 0.0, 0.14)
+        lathe('cata_block', tcx + 7.0, tcz + s * 2.0, [(0.16, Y2 + 1.8), (0.13, Y2 + 2.9), (0.2, Y2 + 3.0), (0.0, Y2 + 3.5)], 6)
+        skull(tcx + 5.5, Y2 + 1.8, tcz + s * 1.3, -1.0, 0.0, 0.14)
     W.collide(tx_ - 1.5, tcz - 2.0, tx_ + 1.5, tcz + 2.0, 6.0)
     vx = tcx + 14.0
     for s in (-1, 1):
@@ -1714,10 +1816,9 @@ def below():
             topz, botz = tcz + s * 4.0, tcz
             W.glowquad((vx, Y2 + 5.4, botz - w_), (vx, Y2 + 5.4, botz + w_), (vx, Y2 + 13.2, topz + w_), (vx, Y2 + 13.2, topz - w_), 100, (0, 0, 1, 1), tint)
     W.light(tcx + 12.4, Y2 + 8.0, tcz, (1.0, 0.13, 0.07), 10.0, 26.0, 0.25)
+    W.light(tcx + 8.6, Y2 + 4.4, tcz - 2.6, (1.0, 0.55, 0.28), 7.5, 22.0, 0.5)
     shaft(tcx + 7.0, tcz, Y2 + 1.82, Y2 + 13.7, 0.9, i=46.0)
-    for d in (-11.5, -8.5, -5.5):
-        for s in (-1, 1):
-            floor_candles(tcx + d, tcz + s * 2.6, Y2, 6, lit=d == -8.5)
+    lane(tcx - 14.4, tcz, tcx + 3.5, tcz, Y2, 1.9)
     for k in range(12):
         a = k / 12 * math.tau
         px, pz = tombc[0] + math.cos(a) * 13.5, tombc[1] + math.sin(a) * 13.5
@@ -1725,7 +1826,7 @@ def below():
             continue
         d = (-math.cos(a), -math.sin(a))
         torch(tombc[0] + math.cos(a) * 14.6, Y2 + 4.0, tombc[1] + math.sin(a) * 14.6, d[0], d[1], c=(1.0, 0.42, 0.2), i=7.0, r=12.0)
-    W.light(tombc[0] + 7.0, Y2 + 5.0, tombc[1], (1.0, 0.36, 0.18), 20.0, 46.0, 0.3)
+    W.light(tombc[0] + 7.0, Y2 + 5.0, tombc[1], (1.0, 0.56, 0.32), 20.0, 40.0, 0.3)
     W.light(tombc[0] + 6.0, Y2 + 2.6, tombc[1], (1.0, 0.45, 0.25), 11.0, 40.0, 0.3)
     # The way on is always red: his colour, in the mouth of each door that goes deeper, and the Tomb at the end of them.
     lantern(186.2, -14.5, Y1 + 4.2, Y1 + 6.4)
@@ -1762,9 +1863,6 @@ def below():
             if gz != -33.0 or s < 0:    # (east of there is the Ossuary's door)
                 bx('cata_wall2', 186.2 + s * 2.76, Y1 + 2.0, gz, 0.26, 2.0, 0.36)
     # The rooms' edges have fire too, so a body in a far corner can be counted.
-    for s in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
-        candle_rack(tx + s[0] * 13.5, tz + s[1] * 6.0, Y2, 5, 0.3)
-        W.light(tx + s[0] * 13.5, Y2 + 2.0, tz + s[1] * 6.0, (1.0, 0.62, 0.32), 10.0, 16.0, 0.5)
     for s in (-1, 1):
         brazier(tx + 15.5, tz + s * 5.0, i=18.0)
     W.light(186.2, Y1 + 4.0, 26.0, (1.0, 0.62, 0.34), 11.0, 26.0, 0.4)
@@ -1793,6 +1891,21 @@ def below():
             spawn(tombc[0] + math.cos(a) * (6.0 + (k % 3) * 2.2), tombc[1] + math.sin(a) * (6.0 + (k % 3) * 2.2))
     for dz in (-9.0, 9.0):
         spawn(tombc[0] + 6.0, tombc[1] + dz)
+    # Each room burns its own colour, so you know from the light alone where you've got to. (His red, and the wells' ash, stay as they are.)
+    def hue(x, z, y):
+        if x < 172.0: return (1.0, 0.6, 0.3)              # the stair: plain tallow
+        if z > 13.0: return (1.0, 0.78, 0.56)             # the Reliquary: good wax
+        if y > -20.0 and x < 183.0 and z < -13.0: return (0.9, 0.8, 0.42)   # the side chambers: tallow gone sour
+        if y > -20.0 and x > 197.0 and z < -13.0: return (1.0, 0.86, 0.68)  # the Ossuary: pale, the colour of what's in it
+        if y > -20.0 and z < -13.0: return (1.0, 0.68, 0.36)  # the Gallery: ochre
+        if x > 229.0: return (1.0, 0.5, 0.26)             # the Tomb
+        if x > 203.0: return (1.0, 0.42, 0.17)            # the Abbots': copper
+        if y < -16.0: return (1.0, 0.54, 0.26)            # the Hall: ember
+        return (1.0, 0.64, 0.32)                          # the Crypt: amber
+    for L in W.lights:
+        x_, y_, z_ = L['p']
+        if y_ < 3.0 and x_ > 126.0 and L['c'][1] > 0.2 and L['c'][2] < 0.56 and L['c'][0] > 0.95:
+            L['c'] = list(hue(x_, z_, y_))
     return Y1, Y2
 
 

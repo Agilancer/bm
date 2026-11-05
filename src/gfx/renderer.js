@@ -1602,7 +1602,7 @@ export class Renderer {
     cd[0] = snap[H.DMG_FLASH]; cd[1] = snap[H.WEAK]; cd[2] = time;
     cd[3] = tier.lean ? 0 : this.W < this.canvas.width * 0.92 ? 0.55 : 0.18;
     cd[4] = this.useShafts ? 1 : 0; cd[5] = this.useBloom ? 0.3 : 0; cd[6] = this.fade || 0;
-    cd[7] = snap[H.HIT_DIR]; cd[8] = Math.max(0, 1 - snap[H.HIT_DIR_T] * 1.5);
+    cd[7] = snap[H.HIT_DIR]; cd[8] = window.__reviewShots ? 0 : Math.max(0, 1 - snap[H.HIT_DIR_T] * 1.5);   // (tools/interior/walk.js photographs the place, not its own wounds)
     q.writeBuffer(this.compU, 0, cd);
     const fp = enc.beginRenderPass({
       colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }],

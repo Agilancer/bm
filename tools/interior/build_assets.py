@@ -19,21 +19,23 @@ TILE, TILE_D, ATLAS, ATLAS_D = 512, 256, 1024, 512
 TILES = {
     'wall_ashlar': ('church_1_1', 'stone', 3.6), 'wall_rough': ('church_3_0', 'stone', 3.6), 'floor_diamond': ('church_1_2', 'stone', 3.0),
     'arcade': ('church_1_3', 'stone', 3.4), 'tracery': ('church_4_3', 'stone', 3.4), 'marble': ('marble_1_0', 'stone', 4.0), 'carpet': ('keep_3_1', 'other', 3.6), 'cloth_red': ('keep_2_2', 'other', 2.0),
-    'cata_wall': ('cata_3_0', 'stone', 3.0), 'cata_wall2': ('cata_7_0', 'stone', 3.0), 'cata_floor': ('cata_4_2', 'stone', 3.0), 'cata_floor2': ('cata_3_2', 'stone', 3.0),
+    'cata_wall': ('cata_3_0', 'stone', 3.0), 'cata_wall2': ('cata_7_0', 'stone', 3.0), 'cata_floor': ('keep_3_0', 'stone', 3.2), 'cata_floor2': ('cata_3_2', 'stone', 3.0),
     'cata_v_floor': ('cata_9_2', 'stone', 4.0), 'cata_bones': ('cata_6_1', 'stone', 3.0), 'skulls': ('cata_2_1', 'stone', 2.6), 'skulls2': ('cata_4_1', 'stone', 2.6),
     'niches': ('cata_3_3', 'stone', 3.2), 'seep': ('cata_1_3', 'stone', 3.4), 'cata_roof': ('cata_2_3', 'stone', 3.4), 'candles': ('cata_11_3', 'stone', 3.2), 'candles_v': ('cata_9_3', 'stone', 3.2),
     'panel': ('panel_4_0', 'stone', 1.76), 'panel2': ('panel_5_0', 'stone', 3.2), 'blood_v': ('cata_11_0', 'stone', 4.0),
     'cata_wall3': ('cata_1_0', 'stone', 3.2), 'cata_wall4': ('cata_4_0', 'stone', 3.0), 'cata_rubble': ('church_4_0', 'stone', 3.2), 'cata_block': ('church_3_1', 'stone', 3.4), 'cata_blood': ('cata_11_2', 'stone', 3.4),
-    'cata_floor3': ('cata_1_2', 'stone', 3.2), 'cata_floor4': ('cata_6_3', 'stone', 3.4), 'cata_earth': ('cata_8_1', 'stone', 3.0),
+    'cata_floor3': ('cata_1_2', 'stone', 3.2), 'cata_floor4': ('church_2_2', 'stone', 3.0), 'cata_earth': ('cata_8_1', 'stone', 3.0),
     'skulls3': ('cata_7_1', 'stone', 2.6), 'femurs': ('cata_5_2', 'stone', 2.6), 'bone': ('marble_1_0', 'stone', 1.6),
 }
 # What the catacombs' own stone looks like, for tiles painted for somewhere else: name: (the cut to match, how bright against it).
-MATCH = {'cata_rubble': ('cata_3_0', 0.95), 'cata_block': ('cata_3_0', 1.45)}
+MATCH = {'cata_rubble': ('cata_3_0', 0.95), 'cata_block': ('cata_3_0', 1.45), 'cata_floor': ('cata_3_0', 1.3), 'cata_floor4': ('cata_3_0', 1.25)}
 # Below, the shader weathers each tile: 1 grime, damp and cavities; 2 those, and never the same stone twice. A tile that's a picture stays whole, at 1.
-DEEP = {n: 2 for n in ('cata_wall', 'cata_wall2', 'cata_wall3', 'cata_wall4', 'cata_rubble', 'cata_block', 'cata_blood', 'cata_floor', 'cata_floor2', 'cata_floor3', 'cata_floor4', 'cata_earth', 'cata_bones', 'cata_roof')}
+# (Only what has no courses to break: mixed copies of a coursed wall read as mush.)
+DEEP = {n: 2 for n in ('cata_rubble', 'cata_earth', 'cata_bones')}
+DEEP.update({n: 1 for n in ('cata_wall', 'cata_wall2', 'cata_wall3', 'cata_wall4', 'cata_block', 'cata_blood', 'cata_floor', 'cata_floor2', 'cata_floor3', 'cata_floor4', 'cata_roof')})
 DEEP.update({n: 1 for n in ('skulls', 'skulls2', 'skulls3', 'femurs', 'niches', 'seep', 'candles', 'candles_v', 'panel', 'panel2', 'blood_v', 'cata_v_floor')})
 # How deep the relief cuts, as a share of a tile: what's heaped stands further out than what's coursed.
-RELIEF = {'skulls': 0.035, 'skulls2': 0.035, 'skulls3': 0.035, 'femurs': 0.035, 'niches': 0.05, 'candles': 0.04, 'candles_v': 0.04, 'cata_rubble': 0.016, 'cata_block': 0.03, 'panel': 0.022, 'panel2': 0.022}
+RELIEF = {'cata_wall': 0.04, 'cata_wall2': 0.04, 'cata_wall3': 0.04, 'cata_wall4': 0.04, 'skulls': 0.035, 'skulls2': 0.035, 'skulls3': 0.035, 'femurs': 0.035, 'niches': 0.05, 'candles': 0.04, 'candles_v': 0.04, 'cata_rubble': 0.016, 'cata_block': 0.03, 'panel': 0.022, 'panel2': 0.022}
 TILES.update({f'wood_{s}{k}': (f'lacquer_{s}_{k}', 'wood', 2.2) for s in 'abc' for k in range(4)})
 FROM_VILLAGE = {'roof': ('assets/game/tex/roof_1_c.webp', 'roof', 4.0)}
 # This is Velscour's church: V banners and the demon's windows only. Tessariel's banners (tess_*) and the angels' panes (glass_*_0, glass_c_1, glass_d_1) stay cut in art/interior/cut, and never ship here.
