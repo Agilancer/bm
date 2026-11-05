@@ -68,7 +68,7 @@ for (let i = 0; i < 20000; i++) {
     assert.ok(a.rarity >= SUITS[GEAR[a.base].suit].floor && a.armor > 0 && a.affixes.length === RARITIES[a.rarity].affixes[0] || a.rarity === 4, 'a piece rolls its rarity');
     assert.ok(linesOf(a)[0].text === nameOf(a));
     for (const k of [0, 1, 2, 5, 7]) for (const it of rollLoot(rng, k)) if (it.type === 'armor') seen++;
-    for (const k of [0, 5, 7]) for (const it of rollLoot(rng, k)) if (it.type === 'armor') assert.equal(GEAR[it.base].suit, 'knight', 'nothing of T on the V side');
+    for (const k of [0, 3, 4, 5, 6, 7]) for (const it of rollLoot(rng, k)) if (it.type === 'armor') assert.equal(GEAR[it.base].suit, 'knight', 'nothing of T on the V side');
   }
   assert.ok(seen > 100, 'monsters drop armour now and then');
   assert.ok(rollChest(rng).some((x) => x.type === 'armor'));

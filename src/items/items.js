@@ -212,7 +212,8 @@ export function rollLoot(rng, kind) {
   if (kind === 1) return [rollWeapon(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...piece(0.35, { minRarity: 1 })];
   if (kind === 5) return rng() < 0.12 ? [rng() < 0.4 ? rollWeapon(rng) : rng() < 0.4 ? rollGem(rng) : rollArmor(rng, { plain: true })] : [];
   if (kind === 7) return [...(rng() < 0.75 ? [rollWeapon(rng, { minRarity: 1 })] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.2, { minRarity: 1, plain: true })];
-  return [...(rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.12)];
+  // (A crab's nobody's. Whatever else lands here, like the undead ogre, carries nothing of Tessariel's.)
+  return [...(rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.12, { plain: kind !== 2 })];
 }
 
 // What a treasure chest or a broken box holds. Nothing in the game calls this yet: there are no chests or boxes in it. See Drops.fromChest.
