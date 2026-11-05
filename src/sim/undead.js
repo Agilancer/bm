@@ -589,6 +589,8 @@ export class Zombie extends Beast {
   startAttack(sim, name) {
     // Only so many at your throat at once: the rest jostle and look for a gap, so a crowd is a threat and not a blender.
     if (this.style !== 'caster' && sim.knights.filter((k) => k instanceof Zombie && !k.dead && k.state === STATE.ATTACK && k.style !== 'caster').length >= MELEE_AT_ONCE) { this.cool = 0.3; return; }
+    // And never two landing together: a beat between blows, to read and to answer.
+    if (this.style !== 'caster') { if (sim.time - (sim.lastMeleeAt ?? -9) < 0.25) { this.cool = 0.15; return; } sim.lastMeleeAt = sim.time; }
     this.setClipOver(name, 0.14);
     this.attack = BLOWS[name];
     this.attackMeta = this.rig.clips[name];

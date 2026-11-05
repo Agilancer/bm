@@ -46,6 +46,10 @@ F3 shows frame time, threads and what the knight is thinking. On a phone, turn o
 
 They don't go together. Anything with a V on it is never found anywhere near anything with a T. The cathedral and its catacombs are the church of Velscour, so they carry V items only: no T banners, no T marks, none of Tessariel's blue and gold. Check the picture, not the file name, before placing a banner, a window or any marked art. In the stained glass cut for the cathedral, only `glass_a_1`, `glass_b_1` and `glass_e_1` are Velscour's, with his angels beaten down beneath him; the other panes give the angels the picture, and stay out of his church.
 
+### How it plays
+
+You start on the road south of town with a common sword, a common staff and a common shield; X swaps sword and staff. The town (radius 58 m) is safe ground. Velscour's knight stands at the foot of the cathedral steps. Out in the woods, packs come out of the trees (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Spells are found as scrolls. Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
+
 ### The cathedral and the catacombs
 
 East of the village, through the great door at x = 66: the nave, the pulpit, the back office, a long stair, then the Bell Crypt, Reliquary, Gallery, Ossuary, Founders' Hall, Abbots' Gallery and Tomb. Undead are stood at the catacombs' spawn points as you go down (`stepCatacombs` in `src/sim/undead.js`), reusing bodies, because there are more places than bodies.

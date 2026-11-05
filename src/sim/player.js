@@ -13,7 +13,7 @@ import { stepSurf } from './surf.js';
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
 const WALK = 6.5, SPRINT = 10;
-const PLATE = 0.55;   // what gets through Velscour's knight's armour: he's a gate, and you bring better than you start with
+const PLATE = 0.7;   // what gets through Velscour's knight's armour: he's a gate, and you bring better than you start with
 const MELEE = 5;   // what a blade's cut is worth in hit points: a common sword takes a zombie in two or three
 const FALL_SAFE = 12, FALL_WORST = 11;   // (speed at the bottom. Five metres and you're fine; twenty, the bottom of the rift, and you're on your last legs.)
 // How each rig fights, by how many hands it has on the sword. The swings are solved to that rig's length of sword, so the reach is theirs too.

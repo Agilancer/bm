@@ -39,7 +39,7 @@ const CRABS = [
 ];
 
 // How much faster than their clips each kind goes, by kind: knight, silver knight, crab, Gravehart, Hydra, undead, ogre.
-const HASTE = [1.35, 1, 1.3, 1.1, 1, 1.4, 1.25], CASTER_HASTE = 1.2;
+const HASTE = [1.25, 1, 1.3, 1.1, 1, 1.4, 1.25], CASTER_HASTE = 1.2;
 
 class Sim {
   constructor() {
@@ -83,7 +83,7 @@ class Sim {
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0;
-    this.packAt = 0; this.packN = 0; this.wave = null; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
+    this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
     p.atkSeen = inp[INPUT.ATTACK]; p.wideSeen = inp[INPUT.WIDE]; p.jumpSeen = inp[INPUT.JUMP]; p.dodgeSeen = inp[INPUT.DODGE];
@@ -124,7 +124,7 @@ class Sim {
       if (k.kind !== 1 && Math.hypot(k.x, k.z) < TOWN_R && Math.hypot(ox, oz) >= TOWN_R) { k.x = ox; k.z = oz; }
       if (k.champion && !k.dead && this.tick % 10 === 0) this.event(EV.CHAMPION, k.x, k.y + 1.3, k.z);
       // Each death leaves its loot once.
-      if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
+      if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(MAX_MANA, this.casting.mana + 4); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
       if (!k.dead) k.looted = false;
     }
     this.separate();
