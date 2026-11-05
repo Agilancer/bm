@@ -228,6 +228,8 @@ rig.traverse((o) => {
   else if (o.isMesh) { if (o.name === 'ironbound') shieldMesh = o; else sword = o; o.frustumCulled = false; }
 });
 vmScene.add(rig);
+const GAUNTLET = new URLSearchParams(location.search).get('gauntlet');
+if (GAUNTLET) await (await import('./tools/gear/wear_view.js')).wear(THREE, GLTFLoader, rig, `arms_${MODEL}`, GAUNTLET);
 // (The staff comes from the pack in the game, so it isn't in the arm's file: the one the arm was built around, on its bone.)
 if (MODEL === 'staff') {
   const item = await new GLTFLoader().loadAsync('assets/game/items/crystal_staff.glb');

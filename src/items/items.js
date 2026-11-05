@@ -4,11 +4,12 @@
 import { INPUT, WEAPONS } from '../core/layout.js';
 
 export const RARITIES = [
-  { name: 'Common', color: '#e9dfc9', weight: 70, affixes: [0, 0], quality: [0.92, 1.0], sockets: { 0: 80, 1: 20 } },
-  { name: 'Fine', color: '#8fb7d9', weight: 23, affixes: [1, 1], quality: [0.98, 1.08], sockets: { 0: 55, 1: 33, 2: 12 } },
-  { name: 'Rare', color: '#d9b45f', weight: 6.5, affixes: [2, 2], quality: [1.05, 1.16], sockets: { 0: 35, 1: 35, 2: 22, 3: 8 } },
+  { name: 'Common', color: '#a8a8a8', weight: 60, affixes: [0, 0], quality: [0.92, 1.0], sockets: { 0: 80, 1: 20 } },
+  { name: 'Uncommon', color: '#3fd14a', weight: 26, affixes: [1, 1], quality: [0.98, 1.08], sockets: { 0: 55, 1: 33, 2: 12 } },
+  { name: 'Rare', color: '#3f8cff', weight: 10, affixes: [2, 2], quality: [1.05, 1.16], sockets: { 0: 35, 1: 35, 2: 22, 3: 8 } },
+  { name: 'Epic', color: '#b04df0', weight: 3.4, affixes: [3, 3], quality: [1.1, 1.2], sockets: { 1: 35, 2: 40, 3: 25 } },
   // Four sockets are here and nowhere else: the best of the best, and few even of them.
-  { name: 'Peerless', color: '#e0573a', weight: 0.5, affixes: [3, 4], quality: [1.12, 1.25], sockets: { 2: 45, 3: 40, 4: 15 } },
+  { name: 'Legendary', color: '#ff8a1e', weight: 0.6, affixes: [3, 4], quality: [1.16, 1.3], sockets: { 2: 45, 3: 40, 4: 15 } },
 ];
 export const MAX_SOCKETS = 4;
 
@@ -32,7 +33,7 @@ export const BASES = {
   thornvine_sword: { name: 'Thornvine Sword', dmg: [20, 32], grade: 'high', innate: { poise: 0.15 } },
   frost_sword: { name: 'Frost Sword', dmg: [21, 29], grade: 'high', innate: { speed: 0.06 } },
 };
-const HIGH_CHANCE = [0, 0, 0.15, 0.7];     // by rarity, the chance a sword is one of the high ones
+const HIGH_CHANCE = [0, 0, 0.15, 0.5, 0.8];     // by rarity, the chance a sword is one of the high ones
 // What a staff's roll comes to in a bolt, against a blade's: see STAFF_BITE in src/sim/casting.js.
 const STAFF_SHOWN = 0.2;
 
@@ -50,6 +51,24 @@ export const SHIELDS = {
   kite_t_red: { name: 'Kite Shield of Tessariel', rarity: 3, side: 'T' }, kite_t_blue: { name: 'Kite Shield of Tessariel', rarity: 3, side: 'T' },
 };
 
+// The five suits, torn into pieces by tools/gear. A piece's id is <suit>_<slot>. floor: the lowest rarity it comes as. armor: what each of the suit's pieces is worth, against the plain knight's.
+export const SUITS = {
+  knight: { name: "Knight's", floor: 0, armor: 1 },
+  t_pale: { name: "Tessariel's Pale", floor: 1, armor: 1.25 },
+  t_silver: { name: "Tessariel's Silvered", floor: 1, armor: 1.4 },
+  t_white: { name: "Tessariel's White", floor: 2, armor: 1.6 },
+  t_purple: { name: "Tessariel's Amethyst", floor: 2, armor: 1.8 },
+};
+export const GEAR_SLOTS = {
+  head: { name: 'Helm', armor: 6, size: { w: 2, h: 2 } }, chest: { name: 'Cuirass', armor: 12, size: { w: 2, h: 3 } },
+  shoulders: { name: 'Pauldrons', armor: 5, size: { w: 2, h: 2 } }, hands: { name: 'Gauntlets', armor: 4, size: { w: 2, h: 2 } },
+  legs: { name: 'Tassets', armor: 8, size: { w: 2, h: 3 } }, feet: { name: 'Greaves', armor: 5, size: { w: 2, h: 3 } },
+};
+export const GEAR = {};
+for (const suit of Object.keys(SUITS)) for (const slot of Object.keys(GEAR_SLOTS)) GEAR[`${suit}_${slot}`] = { suit, slot, name: `${SUITS[suit].name} ${GEAR_SLOTS[slot].name}` };
+// A blow is cut by armor / (armor + this), so the gain tails off and nothing is ever proof.
+export const ARMOR_K = 100;
+
 export const hands = (base) => WEAPONS[weaponIndex(base)].hands;
 export const weaponIndex = (base) => WEAPONS.findIndex((w) => w && w.id === base);
 
@@ -63,7 +82,15 @@ const AFFIXES = [
   { stat: 'stam', pos: 'suf', tiers: [['of Ease', 0.06, 0.1], ['of the Long Road', 0.11, 0.16], ['of Tireless Hands', 0.17, 0.24]] },
   { stat: 'speed', pos: 'suf', tiers: [['of Quick Wrists', 0.04, 0.06], ['of the Hornet', 0.07, 0.1], ['of the Swift Bell', 0.11, 0.15]] },
 ];
-const TIER_OF = [[], [0, 0, 1], [0, 1, 1, 2], [1, 2, 2]];   // by rarity, the tiers it picks from
+// What a piece of armour can roll, the same way a sword rolls its words. Each is applied in src/sim/player.js.
+const GEAR_AFFIXES = [
+  { stat: 'armor', pos: 'pre', int: true, tiers: [['Riveted', 2, 4], ['Tempered', 5, 8], ['Unbroken', 9, 14]] },
+  { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 6, 10], ['of the Old Oak', 11, 18], ['of the Old Blood', 19, 30]] },
+  { stat: 'stam', pos: 'suf', tiers: [['of Ease', 0.02, 0.04], ['of the Long Road', 0.05, 0.07], ['of Tireless Hands', 0.08, 0.11]] },
+  { stat: 'speed', pos: 'suf', tiers: [['of Quick Wrists', 0.01, 0.02], ['of the Hornet', 0.025, 0.04], ['of the Swift Bell', 0.045, 0.06]] },
+  { stat: 'leech', pos: 'suf', int: true, tiers: [['of Thirst', 1, 1], ['of the Red Cup', 1, 2], ['of the Long Drink', 2, 3]] },
+];
+const TIER_OF = [[], [0, 0, 1], [0, 1, 1, 2], [1, 1, 2], [1, 2, 2]];   // by rarity, the tiers it picks from
 
 export const GEM_GRADES = [{ name: 'Rough', weight: 70 }, { name: 'Cut', weight: 25 }, { name: 'Flawless', weight: 5 }];
 export const GEMS = {
@@ -84,6 +111,7 @@ const STAT_TEXT = {
   life: (v) => `+${v} life`,
   stam: (v) => `-${pct(v)} stamina per swing`,
   speed: (v) => `+${pct(v)} swing speed`,
+  armor: (v) => `+${v} armour`,
 };
 
 // A small seeded generator (mulberry32), so a roll can be replayed.
@@ -120,14 +148,15 @@ function rollBase(rng, rarity) {
   return pick(rng, Object.keys(BASES).filter((b) => BASES[b].grade === (high ? 'high' : 'common')));
 }
 
-function rollAffixes(rng, rarity) {
+function rollAffixes(rng, rarity, table = AFFIXES) {
   const [lo, hi] = RARITIES[rarity].affixes;
   const count = lo + Math.floor(rng() * (hi - lo + 1));
-  const pre = AFFIXES.filter((a) => a.pos === 'pre'), suf = AFFIXES.filter((a) => a.pos === 'suf');
+  const pre = table.filter((a) => a.pos === 'pre'), suf = table.filter((a) => a.pos === 'suf');
   const out = [];
   for (let i = 0; i < count; i++) {
     // Turn about, so a rare has one of each, and never the same stat twice.
-    const from = i % 2 === (rarity === 1 ? Math.floor(rng() * 2) : 0) ? pre : suf;
+    let from = i % 2 === (rarity === 1 ? Math.floor(rng() * 2) : 0) ? pre : suf;
+    if (!from.length) from = from === pre ? suf : pre;
     const a = from.splice(Math.floor(rng() * from.length), 1)[0];
     const [name, v0, v1] = a.tiers[pick(rng, TIER_OF[rarity])];
     const v = between(rng, v0, v1);
@@ -151,12 +180,23 @@ export function rollWeapon(rng, opts = {}) {
   };
 }
 
-// A shield of whatever rarity comes up, or opts.base. Fine rolls as common: the sheets have nothing between common and rare.
+// A shield of whatever rarity comes up, or opts.base. Uncommon rolls as common and legendary as epic: the sheets have nothing else.
 export function rollShield(rng, opts = {}) {
   const rolled = rollRarity(rng, opts.minRarity || 0);
-  const rarity = rolled === 1 ? 0 : rolled;
+  const rarity = rolled === 1 ? 0 : Math.min(rolled, 3);
   const base = opts.base || pick(rng, Object.keys(SHIELDS).filter((b) => !SHIELDS[b].side && SHIELDS[b].rarity === rarity));
   return { type: 'shield', base, rarity: SHIELDS[base].rarity };
+}
+
+// A piece of armour of whatever rarity comes up, from the suits that come that rare. opts: base, rarity, minRarity, as for a sword.
+export function rollArmor(rng, opts = {}) {
+  const floor = opts.base ? SUITS[GEAR[opts.base].suit].floor : 0;
+  const rarity = Math.max(opts.rarity ?? rollRarity(rng, opts.minRarity || 0), floor);
+  // (plain: no T. Velscour's knights and whatever is under his church never carry anything of Tessariel's. See CLAUDE.md.)
+  const base = opts.base || pick(rng, Object.keys(GEAR).filter((b) => SUITS[GEAR[b].suit].floor <= rarity && (!opts.plain || GEAR[b].suit === 'knight')));
+  const { suit, slot } = GEAR[base];
+  const q = between(rng, RARITIES[rarity].quality[0], RARITIES[rarity].quality[1]);
+  return { type: 'armor', base, rarity, armor: Math.round(GEAR_SLOTS[slot].armor * SUITS[suit].armor * q), affixes: rollAffixes(rng, rarity, GEAR_AFFIXES) };
 }
 
 export function rollGem(rng, opts = {}) {
@@ -167,16 +207,29 @@ export function rollGem(rng, opts = {}) {
 
 // What a fallen enemy leaves. kind: 0 the black knight, 1 the silver knight, 2 a crab, 5 a zombie, 7 a necromancer or a wizard.
 export function rollLoot(rng, kind) {
-  if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 })];
-  if (kind === 1) return [rollWeapon(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 })];
-  if (kind === 5) return rng() < 0.12 ? [rng() < 0.5 ? rollWeapon(rng) : rollGem(rng)] : [];
-  if (kind === 7) return rng() < 0.75 ? [rollWeapon(rng, { minRarity: 1 })] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)];
-  return rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)];
+  const piece = (chance, opts) => (rng() < chance ? [rollArmor(rng, opts)] : []);
+  if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 }), ...piece(0.5, { minRarity: 2, plain: true })];
+  if (kind === 1) return [rollWeapon(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...piece(0.35, { minRarity: 1 })];
+  if (kind === 5) return rng() < 0.12 ? [rng() < 0.4 ? rollWeapon(rng) : rng() < 0.4 ? rollGem(rng) : rollArmor(rng, { plain: true })] : [];
+  if (kind === 7) return [...(rng() < 0.75 ? [rollWeapon(rng, { minRarity: 1 })] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.2, { minRarity: 1, plain: true })];
+  return [...(rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.12)];
+}
+
+// What a treasure chest or a broken box holds. Nothing in the game calls this yet: there are no chests or boxes in it. See Drops.fromChest.
+export function rollChest(rng, rich = false) {
+  const out = [rollArmor(rng, { minRarity: rich ? 1 : 0 })];
+  if (rng() < 0.5) out.push(rollWeapon(rng, { minRarity: rich ? 1 : 0 }));
+  if (rng() < 0.4) out.push(rollGem(rng));
+  return out;
 }
 
 export function nameOf(item) {
   if (item.type === 'gem') return `${GEM_GRADES[item.grade].name} ${GEMS[item.kind].name}`;
   if (item.type === 'shield') return SHIELDS[item.base].name;
+  if (item.type === 'armor') {
+    const pre = item.affixes.find((a) => a.pos === 'pre'), suf = item.affixes.find((a) => a.pos === 'suf');
+    return [pre?.name, GEAR[item.base].name, suf?.name].filter(Boolean).join(' ');
+  }
   const pre = item.affixes.find((a) => a.pos === 'pre'), suf = item.affixes.find((a) => a.pos === 'suf');
   return [pre?.name, BASES[item.base].name, suf?.name].filter(Boolean).join(' ');
 }
@@ -206,6 +259,11 @@ export function linesOf(item) {
     return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: 'Goes in an open socket, and stays there.', kind: 'sub' }];
   }
   if (item.type === 'shield') return [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} kite shield`, kind: 'sub' }, { text: 'Hold Space as you jump to ride it.', kind: 'sub' }];
+  if (item.type === 'armor') {
+    const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} ${GEAR_SLOTS[GEAR[item.base].slot].name.toLowerCase()}`, kind: 'sub' }, { text: `Armour ${item.armor}`, kind: 'stat' }];
+    for (const a of item.affixes) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
+    return out;
+  }
   const s = statsOf(item), b = BASES[item.base], staff = hands(item.base) === 3;
   const out = [
     { text: nameOf(item), kind: 'title' },
@@ -223,12 +281,24 @@ export function linesOf(item) {
   return out;
 }
 
-// Puts a weapon, or empty hands, in the shared block for the sim thread to take up.
-export function writeWeapon(input, item) {
+// All that what's worn comes to.
+export function gearTotals(slots) {
+  const add = { armor: 0, life: 0, stam: 0, speed: 0, leech: 0 };
+  for (const it of Object.values(slots)) {
+    if (it?.type !== 'armor') continue;
+    add.armor += it.armor;
+    for (const a of it.affixes) add[a.stat] += a.value;
+  }
+  return add;
+}
+
+// Puts a weapon, or empty hands, and what's worn, in the shared block for the sim thread to take up.
+export function writeWeapon(input, item, worn = gearTotals({})) {
   const s = item ? statsOf(item) : null;
   input[INPUT.WEAPON] = item ? weaponIndex(item.base) : 0;
   input[INPUT.W_MIN] = s ? s.min : 0; input[INPUT.W_MAX] = s ? s.max : 0;
   input[INPUT.W_PIERCE] = s ? s.pierce : 0; input[INPUT.W_POISE] = s ? s.poise : 0;
-  input[INPUT.W_STAM] = s ? s.stam : 0; input[INPUT.W_SPEED] = s ? s.speed : 0;
-  input[INPUT.W_LEECH] = s ? s.leech : 0; input[INPUT.W_LIFE] = s ? s.life : 0;
+  input[INPUT.W_STAM] = Math.min((s ? s.stam : 0) + worn.stam, 0.5); input[INPUT.W_SPEED] = Math.min((s ? s.speed : 0) + worn.speed, 0.25);
+  input[INPUT.W_LEECH] = (s ? s.leech : 0) + worn.leech; input[INPUT.W_LIFE] = (s ? s.life : 0) + worn.life;
+  input[INPUT.ARMOR] = worn.armor;
 }

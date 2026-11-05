@@ -1,15 +1,15 @@
 // What the player carries: a grid of cells, and the slots on the body. Items take a footprint of cells. It's a part of every save
 // (main.js), and it stays with you through a new fight; only New Game starts it over.
-import { GEMS, MAX_SOCKETS, makeRng, rollGem, rollShield, rollWeapon } from './items.js';
+import { GEAR, GEAR_SLOTS, GEMS, MAX_SOCKETS, makeRng, rollArmor, rollGem, rollShield, rollWeapon } from './items.js';
 
 export const PACK_W = 12, PACK_H = 8;
-export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'hands', 'ring1', 'feet', 'ring2'];
+export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'shoulders', 'hands', 'ring1', 'legs', 'feet', 'ring2'];
 
 // One of every sword and a pouch of gems, to try it all out before there is much to fight for. The game proper starts with the
 // wheel greatsword alone: set this false.
 const TEST_KIT = true;
 
-export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : item.type === 'shield' ? { w: 2, h: 3 } : { w: 1, h: 1 });
+export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : item.type === 'shield' ? { w: 2, h: 3 } : item.type === 'armor' ? GEAR_SLOTS[GEAR[item.base].slot].size : { w: 1, h: 1 });
 
 export class Pack {
   constructor() {
@@ -89,10 +89,9 @@ export class Pack {
       ['crystal_staff', 1, 1], ['greenwood_staff', 1, 1], ['skullhorn_staff', 1, 1], ['gnarled_crook', 0, 0],
     ];
     for (const [base, rarity, sockets] of swords) this.add(rollWeapon(rng, { base, rarity, sockets }));
-    for (const base of ['kite_royal_lion', 'kite_sun']) this.add(rollShield(rng, { base }));
     for (const kind of Object.keys(GEMS)) this.add(rollGem(rng, { kind, grade: 1 }));
-    this.add(rollGem(rng, { kind: 'ruby', grade: 0 }));
-    this.add(rollGem(rng, { kind: 'ruby', grade: 2 }));
-    this.add(rollGem(rng, { kind: 'diamond', grade: 2 }));
+    // A set of gauntlets to try on, one of each suit: one worn, since the pack only has room for four.
+    this.slots.hands = rollArmor(rng, { base: 'knight_hands', rarity: 2 });
+    for (const suit of ['t_pale', 't_silver', 't_white', 't_purple']) this.add(rollArmor(rng, { base: `${suit}_hands`, rarity: 2 }));
   }
 }

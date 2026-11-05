@@ -7,7 +7,7 @@ import { Governor } from './gfx/governor.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
 import { Drops, boardPose } from './items/drops.js';
-import { SHIELDS, colorOf, nameOf, rollGem, rollShield, rollWeapon, makeRng, writeWeapon } from './items/items.js';
+import { GEAR, SHIELDS, colorOf, gearTotals, nameOf, rollArmor, rollGem, rollShield, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { settings, Title } from './title.js';
@@ -243,7 +243,8 @@ async function boot(plan, poolSize) {
   const pack = new Pack();
   pack.load(null);
   const arm = () => {
-    writeWeapon(shared.input, pack.slots.main);
+    writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots));
+    renderer.gauntlets = pack.slots.hands ? GEAR[pack.slots.hands.base].suit : null;
     const off = pack.slots.off;
     shared.input[INPUT.SHIELD] = off ? 1 : 0;
     renderer.offHand = off ? off.base : null;
@@ -1080,14 +1081,14 @@ class GameView {
       // bm.give('frost_sword', { rarity: 3, sockets: 4 }) or bm.give('gem', { kind: 'ruby', grade: 2 }), into the pack.
       give: (base, opts = {}) => {
         const rng = makeRng((Math.random() * 4294967296) >>> 0);
-        const item = base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base }) : rollWeapon(rng, { base, ...opts });
+        const item = base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base }) : GEAR[base] ? rollArmor(rng, { base, ...opts }) : rollWeapon(rng, { base, ...opts });
         return view.pack.add(item) ? item : null;
       },
       // Lays one on the ground beside the player: bm.lay('fluked_greatsword', { rarity: 2 }).
       lay: (base, opts = {}) => {
         const rng = makeRng((Math.random() * 4294967296) >>> 0);
         const s = view.currentSnap();
-        view.drops.fromPlayer(base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base }) : rollWeapon(rng, { base, ...opts }), s[H.PX], s[H.PY], s[H.PZ], view.input.yaw);
+        view.drops.fromPlayer(base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base }) : GEAR[base] ? rollArmor(rng, { base, ...opts }) : rollWeapon(rng, { base, ...opts }), s[H.PX], s[H.PY], s[H.PZ], view.input.yaw);
       },
       snap: () => view.currentSnap(),
       cmd,

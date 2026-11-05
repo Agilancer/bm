@@ -19,7 +19,9 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // The spell chosen, the cast key held, and a count of presses, so a tap between ticks isn't lost.
   SPELL: 26, CAST: 27, CAST_N: 28,
   // Space held down, for the shield surf, and whether there's a shield to ride.
-  JUMP_HELD: 29, SHIELD: 30, SIZE: 32 };
+  JUMP_HELD: 29, SHIELD: 30,
+  // What the player's armour comes to.
+  ARMOR: 31, SIZE: 32 };
 
 // Snapshot header (float offsets)
 export const H = {

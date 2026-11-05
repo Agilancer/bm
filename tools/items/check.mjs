@@ -2,7 +2,7 @@
 //
 //     node tools/items/check.mjs
 import assert from 'node:assert/strict';
-import { BASES, GEMS, MAX_SOCKETS, RARITIES, SHIELDS, linesOf, makeRng, nameOf, rollGem, rollLoot, rollWeapon, statsOf, weaponIndex } from '../../src/items/items.js';
+import { BASES, GEAR, GEMS, MAX_SOCKETS, RARITIES, SHIELDS, SUITS, gearTotals, rollArmor, rollChest, linesOf, makeRng, nameOf, rollGem, rollLoot, rollWeapon, statsOf, weaponIndex } from '../../src/items/items.js';
 import { PACK_H, PACK_W, Pack, sizeOf } from '../../src/items/pack.js';
 import { WEAPONS } from '../../src/core/layout.js';
 
@@ -20,7 +20,7 @@ for (let i = 0; i < N; i++) {
   sockets[w.rarity][w.sockets]++;
   bases[w.base] = (bases[w.base] || 0) + 1;
   assert.ok(w.sockets >= 0 && w.sockets <= MAX_SOCKETS, 'sockets in range');
-  if (w.sockets === 4) assert.equal(RARITIES[w.rarity].name, 'Peerless', 'four sockets only on the best of the best');
+  if (w.sockets === 4) assert.equal(RARITIES[w.rarity].name, 'Legendary', 'four sockets only on the best of the best');
   assert.ok(w.dmg[0] > 0 && w.dmg[1] >= w.dmg[0], 'damage in order');
   assert.ok(weaponIndex(w.base) > 0, 'a base the threads can name');
   const seen = new Set(w.affixes.map((a) => a.stat));
@@ -30,7 +30,7 @@ for (let i = 0; i < N; i++) {
 }
 assert.ok(!bases.greatsword, 'the old greatsword is not a drop');
 for (const r of RARITIES.keys()) console.log(`${RARITIES[r].name.padEnd(9)} ${(byRarity[r] / N * 100).toFixed(2).padStart(6)}%   sockets 0..4: ${sockets[r].join(' ')}`);
-console.log(`four sockets: ${sockets[3][4]} of ${N} (${(sockets[3][4] / N * 100).toFixed(3)}%). ${Object.keys(bases).length} bases dropped, e.g. "${[...nameSet].slice(-3).join('", "')}"`);
+console.log(`four sockets: ${sockets[4][4]} of ${N} (${(sockets[4][4] / N * 100).toFixed(3)}%). ${Object.keys(bases).length} bases dropped, e.g. "${[...nameSet].slice(-3).join('", "')}"`);
 assert.equal(Object.keys(bases).length, 16, 'all twelve new swords and the four staffs can drop');
 assert.equal(WEAPONS.filter(Boolean).length, 17);
 
@@ -52,11 +52,28 @@ for (const kind of Object.keys(GEMS)) {
 // ---- loot ------------------------------------------------------------------------------------------
 for (let i = 0; i < 20000; i++) {
   const black = rollLoot(rng, 0);
-  assert.equal(black.length, 3);
+  assert.ok(black.length >= 3);
   assert.ok(black[0].rarity >= 2 && black[1].type === 'gem' && black[2].rarity >= 2, 'the black knight pays well');
   for (const k of [0, 1, 2, 7, 3]) for (const it of rollLoot(rng, k)) if (it.type === 'shield') assert.ok(!SHIELDS[it.base].side, 'nobody finds a V or T shield');
   assert.ok(rollLoot(rng, 1)[0].rarity >= 1, 'the silver knight pays fine or better');
-  assert.equal(rollLoot(rng, 2).length, 1);
+  assert.ok(rollLoot(rng, 2).length >= 1);
+}
+
+// ---- armour --------------------------------------------------------------------------------------
+{
+  assert.equal(Object.keys(GEAR).length, 30);
+  let seen = 0;
+  for (let i = 0; i < 4000; i++) {
+    const a = rollArmor(rng);
+    assert.ok(a.rarity >= SUITS[GEAR[a.base].suit].floor && a.armor > 0 && a.affixes.length === RARITIES[a.rarity].affixes[0] || a.rarity === 4, 'a piece rolls its rarity');
+    assert.ok(linesOf(a)[0].text === nameOf(a));
+    for (const k of [0, 1, 2, 5, 7]) for (const it of rollLoot(rng, k)) if (it.type === 'armor') seen++;
+    for (const k of [0, 5, 7]) for (const it of rollLoot(rng, k)) if (it.type === 'armor') assert.equal(GEAR[it.base].suit, 'knight', 'nothing of T on the V side');
+  }
+  assert.ok(seen > 100, 'monsters drop armour now and then');
+  assert.ok(rollChest(rng).some((x) => x.type === 'armor'));
+  const t = gearTotals({ hands: rollArmor(rng, { base: 'knight_hands', rarity: 0 }), head: rollArmor(rng, { base: 't_purple_head', rarity: 2 }), main: null });
+  assert.ok(t.armor > 0);
 }
 
 // ---- the pack ----------------------------------------------------------------------------------------

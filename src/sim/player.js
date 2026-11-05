@@ -1,6 +1,7 @@
 // The player: first-person body, the swings of the sword in hand, and where the blade lands. The blade is tested
 // where it appears on screen: each tick its tip and middle are projected through the view model's camera
 // and cast from the eye into the world, so a cut lands exactly under what the player sees.
+import { ARMOR_K } from '../items/items.js';
 import { floorAt } from '../core/interior.js';
 import { LAND_EDGE } from '../core/terrain.js';
 import { EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
@@ -101,6 +102,7 @@ export class Player {
     this.dmgMin = input[INPUT.W_MIN]; this.dmgMax = input[INPUT.W_MAX];
     this.pierce = input[INPUT.W_PIERCE]; this.poise = input[INPUT.W_POISE];
     this.stamSave = input[INPUT.W_STAM]; this.speed = input[INPUT.W_SPEED]; this.leech = input[INPUT.W_LEECH];
+    this.armor = input[INPUT.ARMOR];
     const maxHp = BASE_HP + input[INPUT.W_LIFE];
     if (maxHp !== this.maxHp && !this.dead) { this.hp = clamp(this.hp + maxHp - this.maxHp, 1, maxHp); this.maxHp = maxHp; }
   }
@@ -342,6 +344,7 @@ export class Player {
 
   damage(sim, amount, fromX, fromZ, knock) {
     if (sim.gameState !== 0) return;
+    amount *= ARMOR_K / (ARMOR_K + (this.armor || 0));
     this.hp -= amount;
     this.regenT = 0;
     this.flash = Math.min(1, this.flash + 0.55 + amount * 0.012);

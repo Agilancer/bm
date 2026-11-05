@@ -94,7 +94,7 @@
   #inv .panel { background: rgba(11,9,7,.93); border: 1px solid var(--gold-dim); padding: 8px 10px 10px; }
   #inv .label { color: var(--gold); margin-bottom: 7px; opacity: 1; }
   #eqGrid { display: grid; grid-template-columns: repeat(3, calc(var(--cell) * 1.4)); grid-auto-rows: calc(var(--cell) * 1.36); gap: 3px;
-    grid-template-areas: ".    head  neck" "main chest off" "main hands ring1" "main feet  ring2"; }
+    grid-template-areas: "shoulders head neck" "main chest off" "main hands ring1" "main legs ring2" "main feet ."; }
   .slot { position: relative; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(140,115,68,.42); background: rgba(255,255,255,.025); min-width: 0; min-height: 0; overflow: hidden; }
   .slot span { font-size: 10.5px; letter-spacing: .1em; opacity: .42; text-transform: uppercase; }
   .slot.full { border-color: var(--rc); background: linear-gradient(0deg, rgba(0,0,0,.25), rgba(255,255,255,.05)); }
@@ -203,8 +203,10 @@
         <div class="slot" data-slot="main" style="grid-area:main"></div>
         <div class="slot" data-slot="chest" style="grid-area:chest"></div>
         <div class="slot" data-slot="off" style="grid-area:off"></div>
+        <div class="slot" data-slot="shoulders" style="grid-area:shoulders"></div>
         <div class="slot" data-slot="hands" style="grid-area:hands"></div>
         <div class="slot" data-slot="ring1" style="grid-area:ring1"></div>
+        <div class="slot" data-slot="legs" style="grid-area:legs"></div>
         <div class="slot" data-slot="feet" style="grid-area:feet"></div>
         <div class="slot" data-slot="ring2" style="grid-area:ring2"></div>
       </div>
