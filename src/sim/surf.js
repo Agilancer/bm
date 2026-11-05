@@ -1,7 +1,7 @@
 // Shield surfing, after Bellmourn's board.js. Jump and keep Space held a moment: the shield's under your feet, and it stays there when
 // you let go. Space on the ground hops with it; Space again off the ground steps off it. A wall stops it, and so does running out of
 // speed. Slopes speed you up, flat ground slows you, a crest throws you into the air, and a landing on a downslope turns the drop into speed.
-// W pushes a little, S drags a heel, A and D carve, all as you look.
+// It only carries what you bring to it, and what the slopes give: W adds nothing. S drags a heel, A and D carve, all as you look.
 import { floorAt } from '../core/interior.js';
 import { INPUT, EV } from '../core/layout.js';
 import { clamp } from '../core/math.js';
@@ -12,12 +12,10 @@ const COOL = 0.25;      // off it this long before getting on again
 const VMAX = 26;
 const DRAG = 0.011;     // the air against you (x speed squared)
 const GRIP = 0.12, GRIP_STONE = 0.2;   // how much the ground holds it back, a share of its weight
-const PUSH = 6.5, PUSH_TOP = 9;        // W: strong from still, a little at speed
 const BRAKE = 5;        // S, against the way you go
 const CARVE = 17, TURN = 2.6, AIR_TURN = 0.8;   // A and D: the sideways grip (m/s/s) and the fastest turn (rad/s)
 const POP = 5.6;        // the hop
 const STOPPED = 0.7, STOP_AFTER = 0.25;   // this slow for this long, on the ground: off it
-const GRACE = 0.4;      // ...though not just after landing, when a push is on its way
 const STEP_E = 0.55;    // how far either side the slope is read
 const R = 0.36;
 const out = new Float32Array(3), n = [0, 1, 0];
@@ -78,13 +76,10 @@ function ride(p, dt, wx, wz, sim) {
   let turn = 0, brake = 0;
   const wl = Math.hypot(wx, wz);
   if (wl > 0.1) {
-    const hs = Math.hypot(p.vx, p.vz), sp = Math.hypot(hs, p.vy);
-    if (hs < 0.6) { p.vx += wx / wl * PUSH * dt; p.vz += wz / wl * PUSH * dt; } else {
+    const hs = Math.hypot(p.vx, p.vz);
+    if (hs >= 0.6) {
       const along = (p.vx * wx + p.vz * wz) / (hs * wl);
-      if (along > 0) {
-        const k = 1 + PUSH * along * Math.max(0.12, 1 - sp / PUSH_TOP) * dt / Math.max(sp, 0.1);
-        p.vx *= k; p.vy *= k; p.vz *= k;
-      } else brake = BRAKE * -along;
+      if (along < 0) brake = BRAKE * -along;
       turn = carve(p, wx, wz, Math.min(TURN, CARVE / hs), dt);
     }
   }
@@ -128,7 +123,7 @@ function fly(p, dt, wx, wz, sim) {
     sim.event(EV.LAND, p.x, p.y, p.z, clamp(into / 7, 0, 1));
     p.landKick = clamp(into * 0.018, 0, 0.13);
   }
-  p.surfAir = false; p.surfGrace = GRACE; p.surfSlow = 0;
+  p.surfAir = false; p.surfSlow = 0;
 }
 
 // One tick of the player's movement, if the shield has it: true, and the walk doesn't run.
@@ -156,9 +151,8 @@ export function stepSurf(p, dt, input, sim) {
   if (p.surfAir) fly(p, dt, wx, wz, sim); else ride(p, dt, wx, wz, sim);
   p.onGround = !p.surfAir;
   if (!p.surfing) return true;
-  // Run out of speed: off it, once there's been the chance of a push.
-  p.surfGrace = Math.max(0, p.surfGrace - dt);
-  if (!p.surfAir && !p.surfGrace && Math.hypot(p.vx, p.vz) < STOPPED) {
+  // Run out of speed: off it.
+  if (!p.surfAir && Math.hypot(p.vx, p.vz) < STOPPED) {
     p.surfSlow += dt;
     if (p.surfSlow >= STOP_AFTER) off(p);
   } else p.surfSlow = 0;
