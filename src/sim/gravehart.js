@@ -229,7 +229,7 @@ export class Gravehart extends Beast {
     }
     // Anything dead on its ground is a meal.
     for (const k of sim.knights) {
-      if (k === this || !k.dead || this.ate.has(k.id)) continue;
+      if (k === this || !k.dead || k.dormant || this.ate.has(k.id)) continue;
       if (Math.hypot(k.x - this.opts.spawn[0], k.z - this.opts.spawn[1]) < this.opts.territory + 8) { this.meal = k; this.setState(STATE.FEED); return; }
     }
     if (this.state === STATE.GRAZE) {

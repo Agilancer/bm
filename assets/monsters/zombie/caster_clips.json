@@ -1,0 +1,81 @@
+{
+ "crawl": {
+  "frames": 48,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.55,
+  "duration": 1.6,
+  "about": "Hauls itself along the ground, hand over hand, with its legs trailing"
+ },
+ "crawl_attack": {
+  "frames": 34,
+  "loop": false,
+  "fps": 30,
+  "speed": 0.0,
+  "duration": 1.1333333333333333,
+  "about": "Rears up on its left arm and rakes with its right; it lands on frame 16",
+  "reach": 1.05
+ },
+ "idle": {
+  "frames": 460,
+  "fps": 30,
+  "duration": 15.333333333333334,
+  "speed": 0,
+  "loop": true
+ },
+ "walk": {
+  "frames": 149,
+  "fps": 30,
+  "duration": 4.966666666666667,
+  "speed": 0.9347121459663725,
+  "loop": true
+ },
+ "run": {
+  "frames": 37,
+  "fps": 30,
+  "duration": 1.2333333333333334,
+  "speed": 4.344481115212627,
+  "loop": true
+ },
+ "hex": {
+  "frames": 161,
+  "fps": 30,
+  "duration": 5.366666666666666,
+  "speed": 0,
+  "loop": false
+ },
+ "summon": {
+  "frames": 299,
+  "fps": 30,
+  "duration": 9.966666666666667,
+  "speed": 0,
+  "loop": false
+ },
+ "bolt": {
+  "frames": 15,
+  "loop": false,
+  "fps": 30,
+  "duration": 0.5,
+  "speed": 0
+ },
+ "hit": {
+  "frames": 10,
+  "loop": false,
+  "fps": 30,
+  "duration": 0.3333333333333333,
+  "speed": 0
+ },
+ "death": {
+  "frames": 72,
+  "loop": false,
+  "fps": 30,
+  "duration": 2.4,
+  "speed": 0,
+  "root": {
+   "start": 0,
+   "end": 72,
+   "dist": 0.6499998569488525,
+   "ramp": 0
+  }
+ }
+}

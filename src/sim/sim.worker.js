@@ -7,10 +7,12 @@ import { Casting } from './casting.js';
 import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
+import { addUndead, raiseZombie, stepFoeSpells } from './undead.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
 import { World } from './world.js';
 
+// Just another man out walking his round. He'll fight you if you come near, and when he's down the world goes on.
 const BLACK = {
   spawn: [-7, -7], yaw: 1.2, hostile: true, hp: 480, walk: 1.5, swordScale: 1.75, shieldScale: 1.3, bladeLen: 0.62,
   route: [[-8, -6], [7, -8], [10, 8], [-6, 11], [-11, 4]], pauseClip: null,
@@ -41,6 +43,8 @@ class Sim {
     this.tacticWeights = new Float32Array(PLAN_TACTICS).fill(1);
     this.rollouts = 0;
     this.pendingEvents = [];
+    this.foeBolts = []; this.foeHexes = [];
+    this.raise = (x, z, owner) => raiseZombie(this, x, z, owner);
   }
 
   charOffset(i) { return CHARS_START + i * C_SIZE; }
@@ -67,6 +71,7 @@ class Sim {
     this.player.reset();
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
+    this.foeBolts = []; this.foeHexes = [];
     this.gameState = 0; this.gameT = 0; this.time = 0;
     this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
@@ -99,21 +104,18 @@ class Sim {
     for (const k of this.knights) {
       k.update(this.frozen ? 0 : tdt * this.casting.rate(k), this);
       // Each death leaves its loot once.
-      if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, this.world.height(k.x, k.z), k.z, k.kind); }
+      if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, this.world.height(k.x, k.z), k.z, k.opts?.lootKind ?? k.kind); }
       if (!k.dead) k.looted = false;
     }
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
+    stepFoeSpells(tdt, this);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     player.sweep(snap, this);
     this.knights.forEach((k, i) => k.writeGashes(snap, this.charOffset(i), this));
-    if (this.gameState === 0) {
-      const black = this.knights[0];
-      if (black.dead && black.deadT > 2.5) { this.gameState = 1; this.gameT = 0; this.event(EV.WIN); }
-    }
     this.plan();
     snap[H.TIME] = this.time; snap[H.TICK] = this.tick;
     snap[H.NCHARS] = this.knights.length;
@@ -214,6 +216,8 @@ class Sim {
       case 9: k.hp = 1; break;
       case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
       case 18: if (k.force) k.force(this, b | 0); break;
+      case 19: if (k.sever) k.sever(this, b | 0); break;
+      case 20: if (k.startCast) { k.goal = 1; k.startCast(this, ['summon', 'hex', 'bolt'][b | 0]); } break;
       case 10: k.hostile = true; k.combat = 1; k.combatTarget = 1; k.shieldUp = 1; k.shieldTarget = 1; k.pauseT = 0; break;
       case 11: this.restart(); break;
       case 13: this.slow = b; break;
@@ -298,6 +302,7 @@ async function boot(msg) {
   CRABS.forEach((c, i) => sim.knights.push(new Crab(2 + i, 2, crabRig, c)));
   sim.knights.push(new Gravehart(5, 3, new ArmsRig(heartBuf, GRAVEHART_SCALE), GRAVEHART));
   sim.knights.push(new Hydra(6, 4, new ArmsRig(hydraBuf, HYDRA_SCALE), HYDRA));
+  await addUndead(sim, base);
   sim.restartSeen = sim.input[INPUT.RESTART];
   sim.cmdSeen = sim.input[INPUT.CMD];
   // Placing the player from a save, asked for by the render thread.

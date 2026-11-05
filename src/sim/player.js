@@ -329,8 +329,7 @@ export class Player {
   }
 
   damage(sim, amount, fromX, fromZ, knock) {
-    // Once the black knight is down, nothing takes the win away.
-    if (sim.gameState !== 0 || sim.knights[0].dead) return;
+    if (sim.gameState !== 0) return;
     this.hp -= amount;
     this.regenT = 0;
     this.flash = Math.min(1, this.flash + 0.55 + amount * 0.012);

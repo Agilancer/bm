@@ -72,7 +72,7 @@ const SETTINGS = `
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 
 const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],
-  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the knight\'s thinking']];
+  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
 const HOWTO = `
   <h2>How to Play</h2><div class="t-rule"></div>
   <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
@@ -84,7 +84,7 @@ const HOWTO = `
   <ul class="t-tips">
     <li>A gem set on a sword goes in an open socket, for good. Only the rarest swords have four.</li>
     <li>Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.</li>
-    <li>A cut opens a gash in the plate. A second blow on that gash goes through, and the knight bleeds from it. Your X turns <b>red</b> over a cut you could go through.</li>
+    <li>A cut opens a gash in the plate. A second blow on that gash goes through, and it bleeds. Your X turns <b>red</b> over a cut you could go through.</li>
     <li>A blade <b>flashes</b> before it falls: dodge, or swing into it to parry.</li>
     <li>Slams and chops break a guard faster than cuts. Running, dodging and swinging all spend your breath.</li>
     <li>Hitting the silver knight makes an enemy of them too. Great crabs come out of the fields after first blood.</li>

@@ -201,7 +201,7 @@ struct Out { @location(0) color: vec4f, @location(1) depth: f32 };
 
 // The skinning compute shader: dual quaternions, so a plate blended across two joints stays rigid.
 export const SKIN = /* wgsl */ `
-struct Params { count: u32, flexAmp: f32, time: f32, pad: f32, wind: vec4f };
+struct Params { count: u32, flexAmp: f32, time: f32, cut: u32, wind: vec4f };
 struct In { pos: vec3f, flex: f32, normal: vec3f, piece: u32, joints: u32, weights: u32, u: f32, v: f32 };
 @group(0) @binding(0) var<uniform> P: Params;
 @group(0) @binding(1) var<storage, read> palette: array<vec4f>;
@@ -212,22 +212,37 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   let i = id.x;
   if (i >= P.count) { return; }
   let v = verts[i];
-  let w = unpack4x8unorm(v.weights);
+  // A stump's cap (see stumps.js) is nothing at all until its joint has been cut: piece holds its own part and, in the third place, the part across the joint.
+  if (v.u < -1.5 && ((P.cut >> (v.piece & 15u)) & 1u) == ((P.cut >> ((v.piece >> 8u) & 15u)) & 1u)) {
+    outV[i] = vec4f(0.0);
+    return;
+  }
+  var w = unpack4x8unorm(v.weights);
   let j0 = v.joints & 255u; let j1 = (v.joints >> 8u) & 255u; let j2 = (v.joints >> 16u) & 255u; let j3 = v.joints >> 24u;
-  let q0 = palette[j0 * 2u];
-  var r = q0 * w.x;
+  if (P.cut != 0u) {
+    // Where a piece has come off, a vertex lets go of the joints on the far side of the cut, so the skin parts instead of stretching.
+    // piece holds, four bits each, the vertex's own part of the body and then the part of each joint it follows.
+    let own = (P.cut >> (v.piece & 15u)) & 1u;
+    let kept = w * vec4f(
+      f32(((P.cut >> ((v.piece >> 4u) & 15u)) & 1u) == own), f32(((P.cut >> ((v.piece >> 8u) & 15u)) & 1u) == own),
+      f32(((P.cut >> ((v.piece >> 12u) & 15u)) & 1u) == own), f32(((P.cut >> ((v.piece >> 16u) & 15u)) & 1u) == own));
+    let sum = kept.x + kept.y + kept.z + kept.w;
+    if (sum > 0.001) { w = kept / sum; }
+  }
+  let q0 = palette[select(select(select(j3, j2, w.z > 0.0), j1, w.y > 0.0), j0, w.x > 0.0) * 2u];
+  var r = palette[j0 * 2u] * w.x;
   var d = palette[j0 * 2u + 1u] * w.x;
   if (w.y > 0.0) {
     let q = palette[j1 * 2u]; let s = select(w.y, -w.y, dot(q, q0) < 0.0);
     r += q * s; d += palette[j1 * 2u + 1u] * s;
-    if (w.z > 0.0) {
-      let q2 = palette[j2 * 2u]; let s2 = select(w.z, -w.z, dot(q2, q0) < 0.0);
-      r += q2 * s2; d += palette[j2 * 2u + 1u] * s2;
-      if (w.w > 0.0) {
-        let q3 = palette[j3 * 2u]; let s3 = select(w.w, -w.w, dot(q3, q0) < 0.0);
-        r += q3 * s3; d += palette[j3 * 2u + 1u] * s3;
-      }
-    }
+  }
+  if (w.z > 0.0) {
+    let q2 = palette[j2 * 2u]; let s2 = select(w.z, -w.z, dot(q2, q0) < 0.0);
+    r += q2 * s2; d += palette[j2 * 2u + 1u] * s2;
+  }
+  if (w.w > 0.0) {
+    let q3 = palette[j3 * 2u]; let s3 = select(w.w, -w.w, dot(q3, q0) < 0.0);
+    r += q3 * s3; d += palette[j3 * 2u + 1u] * s3;
   }
   let il = 1.0 / length(r);
   r *= il; d *= il;

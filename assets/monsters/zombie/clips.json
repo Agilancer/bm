@@ -1,0 +1,199 @@
+{
+ "Zombie_Idle_Loop": {
+  "frames": 40,
+  "loop": true,
+  "fps": 30,
+  "duration": 1.3333333333333333,
+  "speed": 0
+ },
+ "Zombie_Walk_Fwd_Loop": {
+  "frames": 40,
+  "loop": true,
+  "fps": 30,
+  "duration": 1.3333333333333333,
+  "speed": 1.0852690097071092
+ },
+ "Zombie_Scratch": {
+  "frames": 54,
+  "loop": false,
+  "fps": 30,
+  "duration": 1.8,
+  "speed": 0
+ },
+ "Hit_Chest": {
+  "frames": 10,
+  "loop": false,
+  "fps": 30,
+  "duration": 0.3333333333333333,
+  "speed": 0
+ },
+ "Hit_Head": {
+  "frames": 13,
+  "loop": false,
+  "fps": 30,
+  "duration": 0.43333333333333335,
+  "speed": 0
+ },
+ "Hit_Knockback": {
+  "frames": 25,
+  "loop": false,
+  "fps": 30,
+  "duration": 0.8333333333333334,
+  "speed": 0,
+  "root": {
+   "start": 0,
+   "end": 25,
+   "dist": -3.1007689512017613,
+   "ramp": 0
+  }
+ },
+ "Death01": {
+  "frames": 72,
+  "loop": false,
+  "fps": 30,
+  "duration": 2.4,
+  "speed": 0,
+  "root": {
+   "start": 0,
+   "end": 72,
+   "dist": -0.6718332316892125,
+   "ramp": 0
+  }
+ },
+ "LayToIdle": {
+  "frames": 46,
+  "loop": false,
+  "fps": 30,
+  "duration": 1.5333333333333334,
+  "speed": 0
+ },
+ "crawl": {
+  "frames": 48,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.55,
+  "duration": 1.6,
+  "about": "Hauls itself along the ground, hand over hand, with its legs trailing"
+ },
+ "crawl_attack": {
+  "frames": 34,
+  "loop": false,
+  "fps": 30,
+  "speed": 0.0,
+  "duration": 1.1333333333333333,
+  "about": "Rears up on its left arm and rakes with its right; it lands on frame 16",
+  "reach": 1.05
+ },
+ "walk_shamble": {
+  "frames": 56,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.46,
+  "duration": 1.8666666666666667,
+  "about": "Head-heavy trudge, scuffs its toes, arms hanging dead"
+ },
+ "walk_drag": {
+  "frames": 76,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.36,
+  "duration": 2.533333333333333,
+  "about": "Ruined right leg, locked and turned out: hauls with the left, the toe scrapes after it"
+ },
+ "walk_reach": {
+  "frames": 46,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.62,
+  "duration": 1.5333333333333334,
+  "about": "Hungry: arms up and grasping unevenly, legs locked straight, chin thrust out"
+ },
+ "walk_stagger": {
+  "frames": 88,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.42,
+  "duration": 2.933333333333333,
+  "about": "Always nearly falling: four uneven steps, one crossing over, flung arms"
+ },
+ "run_charge": {
+  "frames": 20,
+  "loop": true,
+  "fps": 30,
+  "speed": 4.1,
+  "duration": 0.6666666666666666,
+  "about": "Flat-out sprint, pitched far forward, arms thrashing out of time"
+ },
+ "run_lope": {
+  "frames": 26,
+  "loop": true,
+  "fps": 30,
+  "speed": 3.1,
+  "duration": 0.8666666666666667,
+  "about": "Heavy loose bounding, head rolling and arms flung about like dead weight"
+ },
+ "run_hobble": {
+  "frames": 32,
+  "loop": true,
+  "fps": 30,
+  "speed": 2.3,
+  "duration": 1.0666666666666667,
+  "about": "Broken run: bounds off the right, swings the locked left wide, left arm clamped to its chest"
+ },
+ "run_frenzy": {
+  "frames": 18,
+  "loop": true,
+  "fps": 30,
+  "speed": 3.7,
+  "duration": 0.6,
+  "about": "Grasping sprint: bent double, driving off its toes, clawing at its prey in turn"
+ },
+ "attack_rake": {
+  "frames": 44,
+  "loop": false,
+  "fps": 30,
+  "speed": 0.0,
+  "duration": 1.4666666666666666,
+  "about": "Elbow hauled up behind its head, drives off the back leg, rakes down across the body",
+  "reach": 1.2
+ },
+ "attack_flurry": {
+  "frames": 68,
+  "loop": false,
+  "fps": 30,
+  "speed": 0.0,
+  "duration": 2.2666666666666666,
+  "about": "Marches in, a foot planting on each of three wild rakes, the hips turning before the chest",
+  "root": {
+   "start": 4,
+   "end": 34,
+   "dist": 0.55,
+   "ramp": 6
+  },
+  "reach": 1.2
+ },
+ "attack_bite": {
+  "frames": 64,
+  "loop": false,
+  "fps": 30,
+  "speed": 0.0,
+  "duration": 2.1333333333333333,
+  "about": "Lunges, clamps on at shoulder height, hauls in and worries the bite from its chest",
+  "reach": 0.95
+ },
+ "attack_pounce": {
+  "frames": 66,
+  "loop": false,
+  "fps": 30,
+  "speed": 0.0,
+  "duration": 2.2,
+  "about": "Coils, leaps flat with hands driving up to hit at shoulder height on frame 27, drops into a crouch raking",
+  "root": {
+   "start": 19,
+   "end": 28,
+   "dist": 1.6,
+   "ramp": 2
+  },
+  "reach": 1.55
+ }
+}
