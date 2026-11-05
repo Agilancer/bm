@@ -4,14 +4,16 @@
 import { EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { clamp, damp, wrapAngle } from '../core/math.js';
 import { S } from './knight.js';
+import { leanAmount } from './anim.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
 const WALK = 4.1, SPRINT = 6.6;
 // How each rig fights, by how many hands it has on the sword. The swings are solved to that rig's length of sword, so the reach is theirs too.
+const KICK = 1.4;      // how far the view kicks with a blow as it lands, against how far the body goes with it over the whole cut
 const STANCES = {
   2: { idle: 'great_idle', walk: 'great_walk', combo: ['great_cut1', 'great_cut2', 'great_slam'], wide: ['great_wide_r', 'great_wide_l'], air: 'great_slam', back: 'great_rise', run: 'great_chop', reach: { tip: 2.55, mid: 2.2 } },
-  1: { idle: 'guard_idle', walk: 'guard_walk', combo: ['blade_d1', 'blade_d2', 'blade_over'], wide: ['blade_flat1', 'blade_flat2'], air: 'blade_over', back: 'blade_rise1', run: 'blade_stab', reach: { tip: 2.15, mid: 1.85 } },
+  1: { idle: 'guard_idle', walk: 'guard_walk', combo: ['blade_sky1', 'blade_sky2', 'blade_sky3', 'blade_sky4', 'blade_sky5'], wide: ['blade_flat1', 'blade_flat2'], air: 'blade_sky5', back: 'blade_rise1', run: 'blade_stab', reach: { tip: 2.15, mid: 1.85 } },
 };
 const BASE_HP = 160;
 const PUNCTURE_RADIUS = 0.07;
@@ -26,9 +28,11 @@ const SWING_INFO = {
   great_wide_r: { heavy: false, fromRight: 1, dmg: 4, poise: 24, stam: 12, width: 0.8 },
   great_wide_l: { heavy: false, fromRight: -1, dmg: 4, poise: 24, stam: 12, width: 0.8 },
   // In one hand: quicker and lighter, and it costs less breath.
-  blade_d1: { heavy: false, fromRight: 1, dmg: 4, poise: 24, stam: 8, width: 0.9 },
-  blade_d2: { heavy: false, fromRight: -1, dmg: 4, poise: 24, stam: 8, width: 0.9 },
-  blade_over: { heavy: true, fromRight: 0, dmg: 8, poise: 55, stam: 14, width: 1.25 },
+  blade_sky1: { heavy: false, fromRight: 1, dmg: 4, poise: 24, stam: 8, width: 0.9 },
+  blade_sky2: { heavy: false, fromRight: -1, dmg: 4, poise: 24, stam: 8, width: 0.9 },
+  blade_sky3: { heavy: false, fromRight: 1, dmg: 4, poise: 26, stam: 8, width: 0.9 },
+  blade_sky4: { heavy: false, fromRight: -1, dmg: 4, poise: 24, stam: 8, width: 0.9 },
+  blade_sky5: { heavy: true, fromRight: 0, dmg: 8, poise: 55, stam: 14, width: 1.25 },
   blade_rise1: { heavy: false, fromRight: 1, dmg: 4, poise: 26, stam: 8, width: 0.9 },
   blade_flat1: { heavy: false, fromRight: 1, dmg: 3, poise: 18, stam: 9, width: 0.75 },
   blade_flat2: { heavy: false, fromRight: -1, dmg: 3, poise: 18, stam: 9, width: 0.75 },
@@ -55,7 +59,7 @@ export class Player {
     Object.assign(this, {
       x: -3.5, z: 40, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, onGround: true, hp: BASE_HP, maxHp: BASE_HP, dead: false, deadT: 0,
       weapon: -1, clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, queued: null, queuedT: 0, combo: 0, comboT: 0, wide: 0, swinging: false, recovering: false,
-      threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
+      threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, lean: [0, 0, 0], kick: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
       stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
@@ -231,13 +235,21 @@ export class Player {
     this.shakeY = tr * 0.05 * Math.sin(tt * 1.31 + 4.1);
     this.shakeR = tr * 0.06 * Math.sin(tt * 0.97 + 2.2);
     this.stepSwing(dt, tdt, sim);
+    // The body goes with a blow: the view leans against it in the wind-up and with it through the cut, as far as the clip says.
+    const swung = this.arms.clips[this.clip], k = swung.lean ? leanAmount(this.t, swung.wind, swung.through, swung.dur) : 0;
+    for (let i = 0; i < 3; i++) this.lean[i] = damp(this.lean[i], swung.lean ? swung.lean[i] * k : 0, 16, dt);      // (a blow cut short by the next doesn't jolt the view)
+    this.shakeX += this.lean[0]; this.shakeY += this.lean[1]; this.shakeR += this.lean[2];
+    // ...and it kicks with the blow as it lands, there at once and gone in a quarter of a second, the world going by while the blade's stopped in it.
+    this.kick = Math.max(0, this.kick - dt / 0.26);
+    const kick = KICK * this.kick * this.kick * (swung.lean ? 1 : 0);
+    if (kick > 0) { this.shakeX += swung.lean[0] * kick; this.shakeY += swung.lean[1] * kick; this.shakeR += swung.lean[2] * kick; }
   }
 
   stepSwing(dt, tdt, sim) {
     const { arms } = this;
     const info = arms.clips[this.clip];
     this.fade = Math.min(1, this.fade + tdt / 0.1);
-    const dragRate = this.drag > 0 ? 0.42 : 1;
+    const dragRate = this.drag > 0 ? 0.65 : 1;
     this.drag = Math.max(0, this.drag - tdt);
     this.t += tdt * this.rate * dragRate;
     if (this.rate > 0 && this.drag <= 0 && this.swingRate) this.rate = this.swingRate;
@@ -279,7 +291,7 @@ export class Player {
         if (!this.onGround) name = st.air;
         else if (forward < -1.6) { name = st.back; this.combo = 0; }
         else if (this.sprinting) { name = st.run; this.combo = 0; }
-        else { name = st.combo[this.combo]; this.combo = (this.combo + 1) % 3; this.comboT = 1.6; }
+        else { name = st.combo[this.combo]; this.combo = (this.combo + 1) % st.combo.length; this.comboT = 1.6; }
       }
       this.queued = null;
       this.startSwing(sim, name);
@@ -494,7 +506,8 @@ export class Player {
     const first = !sameKnight;
     if (first) {
       this.whiffed = false;
-      this.drag = 0.1;
+      this.drag = 0.07;
+      this.kick = 1;
       this.trauma = Math.min(1, this.trauma + 0.32);
     }
     k.plateTransforms(sim.scratch, sim.charOffset(charIndex), sim.tick);
@@ -523,7 +536,7 @@ export class Player {
       this.hits++;
       sim.event(EV.GASH, wx, wy, wz, -dx, -dy, -dz, k.id);
       sim.firstBlood();
-      if (first) { sim.hitStop(tag.heavy ? 0.085 : 0.055); k.onHit(sim, 'gash', this.x, this.z, tag.poise * (1 + this.poise)); }
+      if (first) { sim.hitStop(tag.heavy ? 0.1 : 0.07); k.onHit(sim, 'gash', this.x, this.z, tag.poise * (1 + this.poise)); }
     }
     this.contact = { k, piece: hit.piece, gash: g, count: (sameKnight ? c.count : 0) + 1 };
   }

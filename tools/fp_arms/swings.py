@@ -265,10 +265,11 @@ def idle_path(half, amount=1.0):
 class Arm:
     """One arm of the skeleton: lengths and how its hand sits on the sword, in the sword's frame."""
 
-    def __init__(self, side, info, B, held="sword", sho=SHO, lift=None, slide=0.0, ahead=1.0, pole=POLE):
+    def __init__(self, side, info, B, held="sword", sho=SHO, lift=None, slide=0.0, ahead=1.0, pole=POLE, knee=0.86):
         from rig import TWIST_AT
         I = info[side]
         self.side, self.U, self.F = side, I["U"], I["F"]
+        self.knee = knee       # (how much of its reach an arm uses before the shoulder starts to come with it)
         self.lift = lift       # (how much of the way up toward a high hand a shoulder may rise: None, all of it)
         self.ahead = ahead     # (...and how far it comes forward, against across)
         self.sign = 1 if side == "R" else -1
@@ -301,7 +302,7 @@ class Arm:
         v = W - self.S0
         D = np.linalg.norm(v, axis=-1, keepdims=True)
         Lmax = (self.U + self.F) * 0.992
-        knee = Lmax * 0.86
+        knee = Lmax * self.knee
         soft = np.where(D > knee, knee + (Lmax - knee) * (1 - np.exp(-(D - knee) / (Lmax - knee))), D)
         if self.lift is None:
             return W - v / D * soft, soft

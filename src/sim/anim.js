@@ -162,6 +162,14 @@ export function writePalette(pose, out, off) {
 }
 
 // The first-person arms: their own GLB, skeleton and swing clips, resampled to a 60 Hz grid.
+const smooth = (x) => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
+/** How far the body has gone with a blow, at time t of its clip: against it in the wind-up, with it through the cut, back by the end. */
+export function leanAmount(t, wind, through, dur) {
+  if (t < wind) return -0.35 * smooth(t / wind);
+  if (t < through) return -0.35 + 1.35 * smooth((t - wind) / (through - wind));
+  return 1 - smooth((t - through) / (dur - through));
+}
+
 export class ArmsRig {
   constructor(buffer, scale = 1) {
     const glb = parseGLB(buffer);
@@ -207,7 +215,7 @@ export class ArmsRig {
         if (trs[j] && scale !== 1) for (let i = 0; i < trs[j].length; i++) trs[j][i] *= scale;
       }
       const info = (this.extras.clips || {})[name] || {};
-      this.clips[name] = { name, frames: n, dur: c.dur, rots, trs, loop: !!info.loop || /^((walk|run)_|idle$)/.test(name), hit: info.hit, wind: info.wind, through: info.through };
+      this.clips[name] = { name, frames: n, dur: c.dur, rots, trs, loop: !!info.loop || /^((walk|run)_|idle$)/.test(name), hit: info.hit, wind: info.wind, through: info.through, lean: info.lean };
     }
     this.rot = new Float32Array(this.count * 4);
     this.tr = new Float32Array(this.count * 3);
