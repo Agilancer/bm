@@ -23,7 +23,7 @@ struct Frame {
   ground: vec4f,          // ground map: min x, min z, 1/size, grass tint
   blood: vec4f,           // blood map: min x, min z, 1/size, whether there's bloom
   chars: array<vec4f, 6>, // bodies pressing the grass
-  lights: array<Light, 12>,
+  lights: array<Light, 28>,
   counts: vec4f,          // x = lights, y = cascades, z = pom, w = grass near radius
 };
 

@@ -548,7 +548,7 @@ export class SpellFX {
       this.spray(snap, o, dt);
     }
     if (lit.length > 1) lit.sort((a, b) => snap[b + 13] - snap[a + 13]);
-    const room = Math.min(lit.length, r.tier.lean ? 2 : MAX_LIGHTS, 12 - taken);
+    const room = Math.min(lit.length, r.tier.lean ? 2 : MAX_LIGHTS, 28 - taken);
     const t = now * 0.001;
     for (let i = 0; i < room; i++) {
       const o = lit[i], c = ELEM_LIGHT[snap[o + 9] | 0];
