@@ -183,7 +183,7 @@ fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
   if (indoor > 0.5) {
     // Dust, and at the bottom of the stair a damp that swallows the far end of a long gallery.
     let inside = select(vec3f(0.05, 0.045, 0.04), vec3f(0.012, 0.007, 0.0045), indoor > 1.5);
-    return mix(c, inside, clamp(1.0 - exp(-dist * select(0.005, 0.0055, indoor > 1.5)), 0.0, 1.0));
+    return mix(c, inside, clamp(1.0 - exp(-dist * select(0.005, 0.003, indoor > 1.5)), 0.0, 1.0));
   }
   let h = max(p.y, -5.0);
   let density = F.fogColor.a * exp(-max(h, 0.0) * F.fogParams.x);

@@ -22,7 +22,7 @@ TILES = {
     'cata_wall': ('cata_3_0', 'stone', 3.0), 'cata_wall2': ('cata_7_0', 'stone', 3.0), 'cata_floor': ('cata_4_2', 'stone', 3.0), 'cata_floor2': ('cata_3_2', 'stone', 3.0),
     'cata_v_floor': ('cata_9_2', 'stone', 4.0), 'cata_bones': ('cata_6_1', 'stone', 3.0), 'skulls': ('cata_2_1', 'stone', 2.6), 'skulls2': ('cata_4_1', 'stone', 2.6),
     'niches': ('cata_3_3', 'stone', 3.2), 'seep': ('cata_1_3', 'stone', 3.4), 'cata_roof': ('cata_2_3', 'stone', 3.4), 'candles': ('cata_11_3', 'stone', 3.2), 'candles_v': ('cata_9_3', 'stone', 3.2),
-    'panel': ('panel_4_0', 'stone', 3.2), 'panel2': ('panel_5_0', 'stone', 3.2), 'blood_v': ('cata_11_0', 'stone', 4.0),
+    'panel': ('panel_4_0', 'stone', 1.76), 'panel2': ('panel_5_0', 'stone', 3.2), 'blood_v': ('cata_11_0', 'stone', 4.0),
 }
 TILES.update({f'wood_{s}{k}': (f'lacquer_{s}_{k}', 'wood', 2.2) for s in 'abc' for k in range(4)})
 FROM_VILLAGE = {'roof': ('assets/game/tex/roof_1_c.webp', 'roof', 4.0)}
@@ -46,7 +46,7 @@ def main():
         im = Image.open(path).convert('RGB')
         # What each is for, not what it was painted as: pale marble in a dark nave reads as lit paper, lacquer as one red mass;
         # the outside wall has weathered, and bones want to stand out of the dark.
-        grade = {'marble': (0.72, 1.0), 'wall_rough': (0.62, 0.6), 'skulls': (1.35, 0.8, 1.6), 'skulls2': (1.35, 0.8, 1.6), 'niches': (1.25, 0.9), 'floor_diamond': (0.9, 0.9, 0.62)}.get(name)
+        grade = {'marble': (0.72, 1.0), 'wall_rough': (0.62, 0.6), 'skulls': (1.35, 0.55, 1.6), 'skulls2': (1.35, 0.55, 1.6), 'panel': (1.1, 0.8, 0.7), 'cata_v_floor': (0.68, 0.72), 'cata_floor': (0.8, 0.75), 'cata_bones': (0.8, 0.7), 'niches': (1.25, 0.9), 'floor_diamond': (0.9, 0.9, 0.62)}.get(name)
         if name.startswith('wood_'):
             grade = (0.6, 0.72)
         if grade:

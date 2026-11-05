@@ -861,7 +861,7 @@ export function stepCatacombs(sim) {
   if (p.x < 125 || sim.time < nextLook) return;
   nextLook = sim.time + 0.5;
   const spawns = sim.world.spawns;
-  const idle = (k) => k.opts && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 8) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
+  const idle = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 8) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
   LORDS.forEach((l, n) => {
     if (lordsDone.has(n) || !l.when(p)) return;
     lordsDone.add(n);

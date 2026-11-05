@@ -295,12 +295,12 @@ def wash(x, y, z, nx, nz, size, tint):
     W.glowquad((ox - sx, y - size, oz - sz), (ox + sx, y - size, oz + sz), (ox + sx, y + size, oz + sz), (ox - sx, y + size, oz - sz), 101, (0, 0, 1, 1), tint)
 
 
-def torch(x, y, z, nx, nz, c=(1.0, 0.55, 0.22), i=16.0, r=13.0):
+def torch(x, y, z, nx, nz, c=(1.0, 0.55, 0.22), i=16.0, r=13.0, out=0.9):
     bx('iron', x + nx * 0.08, y - 0.1, z + nz * 0.08, 0.05 + abs(nx) * 0.08, 0.05, 0.05 + abs(nz) * 0.08)
     lathe('iron', x + nx * 0.2, z + nz * 0.2, [(0.03, y - 0.42), (0.04, y - 0.1), (0.1, y), (0.11, y + 0.06)], 6)
     flame(x + nx * 0.2, y + 0.04, z + nz * 0.2, 0.09)
     wash(x, y + 0.3, z, nx, nz, 2.6, (0.11, 0.052, 0.02))
-    W.light(x + nx * 0.5, y + 0.25, z + nz * 0.5, c, r, i, 1.0)
+    W.light(x + nx * out, y + 0.25, z + nz * out, c, r, i, 1.0)
 
 
 def candle_rack(x, z, y, n=7, spread=0.42):
@@ -999,8 +999,8 @@ def below():
         sarcophagus(oss_x + dx, Y1, OZ + dz, True, 'wall_rough', 'cata_wall')
     W.light(oss_x + 8.0, Y1 + 4.0, OZ, (1.0, 0.72, 0.42), 20.0, 42.0, 0.4)
     for s in (-1, 1):
-        torch(oss_x + 8.0, Y1 + 3.2, OZ + s * 10.0, 0.0, -s, c=(1.0, 0.68, 0.34), i=7.0, r=15.0)
-        torch(oss_x + 16.0, Y1 + 3.2, OZ + s * 4.0, -1.0, 0.0, c=(1.0, 0.68, 0.34), i=7.0, r=15.0)
+        torch(oss_x + 8.0, Y1 + 3.2, OZ + s * 10.0, 0.0, -s, c=(1.0, 0.68, 0.34), i=20.0, r=16.0, out=2.2)
+        torch(oss_x + 16.0, Y1 + 3.2, OZ + s * 4.0, -1.0, 0.0, c=(1.0, 0.68, 0.34), i=20.0, r=16.0, out=2.2)
     for dx, dz in ((3, 0), (8, 2), (13, -1), (8, -7)):
         spawn(oss_x + dx, OZ + dz)
     # ---- Stage II: the Sexton's Stair, north and down, to the Hall of the Founders. ----
@@ -1028,6 +1028,9 @@ def below():
         W.collide(px - 0.75, pz - 0.75, px + 0.75, pz + 0.75)
         torch(px - s[0] * 0.62, Y2 + 3.2, pz - s[1] * 0.62, -s[0] * 0.7, -s[1] * 0.7, c=(1.0, 0.42, 0.2), i=14.0, r=16.0)
     W.light(tx, Y2 + 7.0, tz, (1.0, 0.5, 0.26), 30.0, 170.0, 0.2)
+    W.light(tx, Y2 + 3.8, tz, (1.0, 0.62, 0.32), 13.0, 42.0, 0.5)
+    for s in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+        candle_rack(tx + s[0] * 2.9, tz + s[1] * 2.6, Y2 + 1.5, 5, 0.3)
     def brazier(x, z, y=Y2, i=24.0, c=(1.0, 0.52, 0.22)):
         lathe('iron', x, z, [(0.42, y), (0.1, y + 0.12), (0.08, y + 0.8), (0.5, y + 1.0), (0.56, y + 1.2)], 8)
         for k in range(7):
@@ -1052,11 +1055,11 @@ def below():
     ruin(tx + 11.5, tz + 6.5, column=False)
     ruin(tx + 2.0, tz - 13.0)
     ruin(tx - 8.0, tz + 11.5)
-    ruin(tx + 9.0, tz - 9.5)
-    ruin(tx - 9.5, tz - 10.0)
+    ruin(tx + 13.5, tz - 5.0)
+    ruin(tx - 5.0, tz - 14.0)
     ruin(tx + 6.0, tz + 14.0, column=False)
     ruin(tx - 15.0, tz - 3.0, column=False)
-    W.light(tx, Y2 + 10.0, tz, (0.42, 0.56, 0.95), 32.0, 230.0, 0.1)
+    W.light(tx, Y2 + 12.0, tz, (0.5, 0.6, 0.9), 32.0, 90.0, 0.1)
     sarcophagus(tx - 12.0, Y2, tz - 6.0, False, 'wall_ashlar', 'wall_rough')
     sarcophagus(tx + 10.5, Y2, tz + 9.5, True, 'wall_ashlar', 'wall_rough')
     for k in range(4):
@@ -1104,19 +1107,68 @@ def below():
             continue
         d = (-math.cos(a), -math.sin(a))
         torch(tombc[0] + math.cos(a) * 14.6, Y2 + 4.0, tombc[1] + math.sin(a) * 14.6, d[0], d[1], c=(1.0, 0.3, 0.16), i=10.0, r=14.0)
-    W.light(tombc[0] + 7.0, Y2 + 5.0, tombc[1], (1.0, 0.2, 0.12), 28.0, 190.0, 0.3)
+    W.light(tombc[0] + 7.0, Y2 + 5.0, tombc[1], (1.0, 0.24, 0.14), 28.0, 130.0, 0.3)
     W.light(tombc[0] - 4.0, Y2 + 7.0, tombc[1], (1.0, 0.42, 0.24), 26.0, 120.0, 0.3)
     W.light(tombc[0], Y2 + 8.5, tombc[1], (0.42, 0.52, 0.95), 28.0, 150.0, 0.1)
     W.light(tombc[0] + 6.0, Y2 + 2.6, tombc[1], (1.0, 0.45, 0.25), 11.0, 40.0, 0.3)
-    W.light(186.2, Y1 + 2.8, -52.0, (1.0, 0.66, 0.34), 13.0, 36.0, 0.5)
+    # The way on is always red: his colour, in the mouth of each door that goes deeper, and the Tomb at the end of them.
+    for wx, wy, wz in ((186.2, Y1, -14.5), (186.2, Y1, -56.0), (186.2, Y2, -71.0), (205.0, Y2, tz), (226.0, Y2, tz)):
+        W.light(wx, wy + 3.4, wz, (1.0, 0.16, 0.09), 7.5, 13.0, 0.3)
+    # Bones, where the dead lay before they got up.
+    def bones(x, z, y, n=5):
+        r2 = random.Random(int(x * 31 + z * 17))
+        for k in range(n):
+            bx('marble', x + r2.uniform(-0.8, 0.8), y + 0.03, z + r2.uniform(-0.8, 0.8), r2.uniform(0.12, 0.26), 0.022, 0.025) if k % 2 else bx('marble', x + r2.uniform(-0.8, 0.8), y + 0.03, z + r2.uniform(-0.8, 0.8), 0.025, 0.022, r2.uniform(0.12, 0.26))
+        sx, sz = x + r2.uniform(-0.5, 0.5), z + r2.uniform(-0.5, 0.5)
+        lathe('marble', sx, sz, [(0.0, y), (0.08, y + 0.03), (0.11, y + 0.11), (0.08, y + 0.2), (0.0, y + 0.23)], 7)
+    r3 = random.Random(11)
+    def scatter(cx0, cz0, inner, outer, y, n, rub):
+        for k in range(n):
+            a, r = r3.uniform(0, math.tau), r3.uniform(inner, outer)
+            x, z = cx0 + math.cos(a) * r, cz0 + math.sin(a) * r
+            bones(x, z, y)
+            if k % rub == 0:
+                ruin(x + 0.8, z - 0.5, y=y, n=4, spread=0.6, column=False)
+    scatter(tx, tz, 6.5, 15.0, Y2, 14, 2)
+    scatter(tombc[0], tombc[1], 4.0, 12.5, Y2, 12, 2)
+    scatter(186.2, 0.0, 4.0, 11.5, Y1, 8, 3)
+    scatter(205.0, -33.0, 2.0, 9.0, Y1, 7, 3)
+    for gz in (-19.0, -32.0, -44.0):
+        bones(186.2 - 1.6, gz, Y1, 4)
+        bones(186.2 + 1.6, gz + 5.0, Y1, 4)
+    # Stone standing proud of the skull walls, so they read as bays and not one long sheet.
+    for gz in range(-17, -52, -7):
+        for s in (-1, 1):
+            bx('cata_wall2', 186.2 + s * 2.86, Y1 + 1.7, float(gz), 0.14, 1.7, 0.32)
+    # The rooms' edges have fire too, so a body in a far corner can be counted.
+    for s in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+        candle_rack(tx + s[0] * 13.5, tz + s[1] * 6.0, Y2, 5, 0.3)
+        W.light(tx + s[0] * 13.5, Y2 + 2.0, tz + s[1] * 6.0, (1.0, 0.62, 0.32), 10.0, 16.0, 0.5)
+    for s in (-1, 1):
+        brazier(tx + 15.5, tz + s * 5.0, i=18.0)
+    W.light(186.2, Y1 + 4.0, 26.0, (1.0, 0.62, 0.34), 11.0, 26.0, 0.4)
+    W.light(179.0, Y1 + 3.5, 7.0, (1.0, 0.62, 0.34), 10.0, 18.0, 0.5)
+    # What's come down off the walls.
+    rng = random.Random(7)
+    for gz in (-16.0, -21.5, -26.0, -30.0, -36.0, -41.0, -45.5, -49.0):
+        ruin(186.2 + rng.choice((-1, 1)) * 2.35, gz, y=Y1, n=4, spread=0.5, column=False)
+    for ox, oz in ((202.0, -29.0), (208.5, -36.0), (213.0, -30.5), (199.5, -38.0)):
+        ruin(ox, oz, y=Y1, n=6, spread=0.9, column=False)
+    for gz in (-18.0, -28.0, -38.0, -47.0):
+        W.light(186.2, Y1 + 3.6, gz, (1.0, 0.68, 0.38), 10.0, 20.0, 0.4)
+    for s in (-1, 1):
+        brazier(186.2 + s * 4.6, -9.0, y=Y1)
+        brazier(186.2 + s * 2.2, -52.6, y=Y1, i=16.0)
+        brazier(186.2 + s * 6.5, -72.5, i=20.0)
+    ruin(195.5, 7.0, y=Y1)
+    ruin(195.0, -7.0, y=Y1)
+    ruin(177.5, 9.5, y=Y1, column=False)
     W.light(186.2, Y1 + 5.8, 0.0, (0.42, 0.56, 0.95), 20.0, 80.0, 0.1)
     brazier(tombc[0] + 5.5, tombc[1] - 5.2, c=(1.0, 0.25, 0.14))
     brazier(tombc[0] + 5.5, tombc[1] + 5.2, c=(1.0, 0.25, 0.14))
     for k, a in enumerate((2.2, 2.6, 3.5, 4.15, 0.9, 5.4)):
         px, pz = tombc[0] + math.cos(a) * 8.6, tombc[1] + math.sin(a) * 8.6
         ruin(px, pz, n=6, spread=1.1)
-    sarcophagus(tombc[0] - 3.0, Y2, tombc[1] - 3.2, True, 'wall_rough', 'wall_rough')
-    sarcophagus(tombc[0] - 3.0, Y2, tombc[1] + 3.2, True, 'wall_rough', 'wall_rough')
     for k in range(10):
         a = (k + 0.5) / 10 * math.tau
         if math.cos(a) < 0.2:
