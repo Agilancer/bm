@@ -97,7 +97,7 @@ export async function loadInterior(r, base, pool, tier) {
   const tiles = makeSet(r, glb, nodes, tileNames);
   tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (POM[l.kind] || 0); })));
   const atlas = makeSet(r, glb, nodes, atlasNames);
-  atlas.bg = bindGroup(ac, ad, uniform((p) => man.atlases.forEach((l, i) => { p[i * 4] = 1; p[i * 4 + 2] = l.kind === 'glass' ? (l.name === 'atlas_13' ? 4 : 2) : 0; })));
+  atlas.bg = bindGroup(ac, ad, uniform((p) => man.atlases.forEach((l, i) => { p[i * 4] = 1; p[i * 4 + 2] = l.kind === 'glass' ? (l.rose ? 4 : 2) : 0; })));
   return { data, tiles, atlas, glowVB: makeBuffer(r.device, new Float32Array(data.glow), GPUBufferUsage.VERTEX), glowN: data.glow.length / 9 };
 }
 

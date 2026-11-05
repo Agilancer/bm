@@ -38,6 +38,13 @@ you leave if you do, and stalks you if you don't. The Bone Hydra lies up in the 
 
 F3 shows frame time, threads and what the knight is thinking. On a phone, turn on **Frame rate readout** in Settings.
 
+### The two sides
+
+- **V is Velscour**, the bad guy, the demon lord: essentially Satan.
+- **T is Tessariel**, the good guy: essentially Jesus.
+
+They don't go together. Anything with a V on it is never found anywhere near anything with a T. The cathedral and its catacombs are the church of Velscour, so they carry V items only: no T banners, no T marks, none of Tessariel's blue and gold. Check the picture, not the file name, before placing a banner, a window or any marked art. In the stained glass cut for the cathedral, only `glass_a_1`, `glass_b_1` and `glass_e_1` are Velscour's, with his angels beaten down beneath him; the other panes give the angels the picture, and stay out of his church.
+
 ### The title, saves and settings
 
 `src/title.js`, from Bellmourn's title screen: Blastorama Gaming's card, then Jamie Herrington's, each with glints flaring on

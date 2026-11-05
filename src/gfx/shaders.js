@@ -142,7 +142,7 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   // Ambient: the sky's hemisphere for diffuse, its picture for reflections.
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
-  if (indoor > 1.5) { ambient = vec3f(0.03, 0.033, 0.03); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  if (indoor > 1.5) { ambient = vec3f(0.085, 0.072, 0.06); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   let nv = max(dot(n, v), 0.0);
   let refl = reflect(-v, n);
   // On a phone only metal reads the sky's picture. On anything else it's a faint sheen, and this fit to that picture, as
@@ -182,8 +182,8 @@ fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
   let indoor = indoorAt(p);
   if (indoor > 0.5) {
     // Dust, and at the bottom of the stair a damp that swallows the far end of a long gallery.
-    let inside = select(vec3f(0.05, 0.045, 0.04), vec3f(0.006, 0.0075, 0.006), indoor > 1.5);
-    return mix(c, inside, clamp(1.0 - exp(-dist * select(0.005, 0.02, indoor > 1.5)), 0.0, 1.0));
+    let inside = select(vec3f(0.05, 0.045, 0.04), vec3f(0.012, 0.007, 0.0045), indoor > 1.5);
+    return mix(c, inside, clamp(1.0 - exp(-dist * select(0.005, 0.0055, indoor > 1.5)), 0.0, 1.0));
   }
   let h = max(p.y, -5.0);
   let density = F.fogColor.a * exp(-max(h, 0.0) * F.fogParams.x);

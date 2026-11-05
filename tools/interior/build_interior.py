@@ -299,7 +299,7 @@ def torch(x, y, z, nx, nz, c=(1.0, 0.55, 0.22), i=16.0, r=13.0):
     bx('iron', x + nx * 0.08, y - 0.1, z + nz * 0.08, 0.05 + abs(nx) * 0.08, 0.05, 0.05 + abs(nz) * 0.08)
     lathe('iron', x + nx * 0.2, z + nz * 0.2, [(0.03, y - 0.42), (0.04, y - 0.1), (0.1, y), (0.11, y + 0.06)], 6)
     flame(x + nx * 0.2, y + 0.04, z + nz * 0.2, 0.09)
-    wash(x, y + 0.3, z, nx, nz, 2.1, (0.2, 0.095, 0.035))
+    wash(x, y + 0.3, z, nx, nz, 2.6, (0.11, 0.052, 0.02))
     W.light(x + nx * 0.5, y + 0.25, z + nz * 0.5, c, r, i, 1.0)
 
 
@@ -388,12 +388,12 @@ def glass_pane(piece, a, b, t, sill, h, depth, inward, sun=None):
             k = (q[1] - F0 - 0.012) / sun[1]
             return (q[0] + sun[0] * k, F0 + 0.012, q[2] + sun[2] * k)
         fa, fb, fc, fd = fall(A), fall(B), fall(C), fall(D)
-        W.glowquad(fa, fb, fc, fd, idx, p['uv'], (1.1, 1.05, 0.95))
+        W.glowquad(fa, fb, fc, fd, idx, p['uv'], (2.0, 1.9, 1.7))
         # The shaft itself, hardly there: dust in the light between glass and floor.
         for s0, s1 in ((0.0, 0.5), (0.5, 1.0)):
             mid0, mid1 = lerp(A, B, s0), lerp(A, B, s1)
             top0, top1 = lerp(D, C, s0), lerp(D, C, s1)
-            W.glowquad(lerp(mid0, fall(top0), 0.92), lerp(mid1, fall(top1), 0.92), top1, top0, 100, (0, 0, 1, 1), (0.05, 0.043, 0.03))
+            W.glowquad(lerp(mid0, fall(top0), 0.92), lerp(mid1, fall(top1), 0.92), top1, top0, 100, (0, 0, 1, 1), (0.08, 0.068, 0.045))
 
 
 def cathedral():
@@ -412,10 +412,11 @@ def cathedral():
         x = 101.0 + k * 0.5
         bx('wall_ashlar', x + 0.25, y - 0.125, 0.0, 0.25, 0.125, ZS, 2.0)
     W.floor(101.0, -ZS, 102.5, ZS, F0, CHANCEL)
-    floor_rect('wood_a3', 102.5, -ZS, XE, ZS, CHANCEL, tile=2.2)
+    floor_rect('wood_a3', 102.5, -ZS, XE, ZS, CHANCEL, tile=1.3)
+    floor_rect('carpet', XE - 8.0, -3.2, XE - 0.2, 3.2, CHANCEL + 0.012, tile=3.2, rot=True)
     W.floor(102.5, -ZS, XE + 0.95, ZS, CHANCEL)
     # Walls: the side walls carry the windows, the arcade running under them.
-    panes = ['glass_a', 'glass_b', 'glass_c', 'glass_d', 'glass_e']
+    panes = ['glass_a_1', 'glass_b_1', 'glass_e_1']   # Velscour's, every one: see README, The two sides
     sun = (0.78, 0.5, 0.38)
     glass_h = 12.8
     sill = F0 + 2.9
@@ -433,20 +434,20 @@ def cathedral():
         for i, o in enumerate(ops):
             reveal('wall_ashlar', a, b, o, inside, 1.0)
             wall_op_trim('wall_ashlar', a, b, o, inside, 0.16)
-            glass_pane(f'{panes[i]}_{k}', a, b, o['t'], sill, glass_h, 0.55, inside, sun if side > 0 else None)
+            glass_pane(panes[(i + k) % 3], a, b, o['t'], sill, glass_h, 0.55, inside, sun if side > 0 else None)
             # (A window throws its colour even where the sun isn't on it.)
-            col = (0.55, 0.62, 1.0) if k == 0 else (1.0, 0.25, 0.2)
+            col = (1.0, 0.25, 0.2)
             W.light(XW + o['t'], F0 + 6.0, z - side * 2.5, col, 15.0, 9.0 if k == 0 else 5.0)
         W.collide(XW - 1, z, XE + 1, z + side)
     # The west front: great door and the rose above it.
     a, b = (XW, -ZS), (XW, ZS)
     door = arch_op(ZS, 4.6, F0, F0 + 4.8, F0 + 7.6)
-    rose = round_op(ZS, F0 + 12.1, 4.3)
+    rose = round_op(ZS, F0 + 13.2, 5.3)
     ops = [door, rose]
     wall('wall_ashlar', a, b, F0, wall_top, ops, inward=inside)
     # Out in front the wall runs up into the gable.
     gable = lambda t: wall_top + (1 - abs(t - 15.0) / 15.0) * 11.0
-    wall('wall_rough', (XW - 1, -15.0), (XW - 1, 15.0), F0 - 1.0, gable, [arch_op(15.0, 4.6, F0, F0 + 4.8, F0 + 7.6), round_op(15.0, F0 + 12.1, 4.3)], inward=(XW + 5, 0.0))
+    wall('wall_rough', (XW - 1, -15.0), (XW - 1, 15.0), F0 - 1.0, gable, [arch_op(15.0, 4.6, F0, F0 + 4.8, F0 + 7.6), round_op(15.0, F0 + 13.2, 5.3)], inward=(XW + 5, 0.0))
     for z0, z1 in ((-ZS - 1, -2.2), (2.2, ZS + 1)):
         W.collide(XW - 1, z0, XW, z1)
     reveal('wall_ashlar', a, b, door, inside, 1.0)
@@ -460,7 +461,7 @@ def cathedral():
     wall_op_trim('wall_ashlar', outer[0], outer[1], rose, (XW, 0.0), 0.34)
     p = PIECE['rose_0']
     u0, v0, u1, v1 = p['uv']
-    rs = 4.42
+    rs = 5.45
     n = (1.0, 0.0, 0.0)
     W.quad(p['layer'], (XW - 0.55, rose['cy'] - rs, rs), (XW - 0.55, rose['cy'] - rs, -rs), (XW - 0.55, rose['cy'] + rs, -rs), (XW - 0.55, rose['cy'] + rs, rs), ((u0, v1), (u1, v1), (u1, v0), (u0, v0)), (n, n, n, n))
     W.light(XW + 4.0, rose['cy'], 0.0, (1.0, 0.28, 0.2), 20.0, 18.0)
@@ -479,8 +480,12 @@ def cathedral():
         n = (0.0, 0.0, 1.0)
         W.quad('wood_b0', hinge, tip, (tip[0], F0 + 6.0, tip[2]), (hinge[0], F0 + 6.8, hinge[2]), ((0, 3), (1, 3), (1, 0), (0, 0)), (n, n, n, n))
         for yb in (1.0, 3.2, 5.2):
-            bx('iron', XW + 1.0, F0 + yb, s * 2.3, 0.95, 0.05, 0.03)
+            bx('iron', XW + 1.0, F0 + yb, s * 2.3, 0.95, 0.09, 0.05)
         W.collide(XW, s * 2.2, XW + 2.2, s * 2.45, 7.0)
+    for s in (-1, 1):
+        candle_rack(XW + 2.6, s * 3.6, F0)
+        torch(XW - 1.5, F0 + 3.3, s * 3.6, -1.0, 0.0, i=10.0, r=9.0)
+    W.light(XW + 3.0, F0 + 2.4, 0.0, (1.0, 0.68, 0.36), 11.0, 12.0, 0.4)
     # Vault: three aisles of five bays, on piers.
     for i in range(5):
         x0 = XW + i * BAY
@@ -508,7 +513,7 @@ def cathedral():
             s = 1 if x == XW else -1
             lathe('wall_ashlar', x + s * 0.2, z, [(0.6, F0), (0.5, F0 + 0.5), (0.42, F0 + 0.7), (0.42, SPRING - 0.6), (0.6, SPRING)], 10)
     # Banners of Tessariel on the piers, facing the nave.
-    names = ['tess_a_0', 'tess_b_0', 'tess_c_1', 'tess_d_0', 'tess_a_1', 'tess_b_1', 'tess_c_0', 'tess_d_1']
+    names = ['vel_a_0', 'vel_d_0', 'vel_c_0', 'vel_a_0', 'vel_d_0', 'vel_c_0', 'vel_a_0', 'vel_d_0']
     k = 0
     for i in (1, 2, 3, 4):
         x = XW + i * BAY
@@ -524,6 +529,7 @@ def cathedral():
             bx('wood_a0', x, F0 + 0.46, zc, 0.24, 0.035, hz)        # seat
             bx('wood_b1', x - 0.24, F0 + 0.72, zc, 0.03, 0.34, hz)    # back
             bx('wood_c1', x + 0.36, F0 + 0.28, zc, 0.03, 0.28, hz)    # kneeler front
+            bx('gold', x - 0.24, F0 + 1.07, zc, 0.04, 0.014, hz)      # rail
             for zz in (z0, z1):
                 bx('wood_a1', x + 0.06, F0 + 0.52, zz, 0.36, 0.52, 0.045)
             W.collide(x - 0.33, min(z0, z1), x + 0.43, max(z0, z1), 1.05)
@@ -536,6 +542,12 @@ def cathedral():
     bx('wood_c2', px + 0.15, y + 2.72, pz, 0.32, 0.03, 0.42)    # the book rest
     bx('wood_a3', px - 0.68, y + 2.66, pz, 0.05, 0.14, 0.34)
     W.collide(px - 1.0, pz - 1.0, px + 1.0, pz + 1.0, 3.0)
+    lathe('wood_b2', px - 0.7, pz, [(0.0, y + 5.2), (1.5, y + 5.05), (1.6, y + 4.85), (0.0, y + 4.85)], 10, phase=0.1)
+    lathe('gold', px - 0.7, pz, [(0.3, y + 5.15), (0.05, y + 5.9), (0.0, y + 6.0)], 8)
+    bx('wood_c2', px - 1.45, y + 2.5, pz, 0.08, 2.5, 0.28)
+    for s in (-1, 1):
+        torch(XE, CHANCEL + 2.5, s * 1.9, -1.0, 0.0, i=14.0, r=9.0)
+    W.light(XE - 0.8, CHANCEL + 2.4, 0.0, (1.0, 0.72, 0.42), 7.0, 10.0, 0.3)
     for s in (-1, 1):
         bx('wood_b3', px + 1.6, y + 0.95, s * 1.15, 0.5, 0.95, 0.06)  # the stair rail, with chevrons
     # Candle stands either side, the rail in front of them, and the great banners on the wall.
@@ -543,7 +555,7 @@ def cathedral():
         for zz in (4.5, 8.5, 11.5):
             candle_rack(XE - 3.2, s * zz, CHANCEL)
         W.light(XE - 3.0, CHANCEL + 2.0, s * 7.5, (1.0, 0.68, 0.36), 13.0, 22.0, 0.5)
-        banner('tess_a_0' if s < 0 else 'tess_a_1', XE - 0.3, CHANCEL + 16.0, s * 8.0, -1.0, 0.0, 12.5, 0.0)
+        banner('vel_a_0' if s < 0 else 'vel_d_0', XE - 0.3, CHANCEL + 16.0, s * 8.0, -1.0, 0.0, 12.5, 0.0)
     W.light(XE - 7.0, F0 + 7.0, 0.0, (1.0, 0.75, 0.48), 20.0, 26.0, 0.25)
     # Pedestals of light along the nave, so the middle isn't only window.
     for i in (1, 3):
@@ -594,6 +606,11 @@ def cathedral():
         bx('floor_diamond', XW - 5.6 + k * 0.7 + (4 - k) * 0.35 + 2.1 - k * 0.35 - 2.1, top - 0.5, 0.0, 0.35 + (3 - k) * 0.35 + 2.0, 0.5, 5.2 - k * 0.25, 2.0)
     W.floor(XW - 5.6, -5.0, XW - 2.8, 5.0, F0 - 0.8, F0)
     W.floor(XW - 2.8, -5.0, XW - 0.5, 5.0, F0)
+    # A dark plinth: stone stays wet and sooty where it meets the ground.
+    bx('cata_wall', XW - 1.25, F0 + 0.55, -8.0, 0.2, 1.75, 6.0, 3.0)
+    bx('cata_wall', XW - 1.25, F0 + 0.55, 8.0, 0.2, 1.75, 6.0, 3.0)
+    for s in (-1, 1):
+        bx('cata_wall', XW - 2.5, F0 + 0.75, s * 18.5, 5.15, 2.0, 4.65, 3.0)
     # Courses and pinnacles: what stops a stone front being one flat sheet.
     for yy in (F0 + 8.6, F0 + 17.2):
         tube('wall_ashlar', [(XW - 1.12, yy, -14.0), (XW - 1.12, yy, 14.0)], 0.2, ref=(1, 0, 0))
@@ -610,7 +627,6 @@ def cathedral():
         wall('tracery', (x, s * 18.5 - 3.2), (x, s * 18.5 + 3.2), F0 + 11.0, F0 + 14.4, inward=(XW - 20, s * 18.5), tile=3.4)
     wall('tracery', (XW - 1.1, -6.0), (XW - 1.1, 6.0), F0 + 21.5, F0 + 24.9, inward=(XW - 20, 0.0), tile=3.4)
     lathe('gold', XW - 1.1, 0.0, [(0.16, wall_top + 11.0), (0.06, wall_top + 12.6), (0.0, wall_top + 12.8)], 6)
-    bx('gold', XW - 1.1, wall_top + 12.0, 0.0, 0.05, 0.05, 0.45)
     for i in range(6):
         for s in (-1, 1):
             x, z = XW + i * BAY, s * (ZS + 1 + 1.0)
@@ -625,7 +641,7 @@ def office():
     x0, x1, hz = XE + 0.95, OFFICE_X, 6.0
     y, top = CHANCEL, CHANCEL + 5.0
     inside = ((x0 + x1) / 2, 0.0)
-    floor_rect('wood_c3', x0, -hz, x1, hz, y, tile=2.4)
+    floor_rect('wood_c3', x0, -hz, x1, hz, y, tile=1.5)
     W.floor(x0, -hz, x1, hz, y)
     d_w = arch_op(hz, 2.2, y, y + 2.4, y + 3.4)
     d_e = arch_op(hz, 2.2, y, y + 2.4, y + 3.4)
@@ -657,8 +673,9 @@ def office():
     W.collide(dx - 1.05, dz - 0.6, dx + 1.05, dz + 0.6, 0.95)
     lathe('gold', dx + 0.5, dz + 0.1, [(0.1, y + 0.84), (0.02, y + 0.95), (0.02, y + 1.15), (0.09, y + 1.2), (0.09, y + 1.45), (0.02, y + 1.5)], 6)
     flame(dx + 0.5, y + 1.25, dz + 0.1, 0.03)
-    W.light(dx + 0.5, y + 1.6, dz + 0.1, (1.0, 0.68, 0.34), 10.0, 7.0, 0.3)
-    W.light(x0 + 2.0, y + 3.8, 2.0, (1.0, 0.6, 0.3), 12.0, 7.0, 0.2)
+    W.light(dx + 0.5, y + 1.6, dz + 0.1, (1.0, 0.68, 0.34), 11.0, 18.0, 0.3)
+    W.light(x0 + 2.0, y + 3.8, 2.0, (1.0, 0.6, 0.3), 14.0, 20.0, 0.2)
+    W.light(x1 - 2.0, y + 3.6, 0.0, (1.0, 0.64, 0.36), 13.0, 18.0, 0.2)
     floor_rect('carpet', dx - 2.2, dz - 1.2, dx + 1.6, dz + 1.2, y + 0.012, tile=2.4)
     rng = random.Random(3)
     for sz in (-1, 1):
@@ -879,12 +896,14 @@ def below():
         x1 = x + steps * RUN
         y1 = y - steps * RISE
         run_corridor((x, 0.0), (x1, 0.0), w, y, y1, 4.2, 6.2, 'panel', 'cata_floor2', 'cata_roof', ribs=2.5)
+        sw = 1 if f % 2 else -1
+        torch((x + x1) / 2, (y + y1) / 2 + 2.6, sw * hw, 0.0, -sw, i=8.0)
         x = x1
         y = y1
         if f < flights - 1:
             run_corridor((x, 0.0), (x + land, 0.0), w, y, y, 4.2, 6.2, 'cata_wall', 'cata_floor', 'cata_roof', ribs=1.6)
-            torch(x + land / 2, y + 2.6, hw, 0.0, -1.0)
-            torch(x + land / 2, y + 2.6, -hw, 0.0, 1.0)
+            torch(x + land / 2, y + 2.6, hw, 0.0, -1.0, i=10.0)
+            torch(x + land / 2, y + 2.6, -hw, 0.0, 1.0, i=10.0)
             banner(names[f], x + land / 2, y + 4.0, -hw, 0.0, 1.0, 3.2, 0.16)
             x += land
     Y1 = y
@@ -912,13 +931,17 @@ def below():
         n_i: [gate(poly[n_i], poly[(n_i + 1) % 8], 6.0, 4.0, 6.5, Y1)],
         s_i: [gate(poly[s_i], poly[(s_i + 1) % 8], 3.4, 2.8, 4.2, Y1)],
     }
-    room(poly, Y1, 7.0, 13.0, 'cata_wall', 'cata_floor', 'cata_roof', dado='candles', ops=door_ops)
+    room(poly, Y1, 7.0, 10.0, 'cata_wall', 'cata_floor', 'cata_roof', dado='candles', ops=door_ops)
     # In the middle, the first tomb, ringed by candles: the room's point, and something to circle.
     sarcophagus(cx, Y1, cz, True, 'wall_ashlar', 'wall_rough', 1.5, 0.75)
     for k in range(6):
         a = k / 6 * math.tau
         candle_rack(cx + math.cos(a) * 3.2, cz + math.sin(a) * 3.2, Y1, 4, 0.3)
-    W.light(cx, Y1 + 2.5, cz, (1.0, 0.55, 0.25), 16.0, 18.0, 0.6)
+    W.light(cx, Y1 + 3.5, cz, (1.0, 0.6, 0.3), 24.0, 80.0, 0.6)
+    a, b = poly[n_i], poly[(n_i + 1) % 8]
+    for s in (-1, 1):
+        mx = (a[0] + b[0]) / 2 + s * 4.2
+        torch(mx, Y1 + 3.4, (a[1] + b[1]) / 2, 0.0, 1.0, i=20.0)
     for i in (w_i + 2, w_i - 2 + 8):
         i %= 8
         if i in door_ops:
@@ -959,7 +982,7 @@ def below():
     side = 1
     while t < G_L - 2:
         if abs(t - G_L / 2) > 3:
-            torch(gx + side * 3.0, Y1 + 3.3, nz - t, -side, 0.0, c=(0.8, 0.95, 0.5), i=7.0, r=10.0)
+            torch(gx + side * 3.0, Y1 + 3.3, nz - t, -side, 0.0, c=(1.0, 0.68, 0.34), i=15.0, r=12.0)
         t += 6.0
         side = -side
     for t, s in ((7, 1), (12, -1), (18, 1), (25, -1), (30, 1), (35, -1), (38, 1)):
@@ -974,10 +997,10 @@ def below():
     room(oss, Y1, 5.2, 9.0, 'skulls2', 'cata_bones', 'cata_roof', dado='skulls', ops={7: [arch_op(7.0, 3.6, Y1, Y1 + 3.0, Y1 + 4.6)]}, rib='cata_wall2')
     for k, (dx, dz) in enumerate(((5, -5), (11, 5), (5, 5), (11, -5))):
         sarcophagus(oss_x + dx, Y1, OZ + dz, True, 'wall_rough', 'cata_wall')
-    W.light(oss_x + 8.0, Y1 + 4.0, OZ, (0.7, 0.95, 0.45), 18.0, 30.0, 0.4)
+    W.light(oss_x + 8.0, Y1 + 4.0, OZ, (1.0, 0.72, 0.42), 20.0, 42.0, 0.4)
     for s in (-1, 1):
-        torch(oss_x + 8.0, Y1 + 3.2, OZ + s * 10.0, 0.0, -s, c=(0.8, 0.95, 0.5))
-        torch(oss_x + 16.0, Y1 + 3.2, OZ + s * 4.0, -1.0, 0.0, c=(0.8, 0.95, 0.5))
+        torch(oss_x + 8.0, Y1 + 3.2, OZ + s * 10.0, 0.0, -s, c=(1.0, 0.68, 0.34), i=7.0, r=15.0)
+        torch(oss_x + 16.0, Y1 + 3.2, OZ + s * 4.0, -1.0, 0.0, c=(1.0, 0.68, 0.34), i=7.0, r=15.0)
     for dx, dz in ((3, 0), (8, 2), (13, -1), (8, -7)):
         spawn(oss_x + dx, OZ + dz)
     # ---- Stage II: the Sexton's Stair, north and down, to the Hall of the Founders. ----
@@ -1004,7 +1027,38 @@ def below():
         lathe('cata_wall', px, pz, [(0.9, Y2), (0.72, Y2 + 0.5), (0.62, Y2 + 0.8), (0.62, Y2 + 8.0), (0.9, Y2 + 9.0)], 12)
         W.collide(px - 0.75, pz - 0.75, px + 0.75, pz + 0.75)
         torch(px - s[0] * 0.62, Y2 + 3.2, pz - s[1] * 0.62, -s[0] * 0.7, -s[1] * 0.7, c=(1.0, 0.42, 0.2), i=14.0, r=16.0)
-    W.light(tx, Y2 + 7.0, tz, (1.0, 0.42, 0.22), 26.0, 34.0, 0.2)
+    W.light(tx, Y2 + 7.0, tz, (1.0, 0.5, 0.26), 30.0, 170.0, 0.2)
+    def brazier(x, z, y=Y2, i=24.0, c=(1.0, 0.52, 0.22)):
+        lathe('iron', x, z, [(0.42, y), (0.1, y + 0.12), (0.08, y + 0.8), (0.5, y + 1.0), (0.56, y + 1.2)], 8)
+        for k in range(7):
+            a = k * 2.4
+            r = 0.1 + 0.05 * k
+            flame(x + math.cos(a) * r, y + 1.1, z + math.sin(a) * r, 0.1 - 0.008 * k)
+        W.collide(x - 0.5, z - 0.5, x + 0.5, z + 0.5, 1.2)
+        W.light(x, y + 2.0, z, c, 16.0, i, 1.0)
+    def ruin(x, z, y=Y2, n=9, spread=1.5, column=True):
+        rng = random.Random(int(x * 13 + z * 7))
+        for k in range(n):
+            s = rng.uniform(0.12, 0.42)
+            bx('cata_wall2', x + rng.uniform(-spread, spread), y + s * 0.6, z + rng.uniform(-spread, spread), s * rng.uniform(0.8, 1.5), s * 0.6, s, 2.0)
+        if column:
+            h = rng.uniform(1.6, 3.2)
+            lathe('cata_wall', x, z, [(0.8, y), (0.62, y + 0.45), (0.56, y + 0.7), (0.56, y + h), (0.3, y + h + 0.1)], 10)
+            W.collide(x - 0.65, z - 0.65, x + 0.65, z + 0.65, h)
+    brazier(tx - 8.0, tz + 12.0 - 13.0 - 3.0)
+    brazier(tx + 3.0, tz + 12.0)
+    brazier(tx + 12.0, tz - 7.0)
+    ruin(tx - 12.5, tz + 4.0)
+    ruin(tx + 11.5, tz + 6.5, column=False)
+    ruin(tx + 2.0, tz - 13.0)
+    ruin(tx - 8.0, tz + 11.5)
+    ruin(tx + 9.0, tz - 9.5)
+    ruin(tx - 9.5, tz - 10.0)
+    ruin(tx + 6.0, tz + 14.0, column=False)
+    ruin(tx - 15.0, tz - 3.0, column=False)
+    W.light(tx, Y2 + 10.0, tz, (0.42, 0.56, 0.95), 32.0, 230.0, 0.1)
+    sarcophagus(tx - 12.0, Y2, tz - 6.0, False, 'wall_ashlar', 'wall_rough')
+    sarcophagus(tx + 10.5, Y2, tz + 9.5, True, 'wall_ashlar', 'wall_rough')
     for k in range(4):
         a = (k + 0.5) / 4 * math.tau
         W.light(tx + math.cos(a) * 11.0, Y2 + 4.0, tz + math.sin(a) * 11.0, (1.0, 0.5, 0.22), 15.0, 18.0, 0.8)
@@ -1021,6 +1075,7 @@ def below():
     ax0 = tx + HR * math.cos(math.pi / 8)
     AL = 26.0
     run_corridor((ax0, tz), (ax0 + AL, tz), 7.0, Y2, Y2, 4.6, 7.2, 'cata_wall2', 'cata_floor', 'seep', dado='panel2', ribs=4.3)
+    W.light(ax0 + 1.0, Y2 + 3.0, tz, (1.0, 0.55, 0.28), 13.0, 22.0, 0.6)
     for t in (5.0, 13.0, 21.0):
         for s in (-1, 1):
             sarcophagus(ax0 + t, Y2, tz + s * 2.5, True, 'wall_ashlar', 'wall_rough', 1.2, 0.5)
@@ -1049,7 +1104,19 @@ def below():
             continue
         d = (-math.cos(a), -math.sin(a))
         torch(tombc[0] + math.cos(a) * 14.6, Y2 + 4.0, tombc[1] + math.sin(a) * 14.6, d[0], d[1], c=(1.0, 0.3, 0.16), i=10.0, r=14.0)
-    W.light(tombc[0], Y2 + 8.0, tombc[1], (1.0, 0.18, 0.12), 26.0, 30.0, 0.3)
+    W.light(tombc[0] + 7.0, Y2 + 5.0, tombc[1], (1.0, 0.2, 0.12), 28.0, 190.0, 0.3)
+    W.light(tombc[0] - 4.0, Y2 + 7.0, tombc[1], (1.0, 0.42, 0.24), 26.0, 120.0, 0.3)
+    W.light(tombc[0], Y2 + 8.5, tombc[1], (0.42, 0.52, 0.95), 28.0, 150.0, 0.1)
+    W.light(tombc[0] + 6.0, Y2 + 2.6, tombc[1], (1.0, 0.45, 0.25), 11.0, 40.0, 0.3)
+    W.light(186.2, Y1 + 2.8, -52.0, (1.0, 0.66, 0.34), 13.0, 36.0, 0.5)
+    W.light(186.2, Y1 + 5.8, 0.0, (0.42, 0.56, 0.95), 20.0, 80.0, 0.1)
+    brazier(tombc[0] + 5.5, tombc[1] - 5.2, c=(1.0, 0.25, 0.14))
+    brazier(tombc[0] + 5.5, tombc[1] + 5.2, c=(1.0, 0.25, 0.14))
+    for k, a in enumerate((2.2, 2.6, 3.5, 4.15, 0.9, 5.4)):
+        px, pz = tombc[0] + math.cos(a) * 8.6, tombc[1] + math.sin(a) * 8.6
+        ruin(px, pz, n=6, spread=1.1)
+    sarcophagus(tombc[0] - 3.0, Y2, tombc[1] - 3.2, True, 'wall_rough', 'wall_rough')
+    sarcophagus(tombc[0] - 3.0, Y2, tombc[1] + 3.2, True, 'wall_rough', 'wall_rough')
     for k in range(10):
         a = (k + 0.5) / 10 * math.tau
         if math.cos(a) < 0.2:
