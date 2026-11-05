@@ -618,4 +618,4 @@ The cut is in `tools/bone_hydra/surgery.py`, the skeleton and weights in `tools/
 
 Twenty kite shields, cut from the five sheets by `tools/shields/separate.py` and `render_icons.py` (both in Blender, through Blender MCP) and `tools/shields/atlas.py`. They are `SHIELDS` in `src/items/items.js`: V and T shields are the knights' own and are never rolled.
 
-Jump and keep Space held a moment to get on the shield (`src/sim/surf.js`). It stays under you when you let go. Space on the ground hops, Space in the air steps off. A wall stops it, and so does running out of speed.
+Jump and keep Space held a moment to get on the shield (`src/sim/surf.js`). It stays under you when you let go. Space on the ground hops, Space in the air steps off. It only carries the speed you bring to it and what slopes give: W adds nothing. A wall stops it, and so does running out of speed.
