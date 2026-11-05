@@ -41,6 +41,8 @@ struct V {
 };
 
 const HOT = 8.0;
+const BEAM_ROOM = 1.5;    // how much wider a beam's card is than the beam
+const FLAME_ROOM = 1.4;   // and a flame's than the flame
 
 @vertex fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> V {
   let I = fx[ii];
@@ -60,29 +62,34 @@ const HOT = 8.0;
       let P = I.p.xyz + I.a.xyz * I.a.w * s;
       let side = normalize(cross(I.a.xyz, F.camPos.xyz - P) + vec3f(0.0, 1e-4, 0.0));
       var w = size;
-      if (shape == 1u) { w = mix(size, I.x.w, s); }
-      vp = (F.view * vec4f(P + side * q.x * w, 1.0)).xyz;
-      o.uv = vec2f(q.x, s);
+      var room = 1.0;
+      if (shape == 1u) { w = mix(size, I.x.w, s); room = BEAM_ROOM; }
+      vp = (F.view * vec4f(P + side * q.x * w * room, 1.0)).xyz;
+      o.uv = vec2f(q.x * room, s);
     }
     case 3u, 4u, 9u: {
       // Marks on the ground. With the depth to read, they are drawn from a card as wide as they are and laid onto whatever's
       // really there; from inside one, the whole screen is the card. A phone lays them flat.
       if (LEAN) {
-        vp = (F.view * vec4f(I.p.xyz + vec3f(q.x * size, 0.08, q.y * size), 1.0)).xyz;
+        vp = (F.view * vec4f(I.p.xyz + vec3f(q.x * size * 1.35, 0.08, q.y * size * 1.35), 1.0)).xyz;
+        o.uv = q * 1.35;
       } else {
         let vc = (F.view * vec4f(I.p.xyz, 1.0)).xyz;
-        if (length(vc) < size * 1.6 + 1.2) {
+        if (length(vc) < size * 2.0 + 1.2) {
           o.pos = vec4f(q, 0.5, 1.0); o.viewZ = 0.0;
           return o;
         }
-        vp = vc + vec3f(q * size * 1.5, 0.0);
+        vp = vc + vec3f(q * size * 1.8, 0.0);
       }
     }
     case 5u, 10u: {
       // Standing up, and turned to you about the upright. Its width is its length.
       let to = F.camPos.xyz - I.p.xyz;
       let side = normalize(vec3f(to.z, 0.0, -to.x) + vec3f(1e-4, 0.0, 0.0));
-      vp = (F.view * vec4f(I.p.xyz + side * q.x * I.a.w + vec3f(0.0, (q.y + 1.0) * 0.5 * size, 0.0), 1.0)).xyz;
+      // Larger than the fire on it, which never reaches the card's edge; the fire itself stays the size it was asked for.
+      let along = vec2f(q.x * FLAME_ROOM, (q.y + 1.0) * 0.5 * FLAME_ROOM);
+      vp = (F.view * vec4f(I.p.xyz + side * along.x * I.a.w + vec3f(0.0, along.y * size, 0.0), 1.0)).xyz;
+      o.uv = vec2f(along.x, along.y * 2.0 - 1.0);
     }
     default: {
       vp = (F.view * vec4f(I.p.xyz, 1.0)).xyz;
@@ -120,19 +127,22 @@ fn orb(uv: vec2f, seed: f32, T: f32) -> vec4f {
   let body = smoothstep(0.74, 0.14, r + (n - 0.5) * 0.62);
   let halo = pow(1.0 - r, 2.4);
   let heat = clamp(body * (0.42 + n * 0.8) + pow(1.0 - r, 5.0) * 0.5, 0.0, 1.0);
-  return vec4f(ramp(heat) * (0.2 + heat * heat * HOT * 1.4) * body + ramp(0.5) * halo * 1.0, 0.0);
+  return vec4f(ramp(heat) * (0.2 + heat * heat * HOT * 1.4) * body * smoothstep(1.0, 0.72, r) + ramp(0.5) * halo * 1.0, 0.0);
 }
 
-fn beam(uv: vec2f, L: f32, seed: f32, T: f32) -> vec4f {
+fn beam(uv: vec2f, L: f32, near: f32, far: f32, seed: f32, T: f32) -> vec4f {
   let d = abs(uv.x);
   let s = uv.y * L;
   let n = cn(fbm(vec2f(s * 0.045 - T * 0.85 + seed, uv.x * 0.1 + seed)));
   let m = cn(fbm(vec2f(s * 0.12 - T * 1.7, uv.x * 0.2 - seed)));
   let edge = d + (n - 0.5) * 0.78;
-  let body = smoothstep(0.95, 0.12, edge);
+  // It frays out before the card ends, and its two ends are round, however wide it has got by then.
+  let body = smoothstep(0.95, 0.12, edge) * smoothstep(BEAM_ROOM, 0.92, d);
   let core = exp(-d * d * 7.0);
   let heat = clamp(core * (0.5 + m * 0.65) + body * 0.22, 0.0, 1.0);
-  let ends = smoothstep(0.0, 0.02, uv.y) * smoothstep(1.0, 0.94, uv.y + (n - 0.5) * 0.05);
+  let toEnd = (1.0 - uv.y) * L / max(mix(near, far, uv.y), 0.001) + (n - 0.5) * 0.9;
+  let fromStart = uv.y * L / max(near, 0.001);
+  let ends = smoothstep(0.0, 1.0, fromStart * 1.6 - d * d) * smoothstep(0.0, 1.3, toEnd - d * d * 0.8);
   return vec4f(ramp(heat) * (0.3 + heat * heat * HOT * 1.3) * body * ends, 0.0);
 }
 
@@ -141,15 +151,15 @@ fn bolt(uv: vec2f, L: f32, jag: f32, seed: f32, T: f32) -> vec4f {
   let env = sin(s * 3.14159);
   let t = floor(T * 22.0) * 0.137 + seed * 0.71;
   let wander = (n1(vec2f(s * L * 0.021 + t, seed)) - 0.5) * 2.0 + (n1(vec2f(s * L * 0.075 - t, seed + 0.4)) - 0.5);
-  let x = uv.x - wander * jag * 1.7 * pow(env, 0.6);
+  let x = uv.x - clamp(wander * jag * 1.7, -0.55, 0.55) * pow(env, 0.6);
   let core = exp(-x * x * 900.0);
   let glow = exp(-abs(x) * 12.0);
   let fall = smoothstep(0.0, 0.02, s) * smoothstep(1.0, 0.98, s);
   // A fork that wanders off and dies.
   let wf = (n1(vec2f(s * L * 0.05 + t * 1.7, seed + 0.8)) - 0.5) * 3.2;
-  let xf = uv.x - wf * jag * smoothstep(0.25, 0.9, s);
+  let xf = uv.x - clamp(wf * jag, -0.6, 0.6) * smoothstep(0.25, 0.9, s);
   let fork = exp(-xf * xf * 1300.0) * smoothstep(0.2, 0.32, s) * smoothstep(0.95, 0.5, s);
-  return vec4f((ramp(1.0) * HOT * 3.0 * core + ramp(1.0) * HOT * 1.2 * fork + ramp(0.55) * glow * 1.8) * fall, 0.0);
+  return vec4f((ramp(1.0) * HOT * 3.0 * core + ramp(1.0) * HOT * 1.2 * fork + ramp(0.55) * glow * 1.8) * fall * smoothstep(1.0, 0.68, abs(uv.x)), 0.0);
 }
 
 fn ring(uv: vec2f, age: f32, seed: f32, T: f32) -> vec4f {
@@ -171,7 +181,7 @@ fn disc(uv: vec2f, size: f32, age: f32, e: u32, seed: f32, T: f32) -> vec4f {
   let q = uv * size * 0.024;
   let w = cn(fbm(q + vec2f(T * 0.008, -T * 0.006) + seed));
   let n = cn(fbm(q * 2.1 + w * 0.12 + seed * 0.3));
-  let edge = smoothstep(1.0, 0.45, r + (w - 0.5) * 0.7);
+  let edge = smoothstep(1.0, 0.45, r + (w - 0.5) * 0.7) * smoothstep(1.25, 0.95, r);
   var v = 1.0 - abs(n * 2.0 - 1.0);    // ridges where the noise crosses its middle
   v = pow(v, 5.0);
   if (e == 1u) {   // frost: a white crust feathering out, cold light under it
@@ -207,23 +217,36 @@ fn rune(uv: vec2f, seed: f32, T: f32) -> vec4f {
   return vec4f(ramp(0.85) * (c * HOT * 1.1 * (0.5 + sweep * 0.5) + ticks * HOT * 0.3) + ramp(0.35) * smoothstep(1.0, 0.1, r) * 0.1, 0.0);
 }
 
+// A flame's shape is its own, and comes to nothing inside its card: narrow at the tip, leaning as it climbs. The noise only bites into
+// it and throws up tongues, each measured from how much flame is left there.
 fn flame(uv: vec2f, wide: f32, tall: f32, seed: f32, T: f32) -> vec4f {
   let s = (uv.y + 1.0) * 0.5;
-  let x = uv.x;
-  let n = cn(fbm(vec2f(x * wide * 0.075 + seed, s * tall * 0.05 - T * 0.34)));
-  let m = cn(fbm(vec2f(x * wide * 0.18 - seed, s * tall * 0.13 - T * 0.7)));
-  let lick = (1.0 - x * x) * (1.15 - s * 1.3);
-  let d = lick + (n * 0.86 + m * 0.52 - 0.72) * (0.5 + s * 0.8);
+  // (However small it is, it has as many tongues as a big one: only a very wide flame gets more.)
+  let fx = 0.16 + wide * 0.05;
+  let fy = 0.1 + tall * 0.035;
+  let n = cn(fbm(vec2f(uv.x * fx + seed, s * fy - T * 0.34)));
+  let m = cn(fbm(vec2f(uv.x * fx * 2.4 - seed, s * fy * 2.6 - T * 0.7)));
+  let lean = (cn(fbm(vec2f(seed * 3.1, s * fy * 0.7 - T * 0.2))) - 0.5) * 0.5 * s;
+  let x = uv.x + lean;
+  // How tall the fire is here: the middle gets to the top, the sides fall short, and each tongue goes up on its own.
+  let tongues = cn(fbm(vec2f(x * (fx * 3.2) + seed * 2.0, T * 0.42)));
+  let top = max(1.0 - x * x * 0.8, 0.0) * (0.42 + tongues * 0.62 + (n - 0.5) * 0.3);
+  let body = clamp(1.0 - s / max(top, 0.05), 0.0, 1.0);
+  let across = (0.86 - abs(x) * (0.86 + (m - 0.5) * 0.5)) * pow(body, 0.42) * 1.5;
+  let d = across + (n * 0.5 + m * 0.5 - 0.5) * body * 0.7;
   let v = smoothstep(0.0, 0.62, d);
-  let h = v * (0.55 + m * 0.55);
-  return vec4f(ramp(h) * (0.2 + h * h * HOT * 1.1) * smoothstep(0.0, 0.1, d) * smoothstep(0.0, 0.05, s + 0.02), 0.0);
+  let h = v * (0.55 + m * 0.55) * (0.62 + body * 0.5);
+  // (The foot fades into what it's standing on rather than end in a line, and nothing gets near the edge of the card.)
+  let foot = smoothstep(-0.01, 0.07, s);
+  let safe = smoothstep(FLAME_ROOM, 1.12, abs(uv.x)) * smoothstep(FLAME_ROOM, 1.12, s);
+  return vec4f(ramp(h) * (0.2 + h * h * HOT * 1.1) * smoothstep(0.0, 0.1, d) * foot * safe, 0.0);
 }
 
 fn puff(uv: vec2f, seed: f32, T: f32) -> vec4f {
   let r = length(uv);
   if (r >= 1.0) { return vec4f(0.0); }
   let n = cn(fbm(uv * 0.13 + vec2f(T * 0.02, -T * 0.03) + seed));
-  let d = smoothstep(1.0, 0.1, r + (n - 0.5) * 0.9);
+  let d = smoothstep(1.0, 0.1, r + (n - 0.5) * 0.9) * smoothstep(1.0, 0.62, r);
   return vec4f(ramp(0.2 + n * 0.32) * d * d * 0.5, d * d * 0.55);
 }
 
@@ -244,15 +267,16 @@ fn trail(uv: vec2f, L: f32, seed: f32, T: f32) -> vec4f {
   let w = abs(uv.x) / max(pow(f, 0.8), 0.001);
   if (w >= 1.0) { return vec4f(0.0); }
   let n = cn(fbm(vec2f(uv.y * L * 0.05 + T * 0.55 + seed, uv.x * 0.09)));
-  let body = smoothstep(1.0, 0.1, w + (n - 0.5) * 0.7 * (1.0 - f * 0.6));
+  let body = smoothstep(1.0, 0.1, w + (n - 0.5) * 0.7 * (1.0 - f * 0.6)) * smoothstep(1.0, 0.62, w);
   let h = clamp(body * f * (0.5 + n * 0.75) + f * f * f * body * 0.3, 0.0, 1.0);
   return vec4f(ramp(h) * (0.18 + h * h * HOT * 1.2) * body * f, 0.0);
 }
 
 fn column(uv: vec2f, seed: f32, T: f32) -> vec4f {
-  let s = (uv.y + 1.0) * 0.5;
+  // (Its card is a flame's, so it stops short of that, and of the edge.)
+  let s = clamp((uv.y + 1.0) * 0.5, 0.0, 1.0);
   let n = cn(fbm(vec2f(uv.x * 0.14 + seed, s * 0.11 - T * 0.22)));
-  let c = exp(-uv.x * uv.x * 5.0) * pow(1.0 - s, 1.3) * (0.32 + n * 0.95);
+  let c = exp(-uv.x * uv.x * 5.0) * pow(1.0 - s, 1.3) * (0.32 + n * 0.95) * smoothstep(0.0, 0.05, s) * smoothstep(1.2, 0.72, abs(uv.x));
   return vec4f(ramp(c) * (0.25 + c * c * HOT * 1.2) * c * 1.6, 0.0);
 }
 
@@ -322,7 +346,7 @@ fn shock(uv: vec2f, age: f32, seed: f32, T: f32) -> vec4f {
   var c = vec4f(0.0);
   switch shape {
     case 0u: { c = orb(uv, seed, T); }
-    case 1u: { c = beam(uv, I.a.w, seed, T); }
+    case 1u: { c = beam(uv, I.a.w, I.p.w, I.x.w, seed, T); }
     case 2u: { c = bolt(uv, I.a.w, I.x.w, seed, T); }
     case 3u: { c = ring(uv, age, seed, T); }
     case 4u: { c = disc(uv, I.p.w, age, e, seed, T); }

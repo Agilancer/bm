@@ -1,23 +1,25 @@
 // The walking dead, after Bellmourn's: they wander until they see or hear you, call the others, and hunt where they last knew you
 // were. They come apart a limb at a time, and carry on with what's left: one with no legs drags itself after you by the arms, one
-// with no head goes by ear. Only running out of body stops them. The necromancers raise more of them at your feet from a distance,
-// and the wizard hexes the ground you stand on; both throw bolts and blink away from a blade.
+// with no head goes by ear. Only running out of body stops them. Over them are the casters, who think: see Caster below, and foespells.js
+// for what they throw.
 import { C, EV } from '../core/layout.js';
 import { clamp, damp, quatYaw, wrapAngle, quatRotate } from '../core/math.js';
 import { ArmsRig } from './anim.js';
 import { Beast } from './beast.js';
 import { CHILDREN, PART, partOfJoint } from './limbs.js';
+import { FOE, lastRite } from './foespells.js';
 import { ELEM, FX } from './spells.js';
 
 const P = PART;
 export const OGRE_SCALE = 1.55;
 // What the renderer and the sim both build, in this order.
 export const BODIES = [
-  ...[1, 2, 3, 4, 5, 6].map((n) => ({ model: `zombie_${n}`, count: 4, scale: 1 })),
+  // (The last gives up a body in the ground so a second wizard fits in the thirty-six.)
+  ...[1, 2, 3, 4, 5, 6].map((n) => ({ model: `zombie_${n}`, count: n === 6 ? 3 : 4, scale: 1 })),
   { model: 'zombie_ogre', count: 2, scale: OGRE_SCALE },
   { model: 'necromancer', count: 1, scale: 1 },
   { model: 'zombie_necromancer', count: 1, scale: 1 },
-  { model: 'evil_wizard', count: 1, scale: 1 },
+  { model: 'evil_wizard', count: 2, scale: 1 },
 ];
 
 const STATE = { MOVE: 0, ATTACK: 3, STAGGER: 7, RISE: 8, PLAYDEAD: 9, DEAD: 10, CAST: 11 };
@@ -26,7 +28,6 @@ const GOAL = { WANDER: 0, CHASE: 1, HUNT: 2, SEARCH: 3 };
 const BLOW = 6;
 const LIMB_HP = { [P.HEAD]: 42, [P.UPPER_L]: 52, [P.UPPER_R]: 52, [P.FORE_L]: 36, [P.FORE_R]: 36, [P.HAND_L]: 22, [P.HAND_R]: 22, [P.THIGH_L]: 150, [P.THIGH_R]: 150, [P.SHIN_L]: 120, [P.SHIN_R]: 120, [P.FOOT_L]: 70, [P.FOOT_R]: 70, [P.HIPS]: 150 };
 const LEGS = new Set([P.HIPS, P.THIGH_L, P.THIGH_R, P.SHIN_L, P.SHIN_R, P.FOOT_L, P.FOOT_R]);
-const BOLTS = { arcane: { elem: ELEM.ARCANE, dmg: 10, speed: 14 }, blood: { elem: ELEM.DRAIN, dmg: 12, speed: 13 }, venom: { elem: ELEM.POISON, dmg: 9, speed: 12 }, fire: { elem: ELEM.FIRE, dmg: 13, speed: 15 } };
 // Windows are the frames of each clip, at 30 a second, in which its blow can land.
 const BLOWS = {
   attack_rake: { windows: [[18, 25]], dmg: 9 },
@@ -34,7 +35,6 @@ const BLOWS = {
   attack_bite: { windows: [[15, 22]], dmg: 14 },
   attack_pounce: { windows: [[26, 33]], dmg: 12 },
   crawl_attack: { windows: [[14, 19]], dmg: 7 },
-  bolt: { windows: [[6, 11]], dmg: 10, reach: 1.6 },
 };
 const WALKS = ['walk_shamble', 'walk_drag', 'walk_reach', 'walk_stagger'];
 const RUNS = { runner: ['run_lope', 'run_hobble', 'run_frenzy', 'run_charge'], lurker: ['run_hobble', 'run_lope'] };
@@ -110,15 +110,22 @@ export class Zombie extends Beast {
     this.dmgScale = opts.dmg || 1;
   }
 
-  // Up out of the ground, at someone's word.
-  raiseAt(sim, x, z, owner) {
+  // Up out of the ground, at someone's word. Calm, it's a servant, and follows its master about until there's something to do.
+  raiseAt(sim, x, z, owner, calm = false) {
     this.reset({ ...this.opts, sleeper: false, type: 'shambler', spawn: [x, z], yaw: Math.atan2(sim.player.x - x, sim.player.z - z) });
     this.owner = owner;
     this.y = sim.world.height(x, z);
     this.state = STATE.RISE; this.stateT = 0; this.sink = -0.4;
     this.setClip(this.riseClip); this.fade = 1;
-    this.aggro = true; this.goal = GOAL.CHASE; this.lastX = sim.player.x; this.lastZ = sim.player.z; this.lastSense = sim.time;
+    if (!calm) { this.aggro = true; this.goal = GOAL.CHASE; this.lastX = sim.player.x; this.lastZ = sim.player.z; this.lastSense = sim.time; }
     sim.event(EV.DIRT, x, this.y, z, 1.5);
+  }
+
+  // Blown apart: nothing of it gets up again.
+  burst(sim) {
+    if (!this.dead) this.die(sim);
+    for (const part of [P.UPPER_L, P.UPPER_R, P.HEAD, P.THIGH_L, P.THIGH_R]) if (this.alive[part]) this.sever(sim, part);
+    this.deadT = Math.max(this.deadT, 40);
   }
 
   setState(s) { this.state = s; this.stateT = 0; }
@@ -243,6 +250,10 @@ export class Zombie extends Beast {
     if (this.goal !== GOAL.CHASE) { this.goal = GOAL.CHASE; this.alert(sim, 9); }
     // Blows don't move them and don't stop one that's already swinging. It only checks its stride.
     if (this.state !== STATE.MOVE || this.crawling) return;
+    this.flinch(kind, poise);
+  }
+
+  flinch(kind, poise) {
     this.state = STATE.STAGGER; this.stateT = 0;
     this.stagger = poise > 50 || kind === 'puncture' ? 0.55 : 0.32;
     this.setClipOver(pick(this.hitClips), 0.08);
@@ -402,7 +413,7 @@ export class Zombie extends Beast {
     if (this.t >= c.dur) {
       this.sink = 0; this.hostile = true;
       this.setState(STATE.MOVE); this.setClip(this.idleClip);
-      if (d < 28) this.goal = GOAL.CHASE;
+      if (d < 28 && this.aggro) this.goal = GOAL.CHASE;
     }
   }
 
@@ -525,7 +536,10 @@ export class Zombie extends Beast {
     if (this.wanderT <= 0) {
       this.wanderT = rnd(5, 12);
       this.moving = Math.random() < 0.65;
-      const home = this.opts.spawn;
+      // A servant's home is wherever its master has got to.
+      const master = this.owner && !this.owner.dead ? [this.owner.x, this.owner.z] : null;
+      if (master) { this.wanderT = rnd(2, 4); this.moving = true; }
+      const home = master || this.opts.spawn;
       for (let i = 0; i < 6; i++) {
         this.wx = home[0] + rnd(-6, 6); this.wz = home[1] + rnd(-6, 6);
         if (!sim.world.inside(this.wx, this.wz, 0.5)) break;
@@ -625,18 +639,111 @@ export class Zombie extends Beast {
 
 // ---- those who command them -------------------------------------------------------------------------------
 
+// Each kind's book, and when it reaches for what. A score is how good an idea it looks right now; what's on the table is worked out
+// once when it decides, with the best of it taken, give or take a little. Each spell has its own wait after it's been cast, so nobody
+// repeats themselves. Combos are what comes straight after, without a breath.
+const low = (s) => s.hurt < 0.45;
+const WIZARD = [
+  { spell: 'bolt', wait: [1.5, 3], score: (s) => (s.sees ? 1 : 0) },
+  { spell: 'prism', wait: [5, 8], score: (s) => (s.sees && s.d > 5 ? 2.2 : 0) },
+  { spell: 'crown', wait: [13, 18], score: (s) => (s.sees && s.d < 22 ? 2.6 : 0) },
+  { spell: 'fallingSky', wait: [13, 19], score: (s) => (s.sees && s.d > 7 ? 2 + (s.d > 14 ? 1 : 0) + (s.running ? 0 : 1) : 0) },
+  { spell: 'stormCage', wait: [17, 24], score: (s) => (s.sees && s.d > 6 && s.d < 24 ? 3 : 0), then: ['fallingSky', 'prism'] },
+  { spell: 'searingRay', wait: [11, 16], score: (s) => (s.sees && s.d > 5 && s.d < 20 ? 2.7 : 0) },
+  { spell: 'slowStar', wait: [16, 22], score: (s) => (s.sees && low(s) ? 4 : 0) },
+  { spell: 'ward', wait: [14, 20], score: (s) => (s.hurtLately && s.k.ward <= 0 ? 3.4 : 0) },
+  { spell: 'hound', wait: [6, 9], score: (s) => (!s.sees && s.d < 45 ? 4 : 0) },
+];
+const NECROMANCER = [
+  { spell: 'bolt', wait: [1.6, 3.2], score: (s) => (s.sees ? 1 : 0) },
+  { spell: 'graveRite', wait: [14, 20], score: (s) => (s.minions < 2 && s.d > 4 && s.d < 30 && s.spare ? 4 : 0) },
+  { spell: 'boneCage', wait: [17, 24], score: (s) => (s.sees && s.d > 4 && s.d < 24 ? 3.1 : 0), then: ['graveRite'] },
+  { spell: 'boneFurrow', wait: [5, 8], score: (s) => (s.sees && s.d > 4 && s.d < 22 ? 2.4 : 0) },
+  { spell: 'soulLeech', wait: [12, 17], score: (s) => (s.sees && s.d > 5 && s.d < 22 ? 2 + (low(s) ? 2 : 0) : 0) },
+  { spell: 'wraiths', wait: [8, 12], score: (s) => (s.d < 26 && s.sees ? 2.3 : 0) },
+  { spell: 'corpseBomb', wait: [8, 12], target: (s) => s.k.bombNearYou(s.sim), score: (s) => (s.bomb ? 3.6 : 0) },
+  { spell: 'reap', wait: [14, 20], target: (s) => s.k.nearestMinion(14), score: (s) => (low(s) && s.nearMinion ? 5 : 0) },
+];
+const PLAGUEBEARER = [
+  { spell: 'bolt', wait: [1.8, 3.4], score: (s) => (s.sees ? 0.8 : 0) },
+  { spell: 'graveRite', wait: [14, 20], score: (s) => (s.minions < 2 && s.d > 4 && s.d < 30 && s.spare ? 4 : 0) },
+  { spell: 'flask', wait: [3.5, 6], score: (s) => (s.d > 5 && s.d < 19 && s.sees ? 2.6 : 0) },
+  { spell: 'bloom', wait: [10, 15], score: (s) => (s.sees && s.d > 4 && s.d < 28 ? 2.8 : 0) },
+  { spell: 'locusts', wait: [15, 21], score: (s) => (s.d < 28 ? 2.4 + (s.running ? 0 : 0.8) : 0) },
+  { spell: 'rotWave', wait: [9, 13], score: (s) => (s.d < 13 ? 3 + (s.d < 7 ? 1.5 : 0) : 0) },
+  { spell: 'wraiths', wait: [9, 13], score: (s) => (s.d < 26 && s.sees ? 1.9 : 0) },
+  { spell: 'corpseBomb', wait: [8, 12], target: (s) => s.k.bombNearYou(s.sim), score: (s) => (s.bomb ? 3.3 : 0) },
+  { spell: 'reap', wait: [14, 20], target: (s) => s.k.nearestMinion(14), score: (s) => (low(s) && s.nearMinion ? 5 : 0) },
+];
+const BOOKS = { wizard: WIZARD, necromancer: NECROMANCER, plaguebearer: PLAGUEBEARER };
+// How far off each likes to work, and how long between one thing and the next.
+const MANNER = {
+  wizard: { near: 9, far: 16, breath: [0.5, 1.2], walk: 'stride', dodge: 0.7 },
+  necromancer: { near: 12, far: 20, breath: [0.9, 1.7], walk: 'walk', dodge: 0.25 },
+  plaguebearer: { near: 8, far: 15, breath: [0.9, 1.8], walk: 'walk', dodge: 0.2 },
+};
+const palm = [0, 0, 0];
+
+export function corpsesNear(sim, k, r) {
+  const found = [];
+  for (const m of sim.knights) {
+    if (!(m instanceof Zombie) || m instanceof Caster || m.scale > 1.2 || !m.dead || m.dormant || m.doomed) continue;
+    const d = Math.hypot(m.x - k.x, m.z - k.z);
+    if (d < r && m.deadT > 1.5 && m.deadT < 40) found.push(m);
+  }
+  return found;
+}
+
 export class Caster extends Zombie {
   takes(opts) {
+    const role = opts.role;
     this.senses = { sight: 32, hear: 1.1, turn: 3.2 };
     this.style = 'caster';
-    this.walkClip = 'walk'; this.runClip = 'run';
-    this.idleClip = 'idle'; this.riseClip = 'idle'; this.deathClip = 'death'; this.hitClips = ['hit'];
-    this.walkPush = 1.5;
+    this.manner = MANNER[role]; this.book = BOOKS[role];
+    this.walkClip = this.manner.walk; this.runClip = 'run';
+    this.idleClip = 'idle'; this.riseClip = 'idle'; this.deathClip = 'death'; this.hitClips = ['hit', 'hit_head'];
+    this.walkPush = 1.6;
     this.dmgScale = 1;
-    this.boltT = rnd(1, 3); this.bigT = rnd(6, 14); this.blinkT = 2; this.blinkAsk = false; this.circleDir = 1; this.circleT = 2; this.cast = null; this.fired = false; this.minions = [];
+    this.waits = {}; this.minions = []; this.queue = []; this.casting = null; this.ward = 0; this.caged = null;
+    this.breath = rnd(0.6, 2); this.blinkT = 2; this.blinkAsk = false; this.lastHurtAt = -99; this.seenBolts = new WeakSet();
+    this.spot = null; this.spotT = 0; this.strain = 0; this.steadyT = 0;
+    this.vigil = { kind: 'go', t: 0, x: opts.spawn[0], z: opts.spawn[1] }; this.revealed = false;
   }
 
   get canCast() { return !this.crawling && !this.headless && (this.armL || this.armR); }
+
+  // Where a spell starts from: the hand the clip raises, which is the left. A throw is the right's. It makes do with whichever is left.
+  handAt(right = false) {
+    const name = (right ? this.armR : !this.armL) ? 'hand_r' : 'hand_l', j = this.jointOf(name), wt = this.rig.wt;
+    palm[0] = wt[j * 3]; palm[1] = wt[j * 3 + 1]; palm[2] = wt[j * 3 + 2];
+    return palm;
+  }
+
+  nearestMinion(r) {
+    let best = null, bd = r;
+    for (const m of this.minions) {
+      if (m.dead || m.owner !== this || m.doomed) continue;
+      const d = Math.hypot(m.x - this.x, m.z - this.z);
+      if (d < bd) { bd = d; best = m; }
+    }
+    return best;
+  }
+
+  // Something near you with a body to give: on its feet, or lying where it fell.
+  bombNearYou(sim) {
+    const p = sim.player;
+    let best = null, bd = 9;
+    for (const m of sim.knights) {
+      if (!(m instanceof Zombie) || m instanceof Caster || m.scale > 1.2 || m.dormant || m.doomed) continue;
+      if (m.dead ? m.deadT > 40 : m.owner !== this) continue;
+      const d = Math.hypot(m.x - p.x, m.z - p.z);
+      if (d < bd) { bd = d; best = m; }
+    }
+    return best;
+  }
+
+  // Down on the ground it claws like the rest. On its feet it has no blows of its own to swing.
+  tryAttack(sim, p, d, toPlayer) { return this.crawling && super.tryAttack(sim, p, d, toPlayer); }
 
   sever(sim, part) {
     super.sever(sim, part);
@@ -644,63 +751,358 @@ export class Caster extends Zombie {
     if (part === P.HEAD && !this.dead) this.die(sim);
   }
 
+  die(sim) {
+    this.stopCasting();
+    super.die(sim);
+    lastRite(this, sim);
+  }
+
+  takeBlow(sim, amount) {
+    if (this.ward > 0) {
+      const soak = Math.min(this.ward, amount);
+      this.ward -= soak;
+      sim.casting.burst(FX.SHOCK, ELEM.ARCANE, this.x, this.y + 1.05, this.z, 1.1, 1.5, 0.16, { alpha: 1, light: 10, lightR: 4 });
+      if (amount - soak <= 0.01) { this.hp = this.seenHp; this.rayPiece = -1; return; }
+      amount -= soak;
+    }
+    // (The dead are soft to spells, at twice what they do. Those who cast them aren't.)
+    super.takeBlow(sim, this.rayPiece < 0 ? amount * 0.5 : amount);
+  }
+
+  // Burns and scratches don't check it, and nor does anything so soon after the last time.
+  flinch(kind, poise) {
+    if ((poise < 18 && kind !== 'puncture') || this.steadyT > 0) return;
+    this.steadyT = 2.5;
+    super.flinch(kind, poise);
+  }
+
   onHit(sim, kind, fromX, fromZ, poise = 0) {
     super.onHit(sim, kind, fromX, fromZ, poise);
-    if (Math.random() < 0.5) this.blinkAsk = true;
+    this.lastHurtAt = sim.time;
+    if (Math.random() < 0.3) this.blinkAsk = true;
+    // A blow or two in the middle of a working, and it's lost. A throw's already gone.
+    const s = this.casting;
+    if (this.state === STATE.CAST && s && s.def.how !== 'lob' && s.phase !== 'release' && s.phase !== 'out' && poise > 0 && this.steadyT <= 0) {
+      this.strain += 1 + poise / 40 + (kind === 'puncture' ? 0.5 : 0);
+      if (this.strain >= 2) this.interrupt(sim);
+    }
   }
 
-  // Keeps its distance and works: priority to getting clear, then a blade if you're in reach, then a great working, then a bolt.
+  stopCasting() { if (this.casting) { this.casting.token.live = false; this.casting = null; } }
+
+  interrupt(sim) {
+    const e = this.casting.def.elem(this), h = this.handAt();
+    sim.casting.burst(FX.FLARE, e, h[0], h[1], h[2], 0.4, 1.1, 0.2, { alpha: 1.1, light: 14, lightR: 5 });
+    sim.event(EV.SPELL_FIZZLE, h[0], h[1], h[2]);
+    this.stopCasting();
+    this.queue.length = 0;
+    this.steadyT = 4;
+    this.state = STATE.STAGGER; this.stateT = 0; this.stagger = 0.75;
+    this.setClipOver('knock', 0.08);
+    this.breath = rnd(0.3, 0.8);
+  }
+
+  // A shield in the face, or a parried clap, loses whatever it was working.
+  reel(sim, seconds) {
+    if (this.casting) this.interrupt(sim);
+    super.reel(sim, seconds);
+  }
+
+  // Wherever it is in a working, frozen stiff it's dropped.
+  update(dt, sim) {
+    if (dt <= 0 && this.casting) this.casting.token.live = false;
+    this.steadyT = Math.max(0, this.steadyT - dt);
+    super.update(dt, sim);
+  }
+
+  // Three things on its mind, in turn: you, the last it knew of you, and its own business.
   think(dt, sim, p, d, toPlayer, hunting) {
-    if (!this.canCast || this.goal !== GOAL.CHASE) { super.think(dt, sim, p, d, toPlayer, hunting); return; }
-    this.boltT -= dt; this.bigT -= dt; this.blinkT -= dt;
+    if (!this.canCast) { super.think(dt, sim, p, d, toPlayer, hunting); return; }
+    // Knocked out of a working by something else: it picks itself up and thinks again.
+    if (this.casting) { this.stopCasting(); this.breath = rnd(0.3, 0.8); }
+    this.blinkT -= dt; this.breath -= dt;
+    for (const w in this.waits) this.waits[w] -= dt;
+    if (this.goal === GOAL.CHASE) this.fight(dt, sim, p, d, toPlayer);
+    else if (this.goal === GOAL.HUNT || this.goal === GOAL.SEARCH) this.seek(dt, sim, p, d, toPlayer);
+    else this.keepVigil(dt, sim, p, d);
+  }
+
+  // ---- in a fight -----------------------------------------------------------------------------------------------
+
+  fight(dt, sim, p, d, toPlayer) {
     const sees = sim.world.sees(this.x, this.y + 1.5, this.z, p.x, p.y + 1.5, p.z);
-    const err = Math.abs(wrapAngle(toPlayer - this.yaw));
-    if ((d < 2.6 || this.blinkAsk) && this.blinkT <= 0 && !this.hobble) { this.blink(sim, p, toPlayer); this.blinkAsk = false; return; }
-    if (d < 1.8 && err < 0.6 && this.armR && this.cool <= 0) { this.startAttack(sim, 'bolt'); this.cool = 1; return; }
-    if (sees && d > 4 && d < 22 && this.bigT <= 0) { this.startCast(sim, this.opts.role === 'wizard' ? 'hex' : 'summon'); this.bigT = this.opts.role === 'wizard' ? rnd(7, 11) : rnd(16, 26); return; }
-    if (sees && d < 30 && err < 0.3 && this.boltT <= 0) { this.startCast(sim, 'bolt'); this.boltT = rnd(2.2, 4); return; }
-    const walk = this.rig.clips.walk.speed * this.pace * this.walkPush;
-    if (!sees || d > 17) {
-      const fast = d > 12;
+    if (this.react(sim, p, d, toPlayer)) return;
+    if (this.queue.length && this.breath <= 0.4) {
+      const next = this.queue.shift();
+      if ((this.waits[next] || 0) <= 0 && sees) { this.begin(sim, this.book.find((b) => b.spell === next), null); return; }
+    }
+    if (this.breath <= 0 && this.decide(sim, p, d, sees)) return;
+    this.reposition(dt, sim, p, d, toPlayer, sees);
+  }
+
+  // What it can't wait for. A blade at its throat; a spell on its way. Getting clear comes before anything else.
+  react(sim, p, d, toPlayer) {
+    if (this.blinkT > 0) return false;
+    // It watches what you throw, and sometimes it isn't there when it lands.
+    for (const b of sim.casting.bolts) {
+      if (this.seenBolts.has(b)) continue;
+      const ax = this.x - b.x, ay = this.y + 1.1 - b.y, az = this.z - b.z, L = Math.hypot(ax, ay, az);
+      if (L > 11 || L < 0.01) continue;
+      const sp = Math.hypot(b.vx, b.vy, b.vz) || 1;
+      if ((ax * b.vx + ay * b.vy + az * b.vz) / (L * sp) < 0.94) continue;
+      this.seenBolts.add(b);
+      if (Math.random() < this.manner.dodge) { this.blinkAcross(sim, b.vx / sp, b.vz / sp, p, toPlayer); return true; }
+    }
+    if (d >= 3 && !this.blinkAsk) return false;
+    this.blinkAsk = false;
+    const role = this.opts.role;
+    if (role === 'wizard') {
+      // With its back to nobody: comes out behind you, and hits you with the clap before you've turned.
+      if (d < 4 && (this.waits.thunderclap || 0) <= 0 && this.ambush(sim, p)) { this.waits.thunderclap = rnd(8, 12); this.begin(sim, { spell: 'thunderclap', wait: [8, 12] }, null); this.breath = 0; return true; }
+      return this.blink(sim, p, toPlayer);
+    }
+    // A servant takes its place, if there's one to take it.
+    const m = this.nearestMinion(16);
+    if (m && d < 4) { this.swap(sim, m); return true; }
+    return this.blink(sim, p, toPlayer);
+  }
+
+  decide(sim, p, d, sees) {
+    const hurtLately = sim.time - this.lastHurtAt < 2.5;
+    const look = {
+      k: this, sim, p, d, sees, hurt: this.hp / this.maxHp, hurtLately, running: Math.hypot(p.vx, p.vz) > 3.2,
+      minions: (this.minions = this.minions.filter((m) => !m.dead && m.owner === this)).length,
+      nearMinion: !!this.nearestMinion(14), bomb: !!this.bombNearYou(sim), spare: this.anyToRaise(sim),
+    };
+    let best = null, top = 0;
+    for (const b of this.book) {
+      if ((this.waits[b.spell] || 0) > 0) continue;
+      if (FOE[b.spell].big && sim.time < sim.foeBigAt) continue;
+      const v = b.score(look);
+      if (v <= 0) continue;
+      const scored = v + Math.random() * 1.1;
+      if (scored > top) { top = scored; best = b; }
+    }
+    if (!best) return false;
+    this.begin(sim, best, best.target ? best.target(look) : null);
+    return true;
+  }
+
+  anyToRaise(sim) { return sim.knights.some((k) => k instanceof Zombie && !(k instanceof Caster) && k.scale <= 1.2 && k.dead && (k.dormant || k.deadT > 1.5)); }
+
+  begin(sim, entry, target) {
+    this.waits[entry.spell] = rnd(entry.wait[0], entry.wait[1]) * (this.hp / this.maxHp < 0.45 ? 0.72 : 1);
+    if (entry.then) this.queue = [entry.then[Math.floor(Math.random() * entry.then.length)]];
+    this.startCast(sim, entry.spell, target);
+  }
+
+  // Finds a place to stand, at its distance, with you in sight and the way clear, and where you aren't looking if it can. It always walks facing the way it's going.
+  reposition(dt, sim, p, d, toPlayer, sees) {
+    const { near, far } = this.manner;
+    if (!sees || d > far + 3) {
+      const fast = d > far + 9;
       sim.world.updateField(p.x, p.z, sim.time, 0);
       sim.world.flow(flow, this.x, this.z, p.x, p.z, 0);
-      this.steer(dt, sim, flow[0], flow[1], fast ? this.rig.clips.run.speed * 0.8 * this.pace : walk, 3.2);
-      this.stride(fast ? 'run' : 'walk', this.speed, dt, sim);
+      this.steer(dt, sim, flow[0], flow[1], fast ? this.rig.clips.run.speed * this.pace : this.rig.clips[this.walkClip].speed * this.walkPush * this.pace, 3.2);
+      this.stride(fast ? 'run' : this.walkClip, this.speed, dt, sim);
       return;
     }
-    // In its range: faces you the whole time, and backs away or goes round.
+    this.spotT -= dt;
+    if (!this.spot || this.spotT <= 0 || d < near * 0.6) this.pickSpot(sim, p, near, far);
+    if (this.spot) {
+      const ax = this.spot.x - this.x, az = this.spot.z - this.z;
+      if (Math.hypot(ax, az) > 0.7) {
+        const fast = d < near * 0.75;
+        this.steer(dt, sim, ax, az, fast ? this.rig.clips.run.speed * this.pace : this.rig.clips[this.walkClip].speed * this.walkPush * this.pace, 3.6);
+        this.stride(fast ? 'run' : this.walkClip, this.speed, dt, sim);
+        return;
+      }
+      this.spot = null; this.spotT = 0.5;
+    }
+    this.halt(dt);
     this.yaw = turn(this.yaw, toPlayer, 3.2 * dt);
-    this.circleT -= dt;
-    if (this.circleT <= 0) { this.circleT = rnd(2, 5); this.circleDir = Math.random() < 0.5 ? -1 : 1; }
-    let ax, az, v, back = false;
-    if (d < 7) { ax = -Math.sin(toPlayer); az = -Math.cos(toPlayer); v = walk * 1.1; back = true; } else { ax = Math.cos(toPlayer) * this.circleDir; az = -Math.sin(toPlayer) * this.circleDir; v = walk * 0.7; }
-    const k = 1 - Math.exp(-7 * dt);
-    this.vx += (ax * v - this.vx) * k; this.vz += (az * v - this.vz) * k;
-    this.speed = Math.hypot(this.vx, this.vz);
-    this.setClip('walk');
-    const rate = clamp(this.speed / (this.rig.clips.walk.speed || 0.7), 0.25, 2);
-    this.t += dt * (back ? -rate : rate);
+    this.setClip(this.idleClip);
+    this.t += dt;
   }
 
-  startCast(sim, name) {
-    this.setClipOver(name, 0.18);
-    this.cast = CASTS[name];
-    this.fired = false;
+  pickSpot(sim, p, near, far) {
+    let best = null, top = -1e9;
+    const here = Math.atan2(this.x - p.x, this.z - p.z), wounded = this.hp / this.maxHp < 0.45, servants = this.minions.filter((m) => !m.dead);
+    for (let i = 0; i < 10; i++) {
+      const a = here + rnd(-1.6, 1.6), r = rnd(near, far), x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
+      if (sim.world.inside(x, z, 0.6)) continue;
+      const y = sim.world.height(x, z), ax = x - this.x, az = z - this.z, L = Math.hypot(ax, az);
+      if (Math.abs(y - this.y) > 1.8) continue;
+      if (L > 0.5 && sim.world.rayBoxes(this.x, this.y + 1, this.z, ax / L, 0, az / L, L) > 0) continue;
+      if (!sim.world.sees(x, y + 1.5, z, p.x, p.y + 1.5, p.z)) continue;
+      // Out of the corner of your eye, not far to go, further off when it's hurt. A master stands with its servants between you and it.
+      let v = -Math.cos(wrapAngle(a - p.yaw)) * 1.5 - L * 0.08 + (wounded ? r * 0.08 : 0);
+      for (const m of servants) {
+        const mx = m.x - p.x, mz = m.z - p.z, mL = Math.hypot(mx, mz) || 1;
+        if (mL < r && Math.cos(Math.atan2(mx, mz) - a) > 0.85) v += 1;
+      }
+      if (v > top) { top = v; best = { x, z }; }
+    }
+    this.spot = best; this.spotT = rnd(2.8, 5);
+  }
+
+  // ---- having lost you ---------------------------------------------------------------------------------------------
+
+  seek(dt, sim, p, d, toPlayer) {
+    if (this.goal === GOAL.HUNT) {
+      const ax = this.lastX - this.x, az = this.lastZ - this.z, left = Math.hypot(ax, az);
+      if (left < 1.5) { this.goal = GOAL.SEARCH; this.searchT = rnd(7, 12); this.wanderT = 0; this.revealed = false; return; }
+      this.steer(dt, sim, ax, az, this.rig.clips[this.walkClip].speed * this.walkPush * this.pace, 3.2);
+      this.stride(this.walkClip, this.speed, dt, sim);
+      return;
+    }
+    this.searchT -= dt;
+    if (this.searchT <= 0) { this.goal = GOAL.WANDER; this.aggro = false; return; }
+    // Having got there, a wizard goes looking the quick way.
+    if (!this.revealed && this.opts.role === 'wizard') { this.revealed = true; this.startCast(sim, 'reveal'); return; }
+    // Otherwise a turn on the spot, looking about, and it sends whatever it has on ahead.
+    if (Math.random() < dt * 0.3) for (const m of this.minions) if (!m.dead && m.goal !== GOAL.CHASE) { m.aggro = true; m.goal = GOAL.HUNT; m.lastX = this.lastX + rnd(-6, 6); m.lastZ = this.lastZ + rnd(-6, 6); }
+    this.halt(dt);
+    this.yaw = wrapAngle(this.yaw + Math.sin(sim.time * 0.6 + this.id) * 1.2 * dt);
+    this.setClip(this.idleClip);
+    this.t += dt;
+  }
+
+  // Something found it: it knows where you are, whatever it can see.
+  findAt(sim) {
+    const p = sim.player;
+    this.lastX = p.x; this.lastZ = p.z; this.lastSense = sim.time;
+    this.aggro = true; this.hostile = true; this.goal = GOAL.CHASE;
+    this.alert(sim, 18);
+  }
+
+  // ---- its own business --------------------------------------------------------------------------------------------
+
+  // A necromancer goes from grave to grave, kneels, and now and then something gets up and follows it about. A wizard walks its rounds,
+  // stops, folds its arms, and works at something in its hand.
+  keepVigil(dt, sim, p, d) {
+    const v = this.vigil, home = this.opts.spawn, wizard = this.opts.role === 'wizard';
+    v.t -= dt;
+    if (v.kind === 'go') {
+      const ax = v.x - this.x, az = v.z - this.z;
+      if (Math.hypot(ax, az) < 0.8 || v.t < -14) { v.kind = 'stay'; v.t = wizard ? rnd(4, 7) : rnd(7, 11); v.done = false; return; }
+      this.steer(dt, sim, ax, az, this.rig.clips[this.walkClip].speed * this.pace * 1.25, 2.4);
+      this.stride(this.walkClip, this.speed, dt, sim);
+      return;
+    }
+    this.halt(dt);
+    if (v.kind === 'work') {
+      this.setClip('cast_hold');
+      const h = this.handAt();
+      sim.casting.fx(FX.FLARE, this.opts.boltElem, h[0], h[1], h[2], 0.09 + 0.03 * Math.sin(sim.time * 5), 0, 1, 0, 0, 0.8, 3, 3, 0.5, this.id * 0.1);
+    } else this.setClip(wizard ? 'guard' : 'tend');
+    this.t += dt;
+    // A servant, from the grave it's kneeling at, if the ground has one to spare.
+    if (!wizard && !v.done && v.t < 2.5) {
+      v.done = true;
+      this.minions = this.minions.filter((m) => !m.dead && m.owner === this);
+      if (this.minions.length < 2 && d < 90) {
+        const a = this.yaw + rnd(-1, 1), x = this.x + Math.sin(a) * 1.7, z = this.z + Math.cos(a) * 1.7;
+        if (!sim.world.inside(x, z, 0.5)) {
+          const m = raiseZombie(sim, x, z, this, true);
+          if (m) {
+            this.minions.push(m);
+            sim.casting.burst(FX.RUNE, ELEM.VOID, x, sim.world.height(x, z) + 0.03, z, 0.4, 1.3, 1.2, { alpha: 0.85, light: 7, lightR: 5 });
+            sim.event(EV.CHANT, this.x, this.y + 1.2, this.z);
+          }
+        }
+      }
+    }
+    if (v.t > 0) return;
+    if (wizard && v.kind === 'stay' && Math.random() < 0.6) { v.kind = 'work'; v.t = rnd(3, 5); return; }
+    for (let i = 0; i < 6; i++) {
+      v.x = home[0] + rnd(-9, 9); v.z = home[1] + rnd(-9, 9);
+      if (!sim.world.inside(v.x, v.z, 0.6)) break;
+    }
+    v.kind = 'go'; v.t = 0;
+  }
+
+  // ---- a working, from the hand going up to the hand coming down -------------------------------------------------------
+
+  startCast(sim, name, target = null) {
+    const def = FOE[name];
+    this.casting = { name, def, target, phase: 'in', t: 0, fired: false, token: { live: true, end: false } };
+    if (def.big) sim.foeBigAt = sim.time + 2.5;
     this.state = STATE.CAST; this.stateT = 0;
+    this.strain = 0;
     this.hostile = true;
-    if (name === 'summon') { sim.event(EV.CHANT, this.x, this.y + 1.5, this.z); this.boltT = Math.max(this.boltT, 1.5); }
+    this.spot = null;
+    if (def.how === 'lob') { this.casting.phase = 'release'; this.setClipOver('lob', 0.16); } else this.setClipOver('cast_in', 0.14);
+    this.breath = 1e9;
+  }
+
+  fireCast(sim, p, d) {
+    const s = this.casting;
+    s.fired = true;
+    const h = this.handAt(s.def.how === 'lob');
+    s.def.fire(this, sim, p, d, s.token, [h[0], h[1], h[2]], s.target);
+  }
+
+  endCast() {
+    this.stopCasting();
+    this.state = STATE.MOVE; this.stateT = 0;
+    this.setClipOver(this.idleClip, 0.2);
+    this.breath = rnd(this.manner.breath[0], this.manner.breath[1]) * (this.hp / this.maxHp < 0.45 ? 0.7 : 1);
   }
 
   thinkCast(dt, sim, p, d, toPlayer) {
-    const c = this.rig.clips[this.clip], cast = this.cast;
+    const s = this.casting;
+    if (!s || !s.token.live) { this.endCast(); return; }
+    const def = s.def, clip = this.rig.clips[this.clip], e = def.elem(this);
     this.halt(dt);
     this.yaw = turn(this.yaw, toPlayer, 3 * dt);
-    this.t += dt * cast.rate;
-    const left = this.jointOf('hand_r'), wt = this.rig.wt;
-    // Something gathers in the hand.
-    if (!this.fired) sim.casting.fx(FX.FLARE, cast.elem(this), wt[left * 3], wt[left * 3 + 1], wt[left * 3 + 2], 0.05 + 0.12 * Math.min(1, this.t * cast.rate / (cast.at * c.dur + 0.01)), 0, 1, 0, 0, 0.8, 4, 3);
-    if (!this.fired && this.t >= cast.at * c.dur) { this.fired = true; cast.fire(this, sim, p, d); }
-    if (this.t >= c.dur * cast.until) { this.setState(STATE.MOVE); this.setClip(this.idleClip); this.cast = null; }
+    this.t += dt; s.t += dt;
+    const next = (phase, name) => { s.phase = phase; s.t = 0; if (name !== this.clip) this.setClipOver(name, 0.12); };
+    // Something gathers in the hand, for all to see, and the ground knows about it under a greater one.
+    if (s.phase === 'in' || s.phase === 'charge') {
+      const h = this.handAt(), grown = s.phase === 'in' ? s.t / clip.dur * 0.4 : 0.4 + 0.6 * s.t / Math.max(def.charge, 0.01);
+      sim.casting.fx(FX.FLARE, e, h[0], h[1], h[2], 0.08 + 0.3 * grown, 0, 1, 0, 0, 0.9, 3 + 7 * grown, 4, 0.5, this.id * 0.1);
+      sim.casting.fx(FX.ORB, e, h[0], h[1], h[2], 0.05 + 0.13 * grown, 0, 1, 0, 0, 1, 0, 0, 0, this.id * 0.2);
+      if (def.big || def.ground) sim.casting.fx(FX.RUNE, e, this.x, sim.world.height(this.x, this.z) + 0.04, this.z, 1.1 + 0.6 * grown, 0, 1, 0, 0, 0.35 + 0.5 * grown, 2 + 8 * grown, 4, grown, this.id * 0.3);
+    }
+    switch (s.phase) {
+      case 'in':
+        if (this.t >= clip.dur) next('charge', 'cast_hold');
+        break;
+      case 'charge':
+        if (s.t < def.charge) break;
+        if (def.how === 'raise') { this.fireCast(sim, p, d); if (this.casting === s) next('channel', 'cast_hold'); } else next('release', 'bolt');
+        break;
+      case 'channel': {
+        const h = this.handAt();
+        sim.casting.fx(FX.FLARE, e, h[0], h[1], h[2], 0.2, 0, 1, 0, 0, 0.9, 5, 4, 0.5, this.id * 0.1);
+        if (s.t >= def.hold || s.token.end) next('out', 'cast_out');
+        break;
+      }
+      case 'release':
+        // A throw lets go as the arm comes through, a bolt as soon as the hand kicks.
+        if (!s.fired && this.t >= (def.how === 'lob' ? clip.dur * 0.34 : 0.05)) this.fireCast(sim, p, d);
+        if (this.casting !== s) break; // (Parried as it left the hand.)
+        if (this.t >= clip.dur * (def.how === 'lob' ? 0.82 : 0.9)) { if (def.how === 'lob') this.endCast(); else next('out', 'cast_out'); }
+        break;
+      default:
+        if (this.t >= clip.dur) this.endCast();
+    }
+  }
+
+  // ---- getting about ------------------------------------------------------------------------------------------------
+
+  flash(sim, x, y, z, scale) {
+    const e = this.opts.role === 'wizard' ? ELEM.ARCANE : ELEM.VOID;
+    sim.casting.burst(FX.FLARE, e, x, y + 1, z, 0.5 * scale, 1.4 * scale, 0.3, { alpha: 1.2, light: 18, lightR: 8 });
+    sim.event(EV.BLINK, x, y + 1, z);
+  }
+
+  place(sim, x, z) {
+    this.flash(sim, this.x, this.y, this.z, 1);
+    this.x = x; this.z = z; this.y = sim.world.height(x, z); this.vx = 0; this.vz = 0;
+    this.spot = null;
+    this.flash(sim, x, this.y, z, 1);
   }
 
   // Lands 8 to 13 m away on its own side of you, somewhere it can see you from. If there's nowhere, it stays put.
@@ -710,121 +1112,58 @@ export class Caster extends Zombie {
       const r = rnd(8, 13), a = toPlayer + Math.PI + rnd(-1.2, 1.2);
       const x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
       if (sim.world.inside(x, z, 0.5)) continue;
-      const y = sim.world.height(x, z);
-      if (!sim.world.sees(x, y + 1.5, z, p.x, p.y + 1.5, p.z)) continue;
-      const c = sim.casting, e = this.opts.role === 'wizard' ? ELEM.ARCANE : ELEM.VOID;
-      c.burst(FX.FLARE, e, this.x, this.y + 1, this.z, 0.5, 1.4, 0.3, { alpha: 1.2, light: 18, lightR: 8 });
-      sim.event(EV.BLINK, this.x, this.y + 1, this.z);
-      this.x = x; this.z = z; this.y = y; this.vx = 0; this.vz = 0;
-      c.burst(FX.FLARE, e, x, y + 1, z, 1.4, 0.5, 0.3, { alpha: 1.2, light: 18, lightR: 8 });
-      sim.event(EV.BLINK, x, y + 1, z);
-      return;
+      if (!sim.world.sees(x, sim.world.height(x, z) + 1.5, z, p.x, p.y + 1.5, p.z)) continue;
+      this.place(sim, x, z);
+      return true;
     }
+    return false;
+  }
+
+  // Out of the way of something coming at it, to one side of its line.
+  blinkAcross(sim, dx, dz, p, toPlayer) {
+    this.blinkT = rnd(3.5, 6);
+    const side = Math.random() < 0.5 ? 1 : -1;
+    for (const r of [5.5, 4, 3]) {
+      for (const s of [side, -side]) {
+        const x = this.x - dz * s * r, z = this.z + dx * s * r;
+        if (sim.world.inside(x, z, 0.5) || Math.abs(sim.world.height(x, z) - this.y) > 1.5) continue;
+        this.place(sim, x, z);
+        this.yaw = turn(this.yaw, Math.atan2(p.x - x, p.z - z), 1.5);
+        return;
+      }
+    }
+    this.blink(sim, p, toPlayer);
+  }
+
+  // Right behind you.
+  ambush(sim, p) {
+    this.blinkT = rnd(5, 8);
+    const x = p.x - Math.sin(p.yaw) * 3.3, z = p.z - Math.cos(p.yaw) * 3.3;
+    if (sim.world.inside(x, z, 0.5) || Math.abs(sim.world.height(x, z) - p.y) > 1.2) return false;
+    this.place(sim, x, z);
+    this.yaw = Math.atan2(p.x - x, p.z - z);
+    return true;
+  }
+
+  // It and one of its own, changing places, when you've got too close.
+  swap(sim, m) {
+    this.blinkT = rnd(5, 8);
+    const x = m.x, z = m.z, mx = this.x, mz = this.z;
+    this.place(sim, x, z);
+    m.x = mx; m.z = mz; m.y = sim.world.height(mx, mz);
+    m.rush = 2;
   }
 }
 
-const CASTS = {
-  // Up to three of the dead, close around you rather than around it, as long as it has fewer than five about.
-  summon: {
-    rate: 3, at: 0.42, until: 0.8, elem: () => ELEM.VOID,
-    fire(k, sim, p) {
-      k.minions = k.minions.filter((m) => !m.dead && m.owner === k);
-      const want = Math.min(3, 5 - k.minions.length);
-      for (let n = 0; n < want; n++) {
-        for (let i = 0; i < 12; i++) {
-          const a = Math.random() * Math.PI * 2, r = rnd(2.5, 5.5), x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
-          if (sim.world.inside(x, z, 0.5)) continue;
-          const m = raiseZombie(sim, x, z, k);
-          if (m) {
-            k.minions.push(m);
-            const y = sim.world.height(x, z);
-            sim.casting.burst(FX.RUNE, ELEM.VOID, x, y + 0.03, z, 0.4, 1.5, 1.2, { alpha: 0.9, light: 10, lightR: 6 });
-          }
-          break;
-        }
-      }
-    },
-  },
-  // A ring at your feet that bursts after a moment. Moving is the answer to it.
-  hex: {
-    rate: 2.4, at: 0.42, until: 0.72, elem: () => ELEM.VOID,
-    fire(k, sim, p) { sim.foeHexes.push({ x: p.x, z: p.z, t: 0, seed: Math.random() }); },
-  },
-  bolt: {
-    rate: 1, at: 0.45, until: 1, elem: (k) => BOLTS[k.opts.bolt].elem,
-    fire(k, sim, p, d) {
-      const j = k.jointOf('hand_r'), wt = k.rig.wt;
-      const b = BOLTS[k.opts.bolt], x = wt[j * 3], y = wt[j * 3 + 1], z = wt[j * 3 + 2];
-      // Leads a moving target, not perfectly.
-      const lead = d / b.speed * 0.6;
-      let ax = p.x + p.vx * lead - x, ay = p.y + 1.1 - y, az = p.z + p.vz * lead - z;
-      const L = Math.hypot(ax, ay, az) || 1; ax /= L; ay /= L; az /= L;
-      sim.foeBolts.push({ x, y, z, dx: ax, dy: ay, dz: az, speed: b.speed, dmg: b.dmg, elem: b.elem, age: 0, seed: Math.random() });
-      sim.event(EV.SPELL_LOOSE, b.elem, 0, x, y, z);
-    },
-  },
-};
-
-export function raiseZombie(sim, x, z, owner) {
+export function raiseZombie(sim, x, z, owner, calm = false) {
   let body = null, oldest = 8;
   for (const k of sim.knights) {
     if (!(k instanceof Zombie) || k instanceof Caster || k.scale > 1.2 || !k.dead) continue;
     if (k.dormant) { body = k; break; }
     if (k.deadT > oldest) { oldest = k.deadT; body = k; }
   }
-  if (body) body.raiseAt(sim, x, z, owner);
+  if (body) body.raiseAt(sim, x, z, owner, calm);
   return body;
-}
-
-// The casters' spells, once they've left the hand. After the player's own, so they're drawn with this tick's shapes.
-export function stepFoeSpells(dt, sim) {
-  const c = sim.casting, p = sim.player;
-  if (sim.foeBolts.length) {
-    const keep = [];
-    for (const b of sim.foeBolts) {
-      b.age += dt;
-      if (b.age < 0.6 && !p.dead) {
-        // Turns toward you for its first moments, then it's on its way and you can step out of it.
-        let ax = p.x - b.x, ay = p.y + 1.1 - b.y, az = p.z - b.z;
-        const L = Math.hypot(ax, ay, az) || 1; ax /= L; ay /= L; az /= L;
-        const k = 1 - Math.exp(-1.6 * dt);
-        b.dx += (ax - b.dx) * k; b.dy += (ay - b.dy) * k; b.dz += (az - b.dz) * k;
-        const l = Math.hypot(b.dx, b.dy, b.dz) || 1; b.dx /= l; b.dy /= l; b.dz /= l;
-      }
-      b.x += b.dx * b.speed * dt; b.y += b.dy * b.speed * dt; b.z += b.dz * b.speed * dt;
-      const low = clamp(b.y, p.y + 0.2, p.y + 1.5);
-      const hit = !p.dead && !p.iframes && Math.hypot(b.x - p.x, b.y - low, b.z - p.z) < 0.42;
-      const wall = b.y < sim.world.height(b.x, b.z) || sim.world.inside(b.x, b.z, 0.05) || b.age > 3.5;
-      if (hit || wall) {
-        if (hit && p.damage(sim, b.dmg, b.x, b.z, 0)) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, b.dmg);
-        c.burst(FX.FLARE, b.elem, b.x, b.y, b.z, 0.3, 0.9, 0.22, { alpha: 1.2, light: 18, lightR: 7 });
-        sim.event(EV.BLINK, b.x, b.y, b.z);
-        continue;
-      }
-      c.fx(FX.ORB, b.elem, b.x, b.y, b.z, 0.14, 0, 1, 0, 0, 1, 16, 9, 0, b.seed);
-      c.fx(FX.TRAIL, b.elem, b.x, b.y, b.z, 0.09, -b.dx, -b.dy, -b.dz, Math.min(b.age * b.speed, 1.6), 0.8, 0, 0, 0, b.seed);
-      keep.push(b);
-    }
-    sim.foeBolts = keep;
-  }
-  if (sim.foeHexes.length) {
-    const keep = [];
-    for (const h of sim.foeHexes) {
-      h.t += dt;
-      const y = sim.world.height(h.x, h.z) + 0.04, k = clamp(h.t / 1.2, 0, 1);
-      c.fx(FX.RUNE, ELEM.VOID, h.x, y, h.z, 1.7, 0, 1, 0, 0, 0.5 + 0.5 * k, 3 + 10 * k, 5, k, h.seed);
-      if (h.t < 1.2) { keep.push(h); continue; }
-      c.burst(FX.SHOCK, ELEM.VOID, h.x, y + 0.2, h.z, 0.3, 2.2, 0.4, { alpha: 1.1, light: 30, lightR: 9 });
-      c.burst(FX.COLUMN, ELEM.VOID, h.x, y, h.z, 1.2, 1.7, 0.4, { alpha: 1, len: 3 });
-      sim.event(EV.SPELL_BOOM, ELEM.VOID, h.x, y + 0.5, h.z, 2);
-      if (!p.dead && Math.hypot(p.x - h.x, p.z - h.z) < 1.7 && Math.abs(p.y - y) < 1.5) {
-        p.damage(sim, 18, h.x, h.z, 0, true);
-        p.vy = Math.max(p.vy, 5);
-        sim.event(EV.HURT, p.x, p.y + 1.1, p.z, 18);
-      }
-    }
-    sim.foeHexes = keep;
-  }
 }
 
 // ---- who's out there ----------------------------------------------------------------------------------------
@@ -917,11 +1256,11 @@ export async function addUndead(sim, base) {
       if (b.model === 'zombie_ogre') {
         sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-31, -36] : [33, 35], yaw: i * 2, hp: 380, limbs: 2.4, dmg: 2.2, type: 'runner' }));
       } else if (b.model === 'necromancer') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-46, 8], yaw: 1.4, hp: 105, role: 'necromancer', bolt: 'blood', lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-46, 8], yaw: 1.4, hp: 340, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7 }));
       } else if (b.model === 'zombie_necromancer') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [46, -8], yaw: -1.7, hp: 105, role: 'necromancer', bolt: 'venom', lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [46, -8], yaw: -1.7, hp: 340, limbs: 1.8, role: 'plaguebearer', boltElem: ELEM.POISON, lootKind: 7 }));
       } else if (b.model === 'evil_wizard') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [22, -44], yaw: -0.4, hp: 105, role: 'wizard', bolt: 'arcane', lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: i ? [-52, 46] : [22, -44], yaw: i ? 2.2 : -0.4, hp: 300, limbs: 1.8, role: 'wizard', boltElem: i ? ELEM.FIRE : ELEM.ARCANE, lootKind: 7 }));
       } else {
         // Half stand in the fields from the start. The rest are in the ground, for the necromancers to call on.
         const sleeper = i >= 2;

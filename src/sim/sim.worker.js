@@ -8,7 +8,8 @@ import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { floorAt, inPit } from '../core/interior.js';
-import { addUndead, raiseZombie, stepCatacombs, stepFoeSpells, Zombie } from './undead.js';
+import { FOE, stepFoeWorks } from './foespells.js';
+import { addUndead, corpsesNear, raiseZombie, stepCatacombs, Zombie } from './undead.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
 import { World } from './world.js';
@@ -45,8 +46,9 @@ class Sim {
     this.tacticWeights = new Float32Array(PLAN_TACTICS).fill(1);
     this.rollouts = 0;
     this.pendingEvents = [];
-    this.foeBolts = []; this.foeHexes = [];
-    this.raise = (x, z, owner) => raiseZombie(this, x, z, owner);
+    this.foeWorks = []; this.foeBigAt = 0;
+    this.raise = (x, z, owner, calm) => raiseZombie(this, x, z, owner, calm);
+    this.corpses = (k, r) => corpsesNear(this, k, r);
   }
 
   charOffset(i) { return CHARS_START + i * C_SIZE; }
@@ -73,7 +75,7 @@ class Sim {
     this.player.reset();
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
-    this.foeBolts = []; this.foeHexes = [];
+    this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0;
     this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
@@ -114,7 +116,7 @@ class Sim {
     }
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
-    stepFoeSpells(tdt, this);
+    stepFoeWorks(tdt, this);
     stepCatacombs(this);
     const snap = this.scratch;
     player.write(snap, this);
@@ -224,7 +226,7 @@ class Sim {
       case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
       case 18: if (k.force) k.force(this, b | 0); break;
       case 19: if (k.sever) k.sever(this, b | 0); break;
-      case 20: if (k.startCast) { k.goal = 1; k.startCast(this, ['summon', 'hex', 'bolt'][b | 0]); } break;
+      case 20: if (k.startCast) { k.goal = 1; k.aggro = true; k.hostile = true; k.startCast(this, Object.keys(FOE)[b | 0]); } break;
       case 10: k.hostile = true; k.combat = 1; k.combatTarget = 1; k.shieldUp = 1; k.shieldTarget = 1; k.pauseT = 0; break;
       case 11: this.restart(); break;
       case 13: this.slow = b; break;
