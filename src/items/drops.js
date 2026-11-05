@@ -1,9 +1,10 @@
 // What's on the ground, where it fell. This is the render thread's: the sim only says something died, and what's taken up
 // goes to the pack. Everything hangs in the air, a small copy of the thing itself, slowly turning and glowing the colour of its rarity.
 import { groundAt as terrainHeight } from '../core/interior.js';
-import { GEMS, RARITIES, hands, makeRng, rollLoot } from './items.js';
+import { GEMS, RARITIES, hands, makeRng, rollLoot, setFind } from './items.js';
 
-const MAX = 32;
+const MAX = 64;
+const GRAB = 1.9;   // coins and orbs come to you, for walking near them: there's no stopping in a fight
 const REACH = 1.8;
 const FALL = 0.55;
 const TIP = { 1: 0.5, 2: 0.7, 3: -0.5 };   // how far along its length a sword's middle is from its fist. (A staff's fist is above its middle.)
@@ -51,7 +52,9 @@ export class Drops {
       n: groundNormal(x, z), turn: 2.5 + Math.random() * 2.5,
     };
     if (gem) d.gem = GEMS[item.kind].color;
-    else if (item.type === 'gold') d.coins = true;
+    else if (item.type === 'orb') { d.gem = item.kind === 'life' ? GEMS.ruby.color : (GEMS.sapphire || GEMS.ruby).color; d.auto = true; }
+    else if (item.type === 'spell') d.gem = (GEMS.amethyst || GEMS.ruby).color;
+    else if (item.type === 'gold') { d.coins = true; d.auto = true; }
     else {
       d.sword = item.base;
       d.glow = RARITIES[item.rarity].color;
@@ -65,7 +68,12 @@ export class Drops {
 
   // A death's worth, scattered about where it fell.
   fromKill(x, y, z, kind) {
-    for (const item of rollLoot(this.rng, kind | 0)) {
+    // The deeper and further out, the better it runs.
+    setFind(y < -2 ? 2.4 : Math.hypot(x, z) > 150 ? 1.6 : 1);
+    const orbs = [];
+    if ((kind | 0) >= 2 && Math.random() < (this.low ? 0.45 : 0.2)) orbs.push({ type: 'orb', kind: 'life', rarity: 0 });
+    if ((kind | 0) >= 2 && Math.random() < 0.14) orbs.push({ type: 'orb', kind: 'mana', rarity: 0 });
+    for (const item of [...rollLoot(this.rng, kind | 0), ...orbs]) {
       const a = Math.random() * 6.28, r = 0.7 + Math.random() * 0.8;
       this.spawn(item, x + Math.cos(a) * r, z + Math.sin(a) * r, [x, y + 1.1, z]);
     }
@@ -119,6 +127,7 @@ export class Drops {
         d.spin += dt * (d.gem ? 1.3 : SPIN);
         this.pose(d);
         const dist = Math.hypot(d.x - px, d.z - pz);
+        if (d.auto) { if (dist < GRAB && Math.abs(d.y - py) < 2.5) (this.grabbed ||= []).push(d); continue; }
         if (dist < bestD && Math.abs(d.y - py) < 2.5) { bestD = dist; best = d; }
       }
       // The rarer it is, the more often it catches the light.
@@ -129,6 +138,7 @@ export class Drops {
         this.renderer.emit(2, 1 + rank, d.x, d.y + (d.gem ? 0.34 : HOVER), d.z, 0, 1, 0, 1.8, 0.1, 0.5, 0.004, 0.008, 0.15, 0.35);
       }
     }
+    if (this.grabbed?.length) { for (const d of this.grabbed) { this.onGrab?.(d); this.take(d); } this.grabbed.length = 0; }
     return best;
   }
 

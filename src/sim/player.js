@@ -12,7 +12,8 @@ import { stepSurf } from './surf.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
-const WALK = 4.1, SPRINT = 6.6;
+const WALK = 6.5, SPRINT = 10;
+const MELEE = 5;   // what a blade's cut is worth in hit points: a common sword takes a zombie in two or three
 const FALL_SAFE = 12, FALL_WORST = 11;   // (speed at the bottom. Five metres and you're fine; twenty, the bottom of the rift, and you're on your last legs.)
 // How each rig fights, by how many hands it has on the sword. The swings are solved to that rig's length of sword, so the reach is theirs too.
 const KICK = 1.4;      // how far the view kicks with a blow as it lands, against how far the body goes with it over the whole cut
@@ -61,7 +62,7 @@ const SWING_INFO = {
   blade_stab: { heavy: false, fromRight: 0, dmg: 6, poise: 34, stam: 10, width: 0.8 },
   blade_stab_block: { heavy: false, fromRight: 0, dmg: 5, poise: 24, stam: 10, width: 0.8 },
 };
-const DODGE_TIME = 0.3, DODGE_COST = 26, DODGE_SPEED = 9;
+const DODGE_TIME = 0.3, DODGE_COST = 18, DODGE_SPEED = 15;
 const hit = { t: 0, piece: -1, lx: 0, ly: 0, lz: 0, nx: 0, ny: 0, nz: 0 };
 const tmp = new Float32Array(3), tmp2 = new Float32Array(3), sweepDir = new Float32Array([1, 0, 0]);
 
@@ -80,7 +81,7 @@ export class Player {
 
   reset() {
     Object.assign(this, {
-      x: -3.5, z: 40, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, onGround: true, hp: BASE_HP, maxHp: BASE_HP, dead: false, deadT: 0,
+      x: -3.5, z: 72, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, onGround: true, hp: BASE_HP, maxHp: BASE_HP, dead: false, deadT: 0,
       weapon: -1, clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, queued: null, queuedT: 0, combo: 0, comboT: 0, wide: 0, swinging: false, recovering: false,
       threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, lean: [0, 0, 0], kick: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
@@ -186,7 +187,7 @@ export class Player {
     this.sprinting = sprint && len > 0.1;
     // Breath: running and swinging spend it, standing gets it back.
     this.staminaT -= dt;
-    if (this.sprinting) { this.stamina = Math.max(0, this.stamina - dt * 15); this.staminaT = 0.45; if (this.stamina <= 0) this.winded = true; }
+    if (this.sprinting) { this.stamina = Math.max(0, this.stamina - dt * 7); this.staminaT = 0.45; if (this.stamina <= 0) this.winded = true; }
     else if (this.staminaT <= 0) this.stamina = Math.min(100, this.stamina + dt * 26);
     if (this.winded && this.stamina > 28) this.winded = false;
     // A sidestep: quick, cheap, and for its first moments nothing touches you.
@@ -206,7 +207,7 @@ export class Player {
       }
     }
     if (!stepSurf(this, dt, input, sim)) {
-    const swingDrag = (this.guard ? GUARD_DRAG : this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== this.stance.idle ? 0.85 : 1) * sim.casting.drag;
+    const swingDrag = (this.guard ? GUARD_DRAG : this.swinging ? 0.8 : this.threat ? 0.9 : this.clip !== this.stance.idle ? 0.95 : 1) * sim.casting.drag;
     const speed = (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2);
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     // Strafe right is -x when facing +z.
@@ -253,7 +254,7 @@ export class Player {
     this.groundSpeed = gs;
     if (this.onGround && gs > 0.5 && !this.surfing) {
       this.stride += gs * dt;
-      const stepLen = this.sprinting ? 2.3 : 1.55;
+      const stepLen = this.sprinting ? 3.1 : 2.1;
       if (this.stride > stepLen) { this.stride -= stepLen; sim.event(EV.STEP, this.x, this.y, this.z, clamp(gs / 6, 0.2, 1), 0, -1); }
     }
     this.landKick = damp(this.landKick, 0, 9, dt);
@@ -715,7 +716,7 @@ export class Player {
       g.dir = [tx, ty, tz];
       g.a = [hit.lx - tx * half, hit.ly - ty * half, hit.lz - tz * half];
       g.b = [hit.lx + tx * half, hit.ly + ty * half, hit.lz + tz * half];
-      k.hp -= tag.dmg * this.bite();
+      k.hp -= tag.dmg * MELEE * this.bite();
       this.drink();
       this.hits++;
       sim.event(EV.GASH, wx, wy, wz, -dx, -dy, -dz, k.id);
@@ -746,7 +747,7 @@ export class Player {
     this.punctured = true;
     this.hits++;
     k.puncture(sim, g, hit.lx, hit.ly, hit.lz, hit.nx, hit.ny, hit.nz);
-    k.hp -= (wasOpen ? 12 : 26) * this.bite() * (1 + this.pierce);
+    k.hp -= (wasOpen ? 18 : 40) * this.bite() * (1 + this.pierce);
     this.drink();
     this.bloodSword = Math.min(1, this.bloodSword + 0.35);
     k.plateTransforms(sim.scratch, sim.charOffset(sim.knights.indexOf(k)), sim.tick);

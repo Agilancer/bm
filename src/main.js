@@ -282,7 +282,7 @@ async function boot(plan, poolSize) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    if (fresh) hud.intro(!!pack.slots.main);
+    if (fresh) { hud.intro(!!pack.slots.main); hud.tip('X swaps sword and staff. The town is safe ground: the woods are not.', 7); }
   };
 
   // ---- saving, loading and the menus ---------------------------------------------------------------------------------
@@ -352,6 +352,7 @@ async function boot(plan, poolSize) {
       arm();
       game.drops.clear();
       game.chests.load(null);
+      game.spellbar.load(null);
       game.doors.load(null);
       enter(true);
     } else if (a === 'continue') {
@@ -438,6 +439,12 @@ async function boot(plan, poolSize) {
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat) return;
+    // Sword to staff and back, with no menu, mid-fight.
+    if (e.code === 'KeyX' && !input.menu && pack.slots.main) {
+      const staff = (it) => (WEAPONS.find((w) => w?.id === it.base)?.hands || 1) === 3;
+      const held = pack.slots.main, other = pack.entries.find((en) => en.item.type === 'weapon' && staff(en.item) !== staff(held));
+      if (other) { pack.slots.main = other.item; other.item = held; arm(); }
+    }
     if (e.code === 'KeyI') { if (inventory.open) closePack(false); else if (!state.paused) openPack(); }
     if (e.code === 'KeyB') { if (bookOpen) closeBook(); else if (!state.paused) openBook(); }
     if (e.code === 'Escape' && bookOpen) closeBook(true);
@@ -640,14 +647,22 @@ class GameView {
       else if (this.nearDoor) { this.doors.toggle(this.nearDoor); this.takeShown = undefined; }
       return;
     }
-    if (d.coins) { this.pack.gold += d.item.amount; this.hud.tip(`${nameOf(d.item)}. ${this.pack.gold} in all.`, 2); }
-    else if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
+    if (d.item.type === 'spell') {
+      const name = nameOf(d.item);
+      if (this.spellbar.learn(d.item.spell)) this.hud.tip(`${name} read. B to set your spells, F to cast.`, 3);
+      else { this.pack.gold += 40; this.hud.tip('You know that one already. Sold for 40 gold.', 2.5); }
+    } else if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
     this.drops.take(d);
     this.nearDrop = null;
     if (this.onTaken) this.onTaken();
   }
 
   updateDrops(dt, snap) {
+    this.drops.low = snap[H.HP] / (snap[H.MAX_HP] || 1) < 0.35;
+    this.drops.onGrab ||= (g) => {
+      if (g.coins) this.pack.gold += g.item.amount;
+      else this.shared.input[g.item.kind === 'life' ? INPUT.HEAL : INPUT.MANA_UP] += g.item.kind === 'life' ? 32 : 40;
+    };
     this.nearDrop = this.input.enabled && !this.input.menu ? this.drops.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ]) : null;
     const d = this.nearDrop;
     const ch = this.chests.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
@@ -1065,6 +1080,7 @@ class GameView {
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
       case EV.LOOT: this.drops.fromKill(a, b, c, d); break;
+      case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 3); break;
       case EV.GROAN:
         // A throat with nothing behind it: a low drone under a wet rasp. d is how big the chest is.

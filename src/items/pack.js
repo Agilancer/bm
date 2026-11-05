@@ -5,9 +5,8 @@ import { GEAR, GEAR_SLOTS, GEMS, MAX_SOCKETS, makeRng, rollArmor, rollGem, rollS
 export const PACK_W = 12, PACK_H = 8;
 export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'shoulders', 'hands', 'ring1', 'legs', 'feet', 'ring2'];
 
-// One of every sword and a pouch of gems, to try it all out before there is much to fight for. The game proper starts with the
-// wheel greatsword alone: set this false.
-const TEST_KIT = true;
+// One of every sword and a pouch of gems, to try it all out. The game proper starts with a common sword, staff and shield and nothing else: leave this false.
+const TEST_KIT = false;
 
 export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : item.type === 'shield' ? { w: 2, h: 3 } : item.type === 'armor' ? GEAR_SLOTS[GEAR[item.base].slot].size : { w: 1, h: 1 });
 
@@ -81,7 +80,8 @@ export class Pack {
 
   startingKit() {
     const rng = makeRng(1793);
-    this.add(rollWeapon(rng, { base: 'wheel_greatsword', rarity: 0, sockets: 0 }));
+    this.slots.main = rollWeapon(rng, { base: 'ringed_sword', rarity: 0, sockets: 0 });
+    this.add(rollWeapon(rng, { base: 'skullhorn_staff', rarity: 0, sockets: 0 }));
     this.slots.off = rollShield(rng, { base: 'kite_cross' });
     if (!TEST_KIT) return;
     const swords = [

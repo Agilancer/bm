@@ -1,6 +1,18 @@
 // The chests about the world, shut until you open them. Like what's lying on the ground, these are the render thread's: the sim only
 // knows a box to walk round. Which are open goes in a save; they stay open through a new fight, and only New Game shuts them again.
+import { groundAt } from '../core/interior.js';
 import { makeRng, rollChest } from './items.js';
+
+// Out in the woods, for finding: further out, better. (After the house and crypt chests, so a save's list still lines up.)
+function woodsChests() {
+  const out = [];
+  for (let i = 0; out.length < 16 && i < 40; i++) {
+    const a = i * 2.399963, r = 88 + i * 7.5, x = Math.sin(a) * r, z = Math.cos(a) * r;
+    if ((x > 30 && Math.abs(z) < 50) || Math.hypot(x + 3.5, z - 72) < 30) continue;
+    out.push({ type: 'chest', x, z, y: groundAt(x, z), yaw: a, loot: r > 170 ? 1 : 0 });
+  }
+  return out;
+}
 
 const REACH = 2.2, FACING = 0.3;
 const SEEN = 30;                       // drawn from this near
@@ -14,7 +26,7 @@ export class Chests {
     this.audio = audio;
     this.drops = drops;
     this.rng = makeRng((Math.random() * 4294967296) >>> 0);
-    this.list = things.filter((t) => t.type === 'chest').map((t) => {
+    this.list = things.filter((t) => t.type === 'chest').concat(woodsChests()).map((t) => {
       const s = Math.sin(t.yaw), c = Math.cos(t.yaw);
       const body = new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, t.x, t.y, t.z, 1]);
       const ch = { ...t, s, c, open: false, spilled: false, k: 0, lidK: -1, body: { piece: 'body', mat: body }, lid: { piece: 'lid', mat: new Float32Array(16) } };

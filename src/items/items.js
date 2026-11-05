@@ -2,6 +2,7 @@
 // so the node check in tools/items/check.mjs rolls exactly what the game rolls. Every stat a line here can show is one
 // src/sim/player.js really applies.
 import { INPUT, WEAPONS } from '../core/layout.js';
+import { SPELLS } from '../sim/spells.js';
 
 export const RARITIES = [
   { name: 'Common', color: '#a8a8a8', weight: 60, affixes: [0, 0], quality: [0.92, 1.0], sockets: { 0: 80, 1: 20 } },
@@ -35,7 +36,7 @@ export const BASES = {
 };
 const HIGH_CHANCE = [0, 0, 0.15, 0.5, 0.8];     // by rarity, the chance a sword is one of the high ones
 // What a staff's roll comes to in a bolt, against a blade's: see STAFF_BITE in src/sim/casting.js.
-const STAFF_SHOWN = 0.2;
+const STAFF_SHOWN = 0.96;
 
 // The kite shields. rarity: what it comes as. side: whose it is. V is Velscour's knights' and T is Tessariel's and his followers', and neither is ever rolled or carried.
 export const SHIELDS = {
@@ -137,9 +138,13 @@ function weighted(rng, table) {
   return Object.keys(table)[0];
 }
 
+// Danger pays: anything better than common comes this many times as often. Set by where the thing died or the chest stood.
+let find = 1;
+export function setFind(v) { find = v; }
+
 function rollRarity(rng, min) {
   const table = {};
-  RARITIES.forEach((r, i) => { if (i >= min) table[i] = r.weight; });
+  RARITIES.forEach((r, i) => { if (i >= min) table[i] = r.weight * (i ? find : 1); });
   return +weighted(rng, table);
 }
 
@@ -208,18 +213,31 @@ export function rollGem(rng, opts = {}) {
 // What a fallen enemy leaves. kind: 0 the black knight, 1 the silver knight, 2 a crab, 5 a zombie, 7 a necromancer or a wizard.
 export function rollLoot(rng, kind) {
   const piece = (chance, opts) => (rng() < chance ? [rollArmor(rng, opts)] : []);
-  if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 }), ...piece(0.5, { minRarity: 2, plain: true })];
-  if (kind === 1) return [rollWeapon(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...piece(0.35, { minRarity: 1 })];
-  if (kind === 5) return rng() < 0.12 ? [rng() < 0.4 ? rollWeapon(rng) : rng() < 0.4 ? rollGem(rng) : rollArmor(rng, { plain: true })] : [];
-  if (kind === 7) return [...(rng() < 0.75 ? [rollWeapon(rng, { minRarity: 1 })] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.2, { minRarity: 1, plain: true })];
+  const gold = (lo, hi) => ({ type: 'gold', amount: lo + Math.floor(rng() * (hi - lo + 1)) });
+  const scroll = (chance) => (rng() < chance ? [rollSpell(rng)] : []);
+  if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 }), ...piece(0.5, { minRarity: 2, plain: true }), rollSpell(rng), gold(120, 240)];
+  if (kind === 1) return [rollWeapon(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...piece(0.35, { minRarity: 1 }), gold(40, 90)];
+  // The rank and file: mostly a few coins, and every so often something to look at.
+  if (kind === 5) {
+    const out = rng() < 0.55 ? [gold(2, 12)] : [];
+    if (rng() < 0.11) out.push(rng() < 0.45 ? rollWeapon(rng) : rng() < 0.45 ? rollGem(rng) : rollArmor(rng, { plain: true }));
+    return out;
+  }
+  // A champion always leaves something worth stopping for.
+  if (kind === 8) return [gold(25, 70), rng() < 0.65 ? rollWeapon(rng, { minRarity: 1 }) : rollArmor(rng, { minRarity: 1, plain: true }), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.15)];
+  if (kind === 7) return [gold(15, 45), ...(rng() < 0.5 ? [rollWeapon(rng, { minRarity: 1 })] : rng() < 0.4 ? [rollShield(rng)] : [rollGem(rng)]), ...piece(0.15, { minRarity: 1, plain: true }), ...scroll(0.3)];
   // (A crab's nobody's. Whatever else lands here, like the undead ogre, carries nothing of Tessariel's.)
-  return [...(rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.12, { plain: kind !== 2 })];
+  return [gold(8, 30), ...(rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.12, { plain: kind !== 2 })];
 }
+
+// A spell, for good, once it's read. Spells are found, not known.
+export function rollSpell(rng) { return { type: 'spell', spell: Math.floor(rng() * SPELLS.length), rarity: 2 }; }
 
 const CHEST_ARMOR = [0.2, 0.5, 0.7];
 
 // What's in a chest: tier 0 a house's, 1 the priest's, 2 what the dead keep.
 export function rollChest(rng, tier) {
+  setFind(1 + tier * 0.6);
   const [lo, hi] = [[6, 24], [25, 60], [60, 140]][tier] || [6, 24];
   const out = [{ type: 'gold', amount: lo + Math.floor(rng() * (hi - lo + 1)) }];
   if (tier === 2) {
@@ -232,10 +250,12 @@ export function rollChest(rng, tier) {
   else if (rng() < 0.3) out.push(rollWeapon(rng));
   // A piece of armour, now and then. (The priest's and the dead's are under Velscour's church: nothing of Tessariel's. See CLAUDE.md.)
   if (rng() < CHEST_ARMOR[tier]) out.push(rollArmor(rng, { minRarity: tier, plain: tier > 0 }));
+  if (rng() < [0.15, 0.5, 1][tier]) out.push(rollSpell(rng));
   return out;
 }
 
 export function nameOf(item) {
+  if (item.type === 'spell') return `Scroll of ${SPELLS[item.spell].name}`;
   if (item.type === 'gold') return `${item.amount} gold`;
   if (item.type === 'gem') return `${GEM_GRADES[item.grade].name} ${GEMS[item.kind].name}`;
   if (item.type === 'shield') return SHIELDS[item.base].name;

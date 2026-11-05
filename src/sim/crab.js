@@ -109,9 +109,9 @@ export class Crab extends Beast {
   thinkMove(dt, sim, p, dist, toPlayer) {
     // They wake a while after the first blood is spilled, or in the end regardless, and then they know where you
     // are. They lose interest once the knight is dead, so a win isn't taken away by a crab.
-    const started = sim.firstBloodAt >= 0 && sim.time > sim.firstBloodAt + this.opts.delay;
-    const awake = started || sim.time > this.opts.delay + 70 || dist < 20 || this.hitOnce;
-    const senses = awake && !p.dead && sim.gameState === 0 && !sim.knights[0].dead;
+    // (Only when you come near, or strike first.)
+    const awake = dist < 24 || this.hitOnce;
+    const senses = awake && !p.dead && sim.gameState === 0;
     if (senses && !sim.crabWoke) { sim.crabWoke = true; sim.event(EV.CRAB_WAKE); }
     let dvx = 0, dvz = 0, want;
     if (!senses) {

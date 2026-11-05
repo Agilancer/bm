@@ -41,7 +41,8 @@ export class SpellBar {
   // openBook and closeBook stop and start the game around the equip menu, as the pack does.
   constructor(shared, input, { openBook, closeBook, tip }) {
     this.shared = shared; this.input = input; this.tip = tip;
-    this.loadout = [0, 1, 2, 3, 4, 5];   // what's in each slot: a spell, or -1
+    this.loadout = [-1, -1, -1, -1, -1, -1];   // what's in each slot: a spell, or -1
+    this.known = new Set();              // the spells found so far
     this.now = 0;                        // the slot F and the middle button cast
     this.i = 0;                          // and the spell in it
     this.armed = -1;                     // in the menu: the spell picked up, waiting for a slot
@@ -227,6 +228,7 @@ export class SpellBar {
       c.querySelector('kbd').textContent = k >= 0 ? k + 1 : '';
       c.classList.toggle('on', i === this.armed);
       c.classList.toggle('slotted', k >= 0);
+      c.style.display = this.known.has(i) ? '' : 'none';
     });
     this.hintEl.textContent = this.armed >= 0
       ? `${SPELLS[this.armed].name}: now choose its slot.`
@@ -271,13 +273,26 @@ export class SpellBar {
 
   // ---- the save ----
 
-  save() { return { loadout: this.loadout.slice(), now: this.now }; }
+  save() { return { loadout: this.loadout.slice(), now: this.now, known: [...this.known] }; }
 
   load(d) {
     const ok = Array.isArray(d?.loadout) && d.loadout.length === SLOTS && d.loadout.every((v) => Number.isInteger(v) && v >= -1 && v < SPELLS.length);
-    this.loadout = ok ? d.loadout.slice() : [0, 1, 2, 3, 4, 5];
+    this.loadout = ok ? d.loadout.slice() : [-1, -1, -1, -1, -1, -1];
+    // (A save from before spells were found knows them all.)
+    this.known = new Set(Array.isArray(d?.known) ? d.known : ok ? SPELLS.map((_, i) => i) : []);
     this.now = ok && this.loadout[d.now] >= 0 ? d.now : Math.max(0, this.loadout.findIndex((v) => v >= 0));
-    this.setSpell(Math.max(0, this.loadout[this.now]));
+    this.setSpell(this.loadout[this.now] ?? -1);
     this.drawMenu();
+  }
+
+  // Read a scroll. Into the first empty slot, if there is one. False if you knew it already.
+  learn(i) {
+    if (this.known.has(i)) return false;
+    this.known.add(i);
+    const k = this.loadout.indexOf(-1);
+    if (k >= 0) { this.loadout[k] = i; if (this.loadout[this.now] < 0) this.now = k; }
+    this.setSpell(this.loadout[this.now] ?? -1);
+    this.drawMenu();
+    return true;
   }
 }

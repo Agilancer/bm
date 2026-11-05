@@ -23,7 +23,9 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // The right button held, for the shield.
   BLOCK: 31,
   // What the player's armour comes to; and which doors stand open, a bit for each (src/items/doors.js).
-  ARMOR: 32, DOORS: 33, SIZE: 40 };
+  ARMOR: 32, DOORS: 33,
+  // Running totals of what's been picked up off the ground: life and mana.
+  HEAL: 34, MANA_UP: 35, SIZE: 40 };
 
 // Snapshot header (float offsets)
 export const H = {
@@ -82,7 +84,7 @@ export const EV = {
   GROUND: 13, GLINT: 14, BLOOD: 15, JUMP: 16, LAND: 17, SHIELD_BREAK: 18, DUST: 19, WHOOSH: 20, ALERT: 21, TAUNT: 22, WIN: 23, LOSE: 24,
   CRAB_HIT: 25, CRAB_DIE: 26, DODGE: 27, CRAB_WAKE: 28, ROAR: 29, BEAST_NOTICE: 30, FIRE: 31, FIRE_HIT: 32, SEVER: 33, STUMP: 34, CHUNK_LAND: 35, HYDRA_NOTICE: 36, BURN: 37, LOOT: 38, EMPTY_HANDS: 39,
   SPELL_CAST: 40, SPELL_LOOSE: 41, SPELL_HIT: 42, SPELL_BOOM: 43, SPELL_FIZZLE: 44,
-  GROAN: 45, DIRT: 46, CHANT: 47, BLINK: 48, UNDEAD_DIE: 49,
+  GROAN: 45, DIRT: 46, CHANT: 47, BLINK: 48, UNDEAD_DIE: 49, CHAMPION: 50, CHAMPION: 50,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.

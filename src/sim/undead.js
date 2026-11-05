@@ -3,6 +3,7 @@
 // with no head goes by ear. Only running out of body stops them. Over them are the casters, who think: see Caster below, and foespells.js
 // for what they throw.
 import { C, EV } from '../core/layout.js';
+import { floorAt } from '../core/interior.js';
 import { clamp, damp, quatYaw, wrapAngle, quatRotate } from '../core/math.js';
 import { ArmsRig } from './anim.js';
 import { Beast } from './beast.js';
@@ -80,7 +81,7 @@ export class Zombie extends Beast {
       chunks: [], jets: [], alive: new Array(15).fill(true), bit: new Array(15).fill(0), cutMask: 0, limb: { ...LIMB_HP }, crawling: false, headless: false, hobble: false,
       state: STATE.MOVE, stateT: 0, goal: GOAL.WANDER, aggro: false, attack: null, used: false, activeOn: -1, cool: rnd(0.5, 2), pounceCool: rnd(2, 6), senseT: Math.random() * 0.25,
       lastX: opts.spawn[0], lastZ: opts.spawn[1], lastSense: -99, wx: opts.spawn[0], wz: opts.spawn[1], wanderT: rnd(0, 5), moving: false, searchT: 0, rush: 0, orbit: 0, stuckT: 1, stuckX: opts.spawn[0], stuckZ: opts.spawn[1], sideT: 0, sideA: 0,
-      groanT: rnd(2, 8), chasers: 0, stagger: 0, sink: 0, dirtT: 0, stepClock: 0, fadeTime: 0.2, dormant: false, looted: false, owner: null, flank: this.id % 3 - 1, pace: rnd(0.88, 1.12), clip: null, t: 0, fade: 1,
+      groanT: rnd(2, 8), chasers: 0, stagger: 0, sink: 0, dirtT: 0, stepClock: 0, fadeTime: 0.2, dormant: false, looted: false, champion: false, owner: null, flank: this.id % 3 - 1, pace: rnd(0.88, 1.12), clip: null, t: 0, fade: 1,
     });
     this.takes(opts);
     this.bodyRadius = 0.5 * S;
@@ -1171,11 +1172,12 @@ export function raiseZombie(sim, x, z, owner, calm = false) {
 // Where the first bodies stand: scattered over the fields round the village, a good way from it.
 function fieldSpot(i, world) {
   for (let tries = 0; tries < 24; tries++) {
-    const a = (i + tries * 0.37) * 2.399963, r = 24 + ((i * 7 + tries * 5) % 26);
+    // In fours, out in the woods: none in the town, none on the church's ground, none where you start.
+    const g = Math.floor(i / 4), a = (g + tries * 0.37) * 2.399963 + (i % 4) * 0.05, r = 82 + ((g * 23 + tries * 11) % 90) + (i % 4) * 2;
     const x = Math.sin(a) * r, z = Math.cos(a) * r;
-    if (!world.inside(x, z, 0.8) && Math.hypot(x + 3.5, z - 40) > 20) return [x, z]; // (not on top of where you start)
+    if (!world.inside(x, z, 0.8) && Math.hypot(x + 3.5, z - 72) > 40 && !(x > 40 && Math.abs(z) < 45)) return [x, z];
   }
-  return [Math.sin(i) * 40, Math.cos(i) * 40];
+  return [-Math.abs(Math.sin(i)) * 90, Math.cos(i) * 90];
 }
 
 // ---- the catacombs -------------------------------------------------------------------------------------------
@@ -1207,7 +1209,7 @@ export function stepCatacombs(sim) {
   if (p.x < 125 || sim.time < nextLook) return;
   nextLook = sim.time + 0.5;
   const spawns = sim.world.spawns;
-  const idle = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 8) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
+  const idle = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
   LORDS.forEach((l, n) => {
     if (lordsDone.has(n) || !l.when(p)) return;
     lordsDone.add(n);
@@ -1235,6 +1237,56 @@ export function stepCatacombs(sim) {
   }
 }
 
+// ---- the woods -----------------------------------------------------------------------------------------------
+// Between the quiet stretches, a pack comes for you out of the trees: a champion and its followers, and sometimes a caster behind them.
+// The bodies are the same few as ever, stood up again wherever you are. Nothing comes while you're near the town, or indoors.
+export const TOWN_R = 58;
+const PACK_NEAR = 24, PACK_FAR = 34, QUIET = [20, 34], MOST_AT_ONCE = 9;
+
+export function stepWoods(sim) {
+  const p = sim.player;
+  if (p.dead || sim.time < sim.packAt) return;
+  sim.packAt = sim.time + 1;
+  const out = Math.hypot(p.x, p.z);
+  if (out < TOWN_R + 26 || floorAt(p.x, p.z) !== null || Math.abs(p.x) > 235 || Math.abs(p.z) > 235) return;
+  const list = sim.knights;
+  if (list.filter((k) => k instanceof Zombie && !k.dead && !k.dormant && k.aggro && Math.hypot(k.x - p.x, k.z - p.z) < 50).length >= MOST_AT_ONCE) return;
+  // Somewhere ahead or to the side, and off the path of what's clear.
+  let cx = 0, cz = 0, found = false;
+  for (let t = 0; t < 12 && !found; t++) {
+    const a = p.yaw + rnd(-1.9, 1.9), r = rnd(PACK_NEAR, PACK_FAR);
+    cx = p.x + Math.sin(a) * r; cz = p.z + Math.cos(a) * r;
+    found = Math.hypot(cx, cz) > TOWN_R + 6 && floorAt(cx, cz) === null && !sim.world.inside(cx, cz, 1);
+  }
+  if (!found) return;
+  const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 60));
+  const bodies = list.filter(free).slice(0, Math.min(10, 5 + Math.floor(out / 60)));
+  if (bodies.length < 3) return;
+  const stand = (b, x, z, type) => {
+    b.reset({ ...b.opts, sleeper: false, type, spawn: [x, z], yaw: Math.atan2(p.x - x, p.z - z) });
+    b.y = sim.world.height(x, z);
+    b.aggro = true; b.hostile = true; b.goal = GOAL.HUNT; b.lastX = p.x; b.lastZ = p.z; b.lastSense = sim.time;
+  };
+  bodies.forEach((b, i) => {
+    let x = cx, z = cz;
+    for (let t = 0; t < 6; t++) {
+      const a = rnd(0, 6.28), r = rnd(1.5, 6);
+      x = cx + Math.sin(a) * r; z = cz + Math.cos(a) * r;
+      if (!sim.world.inside(x, z, 0.7)) break;
+    }
+    stand(b, x, z, i === 0 || Math.random() < 0.6 ? 'runner' : 'shambler');
+    if (i === 0) { b.champion = true; b.hp = b.maxHp = b.hp * 3.5; b.dmgScale *= 1.5; b.pace *= 1.15; }
+  });
+  // A caster at the back, once in a while, if one's free.
+  if (Math.random() < 0.4) {
+    const c = list.find((k) => k.opts?.role && ((k.dead && k.deadT > 45) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 90)));
+    const x = cx + (cx - p.x) * 0.3, z = cz + (cz - p.z) * 0.3;
+    if (c && !sim.world.inside(x, z, 0.8) && floorAt(x, z) === null && Math.hypot(x, z) > TOWN_R + 6) stand(c, x, z, undefined);
+  }
+  sim.event(EV.ROAR, cx, sim.world.height(cx, cz) + 1, cz, 1);
+  sim.packAt = sim.time + rnd(QUIET[0], QUIET[1]) - Math.min(8, out / 40);
+}
+
 export async function addUndead(sim, base) {
   const fetchBuf = (m) => fetch(`${base}assets/monsters/zombie/${m}.glb`).then((r) => { if (!r.ok) throw new Error(`${m}: ${r.status}`); return r.arrayBuffer(); });
   const [zMeta, cMeta, buffers] = await Promise.all([
@@ -1254,20 +1306,20 @@ export async function addUndead(sim, base) {
     }
     for (let i = 0; i < b.count; i++) {
       if (b.model === 'zombie_ogre') {
-        sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-31, -36] : [33, 35], yaw: i * 2, hp: 380, limbs: 2.4, dmg: 2.2, type: 'runner' }));
+        sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-72, -78] : [78, 66], yaw: i * 2, hp: 130, limbs: 2.4, dmg: 2.2, type: 'runner' }));
       } else if (b.model === 'necromancer') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-46, 8], yaw: 1.4, hp: 340, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-98, 12], yaw: 1.4, hp: 90, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7 }));
       } else if (b.model === 'zombie_necromancer') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [46, -8], yaw: -1.7, hp: 340, limbs: 1.8, role: 'plaguebearer', boltElem: ELEM.POISON, lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [82, -72], yaw: -1.7, hp: 90, limbs: 1.8, role: 'plaguebearer', boltElem: ELEM.POISON, lootKind: 7 }));
       } else if (b.model === 'evil_wizard') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: i ? [-52, 46] : [22, -44], yaw: i ? 2.2 : -0.4, hp: 300, limbs: 1.8, role: 'wizard', boltElem: i ? ELEM.FIRE : ELEM.ARCANE, lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: i ? [-88, 70] : [26, -108], yaw: i ? 2.2 : -0.4, hp: 80, limbs: 1.8, role: 'wizard', boltElem: i ? ELEM.FIRE : ELEM.ARCANE, lootKind: 7 }));
       } else {
         // Half stand in the fields from the start. The rest are in the ground, for the necromancers to call on.
         const sleeper = i >= 2;
         const r = (spot * 0.381966) % 1, type = sleeper ? 'shambler' : r < 0.08 ? 'lurker' : r < 0.4 ? 'runner' : 'shambler';
         const at = sleeper ? [0, 0] : fieldSpot(spot, sim.world);
         if (!sleeper) spot++;
-        sim.knights.push(new Zombie(id++, 5, rig, { model: b.model, scale: 1, spawn: at, yaw: spot * 1.7, hp: 120, type, sleeper }));
+        sim.knights.push(new Zombie(id++, 5, rig, { model: b.model, scale: 1, spawn: at, yaw: spot * 1.7, hp: 40, type, sleeper }));
       }
     }
   });

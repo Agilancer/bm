@@ -15,7 +15,8 @@ const tmp = [0, 0, 0], out3 = [0, 0, 0];
 // What each staff fires, a spell's bolt from its head. It costs what the spell costs.
 const STAFF_BOLT = { crystal_staff: 'frost', greenwood_staff: 'plague', skullhorn_staff: 'firebolt', gnarled_crook: 'lightning' };
 // A staff fights from far off, so it bites for far less than a blade up close: what a bolt's spell does, times this, times the staff's roll against a sword of 20.
-const STAFF_BITE = 0.04;
+const STAFF_BITE = 0.48;
+const SPELL_BITE = 0.5;   // every spell against the quicker dying of the overhaul: a firebolt takes a zombie, ten take a knight
 const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a palm's does
 
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
@@ -65,7 +66,9 @@ export class Casting {
     this.castSeen = input[INPUT.CAST_N];
     // (A press made mid-swing waits for the swing, a moment.)
     this.asked = tapped ? 0.35 : Math.max(0, this.asked - dt);
-    const held = input[INPUT.CAST] > 0.5;
+    const none = input[INPUT.SPELL] < 0;   // (No spell learned yet: a staff's bolt is another matter.)
+    if (none) this.asked = 0;
+    const held = input[INPUT.CAST] > 0.5 && !none;
     this.selected = clamp(input[INPUT.SPELL] | 0, 0, SPELLS.length - 1);
     if (this.state !== 'hold') this.mana = Math.min(MAX_MANA, this.mana + MANA_REGEN * dt);
     this.fizzleT -= dt;
@@ -398,7 +401,7 @@ export class Casting {
   hurt(sim, k, dmg, elem, x, y, z, fromX, fromZ, poise = dmg * 0.7, kind = 'gash') {
     if (k.dead) return;
     const a = this.affOf(k);
-    k.hp -= a.freeze > 0 ? dmg * 1.5 : dmg;
+    k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE;
     k.onHit(sim, kind, fromX, fromZ, poise);
     sim.event(EV.SPELL_HIT, elem, x, y, z, dmg);
   }
