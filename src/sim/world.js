@@ -1,12 +1,15 @@
 // Collision and navigation against the village: oriented boxes on a height function, a flat ground grid
 // for the flow field, and rays against the plates of a rigid armour.
+import { floorAt, setFloors } from '../core/interior.js';
 import { terrainHeight } from '../core/terrain.js';
 
-const NAV_SIZE = 110, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2;
+// (Big enough to reach the catacombs. Cells nobody can stand on are walled off, so the search stays small.)
+const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_LAND = 118, NAV_REACH = 150;
 
 export class World {
-  constructor(data) {
-    this.colliders = data.colliders.map((c) => ({ ...c, s: Math.sin(c.yaw), co: Math.cos(c.yaw) }));
+  constructor(data, interior) {
+    setFloors(interior.floors);
+    this.colliders = data.colliders.concat(interior.colliders).map((c) => ({ ...c, s: Math.sin(c.yaw), co: Math.cos(c.yaw) }));
     this.lightsData = data.lights;
     this.grid = new Uint8Array(NAV_SIZE * NAV_SIZE);
     this.slots = new Map();
@@ -16,12 +19,14 @@ export class World {
     for (let j = 0; j < NAV_SIZE; j++) {
       for (let i = 0; i < NAV_SIZE; i++) {
         const x = (i + 0.5) * NAV_CELL - NAV_HALF, z = (j + 0.5) * NAV_CELL - NAV_HALF;
-        this.grid[j * NAV_SIZE + i] = this.inside(x, z, 0.55) ? 1 : 0;
+        this.grid[j * NAV_SIZE + i] = (Math.hypot(x, z) > NAV_LAND && floorAt(x, z) === null) || this.inside(x, z, 0.55) ? 1 : 0;
       }
     }
   }
 
   height(x, z) {
+    const f = floorAt(x, z);
+    if (f !== null) return f;
     const u = x + 128, v = z + 128;
     if (u < 0 || v < 0 || u >= 256 || v >= 256) return terrainHeight(x, z);
     const i = u | 0, j = v | 0, a = u - i, b = v - j, h = this.heights;
@@ -121,6 +126,7 @@ export class World {
           if (grid[nk]) continue;
           if (di && dj && (grid[j * NAV_SIZE + ni] || grid[nj * NAV_SIZE + i])) continue;
           const nd = d + (di && dj ? 1.414 : 1);
+          if (nd > NAV_REACH) continue;
           if (nd < field[nk] - 1e-3 && tail < cap) { field[nk] = nd; queue[tail++] = nk; }
         }
       }

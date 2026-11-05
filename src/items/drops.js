@@ -1,6 +1,6 @@
 // What's lying on the ground, where it fell. This is the render thread's: the sim only says something died, and what's taken up
 // goes to the pack. A sword on the ground is the same model as the sword in the hand, at the size the knights carry theirs.
-import { terrainHeight } from '../core/terrain.js';
+import { groundAt as terrainHeight } from '../core/interior.js';
 import { GEMS, hands, makeRng, rollLoot } from './items.js';
 
 const MAX = 32;

@@ -35,7 +35,10 @@ export function terrainHeight(x, z) {
   const far = sstep(160, 700, r);
   const ridge = fbm(x * 0.0026 - 5, z * 0.0026 + 9, 6);
   const hills = Math.pow(ridge, 1.6) * 330;
-  return lawn * (1 - out) + (roll + Math.max(0, r - 60) * 0.018) * out + hills * far;
+  const land = lawn * (1 - out) + (roll + Math.max(0, r - 60) * 0.018) * out + hills * far;
+  // The cathedral's site, levelled. Its floor stands a little above this: see tools/interior/build_interior.py.
+  const site = Math.max(58 - x, x - 142, Math.abs(z) - 26);
+  return site >= 14 ? land : land + (2.7 - land) * (1 - sstep(0, 14, site));
 }
 
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.

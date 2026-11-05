@@ -1,6 +1,7 @@
 // The player: first-person body, the swings of the sword in hand, and where the blade lands. The blade is tested
 // where it appears on screen: each tick its tip and middle are projected through the view model's camera
 // and cast from the eye into the world, so a cut lands exactly under what the player sees.
+import { floorAt } from '../core/interior.js';
 import { EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { clamp, damp, wrapAngle } from '../core/math.js';
 import { S } from './knight.js';
@@ -204,7 +205,7 @@ export class Player {
     this.x = tmp[0]; this.z = tmp[2];
     // Keep to the land the village owns.
     const R = 118, rr = Math.hypot(this.x, this.z);
-    if (rr > R) { this.x *= R / rr; this.z *= R / rr; }
+    if (rr > R && floorAt(this.x, this.z) === null) { this.x *= R / rr; this.z *= R / rr; }
     const g = sim.world.height(this.x, this.z);
     if (this.y <= g) {
       if (!this.onGround && this.vy < -2) {

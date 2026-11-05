@@ -187,7 +187,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   if (flat_) {
     let m = flatMaterial(in.layer, p, F.camPos.w);
     albedo = m.rgb; rough = m.a;
-    if (in.layer == 100u) { metal = 0.9; }
+    if (in.layer == 100u || in.layer == 105u) { metal = 0.9; }
     if (in.layer == 101u) {
       let f = 0.85 + 0.15 * sin(F.camPos.w * 11.0 + p.x * 9.0) * sin(F.camPos.w * 7.3);
       // (Without bloom to carry it, that heat would only be a white square, so it's a plain gold instead.)
@@ -199,7 +199,11 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     albedo = tex.rgb;
     rough = det.b;
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, 1.0);
-    if (params.z > 0.0) {
+    if (params.z > 1.5) {
+      // Stained glass with the day behind it.
+      emissive = pow(albedo, vec3f(1.5)) * params.z * 1.6;
+      albedo *= 0.05;
+    } else if (params.z > 0.0) {
       // Leaded glass reads as dark and glossy, and a fire is lit behind some of it.
       let glass = 1.0 - smoothstep(0.1, 0.26, det.b);
       let room = textureSampleLevel(noiseTex, repeatSmp, floor(uv * vec2f(5.0, 3.0)) * 0.137 + 0.11 * vec2f(in.f32Layer()), 0.0).r;
