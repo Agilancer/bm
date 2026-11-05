@@ -21,7 +21,7 @@ export class ClipBank {
         const q = new Float32Array(n * 4);
         for (let i = 0; i < n * 4; i++) q[i] = rot[off + i] / 32767;
         for (let i = 0; i < n; i++) quatNormalize(q, i * 4);
-        tracks[j] = q;
+        tracks[j] = sameHemisphere(q);
       }
       this.clips[name] = { name, frames: c.frames, dur: c.dur, loop: c.loop, tracks, pelvis: pel.subarray(c.pelvis, c.pelvis + c.frames * 3) };
     }
@@ -170,6 +170,14 @@ export function leanAmount(t, wind, through, dur) {
   return 1 - smooth((t - through) / (dur - through));
 }
 
+function sameHemisphere(values) {
+  const out = Float32Array.from(values);
+  for (let i = 4; i < out.length; i += 4) {
+    if (out[i] * out[i - 4] + out[i + 1] * out[i - 3] + out[i + 2] * out[i - 2] + out[i + 3] * out[i - 1] < 0) for (let s = 0; s < 4; s++) out[i + s] = -out[i + s];
+  }
+  return out;
+}
+
 export class ArmsRig {
   constructor(buffer, scale = 1) {
     const glb = parseGLB(buffer);
@@ -197,7 +205,9 @@ export class ArmsRig {
       const rots = new Array(this.count).fill(null), trs = new Array(this.count).fill(null);
       const resample = (track, size) => {
         const out = new Float32Array(n * size);
-        const { times, values } = track;
+        const { times } = track;
+        // q and -q are the same turn, and exporters hand over either. Blended straight across a change of sign they pass through nothing, and for that frame the bone points anywhere: so each key takes the sign nearest the last.
+        const values = size === 4 ? sameHemisphere(track.values) : track.values;
         let k = 0;
         for (let i = 0; i < n; i++) {
           const t = i / (n - 1) * c.dur;
