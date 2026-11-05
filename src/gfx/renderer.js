@@ -16,8 +16,8 @@ import { HYDRA_SCALE } from '../sim/hydra.js';
 import { SKIN } from './shaders.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
-const FRAME_FLOATS = 316;
-const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 312 };
+const FRAME_FLOATS = 444;
+const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
 // The kite shield on the arm turned about its grip, so its point is straight down the screen as guard_idle carries it (measured on the rig's shield joint).
 const KITE_TURN = 27 * Math.PI / 180;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
@@ -1205,7 +1205,8 @@ export class Renderer {
     // Lanterns, the nearest to the camera first. When there are more than the tier can light, each fades out before the
     // next one takes its place, so none switches off in view.
     const lights = this.lights;
-    const take = Math.min(lights.length, this.tier.lights);
+    // (Below, where every light there is is a flame, twice the tier's count. A phone keeps its two.)
+    const take = Math.min(lights.length, this.tier.lights * (cam.y < -6 && !this.tier.lean ? 2 : 1));
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
     for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
@@ -1643,7 +1644,7 @@ export class Renderer {
     cd[0] = snap[H.DMG_FLASH]; cd[1] = snap[H.WEAK]; cd[2] = time;
     cd[3] = tier.lean ? 0 : this.W < this.canvas.width * 0.92 ? 0.55 : 0.18;
     cd[4] = this.useShafts ? 1 : 0; cd[5] = this.useBloom ? 0.3 : 0; cd[6] = this.fade || 0;
-    cd[7] = snap[H.HIT_DIR]; cd[8] = Math.max(0, 1 - snap[H.HIT_DIR_T] * 1.5);
+    cd[7] = snap[H.HIT_DIR]; cd[8] = window.__reviewShots ? 0 : Math.max(0, 1 - snap[H.HIT_DIR_T] * 1.5);   // (tools/interior/walk.js photographs the place, not its own wounds)
     q.writeBuffer(this.compU, 0, cd);
     const fp = enc.beginRenderPass({
       colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }],
