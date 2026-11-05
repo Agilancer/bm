@@ -363,9 +363,10 @@ export class Casting {
     const p = sim.player;
     for (const k of sim.knights) {
       if (k.dead || (skip && skip === k)) continue;
-      const dx = k.x - x, dz = k.z - z, d = Math.hypot(dx, dz, chestOf(k) - y);
-      if (d > radius + radiusOf(k)) continue;
-      const f = clamp(1 - d / (radius + radiusOf(k)), 0.25, 1);
+      // Measured from a knight's width in, so a blast on the flank of something huge isn't a near miss.
+      const dx = k.x - x, dz = k.z - z, d = Math.max(0, Math.hypot(dx, dz, chestOf(k) - y) - (radiusOf(k) - 0.55));
+      if (d > radius + 0.55) continue;
+      const f = clamp(1 - d / (radius + 0.55), 0.25, 1);
       this.hurt(sim, k, dmg * f, elem, k.x, chestOf(k), k.z, x, z, 60 * f, f > 0.55 ? 'puncture' : 'gash');
       const L = Math.hypot(dx, dz) || 1;
       this.shove(k, dx / L * force * f, dz / L * force * f, up * f);
