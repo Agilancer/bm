@@ -587,6 +587,8 @@ export class Zombie extends Beast {
   }
 
   startAttack(sim, name) {
+    // Only so many at your throat at once: the rest jostle and look for a gap, so a crowd is a threat and not a blender.
+    if (this.style !== 'caster' && sim.knights.filter((k) => k instanceof Zombie && !k.dead && k.state === STATE.ATTACK && k.style !== 'caster').length >= MELEE_AT_ONCE) { this.cool = 0.3; return; }
     this.setClipOver(name, 0.14);
     this.attack = BLOWS[name];
     this.attackMeta = this.rig.clips[name];
@@ -1241,10 +1243,32 @@ export function stepCatacombs(sim) {
 // Between the quiet stretches, a pack comes for you out of the trees: a champion and its followers, and sometimes a caster behind them.
 // The bodies are the same few as ever, stood up again wherever you are. Nothing comes while you're near the town, or indoors.
 export const TOWN_R = 58;
-const PACK_NEAR = 24, PACK_FAR = 34, QUIET = [20, 34], MOST_AT_ONCE = 9;
+const PACK_NEAR = 20, PACK_FAR = 30, QUIET = [18, 34], MOST_AT_ONCE = 14, MELEE_AT_ONCE = 4, WAVE_GAP = 4;
+
+function standPack(sim, b, cx, cz) {
+  let x = cx, z = cz;
+  for (let t = 0; t < 6; t++) {
+    const a = rnd(0, 6.28), r = rnd(1.5, 6);
+    x = cx + Math.sin(a) * r; z = cz + Math.cos(a) * r;
+    if (!sim.world.inside(x, z, 0.7)) break;
+  }
+  huntFrom(sim, b, x, z, Math.random() < 0.6 ? 'runner' : 'shambler');
+}
+
+function huntFrom(sim, b, x, z, type) {
+  const p = sim.player;
+  b.reset({ ...b.opts, sleeper: false, type, spawn: [x, z], yaw: Math.atan2(p.x - x, p.z - z) });
+  b.y = sim.world.height(x, z);
+  b.aggro = true; b.hostile = true; b.goal = GOAL.HUNT; b.lastX = p.x; b.lastZ = p.z; b.lastSense = sim.time;
+}
 
 export function stepWoods(sim) {
   const p = sim.player;
+  // The rest of the last pack, a moment behind the first of it.
+  if (sim.wave && sim.time >= sim.wave.at) {
+    const w = sim.wave; sim.wave = null;
+    if (!p.dead) for (const b of w.bodies) if (b.dead || b.dormant || !b.aggro) standPack(sim, b, w.x, w.z);
+  }
   if (p.dead || sim.time < sim.packAt) return;
   sim.packAt = sim.time + 1;
   const out = Math.hypot(p.x, p.z);
@@ -1260,31 +1284,24 @@ export function stepWoods(sim) {
   }
   if (!found) return;
   const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 60));
-  const bodies = list.filter(free).slice(0, Math.min(10, 5 + Math.floor(out / 60)));
+  const bodies = list.filter(free).slice(0, Math.min(12, 6 + Math.floor(out / 60)));
   if (bodies.length < 3) return;
-  const stand = (b, x, z, type) => {
-    b.reset({ ...b.opts, sleeper: false, type, spawn: [x, z], yaw: Math.atan2(p.x - x, p.z - z) });
-    b.y = sim.world.height(x, z);
-    b.aggro = true; b.hostile = true; b.goal = GOAL.HUNT; b.lastX = p.x; b.lastZ = p.z; b.lastSense = sim.time;
-  };
-  bodies.forEach((b, i) => {
-    let x = cx, z = cz;
-    for (let t = 0; t < 6; t++) {
-      const a = rnd(0, 6.28), r = rnd(1.5, 6);
-      x = cx + Math.sin(a) * r; z = cz + Math.cos(a) * r;
-      if (!sim.world.inside(x, z, 0.7)) break;
-    }
-    stand(b, x, z, i === 0 || Math.random() < 0.6 ? 'runner' : 'shambler');
-    if (i === 0) { b.champion = true; b.hp = b.maxHp = b.hp * 3.5; b.dmgScale *= 1.5; b.pace *= 1.15; }
+  const first = Math.ceil(bodies.length / 2);
+  sim.packN = (sim.packN || 0) + 1;
+  bodies.slice(0, first).forEach((b, i) => {
+    standPack(sim, b, cx, cz);
+    // A champion with every other pack.
+    if (i === 0 && sim.packN % 2) { b.champion = true; b.hp = b.maxHp = b.hp * 5; b.dmgScale *= 1.8; b.pace *= 1.15; }
   });
+  sim.wave = { at: sim.time + WAVE_GAP, bodies: bodies.slice(first), x: cx, z: cz };
   // A caster at the back, once in a while, if one's free.
   if (Math.random() < 0.4) {
     const c = list.find((k) => k.opts?.role && ((k.dead && k.deadT > 45) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 90)));
     const x = cx + (cx - p.x) * 0.3, z = cz + (cz - p.z) * 0.3;
-    if (c && !sim.world.inside(x, z, 0.8) && floorAt(x, z) === null && Math.hypot(x, z) > TOWN_R + 6) stand(c, x, z, undefined);
+    if (c && !sim.world.inside(x, z, 0.8) && floorAt(x, z) === null && Math.hypot(x, z) > TOWN_R + 6) huntFrom(sim, c, x, z, undefined);
   }
   sim.event(EV.ROAR, cx, sim.world.height(cx, cz) + 1, cz, 1);
-  sim.packAt = sim.time + rnd(QUIET[0], QUIET[1]) - Math.min(8, out / 40);
+  sim.packAt = sim.time + rnd(QUIET[0], QUIET[1]) * (out > 170 ? 0.6 : 1);   // Quieter near the town, relentless far out.
 }
 
 export async function addUndead(sim, base) {
@@ -1319,7 +1336,7 @@ export async function addUndead(sim, base) {
         const r = (spot * 0.381966) % 1, type = sleeper ? 'shambler' : r < 0.08 ? 'lurker' : r < 0.4 ? 'runner' : 'shambler';
         const at = sleeper ? [0, 0] : fieldSpot(spot, sim.world);
         if (!sleeper) spot++;
-        sim.knights.push(new Zombie(id++, 5, rig, { model: b.model, scale: 1, spawn: at, yaw: spot * 1.7, hp: 40, type, sleeper }));
+        sim.knights.push(new Zombie(id++, 5, rig, { model: b.model, scale: 1, spawn: at, yaw: spot * 1.7, hp: 34, type, sleeper }));
       }
     }
   });

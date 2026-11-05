@@ -72,7 +72,7 @@ export class Drops {
     setFind(y < -2 ? 2.4 : Math.hypot(x, z) > 150 ? 1.6 : 1);
     const orbs = [];
     if ((kind | 0) >= 2 && Math.random() < (this.low ? 0.45 : 0.2)) orbs.push({ type: 'orb', kind: 'life', rarity: 0 });
-    if ((kind | 0) >= 2 && Math.random() < 0.14) orbs.push({ type: 'orb', kind: 'mana', rarity: 0 });
+    if ((kind | 0) >= 2 && Math.random() < 0.1) orbs.push({ type: 'orb', kind: 'mana', rarity: 0 });
     for (const item of [...rollLoot(this.rng, kind | 0), ...orbs]) {
       const a = Math.random() * 6.28, r = 0.7 + Math.random() * 0.8;
       this.spawn(item, x + Math.cos(a) * r, z + Math.sin(a) * r, [x, y + 1.1, z]);

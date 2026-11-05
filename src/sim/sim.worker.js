@@ -18,8 +18,8 @@ import { World } from './world.js';
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on.
 const BLACK = {
-  spawn: [62, 0], yaw: -Math.PI / 2, hostile: true, hp: 420, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
-  route: [[62, 0]], pauseClip: null,   // On guard before the cathedral's great door, and no further.
+  spawn: [60, 0], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
+  route: [[60, 0]], pauseClip: null,   // On guard before the cathedral's great door, and no further.
 };
 const SILVER = {
   spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
@@ -39,7 +39,7 @@ const CRABS = [
 ];
 
 // How much faster than their clips each kind goes, by kind: knight, silver knight, crab, Gravehart, Hydra, undead, ogre.
-const HASTE = [1.15, 1, 1.3, 1.1, 1, 1.5, 1.25], CASTER_HASTE = 1.2;
+const HASTE = [1.15, 1, 1.3, 1.1, 1, 1.4, 1.25], CASTER_HASTE = 1.2;
 
 class Sim {
   constructor() {
@@ -83,7 +83,7 @@ class Sim {
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0;
-    this.packAt = 0; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
+    this.packAt = 0; this.packN = 0; this.wave = null; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
     p.atkSeen = inp[INPUT.ATTACK]; p.wideSeen = inp[INPUT.WIDE]; p.jumpSeen = inp[INPUT.JUMP]; p.dodgeSeen = inp[INPUT.DODGE];

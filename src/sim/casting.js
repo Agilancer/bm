@@ -15,7 +15,7 @@ const tmp = [0, 0, 0], out3 = [0, 0, 0];
 // What each staff fires, a spell's bolt from its head. It costs what the spell costs.
 const STAFF_BOLT = { crystal_staff: 'frost', greenwood_staff: 'plague', skullhorn_staff: 'firebolt', gnarled_crook: 'lightning' };
 // A staff fights from far off, so it bites for far less than a blade up close: what a bolt's spell does, times this, times the staff's roll against a sword of 20.
-const STAFF_BITE = 0.48;
+const STAFF_BITE = 0.38, STAFF_MANA = 11, STAFF_BLAST = 2.5;
 const SPELL_BITE = 0.5;   // every spell against the quicker dying of the overhaul: a firebolt takes a zombie, ten take a knight
 const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a palm's does
 
@@ -259,14 +259,15 @@ export class Casting {
     }
     if (p.fired) return;
     p.fired = true;
-    if (this.mana < def.mana) {
+    const cost = Math.max(def.mana, STAFF_MANA);
+    if (this.mana < cost) {
       if (this.fizzleT <= 0) { sim.event(EV.SPELL_FIZZLE); this.fizzleT = 0.8; }
       return;
     }
-    this.mana -= def.mana;
+    this.mana -= cost;
     this.charge = def.gather || 0;
     const k = STAFF_BITE * p.bite();
-    this.cast_bolt({ ...def, staff: true, dmg: def.dmg * k, lash: def.lash * k, dps: def.dps * k }, sim, [from[0], from[1], from[2]]);
+    this.cast_bolt({ ...def, staff: true, radius: Math.min(def.radius ?? STAFF_BLAST, STAFF_BLAST), dmg: def.dmg * k, lash: def.lash * k, dps: def.dps * k }, sim, [from[0], from[1], from[2]]);
     sim.event(EV.SPELL_CAST, def.elem, SPELLS.indexOf(def), p.x, p.y + EYE, p.z);
   }
 

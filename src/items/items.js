@@ -36,7 +36,7 @@ export const BASES = {
 };
 const HIGH_CHANCE = [0, 0, 0.15, 0.5, 0.8];     // by rarity, the chance a sword is one of the high ones
 // What a staff's roll comes to in a bolt, against a blade's: see STAFF_BITE in src/sim/casting.js.
-const STAFF_SHOWN = 0.96;
+const STAFF_SHOWN = 0.76;
 
 // The kite shields. rarity: what it comes as. side: whose it is. V is Velscour's knights' and T is Tessariel's and his followers', and neither is ever rolled or carried.
 export const SHIELDS = {
@@ -224,7 +224,7 @@ export function rollLoot(rng, kind) {
     return out;
   }
   // A champion always leaves something worth stopping for.
-  if (kind === 8) return [gold(25, 70), rng() < 0.65 ? rollWeapon(rng, { minRarity: 1 }) : rollArmor(rng, { minRarity: 1, plain: true }), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.15)];
+  if (kind === 8) return [gold(25, 70), rng() < 0.65 ? rollWeapon(rng, { minRarity: rng() < 0.35 ? 2 : 1 }) : rollArmor(rng, { minRarity: rng() < 0.35 ? 2 : 1, plain: true }), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.15)];
   if (kind === 7) return [gold(15, 45), ...(rng() < 0.5 ? [rollWeapon(rng, { minRarity: 1 })] : rng() < 0.4 ? [rollShield(rng)] : [rollGem(rng)]), ...piece(0.15, { minRarity: 1, plain: true }), ...scroll(0.3)];
   // (A crab's nobody's. Whatever else lands here, like the undead ogre, carries nothing of Tessariel's.)
   return [gold(8, 30), ...(rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.12, { plain: kind !== 2 })];
