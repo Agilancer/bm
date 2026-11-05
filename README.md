@@ -194,7 +194,7 @@ the screen, and a spark where a blow lands. The view shows the path of the blade
 | `blade_flat1`, `blade_flat2` | Flat cuts, right to left and left to right | 0.400 s of 1.00 s |
 | `blade_stab` | Thrust from the low right | 0.317 s of 0.72 s |
 | `blade_stab_block` | Thrust over the rim, shield up | 0.317 s of 0.75 s |
-| `shield_up`, `shield_hold`, `shield_bash`, `shield_down` | Raising the shield, holding it (a loop), a bash from the block and back, lowering it. Cut from first-person Skyrim (YouTube `_ZMx-ejIIBc`, 1.9-2.8 s and 7.4-8.5 s). The shield is strapped along the forearm with the elbow forward and low, and the wrist keeps a natural bend of up to about 25 degrees (`STRAP`, `ELBOW_DOWN`). The game doesn't play these yet: the player has no block control, so they only show in the viewer. | |
+| `shield_up`, `shield_hold`, `shield_bash`, `shield_down` | Raising the shield, holding it (a loop), a bash from the block and back, lowering it. Cut from first-person Skyrim (YouTube `_ZMx-ejIIBc`, 1.9-2.8 s and 7.4-8.5 s). The wrist is locked straight: the fist is on the grip, the board rests on the top of the hand and along the forearm (`shield` in `rig.py`), and the shield is aimed only by the elbow and the forearm's roll, about 100 degrees in the block (`straight_arm`, `shield_roll`, `ELBOW_UP`). The game doesn't play these yet: the player has no block control, so they only show in the viewer. | |
 | `guard_walk` | The carry on the move, sword and shield swaying in step (a 0.92 s loop) | |
 | `guard_idle` | The carry standing still: the same loop, 40% as big | |
 
