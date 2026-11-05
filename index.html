@@ -54,6 +54,10 @@
   .label { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; opacity: .78; margin-bottom: 4px; text-shadow: 0 1px 3px #000; }
   .meter { height: 8px; background: rgba(0,0,0,.6); border: 1px solid rgba(201,163,92,.55); overflow: hidden; }
   .meter > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #b82a1d, #6d120b); transform-origin: 0 50%; will-change: transform; transition: transform .12s; }
+  #clock { position: absolute; left: calc(20px + env(safe-area-inset-left)); top: calc(18px + env(safe-area-inset-top)); width: 76px; text-align: center; filter: drop-shadow(0 2px 5px rgba(0,0,0,.7)); }
+  #clock svg { display: block; width: 100%; height: auto; }
+  #clock text { font: 700 6.6px Georgia, 'Times New Roman', serif; fill: #18120c; text-anchor: middle; }
+  #clock .phase { margin-top: 3px; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #cdbf9f; text-shadow: 0 1px 3px #000; }
   #foe { position: absolute; top: calc(18px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(520px, 62vw); padding: 6px 12px 7px; text-align: center; opacity: 0; transition: opacity .4s; background: rgba(8,6,4,.5); }
   #foe .name { font-size: 15px; letter-spacing: .24em; color: var(--gold); margin-bottom: 5px; text-shadow: 0 1px 4px #000; }
   #foeHp > i { background: linear-gradient(180deg, #a0231a, #5b0e08); }
@@ -86,6 +90,8 @@
   #stick { position: absolute; width: 130px; height: 130px; border-radius: 50%; border: 1.5px solid rgba(233,223,201,.4); background: rgba(10,8,6,.2); display: none; }
   #nub { position: absolute; left: 41px; top: 41px; width: 48px; height: 48px; border-radius: 50%; background: rgba(233,223,201,.45); }
   body.touch #vitals { bottom: auto; top: calc(14px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); width: 28vw; }
+  body.touch #clock { left: auto; right: calc(14px + env(safe-area-inset-right)); top: calc(76px + env(safe-area-inset-top)); width: 46px; }
+  body.touch #clock .phase { font-size: 9px; }
   body.touch #foe { top: calc(10px + env(safe-area-inset-top)); left: auto; right: calc(14px + env(safe-area-inset-right)); transform: none; width: 44vw; }
 
   /* The pack */
@@ -190,6 +196,7 @@
 <div id="softCursor"></div>
 <div id="hud">
   <div id="cross"></div>
+  <div id="clock"></div>
   <div id="vitals"><div class="label">Life</div><div class="meter" id="hp"><i></i></div><div id="stam"><i></i></div><div id="mana"><i></i></div></div>
   <div id="spells"></div>
   <div id="foe">

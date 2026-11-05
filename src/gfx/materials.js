@@ -4,6 +4,7 @@ import { COMMON } from './shaders.js';
 export const TERRAIN = COMMON + /* wgsl */ `
 @group(1) @binding(0) var groundColor: texture_2d_array<f32>;
 @group(1) @binding(1) var groundDetail: texture_2d_array<f32>;
+@group(1) @binding(2) var farMap: texture_2d<f32>;
 
 struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) viewZ: f32 };
 @vertex fn vs(@location(0) p: vec3f, @location(1) n: vec3f) -> V {
@@ -24,7 +25,9 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   var gmUv = (p.xz - F.ground.xy) * F.ground.z;
   let gm = textureSampleLevel(groundMap, clampSmp, gmUv, 0.0);
   let inMap = step(0.0, gmUv.x) * step(gmUv.x, 1.0) * step(0.0, gmUv.y) * step(gmUv.y, 1.0);
-  let dirtBase = gm.r * inMap;
+  // Past the fine map of the village there's a coarse one of all the land: the roads, and where the pines stand.
+  let fm = textureSampleLevel(farMap, clampSmp, p.xz / 2048.0 + 0.5, 0.0);
+  let dirtBase = mix(fm.r, gm.r, inMap);
   let macro2 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.043 + 0.31, 0.0);
 
   let uvA = p.xz * 0.2;
@@ -63,12 +66,14 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   // Dirt shows through where the grass's own height runs low.
   let edge = clamp(dirtBase * 1.7 - 0.35 + (dirtDet.a - grassDet.a) * 0.9 + (macro2.b - 0.5) * 0.35, 0.0, 1.0);
   let dirt = smoothstep(0.32, 0.68, edge);
-  var albedo = mix(mix(vec3f(dot(grassCol.rgb, vec3f(0.3, 0.6, 0.1))), grassCol.rgb, 0.72) * vec3f(0.66, 0.62, 0.38), dirtCol.rgb, dirt);
+  var albedo = mix(mix(vec3f(dot(grassCol.rgb, vec3f(0.3, 0.6, 0.1))), grassCol.rgb, 0.5) * vec3f(0.58, 0.57, 0.4), dirtCol.rgb, dirt);
   var det = mix(grassDet, dirtDet, dirt);
   // Meadow far from the village goes drier and more varied, like the hills under this light.
   let farDry = smoothstep(90.0, 420.0, length(p.xz));
-  albedo = mix(albedo, albedo * vec3f(1.12, 0.95, 0.6) + vec3f(0.02, 0.012, 0.0), farDry * 0.8);
+  albedo = mix(albedo, mix(vec3f(dot(albedo, vec3f(0.3, 0.6, 0.1))), albedo, 0.55) * vec3f(0.92, 0.9, 0.76), farDry * 0.85);
   albedo *= 0.8 + macro2.r * 0.45;
+  // Under the pines, nothing but old needles and the dark.
+  albedo = mix(albedo, vec3f(0.045, 0.034, 0.022), fm.g * 0.82 * (1.0 - dirt * 0.7));
   // Under the blades the soil sits in shade.
   let grassCover = gm.g * inMap * (1.0 - smoothstep(F.counts.w * 0.75, F.counts.w, dist));
   albedo *= 1.0 - grassCover * 0.38;
@@ -256,7 +261,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     }
     if (params.z > 1.5) {
       // Stained glass with the day behind it.
-      emissive = pow(albedo, vec3f(1.5)) * params.z * 1.6;
+      emissive = pow(albedo, vec3f(1.5)) * params.z * 1.6 * F.sunColor.a;
       albedo *= 0.05;
     } else if (params.z > 0.0) {
       // Leaded glass reads as dark and glossy, and a fire is lit behind some of it.
@@ -264,7 +269,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       let room = textureSampleLevel(noiseTex, repeatSmp, floor(uv * vec2f(5.0, 3.0)) * 0.137 + 0.11 * vec2f(in.f32Layer()), 0.0).r;
       let lit = smoothstep(0.48, 0.62, room);
       let flick = 0.86 + 0.14 * sin(F.camPos.w * 3.1 + room * 40.0);
-      emissive = glass * lit * vec3f(1.9, 0.92, 0.3) * flick;
+      emissive = glass * lit * vec3f(1.9, 0.92, 0.3) * flick * mix(1.7, 0.75, F.skyAmb.a);
       metal = glass * 0.3;
     }
   }
@@ -744,7 +749,7 @@ fn makeBlade(root: vec3f, packed_: u32, t: f32, side: f32, width0: f32) -> V {
     let layer = 3 + i32(tint * 2.99);
     base0 = textureSampleLevel(groundColor, repeatSmp, uv, layer, 5.0).rgb;
   }
-  let base = mix(vec3f(dot(base0, vec3f(0.3, 0.6, 0.1))), base0, 0.72) * vec3f(0.72, 0.68, 0.42);
+  let base = mix(vec3f(dot(base0, vec3f(0.3, 0.6, 0.1))), base0, 0.5) * vec3f(0.62, 0.61, 0.42);
   let root_ = base * (0.4 + 0.14 * tint);
   let tip = base * (1.0 + 0.35 * rnd) + vec3f(0.05, 0.05, 0.0) * tint;
   var alb = mix(root_, tip, t);
@@ -761,7 +766,7 @@ fn makeBlade(root: vec3f, packed_: u32, t: f32, side: f32, width0: f32) -> V {
   let v = toCam / dist;
   let nl = max(dot(n, F.sunDir.xyz), 0.0);
   let backlit = pow(max(dot(-v, F.sunDir.xyz), 0.0), 4.0) * t * select(1.7, 0.95, LEAN);
-  var c = alb * (F.sunColor.rgb * (nl * 0.28 + backlit * 0.5 + 0.05) * shadow + mix(F.groundAmb.rgb, F.skyAmb.rgb, 0.65 + 0.3 * t) * (0.65 + 0.5 * t));
+  var c = alb * (F.sunColor.rgb * (nl * 0.28 + backlit * 0.3 + 0.05) * shadow + mix(F.groundAmb.rgb, F.skyAmb.rgb, 0.65 + 0.3 * t) * (0.65 + 0.5 * t));
   c = applyFog(c, p, -v, dist);
   o.color = c;
   return o;
@@ -886,22 +891,35 @@ fn fbm(p0: vec2f) -> f32 {
   let d = normalize(q.xyz / q.w - F.camPos.xyz);
   var c = envDir(d, 0.0);
   let cs = dot(d, F.sunDir.xyz);
-  // The sun's disc and a hot rim of glow.
-  c += F.sunColor.rgb * 16.0 * smoothstep(0.99965, 0.99985, cs);
+  let day = F.skyAmb.a;
+  // Stars, a few and small, when the sun's well gone.
+  if (day < 0.5 && d.y > 0.0) {
+    let g = d * 210.0;
+    let cell = floor(g);
+    let pick = fract(sin(dot(cell, vec3f(12.9898, 78.233, 37.719))) * 43758.5453);
+    let glint = smoothstep(0.42, 0.12, length(fract(g) - 0.5)) * step(0.9965, pick) * (pick - 0.9965) * 300.0;
+    c += vec3f(0.62, 0.68, 0.82) * glint * (1.0 - smoothstep(0.0, 0.5, day)) * smoothstep(0.02, 0.2, d.y);
+  }
+  // The disc, and a hot rim of glow. (The moon's the bigger of the two, and has a ring of haze round it.)
+  let edge = mix(0.9993, 0.99965, day);
+  c += F.sunColor.rgb * mix(9.0, 11.0, day) * smoothstep(edge, edge + 0.0002, cs);
   c += F.sunColor.rgb * pow(max(cs, 0.0), 900.0) * 1.2;
+  c += F.sunColor.rgb * pow(max(cs, 0.0), 40.0) * 0.14 * (1.0 - day);
   // Clouds: a drifting layer projected on a dome, lit from the low sun's side.
   if (d.y > 0.01) {
     let t = F.camPos.w * 0.0035;
     let uv = d.xz / (d.y + 0.18) * 0.085 + vec2f(t, t * 0.4);
     let n = fbm(uv);
-    let cover = smoothstep(0.46, 0.74, n);
+    let cover = smoothstep(0.3, 0.58, n);
     // Lit from the low sun's side, or on a phone simply darker where it's thick.
     var lit = clamp(1.3 - n * 1.25, 0.0, 1.0);
     if (!LEAN) { lit = clamp((n - fbm(uv + F.sunDir.xz * 0.03)) * 5.0 + 0.55, 0.0, 1.0); }
-    let base = mix(vec3f(0.42, 0.38, 0.44), vec3f(1.5, 1.05, 0.7), lit) * mix(0.8, 1.6, pow(max(cs, 0.0), 4.0));
+    let base = mix(F.skyAmb.rgb * 0.95 + F.fogColor.rgb * 0.18, F.fogColor.rgb * 0.75 + F.sunColor.rgb * 0.16, lit) * mix(0.8, 1.6, pow(max(cs, 0.0), 4.0));
     let fade = smoothstep(0.01, 0.16, d.y);
-    c = mix(c, base, cover * fade * 0.9);
+    c = mix(c, base, cover * fade * 0.94);
   }
+  // Low down, the sky's the same haze the land goes into.
+  c = mix(c, F.fogColor.rgb, 1.0 - smoothstep(0.0, 0.13, d.y));
   var o: Out;
   o.color = vec4f(c, 1.0);
   o.depth = 4000.0;
@@ -909,9 +927,9 @@ fn fbm(p0: vec2f) -> f32 {
 }
 `;
 
-// Bakes the atmosphere into a panorama once, which then lights every reflection and fills the sky.
+// Bakes the atmosphere into a panorama every so often, which then lights every reflection and fills the sky.
 export const SKY_BAKE = /* wgsl */ `
-struct U { sun: vec4f, tint: vec4f };
+struct U { sun: vec4f, tint: vec4f, sky: vec4f };
 @group(0) @binding(0) var<uniform> S: U;
 struct V { @builtin(position) pos: vec4f, @location(0) uv: vec2f };
 @vertex fn vs(@builtin(vertex_index) i: u32) -> V {
@@ -968,6 +986,8 @@ fn sky(rd: vec3f, sun: vec3f) -> vec3f {
   let el = in.uv.y * 3.14159265;
   let d = vec3f(sin(el) * sin(az), cos(el), sin(el) * cos(az));
   var c = sky(normalize(vec3f(d.x, max(d.y, 0.002), d.z)), S.sun.xyz);
+  // A grey world: the blue mostly gone, however clear the air. And never quite black, with the moon up there somewhere.
+  c = mix(vec3f(dot(c, vec3f(0.3, 0.55, 0.15))), c, 0.5) * 0.72 + S.sky.rgb * mix(0.55, 0.3, S.sun.w);
   // Below the horizon, the land catches the same light.
   if (d.y < 0.0) { c = mix(c, S.tint.rgb, 1.0 - smoothstep(-0.12, 0.0, d.y)); }
   return vec4f(c, 1.0);

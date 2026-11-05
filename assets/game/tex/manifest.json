@@ -162,6 +162,16 @@
    "name": "cloth_oat",
    "kind": "other",
    "cutout": false
+  },
+  {
+   "name": "pine",
+   "kind": "other",
+   "cutout": true
+  },
+  {
+   "name": "pine_far",
+   "kind": "other",
+   "cutout": true
   }
  ],
  "ground": [

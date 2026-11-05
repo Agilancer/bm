@@ -23,7 +23,7 @@ struct GO { @location(0) color: vec4f, @location(1) depth: f32 };
   var c: vec3f;
   let t = textureSample(colorArr, repeatSmp, in.uv, i32(min(in.layer, 13.0)));
   if (in.layer < 99.5) {
-    c = t.rgb * t.rgb * t.a * in.tint;
+    c = t.rgb * t.rgb * t.a * in.tint * F.sunColor.a;   // (The day behind the window.)
   } else if (in.layer < 100.5) {
     let e = 1.0 - abs(in.uv.x * 2.0 - 1.0);
     c = in.tint * smoothstep(0.0, 0.4, e) * (0.25 + 0.75 * in.uv.y);

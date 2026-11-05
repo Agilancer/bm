@@ -1,5 +1,5 @@
-// Can you walk it? In at each house's door, across to the foot of its stair, up, round the landing, and back down again, with the
-// same collision and the same floors the player gets.  node tools/interior/homes.mjs
+// Can you walk it? In at each house's door, across to the foot of its stair, up, on into the rooms over, and back down again, by the way
+// tools/interior/build_interior.py says each is laid out, with the same collision and the same floors the player gets.  node tools/interior/homes.mjs
 import { readFileSync } from 'node:fs';
 import { World } from '../../src/sim/world.js';
 
@@ -26,28 +26,24 @@ const walk = (b, lx, lz, tr) => {
 let fails = 0;
 const say = (name, ok, b) => { if (!ok) fails++; console.log(`  ${name}: ${ok ? 'ok' : 'STUCK'} at (${b.x.toFixed(2)}, ${b.y.toFixed(2)}, ${b.z.toFixed(2)})`); };
 
-for (const h of village.homes) {
+const routes = inter.homes.filter((h) => h.route);
+if (routes.length !== village.homes.length) { fails++; console.log('homes', village.homes.length, 'walked', routes.length); }
+village.homes.forEach((h, i) => {
   const c = Math.cos(h.yaw), s = Math.sin(h.yaw);
   const tr = (lx, lz) => [h.x + lx * c + lz * s, h.z - lx * s + lz * c];
-  const hd = h.d / 2, ix = h.w / 2 - 0.12, iz = hd - 0.12, side = h.chimney[0] < 0 ? 1 : -1;
-  const hi = side * (ix - 1.1), lo = side * (ix - 1.1 - 4.2), zs = -iz + 0.6;
-  const start = tr(h.door, hd + 1.2);
+  const hd = h.d / 2, iz = hd - 0.12;
+  const start = tr(h.door, hd + 1.2), inside = tr(h.door, iz - 0.4), route = routes[i].route, foot = routes[i].stair;
+  const to = (b, p) => walk(b, p[0], p[1], (x, z) => [x, z]);
   const b = { x: start[0], y: w.height(start[0], start[1]), z: start[1] };
   console.log(`house at ${h.x}, ${h.z}`);
-  say('out front', true, b);
-  say('in at the door', walk(b, h.door, iz - 0.4, tr), b);
-  say('middle of the floor', walk(b, lo - side * 0.5, -iz + 2.0, tr), b);
-  say('foot of the stair', walk(b, lo - side * 0.5, zs, tr), b);
-  say('up it', walk(b, hi + side * 0.6, zs, tr), b);
-  const up = b.y;
-  say('along the landing', walk(b, hi + side * 0.6, -iz + 1.9, tr), b);
-  say('over the room', walk(b, 0, -iz + 1.9, tr), b);
-  if (up < 3) { fails++; console.log('  never got upstairs', up); }
-  say('back to the landing', walk(b, hi + side * 0.6, -iz + 1.9, tr), b);
-  say('to the head of the stair', walk(b, hi + side * 0.6, zs, tr), b);
-  say('down it', walk(b, lo - side * 0.5, zs, tr), b);
+  say('in at the door', to(b, inside), b);
+  route.forEach((p, k) => {
+    say(k === foot ? 'foot of the stair' : k === foot + 1 ? 'head of the stair' : k < foot ? 'across the floor' : 'upstairs', to(b, p), b);
+    if (k === foot + 1 && b.y < 2.8) { fails++; console.log('  never got upstairs', b.y); }
+  });
+  for (const k of route.keys()) say('and back', to(b, route[route.length - 1 - k]), b);
   if (b.y > 0.5) { fails++; console.log('  still up at', b.y); }
-  say('back out', walk(b, h.door, iz - 0.4, tr) && walk(b, h.door, hd + 1.2, tr), b);
-}
+  say('back out', to(b, inside) && to(b, start), b);
+});
 console.log(fails, 'failed');
 process.exit(fails ? 1 : 0);

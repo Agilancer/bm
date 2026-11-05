@@ -4,6 +4,7 @@ import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, 
 import { clamp, damp, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
+import { Clock } from './clock.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
 import { Drops, boardPose } from './items/drops.js';
@@ -302,6 +303,7 @@ async function boot(plan, poolSize) {
     load: (d) => { pack.load(d); arm(); game.drops.clear(); },
   });
   addPart('chests', { save: () => game.chests.save(), load: (d) => game.chests.load(d) });
+  addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 15) });
   // Not while you lie fallen.
   const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
   const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
@@ -582,6 +584,7 @@ class GameView {
     this.govT = 0; this.govMs = 0; this.govN = 0; this.frozenSnap = null;
     this.prevSnap = new Float32Array(SNAP_FLOATS);
     this.drops = new Drops(renderer, audio);
+    this.clock = new Clock($('clock'));
     this.chests = new Chests(renderer, audio, this.drops, renderer.things);
     this.nearChest = null;
     this.nearDrop = null;
@@ -700,6 +703,7 @@ class GameView {
       const r = this.renderer, hs = this.hudStats;
       hs.gpuMs = r.stats.gpuMs; hs.busyMs = r.stats.busyMs; hs.W = r.W; hs.H = r.H; hs.scale = r.scale; hs.msaa = r.msaa; hs.demoted = r.demoted || 0; hs.vsync = this.vsyncMs;
       this.hud.update(dt, snap, hs);
+      this.clock.set(r.hour);
       if (this.spellbar) this.spellbar.update(snap);
       if (this.spellSound) this.spellSound.channel(snap[H.CAST_HELD] | 0);
       if (this.onFrame) this.onFrame();
@@ -1118,6 +1122,8 @@ class GameView {
       book: () => $('spellbook').classList.toggle('open'),
       jump: () => { shared.input[INPUT.JUMP] += 1; },
       setCam: (c) => { view.overrideCam = c; },
+      setTime: (h) => view.renderer.setHour(h),
+      hour: () => view.renderer.hour,
       fixScale: (s) => { view.fixedScale = true; view.renderer.scale = s; },
       shot: (name) => new Promise((resolve) => {
         view.onFrame = () => {

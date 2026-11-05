@@ -12,8 +12,8 @@ struct Frame {
   cascades: array<mat4x4f, 3>,
   camPos: vec4f,          // w = time
   sunDir: vec4f,          // w = shadow softness
-  sunColor: vec4f,
-  skyAmb: vec4f,
+  sunColor: vec4f,        // a = how much day there is behind a window
+  skyAmb: vec4f,          // a = how far up the sun is, 0 to 1
   groundAmb: vec4f,
   fogColor: vec4f,        // a = density
   fogParams: vec4f,       // x = height falloff, y = sun tint
@@ -125,17 +125,29 @@ fn brdf(n: vec3f, v: vec3f, l: vec3f, albedo: vec3f, f0: vec3f, rough: f32, meta
 }
 
 // Indoors the sky doesn't reach. 0 outside, 1 in the cathedral, 2 below. The boxes are the inside of tools/interior/build_interior.py's walls.
-fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32) -> bool { return abs(p.x - x) < hx && abs(p.z - z) < hz; }
+fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32, jx: f32, jz: f32, y1: f32, top: f32) -> bool {
+  let up = p.y > y1;
+  return p.y < top && abs(p.x - x) < hx + select(0.0, jx, up) && abs(p.z - z) < hz + select(0.0, jz, up);
+}
 
 fn indoorAt(p: vec3f) -> f32 {
   if (p.x < 65.9) {
-    // The houses, to the inside of their walls: tools/village/build_village.py's. The upper floor overhangs on two sides.
-    if (p.y > 5.97 || p.y < 0.0) { return 0.0; }
-    let j = select(0.0, 0.42, p.y > 3.49);
-    let square = inHome(p, 1.0, -19.0, 7.45, 3.65 + j) || inHome(p, -19.0, 0.5, 3.45 + j, 4.7) || inHome(p, 18.5, 3.5, 3.25 + j, 5.2) || inHome(p, 9.5, 21.0, 4.95, 3.25 + j);
-    let town = inHome(p, -10.0, 36.0, 3.25 + j, 4.45) || inHome(p, 16.0, 37.0, 3.25 + j, 4.45) || inHome(p, 38.0, -36.0, 4.45, 3.25 + j) || inHome(p, 44.0, -16.0, 4.95, 3.25 + j)
-      || inHome(p, -40.0, -14.0, 3.25 + j, 4.45) || inHome(p, -42.0, 18.0, 3.25 + j, 4.95) || inHome(p, 8.0, -37.0, 4.45, 3.25 + j) || inHome(p, -30.0, -34.0, 4.95, 3.25 + j);
-    return select(0.0, 1.0, square || town);
+    // The houses, to the inside of their walls, with the overhang upstairs. Written by tools/village/build_village.py, which is the one that knows.
+    if (p.y < 0.0) { return 0.0; }
+    // <homes>
+    return select(0.0, 1.0, inHome(p, 1.00, -19.00, 7.45, 3.65, 0.00, 0.42, 3.40, 6.07)
+      || inHome(p, -19.00, 0.50, 3.45, 4.70, 0.50, 0.00, 3.30, 6.27)
+      || inHome(p, 18.50, 3.50, 3.25, 5.20, 0.00, 0.00, 3.50, 6.17)
+      || inHome(p, 9.50, 21.00, 4.95, 3.25, 0.00, 0.00, 2.80, 5.17)
+      || inHome(p, -10.00, 36.00, 3.25, 4.45, 0.00, 0.00, 3.10, 5.57)
+      || inHome(p, 16.00, 37.00, 3.45, 4.95, 0.50, 0.00, 3.30, 5.97)
+      || inHome(p, 38.00, -36.00, 5.95, 3.95, 0.00, 0.00, 3.50, 6.27)
+      || inHome(p, 44.00, -16.00, 3.95, 3.75, 0.00, 0.00, 3.10, 5.47)
+      || inHome(p, -40.00, -14.00, 2.95, 5.45, 0.35, 0.00, 3.00, 5.37)
+      || inHome(p, -42.00, 18.00, 3.45, 4.20, 0.00, 0.00, 3.00, 5.37)
+      || inHome(p, 8.00, -37.00, 3.70, 3.95, 0.00, 0.50, 3.30, 6.07)
+      || inHome(p, -30.00, -34.00, 3.65, 3.65, 0.00, 0.00, 3.40, 6.77));
+    // </homes>
   }
   if (p.x < 113.0) { return select(0.0, 1.0, abs(p.z) < 13.9 && p.y < 24.0); }
   if (p.x < 125.0) { return select(0.0, 1.0, (abs(p.z) < 6.5 && p.y < 9.5) || (p.x < 115.75 && p.z < 0.0 && p.z > -12.45 && p.y < 7.5)); }
@@ -159,7 +171,7 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   // On a phone only metal reads the sky's picture. On anything else it's a faint sheen, and this fit to that picture, as
   // blurred as a rough surface sees it, does as well.
   let toSun = max(dot(refl, F.sunDir.xyz), 0.0);
-  var env = vec3f(0.08, 0.12, 0.15) + vec3f(0.16, 0.16, 0.15) * toSun * toSun;
+  var env = F.skyAmb.rgb * vec3f(0.24, 0.29, 0.26) + F.sunColor.rgb * 0.045 * toSun * toSun;
   if (!LEAN || metal > 0.02) {
     let lod = rough * 7.0;
     // Steel takes the sky's brightness more than its colour.
