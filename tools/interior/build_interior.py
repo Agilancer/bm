@@ -320,19 +320,12 @@ def candle_rack(x, z, y, n=7, spread=0.42):
     W.collide(x - 0.3, z - 0.3, x + 0.3, z + 0.3, 1.2)
 
 
-def door_leaf(piece, hinge, tip, height, flip=False):
-    """A door stood open, from its hinge to its tip, in the owner's picture of it, which cuts itself out along its arch. Faces both ways."""
-    u0, v0, u1, v1 = PIECE[piece]['uv']
-    if flip:
-        u0, u1 = u1, u0
-    dx, dz = tip[0] - hinge[0], tip[2] - hinge[2]
-    L = math.hypot(dx, dz)
-    nx, nz = -dz / L * 0.02, dx / L * 0.02
-    for sg in (-1, 1):
-        n = (sg * nx / 0.02, 0.0, sg * nz / 0.02)
-        a = (hinge[0] + sg * nx, hinge[1], hinge[2] + sg * nz)
-        b = (tip[0] + sg * nx, tip[1], tip[2] + sg * nz)
-        W.quad(PIECE[piece]['layer'], a, b, (b[0], b[1] + height, b[2]), (a[0], a[1] + height, a[2]), ((u0, v1), (u1, v1), (u1, v0), (u0, v0)), (n, n, n, n))
+def door_leaf(door_id, piece, hinge, yaw, opens, shut, ajar, centre, h, reach=2.4, far=110.0, head=None):
+    """A door to open: a model from tools/doors/model.py, swung by src/items/doors.js. hinge: where it turns, its foot. yaw: its front looks along (sin yaw, cos yaw) when it's shut. opens: the turn to open it.
+    shut, ajar: the boxes it fills each way, (x0, z0, x1, z1). centre: the doorway's, for reaching it. Leaves with one id open together."""
+    box = lambda r: {'x': round((r[0] + r[2]) / 2, 3), 'z': round((r[1] + r[3]) / 2, 3), 'hx': round(abs(r[2] - r[0]) / 2, 3), 'hz': round(abs(r[3] - r[1]) / 2, 3), 'yaw': 0.0, 'h': h}
+    W.things.append({'type': 'door', 'id': door_id, 'piece': piece, 'x': round(hinge[0], 3), 'y': round(hinge[1], 3), 'z': round(hinge[2], 3), 'yaw': round(yaw, 4), 'open': round(opens, 4),
+                     'shut': box(shut), 'ajar': box(ajar), 'cx': round(centre[0], 3), 'cz': round(centre[1], 3), 'reach': reach, 'far': far, **({'head': [round(head[0], 3), round(head[1], 3)]} if head else {})})
 
 
 def chest(x, y, z, yaw, loot):
@@ -574,8 +567,8 @@ def cathedral():
     W.glowquad(fall(XW - 0.55, rose['cy'] - rs, rs), fall(XW - 0.55, rose['cy'] - rs, -rs), fall(XW - 0.55, rose['cy'] + rs, -rs), fall(XW - 0.55, rose['cy'] + rs, rs), idx, p['uv'], (1.5, 1.2, 1.1))
     # Doors, stood open, inward.
     for s in (-1, 1):
-        door_leaf('door_great_l' if s < 0 else 'door_great_r', (XW, F0, s * 2.3), (XW + 2.3, F0, s * 2.3), 7.6, s > 0)
-        W.collide(XW, s * 2.2, XW + 2.3, s * 2.45, 7.0)
+        door_leaf(0, 'door_great_l' if s < 0 else 'door_great_r', (XW, F0, s * 2.3), -math.pi / 2, -s * math.pi / 2,
+                  (XW - 0.1, min(0.0, s * 2.3), XW + 0.1, max(0.0, s * 2.3)), (XW, s * 2.2, XW + 2.3, s * 2.45), (XW, 0.0), 7.0, reach=5.0, far=280.0)
     for s in (-1, 1):
         candle_rack(XW + 2.6, s * 3.6, F0)
         torch(XW - 1.5, F0 + 3.3, s * 3.6, -1.0, 0.0, i=10.0, r=9.0)
@@ -651,8 +644,8 @@ def cathedral():
     for z0, z1 in ((-ZS, BACK_DOOR_Z - 1.1), (BACK_DOOR_Z + 1.1, ZS)):
         W.collide(XE, z0, XE + 1, z1)
     wall('wall_rough', (XE + 1, -ZS - 1), (XE + 1, ZS + 1), F0 - 1.0, wall_top, [arch_op(ZS + 1 + BACK_DOOR_Z, 2.2, CHANCEL, CHANCEL + 2.4, CHANCEL + 3.4)], inward=(XE + 3, 0.0))
-    door_leaf('door_pointed', (XE, CHANCEL, BACK_DOOR_Z - 1.1), (XE - 2.2, CHANCEL, BACK_DOOR_Z - 1.1), 3.4)
-    W.collide(XE - 2.2, BACK_DOOR_Z - 1.2, XE, BACK_DOOR_Z - 1.0, 3.2)
+    door_leaf(1, 'door_pointed', (XE, CHANCEL, BACK_DOOR_Z - 1.1), -math.pi / 2, -math.pi / 2,
+              (XE - 0.1, BACK_DOOR_Z - 1.1, XE + 0.1, BACK_DOOR_Z + 1.1), (XE - 2.2, BACK_DOOR_Z - 1.2, XE, BACK_DOOR_Z - 1.0), (XE, BACK_DOOR_Z), 3.2, reach=2.8)
     reveal('wall_ashlar', a, b, door2, inside, 0.95)
     wall_op_trim('wood_c0', a, b, door2, inside, 0.09)
     # Outside: buttresses, and the roof.
@@ -746,8 +739,8 @@ def office():
     W.collide(x0, hz, x1, hz + 1)
     for z0, z1 in ((-hz, -1.1), (1.1, hz)):
         W.collide(x1, z0, x1 + 0.6, z1)
-    door_leaf('door_iron', (x1, y, 1.1), (x1 - 1.9, y, 1.1), 3.4)
-    W.collide(x1 - 1.9, 1.0, x1, 1.2, 3.2)
+    door_leaf(2, 'door_iron_r', (x1, y, 1.1), -math.pi / 2, math.pi / 2,
+              (x1 - 0.1, -1.1, x1 + 0.1, 1.1), (x1 - 2.2, 1.0, x1, 1.2), (x1, 0.0), 3.2, reach=2.8)
     # The passage from the door in the corner of the stage, behind the wall, into this room.
     px1, pz0 = x0 + PASSAGE_W, BACK_DOOR_Z - 1.5
     floor_rect('wood_c3', x0, pz0, px1, -hz, y, tile=1.5)
@@ -2683,11 +2676,14 @@ class Home:
         # Downstairs, nobody gets in under the high end.
         self.collide(*rc(hi - 0.06, a_, hi + 0.06, b_), 1.9)
         # The door, stood open against the wall.
-        hx_ = dl if leaf == 'l' else dr
-        hinge = self.p(hx_, iz)
-        tip = self.p(hx_, iz - 1.55)
-        door_leaf('door_iron2', (hinge[0], y, hinge[1]), (tip[0], y, tip[1]), 2.3)
-        self.collide(hx_ - 0.05, iz - 1.55, hx_ + 0.05, iz, 2.5)
+        # In the plane of the village's door frame, between its posts (0.77 either side), and it opens into the house.
+        fz = hd - 0.05
+        hx_ = self.door - 0.77 if leaf == 'l' else self.door + 0.77
+        hinge = self.p(hx_, fz)
+        s0, s1 = self.p(self.door - 0.8, fz - 0.1), self.p(self.door + 0.8, fz + 0.1)
+        a0, a1 = self.p(hx_ - 0.05, fz - 1.54), self.p(hx_ + 0.05, fz)
+        door_leaf(3 + len([t for t in W.things if t['type'] == 'door' and 'head' in t]), 'door_iron2' if leaf == 'l' else 'door_iron2_r', (hinge[0], y, hinge[1]), self.yaw, math.pi / 2 if leaf == 'l' else -math.pi / 2,
+                  (s0[0], s0[1], s1[0], s1[1]), (a0[0], a0[1], a1[0], a1[1]), self.p(self.door, fz), 2.5, head=self.p(self.door - 0.77, fz))
         # And where you stand. Ramp first: the height runs along whichever of world x and z the stair does.
         a, c = self.p(*at(lo, a_)), self.p(*at(hi, a_))
         world_z = self.turned != (axis == 'z')

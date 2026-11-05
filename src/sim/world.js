@@ -8,6 +8,7 @@ import { LAND_EDGE, terrainHeight } from '../core/terrain.js';
 const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_REACH = 150;
 const NAV_EDGE = 250;      // Past this nothing's worked out where to walk: whatever's chasing you stops at it, and the land goes on to LAND_EDGE.
 
+const OUT_OF_THE_WAY = 1e9;  // (a box only those with their feet above this run into)
 const TRUNK_CELL = 16, TOWN = 50;     // (The forest stands clear of the town, so nobody in it looks for a trunk.)
 const trunkKey = (i, j) => (i + 1000) * 2000 + j + 1000;
 
@@ -35,6 +36,22 @@ export class World {
         const x = (i + 0.5) * NAV_CELL - NAV_HALF, z = (j + 0.5) * NAV_CELL - NAV_HALF;
         this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, 0.55) ? 1 : 0;
       }
+    }
+    // The doors: each leaf a box in its doorway when it's shut and a box against the wall when it's open, one of them out of the way. (Not in the grid above: they come and go.)
+    // They start open, for the tools that walk the place; the game's first tick shuts them.
+    this.doors = (interior.things || []).filter((t) => t.type === 'door').map((t) => {
+      const box = (c) => { const o = { ...c, s: 0, co: 1 }; this.colliders.push(o); return o; };
+      return { id: t.id, shut: box(t.shut), ajar: box(t.ajar) };
+    });
+    this.setDoors(-1);
+  }
+
+  // mask: a bit for each door that stands open. -1: all of them.
+  setDoors(mask) {
+    for (const d of this.doors) {
+      const open = mask < 0 || Math.floor(mask / 2 ** d.id) % 2 === 1;
+      d.shut.b = open ? OUT_OF_THE_WAY : 0;
+      d.ajar.b = open ? 0 : OUT_OF_THE_WAY;
     }
   }
 

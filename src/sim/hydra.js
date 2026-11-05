@@ -1,4 +1,4 @@
-// The Bone Hydra: an old, heavy, territorial thing lying up south of the village. Three heads means it has no blind side, and
+// The Bone Hydra: an old, heavy, territorial thing lying up at the bottom of the rift under the catacombs. Three heads means it has no blind side, and
 // it can't be stalked the way the Gravehart stalks you; it lies watching, and bickers with itself, until you come too close.
 // Then it roars once, and if you stay it comes on at a walk: it burns what's far and bites what's near, and swings its tail
 // at anything that gets behind it. Its body barely minds a sword. Its necks do. Cut one enough and the head comes off and
@@ -33,12 +33,14 @@ const NECK_HP = 170, STUMP_HP = 70, TAIL_HP = 60, DRAPE_HP = 28;
 const FIRE_RANGE = 10.5, FIRE_TICK = 0.25, FIRE_DMG = 5;
 const WIND = [0.6, 0.8];
 const tv = new Float32Array(3), tv2 = new Float32Array(3), flow = new Float32Array(2);
+let PIT = null;     // the floor it lives on: HYDRA in src/sim/sim.worker.js
 
 function turn(a, b, step) { const d = wrapAngle(b - a); return wrapAngle(a + clamp(d, -step, step)); }
 
 export class Hydra extends Beast {
   constructor(id, kind, rig, opts) {
     super(id, kind, rig, opts);
+    PIT = opts.pit;
     this.bodyRadius = 1.7;
     this.scale = S;
     this.jointOf = (n) => rig.index.get(n);
@@ -161,7 +163,8 @@ export class Hydra extends Beast {
     if (this.hp <= 0 && !this.dead) this.die(sim);
     this.cooldown = Math.max(0, this.cooldown - dt);
     let rate = 1;
-    const hunting = !p.dead && sim.gameState === 0;
+    // (It can't climb. Up on the scaffold or the bridge you're as good as gone, however near you are across the ground.)
+    const hunting = !p.dead && sim.gameState === 0 && p.y - this.y < 6;
     if (!this.dead) {
       const n = hunting ? this.sense(p, dist) : 0;
       this.aware = clamp(this.aware + (n > 0 ? n * dt : -dt * 0.08), 0, 1.4);
@@ -177,9 +180,11 @@ export class Hydra extends Beast {
     }
     this.x += this.vx * dt; this.z += this.vz * dt;
     tv[0] = this.x; tv[2] = this.z;
-    sim.world.resolve(tv, 1.25, this.y + 0.6);
+    // (Its stride takes it over the rubble on the floor, the tallest of which comes to 1.3 m. It's the trench's walls that stop it.)
+    sim.world.resolve(tv, 1.25, this.y + 1.4);
     this.x = tv[0]; this.z = tv[2];
-    this.y = sim.world.height(this.x, this.z);
+    this.x = clamp(this.x, PIT.x0, PIT.x1); this.z = clamp(this.z, PIT.z0, PIT.z1);
+    this.y = PIT.y;
     if (this.state !== STATE.ATTACK && !this.dead) {
       const stride = STRIDE[this.clip];
       if (stride) rate *= clamp(this.speed / stride, 0.3, 1.4);
@@ -200,8 +205,9 @@ export class Hydra extends Beast {
   }
 
   go(dt, sim, tx, tz, speed, clipName, turnRate) {
-    sim.world.updateField(tx, tz, sim.time, 6);
-    sim.world.flow(flow, this.x, this.z, tx, tz, 6);
+    // The floor of the rift is one long open trench, so there's no working out a way: straight at it, as far as the trench goes.
+    const ax = clamp(tx, PIT.x0, PIT.x1) - this.x, az = clamp(tz, PIT.z0, PIT.z1) - this.z, al = Math.hypot(ax, az) || 1;
+    flow[0] = ax / al; flow[1] = az / al;
     const k = 1 - Math.exp(-2.4 * dt);
     this.vx += (flow[0] * speed - this.vx) * k; this.vz += (flow[1] * speed - this.vz) * k;
     this.speed = Math.hypot(this.vx, this.vz);
@@ -291,7 +297,7 @@ export class Hydra extends Beast {
       this.waitT -= dt;
       if (this.waitT <= 0 && this.clip === 'idle') {
         const a = Math.random() * Math.PI * 2, r = 4 + Math.random() * (this.opts.territory * 0.45);
-        this.wx = this.opts.spawn[0] + Math.sin(a) * r; this.wz = this.opts.spawn[1] + Math.cos(a) * r;
+        this.wx = clamp(this.opts.spawn[0] + Math.sin(a) * r, PIT.x0, PIT.x1); this.wz = clamp(this.opts.spawn[1] + Math.cos(a) * r, PIT.z0, PIT.z1);
         this.setState(STATE.ROAM);
       }
     } else {
@@ -440,13 +446,13 @@ export class Hydra extends Beast {
     const to = Math.hypot(p.x - ox, p.z - oz);
     const ahead = (p.x - ox) * dx + (p.z - oz) * dz;
     const aim = a.rake || ahead < to * 0.75 ? 6.5 : clamp(to, 3, FIRE_RANGE);
-    const drop = (sim.world.height(ox + dx * aim, oz + dz * aim) + (a.rake ? 0 : 1) - oy) / aim;
+    const drop = (PIT.y + (a.rake ? 0 : 1) - oy) / aim;
     const dy = clamp(drop, -1.2, 0.3), L = Math.hypot(1, dy);
     const nx = dx / L, ny = dy / L, nz = dz / L;
     if (emit) {
       sim.event(EV.FIRE, ox, oy, oz, nx, ny, nz);
       // Where it comes down, the ground burns.
-      const gy = sim.world.height(ox + dx * aim, oz + dz * aim);
+      const gy = PIT.y;
       if (dy < -0.08 && aim * L < FIRE_RANGE) sim.event(EV.FIRE_HIT, ox + dx * aim, gy + 0.05, oz + dz * aim);
     }
     if (!burn || p.dead || p.iframes) return;

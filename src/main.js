@@ -12,6 +12,7 @@ import { GEAR, SHIELDS, colorOf, gearTotals, nameOf, rollArmor, rollGem, rollShi
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { Chests } from './items/chests.js';
+import { Doors } from './items/doors.js';
 import { settings, Title } from './title.js';
 import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
@@ -304,6 +305,7 @@ async function boot(plan, poolSize) {
     load: (d) => { pack.load(d); arm(); game.drops.clear(); },
   });
   addPart('chests', { save: () => game.chests.save(), load: (d) => game.chests.load(d) });
+  addPart('doors', { save: () => game.doors.save(), load: (d) => game.doors.load(d) });
   addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 15) });
   // Not while you lie fallen.
   const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
@@ -350,6 +352,7 @@ async function boot(plan, poolSize) {
       arm();
       game.drops.clear();
       game.chests.load(null);
+      game.doors.load(null);
       enter(true);
     } else if (a === 'continue') {
       const d = saves.newest();
@@ -451,7 +454,7 @@ async function boot(plan, poolSize) {
   game.run();
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> swings, <b>WIDE</b> swings wide, or with a shield on, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to cast it, hold it to keep casting, and <b>B</b> beside them changes them. <b>PACK</b> holds your swords.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up, or a wide swing with no shield &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take or open';
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up, or a wide swing with no shield &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take, open or shut';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
@@ -588,6 +591,8 @@ class GameView {
     this.clock = new Clock($('clock'));
     this.chests = new Chests(renderer, audio, this.drops, renderer.things);
     this.nearChest = null;
+    this.doors = new Doors(renderer, audio, renderer.things, { set value(m) { shared.input[INPUT.DOORS] = m; } });
+    this.nearDoor = null;
     this.nearDrop = null;
     this.takeShown = null;
     this.hudStats = { gpuMs: 0, busyMs: 0, W: 0, H: 0, scale: 1, msaa: 1, demoted: 0, vsync: 0 };
@@ -632,6 +637,7 @@ class GameView {
     const d = this.nearDrop;
     if (!d) {
       if (this.nearChest) this.chests.open(this.nearChest);
+      else if (this.nearDoor) { this.doors.toggle(this.nearDoor); this.takeShown = undefined; }
       return;
     }
     if (d.coins) { this.pack.gold += d.item.amount; this.hud.tip(`${nameOf(d.item)}. ${this.pack.gold} in all.`, 2); }
@@ -646,13 +652,16 @@ class GameView {
     const d = this.nearDrop;
     const ch = this.chests.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     this.nearChest = this.input.enabled && !this.input.menu ? ch : null;
-    const near = d || this.nearChest;
+    const door = this.doors.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
+    this.nearDoor = this.input.enabled && !this.input.menu ? door : null;
+    const near = d || this.nearChest || this.nearDoor;
     if (near === this.takeShown) return;
     this.takeShown = near;
     $('take').style.display = near ? 'block' : 'none';
     $('bTake').style.display = near && this.input.touch ? 'flex' : 'none';
-    $('bTake').textContent = d || !near ? 'TAKE' : 'OPEN';
-    if (near) $('take').innerHTML = `${this.input.touch ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : 'Open the chest'}`;
+    const shuts = !d && !this.nearChest && this.nearDoor?.open;
+    $('bTake').textContent = d || !near ? 'TAKE' : shuts ? 'SHUT' : 'OPEN';
+    if (near) $('take').innerHTML = `${this.input.touch ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : shuts ? 'Shut the door' : 'Open the door'}`;
   }
 
   gameState() { const s = this.currentSnap(); return s ? s[H.GAME] : 0; }

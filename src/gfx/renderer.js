@@ -29,7 +29,7 @@ const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104 };
-const MAX_GROUND = 48;
+const MAX_GROUND = 96;
 
 const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y * l, z * l]; };
 
@@ -185,6 +185,7 @@ export class Renderer {
     this.ground = [];
     this.gauntletSets = new Map();
     this.chests = [];
+    this.doorItems = [];
     this.things = (village.things || []).concat(this.interior.data.things || []);
     this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
@@ -800,6 +801,29 @@ export class Renderer {
       ]);
       this.chestModels = { body: this.lyingModel(body, alb, nrm, mr, [0, 0, 0, 0]), lid: this.lyingModel(lid, alb, nrm, mr, [0, 0, 0, 0]) };
     })().catch((e) => console.error('chest', e));
+  }
+
+  // The doors, the first time one comes near: every leaf from one glb, on one set of maps. See src/items/doors.js and tools/doors/model.py.
+  doorModel() {
+    this.doorModels = {};
+    (async () => {
+      const buf = await fetch(`${this.base}assets/game/items/doors.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+      const glb = parseGLB(buf);
+      const prims = glb.json.nodes.filter((n) => n.mesh !== undefined).map((n) => {
+        const pr = glb.json.meshes[n.mesh].primitives[0], a = pr.attributes;
+        return { name: n.name, pr, pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+      });
+      const mat = glb.json.materials[prims[0].pr.material], scale = this.tier.texScale;
+      const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
+      const [alb, nrm, mr] = await Promise.all([
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
+        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+      ]);
+      const models = {};
+      for (const p of prims) models[p.name] = this.lyingModel(p, alb, nrm, mr, [0, 0, 0, 0]);
+      this.doorModels = models;
+    })().catch((e) => console.error('doors', e));
   }
 
   async buildProp(glb) {
@@ -1571,9 +1595,11 @@ export class Renderer {
     for (const g of this.ground) drawn.push(g);
     if (this.chests.length && !this.chestModels) this.chestModel();
     for (const g of this.chests) drawn.push(g);
+    if (this.doorItems.length && !this.doorModels) this.doorModel();
+    for (const g of this.doorItems) drawn.push(g);
     if (snap[H.SURF] > 0.5 && this.board.sword) drawn.push(this.board);
     for (const g of drawn) {
-      let model = g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
+      let model = g.door ? this.doorModels?.[g.piece] : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
       if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
