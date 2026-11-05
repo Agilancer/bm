@@ -240,6 +240,7 @@ class Scene:
         self.lights = []
         self.smoke = []
         self.doors = []
+        self.fences = []
         self.windows = []
         self.trees = []
         self.homes = []        # what tools/interior/build_interior.py fits out
@@ -969,6 +970,7 @@ def crate(S, x, z, yaw=0.0, s=0.45, y=0.0, collide=True):
 
 def fence(S, pts, h=1.05, post_gap=2.3):
     b = S.b
+    S.fences.append([list(p) for p in pts])
     for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
         L = math.hypot(x1 - x0, z1 - z0)
         yaw = math.atan2(x1 - x0, z1 - z0)
@@ -1177,10 +1179,10 @@ def compose():
     barrel(S, -14.1, 8.1, 0.6)
     crate(S, 3.0, 16.2, 0.1, 0.45)
     barrel(S, 4.0, 16.8, 0.9)
-    # Paddock fence on the south-west and a run behind the inn.
-    fence(S, [(-24, 9), (-24, 21), (-8, 26), (-3.5, 27)])
-    fence(S, [(-9, -24.5), (-20, -22), (-27, -13)])
-    fence(S, [(19, -24), (27, -14), (27.5, -6)])
+    # Paddock fence on the south-west, a run behind the inn, and two more out east. All clear of the roads and lanes: node tools/village/fences.mjs checks.
+    fence(S, [(-21, 11), (-21, 21), (-8, 26), (-6, 26.5)])
+    fence(S, [(-9, -22.5), (-19, -20), (-26, -12.5)])
+    fence(S, [(21.5, -9.5), (27.5, -13.5), (28, -6)])
     fence(S, [(21, 27), (31, 20), (33, 12)])
     # Low stone walls and a stack of crates in the square: cover, corners, and something to back an enemy against.
     low_wall(S, -8.5, 6.5, -5.0, 9.5)
@@ -1424,7 +1426,7 @@ def build(export=True):
         bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", use_selection=True, export_image_format="NONE",
                                   export_texcoords=True, export_normals=True, export_materials="EXPORT", export_apply=False)
         with open(os.path.join(ROOT, "assets", "game", "village.json"), "w") as fh:
-            json.dump({"colliders": S.colliders, "footprints": S.footprints, "homes": S.homes, "lights": S.lights, "smoke": S.smoke, "doors": S.doors, "trees": S.trees}, fh, separators=(",", ":"))
+            json.dump({"colliders": S.colliders, "footprints": S.footprints, "homes": S.homes, "lights": S.lights, "smoke": S.smoke, "doors": S.doors, "trees": S.trees, "fences": S.fences}, fh, separators=(",", ":"))
         write_indoor(S)
         print(f"exported {os.path.getsize(out) / 1048576:.2f} MB")
     return objs

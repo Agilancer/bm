@@ -183,7 +183,8 @@ export class Beast {
       quatMul(tq2, 0, tq, 0, c.q, 0);
       c.q.set(tq2); quatNormalize(c.q, 0);
       // The lowest of its points takes the ground.
-      const g = sim.world.height(c.x, c.z) + c.radius;
+      // (What's cut off a thing in a pit lands in the pit, whatever crosses over it.)
+      const g = (this.opts?.pit ? this.opts.pit.y : sim.world.height(c.x, c.z)) + c.radius;
       let low = 1e9, lx = 0, ly = 0, lz = 0;
       for (const p of c.pts) {
         tv[0] = p[0]; tv[1] = p[1]; tv[2] = p[2];

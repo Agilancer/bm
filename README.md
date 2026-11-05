@@ -35,7 +35,7 @@ themselves: bait drops the shield and dares you. Great crabs come out of the fie
 different sides.
 
 Two animals keep their own ground and want nothing to do with the duel. The Gravehart holds the north: it warns you off, lets
-you leave if you do, and stalks you if you don't. The Bone Hydra lies up in the south, and its heads can be cut off.
+you leave if you do, and stalks you if you don't. The Bone Hydra lies at the bottom of the rift under the catacombs, and its heads can be cut off.
 
 F3 shows frame time, threads and what the knight is thinking. On a phone, turn on **Frame rate readout** in Settings.
 
@@ -64,7 +64,7 @@ The Mourning Rift is a side branch off the north gate of the Founders' Hall, 30 
 
 ### The village's houses and chests
 
-All twelve houses can be entered: furnished, with a stair and an upper floor, built in `class Home` in `tools/interior/build_interior.py`. Colliders with a `b` only stop feet above that height, which is how an upstairs has its own walls. The doors stand open and can't be shut. The dead and the surface creatures don't come in.
+All twelve houses can be entered: furnished, with a stair and an upper floor, built in `class Home` in `tools/interior/build_interior.py`. Colliders with a `b` only stop feet above that height, which is how an upstairs has its own walls. Every door is a model (`tools/doors/model.py`, in Blender, from the pictures by way of `tools/doors/trace.py`), shut until you press E at it, and E shuts it again. `src/items/doors.js` swings them; a shut one stops you, spells and sight.  The dead and the surface creatures don't come in.
 
 Chests (`src/items/chests.js`, placed by `chest(...)` in the builder) open on `E`, the lid swings up on its hinge and gold, gems and gear spill out. Which are open is saved. Gold is counted in the pack.
 
@@ -626,7 +626,7 @@ over which an attack carries the animal forward, in `hits` which part lands when
 
 ### How it behaves
 
-`src/sim/hydra.js`. It lies up in its territory south of the village, basking and roaming. If you come near it looks a long time,
+`src/sim/hydra.js`. It lies up on the floor of the rift, the chasm under the catacombs, east of the bridge, basking and roaming. It can't climb out. If you come near it looks a long time,
 roars twice, and comes for you if you stay. It's too heavy to circle, so it comes straight on: bites and claws close up, the tail
 if you get behind it, and fire from 5 to 13 m. It won't follow you far off its ground, unless you're close enough to still be
 cutting at it.

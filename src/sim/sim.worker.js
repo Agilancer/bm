@@ -28,7 +28,8 @@ const SILVER = {
 // Keeps to the woods north of the village. hp is how long it fights; territory is how far from spawn it minds you.
 const GRAVEHART = { spawn: [4, -56], lair: [-14, -74], yaw: 0.4, hp: 420, territory: 30 };
 // Lies up in the south, and doesn't go looking for anyone.
-const HYDRA = { spawn: [-6, 92], lair: [12, 106], yaw: 3.1, hp: 900, territory: 30 };
+// Down in the rift under the catacombs, on its burning floor, east of the bridge and the scaffold stair: see gulf() in tools/interior/build_interior.py. pit: where it can go.
+const HYDRA = { spawn: [208, -128], lair: [217, -127], yaw: -1.57, hp: 900, territory: 24, pit: { y: -44.25, x0: 150, x1: 222, z0: -133, z1: -123 } };
 
 const CRABS = [
   { spawn: [-40, -28], yaw: 1.0, hp: 170, delay: 20, flank: 1.1 },
@@ -88,6 +89,7 @@ class Sim {
 
   step(dt) {
     const { input, player } = this;
+    if (input[INPUT.DOORS] !== this.doorsSeen) { this.doorsSeen = input[INPUT.DOORS]; this.world.setDoors(this.doorsSeen); }
     // (The first tick runs even paused, so there's a world to draw under the title.)
     if (input[INPUT.PAUSE] > 0.5 && this.tick > 0) { if (this.shared) this.shared.plan[9] = 0; return; }
     this.touchAssist = input[INPUT.TOUCH] > 0.5;
@@ -109,9 +111,10 @@ class Sim {
       const ox = k.x, oz = k.z;
       k.update(this.frozen ? 0 : tdt * this.casting.rate(k), this);
       // Velscour's church is the undead's. What lives in the fields stops at its door.
-      if (k instanceof Zombie ? inPit(k.x, k.z) : floorAt(k.x, k.z) !== null) { k.x = ox; k.z = oz; }
+      // (The Hydra is the exception. The pit is where it lives.)
+      if (k.opts?.pit ? false : k instanceof Zombie ? inPit(k.x, k.z) : floorAt(k.x, k.z) !== null) { k.x = ox; k.z = oz; }
       // Each death leaves its loot once.
-      if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, this.world.height(k.x, k.z), k.z, k.opts?.lootKind ?? k.kind); }
+      if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.opts?.lootKind ?? k.kind); }
       if (!k.dead) k.looted = false;
     }
     this.separate();
@@ -141,7 +144,7 @@ class Sim {
       if (k.dead) continue;
       const P = k.bodyRadius || 0.82;
       const dx = p.x - k.x, dz = p.z - k.z, d = Math.hypot(dx, dz);
-      if (d < P && d > 1e-3 && !k.iframes) {
+      if (d < P && d > 1e-3 && !k.iframes && Math.abs(p.y - k.y) < 4) {
         const push = (P - d) / d;
         p.x += dx * push * 0.8; p.z += dz * push * 0.8;
         k.x -= dx * push * 0.2; k.z -= dz * push * 0.2;
@@ -154,7 +157,7 @@ class Sim {
         if (a.dead || b.dead) continue;
         const R = (a.bodyRadius || 0.5) * 0.7 + (b.bodyRadius || 0.5) * 0.7;
         const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
-        if (d < R && d > 1e-3) {
+        if (d < R && d > 1e-3 && Math.abs(a.y - b.y) < 4) {
           const push = (R - d) / d * 0.5;
           b.x += dx * push; b.z += dz * push; a.x -= dx * push; a.z -= dz * push;
         }
