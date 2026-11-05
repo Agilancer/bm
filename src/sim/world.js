@@ -9,6 +9,7 @@ const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_LA
 export class World {
   constructor(data, interior) {
     setFloors(interior.floors);
+    this.spawns = interior.spawns;
     this.colliders = data.colliders.concat(interior.colliders).map((c) => ({ ...c, s: Math.sin(c.yaw), co: Math.cos(c.yaw) }));
     this.lightsData = data.lights;
     this.grid = new Uint8Array(NAV_SIZE * NAV_SIZE);
@@ -85,7 +86,9 @@ export class World {
         return t0 <= t1;
       };
       if (!slab(lox, ldx, c.hx) || !slab(loz, ldz, c.hz)) continue;
-      const yAt = oy + dy * t0;
+      // (Underground, a box's height counts from the floor it stands on.)
+      let yAt = oy + dy * t0;
+      if (yAt < -2) yAt -= this.height(c.x, c.z);
       if (yAt > c.h && c.h < 3.5) continue;
       if (c.h >= 3.5 && yAt > 7) continue;
       if (best < 0 || t0 < best) best = t0;

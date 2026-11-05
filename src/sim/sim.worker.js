@@ -7,7 +7,7 @@ import { Casting } from './casting.js';
 import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
-import { addUndead, raiseZombie, stepFoeSpells } from './undead.js';
+import { addUndead, raiseZombie, stepCatacombs, stepFoeSpells } from './undead.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
 import { World } from './world.js';
@@ -110,6 +110,7 @@ class Sim {
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     stepFoeSpells(tdt, this);
+    stepCatacombs(this);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);

@@ -832,6 +832,63 @@ function fieldSpot(i, world) {
   return [Math.sin(i) * 40, Math.cos(i) * 40];
 }
 
+// ---- the catacombs -------------------------------------------------------------------------------------------
+
+// Below ground there are more places to stand than there are bodies, so bodies with nothing better to do are stood ahead of you as
+// you go down: first the ones nobody's using, then the long dead, then whoever's still in the fields, a long way above. Each place is
+// filled once, so what you've cleared stays clear. The big ones and the casters have rooms of their own, when you get near them.
+const LORDS = [
+  { model: 'zombie_necromancer', when: (p) => p.y < -10, near: [205, -33] },
+  { model: 'necromancer', when: (p) => p.y < -20, near: [186, -100] },
+  { model: 'zombie_ogre', when: (p) => p.y < -20, near: [197, -78] },
+  { model: 'zombie_ogre', when: (p) => p.y < -20 && p.x > 200, near: [236, -86] },
+  { model: 'evil_wizard', when: (p) => p.y < -20 && p.x > 200, near: [250, -86] },
+];
+const NEAR = 12, FAR = 32, OUT_OF_SIGHT = 20;
+const used = new Set();
+const lordsDone = new Set();
+let nextLook = 0;
+
+function standAt(sim, body, s) {
+  const r = Math.random();
+  const type = body.opts.type && !body.opts.role && body.opts.model === 'zombie_ogre' ? body.opts.type : r < 0.12 ? 'lurker' : r < 0.42 ? 'runner' : 'shambler';
+  body.reset({ ...body.opts, sleeper: false, type: body.opts.role ? undefined : type, spawn: [s.x, s.z], yaw: s.yaw });
+  body.y = sim.world.height(s.x, s.z);
+}
+
+export function stepCatacombs(sim) {
+  const p = sim.player;
+  if (p.x < 125 || sim.time < nextLook) return;
+  nextLook = sim.time + 0.5;
+  const spawns = sim.world.spawns;
+  const idle = (k) => k.opts && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 8) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
+  LORDS.forEach((l, n) => {
+    if (lordsDone.has(n) || !l.when(p)) return;
+    lordsDone.add(n);
+    const body = sim.knights.find((k) => k.opts && k.opts.model === l.model && !k.below && !k.aggro && !k.dead);
+    if (!body) return;
+    let best = null, bd = 1e9;
+    spawns.forEach((s, i) => { const d = Math.hypot(s.x - l.near[0], s.z - l.near[1]); if (!used.has(i) && d < bd) { bd = d; best = i; } });
+    if (best === null) return;
+    used.add(best);
+    body.below = true;
+    standAt(sim, body, spawns[best]);
+  });
+  let room = 2;
+  for (let i = 0; i < spawns.length && room > 0; i++) {
+    if (used.has(i)) continue;
+    const s = spawns[i], d = Math.hypot(s.x - p.x, s.z - p.z);
+    if (d < NEAR || d > FAR) continue;
+    if (d < OUT_OF_SIGHT && sim.world.sees(p.x, p.y + 1.5, p.z, s.x, sim.world.height(s.x, s.z) + 1.5, s.z)) continue;
+    // The ground's own dead first; then any that have lain long enough; then the fields.
+    const body = sim.knights.find((k) => idle(k) && k.dormant) || sim.knights.find((k) => idle(k) && k.dead) || sim.knights.find(idle);
+    if (!body) return;
+    used.add(i);
+    standAt(sim, body, s);
+    room--;
+  }
+}
+
 export async function addUndead(sim, base) {
   const fetchBuf = (m) => fetch(`${base}assets/monsters/zombie/${m}.glb`).then((r) => { if (!r.ok) throw new Error(`${m}: ${r.status}`); return r.arrayBuffer(); });
   const [zMeta, cMeta, buffers] = await Promise.all([
