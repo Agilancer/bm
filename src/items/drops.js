@@ -45,10 +45,11 @@ export class Drops {
     if (this.list.length >= MAX) this.list.shift();
     const gem = item.type === 'gem';
     const d = {
-      item, x, z, y: terrainHeight(x, z), from, t: 0, glintT: Math.random(), spin: Math.random() * 6.28, mat: new Float32Array(16),
+      item, x, z, y: terrainHeight(x, z, from?.[1]), from, t: 0, glintT: Math.random(), spin: Math.random() * 6.28, mat: new Float32Array(16),
       n: groundNormal(x, z), turn: 2.5 + Math.random() * 2.5,
     };
     if (gem) d.gem = GEMS[item.kind].color;
+    else if (item.type === 'gold') d.coins = true;
     else { d.sword = item.base; d.kite = item.type === 'shield'; }
     this.pose(d);
     this.list.push(d);
@@ -73,6 +74,11 @@ export class Drops {
     const m = d.mat;
     const k = Math.min(d.t, 1);
     const arc = Math.sin(k * Math.PI) * 0.7;
+    if (d.coins) {
+      const c = Math.cos(d.spin), s = Math.sin(d.spin);
+      m.set([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, d.from[0] + (d.x - d.from[0]) * k, d.from[1] + (d.y + 0.01 - d.from[1]) * k + arc, d.from[2] + (d.z - d.from[2]) * k, 1]);
+      return;
+    }
     if (d.gem) {
       // Hangs at knee height, turning, to catch the eye in the grass.
       const px = d.from[0] + (d.x - d.from[0]) * k, pz = d.from[2] + (d.z - d.from[2]) * k;
@@ -111,7 +117,7 @@ export class Drops {
   }
 
   // Moves what's still falling and glints what's down. Returns the nearest within reach of the player, or null.
-  update(dt, px, pz) {
+  update(dt, px, py, pz) {
     let best = null, bestD = REACH;
     for (const d of this.list) {
       if (d.t < 1) {
@@ -124,12 +130,12 @@ export class Drops {
       } else {
         if (d.gem) { d.spin += dt * 1.3; this.pose(d); }
         const dist = Math.hypot(d.x - px, d.z - pz);
-        if (dist < bestD) { bestD = dist; best = d; }
+        if (dist < bestD && Math.abs(d.y - py) < 2.5) { bestD = dist; best = d; }
       }
       // The rarer it is, the more often it catches the light.
       d.glintT -= dt;
       if (d.glintT <= 0 && d.t >= 1) {
-        const rank = d.item.type === 'gem' ? 1 : d.item.rarity;
+        const rank = d.item.rarity ?? 1;
         d.glintT = 1.7 - rank * 0.35 + Math.random() * 0.6;
         this.renderer.emit(2, 1 + rank, d.x, d.y + (d.gem ? 0.34 : LIFT + 0.06), d.z, 0, 1, 0, 1.8, 0.1, 0.5, 0.004, 0.008, 0.15, 0.35);
       }
@@ -139,6 +145,6 @@ export class Drops {
 
   take(d) {
     this.list.splice(this.list.indexOf(d), 1);
-    this.audio.play('draw', null, 0, 0, d.gem ? 0.4 : 0.8, d.gem ? 1.6 : 1.15, false);
+    this.audio.play('draw', null, 0, 0, d.gem || d.coins ? 0.4 : 0.8, d.coins ? 1.9 : d.gem ? 1.6 : 1.15, false);
   }
 }

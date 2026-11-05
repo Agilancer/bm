@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { Audio } from './audio.js';
-import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, mapShared } from './core/layout.js';
+import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
@@ -10,6 +10,7 @@ import { Drops, boardPose } from './items/drops.js';
 import { SHIELDS, colorOf, nameOf, rollGem, rollShield, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
+import { Chests } from './items/chests.js';
 import { settings, Title } from './title.js';
 import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
@@ -246,6 +247,7 @@ async function boot(plan, poolSize) {
     writeWeapon(shared.input, pack.slots.main);
     const off = pack.slots.off;
     shared.input[INPUT.SHIELD] = off ? 1 : 0;
+    $('bWide').textContent = off && (WEAPONS.find((w) => w?.id === pack.slots.main?.base)?.hands || 1) === 1 ? 'GUARD' : 'WIDE';
     renderer.offHand = off ? off.base : null;
     renderer.board.sword = renderer.offHand;
   };
@@ -299,6 +301,7 @@ async function boot(plan, poolSize) {
     save: () => pack.save(),
     load: (d) => { pack.load(d); arm(); game.drops.clear(); },
   });
+  addPart('chests', { save: () => game.chests.save(), load: (d) => game.chests.load(d) });
   // Not while you lie fallen.
   const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
   const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
@@ -343,6 +346,7 @@ async function boot(plan, poolSize) {
       pack.load(null);
       arm();
       game.drops.clear();
+      game.chests.load(null);
       enter(true);
     } else if (a === 'continue') {
       const d = saves.newest();
@@ -406,7 +410,11 @@ async function boot(plan, poolSize) {
     if (viaEsc === true && !input.touch && !AUTO) input.onPauseChange(true); else resume();
   };
   let bookOpen = false;
-  game.spellbar = new SpellBar(shared, input, { openBook, closeBook });
+  game.spellbar = new SpellBar(shared, input, { openBook, closeBook, tip: (t) => hud.tip(t, 2.5) });
+  addPart('spells', {
+    save: () => game.spellbar.save(),
+    load: (d) => game.spellbar.load(d),
+  });
   game.closeBook = closeBook;
   const closePack = (viaEsc) => {
     inventory.hide();
@@ -439,8 +447,8 @@ async function boot(plan, poolSize) {
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>CAST</b> casts, hold it to keep casting. Tap the spell at the top for the book, or either side of it to turn it. <b>PACK</b> holds your swords.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>F</kbd> cast &nbsp; <kbd>Wheel</kbd> or <kbd>B</kbd> spells &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take';
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> swings, <b>WIDE</b> swings wide, or with a shield on, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to cast it, hold it to keep casting, and <b>B</b> beside them changes them. <b>PACK</b> holds your swords.'
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up, or a wide swing with no shield &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take or open';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
@@ -574,6 +582,8 @@ class GameView {
     this.govT = 0; this.govMs = 0; this.govN = 0; this.frozenSnap = null;
     this.prevSnap = new Float32Array(SNAP_FLOATS);
     this.drops = new Drops(renderer, audio);
+    this.chests = new Chests(renderer, audio, this.drops, renderer.things);
+    this.nearChest = null;
     this.nearDrop = null;
     this.takeShown = null;
     this.hudStats = { gpuMs: 0, busyMs: 0, W: 0, H: 0, scale: 1, msaa: 1, demoted: 0, vsync: 0 };
@@ -616,21 +626,29 @@ class GameView {
   // The nearest thing on the ground, into the pack if there's room for it.
   takeNearest() {
     const d = this.nearDrop;
-    if (!d) return;
-    if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
+    if (!d) {
+      if (this.nearChest) this.chests.open(this.nearChest);
+      return;
+    }
+    if (d.coins) { this.pack.gold += d.item.amount; this.hud.tip(`${nameOf(d.item)}. ${this.pack.gold} in all.`, 2); }
+    else if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
     this.drops.take(d);
     this.nearDrop = null;
     if (this.onTaken) this.onTaken();
   }
 
   updateDrops(dt, snap) {
-    this.nearDrop = this.input.enabled && !this.input.menu ? this.drops.update(dt, snap[H.PX], snap[H.PZ]) : null;
+    this.nearDrop = this.input.enabled && !this.input.menu ? this.drops.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ]) : null;
     const d = this.nearDrop;
-    if (d === this.takeShown) return;
-    this.takeShown = d;
-    $('take').style.display = d ? 'block' : 'none';
-    $('bTake').style.display = d && this.input.touch ? 'flex' : 'none';
-    if (d) $('take').innerHTML = `${this.input.touch ? '' : '<kbd>E</kbd> '}<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>`;
+    const ch = this.chests.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
+    this.nearChest = this.input.enabled && !this.input.menu ? ch : null;
+    const near = d || this.nearChest;
+    if (near === this.takeShown) return;
+    this.takeShown = near;
+    $('take').style.display = near ? 'block' : 'none';
+    $('bTake').style.display = near && this.input.touch ? 'flex' : 'none';
+    $('bTake').textContent = d || !near ? 'TAKE' : 'OPEN';
+    if (near) $('take').innerHTML = `${this.input.touch ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : 'Open the chest'}`;
   }
 
   gameState() { const s = this.currentSnap(); return s ? s[H.GAME] : 0; }
@@ -882,7 +900,7 @@ class GameView {
       case EV.SPELL_CAST:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
-        this.hud.once('cast', 'Hold F, or the middle button, to cast and keep casting. The wheel or the numbers change the spell, B opens the book.', 5);
+        this.hud.once('cast', '1 to 6 cast what is in each slot: hold to keep casting. B changes them. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);

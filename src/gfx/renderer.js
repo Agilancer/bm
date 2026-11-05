@@ -24,7 +24,7 @@ const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104 };
-const MAX_GROUND = 32;
+const MAX_GROUND = 48;
 
 const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y * l, z * l]; };
 
@@ -119,7 +119,7 @@ export class Renderer {
     const rowsEach = Math.ceil(GROUND_SIZE / Math.max(1, pool.size));
     const groundJobs = [];
     for (let r = 0; r < GROUND_SIZE; r += rowsEach) {
-      groundJobs.push(pool.run('ground', { size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat([{ x: 90, z: 0, hx: 34, hz: 22, yaw: 0, h: 9 }]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
+      groundJobs.push(pool.run('ground', { size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat(village.footprints || [], [{ x: 90, z: 0, hx: 34, hz: 22, yaw: 0, h: 9 }]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
     }
     const [terrain, ...rows] = await Promise.all([pool.run('terrain', { n: tier.terrainN, extent: 2400 }), ...groundJobs]);
     tick();
@@ -168,6 +168,8 @@ export class Renderer {
     this.swords = new Map();
     this.gems = new Map();
     this.ground = [];
+    this.chests = [];
+    this.things = (village.things || []).concat(this.interior.data.things || []);
     this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.itemData = new Float32Array(16 * MAX_GROUND);
@@ -626,6 +628,53 @@ export class Renderer {
       [lin[0] * 1.6, lin[1] * 1.6, lin[2] * 1.6, 0]);
     this.gems.set(hex, m);
     return m;
+  }
+
+  // A heap of coins on the ground, each an eight-sided disc lying as it fell.
+  coins() {
+    if (this.coinHeap) return this.coinHeap;
+    const R = 0.034, T = 0.005;
+    const pos = [], nrm = [], uv = [];
+    const tri = (o, a, b, c, n) => { for (const q of [a, b, c]) { pos.push(o[0] + q[0], o[1] + q[1], o[2] + q[2]); nrm.push(...n); uv.push(0.5, 0.5); } };
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let i = 0; i < 18; i++) {
+      const a = rnd() * 6.283, r = Math.sqrt(i / 18) * 0.11, o = [Math.cos(a) * r, 0.006 + (1 - r / 0.11) * 0.03 * rnd() + (i < 6 ? 0.012 : 0), Math.sin(a) * r];
+      const tx = (rnd() - 0.5) * 0.35, tz = (rnd() - 0.5) * 0.35;   // its tilt
+      const up = norm3(tx, 1, tz), at = (b, y) => { const x = Math.cos(b) * R, z = Math.sin(b) * R; return [x, y - x * tx - z * tz, z]; };
+      for (let k = 0; k < 8; k++) {
+        const b0 = k / 8 * 6.283, b1 = (k + 1) / 8 * 6.283, bm = (b0 + b1) / 2, side = [Math.cos(bm), 0, Math.sin(bm)];
+        tri(o, [0, T, 0], at(b1, T), at(b0, T), up);
+        tri(o, at(b0, T), at(b1, T), at(b1, -T), side);
+        tri(o, at(b0, T), at(b1, -T), at(b0, -T), side);
+      }
+    }
+    const idx = new Uint32Array(pos.length / 3).map((_, i) => i);
+    this.coinHeap = this.lyingModel({ pos: new Float32Array(pos), nrm: new Float32Array(nrm), uv: new Float32Array(uv), idx }, this.pixel('rgba8unorm-srgb', [232, 186, 74, 255]), this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255])),
+      this.pixel('rgba8unorm', [255, 90, 255, 255]), [0.2, 0.13, 0.03, 0]);
+    return this.coinHeap;
+  }
+
+  // The chest, the first time one comes near: its box and its lid, the lid's frame on the hinge. See src/items/chests.js.
+  chestModel() {
+    this.chestModels = {};
+    (async () => {
+      const buf = await fetch(`${this.base}assets/game/items/chest.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+      const glb = parseGLB(buf);
+      const prim = (name) => {
+        const pr = glb.json.meshes[glb.json.nodes.find((n) => n.name === name).mesh].primitives[0], a = pr.attributes;
+        return { pr, pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+      };
+      const body = prim('chest_body'), lid = prim('chest_lid');
+      const mat = glb.json.materials[body.pr.material], scale = this.tier.texScale;
+      const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
+      const [alb, nrm, mr] = await Promise.all([
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
+        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+      ]);
+      this.chestModels = { body: this.lyingModel(body, alb, nrm, mr, [0, 0, 0, 0]), lid: this.lyingModel(lid, alb, nrm, mr, [0, 0, 0, 0]) };
+    })().catch((e) => console.error('chest', e));
   }
 
   async buildProp(glb) {
@@ -1337,9 +1386,11 @@ export class Renderer {
     const drawn = this.drawnItems || (this.drawnItems = []);
     drawn.length = 0;
     for (const g of this.ground) drawn.push(g);
+    if (this.chests.length && !this.chestModels) this.chestModel();
+    for (const g of this.chests) drawn.push(g);
     if (snap[H.SURF] > 0.5 && this.board.sword) drawn.push(this.board);
     for (const g of drawn) {
-      const model = g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
+      const model = g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
       g.slot = nGround;

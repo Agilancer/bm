@@ -238,9 +238,14 @@ class Scene:
         self.doors = []
         self.windows = []
         self.trees = []
+        self.homes = []        # what tools/interior/build_interior.py fits out
+        self.footprints = []   # where each house stands, for the ground map
 
     def collider(self, x, z, hx, hz, yaw=0.0, h=4.0):
         self.colliders.append({"x": round(x, 3), "z": round(z, 3), "hx": round(hx, 3), "hz": round(hz, 3), "yaw": round(yaw, 4), "h": h})
+
+
+DOOR_W, DOOR_H = 1.6, 2.35
 
 
 def house(S, cx, cz, yaw, w, d, sp):
@@ -254,11 +259,16 @@ def house(S, cx, cz, yaw, w, d, sp):
     below = 1.2
     # Ground floor. The texture's own stone skirt meets the ground.
     gf = sp["ground"]
+    door_x = sp["doors"][0]["x"]
     gf_tile = {True: h1, False: h1 * 1792 / 1024}
     for side, (mat, square) in zip(("front", "back", "left", "right"), gf):
         tile = gf_tile[square]
         if side == "front":
-            wall(b, f, mat, -hw, hw, hd, -below, h1, tile, 0, 1 + below / h1, u_off=0.13)
+            # Cut round the door, the picture carrying on across the cut.
+            dl, dr = door_x - DOOR_W / 2, door_x + DOOR_W / 2
+            wall(b, f, mat, -hw, dl, hd, -below, h1, tile, 0, 1 + below / h1, u_off=0.13)
+            wall(b, f, mat, dr, hw, hd, -below, h1, tile, 0, 1 + below / h1, u_off=0.13 + (dr + hw) / tile)
+            wall(b, f, mat, dl, dr, hd, DOOR_H, h1, tile, 0, (h1 - DOOR_H) / h1, u_off=0.13 + (dl + hw) / tile)
         elif side == "back":
             wall(b, f, mat, -hw, hw, -hd, -below, h1, tile, 0, 1 + below / h1, u_off=0.41, depth_sign=-1)
         elif side == "left":
@@ -266,7 +276,9 @@ def house(S, cx, cz, yaw, w, d, sp):
         else:
             side_wall(b, f, mat, -hd, hd, hw, -below, h1, tile, 0, 1 + below / h1, u_off=0.63, sign=1)
     # Stone sill course around the foot, to seat the walls in the ground.
-    for sx, sz, hx, hz in ((0, hd + 0.05, hw + 0.15, 0.13), (0, -hd - 0.05, hw + 0.15, 0.13), (hw + 0.05, 0, 0.13, hd), (-hw - 0.05, 0, 0.13, hd)):
+    dl, dr = door_x - DOOR_W / 2, door_x + DOOR_W / 2
+    for sx, sz, hx, hz in (((dl - hw - 0.15) / 2, hd + 0.05, (dl + hw + 0.15) / 2, 0.13), ((dr + hw + 0.15) / 2, hd + 0.05, (hw + 0.15 - dr) / 2, 0.13),
+                           (0, -hd - 0.05, hw + 0.15, 0.13), (hw + 0.05, 0, 0.13, hd), (-hw - 0.05, 0, 0.13, hd)):
         box(b, f, "rubble", sx, -0.25, sz, hx, 0.45, hz, uv_scale=(0.30, 0.30))
     # Corner posts.
     for sx in (-1, 1):
@@ -385,19 +397,21 @@ def house(S, cx, cz, yaw, w, d, sp):
         # A dark flue, so the smoke has somewhere to come from.
         box(b, f, "rubble", cxl, top + 0.3, czl, 0.2, 0.09, 0.2, uv_scale=(0.42, 0.42))
         S.smoke.append({"p": [round(v, 3) for v in f.p(cxl, top + 0.45, czl)]})
-    # Doors: a card proud of the wall, stone step, lantern.
+    # Doors: a timber frame through the wall's thickness, stone step, lantern.
     for dd in sp.get("doors", []):
-        dx, dmat = dd["x"], dd["mat"]
+        dx = dd["x"]
         dh = dd.get("h", 3.0)
-        dw = dh * 1792 / 1024
-        dz = hd + 0.04
-        wall(b, f, dmat, dx - dw / 2, dx + dw / 2, dz, -0.02, dh, dw, 0, 1)
+        for sx in (-1, 1):
+            box(b, f, "wood", dx + sx * (DOOR_W / 2 + 0.05), DOOR_H / 2, hd - 0.05, 0.08, DOOR_H / 2 + 0.05, 0.13, uv_scale=(0.9, 0.3))
+        box(b, f, "wood", dx, DOOR_H + 0.05, hd - 0.05, DOOR_W / 2 + 0.13, 0.08, 0.13, uv_scale=(0.9, 0.2), grain="x")
+        box(b, f, "wood", dx, 0.1, hd - 0.05, DOOR_W / 2, 0.06, 0.13, uv_scale=(0.9, 0.2), grain="x")
         box(b, f, "stone", dx, 0.03, hd + 0.34, 0.95, 0.09, 0.32, uv_scale=(0.3, 0.3))
         box(b, f, "stone", dx, -0.03, hd + 0.72, 1.15, 0.07, 0.3, uv_scale=(0.3, 0.3))
         S.doors.append({"p": [round(v, 3) for v in f.p(dx, 0, hd + 1.2)]})
         lx = dx + dd.get("lamp", 1.05)
         lantern(S, f, lx, dh * 0.9, hd + 0.05)
-    S.collider(cx, cz, hw + 0.14, hd + 0.14, yaw)
+    S.footprints.append({"x": round(cx, 3), "z": round(cz, 3), "hx": round(hw + 0.14, 3), "hz": round(hd + 0.14, 3), "yaw": round(yaw, 4), "h": 4.0})
+    S.homes.append({"x": cx, "z": cz, "yaw": yaw, "w": w, "d": d, "h1": h1, "h2": h2, "jet": jet, "door": door_x, "chimney": sp["chimney"]})
     # Extra lit windows, for the shader's glow and the light they throw.
     for lw in sp.get("glow", []):
         S.lights.append({"p": [round(v, 3) for v in f.p(lw[0], lw[1], lw[2])], "c": [1.0, 0.55, 0.22], "r": 4.0, "i": 1.1, "flicker": 0.25})
@@ -643,14 +657,15 @@ def compose():
         "ground": [W(16), W(19), W(17), W(17)],
         "upper": [("wall_08", 0, 1, 5.1), ("wall_10", 0, 1, 5.1), ("wall_09", 0, 1, 5.1), ("wall_09", 0, 1, 5.1)],
         "gable": "wall_07", "roof": "roof_1", "pitch": 50, "chimney": (5.2, -0.8), "sag": (0.2, 0.1),
-        "doors": [{"x": -1.4, "mat": "door_3"}],
+        "doors": [{"x": -1.4}],
         "glow": [(3.0, 1.7, 4.3), (-5.0, 1.7, 4.3)],
     })
     # 2. West house, ridge running north-south, door to the east.
     house(S, -19.0, 0.5, math.pi / 2, 9.5, 7.0, {
-        "ground": [("door_wall", False), W(18), W(13, True), W(13, True)],
+        "ground": [W(18), W(18), W(13, True), W(13, True)],
         "upper": [("wall_12", 0, 1, 5.1), ("wall_11", 0, 1, 5.1), ("wall_12", 0, 1, 5.1), ("wall_12", 0, 1, 5.1)],
         "gable": "wall_09", "roof": "roof_3", "pitch": 54, "chimney": (-2.6, 0.8), "sag": (0.14, 0.08),
+        "doors": [{"x": 0.0}],
         "glow": [(2.6, 1.7, 3.9)],
     })
     # 3. East house, stone infill, door to the west.
@@ -658,7 +673,7 @@ def compose():
         "ground": [W(19), W(14, True), W(15, True), W(15, True)],
         "upper": [("wall_07", 0, 1, 5.1), ("wall_09", 0, 1, 5.1), ("wall_10", 0, 1, 5.1), ("wall_10", 0, 1, 5.1)],
         "gable": "wall_11", "roof": "roof_2", "pitch": 48, "chimney": (3.0, -0.6), "sag": (0.16, 0.12),
-        "doors": [{"x": 0.6, "mat": "door_1"}],
+        "doors": [{"x": 0.6}],
         "glow": [(-3.2, 1.7, 3.7)],
     })
     # 4. South cottage, facing north across the square, leaving the road open to the south-west.
@@ -666,7 +681,7 @@ def compose():
         "ground": [W(17), W(20, True), W(20, True), W(16)],
         "upper": [("wall_11", 0, 1, 5.1), ("wall_07", 0, 1, 5.1), ("wall_08", 0, 1, 5.1), ("wall_08", 0, 1, 5.1)],
         "gable": "wall_10", "roof": "roof_4", "pitch": 56, "chimney": (-2.8, 0.4), "sag": (0.22, 0.14), "h2": 2.5,
-        "doors": [{"x": -1.0, "mat": "door_5"}],
+        "doors": [{"x": -1.0}],
         "glow": [(2.6, 1.7, 3.9)],
     })
     well(S, -1.5, 1.0)
@@ -699,6 +714,27 @@ def compose():
                   (-22, -38, 15, 7, 1), (36, 27, 15, 6, 2), (-38, 28, 16, 7, 0), (30, -31, 16, 7, 3)]
     for i, (x, z, h, sp, kind) in enumerate(tree_sites):
         tree(S, x, z, h, sp * (0.72 if kind == 3 else 1), 100 + i, kind)
+    # The town beyond the square: up the south road and the east road, and out behind. Their plots are levelled: PLOTS in src/core/terrain.js.
+    E, S_, N, Wt = math.pi / 2, math.pi, 0.0, -math.pi / 2     # which way each door looks: east, north, south, west
+    for x, z, yaw, w, door, walls, up, gable, roof, pitch, chimney in (
+        (-10.0, 36.0, E, 9.0, 0.3, (16, 19, 13), (8, 10, 9), "wall_07", "roof_2", 52, (2.6, 0.6)),
+        (16.0, 37.0, Wt, 9.0, -0.3, (17, 18, 15), (11, 7, 12), "wall_10", "roof_4", 54, (-2.6, 0.6)),
+        (38.0, -36.0, N, 9.0, 0.3, (19, 16, 20), (9, 12, 10), "wall_11", "roof_1", 50, (2.6, 0.6)),
+        (44.0, -16.0, S_, 10.0, -0.3, (18, 17, 13), (7, 8, 11), "wall_09", "roof_3", 56, (-2.6, 0.6)),
+        (-40.0, -14.0, E, 9.0, 0.3, (17, 16, 15), (12, 9, 8), "wall_08", "roof_1", 48, (2.6, 0.6)),
+        (-42.0, 18.0, E, 10.0, -0.3, (19, 18, 20), (10, 11, 7), "wall_12", "roof_4", 52, (-2.6, 0.6)),
+        (8.0, -37.0, N, 9.0, -0.3, (16, 17, 14), (8, 7, 9), "wall_09", "roof_3", 54, (-2.6, 0.6)),
+        (-30.0, -34.0, N, 10.0, 0.3, (18, 19, 13), (11, 10, 12), "wall_07", "roof_2", 50, (2.6, 0.6)),
+    ):
+        square = {13, 14, 15, 20}
+        ground = [W(walls[0], walls[0] in square), W(walls[1], walls[1] in square), W(walls[2], walls[2] in square), W(walls[2], walls[2] in square)]
+        house(S, x, z, yaw, w, 6.6, {
+            "ground": ground,
+            "upper": [(f"wall_{up[0]:02d}", 0, 1, 5.1), (f"wall_{up[1]:02d}", 0, 1, 5.1), (f"wall_{up[2]:02d}", 0, 1, 5.1), (f"wall_{up[2]:02d}", 0, 1, 5.1)],
+            "gable": gable, "roof": roof, "pitch": pitch, "chimney": chimney, "sag": (0.16, 0.1),
+            "doors": [{"x": door}],
+            "glow": [(-chimney[0], 1.7, 3.7)],
+        })
     return S
 
 
@@ -759,6 +795,6 @@ def build(export=True):
         bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", use_selection=True, export_image_format="NONE",
                                   export_texcoords=True, export_normals=True, export_materials="EXPORT", export_apply=False)
         with open(os.path.join(ROOT, "assets", "game", "village.json"), "w") as fh:
-            json.dump({"colliders": S.colliders, "lights": S.lights, "smoke": S.smoke, "doors": S.doors, "trees": S.trees}, fh, separators=(",", ":"))
+            json.dump({"colliders": S.colliders, "footprints": S.footprints, "homes": S.homes, "lights": S.lights, "smoke": S.smoke, "doors": S.doors, "trees": S.trees}, fh, separators=(",", ":"))
         print(f"exported {os.path.getsize(out) / 1048576:.2f} MB")
     return objs

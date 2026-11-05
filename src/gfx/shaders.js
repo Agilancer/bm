@@ -125,13 +125,24 @@ fn brdf(n: vec3f, v: vec3f, l: vec3f, albedo: vec3f, f0: vec3f, rough: f32, meta
 }
 
 // Indoors the sky doesn't reach. 0 outside, 1 in the cathedral, 2 below. The boxes are the inside of tools/interior/build_interior.py's walls.
+fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32) -> bool { return abs(p.x - x) < hx && abs(p.z - z) < hz; }
+
 fn indoorAt(p: vec3f) -> f32 {
-  if (p.x < 65.9) { return 0.0; }
+  if (p.x < 65.9) {
+    // The houses, to the inside of their walls: tools/village/build_village.py's. The upper floor overhangs on two sides.
+    if (p.y > 5.97 || p.y < 0.0) { return 0.0; }
+    let j = select(0.0, 0.42, p.y > 3.49);
+    let square = inHome(p, 1.0, -19.0, 7.45, 3.65 + j) || inHome(p, -19.0, 0.5, 3.45 + j, 4.7) || inHome(p, 18.5, 3.5, 3.25 + j, 5.2) || inHome(p, 9.5, 21.0, 4.95, 3.25 + j);
+    let town = inHome(p, -10.0, 36.0, 3.25 + j, 4.45) || inHome(p, 16.0, 37.0, 3.25 + j, 4.45) || inHome(p, 38.0, -36.0, 4.45, 3.25 + j) || inHome(p, 44.0, -16.0, 4.95, 3.25 + j)
+      || inHome(p, -40.0, -14.0, 3.25 + j, 4.45) || inHome(p, -42.0, 18.0, 3.25 + j, 4.95) || inHome(p, 8.0, -37.0, 4.45, 3.25 + j) || inHome(p, -30.0, -34.0, 4.95, 3.25 + j);
+    return select(0.0, 1.0, square || town);
+  }
   if (p.x < 113.0) { return select(0.0, 1.0, abs(p.z) < 13.9 && p.y < 24.0); }
-  if (p.x < 125.0) { return select(0.0, 1.0, abs(p.z) < 7.2 && p.y < 9.5); }
+  if (p.x < 125.0) { return select(0.0, 1.0, (abs(p.z) < 6.5 && p.y < 9.5) || (p.x < 115.75 && p.z < 0.0 && p.z > -12.45 && p.y < 7.5)); }
   // (The land above is out here too, and never as low as the catacombs' ceilings.)
-  if (p.x < 176.0 && abs(p.z) < 3.0 && p.y < 9.5) { return 2.0; }
-  return select(0.0, 2.0, p.x < 262.0 && p.z > -108.0 && p.z < 45.0 && p.y < -6.0);
+  // (The stair's passage, under its falling roof: the land over it is outdoors.)
+  if (p.x < 176.0 && abs(p.z) < 3.0 && p.y < 9.0 - (p.x - 125.0) * 0.33) { return 2.0; }
+  return select(0.0, 2.0, p.x < 262.0 && p.z > -176.0 && p.z < 45.0 && p.y < -6.0);
 }
 
 fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32, ao: f32, shadow: f32) -> vec3f {

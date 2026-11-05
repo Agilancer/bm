@@ -95,7 +95,7 @@ function ride(p, dt, wx, wz, sim) {
   const oy = p.y;
   if (!move(p, dt, sim)) return;
   // Down the slope with it. A crest that falls away faster than you would throws you into the air.
-  const pred = oy + p.vy * dt, floor = w.height(p.x, p.z);
+  const pred = oy + p.vy * dt, floor = w.heightFor(p.x, p.z, p.y);
   if (floor >= pred - 0.5 * G * dt * dt - 0.025) {
     p.y = floor;
     slope(p, w);
@@ -117,7 +117,7 @@ function fly(p, dt, wx, wz, sim) {
   carve(p, wx, wz, AIR_TURN, dt);
   if (!move(p, dt, sim)) return;
   p.y += p.vy * dt;
-  const floor = sim.world.height(p.x, p.z);
+  const floor = sim.world.heightFor(p.x, p.z, p.y);
   if (p.y > floor) return;
   // The landing: what went into the ground is lost, and what went along it is kept.
   p.y = floor;

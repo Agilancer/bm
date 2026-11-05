@@ -391,8 +391,8 @@ export class Hydra extends Beast {
         const near = (h.by === 'both' ? dist : this.gapTo(p, h.by)) < a.reach;
         if (near && !p.dead && !p.iframes && Math.abs(p.y - this.y) < 3 && (a.wide || Math.abs(wrapAngle(toPlayer - this.yaw)) < 1.4)) {
           this.used.add(h); this.bites++;
-          p.damage(sim, a.dmg, this.x, this.z, a.knock || 0);
-          sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
+          const landed = p.damage(sim, a.dmg, this.x, this.z, a.knock || 0);
+          if (landed) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
         }
       }
       if (a.slam && f >= a.slam && !this.slammed) {

@@ -26,6 +26,10 @@ function fbm(x, y, oct) {
 
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
+// (x, z, half x, half z), and the height they're all brought to, a little under a house's floor. The four round the square need none.
+const PLOT_Y = 0.1;
+const PLOTS = [[-10, 36, 5, 6], [16, 37, 5, 6], [38, -36, 6, 5], [44, -16, 6.5, 5], [-40, -14, 5, 6], [-42, 18, 5, 6.5], [8, -37, 6, 5], [-30, -34, 6.5, 5]];
+
 export function terrainHeight(x, z) {
   const r = Math.hypot(x, z);
   // The village sits on a gently dished, nearly flat green.
@@ -36,9 +40,16 @@ export function terrainHeight(x, z) {
   const ridge = fbm(x * 0.0026 - 5, z * 0.0026 + 9, 6);
   const hills = Math.pow(ridge, 1.6) * 330;
   const land = lawn * (1 - out) + (roll + Math.max(0, r - 60) * 0.018) * out + hills * far;
-  // The cathedral's site, levelled. Its floor stands a little above this: see tools/interior/build_interior.py.
-  const site = Math.max(58 - x, x - 142, Math.abs(z) - 26);
-  return site >= 14 ? land : land + (2.7 - land) * (1 - sstep(0, 14, site));
+  // The cathedral's site, levelled, and on over the stair down behind it, which the land has to cover. Its floor stands a little above this: see tools/interior/build_interior.py.
+  const site = Math.max(58 - x, x - 176, Math.abs(z) - 26);
+  if (site < 14) return land + (2.7 - land) * (1 - sstep(0, 14, site));
+  // And the plots of the town's outer houses, under their floors: see tools/village/build_village.py.
+  let level = land;
+  for (const p of PLOTS) {
+    const d = Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]);
+    if (d < 6) level += (PLOT_Y - level) * (1 - sstep(0, 6, d));
+  }
+  return level;
 }
 
 // How far the land goes, either way along x and z: the grass ends at 128 (GROUND_HALF in src/gfx/renderer.js), and an unseen wall stands just inside it.
@@ -52,6 +63,10 @@ export const PATHS = [
   { pts: [[8.5, 16.8], [6, 11], [2, 5.5], [-1.5, 1]], w: 1.7 },
   { pts: [[-1.5, 1], [-4, 9], [-2, 18], [0, 30], [6, 48], [8, 80], [0, 130], [-20, 190]], w: 2.2 },
   { pts: [[-1.5, 1], [10, -6], [24, -18], [50, -32], [95, -50], [160, -60]], w: 1.8 },
+  { pts: [[-6, 36], [2.5, 34]], w: 1.4 }, { pts: [[12, 37], [3.5, 38]], w: 1.4 },
+  { pts: [[38.3, -32], [37, -25.4]], w: 1.4 }, { pts: [[44.3, -20], [43, -28.5]], w: 1.4 },
+  { pts: [[-36, -14], [-24, -8], [-14.5, 0.5]], w: 1.4 }, { pts: [[-38, 18], [-24, 6], [-14.5, 0.5]], w: 1.4 },
+  { pts: [[7.7, -33], [13, -28], [22, -19.5]], w: 1.4 }, { pts: [[-29.7, -30], [-22, -27], [-10, -26], [13, -28]], w: 1.4 },
 ];
 
 function segDist2(px, pz, ax, az, bx, bz) {

@@ -28,30 +28,48 @@ export class Input {
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       this.keys.add(e.code);
+      // (Alt would take the browser's focus to its menu.)
+      if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); this.softOn(true); }
       if (!this.enabled || this.menu) return;
       if (e.code === 'Space') { this.fire(INPUT.JUMP); e.preventDefault(); }
       if (e.code === 'KeyQ') this.fire(INPUT.DODGE);
       if (e.code === 'KeyF') this.fire(INPUT.CAST_N);
     });
-    window.addEventListener('keyup', (e) => this.keys.delete(e.code));
-    window.addEventListener('blur', () => this.keys.clear());
+    window.addEventListener('keyup', (e) => { this.keys.delete(e.code); if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); this.softOn(false); } });
+    window.addEventListener('blur', () => { this.keys.clear(); this.softOn(false); });
     document.addEventListener('mousemove', (e) => {
       if (!this.enabled || document.pointerLockElement !== this.canvas) return;
+      if (this.soft) {
+        this.softX = Math.max(0, Math.min(innerWidth - 1, this.softX + e.movementX));
+        this.softY = Math.max(0, Math.min(innerHeight - 1, this.softY + e.movementY));
+        this.softMove?.(this.softX, this.softY);
+        return;
+      }
       this.look(e.movementX * SENS * this.sens, e.movementY * SENS * this.sens);
     });
     this.canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
+      if (this.soft) { if (e.button === 0) this.softPress?.(this.softX, this.softY); return; }
       if (e.button === 0) this.fire(INPUT.ATTACK);
-      if (e.button === 2) this.fire(INPUT.WIDE);
+      if (e.button === 2) { this.guardMouse = true; this.fire(INPUT.WIDE); }
       if (e.button === 1) { e.preventDefault(); this.castMouse = true; this.fire(INPUT.CAST_N); }
     });
-    window.addEventListener('mouseup', (e) => { if (e.button === 1) this.castMouse = false; });
+    window.addEventListener('mouseup', (e) => { if (e.button === 1) this.castMouse = false; if (e.button === 2) this.guardMouse = false; });
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === this.canvas;
       if (this.onPauseChange && !this.touch) this.onPauseChange(!locked);
     });
+  }
+
+  // The soft cursor, while Alt is held: the mouse moves it, not the view. It starts over the spell bar.
+  softOn(on) {
+    if (on && (!this.enabled || this.menu || document.pointerLockElement !== this.canvas)) return;
+    if (this.soft === on) return;
+    this.soft = on;
+    if (on) { this.softX = innerWidth / 2; this.softY = innerHeight - 50; this.softMove?.(this.softX, this.softY); }
+    this.softShow?.(on);
   }
 
   lock() {
@@ -127,7 +145,10 @@ export class Input {
       }, { passive: false });
     };
     btn('bAttack', () => this.fire(INPUT.ATTACK));
-    btn('bWide', () => this.fire(INPUT.WIDE));
+    btn('bWide', () => { this.guardTouch = true; this.fire(INPUT.WIDE); });
+    const lower = () => { this.guardTouch = false; };
+    document.getElementById('bWide').addEventListener('touchend', lower);
+    document.getElementById('bWide').addEventListener('touchcancel', lower);
     btn('bJump', () => { this.jumpTouch = true; this.fire(INPUT.JUMP); });
     const letGo = () => { this.jumpTouch = false; };
     document.getElementById('bJump').addEventListener('touchend', letGo);
@@ -157,6 +178,7 @@ export class Input {
     s[INPUT.PITCH] = this.pitch;
     s[INPUT.SPRINT] = (k.has('ShiftLeft') || k.has('ShiftRight') || this.sprintToggle || this.stickRun) ? 1 : 0;
     s[INPUT.JUMP_HELD] = this.enabled && !this.menu && (k.has('Space') || this.jumpTouch) ? 1 : 0;
-    s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch) ? 1 : 0;
+    s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch || this.castSlot) ? 1 : 0;
+    s[INPUT.BLOCK] = this.enabled && !this.menu && (this.guardMouse || this.guardTouch) ? 1 : 0;
   }
 }

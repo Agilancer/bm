@@ -19,6 +19,9 @@ ROOT = globals().get('ROOT_OVERRIDE') or os.environ.get('BM_ROOT') or r"C:\Users
 OUT = os.path.join(ROOT, 'assets', 'game', 'interior')
 MAN = json.load(open(os.path.join(OUT, 'manifest.json')))
 TILE_M = {l['name']: l['metres'] for l in MAN['layers']}
+# (From tools/skulls/separate.py, run in Blender.)
+SKULLS = json.load(open(os.path.join(ROOT, 'tools', 'build', 'skulls.json')))
+SKULL_PICK = random.Random(11)
 PIECE = MAN['pieces']
 R = random.Random(11)
 
@@ -29,6 +32,9 @@ BAY = (XE - XW) / 5
 SPRING, APEX = F0 + 11.0, F0 + 18.5
 CHANCEL = F0 + 0.75
 OFFICE_X = 124.0
+BACK_WING_X = 146.0     # how far the wing over the stair goes: the stair's roof is under the ground from there on
+BACK_DOOR_Z = -11.0     # the door from the stage to the back room: at the far left of it, facing east. The passage behind the wall takes you to the room.
+PASSAGE_W = 2.6
 Y_STAIR_TOP = CHANCEL
 RISE, RUN = 0.25, 0.5
 
@@ -49,7 +55,7 @@ class World:
     def __init__(self):
         self.mats = {}
         self.zone = 'cath'
-        self.colliders, self.floors, self.lights, self.glow, self.spawns = [], [], [], [], []
+        self.colliders, self.floors, self.lights, self.glow, self.spawns, self.things, self.homes = [], [], [], [], [], [], []
 
     def tri(self, mat, ps, uvs, ns=None):
         m = self.mats.setdefault((self.zone, mat), {'p': [], 'uv': [], 'n': []})
@@ -66,8 +72,9 @@ class World:
         self.tri(mat, (a, b, c), (uvs[0], uvs[1], uvs[2]), None if ns is None else (ns[0], ns[1], ns[2]))
         self.tri(mat, (a, c, d), (uvs[0], uvs[2], uvs[3]), None if ns is None else (ns[0], ns[2], ns[3]))
 
-    def collide(self, x0, z0, x1, z1, h=40.0):
-        self.colliders.append({'x': round((x0 + x1) / 2, 3), 'z': round((z0 + z1) / 2, 3), 'hx': round(abs(x1 - x0) / 2, 3), 'hz': round(abs(z1 - z0) / 2, 3), 'yaw': 0.0, 'h': h})
+    def collide(self, x0, z0, x1, z1, h=40.0, b=0.0):
+        """b: only anyone with their feet above this runs into it. (Upstairs in a house: see Home.)"""
+        self.colliders.append({'x': round((x0 + x1) / 2, 3), 'z': round((z0 + z1) / 2, 3), 'hx': round(abs(x1 - x0) / 2, 3), 'hz': round(abs(z1 - z0) / 2, 3), 'yaw': 0.0, 'h': h, **({'b': b} if b else {})})
 
     def floor(self, x0, z0, x1, z1, y, y2=None, axis='x'):
         """y at the low edge of the axis, y2 at its high edge."""
@@ -313,6 +320,99 @@ def candle_rack(x, z, y, n=7, spread=0.42):
     W.collide(x - 0.3, z - 0.3, x + 0.3, z + 0.3, 1.2)
 
 
+def door_leaf(piece, hinge, tip, height, flip=False):
+    """A door stood open, from its hinge to its tip, in the owner's picture of it, which cuts itself out along its arch. Faces both ways."""
+    u0, v0, u1, v1 = PIECE[piece]['uv']
+    if flip:
+        u0, u1 = u1, u0
+    dx, dz = tip[0] - hinge[0], tip[2] - hinge[2]
+    L = math.hypot(dx, dz)
+    nx, nz = -dz / L * 0.02, dx / L * 0.02
+    for sg in (-1, 1):
+        n = (sg * nx / 0.02, 0.0, sg * nz / 0.02)
+        a = (hinge[0] + sg * nx, hinge[1], hinge[2] + sg * nz)
+        b = (tip[0] + sg * nx, tip[1], tip[2] + sg * nz)
+        W.quad(PIECE[piece]['layer'], a, b, (b[0], b[1] + height, b[2]), (a[0], a[1] + height, a[2]), ((u0, v1), (u1, v1), (u1, v0), (u0, v0)), (n, n, n, n))
+
+
+def chest(x, y, z, yaw, loot):
+    """A chest to open: drawn and played by src/things.js, its front looking along (sin yaw, cos yaw)."""
+    W.things.append({'type': 'chest', 'x': round(x, 3), 'y': round(y, 3), 'z': round(z, 3), 'yaw': round(yaw, 4), 'loot': loot})
+    hx, hz = (0.33, 0.48) if abs(math.sin(yaw)) > 0.5 else (0.48, 0.33)
+    W.collide(x - hx, z - hz, x + hx, z + hz, 0.8)
+
+
+def altar(x, z, y):
+    """The high altar, on its dais, under a carved screen. Velscour's: gold, red, his banners and his V, and nothing else."""
+    # Three steps round it, wide enough to stand on.
+    top = y
+    for hx, hz, up in ((3.3, 5.2, 0.17), (2.65, 4.5, 0.17), (2.0, 3.8, 0.17)):
+        top += up
+        bx('marble', x, top - up / 2, z, hx, up / 2, hz, 3.0)
+        bx('gold', x, top + 0.004, z, hx + 0.012, 0.004, hz + 0.012)
+        W.floors.insert(0, {'x0': round(x - hx, 3), 'z0': round(z - hz, 3), 'x1': round(x + hx, 3), 'z1': round(z + hz, 3), 'y': round(top, 3), 'y2': round(top, 3), 'axis': 'x'})
+    # (The topmost step has to be found first. It was put in first of the three in the list, last of all into it: so it is.)
+    floor_rect('carpet', x - 2.0, z - 1.5, x - 0.95, z + 1.5, top + 0.012, tile=2.4, rot=True)
+    # The table: a plinth, a solid block with three blind arches, a thick slab.
+    bx('wall_ashlar', x, top + 0.09, z, 0.95, 0.09, 2.45, 2.0)
+    bx('marble', x, top + 0.62, z, 0.74, 0.46, 2.2, 2.4)
+    bx('wall_ashlar', x, top + 1.13, z, 0.9, 0.05, 2.4, 2.0)
+    bx('marble', x, top + 1.2, z, 0.98, 0.035, 2.5, 2.4)
+    for k in (-1, 0, 1):
+        zc = z + k * 1.42
+        arch = [(x - 0.75, top + 0.2, zc - 0.56), (x - 0.75, top + 0.68, zc - 0.56), (x - 0.75, top + 0.86, zc - 0.34), (x - 0.75, top + 1.02, zc), (x - 0.75, top + 0.86, zc + 0.34), (x - 0.75, top + 0.68, zc + 0.56), (x - 0.75, top + 0.2, zc + 0.56)]
+        tube('gold', arch, 0.022, ref=(1.0, 0.0, 0.0), sides=4)
+    # His cloth, over the middle of it and down the front.
+    bx('cloth_red', x, top + 1.243, z, 0.72, 0.008, 0.9, 1.2)
+    bx('cloth_red', x - 0.995, top + 0.86, z, 0.012, 0.39, 0.9, 1.2)
+    bx('gold', x - 1.0, top + 0.47, z, 0.014, 0.03, 0.92)
+    # Six tall sticks, three each side, the tallest in the middle of each; a basin of fire; his V between them.
+    surface = top + 1.235
+    for s in (-1, 1):
+        for k, (d, tall) in enumerate(((1.0, 0.72), (1.55, 0.86), (2.1, 0.62))):
+            zc = z + s * d
+            lathe('gold', x + 0.45, zc, [(0.13, surface), (0.05, surface + 0.05), (0.03, surface + 0.14), (0.055, surface + tall * 0.5), (0.025, surface + tall * 0.6), (0.03, surface + tall - 0.03), (0.075, surface + tall - 0.02), (0.075, surface + tall)], 8)
+            lathe('marble', x + 0.45, zc, [(0.028, surface + tall), (0.028, surface + tall + 0.32)], 6, tile=1.0)
+            flame(x + 0.45, surface + tall + 0.32, zc, 0.04)
+    lathe('gold', x + 0.1, z, [(0.0, surface), (0.2, surface + 0.01), (0.06, surface + 0.08), (0.06, surface + 0.2), (0.32, surface + 0.34), (0.36, surface + 0.42), (0.28, surface + 0.36), (0.0, surface + 0.3)], 12)
+    flame(x + 0.1, surface + 0.36, z, 0.15)
+    tube('gold', [(x + 0.5, surface + 1.9, z - 0.62), (x + 0.5, surface + 0.08, z), (x + 0.5, surface + 1.9, z + 0.62)], 0.055, ref=(1.0, 0.0, 0.0), sides=6)
+    lathe('gold', x + 0.5, z, [(0.0, surface), (0.2, surface + 0.02), (0.1, surface + 0.1), (0.0, surface + 0.12)], 8)
+    W.light(x + 0.1, surface + 1.0, z, (1.0, 0.62, 0.3), 8.0, 16.0, 0.35)
+    W.collide(x - 1.0, z - 2.5, x + 1.0, z + 2.5, top - y + 1.3)
+    # The screen behind: a dark carved wall of three tall pointed bays, gilt, the banners his, a crest of spires.
+    xs = x + 1.85
+    bot, spring = y, y + 6.2
+    apex = spring + 2.3
+    bx('wood_b2', xs, bot + 0.6, z, 0.28, 0.6, 5.2, 2.0)
+    bx('gold', xs - 0.29, bot + 1.22, z, 0.01, 0.03, 5.2)
+    for k, zc, hw, names in ((0, z, 1.85, 'vel_b_0'), (1, z - 3.45, 1.35, 'vel_c_0'), (2, z + 3.45, 1.35, 'vel_c_1')):
+        sp = spring if k == 0 else spring - 1.2
+        ap = apex if k == 0 else apex - 1.6
+        N = 8
+        for i in range(N):
+            u0, u1 = -1 + 2 * i / N, -1 + 2 * (i + 1) / N
+            h0, h1 = sp + (ap - sp) * norm_arch(abs(u0)), sp + (ap - sp) * norm_arch(abs(u1))
+            za, zb = zc + u0 * hw, zc + u1 * hw
+            n = (-1.0, 0.0, 0.0)
+            W.quad('wood_c1', (xs - 0.05, bot + 1.2, zb), (xs - 0.05, bot + 1.2, za), (xs - 0.05, h0, za), (xs - 0.05, h1, zb), ((u1, h1 / 3), (u0, h1 / 3), (u0, 0), (u1, 0)), (n, n, n, n))
+        arch = [(xs - 0.1, bot + 1.2, zc - hw)] + [(xs - 0.1, sp + (ap - sp) * norm_arch(abs(-1 + 2 * i / 12)), zc + (-1 + 2 * i / 12) * hw) for i in range(13)] + [(xs - 0.1, bot + 1.2, zc + hw)]
+        tube('gold', arch, 0.07, ref=(1.0, 0.0, 0.0), sides=5)
+        banner(names, xs - 0.06, sp + 0.5, zc, -1.0, 0.0, 5.2 if k == 0 else 3.7, 0.03)
+    for zc in (z - 5.25, z - 1.85 - 0.2, z + 1.85 + 0.2, z + 5.25):
+        tall = spring + 1.6 if abs(zc - z) < 3 else spring - 0.2
+        lathe('wall_ashlar', xs - 0.1, zc, [(0.26, bot), (0.2, bot + 0.4), (0.16, bot + 0.6), (0.16, tall - 0.3), (0.22, tall - 0.2), (0.22, tall), (0.04, tall + 1.2), (0.0, tall + 1.3)], 8)
+        lathe('gold', xs - 0.1, zc, [(0.05, tall + 1.15), (0.09, tall + 1.25), (0.0, tall + 1.45)], 6)
+    W.collide(xs - 0.3, z - 5.3, xs + 0.3, z + 5.3, 8.0)
+    # Fire stands at the corners of the dais.
+    for s in (-1, 1):
+        fx, fz = x - 2.7, z + s * 4.0
+        lathe('gold', fx, fz, [(0.32, top - 0.34), (0.08, top - 0.2), (0.05, top + 1.0), (0.26, top + 1.25), (0.3, top + 1.34), (0.2, top + 1.3)], 8)
+        flame(fx, top + 1.28, fz, 0.14)
+        W.light(fx, top + 1.9, fz, (1.0, 0.6, 0.28), 8.0, 11.0, 0.5)
+        W.collide(fx - 0.3, fz - 0.3, fx + 0.3, fz + 0.3, 1.6)
+
+
 # ---- the cathedral ----
 def wall_op_trim(mat, a, b, op, inward, r=0.14):
     """A moulding round an opening on the wall a to b, proud of its face."""
@@ -474,14 +574,8 @@ def cathedral():
     W.glowquad(fall(XW - 0.55, rose['cy'] - rs, rs), fall(XW - 0.55, rose['cy'] - rs, -rs), fall(XW - 0.55, rose['cy'] + rs, -rs), fall(XW - 0.55, rose['cy'] + rs, rs), idx, p['uv'], (1.5, 1.2, 1.1))
     # Doors, stood open, inward.
     for s in (-1, 1):
-        hinge = (XW, F0, s * 2.3)
-        tip = (XW + 2.2, F0, s * 2.3)
-        hw = 2.2
-        n = (0.0, 0.0, 1.0)
-        W.quad('wood_b0', hinge, tip, (tip[0], F0 + 6.0, tip[2]), (hinge[0], F0 + 6.8, hinge[2]), ((0, 3), (1, 3), (1, 0), (0, 0)), (n, n, n, n))
-        for yb in (1.0, 3.2, 5.2):
-            bx('iron', XW + 1.0, F0 + yb, s * 2.3, 0.95, 0.09, 0.05)
-        W.collide(XW, s * 2.2, XW + 2.2, s * 2.45, 7.0)
+        door_leaf('door_great_l' if s < 0 else 'door_great_r', (XW, F0, s * 2.3), (XW + 2.3, F0, s * 2.3), 7.6, s > 0)
+        W.collide(XW, s * 2.2, XW + 2.3, s * 2.45, 7.0)
     for s in (-1, 1):
         candle_rack(XW + 2.6, s * 3.6, F0)
         torch(XW - 1.5, F0 + 3.3, s * 3.6, -1.0, 0.0, i=10.0, r=9.0)
@@ -533,26 +627,13 @@ def cathedral():
             for zz in (z0, z1):
                 bx('wood_a1', x + 0.06, F0 + 0.52, zz, 0.36, 0.52, 0.045)
             W.collide(x - 0.33, min(z0, z1), x + 0.43, max(z0, z1), 1.05)
-    # The pulpit, in front of the door it hides: a burr drum on a stem, its stair behind it.
-    px, pz = XE - 4.5, 0.0
-    y = CHANCEL
-    lathe('wood_b2', px, pz, [(0.6, y), (0.3, y + 0.25), (0.26, y + 1.0), (0.9, y + 1.5), (0.95, y + 2.5), (1.05, y + 2.62), (0.0, y + 2.62)], 10, tile=2.0, phase=0.1)
-    lathe('gold', px, pz, [(0.97, y + 1.5), (0.99, y + 1.56)], 10)
-    lathe('gold', px, pz, [(1.07, y + 2.55), (1.08, y + 2.64)], 10)
-    bx('wood_c2', px + 0.15, y + 2.72, pz, 0.32, 0.03, 0.42)    # the book rest
-    bx('wood_a3', px - 0.68, y + 2.66, pz, 0.05, 0.14, 0.34)
-    W.collide(px - 1.0, pz - 1.0, px + 1.0, pz + 1.0, 3.0)
-    lathe('wood_b2', px - 0.7, pz, [(0.0, y + 5.2), (1.5, y + 5.05), (1.6, y + 4.85), (0.0, y + 4.85)], 10, phase=0.1)
-    lathe('gold', px - 0.7, pz, [(0.3, y + 5.15), (0.05, y + 5.9), (0.0, y + 6.0)], 8)
-    bx('wood_c2', px - 1.45, y + 2.5, pz, 0.08, 2.5, 0.28)
+    altar(XE - 5.2, 0.0, CHANCEL)
     for s in (-1, 1):
-        torch(XE, CHANCEL + 2.5, s * 1.9, -1.0, 0.0, i=14.0, r=9.0)
+        torch(XE, CHANCEL + 2.5, s * 6.0, -1.0, 0.0, i=14.0, r=9.0)
     W.light(XE - 0.8, CHANCEL + 2.4, 0.0, (1.0, 0.72, 0.42), 7.0, 10.0, 0.3)
-    for s in (-1, 1):
-        bx('wood_b3', px + 1.6, y + 0.95, s * 1.15, 0.5, 0.95, 0.06)  # the stair rail, with chevrons
     # Candle stands either side, the rail in front of them, and the great banners on the wall.
     for s in (-1, 1):
-        for zz in (4.5, 8.5, 11.5):
+        for zz in (6.2, 8.5) if s < 0 else (6.2, 8.5, 11.5):
             candle_rack(XE - 3.2, s * zz, CHANCEL)
         W.light(XE - 3.0, CHANCEL + 2.0, s * 7.5, (1.0, 0.68, 0.36), 13.0, 22.0, 0.5)
         banner('vel_a_0' if s < 0 else 'vel_d_0', XE - 0.3, CHANCEL + 16.0, s * 8.0, -1.0, 0.0, 12.5, 0.0)
@@ -562,14 +643,16 @@ def cathedral():
         for s in (-1, 1):
             W.light(XW + i * BAY + 2.0, F0 + 3.0, s * 7.0, (1.0, 0.62, 0.3), 12.0, 10.0, 0.5)
             candle_rack(XW + i * BAY + 2.0, s * 7.8, F0, 5)
-    # The back wall, with the plain door behind the pulpit.
+    # The back wall, with the door to the back room in its far left corner, as you face the altar.
     a, b = (XE, -ZS), (XE, ZS)
-    door2 = arch_op(ZS, 2.2, CHANCEL, CHANCEL + 2.4, CHANCEL + 3.4)
+    door2 = arch_op(ZS + BACK_DOOR_Z, 2.2, CHANCEL, CHANCEL + 2.4, CHANCEL + 3.4)
     wall('tracery', a, b, CHANCEL, CHANCEL + 3.4, [door2], inward=inside, tile=3.4)
     wall('wall_ashlar', a, b, CHANCEL + 3.4, wall_top, inward=inside)
-    for z0, z1 in ((-ZS, -1.1), (1.1, ZS)):
+    for z0, z1 in ((-ZS, BACK_DOOR_Z - 1.1), (BACK_DOOR_Z + 1.1, ZS)):
         W.collide(XE, z0, XE + 1, z1)
-    wall('wall_rough', (XE + 1, -ZS - 1), (XE + 1, ZS + 1), F0 - 1.0, wall_top, [arch_op(ZS + 1, 2.2, CHANCEL, CHANCEL + 2.4, CHANCEL + 3.4)], inward=(XE + 3, 0.0))
+    wall('wall_rough', (XE + 1, -ZS - 1), (XE + 1, ZS + 1), F0 - 1.0, wall_top, [arch_op(ZS + 1 + BACK_DOOR_Z, 2.2, CHANCEL, CHANCEL + 2.4, CHANCEL + 3.4)], inward=(XE + 3, 0.0))
+    door_leaf('door_pointed', (XE, CHANCEL, BACK_DOOR_Z - 1.1), (XE - 2.2, CHANCEL, BACK_DOOR_Z - 1.1), 3.4)
+    W.collide(XE - 2.2, BACK_DOOR_Z - 1.2, XE, BACK_DOOR_Z - 1.0, 3.2)
     reveal('wall_ashlar', a, b, door2, inside, 0.95)
     wall_op_trim('wood_c0', a, b, door2, inside, 0.09)
     # Outside: buttresses, and the roof.
@@ -643,13 +726,13 @@ def office():
     inside = ((x0 + x1) / 2, 0.0)
     floor_rect('wood_c3', x0, -hz, x1, hz, y, tile=1.5)
     W.floor(x0, -hz, x1, hz, y)
-    d_w = arch_op(hz, 2.2, y, y + 2.4, y + 3.4)
+    d_n = arch_op(PASSAGE_W / 2 + 0.1, PASSAGE_W - 0.2, y, y + 2.4, y + 3.3)
     d_e = arch_op(hz, 2.2, y, y + 2.4, y + 3.4)
-    for a, b, ops in (((x0, -hz), (x0, hz), [d_w]), ((x1, -hz), (x1, hz), [d_e]), ((x0, -hz), (x1, -hz), []), ((x0, hz), (x1, hz), [])):
+    for a, b, ops in (((x0, -hz), (x0, hz), []), ((x1, -hz), (x1, hz), [d_e]), ((x0, -hz), (x1, -hz), [d_n]), ((x0, hz), (x1, hz), [])):
         wall('wood_b1', a, b, y, y + 2.3, ops, inward=inside, tile=2.2)
         wall('wall_ashlar', a, b, y + 2.3, top, ops, inward=inside)
         tube('wood_c0', [(a[0], y + 2.3, a[1]), (b[0], y + 2.3, b[1])], 0.05, ref=(0, 1, 0))
-    for a, b, o in (((x0, -hz), (x0, hz), d_w), ((x1, -hz), (x1, hz), d_e)):
+    for a, b, o in (((x0, -hz), (x1, -hz), d_n), ((x1, -hz), (x1, hz), d_e)):
         wall_op_trim('wood_c0', a, b, o, inside, 0.09)
     reveal('wall_ashlar', (x1, -hz), (x1, hz), d_e, inside, 0.6)
     # A beamed ceiling.
@@ -659,10 +742,30 @@ def office():
     while x < x1:
         bx('wood_c2', x, top - 0.15, 0.0, 0.14, 0.15, hz)
         x += 2.4
-    W.collide(x0, -hz - 1, x1, -hz)
+    W.collide(x0 + PASSAGE_W, -hz - 1, x1, -hz)
     W.collide(x0, hz, x1, hz + 1)
     for z0, z1 in ((-hz, -1.1), (1.1, hz)):
         W.collide(x1, z0, x1 + 0.6, z1)
+    door_leaf('door_iron', (x1, y, 1.1), (x1 - 1.9, y, 1.1), 3.4)
+    W.collide(x1 - 1.9, 1.0, x1, 1.2, 3.2)
+    # The passage from the door in the corner of the stage, behind the wall, into this room.
+    px1, pz0 = x0 + PASSAGE_W, BACK_DOOR_Z - 1.5
+    floor_rect('wood_c3', x0, pz0, px1, -hz, y, tile=1.5)
+    W.floor(x0, pz0, px1, -hz, y)
+    pass_in = ((x0 + px1) / 2, (pz0 - hz) / 2)
+    wall('wood_b1', (px1, pz0), (px1, -hz), y, y + 2.3, inward=pass_in, tile=2.2)
+    wall('wall_ashlar', (px1, pz0), (px1, -hz), y + 2.3, y + 3.6, inward=pass_in)
+    wall('wood_b1', (x0, pz0), (px1, pz0), y, y + 2.3, inward=pass_in, tile=2.2)
+    wall('wall_ashlar', (x0, pz0), (px1, pz0), y + 2.3, y + 3.6, inward=pass_in)
+    n = (0.0, -1.0, 0.0)
+    W.quad('wood_a2', (x0, y + 3.6, pz0), (px1, y + 3.6, pz0), (px1, y + 3.6, -hz), (x0, y + 3.6, -hz), ((0, 0), (1.5, 0), (1.5, 3), (0, 3)), (n, n, n, n))
+    W.collide(px1, pz0 - 0.5, px1 + 0.5, -hz)
+    W.collide(x0, pz0 - 0.5, px1 + 0.5, pz0)
+    torch(px1, y + 2.4, (pz0 - hz) / 2, -1.0, 0.0, i=8.0, r=8.0)
+    # Its outside, seen from behind the church.
+    wall('wall_rough', (px1 + 0.3, pz0 - 0.3), (px1 + 0.3, -hz), F0 - 1.0, y + 4.4, inward=(px1 + 6, (pz0 - hz) / 2))
+    wall('wall_rough', (XE + 1, pz0 - 0.3), (px1 + 0.3, pz0 - 0.3), F0 - 1.0, y + 4.4, inward=((x0 + px1) / 2, pz0 - 6))
+    W.quad('roof', (XE + 1, y + 5.6, -hz), (px1 + 0.6, y + 5.6, -hz), (px1 + 0.6, y + 4.4, pz0 - 0.6), (XE + 1, y + 4.4, pz0 - 0.6), ((0, 0), (0.6, 0), (0.6, 1), (0, 1)))
     # The desk, its chair, a shelf of books on each side, and a rug.
     dx, dz = x0 + 5.0, -2.4
     bx('wood_c2', dx, y + 0.8, dz, 1.0, 0.04, 0.55)
@@ -680,17 +783,19 @@ def office():
     rng = random.Random(3)
     for sz in (-1, 1):
         zw = sz * (hz - 0.25)
-        bx('wood_b0', x0 + 2.3, y + 1.45, zw, 1.6, 1.45, 0.25)
-        W.collide(x0 + 0.7, zw - 0.28, x0 + 3.9, zw + 0.28, 3.0)
+        sx = x0 + (3.0 if sz < 0 else 0.0)  # (clear of the door from the passage)
+        bx('wood_b0', sx + 2.3, y + 1.45, zw, 1.6, 1.45, 0.25)
+        W.collide(sx + 0.7, zw - 0.28, sx + 3.9, zw + 0.28, 3.0)
         for shelf in range(4):
             yy = y + 0.25 + shelf * 0.68
-            x = x0 + 0.85
-            while x < x0 + 3.75:
+            x = sx + 0.85
+            while x < sx + 3.75:
                 w = rng.uniform(0.04, 0.09)
                 h = rng.uniform(0.2, 0.3)
                 bx(rng.choice(['cloth_red', 'wood_c1', 'carpet', 'wood_b2']), x, yy + h, zw - sz * 0.27, w, h, 0.12, 1.5)
                 x += w * 2.3
     banner('vel_d_1', x1, y + 4.6, 3.8, -1.0, 0.0, 4.0, 0.03)
+    chest(x1 - 1.3, y, -3.8, -math.pi / 2, 1)
 
 
 # ---- below ----
@@ -1110,15 +1215,23 @@ def lantern(x, z, y, top, c=(1.0, 0.16, 0.09), i=7.0, r=6.0):
     W.light(x, y - 0.3, z, c, r, i, 0.3)
 
 
-def skull(x, y, z, nx=1.0, nz=0.0, s=0.105, mat='bone'):
-    """A skull facing (nx, nz): it has sockets and a jaw, so it reads at a glance as what it is."""
-    sx, sz = -nz, nx
-    lathe(mat, x, z, [(s * 0.62, y + s * 0.42), (s * 0.95, y + s * 0.8), (s, y + s * 1.25), (s * 0.68, y + s * 1.72), (0.0, y + s * 1.86)], 6, tile=0.6)
-    lathe(mat, x + nx * s * 0.45, z + nz * s * 0.45, [(0.0, y), (s * 0.5, y + s * 0.03), (s * 0.58, y + s * 0.42), (s * 0.5, y + s * 0.6)], 5, tile=0.6)
-    for d in (-1, 1):
-        ex, ez = x + nx * s * 0.82 + sx * d * s * 0.42, z + nz * s * 0.82 + sz * d * s * 0.42
-        lathe('iron', ex, ez, [(0.0, y + s * 0.78), (s * 0.25, y + s * 0.98), (0.0, y + s * 1.2)], 4)
-    lathe('iron', x + nx * s * 0.92, z + nz * s * 0.92, [(0.0, y + s * 0.5), (s * 0.12, y + s * 0.64), (0.0, y + s * 0.8)], 3)
+def skull(x, y, z, nx=1.0, nz=0.0, s=0.105, lod=0):
+    """One of the owner's 24 (tools/skulls), life size, looking along (nx, nz), its jawless base at y. lod 1 is for skulls packed in a wall."""
+    L = math.hypot(nx, nz) or 1.0
+    nx, nz = nx / L, nz / L
+    sk = SKULLS[SKULL_PICK.randrange(len(SKULLS))]
+    m = sk['lod'][lod]
+    k = SKULL_PICK.uniform(0.95, 1.05)
+    P, N, T = m['p'], m['n'], m['uv']
+    def to_world(i):
+        lx, ly, lz = P[i * 3] * k, P[i * 3 + 1] * k, P[i * 3 + 2] * k
+        return (x + lx * nz + lz * nx, y + ly, z - lx * nx + lz * nz)
+    def nrm(i):
+        lx, ly, lz = N[i * 3], N[i * 3 + 1], N[i * 3 + 2]
+        return (lx * nz + lz * nx, ly, -lx * nx + lz * nz)
+    for t in range(m['tris']):
+        i = t * 3
+        W.tri(sk['layer'], (to_world(i), to_world(i + 1), to_world(i + 2)), ((T[i * 2], T[i * 2 + 1]), (T[i * 2 + 2], T[i * 2 + 3]), (T[i * 2 + 4], T[i * 2 + 5])), (nrm(i), nrm(i + 1), nrm(i + 2)))
 
 
 def long_bone(x, y, z, a, L=0.42, r=0.018, mat='bone'):
@@ -1193,17 +1306,17 @@ def loculi(a, b, y, inward, rows=4, h=3.0, depth=0.5, mat='cata_block', seed=0):
                 c = O(t + s * hu * 0.45, front)
                 obox(slab, (c[0], cy, c[1]), u, n, hu * 0.55, hv, 0.03, 1.6)
                 c = O(t - s * hu * 0.5, depth * 0.45)
-                skull(c[0], cy - hv, c[1], nx, nz, 0.095)
+                skull(c[0], cy - hv, c[1], nx, nz, lod=1)
             elif what < 0.86:    # a body still in its shroud, drawn half out by whoever came for it
                 s = rng.choice((-1, 1))
                 q0, q1, q2 = O(t - s * hu * 0.85, depth * 0.45), O(t, depth * 0.55), O(t + s * hu * 0.62, depth * 0.62)
                 base = cy - hv + 0.09
                 tube('bone', [(q0[0], base, q0[1]), (q1[0], base + 0.012, q1[1]), (q2[0], base, q2[1])], 0.11, ref=(0.0, 1.0, 0.0), ry=0.085, sides=6, tile=0.5)
                 c = O(t + s * hu * 0.8, depth * 0.66)
-                skull(c[0], cy - hv, c[1], nx, nz, 0.092)
+                skull(c[0], cy - hv, c[1], nx, nz, lod=1)
             else:               # robbed
                 c = O(t + rng.uniform(-0.4, 0.4), depth * 0.5)
-                skull(c[0], cy - hv, c[1], nx + rng.uniform(-0.4, 0.4), nz + rng.uniform(-0.4, 0.4), 0.1)
+                skull(c[0], cy - hv, c[1], nx + rng.uniform(-0.4, 0.4), nz + rng.uniform(-0.4, 0.4), lod=1)
                 c = O(t + rng.uniform(-0.5, 0.5), depth * 0.55)
                 long_bone(c[0], cy - hv, c[1], math.atan2(uz, ux) + rng.uniform(-0.25, 0.25))
     c = O(L / 2, depth / 2)
@@ -1345,14 +1458,14 @@ def portcullis(x0, x1, z, y0, y1):
         tube('iron', [(x0, y, z), (x1, y, z)], 0.024, ref=(0.0, 1.0, 0.0), sides=4)
 
 
-def skull_column(x, z, y, h=3.8, rings=8):
+def skull_column(x, z, y, h=3.8, rings=11):
     """A pier faced in the dead, ring on ring, staring out."""
     lathe('cata_wall2', x, z, [(0.72, y), (0.56, y + 0.3), (0.42, y + 0.42), (0.42, y + h - 0.4), (0.56, y + h - 0.26), (0.72, y + h)], 10)
     for r in range(rings):
         py = y + 0.46 + r * (h - 0.92) / rings
-        for k in range(8):
-            a = (k + 0.5 * (r % 2)) / 8 * math.tau
-            skull(x + math.cos(a) * 0.46, py, z + math.sin(a) * 0.46, math.cos(a), math.sin(a), 0.135)
+        for k in range(11):
+            a = (k + 0.5 * (r % 2)) / 11 * math.tau
+            skull(x + math.cos(a) * 0.5, py, z + math.sin(a) * 0.5, math.cos(a), math.sin(a), lod=1)
     W.collide(x - 0.72, z - 0.72, x + 0.72, z + 0.72, h)
 
 
@@ -1626,8 +1739,9 @@ def below():
             obox('cata_block', c, (ux, 0.0, uz), (nx, 0.0, nz2), L / 2, 0.05, 0.16)
             for k in range(int(L / 0.31)):
                 t = (k + 0.5) * L / int(L / 0.31)
-                skull(a[0] + ux * t + nx * 0.16, Y1 + hy, a[1] + uz * t + nz2 * 0.16, nx, nz2, 0.1)
+                skull(a[0] + ux * t + nx * 0.16, Y1 + hy, a[1] + uz * t + nz2 * 0.16, nx, nz2, lod=1)
     corona(oss_x + 8.0, OZ, Y1 + 5.0, Y1 + 8.8, 2.0, 8, 24.0, 15.0)
+    chest(oss_x + 13.0 + 2.3, Y1, OZ + 1.0, -math.pi / 2, 2)
     # The room's reason: an altar built of the dead, between two piers faced in them.
     ax_, az_ = oss_x + 13.0, OZ
     bx('cata_block', ax_, Y1 + 0.3, az_, 1.3, 0.3, 1.8, 2.0)
@@ -1663,8 +1777,9 @@ def below():
     HR = 18.0
     hallc = (gx, sz1 - HR * math.cos(math.pi / 8))
     hall = ngon(hallc[0], hallc[1], HR, 8, math.pi / 8)
-    hs, he = facing(hall, 0, 1), facing(hall, 1, 0)
-    hall_ops = {hs: [gate(hall[hs], hall[(hs + 1) % 8], 5.0, 4.0, 6.5, Y2)], he: [gate(hall[he], hall[(he + 1) % 8], 7.0, 4.6, 7.2, Y2)]}
+    hs, he, hn = facing(hall, 0, 1), facing(hall, 1, 0), facing(hall, 0, -1)
+    hall_ops = {hs: [gate(hall[hs], hall[(hs + 1) % 8], 5.0, 4.0, 6.5, Y2)], he: [gate(hall[he], hall[(he + 1) % 8], 7.0, 4.6, 7.2, Y2)], hn: [gate(hall[hn], hall[(hn + 1) % 8], 5.0, 4.0, 6.5, Y2)]}
+    W.hall_north = (hallc[0], (hall[hn][1] + hall[(hn + 1) % 8][1]) / 2)
     for i in range(8):
         if i not in hall_ops:
             hL = math.hypot(hall[(i + 1) % 8][0] - hall[i][0], hall[(i + 1) % 8][1] - hall[i][1])
@@ -1909,16 +2024,712 @@ def below():
     return Y1, Y2
 
 
-def stair_cover():
-    """Where the stair's vault would stand out of the hill: a stone hood, sloped into the ground."""
+def gulf(y):
+    """A rift an earthquake tore through the catacombs, off the north side of the Founders' Hall, and the rope bridge someone strung over it to keep the way open. Thirty metres across and twenty down,
+    its walls stepping down in terraces to a narrow floor and a burning stream. Three metres of planks are gone a third of the way over: a jump you commit to. A fall costs you all but your last breath,
+    and the scaffold stair along the near wall brings you back up. Across, the room it was all for. Who's on what: the dead know the bridge and the landings (W.floors), and won't step off them
+    (the pit is marked); only the player can be under the bridge, so the floors over the bottom are one of W.homes, chosen by how high you are."""
+    W.zone = 'deep'
+    bx0, hall_z = W.hall_north
+    rim_s = hall_z - 9.73        # the near rim, where the passage comes out
+    across = 30.0
+    rim_n = rim_s - across
+    mid = (rim_s + rim_n) / 2
+    bottom = y - 20.0
+    roof = y + 16.0
+    RISE, LEDGE, N = 20.0 / 6, 1.4, 6
+    far = 40.0
+    def calm(x):                 # none of the rift's wander by the bridge, so the rims stay where the landings are
+        t = min(1.0, max(0.0, (abs(x - bx0) - 6.0) / 8.0))
+        return t * t * (3 - 2 * t)
+    def zc(x):
+        return mid + calm(x) * (1.0 * math.sin(x * 0.11 + 1.1) + 0.5 * math.sin(x * 0.31))
+    def hw(x):
+        t = (x - bx0) / far
+        return across / 2 * (1 - calm(x) * (1 - math.sqrt(max(0.0, 1 - t ** 4)) * (1 + 0.05 * math.sin(x * 0.23))))
+    rough = random.Random(1789)
+    jolt = {}
+    def j(x, row, s):
+        k = (round(x, 2), row, s)
+        if k not in jolt:
+            jolt[k] = (rough.uniform(-1, 1), rough.uniform(-1, 1))
+        return jolt[k]
+    # The profile, down from the roof: (height, how far in from the rim, a riser or a ledge below it).
+    prof = [(roof, 0.8), (y + 9.5, 0.0), (y, 0.0)]
+    for k in range(N):
+        yy = y - RISE * (k + 1)
+        prof.append((yy + RISE * 0.5, LEDGE * k + 0.28))
+        prof.append((yy, LEDGE * k + 0.42))
+        prof.append((yy, LEDGE * (k + 1)))
+    xs = [bx0 - far + i * 2.0 for i in range(int(far) + 1)]
+    def pt(x, row, s):
+        yy, inset = prof[row]
+        h = hw(x)
+        inset = min(inset, h * 0.84)
+        a, b = j(x, row, s)
+        cut = calm(x) if row < 3 else 1.0
+        z = zc(x) + s * (h - inset) + cut * (a * 0.38 if inset > 0 or row > 2 else a * 0.2)
+        return (x, yy + (b * 0.28 * cut if 0 < row < len(prof) - 1 else 0.0), z)
+    faces = ('cata_rubble', 'cata_wall3', 'cata_rubble', 'cata_wall4')
+    for s in (1, -1):
+        for c in range(len(xs) - 1):
+            x0, x1 = xs[c], xs[c + 1]
+            for row in range(len(prof) - 1):
+                if row == 1 and abs((x0 + x1) / 2 - bx0) < 6.0:
+                    continue     # (the masonry of the portal is here)
+                a, b, c1, d = pt(x0, row + 1, s), pt(x1, row + 1, s), pt(x1, row, s), pt(x0, row, s)
+                ledge = row >= 3 and (row - 3) % 3 == 2
+                n = unit(cross(sub(b, a), sub(d, a)))
+                if ledge:
+                    if n[1] < 0:
+                        n = mul(n, -1.0)
+                    mat = 'cata_earth'
+                    uv = ((a[0] / 3, a[2] / 3), (b[0] / 3, b[2] / 3), (c1[0] / 3, c1[2] / 3), (d[0] / 3, d[2] / 3))
+                else:
+                    if n[2] * s > 0:
+                        n = mul(n, -1.0)
+                    mat = faces[(row // 3) % 4]
+                    uv = ((a[0] / 3.2, a[1] / 3.2), (b[0] / 3.2, b[1] / 3.2), (c1[0] / 3.2, c1[1] / 3.2), (d[0] / 3.2, d[1] / 3.2))
+                W.quad(mat, a, b, c1, d, uv, (n, n, n, n))
+    # The roof, lost in the dark, and the floor: grit either side of the stream.
+    n = (0.0, -1.0, 0.0)
+    W.quad('cata_roof', (bx0 - far - 2, roof, rim_n - 3), (bx0 + far + 2, roof, rim_n - 3), (bx0 + far + 2, roof, rim_s + 3), (bx0 - far - 2, roof, rim_s + 3), ((0, 0), (26, 0), (26, 11), (0, 11)), (n, n, n, n))
+    up = (0.0, 1.0, 0.0)
+    last = len(prof) - 1
+    for c in range(len(xs) - 1):
+        x0, x1 = xs[c], xs[c + 1]
+        q0, q1, p0, p1 = pt(x0, last, 1), pt(x1, last, 1), pt(x0, last, -1), pt(x1, last, -1)
+        W.quad('cata_earth', (x0, bottom, q0[2]), (x1, bottom, q1[2]), (x1, bottom, p1[2]), (x0, bottom, p0[2]), ((x0 / 3, q0[2] / 3), (x1 / 3, q1[2] / 3), (x1 / 3, p1[2] / 3), (x0 / 3, p0[2] / 3)), (up, up, up, up))
+        if abs((x0 + x1) / 2 - bx0) < far - 4.0:
+            w0, w1 = min(0.7, hw(x0) * 0.08), min(0.7, hw(x1) * 0.08)
+            m0, m1 = zc(x0) + 0.5 * math.sin(x0 * 0.4), zc(x1) + 0.5 * math.sin(x1 * 0.4)
+            for r, tint in ((1.0, (0.8, 0.09, 0.025)), (4.0, (0.11, 0.012, 0.005))):
+                W.glowquad((x0, bottom + 0.05, m0 + w0 * r), (x0, bottom + 0.05, m0 - w0 * r), (x1, bottom + 0.05, m1 - w1 * r), (x1, bottom + 0.05, m1 + w1 * r), 100, (0, 1, 1, 1), tint)
+    # Where its two walls meet at each end, shut.
+    for dx, sg in ((-far, 1.0), (far, -1.0)):
+        x = bx0 + dx - sg * 0.4
+        n = (sg, 0.0, 0.0)
+        a, b, c1, d = (x, bottom - 1, mid - 8), (x, bottom - 1, mid + 8), (x, roof + 1, mid + 8), (x, roof + 1, mid - 8)
+        W.quad('cata_rubble', a, b, c1, d, ((0, 0), (5, 0), (5, 18), (0, 18)), (n, n, n, n))
+    # Its light, which comes up from below. His colour.
+    for k in range(5):
+        x = bx0 - 24.0 + k * 12.0
+        W.light(x, bottom + 2.5, zc(x), (1.0, 0.24, 0.08), 30.0, 42.0, 0.5)
+    for dx in (-13.0, 13.0):
+        W.light(bx0 + dx, y - 6.0, mid, (1.0, 0.3, 0.12), 30.0, 26.0, 0.5)
+    # What fell, and who.
+    boulders = random.Random(45)
+    for k in range(16):
+        x = bx0 + boulders.uniform(-28, 28)
+        h, s = hw(x) - LEDGE * N, boulders.choice((-1, 1))
+        z = zc(x) + s * boulders.uniform(1.8, max(2.0, h - 0.6))
+        r = boulders.uniform(0.5, 1.5)
+        if h < 2.4 or (-31.0 < x - bx0 < 0.0 and abs(z - mid - 1.0) < 3.4):    # (none on the way to the scaffold, or at its foot)
+            continue
+        lathe('cata_rubble', x, z, [(r, bottom), (r * 1.1, bottom + r * 0.5), (r * 0.7, bottom + r), (0.0, bottom + r * 1.15)], 7, phase=boulders.uniform(0, 3))
+        W.collide(x - r * 0.8, z - r * 0.8, x + r * 0.8, z + r * 0.8, 40.0, bottom - 1.0)
+        W.colliders[-1]['t'] = bottom + r
+    for k in range(9):
+        x = bx0 + boulders.uniform(-26, 26)
+        h = hw(x) - LEDGE * N
+        if h > 2.0:
+            heap(x, zc(x) + boulders.choice((-1, 1)) * boulders.uniform(1.4, h - 0.3), bottom, 6, 0.6, k)
+    chest(bx0 - 14.0, bottom, mid - 3.2, 0.0, 2)
+    # Round the floor, what stops you: only down here, which the bridge's far above.
+    def low_wall(x0, z0, x1, z1):
+        W.collide(x0, z0, x1, z1, 40.0, bottom - 1.0)
+        W.colliders[-1]['t'] = bottom + 7.0
+    for c in range(0, len(xs) - 2, 2):
+        x0, x1 = xs[c], xs[c + 2]
+        for s in (1, -1):
+            zz = min(pt(x0, last, s)[2], pt(x1, last, s)[2]) if s > 0 else max(pt(x0, last, s)[2], pt(x1, last, s)[2])
+            low_wall(x0 - 0.2, zz, x1 + 0.2, zz + s * 1.5)
+    low_wall(bx0 - far - 1, mid - 16, bx0 - far + 1, mid + 16)
+    low_wall(bx0 + far - 1, mid - 16, bx0 + far + 1, mid + 16)
+    # The passage out to it, a portal of the old masonry left standing in the torn rock, and a shelf to step out on. At each end.
+    gx0, floor_mat = bx0, ('cata_floor2', 'cata_floor')
+    run_corridor((gx0, hall_z), (gx0, rim_s), 5.0, y, y, 4.0, 6.5, ('cata_rubble', 'cata_wall2'), floor_mat, 'cata_roof', ribs=2.5, bay=5.4, trim='cata_block')
+    run_corridor((gx0, rim_n), (gx0, rim_n - 6.0), 5.0, y, y, 4.0, 6.5, ('cata_rubble', 'cata_wall2'), floor_mat, 'cata_roof', ribs=2.5, bay=5.4, trim='cata_block')
+    SHELF = 1.5
+    levels = []
+    def bridge_floor(x0, z0, x1, z1, yy, y2=None, axis='z', shared=True):
+        if shared:
+            W.floor(x0, z0, x1, z1, yy, y2, axis)
+        levels.append({'x0': round(min(x0, x1), 3), 'z0': round(min(z0, z1), 3), 'x1': round(max(x0, x1), 3), 'z1': round(max(z0, z1), 3), 'y': round(yy, 3), 'y2': round(yy if y2 is None else y2, 3), 'axis': axis})
+    for rim, sg, to in ((rim_s, -1.0, mid), (rim_n, 1.0, mid)):
+        a, b = (gx0 - 6.0, rim), (gx0 + 6.0, rim)
+        wall('cata_block', a, b, y, y + 9.5, [gate(a, b, 5.0, 4.0, 6.5, y)], inward=(gx0, to))
+        bx('cata_block', gx0, y - 0.6, rim + sg * SHELF / 2, 3.2, 0.6, SHELF / 2)
+        bx('cata_block', gx0, y - 1.7, rim + sg * SHELF * 0.3, 2.4, 0.5, SHELF * 0.3)
+        bridge_floor(gx0 - 3.2, min(rim, rim + sg * SHELF), gx0 + 3.2, max(rim, rim + sg * SHELF), y)
+        W.collide(gx0 - 3.2, min(rim, rim + sg * SHELF), gx0 - 3.0, max(rim, rim + sg * SHELF), 40.0, y - 6.0)
+        W.collide(gx0 + 3.0, min(rim, rim + sg * SHELF), gx0 + 3.2, max(rim, rim + sg * SHELF), 40.0, y - 6.0)
+        torch(gx0 - 2.5, y + 2.6, rim + sg * 0.02, 0.0, sg, c=(1.0, 0.5, 0.22), i=12.0, r=12.0)
+        torch(gx0 + 2.5, y + 2.6, rim + sg * 0.02, 0.0, sg, c=(1.0, 0.5, 0.22), i=12.0, r=12.0)
+        # Each rope made off to a post either side.
+        for k in (-1, 1):
+            bx('wood_c0', gx0 + k * 1.15, y + 0.6, rim + sg * (SHELF - 0.1), 0.11, 1.2, 0.11)
+    # The bridge. It hangs two metres and more at its middle.
+    z_a, z_b = rim_s - SHELF, rim_n + SHELF
+    L = z_a - z_b
+    SAG, HALF = 2.3, 1.05
+    deck = lambda t: y - SAG * 4 * t * (1 - t)
+    GAP = (0.33, 0.33 + 3.0 / L)
+    SEG = 16
+    for k in range(SEG):
+        t0, t1 = k / SEG, (k + 1) / SEG
+        for lo, hi in ((t0, min(t1, GAP[0])), (max(t0, GAP[1]), t1)):
+            if hi > lo:
+                za, zb = z_a - L * lo, z_a - L * hi
+                bridge_floor(gx0 - HALF, zb, gx0 + HALF, za, deck(hi), deck(lo))
+    planks = random.Random(77)
+    t = 0.0
+    ends = []
+    while t < 1.0:
+        w = planks.uniform(0.11, 0.17)
+        step = (w * 2 + 0.03) / L
+        z = z_a - L * (t + step / 2)
+        if GAP[0] <= t + step / 2 <= GAP[1]:
+            t += step
+            continue
+        hw_ = HALF - planks.uniform(0.0, 0.1)
+        bx('wood_c1', gx0 + planks.uniform(-0.03, 0.03), deck(t) - 0.03 + planks.uniform(-0.012, 0.012), z, hw_, 0.03, w, 1.6)
+        t += step
+    # Its ropes, over the gap too, and the broken ends hanging.
+    for dy, dx in ((0.98, HALF + 0.06), (-0.05, HALF - 0.04)):
+        for k in (-1, 1):
+            pts = [(gx0 + k * dx, deck(i / 18) + dy, z_a - L * i / 18) for i in range(19)]
+            tube('wood_b2', pts, 0.028, ref=(1, 0, 0), sides=4)
+    for i in range(int(L / 1.2) + 1):
+        t = i * 1.2 / L
+        z = z_a - L * t
+        for k in (-1, 1):
+            bx('wood_b2', gx0 + k * (HALF + 0.03), deck(t) + 0.47, z, 0.012, 0.5, 0.012)
+    for t, sway in ((GAP[0], -0.3), (GAP[0] - 0.012, 0.25), (GAP[1], 0.2), (GAP[1] + 0.012, -0.25)):
+        z = z_a - L * t
+        for dx, ln in ((-0.6, 0.55), (0.1, 0.8), (0.65, 0.45)):
+            bx('wood_c1', gx0 + dx + sway * 0.1, deck(t) - ln, z, 0.16, ln, 0.025, 1.6)
+    # Ropes either side all the way across: you go in at the gap, not off the side.
+    for k in (-1, 1):
+        W.collide(gx0 + k * (HALF + 0.02), z_b, gx0 + k * (HALF + 0.14), z_a, 40.0, y - 8.0)
+    # The way back up from the bottom: a scaffold along the near wall, and a gangway from its head over to the shelf.
+    sz = mid + 1.0
+    sx0, sx1 = gx0 - 27.0, gx0 - 3.1
+    top = y - 0.75
+    bridge_floor(sx0, sz - 0.7, sx1, sz + 0.7, bottom, top, 'x', shared=False)
+    bridge_floor(sx1 - 0.2, sz - 0.7, sx1 + 1.6, rim_s - SHELF + 0.05, top, y, 'z', shared=False)
+    n_t = int((sx1 - sx0) / 0.46)
+    for k in range(n_t):
+        t = (k + 0.5) / n_t
+        bx('wood_c2', sx0 + (sx1 - sx0) * t, bottom + (top - bottom) * t - 0.05, sz, (sx1 - sx0) / n_t / 2 - 0.03, 0.05, 0.68, 1.6)
+    for s_ in (-1, 1):
+        tube('wood_c0', [(sx0, bottom - 0.1, sz + s_ * 0.72), (sx1, top - 0.1, sz + s_ * 0.72)], 0.07, ref=(0, 1, 0), sides=4)
+        tube('wood_b2', [(sx0, bottom + 1.0, sz + s_ * 0.74), (sx1, top + 1.0, sz + s_ * 0.74)], 0.03, ref=(0, 1, 0), sides=4)
+    posts = 8
+    for k in range(1, posts + 1):
+        t = k / posts
+        x = sx0 + (sx1 - sx0) * t
+        h = bottom + (top - bottom) * t
+        for s_ in (-1, 1):
+            bx('wood_c0', x, (bottom + h + 1.0) / 2, sz + s_ * 0.76, 0.08, (h + 1.0 - bottom) / 2, 0.08)
+    g0, g1 = sx1 - 0.2, sx1 + 1.6
+    zg0, zg1 = rim_s - SHELF + 0.05, sz + 0.7
+    zh = sz - 0.7
+    n_t = int((zg0 - zh) / 0.34)
+    for k in range(n_t):
+        t = (k + 0.5) / n_t
+        bx('wood_c2', (g0 + g1) / 2, top + (y - top) * t - 0.05, zh + (zg0 - zh) * t, (g1 - g0) / 2, 0.04, (zg0 - zh) / n_t / 2 - 0.02, 1.6)
+    for x_ in (g0, g1):
+        tube('wood_b2', [(x_, top + 1.0, zg1), (x_, y + 1.0, zg0)], 0.03, ref=(1, 0, 0), sides=4)
+        tube('wood_c0', [(x_, top - 0.12, zh), (x_, y - 0.12, zg0)], 0.07, ref=(1, 0, 0), sides=4)
+        for k in range(3):
+            z_ = zg1 + (zg0 - zg1) * k / 2
+            bx('wood_c0', x_, (bottom + y + 1.0) / 2, z_, 0.08, (y + 1.0 - bottom) / 2, 0.08)
+    # The gangway's ropes hold you, when you've come all that way.
+    W.collide(g1, zg1, g1 + 0.12, zg0, 40.0, y - 2.0)
+    W.collide(g0 - 0.12, zg1, g0, zg0, 40.0, y - 2.0)
+    # A fire on the terraces either side, seen from the bridge, burning at the ends of the galleries it cut through. And one at the scaffold's foot, to find it by.
+    for x_, s_, row in ((-22.0, 1, 2), (-14.0, -1, 3), (17.0, 1, 3), (25.0, -1, 2), (-30.0, -1, 4), (30.0, 1, 4), (sx0 - 1.5 - bx0, 0, 5)):
+        x = bx0 + x_
+        yy = y - RISE * (row + 1)
+        z = zc(x) + s_ * (hw(x) - min(LEDGE * (row + 0.5), hw(x) * 0.84)) if s_ else sz - 1.3
+        lathe('iron', x, z, [(0.3, yy), (0.08, yy + 0.1), (0.07, yy + 0.7), (0.4, yy + 0.9), (0.46, yy + 1.05)], 7)
+        for k in range(5):
+            flame(x + math.cos(k * 2.4) * 0.14, yy + 0.95, z + math.sin(k * 2.4) * 0.14, 0.09)
+        W.light(x, yy + 1.6, z - s_ * 0.8, (1.0, 0.5, 0.2), 14.0, 22.0, 1.0)
+    # What it was all for, across.
+    rc = rim_n - 6.0 - 9.0 * math.cos(math.pi / 8)
+    cell = ngon(gx0, rc, 9.0, 8, math.pi / 8)
+    south = max(range(8), key=lambda i: cell[i][1] + cell[(i + 1) % 8][1])
+    room(cell, y, 5.0, 8.5, ('skulls2', 'cata_wall4', 'femurs', 'cata_wall4'), ('cata_floor3', 'cata_floor'), 'cata_roof', dado=('skulls3', 'cata_block'), rib='cata_block',
+         ops={south: [gate(cell[south], cell[(south + 1) % 8], 5.0, 4.0, 6.5, y)]}, trim='cata_block')
+    chest(gx0, y, rc - 5.2, 0.0, 2)
+    sarcophagus(gx0 - 4.6, y, rc - 1.0, along_x=False)
+    sarcophagus(gx0 + 4.6, y, rc - 1.0, along_x=False)
+    skull_column(gx0 - 3.6, rc - 5.4, y, h=3.6)
+    skull_column(gx0 + 3.6, rc - 5.4, y, h=3.6)
+    corona(gx0, rc, y + 4.5, y + 8.5, 1.8, 8, 40.0, 15.0)
+    candelabra(gx0 - 2.4, rc - 5.9, y)
+    candelabra(gx0 + 2.4, rc - 5.9, y)
+    for dx in (-2.0, 0.0, 2.0):
+        spawn(gx0 + dx, rc + 2.0 + abs(dx))
+    spawn(gx0 - 1.2, rim_n - 3.0)
+    spawn(gx0 + 1.2, rim_n - 4.5)
+    spawn(gx0, z_b + 2.6)
+    # Over the rift, anywhere that isn't the bridge or a landing, is a pit: the dead don't step off into it, and a spell falls all the way in.
+    W.floors.append({'x0': round(bx0 - far - 1, 3), 'z0': round(rim_n - 2.5, 3), 'x1': round(bx0 + far + 1, 3), 'z1': round(rim_s + 2.5, 3), 'y': bottom, 'y2': bottom, 'axis': 'x', 'pit': True})
+    levels.append({'x0': round(bx0 - far, 3), 'z0': round(rim_n, 3), 'x1': round(bx0 + far, 3), 'z1': round(rim_s, 3), 'y': bottom, 'y2': bottom, 'axis': 'x'})
+    W.homes.append({'x0': round(bx0 - far - 1, 3), 'z0': round(rim_n - 2.5, 3), 'x1': round(bx0 + far + 1, 3), 'z1': round(rim_s + 2.5, 3), 'y': bottom, 'ground': [1e9, 1e9, 1e9, 1e9], 'floors': levels})
+
+
+HOME_FLOOR = 0.16    # above the highest the land gets under any of them
+RAIL_Y = 2.2         # feet above this are upstairs
+
+
+class Home:
+    """The inside of one of tools/village/build_village.py's houses, in its own frame: local z is its front. Each is turned by a quarter turn or so, so a box stays a box."""
+
+    def __init__(self, h):
+        self.x, self.z, self.yaw = h['x'], h['z'], h['yaw']
+        self.c, self.s = math.cos(self.yaw), math.sin(self.yaw)
+        self.turned = abs(self.s) > 0.5
+        self.hw, self.hd = h['w'] / 2, h['d'] / 2
+        self.ix, self.iz = self.hw - 0.12, self.hd - 0.12      # the walls' inner faces
+        self.jet = h['jet']
+        self.uz = self.iz + self.jet                           # upstairs, over the overhang
+        self.h1 = h['h1']
+        self.y1 = h['h1'] + 0.30                               # the upper floor
+        self.top = self.y1 + h['h2'] - 0.25
+        self.door = h['door']
+        self.chimney = h['chimney']
+
+    def p(self, lx, lz):
+        return (self.x + lx * self.c + lz * self.s, self.z - lx * self.s + lz * self.c)
+
+    def box(self, mat, lx, y, lz, hx, hy, hz, tile=None):
+        x, z = self.p(lx, lz)
+        bx(mat, x, y, z, hz if self.turned else hx, hy, hx if self.turned else hz, tile)
+
+    def collide(self, x0, z0, x1, z1, h=40.0, b=0.0):
+        a, c = self.p(x0, z0), self.p(x1, z1)
+        W.collide(a[0], a[1], c[0], c[1], h, b)
+
+    # Something standing at height y. On the ground floor you can jump what's low; upstairs nobody below runs into it.
+    def solid(self, x0, z0, x1, z1, y, up):
+        if y > 1.0:
+            self.collide(x0, z0, x1, z1, y + up - HOME_FLOOR, RAIL_Y)
+        else:
+            self.collide(x0, z0, x1, z1, up)
+
+    def face(self, mat, a, b, y0, y1, tile=None):
+        wall(mat, self.p(*a), self.p(*b), y0, y1, inward=self.p(0.0, 0.0), tile=tile)
+
+    def floor(self, mat, x0, z0, x1, z1, y, tile=1.8):
+        a, c = self.p(x0, z0), self.p(x1, z1)
+        floor_rect(mat, min(a[0], c[0]), min(a[1], c[1]), max(a[0], c[0]), max(a[1], c[1]), y, tile=tile)
+
+    def ceiling(self, mat, x0, z0, x1, z1, y, tile=2.2):
+        a, c = self.p(x0, z0), self.p(x1, z1)
+        ax, az, bx_, bz = min(a[0], c[0]), min(a[1], c[1]), max(a[0], c[0]), max(a[1], c[1])
+        n = (0.0, -1.0, 0.0)
+        W.quad(mat, (ax, y, az), (bx_, y, az), (bx_, y, bz), (ax, y, bz), ((ax / tile, az / tile), (bx_ / tile, az / tile), (bx_ / tile, bz / tile), (ax / tile, bz / tile)), (n, n, n, n))
+
+    def rect(self, x0, z0, x1, z1):
+        a, c = self.p(x0, z0), self.p(x1, z1)
+        return min(a[0], c[0]), min(a[1], c[1]), max(a[0], c[0]), max(a[1], c[1])
+
+    def level(self, x0, z0, x1, z1, y):
+        r = self.rect(x0, z0, x1, z1)
+        return {'x0': round(r[0], 3), 'z0': round(r[1], 3), 'x1': round(r[2], 3), 'z1': round(r[3], 3), 'y': round(y, 3), 'y2': round(y, 3), 'axis': 'x'}
+
+    def light(self, lx, y, lz, i=8.0, r=7.0, flicker=0.6, c=(1.0, 0.6, 0.28)):
+        x, z = self.p(lx, lz)
+        W.light(x, y, z, c, r, i, flicker)
+
+    # ---- the furniture ----
+    def table(self, lx, lz, y, hx=0.9, hz=0.45, lit=True):
+        self.box('wood_b2', lx, y + 0.74, lz, hx, 0.035, hz)
+        for sx in (-1, 1):
+            for sz in (-1, 1):
+                self.box('wood_b0', lx + sx * (hx - 0.08), y + 0.36, lz + sz * (hz - 0.08), 0.04, 0.36, 0.04)
+        self.solid(lx - hx, lz - hz, lx + hx, lz + hz, y, 0.8)
+        if lit:
+            x, z = self.p(lx, lz)
+            candle(x, y + 0.775, z)
+            W.light(x, y + 1.15, z, (1.0, 0.62, 0.3), 6.5, 5.0, 0.7)
+
+    def chair(self, lx, lz, y, nx, nz):
+        """Looking along (nx, nz), a quarter turn from the axes or none."""
+        self.box('wood_b0', lx, y + 0.44, lz, 0.2, 0.025, 0.2)
+        for sx in (-1, 1):
+            for sz in (-1, 1):
+                self.box('wood_b0', lx + sx * 0.16, y + 0.21, lz + sz * 0.16, 0.025, 0.21, 0.025)
+        self.box('wood_b1', lx - nx * 0.18, y + 0.72, lz - nz * 0.18, 0.2 if nz else 0.02, 0.26, 0.02 if nz else 0.2)
+        self.solid(lx - 0.2, lz - 0.2, lx + 0.2, lz + 0.2, y, 0.5)
+
+    def bench(self, lx, lz, y, hx, hz):
+        self.box('wood_b1', lx, y + 0.42, lz, hx, 0.035, hz)
+        for sx in (-1, 1):
+            self.box('wood_b0', lx + sx * (hx - 0.1) if hx > hz else lx, y + 0.2, lz if hx > hz else lz + sx * (hz - 0.1), 0.03 if hx > hz else hx - 0.02, 0.2, hz - 0.02 if hx > hz else 0.03)
+        self.solid(lx - hx, lz - hz, lx + hx, lz + hz, y, 0.5)
+
+    def bed(self, lx, lz, y, nx, nz):
+        """The foot of it toward (nx, nz)."""
+        hx, hz = (1.0, 0.5) if nx else (0.5, 1.0)
+        self.box('wood_c1', lx, y + 0.24, lz, hx, 0.09, hz)
+        for sx in (-1, 1):
+            for sz in (-1, 1):
+                self.box('wood_c0', lx + sx * (hx - 0.05), y + 0.14, lz + sz * (hz - 0.05), 0.05, 0.14, 0.05)
+        self.box('cloth_red', lx + nx * 0.28, y + 0.38, lz + nz * 0.28, hx - (0.3 if nx else 0.03), 0.07, hz - (0.3 if nz else 0.03), 1.2)
+        self.box('bone', lx - nx * 0.72, y + 0.38, lz - nz * 0.72, 0.17 if nx else 0.38, 0.06, 0.38 if nx else 0.17, 1.0)
+        self.box('wood_c1', lx - nx * (1.0 if nx else 0) , y + 0.55, lz - nz * (1.0 if nz else 0), 0.05 if nx else hx, 0.42, hz if nx else 0.05)
+        self.solid(lx - hx, lz - hz, lx + hx, lz + hz, y, 0.65)
+
+    def barrel(self, lx, lz, y, r=0.32, h=0.9):
+        x, z = self.p(lx, lz)
+        lathe('wood_c1', x, z, [(r * 0.84, y), (r, y + h * 0.5), (r * 0.84, y + h), (0.0, y + h)], 9)
+        for t in (0.2, 0.8):
+            k = 0.84 + 0.16 * (1 - abs(t - 0.5) * 2)
+            lathe('iron', x, z, [(r * k + 0.008, y + h * t - 0.025), (r * k + 0.008, y + h * t + 0.025)], 9)
+        self.solid(lx - r, lz - r, lx + r, lz + r, y, h + 0.05)
+
+    def shelf(self, lx, lz, y, hx, hz):
+        """Four shelves of crocks and books, against a wall."""
+        self.box('wood_b0', lx, y + 1.0, lz, hx, 1.0, hz)
+        rng = random.Random(int(abs(self.x * 7 + lx * 13 + lz * 3)))
+        along_x = hx > hz
+        side = -1.0 if (lz if along_x else lx) > 0 else 1.0
+        for row in range(3):
+            t = -hx + 0.1 if along_x else -hz + 0.1
+            end = hx - 0.1 if along_x else hz - 0.1
+            while t < end:
+                w, h = rng.uniform(0.04, 0.09), rng.uniform(0.09, 0.15)
+                m = rng.choice(['cloth_red', 'wood_c1', 'carpet', 'wood_b2'])
+                if along_x:
+                    self.box(m, lx + t, y + 0.72 + row * 0.56 + h, lz + side * (hz + 0.02), w, h, 0.05, 1.5)
+                else:
+                    self.box(m, lx + side * (hx + 0.02), y + 0.72 + row * 0.56 + h, lz + t, 0.05, h, w, 1.5)
+                t += w * 2.4
+        self.solid(lx - hx, lz - hz, lx + hx, lz + hz, y, 2.2)
+
+    def rug(self, lx, lz, y, hx, hz):
+        self.floor('carpet', lx - hx, lz - hz, lx + hx, lz + hz, y + 0.012, tile=2.4)
+
+    def hearth(self, nx, nz):
+        """A fire in the foot of the chimney, on the side (nx, nz)."""
+        cx, cz = self.chimney
+        y = HOME_FLOOR
+        ox, oz = cx + nx * 0.62, cz + nz * 0.62
+        sx, sz = nz, nx    # across it
+        self.box('cata_block', cx + nx * 0.44, y + 0.65, cz + nz * 0.44, 0.03 if nx else 0.42, 0.65, 0.42 if nx else 0.03)
+        for k in (-1, 1):
+            self.box('wall_rough', ox + sx * k * 0.56, y + 0.6, oz + sz * k * 0.56, 0.2 if nx else 0.12, 0.6, 0.12 if nx else 0.2, 1.2)
+        self.box('wall_rough', ox, y + 1.32, oz, 0.22 if nx else 0.72, 0.13, 0.72 if nx else 0.22, 1.2)
+        self.box('wood_c0', ox + nx * 0.1, y + 1.5, oz + nz * 0.1, 0.16 if nx else 0.82, 0.05, 0.82 if nx else 0.16)
+        self.box('wall_rough', ox + nx * 0.1, y + 0.02, oz + nz * 0.1, 0.34 if nx else 0.56, 0.04, 0.56 if nx else 0.34, 1.2)
+        x, z = self.p(ox, oz)
+        for dx, dz, s in ((0.0, 0.0, 0.2), (0.14, 0.08, 0.13), (-0.14, -0.06, 0.15)):
+            flame(x + dx, y + 0.07, z + dz, s)
+        for k in (-1, 1):
+            self.box('wood_c1', ox + sx * k * 0.14, y + 0.09, oz + sz * k * 0.14, 0.06 if nx else 0.22, 0.04, 0.22 if nx else 0.06)
+        fx, fz = self.p(cx + nx * 1.5, cz + nz * 1.5)
+        W.light(fx, y + 0.9, fz, (1.0, 0.5, 0.2), 8.0, 12.0, 1.0)
+        self.collide(ox - (0.3 if nx else 0.75), oz - (0.75 if nx else 0.3), ox + (0.3 if nx else 0.75), oz + (0.75 if nx else 0.3), 1.6)
+
+    # ---- the house ----
+    def shell(self):
+        y, y1, ix, iz, uz, h1 = HOME_FLOOR, self.y1, self.ix, self.iz, self.uz, self.h1
+        hw, hd = self.hw, self.hd
+        dl, dr = self.door - 0.8, self.door + 0.8
+        # The stair: up the back wall, away from the chimney, to a landing at the end wall.
+        side = 1.0 if self.chimney[0] < 0 else -1.0
+        hi, lo = side * (ix - 1.1), side * (ix - 1.1 - 4.2)
+        z0, z1 = -iz, -iz + 1.2
+        sx0, sx1 = min(lo, hi), max(lo, hi)
+        # Round the stairwell, a floor or a ceiling is four pieces.
+        def round_well(back, front):
+            return ((-ix, z1, ix, front), (-ix, z0, sx0, z1), (sx1, z0, ix, z1), (-ix, back, ix, z0))
+        ground_floor = (-hw, -hd, hw, hd + 0.02)
+        for r in round_well(-iz, iz):
+            if r[1] < r[3] and r[0] < r[2]:
+                self.ceiling('wood_a2', r[0], r[1], r[2], r[3], h1)
+        self.floor('wood_a1', -ix, -iz, ix, iz + 0.04, y)
+        ups = []
+        for r in round_well(-uz, uz):
+            if r[1] < r[3] and r[0] < r[2]:
+                self.floor('wood_a1', r[0], r[1], r[2], r[3], y1)
+                ups.append(self.level(r[0], r[1], r[2], r[3], y1))
+        self.ceiling('wood_a2', -ix, -uz, ix, uz, self.top)
+        # Walls: stone, with planks to the waist. (A little proud, the planks.)
+        for lvl_y, top, zf, lo_z in ((y, y1, iz, -iz), (y1, self.top, uz, -uz)):
+            plank = 'wood_b1' if lvl_y == y else 'wood_a3'
+            if lvl_y == y:
+                runs = [((-ix, zf), (dl, zf)), ((dr, zf), (ix, zf))]
+                self.face('wall_ashlar', (dl, zf), (dr, zf), y + 2.19, top)
+            else:
+                runs = [((-ix, zf), (ix, zf))]
+            runs += [((-ix, lo_z), (ix, lo_z)), ((-ix, lo_z), (-ix, zf)), ((ix, lo_z), (ix, zf))]
+            for a, b in runs:
+                self.face('wall_ashlar', a, b, lvl_y, top)
+                k = 0.02
+                ia = (a[0] + (k if a[0] == b[0] and a[0] < 0 else -k if a[0] == b[0] else 0.0), a[1] + (k if a[1] == b[1] and a[1] < 0 else -k if a[1] == b[1] else 0.0))
+                ib = (b[0] + (ia[0] - a[0]), b[1] + (ia[1] - a[1]))
+                self.face(plank, ia, ib, lvl_y, lvl_y + 0.95, tile=2.2)
+                # A rail along the planks' top.
+                self.box('wood_c0', (ia[0] + ib[0]) / 2, lvl_y + 0.97, (ia[1] + ib[1]) / 2, abs(ib[0] - ia[0]) / 2 + 0.02, 0.03, abs(ib[1] - ia[1]) / 2 + 0.02)
+        # A lantern hung in the middle of each floor, clear of the beams it's between.
+        for ceil, lz in ((h1, 0.9), (self.top, 0.6)):
+            x, z = self.p(0.0, lz)
+            bx('iron', x, ceil - 0.2, z, 0.012, 0.2, 0.012)
+            bx('iron', x, ceil - 0.42, z, 0.09, 0.012, 0.09)
+            bx('iron', x, ceil - 0.72, z, 0.09, 0.012, 0.09)
+            for a0, b0 in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+                bx('iron', x + a0 * 0.08, ceil - 0.57, z + b0 * 0.08, 0.008, 0.15, 0.008)
+            flame(x, ceil - 0.7, z, 0.06)
+            W.light(x, ceil - 0.65, z, (1.0, 0.68, 0.38), 12.0, 22.0, 0.35)
+        # The stair.
+        n = 13
+        for k in range(n):
+            t0, t1 = k / n, (k + 1) / n
+            x0, x1 = lo + (hi - lo) * t0, lo + (hi - lo) * t1
+            h = y + (y1 - y) * t1
+            self.box('wood_c2', (x0 + x1) / 2, (y + h) / 2, (z0 + z1) / 2, abs(x1 - x0) / 2, (h - y) / 2, (z1 - z0) / 2, 1.6)
+        # Its handrail, on balusters, and on round the well upstairs.
+        for k in range(0, n + 1, 2):
+            t = k / n
+            xr = lo + (hi - lo) * t
+            hb = y + (y1 - y) * t
+            self.box('wood_c0', xr, hb + 0.47, z1 + 0.03, 0.03, 0.47, 0.03)
+        a, c = self.p(lo, z1 + 0.03), self.p(hi, z1 + 0.03)
+        tube('wood_c0', [(a[0], y + 0.96, a[1]), (c[0], y1 + 0.96, c[1])], 0.04, ref=(0, 1, 0))
+        ends = [((lo, z1 + 0.03), (lo, z0)), ((lo, z0 + 0.03), (hi, z0 + 0.03))]
+        for (ax, az), (bx_, bz) in ends:
+            for k in range(5):
+                t = k / 4
+                self.box('wood_c0', ax + (bx_ - ax) * t, y1 + 0.47, az + (bz - az) * t, 0.03, 0.47, 0.03)
+            a, c = self.p(ax, az), self.p(bx_, bz)
+            tube('wood_c0', [(a[0], y1 + 0.96, a[1]), (c[0], y1 + 0.96, c[1])], 0.04, ref=(0, 1, 0))
+        # Beams, across, clear of the well.
+        for lvl_top, zmax, zmin in ((h1, iz, None), (self.top, uz, -uz)):
+            m = int(2 * ix / 1.7)
+            for k in range(1, m):
+                x = -ix + k * 2 * ix / m
+                z_lo = zmin if zmin is not None else (z1 if sx0 - 0.1 < x < sx1 + 0.1 else -iz)
+                self.box('wood_c2', x, lvl_top - 0.09, (z_lo + zmax) / 2, 0.08, 0.09, (zmax - z_lo) / 2)
+        # Posts, in the walls, either side of the door and between.
+        for x in (-ix + 0.06, ix - 0.06):
+            for z in (-iz + 0.06, iz - 0.06):
+                self.box('wood_c0', x, (y + h1) / 2, z, 0.08, (h1 - y) / 2, 0.08)
+        # What you walk into. Ground-floor walls stop at the first floor's height, to let you past above them.
+        wall_h = 3.0
+        self.collide(-hw - 0.14, hd - 0.1, dl, hd + 0.14, wall_h)
+        self.collide(dr, hd - 0.1, hw + 0.14, hd + 0.14, wall_h)
+        self.collide(-hw - 0.14, -hd - 0.14, hw + 0.14, -hd + 0.1, wall_h)
+        for s in (-1, 1):
+            self.collide(s * (hw - 0.1), -hd - 0.14, s * (hw + 0.14), hd + 0.14, wall_h)
+            self.collide(s * (hw - 0.1), -uz - 0.14, s * (hw + 0.14), uz + 0.14, 40.0, RAIL_Y)
+            self.collide(-hw - 0.14, s * (uz + 0.02), hw + 0.14, s * (uz + 0.2), 40.0, RAIL_Y)
+        self.collide(self.chimney[0] - 0.44, self.chimney[1] - 0.44, self.chimney[0] + 0.44, self.chimney[1] + 0.44)
+        # The stair's rail, all the way up, so it's a way in at each end and no other.
+        self.collide(sx0, z1, sx1, z1 + 0.08)
+        # Upstairs, the low end and the back of the well.
+        self.collide(lo - 0.04, z0, lo + 0.04, z1, 40.0, RAIL_Y)
+        self.collide(sx0, z0 - 0.1, sx1, z0 + 0.06, 40.0, RAIL_Y)
+        # Downstairs, nobody gets in under the high end.
+        self.collide(hi - 0.06, z0, hi + 0.06, z1, 1.9)
+        # The door, stood open against the wall.
+        hinge = self.p(dl, iz)
+        tip = self.p(dl, iz - 1.55)
+        door_leaf('door_iron2', (hinge[0], y, hinge[1]), (tip[0], y, tip[1]), 2.3)
+        self.collide(dl - 0.05, iz - 1.55, dl + 0.05, iz, 2.5)
+        # And where you stand. Ramp first: the height runs along whichever of x and z the house's own x is.
+        a, c = self.p(lo, z0), self.p(hi, z1)
+        axis = 'z' if self.turned else 'x'
+        rising = (c[1] > a[1]) if self.turned else (c[0] > a[0])
+        r = self.rect(lo, z0, hi, z1)
+        ramp = {'x0': round(r[0], 3), 'z0': round(r[1], 3), 'x1': round(r[2], 3), 'z1': round(r[3], 3), 'y': round(y if rising else y1, 3), 'y2': round(y1 if rising else y, 3), 'axis': axis}
+        o0, o1 = self.p(-hw - 0.2, -uz - 0.2), self.p(hw + 0.2, uz + 0.2)
+        g = self.rect(*ground_floor)
+        W.homes.append({'x0': round(min(o0[0], o1[0]), 3), 'z0': round(min(o0[1], o1[1]), 3), 'x1': round(max(o0[0], o1[0]), 3), 'z1': round(max(o0[1], o1[1]), 3),
+                        'y': y, 'ground': [round(v, 3) for v in g], 'floors': [self.level(*ground_floor, y), ramp] + ups})
+        return hi, lo, z1
+
+
+def homes():
+    """The houses of the village, from the inside. What they look like from the outside is tools/village/build_village.py's, which says where they stand."""
     W.zone = 'cath'
-    x0, x1 = OFFICE_X + 1.0, OFFICE_X + 32.0
-    top0, top1 = CHANCEL + 7.6, F0 - 2.0
+    with open(os.path.join(ROOT, 'assets', 'game', 'village.json')) as f:
+        data = json.load(f)
+    F = HOME_FLOOR
+    inn, west, east, south, *town = [Home(h) for h in data['homes']]
+    # The inn: a bar, kegs behind it, tables by the fire. Rooms over.
+    h = inn
+    h.shell()
+    U = h.y1
+    h.hearth(-1.0, 0.0)
+    h.box('wood_b2', 1.2, F + 0.98, -1.75, 2.4, 0.04, 0.3)
+    h.box('wood_c1', 1.2, F + 0.48, -1.75, 2.3, 0.48, 0.24)
+    h.solid(-1.2, -2.05, 3.6, -1.45, F, 1.1)
+    for x in (-0.6, 0.3, 1.2, 2.1, 3.0):
+        h.barrel(x, -3.05, F, 0.3, 0.8)
+        h.barrel(x, -3.05, F + 0.8, 0.26, 0.62) if x != 1.2 else None
+    h.table(-4.6, 1.3, F, 1.1, 0.5)
+    h.bench(-4.6, 0.45, F, 1.0, 0.16)
+    h.bench(-4.6, 2.15, F, 1.0, 0.16)
+    h.table(1.8, 1.7, F, 1.1, 0.5)
+    h.bench(1.8, 0.85, F, 1.0, 0.16)
+    h.bench(1.8, 2.55, F, 1.0, 0.16)
+    h.table(4.9, 2.1, F, 0.6, 0.6)
+    h.chair(4.0, 2.1, F, 1, 0)
+    h.chair(5.8, 2.1, F, -1, 0)
+    x, z = h.p(6.75, -2.8)
+    chest(x, F, z, h.yaw - math.pi / 2, 0)
+    for lx in (-5.6, -1.9, 1.8, 5.5):
+        h.bed(lx, 3.0, U, 0, -1)
+        h.table(lx + 1.1, 3.55, U, 0.28, 0.28, lit=lx in (-1.9, 5.5))
+    h.rug(-1.9, 0.4, U, 1.4, 1.0)
+    h.table(3.2, -3.2, U, 0.9, 0.42)
+    h.chair(3.2, -2.45, U, 0, -1)
+    # The west house: a family's. Fire, table, a shelf of crocks; a bed over.
+    h = west
+    h.shell()
+    U = h.y1
+    h.hearth(1.0, 0.0)
+    h.table(1.7, 1.2, F, 0.85, 0.5)
+    h.chair(1.7, 0.35, F, 0, 1)
+    h.chair(1.7, 2.05, F, 0, -1)
+    h.chair(0.5, 1.2, F, 1, 0)
+    h.shelf(-3.0, -3.1, F, 1.0, 0.26)
+    h.barrel(-4.2, -2.1, F)
+    h.barrel(4.15, 2.9, F)
+    h.rug(-1.2, 2.2, F, 0.9, 0.7)
+    x, z = h.p(-4.1, 2.8)
+    chest(x, F, z, h.yaw + math.pi / 2, 0)
+    h.bed(-3.3, 2.6, U, 1, 0)
+    h.bed(-3.3, 0.2, U, 1, 0)
+    h.table(1.4, 2.9, U, 0.55, 0.35)
+    h.chair(1.4, 2.15, U, 0, 1)
+    h.rug(-1.0, 1.4, U, 1.0, 1.4)
+    # The east house: a workshop below, the bed over it.
+    h = east
+    h.shell()
+    U = h.y1
+    h.hearth(-1.0, 0.0)
+    h.table(-2.4, 1.6, F, 1.2, 0.5)
+    h.chair(-2.4, 0.75, F, 0, 1)
+    h.shelf(4.8, 2.0, F, 0.26, 0.95)
+    h.shelf(4.0, -2.85, F, 0.95, 0.26)
+    h.barrel(-4.5, 2.5, F)
+    h.barrel(-3.8, 2.65, F, 0.28, 0.8)
+    x, z = h.p(4.5, 0.0)
+    chest(x, F, z, h.yaw - math.pi / 2, 0)
+    h.bed(3.6, 2.6, U, -1, 0)
+    h.bed(-3.8, 2.8, U, 1, 0)
+    h.table(0.4, 3.2, U, 0.7, 0.4)
+    h.rug(0.2, 1.0, U, 1.3, 0.9)
+    # The south cottage: small, and kept.
+    h = south
+    h.shell()
+    U = h.y1
+    h.hearth(1.0, 0.0)
+    h.table(1.6, 0.9, F, 0.8, 0.5)
+    h.chair(1.6, 0.05, F, 0, 1)
+    h.chair(2.7, 0.9, F, -1, 0)
+    h.shelf(-3.2, -2.85, F, 0.95, 0.26)
+    h.barrel(4.3, 2.65, F)
+    h.rug(-1.4, 2.1, F, 0.8, 0.6)
+    x, z = h.p(4.25, 0.3)
+    chest(x, F, z, h.yaw - math.pi / 2, 0)
+    h.bed(-3.3, 2.6, U, 1, 0)
+    h.table(0.8, 3.1, U, 0.5, 0.35)
+    h.shelf(4.3, 2.4, U, 0.26, 0.9)
+    # The town's. The stair's on the side away from the chimney, the door by the middle, so they're all laid out by which side the fire's on.
+    for i, h in enumerate(town):
+        h.shell()
+        U = h.y1
+        c = 1.0 if h.chimney[0] > 0 else -1.0
+        ix, iz = h.ix, h.iz
+        h.hearth(-c, 0.0)
+        kind = i % 3
+        if kind == 0:      # a family's
+            h.table(-c * 2.3, 0.6, F, 0.8, 0.5)
+            h.chair(-c * 2.3, -0.25, F, 0, 1)
+            h.chair(-c * 2.3, 1.45, F, 0, -1)
+            h.chair(-c * 1.15, 0.6, F, -c, 0)
+            h.shelf(c * (ix - 0.97), -iz + 0.28, F, 0.95, 0.26)
+            h.barrel(-c * (ix - 0.45), iz - 0.5, F)
+            h.rug(c * 1.9, 2.0, F, 0.8, 0.6)
+            h.bed(-c * (ix - 1.1), 2.2, U, c, 0)
+            h.bed(c * (ix - 1.1), 2.2, U, -c, 0)
+            h.table(0.0, iz, U, 0.55, 0.3)
+            h.rug(0.0, 0.6, U, 1.0, 1.2)
+        elif kind == 1:    # a workshop
+            h.table(-c * 2.2, 0.8, F, 1.1, 0.5)
+            h.bench(-c * 2.2, 1.65, F, 1.0, 0.16)
+            h.shelf(c * (ix - 0.97), -iz + 0.28, F, 0.95, 0.26)
+            h.barrel(c * (ix - 0.5), iz - 0.5, F)
+            h.barrel(c * (ix - 1.2), iz - 0.45, F, 0.28, 0.8)
+            h.bed(0.0, iz - 0.1, U, 0, -1)
+            h.table(-c * 2.4, iz - 0.2, U, 0.6, 0.35)
+            h.chair(-c * 2.4, iz - 1.0, U, 0, 1)
+            h.shelf(c * (ix - 0.28), 1.0, U, 0.26, 0.9)
+        else:              # the alewife's: two tables and a stock of barrels
+            h.table(-c * 2.2, 1.6, F, 0.9, 0.5)
+            h.bench(-c * 2.2, 0.8, F, 0.8, 0.16)
+            h.barrel(c * (ix - 0.45), -iz + 0.45, F)
+            h.barrel(c * (ix - 1.15), -iz + 0.45, F)
+            h.barrel(c * (ix - 1.85), -iz + 0.45, F)
+            h.barrel(c * (ix - 0.45), -iz + 1.15, F, 0.28, 0.8)
+            h.rug(c * 2.0, 2.2, F, 0.7, 0.5)
+            h.bed(c * (ix - 1.1), 2.2, U, -c, 0)
+            h.bed(-c * (ix - 1.1), 2.2, U, c, 0)
+            h.shelf(0.0, iz + h.jet - 0.28, U, 0.9, 0.26)
+            h.rug(0.0, 0.3, U, 1.1, 1.0)
+        # (Clear of the door and of its leaf, which opens on the far side of it from the fire or the near.)
+        x, z = h.p(-c * (ix - 0.6), iz - 1.5 if kind != 0 else -0.8)
+        chest(x, F, z, h.yaw + (c * math.pi / 2), 0)
+
+
+def stair_cover():
+    """A wing on the back of the church, over the head of the stair, that goes as far as the stair stands out of the ground. Past its end the land covers the rest."""
+    W.zone = 'cath'
+    x0, x1, hz = OFFICE_X + 1.0, BACK_WING_X, 9.0
+    eave, ridge = F0 + 7.5, F0 + 12.5
+    foot = F0 - 2.0
+    outside = (x0 + 200.0, 0.0)
+    wall('wall_rough', (x0, -hz), (x1, -hz), foot, eave, inward=((x0 + x1) / 2, -40.0))
+    wall('wall_rough', (x0, hz), (x1, hz), foot, eave, inward=((x0 + x1) / 2, 40.0))
+    wall('wall_rough', (x1, -hz), (x1, hz), foot, eave, inward=outside)
+    # Its gable, its roof, hipless and steep like the church's.
+    n = (1.0, 0.0, 0.0)
+    W.quad('wall_rough', (x1, eave, hz), (x1, eave, -hz), (x1, ridge, -0.01), (x1, ridge, 0.01), ((0, 1.4), (5, 1.4), (2.6, 0), (2.4, 0)), (n, n, n, n))
     for s in (-1, 1):
-        W.quad('wall_rough', (x0, F0 - 2.0, s * 9.0), (x1, F0 - 2.0, s * 9.0), (x1, top1, 0.0), (x0, top0, 0.0), ((0, 3), (9, 3), (9, 0), (0, 0)))
+        W.quad('roof', (x0, eave - 0.4, s * (hz + 0.5)), (x1 + 0.5, eave - 0.4, s * (hz + 0.5)), (x1 + 0.5, ridge + 0.1, 0.0), (x0, ridge + 0.1, 0.0), ((0, 2), (5, 2), (5, 0), (0, 0)))
+    W.collide(x0, -hz - 0.3, x1, -hz)
+    W.collide(x0, hz, x1, hz + 0.3)
+    # It's wider than the room it grows from: the step between them, closed.
+    for s in (-1, 1):
+        a, b = (x0, s * 7.0), (x0, s * hz)
+        wall('wall_rough', a, b, foot, eave, inward=(x0 + 10.0, s * 8.0))
+        W.collide(x0 - 0.3, min(s * 7.0, s * hz), x0, max(s * 7.0, s * hz))
+    # What stops a stone flank being one flat sheet: a dark plinth, a course under the eave, buttresses, a tall dark lancet in each bay.
+    for s in (-1, 1):
+        z = s * hz
+        wall('cata_wall', (x0, z + s * 0.12), (x1, z + s * 0.12), foot, F0 + 1.3, inward=((x0 + x1) / 2, s * 40.0), tile=3.0)
+        tube('wall_ashlar', [(x0, eave - 0.3, z + s * 0.1), (x1, eave - 0.3, z + s * 0.1)], 0.16, ref=(0, 0, 1))
+        for i in range(5):
+            x = x0 + 0.8 + i * (x1 - x0 - 1.6) / 4
+            bx('wall_rough', x, F0 + 2.5, z + s * 0.5, 0.55, 5.0, 0.5)
+            lathe('wall_rough', x, z + s * 0.5, [(0.6, F0 + 7.5), (0.45, F0 + 7.7), (0.05, F0 + 9.3), (0.0, F0 + 9.4)], 6)
+        for i in range(4):
+            xc = x0 + 0.8 + (i + 0.5) * (x1 - x0 - 1.6) / 4
+            wall('tracery', (xc - 1.0, z + s * 0.06), (xc + 1.0, z + s * 0.06), F0 + 2.0, F0 + 5.4, inward=(xc, s * 40.0), tile=3.4)
+    wall('tracery', (x1 + 0.06, -2.2), (x1 + 0.06, 2.2), F0 + 2.0, F0 + 5.4, inward=outside, tile=3.4)
+    wall('cata_wall', (x1 + 0.12, -hz - 0.12), (x1 + 0.12, hz + 0.12), foot, F0 + 1.3, inward=outside, tile=3.0)
+    tube('wall_ashlar', [(x1 + 0.1, eave - 0.3, -hz), (x1 + 0.1, eave - 0.3, hz)], 0.16, ref=(1, 0, 0))
     # The office's own shell and roof.
     hz = 7.0
-    wall('wall_rough', (XE + 1, -hz), (OFFICE_X + 1.0, -hz), F0 - 1.0, F0 + 8.0, inward=(120, 0))
+    wall('wall_rough', (XE + 1 + PASSAGE_W + 0.3, -hz), (OFFICE_X + 1.0, -hz), F0 - 1.0, F0 + 8.0, inward=(120, 0))
     wall('wall_rough', (XE + 1, hz), (OFFICE_X + 1.0, hz), F0 - 1.0, F0 + 8.0, inward=(120, 0))
     wall('wall_rough', (OFFICE_X + 1.0, -hz), (OFFICE_X + 1.0, hz), F0 - 1.0, F0 + 8.0, [arch_op(hz, 2.2, CHANCEL, CHANCEL + 2.4, CHANCEL + 3.4)], inward=(120, 0))
     for s in (-1, 1):
@@ -1930,6 +2741,8 @@ def compose():
     office()
     stair_cover()
     Y1, Y2 = below()
+    gulf(Y2)
+    homes()
     return Y1, Y2
 
 
@@ -1973,7 +2786,7 @@ def build():
         bpy.data.meshes.remove(me)
     bpy.data.scenes.remove(scene)
     # Floors, most specific first: the first one that holds a point is the ground there.
-    data = {'f0': F0, 'y1': Y1, 'y2': Y2, 'colliders': W.colliders, 'floors': W.floors, 'lights': W.lights, 'spawns': W.spawns, 'glow': W.glow}
+    data = {'f0': F0, 'y1': Y1, 'y2': Y2, 'colliders': W.colliders, 'floors': W.floors, 'lights': W.lights, 'spawns': W.spawns, 'glow': W.glow, 'things': W.things, 'homes': W.homes}
     with open(os.path.join(OUT, 'interior.json'), 'w') as f:
         json.dump(data, f, separators=(',', ':'))
     print(f'{len(objs)} parts, {tris} tris, {len(W.colliders)} colliders, {len(W.floors)} floors, {len(W.lights)} lights, {len(W.spawns)} zombies, {len(W.glow) // 9 // 6} cards, glb {os.path.getsize(out) / 1048576:.2f} MB, Y1 {Y1} Y2 {Y2}')

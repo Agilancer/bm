@@ -15,6 +15,7 @@ export class Pack {
   constructor() {
     this.slots = Object.fromEntries(SLOTS.map((s) => [s, null]));
     this.entries = [];   // { item, x, y }
+    this.gold = 0;
   }
 
   // The entries an item would land on, at (x, y). Null if it would stick out of the grid.
@@ -62,12 +63,13 @@ export class Pack {
   }
 
   // What goes in a save. Items are plain data.
-  save() { return structuredClone({ slots: this.slots, entries: this.entries, kite: true }); }
+  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, kite: true }); }
 
   // A saved pack back in hand, or with null, what a new game starts with.
   load(d) {
     this.slots = Object.fromEntries(SLOTS.map((s) => [s, null]));
     this.entries = [];
+    this.gold = d?.gold || 0;
     if (!d) { this.startingKit(); return; }
     Object.assign(this.slots, d.slots);
     this.entries = d.entries;

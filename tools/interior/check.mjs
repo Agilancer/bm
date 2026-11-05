@@ -26,7 +26,8 @@ const walk = (from, to, maxT = 200) => {
   }
   return { ok: false, at: [+pos[0].toFixed(1), +y.toFixed(1), +pos[2].toFixed(1)] };
 };
-const route = [[50, 0], [68, 0], [106, -8], [111, 0], [115, 0], [123, 0], [126, 0], [172, 0], [186, -8], [186, -53], [186, -68], [190, -72], [203, -86.6], [228, -86.6], [240, -86.6]];
+// (Over the gulf and on is the far side of a jump: nothing can walk there.)
+const route = [[50, 0], [68, 0], [106, -8], [110, -9.5], [111.4, -11], [114.3, -11], [114.3, -4], [115, 0], [123, 0], [126, 0], [172, 0], [186, -8], [186, -53], [186, -68], [190, -72], [203, -86.6], [228, -86.6], [240, -86.6]];
 let fails = 0;
 for (let i = 0; i + 1 < route.length; i++) {
   const r = walk(route[i], route[i + 1]);
@@ -36,7 +37,7 @@ for (let i = 0; i + 1 < route.length; i++) {
 w.updateField(186, -5, 0, 2);
 const f = w.slots.get(2).field;
 let lost = 0;
-for (const s of inter.spawns) {
+for (const s of inter.spawns.filter((p) => p.z > -125)) {
   const i = ((s.x + 256) | 0), j = ((s.z + 256) | 0);
   if (f[j * 512 + i] > 1e8) { lost++; console.log('cut off:', s.x, s.z); }
 }

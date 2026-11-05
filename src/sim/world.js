@@ -1,6 +1,6 @@
 // Collision and navigation against the village: oriented boxes on a height function, a flat ground grid
 // for the flow field, and rays against the plates of a rigid armour.
-import { floorAt, setFloors } from '../core/interior.js';
+import { floorAt, homeFloor, inPit, setFloors } from '../core/interior.js';
 import { LAND_EDGE, terrainHeight } from '../core/terrain.js';
 
 // (Big enough to reach the catacombs. Cells nobody can stand on are walled off, so the search stays small.)
@@ -8,7 +8,7 @@ const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_RE
 
 export class World {
   constructor(data, interior) {
-    setFloors(interior.floors);
+    setFloors(interior.floors, interior.homes);
     this.spawns = interior.spawns;
     this.colliders = data.colliders.concat(interior.colliders).map((c) => ({ ...c, s: Math.sin(c.yaw), co: Math.cos(c.yaw) }));
     this.lightsData = data.lights;
@@ -20,7 +20,7 @@ export class World {
     for (let j = 0; j < NAV_SIZE; j++) {
       for (let i = 0; i < NAV_SIZE; i++) {
         const x = (i + 0.5) * NAV_CELL - NAV_HALF, z = (j + 0.5) * NAV_CELL - NAV_HALF;
-        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > LAND_EDGE || Math.abs(z) > LAND_EDGE) && floorAt(x, z) === null) || this.inside(x, z, 0.55) ? 1 : 0;
+        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > LAND_EDGE || Math.abs(z) > LAND_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, 0.55) ? 1 : 0;
       }
     }
   }
@@ -35,8 +35,14 @@ export class World {
     return (h[k] * (1 - a) + h[k + 1] * a) * (1 - b) + (h[k + 257] * (1 - a) + h[k + 258] * a) * b;
   }
 
+  // Where the player comes down, at height y: in a house that depends how high they've got. Everyone else stays on the ground floor.
+  heightFor(x, z, y) {
+    return homeFloor(x, z, y) ?? this.height(x, z);
+  }
+
   inside(x, z, r) {
     for (const c of this.colliders) {
+      if (c.b || c.t !== undefined) continue;   // (Upstairs, or down in the rift: nobody who goes by this is there.)
       const dx = x - c.x, dz = z - c.z;
       if (Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r) return true;
     }
@@ -49,9 +55,9 @@ export class World {
     let hit = false;
     for (let pass = 0; pass < 2; pass++) {
       for (const c of this.colliders) {
-        if (feet > c.h + 0.02 + this.height(c.x, c.z)) continue;
         const dx = x - c.x, dz = z - c.z;
         if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) continue;
+        if (feet > (c.t ?? c.h + 0.02 + this.height(c.x, c.z)) || feet < c.b) continue;
         const lx = dx * c.co - dz * c.s, lz = dx * c.s + dz * c.co;
         const qx = Math.abs(lx) - c.hx, qz = Math.abs(lz) - c.hz;
         if (qx > r || qz > r) continue;
@@ -89,6 +95,7 @@ export class World {
       // (Underground, a box's height counts from the floor it stands on.)
       let yAt = oy + dy * t0;
       if (yAt < -2) yAt -= this.height(c.x, c.z);
+      if (yAt < c.b || yAt > c.t) continue;
       if (yAt > c.h && c.h < 3.5) continue;
       if (c.h >= 3.5 && yAt > 7) continue;
       if (best < 0 || t0 < best) best = t0;

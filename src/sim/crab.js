@@ -172,8 +172,8 @@ export class Crab extends Beast {
         if (d < a.reach && facing && Math.abs(p.y - this.y) < 1.5) {
           this.used = true;
           this.bites++;
-          p.damage(sim, a.dmg, this.x, this.z, a.knock || 0);
-          sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
+          const landed = p.damage(sim, a.dmg, this.x, this.z, a.knock || 0);
+          if (landed) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
         }
       }
     }

@@ -248,6 +248,14 @@ export class Zombie extends Beast {
     this.setClipOver(pick(this.hitClips), 0.08);
   }
 
+  // A shield in the face knocks it off its stride, whatever it was doing, unless it's on the ground.
+  reel(sim, seconds) {
+    this.onHit(sim, 'bash', sim.player.x, sim.player.z);
+    if (this.crawling || this.state === STATE.RISE || this.state === STATE.PLAYDEAD || this.state === STATE.DEAD) return;
+    this.state = STATE.STAGGER; this.stateT = 0; this.stagger = seconds;
+    this.setClipOver(pick(this.hitClips), 0.08);
+  }
+
   alert(sim, r) {
     for (const k of sim.knights) {
       if (k === this || !(k instanceof Zombie) || k.dead) continue;
@@ -596,8 +604,7 @@ export class Zombie extends Beast {
       if (!this.used && !p.dead && !p.iframes && d < this.reach + 0.75 * this.scale && Math.abs(wrapAngle(toPlayer - this.yaw)) < 1.2 && Math.abs(p.y - this.y) < 1.7 * this.scale) {
         this.used = true; this.bites++;
         const dmg = a.dmg * this.dmgScale;
-        p.damage(sim, dmg, this.x, this.z, this.scale > 1.2 ? 4 : 0);
-        sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
+        if (p.damage(sim, dmg, this.x, this.z, this.scale > 1.2 ? 4 : 0)) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
       }
     }
     if (this.t >= c.dur) {
@@ -789,7 +796,7 @@ export function stepFoeSpells(dt, sim) {
       const hit = !p.dead && !p.iframes && Math.hypot(b.x - p.x, b.y - low, b.z - p.z) < 0.42;
       const wall = b.y < sim.world.height(b.x, b.z) || sim.world.inside(b.x, b.z, 0.05) || b.age > 3.5;
       if (hit || wall) {
-        if (hit) { p.damage(sim, b.dmg, b.x, b.z, 0); sim.event(EV.HURT, p.x, p.y + 1.1, p.z, b.dmg); }
+        if (hit && p.damage(sim, b.dmg, b.x, b.z, 0)) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, b.dmg);
         c.burst(FX.FLARE, b.elem, b.x, b.y, b.z, 0.3, 0.9, 0.22, { alpha: 1.2, light: 18, lightR: 7 });
         sim.event(EV.BLINK, b.x, b.y, b.z);
         continue;
@@ -811,7 +818,7 @@ export function stepFoeSpells(dt, sim) {
       c.burst(FX.COLUMN, ELEM.VOID, h.x, y, h.z, 1.2, 1.7, 0.4, { alpha: 1, len: 3 });
       sim.event(EV.SPELL_BOOM, ELEM.VOID, h.x, y + 0.5, h.z, 2);
       if (!p.dead && Math.hypot(p.x - h.x, p.z - h.z) < 1.7 && Math.abs(p.y - y) < 1.5) {
-        p.damage(sim, 18, h.x, h.z, 0);
+        p.damage(sim, 18, h.x, h.z, 0, true);
         p.vy = Math.max(p.vy, 5);
         sim.event(EV.HURT, p.x, p.y + 1.1, p.z, 18);
       }

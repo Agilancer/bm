@@ -130,21 +130,25 @@
   body.touch #foe { background: rgba(8,6,4,.68); }
   body.touch #bleed { font-size: 14px; color: #ff6a4a; }
   body.touch #debug { top: calc(56px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); right: auto; text-align: left; font-size: 10px; }
-  /* The spell in hand, between its neighbours; the book of all twenty. */
+  /* The six spell slots; the menu that fills them from all twenty. */
   #mana { height: 5px; margin-top: 3px; background: rgba(0,0,0,.6); overflow: hidden; border: 1px solid rgba(110,150,230,.4); }
   #mana > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #5aa4ff, #2346b8); transform-origin: 0 50%; will-change: transform; transition: transform .08s; }
-  #spells { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 6px; pointer-events: auto; }
-  #spells .spell { --c: #ccc; width: 34px; height: 34px; padding: 6px; box-sizing: border-box; color: var(--c); background: rgba(8,6,4,.62); border: 1px solid rgba(201,163,92,.28); opacity: .55; transition: opacity .12s, box-shadow .12s, transform .12s; cursor: pointer; }
+  #spells { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 5px; pointer-events: auto; }
+  #spells .spell { --c: #ccc; position: relative; width: 48px; height: 48px; padding: 9px; box-sizing: border-box; color: var(--c); background: rgba(8,6,4,.66); border: 1px solid rgba(201,163,92,.34); cursor: pointer; transition: box-shadow .12s, transform .12s, opacity .12s; }
   #spells .spell svg { display: block; width: 100%; height: 100%; }
-  #spells .spell[data-off="-2"], #spells .spell[data-off="2"] { width: 26px; height: 26px; padding: 4px; opacity: .32; }
-  #spells .spell.now { width: 54px; height: 54px; padding: 10px; opacity: 1; border-color: rgba(201,163,92,.8); box-shadow: 0 0 14px -4px var(--c), inset 0 0 12px -6px var(--c); }
-  #spells .spell.now.short { opacity: .42; filter: saturate(.3); }
-  #spells .spell.now.up { box-shadow: 0 0 26px -2px var(--c), inset 0 0 18px -5px var(--c); transform: translateY(-2px); }
-  #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 5px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
+  #spells .spell b { position: absolute; left: 3px; top: 1px; font-size: 11px; font-weight: 400; color: #e7dcc4; text-shadow: 0 1px 2px #000; }
+  #spells .spell.now { border-color: rgba(233,200,130,.95); box-shadow: 0 0 12px -3px var(--c), inset 0 0 12px -6px var(--c); }
+  #spells .spell.short { opacity: .42; filter: saturate(.3); }
+  #spells .spell.empty { background: rgba(8,6,4,.3); border-style: dashed; }
+  #spells .spell.up { box-shadow: 0 0 26px -2px var(--c), inset 0 0 18px -5px var(--c); transform: translateY(-3px); }
+  #spellOpen { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; font-size: 13px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
+  #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
+  #softCursor { position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin: -2px 0 0 -2px; display: none; z-index: 40; pointer-events: none; }
+  #softCursor::before { content: ''; display: block; width: 0; height: 0; border-left: 11px solid #e7cf9a; border-bottom: 16px solid transparent; filter: drop-shadow(0 1px 2px #000); }
   #spellbook { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; padding: calc(22px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(5,4,3,.82); backdrop-filter: blur(5px); z-index: 30; pointer-events: auto; overflow: auto; box-sizing: border-box; }
   #spellbook.open { display: flex; }
   #spellbook h2 { margin: 0 0 12px; font-size: 18px; font-weight: 400; letter-spacing: .3em; color: var(--gold); }
-  #spellGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 7px; width: min(1220px, 100%); }
+  #spellGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 7px; width: min(1220px, 100%); flex: none; }
   #spellGrid .card { --c: #ccc; position: relative; display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 8px 10px; font: inherit; color: #d7cdb8; background: rgba(20,15,10,.8); border: 1px solid rgba(201,163,92,.2); cursor: pointer; }
   #spellGrid .card:hover { border-color: var(--c); background: rgba(34,26,18,.9); }
   #spellGrid .card.on { border-color: var(--c); box-shadow: inset 0 0 22px -12px var(--c); }
@@ -155,15 +159,35 @@
   #spellGrid .tx i { font-style: normal; font-size: 11px; color: var(--c); }
   #spellGrid kbd { position: absolute; top: 6px; right: 8px; font: inherit; font-size: 10px; color: #8d8370; }
   #spellClose { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(18px + env(safe-area-inset-right)); padding: 6px 12px; font: inherit; color: var(--gold); background: none; border: 1px solid rgba(201,163,92,.45); cursor: pointer; }
-  #bCast { width: 74px; height: 74px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom)); font-size: 13px; }
-  body.touch #spells { bottom: auto; top: calc(58px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); transform: none; }
-  body.touch #spellName { left: 100%; bottom: auto; top: 50%; transform: translateY(-50%); margin: 0 0 0 8px; }
+  #bCast { display: none; }
+  /* On a touch screen the slots sit left of the thumb buttons and do the casting themselves. */
+  body.touch #spells { left: 41%; bottom: calc(6px + env(safe-area-inset-bottom)); gap: 4px; }
+  body.touch #spells .spell { width: 42px; height: 42px; padding: 7px; }
+  body.touch #spellOpen { width: 36px; height: 36px; }
+  body.touch #bPause { bottom: auto; top: calc(6px + env(safe-area-inset-top)); }
+  body.touch #bTake { bottom: calc(112px + env(safe-area-inset-bottom)); }
+  #spellHint { margin: 0 0 8px; font-size: 13px; color: #cfc3a8; text-align: center; }
+  #spellSlots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; width: min(860px, 100%); margin-bottom: 12px; flex: none; }
+  #spellSlots .lslot { --c: #ccc; position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 78px; padding: 8px 4px 6px; font: inherit; color: #e7dcc4; background: rgba(20,15,10,.85); border: 1px solid rgba(201,163,92,.5); cursor: pointer; }
+  #spellSlots .lslot:hover { border-color: var(--gold); background: rgba(40,30,20,.95); }
+  #spellSlots .lslot.empty { border-style: dashed; color: #8d8370; justify-content: center; }
+  #spellSlots .lslot b { position: absolute; left: 6px; top: 3px; font-size: 13px; font-weight: 400; color: var(--gold); }
+  #spellSlots .ic { width: 34px; height: 34px; color: var(--c); }
+  #spellSlots .ic svg { display: block; width: 100%; height: 100%; }
+  #spellSlots .nm { font-size: 11px; letter-spacing: .03em; text-align: center; line-height: 1.15; }
+  #spellGrid .card.slotted { background: rgba(38,29,18,.9); }
+  #spellGrid .card kbd { font-size: 13px; color: var(--gold); }
+  #spellGrid .card kbd:empty { display: none; }
+  #spellGhost { --c: #ccc; position: fixed; left: 0; top: 0; width: 38px; height: 38px; margin: -19px 0 0 -19px; display: none; z-index: 45; color: var(--c); pointer-events: none; filter: drop-shadow(0 2px 5px #000); }
+  #spellGhost svg { display: block; width: 100%; height: 100%; }
 </style>
 </head>
 <body>
 <canvas id="view"></canvas>
 
-<div id="spellbook"><h2>SPELLBOOK</h2><button id="spellClose">CLOSE</button><div id="spellGrid"></div></div>
+<div id="spellbook"><h2>EQUIP SPELLS</h2><button id="spellClose">CLOSE</button><p id="spellHint"></p><div id="spellSlots"></div><div id="spellGrid"></div></div>
+<div id="spellGhost"></div>
+<div id="softCursor"></div>
 <div id="hud">
   <div id="cross"></div>
   <div id="vitals"><div class="label">Life</div><div class="meter" id="hp"><i></i></div><div id="stam"><i></i></div><div id="mana"><i></i></div></div>
@@ -215,7 +239,7 @@
       <div id="packGrid"><div id="packHover"></div></div>
     </div>
   </div>
-  <div id="invBar"><span id="invHelp"></span><span id="invNote"></span><button id="invClose">CLOSE</button></div>
+  <div id="invBar"><span id="invGold" style="color:#e8c15a"></span><span id="invHelp"></span><span id="invNote"></span><button id="invClose">CLOSE</button></div>
   <div id="invCarry"></div>
 </div>
 <div id="invTip"></div>

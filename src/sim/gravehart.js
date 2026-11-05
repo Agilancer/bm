@@ -359,8 +359,8 @@ export class Gravehart extends Beast {
   land(sim, p, a) {
     this.used = true;
     this.bites++;
-    p.damage(sim, a.dmg, this.x, this.z, a.knock || 0);
-    sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
+    const landed = p.damage(sim, a.dmg, this.x, this.z, a.knock || 0);
+    if (landed) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
   }
 
   thinkAttack(dt, sim, p, dist, toPlayer) {
