@@ -608,7 +608,8 @@ export class Knight {
     }
     this.attackUsed = true;
     this.stats.landed++;
-    if (p.damage(sim, a.dmg, this.x, this.z, a.knock || 0)) sim.event(EV.HURT, p.x, p.y + 1.2, p.z, a.dmg);
+    const bite = a.dmg * (this.opts.hostile ? 2 : 1);
+    if (p.damage(sim, bite, this.x, this.z, a.knock || 0)) sim.event(EV.HURT, p.x, p.y + 1.2, p.z, bite);
   }
 
   onParried(sim) {

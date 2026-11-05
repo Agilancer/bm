@@ -39,7 +39,7 @@ const CRABS = [
 ];
 
 // How much faster than their clips each kind goes, by kind: knight, silver knight, crab, Gravehart, Hydra, undead, ogre.
-const HASTE = [1.15, 1, 1.3, 1.1, 1, 1.4, 1.25], CASTER_HASTE = 1.2;
+const HASTE = [1.35, 1, 1.3, 1.1, 1, 1.4, 1.25], CASTER_HASTE = 1.2;
 
 class Sim {
   constructor() {
