@@ -16,9 +16,9 @@ const tmp = [0, 0, 0], out3 = [0, 0, 0];
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
 const TO_WORLD = Math.tan(32 * Math.PI / 180) / Math.tan(38 * Math.PI / 180);
 
-const chestOf = (k) => k.y + (k.kind === 2 ? 0.55 : 1.25);
-const radiusOf = (k) => (k.kind === 2 ? 1.15 : 0.55);
-const heightOf = (k) => (k.kind === 2 ? 1.2 : 2);
+const chestOf = (k) => k.y + [1.25, 1.25, 0.55, 1.3, 1.4][k.kind];
+const radiusOf = (k) => [0.55, 0.55, 1.15, 1.5, 1.7][k.kind];
+const heightOf = (k) => [2, 2, 1.2, 2.2, 3.1][k.kind];
 
 export class Casting {
   constructor(rigs) {
@@ -930,7 +930,7 @@ export class Casting {
     this.fx(FX.VORTEX, e, z.x, c, z.z, 2.6 * k * pulse, 0, 1, 0, 0, 1, 18 * k, 13, 0, z.seed);
     this.fx(FX.RUNE, e, z.x, sim.world.height(z.x, z.z), z.z, def.radius * k, 0, 1, 0, 0, 0.5 * k, 0, 0, 0.8, z.seed);
     for (const f of sim.knights) {
-      if (f.dead && f.kind === 2) continue;
+      if (f.dead && f.kind >= 2) continue;
       const dx = z.x - f.x, dz = z.z - f.z, d = Math.hypot(dx, dz);
       if (d > def.radius || d < 0.6) continue;
       const a = (46 * (1 - d / def.radius) + 8) * dt;

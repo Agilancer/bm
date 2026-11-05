@@ -1,5 +1,7 @@
 tools/fp_arms/build/
 tools/crab_monster/build/
+tools/gravehart/build/
+tools/bone_hydra/build/
 __pycache__/
 *.pyc
 tools/build/

@@ -1,0 +1,232 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gravehart Animations</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: specimen bench. The creature fills the stage; a clip rack sits left and a transport strip runs under the stage. */
+:root{
+  color-scheme:dark;
+  --bench:#1f2320; --panel:#292e29; --panel-hi:#343a33; --line:#454c42;
+  --bone:#e9e1cc; --dim:#a4aa9c; --chitin:#c9a24a; --flesh:#a8402f;
+  --display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",Consolas,monospace;
+}
+html,body{height:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bench);color:var(--bone);font:14px/1.4 var(--display);overflow:hidden}
+#app{display:grid;grid-template-columns:272px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;height:100%}
+#rack{grid-row:1/3;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px;gap:14px}
+h1{font-size:19px;font-weight:700;margin:0;line-height:1.15;text-wrap:balance}
+.sub{color:var(--dim);font-size:12.5px;margin-top:4px}
+.group{display:flex;flex-direction:column;gap:3px}
+.group h2{font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:0 0 3px}
+.clip{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:2px 6px;padding:7px 8px;border-radius:4px;align-items:baseline}
+.clip:hover{background:var(--panel-hi)}
+.clip:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--chitin);outline-offset:1px}
+.clip[aria-pressed=true]{background:var(--chitin);color:#231a0a}
+.clip .key{font:400 11px var(--mono);opacity:.65}
+.clip .nm{font-weight:700}
+.clip .len{font:400 11.5px var(--mono);font-variant-numeric:tabular-nums;opacity:.8}
+.clip .ds{grid-column:2/4;font-size:12px;opacity:.82;line-height:1.3}
+#stage{position:relative;min-width:0;min-height:0;background:#59666a}
+#stage canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;left:12px;top:10px;max-width:calc(100% - 250px);font:500 12px var(--mono);color:#fff;text-shadow:0 1px 2px #000a;pointer-events:none;font-variant-numeric:tabular-nums}
+#cams{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#status[hidden]{display:none}
+#status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 14px var(--mono);color:#fff;padding-inline:16px;text-align:center}
+button,select{font:500 12.5px var(--display);color:var(--bone);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 9px;cursor:pointer;min-height:30px}
+button:hover,select:hover{background:var(--panel-hi)}
+button[aria-pressed=true]{background:var(--chitin);border-color:var(--chitin);color:#231a0a}
+#transport{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-block:9px;padding-left:12px;padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border-top:1px solid var(--line)}
+#play{min-width:68px;font-weight:700}
+#scrub{flex:1 1 180px;min-width:120px;accent-color:var(--chitin);height:24px}
+#frame{font:500 12.5px var(--mono);font-variant-numeric:tabular-nums;min-width:82px;text-align:right}
+label.sel{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--dim)}
+#log{font-size:12.5px;border-top:1px solid var(--line);padding-top:10px;margin-top:auto}
+#log summary{cursor:pointer;font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+#log ol{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+.round b{font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font:500 10.5px var(--mono);padding:0 5px;border-radius:3px;margin-left:4px}
+.pill.ok{background:#54803f;color:#fff}.pill.no{background:var(--flesh);color:#fff}
+.round p{margin:3px 0 0;color:var(--dim);line-height:1.35}
+@media (max-width:760px){
+  body{overflow:auto}
+  #app{display:flex;flex-direction:column;height:auto}
+  #stage{height:58vh;order:1;flex:none}
+  #transport{order:2;padding-left:max(16px,env(safe-area-inset-left,0px))}
+  #rack{order:3;border-right:0;padding-right:max(16px,env(safe-area-inset-right,0px));overflow:visible}
+}
+</style>
+<div id="app">
+  <aside id="rack">
+    <div>
+      <h1>Gravehart Animations</h1>
+      <div class="sub" id="meta">Loading…</div>
+    </div>
+    <div id="clips" style="display:flex;flex-direction:column;gap:12px"></div>
+  </aside>
+  <main id="stage">
+    <div id="status">Loading model…</div>
+    <div id="hud"></div>
+    <div id="cams"></div>
+  </main>
+  <div id="transport">
+    <button id="play" aria-label="Play or pause">Pause</button>
+    <button id="prev" aria-label="Previous frame">◀ Frame</button>
+    <button id="next" aria-label="Next frame">Frame ▶</button>
+    <input id="scrub" type="range" min="0" max="1" step="1" value="0" aria-label="Clip timeline">
+    <span id="frame">0 / 0</span>
+    <label class="sel" for="rate">Speed
+      <select id="rate"><option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option><option value="0.1">⅒×</option></select>
+    </label>
+    <button id="tSkel" aria-pressed="false">Skeleton</button>
+    <button id="tGhost" aria-pressed="false">See-through</button>
+    <button id="tFloor" aria-pressed="true">Moving floor</button>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const $=id=>document.getElementById(id);
+const FPS=30;
+const INFO={
+ idle:['Idle','Idle','Tests the air, sniffs the ground, snaps round to listen'],
+ walk_prowl:['Walk','Prowl','Belly low, each forepaw hung and placed'],
+ walk_roam:['Walk','Roam','Easy, swinging road gait'],
+ run_lope:['Run','Lope','Three-beat canter with a rocking back'],
+ run_gallop:['Run','Gallop','Rotary gallop, with the spine folding and stretching'],
+ attack_bite:['Attack','Bite','Gathers, drives forward, snaps and wrenches'],
+ attack_swipe:['Attack','Swipe','Rears up, rakes twice, slams down'],
+ attack_pounce:['Attack','Pounce','Hip shiver, leap, pin and bite'],
+ attack_antler_charge:['Attack','Antler charge','Scrapes the ground, gallops head-down, hooks'],
+ jump:['Jump','Jump','Crouch, launch, land forefeet first'],
+ taunt_bellow:['Taunt','Bellow','Antlers back, three heaving roars, a stamp'],
+ taunt_thrash:['Taunt','Antler thrash','Rips side to side, then a toss and a stare'],
+ death:['Death','Death','Forelegs go, topples, propped on its antlers'],
+};
+const stage=$('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+stage.prepend(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x59666a);scene.fog=new THREE.Fog(0x59666a,6,16);
+const camera=new THREE.PerspectiveCamera(35,1,.05,60);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,.42,0);controls.minDistance=.7;controls.maxDistance=9;controls.maxPolarAngle=Math.PI*.54;
+scene.add(new THREE.HemisphereLight(0xdfe8ee,0x4a4038,1.15));
+const key=new THREE.DirectionalLight(0xfff0dc,2.6);key.position.set(1.8,3.4,2.4);key.castShadow=true;key.shadow.mapSize.set(2048,2048);
+Object.assign(key.shadow.camera,{left:-1.6,right:1.6,top:1.6,bottom:-1.6,near:.5,far:9});key.shadow.bias=-.0006;key.shadow.normalBias=.012;scene.add(key);
+const rim=new THREE.DirectionalLight(0xbcd4ff,1.1);rim.position.set(-2,1.6,-2.4);scene.add(rim);
+// Floor: 10 cm squares with a heavier line each metre, so stride and speed can be read off it.
+const cv=document.createElement('canvas');cv.width=cv.height=1024;const g=cv.getContext('2d');
+g.fillStyle='#6d7a7d';g.fillRect(0,0,1024,1024);
+g.fillStyle='#657275';for(let i=0;i<10;i++)for(let j=0;j<10;j++)if((i+j)%2)g.fillRect(i*102.4,j*102.4,102.4,102.4);
+g.strokeStyle='#39454a';g.lineWidth=6;g.strokeRect(0,0,1024,1024);
+const tex=new THREE.CanvasTexture(cv);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+const FLOOR=40;tex.repeat.set(FLOOR,FLOOR);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(FLOOR,FLOOR),new THREE.MeshStandardMaterial({map:tex,roughness:.95}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+
+const CAMS={'3/4':[1.75,.85,2.2],Front:[0,.6,3],Side:[3,.55,0],Back:[-1.4,1,-2.5],Low:[1.8,.12,1.6]};
+function setCam(n){const c=CAMS[n];camera.position.set(...c);controls.target.set(0,.42,0);controls.update();document.querySelectorAll('#cams button').forEach(b=>b.setAttribute('aria-pressed',b.textContent===n))}
+Object.keys(CAMS).forEach(n=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>setCam(n);$('cams').append(b)});
+setCam('3/4');
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(stage);resize();
+
+let mixer,actions={},cur=null,meta={},names=[],playing=true,rate=1,moving=true,helper,mats=[];
+function frames(){return Math.round(cur.getClip().duration*FPS)}
+function select(n,keep){
+  if(cur)cur.stop();cur=actions[n];cur.reset();cur.play();cur.paused=!playing;
+  const loop=meta[n]?.loop;cur.setLoop(THREE.LoopRepeat,Infinity);
+  $('scrub').max=frames();
+  document.querySelectorAll('.clip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===n));
+  try{localStorage.setItem('gravehartclip',n)}catch(e){}
+  const m=meta[n]||{};const sp=m.speed?`${m.speed.toFixed(2)} units/s floor speed`:m.root?`travels ${travelled(m.root,m.frames).toFixed(2)} units`:'in place';
+  $('hud').textContent=`${n}  ·  ${m.frames} frames  ·  ${sp}  ·  ${m.loop?'loop':'one-shot'}`;
+}
+function setPlay(p){playing=p;if(cur)cur.paused=!p;$('play').textContent=p?'Pause':'Play'}
+function seek(f){if(!cur)return;setPlay(false);cur.time=Math.max(0,Math.min(f,frames()))/FPS;mixer.update(0)}
+$('play').onclick=()=>setPlay(!playing);
+$('prev').onclick=()=>seek(Math.round(cur.time*FPS)-1);
+$('next').onclick=()=>seek(Math.round(cur.time*FPS)+1);
+$('scrub').oninput=e=>seek(+e.target.value);
+$('rate').onchange=e=>{rate=+e.target.value};
+function toggle(b,fn){b.onclick=()=>{const v=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',v);fn(v)}}
+toggle($('tSkel'),v=>{if(helper)helper.visible=v});
+toggle($('tGhost'),v=>mats.forEach(m=>{m.transparent=v;m.opacity=v?.35:1;m.depthWrite=!v;m.needsUpdate=true}));
+toggle($('tFloor'),v=>{moving=v});
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT')return;
+  if(e.code==='Space'&&e.target.tagName!=='BUTTON'){e.preventDefault();setPlay(!playing)}
+  if(e.key==='ArrowLeft'&&e.target.tagName!=='INPUT')seek(Math.round(cur.time*FPS)-1);
+  if(e.key==='ArrowRight'&&e.target.tagName!=='INPUT')seek(Math.round(cur.time*FPS)+1);
+  if(/^[1-9]$/.test(e.key)&&names[+e.key-1])select(names[+e.key-1]);
+});
+let floorT=0;
+// Distance covered by frame f: constant speed from start to end, easing up over `ramp` frames at each end if it has one.
+function travelled(r,f){
+  const k=r.ramp||0,span=r.end-r.start,v=r.dist/(span-k),u=Math.max(0,Math.min(f,r.end)-r.start);
+  if(!k)return v*u;
+  if(u<k)return v*u*u/(2*k);
+  if(u<span-k)return v*(u-k/2);
+  const o=span-u;return v*(span-k-o*o/(2*k));
+}
+const clock=new THREE.Clock();
+renderer.setAnimationLoop(()=>{
+  const dt=clock.getDelta();controls.update();
+  if(mixer&&cur){
+    mixer.update(playing?dt*rate:0);
+    const f=Math.round(cur.time*FPS);$('scrub').value=f;$('frame').textContent=`${f} / ${frames()}`;
+    // Clips run in place: the floor travels at the speed the planted feet move (-Z), locked to clip time.
+    // Attacks travel by the same means, over the frames clips.json gives for them.
+    const m=meta[cur.getClip().name]||{};
+    let d=cur.time-floorT;
+    if(d<0)d+=cur.getClip().duration;
+    let move=(m.speed||0)*d;
+    if(m.root){const a=travelled(m.root,floorT*FPS),b=travelled(m.root,cur.time*FPS);move=b>=a?b-a:b}
+    floorT=cur.time;
+    if(moving)tex.offset.y=(tex.offset.y-move)%1;
+  }
+  renderer.render(scene,camera);
+});
+function buildRack(){
+  const groups={};names.forEach(n=>{const g=(INFO[n]||['Other'])[0];(groups[g]=groups[g]||[]).push(n)});
+  let i=0;
+  for(const g of ['Idle','Walk','Run','Attack','Jump','Taunt','Death','Other']){
+    if(!groups[g])continue;
+    const d=document.createElement('div');d.className='group';d.innerHTML=`<h2>${g}</h2>`;
+    for(const n of groups[g]){
+      i++;const inf=INFO[n]||[g,n,''];const b=document.createElement('button');b.className='clip';b.dataset.c=n;b.setAttribute('aria-pressed','false');
+      const dur=(meta[n]?.duration??actions[n].getClip().duration).toFixed(2);
+      b.innerHTML=`<span class="key">${names.indexOf(n)+1}</span><span class="nm">${inf[1]}</span><span class="len">${dur}s</span><span class="ds">${inf[2]}</span>`;
+      b.onclick=()=>select(n);d.append(b);
+    }
+    $('clips').append(d);
+  }
+}
+(async()=>{
+  try{
+    try{meta=await (await fetch('assets/monsters/gravehart/clips.json')).json()}catch(e){}
+    const buf=await (await fetch('assets/monsters/gravehart/gravehart.glb')).arrayBuffer();
+    const gltf=await new Promise((ok,no)=>new GLTFLoader().parse(buf,'',ok,no));
+    const model=gltf.scene;scene.add(model);
+    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;if(!mats.includes(o.material))mats.push(o.material)}});
+    helper=new THREE.SkeletonHelper(model);helper.visible=false;helper.material.depthTest=false;helper.material.linewidth=2;scene.add(helper);
+    mixer=new THREE.AnimationMixer(model);
+    gltf.animations.forEach(c=>{actions[c.name]=mixer.clipAction(c)});
+    const order=Object.keys(INFO);names=gltf.animations.map(c=>c.name).sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+    buildRack();
+    let first=names[0];try{const s=localStorage.getItem('gravehartclip');if(s&&actions[s])first=s}catch(e){}
+    select(first);
+    let bones=0;model.traverse(o=>{if(o.isBone)bones++});
+    $('meta').textContent=`${names.length} clips · ${bones} bones · 30 fps · drag to orbit`;
+    $('status').hidden=true;
+    window.__viewer={mixer,actions,select,seek,scene,camera};
+  }catch(e){$('status').textContent='The model did not load: '+e.message+'. Reload the page to try again.';console.error(e)}
+})();
+</script>
