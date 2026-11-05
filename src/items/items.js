@@ -33,6 +33,22 @@ export const BASES = {
   frost_sword: { name: 'Frost Sword', dmg: [21, 29], grade: 'high', innate: { speed: 0.06 } },
 };
 const HIGH_CHANCE = [0, 0, 0.15, 0.7];     // by rarity, the chance a sword is one of the high ones
+// What a staff's roll comes to in a bolt, against a blade's: see STAFF_BITE in src/sim/casting.js.
+const STAFF_SHOWN = 0.2;
+
+// The kite shields. rarity: what it comes as. side: whose it is. V is Velscour's knights' and T is Tessariel's and his followers', and neither is ever rolled or carried.
+export const SHIELDS = {
+  kite_cross: { name: 'Crossed Kite Shield', rarity: 0 }, kite_lion: { name: 'Lion Kite Shield', rarity: 0 },
+  kite_fleur: { name: 'Fleur Kite Shield', rarity: 0 }, kite_eagle: { name: 'Eagle Kite Shield', rarity: 0 },
+  kite_royal_lion: { name: 'Royal Lion Kite Shield', rarity: 2 }, kite_silver_cross: { name: 'Silver Cross Kite Shield', rarity: 2 },
+  kite_dragon: { name: 'Dragon Kite Shield', rarity: 2 }, kite_tree: { name: 'Old Tree Kite Shield', rarity: 2 },
+  kite_sun: { name: 'Sunwing Kite Shield', rarity: 3 }, kite_ember: { name: 'Emberwyrm Kite Shield', rarity: 3 },
+  kite_elder: { name: 'Elderroot Kite Shield', rarity: 3 }, kite_frost: { name: 'Hoarfrost Kite Shield', rarity: 3 },
+  kite_v_red: { name: 'Kite Shield of Velscour', rarity: 3, side: 'V' }, kite_v_violet: { name: 'Kite Shield of Velscour', rarity: 3, side: 'V' },
+  kite_v_bone: { name: 'Kite Shield of Velscour', rarity: 3, side: 'V' }, kite_v_steel: { name: 'Kite Shield of Velscour', rarity: 3, side: 'V' },
+  kite_t_white: { name: 'Kite Shield of Tessariel', rarity: 3, side: 'T' }, kite_t_black: { name: 'Kite Shield of Tessariel', rarity: 3, side: 'T' },
+  kite_t_red: { name: 'Kite Shield of Tessariel', rarity: 3, side: 'T' }, kite_t_blue: { name: 'Kite Shield of Tessariel', rarity: 3, side: 'T' },
+};
 
 export const hands = (base) => WEAPONS[weaponIndex(base)].hands;
 export const weaponIndex = (base) => WEAPONS.findIndex((w) => w && w.id === base);
@@ -135,6 +151,14 @@ export function rollWeapon(rng, opts = {}) {
   };
 }
 
+// A shield of whatever rarity comes up, or opts.base. Fine rolls as common: the sheets have nothing between common and rare.
+export function rollShield(rng, opts = {}) {
+  const rolled = rollRarity(rng, opts.minRarity || 0);
+  const rarity = rolled === 1 ? 0 : rolled;
+  const base = opts.base || pick(rng, Object.keys(SHIELDS).filter((b) => !SHIELDS[b].side && SHIELDS[b].rarity === rarity));
+  return { type: 'shield', base, rarity: SHIELDS[base].rarity };
+}
+
 export function rollGem(rng, opts = {}) {
   const kinds = {};
   GEM_GRADES.forEach((g, i) => { kinds[i] = g.weight; });
@@ -143,15 +167,16 @@ export function rollGem(rng, opts = {}) {
 
 // What a fallen enemy leaves. kind: 0 the black knight, 1 the silver knight, 2 a crab, 5 a zombie, 7 a necromancer or a wizard.
 export function rollLoot(rng, kind) {
-  if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollGem(rng)];
-  if (kind === 1) return [rollWeapon(rng, { minRarity: 1 })];
+  if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 })];
+  if (kind === 1) return [rollWeapon(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 })];
   if (kind === 5) return rng() < 0.12 ? [rng() < 0.5 ? rollWeapon(rng) : rollGem(rng)] : [];
-  if (kind === 7) return rng() < 0.75 ? [rollWeapon(rng, { minRarity: 1 })] : [rollGem(rng)];
-  return rng() < 0.6 ? [rollWeapon(rng)] : [rollGem(rng)];
+  if (kind === 7) return rng() < 0.75 ? [rollWeapon(rng, { minRarity: 1 })] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)];
+  return rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)];
 }
 
 export function nameOf(item) {
   if (item.type === 'gem') return `${GEM_GRADES[item.grade].name} ${GEMS[item.kind].name}`;
+  if (item.type === 'shield') return SHIELDS[item.base].name;
   const pre = item.affixes.find((a) => a.pos === 'pre'), suf = item.affixes.find((a) => a.pos === 'suf');
   return [pre?.name, BASES[item.base].name, suf?.name].filter(Boolean).join(' ');
 }
@@ -180,11 +205,12 @@ export function linesOf(item) {
   if (item.type === 'gem') {
     return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: 'Goes in an open socket, and stays there.', kind: 'sub' }];
   }
-  const s = statsOf(item), b = BASES[item.base];
+  if (item.type === 'shield') return [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} kite shield`, kind: 'sub' }, { text: 'Hold Space as you jump to ride it.', kind: 'sub' }];
+  const s = statsOf(item), b = BASES[item.base], staff = hands(item.base) === 3;
   const out = [
     { text: nameOf(item), kind: 'title' },
     { text: `${RARITIES[item.rarity].name} ${hands(item.base) === 3 ? 'staff' : `${hands(item.base) === 2 ? 'two-handed' : 'one-handed'} sword`}`, kind: 'sub' },
-    { text: `Damage ${s.min} to ${s.max}`, kind: 'stat' },
+    { text: staff ? `Damage ${Math.round(s.min * STAFF_SHOWN)} to ${Math.round(s.max * STAFF_SHOWN)}` : `Damage ${s.min} to ${s.max}`, kind: 'stat' },
   ];
   // What it was made with and what it rolled, a line a stat. The gems speak for themselves below.
   const rolled = new Map(Object.entries(b.innate || {}));

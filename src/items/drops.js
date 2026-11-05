@@ -9,6 +9,7 @@ const FALL = 0.55;
 const WORLD_SCALE = { 1: 1.5, 2: 1.3, 3: 1.15 };
 const TIP = { 1: 0.6, 2: 1, 3: -0.58 };   // (A staff's fist is above its middle.)
 const LIFT = 0.1;                          // a little proud of the ground, for the grass
+const KITE_LIFT = 0.07, BOARD_LIFT = 0.09; // a shield's back and face stand this far off its grip
 
 function groundNormal(x, z) {
   const e = 0.3;
@@ -18,6 +19,15 @@ function groundNormal(x, z) {
 }
 
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+// The shield being ridden: on the ground's slope, face down, its point the way it's going. (hx, hz): a unit heading.
+export function boardPose(m, x, y, z, hx, hz, grounded) {
+  const n = grounded ? groundNormal(x, z) : [0, 1, 0];
+  const along = hx * n[0] + hz * n[2];
+  const f = [hx - n[0] * along, -n[1] * along, hz - n[2] * along], l = 1 / Math.hypot(f[0], f[1], f[2]);
+  const Y = [-f[0] * l, -f[1] * l, -f[2] * l], X = cross(Y, n);
+  m.set([...X, 0, ...Y, 0, ...n, 0, x, y + BOARD_LIFT, z, 1]);
+}
 
 export class Drops {
   constructor(renderer, audio) {
@@ -39,7 +49,7 @@ export class Drops {
       n: groundNormal(x, z), turn: 2.5 + Math.random() * 2.5,
     };
     if (gem) d.gem = GEMS[item.kind].color;
-    else d.sword = item.base;
+    else { d.sword = item.base; d.kite = item.type === 'shield'; }
     this.pose(d);
     this.list.push(d);
     return d;
@@ -70,6 +80,15 @@ export class Drops {
       const py = d.from[1] + (rest - d.from[1]) * k + arc;
       const c = Math.cos(d.spin), s = Math.sin(d.spin);
       m.set([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, px, py, pz, 1]);
+      return;
+    }
+    if (d.kite) {
+      // On its back, face up.
+      const a = [Math.sin(d.spin), 0, Math.cos(d.spin)], along = a[0] * d.n[0] + a[2] * d.n[2];
+      const t = [a[0] - d.n[0] * along, -d.n[1] * along, a[2] - d.n[2] * along], tl = 1 / Math.hypot(t[0], t[1], t[2]);
+      t[0] *= tl; t[1] *= tl; t[2] *= tl;
+      const Z = [-d.n[0], -d.n[1], -d.n[2]], X = cross(t, Z);
+      m.set([...X, 0, ...t, 0, ...Z, 0, d.from[0] + (d.x - d.from[0]) * k, d.from[1] + (d.y + KITE_LIFT - d.from[1]) * k + arc, d.from[2] + (d.z - d.from[2]) * k, 1]);
       return;
     }
     const n2 = hands(d.sword);

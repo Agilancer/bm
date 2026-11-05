@@ -1,6 +1,6 @@
 // What the player carries: a grid of cells, and the slots on the body. Items take a footprint of cells. It's a part of every save
 // (main.js), and it stays with you through a new fight; only New Game starts it over.
-import { GEMS, MAX_SOCKETS, makeRng, rollGem, rollWeapon } from './items.js';
+import { GEMS, MAX_SOCKETS, makeRng, rollGem, rollShield, rollWeapon } from './items.js';
 
 export const PACK_W = 12, PACK_H = 8;
 export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'hands', 'ring1', 'feet', 'ring2'];
@@ -9,7 +9,7 @@ export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'hands', 'ring1', 
 // wheel greatsword alone: set this false.
 const TEST_KIT = true;
 
-export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : { w: 1, h: 1 });
+export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : item.type === 'shield' ? { w: 2, h: 3 } : { w: 1, h: 1 });
 
 export class Pack {
   constructor() {
@@ -62,7 +62,7 @@ export class Pack {
   }
 
   // What goes in a save. Items are plain data.
-  save() { return structuredClone({ slots: this.slots, entries: this.entries }); }
+  save() { return structuredClone({ slots: this.slots, entries: this.entries, kite: true }); }
 
   // A saved pack back in hand, or with null, what a new game starts with.
   load(d) {
@@ -71,6 +71,8 @@ export class Pack {
     if (!d) { this.startingKit(); return; }
     Object.assign(this.slots, d.slots);
     this.entries = d.entries;
+    // A save from before the kite shields: everyone starts with one.
+    if (!d.kite && !this.slots.off) this.slots.off = rollShield(makeRng(1793), { base: 'kite_cross' });
     // A save from when the old greatsword was still about.
     for (const item of [...Object.values(this.slots), ...this.entries.map((e) => e.item)]) if (item?.base === 'greatsword') item.base = 'wheel_greatsword';
   }
@@ -78,6 +80,7 @@ export class Pack {
   startingKit() {
     const rng = makeRng(1793);
     this.add(rollWeapon(rng, { base: 'wheel_greatsword', rarity: 0, sockets: 0 }));
+    this.slots.off = rollShield(rng, { base: 'kite_cross' });
     if (!TEST_KIT) return;
     const swords = [
       ['frost_sword', 3, 4], ['crimson_sword', 3, 3], ['gilded_sword', 2, 3], ['thornvine_sword', 2, 2],
@@ -86,6 +89,7 @@ export class Pack {
       ['crystal_staff', 1, 1], ['greenwood_staff', 1, 1], ['skullhorn_staff', 1, 1], ['gnarled_crook', 0, 0],
     ];
     for (const [base, rarity, sockets] of swords) this.add(rollWeapon(rng, { base, rarity, sockets }));
+    for (const base of ['kite_royal_lion', 'kite_sun']) this.add(rollShield(rng, { base }));
     for (const kind of Object.keys(GEMS)) this.add(rollGem(rng, { kind, grade: 1 }));
     this.add(rollGem(rng, { kind: 'ruby', grade: 0 }));
     this.add(rollGem(rng, { kind: 'ruby', grade: 2 }));

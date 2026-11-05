@@ -2,7 +2,7 @@
 //
 //     node tools/items/check.mjs
 import assert from 'node:assert/strict';
-import { BASES, GEMS, MAX_SOCKETS, RARITIES, linesOf, makeRng, nameOf, rollGem, rollLoot, rollWeapon, statsOf, weaponIndex } from '../../src/items/items.js';
+import { BASES, GEMS, MAX_SOCKETS, RARITIES, SHIELDS, linesOf, makeRng, nameOf, rollGem, rollLoot, rollWeapon, statsOf, weaponIndex } from '../../src/items/items.js';
 import { PACK_H, PACK_W, Pack, sizeOf } from '../../src/items/pack.js';
 import { WEAPONS } from '../../src/core/layout.js';
 
@@ -52,8 +52,9 @@ for (const kind of Object.keys(GEMS)) {
 // ---- loot ------------------------------------------------------------------------------------------
 for (let i = 0; i < 20000; i++) {
   const black = rollLoot(rng, 0);
-  assert.equal(black.length, 2);
-  assert.ok(black[0].rarity >= 2 && black[1].type === 'gem', 'the black knight pays well');
+  assert.equal(black.length, 3);
+  assert.ok(black[0].rarity >= 2 && black[1].type === 'gem' && black[2].rarity >= 2, 'the black knight pays well');
+  for (const k of [0, 1, 2, 7, 3]) for (const it of rollLoot(rng, k)) if (it.type === 'shield') assert.ok(!SHIELDS[it.base].side, 'nobody finds a V or T shield');
   assert.ok(rollLoot(rng, 1)[0].rarity >= 1, 'the silver knight pays fine or better');
   assert.equal(rollLoot(rng, 2).length, 1);
 }

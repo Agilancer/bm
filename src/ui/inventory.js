@@ -69,6 +69,7 @@ export class Inventory {
 
   iconOf(item) {
     if (item.type === 'gem') return this.gemSvg(item);
+    if (item.type === 'shield') return `<div class="ico" style="aspect-ratio:2/3;background-image:url(${this.base}assets/game/items/icons/${item.base}.webp)"></div>`;
     const m = this.manifest.swords[item.base];
     const [y0, y1] = m.frame.y;
     let dots = '';
@@ -237,9 +238,10 @@ export class Inventory {
       if (lifted === false) { this.flash('It won\'t go there.'); return; }
       this.carry = lifted ? { item: lifted, from: null } : null;
     } else if (t.kind === 'slot') {
-      if (t.name !== 'main' || item.type !== 'weapon') { this.flash(t.name === 'main' ? 'Only a sword goes in the hand.' : 'That doesn\'t go there.'); return; }
-      const prev = this.pack.slots.main;
-      this.pack.slots.main = item;
+      const fits = (t.name === 'main' && item.type === 'weapon') || (t.name === 'off' && item.type === 'shield');
+      if (!fits) { this.flash(t.name === 'main' ? 'Only a sword goes in the hand.' : t.name === 'off' ? 'Only a shield goes on the arm.' : 'That doesn\'t go there.'); return; }
+      const prev = this.pack.slots[t.name];
+      this.pack.slots[t.name] = item;
       this.carry = prev ? { item: prev, from: null } : null;
       this.on.change();
     } else if (t.kind === 'ground') {
@@ -254,15 +256,15 @@ export class Inventory {
     const { pack } = this;
     if (this.carry || !t.item) return;
     if (t.kind === 'slot') {
-      if (t.name === 'main' && pack.slots.main) {
-        if (!pack.add(pack.slots.main)) { this.flash('No room in the pack.'); return; }
-        pack.slots.main = null;
+      if ((t.name === 'main' || t.name === 'off') && pack.slots[t.name]) {
+        if (!pack.add(pack.slots[t.name])) { this.flash('No room in the pack.'); return; }
+        pack.slots[t.name] = null;
         this.on.change();
       }
-    } else if (t.item.type === 'weapon') {
-      const prev = pack.slots.main, { x, y } = t.entry;
+    } else if (t.item.type === 'weapon' || t.item.type === 'shield') {
+      const slot = t.item.type === 'weapon' ? 'main' : 'off', prev = pack.slots[slot], { x, y } = t.entry;
       pack.remove(t.entry);
-      pack.slots.main = t.item;
+      pack.slots[slot] = t.item;
       if (prev) pack.entries.push({ item: prev, x, y });
       this.on.change();
     } else if (pack.slots.main && pack.socket(pack.slots.main, t.item)) {

@@ -2,10 +2,12 @@
 // where it appears on screen: each tick its tip and middle are projected through the view model's camera
 // and cast from the eye into the world, so a cut lands exactly under what the player sees.
 import { floorAt } from '../core/interior.js';
+import { LAND_EDGE } from '../core/terrain.js';
 import { EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { clamp, damp, wrapAngle } from '../core/math.js';
 import { S } from './knight.js';
 import { leanAmount } from './anim.js';
+import { stepSurf } from './surf.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
@@ -18,6 +20,7 @@ const STANCES = {
   // A staff doesn't cut: every move is the one cast, and it fires from the head (Casting.stepStaff).
   3: { idle: 'staff_idle', walk: 'staff_walk', combo: ['staff_cast'], wide: ['staff_cast', 'staff_cast'], air: 'staff_cast', back: 'staff_cast', run: 'staff_cast', reach: { tip: 0, mid: 0 }, shoots: true },
 };
+const SURF_CROUCH = 0.3;   // the eye lower on the shield, the knees bent
 const BASE_HP = 160;
 const PUNCTURE_RADIUS = 0.07;
 const MAX_GASH_LENGTH = 0.55;
@@ -69,8 +72,15 @@ export class Player {
       threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, lean: [0, 0, 0], kick: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
-      stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
+      surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfGrace: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
     });
+  }
+
+  // The unseen wall at the edge of the grass. Indoors there's no such edge.
+  keepToLand() {
+    if ((Math.abs(this.x) > LAND_EDGE || Math.abs(this.z) > LAND_EDGE) && floorAt(this.x, this.z) === null) {
+      this.x = clamp(this.x, -LAND_EDGE, LAND_EDGE); this.z = clamp(this.z, -LAND_EDGE, LAND_EDGE);
+    }
   }
 
   // What's in the hand changed: the other rig, if it takes the other number of hands, and nothing left over from the last sword.
@@ -155,7 +165,7 @@ export class Player {
     if (this.queuedT <= 0) this.queued = null;
     const mx = input[INPUT.MOVE_X], mz = input[INPUT.MOVE_Z];
     const len = Math.hypot(mx, mz);
-    const sprint = input[INPUT.SPRINT] > 0.5 && mz > 0.3 && !this.winded;
+    const sprint = input[INPUT.SPRINT] > 0.5 && mz > 0.3 && !this.winded && !this.surfing;
     this.sprinting = sprint && len > 0.1;
     // Breath: running and swinging spend it, standing gets it back.
     this.staminaT -= dt;
@@ -168,7 +178,7 @@ export class Player {
     this.iframes = this.dodgeT > 0.08;
     if (input[INPUT.DODGE] !== this.dodgeSeen) {
       this.dodgeSeen = input[INPUT.DODGE];
-      if (this.dodgeCd <= 0 && this.stamina >= DODGE_COST * 0.6 && this.onGround) {
+      if (this.dodgeCd <= 0 && this.stamina >= DODGE_COST * 0.6 && this.onGround && !this.surfing) {
         const dl = Math.hypot(mx, mz);
         const lx = dl > 0.1 ? mx / dl : 0, lz = dl > 0.1 ? mz / dl : -1;
         const sn = Math.sin(this.yaw), cs = Math.cos(this.yaw);
@@ -178,6 +188,7 @@ export class Player {
         sim.event(EV.DODGE, this.x, this.y, this.z, lx);
       }
     }
+    if (!stepSurf(this, dt, input, sim)) {
     const swingDrag = (this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== this.stance.idle ? 0.85 : 1) * sim.casting.drag;
     const speed = (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2);
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
@@ -203,9 +214,7 @@ export class Player {
     tmp[0] = this.x; tmp[2] = this.z;
     sim.world.resolve(tmp, 0.36, this.y + 0.2);
     this.x = tmp[0]; this.z = tmp[2];
-    // Keep to the land the village owns.
-    const R = 118, rr = Math.hypot(this.x, this.z);
-    if (rr > R && floorAt(this.x, this.z) === null) { this.x *= R / rr; this.z *= R / rr; }
+    this.keepToLand();
     const g = sim.world.height(this.x, this.z);
     if (this.y <= g) {
       if (!this.onGround && this.vy < -2) {
@@ -215,9 +224,11 @@ export class Player {
       this.y = g; this.vy = 0; this.onGround = true;
     } else if (this.y > g + 0.06) this.onGround = false;
     else if (this.onGround) this.y = g;
+    }
+    this.surfLow = damp(this.surfLow, this.surfing ? SURF_CROUCH : 0, 10, dt);
     const gs = Math.hypot(this.vx, this.vz);
     this.groundSpeed = gs;
-    if (this.onGround && gs > 0.5) {
+    if (this.onGround && gs > 0.5 && !this.surfing) {
       this.stride += gs * dt;
       const stepLen = this.sprinting ? 2.3 : 1.55;
       if (this.stride > stepLen) { this.stride -= stepLen; sim.event(EV.STEP, this.x, this.y, this.z, clamp(gs / 6, 0.2, 1), 0, -1); }
@@ -479,7 +490,7 @@ export class Player {
   }
 
   rayShield(k, ox, oy, oz, dx, dy, dz, reach) {
-    const s = k.shieldPos, nz = k.shieldAxisZ, ax = k.shieldAxisX, ay = k.shieldAxisY, scale = k.opts.shieldScale;
+    const s = k.shieldPos, nz = k.shieldAxisZ, ax = k.shieldAxisX, ay = k.shieldAxisY, scale = k.opts.shieldHit;
     const den = dx * nz[0] + dy * nz[1] + dz * nz[2];
     if (Math.abs(den) < 1e-4) return -1;
     const t = ((s[0] - ox) * nz[0] + (s[1] - oy) * nz[1] + (s[2] - oz) * nz[2]) / den;
@@ -596,7 +607,8 @@ export class Player {
     snap[H.HIT_DIR] = this.hitDir; snap[H.HIT_DIR_T] = this.hitDirT;
     snap[H.GROUND_SPEED] = this.groundSpeed || 0;
     snap[H.ON_GROUND] = this.onGround ? 1 : 0;
-    snap[H.CAM_DROP] = this.landKick + (this.dead ? Math.min(this.deadT * 0.9, 1.25) : 0);
+    snap[H.SURF] = this.surfing ? 1 : 0;
+    snap[H.CAM_DROP] = this.landKick + this.surfLow + (this.dead ? Math.min(this.deadT * 0.9, 1.25) : 0);
     snap[H.WEAK] = this.weak;
     snap[H.STAMINA] = this.stamina;
     snap[H.AIM_WOUND] = this.aimWound ? 1 : 0;
