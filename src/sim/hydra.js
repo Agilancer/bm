@@ -5,7 +5,7 @@
 // falls, then the neck above the stump if you keep at it; a head that's gone stops biting and burning, and when the last one
 // is gone so is the hydra. The chunks are whole pieces of the skin, carried from then on by a rigid body each.
 import { EV } from '../core/layout.js';
-import { clamp, damp, quatYaw, wrapAngle } from '../core/math.js';
+import { clamp, damp, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
 import { Beast } from './beast.js';
 
 export const HYDRA_SCALE = 3.6;

@@ -27,6 +27,12 @@ struct GO { @location(0) color: vec4f, @location(1) depth: f32 };
   } else if (in.layer < 100.5) {
     let e = 1.0 - abs(in.uv.x * 2.0 - 1.0);
     c = in.tint * smoothstep(0.0, 0.4, e) * (0.25 + 0.75 * in.uv.y);
+  } else if (in.layer > 101.5) {
+    // A light well: dust drifting in a soft beam, and nothing at all when you stand in it.
+    let e = 1.0 - abs(in.uv.x * 2.0 - 1.0);
+    let T = F.camPos.w;
+    let dust = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.uv.x * 0.5 + T * 0.006, in.uv.y * 0.9 - T * 0.012), 0.0).r;
+    c = in.tint * e * e * (0.3 + 0.7 * in.uv.y) * (0.25 + 1.5 * dust) * smoothstep(1.5, 8.0, in.viewZ);
   } else {
     let d = length(in.uv * 2.0 - 1.0);
     let f = max(1.0 - d, 0.0);
@@ -95,7 +101,7 @@ export async function loadInterior(r, base, pool, tier) {
     { binding: 0, resource: c.createView({ dimension: '2d-array' }) }, { binding: 1, resource: d.createView({ dimension: '2d-array' }) }, { binding: 2, resource: { buffer: ubo } }] });
   const pom = tier.pom > 0 ? 1 : 0;
   const tiles = makeSet(r, glb, nodes, tileNames);
-  tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (POM[l.kind] || 0); })));
+  tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (l.pom || POM[l.kind] || 0); p[i * 4 + 2] = -(l.deep || 0); })));
   const atlas = makeSet(r, glb, nodes, atlasNames);
   atlas.bg = bindGroup(ac, ad, uniform((p) => man.atlases.forEach((l, i) => { p[i * 4] = 1; p[i * 4 + 2] = l.kind === 'glass' ? (l.rose ? 4 : 2) : 0; })));
   return { data, tiles, atlas, glowVB: makeBuffer(r.device, new Float32Array(data.glow), GPUBufferUsage.VERTEX), glowN: data.glow.length / 9 };

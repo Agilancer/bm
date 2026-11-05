@@ -172,18 +172,38 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     var cur = uv;
     var h = textureSampleGrad(detailArr, repeatSmp, cur, layerI, dx, dy).a;
     var ray = 1.0;
+    var hPrev = h;
     for (var i = 0; i < i32(steps); i++) {
       if (ray <= h) { break; }
       ray -= 1.0 / steps;
       cur -= delta;
+      hPrev = h;
       h = textureSampleGrad(detailArr, repeatSmp, cur, layerI, dx, dy).a;
     }
     uv = cur;
+    if (params.z < 0.0) {
+      // Relief this deep shows its steps: put the hit between the last two, where the ray really crossed.
+      let after = h - ray;
+      let before = hPrev - (ray + 1.0 / steps);
+      uv = cur + delta * clamp(after / max(after - before, 1e-4), 0.0, 1.0);
+    }
     ao = mix(1.0, 0.45 + 0.55 * smoothstep(0.2, 0.62, h), fade);
   }
 
-  let tex = textureSampleGrad(colorArr, repeatSmp, uv, layerI, dx, dy);
-  let det = textureSampleGrad(detailArr, repeatSmp, uv, layerI, dx, dy);
+  var tex = textureSampleGrad(colorArr, repeatSmp, uv, layerI, dx, dy);
+  var det = textureSampleGrad(detailArr, repeatSmp, uv, layerI, dx, dy);
+  if (!LEAN && params.z < -1.5) {
+    // Never the same stone twice: a slow noise picks between two copies of the tile, each shifted its own way, and they
+    // meet along the height of the stone, so the seam runs in the mortar. The tile's repeat goes.
+    let l = textureSampleLevel(noiseTex, repeatSmp, uv * 0.11 + 0.37, 0.0).r * 12.0;
+    let ia = floor(l);
+    let oa = sin(vec2f(3.0, 7.0) * ia); let ob = sin(vec2f(3.0, 7.0) * (ia + 1.0));
+    let da = textureSampleGrad(detailArr, repeatSmp, uv + oa, layerI, dx, dy);
+    let db = textureSampleGrad(detailArr, repeatSmp, uv + ob, layerI, dx, dy);
+    let w = smoothstep(0.3, 0.7, l - ia + (db.a - da.a) * 1.1);
+    tex = mix(textureSampleGrad(colorArr, repeatSmp, uv + oa, layerI, dx, dy), textureSampleGrad(colorArr, repeatSmp, uv + ob, layerI, dx, dy), w);
+    det = mix(da, db, w);
+  }
   if (flat_) {
     let m = flatMaterial(in.layer, p, F.camPos.w);
     albedo = m.rgb; rough = m.a;
@@ -198,7 +218,42 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     if (params.x > 0.0 && tex.a < 0.5) { discard; }
     albedo = tex.rgb;
     rough = det.b;
-    n = perturbD(n0, dp1, dp2, dx, dy, det.rg, 1.0);
+    n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
+    if (params.z < 0.0) {
+      // What the damp has done, in world space, so it runs on across every tile and joint. Mortar and hollows first.
+      let cav = smoothstep(0.08, 0.5, det.a);
+      albedo *= mix(0.42, 1.0, cav);
+      ao *= mix(0.5, 1.0, cav);
+      // Grey stone. The warmth is the flames', so what they don't reach falls away cold, and a lit pool stands off its shadow.
+      albedo = mix(vec3f(dot(albedo, vec3f(0.3, 0.55, 0.15))), albedo, 0.62);
+      let level = select(-16.25, -24.25, p.z < -54.0);   // (the catacombs' two floors: north of the Sexton's Stair is the lower)
+      let q = select(vec2f(p.x + p.z, p.y), p.xz, abs(n0.y) > 0.6);
+      let m = textureSampleLevel(noiseTex, repeatSmp, q * 0.047, 0.0);
+      // Old stone is never one colour: blotches of dark, and a drift between ochre and grey.
+      albedo *= 0.72 + 0.56 * m.r;
+      albedo = mix(albedo, albedo * vec3f(1.1, 0.96, 0.78), smoothstep(0.42, 0.58, m.g));
+      // (Far off, a sharp highlight on bumpy stone is only sparkle.)
+      rough = max(rough, 0.62 * smoothstep(7.0, 20.0, dist));
+      if (!LEAN) {
+        if (n0.y > 0.6) {
+          // Where a floor dips, water stands: dark, smooth, and holding the flames.
+          let s = textureSampleLevel(noiseTex, repeatSmp, q * 0.13 + 0.5, 0.0).b;
+          let pool = smoothstep(0.6, 0.67, s + (0.5 - det.a) * 0.25);
+          albedo *= 1.0 - 0.4 * pool;
+          rough = mix(rough, 0.09, pool);
+          n = normalize(mix(n, n0, pool * 0.92));
+        } else if (n0.y > -0.4) {
+          // Water comes down a wall in runs, and rises from the floor in a dark tide.
+          let run = textureSampleLevel(noiseTex, repeatSmp, vec2f((p.x + p.z) * 0.29, p.y * 0.012), 0.0).b;
+          let wet = smoothstep(0.54, 0.64, run);
+          albedo *= 1.0 - 0.42 * wet;
+          rough = mix(rough, 0.42, wet);
+          let tide = smoothstep(0.0, 1.5, p.y - level + (m.a - 0.5) * 2.2);
+          albedo *= mix(0.4, 1.0, tide);
+          rough = mix(0.34, rough, tide);
+        }
+      }
+    }
     if (params.z > 1.5) {
       // Stained glass with the day behind it.
       emissive = pow(albedo, vec3f(1.5)) * params.z * 1.6;
@@ -479,7 +534,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   c += vec3f(5.0, 2.6, 0.9) * wound.hot;
   // A cool edge of sky around the silhouette separates dark plate from anything behind it.
   let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
-  c += F.skyAmb.rgb * rimT * 0.32 * (0.35 + 0.65 * metal) * C.info.y;
+  // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)
+  c += select(F.skyAmb.rgb * 0.32 * (0.35 + 0.65 * metal), vec3f(0.5, 0.31, 0.17), indoorAt(p) > 1.5) * rimT * C.info.y;
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);
