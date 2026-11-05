@@ -83,7 +83,7 @@
   </header>
   <div class="scroll">
     <div class="row"><label for="hands">Hands</label><select id="hands">
-      <option value="1h">Sword and shield</option><option value="2h">Two-handed sword</option></select></div>
+      <option value="1h">Sword and shield</option><option value="2h">Two-handed sword</option><option value="staff">Staff</option></select></div>
     <h2>Try it</h2>
     <div class="buttons">
       <button id="bAttack">Attack <kbd>click</kbd></button>
@@ -125,7 +125,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const $ = (id) => document.getElementById(id);
-const MODEL = new URLSearchParams(location.search).get('model') === '2h' ? '2h' : '1h';
+const MODEL = ['2h', 'staff'].includes(new URLSearchParams(location.search).get('model')) ? new URLSearchParams(location.search).get('model') : '1h';
 const NAMES_2H = { great_sky1: 'Skyrim 1: across from the right', great_sky2: 'Skyrim 2: back from the left', great_sky3: 'Skyrim 3: down from the right', great_sky4: 'Skyrim 4: down from the left',
   great_sky5: 'Skyrim 5: overhead', great_chop: 'Overhead chop', great_rise: 'Rising, from the right', great_wide_r: 'Wide, right to left', great_wide_l: 'Wide, left to right' };
 $('hands').value = MODEL;
@@ -220,7 +220,7 @@ const meta = rig.userData;
 const NICE = meta.nice || NAMES_2H;
 const IDLE = meta.idle || 'great_idle';
 const BLOCK = meta.block || null;
-const TITLES = { ...NICE, shield_up: 'The shield comes up', shield_down: 'The shield goes down', blade_stab_block: 'Thrust over the rim' };
+const TITLES = { ...NICE, shield_up: 'The shield comes up', shield_down: 'The shield goes down', shield_bash: 'Shield bash', blade_stab_block: 'Thrust over the rim' };
 vmCam.fov = meta.view.fov; vmCam.near = meta.view.near; vmCam.updateProjectionMatrix();
 let arms, sword, shieldMesh;
 rig.traverse((o) => {
@@ -228,6 +228,12 @@ rig.traverse((o) => {
   else if (o.isMesh) { if (o.name === 'ironbound') shieldMesh = o; else sword = o; o.frustumCulled = false; }
 });
 vmScene.add(rig);
+// (The staff comes from the pack in the game, so it isn't in the arm's file: the one the arm was built around, on its bone.)
+if (MODEL === 'staff') {
+  const item = await new GLTFLoader().loadAsync('assets/game/items/crystal_staff.glb');
+  item.scene.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; sword = o; } });
+  rig.getObjectByName('weapon').add(item.scene);
+}
 const tipBone = rig.getObjectByName('weapon_tip');
 const skeletonHelper = new THREE.SkeletonHelper(rig.getObjectByName('root'));
 skeletonHelper.visible = false; skeletonHelper.material.depthTest = false; vmScene.add(skeletonHelper);
@@ -267,7 +273,7 @@ function blow(name) {
   clearTrail();
 }
 function attack() {
-  if (BLOCK && blocking) { if (!playing) blow(BLOCK.stab); return; }   // (with the shield up: a thrust over the rim)
+  if (BLOCK && blocking) { if (!playing) blow(BLOCK.bash); return; }   // (with the shield up: a bash)
   if (playing) { if (playing.getClip().duration - playing.time < 0.4 && !queue.length) queue.push('next'); return; }   // (a click near the end is kept)
   const c = chain(); blow(c[turn++ % c.length]); lastSeq = 'attack';
 }
@@ -285,7 +291,7 @@ function stepBlow() {
   if (ev.hit != null && !hitDone && playing.time >= ev.hit) { hitDone = true; spark(); land(/over|slam/.test(name)); }
   if (playing.time >= ev.duration - 1e-4) {
     if (BLOCK) {
-      const up = name === BLOCK.up || name === BLOCK.stab;
+      const up = name === BLOCK.up || name === BLOCK.bash || name === BLOCK.stab;
       if (up && !blocking) { blow(BLOCK.down); return; }           // (let go while it was coming up)
       if (!up && name !== BLOCK.down && blocking) { blow(BLOCK.up); return; }
       if (name === BLOCK.down && blocking) { blow(BLOCK.up); return; }
@@ -324,7 +330,7 @@ addEventListener('keydown', (e) => {
 if (BLOCK) {
   $('bBlock').hidden = false;
   $('shieldToggle').hidden = false;
-  $('howto').textContent += ' Hold the right button to raise the shield; click with it up to thrust over the rim.';
+  $('howto').textContent += ' Hold the right button to raise the shield; click with it up to bash.';
   $('bBlock').onclick = () => setBlock(!blocking);
   $('showShield').onchange = () => { shieldMesh.visible = $('showShield').checked; };
 }

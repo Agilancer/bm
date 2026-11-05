@@ -31,8 +31,8 @@ for (let i = 0; i < N; i++) {
 assert.ok(!bases.greatsword, 'the old greatsword is not a drop');
 for (const r of RARITIES.keys()) console.log(`${RARITIES[r].name.padEnd(9)} ${(byRarity[r] / N * 100).toFixed(2).padStart(6)}%   sockets 0..4: ${sockets[r].join(' ')}`);
 console.log(`four sockets: ${sockets[3][4]} of ${N} (${(sockets[3][4] / N * 100).toFixed(3)}%). ${Object.keys(bases).length} bases dropped, e.g. "${[...nameSet].slice(-3).join('", "')}"`);
-assert.equal(Object.keys(bases).length, 12, 'all twelve new swords can drop');
-assert.equal(WEAPONS.filter(Boolean).length, 13);
+assert.equal(Object.keys(bases).length, 16, 'all twelve new swords and the four staffs can drop');
+assert.equal(WEAPONS.filter(Boolean).length, 17);
 
 // ---- socketing ------------------------------------------------------------------------------------
 const pack = new Pack();
@@ -61,7 +61,7 @@ for (let i = 0; i < 20000; i++) {
 // ---- the pack ----------------------------------------------------------------------------------------
 const p = new Pack();
 p.startingKit();
-assert.equal(p.entries.filter((e) => e.item.type === 'weapon').length, 13, 'the test kit holds all thirteen');
+assert.equal(p.entries.filter((e) => e.item.type === 'weapon').length, 17, 'the test kit holds all thirteen swords and four staffs');
 for (const e of p.entries) {
   const { w: fw, h: fh } = sizeOf(e.item);
   assert.ok(e.x + fw <= PACK_W && e.y + fh <= PACK_H, 'inside the grid');

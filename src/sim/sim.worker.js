@@ -273,7 +273,7 @@ async function boot(msg) {
     self.addEventListener('message', (e) => { if (e.data.input) sim.input.set(e.data.input); });
   }
   sim.input[INPUT.YAW] = Math.PI;
-  const [clipsMeta, clipsBin, black, silver, arms2h, arms1h, village, crabBuf, heartBuf, hydraBuf, spellAttack, spellRaise] = await Promise.all([
+  const [clipsMeta, clipsBin, black, silver, arms2h, arms1h, village, crabBuf, heartBuf, hydraBuf, spellAttack, spellRaise, armsStaff] = await Promise.all([
     fetch(`${base}assets/game/clips.json`).then((r) => r.json()),
     fetchBuf(`${base}assets/game/clips.bin`),
     fetchBuf(`${base}assets/game/velscour_knight.glb`),
@@ -286,10 +286,11 @@ async function boot(msg) {
     fetchBuf(`${base}assets/monsters/bone_hydra/bone_hydra.glb`),
     fetchBuf(`${base}assets/fp/spell_attack.glb`),
     fetchBuf(`${base}assets/fp/spell_raise.glb`),
+    fetchBuf(`${base}assets/fp/arms_staff.glb`),
   ]);
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village);
-  sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h) });
+  sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
   sim.casting = new Casting({ attack: new ArmsRig(spellAttack), raise: new ArmsRig(spellRaise) });
   sim.knights.push(new Knight(0, 0, new Rig(parseGLB(black), bank), bank, BLACK));
   sim.knights.push(new Knight(1, 1, new Rig(parseGLB(silver), bank), bank, SILVER));

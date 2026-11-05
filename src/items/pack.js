@@ -81,6 +81,7 @@ export class Pack {
       ['frost_sword', 3, 4], ['crimson_sword', 3, 3], ['gilded_sword', 2, 3], ['thornvine_sword', 2, 2],
       ['swept_rapier', 2, 1], ['brass_sabre', 1, 2], ['bronze_broadsword', 1, 1], ['ringed_sword', 0, 0],
       ['fluked_greatsword', 2, 2], ['bluegrip_greatsword', 1, 1], ['wheel_greatsword', 0, 1], ['greengrip_greatsword', 1, 0],
+      ['crystal_staff', 1, 1], ['greenwood_staff', 1, 1], ['skullhorn_staff', 1, 1], ['gnarled_crook', 0, 0],
     ];
     for (const [base, rarity, sockets] of swords) this.add(rollWeapon(rng, { base, rarity, sockets }));
     for (const kind of Object.keys(GEMS)) this.add(rollGem(rng, { kind, grade: 1 }));

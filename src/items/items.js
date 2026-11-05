@@ -23,6 +23,10 @@ export const BASES = {
   bluegrip_greatsword: { name: 'Bluegrip Greatsword', dmg: [18, 26], grade: 'common' },
   fluked_greatsword: { name: 'Fluked Greatsword', dmg: [20, 28], grade: 'common', innate: { poise: 0.15 } },
   greengrip_greatsword: { name: 'Greengrip Greatsword', dmg: [17, 25], grade: 'common' },
+  greenwood_staff: { name: 'Greenwood Staff', dmg: [14, 20], grade: 'common' },
+  crystal_staff: { name: 'Crystal Staff', dmg: [14, 20], grade: 'common' },
+  skullhorn_staff: { name: 'Skullhorn Staff', dmg: [14, 20], grade: 'common' },
+  gnarled_crook: { name: 'Gnarled Crook', dmg: [14, 20], grade: 'common' },
   gilded_sword: { name: 'Gilded Sword', dmg: [22, 30], grade: 'high', innate: { life: 10 } },
   crimson_sword: { name: 'Crimson Sword', dmg: [24, 34], grade: 'high', innate: { leech: 1 } },
   thornvine_sword: { name: 'Thornvine Sword', dmg: [20, 32], grade: 'high', innate: { poise: 0.15 } },
@@ -177,7 +181,7 @@ export function linesOf(item) {
   const s = statsOf(item), b = BASES[item.base];
   const out = [
     { text: nameOf(item), kind: 'title' },
-    { text: `${RARITIES[item.rarity].name} ${hands(item.base) === 2 ? 'two-handed' : 'one-handed'} sword`, kind: 'sub' },
+    { text: `${RARITIES[item.rarity].name} ${hands(item.base) === 3 ? 'staff' : `${hands(item.base) === 2 ? 'two-handed' : 'one-handed'} sword`}`, kind: 'sub' },
     { text: `Damage ${s.min} to ${s.max}`, kind: 'stat' },
   ];
   // What it was made with and what it rolled, a line a stat. The gems speak for themselves below.

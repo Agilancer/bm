@@ -78,13 +78,14 @@ export const EV = {
   SPELL_CAST: 40, SPELL_LOOSE: 41, SPELL_HIT: 42, SPELL_BOOM: 43, SPELL_FIZZLE: 44,
 };
 
-// What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it.
+// What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.
 export const WEAPONS = [
   null,
   { id: 'greatsword', hands: 2 },
   { id: 'gilded_sword', hands: 1 }, { id: 'crimson_sword', hands: 1 }, { id: 'thornvine_sword', hands: 1 }, { id: 'frost_sword', hands: 1 },
   { id: 'ringed_sword', hands: 1 }, { id: 'bronze_broadsword', hands: 1 }, { id: 'brass_sabre', hands: 1 }, { id: 'swept_rapier', hands: 1 },
   { id: 'wheel_greatsword', hands: 2 }, { id: 'bluegrip_greatsword', hands: 2 }, { id: 'fluked_greatsword', hands: 2 }, { id: 'greengrip_greatsword', hands: 2 },
+  { id: 'greenwood_staff', hands: 3 }, { id: 'crystal_staff', hands: 3 }, { id: 'skullhorn_staff', hands: 3 }, { id: 'gnarled_crook', hands: 3 },
 ];
 
 export const STATE_NAMES = ['patrol', 'alert', 'approach', 'circle', 'attack', 'block', 'roll', 'stagger', 'retreat', 'break', 'dead', 'taunt', 'feint', 'idle'];
