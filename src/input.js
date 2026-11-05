@@ -52,10 +52,10 @@ export class Input {
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
       if (this.soft) { if (e.button === 0) this.softPress?.(this.softX, this.softY); return; }
       if (e.button === 0) this.fire(INPUT.ATTACK);
-      if (e.button === 2) { this.guardMouse = true; this.fire(INPUT.WIDE); }
+      if (e.button === 2) { this.guardMouse = true; this.s[INPUT.BLOCK] = 1; this.fire(INPUT.WIDE); }     // (held before the press is seen: the shield drops when it isn't)
       if (e.button === 1) { e.preventDefault(); this.castMouse = true; this.fire(INPUT.CAST_N); }
     });
-    window.addEventListener('mouseup', (e) => { if (e.button === 1) this.castMouse = false; if (e.button === 2) this.guardMouse = false; });
+    window.addEventListener('mouseup', (e) => { if (e.button === 1) this.castMouse = false; if (e.button === 2) { this.guardMouse = false; if (!this.guardTouch) this.s[INPUT.BLOCK] = 0; } });
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === this.canvas;
@@ -145,8 +145,8 @@ export class Input {
       }, { passive: false });
     };
     btn('bAttack', () => this.fire(INPUT.ATTACK));
-    btn('bWide', () => { this.guardTouch = true; this.fire(INPUT.WIDE); });
-    const lower = () => { this.guardTouch = false; };
+    btn('bWide', () => { this.guardTouch = true; this.s[INPUT.BLOCK] = 1; this.fire(INPUT.WIDE); });
+    const lower = () => { this.guardTouch = false; if (!this.guardMouse) this.s[INPUT.BLOCK] = 0; };
     document.getElementById('bWide').addEventListener('touchend', lower);
     document.getElementById('bWide').addEventListener('touchcancel', lower);
     btn('bJump', () => { this.jumpTouch = true; this.fire(INPUT.JUMP); });

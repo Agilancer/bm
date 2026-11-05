@@ -15,7 +15,7 @@ Edge and Safari on PC and phones, or Firefox on Windows. On a static host it rea
 | Run | `Shift` | `RUN`, or push the stick past its edge |
 | Dodge | `Q` | `DODGE` |
 | Combo: two cuts, then a slam | Left click | `CUT` |
-| Raise the shield and bash, then hold to block. With no shield, a wide swing | Right click | `WIDE` |
+| Raise the shield and bash, hold to block, let go and it drops at once. With no shield, a wide swing | Right click | `WIDE` |
 | Cast the spell in a slot | `1` to `6`, or click its button | Tap its button |
 | Pack: swords and gems | `I` | `PACK` |
 | Take up what's on the ground, or open a chest | `E` | `TAKE` / `OPEN` |
@@ -257,7 +257,7 @@ the screen, and a spark where a blow lands. The view shows the path of the blade
 | `blade_rise1`, `blade_rise2` | Rising cuts from the lower right and lower left | 0.400 s of 1.00 s |
 | `blade_flat1`, `blade_flat2` | Flat cuts, right to left and left to right | 0.400 s of 1.00 s |
 | `blade_stab` | Thrust from the low right | 0.317 s of 0.72 s |
-| `blade_stab_block` | Thrust over the rim, shield up | 0.317 s of 0.75 s |
+| `blade_stab_block` | Thrust past the rim, the raised shield swinging aside for it | 0.317 s of 0.75 s |
 | `shield_up`, `shield_hold`, `shield_bash`, `shield_down` | Raising the shield, holding it (a loop), a bash from the block and back, lowering it. Cut from first-person Skyrim (YouTube `_ZMx-ejIIBc`, 1.9-2.8 s and 7.4-8.5 s). The wrist is locked straight: the fist is on the grip, the board rests on the top of the hand and along the forearm (`shield` in `rig.py`), and the shield is aimed only by the elbow and the forearm's roll, about 100 degrees in the block (`straight_arm`, `shield_roll`, `ELBOW_UP`). The game doesn't play these yet: the player has no block control, so they only show in the viewer. | |
 | `guard_walk` | The carry on the move, sword and shield swaying in step (a 0.92 s loop) | |
 | `guard_idle` | The carry standing still: the same loop, 40% as big | |
@@ -267,7 +267,7 @@ right click alternates the flat cuts. `blade_d1`, `blade_d2`, `blade_over` and `
 
 The shield steps aside inside each blow, out and down with its face turned out, and comes back in the recovery, so
 those clips drive both arms. In the viewer, left click cycles the combo (1 is the Skyrim five, 2 to 7 the game's old six), holding the
-right button raises the shield, clicking with it up thrusts over the rim, and the **Walking** box plays the carry at walking
+right button raises the shield, clicking with it up thrusts past the rim, and the **Walking** box plays the carry at walking
 speed. The clip times, combos and field of view are in `gltf.scene.userData`, and blows that start from the guard also end
 on it, so they chain with no join. Play the carries and `shield_hold` at `0.25 + min(1.3, speed / 6.2)` for a ground speed in
 m/s, as the two-hander's.
@@ -282,7 +282,7 @@ and `jVG7n8yCInI` for first-person animation mods. The mods were used because va
 The lines through the crosshair are still Bellmourn's (`tools/templates/mocap1h.py`), and the rules are the two-hander's: the tip goes through the X on a frame,
 along its line, the edge leads, every blow starts and ends on one guard. The owner's video of the swings is the check on the elbow.
 
-- **The carry.** The hand's off the bottom of the screen and the top half of the blade stands up at the right. The shield's a wedge in the lower left corner.
+- **The carry.** The hand's off the bottom of the screen and the top half of the blade stands up at the right. The shield sits low in the lower left corner, its point down.
 - **The draw-back.** The fist comes back by the shoulder, 0.04 to 0.18 m ahead of the eye, the elbow folds to 53 to 75 degrees and the sword leaves the screen.
   The old build kept the fist 0.46 to 0.56 m out, so its elbow opened on the wind-up and closed into the hit, which is backwards.
 - **The elbow swings it.** It opens through the strike and goes on opening past the hit, to 101 to 165 degrees, till shoulder, arm and blade are one line.
