@@ -61,8 +61,8 @@ SWORD_SHIELD = dict(
     # the view and run off the bottom of the screen, its cut end out of sight, with the fist anywhere on a cut's line
     stretch_upper={"R": 1.6},
     tip=1.00, weapon_parent="hand_R",
-    # the shield: strapped along the forearm, the board on the back of the hand's side, clear of the knuckles and the arm
-    shield=dict(back=(-0.139, -0.342, 0.929), seat=0.05))
+    # the shield: the grip in the fist, the board's inner face resting on the top of the hand and on the forearm, both measured off the sculpt
+    shield=dict(back=(-0.038, -0.208, 0.977), seat=0.015))
 DIGITS = ("thumb", "index", "middle", "ring", "pinky")
 
 ELBOW_BLEND = 0.060     # half-width of the blend across the elbow (m)

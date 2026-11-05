@@ -127,14 +127,14 @@ BACK_LOW = dict(d=un(np.array([0.10, 0.92, 0.28])))
 # (YouTube _ZMx-ejIIBc at 1.9-2.8 s and 7.4-8.5 s): carried, only an edge shows in the corner; up, the boss is low on the left, the
 # top of the rim is above the X's height and the rim passes under the X; a bash shoves it up and in, whips it out to the left edge-on
 # with the fist showing, and comes back
-# It's strapped along the forearm, so the wrist stays straight: `face` is the way wanted, taken to the nearest the forearm allows, and `pole` is where the elbow goes
-ELBOW_DOWN, ELBOW_OUT = (-0.3, 0.8, -0.8), (-1.0, -0.1, -0.6)
-STRAP = 0.65                                # how much of the way the forearm has its say: the rest is the wrist's, a natural bend
+# The wrist never bends: the hand is locked straight on the forearm and the shield is rigid on the hand, resting on both. So the shield is aimed only by the elbow (`pole`)
+# and the forearm's roll: `face` is the way wanted, and the roll that comes nearest it is found.
+ELBOW_UP, ELBOW_OUT = (-0.3, -0.2, -1.0), (-1.0, -0.1, -0.6)
 SHIELD = dict(carry=dict(c=(-0.36, 0.44, -0.58), face=(-0.80, 0.60, 0.10), pole=ELBOW_OUT),
               aside=dict(c=(-0.50, 0.36, -0.70), face=(-0.95, 0.30, 0.05), pole=ELBOW_OUT),
-              up=dict(c=(-0.17, 0.30, -0.13), face=(0.0, 1.0, 0.12), pole=ELBOW_DOWN),
-              shove=dict(c=(-0.11, 0.33, -0.03), face=(0.0, 1.0, 0.25), pole=ELBOW_DOWN),
-              whip=dict(c=(-0.30, 0.38, -0.22), face=(-0.92, 0.38, 0.05), pole=ELBOW_OUT))
+              up=dict(c=(-0.04, 0.34, -0.13), face=(-0.25, 1.0, 0.05), pole=ELBOW_UP),
+              shove=dict(c=(0.0, 0.39, -0.04), face=(-0.25, 1.0, 0.20), pole=ELBOW_UP),
+              whip=dict(c=(-0.13, 0.40, -0.19), face=(-0.85, 0.50, 0.05), pole=ELBOW_UP))
 SHIELD_T = dict(up=0.22, down=0.26, bash=(0.0, 0.13, 0.28, 0.44, 0.54))
 # on the move (anims.walk_cycle, made smooth): the fist and shield sway and dip in step, the tip less and later. Standing
 # it's the same loop, smaller and slowed right down; holding the shield up, it's smaller still
@@ -658,11 +658,11 @@ def lead_arm(arm, Rs, r, lead, most=None, finish=None, how={}):
     return dict(S=S_, E=E, W=W, Ru=Ru, Rf=Rf, Rh=R_h, twist=tw, bend=bend, cock=cock, lead=k)
 
 
-def solve_arm(arm, Rs, r, poles=None):
+def solve_arm(arm, Rs, r):
     """An arm on whatever its hand holds, frame by frame."""
     R_h, W = arm.hand(Rs, r, np.zeros(len(r)))
     Sh, _ = arm.reach(W)
-    _, p = arm.elbow(Sh, W, poles)
+    _, p = arm.elbow(Sh, W)
     p = gaussian_filter1d(p, 2.0, axis=0, mode="nearest")
     E, _ = arm.elbow(Sh, W, p)
     Ru, Rf = frame_of_arm(Sh, E, W, arm.U, arm.F)
@@ -695,29 +695,33 @@ def shield_frame(arm, c, face, turn=None):
     return Rb
 
 
-def strapped_frame(arm, c, face, pole):
-    """The shield's rotation when it's strapped along the forearm: the wrist straight and the face as near `face` as that lets it."""
+def straight_arm(arm, c, roll, poles):
+    """The shield arm, frame by frame, with the wrist locked straight: for the grip's place, the forearm's roll (degrees) and where the elbow goes."""
+    W = np.array(c, float)
+    for i in range(7):
+        Sh, _ = arm.reach(W)
+        _, p = arm.elbow(Sh, W, poles)
+        if i == 6 and len(W) > 1:
+            p = gaussian_filter1d(p, 2.0, axis=0, mode="nearest")
+        E, _ = arm.elbow(Sh, W, p)
+        Ru, Rf = frame_of_arm(Sh, E, W, arm.U, arm.F)
+        R_h = Rf @ S.rot_about((0, 1, 0), roll) @ arm.Q0
+        Rs = R_h @ arm.rel.T
+        if i < 6:
+            W = c + (Rs @ arm.off[..., None])[..., 0]
+    return dict(S=Sh, E=E, W=W, Ru=Ru, Rf=Rf, Rh=R_h, twist=np.asarray(roll, float), bend=np.zeros(len(W)), shield=Rs)
+
+
+def shield_roll(arm, c, face, pole):
+    """The forearm's roll that points the shield nearest `face`."""
     c, want, pole = np.array(c, float), un(np.array(face, float)), np.array(pole, float)
-    now, Rb = want, None
-    for _ in range(8):
-        z = -now
-        up = un(np.array([0.0, 0.0, 1.0]) - z * z[2])
-        best = 1e18
-        for a in np.arange(-180, 180, 3.0):
-            r = math.radians(a)
-            y = un(math.cos(r) * up + math.sin(r) * np.cross(z, up))
-            Rs = np.c_[np.cross(y, z), y, z]
-            R_h, W = arm.hand(Rs[None], c[None], np.zeros(1))
-            Sh, _ = arm.reach(W)
-            E, _ = arm.elbow(Sh, W, pole[None])
-            f = (W - E) / arm.F
-            bend = np.degrees(np.arccos(np.clip((f * (R_h @ arm.fh[..., None])[..., 0]).sum(-1), -1, 1)))
-            _, Rf = frame_of_arm(Sh, E, W, arm.U, arm.F)
-            k = float((bend[0] / 30) ** 2 + (twist_of(Rf, R_h, arm.Q0)[0] / 70) ** 2)
-            if k < best:
-                best, Rb, fb = k, Rs, f[0]
-        now = un(want - STRAP * fb * (want @ fb))
-    return Rb
+    best, out = -2.0, 0.0
+    for r in np.arange(-180.0, 180.0, 2.0):
+        Rs = straight_arm(arm, c[None], np.array([r]), pole[None])["shield"][0]
+        k = float(-Rs[:, 2] @ want)
+        if k > best:
+            best, out = k, float(r)
+    return out
 
 
 def quat_of(R):
@@ -742,51 +746,47 @@ def mat_of(q):
                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
+def nearest_rolls(keys):
+    """The keys' rolls run on from each other, the short way round."""
+    out = [keys[0][1]]
+    for k in keys[1:]:
+        out.append(out[-1] + wrap180(k[1] - out[-1]))
+    return np.array(out)
+
+
 def blend_shield(keys, weights):
-    """Shield frames through a list of (centre, rotation) keys, by a [frames] float position along them."""
-    cs = np.array([k[0] for k in keys])
-    qs = [quat_of(k[1]) for k in keys]
-    ls = np.array([k[2] for k in keys])
-    for i in range(1, len(qs)):
-        if qs[i] @ qs[i - 1] < 0:
-            qs[i] = -qs[i]
-    Rs, ps, pp = [], [], []
+    """Grip, roll and elbow through a list of (grip, roll, pole) keys, by a [frames] float position along them."""
+    cs, ls, rs = np.array([k[0] for k in keys]), np.array([k[2] for k in keys]), nearest_rolls(keys)
+    ps, pp, tw = [], [], []
     for x in weights:
         i = min(int(x), len(keys) - 2)
         u = float(x - i)
-        q = (1 - u) * qs[i] + u * qs[i + 1]
-        Rs.append(mat_of(q))
         ps.append((1 - u) * cs[i] + u * cs[i + 1])
         pp.append((1 - u) * ls[i] + u * ls[i + 1])
-    return np.array(Rs), np.array(ps), np.array(pp)
+        tw.append((1 - u) * rs[i] + u * rs[i + 1])
+    return np.array(ps), np.array(tw), np.array(pp)
 
 
 def shield_spline(keys, times, T):
-    """(centre, rotation) for each time in T, smooth through the keys at their times, at rest at both ends."""
-    cs = np.array([k[0] for k in keys])
-    qs = [quat_of(k[1]) for k in keys]
-    for i in range(1, len(qs)):
-        if qs[i] @ qs[i - 1] < 0:
-            qs[i] = -qs[i]
-    pc = CubicSpline(times, cs, bc_type="clamped")
-    qc = CubicSpline(times, np.array(qs), bc_type="clamped")
-    lc = CubicSpline(times, np.array([k[2] for k in keys]), bc_type="clamped")
-    return [(pc(t), mat_of(qc(t) / np.linalg.norm(qc(t))), lc(t)) for t in T]
+    """Grip, roll and elbow for each time in T, smooth through the keys at their times, at rest at both ends."""
+    cs, ls, rs = np.array([k[0] for k in keys]), np.array([k[2] for k in keys]), nearest_rolls(keys)
+    spline = lambda v: CubicSpline(times, v, bc_type="clamped")(T)
+    return spline(cs), spline(rs), spline(ls)
 
 
 def build_clips(info, B):
     """All the clips: {name: (path, sol)}, sol holding each arm's joints frame by frame."""
     armR = S.Arm("R", info, B, held="sword", sho=SHO, lift=0.5, ahead=1.2, knee=0.96)
     armL = S.Arm("L", info, B, held="shield", sho=SHO, lift=0.5)
-    SK = {k: (np.array(v["c"], float), strapped_frame(armL, v["c"], v["face"], v["pole"]), np.array(v["pole"], float)) for k, v in SHIELD.items()}
+    SK = {k: (np.array(v["c"], float), shield_roll(armL, v["c"], v["face"], v["pole"]), np.array(v["pole"], float)) for k, v in SHIELD.items()}
     carry, aside, up, shove, whip = SK["carry"], SK["aside"], SK["up"], SK["shove"], SK["whip"]
     clips = {}
 
     def clip(cname, path, shield_keys, weights, off=0.0):
         Rs = solve_sword(path, armR)
         sol = dict(T=path["T"], sword_R=Rs, sword_p=path["G"], R=lead_arm(armR, Rs, path["G"], path.get("lead", np.zeros(len(path["T"]))), path.get("cock"), path.get("finish"), FINISH.get(path["name"], {})))
-        RL, pL, poles = blend_shield(shield_keys, weights)
-        sol["L"] = solve_arm(armL, RL, pL + off, poles)
+        pL, rolls, poles = shield_keys if isinstance(shield_keys, tuple) else blend_shield(shield_keys, weights)
+        sol["L"] = straight_arm(armL, pL + off, rolls, poles)
         clips[cname] = (path, sol)
 
     for name in ORDER + ("stab",):
@@ -804,7 +804,7 @@ def build_clips(info, B):
     clip("shield_up", p, [carry, up], bell(p["T"] / p["T"][-1], 2.0, 2.0))
     # the bash, from the block and back to it
     p = move_path("bash", BACK, BACK, SHIELD_T["bash"][-1])
-    clip("shield_bash", p, shield_spline([up, shove, whip, up, up], SHIELD_T["bash"], p["T"]), np.arange(len(p["T"]), dtype=float))
+    clip("shield_bash", p, shield_spline([up, shove, whip, up, up], SHIELD_T["bash"], p["T"]), None)
     p, off = carry_path("hold", BACK, WALK["holding"])
     clip("shield_hold", p, [up, up], np.zeros(len(p["T"])), off)
     p = move_path("down", BACK, GUARD, SHIELD_T["down"])
