@@ -633,8 +633,22 @@ python tools/bone_hydra/build.py
 The cut is in `tools/bone_hydra/surgery.py`, the skeleton and weights in `tools/bone_hydra/rig.py`, and the clips in
 `tools/bone_hydra/anim.py`. Source art and the Blender file are in `art/bone_hydra/`.
 
+## Wizards and necromancers
+
+Two wizards, a necromancer and a plague-bearer (the zombie necromancer) think for themselves: `Caster` in `src/sim/undead.js`, with what they cast in `src/sim/foespells.js`. Each scores its book against what it can see, so spells follow from the fight: how far you are, whether you're running, whether it's hurt, and who's lying about. Every spell has its own wait.
+
+| Who | Spells | Habits |
+|---|---|---|
+| Wizard | Bolt, prism volley, crown of storms, falling sky, storm cage, searing ray (jump it), thunderclap, slow star, hound, ward, reveal | Blinks out of the way of what you throw, comes out behind you if you close in, cages you then drops stones in. Walks its rounds, folds its arms and works at something in its hand |
+| Necromancer | Bolt, grave rite, bone cage, bone furrow, soul leech, wraiths, corpse bomb, reap | Raises those lying near as they fell, swaps places with a servant when you reach it, drains one to heal when hurt. Kneels at graves and raises a servant or two to follow it |
+| Plague-bearer | Bolt, grave rite, thrown flask, blooms, locusts, rot wave (jump it), wraiths, corpse bomb, reap | As the necromancer, closer in |
+
+Solid blows can break a working, then it's steady for a few seconds. Burns can't. A necromancer's body raises what's near it as it falls, and a wizard's goes off a moment later.
+
+All their motion is UAL's own clips, listed in `tools/zombie/caster.py`: nothing text-prompted, nothing played sped up or backwards, and they always walk the way they face. To rebuild one: `blender -b --factory-startup --python-exit-code 1 --python tools/zombie/build_all.py -- necromancer` (or `zombie_necromancer`, `evil_wizard`). `bm.cmd(20, knight, n)` forces the nth spell in `FOE`. The knights are 32 and 33 for the necromancers, and 34 and 35 for the wizards.
+
 ## Kite shields and the shield surf
 
 Twenty kite shields, cut from the five sheets by `tools/shields/separate.py` and `render_icons.py` (both in Blender, through Blender MCP) and `tools/shields/atlas.py`. They are `SHIELDS` in `src/items/items.js`: V and T shields are the knights' own and are never rolled.
 
-Jump and keep Space held a moment to get on the shield (`src/sim/surf.js`). It stays under you when you let go. Space on the ground hops, Space in the air steps off. A wall stops it, and so does running out of speed.
+Jump and keep Space held a moment to get on the shield (`src/sim/surf.js`). It stays under you when you let go. Space on the ground hops, Space in the air steps off. It only carries the speed you bring to it and what slopes give: W adds nothing. A wall stops it, and so does running out of speed.

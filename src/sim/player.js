@@ -73,7 +73,7 @@ export class Player {
       threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, lean: [0, 0, 0], kick: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
-      surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfGrace: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
+      surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
     });
   }
 
