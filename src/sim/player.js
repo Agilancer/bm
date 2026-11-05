@@ -14,12 +14,15 @@ const KICK = 1.4;      // how far the view kicks with a blow as it lands, agains
 const STANCES = {
   2: { idle: 'great_idle', walk: 'great_walk', combo: ['great_sky1', 'great_sky2', 'great_sky3', 'great_sky4', 'great_sky5'], wide: ['great_wide_r', 'great_wide_l'], air: 'great_slam', back: 'great_rise', run: 'great_chop', reach: { tip: 2.55, mid: 2.2 } },
   1: { idle: 'guard_idle', walk: 'guard_walk', combo: ['blade_sky1', 'blade_sky2', 'blade_sky3', 'blade_sky4', 'blade_sky5'], wide: ['blade_flat1', 'blade_flat2'], air: 'blade_sky5', back: 'blade_rise1', run: 'blade_stab', reach: { tip: 2.15, mid: 1.85 } },
+  // A staff doesn't cut: every move is the one cast, and it fires from the head (Casting.stepStaff).
+  3: { idle: 'staff_idle', walk: 'staff_walk', combo: ['staff_cast'], wide: ['staff_cast', 'staff_cast'], air: 'staff_cast', back: 'staff_cast', run: 'staff_cast', reach: { tip: 0, mid: 0 }, shoots: true },
 };
 const BASE_HP = 160;
 const PUNCTURE_RADIUS = 0.07;
 const MAX_GASH_LENGTH = 0.55;
 // Each move has its own weight: cuts chain, wide swings cover ground but bite less, slams and chops break a guard.
 const SWING_INFO = {
+  staff_cast: { heavy: false, fromRight: 0, dmg: 0, poise: 0, stam: 0, width: 0 },
   great_sky1: { heavy: false, fromRight: 1, dmg: 5, poise: 30, stam: 10, width: 1 },
   great_sky2: { heavy: false, fromRight: -1, dmg: 5, poise: 30, stam: 10, width: 1 },
   great_sky3: { heavy: false, fromRight: 1, dmg: 5, poise: 30, stam: 10, width: 1 },
@@ -116,7 +119,9 @@ export class Player {
     this.contact = null; this.punctured = false; this.whiffed = true; this.struckGround = false; this.struckWall = false; this.drag = 0;
     this.havePrev = false; this.swinging = false; this.recovering = false;
     const info = arms.clips[name], tag = SWING_INFO[name];
-    this.threat = { name, t: 0, hit: info.hit, heavy: tag.heavy, fromRight: tag.fromRight };
+    this.fired = false;
+    this.threat = this.stance.shoots ? null : { name, t: 0, hit: info.hit, heavy: tag.heavy, fromRight: tag.fromRight };
+    if (this.stance.shoots) this.whiffed = false;
     this.swingCount++;
     this.aggression = this.aggression * 0.8 + 0.2 * clamp(1.4 / Math.max(sim.time - this.lastSwing, 0.2), 0, 1.5);
     this.lastSwing = sim.time;
@@ -127,7 +132,7 @@ export class Player {
     this.swingRate = this.rate;
     sim.event(EV.SWING, this.x, this.y + EYE, this.z, tag.heavy ? 1 : 0);
     // Weight behind the blow.
-    const f = 0.75;
+    const f = this.stance.shoots ? 0 : 0.75;
     this.vx += Math.sin(this.yaw) * f; this.vz += Math.cos(this.yaw) * f;
   }
 
@@ -268,7 +273,7 @@ export class Player {
     }
     if (this.clip !== this.stance.idle) {
       if (this.threat) this.threat.t = this.t;
-      const active = this.t >= info.wind && this.t <= info.through && this.rate > 0;
+      const active = !this.stance.shoots && this.t >= info.wind && this.t <= info.through && this.rate > 0;
       if (active && !this.swinging) { this.swinging = true; sim.event(EV.WHOOSH, this.x, this.y + EYE, this.z, 1); }
       if (!active) this.swinging = false;
       if (this.t > info.hit) this.threat = null;

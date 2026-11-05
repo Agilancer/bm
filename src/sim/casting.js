@@ -12,6 +12,9 @@ const SUFFIX = { R: 'r', L: 'l', both: 'both' };
 const RESUME = 0.16;   // after a hold, the cast picks up this long past its hit
 const TICK = 0.18;     // how often a held spell bites
 const tmp = [0, 0, 0], out3 = [0, 0, 0];
+// What each staff fires, a spell's bolt from its head. It costs what the spell costs.
+const STAFF_BOLT = { crystal_staff: 'frost', greenwood_staff: 'plague', skullhorn_staff: 'firebolt', gnarled_crook: 'lightning' };
+const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a palm's does
 
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
 const TO_WORLD = Math.tan(32 * Math.PI / 180) / Math.tan(38 * Math.PI / 180);
@@ -147,6 +150,7 @@ export class Casting {
   stepHands(dt, want, held, sim) {
     const p = sim.player;
     if (this.state === 'idle') {
+      if (p.stance.shoots) this.stepStaff(sim);
       this.lower = Math.max(0, this.lower - dt * 3.2);
       if (want && !p.dead && !p.swinging && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
       if (this.state === 'idle') return;
@@ -214,6 +218,40 @@ export class Casting {
     const x = -c * sx - s * sp * sy + s * cp, y = cp * sy + sp, z = s * sx - c * sp * sy + c * cp, L = dist / Math.hypot(x, y, z);
     out[0] = p.x + x * L; out[1] = p.y + EYE + y * L; out[2] = p.z + z * L;
     return out;
+  }
+
+  // The staff's head, on the same ray as it's drawn.
+  staffHead(p, out) {
+    const a = p.arms.tip * 3, w = p.arms.wt;
+    const d = Math.max(-w[a + 2], 0.05), sx = w[a] / d * TO_WORLD, sy = w[a + 1] / d * TO_WORLD;
+    const s = Math.sin(p.yaw), c = Math.cos(p.yaw), sp = Math.sin(p.pitch), cp = Math.cos(p.pitch);
+    const x = -c * sx - s * sp * sy + s * cp, y = cp * sy + sp, z = s * sx - c * sp * sy + c * cp, L = STAFF_AHEAD / Math.hypot(x, y, z);
+    out[0] = p.x + x * L; out[1] = p.y + EYE + y * L; out[2] = p.z + z * L;
+    return out;
+  }
+
+  // A cast in the staff's arm: the head gathers light on the lift, and on the hit a bolt leaves it for what's under the crosshair.
+  stepStaff(sim) {
+    const p = sim.player;
+    if (p.clip !== 'staff_cast') return;
+    const def = SPELLS.find((d) => d.key === STAFF_BOLT[WEAPONS[p.weapon].id]), info = p.arms.clips[p.clip];
+    const from = this.staffHead(p, out3);
+    if (p.t < info.hit) {
+      const k = smooth(p.t / info.hit);
+      this.fx(FX.FLARE, def.elem, from[0], from[1], from[2], 0.015 + 0.035 * k, 0, 1, 0, 0, -(0.2 + 0.5 * k), 0, 0, 0, 0.3);
+      this.fx(FX.LIGHT, def.elem, from[0], from[1], from[2], 0, 0, 1, 0, 0, 1, 0.1 + 0.3 * k, 1.5);
+      return;
+    }
+    if (p.fired) return;
+    p.fired = true;
+    if (this.mana < def.mana) {
+      if (this.fizzleT <= 0) { sim.event(EV.SPELL_FIZZLE); this.fizzleT = 0.8; }
+      return;
+    }
+    this.mana -= def.mana;
+    this.charge = def.gather || 0;
+    this.cast_bolt(def, sim, [from[0], from[1], from[2]]);
+    sim.event(EV.SPELL_CAST, def.elem, SPELLS.indexOf(def), p.x, p.y + EYE, p.z);
   }
 
   // The hands are lit from where they're drawn, which is further off than they look: this is that place.
@@ -437,8 +475,8 @@ export class Casting {
     sim.event(EV.SPELL_LOOSE, def.elem, SPELLS.indexOf(def), sim.player.x, sim.player.y + EYE, sim.player.z);
   }
 
-  cast_bolt(def, sim) {
-    const aim = [0, 0, 0], from = this.palm(this.side, 0.85, sim, [0, 0, 0]);
+  cast_bolt(def, sim, head = null) {
+    const aim = [0, 0, 0], from = head || this.palm(this.side, 0.85, sim, [0, 0, 0]);
     this.aim(sim, 90, aim);
     const n = def.shards || 1;
     for (let i = 0; i < n; i++) {
@@ -458,7 +496,7 @@ export class Casting {
         maxAge: def.fuse || def.life || 3,
       });
     }
-    this.burst(FX.FLARE, def.elem, from[0], from[1], from[2], 0.09, 0.26, 0.14, { alpha: -0.8 });
+    this.burst(FX.FLARE, def.elem, from[0], from[1], from[2], 0.09, head ? 0.18 : 0.26, head ? 0.1 : 0.14, { alpha: head ? -0.55 : -0.8 });
   }
 
   stepBolts(dt, sim) {
@@ -487,15 +525,15 @@ export class Casting {
   }
 
   drawBolt(b, dx, dy, dz, sp, dt, sim) {
-    const { x, y, z, size, elem } = b, tail = Math.min(b.age * sp, 1);
+    const { x, y, z, size, elem } = b, flown = b.age * sp, tail = Math.min(flown, 1);
     switch (b.def.key) {
       case 'firebolt':
         this.fx(FX.ORB, elem, x, y, z, size, 0, 1, 0, 0, 1, 18 + 26 * b.power, 14, 0, b.seed);
-        this.fx(FX.TRAIL, elem, x, y, z, size * 0.72, -dx, -dy, -dz, tail * (2.2 + size * 2.4), 0.9, 0, 0, 0, b.seed);
+        this.fx(FX.TRAIL, elem, x, y, z, size * 0.72, -dx, -dy, -dz, Math.min(flown, tail * (2.2 + size * 2.4)), 0.9, 0, 0, 0, b.seed);
         break;
       case 'frost':
         this.fx(FX.ICE, elem, x - dx * 0.45, y - dy * 0.45, z - dz * 0.45, 0.075, dx, dy, dz, 0.9, 1, 3, 5, 0, b.seed);
-        this.fx(FX.TRAIL, elem, x, y, z, 0.1, -dx, -dy, -dz, tail * 1.8, 0.7, 0, 0, 0, b.seed);
+        this.fx(FX.TRAIL, elem, x, y, z, 0.1, -dx, -dy, -dz, Math.min(flown, tail * 1.8), 0.7, 0, 0, 0, b.seed);
         break;
       case 'lightning':
         this.fx(FX.ORB, elem, x, y, z, size * (0.92 + 0.14 * Math.sin(b.age * 31)), 0, 1, 0, 0, 1, 26, 15, 0, b.seed);
@@ -519,14 +557,14 @@ export class Casting {
         break;
       case 'lance':
         this.fx(FX.LANCE, elem, x - dx * 1.5, y - dy * 1.5, z - dz * 1.5, 0.06, dx, dy, dz, 1.9, 1, 3, 4, 0, b.seed);
-        this.fx(FX.TRAIL, elem, x, y, z, 0.07, -dx, -dy, -dz, tail * 2.6, 0.6, 0, 0, 0, b.seed);
+        this.fx(FX.TRAIL, elem, x, y, z, 0.07, -dx, -dy, -dz, Math.min(flown, tail * 2.6), 0.6, 0, 0, 0, b.seed);
         break;
       case 'well':
         this.fx(FX.VORTEX, elem, x, y, z, size * 0.9, 0, 1, 0, 0, 1, 10, 9, 0, b.seed);
         break;
       default:   // the flask
         this.fx(FX.FLASK, elem, x - dx * 0.16, y - dy * 0.16, z - dz * 0.16, 0.085, Math.sin(b.age * 13), Math.cos(b.age * 13), 0.2, 0.32, 1, 4, 5, 0, b.seed);
-        this.fx(FX.TRAIL, elem, x, y, z, 0.09, -dx, -dy, -dz, tail * 1.2, 0.55, 0, 0, 0, b.seed);
+        this.fx(FX.TRAIL, elem, x, y, z, 0.09, -dx, -dy, -dz, Math.min(flown, tail * 1.2), 0.55, 0, 0, 0, b.seed);
     }
   }
 

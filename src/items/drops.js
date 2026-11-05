@@ -6,8 +6,8 @@ import { GEMS, hands, makeRng, rollLoot } from './items.js';
 const MAX = 32;
 const REACH = 1.8;
 const FALL = 0.55;
-const WORLD_SCALE = { 1: 1.5, 2: 1.3 };
-const TIP = { 1: 0.6, 2: 1 };
+const WORLD_SCALE = { 1: 1.5, 2: 1.3, 3: 1.15 };
+const TIP = { 1: 0.6, 2: 1, 3: -0.58 };   // (A staff's fist is above its middle.)
 const LIFT = 0.1;                          // a little proud of the ground, for the grass
 
 function groundNormal(x, z) {

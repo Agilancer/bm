@@ -633,6 +633,202 @@
      "front": 0.0197
     }
    ]
+  },
+  "greenwood_staff": {
+   "file": "assets/game/items/greenwood_staff.glb",
+   "icon": "assets/game/items/icons/greenwood_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.005,
+   "guard": 0.1359,
+   "frame": {
+    "y": [
+     -1.025,
+     0.515
+    ],
+    "z": 0.1925
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.135,
+     "z": -0.0375,
+     "radius": 0.0329,
+     "back": -0.0058,
+     "front": 0.0477
+    },
+    {
+     "slot": "blade",
+     "y": -0.165,
+     "z": -0.0145,
+     "radius": 0.0247,
+     "back": -0.0148,
+     "front": 0.0332
+    },
+    {
+     "slot": "blade",
+     "y": -0.645,
+     "z": -0.0099,
+     "radius": 0.0247,
+     "back": -0.0205,
+     "front": 0.034
+    },
+    {
+     "slot": "pommel",
+     "y": -0.915,
+     "z": -0.0251,
+     "radius": 0.0288,
+     "back": -0.0163,
+     "front": 0.0809
+    }
+   ]
+  },
+  "crystal_staff": {
+   "file": "assets/game/items/crystal_staff.glb",
+   "icon": "assets/game/items/icons/crystal_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -0.9929,
+   "guard": 0.0905,
+   "frame": {
+    "y": [
+     -1.0129,
+     0.5271
+    ],
+    "z": 0.1925
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.1471,
+     "z": 0.001,
+     "radius": 0.0324,
+     "back": -0.0488,
+     "front": 0.0544
+    },
+    {
+     "slot": "blade",
+     "y": -0.1529,
+     "z": 0.0057,
+     "radius": 0.0243,
+     "back": -0.0217,
+     "front": 0.0231
+    },
+    {
+     "slot": "blade",
+     "y": -0.6329,
+     "z": -0.0009,
+     "radius": 0.0243,
+     "back": -0.025,
+     "front": 0.0276
+    },
+    {
+     "slot": "pommel",
+     "y": -0.9029,
+     "z": 0.0002,
+     "radius": 0.0284,
+     "back": -0.0253,
+     "front": 0.0275
+    }
+   ]
+  },
+  "skullhorn_staff": {
+   "file": "assets/game/items/skullhorn_staff.glb",
+   "icon": "assets/game/items/icons/skullhorn_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -0.9995,
+   "guard": 0.208,
+   "frame": {
+    "y": [
+     -1.1616,
+     0.6626
+    ],
+    "z": 0.228
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.1405,
+     "z": -0.0534,
+     "radius": 0.0328,
+     "back": -0.0611,
+     "front": 0.0139
+    },
+    {
+     "slot": "blade",
+     "y": -0.1595,
+     "z": 0.0121,
+     "radius": 0.0246,
+     "back": -0.0169,
+     "front": 0.0571
+    },
+    {
+     "slot": "blade",
+     "y": -0.6395,
+     "z": -0.0531,
+     "radius": 0.0246,
+     "back": -0.0533,
+     "front": 0.0077
+    },
+    {
+     "slot": "pommel",
+     "y": -0.9095,
+     "z": -0.0494,
+     "radius": 0.0287,
+     "back": -0.0528,
+     "front": 0.0274
+    }
+   ]
+  },
+  "gnarled_crook": {
+   "file": "assets/game/items/gnarled_crook.glb",
+   "icon": "assets/game/items/icons/gnarled_crook.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -0.9036,
+   "guard": 0.1254,
+   "frame": {
+    "y": [
+     -0.9236,
+     0.6164
+    ],
+    "z": 0.1925
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2364,
+     "z": -0.0085,
+     "radius": 0.0323,
+     "back": -0.0363,
+     "front": 0.0375
+    },
+    {
+     "slot": "blade",
+     "y": -0.0636,
+     "z": -0.0001,
+     "radius": 0.0242,
+     "back": -0.0342,
+     "front": 0.0353
+    },
+    {
+     "slot": "blade",
+     "y": -0.5436,
+     "z": 0.0092,
+     "radius": 0.0242,
+     "back": -0.0472,
+     "front": 0.0173
+    },
+    {
+     "slot": "pommel",
+     "y": -0.8136,
+     "z": 0.0136,
+     "radius": 0.0283,
+     "back": -0.0481,
+     "front": 0.0571
+    }
+   ]
   }
  }
 }

@@ -194,7 +194,7 @@ the screen, and a spark where a blow lands. The view shows the path of the blade
 | `blade_flat1`, `blade_flat2` | Flat cuts, right to left and left to right | 0.400 s of 1.00 s |
 | `blade_stab` | Thrust from the low right | 0.317 s of 0.72 s |
 | `blade_stab_block` | Thrust over the rim, shield up | 0.317 s of 0.75 s |
-| `shield_up`, `shield_hold`, `shield_down` | Raising the shield with a shove, holding it (a loop), lowering it | |
+| `shield_up`, `shield_hold`, `shield_bash`, `shield_down` | Raising the shield, holding it (a loop), a bash from the block and back, lowering it. Cut from first-person Skyrim (YouTube `_ZMx-ejIIBc`, 1.9-2.8 s and 7.4-8.5 s). The shield is strapped along the forearm with the elbow forward and low, and the wrist keeps a natural bend of up to about 25 degrees (`STRAP`, `ELBOW_DOWN`). The game doesn't play these yet: the player has no block control, so they only show in the viewer. | |
 | `guard_walk` | The carry on the move, sword and shield swaying in step (a 0.92 s loop) | |
 | `guard_idle` | The carry standing still: the same loop, 40% as big | |
 
@@ -336,6 +336,20 @@ sword left free in the atlas, and normals are rebuilt across the whole surface.
 - The wrist is sculpted a fixed distance from the handle, and at the carry it sits just under the frame. So you see the
   fist and the heel of the hand, but not the forearm running to the corner as in Bellmourn.
 - The arms are detailed PBR and the Greatsword is the game's low-poly retro model, so they differ in style up close.
+
+## First-person arm with a staff
+
+Four staffs (Greenwood Staff, Crystal Staff, Skullhorn Staff, Gnarled Crook) can be equipped, dropped and picked up. Each fires a spell's bolt from its head on a left click, and it costs that spell's mana: Greenwood fires plague, Crystal frost, Skullhorn firebolt, the Crook lightning.
+
+The arm is right-handed only, cut from the Tripo arms holding a wooden stick, with the stick removed and 28 bones added (`assets/fp/arms_staff.glb`, `hands: 3` in `WEAPONS`). The pack's staff hangs on its `weapon` bone, and `weapon_tip` is the muzzle. The cast follows Bellmourn's `R1S_CAST`: dips, lifts straight up and inward, tips forward 18 degrees as it fires at 0.40 s, and settles by 1.00 s. The hand is off the bottom of the screen at the carry and comes into view on the lift.
+
+To adjust the feel, change `CARRY_FIST`, `CARRY_AXIS`, `GRIP` (how far down the shaft the fist holds), `TIP` and the `CAST` table at the top of `tools/fp_staff/build.py`. To rebuild, run these inside Blender, each with `exec(open(path).read(), dict(__file__=path, __name__="__main__"))`: `tools/staffs/separate.py` (splits `art/staffs/staffs_3_common.glb`), `tools/staffs/atlas.py`, `tools/staffs/render_icons.py`, and `tools/fp_staff/build.py`. The viewer shows it at `swings.html?model=staff`.
+
+Known limits:
+
+- A bolt's damage is its spell's. The damage rolled on a staff doesn't change it yet.
+- The hole the stick left in the palm is still there. It faces away from the eye, so the player can't see it.
+- The Crook's lightning is very bright close to the eye as it leaves.
 
 ## Rebuilding the first-person arms
 

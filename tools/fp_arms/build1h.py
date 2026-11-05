@@ -120,7 +120,7 @@ def build():
     fov = 2 * np.degrees(np.arctan(1 / (1.6 * M.ZOOM)))
     meta = dict(kind="sword_shield", idle="guard_idle", walk="guard_walk", nice=NICE, combos={str(k): [f"blade_{c}" for c in v] for k, v in M.COMBOS.items()},
                 combo=[f"blade_{c}" for c in M.COMBOS[1]], lines=M.LINES, clips={},
-                view=dict(fov=float(fov), near=0.10), block=dict(up="shield_up", hold="shield_hold", down="shield_down", stab="blade_stab_block"),
+                view=dict(fov=float(fov), near=0.10), block=dict(up="shield_up", hold="shield_hold", down="shield_down", bash="shield_bash", stab="blade_stab_block"),
                 sword=dict(id="arming_sword", tip=M.TIP, pommel=M.POMMEL), shield=dict(id="ironbound"))
     animations = []
     for cname, (path, sol) in clips.items():
@@ -160,7 +160,7 @@ def build():
                 ev["free"] = float(T[path["free"]])
                 ev["lean"] = M.lean_of(path["line"])
         # (clips that leave the guard, or come back to something else)
-        ev["rest"] = cname not in ("shield_up", "shield_hold", "shield_down", "blade_stab_block")
+        ev["rest"] = cname not in ("shield_up", "shield_hold", "shield_bash", "shield_down", "blade_stab_block")
         meta["clips"][cname] = ev
 
     gltf = dict(asset=dict(version="2.0", generator="bm tools/fp_arms/build1h.py"), scene=0,
