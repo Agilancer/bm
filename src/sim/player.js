@@ -12,7 +12,7 @@ const WALK = 4.1, SPRINT = 6.6;
 // How each rig fights, by how many hands it has on the sword. The swings are solved to that rig's length of sword, so the reach is theirs too.
 const KICK = 1.4;      // how far the view kicks with a blow as it lands, against how far the body goes with it over the whole cut
 const STANCES = {
-  2: { idle: 'great_idle', walk: 'great_walk', combo: ['great_cut1', 'great_cut2', 'great_slam'], wide: ['great_wide_r', 'great_wide_l'], air: 'great_slam', back: 'great_rise', run: 'great_chop', reach: { tip: 2.55, mid: 2.2 } },
+  2: { idle: 'great_idle', walk: 'great_walk', combo: ['great_sky1', 'great_sky2', 'great_sky3', 'great_sky4', 'great_sky5'], wide: ['great_wide_r', 'great_wide_l'], air: 'great_slam', back: 'great_rise', run: 'great_chop', reach: { tip: 2.55, mid: 2.2 } },
   1: { idle: 'guard_idle', walk: 'guard_walk', combo: ['blade_sky1', 'blade_sky2', 'blade_sky3', 'blade_sky4', 'blade_sky5'], wide: ['blade_flat1', 'blade_flat2'], air: 'blade_sky5', back: 'blade_rise1', run: 'blade_stab', reach: { tip: 2.15, mid: 1.85 } },
 };
 const BASE_HP = 160;
@@ -20,8 +20,11 @@ const PUNCTURE_RADIUS = 0.07;
 const MAX_GASH_LENGTH = 0.55;
 // Each move has its own weight: cuts chain, wide swings cover ground but bite less, slams and chops break a guard.
 const SWING_INFO = {
-  great_cut1: { heavy: false, fromRight: 1, dmg: 5, poise: 30, stam: 10, width: 1 },
-  great_cut2: { heavy: false, fromRight: -1, dmg: 5, poise: 30, stam: 10, width: 1 },
+  great_sky1: { heavy: false, fromRight: 1, dmg: 5, poise: 30, stam: 10, width: 1 },
+  great_sky2: { heavy: false, fromRight: -1, dmg: 5, poise: 30, stam: 10, width: 1 },
+  great_sky3: { heavy: false, fromRight: 1, dmg: 5, poise: 30, stam: 10, width: 1 },
+  great_sky4: { heavy: false, fromRight: -1, dmg: 5, poise: 30, stam: 10, width: 1 },
+  great_sky5: { heavy: true, fromRight: 0, dmg: 11, poise: 75, stam: 20, width: 1.5 },
   great_slam: { heavy: true, fromRight: 0, dmg: 11, poise: 75, stam: 20, width: 1.5 },
   great_chop: { heavy: true, fromRight: 0, dmg: 10, poise: 65, stam: 18, width: 1.45 },
   great_rise: { heavy: false, fromRight: 0, dmg: 5, poise: 34, stam: 10, width: 1 },
