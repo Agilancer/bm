@@ -42,15 +42,15 @@
    "file": "assets/game/items/gilded_sword.glb",
    "icon": "assets/game/items/icons/gilded_sword.webp",
    "hands": 1,
-   "tip": 0.6,
+   "tip": 1.0,
    "pommel": -0.1045,
    "guard": 0.0914,
    "frame": {
     "y": [
      -0.1978,
-     0.6932
+     1.0932
     ],
-    "z": 0.1114
+    "z": 0.1614
    },
    "sockets": [
     {
@@ -63,7 +63,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.2409,
+     "y": 0.3552,
      "z": 0.0002,
      "radius": 0.0114,
      "back": -0.0089,
@@ -71,7 +71,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.4024,
+     "y": 0.6452,
      "z": 0.0004,
      "radius": 0.0086,
      "back": -0.0089,
@@ -85,21 +85,22 @@
      "back": -0.0146,
      "front": 0.0141
     }
-   ]
+   ],
+   "blade_width": 1.3
   },
   "crimson_sword": {
    "file": "assets/game/items/crimson_sword.glb",
    "icon": "assets/game/items/icons/crimson_sword.webp",
    "hands": 1,
-   "tip": 0.6,
+   "tip": 1.0,
    "pommel": -0.082,
    "guard": 0.0837,
    "frame": {
     "y": [
      -0.1559,
-     0.6739
+     1.0739
     ],
-    "z": 0.1037
+    "z": 0.1537
    },
    "sockets": [
     {
@@ -112,7 +113,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.1997,
+     "y": 0.2589,
      "z": -0.0001,
      "radius": 0.0112,
      "back": -0.0107,
@@ -120,7 +121,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.3128,
+     "y": 0.4683,
      "z": -0.0001,
      "radius": 0.0098,
      "back": -0.0106,
@@ -134,21 +135,22 @@
      "back": -0.0176,
      "front": 0.012
     }
-   ]
+   ],
+   "blade_width": 1.3
   },
   "thornvine_sword": {
    "file": "assets/game/items/thornvine_sword.glb",
    "icon": "assets/game/items/icons/thornvine_sword.webp",
    "hands": 1,
-   "tip": 0.6,
+   "tip": 1.0,
    "pommel": -0.1029,
    "guard": 0.0888,
    "frame": {
     "y": [
      -0.1865,
-     0.6836
+     1.0836
     ],
-    "z": 0.1088
+    "z": 0.1588
    },
    "sockets": [
     {
@@ -161,7 +163,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.2379,
+     "y": 0.3387,
      "z": -0.0021,
      "radius": 0.0099,
      "back": -0.0104,
@@ -169,7 +171,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.387,
+     "y": 0.611,
      "z": -0.0009,
      "radius": 0.0085,
      "back": -0.0148,
@@ -183,21 +185,22 @@
      "back": -0.0145,
      "front": 0.0117
     }
-   ]
+   ],
+   "blade_width": 1.3
   },
   "frost_sword": {
    "file": "assets/game/items/frost_sword.glb",
    "icon": "assets/game/items/icons/frost_sword.webp",
    "hands": 1,
-   "tip": 0.6,
+   "tip": 1.0,
    "pommel": -0.1071,
    "guard": 0.0861,
    "frame": {
     "y": [
      -0.1781,
-     0.6709
+     1.0709
     ],
-    "z": 0.1061
+    "z": 0.1561
    },
    "sockets": [
     {
@@ -210,7 +213,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.2114,
+     "y": 0.2873,
      "z": 0.0011,
      "radius": 0.0114,
      "back": -0.0081,
@@ -218,7 +221,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.4427,
+     "y": 0.7115,
      "z": 0.0005,
      "radius": 0.0086,
      "back": -0.0088,
@@ -232,21 +235,22 @@
      "back": -0.0112,
      "front": 0.0103
     }
-   ]
+   ],
+   "blade_width": 1.3
   },
   "ringed_sword": {
    "file": "assets/game/items/ringed_sword.glb",
    "icon": "assets/game/items/icons/ringed_sword.webp",
    "hands": 1,
-   "tip": 0.6,
+   "tip": 1.0,
    "pommel": -0.0844,
    "guard": 0.0803,
    "frame": {
     "y": [
      -0.1433,
-     0.6589
+     1.0589
     ],
-    "z": 0.1003
+    "z": 0.1503
    },
    "sockets": [
     {
@@ -259,7 +263,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.2229,
+     "y": 0.3308,
      "z": 0.0002,
      "radius": 0.0096,
      "back": -0.0041,
@@ -267,7 +271,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.3943,
+     "y": 0.635,
      "z": 0.0002,
      "radius": 0.0082,
      "back": -0.0045,
@@ -281,21 +285,22 @@
      "back": -0.013,
      "front": 0.0123
     }
-   ]
+   ],
+   "blade_width": 1.3
   },
   "bronze_broadsword": {
    "file": "assets/game/items/bronze_broadsword.glb",
    "icon": "assets/game/items/icons/bronze_broadsword.webp",
    "hands": 1,
-   "tip": 0.6,
+   "tip": 1.0,
    "pommel": -0.0799,
    "guard": 0.0823,
    "frame": {
     "y": [
      -0.149,
-     0.6691
+     1.0691
     ],
-    "z": 0.1023
+    "z": 0.1523
    },
    "sockets": [
     {
@@ -308,7 +313,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.225,
+     "y": 0.3327,
      "z": -0.0,
      "radius": 0.0109,
      "back": -0.004,
@@ -316,7 +321,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.3955,
+     "y": 0.6362,
      "z": -0.0001,
      "radius": 0.0095,
      "back": -0.0038,
@@ -330,21 +335,22 @@
      "back": -0.0221,
      "front": 0.0217
     }
-   ]
+   ],
+   "blade_width": 1.3
   },
   "brass_sabre": {
    "file": "assets/game/items/brass_sabre.glb",
    "icon": "assets/game/items/icons/brass_sabre.webp",
    "hands": 1,
-   "tip": 0.6,
+   "tip": 1.0,
    "pommel": -0.0669,
    "guard": 0.0775,
    "frame": {
     "y": [
      -0.1236,
-     0.6567
+     1.0567
     ],
-    "z": 0.0975
+    "z": 0.1475
    },
    "sockets": [
     {
@@ -357,7 +363,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.2307,
+     "y": 0.3304,
      "z": -0.008,
      "radius": 0.0089,
      "back": -0.0039,
@@ -365,7 +371,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.4093,
+     "y": 0.6542,
      "z": 0.0086,
      "radius": 0.0089,
      "back": -0.0042,
@@ -379,21 +385,22 @@
      "back": -0.0179,
      "front": 0.0177
     }
-   ]
+   ],
+   "blade_width": 1.3
   },
   "swept_rapier": {
    "file": "assets/game/items/swept_rapier.glb",
    "icon": "assets/game/items/icons/swept_rapier.webp",
    "hands": 1,
-   "tip": 0.6,
+   "tip": 1.0,
    "pommel": -0.0859,
    "guard": 0.1083,
    "frame": {
     "y": [
      -0.2562,
-     0.7703
+     1.1703
     ],
-    "z": 0.1283
+    "z": 0.1783
    },
    "sockets": [
     {
@@ -406,7 +413,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.2577,
+     "y": 0.3802,
      "z": 0.0011,
      "radius": 0.0072,
      "back": -0.0058,
@@ -414,7 +421,7 @@
     },
     {
      "slot": "blade",
-     "y": 0.4114,
+     "y": 0.6585,
      "z": 0.0013,
      "radius": 0.0063,
      "back": -0.0051,
@@ -428,7 +435,8 @@
      "back": -0.0185,
      "front": 0.0186
     }
-   ]
+   ],
+   "blade_width": 1.3
   },
   "wheel_greatsword": {
    "file": "assets/game/items/wheel_greatsword.glb",

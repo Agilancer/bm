@@ -1,25 +1,21 @@
-"""The sword-and-shield moves on the new skeleton, by the same rules as the two-hander (swings.py).
+"""The sword-and-shield moves on the new skeleton, cut as first-person Skyrim plays them. The lines through the X come from
+tools/templates/mocap1h.py in Bellmourn (the owner's sword-and-shield video); the rest comes from stepping through first-person footage.
 
-The cuts' lines are the game's (tools/templates/mocap1h.py in Bellmourn: the user's sword-and-shield video). In the
-game a one-hander is drawn shrunk, so its keys are laid out in a lifted frame; here the arms have the two-hander's own
-view, so the crosshair's ray is simply straight ahead. As there:
+  * Carried, the hand's off the bottom of the screen and the top half of the blade stands up at the right (GUARD).
+  * A blow draws right back: the fist comes by the shoulder, the elbow folds and the sword leaves the screen (DRAW's top, back).
+  * Then the elbow opens and drives the fist out. The tip joins its line (TIP_ON), goes through the X on a frame, and the arm runs on off
+    the far side of the view, opening till shoulder, arm and blade are one line (ARM_OUT). It comes home from under the screen.
+  * At the hit the fist is well out to the side of the X, often off the screen, so the blade lies across the view, not into it. A metre
+    of blade from a fist `a` metres off the X's ray sits asin(a) off that ray: `blade_d1`'s fist is 0.80 out, so about 53 degrees. Square to the ray can't be reached.
+  * The forearm follows the hand (`lead`) and the wrist only cocks in the blade's plane, where the shoulder can get there. Lower `lead`
+    leaves it to plain reach and the wrist takes up the rest. The hand may be off the screen for most of a blow.
+  * The fist's speed is one hump (`hump`): it's fastest a little before the hit and slows through the follow-through. The blade's length
+    never changes, and the sword never turns in the fist, since it hangs from the hand's own joint.
+  * Every blow starts and ends on the one guard, so any can follow any.
 
-  * the tip of the blade goes through the X at the hit, on a frame, along the swing's drawn line;
-  * the edge leads the cut, a little off edge-on so the flat shows; the sword never turns in the fist
-    (it hangs from the hand's own joint here, so it can't);
-  * the arm carries the swing, not the wrist: as in the video, a wrist only bends in the blade's own plane, cocked back in
-    the wind-up and opening toward straight through the cut (`cock`), never sideways; the elbow and the unseen shoulder
-    move to put the forearm there, the torso turning behind the blow, and the arm goes out long through the follow-through;
-  * the blade's angle drives the swing, with one bell of speed and no holds;
-  * the fist is laid out on the screen (FIST): low and beside the X at the hit, so the blade pivots through it;
-  * every blow starts and ends on the one guard.
-
-The follow-through is what's changed most: the game's cuts carry 38 to 68 degrees past the hit; here
-they carry further, the whole arm going on down the line with the blade, the hand low at the end of it.
-
-The shield steps aside for each blow as in the game (out and down, face turned out), frame for frame,
-and comes back with the recovery. Holding it up (block) brings its rim just under the X, the sword drawn
-back and down out of its way, and a thrust goes over the rim.
+The `sky` blows are the five-swing combo, and the game's attack. The body goes with the blow (`lean_of`): only the world moves, so the
+arms and the X stay put on the screen. The shield steps aside for each blow as in the game (out and down, face turned out) and comes back
+with the recovery. Held up, it stands left of the middle with the sword down and off the screen, and a thrust goes over its rim.
 
 Carried, both ride your steps as the two-hander's does (anims.walk_cycle): the same sway, in step.
 """
@@ -32,71 +28,77 @@ from scipy.ndimage import gaussian_filter1d
 import swings as S
 from swings import HZ, along, bell, chord_spline, frame_of_arm, slerp, steady_twist, sword_frames, transport, twist_of, un, unwrap_deg, viterbi, wrap180
 
-TIP = 0.60                                 # the sword's tip from the fist (Bellmourn's PROXY sword1h)
+TIP = 1.00                                 # the sword's tip from the fist, as tools/swords/lengthen.py draws them (Bellmourn's 0.60 reads as a dagger)
 POMMEL = -0.098                            # ...and its pommel, which sits just past the wrist
 POMMEL_CLEAR = 62.0                        # the least angle at the wrist between the forearm and the pommel: below it, the pommel's through the skin
 SHOULDER_EASE = 0.40                       # metres: the shoulder may come this far before it weighs as much as a bent wrist
-SHOULDER_ROOM = (0.22, 0.30, 0.12)         # how far the torso can carry the shoulder: across, ahead, up or down (metres)
-TWIST_EASE = 100.0                         # how far a forearm rolls either way from the sculpt's before it starts to cost (degrees)
-TWIST_MAX = 125.0                          # ...and the most it will (the sculpt has no more in its skin)
-TWIST_RATE = 9.0                           # ...and how fast, in degrees a frame
+UPPER_ANCHOR = np.array([0.0, -0.24, 0.0])   # where an upper arm heads for, from the shoulder: an elbow close by the shoulder itself would swing it round in a frame
+SHOULDER_ROOM = (0.34, 0.30, 0.20)         # how far the torso can carry the shoulder: across, ahead, up or down (metres)
+TWIST_EASE = 80.0                         # how far a forearm rolls either way from the sculpt's before it starts to cost (degrees)
+TWIST_MAX = 105.0                          # ...and the most it will (the sculpt has no more in its skin)
+TWIST_RATE = 12.0                           # ...and how fast, in degrees a frame
 # How far the wrist is cocked from the sculpt's grip, in the blade's own plane (degrees). The sculpt holds the handle almost
 # in line with its forearm, as far as a real wrist goes that way; from there it only opens the one way, blade up from the
-# forearm. COCK: the most it may be at the wind-up, the hit and the end of the follow-through.
-RADIALS = np.arange(15.0, 71.0, 5.0)
+# forearm, and it can close the little that's left between them. COCK: the most it may be at the wind-up, the hit and the end of the follow-through.
+RADIALS = np.arange(-15.0, 71.0, 5.0)
 COCK = dict(wind=65.0, hit=45.0, end=40.0)
-# ...and on the cuts that finish out to the right, across the arm's own side, the blade can't lie in line with the forearm and
-# stay in sight: it stands off it, as a hammer does in a fist, its plane still through the forearm
-COCK_END = {"d2": 45.0, "flat2": 45.0}
 HOOK_EASE = 0.10                           # how far off its forearm's line, on the screen, before a fist starts to cost (half the screen's height is 1)
 ELBOW_DROP = 0.15                          # after the hit, how far under the hand an elbow should fall on the screen (from -1 to 1)
 ELBOW_NEAR = 0.30                          # ...and how near the eye it may come before the forearm swells to a lump (metres)
-ELBOW_BEND = (12.0, 140.0)                 # how straight and how bent an elbow goes (degrees from straight)
 ELBOW_ASTRAY = 0.09                        # how far an elbow may stray the wrong side of the arm's line before the wrist helps out (metres)
 FOLD_EASE = 35.0                           # past the hit, the degrees of fold between forearm and blade on the screen that weigh as much as the rest
 # What a cut's finish asks beyond those, by name. in_line: how much it wants its forearm and blade in one line on the screen. room: in
 # place of SHOULDER_ROOM. (An arm's cut end isn't its shoulder: it's partway up the upper arm, and it rises with the elbow.) drop: in
 # place of ELBOW_DROP. An overhead cut ends with the arm straight and the elbow still up: forearm, fist and blade going down one line.
 # A backhand ends with the forearm swung out across the body from an elbow under the view, the blade going on from it.
-FINISH = {"over": dict(in_line=6.0, room=(0.22, 0.30, 0.24), drop=-0.05), "d2": dict(in_line=6.0)}
+FINISH = {"d1": dict(room=(0.40, 0.30, 0.22)), "flat1": dict(room=(0.40, 0.30, 0.22)), "rise1": dict(room=(0.40, 0.30, 0.22)), "over": dict(room=(0.34, 0.30, 0.26), drop=1.0), "d2": dict(in_line=6.0), "flat2": dict(in_line=6.0)}
 SHO = np.array([0.25, 0.02, -0.32])        # the right shoulder from the eye, the left mirrored
 ZOOM = S.ZOOM
 ROLLS = S.ROLLS
-FLAT_ROLL = S.FLAT_ROLL
-FLAT_SIDE = {"rise1": -1, "flat1": -1, "over": 1}                             # (which way the edges sit off edge-on, by blow: toward the eye, not away)
+# How far the edges sit off edge-on, by blow, and which way (degrees). Where a cut's plane runs nearly through the eye (d2, flat2) a blade with its edge
+# dead true is a wire, so it rolls well off; on the lever it shows its flat anyway, and the edge can lead true.
+FLAT_PAST = {"d1": 28.0, "over": 17.0, "d2": 60.0, "flat2": 40.0}
+FLAT = {"sky1": 25.0, "sky2": -25.0, "sky3": -17.0, "sky4": -25.0, "sky5": 17.0, "d1": 30.0, "d2": -36.0, "over": 17.0, "rise1": -17.0, "rise2": -10.0, "flat1": -17.0, "flat2": -40.0}
 
 # mocap1h.SWINGS' lines through the crosshair (degrees on screen, 0 right, 90 up, running from the + end to the - end)
-LINES = {"d1": 37.0, "d2": 143.0, "over": 90.0, "rise1": -25.0, "rise2": -155.0, "flat1": 10.0, "flat2": 170.0}
-# the wind-up's furthest blade angle: less far back than the video's, so the wrist stays a wrist
-WIND_CAP = {"d1": 84, "d2": 84, "over": 85, "rise1": 20, "rise2": 20, "flat1": 45, "flat2": 60}
-LAG_AT = 0.60                              # the blade's angle at the middle key: this far from the hit's toward the wind-up's
-# The fist's way through each blow, laid out on the screen at 16:9: (x, y, how far ahead). The wind-up, the middle of
-# the swing (it has most of its way behind it: the fist leads, then slows as the blade comes through), the hit, and
-# through it: (degrees of blade past the hit, x, y, how far ahead), staying in sight. The blade is put on the tip's ray
-# from wherever the fist is: only the tip's path is the rule's.
-FIST = {
-    "d1": dict(wind=(0.66, 0.2, 0.46), lag=(0.5, -0.42, 0.46), hit=(0.42, -0.62, 0.46),
-        through=[(23, 0.276, -0.656, 0.478), (42, 0.17, -0.682, 0.491), (58, 0.1, -0.7, 0.5)]),
-    "d2": dict(wind=(-0.28, 0.02, 0.46), lag=(-0.24, -0.38, 0.48), hit=(-0.16, -0.56, 0.5),
-        through=[(23, -0.07, -0.569, 0.473), (42, -0.004, -0.576, 0.453), (58, 0.04, -0.58, 0.44)]),
-    "over": dict(wind=(0.36, 0.5, 0.44), lag=(0.28, -0.4, 0.46), hit=(0.24, -0.66, 0.46),
-        through=[(23, 0.321, -0.687, 0.442), (42, 0.38, -0.707, 0.429), (58, 0.42, -0.72, 0.42)]),
-    "rise1": dict(wind=(0.62, -0.62, 0.46), lag=(0.5, -0.62, 0.46), hit=(0.4, -0.6, 0.46),
-        through=[(21, 0.175, -0.532, 0.478), (37, 0.01, -0.483, 0.491), (52, -0.1, -0.45, 0.5)]),
-    "rise2": dict(wind=(-0.24, -0.6, 0.5), lag=(-0.18, -0.56, 0.5), hit=(-0.14, -0.54, 0.52),
-        through=[(26, 0.036, -0.499, 0.538), (46, 0.164, -0.47, 0.551), (64, 0.25, -0.45, 0.56)]),
-    "flat1": dict(wind=(0.7, -0.38, 0.58), lag=(0.5, -0.26, 0.48), hit=(0.44, -0.32, 0.5),
-        through=[(26, 0.197, -0.514, 0.455), (46, 0.019, -0.655, 0.422), (64, -0.1, -0.75, 0.4)]),
-    "flat2": dict(wind=(-0.46, -0.1, 0.46), lag=(-0.24, -0.46, 0.48), hit=(-0.14, -0.52, 0.5),
-        through=[(26, 0.08, -0.444, 0.482), (48, 0.242, -0.387, 0.469), (66, 0.35, -0.35, 0.46)]),
+LINES = {"sky1": 18.0, "sky2": 162.0, "sky3": -40.0, "sky4": 125.0, "sky5": 90.0, "d1": 37.0, "d2": 143.0, "over": 90.0, "rise1": -25.0, "rise2": -155.0, "flat1": 10.0, "flat2": 170.0}
+# Each blow, in the eye's frame (metres: right, ahead, up). top: the fist drawn back by the shoulder, the elbow folded. hit: the fist at the hit, well to the side of
+# the X and often off the screen, so the blade lies across the view, square to the crosshair, and square to the way it's going: the fist's a long way off the
+# X's ray, and a metre of blade can only lie so flat. back: the way the blade points when drawn back. tip: where the tip is on the line when it joins it and at the end.
+# run: how far the fist runs along the line before and after the hit, carrying the blade across with it, hardly turning.
+LEAD_HIT, LEAD_END = 0.85, 0.60              # how far the forearm follows the hand, at the hit and at the end of the follow-through: from there the elbow straightens, reaching
+ARM_OUT = 0.59                             # at the end of the follow-through: the fist this far out from the shoulder toward the tip
+DRAW = {
+    "d1": dict(top=(0.42, 0.06, -0.06), hit=(0.62, 0.32, -0.50), back=(0.30, -0.45, 0.84), tip=(1.9, -2.0), run=(0.30, 0.42)),
+    "d2": dict(top=(-0.06, 0.16, -0.30), hit=(-0.15, 0.42, -0.62), back=(-0.55, -0.35, 0.75), tip=(1.9, -2.0), run=(0.26, 0.42)),
+    "over": dict(top=(0.28, 0.04, 0.02), hit=(0.45, 0.38, -0.25), back=(0.12, -0.75, 0.65), tip=(1.7, -1.8), run=(0.30, 0.42)),
+    "rise1": dict(top=(0.46, 0.10, -0.50), hit=(0.00, 0.42, -0.60), back=(0.45, -0.70, -0.55), tip=(1.9, -2.0), run=(0.26, 0.36)),
+    "rise2": dict(top=(-0.02, 0.18, -0.52), hit=(0.35, 0.40, -0.60), back=(-0.50, -0.45, -0.74), tip=(1.9, -2.0), run=(0.26, 0.36)),
+    "flat1": dict(top=(0.50, 0.08, -0.26), hit=(0.40, 0.40, -0.55), back=(0.70, -0.70, 0.12), tip=(2.0, -2.2), run=(0.28, 0.44)),
+    # the five-swing combo, from first-person Skyrim alone: across from the right, back across from the left, up from low on the right, down from the upper left, and the
+    # big overhead finisher with the longest draw
+    "sky1": dict(top=(0.48, 0.06, -0.12), hit=(0.60, 0.34, -0.46), back=(0.62, -0.62, 0.45), tip=(1.9, -2.2), run=(0.30, 0.42)),
+    "sky2": dict(top=(-0.06, 0.16, -0.28), hit=(-0.16, 0.42, -0.60), back=(-0.70, -0.55, 0.40), tip=(1.9, -2.2), run=(0.26, 0.42)),
+    "sky3": dict(top=(0.46, 0.10, -0.48), hit=(0.10, 0.42, -0.60), back=(0.45, -0.70, -0.55), tip=(1.9, -2.0), run=(0.26, 0.36)),
+    "sky4": dict(top=(-0.04, 0.14, -0.22), hit=(-0.10, 0.42, -0.60), back=(-0.45, -0.40, 0.80), tip=(1.9, -2.0), run=(0.26, 0.42)),
+    "sky5": dict(top=(0.30, 0.02, 0.04), hit=(0.50, 0.38, -0.30), back=(0.10, -0.85, 0.52), tip=(1.9, -1.9), run=(0.30, 0.42)),
+    "flat2": dict(top=(-0.08, 0.16, -0.30), hit=(-0.18, 0.42, -0.60), back=(-0.75, -0.62, 0.20), tip=(2.0, -2.2), run=(0.26, 0.44)),
 }
-# seconds: guard to wind-up, the swing, back to the guard
-TIMES = {"d1": (0.22, 0.44, 0.40), "d2": (0.22, 0.44, 0.36), "over": (0.32, 0.46, 0.38), "rise1": (0.26, 0.42, 0.46),
-         "rise2": (0.26, 0.42, 0.38), "flat1": (0.22, 0.44, 0.42), "flat2": (0.22, 0.44, 0.36)}
-HOME_BELL = (1.5, 1.7)                     # the way back: more even than a blow's, so it never reads as a second one
-ORDER = ("d1", "d2", "over", "rise1", "rise2", "flat1", "flat2")
-COMBOS = {1: ["d1", "d2", "over"], 2: ["rise1", "rise2", "stab"], 3: ["flat1", "flat2", "over"],
-          4: ["stab", "d1", "d2"], 5: ["over", "rise1", "flat1"], 6: ["d2", "flat2", "stab", "over"]}   # (mocap1h.COMBOS)
+# seconds: guard to drawn right back, from there to the hit, through to the end of the follow-through, and home. What first-person Skyrim shows: it's on the
+# screen for the strike, a fifth to a third of a second, and off it for most of the rest.
+TIMES = {k: (0.23, 0.17, 0.30, 0.30) for k in DRAW}
+TIMES.update(sky1=(0.18, 0.15, 0.26, 0.26), sky2=(0.18, 0.15, 0.26, 0.26), sky3=(0.18, 0.15, 0.26, 0.26), sky4=(0.18, 0.15, 0.26, 0.26), sky5=(0.30, 0.19, 0.34, 0.34))
+HANG = 3                                   # frames the fist turns before the blade does: it's off down the line while the blade's still going back
+PEAK_LEAD = 2                              # frames before the hit that the fist is fastest
+FIST_BUILD = 1.2                           # how late the speed comes in the strike (the power of sin^2 of the time: 1 is an even rise)
+TIP_ON = 0.45                              # how much of the strike it takes the tip to join its line
+RISE_BELL = (1.6, 1.5)                      # the way up: hardly slowing till it turns, so it never hangs at the top
+HOME_FIST, HOME_BLADE = (1.4, 2.0), (1.25, 1.4)     # the way back, on a bell each: the arm lifts first, the tip hanging and coming after
+OVERLAP = 0.18                             # seconds the way back starts before the sweep's quite done: the blade never stops dead at the bottom
+LEAN = (0.03, 0.02, 0.035)                 # the turn of the head with a cut across, its dip with one downward, and its tilt with one across (radians)
+ORDER = ("d1", "d2", "over", "rise1", "rise2", "flat1", "flat2", "sky1", "sky2", "sky3", "sky4", "sky5")
+COMBOS = {1: ["sky1", "sky2", "sky3", "sky4", "sky5"], 2: ["d1", "d2", "over"], 3: ["rise1", "rise2", "stab"], 4: ["flat1", "flat2", "over"],
+          5: ["stab", "d1", "d2"], 6: ["over", "rise1", "flat1"], 7: ["d2", "flat2", "stab", "over"]}   # (the first's first-person Skyrim's; the rest, mocap1h.COMBOS)
 
 
 
@@ -115,117 +117,190 @@ def pose_on_screen(fist, tip):
     return dict(g=g, d=un(ray * (b + math.sqrt(b * b - a * c)) / a - g))
 
 
-# the carry, where the game draws it (measured in its moves.html at 16:9): the fist low in the lower right fifth, the
-# blade up and clear of the view's middle
-GUARD = pose_on_screen((0.60, -0.84, 0.44), (0.63, 0.55))
-# the sword drawn back and out of the shield's way, as the game's
-BACK = pose_on_screen((0.72, -0.96, 0.42), (0.86, 0.16))
-# on the way back a blade that ended left of the X comes along the bottom and lifts on the right, by way of this:
-# it never sweeps back across the middle like a second blow
-BACK_LOW = dict(d=un(np.array([-0.05, 0.95, 0.0])))
-# ...and the fist goes by way of here, out in front: the elbow drops and the arm draws the sword back
-HOME_VIA = (0.42, -0.70, 0.52)
+# the carry, as first-person Skyrim has it: the hand off the bottom of the screen, the top of the blade standing up at the right
+GUARD = pose_on_screen((0.60, -1.25, 0.42), (0.50, 0.55))
+# the sword down and off the screen behind the shield, as first-person Skyrim has it
+BACK = pose_on_screen((0.74, -1.45, 0.38), (1.15, -1.15))
+# on the way home a blade comes along the bottom and lifts on the right, by way of this: it never sweeps back across the middle like a second blow
+BACK_LOW = dict(d=un(np.array([0.10, 0.92, 0.28])))
 # the shield, in the eye's frame: (the fist on its grip, the way its face points); moves.py's ROUND, ROUND_UP,
 # ROUND_ASIDE, its shove and its settle. Carried, only its upper right shows in the corner; up, its rim is just under
 # the X and it stands left of the middle, so you look over it and past it
 SHIELD = dict(carry=dict(c=(-0.357, 0.46, -0.622), face=(-0.30, 0.95, 0.10)),
               aside=dict(c=(-0.50, 0.40, -0.72), face=(-0.75, 0.66, 0.10)),
-              up=dict(c=(-0.035, 0.42, -0.285), face=(0.0, 1.0, 0.08), turn=4),
-              shove=dict(c=(-0.03, 0.50, -0.26), face=(0.0, 1.0, 0.20), turn=4))
+              up=dict(c=(-0.14, 0.40, -0.285), face=(0.10, 1.0, 0.08), turn=4),
+              shove=dict(c=(-0.12, 0.52, -0.26), face=(0.05, 1.0, 0.20), turn=4))
 # on the move (anims.walk_cycle, made smooth): the fist and shield sway and dip in step, the tip less and later. Standing
 # it's the same loop, smaller and slowed right down; holding the shield up, it's smaller still
 WALK = dict(frames=55, sway=0.053, tip_sway=0.022, dip=0.018, lag=25.0, standing=0.4, holding=0.3)
-# the thrust: drawn back to the hip, the tip then on the X's own ray all the way in (fist: right, ahead, up)
-STAB = dict(draw=(0.27, 0.27, -0.27), chamber=(0.26, 0.29, -0.20), thrust=(0.18, 0.48, -0.20), hit=(0.13, 0.60, -0.20),
-            end=(0.11, 0.68, -0.19))
+# the thrust: drawn back low to the right, then a punch, the tip coming in to the X only as it lands and staying on its ray as the arm drives on
+# (fist: right, ahead, up; chamber_tip: where the tip starts from, on the screen)
+STAB = dict(draw=(0.42, 0.20, -0.42), chamber=(0.42, 0.16, -0.40), thrust=(0.32, 0.40, -0.30), hit=(0.26, 0.60, -0.30),
+            end=(0.23, 0.70, -0.30), chamber_tip=(0.95, 0.30))
 
 
-def tip_on_ray(g):
-    """The blade from a fist whose tip lies on the X's ray."""
-    y = g[1] + math.sqrt(max(TIP * TIP - g[0] ** 2 - g[2] ** 2, 1e-4))
-    return un(np.array([0.0, y, 0.0]) - g)
+def tip_at(g, sx, sy):
+    """The blade from a fist whose tip lies on the ray through this place on the screen."""
+    fy = 1.6 * ZOOM
+    ray = un(np.array([sx / fy, 1.0, sy / fy]))
+    k = ray @ g
+    return un(ray * (k + math.sqrt(max(k * k - g @ g + TIP * TIP, 1e-4))) - g)
 
 
-def line_path(name):
-    """A cut: the fist and blade at each 60th of a second, and its timing facts."""
+_AX = np.linspace(0.0, 1.0, 1001)
+_POW = np.geomspace(0.02, 60.0, 600)
+_AREA = np.array([np.trapezoid(np.sin(_AX * np.pi / 2) ** (2 * a_), _AX) for a_ in _POW])
+
+
+def hump(T, t0, tp, t1, left, right, build=1.0):
+    """How far a thing has gone at each of the times T, on one smooth hump of speed: still at t0, fastest at tp, still again at t1;
+    `left` by tp and `right` after it. `build`: how late the speed comes on the way up. The way down takes what shape it must."""
+    v = left / ((tp - t0) * np.interp(build, _POW, _AREA))
+    fall = float(np.interp(right / (v * (t1 - tp)), _AREA[::-1], _POW[::-1]))
+    fine = np.linspace(t0, t1, 4001)
+    x = np.where(fine <= tp, (fine - t0) / (tp - t0), (t1 - fine) / (t1 - tp))
+    speed = v * np.sin(np.clip(x, 0, 1) * np.pi / 2) ** (2 * np.where(fine <= tp, build, fall))
+    run = np.r_[0.0, np.cumsum((speed[1:] + speed[:-1]) / 2 * np.diff(fine))]
+    k = fine <= tp
+    at_top = run[k][-1]
+    run[k] *= left / at_top
+    run[~k] = left + (run[~k] - at_top) * right / max(run[-1] - at_top, 1e-9)
+    return np.interp(T, fine, run)
+
+
+def screen_at(x, y, ahead):
+    """A place on the screen, x as wide as it really is, and how far ahead, in the eye's frame."""
+    fy = 1.6 * ZOOM
+    return np.array([x / fy * ahead, ahead, y / fy * ahead])
+
+
+def lean_of(line):
+    """How far the view goes with a cut at its fullest (radians, as the game's shake has them: turning left, up, the head to the right): the
+    body's behind the blow. Only the world moves: the arms and the X stay put on the screen, so the tip still lands on it."""
+    r = math.radians(line)
+    return [round(LEAN[0] * math.cos(r), 4), round(-LEAN[1] * math.sin(r), 4), round(-LEAN[2] * math.cos(r), 4)]
+
+
+def carried(d, a, b):
+    """A direction, turned as much as a is from b: how a move that's still dying away carries what's begun on top of it."""
+    k = np.cross(a, b)
+    s_, c_ = np.linalg.norm(k), float(a @ b)
+    if s_ < 1e-6:
+        return d
+    k = k / s_
+    return d * c_ + np.cross(k, d) * s_ + k * (k @ d) * (1 - c_)
+
+
+def un_rows(v):
+    return v / np.linalg.norm(v, axis=1, keepdims=True)
+
+
+def drawn_path(name):
+    """A cut as first-person Skyrim plays it: the sword drawn back off the screen, the fist right back by the shoulder and the elbow folded; then
+    the elbow opens and drives the fist out through the X, the blade trailing on to its line and the tip on the X on a frame; and the arm runs
+    on across and off the far side of the view, coming home from under it. The elbow's bend follows from how near the shoulder the fist is."""
     al = LINES[name]
     r_al = math.radians(al)
     f0 = np.array([0.0, 1.0, 0.0])
     u = np.array([math.cos(r_al), 0.0, math.sin(r_al)])
     n = np.cross(u, f0)
-    low = n * (-1 if n[2] > 1e-6 else 1) if abs(n[2]) > 1e-6 else np.array([1.0, 0.0, 0.0])
+    F = DRAW[name]
+    fy_ = 1.6 * ZOOM
+    hit_, (r0_, r1_) = np.array(F["hit"], float), F["run"]
+    # (past the hit the elbow goes on opening, till shoulder, arm and blade are one line toward where the tip's gone)
+    r_e = math.atan(F["tip"][1] / fy_)
+    out_ = SHO + ARM_OUT * un((math.cos(r_e) * f0 + math.sin(r_e) * u) * 1.6 - SHO)
+    way = np.array([F["top"], hit_ + u * r0_ - f0 * 0.10, hit_, (hit_ + out_) / 2 + f0 * 0.03, out_])
+    arc = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(way, axis=0), axis=1))]
+    fist_on = CubicSpline(arc, way, bc_type="natural")
+    t_rise, t_strike, t_through, t_home = TIMES[name]
+    i_wind = int(round(t_rise * HZ))
+    i_hit = i_wind + int(round(t_strike * HZ))
+    i_end = i_hit + int(round(t_through * HZ))
+    i_free = i_end - int(round(OVERLAP * HZ))
+    N = i_end + int(round(t_home * HZ))
+    T = np.arange(N + 1) / HZ
+    TB, TH_, TE, TS = T[i_wind], T[i_hit], T[i_end], T[i_free]
+    TF, TP = T[i_wind - HANG], T[i_hit - PEAK_LEAD]
 
-    def plane(sx, sy, y):
-        """A place on the screen: how far ahead, along the line, and beside it."""
-        p_ = screen(sx, sy, y)
-        return p_ @ f0, p_ @ u, p_ @ low
+    # the fist: its one hump, with the hit's waypoint under it on the hit's frame
+    fine_ = np.linspace(0.0, float(arc[-1]), 4001)
+    gone_ = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(fist_on(fine_), axis=0), axis=1))]      # (true metres along it, so its speed is its hump's)
+    total, to_hit = float(gone_[-1]), float(np.interp(arc[2], fine_, gone_))
+    lo, hi = 0.02 * to_hit, 0.999 * to_hit
+    for _ in range(50):
+        mid = (lo + hi) / 2
+        if float(hump(np.array([TH_]), TF, TP, TE, mid, total - mid, FIST_BUILD)[0]) < to_hit:
+            lo = mid
+        else:
+            hi = mid
+    gone = hump(T, TF, TP, TE, (lo + hi) / 2, total - (lo + hi) / 2, FIST_BUILD)
+    W_ = fist_on(np.interp(gone, gone_, fine_))
 
-    F = FIST[name]
-    tw = WIND_CAP[name]
-    hit_ = plane(*F["hit"])
-    th = math.degrees(math.asin(np.clip(-hit_[1] / TIP, -1, 1)))
-    seq = [(tw, *plane(*F["wind"])), (th + LAG_AT * (tw - th), *plane(*F["lag"])), (th, *hit_)]
-    seq += [(th - past, *plane(sx, sy, y)) for past, sx, sy, y in F["through"]]
-    TH = np.array([s_[0] for s_ in seq])
-    assert np.all(np.diff(TH) < 0), f"{name}: the blade must keep turning one way {TH}"
-    ga, gb, gc = (CubicSpline(-TH, [s_[i] for s_ in seq], bc_type="natural") for i in (1, 2, 3))
-
-    def pose_at(th_):
-        r_ = math.radians(th_)
-        gp = f0 * float(ga(-th_)) + u * float(gb(-th_))
-        ray = un(gp + TIP * (math.cos(r_) * f0 + math.sin(r_) * u))
-        g_ = gp + low * float(gc(-th_))
+    def pose_at(i, c):
+        """The fist on this frame, and the blade from it, with its tip at c on the line on the screen (half the screen's height is 1)."""
+        r_ = math.atan(c / fy_)
+        ray = math.cos(r_) * f0 + math.sin(r_) * u
+        g_ = W_[i]
         k = ray @ g_
         s_ = k + math.sqrt(max(k * k - g_ @ g_ + TIP * TIP, 1e-6))
         return g_, un(ray * s_ - g_)
 
-    TA, TB, TC = TIMES[name]
-    span = TH[0] - TH[-1]
-    uu = np.linspace(0, 1, 4001)
-    u_hit = float(np.interp((TH[0] - th) / span, bell(uu, *S.BELLS["swing"]), uu))
-    TA = round(TA * HZ) / HZ
-    TB = (round((TA + TB * u_hit) * HZ) / HZ - TA) / u_hit
-    t_end = TA + TB
-    N = int(round((t_end + TC) * HZ))
-    TC = N / HZ - t_end
-    T = np.arange(N + 1) / HZ
-    g_w, d_w = pose_at(float(tw))
-    g_e, d_e = pose_at(float(TH[-1]))
-    pg = chord_spline([GUARD["g"], g_w], [0, 1])
-    tip_e = g_e + d_e * TIP
-    fx_ = 1.6 * ZOOM / S.ASPECT
-    from_left = fx_ * tip_e[0] / tip_e[1] < 0.25
-    home = [d_e, BACK_LOW["d"], GUARD["d"]] if from_left else [d_e, GUARD["d"]]
-    rg = chord_spline([g_e, screen(*HOME_VIA), GUARD["g"]], [0, 0.5, 1]) if from_left else chord_spline([g_e, GUARD["g"]], [0, 1])
+    # the tip on its line: from off the screen at the start of the strike, through the X at the hit, and on off the screen
+    i_on = i_wind + max(int(round(TIP_ON * (i_hit - i_wind))), 2)
+    c0, c1 = F["tip"]
+    C = np.where(np.arange(N + 1) <= i_hit, c0 * (gone[i_hit] - gone) / (gone[i_hit] - gone[i_on]), c1 * (gone - gone[i_hit]) / (gone[i_end] - gone[i_hit]))
+    C = np.clip(C, -7.0, 7.0)
+    C = gaussian_filter1d(C, 1.2, mode="nearest")
+    C = C - C[i_hit] * np.exp(-(((np.arange(N + 1) - i_hit) / 7.0) ** 2))
+    theta_of = lambda d_: math.degrees(math.atan2(d_ @ u, d_ @ f0))
+    d_top = un(np.array(F["back"], float))
+    g_e, d_e = pose_at(N, C[N])
+    top = way[0]
+    via_up = (GUARD["g"] + top) / 2 + np.array(F.get("up_via", (0.0, 0.0, 0.0)))
+    pg = CubicSpline([0, 0.5, 1], [GUARD["g"], via_up, top], bc_type="natural")      # (eased once, by its bell)
+    home = [d_e, BACK_LOW["d"], GUARD["d"]]
+    via = np.array(F.get("home_via", (0.34, 0.36, -0.62)))     # (under the view: it comes home from below the screen)
+    rg = CubicSpline([0, 0.5, 1], [g_e, via, GUARD["g"]], bc_type="natural")      # (eased once, by its bell)
     G, D, W, V, TT, LEAD, COCKS, FIN = [], [], [], [], [], [], [], []
-    for t in T:
-        lead = 1.0
-        cock = COCK["wind"]
-        fin = 0.0
-        if t < TA:
-            x = float(bell(np.array(t / TA), *S.BELLS["rise"]))
-            lead = x
-            g, d, w, v, tt = pg(x), un(slerp(GUARD["d"], d_w, x)), x ** 2, np.zeros(3), tw
-        elif t <= t_end + 1e-9:
-            x = float(bell(np.array((t - TA) / TB), *S.BELLS["swing"]))
-            tt = float(TH[0] - span * x)
-            g, d = pose_at(tt)
-            r = math.radians(tt)
-            v = -math.sin(r) * f0 + math.cos(r) * u
-            v = un(v - d * (v @ d))
-            past = (th - tt) / max(th - TH[-1], 1e-6)
-            w = 1.0 - float(np.clip((past - 0.35) / 0.65, 0, 1)) ** 2
-            to_hit = float(np.clip((TH[0] - tt) / (TH[0] - th), 0, 1))
-            cock = COCK["wind"] + (COCK["hit"] - COCK["wind"]) * to_hit * to_hit * (3 - 2 * to_hit)
-            if tt < th:
-                cock = COCK["hit"] + (COCK_END.get(name, COCK["end"]) - COCK["hit"]) * min(past, 1.0)
-                fin = min(past * 3, 1.0)
+    gone_w, gone_h, gone_e = gone[i_wind], gone[i_hit], gone[i_end]
+    for i, t in enumerate(T):
+        lead, cock, fin = 1.0, COCK["wind"], 0.0
+        if i <= i_wind:
+            x = float(bell(np.array(t / TB), *RISE_BELL))
+            xf = float(bell(np.array(min(t / TF, 1.0)), *RISE_BELL))
+            g = pg(xf) if t < TF else W_[i]
+            d, w = un(slerp(GUARD["d"], d_top, x)), x ** 2
+            tt = theta_of(d)
+            lead = xf
         else:
-            x = float(bell(np.array((t - t_end) / TC), *HOME_BELL))
-            lead = 1 - x ** 2.5
-            fin = 1 - x
-            cock = COCK_END.get(name, COCK["end"]) + (COCK["wind"] - COCK_END.get(name, COCK["end"])) * x
-            g, d, w, v, tt = rg(x), along(home, x), 0.0, np.zeros(3), TH[-1]
+            g, d = pose_at(i, C[i])
+            if i < i_on:      # (it comes off where it was drawn back to and onto its line with the fist already on its way)
+                q_ = (i - i_wind) / (i_on - i_wind)
+                d = un(slerp(d_top, d, q_ * q_ * (3 - 2 * q_)))
+            tt = theta_of(d)
+            w = 1.0
+            to_hit = float(np.clip((gone[i] - gone_w) / (gone_h - gone_w), 0, 1))
+            cock = COCK["wind"] + (COCK["hit"] - COCK["wind"]) * to_hit * to_hit * (3 - 2 * to_hit)
+            lead = 1.0 - (1.0 - LEAD_HIT) * to_hit * to_hit * (3 - 2 * to_hit)
+            if i > i_hit:
+                past = float(np.clip((gone[i] - gone_h) / max(gone_e - gone_h, 1e-6), 0, 1))
+                cock = COCK["hit"] + (COCK["end"] - COCK["hit"]) * past
+                fin = min(past * 3, 1.0)
+                lead = LEAD_HIT + (LEAD_END - LEAD_HIT) * min(past / 0.6, 1.0)
+            if i > i_free:         # (the way back, on top of the last of the sweep)
+                q = (t - TS) / (T[-1] - TS)
+                x, xd = float(bell(np.array(q), *HOME_FIST)), float(bell(np.array(q), *HOME_BLADE))
+                lead += (1 - lead) * x
+                lead *= 1 - x ** 6
+                fin *= 1 - x
+                cock += (COCK["wind"] - cock) * x
+                w *= 1 - x
+                g = rg(x) + g - g_e
+                d = carried(along(home, xd), d_e, d)
+        r = math.radians(tt)
+        v = math.sin(r) * f0 - math.cos(r) * u      # (the way the blade's going)
+        v = un(v - d * (v @ d)) if i <= i_end else np.zeros(3)
         G.append(g)
         D.append(d)
         W.append(w)
@@ -234,16 +309,21 @@ def line_path(name):
         LEAD.append(lead)
         COCKS.append(cock)
         FIN.append(fin)
-    return dict(name=name, T=T, G=np.array(G), D=np.array(D), edge_w=np.array(W), travel=np.array(V), normal=n,
-                hit=int(round((TA + TB * u_hit) * HZ)), wind=int(round(TA * HZ)), end=int(round(t_end * HZ)),
+    D = np.array(D)
+    soft = gaussian_filter1d(D, 2.0, axis=0, mode="nearest")
+    keep = np.maximum(np.exp(-(((np.arange(N + 1) - i_hit) / 4.0) ** 2)), np.maximum(1 - np.arange(N + 1) / 5.0, (np.arange(N + 1) - N + 5) / 5.0).clip(0, 1))[:, None]
+    D = un_rows(soft * (1 - keep) + D * keep)
+    return dict(name=name, T=T, G=np.array(G), D=D, edge_w=np.array(W), travel=np.array(V), normal=n,
+                hit=i_hit, wind=i_wind, on=i_on, end=i_end, free=i_free,
                 theta=np.array(TT), line=al, start=GUARD, stop=GUARD, lead=np.array(LEAD), cock=np.array(COCKS), finish=np.array(FIN))
 
 
-def stab_path(name, start, times=(0.28, 0.26, 0.36)):
-    """The thrust: back to the hip, then straight down the X's ray, the tip on it all the way in and out."""
+def stab_path(name, start, times=(0.20, 0.16, 0.36)):
+    """The thrust: drawn back low to the right, then a punch down to the X, the tip arriving as the arm's fastest; it stays on the X's ray as the arm drives on."""
     TA, TB, TC = times
     draw, chamber, thrust, hit, end = (np.array(STAB[k]) for k in ("draw", "chamber", "thrust", "hit", "end"))
-    d_ch = tip_on_ray(chamber)
+    cx, cy = STAB["chamber_tip"]
+    d_ch = tip_at(chamber, cx, cy)
     pg = chord_spline([start["g"], draw, chamber], [0, 0.5, 1])
     ds = [start["d"], un(0.5 * (start["d"] + d_ch) + np.array([0.0, 0.1, 0.0])), d_ch]
     fg = CubicSpline([0, 0.45, 0.72, 1], [chamber, thrust, hit, end], bc_type="clamped")
@@ -255,7 +335,7 @@ def stab_path(name, start, times=(0.28, 0.26, 0.36)):
     N = int(round((t_end + TC) * HZ))
     TC = N / HZ - t_end
     T = np.arange(N + 1) / HZ
-    g_e, d_e = fg(1.0), tip_on_ray(fg(1.0))
+    g_e, d_e = fg(1.0), tip_at(fg(1.0), 0.0, 0.0)
     rg = chord_spline([g_e, start["g"]], [0, 1])
     G, D, LEAD = [], [], []
     for t in T:
@@ -267,7 +347,9 @@ def stab_path(name, start, times=(0.28, 0.26, 0.36)):
         elif t <= t_end + 1e-9:
             x = float(bell(np.array((t - TA) / TB), 2.0, 1.6))
             g = fg(x)
-            d = tip_on_ray(g)
+            q_ = min(x / 0.72, 1.0)
+            k_ = 1 - q_ * q_ * (3 - 2 * q_)
+            d = tip_at(g, cx * k_, cy * k_)
         else:
             x = float(bell(np.array((t - t_end) / TC), 1.8, 2.4))
             lead = 1 - x
@@ -337,7 +419,7 @@ def solve_sword(path, arm):
     step = 360.0 / ROLLS
     cost = np.zeros((N, ROLLS))
     twists = np.zeros((N, ROLLS))
-    fl = math.radians(FLAT_ROLL * FLAT_SIDE.get(path["name"], 1))
+    fl_ = FLAT.get(path["name"], 0.0)
     leads = path.get("lead", np.zeros(N))
     cocks = path.get("cock", np.full(N, COCK["wind"]))
     finishes = path.get("finish", np.zeros(N))
@@ -349,7 +431,7 @@ def solve_sword(path, arm):
         twists[i] = more[0]
         c = (bend / 90) ** 2 + (np.linalg.norm(Sh - arm.S0, axis=-1) / SHOULDER_EASE) ** 2 + (elbow_astray(arm, E, W) / 0.04) ** 2
         high, near = elbow_on_screen(E, W, how)
-        c = c + finishes[i] * ((high / 0.2) ** 2 + (near / 0.06) ** 2)
+        c = c + finishes[i] * (high / 0.2) ** 2 + (near / 0.06) ** 2
         if finishes[i] > 0:       # (past the hit: the fist on the forearm's line, the blade's flat to the eye)
             to_eye = un(-(G[i] + D[i] * TIP * 0.5))
             flat = np.degrees(np.arcsin(np.clip(np.abs(Rs[:, :, 0] @ to_eye), 0, 1)))
@@ -360,13 +442,14 @@ def solve_sword(path, arm):
         clear = np.degrees(np.arccos(np.clip((q * e).sum(-1) / np.linalg.norm(q, axis=-1), -1, 1)))
         c = c + 4 * (np.maximum(0, POMMEL_CLEAR - clear) / 25) ** 2
         w, v = path["edge_w"][i], path["travel"][i]
-        if path["hit"] is not None and i <= path["hit"]:      # (coming up and coming in the flat shows: edge-on it's a wire against the sky)
+        if path["hit"] is not None:      # (the flat shows, always: edge-on it's a wire against the sky)
             to_eye = un(-(G[i] + D[i] * TIP * 0.5))
             flat = np.degrees(np.arcsin(np.clip(np.abs(Rs[:, :, 0] @ to_eye), 0, 1)))
-            c = c + 2.5 * (np.maximum(0, 25 - flat) / 15) ** 2
+            c = c + 2.5 * (np.maximum(0, 25 - flat) / 15) ** 2 + 6 * (np.maximum(0, 14 - flat) / 8) ** 2
         if w > 0 and np.linalg.norm(v) > 0:
+            fl = math.radians(fl_ + (math.copysign(FLAT_PAST.get(path["name"], 45.0), fl_) - fl_) * finishes[i])       # (once it's through the X it can open up and show its width)
             target = math.cos(fl) * v + math.sin(fl) * un(np.cross(D[i], v))
-            err = np.degrees(np.arccos(np.clip(np.abs(Rs[:, :, 2] @ target), 0, 1)))
+            err = np.degrees(np.arccos(np.clip(-(Rs[:, :, 2] @ target), -1, 1)))      # (the knuckle edge is the sword's -z: never the back of the blade)
             c = c + 3.5 * w * (err / 25) ** 2
         cost[i] = c
     ang_of = lambda x, i: math.degrees(math.atan2(x @ np.cross(X[i], D[i]), x @ X[i]))
@@ -470,39 +553,32 @@ def best_cock(arm, R_h, W, most, finish=0.0, how={}):
     c = (np.linalg.norm(S_ - arm.S0, axis=-1) / 0.12) ** 2 + (RADIALS / 70.0) ** 2 + (elbow_astray(arm, E, W[..., None, :]) / 0.03) ** 2
     c = c + 40.0 * ~_shoulder_fits(arm, S_, how) + 400.0 * (RADIALS > np.asarray(most)[..., None])
     high, near = elbow_on_screen(E, W[..., None, :], how)
-    c = c + np.asarray(finish)[..., None] * ((high / 0.2) ** 2 + (near / 0.06) ** 2)
+    c = c + np.asarray(finish)[..., None] * (high / 0.2) ** 2 + (near / 0.06) ** 2
     return RADIALS[np.argmin(c, axis=-1)]
 
 
 def _arm_at(arm, R_h, W, Sh, E0, k, cock, keep=None):
-    """The arm with its lead at k and its wrist cocked by `cock`, as a real arm goes: the forearm's way, then the elbow's hinge
-    about it (the hand's own hinge, turned by at most TWIST_MAX: a forearm can only roll so far) and how far the elbow is
-    bent. The shoulder lands as near as those allow to where it wants to be. So a hinge can't flip and a forearm can't wind.
-    `keep`: (twist, bend) to use, already smoothed, in place of working them out. Gives the shoulder, elbow, wrist's bend,
-    and (the twist, the elbow's bend, the hinge's rest, the forearm's way)."""
+    """The arm with its lead at k and its wrist cocked by `cock`, as a real arm goes: the forearm's way, the upper arm from that elbow
+    heading for where the shoulder wants to be, and the forearm's roll on the hand's own hinge, turned by at most TWIST_MAX: a forearm
+    can only roll so far, and past that the elbow's skin takes up what the hinge can't, off in the corner of the view.
+    `keep`: the twist to use, already smoothed, in place of working it out. Gives the shoulder, elbow, wrist's bend, and (the twist,
+    the hinge, the forearm's way, the upper arm's way)."""
     natural = (R_h @ arm.fh[..., None])[..., 0]
     wanted = forearm_way(arm, R_h, np.asarray(cock)[..., None])[..., 0, :]
     f = _unit((W - E0) / arm.F * (1 - k) + wanted * k)
     E = W - f * arm.F
     rest = (R_h @ np.swapaxes(arm.Q0, -1, -2))[..., 0]
     rest = _unit(rest - f * (rest * f).sum(-1, keepdims=True))
+    ud = _unit(E - ((arm.S0 + UPPER_ANCHOR) * k + Sh * (1 - k)))
     if keep is None:
-        ud = -_unit(arm.S0 * k + Sh * (1 - k) - E)
-        along_f = (ud * f).sum(-1, keepdims=True)
-        side = ud - f * along_f
-        n = _unit(np.cross(side, f))
+        n = _unit(np.cross(ud - f * (ud * f).sum(-1, keepdims=True), f))
         tau = np.degrees(np.arctan2((np.cross(rest, n) * f).sum(-1), (rest * n).sum(-1)))
-        phi = np.degrees(np.arctan2(np.linalg.norm(side, axis=-1), along_f[..., 0]))
     else:
-        tau, phi = keep
+        tau = keep
     tau = np.clip(tau, -TWIST_MAX, TWIST_MAX)
-    phi = np.clip(phi, *ELBOW_BEND)
     n = _turned(rest, f, tau)
-    a = np.radians(phi)[..., None]
-    ud = np.cos(a) * f + np.sin(a) * np.cross(f, n)
-    S_ = E - ud * arm.U
     bend = np.degrees(np.arccos(np.clip((f * natural).sum(-1), -1, 1)))
-    return S_, E, bend, (tau, phi, n, f, ud)
+    return E - ud * arm.U, E, bend, (tau, n, f, ud)
 
 
 def arm_on_hand(arm, R_h, W, lead, most, pole=None, finish=0.0, how={}):
@@ -531,13 +607,15 @@ def lead_arm(arm, Rs, r, lead, most=None, finish=None, how={}):
     R_h, W = arm.hand(Rs, r, np.zeros(len(r)))
     Sh, _ = arm.reach(W)
     _, p = arm.elbow(Sh, W)
-    p = gaussian_filter1d(p, 2.0, axis=0, mode="nearest")
+    p_ = gaussian_filter1d(p, 2.0, axis=0, mode="nearest")
+    u_ = np.arange(len(r)) / (len(r) - 1)
+    p = p_ + (p[0] - p_[0]) * (np.clip(1 - u_ * 8, 0, 1) ** 2)[:, None] + (p[-1] - p_[-1]) * (np.clip(1 - (1 - u_) * 8, 0, 1) ** 2)[:, None]      # (still the guard's on its first and last frames)
     _, _, _, k, cock, _ = arm_on_hand(arm, R_h, W, lead, most, p, 0.0 if finish is None else finish, how)
     k = np.minimum(gaussian_filter1d(k, 3.0, mode="nearest"), lead)       # (no quicker than the arm could turn)
     cock = gaussian_filter1d(cock, 3.0, mode="nearest")
     Sh, _ = arm.reach(W)
     E0, _ = arm.elbow(Sh, W, p)
-    _, _, _, (tau, phi, _, _, _) = _arm_at(arm, R_h, W, Sh, E0, k[..., None], cock)
+    _, _, _, (tau, _, _, _) = _arm_at(arm, R_h, W, Sh, E0, k[..., None], cock)
     N = len(r)
     wound = unwrap_deg(tau)
     u = np.arange(N) / (N - 1)
@@ -557,13 +635,19 @@ def lead_arm(arm, Rs, r, lead, most=None, finish=None, how={}):
             b[N - 1 - i] = np.clip(b[N - 1 - i], b[N - i] - per_frame, b[N - i] + per_frame)
         return (a + b) / 2
 
-    tau, phi = eased(no_quicker(np.clip(wound, -TWIST_MAX, TWIST_MAX), TWIST_RATE)), eased(phi)
-    S_, E, bend, (tau, phi, n, f, ud) = _arm_at(arm, R_h, W, Sh, E0, k[..., None], cock, (tau, phi))
+    limited = np.clip(wound, -TWIST_MAX, TWIST_MAX)
+    quick = no_quicker(limited, TWIST_RATE)
+    quick = quick + (limited[0] - quick[0]) * np.clip(1 - u * 6, 0, 1) ** 2 + (limited[-1] - quick[-1]) * np.clip(1 - (1 - u) * 6, 0, 1) ** 2
+    S_, E, bend, (tau, n, f, ud) = _arm_at(arm, R_h, W, Sh, E0, k[..., None], cock, eased(quick))
 
     def about(y):
         x = _unit(n - y * (n * y).sum(-1, keepdims=True))
         return np.stack([x, y, np.cross(x, y)], -1)
-    Ru, Rf = about(ud), about(f)
+    Rf = about(f)
+    c_ = (f * ud).sum(-1, keepdims=True)
+    ax = np.cross(f, ud)
+    xu = Rf[..., 0] * c_ + np.cross(ax, Rf[..., 0]) + ax * (ax * Rf[..., 0]).sum(-1, keepdims=True) / (1 + c_)
+    Ru = np.stack([xu, ud, np.cross(xu, ud)], -1)
     tw = steady_twist(twist_of(Rf, R_h, arm.Q0))
     return dict(S=S_, E=E, W=W, Ru=Ru, Rf=Rf, Rh=R_h, twist=tw, bend=bend, cock=cock, lead=k)
 
@@ -646,7 +730,7 @@ def blend_shield(keys, weights):
 
 def build_clips(info, B):
     """All the clips: {name: (path, sol)}, sol holding each arm's joints frame by frame."""
-    armR = S.Arm("R", info, B, held="sword", sho=SHO, lift=0.5, ahead=1.2)
+    armR = S.Arm("R", info, B, held="sword", sho=SHO, lift=0.5, ahead=1.2, knee=0.96)
     armL = S.Arm("L", info, B, held="shield", sho=SHO, lift=0.5)
     SK = {k: (np.array(v["c"], float), shield_frame(armL, v["c"], v["face"], v.get("turn"))) for k, v in SHIELD.items()}
     carry, aside, up, shove = SK["carry"], SK["aside"], SK["up"], SK["shove"]
@@ -660,7 +744,7 @@ def build_clips(info, B):
         clips[cname] = (path, sol)
 
     for name in ORDER + ("stab",):
-        path = stab_path("stab", GUARD) if name == "stab" else line_path(name)
+        path = stab_path("stab", GUARD) if name == "stab" else drawn_path(name)
         T = path["T"]
         t_in, t_stay = T[path["hit"]] * 0.9, T[path["end"]]
         w = bell(np.minimum(T / t_in, 1.0), 2.0, 2.2) * (1 - bell(np.clip((T - t_stay) / (T[-1] - t_stay), 0, 1), 2.0, 2.2))
@@ -678,7 +762,7 @@ def build_clips(info, B):
     p = move_path("down", BACK, GUARD, 0.42)
     clip("shield_down", p, [up, carry], bell(p["T"] / p["T"][-1], 2.0, 2.0))
     # the thrust over the rim: the shield stays up
-    p = stab_path("stab", BACK, times=(0.24, 0.30, 0.38))
+    p = stab_path("stab", BACK, times=(0.20, 0.16, 0.38))
     clip("blade_stab_block", p, [up, up], np.zeros(len(p["T"])))
     return clips, armR, armL
 

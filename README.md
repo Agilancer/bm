@@ -2,7 +2,7 @@
 
 Bellmourn v2.
 
-## Play: The Knight of Velscour
+## Play: Velscour's Throne
 
 Run `play.bat`, or `python tools/serve.py`, and open `http://localhost:8402/`. It needs a WebGPU browser: current Chrome,
 Edge and Safari on PC and phones, or Firefox on Windows. On a static host it reaches the same state through `coi-sw.js`.
@@ -79,7 +79,7 @@ grades. The black knight drops a Rare or better sword and a gem, the silver knig
 or a gem (40%). Damage is weighed against a sword of 20, which the swings were balanced on, in `Player.bite`.
 
 To change the rolls, see the tables at the top of `src/items/items.js`, and run `node tools/items/check.mjs` to test them. To add
-swords, add the sheet to `tools/swords/sheets.py`, run `separate.py` and `render_icons.py` in Blender and `atlas.py` with Python.
+swords, add the sheet to `tools/swords/sheets.py`, run `separate.py` and `render_icons.py` in Blender and `atlas.py` with Python. `lengthen.py` draws out the one-handers' blades.
 
 Known limits: a socketed gem only shows on the icon, not on the 3D sword. The two-handers' handles were drawn out ×1.30 to ×1.43
 so both fists fit. The sabre is single-edged, but its swings alternate edges as the other swords' do. Nothing is carried in the off
@@ -171,8 +171,8 @@ To check it yourself:
 
 ## First-person arms with a sword and shield
 
-`assets/fp/arms_1h.glb` (2.7 MB) is one self-contained model: bare arms on their own skeleton, Bellmourn's Arming Sword in
-the right fist and its Iron-Bound Roundshield on the left, and the game's one-handed moves as thirteen clips.
+`assets/fp/arms_1h.glb` (2.8 MB) is one self-contained model: bare arms on their own skeleton, Bellmourn's Arming Sword in
+the right fist and its Iron-Bound Roundshield on the left, and the one-handed moves as nineteen clips, cut as first-person Skyrim plays them.
 
 To watch the first-person arms, run `swings-player.bat`. That opens `swings.html` on
 `http://localhost:8401/swings.html`, which is Bellmourn's move-picker scene: the training dummy, the X in the middle of
@@ -180,21 +180,26 @@ the screen, and a spark where a blow lands. The view shows the path of the blade
 
 | Clip | What it is | Tip through the X at |
 | --- | --- | --- |
-| `blade_d1` | Slash from the upper right | 0.450 s of 1.05 s |
-| `blade_d2` | Slash from the upper left | 0.433 s of 1.00 s |
-| `blade_over` | Overhead cut, straight down | 0.533 s of 1.17 s |
-| `blade_rise1` | Rising cut from the lower right | 0.450 s of 1.13 s |
-| `blade_rise2` | Rising cut from the lower left | 0.417 s of 1.05 s |
-| `blade_flat1` | Flat cut, right to left | 0.433 s of 1.10 s |
-| `blade_flat2` | Flat cut, left to right | 0.417 s of 1.02 s |
-| `blade_stab` | Thrust from the hip | 0.467 s of 0.90 s |
-| `blade_stab_block` | Thrust over the rim, shield up | 0.450 s of 0.92 s |
+| `blade_sky1` | Across from the right | 0.333 s of 0.87 s |
+| `blade_sky2` | Back across from the left | 0.333 s of 0.87 s |
+| `blade_sky3` | Rising, from the lower right | 0.333 s of 0.87 s |
+| `blade_sky4` | Down from the upper left | 0.333 s of 0.87 s |
+| `blade_sky5` | The overhead finisher, with the longest draw | 0.483 s of 1.15 s |
+| `blade_d1`, `blade_d2` | Slashes from the upper right and upper left | 0.400 s of 1.00 s |
+| `blade_over` | Overhead cut, straight down | 0.400 s of 1.00 s |
+| `blade_rise1`, `blade_rise2` | Rising cuts from the lower right and lower left | 0.400 s of 1.00 s |
+| `blade_flat1`, `blade_flat2` | Flat cuts, right to left and left to right | 0.400 s of 1.00 s |
+| `blade_stab` | Thrust from the low right | 0.317 s of 0.72 s |
+| `blade_stab_block` | Thrust over the rim, shield up | 0.317 s of 0.75 s |
 | `shield_up`, `shield_hold`, `shield_down` | Raising the shield with a shove, holding it (a loop), lowering it | |
 | `guard_walk` | The carry on the move, sword and shield swaying in step (a 0.92 s loop) | |
 | `guard_idle` | The carry standing still: the same loop, 40% as big | |
 
+In the game, left click runs the five `sky` swings in turn. In the air it's `blade_sky5`, stepping back `blade_rise1`, sprinting `blade_stab`, and
+right click alternates the flat cuts. `blade_d1`, `blade_d2`, `blade_over` and `blade_rise2` are in the file but the game doesn't use them.
+
 The shield steps aside inside each blow, out and down with its face turned out, and comes back in the recovery, so
-those clips drive both arms. In the viewer, left click cycles the combo (1 to 6 pick from the game's six), holding the
+those clips drive both arms. In the viewer, left click cycles the combo (1 is the Skyrim five, 2 to 7 the game's old six), holding the
 right button raises the shield, clicking with it up thrusts over the rim, and the **Walking** box plays the carry at walking
 speed. The clip times, combos and field of view are in `gltf.scene.userData`, and blows that start from the guard also end
 on it, so they chain with no join. Play the carries and `shield_hold` at `0.25 + min(1.3, speed / 6.2)` for a ground speed in
@@ -203,36 +208,32 @@ m/s, as the two-hander's.
 The skeleton is 54 joints, as the two-hander's below, but `weapon` hangs from `hand_R`, so the sword can't drift in the
 fist, and there's a `shield` joint on `hand_L`, with its origin on the grip, +y along it and -z toward the enemy.
 
-### What was kept from Bellmourn, and what changed
+### Where the motion comes from
 
-Kept, from `tools/templates/mocap1h.py`, `moves.py` and `anims.py`: the lines through the crosshair, the six combos, where
-the sword and shield sit on the screen carried and held up, the shield's step-aside, and the walk's sway and dip, in step.
-The rules are the two-hander's: the tip goes through the X on a frame, along its line, the edge leads, every blow starts and
-ends on one guard, and speed is one bell with no holds.
+The basis is first-person Skyrim, stepped through frame by frame with no sound: `_ZMx-ejIIBc` and `nr62-GnrrOs` for the vanilla game, `9QnSXSsUlY4`
+and `jVG7n8yCInI` for first-person animation mods. The mods were used because vanilla footage of a clean sword swing is scarce, so not all of it is vanilla.
+The lines through the crosshair are still Bellmourn's (`tools/templates/mocap1h.py`), and the rules are the two-hander's: the tip goes through the X on a frame,
+along its line, the edge leads, every blow starts and ends on one guard. The owner's video of the swings is the check on the elbow.
 
-Changed:
-
-- **The arm carries the swing, not the wrist.** As in the video of the swings, a wrist here only cocks in the blade's own plane,
-  back in the wind-up and opening through the cut, and hardly goes sideways. The elbow and the unseen shoulder move to put the
-  forearm there, the torso turning behind the blow. Elbows hang out and down, and the forearm turns as far as it needs to
-  without winding round. The arm reaches out long at the finish, and draws the sword back on the way home.
-- **The follow-through is the arm's.** Past the hit, the slashes' blades carry 51 and 56 degrees (50 in the game), the overhead
-  cut 56 (46), the flat cuts 61 and 64 (68) and the rising cuts 53 and 64 (38), with the hand and blade in sight throughout. So in
-  angle they're about the game's, and the flat cuts fall a little short of it: they used to carry up to 108, but only by breaking
-  the wrist. What's gained is the arm going through with the blade.
-- **Fists laid out on the screen.** Each blow's fist has its own path (`FIST`): low and beside the X at the hit, leading and
-  then slowing, so the blade pivots through the X, and it's under 8 m/s.
-- **A quieter way home.** A blade that ends left of the X comes back by way of a fist out in front and lifts on the right, so it
-  doesn't sweep across the view like a second blow. The blows are also shorter than the two-hander's.
+- **The carry.** The hand's off the bottom of the screen and the top half of the blade stands up at the right. The shield's a wedge in the lower left corner.
+- **The draw-back.** The fist comes back by the shoulder, 0.04 to 0.18 m ahead of the eye, the elbow folds to 53 to 75 degrees and the sword leaves the screen.
+  The old build kept the fist 0.46 to 0.56 m out, so its elbow opened on the wind-up and closed into the hit, which is backwards.
+- **The elbow swings it.** It opens through the strike and goes on opening past the hit, to 101 to 165 degrees, till shoulder, arm and blade are one line.
+  Skyrim shows the blade for only about a fifth to a third of a second, and these show it about as long: the sword's off the screen for most of a blow.
+- **Blade across the view.** A metre of blade with its tip on the X sits asin(`a`) off the view ray, for a fist `a` metres off that ray. So the fist is well out to the side at the hit,
+  which puts it off the screen. `blade_d1`'s is 0.80 out, about 53 degrees. Fully square to the crosshair can't be reached by an arm this long.
+- **Longer, broader blades.** `tools/swords/lengthen.py` draws the eight one-handers' blades out to 1.00 m from the fist and 1.3 times wider
+  toward the point, leaving the guards, grips and pommels alone. It's safe to run again. A one-hander's tip now sits as far from the fist as a greatsword's.
+- **Weight at the hit, in the game** (`src/sim/player.js`): hit-stop of 0.07 s (0.10 on a heavy), time at 0.08, then 0.07 s of drag at 0.65 speed. The
+  view kicks along the cut as it lands, there at once and gone in 0.26 s (`KICK`), on top of the body's lean through the blow. The drag applies to the two-hander too.
 - **Drawn at full size.** The game shrinks its one-handers toward the bottom of the screen. These use the two-hander's view,
   so the X is simply straight ahead.
-- **A longer sword arm.** The source's right forearm is much shorter than its left (0.21 m to 0.28 m), so it's drawn out 25%
-  to match. Without that the arm can't reach through its cuts.
-- **The overhead wind-up** stays lower and further forward than in the video, so the arm's cut-off end never comes into view.
+- **A longer sword arm.** The source's right forearm is much shorter than its left (0.21 m to 0.28 m), so it's drawn out 25%, and its upper arm 60% (0.19 m to 0.30 m).
+  Without that the arm can't reach through its cuts.
 
-To adjust the feel, change the tables at the top of `tools/fp_arms/swings1h.py`: `FIST` (the fist's path and the
-follow-through), `COCK` and `COCK_END` (how far the wrist may cock), `SHOULDER_ROOM` (how far the torso carries the shoulder),
-`GUARD`, `BACK`, `WALK`, `TIMES`, `WIND_CAP` and `SHIELD`.
+To adjust the feel, change the tables at the top of `tools/fp_arms/swings1h.py`: `DRAW` (the fist and blade drawn back, the fist at the hit, the tip's run), `TIMES`,
+`LEAD_HIT` and `LEAD_END` (how far the forearm follows the hand), `ARM_OUT`, `COCK` (how far the wrist may cock), `FLAT` and `FLAT_PAST` (how far the flat turns to the eye), `FINISH`, `OVERLAP`,
+`SHOULDER_ROOM` (how far the torso carries the shoulder), `STAB`, `GUARD`, `BACK`, `WALK` and `SHIELD`. `tools/fp_arms/check.py 1h` holds the rules; every limit is at the top of it.
 
 ### The hand repair
 
@@ -241,16 +242,18 @@ creased palm was also repainted and smoothed, since it faces you when the shield
 
 ### Known limits
 
+- `tools/fp_arms/check.py 1h` exits non-zero. The owner approved these blows by eye on 2026-11-04 with these failures standing: wrists bent back past the 20-degree limit (up to 40 on the `sky` blows, 47 on `blade_flat2`), a forearm and handle up to 45 degrees apart (limit 30), the tip up to 0.06 off its line away from the hit (limit 0.01), and several blows' elbows opening under 50 degrees.
+- `blade_sky3`'s forearm and upper arm jump 41 and 32 degrees in a frame at 0.23 s (limit 25), and `blade_flat1`'s 31 and 27 at 0.28 s. The sword's off the screen then.
+- With a hand off the screen, `check.py`'s on-screen blade length often has only the hit's frame to measure, so it says little about these blows. Many of its on-screen rules (hand height, fold, steel and forearm showing) no longer apply to a one-hander, since Skyrim's hands leave the screen.
+- The shield was only moved to where Skyrim holds it. The raise and the bash weren't rebuilt, and nobody has judged them against the footage.
 - The fingers are fused here too, so the finger bones can tighten or loosen a grip, not open the hand.
 - The shield is the game's low-poly model, as is the sword, so they differ in style from the detailed arms up close.
 - The sculpt's forearm runs almost along the handle, and the pommel sits just past the wrist, so it's close all the time.
   `blender_check.py` tests every second frame of the skinned mesh and lists any where it shows through.
 - The sculpt holds its fist a little off the forearm's axis, and its hand is painted dark, so at some angles the fist reads
   nearly black against the forearm.
-- The backhand's and left-to-right cut's finishes hold the sword like a hammer, standing off the forearm, since their tips have
-  to leave toward the lower right, across the arm's own side.
-- The flat cuts' tip is still gathering speed as it passes the X, and the rising cuts are the softest blows, so these may want
-  a little hit-stop to land.
+- A blow chained straight from the last one blends in over 0.1 s, so the blade's length can change faster across that seam than the clip's own numbers show.
+- The two-hander is still built the old way and its blade swells on the screen: x2.3 to x3.5 through most blows, x7.9 on `great_chop` and x339 on `great_slam`, where the tip runs past the eye.
 
 ## First-person arms with a two-handed sword
 

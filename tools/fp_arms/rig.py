@@ -57,7 +57,10 @@ SWORD_SHIELD = dict(
     grip={"L": ((-0.205, 0.135, 0.195), (0.857, -0.511, -0.060))},
     # the sculpt's sword arm has a much shorter forearm than the other (0.21 m to 0.28 m): drawn out to match
     stretch={"R": 1.25},
-    tip=0.60, weapon_parent="hand_R",
+    # ...and its upper arm stops short of the shoulder (0.19 m to a real arm's 0.30): drawn out too, so the arm can reach across
+    # the view and run off the bottom of the screen, its cut end out of sight, with the fist anywhere on a cut's line
+    stretch_upper={"R": 1.6},
+    tip=1.00, weapon_parent="hand_R",
     # the shield: on the left fist's grip, the board on the back of the hand's side, clear of the knuckles
     shield=dict(back=(0.088, 0.031, 0.996), seat=0.015))
 DIGITS = ("thumb", "index", "middle", "ring", "pinky")
@@ -104,6 +107,14 @@ def stretched(d, cfg):
         J["W"] = tuple(E + fd * L * k)
         if s == "R":
             d["sword_c"] = d["sword_c"] + fd * L * (k - 1)
+    for s, k in cfg.get("stretch_upper", {}).items():
+        J = cfg["arm"][s]
+        E, S_ = np.array(J["E"]), np.array(J["S"])
+        L = np.linalg.norm(S_ - E)
+        ud = (S_ - E) / L
+        m = d["side"] == (1 if s == "R" else -1)
+        V[m] += (k - 1) * np.clip((V[m] - E) @ ud, 0, L)[:, None] * ud
+        J["S"] = tuple(E + ud * L * k)
     d["V"] = V
     return d, cfg
 

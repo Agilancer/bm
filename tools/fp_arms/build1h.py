@@ -6,6 +6,7 @@ Sword in the right fist and Iron-Bound Roundshield on the left, and the game's o
 """
 import json
 import os
+import runpy
 import struct
 
 import numpy as np
@@ -17,12 +18,15 @@ from repair import BUILD, ROOT
 from swings import rot_about
 
 OUT = os.path.join(ROOT, "assets", "fp", "arms_1h.glb")
+DRAWN_OUT = runpy.run_path(os.path.join(ROOT, "tools", "swords", "lengthen.py"))["drawn_out"]
 NICE = dict(blade_d1="Slash, upper right", blade_d2="Slash, upper left", blade_over="Overhead cut", blade_rise1="Rising, from the right",
-            blade_rise2="Rising, from the left", blade_flat1="Flat, right to left", blade_flat2="Flat, left to right", blade_stab="Thrust")
+            blade_rise2="Rising, from the left", blade_flat1="Flat, right to left", blade_flat2="Flat, left to right", blade_stab="Thrust",
+            blade_sky1="Skyrim 1: across from the right", blade_sky2="Skyrim 2: back from the left", blade_sky3="Skyrim 3: rising, from the right",
+            blade_sky4="Skyrim 4: down from the left", blade_sky5="Skyrim 5: overhead finisher")
 
 
-def embed_item(g, path, images, materials, meshes, name):
-    """An item from the game: its mesh, material and texture, as they are."""
+def embed_item(g, path, images, materials, meshes, name, tip=None):
+    """An item from the game: its mesh, material and texture, as they are (`tip`: its blade drawn out to there)."""
     raw = open(path, "rb").read()
     jl = struct.unpack("<I", raw[12:16])[0]
     sj = json.loads(raw[20:20 + jl])
@@ -37,8 +41,11 @@ def embed_item(g, path, images, materials, meshes, name):
         return arr.reshape(-1, n_) if n_ > 1 else arr
 
     sp = sj["meshes"][0]["primitives"][0]
-    prim = dict(attributes=dict(POSITION=g.accessor(sacc(sp["attributes"]["POSITION"]), "VEC3", 5126, 34962, minmax=True),
-                                NORMAL=g.accessor(sacc(sp["attributes"]["NORMAL"]), "VEC3", 5126, 34962),
+    P_, N_ = sacc(sp["attributes"]["POSITION"]), sacc(sp["attributes"]["NORMAL"])
+    if tip is not None:
+        P_, N_, _, _ = DRAWN_OUT(P_, N_, tip)
+    prim = dict(attributes=dict(POSITION=g.accessor(P_, "VEC3", 5126, 34962, minmax=True),
+                                NORMAL=g.accessor(N_, "VEC3", 5126, 34962),
                                 TEXCOORD_0=g.accessor(sacc(sp["attributes"]["TEXCOORD_0"]), "VEC2", 5126, 34962)),
                 indices=g.accessor(sacc(sp["indices"]).astype(np.uint32), "SCALAR", 5125, 34963), material=len(materials))
     sim = sj["images"][0]
@@ -98,7 +105,7 @@ def build():
               image(os.path.join(BUILD, "arms_1h_normal.png"), "image/png")]
     materials = [dict(name="arms", pbrMetallicRoughness=dict(baseColorTexture=dict(index=0), metallicRoughnessTexture=dict(index=1)), normalTexture=dict(index=2))]
     meshes = [dict(name="arms", primitives=[prim])]
-    i_sword = embed_item(g, os.path.join(ROOT, "art", "fp_arms", "arming_sword.glb"), images, materials, meshes, "arming_sword")
+    i_sword = embed_item(g, os.path.join(ROOT, "art", "fp_arms", "arming_sword.glb"), images, materials, meshes, "arming_sword", M.TIP)
     i_shield = embed_item(g, os.path.join(ROOT, "art", "fp_arms", "ironbound.glb"), images, materials, meshes, "ironbound")
     i_arms = len(nodes)
     nodes.append(dict(name="arms", mesh=0, skin=0))
@@ -144,11 +151,14 @@ def build():
         if ev["loop"]:
             ev["walk"] = True       # (a carry, standing or on the move: played by how fast you go)
         if path["hit"] is not None:
-            ev.update(hit=float(T[path["hit"]]), wind=float(T[path["wind"]]), through=float(T[path["end"]]))
+            ev.update(hit=float(T[path["hit"]]), wind=float(T[path["wind"]]), on=float(T[path.get("on", path["wind"])]), through=float(T[path["end"]]))
         if path.get("thrust"):
             ev["thrust"] = True
         if path.get("line") is not None:
             ev["line"] = path["line"]
+            if "free" in path:
+                ev["free"] = float(T[path["free"]])
+                ev["lean"] = M.lean_of(path["line"])
         # (clips that leave the guard, or come back to something else)
         ev["rest"] = cname not in ("shield_up", "shield_hold", "shield_down", "blade_stab_block")
         meta["clips"][cname] = ev
