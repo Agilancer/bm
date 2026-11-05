@@ -2,7 +2,7 @@
 
 Bellmourn v2.
 
-## Play: The Knight of Velscour
+## Play: Velscour's Throne
 
 Run `play.bat`, or `python tools/serve.py`, and open `http://localhost:8402/`. It needs a WebGPU browser: current Chrome,
 Edge and Safari on PC and phones, or Firefox on Windows. On a static host it reaches the same state through `coi-sw.js`.
