@@ -50,10 +50,11 @@ HOLD = dict(near=0.006, curl=0.014, flex=1.2, shake=0.006)
 #   fist_roll: the fist about its forearm, degrees, as it is the moment it gives way to the open hand. fist_scale: the fist, the same on all axes, to the open arm's thickness at the wrist
 #   source: the name of the sculpt's files, if not the model's own. eye, pitch: where the eye stands to the whole sculpt, metres and degrees, if not from its fitted camera
 #   elbow: how far along the arm's length from the shoulder its elbow is, metres, if it has one
+#   down: where a finished cast stands, back along the arm and down, as a share of the way out of sight. A rest of 0 would be the sculpt as it stands. Every pose of a clip goes with it.
 PLACE = dict(
     # As modelled, from one eye, through the game's lens: the owner's picture, within 21 pixels of 1024, with the sculpt not moved at all
-    attack=dict(source="closer", eye=(0.0, -0.279, 0.444), pitch=-30.7, back=1.0, spread=0.0, lift=0.0, drop=0.0, rest=0.0, palm_out=0.05, fist_roll=0.0, fist_scale=1.1, elbow=0.22),
-    raise_=dict(back=0.55, spread=2.0, lift=12.0, drop=0.15, rest=36.0, palm_out=0.08, fist_roll=150.0),
+    attack=dict(source="closer", eye=(0.0, -0.279, 0.444), pitch=-30.7, back=1.0, spread=0.0, lift=0.0, drop=0.0, rest=0.0, palm_out=0.05, fist_roll=0.0, fist_scale=1.1, elbow=0.22, down=0.5),
+    raise_=dict(back=0.55, spread=2.0, lift=12.0, drop=0.15, rest=36.0, palm_out=0.08, fist_roll=150.0, down=0.42),
 )
 
 # The poses of a cast, one arm's worth, at key times. Between keys they ease. Missing values carry on from the key before.
@@ -493,6 +494,10 @@ def build(model):
         pts = pv[side_of if s == "R" else ~side_of]
         pts = pts[pts[:, 2] < -0.1]
         gone = float(np.max((pts[:, 1] - c_ * pts[:, 2]) / (enter[1] - c_ * enter[2])))
+        for a_ in (0.0, spec.get("down", 0.0)):
+            moved = pts - a_ * gone * enter
+            moved = moved[moved[:, 2] < -0.1]     # (what's gone past the eye isn't seen)
+            print("%s: at down %.3f the top of the hand is %.3f up the screen" % (s, a_, 0.5 + 0.5 * fg * np.max(moved[:, 1] / -moved[:, 2])))
         axes[s] = dict(n=n_view, along=along, enter=enter, flex=unit(np.cross(mid, n_view)), fingers=tips, gone=gone, sign=1.0 if s == "R" else -1.0)
         if jointed:     # (the way that closes the forearm on the upper arm)
             axes[s]["bend"] = unit(np.cross(pos["fore_" + s] - shoulder, wrist - pos["fore_" + s]))
@@ -523,7 +528,7 @@ def build(model):
         ax = axes[s]
         p = pose_of(t)
         tr, ro = {}, {}
-        tr["pose_" + s] = pos["pose_" + s] - np.outer(p["away"] * ax["gone"], ax["enter"]) + np.outer(p["near"], (0, 0, 1.0))
+        tr["pose_" + s] = pos["pose_" + s] - np.outer((spec.get("down", 0.0) + (1 - spec.get("down", 0.0)) * p["away"]) * ax["gone"], ax["enter"]) + np.outer(p["near"], (0, 0, 1.0))
         ro["pose_" + s] = axis_angle((0, 0, 1.0), p["roll"] * ax["sign"])
         o = opened(t)
         tr["arm_" + s] = np.outer(~o, WAITING)

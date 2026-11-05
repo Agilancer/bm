@@ -970,6 +970,43 @@ class GameView {
       case EV.JUMP: au.play('jump', null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play('run', null, 0, 0, 0.5, 1.15, false); break;
       case EV.CRAB_WAKE: this.hud.once('crab', 'Something is coming out of the fields.'); break;
+      case EV.HYDRA_NOTICE: this.hud.once('hydra', 'Three heads have turned your way. It has given you one warning.', 5); break;
+      case EV.FIRE: {
+        // One head's breath, this instant. A hiss under it, not on every puff.
+        r.emit(7, 8, a, b, c, d, e, f, 0.13, 9, 16, 0.07, 0.24, 0.5, 0.95);
+        if (Math.random() < 0.35) r.emit(6, 2, a, b, c, d, e + 0.15, f, 0.3, 4, 10, 0.012, 0.03, 0.6, 1.3);
+        if (Math.random() < 0.2) r.emit(4, 1, a + d * 2, b + e * 2 + 0.5, c + f * 2, 0, 1, 0, 0.5, 0.4, 1.2, 0.4, 0.8, 1.2, 2.4);
+        if (Math.random() < 0.2) au.gore(a, b, c, 0.32, 0.3, 2600);
+        break;
+      }
+      case EV.FIRE_HIT:
+        r.emit(7, 4, a, b + 0.1, c, 0, 1, 0, 1.2, 1, 3.2, 0.14, 0.34, 0.3, 0.7);
+        if (Math.random() < 0.3) r.emit(4, 1, a, b + 0.3, c, 0, 1, 0, 0.8, 0.4, 1, 0.5, 0.9, 1.4, 2.6);
+        break;
+      case EV.BURN:
+        au.gore(a, b, c, 0.4, 0.2, 1800);
+        r.emit(7, 8, a, b, c, 0, 1, 0, 1, 0.8, 2.6, 0.08, 0.2, 0.25, 0.55);
+        break;
+      case EV.SEVER:
+        // It comes off with a crack of bone, and everything that was in the neck comes after it.
+        au.play('impact', a, b, c, 1.5, 0.7);
+        au.gore(a, b, c, 1, 0.8, 420);
+        r.emit(0, 170, a, b, c, d, e + 0.6, f, 1.1, 1.5, 6, 0.004, 0.012, 0.8, 1.7);
+        r.emit(1, 30, a, b, c, 0, 0.5, 0, 1.4, 0.4, 1.8, 0.1, 0.28, 0.7, 1.4);
+        r.emit(2, 22, a, b, c, d, e, f, 1.2, 1, 5, 0.003, 0.006, 0.2, 0.5);
+        break;
+      case EV.STUMP:
+        r.emit(0, Math.ceil(14 * g), a, b, c, d, e, f, 0.3, 1.6 + 2.6 * g, 3 + 4 * g, 0.004, 0.01, 0.7, 1.3);
+        break;
+      case EV.CHUNK_LAND:
+        au.play('armorLand', a, b, c, 0.5 + d * 0.9, 0.5);
+        r.emit(3, Math.ceil(30 * d), a, b + 0.05, c, 0, 1, 0, 1.3, 0.4, 2.2, 0.08, 0.2, 0.5, 1.2);
+        break;
+      case EV.BEAST_NOTICE: this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
+      case EV.ROAR:
+        // A stag's roar, far too big: a groan under a rasp, carrying a long way.
+        au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
+        break;
       case EV.LOOT: this.drops.fromKill(a, b, c, d); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 3); break;
       case EV.WIN:

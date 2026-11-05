@@ -33,6 +33,9 @@ turned away, and when badly hurt fall back behind a house and come around the co
 themselves: bait drops the shield and dares you. Great crabs come out of the fields from 20 seconds after first blood, from
 different sides.
 
+Two animals keep their own ground and want nothing to do with the duel. The Gravehart holds the north: it warns you off, lets
+you leave if you do, and stalks you if you don't. The Bone Hydra lies up in the south, and its heads can be cut off.
+
 F3 shows frame time, threads and what the knight is thinking. On a phone, turn on **Frame rate readout** in Settings.
 
 ### The title, saves and settings
@@ -242,7 +245,7 @@ creased palm was also repainted and smoothed, since it faces you when the shield
 
 ### Known limits
 
-- `tools/fp_arms/check.py 1h` exits non-zero. The owner approved these blows by eye on 2026-11-04 with these failures standing: wrists bent back past the 20-degree limit (up to 40 on the `sky` blows, 47 on `blade_flat2`), a forearm and handle up to 45 degrees apart (limit 30), the tip up to 0.06 off its line away from the hit (limit 0.01), and several blows' elbows opening under 50 degrees.
+- `tools/fp_arms/check.py 1h` exits non-zero. The owner approved these blows by eye on 2026-11-04 with these failures standing: wrists bent back past the 20-degree limit (up to 40 on the `sky` blows, 48 on `blade_flat2`), a forearm and handle up to 45 degrees apart (limit 30), the tip up to 0.06 off its line away from the hit (limit 0.01), and several blows' elbows opening under 50 degrees.
 - `blade_sky3`'s forearm and upper arm jump 41 and 32 degrees in a frame at 0.23 s (limit 25), and `blade_flat1`'s 31 and 27 at 0.28 s. The sword's off the screen then.
 - With a hand off the screen, `check.py`'s on-screen blade length often has only the hit's frame to measure, so it says little about these blows. Many of its on-screen rules (hand height, fold, steel and forearm showing) no longer apply to a one-hander, since Skyrim's hands leave the screen.
 - The shield was only moved to where Skyrim holds it. The raise and the bash weren't rebuilt, and nobody has judged them against the footage.
@@ -396,7 +399,7 @@ Twenty spells, all of Bellmourn's, on hands of their own. **F** or the **middle 
 
 ### The hands
 
-`assets/fp/spell_attack.glb` and `assets/fp/spell_raise.glb` are built by `tools/fp_spells/hands.py`. Attack's open hands are the owner's `art/fp_spells/attack_closer.glb`, and that mesh is not to be changed: the file in the game is its points under one scale and one rigid move, its triangles and UVs the same. All that moves it is its skeleton, shoulder, elbow, wrist and three knuckles to a finger. Seen from one eye through the game's lens, it is the owner's picture with nothing moved. A reference picture sets a pose and nothing else: an earlier version squeezed the hands' depth to fit one, and flattened the fingers.
+`assets/fp/spell_attack.glb` and `assets/fp/spell_raise.glb` are built by `tools/fp_spells/hands.py`. Attack's open hands are the owner's `art/fp_spells/attack_closer.glb`, and that mesh is not to be changed: the file in the game is its points under one scale and one rigid move, its triangles and UVs the same. All that moves it is its skeleton, shoulder, elbow, wrist and three knuckles to a finger. Seen from one eye through the game's lens, it is the owner's picture with nothing moved. In the game a finished cast stands lower than that, the tops of the hands halfway up the screen, by moving the arms back and down: that's `down` in `PLACE`. A reference picture sets a pose and nothing else: an earlier version squeezed the hands' depth to fit one, and flattened the fingers.
 
 Every cast starts on the owner's closed fist, the empty hand of `art/fp_spells/empty_hand.glb` and its mirror. A fist's fingers are fused and can't open, so the fist and the open hand swap in one frame, under the flash at the hit. Attack hands close and go back to the fist at the end, in plain sight, with the arm already moving down.
 
@@ -416,7 +419,7 @@ That recolours the textures and only the textures, to the fist's skin, so the sw
 
 ### Known limits
 
-All twenty were checked in stepped frames against the knight, for their look, their damage and their mana, not by hand at full speed. Real touch and a real phone haven't been tried. The two hand files are 5.1 and 3.8 MB.
+All twenty were checked in stepped frames against the knight, for their look, their damage and their mana, not by hand at full speed. Real touch and a real phone haven't been tried. The two hand files are 5.1 and 3.8 MB. Spells hurt the Bone Hydra's body at half, as a sword does, and can't aim at a neck to take a head off.
 
 ## Crab monster
 
@@ -465,3 +468,123 @@ python tools/crab_monster/build.py
 
 The skeleton and weights are in `tools/crab_monster/rig.py`, and the clips, as eased keys, are in `tools/crab_monster/anim.py`.
 Source art and the Blender file are in `art/crab_monster/`.
+
+## The Gravehart
+
+`assets/monsters/gravehart/gravehart.glb` (6.8 MB) is a Tripo model of an antlered death-beast on its own 56-bone skeleton,
+with 13 clips. It faces +z, stands on y = 0 and is scaled 3x in the game. To watch it, run `gravehart-player.bat`, which opens
+`gravehart.html` on `http://localhost:8402/gravehart.html`.
+
+| Clip | What it is | Frames | Floor speed or travel, model units |
+| --- | --- | --- | --- |
+| `idle` | Tests the air, sniffs the ground, snaps round to listen | 180 | |
+| `walk_prowl` | Belly low, each forepaw hung and placed | 72 | 0.16/s |
+| `walk_roam` | Easy, swinging road gait | 40 | 0.34/s |
+| `run_lope` | Three-beat canter with a rocking back | 20 | 1.17/s |
+| `run_gallop` | Rotary gallop, with the spine folding and stretching | 18 | 2.11/s |
+| `attack_bite` | Gathers, drives forward, snaps and wrenches | 56 | 0.2 |
+| `attack_swipe` | Rears up, rakes twice, slams down | 68 | 0.06 |
+| `attack_pounce` | Hip shiver, leap, pin and bite | 76 | 0.95 |
+| `attack_antler_charge` | Scrapes the ground, gallops head-down, hooks | 112 | 3.03 |
+| `jump` | Crouch, launch, land forefeet first | 60 | 0.55 |
+| `taunt_bellow` | Antlers back, three heaving roars, a stamp | 104 | |
+| `taunt_thrash` | Rips side to side, then a toss and a stare | 114 | |
+| `death` | Forelegs go, topples, propped on its antlers | 62 | |
+
+All clips run at 30 fps and stay in place. `clips.json`, next to the model, has the frames, the floor speeds, and in `root` the
+frames over which each attack carries the animal forward.
+
+### How it behaves
+
+`src/sim/gravehart.js`. It has a territory north of the village, and feeds and wanders in it until it notices you by eye, by ear
+or by scent on the wind. It warns you off first, and lets you go if you leave. If you stay it hunts: it stalks from behind and
+freezes when you look round, pounces on a turned back, charges from range, and breaks off after each strike to circle. Badly
+hurt, it runs for its lair and fights like a cornered thing if you follow it there.
+
+### Known limits
+
+- Two critics passed it in their fifth round, from stills and measurements. Nobody has judged it in playback except in short
+  checks in the game.
+- `run_gallop` slips up to about 8 mm per frame, and `attack_antler_charge`'s hind legs bounce a little at full fold.
+- The corpse's rear hangs up to 66 mm clear of the floor at the end of `death`.
+- The ears and the antler bones aren't weighted to anything that shows, so there are no ear flicks.
+- The neck's texture looks streaky at the far end of a stretch (`idle` f72).
+
+### Rebuilding
+
+Needs Blender (on `PATH`, or in `BLENDER`), and Python to run the build. From the top of the repo:
+
+```bash
+python tools/gravehart/build.py
+```
+
+This reproduces the checked-in model and `clips.json` byte for byte. The skeleton and weights are in `tools/gravehart/rig.py`,
+and the clips are in `tools/gravehart/anim.py`. Source art and the Blender file are in `art/gravehart/`.
+
+## The Bone Hydra
+
+`assets/monsters/bone_hydra/bone_hydra.glb` (6 MB) is a Tripo model of a bone hydra on its own 53-bone skeleton, with 18 clips.
+The source had a fourth head with no neck; `tools/bone_hydra/surgery.py` takes it off and patches the shoulder where it was. It
+faces +z, stands on y = 0 and is scaled 3.6x in the game. To watch it, run `bone_hydra-player.bat`, which opens `bone_hydra.html`
+with a stand-in flame.
+
+| Clip | What it is | Frames | Floor speed or travel, model units |
+| --- | --- | --- | --- |
+| `idle` | One head on watch, one nosing the ground, one snapping at its neighbour | 180 | |
+| `walk_stalk` | Belly low, necks snaking, heads gliding level | 72 | 0.1/s |
+| `walk_lumber` | The everyday heavy walk | 44 | 0.24/s |
+| `run_lumber` | A heavy trot | 20 | 0.72/s |
+| `run_charge` | The flat-out gallop | 15 | 1.35/s |
+| `attack_bite` | Middle head coils and strikes, then wrenches | 56 | 0.16 |
+| `attack_triple_bite` | Right, left, middle, walking forward through them | 84 | 0.28 |
+| `attack_claw` | Rears over one shoulder and rakes, then the other side | 84 | |
+| `attack_tail_sweep` | Throws its hips round and cracks the tail across its left and rear | 72 | |
+| `attack_stomp` | Hauls its front end up and comes down on both forefeet | 80 | 0.16 |
+| `attack_fire_cone` | Middle head breathes a long stream | 110 | |
+| `attack_fire_triple` | All three heads, one after another | 122 | |
+| `attack_fire_sweep` | The two outer heads rake the ground, closing in | 118 | |
+| `jump` | Crouch, launch, land on the forefeet | 66 | 0.42 |
+| `taunt_roar` | Warning display from all three heads | 120 | |
+| `taunt_bicker` | The heads fall out with each other | 112 | |
+| `hurt` | Recoil when a neck is cut | 36 | |
+| `death` | The legs go, the belly hits, the necks come down one by one | 92 | |
+
+All clips run at 30 fps and stay in place. `clips.json`, next to the model, has the frames, the floor speeds, in `root` the frames
+over which an attack carries the animal forward, in `hits` which part lands when, and in `fire` which head burns when.
+
+### How it behaves
+
+`src/sim/hydra.js`. It lies up in its territory south of the village, basking and roaming. If you come near it looks a long time,
+roars twice, and comes for you if you stay. It's too heavy to circle, so it comes straight on: bites and claws close up, the tail
+if you get behind it, and fire from 5 to 13 m. It won't follow you far off its ground, unless you're close enough to still be
+cutting at it.
+
+### Cutting it up
+
+Each neck, the tail and the two drapes have their own hit points, and the mesh is already in pieces along the body's own segments.
+Cut a neck and the head falls to the ground with whatever neck was above the cut, and the stump bleeds. A neck that has lost its
+head can be cut again, lower down. Each head that goes takes that head's attacks with it. Down to its last head it runs for its
+lair once, and fights harder if you follow it there. Killing the last head kills it. Restarting clears the pieces.
+
+### Known limits
+
+- The two critics did not pass it. Both turned down round 2, from stills and measurements. The fixes for their must-fix lists are
+  in, but nobody has reviewed them. Nobody has judged it in playback except in short checks in the game.
+- `attack_claw`'s planted paw slips up to 21 mm per frame as the rake pulls back, and `walk_lumber` slips about 4 mm per frame.
+- The belly dips below the floor plane: 53 mm in `death` and `attack_claw`, more visibly on a slope.
+- The jump's heads bottom out together with the body.
+- Where a head meets its neck, the patch can show in low close-ups, and part 16's crest plate leaves a few open edges on the middle
+  neck, hidden by the double-sided material.
+- The tail sweep only reaches round the left and rear, so the animal first swings its hips to bring you under it.
+- `bone_hydra.html` shows a stand-in flame, not the game's.
+
+### Rebuilding
+
+Needs Blender (on `PATH`, or in `BLENDER`), and Python to run the build. From the top of the repo:
+
+```bash
+python tools/bone_hydra/build.py
+```
+
+The cut is in `tools/bone_hydra/surgery.py`, the skeleton and weights in `tools/bone_hydra/rig.py`, and the clips in
+`tools/bone_hydra/anim.py`. Source art and the Blender file are in `art/bone_hydra/`.

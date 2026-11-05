@@ -1,0 +1,121 @@
+{
+ "idle": {
+  "frames": 180,
+  "loop": true,
+  "fps": 30,
+  "speed": 0,
+  "duration": 6.0
+ },
+ "walk_prowl": {
+  "frames": 72,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.16,
+  "duration": 2.4
+ },
+ "walk_roam": {
+  "frames": 40,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.34,
+  "duration": 1.3333333333333333
+ },
+ "run_lope": {
+  "frames": 20,
+  "loop": true,
+  "fps": 30,
+  "speed": 1.173913043478261,
+  "duration": 0.6666666666666666
+ },
+ "run_gallop": {
+  "frames": 18,
+  "loop": true,
+  "fps": 30,
+  "speed": 2.111111111111111,
+  "duration": 0.6
+ },
+ "attack_bite": {
+  "frames": 56,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 1.8666666666666667,
+  "root": {
+   "start": 13,
+   "end": 22,
+   "dist": 0.2
+  }
+ },
+ "attack_swipe": {
+  "frames": 68,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.2666666666666666,
+  "root": {
+   "start": 30,
+   "end": 46,
+   "dist": 0.06
+  }
+ },
+ "attack_pounce": {
+  "frames": 76,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.533333333333333,
+  "root": {
+   "start": 26,
+   "end": 42,
+   "ramp": 2,
+   "dist": 0.95
+  }
+ },
+ "attack_antler_charge": {
+  "frames": 112,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 3.7333333333333334,
+  "root": {
+   "start": 30,
+   "end": 78,
+   "ramp": 5,
+   "dist": 3.0259259259259266
+  }
+ },
+ "jump": {
+  "frames": 60,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.0,
+  "root": {
+   "start": 20,
+   "end": 34,
+   "ramp": 2,
+   "dist": 0.55
+  }
+ },
+ "taunt_bellow": {
+  "frames": 104,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 3.466666666666667
+ },
+ "taunt_thrash": {
+  "frames": 114,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 3.8
+ },
+ "death": {
+  "frames": 62,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.066666666666667
+ }
+}

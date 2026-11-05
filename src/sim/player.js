@@ -432,7 +432,7 @@ export class Player {
       if (Math.hypot(k.x - x, k.z - z) > 4.6) continue;
       if (wallT > 0 && wallT < Math.hypot(k.x - x, k.z - z) - 0.5) continue;
       // The shield stands in front of everything when it's up.
-      if (k.shieldUp > 0.55 || k.state === S.BLOCK) {
+      if (k.shieldPos && (k.shieldUp > 0.55 || k.state === S.BLOCK)) {
         const t = this.rayShield(k, x, ey, z, dx, dy, dz, reach);
         if (t > 0) {
           const hx = x + dx * t, hy = ey + dy * t, hz = z + dz * t;

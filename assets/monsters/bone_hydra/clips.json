@@ -1,0 +1,230 @@
+{
+ "idle": {
+  "frames": 180,
+  "loop": true,
+  "fps": 30,
+  "speed": 0,
+  "duration": 6.0
+ },
+ "walk_stalk": {
+  "frames": 72,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.1,
+  "duration": 2.4
+ },
+ "walk_lumber": {
+  "frames": 44,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.24,
+  "duration": 1.4666666666666666
+ },
+ "run_lumber": {
+  "frames": 20,
+  "loop": true,
+  "fps": 30,
+  "speed": 0.7173913043478262,
+  "duration": 0.6666666666666666
+ },
+ "run_charge": {
+  "frames": 15,
+  "loop": true,
+  "fps": 30,
+  "speed": 1.352941176470588,
+  "duration": 0.5
+ },
+ "attack_bite": {
+  "frames": 56,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 1.8666666666666667,
+  "root": {
+   "start": 11,
+   "end": 22,
+   "ramp": 2,
+   "dist": 0.16
+  },
+  "hits": [
+   {
+    "by": "m",
+    "at": 20
+   }
+  ]
+ },
+ "attack_triple_bite": {
+  "frames": 84,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.8,
+  "root": {
+   "start": 14,
+   "end": 62,
+   "ramp": 6,
+   "dist": 0.28
+  },
+  "hits": [
+   {
+    "by": "r",
+    "at": 20
+   },
+   {
+    "by": "l",
+    "at": 36
+   },
+   {
+    "by": "m",
+    "at": 52
+   }
+  ]
+ },
+ "attack_claw": {
+  "frames": 84,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.8,
+  "hits": [
+   {
+    "by": "R",
+    "at": 31
+   },
+   {
+    "by": "L",
+    "at": 55
+   }
+  ]
+ },
+ "attack_tail_sweep": {
+  "frames": 72,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.4,
+  "hits": [
+   {
+    "by": "tail",
+    "at": 30
+   }
+  ]
+ },
+ "attack_stomp": {
+  "frames": 80,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.6666666666666665,
+  "root": {
+   "start": 18,
+   "end": 34,
+   "ramp": 3,
+   "dist": 0.16
+  },
+  "hits": [
+   {
+    "by": "both",
+    "at": 34
+   }
+  ]
+ },
+ "attack_fire_cone": {
+  "frames": 110,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 3.6666666666666665,
+  "fire": [
+   {
+    "head": "m",
+    "start": 34,
+    "end": 84
+   }
+  ]
+ },
+ "attack_fire_triple": {
+  "frames": 122,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 4.066666666666666,
+  "fire": [
+   {
+    "head": "r",
+    "start": 36,
+    "end": 84
+   },
+   {
+    "head": "l",
+    "start": 44,
+    "end": 88
+   },
+   {
+    "head": "m",
+    "start": 52,
+    "end": 92
+   }
+  ]
+ },
+ "attack_fire_sweep": {
+  "frames": 118,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 3.933333333333333,
+  "fire": [
+   {
+    "head": "r",
+    "start": 32,
+    "end": 86
+   },
+   {
+    "head": "l",
+    "start": 32,
+    "end": 86
+   }
+  ]
+ },
+ "jump": {
+  "frames": 66,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 2.2,
+  "root": {
+   "start": 21,
+   "end": 35,
+   "ramp": 2,
+   "dist": 0.42
+  }
+ },
+ "taunt_roar": {
+  "frames": 120,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 4.0
+ },
+ "taunt_bicker": {
+  "frames": 112,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 3.7333333333333334
+ },
+ "hurt": {
+  "frames": 36,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 1.2
+ },
+ "death": {
+  "frames": 92,
+  "loop": false,
+  "fps": 30,
+  "speed": 0,
+  "duration": 3.066666666666667
+ }
+}

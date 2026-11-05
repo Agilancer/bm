@@ -215,7 +215,7 @@ export class ArmsRig {
         if (trs[j] && scale !== 1) for (let i = 0; i < trs[j].length; i++) trs[j][i] *= scale;
       }
       const info = (this.extras.clips || {})[name] || {};
-      this.clips[name] = { name, frames: n, dur: c.dur, rots, trs, loop: !!info.loop || /^(walk|run)_/.test(name), hit: info.hit, wind: info.wind, through: info.through, lean: info.lean };
+      this.clips[name] = { name, frames: n, dur: c.dur, rots, trs, loop: !!info.loop || /^((walk|run)_|idle$)/.test(name), hit: info.hit, wind: info.wind, through: info.through, lean: info.lean };
     }
     this.rot = new Float32Array(this.count * 4);
     this.tr = new Float32Array(this.count * 3);
