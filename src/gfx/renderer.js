@@ -1,11 +1,12 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
-import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, VM_PALETTE, WEAPONS } from '../core/layout.js';
+import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
 import { MipGen, makeBuffer, mipCountFor, textureArrayFromBitmaps } from './gpu.js';
 import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
+import { SpellFX } from './spellfx.js';
 import { CRAB_SCALE } from '../sim/crab.js';
 import { SKIN } from './shaders.js';
 
@@ -131,7 +132,7 @@ export class Renderer {
 
     const buffers = await Promise.all(['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/reliquary_blade.glb', 'assets/game/items/thorned_kite.glb', 'assets/game/items/arming_sword.glb', 'assets/game/items/templar_kite.glb',
-      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb']
+      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb']
       .map((p) => fetch(base + p).then((r) => r.arrayBuffer()).then((b) => { tick(); return b; })));
     this.buildSamplers();
     this.buildBaseLayouts();
@@ -146,6 +147,7 @@ export class Renderer {
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
     this.vms = { 1: await this.buildViewModel(parseGLB(buffers[9])), 2: await this.buildViewModel(parseGLB(buffers[3])) };
     this.vm = this.vms[1];
+    this.spellVMs = { 1: await this.buildViewModel(parseGLB(buffers[10])), 2: await this.buildViewModel(parseGLB(buffers[11])) };
     // Swords are fetched the first time one is wanted, in the hand or on the ground, and kept: there are too many maps to load them all up front.
     this.swords = new Map();
     this.gems = new Map();
@@ -706,6 +708,8 @@ export class Renderer {
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
+    if (!this.spellfx) this.spellfx = new SpellFX(this);
+    this.spellfx.buildSolid((bgl) => layout(this.bgl0, bgl), targets, depth(), ms);
     const skyMod = module(SKY);
     this.pSky = device.createRenderPipeline({
       layout: layout(this.bgl0),
@@ -840,6 +844,7 @@ export class Renderer {
       fragment: { module: draw, entryPoint: 'fs', targets: [{ format: this.gpu.hdrFormat, blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } } }] },
       ...inWorld('greater'),
     });
+    this.spellfx.buildGlow(inWorld);
     const trail = this.shader(TRAIL);
     this.pTrail = device.createRenderPipeline({
       layout: device.createPipelineLayout({ bindGroupLayouts: [this.bgl0] }),
@@ -1007,6 +1012,7 @@ export class Renderer {
       pDrawBG: device.createBindGroup({ layout: this.bglPDraw, entries: [
         { binding: 0, resource: { buffer: this.pBuffer } }, { binding: 1, resource: { buffer: this.pAlive } }, { binding: 2, resource: ldView },
       ] }),
+      fxBG: this.spellfx.depthBG(ldView),
     };
     return { fields, textures, bloomData: bd };
   }
@@ -1179,7 +1185,8 @@ export class Renderer {
       const fade = Math.min(1, nextD - lit[i].d);
       d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i * fl * fade], O.LIGHTS + i * 8);
     }
-    d.set([take, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9], O.COUNTS);
+    const spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
+    d.set([take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9], O.COUNTS);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);
   }
 
@@ -1252,6 +1259,10 @@ export class Renderer {
     q.writeBuffer(this.vm.params, 0, skinParams);
     const vmData = this.vmData || (this.vmData = new Float32Array(20));
     vmData.set(vmSway, 0);
+    // A spell that wants the hands takes the sword down out of the way.
+    const lowered = snap[H.VM_LOWER];
+    vmData[13] -= lowered * 0.85; vmData[14] += lowered * 0.2;
+    this.vmDown = lowered > 0.995;
     vmData[16] = snap[H.BLOOD_SWORD];
     for (const part of this.vm.parts) {
       vmData[17] = part.isSword ? 1 : 0; vmData[18] = part.isSword ? 1 : 0; vmData[19] = 1;
@@ -1264,6 +1275,17 @@ export class Renderer {
       q.writeBuffer(h.hand.params, 0, skinParams);
       vmData[17] = 0; vmData[18] = 1; vmData[19] = h.tip;
       q.writeBuffer(h.ubo, 0, vmData);
+    }
+    // The spell hands, when they're up, with their own pose.
+    this.spellVM = this.spellVMs[snap[H.SPELL_RIG] | 0] || null;
+    if (this.spellVM) {
+      const sv = this.spellVM;
+      q.writeBuffer(sv.palette, 0, snap.buffer, snap.byteOffset + SPELL_PALETTE * 4, sv.jointCount * 32);
+      skinParamsU[0] = sv.count;
+      q.writeBuffer(sv.params, 0, skinParams);
+      vmData.set(vmSway, 0);
+      vmData[16] = 0; vmData[17] = 0; vmData[18] = 0; vmData[19] = -1;
+      for (const part of sv.parts) q.writeBuffer(part.ubo, 0, vmData);
     }
     // What's lying on the ground.
     let nGround = 0;
@@ -1322,6 +1344,10 @@ export class Renderer {
     if (this.held) {
       cp.setBindGroup(0, this.held.hand.bg);
       cp.dispatchWorkgroups(Math.ceil(this.held.hand.count / 128));
+    }
+    if (this.spellVM) {
+      cp.setBindGroup(0, this.spellVM.bg);
+      cp.dispatchWorkgroups(Math.ceil(this.spellVM.count / 128));
     }
     if (cullGrass) {
       cp.setPipeline(this.pGrassCull);
@@ -1400,15 +1426,25 @@ export class Renderer {
     if (!this.hideVM) {
       mp.setViewport(0, 0, this.W, this.H, 0.96, 1);
       mp.setPipeline(this.pVM);
+      if (this.spellVM) {
+        const sv = this.spellVM;
+        mp.setVertexBuffer(0, sv.outBuf);
+        mp.setVertexBuffer(1, sv.sideVB);
+        mp.setIndexBuffer(sv.IB, 'uint32');
+        for (const part of sv.parts) {
+          mp.setBindGroup(1, part.bg);
+          mp.drawIndexed(part.range.count, 1, part.range.first);
+        }
+      }
       mp.setVertexBuffer(0, this.vm.outBuf);
       mp.setVertexBuffer(1, this.vm.sideVB);
       mp.setIndexBuffer(this.vm.IB, 'uint32');
-      for (const part of this.vm.parts) {
+      if (!this.vmDown) for (const part of this.vm.parts) {
         if (part.isSword && !this.holdingOld) continue;
         mp.setBindGroup(1, part.bg);
         mp.drawIndexed(part.range.count, 1, part.range.first);
       }
-      if (this.held) {
+      if (this.held && !this.vmDown) {
         const h = this.held;
         mp.setVertexBuffer(0, h.hand.outBuf);
         mp.setVertexBuffer(1, h.hand.sideVB);
@@ -1418,6 +1454,7 @@ export class Renderer {
       }
     }
     mp.setViewport(0, 0, this.W, this.H, 0, 0.96);
+    this.spellfx.drawSolid(mp);
     mp.setPipeline(this.pArmor);
     for (let i = 0; i < this.chars.length; i++) {
       const ch = this.chars[i];
@@ -1482,6 +1519,7 @@ export class Renderer {
       mp.setPipeline(this.pDraw);
       mp.setBindGroup(1, this.pDrawBG);
       mp.drawIndirect(this.pArgs, 0);
+      this.spellfx.draw(mp);
       if (this.trailCount >= 4 && !this.hideVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
         mp.setViewport(0, 0, this.W, this.H, 0.96, 1);
@@ -1508,6 +1546,7 @@ export class Renderer {
       pp.setPipeline(this.pDraw);
       pp.setBindGroup(1, this.pDrawBG);
       pp.drawIndirect(this.pArgs, 0);
+      this.spellfx.draw(pp);
       if (this.trailCount >= 4 && !this.hideVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
         pp.setPipeline(this.pTrail);

@@ -380,6 +380,41 @@ blender -b --factory-startup --python tools/fp_arms/blender_check.py -- 1h
 Source art is in `art/fp_arms/`: the Tripo models as delivered, the Greatsword, Arming Sword and Iron-Bound Roundshield
 from Bellmourn2, and the two-hander's original swing keys from Bellmourn (kept for reference: the build no longer reads them).
 
+## Spells
+
+Twenty spells, all of Bellmourn's, on hands of their own. **F** or the **middle mouse button** casts; hold it to charge Firebolt or keep up a channel. The **number keys** or the **wheel** pick from the bar, **B** opens the book. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
+
+| Hands | Spells |
+| --- | --- |
+| Attack: thrown, the palms to the target | Firebolt, Frost Shards, Ball Lightning, Magic Missiles, Arcane Blast, Fire Beam, Chain Lightning, Life Drain, Blink, Bone Lance, Gravity Well, Plague Flask, Earthsplitter |
+| Raise: lifted, the palms up | Mend, Wisp Light, Wall of Fire, Frost Nova, Meteor, Blizzard, Spirit Blades |
+
+`src/sim/spells.js` is the table of them, `src/sim/casting.js` runs them on the sim thread and drives the hands, `src/gfx/spellfx.js` draws them, `src/spellsound.js` and `src/ui/spellbar.js` are their sound and their bar and book.
+
+### The hands
+
+`assets/fp/spell_attack.glb` and `assets/fp/spell_raise.glb` are built by `tools/fp_spells/hands.py`. Attack's open hands are the owner's `art/fp_spells/attack_closer.glb`, and that mesh is not to be changed: the file in the game is its points under one scale and one rigid move, its triangles and UVs the same. All that moves it is its skeleton, shoulder, elbow, wrist and three knuckles to a finger. Seen from one eye through the game's lens, it is the owner's picture with nothing moved. A reference picture sets a pose and nothing else: an earlier version squeezed the hands' depth to fit one, and flattened the fingers.
+
+Every cast starts on the owner's closed fist, the empty hand of `art/fp_spells/empty_hand.glb` and its mirror. A fist's fingers are fused and can't open, so the fist and the open hand swap in one frame, under the flash at the hit. Attack hands close and go back to the fist at the end, in plain sight, with the arm already moving down.
+
+Finger roundness, thin way over wide way, as shipped: Attack's median is 0.71, its lowest 0.40 at a thumb root. `measure` in `hands.py` prints it. Below about 0.3 a finger reads as flat.
+
+To see them on their own, run `spells-player.bat`: Attack or Raise, one hand or both, any speed, scrubbed, or walked around with **O**.
+
+### Rebuilding the hands
+
+`hands.py` runs inside Blender, through Blender MCP, and its first lines say how. To change the feel, change `CLIPS` at the top of it, and `PLACE` for where the arms stand. To bring new textures in:
+
+```bash
+python tools/fp_spells/skin_tone.py
+```
+
+That recolours the textures and only the textures, to the fist's skin, so the swap doesn't show. Raise's sculpt is still repaired from its own picture, by `fingers.py`, `match.py`, `fit_fingers.py`, `arm.py` and `fix.py`, in that order.
+
+### Known limits
+
+All twenty were checked in stepped frames against the knight, for their look, their damage and their mana, not by hand at full speed. Real touch and a real phone haven't been tried. The two hand files are 5.1 and 3.8 MB.
+
 ## Crab monster
 
 `assets/monsters/crab_monster/crab_monster.glb` (5.3 MB) is the Tripo crab monster on its own 70-bone skeleton, with eight

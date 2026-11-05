@@ -165,7 +165,7 @@ export class Player {
         sim.event(EV.DODGE, this.x, this.y, this.z, lx);
       }
     }
-    const swingDrag = this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== this.stance.idle ? 0.85 : 1;
+    const swingDrag = (this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== this.stance.idle ? 0.85 : 1) * sim.casting.drag;
     const speed = (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2);
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     // Strafe right is -x when facing +z.
@@ -268,7 +268,7 @@ export class Player {
     }
     // A buffered click starts the next swing at the end of the last one's follow-through.
     if (this.queued && !this.weapon) { this.queued = null; sim.event(EV.EMPTY_HANDS); }
-    const canStart = this.clip === this.stance.idle || (this.recovering && this.t > info.through + 0.04);
+    const canStart = !sim.casting.busy && (this.clip === this.stance.idle || (this.recovering && this.t > info.through + 0.04));
     if (this.queued && canStart && this.recoilT <= 0) {
       const st = this.stance;
       let name;

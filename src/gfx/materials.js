@@ -587,9 +587,17 @@ fn vn2(p: vec2f) -> f32 {
   let worldViewZ = -(F.view * vec4f(in.p, 1.0)).z;
   let shadow = shadowAt(in.p, n0, max(worldViewZ, 0.1), ign(in.pos.xy));
   var c = shadePBR(in.p, n, v, albedo, rough, metal, 1.0, shadow);
+  // The spell hands are held up against the light as often as not: a low, warm fill from the eye keeps the skin skin, and the fingers' roundness in view.
+  // And a spell's light, so near, can colour them but not burn them out: the upper arm faces all of it.
+  if (M.params.w < 0.0) {
+    c += albedo * vec3f(0.62, 0.5, 0.42) * (0.3 + 0.7 * max(dot(n, v), 0.0));
+    let most = max(max(c.r, c.g), c.b);
+    if (most > 1.0) { c *= (1.0 + (most - 1.0) * 0.12) / most; }
+  }
   var o: Out;
   o.color = vec4f(c, 1.0);
-  o.depth = in.viewZ;
+  // (The spell hands say how near they look, not how far off they're drawn.)
+  o.depth = select(in.viewZ, 0.2, M.params.w < 0.0);
   return o;
 }
 `;

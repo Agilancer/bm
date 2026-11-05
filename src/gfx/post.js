@@ -1,5 +1,6 @@
 // WGSL for GPU particles and the post chain.
 import { COMMON } from './shaders.js';
+import { RAMP } from './spellfx.js';
 
 export const PARTICLE_SIM = /* wgsl */ `
 struct P { pos: vec3f, life: f32, vel: vec3f, maxLife: f32, size: f32, kind: u32, seed: f32, pad: f32 };
@@ -53,7 +54,12 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
       p.vel = S.wind.xyz * 0.25 + vec3f(sin(t), sin(t * 0.7 + 1.0) * 0.5, cos(t * 1.1)) * 0.11;
     }
     default: {
-      p.vel.y += 0.5 * dt;
+      if (p.kind >= 16u) {
+        p.vel.y -= 2.2 * dt;
+        p.vel *= 1.0 - 1.7 * dt;
+      } else {
+        p.vel.y += 0.5 * dt;
+      }
     }
   }
   p.pos += p.vel * dt;
@@ -86,7 +92,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
 }
 `;
 
-export const PARTICLE_DRAW = COMMON + /* wgsl */ `
+export const PARTICLE_DRAW = COMMON + RAMP + /* wgsl */ `
 struct P { pos: vec3f, life: f32, vel: vec3f, maxLife: f32, size: f32, kind: u32, seed: f32, pad: f32 };
 @group(1) @binding(0) var<storage, read> particles: array<P>;
 @group(1) @binding(1) var<storage, read> alive: array<u32>;
@@ -156,7 +162,20 @@ struct V {
       col *= smoothstep(0.0, 0.2, a) * (1.0 - smoothstep(0.85, 1.0, a));
     }
     default: {
-      col = vec4f(vec3f(6.0, 1.6, 0.25) * a, 0.0);
+      if (pt.kind >= 16u) {
+        // A spell's sparks: its own colours, streaking the way they go, and cooling.
+        let vv = (F.view * vec4f(pt.vel, 0.0)).xy;
+        let sp = length(vv);
+        if (sp > 0.05) {
+          let dir = vv / sp;
+          let perp = vec2f(-dir.y, dir.x);
+          let stretch = 1.0 + min(sp * 0.008 / max(pt.size, 0.001), 4.0);
+          off = (dir * q.y * pt.size * stretch + perp * q.x * pt.size) * lens;
+        }
+        col = vec4f(rampColor(pt.kind - 16u, 0.3 + a * 0.7) * (1.0 + a * a * 22.0), 0.0);
+      } else {
+        col = vec4f(vec3f(6.0, 1.6, 0.25) * a, 0.0);
+      }
     }
   }
   o.color = col;

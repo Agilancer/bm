@@ -1,0 +1,620 @@
+// Spells on the screen. The sim writes what's alive as a list of shapes; solid things (ice, stone, bone, blades) are drawn lit in the
+// world, and everything else (fire, light, force) as procedural HDR light after it, hot enough for the bloom to carry.
+import { FX_FLOATS, FX_START, H, MAX_FX } from '../core/layout.js';
+import { ELEM, ELEM_LIGHT, FX } from '../sim/spells.js';
+import { COMMON } from './shaders.js';
+
+// Each element's colours in linear light, white-hot first, down to the deep shade its edges fall off through.
+export const RAMP = /* wgsl */ `
+fn rampStop(e: u32, i: u32) -> vec3f {
+  var R = array<vec3f, 48>(
+    vec3f(1.0, 0.86, 0.52), vec3f(1.0, 0.44, 0.08), vec3f(0.72, 0.1, 0.015), vec3f(0.09, 0.008, 0.0),       // fire
+    vec3f(0.9, 1.0, 1.0), vec3f(0.42, 0.8, 1.0), vec3f(0.08, 0.34, 0.92), vec3f(0.008, 0.05, 0.24),         // frost
+    vec3f(1.0, 0.84, 1.0), vec3f(0.84, 0.32, 1.0), vec3f(0.38, 0.07, 0.9), vec3f(0.05, 0.008, 0.2),         // arcane
+    vec3f(0.94, 0.95, 1.0), vec3f(0.56, 0.5, 1.0), vec3f(0.24, 0.14, 0.95), vec3f(0.03, 0.015, 0.3),        // storm
+    vec3f(1.0, 1.0, 0.84), vec3f(0.7, 1.0, 0.38), vec3f(0.14, 0.7, 0.14), vec3f(0.008, 0.14, 0.04),         // heal
+    vec3f(1.0, 1.0, 0.9), vec3f(1.0, 0.84, 0.5), vec3f(1.0, 0.54, 0.14), vec3f(0.28, 0.11, 0.015),          // light
+    vec3f(1.0, 0.72, 0.72), vec3f(1.0, 0.13, 0.17), vec3f(0.52, 0.008, 0.035), vec3f(0.05, 0.0, 0.008),     // drain
+    vec3f(1.0, 1.0, 0.94), vec3f(0.78, 0.92, 0.62), vec3f(0.28, 0.6, 0.4), vec3f(0.025, 0.09, 0.06),        // bone
+    vec3f(0.88, 0.74, 1.0), vec3f(0.48, 0.18, 1.0), vec3f(0.11, 0.015, 0.44), vec3f(0.004, 0.0, 0.016),     // void
+    vec3f(0.88, 1.0, 0.46), vec3f(0.44, 0.95, 0.09), vec3f(0.07, 0.34, 0.025), vec3f(0.008, 0.045, 0.008),  // poison
+    vec3f(1.0, 1.0, 1.0), vec3f(0.44, 0.95, 1.0), vec3f(0.05, 0.58, 0.74), vec3f(0.008, 0.11, 0.15),        // spirit
+    vec3f(1.0, 0.74, 0.42), vec3f(0.58, 0.4, 0.26), vec3f(0.24, 0.19, 0.15), vec3f(0.03, 0.024, 0.018)      // stone
+  );
+  return R[e * 4u + i];
+}
+fn rampColor(e: u32, t: f32) -> vec3f {
+  let s = clamp(t, 0.0, 1.0) * 2.999;
+  let i = u32(s);
+  return mix(rampStop(e, 3u - i), rampStop(e, 2u - i), s - f32(i));
+}
+`;
+
+const LIGHT_SHAPES = /* wgsl */ `
+struct Inst { p: vec4f, a: vec4f, m: vec4f, x: vec4f };  // p: place, size. a: axis, length. m: shape, element, seed, age. x: alpha, light, its reach, extra.
+@group(1) @binding(0) var<storage, read> fx: array<Inst>;
+@group(1) @binding(1) var depthTex: texture_2d<f32>;
+
+struct V {
+  @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) viewZ: f32, @location(2) @interpolate(flat) id: u32,
+  @location(3) @interpolate(flat) c0: vec3f, @location(4) @interpolate(flat) c1: vec3f, @location(5) @interpolate(flat) c2: vec3f, @location(6) @interpolate(flat) c3: vec3f,
+};
+
+const HOT = 8.0;
+
+@vertex fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> V {
+  let I = fx[ii];
+  var quad = array<vec2f, 6>(vec2f(-1, -1), vec2f(1, -1), vec2f(1, 1), vec2f(-1, -1), vec2f(1, 1), vec2f(-1, 1));
+  let q = quad[vi];
+  let shape = u32(I.m.x);
+  let e = u32(I.m.y);
+  let size = I.p.w;
+  var o: V;
+  o.id = ii; o.uv = q;
+  o.c0 = rampStop(e, 0u); o.c1 = rampStop(e, 1u); o.c2 = rampStop(e, 2u); o.c3 = rampStop(e, 3u);
+  var vp: vec3f;
+  switch shape {
+    case 1u, 2u, 8u: {
+      // A ribbon along its length, turned to face the eye. A beam widens to its extra.
+      let s = (q.y + 1.0) * 0.5;
+      let P = I.p.xyz + I.a.xyz * I.a.w * s;
+      let side = normalize(cross(I.a.xyz, F.camPos.xyz - P) + vec3f(0.0, 1e-4, 0.0));
+      var w = size;
+      if (shape == 1u) { w = mix(size, I.x.w, s); }
+      vp = (F.view * vec4f(P + side * q.x * w, 1.0)).xyz;
+      o.uv = vec2f(q.x, s);
+    }
+    case 3u, 4u, 9u: {
+      // Marks on the ground. With the depth to read, they are drawn from a card as wide as they are and laid onto whatever's
+      // really there; from inside one, the whole screen is the card. A phone lays them flat.
+      if (LEAN) {
+        vp = (F.view * vec4f(I.p.xyz + vec3f(q.x * size, 0.08, q.y * size), 1.0)).xyz;
+      } else {
+        let vc = (F.view * vec4f(I.p.xyz, 1.0)).xyz;
+        if (length(vc) < size * 1.6 + 1.2) {
+          o.pos = vec4f(q, 0.5, 1.0); o.viewZ = 0.0;
+          return o;
+        }
+        vp = vc + vec3f(q * size * 1.5, 0.0);
+      }
+    }
+    case 5u, 10u: {
+      // Standing up, and turned to you about the upright. Its width is its length.
+      let to = F.camPos.xyz - I.p.xyz;
+      let side = normalize(vec3f(to.z, 0.0, -to.x) + vec3f(1e-4, 0.0, 0.0));
+      vp = (F.view * vec4f(I.p.xyz + side * q.x * I.a.w + vec3f(0.0, (q.y + 1.0) * 0.5 * size, 0.0), 1.0)).xyz;
+    }
+    default: {
+      vp = (F.view * vec4f(I.p.xyz, 1.0)).xyz;
+      // Passing the lens, it shrinks away rather than fill the screen.
+      vp = vec3f(vp.xy + q * size * smoothstep(0.05, 0.5, -vp.z), vp.z);
+    }
+  }
+  o.viewZ = -vp.z;
+  o.pos = F.proj * vec4f(vp, 1.0);
+  return o;
+}
+
+var<private> C: array<vec3f, 4>;
+fn ramp(t: f32) -> vec3f {
+  let s = clamp(t, 0.0, 1.0) * 2.999;
+  let i = u32(s);
+  return mix(C[3u - i], C[2u - i], s - f32(i));
+}
+fn n1(p: vec2f) -> f32 { return textureSampleLevel(noiseTex, repeatSmp, p, 0.0).r; }
+fn fbm(p: vec2f) -> f32 {
+  return n1(p) * 0.5 + textureSampleLevel(noiseTex, repeatSmp, p * 2.03 + vec2f(0.37, 0.11), 0.0).g * 0.27
+    + textureSampleLevel(noiseTex, repeatSmp, p * 4.07 + vec2f(0.71, 0.53), 0.0).b * 0.15 + textureSampleLevel(noiseTex, repeatSmp, p * 8.13 + vec2f(0.13, 0.91), 0.0).a * 0.08;
+}
+// Noise with its contrast brought back up: the sums above bunch around the middle.
+fn cn(v: f32) -> f32 { return clamp((v - 0.5) * 2.1 + 0.5, 0.0, 1.0); }
+
+fn orb(uv: vec2f, seed: f32, T: f32) -> vec4f {
+  let r = length(uv);
+  if (r >= 1.0) { return vec4f(0.0); }
+  // Noise on the face of a ball, boiling.
+  let sp = uv / (1.0 + sqrt(max(1.0 - r * r, 0.0)));
+  let flow = vec2f(T * 0.11, -T * 0.19);
+  let w = cn(fbm(sp * 0.22 + flow * 0.6 + seed));
+  let n = cn(fbm(sp * 0.42 + w * 0.2 - flow));
+  let body = smoothstep(0.74, 0.14, r + (n - 0.5) * 0.62);
+  let halo = pow(1.0 - r, 2.4);
+  let heat = clamp(body * (0.42 + n * 0.8) + pow(1.0 - r, 5.0) * 0.5, 0.0, 1.0);
+  return vec4f(ramp(heat) * (0.2 + heat * heat * HOT * 1.4) * body + ramp(0.5) * halo * 1.0, 0.0);
+}
+
+fn beam(uv: vec2f, L: f32, seed: f32, T: f32) -> vec4f {
+  let d = abs(uv.x);
+  let s = uv.y * L;
+  let n = cn(fbm(vec2f(s * 0.045 - T * 0.85 + seed, uv.x * 0.1 + seed)));
+  let m = cn(fbm(vec2f(s * 0.12 - T * 1.7, uv.x * 0.2 - seed)));
+  let edge = d + (n - 0.5) * 0.78;
+  let body = smoothstep(0.95, 0.12, edge);
+  let core = exp(-d * d * 7.0);
+  let heat = clamp(core * (0.5 + m * 0.65) + body * 0.22, 0.0, 1.0);
+  let ends = smoothstep(0.0, 0.02, uv.y) * smoothstep(1.0, 0.94, uv.y + (n - 0.5) * 0.05);
+  return vec4f(ramp(heat) * (0.3 + heat * heat * HOT * 1.3) * body * ends, 0.0);
+}
+
+fn bolt(uv: vec2f, L: f32, jag: f32, seed: f32, T: f32) -> vec4f {
+  let s = uv.y;
+  let env = sin(s * 3.14159);
+  let t = floor(T * 22.0) * 0.137 + seed * 0.71;
+  let wander = (n1(vec2f(s * L * 0.021 + t, seed)) - 0.5) * 2.0 + (n1(vec2f(s * L * 0.075 - t, seed + 0.4)) - 0.5);
+  let x = uv.x - wander * jag * 1.7 * pow(env, 0.6);
+  let core = exp(-x * x * 900.0);
+  let glow = exp(-abs(x) * 12.0);
+  let fall = smoothstep(0.0, 0.02, s) * smoothstep(1.0, 0.98, s);
+  // A fork that wanders off and dies.
+  let wf = (n1(vec2f(s * L * 0.05 + t * 1.7, seed + 0.8)) - 0.5) * 3.2;
+  let xf = uv.x - wf * jag * smoothstep(0.25, 0.9, s);
+  let fork = exp(-xf * xf * 1300.0) * smoothstep(0.2, 0.32, s) * smoothstep(0.95, 0.5, s);
+  return vec4f((ramp(1.0) * HOT * 3.0 * core + ramp(1.0) * HOT * 1.2 * fork + ramp(0.55) * glow * 1.8) * fall, 0.0);
+}
+
+fn ring(uv: vec2f, age: f32, seed: f32, T: f32) -> vec4f {
+  let r = length(uv);
+  if (r > 1.3) { return vec4f(0.0); }
+  let a = atan2(uv.y, uv.x);
+  let n = cn(fbm(vec2f(cos(a) * 0.3 + seed, sin(a) * 0.3 + r * 0.14 - T * 0.05)));
+  let w = 0.035 + 0.09 * age;
+  let dr = (r - 0.93) / w;
+  let band = exp(-dr * dr) * (0.35 + n * 1.1);
+  let haze = smoothstep(0.95, 0.15, r) * 0.14 * (1.0 - age) * n;
+  return vec4f(ramp(band) * (band * band * HOT * 1.5 + band * 1.2) + ramp(0.45) * haze, 0.0);
+}
+
+// The mark a spell leaves on the ground: dark where it's scorched or wet, with its element's light running in the veins.
+fn disc(uv: vec2f, size: f32, age: f32, e: u32, seed: f32, T: f32) -> vec4f {
+  let r = length(uv);
+  if (r > 1.25) { return vec4f(0.0); }
+  let q = uv * size * 0.024;
+  let w = cn(fbm(q + vec2f(T * 0.008, -T * 0.006) + seed));
+  let n = cn(fbm(q * 2.1 + w * 0.12 + seed * 0.3));
+  let edge = smoothstep(1.0, 0.45, r + (w - 0.5) * 0.7);
+  var v = 1.0 - abs(n * 2.0 - 1.0);    // ridges where the noise crosses its middle
+  v = pow(v, 5.0);
+  if (e == 1u) {   // frost: a white crust feathering out, cold light under it
+    let crust = smoothstep(0.32, 0.7, n) * edge;
+    return vec4f(ramp(0.75) * (crust * 0.34 + v * edge * 0.9), crust * 0.42);
+  }
+  if (e == 9u || e == 8u) {   // a stain with a sickly glow
+    return vec4f(ramp(0.5) * edge * (0.14 + v * 0.8), edge * 0.32);
+  }
+  let pulse = 0.72 + 0.28 * n1(q * 0.5 + vec2f(T * 0.06, 0.0));
+  let burn = v * pulse * (1.0 - age * 0.55);
+  return vec4f(ramp(0.4 + burn * 0.6) * burn * edge * HOT * 0.7, edge * 0.74);
+}
+
+fn line(v: f32, at: f32, w: f32) -> f32 { let d = (v - at) / w; return exp(-d * d); }
+fn rune(uv: vec2f, seed: f32, T: f32) -> vec4f {
+  let r = length(uv);
+  if (r > 1.2) { return vec4f(0.0); }
+  let a = atan2(uv.y, uv.x);
+  let tau = 6.28318;
+  // Circles, and the gauge marks between the outer two, slowly turning against each other.
+  var c = line(r, 0.97, 0.008) + line(r, 0.9, 0.004) * 0.5 + line(r, 0.52, 0.006) * 0.7;
+  let ticks = step(0.86, fract((a + T * 0.12) / tau * 60.0)) * step(0.935, r) * step(r, 0.968);
+  // Two polygons, one turning each way: an open seven inside a closing three.
+  let sec7 = tau / 7.0;
+  let f7 = (fract((a - T * 0.3 + seed) / sec7) - 0.5) * sec7;
+  let hept = r * cos(f7);
+  let sec3 = tau / 3.0;
+  let f3 = (fract((a + T * 0.42 + seed) / sec3) - 0.5) * sec3;
+  let tri = r * cos(f3);
+  c += line(hept, 0.84, 0.006) * step(r, 0.9) + line(tri, 0.25, 0.006) * step(r, 0.52) * 1.2;
+  let sweep = 0.55 + 0.45 * sin(a * 2.0 - T * 2.6);
+  return vec4f(ramp(0.85) * (c * HOT * 1.1 * (0.5 + sweep * 0.5) + ticks * HOT * 0.3) + ramp(0.35) * smoothstep(1.0, 0.1, r) * 0.1, 0.0);
+}
+
+fn flame(uv: vec2f, wide: f32, tall: f32, seed: f32, T: f32) -> vec4f {
+  let s = (uv.y + 1.0) * 0.5;
+  let x = uv.x;
+  let n = cn(fbm(vec2f(x * wide * 0.075 + seed, s * tall * 0.05 - T * 0.34)));
+  let m = cn(fbm(vec2f(x * wide * 0.18 - seed, s * tall * 0.13 - T * 0.7)));
+  let lick = (1.0 - x * x) * (1.15 - s * 1.3);
+  let d = lick + (n * 0.86 + m * 0.52 - 0.72) * (0.5 + s * 0.8);
+  let v = smoothstep(0.0, 0.62, d);
+  let h = v * (0.55 + m * 0.55);
+  return vec4f(ramp(h) * (0.2 + h * h * HOT * 1.1) * smoothstep(0.0, 0.1, d) * smoothstep(0.0, 0.05, s + 0.02), 0.0);
+}
+
+fn puff(uv: vec2f, seed: f32, T: f32) -> vec4f {
+  let r = length(uv);
+  if (r >= 1.0) { return vec4f(0.0); }
+  let n = cn(fbm(uv * 0.13 + vec2f(T * 0.02, -T * 0.03) + seed));
+  let d = smoothstep(1.0, 0.1, r + (n - 0.5) * 0.9);
+  return vec4f(ramp(0.2 + n * 0.32) * d * d * 0.5, d * d * 0.55);
+}
+
+fn flare(uv: vec2f, seed: f32) -> vec4f {
+  let r = length(uv);
+  if (r >= 1.0) { return vec4f(0.0); }
+  let edge = (1.0 - r) * (1.0 - r);
+  let core = 0.028 / (r * r + 0.028);
+  // A wide lens streak, and four thin rays.
+  let streak = exp(-abs(uv.y) * 34.0) * exp(-abs(uv.x) * 2.2);
+  let a = atan2(uv.y, uv.x) + seed * 3.0;
+  let rays = pow(abs(cos(a * 2.0)), 24.0) * exp(-r * 4.5);
+  return vec4f((ramp(1.0) * core * HOT * 0.8 + ramp(0.62) * (streak * 2.4 + rays * 1.5 + exp(-r * 3.2) * 0.9)) * edge, 0.0);
+}
+
+fn trail(uv: vec2f, L: f32, seed: f32, T: f32) -> vec4f {
+  let f = 1.0 - uv.y;
+  let w = abs(uv.x) / max(pow(f, 0.8), 0.001);
+  if (w >= 1.0) { return vec4f(0.0); }
+  let n = cn(fbm(vec2f(uv.y * L * 0.05 + T * 0.55 + seed, uv.x * 0.09)));
+  let body = smoothstep(1.0, 0.1, w + (n - 0.5) * 0.7 * (1.0 - f * 0.6));
+  let h = clamp(body * f * (0.5 + n * 0.75) + f * f * f * body * 0.3, 0.0, 1.0);
+  return vec4f(ramp(h) * (0.18 + h * h * HOT * 1.2) * body * f, 0.0);
+}
+
+fn column(uv: vec2f, seed: f32, T: f32) -> vec4f {
+  let s = (uv.y + 1.0) * 0.5;
+  let n = cn(fbm(vec2f(uv.x * 0.14 + seed, s * 0.11 - T * 0.22)));
+  let c = exp(-uv.x * uv.x * 5.0) * pow(1.0 - s, 1.3) * (0.32 + n * 0.95);
+  return vec4f(ramp(c) * (0.25 + c * c * HOT * 1.2) * c * 1.6, 0.0);
+}
+
+fn vortex(uv: vec2f, seed: f32, T: f32) -> vec4f {
+  let r = length(uv);
+  if (r >= 1.0) { return vec4f(0.0); }
+  let a = atan2(uv.y, uv.x);
+  // Arms winding tighter toward the hole, and everything falling in.
+  let swirl = a + 1.4 / (r + 0.16) - T * 2.4 + seed;
+  let n = cn(fbm(vec2f(cos(swirl), sin(swirl)) * 0.2 + vec2f(r * 0.3 - T * 0.09, 0.0)));
+  let disk = smoothstep(1.0, 0.42, r) * smoothstep(0.2, 0.36, r) * n * n * 1.8;
+  let rim = line(r, 0.3, 0.022);
+  let hole = smoothstep(0.34, 0.25, r);
+  let rgb = ramp(disk * 0.75) * disk * (0.5 + disk * HOT * 0.65) + ramp(1.0) * rim * HOT * 1.3;
+  return vec4f(rgb, max(hole, disk * 0.2));
+}
+
+fn shock(uv: vec2f, age: f32, seed: f32, T: f32) -> vec4f {
+  let r = length(uv);
+  if (r >= 1.0) { return vec4f(0.0); }
+  let a = atan2(uv.y, uv.x);
+  let n = cn(fbm(vec2f(cos(a), sin(a)) * 0.22 + vec2f(seed, r * 0.1)));
+  let w = 0.028 + 0.1 * age;
+  let dr = (r - 0.9) / w;
+  let band = exp(-dr * dr) * (0.3 + n * 1.0) * smoothstep(1.0, 0.95, r);
+  let inner = smoothstep(0.9, 0.3, r) * 0.1 * (1.0 - age);
+  return vec4f(ramp(band) * (band * band * HOT * 1.5 + band * 0.9) + ramp(0.5) * inner * n, 0.0);
+}
+
+@fragment fn fs(in: V) -> @location(0) vec4f {
+  let I = fx[in.id];
+  C[0] = in.c0; C[1] = in.c1; C[2] = in.c2; C[3] = in.c3;
+  let shape = u32(I.m.x);
+  let e = u32(I.m.y);
+  let seed = I.m.z * 0.37;
+  let age = I.m.w;
+  let T = F.camPos.w;
+  let alpha = abs(I.x.x);
+  var uv = in.uv;
+  var keep = 1.0;
+  var scene = 1e6;
+  if (!LEAN) { scene = textureLoad(depthTex, vec2i(in.pos.xy), 0).r; }
+  if (shape == 3u || shape == 4u || shape == 9u) {
+    if (!LEAN) {
+      // Back from the depth to the point in the world under this pixel.
+      if (scene < 0.35) { discard; }
+      let ndc = vec2f(in.pos.x * F.screen.z * 2.0 - 1.0, 1.0 - in.pos.y * F.screen.w * 2.0);
+      let far = F.invViewProj * vec4f(ndc, 0.5, 1.0);
+      let dir = far.xyz / far.w - F.camPos.xyz;
+      let fwd = -vec3f(F.view[0].z, F.view[1].z, F.view[2].z);
+      let w = F.camPos.xyz + dir / dot(dir, fwd) * scene;
+      let d = w - I.p.xyz;
+      uv = d.xz / I.p.w;
+      let tall = clamp(I.p.w * 0.35, 0.6, 1.5);
+      keep = 1.0 - smoothstep(tall * 0.45, tall, abs(d.y));
+      if (keep <= 0.0) { discard; }
+    }
+  } else if (!LEAN) {
+    if (I.x.x < 0.0) {
+      // Drawn over the hands, with the fingers dark against it.
+      if (scene < 0.35) { keep = 0.42; }
+    } else {
+      if (scene < in.viewZ) { discard; }
+      keep = clamp((scene - in.viewZ) * 2.6, 0.0, 1.0);
+    }
+  }
+  var c = vec4f(0.0);
+  switch shape {
+    case 0u: { c = orb(uv, seed, T); }
+    case 1u: { c = beam(uv, I.a.w, seed, T); }
+    case 2u: { c = bolt(uv, I.a.w, I.x.w, seed, T); }
+    case 3u: { c = ring(uv, age, seed, T); }
+    case 4u: { c = disc(uv, I.p.w, age, e, seed, T); }
+    case 5u: { c = flame(uv, I.a.w, I.p.w, seed, T); }
+    case 6u: { c = puff(uv, seed, T); }
+    case 7u: { c = flare(uv, seed); }
+    case 8u: { c = trail(uv, I.a.w, seed, T); }
+    case 9u: { c = rune(uv, seed, T); }
+    case 10u: { c = column(uv, seed, T); }
+    case 11u: { c = vortex(uv, seed, T); }
+    case 12u: { c = shock(uv, age, seed, T); }
+    default: { discard; }
+  }
+  return c * alpha * keep;
+}
+`;
+
+const SOLID_SHAPES = /* wgsl */ `
+struct Inst { p: vec4f, a: vec4f, m: vec4f, x: vec4f };
+@group(1) @binding(0) var<storage, read> fx: array<Inst>;
+struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) along: f32, @location(2) @interpolate(flat) id: u32, @location(3) viewZ: f32, @location(4) ring: f32 };
+
+fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
+
+// Six-sided, narrowing to a point at each end from its widest place. No vertices: it's all from the index.
+@vertex fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> V {
+  let I = fx[ii];
+  let shape = u32(I.m.x);
+  let seed = I.m.z;
+  let tri = vi / 3u;
+  let corner = vi % 3u;
+  let k = tri % 6u;
+  let top = tri < 6u;
+  var belly = 0.3;
+  switch shape {
+    case 17u: { belly = 0.05; }   // a spike: all rise
+    case 18u: { belly = 0.82; }   // a lance: long haft, a head at its end
+    case 19u: { belly = 0.14; }   // a blade: a hilt's width low down
+    case 20u, 21u: { belly = 0.5; }
+    default: {}
+  }
+  var along = belly;
+  var rad = 0.0;
+  var ring = 1.0;
+  var at = 0.0;
+  let isApex = corner == 2u;
+  if (isApex) { along = select(0.0, 1.0, top); ring = 0.0; } else {
+    let second = (corner == 1u) == top;
+    at = f32(k + select(0u, 1u, second));
+    let i = at % 6.0;
+    rad = 0.72 + 0.56 * jitter(seed + i * 1.37);
+    along = belly + (jitter(seed * 3.0 + i) - 0.5) * 0.1;
+  }
+  let axis = normalize(I.a.xyz);
+  let other = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(axis.y) > 0.92);
+  let side = normalize(cross(axis, other));
+  let up = cross(side, axis);
+  let ang = at / 6.0 * 6.28318 + seed * 6.0;
+  var flat_ = 1.0;
+  if (shape == 19u) { flat_ = 0.16; }
+  // A blade's width lies along its side, so it isn't turned by the seed.
+  let ca = select(cos(ang), cos(at / 6.0 * 6.28318), shape == 19u);
+  let sa = select(sin(ang), sin(at / 6.0 * 6.28318), shape == 19u);
+  let w = I.p.xyz + axis * along * I.a.w + (side * ca + up * sa * flat_) * rad * I.p.w;
+  var o: V;
+  o.id = ii; o.p = w; o.along = along; o.ring = ring;
+  o.pos = F.viewProj * vec4f(w, 1.0);
+  o.viewZ = -(F.view * vec4f(w, 1.0)).z;
+  return o;
+}
+
+@fragment fn fs(in: V) -> Out {
+  let I = fx[in.id];
+  let shape = u32(I.m.x);
+  let e = u32(I.m.y);
+  let age = I.m.w;
+  let seed = I.m.z;
+  let T = F.camPos.w;
+  let toCam = F.camPos.xyz - in.p;
+  let dist = length(toCam);
+  let v = toCam / dist;
+  var n = normalize(cross(dpdx(in.p), dpdy(in.p)));
+  if (dot(n, v) < 0.0) { n = -n; }
+  let ndv = max(dot(n, v), 0.0);
+  let fres = pow(1.0 - ndv, 3.0);
+  var albedo = vec3f(0.5);
+  var rough = 0.6;
+  var metal = 0.0;
+  var glow = vec3f(0.0);
+  let noise = textureSampleLevel(noiseTex, repeatSmp, in.p.xz * 0.1 + vec2f(in.p.y * 0.17, seed), 0.0);
+  switch shape {
+    case 16u: {   // ice: dark and clear, lit up from inside at its edges
+      albedo = vec3f(0.1, 0.27, 0.44); rough = 0.1;
+      glow = rampColor(e, 0.68) * (fres * 3.6 + 0.14 + pow(noise.r, 3.0) * 1.1 + in.along * 0.26);
+    }
+    case 17u: {   // black stone broken out of the ground, molten in its cracks and along the base, cooling as it comes up
+      let fine = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.p.x + in.p.z, in.p.y) * 0.8 + seed, 0.0);
+      let wide = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.p.x - in.p.z, in.p.y) * 0.27 + seed * 3.0, 0.0);
+      albedo = mix(vec3f(0.03, 0.026, 0.024), vec3f(0.14, 0.12, 0.105), fine.g * wide.r * 1.8); rough = 0.82;
+      let cool = (1.0 - age * 0.72) * (1.0 - age * 0.72);
+      let crack = pow(1.0 - abs(wide.b * 2.0 - 1.0), 10.0) + pow(1.0 - abs(fine.b * 2.0 - 1.0), 14.0) * 0.5;
+      glow = rampColor(11u, 1.0) * vec3f(1.0, 0.5, 0.18) * cool * (crack * 9.0 + smoothstep(0.34, 0.0, in.along) * 1.5);
+    }
+    case 18u: {   // bone: yellowed, polished
+      albedo = mix(vec3f(0.62, 0.58, 0.44), vec3f(0.86, 0.83, 0.68), noise.r); rough = 0.34;
+      glow = rampColor(e, 0.62) * fres * 2.2;
+    }
+    case 19u: {   // a spirit's sword: nothing but its own light, brightest down the edge
+      albedo = vec3f(0.02, 0.1, 0.13); rough = 0.2; metal = 1.0;
+      let shimmer = 0.75 + 0.25 * sin(T * 11.0 + in.along * 9.0 + seed * 40.0);
+      glow = rampColor(e, 0.55 + in.along * 0.35) * (0.3 + fres * 3.2) * shimmer;
+    }
+    case 20u: {   // the falling stone: black crust, split, and molten in the splits
+      albedo = vec3f(0.05, 0.04, 0.035); rough = 0.9;
+      let q = textureSampleLevel(noiseTex, repeatSmp, in.p.xz * 0.05 + vec2f(in.p.y * 0.05, T * 0.03), 0.0).r;
+      let crack = pow(1.0 - abs(q * 2.0 - 1.0), 3.0);
+      glow = rampColor(0u, 0.55 + crack * 0.45) * (crack * 14.0 + 0.7);
+    }
+    default: {   // the flask: thick green glass, with something moving in it
+      albedo = vec3f(0.04, 0.16, 0.04); rough = 0.08;
+      glow = rampColor(e, 0.6) * (fres * 2.0 + 0.9 + noise.r);
+    }
+  }
+  let shadow = shadowAt(in.p, n, in.viewZ, ign(in.pos.xy));
+  var c = shadePBR(in.p, n, v, albedo, rough, metal, 1.0, shadow) + glow;
+  c = applyFog(c, in.p, -v, dist);
+  var o: Out;
+  o.color = vec4f(c, 1.0);
+  o.depth = in.viewZ;
+  return o;
+}
+`;
+
+const GROUND = new Set([FX.RING, FX.DISC, FX.RUNE]);
+const MAX_LIGHTS = 4;
+const STRIDE = FX_FLOATS * 4;
+
+export class SpellFX {
+  constructor(r) {
+    this.r = r;
+    const { device } = r;
+    const usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
+    this.glowBuf = device.createBuffer({ size: MAX_FX * STRIDE, usage });
+    this.solidBuf = device.createBuffer({ size: MAX_FX * STRIDE, usage });
+    this.glowData = new Float32Array(MAX_FX * FX_FLOATS);
+    this.solidData = new Float32Array(MAX_FX * FX_FLOATS);
+    this.nGlow = 0; this.nSolid = 0; this.nFirst = 0;
+    this.last = performance.now();
+    this.spare = [];
+    this.bglGlow = device.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'unfilterable-float' } },
+    ] });
+    this.bglSolid = device.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+    ] });
+    this.solidBG = device.createBindGroup({ layout: this.bglSolid, entries: [{ binding: 0, resource: { buffer: this.solidBuf } }] });
+  }
+
+  buildSolid(layout, targets, depth, ms) {
+    const mod = this.r.shader(COMMON + RAMP + SOLID_SHAPES);
+    this.pSolid = this.r.device.createRenderPipeline({
+      layout: layout(this.bglSolid),
+      vertex: { module: mod, entryPoint: 'vs' },
+      fragment: { module: mod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: depth, multisample: ms,
+    });
+  }
+
+  buildGlow(inWorld) {
+    const { r } = this, { device } = r;
+    const mod = r.shader(COMMON + RAMP + LIGHT_SHAPES);
+    const make = (cmp) => device.createRenderPipeline({
+      layout: device.createPipelineLayout({ bindGroupLayouts: [r.bgl0, this.bglGlow] }),
+      vertex: { module: mod, entryPoint: 'vs' },
+      fragment: { module: mod, entryPoint: 'fs', targets: [{ format: r.gpu.hdrFormat, blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } } }] },
+      ...inWorld(cmp),
+    });
+    this.pGlow = make('greater');
+    this.pGlowOver = r.tier.lean ? make('always') : this.pGlow;
+  }
+
+  depthBG(ldView) {
+    return this.r.device.createBindGroup({ layout: this.bglGlow, entries: [{ binding: 0, resource: { buffer: this.glowBuf } }, { binding: 1, resource: ldView }] });
+  }
+
+  // Each frame: sort the snapshot's shapes into what's solid and what's light, spray what they spray, and add their lights to the
+  // frame's. Returns how many lights it added.
+  frame(snap, d, lightsAt, taken) {
+    const { r, glowData: g, solidData: s } = this;
+    const now = performance.now(), dt = Math.min(0.05, (now - this.last) / 1000);
+    this.last = now;
+    const n = snap[H.FX_N] | 0;
+    let nG = 0, nS = 0;
+    // Marks on the ground go down first, then the light over them, and what's drawn over the hands last.
+    for (const pass of [0, 1, 2]) {
+      if (pass === 2) this.nFirst = nG;
+      for (let i = 0; i < n; i++) {
+        const o = FX_START + i * FX_FLOATS, shape = snap[o + 8];
+        if (shape >= FX.LIGHT) continue;
+        if (shape >= FX.ICE) {
+          if (pass === 0) { s.set(snap.subarray(o, o + FX_FLOATS), nS * FX_FLOATS); nS++; }
+          continue;
+        }
+        const over = snap[o + 12] < 0;
+        if ((pass === 0) !== GROUND.has(shape)) continue;
+        if (pass !== 0 && (pass === 2) !== over) continue;
+        g.set(snap.subarray(o, o + FX_FLOATS), nG * FX_FLOATS);
+        nG++;
+      }
+    }
+    this.nGlow = nG; this.nSolid = nS;
+    const q = r.device.queue;
+    if (nG) q.writeBuffer(this.glowBuf, 0, g, 0, nG * FX_FLOATS);
+    if (nS) q.writeBuffer(this.solidBuf, 0, s, 0, nS * FX_FLOATS);
+    // The brightest few light the world, however many the tier otherwise affords.
+    const lit = this.spare;
+    lit.length = 0;
+    for (let i = 0; i < n; i++) {
+      const o = FX_START + i * FX_FLOATS;
+      if (snap[o + 13] > 0) lit.push(o);
+      this.spray(snap, o, dt);
+    }
+    if (lit.length > 1) lit.sort((a, b) => snap[b + 13] - snap[a + 13]);
+    const room = Math.min(lit.length, r.tier.lean ? 2 : MAX_LIGHTS, 12 - taken);
+    const t = now * 0.001;
+    for (let i = 0; i < room; i++) {
+      const o = lit[i], c = ELEM_LIGHT[snap[o + 9] | 0];
+      const fl = 0.86 + 0.14 * Math.sin(t * 23 + i * 2.1) * Math.sin(t * 13.7 + i);
+      d.set([snap[o], snap[o + 1], snap[o + 2], snap[o + 14], c[0], c[1], c[2], snap[o + 13] * fl], lightsAt + (taken + i) * 8);
+    }
+    return room;
+  }
+
+  spray(snap, o, dt) {
+    const shape = snap[o + 8], e = snap[o + 9] | 0, size = snap[o + 3], alpha = Math.abs(snap[o + 12]);
+    const x = snap[o], y = snap[o + 1], z = snap[o + 2], r = this.r;
+    const kind = 16 + e;
+    const n = (rate) => { const v = rate * dt; return Math.floor(v) + (Math.random() < v - Math.floor(v) ? 1 : 0); };
+    switch (shape) {
+      case FX.ORB:
+        if (size > 0.22) r.emit(e === ELEM.FIRE ? 6 : kind, n(90 * size), x, y, z, 0, 0.4, 0, 1, 0.3, 2.2, 0.012, 0.03, 0.3, 0.9);
+        break;
+      case FX.TRAIL:
+        if (size > 0.06) r.emit(kind, n(90 * size), x, y, z, snap[o + 4], snap[o + 5], snap[o + 6], 0.5, 0.4, 2.4, 0.008, 0.02, 0.2, 0.6);
+        break;
+      case FX.FLAME:
+        r.emit(6, n(9 * snap[o + 7] * alpha), x + (Math.random() - 0.5) * snap[o + 7], y + Math.random() * size * 0.7, z + (Math.random() - 0.5) * snap[o + 7], 0, 1, 0, 0.4, 0.5, 2, 0.012, 0.028, 0.7, 1.7);
+        break;
+      case FX.BEAM: {
+        if (snap[o + 3] > 0.1 && snap[o + 15] > 0) {
+          const L = snap[o + 7], ax = snap[o + 4], ay = snap[o + 5], az = snap[o + 6], u = Math.random();
+          r.emit(e === ELEM.FIRE ? 6 : kind, n(90), x + ax * L * u, y + ay * L * u, z + az * L * u, ax, ay + 0.2, az, 0.7, 0.8, 4, 0.012, 0.03, 0.2, 0.7);
+          r.emit(2, n(70), x + ax * L, y + ay * L, z + az * L, -ax, 0.5 - ay, -az, 1.1, 1.5, 6, 0.003, 0.008, 0.2, 0.6);
+        }
+        break;
+      }
+      case FX.BOLT: {
+        const L = snap[o + 7], ax = snap[o + 4], ay = snap[o + 5], az = snap[o + 6];
+        r.emit(kind, n(40), x + ax * L, y + ay * L, z + az * L, ax, ay, az, 1.3, 1, 5, 0.006, 0.014, 0.1, 0.35);
+        break;
+      }
+      case FX.VORTEX:
+        // Motes spiralling in.
+        for (let i = n(60); i > 0; i--) {
+          const a = Math.random() * Math.PI * 2, R = size * (1.5 + Math.random() * 2);
+          const px = Math.cos(a) * R, pz = Math.sin(a) * R, py = (Math.random() - 0.5) * size;
+          r.emit(kind, 1, x + px, y + py, z + pz, -px - pz * 1.2, -py, -pz + px * 1.2, 0, R * 1.3, R * 1.7, 0.012, 0.026, 0.45, 0.6);
+        }
+        break;
+      case FX.DISC:
+        if (e === ELEM.FIRE) {
+          const a = Math.random() * Math.PI * 2, R = Math.sqrt(Math.random()) * size;
+          r.emit(6, n(2.4 * size * alpha), x + Math.cos(a) * R, y + 0.1, z + Math.sin(a) * R, 0, 1, 0, 0.5, 0.4, 1.8, 0.012, 0.028, 0.8, 1.9);
+        }
+        break;
+      default:
+    }
+  }
+
+  drawSolid(pass) {
+    if (!this.nSolid) return;
+    pass.setPipeline(this.pSolid);
+    pass.setBindGroup(1, this.solidBG);
+    pass.draw(36, this.nSolid);
+  }
+
+  draw(pass) {
+    if (!this.nGlow) return;
+    pass.setBindGroup(1, this.r.fxBG);
+    if (this.nFirst) { pass.setPipeline(this.pGlow); pass.draw(6, this.nFirst); }
+    if (this.nGlow > this.nFirst) { pass.setPipeline(this.pGlowOver); pass.draw(6, this.nGlow - this.nFirst, 0, this.nFirst); }
+  }
+}

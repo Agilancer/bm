@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07060a">
+<title>Bellmourn Spell Hands</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@500;700&family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<!-- The casts of the two spell hands (assets/fp/spell_attack.glb and spell_raise.glb, built by tools/fp_spells/hands.py), through
+     the game's view model camera, with a stand-in for the magic coming out of the palms at a target. Served by spells-player.bat. -->
+<style>
+  :root {
+    --gold: #d8b870; --gold-dim: #8a7448; --ink: #07060a; --panel: rgba(16, 12, 18, .96); --edge: #4a3c30;
+    --text: #e8dcc0; --muted: #a8987c; --stage: #0d0b10;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ink); color: var(--text); overflow: hidden;
+               font: 500 14px 'Alegreya Sans', system-ui, sans-serif; }
+  button, select, input { font: inherit; color: inherit; }
+  #panel { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; background: var(--panel); border-right: 1px solid var(--edge);
+           display: flex; flex-direction: column; z-index: 3; }
+  #panel header { padding: 16px 18px 10px; border-bottom: 1px solid var(--edge); }
+  #panel h1 { margin: 0; font: 700 20px Cinzel, Georgia, serif; color: var(--gold); letter-spacing: .06em; }
+  #panel header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.35; }
+  #panel .scroll { overflow-y: auto; padding: 4px 0 18px; flex: 1; }
+  #panel h2 { margin: 16px 18px 6px; font: 700 11px Cinzel, serif; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-dim); }
+  .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 18px; }
+  .buttons button { background: #221a1e; border: 1px solid var(--edge); border-radius: 3px; padding: 8px; cursor: pointer; min-height: 38px; }
+  .buttons button:hover { border-color: var(--gold-dim); }
+  .buttons button.on { border-color: var(--gold); background: #2e2418; }
+  .buttons button kbd { color: var(--muted); font: 500 11px ui-monospace, monospace; margin-left: 4px; }
+  .wide { grid-column: 1 / 3; }
+  .toggles { display: grid; gap: 6px; padding: 6px 18px; }
+  .toggles label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  .toggles input { accent-color: var(--gold); width: 16px; height: 16px; }
+  .row { display: grid; grid-template-columns: 62px 1fr; align-items: center; gap: 8px; padding: 3px 18px; }
+  .row label { color: var(--muted); font-size: 13px; }
+  input[type=range] { width: 100%; accent-color: var(--gold); }
+  #readout { margin: 8px 18px; color: var(--muted); font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  #readout b { color: var(--text); font-weight: 700; }
+  #stage { position: fixed; left: 280px; right: 0; top: 0; bottom: 0; background: var(--stage); display: grid; place-items: center; }
+  #frame { position: relative; overflow: hidden; box-shadow: 0 0 0 1px var(--edge); }
+  #view { display: block; width: 100%; height: 100%; }
+  #picture { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; opacity: .5; }
+  #xhair { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; pointer-events: none; }
+  #xhair::before, #xhair::after { content: ''; position: absolute; background: rgba(255,255,255,.55); }
+  #xhair::before { left: 6px; top: 0; width: 2px; height: 14px; }
+  #xhair::after { top: 6px; left: 0; width: 14px; height: 2px; }
+  @media (max-width: 760px) {
+    #panel { position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 46%; border-right: 0; border-top: 1px solid var(--edge); }
+    #stage { left: 0; bottom: 46%; }
+  }
+</style>
+</head>
+<body>
+<aside id="panel">
+  <header>
+    <h1>Spell Hands</h1>
+    <p>The casts, through the game's first-person camera. The magic here only stands in for the spells to come.</p>
+  </header>
+  <div class="scroll">
+    <h2>Hands</h2>
+    <div class="buttons" id="models">
+      <button data-model="attack">Attack</button>
+      <button data-model="raise">Raise</button>
+    </div>
+    <h2>Cast</h2>
+    <div class="buttons" id="casts">
+      <button data-cast="r">Right hand<kbd>1</kbd></button>
+      <button data-cast="l">Left hand<kbd>2</kbd></button>
+      <button data-cast="both" class="wide">Both hands<kbd>3</kbd></button>
+    </div>
+    <div class="toggles">
+      <label><input type="checkbox" id="channel"> Hold it out, as a channelled spell does</label>
+      <label><input type="checkbox" id="loop" checked> Keep casting</label>
+    </div>
+    <h2>Magic</h2>
+    <div class="buttons" id="magics">
+      <button data-magic="fire">Fire</button>
+      <button data-magic="frost">Frost</button>
+      <button data-magic="arcane">Arcane</button>
+      <button data-magic="none">None</button>
+    </div>
+    <h2>Look closer</h2>
+    <div class="row"><label for="speed">Speed</label><input id="speed" type="range" min="0.1" max="1" step="0.05" value="1"></div>
+    <div class="row"><label for="scrub">Scrub</label><input id="scrub" type="range" min="0" max="1" step="0.001" value="0"></div>
+    <div class="toggles">
+      <label><input type="checkbox" id="orbit"> Walk round the hands: drag to turn, wheel to zoom<kbd>O</kbd></label>
+      <label><input type="checkbox" id="picture-on"> Stop at rest, with the picture over it</label>
+    </div>
+    <div id="readout"></div>
+  </div>
+</aside>
+<main id="stage"><div id="frame"><canvas id="view"></canvas><img id="picture" alt=""><div id="xhair"></div></div></main>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const ASPECT = 1792 / 1024;
+const TARGET = new THREE.Vector3(0, 0, -7);
+const PALETTES = {
+  fire: { core: 0xfff0c0, mid: 0xff8a2a, edge: 0xb3200a },
+  frost: { core: 0xeaffff, mid: 0x66d8ff, edge: 0x1a5cd8 },
+  arcane: { core: 0xf6e0ff, mid: 0xb36bff, edge: 0x4a1aa8 },
+};
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('view'), frame = $('frame'), stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14111a);
+scene.fog = new THREE.Fog(0x14111a, 6, 26);
+const camera = new THREE.PerspectiveCamera(76, ASPECT, 0.05, 80);     // (the renderer's view model camera)
+const orbitCam = new THREE.PerspectiveCamera(35, ASPECT, 0.02, 80);    // (to walk round the hands, and see that they're solid)
+const orbit = new OrbitControls(orbitCam, canvas);
+orbit.enabled = false;
+orbit.target.set(0, 0.12, -0.5);
+orbitCam.position.set(1.0, 0.45, -0.1);
+orbit.update();
+const viewer = () => (orbit.enabled ? orbitCam : camera);
+
+scene.add(new THREE.HemisphereLight(0xbfc4d8, 0x4a3a30, 1.5));
+const key = new THREE.DirectionalLight(0xfff0dc, 1.9);
+key.position.set(0.5, 1.0, 0.8);
+scene.add(key);
+
+// a floor and a target to cast at
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ color: 0x262029, roughness: 1 }));
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -1.62;
+scene.add(floor);
+const dummy = new THREE.Group();
+const dummyMat = new THREE.MeshStandardMaterial({ color: 0x3a3238, roughness: 0.9, emissive: 0xffffff, emissiveIntensity: 0 });
+const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 1.0, 6, 16), dummyMat);
+body.position.y = -0.62;
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 20, 14), dummyMat);
+head.position.y = 0.2;
+dummy.add(body, head);
+dummy.position.copy(TARGET).setY(0);
+scene.add(dummy);
+
+// --- the magic
+function glowTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, 'rgba(255,255,255,1)');
+  r.addColorStop(0.25, 'rgba(255,255,255,.55)');
+  r.addColorStop(0.6, 'rgba(255,255,255,.12)');
+  r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+const glow = glowTexture();
+const sprite = () => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
+  scene.add(s);
+  return s;
+};
+
+const MAX = 900;
+const pts = { pos: new Float32Array(MAX * 3), col: new Float32Array(MAX * 4), size: new Float32Array(MAX), vel: new Float32Array(MAX * 3), life: new Float32Array(MAX), born: new Float32Array(MAX), next: 0 };
+const ptsGeo = new THREE.BufferGeometry();
+ptsGeo.setAttribute('position', new THREE.BufferAttribute(pts.pos, 3));
+ptsGeo.setAttribute('aCol', new THREE.BufferAttribute(pts.col, 4));
+ptsGeo.setAttribute('aSize', new THREE.BufferAttribute(pts.size, 1));
+const ptsMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { scale: { value: 800 } },
+  vertexShader: `attribute vec4 aCol; attribute float aSize; varying vec4 vCol; uniform float scale;
+    void main() { vCol = aCol; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aSize * scale / -mv.z; }`,
+  fragmentShader: `varying vec4 vCol; void main() { float d = length(gl_PointCoord - 0.5) * 2.0; float a = pow(max(1.0 - d, 0.0), 1.6); gl_FragColor = vec4(vCol.rgb, vCol.a * a); }`,
+});
+const ptsObj = new THREE.Points(ptsGeo, ptsMat);
+ptsObj.frustumCulled = false;
+ptsObj.renderOrder = 2;
+scene.add(ptsObj);
+
+function spawn(p, v, color, size, life) {
+  const i = pts.next = (pts.next + 1) % MAX;
+  pts.pos.set([p.x, p.y, p.z], i * 3);
+  pts.vel.set([v.x, v.y, v.z], i * 3);
+  pts.col.set([color.r, color.g, color.b, 1], i * 4);
+  pts.size[i] = size;
+  pts.life[i] = life;
+  pts.born[i] = life;
+}
+function stepParticles(dt) {
+  for (let i = 0; i < MAX; i++) {
+    if (pts.life[i] <= 0) { pts.col[i * 4 + 3] = 0; continue; }
+    pts.life[i] -= dt;
+    const u = Math.max(pts.life[i] / pts.born[i], 0);
+    pts.pos[i * 3] += pts.vel[i * 3] * dt; pts.pos[i * 3 + 1] += pts.vel[i * 3 + 1] * dt; pts.pos[i * 3 + 2] += pts.vel[i * 3 + 2] * dt;
+    pts.col[i * 4 + 3] = u * u;
+  }
+  ptsGeo.attributes.position.needsUpdate = true;
+  ptsGeo.attributes.aCol.needsUpdate = true;
+}
+
+const hands = { R: { glow: sprite(), light: new THREE.PointLight(0xffffff, 0, 0.42, 1) }, L: { glow: sprite(), light: new THREE.PointLight(0xffffff, 0, 0.42, 1) } };
+scene.add(hands.R.light, hands.L.light);
+const bolts = [];
+const flash = sprite();
+flash.position.copy(TARGET);
+const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3(), tmpC = new THREE.Color();
+
+function pal() {
+  const p = PALETTES[state.magic];
+  return p && { core: new THREE.Color(p.core), mid: new THREE.Color(p.mid), edge: new THREE.Color(p.edge) };
+}
+function fireBolt(side) {
+  const p = pal();
+  if (!p) return;
+  const from = palmOf(side).clone();
+  const out = model.raise ? new THREE.Vector3(side === 'R' ? -0.05 : 0.05, 0.3, -0.5) : new THREE.Vector3(side === 'R' ? -0.05 : 0.05, 0.03, -0.6);
+  const s = sprite();
+  s.material.color.copy(p.core);
+  s.material.opacity = 1;
+  const tail = sprite();
+  tail.material.color.copy(p.mid);
+  tail.material.opacity = 0.9;
+  bolts.push({ from, ctrl: from.clone().add(out), s, tail, t: 0, dur: 0.42, p, side });
+  // the burst as it leaves the palm
+  for (let i = 0; i < 26; i++) {
+    tmpV.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(1.5).add(tmpV2.copy(out).multiplyScalar(2.2));
+    spawn(from, tmpV, i % 3 ? p.mid : p.core, 0.05 + Math.random() * 0.05, 0.16 + Math.random() * 0.16);
+  }
+}
+function stepBolts(dt) {
+  for (let i = bolts.length - 1; i >= 0; i--) {
+    const b = bolts[i];
+    b.t += dt / b.dur;
+    const u = Math.min(b.t, 1), v = 1 - u;
+    tmpV.set(0, 0, 0).addScaledVector(b.from, v * v).addScaledVector(b.ctrl, 2 * u * v).addScaledVector(TARGET, u * u);
+    b.s.position.copy(tmpV);
+    b.s.scale.setScalar(0.07 + 0.2 * u);
+    b.tail.position.copy(tmpV);
+    b.tail.scale.setScalar(0.2 + 0.42 * u);
+    for (let k = 0; k < 3; k++) {
+      tmpV2.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.25 + 0.5 * u);
+      spawn(tmpV, tmpV2, Math.random() < 0.4 ? b.p.mid : b.p.edge, 0.03 + 0.09 * u * Math.random() + 0.02, 0.14 + Math.random() * 0.2);
+    }
+    if (b.t >= 1) {
+      scene.remove(b.s, b.tail);
+      bolts.splice(i, 1);
+      flash.material.color.copy(b.p.mid);
+      flash.material.opacity = 1;
+      flash.scale.setScalar(2.6);
+      dummyMat.emissive.copy(b.p.mid);
+      dummyMat.emissiveIntensity = 1.2;
+      for (let k = 0; k < 70; k++) {
+        tmpV2.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(1.5 + Math.random() * 4);
+        spawn(TARGET, tmpV2, k % 3 ? b.p.mid : b.p.core, 0.1 + Math.random() * 0.22, 0.2 + Math.random() * 0.4);
+      }
+    }
+  }
+  flash.material.opacity = Math.max(0, flash.material.opacity - dt * 5);
+  flash.scale.multiplyScalar(1 + dt * 1.5);
+  dummyMat.emissiveIntensity = Math.max(0, dummyMat.emissiveIntensity - dt * 4);
+}
+
+// --- the hands
+const loader = new GLTFLoader();
+const models = {};
+let model = null;
+const state = { model: 'attack', cast: 'both', magic: 'fire', t: 0, phase: 'cast', held: 0, wait: 0, fired: {}, seeking: false };
+
+async function loadModel(name) {
+  const gltf = await new Promise((ok, no) => loader.load(`assets/fp/spell_${name}.glb?${Date.now()}`, ok, undefined, no));
+  const root = gltf.scene;
+  root.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+  const mixer = new THREE.AnimationMixer(root);
+  const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
+  const actions = Object.fromEntries(Object.entries(clips).map(([n, c]) => {
+    const a = mixer.clipAction(c);
+    a.setLoop(THREE.LoopRepeat);
+    a.play();
+    a.paused = true;
+    a.setEffectiveWeight(0);
+    return [n, a];
+  }));
+  const m = { name, root, mixer, clips, actions, meta: root.userData.clips || {}, raise: name === 'raise', palm: { R: root.getObjectByName('palm_R'), L: root.getObjectByName('palm_L') } };
+  models[name] = m;
+  return m;
+}
+const palmPos = new THREE.Vector3();
+function palmOf(side) { return model.palm[side].getWorldPosition(palmPos); }
+
+function pose() {
+  // the cast at its time, and the hold over it, by how far into the hold it has got
+  const { actions, meta, mixer } = model;
+  const castName = `cast_${state.cast}`, holdName = `hold_${state.cast}`;
+  for (const a of Object.values(actions)) a.setEffectiveWeight(0);
+  const w = state.phase === 'hold' ? Math.min(state.held / 0.1, 1) : state.phase === 'out' ? 1 - Math.min(state.t / 0.1, 1) : 0;
+  const c = actions[castName], h = actions[holdName];
+  if (state.phase === 'cast') c.time = state.t;
+  else if (state.phase === 'hold') c.time = meta[castName].hit;
+  else c.time = meta[castName].hit + state.t * 1.6;
+  h.time = state.held % meta[holdName].duration;
+  c.setEffectiveWeight(1 - w);
+  h.setEffectiveWeight(w);
+  if (state.picture) {
+    for (const a of Object.values(actions)) a.setEffectiveWeight(0);
+    h.time = 0;
+    h.setEffectiveWeight(1);
+  }
+  mixer.update(0);
+}
+
+function restart() {
+  state.t = 0; state.phase = 'cast'; state.held = 0; state.wait = 0; state.fired = {};
+}
+
+function sidesOf(c) { return c === 'both' ? ['R', 'L'] : [c.toUpperCase()]; }
+
+function stepCast(dt) {
+  const name = `cast_${state.cast}`, info = model.meta[name];
+  const rate = dt;
+  if (state.phase === 'cast') {
+    state.t += rate;
+    if (!state.seeking) for (const s of sidesOf(state.cast)) {
+      const lag = state.cast === 'both' && s === 'L' ? 0.02 : 0;
+      if (!state.fired[s] && state.t >= info.hit + lag) { state.fired[s] = 1; if (!state.channeling) fireBolt(s); }
+    }
+    if ($('channel').checked && state.t >= info.hit) { state.phase = 'hold'; state.held = 0; state.t = info.hit; }
+    if (state.t >= info.duration) {
+      state.t = info.duration;
+      if ($('loop').checked) { state.wait += rate; if (state.wait > 0.5) restart(); }
+    }
+  } else if (state.phase === 'hold') {
+    state.held += rate;
+    if (!$('channel').checked || state.held > 3) { state.phase = 'out'; state.t = 0; }
+    if (state.magic !== 'none') for (const s of sidesOf(state.cast)) stream(s);
+  } else {
+    state.t += rate;
+    if (state.t >= 0.1) { state.phase = 'cast'; state.t = info.hit + 0.16; state.fired = { R: 1, L: 1 }; }
+  }
+}
+function stream(side) {
+  const p = pal();
+  if (!p) return;
+  const from = palmOf(side);
+  for (let k = 0; k < 4; k++) {
+    tmpV2.copy(TARGET).sub(from).normalize().multiplyScalar(5 + Math.random() * 6);
+    tmpV2.x += (Math.random() - 0.5) * 0.8; tmpV2.y += (Math.random() - 0.5) * 0.8;
+    spawn(from, tmpV2, k % 2 ? p.mid : p.core, 0.03 + Math.random() * 0.06, 0.3 + Math.random() * 0.4);
+  }
+}
+function stepGlow(dt) {
+  const info = model.meta[`cast_${state.cast}`];
+  const p = pal();
+  const on = sidesOf(state.cast);
+  for (const s of ['R', 'L']) {
+    const h = hands[s];
+    let w = 0;
+    if (p && on.includes(s)) {
+      if (state.phase === 'hold') w = 1;
+      else if (state.phase === 'out') w = 1 - state.t / 0.1;
+      else if (state.t < info.hit) w = THREE.MathUtils.smoothstep(state.t, info.wind - 0.16, info.hit);
+      else w = 1 - THREE.MathUtils.smoothstep(state.t, info.hit, info.hit + 0.18);
+    }
+    if (!model.raise && state.phase === 'cast' && state.t < info.hit) w *= 0.45;     // (behind the hand till it opens)
+    h.glow.material.opacity = w * 0.95;
+    h.glow.material.depthTest = !model.raise;      // (a palm turned to the eye has its glow in front of it)
+    h.light.intensity = w * 0.22;
+    if (w > 0.001) {
+      const at = palmOf(s);
+      h.glow.position.copy(at);
+      h.glow.scale.setScalar(0.1 + 0.26 * w + 0.015 * Math.sin(performance.now() * 0.03));
+      h.glow.material.color.copy(p.mid);
+      h.light.color.copy(p.mid);
+      h.light.position.copy(at);
+      if (Math.random() < w * dt * 90) {
+        tmpV.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.35);
+        spawn(at, tmpV, Math.random() < 0.5 ? p.core : p.mid, 0.015 + Math.random() * 0.03, 0.15 + Math.random() * 0.2);
+      }
+    }
+  }
+}
+
+// --- the page
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  const fw = Math.min(w, h * ASPECT), fh = fw / ASPECT;
+  frame.style.width = `${fw}px`;
+  frame.style.height = `${fh}px`;
+  renderer.setSize(fw, fh, false);
+  ptsMat.uniforms.scale.value = fh * renderer.getPixelRatio() * 0.64;
+}
+addEventListener('resize', resize);
+resize();
+
+function mark() {
+  document.querySelectorAll('#models button').forEach((b) => b.classList.toggle('on', b.dataset.model === state.model));
+  document.querySelectorAll('#casts button').forEach((b) => b.classList.toggle('on', b.dataset.cast === state.cast));
+  document.querySelectorAll('#magics button').forEach((b) => b.classList.toggle('on', b.dataset.magic === state.magic));
+  $('picture').src = `art/fp_spells/${state.model}_reference.png`;
+}
+async function useModel(name) {
+  if (model) scene.remove(model.root);
+  state.model = name;
+  model = models[name] || await loadModel(name);
+  scene.add(model.root);
+  restart();
+  mark();
+}
+document.querySelector('#models').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) useModel(b.dataset.model); });
+document.querySelector('#casts').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { state.cast = b.dataset.cast; restart(); mark(); } });
+document.querySelector('#magics').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { state.magic = b.dataset.magic; mark(); } });
+function setOrbit(on) { $('orbit').checked = on; orbit.enabled = on; if (on) { $('picture-on').checked = false; state.picture = false; $('picture').style.display = 'none'; } }
+$('orbit').addEventListener('change', (e) => setOrbit(e.target.checked));
+$('picture-on').addEventListener('change', (e) => { state.picture = e.target.checked; $('picture').style.display = e.target.checked ? 'block' : 'none'; });
+$('scrub').addEventListener('input', (e) => { state.scrubbing = true; state.phase = 'cast'; state.t = +e.target.value * model.meta[`cast_${state.cast}`].duration; });
+$('scrub').addEventListener('change', () => { state.scrubbing = false; });
+addEventListener('keydown', (e) => {
+  if (e.key === '1') { state.cast = 'r'; restart(); mark(); }
+  if (e.key === '2') { state.cast = 'l'; restart(); mark(); }
+  if (e.key === '3') { state.cast = 'both'; restart(); mark(); }
+  if (e.key === 'o' || e.key === 'O') setOrbit(!orbit.enabled);
+  if (e.key === ' ') { restart(); e.preventDefault(); }
+});
+
+let last = performance.now();
+function frameLoop(now) {
+  requestAnimationFrame(frameLoop);
+  if (!model || state.frozen) return;
+  const dt = Math.min((now - last) / 1000, 0.05) * +$('speed').value;
+  last = now;
+  if (!state.scrubbing && !state.picture) stepCast(dt);
+  else if (state.picture) state.t = 0;
+  pose();
+  stepGlow(dt);
+  stepBolts(dt);
+  stepParticles(dt);
+  renderer.render(scene, viewer());
+  const name = `cast_${state.cast}`, info = model.meta[name];
+  if (!state.scrubbing && state.phase === 'cast') $('scrub').value = state.t / info.duration;
+  $('readout').innerHTML = `<b>${name}</b> of ${state.model}<br>${state.t.toFixed(2)} s of ${info.duration.toFixed(2)}<br>the spell leaves at ${info.hit.toFixed(2)} s`;
+}
+useModel('attack').then(() => requestAnimationFrame(frameLoop));
+
+// For the review sheets: a cast's pose at a time, saved through serve.py.
+window.bm = {
+  async seek(name, cast, t, magic = 'none') {
+    state.frozen = true;
+    if (state.model !== name) await useModel(name);
+    state.cast = cast; state.magic = magic; state.phase = 'cast'; state.t = t; state.picture = false;
+    state.seeking = true;
+    pose();
+    model.root.updateMatrixWorld(true);
+    stepGlow(0);
+    renderer.render(scene, viewer());
+  },
+  // From outside the hands: the angles in degrees, round from the eye's side and up, and how far off. No angles goes back to the eye.
+  look(round, up, far = 1.1, at = null) {
+    setOrbit(round !== undefined);
+    if (round === undefined) return;
+    orbit.target.set(...(at || [0, 0.12, -0.5]));
+    const a = round * Math.PI / 180, b = up * Math.PI / 180;
+    orbitCam.position.set(Math.sin(a) * Math.cos(b), Math.sin(b), Math.cos(a) * Math.cos(b)).multiplyScalar(far).add(orbit.target);
+    orbit.update();
+  },
+  palm(side) { return palmOf(side).toArray(); },
+  async shot(file) {
+    const blob = await new Promise((ok) => canvas.toBlob(ok, 'image/png'));
+    await fetch(`/shot?name=${file}`, { method: 'POST', body: blob });
+  },
+  async sheet(name, cast, times, magic = 'none') {
+    for (const t of times) {
+      await this.seek(name, cast, t, magic);
+      await this.shot(`${name}_${cast}_${String(Math.round(t * 1000)).padStart(4, '0')}`);
+    }
+    return times.length;
+  },
+  // Runs the page by hand, so that a slow or hidden tab still shows what a fast one would.
+  advance(name, cast, seconds, magic = 'fire', dt = 1 / 60) {
+    state.frozen = true; state.seeking = false; state.magic = magic;
+    if (state.model !== name || state.cast !== cast) { state.cast = cast; }
+    restart();
+    for (let i = 0; i < seconds / dt; i++) { stepCast(dt); pose(); model.root.updateMatrixWorld(true); stepGlow(dt); stepBolts(dt); stepParticles(dt); }
+    renderer.render(scene, viewer());
+  },
+  resume() { state.frozen = false; state.seeking = false; last = performance.now(); },
+};
+</script>
+</body>
+</html>
