@@ -22,8 +22,9 @@ import { SKIN } from './shaders.js';
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 444;
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
-// The kite shield on the arm turned about its grip, so its point is straight down the screen as guard_idle carries it (measured on the rig's shield joint).
-const KITE_TURN = 27 * Math.PI / 180;
+// The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
+// the forearm toward the elbow (fitted to the skinned arm, within a millimetre at both, on the rig's shield joint). Bigger than on the ground, to fill the owner's outline.
+const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCALE = 1.25, KITE_SEAT = [-0.06, -0.08, -0.023];
 const FAR_HALF = 1024;       // What the coarse map of the land covers, either way.
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
@@ -592,11 +593,12 @@ export class Renderer {
     if (w) this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
     else {
       // (Not a weapon: a shield, on the arm's shield joint.)
-      const c = Math.cos(KITE_TURN), sn = Math.sin(KITE_TURN), pos = new Float32Array(prim.pos), nrm = new Float32Array(prim.nrm);
-      for (let v = 0; v < pos.length; v += 3) {
-        pos[v] = prim.pos[v] * c - prim.pos[v + 1] * sn; pos[v + 1] = prim.pos[v] * sn + prim.pos[v + 1] * c;
-        nrm[v] = prim.nrm[v] * c - prim.nrm[v + 1] * sn; nrm[v + 1] = prim.nrm[v] * sn + prim.nrm[v + 1] * c;
-      }
+      const c = Math.cos(KITE_TURN), sn = Math.sin(KITE_TURN), ct = Math.cos(KITE_TILT), st = Math.sin(KITE_TILT), pos = new Float32Array(prim.pos), nrm = new Float32Array(prim.nrm);
+      const seat = (from, to, v, size, at) => {
+        const x = from[v] * c - from[v + 1] * sn, y = from[v] * sn + from[v + 1] * c, z = from[v + 2];
+        to[v] = (x * ct + z * st) * size + at[0]; to[v + 1] = y * size + at[1]; to[v + 2] = (-x * st + z * ct) * size + at[2];
+      };
+      for (let v = 0; v < pos.length; v += 3) { seat(prim.pos, pos, v, KITE_SCALE, KITE_SEAT); seat(prim.nrm, nrm, v, 1, [0, 0, 0]); }
       prim.pos = pos; prim.nrm = nrm;
       this.onWeaponJoint(prim, vm.shieldJoint, vm.shieldBind);
     }

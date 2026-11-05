@@ -23,11 +23,10 @@ const STANCES = {
   // A staff doesn't cut: every move is the one cast, and it fires from the head (Casting.stepStaff).
   3: { idle: 'staff_idle', walk: 'staff_walk', combo: ['staff_cast'], wide: ['staff_cast', 'staff_cast'], air: 'staff_cast', back: 'staff_cast', run: 'staff_cast', reach: { tip: 0, mid: 0 }, shoots: true },
 };
-// The shield, after Bellmourn's: the right button brings it up and it shoves on the way, then it holds for a moment, or for as long as the button's down.
+// The shield, after Bellmourn's: the right button brings it up and it shoves on the way, then it holds for as long as the button's down, and starts down the moment it's let go.
 // Up in time for the blow (GUARD_PERFECT) it turns that blow aside whole and sets the striker reeling. Later it takes the blow on your breath, and when that runs out the guard breaks.
 const G = { UP: 1, BASH: 2, HOLD: 3, DOWN: 4, STAB: 5 };
 const GUARD_RATE = 1.35;       // how fast it comes up, shoves and goes down, against its clips
-const GUARD_HOLD = 1.0;        // seconds it stays up after a tap
 const GUARD_PERFECT = 0.3;
 const GUARD_ARC = Math.cos(1.2);    // what it covers: this far either side of where you look
 const GUARD_COST = 1.1, GUARD_LEAK = 0.1;   // breath per point of a blow taken on it, and how much of the blow gets through
@@ -86,7 +85,7 @@ export class Player {
       threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, lean: [0, 0, 0], kick: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
-      guard: 0, guardHold: 0, guardAt: -9, bashed: false, blockEvT: 0, hasShield: false, blockHeld: false,
+      guard: 0, guardAt: -9, bashed: false, blockEvT: 0, hasShield: false, blockHeld: false,
       surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
     });
   }
@@ -302,7 +301,7 @@ export class Player {
 
   startGuard(sim) {
     this.guardClip('shield_up', G.UP);
-    this.guardAt = sim.time; this.guardHold = 0; this.bashed = false; this.recoilT = 0; this.drag = 0; this.queued = null;
+    this.guardAt = sim.time; this.bashed = false; this.recoilT = 0; this.drag = 0; this.queued = null;
   }
 
   // Everything in front, as wide as the shield and a stride deep, is knocked back and set reeling.
@@ -328,18 +327,26 @@ export class Player {
     if (met) { sim.hitStop(0.06); this.trauma = Math.min(1, this.trauma + 0.3); this.kick = 1; }
   }
 
+  // The button's let go: the shield starts down now, from wherever it's got to, so a shield still on its way up turns round where it is.
+  dropGuard() {
+    const up = this.guard === G.UP ? Math.min(1, this.t / this.arms.clips.shield_up.dur) : 1;
+    this.queued = null;
+    this.guardClip('shield_down', G.DOWN);
+    this.t = (1 - up) * this.arms.clips.shield_down.dur;
+  }
+
   stepGuard(tdt, sim) {
+    if (!this.blockHeld && this.guard !== G.DOWN) { this.dropGuard(); return; }
     const info = this.arms.clips[this.clip];
     this.fade = Math.min(1, this.fade + tdt / 0.06);
     this.t += tdt * (this.guard === G.HOLD ? 0.25 + Math.min(1.3, this.groundSpeed / 6.2) : GUARD_RATE);
-    this.guardHold -= tdt;
     switch (this.guard) {
       case G.UP:
         if (this.t >= info.dur) this.guardClip('shield_bash', G.BASH);
         break;
       case G.BASH:
         if (!this.bashed && this.t >= BASH_AT) this.bash(sim);
-        if (this.t >= info.dur) { this.guardClip('shield_hold', G.HOLD); this.guardHold = GUARD_HOLD; }
+        if (this.t >= info.dur) this.guardClip('shield_hold', G.HOLD);
         break;
       case G.HOLD:
         // With the shield up the sword only thrusts, over the rim. The right button again is another shove.
@@ -351,7 +358,7 @@ export class Player {
           this.queued = null;
           this.guardClip('shield_bash', G.BASH);
           this.bashed = false;
-        } else if ((!this.blockHeld && this.guardHold <= 0) || this.winded || !this.hasShield || this.surfing) {
+        } else if (this.winded || !this.hasShield || this.surfing) {
           this.queued = null;
           this.guardClip('shield_down', G.DOWN);
         }
@@ -388,6 +395,7 @@ export class Player {
   }
 
   stepSwing(dt, tdt, sim) {
+    if (this.guard === G.STAB && !this.blockHeld) this.dropGuard();     // (a thrust goes with the shield: the button's what keeps either up)
     if (this.guard && this.guard !== G.STAB) { this.stepGuard(tdt, sim); return; }
     const { arms } = this;
     const info = arms.clips[this.clip];
@@ -448,7 +456,7 @@ export class Player {
 
   toIdle() {
     // A thrust over the rim ends behind the shield.
-    if (this.guard === G.STAB) { this.guardClip('shield_hold', G.HOLD); this.guardHold = 0.25; return; }
+    if (this.guard === G.STAB) { this.guardClip('shield_hold', G.HOLD); return; }
     this.arms.capture();
     this.clip = this.stance.idle; this.t = 0; this.fade = 0; this.rate = 1; this.swingRate = 1;
     this.swinging = false; this.recovering = false; this.threat = null; this.recoilT = 0;
