@@ -282,6 +282,8 @@ async function loadModel(name) {
   const gltf = await new Promise((ok, no) => loader.load(`assets/fp/spell_${name}.glb?${Date.now()}`, ok, undefined, no));
   const root = gltf.scene;
   root.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+  const gauntlet = new URLSearchParams(location.search).get('gauntlet');
+  if (gauntlet) await (await import('./tools/gear/wear_view.js')).wear(THREE, GLTFLoader, root, `spell_${name}`, gauntlet);
   const mixer = new THREE.AnimationMixer(root);
   const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
   const actions = Object.fromEntries(Object.entries(clips).map(([n, c]) => {

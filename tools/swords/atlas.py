@@ -189,11 +189,11 @@ def encode(arr, kind):
     return b.getvalue()
 
 
-def write(path, name, g, UVn, maps, sockets):
+def write(path, name, g, UVn, maps, sockets, normal_kind="png"):
     b = Glb()
     images = [dict(bufferView=b.view(encode(maps[0], "jpg")), mimeType="image/jpeg", name=f"{name}_basecolor"),
               dict(bufferView=b.view(encode(maps[1], "jpg")), mimeType="image/jpeg", name=f"{name}_rm"),
-              dict(bufferView=b.view(encode(maps[2], "png")), mimeType="image/png", name=f"{name}_normal")]
+              dict(bufferView=b.view(encode(maps[2], normal_kind)), mimeType="image/png" if normal_kind == "png" else "image/jpeg", name=f"{name}_normal")]
     prim = dict(attributes=dict(POSITION=b.accessor(g["P"], "VEC3", 5126, 34962, minmax=True), NORMAL=b.accessor(g["N"], "VEC3", 5126, 34962),
                                 TEXCOORD_0=b.accessor(UVn.astype(np.float32), "VEC2", 5126, 34962)),
                 indices=b.accessor(g["F"].astype(np.uint32).ravel(), "SCALAR", 5125, 34963), material=0)

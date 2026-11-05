@@ -6,6 +6,7 @@ import { Pines } from './pines.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
+import { GEAR } from '../items/items.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
 import { MipGen, makeBuffer, mipCountFor, textureArrayFromBitmaps } from './gpu.js';
@@ -182,6 +183,7 @@ export class Renderer {
     this.swords = new Map();
     this.gems = new Map();
     this.ground = [];
+    this.gauntletSets = new Map();
     this.chests = [];
     this.things = (village.things || []).concat(this.interior.data.things || []);
     this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
@@ -523,11 +525,11 @@ export class Renderer {
       const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
         { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
       ] });
-      parts.push({ range: sk.ranges[i], bg, ubo, isSword: name === 'greatsword' });
+      parts.push({ range: sk.ranges[i], bg, ubo, name, isSword: name === 'greatsword', nrm });
     }
     const shieldJoint = skin.joints.findIndex((j) => glb.json.nodes[j].name === 'shield');
     const shieldBind = shieldJoint < 0 ? null : mat4Invert(new Float32Array(16), accessor(glb, skin.inverseBindMatrices).subarray(shieldJoint * 16, shieldJoint * 16 + 16));
-    return { ...sk, parts, weaponJoint, weaponBind, shieldJoint, shieldBind };
+    return { ...sk, parts, weaponJoint, weaponBind, shieldJoint, shieldBind, prims, jointNames: skin.joints.map((j) => glb.json.nodes[j].name) };
   }
 
   pixel(format, rgba) {
@@ -583,6 +585,8 @@ export class Renderer {
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
     s.lying = this.lyingModel(prim, alb, nrm, mr, [0, 0, 0, 0]);
     s.tip = prim.pos.reduce((best, v, i) => (i % 3 === 1 ? Math.max(best, v) : best), 0);
+    // (A piece of a suit is only ever seen on the ground, or in a slot.)
+    if (GEAR[id]) { s.ready = true; return; }
     const vm = this.vms[w ? w.hands : 1];
     if (w) this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
     else {
@@ -618,7 +622,112 @@ export class Renderer {
     const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
-    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg };
+    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, maps: [alb, nrm, mr], tints: new Map() };
+  }
+
+  // The same model, glowing a colour: its rarity's, when it's dropped.
+  tinted(model, hex) {
+    let t = model.tints.get(hex);
+    if (t) return t;
+    const { device } = this;
+    const glow = [1, 3, 5].map((i) => (parseInt(hex.slice(i, i + 2), 16) / 255) ** 2.2);
+    const ubo = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(ubo, 0, new Float32Array([...glow, 1]));
+    t = { ...model, bg: device.createBindGroup({ layout: this.bglArmor, entries: [
+      { binding: 0, resource: { buffer: ubo } }, ...model.maps.map((m, i) => ({ binding: i + 1, resource: m.createView() })),
+    ] }) };
+    model.tints.set(hex, t);
+    return t;
+  }
+
+  // A suit's gauntlets, by its id: { ready } until its file is in, and then, per first-person rig, what goes on it. See tools/gear/gauntlets.py.
+  gauntletSet(suit) {
+    let s = this.gauntletSets.get(suit);
+    if (!s) {
+      s = { ready: false, rigs: new Map() };
+      this.gauntletSets.set(suit, s);
+      this.buildGauntlets(suit, s).catch((e) => console.error(`gauntlets ${suit}`, e));
+    }
+    return s;
+  }
+
+  async buildGauntlets(suit, s) {
+    const { device } = this;
+    const buf = await fetch(`${this.base}assets/fp/gauntlets_${suit}.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+    const glb = parseGLB(buf);
+    const mat = glb.json.materials[0];
+    const srcOf = (t) => glb.json.textures[t.index].source;
+    const scale = this.tier.texScale;
+    const [alb, nrm, mr] = await Promise.all([
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+    ]);
+    const rigs = { arms_1h: this.vms[1], arms_2h: this.vms[2], arms_staff: this.vms[3], spell_attack: this.spellVMs[1], spell_raise: this.spellVMs[2] };
+    for (const m of glb.json.meshes) {
+      const vm = rigs[m.name];
+      if (!vm) continue;
+      const a = m.primitives[0].attributes;
+      const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, m.primitives[0].indices), joints: accessor(glb, a.JOINTS_0), weights: accessor(glb, a.WEIGHTS_0) };
+      const hand = this.makeSkinned([prim], vm.jointCount);
+      const ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+      const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
+        { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
+      ] });
+      // (The leather has the arm's own normal map, a part at a time: the creases of a knuckle, where a flat colour reads as rubber.)
+      const under = vm.parts.map((part) => device.createBindGroup({ layout: this.bglArmor, entries: [
+        { binding: 0, resource: { buffer: ubo } }, ...this.underMaps().map((t, i) => ({ binding: i + 1, resource: (i === 1 ? part.nrm : t).createView() })),
+      ] }));
+      s.rigs.set(vm, { hand, ubo, bg, under, bare: this.armsUnder(vm, m.extras.cut) });
+    }
+    s.ready = true;
+  }
+
+  // What's under armour: dark leather, in a texel each of colour, normal and roughness.
+  underMaps() {
+    if (this.underTex) return this.underTex;
+    const { device } = this;
+    const texel = (rgba, format) => {
+      const t = device.createTexture({ size: [1, 1], format, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+      device.queue.writeTexture({ texture: t }, new Uint8Array(rgba), { bytesPerRow: 4 }, [1, 1]);
+      return t;
+    };
+    this.underTex = [texel([30, 25, 21, 255], 'rgba8unorm-srgb'), texel([128, 128, 255, 255], 'rgba8unorm'), texel([255, 230, 0, 255], 'rgba8unorm')];
+    return this.underTex;
+  }
+
+  // The arms, sorted about the armour: an index buffer of their own, with the skin that shows in the parts' ranges, and what's under the plates in `dark`.
+  // cut: per side and per part, a point and which way is under.
+  armsUnder(vm, cut) {
+    const { prims, jointNames } = vm;
+    const out = [], ranges = [], leather = [], dark = [];
+    let base = 0;
+    prims.forEach((p, k) => {
+      const first = out.length, leatherAt = leather.length, n = p.pos.length / 3;
+      const name = vm.parts[k].name;
+      const sideOf = (i) => {
+        let best = 0, w = -1;
+        for (let c = 0; c < 4; c++) if (p.weights[i * 4 + c] > w) { w = p.weights[i * 4 + c]; best = p.joints[i * 4 + c]; }
+        return jointNames[best].endsWith('_L') ? 'L' : 'R';
+      };
+      const under = (i) => {
+        if (!p.joints || vm.parts[k].isSword) return false;
+        const pl = (cut[name] || cut)[sideOf(i)];
+        if (!pl) return false;
+        return (p.pos[i * 3] - pl[0]) * pl[3] + (p.pos[i * 3 + 1] - pl[1]) * pl[4] + (p.pos[i * 3 + 2] - pl[2]) * pl[5] > 0;
+      };
+      const seen = new Int8Array(n).fill(-1);
+      const test = (i) => { if (seen[i] < 0) seen[i] = under(i) ? 1 : 0; return seen[i] === 1; };
+      for (let t = 0; t < p.idx.length; t += 3) {
+        const a = p.idx[t], b = p.idx[t + 1], c = p.idx[t + 2];
+        (test(a) && test(b) && test(c) ? leather : out).push(a + base, b + base, c + base);
+      }
+      ranges.push({ first, count: out.length - first });
+      if (leather.length > leatherAt) dark.push({ first: leatherAt, count: leather.length - leatherAt, part: k });
+      base += n;
+    });
+    for (const r of dark) r.first += out.length;
+    return { IB: makeBuffer(this.device, new Uint32Array([...out, ...leather]), GPUBufferUsage.INDEX), ranges, dark };
   }
 
   // A gem on the ground: a long-pointed eight-sided stone, flat-shaded, in its one colour and giving off a little of it.
@@ -1425,6 +1534,17 @@ export class Renderer {
       vmData[17] = 0; vmData[18] = 0; vmData[19] = 1;
       q.writeBuffer(h.ubo, 0, vmData);
     }
+    // The gauntlets, when they're worn and in: each rig's on that rig's palette.
+    const set = this.gauntlets ? this.gauntletSet(this.gauntlets) : null;
+    this.vmGloves = set && set.ready ? set.rigs.get(this.vm) || null : null;
+    if (this.vmGloves) {
+      const h = this.vmGloves;
+      q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, h.hand.jointCount * 32);
+      skinParamsU[0] = h.hand.count;
+      q.writeBuffer(h.hand.params, 0, skinParams);
+      vmData[17] = 0; vmData[18] = 0; vmData[19] = 1;
+      q.writeBuffer(h.ubo, 0, vmData);
+    }
     // The spell hands, when they're up, with their own pose.
     this.spellVM = this.spellVMs[snap[H.SPELL_RIG] | 0] || null;
     if (this.spellVM) {
@@ -1435,7 +1555,15 @@ export class Renderer {
       vmData.set(vmSway, 0);
       vmData[16] = 0; vmData[17] = 0; vmData[18] = 0; vmData[19] = -1;
       for (const part of sv.parts) q.writeBuffer(part.ubo, 0, vmData);
-    }
+      this.spellGloves = set && set.ready ? set.rigs.get(sv) || null : null;
+      if (this.spellGloves) {
+        const h = this.spellGloves;
+        q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + SPELL_PALETTE * 4, h.hand.jointCount * 32);
+        skinParamsU[0] = h.hand.count;
+        q.writeBuffer(h.hand.params, 0, skinParams);
+        q.writeBuffer(h.ubo, 0, vmData);
+      }
+    } else this.spellGloves = null;
     // What's lying on the ground.
     let nGround = 0;
     const drawn = this.drawnItems || (this.drawnItems = []);
@@ -1445,7 +1573,8 @@ export class Renderer {
     for (const g of this.chests) drawn.push(g);
     if (snap[H.SURF] > 0.5 && this.board.sword) drawn.push(this.board);
     for (const g of drawn) {
-      const model = g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
+      let model = g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
+      if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
       g.slot = nGround;
@@ -1507,6 +1636,11 @@ export class Renderer {
     if (this.spellVM) {
       cp.setBindGroup(0, this.spellVM.bg);
       cp.dispatchWorkgroups(Math.ceil(this.spellVM.count / 128));
+    }
+    for (const h of [this.vmGloves, this.spellGloves]) {
+      if (!h) continue;
+      cp.setBindGroup(0, h.hand.bg);
+      cp.dispatchWorkgroups(Math.ceil(h.hand.count / 128));
     }
     if (cullGrass) {
       cp.setPipeline(this.pGrassCull);
@@ -1589,25 +1723,52 @@ export class Renderer {
     // Nearest first, so what's behind fails the depth test before it's lit: the arms, in front of everything, with their
     // own camera, and then the knights.
     if (!this.hideVM) {
-      mp.setViewport(0, 0, this.W, this.H, 0.96, 1);
+      mp.setViewport(0, 0, this.W, this.H, 0.97, 1);
       mp.setPipeline(this.pVM);
       if (this.spellVM) {
         const sv = this.spellVM;
         mp.setVertexBuffer(0, sv.outBuf);
         mp.setVertexBuffer(1, sv.sideVB);
-        mp.setIndexBuffer(sv.IB, 'uint32');
-        for (const part of sv.parts) {
+        const bare = this.spellGloves?.bare;
+        mp.setIndexBuffer(bare ? bare.IB : sv.IB, 'uint32');
+        sv.parts.forEach((part, i) => {
+          const r = bare ? bare.ranges[i] : part.range;
           mp.setBindGroup(1, part.bg);
-          mp.drawIndexed(part.range.count, 1, part.range.first);
+          mp.drawIndexed(r.count, 1, r.first);
+        });
+        if (this.spellGloves) {
+          const h = this.spellGloves;
+          // (In a depth band behind the plates, a lower one, since nearer is greater here: a plate's shape doesn't follow the skin, and it's always the plate you see. Only a gap shows this.)
+          mp.setViewport(0, 0, this.W, this.H, 0.96, 0.97);
+          for (const r of bare.dark) { mp.setBindGroup(1, h.under[r.part]); mp.drawIndexed(r.count, 1, r.first); }
+          mp.setViewport(0, 0, this.W, this.H, 0.97, 1);
+          mp.setVertexBuffer(0, h.hand.outBuf);
+          mp.setVertexBuffer(1, h.hand.sideVB);
+          mp.setIndexBuffer(h.hand.IB, 'uint32');
+          mp.setBindGroup(1, h.bg);
+          mp.drawIndexed(h.hand.indices);
         }
       }
       mp.setVertexBuffer(0, this.vm.outBuf);
       mp.setVertexBuffer(1, this.vm.sideVB);
-      mp.setIndexBuffer(this.vm.IB, 'uint32');
-      if (!this.vmDown) for (const part of this.vm.parts) {
-        if (part.isSword && !this.holdingOld) continue;
+      const bare = this.vmGloves?.bare;
+      mp.setIndexBuffer(bare ? bare.IB : this.vm.IB, 'uint32');
+      if (!this.vmDown) this.vm.parts.forEach((part, i) => {
+        if (part.isSword && !this.holdingOld) return;
+        const r = bare ? bare.ranges[i] : part.range;
         mp.setBindGroup(1, part.bg);
-        mp.drawIndexed(part.range.count, 1, part.range.first);
+        mp.drawIndexed(r.count, 1, r.first);
+      });
+      if (this.vmGloves && !this.vmDown) {
+        const h = this.vmGloves;
+        mp.setViewport(0, 0, this.W, this.H, 0.96, 0.97);
+        for (const r of bare.dark) { mp.setBindGroup(1, h.under[r.part]); mp.drawIndexed(r.count, 1, r.first); }
+        mp.setViewport(0, 0, this.W, this.H, 0.97, 1);
+        mp.setVertexBuffer(0, h.hand.outBuf);
+        mp.setVertexBuffer(1, h.hand.sideVB);
+        mp.setIndexBuffer(h.hand.IB, 'uint32');
+        mp.setBindGroup(1, h.bg);
+        mp.drawIndexed(h.hand.indices);
       }
       if (this.held && !this.vmDown) {
         const h = this.held;
@@ -1702,7 +1863,7 @@ export class Renderer {
       this.spellfx.draw(mp);
       if (this.trailCount >= 4 && !this.hideVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
-        mp.setViewport(0, 0, this.W, this.H, 0.96, 1);
+        mp.setViewport(0, 0, this.W, this.H, 0.97, 1);
         mp.setPipeline(this.pTrail);
         mp.setVertexBuffer(0, this.trailVB);
         mp.draw(this.trailCount);

@@ -615,7 +615,9 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   let mr = textureSample(mrTex, repeatSmp, in.uv);
   let n = perturb(n0, in.p, in.uv, nm.rg, 1.0);
   let shadow = shadowAt(in.p, n0, in.viewZ, ign(in.pos.xy));
-  var c = shadePBR(in.p, n, v, albedo, mr.g, mr.b, 1.0, shadow) + I.glow.rgb;
+  // A dropped thing's rarity: a little all over, and strongest where it turns from the eye. (A gem's glow is flat: a = 0.)
+  let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), 2.2);
+  var c = shadePBR(in.p, n, v, albedo, mr.g, mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 1.5 * rim * rim, I.glow.a);
   c = applyFog(c, in.p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);

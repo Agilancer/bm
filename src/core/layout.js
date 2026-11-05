@@ -21,7 +21,9 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // Space held down, for the shield surf, and whether there's a shield to ride.
   JUMP_HELD: 29, SHIELD: 30,
   // The right button held, for the shield; and a count of presses of the use key, for doors and chests.
-  BLOCK: 31, SIZE: 40 };
+  BLOCK: 31,
+  // What the player's armour comes to.
+  ARMOR: 32, SIZE: 40 };
 
 // Snapshot header (float offsets)
 export const H = {

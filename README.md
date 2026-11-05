@@ -102,17 +102,33 @@ move things, right-click or double tap to equip or stow, and click outside the p
 open socket, for good. Only the Sword slot does anything yet; the others wait for items. The pack stays with you through a new
 fight, and only New Game starts it over.
 
-**`TEST_KIT` in `src/items/pack.js` is on for review**, so the pack starts with every sword and nine gems. Set it false for the
+**`TEST_KIT` in `src/items/pack.js` is on for review**, so the pack starts with every sword, a gem of each kind and a pair of gauntlets from each suit, the Knight's worn. Set it false for the
 real start, with the old greatsword alone.
 
 There are twelve swords from three Tripo sheets, 8 one-handed and 4 two-handed. Each is one model, used in the hand and on the
-ground, where it's drawn at the size the knights carry theirs. A sword rolls a rarity (Common 70%, Fine 23%, Rare 6.5%, Peerless
-0.5%), affixes and sockets. Four sockets only come on a Peerless sword, about one sword in 1,150. Gems come in six kinds and three
-grades. The black knight drops a Rare or better sword and a gem, the silver knight a Fine or better sword, and a crab a sword (60%)
-or a gem (40%). Damage is weighed against a sword of 20, which the swings were balanced on, in `Player.bite`.
+ground, where it's drawn at the size the knights carry theirs. A sword rolls a rarity (Common 60%, Uncommon 26%, Rare 10%, Epic 3.4%,
+Legendary 0.6%), affixes and sockets. Four sockets only come on a Legendary sword, about one sword in 1,100. Gems come in six kinds and three
+grades. The black knight drops a Rare or better sword and shield and a gem, the silver knight an Uncommon or better sword and a Rare or better shield, and a crab a sword (60%)
+or a shield or gem (40%). Damage is weighed against a sword of 20, which the swings were balanced on, in `Player.bite`.
 
 To change the rolls, see the tables at the top of `src/items/items.js`, and run `node tools/items/check.mjs` to test them. To add
 swords, add the sheet to `tools/swords/sheets.py`, run `separate.py` and `render_icons.py` in Blender and `atlas.py` with Python. `lengthen.py` draws out the one-handers' blades.
+
+Five suits of armour come apart into six pieces each: helm, cuirass, pauldrons, gauntlets, tassets and greaves, in slots of their own. A piece rolls the same five rarities, with its
+suit's armour value and affixes, and lies on the ground as a small copy of itself, hovering, slowly turning, and glowing its rarity's colour. Knights and crabs sometimes drop one. Velscour's
+side only ever drops the plain Knight's suit: see "The two sides". A chest can hold a piece too: a house's any suit, the priest's and what the dead keep only the Knight's, since those are in Velscour's church. Breakable boxes and pots aren't in the game yet.
+
+### Gauntlets over the hands
+
+The equipped gauntlets go over both first-person hands, in every swing and cast, from `assets/fp/gauntlets_<suit>.glb`. They're metal, and metal doesn't bend. So `tools/gear/gauntlets.py` cuts a
+suit's arm into plates, one to a bone, carries each from its bone's frame on the suit to the same bone's on each rig, sizes it once, and weights it wholly to that one joint. The clips aren't touched, and nothing warps.
+
+- The forearm and the back of the hand are the suit's own model. The upper arm is a second copy of its forearm, since a suit's own is modelled over mail. It comes with the gauntlets.
+- Each joint of a finger is a round lame on the suit's steel, with a round cap at the tip. A suit's own finger plates hardly reach the first joint of a rig's long fingers, and come to points. `SUIT_FINGERS = True` puts them back on the first two joints.
+- All the arm's skin is drawn dark, as leather, in a depth band just behind the plates, so it shows only in gaps, and on the palm.
+- The game's depth is reversed, and `swings.html` and `spells.html` have regular depth, so a viewer can't show a band that's the wrong way round. **Judge gauntlets in the game.** Load `?auto&timer`, then `(await import('/tools/gear/game_sheet.js')).suitSheet('knight')` writes the sheets to `tools/build/shots/`.
+
+To add a suit: its file and its gauntlets' segments in `SUITS` at the top of `gauntlets.py`, and its values in `COOL`, `GAIN`, `METAL` and `RELIEF`. Then `python tools/gear/gauntlets.py` and `python tools/gear/check.py`. `?gauntlet=<suit>` on `swings.html` and `spells.html` previews one.
 
 Known limits: a socketed gem only shows on the icon, not on the 3D sword. The two-handers' handles were drawn out ×1.30 to ×1.43
 so both fists fit. The sabre is single-edged, but its swings alternate edges as the other swords' do. Nothing is carried in the off
@@ -217,6 +233,8 @@ To check it yourself:
 | `assets/game/items/`, `art/swords/` | The swords, their icons and `swords.json`, and the sheets they came from |
 | `tools/swords/` | Separates the sheets into swords (in Blender), and renders their icons |
 | `tools/items/check.mjs` | Tests the item rules and rarity odds |
+| `tools/gear/` | Tears the suits into pieces and renders their icons (in Blender), and fits gauntlets over the first-person arms |
+| `assets/fp/gauntlets_*.glb` | A suit's gauntlets and upper arms, fitted to every first-person rig |
 
 ## First-person arms with a sword and shield
 
