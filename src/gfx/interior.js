@@ -23,7 +23,7 @@ struct GO { @location(0) color: vec4f, @location(1) depth: f32 };
   var c: vec3f;
   let t = textureSample(colorArr, repeatSmp, in.uv, i32(min(in.layer, 13.0)));
   if (in.layer < 99.5) {
-    c = t.rgb * t.rgb * t.a * in.tint;
+    c = t.rgb * t.rgb * t.a * in.tint * F.sunColor.a;   // (The day behind the window.)
   } else if (in.layer < 100.5) {
     let e = 1.0 - abs(in.uv.x * 2.0 - 1.0);
     c = in.tint * smoothstep(0.0, 0.4, e) * (0.25 + 0.75 * in.uv.y);
@@ -83,7 +83,7 @@ export async function loadInterior(r, base, pool, tier) {
   const [man, data, glbBuf] = await Promise.all([
     fetch(`${dir}manifest.json`).then((x) => x.json()), fetch(`${dir}interior.json`).then((x) => x.json()), fetch(`${dir}interior.glb`).then((x) => x.arrayBuffer()),
   ]);
-  setFloors(data.floors);
+  setFloors(data.floors, data.homes);
   const scale = tier.texScale;
   const load = async (names, cs, ds) => {
     const px = (s) => Math.max(64, Math.round(s * scale));
@@ -124,7 +124,8 @@ export function buildGlowPipeline(r, module, layout, depthFormat, multisample) {
 
 // Where the camera is decides what's worth drawing. A wall can't be seen through, so it's simple.
 export function visibility(f0, cam) {
-  const deep = cam.x >= 124.5 && cam.y < f0 + 6.5;
+  // (Below is the stair's own passage, or under the land. Behind the church, out in the open, is neither.)
+  const deep = cam.x >= 124.5 && ((cam.x < 176 && Math.abs(cam.z) < 3 && cam.y < f0 + 6.5) || cam.y < -6);
   const hall = cam.x > 66 && cam.x < 124.5 && Math.abs(cam.z) < 14;
   return { deep, hall, cath: !deep || cam.x < 160, below: deep || (hall && cam.x > 100) };
 }

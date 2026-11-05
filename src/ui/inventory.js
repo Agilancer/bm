@@ -99,6 +99,7 @@ export class Inventory {
     }
     const main = this.pack.slots.main;
     const st = main ? statsOf(main) : null;
+    $('invGold').textContent = `${this.pack.gold} gold`;
     $('invStats').innerHTML = main
       ? `<b style="color:${colorOf(main)}">${nameOf(main)}</b><br>Damage ${st.min} to ${st.max}, ${hands(main.base) === 2 ? 'two hands' : 'one hand'}${hands(main.base) === 3 ? ', fires from its head' : ''}`
       : '<b>Bare hands</b><br>Nothing to swing.';

@@ -1,14 +1,27 @@
 // Collision and navigation against the village: oriented boxes on a height function, a flat ground grid
 // for the flow field, and rays against the plates of a rigid armour.
-import { floorAt, setFloors } from '../core/interior.js';
+import { floorAt, homeFloor, inPit, setFloors } from '../core/interior.js';
+import { forestTrees, trunkRadius } from '../core/forest.js';
 import { LAND_EDGE, terrainHeight } from '../core/terrain.js';
 
 // (Big enough to reach the catacombs. Cells nobody can stand on are walled off, so the search stays small.)
 const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_REACH = 150;
+const NAV_EDGE = 250;      // Past this nothing's worked out where to walk: whatever's chasing you stops at it, and the land goes on to LAND_EDGE.
+
+const TRUNK_CELL = 16, TOWN = 50;     // (The forest stands clear of the town, so nobody in it looks for a trunk.)
+const trunkKey = (i, j) => (i + 1000) * 2000 + j + 1000;
 
 export class World {
   constructor(data, interior) {
-    setFloors(interior.floors);
+    // The pines' trunks, by the cell they're in. As far as you can go, and no further.
+    this.trunks = new Map();
+    const t = forestTrees(LAND_EDGE + 24);
+    for (let i = 0; i < t.length; i += 6) {
+      const key = trunkKey(Math.floor(t[i] / TRUNK_CELL), Math.floor(t[i + 1] / TRUNK_CELL));
+      if (!this.trunks.has(key)) this.trunks.set(key, []);
+      this.trunks.get(key).push(t[i], t[i + 1], trunkRadius(t[i + 2], t[i + 3]));
+    }
+    setFloors(interior.floors, interior.homes);
     this.spawns = interior.spawns;
     this.colliders = data.colliders.concat(interior.colliders).map((c) => ({ ...c, s: Math.sin(c.yaw), co: Math.cos(c.yaw) }));
     this.lightsData = data.lights;
@@ -20,7 +33,7 @@ export class World {
     for (let j = 0; j < NAV_SIZE; j++) {
       for (let i = 0; i < NAV_SIZE; i++) {
         const x = (i + 0.5) * NAV_CELL - NAV_HALF, z = (j + 0.5) * NAV_CELL - NAV_HALF;
-        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > LAND_EDGE || Math.abs(z) > LAND_EDGE) && floorAt(x, z) === null) || this.inside(x, z, 0.55) ? 1 : 0;
+        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, 0.55) ? 1 : 0;
       }
     }
   }
@@ -35,10 +48,26 @@ export class World {
     return (h[k] * (1 - a) + h[k + 1] * a) * (1 - b) + (h[k + 257] * (1 - a) + h[k + 258] * a) * b;
   }
 
+  // Where the player comes down, at height y: in a house that depends how high they've got. Everyone else stays on the ground floor.
+  heightFor(x, z, y) {
+    return homeFloor(x, z, y) ?? this.height(x, z);
+  }
+
   inside(x, z, r) {
     for (const c of this.colliders) {
+      if (c.b || c.t !== undefined) continue;   // (Upstairs, or down in the rift: nobody who goes by this is there.)
       const dx = x - c.x, dz = z - c.z;
       if (Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r) return true;
+    }
+    if (Math.abs(x) > TOWN || Math.abs(z) > TOWN) {
+      const ci = Math.floor(x / TRUNK_CELL), cj = Math.floor(z / TRUNK_CELL);
+      for (let j = cj - 1; j <= cj + 1; j++) {
+        for (let i = ci - 1; i <= ci + 1; i++) {
+          const list = this.trunks.get(trunkKey(i, j));
+          if (!list) continue;
+          for (let k = 0; k < list.length; k += 3) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return true;
+        }
+      }
     }
     return false;
   }
@@ -49,9 +78,9 @@ export class World {
     let hit = false;
     for (let pass = 0; pass < 2; pass++) {
       for (const c of this.colliders) {
-        if (feet > c.h + 0.02 + this.height(c.x, c.z)) continue;
         const dx = x - c.x, dz = z - c.z;
         if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) continue;
+        if (feet > (c.t ?? c.h + 0.02 + this.height(c.x, c.z)) || feet < c.b) continue;
         const lx = dx * c.co - dz * c.s, lz = dx * c.s + dz * c.co;
         const qx = Math.abs(lx) - c.hx, qz = Math.abs(lz) - c.hz;
         if (qx > r || qz > r) continue;
@@ -64,6 +93,21 @@ export class World {
         } else if (qx > qz) { px = sx * (r - qx); } else { pz = sz * (r - qz); }
         x += px * c.co + pz * c.s; z += -px * c.s + pz * c.co;
         hit = true;
+      }
+      if (Math.abs(x) > TOWN || Math.abs(z) > TOWN) {
+        const ci = Math.floor(x / TRUNK_CELL), cj = Math.floor(z / TRUNK_CELL);
+        for (let j = cj - 1; j <= cj + 1; j++) {
+          for (let i = ci - 1; i <= ci + 1; i++) {
+            const list = this.trunks.get(trunkKey(i, j));
+            if (!list) continue;
+            for (let k = 0; k < list.length; k += 3) {
+              const dx = x - list[k], dz = z - list[k + 1], d = Math.hypot(dx, dz), R = list[k + 2] + r;
+              if (d >= R || d < 1e-4) continue;
+              x = list[k] + dx / d * R; z = list[k + 1] + dz / d * R;
+              hit = true;
+            }
+          }
+        }
       }
     }
     out[0] = x; out[2] = z;
@@ -89,9 +133,29 @@ export class World {
       // (Underground, a box's height counts from the floor it stands on.)
       let yAt = oy + dy * t0;
       if (yAt < -2) yAt -= this.height(c.x, c.z);
+      if (yAt < c.b || yAt > c.t) continue;
       if (yAt > c.h && c.h < 3.5) continue;
       if (c.h >= 3.5 && yAt > 7) continue;
       if (best < 0 || t0 < best) best = t0;
+    }
+    // And the pines, stepping along the ray a cell at a time.
+    const flat2 = dx * dx + dz * dz;
+    const ex = ox + dx * maxT, ez = oz + dz * maxT;
+    if (flat2 > 1e-6 && (Math.abs(ox) > TOWN || Math.abs(oz) > TOWN || Math.abs(ex) > TOWN || Math.abs(ez) > TOWN)) {
+      const step = TRUNK_CELL / Math.sqrt(flat2);
+      let lastKey = -1;
+      for (let s = 0; s <= maxT + step; s += step) {
+        const key = trunkKey(Math.floor((ox + dx * Math.min(s, maxT)) / TRUNK_CELL), Math.floor((oz + dz * Math.min(s, maxT)) / TRUNK_CELL));
+        if (key === lastKey) continue;
+        lastKey = key;
+        const list = this.trunks.get(key);
+        if (!list) continue;
+        for (let k = 0; k < list.length; k += 3) {
+          const qx = list[k] - ox, qz = list[k + 1] - oz;
+          const t = Math.max(0, Math.min(maxT, (qx * dx + qz * dz) / flat2));
+          if (Math.hypot(ox + dx * t - list[k], oz + dz * t - list[k + 1]) < list[k + 2] && (best < 0 || t < best)) best = t;
+        }
+      }
     }
     return best;
   }

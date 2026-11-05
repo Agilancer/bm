@@ -174,14 +174,30 @@ export function rollLoot(rng, kind) {
   return rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)];
 }
 
+// What's in a chest: tier 0 a house's, 1 the priest's, 2 what the dead keep.
+export function rollChest(rng, tier) {
+  const [lo, hi] = [[6, 24], [25, 60], [60, 140]][tier] || [6, 24];
+  const out = [{ type: 'gold', amount: lo + Math.floor(rng() * (hi - lo + 1)) }];
+  if (tier === 2) {
+    out.push(rollWeapon(rng, { minRarity: 2 }), rollGem(rng));
+    if (rng() < 0.5) out.push(rollShield(rng, { minRarity: 1 }));
+  } else if (tier === 1) {
+    out.push(rng() < 0.5 ? rollWeapon(rng, { minRarity: 1 }) : rollGem(rng));
+    if (rng() < 0.25) out.push(rollShield(rng));
+  } else if (rng() < 0.35) out.push(rollGem(rng));
+  else if (rng() < 0.3) out.push(rollWeapon(rng));
+  return out;
+}
+
 export function nameOf(item) {
+  if (item.type === 'gold') return `${item.amount} gold`;
   if (item.type === 'gem') return `${GEM_GRADES[item.grade].name} ${GEMS[item.kind].name}`;
   if (item.type === 'shield') return SHIELDS[item.base].name;
   const pre = item.affixes.find((a) => a.pos === 'pre'), suf = item.affixes.find((a) => a.pos === 'suf');
   return [pre?.name, BASES[item.base].name, suf?.name].filter(Boolean).join(' ');
 }
 
-export const colorOf = (item) => (item.type === 'gem' ? GEMS[item.kind].color : RARITIES[item.rarity].color);
+export const colorOf = (item) => (item.type === 'gold' ? '#e8c15a' : item.type === 'gem' ? GEMS[item.kind].color : RARITIES[item.rarity].color);
 
 export function gemLine(gem) {
   const g = GEMS[gem.kind];

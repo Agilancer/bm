@@ -12,14 +12,26 @@ import { stepSurf } from './surf.js';
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
 const WALK = 4.1, SPRINT = 6.6;
+const FALL_SAFE = 12, FALL_WORST = 11;   // (speed at the bottom. Five metres and you're fine; twenty, the bottom of the rift, and you're on your last legs.)
 // How each rig fights, by how many hands it has on the sword. The swings are solved to that rig's length of sword, so the reach is theirs too.
 const KICK = 1.4;      // how far the view kicks with a blow as it lands, against how far the body goes with it over the whole cut
 const STANCES = {
   2: { idle: 'great_idle', walk: 'great_walk', combo: ['great_sky1', 'great_sky2', 'great_sky3', 'great_sky4', 'great_sky5'], wide: ['great_wide_r', 'great_wide_l'], air: 'great_slam', back: 'great_rise', run: 'great_chop', reach: { tip: 2.55, mid: 2.2 } },
-  1: { idle: 'guard_idle', walk: 'guard_walk', combo: ['blade_sky1', 'blade_sky2', 'blade_sky3', 'blade_sky4', 'blade_sky5'], wide: ['blade_flat1', 'blade_flat2'], air: 'blade_sky5', back: 'blade_rise1', run: 'blade_stab', reach: { tip: 2.15, mid: 1.85 } },
+  // (pace: a one-hander comes round far quicker than its clips were cut. It costs the same breath a second.)
+  1: { idle: 'guard_idle', walk: 'guard_walk', combo: ['blade_sky1', 'blade_sky2', 'blade_sky3', 'blade_sky4', 'blade_sky5'], wide: ['blade_flat1', 'blade_flat2'], air: 'blade_sky5', back: 'blade_rise1', run: 'blade_stab', reach: { tip: 2.15, mid: 1.85 }, pace: 1.7 },
   // A staff doesn't cut: every move is the one cast, and it fires from the head (Casting.stepStaff).
   3: { idle: 'staff_idle', walk: 'staff_walk', combo: ['staff_cast'], wide: ['staff_cast', 'staff_cast'], air: 'staff_cast', back: 'staff_cast', run: 'staff_cast', reach: { tip: 0, mid: 0 }, shoots: true },
 };
+// The shield, after Bellmourn's: the right button brings it up and it shoves on the way, then it holds for a moment, or for as long as the button's down.
+// Up in time for the blow (GUARD_PERFECT) it turns that blow aside whole and sets the striker reeling. Later it takes the blow on your breath, and when that runs out the guard breaks.
+const G = { UP: 1, BASH: 2, HOLD: 3, DOWN: 4, STAB: 5 };
+const GUARD_RATE = 1.35;       // how fast it comes up, shoves and goes down, against its clips
+const GUARD_HOLD = 1.0;        // seconds it stays up after a tap
+const GUARD_PERFECT = 0.3;
+const GUARD_ARC = Math.cos(1.2);    // what it covers: this far either side of where you look
+const GUARD_COST = 1.1, GUARD_LEAK = 0.1;   // breath per point of a blow taken on it, and how much of the blow gets through
+const GUARD_DRAG = 0.6;
+const BASH_AT = 0.16, BASH_REACH = 2.5, BASH_ARC = Math.cos(1.05), BASH_DMG = 3, BASH_POISE = 70, BASH_PUSH = 6, BASH_COST = 8;
 const SURF_CROUCH = 0.3;   // the eye lower on the shield, the knees bent
 const BASE_HP = 160;
 const PUNCTURE_RADIUS = 0.07;
@@ -47,6 +59,7 @@ const SWING_INFO = {
   blade_flat1: { heavy: false, fromRight: 1, dmg: 3, poise: 18, stam: 9, width: 0.75 },
   blade_flat2: { heavy: false, fromRight: -1, dmg: 3, poise: 18, stam: 9, width: 0.75 },
   blade_stab: { heavy: false, fromRight: 0, dmg: 6, poise: 34, stam: 10, width: 0.8 },
+  blade_stab_block: { heavy: false, fromRight: 0, dmg: 5, poise: 24, stam: 10, width: 0.8 },
 };
 const DODGE_TIME = 0.3, DODGE_COST = 26, DODGE_SPEED = 9;
 const hit = { t: 0, piece: -1, lx: 0, ly: 0, lz: 0, nx: 0, ny: 0, nz: 0 };
@@ -72,6 +85,7 @@ export class Player {
       threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, lean: [0, 0, 0], kick: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
+      guard: 0, guardHold: 0, guardAt: -9, bashed: false, blockEvT: 0, hasShield: false, blockHeld: false,
       surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
     });
   }
@@ -91,7 +105,7 @@ export class Player {
     this.stance = STANCES[hands];
     Object.assign(this, {
       clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, swingRate: 1, queued: null, combo: 0, comboT: 0, swinging: false, recovering: false,
-      threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0,
+      threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0, guard: 0,
     });
   }
 
@@ -101,6 +115,7 @@ export class Player {
     this.dmgMin = input[INPUT.W_MIN]; this.dmgMax = input[INPUT.W_MAX];
     this.pierce = input[INPUT.W_PIERCE]; this.poise = input[INPUT.W_POISE];
     this.stamSave = input[INPUT.W_STAM]; this.speed = input[INPUT.W_SPEED]; this.leech = input[INPUT.W_LEECH];
+    this.hasShield = input[INPUT.SHIELD] > 0.5; this.blockHeld = input[INPUT.BLOCK] > 0.5;
     const maxHp = BASE_HP + input[INPUT.W_LIFE];
     if (maxHp !== this.maxHp && !this.dead) { this.hp = clamp(this.hp + maxHp - this.maxHp, 1, maxHp); this.maxHp = maxHp; }
   }
@@ -137,9 +152,10 @@ export class Player {
     this.aggression = this.aggression * 0.8 + 0.2 * clamp(1.4 / Math.max(sim.time - this.lastSwing, 0.2), 0, 1.5);
     this.lastSwing = sim.time;
     for (const k of sim.knights) k.observeSwing(name);
-    this.spend(tag.stam * (1 - this.stamSave));
+    const pace = this.stance.pace || 1;
+    this.spend(tag.stam * (1 - this.stamSave) / pace);
     // Out of breath, the sword comes round slowly.
-    this.rate = (this.stamina < 12 ? 0.8 : 1) * (1 + this.speed);
+    this.rate = (this.stamina < 12 ? 0.8 : 1) * (1 + this.speed) * pace;
     this.swingRate = this.rate;
     sim.event(EV.SWING, this.x, this.y + EYE, this.z, tag.heavy ? 1 : 0);
     // Weight behind the blow.
@@ -165,7 +181,7 @@ export class Player {
     if (this.queuedT <= 0) this.queued = null;
     const mx = input[INPUT.MOVE_X], mz = input[INPUT.MOVE_Z];
     const len = Math.hypot(mx, mz);
-    const sprint = input[INPUT.SPRINT] > 0.5 && mz > 0.3 && !this.winded && !this.surfing;
+    const sprint = input[INPUT.SPRINT] > 0.5 && mz > 0.3 && !this.winded && !this.surfing && !this.guard;
     this.sprinting = sprint && len > 0.1;
     // Breath: running and swinging spend it, standing gets it back.
     this.staminaT -= dt;
@@ -189,7 +205,7 @@ export class Player {
       }
     }
     if (!stepSurf(this, dt, input, sim)) {
-    const swingDrag = (this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== this.stance.idle ? 0.85 : 1) * sim.casting.drag;
+    const swingDrag = (this.guard ? GUARD_DRAG : this.swinging ? 0.5 : this.threat ? 0.72 : this.clip !== this.stance.idle ? 0.85 : 1) * sim.casting.drag;
     const speed = (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2);
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     // Strafe right is -x when facing +z.
@@ -215,11 +231,17 @@ export class Player {
     sim.world.resolve(tmp, 0.36, this.y + 0.2);
     this.x = tmp[0]; this.z = tmp[2];
     this.keepToLand();
-    const g = sim.world.height(this.x, this.z);
+    const g = sim.world.heightFor(this.x, this.z, this.y);
     if (this.y <= g) {
       if (!this.onGround && this.vy < -2) {
         sim.event(EV.LAND, this.x, this.y, this.z, clamp(-this.vy / 7, 0, 1));
         this.landKick = clamp(-this.vy * 0.018, 0, 0.13);
+        // A long way down costs you nearly everything, and never the last of it.
+        if (this.vy < -FALL_SAFE) {
+          this.hp = Math.max(1, this.hp - this.maxHp * Math.min(1, (-this.vy - FALL_SAFE) / FALL_WORST));
+          this.regenT = 0;
+          sim.event(EV.HURT, this.x, this.y + 1, this.z, 1);
+        }
       }
       this.y = g; this.vy = 0; this.onGround = true;
     } else if (this.y > g + 0.06) this.onGround = false;
@@ -265,7 +287,106 @@ export class Player {
     if (kick > 0) { this.shakeX += swung.lean[0] * kick; this.shakeY += swung.lean[1] * kick; this.shakeR += swung.lean[2] * kick; }
   }
 
+  // ---- the shield ----
+
+  // Between the shield coming level and its starting down, it stops what comes at it from the front.
+  get blocking() { return (this.guard === G.UP && this.t > 0.08) || this.guard === G.BASH || this.guard === G.HOLD || this.guard === G.STAB; }
+
+  guardClip(name, g) {
+    this.arms.capture();
+    this.clip = name; this.t = 0; this.fade = 0; this.rate = 1; this.swingRate = 1; this.guard = g;
+    this.swinging = false; this.recovering = false; this.threat = null;
+  }
+
+  startGuard(sim) {
+    this.guardClip('shield_up', G.UP);
+    this.guardAt = sim.time; this.guardHold = 0; this.bashed = false; this.recoilT = 0; this.drag = 0; this.queued = null;
+  }
+
+  // Everything in front, as wide as the shield and a stride deep, is knocked back and set reeling.
+  bash(sim) {
+    this.bashed = true;
+    this.spend(BASH_COST * (1 - this.stamSave));
+    sim.event(EV.WHOOSH, this.x, this.y + EYE, this.z, 1);
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    let met = false;
+    for (const k of sim.knights) {
+      if (k.dead || k.dormant || k.iframes) continue;
+      const dx = k.x - this.x, dz = k.z - this.z, d = Math.hypot(dx, dz) || 1;
+      if (d > BASH_REACH + (k.bodyRadius || 0.5) * 0.5 || (dx * fx + dz * fz) / d < BASH_ARC || Math.abs(k.y - this.y) > 2.2) continue;
+      if (sim.world.rayBoxes(this.x, this.y + EYE - 0.4, this.z, dx / d, 0, dz / d, Math.max(d - 0.4, 0.01)) > 0) continue;
+      met = true;
+      k.hp -= BASH_DMG * this.bite() * (1 + this.poise);
+      if (k.reel) k.reel(sim, 0.7);
+      else k.onHit(sim, 'gash', this.x, this.z, BASH_POISE * (1 + this.poise));
+      // (The Gravehart and the Hydra are far too big to shift.)
+      if (k.knock !== undefined) { k.knockX = dx / d; k.knockZ = dz / d; k.knock = Math.max(k.knock, BASH_PUSH); } else if (k.kind === 2 || k.kind >= 5) { k.vx = dx / d * BASH_PUSH; k.vz = dz / d * BASH_PUSH; }
+      sim.event(EV.BLOCK, k.x - dx / d * 0.4, this.y + 1.2, k.z - dz / d * 0.4, -dx / d, 0.1, -dz / d, k.id);
+    }
+    if (met) { sim.hitStop(0.06); this.trauma = Math.min(1, this.trauma + 0.3); this.kick = 1; }
+  }
+
+  stepGuard(tdt, sim) {
+    const info = this.arms.clips[this.clip];
+    this.fade = Math.min(1, this.fade + tdt / 0.06);
+    this.t += tdt * (this.guard === G.HOLD ? 0.25 + Math.min(1.3, this.groundSpeed / 6.2) : GUARD_RATE);
+    this.guardHold -= tdt;
+    switch (this.guard) {
+      case G.UP:
+        if (this.t >= info.dur) this.guardClip('shield_bash', G.BASH);
+        break;
+      case G.BASH:
+        if (!this.bashed && this.t >= BASH_AT) this.bash(sim);
+        if (this.t >= info.dur) { this.guardClip('shield_hold', G.HOLD); this.guardHold = GUARD_HOLD; }
+        break;
+      case G.HOLD:
+        // With the shield up the sword only thrusts, over the rim. The right button again is another shove.
+        if (this.queued === 'L' && this.weapon > 0) {
+          this.queued = null;
+          this.startSwing(sim, 'blade_stab_block');
+          this.guard = G.STAB;
+        } else if (this.queued === 'R' && this.stamina > BASH_COST) {
+          this.queued = null;
+          this.guardClip('shield_bash', G.BASH);
+          this.bashed = false;
+        } else if ((!this.blockHeld && this.guardHold <= 0) || this.winded || !this.hasShield || this.surfing) {
+          this.queued = null;
+          this.guardClip('shield_down', G.DOWN);
+        }
+        break;
+      default:
+        if (this.t >= info.dur) { this.guard = 0; this.toIdle(); }
+    }
+  }
+
+  // What comes at the shield. Returns whether any of it got through.
+  blockBlow(sim, amount, fromX, fromZ, knock) {
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const hx = this.x + fx * 0.7, hy = this.y + EYE - 0.35, hz = this.z + fz * 0.7;
+    if (sim.time - this.guardAt < GUARD_PERFECT) {
+      sim.event(EV.PARRY, hx, hy, hz);
+      sim.hitStop(0.06);
+      this.trauma = Math.min(1, this.trauma + 0.2);
+      // Whoever struck it is thrown off their stride.
+      const foe = sim.knights.find((k) => k.x === fromX && k.z === fromZ);
+      if (foe) { if (foe.reel) foe.reel(sim, 0.9); else if (foe.onParried) foe.onParried(sim); else foe.onHit(sim, 'gash', this.x, this.z, BASH_POISE); }
+      return false;
+    }
+    this.spend(amount * GUARD_COST * (1 - this.stamSave));
+    if (sim.time > this.blockEvT) { this.blockEvT = sim.time + 0.12; sim.event(EV.BLOCK, hx, hy, hz, -fx, 0.1, -fz, -1); }
+    this.trauma = Math.min(1, this.trauma + 0.2);
+    const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1, push = 0.9 + Math.max(knock, 0) * 0.3;
+    this.knockX = dx / L * push; this.knockZ = dz / L * push;
+    if (this.stamina > 0) { this.hp = Math.max(1, this.hp - amount * GUARD_LEAK); this.regenT = 0; return false; }
+    // Out of breath: the guard breaks, and half of it lands.
+    sim.event(EV.SHIELD_BREAK, hx, hy, hz);
+    this.guardClip('shield_down', G.DOWN);
+    this.applyHurt(sim, amount * 0.5, fromX, fromZ, knock);
+    return true;
+  }
+
   stepSwing(dt, tdt, sim) {
+    if (this.guard && this.guard !== G.STAB) { this.stepGuard(tdt, sim); return; }
     const { arms } = this;
     const info = arms.clips[this.clip];
     this.fade = Math.min(1, this.fade + tdt / 0.1);
@@ -298,9 +419,14 @@ export class Player {
       this.comboT -= dt;
       if (this.comboT <= 0) this.combo = 0;
     }
+    // The right button with a shield on the arm brings it up, at once: out of a wind-up or a follow-through, though not through a blow that's landing.
+    if (this.queued === 'R' && this.hasShield && this.stance === STANCES[1] && !this.guard) {
+      if (this.winded || this.surfing || this.stamina <= 6) this.queued = null;
+      else if (!this.swinging && !sim.casting.busy) { this.startGuard(sim); return; }
+    }
     // A buffered click starts the next swing at the end of the last one's follow-through.
     if (this.queued && !this.weapon) { this.queued = null; sim.event(EV.EMPTY_HANDS); }
-    const canStart = !sim.casting.busy && (this.clip === this.stance.idle || (this.recovering && this.t > info.through + 0.04));
+    const canStart = !this.guard && !sim.casting.busy && (this.clip === this.stance.idle || (this.recovering && this.t > info.through + 0.04));
     if (this.queued && canStart && this.recoilT <= 0) {
       const st = this.stance;
       let name;
@@ -319,6 +445,8 @@ export class Player {
   }
 
   toIdle() {
+    // A thrust over the rim ends behind the shield.
+    if (this.guard === G.STAB) { this.guardClip('shield_hold', G.HOLD); this.guardHold = 0.25; return; }
     this.arms.capture();
     this.clip = this.stance.idle; this.t = 0; this.fade = 0; this.rate = 1; this.swingRate = 1;
     this.swinging = false; this.recovering = false; this.threat = null; this.recoilT = 0;
@@ -340,8 +468,18 @@ export class Player {
     this.swinging = false;
   }
 
-  damage(sim, amount, fromX, fromZ, knock) {
-    if (sim.gameState !== 0) return;
+  // Returns whether it landed: a shield can stop it. (unblockable: it comes up out of the ground under you.)
+  damage(sim, amount, fromX, fromZ, knock, unblockable = false) {
+    if (sim.gameState !== 0) return false;
+    if (!unblockable && this.blocking) {
+      const dx = fromX - this.x, dz = fromZ - this.z, L = Math.hypot(dx, dz) || 1;
+      if ((dx * Math.sin(this.yaw) + dz * Math.cos(this.yaw)) / L > GUARD_ARC) return this.blockBlow(sim, amount, fromX, fromZ, knock);
+    }
+    this.applyHurt(sim, amount, fromX, fromZ, knock);
+    return true;
+  }
+
+  applyHurt(sim, amount, fromX, fromZ, knock) {
     this.hp -= amount;
     this.regenT = 0;
     this.flash = Math.min(1, this.flash + 0.55 + amount * 0.012);
@@ -357,7 +495,8 @@ export class Player {
       sim.event(EV.LOSE, this.x, this.y, this.z);
       sim.gameState = 2; sim.gameT = 0;
     } else if (amount > 14 && this.clip !== this.stance.idle && !this.swinging) {
-      // A hard blow knocks an unfinished wind-up out of your hands.
+      // A hard blow knocks an unfinished wind-up, or a guard taken from behind, out of your hands.
+      this.guard = 0;
       this.toIdle();
     }
   }
@@ -366,9 +505,24 @@ export class Player {
   solveViewModel(snap, sim) {
     const { arms } = this;
     arms.solve(arms.clips[this.clip === this.stance.idle ? this.rest : this.clip], this.t, this.fade, snap, VM_PALETTE);
+    if (sim.casting.armDown > 0) this.lowerSwordArm(snap, sim.casting.armDown);
     const tp = arms.tip * 3, rp = arms.weapon * 3, w = arms.wt;
     snap[H.TIP_X] = w[tp]; snap[H.TIP_Y] = w[tp + 1]; snap[H.TIP_Z] = w[tp + 2];
     snap[H.ROOT_X] = w[rp]; snap[H.ROOT_Y] = w[rp + 1]; snap[H.ROOT_Z] = w[rp + 2];
+  }
+
+  // The sword arm goes down out of the way of the casting hand, and the shield arm stays where it is.
+  lowerSwordArm(snap, k) {
+    const { arms } = this;
+    const chain = arms.swordArm || (arms.swordArm = arms.names.flatMap((n, j) => (/_R$/.test(n) || n === 'weapon' || n === 'weapon_tip' ? [j] : [])));
+    const ty = -1.6 * k, tz = 0.2 * k;
+    for (const j of chain) {
+      const o = VM_PALETTE + j * 8, x = snap[o], y = snap[o + 1], z = snap[o + 2], w = snap[o + 3];
+      snap[o + 4] += 0.5 * (ty * z - tz * y);
+      snap[o + 5] += 0.5 * (ty * w + tz * x);
+      snap[o + 6] += 0.5 * (-ty * x + tz * w);
+      snap[o + 7] += -0.5 * (ty * y + tz * z);
+    }
   }
 
   // View-space blade point to a world ray from the eye. The view model has a wider camera than the world,

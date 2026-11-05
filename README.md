@@ -15,9 +15,10 @@ Edge and Safari on PC and phones, or Firefox on Windows. On a static host it rea
 | Run | `Shift` | `RUN`, or push the stick past its edge |
 | Dodge | `Q` | `DODGE` |
 | Combo: two cuts, then a slam | Left click | `CUT` |
-| Wide swing | Right click | `WIDE` |
+| Raise the shield and bash, then hold to block. With no shield, a wide swing | Right click | `WIDE` |
+| Cast the spell in a slot | `1` to `6`, or click its button | Tap its button |
 | Pack: swords and gems | `I` | `PACK` |
-| Take up what's on the ground | `E` | `TAKE` |
+| Take up what's on the ground, or open a chest | `E` | `TAKE` / `OPEN` |
 
 Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
 
@@ -52,10 +53,20 @@ East of the village, through the great door at x = 66: the nave, the pulpit, the
 Below, what makes it a catacomb is built, not painted: tiers of burial niches (loculi) in the Gallery, arched wall tombs (arcosolia) cut back into the walls, two side chambers (cubicula), light wells (lucernaria) in the Gallery, Hall and Tomb, candelabras and hanging wheels of candles, kerbs, gutters, ledger slabs and a lit lane to each altar. Tiles marked `deep` in `manifest.json` are weathered by the `params.z < 0` block in the STATIC shader: deeper relief, mortar and cavities, damp runs, a tide line and standing water. Value 2 also mixes two shifted copies of the tile so it stops repeating; keep that off anything with block courses, or the wall reads as mush. The village has no such tiles, so it's untouched. Underground the frame lights twice the tier's count of lamps (a phone keeps its two). Each room's flames have their own colour: see `hue` in `below()`.
 
 - `tools/interior/cut_sheets.py` cuts the texture sheets, `build_assets.py` makes the game's textures, and `build_interior.py` builds the geometry when run in Blender.
-- `node tools/interior/check.mjs` walks the whole route and checks every spawn can be reached.
+- `node tools/interior/check.mjs` walks the whole route and checks every spawn can be reached. The spawns past the Mourning Rift's gap are left out, since nothing can walk there.
+- `node tools/interior/homes.mjs` walks in, up, round, down and out of every house. `node tools/interior/gulf.mjs` crosses the rift: the gap at a run and at a walk, the fall, the scaffold back up, and where the dead can't go.
+- Build the village first if the houses moved: `tools/interior/build_interior.py` reads `homes` from `village.json`. In Blender with `-b --factory-startup`: `tools/village/run_build.py`, then `tools/interior/run_build.py`.
 - `tools/interior/walk.js` walks the route on the player's own keys and camera, logs stuck spots and hits, and saves first-person shots. It tops up the player's health as it goes.
 - `tools/interior/tour.js` and `sheet.py` take and tile the review shots. Set the page to a real size first: a tiny canvas gives blurred shots.
 - `indoorAt` in the shaders treats anything below y = -6 as underground, so a catacomb ceiling must stay under that or the sun lights it.
+
+The Mourning Rift is a side branch off the north gate of the Founders' Hall, 30 m across and 20 m down, its terraces stepping down to a narrow floor and a burning stream. The rope bridge sags 2.3 m and is missing 3 m of planks a third of the way over: a run and a jump clears it, and a jump from a walk only does from the very lip. A fall leaves you on your last legs, never dead (`FALL_SAFE` in `src/sim/player.js`), and a scaffold stair along the rift, with a brazier at its foot, brings you back up. The room across has a chest and six undead, and there's another chest on the rift floor. The design follows the Mourning Gulf in the Bellmourn repo, built here with this game's textures and his red in place of its blue. The bridge is static, it doesn't sway. The dead walk the bridge and shelves up to the gap and won't step off (a floor marked `pit`, read by `inPit` in `src/core/interior.js`). Only the player can be under the bridge, so the floors in the rift are an entry in `homes`, chosen by how high you are (`homeFloor`).
+
+### The village's houses and chests
+
+All twelve houses can be entered: furnished, with a stair and an upper floor, built in `class Home` in `tools/interior/build_interior.py`. Colliders with a `b` only stop feet above that height, which is how an upstairs has its own walls. The doors stand open and can't be shut. The dead and the surface creatures don't come in.
+
+Chests (`src/items/chests.js`, placed by `chest(...)` in the builder) open on `E`, the lid swings up on its hinge and gold, gems and gear spill out. Which are open is saved. Gold is counted in the pack.
 
 ### The title, saves and settings
 
@@ -106,6 +117,21 @@ swords, add the sheet to `tools/swords/sheets.py`, run `separate.py` and `render
 Known limits: a socketed gem only shows on the icon, not on the 3D sword. The two-handers' handles were drawn out ×1.30 to ×1.43
 so both fists fit. The sabre is single-edged, but its swings alternate edges as the other swords' do. Nothing is carried in the off
 hand. There's no punch: with empty hands, a click tells you to open the pack.
+
+### The forest, the hill and the hours of the day
+
+The town stands in a clearing in a forest of pines, about 16,000 of them out to 1 km, with six big oaks inside the clearing. `src/core/forest.js` says where each pine stands, the same on every thread, so what's drawn is what you walk into. `src/gfx/pines.js` draws one tree in three meshes: full boughs under about 84 m, big cards to 232 m, three crossed paintings past that. Only the two nearer rings throw shadows. Paint the bough and the far tree with `python tools/village/build_pines.py`, which needs nothing but numpy and Pillow.
+
+The land now goes on for 600 m either way (`LAND_EDGE`), and the hill to the west, at (-512, 166) and 146 m up, has two roads from the town, in `ROADS` in `src/core/terrain.js`. Both have a signpost where they leave the town, and a cairn with a fire on it where they end.
+
+- **The Long Road** leaves by the hunter's house: 1,080 m, winding, never over about 9 degrees. On a shield it holds a walking pace or a little better, and you have to bring the speed yourself.
+- **The Fall** leaves by the weaver's, with a rag on its post: 525 m, nearly straight, each pitch steeper than the last, up to about 28 degrees, about 19 m/s on a shield at the fastest. A short rise stands at the foot of each pitch. The shield clings on over these rather than leaving the ground, so use Space to hop.
+
+The roads have a 2 m grid of their own in the terrain mesh (`patch` in `buildTerrain`, `src/sim/job.worker.js`), and `farMap`, a coarse map of all the land, gives them and the forest floor their colour past the fine map of the village. Grass blades still stop at 128 m from the middle of the map. Nothing that hunts you goes past `NAV_EDGE`, 250 m out.
+
+Measured on the one machine in the table below, at 1024x768: the forest adds about 3 ms of GPU time a frame in the town and 7 ms among the trees. It has not been measured at a higher resolution or on a phone.
+
+A day is 24 minutes (`src/gfx/daylight.js`: an hour is `SECONDS_PER_HOUR`, the colours are the keys at the top). It starts at 15:00, runs only while the world does, and is kept in a save. The sun gets as far as 6 degrees above the horizon and no lower, so shadows stay within the maps; between sun and moon, the light swaps while there's none of it to see. The sky is painted again every 10 s of play (30 s on a phone). The clock in the corner is `src/clock.js`. In the console: `bm.setTime(21)`.
 
 ### What has and hasn't been tested
 
@@ -179,6 +205,7 @@ To check it yourself:
 | `tools/armor/fit_shield.py` | Moves a kite shield's handle to where a knight's fist is |
 | `tools/village/build_textures.py` | Turns the paintings into colour and detail arrays, reading timber, plaster, glass and mortar from the paint |
 | `tools/village/build_village.py` | Builds the village in Blender, including the colliders and lights in `village.json` |
+| `tools/village/build_pines.py` | Paints the pines' bough and far tree, and adds them to the texture manifest |
 | `tools/review.js`, `tools/sheet.py` | Stage scenes and screenshots, and run a scripted fight, for reviews |
 | `tools/test_governor.mjs` | The phone governor against simulated phones |
 | `tools/phone_bench.mjs` | The game at a phone's screen size on a software GPU: frame costs, and the governor under real load |
@@ -267,7 +294,7 @@ creased palm was also repainted and smoothed, since it faces you when the shield
 - `tools/fp_arms/check.py 1h` exits non-zero. The owner approved these blows by eye on 2026-11-04 with these failures standing: wrists bent back past the 20-degree limit (up to 40 on the `sky` blows, 48 on `blade_flat2`), a forearm and handle up to 45 degrees apart (limit 30), the tip up to 0.06 off its line away from the hit (limit 0.01), and several blows' elbows opening under 50 degrees.
 - `blade_sky3`'s forearm and upper arm jump 41 and 32 degrees in a frame at 0.23 s (limit 25), and `blade_flat1`'s 31 and 27 at 0.28 s. The sword's off the screen then.
 - With a hand off the screen, `check.py`'s on-screen blade length often has only the hit's frame to measure, so it says little about these blows. Many of its on-screen rules (hand height, fold, steel and forearm showing) no longer apply to a one-hander, since Skyrim's hands leave the screen.
-- The shield was only moved to where Skyrim holds it. The raise and the bash weren't rebuilt, and nobody has judged them against the footage.
+- The shield was only moved to where Skyrim holds it. Nobody has judged the raise and the bash against the footage. Blocking was checked in the sim, not with a real mouse.
 - The fingers are fused here too, so the finger bones can tighten or loosen a grip, not open the hand.
 - The shield is the game's low-poly model, as is the sword, so they differ in style from the detailed arms up close.
 - The sculpt's forearm runs almost along the handle, and the pommel sits just past the wrist, so it's close all the time.
@@ -414,6 +441,8 @@ from Bellmourn2, and the two-hander's original swing keys from Bellmourn (kept f
 ## Spells
 
 Twenty spells, all of Bellmourn's, on hands of their own. **F** or the **middle mouse button** casts; hold it to charge Firebolt or keep up a channel. The **number keys** or the **wheel** pick from the bar, **B** opens the book. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
+
+The bar has six numbered slots, and the book (**B**) is where you put spells in them. With a shield up your right hand does the casting: the sword goes away, the hand comes out and casts, and the sword comes back.
 
 | Hands | Spells |
 | --- | --- |

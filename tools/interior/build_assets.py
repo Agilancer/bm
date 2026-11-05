@@ -20,12 +20,12 @@ TILES = {
     'wall_ashlar': ('church_1_1', 'stone', 3.6), 'wall_rough': ('church_3_0', 'stone', 3.6), 'floor_diamond': ('church_1_2', 'stone', 3.0),
     'arcade': ('church_1_3', 'stone', 3.4), 'tracery': ('church_4_3', 'stone', 3.4), 'marble': ('marble_1_0', 'stone', 4.0), 'carpet': ('keep_3_1', 'other', 3.6), 'cloth_red': ('keep_2_2', 'other', 2.0),
     'cata_wall': ('cata_3_0', 'stone', 3.0), 'cata_wall2': ('cata_7_0', 'stone', 3.0), 'cata_floor': ('keep_3_0', 'stone', 3.2), 'cata_floor2': ('cata_3_2', 'stone', 3.0),
-    'cata_v_floor': ('cata_9_2', 'stone', 4.0), 'cata_bones': ('cata_6_1', 'stone', 3.0), 'skulls': ('cata_2_1', 'stone', 2.6), 'skulls2': ('cata_4_1', 'stone', 2.6),
+    'cata_v_floor': ('cata_9_2', 'stone', 4.0), 'cata_bones': ('cata_6_1', 'stone', 0.91), 'skulls': ('cata_2_1', 'stone', 0.91), 'skulls2': ('cata_4_1', 'stone', 0.82),
     'niches': ('cata_3_3', 'stone', 3.2), 'seep': ('cata_1_3', 'stone', 3.4), 'cata_roof': ('cata_2_3', 'stone', 3.4), 'candles': ('cata_11_3', 'stone', 3.2), 'candles_v': ('cata_9_3', 'stone', 3.2),
     'panel': ('panel_4_0', 'stone', 1.76), 'panel2': ('panel_5_0', 'stone', 3.2), 'blood_v': ('cata_11_0', 'stone', 4.0),
     'cata_wall3': ('cata_1_0', 'stone', 3.2), 'cata_wall4': ('cata_4_0', 'stone', 3.0), 'cata_rubble': ('church_4_0', 'stone', 3.2), 'cata_block': ('church_3_1', 'stone', 3.4), 'cata_blood': ('cata_11_2', 'stone', 3.4),
     'cata_floor3': ('cata_1_2', 'stone', 3.2), 'cata_floor4': ('church_2_2', 'stone', 3.0), 'cata_earth': ('cata_8_1', 'stone', 3.0),
-    'skulls3': ('cata_7_1', 'stone', 2.6), 'femurs': ('cata_5_2', 'stone', 2.6), 'bone': ('marble_1_0', 'stone', 1.6),
+    'skulls3': ('cata_7_1', 'stone', 0.86), 'femurs': ('cata_5_2', 'stone', 0.82), 'bone': ('marble_1_0', 'stone', 1.6),
 }
 # What the catacombs' own stone looks like, for tiles painted for somewhere else: name: (the cut to match, how bright against it).
 MATCH = {'cata_rubble': ('cata_3_0', 0.95), 'cata_block': ('cata_3_0', 1.45), 'cata_floor': ('cata_3_0', 1.3), 'cata_floor4': ('cata_3_0', 1.25)}

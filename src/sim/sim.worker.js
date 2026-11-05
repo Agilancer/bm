@@ -7,7 +7,7 @@ import { Casting } from './casting.js';
 import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
-import { floorAt } from '../core/interior.js';
+import { floorAt, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
 import { addUndead, corpsesNear, raiseZombie, stepCatacombs, Zombie } from './undead.js';
 import { ATTACKS, Knight, S } from './knight.js';
@@ -109,7 +109,7 @@ class Sim {
       const ox = k.x, oz = k.z;
       k.update(this.frozen ? 0 : tdt * this.casting.rate(k), this);
       // Velscour's church is the undead's. What lives in the fields stops at its door.
-      if (!(k instanceof Zombie) && floorAt(k.x, k.z) !== null) { k.x = ox; k.z = oz; }
+      if (k instanceof Zombie ? inPit(k.x, k.z) : floorAt(k.x, k.z) !== null) { k.x = ox; k.z = oz; }
       // Each death leaves its loot once.
       if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, this.world.height(k.x, k.z), k.z, k.opts?.lootKind ?? k.kind); }
       if (!k.dead) k.looted = false;

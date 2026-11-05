@@ -259,6 +259,14 @@ export class Zombie extends Beast {
     this.setClipOver(pick(this.hitClips), 0.08);
   }
 
+  // A shield in the face knocks it off its stride, whatever it was doing, unless it's on the ground.
+  reel(sim, seconds) {
+    this.onHit(sim, 'bash', sim.player.x, sim.player.z);
+    if (this.crawling || this.state === STATE.RISE || this.state === STATE.PLAYDEAD || this.state === STATE.DEAD) return;
+    this.state = STATE.STAGGER; this.stateT = 0; this.stagger = seconds;
+    this.setClipOver(pick(this.hitClips), 0.08);
+  }
+
   alert(sim, r) {
     for (const k of sim.knights) {
       if (k === this || !(k instanceof Zombie) || k.dead) continue;
@@ -610,8 +618,7 @@ export class Zombie extends Beast {
       if (!this.used && !p.dead && !p.iframes && d < this.reach + 0.75 * this.scale && Math.abs(wrapAngle(toPlayer - this.yaw)) < 1.2 && Math.abs(p.y - this.y) < 1.7 * this.scale) {
         this.used = true; this.bites++;
         const dmg = a.dmg * this.dmgScale;
-        p.damage(sim, dmg, this.x, this.z, this.scale > 1.2 ? 4 : 0);
-        sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
+        if (p.damage(sim, dmg, this.x, this.z, this.scale > 1.2 ? 4 : 0)) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
       }
     }
     if (this.t >= c.dur) {
@@ -793,6 +800,12 @@ export class Caster extends Zombie {
     this.state = STATE.STAGGER; this.stateT = 0; this.stagger = 0.75;
     this.setClipOver('knock', 0.08);
     this.breath = rnd(0.3, 0.8);
+  }
+
+  // A shield in the face, or a parried clap, loses whatever it was working.
+  reel(sim, seconds) {
+    if (this.casting) this.interrupt(sim);
+    super.reel(sim, seconds);
   }
 
   // Wherever it is in a working, frozen stiff it's dropped.
@@ -1058,7 +1071,7 @@ export class Caster extends Zombie {
         break;
       case 'charge':
         if (s.t < def.charge) break;
-        if (def.how === 'raise') { this.fireCast(sim, p, d); next('channel', 'cast_hold'); } else next('release', 'bolt');
+        if (def.how === 'raise') { this.fireCast(sim, p, d); if (this.casting === s) next('channel', 'cast_hold'); } else next('release', 'bolt');
         break;
       case 'channel': {
         const h = this.handAt();
@@ -1069,6 +1082,7 @@ export class Caster extends Zombie {
       case 'release':
         // A throw lets go as the arm comes through, a bolt as soon as the hand kicks.
         if (!s.fired && this.t >= (def.how === 'lob' ? clip.dur * 0.34 : 0.05)) this.fireCast(sim, p, d);
+        if (this.casting !== s) break; // (Parried as it left the hand.)
         if (this.t >= clip.dur * (def.how === 'lob' ? 0.82 : 0.9)) { if (def.how === 'lob') this.endCast(); else next('out', 'cast_out'); }
         break;
       default:

@@ -2,7 +2,8 @@
 // thread spends a small slice of every 40 ms playing out the duel to come, so the knight's next tactic is
 // informed by however many cores the machine can spare.
 import { CTRL, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, mapShared } from '../core/layout.js';
-import { footprintDirt, pathAmount, terrainHeight } from '../core/terrain.js';
+import { forestAmount, forestTrees } from '../core/forest.js';
+import { ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
 
 async function decode(url, flags) {
   const r = await fetch(url);
@@ -13,8 +14,10 @@ async function decode(url, flags) {
 }
 
 // The terrain grid: dense under the village and stretching to the horizon with a warped spacing.
-function buildTerrain({ n, extent }) {
-  const verts = new Float32Array((n + 1) * (n + 1) * 6);
+function buildTerrain({ n, extent, patch }) {
+  // The hill and its roads have a finer grid of their own: this one's cells are ten metres across out there, which a road can't be cut into.
+  const px = Math.round((patch.x1 - patch.x0) / patch.cell), pz = Math.round((patch.z1 - patch.z0) / patch.cell);
+  const verts = new Float32Array(((n + 1) * (n + 1) + (px + 1) * (pz + 1)) * 6);
   // About 0.8 m a cell at the centre, stretching out to the horizon.
   const c = 0.4 * n;
   const warp = (t) => Math.sign(t) * (c * Math.abs(t) + (extent - c) * Math.abs(t) ** 4);
@@ -33,15 +36,74 @@ function buildTerrain({ n, extent }) {
       verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
     }
   }
-  const idx = new Uint32Array(n * n * 6);
+  // (A cell's left out only well inside it: the two overlap at the edge, and the ground's colour goes by where it is, so nothing shows.)
+  const under = (x, z) => x > patch.x0 + 12 && x < patch.x1 - 12 && z > patch.z0 + 12 && z < patch.z1 - 12;
+  const idx = new Uint32Array((n * n + px * pz) * 6);
   let o = 0;
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
+      if (under(xs[i], xs[j]) && under(xs[i + 1], xs[j]) && under(xs[i], xs[j + 1]) && under(xs[i + 1], xs[j + 1])) continue;
       const a = j * (n + 1) + i, b = a + 1, c = a + n + 1, d = c + 1;
       idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
     }
   }
-  return { verts, idx };
+  const first = (n + 1) * (n + 1), e = patch.cell;
+  for (let j = 0; j <= pz; j++) {
+    for (let i = 0; i <= px; i++) {
+      const x = patch.x0 + i * e, z = patch.z0 + j * e;
+      const dx = (terrainHeight(x + e, z) - terrainHeight(x - e, z)) / (2 * e);
+      const dz = (terrainHeight(x, z + e) - terrainHeight(x, z - e)) / (2 * e);
+      const l = 1 / Math.hypot(dx, 1, dz);
+      const k = (first + j * (px + 1) + i) * 6;
+      verts[k] = x; verts[k + 1] = terrainHeight(x, z); verts[k + 2] = z;
+      verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
+    }
+  }
+  for (let j = 0; j < pz; j++) {
+    for (let i = 0; i < px; i++) {
+      const a = first + j * (px + 1) + i, b = a + 1, c = a + px + 1, d = c + 1;
+      idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
+    }
+  }
+  return { verts, idx: idx.subarray(0, o) };
+}
+
+// The pines: (x, y, z, height), (cos, sin, how wide, how dark), all the way out.
+function buildForest({ reach }) {
+  const t = forestTrees(reach), n = t.length / 6;
+  const trees = new Float32Array(n * 8);
+  for (let i = 0; i < n; i++) {
+    const x = t[i * 6], z = t[i * 6 + 1], k = i * 8;
+    trees[k] = x; trees[k + 1] = terrainHeight(x, z); trees[k + 2] = z; trees[k + 3] = t[i * 6 + 2];
+    trees[k + 4] = t[i * 6 + 4]; trees[k + 5] = t[i * 6 + 5]; trees[k + 6] = t[i * 6 + 3]; trees[k + 7] = 0.72 + 0.42 * hash2(i, 77);
+  }
+  return { trees };
+}
+
+// A coarse map of all the land there is, for what the map over the village doesn't reach: r = worn road, g = under the pines.
+function buildFarRows({ size, half, rowStart, rowEnd }) {
+  const data = new Uint8Array((rowEnd - rowStart) * size * 4);
+  let o = 0;
+  for (let j = rowStart; j < rowEnd; j++) {
+    for (let i = 0; i < size; i++) {
+      const x = (i + 0.5) / size * 2 * half - half, z = (j + 0.5) / size * 2 * half - half;
+      let dirt = 0;
+      if (x < -20 && x > -640 && z > -60 && z < 360) {
+        const wob = (fbm(x * 0.21, z * 0.21, 2) - 0.5) * 2.6;
+        for (const road of ROADS) {
+          if (x < road.x0 || x > road.x1 || z < road.z0 || z > road.z1) continue;
+          dirt = Math.max(dirt, 1 - sstep(road.w * 0.62, road.w * 1.18, nearest(road, x, z).d + wob));
+        }
+        dirt = Math.max(dirt, 1 - sstep(SUMMIT.r - 2, SUMMIT.r + 9, Math.hypot(x - SUMMIT.x, z - SUMMIT.z) + wob * 2));
+      }
+      if (Math.abs(x) < 240 && Math.abs(z) < 240) dirt = Math.max(dirt, pathAmount(x, z));
+      data[o++] = Math.round(dirt * 255);
+      data[o++] = Math.round(forestAmount(x, z) * 255);
+      data[o++] = 0;
+      data[o++] = 255;
+    }
+  }
+  return { data, rowStart };
 }
 
 // Ground map over the village: r = worn dirt, g = grass density, b = large scale variation.
@@ -54,7 +116,7 @@ function buildGroundRows({ size, half, colliders, rowStart, rowEnd }) {
       const x = (i + 0.5) / size * 2 * half - half, z = (j + 0.5) / size * 2 * half - half;
       const dirt = Math.max(pathAmount(x, z), footprintDirt(x, z, colliders));
       const ph = Math.sin(x * 0.11 + z * 0.07) * 0.5 + Math.sin(x * 0.03 - z * 0.09 + 2) * 0.5;
-      const grass = Math.max(0, 1 - dirt * 1.7) * (0.85 + 0.15 * ph);
+      const grass = Math.max(0, 1 - dirt * 1.7) * (0.85 + 0.15 * ph) * (1 - 0.82 * forestAmount(x, z));
       data[o * 4] = Math.round(dirt * 255);
       data[o * 4 + 1] = Math.round(grass * 255);
       data[o * 4 + 2] = Math.round((ph * 0.5 + 0.5) * 255);
@@ -166,6 +228,14 @@ self.addEventListener('message', async (e) => {
       case 'terrain':
         result = buildTerrain(args);
         transfer = [result.verts.buffer, result.idx.buffer];
+        break;
+      case 'forest':
+        result = buildForest(args);
+        transfer = [result.trees.buffer];
+        break;
+      case 'farground':
+        result = buildFarRows(args);
+        transfer = [result.data.buffer];
         break;
       case 'ground':
         result = buildGroundRows(args);
