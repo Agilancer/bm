@@ -3,6 +3,7 @@
 import { parseGLB } from '../core/glb.js';
 import { CHARS_START, CTRL, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
+import { Casting } from './casting.js';
 import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
@@ -64,6 +65,7 @@ class Sim {
 
   restart() {
     this.player.reset();
+    this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.gameState = 0; this.gameT = 0; this.time = 0;
     this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
@@ -95,14 +97,16 @@ class Sim {
     this.gameT += dt;
     player.update(dt * (this.slow || 1), tdt, input, this);
     for (const k of this.knights) {
-      k.update(this.frozen ? 0 : tdt, this);
+      k.update(this.frozen ? 0 : tdt * this.casting.rate(k), this);
       // Each death leaves its loot once.
       if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, this.world.height(k.x, k.z), k.z, k.kind); }
       if (!k.dead) k.looted = false;
     }
     this.separate();
+    this.casting.update(dt * (this.slow || 1), tdt, input, this);
     const snap = this.scratch;
     player.write(snap, this);
+    this.casting.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     player.sweep(snap, this);
     this.knights.forEach((k, i) => k.writeGashes(snap, this.charOffset(i), this));
@@ -269,7 +273,7 @@ async function boot(msg) {
     self.addEventListener('message', (e) => { if (e.data.input) sim.input.set(e.data.input); });
   }
   sim.input[INPUT.YAW] = Math.PI;
-  const [clipsMeta, clipsBin, black, silver, arms2h, arms1h, village, crabBuf, heartBuf, hydraBuf] = await Promise.all([
+  const [clipsMeta, clipsBin, black, silver, arms2h, arms1h, village, crabBuf, heartBuf, hydraBuf, spellAttack, spellRaise] = await Promise.all([
     fetch(`${base}assets/game/clips.json`).then((r) => r.json()),
     fetchBuf(`${base}assets/game/clips.bin`),
     fetchBuf(`${base}assets/game/velscour_knight.glb`),
@@ -280,10 +284,13 @@ async function boot(msg) {
     fetchBuf(`${base}assets/monsters/crab_monster/crab_monster.glb`),
     fetchBuf(`${base}assets/monsters/gravehart/gravehart.glb`),
     fetchBuf(`${base}assets/monsters/bone_hydra/bone_hydra.glb`),
+    fetchBuf(`${base}assets/fp/spell_attack.glb`),
+    fetchBuf(`${base}assets/fp/spell_raise.glb`),
   ]);
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village);
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h) });
+  sim.casting = new Casting({ attack: new ArmsRig(spellAttack), raise: new ArmsRig(spellRaise) });
   sim.knights.push(new Knight(0, 0, new Rig(parseGLB(black), bank), bank, BLACK));
   sim.knights.push(new Knight(1, 1, new Rig(parseGLB(silver), bank), bank, SILVER));
   const crabRig = new ArmsRig(crabBuf, CRAB_SCALE);

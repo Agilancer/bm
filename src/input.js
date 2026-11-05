@@ -31,6 +31,7 @@ export class Input {
       if (!this.enabled || this.menu) return;
       if (e.code === 'Space') { this.fire(INPUT.JUMP); e.preventDefault(); }
       if (e.code === 'KeyQ') this.fire(INPUT.DODGE);
+      if (e.code === 'KeyF') this.fire(INPUT.CAST_N);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
@@ -43,7 +44,9 @@ export class Input {
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
       if (e.button === 0) this.fire(INPUT.ATTACK);
       if (e.button === 2) this.fire(INPUT.WIDE);
+      if (e.button === 1) { e.preventDefault(); this.castMouse = true; this.fire(INPUT.CAST_N); }
     });
+    window.addEventListener('mouseup', (e) => { if (e.button === 1) this.castMouse = false; });
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === this.canvas;
@@ -127,6 +130,10 @@ export class Input {
     btn('bWide', () => this.fire(INPUT.WIDE));
     btn('bJump', () => this.fire(INPUT.JUMP));
     btn('bDodge', () => this.fire(INPUT.DODGE));
+    btn('bCast', () => { this.castTouch = true; this.fire(INPUT.CAST_N); });
+    const lift = () => { this.castTouch = false; };
+    document.getElementById('bCast').addEventListener('touchend', lift);
+    document.getElementById('bCast').addEventListener('touchcancel', lift);
     btn('bSprint', (el) => { this.sprintToggle = !this.sprintToggle; el.classList.toggle('on', this.sprintToggle); });
   }
 
@@ -146,5 +153,6 @@ export class Input {
     s[INPUT.YAW] = this.yaw;
     s[INPUT.PITCH] = this.pitch;
     s[INPUT.SPRINT] = (k.has('ShiftLeft') || k.has('ShiftRight') || this.sprintToggle || this.stickRun) ? 1 : 0;
+    s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch) ? 1 : 0;
   }
 }

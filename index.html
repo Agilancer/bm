@@ -131,14 +131,44 @@
   body.touch #foe { background: rgba(8,6,4,.68); }
   body.touch #bleed { font-size: 14px; color: #ff6a4a; }
   body.touch #debug { top: calc(56px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); right: auto; text-align: left; font-size: 10px; }
+  /* The spell in hand, between its neighbours; the book of all twenty. */
+  #mana { height: 5px; margin-top: 3px; background: rgba(0,0,0,.6); overflow: hidden; border: 1px solid rgba(110,150,230,.4); }
+  #mana > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #5aa4ff, #2346b8); transform-origin: 0 50%; will-change: transform; transition: transform .08s; }
+  #spells { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 6px; pointer-events: auto; }
+  #spells .spell { --c: #ccc; width: 34px; height: 34px; padding: 6px; box-sizing: border-box; color: var(--c); background: rgba(8,6,4,.62); border: 1px solid rgba(201,163,92,.28); opacity: .55; transition: opacity .12s, box-shadow .12s, transform .12s; cursor: pointer; }
+  #spells .spell svg { display: block; width: 100%; height: 100%; }
+  #spells .spell[data-off="-2"], #spells .spell[data-off="2"] { width: 26px; height: 26px; padding: 4px; opacity: .32; }
+  #spells .spell.now { width: 54px; height: 54px; padding: 10px; opacity: 1; border-color: rgba(201,163,92,.8); box-shadow: 0 0 14px -4px var(--c), inset 0 0 12px -6px var(--c); }
+  #spells .spell.now.short { opacity: .42; filter: saturate(.3); }
+  #spells .spell.now.up { box-shadow: 0 0 26px -2px var(--c), inset 0 0 18px -5px var(--c); transform: translateY(-2px); }
+  #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 5px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
+  #spellbook { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; padding: calc(22px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(5,4,3,.82); backdrop-filter: blur(5px); z-index: 30; pointer-events: auto; overflow: auto; box-sizing: border-box; }
+  #spellbook.open { display: flex; }
+  #spellbook h2 { margin: 0 0 12px; font-size: 18px; font-weight: 400; letter-spacing: .3em; color: var(--gold); }
+  #spellGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 7px; width: min(1220px, 100%); }
+  #spellGrid .card { --c: #ccc; position: relative; display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 8px 10px; font: inherit; color: #d7cdb8; background: rgba(20,15,10,.8); border: 1px solid rgba(201,163,92,.2); cursor: pointer; }
+  #spellGrid .card:hover { border-color: var(--c); background: rgba(34,26,18,.9); }
+  #spellGrid .card.on { border-color: var(--c); box-shadow: inset 0 0 22px -12px var(--c); }
+  #spellGrid .ic { flex: none; width: 34px; height: 34px; color: var(--c); }
+  #spellGrid .ic svg { display: block; width: 100%; height: 100%; }
+  #spellGrid .tx { display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 1.32; min-width: 0; }
+  #spellGrid .tx b { font-size: 14px; font-weight: 400; letter-spacing: .05em; color: #f0e5cd; }
+  #spellGrid .tx i { font-style: normal; font-size: 11px; color: var(--c); }
+  #spellGrid kbd { position: absolute; top: 6px; right: 8px; font: inherit; font-size: 10px; color: #8d8370; }
+  #spellClose { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(18px + env(safe-area-inset-right)); padding: 6px 12px; font: inherit; color: var(--gold); background: none; border: 1px solid rgba(201,163,92,.45); cursor: pointer; }
+  #bCast { width: 74px; height: 74px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom)); font-size: 13px; }
+  body.touch #spells { bottom: auto; top: calc(58px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); transform: none; }
+  body.touch #spellName { left: 100%; bottom: auto; top: 50%; transform: translateY(-50%); margin: 0 0 0 8px; }
 </style>
 </head>
 <body>
 <canvas id="view"></canvas>
 
+<div id="spellbook"><h2>SPELLBOOK</h2><button id="spellClose">CLOSE</button><div id="spellGrid"></div></div>
 <div id="hud">
   <div id="cross"></div>
-  <div id="vitals"><div class="label">Life</div><div class="meter" id="hp"><i></i></div><div id="stam"><i></i></div></div>
+  <div id="vitals"><div class="label">Life</div><div class="meter" id="hp"><i></i></div><div id="stam"><i></i></div><div id="mana"><i></i></div></div>
+  <div id="spells"></div>
   <div id="foe">
     <div class="name" id="foeName">KNIGHT OF VELSCOUR</div>
     <div class="meter" id="foeHp"><i></i></div>
@@ -161,6 +191,7 @@
   <div class="tbtn" id="bPause">II</div>
   <div class="tbtn" id="bPack">PACK</div>
   <div class="tbtn" id="bTake">TAKE</div>
+  <div class="tbtn" id="bCast">CAST</div>
 </div>
 
 <div id="inv">

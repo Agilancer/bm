@@ -15,14 +15,17 @@ export const CTRL = { LATEST: 0, READING: 1, TICK: 2, EV_HEAD: 3, INPUT_SEQ: 4, 
 // Input block (Float32Array)
 export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK: 5, WIDE: 6, JUMP: 7, RESTART: 8, ASPECT: 9, CMD: 10, CMD_A: 11, CMD_B: 12, CMD_C: 13, PAUSE: 14, DODGE: 15, TOUCH: 16,
   // The sword in hand, as an index into WEAPONS, and what it comes to with its rolls and gems. See src/items/items.js.
-  WEAPON: 17, W_MIN: 18, W_MAX: 19, W_PIERCE: 20, W_POISE: 21, W_STAM: 22, W_SPEED: 23, W_LEECH: 24, W_LIFE: 25, SIZE: 28 };
+  WEAPON: 17, W_MIN: 18, W_MAX: 19, W_PIERCE: 20, W_POISE: 21, W_STAM: 22, W_SPEED: 23, W_LEECH: 24, W_LIFE: 25,
+  // The spell chosen, the cast key held, and a count of presses, so a tap between ticks isn't lost.
+  SPELL: 26, CAST: 27, CAST_N: 28, SIZE: 30 };
 
 // Snapshot header (float offsets)
 export const H = {
   TIME: 0, TICK: 1, PX: 2, PY: 3, PZ: 4, VX: 5, VY: 6, VZ: 7, HP: 8, MAX_HP: 9, SHAKE_X: 10, SHAKE_Y: 11, SHAKE_R: 12,
   DMG_FLASH: 13, BLOOD_SWORD: 14, SWINGING: 15, SWING_T: 16, TIP_X: 17, TIP_Y: 18, TIP_Z: 19, ROOT_X: 20, ROOT_Y: 21, ROOT_Z: 22,
   NCHARS: 23, GAME: 24, GAME_T: 25, HIT_DIR: 26, HIT_DIR_T: 27, GROUND_SPEED: 28, ON_GROUND: 29, CAM_DROP: 30, WEAK: 31,
-  TIME_SCALE: 32, TACTIC: 33, TACTIC_CONF: 34, ROLLOUTS: 35, BOB: 36, STAMINA: 37, AIM_WOUND: 38, DODGE: 39, PARRIED: 40, WEAPON: 41, SIZE: 48,
+  TIME_SCALE: 32, TACTIC: 33, TACTIC_CONF: 34, ROLLOUTS: 35, BOB: 36, STAMINA: 37, AIM_WOUND: 38, DODGE: 39, PARRIED: 40, WEAPON: 41,
+  MANA: 42, MAX_MANA: 43, SPELL: 44, SPELL_RIG: 45, VM_LOWER: 46, CAST_HELD: 47, FX_N: 48, SIZE: 52,
 };
 
 // Per-character block
@@ -38,7 +41,12 @@ export const C_MASKS = C_GASH + MAX_GASH * GASH_FLOATS;
 export const C_SIZE = C_MASKS + MAX_PIECES;
 
 export const VM_PALETTE = H.SIZE;
-export const CHARS_START = VM_PALETTE + VM_JOINTS * 8;
+// The spell hands, beside the sword's arms, and the spells: what's alive this tick, as shapes (src/sim/spells.js).
+export const SPELL_PALETTE = VM_PALETTE + VM_JOINTS * 8;
+export const FX_START = SPELL_PALETTE + VM_JOINTS * 8;
+export const FX_FLOATS = 16;
+export const MAX_FX = 256;
+export const CHARS_START = FX_START + MAX_FX * FX_FLOATS;
 export const SNAP_FLOATS = CHARS_START + MAX_CHARS * C_SIZE;
 
 export const EV_FLOATS = 8;
@@ -67,6 +75,7 @@ export const EV = {
   SWING: 1, BITE: 2, GASH: 3, PUNCTURE: 4, BLOCK: 5, PARRY: 6, HURT: 7, STEP: 8, ROLL: 9, GRUNT: 10, DEATH: 11, WALL: 12,
   GROUND: 13, GLINT: 14, BLOOD: 15, JUMP: 16, LAND: 17, SHIELD_BREAK: 18, DUST: 19, WHOOSH: 20, ALERT: 21, TAUNT: 22, WIN: 23, LOSE: 24,
   CRAB_HIT: 25, CRAB_DIE: 26, DODGE: 27, CRAB_WAKE: 28, ROAR: 29, BEAST_NOTICE: 30, FIRE: 31, FIRE_HIT: 32, SEVER: 33, STUMP: 34, CHUNK_LAND: 35, HYDRA_NOTICE: 36, BURN: 37, LOOT: 38, EMPTY_HANDS: 39,
+  SPELL_CAST: 40, SPELL_LOOSE: 41, SPELL_HIT: 42, SPELL_BOOM: 43, SPELL_FIZZLE: 44,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it.

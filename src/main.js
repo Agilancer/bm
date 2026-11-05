@@ -11,7 +11,10 @@ import { colorOf, nameOf, rollGem, rollWeapon, makeRng, writeWeapon } from './it
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { settings, Title } from './title.js';
+import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
+import { SpellBar } from './ui/spellbar.js';
+import { SpellSound } from './spellsound.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -380,6 +383,23 @@ async function boot(plan, poolSize) {
     if (document.pointerLockElement) document.exitPointerLock();
   };
   // viaEsc: a browser won't lock the pointer again off the Esc key, so that stops at the pause screen, which will on a click.
+  const openBook = () => {
+    state.paused = true;
+    shared.input[INPUT.PAUSE] = 1;
+    input.menu = true;
+    bookOpen = true;
+    $('spellbook').classList.add('open');
+    if (document.pointerLockElement) document.exitPointerLock();
+  };
+  const closeBook = (viaEsc) => {
+    bookOpen = false;
+    $('spellbook').classList.remove('open');
+    input.menu = false;
+    if (viaEsc === true && !input.touch && !AUTO) input.onPauseChange(true); else resume();
+  };
+  let bookOpen = false;
+  game.spellbar = new SpellBar(shared, input, { openBook, closeBook });
+  game.closeBook = closeBook;
   const closePack = (viaEsc) => {
     inventory.hide();
     input.menu = false;
@@ -397,6 +417,8 @@ async function boot(plan, poolSize) {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat) return;
     if (e.code === 'KeyI') { if (inventory.open) closePack(false); else if (!state.paused) openPack(); }
+    if (e.code === 'KeyB') { if (bookOpen) closeBook(); else if (!state.paused) openBook(); }
+    if (e.code === 'Escape' && bookOpen) closeBook(true);
     if (e.code === 'Escape' && inventory.open) closePack(true);
     if (e.code === 'KeyE' && !input.menu && !state.paused) game.takeNearest();
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
@@ -409,8 +431,8 @@ async function boot(plan, poolSize) {
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>PACK</b> holds your swords.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take';
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>CAST</b> casts, hold it to keep casting. Tap the spell at the top for the book, or either side of it to turn it. <b>PACK</b> holds your swords.'
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>F</kbd> cast &nbsp; <kbd>Wheel</kbd> or <kbd>B</kbd> spells &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> wide swing &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
@@ -645,6 +667,8 @@ class GameView {
       const r = this.renderer, hs = this.hudStats;
       hs.gpuMs = r.stats.gpuMs; hs.busyMs = r.stats.busyMs; hs.W = r.W; hs.H = r.H; hs.scale = r.scale; hs.msaa = r.msaa; hs.demoted = r.demoted || 0; hs.vsync = this.vsyncMs;
       this.hud.update(dt, snap, hs);
+      if (this.spellbar) this.spellbar.update(snap);
+      if (this.spellSound) this.spellSound.channel(snap[H.CAST_HELD] | 0);
       if (this.onFrame) this.onFrame();
     };
     schedule(loop);
@@ -835,6 +859,34 @@ class GameView {
     const r = this.renderer, au = this.audio;
     switch (type) {
       case EV.SWING: break;
+      case EV.SPELL_CAST:
+        if (!this.spellSound) this.spellSound = new SpellSound(au);
+        this.spellSound.gather(a);
+        this.hud.once('cast', 'Hold F, or the middle button, to cast and keep casting. The wheel or the numbers change the spell, B opens the book.', 5);
+        break;
+      case EV.SPELL_LOOSE:
+        if (!this.spellSound) this.spellSound = new SpellSound(au);
+        this.spellSound.loose(a, c, d, e);
+        break;
+      case EV.SPELL_HIT:
+        this.spellSound?.hit(a, b, c, d);
+        r.emit(16 + a, 16, b, c, d, 0, 0.4, 0, 1.4, 1, 5.5, 0.008, 0.02, 0.2, 0.6);
+        if (a !== 0 && a !== 9) this.hud.crossHit();
+        break;
+      case EV.SPELL_BOOM: {
+        this.spellSound?.boom(a, b, c, d, e);
+        const big = Math.min(4, e);
+        r.emit(16 + a, Math.ceil(70 * big), b, c, d, 0, 0.5, 0, 1.6, 2 + big * 1.4, 7 + big * 3.5, 0.012, 0.03 + big * 0.012, 0.3, 0.9 + big * 0.22);
+        if (a === 0) r.emit(6, Math.ceil(26 * big), b, c, d, 0, 1, 0, 1, 0.8, 3 + big, 0.012, 0.03, 0.8, 2.4);
+        if (a === 11) { r.emit(3, Math.ceil(28 * big), b, c, d, 0, 0.7, 0, 1.2, 1, 4.5, 0.08, 0.26, 0.7, 1.7); r.emit(4, 3, b, c + 0.3, d, 0, 1, 0, 1, 0.2, 0.6, 0.5, 1, 1.6, 2.6); }
+        if (a === 0 && e > 1.5) r.emit(4, Math.ceil(8 * big), b, c, d, 0, 1, 0, 1, 0.4, 1.8, 0.4, 1.1, 1.6, 3.4);
+        break;
+      }
+      case EV.SPELL_FIZZLE:
+        if (!this.spellSound) this.spellSound = new SpellSound(au);
+        this.spellSound.fizzle();
+        this.hud.tip('Not enough mana.', 1.2);
+        break;
       case EV.WHOOSH:
         au.play('attack', d === 1 ? null : a, b, c, d === 1 ? 0.8 : 0.9, d === 1 ? 0.92 : 1.05);
         break;
@@ -1000,6 +1052,10 @@ class GameView {
       look: (yaw, pitch) => { view.input.yaw = yaw; view.input.pitch = pitch; },
       attack: () => { shared.input[INPUT.ATTACK] += 1; },
       wide: () => { shared.input[INPUT.WIDE] += 1; },
+      spell: (i) => { const n = typeof i === 'number' ? i : SPELLS.findIndex((s) => s.key === i); view.spellbar.pick(n); return n; },
+      cast: (held = 0) => { shared.input[INPUT.CAST_N] += 1; shared.input[INPUT.CAST] = held; },
+      castKey: () => shared.input[INPUT.CAST],
+      book: () => $('spellbook').classList.toggle('open'),
       jump: () => { shared.input[INPUT.JUMP] += 1; },
       setCam: (c) => { view.overrideCam = c; },
       fixScale: (s) => { view.fixedScale = true; view.renderer.scale = s; },
