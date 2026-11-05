@@ -141,10 +141,12 @@ export function rollGem(rng, opts = {}) {
   return { type: 'gem', kind: opts.kind || pick(rng, Object.keys(GEMS)), grade: opts.grade ?? +weighted(rng, kinds) };
 }
 
-// What a fallen enemy leaves. kind: 0 the black knight, 1 the silver knight, 2 a crab.
+// What a fallen enemy leaves. kind: 0 the black knight, 1 the silver knight, 2 a crab, 5 a zombie, 7 a necromancer or a wizard.
 export function rollLoot(rng, kind) {
   if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollGem(rng)];
   if (kind === 1) return [rollWeapon(rng, { minRarity: 1 })];
+  if (kind === 5) return rng() < 0.12 ? [rng() < 0.5 ? rollWeapon(rng) : rollGem(rng)] : [];
+  if (kind === 7) return rng() < 0.75 ? [rollWeapon(rng, { minRarity: 1 })] : [rollGem(rng)];
   return rng() < 0.6 ? [rollWeapon(rng)] : [rollGem(rng)];
 }
 

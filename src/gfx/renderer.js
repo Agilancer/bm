@@ -1,7 +1,9 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
-import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
+import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
+import { addStumps } from './stumps.js';
+import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
 import { MipGen, makeBuffer, mipCountFor, textureArrayFromBitmaps } from './gpu.js';
 import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
@@ -56,7 +58,7 @@ export class Renderer {
     this.time = 0;
     this.scale = 1;
     this.mip = new MipGen(this.device);
-    this.gashVersions = new Int32Array(8).fill(-1);
+    this.gashVersions = new Int32Array(MAX_CHARS).fill(-1);
     this.tmpV = new Float32Array(16); this.tmpP = new Float32Array(16); this.tmpVP = new Float32Array(16); this.tmpI = new Float32Array(16);
     this.emitted = [];
     this.emitHead = 0;
@@ -134,7 +136,8 @@ export class Renderer {
 
     const buffers = await Promise.all(['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/reliquary_blade.glb', 'assets/game/items/thorned_kite.glb', 'assets/game/items/arming_sword.glb', 'assets/game/items/templar_kite.glb',
-      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb']
+      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`)]
       .map((p) => fetch(base + p).then((r) => r.arrayBuffer()).then((b) => { tick(); return b; })));
     this.buildSamplers();
     this.buildBaseLayouts();
@@ -147,6 +150,11 @@ export class Renderer {
       ...(await this.buildCrabs(parseGLB(buffers[10]), 1, GRAVEHART_SCALE)),
       ...(await this.buildCrabs(parseGLB(buffers[11]), 1, HYDRA_SCALE)),
     ];
+    // The undead, in the order the sim adds them: a body per place in BODIES.count, sharing that model's mesh and paint.
+    for (let i = 0; i < BODIES.length; i++) {
+      const bodies = await this.buildCrabs(parseGLB(buffers[15 + i]), BODIES[i].count, BODIES[i].scale, addStumps);
+      for (const b of bodies) { b.flesh = 1; this.chars.push(b); }
+    }
     tick();
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
     this.vms = { 1: await this.buildViewModel(parseGLB(buffers[9])), 2: await this.buildViewModel(parseGLB(buffers[3])), 3: await this.buildViewModel(parseGLB(buffers[14])) };
@@ -355,7 +363,7 @@ export class Renderer {
         const o = vo * 12, s = vo * 9;
         f[o] = p.pos[i * 3]; f[o + 1] = p.pos[i * 3 + 1]; f[o + 2] = p.pos[i * 3 + 2]; f[o + 3] = p.flex ? p.flex[i] : 0;
         f[o + 4] = p.nrm[i * 3]; f[o + 5] = p.nrm[i * 3 + 1]; f[o + 6] = p.nrm[i * 3 + 2];
-        u[o + 7] = p.piece ? p.piece[i] : 0;
+        u[o + 7] = p.skinTag ? p.skinTag[i] : p.piece ? p.piece[i] : 0;
         let j0 = p.fixedJoint ?? 0, j1 = 0, j2 = 0, j3 = 0, w0 = 255, w1 = 0, w2 = 0, w3 = 0;
         if (p.joints) {
           j0 = p.joints[i * 4]; j1 = p.joints[i * 4 + 1]; j2 = p.joints[i * 4 + 2]; j3 = p.joints[i * 4 + 3];
@@ -410,12 +418,13 @@ export class Renderer {
     return { ...base, outBuf, palette, params, bg };
   }
 
-  async buildCrabs(glb, count, scale) {
+  async buildCrabs(glb, count, scale, prepare) {
     const pr = glb.json.meshes[0].primitives[0];
     const a = pr.attributes;
     const pos = accessor(glb, a.POSITION).slice();
     for (let i = 0; i < pos.length; i++) pos[i] *= scale;
-    const prim = { pos, nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices), joints: accessor(glb, a.JOINTS_0), weights: accessor(glb, a.WEIGHTS_0) };
+    let prim = { pos, nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices), joints: accessor(glb, a.JOINTS_0), weights: accessor(glb, a.WEIGHTS_0) };
+    if (prepare) prim = prepare(prim, glb, scale);
     const base = this.makeSkinned([prim], glb.json.skins[0].joints.length);
     this.addLod(base, prim, 0.14);
     const mat = glb.json.materials[pr.material];
@@ -1236,11 +1245,12 @@ export class Renderer {
         q.writeBuffer(c.ubo, 24 * 64, snap.buffer, snap.byteOffset + (co + C_MASKS) * 4, 256);
       }
       c.gashData[0] = snap[co + C.HEART];
-      c.gashData[1] = i < 2 ? 1 : 0.62;
+      c.gashData[1] = i < 2 || c.flesh ? 1 : 0.62;
       c.gashData[2] = i === 1 ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
+      c.gashData[3] = c.flesh ? 1 : 0;
       q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
       skinParamsU[0] = c.count;
-      skinParams[1] = 1; skinParams[2] = time;
+      skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
       skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
       q.writeBuffer(c.params, 0, skinParams);
       if (i < 2) {
@@ -1259,7 +1269,7 @@ export class Renderer {
     this.holdingOld = !!weapon && weapon.id === 'greatsword';
     q.writeBuffer(this.vm.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, this.vm.jointCount * 32);
     skinParamsU[0] = this.vm.count;
-    skinParams[1] = 0; skinParams[2] = time;
+    skinParams[1] = 0; skinParams[2] = time; skinParamsU[3] = 0;
     q.writeBuffer(this.vm.params, 0, skinParams);
     const vmData = this.vmData || (this.vmData = new Float32Array(20));
     vmData.set(vmSway, 0);

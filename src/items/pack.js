@@ -6,7 +6,7 @@ export const PACK_W = 12, PACK_H = 8;
 export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'hands', 'ring1', 'feet', 'ring2'];
 
 // One of every sword and a pouch of gems, to try it all out before there is much to fight for. The game proper starts with the
-// old greatsword alone: set this false.
+// wheel greatsword alone: set this false.
 const TEST_KIT = true;
 
 export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : { w: 1, h: 1 });
@@ -71,11 +71,13 @@ export class Pack {
     if (!d) { this.startingKit(); return; }
     Object.assign(this.slots, d.slots);
     this.entries = d.entries;
+    // A save from when the old greatsword was still about.
+    for (const item of [...Object.values(this.slots), ...this.entries.map((e) => e.item)]) if (item?.base === 'greatsword') item.base = 'wheel_greatsword';
   }
 
   startingKit() {
     const rng = makeRng(1793);
-    this.add(rollWeapon(rng, { base: 'greatsword', rarity: 0, sockets: 0 }));
+    this.add(rollWeapon(rng, { base: 'wheel_greatsword', rarity: 0, sockets: 0 }));
     if (!TEST_KIT) return;
     const swords = [
       ['frost_sword', 3, 4], ['crimson_sword', 3, 3], ['gilded_sword', 2, 3], ['thornvine_sword', 2, 2],

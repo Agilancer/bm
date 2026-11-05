@@ -1,9 +1,10 @@
 // What monsters have in common: their own pose over shared clips, one soft skin that the blade tests against spheres
 // riding its joints, and wounds that work like the knights': a cut, then a second blow through the same cut, and it bleeds.
-import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, GASH_FLOATS, MAX_BLEEDS, MAX_GASH } from '../core/layout.js';
-import { clamp, quatRotate } from '../core/math.js';
+import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH } from '../core/layout.js';
+import { clamp, quatMul, quatNormalize, quatRotate } from '../core/math.js';
 
-const tv = new Float32Array(3), out3 = new Float32Array(3);
+const GRAVITY = 15;
+const tv = new Float32Array(3), tv2 = new Float32Array(3), out3 = new Float32Array(3), tq = new Float32Array(4), tq2 = new Float32Array(4);
 
 export class Beast {
   constructor(id, kind, rig, opts) {
@@ -91,11 +92,24 @@ export class Beast {
     return g;
   }
 
+  // Blood thrown over the skin round a joint: no cut to it, and nothing a blade can go through. The radius goes down as a negative width.
+  addThrownBlood(sim, jointName, radius) {
+    const j = this.jointOf(jointName), { wt } = this.rig;
+    this.plateTransforms();
+    const iv = this.inv[j];
+    tv[0] = wt[j * 3] - iv.t[0]; tv[1] = wt[j * 3 + 1] - iv.t[1]; tv[2] = wt[j * 3 + 2] - iv.t[2];
+    quatRotate(out3, 0, iv.r, 0, tv, 0);
+    const g = this.addGash(sim, j, out3[0], out3[1], out3[2], 0, 1, 0, 0, -1, 0);
+    g.width = -radius;
+    g.punct = sim.time;
+    g.thrown = true;
+  }
+
   // Wounds live on the whole skin here, not plate by plate.
   nearestGash(piece, lx, ly, lz, radius, swing) {
     let best = null, bd = radius * 1.6;
     for (const g of this.gashes) {
-      if (g.swing === swing) continue;
+      if (g.swing === swing || g.thrown) continue;
       const a = g.a, b = g.b, dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L2 = dx * dx + dy * dy + dz * dz;
       const t = L2 > 1e-8 ? clamp(((lx - a[0]) * dx + (ly - a[1]) * dy + (lz - a[2]) * dz) / L2, 0, 1) : 0;
       const d = Math.hypot(a[0] + dx * t - lx, a[1] + dy * t - ly, a[2] + dz * t - lz);
@@ -133,10 +147,106 @@ export class Beast {
     u[cOff + C_MASKS] = mask >>> 0;
   }
 
+  // ---- pieces that have come off ----------------------------------------------------------------------
+
+  bleedFrom(sim, name, life) { this.jets.push({ j: this.jointOf(name), life, born: sim.time, clock: 0 }); }
+
+  // Takes these joints off the skeleton: from here on their palette follows a rigid body, and the clips no longer touch them.
+  drop(sim, names, radius, rank) {
+    const { pq, pt, wt } = this.rig;
+    const js = names.map(this.jointOf);
+    const taken = new Set(js);
+    this.bleeds = this.bleeds.filter((b) => !taken.has(b.piece));
+    let cx = 0, cy = 0, cz = 0;
+    for (const j of js) { cx += wt[j * 3]; cy += wt[j * 3 + 1]; cz += wt[j * 3 + 2]; }
+    cx /= js.length; cy /= js.length; cz /= js.length;
+    // Thrown out from the body and up a little, tumbling. Longer pieces turn slower.
+    const ox = cx - this.x, oz = cz - this.z, ol = Math.hypot(ox, oz) || 1, spin = 3.4 / Math.sqrt(rank);
+    this.chunks.push({
+      js, q0: js.map((j) => [pq[j * 4], pq[j * 4 + 1], pq[j * 4 + 2], pq[j * 4 + 3]]), t0: js.map((j) => [pt[j * 3], pt[j * 3 + 1], pt[j * 3 + 2]]),
+      c0: [cx, cy, cz], x: cx, y: cy, z: cz, vx: ox / ol * 2.1 + this.vx * 0.5, vy: 2.6 + Math.random() * 1.2, vz: oz / ol * 2.1 + this.vz * 0.5,
+      q: new Float32Array([0, 0, 0, 1]), wx: (Math.random() - 0.5) * spin * 2, wy: (Math.random() - 0.5) * spin, wz: (Math.random() - 0.5) * spin * 2, radius: radius * this.scale * 0.55,
+      // the points it can land on: its own joints, relative to where it is
+      pts: js.map((j) => [wt[j * 3] - cx, wt[j * 3 + 1] - cy, wt[j * 3 + 2] - cz]), inertia: 0.5 + rank * 0.6, rest: false, thuds: 0, age: 0,
+    });
+    sim.event(EV.SEVER, cx, cy, cz, ox / ol, 0.5, oz / ol);
+  }
+
+  stepChunks(dt, sim) {
+    for (const c of this.chunks) {
+      if (c.rest) continue;
+      c.age += dt;
+      c.vy -= GRAVITY * dt;
+      c.x += c.vx * dt; c.y += c.vy * dt; c.z += c.vz * dt;
+      // Turning: q' = q + (w q) dt / 2
+      tq[0] = c.wx * dt * 0.5; tq[1] = c.wy * dt * 0.5; tq[2] = c.wz * dt * 0.5; tq[3] = 1;
+      quatMul(tq2, 0, tq, 0, c.q, 0);
+      c.q.set(tq2); quatNormalize(c.q, 0);
+      // The lowest of its points takes the ground.
+      const g = sim.world.height(c.x, c.z) + c.radius;
+      let low = 1e9, lx = 0, ly = 0, lz = 0;
+      for (const p of c.pts) {
+        tv[0] = p[0]; tv[1] = p[1]; tv[2] = p[2];
+        quatRotate(tv2, 0, c.q, 0, tv, 0);
+        if (tv2[1] < low) { low = tv2[1]; lx = tv2[0]; ly = tv2[1]; lz = tv2[2]; }
+      }
+      const d = g - (c.y + low);
+      if (d > 0) {
+        c.y += d;
+        if (c.vy < -2.2 && c.thuds < 3) { c.thuds++; sim.event(EV.CHUNK_LAND, c.x, g - c.radius, c.z, clamp(-c.vy / 8, 0.2, 1)); }
+        const j = Math.max(0, -c.vy);
+        c.vy = c.vy < 0 ? -c.vy * 0.28 : c.vy;
+        c.vx *= 1 - Math.min(1, 8 * dt) * 0.6 - 0.06 * Math.min(j, 1); c.vz *= 1 - Math.min(1, 8 * dt) * 0.6 - 0.06 * Math.min(j, 1);
+        // the ground pushes up at that point, away from under the middle: a piece balanced on its end falls over
+        const k = (j * 0.9 + GRAVITY * dt) / c.inertia;
+        c.wx += lz * k * -1; c.wz += lx * k;
+        const a = Math.exp(-5.5 * dt); c.wx *= a; c.wy *= a; c.wz *= a;
+        if (c.age > 1 && Math.abs(c.vy) < 0.5 && Math.hypot(c.vx, c.vz) < 0.2 && Math.hypot(c.wx, c.wy, c.wz) < 0.25) c.rest = true;
+      }
+      if (c.age > 7) c.rest = true;
+    }
+    // Blood comes out of a stump in pulses, weakening.
+    this.jets = this.jets.filter((b) => sim.time - b.born < b.life);
+    const { wt, wq } = this.rig;
+    for (const b of this.jets) {
+      b.clock -= dt;
+      if (b.clock > 0) continue;
+      b.clock = 0.07;
+      const age = (sim.time - b.born) / b.life, pulse = 0.55 + 0.45 * Math.sin(sim.time * 9);
+      tv[0] = 0; tv[1] = 1; tv[2] = 0;
+      quatRotate(tv2, 0, wq, b.j * 4, tv, 0);
+      sim.event(EV.STUMP, wt[b.j * 3], wt[b.j * 3 + 1], wt[b.j * 3 + 2], tv2[0], tv2[1] + 0.3, tv2[2], (1 - age) * pulse);
+    }
+  }
+
+  // The chunks' palette goes on top of what the clip wrote.
+  writeChunks(snap, off) {
+    const pq = this.rig.pq, pt = this.rig.pt;
+    for (const c of this.chunks) {
+      c.js.forEach((j, n) => {
+        const q0 = c.q0[n], t0 = c.t0[n];
+        tq[0] = q0[0]; tq[1] = q0[1]; tq[2] = q0[2]; tq[3] = q0[3];
+        quatMul(tq2, 0, c.q, 0, tq, 0);
+        tv[0] = t0[0] - c.c0[0]; tv[1] = t0[1] - c.c0[1]; tv[2] = t0[2] - c.c0[2];
+        quatRotate(tv2, 0, c.q, 0, tv, 0);
+        const x = tq2[0], y = tq2[1], z = tq2[2], w = tq2[3], tx = tv2[0] + c.x, ty = tv2[1] + c.y, tz = tv2[2] + c.z;
+        pq[j * 4] = x; pq[j * 4 + 1] = y; pq[j * 4 + 2] = z; pq[j * 4 + 3] = w;
+        pt[j * 3] = tx; pt[j * 3 + 1] = ty; pt[j * 3 + 2] = tz;
+        const o = off + j * 8;
+        snap[o] = x; snap[o + 1] = y; snap[o + 2] = z; snap[o + 3] = w;
+        snap[o + 4] = 0.5 * (tx * w + ty * z - tz * y);
+        snap[o + 5] = 0.5 * (-tx * z + ty * w + tz * x);
+        snap[o + 6] = 0.5 * (tx * y - ty * x + tz * w);
+        snap[o + 7] = -0.5 * (tx * x + ty * y + tz * z);
+      });
+    }
+  }
+
   write(snap, cOff, sim) {
     const { rig } = this;
     const clip = rig.clips[this.clip];
     rig.solve(clip, this.t, this.fade, snap, cOff + C_PALETTE);
+    if (this.chunks) this.writeChunks(snap, cOff + C_PALETTE);
     snap[cOff + C.ACTIVE] = 1;
     snap[cOff + C.KIND] = this.kind;
     snap[cOff + C.X] = this.x; snap[cOff + C.Y] = this.y; snap[cOff + C.Z] = this.z; snap[cOff + C.YAW] = this.yaw;

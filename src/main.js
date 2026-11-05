@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { Audio } from './audio.js';
-import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, mapShared } from './core/layout.js';
+import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, mapShared } from './core/layout.js';
 import { clamp, damp, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
@@ -26,6 +26,8 @@ const title = new Title();
 window.bmTitle = title;
 
 // ---- job pool ----------------------------------------------------------------------------------------------
+
+const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF VELSCOUR', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE'];
 
 class Pool {
   constructor(size) {
@@ -474,7 +476,7 @@ class Hud {
   }
 
   intro(armed) {
-    this.tip(armed ? 'Find the black knight. A cut opens the armour.' : `Your hands are empty. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 7);
+    this.tip(armed ? 'The dead are walking out in the fields. Cut them apart.' : `Your hands are empty. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 7);
   }
 
   // Each lesson once, at the moment it means something.
@@ -514,10 +516,18 @@ class Hud {
     this.t = 0;
     this.setBar(this.stamEl, clamp(snap[H.STAMINA] / 100, 0, 1));
     this.setBar(this.hpEl, clamp(snap[H.HP] / snap[H.MAX_HP], 0, 1));
-    const co = CHARS_START;
-    const hostile = snap[co + C.STATE] !== 0 || snap[co + C.GASH_COUNT] > 0;
+    // The bar is for whatever's closest and means you harm.
+    let co = CHARS_START, near = 9;
+    for (let i = 0; i < snap[H.NCHARS]; i++) {
+      const o = CHARS_START + i * C_SIZE;
+      if (snap[o + C.ACTIVE] < 0.5 || !snap[o + C.HOSTILE] || snap[o + C.STATE] === 10) continue;
+      const d = Math.hypot(snap[o + C.X] - snap[H.PX], snap[o + C.Z] - snap[H.PZ]);
+      if (d < near) { near = d; co = o; }
+    }
     const hpf = clamp(snap[co + C.HP] / snap[co + C.MAX_HP], 0, 1);
-    $('foe').style.opacity = hostile && snap[co + C.STATE] !== 10 ? 1 : 0;
+    $('foe').style.opacity = near < 9 ? 1 : 0;
+    const foeName = FOE_NAMES[snap[co + C.KIND]] || '';
+    if (foeName !== this.foeNameShown) { this.foeNameShown = foeName; $('foeName').textContent = foeName; }
     this.setBar(this.foeHp, hpf);
     this.setBar(this.foeArm, clamp(snap[co + C.ARMOR], 0, 1));
     const bleeds = snap[co + C.N_BLEEDS];
@@ -528,7 +538,6 @@ class Hud {
       this.msgShown = g;
       const m = $('msg');
       const again = this.input.touch ? 'Tap to play again' : 'R to play again';
-      if (g === 1) { m.innerHTML = `The knight has fallen<small>${again}</small>`; m.style.opacity = 1; }
       if (g === 2) { m.innerHTML = `You have fallen<small>${again}</small>`; m.style.opacity = 1; }
     }
     if (this.debug) {
@@ -554,7 +563,7 @@ class GameView {
     this.cam = { x: 0, y: 2, z: 0, fx: 0, fy: 0, fz: 1, ux: 0, uy: 1, uz: 0 };
     this.bobT = 0; this.swayX = 0; this.swayY = 0; this.sway = new Float32Array(16);
     this.sway.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-    this.heartPrev = new Float32Array(8);
+    this.heartPrev = new Float32Array(MAX_CHARS);
     this.smokeT = 0; this.moteT = 0; this.overrideCam = null;
     this.govT = 0; this.govMs = 0; this.govN = 0; this.frozenSnap = null;
     this.prevSnap = new Float32Array(SNAP_FLOATS);
@@ -892,8 +901,14 @@ class GameView {
         break;
       case EV.GASH:
         au.play('impact', a, b, c, 1.1, 0.92);
-        au.play('blocked', a, b, c, 0.7, 1.2);
-        r.emit(2, 42, a, b, c, d, e, f, 0.9, 1.4, 6.5, 0.0018, 0.005, 0.2, 0.6);
+        if (r.chars[g]?.flesh) {
+          // Rotten meat: no steel to ring or throw sparks, only the blood it was holding.
+          au.gore(a, b, c, 0.8, 0.34, 1600);
+          r.emit(0, 220, a, b, c, d, e + 0.1, f, 0.6, 0.8, 5.5, 0.0014, 0.009, 0.8, 2);
+        } else {
+          au.play('blocked', a, b, c, 0.7, 1.2);
+          r.emit(2, 42, a, b, c, d, e, f, 0.9, 1.4, 6.5, 0.0018, 0.005, 0.2, 0.6);
+        }
         this.hud.once('gash', g < 2 ? 'The plate is cut. Strike that same cut again to go through. Your X turns red over it.' : 'A cut. Strike it again to go through.');
         r.emit(6, 8, a, b, c, d, e, f, 0.6, 0.3, 1.1, 0.004, 0.01, 0.5, 1.3);
                 this.hud.crossHit();
@@ -905,9 +920,8 @@ class GameView {
         r.emit(0, 900, a, b, c, d, e + 0.1, f, 0.5, 0.8, 6.8, 0.0014, 0.011, 1.2, 3);
         r.emit(0, 80, a, b, c, d, e, f, 0.1, 5.5, 9, 0.002, 0.01, 1, 2);
         r.emit(1, 22, a, b, c, d, e, f, 0.9, 0.4, 2.5, 0.03, 0.08, 0.4, 0.9);
-        r.emit(2, 30, a, b, c, d, e, f, 1.0, 1, 4.5, 0.002, 0.004, 0.2, 0.5);
-        this.hud.crossHit();
-        if (g < 2) this.hud.once('puncture', 'Through the armour. The knight is bleeding.', 3);
+        if (!r.chars[g]?.flesh) r.emit(2, 30, a, b, c, d, e, f, 1.0, 1, 4.5, 0.002, 0.004, 0.2, 0.5);        this.hud.crossHit();
+        if (g < 2) this.hud.once('puncture', 'Through the wound. Now it bleeds.', 3);
         break;
       }
       case EV.BLOCK:
@@ -1009,9 +1023,26 @@ class GameView {
         break;
       case EV.LOOT: this.drops.fromKill(a, b, c, d); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 3); break;
-      case EV.WIN:
-        au.play('impact', null, 0, 0, 0.8, 0.45);
-        this.hud.tip('', 0.1);
+      case EV.GROAN:
+        // A throat with nothing behind it: a low drone under a wet rasp. d is how big the chest is.
+        au.gore(a, b, c, 0.5 + 0.5 * d, 0.7 + 0.5 * d, (150 + Math.random() * 90) / (0.6 + 0.4 * d));
+        au.gore(a, b, c, 0.22, 0.45, 520 + Math.random() * 300);
+        break;
+      case EV.DIRT:
+        // The ground giving way. d is how much of it.
+        if (d >= 1) au.gore(a, b, c, 0.5, 0.55, 240);
+        r.emit(3, Math.ceil(26 * d) + 3, a, b + 0.05, c, 0, 1, 0, 1.2, 0.5, 2.6 * d + 0.5, 0.05, 0.16, 0.5, 1.3);
+        break;
+      case EV.CHANT:
+        au.gore(a, b, c, 0.9, 1.4, 96); au.gore(a, b, c, 0.45, 1.2, 190);
+        break;
+      case EV.BLINK:
+        au.gore(a, b, c, 0.5, 0.25, 1500);
+        r.emit(4, 16, a, b, c, 0, 1, 0, 1.3, 0.3, 1.2, 0.2, 0.5, 0.4, 0.9);
+        break;
+      case EV.UNDEAD_DIE:
+        au.gore(a, b, c, 0.8, 0.6, 300);
+        r.emit(3, 26, a, b, c, 0, 0.6, 0, 1.4, 0.4, 1.6, 0.08, 0.2, 0.7, 1.5);
         break;
       case EV.LOSE: au.play('armorLand', null, 0, 0, 1, 0.7); break;
       case EV.LAND: au.play('land', null, 0, 0, 0.25 + d * 0.4, 1, false); break;
