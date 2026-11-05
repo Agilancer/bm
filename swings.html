@@ -126,8 +126,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const $ = (id) => document.getElementById(id);
 const MODEL = new URLSearchParams(location.search).get('model') === '2h' ? '2h' : '1h';
-const NAMES_2H = { great_cut1: 'Slash, upper right', great_cut2: 'Slash, upper left', great_slam: 'The slam', great_chop: 'Overhead chop',
-  great_rise: 'Rising backhand', great_wide_r: 'Wide, right to left', great_wide_l: 'Wide, left to right' };
+const NAMES_2H = { great_sky1: 'Skyrim 1: across from the right', great_sky2: 'Skyrim 2: back from the left', great_sky3: 'Skyrim 3: down from the right', great_sky4: 'Skyrim 4: down from the left',
+  great_sky5: 'Skyrim 5: overhead', great_chop: 'Overhead chop', great_rise: 'Rising, from the right', great_wide_r: 'Wide, right to left', great_wide_l: 'Wide, left to right' };
 $('hands').value = MODEL;
 $('hands').onchange = () => { location.search = '?model=' + $('hands').value; };
 

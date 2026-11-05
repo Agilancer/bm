@@ -1,5 +1,5 @@
 """Builds assets/fp/arms_2h.glb: the repaired arms on their skeleton, the Greatsword in both fists, and
-Bellmourn's two-handed swings, smoothed, as clips.
+the two-handed swings of swings2h.py, as clips.
 
     python tools/fp_arms/repair.py     # first (and again only if the repair changes)
     python tools/fp_arms/build.py      # then this
@@ -15,6 +15,7 @@ import numpy as np
 
 import rig
 import swings
+import swings2h
 from repair import BUILD, ROOT, read_glb
 
 OUT = os.path.join(ROOT, "assets", "fp", "arms_2h.glb")
@@ -93,8 +94,8 @@ def build():
     guard = swings.guard_rolls(arms, half)
     clips = {}
     report = {}
-    for name in swings.ORDER:
-        path = swings.path_of(name, half)
+    for name in swings2h.ORDER:
+        path = swings2h.drawn_path(name, half)
         sol = swings.solve_clip(path, arms, half, guard)
         clips[f"great_{name}"] = (path, sol)
         report[name] = swings.metrics(path, sol, half)
@@ -189,7 +190,7 @@ def build():
     # --- the clips
     animations = []
     fov = 2 * np.degrees(np.arctan(1 / (1.6 * swings.ZOOM)))
-    meta = dict(combo=[f"great_{c}" for c in swings.COMBO], lines=swings.LINES, clips={}, view=dict(fov=float(fov), near=0.10),
+    meta = dict(combo=[f"great_{c}" for c in swings2h.COMBO], lines={**swings2h.LINES, "slam": swings2h.line_of("slam")}, clips={}, view=dict(fov=float(fov), near=0.05),
                 walk="great_walk")
     for cname, (path_, sol) in clips.items():
         T = sol["T"]
@@ -222,7 +223,7 @@ def build():
         if path_["hit"] is None:
             ev["walk"] = True       # (the carry, standing or on the move: played by how fast you go)
         if path_["hit"] is not None:
-            ev.update(hit=float(T[path_["hit"]]), wind=float(T[path_["wind"]]), through=float(T[path_["end"]]))
+            ev.update(hit=float(T[path_["hit"]]), wind=float(T[path_["wind"]]), on=float(T[path_["on"]]), through=float(T[path_["end"]]), lean=swings2h.lean_of(path_["angle"]))
         meta["clips"][cname] = ev
 
     meta["sword"] = dict(id="greatsword", tip=swings.TIP, from_="Bellmourn2 templates/models/items/twohand/greatsword")

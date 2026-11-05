@@ -256,22 +256,24 @@ creased palm was also repainted and smoothed, since it faces you when the shield
 - The sculpt holds its fist a little off the forearm's axis, and its hand is painted dark, so at some angles the fist reads
   nearly black against the forearm.
 - A blow chained straight from the last one blends in over 0.1 s, so the blade's length can change faster across that seam than the clip's own numbers show.
-- The two-hander is still built the old way and its blade swells on the screen: x2.3 to x3.5 through most blows, x7.9 on `great_chop` and x339 on `great_slam`, where the tip runs past the eye.
 
 ## First-person arms with a two-handed sword
 
-`assets/fp/arms_2h.glb` (2.7 MB) is one self-contained model: muscular bare arms on their own skeleton, Bellmourn's
-Greatsword in both fists, and the game's two-handed swings as nine clips.
+`assets/fp/arms_2h.glb` (2.8 MB) is one self-contained model: muscular bare arms on their own skeleton, Bellmourn's
+Greatsword in both fists, and the two-handed swings as twelve clips, cut as first-person Skyrim plays them.
 
 | Clip | What it is | Tip through the X at |
 | --- | --- | --- |
-| `great_cut1` | Left click, first: slash from the upper right | 0.533 s of 1.22 s |
-| `great_cut2` | Left click, second: slash from the upper left | 0.533 s of 1.23 s |
-| `great_slam` | Left click, third: the slam, straight down | 0.683 s of 1.42 s |
-| `great_chop` | Overhead chop | 0.633 s of 1.37 s |
-| `great_rise` | Rising backhand | 0.433 s of 1.22 s |
-| `great_wide_r` | Right click: wide, right to left | 0.517 s of 1.22 s |
-| `great_wide_l` | Right click: wide, left to right | 0.517 s of 1.23 s |
+| `great_sky1` | Left click, first: across from the right | 0.467 s of 1.07 s |
+| `great_sky2` | Left click, second: back across from the left | 0.483 s of 1.08 s |
+| `great_sky3` | Left click, third: down from the upper right | 0.467 s of 1.07 s |
+| `great_sky4` | Left click, fourth: down from the upper left | 0.483 s of 1.08 s |
+| `great_sky5` | Left click, fifth: overhead, straight down the middle | 0.617 s of 1.30 s |
+| `great_slam` | In the air: the same blow as `great_sky5` | 0.617 s of 1.30 s |
+| `great_chop` | Sprinting: overhead chop | 0.567 s of 1.23 s |
+| `great_rise` | Stepping back: rising, from the lower right | 0.467 s of 1.07 s |
+| `great_wide_r` | Right click: wide, right to left | 0.483 s of 1.10 s |
+| `great_wide_l` | Right click: wide, left to right | 0.483 s of 1.10 s |
 | `great_walk` | The carry on the move, a smooth figure of eight (a 0.92 s loop) | |
 | `great_idle` | The carry standing still: the same loop, 40% as big | |
 
@@ -300,32 +302,22 @@ about the middle of the screen, so the X stays where it is.
 
 ### What was kept from Bellmourn, and what changed
 
-Kept, from `tools/templates/mocap2h.py`: the lines through the crosshair from the swing video, and the order of the
-combo. The tip runs along its line and goes through the X at the hit. The edge leads the cut, and the sword doesn't turn
-in the right fist. Kept from `anims.py` and `moves.py`: where the greatsword is carried on the screen, and the walk's sway
-and dip, with its size on the screen matched.
+The basis is first-person Skyrim, stepped through frame by frame with no sound. It's `peh8gI19q90`, a vanilla playthrough with a two-handed axe, at about 905 to 919 s:
 
-Changed:
+- **The carry.** The weapon stands nearly upright at the right of the screen, about 0.8 of the way across, its top near the top of the view and both hands off the bottom.
+- **Across** (907.2 to 907.6 s). The weapon's off the screen on the draw. The hands then come in low from the lower right, in sight, with the shaft lying almost flat across the view and trailing
+  out to the right. They lead it across to the lower left and it's off that corner, about 0.25 s on the screen in all. In `great_sky1` the tip's on the X with the fists to the left of it.
+- **Overhead** (914.6 to 914.9 s). The hands come over from above, with the forearms in a V, and the weapon drops straight down the middle and off the bottom, about 0.3 s on the screen.
+- **Home.** It's off the screen for a long while, then rises from the lower right with its top leaning in.
 
-- **Smooth motion.** The game plays one pose per tic with holds, then smooths it. Here the blade's angle drives the
-  swing, the fists are a continuous curve of that angle, and its speed is a single bell, baked at 60 Hz with a frame
-  exactly on the hit.
-- **More follow-through.** The blade carries about 60 degrees past the hit on every blow, up from about 33 on the cuts and
-  24 on the slam in the game. The arms drive forward and down, so it continues the forearms' line.
-- **Further from the eye.** These arms are much bulkier than the game's gauntlets, so the shoulders are wider, lower and
-  further forward, and the view model has a wider field of view.
-- **Fists laid out on the screen.** The game's gauntlets can run right along the line. These would wall off the view, so
-  each blow's right fist has its own path on the screen (`FIST`): low and beside the X at the hit, with both hands in sight.
-  The fist leads and slows as the blade comes through, so the blade pivots through the X. Only the tip stays exactly on the
-  line, turned there by the blade's angle.
-- **Smooth carry.** The game's walk bounces at the ends of its sway. Here it's one curve, with the tip following a little
-  behind the fist. Standing still, the sway is 40% as big as the walk's.
-- **Shallower wind-ups.** They go less far back than in the video, to spare the wrists. Where an arm would run out of
-  reach, its unseen shoulder comes forward toward the hand, so the sword's path is never disturbed.
+The footage shows only right-to-left and overhead swings. `great_sky2`, `great_sky4` and `great_wide_l` are those mirrored, and `great_rise` is the same method: Skyrim didn't show them.
+`great_sky3` follows a diagonal at 918.0 to 918.5 s, with the forearm large in the view.
 
-To adjust the feel, change the tables at the top of `tools/fp_arms/swings.py`: `FIST` (the fist's path and the
-follow-through), `CARRY` (the guard), `WALK` (the sway), `TIMES`, `BELLS`, `WIND_CAP`, and `SHO` and `ZOOM` for the distance
-from the eye. Then rebuild. In the viewer, the **Walking** box plays the carry at walking speed.
+Kept from Bellmourn's rules: the tip goes through the X on a frame, every blow starts and ends on one guard, the edge leads, the sword doesn't turn in the right fist, and the fist's speed is one hump, baked at 60 Hz.
+The drawn line itself is looser than it was, see the known limits below. The elbow no longer has a fixed way to hang: it carries on from the last frame (`Arm.steady_pole`), since an arm pointing along that way would snap round.
+
+To adjust the feel, change the tables at the top of `tools/fp_arms/swings2h.py`: `DRAW` (the fist's way, the blade drawn back, the tip's run), `LINES`, `TIMES`, and `CARRY` (the guard), `WALK` (the sway), `SHO` and `ZOOM`
+in `swings.py`. Then rebuild. In the viewer, the **Walking** box plays the carry at walking speed. The model's near plane is 5 cm, the game's for the arms (`src/gfx/renderer.js`).
 
 ### The hand repair
 
@@ -336,13 +328,13 @@ sword left free in the atlas, and normals are rebuilt across the whole surface.
 
 ### Known limits
 
+- `tools/fp_arms/check.py 2h` exits non-zero. Away from the hit the tip comes in onto its line, up to 0.72 off it (limit 0.01); it's on the X on the hit's frame in every blow. Some joints jump past 25 degrees in a frame, up to 76 on the draw of `great_sky4` and about 50 on `great_sky2` and `great_wide_l`, behind the eye where they're never seen. `forearm_L` jumps 42 to 46 degrees at about 0.42 s on `great_sky2` and `great_wide_l`, with the fists at the bottom edge of the view. The fist peaks at up to 9.3 m/s (limit 8), and most blows have two or three peaks of blade speed. The near plane still cuts an arm on 3 frames of `great_sky5`, `great_slam` and `great_chop`, a few pixels at the bottom edge at about 0.33 to 0.36 s.
 - The sculpted fingers are fused side by side. The finger bones can tighten or loosen a grip, but a fully open hand comes
   out as a webbed mitten. Open hands would need the fingers separated first.
 - Each upper arm is cut off flat at its base, with a dark underside. That comes from the source model. `check.py` fails if
   the middle of that end reaches the screen.
 - The wrist is sculpted a fixed distance from the handle, and at the carry it sits just under the frame. So you see the
   fist and the heel of the hand, but not the forearm running to the corner as in Bellmourn.
-- In the slam's and chop's last moments before the recovery, the blade is hidden for about 0.15 s behind the left forearm.
 - The arms are detailed PBR and the Greatsword is the game's low-poly retro model, so they differ in style up close.
 
 ## Rebuilding the first-person arms

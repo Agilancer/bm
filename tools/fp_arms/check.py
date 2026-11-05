@@ -299,7 +299,7 @@ def main(model):
         swing_ = shows[whole_].max() / shows[whole_].min()
         both_ = whole_[6:] & whole_[:-6]
         rate_ = float((np.maximum(shows[6:], shows[:-6]) / np.minimum(shows[6:], shows[:-6]))[both_].max()) if both_.any() else 1.0
-        if one_fist and swing_ > SHOWN_SWING and not ev.get("thrust"):       # (the two-hander's still built the old way: its numbers are printed, not held)
+        if one_fist and swing_ > SHOWN_SWING and not ev.get("thrust"):       # (a two-hander's numbers are printed, not held)
             fails.append(f"{name}: the blade looks {swing_:.1f} times longer at its longest than its shortest through the blow ({shows[whole_].min():.2f} to {shows[whole_].max():.2f})")
         if one_fist and rate_ > SHOWN_RATE and not ev.get("thrust"):
             fails.append(f"{name}: the blade's length on the screen changes {rate_:.2f} times over in a tenth of a second")
