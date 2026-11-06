@@ -9,7 +9,7 @@ import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
-import { shieldRise, shieldX, shieldY } from '../core/shield-pose.js';
+import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
 import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
@@ -1681,11 +1681,8 @@ export class Renderer {
       q.writeBuffer(h.ubo, 0, vmData);
     }
     if (this.shieldParts.length) {
-      // Dual quaternion, so half the translation. Eased, so it arrives gently at the top of the line.
-      const pal = this.shieldPal || (this.shieldPal = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
-      const rise = shieldRise(shieldUp);
-      pal[4] = shieldX(rise, this.W / this.H) * 0.5;
-      pal[5] = shieldY(rise) * 0.5;
+      const pal = this.shieldPal || (this.shieldPal = new Float32Array(8));
+      shieldPose(pal, shieldUp, this.W / this.H);
       for (const h of this.shieldParts) {
         q.writeBuffer(h.hand.palette, 0, pal);
         skinParamsU[0] = h.hand.count;
