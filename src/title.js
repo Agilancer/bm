@@ -78,7 +78,7 @@ const HOWTO = `
   <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
   <div class="t-touchkeys">
     <p><b>Left thumb</b> moves (push it right out to run); <b>right thumb</b> looks, on or off the buttons.</p>
-    <p><b>CUT</b> and <b>WIDE</b> swing, <b>DODGE</b> gets you out, <b>JUMP</b>, <b>RUN</b>, <b>PACK</b> holds your swords and gems, <b>TAKE</b> takes up what's on the ground, and <b>II</b> pauses.</p>
+    <p><b>Staff</b> fires your staff. <b>DODGE</b> gets you out, <b>JUMP</b>, <b>RUN</b>, <b>PACK</b> holds your swords and gems, <b>TAKE</b> takes up what's on the ground, and <b>II</b> pauses.</p>
   </div>
   <h3>Along the way</h3>
   <ul class="t-tips">

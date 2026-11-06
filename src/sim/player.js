@@ -89,7 +89,7 @@ export class Player {
       threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, lean: [0, 0, 0], kick: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
-      guard: 0, guardAt: -9, bashed: false, blockEvT: 0, hasShield: false, blockHeld: false,
+      guard: 0, guardAt: -9, bashed: false, blockEvT: 0, hasShield: false, blockHeld: false, staffSurfT: null,
       surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
     });
   }
@@ -107,7 +107,7 @@ export class Player {
     const hands = WEAPONS[w]?.hands || 1;
     this.arms = this.rigs[hands];
     this.stance = STANCES[hands];
-    this.staffSurf = false;
+    this.staffSurf = false; this.staffSurfT = null;
     this.surfArm = 0; this.surfTilt = 0; this.surfYaw = 0; this.steerX = 0;
     Object.assign(this, {
       clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, swingRate: 1, queued: null, combo: 0, comboT: 0, swinging: false, recovering: false,
@@ -407,13 +407,15 @@ export class Player {
   // On the shield your arms ride still. (A staff's arms have no left hand: they give way to the others, as they do to guard.)
   poseForSurf() {
     this.surfPose = this.surfing;
+    this.staffSurfT = null;
     if (this.surfing) {
       // (With a skull in hand the left arm is the skull's own, so the staff's rig stays up.)
       this.staffSurf = this.stance === STANCES[3] && !this.hasSkull;
       if (this.staffSurf) { this.stance = STANCES[1]; this.arms = this.rigs[1]; }
       this.staffGuard = false; this.guard = 0;
       if (!this.staffSurf) this.arms.capture();
-      this.clip = this.stance.idle; this.rest = this.stance.idle; this.t = 0; this.fade = this.staffSurf ? 1 : 0; this.rate = 0; this.swingRate = 1; this.queued = null;
+      this.clip = this.stance.idle; this.rest = this.stance.idle; this.t = 0; this.fade = this.staffSurf ? 1 : 0; this.rate = 0; this.swingRate = 1;
+      if (!this.staffSurf || this.queued !== 'L') this.queued = null;
     } else if (this.staffSurf) {
       this.staffSurf = false; this.stance = STANCES[3]; this.arms = this.rigs[3];
       this.clip = this.stance.idle; this.rest = this.stance.idle; this.t = 0; this.fade = 1; this.rate = 1;
@@ -437,6 +439,11 @@ export class Player {
     const shieldWant = this.guard && this.guard !== G.DOWN;
     this.shieldUp = shieldWant ? Math.min(1, this.shieldUp + dt / SHIELD_RISE) : Math.max(0, this.shieldUp - dt / SHIELD_FALL);
     if (this.surfing !== !!this.surfPose) this.poseForSurf();
+    // Time the hidden staff's cast without swapping out the surfing arms.
+    if (this.staffSurfT !== null) {
+      this.staffSurfT += tdt * this.staffSurfRate;
+      if (this.staffSurfT >= this.rigs[3].clips.staff_cast.dur) this.staffSurfT = null;
+    }
     if (this.guard === G.STAB && !this.blockHeld) this.dropGuard();     // (a thrust goes with the shield: the button's what keeps either up)
     if (this.guard && this.guard !== G.STAB) { this.stepGuard(tdt, sim); return; }
     const { arms } = this;
@@ -480,6 +487,15 @@ export class Player {
     if (this.queued && !this.weapon) { this.queued = null; sim.event(EV.EMPTY_HANDS); }
     const canStart = !this.guard && !sim.casting.busy && (this.clip === this.stance.idle || (this.recovering && this.t > info.through + 0.04));
     if (this.queued && canStart && this.recoilT <= 0) {
+      if (this.staffSurf && this.queued === 'L') {
+        if (this.staffSurfT === null || this.staffSurfT > this.rigs[3].clips.staff_cast.through + 0.04) {
+          this.staffSurfT = 0;
+          this.staffSurfRate = (this.stamina < 12 ? 0.8 : 1) * (1 + this.speed);
+          this.fired = false;
+          this.queued = null;
+        }
+        return;
+      }
       const st = this.stance;
       let name;
       if (this.queued === 'R') {
