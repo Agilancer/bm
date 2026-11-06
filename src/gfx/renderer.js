@@ -43,6 +43,11 @@ const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM:
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
 // the forearm toward the elbow (fitted to the skinned arm, within a millimetre at both, on the rig's shield joint). Bigger than on the ground, to fill the owner's outline.
 const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCALE = 1.25, KITE_SEAT = [-0.06, -0.08, -0.023];
+// The raised arm (assets/game/items/shield_arm.glb, already posed in the view's space) and the socket on it, printed by tools/fp_shield_arm/bake.py. It only ever slides, along the owner's blue line.
+const SHIELD_SOCKET = [0.99692, -0.01765, 0.07643, 0.00000, 0.00000, 0.97437, 0.22495, 0.00000, -0.07844, -0.22426, 0.97137, 0.00000, 0.05418, -0.29743, -0.51052, 1.00000];
+const SHIELD_TRAVEL = [-0.3779, -0.2552, 0.0000], SHIELD_AWAY = 2.3;  // AWAY: of the clip's travel, enough to leave the frame.
+// A shield on the socket, as the owner's outline has it: this wide and its top this high, its inner face to the eye and on the back of the arm. SHIELD_FACE: which way its inner face looks in its own model.
+const SHIELD_WIDTH = 0.675, SHIELD_TOP = 0.4932, SHIELD_FACE = 1, SHIELD_PLANE = -0.018, SHIELD_ARM_Y = 0.107;
 const FAR_HALF = 1024;       // What the coarse map of the land covers, either way.
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
@@ -618,7 +623,7 @@ export class Renderer {
     // (A piece of a suit is only ever seen on the ground, or in a slot.)
     if (GEAR[id] || ROBES[id]) { s.ready = true; return; }
     // The skull in the left hand and the arm that holds it are rigid, already in the view's own space (tools/wizard/skull_hold.py), so one joint that never moves.
-    if (SKULLS[id] || id === 'skull_arm' || id === 'surf_arm') {
+    if (SKULLS[id] || id === 'skull_arm' || id === 'surf_arm' || id === 'shield_arm') {
       if (SKULLS[id]) {
         const m = SKULL_SEAT, pos = new Float32Array(prim.pos), nr = new Float32Array(prim.nrm);
         for (let v = 0; v < pos.length; v += 3) for (let c = 0; c < 3; c++) {
@@ -647,6 +652,8 @@ export class Renderer {
         to[v] = (x * ct + z * st) * size + at[0]; to[v + 1] = y * size + at[1]; to[v + 2] = (-x * st + z * ct) * size + at[2];
       };
       for (let v = 0; v < pos.length; v += 3) { seat(prim.pos, pos, v, KITE_SCALE, KITE_SEAT); seat(prim.nrm, nrm, v, 1, [0, 0, 0]); }
+      // The same shield for the raised arm, on one joint of its own.
+      s.up = { hand: this.makeSkinned([this.onShieldSocket(prim)], 1) };
       prim.pos = pos; prim.nrm = nrm;
       this.onWeaponJoint(prim, vm.shieldJoint, vm.shieldBind);
     }
@@ -655,7 +662,33 @@ export class Renderer {
     s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: s.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
+    if (s.up) { s.up.ubo = s.ubo; s.up.bg = s.bg; s.up.ready = true; }
     s.ready = true;
+  }
+
+  // A shield's model, carried to the raised arm's socket and on into the view's space. Fitted by its own size, since they aren't all cut alike.
+  onShieldSocket(from) {
+    const P = from.pos, N = from.nrm, n = P.length / 3;
+    let x0 = Infinity, x1 = -Infinity, top = -Infinity;
+    for (let v = 0; v < n; v++) { x0 = Math.min(x0, P[v * 3]); x1 = Math.max(x1, P[v * 3]); top = Math.max(top, P[v * 3 + 1]); }
+    const k = SHIELD_WIDTH / (x1 - x0), cx = (x0 + x1) / 2, F = SHIELD_FACE, pos = new Float32Array(n * 3), nrm = new Float32Array(n * 3);
+    let near = -Infinity;
+    for (let v = 0; v < n; v++) {
+      const X = F * (P[v * 3] - cx) * k, Y = (P[v * 3 + 1] - top) * k + SHIELD_TOP, Z = F * P[v * 3 + 2] * k;
+      pos[v * 3] = X; pos[v * 3 + 1] = Y; pos[v * 3 + 2] = Z;
+      if (Math.abs(X) < 0.22 && Math.abs(Y - SHIELD_ARM_Y) < 0.07) near = Math.max(near, Z);   // what the arm's back comes to first
+    }
+    const m = SHIELD_SOCKET, seat = SHIELD_PLANE - near;
+    for (let v = 0; v < n; v++) {
+      const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2] + seat, nx = F * N[v * 3], ny = N[v * 3 + 1], nz = F * N[v * 3 + 2];
+      for (let c = 0; c < 3; c++) {
+        pos[v * 3 + c] = m[c] * x + m[c + 4] * y + m[c + 8] * z + m[c + 12];
+        nrm[v * 3 + c] = m[c] * nx + m[c + 4] * ny + m[c + 8] * nz;
+      }
+    }
+    const p = { pos, nrm, uv: from.uv, idx: from.idx };
+    this.onWeaponJoint(p, 0, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    return p;
   }
 
   // Something to lay on the ground: positions in the item's own frame, and its maps. glow is added to whatever light it gets.
@@ -1592,6 +1625,13 @@ export class Renderer {
     // The surfing hand: rigid, from SURFING.glb, up once the shield's on the ground.
     this.surfHand = null;
     if (surfArm > 0 && this.sword('surf_arm').ready) { this.surfHand = this.sword('surf_arm'); this.skullParts.push(this.surfHand); }
+    // The raised shield arm, with whatever's on it: there as soon as the shield's on its way up, and until it's gone again.
+    this.shieldParts = this.shieldParts || [];
+    this.shieldParts.length = 0;
+    const shieldUp = this.offHand && snap[H.SURF] < 0.5 ? snap[H.SHIELD_UP] : 0;
+    if (this.offHand && this.sword('shield_arm').ready && this.sword(this.offHand).up?.ready) {
+      if (shieldUp > 0) this.shieldParts.push(this.sword('shield_arm'), this.sword(this.offHand).up);
+    }
     q.writeBuffer(this.vm.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, this.vm.jointCount * 32);
     skinParamsU[0] = this.vm.count;
     skinParams[1] = 0; skinParams[2] = time; skinParamsU[3] = 0;
@@ -1601,7 +1641,8 @@ export class Renderer {
     // A spell that wants the hands takes the sword down out of the way.
     const lowered = snap[H.VM_LOWER];
     vmData[13] -= lowered * 0.85; vmData[14] += lowered * 0.2;
-    this.vmDown = lowered > 0.995;
+    // (The old hands' own left arm would be a second one, so those stand aside for it. A staff's rig has none, and stays.)
+    this.vmDown = lowered > 0.995 || (this.shieldParts.length > 0 && this.vm === this.vms[1]);
     vmData[16] = snap[H.BLOOD_SWORD];
     for (const part of this.vm.parts) {
       vmData[17] = part.isSword ? 1 : 0; vmData[18] = part.isSword ? 1 : 0; vmData[19] = 1;
@@ -1634,6 +1675,19 @@ export class Renderer {
       // (Negative: the spell hands' warm fill from the eye, so this arm is the same skin as the one that casts, and the skull, on less of it, doesn't go black at night.)
       vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.surfHand || h === this.skullParts[0] ? -1 : -0.28;
       q.writeBuffer(h.ubo, 0, vmData);
+    }
+    if (this.shieldParts.length) {
+      // Dual quaternion, so half the translation. Eased, so it arrives gently at the top of the line.
+      const pal = this.shieldPal || (this.shieldPal = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
+      const away = (1 - shieldUp) ** 3 * SHIELD_AWAY;
+      for (let c = 0; c < 3; c++) pal[4 + c] = SHIELD_TRAVEL[c] * away * 0.5;
+      for (const h of this.shieldParts) {
+        q.writeBuffer(h.hand.palette, 0, pal);
+        skinParamsU[0] = h.hand.count;
+        q.writeBuffer(h.hand.params, 0, skinParams);
+        vmData[17] = 0; vmData[18] = 0; vmData[19] = -1;   // (Arm and board in the one light: the back of a board is a dark texture, and would be a black shape in the view.)
+        q.writeBuffer(h.ubo, 0, vmData);
+      }
     }
     // The gauntlets, when they're worn and in: each rig's on that rig's palette.
     const set = this.gauntlets ? this.gauntletSet(this.gauntlets) : null;
@@ -1731,6 +1785,10 @@ export class Renderer {
     if (this.held) {
       cp.setBindGroup(0, this.held.hand.bg);
       cp.dispatchWorkgroups(Math.ceil(this.held.hand.count / 128));
+    }
+    for (const h of this.shieldParts) {
+      cp.setBindGroup(0, h.hand.bg);
+      cp.dispatchWorkgroups(Math.ceil(h.hand.count / 128));
     }
     for (const h of this.skullParts) {
       cp.setBindGroup(0, h.hand.bg);
@@ -1879,6 +1937,13 @@ export class Renderer {
       }
       if (this.held && !this.vmDown) {
         const h = this.held;
+        mp.setVertexBuffer(0, h.hand.outBuf);
+        mp.setVertexBuffer(1, h.hand.sideVB);
+        mp.setIndexBuffer(h.hand.IB, 'uint32');
+        mp.setBindGroup(1, h.bg);
+        mp.drawIndexed(h.hand.indices);
+      }
+      for (const h of this.shieldParts) {
         mp.setVertexBuffer(0, h.hand.outBuf);
         mp.setVertexBuffer(1, h.hand.sideVB);
         mp.setIndexBuffer(h.hand.IB, 'uint32');
