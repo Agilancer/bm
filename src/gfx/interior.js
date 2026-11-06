@@ -96,7 +96,7 @@ export async function loadInterior(r, base, pool, tier) {
 
   const glb = parseGLB(glbBuf);
   const nodes = glb.json.nodes.filter((n) => n.mesh !== undefined && n.name.includes('|'));
-  const uniform = (fill) => { const p = new Float32Array(48 * 4); fill(p); return makeBuffer(r.device, p, GPUBufferUsage.UNIFORM); };
+  const uniform = (fill) => { const p = new Float32Array(64 * 4); fill(p); return makeBuffer(r.device, p, GPUBufferUsage.UNIFORM); };
   const bindGroup = (c, d, ubo) => r.device.createBindGroup({ layout: r.bglStatic, entries: [
     { binding: 0, resource: c.createView({ dimension: '2d-array' }) }, { binding: 1, resource: d.createView({ dimension: '2d-array' }) }, { binding: 2, resource: { buffer: ubo } }] });
   const pom = tier.pom > 0 ? 1 : 0;

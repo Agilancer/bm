@@ -113,7 +113,7 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
 export const STATIC = COMMON + /* wgsl */ `
 @group(1) @binding(0) var colorArr: texture_2d_array<f32>;
 @group(1) @binding(1) var detailArr: texture_2d_array<f32>;
-@group(1) @binding(2) var<uniform> layers: array<vec4f, 48>;
+@group(1) @binding(2) var<uniform> layers: array<vec4f, 64>;
 
 struct V {
   @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f,
@@ -123,7 +123,7 @@ struct V {
 @vertex fn vs(@location(0) pIn: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f, @location(3) layer: u32) -> V {
   var o: V;
   var p = pIn;
-  let params = layers[min(layer, 47u)];
+  let params = layers[min(layer, 63u)];
   if (params.w > 0.0) {
     // Leaves stir, in gusts that travel across the trees.
     let t = F.camPos.w;
@@ -156,8 +156,8 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   o.depth = in.viewZ;
   var uv = in.uv;
   let flat_ = in.layer >= 100u;
-  let params = layers[min(in.layer, 47u)];
-  let layerI = i32(min(in.layer, 47u));
+  let params = layers[min(in.layer, 63u)];
+  let layerI = i32(min(in.layer, 63u));
   if (!front && params.x == 0.0) { n0 = -n0; }
   var albedo: vec3f; var rough = 0.8; var metal = 0.0; var emissive = vec3f(0.0); var ao = 1.0;
   let dx = dpdx(uv); let dy = dpdy(uv);

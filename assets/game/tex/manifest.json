@@ -172,6 +172,81 @@
    "name": "pine_far",
    "kind": "other",
    "cutout": true
+  },
+  {
+   "name": "pine_bark",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "bark_2",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "bark_3",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "bark_4",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "pine_bark_2",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "pine_bark_3",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "pine_bark_4",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "pine_bark_5",
+   "kind": "wood",
+   "cutout": false
+  },
+  {
+   "name": "leaves_2",
+   "kind": "other",
+   "cutout": true
+  },
+  {
+   "name": "leaves_3",
+   "kind": "other",
+   "cutout": true
+  },
+  {
+   "name": "leaves_4",
+   "kind": "other",
+   "cutout": true
+  },
+  {
+   "name": "pine_2",
+   "kind": "other",
+   "cutout": true
+  },
+  {
+   "name": "pine_3",
+   "kind": "other",
+   "cutout": true
+  },
+  {
+   "name": "pine_4",
+   "kind": "other",
+   "cutout": true
+  },
+  {
+   "name": "pine_5",
+   "kind": "other",
+   "cutout": true
   }
  ],
  "ground": [
