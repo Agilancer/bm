@@ -1,20 +1,26 @@
 // What the player carries: a grid of cells, and the slots on the body. Items take a footprint of cells. It's a part of every save
 // (main.js), and it stays with you through a new fight; only New Game starts it over.
-import { GEAR, GEAR_SLOTS, GEMS, MAX_SOCKETS, makeRng, rollArmor, rollGem, rollShield, rollWeapon } from './items.js';
+import { WEAPONS } from '../core/layout.js';
+import { GEMS, MAX_SOCKETS, ROBES, SKULLS, makeRng, robeSize, rollGem, rollRobe, rollShield, rollSkull, rollWeapon } from './items.js';
 
 export const PACK_W = 12, PACK_H = 8;
-export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'shoulders', 'hands', 'ring1', 'legs', 'feet', 'ring2'];
+export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'shoulders', 'skull', 'ring1', 'legs', 'feet', 'ring2'];
 
-// One of every sword and a pouch of gems, to try it all out. The game proper starts with a common sword, staff and shield and nothing else: leave this false.
+// A bit of everything and a pouch of gems, to try it all out. The game proper starts with a common staff and shield and nothing else: leave this false.
 const TEST_KIT = false;
 
-export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : item.type === 'shield' ? { w: 2, h: 3 } : item.type === 'armor' ? GEAR_SLOTS[GEAR[item.base].slot].size : { w: 1, h: 1 });
+export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : item.type === 'shield' ? { w: 2, h: 3 } : item.type === 'robe' ? robeSize(item.base) : item.type === 'skull' ? { w: 2, h: 2 } : { w: 1, h: 1 });
+
+const SOCKETED = new Set(['weapon', 'skull', 'shield']);
+// From before Tessariel put away his swords and his plate: neither comes back out of a save.
+const RETIRED = (it) => it.type === 'armor' || (it.type === 'weapon' && (WEAPONS.find((w) => w?.id === it.base)?.hands || 1) !== 3);
 
 export class Pack {
   constructor() {
     this.slots = Object.fromEntries(SLOTS.map((s) => [s, null]));
     this.entries = [];   // { item, x, y }
     this.gold = 0;
+    this.xp = 0; this.level = 1;
   }
 
   // The entries an item would land on, at (x, y). Null if it would stick out of the grid.
@@ -56,44 +62,43 @@ export class Pack {
 
   // A gem into a weapon, for good. False if it has no open socket.
   socket(weapon, gem) {
-    if (weapon.type !== 'weapon' || gem.type !== 'gem' || weapon.gems.length >= Math.min(weapon.sockets, MAX_SOCKETS) || !GEMS[gem.kind]) return false;
+    if (!SOCKETED.has(weapon.type) || gem.type !== 'gem' || (weapon.gems ||= []).length >= Math.min(weapon.sockets || 0, MAX_SOCKETS) || !GEMS[gem.kind]) return false;
     weapon.gems.push(gem);
     return true;
   }
 
   // What goes in a save. Items are plain data.
-  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, kite: true }); }
+  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, kite: true, xp: this.xp, level: this.level }); }
 
   // A saved pack back in hand, or with null, what a new game starts with.
   load(d) {
     this.slots = Object.fromEntries(SLOTS.map((s) => [s, null]));
     this.entries = [];
     this.gold = d?.gold || 0;
+    this.xp = d?.xp || 0; this.level = d?.level || 1;
     if (!d) { this.startingKit(); return; }
     Object.assign(this.slots, d.slots);
     this.entries = d.entries;
     // A save from before the kite shields: everyone starts with one.
     if (!d.kite && !this.slots.off) this.slots.off = rollShield(makeRng(1793), { base: 'kite_cross' });
     // A save from when the old greatsword was still about.
-    for (const item of [...Object.values(this.slots), ...this.entries.map((e) => e.item)]) if (item?.base === 'greatsword') item.base = 'wheel_greatsword';
+    delete this.slots.hands;
+    for (const k of Object.keys(this.slots)) if (this.slots[k] && RETIRED(this.slots[k])) this.slots[k] = null;
+    this.entries = this.entries.filter((e) => !RETIRED(e.item));
+    if (!this.slots.main) {
+      const staff = this.entries.find((e) => e.item.type === 'weapon');
+      if (staff) { this.slots.main = staff.item; this.remove(staff); } else this.slots.main = rollWeapon(makeRng(1793), { base: 'skullhorn_staff', rarity: 0, sockets: 0 });
+    }
   }
 
   startingKit() {
     const rng = makeRng(1793);
-    this.slots.main = rollWeapon(rng, { base: 'ringed_sword', rarity: 0, sockets: 0 });
-    this.add(rollWeapon(rng, { base: 'skullhorn_staff', rarity: 0, sockets: 0 }));
-    this.slots.off = rollShield(rng, { base: 'kite_cross' });
+    this.slots.main = rollWeapon(rng, { base: 'skullhorn_staff', rarity: 0, sockets: 1 });
+    this.slots.off = rollShield(rng, { base: 'kite_cross', sockets: 1 });
     if (!TEST_KIT) return;
-    const swords = [
-      ['frost_sword', 3, 4], ['crimson_sword', 3, 3], ['gilded_sword', 2, 3], ['thornvine_sword', 2, 2],
-      ['swept_rapier', 2, 1], ['brass_sabre', 1, 2], ['bronze_broadsword', 1, 1], ['ringed_sword', 0, 0],
-      ['fluked_greatsword', 2, 2], ['bluegrip_greatsword', 1, 1], ['wheel_greatsword', 0, 1], ['greengrip_greatsword', 1, 0],
-      ['crystal_staff', 1, 1], ['greenwood_staff', 1, 1], ['skullhorn_staff', 1, 1], ['gnarled_crook', 0, 0],
-    ];
-    for (const [base, rarity, sockets] of swords) this.add(rollWeapon(rng, { base, rarity, sockets }));
-    for (const kind of Object.keys(GEMS)) this.add(rollGem(rng, { kind, grade: 1 }));
-    // A set of gauntlets to try on, one of each suit: one worn, since the pack only has room for four.
-    this.slots.hands = rollArmor(rng, { base: 'knight_hands', rarity: 2 });
-    for (const suit of ['t_pale', 't_silver', 't_white', 't_purple']) this.add(rollArmor(rng, { base: `${suit}_hands`, rarity: 2 }));
+    for (const base of ['crystal_staff', 'greenwood_staff', 'gnarled_crook']) this.add(rollWeapon(rng, { base, rarity: 2, sockets: 3 }));
+    for (const base of Object.keys(SKULLS).slice(0, 3)) this.add(rollSkull(rng, { base, rarity: 3, sockets: 3 }));
+    for (const kind of Object.keys(GEMS)) this.add(rollGem(rng, { kind, grade: 2 }));
+    for (const base of Object.keys(ROBES).slice(0, 4)) this.add(rollRobe(rng, { base, rarity: 2 }));
   }
 }

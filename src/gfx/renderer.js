@@ -6,7 +6,7 @@ import { Pines } from './pines.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
-import { GEAR } from '../items/items.js';
+import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
 import { MipGen, makeBuffer, mipCountFor, textureArrayFromBitmaps } from './gpu.js';
@@ -21,6 +21,10 @@ import { SKIN } from './shaders.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 444;
+// Where a skull sits in the left hand, from its own frame to the view's. Printed by tools/wizard/skull_hold.py.
+const SKULL_SCALE = 0.74;
+const SKULL_SEAT = [-0.09696, 0.01479, -0.73347, 0.0, -0.56108, 0.47516, 0.08375, 0.0, 0.47264, 0.5671, -0.05105, 0.0, -0.16928, -0.20875, -0.38148, 1.0];
+
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
 // the forearm toward the elbow (fitted to the skinned arm, within a millimetre at both, on the rig's shield joint). Bigger than on the ground, to fill the owner's outline.
@@ -588,7 +592,27 @@ export class Renderer {
     s.lying = this.lyingModel(prim, alb, nrm, mr, [0, 0, 0, 0]);
     s.tip = prim.pos.reduce((best, v, i) => (i % 3 === 1 ? Math.max(best, v) : best), 0);
     // (A piece of a suit is only ever seen on the ground, or in a slot.)
-    if (GEAR[id]) { s.ready = true; return; }
+    if (GEAR[id] || ROBES[id]) { s.ready = true; return; }
+    // The skull in the left hand and the arm that holds it are rigid, already in the view's own space (tools/wizard/skull_hold.py), so one joint that never moves.
+    if (SKULLS[id] || id === 'skull_arm') {
+      if (SKULLS[id]) {
+        const m = SKULL_SEAT, pos = new Float32Array(prim.pos), nr = new Float32Array(prim.nrm);
+        for (let v = 0; v < pos.length; v += 3) for (let c = 0; c < 3; c++) {
+          pos[v + c] = m[c] * prim.pos[v] + m[c + 4] * prim.pos[v + 1] + m[c + 8] * prim.pos[v + 2] + m[c + 12];
+          nr[v + c] = (m[c] * prim.nrm[v] + m[c + 4] * prim.nrm[v + 1] + m[c + 8] * prim.nrm[v + 2]) / SKULL_SCALE;
+        }
+        prim.pos = pos; prim.nrm = nr;
+      }
+      this.onWeaponJoint(prim, 0, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+      s.hand = this.makeSkinned([prim], 1);
+      device.queue.writeBuffer(s.hand.palette, 0, new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
+      s.ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+      s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
+        { binding: 0, resource: { buffer: s.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
+      ] });
+      s.ready = true;
+      return;
+    }
     const vm = this.vms[w ? w.hands : 1];
     if (w) this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
     else {
@@ -1457,7 +1481,12 @@ export class Renderer {
       const fade = Math.min(1, nextD - lit[i].d);
       d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i * fl * fade], O.LIGHTS + i * 8);
     }
-    const spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
+    let spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
+    // The light off the gems you carry. src/gfx/gemfx.js.
+    for (const L of this.gemLights || []) {
+      if (take + spellLights >= 28) break;
+      d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i], O.LIGHTS + (take + spellLights++) * 8);
+    }
     d.set([take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9], O.COUNTS);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);
   }
@@ -1529,6 +1558,12 @@ export class Renderer {
     // The shield on the arm, if the arms in view have a place for one and it isn't under your feet.
     const onArm = this.offHand && this.vm === this.vms[1] && snap[H.SURF] < 0.5 ? this.sword(this.offHand) : null;
     this.onArm = onArm && onArm.ready ? onArm : null;
+    // The skull in the left hand, on the staff's arms, which have no left of their own.
+    this.skullParts = this.skullParts || [];
+    this.skullParts.length = 0;
+    if (this.skull && this.vm === this.vms[3]) {
+      for (const h of [this.sword('skull_arm'), this.sword(this.skull)]) if (h.ready) this.skullParts.push(h);
+    }
     q.writeBuffer(this.vm.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, this.vm.jointCount * 32);
     skinParamsU[0] = this.vm.count;
     skinParams[1] = 0; skinParams[2] = time; skinParamsU[3] = 0;
@@ -1555,6 +1590,12 @@ export class Renderer {
     if (this.onArm) {
       const h = this.onArm;
       q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, h.hand.jointCount * 32);
+      skinParamsU[0] = h.hand.count;
+      q.writeBuffer(h.hand.params, 0, skinParams);
+      vmData[17] = 0; vmData[18] = 0; vmData[19] = 1;
+      q.writeBuffer(h.ubo, 0, vmData);
+    }
+    for (const h of this.skullParts) {
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
       vmData[17] = 0; vmData[18] = 0; vmData[19] = 1;
@@ -1656,6 +1697,10 @@ export class Renderer {
     if (this.held) {
       cp.setBindGroup(0, this.held.hand.bg);
       cp.dispatchWorkgroups(Math.ceil(this.held.hand.count / 128));
+    }
+    for (const h of this.skullParts) {
+      cp.setBindGroup(0, h.hand.bg);
+      cp.dispatchWorkgroups(Math.ceil(h.hand.count / 128));
     }
     if (this.onArm) {
       cp.setBindGroup(0, this.onArm.hand.bg);
@@ -1800,6 +1845,13 @@ export class Renderer {
       }
       if (this.held && !this.vmDown) {
         const h = this.held;
+        mp.setVertexBuffer(0, h.hand.outBuf);
+        mp.setVertexBuffer(1, h.hand.sideVB);
+        mp.setIndexBuffer(h.hand.IB, 'uint32');
+        mp.setBindGroup(1, h.bg);
+        mp.drawIndexed(h.hand.indices);
+      }
+      if (!this.vmDown) for (const h of this.skullParts) {
         mp.setVertexBuffer(0, h.hand.outBuf);
         mp.setVertexBuffer(1, h.hand.sideVB);
         mp.setIndexBuffer(h.hand.IB, 'uint32');

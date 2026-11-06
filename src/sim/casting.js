@@ -15,8 +15,8 @@ const tmp = [0, 0, 0], out3 = [0, 0, 0];
 // What each staff fires, a spell's bolt from its head. It costs what the spell costs.
 const STAFF_BOLT = { crystal_staff: 'frost', greenwood_staff: 'plague', skullhorn_staff: 'firebolt', gnarled_crook: 'lightning' };
 // A staff fights from far off, so it bites for far less than a blade up close: what a bolt's spell does, times this, times the staff's roll against a sword of 20.
-const STAFF_BITE = 0.38, STAFF_MANA = 11, STAFF_BLAST = 2.5;
-const SPELL_BITE = 0.5;   // every spell against the quicker dying of the overhaul: a firebolt takes a zombie, ten take a knight
+const STAFF_BITE = 0.55, STAFF_MANA = 5, STAFF_BLAST = 2.5;   // (Raised when the swords went: this is the left click now, the thing you do between spells.)
+const SPELL_BITE = 0.6;   // every spell against the quicker dying of the overhaul: a firebolt takes a zombie, ten take a knight
 const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a palm's does
 
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
@@ -38,7 +38,7 @@ export class Casting {
 
   reset() {
     Object.assign(this, {
-      waves: [], mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0, armOnly: false, armLower: 0, asked: 0,
+      waves: [], power: 1, maxMana: MAX_MANA, regen: 1, thrift: 0, leechT: 0, mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0, armOnly: false, armLower: 0, asked: 0,
       gathered: false, charge: 0, held: 0, tickT: 0, fizzleT: 0, selected: 0, summonT: 0, launchT: 0, heldNow: false, flip: false,
       bolts: [], zones: [], bursts: [], missiles: [], spikes: [], blades: null, wisp: null,
     });
@@ -71,7 +71,7 @@ export class Casting {
     if (none) this.asked = 0;
     const held = input[INPUT.CAST] > 0.5 && !none;
     this.selected = clamp(input[INPUT.SPELL] | 0, 0, SPELLS.length - 1);
-    if (this.state !== 'hold') this.mana = Math.min(MAX_MANA, this.mana + MANA_REGEN * dt);
+    if (this.state !== 'hold') this.mana = Math.min(this.maxMana, this.mana + MANA_REGEN * this.regen * dt);
     this.fizzleT -= dt;
     this.stepHands(dt, held || this.asked > 0, held, sim);
     this.stepBolts(tdt, sim);
@@ -85,7 +85,7 @@ export class Casting {
   }
 
   write(snap) {
-    snap[H.MANA] = this.mana; snap[H.MAX_MANA] = MAX_MANA;
+    snap[H.MANA] = this.mana; snap[H.MAX_MANA] = this.maxMana;
     snap[H.SPELL] = this.selected;
     snap[H.VM_LOWER] = smooth(this.lower);
     snap[H.CAST_HELD] = this.state === 'hold' ? this.def.elem + 1 : 0;
@@ -138,11 +138,11 @@ export class Casting {
 
   begin(sim) {
     const def = SPELLS[this.selected], p = sim.player;
-    if (this.mana < def.mana) {
+    if (this.mana < def.mana * (1 - this.thrift)) {
       if (this.fizzleT <= 0) { sim.event(EV.SPELL_FIZZLE); this.fizzleT = 0.8; }
       return;
     }
-    this.mana -= def.mana;
+    this.mana -= def.mana * (1 - this.thrift);
     this.asked = 0;
     const swordHands = WEAPONS[p.weapon]?.hands || 0, shield = swordHands === 1 && p.hasShield;
     // A free hand beside a one-handed sword casts, and the sword stays up. With a shield on the other arm the sword goes away and the sword hand casts,
@@ -200,7 +200,7 @@ export class Casting {
         this.t += dt;
         this.held += dt;
         // A full fan of missiles costs little to keep.
-        this.mana = Math.max(0, this.mana - def.drain * dt * (def.cast === 'swarm' && this.waiting() >= def.max ? 0.15 : 1));
+        this.mana = Math.max(0, this.mana - (1 - this.thrift) * def.drain * dt * (def.cast === 'swarm' && this.waiting() >= def.max ? 0.15 : 1));
         if ((!held && this.held >= def.minHold) || this.mana <= 0) {
           this.setClip(this.clipName('cast'), this.rig.clips[this.clipName('cast')].hit + RESUME, 10);
           this.state = 'out';
@@ -260,7 +260,7 @@ export class Casting {
     }
     if (p.fired) return;
     p.fired = true;
-    const cost = Math.max(def.mana, STAFF_MANA);
+    const cost = STAFF_MANA * (1 - this.thrift);
     if (this.mana < cost) {
       if (this.fizzleT <= 0) { sim.event(EV.SPELL_FIZZLE); this.fizzleT = 0.8; }
       return;
@@ -403,7 +403,9 @@ export class Casting {
   hurt(sim, k, dmg, elem, x, y, z, fromX, fromZ, poise = dmg * 0.7, kind = 'gash') {
     if (k.dead) return;
     const a = this.affOf(k);
-    k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE;
+    k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE * this.power;
+    // Leech: a drink for each hit, but a held spell's ticks don't add up to a fountain.
+    if (sim.time > this.leechT) { this.leechT = sim.time + 0.25; sim.player.drink(); }
     k.onHit(sim, kind, fromX, fromZ, poise);
     sim.event(EV.SPELL_HIT, elem, x, y, z, dmg);
   }
