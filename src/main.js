@@ -415,7 +415,7 @@ async function boot(plan, poolSize) {
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
     if (!input.enabled || inventory.open) return;
-    if (paused && !state.paused) autosave();
+    if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
@@ -425,6 +425,7 @@ async function boot(plan, poolSize) {
     state.paused = true;
     shared.input[INPUT.PAUSE] = 1;
     input.menu = true;
+    input.releaseControls();
     inventory.show();
     if (document.pointerLockElement) document.exitPointerLock();
   };
@@ -433,6 +434,7 @@ async function boot(plan, poolSize) {
     state.paused = true;
     shared.input[INPUT.PAUSE] = 1;
     input.menu = true;
+    input.releaseControls();
     bookOpen = true;
     $('spellbook').classList.add('open');
     if (document.pointerLockElement) document.exitPointerLock();
@@ -460,6 +462,7 @@ async function boot(plan, poolSize) {
   $('bPause').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); input.onPauseChange(true); }, { passive: false });
   document.addEventListener('visibilitychange', () => {
     const hidden = document.hidden;
+    if (hidden) input.releaseControls();
     shared.input[INPUT.PAUSE] = hidden || state.paused ? 1 : 0;
     if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
   });
@@ -741,7 +744,7 @@ class GameView {
       // Under the title the village isn't drawn: a few frames, so the pipelines are built (and on a phone, timed), then nothing.
       if (this.idle) { if (this.idleFrames > (this.governor && !this.benched ? 40 : 3)) return; this.idleFrames = (this.idleFrames || 0) + 1; } else this.idleFrames = 0;
       if (this.onTick) this.onTick(dt);
-      if (this.input.touch && this.input.enabled) this.aimAssist(dt, snap);
+      if (this.input.touch && this.input.enabled && !this.shared.input[INPUT.PAUSE]) this.aimAssist(dt, snap);
       this.processEvents(snap);
       this.updateCamera(dt, snap);
       this.emitAmbient(dt, snap);
@@ -769,17 +772,20 @@ class GameView {
     let best = 0.42, target = null;
     for (let i = 0; i < snap[H.NCHARS]; i++) {
       const co = CHARS_START + i * C_SIZE;
-      if (snap[co + C.STATE] === 10 || !snap[co + C.HOSTILE]) continue;
+      if (snap[co + C.ACTIVE] < 0.5 || snap[co + C.STATE] === 10 || !snap[co + C.HOSTILE]) continue;
       const dx = snap[co + C.X] - snap[H.PX], dz = snap[co + C.Z] - snap[H.PZ], d = Math.hypot(dx, dz);
       if (d > 5.5) continue;
-      const off = Math.abs(wrapAngle(Math.atan2(dx, dz) - inp.yaw));
-      if (off < best) { best = off; target = { yaw: Math.atan2(dx, dz), d, h: snap[co + C.Y] + (i < 2 ? 1.32 : 0.9) }; }
+      const dy = snap[co + C.Y] - snap[H.PY];
+      if (Math.abs(dy) > 2.2) continue;
+      const yaw = Math.atan2(dx, dz);
+      const pitch = Math.atan2(dy + (i < 2 ? 1.32 : 0.9) - 1.62, Math.max(d, 0.8));
+      const off = Math.hypot(wrapAngle(yaw - inp.yaw), pitch - inp.pitch);
+      if (off < best) { best = off; target = { yaw, pitch }; }
     }
     if (!target) return;
     const strength = 1 - Math.exp(-dt * (snap[H.SWINGING] > 0.5 ? 2.2 : 0.8));
     inp.yaw += wrapAngle(target.yaw - inp.yaw) * strength;
-    const pitch = Math.atan2(target.h - (snap[H.PY] + 1.62), Math.max(target.d, 0.8));
-    inp.pitch += (pitch - inp.pitch) * strength * 0.7;
+    inp.pitch += (target.pitch - inp.pitch) * strength * 0.7;
   }
 
   // Dynamic resolution: hold the display's refresh rate, spend what's left on pixels. (Phones: gfx/governor.js.)
