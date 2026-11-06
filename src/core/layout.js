@@ -27,7 +27,8 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // Running totals of what's been picked up off the ground: life and mana.
   HEAL: 34, MANA_UP: 35,
   // What gear and level come to for spells; and a skull in the left hand, which puts the shield's guard away.
-  POWER: 36, MANA_MAX: 37, REGEN: 38, THRIFT: 39, SKULL: 40, SIZE: 44 };
+  POWER: 36, MANA_MAX: 37, REGEN: 38, THRIFT: 39, SKULL: 40,
+  VIEW_ASPECT: 41, SIZE: 44 };
 
 // Snapshot header (float offsets)
 export const H = {

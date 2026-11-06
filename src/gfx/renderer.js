@@ -9,6 +9,7 @@ import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
+import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
 import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
@@ -45,8 +46,6 @@ const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM:
 const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCALE = 1.25, KITE_SEAT = [-0.06, -0.08, -0.023];
 // The raised arm (assets/game/items/shield_arm.glb, already posed in view space) and the socket on it, printed by tools/fp_shield_arm/bake.py.
 const SHIELD_SOCKET = [0.99692, -0.01765, 0.07643, 0.00000, 0.00000, 0.97437, 0.22495, 0.00000, -0.07844, -0.22426, 0.97137, 0.00000, 0.05418, -0.29743, -0.51052, 1.00000];
-// At rest only the rim clears the bottom of the view. Guard raises it up and to the left.
-const SHIELD_REST = [-0.17, -0.46], SHIELD_GUARD_X = -0.25;
 // A shield on the socket, as the owner's outline has it: this wide and its top this high, its inner face to the eye and on the back of the arm. SHIELD_FACE: which way its inner face looks in its own model.
 const SHIELD_WIDTH = 0.675, SHIELD_TOP = 0.4932, SHIELD_FACE = 1, SHIELD_PLANE = -0.018, SHIELD_ARM_Y = 0.107;
 const FAR_HALF = 1024;       // What the coarse map of the land covers, either way.
@@ -1682,11 +1681,8 @@ export class Renderer {
       q.writeBuffer(h.ubo, 0, vmData);
     }
     if (this.shieldParts.length) {
-      // Dual quaternion, so half the translation. Eased, so it arrives gently at the top of the line.
-      const pal = this.shieldPal || (this.shieldPal = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
-      const rise = 1 - (1 - shieldUp) ** 3;
-      pal[4] = lerp(SHIELD_REST[0], SHIELD_GUARD_X, rise) * 0.5;
-      pal[5] = lerp(SHIELD_REST[1], 0, rise) * 0.5;
+      const pal = this.shieldPal || (this.shieldPal = new Float32Array(8));
+      shieldPose(pal, shieldUp, this.W / this.H);
       for (const h of this.shieldParts) {
         q.writeBuffer(h.hand.palette, 0, pal);
         skinParamsU[0] = h.hand.count;

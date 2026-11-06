@@ -1,6 +1,7 @@
 // Spells on the sim's side: the hands, the mana, everything in the air and on the ground, and what it does to whoever is there.
 // Each tick it writes what's alive as a list of shapes (FX in spells.js) into the snapshot, for src/gfx/spellfx.js to draw.
 import { EV, FX_FLOATS, FX_START, H, INPUT, MAX_FX, SPELL_PALETTE, WEAPONS } from '../core/layout.js';
+import { SHIELD_FACE_POINT, shieldRise, shieldX, shieldY } from '../core/shield-pose.js';
 import { EYE } from './player.js';
 import { ELEM, FX, MANA_REGEN, MAX_MANA, SPELLS } from './spells.js';
 
@@ -73,7 +74,7 @@ export class Casting {
 
   update(dt, tdt, input, sim) {
     this.n = 0;
-    this.stepGhosts(tdt);
+    this.stepGhosts(tdt, input, sim);
     if (this.castSeen < 0) this.castSeen = input[INPUT.CAST_N];
     const tapped = input[INPUT.CAST_N] !== this.castSeen;
     this.castSeen = input[INPUT.CAST_N];
@@ -431,18 +432,36 @@ export class Casting {
 
   // The shove made visible, after Bellmourn's shovewave.js: a see-through, rim-lit ghost of the shield leaves its face and flies out across
   // the shove's box, swelling to the box's width and fading at the far end.
-  ghostShield(x, y, z, fx, fz, reach, half) {
-    this.waves.push({ x: x + fx * 0.75, y, z: z + fz * 0.75, fx, fz, reach, half, t: 0 });
+  ghostShield(reach, half) {
+    this.waves.push({ reach, half, t: 0, from: null, travel: null });
   }
 
-  stepGhosts(tdt) {
+  stepGhosts(tdt, input, sim) {
     const WAVE_TIME = 0.36;
+    const p = sim.player;
     for (let i = this.waves.length - 1; i >= 0; i--) {
       const w = this.waves[i];
-      w.t += tdt;
+      if (w.from) w.t += tdt;
+      else {
+        if (!p.hasShield || p.hasSkull || p.surfing || p.dead) { this.waves.splice(i, 1); continue; }
+        // Let the board rise into the view. A quick tap still launches on release.
+        if (p.guard && p.blockHeld && p.shieldUp < 0.5) continue;
+        const rise = shieldRise(p.shieldUp);
+        const [x, y, z] = SHIELD_FACE_POINT;
+        const sx = (x + shieldX(rise, input[INPUT.VIEW_ASPECT] || 16 / 9)) * TO_WORLD;
+        const sy = (y + shieldY(rise)) * TO_WORLD;
+        const s = Math.sin(p.yaw), c = Math.cos(p.yaw), sp = Math.sin(p.pitch), cp = Math.cos(p.pitch);
+        w.from = [p.x - c * sx - s * sp * sy - s * cp * z, p.y + EYE + cp * sy - sp * z, p.z + s * sx - c * sp * sy - c * cp * z];
+        const fx = s * cp, fy = sp, fz = c * cp;
+        const distance = Math.max(-z + 0.05, this.trace(sim, p.x, p.y + EYE, p.z, fx, fy, fz, w.reach));
+        w.travel = [p.x + fx * distance - w.from[0], p.y + EYE + fy * distance - w.from[1], p.z + fz * distance - w.from[2]];
+        const length = Math.hypot(...w.travel);
+        w.dir = w.travel.map((d) => d / length);
+      }
       const k = Math.min(1, w.t / WAVE_TIME), e = 1 - (1 - k) * (1 - k);
       const a = 0.9 * (k < 0.15 ? 1 : ((1 - k) / 0.85) ** 1.6);
-      this.fx(FX.KITE, ELEM.SPIRIT, w.x + w.fx * w.reach * e, w.y, w.z + w.fz * w.reach * e, 0.45 + (w.half - 0.45) * e, w.fx, 0, w.fz, 0, a, 8 * a, 6, k, 0);
+      const [x, y, z] = w.from, [dx, dy, dz] = w.travel;
+      this.fx(FX.KITE, ELEM.SPIRIT, x + dx * e, y + dy * e, z + dz * e, 0.27 + (w.half - 0.27) * e, ...w.dir, 0, a, 8 * a, 6, k, 0);
       if (k >= 1) this.waves.splice(i, 1);
     }
   }
