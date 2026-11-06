@@ -62,9 +62,10 @@ export function readSkeleton(glb) {
   return { names, parent, restT, restR, ibm, nodeToJoint: index };
 }
 
-export function readClips(glb, skeleton) {
+export function readClips(glb, skeleton, names) {
   const clips = {};
   for (const anim of glb.json.animations || []) {
+    if (names && !names.has(anim.name)) continue;
     let frames = 0, dur = 0;
     const rot = new Map(), trans = new Map();
     for (const c of anim.channels) {
