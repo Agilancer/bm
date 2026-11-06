@@ -2,8 +2,11 @@
 // a ruby and a sapphire smoulders and snows at once. A better cut does it harder, and a Flawless stone adds a flourish of its own.
 // All of it is on the render thread and owes the sim nothing. Particle kinds 16 + an element are the spells' own colours (src/sim/spells.js).
 import { H } from '../core/layout.js';
+import { SKULL_SEAT } from './renderer.js';
 import { ELEM } from '../sim/spells.js';
 
+// Where the skull is on the screen, in the world's wider camera: tan 32 over tan 38 turns one's slope into the other's.
+const SEAT_A = (SKULL_SEAT[12] / SKULL_SEAT[14]) * 0.8 * 0.6, SEAT_B = (SKULL_SEAT[13] / -SKULL_SEAT[14]) * 0.8 * 0.6;
 const K = (e) => 16 + e;
 const GRADE = [0.7, 1, 1.5];
 const TAU = Math.PI * 2;
@@ -62,6 +65,7 @@ export class GemFx {
     this.t = 0;
     renderer.gemLights = this.lights = [];
     this.pool = [0, 1, 2].map(() => ({ p: [0, 0, 0], c: [1, 1, 1], r: 4, i: 0 }));
+    this.fill = { p: [0, 0, 0], c: [0.45, 0.7, 0.8], r: 0.9, i: 0.22 };
   }
 
   // Everything in the sockets of one thing, at one place. strength: bigger for what's out in the world than what's in the hand.
@@ -79,7 +83,7 @@ export class GemFx {
       const c = look.light || prism(t), i = look.i * GRADE[g.grade] * look.pulse(t);
       lr += c[0] * i; lg += c[1] * i; lb += c[2] * i; li += i; lreach = Math.max(lreach, look.r);
     }
-    const L = this.pool[this.lights.length];
+    const L = this.pool[this.used++];
     if (!L || !li) return;
     L.p[0] = x; L.p[1] = y; L.p[2] = z; L.c[0] = lr / li; L.c[1] = lg / li; L.c[2] = lb / li; L.r = lreach; L.i = Math.min(li, 3.5) * glow;
     this.lights.push(L);
@@ -95,9 +99,12 @@ export class GemFx {
   step(dt, snap, cam, pack) {
     this.t += dt;
     this.lights.length = 0;
+    this.used = 0;
     const { main, off, skull } = pack.slots;
+    // Whatever's in it, a skull keeps a little cold light on its face, so it doesn't go to a dark lump at night.
+    if (skull) { const L = this.fill; L.p = this.at(cam, SEAT_A * 0.8, SEAT_B * 0.8, 0.48); this.lights.push(L); }
     if (main?.gems?.length) this.shine(main.gems, ...this.at(cam, -0.42, -0.03, 0.8), dt, 0.5, 0.4);
-    if (skull?.gems?.length) this.shine(skull.gems, ...this.at(cam, 0.21, -0.26, 0.6), dt, 0.5, 0.22);   // (A light this near the hand would burn it white: it's the ground and the walls it's for.)
+    if (skull?.gems?.length) this.shine(skull.gems, ...this.at(cam, SEAT_A, SEAT_B, 0.6), dt, 0.5, 0.22);   // (A light this near the hand would burn it white: it's the ground and the walls it's for.)
     // A shield on the arm is out of view under a staff: you see its stones when you're riding it, under your feet, and they run hot.
     if (off?.gems?.length && this.r.board.sword && snap[H.SURF] > 0.5) {
       const m = this.r.board.mat;
