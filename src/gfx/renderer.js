@@ -1,6 +1,6 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
-import { LISANDRA_FORMS, LISANDRA_SCALE } from '../core/lisandra.js';
+import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
 import { DAWN_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
@@ -208,7 +208,16 @@ export class Renderer {
     }
     tick();
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
-      const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE);
+      const { skirtCenter } = LISANDRA_FORMS[i];
+      const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
+        const skirt = accessor(glb, glb.json.meshes[0].primitives[0].attributes._SKIRT);
+        const skirtDirection = new Uint16Array(skirt.length);
+        for (let v = 0; v < skirt.length; v++) {
+          const angle = Math.atan2(prim.pos[v * 3] / scale - skirtCenter[0], prim.pos[v * 3 + 2] / scale - skirtCenter[1]);
+          skirtDirection[v] = Math.round((angle / (2 * Math.PI) + 0.5) * 65535);
+        }
+        return { ...prim, flex: Float32Array.from(skirt, (weight) => -weight), skirtDirection };
+      }, SKIRT_PALETTE_JOINTS);
       form.flesh = 1;
       this.chars.push(form);
     }
@@ -434,7 +443,7 @@ export class Renderer {
         const o = vo * 12, s = vo * 9;
         f[o] = p.pos[i * 3]; f[o + 1] = p.pos[i * 3 + 1]; f[o + 2] = p.pos[i * 3 + 2]; f[o + 3] = p.flex ? p.flex[i] : 0;
         f[o + 4] = p.nrm[i * 3]; f[o + 5] = p.nrm[i * 3 + 1]; f[o + 6] = p.nrm[i * 3 + 2];
-        u[o + 7] = p.skinTag ? p.skinTag[i] : p.piece ? p.piece[i] : 0;
+        u[o + 7] = p.skirtDirection?.[i] ?? p.skinTag?.[i] ?? p.piece?.[i] ?? 0;
         let j0 = p.fixedJoint ?? 0, j1 = 0, j2 = 0, j3 = 0, w0 = 255, w1 = 0, w2 = 0, w3 = 0;
         if (p.joints) {
           j0 = p.joints[i * 4]; j1 = p.joints[i * 4 + 1]; j2 = p.joints[i * 4 + 2]; j3 = p.joints[i * 4 + 3];
@@ -489,14 +498,14 @@ export class Renderer {
     return { ...base, outBuf, palette, params, bg };
   }
 
-  async buildCrabs(glb, count, scale, prepare) {
+  async buildCrabs(glb, count, scale, prepare, paletteExtra = 0) {
     const pr = glb.json.meshes[0].primitives[0];
     const a = pr.attributes;
     const pos = accessor(glb, a.POSITION).slice();
     for (let i = 0; i < pos.length; i++) pos[i] *= scale;
     let prim = { pos, nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices), joints: accessor(glb, a.JOINTS_0), weights: accessor(glb, a.WEIGHTS_0) };
     if (prepare) prim = prepare(prim, glb, scale);
-    const base = this.makeSkinned([prim], glb.json.skins[0].joints.length);
+    const base = this.makeSkinned([prim], glb.json.skins[0].joints.length + paletteExtra);
     this.addLod(base, prim, 0.14);
     const mat = glb.json.materials[pr.material];
     const srcOf = (t) => glb.json.textures[t.index].source;
@@ -2229,4 +2238,3 @@ export class Renderer {
     });
   }
 }
-

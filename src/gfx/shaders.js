@@ -250,6 +250,24 @@ struct In { pos: vec3f, flex: f32, normal: vec3f, piece: u32, joints: u32, weigh
 @group(0) @binding(1) var<storage, read> palette: array<vec4f>;
 @group(0) @binding(2) var<storage, read> verts: array<In>;
 @group(0) @binding(3) var<storage, read_write> outV: array<vec4f>;
+// Push outward along the panel's original direction so a vertex that crosses
+// the centre of a leg always returns to the correct side of the dress.
+fn clearLeg(p: vec3f, outward: vec2f, a: vec4f, b: vec4f) -> f32 {
+  let segment = b.xyz - a.xyz;
+  let t = clamp((p.y - a.y) / min(-0.001, segment.y), 0.0, 1.0);
+  let centre = mix(a.xyz, b.xyz, t);
+  let radius = mix(a.w, b.w, t);
+  let height = p.y - centre.y;
+  let crossSection = radius * radius - height * height;
+  let delta = p.xz - centre.xz;
+  let along = dot(delta, outward);
+  let across = dot(delta, vec2f(-outward.y, outward.x));
+  let circle = crossSection - across * across;
+  if (circle <= 0.0 || along < -radius * 1.35) { return 0.0; }
+  let influence = smoothstep(-radius * 1.35, -radius * 0.65, along);
+  return clamp(sqrt(circle) + 0.008 - along, 0.0, 0.20) * influence;
+}
+
 @compute @workgroup_size(128)
 fn main(@builtin(global_invocation_id) id: vec3u) {
   let i = id.x;
@@ -298,6 +316,20 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
     let f = v.flex * v.flex;
     let ph = P.time * 2.6 + p.y * 4.0 + v.pos.x * 7.0;
     p += (P.wind.xyz * (sin(ph) * 0.5 + 0.6) + vec3f(sin(ph * 1.3), 0.0, cos(ph * 0.9)) * 0.022) * f * P.flexAmp;
+  }
+  if (v.flex < 0.0) {
+    let start = arrayLength(&palette) - 8u;
+    let angle = (f32(v.piece) / 65535.0 - 0.5) * 6.2831853 + palette[start + 6u].x;
+    let direction = vec2f(sin(angle), cos(angle));
+    let flex = -v.flex;
+    let sway = 0.009 * sin(P.time * 4.6 - v.pos.y * 12.0 + angle * 1.5) * flex;
+    p += vec3f(direction.x, 0.0, direction.y) * sway;
+    var lift = 0.0;
+    for (var j = 0u; j < 6u; j += 3u) {
+      lift = max(lift, clearLeg(p, direction, palette[start + j], palette[start + j + 1u]));
+      lift = max(lift, clearLeg(p, direction, palette[start + j + 1u], palette[start + j + 2u]));
+    }
+    p += vec3f(direction.x, 0.0, direction.y) * lift * flex;
   }
   outV[i] = vec4f(p, bitcast<f32>(pack4x8snorm(vec4f(n, 0.0))));
 }

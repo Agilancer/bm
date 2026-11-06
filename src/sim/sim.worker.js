@@ -364,8 +364,8 @@ async function boot(msg) {
   sim.knights.push(new Gravehart(5, 3, new ArmsRig(heartBuf, GRAVEHART_SCALE), GRAVEHART));
   sim.knights.push(new Hydra(6, 4, new ArmsRig(hydraBuf, HYDRA_SCALE), HYDRA));
   await addUndead(sim, base);
-  for (const { asset, route } of LISANDRA_FORMS) {
-    sim.villagers.push(new VillageWalker(await fetchBuf(base + asset), route));
+  for (const form of LISANDRA_FORMS) {
+    sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form));
   }
   sim.restartSeen = sim.input[INPUT.RESTART];
   sim.cmdSeen = sim.input[INPUT.CMD];
