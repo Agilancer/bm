@@ -250,7 +250,7 @@ async function boot(plan, poolSize) {
     renderer.gauntlets = pack.slots.hands ? GEAR[pack.slots.hands.base].suit : null;
     const off = pack.slots.off;
     shared.input[INPUT.SHIELD] = off ? 1 : 0;
-    $('bWide').textContent = off && (WEAPONS.find((w) => w?.id === pack.slots.main?.base)?.hands || 1) === 1 ? 'GUARD' : 'WIDE';
+    $('bWide').textContent = off && (WEAPONS.find((w) => w?.id === pack.slots.main?.base)?.hands || 1) !== 2 ? 'GUARD' : 'WIDE';
     renderer.offHand = off ? off.base : null;
     renderer.board.sword = renderer.offHand;
   };

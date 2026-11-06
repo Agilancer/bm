@@ -39,7 +39,7 @@ const CRABS = [
 ];
 
 // How much faster than their clips each kind goes, by kind: knight, silver knight, crab, Gravehart, Hydra, undead, ogre.
-const HASTE = [1.25, 1, 1.3, 1.1, 1, 1.4, 1.25], CASTER_HASTE = 1.2;
+const HASTE = [1.2, 1, 1.2, 1.1, 1, 1.3, 1.15], CASTER_HASTE = 1.2;
 
 class Sim {
   constructor() {
@@ -120,6 +120,14 @@ class Sim {
       // Velscour's church is the undead's. What lives in the fields stops at its door.
       // (The Hydra is the exception. The pit is where it lives.)
       if (k.opts?.pit ? false : k instanceof Zombie ? inPit(k.x, k.z) : floorAt(k.x, k.z) !== null) { k.x = ox; k.z = oz; }
+      // The ghost shield's shove: thrown back, dying off fast, and stopped by what's solid.
+      if (k.pushX || k.pushZ) {
+        const nx = k.x + k.pushX * tdt, nz = k.z + k.pushZ * tdt;
+        if (!this.world.inside(nx, nz, 0.4)) { k.x = nx; k.z = nz; } else { k.pushX = 0; k.pushZ = 0; }
+        const fall = Math.exp(-4.5 * tdt);
+        k.pushX *= fall; k.pushZ *= fall;
+        if (Math.abs(k.pushX) + Math.abs(k.pushZ) < 0.4) { k.pushX = 0; k.pushZ = 0; }
+      }
       // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there.)
       if (k.kind !== 1 && Math.hypot(k.x, k.z) < TOWN_R && Math.hypot(ox, oz) >= TOWN_R) { k.x = ox; k.z = oz; }
       if (k.champion && !k.dead && this.tick % 10 === 0) this.event(EV.CHAMPION, k.x, k.y + 1.3, k.z);

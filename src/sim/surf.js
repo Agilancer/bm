@@ -1,6 +1,6 @@
-// Shield surfing, after Bellmourn's board.js. Jump and keep Space held a moment: the shield's under your feet, and it stays there when
-// you let go. Space on the ground hops with it; Space again off the ground steps off it. A wall stops it, and so does running out of
-// speed. Slopes speed you up, flat ground slows you, a crest throws you into the air, and a landing on a downslope turns the drop into speed.
+// Shield surfing, after Bellmourn's board.js. Jump and keep Space held: the shield's under your feet for as long as it's held. Let go before
+// you land and it's back on the arm. After that, let go and tap again quickly to hop; let go any longer and you step off. A wall stops it,
+// and so does running out of speed. Slopes speed you up, flat ground slows you, a crest throws you into the air, and a landing on a downslope turns the drop into speed.
 // It only carries what you bring to it, and what the slopes give: W adds nothing. S drags a heel, A and D carve, all as you look.
 import { floorAt } from '../core/interior.js';
 import { INPUT, EV } from '../core/layout.js';
@@ -8,6 +8,7 @@ import { clamp } from '../core/math.js';
 
 const G = 14;           // the player's own gravity
 const HOLD = 0.12;      // Space held this long, off the ground: on the shield
+const RETAP = 0.2;     // Space let go this long and you step off; pressed again sooner, a hop
 const COOL = 0.25;      // off it this long before getting on again
 const VMAX = 26;
 const DRAG = 0.011;     // the air against you (x speed squared)
@@ -123,7 +124,7 @@ function fly(p, dt, wx, wz, sim) {
     sim.event(EV.LAND, p.x, p.y, p.z, clamp(into / 7, 0, 1));
     p.landKick = clamp(into * 0.018, 0, 0.13);
   }
-  p.surfAir = false; p.surfSlow = 0;
+  p.surfAir = false; p.surfSlow = 0; p.surfLanded = true;
 }
 
 // One tick of the player's movement, if the shield has it: true, and the walk doesn't run.
@@ -132,19 +133,29 @@ export function stepSurf(p, dt, input, sim) {
   if (!p.surfing) {
     p.surfHold = input[INPUT.JUMP_HELD] > 0.5 ? p.surfHold + dt : 0;
     if (input[INPUT.SHIELD] < 0.5 || p.surfHold < HOLD || p.onGround || p.surfCool > 0) return false;
-    p.surfing = true; p.surfAir = true; p.surfSlow = 0;
+    p.surfing = true; p.surfAir = true; p.surfSlow = 0; p.surfLanded = false; p.surfUp = -1; p.jumpSeen = input[INPUT.JUMP];
     p.dodgeT = 0;
   }
   if (input[INPUT.SHIELD] < 0.5) { off(p); return false; }
   // Space, as a press: a hop on the ground, off the shield in the air.
   const pressed = input[INPUT.JUMP] !== p.jumpSeen;
   p.jumpSeen = input[INPUT.JUMP];
-  if (pressed) {
-    if (p.surfAir) { off(p); return false; }
-    slope(p, sim.world);
-    p.vx += n[0] * POP * 0.35; p.vy += n[1] * POP * 0.35 + POP * 0.65; p.vz += n[2] * POP * 0.35;
-    p.surfAir = true;
-    sim.event(EV.JUMP, p.x, p.y, p.z);
+  const held = input[INPUT.JUMP_HELD] > 0.5;
+  if (!p.surfLanded && !held) { off(p); return false; }
+  if (p.surfLanded) {
+    if (pressed && p.surfUp >= 0) {
+      if (!p.surfAir) {
+        slope(p, sim.world);
+        p.vx += n[0] * POP * 0.35; p.vy += n[1] * POP * 0.35 + POP * 0.65; p.vz += n[2] * POP * 0.35;
+        p.surfAir = true;
+        sim.event(EV.JUMP, p.x, p.y, p.z);
+      }
+      p.surfUp = -1;
+    } else if (held) p.surfUp = -1;
+    else {
+      p.surfUp = p.surfUp < 0 ? 0 : p.surfUp + dt;
+      if (p.surfUp >= RETAP) { off(p); return false; }
+    }
   }
   const mx = input[INPUT.MOVE_X], mz = input[INPUT.MOVE_Z], s = Math.sin(p.yaw), c = Math.cos(p.yaw);
   const wx = mx * -c + mz * s, wz = mx * s + mz * c;

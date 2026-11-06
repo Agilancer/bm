@@ -38,7 +38,7 @@ export class Casting {
 
   reset() {
     Object.assign(this, {
-      mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0, armOnly: false, armLower: 0, asked: 0,
+      waves: [], mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0, armOnly: false, armLower: 0, asked: 0,
       gathered: false, charge: 0, held: 0, tickT: 0, fizzleT: 0, selected: 0, summonT: 0, launchT: 0, heldNow: false, flip: false,
       bolts: [], zones: [], bursts: [], missiles: [], spikes: [], blades: null, wisp: null,
     });
@@ -61,6 +61,7 @@ export class Casting {
 
   update(dt, tdt, input, sim) {
     this.n = 0;
+    this.stepGhosts(tdt);
     if (this.castSeen < 0) this.castSeen = input[INPUT.CAST_N];
     const tapped = input[INPUT.CAST_N] !== this.castSeen;
     this.castSeen = input[INPUT.CAST_N];
@@ -411,6 +412,24 @@ export class Casting {
     const a = this.affOf(k);
     a.vx += vx; a.vz += vz;
     if (up > 0) a.vh = Math.max(a.vh, up);
+  }
+
+  // The shove made visible, after Bellmourn's shovewave.js: a see-through, rim-lit ghost of the shield leaves its face and flies out across
+  // the shove's box, swelling to the box's width and fading at the far end.
+  ghostShield(x, y, z, fx, fz, reach, half) {
+    this.waves.push({ x: x + fx * 0.75, y, z: z + fz * 0.75, fx, fz, reach, half, t: 0 });
+  }
+
+  stepGhosts(tdt) {
+    const WAVE_TIME = 0.36;
+    for (let i = this.waves.length - 1; i >= 0; i--) {
+      const w = this.waves[i];
+      w.t += tdt;
+      const k = Math.min(1, w.t / WAVE_TIME), e = 1 - (1 - k) * (1 - k);
+      const a = 0.9 * (k < 0.15 ? 1 : ((1 - k) / 0.85) ** 1.6);
+      this.fx(FX.KITE, ELEM.SPIRIT, w.x + w.fx * w.reach * e, w.y, w.z + w.fz * w.reach * e, 0.45 + (w.half - 0.45) * e, w.fx, 0, w.fz, 0, a, 8 * a, 6, k, 0);
+      if (k >= 1) this.waves.splice(i, 1);
+    }
   }
 
   // A blast: hurts and throws everything within radius, by how near it is.

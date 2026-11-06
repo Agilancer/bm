@@ -12,7 +12,7 @@ import { stepSurf } from './surf.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
-const WALK = 6.5, SPRINT = 10;
+const WALK = 5.6, SPRINT = 8.6;
 const PLATE = 0.7;   // what gets through Velscour's knight's armour: he's a gate, and you bring better than you start with
 const MELEE = 5;   // what a blade's cut is worth in hit points: a common sword takes a zombie in two or three
 const FALL_SAFE = 12, FALL_WORST = 11;   // (speed at the bottom. Five metres and you're fine; twenty, the bottom of the rift, and you're on your last legs.)
@@ -33,7 +33,8 @@ const GUARD_PERFECT = 0.3;
 const GUARD_ARC = Math.cos(1.2);    // what it covers: this far either side of where you look
 const GUARD_COST = 1.1, GUARD_LEAK = 0.1;   // breath per point of a blow taken on it, and how much of the blow gets through
 const GUARD_DRAG = 0.6;
-const BASH_AT = 0.16, BASH_REACH = 2.5, BASH_ARC = Math.cos(1.05), BASH_DMG = 3, BASH_POISE = 70, BASH_PUSH = 6, BASH_COST = 8;
+// The shove, after Bellmourn's: a box in front of you, as wide as the ghost shield gets and as far as it flies.
+const BASH_REACH = 7, BASH_HALF = 2.4, BASH_DMG = 12, BASH_POISE = 130, BASH_PUSH = 18, BASH_COST = 14, BASH_COOL = 0.9;
 const SURF_CROUCH = 0.3;   // the eye lower on the shield, the knees bent
 const BASE_HP = 160;
 const PUNCTURE_RADIUS = 0.07;
@@ -63,7 +64,7 @@ const SWING_INFO = {
   blade_stab: { heavy: false, fromRight: 0, dmg: 6, poise: 34, stam: 10, width: 0.8 },
   blade_stab_block: { heavy: false, fromRight: 0, dmg: 5, poise: 24, stam: 10, width: 0.8 },
 };
-const DODGE_TIME = 0.3, DODGE_COST = 18, DODGE_SPEED = 15;
+const DODGE_TIME = 0.3, DODGE_COST = 18, DODGE_SPEED = 13;
 const hit = { t: 0, piece: -1, lx: 0, ly: 0, lz: 0, nx: 0, ny: 0, nz: 0 };
 const tmp = new Float32Array(3), tmp2 = new Float32Array(3), sweepDir = new Float32Array([1, 0, 0]);
 
@@ -82,7 +83,7 @@ export class Player {
 
   reset() {
     Object.assign(this, {
-      x: -3.5, z: 72, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, onGround: true, hp: BASE_HP, maxHp: BASE_HP, dead: false, deadT: 0,
+      x: 7.5, z: 72, y: 0, vx: 0, vz: 0, vy: 0, yaw: Math.PI, pitch: 0, onGround: true, hp: BASE_HP, maxHp: BASE_HP, dead: false, deadT: 0,
       weapon: -1, clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, queued: null, queuedT: 0, combo: 0, comboT: 0, wide: 0, swinging: false, recovering: false,
       threat: null, atkSeen: 0, wideSeen: 0, jumpSeen: 0, shakeX: 0, shakeY: 0, shakeR: 0, lean: [0, 0, 0], kick: 0, trauma: 0, flash: 0, drag: 0, contact: null, whiffed: true,
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
@@ -107,7 +108,7 @@ export class Player {
     this.stance = STANCES[hands];
     Object.assign(this, {
       clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, swingRate: 1, queued: null, combo: 0, comboT: 0, swinging: false, recovering: false,
-      threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0, guard: 0,
+      threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0, guard: 0, staffGuard: false,
     });
   }
 
@@ -255,7 +256,7 @@ export class Player {
     this.groundSpeed = gs;
     if (this.onGround && gs > 0.5 && !this.surfing) {
       this.stride += gs * dt;
-      const stepLen = this.sprinting ? 3.1 : 2.1;
+      const stepLen = this.sprinting ? 2.8 : 1.9;
       if (this.stride > stepLen) { this.stride -= stepLen; sim.event(EV.STEP, this.x, this.y, this.z, clamp(gs / 6, 0.2, 1), 0, -1); }
     }
     this.landKick = damp(this.landKick, 0, 9, dt);
@@ -302,39 +303,45 @@ export class Player {
   }
 
   startGuard(sim) {
-    this.guardClip('shield_up', G.UP);
-    this.guardAt = sim.time; this.bashed = false; this.recoilT = 0; this.drag = 0; this.queued = null;
+    // It just comes up: straight to the hold, no wind-up and no thump. The push is the ghost shield's, thrown from its face as it arrives.
+    // (A staff's rig has no left arm, so a staff goes out of view behind the shield while it's up.)
+    if (this.stance === STANCES[3]) { this.arms = this.rigs[1]; this.staffGuard = true; }
+    this.guardClip('shield_hold', G.HOLD);
+    this.fade = 0.5;
+    this.guardAt = sim.time; this.recoilT = 0; this.drag = 0; this.queued = null;
+    this.shove(sim);
   }
 
   // Everything in front, as wide as the shield and a stride deep, is knocked back and set reeling.
-  bash(sim) {
-    this.bashed = true;
+  shove(sim) {
+    if (sim.time - (this.shoveAt ?? -9) < BASH_COOL || this.stamina < BASH_COST * 0.5) return;
+    this.shoveAt = sim.time;
     this.spend(BASH_COST * (1 - this.stamSave));
     sim.event(EV.WHOOSH, this.x, this.y + EYE, this.z, 1);
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    sim.casting.ghostShield(this.x, this.y + EYE - 0.28, this.z, fx, fz, BASH_REACH, BASH_HALF);
     let met = false;
     for (const k of sim.knights) {
       if (k.dead || k.dormant || k.iframes) continue;
       const dx = k.x - this.x, dz = k.z - this.z, d = Math.hypot(dx, dz) || 1;
-      if (d > BASH_REACH + (k.bodyRadius || 0.5) * 0.5 || (dx * fx + dz * fz) / d < BASH_ARC || Math.abs(k.y - this.y) > 2.2) continue;
+      const ahead = dx * fx + dz * fz, across = Math.abs(dx * fz - dz * fx), R = (k.bodyRadius || 0.5) * 0.5;
+      if (ahead < -R || ahead > BASH_REACH + R || across > BASH_HALF + R || Math.abs(k.y - this.y) > 2.2) continue;
       if (sim.world.rayBoxes(this.x, this.y + EYE - 0.4, this.z, dx / d, 0, dz / d, Math.max(d - 0.4, 0.01)) > 0) continue;
       met = true;
       k.hp -= BASH_DMG * this.bite() * (1 + this.poise);
-      if (k.reel) k.reel(sim, 0.7);
+      if (k.reel) k.reel(sim, 1.1);
       else k.onHit(sim, 'gash', this.x, this.z, BASH_POISE * (1 + this.poise));
       // (The Gravehart and the Hydra are far too big to shift.)
-      if (k.knock !== undefined) { k.knockX = dx / d; k.knockZ = dz / d; k.knock = Math.max(k.knock, BASH_PUSH); } else if (k.kind === 2 || k.kind >= 5) { k.vx = dx / d * BASH_PUSH; k.vz = dz / d * BASH_PUSH; }
+      if (k.knock !== undefined) { k.knockX = dx / d; k.knockZ = dz / d; k.knock = Math.max(k.knock, BASH_PUSH); } else if (k.kind === 2 || k.kind >= 5) { k.pushX = dx / d * BASH_PUSH; k.pushZ = dz / d * BASH_PUSH; }
       sim.event(EV.BLOCK, k.x - dx / d * 0.4, this.y + 1.2, k.z - dz / d * 0.4, -dx / d, 0.1, -dz / d, k.id);
     }
-    if (met) { sim.hitStop(0.06); this.trauma = Math.min(1, this.trauma + 0.3); this.kick = 1; }
+    if (met) { sim.hitStop(0.05); this.trauma = Math.min(1, this.trauma + 0.3); }
   }
 
   // The button's let go: the shield starts down now, from wherever it's got to, so a shield still on its way up turns round where it is.
   dropGuard() {
-    const up = this.guard === G.UP ? Math.min(1, this.t / this.arms.clips.shield_up.dur) : 1;
     this.queued = null;
     this.guardClip('shield_down', G.DOWN);
-    this.t = (1 - up) * this.arms.clips.shield_down.dur;
   }
 
   stepGuard(tdt, sim) {
@@ -343,30 +350,27 @@ export class Player {
     this.fade = Math.min(1, this.fade + tdt / 0.06);
     this.t += tdt * (this.guard === G.HOLD ? 0.25 + Math.min(1.3, this.groundSpeed / 6.2) : GUARD_RATE);
     switch (this.guard) {
-      case G.UP:
-        if (this.t >= info.dur) this.guardClip('shield_bash', G.BASH);
-        break;
-      case G.BASH:
-        if (!this.bashed && this.t >= BASH_AT) this.bash(sim);
-        if (this.t >= info.dur) this.guardClip('shield_hold', G.HOLD);
-        break;
       case G.HOLD:
         // With the shield up the sword only thrusts, over the rim. The right button again is another shove.
-        if (this.queued === 'L' && this.weapon > 0) {
+        if (this.queued === 'L' && this.staffGuard) this.queued = null;
+        else if (this.queued === 'L' && this.weapon > 0) {
           this.queued = null;
           this.startSwing(sim, 'blade_stab_block');
           this.guard = G.STAB;
-        } else if (this.queued === 'R' && this.stamina > BASH_COST) {
+        } else if (this.queued === 'R') {
           this.queued = null;
-          this.guardClip('shield_bash', G.BASH);
-          this.bashed = false;
+          this.shove(sim);
         } else if (this.winded || !this.hasShield || this.surfing) {
           this.queued = null;
           this.guardClip('shield_down', G.DOWN);
         }
         break;
       default:
-        if (this.t >= info.dur) { this.guard = 0; this.toIdle(); }
+        if (this.t >= info.dur) {
+          this.guard = 0;
+          if (this.staffGuard) { this.staffGuard = false; this.arms = this.rigs[3]; this.t = 0; this.fade = 1; }
+          this.toIdle();
+        }
     }
   }
 
@@ -432,7 +436,7 @@ export class Player {
       if (this.comboT <= 0) this.combo = 0;
     }
     // The right button with a shield on the arm brings it up, at once: out of a wind-up or a follow-through, though not through a blow that's landing.
-    if (this.queued === 'R' && this.hasShield && this.stance === STANCES[1] && !this.guard) {
+    if (this.queued === 'R' && this.hasShield && (this.stance === STANCES[1] || this.stance === STANCES[3]) && !this.guard) {
       if (this.winded || this.surfing || this.stamina <= 6) this.queued = null;
       else if (!this.swinging && !sim.casting.busy) { this.startGuard(sim); return; }
     }
@@ -770,7 +774,7 @@ export class Player {
     snap[H.BLOOD_SWORD] = this.bloodSword;
     snap[H.SWINGING] = this.swinging ? 1 : 0;
     snap[H.SWING_T] = this.clip === this.stance.idle ? 0 : this.t;
-    snap[H.WEAPON] = this.weapon;
+    snap[H.WEAPON] = this.staffGuard ? 0 : this.weapon;
     snap[H.HIT_DIR] = this.hitDir; snap[H.HIT_DIR_T] = this.hitDirT;
     snap[H.GROUND_SPEED] = this.groundSpeed || 0;
     snap[H.ON_GROUND] = this.onGround ? 1 : 0;

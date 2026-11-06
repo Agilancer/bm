@@ -91,6 +91,12 @@ const FLAME_ROOM = 1.4;   // and a flame's than the flame
       vp = (F.view * vec4f(I.p.xyz + side * along.x * I.a.w + vec3f(0.0, along.y * size, 0.0), 1.0)).xyz;
       o.uv = vec2f(along.x, along.y * 2.0 - 1.0);
     }
+    case 13u: {
+      // A ghost of the shield: flat, upright, its face along the way it flies.
+      let side = normalize(cross(vec3f(0.0, 1.0, 0.0), I.a.xyz));
+      vp = (F.view * vec4f(I.p.xyz + side * q.x * size + vec3f(0.0, q.y * size * 1.25, 0.0), 1.0)).xyz;
+      o.uv = q;
+    }
     default: {
       vp = (F.view * vec4f(I.p.xyz, 1.0)).xyz;
       // Passing the lens, it shrinks away rather than fill the screen.
@@ -294,6 +300,14 @@ fn vortex(uv: vec2f, seed: f32, T: f32) -> vec4f {
   return vec4f(rgb, max(hole, disk * 0.2));
 }
 
+fn kite(uv: vec2f) -> vec4f {
+  let x = abs(uv.x);
+  let d = max(uv.y - (0.85 - x * x * 0.3), x - 0.78 * clamp((uv.y + 1.0) / 1.2, 0.0, 1.0));
+  if (d >= 0.0) { return vec4f(0.0); }
+  let rim = smoothstep(-0.14, -0.01, d);
+  let t = 0.16 + 0.1 * (uv.y + 1.0) + rim * 0.75;
+  return vec4f(ramp(t) * t * 1.5, t * 0.55);
+}
 fn shock(uv: vec2f, age: f32, seed: f32, T: f32) -> vec4f {
   let r = length(uv);
   if (r >= 1.0) { return vec4f(0.0); }
@@ -358,6 +372,7 @@ fn shock(uv: vec2f, age: f32, seed: f32, T: f32) -> vec4f {
     case 10u: { c = column(uv, seed, T); }
     case 11u: { c = vortex(uv, seed, T); }
     case 12u: { c = shock(uv, age, seed, T); }
+    case 13u: { c = kite(uv); }
     default: { discard; }
   }
   return c * alpha * keep;

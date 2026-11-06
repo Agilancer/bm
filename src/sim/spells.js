@@ -14,7 +14,7 @@ export const ELEM_LIGHT = [
 
 // Shapes the renderer draws them with. From ICE up they are solid things in the world; LIGHT only lights it.
 export const FX = {
-  ORB: 0, BEAM: 1, BOLT: 2, RING: 3, DISC: 4, FLAME: 5, PUFF: 6, FLARE: 7, TRAIL: 8, RUNE: 9, COLUMN: 10, VORTEX: 11, SHOCK: 12,
+  ORB: 0, BEAM: 1, BOLT: 2, RING: 3, DISC: 4, FLAME: 5, PUFF: 6, FLARE: 7, TRAIL: 8, RUNE: 9, COLUMN: 10, VORTEX: 11, SHOCK: 12, KITE: 13,
   ICE: 16, SPIKE: 17, LANCE: 18, BLADE: 19, ROCK: 20, FLASK: 21, LIGHT: 31,
 };
 
