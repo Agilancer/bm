@@ -1,10 +1,10 @@
 // The pack and what's on the body. An item is lifted with a click and follows the pointer until it's set down, or dragged and let
 // go; a right-click or a double tap equips or stows. A gem set down on a sword goes in its next open socket, for good.
-import { GEAR, GEMS, colorOf, hands, linesOf, nameOf, statsOf } from '../items/items.js';
+import { ROBES, GEMS, colorOf, hands, linesOf, nameOf, statsOf } from '../items/items.js';
 import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
 
 const $ = (id) => document.getElementById(id);
-const SLOT_LABEL = { head: 'Head', neck: 'Neck', main: 'Sword', chest: 'Chest', off: 'Off hand', shoulders: 'Shoulders', hands: 'Hands', ring1: 'Ring', legs: 'Legs', feet: 'Feet', ring2: 'Ring' };
+const SLOT_LABEL = { head: 'Head', neck: 'Neck', main: 'Staff', chest: 'Chest', off: 'Shield', shoulders: 'Shoulders', skull: 'Skull', ring1: 'Ring', legs: 'Legs', feet: 'Feet', ring2: 'Ring' };
 const DOUBLE_MS = 320;
 const DOUBLE_PX = 24;   // A quick second press elsewhere is setting it down: socketing can't be undone, so it mustn't be misread.
 
@@ -14,6 +14,8 @@ const GEM_SVG = [
   '<polygon points="12,2 20.5,7 20.5,17 12,22 3.5,17 3.5,7" fill="C"/><polygon points="12,6.5 16.5,9.2 16.5,14.8 12,17.5 7.5,14.8 7.5,9.2" fill="#fff" opacity=".28"/><polygon points="3.5,17 7.5,14.8 12,17.5 12,22" fill="#000" opacity=".28"/><polygon points="20.5,17 16.5,14.8 12,17.5 12,22" fill="#000" opacity=".16"/><polygon points="12,2 20.5,7 16.5,9.2 12,6.5" fill="#fff" opacity=".18"/>',
   '<polygon points="7,3 17,3 22,9 12,22 2,9" fill="C"/><polygon points="7,3 17,3 15,9 9,9" fill="#fff" opacity=".42"/><polygon points="2,9 9,9 12,22" fill="#fff" opacity=".12"/><polygon points="22,9 15,9 12,22" fill="#000" opacity=".28"/><polygon points="17,3 22,9 15,9" fill="#fff" opacity=".2"/><polygon points="7,3 2,9 9,9" fill="#000" opacity=".12"/>',
 ];
+
+const SOCKETED = new Set(['weapon', 'skull', 'shield']);
 
 export class Inventory {
   // manifest: assets/game/items/swords.json. on: { change() the equipped sword may be different, drop(item) let go of on the ground }.
@@ -35,7 +37,7 @@ export class Inventory {
     for (const s of SLOTS) this.slotEls[s] = this.root.querySelector(`[data-slot="${s}"]`);
     $('invHelp').textContent = touch
       ? 'Tap to lift and set down. Double tap to equip or stow. Tap outside to drop.'
-      : 'Click to lift and set down. Right-click to equip or stow. Set a gem on a sword to socket it. Click outside to drop.';
+      : 'Click to lift and set down. Right-click to equip or stow. Set a gem on a staff, skull or shield to socket it. Click outside to drop.';
     this.root.addEventListener('pointerdown', (e) => this.onDown(e));
     window.addEventListener('pointermove', (e) => { if (this.open) this.onMove(e); });
     window.addEventListener('pointerup', (e) => { if (this.open) this.onUp(e); });
@@ -69,8 +71,11 @@ export class Inventory {
 
   iconOf(item) {
     if (item.type === 'gem') return this.gemSvg(item);
-    if (item.type === 'shield') return `<div class="ico" style="aspect-ratio:2/3;background-image:url(${this.base}assets/game/items/icons/${item.base}.webp)"></div>`;
-    if (item.type === 'armor') return `<div class="ico" style="aspect-ratio:${sizeOf(item).w}/${sizeOf(item).h};background-image:url(${this.base}assets/game/items/icons/${item.base}.webp)"></div>`;
+    if (item.type === 'shield' || item.type === 'skull' || item.type === 'robe') {
+      const { w, h } = sizeOf(item);
+      const dots = (item.gems || []).map((g, i) => `<i style="position:absolute;right:${4 + i * 11}%;bottom:4%;width:12%;aspect-ratio:1;border-radius:50%;background:${GEMS[g.kind].color};box-shadow:0 0 5px ${GEMS[g.kind].color}"></i>`).join('');
+      return `<div class="ico" style="position:relative;aspect-ratio:${w}/${h};background-image:url(${this.base}assets/game/items/icons/${item.base}.webp)">${dots}</div>`;
+    }
     const m = this.manifest.swords[item.base];
     const [y0, y1] = m.frame.y;
     let dots = '';
@@ -203,7 +208,7 @@ export class Inventory {
       const { x, y } = this.originFor(this.carry.item, t);
       const { w, h } = sizeOf(this.carry.item);
       const hit = this.pack.under(this.carry.item, x, y);
-      const gemOnSword = this.carry.item.type === 'gem' && t.item?.type === 'weapon' && t.item.gems.length < t.item.sockets;
+      const gemOnSword = this.carry.item.type === 'gem' && SOCKETED.has(t.item?.type) && (t.item.gems?.length || 0) < (t.item.sockets || 0);
       this.hover.style.cssText = `display:block;--x:${x};--y:${y};--w:${w};--h:${h}`;
       this.hover.className = gemOnSword ? 'ok' : hit && hit.length <= 1 ? 'ok' : 'bad';
     } else this.hover.style.display = 'none';
@@ -225,13 +230,13 @@ export class Inventory {
   setDown(t) {
     const { item } = this.carry;
     // A gem on a sword goes in. Anywhere else it is a thing like any other.
-    if (item.type === 'gem' && t.item?.type === 'weapon') {
+    if (item.type === 'gem' && SOCKETED.has(t.item?.type)) {
       if (this.pack.socket(t.item, item)) {
         this.carry = null;
         this.on.change();
         this.render();
         this.flash(`${nameOf(item)} set in ${nameOf(t.item)}.`);
-      } else this.flash(t.item.sockets ? 'Every socket on that sword is full.' : 'That sword has no sockets.');
+      } else this.flash(t.item.sockets ? 'Every socket on that is full.' : 'That has no sockets.');
       return;
     }
     if (t.kind === 'pack') {
@@ -240,8 +245,8 @@ export class Inventory {
       if (lifted === false) { this.flash('It won\'t go there.'); return; }
       this.carry = lifted ? { item: lifted, from: null } : null;
     } else if (t.kind === 'slot') {
-      const fits = (t.name === 'main' && item.type === 'weapon') || (t.name === 'off' && item.type === 'shield') || (item.type === 'armor' && GEAR[item.base].slot === t.name);
-      if (!fits) { this.flash(t.name === 'main' ? 'Only a sword goes in the hand.' : t.name === 'off' ? 'Only a shield goes on the arm.' : 'That doesn\'t go there.'); return; }
+      const fits = (t.name === 'main' && item.type === 'weapon') || (t.name === 'off' && item.type === 'shield') || (t.name === 'skull' && item.type === 'skull') || (item.type === 'robe' && ROBES[item.base].slot === t.name);
+      if (!fits) { this.flash(t.name === 'main' ? 'Only a staff goes in the right hand.' : t.name === 'off' ? 'Only a shield goes on the arm.' : t.name === 'skull' ? 'Only a skull goes in the left hand.' : 'That doesn\'t go there.'); return; }
       const prev = this.pack.slots[t.name];
       this.pack.slots[t.name] = item;
       this.carry = prev ? { item: prev, from: null } : null;
@@ -263,8 +268,8 @@ export class Inventory {
         pack.slots[t.name] = null;
         this.on.change();
       }
-    } else if (t.item.type === 'weapon' || t.item.type === 'shield' || t.item.type === 'armor') {
-      const slot = t.item.type === 'weapon' ? 'main' : t.item.type === 'shield' ? 'off' : GEAR[t.item.base].slot, prev = pack.slots[slot], { x, y } = t.entry;
+    } else if (t.item.type === 'weapon' || t.item.type === 'shield' || t.item.type === 'skull' || t.item.type === 'robe') {
+      const slot = t.item.type === 'weapon' ? 'main' : t.item.type === 'shield' ? 'off' : t.item.type === 'skull' ? 'skull' : ROBES[t.item.base].slot, prev = pack.slots[slot], { x, y } = t.entry;
       pack.remove(t.entry);
       pack.slots[slot] = t.item;
       if (prev && !pack.add(prev)) this.on.drop(prev);
@@ -274,7 +279,7 @@ export class Inventory {
       this.on.change();
       this.flash(`${nameOf(t.item)} set in ${nameOf(pack.slots.main)}.`);
     } else {
-      this.flash(pack.slots.main ? 'No open socket on the sword in hand.' : 'No sword in hand to set it in.');
+      this.flash(pack.slots.main ? 'No open socket on the staff in hand.' : 'No staff in hand to set it in.');
     }
     this.tipFor = null;
     this.render();

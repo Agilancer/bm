@@ -1,4 +1,4 @@
-// What can be found: the swords, the words a roll can add to them and the gems that go in their sockets. Tables and dice only,
+// What can be found: the swords, the words a roll can add to them and the gems that go in their sockets. Tessariel fights with spells: the swords' rows stay here but are never rolled. Tables and dice only,
 // so the node check in tools/items/check.mjs rolls exactly what the game rolls. Every stat a line here can show is one
 // src/sim/player.js really applies.
 import { INPUT, WEAPONS } from '../core/layout.js';
@@ -17,24 +17,23 @@ export const MAX_SOCKETS = 4;
 // Damage is on a scale where 20 is what the swings' own numbers were balanced on. grade: which rarities it can come as (HIGH_CHANCE).
 export const BASES = {
   greatsword: { name: 'Old Greatsword', dmg: [17, 23], grade: 'starter' },
-  ringed_sword: { name: 'Ringed Sword', dmg: [14, 20], grade: 'common' },
-  bronze_broadsword: { name: 'Bronze Broadsword', dmg: [16, 22], grade: 'common' },
-  brass_sabre: { name: 'Brass Sabre', dmg: [13, 21], grade: 'common', innate: { speed: 0.05 } },
-  swept_rapier: { name: 'Swept Rapier', dmg: [11, 18], grade: 'common', innate: { pierce: 0.2 } },
-  wheel_greatsword: { name: 'Wheel Greatsword', dmg: [18, 24], grade: 'common' },
-  bluegrip_greatsword: { name: 'Bluegrip Greatsword', dmg: [18, 26], grade: 'common' },
-  fluked_greatsword: { name: 'Fluked Greatsword', dmg: [20, 28], grade: 'common', innate: { poise: 0.15 } },
-  greengrip_greatsword: { name: 'Greengrip Greatsword', dmg: [17, 25], grade: 'common' },
+  ringed_sword: { name: 'Ringed Sword', dmg: [14, 20], grade: 'retired' },
+  bronze_broadsword: { name: 'Bronze Broadsword', dmg: [16, 22], grade: 'retired' },
+  brass_sabre: { name: 'Brass Sabre', dmg: [13, 21], grade: 'retired', innate: { speed: 0.05 } },
+  swept_rapier: { name: 'Swept Rapier', dmg: [11, 18], grade: 'retired', innate: { pierce: 0.2 } },
+  wheel_greatsword: { name: 'Wheel Greatsword', dmg: [18, 24], grade: 'retired' },
+  bluegrip_greatsword: { name: 'Bluegrip Greatsword', dmg: [18, 26], grade: 'retired' },
+  fluked_greatsword: { name: 'Fluked Greatsword', dmg: [20, 28], grade: 'retired', innate: { poise: 0.15 } },
+  greengrip_greatsword: { name: 'Greengrip Greatsword', dmg: [17, 25], grade: 'retired' },
   greenwood_staff: { name: 'Greenwood Staff', dmg: [14, 20], grade: 'common' },
   crystal_staff: { name: 'Crystal Staff', dmg: [14, 20], grade: 'common' },
   skullhorn_staff: { name: 'Skullhorn Staff', dmg: [14, 20], grade: 'common' },
   gnarled_crook: { name: 'Gnarled Crook', dmg: [14, 20], grade: 'common' },
-  gilded_sword: { name: 'Gilded Sword', dmg: [22, 30], grade: 'high', innate: { life: 10 } },
-  crimson_sword: { name: 'Crimson Sword', dmg: [24, 34], grade: 'high', innate: { leech: 1 } },
-  thornvine_sword: { name: 'Thornvine Sword', dmg: [20, 32], grade: 'high', innate: { poise: 0.15 } },
-  frost_sword: { name: 'Frost Sword', dmg: [21, 29], grade: 'high', innate: { speed: 0.06 } },
+  gilded_sword: { name: 'Gilded Sword', dmg: [22, 30], grade: 'retired', innate: { life: 10 } },
+  crimson_sword: { name: 'Crimson Sword', dmg: [24, 34], grade: 'retired', innate: { leech: 1 } },
+  thornvine_sword: { name: 'Thornvine Sword', dmg: [20, 32], grade: 'retired', innate: { poise: 0.15 } },
+  frost_sword: { name: 'Frost Sword', dmg: [21, 29], grade: 'retired', innate: { speed: 0.06 } },
 };
-const HIGH_CHANCE = [0, 0, 0.15, 0.5, 0.8];     // by rarity, the chance a sword is one of the high ones
 // What a staff's roll comes to in a bolt, against a blade's: see STAFF_BITE in src/sim/casting.js.
 const STAFF_SHOWN = 0.76;
 
@@ -70,6 +69,29 @@ for (const suit of Object.keys(SUITS)) for (const slot of Object.keys(GEAR_SLOTS
 // A blow is cut by armor / (armor + this), so the gain tails off and nothing is ever proof.
 export const ARMOR_K = 100;
 
+// The skulls out of the catacombs, one of each model, in the left hand. Any of them can come at any rarity. tools/wizard/skulls_to_items.py.
+export const SKULLS = {
+  skull_01: { name: 'Yellowed Skull' }, skull_02: { name: 'Grave Skull' }, skull_03: { name: 'Hollow Skull' }, skull_04: { name: 'Pit Skull' },
+  skull_05: { name: 'Ashen Skull' }, skull_06: { name: 'Crypt Skull' }, skull_07: { name: "Sexton's Skull" }, skull_08: { name: 'Ossuary Skull' },
+};
+
+// What a wizard wears. A piece's id is <palette>_<shape>_<slot>, built by tools/wizard/robes.py. floor: the lowest rarity it comes as.
+export const ROBE_PALETTES = {
+  ash: { name: 'Ashen', floor: 0, ward: 1 }, moss: { name: 'Mossgrown', floor: 0, ward: 1 }, night: { name: 'Midnight', floor: 1, ward: 1.2 },
+  crimson: { name: 'Crimson', floor: 2, ward: 1.4 }, amethyst: { name: 'Amethyst', floor: 3, ward: 1.6 },
+};
+export const ROBE_SHAPES = {
+  pointed: { name: 'Pointed Hat', slot: 'head' }, wide: { name: 'Wide-Brimmed Hat', slot: 'head' }, hood: { name: 'Hood', slot: 'head' },
+  long: { name: 'Robe', slot: 'chest' }, jacket: { name: 'Jacket', slot: 'chest' }, coat: { name: 'Long Coat', slot: 'chest' },
+  mantle: { name: 'Mantle', slot: 'shoulders' }, cowl: { name: 'Cowl Cape', slot: 'shoulders' },
+  pants: { name: 'Pants', slot: 'legs' }, wraps: { name: 'Wrapped Trousers', slot: 'legs' },
+  boots: { name: 'Boots', slot: 'feet' }, curled: { name: 'Curl-Toed Boots', slot: 'feet' },
+};
+const ROBE_SLOTS = { head: { ward: 3, size: { w: 2, h: 2 } }, chest: { ward: 8, size: { w: 2, h: 3 } }, shoulders: { ward: 3, size: { w: 2, h: 2 } }, legs: { ward: 5, size: { w: 2, h: 3 } }, feet: { ward: 3, size: { w: 2, h: 3 } } };
+export const ROBES = {};
+for (const p of Object.keys(ROBE_PALETTES)) for (const [sh, d] of Object.entries(ROBE_SHAPES)) ROBES[`${p}_${sh}_${d.slot}`] = { palette: p, shape: sh, slot: d.slot, name: `${ROBE_PALETTES[p].name} ${d.name}` };
+export const robeSize = (base) => ROBE_SLOTS[ROBES[base].slot].size;
+
 export const hands = (base) => WEAPONS[weaponIndex(base)].hands;
 export const weaponIndex = (base) => WEAPONS.findIndex((w) => w && w.id === base);
 
@@ -91,15 +113,32 @@ const GEAR_AFFIXES = [
   { stat: 'speed', pos: 'suf', tiers: [['of Quick Wrists', 0.01, 0.02], ['of the Hornet', 0.025, 0.04], ['of the Swift Bell', 0.045, 0.06]] },
   { stat: 'leech', pos: 'suf', int: true, tiers: [['of Thirst', 1, 1], ['of the Red Cup', 1, 2], ['of the Long Drink', 2, 3]] },
 ];
+// What a staff or a skull can roll, and what a robe can. Everything a caster wants; each is applied in src/sim/casting.js or player.js.
+const WIZ_AFFIXES = [
+  { stat: 'power', pos: 'pre', tiers: [['Kindled', 0.06, 0.1], ['Searing', 0.11, 0.17], ['Cataclysmic', 0.18, 0.28]] },
+  { stat: 'thrift', pos: 'pre', tiers: [['Frugal', 0.04, 0.07], ['Spare', 0.08, 0.12], ['Ascetic', 0.13, 0.2]] },
+  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.1, 0.18], ['of the Spring', 0.2, 0.32], ['of the Flood', 0.35, 0.55]] },
+  { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 12, 20], ['of the Deep Well', 22, 36], ['of the Abyss', 40, 64]] },
+  { stat: 'leech', pos: 'suf', int: true, tiers: [['of Thirst', 1, 2], ['of the Red Cup', 2, 3], ['of the Long Drink', 3, 5]] },
+  { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 10, 16], ['of the Old Oak', 18, 28], ['of the Old Blood', 30, 44]] },
+];
+const ROBE_AFFIXES = [
+  { stat: 'power', pos: 'pre', tiers: [['Whispering', 0.02, 0.04], ['Chanting', 0.05, 0.07], ['Thundering', 0.08, 0.12]] },
+  { stat: 'armor', pos: 'pre', int: true, tiers: [['Quilted', 2, 4], ['Warded', 5, 8], ['Hexproof', 9, 14]] },
+  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.04, 0.07], ['of the Spring', 0.08, 0.12], ['of the Flood', 0.13, 0.2]] },
+  { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 6, 10], ['of the Deep Well', 11, 18], ['of the Abyss', 19, 30]] },
+  { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 6, 10], ['of the Old Oak', 11, 18], ['of the Old Blood', 19, 30]] },
+  { stat: 'thrift', pos: 'suf', tiers: [['of Ease', 0.02, 0.03], ['of the Long Road', 0.04, 0.05], ['of Scant Words', 0.06, 0.08]] },
+];
 const TIER_OF = [[], [0, 0, 1], [0, 1, 1, 2], [1, 1, 2], [1, 2, 2]];   // by rarity, the tiers it picks from
 
 export const GEM_GRADES = [{ name: 'Rough', weight: 70 }, { name: 'Cut', weight: 25 }, { name: 'Flawless', weight: 5 }];
 export const GEMS = {
-  ruby: { name: 'Ruby', color: '#d8362c', stat: 'dmg', values: [0.06, 0.1, 0.15] },
-  topaz: { name: 'Topaz', color: '#e2a63a', stat: 'poise', values: [0.08, 0.14, 0.22] },
+  ruby: { name: 'Ruby', color: '#d8362c', stat: 'power', values: [0.06, 0.1, 0.15] },
+  topaz: { name: 'Topaz', color: '#e2a63a', stat: 'regen', values: [0.1, 0.18, 0.28] },
   emerald: { name: 'Emerald', color: '#3fb56a', stat: 'leech', values: [1, 2, 3] },
-  sapphire: { name: 'Sapphire', color: '#3f7fe0', stat: 'stam', values: [0.06, 0.1, 0.15] },
-  amethyst: { name: 'Amethyst', color: '#a45ad6', stat: 'pierce', values: [0.1, 0.18, 0.28] },
+  sapphire: { name: 'Sapphire', color: '#3f7fe0', stat: 'mana', values: [12, 20, 32] },
+  amethyst: { name: 'Amethyst', color: '#a45ad6', stat: 'thrift', values: [0.04, 0.07, 0.11] },
   diamond: { name: 'Diamond', color: '#cfe6ee', stat: 'life', values: [10, 18, 30] },
 };
 
@@ -112,7 +151,11 @@ const STAT_TEXT = {
   life: (v) => `+${v} life`,
   stam: (v) => `-${pct(v)} stamina per swing`,
   speed: (v) => `+${pct(v)} swing speed`,
-  armor: (v) => `+${v} armour`,
+  armor: (v) => `+${v} ward`,
+  power: (v) => `+${pct(v)} spell damage`,
+  regen: (v) => `+${pct(v)} mana regeneration`,
+  mana: (v) => `+${v} mana`,
+  thrift: (v) => `-${pct(v)} mana cost`,
 };
 
 // A small seeded generator (mulberry32), so a roll can be replayed.
@@ -149,8 +192,8 @@ function rollRarity(rng, min) {
 }
 
 function rollBase(rng, rarity) {
-  const high = rng() < HIGH_CHANCE[rarity];
-  return pick(rng, Object.keys(BASES).filter((b) => BASES[b].grade === (high ? 'high' : 'common')));
+  // Tessariel carries no blade: only the staffs are ever rolled. (rarity stays in the signature for the day there are better staffs.)
+  return pick(rng, Object.keys(BASES).filter((b) => BASES[b].grade === 'common'));
 }
 
 function rollAffixes(rng, rarity, table = AFFIXES) {
@@ -180,7 +223,7 @@ export function rollWeapon(rng, opts = {}) {
   return {
     type: 'weapon', base, rarity,
     dmg: [Math.round(BASES[base].dmg[0] * q), Math.round(BASES[base].dmg[1] * q)],
-    affixes: rollAffixes(rng, rarity),
+    affixes: rollAffixes(rng, rarity, WIZ_AFFIXES),
     sockets, gems: [],
   };
 }
@@ -190,7 +233,24 @@ export function rollShield(rng, opts = {}) {
   const rolled = rollRarity(rng, opts.minRarity || 0);
   const rarity = rolled === 1 ? 0 : Math.min(rolled, 3);
   const base = opts.base || pick(rng, Object.keys(SHIELDS).filter((b) => !SHIELDS[b].side && SHIELDS[b].rarity === rarity));
-  return { type: 'shield', base, rarity: SHIELDS[base].rarity };
+  const shown = SHIELDS[base].rarity;
+  return { type: 'shield', base, rarity: shown, sockets: opts.sockets ?? +weighted(rng, RARITIES[shown].sockets), gems: [] };
+}
+
+// A skull for the left hand: the same five rarities as a staff, the same rolls, the same sockets.
+export function rollSkull(rng, opts = {}) {
+  const rarity = opts.rarity ?? rollRarity(rng, opts.minRarity || 0);
+  return { type: 'skull', base: opts.base || pick(rng, Object.keys(SKULLS)), rarity, affixes: rollAffixes(rng, rarity, WIZ_AFFIXES), sockets: opts.sockets ?? +weighted(rng, RARITIES[rarity].sockets), gems: [] };
+}
+
+// A hat, a robe, a jacket, pants... opts: base, rarity, minRarity.
+export function rollRobe(rng, opts = {}) {
+  const floor = opts.base ? ROBE_PALETTES[ROBES[opts.base].palette].floor : 0;
+  const rarity = Math.max(opts.rarity ?? rollRarity(rng, opts.minRarity || 0), floor);
+  const base = opts.base || pick(rng, Object.keys(ROBES).filter((b) => ROBE_PALETTES[ROBES[b].palette].floor <= rarity));
+  const { palette, slot } = ROBES[base];
+  const q = between(rng, RARITIES[rarity].quality[0], RARITIES[rarity].quality[1]);
+  return { type: 'robe', base, rarity, armor: Math.round(ROBE_SLOTS[slot].ward * ROBE_PALETTES[palette].ward * q), affixes: rollAffixes(rng, rarity, ROBE_AFFIXES) };
 }
 
 // A piece of armour of whatever rarity comes up, from the suits that come that rare. opts: base, rarity, minRarity, as for a sword.
@@ -210,30 +270,30 @@ export function rollGem(rng, opts = {}) {
   return { type: 'gem', kind: opts.kind || pick(rng, Object.keys(GEMS)), grade: opts.grade ?? +weighted(rng, kinds) };
 }
 
-// What a fallen enemy leaves. kind: 0 the black knight, 1 the silver knight, 2 a crab, 5 a zombie, 7 a necromancer or a wizard.
+// What a fallen enemy leaves. kind: 0 the black knight, 1 the silver knight, 2 a crab, 5 a zombie, 7 a necromancer or a wizard, 8 a champion.
 export function rollLoot(rng, kind) {
-  const piece = (chance, opts) => (rng() < chance ? [rollArmor(rng, opts)] : []);
+  const robe = (chance, opts) => (rng() < chance ? [rollRobe(rng, opts)] : []);
+  const skull = (chance, opts) => (rng() < chance ? [rollSkull(rng, opts)] : []);
   const gold = (lo, hi) => ({ type: 'gold', amount: lo + Math.floor(rng() * (hi - lo + 1)) });
   const scroll = (chance) => (rng() < chance ? [rollSpell(rng)] : []);
-  if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 }), ...piece(0.5, { minRarity: 2, plain: true }), rollSpell(rng), gold(120, 240)];
-  if (kind === 1) return [rollWeapon(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...piece(0.35, { minRarity: 1 }), gold(40, 90)];
+  if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollSkull(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 }), ...robe(0.6, { minRarity: 2 }), rollSpell(rng), gold(120, 240)];
+  if (kind === 1) return [rng() < 0.5 ? rollWeapon(rng, { minRarity: 1 }) : rollSkull(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...robe(0.4, { minRarity: 1 }), gold(40, 90)];
   // The rank and file: mostly a few coins, and every so often something to look at.
   if (kind === 5) {
     const out = rng() < 0.55 ? [gold(2, 12)] : [];
-    if (rng() < 0.11) out.push(rng() < 0.45 ? rollWeapon(rng) : rng() < 0.45 ? rollGem(rng) : rollArmor(rng, { plain: true }));
+    if (rng() < 0.11) { const r = rng(); out.push(r < 0.2 ? rollWeapon(rng) : r < 0.42 ? rollSkull(rng) : r < 0.65 ? rollGem(rng) : rollRobe(rng)); }
     return out;
   }
   // A champion always leaves something worth stopping for.
-  if (kind === 8) return [gold(25, 70), rng() < 0.65 ? rollWeapon(rng, { minRarity: rng() < 0.35 ? 2 : 1 }) : rollArmor(rng, { minRarity: rng() < 0.35 ? 2 : 1, plain: true }), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.15)];
-  if (kind === 7) return [gold(15, 45), ...(rng() < 0.5 ? [rollWeapon(rng, { minRarity: 1 })] : rng() < 0.4 ? [rollShield(rng)] : [rollGem(rng)]), ...piece(0.15, { minRarity: 1, plain: true }), ...scroll(0.3)];
-  // (A crab's nobody's. Whatever else lands here, like the undead ogre, carries nothing of Tessariel's.)
-  return [gold(8, 30), ...(rng() < 0.6 ? [rollWeapon(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...piece(0.12, { plain: kind !== 2 })];
+  if (kind === 8) { const m = { minRarity: rng() < 0.35 ? 2 : 1 }, r = rng(); return [gold(25, 70), r < 0.3 ? rollWeapon(rng, m) : r < 0.6 ? rollSkull(rng, m) : rollRobe(rng, m), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.15)]; }
+  if (kind === 7) return [gold(15, 45), ...(rng() < 0.35 ? [rollWeapon(rng, { minRarity: 1 })] : rng() < 0.5 ? [rollSkull(rng, { minRarity: 1 })] : rng() < 0.4 ? [rollShield(rng)] : [rollGem(rng)]), ...robe(0.2, { minRarity: 1 }), ...scroll(0.3)];
+  return [gold(8, 30), ...(rng() < 0.3 ? [rollWeapon(rng)] : rng() < 0.4 ? [rollSkull(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...robe(0.15)];
 }
 
 // A spell, for good, once it's read. Spells are found, not known.
 export function rollSpell(rng) { return { type: 'spell', spell: Math.floor(rng() * SPELLS.length), rarity: 2 }; }
 
-const CHEST_ARMOR = [0.2, 0.5, 0.7];
+const CHEST_ROBE = [0.25, 0.5, 0.7];
 
 // What's in a chest: tier 0 a house's, 1 the priest's, 2 what the dead keep.
 export function rollChest(rng, tier) {
@@ -241,15 +301,15 @@ export function rollChest(rng, tier) {
   const [lo, hi] = [[6, 24], [25, 60], [60, 140]][tier] || [6, 24];
   const out = [{ type: 'gold', amount: lo + Math.floor(rng() * (hi - lo + 1)) }];
   if (tier === 2) {
-    out.push(rollWeapon(rng, { minRarity: 2 }), rollGem(rng));
+    out.push(rng() < 0.5 ? rollWeapon(rng, { minRarity: 2 }) : rollSkull(rng, { minRarity: 2 }), rollGem(rng));
     if (rng() < 0.5) out.push(rollShield(rng, { minRarity: 1 }));
   } else if (tier === 1) {
-    out.push(rng() < 0.5 ? rollWeapon(rng, { minRarity: 1 }) : rollGem(rng));
+    const r = rng();
+    out.push(r < 0.3 ? rollWeapon(rng, { minRarity: 1 }) : r < 0.6 ? rollSkull(rng, { minRarity: 1 }) : rollGem(rng));
     if (rng() < 0.25) out.push(rollShield(rng));
   } else if (rng() < 0.35) out.push(rollGem(rng));
-  else if (rng() < 0.3) out.push(rollWeapon(rng));
-  // A piece of armour, now and then. (The priest's and the dead's are under Velscour's church: nothing of Tessariel's. See CLAUDE.md.)
-  if (rng() < CHEST_ARMOR[tier]) out.push(rollArmor(rng, { minRarity: tier, plain: tier > 0 }));
+  else if (rng() < 0.3) out.push(rng() < 0.5 ? rollWeapon(rng) : rollSkull(rng));
+  if (rng() < CHEST_ROBE[tier]) out.push(rollRobe(rng, { minRarity: tier }));
   if (rng() < [0.15, 0.5, 1][tier]) out.push(rollSpell(rng));
   return out;
 }
@@ -264,7 +324,7 @@ export function nameOf(item) {
     return [pre?.name, GEAR[item.base].name, suf?.name].filter(Boolean).join(' ');
   }
   const pre = item.affixes.find((a) => a.pos === 'pre'), suf = item.affixes.find((a) => a.pos === 'suf');
-  return [pre?.name, BASES[item.base].name, suf?.name].filter(Boolean).join(' ');
+  return [pre?.name, (item.type === 'skull' ? SKULLS[item.base] : item.type === 'robe' ? ROBES[item.base] : BASES[item.base]).name, suf?.name].filter(Boolean).join(' ');
 }
 
 export const colorOf = (item) => (item.type === 'gold' ? '#e8c15a' : item.type === 'gem' ? GEMS[item.kind].color : RARITIES[item.rarity].color);
@@ -274,64 +334,70 @@ export function gemLine(gem) {
   return STAT_TEXT[g.stat](g.values[gem.grade]);
 }
 
-// All a weapon comes to, with its affixes and whatever is in its sockets.
+const SOCKET_LINES = (item, out) => {
+  for (let i = 0; i < (item.sockets || 0); i++) {
+    const g = item.gems?.[i];
+    out.push(g ? { text: `${nameOf(g)}: ${gemLine(g)}`, kind: 'gem', color: GEMS[g.kind].color } : { text: 'Empty socket', kind: 'open' });
+  }
+  return out;
+};
+
+// A staff's damage, with what's in its sockets and on its words counted by gearTotals.
 export function statsOf(item) {
-  const add = { dmg: 0, pierce: 0, poise: 0, stam: 0, speed: 0, leech: 0, life: 0 };
-  for (const [k, v] of Object.entries(BASES[item.base].innate || {})) add[k] += v;
-  for (const a of item.affixes) add[a.stat] += a.value;
-  for (const g of item.gems) add[GEMS[g.kind].stat] += GEMS[g.kind].values[g.grade];
-  return {
-    min: Math.round(item.dmg[0] * (1 + add.dmg)), max: Math.round(item.dmg[1] * (1 + add.dmg)),
-    pierce: add.pierce, poise: add.poise, stam: Math.min(add.stam, 0.5), speed: Math.min(add.speed, 0.25), leech: add.leech, life: add.life,
-  };
+  return { min: item.dmg?.[0] ?? 0, max: item.dmg?.[1] ?? 0 };
 }
 
 // The lines of a tooltip, in order: { text, kind } with kind one of title, sub, stat, gem, open.
 export function linesOf(item) {
   if (item.type === 'gem') {
-    return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: 'Goes in an open socket, and stays there.', kind: 'sub' }];
+    return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: GEM_LOOK[item.kind], kind: 'sub' }, { text: 'Goes in an open socket on a staff, a skull or a shield, and stays there.', kind: 'sub' }];
   }
-  if (item.type === 'shield') return [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} kite shield`, kind: 'sub' }, { text: 'Hold Space as you jump to ride it.', kind: 'sub' }];
-  if (item.type === 'armor') {
-    const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} ${GEAR_SLOTS[GEAR[item.base].slot].name.toLowerCase()}`, kind: 'sub' }, { text: `Armour ${item.armor}`, kind: 'stat' }];
+  if (item.type === 'shield') return SOCKET_LINES(item, [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} kite shield`, kind: 'sub' }, { text: 'Hold Space as you jump to ride it.', kind: 'sub' }, { text: 'With a skull in hand it is only for riding: its gems give no stats.', kind: 'sub' }]);
+  if (item.type === 'skull') {
+    const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} skull`, kind: 'sub' }];
+    for (const a of item.affixes) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
+    return SOCKET_LINES(item, out);
+  }
+  if (item.type === 'robe') {
+    const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} ${ROBE_SHAPES[ROBES[item.base].shape].name.toLowerCase()}`, kind: 'sub' }, { text: `Ward ${item.armor}`, kind: 'stat' }];
     for (const a of item.affixes) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
     return out;
   }
-  const s = statsOf(item), b = BASES[item.base], staff = hands(item.base) === 3;
-  const out = [
-    { text: nameOf(item), kind: 'title' },
-    { text: `${RARITIES[item.rarity].name} ${hands(item.base) === 3 ? 'staff' : `${hands(item.base) === 2 ? 'two-handed' : 'one-handed'} sword`}`, kind: 'sub' },
-    { text: staff ? `Damage ${Math.round(s.min * STAFF_SHOWN)} to ${Math.round(s.max * STAFF_SHOWN)}` : `Damage ${s.min} to ${s.max}`, kind: 'stat' },
-  ];
-  // What it was made with and what it rolled, a line a stat. The gems speak for themselves below.
-  const rolled = new Map(Object.entries(b.innate || {}));
-  for (const a of item.affixes) rolled.set(a.stat, (rolled.get(a.stat) || 0) + a.value);
-  for (const [k, v] of rolled) out.push({ text: STAT_TEXT[k](v), kind: 'stat' });
-  for (let i = 0; i < item.sockets; i++) {
-    const g = item.gems[i];
-    out.push(g ? { text: `${nameOf(g)}: ${gemLine(g)}`, kind: 'gem', color: GEMS[g.kind].color } : { text: 'Empty socket', kind: 'open' });
-  }
-  return out;
+  const s = statsOf(item);
+  const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} staff`, kind: 'sub' }, { text: `Bolt damage ${Math.round(s.min * STAFF_SHOWN)} to ${Math.round(s.max * STAFF_SHOWN)}`, kind: 'stat' }];
+  for (const a of item.affixes) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
+  return SOCKET_LINES(item, out);
 }
 
-// All that what's worn comes to.
+// What each gem looks like on what it's set in, for its tooltip. src/gfx/gemfx.js does it.
+const GEM_LOOK = {
+  ruby: 'Sheds rising embers and a warm, flickering light.', topaz: 'Crackles with sparks, and strobes like a storm far off.', emerald: 'Breathes out a slow green mist.',
+  sapphire: 'Falls in snow, with a cold steady light.', amethyst: 'Draws dark motes in out of the air.', diamond: 'Throws prisms that turn through every colour.',
+};
+
+// All that what's worn and held comes to. A shield counts for nothing while there's a skull in hand: it's only there to ride.
 export function gearTotals(slots) {
-  const add = { armor: 0, life: 0, stam: 0, speed: 0, leech: 0 };
-  for (const it of Object.values(slots)) {
-    if (it?.type !== 'armor') continue;
-    add.armor += it.armor;
-    for (const a of it.affixes) add[a.stat] += a.value;
+  const add = { armor: 0, life: 0, power: 0, regen: 0, mana: 0, thrift: 0, leech: 0 };
+  const skull = slots.skull;
+  for (const [slot, it] of Object.entries(slots)) {
+    if (!it || (slot === 'off' && skull)) continue;
+    if (it.type === 'robe') add.armor += it.armor;
+    for (const a of it.affixes || []) if (a.stat in add) add[a.stat] += a.value;
+    for (const g of it.gems || []) if (GEMS[g.kind].stat in add) add[GEMS[g.kind].stat] += GEMS[g.kind].values[g.grade];
   }
   return add;
 }
 
-// Puts a weapon, or empty hands, and what's worn, in the shared block for the sim thread to take up.
-export function writeWeapon(input, item, worn = gearTotals({})) {
+// Puts the staff, or empty hands, what's worn and what the level comes to, in the shared block for the sim thread to take up.
+export function writeWeapon(input, item, worn = gearTotals({}), lv = { power: 1, life: 0, mana: 0, regen: 1 }) {
   const s = item ? statsOf(item) : null;
   input[INPUT.WEAPON] = item ? weaponIndex(item.base) : 0;
   input[INPUT.W_MIN] = s ? s.min : 0; input[INPUT.W_MAX] = s ? s.max : 0;
-  input[INPUT.W_PIERCE] = s ? s.pierce : 0; input[INPUT.W_POISE] = s ? s.poise : 0;
-  input[INPUT.W_STAM] = Math.min((s ? s.stam : 0) + worn.stam, 0.5); input[INPUT.W_SPEED] = Math.min((s ? s.speed : 0) + worn.speed, 0.25);
-  input[INPUT.W_LEECH] = (s ? s.leech : 0) + worn.leech; input[INPUT.W_LIFE] = (s ? s.life : 0) + worn.life;
+  input[INPUT.W_PIERCE] = 0; input[INPUT.W_POISE] = 0; input[INPUT.W_STAM] = 0; input[INPUT.W_SPEED] = 0;
+  input[INPUT.W_LEECH] = worn.leech; input[INPUT.W_LIFE] = worn.life + lv.life;
   input[INPUT.ARMOR] = worn.armor;
+  input[INPUT.POWER] = (1 + worn.power) * lv.power;
+  input[INPUT.MANA_MAX] = worn.mana + lv.mana;
+  input[INPUT.REGEN] = (1 + worn.regen) * lv.regen;
+  input[INPUT.THRIFT] = Math.min(worn.thrift, 0.5);
 }

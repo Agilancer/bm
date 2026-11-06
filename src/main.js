@@ -8,7 +8,9 @@ import { Clock } from './clock.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
 import { Drops, boardPose } from './items/drops.js';
-import { GEAR, SHIELDS, colorOf, gearTotals, nameOf, rollArmor, rollGem, rollShield, rollWeapon, makeRng, writeWeapon } from './items/items.js';
+import { ROBES, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
+import { levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
+import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { Chests } from './items/chests.js';
@@ -245,14 +247,37 @@ async function boot(plan, poolSize) {
   game = new GameView(renderer, shared, input, audio, hud, gpu, simWorker, buffer);
   const pack = new Pack();
   pack.load(null);
+  game.gemFx = new GemFx(renderer);
+  const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
   const arm = () => {
-    writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots));
-    renderer.gauntlets = pack.slots.hands ? GEAR[pack.slots.hands.base].suit : null;
-    const off = pack.slots.off;
+    writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots), levelPerks(pack.level));
+    // (Bare hands: the gauntlet code is still in the renderer, nothing asks for it.)
+    renderer.gauntlets = null;
+    const off = pack.slots.off, skull = pack.slots.skull;
     shared.input[INPUT.SHIELD] = off ? 1 : 0;
-    $('bWide').textContent = off && (WEAPONS.find((w) => w?.id === pack.slots.main?.base)?.hands || 1) !== 2 ? 'GUARD' : 'WIDE';
-    renderer.offHand = off ? off.base : null;
-    renderer.board.sword = renderer.offHand;
+    shared.input[INPUT.SKULL] = skull ? 1 : 0;
+    $('bWide').textContent = off && !skull ? 'GUARD' : 'CAST';
+    renderer.offHand = off && !skull ? off.base : null;
+    renderer.board.sword = off ? off.base : null;
+    renderer.skull = skull ? skull.base : null;
+    renderer.board.glow = off?.gems?.length ? GEM_COLOR(off.gems[0]) : null;
+    showLevel();
+  };
+  const showLevel = () => {
+    $('levelNum').textContent = `Level ${pack.level}`;
+    const lo = xpFor(pack.level), hi = xpFor(pack.level + 1);
+    $('xpBar').firstElementChild.style.width = `${Math.min(100, (pack.xp - lo) / (hi - lo) * 100)}%`;
+  };
+  // A kill's worth of experience, and whatever that buys. The sim only says something died.
+  game.gainXp = (kind) => {
+    if (!stepXp(pack, XP_OF[kind | 0] ?? 10)) { showLevel(); return; }
+    arm();
+    // A new level fills you up, as it should.
+    shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999;
+    const snap = game.currentSnap();
+    for (const e of [4, 5, 10]) renderer.emit(16 + e, 90, snap[H.PX], snap[H.PY] + 1, snap[H.PZ], 0, 1, 0, 1.6, 1, 5, 0.012, 0.03, 0.5, 1.4);
+    audio.play('draw', null, 0, 0, 1, 0.6, false);
+    hud.tip(`Level ${pack.level}. Your spells bite harder, and your well runs deeper.`, 4);
   };
   arm();
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
@@ -282,7 +307,7 @@ async function boot(plan, poolSize) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    if (fresh) { hud.intro(!!pack.slots.main); hud.tip('X swaps sword and staff. The town is safe ground: the woods are not.', 7); }
+    if (fresh) { hud.intro(!!pack.slots.main); hud.tip('Spells are all you have. Hold Space as you jump to ride your shield. The town is safe ground: the woods are not.', 7); }
   };
 
   // ---- saving, loading and the menus ---------------------------------------------------------------------------------
@@ -440,12 +465,6 @@ async function boot(plan, poolSize) {
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat) return;
-    // Sword to staff and back, with no menu, mid-fight.
-    if (e.code === 'KeyX' && !input.menu && pack.slots.main) {
-      const staff = (it) => (WEAPONS.find((w) => w?.id === it.base)?.hands || 1) === 3;
-      const held = pack.slots.main, other = pack.entries.find((en) => en.item.type === 'weapon' && staff(en.item) !== staff(held));
-      if (other) { pack.slots.main = other.item; other.item = held; arm(); }
-    }
     if (e.code === 'KeyI') { if (inventory.open) closePack(false); else if (!state.paused) openPack(); }
     if (e.code === 'KeyB') { if (bookOpen) closeBook(); else if (!state.paused) openBook(); }
     if (e.code === 'Escape' && bookOpen) closeBook(true);
@@ -461,8 +480,8 @@ async function boot(plan, poolSize) {
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> swings, <b>WIDE</b> swings wide, or with a shield on, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to cast it, hold it to keep casting, and <b>B</b> beside them changes them. <b>PACK</b> holds your swords.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> cut &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up, or a wide swing with no shield &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take, open or shut';
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to cast it, hold it to keep casting, and <b>B</b> beside them changes them. <b>PACK</b> holds your gear.'
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take, open or shut';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
@@ -504,7 +523,7 @@ class Hud {
   }
 
   intro(armed) {
-    this.tip(armed ? 'The dead are walking out in the fields. Cut them apart.' : `Your hands are empty. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 7);
+    this.tip(armed ? 'The dead are walking out in the fields. Burn them from afar.' : `Your hands are empty. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 7);
   }
 
   // Each lesson once, at the moment it means something.
@@ -664,6 +683,7 @@ class GameView {
       if (g.coins) this.pack.gold += g.item.amount;
       else this.shared.input[g.item.kind === 'life' ? INPUT.HEAL : INPUT.MANA_UP] += g.item.kind === 'life' ? 32 : 40;
     };
+    if (this.pack && this.input.enabled) this.gemFx?.step(dt, snap, this.cam, this.pack);
     this.nearDrop = this.input.enabled && !this.input.menu ? this.drops.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ]) : null;
     const d = this.nearDrop;
     const ch = this.chests.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
@@ -1081,9 +1101,9 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
-      case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 3); break;
+      case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
         // A throat with nothing behind it: a low drone under a wet rasp. d is how big the chest is.
         au.gore(a, b, c, 0.5 + 0.5 * d, 0.7 + 0.5 * d, (150 + Math.random() * 90) / (0.6 + 0.4 * d));
@@ -1130,14 +1150,14 @@ class GameView {
       // bm.give('frost_sword', { rarity: 3, sockets: 4 }) or bm.give('gem', { kind: 'ruby', grade: 2 }), into the pack.
       give: (base, opts = {}) => {
         const rng = makeRng((Math.random() * 4294967296) >>> 0);
-        const item = base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base }) : GEAR[base] ? rollArmor(rng, { base, ...opts }) : rollWeapon(rng, { base, ...opts });
+        const item = base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base, ...opts }) : SKULLS[base] ? rollSkull(rng, { base, ...opts }) : ROBES[base] ? rollRobe(rng, { base, ...opts }) : rollWeapon(rng, { base, ...opts });
         return view.pack.add(item) ? item : null;
       },
       // Lays one on the ground beside the player: bm.lay('fluked_greatsword', { rarity: 2 }).
       lay: (base, opts = {}) => {
         const rng = makeRng((Math.random() * 4294967296) >>> 0);
         const s = view.currentSnap();
-        view.drops.fromPlayer(base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base }) : GEAR[base] ? rollArmor(rng, { base, ...opts }) : rollWeapon(rng, { base, ...opts }), s[H.PX], s[H.PY], s[H.PZ], view.input.yaw);
+        view.drops.fromPlayer(base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base, ...opts }) : SKULLS[base] ? rollSkull(rng, { base, ...opts }) : ROBES[base] ? rollRobe(rng, { base, ...opts }) : rollWeapon(rng, { base, ...opts }), s[H.PX], s[H.PY], s[H.PZ], view.input.yaw);
       },
       snap: () => view.currentSnap(),
       cmd,

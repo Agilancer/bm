@@ -11,7 +11,7 @@ const TIP = { 1: 0.5, 2: 0.7, 3: -0.5 };   // how far along its length a sword's
 const HOVER = 0.62;                        // the height of a thing's middle over the ground
 const SPIN = 0.9;                          // radians a second
 const BOB = 0.035;
-const SCALE = { weapon: 0.5, shield: 0.55, armor: 0.72 };  // of the model. A suit's piece comes half a metre long: tools/gear/atlas.py
+const SCALE = { weapon: 0.5, shield: 0.55, armor: 0.72, robe: 0.8, skull: 1.5 };  // of the model. A suit's piece comes half a metre long: tools/gear/atlas.py
 const BOARD_LIFT = 0.09;                   // a ridden shield's face stands this far off its grip
 
 function groundNormal(x, z) {

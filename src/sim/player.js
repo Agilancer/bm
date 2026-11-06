@@ -120,7 +120,7 @@ export class Player {
     this.pierce = input[INPUT.W_PIERCE]; this.poise = input[INPUT.W_POISE];
     this.stamSave = input[INPUT.W_STAM]; this.speed = input[INPUT.W_SPEED]; this.leech = input[INPUT.W_LEECH];
     this.armor = input[INPUT.ARMOR];
-    this.hasShield = input[INPUT.SHIELD] > 0.5; this.blockHeld = input[INPUT.BLOCK] > 0.5;
+    this.hasSkull = input[INPUT.SKULL] > 0.5; this.hasShield = input[INPUT.SHIELD] > 0.5; this.blockHeld = input[INPUT.BLOCK] > 0.5;
     const maxHp = BASE_HP + input[INPUT.W_LIFE];
     if (maxHp !== this.maxHp && !this.dead) { this.hp = clamp(this.hp + maxHp - this.maxHp, 1, maxHp); this.maxHp = maxHp; }
   }
@@ -404,9 +404,10 @@ export class Player {
   // On the shield your arms ride still and your left hand's shut on nothing. (A staff's arms have no left hand: they give way to the others, as they do to guard.)
   poseForSurf() {
     this.surfPose = this.surfing;
-    this.rigs[1].leftFist = this.surfing;
+    this.rigs[1].leftFist = this.surfing; // (the staff rig has no left hand: a skull is drawn on its own)
     if (this.surfing) {
-      this.staffSurf = this.stance === STANCES[3];
+      // (With a skull in hand the left arm is the skull's own, so the staff's rig stays up.)
+      this.staffSurf = this.stance === STANCES[3] && !this.hasSkull;
       if (this.staffSurf) { this.stance = STANCES[1]; this.arms = this.rigs[1]; }
       this.staffGuard = false; this.guard = 0;
       if (!this.staffSurf) this.arms.capture();
@@ -454,7 +455,7 @@ export class Player {
       if (this.comboT <= 0) this.combo = 0;
     }
     // The right button with a shield on the arm brings it up, at once: out of a wind-up or a follow-through, though not through a blow that's landing.
-    if (this.queued === 'R' && this.hasShield && (this.stance === STANCES[1] || this.stance === STANCES[3]) && !this.guard) {
+    if (this.queued === 'R' && this.hasShield && !this.hasSkull && (this.stance === STANCES[1] || this.stance === STANCES[3]) && !this.guard) {
       if (this.winded || this.surfing || this.stamina <= 6) this.queued = null;
       else if (!this.swinging && !sim.casting.busy && !this.surfing) { this.startGuard(sim); return; }
     }
