@@ -38,7 +38,9 @@ const MOODS = {
   sleepy: { open: 0.2, size: 0.9, tilt: -0.1, glow: 0.45, hue: 0, shake: 0, roam: 0.1, hold: [3, 6], blink: [2, 4], rate: 0.25, droop: 0.007 },
 };
 const KEYS = ['open', 'size', 'tilt', 'glow', 'hue', 'shake', 'rate', 'droop'];
-const MAX = 96, SPECKS = 22, STRIDE = 12;
+const MAX = 170, SPECKS = 22, STRIDE = 12, AURA = 64;
+const CENTRE = [-0.483, -0.159, -0.783];     // the skull's middle: SKULL_AT
+const GEM_LIGHT = { ruby: [1, 0.15, 0.12], topaz: [1, 0.62, 0.15], emerald: [0.15, 1, 0.45], sapphire: [0.2, 0.45, 1], amethyst: [0.75, 0.3, 1], diamond: [0.9, 0.97, 1] };
 const between = (a, b) => a + (b - a) * Math.random();
 
 export class SkullEyes {
@@ -65,6 +67,86 @@ export class SkullEyes {
     this.specks = [0, 1].map(() => Array.from({ length: SPECKS }, () => ({ age: 1, life: 0 })));
     this.emit = [0, 0];
     this.sparks = Array.from({ length: 16 }, () => ({ age: 1, life: 0 }));
+    this.looks = LOOKS; this.skin = null; this.spots = null;
+    this.auraBuf = device.createBuffer({ size: AURA * STRIDE * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+    this.auraData = new Float32Array(AURA * STRIDE);
+    this.auraN = 0;
+    this.motes = Array.from({ length: 36 }, () => ({ age: 1, life: 0 }));
+  }
+
+  // What the skull is: its eyes, from epic up, and the gems to set glinting.
+  setSkin(skin, spots) {
+    this.spots = spots;
+    if (skin === this.skin) return;
+    this.skin = skin;
+    this.looks = skin.eyes ? skin.eyes.map((c) => ({ iris: c, core: c.map((v) => v + (1 - v) * 0.75), speck: c })) : LOOKS;
+  }
+
+  // Past the world's own pass, so what rises off a legendary or goes round a mythical can leave the skull's edge.
+  makeAura(compile, bgl0, format, inWorld) {
+    const module = compile(WGSL);
+    this.pAura = this.device.createRenderPipeline({
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [bgl0] }),
+      vertex: { module, entryPoint: 'vs', buffers: [{ arrayStride: STRIDE * 4, stepMode: 'instance', attributes: [0, 1, 2].map((l) => ({ shaderLocation: l, offset: l * 16, format: 'float32x4' })) }] },
+      fragment: { module, entryPoint: 'fs', targets: [{ format, blend: { color: { srcFactor: 'one', dstFactor: 'one' }, alpha: { srcFactor: 'zero', dstFactor: 'one' } } }] },
+      primitive: { topology: 'triangle-strip' }, ...inWorld,
+    });
+  }
+
+  drawAura(pass) {
+    if (!this.auraN || !this.pAura) return;
+    pass.setPipeline(this.pAura);
+    pass.setVertexBuffer(0, this.auraBuf);
+    pass.draw(4, this.auraN);
+  }
+
+  // The skull's glow colour, turning through the spectrum if it's the kind to.
+  tone(u) {
+    const s = this.skin, c = s.eyes?.[0] || s.glow;
+    if (!s.cycle) return c;
+    return [0.55 + 0.45 * Math.cos(u), 0.55 + 0.45 * Math.cos(u + 2.09), 0.55 + 0.45 * Math.cos(u + 4.19)];
+  }
+
+  // Sparkle off the gems, and what rises or turns around a legendary or a mythical.
+  extras(dt, sway, ox, oy) {
+    const d = this.data, t = this.t;
+    const raw = (D, n, x, y, z, sx, sy, rot, k, c, a) => {
+      const o = n * STRIDE;
+      D[o] = sway[0] * x + sway[4] * y + sway[8] * z + sway[12]; D[o + 1] = sway[1] * x + sway[5] * y + sway[9] * z + sway[13]; D[o + 2] = sway[2] * x + sway[6] * y + sway[10] * z + sway[14];
+      D[o + 3] = sx; D[o + 4] = sy; D[o + 5] = rot; D[o + 6] = k; D[o + 7] = 0; D[o + 8] = c[0]; D[o + 9] = c[1]; D[o + 10] = c[2]; D[o + 11] = a;
+    };
+    for (const g of this.spots || []) {
+      if (this.n + 3 > MAX) break;
+      const c = GEM_LIGHT[g.kind] || GEM_LIGHT.diamond, x = g.x + ox, y = g.y + oy;
+      raw(d, this.n++, x, y, g.z, g.size * 1.5, g.size * 1.5, 0, 1.6, c, 0.5 + 0.12 * Math.sin(t * 2 + g.phase));
+      // A star, every so often, turning a little as it goes.
+      const star = Math.pow(Math.max(Math.sin(t * 1.3 + g.phase * 2.3), 0), 26) * 9;
+      if (star > 0.05) {
+        raw(d, this.n++, x, y, g.z, 0.024, 0.0014, 0.5 + t * 0.2, 1, [1, 1, 1], star);
+        raw(d, this.n++, x, y, g.z, 0.0014, 0.024, 0.5 + t * 0.2, 1, [1, 1, 1], star);
+      }
+    }
+    this.auraN = 0;
+    const aura = this.skin?.aura;
+    if (!aura) return;
+    const [cx, cy, cz] = CENTRE;
+    for (const m of this.motes) {
+      if (m.age >= m.life) {
+        const a = Math.random() * Math.PI * 2;
+        Object.assign(m, { age: 0, life: between(0.9, 2.2), x: Math.cos(a) * between(0.1, 0.15), y: Math.sin(a) * between(0.05, 0.15), v: between(0.05, 0.13), size: between(0.0018, 0.0048), ph: Math.random() * 7 });
+      }
+      m.age += dt; m.y += m.v * dt; m.x += Math.sin(t * 2 + m.ph) * 0.012 * dt;
+      raw(this.auraData, this.auraN++, cx + ox + m.x, cy + oy + m.y, cz, m.size, m.size, 0, 1.3, this.tone(t + m.ph), 3.2 * Math.sin(Math.min(m.age / m.life, 1) * Math.PI));
+    }
+    if (aura === 2) {
+      // A crown of light, turning above the brow, and a hazy ring under it.
+      for (let i = 0; i < 18; i++) {
+        const a = t * 0.9 + i / 18 * Math.PI * 2, s = Math.sin(a), near = Math.cos(a);
+        const x = cx + ox + s * 0.135, y = cy + oy + 0.125 + near * 0.018 + Math.sin(t * 2 + i) * 0.002, z = cz + near * 0.05;
+        raw(this.auraData, this.auraN++, x, y, z, 0.0048, 0.0048, 0, 1.2, this.tone(a * 2 + t * 0.5), 3.4 + near * 1.6);
+      }
+      raw(this.auraData, this.auraN++, cx + ox, cy + oy + 0.125, cz, 0.17, 0.035, 0, 2.2, this.tone(t * 0.5), 0.42);
+    }
   }
 
   // Something happened: this mood, for this long.
@@ -136,7 +218,7 @@ export class SkullEyes {
     const breathe = 0.92 + 0.08 * Math.sin(this.t * 1.7), ox = breath[4] * 2, oy = breath[5] * 2;
     this.n = 0;
     SEATS.forEach((seat, e) => {
-      const look = LOOKS[e], side = e ? 1 : -1;
+      const look = this.looks[e], side = e ? 1 : -1;
       // Mix the mood's colour in; a curious one raises a brow.
       const hue = now.hue > 0 ? RAGE : PALE, h = Math.min(1, Math.abs(now.hue));
       const iris = look.iris.map((v, i) => v + (hue[i] - v) * h);
@@ -187,7 +269,7 @@ export class SkullEyes {
     for (const s of this.sparks) {
       if (s.age >= s.life) continue;
       s.age += dt; s.x += s.vx * dt; s.y += s.vy * dt;
-      const seat = SEATS[s.eye], hue = now.hue > 0 ? RAGE : LOOKS[s.eye].core, px = seat[0] + ox + s.x, py = seat[1] + oy + s.y, d = this.data;
+      const seat = SEATS[s.eye], hue = now.hue > 0 ? RAGE : this.looks[s.eye].core, px = seat[0] + ox + s.x, py = seat[1] + oy + s.y, d = this.data;
       if (this.n >= MAX) break;
       const o = this.n++ * STRIDE;
       d[o] = sway[0] * px + sway[4] * py + sway[8] * seat[2] + sway[12];
@@ -196,6 +278,8 @@ export class SkullEyes {
       d[o + 3] = 0.0016; d[o + 4] = 0.0016; d[o + 5] = 0; d[o + 6] = 1; d[o + 7] = 0;
       d[o + 8] = hue[0]; d[o + 9] = hue[1]; d[o + 10] = hue[2]; d[o + 11] = 7 * (1 - s.age / s.life);
     }
+    this.extras(dt, sway, ox, oy);
+    if (this.auraN) this.device.queue.writeBuffer(this.auraBuf, 0, this.auraData, 0, this.auraN * STRIDE);
     this.device.queue.writeBuffer(this.buf, 0, this.data, 0, this.n * STRIDE);
   }
 

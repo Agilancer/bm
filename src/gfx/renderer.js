@@ -8,11 +8,13 @@ import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHA
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { SkullEyes } from './skulleyes.js';
+import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
+import { PATTERNS, SKINS } from '../items/skins.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
-import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
+import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { buildGlowPipeline, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
@@ -625,12 +627,15 @@ export class Renderer {
     s.tip = prim.pos.reduce((best, v, i) => (i % 3 === 1 ? Math.max(best, v) : best), 0);
     // (A piece of a suit is only ever seen on the ground, or in a slot. So is a skull, for now: the arm in the left hand has its own, fused to it.)
     if (GEAR[id] || ROBES[id] || SKULLS[id]) { s.ready = true; return; }
+    // (The gems for the skull: kept to cut up as each skull wants them. See skullGems.)
+    if (id === 'skull_gems') { Object.assign(s, { prim, alb, nrm, mr, ready: true }); return; }
     // The arm that holds the skull, one mesh with it, and the others like it are rigid, already in the view's own space (tools/wizard/skull_arm.py), so one joint that never moves.
     if (id === 'skull_arm' || id === 'surf_arm' || id === 'shield_arm') {
       this.onWeaponJoint(prim, 0, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
       s.hand = this.makeSkinned([prim], 1);
       device.queue.writeBuffer(s.hand.palette, 0, new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
-      s.ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+      s.skinned = id === 'skull_arm';
+      s.ubo = device.createBuffer({ size: s.skinned ? 144 : 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
         { binding: 0, resource: { buffer: s.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
       ] });
@@ -1031,6 +1036,14 @@ export class Renderer {
       depthStencil: depth(), multisample: ms,
     });
     this.skullEyes = new SkullEyes(device, this.bgl0, targets, DEPTH, this.msaa, module);
+    const vmSkullMod = module(VIEWMODEL_SKULL);
+    this.pVMSkull = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArmor),
+      vertex: { module: vmSkullMod, entryPoint: 'vs', buffers: vmVB },
+      fragment: { module: vmSkullMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: depth(), multisample: ms,
+    });
     const itemMod = module(ITEM);
     const propMod = module(PROP);
     this.propVB = [
@@ -1197,6 +1210,7 @@ export class Renderer {
       primitive: { topology: 'triangle-strip' },
       ...inWorld('always'),
     });
+    this.skullEyes.makeAura((code) => this.shader(code), this.bgl0, this.gpu.hdrFormat, inWorld('always'));
     this.trailVB = device.createBuffer({ size: 128 * 16, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.trailData = new Float32Array(128 * 4);
     this.trailCount = 0;
@@ -1563,6 +1577,53 @@ export class Renderer {
     }
   }
 
+  // The gems on the skull in the left hand, in its own pattern: one mesh, made when what's on it changes. An empty socket is a small black stone.
+  skullGems() {
+    const it = this.skullItem, src = this.sword('skull_gems');
+    if (!it || !src.ready) return null;
+    const spots = PATTERNS[it.pattern] || [], gems = it.gems || [];
+    const key = `${it.pattern}:${gems.map((g) => `${g.kind}${g.grade}`).join()}`;
+    const cache = this.gemMeshes || (this.gemMeshes = new Map());
+    if (cache.has(key)) return cache.get(key);
+    const { prim, alb, nrm, mr } = src, device = this.device, out = [];
+    let verts = 0, tris = 0;
+    spots.forEach((name, i) => {
+      const cut = GEM_CUTS[gems[i]?.kind || 'empty'];
+      out.push({ name, cut, gem: gems[i] }); verts += cut.v[1]; tris += cut.i[1];
+    });
+    const pos = new Float32Array(verts * 3), nr = new Float32Array(verts * 3), uv = new Float32Array(verts * 2), idx = new Uint32Array(tris);
+    const gemSpots = [];
+    let vAt = 0, iAt = 0;
+    for (const { name, cut, gem } of out) {
+      const A = SKULL_ANCHORS[name], size = gem ? 0.0118 + gem.grade * 0.0011 : 0.0085;
+      const zx = A[3], zy = A[4], zz = A[5];
+      let xx = zz, xz = -zx, xl = Math.hypot(xx, xz) || 1; xx /= xl; xz /= xl;
+      const yx = zy * xz, yy = zz * xx - zx * xz, yz = -zy * xx;
+      const [v0, vn] = cut.v, [i0, inn] = cut.i;
+      const cx = A[0] + zx * 0.0035, cy = A[1] + zy * 0.0035, cz = A[2] + zz * 0.0035;
+      for (let v = 0; v < vn; v++) {
+        const a = prim.pos[(v0 + v) * 3], b = prim.pos[(v0 + v) * 3 + 1], c = prim.pos[(v0 + v) * 3 + 2];
+        const na = prim.nrm[(v0 + v) * 3], nb = prim.nrm[(v0 + v) * 3 + 1], nc = prim.nrm[(v0 + v) * 3 + 2], o = (vAt + v) * 3;
+        pos[o] = cx + (xx * a + yx * b + zx * c) * size; pos[o + 1] = cy + (yy * b + zy * c) * size; pos[o + 2] = cz + (xz * a + yz * b + zz * c) * size;
+        nr[o] = xx * na + yx * nb + zx * nc; nr[o + 1] = yy * nb + zy * nc; nr[o + 2] = xz * na + yz * nb + zz * nc;
+        uv[(vAt + v) * 2] = prim.uv[(v0 + v) * 2]; uv[(vAt + v) * 2 + 1] = prim.uv[(v0 + v) * 2 + 1];
+      }
+      for (let k = 0; k < inn; k++) idx[iAt + k] = prim.idx[i0 + k] - v0 + vAt;
+      vAt += vn; iAt += inn;
+      if (gem) gemSpots.push({ x: A[0] + zx * 0.012, y: A[1] + zy * 0.012, z: A[2] + zz * 0.012, size, kind: gem.kind, phase: gemSpots.length * 1.9 });
+    }
+    const made = { pos, nrm: nr, uv, idx };
+    this.onWeaponJoint(made, 0, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    const h = { hand: this.makeSkinned([made], 1), gemSpots };
+    device.queue.writeBuffer(h.hand.palette, 0, new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
+    h.ubo = device.createBuffer({ size: 144, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    h.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
+      { binding: 0, resource: { buffer: h.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
+    ] });
+    cache.set(key, h);
+    return h;
+  }
+
   frame(cam, snap, vmSway, dt) {
     const { device, tier } = this;
     this.resize();
@@ -1615,7 +1676,11 @@ export class Renderer {
     const surfArm = snap[H.SURF_ARM];
     if (this.skull && this.vm === this.vms[3] && surfArm < 1) {
       const arm = this.sword('skull_arm');     // (Whichever skull it is, for now.)
-      if (arm.ready) { this.skullParts.push(arm); this.eyesOn = true; }
+      if (arm.ready) {
+        this.skullParts.push(arm); this.eyesOn = true;
+        const gems = this.skullGems();
+        if (gems) this.skullParts.push(gems);
+      }
     }
     // The surfing hand: rigid, from SURFING.glb, up once the shield's on the ground.
     this.surfHand = null;
@@ -1675,7 +1740,19 @@ export class Renderer {
       vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.surfHand ? -1 : -0.5;   // (Less on the skull's arm: so much pale bone lights up the night.)
       q.writeBuffer(h.ubo, 0, vmData);
     }
-    if (this.eyesOn) this.skullEyes.update(dt, cam, snap, vmData, breath);
+    if (this.eyesOn) {
+      const it = this.skullItem, skin = SKINS[it?.skin] || SKINS.bone;
+      const sd = this.skinData || (this.skinData = new Float32Array(16));
+      sd.set(skin.a, 0); sd[3] = skin.metal; sd.set(skin.b, 4); sd[7] = skin.rough; sd.set(skin.c, 8); sd[11] = skin.fx; sd.set(skin.glow, 12); sd[15] = skin.power;
+      q.writeBuffer(this.skullParts[0].ubo, 80, sd);
+      const gems = this.skullParts[1];
+      if (gems?.gemSpots) {
+        sd[11] = -1; sd[15] = 0.3 + (it?.rarity || 0) * 0.14;
+        q.writeBuffer(gems.ubo, 80, sd);
+      }
+      this.skullEyes.setSkin(skin, gems?.gemSpots || null);
+      this.skullEyes.update(dt, cam, snap, vmData, breath);
+    }
     if (this.shieldParts.length) {
       const pal = this.shieldPal || (this.shieldPal = new Float32Array(8));
       shieldPose(pal, shieldUp, this.W / this.H);
@@ -1949,12 +2026,14 @@ export class Renderer {
         mp.drawIndexed(h.hand.indices);
       }
       if (!this.vmDown) for (const h of this.skullParts) {
+        mp.setPipeline(h === this.surfHand ? this.pVM : this.pVMSkull);
         mp.setVertexBuffer(0, h.hand.outBuf);
         mp.setVertexBuffer(1, h.hand.sideVB);
         mp.setIndexBuffer(h.hand.IB, 'uint32');
         mp.setBindGroup(1, h.bg);
         mp.drawIndexed(h.hand.indices);
       }
+      mp.setPipeline(this.pVM);
       if (this.onArm && !this.vmDown) {
         const h = this.onArm;
         mp.setVertexBuffer(0, h.hand.outBuf);
@@ -2046,6 +2125,7 @@ export class Renderer {
         mp.setVertexBuffer(0, this.trailVB);
         mp.draw(this.trailCount);
       }
+      if (this.eyesOn && !this.vmDown && !this.hideVM) { mp.setViewport(0, 0, this.W, this.H, 0.97, 1); this.skullEyes.drawAura(mp); }
     }
     mp.end();
 
@@ -2066,6 +2146,7 @@ export class Renderer {
       pp.setBindGroup(1, this.pDrawBG);
       pp.drawIndirect(this.pArgs, 0);
       this.spellfx.draw(pp);
+      if (this.eyesOn && !this.vmDown && !this.hideVM) this.skullEyes.drawAura(pp);
       if (this.trailCount >= 4 && !this.hideVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
         pp.setPipeline(this.pTrail);

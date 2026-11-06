@@ -8,6 +8,7 @@ import { Clock } from './clock.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
 import { Drops, boardPose } from './items/drops.js';
+import { settleSkull } from './items/skins.js';
 import { ROBES, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
 import { GemFx } from './gfx/gemfx.js';
@@ -261,6 +262,8 @@ async function boot(plan, poolSize) {
     renderer.board.sword = off ? off.base : null;
     if (off) renderer.sword('surf_arm');     // (Ready before the first landing.)
     renderer.skull = skull ? skull.base : null;
+    renderer.skullItem = skull ? settleSkull(skull) : null;
+    if (skull) renderer.sword('skull_gems');
     renderer.board.glow = off?.gems?.length ? GEM_COLOR(off.gems[0]) : null;
     showLevel();
   };

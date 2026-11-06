@@ -1,5 +1,6 @@
 // The pack and what's on the body. An item is lifted with a click and follows the pointer until it's set down, or dragged and let
 // go; a right-click or a double tap equips or stows. A gem set down on a sword goes in its next open socket, for good.
+import { skinFilter } from '../items/skins.js';
 import { ROBES, GEMS, colorOf, hands, linesOf, nameOf, statsOf } from '../items/items.js';
 import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
 
@@ -74,7 +75,7 @@ export class Inventory {
     if (item.type === 'shield' || item.type === 'skull' || item.type === 'robe') {
       const { w, h } = sizeOf(item);
       const dots = (item.gems || []).map((g, i) => `<i style="position:absolute;right:${4 + i * 11}%;bottom:4%;width:12%;aspect-ratio:1;border-radius:50%;background:${GEMS[g.kind].color};box-shadow:0 0 5px ${GEMS[g.kind].color}"></i>`).join('');
-      return `<div class="ico" style="position:relative;aspect-ratio:${w}/${h};background-image:url(${this.base}assets/game/items/icons/${item.base}.webp)">${dots}</div>`;
+      return `<div class="ico" style="position:relative;aspect-ratio:${w}/${h};background-image:url(${this.base}assets/game/items/icons/${item.base}.webp);${item.type === 'skull' ? `filter:${skinFilter(item)}` : ''}">${dots}</div>`;
     }
     const m = this.manifest.swords[item.base];
     const [y0, y1] = m.frame.y;
