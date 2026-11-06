@@ -1,5 +1,7 @@
 // The simulation thread. Runs the world at a fixed rate, independent of the display, and publishes
 // complete snapshots for the render thread. Nothing in here waits on the GPU or the DOM.
+import { LISANDRA_FORMS } from '../core/lisandra.js';
+import { VillageWalker } from './village-walker.js';
 import { parseGLB } from '../core/glb.js';
 import { CHARS_START, CTRL, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
@@ -23,7 +25,7 @@ const BLACK = {
 };
 const SILVER = {
   spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
-  route: [[4, 13], [11, 12], [12, -2], [6, -13], [-6, -13], [-13, -6], [-11, 12]], pauseClip: 'Idle_FoldArms_Loop',
+  route: [[-7, 13], [-7, 19], [0, 19], [0, 13]], pauseClip: 'Idle_FoldArms_Loop',
 };
 
 // Keeps to the woods north of the village. hp is how long it fights; territory is how far from spawn it minds you.
@@ -48,6 +50,7 @@ class Sim {
     this.time = 0; this.tick = 0; this.timeScale = 1; this.stopT = 0; this.slowT = 0; this.gameState = 0; this.gameT = 0;
     this.firstBloodAt = -1; this.crabWoke = false;
     this.knights = [];
+    this.villagers = [];
     this.nudgePosition = new Float32Array(3);
     this.scratch = new Float32Array(SNAP_FLOATS);
     this.snapU = new Uint32Array(this.scratch.buffer);
@@ -84,6 +87,7 @@ class Sim {
     this.player.y = this.world.height(this.player.x, this.player.z);
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
+    this.villagers.forEach((v) => v.reset());
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0; this.stopT = 0; this.timeScale = 1;
     this.reachedTown = false; this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
@@ -138,6 +142,7 @@ class Sim {
       if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
       if (!k.dead) k.looted = false;
     }
+    for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     stepFoeWorks(tdt, this);
@@ -147,11 +152,12 @@ class Sim {
     player.write(snap, this);
     this.casting.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
+    this.villagers.forEach((v, i) => v.write(snap, this.charOffset(this.knights.length + i)));
     player.sweep(snap, this);
     this.knights.forEach((k, i) => k.writeGashes(snap, this.charOffset(i), this));
     this.plan();
     snap[H.TIME] = this.time; snap[H.TICK] = this.tick;
-    snap[H.NCHARS] = this.knights.length;
+    snap[H.NCHARS] = this.knights.length + this.villagers.length;
     snap[H.GAME] = this.gameState; snap[H.GAME_T] = this.gameT;
     snap[H.TIME_SCALE] = this.timeScale * (this.slowT > 0 ? 0.25 : 1);
     snap[H.TACTIC] = this.knights[0].tactic;
@@ -179,7 +185,8 @@ class Sim {
   // Bodies don't pass through each other: plate armour shoulders the player aside, and knights too.
   separate() {
     const p = this.player;
-    for (const k of this.knights) {
+    const list = [...this.knights, ...this.villagers];
+    for (const k of list) {
       if (k.dead || k.dormant) continue;
       const P = k.bodyRadius || 0.82;
       const dx = p.x - k.x, dz = p.z - k.z, d = Math.hypot(dx, dz);
@@ -189,7 +196,6 @@ class Sim {
         this.nudgeBody(k, -dx * push * 0.2, -dz * push * 0.2, 0.4);
       }
     }
-    const list = this.knights;
     for (let i = 0; i < list.length; i++) {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i], b = list[j];
@@ -358,6 +364,9 @@ async function boot(msg) {
   sim.knights.push(new Gravehart(5, 3, new ArmsRig(heartBuf, GRAVEHART_SCALE), GRAVEHART));
   sim.knights.push(new Hydra(6, 4, new ArmsRig(hydraBuf, HYDRA_SCALE), HYDRA));
   await addUndead(sim, base);
+  for (const { asset, route } of LISANDRA_FORMS) {
+    sim.villagers.push(new VillageWalker(await fetchBuf(base + asset), route));
+  }
   sim.restartSeen = sim.input[INPUT.RESTART];
   sim.cmdSeen = sim.input[INPUT.CMD];
   // Placing the player from a save, asked for by the render thread.
