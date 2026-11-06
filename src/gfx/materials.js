@@ -996,3 +996,78 @@ fn sky(rd: vec3f, sun: vec3f) -> vec3f {
   return vec4f(c, 1.0);
 }
 `;
+
+// The held skull and its gems: VIEWMODEL with the bone's palette swap. mr.r says what's bone (tools/wizard/skull_arm.py), so the hand holding it stays a hand. See src/items/skins.js.
+const SKULL_SKIN = /* wgsl */ `
+  var emit = vec3f(0.0);
+  if (M.c.w >= 0.0) {
+    let kind = M.c.w;
+    let mask = smoothstep(0.3, 0.7, mr.r);
+    let tm = F.camPos.w;
+    let L = dot(albedo, vec3f(0.3, 0.59, 0.11));
+    let s = pow(clamp(L / 0.72, 0.0, 1.0), 1.25);
+    var col = mix(M.a.rgb, M.b.rgb, smoothstep(0.0, 0.55, s));
+    col = mix(col, M.c.rgb, smoothstep(0.55, 1.0, s));
+    // What is deep (the sockets, the nose) stays dark whatever it is made of, so the eyes have something to burn against.
+    let deep = 1.0 - smoothstep(0.02, 0.1, L);
+    var mt = M.a.w; var ro = M.b.w;
+    let Q = in.bind * 34.0;
+    let facing = max(dot(n, v), 0.0);
+    let glow = M.fx.rgb * M.fx.a;
+    // Fine branching cracks of its own, as the bone's are too faint to find.
+    let w0 = vn2(Q.xy * 1.15 + vec2f(3.1, 1.7));
+    let w1 = vn2(Q.xy * 2.7 + vec2f(w0 * 2.4, -w0));
+    let crack = max(1.0 - smoothstep(0.0, 0.028, abs(w0 - 0.5)), (1.0 - smoothstep(0.0, 0.03, abs(w1 - 0.5))) * smoothstep(0.42, 0.56, w0));
+    if (kind == 1.0) {
+      let wet = smoothstep(0.42, 0.68, vn2(vec2f(Q.x * 1.6, Q.y * 0.42 + tm * 0.3)));
+      col = mix(col, M.fx.rgb * 0.7, wet * 0.5);
+      ro = mix(0.4, 0.05, wet);
+      emit = glow * (0.04 + 0.22 * wet * (0.7 + 0.3 * sin(tm * 2.0 + Q.y)));
+    } else if (kind == 2.0) {
+      emit = glow * crack * (0.72 + 0.28 * sin(tm * 2.3 + Q.x * 0.4 + Q.y * 0.3));
+    } else if (kind == 3.0) {
+      let a0 = vn2(Q.xy * 0.42 + vec2f(tm * 0.08, -tm * 0.06));
+      let b0 = vn2(Q.xy * 0.95 - a0 * 3.5 + vec2f(-tm * 0.12, tm * 0.07));
+      let neb = smoothstep(0.45, 0.85, b0);
+      let hue = mix(M.fx.rgb, M.fx.gbr, 0.5 + 0.5 * sin(b0 * 7.0 + tm * 0.35));
+      let cell = floor(Q.xy * 6.5);
+      let star = step(0.97, h2(cell)) * (0.55 + 0.45 * sin(tm * 3.0 + h2(cell + 3.0) * 40.0));
+      emit = hue * M.fx.a * (neb * neb * 0.045 + crack * 0.3) + vec3f(star * 2.2);
+    } else if (kind == 4.0) {
+      let f0 = vn2(Q.xy * 0.62 + vec2f(w0, -tm * 0.14)) + 0.5 * vn2(Q.xy * 1.5 + vec2f(tm * 0.1, -tm * 0.26));
+      let lava = max(smoothstep(0.92, 1.25, f0) * 0.13, crack * 0.75);
+      emit = glow * lava * (0.8 + 0.2 * sin(tm * 3.1 + Q.y * 0.5));
+      ro = mix(ro, 0.85, lava);
+    } else if (kind == 5.0) {
+      let fres = 1.0 - facing;
+      let ph = fres * 1.7 + vn2(Q.xy * 0.34) * 1.5 + tm * 0.1;
+      let irid = 0.5 + 0.5 * cos(6.283 * (ph + vec3f(0.0, 0.33, 0.67)));
+      col = mix(col, irid * (0.25 + s), 0.75);
+      emit = irid * fres * fres * fres * 0.3 * M.fx.a;
+    } else if (kind == 6.0) {
+      col = mix(col, M.fx.rgb, crack);
+      mt = mix(mt, 1.0, crack); ro = mix(ro, 0.16, crack);
+      emit = glow * crack * 0.3;
+    } else if (kind == 7.0) {
+      let cell = floor(Q.xy * 11.0);
+      let spark = step(0.96, h2(cell)) * (0.5 + 0.5 * sin(tm * 2.0 + h2(cell + 7.0) * 30.0));
+      emit = glow * (spark * 2.0 + pow(1.0 - facing, 3.0) * 0.25);
+    }
+    col = mix(col, M.a.rgb * 0.25, deep);
+    emit *= 1.0 - deep;
+    albedo = mix(albedo, col, mask);
+    rough = mix(rough, ro, mask);
+    metal = mix(metal, mt, mask);
+    emit *= mask;
+  } else {
+    // A gem: a light of its own.
+    emit = albedo * M.fx.a;
+  }
+`;
+const skullCode = VIEWMODEL
+  .replace('struct VM { sway: mat4x4f, params: vec4f };', 'struct VM { sway: mat4x4f, params: vec4f, a: vec4f, b: vec4f, c: vec4f, fx: vec4f };')
+  .replace('  let worldViewZ = -(F.view * vec4f(in.p, 1.0)).z;', () => SKULL_SKIN + '  let worldViewZ = -(F.view * vec4f(in.p, 1.0)).z;')
+  .replace('o.color = vec4f(c, 1.0);\r\n  // (The spell hands', 'o.color = vec4f(c + emit, 1.0);\r\n  // (The spell hands')
+  .replace('o.color = vec4f(c, 1.0);\n  // (The spell hands', 'o.color = vec4f(c + emit, 1.0);\n  // (The spell hands');
+if (!skullCode.includes('c + emit') || !skullCode.includes('kind == 7.0') || !skullCode.includes('fx: vec4f')) throw new Error('VIEWMODEL has moved: fix the skull skin');
+export const VIEWMODEL_SKULL = skullCode;

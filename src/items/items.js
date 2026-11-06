@@ -1,6 +1,7 @@
 // What can be found: the swords, the words a roll can add to them and the gems that go in their sockets. Tessariel fights with spells: the swords' rows stay here but are never rolled. Tables and dice only,
 // so the node check in tools/items/check.mjs rolls exactly what the game rolls. Every stat a line here can show is one
 // src/sim/player.js really applies.
+import { SKINS, rollPattern, rollSkin } from './skins.js';
 import { INPUT, WEAPONS } from '../core/layout.js';
 import { SPELLS } from '../sim/spells.js';
 
@@ -11,6 +12,8 @@ export const RARITIES = [
   { name: 'Epic', color: '#b04df0', weight: 3.4, affixes: [3, 3], quality: [1.1, 1.2], sockets: { 1: 35, 2: 40, 3: 25 } },
   // Four sockets are here and nowhere else: the best of the best, and few even of them.
   { name: 'Legendary', color: '#ff8a1e', weight: 0.6, affixes: [3, 4], quality: [1.16, 1.3], sockets: { 2: 45, 3: 40, 4: 15 } },
+  // Skulls alone come this rare: see rollSkull.
+  { name: 'Mythical', color: '#ff2e88', weight: 0, affixes: [4, 4], quality: [1.25, 1.4], sockets: { 4: 100 } },
 ];
 export const MAX_SOCKETS = 4;
 
@@ -156,7 +159,7 @@ export const SHIELD_POWERS = [null,
   { id: 'bulwark', name: 'Bulwark', values: [0.25, 0.4, 0.6], text: (v) => `A guarded blow costs ${pct(v)} less.` },
   { id: 'windrider', name: 'Windrider', values: [0.2, 0.35, 0.5], text: (v) => `Rides ${pct(v)} farther: less drag on land and in the air.` },
 ];
-const TIER_OF = [[], [0, 0, 1], [0, 1, 1, 2], [1, 1, 2], [1, 2, 2]];   // by rarity, the tiers it picks from
+const TIER_OF = [[], [0, 0, 1], [0, 1, 1, 2], [1, 1, 2], [1, 2, 2], [2, 2]];   // by rarity, the tiers it picks from
 
 export const GEM_GRADES = [{ name: 'Rough', weight: 70 }, { name: 'Cut', weight: 25 }, { name: 'Flawless', weight: 5 }];
 export const GEMS = {
@@ -270,10 +273,13 @@ export function rollShield(rng, opts = {}) {
   };
 }
 
-// A skull for the left hand: the same five rarities as a staff, the same rolls, the same sockets.
+// A skull for the left hand: the same rolls as a staff, a skin to show what it is, and from one to six places for gems, laid out in one of sixty patterns.
+const SKULL_SOCKETS = [{ 1: 70, 2: 30 }, { 1: 40, 2: 40, 3: 20 }, { 2: 40, 3: 40, 4: 20 }, { 3: 40, 4: 40, 5: 20 }, { 4: 40, 5: 40, 6: 20 }, { 6: 1 }];
 export function rollSkull(rng, opts = {}) {
-  const rarity = opts.rarity ?? rollRarity(rng, opts.minRarity || 0);
-  return { type: 'skull', base: opts.base || pick(rng, Object.keys(SKULLS)), rarity, affixes: rollAffixes(rng, rarity, WIZ_AFFIXES), sockets: opts.sockets ?? +weighted(rng, RARITIES[rarity].sockets), gems: [] };
+  let rarity = opts.rarity ?? rollRarity(rng, opts.minRarity || 0);
+  if (opts.rarity === undefined && rarity === 4 && rng() < 0.12) rarity = 5;     // One in eight of the legendary.
+  const sockets = opts.sockets ?? +weighted(rng, SKULL_SOCKETS[rarity]);
+  return { type: 'skull', base: opts.base || pick(rng, Object.keys(SKULLS)), rarity, skin: opts.skin || rollSkin(rng, rarity), pattern: opts.pattern ?? rollPattern(rng, sockets), affixes: rollAffixes(rng, rarity, WIZ_AFFIXES), sockets, gems: [] };
 }
 
 // A hat, a robe, a jacket, pants... opts: base, rarity, minRarity.
@@ -360,7 +366,8 @@ export function nameOf(item) {
     return [pre?.name, GEAR[item.base].name, suf?.name].filter(Boolean).join(' ');
   }
   const pre = item.affixes.find((a) => a.pos === 'pre'), suf = item.affixes.find((a) => a.pos === 'suf');
-  return [pre?.name, (item.type === 'skull' ? SKULLS[item.base] : item.type === 'robe' ? ROBES[item.base] : BASES[item.base]).name, suf?.name].filter(Boolean).join(' ');
+  const named = item.type === 'skull' ? (SKINS[item.skin] ? `${SKINS[item.skin].name} Skull` : SKULLS[item.base].name) : (item.type === 'robe' ? ROBES[item.base] : BASES[item.base]).name;
+  return [pre?.name, named, suf?.name].filter(Boolean).join(' ');
 }
 
 export const colorOf = (item) => (item.type === 'gold' ? '#e8c15a' : item.type === 'gem' ? GEMS[item.kind].color : RARITIES[item.rarity].color);

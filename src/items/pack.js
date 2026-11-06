@@ -1,6 +1,7 @@
 // What the player carries: a grid of cells, and the slots on the body. Items take a footprint of cells. It's a part of every save
 // (main.js), and it stays with you through a new fight; only New Game starts it over.
 import { WEAPONS } from '../core/layout.js';
+import { settleSkull } from './skins.js';
 import { GEMS, MAX_SOCKETS, ROBES, SKULLS, makeRng, robeSize, rollGem, rollRobe, rollShield, rollSkull, rollWeapon } from './items.js';
 
 const ELEMENTAL_STAFFS = ['vine_staff', 'wind_staff', 'fire_staff', 'ice_staff', 'earth_staff', 'dark_staff', 'death_staff', 'life_staff'];
@@ -64,7 +65,7 @@ export class Pack {
 
   // A gem into a weapon, for good. False if it has no open socket.
   socket(weapon, gem) {
-    if (!SOCKETED.has(weapon.type) || gem.type !== 'gem' || (weapon.gems ||= []).length >= Math.min(weapon.sockets || 0, MAX_SOCKETS) || !GEMS[gem.kind]) return false;
+    if (!SOCKETED.has(weapon.type) || gem.type !== 'gem' || (weapon.gems ||= []).length >= Math.min(weapon.sockets || 0, weapon.type === 'skull' ? 6 : MAX_SOCKETS) || !GEMS[gem.kind]) return false;
     weapon.gems.push(gem);
     return true;
   }
@@ -89,6 +90,8 @@ export class Pack {
       const { armor, affixes, power } = rollShield(makeRng((Math.random() * 2 ** 32) >>> 0), { base: it.base });
       Object.assign(it, { armor, affixes, power });
     }
+    // A save from before skulls had skins and patterns.
+    for (const it of [...Object.values(this.slots), ...this.entries.map((e) => e.item)]) if (it?.type === 'skull') settleSkull(it);
     // A save from when the old greatsword was still about.
     delete this.slots.hands;
     for (const k of Object.keys(this.slots)) if (this.slots[k] && RETIRED(this.slots[k])) this.slots[k] = null;
