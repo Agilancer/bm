@@ -163,7 +163,7 @@ export class Renderer {
       .map((p) => fetch(base + p).then((r) => r.arrayBuffer()).then((b) => { tick(); return b; })));
     this.buildSamplers();
     this.buildBaseLayouts();
-    this.buildStatics(parseGLB(buffers[0]), layerNames, manifest.layers);
+    this.buildStatics(parseGLB(buffers[0]), layerNames, manifest.layers, village.trees);
     this.pines = new Pines(this, forest.trees, layerNames);
     this.interior = await loadInterior(this, base, pool, tier);
     tick();
@@ -299,7 +299,7 @@ export class Renderer {
     this.skinPipeline = device.createComputePipeline({ layout: device.createPipelineLayout({ bindGroupLayouts: [this.bglSkin] }), compute: { module: this.skinModule, entryPoint: 'main' } });
   }
 
-  buildStatics(glb, layerNames, layers) {
+  buildStatics(glb, layerNames, layers, oaks) {
     const { device } = this;
     // Merge every primitive into one buffer, opaque first so the cutouts are one range at the end.
     const prims = [];
@@ -316,6 +316,16 @@ export class Renderer {
     prims.sort((a, b) => a.cutout - b.cutout);
     let nv = 0, ni = 0;
     for (const p of prims) { nv += p.pos.length / 3; ni += p.idx.length; }
+    // Each oak its own bark and leaves, going by the tree a vertex stands under. (Anything else in bark nearby may take it too; it's only bark.)
+    const oakSets = ['bark', 'leaves'].map((n) => [n, `${n}_2`, `${n}_3`, `${n}_4`].map((x) => layerNames.indexOf(x)));
+    const oakLayer = (layer, x, z) => {
+      const set = oakSets.find((s) => s[0] === layer);
+      if (!set) return layer;
+      for (let t = 0; t < oaks.length; t++) {
+        if (Math.hypot(x - oaks[t].p[0], z - oaks[t].p[1]) < oaks[t].s * 1.5) return set[t % set.length];
+      }
+      return layer;
+    };
     const verts = new ArrayBuffer(nv * 36);
     const f = new Float32Array(verts), u = new Uint32Array(verts);
     const indices = new Uint32Array(ni);
@@ -329,7 +339,7 @@ export class Renderer {
         f[o] = p.pos[i * 3]; f[o + 1] = p.pos[i * 3 + 1]; f[o + 2] = p.pos[i * 3 + 2];
         f[o + 3] = p.nrm[i * 3]; f[o + 4] = p.nrm[i * 3 + 1]; f[o + 5] = p.nrm[i * 3 + 2];
         f[o + 6] = p.uv[i * 2]; f[o + 7] = p.uv[i * 2 + 1];
-        u[o + 8] = p.layer;
+        u[o + 8] = oakLayer(p.layer, p.pos[i * 3], p.pos[i * 3 + 2]);
         vo++;
       }
       for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
@@ -339,13 +349,13 @@ export class Renderer {
     this.staticOpaque = cutStart < 0 ? ni : cutStart;
     this.staticTotal = ni;
     // Per-layer parameters: cutout, parallax depth in uv, has windows, foliage.
-    const params = new Float32Array(48 * 4);
+    const params = new Float32Array(64 * 4);
     const pomDepth = this.tier.pom > 0 ? 1 : 0;
     layers.forEach((l, i) => {
       params[i * 4] = l.cutout ? 1 : 0;
       params[i * 4 + 1] = pomDepth * ({ wall: 0.011, roof: 0.022, stone: 0.02, door: 0.012 }[l.kind] || 0);
       params[i * 4 + 2] = l.kind === 'wall' ? 1 : 0;
-      params[i * 4 + 3] = l.name === 'leaves' || l.name === 'pine' || l.name === 'pine_far' ? 1 : 0;
+      params[i * 4 + 3] = /^(leaves|pine|pine_far)(_\d)?$/.test(l.name) ? 1 : 0;
     });
     const layerUBO = makeBuffer(device, params, GPUBufferUsage.UNIFORM);
     this.staticBG = device.createBindGroup({ layout: this.bglStatic, entries: [

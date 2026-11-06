@@ -142,7 +142,11 @@ const PINE = STATIC
   var p = vec3f(w.x * spin.x - w.y * spin.y, pIn.y * at.w, w.x * spin.y + w.y * spin.x) + at.xyz;
   let nw = vec3f(n.x * spin.x - n.z * spin.y, n.y, n.x * spin.y + n.z * spin.x);
   o.tone = spin.w * 1.8 * mix(0.5, 1.05, clamp(pIn.y * 1.5, 0.0, 1.0)) * mix(0.62, 1.1, clamp(length(pIn.xz) / max(0.012, 0.22 * (1.0 - pIn.y)), 0.0, 1.0));`)
-  .replace('o.p = p; o.n = n; o.uv = uv; o.layer = layer;', 'o.p = p; o.n = nw; o.uv = uv; o.layer = layer;')
+  // Each tree its own bark and needles, of the five, from where it stands.
+  .replace('o.p = p; o.n = n; o.uv = uv; o.layer = layer;', `o.p = p; o.n = nw; o.uv = uv; o.layer = layer;
+  let which = u32(fract(sin(dot(at.xz, vec2f(12.9898, 78.233))) * 43758.5453) * 5.0);
+  if (which > 0u && layer == PINE_LAYERu) { o.layer = PINE_2u + which - 1u; }
+  if (which > 0u && layer == BARK_LAYERu) { o.layer = BARK_2u + which - 1u; }`)
   .replace('albedo = tex.rgb;\n    rough = det.b;', 'albedo = tex.rgb * in.tone;\n    rough = det.b;')
   // (The smaller a painting's copy, the more its needles have faded into the gaps between them. Kept, the trees stay as thick from far off.)
   .replace('if (params.x > 0.0 && tex.a < 0.5) { discard; }', 'if (tex.a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }');
@@ -164,7 +168,8 @@ export class Pines {
     this.r = r;
     const { device, tier } = r;
     this.lean = !!tier.lean;
-    const { verts, idx, lods } = pineMeshes(layerNames.indexOf('pine'), layerNames.indexOf('pine_far'), layerNames.indexOf('bark'));
+    this.names = layerNames;
+    const { verts, idx, lods } = pineMeshes(layerNames.indexOf('pine'), layerNames.indexOf('pine_far'), layerNames.indexOf('pine_bark'));
     this.VB = makeBuffer(device, verts, GPUBufferUsage.VERTEX);
     this.IB = makeBuffer(device, idx, GPUBufferUsage.INDEX);
     this.lods = lods;
@@ -198,7 +203,8 @@ export class Pines {
   buildPipelines(layout, targets, depth, ms, staticVB, shDepth, bglShadow, bglShCut) {
     const { r } = this;
     const { device } = r;
-    const mod = r.shader(PINE);
+    const at = (n) => `${this.names.indexOf(n)}u`;
+    const mod = r.shader(PINE.replace('PINE_LAYERu', at('pine')).replace('PINE_2u', at('pine_2')).replace('BARK_LAYERu', at('pine_bark')).replace('BARK_2u', at('pine_bark_2')));
     const buffers = [...staticVB, INSTANCE];
     this.pMain = device.createRenderPipeline({
       layout: layout(r.bgl0, r.bglStatic),
