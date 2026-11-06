@@ -83,6 +83,12 @@ export class Pack {
     this.entries = d.entries;
     // A save from before the kite shields: everyone starts with one.
     if (!d.kite && !this.slots.off) this.slots.off = rollShield(makeRng(1793), { base: 'kite_cross' });
+    // A save from before shields had stats: roll them, keeping the gems and sockets it already has.
+    for (const it of [...Object.values(this.slots), ...this.entries.map((e) => e.item)]) {
+      if (it?.type !== 'shield' || it.armor !== undefined) continue;
+      const { armor, affixes, power } = rollShield(makeRng((Math.random() * 2 ** 32) >>> 0), { base: it.base });
+      Object.assign(it, { armor, affixes, power });
+    }
     // A save from when the old greatsword was still about.
     delete this.slots.hands;
     for (const k of Object.keys(this.slots)) if (this.slots[k] && RETIRED(this.slots[k])) this.slots[k] = null;

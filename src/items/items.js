@@ -138,6 +138,24 @@ const ROBE_AFFIXES = [
   { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 6, 10], ['of the Old Oak', 11, 18], ['of the Old Blood', 19, 30]] },
   { stat: 'thrift', pos: 'suf', tiers: [['of Ease', 0.02, 0.03], ['of the Long Road', 0.04, 0.05], ['of Scant Words', 0.06, 0.08]] },
 ];
+// What a shield can roll. Its ward and these count only with no skull in hand: see gearTotals.
+const SHIELD_AFFIXES = [
+  { stat: 'armor', pos: 'pre', int: true, tiers: [['Studded', 3, 5], ['Bossed', 6, 10], ['Unyielding', 11, 16]] },
+  { stat: 'power', pos: 'pre', tiers: [['Runed', 0.03, 0.05], ['Sigiled', 0.06, 0.09], ['Spellbound', 0.1, 0.15]] },
+  { stat: 'life', pos: 'suf', int: true, tiers: [['of Broth', 8, 12], ['of the Old Oak', 14, 22], ['of the Old Blood', 24, 36]] },
+  { stat: 'mana', pos: 'suf', int: true, tiers: [['of the Well', 8, 14], ['of the Deep Well', 15, 24], ['of the Abyss', 26, 40]] },
+  { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.06, 0.1], ['of the Spring', 0.11, 0.17], ['of the Flood', 0.18, 0.28]] },
+];
+const SHIELD_WARD = [6, 8, 11, 15, 20];   // by rarity, before its quality
+const SHIELD_POWER_CHANCE = [0.25, 0.4, 0.6, 1, 1];
+// A shield's special ability, one at most. Its place in this list is what src/sim/player.js and surf.js are told. values: common, rare, epic.
+export const SHIELD_POWERS = [null,
+  { id: 'aegis', name: 'Aegis', values: [40, 30, 20], text: (v) => `Every ${v} seconds, stops one blow outright.` },
+  { id: 'mending', name: 'Mending', values: [1, 2, 3], text: (v) => `Mends ${v} life a second, even in a fight.` },
+  { id: 'manaward', name: 'Manaward', values: [0.15, 0.25, 0.35], text: (v) => `${pct(v)} of every wound is paid in mana instead.` },
+  { id: 'bulwark', name: 'Bulwark', values: [0.25, 0.4, 0.6], text: (v) => `A guarded blow costs ${pct(v)} less.` },
+  { id: 'windrider', name: 'Windrider', values: [0.2, 0.35, 0.5], text: (v) => `Rides ${pct(v)} farther: less drag on land and in the air.` },
+];
 const TIER_OF = [[], [0, 0, 1], [0, 1, 1, 2], [1, 1, 2], [1, 2, 2]];   // by rarity, the tiers it picks from
 
 export const GEM_GRADES = [{ name: 'Rough', weight: 70 }, { name: 'Cut', weight: 25 }, { name: 'Flawless', weight: 5 }];
@@ -242,7 +260,14 @@ export function rollShield(rng, opts = {}) {
   const rarity = rolled === 1 ? 0 : Math.min(rolled, 3);
   const base = opts.base || pick(rng, Object.keys(SHIELDS).filter((b) => !SHIELDS[b].side && SHIELDS[b].rarity === rarity));
   const shown = SHIELDS[base].rarity;
-  return { type: 'shield', base, rarity: shown, sockets: opts.sockets ?? +weighted(rng, RARITIES[shown].sockets), gems: [] };
+  const power = rng() < SHIELD_POWER_CHANCE[shown] ? pick(rng, SHIELD_POWERS.slice(1)) : null;
+  return {
+    type: 'shield', base, rarity: shown,
+    armor: Math.round(SHIELD_WARD[shown] * between(rng, RARITIES[shown].quality[0], RARITIES[shown].quality[1])),
+    affixes: rollAffixes(rng, shown, SHIELD_AFFIXES),
+    power: power && { id: power.id, value: power.values[shown > 2 ? 2 : shown > 0 ? 1 : 0] },
+    sockets: opts.sockets ?? +weighted(rng, RARITIES[shown].sockets), gems: [],
+  };
 }
 
 // A skull for the left hand: the same five rarities as a staff, the same rolls, the same sockets.
@@ -326,7 +351,10 @@ export function nameOf(item) {
   if (item.type === 'spell') return `Scroll of ${SPELLS[item.spell].name}`;
   if (item.type === 'gold') return `${item.amount} gold`;
   if (item.type === 'gem') return `${GEM_GRADES[item.grade].name} ${GEMS[item.kind].name}`;
-  if (item.type === 'shield') return SHIELDS[item.base].name;
+  if (item.type === 'shield') {
+    const pre = item.affixes?.find((a) => a.pos === 'pre'), suf = item.affixes?.find((a) => a.pos === 'suf');
+    return [pre?.name, SHIELDS[item.base].name, suf?.name].filter(Boolean).join(' ');
+  }
   if (item.type === 'armor') {
     const pre = item.affixes.find((a) => a.pos === 'pre'), suf = item.affixes.find((a) => a.pos === 'suf');
     return [pre?.name, GEAR[item.base].name, suf?.name].filter(Boolean).join(' ');
@@ -360,7 +388,15 @@ export function linesOf(item) {
   if (item.type === 'gem') {
     return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: GEM_LOOK[item.kind], kind: 'sub' }, { text: 'Goes in an open socket on a staff, a skull or a shield, and stays there.', kind: 'sub' }];
   }
-  if (item.type === 'shield') return SOCKET_LINES(item, [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} kite shield`, kind: 'sub' }, { text: 'Hold Space as you jump to ride it.', kind: 'sub' }, { text: 'With a skull in hand it is only for riding: its gems give no stats.', kind: 'sub' }]);
+  if (item.type === 'shield') {
+    const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} kite shield`, kind: 'sub' }, { text: `Ward ${item.armor || 0}`, kind: 'stat' }];
+    for (const a of item.affixes || []) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
+    const p = item.power && SHIELD_POWERS.find((s) => s?.id === item.power.id);
+    if (p) out.push({ text: `${p.name}: ${p.text(item.power.value)}`, kind: 'gem', color: '#e8c15a' });
+    SOCKET_LINES(item, out);
+    out.push({ text: 'Hold Space as you jump to ride it.', kind: 'sub' }, { text: 'With a skull in hand it is only for riding: the skull counts, and nothing on the shield does.', kind: 'sub' });
+    return out;
+  }
   if (item.type === 'skull') {
     const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} skull`, kind: 'sub' }];
     for (const a of item.affixes) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
@@ -384,13 +420,14 @@ const GEM_LOOK = {
   sapphire: 'Falls in snow, with a cold steady light.', amethyst: 'Draws dark motes in out of the air.', diamond: 'Throws prisms that turn through every colour.',
 };
 
-// All that what's worn and held comes to. A shield counts for nothing while there's a skull in hand: it's only there to ride.
+// All that what's worn and held comes to. With a skull in hand the skull counts and the shield doesn't: ward, words, gems, ability, nothing. It's only there to ride.
 export function gearTotals(slots) {
-  const add = { armor: 0, life: 0, power: 0, regen: 0, mana: 0, thrift: 0, leech: 0 };
+  const add = { armor: 0, life: 0, power: 0, regen: 0, mana: 0, thrift: 0, leech: 0, shPower: 0, shValue: 0 };
   const skull = slots.skull;
   for (const [slot, it] of Object.entries(slots)) {
     if (!it || (slot === 'off' && skull)) continue;
-    if (it.type === 'robe') add.armor += it.armor;
+    if (it.type === 'robe' || it.type === 'shield') add.armor += it.armor || 0;
+    if (slot === 'off' && it.power) { add.shPower = SHIELD_POWERS.findIndex((s) => s?.id === it.power.id); add.shValue = it.power.value; }
     for (const a of it.affixes || []) if (a.stat in add) add[a.stat] += a.value;
     for (const g of it.gems || []) if (GEMS[g.kind].stat in add) add[GEMS[g.kind].stat] += GEMS[g.kind].values[g.grade];
   }
@@ -409,4 +446,5 @@ export function writeWeapon(input, item, worn = gearTotals({}), lv = { power: 1,
   input[INPUT.MANA_MAX] = worn.mana + lv.mana;
   input[INPUT.REGEN] = (1 + worn.regen) * lv.regen;
   input[INPUT.THRIFT] = Math.min(worn.thrift, 0.5);
+  input[INPUT.SH_POWER] = worn.shPower; input[INPUT.SH_VALUE] = worn.shValue;
 }

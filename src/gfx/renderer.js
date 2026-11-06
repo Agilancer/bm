@@ -7,6 +7,7 @@ import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
+import { SkullEyes } from './skulleyes.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
@@ -36,9 +37,8 @@ function surfHandPose(tilt, up, time) {
   return surfPal;
 }
 
-// Where a skull sits in the left hand, from its own frame to the view's. Printed by tools/wizard/skull_hold.py.
-const SKULL_SCALE = 1.0;
-export const SKULL_SEAT = [0.82533, -0.20219, -0.52721, 0.0, 0.12691, 0.97623, -0.17572, 0.0, 0.55021, 0.07812, 0.83137, 0.0, -0.223, -0.075, -0.365, 1.0];
+// The middle of the skull in the left hand, in the view's own space. Printed by tools/wizard/skull_arm.py.
+export const SKULL_AT = [-0.483, -0.159, -0.783];
 
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
@@ -623,18 +623,10 @@ export class Renderer {
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
     s.lying = this.lyingModel(prim, alb, nrm, mr, [0, 0, 0, 0]);
     s.tip = prim.pos.reduce((best, v, i) => (i % 3 === 1 ? Math.max(best, v) : best), 0);
-    // (A piece of a suit is only ever seen on the ground, or in a slot.)
-    if (GEAR[id] || ROBES[id]) { s.ready = true; return; }
-    // The skull in the left hand and the arm that holds it are rigid, already in the view's own space (tools/wizard/skull_hold.py), so one joint that never moves.
-    if (SKULLS[id] || id === 'skull_arm' || id === 'surf_arm' || id === 'shield_arm') {
-      if (SKULLS[id]) {
-        const m = SKULL_SEAT, pos = new Float32Array(prim.pos), nr = new Float32Array(prim.nrm);
-        for (let v = 0; v < pos.length; v += 3) for (let c = 0; c < 3; c++) {
-          pos[v + c] = m[c] * prim.pos[v] + m[c + 4] * prim.pos[v + 1] + m[c + 8] * prim.pos[v + 2] + m[c + 12];
-          nr[v + c] = (m[c] * prim.nrm[v] + m[c + 4] * prim.nrm[v + 1] + m[c + 8] * prim.nrm[v + 2]) / SKULL_SCALE;
-        }
-        prim.pos = pos; prim.nrm = nr;
-      }
+    // (A piece of a suit is only ever seen on the ground, or in a slot. So is a skull, for now: the arm in the left hand has its own, fused to it.)
+    if (GEAR[id] || ROBES[id] || SKULLS[id]) { s.ready = true; return; }
+    // The arm that holds the skull, one mesh with it, and the others like it are rigid, already in the view's own space (tools/wizard/skull_arm.py), so one joint that never moves.
+    if (id === 'skull_arm' || id === 'surf_arm' || id === 'shield_arm') {
       this.onWeaponJoint(prim, 0, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
       s.hand = this.makeSkinned([prim], 1);
       device.queue.writeBuffer(s.hand.palette, 0, new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
@@ -1038,6 +1030,7 @@ export class Renderer {
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
+    this.skullEyes = new SkullEyes(device, this.bgl0, targets, DEPTH, this.msaa, module);
     const itemMod = module(ITEM);
     const propMod = module(PROP);
     this.propVB = [
@@ -1618,9 +1611,11 @@ export class Renderer {
     // The skull in the left hand, on the staff's arms, which have no left of their own.
     this.skullParts = this.skullParts || [];
     this.skullParts.length = 0;
+    this.eyesOn = false;
     const surfArm = snap[H.SURF_ARM];
     if (this.skull && this.vm === this.vms[3] && surfArm < 1) {
-      for (const h of [this.sword('skull_arm'), this.sword(this.skull)]) if (h.ready) this.skullParts.push(h);
+      const arm = this.sword('skull_arm');     // (Whichever skull it is, for now.)
+      if (arm.ready) { this.skullParts.push(arm); this.eyesOn = true; }
     }
     // The surfing hand: rigid, from SURFING.glb, up once the shield's on the ground.
     this.surfHand = null;
@@ -1677,9 +1672,10 @@ export class Renderer {
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
       // (Negative: the spell hands' warm fill from the eye, so this arm is the same skin as the one that casts, and the skull, on less of it, doesn't go black at night.)
-      vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.surfHand || h === this.skullParts[0] ? -1 : -0.28;
+      vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.surfHand ? -1 : -0.5;   // (Less on the skull's arm: so much pale bone lights up the night.)
       q.writeBuffer(h.ubo, 0, vmData);
     }
+    if (this.eyesOn) this.skullEyes.update(dt, cam, snap, vmData, breath);
     if (this.shieldParts.length) {
       const pal = this.shieldPal || (this.shieldPal = new Float32Array(8));
       shieldPose(pal, shieldUp, this.W / this.H);
@@ -1967,6 +1963,7 @@ export class Renderer {
         mp.setBindGroup(1, h.bg);
         mp.drawIndexed(h.hand.indices);
       }
+      if (this.eyesOn && !this.vmDown) this.skullEyes.draw(mp);
     }
     mp.setViewport(0, 0, this.W, this.H, 0, 0.96);
     this.spellfx.drawSolid(mp);

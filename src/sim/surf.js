@@ -85,8 +85,9 @@ function ride(p, dt, wx, wz, sim) {
     }
   }
   // The ground and the air holding you back, and a carve scrubs a little.
-  const sp = Math.hypot(p.vx, p.vy, p.vz), mu = floorAt(p.x, p.z) === null ? GRIP : GRIP_STONE;
-  const left = clamp(sp - (mu * G * n[1] + DRAG * sp * sp + brake + 0.6 * Math.abs(turn)) * dt, 0, VMAX);
+  const glide = p.shPower === 5 ? 1 - p.shValue : 1;   // Windrider
+  const sp = Math.hypot(p.vx, p.vy, p.vz), mu = (floorAt(p.x, p.z) === null ? GRIP : GRIP_STONE) * glide;
+  const left = clamp(sp - (mu * G * n[1] + DRAG * glide * sp * sp + brake + 0.6 * Math.abs(turn)) * dt, 0, VMAX);
   if (sp > 1e-6) { const k = left / sp; p.vx *= k; p.vy *= k; p.vz *= k; } else { p.vx = 0; p.vy = 0; p.vz = 0; }
   const oy = p.y;
   if (!move(p, dt, sim)) return;
@@ -108,7 +109,7 @@ function ride(p, dt, wx, wz, sim) {
 
 function fly(p, dt, wx, wz, sim) {
   p.vy -= G * dt;
-  const k = Math.max(0, 1 - DRAG * Math.hypot(p.vx, p.vy, p.vz) * dt);
+  const k = Math.max(0, 1 - DRAG * (p.shPower === 5 ? 1 - p.shValue : 1) * Math.hypot(p.vx, p.vy, p.vz) * dt);
   p.vx *= k; p.vy *= k; p.vz *= k;
   carve(p, wx, wz, AIR_TURN, dt);
   if (!move(p, dt, sim)) return;

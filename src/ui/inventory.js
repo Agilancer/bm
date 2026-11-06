@@ -107,7 +107,7 @@ export class Inventory {
     const st = main ? statsOf(main) : null;
     $('invGold').textContent = `${this.pack.gold} gold`;
     $('invStats').innerHTML = main
-      ? `<b style="color:${colorOf(main)}">${nameOf(main)}</b><br>Fires for ${Math.round(st.min * 0.76)} to ${Math.round(st.max * 0.76)}${this.pack.slots.skull ? `, with ${nameOf(this.pack.slots.skull)} in the left hand` : ''}`
+      ? `<b style="color:${colorOf(main)}">${nameOf(main)}</b><br>Fires for ${Math.round(st.min * 0.76)} to ${Math.round(st.max * 0.76)}${this.pack.slots.skull ? `, with ${nameOf(this.pack.slots.skull)} in the left hand${this.pack.slots.off ? '. The shield is only for riding: its stats do not count' : ''}` : this.pack.slots.off ? `, with ${nameOf(this.pack.slots.off)} on the arm` : ''}`
       : '<b>Bare hands</b><br>Nothing to swing.';
     if (this.carry) {
       const { w, h } = sizeOf(this.carry.item);

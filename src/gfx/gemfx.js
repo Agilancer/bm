@@ -2,14 +2,15 @@
 // a ruby and a sapphire smoulders and snows at once. A better cut does it harder, and a Flawless stone adds a flourish of its own.
 // All of it is on the render thread and owes the sim nothing. Particle kinds 16 + an element are the spells' own colours (src/sim/spells.js).
 import { H } from '../core/layout.js';
-import { SKULL_SEAT } from './renderer.js';
+import { SKULL_AT } from './renderer.js';
 import { ELEM } from '../sim/spells.js';
 
 // Where the skull is on the screen, in the world's wider camera: tan 32 over tan 38 turns one's slope into the other's.
-const SEAT_A = (SKULL_SEAT[12] / SKULL_SEAT[14]) * 0.8 * 0.6, SEAT_B = (SKULL_SEAT[13] / -SKULL_SEAT[14]) * 0.8 * 0.6;
+const SEAT_A = (SKULL_AT[0] / SKULL_AT[2]) * 0.8 * 0.6, SEAT_B = (SKULL_AT[1] / -SKULL_AT[2]) * 0.8 * 0.6;
 const K = (e) => 16 + e;
 const GRADE = [0.7, 1, 1.5];
 const TAU = Math.PI * 2;
+const LANTERN = [1, 0.74, 0.5], RAGE_LIGHT = [1, 0.22, 0.1], PALE_LIGHT = [0.7, 0.82, 1];
 
 // Each: light [r, g, b], its strength and reach, how it moves, and what it sheds, given a place to shed it from.
 const LOOKS = {
@@ -101,8 +102,18 @@ export class GemFx {
     this.lights.length = 0;
     this.used = 0;
     const { main, off, skull } = pack.slots;
-    // Whatever's in it, a skull keeps a little cold light on its face, so it doesn't go to a dark lump at night.
-    if (skull) { const L = this.fill; L.p = this.at(cam, SEAT_A * 0.8, SEAT_B * 0.8, 0.48); this.lights.push(L); }
+    // A skull is a lantern: faint by day, and a good light at night and in the dark places below. It feels what its eyes feel: src/gfx/skulleyes.js.
+    if (skull) {
+      const L = this.fill, sun = this.r.light?.sun || [0, 0, 0], eyes = this.r.skullEyes?.now, deep = cam.y < -6 || (cam.x >= 124.5 && cam.x < 176 && Math.abs(cam.z) < 3);
+      const dark = deep ? 1 : Math.min(1, Math.max(0, 1 - (sun[0] + sun[1] + sun[2]) / 5));
+      const glow = eyes ? Math.min(eyes.glow, 1.6) : 1, hue = eyes ? eyes.hue : 0, h = Math.min(1, Math.abs(hue)), to = hue > 0 ? RAGE_LIGHT : PALE_LIGHT;
+      for (let c = 0; c < 3; c++) L.c[c] = LANTERN[c] + (to[c] - LANTERN[c]) * h;
+      L.r = 4 + 15 * dark;
+      L.i = (0.5 + 9 * dark) * glow * (0.94 + 0.06 * Math.sin(this.t * 7.3) * Math.sin(this.t * 3.1));
+      // (Out past the skull, so it lights the ground and the walls and doesn't burn its own face white.)
+      L.p = this.at(cam, -0.5, -0.1, 1.15);
+      this.lights.push(L);
+    }
     if (main?.gems?.length) this.shine(main.gems, ...this.at(cam, -0.42, -0.03, 0.8), dt, 0.5, 0.4);
     if (skull?.gems?.length) this.shine(skull.gems, ...this.at(cam, SEAT_A, SEAT_B, 0.6), dt, 0.5, 0.22);   // (A light this near the hand would burn it white: it's the ground and the walls it's for.)
     // A shield on the arm is out of view under a staff: you see its stones when you're riding it, under your feet, and they run hot.
