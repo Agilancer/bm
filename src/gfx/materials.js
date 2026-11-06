@@ -605,6 +605,24 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   return o;
 }
 @fragment fn fs(in: V, @builtin(front_facing) front: bool) -> Out {
+  if (I.glow.a < 0.0) {
+    let p = in.uv * 2.0 - 1.0;
+    let r = length(p);
+    let a = atan2(p.y, p.x);
+    let t = F.camPos.w;
+    let edge = 0.956 + 0.025 * sin(a * 7.0 - t * 2.6) + 0.012 * sin(a * 17.0 + t * 3.1);
+    if (r > edge) { discard; }
+    let rim = exp(-abs(r - edge + 0.052) * 34.0);
+    let whirl = a * 3.0 - r * 21.0 + t * 3.25 + sin(r * 13.0 + a * 2.0) * 0.8;
+    let threads = pow(0.5 + 0.5 * sin(whirl), 7.0) * smoothstep(0.04, 0.42, r);
+    let vapor = 0.5 + 0.5 * sin(a * 5.0 - r * 31.0 + t * 4.8 + sin(a * 8.0 + r * 31.0 - t) * 1.3);
+    let core = vec3f(0.048, 0.005, 0.12) + vapor * vec3f(0.22, 0.022, 0.51);
+    let fire = threads * vec3f(0.64, 0.15, 1.6) * (0.3 + 0.7 * r);
+    var out: Out;
+    out.color = vec4f(core + fire + rim * vec3f(2.25, 0.58, 4.25), 1.0);
+    out.depth = in.viewZ;
+    return out;
+  }
   let toCam = F.camPos.xyz - in.p;
   let dist = length(toCam);
   let v = toCam / dist;

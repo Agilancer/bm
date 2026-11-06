@@ -8,11 +8,13 @@ const SPEED = 0.9;
 const RADIUS = 0.48;
 
 export class VillageWalker {
-  constructor(buffer, form) {
+  constructor(buffer, form, opening = false) {
     this.route = form.route;
     this.legRadii = form.legRadii;
     this.bodyRadius = RADIUS * 2;
-    this.rig = new ArmsRig(buffer, LISANDRA_SCALE, new Set([WALK, 'idle']));
+    const clips = new Set([WALK, 'idle']);
+    if (opening) clips.add('afraid');
+    this.rig = new ArmsRig(buffer, LISANDRA_SCALE, clips);
     this.skirtLegs = ['Left', 'Right'].flatMap((side) => ['UpLeg', 'Leg', 'Foot'].map(
       (part) => this.rig.index.get(`mixamorig:${side}${part}`),
     ));
@@ -61,7 +63,7 @@ export class VillageWalker {
     this.fade = 1;
   }
 
-  update(dt, world) {
+  update(dt, world, wait = false, idle = 'idle') {
     const [tx, tz] = this.route[this.next];
     const dx = tx - this.x, dz = tz - this.z;
     const distance = Math.hypot(dx, dz);
@@ -69,14 +71,14 @@ export class VillageWalker {
     const x = distance ? this.x + dx / distance * step : tx;
     const z = distance ? this.z + dz / distance * step : tz;
     const clear = !world.inside(x, z, RADIUS);
-    if (clear) {
+    if (clear && !wait) {
       this.x = x;
       this.z = z;
       if (distance > 0) this.yaw += wrapAngle(Math.atan2(dx, dz) - this.yaw) * Math.min(1, 7 * dt);
       if (step === distance) this.next = (this.next + 1) % this.route.length;
     }
     this.y = world.height(this.x, this.z);
-    const clip = clear ? WALK : 'idle';
+    const clip = clear && !wait ? WALK : idle;
     if (clip !== this.clip) {
       this.rig.capture();
       this.clip = clip;
