@@ -102,6 +102,7 @@ export class Casting {
     snap[H.MANA] = this.mana; snap[H.MAX_MANA] = this.maxMana;
     snap[H.SPELL] = this.selected;
     snap[H.VM_LOWER] = smooth(this.lower);
+    snap[H.SKULL_LOWER] = smooth(this.skullLower || 0);
     snap[H.CAST_HELD] = this.state === 'hold' ? this.def.elem + 1 : 0;
     snap[H.SPELL_RIG] = 0;
     if (this.rig) {
@@ -180,6 +181,7 @@ export class Casting {
     if (this.state === 'idle') {
       if (p.stance.shoots || p.staffSurf) this.stepStaff(sim);
       this.lower = Math.max(0, this.lower - dt * 3.2);
+      this.skullLower = Math.max(0, (this.skullLower || 0) - dt * 3.2);
       this.armLower = Math.max(0, this.armLower - dt * 3.2);
       if (want && !p.dead && !p.swinging && !p.guard && p.staffSurfT === null && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
       if (this.state === 'idle') return;
@@ -188,6 +190,8 @@ export class Casting {
     const clip = this.rig.clips[this.clip];
     this.lower = this.keep || this.armOnly ? Math.max(0, this.lower - dt * 5) : Math.min(1, this.lower + dt * 6);
     if (this.armOnly) this.armLower = Math.min(1, this.armLower + dt * 6);
+    // The skull's hand is free of a one-handed spell, and only goes down for one that needs both.
+    this.skullLower = def.hands === 2 ? Math.min(1, (this.skullLower || 0) + dt * 6) : Math.max(0, (this.skullLower || 0) - dt * 5);
     if (this.fade < 1) this.fade = Math.min(1, this.fade + dt * this.fadeRate);
     if (p.dead) { this.endCast(); return; }
     switch (this.state) {

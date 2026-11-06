@@ -841,6 +841,12 @@ export class Player {
     snap[H.SWING_T] = this.clip === this.stance.idle ? 0 : this.t;
     snap[H.WEAPON] = this.staffSurf ? 0 : this.weapon;
     snap[H.SHIELD_UP] = this.shieldUp;
+    // Where the hand's carry clip is in its stride, and how much of it, for what's held rigid in the other hand. (A swing leaves the stride where it was.)
+    if (this.clip === this.stance.idle) {
+      this.carryT = this.t / (this.arms.clips[this.rest]?.dur || 1);
+      this.carryK = this.rest === this.stance.walk ? 1 : this.surfing ? 0 : 0.4;
+    }
+    snap[H.CARRY_T] = this.carryT || 0; snap[H.CARRY_K] = this.carryK || 0;
     snap[H.HIT_DIR] = this.hitDir; snap[H.HIT_DIR_T] = this.hitDirT;
     snap[H.GROUND_SPEED] = this.groundSpeed || 0;
     snap[H.ON_GROUND] = this.onGround ? 1 : 0;
