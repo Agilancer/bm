@@ -62,7 +62,7 @@ for (const kind of Object.keys(GEMS)) {
 const old = new Pack();
 old.load({ gold: 5, kite: true, slots: { main: { type: 'weapon', base: 'ringed_sword', rarity: 0, dmg: [1, 2], affixes: [], sockets: 0, gems: [] }, hands: { type: 'armor', base: 'knight_hands', rarity: 0, armor: 1, affixes: [] } }, entries: [{ item: { type: 'armor', base: 'knight_head', rarity: 0, armor: 1, affixes: [] }, x: 0, y: 0 }] });
 assert.equal(hands(old.slots.main.base), 3);
-assert.equal(old.entries.length, 0);
+assert.equal(old.entries.length, 7);   // (the eight new staffs, less the one put in the hand)
 assert.equal(old.slots.hands, undefined);
 
 // Levels: each costs more than the last, and every perk goes up.

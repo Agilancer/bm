@@ -97,6 +97,8 @@ export const WEAPONS = [
   { id: 'ringed_sword', hands: 1 }, { id: 'bronze_broadsword', hands: 1 }, { id: 'brass_sabre', hands: 1 }, { id: 'swept_rapier', hands: 1 },
   { id: 'wheel_greatsword', hands: 2 }, { id: 'bluegrip_greatsword', hands: 2 }, { id: 'fluked_greatsword', hands: 2 }, { id: 'greengrip_greatsword', hands: 2 },
   { id: 'greenwood_staff', hands: 3 }, { id: 'crystal_staff', hands: 3 }, { id: 'skullhorn_staff', hands: 3 }, { id: 'gnarled_crook', hands: 3 },
+  { id: 'dark_staff', hands: 3 }, { id: 'death_staff', hands: 3 }, { id: 'earth_staff', hands: 3 }, { id: 'fire_staff', hands: 3 },
+  { id: 'ice_staff', hands: 3 }, { id: 'life_staff', hands: 3 }, { id: 'vine_staff', hands: 3 }, { id: 'wind_staff', hands: 3 },
 ];
 
 export const STATE_NAMES = ['patrol', 'alert', 'approach', 'circle', 'attack', 'block', 'roll', 'stagger', 'retreat', 'break', 'dead', 'taunt', 'feint', 'idle'];

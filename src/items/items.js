@@ -29,6 +29,14 @@ export const BASES = {
   crystal_staff: { name: 'Crystal Staff', dmg: [14, 20], grade: 'common' },
   skullhorn_staff: { name: 'Skullhorn Staff', dmg: [14, 20], grade: 'common' },
   gnarled_crook: { name: 'Gnarled Crook', dmg: [14, 20], grade: 'common' },
+  dark_staff: { name: 'Dark Staff', dmg: [14, 20], grade: 'common', note: 'A shade that hunts from foe to foe, and brings you back mana for each.' },
+  death_staff: { name: 'Death Staff', dmg: [14, 20], grade: 'common', note: 'Marks a foe for death. If the mark kills, it leaps to two more.' },
+  earth_staff: { name: 'Earth Staff', dmg: [14, 20], grade: 'common', note: 'A boulder that bounces on, throwing up all it lands among.' },
+  fire_staff: { name: 'Fire Staff', dmg: [14, 20], grade: 'common', note: 'A comet that bursts into a spray of embers, and they burn.' },
+  ice_staff: { name: 'Ice Staff', dmg: [14, 20], grade: 'common', note: 'Freezes what it strikes solid, and shards fly out from it.' },
+  life_staff: { name: 'Life Staff', dmg: [14, 20], grade: 'common', note: 'A seed that bursts. Each foe it hurts sends a mote back to heal you.' },
+  vine_staff: { name: 'Vine Staff', dmg: [14, 20], grade: 'common', note: 'Vines seize nearby foes and drag them in, to the spot or to the one it hit.' },
+  wind_staff: { name: 'Wind Staff', dmg: [14, 20], grade: 'common', note: 'A tornado that leaves small and grows huge, sweeping up all it meets.' },
   gilded_sword: { name: 'Gilded Sword', dmg: [22, 30], grade: 'retired', innate: { life: 10 } },
   crimson_sword: { name: 'Crimson Sword', dmg: [24, 34], grade: 'retired', innate: { leech: 1 } },
   thornvine_sword: { name: 'Thornvine Sword', dmg: [20, 32], grade: 'retired', innate: { poise: 0.15 } },
@@ -365,6 +373,7 @@ export function linesOf(item) {
   }
   const s = statsOf(item);
   const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} staff`, kind: 'sub' }, { text: `Bolt damage ${Math.round(s.min * STAFF_SHOWN)} to ${Math.round(s.max * STAFF_SHOWN)}`, kind: 'stat' }];
+  if (BASES[item.base]?.note) out.push({ text: BASES[item.base].note, kind: 'sub' });
   for (const a of item.affixes) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
   return SOCKET_LINES(item, out);
 }
