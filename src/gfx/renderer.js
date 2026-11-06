@@ -1737,13 +1737,23 @@ export class Renderer {
     // It breathes with you, a very little: arm and skull as one.
     const breath = this.breathData || (this.breathData = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
     breath[4] = Math.sin(time * 0.7) * 0.0015; breath[5] = Math.sin(time * 1.3) * 0.002;
+    // What's held rigid rides the same stride as the hand on the staff (staff_walk: side to side once, up and down twice), in step with it.
+    const stride = snap[H.CARRY_T] * Math.PI * 2, carryRate = 1 - Math.exp(-18 * dt);
+    this.carryX = (this.carryX || 0) + (Math.sin(stride) * 0.008 * snap[H.CARRY_K] - (this.carryX || 0)) * carryRate;
+    this.carryY = (this.carryY || 0) + (Math.sin(stride * 2) * 0.012 * snap[H.CARRY_K] - (this.carryY || 0)) * carryRate;
+    breath[4] += this.carryX; breath[5] += this.carryY;
     breath[5] -= surfArm * 0.35;      // (the skull's arm going down; half, as this is a dual quaternion)
+    // A one-handed spell lowers the staff and leaves the skull where it is.
+    const skullLow = snap[H.SKULL_LOWER];
+    this.skullDown = skullLow > 0.995;
+    const vmY = vmData[13], vmZ = vmData[14], skullY = vmSway[13] - skullLow * 0.85, skullZ = vmSway[14] + skullLow * 0.2;
     for (const h of this.skullParts) {
       q.writeBuffer(h.hand.palette, 0, h === this.surfHand ? surfHandPose(snap[H.SURF_TILT], surfArm, time) : breath);
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
       // (Negative: the spell hands' warm fill from the eye, so this arm is the same skin as the one that casts, and the skull, on less of it, doesn't go black at night.)
       vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.surfHand ? -1 : -0.5;   // (Less on the skull's arm: so much pale bone lights up the night.)
+      vmData[13] = h === this.surfHand ? vmY : skullY; vmData[14] = h === this.surfHand ? vmZ : skullZ;
       q.writeBuffer(h.ubo, 0, vmData);
     }
     if (this.eyesOn) {
@@ -1757,11 +1767,16 @@ export class Renderer {
         q.writeBuffer(gems.ubo, 80, sd);
       }
       this.skullEyes.setSkin(skin, gems?.gemSpots || null);
+      vmData[13] = skullY; vmData[14] = skullZ;
       this.skullEyes.update(dt, cam, snap, vmData, breath);
     }
+    vmData[13] = vmY; vmData[14] = vmZ;
     if (this.shieldParts.length) {
       const pal = this.shieldPal || (this.shieldPal = new Float32Array(8));
       shieldPose(pal, shieldUp, this.W / this.H);
+      // The stride, moved in view space: half of it times the board's rotation, on the dual part.
+      const hx = this.carryX, hy = this.carryY;
+      pal[4] += hx * pal[3] + hy * pal[2]; pal[5] += hy * pal[3] - hx * pal[2]; pal[6] += hx * pal[1] - hy * pal[0]; pal[7] -= hx * pal[0] + hy * pal[1];
       for (const h of this.shieldParts) {
         q.writeBuffer(h.hand.palette, 0, pal);
         skinParamsU[0] = h.hand.count;
@@ -2031,7 +2046,8 @@ export class Renderer {
         mp.setBindGroup(1, h.bg);
         mp.drawIndexed(h.hand.indices);
       }
-      if (!this.vmDown) for (const h of this.skullParts) {
+      for (const h of this.skullParts) {
+        if (h === this.surfHand ? this.vmDown : this.skullDown) continue;
         mp.setPipeline(h === this.surfHand ? this.pVM : this.pVMSkull);
         mp.setVertexBuffer(0, h.hand.outBuf);
         mp.setVertexBuffer(1, h.hand.sideVB);
@@ -2048,7 +2064,7 @@ export class Renderer {
         mp.setBindGroup(1, h.bg);
         mp.drawIndexed(h.hand.indices);
       }
-      if (this.eyesOn && !this.vmDown) this.skullEyes.draw(mp);
+      if (this.eyesOn && !this.skullDown) this.skullEyes.draw(mp);
     }
     mp.setViewport(0, 0, this.W, this.H, 0, 0.96);
     this.spellfx.drawSolid(mp);
@@ -2131,7 +2147,7 @@ export class Renderer {
         mp.setVertexBuffer(0, this.trailVB);
         mp.draw(this.trailCount);
       }
-      if (this.eyesOn && !this.vmDown && !this.hideVM) { mp.setViewport(0, 0, this.W, this.H, 0.97, 1); this.skullEyes.drawAura(mp); }
+      if (this.eyesOn && !this.skullDown && !this.hideVM) { mp.setViewport(0, 0, this.W, this.H, 0.97, 1); this.skullEyes.drawAura(mp); }
     }
     mp.end();
 
@@ -2152,7 +2168,7 @@ export class Renderer {
       pp.setBindGroup(1, this.pDrawBG);
       pp.drawIndirect(this.pArgs, 0);
       this.spellfx.draw(pp);
-      if (this.eyesOn && !this.vmDown && !this.hideVM) this.skullEyes.drawAura(pp);
+      if (this.eyesOn && !this.skullDown && !this.hideVM) this.skullEyes.drawAura(pp);
       if (this.trailCount >= 4 && !this.hideVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
         pp.setPipeline(this.pTrail);
