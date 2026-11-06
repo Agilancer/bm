@@ -22,8 +22,8 @@ import { SKIN } from './shaders.js';
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 444;
 // Where a skull sits in the left hand, from its own frame to the view's. Printed by tools/wizard/skull_hold.py.
-const SKULL_SCALE = 0.8;
-export const SKULL_SEAT = [0.70466, 0.02157, -0.37813, 0.0, -0.04562, 0.79772, -0.0395, 0.0, 0.37599, 0.05635, 0.70389, 0.0, -0.22996, -0.17554, -0.4273, 1.0];
+const SKULL_SCALE = 1.0;
+export const SKULL_SEAT = [0.82533, -0.20219, -0.52721, 0.0, 0.12691, 0.97623, -0.17572, 0.0, 0.55021, 0.07812, 0.83137, 0.0, -0.223, -0.075, -0.365, 1.0];
 
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
@@ -1602,7 +1602,8 @@ export class Renderer {
       q.writeBuffer(h.hand.palette, 0, breath);
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
-      vmData[17] = 0; vmData[18] = 0; vmData[19] = 1;
+      // (Negative: the spell hands' warm fill from the eye, so this arm is the same skin as the one that casts, and the skull, on less of it, doesn't go black at night.)
+      vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.skullParts[0] ? -1 : -0.28;
       q.writeBuffer(h.ubo, 0, vmData);
     }
     // The gauntlets, when they're worn and in: each rig's on that rig's palette.
