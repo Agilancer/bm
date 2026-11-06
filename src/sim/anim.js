@@ -181,7 +181,7 @@ function sameHemisphere(values) {
 const FIST_RAISE = 0.65;
 
 export class ArmsRig {
-  constructor(buffer, scale = 1) {
+  constructor(buffer, scale = 1, clipNames) {
     const glb = parseGLB(buffer);
     const skel = readSkeleton(glb);
     this.names = skel.names;
@@ -201,7 +201,7 @@ export class ArmsRig {
     if (scale !== 1) for (let i = 0; i < this.restT.length; i++) this.restT[i] *= scale;
     this.rootQ = null; this.rootT = null;
     this.clips = {};
-    const clips = readClips(glb, skel);
+    const clips = readClips(glb, skel, clipNames);
     for (const [name, c] of Object.entries(clips)) {
       const n = Math.max(2, Math.round(c.dur * 60) + 1);
       const rots = new Array(this.count).fill(null), trs = new Array(this.count).fill(null);
