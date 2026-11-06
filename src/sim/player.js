@@ -35,6 +35,7 @@ const GUARD_COST = 1.1, GUARD_LEAK = 0.1;   // breath per point of a blow taken 
 const GUARD_DRAG = 0.6;
 // The shove, after Bellmourn's: a box in front of you, as wide as the ghost shield gets and as far as it flies.
 const BASH_REACH = 7, BASH_HALF = 2.4, BASH_DMG = 12, BASH_POISE = 130, BASH_PUSH = 18, BASH_COST = 14, BASH_COOL = 0.9;
+const SHIELD_RISE = 0.2, SHIELD_FALL = 0.14;
 const SURF_CROUCH = 0.3;   // the eye lower on the shield, the knees bent
 const BASE_HP = 160;
 const PUNCTURE_RADIUS = 0.07;
@@ -109,7 +110,7 @@ export class Player {
     this.staffSurf = false;
     Object.assign(this, {
       clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, swingRate: 1, queued: null, combo: 0, comboT: 0, swinging: false, recovering: false,
-      threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0, guard: 0, staffGuard: false,
+      threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0, guard: 0, staffGuard: false, shieldUp: 0,
     });
   }
 
@@ -305,9 +306,9 @@ export class Player {
 
   startGuard(sim) {
     // It just comes up: straight to the hold, no wind-up and no thump. The push is the ghost shield's, thrown from its face as it arrives.
-    // (A staff's rig has no left arm, so a staff goes out of view behind the shield while it's up.)
-    if (this.stance === STANCES[3]) { this.arms = this.rigs[1]; this.staffGuard = true; }
-    this.guardClip('shield_hold', G.HOLD);
+    // (The raised arm is drawn on its own, so a staff stays in the right hand, in its own idle, while the shield's up.)
+    this.staffGuard = this.stance === STANCES[3];
+    this.guardClip(this.staffGuard ? this.stance.idle : 'shield_hold', G.HOLD);
     this.fade = 0.5;
     this.guardAt = sim.time; this.recoilT = 0; this.drag = 0; this.queued = null;
     this.shove(sim);
@@ -342,6 +343,8 @@ export class Player {
   // The button's let go: the shield starts down now, from wherever it's got to, so a shield still on its way up turns round where it is.
   dropGuard() {
     this.queued = null;
+    // (The staff's arm never left its idle, so there's nothing to bring down.)
+    if (this.staffGuard) { this.staffGuard = false; this.guard = 0; return; }
     this.guardClip('shield_down', G.DOWN);
   }
 
@@ -362,14 +365,12 @@ export class Player {
           this.queued = null;
           this.shove(sim);
         } else if (this.winded || !this.hasShield || this.surfing) {
-          this.queued = null;
-          this.guardClip('shield_down', G.DOWN);
+          this.dropGuard();
         }
         break;
       default:
         if (this.t >= info.dur) {
           this.guard = 0;
-          if (this.staffGuard) { this.staffGuard = false; this.arms = this.rigs[3]; this.t = 0; this.fade = 1; }
           this.toIdle();
         }
     }
@@ -396,7 +397,7 @@ export class Player {
     if (this.stamina > 0) { this.hp = Math.max(1, this.hp - amount * GUARD_LEAK); this.regenT = 0; return false; }
     // Out of breath: the guard breaks, and half of it lands.
     sim.event(EV.SHIELD_BREAK, hx, hy, hz);
-    this.guardClip('shield_down', G.DOWN);
+    this.dropGuard();
     this.applyHurt(sim, amount * 0.5, fromX, fromZ, knock);
     return true;
   }
@@ -419,6 +420,9 @@ export class Player {
   }
 
   stepSwing(dt, tdt, sim) {
+    // The raised arm's way up its line: quick up, and it starts down the instant the button's let go.
+    const shieldWant = this.guard && this.guard !== G.DOWN;
+    this.shieldUp = shieldWant ? Math.min(1, this.shieldUp + dt / SHIELD_RISE) : Math.max(0, this.shieldUp - dt / SHIELD_FALL);
     if (this.surfing !== !!this.surfPose) this.poseForSurf();
     if (this.guard === G.STAB && !this.blockHeld) this.dropGuard();     // (a thrust goes with the shield: the button's what keeps either up)
     if (this.guard && this.guard !== G.STAB) { this.stepGuard(tdt, sim); return; }
@@ -793,7 +797,8 @@ export class Player {
     snap[H.BLOOD_SWORD] = this.bloodSword;
     snap[H.SWINGING] = this.swinging ? 1 : 0;
     snap[H.SWING_T] = this.clip === this.stance.idle ? 0 : this.t;
-    snap[H.WEAPON] = this.staffGuard || this.staffSurf ? 0 : this.weapon;
+    snap[H.WEAPON] = this.staffSurf ? 0 : this.weapon;
+    snap[H.SHIELD_UP] = this.shieldUp;
     snap[H.HIT_DIR] = this.hitDir; snap[H.HIT_DIR_T] = this.hitDirT;
     snap[H.GROUND_SPEED] = this.groundSpeed || 0;
     snap[H.ON_GROUND] = this.onGround ? 1 : 0;
