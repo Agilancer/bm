@@ -1183,4 +1183,13 @@ class GameView {
         view.onFrame = () => {
           view.onFrame = null;
           view.renderer.canvas.toBlob(async (blob) => {
-            await fetch(`/shot?name=${encodeURIComponent(name)}`, { 
+            await fetch(`/shot?name=${encodeURIComponent(name)}`, { method: 'POST', body: blob });
+            resolve(name);
+          }, 'image/png');
+        };
+      }),
+    };
+  }
+}
+
+main().catch((e) => { console.error(e); showFail(e.message); });
