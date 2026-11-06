@@ -43,9 +43,10 @@ const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM:
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
 // the forearm toward the elbow (fitted to the skinned arm, within a millimetre at both, on the rig's shield joint). Bigger than on the ground, to fill the owner's outline.
 const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCALE = 1.25, KITE_SEAT = [-0.06, -0.08, -0.023];
-// The raised arm (assets/game/items/shield_arm.glb, already posed in the view's space) and the socket on it, printed by tools/fp_shield_arm/bake.py. It only ever slides, along the owner's blue line.
+// The raised arm (assets/game/items/shield_arm.glb, already posed in view space) and the socket on it, printed by tools/fp_shield_arm/bake.py.
 const SHIELD_SOCKET = [0.99692, -0.01765, 0.07643, 0.00000, 0.00000, 0.97437, 0.22495, 0.00000, -0.07844, -0.22426, 0.97137, 0.00000, 0.05418, -0.29743, -0.51052, 1.00000];
-const SHIELD_TRAVEL = [-0.3779, -0.2552, 0.0000], SHIELD_AWAY = 2.3;  // AWAY: of the clip's travel, enough to leave the frame.
+// At rest only the rim clears the bottom of the view. Guard raises it up and to the left.
+const SHIELD_REST = [-0.17, -0.46], SHIELD_GUARD_X = -0.25;
 // A shield on the socket, as the owner's outline has it: this wide and its top this high, its inner face to the eye and on the back of the arm. SHIELD_FACE: which way its inner face looks in its own model.
 const SHIELD_WIDTH = 0.675, SHIELD_TOP = 0.4932, SHIELD_FACE = 1, SHIELD_PLANE = -0.018, SHIELD_ARM_Y = 0.107;
 const FAR_HALF = 1024;       // What the coarse map of the land covers, either way.
@@ -1615,9 +1616,6 @@ export class Renderer {
     const held = weapon && weapon.id !== 'greatsword' ? this.sword(weapon.id) : null;
     this.held = held && held.ready ? held : null;
     this.holdingOld = !!weapon && weapon.id === 'greatsword';
-    // The shield on the arm, if the arms in view have a place for one and it isn't under your feet.
-    const onArm = this.offHand && this.vm === this.vms[1] && snap[H.SURF] < 1.5 ? this.sword(this.offHand) : null;
-    this.onArm = onArm && onArm.ready ? onArm : null;
     // The skull in the left hand, on the staff's arms, which have no left of their own.
     this.skullParts = this.skullParts || [];
     this.skullParts.length = 0;
@@ -1628,13 +1626,17 @@ export class Renderer {
     // The surfing hand: rigid, from SURFING.glb, up once the shield's on the ground.
     this.surfHand = null;
     if (surfArm > 0 && this.sword('surf_arm').ready) { this.surfHand = this.sword('surf_arm'); this.skullParts.push(this.surfHand); }
-    // The raised shield arm, with whatever's on it: there as soon as the shield's on its way up, and until it's gone again.
+    // Use one arm and shield for both resting and guarding so the shield stays seated as it rises.
     this.shieldParts = this.shieldParts || [];
     this.shieldParts.length = 0;
-    const shieldUp = this.offHand && snap[H.SURF] < 0.5 ? snap[H.SHIELD_UP] : 0;
-    if (this.offHand && this.sword('shield_arm').ready && this.sword(this.offHand).up?.ready) {
-      if (shieldUp > 0) this.shieldParts.push(this.sword('shield_arm'), this.sword(this.offHand).up);
+    const surf = snap[H.SURF], shieldUp = snap[H.SHIELD_UP];
+    const shield = this.offHand ? this.sword(this.offHand) : null;
+    if (shield && surf < 0.5 && (!weapon || weapon.hands === 3 || shieldUp > 0)) {
+      const arm = this.sword('shield_arm');
+      if (arm.ready && shield.up?.ready) this.shieldParts.push(arm, shield.up);
     }
+    // The rig still carries the shield during the jump onto it, until it becomes the board.
+    this.onArm = shield?.ready && !this.shieldParts.length && this.vm === this.vms[1] && surf < 1.5 ? shield : null;
     q.writeBuffer(this.vm.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, this.vm.jointCount * 32);
     skinParamsU[0] = this.vm.count;
     skinParams[1] = 0; skinParams[2] = time; skinParamsU[3] = 0;
@@ -1682,8 +1684,9 @@ export class Renderer {
     if (this.shieldParts.length) {
       // Dual quaternion, so half the translation. Eased, so it arrives gently at the top of the line.
       const pal = this.shieldPal || (this.shieldPal = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
-      const away = (1 - shieldUp) ** 3 * SHIELD_AWAY;
-      for (let c = 0; c < 3; c++) pal[4 + c] = SHIELD_TRAVEL[c] * away * 0.5;
+      const rise = 1 - (1 - shieldUp) ** 3;
+      pal[4] = lerp(SHIELD_REST[0], SHIELD_GUARD_X, rise) * 0.5;
+      pal[5] = lerp(SHIELD_REST[1], 0, rise) * 0.5;
       for (const h of this.shieldParts) {
         q.writeBuffer(h.hand.palette, 0, pal);
         skinParamsU[0] = h.hand.count;
