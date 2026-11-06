@@ -9,16 +9,17 @@ import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
-import { addUndead, corpsesNear, raiseZombie, stepCatacombs, Zombie } from './undead.js';
+import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepWoods, TOWN_R, Zombie } from './undead.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
+import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
-// Just another man out walking his round. He'll fight you if you come near, and when he's down the world goes on.
+// Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on.
 const BLACK = {
-  spawn: [-7, -7], yaw: 1.2, hostile: true, hp: 480, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
-  route: [[-8, -6], [7, -8], [10, 8], [-6, 11], [-11, 4]], pauseClip: null,
+  spawn: [60, 0], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
+  route: [[60, 0]], pauseClip: null,   // On guard before the cathedral's great door, and no further.
 };
 const SILVER = {
   spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
@@ -26,19 +27,23 @@ const SILVER = {
 };
 
 // Keeps to the woods north of the village. hp is how long it fights; territory is how far from spawn it minds you.
-const GRAVEHART = { spawn: [4, -56], lair: [-14, -74], yaw: 0.4, hp: 420, territory: 30 };
+const GRAVEHART = { spawn: [12, -128], lair: [-14, -150], yaw: 0.4, hp: 380, territory: 30 };
 // Lies up in the south, and doesn't go looking for anyone.
 // Down in the rift under the catacombs, on its burning floor, east of the bridge and the scaffold stair: see gulf() in tools/interior/build_interior.py. pit: where it can go.
 const HYDRA = { spawn: [208, -128], lair: [217, -127], yaw: -1.57, hp: 900, territory: 24, pit: { y: -44.25, x0: 150, x1: 222, z0: -133, z1: -123 } };
 
 const CRABS = [
-  { spawn: [-40, -28], yaw: 1.0, hp: 170, delay: 20, flank: 1.1 },
-  { spawn: [42, -24], yaw: -0.9, hp: 170, delay: 50, flank: -1.2 },
-  { spawn: [42, 26], yaw: -2.0, hp: 170, delay: 80, flank: 0.3 },
+  { spawn: [-92, -58], yaw: 1.0, hp: 55, delay: 20, flank: 1.1 },
+  { spawn: [-120, 96], yaw: -0.9, hp: 55, delay: 50, flank: -1.2 },
+  { spawn: [112, 92], yaw: -2.0, hp: 55, delay: 80, flank: 0.3 },
 ];
+
+// How much faster than their clips each kind goes, by kind: knight, silver knight, crab, Gravehart, Hydra, undead, ogre.
+const HASTE = [1.2, 1, 1.2, 1.1, 1, 1.3, 1.15], CASTER_HASTE = 1.2;
 
 class Sim {
   constructor() {
+    this.packAt = 0; this.healSeen = 0; this.manaSeen = 0;
     this.time = 0; this.tick = 0; this.timeScale = 1; this.stopT = 0; this.slowT = 0; this.gameState = 0; this.gameT = 0;
     this.firstBloodAt = -1; this.crabWoke = false;
     this.knights = [];
@@ -78,7 +83,7 @@ class Sim {
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0;
-    this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
+    this.reachedTown = false; this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
     p.atkSeen = inp[INPUT.ATTACK]; p.wideSeen = inp[INPUT.WIDE]; p.jumpSeen = inp[INPUT.JUMP]; p.dodgeSeen = inp[INPUT.DODGE];
@@ -106,21 +111,35 @@ class Sim {
     this.time += tdt;
     this.tick++;
     this.gameT += dt;
+    if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
+    if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(MAX_MANA, this.casting.mana + g); }
     player.update(dt * (this.slow || 1), tdt, input, this);
     for (const k of this.knights) {
       const ox = k.x, oz = k.z;
-      k.update(this.frozen ? 0 : tdt * this.casting.rate(k), this);
+      k.update(this.frozen ? 0 : tdt * this.casting.rate(k) * (k.opts?.role ? CASTER_HASTE : HASTE[k.kind] ?? 1), this);
       // Velscour's church is the undead's. What lives in the fields stops at its door.
       // (The Hydra is the exception. The pit is where it lives.)
       if (k.opts?.pit ? false : k instanceof Zombie ? inPit(k.x, k.z) : floorAt(k.x, k.z) !== null) { k.x = ox; k.z = oz; }
+      // The ghost shield's shove: thrown back, dying off fast, and stopped by what's solid.
+      if (k.pushX || k.pushZ) {
+        const nx = k.x + k.pushX * tdt, nz = k.z + k.pushZ * tdt;
+        if (!this.world.inside(nx, nz, 0.4)) { k.x = nx; k.z = nz; } else { k.pushX = 0; k.pushZ = 0; }
+        const fall = Math.exp(-4.5 * tdt);
+        k.pushX *= fall; k.pushZ *= fall;
+        if (Math.abs(k.pushX) + Math.abs(k.pushZ) < 0.4) { k.pushX = 0; k.pushZ = 0; }
+      }
+      // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there.)
+      if (k.kind !== 1 && Math.hypot(k.x, k.z) < TOWN_R && Math.hypot(ox, oz) >= TOWN_R) { k.x = ox; k.z = oz; }
+      if (k.champion && !k.dead && this.tick % 10 === 0) this.event(EV.CHAMPION, k.x, k.y + 1.3, k.z);
       // Each death leaves its loot once.
-      if (k.dead && !k.looted) { k.looted = true; this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.opts?.lootKind ?? k.kind); }
+      if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(MAX_MANA, this.casting.mana + 4); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
       if (!k.dead) k.looted = false;
     }
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
+    stepWoods(this);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);

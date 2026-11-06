@@ -69,14 +69,21 @@ SUMMIT = (-512.0, 166.0, 146.0)       # (x, z, height): the top of the hill, in 
 ROAD_SIGN_Y = (0.09, 0.2)
 
 
+# Every house, and all that's in it, this much bigger on the ground, about its front wall: the doors stay where the lanes reach them, and it
+# grows back and to either side. Heights stay. tools/interior/build_interior.py takes it from the homes list, so the insides match.
+HOUSE_SCALE = 1.25
+
+
 class Frame:
     """A local frame on the ground: local z is the building's front."""
 
     def __init__(self, x, z, yaw, y=0.0):
         self.x, self.z, self.y, self.yaw = x, z, y, yaw
         self.c, self.s = math.cos(yaw), math.sin(yaw)
+        self.k, self.front = 1.0, 0.0     # a house's plan is drawn this much bigger, about its front wall: see HOUSE_SCALE
 
     def p(self, lx, ly, lz):
+        lx, lz = lx * self.k, (lz - self.front) * self.k + self.front
         return (self.x + lx * self.c + lz * self.s, self.y + ly, self.z - lx * self.s + lz * self.c)
 
     def d(self, lx, ly, lz):
@@ -634,7 +641,7 @@ def shed(S, f, x0, z0, x1, z1, yh, yl, down, mat="roof_1", tile=3.0, posts=True,
                 face(b, f, mat_w, pts_w, [(p[2] / tile_w, 1 - p[1] / tile_w) for p in pts_w], (s, 0, 0))
         if solid:
             c = f.p(mx, 0, mz)
-            S.collider(c[0], c[2], abs(x1 - x0) / 2, abs(z1 - z0) / 2, f.yaw, 3.0)
+            S.collider(c[0], c[2], (abs(x1 - x0) / 2) * f.k, (abs(z1 - z0) / 2) * f.k, f.yaw, 3.0)
 
 
 DOOR_W, DOOR_H = 1.6, 2.35
@@ -645,6 +652,7 @@ def house(S, cx, cz, yaw, w, d, sp):
     b = S.b
     f = Frame(cx, cz, yaw)
     hw, hd = w / 2, d / 2
+    f.k, f.front = HOUSE_SCALE, hd
     h1 = sp.get("h1", 3.2)
     h2 = sp.get("h2", 2.7)
     jet = sp.get("jetty", 0.42)
@@ -660,7 +668,7 @@ def house(S, cx, cz, yaw, w, d, sp):
             tile, v1 = 2.6, (h1 + below) / 2.6
         if side == "front":
             # Cut round the door, the picture carrying on across the cut.
-            dl, dr = door_x - DOOR_W / 2, door_x + DOOR_W / 2
+            dl, dr = door_x - DOOR_W / 2 / f.k, door_x + DOOR_W / 2 / f.k
             wall(b, f, mat, -hw, dl, hd, -below, h1, tile, 0, v1, u_off=0.13)
             wall(b, f, mat, dr, hw, hd, -below, h1, tile, 0, v1, u_off=0.13 + (dr + hw) / tile)
             wall(b, f, mat, dl, dr, hd, DOOR_H, h1, tile, 0, (h1 - DOOR_H) / (h1 + below) * v1, u_off=0.13 + (dl + hw) / tile)
@@ -671,7 +679,7 @@ def house(S, cx, cz, yaw, w, d, sp):
         else:
             side_wall(b, f, mat, -hd, hd, hw, -below, h1, tile, 0, v1, u_off=0.63, sign=1)
     # Stone sill course around the foot, to seat the walls in the ground.
-    dl, dr = door_x - DOOR_W / 2, door_x + DOOR_W / 2
+    dl, dr = door_x - DOOR_W / 2 / f.k, door_x + DOOR_W / 2 / f.k
     for sx, sz, hx, hz in (((dl - hw - 0.15) / 2, hd + 0.05, (dl + hw + 0.15) / 2, 0.13), ((dr + hw + 0.15) / 2, hd + 0.05, (hw + 0.15 - dr) / 2, 0.13),
                            (0, -hd - 0.05, hw + 0.15, 0.13), (hw + 0.05, 0, 0.13, hd), (-hw - 0.05, 0, 0.13, hd)):
         box(b, f, "rubble", sx, -0.25, sz, hx, 0.45, hz, uv_scale=(0.30, 0.30))
@@ -781,7 +789,7 @@ def house(S, cx, cz, yaw, w, d, sp):
         dh = dd.get("h", 3.0)
         fm = "stone" if stone_body else "wood"
         for sx in (-1, 1):
-            box(b, f, fm, dx + sx * (DOOR_W / 2 + 0.05), DOOR_H / 2, hd - 0.05, 0.08, DOOR_H / 2 + 0.05, 0.13, uv_scale=(0.42, 0.42) if stone_body else (0.9, 0.3))
+            box(b, f, fm, dx + sx * (DOOR_W / 2 + 0.05) / f.k, DOOR_H / 2, hd - 0.05, 0.08, DOOR_H / 2 + 0.05, 0.13, uv_scale=(0.42, 0.42) if stone_body else (0.9, 0.3))
         box(b, f, fm, dx, DOOR_H + 0.05, hd - 0.05, DOOR_W / 2 + 0.13, 0.08, 0.13, uv_scale=(0.42, 0.42) if stone_body else (0.9, 0.2), grain="x")
         box(b, f, "wood", dx, 0.1, hd - 0.05, DOOR_W / 2, 0.06, 0.13, uv_scale=(0.9, 0.2), grain="x")
         box(b, f, "stone", dx, 0.03, hd + 0.34, 0.95, 0.09, 0.32, uv_scale=(0.3, 0.3))
@@ -789,8 +797,9 @@ def house(S, cx, cz, yaw, w, d, sp):
         S.doors.append({"p": [round(v, 3) for v in f.p(dx, 0, hd + 1.2)]})
         lx = dx + dd.get("lamp", 1.05)
         lantern(S, f, lx, min(dh * 0.9, h1 - 0.3), hd + 0.05)
-    S.footprints.append({"x": round(cx, 3), "z": round(cz, 3), "hx": round(hw + 0.14, 3), "hz": round(hd + 0.14, 3), "yaw": round(yaw, 4), "h": 4.0})
-    S.homes.append({"x": cx, "z": cz, "yaw": yaw, "w": w, "d": d, "h1": h1, "h2": h2, "jet": jet, "door": door_x, "chimney": chimneys[0], "chimneys": chimneys, "who": sp.get("who", "")})
+    mid = f.p(0, 0, 0)
+    S.footprints.append({"x": round(mid[0], 3), "z": round(mid[2], 3), "hx": round(hw * f.k + 0.14, 3), "hz": round(hd * f.k + 0.14, 3), "yaw": round(yaw, 4), "h": 4.0})
+    S.homes.append({"x": cx, "z": cz, "k": f.k, "mid": [mid[0], mid[2]], "yaw": yaw, "w": w, "d": d, "h1": h1, "h2": h2, "jet": jet, "door": door_x, "chimney": chimneys[0], "chimneys": chimneys, "who": sp.get("who", "")})
     # Extra lit windows, for the shader's glow and the light they throw.
     for lw in sp.get("glow", []):
         S.lights.append({"p": [round(v, 3) for v in f.p(lw[0], lw[1], lw[2])], "c": [1.0, 0.55, 0.22], "r": 4.0, "i": 1.1, "flicker": 0.25})
@@ -856,7 +865,7 @@ def rack(S, f, x, z, w=2.6, cloth="cloth_oat", n=3):
         face(b, f, cloth, [(cx - hw, 2.24 - hg, z), (cx + hw, 2.24 - hg * 0.86, z), (cx + hw, 2.24, z), (cx - hw, 2.24, z)], [(0, 1), (1, 1), (1, 0), (0, 0)], (0, 0, 1))
         face(b, f, cloth, [(cx + hw, 2.24 - hg * 0.86, z - 0.01), (cx - hw, 2.24 - hg, z - 0.01), (cx - hw, 2.24, z - 0.01), (cx + hw, 2.24, z - 0.01)], [(1, 1), (0, 1), (0, 0), (1, 0)], (0, 0, -1))
     c = f.p(x, 0, z)
-    S.collider(c[0], c[2], w / 2 + 0.05, 0.1, f.yaw, 2.2)
+    S.collider(c[0], c[2], (w / 2 + 0.05) * f.k, (0.1) * f.k, f.yaw, 2.2)
 
 
 def woodpile(S, f, x, z, w=2.4, rows=4, along_x=True):
@@ -873,7 +882,7 @@ def woodpile(S, f, x, z, w=2.4, rows=4, along_x=True):
             else:
                 cylinder(b, f, "bark", (x - L, y, z + t), (x + L, y, z + t), 0.1, 0.1, 6, uv=(0.8, 0.5), cap_mat="wood")
     c = f.p(x, 0, z)
-    S.collider(c[0], c[2], w / 2 if along_x else 0.42, 0.42 if along_x else w / 2, f.yaw, rows * 0.19)
+    S.collider(c[0], c[2], (w / 2 if along_x else 0.42) * f.k, (0.42 if along_x else w / 2) * f.k, f.yaw, rows * 0.19)
 
 
 def lantern(S, f, x, y, z):
@@ -1167,7 +1176,7 @@ def compose():
 
     well(S, -1.5, 1.0)
     stall(S, -6.5, -9.8, 0.08)
-    cart(S, 11.5, -9.0, 1.1)
+    cart(S, 17.5, -6.5, 1.1)
     for x, z, y in ((-9.4, -11.6, 0), (-10.3, -10.9, 0), (-9.6, -10.6, 0)):
         barrel(S, x, z, Rng.uniform(0, 6), 0.36, 0.92, y)
     barrel(S, 11.6, -5.0, 0.3)
@@ -1180,15 +1189,15 @@ def compose():
     crate(S, 3.0, 16.2, 0.1, 0.45)
     barrel(S, 4.0, 16.8, 0.9)
     # Paddock fence on the south-west, a run behind the inn, and two more out east. All clear of the roads and lanes: node tools/village/fences.mjs checks.
-    fence(S, [(-21, 11), (-21, 21), (-8, 26), (-6, 26.5)])
-    fence(S, [(-9, -22.5), (-19, -20), (-26, -12.5)])
+    fence(S, [(-21, 12.2), (-21, 21), (-8, 26), (-6, 26.5)])
+    fence(S, [(-10.5, -22.2), (-19, -20), (-26, -12.5)])
     fence(S, [(21.5, -9.5), (27.5, -13.5), (28, -6)])
     fence(S, [(21, 27), (31, 20), (33, 12)])
     # Low stone walls and a stack of crates in the square: cover, corners, and something to back an enemy against.
     low_wall(S, -8.5, 6.5, -5.0, 9.5)
-    low_wall(S, 6.2, -2.0, 9.6, -5.2)
+    low_wall(S, 11.0, -0.6, 14.0, -3.0)
     low_wall(S, 5.8, 8.6, 9.8, 7.8)
-    crate(S, -4.3, 9.3, 0.5, 0.42)
+    crate(S, -9.0, 10.6, 0.5, 0.42)
     crate(S, 9.9, -3.5, 0.2, 0.5)
     # A few great oaks, inside the town. The pines stand outside it: tools/village/build_pines.py and src/core/forest.js.
     for i, (x, z, h, sp) in enumerate(((-14.5, 15.0, 17, 8.5), (-29, -22, 18, 9), (31, -6, 19, 9.5), (28.5, 25, 17, 9), (-27.5, 34, 20, 10), (24, -36, 18, 9))):
@@ -1211,9 +1220,9 @@ def compose():
     box(S.b, f, "iron", 6.2, 0.72, 1.3, 0.13, 0.06, 0.38, uv_scale=(0.2, 0.2))
     box(S.b, f, "iron", 6.2, 0.8, 1.72, 0.04, 0.03, 0.12, uv_scale=(0.2, 0.2))
     x, z = xz(f, 5.6, -1.1)
-    S.collider(x, z, 1.0, 0.85, f.yaw, 1.05)
+    S.collider(x, z, (1.0) * f.k, (0.85) * f.k, f.yaw, 1.05)
     x, z = xz(f, 6.2, 1.3)
-    S.collider(x, z, 0.3, 0.42, f.yaw, 0.8)
+    S.collider(x, z, (0.3) * f.k, (0.42) * f.k, f.yaw, 0.8)
     barrel(S, *xz(f, 7.2, 2.2), 0.4)
     # 6. The alewife's: two gables over the street, side by side.
     f = house(S, 16.0, 37.0, Wt, 10.0, 7.0, {
@@ -1236,12 +1245,12 @@ def compose():
     for x_ in (-4.2, 4.2):
         box(S.b, f, "rubble", x_, 1.5, 4.25, 0.4, 1.9, 0.25, uv_scale=(0.42, 0.42))
         x, z = xz(f, x_, 4.25)
-        S.collider(x, z, 0.4, 0.25, f.yaw, 3.0)
+        S.collider(x, z, (0.4) * f.k, (0.25) * f.k, f.yaw, 3.0)
     for s in (-1, 1):
         for lz in (-2.2, 2.2):
             box(S.b, f, "rubble", s * 6.25, 1.5, lz, 0.25, 1.9, 0.4, uv_scale=(0.42, 0.42))
             x, z = xz(f, s * 6.25, lz)
-            S.collider(x, z, 0.25, 0.4, f.yaw, 3.0)
+            S.collider(x, z, (0.25) * f.k, (0.4) * f.k, f.yaw, 3.0)
     box(S.b, f, "wood", 2.6, 5.0, 4.03, 0.8, 0.8, 0.03, uv_scale=(0.9, 0.9), grain="x")
     box(S.b, f, "wood", 2.6, 6.45, 4.8, 0.09, 0.09, 1.0, uv_scale=(0.9, 0.2))
     cylinder(S.b, f, "iron", (2.6, 3.0, 5.55), (2.6, 6.37, 5.55), 0.012, 0.012, 5, caps=False)
@@ -1289,13 +1298,13 @@ def compose():
         "windows_front": [(0.0, 5.0)], "windows_right": [(-2.0, 5.0)],
         "doors": [{"x": 0.0, "lamp": -1.05}],
     })
-    for i, (lx, lz) in enumerate(((2.5, 5.0), (2.5, 5.0), (2.5, 5.0))):
+    for i, (lx, lz) in enumerate(((3.4, 5.0), (3.4, 5.0), (3.4, 5.0))):
         coffin(S, f, lx + i * 0.02, i * 0.35, lz, (0, 1))
     coffin(S, f, -2.7, 0.0, 5.0, (0, 1))
-    x, z = xz(f, 2.5, 5.0)
-    S.collider(x, z, 0.35, 1.0, f.yaw, 1.05)
+    x, z = xz(f, 3.4, 5.0)
+    S.collider(x, z, (0.35) * f.k, (1.0) * f.k, f.yaw, 1.05)
     x, z = xz(f, -2.7, 5.0)
-    S.collider(x, z, 0.35, 1.0, f.yaw, 0.34)
+    S.collider(x, z, (0.35) * f.k, (1.0) * f.k, f.yaw, 0.34)
     hanging_sign(S, f, -1.5, 2.7, 4.0)
     # 12. The tower house: square stone, slits for windows, a tall pyramid of a roof, and a shed against its foot.
     f = house(S, -30.0, -34.0, N, 7.4, 7.4, {
@@ -1351,11 +1360,11 @@ def write_indoor(S):
     tests = []
     for h in S.homes:
         turned = abs(math.sin(h["yaw"])) > 0.5
-        along, across = h["w"] / 2 - 0.05, h["d"] / 2 - 0.05
+        along, across = h["w"] / 2 * h["k"] - 0.05, h["d"] / 2 * h["k"] - 0.05
         hx, hz = (across, along) if turned else (along, across)
         jx, jz = (h["jet"], 0.0) if turned else (0.0, h["jet"])
         y1, top = h["h1"] + 0.1, h["h1"] + 0.3 + h["h2"] - 0.23
-        tests.append(f"inHome(p, {h['x']:.2f}, {h['z']:.2f}, {hx:.2f}, {hz:.2f}, {jx:.2f}, {jz:.2f}, {y1:.2f}, {top:.2f})")
+        tests.append(f"inHome(p, {h['mid'][0]:.2f}, {h['mid'][1]:.2f}, {hx:.2f}, {hz:.2f}, {jx:.2f}, {jz:.2f}, {y1:.2f}, {top:.2f})")
     body = "    return select(0.0, 1.0, " + "\n      || ".join(tests) + ");\n"
     path = os.path.join(ROOT, "src", "gfx", "shaders.js")
     with open(path, encoding="utf8", newline="") as fh:

@@ -1,7 +1,7 @@
 // The spellbook, shared by the sim (what they do) and the page (their names, costs and colours). Bellmourn's twenty.
 
 export const MAX_MANA = 120;
-export const MANA_REGEN = 7;   // a second
+export const MANA_REGEN = 9;   // a second
 
 // What each is made of, which picks its colours in the shaders and its noise.
 export const ELEM = { FIRE: 0, FROST: 1, ARCANE: 2, STORM: 3, HEAL: 4, LIGHT: 5, DRAIN: 6, BONE: 7, VOID: 8, POISON: 9, SPIRIT: 10, STONE: 11 };
@@ -14,7 +14,7 @@ export const ELEM_LIGHT = [
 
 // Shapes the renderer draws them with. From ICE up they are solid things in the world; LIGHT only lights it.
 export const FX = {
-  ORB: 0, BEAM: 1, BOLT: 2, RING: 3, DISC: 4, FLAME: 5, PUFF: 6, FLARE: 7, TRAIL: 8, RUNE: 9, COLUMN: 10, VORTEX: 11, SHOCK: 12,
+  ORB: 0, BEAM: 1, BOLT: 2, RING: 3, DISC: 4, FLAME: 5, PUFF: 6, FLARE: 7, TRAIL: 8, RUNE: 9, COLUMN: 10, VORTEX: 11, SHOCK: 12, KITE: 13,
   ICE: 16, SPIKE: 17, LANCE: 18, BLADE: 19, ROCK: 20, FLASK: 21, LIGHT: 31,
 };
 

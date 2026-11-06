@@ -2287,6 +2287,7 @@ class Home:
         self.c, self.s = math.cos(self.yaw), math.sin(self.yaw)
         self.turned = abs(self.s) > 0.5
         self.hw, self.hd = h['w'] / 2, h['d'] / 2
+        self.k = h.get('k', 1.0)                               # the plan drawn this much bigger, about its front wall: HOUSE_SCALE in the village's build
         self.ix, self.iz = self.hw - 0.12, self.hd - 0.12      # the walls' inner faces
         self.jet = h['jet']
         self.uz = self.iz + self.jet                           # upstairs, over the overhang
@@ -2298,10 +2299,12 @@ class Home:
         self.chimneys = h.get('chimneys') or [h['chimney']]
 
     def p(self, lx, lz):
+        lx, lz = lx * self.k, (lz - self.hd) * self.k + self.hd
         return (self.x + lx * self.c + lz * self.s, self.z - lx * self.s + lz * self.c)
 
     def box(self, mat, lx, y, lz, hx, hy, hz, tile=None):
         x, z = self.p(lx, lz)
+        hx, hz = hx * self.k, hz * self.k
         bx(mat, x, y, z, hz if self.turned else hx, hy, hx if self.turned else hz, tile)
 
     def collide(self, x0, z0, x1, z1, h=40.0, b=0.0):
@@ -2567,7 +2570,7 @@ class Home:
         """stair is (axis, foot, head, wall side, room side): it climbs along that axis of the house from foot to head, between the other two. via: where you go on the way from the door to its foot. up: and from its head, upstairs."""
         y, y1, ix, iz, uz, h1 = HOME_FLOOR, self.y1, self.ix, self.iz, self.uz, self.h1
         hw, hd = self.hw, self.hd
-        dl, dr = self.door - 0.8, self.door + 0.8
+        dl, dr = self.door - 0.8 / self.k, self.door + 0.8 / self.k
         axis, lo, hi, a_, b_ = stair
         at = (lambda t, w: (t, w)) if axis == 'x' else (lambda t, w: (w, t))
         def rc(t0, w0, t1, w1):
@@ -2678,12 +2681,12 @@ class Home:
         # The door, stood open against the wall.
         # In the plane of the village's door frame, between its posts (0.77 either side), and it opens into the house.
         fz = hd - 0.05
-        hx_ = self.door - 0.77 if leaf == 'l' else self.door + 0.77
+        hx_ = self.door - 0.77 / self.k if leaf == 'l' else self.door + 0.77 / self.k
         hinge = self.p(hx_, fz)
-        s0, s1 = self.p(self.door - 0.8, fz - 0.1), self.p(self.door + 0.8, fz + 0.1)
-        a0, a1 = self.p(hx_ - 0.05, fz - 1.54), self.p(hx_ + 0.05, fz)
+        s0, s1 = self.p(self.door - 0.8 / self.k, fz - 0.1), self.p(self.door + 0.8 / self.k, fz + 0.1)
+        a0, a1 = self.p(hx_ - 0.05, fz - 1.54 / self.k), self.p(hx_ + 0.05, fz)
         door_leaf(3 + len([t for t in W.things if t['type'] == 'door' and 'head' in t]), 'door_iron2' if leaf == 'l' else 'door_iron2_r', (hinge[0], y, hinge[1]), self.yaw, math.pi / 2 if leaf == 'l' else -math.pi / 2,
-                  (s0[0], s0[1], s1[0], s1[1]), (a0[0], a0[1], a1[0], a1[1]), self.p(self.door, fz), 2.5, head=self.p(self.door - 0.77, fz))
+                  (s0[0], s0[1], s1[0], s1[1]), (a0[0], a0[1], a1[0], a1[1]), self.p(self.door, fz), 2.5, head=self.p(self.door - 0.77 / self.k, fz))
         # And where you stand. Ramp first: the height runs along whichever of world x and z the stair does.
         a, c = self.p(*at(lo, a_)), self.p(*at(hi, a_))
         world_z = self.turned != (axis == 'z')

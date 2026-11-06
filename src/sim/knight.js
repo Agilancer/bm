@@ -608,7 +608,8 @@ export class Knight {
     }
     this.attackUsed = true;
     this.stats.landed++;
-    if (p.damage(sim, a.dmg, this.x, this.z, a.knock || 0)) sim.event(EV.HURT, p.x, p.y + 1.2, p.z, a.dmg);
+    const bite = a.dmg * (this.opts.hostile ? 1.8 : 1);
+    if (p.damage(sim, bite, this.x, this.z, a.knock || 0)) sim.event(EV.HURT, p.x, p.y + 1.2, p.z, bite);
   }
 
   onParried(sim) {
@@ -697,7 +698,7 @@ export class Knight {
     // Sight is a cone. A sprint close by is heard, and anything at arm's length is felt.
     const sees = sim.world.sees(this.x, this.y + 1.7, this.z, p.x, p.y + 1.6, p.z);
     const inCone = Math.abs(wrapAngle(toPlayer - this.faceYaw)) < 1.9;
-    if ((sees && inCone && dist < 22) || (dist < 9 && p.sprinting) || dist < 5) {
+    if ((sees && inCone && dist < (this.opts.hostile ? 18 : 22)) || (dist < 9 && p.sprinting) || dist < 5) {
       this.seen = true;
       if (this.action) this.stopAction(0.2);
       sim.event(EV.ALERT, this.x, this.y + 1.5, this.z);

@@ -82,13 +82,14 @@ for (let i = 0; i < 20000; i++) {
 // ---- the pack ----------------------------------------------------------------------------------------
 const p = new Pack();
 p.startingKit();
-assert.equal(p.entries.filter((e) => e.item.type === 'weapon').length, 17, 'the test kit holds all thirteen swords and four staffs');
+assert.equal(p.entries.length, 1, 'a common staff in the pack and nothing else');
+assert.ok(p.slots.main.rarity === 0 && p.entries[0].item.rarity === 0 && p.slots.off.rarity === 0, 'all three common');
 for (const e of p.entries) {
   const { w: fw, h: fh } = sizeOf(e.item);
   assert.ok(e.x + fw <= PACK_W && e.y + fh <= PACK_H, 'inside the grid');
   assert.equal(p.under(e.item, e.x, e.y).length, 1, 'on nothing else');
 }
-assert.ok(p.entries.some((e) => e.item.sockets === 4), 'the kit shows a four-socket sword');
+
 const q = new Pack();
 const big = rollWeapon(rng, { base: 'ringed_sword', rarity: 0, sockets: 0 });
 assert.equal(q.place(big, 0, 0), null);

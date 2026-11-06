@@ -15,7 +15,8 @@ const tmp = [0, 0, 0], out3 = [0, 0, 0];
 // What each staff fires, a spell's bolt from its head. It costs what the spell costs.
 const STAFF_BOLT = { crystal_staff: 'frost', greenwood_staff: 'plague', skullhorn_staff: 'firebolt', gnarled_crook: 'lightning' };
 // A staff fights from far off, so it bites for far less than a blade up close: what a bolt's spell does, times this, times the staff's roll against a sword of 20.
-const STAFF_BITE = 0.04;
+const STAFF_BITE = 0.38, STAFF_MANA = 11, STAFF_BLAST = 2.5;
+const SPELL_BITE = 0.5;   // every spell against the quicker dying of the overhaul: a firebolt takes a zombie, ten take a knight
 const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a palm's does
 
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
@@ -37,7 +38,7 @@ export class Casting {
 
   reset() {
     Object.assign(this, {
-      mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0, armOnly: false, armLower: 0, asked: 0,
+      waves: [], mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0, armOnly: false, armLower: 0, asked: 0,
       gathered: false, charge: 0, held: 0, tickT: 0, fizzleT: 0, selected: 0, summonT: 0, launchT: 0, heldNow: false, flip: false,
       bolts: [], zones: [], bursts: [], missiles: [], spikes: [], blades: null, wisp: null,
     });
@@ -60,12 +61,15 @@ export class Casting {
 
   update(dt, tdt, input, sim) {
     this.n = 0;
+    this.stepGhosts(tdt);
     if (this.castSeen < 0) this.castSeen = input[INPUT.CAST_N];
     const tapped = input[INPUT.CAST_N] !== this.castSeen;
     this.castSeen = input[INPUT.CAST_N];
     // (A press made mid-swing waits for the swing, a moment.)
     this.asked = tapped ? 0.35 : Math.max(0, this.asked - dt);
-    const held = input[INPUT.CAST] > 0.5;
+    const none = input[INPUT.SPELL] < 0;   // (No spell learned yet: a staff's bolt is another matter.)
+    if (none) this.asked = 0;
+    const held = input[INPUT.CAST] > 0.5 && !none;
     this.selected = clamp(input[INPUT.SPELL] | 0, 0, SPELLS.length - 1);
     if (this.state !== 'hold') this.mana = Math.min(MAX_MANA, this.mana + MANA_REGEN * dt);
     this.fizzleT -= dt;
@@ -256,14 +260,15 @@ export class Casting {
     }
     if (p.fired) return;
     p.fired = true;
-    if (this.mana < def.mana) {
+    const cost = Math.max(def.mana, STAFF_MANA);
+    if (this.mana < cost) {
       if (this.fizzleT <= 0) { sim.event(EV.SPELL_FIZZLE); this.fizzleT = 0.8; }
       return;
     }
-    this.mana -= def.mana;
+    this.mana -= cost;
     this.charge = def.gather || 0;
     const k = STAFF_BITE * p.bite();
-    this.cast_bolt({ ...def, staff: true, dmg: def.dmg * k, lash: def.lash * k, dps: def.dps * k }, sim, [from[0], from[1], from[2]]);
+    this.cast_bolt({ ...def, staff: true, radius: Math.min(def.radius ?? STAFF_BLAST, STAFF_BLAST), dmg: def.dmg * k, lash: def.lash * k, dps: def.dps * k }, sim, [from[0], from[1], from[2]]);
     sim.event(EV.SPELL_CAST, def.elem, SPELLS.indexOf(def), p.x, p.y + EYE, p.z);
   }
 
@@ -398,7 +403,7 @@ export class Casting {
   hurt(sim, k, dmg, elem, x, y, z, fromX, fromZ, poise = dmg * 0.7, kind = 'gash') {
     if (k.dead) return;
     const a = this.affOf(k);
-    k.hp -= a.freeze > 0 ? dmg * 1.5 : dmg;
+    k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE;
     k.onHit(sim, kind, fromX, fromZ, poise);
     sim.event(EV.SPELL_HIT, elem, x, y, z, dmg);
   }
@@ -407,6 +412,24 @@ export class Casting {
     const a = this.affOf(k);
     a.vx += vx; a.vz += vz;
     if (up > 0) a.vh = Math.max(a.vh, up);
+  }
+
+  // The shove made visible, after Bellmourn's shovewave.js: a see-through, rim-lit ghost of the shield leaves its face and flies out across
+  // the shove's box, swelling to the box's width and fading at the far end.
+  ghostShield(x, y, z, fx, fz, reach, half) {
+    this.waves.push({ x: x + fx * 0.75, y, z: z + fz * 0.75, fx, fz, reach, half, t: 0 });
+  }
+
+  stepGhosts(tdt) {
+    const WAVE_TIME = 0.36;
+    for (let i = this.waves.length - 1; i >= 0; i--) {
+      const w = this.waves[i];
+      w.t += tdt;
+      const k = Math.min(1, w.t / WAVE_TIME), e = 1 - (1 - k) * (1 - k);
+      const a = 0.9 * (k < 0.15 ? 1 : ((1 - k) / 0.85) ** 1.6);
+      this.fx(FX.KITE, ELEM.SPIRIT, w.x + w.fx * w.reach * e, w.y, w.z + w.fz * w.reach * e, 0.45 + (w.half - 0.45) * e, w.fx, 0, w.fz, 0, a, 8 * a, 6, k, 0);
+      if (k >= 1) this.waves.splice(i, 1);
+    }
   }
 
   // A blast: hurts and throws everything within radius, by how near it is.

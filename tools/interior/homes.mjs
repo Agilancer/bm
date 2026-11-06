@@ -30,8 +30,8 @@ const routes = inter.homes.filter((h) => h.route);
 if (routes.length !== village.homes.length) { fails++; console.log('homes', village.homes.length, 'walked', routes.length); }
 village.homes.forEach((h, i) => {
   const c = Math.cos(h.yaw), s = Math.sin(h.yaw);
-  const tr = (lx, lz) => [h.x + lx * c + lz * s, h.z - lx * s + lz * c];
-  const hd = h.d / 2, iz = hd - 0.12;
+  const hd = h.d / 2, iz = hd - 0.12, k = h.k || 1;
+  const tr = (lx, lz) => { const X = lx * k, Z = (lz - hd) * k + hd; return [h.x + X * c + Z * s, h.z - X * s + Z * c]; };
   const start = tr(h.door, hd + 1.2), inside = tr(h.door, iz - 0.4), route = routes[i].route, foot = routes[i].stair;
   const to = (b, p) => walk(b, p[0], p[1], (x, z) => [x, z]);
   const b = { x: start[0], y: w.height(start[0], start[1]), z: start[1] };

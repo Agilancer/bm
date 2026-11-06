@@ -250,7 +250,7 @@ async function boot(plan, poolSize) {
     renderer.gauntlets = pack.slots.hands ? GEAR[pack.slots.hands.base].suit : null;
     const off = pack.slots.off;
     shared.input[INPUT.SHIELD] = off ? 1 : 0;
-    $('bWide').textContent = off && (WEAPONS.find((w) => w?.id === pack.slots.main?.base)?.hands || 1) === 1 ? 'GUARD' : 'WIDE';
+    $('bWide').textContent = off && (WEAPONS.find((w) => w?.id === pack.slots.main?.base)?.hands || 1) !== 2 ? 'GUARD' : 'WIDE';
     renderer.offHand = off ? off.base : null;
     renderer.board.sword = renderer.offHand;
   };
@@ -282,7 +282,7 @@ async function boot(plan, poolSize) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    if (fresh) hud.intro(!!pack.slots.main);
+    if (fresh) { hud.intro(!!pack.slots.main); hud.tip('X swaps sword and staff. The town is safe ground: the woods are not.', 7); }
   };
 
   // ---- saving, loading and the menus ---------------------------------------------------------------------------------
@@ -306,7 +306,7 @@ async function boot(plan, poolSize) {
   });
   addPart('chests', { save: () => game.chests.save(), load: (d) => game.chests.load(d) });
   addPart('doors', { save: () => game.doors.save(), load: (d) => game.doors.load(d) });
-  addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 15) });
+  addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 6) });
   // Not while you lie fallen.
   const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
   const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
@@ -340,6 +340,7 @@ async function boot(plan, poolSize) {
     document.body.classList.remove('playing');
     game.idle = true;
     audio.setAmbience(0);
+    audio.surf(0, false);
     title.toMenu();
   };
   title.onMenu = async (a) => {
@@ -352,6 +353,7 @@ async function boot(plan, poolSize) {
       arm();
       game.drops.clear();
       game.chests.load(null);
+      game.spellbar.load(null);
       game.doors.load(null);
       enter(true);
     } else if (a === 'continue') {
@@ -438,6 +440,12 @@ async function boot(plan, poolSize) {
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat) return;
+    // Sword to staff and back, with no menu, mid-fight.
+    if (e.code === 'KeyX' && !input.menu && pack.slots.main) {
+      const staff = (it) => (WEAPONS.find((w) => w?.id === it.base)?.hands || 1) === 3;
+      const held = pack.slots.main, other = pack.entries.find((en) => en.item.type === 'weapon' && staff(en.item) !== staff(held));
+      if (other) { pack.slots.main = other.item; other.item = held; arm(); }
+    }
     if (e.code === 'KeyI') { if (inventory.open) closePack(false); else if (!state.paused) openPack(); }
     if (e.code === 'KeyB') { if (bookOpen) closeBook(); else if (!state.paused) openBook(); }
     if (e.code === 'Escape' && bookOpen) closeBook(true);
@@ -640,14 +648,22 @@ class GameView {
       else if (this.nearDoor) { this.doors.toggle(this.nearDoor); this.takeShown = undefined; }
       return;
     }
-    if (d.coins) { this.pack.gold += d.item.amount; this.hud.tip(`${nameOf(d.item)}. ${this.pack.gold} in all.`, 2); }
-    else if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
+    if (d.item.type === 'spell') {
+      const name = nameOf(d.item);
+      if (this.spellbar.learn(d.item.spell)) this.hud.tip(`${name} read. B to set your spells, F to cast.`, 3);
+      else { this.pack.gold += 40; this.hud.tip('You know that one already. Sold for 40 gold.', 2.5); }
+    } else if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
     this.drops.take(d);
     this.nearDrop = null;
     if (this.onTaken) this.onTaken();
   }
 
   updateDrops(dt, snap) {
+    this.drops.low = snap[H.HP] / (snap[H.MAX_HP] || 1) < 0.35;
+    this.drops.onGrab ||= (g) => {
+      if (g.coins) this.pack.gold += g.item.amount;
+      else this.shared.input[g.item.kind === 'life' ? INPUT.HEAL : INPUT.MANA_UP] += g.item.kind === 'life' ? 32 : 40;
+    };
     this.nearDrop = this.input.enabled && !this.input.menu ? this.drops.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ]) : null;
     const d = this.nearDrop;
     const ch = this.chests.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
@@ -791,7 +807,7 @@ class GameView {
     const roll = sr + this.dodgeLean;
     const cr = Math.cos(roll), srn = Math.sin(roll);
     const ux = uxb * cr + rx * srn, uy = uyb * cr, uz = uzb * cr + rz * srn;
-    const sp = snap[H.GROUND_SPEED];
+    const sp = snap[H.SURF] > 0.5 ? 0 : snap[H.GROUND_SPEED];    // (No steps, on the shield.)
     this.bobT += dt * sp * 1.25 * (snap[H.ON_GROUND] > 0.5 ? 1 : 0);
     const bobA = clamp(sp / 6, 0, 1);
     const bobY = Math.sin(this.bobT * 2) * 0.03 * bobA;
@@ -805,6 +821,7 @@ class GameView {
     const eyeX = snap[H.PX] + snap[H.VX] * age + rx * bobX;
     const eyeY = snap[H.PY] + 1.62 + bobY - snap[H.CAM_DROP] - Math.min(snap[H.DODGE], 0.2) * 0.45;
     const eyeZ = snap[H.PZ] + snap[H.VZ] * age + rz * bobX;
+    this.audio.surf(snap[H.SURF] > 0.5 && inp.enabled ? Math.hypot(snap[H.VX], snap[H.VZ]) : 0, snap[H.ON_GROUND] > 0.5);
     if (snap[H.SURF] > 0.5) {
       const hs = Math.hypot(snap[H.VX], snap[H.VZ]);
       if (hs > 0.5) { this.boardX = snap[H.VX] / hs; this.boardZ = snap[H.VZ] / hs; } else if (this.boardX === undefined) { this.boardX = 0; this.boardZ = 1; }
@@ -815,7 +832,7 @@ class GameView {
     this.swayX = damp(this.swayX, clamp(inp.yawVel * 1.5, -0.05, 0.05), 11, dt);
     this.swayY = damp(this.swayY, clamp(inp.pitchVel * 1.5, -0.05, 0.05), 11, dt);
     inp.yawVel = 0; inp.pitchVel = 0;
-    const vy = Math.min(0, snap[H.VY]) * 0.002 + this.swayY;
+    const vy = (snap[H.SURF] > 0.5 ? 0 : Math.min(0, snap[H.VY]) * 0.002) + this.swayY;
     const vx = -this.swayX;
     const m = this.sway;
     const vmRoll = -this.swayX * 0.6;
@@ -1065,6 +1082,7 @@ class GameView {
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
       case EV.LOOT: this.drops.fromKill(a, b, c, d); break;
+      case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a sword.`, 3); break;
       case EV.GROAN:
         // A throat with nothing behind it: a low drone under a wet rasp. d is how big the chest is.
