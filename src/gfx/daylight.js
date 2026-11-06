@@ -9,7 +9,7 @@ const DAY = { sun: [3.1, 2.8, 2.4], sky: [0.3, 0.33, 0.38], gnd: [0.1, 0.09, 0.0
 const DUSK = { sun: [4.0, 1.25, 0.5], sky: [0.22, 0.14, 0.16], gnd: [0.07, 0.05, 0.045], fog: [0.36, 0.17, 0.14, 0.002], glass: 0.55 };
 const LATE = { sun: [0.8, 0.16, 0.1], sky: [0.09, 0.07, 0.1], gnd: [0.024, 0.02, 0.024], fog: [0.09, 0.055, 0.07, 0.0022], glass: 0.22 };
 
-const KEYS = [[0, NIGHT], [5, NIGHT], [6, LATE], [7.2, DAWN], [10, DAY], [16, DAY], [17.3, DUSK], [18.6, LATE], [20.5, NIGHT], [24, NIGHT]];
+const KEYS = [[0, NIGHT], [4.8, NIGHT], [5.4, LATE], [6, DAWN], [8, DAY], [16, DAY], [17.3, DUSK], [18.6, LATE], [20.5, NIGHT], [24, NIGHT]];
 
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const unit = (v) => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; };
@@ -34,7 +34,8 @@ export function daylight(hour) {
   const trueSun = across((h - 6) / 12 * Math.PI);
   // Moon up by the time the sun's gone. It goes the same way across a little out of step, and the light's swapped while there's none of it to see.
   const trueMoon = across(((h + 12 - 6.4) % 24) / 12 * Math.PI);
-  const sunUp = sstep(-0.02, 0.16, trueSun[1]);
+  // (The morning's sun comes up quicker than the evening's goes down: you start the game at six, and should be able to see.)
+  const sunUp = Math.max(sstep(-0.02, 0.16, trueSun[1]), h < 12 ? sstep(5.85, 6, h) * 0.55 : 0);
   const moonUp = sstep(0.0, 0.24, trueMoon[1]) * (1 - sstep(-0.1, 0.0, trueSun[1]));
   const isSun = trueSun[1] > -0.02;
   const scale = isSun ? sunUp : moonUp;
