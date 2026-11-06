@@ -1,5 +1,7 @@
 // The hour of the day, and what it does to the light. A grey, thin sun by day; a red hour at each end of it; a cold moon all night.
-export const SECONDS_PER_HOUR = 60;    // A day of the world's is 24 minutes of ours.
+export const DAWN_HOUR = 6, DUSK_HOUR = 20;       // Day runs from six in the morning to eight at night.
+// An hour of the day is 3 minutes of ours, an hour of the night is 1: 42 minutes of day, 10 of night.
+export const secondsPerHour = (h) => (h >= DAWN_HOUR && h < DUSK_HOUR ? 180 : 60);
 
 const NIGHT = { sun: [0.36, 0.44, 0.66], sky: [0.042, 0.052, 0.082], gnd: [0.013, 0.013, 0.018], fog: [0.024, 0.029, 0.043, 0.0024], glass: 0.1 };
 const DAWN = { sun: [3.3, 1.75, 0.95], sky: [0.2, 0.17, 0.2], gnd: [0.07, 0.055, 0.05], fog: [0.36, 0.25, 0.24, 0.0021], glass: 0.55 };

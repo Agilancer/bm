@@ -178,6 +178,8 @@ function sameHemisphere(values) {
   return out;
 }
 
+const FIST_RAISE = 0.65;
+
 export class ArmsRig {
   constructor(buffer, scale = 1) {
     const glb = parseGLB(buffer);
@@ -262,10 +264,29 @@ export class ArmsRig {
     }
   }
 
+  // The left arm part way up to where it holds a shield, so that its hand, shut on the grip that isn't there, is at the bottom of your view. The right arm isn't touched.
+  closeLeft(rot, tr) {
+    if (!this.holdRot) {
+      this.holdRot = new Float32Array(rot.length);
+      this.holdTr = new Float32Array(tr.length);
+      this.sampleInto(this.clips.shield_hold, 0, this.holdRot, this.holdTr);
+      this.leftArm = this.names.flatMap((n, j) => (/^(upperarm|forearm|hand)(_twist\d)?_L$/.test(n) ? [j] : []));
+    }
+    const hold = this.holdRot, holdT = this.holdTr;
+    for (const j of this.leftArm) {
+      const k = j * 4;
+      for (let i = 0; i < 3; i++) tr[j * 3 + i] += (holdT[j * 3 + i] - tr[j * 3 + i]) * FIST_RAISE;
+      const s = rot[k] * hold[k] + rot[k + 1] * hold[k + 1] + rot[k + 2] * hold[k + 2] + rot[k + 3] * hold[k + 3] < 0 ? -1 : 1;
+      for (let i = 0; i < 4; i++) rot[k + i] += (hold[k + i] * s - rot[k + i]) * FIST_RAISE;
+      quatNormalize(rot, k);
+    }
+  }
+
   // Crossfades from a previous pose (rot2, tr2) by fade (0 = previous, 1 = current).
   solve(clip, t, fade, out, off) {
     this.sampleInto(clip, t, this.rot, this.tr);
     const { rot, tr, rot2, tr2, wq, wt, pq, pt, parent, ibQ, ibT, count } = this;
+    if (this.leftFist) this.closeLeft(rot, tr);
     if (fade < 1) {
       for (let j = 0; j < count; j++) {
         const k = j * 4;

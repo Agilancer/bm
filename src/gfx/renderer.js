@@ -1,7 +1,7 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { FOREST_REACH } from '../core/forest.js';
-import { SECONDS_PER_HOUR, daylight } from './daylight.js';
+import { DAWN_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
@@ -74,7 +74,7 @@ export class Renderer {
     this.prevTip = [];
     this.flash = 0;
     // Mid-afternoon going gold, over the shoulder as you come up the road, so plate and faces read.
-    this.hour = 15;
+    this.hour = DAWN_HOUR;
     this.farSize = gpu.tier.lean ? 512 : 1024;
     this.sunDir = norm3(-0.78, 0.5, 0.38);
     this.splits = gpu.tier.splits || [12, 38, 130];
@@ -886,7 +886,7 @@ export class Renderer {
     const dt = time - (this.dayTime ?? time);
     this.dayTime = time;
     if (dt <= 0 || dt > 2) return;
-    this.hour = (this.hour + dt / SECONDS_PER_HOUR) % 24;
+    this.hour = (this.hour + dt / secondsPerHour(this.hour)) % 24;
     this.lightAge += dt; this.bakeAge += dt;
     if (this.lightAge >= 0.5) {
       this.lightAge = 0;

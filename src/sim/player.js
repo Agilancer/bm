@@ -106,6 +106,7 @@ export class Player {
     const hands = WEAPONS[w]?.hands || 1;
     this.arms = this.rigs[hands];
     this.stance = STANCES[hands];
+    this.staffSurf = false;
     Object.assign(this, {
       clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, swingRate: 1, queued: null, combo: 0, comboT: 0, swinging: false, recovering: false,
       threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0, guard: 0, staffGuard: false,
@@ -400,7 +401,24 @@ export class Player {
     return true;
   }
 
+  // On the shield your arms ride still and your left hand's shut on nothing. (A staff's arms have no left hand: they give way to the others, as they do to guard.)
+  poseForSurf() {
+    this.surfPose = this.surfing;
+    this.rigs[1].leftFist = this.surfing;
+    if (this.surfing) {
+      this.staffSurf = this.stance === STANCES[3];
+      if (this.staffSurf) { this.stance = STANCES[1]; this.arms = this.rigs[1]; }
+      this.staffGuard = false; this.guard = 0;
+      if (!this.staffSurf) this.arms.capture();
+      this.clip = this.stance.idle; this.rest = this.stance.idle; this.t = 0; this.fade = this.staffSurf ? 1 : 0; this.rate = 0; this.swingRate = 1; this.queued = null;
+    } else if (this.staffSurf) {
+      this.staffSurf = false; this.stance = STANCES[3]; this.arms = this.rigs[3];
+      this.clip = this.stance.idle; this.rest = this.stance.idle; this.t = 0; this.fade = 1; this.rate = 1;
+    }
+  }
+
   stepSwing(dt, tdt, sim) {
+    if (this.surfing !== !!this.surfPose) this.poseForSurf();
     if (this.guard === G.STAB && !this.blockHeld) this.dropGuard();     // (a thrust goes with the shield: the button's what keeps either up)
     if (this.guard && this.guard !== G.STAB) { this.stepGuard(tdt, sim); return; }
     const { arms } = this;
@@ -412,8 +430,8 @@ export class Player {
     if (this.rate > 0 && this.drag <= 0 && this.swingRate) this.rate = this.swingRate;
     // The carry rides your steps, played by how fast you go; standing, it's the same sway, smaller and slowed right down.
     if (this.clip === this.stance.idle) {
-      this.rate = 0.25 + Math.min(1.3, this.groundSpeed / 6.2);
-      const rest = this.groundSpeed > 0.6 ? this.stance.walk : this.stance.idle;
+      this.rate = this.surfing ? 0 : 0.25 + Math.min(1.3, this.groundSpeed / 6.2);
+      const rest = this.groundSpeed > 0.6 && !this.surfing ? this.stance.walk : this.stance.idle;
       if (rest !== this.rest && this.fade >= 1) { arms.capture(); this.rest = rest; this.fade = 0; }
     }
     if (this.recoilT > 0) {
@@ -438,7 +456,7 @@ export class Player {
     // The right button with a shield on the arm brings it up, at once: out of a wind-up or a follow-through, though not through a blow that's landing.
     if (this.queued === 'R' && this.hasShield && (this.stance === STANCES[1] || this.stance === STANCES[3]) && !this.guard) {
       if (this.winded || this.surfing || this.stamina <= 6) this.queued = null;
-      else if (!this.swinging && !sim.casting.busy) { this.startGuard(sim); return; }
+      else if (!this.swinging && !sim.casting.busy && !this.surfing) { this.startGuard(sim); return; }
     }
     // A buffered click starts the next swing at the end of the last one's follow-through.
     if (this.queued && !this.weapon) { this.queued = null; sim.event(EV.EMPTY_HANDS); }
@@ -774,7 +792,7 @@ export class Player {
     snap[H.BLOOD_SWORD] = this.bloodSword;
     snap[H.SWINGING] = this.swinging ? 1 : 0;
     snap[H.SWING_T] = this.clip === this.stance.idle ? 0 : this.t;
-    snap[H.WEAPON] = this.staffGuard ? 0 : this.weapon;
+    snap[H.WEAPON] = this.staffGuard || this.staffSurf ? 0 : this.weapon;
     snap[H.HIT_DIR] = this.hitDir; snap[H.HIT_DIR_T] = this.hitDirT;
     snap[H.GROUND_SPEED] = this.groundSpeed || 0;
     snap[H.ON_GROUND] = this.onGround ? 1 : 0;

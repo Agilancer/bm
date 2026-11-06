@@ -306,7 +306,7 @@ async function boot(plan, poolSize) {
   });
   addPart('chests', { save: () => game.chests.save(), load: (d) => game.chests.load(d) });
   addPart('doors', { save: () => game.doors.save(), load: (d) => game.doors.load(d) });
-  addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 15) });
+  addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 6) });
   // Not while you lie fallen.
   const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
   const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
@@ -340,6 +340,7 @@ async function boot(plan, poolSize) {
     document.body.classList.remove('playing');
     game.idle = true;
     audio.setAmbience(0);
+    audio.surf(0, false);
     title.toMenu();
   };
   title.onMenu = async (a) => {
@@ -806,7 +807,7 @@ class GameView {
     const roll = sr + this.dodgeLean;
     const cr = Math.cos(roll), srn = Math.sin(roll);
     const ux = uxb * cr + rx * srn, uy = uyb * cr, uz = uzb * cr + rz * srn;
-    const sp = snap[H.GROUND_SPEED];
+    const sp = snap[H.SURF] > 0.5 ? 0 : snap[H.GROUND_SPEED];    // (No steps, on the shield.)
     this.bobT += dt * sp * 1.25 * (snap[H.ON_GROUND] > 0.5 ? 1 : 0);
     const bobA = clamp(sp / 6, 0, 1);
     const bobY = Math.sin(this.bobT * 2) * 0.03 * bobA;
@@ -820,6 +821,7 @@ class GameView {
     const eyeX = snap[H.PX] + snap[H.VX] * age + rx * bobX;
     const eyeY = snap[H.PY] + 1.62 + bobY - snap[H.CAM_DROP] - Math.min(snap[H.DODGE], 0.2) * 0.45;
     const eyeZ = snap[H.PZ] + snap[H.VZ] * age + rz * bobX;
+    this.audio.surf(snap[H.SURF] > 0.5 && inp.enabled ? Math.hypot(snap[H.VX], snap[H.VZ]) : 0, snap[H.ON_GROUND] > 0.5);
     if (snap[H.SURF] > 0.5) {
       const hs = Math.hypot(snap[H.VX], snap[H.VZ]);
       if (hs > 0.5) { this.boardX = snap[H.VX] / hs; this.boardZ = snap[H.VZ] / hs; } else if (this.boardX === undefined) { this.boardX = 0; this.boardZ = 1; }
@@ -830,7 +832,7 @@ class GameView {
     this.swayX = damp(this.swayX, clamp(inp.yawVel * 1.5, -0.05, 0.05), 11, dt);
     this.swayY = damp(this.swayY, clamp(inp.pitchVel * 1.5, -0.05, 0.05), 11, dt);
     inp.yawVel = 0; inp.pitchVel = 0;
-    const vy = Math.min(0, snap[H.VY]) * 0.002 + this.swayY;
+    const vy = (snap[H.SURF] > 0.5 ? 0 : Math.min(0, snap[H.VY]) * 0.002) + this.swayY;
     const vx = -this.swayX;
     const m = this.sway;
     const vmRoll = -this.swayX * 0.6;

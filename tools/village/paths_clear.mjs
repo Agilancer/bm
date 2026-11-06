@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { PATHS } from '../../src/core/terrain.js';
 
 const v = JSON.parse(readFileSync(new URL('../../assets/game/village.json', import.meta.url)));
-const boxes = v.colliders.map((c) => ({ ...c, s: Math.sin(c.yaw || 0), co: Math.cos(c.yaw || 0) }));
+const inside = JSON.parse(readFileSync(new URL('../../assets/game/interior/interior.json', import.meta.url))).colliders.filter((c) => !c.b && c.t === undefined);
+const boxes = v.colliders.concat(inside).map((c) => ({ ...c, s: Math.sin(c.yaw || 0), co: Math.cos(c.yaw || 0) }));
 const R = 0.5;   // a player and a little room
 const hits = new Map();
 PATHS.forEach((path, n) => {

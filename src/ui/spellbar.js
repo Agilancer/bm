@@ -2,6 +2,9 @@
 import { H, INPUT } from '../core/layout.js';
 import { SPELLS } from '../sim/spells.js';
 
+// A test build: every spell known from the start. Turn this off and they're found as scrolls again.
+export const ALL_SPELLS = true;
+
 const $ = (id) => document.getElementById(id);
 const COLOURS = ['#ff9a3c', '#8fd4ff', '#d27bff', '#a79bff', '#a4ec7a', '#ffd98a', '#ff5563', '#d6eab6', '#a071ff', '#a7ee4a', '#7bebff', '#d8b184'];
 
@@ -41,8 +44,8 @@ export class SpellBar {
   // openBook and closeBook stop and start the game around the equip menu, as the pack does.
   constructor(shared, input, { openBook, closeBook, tip }) {
     this.shared = shared; this.input = input; this.tip = tip;
-    this.loadout = [-1, -1, -1, -1, -1, -1];   // what's in each slot: a spell, or -1
-    this.known = new Set();              // the spells found so far
+    this.loadout = ALL_SPELLS ? [0, 1, 2, 3, 4, 5] : [-1, -1, -1, -1, -1, -1];   // what's in each slot: a spell, or -1
+    this.known = new Set(ALL_SPELLS ? SPELLS.map((_, i) => i) : []);              // the spells found so far
     this.now = 0;                        // the slot F and the middle button cast
     this.i = 0;                          // and the spell in it
     this.armed = -1;                     // in the menu: the spell picked up, waiting for a slot
@@ -277,9 +280,10 @@ export class SpellBar {
 
   load(d) {
     const ok = Array.isArray(d?.loadout) && d.loadout.length === SLOTS && d.loadout.every((v) => Number.isInteger(v) && v >= -1 && v < SPELLS.length);
-    this.loadout = ok ? d.loadout.slice() : [-1, -1, -1, -1, -1, -1];
+    const empty = ALL_SPELLS && (!ok || d.loadout.every((v) => v < 0));
+    this.loadout = empty ? [0, 1, 2, 3, 4, 5] : ok ? d.loadout.slice() : [-1, -1, -1, -1, -1, -1];
     // (A save from before spells were found knows them all.)
-    this.known = new Set(Array.isArray(d?.known) ? d.known : ok ? SPELLS.map((_, i) => i) : []);
+    this.known = new Set(ALL_SPELLS ? SPELLS.map((_, i) => i) : Array.isArray(d?.known) ? d.known : ok ? SPELLS.map((_, i) => i) : []);
     this.now = ok && this.loadout[d.now] >= 0 ? d.now : Math.max(0, this.loadout.findIndex((v) => v >= 0));
     this.setSpell(this.loadout[this.now] ?? -1);
     this.drawMenu();

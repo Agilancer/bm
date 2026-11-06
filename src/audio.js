@@ -86,6 +86,29 @@ export class Audio {
     src.start();
   }
 
+  // The shield's scrape, its rumble, and the wind when you're fast. Bellmourn's board loop. speed 0 is silence; in the air only the wind's left.
+  surf(speed, grounded) {
+    if (!this.ready) return;
+    const c = this.ctx;
+    if (!this.slide) {
+      if (speed <= 0) return;
+      const mk = (type, f, q) => {
+        const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
+        const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+        const g = c.createGain(); g.gain.value = 0;
+        src.connect(fl); fl.connect(g); g.connect(this.master); src.start(c.currentTime, Math.random() * 0.5);
+        return { fl, g };
+      };
+      this.slide = { scrape: mk('bandpass', 900, 0.8), rumble: mk('lowpass', 160, 0.7), wind: mk('bandpass', 700, 0.6) };
+    }
+    const n = c.currentTime, k = Math.min(1, speed / 18), on = speed > 0 && grounded, { scrape, rumble, wind } = this.slide;
+    scrape.g.gain.setTargetAtTime(on ? 0.16 + 0.4 * Math.sqrt(k) : 0, n, 0.06);
+    scrape.fl.frequency.setTargetAtTime(900 * (0.7 + 0.6 * k), n, 0.1);
+    rumble.g.gain.setTargetAtTime(on ? 0.1 + 0.35 * k : 0, n, 0.08);
+    wind.g.gain.setTargetAtTime(0.24 * Math.max(0, (speed - 7) / 22) ** 1.5, n, 0.15);
+    wind.fl.frequency.setTargetAtTime(500 + speed * 40, n, 0.2);
+  }
+
   setAmbience(v) { this.ambienceLevel = v; if (this.amb) this.amb.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }
 
   listener(x, y, z, fx, fy, fz, ux, uy, uz) {

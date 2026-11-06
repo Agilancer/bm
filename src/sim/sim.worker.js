@@ -83,7 +83,7 @@ class Sim {
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0;
-    this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
+    this.reachedTown = false; this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
     p.atkSeen = inp[INPUT.ATTACK]; p.wideSeen = inp[INPUT.WIDE]; p.jumpSeen = inp[INPUT.JUMP]; p.dodgeSeen = inp[INPUT.DODGE];

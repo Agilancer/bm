@@ -1179,7 +1179,7 @@ function fieldSpot(i, world) {
     // In fours, out in the woods: none in the town, none on the church's ground, none where you start.
     const g = Math.floor(i / 4), a = (g + tries * 0.37) * 2.399963 + (i % 4) * 0.05, r = 82 + ((g * 23 + tries * 11) % 90) + (i % 4) * 2;
     const x = Math.sin(a) * r, z = Math.cos(a) * r;
-    if (!world.inside(x, z, 0.8) && Math.hypot(x + 3.5, z - 72) > 40 && !(x > 40 && Math.abs(z) < 45)) return [x, z];
+    if (!world.inside(x, z, 0.8) && Math.hypot(x - 7.5, z - 72) > 95 && !(x > 40 && Math.abs(z) < 45)) return [x, z];
   }
   return [-Math.abs(Math.sin(i)) * 90, Math.cos(i) * 90];
 }
@@ -1274,7 +1274,8 @@ export function stepWoods(sim) {
   if (p.dead || sim.time < sim.packAt) return;
   sim.packAt = sim.time + 1;
   const out = Math.hypot(p.x, p.z);
-  if (out < TOWN_R + 26 || floorAt(p.x, p.z) !== null || Math.abs(p.x) > 235 || Math.abs(p.z) > 235) return;
+  if (out < 40 || out > 125) sim.reachedTown = true;   // In the town, or gone out past it: until then the woods hold their packs back.
+  if (!sim.reachedTown || out < TOWN_R + 26 || floorAt(p.x, p.z) !== null || Math.abs(p.x) > 235 || Math.abs(p.z) > 235) return;
   const list = sim.knights;
   if (list.filter((k) => k instanceof Zombie && !k.dead && !k.dormant && k.aggro && Math.hypot(k.x - p.x, k.z - p.z) < 50).length >= MOST_AT_ONCE) return;
   // Somewhere ahead or to the side, and off the path of what's clear.
@@ -1325,7 +1326,7 @@ export async function addUndead(sim, base) {
     }
     for (let i = 0; i < b.count; i++) {
       if (b.model === 'zombie_ogre') {
-        sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-72, -78] : [78, 66], yaw: i * 2, hp: 130, limbs: 2.4, dmg: 2.2, type: 'runner' }));
+        sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-72, -78] : [118, -64], yaw: i * 2, hp: 130, limbs: 2.4, dmg: 2.2, type: 'runner' }));
       } else if (b.model === 'necromancer') {
         sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-98, 12], yaw: 1.4, hp: 90, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7 }));
       } else if (b.model === 'zombie_necromancer') {

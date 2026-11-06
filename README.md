@@ -48,7 +48,7 @@ They don't go together. Anything with a V on it is never found anywhere near any
 
 ### How it plays
 
-You start on the road south of town with a common sword, a common staff and a common shield; X swaps sword and staff. The town (radius 58 m) is safe ground. Velscour's knight stands at the foot of the cathedral steps. Out in the woods, packs come out of the trees (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Spells are found as scrolls. Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
+You start on the road south of town with a common sword, a common staff and a common shield; X swaps sword and staff. The town (radius 58 m) is safe ground. Velscour's knight stands at the foot of the cathedral steps. Out in the woods, packs come out of the trees (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Spells are found as scrolls, except that this test build knows them all (`ALL_SPELLS` in `src/ui/spellbar.js`). Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
 
 ### The cathedral and the catacombs
 
