@@ -15,7 +15,7 @@ TWEAK = {
     'scale': 0.74,            # the skull, of life size
     'tilt': 30,              # degrees its face turns up, bringing the sockets nearer the fingers
     'fwd': -0.012, 'gap': 0.032,   # how far along the fingers and how far under the palm its centre sits
-    'yaw': -32, 'move': (-0.12, 0.1, 0.09),   # the whole arm, skull and all: the arm moves, the wrist stays straight
+    'yaw': -58, 'move': (-0.107, 0.186, 0.09),   # the whole arm, skull and all: the arm moves, the wrist stays straight
 }
 ROOT = os.environ.get('BM_ROOT') or globals().get('W')
 Z_UP_TO_GLTF = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))

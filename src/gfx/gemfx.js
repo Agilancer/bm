@@ -96,8 +96,8 @@ export class GemFx {
     this.t += dt;
     this.lights.length = 0;
     const { main, off, skull } = pack.slots;
-    if (main?.gems?.length) this.shine(main.gems, ...this.at(cam, -0.42, -0.03, 0.8), dt, 1, 0.4);
-    if (skull?.gems?.length) this.shine(skull.gems, ...this.at(cam, 0.23, -0.19, 0.6), dt, 1, 0.22);   // (A light this near the hand would burn it white: it's the ground and the walls it's for.)
+    if (main?.gems?.length) this.shine(main.gems, ...this.at(cam, -0.42, -0.03, 0.8), dt, 0.5, 0.4);
+    if (skull?.gems?.length) this.shine(skull.gems, ...this.at(cam, 0.21, -0.26, 0.6), dt, 0.5, 0.22);   // (A light this near the hand would burn it white: it's the ground and the walls it's for.)
     // A shield on the arm is out of view under a staff: you see its stones when you're riding it, under your feet, and they run hot.
     if (off?.gems?.length && this.r.board.sword && snap[H.SURF] > 0.5) {
       const m = this.r.board.mat;

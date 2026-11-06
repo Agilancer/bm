@@ -23,7 +23,7 @@ const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 444;
 // Where a skull sits in the left hand, from its own frame to the view's. Printed by tools/wizard/skull_hold.py.
 const SKULL_SCALE = 0.74;
-const SKULL_SEAT = [-0.40868, 0.01479, -0.61674, 0.0, -0.46758, 0.47516, 0.32123, 0.0, 0.40243, 0.5671, -0.25307, 0.0, -0.20981, -0.20875, -0.44275, 1.0];
+const SKULL_SEAT = [-0.09696, 0.01479, -0.73347, 0.0, -0.56108, 0.47516, 0.08375, 0.0, 0.47264, 0.5671, -0.05105, 0.0, -0.16928, -0.20875, -0.38148, 1.0];
 
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along

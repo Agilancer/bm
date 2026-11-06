@@ -84,7 +84,7 @@ def skulls():
         crop = sheet.crop(box)
         uv2 = (uv * [w, h] - [box[0], box[1]]) / [crop.size[0], crop.size[1]]
         p[:, 1] -= (p[:, 1].min() + p[:, 1].max()) / 2
-        write_glb(os.path.join(ITEMS, f'skull_{n + 1:02d}.glb'), f'skull_{n + 1:02d}', p, nr, uv2, np.arange(len(p), dtype='u4'), [jpeg(crop, 90), FLAT, mr_map(0.72)])
+        write_glb(os.path.join(ITEMS, f'skull_{n + 1:02d}.glb'), f'skull_{n + 1:02d}', p, nr, uv2, np.arange(len(p), dtype='u4'), [jpeg(crop.point(lambda c: int(c * 0.72)), 90), FLAT, mr_map(0.72)])
         print('skull', n + 1, e['name'], len(p), crop.size)
 
 

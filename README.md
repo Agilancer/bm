@@ -2,6 +2,18 @@
 
 Bellmourn v2.
 
+## Direction: Tessariel is a wizard
+
+The game is now ranged spell combat. Everything below about swords and armour describes files and code kept on the repo but out of play.
+
+- **Out of play:** one and two-handed swords (`BASES` rows with grade `retired`, never rolled) and the armour suits and gauntlets (`GEAR`, `rollArmor`, `assets/fp/gauntlets_*`). Hands are bare. An old save's swords and armour are removed on load.
+- **Right hand:** staffs. Left click fires the staff's bolt. All twenty spells are on `1`-`6` and the book.
+- **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Palm on the crown, two fingers in the sockets.
+- **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats.
+- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Seen as drops and icons; there's no visible body to wear them on.
+- **Gems:** socket into staffs, skulls and shields. Each kind has its own stat, particles, motion and light (`src/gfx/gemfx.js`), and a Flawless stone adds a flourish. A shield's show when you ride it.
+- **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, and fills you up. It's kept in the save.
+
 ## Play: Velscour's Throne
 
 Run `play.bat`, or `python tools/serve.py`, and open `http://localhost:8402/`. It needs a WebGPU browser: current Chrome,
@@ -17,7 +29,7 @@ Edge and Safari on PC and phones, or Firefox on Windows. On a static host it rea
 | Combo: two cuts, then a slam | Left click | `CUT` |
 | Raise the shield and bash, hold to block, let go and it drops at once. With no shield, a wide swing | Right click | `WIDE` |
 | Cast the spell in a slot | `1` to `6`, or click its button | Tap its button |
-| Pack: swords and gems | `I` | `PACK` |
+| Pack: staffs, skulls, robes and gems | `I` | `PACK` |
 | Take up what's on the ground, or open a chest | `E` | `TAKE` / `OPEN` |
 
 Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
