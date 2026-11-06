@@ -1,0 +1,23 @@
+<!doctype html><meta charset=utf-8><title>Left Shield Arm</title>
+<style>body{margin:0;background:#3a3f42;font:14px system-ui;color:#eee;overflow:hidden}#b{position:fixed;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap}button{padding:8px 12px;background:#222;color:#eee;border:1px solid #666;border-radius:4px;cursor:pointer}canvas{display:block}</style>
+<div id=b><button id=up>Raise</button><button id=dn>Lower</button><button data-v=fp>First person</button><button data-v=side>Side</button><button data-v=top>Top</button><button data-v=front>Shield front</button><button data-v=out>Outside elbow</button><button data-v=inner>Under</button><button data-v=elbow>Elbow</button><button id=sh>Shield on/off</button><button id=st>Staff arm on/off</button></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type=module>
+import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const q=new URLSearchParams(location.search);const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setPixelRatio(1);r.outputColorSpace=THREE.SRGBColorSpace;r.toneMapping=THREE.ACESFilmicToneMapping;
+document.body.append(r.domElement);const s=new THREE.Scene();s.background=new THREE.Color(0x8d8a80);
+s.add(new THREE.HemisphereLight(0xffffff,0x554433,1.6));const d=new THREE.DirectionalLight(0xfff0dd,2.2);d.position.set(-.6,1,1);s.add(d);
+const cam=new THREE.PerspectiveCamera(60,4/3,.02,20);const c=new OrbitControls(cam,r.domElement);c.enabled=false;
+const AS=q.get('wide')?16/9:4/3;function fit(){const h=innerHeight;const w=Math.min(innerWidth,h*AS)|0;r.setSize(w,w/AS|0);cam.aspect=AS;cam.updateProjectionMatrix()}addEventListener('resize',fit);fit();
+const meta=await(await fetch('meta.json')).json();cam.fov=meta.fov;cam.updateProjectionMatrix();const L=new GLTFLoader();const [a,k]=await Promise.all([L.loadAsync('../../../assets/fp/left_shield_arm.glb'),L.loadAsync('kite.glb')]);
+s.add(a.scene);let sock;a.scene.traverse(o=>{if(o.name==='ShieldSocket')sock=o;if(o.isMesh)o.frustumCulled=false});k.scene.scale.setScalar(meta.shieldScale);sock.add(k.scene);
+const pm=new THREE.MeshStandardMaterial({color:0x2a2622,roughness:.6,metalness:.4});for(const[pa,pb]of meta.posts){const A=new THREE.Vector3(...pa),B=new THREE.Vector3(...pb),m=new THREE.Mesh(new THREE.BoxGeometry(.034,A.distanceTo(B),.008),pm);m.position.copy(A).add(B).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),B.clone().sub(A).normalize());k.scene.parent.add(m);(window.posts=window.posts||[]).push(m)}
+const mix=new THREE.AnimationMixer(a.scene);const clips=Object.fromEntries(a.animations.map(x=>[x.name,mix.clipAction(x)]));
+function play(n){for(const x of Object.values(clips))x.stop();const p=clips[n];p.setLoop(THREE.LoopOnce);p.clampWhenFinished=true;p.play()}
+up.onclick=()=>play('ShieldRaise');dn.onclick=()=>play('ShieldLower');sh.onclick=()=>{k.scene.visible=!k.scene.visible;window.posts.forEach(m=>m.visible=k.scene.visible)};
+const tgt=new THREE.Vector3(.02,-.08,-.42),V={fp:[[0,0,0],[0,0,-1]],side:[[.95,-.05,-.3],tgt],top:[[.02,.9,-.35],tgt],front:[[.02,-.08,-1.4],tgt],out:[[-.75,-.35,-.95],tgt],inner:[[.1,-.75,-.1],new THREE.Vector3(-.1,-.15,-.42)],elbow:[[-.55,-.15,-.15],new THREE.Vector3(-.1,-.15,-.42)]};
+function view(n){const[p,t]=V[n];cam.position.set(...p);if(n==='fp'){c.enabled=false;cam.lookAt(0,0,-1)}else{c.enabled=true;c.target.copy(t);cam.lookAt(t);c.update()}}
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>view(b.dataset.v));view(q.get('v')||'fp');
+if(q.get('noshield')){k.scene.visible=false;window.posts.forEach(m=>m.visible=false)}if(q.get('ref')){const i=new Image;i.src='ref.png';i.style='position:fixed;left:0;top:0;opacity:.45;pointer-events:none;width:'+r.domElement.width+'px';document.body.append(i)}if(q.get('lower')){play('ShieldLower');mix.update(1)}if(q.get('mid')){play('ShieldLower');mix.update(.07)}
+const sg=await L.loadAsync('../../../assets/fp/arms_staff.glb');const sa=sg.scene;const sm=new THREE.AnimationMixer(sa);if(q.get('cast')){const ca=sm.clipAction(sg.animations.find(x=>x.name==='staff_cast'));ca.play();ca.paused=false;sm.update(+q.get('cast'))}sa.traverse(o=>{if(o.isMesh)o.frustumCulled=false});s.add(sa);sa.visible=!!q.get('staff');st.onclick=()=>sa.visible=!sa.visible;window.ready=true;window.dbg={r,s,cam,sock,a,k};const clk=new THREE.Clock();r.setAnimationLoop(()=>{q.get('mid')||mix.update(clk.getDelta());c.enabled&&c.update();r.render(s,cam)});
+</script>
