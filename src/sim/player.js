@@ -108,6 +108,7 @@ export class Player {
     this.arms = this.rigs[hands];
     this.stance = STANCES[hands];
     this.staffSurf = false;
+    this.surfArm = 0; this.surfTilt = 0; this.surfYaw = 0; this.steerX = 0;
     Object.assign(this, {
       clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, swingRate: 1, queued: null, combo: 0, comboT: 0, swinging: false, recovering: false,
       threat: null, recoilT: 0, drag: 0, contact: null, havePrev: false, bloodSword: 0, guard: 0, staffGuard: false, shieldUp: 0,
@@ -186,6 +187,7 @@ export class Player {
     this.queuedT -= dt;
     if (this.queuedT <= 0) this.queued = null;
     const mx = input[INPUT.MOVE_X], mz = input[INPUT.MOVE_Z];
+    this.steerX = mx;
     const len = Math.hypot(mx, mz);
     const sprint = input[INPUT.SPRINT] > 0.5 && mz > 0.3 && !this.winded && !this.surfing && !this.guard;
     this.sprinting = sprint && len > 0.1;
@@ -402,10 +404,9 @@ export class Player {
     return true;
   }
 
-  // On the shield your arms ride still and your left hand's shut on nothing. (A staff's arms have no left hand: they give way to the others, as they do to guard.)
+  // On the shield your arms ride still. (A staff's arms have no left hand: they give way to the others, as they do to guard.)
   poseForSurf() {
     this.surfPose = this.surfing;
-    this.rigs[1].leftFist = this.surfing; // (the staff rig has no left hand: a skull is drawn on its own)
     if (this.surfing) {
       // (With a skull in hand the left arm is the skull's own, so the staff's rig stays up.)
       this.staffSurf = this.stance === STANCES[3] && !this.hasSkull;
@@ -419,7 +420,19 @@ export class Player {
     }
   }
 
+  // Once the shield's down on the ground the left arm drops and the surfing hand comes up, leaning the way you steer. Off the shield, it's all back at once.
+  stepSurfHand(dt) {
+    const down = this.surfing && this.surfLanded;
+    this.surfArm = down ? Math.min(1, this.surfArm + dt / 0.16) : 0;
+    const dy = this.yaw - this.surfYaw;
+    this.surfYaw = this.yaw;
+    const turn = Math.atan2(Math.sin(dy), Math.cos(dy)) / Math.max(dt, 1e-3);     // (yaw grows to the left)
+    this.surfTilt = down ? damp(this.surfTilt, Math.max(-1, Math.min(1, this.steerX - turn * 0.5)), 9, dt) : 0;
+    this.rigs[1].leftDrop = this.surfArm;
+  }
+
   stepSwing(dt, tdt, sim) {
+    this.stepSurfHand(dt);
     // The raised arm's way up its line: quick up, and it starts down the instant the button's let go.
     const shieldWant = this.guard && this.guard !== G.DOWN;
     this.shieldUp = shieldWant ? Math.min(1, this.shieldUp + dt / SHIELD_RISE) : Math.max(0, this.shieldUp - dt / SHIELD_FALL);
@@ -802,7 +815,8 @@ export class Player {
     snap[H.HIT_DIR] = this.hitDir; snap[H.HIT_DIR_T] = this.hitDirT;
     snap[H.GROUND_SPEED] = this.groundSpeed || 0;
     snap[H.ON_GROUND] = this.onGround ? 1 : 0;
-    snap[H.SURF] = this.surfing ? 1 : 0;
+    snap[H.SURF] = this.surfing ? (this.surfLanded ? 2 : 1) : 0;     // (2: it's left your arm and is on the ground)
+    snap[H.SURF_ARM] = this.surfArm; snap[H.SURF_TILT] = this.surfTilt;
     snap[H.CAM_DROP] = this.landKick + this.surfLow + (this.dead ? Math.min(this.deadT * 0.9, 1.25) : 0);
     snap[H.WEAK] = this.weak;
     snap[H.STAMINA] = this.stamina;

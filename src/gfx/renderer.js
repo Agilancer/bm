@@ -21,6 +21,20 @@ import { SKIN } from './shaders.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 444;
+// The surfing hand's one joint, as a dual quaternion: it leans and swings about the shoulder with the steering (-1 left, 1 right), and rises as it comes out.
+const SURF_PIVOT = [-0.33, -0.33, 0.2], surfPal = new Float32Array(8);
+function surfHandPose(tilt, up, time) {
+  const hy = -tilt * 0.08, hz = -tilt * 0.15, sy = Math.sin(hy), cy = Math.cos(hy), sz = Math.sin(hz), cz = Math.cos(hz);
+  const x = sy * sz, y = sy * cz, z = cy * sz, w = cy * cz;
+  const [px, py, pz] = SURF_PIVOT, cx1 = y * pz - z * py, cy1 = z * px - x * pz, cz1 = x * py - y * px;
+  const ease = up * (2 - up);
+  const tx = -2 * (w * cx1 + y * cz1 - z * cy1), ty = -2 * (w * cy1 + z * cx1 - x * cz1) - (1 - ease) * 0.7 + Math.sin(time * 1.3) * 0.004, tz = -2 * (w * cz1 + x * cy1 - y * cx1);
+  surfPal[0] = x; surfPal[1] = y; surfPal[2] = z; surfPal[3] = w;
+  surfPal[4] = 0.5 * (tx * w + ty * z - tz * y); surfPal[5] = 0.5 * (-tx * z + ty * w + tz * x);
+  surfPal[6] = 0.5 * (tx * y - ty * x + tz * w); surfPal[7] = -0.5 * (tx * x + ty * y + tz * z);
+  return surfPal;
+}
+
 // Where a skull sits in the left hand, from its own frame to the view's. Printed by tools/wizard/skull_hold.py.
 const SKULL_SCALE = 1.0;
 export const SKULL_SEAT = [0.82533, -0.20219, -0.52721, 0.0, 0.12691, 0.97623, -0.17572, 0.0, 0.55021, 0.07812, 0.83137, 0.0, -0.223, -0.075, -0.365, 1.0];
@@ -609,7 +623,7 @@ export class Renderer {
     // (A piece of a suit is only ever seen on the ground, or in a slot.)
     if (GEAR[id] || ROBES[id]) { s.ready = true; return; }
     // The skull in the left hand and the arm that holds it are rigid, already in the view's own space (tools/wizard/skull_hold.py), so one joint that never moves.
-    if (SKULLS[id] || id === 'skull_arm' || id === 'shield_arm') {
+    if (SKULLS[id] || id === 'skull_arm' || id === 'surf_arm' || id === 'shield_arm') {
       if (SKULLS[id]) {
         const m = SKULL_SEAT, pos = new Float32Array(prim.pos), nr = new Float32Array(prim.nrm);
         for (let v = 0; v < pos.length; v += 3) for (let c = 0; c < 3; c++) {
@@ -1599,14 +1613,18 @@ export class Renderer {
     this.held = held && held.ready ? held : null;
     this.holdingOld = !!weapon && weapon.id === 'greatsword';
     // The shield on the arm, if the arms in view have a place for one and it isn't under your feet.
-    const onArm = this.offHand && this.vm === this.vms[1] && snap[H.SURF] < 0.5 ? this.sword(this.offHand) : null;
+    const onArm = this.offHand && this.vm === this.vms[1] && snap[H.SURF] < 1.5 ? this.sword(this.offHand) : null;
     this.onArm = onArm && onArm.ready ? onArm : null;
     // The skull in the left hand, on the staff's arms, which have no left of their own.
     this.skullParts = this.skullParts || [];
     this.skullParts.length = 0;
-    if (this.skull && this.vm === this.vms[3]) {
+    const surfArm = snap[H.SURF_ARM];
+    if (this.skull && this.vm === this.vms[3] && surfArm < 1) {
       for (const h of [this.sword('skull_arm'), this.sword(this.skull)]) if (h.ready) this.skullParts.push(h);
     }
+    // The surfing hand: rigid, from SURFING.glb, up once the shield's on the ground.
+    this.surfHand = null;
+    if (surfArm > 0 && this.sword('surf_arm').ready) { this.surfHand = this.sword('surf_arm'); this.skullParts.push(this.surfHand); }
     // The raised shield arm, with whatever's on it: there as soon as the shield's on its way up, and until it's gone again.
     this.shieldParts = this.shieldParts || [];
     this.shieldParts.length = 0;
@@ -1649,12 +1667,13 @@ export class Renderer {
     // It breathes with you, a very little: arm and skull as one.
     const breath = this.breathData || (this.breathData = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
     breath[4] = Math.sin(time * 0.7) * 0.0015; breath[5] = Math.sin(time * 1.3) * 0.002;
+    breath[5] -= surfArm * 0.35;      // (the skull's arm going down; half, as this is a dual quaternion)
     for (const h of this.skullParts) {
-      q.writeBuffer(h.hand.palette, 0, breath);
+      q.writeBuffer(h.hand.palette, 0, h === this.surfHand ? surfHandPose(snap[H.SURF_TILT], surfArm, time) : breath);
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
       // (Negative: the spell hands' warm fill from the eye, so this arm is the same skin as the one that casts, and the skull, on less of it, doesn't go black at night.)
-      vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.skullParts[0] ? -1 : -0.28;
+      vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.surfHand || h === this.skullParts[0] ? -1 : -0.28;
       q.writeBuffer(h.ubo, 0, vmData);
     }
     if (this.shieldParts.length) {
@@ -1709,7 +1728,7 @@ export class Renderer {
     for (const g of this.chests) drawn.push(g);
     if (this.doorItems.length && !this.doorModels) this.doorModel();
     for (const g of this.doorItems) drawn.push(g);
-    if (snap[H.SURF] > 0.5 && this.board.sword) drawn.push(this.board);
+    if (snap[H.SURF] > 1.5 && this.board.sword) drawn.push(this.board);
     for (const g of drawn) {
       let model = g.door ? this.doorModels?.[g.piece] : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
       if (model && g.glow) model = this.tinted(model, g.glow);

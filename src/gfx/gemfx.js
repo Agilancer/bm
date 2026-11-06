@@ -106,7 +106,7 @@ export class GemFx {
     if (main?.gems?.length) this.shine(main.gems, ...this.at(cam, -0.42, -0.03, 0.8), dt, 0.5, 0.4);
     if (skull?.gems?.length) this.shine(skull.gems, ...this.at(cam, SEAT_A, SEAT_B, 0.6), dt, 0.5, 0.22);   // (A light this near the hand would burn it white: it's the ground and the walls it's for.)
     // A shield on the arm is out of view under a staff: you see its stones when you're riding it, under your feet, and they run hot.
-    if (off?.gems?.length && this.r.board.sword && snap[H.SURF] > 0.5) {
+    if (off?.gems?.length && this.r.board.sword && snap[H.SURF] > 1.5) {
       const m = this.r.board.mat;
       this.shine(off.gems, m[12], m[13] + 0.08, m[14], dt, 2.2);
     }
