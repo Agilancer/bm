@@ -61,7 +61,13 @@ export class SpellBar {
     for (let k = 0; k < SLOTS; k++) {
       const s = document.createElement('div');
       s.className = 'spell';
-      const press = (e) => { e.preventDefault(); e.stopPropagation(); this.press(k, 'pointer'); };
+      const press = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (input.touch || e.type === 'touchstart') {
+          if (input.enabled && !input.menu) this.select(k);
+        } else this.press(k, 'pointer');
+      };
       s.addEventListener('touchstart', press, { passive: false });
       s.addEventListener('mousedown', press);
       s.addEventListener('touchend', lift);

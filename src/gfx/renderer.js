@@ -59,11 +59,15 @@ const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y
 
 // A coarser index list over the same skinned vertices, by merging everything in a small cell: for shadows on a phone, and
 // for bodies in the distance.
-function clusterIndices(pos, idx, cell) {
+function clusterIndices({ pos, idx, uv, skinTag }, cell) {
   const first = new Map();
   const map = new Uint32Array(pos.length / 3);
   for (let v = 0; v < map.length; v++) {
-    const key = (Math.floor(pos[v * 3] / cell) + 1024) * 4194304 + (Math.floor(pos[v * 3 + 1] / cell) + 1024) * 2048 + Math.floor(pos[v * 3 + 2] / cell) + 1024;
+    // Hidden stump caps collapse to the origin in the skin shader. Never weld
+    // them into the skin or let a distant mesh join parts that can separate.
+    if (skinTag && uv[v * 2] < -1.5) { map[v] = v; continue; }
+    const spatialKey = (Math.floor(pos[v * 3] / cell) + 1024) * 4194304 + (Math.floor(pos[v * 3 + 1] / cell) + 1024) * 2048 + Math.floor(pos[v * 3 + 2] / cell) + 1024;
+    const key = skinTag ? spatialKey * 16 + (skinTag[v] & 15) : spatialKey;
     let r = first.get(key);
     if (r === undefined) { r = v; first.set(key, v); }
     map[v] = r;
@@ -459,7 +463,7 @@ export class Renderer {
   addLod(sk, prim, cell) {
     sk.lodIB = sk.IB; sk.lodCount = sk.indices;
     if (!this.tier.lean) return;
-    const idx = clusterIndices(prim.pos, prim.idx, cell);
+    const idx = clusterIndices(prim, cell);
     sk.lodIB = makeBuffer(this.device, idx, GPUBufferUsage.INDEX);
     sk.lodCount = idx.length;
   }

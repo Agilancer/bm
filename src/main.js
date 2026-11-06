@@ -256,7 +256,7 @@ async function boot(plan, poolSize) {
     const off = pack.slots.off, skull = pack.slots.skull;
     shared.input[INPUT.SHIELD] = off ? 1 : 0;
     shared.input[INPUT.SKULL] = skull ? 1 : 0;
-    $('bWide').textContent = off && !skull ? 'GUARD' : 'CAST';
+    $('bWide').style.display = off && !skull ? 'flex' : '';
     renderer.offHand = off && !skull ? off.base : null;
     renderer.board.sword = off ? off.base : null;
     if (off) renderer.sword('surf_arm');     // (Ready before the first landing.)
@@ -481,7 +481,7 @@ async function boot(plan, poolSize) {
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to cast it, hold it to keep casting, and <b>B</b> beside them changes them. <b>PACK</b> holds your gear.'
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>CUT</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> changes your spells. <b>PACK</b> holds your gear.'
     : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take, open or shut';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
@@ -707,8 +707,13 @@ class GameView {
     if (this.buffer) {
       const { ctrl, snaps } = this.shared;
       if (Atomics.load(ctrl, CTRL.TICK) === 0) return null;
-      const latest = Atomics.load(ctrl, CTRL.LATEST);
-      Atomics.store(ctrl, CTRL.READING, latest);
+      // The writer can publish between reading LATEST and reserving the slot.
+      // Recheck before using the pose so the GPU never reads an overwritten palette.
+      let latest;
+      do {
+        latest = Atomics.load(ctrl, CTRL.LATEST);
+        Atomics.store(ctrl, CTRL.READING, latest);
+      } while (Atomics.load(ctrl, CTRL.LATEST) !== latest);
       return snaps[latest];
     }
     return this.getNonSharedSnap();
@@ -952,7 +957,7 @@ class GameView {
       case EV.SPELL_CAST:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
-        this.hud.once('cast', '1 to 6 cast what is in each slot: hold to keep casting. B changes them. Alt gives you a cursor to click them with.', 5);
+        this.hud.once('cast', this.input.touch ? 'Tap a spell slot to select it, then use CAST. B changes your spells.' : '1 to 6 cast what is in each slot: hold to keep casting. B changes them. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
@@ -1178,13 +1183,4 @@ class GameView {
         view.onFrame = () => {
           view.onFrame = null;
           view.renderer.canvas.toBlob(async (blob) => {
-            await fetch(`/shot?name=${encodeURIComponent(name)}`, { method: 'POST', body: blob });
-            resolve(name);
-          }, 'image/png');
-        };
-      }),
-    };
-  }
-}
-
-main().catch((e) => { console.error(e); showFail(e.message); });
+            await fetch(`/shot?name=${encodeURIComponent(name)}`, { 
