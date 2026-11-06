@@ -22,6 +22,16 @@ export class Input {
     this.stickId = null; this.lookId = null;
   }
 
+  releaseControls() {
+    this.keys.clear();
+    this.softOn(false);
+    this.castMouse = this.castTouch = this.castSlot = false;
+    this.guardMouse = this.guardTouch = this.jumpTouch = false;
+    this.lookId = null;
+    this.resetStick?.();
+    this.update();
+  }
+
   fire(slot) { this.s[slot] += 1; }
 
   bindMouse() {
@@ -36,7 +46,7 @@ export class Input {
       if (e.code === 'KeyF') this.fire(INPUT.CAST_N);
     });
     window.addEventListener('keyup', (e) => { this.keys.delete(e.code); if (e.code === 'AltLeft' || e.code === 'AltRight') { e.preventDefault(); this.softOn(false); } });
-    window.addEventListener('blur', () => { this.keys.clear(); this.softOn(false); });
+    window.addEventListener('blur', () => this.releaseControls());
     document.addEventListener('mousemove', (e) => {
       if (!this.enabled || document.pointerLockElement !== this.canvas) return;
       if (this.soft) {
@@ -48,7 +58,7 @@ export class Input {
       this.look(e.movementX * SENS * this.sens, e.movementY * SENS * this.sens);
     });
     this.canvas.addEventListener('mousedown', (e) => {
-      if (!this.enabled) return;
+      if (!this.enabled || this.menu) return;
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
       if (this.soft) { if (e.button === 0) this.softPress?.(this.softX, this.softY); return; }
       if (e.button === 0) this.fire(INPUT.ATTACK);
@@ -90,7 +100,7 @@ export class Input {
     const stick = document.getElementById('stick'), nub = document.getElementById('nub');
     const R = 52;
     const start = (e) => {
-      if (!this.enabled) return;
+      if (!this.enabled || this.menu) return;
       for (const t of e.changedTouches) {
         if (t.clientX < innerWidth * 0.42 && this.stickId === null) {
           this.stickId = t.identifier;
@@ -121,11 +131,14 @@ export class Input {
       }
       e.preventDefault();
     };
+    this.resetStick = () => {
+      this.stickId = null; this.stickX = 0; this.stickY = 0; this.stickRun = false;
+      stick.style.display = 'none'; nub.style.transform = '';
+    };
     const end = (e) => {
       for (const t of e.changedTouches) {
         if (t.identifier === this.stickId) {
-          this.stickId = null; this.stickX = 0; this.stickY = 0; this.stickRun = false;
-          stick.style.display = 'none'; nub.style.transform = '';
+          this.resetStick();
         } else if (t.identifier === this.lookId) this.lookId = null;
       }
     };
@@ -138,7 +151,7 @@ export class Input {
       // A thumb on a button can still steer: drag off it, or on it, and the view follows.
       el.addEventListener('touchstart', (e) => {
         e.preventDefault(); e.stopPropagation();
-        if (!this.enabled) return;
+        if (!this.enabled || this.menu) return;
         fn(el);
         const t = e.changedTouches[0];
         if (this.lookId === null) { this.lookId = t.identifier; this.lx = t.clientX; this.ly = t.clientY; }

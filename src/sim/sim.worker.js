@@ -48,6 +48,7 @@ class Sim {
     this.time = 0; this.tick = 0; this.timeScale = 1; this.stopT = 0; this.slowT = 0; this.gameState = 0; this.gameT = 0;
     this.firstBloodAt = -1; this.crabWoke = false;
     this.knights = [];
+    this.nudgePosition = new Float32Array(3);
     this.scratch = new Float32Array(SNAP_FLOATS);
     this.snapU = new Uint32Array(this.scratch.buffer);
     this.tacticWeights = new Float32Array(PLAN_TACTICS).fill(1);
@@ -80,10 +81,11 @@ class Sim {
 
   restart() {
     this.player.reset();
+    this.player.y = this.world.height(this.player.x, this.player.z);
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.foeWorks = []; this.foeBigAt = 0;
-    this.gameState = 0; this.gameT = 0; this.time = 0;
+    this.gameState = 0; this.gameT = 0; this.time = 0; this.stopT = 0; this.timeScale = 1;
     this.reachedTown = false; this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
@@ -124,8 +126,7 @@ class Sim {
       if (k.opts?.pit ? false : k instanceof Zombie ? inPit(k.x, k.z) : floorAt(k.x, k.z) !== null) { k.x = ox; k.z = oz; }
       // The ghost shield's shove: thrown back, dying off fast, and stopped by what's solid.
       if (k.pushX || k.pushZ) {
-        const nx = k.x + k.pushX * tdt, nz = k.z + k.pushZ * tdt;
-        if (!this.world.inside(nx, nz, 0.4)) { k.x = nx; k.z = nz; } else { k.pushX = 0; k.pushZ = 0; }
+        if (!this.nudgeBody(k, k.pushX * tdt, k.pushZ * tdt, 0.4)) k.pushX = k.pushZ = 0;
         const fall = Math.exp(-4.5 * tdt);
         k.pushX *= fall; k.pushZ *= fall;
         if (Math.abs(k.pushX) + Math.abs(k.pushZ) < 0.4) { k.pushX = 0; k.pushZ = 0; }
@@ -158,29 +159,47 @@ class Sim {
     snap[H.PARRIED] = this.knights[0].stats.parried || 0;
   }
 
+  // Combat shoves and separation happen after movement, so they need their own collision check.
+  nudgeBody(body, dx, dz, radius) {
+    const x = body.x + dx, z = body.z + dz;
+    if (body !== this.player) {
+      const pit = body.opts?.pit;
+      if (pit && (x < pit.x0 || x > pit.x1 || z < pit.z0 || z > pit.z1)) return false;
+      if (!pit && (body instanceof Zombie ? inPit(x, z) : floorAt(x, z) !== null)) return false;
+      if (body.kind !== 1 && Math.hypot(x, z) < TOWN_R && Math.hypot(body.x, body.z) >= TOWN_R) return false;
+    }
+    const pos = this.nudgePosition;
+    pos[0] = x; pos[2] = z;
+    if (this.world.resolve(pos, radius, body.y + 0.2)) return false;
+    body.x = x; body.z = z;
+    if (body === this.player) body.keepToLand();
+    return true;
+  }
+
   // Bodies don't pass through each other: plate armour shoulders the player aside, and knights too.
   separate() {
     const p = this.player;
     for (const k of this.knights) {
-      if (k.dead) continue;
+      if (k.dead || k.dormant) continue;
       const P = k.bodyRadius || 0.82;
       const dx = p.x - k.x, dz = p.z - k.z, d = Math.hypot(dx, dz);
       if (d < P && d > 1e-3 && !k.iframes && Math.abs(p.y - k.y) < 4) {
         const push = (P - d) / d;
-        p.x += dx * push * 0.8; p.z += dz * push * 0.8;
-        k.x -= dx * push * 0.2; k.z -= dz * push * 0.2;
+        this.nudgeBody(p, dx * push * 0.8, dz * push * 0.8, 0.36);
+        this.nudgeBody(k, -dx * push * 0.2, -dz * push * 0.2, 0.4);
       }
     }
     const list = this.knights;
     for (let i = 0; i < list.length; i++) {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i], b = list[j];
-        if (a.dead || b.dead) continue;
+        if (a.dead || b.dead || a.dormant || b.dormant) continue;
         const R = (a.bodyRadius || 0.5) * 0.7 + (b.bodyRadius || 0.5) * 0.7;
         const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
         if (d < R && d > 1e-3 && Math.abs(a.y - b.y) < 4) {
           const push = (R - d) / d * 0.5;
-          b.x += dx * push; b.z += dz * push; a.x -= dx * push; a.z -= dz * push;
+          this.nudgeBody(b, dx * push, dz * push, 0.4);
+          this.nudgeBody(a, -dx * push, -dz * push, 0.4);
         }
       }
     }
@@ -287,7 +306,9 @@ Sim.prototype.place = function (d) {
   this.restart();
   if (!d) return;
   const p = this.player;
-  p.x = d.x; p.z = d.z; p.y = Math.max(d.y, this.world.height(d.x, d.z));
+  const floor = this.world.heightFor(d.x, d.z, d.y);
+  p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
+  p.onGround = p.y <= floor + 0.06;
   p.vx = 0; p.vy = 0; p.vz = 0; p.yaw = d.yaw;
   this.input[INPUT.YAW] = d.yaw; this.input[INPUT.PITCH] = d.pitch;
   self.postMessage({ type: 'look', yaw: d.yaw, pitch: d.pitch });
@@ -328,6 +349,7 @@ async function boot(msg) {
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village, await fetch(`${base}assets/game/interior/interior.json`).then((r) => r.json()));
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
+  sim.player.y = sim.world.height(sim.player.x, sim.player.z);
   sim.casting = new Casting({ attack: new ArmsRig(spellAttack), raise: new ArmsRig(spellRaise) });
   sim.knights.push(new Knight(0, 0, new Rig(parseGLB(black), bank), bank, BLACK));
   sim.knights.push(new Knight(1, 1, new Rig(parseGLB(silver), bank), bank, SILVER));
