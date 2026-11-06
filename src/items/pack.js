@@ -71,7 +71,7 @@ export class Pack {
   }
 
   // What goes in a save. Items are plain data.
-  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, kite: true, elementals: true, xp: this.xp, level: this.level }); }
+  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, kite: true, elementals: true, aurora: true, xp: this.xp, level: this.level }); }
 
   // A saved pack back in hand, or with null, what a new game starts with.
   load(d) {
@@ -97,6 +97,7 @@ export class Pack {
     for (const k of Object.keys(this.slots)) if (this.slots[k] && RETIRED(this.slots[k])) this.slots[k] = null;
     this.entries = this.entries.filter((e) => !RETIRED(e.item));
     if (!d.elementals) this.addElementals();
+    if (!d.aurora) this.addAurora();
     if (!this.slots.main) {
       const staff = this.entries.find((e) => e.item.type === 'weapon');
       if (staff) { this.slots.main = staff.item; this.remove(staff); } else this.slots.main = rollWeapon(makeRng(1793), { base: 'skullhorn_staff', rarity: 0, sockets: 0 });
@@ -109,11 +110,19 @@ export class Pack {
     for (const base of ELEMENTAL_STAFFS) this.add(rollWeapon(rng, { base, rarity: 0, sockets: 0 }));
   }
 
+  // For testing, in the pack of every game and every save: a Mythical Aurora skull with its six sockets open, and a flawless stone of each kind to fill them.
+  addAurora() {
+    const rng = makeRng(2026);
+    this.add(rollSkull(rng, { base: 'skull_03', rarity: 5, skin: 'aurora', pattern: 50, sockets: 6 }));
+    for (const kind of ['ruby', 'sapphire', 'emerald', 'amethyst', 'topaz', 'diamond']) this.add(rollGem(rng, { kind, grade: 2 }));
+  }
+
   startingKit() {
     const rng = makeRng(1793);
     this.slots.main = rollWeapon(rng, { base: 'skullhorn_staff', rarity: 0, sockets: 1 });
     this.slots.off = rollShield(rng, { base: 'kite_cross', sockets: 1 });
     this.addElementals();
+    this.addAurora();
     if (!TEST_KIT) return;
     for (const base of ['crystal_staff', 'greenwood_staff', 'gnarled_crook']) this.add(rollWeapon(rng, { base, rarity: 2, sockets: 3 }));
     for (const base of Object.keys(SKULLS).slice(0, 3)) this.add(rollSkull(rng, { base, rarity: 3, sockets: 3 }));
