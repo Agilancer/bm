@@ -2,7 +2,7 @@
 // the village's are big and painted. Drawn only from where they can be seen, and the world outside isn't drawn from below.
 import { accessor, parseGLB } from '../core/glb.js';
 import { setFloors } from '../core/interior.js';
-import { makeBuffer, textureArrayFromBitmaps } from './gpu.js';
+import { makeBuffer, loadTextureArray } from './gpu.js';
 import { COMMON } from './shaders.js';
 
 const FLAT = { iron: 100, flame: 101, gold: 105 };
@@ -88,11 +88,13 @@ export async function loadInterior(r, base, pool, tier) {
   const load = async (names, cs, ds) => {
     const px = (s) => Math.max(64, Math.round(s * scale));
     const decode = (n, s) => pool.run('decode', { url: `${dir}${n}.webp`, ...(scale !== 1 ? { width: px(s), height: px(s) } : {}) });
-    const [c, d] = await Promise.all([Promise.all(names.map((n) => decode(`${n}_c`, cs))), Promise.all(names.map((n) => decode(`${n}_d`, ds)))]);
-    return [textureArrayFromBitmaps(r.device, r.mip, c, 'rgba8unorm-srgb'), textureArrayFromBitmaps(r.device, r.mip, d, 'rgba8unorm')];
+    const c = await loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_c`, cs), 'rgba8unorm-srgb');
+    const d = await loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_d`, ds), 'rgba8unorm');
+    return [c, d];
   };
   const tileNames = man.layers.map((l) => l.name), atlasNames = man.atlases.map((l) => l.name);
-  const [[tc, td], [ac, ad]] = await Promise.all([load(tileNames, man.tile[0], man.tile[1]), load(atlasNames, man.atlas[0], man.atlas[1])]);
+  const [tc, td] = await load(tileNames, man.tile[0], man.tile[1]);
+  const [ac, ad] = await load(atlasNames, man.atlas[0], man.atlas[1]);
 
   const glb = parseGLB(glbBuf);
   const nodes = glb.json.nodes.filter((n) => n.mesh !== undefined && n.name.includes('|'));
@@ -151,3 +153,4 @@ export function drawGlow(r, mp, it) {
   mp.setVertexBuffer(0, it.glowVB);
   mp.draw(it.glowN);
 }
+

@@ -12,7 +12,7 @@ export const TIERS = {
   // A phone has a fraction of a PC's GPU, and loses more of it to heat within minutes. So: a set number of pixels whatever
   // the screen (the browser stretches them, which costs nothing), the shaders' LEAN paths, and few passes, which a tiled
   // GPU pays dearly for. Also the Low setting on a PC.
-  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 4, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.5, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
+  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 4, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
 
 export function isMobileDevice() {
@@ -85,9 +85,9 @@ export class MipGen {
     return this.pipelines.get(format);
   }
 
-  generate(texture, format, layers, mipCount, encoder) {
+  generate(texture, format, layers, mipCount, encoder, firstLayer = 0) {
     const pipe = this.pipeline(format);
-    for (let layer = 0; layer < layers; layer++) {
+    for (let layer = firstLayer; layer < firstLayer + layers; layer++) {
       for (let mip = 1; mip < mipCount; mip++) {
         const src = texture.createView({ dimension: '2d', baseMipLevel: mip - 1, mipLevelCount: 1, baseArrayLayer: layer, arrayLayerCount: 1 });
         const dst = texture.createView({ dimension: '2d', baseMipLevel: mip, mipLevelCount: 1, baseArrayLayer: layer, arrayLayerCount: 1 });
@@ -103,6 +103,43 @@ export class MipGen {
 }
 
 export const mipCountFor = (w, h) => Math.floor(Math.log2(Math.max(w, h))) + 1;
+
+// Decode, upload and release one layer before asking for the next. Worker count does
+// not bound asynchronous image decodes; queuing the whole manifest exhausts iOS memory.
+export async function loadTextureArray(device, mipgen, names, decode, format) {
+  let tex, w, h, mips;
+  try {
+    for (let layer = 0; layer < names.length; layer++) {
+      const bmp = await decode(names[layer]);
+      try {
+        if (!tex) {
+          w = bmp.width; h = bmp.height; mips = mipCountFor(w, h);
+          tex = device.createTexture({ size: [w, h, names.length], format, mipLevelCount: mips,
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+        }
+        if (bmp.width !== w || bmp.height !== h) throw new Error(`Texture layer size mismatch: ${names[layer]}`);
+        device.queue.copyExternalImageToTexture({ source: bmp }, { texture: tex, origin: [0, 0, layer], premultipliedAlpha: false }, [w, h]);
+      } finally { bmp.close(); }
+      const enc = device.createCommandEncoder();
+      mipgen.generate(tex, format, 1, mips, enc, layer);
+      device.queue.submit([enc.finish()]);
+      // Bound GPU staging memory as well as decoded bitmaps.
+      await device.queue.onSubmittedWorkDone();
+    }
+    return tex;
+  } catch (error) { tex?.destroy(); throw error; }
+}
+
+export async function decodeScaledBitmap(blob, scale) {
+  const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
+  const bmp = await createImageBitmap(blob, opts);
+  if (scale === 1) return bmp;
+  try {
+    // Resize the decoded pixels instead of decoding the compressed source twice.
+    return await createImageBitmap(bmp, { ...opts, resizeWidth: Math.max(1, Math.round(bmp.width * scale)),
+      resizeHeight: Math.max(1, Math.round(bmp.height * scale)), resizeQuality: 'high' });
+  } finally { bmp.close(); }
+}
 
 // Build a texture array from decoded bitmaps.
 export function textureArrayFromBitmaps(device, mipgen, bitmaps, format) {
@@ -129,3 +166,4 @@ export function makeBuffer(device, data, usage) {
   buf.unmap();
   return buf;
 }
+
