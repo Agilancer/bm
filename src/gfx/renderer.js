@@ -9,7 +9,7 @@ import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
-import { MipGen, makeBuffer, mipCountFor, textureArrayFromBitmaps } from './gpu.js';
+import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
 import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
@@ -135,16 +135,10 @@ export class Renderer {
     total = manifest.layers.length * 2 + manifest.ground.length * 2 + 17;
     const shrink = tier.texScale !== 1;
     const decode = (name, width, height) => pool.run('decode', { url: `${base}assets/game/tex/${name}.webp`, ...(shrink ? { width, height } : {}) }).then((b) => { tick(); return b; });
-    const [colorBmps, detailBmps, gColor, gDetail] = await Promise.all([
-      Promise.all(manifest.layers.map((l) => decode(`${l.name}_c`, tw, th))),
-      Promise.all(manifest.layers.map((l) => decode(`${l.name}_d`, dw, dh))),
-      Promise.all(manifest.ground.map((n) => decode(`${n}_c`, gs, gs))),
-      Promise.all(manifest.ground.map((n) => decode(`${n}_d`, gd, gd))),
-    ]);
-    this.colorArr = textureArrayFromBitmaps(device, this.mip, colorBmps, 'rgba8unorm-srgb');
-    this.detailArr = textureArrayFromBitmaps(device, this.mip, detailBmps, 'rgba8unorm');
-    this.groundColor = textureArrayFromBitmaps(device, this.mip, gColor, 'rgba8unorm-srgb');
-    this.groundDetail = textureArrayFromBitmaps(device, this.mip, gDetail, 'rgba8unorm');
+    this.colorArr = await loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb');
+    this.detailArr = await loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_d`, dw, dh), 'rgba8unorm');
+    this.groundColor = await loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_c`, gs, gs), 'rgba8unorm-srgb');
+    this.groundDetail = await loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_d`, gd, gd), 'rgba8unorm');
     tick();
     // Terrain and the ground map, split across the pool.
     const rowsEach = Math.ceil(GROUND_SIZE / Math.max(1, pool.size));
@@ -175,34 +169,41 @@ export class Renderer {
     // Tiling noise for clouds and macro variation: four channels of smooth noise.
     this.noiseTex = this.makeNoise();
 
-    const buffers = await Promise.all(['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
+    const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
       'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
-      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`)]
-      .map((p) => fetch(base + p).then((r) => r.arrayBuffer()).then((b) => { tick(); return b; })));
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`)];
+    // Fetch when building each model; don't retain every source GLB during startup.
+    const loadModel = async (i) => {
+      const res = await fetch(base + models[i]);
+      if (!res.ok) throw new Error(`${models[i]}: ${res.status}`);
+      const glb = parseGLB(await res.arrayBuffer());
+      tick();
+      return glb;
+    };
     this.buildSamplers();
     this.buildBaseLayouts();
-    this.buildStatics(parseGLB(buffers[0]), layerNames, manifest.layers, village.trees);
+    this.buildStatics(await loadModel(0), layerNames, manifest.layers, village.trees);
     this.pines = new Pines(this, forest.trees, layerNames);
     this.interior = await loadInterior(this, base, pool, tier);
     tick();
     this.chars = [
-      await this.buildCharacter(parseGLB(buffers[1])),
-      await this.buildCharacter(parseGLB(buffers[2])),
-      ...(await this.buildCrabs(parseGLB(buffers[8]), 3, CRAB_SCALE)),
-      ...(await this.buildCrabs(parseGLB(buffers[10]), 1, GRAVEHART_SCALE)),
-      ...(await this.buildCrabs(parseGLB(buffers[11]), 1, HYDRA_SCALE)),
+      await this.buildCharacter(await loadModel(1)),
+      await this.buildCharacter(await loadModel(2)),
+      ...(await this.buildCrabs(await loadModel(8), 3, CRAB_SCALE)),
+      ...(await this.buildCrabs(await loadModel(10), 1, GRAVEHART_SCALE)),
+      ...(await this.buildCrabs(await loadModel(11), 1, HYDRA_SCALE)),
     ];
     // The undead, in the order the sim adds them: a body per place in BODIES.count, sharing that model's mesh and paint.
     for (let i = 0; i < BODIES.length; i++) {
-      const bodies = await this.buildCrabs(parseGLB(buffers[15 + i]), BODIES[i].count, BODIES[i].scale, addStumps);
+      const bodies = await this.buildCrabs(await loadModel(15 + i), BODIES[i].count, BODIES[i].scale, addStumps);
       for (const b of bodies) { b.flesh = 1; this.chars.push(b); }
     }
     tick();
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
-    this.vms = { 1: await this.buildViewModel(parseGLB(buffers[9])), 2: await this.buildViewModel(parseGLB(buffers[3])), 3: await this.buildViewModel(parseGLB(buffers[14])) };
+    this.vms = { 1: await this.buildViewModel(await loadModel(9)), 2: await this.buildViewModel(await loadModel(3)), 3: await this.buildViewModel(await loadModel(14)) };
     this.vm = this.vms[1];
-    this.spellVMs = { 1: await this.buildViewModel(parseGLB(buffers[12])), 2: await this.buildViewModel(parseGLB(buffers[13])) };
+    this.spellVMs = { 1: await this.buildViewModel(await loadModel(12)), 2: await this.buildViewModel(await loadModel(13)) };
     // Swords are fetched the first time one is wanted, in the hand or on the ground, and kept: there are too many maps to load them all up front.
     this.swords = new Map();
     this.gems = new Map();
@@ -215,7 +216,8 @@ export class Renderer {
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.itemData = new Float32Array(16 * MAX_GROUND);
     tick();
-    this.props = await Promise.all([4, 5, 6, 7].map((i) => this.buildProp(parseGLB(buffers[i]))));
+    this.props = [];
+    for (const i of [4, 5, 6, 7]) this.props.push(await this.buildProp(await loadModel(i)));
     this.propInstances = device.createBuffer({ size: 64 * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.propData = new Float32Array(64);
     tick();
@@ -387,19 +389,16 @@ export class Renderer {
 
   async imageTexture(glb, imageIndex, format, scale = 1) {
     const blob = imageBytes(glb, imageIndex);
-    let bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-    if (scale !== 1) {
-      const small = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none', resizeWidth: Math.round(bmp.width * scale), resizeHeight: Math.round(bmp.height * scale), resizeQuality: 'high' });
-      bmp.close();
-      bmp = small;
-    }
+    const bmp = await decodeScaledBitmap(blob, scale);
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
-    this.device.queue.copyExternalImageToTexture({ source: bmp }, { texture: tex, premultipliedAlpha: false }, [bmp.width, bmp.height]);
-    bmp.close();
+    try {
+      this.device.queue.copyExternalImageToTexture({ source: bmp }, { texture: tex, premultipliedAlpha: false }, [bmp.width, bmp.height]);
+    } finally { bmp.close(); }
     const enc = this.device.createCommandEncoder();
     this.mip.generate(tex, format, 1, mips, enc);
     this.device.queue.submit([enc.finish()]);
+    await this.device.queue.onSubmittedWorkDone();
     return tex;
   }
 
@@ -2127,3 +2126,4 @@ export class Renderer {
     });
   }
 }
+
