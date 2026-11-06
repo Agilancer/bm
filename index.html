@@ -78,7 +78,7 @@
   .tbtn { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid rgba(233,223,201,.55); background: rgba(10,8,6,.42); color: var(--bone); font-size: 12px; letter-spacing: .08em; }
   .tbtn.on, .tbtn:active { background: rgba(201,163,92,.45); }
   #bAttack { width: 92px; height: 92px; right: calc(26px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom)); font-size: 13px; }
-  #bWide { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); }
+  #bWide { width: 66px; height: 66px; right: calc(204px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); display: none; }
   #bJump { width: 66px; height: 66px; right: calc(38px + env(safe-area-inset-right)); bottom: calc(132px + env(safe-area-inset-bottom)); }
   #bSprint { width: 56px; height: 56px; left: calc(30px + env(safe-area-inset-left)); bottom: calc(190px + env(safe-area-inset-bottom)); }
   #bDodge { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(112px + env(safe-area-inset-bottom)); }
@@ -168,7 +168,7 @@
   #spellGrid .tx i { font-style: normal; font-size: 11px; color: var(--c); }
   #spellGrid kbd { position: absolute; top: 6px; right: 8px; font: inherit; font-size: 10px; color: #8d8370; }
   #spellClose { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(18px + env(safe-area-inset-right)); padding: 6px 12px; font: inherit; color: var(--gold); background: none; border: 1px solid rgba(201,163,92,.45); cursor: pointer; }
-  #bCast { display: none; }
+  #bCast { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); }
   /* On a touch screen the slots sit left of the thumb buttons and do the casting themselves. */
   body.touch #spells { left: 41%; bottom: calc(6px + env(safe-area-inset-bottom)); gap: 4px; }
   body.touch #spells .spell { width: 42px; height: 42px; padding: 7px; }
@@ -218,7 +218,7 @@
 <div id="touch">
   <div id="stick"><div id="nub"></div></div>
   <div class="tbtn" id="bSprint">RUN</div>
-  <div class="tbtn" id="bWide">WIDE</div>
+  <div class="tbtn" id="bWide">GUARD</div>
   <div class="tbtn" id="bJump">JUMP</div>
   <div class="tbtn" id="bDodge">DODGE</div>
   <div class="tbtn" id="bAttack">CUT</div>
