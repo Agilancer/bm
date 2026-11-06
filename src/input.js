@@ -189,6 +189,7 @@ export class Input {
     s[INPUT.MOVE_Z] = mz;
     s[INPUT.YAW] = this.yaw;
     s[INPUT.PITCH] = this.pitch;
+    s[INPUT.VIEW_ASPECT] = this.canvas.width / Math.max(1, this.canvas.height);
     s[INPUT.SPRINT] = (k.has('ShiftLeft') || k.has('ShiftRight') || this.sprintToggle || this.stickRun) ? 1 : 0;
     s[INPUT.JUMP_HELD] = this.enabled && !this.menu && (k.has('Space') || this.jumpTouch) ? 1 : 0;
     s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch || this.castSlot) ? 1 : 0;

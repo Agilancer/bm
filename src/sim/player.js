@@ -323,7 +323,7 @@ export class Player {
     this.spend(BASH_COST * (1 - this.stamSave));
     sim.event(EV.WHOOSH, this.x, this.y + EYE, this.z, 1);
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-    sim.casting.ghostShield(this.x, this.y + EYE - 0.28, this.z, fx, fz, BASH_REACH, BASH_HALF);
+    sim.casting.ghostShield(BASH_REACH, BASH_HALF);
     let met = false;
     for (const k of sim.knights) {
       if (k.dead || k.dormant || k.iframes) continue;
