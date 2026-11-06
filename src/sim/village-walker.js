@@ -1,6 +1,6 @@
 import { LISANDRA_SCALE } from '../core/lisandra.js';
 import { C, C_PALETTE } from '../core/layout.js';
-import { quatYaw, wrapAngle } from '../core/math.js';
+import { quatAxisAngle, quatMul, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
 import { ArmsRig } from './anim.js';
 
 const WALK = 'Walk_Loop';
@@ -8,10 +8,15 @@ const SPEED = 0.9;
 const RADIUS = 0.48;
 
 export class VillageWalker {
-  constructor(buffer, route) {
-    this.route = route;
+  constructor(buffer, form) {
+    this.route = form.route;
+    this.legRadii = form.legRadii;
     this.bodyRadius = RADIUS * 2;
     this.rig = new ArmsRig(buffer, LISANDRA_SCALE, new Set([WALK, 'idle']));
+    this.skirtLegs = ['Left', 'Right'].flatMap((side) => ['UpLeg', 'Leg', 'Foot'].map(
+      (part) => this.rig.index.get(`mixamorig:${side}${part}`),
+    ));
+    for (const clip of Object.values(this.rig.clips)) this.fitArms(clip, form.armClearance);
     this.rig.rootQ = new Float32Array(4);
     this.rig.rootT = new Float32Array(3);
     const clip = this.rig.clips[WALK];
@@ -22,6 +27,27 @@ export class VillageWalker {
     for (let i = 0; i < clip.frames; i++) hips[i * 3 + 2] -= travel * i / (clip.frames - 1);
     this.walkRate = SPEED * clip.dur / travel;
     this.reset();
+  }
+
+  // Rotate the upper arms away from the dress in chest space. Recalculate the
+  // local axis at each key so the clearance follows the pose through the cycle.
+  fitArms(clip, angle) {
+    const rig = this.rig;
+    const palette = new Float32Array(rig.count * 8);
+    const inverse = new Float32Array(4), rotation = new Float32Array(4), axis = new Float32Array(3);
+    const forward = [0, 0, 1];
+    for (const [side, sign] of [['Left', 1], ['Right', -1]]) {
+      const arm = rig.index.get(`mixamorig:${side}Arm`);
+      const track = clip.rots[arm];
+      const parent = rig.parent[arm] * 4;
+      for (let i = 0; i < clip.frames; i++) {
+        rig.solve(clip, clip.dur * i / (clip.frames - 1), 1, palette, 0);
+        inverse.set([-rig.wq[parent], -rig.wq[parent + 1], -rig.wq[parent + 2], rig.wq[parent + 3]]);
+        quatRotate(axis, 0, inverse, 0, forward, 0);
+        quatAxisAngle(rotation, 0, axis[0], axis[1], axis[2], sign * angle);
+        quatMul(track, i * 4, rotation, 0, track, i * 4);
+      }
+    }
   }
 
   reset() {
@@ -66,6 +92,17 @@ export class VillageWalker {
     quatYaw(rig.rootQ, 0, this.yaw);
     rig.rootT.set([this.x, this.y, this.z]);
     rig.solve(rig.clips[this.clip], this.time, this.fade, snap, offset + C_PALETTE);
+    // The render pass uses the current thigh and shin shapes to keep the marked
+    // dress panels outside the moving legs. Points are in world space.
+    const skirt = offset + C_PALETTE + rig.count * 8;
+    this.skirtLegs.forEach((joint, i) => {
+      const k = joint * 3, p = skirt + i * 4;
+      snap[p] = rig.wt[k];
+      snap[p + 1] = rig.wt[k + 1];
+      snap[p + 2] = rig.wt[k + 2];
+      snap[p + 3] = this.legRadii[i % 3];
+    });
+    snap[skirt + 24] = this.yaw;
     snap[offset + C.ACTIVE] = 1;
     snap[offset + C.X] = this.x;
     snap[offset + C.Y] = this.y;
