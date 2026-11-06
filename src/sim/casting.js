@@ -33,7 +33,8 @@ const SPELL_BITE = 0.6;   // every spell against the quicker dying of the overha
 const STAFF_AHEAD = 0.85;   // how far along the head's ray a bolt starts, as a palm's does
 
 // The hands' camera is wider than the world's: this turns a slope from one into the slope under the same pixel in the other.
-const TO_WORLD = Math.tan(32 * Math.PI / 180) / Math.tan(38 * Math.PI / 180);
+const WORLD_HALF_TAN = Math.tan(32 * Math.PI / 180);
+const TO_WORLD = WORLD_HALF_TAN / Math.tan(38 * Math.PI / 180);
 
 // (5 is a zombie or a caster, 6 the ogre.)
 const chestOf = (k) => k.y + (k.crawling ? 0.35 : [1.25, 1.25, 0.55, 1.3, 1.4, 1.2, 1.9][k.kind]);
@@ -177,10 +178,10 @@ export class Casting {
   stepHands(dt, want, held, sim) {
     const p = sim.player;
     if (this.state === 'idle') {
-      if (p.stance.shoots) this.stepStaff(sim);
+      if (p.stance.shoots || p.staffSurf) this.stepStaff(sim);
       this.lower = Math.max(0, this.lower - dt * 3.2);
       this.armLower = Math.max(0, this.armLower - dt * 3.2);
-      if (want && !p.dead && !p.swinging && !p.guard && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
+      if (want && !p.dead && !p.swinging && !p.guard && p.staffSurfT === null && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
       if (this.state === 'idle') return;
     }
     const def = this.def;
@@ -249,24 +250,35 @@ export class Casting {
     return out;
   }
 
-  // The staff's head, on the same ray as it's drawn.
-  staffHead(p, out) {
-    const a = p.arms.tip * 3, w = p.arms.wt;
-    const d = Math.max(-w[a + 2], 0.05), sx = w[a] / d * TO_WORLD, sy = w[a + 1] / d * TO_WORLD;
+  // Use the staff tip's screen ray on foot, or the off-screen hand at the lower-right corner when surfing.
+  staffOrigin(p, aspect, out) {
+    let sx, sy, eyeY = p.y + EYE;
+    if (p.surfing) {
+      const edge = 1.1 * WORLD_HALF_TAN;
+      sx = edge * aspect;
+      sy = -edge;
+      eyeY -= p.surfLow + p.landKick;
+    } else {
+      const a = p.arms.tip * 3, w = p.arms.wt;
+      const d = Math.max(-w[a + 2], 0.05);
+      sx = w[a] / d * TO_WORLD;
+      sy = w[a + 1] / d * TO_WORLD;
+    }
     const s = Math.sin(p.yaw), c = Math.cos(p.yaw), sp = Math.sin(p.pitch), cp = Math.cos(p.pitch);
     const x = -c * sx - s * sp * sy + s * cp, y = cp * sy + sp, z = s * sx - c * sp * sy + c * cp, L = STAFF_AHEAD / Math.hypot(x, y, z);
-    out[0] = p.x + x * L; out[1] = p.y + EYE + y * L; out[2] = p.z + z * L;
+    out[0] = p.x + x * L; out[1] = eyeY + y * L; out[2] = p.z + z * L;
     return out;
   }
 
   // A cast in the staff's arm: the head gathers light on the lift, and on the hit a bolt leaves it for what's under the crosshair.
   stepStaff(sim) {
     const p = sim.player;
-    if (p.clip !== 'staff_cast') return;
-    const id = WEAPONS[p.weapon].id, def = STAFF_SHOT[id] || SPELLS.find((d) => d.key === STAFF_BOLT[id]), info = p.arms.clips[p.clip];
-    const from = this.staffHead(p, out3);
-    if (p.t < info.hit) {
-      const k = smooth(p.t / info.hit);
+    const t = p.staffSurf ? p.staffSurfT : p.clip === 'staff_cast' ? p.t : null;
+    if (t === null) return;
+    const id = WEAPONS[p.weapon].id, def = STAFF_SHOT[id] || SPELLS.find((d) => d.key === STAFF_BOLT[id]), info = p.rigs[3].clips.staff_cast;
+    const from = this.staffOrigin(p, sim.input[INPUT.VIEW_ASPECT] || 16 / 9, out3);
+    if (t < info.hit) {
+      const k = smooth(t / info.hit);
       this.fx(FX.FLARE, def.elem, from[0], from[1], from[2], 0.015 + 0.035 * k, 0, 1, 0, 0, -(0.2 + 0.5 * k), 0, 0, 0, 0.3);
       this.fx(FX.LIGHT, def.elem, from[0], from[1], from[2], 0, 0, 1, 0, 0, 1, 0.1 + 0.3 * k, 1.5);
       return;
