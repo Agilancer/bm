@@ -321,6 +321,7 @@ export class ArmsRig {
       quatMul(pq, j * 4, wq, j * 4, ibQ, j * 4);
       quatRotate(pt, j * 3, wq, j * 4, ibT, j * 3);
       pt[j * 3] += wt[j * 3]; pt[j * 3 + 1] += wt[j * 3 + 1]; pt[j * 3 + 2] += wt[j * 3 + 2];
+      if (this.leftDrop > 0 && /_L$/.test(this.names[j])) pt[j * 3 + 1] -= this.leftDrop * 0.9;     // (the left arm, down out of view, whole)
       const x = pq[j * 4], y = pq[j * 4 + 1], z = pq[j * 4 + 2], w = pq[j * 4 + 3];
       const tx = pt[j * 3], ty = pt[j * 3 + 1], tz = pt[j * 3 + 2];
       const o = off + j * 8;

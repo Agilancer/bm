@@ -259,6 +259,7 @@ async function boot(plan, poolSize) {
     $('bWide').textContent = off && !skull ? 'GUARD' : 'CAST';
     renderer.offHand = off && !skull ? off.base : null;
     renderer.board.sword = off ? off.base : null;
+    if (off) renderer.sword('surf_arm');     // (Ready before the first landing.)
     renderer.skull = skull ? skull.base : null;
     renderer.board.glow = off?.gems?.length ? GEM_COLOR(off.gems[0]) : null;
     showLevel();
