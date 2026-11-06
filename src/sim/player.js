@@ -122,6 +122,7 @@ export class Player {
     this.pierce = input[INPUT.W_PIERCE]; this.poise = input[INPUT.W_POISE];
     this.stamSave = input[INPUT.W_STAM]; this.speed = input[INPUT.W_SPEED]; this.leech = input[INPUT.W_LEECH];
     this.armor = input[INPUT.ARMOR];
+    this.shPower = input[INPUT.SH_POWER] | 0; this.shValue = input[INPUT.SH_VALUE];
     this.hasSkull = input[INPUT.SKULL] > 0.5; this.hasShield = input[INPUT.SHIELD] > 0.5; this.blockHeld = input[INPUT.BLOCK] > 0.5;
     const maxHp = BASE_HP + input[INPUT.W_LIFE];
     if (maxHp !== this.maxHp && !this.dead) { this.hp = clamp(this.hp + maxHp - this.maxHp, 1, maxHp); this.maxHp = maxHp; }
@@ -267,6 +268,9 @@ export class Player {
     // Recover from wounds slowly when no one is on top of you.
     this.regenT += dt;
     if (this.regenT > 6 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * 1.6);
+    // The shield's ability, if it has one: Mending, and Aegis coming back.
+    if (this.shPower === 2 && !this.dead && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * this.shValue);
+    this.aegisT = Math.max(0, (this.aegisT || 0) - dt);
     this.weak = damp(this.weak, this.hp < this.maxHp * 0.28 ? 1 : 0, 2, dt);
     this.flash = Math.max(0, this.flash - dt * 1.4);
     this.hitDirT += dt;
@@ -391,6 +395,7 @@ export class Player {
       if (foe) { if (foe.reel) foe.reel(sim, 0.9); else if (foe.onParried) foe.onParried(sim); else foe.onHit(sim, 'gash', this.x, this.z, BASH_POISE); }
       return false;
     }
+    if (this.shPower === 4) amount *= 1 - this.shValue;     // Bulwark
     this.spend(amount * GUARD_COST * (1 - this.stamSave));
     if (sim.time > this.blockEvT) { this.blockEvT = sim.time + 0.12; sim.event(EV.BLOCK, hx, hy, hz, -fx, 0.1, -fz, -1); }
     this.trauma = Math.min(1, this.trauma + 0.2);
@@ -539,6 +544,12 @@ export class Player {
   // Returns whether it landed: a shield can stop it. (unblockable: it comes up out of the ground under you.)
   damage(sim, amount, fromX, fromZ, knock, unblockable = false) {
     if (sim.gameState !== 0) return false;
+    // Aegis: this one never lands, whatever it was.
+    if (this.shPower === 1 && !this.aegisT) {
+      this.aegisT = this.shValue;
+      sim.event(EV.BLOCK, this.x, this.y + EYE - 0.35, this.z, 0, 0.1, 0, -1);
+      return false;
+    }
     if (!unblockable && this.blocking) {
       const dx = fromX - this.x, dz = fromZ - this.z, L = Math.hypot(dx, dz) || 1;
       if ((dx * Math.sin(this.yaw) + dz * Math.cos(this.yaw)) / L > GUARD_ARC) return this.blockBlow(sim, amount, fromX, fromZ, knock);
@@ -549,6 +560,8 @@ export class Player {
 
   applyHurt(sim, amount, fromX, fromZ, knock) {
     amount *= ARMOR_K / (ARMOR_K + (this.armor || 0));
+    // Manaward: a share of it paid in mana, as far as there's any to pay with.
+    if (this.shPower === 3) { const paid = Math.min(sim.casting.mana, amount * this.shValue); sim.casting.mana -= paid; amount -= paid; }
     this.hp -= amount;
     this.regenT = 0;
     this.flash = Math.min(1, this.flash + 0.55 + amount * 0.012);

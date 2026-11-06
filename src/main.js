@@ -271,6 +271,7 @@ async function boot(plan, poolSize) {
   };
   // A kill's worth of experience, and whatever that buys. The sim only says something died.
   game.gainXp = (kind) => {
+    renderer.skullEyes?.feel('glee', 3);
     if (!stepXp(pack, XP_OF[kind | 0] ?? 10)) { showLevel(); return; }
     arm();
     // A new level fills you up, as it should.
