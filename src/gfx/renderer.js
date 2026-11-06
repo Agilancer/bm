@@ -22,8 +22,8 @@ import { SKIN } from './shaders.js';
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 444;
 // Where a skull sits in the left hand, from its own frame to the view's. Printed by tools/wizard/skull_hold.py.
-const SKULL_SCALE = 0.74;
-const SKULL_SEAT = [-0.09696, 0.01479, -0.73347, 0.0, -0.56108, 0.47516, 0.08375, 0.0, 0.47264, 0.5671, -0.05105, 0.0, -0.16928, -0.20875, -0.38148, 1.0];
+const SKULL_SCALE = 0.8;
+export const SKULL_SEAT = [0.70466, 0.02157, -0.37813, 0.0, -0.04562, 0.79772, -0.0395, 0.0, 0.37599, 0.05635, 0.70389, 0.0, -0.22996, -0.17554, -0.4273, 1.0];
 
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
@@ -1595,7 +1595,11 @@ export class Renderer {
       vmData[17] = 0; vmData[18] = 0; vmData[19] = 1;
       q.writeBuffer(h.ubo, 0, vmData);
     }
+    // It breathes with you, a very little: arm and skull as one.
+    const breath = this.breathData || (this.breathData = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]));
+    breath[4] = Math.sin(time * 0.7) * 0.0015; breath[5] = Math.sin(time * 1.3) * 0.002;
     for (const h of this.skullParts) {
+      q.writeBuffer(h.hand.palette, 0, breath);
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
       vmData[17] = 0; vmData[18] = 0; vmData[19] = 1;
