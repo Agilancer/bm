@@ -693,7 +693,8 @@ fn vn2(p: vec2f) -> f32 {
   // The spell hands are held up against the light as often as not: a low, warm fill from the eye keeps the skin skin, and the fingers' roundness in view.
   // And a spell's light, so near, can colour them but not burn them out: the upper arm faces all of it.
   if (M.params.w < 0.0) {
-    c += albedo * vec3f(0.62, 0.5, 0.42) * (0.3 + 0.7 * max(dot(n, v), 0.0));
+    // (How much is -w: the skull in the hand takes less than skin, being so much paler that it would light up the night.)
+    c += albedo * vec3f(0.62, 0.5, 0.42) * (0.3 + 0.7 * max(dot(n, v), 0.0)) * -M.params.w;
     let most = max(max(c.r, c.g), c.b);
     if (most > 1.0) { c *= (1.0 + (most - 1.0) * 0.12) / most; }
   }
