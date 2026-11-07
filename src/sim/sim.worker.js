@@ -1,5 +1,7 @@
 // The simulation thread. Runs the world at a fixed rate, independent of the display, and publishes
 // complete snapshots for the render thread. Nothing in here waits on the GPU or the DOM.
+import { FIELD_CREATURES } from '../core/field-creatures.js';
+import { FieldCreature } from './field-creature.js';
 import { setOpeningTerrain } from '../core/terrain.js';
 import { CAVE_WALLS, OPENING, OPENING_REVISION, OPENING_YAW } from '../core/opening.js';
 import { Opening } from './opening.js';
@@ -382,6 +384,25 @@ async function boot(msg) {
   sim.knights.push(new Gravehart(5, 3, new ArmsRig(heartBuf, GRAVEHART_SCALE), GRAVEHART));
   sim.knights.push(new Hydra(6, 4, new ArmsRig(hydraBuf, HYDRA_SCALE), HYDRA));
   await addUndead(sim, base);
+  for (const creature of FIELD_CREATURES) {
+    const buffer = await fetchBuf(base + 'assets/monsters/new_creatures/' + creature.model + '.glb');
+    const rig = new ArmsRig(buffer, creature.scale, new Set(['idle', 'walk', 'run', 'attack', 'death']));
+    const hips = rig.index.get('mixamorig:Hips');
+    for (const clip of Object.values(rig.clips)) {
+      const track = clip.trs[hips];
+      if (!track) { clip.speed = 1; continue; }
+      const x = track[0], z = track[2];
+      const dx = track[track.length - 3] - x, dz = track[track.length - 1] - z;
+      clip.speed = Math.max(0.5, Math.hypot(dx, dz) / clip.dur);
+      for (let frame = 0; frame < clip.frames; frame++) {
+        const fraction = frame / (clip.frames - 1);
+        track[frame * 3] -= dx * fraction;
+        track[frame * 3 + 2] -= dz * fraction;
+      }
+      clip.loop = ['idle', 'walk', 'run'].includes(clip.name);
+    }
+    sim.knights.push(new FieldCreature(sim.knights.length, rig, creature));
+  }
   for (const form of LISANDRA_FORMS) {
     sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
   }

@@ -1,5 +1,6 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
+import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
 import { OPENING, REVEAL_SWAP_AT } from '../core/opening.js';
@@ -183,7 +184,7 @@ export class Renderer {
     const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
       'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
-      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset)];
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb')];
     // Fetch when building each model; don't retain every source GLB during startup.
     const loadModel = async (i) => {
       const res = await fetch(base + models[i]);
@@ -211,6 +212,11 @@ export class Renderer {
       for (const b of bodies) { b.flesh = 1; this.chars.push(b); }
     }
     tick();
+    for (let i = 0; i < FIELD_CREATURES.length; i++) {
+      const [body] = await this.buildCrabs(await loadModel(15 + BODIES.length + LISANDRA_FORMS.length + i), 1, FIELD_CREATURES[i].scale);
+      body.flesh = 1;
+      this.chars.push(body);
+    }
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
       const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
