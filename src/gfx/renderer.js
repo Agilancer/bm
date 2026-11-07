@@ -2,7 +2,9 @@
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
-import { DAWN_HOUR, secondsPerHour, daylight } from './daylight.js';
+import { OPENING, REVEAL_SWAP_AT } from '../core/opening.js';
+import { loadOpeningStage } from './opening.js';
+import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
@@ -151,13 +153,13 @@ export class Renderer {
     const rowsEach = Math.ceil(GROUND_SIZE / Math.max(1, pool.size));
     const groundJobs = [];
     for (let r = 0; r < GROUND_SIZE; r += rowsEach) {
-      groundJobs.push(pool.run('ground', { size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat(village.footprints || [], [{ x: 90, z: 0, hx: 34, hz: 22, yaw: 0, h: 9 }]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
+      groundJobs.push(pool.run('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat(village.footprints || [], [{ x: 90, z: 0, hx: 34, hz: 22, yaw: 0, h: 9 }]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
     }
     const farEach = Math.ceil(this.farSize / Math.max(1, pool.size));
     const farJobs = [];
-    for (let r = 0; r < this.farSize; r += farEach) farJobs.push(pool.run('farground', { size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + farEach) }));
+    for (let r = 0; r < this.farSize; r += farEach) farJobs.push(pool.run('farground', { opening: this.openingEnabled, size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + farEach) }));
     const patch = { x0: -614, x1: -90, z0: -44, z1: 344, cell: tier.lean ? 4 : 2 };
-    const [terrain, forest, ...rest] = await Promise.all([pool.run('terrain', { n: tier.terrainN, extent: 2400, patch }), pool.run('forest', { reach: FOREST_REACH }), ...farJobs, ...groundJobs]);
+    const [terrain, forest, ...rest] = await Promise.all([pool.run('terrain', { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patch }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH }), ...farJobs, ...groundJobs]);
     const farRows = rest.slice(0, farJobs.length), rows = rest.slice(farJobs.length);
     this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     for (const row of farRows) device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, row.data.length / 4 / this.farSize]);
@@ -247,6 +249,7 @@ export class Renderer {
     this.buildParticles();
     this.buildGrass();
     this.lights = village.lights.concat(this.interior.data.lights);
+    if (this.openingEnabled) this.openingStage = await loadOpeningStage(this, base);
     this.smokeT = 0;
     this.moteT = 0;
     this.resize();
@@ -409,7 +412,10 @@ export class Renderer {
   }
 
   async imageTexture(glb, imageIndex, format, scale = 1) {
-    const blob = imageBytes(glb, imageIndex);
+    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale);
+  }
+
+  async bitmapTexture(blob, format, scale) {
     const bmp = await decodeScaledBitmap(blob, scale);
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
@@ -1577,10 +1583,14 @@ export class Renderer {
   // needn't even be skinned. On a phone a body far away is drawn from its coarse index list.
   cullBodies(cam, snap) {
     const pl = this.planes;
+    const stage = snap[H.OPENING];
+    const afterReveal = stage >= OPENING.ESCORT || stage === OPENING.REVEAL && snap[H.OPENING_TIME] > REVEAL_SWAP_AT;
+    const pretty = afterReveal && this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR;
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
-      if (snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
+      const otherForm = stage && (i === this.chars.length - (pretty ? 1 : 2));
+      if (otherForm || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
       const r = i < 2 ? 2.6 : 5;
       let inside = 1e9;
@@ -1828,6 +1838,7 @@ export class Renderer {
     let nGround = 0;
     const drawn = this.drawnItems || (this.drawnItems = []);
     drawn.length = 0;
+    this.openingStage?.append(drawn, snap, dt);
     for (const g of this.ground) drawn.push(g);
     if (this.chests.length && !this.chestModels) this.chestModel();
     for (const g of this.chests) drawn.push(g);
@@ -1835,7 +1846,7 @@ export class Renderer {
     for (const g of this.doorItems) drawn.push(g);
     if (snap[H.SURF] > 1.5 && this.board.sword) drawn.push(this.board);
     for (const g of drawn) {
-      let model = g.door ? this.doorModels?.[g.piece] : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying;
+      let model = g.openingModel ?? (g.door ? this.doorModels?.[g.piece] : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
@@ -1967,7 +1978,7 @@ export class Renderer {
       if (nGround) {
         sp.setVertexBuffer(1, this.itemInstances);
         for (const g of drawn) {
-          if (g.slot < 0) continue;
+          if (g.slot < 0 || g.noShadow) continue;
           sp.setVertexBuffer(0, g.model.VB);
           sp.setIndexBuffer(g.model.IB, 'uint32');
           sp.drawIndexed(g.model.count, 1, 0, 0, g.slot);

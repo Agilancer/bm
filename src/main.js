@@ -1,7 +1,10 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
+import { setOpeningTerrain } from './core/terrain.js';
+import { OPENING, OPENING_REVISION, OPENING_YAW } from './core/opening.js';
+import { OpeningHUD } from './ui/opening.js';
 import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
-import { clamp, damp, wrapAngle } from './core/math.js';
+import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
 import { Clock } from './clock.js';
@@ -26,6 +29,7 @@ const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
+const OPENING_PREVIEW = params.has('opening');
 const CONSENT_KEY = 'bm-threads-consent';
 const AUTOSAVE_EVERY = 20;   // seconds of play between the saves Continue picks up
 const title = new Title();
@@ -33,7 +37,7 @@ window.bmTitle = title;
 
 // ---- job pool ----------------------------------------------------------------------------------------------
 
-const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF VELSCOUR', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE'];
+const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE'];
 
 class Pool {
   constructor(size) {
@@ -186,6 +190,8 @@ async function boot(plan, poolSize) {
   setProgress(0.05, `Loading with ${poolSize} threads...`);
 
   const renderer = new Renderer(gpu, canvas, pool);
+  renderer.openingEnabled = OPENING_PREVIEW;
+  setOpeningTerrain(OPENING_PREVIEW);
   const simWorker = new Worker(new URL('./sim/sim.worker.js', import.meta.url), { type: 'module' });
   const audio = new Audio(BASE, title.ctx, title.out, settings.ambience);
   let latestSnap = null;
@@ -204,7 +210,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'error') { console.error(m.message); reject(new Error(m.message)); }
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
-      else if (m.type === 'restart') { input.yaw = Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
+      else if (m.type === 'restart') { input.yaw = m.yaw ?? Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
       else if (m.type === 'placed') {
         const c = calls.get(m.id);
         calls.delete(m.id);
@@ -215,7 +221,7 @@ async function boot(plan, poolSize) {
   });
   const pendingEvents = [];
   const hz = gpu.tier.sim;
-  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE });
+  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_PREVIEW });
 
   const hud = new Hud(gpu, plan, poolSize, isolated, input);
   const start = performance.now();
@@ -294,6 +300,13 @@ async function boot(plan, poolSize) {
   game.pendingEvents = pendingEvents;
   game.getNonSharedSnap = () => latestSnap;
 
+  let naming = false;
+  const openingHUD = OPENING_PREVIEW ? new OpeningHUD(() => {
+    naming = false;
+    input.menu = false;
+    simWorker.postMessage({ type: 'openingName' });
+    if (!input.touch && !AUTO) input.lock();
+  }) : null;
   const enter = async (fresh = true) => {
     title.hide();
     game.idle = false;
@@ -307,12 +320,12 @@ async function boot(plan, poolSize) {
     input.enabled = true;
     document.body.classList.add('playing');
     audio.start();
-    input.lock();
+    if (!openingHUD || (!fresh && openingHUD.name)) input.lock();
     if (input.touch && document.documentElement.requestFullscreen) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    if (fresh) { hud.intro(!!pack.slots.main); hud.tip('Spells are all you have. Hold Space as you jump to ride your shield. The town is safe ground: the woods are not.', 7); }
+    if (fresh && !openingHUD) { hud.intro(!!pack.slots.main); hud.tip('Spells are all you have. Hold Space as you jump to ride your shield. The town is safe ground: the woods are not.', 7); }
   };
 
   // ---- saving, loading and the menus ---------------------------------------------------------------------------------
@@ -321,8 +334,11 @@ async function boot(plan, poolSize) {
   // what's on the body. Quests will be a part of their own. What's lying on the ground isn't kept: a load starts the world fresh.
   let played = 0, playT = 0;
   addPart('player', {
-    save: () => { const s = game.currentSnap(); return { x: s[H.PX], y: s[H.PY], z: s[H.PZ], yaw: input.yaw, pitch: input.pitch }; },
-    load: (d) => simCall('place', d),   // (a fresh world, and you where the save says; null: where a new game starts)
+    save: () => {
+      const s = game.currentSnap();
+      return { x: s[H.PX], y: s[H.PY], z: s[H.PZ], yaw: input.yaw, pitch: input.pitch, ...openingHUD?.save(s) };
+    },
+    load: (d) => { openingHUD?.reset(d?.openingRevision === OPENING_REVISION ? d.name : ''); return simCall('place', d); },   // (a fresh world, and you where the save says; null: where a new game starts)
     summary: () => 'Velscour village',
   });
   addPart('stats', {
@@ -344,6 +360,34 @@ async function boot(plan, poolSize) {
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
   game.onTaken = autosave;
   game.onTick = (dt) => {
+    if (openingHUD) {
+      const snap = game.currentSnap();
+      if (snap) {
+        const active = input.enabled && !state.paused;
+        openingHUD.draw(snap, active);
+        if (active && snap[H.OPENING] === OPENING.NAME && !naming && !openingHUD.name) {
+          naming = true;
+          input.menu = true;
+          input.releaseControls();
+          if (document.pointerLockElement) document.exitPointerLock();
+        } else if (snap[H.OPENING] !== OPENING.NAME && naming) {
+          naming = false;
+          input.menu = false;
+        }
+        if (active && snap[H.OPENING] === OPENING.NAME) {
+          const t = snap[H.OPENING_TIME];
+          const wake = smoothstep(0.45, 3.25, t);
+          input.yaw = OPENING_YAW + (1 - wake) * 0.26;
+          input.pitch = lerp(-0.64, -0.11, wake);
+        }
+        if (active && snap[H.OPENING] === OPENING.REVEAL) {
+          const guide = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
+          const yaw = Math.atan2(snap[guide + C.X] - snap[H.PX], snap[guide + C.Z] - snap[H.PZ]);
+          input.yaw += wrapAngle(yaw - input.yaw) * Math.min(1, dt * 4);
+          input.pitch = damp(input.pitch, -0.10, 4, dt);
+        }
+      }
+    }
     if (!input.enabled || state.paused) return;
     played += dt; playT += dt;
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
@@ -377,6 +421,7 @@ async function boot(plan, poolSize) {
     if (a === 'new') {
       if (saves.auto() && !(await title.confirm({ title: 'New Game', text: 'Start the fight over from the beginning? The game you were playing stays in Continue until you play on.', yes: 'New Game' }))) return;
       saves.clearAuto();
+      openingHUD?.reset();
       shared.input[INPUT.RESTART] += 1;   // (taken up on the first step after the world is let go)
       played = 0; playT = 0;
       pack.load(null);
@@ -418,7 +463,7 @@ async function boot(plan, poolSize) {
   applySetting('res', settings.res);
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
-    if (!input.enabled || inventory.open) return;
+    if (!input.enabled || inventory.open || naming) return;
     if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
@@ -472,7 +517,7 @@ async function boot(plan, poolSize) {
   });
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
-    if (!input.enabled || e.repeat) return;
+    if (!input.enabled || e.repeat || naming) return;
     if (e.code === 'KeyI') { if (inventory.open) closePack(false); else if (!state.paused) openPack(); }
     if (e.code === 'KeyB') { if (bookOpen) closeBook(); else if (!state.paused) openBook(); }
     if (e.code === 'Escape' && bookOpen) closeBook(true);
@@ -480,8 +525,8 @@ async function boot(plan, poolSize) {
     if (e.code === 'KeyE' && !input.menu && !state.paused) game.takeNearest();
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
-  $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused) openPack(); }, { passive: false });
-  $('bTake').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused) game.takeNearest(); }, { passive: false });
+  $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) openPack(); }, { passive: false });
+  $('bTake').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) game.takeNearest(); }, { passive: false });
   $('touch').addEventListener('touchstart', () => {
     const snap = game.currentSnap();
     if (input.enabled && snap && snap[H.GAME] !== 0 && snap[H.GAME_T] > 1.5) shared.input[INPUT.RESTART] += 1;

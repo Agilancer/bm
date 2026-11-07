@@ -49,8 +49,9 @@ function migrate(d) {
 
 // ---- where they're kept ----------------------------------------------------------------------------------------
 
-const SLOT_KEY = (i) => `velscour.save.${i}`;
-const AUTO_KEY = 'velscour.autosave';
+const SAVE_PREFIX = new URLSearchParams(location.search).has('opening') ? 'velscour.opening' : 'velscour';
+const SLOT_KEY = (i) => `${SAVE_PREFIX}.save.${i}`;
+const AUTO_KEY = `${SAVE_PREFIX}.autosave`;
 const get = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const parse = (k) => { try { return JSON.parse(get(k) || 'null'); } catch { return null; } };
 const put = (k, data) => { try { localStorage.setItem(k, JSON.stringify({ ...data, at: Date.now() })); return true; } catch (e) { console.warn('save', e); return false; } };

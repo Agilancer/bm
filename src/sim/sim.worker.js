@@ -1,5 +1,8 @@
 // The simulation thread. Runs the world at a fixed rate, independent of the display, and publishes
 // complete snapshots for the render thread. Nothing in here waits on the GPU or the DOM.
+import { setOpeningTerrain } from '../core/terrain.js';
+import { CAVE_WALLS, OPENING, OPENING_REVISION, OPENING_YAW } from '../core/opening.js';
+import { Opening } from './opening.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
 import { parseGLB } from '../core/glb.js';
@@ -88,15 +91,17 @@ class Sim {
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.villagers.forEach((v) => v.reset());
+    this.opening?.reset();
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0; this.stopT = 0; this.timeScale = 1;
     this.reachedTown = false; this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
     p.atkSeen = inp[INPUT.ATTACK]; p.wideSeen = inp[INPUT.WIDE]; p.jumpSeen = inp[INPUT.JUMP]; p.dodgeSeen = inp[INPUT.DODGE];
-    this.input[INPUT.YAW] = Math.PI;
+    const yaw = this.opening ? OPENING_YAW : Math.PI;
+    this.input[INPUT.YAW] = yaw;
     this.input[INPUT.PITCH] = 0;
-    self.postMessage({ type: 'restart' });
+    self.postMessage({ type: 'restart', yaw });
   }
 
   step(dt) {
@@ -121,7 +126,7 @@ class Sim {
     this.casting.power = input[INPUT.POWER] || 1; this.casting.maxMana = MAX_MANA + input[INPUT.MANA_MAX]; this.casting.regen = input[INPUT.REGEN] || 1; this.casting.thrift = input[INPUT.THRIFT];
     if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
     if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + g); }
-    player.update(dt * (this.slow || 1), tdt, input, this);
+    if (this.opening?.stage !== OPENING.NAME && this.opening?.stage !== OPENING.REVEAL) player.update(dt * (this.slow || 1), tdt, input, this);
     for (const k of this.knights) {
       const ox = k.x, oz = k.z;
       k.update(this.frozen ? 0 : tdt * this.casting.rate(k) * (k.opts?.role ? CASTER_HASTE : HASTE[k.kind] ?? 1), this);
@@ -142,17 +147,21 @@ class Sim {
       if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
       if (!k.dead) k.looted = false;
     }
-    for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
+    if (this.opening) this.opening.update(tdt);
+    else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
-    stepWoods(this);
+    if (!this.opening || this.opening.stage === OPENING.ARRIVED) stepWoods(this);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     this.villagers.forEach((v, i) => v.write(snap, this.charOffset(this.knights.length + i)));
+    snap[H.OPENING] = this.opening?.stage ?? OPENING.OFF;
+    snap[H.OPENING_TIME] = this.opening?.time ?? 0;
+    snap[H.OPENING_NEXT] = this.opening ? this.villagers[1].next : 0;
     player.sweep(snap, this);
     this.knights.forEach((k, i) => k.writeGashes(snap, this.charOffset(i), this));
     this.plan();
@@ -185,7 +194,7 @@ class Sim {
   // Bodies don't pass through each other: plate armour shoulders the player aside, and knights too.
   separate() {
     const p = this.player;
-    const list = [...this.knights, ...this.villagers];
+    const list = [...this.knights, ...(this.opening ? this.villagers.slice(1) : this.villagers)];
     for (const k of list) {
       if (k.dead || k.dormant) continue;
       const P = k.bodyRadius || 0.82;
@@ -310,12 +319,19 @@ class Sim {
 // A loaded game starts the world fresh and puts the player where the save says (src/saves.js has what a save holds).
 Sim.prototype.place = function (d) {
   this.restart();
-  if (!d) return;
+  if (!d || (this.opening && d.openingRevision !== OPENING_REVISION)) return;
   const p = this.player;
   const floor = this.world.heightFor(d.x, d.z, d.y);
   p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
   p.onGround = p.y <= floor + 0.06;
   p.vx = 0; p.vy = 0; p.vz = 0; p.yaw = d.yaw;
+  if (this.opening && d.opening) {
+    this.opening.setStage(d.opening);
+    if (d.guide) for (const v of this.villagers) {
+      [v.x, v.z, v.yaw, v.next] = d.guide;
+      v.y = this.world.height(v.x, v.z);
+    }
+  }
   this.input[INPUT.YAW] = d.yaw; this.input[INPUT.PITCH] = d.pitch;
   self.postMessage({ type: 'look', yaw: d.yaw, pitch: d.pitch });
 };
@@ -329,6 +345,7 @@ async function fetchBuf(path) {
 async function boot(msg) {
   const sim = new Sim();
   const base = msg.base;
+  setOpeningTerrain(msg.opening);
   if (msg.buffer) {
     sim.shared = mapShared(msg.buffer);
     sim.input = sim.shared.input;
@@ -352,6 +369,7 @@ async function boot(msg) {
     fetchBuf(`${base}assets/fp/spell_raise.glb`),
     fetchBuf(`${base}assets/fp/arms_staff.glb`),
   ]);
+  if (msg.opening) village.colliders.push(...CAVE_WALLS);
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village, await fetch(`${base}assets/game/interior/interior.json`).then((r) => r.json()));
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
@@ -365,13 +383,20 @@ async function boot(msg) {
   sim.knights.push(new Hydra(6, 4, new ArmsRig(hydraBuf, HYDRA_SCALE), HYDRA));
   await addUndead(sim, base);
   for (const form of LISANDRA_FORMS) {
-    sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form));
+    sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
+  }
+  if (msg.opening) {
+    sim.opening = new Opening(sim);
+    sim.opening.reset();
+    sim.input[INPUT.YAW] = OPENING_YAW;
+    self.postMessage({ type: 'look', yaw: OPENING_YAW, pitch: 0 });
   }
   sim.restartSeen = sim.input[INPUT.RESTART];
   sim.cmdSeen = sim.input[INPUT.CMD];
   // Placing the player from a save, asked for by the render thread.
   self.addEventListener('message', (e) => {
     const m = e.data;
+    if (m.type === 'openingName' && sim.opening?.stage === OPENING.NAME) sim.opening.setStage(OPENING.LEAVE);
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {
       console.error(err);

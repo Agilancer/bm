@@ -1,3 +1,4 @@
+import { OPENING_CLIPS } from '../core/opening.js';
 import { LISANDRA_SCALE } from '../core/lisandra.js';
 import { C, C_PALETTE } from '../core/layout.js';
 import { quatAxisAngle, quatMul, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
@@ -8,15 +9,30 @@ const SPEED = 0.9;
 const RADIUS = 0.48;
 
 export class VillageWalker {
-  constructor(buffer, form) {
+  constructor(buffer, form, opening = false) {
     this.route = form.route;
     this.legRadii = form.legRadii;
     this.bodyRadius = RADIUS * 2;
-    this.rig = new ArmsRig(buffer, LISANDRA_SCALE, new Set([WALK, 'idle']));
+    const clips = new Set([WALK, 'idle']);
+    if (opening) for (const clip of OPENING_CLIPS) clips.add(clip);
+    this.rig = new ArmsRig(buffer, LISANDRA_SCALE, clips);
     this.skirtLegs = ['Left', 'Right'].flatMap((side) => ['UpLeg', 'Leg', 'Foot'].map(
       (part) => this.rig.index.get(`mixamorig:${side}${part}`),
     ));
-    for (const clip of Object.values(this.rig.clips)) this.fitArms(clip, form.armClearance);
+    const hipsJoint = this.rig.index.get('mixamorig:Hips');
+    for (const clip of Object.values(this.rig.clips)) {
+      this.fitArms(clip, form.armClearance);
+      const track = clip.trs[hipsJoint];
+      if (!OPENING_CLIPS.includes(clip.name) || !track) continue;
+      // Story blocking places Lisandra on her mark. Keep vertical recoil and
+      // a little weight shift without carrying motion-capture travel into it.
+      const x = track[0], z = track[2];
+      for (let i = 0; i < track.length; i += 3) {
+        track[i] = x + Math.max(-0.1, Math.min(0.1, track[i] - x));
+        track[i + 2] = z + Math.max(-0.1, Math.min(0.1, track[i + 2] - z));
+      }
+    }
+    if (opening) this.rig.clips.Spell_Simple_Idle_Loop.loop = true;
     this.rig.rootQ = new Float32Array(4);
     this.rig.rootT = new Float32Array(3);
     const clip = this.rig.clips[WALK];
@@ -39,6 +55,7 @@ export class VillageWalker {
     for (const [side, sign] of [['Left', 1], ['Right', -1]]) {
       const arm = rig.index.get(`mixamorig:${side}Arm`);
       const track = clip.rots[arm];
+      if (!track) continue;
       const parent = rig.parent[arm] * 4;
       for (let i = 0; i < clip.frames; i++) {
         rig.solve(clip, clip.dur * i / (clip.frames - 1), 1, palette, 0);
@@ -61,22 +78,22 @@ export class VillageWalker {
     this.fade = 1;
   }
 
-  update(dt, world) {
+  update(dt, world, wait = false, idle = 'idle', speed = SPEED) {
     const [tx, tz] = this.route[this.next];
     const dx = tx - this.x, dz = tz - this.z;
     const distance = Math.hypot(dx, dz);
-    const step = Math.min(distance, SPEED * dt);
+    const step = Math.min(distance, speed * dt);
     const x = distance ? this.x + dx / distance * step : tx;
     const z = distance ? this.z + dz / distance * step : tz;
     const clear = !world.inside(x, z, RADIUS);
-    if (clear) {
+    if (clear && !wait) {
       this.x = x;
       this.z = z;
       if (distance > 0) this.yaw += wrapAngle(Math.atan2(dx, dz) - this.yaw) * Math.min(1, 7 * dt);
       if (step === distance) this.next = (this.next + 1) % this.route.length;
     }
     this.y = world.height(this.x, this.z);
-    const clip = clear ? WALK : 'idle';
+    const clip = clear && !wait ? WALK : idle;
     if (clip !== this.clip) {
       this.rig.capture();
       this.clip = clip;
@@ -84,7 +101,7 @@ export class VillageWalker {
       this.fade = 0;
     }
     this.fade = Math.min(1, this.fade + dt * 5);
-    this.time += dt * (clip === WALK ? this.walkRate : 1);
+    this.time += dt * (clip === WALK ? this.walkRate * speed / SPEED : 1);
   }
 
   write(snap, offset) {
