@@ -95,14 +95,18 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const FPS=30;
 const INFO={
- walk_stalk:['Walk','Stalk','Slow predatory prowl'],
- walk_skitter:['Walk','Skitter','Rippling, twitchy leg wave'],
- run_scuttle:['Run','Scuttle','Low alternating sprint'],
- run_gallop:['Run','Gallop','Bounding, flexing body'],
- attack_bite:['Attack','Bite','Coil, lunge, snap, worry'],
- attack_claw:['Attack','Claw rake','Rear up, left then right'],
- attack_slam:['Attack','Belly slam','Leap and crush'],
- jump:['Jump','Jump','Crouch, launch, land'],
+ idle:['Other','Idle','Original leg pose'],
+ walk:['Walk','Walk','Alternating support, restrained foot lift'],
+ run:['Run','Run','Faster alternating leg cycle'],
+ strafe_left:['Walk','Step left','Lateral foot targets'],
+ strafe_right:['Walk','Step right','Lateral foot targets'],
+ turn_left:['Walk','Turn left','Curved foot targets'],
+ turn_right:['Walk','Turn right','Curved foot targets'],
+ attack_bite:['Attack','Bite','Small front-leg brace'],
+ attack_slam:['Attack','Slam preparation','Front-leg lift and recovery'],
+ attack_lunge:['Attack','Lunge preparation','Front-leg reach and recovery'],
+ hit:['Other','Hit reaction','Short restrained recoil'],
+ death:['Other','Death hold','Leg shape preserved'],
 };
 const selected=new URLSearchParams(location.search).get('model')||'flesh_spider_demon';
 const catalog=await(await fetch('assets/monsters/new_creatures/animations.json')).json();
