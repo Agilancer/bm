@@ -1,3 +1,4 @@
+import { openingBeat } from '../core/opening-script.js';
 import { CAVE_MOUTH, OPENING, OPENING_ROUTE, OPENING_SPAWN, OPENING_YAW, REVEAL_END } from '../core/opening.js';
 import { wrapAngle } from '../core/math.js';
 
@@ -35,20 +36,14 @@ export class Opening {
     const last = OPENING_ROUTE.at(-1);
     const atTown = Math.hypot(witch.x - last[0], witch.z - last[1]) < 0.4;
     if (this.stage === OPENING.ESCORT && atTown && Math.hypot(player.x - last[0], player.z - last[1]) < 4) this.setStage(OPENING.ARRIVED);
-    const walking = (this.stage === OPENING.LEAVE && this.time >= 2.5 && witch.next < 2)
+    const walking = (this.stage === OPENING.LEAVE && this.time >= 4.2 && witch.next < 2)
       || (this.stage === OPENING.ESCORT && follow && !atTown);
-    let gesture = 'idle';
-    if (this.stage === OPENING.NAME) {
-      if (this.time < 3.4) gesture = 'Spell_Simple_Idle_Loop';
-      else if (this.time < 5.9) gesture = 'afraid';
-      else if (this.time < 9.4) gesture = 'greet_01';
-    } else if (this.stage === OPENING.LEAVE && this.time < 2.5) {
-      gesture = 'Pointing into the distance';
-    } else if (this.stage === OPENING.REVEAL && this.time < 3.6) {
-      gesture = 'angry_01';
-    }
+    const beat = openingBeat(this.stage, this.time);
+    let gesture = beat?.gesture ?? 'idle';
+    // The player is speaking: hold the last reaction instead of greeting them.
+    if (beat?.who === 'player') gesture = 'scared_02';
     if (!walking) {
-      const angle = this.stage === OPENING.NAME && this.time < 3.4 ? -1.12
+      const angle = this.stage === OPENING.NAME && (this.time < 3.5 || (this.time >= 12.1 && this.time < 13.5)) ? -1.12
         : this.stage === OPENING.LEAVE ? -Math.PI + 0.2
         : Math.atan2(player.x - witch.x, player.z - witch.z);
       witch.yaw += wrapAngle(angle - witch.yaw) * Math.min(1, dt * 5);

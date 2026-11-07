@@ -302,6 +302,7 @@ export class ArmsRig {
         tr[j * 3 + 2] = tr2[j * 3 + 2] * (1 - fade) + tr[j * 3 + 2] * fade;
       }
     }
+    this.poseModifier?.(rot, tr);
     for (let j = 0; j < count; j++) {
       const p = parent[j];
       if (p < 0) {

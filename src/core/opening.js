@@ -1,5 +1,5 @@
 export const OPENING = { OFF: 0, NAME: 1, LEAVE: 2, REVEAL: 3, ESCORT: 4, ARRIVED: 5 };
-export const OPENING_REVISION = 2;
+export const OPENING_REVISION = 3;
 export const OPENING_SPAWN = [37.05, 122.4];
 export const OPENING_YAW = 2.52;
 export const CAVE_CENTRE = 38;
@@ -21,9 +21,9 @@ export const CAVE_WALLS = [
   { x: CAVE_CENTRE, z: CAVE_BACK, hx: 3.8, hz: 0.7, yaw: 0, h: 5 },
 ];
 
-export const NAME_PROMPT_AT = 19.4;
-export const REVEAL_END = 9.2;
+export const NAME_PROMPT_AT = 27.8;
+export const REVEAL_END = 20.6;
 export const REVEAL_SWAP_AT = 1.25;
 export const OPENING_CLIPS = [
-  'Spell_Simple_Idle_Loop', 'afraid', 'greet_01', 'Pointing into the distance', 'angry_01',
+  'Spell_Simple_Idle_Loop', 'afraid', 'greet_01', 'Pointing into the distance', 'scared_02', 'frightened',
 ];

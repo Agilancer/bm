@@ -148,6 +148,38 @@ export class Audio {
     src.start();
   }
 
+  // A close aspirated inhale: filtered air with a brief, quiet throat onset.
+  // Synthesized locally so scene cues need no external voice service.
+  breath(kind, x, y, z) {
+    if (!this.ready || this.ctx.state !== 'running') return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const duration = kind === 'gasp' ? 0.52 : kind === 'catch' ? 0.42 : 0.8;
+    const level = kind === 'gasp' ? 0.46 : kind === 'catch' ? 0.27 : 0.14;
+    const pan = ctx.createPanner();
+    pan.panningModel = PANNING;
+    pan.refDistance = 2.5;
+    pan.positionX.value = x; pan.positionY.value = y; pan.positionZ.value = z;
+    pan.connect(this.master);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(level, now + (kind === 'release' ? 0.12 : 0.035));
+    if (kind === 'catch') {
+      gain.gain.exponentialRampToValueAtTime(0.025, now + 0.14);
+      gain.gain.exponentialRampToValueAtTime(level * 0.65, now + 0.21);
+    }
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    gain.connect(pan);
+    const air = ctx.createBufferSource();
+    air.buffer = this.noise;
+    const mouth = ctx.createBiquadFilter();
+    mouth.type = 'bandpass'; mouth.Q.value = 0.65;
+    mouth.frequency.setValueAtTime(kind === 'release' ? 850 : 1900, now);
+    mouth.frequency.exponentialRampToValueAtTime(650, now + duration);
+    air.connect(mouth); mouth.connect(gain);
+    air.start(now, 0.17); air.stop(now + duration);
+    air.onended = () => { air.disconnect(); mouth.disconnect(); gain.disconnect(); pan.disconnect(); };
+  }
+
   // A burst of filtered noise: the wet sound of a wound opening, or a spurt on each heartbeat.
   gore(x, y, z, gain = 1, dur = 0.28, freq = 900) {
     if (!this.ready || this.ctx.state !== 'running') return;
