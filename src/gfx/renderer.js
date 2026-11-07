@@ -672,7 +672,11 @@ export class Renderer {
       return;
     }
     const vm = this.vms[w ? w.hands : 1];
-    if (w) this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
+    if (w) {
+      // Carry the staff kind alongside its original model coordinates. Other gear stays untagged.
+      if (w.hands === 3) prim.piece = new Uint32Array(prim.pos.length / 3).fill(WEAPONS.indexOf(w));
+      this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
+    }
     else {
       // (Not a weapon: a shield, on the arm's shield joint.)
       const c = Math.cos(KITE_TURN), sn = Math.sin(KITE_TURN), ct = Math.cos(KITE_TILT), st = Math.sin(KITE_TILT), pos = new Float32Array(prim.pos), nrm = new Float32Array(prim.nrm);
@@ -1762,7 +1766,7 @@ export class Renderer {
       q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, h.hand.jointCount * 32);
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
-      vmData[17] = 0; vmData[18] = 1; vmData[19] = h.tip;
+      vmData[17] = 0; vmData[18] = weapon?.hands === 3 ? 0 : 1; vmData[19] = h.tip;
       q.writeBuffer(h.ubo, 0, vmData);
     }
     if (this.onArm) {

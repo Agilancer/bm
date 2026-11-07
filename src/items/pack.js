@@ -119,7 +119,7 @@ export class Pack {
 
   startingKit() {
     const rng = makeRng(1793);
-    this.slots.main = rollWeapon(rng, { base: 'skullhorn_staff', rarity: 0, sockets: 1 });
+    this.slots.main = rollWeapon(rng, { base: 'fire_staff', rarity: 0, sockets: 1 });
     this.slots.off = rollShield(rng, { base: 'kite_cross', sockets: 1 });
     this.addElementals();
     this.addAurora();
