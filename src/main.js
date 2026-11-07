@@ -31,7 +31,8 @@ const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
 const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
-const OPENING_PREVIEW = params.has('opening');
+// Every new game begins with the witch in the cave.
+const OPENING_ENABLED = true;
 const CONSENT_KEY = 'bm-threads-consent';
 const AUTOSAVE_EVERY = 20;   // seconds of play between the saves Continue picks up
 const title = new Title();
@@ -193,8 +194,8 @@ async function boot(plan, poolSize) {
   setProgress(0.05, `Loading with ${poolSize} threads...`);
 
   const renderer = new Renderer(gpu, canvas, pool);
-  renderer.openingEnabled = OPENING_PREVIEW;
-  setOpeningTerrain(OPENING_PREVIEW);
+  renderer.openingEnabled = OPENING_ENABLED;
+  setOpeningTerrain(OPENING_ENABLED);
   const simWorker = new Worker(new URL('./sim/sim.worker.js', import.meta.url), { type: 'module' });
   const audio = new Audio(BASE, title.ctx, title.out, settings.ambience);
   let latestSnap = null;
@@ -224,7 +225,7 @@ async function boot(plan, poolSize) {
   });
   const pendingEvents = [];
   const hz = gpu.tier.sim;
-  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_PREVIEW });
+  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_ENABLED });
 
   const hud = new Hud(gpu, plan, poolSize, isolated, input);
   const start = performance.now();
@@ -311,7 +312,7 @@ async function boot(plan, poolSize) {
   game.getNonSharedSnap = () => latestSnap;
 
   let naming = false;
-  const openingHUD = OPENING_PREVIEW ? new OpeningHUD(() => {
+  const openingHUD = OPENING_ENABLED ? new OpeningHUD(() => {
     naming = false;
     input.menu = false;
     simWorker.postMessage({ type: 'openingName' });
