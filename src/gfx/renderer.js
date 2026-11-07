@@ -1659,11 +1659,14 @@ export class Renderer {
       this.uploadSnap.set(snap);
       snap = this.uploadSnap;
     }
+    this.stage = 'resize';
     this.resize();
+    this.stage = 'frame uniforms';
     this.writeFrame(cam, snap);
     this.cullBodies(cam, snap);
     const time = this.frameData[O.CAM + 3];
 
+    this.stage = 'character uploads';
     // Characters: palettes, wounds, weapons.
     const q = device.queue;
     const skinParams = this.skinParamData || (this.skinParamData = new Float32Array(8));
@@ -1696,6 +1699,7 @@ export class Renderer {
       }
     }
     q.writeBuffer(this.propInstances, 0, this.propData);
+    this.stage = 'viewmodel uploads';
     // View model: the arms the snapshot posed, and what's in them.
     const weapon = WEAPONS[snap[H.WEAPON] | 0] || null;
     this.vm = this.vms[weapon ? weapon.hands : 1];
@@ -1895,6 +1899,7 @@ export class Renderer {
 
     const enc = device.createCommandEncoder();
     const useTime = this.querySet && !this.queryBusy[this.queryI];
+    this.stage = 'compute';
     // ---- compute ----
     const cp = enc.beginComputePass(useTime ? { timestampWrites: { querySet: this.querySet, beginningOfPassWriteIndex: 0 } } : undefined);
     cp.setPipeline(this.skinPipeline);
@@ -2006,6 +2011,7 @@ export class Renderer {
       stainPass.end();
     }
 
+    this.stage = 'world pass';
     // ---- the world ----
     const mp = enc.beginRenderPass(this.worldPass);
     mp.setBindGroup(0, this.frameBG);
@@ -2217,6 +2223,7 @@ export class Renderer {
       b.setPipeline(this.pBloomUp); b.setBindGroup(0, this.bloomUpBG[k], [this.bloomSlots.up[k]]); b.draw(3); b.end();
     }
 
+    this.stage = 'presentation';
     // ---- to the screen ----
     const cd = this.compData;
     cd[0] = snap[H.DMG_FLASH]; cd[1] = snap[H.WEAK]; cd[2] = time;
@@ -2247,6 +2254,7 @@ export class Renderer {
       q.submit([enc.finish()]);
     }
     // How long the GPU really took, in any browser. It's also how the game loop knows not to queue up more frames.
+    this.stage = 'submitted';
     this.inFlight++;
     const sent = this.lastSent = performance.now();
     q.onSubmittedWorkDone().then(() => {

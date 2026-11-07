@@ -7,6 +7,7 @@ import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, 
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
+import { RenderDiagnostics } from './gfx/render-diagnostics.js';
 import { Clock } from './clock.js';
 import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
@@ -29,6 +30,7 @@ const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
+const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
 const OPENING_PREVIEW = params.has('opening');
 const CONSENT_KEY = 'bm-threads-consent';
 const AUTOSAVE_EVERY = 20;   // seconds of play between the saves Continue picks up
@@ -175,10 +177,11 @@ async function boot(plan, poolSize) {
   try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
   gpu.device.lost.then((info) => {
     console.error('device lost', info.message);
+    renderDiagnostics.fail(new Error(info.message), `device lost (${info.reason})`);
     if (info.reason !== 'destroyed') failOnTitle('The GPU reset. Reload the page to continue.');
   });
   let gpuErrors = 0;
-  gpu.device.addEventListener('uncapturederror', (e) => { window.__gpuErrors = ++gpuErrors; if (gpuErrors < 6) console.error('GPU error:', e.error.message); });
+  gpu.device.addEventListener('uncapturederror', (e) => { window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message); });
   const canvas = $('view');
   const pool = new Pool(poolSize);
   const isolated = window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined' && !params.has('nosab');
@@ -297,6 +300,13 @@ async function boot(plan, poolSize) {
   });
   Object.assign(game, { pack, inventory });
   window.bm = game.api(shared, simWorker, buffer, pool);
+  renderDiagnostics.attach(() => ({
+    'Simulation tick': buffer ? Atomics.load(shared.ctrl, CTRL.TICK) : latestSnap?.[H.TICK],
+    'GPU queue': `${renderer.inFlight} pending; last submit ${Math.round(performance.now() - renderer.lastSent)} ms ago`,
+    'Graphics': `${gpu.tierName} ${renderer.W}x${renderer.H}; MSAA ${renderer.msaa}; scale ${renderer.scale}`,
+    'State': `idle=${!!game.idle}; paused=${!!shared.input[INPUT.PAUSE]}; shared=${!!buffer}`,
+    'Render stage': renderer.stage || 'not started',
+  }));
   game.pendingEvents = pendingEvents;
   game.getNonSharedSnap = () => latestSnap;
 
@@ -782,8 +792,8 @@ class GameView {
     // ?timer=1 keeps the loop alive in an occluded window, for automated review.
     const useTimer = params.has('timer');
     const schedule = useTimer ? (f) => setTimeout(() => f(performance.now()), 16) : requestAnimationFrame.bind(window);
-    const loop = (now) => {
-      schedule(loop);
+    const draw = (now) => {
+      renderDiagnostics.stage = 'input';
       this.watchRefresh(now);
       this.input.update();
       if (!this.buffer) this.sim.postMessage({ input: this.shared.input.slice() });
@@ -795,12 +805,14 @@ class GameView {
       if (this.renderer.inFlight >= (this.idle ? 1 : this.maxInFlight) && performance.now() - this.renderer.lastSent < 1000) return;
       const dt = Math.min((now - this.last) / 1000, 0.1);
       this.last = now;
+      renderDiagnostics.stage = 'snapshot';
       const snap = this.currentSnap();
       if (!snap) return;
       // Under the title the village isn't drawn: a few frames, so the pipelines are built (and on a phone, timed), then nothing.
       if (this.idle) { if (this.idleFrames > (this.governor && !this.benched ? 40 : 3)) return; this.idleFrames = (this.idleFrames || 0) + 1; } else this.idleFrames = 0;
       if (this.onTick) this.onTick(dt);
       if (this.input.touch && this.input.enabled && !this.shared.input[INPUT.PAUSE]) this.aimAssist(dt, snap);
+      renderDiagnostics.stage = 'scene update';
       this.processEvents(snap);
       this.updateCamera(dt, snap);
       this.emitAmbient(dt, snap);
@@ -808,7 +820,10 @@ class GameView {
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
       const c = this.overrideCam || this.cam;
+      renderDiagnostics.stage = 'renderer';
       this.renderer.frame(c, snap, this.sway, dt);
+      renderDiagnostics.presented();
+      renderDiagnostics.stage = 'HUD';
       this.drawOpening?.(snap, c);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
       if (!this.idle) this.govern(dt);
@@ -819,6 +834,12 @@ class GameView {
       if (this.spellbar) this.spellbar.update(snap);
       if (this.spellSound) this.spellSound.channel(snap[H.CAST_HELD] | 0);
       if (this.onFrame) this.onFrame();
+    };
+    const loop = (now) => {
+      schedule(loop);
+      try { draw(now); } catch (error) {
+        renderDiagnostics.fail(error);
+      }
     };
     schedule(loop);
   }
