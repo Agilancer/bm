@@ -12,7 +12,9 @@ export const TIERS = {
   // A phone has a fraction of a PC's GPU, and loses more of it to heat within minutes. So: a set number of pixels whatever
   // the screen (the browser stretches them, which costs nothing), the shaders' LEAN paths, and few passes, which a tiled
   // GPU pays dearly for. Also the Low setting on a PC.
-  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 4, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
+  // Start without MSAA: dropping it after warmup rebuilds pipelines, shadows,
+  // particles and grass while the original GPU resources are still resident.
+  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
 
 export function isMobileDevice() {

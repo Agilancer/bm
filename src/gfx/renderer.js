@@ -1651,6 +1651,14 @@ export class Renderer {
 
   frame(cam, snap, vmSway, dt) {
     const { device, tier } = this;
+    // Keep worker-owned memory out of WebGPU uploads. Safari versions differ in
+    // whether writeBuffer accepts a bare SharedArrayBuffer. One reusable local
+    // copy also gives all palette/wound uploads the same pose for this frame.
+    if (typeof SharedArrayBuffer !== 'undefined' && snap.buffer instanceof SharedArrayBuffer) {
+      if (this.uploadSnap?.length !== snap.length) this.uploadSnap = new Float32Array(snap.length);
+      this.uploadSnap.set(snap);
+      snap = this.uploadSnap;
+    }
     this.resize();
     this.writeFrame(cam, snap);
     this.cullBodies(cam, snap);
