@@ -1,6 +1,6 @@
 import { OPENING_CLIPS } from '../core/opening.js';
 import { LISANDRA_SCALE } from '../core/lisandra.js';
-import { C, C_PALETTE } from '../core/layout.js';
+import { C, C_PALETTE, C_PROPS } from '../core/layout.js';
 import { quatAxisAngle, quatMul, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
 import { ArmsRig } from './anim.js';
 
@@ -33,6 +33,19 @@ export class VillageWalker {
       }
     }
     if (opening) this.rig.clips.Spell_Simple_Idle_Loop.loop = true;
+    if (opening) {
+      const head = this.rig.index.get('mixamorig:Head');
+      const chest = this.rig.index.get('mixamorig:Spine2');
+      const turn = new Float32Array(4);
+      this.rig.poseModifier = (rot) => {
+        if (!this.frightened) return;
+        const t = this.time;
+        quatAxisAngle(turn, 0, 0, 0, 1, Math.sin(t * 19) * 0.012 + Math.sin(t * 31) * 0.006);
+        quatMul(rot, head * 4, rot, head * 4, turn, 0);
+        quatAxisAngle(turn, 0, 1, 0, 0, Math.sin(t * 8.5) * 0.014);
+        quatMul(rot, chest * 4, rot, chest * 4, turn, 0);
+      };
+    }
     this.rig.rootQ = new Float32Array(4);
     this.rig.rootT = new Float32Array(3);
     const clip = this.rig.clips[WALK];
@@ -79,6 +92,7 @@ export class VillageWalker {
   }
 
   update(dt, world, wait = false, idle = 'idle', speed = SPEED) {
+    this.frightened = wait && ['afraid', 'frightened', 'scared_02'].includes(idle);
     const [tx, tz] = this.route[this.next];
     const dx = tx - this.x, dz = tz - this.z;
     const distance = Math.hypot(dx, dz);
@@ -120,6 +134,11 @@ export class VillageWalker {
       snap[p + 3] = this.legRadii[i % 3];
     });
     snap[skirt + 24] = this.yaw;
+    // The unused NPC prop frame carries the animated speech anchor.
+    const head = rig.index.get('mixamorig:Head') * 3;
+    snap[offset + C_PROPS] = rig.wt[head];
+    snap[offset + C_PROPS + 1] = rig.wt[head + 1] + 0.19;
+    snap[offset + C_PROPS + 2] = rig.wt[head + 2];
     snap[offset + C.ACTIVE] = 1;
     snap[offset + C.X] = this.x;
     snap[offset + C.Y] = this.y;

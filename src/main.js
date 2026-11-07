@@ -307,6 +307,13 @@ async function boot(plan, poolSize) {
     simWorker.postMessage({ type: 'openingName' });
     if (!input.touch && !AUTO) input.lock();
   }) : null;
+  if (openingHUD) {
+    openingHUD.onBreath = (kind, snap) => {
+      const guide = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
+      audio.breath(kind, snap[guide + C.X], snap[guide + C.Y] + 1.5, snap[guide + C.Z]);
+    };
+    game.drawOpening = (snap, cam) => openingHUD.position(snap, cam);
+  }
   const enter = async (fresh = true) => {
     title.hide();
     game.idle = false;
@@ -802,6 +809,7 @@ class GameView {
       this.updateDrops(dt, snap);
       const c = this.overrideCam || this.cam;
       this.renderer.frame(c, snap, this.sway, dt);
+      this.drawOpening?.(snap, c);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
       if (!this.idle) this.govern(dt);
       const r = this.renderer, hs = this.hudStats;
