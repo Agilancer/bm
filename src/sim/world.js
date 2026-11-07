@@ -6,6 +6,7 @@ import { LAND_EDGE, terrainHeight } from '../core/terrain.js';
 
 // (Big enough to reach the catacombs. Cells nobody can stand on are walled off, so the search stays small.)
 const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_REACH = 150;
+const NAV_RADIUS = 0.86;
 const NAV_EDGE = 250;      // Past this nothing's worked out where to walk: whatever's chasing you stops at it, and the land goes on to LAND_EDGE.
 
 const OUT_OF_THE_WAY = 1e9;  // (a box only those with their feet above this run into)
@@ -34,7 +35,7 @@ export class World {
     for (let j = 0; j < NAV_SIZE; j++) {
       for (let i = 0; i < NAV_SIZE; i++) {
         const x = (i + 0.5) * NAV_CELL - NAV_HALF, z = (j + 0.5) * NAV_CELL - NAV_HALF;
-        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, 0.55) ? 1 : 0;
+        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, NAV_RADIUS) ? 1 : 0;
       }
     }
     // The doors: each leaf a box in its doorway when it's shut and a box against the wall when it's open, one of them out of the way. (Not in the grid above: they come and go.)
@@ -227,6 +228,8 @@ export class World {
       let found = false;
       for (let dj = -1; dj <= 1; dj++) {
         for (let di = -1; di <= 1; di++) {
+          if ((!di && !dj) || this.grid[(j + dj) * NAV_SIZE + i + di]) continue;
+          if (di && dj && (this.grid[j * NAV_SIZE + i + di] || this.grid[(j + dj) * NAV_SIZE + i])) continue;
           const v = field[(j + dj) * NAV_SIZE + i + di];
           if (v < best - 0.01) {
             const cost = v + (di && dj ? 1.414 : 1);
@@ -235,7 +238,7 @@ export class World {
         }
       }
       // With a clear line, head straight there and skip the grid's stair-steps.
-      if (this.sees(x, 1, z, tx, 1, tz)) { bx = tx - x; bz = tz - z; }
+      if (this.clearance(x, z, (tx - x) / (Math.hypot(tx - x, tz - z) || 1), (tz - z) / (Math.hypot(tx - x, tz - z) || 1), Math.hypot(tx - x, tz - z), NAV_RADIUS) >= Math.hypot(tx - x, tz - z)) { bx = tx - x; bz = tz - z; }
     }
     const L = Math.hypot(bx, bz) || 1;
     out[0] = bx / L; out[1] = bz / L;
@@ -243,7 +246,7 @@ export class World {
   }
 
   clearance(x, z, dx, dz, dist, r) {
-    for (let s = 0.5; s <= dist; s += 0.5) if (this.inside(x + dx * s, z + dz * s, r)) return s - 0.5;
+    for (let s = Math.min(0.2, dist); s <= dist + 0.199; s += 0.2) if (this.inside(x + dx * Math.min(s, dist), z + dz * Math.min(s, dist), r)) return Math.max(0, Math.min(s, dist) - 0.2);
     return dist;
   }
 }

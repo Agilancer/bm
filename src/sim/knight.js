@@ -73,7 +73,7 @@ export class Knight {
       const { fingers: f, palm: p, knuckles: k } = grip.r;
       const L = lenOf('r');
       this.swordFight = new Float32Array(frame(mix3(k, Math.cos(0.32), f, Math.sin(0.32)), f));
-      this.swordEase = new Float32Array(frame(mix3(k, 0.5, f, 0.87), f));
+      this.swordEase = new Float32Array(this.swordFight);
       this.swordT.set(off(f, L * 0.66, p, L * 0.3));
     }
     {
@@ -82,7 +82,7 @@ export class Knight {
       // The arm sits behind the board with air between, and the board leans out from the forearm a little.
       const lean = 0.12;
       this.shieldFight = new Float32Array(frame(k, mix3(p, Math.cos(lean), f, -Math.sin(lean))));
-      this.shieldEase = new Float32Array(frame([-f[0], -f[1], -f[2]], mix3(p, Math.cos(lean), f, Math.sin(lean))));
+      this.shieldEase = new Float32Array(this.shieldFight);
       this.shieldT.set(off(f, L * 0.62, p, -L * 0.42));
     }
     // Where each joint stands on the ground in the bind pose, for keeping soles and bodies out of the earth.
@@ -108,6 +108,8 @@ export class Knight {
     rig.names.forEach((n, j) => { if (/^(index|middle|ring|pinky|thumb)_/.test(n)) this.fingerJoints.push(j); });
     bank.sample(bank.clips.Sword_Idle, 0, this.rA, null);
     this.fingerJoints.forEach((j) => { if (rig.names[j].endsWith('_r')) for (let k = 0; k < 4; k++) this.fist[j * 4 + k] = this.rA[j * 4 + k]; });
+    this.propMatrices = new Float32Array(32);
+    this.clearanceJoints = ['pelvis', 'spine_03', 'Head', 'thigh_l', 'calf_l', 'foot_l', 'thigh_r', 'calf_r', 'foot_r'].map(n => rig.index.get(n));
     this.reset(opts);
   }
 
@@ -121,7 +123,7 @@ export class Knight {
       attack: null, attackUsed: false, attackT: 1.6, strafe: Math.random() < 0.5 ? -1 : 1, strafeT: 2, reactT: -1, reacted: false,
       seen: false, lastSeenT: 0, lastX: 0, lastZ: 0, recovering: false, rollCd: 0, blockT: 0, armor: 1, dead: false, deadT: 0, lookYaw: 0, lookPitch: 0, glint: 0,
       tactic: 1, tacticT: 0, tacticWeights: new Float32Array(TACTICS.length).fill(1 / TACTICS.length), hurt: 0, rootX: 0, rootZ: 0, staggerRes: 0, recentHits: 0,
-      hitT: 10, swingBlade: null, coverX: 0, coverZ: 0, iframes: false, knock: 0, knockX: 0, knockZ: 0, lastAttack: '', tauntT: 6,
+      spellSeen: null, spellReactAt: 0, target: null, hitT: 10, swingBlade: null, coverX: 0, coverZ: 0, iframes: false, knock: 0, knockX: 0, knockZ: 0, lastAttack: '', tauntT: 6,
       seenSwings: { great_cut1: 0, great_cut2: 0, great_slam: 0, great_chop: 0, great_rise: 0, great_wide_r: 0, great_wide_l: 0 },
       habit: { total: 0, last: '', repeat: 0 }, moveYaw: opts.yaw ?? 0, backward: false, rollDirX: 0, rollDirZ: 0, wasOnAttack: false, activeOn: -1,
       armorHits: 0, prevClipT: 0, stamDelay: 0, lastRetreat: -99, poise: 100, groundLift: 0, windRate: 1, stats: { attacks: 0, landed: 0, blocks: 0, rolls: 0, hitsTaken: 0 },
@@ -239,10 +241,10 @@ export class Knight {
       blend(rot, rot, this.rFrom, w, rig.count);
       lerp3(pel, pel, this.pFrom, w);
     }
-    // In a roll or a charge the clip's left wrist would take the fist off the shield's handle, so it stays nearly straight.
-    if (this.action === clips.Roll || this.action === clips.Shield_Dash) {
+    // The board and its handle share the forearm frame, so the wrist stays seated in the grip.
+    {
       const hl = J0.handL;
-      quatNlerp(rot, hl * 4, rot, hl * 4, rig.restR, hl * 4, 0.8 * this.actW);
+      quatNlerp(rot, hl * 4, rot, hl * 4, rig.restR, hl * 4, 1);
     }
     // Hands stay shut on sword and shield.
     if (!this.dead) for (const j of this.fingerJoints) { rot[j * 4] = this.fist[j * 4]; rot[j * 4 + 1] = this.fist[j * 4 + 1]; rot[j * 4 + 2] = this.fist[j * 4 + 2]; rot[j * 4 + 3] = this.fist[j * 4 + 3]; }
@@ -255,7 +257,54 @@ export class Knight {
     this.nod.fill(0);
     this.nod[J.head] = this.lookPitch;
     solveFK(pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
+    this.solveEquipment();
     this.solveGround(dt, sim);
+  }
+
+  // Keep equipment outside conservative body capsules by moving the arm, never the grip.
+  // The same corrected pose drives skinning, rendered props and combat hit tests.
+  equipmentPenalty(side) {
+    this.writeProps(this.propMatrices, 0);
+    const m = this.propMatrices, off = side === 'r' ? 0 : 16;
+    const points = side === 'r' ? SWORD_POINTS : this.kind === 0 ? BLACK_SHIELD_POINTS : SILVER_SHIELD_POINTS;
+    const wt = this.pose.wt, joints = this.clearanceJoints, u = this.rig.height / 2.12;
+    let penalty = 0;
+    for (const [x, y, z] of points) {
+      const p = [m[off] * x + m[off + 4] * y + m[off + 8] * z + m[off + 12],
+        m[off + 1] * x + m[off + 5] * y + m[off + 9] * z + m[off + 13],
+        m[off + 2] * x + m[off + 6] * y + m[off + 10] * z + m[off + 14]];
+      for (const [a, b, radius] of BODY_CAPSULES) {
+        const j = joints[a] * 3, k = joints[b] * 3;
+        const dx = wt[k] - wt[j], dy = wt[k + 1] - wt[j + 1], dz = wt[k + 2] - wt[j + 2];
+        const t = clamp(((p[0] - wt[j]) * dx + (p[1] - wt[j + 1]) * dy + (p[2] - wt[j + 2]) * dz) / (dx * dx + dy * dy + dz * dz || 1), 0, 1);
+        const overlap = radius * u - Math.hypot(p[0] - wt[j] - dx * t, p[1] - wt[j + 1] - dy * t, p[2] - wt[j + 2] - dz * t);
+        if (overlap > 0) penalty += overlap * overlap;
+      }
+    }
+    return penalty;
+  }
+
+  solveEquipment() {
+    for (const side of ['r', 'l']) {
+      let best = this.equipmentPenalty(side);
+      if (best < 1e-8) continue;
+      for (let pass = 0; pass < 3 && best > 1e-8; pass++) {
+        for (const name of [`upperarm_${side}`, `lowerarm_${side}`]) {
+          const j = this.rig.index.get(name), original = this.pose.rot.slice(j * 4, j * 4 + 4);
+          let chosen = original;
+          search: for (const angle of [-1.2, -0.65, -0.3, 0.3, 0.65, 1.2]) for (let axis = 0; axis < 3; axis++) {
+            const q = [0, 0, 0, Math.cos(angle / 2)]; q[axis] = Math.sin(angle / 2);
+            quatMul(this.pose.rot, j * 4, original, 0, q, 0);
+            solveFK(this.pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
+            const score = this.equipmentPenalty(side);
+            if (score < best) { best = score; chosen = this.pose.rot.slice(j * 4, j * 4 + 4); if (best < 1e-8) break search; }
+          }
+          this.pose.rot.set(chosen, j * 4);
+          solveFK(this.pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
+        }
+      }
+    }
+    this.writeProps(this.propMatrices, 0);
   }
 
   // No clip knows about the earth at this model's size. Find whichever joint is nearest going under and move the
@@ -294,7 +343,7 @@ export class Knight {
     // Strapped to the forearm, the board doesn't follow every flick of the wrist.
     quatMul(armQ, 0, pose.wq, J.foreL * 4, this.rig.restR, J.handL * 4);
     quatMul(q, 0, armQ, 0, this.shieldQ, 0);
-    quatRotate(t, 0, pose.wq, J.handL * 4, this.shieldT, 0);
+    quatRotate(t, 0, armQ, 0, this.shieldT, 0);
     t[0] += pose.wt[J.handL * 3]; t[1] += pose.wt[J.handL * 3 + 1]; t[2] += pose.wt[J.handL * 3 + 2];
     mat4FromQT(tmpM, q, 0, t, 0);
     // The arm stands off the back of the board: the grip in the file is on it.
@@ -474,12 +523,38 @@ export class Knight {
   }
 
   move(dt, sim) {
-    this.x += this.vx * dt;
-    this.z += this.vz * dt;
-    tmp3[0] = this.x; tmp3[2] = this.z;
-    sim.world.resolve(tmp3, 0.42, this.y + 0.2);
-    this.x = tmp3[0]; this.z = tmp3[2];
+    const ox = this.x, oz = this.z;
+    // Substeps keep charges and knockbacks from tunnelling through thin geometry.
+    const steps = Math.max(1, Math.ceil(Math.hypot(this.vx, this.vz) * dt / 0.2));
+    for (let i = 0; i < steps; i++) {
+      tmp3[0] = this.x + this.vx * dt / steps; tmp3[2] = this.z + this.vz * dt / steps;
+      sim.world.resolve(tmp3, this.bodyRadius, this.y + 0.2);
+      this.x = tmp3[0]; this.z = tmp3[2];
+    }
+    if (dt > 0) {
+      this.vx = (this.x - ox) / dt; this.vz = (this.z - oz) / dt;
+      if (!this.action) this.speed = Math.hypot(this.vx, this.vz);
+    }
     this.y = sim.world.height(this.x, this.z);
+  }
+
+  selectTarget(sim) {
+    let target = sim.player;
+    let best = this.hostile && !target.dead ? Math.hypot(target.x - this.x, target.z - this.z) : Infinity;
+    for (const other of sim.knights) {
+      if (!(other instanceof Knight) || other === this || other.kind === this.kind || other.dead) continue;
+      const d = Math.hypot(other.x - this.x, other.z - this.z);
+      if (d < 18 && d < best && sim.world.sees(this.x, this.y + 1.4, this.z, other.x, other.y + 1.4, other.z)) {
+        target = other; best = d;
+      }
+    }
+    return Number.isFinite(best) ? target : null;
+  }
+
+  get threat() {
+    if (!this.attack || !this.action) return null;
+    return { name: this.attack.clip, hit: this.attack.active[0][0] * this.action.dur / this.actRate,
+      t: this.actT / this.actRate, heavy: this.attack.dmg >= 20, fromRight: 0 };
   }
 
   observeSwing(name) {
@@ -512,7 +587,15 @@ export class Knight {
     this.hurt = damp(this.hurt, clamp((1 - this.hp / this.maxHp - 0.45) * 2 + blood * 0.05, 0, 1), 1.5, dt);
     if (this.hp <= 0 && !this.dead) this.die(sim);
 
-    const p = sim.player;
+    const target = this.selectTarget(sim);
+    if (!this.dead && target !== this.target) {
+      this.target = target;
+      this.attack = null; this.activeOn = -1; this.iframes = false;
+      this.stopAction(0.2);
+      if (!target) this.setState(S.PATROL);
+      else if (this.state !== S.PATROL && this.state !== S.IDLE) this.setState(S.APPROACH);
+    }
+    const p = target || sim.player;
     const dx = p.x - this.x, dz = p.z - this.z;
     const dist = Math.hypot(dx, dz);
     const toPlayer = Math.atan2(dx, dz);
@@ -597,7 +680,7 @@ export class Knight {
     if (!sim.world.sees(this.x, this.y + 1.2, this.z, p.x, p.y + 1.2, p.z)) return;
     if (p.iframes) return;
     // This blow lands, unless the player's swing meets it at the moment it does.
-    if (!a.shield && p.parryOpen() && Math.abs(wrapAngle(Math.atan2(this.x - p.x, this.z - p.z) - p.yaw)) < 0.85) {
+    if (!a.shield && p.parryOpen?.() && Math.abs(wrapAngle(Math.atan2(this.x - p.x, this.z - p.z) - p.yaw)) < 0.85) {
       this.attackUsed = true;
       const mx = (this.bladeA[0] + this.bladeB[0]) / 2, my = (this.bladeA[1] + this.bladeB[1]) / 2, mz = (this.bladeA[2] + this.bladeB[2]) / 2;
       sim.event(EV.PARRY, mx, my, mz);
@@ -609,6 +692,16 @@ export class Knight {
     this.attackUsed = true;
     this.stats.landed++;
     const bite = a.dmg * (this.opts.hostile ? 1.8 : 1);
+    if (p instanceof Knight) {
+      const frontal = Math.abs(wrapAngle(Math.atan2(this.x - p.x, this.z - p.z) - p.faceYaw)) < 1.2;
+      if (frontal && p.shieldUp > 0.65 && p.stam > 0 && !a.shield) { p.onBlocked(sim, a.dmg >= 20); return; }
+      p.hp -= bite;
+      const hostile = p.hostile;
+      p.onHit(sim, 'cut', this.x, this.z, a.dmg);
+      p.hostile = hostile; // A duel does not turn Tessariel's knight against the player.
+      if (p.hp <= 0) p.die(sim);
+      return;
+    }
     if (p.damage(sim, bite, this.x, this.z, a.knock || 0)) sim.event(EV.HURT, p.x, p.y + 1.2, p.z, bite);
   }
 
@@ -649,7 +742,7 @@ export class Knight {
       case S.STAGGER:
         if (!this.action || this.actT >= this.action.dur) {
           this.stopAction(0.22);
-          this.setState(hostile ? S.CIRCLE : S.PATROL);
+          this.setState(hostile || p instanceof Knight ? S.CIRCLE : S.PATROL);
           this.attackT = Math.min(this.attackT, 0.4 + Math.random() * 0.7);
           // Hurt and too close: gets out before the next one lands.
           if (hostile && dist < 3 && this.stam > 16 && this.rollCd <= 0 && Math.random() < 0.55 + this.hurt * 0.3) this.startRoll(sim, p, false);
@@ -682,7 +775,7 @@ export class Knight {
     if (this.pauseT > 0) {
       this.pauseT -= dt;
       this.steer(dt, 0, 0, 6, this.faceYaw);
-      if (!this.action && this.opts.pauseClip && this.pauseT > 1 && Math.random() < dt * 0.25) this.play(this.opts.pauseClip, 1, 'full', 0.4);
+      // Armed patrols keep their hands on their equipment.
       if (this.action && this.actT >= this.action.dur - 0.2) this.stopAction(0.4);
     } else {
       if (this.action) this.stopAction(0.4);
@@ -690,11 +783,11 @@ export class Knight {
       const d = Math.hypot(tx - this.x, tz - this.z);
       if (d < 1.1) { this.routeI = (this.routeI + 1) % route.length; this.pauseT = 1 + Math.random() * 3.5; }
       else {
-        if (!sim.world.sees(this.x, 1, this.z, tx, 1, tz)) this.goto(dt, sim, tx, tz, this.opts.walk, Math.atan2(tx - this.x, tz - this.z));
+        if (sim.world.clearance(this.x, this.z, (tx - this.x) / d, (tz - this.z) / d, d, this.bodyRadius) < d) this.goto(dt, sim, tx, tz, this.opts.walk, Math.atan2(tx - this.x, tz - this.z));
         else { const fx = (tx - this.x) / d, fz = (tz - this.z) / d; this.steer(dt, fx * this.opts.walk, fz * this.opts.walk, 4, Math.atan2(fx, fz)); }
       }
     }
-    if (!this.hostile || p.dead) return;
+    if ((!this.hostile && !(p instanceof Knight)) || p.dead) return;
     // Sight is a cone. A sprint close by is heard, and anything at arm's length is felt.
     const sees = sim.world.sees(this.x, this.y + 1.7, this.z, p.x, p.y + 1.6, p.z);
     const inCone = Math.abs(wrapAngle(toPlayer - this.faceYaw)) < 1.9;
@@ -711,10 +804,10 @@ export class Knight {
     this.combatTarget = 1; this.shieldTarget = dist < 11 ? 1 : 0.4;
     if (this.action && this.actMask === 'upper' && this.actT >= this.action.dur - 0.1) this.stopAction(0.3);
     const lim = 1 - this.hurt * 0.35;
-    const speed = (dist > 14 ? 5.4 : dist > 7 ? 3.5 : 1.9) * lim;
+    const speed = (dist > 7 ? 5.4 : p instanceof Knight ? 1.9 : 3.5) * lim;
     this.goto(dt, sim, p.x, p.z, speed, undefined);
     this.faceYaw = dist < 8 ? turn(this.faceYaw, toPlayer, 7 * dt) : turn(this.faceYaw, this.yaw, 7 * dt);
-    if (dist < 7.2 && sim.world.sees(this.x, 1.2, this.z, p.x, 1.2, p.z)) {
+    if (dist < 7.2 && sim.world.sees(this.x, this.y + 1.2, this.z, p.x, p.y + 1.2, p.z)) {
       // Close the last few metres behind the shield, or commit with a dash across open ground.
       if (dist > 3.6 && dist < 6.4 && this.stam > 40 && Math.random() < dt * 0.9 && !p.dead) this.startAttack(sim, ATTACKS.dash);
       else if (dist < 4.8) this.setState(S.CIRCLE);
@@ -745,14 +838,14 @@ export class Knight {
     if (this.tacticT <= 0) this.chooseTactic(sim);
     const lim = 1 - this.hurt * 0.3;
     const name = TACTICS[this.tactic];
-    const ring = { press: 1.9, circle: 3.0, bait: 3.7, 'shield wall': 2.2, 'flank dash': 3.6, 'fall back': 6.5 }[name];
+    const ring = p instanceof Knight ? { press: 1.9, circle: 3.0, bait: 3.7, 'shield wall': 2.2, 'flank dash': 3.6, 'fall back': 6.5 }[name] : 2.1;
     // Each plan shows in how he holds himself: bait drops the shield and dares you.
     this.shieldTarget = name === 'bait' ? 0.12 : 1;
     if (this.tacticStart) {
       this.tacticStart = false;
       if (name === 'fall back' && (this.bleeds.length || this.hurt > 0.05)) { this.startRetreat(sim, p); return; }
       if (name === 'flank dash' && this.rollCd <= 0 && this.stam > 45 && dist < 5.5) { this.startRoll(sim, p, false, true); return; }
-      if (name === 'bait' && dist > 2.8) { this.play('Idle_No_Loop', 1, 'upper', 0.3); this.setState(S.TAUNT); sim.event(EV.TAUNT, this.x, this.y + 1.6, this.z); return; }
+      if (p instanceof Knight && name === 'bait' && dist > 2.8) { this.play('Idle_No_Loop', 1, 'upper', 0.3); this.setState(S.TAUNT); sim.event(EV.TAUNT, this.x, this.y + 1.6, this.z); return; }
     }
     this.strafeT -= dt;
     // Protect the wounded side: keep it turned away from the player.
@@ -766,16 +859,22 @@ export class Knight {
       this.strafeT = 1.2 + Math.random() * 2.6;
     }
     const tx = Math.sin(toPlayer), tz = Math.cos(toPlayer);
-    const sx = tz * this.strafe, sz = -tx * this.strafe;
-    if (sim.world.clearance(this.x, this.z, sx, sz, 1.5, 0.4) < 1.5) { this.strafe = -this.strafe; this.strafeT = 1.5; }
+    let sx = tz * this.strafe, sz = -tx * this.strafe;
+    if (sim.world.clearance(this.x, this.z, sx, sz, 1.5, this.bodyRadius) < 1.5) { this.strafe = -this.strafe; this.strafeT = 1.5; sx = -sx; sz = -sz; }
     const radial = clamp((dist - ring) * 1.2, -1.2, 1.4);
     const speed = (name === 'press' ? 1.9 : name === 'shield wall' ? 1.15 : 1.45) * lim;
-    this.steer(dt, (sx + tx * radial) * speed, (sz + tz * radial) * speed, 6, wrapAngle(toPlayer + woundBias));
+    if (!sim.world.sees(this.x, this.y + 1.2, this.z, p.x, p.y + 1.2, p.z)) {
+      this.setState(S.APPROACH); this.goto(dt, sim, p.x, p.z, speed, toPlayer); return;
+    }
+    const mx = sx + tx * radial, mz = sz + tz * radial, ml = Math.hypot(mx, mz) || 1;
+    if (sim.world.clearance(this.x, this.z, mx / ml, mz / ml, 0.8, this.bodyRadius) < 0.4 && dist > 2.5) {
+      this.goto(dt, sim, p.x, p.z, speed, toPlayer);
+    } else this.steer(dt, mx * speed, mz * speed, 6, wrapAngle(toPlayer + woundBias));
     if (dist > 8.5 && name !== 'fall back') { this.setState(S.APPROACH); return; }
     if (name === 'fall back' && (this.hurt > 0.05 || this.bleeds.length) && this.stateT > 0.4) { this.startRetreat(sim, p); return; }
     if (this.reactToSwing(dt, sim, p, dist)) return;
     // Cornered with the player on top of him: roll out past them.
-    if (dist < 2.0 && this.rollCd <= 0 && sim.world.clearance(this.x, this.z, -tx, -tz, 2, 0.4) < 1.2 && Math.random() < dt * 1.6) { this.startRoll(sim, p, true); return; }
+    if (dist < 2.0 && this.rollCd <= 0 && sim.world.clearance(this.x, this.z, -tx, -tz, 2, this.bodyRadius) < 1.2 && Math.random() < dt * 1.6) { this.startRoll(sim, p, true); return; }
     if (this.action && this.actMask === 'upper' && this.actT >= this.action.dur) this.stopAction(0.15);
     if (name !== 'fall back') this.attackT -= dt * (name === 'press' ? 1.5 : name === 'shield wall' ? 0.45 : name === 'circle' || name === 'bait' ? 0.75 : 1);
     if (p.recovering && dist < 6) this.attackT -= dt * 7;
@@ -785,7 +884,7 @@ export class Knight {
       if (pick) { this.startAttack(sim, pick); return; }
     }
     this.tauntT -= dt;
-    if (this.tauntT <= 0 && dist > 3.4) {
+    if (p instanceof Knight && this.tauntT <= 0 && dist > 3.4) {
       this.tauntT = 8 + Math.random() * 8;
       this.play('Idle_No_Loop', 1, 'upper', 0.3);
       this.setState(S.TAUNT);
@@ -810,7 +909,7 @@ export class Knight {
     if (!out.length) return null;
     // A feint now and then, more when the player is the kind who swings first.
     const eager = this.habit.total > 4 ? 0.28 : 0.12;
-    if (!p.recovering && dist < 3.4 && Math.random() < eager) return 'feint';
+    if (p instanceof Knight && !p.recovering && dist < 3.4 && Math.random() < eager) return 'feint';
     let sum = out.reduce((s, e) => s + e[1], 0), r = Math.random() * sum;
     for (const [k, w] of out) { r -= w; if (r <= 0) { this.lastAttack = k; return ATTACKS[k]; } }
     return ATTACKS[out[0][0]];
@@ -857,6 +956,7 @@ export class Knight {
 
   // Reading the player's swing: wait a human moment, then shield, roll or step out.
   reactToSwing(dt, sim, p, dist) {
+    if (!(p instanceof Knight)) return this.reactToSpell(dt, sim, p);
     const sw = p.threat;
     if (!sw) { this.reacted = false; this.reactT = -1; return false; }
     const aimed = dist < 3.9 && Math.abs(wrapAngle(Math.atan2(this.x - p.x, this.z - p.z) - p.yaw)) < 1.05;
@@ -890,7 +990,30 @@ export class Knight {
     return false;
   }
 
+  reactToSpell(dt, sim, p) {
+    // React to visible incoming projectiles, not the caster's inputs or aim.
+    let incoming = null, soonest = 0.85;
+    for (const b of sim.casting?.bolts || []) {
+      const v2 = b.vx ** 2 + b.vz ** 2;
+      if (v2 < 1) continue;
+      const t = ((this.x - b.x) * b.vx + (this.z - b.z) * b.vz) / v2;
+      if (t < 0.16 || t > soonest) continue;
+      if (Math.hypot(b.x + b.vx * t - this.x, b.z + b.vz * t - this.z) > this.bodyRadius + (b.size || 0.1)) continue;
+      const y = b.y + (b.vy || 0) * t;
+      if (y < this.y || y > this.y + this.rig.height) continue;
+      if (!sim.world.sees(this.x, this.y + 1.4, this.z, b.x, b.y, b.z)) continue;
+      incoming = b; soonest = t;
+    }
+    if (!incoming) { this.spellSeen = null; this.spellReactAt = 0; return false; }
+    if (this.spellSeen !== incoming) { this.spellSeen = incoming; this.spellReactAt = sim.time + 0.18; return false; }
+    if (sim.time < this.spellReactAt || this.rollCd > 0 || this.stam < 22) return false;
+    const before = this.state;
+    this.startRoll(sim, p, false, true);
+    return this.state !== before;
+  }
+
   startBlock(sim, hold) {
+    this.attack = null; this.activeOn = -1;
     this.setState(S.BLOCK);
     this.blockT = hold + 0.42;
     this.shieldTarget = 1;
@@ -920,7 +1043,7 @@ export class Knight {
     for (let i = 0; i < 8; i++) {
       const a = this.toPlayer + i / 8 * Math.PI * 2 + 0.2;
       const dx = Math.sin(a), dz = Math.cos(a);
-      const clear = sim.world.clearance(this.x, this.z, dx, dz, 3.5, 0.45);
+      const clear = sim.world.clearance(this.x, this.z, dx, dz, 3.5, this.bodyRadius);
       if (clear < 2) continue;
       const ex = this.x + dx * clear, ez = this.z + dz * clear;
       const endD = Math.hypot(ex - px, ez - pz);
@@ -938,6 +1061,7 @@ export class Knight {
       if (score > best) { best = score; bx = dx; bz = dz; }
     }
     if (best < -1e8) return;
+    this.attack = null; this.activeOn = -1;
     this.rollDirX = bx; this.rollDirZ = bz;
     this.yaw = Math.atan2(bx, bz);
     this.faceYaw = this.yaw;
@@ -1094,6 +1218,13 @@ export class Knight {
 // Cross-module helpers.
 const tv = new Float32Array(3), lo = new Float32Array(3), ld = new Float32Array(3), hn = new Float32Array(3), tmp3 = new Float32Array(3);
 const SHIELD_OFF = 0.065;
+const BODY_CAPSULES = [[0, 1, 0.32], [1, 2, 0.19], [3, 4, 0.16], [4, 5, 0.12], [6, 7, 0.16], [7, 8, 0.12]];
+// Dense conservative surface samples in the shipped prop files' local coordinates.
+const SWORD_POINTS = Array.from({ length: 25 }, (_, i) => [-0.09, 0, 0.09].map(z => [0, -0.11 + i * 1.11 / 24, z])).flat();
+const shieldPoints = (w, low, high) => Array.from({ length: 13 }, (_, i) => Array.from({ length: 9 }, (_, j) =>
+  [-0.085, 0.06].map(z => [-w + j * w / 4, low + i * (high - low) / 12, z]))).flat(2);
+const BLACK_SHIELD_POINTS = shieldPoints(0.237, -0.406, 0.294);
+const SILVER_SHIELD_POINTS = shieldPoints(0.18, -0.534, 0.386);
 const armQ = new Float32Array(4), weaponQ = new Float32Array(4), weaponT = new Float32Array(3), tmpM = new Float32Array(16), flowDir = new Float32Array(2);
 
 function turn(a, b, step) {
