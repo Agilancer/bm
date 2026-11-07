@@ -18,7 +18,9 @@ export class RenderDiagnostics {
   }
 
   fail(error, stage = this.stage) {
-    const message = `${stage}: ${error?.stack || error?.message || String(error)}`;
+    // GPU errors may have an unhelpful stack on Safari. Preserve the message.
+    const detail = error?.message || error?.stack || String(error);
+    const message = `${stage}: ${detail}`;
     if (!this.errors.includes(message)) this.errors.push(message);
     this.errors = this.errors.slice(-3);
     this.draw();

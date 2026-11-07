@@ -123,7 +123,9 @@ export class Renderer {
   // other. A phone also has no second colour target, so the depth that would go in it goes nowhere.
   shader(code) {
     let text = `const LEAN = ${!!this.tier.lean};\n${code}`;
-    if (this.tier.lean) text = text.replace('@location(1) depth: f32', '').replace(/o\.depth = [^;]*;/g, '');
+    // All fragment return paths must lose the unused depth write. ITEM has an
+    // early return named `out`, so matching only `o.depth` leaves invalid WGSL.
+    if (this.tier.lean) text = text.replace(/@location\(1\)\s+depth:\s*f32/g, '').replace(/\b\w+\.depth\s*=\s*[^;]*;/g, '');
     return this.device.createShaderModule({ code: text });
   }
 
