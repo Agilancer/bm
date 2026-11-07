@@ -652,7 +652,7 @@ struct VM { sway: mat4x4f, params: vec4f };  // params: x = blood on the sword, 
 @group(1) @binding(2) var normalTex: texture_2d<f32>;
 @group(1) @binding(3) var mrTex: texture_2d<f32>;
 
-struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f, @location(3) viewZ: f32, @location(4) bind: vec3f };
+struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f, @location(3) viewZ: f32, @location(4) bind: vec3f, @location(5) @interpolate(flat) staff: u32 };
 
 @vertex fn vs(@location(0) sk: vec4f, @location(1) bindP: vec3f, @location(2) piece: u32, @location(3) uv: vec2f) -> V {
   var o: V;
@@ -662,7 +662,7 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   o.p = w.xyz;
   let nv = unpack4x8snorm(bitcast<u32>(sk.w)).xyz;
   o.n = (F.vmToWorld * M.sway * vec4f(nv, 0.0)).xyz;
-  o.uv = uv; o.bind = bindP;
+  o.uv = uv; o.bind = bindP; o.staff = piece;
   o.viewZ = -vp.z;
   return o;
 }
@@ -708,6 +708,28 @@ fn vn2(p: vec2f) -> f32 {
   let worldViewZ = -(F.view * vec4f(in.p, 1.0)).z;
   let shadow = shadowAt(in.p, n0, max(worldViewZ, 0.1), ign(in.pos.xy));
   var c = shadePBR(in.p, n, v, albedo, rough, metal, 1.0, shadow);
+  if (in.staff > 0u && M.params.w > 0.0) {
+    // Model-space currents cling to the head through every walk and cast, rather than sliding with the camera.
+    let head = smoothstep(0.40, 0.68, in.bind.y / max(M.params.w, 0.01));
+    let tm = F.camPos.w;
+    let q = in.bind * 26.0;
+    let flow = vn2(q.xy + vec2f(tm * 0.7, -tm * 1.8));
+    let vein = abs(sin(q.y * 1.7 + q.z * 2.8 + flow * 7.0 + tm * 2.0));
+    let crack = 1.0 - smoothstep(0.025, 0.12, vein);
+    let pulse = 0.75 + 0.25 * sin(tm * 3.4 + q.y);
+    let flicker = pow(max(0.0, sin(tm * 19.0 + floor(q.y * 3.0) * 2.1)), 10.0);
+    var tint = vec3f(1.0, 0.22, 0.025);
+    // Weapon indices are stable across the simulation and renderer (core/layout.js).
+    if (in.staff == 15u || in.staff == 22u) { tint = vec3f(0.08, 0.55, 1.0); }
+    if (in.staff == 14u || in.staff == 23u || in.staff == 24u) { tint = vec3f(0.15, 1.0, 0.27); }
+    if (in.staff == 17u || in.staff == 25u) { tint = vec3f(0.55, 0.65, 1.0); }
+    if (in.staff == 18u) { tint = vec3f(0.52, 0.08, 1.0); }
+    if (in.staff == 19u) { tint = vec3f(0.25, 1.0, 0.64); }
+    if (in.staff == 20u) { tint = vec3f(1.0, 0.56, 0.08); }
+    let facing = max(dot(n, v), 0.0);
+    let rim = pow(1.0 - facing, 3.0);
+    c += tint * head * (0.12 + flow * 0.28 + rim * 0.7 + crack * (1.4 + flicker * 2.5)) * pulse;
+  }
   // The spell hands are held up against the light as often as not: a low, warm fill from the eye keeps the skin skin, and the fingers' roundness in view.
   // And a spell's light, so near, can colour them but not burn them out: the upper arm faces all of it.
   if (M.params.w < 0.0) {
