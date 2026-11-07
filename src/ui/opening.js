@@ -78,16 +78,16 @@ export class OpeningHUD {
         line = (beat?.text ?? '').replace('{name}', this.name || 'Tessariel');
         break;
       case OPENING.ESCORT:
-        this.speaker.textContent = 'FIRST QUEST Ã‚Â· FOLLOW LISANDRA TO TOWN';
+        this.speaker.textContent = 'FIRST QUEST - FOLLOW LISANDRA TO TOWN';
         line = t < 6 ? 'Stay close. I know the turns. You watch the trees.'
           : snap[H.OPENING_NEXT] < 6 ? 'If you lose sight of me, follow the worn stones down to the south road.'
           : snap[H.OPENING_NEXT] < 10 ? 'I used to come up here for the quiet. The book ruined that.'
-          : snap[H.OPENING_NEXT] < 14 ? 'See where the trail widens? ThatÃ¢â‚¬â„¢s the road into town.'
+          : snap[H.OPENING_NEXT] < 14 ? 'See where the trail widens? That’s the road into town.'
           : 'There. The village. Let me do the talking if anyone stops us.';
         break;
       case OPENING.ARRIVED:
         this.speaker.textContent = 'QUEST COMPLETE';
-        line = 'WeÃ¢â‚¬â„¢re here. Keep your birth name to yourself for a little while longer.';
+        line = 'We’re here. Keep your birth name to yourself for a little while longer.';
         break;
     }
     this.playerSpeaking = beat?.who === 'player';
