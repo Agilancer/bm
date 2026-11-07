@@ -69,8 +69,18 @@
   #tip { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); max-width: min(620px, 64vw); text-align: center; font-size: 15px; line-height: 1.4; letter-spacing: .03em; color: var(--bone); background: rgba(8,6,4,.62); padding: 7px 14px; opacity: 0; transition: opacity .5s; }
   #stam { height: 4px; margin-top: 3px; background: rgba(0,0,0,.6); overflow: hidden; }
   #stam > i { display: block; height: 100%; width: 100%; background: #c9b478; transform-origin: 0 50%; will-change: transform; transition: transform .08s; }
-  #debug { position: absolute; right: 12px; top: 12px; font: 12px/1.45 ui-monospace, Consolas, monospace; text-align: right; color: #e6e0d0; text-shadow: 0 1px 2px #000; white-space: pre; display: none; }
+  #debug { position: absolute; right: 12px; top: 200px; font: 12px/1.45 ui-monospace, Consolas, monospace; text-align: right; color: #e6e0d0; text-shadow: 0 1px 2px #000; white-space: pre; display: none; }
   #take { position: absolute; left: 50%; top: 70%; transform: translateX(-50%); max-width: 70vw; text-align: center; font-size: 15px; letter-spacing: .03em; background: rgba(8,6,4,.62); padding: 6px 14px; display: none; }
+  /* The map */
+  #mapMini { position: absolute; right: calc(20px + env(safe-area-inset-right)); top: calc(18px + env(safe-area-inset-top)); width: 168px; height: 168px; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,.7); opacity: .92; display: none; }
+  #mapBig { position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 8px; background: rgba(4,3,2,.55); pointer-events: none; }
+  #mapBig.open { display: flex; }
+  #mapBigCanvas { width: min(86vh, 92vw); height: min(86vh, 92vw); border: 1px solid var(--gold-dim); opacity: .9; }
+  .mapKey { font-size: 12px; letter-spacing: .1em; color: var(--bone); text-shadow: 0 1px 3px #000; }
+  .mapKey span { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1px solid #000; vertical-align: -1px; }
+  .mapKey .me { background: #f1d68a; } .mapKey .foe { background: #d8402c; } .mapKey .kin { background: #e9dfc9; }
+  .mapKey b { color: var(--gold); }
+  body.touch .mapKey .mapClose::after { content: 'AP'; }
   #pause { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.55); z-index: 15; }
 
   /* Touch controls */
@@ -84,6 +94,7 @@
   #bDodge { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(112px + env(safe-area-inset-bottom)); }
   #bPause { width: 40px; height: 40px; left: 50%; margin-left: -20px; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 15px; letter-spacing: 0; }
   #bPack { width: 56px; height: 56px; left: calc(30px + env(safe-area-inset-left)); bottom: calc(256px + env(safe-area-inset-bottom)); }
+  #bMap { width: 40px; height: 40px; left: 50%; margin-left: 30px; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: .04em; }
   #bTake { width: 66px; height: 66px; right: calc(218px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); display: none; background: rgba(201,163,92,.32); }
   #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #0b0907; z-index: 30; font-size: 18px; text-align: center; padding: 30px; color: var(--gold); }
   @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
@@ -91,6 +102,7 @@
   #nub { position: absolute; left: 41px; top: 41px; width: 48px; height: 48px; border-radius: 50%; background: rgba(233,223,201,.45); }
   body.touch #vitals { bottom: auto; top: calc(14px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); width: 28vw; }
   body.touch #clock { left: auto; right: calc(14px + env(safe-area-inset-right)); top: calc(76px + env(safe-area-inset-top)); width: 46px; }
+  body.touch #mapMini { right: calc(70px + env(safe-area-inset-right)); top: calc(66px + env(safe-area-inset-top)); width: 96px; height: 96px; }
   body.touch #clock .phase { font-size: 9px; }
   body.touch #foe { top: calc(10px + env(safe-area-inset-top)); left: auto; right: calc(14px + env(safe-area-inset-right)); transform: none; width: 44vw; }
 
@@ -234,7 +246,9 @@
   <div id="take"></div>
   <div id="msg"></div>
   <div id="debug"></div>
+  <canvas id="mapMini"></canvas>
 </div>
+<div id="mapBig"><canvas id="mapBigCanvas"></canvas><div class="mapKey"><span class="me"></span> you &nbsp; <span class="foe"></span> foe &nbsp; <span class="kin"></span> townsfolk &nbsp;&nbsp; <b class="mapClose">M</b> for more, then to close</div></div>
 
 <div id="touch">
   <div id="stick"><div id="nub"></div></div>
@@ -246,6 +260,7 @@
   <div class="tbtn" id="bPause">II</div>
   <div class="tbtn" id="bPack">PACK</div>
   <div class="tbtn" id="bTake">TAKE</div>
+  <div class="tbtn" id="bMap">MAP</div>
   <div class="tbtn" id="bCast">CAST</div>
 </div>
 

@@ -24,6 +24,7 @@ import { settings, Title } from './title.js';
 import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
+import { WorldMap } from './ui/map.js';
 import { SpellSound } from './spellsound.js';
 
 const BASE = new URL('..', import.meta.url).href;
@@ -258,6 +259,11 @@ async function boot(plan, poolSize) {
   game = new GameView(renderer, shared, input, audio, hud, gpu, simWorker, buffer);
   const pack = new Pack();
   pack.load(null);
+  const worldMap = new WorldMap(BASE, input.touch);
+  worldMap.load(null);
+  game.worldMap = worldMap;
+  // What of the land you've seen.
+  addPart('map', { save: () => worldMap.save(), load: (d) => worldMap.load(d) });
   game.gemFx = new GemFx(renderer);
   const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
   const arm = () => {
@@ -448,6 +454,7 @@ async function boot(plan, poolSize) {
       game.chests.load(null);
       game.spellbar.load(null);
       game.doors.load(null);
+      worldMap.load(null);
       enter(true);
     } else if (a === 'continue') {
       const d = saves.newest();
@@ -541,9 +548,11 @@ async function boot(plan, poolSize) {
     if (e.code === 'Escape' && bookOpen) closeBook(true);
     if (e.code === 'Escape' && inventory.open) closePack(true);
     if (e.code === 'KeyE' && !input.menu && !state.paused) game.takeNearest();
+    if (e.code === 'KeyM' && !input.menu && !state.paused) worldMap.toggle();
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
   $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) openPack(); }, { passive: false });
+  $('bMap').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) worldMap.toggle(); }, { passive: false });
   $('bTake').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) game.takeNearest(); }, { passive: false });
   $('touch').addEventListener('touchstart', () => {
     const snap = game.currentSnap();
@@ -551,8 +560,8 @@ async function boot(plan, poolSize) {
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> changes your spells. <b>PACK</b> holds your gear.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>E</kbd> take, open or shut';
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> changes your spells. <b>PACK</b> holds your gear. <b>MAP</b> shows the land.'
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open or shut';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
@@ -833,6 +842,7 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.clock.set(r.hour);
       if (this.spellbar) this.spellbar.update(snap);
+      if (this.worldMap) this.worldMap.update(dt, snap, this.input.yaw, !this.idle && this.input.enabled && !this.input.menu && !(snap[H.OPENING] > 0 && snap[H.OPENING] < 4));
       if (this.spellSound) this.spellSound.channel(snap[H.CAST_HELD] | 0);
       if (this.onFrame) this.onFrame();
     };
