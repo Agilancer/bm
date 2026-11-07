@@ -197,6 +197,13 @@
 #opening-scene input,#opening-scene button{font:inherit;color:#f6e9d6;background:#21182a;border:1px solid #9674a1;padding:8px 10px}
 #opening-scene input{max-width:56%}
 #opening-scene button{cursor:pointer}
+#opening-eyes{position:fixed;inset:0;z-index:20;overflow:hidden;pointer-events:none;backdrop-filter:blur(var(--haze,0px))}
+#opening-eyes[hidden]{display:none}
+#opening-eyes span{position:absolute;left:-10%;width:120%;height:calc(var(--lid,57vh) + 24vh);background:#030207;box-shadow:0 0 26px 14px #030207}
+#opening-eyes span:first-child{top:-24vh;border-radius:0 0 50% 50% / 0 0 16% 16%}
+#opening-eyes span:last-child{bottom:-24vh;border-radius:50% 50% 0 0 / 16% 16% 0 0}
+#opening-eyes.reveal{backdrop-filter:none;background:radial-gradient(ellipse,#e5baff 0%,#9a56ef 43%,#3d1b63 100%);opacity:var(--flash,0)}
+#opening-eyes.reveal span{display:none}
 </style>
 </head>
 <body>

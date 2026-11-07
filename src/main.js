@@ -1,9 +1,10 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
-import { OPENING } from './core/opening.js';
+import { setOpeningTerrain } from './core/terrain.js';
+import { OPENING, OPENING_REVISION, OPENING_YAW } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
-import { clamp, damp, wrapAngle } from './core/math.js';
+import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
 import { Clock } from './clock.js';
@@ -190,6 +191,7 @@ async function boot(plan, poolSize) {
 
   const renderer = new Renderer(gpu, canvas, pool);
   renderer.openingEnabled = OPENING_PREVIEW;
+  setOpeningTerrain(OPENING_PREVIEW);
   const simWorker = new Worker(new URL('./sim/sim.worker.js', import.meta.url), { type: 'module' });
   const audio = new Audio(BASE, title.ctx, title.out, settings.ambience);
   let latestSnap = null;
@@ -336,7 +338,7 @@ async function boot(plan, poolSize) {
       const s = game.currentSnap();
       return { x: s[H.PX], y: s[H.PY], z: s[H.PZ], yaw: input.yaw, pitch: input.pitch, ...openingHUD?.save(s) };
     },
-    load: (d) => { openingHUD?.reset(d?.name); return simCall('place', d); },   // (a fresh world, and you where the save says; null: where a new game starts)
+    load: (d) => { openingHUD?.reset(d?.openingRevision === OPENING_REVISION ? d.name : ''); return simCall('place', d); },   // (a fresh world, and you where the save says; null: where a new game starts)
     summary: () => 'Velscour village',
   });
   addPart('stats', {
@@ -372,10 +374,17 @@ async function boot(plan, poolSize) {
           naming = false;
           input.menu = false;
         }
-        if (input.enabled && !state.paused && snap[H.OPENING] === OPENING.REVEAL) {
+        if (active && snap[H.OPENING] === OPENING.NAME) {
+          const t = snap[H.OPENING_TIME];
+          const wake = smoothstep(0.45, 3.25, t);
+          input.yaw = OPENING_YAW + (1 - wake) * 0.26;
+          input.pitch = lerp(-0.64, -0.11, wake);
+        }
+        if (active && snap[H.OPENING] === OPENING.REVEAL) {
           const guide = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
           const yaw = Math.atan2(snap[guide + C.X] - snap[H.PX], snap[guide + C.Z] - snap[H.PZ]);
           input.yaw += wrapAngle(yaw - input.yaw) * Math.min(1, dt * 4);
+          input.pitch = damp(input.pitch, -0.10, 4, dt);
         }
       }
     }

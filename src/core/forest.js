@@ -1,5 +1,5 @@
 // The pines round the town: where they stand. Worked out the same on every thread, for the renderer to draw and the sim to bump into.
-import { PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, segDist2, sstep } from './terrain.js';
+import { CAVE_PATH, openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, segDist2, sstep } from './terrain.js';
 
 const LONG_PATHS = PATHS.filter((p) => p.pts.length >= 5);
 
@@ -17,6 +17,7 @@ export function forestAmount(x, z) {
   }
   if (r < 260) {
     for (const p of LONG_PATHS) {
+      if (p === CAVE_PATH && !openingTerrain) continue;
       for (let i = 0; i + 1 < p.pts.length; i++) {
         const [ax, az] = p.pts[i], [bx, bz] = p.pts[i + 1];
         if (segDist2(x, z, ax, az, bx, bz) < (p.w + 5) * (p.w + 5)) return 0;

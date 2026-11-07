@@ -1,6 +1,11 @@
 // The land. One deterministic height function shared by every thread: the sim walks on it, the GPU
 // draws it. Flat where the village stands, rolling meadow beyond, big hills at the horizon.
 
+import { CAVE_BACK, CAVE_CENTRE, CAVE_FLOOR, CAVE_MOUTH, CAVE_TRAIL } from './opening.js';
+
+export let openingTerrain = false;
+export function setOpeningTerrain(enabled) { openingTerrain = !!enabled; }
+
 function hash2(x, y) {
   let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -135,14 +140,27 @@ export function terrainHeight(x, z) {
     const d = Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]);
     if (d < 6) level += (PLOT_Y - level) * (1 - sstep(0, 6, d));
   }
-  return level;
+  // Level the cave floor and its apron. The two shoulders and the rising
+  // ground behind it continue into the rock overburden above the chamber.
+  if (!openingTerrain) return level;
+  const side = Math.abs(x - CAVE_CENTRE);
+  if (side >= 15 || z <= CAVE_MOUTH - 8 || z >= CAVE_BACK + 21) return level;
+  const end = Math.max(CAVE_MOUTH - z, z - CAVE_BACK);
+  const cave = (1 - sstep(3.5, 6.5, side)) * (1 - sstep(0.6, 5, end));
+  level += (CAVE_FLOOR - level) * cave;
+  const shoulder = sstep(3.5, 6.2, side) * (1 - sstep(6.2, 15, side));
+  const ridge = (1 - sstep(4, 17, Math.abs(z - CAVE_BACK))) * 2.5;
+  const back = sstep(CAVE_BACK, CAVE_BACK + 4, z) * (1 - sstep(CAVE_BACK + 6, CAVE_BACK + 21, z));
+  return level + ridge * shoulder + back * (1 - sstep(2, 14, side)) * 4.5;
 }
 
 // How far you can go, either way along x and z. An unseen wall stands here. (Only so much of it is worked out for the things that hunt you: NAV_EDGE, in src/sim/world.js.)
 export const LAND_EDGE = 600;
 
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.
+export const CAVE_PATH = { pts: [[CAVE_CENTRE, CAVE_BACK - 0.6], ...CAVE_TRAIL], w: 1.45 };
 export const PATHS = [
+  CAVE_PATH,
   { pts: [[-1, -14.5], [-1.2, -8], [-1.5, -2], [-1.5, 1]], w: 2.0 },
   { pts: [[-14.5, 0.5], [-9, 1.2], [-4, 1.0], [-1.5, 1]], w: 1.8 },
   { pts: [[14.2, 3], [9, 2.2], [3, 1.4], [-1.5, 1]], w: 1.8 },
@@ -170,6 +188,7 @@ export function pathAmount(x, z) {
   const wob = (fbm(x * 0.35, z * 0.35, 3) - 0.5) * 1.6;
   let best = 0;
   for (const p of PATHS) {
+    if (p === CAVE_PATH && !openingTerrain) continue;
     for (let i = 0; i + 1 < p.pts.length; i++) {
       const [ax, az] = p.pts[i], [bx, bz] = p.pts[i + 1];
       const d = Math.sqrt(segDist2(x, z, ax, az, bx, bz));

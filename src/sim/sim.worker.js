@@ -1,6 +1,7 @@
 // The simulation thread. Runs the world at a fixed rate, independent of the display, and publishes
 // complete snapshots for the render thread. Nothing in here waits on the GPU or the DOM.
-import { CAVE_WALLS, OPENING, OPENING_YAW } from '../core/opening.js';
+import { setOpeningTerrain } from '../core/terrain.js';
+import { CAVE_WALLS, OPENING, OPENING_REVISION, OPENING_YAW } from '../core/opening.js';
 import { Opening } from './opening.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
@@ -152,7 +153,7 @@ class Sim {
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
-    stepWoods(this);
+    if (!this.opening || this.opening.stage === OPENING.ARRIVED) stepWoods(this);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
@@ -318,7 +319,7 @@ class Sim {
 // A loaded game starts the world fresh and puts the player where the save says (src/saves.js has what a save holds).
 Sim.prototype.place = function (d) {
   this.restart();
-  if (!d) return;
+  if (!d || (this.opening && d.openingRevision !== OPENING_REVISION)) return;
   const p = this.player;
   const floor = this.world.heightFor(d.x, d.z, d.y);
   p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
@@ -344,6 +345,7 @@ async function fetchBuf(path) {
 async function boot(msg) {
   const sim = new Sim();
   const base = msg.base;
+  setOpeningTerrain(msg.opening);
   if (msg.buffer) {
     sim.shared = mapShared(msg.buffer);
     sim.input = sim.shared.input;

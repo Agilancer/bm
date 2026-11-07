@@ -1,7 +1,8 @@
 import { accessor, parseGLB } from '../core/glb.js';
 import { C, C_SIZE, CHARS_START, H } from '../core/layout.js';
-import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatYaw, smoothstep, wrapAngle } from '../core/math.js';
-import { CAVE_BACK, CAVE_CENTRE, CAVE_MOUTH, OPENING, PORTAL } from '../core/opening.js';
+import { clamp, damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatYaw, smoothstep, wrapAngle } from '../core/math.js';
+import { CAVE_BACK, CAVE_CENTRE, CAVE_FLOOR, CAVE_MOUTH, OPENING, PORTAL, REVEAL_END } from '../core/opening.js';
+import { terrainHeight } from '../core/terrain.js';
 
 const BOOK_ASSET = 'assets/game/lisandra/spellbook.glb';
 const BOOK_SCALE = 0.95;
@@ -67,7 +68,7 @@ function caveMesh() {
       const flare = Math.max(0, 2 - r) * 0.28;
       const z = CAVE_MOUTH + (CAVE_BACK - CAVE_MOUTH) * r / rows + 0.19 * Math.cos(i * 2.5 + r * 4.1);
       const x = CAVE_CENTRE + Math.cos(angle) * (2.91 + ripple + flare);
-      const y = 0.25 + 0.82 * r / rows + Math.sin(angle) * (3.08 + ripple * 1.5 + flare);
+      const y = CAVE_FLOOR - 0.32 + Math.sin(angle) * (3.55 + ripple * 1.5 + flare);
       ring.push([x, y, z]);
     }
     points.push(ring);
@@ -88,10 +89,40 @@ function caveMesh() {
     tri(a, b, c, [u, v], [u + 0.42, v], [u + 0.42, v + 0.36]);
     tri(a, c, d, [u, v], [u + 0.42, v + 0.36], [u, v + 0.36]);
   }
-  const end = points[rows], centre = [CAVE_CENTRE, 1, CAVE_BACK + 0.09];
+  const end = points[rows], centre = [CAVE_CENTRE, CAVE_FLOOR - 0.35, CAVE_BACK + 0.09];
   for (let i = 0; i < sides; i++) {
     const uvOf = (p) => [p[0] * 0.65, p[1] * 0.65];
     tri(centre, end[i], end[i + 1], uvOf(centre), uvOf(end[i]), uvOf(end[i + 1]));
+  }
+  // The arch face continues out into a broad, irregular rock shoulder. Its
+  // flanks and rear edge sink into the shaped hillside, leaving only the mouth.
+  const skirt = [];
+  const depth = 15;
+  for (let r = 0; r <= depth; r++) {
+    const t = r / depth;
+    skirt.push(Array.from({ length: sides + 1 }, (_, i) => {
+      const a = i / sides * Math.PI;
+      const ridge = Math.sin(a) ** 0.85;
+      const roughness = Math.sin(i * 7.5 + r * 3.8) * 0.38 + Math.cos(i * 3.7 - r * 2.1) * 0.24;
+      const x = CAVE_CENTRE + Math.cos(a) * (6.6 + 3.8 * Math.sin(Math.PI * t * 0.84) + roughness) + t * 0.8;
+      const z = CAVE_MOUTH - 0.5 + 23 * t + roughness;
+      const terrain = terrainHeight(x, z);
+      const crest = CAVE_FLOOR + (4.15 + roughness) * ridge + Math.sin(Math.PI * t) * 2.1 * ridge;
+      const shell = Math.max(terrain + ridge * 0.7, crest);
+      const y = lerp(shell, terrain - 0.38, smoothstep(0.73, 1, t));
+      return [x, lerp(terrain - 0.3, y, smoothstep(0, 0.37, ridge)), z];
+    }));
+  }
+  const stoneUV = (p) => [p[0] * 0.46 + p[1] * 0.21, p[2] * 0.44 + p[1] * 0.48];
+  const rock = (a, b, c) => tri(a, b, c, stoneUV(a), stoneUV(b), stoneUV(c));
+  for (let i = 0; i < sides; i++) {
+    rock(skirt[0][i], points[0][i], points[0][i + 1]);
+    rock(skirt[0][i], points[0][i + 1], skirt[0][i + 1]);
+    for (let r = 0; r < depth; r++) {
+      const [a, b, c, d] = [skirt[r][i], skirt[r][i + 1], skirt[r + 1][i + 1], skirt[r + 1][i]];
+      rock(a, c, b);
+      rock(a, d, c);
+    }
   }
   return { pos: new Float32Array(pos), nrm: new Float32Array(nrm), uv: new Float32Array(uv), idx };
 }
@@ -112,11 +143,11 @@ export async function loadOpeningStage(renderer, base) {
   mat4FromQT(cave.mat, [0, 0, 0, 1], 0, [0, 0, 0], 0);
   mat4FromQT(portal.mat, [0, 0, 0, 1], 0, PORTAL, 0);
   const book = await loadBook(renderer, base);
-  const bookLight = { p: [6, 2, 54], r: 2.4, c: [0.55, 0.25, 1], i: 1.7, flicker: 0.4 };
+  const bookLight = { p: [CAVE_CENTRE, CAVE_FLOOR + 1.2, CAVE_MOUTH + 3.5], r: 2.4, c: [0.55, 0.25, 1], i: 1.7, flicker: 0.4 };
   renderer.lights.push(
     bookLight,
-    { p: [6.0, 2.3, 57.65], r: 7.5, c: [0.48, 0.12, 1], i: 17.5, flicker: 0.65 },
-    { p: [7.1, 2.3, 53.7], r: 4.0, c: [0.95, 0.56, 0.24], i: 5.0, flicker: 0.35 },
+    { p: [CAVE_CENTRE, PORTAL[1], PORTAL[2] - 0.75], r: 7.5, c: [0.48, 0.12, 1], i: 17.5, flicker: 0.65 },
+    { p: [CAVE_CENTRE + 1.1, CAVE_FLOOR + 1.7, CAVE_MOUTH + 3.9], r: 4.0, c: [0.95, 0.56, 0.24], i: 5.0, flicker: 0.35 },
   );
   return new OpeningStage(cave, portal, book, bookLight);
 }
@@ -158,7 +189,7 @@ class OpeningStage {
     for (let i = 0; i < 3; i++) this.bookLight.p[i] = this.position[i];
     const shut = ritual ? 1 - smoothstep(0.15, 1.45, phase)
       : stage === OPENING.LEAVE ? smoothstep(0, 0.8, phase)
-      : stage === OPENING.REVEAL ? 1 - 0.74 * Math.sin(Math.PI * clamp(phase / 3.2, 0, 1)) : 1;
+      : stage === OPENING.REVEAL ? 1 - 0.74 * Math.sin(Math.PI * clamp(phase / REVEAL_END, 0, 1)) : 1;
     quatYaw(this.heading, 0, this.yaw + Math.PI + (ritual ? -0.5 : 0.35));
     quatAxisAngle(this.tilt, 0, 1, 0, 0, -0.92 + shut * 0.68 + Math.sin(time * 1.8) * 0.07);
     quatMul(this.heading, 0, this.heading, 0, this.tilt, 0);

@@ -3,7 +3,7 @@
 // informed by however many cores the machine can spare.
 import { CTRL, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, mapShared } from '../core/layout.js';
 import { forestAmount, forestTrees } from '../core/forest.js';
-import { ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
+import { setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
 
 async function decode(url, flags) {
   const r = await fetch(url);
@@ -219,6 +219,7 @@ function plannerLoop(shared, id, budgetMs, intervalMs) {
 self.addEventListener('message', async (e) => {
   const { id, type, args } = e.data;
   try {
+    setOpeningTerrain(args.opening);
     let result, transfer = [];
     switch (type) {
       case 'decode':
