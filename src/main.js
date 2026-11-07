@@ -37,7 +37,7 @@ window.bmTitle = title;
 
 // ---- job pool ----------------------------------------------------------------------------------------------
 
-const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF VELSCOUR', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE'];
+const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE'];
 
 class Pool {
   constructor(size) {
