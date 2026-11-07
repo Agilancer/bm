@@ -37,9 +37,9 @@ const WORLD_HALF_TAN = Math.tan(32 * Math.PI / 180);
 const TO_WORLD = WORLD_HALF_TAN / Math.tan(38 * Math.PI / 180);
 
 // (5 is a zombie or a caster, 6 the ogre.)
-const chestOf = (k) => k.y + (k.crawling ? 0.35 : [1.25, 1.25, 0.55, 1.3, 1.4, 1.2, 1.9][k.kind]);
-const radiusOf = (k) => [0.55, 0.55, 1.15, 1.5, 1.7, 0.5, 0.8][k.kind];
-const heightOf = (k) => (k.crawling ? 0.7 : [2, 2, 1.2, 2.2, 3.1, 1.9, 2.9][k.kind]);
+const chestOf = (k) => k.y + (k.crawling ? 0.35 : k.opts?.height ? k.opts.height * 0.6 : [1.25, 1.25, 0.55, 1.3, 1.4, 1.2, 1.9][k.kind]);
+const radiusOf = (k) => k.opts?.radius ?? [0.55, 0.55, 1.15, 1.5, 1.7, 0.5, 0.8][k.kind];
+const heightOf = (k) => (k.crawling ? 0.7 : k.opts?.height ?? [2, 2, 1.2, 2.2, 3.1, 1.9, 2.9][k.kind]);
 
 export class Casting {
   constructor(rigs) {

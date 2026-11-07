@@ -1,7 +1,7 @@
 // What the threads share. The sim thread writes whole snapshots into one of three slots and publishes
 // the slot index; the render thread reads the newest. Input flows the other way as a small block.
 
-export const MAX_CHARS = 38;
+export const MAX_CHARS = 40;
 export const MAX_JOINTS = 72;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;
