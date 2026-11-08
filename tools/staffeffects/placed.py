@@ -3,7 +3,7 @@ frame from the front. Depth is read off the mesh by cores.py."""
 PLACED = {
     "greenwood_staff": (-0.01, 0.375, 0.065), "crystal_staff": (0.0, 0.40, 0.09), "skullhorn_staff": (-0.05, 0.40, 0.06),
     "gnarled_crook": (-0.02, 0.48, 0.07), "dark_staff": (0.015, 0.45, 0.09), "death_staff": (0.0, 0.435, 0.075),
-    "earth_staff": (0.03, 0.32, 0.05), "fire_staff": (0.0, 0.365, 0.085), "ice_staff": (-0.005, 0.365, 0.09),
+    "earth_staff": (0.03, 0.32, 0.05), "fire_staff": (0.0, 0.365, 0.1), "ice_staff": (-0.005, 0.365, 0.09),
     "life_staff": (0.01, 0.405, 0.08), "vine_staff": (-0.01, 0.415, 0.10), "wind_staff": (0.0, 0.385, 0.10),
 
     "dawnspire_staff": (0.0, 0.395, 0.055), "nightflame_staff": (-0.01, 0.435, 0.055), "riptide_staff": (0.015, 0.44, 0.05),
@@ -32,11 +32,11 @@ PLACED = {
     "celestial_orrery": (0.0, 0.43, 0.07), "rimeheart_staff": (0.0, 0.465, 0.08), "moonlit_reliquary": (-0.005, 0.42, 0.085),
 
     "forest_charm": (0.0, 0.44, 0.055), "shroud_of_the_lich": (-0.035, 0.505, 0.07), "frostbanner_staff": (-0.03, 0.425, 0.06),
-    "oakroot_staff": (-0.02, 0.505, 0.07), "sapphire_staff": (-0.005, 0.495, 0.06), "lavaroot_staff": (-0.01, 0.45, 0.06),
+    "oakroot_staff": (-0.02, 0.505, 0.07), "sapphire_staff": (-0.005, 0.495, 0.06), "lavaroot_staff": (-0.01, 0.45, 0.075),
     "pale_crescent": (0.005, 0.53, 0.095), "mossgem_staff": (0.015, 0.535, 0.06), "cobalt_staff": (0.0, 0.52, 0.06),
     "ember_staff": (0.0, 0.49, 0.07), "twilight_staff": (0.0, 0.50, 0.09), "moonstone_staff": (-0.01, 0.51, 0.11),
 
-    "amethyst_staff": (0.0, 0.50, 0.06), "old_crook": (-0.05, 0.49, 0.045), "wayfinder_staff": (0.0, 0.47, 0.05),
+    "amethyst_staff": (0.0, 0.50, 0.06), "old_crook": (-0.05, 0.49, 0.045), "wayfinder_staff": (0.0, 0.47, 0.095),
     "driftwood_staff": (-0.015, 0.525, 0.065), "copper_sun_staff": (0.0, 0.44, 0.06), "vinewood_staff": (0.0, 0.49, 0.045),
     "ironcrystal_staff": (0.0, 0.515, 0.06), "stormwood_staff": (-0.01, 0.52, 0.085), "gilded_sun_staff": (0.0, 0.445, 0.06),
     "bonecrystal_staff": (0.0, 0.545, 0.06), "greenmoon_staff": (-0.005, 0.525, 0.06),

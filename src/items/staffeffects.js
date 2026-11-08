@@ -5,7 +5,7 @@ import { STAFF_GLOW } from './staffglow.js';
 
 export const FX = {
   ember: 0, magma: 1, frost: 2, aurora: 3, storm: 4, void: 5, eye: 6, heartbeat: 7, sap: 8, spores: 9,
-  sunflare: 10, moonphase: 11, starfield: 12, sand: 13, souls: 14, toxic: 15, prism: 16, phoenix: 17, runes: 18, wind: 19,
+  sunflare: 10, moonphase: 11, starfield: 12, sand: 13, souls: 14, toxic: 15, prism: 16, phoenix: 17, runes: 18, wind: 19, compass: 20,
 };
 
 const C = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -15,6 +15,7 @@ const SECOND = {
   ember: '#ffd27a', magma: '#ffe9a0', frost: '#f2faff', aurora: '#7affc8', storm: '#f4f8ff', void: '#ff6ae0', eye: '#fff0a0',
   heartbeat: '#ff9a8a', sap: '#ffb030', spores: '#dcff96', sunflare: '#fff6da', moonphase: '#ffffff', starfield: '#ffffff',
   sand: '#ffe9b0', souls: '#c8fff0', toxic: '#f2ff3a', prism: '#ffffff', phoenix: '#fff0a0', runes: '#ffffff', wind: '#eef6ff',
+  compass: '#ffffff',
 };
 
 // What a staff's shot makes of its light, unless the staff says otherwise below.
@@ -31,26 +32,26 @@ const FIRST = { toxic: '#9cf020', sap: '#e89a20' };
 const OWN = {
   // The first twelve.
   greenwood_staff: ['sap'], crystal_staff: ['frost'], skullhorn_staff: ['ember'], gnarled_crook: ['storm'],
-  death_staff: ['souls'], fire_staff: ['ember'], ice_staff: ['frost'], life_staff: ['spores'],
+  death_staff: ['souls'], fire_staff: ['phoenix', '#ff8a1c', '#ffe890'], ice_staff: ['frost'], life_staff: ['spores'],
   vine_staff: ['sap'], wind_staff: ['wind'],
   // The earth staff's stone is a yellow geode: amber, not lava.
   earth_staff: ['sap', '#ffa020', '#ffe080'],
   // Eyes look back.
   abyssal_eye: ['eye'], voidgaze_staff: ['eye'], eye_of_the_maelstrom: ['eye', null, '#ff3a6a'], umbral_eye: ['eye'],
   // Skies and stars.
-  galaxy_coil: ['starfield', '#6a5cff', '#ff9af0'], wayfinder_staff: ['runes', '#cfe0ff'], celestial_orrery: ['runes', '#a890ff', '#e0d4ff'],
-  moonstone_staff: ['moonphase', '#dfe8ff'], twilight_staff: ['starfield', '#7a40ff'], nightflame_staff: ['ember', '#a040ff', '#e8b8ff'],
+  galaxy_coil: ['starfield', '#6a5cff', '#ff9af0'], wayfinder_staff: ['compass', '#ffc860', '#ffe4a8'], celestial_orrery: ['runes', '#a890ff', '#e0d4ff'],
+  moonstone_staff: ['heartbeat', '#c8d8ff', '#f0e4ff'], twilight_staff: ['starfield', '#7a40ff'], nightflame_staff: ['ember', '#a040ff', '#e8b8ff'],
   // Water and wind.
   riptide_staff: ['aurora', '#30c8ff', '#a0fff0'], whisper_spiral: ['wind', '#b070ff'], stormwood_staff: ['storm', '#4a9cff'],
   // Ice that's more northern sky than ice.
-  glacier_spire: ['aurora'], icecrown_staff: ['aurora'], frostbanner_staff: ['aurora', '#5ab8ff'], cobalt_staff: ['frost'],
+  glacier_spire: ['frost', null, '#f4feff'], icecrown_staff: ['frost', null, '#f4feff'], frostbanner_staff: ['aurora', '#5ab8ff'], cobalt_staff: ['frost'],
   driftwood_staff: ['frost'], sapphire_staff: ['frost', '#3a9cff'], frostwheel_staff: ['frost'], icefall_staff: ['frost'],
   shardstorm_staff: ['storm', '#7ab8ff'],
   // Hearts beat.
   dragonheart_staff: ['heartbeat', '#ff4a12', '#ffd070'], emerald_thornheart: ['heartbeat', '#3aff6a', '#d0ffb0'],
   verdant_heart: ['heartbeat', '#b0ff40', '#f0ffb0'], mossheart_staff: ['sap'],
   // Fire of the earth.
-  lavaroot_staff: ['magma'], magma_heart: ['magma'], emberheart_staff: ['phoenix', '#ff5a10'], ember_staff: ['phoenix', '#ff6a10'],
+  lavaroot_staff: ['ember', '#ff6a10', '#ffd040'], magma_heart: ['magma'], emberheart_staff: ['phoenix', '#ff5a10'], ember_staff: ['phoenix', '#ff6a10'],
   // The holy suns write.
   angels_dawn: ['runes', '#ffb838', '#ffe070'], sunpillar_staff: ['runes', '#ffd27a', '#ffe8b0'],
   // The dead.
@@ -62,7 +63,7 @@ const OWN = {
   // Round 3: ten suns that looked alike, a green and a purple crowd. Each sun its own light; the greens and violets spread.
   dawnwheel_staff: ['sunflare', '#ff8a60', '#ffd0e0'], sunwheel_staff: ['runes', '#ffb020', '#ffe070'],
   gilded_sun_staff: ['heartbeat', '#ffb000', '#fff0a0'], sunrod: ['ember', '#ffc030', '#fff0b0'],
-  sunbanner_staff: ['phoenix', '#ffa818', '#ffe8a0'], dawnspire_staff: ['prism', '#ffd0a0'], sunspoke_staff: ['sunflare', null, '#ffe8a0'],
+  sunbanner_staff: ['sunflare', '#ff9a20', '#ffd890'], dawnspire_staff: ['prism', '#ffd0a0'], sunspoke_staff: ['sunflare', null, '#ffe8a0'],
   seraphs_coil: ['phoenix', '#ffd070', '#fff0c0'],
   druids_reliquary: ['spores', '#ffd860', '#fff0a0'], wildcage_staff: ['spores', '#40ffd0', '#c8fff0'],
   verdant_oath: ['spores', '#c8ff60', '#f0ffc0'], dark_staff: ['void', '#a040ff', '#ff80f0'],
