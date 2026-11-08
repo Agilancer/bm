@@ -4,6 +4,7 @@
 import { SKINS, rollPattern, rollSkin } from './skins.js';
 import { INPUT, WEAPONS } from '../core/layout.js';
 import { SPELLS } from '../sim/spells.js';
+import { STAFFS2 } from './staffs2.js';
 
 export const RARITIES = [
   { name: 'Common', color: '#a8a8a8', weight: 60, affixes: [0, 0], quality: [0.92, 1.0], sockets: { 0: 80, 1: 20 } },
@@ -45,6 +46,35 @@ export const BASES = {
   thornvine_sword: { name: 'Thornvine Sword', dmg: [20, 32], grade: 'retired', innate: { poise: 0.15 } },
   frost_sword: { name: 'Frost Sword', dmg: [21, 29], grade: 'retired', innate: { speed: 0.06 } },
 };
+// What each kind of shot does, in a line, for the staffs that fire it (src/sim/casting.js STAFF_SHOTS).
+export const SHOT_NOTE = {
+  sunburst: 'A mote of sun that bursts in a pillar of light, and rays leap from it to the foes nearest.',
+  crescent: 'A spinning crescent moon that cuts through all in its path, then turns and comes back to your hand.',
+  stasis: 'Opens a sphere where time stops: all inside hang frozen, and every hurt they took falls on them at once when it ends.',
+  judgement: 'Marks the ground where you look, and a sword of light falls on it: all near are struck and left reeling.',
+  singularity: 'A slow black star that drags all it passes into its wake, then collapses on them.',
+  prism: 'A shard of crystal that splits on what it strikes into three beams that run on through.',
+  leech: 'A drop of blood that bursts in threads, fastening on the foes about it and drinking their life into yours.',
+  wyrm: 'A serpent of fire that weaves its way to the nearest foe and leaves the ground burning.',
+  phoenix: 'A firebird that flies through all in its way and bursts in a ring of flame. It mends you as it dies.',
+  tesla: 'A spark that sticks where it lands and lashes lightning into everyone near for three seconds.',
+  souls: 'Five wailing souls that each go hunting a foe of their own.',
+  thorns: 'A fan of five thorns that pierce, and leave what they hit bleeding sap.',
+  starfall: 'Marks the ground: a moment later stars rain down on the mark.',
+  vine: 'Vines seize nearby foes and drag them in.',
+  rime: 'Freezes what it strikes solid, and shards fly out from it.',
+  comet: 'A comet that bursts into a spray of embers, and they burn.',
+  bloom: 'A seed that bursts. Each foe it hurts sends a mote back to heal you.',
+  shade: 'A shade that hunts from foe to foe, and brings you back mana for each.',
+  frost: 'Three splinters of ice that slow what they strike.',
+};
+// What the 83 staffs hit for, by their rarity: the finer the look, the harder.
+const TIER_DMG = [[12, 18], [14, 20], [17, 24], [20, 28], [24, 33]];
+for (const s of STAFFS2) BASES[s.id] = { name: s.name, dmg: TIER_DMG[s.tier], grade: 'staff', tier: s.tier, shot: s.shot, note: SHOT_NOTE[s.shot] };
+// The first twelve fall in with them: the four plain ones as common, the elementals as uncommon.
+for (const id of ['greenwood_staff', 'crystal_staff', 'skullhorn_staff', 'gnarled_crook']) BASES[id].tier = 0;
+for (const id of ['dark_staff', 'death_staff', 'earth_staff', 'fire_staff', 'ice_staff', 'life_staff', 'vine_staff', 'wind_staff']) BASES[id].tier = 1;
+
 // What a staff's roll comes to in a bolt, against a blade's: see STAFF_BITE in src/sim/casting.js.
 const STAFF_SHOWN = 0.76;
 
@@ -221,8 +251,11 @@ function rollRarity(rng, min) {
 }
 
 function rollBase(rng, rarity) {
-  // Tessariel carries no blade: only the staffs are ever rolled. (rarity stays in the signature for the day there are better staffs.)
-  return pick(rng, Object.keys(BASES).filter((b) => BASES[b].grade === 'common'));
+  // Tessariel carries no blade: only the staffs are ever rolled, and a staff comes as fine as its rarity: a legendary roll is one
+  // of the legendary-looking staffs. (Mythical is for skulls; past legendary, the legendary ones.)
+  const tier = Math.min(rarity, 4);
+  const staffs = Object.keys(BASES).filter((b) => BASES[b].tier !== undefined && (BASES[b].grade === 'common' || BASES[b].grade === 'staff'));
+  return pick(rng, staffs.filter((b) => BASES[b].tier === tier));
 }
 
 function rollAffixes(rng, rarity, table = AFFIXES) {
