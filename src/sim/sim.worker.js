@@ -25,6 +25,7 @@ import { TOWN_KNIGHTS } from '../core/knights.js';
 import { Player } from './player.js';
 import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
+import { Slimes } from './slimes.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
@@ -65,6 +66,8 @@ class Sim {
     this.time = 0; this.tick = 0; this.timeScale = 1; this.stopT = 0; this.slowT = 0; this.gameState = 0; this.gameT = 0;
     this.firstBloodAt = -1; this.crabWoke = false;
     this.knights = [];
+    // The slimes out in the wet places; the spells look for them with the knights, as sim.foes.
+    this.slimes = new Slimes();
     this.villagers = [];
     this.nudgePosition = new Float32Array(3);
     this.scratch = new Float32Array(SNAP_FLOATS);
@@ -78,6 +81,12 @@ class Sim {
   }
 
   charOffset(i) { return CHARS_START + i * C_SIZE; }
+
+  // Whatever a spell can hit: the knights and the dead, and the slimes (src/sim/slimes.js). Made once a tick.
+  get foes() {
+    if (this.foesTick !== this.tick) { this.foesTick = this.tick; this.foesList = this.slimes.list.length ? this.knights.concat(this.slimes.list) : this.knights; }
+    return this.foesList;
+  }
 
   event(type, a = 0, b = 0, c = 0, d = 0, e = 0, f = 0, g = 0) {
     if (this.shared) {
@@ -164,12 +173,14 @@ class Sim {
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
+    if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) stepWoods(this);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
+    this.slimes.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     this.villagers.forEach((v, i) => v.write(snap, this.charOffset(this.knights.length + i)));
     if (this.opening) this.opening.write(snap, H);

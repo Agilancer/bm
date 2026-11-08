@@ -25,6 +25,7 @@ export class Pack {
     this.gold = 0; this.copper = 0;
     this.mats = {};      // what's in the satchel, by kind (items.js MATS)
     this.xp = 0; this.level = 1;
+    this.charms = [];    // the charm pouch: charm ids (src/ui/lands.js CHARMS)
   }
 
   // The entries an item would land on, at (x, y). Null if it would stick out of the grid.
@@ -86,7 +87,7 @@ export class Pack {
   }
 
   // What goes in a save. Items are plain data.
-  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, copper: this.copper, mats: this.mats, kite: true, elementals: true, aurora: true, xp: this.xp, level: this.level }); }
+  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, copper: this.copper, mats: this.mats, kite: true, elementals: true, aurora: true, xp: this.xp, level: this.level, charms: this.charms }); }
 
   // A saved pack back in hand, or with null, what a new game starts with.
   load(d) {
@@ -95,6 +96,7 @@ export class Pack {
     this.gold = d?.gold || 0; this.copper = d?.copper || 0;
     this.mats = { ...(d?.mats || {}) };
     this.xp = d?.xp || 0; this.level = d?.level || 1;
+    this.charms = [...(d?.charms || [])];
     if (!d) { this.startingKit(); return; }
     Object.assign(this.slots, d.slots);
     this.entries = d.entries;

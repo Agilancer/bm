@@ -3,6 +3,7 @@ import { CAVE_PATH, openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nea
 import { churchSite } from './church.js';
 import { oldChurchGround } from './town.js';
 import { inCaveBox } from './opening.js';
+import { landTrees, treeCode } from './lands.js';
 
 const LONG_PATHS = PATHS.filter((p) => p.pts.length >= 5);
 
@@ -40,23 +41,36 @@ export function forestAmount(x, z) {
   }
   // Out past the near woods it comes in stands, with the hillsides' grass between them.
   if (r > 240) a *= sstep(0.36, 0.5, fbm(x * 0.0072 + 20, z * 0.0072 - 8, 3)) * (1 - 0.35 * sstep(240, 420, r));
+  // And out in the countries, as thick as each one grows them (src/core/lands.js).
+  if (r > 1150 && a > 0) a = Math.min(1, a * landTrees(x, z));
   return a;
 }
 
 export const FOREST_REACH = 1040;
-const CELL = 10;
+export const CELL = 10;
 
-// (x, z, height, how wide, cos, sin), a tree to each six numbers. Out to reach, a square that far either way.
-export function forestTrees(reach = FOREST_REACH) {
-  const n = Math.floor(reach / CELL);
+// (x, z, height, how wide, cos, sin, tint), a tree to each seven numbers. Out to reach, a square that far either way round (cx, cz).
+// The tint is lands.js treeCode: 0 green, 1 rust, 2 snow-dusted, 3 dead.
+export const TREE_FLOATS = 7;
+export function forestTrees(reach = FOREST_REACH, cx = 0, cz = 0) {
+  const i0 = Math.floor((cx - reach) / CELL), i1 = Math.ceil((cx + reach) / CELL);
+  const j0 = Math.floor((cz - reach) / CELL), j1 = Math.ceil((cz + reach) / CELL);
+  return treesInCells(i0, i1, j0, j1);
+}
+
+// The trees in the cells [i0, i1) x [j0, j1): the same trees whichever square they're asked for in.
+export function treesInCells(i0, i1, j0, j1) {
   const out = [];
-  for (let j = -n; j < n; j++) {
-    for (let i = -n; i < n; i++) {
+  for (let j = j0; j < j1; j++) {
+    for (let i = i0; i < i1; i++) {
       const pick = hash2(i * 3 + 1, j * 5 + 2);
       const x = (i + 0.5 + (hash2(i + 91, j - 17) - 0.5) * 0.8) * CELL, z = (j + 0.5 + (hash2(i - 37, j + 53) - 0.5) * 0.8) * CELL;
       if (pick > forestAmount(x, z)) continue;
       const h = 21 + 15 * hash2(i - 11, j + 29) ** 1.3, a = hash2(i + 71, j + 11) * 6.2832;
-      out.push(x, z, h, 0.86 + 0.32 * hash2(i + 5, j + 131), Math.cos(a), Math.sin(a));
+      const code = Math.abs(x) > 1150 || Math.abs(z) > 1150 ? treeCode(x, z) : 0;
+      // (Dead wood stands lower and thinner; snow pines lower.)
+      const hk = code === 3 ? 0.62 : code === 2 ? 0.8 : 1;
+      out.push(x, z, h * hk, (0.86 + 0.32 * hash2(i + 5, j + 131)) * (code === 3 ? 0.7 : 1), Math.cos(a), Math.sin(a), code);
     }
   }
   return new Float32Array(out);

@@ -12,6 +12,7 @@
 import { churchAt, inChurch } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { QUESTS } from './lines/quests.js';
+import { SITES } from '../core/lands.js';
 
 export const RULES = {
   bed_and_bell: { steps: [{ talk: 'silas', say: 'Bram Kettle sent me.' }, { back: true, say: "I've been to see Silas." }], xp: 40 },
@@ -22,6 +23,14 @@ export const RULES = {
   pines: { steps: [{ kill: 'woods', n: 12 }, { back: true, say: 'Twelve of them. Down.' }], gold: 80, xp: 300 },
   toll_of_bell: { steps: [{ enter: 'bellcrypt', night: true }, { warden: true }, { back: true, say: "The bell's warden is put down." }], item: 'scroll', xp: 400 },
   letter: { steps: [{ talk: 'elowen', say: 'A letter from Cedric Ashby. Into your hand.' }, { back: true, say: "Elowen's answer." }], xp: 120 },
+  // Out past the town (src/folk/lines/beyond.js; the places are src/core/lands.js SITES). of: what must die (9 a jelly).
+  long_way_round: { steps: [{ enter: 'belltower' }, { talk: 'bellwright', say: 'Corran Thrale asks why the dead walk wide of your hill.' }, { back: true, say: 'The Bellwright says it is the bells.' }], gold: 90, xp: 400 },
+  millhaven_jelly: { steps: [{ kill: 'millhaven', n: 8, of: 9 }, { back: true, say: "Abel's millpond is clear." }], gold: 60, xp: 450 },
+  four_watches: { steps: [{ visit: ['abbey', 'chapel', 'shrine'] }, { back: true, say: 'All three seals woke.' }], charm: 'wingbell', charmName: 'the Wingbell', xp: 900 },
+  sallowmere: { steps: [{ kill: 'fen', n: 10, of: 9 }, { back: true, say: 'The east shore is clear.' }], gold: 90, xp: 600 },
+  black_road: { steps: [{ enter: 'keep' }, { back: true, say: 'I saw the keep at the end of the west road.' }], gold: 200, xp: 900 },
+  crown_of_teeth: { needs: 'toll_of_bell', steps: [{ enter: 'crown' }, { back: true, say: "I've been to the top of the Sorrowhorn." }], item: 'scroll', gold: 150, xp: 1200 },
+  barrow_lights: { steps: [{ enter: 'barrows', night: true }, { kill: 'barrows', n: 6, of: 9 }, { back: true, say: 'The lights were jellies. Full of bones.' }], gold: 140, xp: 700 },
 };
 
 // The Bell Crypt: the octagon where the stair down lets out (tools/interior/build_interior.py, Stage I), in the world.
@@ -34,6 +43,11 @@ const AREAS = {
   woods: (x, y, z) => y > -3 && !inTown(x, z, 10) && !inChurch(x, y + 1, z),
   bellcrypt: inCrypt,
 };
+// Out past the town: within reach of a named place (src/core/lands.js SITES), its radius stretched by s.
+const near = (k, s = 1) => (x, y, z) => Math.hypot(x - SITES[k].x, z - SITES[k].z) < SITES[k].r * s;
+for (const k of ['belltower', 'abbey', 'chapel', 'shrine', 'keep', 'crown', 'barrows']) AREAS[k] = near(k, k === 'keep' ? 1.6 : 1.2);
+AREAS.millhaven = (x, y, z) => ['farm', 'mill', 'hamlet'].some((k) => near(k, 3)(x, y, z));
+AREAS.fen = (x, y, z) => Math.hypot(x - SITES.sallow.x, z - SITES.sallow.z) < 1500;
 
 // What of a list of lines can be said now. A line is a string (said any time), or a line kept for before or after something:
 //   { before: 'toll_of_bell', say }   until that quest is done (the bell still ringing)
@@ -114,7 +128,8 @@ export class QuestBook {
     const line = text.journal[Math.min(s.step, text.journal.length - 1)];
     // (The way in, for work that's down among the dead and given before Silas has handed over his key.)
     const hint = s.step === 0 ? sayable([text.hint], this.flags)[0] : null;
-    return `${step.kill ? `${line} (${s.n} of ${step.n})` : line}${hint ? ` ${hint}` : ''}`;
+    const count = step.kill ? ` (${s.n} of ${step.n})` : step.visit ? ` (${(s.seen || []).length} of ${step.visit.length})` : '';
+    return `${line}${count}${hint ? ` ${hint}` : ''}`;
   }
 
   // ---- what the world reports ----
@@ -125,7 +140,7 @@ export class QuestBook {
       const st = this.step(id);
       if (!st) continue;
       if (st.warden && kind === 8 && inCrypt(x, y, z)) { this.on.toast('The warden is down. Somewhere above, a rope goes slack.', 'step'); this.advance(id); continue; }
-      if (!st.kill || !AREAS[st.kill](x, y, z) || kind === 2) continue;
+      if (!st.kill || !AREAS[st.kill](x, y, z) || kind === 2 || (st.of != null && kind !== st.of)) continue;
       const s = this.q[id];
       s.n++;
       if (s.n >= st.n) this.advance(id);
@@ -142,9 +157,18 @@ export class QuestBook {
     }
     for (const id of this.active()) {
       const st = this.step(id);
+      // visit: every one of a list of places, in any order.
+      if (st?.visit) {
+        const s = this.q[id], k = st.visit.find((v) => !(s.seen || []).includes(v) && AREAS[v](x, y, z));
+        if (!k) continue;
+        (s.seen = s.seen || []).push(k);
+        if (s.seen.length >= st.visit.length) this.advance(id);
+        else { this.on.toast(`${QUESTS[id].title}: ${s.seen.length} of ${st.visit.length}`, 'count'); this.on.change(); }
+        continue;
+      }
       if (!st?.enter || !AREAS[st.enter](x, y, z)) continue;
       if (st.night && !isNight(hour)) {
-        if (!this.toldDay) { this.toldDay = true; this.on.toast('The crypt is still. Whatever keeps the bell keeps its hours: come back at night.', 'hint'); }
+        if (!this.toldDay) { this.toldDay = true; this.on.toast(QUESTS[id].dayHint || 'The crypt is still. Whatever keeps the bell keeps its hours: come back at night.', 'hint'); }
         continue;
       }
       this.toldDay = false;

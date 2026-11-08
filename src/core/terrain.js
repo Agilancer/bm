@@ -2,36 +2,13 @@
 // draws it. Flat where the village stands, rolling meadow beyond, big hills at the horizon.
 
 import { CAVE_MOUTH, CAVE_OUT, LEDGE, LEDGE_Y } from './opening.js';
+import { fbm, hash2, sstep } from './terrain-noise.js';
+import { WORLD_EDGE, landHeight, setLandBase } from './lands.js';
 import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
 import { OLD_CHURCH_GROUND, oldChurchGround } from './town.js';
 
 export let openingTerrain = false;
 export function setOpeningTerrain(enabled) { openingTerrain = !!enabled; }
-
-function hash2(x, y) {
-  let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-function vnoise(x, y) {
-  const xi = Math.floor(x), yi = Math.floor(y);
-  const fx = x - xi, fy = y - yi;
-  const u = fx * fx * fx * (fx * (fx * 6 - 15) + 10), v = fy * fy * fy * (fy * (fy * 6 - 15) + 10);
-  const a = hash2(xi, yi), b = hash2(xi + 1, yi), c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
-  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
-}
-
-function fbm(x, y, oct) {
-  let s = 0, a = 0.5;
-  for (let i = 0; i < oct; i++) {
-    s += a * vnoise(x, y);
-    x = x * 2.03 + 11.7; y = y * 2.03 - 4.3; a *= 0.5;
-  }
-  return s;
-}
-
-const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // (x, z, half x, half z), and the height they're all brought to, a little under a house's floor. The four round the square need none.
 const PLOT_Y = 0.1;
@@ -122,8 +99,10 @@ export function nearest(road, x, z) {
   return NEAR;
 }
 
+setLandBase(wild);
+
 export function terrainHeight(x, z) {
-  let level = wild(x, z);
+  let level = landHeight(x, z, wild(x, z));
   // The hill's top levelled, and its roads cut and banked into it, on over that.
   if (x < -20) {
     const top = Math.hypot(x - SUMMIT.x, z - SUMMIT.z);
@@ -158,7 +137,7 @@ export function terrainHeight(x, z) {
 }
 
 // How far you can go, either way along x and z. An unseen wall stands here. (Only so much of it is worked out for the things that hunt you: NAV_EDGE, in src/sim/world.js.)
-export const LAND_EDGE = 600;
+export const LAND_EDGE = WORLD_EDGE;
 
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.
 // (The worn way off Lisandra's ledge, down onto the road.)

@@ -141,13 +141,23 @@ const PINE = STATIC
   let w = pIn.xz * spin.z * at.w;
   var p = vec3f(w.x * spin.x - w.y * spin.y, pIn.y * at.w, w.x * spin.y + w.y * spin.x) + at.xyz;
   let nw = vec3f(n.x * spin.x - n.z * spin.y, n.y, n.x * spin.y + n.z * spin.x);
-  o.tone = spin.w * 1.8 * mix(0.5, 1.05, clamp(pIn.y * 1.5, 0.0, 1.0)) * mix(0.62, 1.1, clamp(length(pIn.xz) / max(0.012, 0.22 * (1.0 - pIn.y)), 0.0, 1.0));`)
+  // (spin.w: how dark, plus ten times the country's tint, src/core/lands.js treeCode. Handed on as a hundred times the tint plus the tone.)
+  let tcode = floor(spin.w / 10.0);
+  o.tone = tcode * 100.0 + (spin.w - tcode * 10.0) * 1.8 * mix(0.5, 1.05, clamp(pIn.y * 1.5, 0.0, 1.0)) * mix(0.62, 1.1, clamp(length(pIn.xz) / max(0.012, 0.22 * (1.0 - pIn.y)), 0.0, 1.0));`)
   // Each tree its own bark and needles, of the five, from where it stands.
   .replace('o.p = p; o.n = n; o.uv = uv; o.layer = layer;', `o.p = p; o.n = nw; o.uv = uv; o.layer = layer;
   let which = u32(fract(sin(dot(at.xz, vec2f(12.9898, 78.233))) * 43758.5453) * 5.0);
   if (which > 0u && layer == PINE_LAYERu) { o.layer = PINE_2u + which - 1u; }
   if (which > 0u && layer == BARK_LAYERu) { o.layer = BARK_2u + which - 1u; }`)
-  .replace('albedo = tex.rgb;\n    rough = det.b;', 'albedo = tex.rgb * in.tone;\n    rough = det.b;')
+  // Rust: the needles turned the red-brown of a dying larch. Snow: white along the top of every bough. Dead: grey and bare-looking.
+  .replace('albedo = tex.rgb;\n    rough = det.b;', `let tcode = floor(in.tone / 100.0);
+    albedo = tex.rgb * (in.tone - tcode * 100.0);
+    let needle = params.x > 0.0;
+    let lum = dot(albedo, vec3f(0.3, 0.6, 0.1));
+    if (tcode == 1.0 && needle) { albedo = vec3f(lum) * vec3f(2.3, 1.05, 0.42); }
+    if (tcode == 2.0 && needle) { albedo = mix(albedo * 0.8, vec3f(0.78, 0.82, 0.88) * (0.75 + lum), smoothstep(0.55, 0.95, n0.y) * 0.7); }
+    if (tcode == 3.0) { albedo = vec3f(lum) * select(vec3f(0.95, 0.9, 0.85), vec3f(0.7, 0.66, 0.6), needle); }
+    rough = det.b;`)
   // (The smaller a painting's copy, the more its needles have faded into the gaps between them. Kept, the trees stay as thick from far off.)
   .replace('if (params.x > 0.0 && tex.a < 0.5) { discard; }', 'if (tex.a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }');
 
@@ -174,6 +184,14 @@ export class Pines {
     this.IB = makeBuffer(device, idx, GPUBufferUsage.INDEX);
     this.lods = lods;
     r.stats.pineTris = [lods[0].count / 3, lods[1].count / 3, lods[2].count / 3];
+    // On a phone the near mesh goes, and the far ones stop at where the haze has them anyway.
+    this.near = NEAR; this.mid = MID; this.far = tier.lean ? 420 : 1e9;
+    this.setTrees(trees);
+  }
+
+  // A new set of trees (src/gfx/renderer.js followLand): sorted into chunks again, the lists made big enough.
+  setTrees(trees) {
+    const { device } = this.r;
     // Sorted into chunks, so a chunk's trees are one run to copy.
     const n = trees.length / FLOATS;
     const byChunk = new Map();
@@ -191,8 +209,7 @@ export class Pines {
       for (const i of list) { this.data.set(trees.subarray(i * FLOATS, (i + 1) * FLOATS), o * FLOATS); o++; }
       this.chunks.push({ x: (cx + 0.5) * CHUNK, z: (cz + 0.5) * CHUNK, a: start * FLOATS, b: o * FLOATS, n: list.length });
     }
-    // On a phone the near mesh goes, and the far ones stop at where the haze has them anyway.
-    this.near = NEAR; this.mid = MID; this.far = tier.lean ? 420 : 1e9;
+    for (const L of this.lists || []) L.buf.destroy();
     this.lists = [64, 2048, n].map((max, i) => {
       const cap = Math.min(max * 4, n);
       return { buf: device.createBuffer({ size: Math.max(1, cap) * FLOATS * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }), cpu: new Float32Array(cap * FLOATS), cap, count: 0, lod: i };

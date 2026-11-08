@@ -6,13 +6,20 @@ import { LINES as LA } from '../folk/lines/town_a.js';
 import { LINES as LB } from '../folk/lines/town_b.js';
 import { LINES as LC } from '../folk/lines/town_c.js';
 import { QUESTS } from '../folk/lines/quests.js';
+import { BEYOND, LINES as LBEY } from '../folk/lines/beyond.js';
+import { TOWN_KNIGHTS } from '../core/knights.js';
 import { QuestBook, RULES, sayable } from '../folk/quests.js';
 import { CRAFTS, GOODS, MAX_EMBERS, TRADES, matsText, offerFor, priceText, rollStock, worth } from '../folk/shops.js';
 import { DAYS, partOfDay } from '../folk/days.js';
 import { MATS, colorOf, makeRng, matName, nameOf } from '../items/items.js';
 import { SPELLS } from '../sim/spells.js';
 
-const LINES = { ...LA, ...LB, ...LC };
+const LINES = { ...LA, ...LB, ...LC, ...LBEY };
+// Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
+const BEYOND_AT = Object.fromEntries(BEYOND.map((b) => {
+  const k = TOWN_KNIGHTS.find((t) => t[b.id]), r = k.route;
+  return [b.id, { x: r.reduce((s, p) => s + p[0], 0) / r.length, z: r.reduce((s, p) => s + p[1], 0) / r.length }];
+}));
 const ACT = { SLEEP: 2, WORK: 4, SHOP: 5, FLEE: 12, HIDE: 13 };
 const REACH = 2.3;
 // A keeper behind a stall's counter is further than that from anyone in front of it: the counter's 1.2 m deep, and they stand back of it.
@@ -113,7 +120,7 @@ export class TownUI {
   //      opened(), closed(), player(), saved() } }
   constructor(o) {
     Object.assign(this, o);
-    this.people = PEOPLE;
+    this.people = PEOPLE.concat(BEYOND);   // the town's, then those out past it (no body in the town's worker)
     this.balloons = new Map();
     this.with = -1; this.open = false; this.book = false;
     this.met = new Set();
@@ -146,6 +153,12 @@ export class TownUI {
   }
 
   person(i) { return this.people[i]; }
+  // Where someone stands: the town's worker's word, or (out past the town) the beat they keep.
+  whereOf(i) {
+    if (i < PEOPLE.length) return this.renderer.folk?.where(i);
+    const at = BEYOND_AT[this.people[i]?.id];
+    return at ? { ...at, busy: 0, sleep: false, house: -1, beyond: true } : null;
+  }
   lines(i) { return LINES[this.people[i].id] || {}; }
   fill(t) { return String(t).replaceAll('{name}', this.name || 'stranger'); }
   // The lines of a list that can be said now: before or after a quest, once you've met someone (src/folk/quests.js sayable).
@@ -236,11 +249,12 @@ export class TownUI {
     let best = null, bs = Infinity;
     const fx = Math.sin(yaw), fz = Math.cos(yaw);
     for (let i = 0; i < this.people.length; i++) {
-      const w = folk.where(i);
-      if (!w || Math.abs(w.y - py) > 1.3) continue;
+      const w = this.whereOf(i);
+      if (!w || (!w.beyond && Math.abs(w.y - py) > 1.3)) continue;
       const dx = w.x - px, dz = w.z - pz, d = Math.hypot(dx, dz);
       const keeper = w.busy === ACT.SHOP;
-      if (d > (keeper ? STALL_REACH : REACH)) continue;
+      // (Out past the town they walk a short beat, so the reach is the beat's.)
+      if (d > (w.beyond ? 4.2 : keeper ? STALL_REACH : REACH)) continue;
       const ahead = d < 0.01 ? 1 : (dx * fx + dz * fz) / d;
       if (ahead < (keeper && d > REACH ? 0.8 : 0.45) && d > 1.1) continue;
       const score = (keeper ? d * REACH / STALL_REACH : d) * (1.6 - ahead);
@@ -255,10 +269,10 @@ export class TownUI {
   // ---- a word with someone ----
 
   talk(i) {
-    const w = this.renderer.folk.where(i);
+    const w = this.whereOf(i);
     if (!w) return;
     this.with = i; this.open = true;
-    this.town.talkTo(i);
+    if (!w.beyond) this.town.talkTo(i);
     this.balloons.get(i)?.el.remove(); this.balloons.delete(i);
     this.act.opened();
     document.body.classList.add('folk-talking');
@@ -424,8 +438,8 @@ export class TownUI {
   doneLines(qid, k) {
     const q = QUESTS[qid], line = q.done[k];
     const [who, text] = Array.isArray(line) ? line : [q.giver, line];
-    const paper = qid === 'toll_of_bell' && k === q.done.length - 1 ? q.page : null;
-    if (paper) this.keep('From the cathedral\'s register', paper);
+    const paper = q.page && k === q.done.length - 1 ? q.page : null;
+    if (paper) this.keep(qid === 'toll_of_bell' ? "From the cathedral's register" : `${q.title}: Orrin's page`, paper);
     if (k < q.done.length - 1) this.show(text, who, [{ label: 'Go on.', run: () => this.doneLines(qid, k + 1) }], paper);
     else this.show(text, who, this.root(), paper);
   }
@@ -440,6 +454,7 @@ export class TownUI {
     if (R.item === 'skull') item = CRAFTS.skull.make(rng, 2);
     else if (R.item === 'staff') item = CRAFTS.staff.make(rng, 2);
     else if (R.item === 'robe') item = CRAFTS.robe.make(rng, 2);
+    else if (R.charm) { if (this.act.charm?.(R.charm)) this.note(`Received: ${R.charmName || 'a charm'}. (I: your pack.)`, 'quest'); }
     else if (R.item === 'scroll') {
       const left = SPELLS.map((_, i) => i).filter((i) => !this.spellbar.known.has(i));
       if (left.length) { const sp = left[Math.floor(rng() * left.length)]; this.spellbar.learn(sp); this.note(`You learn ${SPELLS[sp].name}. B to set your spells.`, 'quest'); } else { this.pack.gold += 120; this.note('120 gold', 'mat'); }

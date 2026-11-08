@@ -358,7 +358,7 @@ export function rollLoot(rng, kind) {
   if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollSkull(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 }), ...robe(0.6, { minRarity: 2 }), rollSpell(rng), gold(120, 240)];
   if (kind === 1) return [rng() < 0.5 ? rollWeapon(rng, { minRarity: 1 }) : rollSkull(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...robe(0.4, { minRarity: 1 }), gold(40, 90)];
   // The rank and file: mostly a few coins, and every so often something to look at.
-  if (kind === 5) {
+  if (kind === 5 || kind === 9) {
     const out = rng() < 0.55 ? [gold(2, 12)] : [];
     if (rng() < 0.11) { const r = rng(); out.push(r < 0.2 ? rollWeapon(rng) : r < 0.4 ? rollSkull(rng) : r < 0.55 ? rollShield(rng) : r < 0.75 ? rollGem(rng) : rollRobe(rng)); }
     return out;

@@ -4,6 +4,9 @@ import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
+import { WORLD_EDGE } from '../core/lands.js';
+import { buildSites } from '../core/sites.js';
+import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/church.js';
 import { loadOpeningStage } from './opening.js';
@@ -70,11 +73,15 @@ const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCA
 const SHIELD_SOCKET = [0.99692, -0.01765, 0.07643, 0.00000, 0.00000, 0.97437, 0.22495, 0.00000, -0.07844, -0.22426, 0.97137, 0.00000, 0.05418, -0.29743, -0.51052, 1.00000];
 // A shield on the socket, as the owner's outline has it: this wide and its top this high, its inner face to the eye and on the back of the arm. SHIELD_FACE: which way its inner face looks in its own model.
 const SHIELD_WIDTH = 0.675, SHIELD_TOP = 0.4932, SHIELD_FACE = 1, SHIELD_PLANE = -0.018, SHIELD_ARM_Y = 0.107;
-const FAR_HALF = 1024;       // What the coarse map of the land covers, either way.
+const FAR_HALF = WORLD_EDGE + 32;   // What the coarse map of the land covers, either way: all of it (src/core/lands.js).
+// Out past this from where the land's grid and the pines were last laid, they're laid again round you (followLand).
+const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
-const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104 };
+const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, lake: 110, falls: 111, ice: 112, seal: 113 };
+// A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
+const TINTS = { dark: 1, pale: 2, frost: 3 };
 const MAX_GROUND = 160;
 
 const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y * l, z * l]; };
@@ -139,7 +146,7 @@ export class Renderer {
     this.flash = 0;
     // Mid-afternoon going gold, over the shoulder as you come up the road, so plate and faces read.
     this.hour = DAWN_HOUR;
-    this.farSize = gpu.tier.lean ? 512 : 1024;
+    this.farSize = gpu.tier.lean ? 1024 : 2048;
     this.sunDir = norm3(-0.78, 0.5, 0.38);
     this.splits = gpu.tier.splits || [12, 38, 130];
     this.shadowFrame = 0;
@@ -196,10 +203,17 @@ export class Renderer {
     // the wing over its stair (src/core/church.js).
     const cell = tier.lean ? 4 : 2;
     const patches = [{ x0: -614, x1: -90, z0: -44, z1: 344, cell }, { ...CHURCH_PATCH, cell, hole: LAND_HOLE }];
-    const [terrain, forest, ...rest] = await Promise.all([pool.run('terrain', { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patches }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH }), ...farJobs, ...groundJobs]);
+    this.terrainArgs = { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patches };
+    this.landAt = [0, 0]; this.landBusy = false;
+    const [terrain, forest, ...rest] = await Promise.all([pool.run('terrain', this.terrainArgs), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH }), ...farJobs, ...groundJobs]);
     const farRows = rest.slice(0, farJobs.length), rows = rest.slice(farJobs.length);
     this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    for (const row of farRows) device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, row.data.length / 4 / this.farSize]);
+    this.farTint = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    for (const row of farRows) {
+      const rowsN = row.data.length / 4 / this.farSize;
+      device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
+      device.queue.writeTexture({ texture: this.farTint, origin: [0, row.rowStart] }, row.tint, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
+    }
     tick();
     this.groundMap = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.heightTex = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'r32float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
@@ -231,6 +245,7 @@ export class Renderer {
     this.buildBaseLayouts();
     this.buildStatics(await loadModel(0), layerNames, manifest.layers, village.trees);
     this.pines = new Pines(this, forest.trees, layerNames);
+    this.slimeBodies = new SlimeBodies(this);
     this.interior = await loadInterior(this, base, pool, tier);
     tick();
     this.chars = [
@@ -373,6 +388,7 @@ export class Renderer {
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 1, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 2, visibility: VF, texture: { sampleType: 'float' } },
+      { binding: 3, visibility: VF, texture: { sampleType: 'float' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -400,9 +416,32 @@ export class Renderer {
       { binding: 0, resource: this.groundColor.createView({ dimension: '2d-array' }) },
       { binding: 1, resource: this.groundDetail.createView({ dimension: '2d-array' }) },
       { binding: 2, resource: this.farMap.createView() },
+      { binding: 3, resource: this.farTint.createView() },
     ] });
     this.skinModule = device.createShaderModule({ code: SKIN });
     this.skinPipeline = device.createComputePipeline({ layout: device.createPipelineLayout({ bindGroupLayouts: [this.bglSkin] }), compute: { module: this.skinModule, entryPoint: 'main' } });
+  }
+
+  // Out in the countries the land's grid and the pines are laid again round you, a few hundred metres at a time, in the pool's
+  // threads; the old ones are drawn till the new are ready. Near the town both stay as they were laid at the start.
+  followLand(cam) {
+    const pool = this.landPool || this.pool;
+    if (this.landBusy || !pool) return;
+    const near = Math.abs(cam.x) < 700 && Math.abs(cam.z) < 700;
+    const cx = near ? 0 : Math.round(cam.x / 128) * 128, cz = near ? 0 : Math.round(cam.z / 128) * 128;
+    if (cx === this.landAt[0] && cz === this.landAt[1]) return;
+    if (!near && Math.hypot(cam.x - this.landAt[0], cam.z - this.landAt[1]) < FOLLOW_AT) return;
+    this.landBusy = true;
+    Promise.all([pool.run('terrain', { ...this.terrainArgs, cx, cz }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH, cx, cz })]).then(([terrain, forest]) => {
+      const old = [this.terrainVB, this.terrainIB];
+      this.terrainVB = makeBuffer(this.device, terrain.verts, GPUBufferUsage.VERTEX);
+      this.terrainIB = makeBuffer(this.device, terrain.idx, GPUBufferUsage.INDEX);
+      this.terrainCount = terrain.idx.length;
+      this.pines.setTrees(forest.trees);
+      this.landAt = [cx, cz];
+      // (Gone once this frame's work that drew them is done: nothing new is recorded with them.)
+      setTimeout(() => { for (const b of old) b.destroy(); }, 500);
+    }).catch((e) => console.warn('followLand', e)).finally(() => { this.landBusy = false; });
   }
 
   buildStatics(glb, layerNames, layers, oaks) {
@@ -418,6 +457,14 @@ export class Renderer {
         const cutout = layer < 100 && layers[layer].cutout;
         prims.push({ layer, cutout, pos: accessor(glb, pr.attributes.POSITION), nrm: accessor(glb, pr.attributes.NORMAL), uv: accessor(glb, pr.attributes.TEXCOORD_0), idx: accessor(glb, pr.indices) });
       }
+    }
+    // And everything out in the countries.
+    for (const [name, part] of buildSites().parts) {
+      const m = /^(dark|pale|frost):(.*)$/.exec(name), base = m ? m[2] : name;
+      let layer = layerNames.indexOf(base);
+      if (layer < 0) layer = FLAT[base] ?? 100;
+      const cutout = layer < 100 && layers[layer].cutout;
+      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });
     }
     prims.sort((a, b) => a.cutout - b.cutout);
     let nv = 0, ni = 0;
@@ -1237,7 +1284,7 @@ export class Renderer {
     const layout = (...g) => device.createPipelineLayout({ bindGroupLayouts: g });
     const module = (code) => this.shader(code);
 
-    const terrainMod = module(TERRAIN);
+    const terrainMod = module(TERRAIN.replaceAll('FAR_SPAN', (2 * FAR_HALF).toFixed(1)));
     this.pTerrain = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArr2),
       vertex: { module: terrainMod, entryPoint: 'vs', buffers: [{ arrayStride: 24, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }] }] },
@@ -1742,6 +1789,8 @@ export class Renderer {
     const n = this.tier.cascades;
     const tan = Math.tan(fov / 2);
     const sun = this.sunDir;
+    this.followLand(cam);
+    this.slimeBodies?.update(snap, snap[H.TIME], cam);
     this.pines.update(cam, aspect, tan);
     let prev = 0.1;
     // The far cascade is drawn less often, and keeps the matrix it was drawn with until the next.
@@ -2244,6 +2293,7 @@ export class Renderer {
       // (The cathedral's shell shades the green. What's under the ground has no sun to shade.)
       if (this.camNow.y > -6) this.pines.drawShadow(sp, c, c === tier.cascades - 1, this.shCutBG);
       sp.setPipeline(this.pShStatic);
+      if (c < 2) this.slimeBodies?.draw(sp);
       sp.setVertexBuffer(0, this.interior.tiles.VB);
       sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
       sp.drawIndexed(this.interior.tiles.cath);
@@ -2427,6 +2477,7 @@ export class Renderer {
       mp.setPipeline(this.pStaticCut);
       mp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
     }
+    if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     this.pines.draw(mp);
     // Grass before the ground it stands on: its shader is next to nothing, and the ground's is the costliest there is.
     if (this.grassOn) {

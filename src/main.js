@@ -29,7 +29,8 @@ import { SpellSound } from './spellsound.js';
 import { TownClient } from './folk/client.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
-import { matName } from './items/items.js';
+import { matName, RARITIES } from './items/items.js';
+import { Lands } from './ui/lands.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -261,6 +262,8 @@ async function boot(plan, poolSize) {
     // need many rollouts to read, and they never slowed the frame on a PC.
     if (gpu.mobile) pool.startPlanners(buffer, 2, 80, 2);
     else pool.startPlanners(buffer, 4, 40);
+    // (The planners keep their threads for good, so the land laid again round you out in the countries has one of its own.)
+    renderer.landPool = renderer.landPool || new Pool(1);
   }
 
   // ---- the render thread's loop --------------------------------------------------------------------------------------
@@ -281,6 +284,8 @@ async function boot(plan, poolSize) {
   const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
   const arm = () => {
     writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots), levelPerks(pack.level));
+    // (GOD MODE, from the skull: everything dies at one blow.)
+    if (game.lands?.cheats.god) for (const k of [INPUT.POWER, INPUT.W_MIN, INPUT.W_MAX]) shared.input[k] *= 1000;
     // (Bare hands: the gauntlet code is still in the renderer, nothing asks for it.)
     renderer.gauntlets = null;
     const off = pack.slots.off, skull = pack.slots.skull;
@@ -347,10 +352,48 @@ async function boot(plan, poolSize) {
       saved: () => autosave(),
       canMenu: () => input.enabled && !input.menu && !state.paused && !naming,
       click: () => title.chime?.(),
+      // A charm for a quest (src/ui/lands.js), into the pouch.
+      charm: (k) => !!game.lands?.addCharm(k, true),
     },
   });
   game.townUI = townUI;
   addPart('folk', { save: () => townUI.save(), load: (d) => townUI.load(d) });
+  // Out past the town: the seals, the charms, the countries' sounds, and Velscour's Skull (src/ui/lands.js).
+  const lands = new Lands({
+    shared, input, hud, audio, pack, worldMap,
+    cmd: (code, a = 0, b = 0, c = 0) => { shared.input[INPUT.ASPECT] = code; shared.input[INPUT.CMD_A] = a; shared.input[INPUT.CMD_B] = b; shared.input[INPUT.CMD_C] = c; shared.input[INPUT.CMD] += 1; },
+    snap: () => game.currentSnap(),
+    hour: () => renderer.hour,
+    opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
+    closed: () => { input.menu = false; resume(); },
+    canMenu: () => input.enabled && !input.menu && !naming,
+    arm: () => arm(),
+    level: (d) => {
+      pack.level = Math.max(1, Math.min(50, pack.level + d));
+      pack.xp = xpFor(pack.level);
+      arm();
+      return `Level ${pack.level}.`;
+    },
+    gear: (kind) => {
+      const rng = makeRng((Math.random() * 4294967296) >>> 0);
+      const tiers = kind === 'god' ? [3, 4, 5] : [0, 1, 2];
+      const items = [];
+      for (const r of tiers) {
+        items.push(rollSkull(rng, { rarity: r }), rollWeapon(rng, { rarity: Math.min(r, 4) }), rollShield(rng, { rarity: Math.min(r, 4) }));
+        if (Object.keys(ROBES).length) items.push(rollRobe(rng, { rarity: Math.min(r, 4) }));
+        items.push(rollGem(rng, { grade: Math.min(2, r - tiers[0]) }));
+      }
+      const snap = game.currentSnap();
+      let dropped = 0;
+      for (const it of items) if (!pack.add(it)) { game.drops.fromPlayer(it, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); dropped++; }
+      pack.gold += kind === 'god' ? 25000 : 2500;
+      inventory.render();
+      return `${items.length} things of ${tiers.map((r) => RARITIES[r].name).join(', ')}, and ${kind === 'god' ? '25,000' : '2,500'} gold${dropped ? `; ${dropped} on the ground at your feet, the pack being full` : ''}.`;
+    },
+  });
+  lands.load(null);
+  game.lands = lands;
+  addPart('lands', { save: () => lands.save(), load: (d) => lands.load(d) });
   window.bm = game.api(shared, simWorker, buffer, pool);
   renderDiagnostics.attach(() => ({
     'Simulation tick': buffer ? Atomics.load(shared.ctrl, CTRL.TICK) : latestSnap?.[H.TICK],
@@ -795,6 +838,7 @@ class GameView {
   takeNearest() {
     const d = this.nearDrop;
     if (!d) {
+      if (this.lands?.use()) return;
       if (this.nearChest) this.chests.open(this.nearChest);
       else if (this.nearFolk) { if (!this.nearFolk.busy) { this.townUI.talk(this.nearFolk.i); this.takeShown = undefined; } }
       else if (this.nearDoor) {
@@ -898,6 +942,7 @@ class GameView {
       renderDiagnostics.stage = 'HUD';
       this.drawOpening?.(snap, c);
       this.townUI?.frame(dt, c, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
+      this.lands?.frame(snap);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
       if (!this.idle) this.govern(dt);
       const r = this.renderer, hs = this.hudStats;

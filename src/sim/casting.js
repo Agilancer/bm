@@ -386,7 +386,7 @@ export class Casting {
   foeOn(sim, ox, oy, oz, dx, dy, dz, len, rad, skip) {
     let best = null, bestT = len;
     const xz2 = dx * dx + dz * dz;
-    for (const k of sim.knights) {
+    for (const k of sim.foes) {
       if (k.dead || (skip && skip.has(k))) continue;
       const R = radiusOf(k) + rad;
       const fx = k.x - ox, fz = k.z - oz;
@@ -405,7 +405,7 @@ export class Casting {
   lockOn(sim, range, angle) {
     const p = sim.player, f = this.forward(p, []), ey = p.y + EYE;
     let best = null, bestA = angle;
-    for (const k of sim.knights) {
+    for (const k of sim.foes) {
       if (k.dead) continue;
       const dx = k.x - p.x, dy = chestOf(k) - ey, dz = k.z - p.z, d = Math.hypot(dx, dy, dz);
       if (d > range || d < 0.01) continue;
@@ -419,7 +419,7 @@ export class Casting {
 
   nearestFoe(sim, x, y, z, range, skip) {
     let best = null, bestD = range;
-    for (const k of sim.knights) {
+    for (const k of sim.foes) {
       if (k.dead || !k.hostile || (skip && skip.has(k))) continue;
       const d = Math.hypot(k.x - x, chestOf(k) - y, k.z - z);
       if (d < bestD && sim.world.sees(x, y, z, k.x, chestOf(k), k.z)) { bestD = d; best = k; }
@@ -503,7 +503,7 @@ export class Casting {
   // A blast: hurts and throws everything within radius, by how near it is.
   explode(sim, x, y, z, radius, dmg, elem, force, up = 0, skip = null) {
     const p = sim.player;
-    for (const k of sim.knights) {
+    for (const k of sim.foes) {
       if (k.dead || (skip && skip === k)) continue;
       // Measured from a knight's width in, so a blast on the flank of something huge isn't a near miss.
       const dx = k.x - x, dz = k.z - z, d = Math.max(0, Math.hypot(dx, dz, chestOf(k) - y) - (radiusOf(k) - 0.55));
@@ -663,7 +663,7 @@ export class Casting {
         }
         if (b.lashT <= 0) {
           b.lashT = 0.35;
-          for (const k of sim.knights) {
+          for (const k of sim.foes) {
             if (k.dead) continue;
             const c = chestOf(k), d = Math.hypot(k.x - x, c - y, k.z - z);
             if (d > 7 || !k.hostile) continue;
@@ -729,7 +729,7 @@ export class Casting {
         break;
       case 'ember':
         this.explode(sim, x, y, z, def.radius, def.dmg, elem, 2);
-        for (const k of sim.knights) if (!k.dead && k.hostile && Math.hypot(k.x - x, chestOf(k) - y, k.z - z) < def.radius + radiusOf(k)) this.affOf(k).burn = Math.max(this.affOf(k).burn, 2.5);
+        for (const k of sim.foes) if (!k.dead && k.hostile && Math.hypot(k.x - x, chestOf(k) - y, k.z - z) < def.radius + radiusOf(k)) this.affOf(k).burn = Math.max(this.affOf(k).burn, 2.5);
         break;
       case 'rime':
         if (foe) { this.hurt(sim, foe, def.dmg, elem, x, y, z, x, z, 20); this.affOf(foe).freeze = Math.max(this.affOf(foe).freeze, def.freeze); }
@@ -754,7 +754,7 @@ export class Casting {
         if (foe) this.markDoom(foe, def, 0);
         break;
       case 'bloom': {
-        for (const k of sim.knights) if (!k.dead && k.hostile && Math.hypot(k.x - x, chestOf(k) - y, k.z - z) < def.radius + radiusOf(k)) this.zones.push({ kind: 'mote', def, x: k.x, y: chestOf(k), z: k.z, t: 0, life: 5, seed: Math.random() });
+        for (const k of sim.foes) if (!k.dead && k.hostile && Math.hypot(k.x - x, chestOf(k) - y, k.z - z) < def.radius + radiusOf(k)) this.zones.push({ kind: 'mote', def, x: k.x, y: chestOf(k), z: k.z, t: 0, life: 5, seed: Math.random() });
         this.explode(sim, x, y, z, def.radius, def.dmg, elem, 3);
         break;
       }
@@ -851,7 +851,7 @@ export class Casting {
     z.tickT -= dt;
     const bite = z.tickT <= 0;
     if (bite) z.tickT = 0.25;
-    for (const k of sim.knights) {
+    for (const k of sim.foes) {
       if (k.dead || !k.hostile) continue;
       const dx = z.x - k.x, dz = z.z - k.z, d = Math.hypot(dx, dz) || 1, reach = R * 2 + 1 + radiusOf(k);
       if (d > reach) continue;
@@ -959,7 +959,7 @@ export class Casting {
   cast_cone(def, sim) {
     const p = sim.player, from = this.palm('both', 0.85, sim, [0, 0, 0]), f = this.forward(p, []);
     const ey = p.y + EYE;
-    for (const k of sim.knights) {
+    for (const k of sim.foes) {
       if (k.dead) continue;
       const dx = k.x - p.x, dy = chestOf(k) - ey, dz = k.z - p.z, d = Math.hypot(dx, dy, dz);
       if (d > def.range + radiusOf(k) || d < 0.01) continue;
@@ -1063,7 +1063,7 @@ export class Casting {
       this.fx(FX.BLADE, b.elem, x - ax * len * 0.5, y - ay * len * 0.5, z - az * len * 0.5, 0.07 * k, ax, ay, az, len, 1, i === 0 ? 6 * k : 0, 7, 0, i * 0.21);
       this.fx(FX.TRAIL, b.elem, x + ax * 0.4, y + ay * 0.4, z + az * 0.4, 0.12 * k, oz, 0, -ox, 0.95, 0.5 * k, 0, 0, 0, i * 0.3);
       if (k < 0.3) continue;
-      for (const f of sim.knights) {
+      for (const f of sim.foes) {
         if (f.dead || !f.hostile) continue;
         if (Math.hypot(f.x - x, f.z - z) > radiusOf(f) + 0.45 || Math.abs(f.y + 1 - y) > 1.7) continue;
         const key = f.id * 16 + i, t = b.cool.get(key) || 0;
@@ -1104,7 +1104,7 @@ export class Casting {
         s.up = true;
         sim.event(EV.SPELL_BOOM, s.def.elem, s.x, s.y + 0.1, s.z, 1.1);
         this.burst(FX.RING, s.def.elem, s.x, s.y, s.z, 0.4, 2, 0.36);
-        for (const k of sim.knights) {
+        for (const k of sim.foes) {
           if (k.dead || s.hit.has(k) || Math.hypot(k.x - s.x, k.z - s.z) > radiusOf(k) + 0.6 || Math.abs(k.y - s.y) > 1.6) continue;
           s.hit.add(k);
           this.hurt(sim, k, s.def.dmg, s.def.elem, k.x, k.y + 0.8, k.z, s.x, s.z, 70, 'puncture');
@@ -1159,7 +1159,7 @@ export class Casting {
     z.tickT -= dt;
     if (z.tickT > 0 || k < 0.2) return;
     z.tickT = 0.25;
-    for (const f of sim.knights) {
+    for (const f of sim.foes) {
       if (f.dead) continue;
       const dx = f.x - z.x, dz = f.z - z.z, along = dx * z.rx + dz * z.rz, off = Math.abs(dx * z.rz - dz * z.rx);
       if (Math.abs(along) > def.length / 2 + 0.4 || off > radiusOf(f) + 0.75) continue;
@@ -1180,7 +1180,7 @@ export class Casting {
     z.tickT = (z.tickT || 0) - dt;
     if (z.tickT > 0) return;
     z.tickT = 0.3;
-    for (const f of sim.knights) {
+    for (const f of sim.foes) {
       if (f.dead || Math.hypot(f.x - z.x, f.z - z.z) > z.r + radiusOf(f) * 0.5) continue;
       this.hurt(sim, f, 4, ELEM.FIRE, f.x, chestOf(f), f.z, f.x, f.z, 2);
       this.affOf(f).burn = Math.max(this.affOf(f).burn, 2);
@@ -1199,7 +1199,7 @@ export class Casting {
       const x = z.x + ox * rr, c = z.z + oz * rr, L = (0.5 + hash(i * 3) * 1) * (1.2 - rr / R * 0.5);
       this.fx(FX.ICE, e, x, sim.world.height(x, c) - 0.14, c, 0.17 * L * grow, ox * 0.5, 0.86, oz * 0.5, L * 1.3 * grow, 1, 0, 0, 0, i * 0.17);
     }
-    for (const f of sim.knights) {
+    for (const f of sim.foes) {
       if (f.dead || z.hit.has(f)) continue;
       if (Math.hypot(f.x - z.x, f.z - z.z) > wave + radiusOf(f)) continue;
       z.hit.add(f);
@@ -1248,7 +1248,7 @@ export class Casting {
     z.tickT -= dt;
     if (z.tickT > 0 || k < 0.3) return;
     z.tickT = 0.35;
-    for (const f of sim.knights) {
+    for (const f of sim.foes) {
       if (f.dead || Math.hypot(f.x - z.x, f.z - z.z) > R + radiusOf(f) * 0.5) continue;
       this.hurt(sim, f, def.dmg, e, f.x, chestOf(f), f.z, f.x, f.z, 3);
       this.affOf(f).slow = Math.max(this.affOf(f).slow, 1.2);
@@ -1266,7 +1266,7 @@ export class Casting {
     z.tickT -= dt;
     if (z.tickT > 0 || k < 0.2) return;
     z.tickT = 0.5;
-    for (const f of sim.knights) {
+    for (const f of sim.foes) {
       if (f.dead || Math.hypot(f.x - z.x, f.z - z.z) > R + radiusOf(f) * 0.5) continue;
       this.hurt(sim, f, def.dps * 0.5, e, f.x, chestOf(f), f.z, f.x, f.z, 2);
       const a = this.affOf(f);
@@ -1279,7 +1279,7 @@ export class Casting {
     const def = z.def, k = smooth(z.t / 0.3), e = def.elem, c = z.y, pulse = 1 + 0.08 * Math.sin(z.t * 18);
     this.fx(FX.VORTEX, e, z.x, c, z.z, 2.6 * k * pulse, 0, 1, 0, 0, 1, 18 * k, 13, 0, z.seed);
     this.fx(FX.RUNE, e, z.x, sim.world.height(z.x, z.z), z.z, def.radius * k, 0, 1, 0, 0, 0.5 * k, 0, 0, 0.8, z.seed);
-    for (const f of sim.knights) {
+    for (const f of sim.foes) {
       if (f.dead && f.kind >= 2) continue;
       const dx = z.x - f.x, dz = z.z - f.z, d = Math.hypot(dx, dz);
       if (d > def.radius || d < 0.6) continue;

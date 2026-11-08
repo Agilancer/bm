@@ -1,5 +1,6 @@
 // The pack and what's on the body. An item is lifted with a click and follows the pointer until it's set down, or dragged and let
 // go; a right-click or a double tap equips or stows. A gem set down on a sword goes in its next open socket, for good.
+import { CHARM_SLOTS, charmIcon, charmTip } from './lands.js';
 import { skinFilter } from '../items/skins.js';
 import { ROBES, GEMS, colorOf, hands, linesOf, nameOf, statsOf } from '../items/items.js';
 import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
@@ -110,6 +111,11 @@ export class Inventory {
     $('invStats').innerHTML = main
       ? `<b style="color:${colorOf(main)}">${nameOf(main)}</b><br>Fires for ${Math.round(st.min * 0.76)} to ${Math.round(st.max * 0.76)}${this.pack.slots.skull ? `, with ${nameOf(this.pack.slots.skull)} in the left hand${this.pack.slots.off ? '. The shield is only for riding: its stats do not count' : ''}` : this.pack.slots.off ? `, with ${nameOf(this.pack.slots.off)} on the arm` : ''}`
       : '<b>Bare hands</b><br>Nothing to swing.';
+    // The charm pouch: every charm carried works (src/ui/lands.js).
+    let row = $('charmRow');
+    if (!row) { row = document.createElement('div'); row.id = 'charmRow'; $('invStats').after(row); }
+    row.innerHTML = (this.pack.charms || []).map((k) => `<div class="ch" title="${charmTip(k).replace(/"/g, '&quot;')}"><img src="${charmIcon(k)}" alt=""></div>`).join('')
+      + Array.from({ length: Math.max(0, CHARM_SLOTS - (this.pack.charms || []).length) }, () => '<div class="ch"></div>').join('');
     if (this.carry) {
       const { w, h } = sizeOf(this.carry.item);
       this.carryEl.style.cssText += `;display:block;--w:${w};--h:${h}`;
