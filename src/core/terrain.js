@@ -2,6 +2,8 @@
 // draws it. Flat where the village stands, rolling meadow beyond, big hills at the horizon.
 
 import { CAVE_BACK, CAVE_CENTRE, CAVE_FLOOR, CAVE_MOUTH, CAVE_TRAIL } from './opening.js';
+import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
+import { OLD_CHURCH_GROUND, oldChurchGround } from './town.js';
 
 export let openingTerrain = false;
 export function setOpeningTerrain(enabled) { openingTerrain = !!enabled; }
@@ -132,9 +134,14 @@ export function terrainHeight(x, z) {
       if (NEAR.d < road.w + road.blend) level += (NEAR.y - level) * (1 - sstep(road.w, road.w + road.blend, NEAR.d));
     }
   }
-  // The cathedral's site, levelled, and on over the stair down behind it, which the land has to cover. Its floor stands a little above this: see tools/interior/build_interior.py.
-  const site = Math.max(58 - x, x - 176, Math.abs(z) - 26);
-  if (site < 14) level += (2.7 - level) * (1 - sstep(0, 14, site));
+  // Where the cathedral stood, levelled as it was, for the town to grow onto (src/core/town.js). And where it stands now, out east
+  // (src/core/church.js): its ground levelled a little under its floor, out past its walls and over the head of the stair, and let back
+  // to the land's own lie slowly, so it sits on a broad terrace over the hollow west of it with its back cut into the foot of the hills.
+  // Past the wing over the stair the land rises over the rest of the stair, which it has to cover. See tools/interior/build_interior.py.
+  const old = oldChurchGround(x, z);
+  if (old < OLD_CHURCH_GROUND.blend) level += (OLD_CHURCH_GROUND.y - level) * (1 - sstep(0, OLD_CHURCH_GROUND.blend, old));
+  const site = churchSite(x, z);
+  if (site < CHURCH_SITE.blend) level += (CHURCH_SITE.y - level) * (1 - sstep(0, CHURCH_SITE.blend, site));
   // And the plots of the town's outer houses, under their floors: see tools/village/build_village.py.
   for (const p of PLOTS) {
     const d = Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]);
@@ -167,6 +174,13 @@ export const PATHS = [
   { pts: [[10.75, 16.8], [6, 11], [2, 5.5], [-1.5, 1]], w: 1.7 },
   { pts: [[-1.5, 1], [-4, 9], [-2, 18], [0, 30], [6, 48], [8, 80], [0, 130], [-20, 190]], w: 2.2 },
   { pts: [[-1.5, 1], [10, -6], [24, -18], [50, -32], [95, -50], [160, -60]], w: 1.8 },
+  // The church road: off the north-east track, round the east house's yard, and out over the church's old ground to the foot of its steps.
+  { pts: [[24, -18], [28.5, -20.4], [31.8, -15.5], [33.2, -10.8], [35.6, -5.6], [41, -1.6], [60, 0], [95, 0.6], [CHURCH_GUARD[0] - 26, CHURCH_GUARD[1] - 0.4], [CHURCH_GUARD[0] + 1, CHURCH_GUARD[1]]], w: 1.8 },
+  // The east end's doors: the manor's through its forecourt, the bakehouse's and the herbalist's across the road.
+  { pts: [[80, -7.1], [80, -0.2]], w: 1.4 }, { pts: [[62.75, 5.8], [62.6, 1.0]], w: 1.3 }, { pts: [[85.25, 6.3], [85.0, 1.2]], w: 1.2 },
+  // The sexton's way: off the church road before the knight's ground, wide round the church's south side, to the little door in the
+  // wing over the stair (the Sexton's Door, tools/interior/build_interior.py). It keeps well out of the knight's reach.
+  { pts: [[112, 0.3], [126, 24], [150, 34], [190, 34], [212, 22], [216.9, 10.2]], w: 1.2 },
   { pts: [[-6, 36], [2.5, 34]], w: 1.4 }, { pts: [[12, 37], [3.5, 38]], w: 1.4 },
   { pts: [[38, -31.6], [37, -25.4]], w: 1.4 }, { pts: [[44.3, -20], [43, -28.5]], w: 1.4 },
   { pts: [[-37, -14.4], [-33, -14], [-26, -8], [-14, -7], [-13, 0.5]], w: 1.4 }, { pts: [[-38.5, 18.4], [-36, 17.8], [-26, 9.5], [-12, 9.5], [-12, 0.5]], w: 1.4 },

@@ -22,7 +22,8 @@ export class Pack {
   constructor() {
     this.slots = Object.fromEntries(SLOTS.map((s) => [s, null]));
     this.entries = [];   // { item, x, y }
-    this.gold = 0;
+    this.gold = 0; this.copper = 0;
+    this.mats = {};      // what's in the satchel, by kind (items.js MATS)
     this.xp = 0; this.level = 1;
   }
 
@@ -63,6 +64,20 @@ export class Pack {
 
   remove(entry) { this.entries.splice(this.entries.indexOf(entry), 1); }
 
+  // Coin: gold, and the copper the town counts in. Ten copper to the gold; a purse breaks a gold piece when it has to.
+  purse() { return this.gold * 10 + this.copper; }
+  pay(copper) {
+    if (this.purse() < copper) return false;
+    let c = this.copper - copper;
+    while (c < 0) { this.gold--; c += 10; }
+    this.copper = c;
+    return true;
+  }
+  earn(copper) { this.copper += copper; this.gold += Math.floor(this.copper / 10); this.copper %= 10; }
+  has(kind, n) { return (this.mats[kind] || 0) >= n; }
+  addMat(kind, n) { this.mats[kind] = (this.mats[kind] || 0) + n; }
+  takeMat(kind, n) { if (!this.has(kind, n)) return false; this.mats[kind] -= n; return true; }
+
   // A gem into a weapon, for good. False if it has no open socket.
   socket(weapon, gem) {
     if (!SOCKETED.has(weapon.type) || gem.type !== 'gem' || (weapon.gems ||= []).length >= Math.min(weapon.sockets || 0, weapon.type === 'skull' ? 6 : MAX_SOCKETS) || !GEMS[gem.kind]) return false;
@@ -71,13 +86,14 @@ export class Pack {
   }
 
   // What goes in a save. Items are plain data.
-  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, kite: true, elementals: true, aurora: true, xp: this.xp, level: this.level }); }
+  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, copper: this.copper, mats: this.mats, kite: true, elementals: true, aurora: true, xp: this.xp, level: this.level }); }
 
   // A saved pack back in hand, or with null, what a new game starts with.
   load(d) {
     this.slots = Object.fromEntries(SLOTS.map((s) => [s, null]));
     this.entries = [];
-    this.gold = d?.gold || 0;
+    this.gold = d?.gold || 0; this.copper = d?.copper || 0;
+    this.mats = { ...(d?.mats || {}) };
     this.xp = d?.xp || 0; this.level = d?.level || 1;
     if (!d) { this.startingKit(); return; }
     Object.assign(this.slots, d.slots);

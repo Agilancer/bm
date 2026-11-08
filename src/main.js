@@ -26,6 +26,10 @@ import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
 import { SpellSound } from './spellsound.js';
+import { TownClient } from './folk/client.js';
+import { FolkBodies } from './gfx/folk.js';
+import { TownUI } from './ui/folk.js';
+import { matName } from './items/items.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -198,6 +202,11 @@ async function boot(plan, poolSize) {
   renderer.openingEnabled = OPENING_ENABLED;
   setOpeningTerrain(OPENING_ENABLED);
   const simWorker = new Worker(new URL('./sim/sim.worker.js', import.meta.url), { type: 'module' });
+  // The townsfolk, on a thread of their own (src/folk/). The sim has where they stand, to bump you off them.
+  const town = new TownClient(BASE, isolated);
+  renderer.folk = new FolkBodies(renderer, town.map);
+  town.onReady = (m) => renderer.folk.setBeds(m.beds);
+  if (town.buffer) simWorker.postMessage({ type: 'folk', buffer: town.buffer });
   const audio = new Audio(BASE, title.ctx, title.out, settings.ambience);
   let latestSnap = null;
   // Saves and loads are asked of the simulation thread, and answered by id.
@@ -257,6 +266,10 @@ async function boot(plan, poolSize) {
   // ---- the render thread's loop --------------------------------------------------------------------------------------
 
   game = new GameView(renderer, shared, input, audio, hud, gpu, simWorker, buffer);
+  game.town = town;
+  town.on((e) => game.townEvent(e));
+  addPart('town', { save: () => town.save(), load: (d) => town.load(d) });
+  renderer.folk.load(BASE).catch((e) => console.warn('townsfolk', e));
   const pack = new Pack();
   pack.load(null);
   const worldMap = new WorldMap(BASE, input.touch);
@@ -306,6 +319,38 @@ async function boot(plan, poolSize) {
     drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); },
   });
   Object.assign(game, { pack, inventory });
+  // A word with the town (src/ui/folk.js): E to someone, J for the journal.
+  const giveXp = (n) => {
+    if (!stepXp(pack, n)) { showLevel(); return; }
+    arm();
+    shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999;
+    hud.tip(`Level ${pack.level}. Your spells bite harder, and your well runs deeper.`, 4);
+  };
+  const townUI = new TownUI({
+    town, renderer, pack, input, hud, inventory, spellbar: null,
+    act: {
+      heal: (n) => { shared.input[INPUT.HEAL] += n; },
+      hp: () => { const s = game.currentSnap(); return s ? s[H.HP] / (s[H.MAX_HP] || 1) : 1; },
+      // A night's sleep: dawn, mended, and the game kept.
+      sleep: () => { renderer.setHour(6.1); shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999; autosave(); },
+      give: (item) => {
+        if (pack.add(item)) return;
+        const snap = game.currentSnap();
+        game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw);
+        townUI.note('Your pack is full: it is on the ground at your feet.', 'hint');
+      },
+      xp: giveXp,
+      day: () => town.day,
+      hour: () => renderer.hour,
+      opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
+      closed: () => { input.menu = false; resume(); },
+      saved: () => autosave(),
+      canMenu: () => input.enabled && !input.menu && !state.paused && !naming,
+      click: () => title.chime?.(),
+    },
+  });
+  game.townUI = townUI;
+  addPart('folk', { save: () => townUI.save(), load: (d) => townUI.load(d) });
   window.bm = game.api(shared, simWorker, buffer, pool);
   renderDiagnostics.attach(() => ({
     'Simulation tick': buffer ? Atomics.load(shared.ctrl, CTRL.TICK) : latestSnap?.[H.TICK],
@@ -412,6 +457,12 @@ async function boot(plan, poolSize) {
         }
       }
     }
+    const named = openingHUD?.name;
+    if (named && named !== townUI.name) { townUI.name = named; town.setName(named); }
+    if (input.enabled && !state.paused) {
+      const night = town.day * 2 + (renderer.hour < 12 ? 0 : 1);
+      if (townUI.quests.wantsWarden(renderer.hour) && townUI.wardenAsked !== night) { townUI.wardenAsked = night; simWorker.postMessage({ type: 'warden' }); }
+    }
     if (!input.enabled || state.paused) return;
     played += dt; playT += dt;
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
@@ -455,6 +506,8 @@ async function boot(plan, poolSize) {
       game.spellbar.load(null);
       game.doors.load(null);
       worldMap.load(null);
+      townUI.load(null);
+      town.load(null);
       enter(true);
     } else if (a === 'continue') {
       const d = saves.newest();
@@ -488,7 +541,7 @@ async function boot(plan, poolSize) {
   applySetting('res', settings.res);
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
-    if (!input.enabled || inventory.open || naming) return;
+    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book) return;
     if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
@@ -526,6 +579,7 @@ async function boot(plan, poolSize) {
     load: (d) => game.spellbar.load(d),
   });
   game.closeBook = closeBook;
+  townUI.spellbar = game.spellbar;
   const closePack = (viaEsc) => {
     inventory.hide();
     input.menu = false;
@@ -561,7 +615,7 @@ async function boot(plan, poolSize) {
   game.run();
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> changes your spells. <b>PACK</b> holds your gear. <b>MAP</b> shows the land.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open or shut';
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> journal';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
@@ -701,6 +755,7 @@ class GameView {
     this.doors = new Doors(renderer, audio, renderer.things, { set value(m) { shared.input[INPUT.DOORS] = m; } });
     this.nearDoor = null;
     this.nearDrop = null;
+    this.nearFolk = null;
     this.takeShown = null;
     this.hudStats = { gpuMs: 0, busyMs: 0, W: 0, H: 0, scale: 1, msaa: 1, demoted: 0, vsync: 0 };
     // Frames queued beyond this are only input lag. A phone's governor, and what it goes by.
@@ -739,12 +794,29 @@ class GameView {
     this.rafLast = now;
   }
 
+  // What the town says back (src/folk/client.js).
+  townEvent(e) {
+    if (e.type === 'door') this.doors.byFolk(e.id, e.open);
+    else if (e.type === 'stall') this.renderer.stallOpen(e.id, e.open);
+    else if (e.type === 'dish') this.renderer.dish(e.id, e.on, e.kind, e.at, e.yaw);
+    else if (this.onTownEvent) this.onTownEvent(e);
+  }
+
+  // A door with a lock on it, and no key for it yet. (The Sexton's Door: Silas gives you its key with The Dead Can't Wait.)
+  locked(door) {
+    return door.lock === 'sexton' && !door.open && !this.townUI?.quests.state('dead_cant_wait');
+  }
+
   // The nearest thing on the ground, into the pack if there's room for it.
   takeNearest() {
     const d = this.nearDrop;
     if (!d) {
       if (this.nearChest) this.chests.open(this.nearChest);
-      else if (this.nearDoor) { this.doors.toggle(this.nearDoor); this.takeShown = undefined; }
+      else if (this.nearFolk) { if (!this.nearFolk.busy) { this.townUI.talk(this.nearFolk.i); this.takeShown = undefined; } }
+      else if (this.nearDoor) {
+        if (this.locked(this.nearDoor)) { this.hud.tip('Locked, and solid. Silas Crane at the coffin yard keeps the key.', 3); return; }
+        this.doors.toggle(this.nearDoor); this.takeShown = undefined;
+      }
       return;
     }
     if (d.item.type === 'spell') {
@@ -761,6 +833,7 @@ class GameView {
     this.drops.low = snap[H.HP] / (snap[H.MAX_HP] || 1) < 0.35;
     this.drops.onGrab ||= (g) => {
       if (g.coins) this.pack.gold += g.item.amount;
+      else if (g.item.type === 'mat') { this.pack.addMat(g.item.kind, g.item.n); this.townUI?.note(`${g.item.n} ${matName(g.item.kind, g.item.n)}  (${this.pack.mats[g.item.kind]})`, 'mat'); }
       else this.shared.input[g.item.kind === 'life' ? INPUT.HEAL : INPUT.MANA_UP] += g.item.kind === 'life' ? 32 : 40;
     };
     if (this.pack && this.input.enabled) this.gemFx?.step(dt, snap, this.cam, this.pack);
@@ -770,14 +843,18 @@ class GameView {
     this.nearChest = this.input.enabled && !this.input.menu ? ch : null;
     const door = this.doors.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     this.nearDoor = this.input.enabled && !this.input.menu ? door : null;
-    const near = d || this.nearChest || this.nearDoor;
+    // Someone to talk to, if there's nothing to take or open first.
+    const folk = this.input.enabled && !this.input.menu && !d && !this.nearChest && this.townUI ? this.townUI.nearest(snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw) : null;
+    this.nearFolk = folk;
+    const near = d || this.nearChest || (folk && folk.label) || this.nearDoor;
     if (near === this.takeShown) return;
     this.takeShown = near;
     $('take').style.display = near ? 'block' : 'none';
     $('bTake').style.display = near && this.input.touch ? 'flex' : 'none';
-    const shuts = !d && !this.nearChest && this.nearDoor?.open;
-    $('bTake').textContent = d || !near ? 'TAKE' : shuts ? 'SHUT' : 'OPEN';
-    if (near) $('take').innerHTML = `${this.input.touch ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : shuts ? 'Shut the door' : 'Open the door'}`;
+    const shuts = !d && !this.nearChest && !folk && this.nearDoor?.open;
+    const locked = !d && !this.nearChest && !folk && this.nearDoor && this.locked(this.nearDoor);
+    $('bTake').textContent = d || !near ? 'TAKE' : folk ? 'TALK' : shuts ? 'SHUT' : locked ? 'TRY' : 'OPEN';
+    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : folk ? folk.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
   }
 
   gameState() { const s = this.currentSnap(); return s ? s[H.GAME] : 0; }
@@ -830,11 +907,13 @@ class GameView {
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
       const c = this.overrideCam || this.cam;
+      if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       renderDiagnostics.stage = 'renderer';
       this.renderer.frame(c, snap, this.sway, dt);
       renderDiagnostics.presented();
       renderDiagnostics.stage = 'HUD';
       this.drawOpening?.(snap, c);
+      this.townUI?.frame(dt, c, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
       if (!this.idle) this.govern(dt);
       const r = this.renderer, hs = this.hudStats;
@@ -1052,6 +1131,7 @@ class GameView {
       case EV.SPELL_CAST:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
+        if (this.town) this.town.cast++;   // (The town's never seen real magic: src/folk/talk.js.)
         this.hud.once('cast', this.input.touch ? 'Tap a spell slot to select it, then use CAST. B changes your spells.' : '1 to 6 cast what is in each slot: hold to keep casting. B changes them. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
@@ -1202,7 +1282,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); this.townUI?.kill(a, b, c, d | 0); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:

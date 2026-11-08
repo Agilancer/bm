@@ -236,6 +236,16 @@ export class Player {
     this.jumpSeen = input[INPUT.JUMP];
     this.vy -= 14 * dt;
     this.x += this.vx * dt; this.z += this.vz * dt; this.y += this.vy * dt;
+    // The townsfolk: stepped round, not walked through.
+    const fb = globalThis.folkBodies;
+    if (fb) {
+      for (let k = 0; k < fb.length; k += 4) {
+        const r = fb[k + 2];
+        if (!r || Math.abs(fb[k + 3] - this.y) > 1.4) continue;
+        const dx = this.x - fb[k], dz = this.z - fb[k + 1], d = Math.hypot(dx, dz), min = r + 0.3;
+        if (d < min && d > 1e-4) { this.x = fb[k] + dx / d * min; this.z = fb[k + 1] + dz / d * min; }
+      }
+    }
     tmp[0] = this.x; tmp[2] = this.z;
     sim.world.resolve(tmp, 0.36, this.y + 0.2);
     this.x = tmp[0]; this.z = tmp[2];

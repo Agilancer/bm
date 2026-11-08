@@ -1,5 +1,6 @@
 // WGSL for everything drawn in the world pass.
 import { COMMON } from './shaders.js';
+import { CHURCH_Z } from '../core/church.js';
 
 export const TERRAIN = COMMON + /* wgsl */ `
 @group(1) @binding(0) var groundColor: texture_2d_array<f32>;
@@ -214,6 +215,11 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     albedo = m.rgb; rough = m.a;
     if (in.layer == 100u || in.layer == 105u) { metal = 0.9; }
     if (in.layer == 101u) {
+      // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
+      for (var li = 0u; li < u32(F.counts.x); li++) {
+        let L = F.lights[li];
+        if (L.colI.w < 0.03 && distance(p, L.posR.xyz) < 0.45) { discard; }
+      }
       let f = 0.85 + 0.15 * sin(F.camPos.w * 11.0 + p.x * 9.0) * sin(F.camPos.w * 7.3);
       // (Without bloom to carry it, that heat would only be a white square, so it's a plain gold instead.)
       emissive = select(vec3f(14.0, 7.0, 2.4), vec3f(2.2, 1.2, 0.3), F.blood.w < 0.5) * f;
@@ -231,7 +237,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       ao *= mix(0.5, 1.0, cav);
       // Grey stone. The warmth is the flames', so what they don't reach falls away cold, and a lit pool stands off its shadow.
       albedo = mix(vec3f(dot(albedo, vec3f(0.3, 0.55, 0.15))), albedo, 0.62);
-      let level = select(-16.25, -24.25, p.z < -54.0);   // (the catacombs' two floors: north of the Sexton's Stair is the lower)
+      let level = select(-16.25, -24.25, p.z < ${(CHURCH_Z - 54).toFixed(1)});   // (the catacombs' two floors: north of the Sexton's Stair is the lower; src/core/church.js)
       let q = select(vec2f(p.x + p.z, p.y), p.xz, abs(n0.y) > 0.6);
       let m = textureSampleLevel(noiseTex, repeatSmp, q * 0.047, 0.0);
       // Old stone is never one colour: blotches of dark, and a drift between ochre and grey.
@@ -269,7 +275,8 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       let room = textureSampleLevel(noiseTex, repeatSmp, floor(uv * vec2f(5.0, 3.0)) * 0.137 + 0.11 * vec2f(in.f32Layer()), 0.0).r;
       let lit = smoothstep(0.48, 0.62, room);
       let flick = 0.86 + 0.14 * sin(F.camPos.w * 3.1 + room * 40.0);
-      emissive = glass * lit * vec3f(1.9, 0.92, 0.3) * flick * mix(1.7, 0.75, F.skyAmb.a);
+      // (A window's one face looks out. Seen from indoors, its back, it's the day outside that comes through, or none at night.)
+      emissive = select(glass * vec3f(0.85, 0.9, 1.0) * F.sunColor.a * 1.3, glass * lit * vec3f(1.9, 0.92, 0.3) * flick * mix(1.7, 0.75, F.skyAmb.a), front);
       metal = glass * 0.3;
     }
   }

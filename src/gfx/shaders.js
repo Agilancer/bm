@@ -1,4 +1,7 @@
 // WGSL shared by the world's pipelines: the frame block, lighting, shadows, fog.
+import { CHURCH_X, CHURCH_Z, SEXTON } from '../core/church.js';
+
+const f32 = (v) => v.toFixed(2);   // (a number into WGSL, as a float)
 
 export const COMMON = /* wgsl */ `
 struct Light { posR: vec4f, colI: vec4f };
@@ -124,18 +127,18 @@ fn brdf(n: vec3f, v: vec3f, l: vec3f, albedo: vec3f, f0: vec3f, rough: f32, meta
   return (diff + spec) * nl;
 }
 
-// Indoors the sky doesn't reach. 0 outside, 1 in the cathedral, 2 below. The boxes are the inside of tools/interior/build_interior.py's walls.
+// Indoors the sky doesn't reach. 0 outside, 1 in the cathedral, 1.25 in a house, 2 below. The boxes are the inside of tools/interior/build_interior.py's walls.
 fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32, jx: f32, jz: f32, y1: f32, top: f32) -> bool {
   let up = p.y > y1;
   return p.y < top && abs(p.x - x) < hx + select(0.0, jx, up) && abs(p.z - z) < hz + select(0.0, jz, up);
 }
 
 fn indoorAt(p: vec3f) -> f32 {
-  if (p.x < 65.9) {
+  if (p.x < ${f32(CHURCH_X + 65.9)}) {
     // The houses, to the inside of their walls, with the overhang upstairs. Written by tools/village/build_village.py, which is the one that knows.
     if (p.y < 0.0) { return 0.0; }
     // <homes>
-    return select(0.0, 1.0, inHome(p, 1.00, -19.93, 9.32, 4.58, 0.00, 0.42, 3.40, 6.07)
+    return select(0.0, 1.25, inHome(p, 1.00, -19.93, 9.32, 4.58, 0.00, 0.42, 3.40, 6.07)
       || inHome(p, -19.88, 0.50, 4.33, 5.89, 0.50, 0.00, 3.30, 6.27)
       || inHome(p, 19.32, 3.50, 4.08, 6.51, 0.00, 0.00, 3.50, 6.17)
       || inHome(p, 9.50, 21.82, 6.20, 4.08, 0.00, 0.00, 2.80, 5.17)
@@ -146,15 +149,22 @@ fn indoorAt(p: vec3f) -> f32 {
       || inHome(p, -40.75, -14.00, 3.70, 6.83, 0.35, 0.00, 3.00, 5.37)
       || inHome(p, -42.88, 18.00, 4.33, 5.26, 0.00, 0.00, 3.00, 5.37)
       || inHome(p, 8.00, -38.00, 4.64, 4.95, 0.00, 0.50, 3.30, 6.07)
-      || inHome(p, -30.00, -34.92, 4.58, 4.58, 0.00, 0.00, 3.40, 6.77));
+      || inHome(p, -30.00, -34.92, 4.58, 4.58, 0.00, 0.00, 3.40, 6.77)
+      || inHome(p, 80.00, -12.50, 8.07, 4.95, 0.00, 0.00, 3.50, 6.37)
+      || inHome(p, 64.00, 10.38, 5.89, 4.33, 0.00, 0.40, 3.10, 5.57)
+      || inHome(p, 84.00, 10.88, 4.95, 4.33, 0.00, 0.00, 3.00, 5.37));
     // </homes>
   }
-  if (p.x < 113.0) { return select(0.0, 1.0, abs(p.z) < 13.9 && p.y < 24.0); }
-  if (p.x < 125.0) { return select(0.0, 1.0, (abs(p.z) < 6.5 && p.y < 9.5) || (p.x < 115.75 && p.z < 0.0 && p.z > -12.45 && p.y < 7.5)); }
+  // The church, in its own frame: it was moved out east of the town as a whole (src/core/church.js). inChurchFrame there is the same.
+  let c = vec3f(p.x - ${f32(CHURCH_X)}, p.y, p.z - ${f32(CHURCH_Z)});
+  if (c.x < 113.0) { return select(0.0, 1.0, abs(c.z) < 13.9 && c.y < 24.0); }
+  if (c.x < 125.0) { return select(0.0, 1.0, (abs(c.z) < 6.5 && c.y < 9.5) || (c.x < 115.75 && c.z < 0.0 && c.z > -12.45 && c.y < 7.5)); }
   // (The land above is out here too, and never as low as the catacombs' ceilings.)
+  // (The Sexton's passage in from the wing's south wall: src/core/church.js SEXTON.)
+  if (c.x > ${f32(SEXTON.x0)} && c.x < ${f32(SEXTON.x1)} && c.z > ${f32(SEXTON.z0)} && c.z < ${f32(SEXTON.z1)} && c.y < ${f32(SEXTON.y)}) { return 1.0; }
   // (The stair's passage, under its falling roof: the land over it is outdoors.)
-  if (p.x < 176.0 && abs(p.z) < 3.0 && p.y < 9.0 - (p.x - 125.0) * 0.33) { return 2.0; }
-  return select(0.0, 2.0, p.x < 262.0 && p.z > -176.0 && p.z < 45.0 && p.y < -6.0);
+  if (c.x < 176.0 && abs(c.z) < 3.0 && c.y < 9.0 - (c.x - 125.0) * 0.33) { return 2.0; }
+  return select(0.0, 2.0, c.x < 262.0 && c.z > -176.0 && c.z < 45.0 && c.y < -6.0);
 }
 
 fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32, ao: f32, shadow: f32) -> vec3f {
@@ -166,6 +176,8 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   if (indoor > 1.5) { ambient = vec3f(0.044, 0.044, 0.048); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  // (A house's rooms have only their windows: at night, about a fifth of the day's. F.sunColor.a is the day behind a window.)
+  if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   let nv = max(dot(n, v), 0.0);
   let refl = reflect(-v, n);
   // On a phone only metal reads the sky's picture. On anything else it's a faint sheen, and this fit to that picture, as

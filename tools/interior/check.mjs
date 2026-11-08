@@ -1,7 +1,9 @@
-// Can you walk it? From the village green, through the great door, the office and down the stair, to everywhere a zombie stands,
-// with the same grid and the same collision the game uses.  node tools/interior/check.mjs
+// Can you walk it? From the village green, out along the church road, through the great door, the office and down the stair, to
+// everywhere a zombie stands, with the same grid and the same collision the game uses.  node tools/interior/check.mjs
+// (The church's points are written where it was first drawn, and moved to where it stands: src/core/church.js.)
 import { readFileSync } from 'node:fs';
-import { World } from '../../src/sim/world.js';
+import { NAV_W, NAV_X0, NAV_Z0, World } from '../../src/sim/world.js';
+import { churchAt, toChurch } from '../../src/core/church.js';
 
 const json = (p) => JSON.parse(readFileSync(new URL(`../../assets/game/${p}`, import.meta.url)));
 const inter = json('interior/interior.json');
@@ -27,19 +29,26 @@ const walk = (from, to, maxT = 200) => {
   return { ok: false, at: [+pos[0].toFixed(1), +y.toFixed(1), +pos[2].toFixed(1)] };
 };
 // (Over the gulf and on is the far side of a jump: nothing can walk there.)
-const route = [[50, 0], [68, 0], [106, -8], [110, -9.5], [111.4, -11], [114.3, -11], [114.3, -4], [115, 0], [123, 0], [126, 0], [172, 0], [186, -8], [186, -53], [186, -68], [190, -72], [203, -86.6], [228, -86.6], [240, -86.6]];
+const route = [[50, 0], [95, 0.6], ...[[68, 0], [106, -8], [110, -9.5], [111.4, -11], [114.3, -11], [114.3, -4], [115, 0], [123, 0], [126, 0], [172, 0], [186, -8], [186, -53], [186, -68], [190, -72], [203, -86.6], [228, -86.6], [240, -86.6]].map(([x, z]) => churchAt(x, z))];
 let fails = 0;
 for (let i = 0; i + 1 < route.length; i++) {
   const r = walk(route[i], route[i + 1]);
   if (!r.ok) fails++;
   console.log(route[i], '->', route[i + 1], JSON.stringify(r));
 }
-w.updateField(186, -5, 0, 2);
+// The Sexton's Door: from the land south of the stair's wing, in at the little door, along its passage, and down the stair.
+const sexton = [[121, 14], [126.9, 10.6], [126.9, 2.6], [127.2, 0.6], [134, 0]].map(([x, z]) => churchAt(x, z));
+for (let i = 0; i + 1 < sexton.length; i++) {
+  const r = walk(sexton[i], sexton[i + 1]);
+  if (!r.ok) fails++;
+  console.log('sexton', sexton[i], '->', sexton[i + 1], JSON.stringify(r));
+}
+w.updateField(...churchAt(186, -5), 0, 2);
 const f = w.slots.get(2).field;
 let lost = 0;
-for (const s of inter.spawns.filter((p) => p.z > -125)) {
-  const i = ((s.x + 256) | 0), j = ((s.z + 256) | 0);
-  if (f[j * 512 + i] > 1e8) { lost++; console.log('cut off:', s.x, s.z); }
+for (const s of inter.spawns.filter((p) => toChurch(p.x, p.z)[1] > -125)) {
+  const i = ((s.x - NAV_X0) | 0), j = ((s.z - NAV_Z0) | 0);
+  if (f[j * NAV_W + i] > 1e8) { lost++; console.log('cut off:', s.x, s.z); }
 }
 console.log(inter.spawns.length, 'spawn points,', lost, 'unreachable within 150 m of the crypt.', fails, 'failed legs');
 process.exit(fails || lost ? 1 : 0);

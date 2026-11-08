@@ -72,6 +72,8 @@ ROAD_SIGN_Y = (0.09, 0.2)
 # Every house, and all that's in it, this much bigger on the ground, about its front wall: the doors stay where the lanes reach them, and it
 # grows back and to either side. Heights stay. tools/interior/build_interior.py takes it from the homes list, so the insides match.
 HOUSE_SCALE = 1.25
+# The market stalls: (x, z, yaw), the keeper's side to local +z. The same numbers as `stall` in src/folk/town.js PLACES.
+STALLS = ((-6.5, -9.8, 0.08), (6.36, 5.12, 1.249), (-6.8, 4.55, -1.61), (4.33, -6.0, 2.553))
 
 
 class Frame:
@@ -565,6 +567,84 @@ def window(S, f, x, y, z, facing=1, w=0.62, h=0.56, along_x=True):
         face(S.b, f, "wall_16", pts, uv, (facing, 0, 0))
 
 
+def dressed_window(S, f, x, y, z, facing=1, along_x=True, w=0.62, h=0.6):
+    """A window for a stone house: the leaded lights split by a stone mullion and transom, in a dressed surround, a sill under it
+    and a hood mould over it to throw the rain off."""
+    b = S.b
+    window(S, f, x, y, z, facing, w, h, along_x)
+    T = (0.42, 0.42)
+    o = facing * 0.055
+    def put(u, v, du, dv, out, dn):
+        # u along the wall, v up, out from the wall's face.
+        if along_x:
+            box(b, f, "stone", x + u, y + v, z + out, du, dv, dn, uv_scale=T, grain="x" if du > dv else "y")
+        else:
+            box(b, f, "stone", x + out, y + v, z + u, dn, dv, du, uv_scale=T)
+    put(0, 0, 0.045, h, o, 0.055)                       # mullion
+    put(0, h * 0.32, w, 0.035, o, 0.05)                 # transom
+    for sd in (-1, 1):
+        put(sd * (w + 0.07), 0, 0.08, h + 0.05, o, 0.065)   # jambs
+    put(0, -h - 0.08, w + 0.17, 0.06, o * 1.5, 0.085)   # sill
+    put(0, h + 0.1, w + 0.22, 0.07, o * 1.5, 0.085)     # hood mould
+    for sd in (-1, 1):
+        put(sd * (w + 0.17), h - 0.04, 0.05, 0.13, o * 1.5, 0.085)  # its drops
+
+
+def manor_porch(S, f, x, hd, pw=1.55, depth=1.45, top=6.53, pitch=50):
+    """A two-storey porch of the house's own stone: an open arch below, a room over it with its own window, under a gable of
+    its own that runs back into the main roof. Its end is a parapet: coping stones over the roof's edge, a ball at the top."""
+    b = S.b
+    T = (0.42, 0.42)
+    th = 0.2
+    zf = hd + depth
+    arch = 2.95
+    t = math.tan(pitch * math.pi / 180)
+    ridge = top + pw * t
+    for sd in (-1, 1):
+        box(b, f, "rubble", x + sd * (pw - th), (top - 0.6) / 2, hd + depth / 2, th, (top + 0.6) / 2, depth / 2, uv_scale=T)
+        # Quoins up the front corners.
+        k, yq = 0, -0.1
+        while yq < top - 0.3:
+            run = 0.3 if k % 2 == 0 else 0.18
+            box(b, f, "stone", x + sd * (pw + 0.03 - run), yq + 0.2, zf + 0.03, run, 0.2, 0.05, uv_scale=T)
+            box(b, f, "stone", x + sd * (pw + 0.03), yq + 0.2, zf - (0.46 - run), 0.05, 0.2, 0.46 - run, uv_scale=T)
+            yq += 0.42
+            k += 1
+        x0, _, z0 = f.p(x + sd * (pw - th), 0, hd + depth / 2)
+        S.collider(x0, z0, th * f.k, depth / 2 * f.k, f.yaw, 3.0)
+    box(b, f, "rubble", x, (arch + top) / 2, zf - th, pw, (top - arch) / 2, th, uv_scale=T)
+    # The arch: dressed jambs, the head's two shoulders cut in stone, and a plain panel over it.
+    inner = pw - 2 * th
+    for sd in (-1, 1):
+        box(b, f, "stone", x + sd * (inner - 0.06), arch / 2 - 0.05, zf - 0.02, 0.12, arch / 2 + 0.05, 0.06, uv_scale=T)
+        tri = [(x + sd * inner, arch - 0.42, zf + 0.045), (x + sd * inner, arch, zf + 0.045), (x + sd * (inner - 0.7), arch, zf + 0.045)]
+        if sd < 0:
+            tri = [tri[0], tri[2], tri[1]]
+        face(b, f, "stone", tri, [(0, 0), (0, 0.2), (0.3, 0.2)], (0, 0, 1))
+    box(b, f, "stone", x, arch + 0.12, zf, inner + 0.12, 0.13, 0.06, uv_scale=T, grain="x")
+    box(b, f, "stone", x, arch + 0.62, zf, 0.5, 0.3, 0.05, uv_scale=T, grain="x")
+    # The string course carried round it.
+    box(b, f, "stone", x, 3.58, zf + 0.04, pw + 0.07, 0.09, 0.08, uv_scale=T, grain="x")
+    for sd in (-1, 1):
+        box(b, f, "stone", x + sd * (pw + 0.04), 3.58, hd + depth / 2, 0.08, 0.09, depth / 2, uv_scale=T)
+    dressed_window(S, f, x, 5.0, zf + 0.015, 1, w=0.5, h=0.55)
+    # The gable and its coping.
+    face(b, f, "rubble", [(x - pw, top - 0.02, zf), (x + pw, top - 0.02, zf), (x, ridge + 0.05, zf)],
+         [(0, 0), (2 * pw * 0.42, 0), (pw * 0.42, pw * t * 0.42)], (0, 0, 1))
+    for sd in (-1, 1):
+        beam(b, f, "stone", (x + sd * (pw + 0.08), top - 0.06, zf - 0.06), (x, ridge + 0.16, zf - 0.06), 0.13, 0.09)
+        box(b, f, "stone", x + sd * (pw + 0.02), top - 0.02, zf - 0.06, 0.16, 0.1, 0.16, uv_scale=T)
+    ball(b, f, "stone", x, ridge + 0.36, zf - 0.06, 0.15, 7)
+    box(b, f, "stone", x, ridge + 0.16, zf - 0.06, 0.12, 0.08, 0.12, uv_scale=T)
+    # Its roof, from the parapet back into the main roof.
+    zb = hd - 2.4
+    o = 0.28
+    for sd in (-1, 1):
+        plane(S, f, "roof_2", [(x + sd * (pw + o), top - o * t, zb), (x + sd * (pw + o), top - o * t, zf - 0.08), (x, ridge, zf - 0.08), (x, ridge, zb)], 2.4, 0.02, rows=3, cols=3)
+        beam(b, f, "wood", (x + sd * (pw + o), top - o * t + ROOF_TH / 2 - 0.05, zf - 0.08), (x + sd * (pw + o), top - o * t + ROOF_TH / 2 - 0.05, hd), 0.04, ROOF_TH / 2 + 0.05)
+    cap(S, f, "roof_2", (x, ridge + ROOF_TH, zb), (x, ridge + ROOF_TH, zf - 0.1), 2.4, t)
+
+
 def slit(S, f, x, y, z, facing=1, along_x=True):
     """An arrow slit: a dark line through thick stone, its edges dressed."""
     b = S.b
@@ -744,14 +824,15 @@ def house(S, cx, cz, yaw, w, d, sp):
         box(b, f, "stone", 0, y0 - 0.1, -hd - 0.05, hw + 0.08, 0.09, 0.08, uv_scale=(0.42, 0.42), grain="x")
         box(b, f, "stone", hw + 0.05, y0 - 0.1, 0, 0.08, 0.09, hd, uv_scale=(0.42, 0.42))
         box(b, f, "stone", -hw - 0.05, y0 - 0.1, 0, 0.08, 0.09, hd, uv_scale=(0.42, 0.42))
+    win = dressed_window if sp.get("dressed") else window
     for wx, wy in sp.get("windows_front", []):
-        window(S, f, wx, wy, uz + 0.015, 1)
+        win(S, f, wx, wy, uz + 0.015, 1)
     for wx, wy in sp.get("windows_back", []):
-        window(S, f, wx, wy, -uz - 0.015, -1)
+        win(S, f, wx, wy, -uz - 0.015, -1)
     for wz, wy in sp.get("windows_left", []):
-        window(S, f, -hw - 0.015, wy, wz, -1, along_x=False)
+        win(S, f, -hw - 0.015, wy, wz, -1, along_x=False)
     for wz, wy in sp.get("windows_right", []):
-        window(S, f, hw + 0.015, wy, wz, 1, along_x=False)
+        win(S, f, hw + 0.015, wy, wz, 1, along_x=False)
     for wx, wy, fc in sp.get("slits", []):
         if fc in (1, -1):
             slit(S, f, wx, wy, fc * (uz + 0.04), fc)
@@ -799,7 +880,8 @@ def house(S, cx, cz, yaw, w, d, sp):
         lantern(S, f, lx, min(dh * 0.9, h1 - 0.3), hd + 0.05)
     mid = f.p(0, 0, 0)
     S.footprints.append({"x": round(mid[0], 3), "z": round(mid[2], 3), "hx": round(hw * f.k + 0.14, 3), "hz": round(hd * f.k + 0.14, 3), "yaw": round(yaw, 4), "h": 4.0})
-    S.homes.append({"x": cx, "z": cz, "k": f.k, "mid": [mid[0], mid[2]], "yaw": yaw, "w": w, "d": d, "h1": h1, "h2": h2, "jet": jet, "door": door_x, "chimney": chimneys[0], "chimneys": chimneys, "who": sp.get("who", "")})
+    S.homes.append({"x": cx, "z": cz, "k": f.k, "mid": [mid[0], mid[2]], "yaw": yaw, "w": w, "d": d, "h1": h1, "h2": h2, "jet": jet, "door": door_x, "chimney": chimneys[0], "chimneys": chimneys, "who": sp.get("who", ""),
+                    "stone": stone_body, "stack_w": 0.56 if sp.get("stack_kind") == "broad" else 0.42})
     # Extra lit windows, for the shader's glow and the light they throw.
     for lw in sp.get("glow", []):
         S.lights.append({"p": [round(v, 3) for v in f.p(lw[0], lw[1], lw[2])], "c": [1.0, 0.55, 0.22], "r": 4.0, "i": 1.1, "flicker": 0.25})
@@ -1001,23 +1083,37 @@ def stall(S, x, z, yaw):
         for sz in (-1, 1):
             hgt = 2.45 if sz > 0 else 2.0
             box(b, f, "wood", sx * w, hgt / 2, sz * d, 0.06, hgt / 2, 0.06, uv_scale=(0.8, 0.3))
-    box(b, f, "wood", 0, 0.92, 0.1, w, 0.04, d * 0.8, uv_scale=(1.8, 1.8))
-    box(b, f, "wood", 0, 0.48, 0.1 + d * 0.78, w, 0.44, 0.02, uv_scale=(1.8, 1.8))
+    # The counter: one board 0.6 deep across the customers' side (local -z), on two trestles, a cloth hung over its front. The
+    # keeper stands behind it under the awning; the stock waits behind them in crates.
+    cz = -d + 0.31
+    box(b, f, "wood", 0, 0.92, cz, w, 0.04, 0.31, uv_scale=(1.8, 1.8))
+    for sx in (-1, 1):
+        box(b, f, "wood", sx * (w - 0.3), 0.45, cz, 0.05, 0.43, 0.24, uv_scale=(0.8, 0.3))
+        box(b, f, "wood", sx * (w - 0.3), 0.12, cz, 0.06, 0.04, 0.29, uv_scale=(0.8, 0.3))
+    box(b, f, "cloth_red", 0, 0.6, -d - 0.025, w + 0.02, 0.33, 0.012, uv_scale=(1.0, 1.0))
+    box(b, f, "cloth_oat", 0, 0.29, -d - 0.035, w + 0.02, 0.035, 0.012, uv_scale=(1.0, 1.0))
+    for cx_, cz_, hx_, hy_, hz_, y_ in ((-1.15, 0.7, 0.3, 0.24, 0.22, 0.0), (-1.1, 0.68, 0.24, 0.17, 0.18, 0.48), (1.2, 0.72, 0.28, 0.24, 0.2, 0.0)):
+        box(b, f, "wood", cx_, y_ + hy_, cz_, hx_, hy_, hz_, uv_scale=(1.2, 1.2))
+        for s_ in (-1, 1):
+            box(b, f, "wood", cx_, y_ + hy_, cz_ + s_ * (hz_ + 0.005), hx_ + 0.01, 0.025, 0.006, uv_scale=(1.2, 0.3), grain="x")
+    # A sack slumped against the right-hand crate.
+    ball(b, f, "cloth_oat", 0.82, 0.3, 0.76, 0.22, 7)
     # Striped awning that sags between its poles.
     for i in range(6):
         x0 = -w - 0.12 + i * (2 * w + 0.24) / 6
         x1 = x0 + (2 * w + 0.24) / 6
         mat = "cloth_red" if i % 2 == 0 else "cloth_oat"
         roof_slope(b, f, mat, x0, x1, d + 0.5, 2.28, -d - 0.05, 2.0, 1.2, 0.0, 0.1, (1, 6))
-    for i in range(5):
-        tray_x = -1.25 + i * 0.62
-        box(b, f, "wood", tray_x, 0.985, 0.1, 0.26, 0.024, 0.24, uv_scale=(1.5, 1.5))
-        for sxx, szz, hh in ((-1, -1, 0), (0, -1, 0), (1, -1, 0), (-1, 0, 0), (0, 0, 0), (1, 0, 0), (-1, 1, 0), (0, 1, 0), (1, 1, 0), (-0.5, -0.5, 1), (0.5, -0.5, 1), (-0.5, 0.5, 1), (0.5, 0.5, 1), (0, 0, 2)):
-            rad = Rng.uniform(0.042, 0.052)
-            ax = tray_x + sxx * 0.088 + Rng.uniform(-0.007, 0.007)
-            az = 0.1 + szz * 0.08 + Rng.uniform(-0.007, 0.007)
-            ball(b, f, "fruit" if i % 2 else "fruit2", ax, 1.058 + hh * 0.07, az, rad, 7)
-    S.collider(x, z, w + 0.08, d + 0.08, yaw, 1.0)
+    # The counter's bare. What's for sale is set out on it when the stall opens, and packed away at dusk with a cloth roped over
+    # the counter for the night: the renderer draws those (Renderer.wares), at this same place (`stall` in src/folk/town.js PLACES).
+    # Something to bump into: the counter, the crates, and the four posts.
+    for lx, lz, hx_, hz_ in ((0, cz, w + 0.08, 0.36), (-1.15, 0.7, 0.33, 0.25), (1.0, 0.73, 0.5, 0.25)):
+        wx, _, wz = f.p(lx, 0, lz)
+        S.collider(wx, wz, hx_, hz_, yaw, 1.0)
+    wx, _, wz = f.p(0, 0, d)
+    for sx in (-1, 1):
+        px_, _, pz_ = f.p(sx * w, 0, d)
+        S.collider(px_, pz_, 0.1, 0.1, yaw, 2.4)
 
 
 def cart(S, x, z, yaw):
@@ -1098,6 +1194,36 @@ def tree(S, x, z, height, spread, seed, kind=0):
     S.trees.append({"p": [round(x, 2), round(z, 2)], "h": height, "s": spread})
 
 
+def herb_bed(S, x, z, hx, hz, seed):
+    """A raised bed boarded round, the earth in it dark, and herbs in rows: some bushy, some low."""
+    b = S.b
+    f = Frame(x, z, 0.0)
+    for sx in (-1, 1):
+        box(b, f, "wood", sx * hx, 0.1, 0, 0.045, 0.16, hz + 0.045, uv_scale=(0.8, 0.3))
+    for sz in (-1, 1):
+        box(b, f, "wood", 0, 0.1, sz * hz, hx, 0.16, 0.045, uv_scale=(0.8, 0.3), grain="x")
+    box(b, f, "bark", 0, 0.1, 0, hx - 0.04, 0.13, hz - 0.04, uv_scale=(0.5, 0.5))
+    r = random.Random(seed)
+    rows = max(1, int(round(hz * 2 / 0.5)))
+    for j in range(rows):
+        zz = -hz + (j + 0.5) * 2 * hz / rows
+        xx = -hx + 0.22
+        while xx < hx - 0.18:
+            rad = r.uniform(0.12, 0.21)
+            ball(b, f, "leaves", xx, 0.22 + rad * 0.55, zz + r.uniform(-0.04, 0.04), rad, 6)
+            xx += rad * 1.6 + r.uniform(0.0, 0.08)
+    S.collider(x, z, hx + 0.06, hz + 0.06, 0.0, 0.3)
+
+
+def gate_pier(S, x, z):
+    """A square stone pier with a ball on it, either side of a gateway."""
+    f = Frame(x, z, 0.0)
+    box(S.b, f, "stone", 0, 0.8, 0, 0.3, 0.85, 0.3, uv_scale=(0.42, 0.42))
+    box(S.b, f, "stone", 0, 1.68, 0, 0.36, 0.05, 0.36, uv_scale=(0.42, 0.42))
+    ball(S.b, f, "stone", 0, 1.93, 0, 0.2, 7)
+    S.collider(x, z, 0.32, 0.32, 0.0, 1.8)
+
+
 def low_wall(S, x0, z0, x1, z1, h=1.05):
     """A dry-stone wall in irregular courses: something to fight around."""
     b = S.b
@@ -1159,7 +1285,7 @@ def compose():
     # 3. The reeve's, east: stone below, a hipped roof with a stack at each end, and a porch to the door.
     f = house(S, 18.5, 3.5, Wt, 10.5, 6.6, {
         "h1": 3.4, "jetty": 0.0, "ground": [W(15, True), W(14, True), W(15, True), W(15, True)], "upper": U(7, 9, 10),
-        "gable": "wall_11", "roof": "roof_2", "kind": "hip", "pitch": 44, "sag": 0.08, "over_z": 0.6, "chimney": (-3.4, -0.6), "chimneys": [(-3.4, -0.6), (3.9, -2.6)], "stack": 0.9,
+        "gable": "wall_11", "roof": "roof_2", "kind": "hip", "pitch": 44, "sag": 0.08, "over_z": 0.6, "chimney": (-3.4, -0.6), "chimneys": [(-3.4, -0.6), (4.3, -2.6)], "stack": 0.9,
         "windows_front": [(-3.6, 5.05), (0.6, 5.05), (3.6, 5.05)], "windows_back": [(-2.0, 5.05), (2.0, 5.05)], "windows_left": [(0.0, 5.05)], "windows_right": [(0.0, 5.05)],
         "doors": [{"x": 0.6, "lamp": 1.25}], "glow": [(-3.2, 1.7, 3.7)],
     })
@@ -1175,7 +1301,9 @@ def compose():
     woodpile(S, f, 4.3, -3.95, 1.4, 4, along_x=False)
 
     well(S, -1.5, 1.0)
-    stall(S, -6.5, -9.8, 0.08)
+    # The market round the well: curios, ale, bread and cloth. (Where each keeper stands, and their customers: PLACES in src/folk/town.js.)
+    for sx, sz, syaw in STALLS:
+        stall(S, sx, sz, syaw)
     cart(S, 17.5, -6.5, 1.1)
     for x, z, y in ((-9.4, -11.6, 0), (-10.3, -10.9, 0), (-9.6, -10.6, 0)):
         barrel(S, x, z, Rng.uniform(0, 6), 0.36, 0.92, y)
@@ -1319,6 +1447,75 @@ def compose():
             box(S.b, f, "stone", x_, 6.72, s * 3.76, 0.14, 0.13, 0.1, uv_scale=(0.42, 0.42))
             box(S.b, f, "stone", s * 3.76, 6.72, x_, 0.1, 0.13, 0.14, uv_scale=(0.42, 0.42))
     shed(S, f, 3.7, -1.5, 6.1, 2.2, 3.1, 2.2, (1, 0), mat="roof_1", walls=("rubble", 2.6))
+    # The east end, on the ground the church stood on (OLD_CHURCH_GROUND in src/core/town.js), either side of the church road.
+    # 13. The reeve's manor (the Ashbys'): the one house in the town of dressed stone all the way up, hipped, a stack at each end, a porch, and a
+    # walled forecourt to the road with a pier either side of its gateway. Coursed rubble dressed with cut stone: quoins, a string
+    # course, mullioned windows on both floors in the same bays, and a porch of two storeys under a gable of its own.
+    RUBBLE = ("rubble", False)
+    f = house(S, 80.0, -11.5, N, 13.0, 8.0, {
+        "h1": 3.4, "h2": 2.9, "jetty": 0.0, "stone_body": True, "dressed": True, "ground": [RUBBLE] * 4, "upper": [("rubble", 0, 1, 2.6)] * 4,
+        "gable": "wall_18", "roof": "roof_2", "kind": "hip", "pitch": 40, "sag": 0.04, "over_z": 0.55,
+        "chimney": (5.4, 0.6), "chimneys": [(5.4, 0.6), (-5.4, 1.2)], "stack": 1.9,
+        "windows_front": [(-5.0, 1.8), (-2.9, 1.8), (2.9, 1.8), (5.0, 1.8), (-5.0, 5.1), (-2.9, 5.1), (2.9, 5.1), (5.0, 5.1)],
+        "windows_back": [(-3.2, 1.8), (3.2, 1.8), (-3.2, 5.1), (3.2, 5.1)],
+        "windows_left": [(-1.4, 1.8), (-1.4, 5.1)], "windows_right": [(-1.8, 1.8), (1.9, 1.8), (-1.8, 5.1), (1.9, 5.1)],
+        "doors": [{"x": 0.0, "lamp": 0.95}], "glow": [(-2.9, 1.8, 4.5), (2.9, 1.8, 4.5)],
+    })
+    manor_porch(S, f, 0.0, 4.0)
+    low_wall(S, 71.2, -7.3, 71.2, -3.4)
+    low_wall(S, 71.2, -3.4, 77.8, -3.4)
+    low_wall(S, 82.2, -3.4, 88.8, -3.4)
+    low_wall(S, 88.8, -3.4, 88.8, -7.3)
+    gate_pier(S, 77.75, -3.4)
+    gate_pier(S, 82.25, -3.4)
+    barrel(S, 89.8, -4.6, 0.3)
+    barrel(S, 90.4, -5.3, 1.0)
+    crate(S, 90.1, -6.3, 0.2, 0.45)
+    # 14. The bakehouse, across the road: a broad stack, and the bread oven out under a lean-to on its east end, a pile of faggots
+    # to fire it.
+    f = house(S, 64.0, 9.5, S_, 9.5, 7.0, {
+        "h1": 3.0, "h2": 2.5, "jetty": 0.4, "ground": [W(16), W(19), W(13, True), W(13, True)], "upper": U(8, 12, 10),
+        "gable": "wall_08", "roof": "roof_4", "pitch": 50, "sag": 0.1, "chimney": (-3.6, 0.4), "stack": 1.2, "stack_kind": "broad",
+        "windows_front": [(-1.6, 4.55), (2.4, 4.55)], "windows_back": [(0.0, 4.55)], "windows_right": [(0.0, 4.55)],
+        "doors": [{"x": 1.0, "lamp": -1.05}], "glow": [(-2.4, 1.7, 4.1)],
+    })
+    hanging_sign(S, f, -1.7, 2.6, 3.55)
+    shed(S, f, -7.6, -2.5, -4.75, 2.5, 2.9, 2.1, (-1, 0), mat="roof_4", posts=[(-7.6, -2.5), (-7.6, 2.5)])
+    box(S.b, f, "rubble", -6.1, 0.42, -0.6, 0.95, 0.52, 1.0, uv_scale=(0.42, 0.42))
+    ball(S.b, f, "rubble", -6.1, 0.95, -0.6, 0.85, 9)
+    # The mouth, low in the dome's face, a stone over it.
+    box(S.b, f, "flame", -6.1, 1.12, 0.25, 0.24, 0.16, 0.02, uv_scale=(1, 1))
+    box(S.b, f, "stone", -6.1, 1.32, 0.22, 0.32, 0.05, 0.08, uv_scale=(0.42, 0.42))
+    chimney_stack(S, f, -6.3, -1.1, 4.0, "square")
+    S.lights.append({"p": [round(v, 3) for v in f.p(-6.1, 1.0, 0.8)], "c": [1.0, 0.45, 0.16], "r": 6.0, "i": 4.0, "flicker": 0.7})
+    x, z = xz(f, -6.1, -0.6)
+    S.collider(x, z, (0.98) * f.k, (1.02) * f.k, f.yaw, 1.8)
+    woodpile(S, f, -6.6, 1.75, 1.6, 3, along_x=True)
+    barrel(S, *xz(f, 3.7, 3.95), 0.4)
+    crate(S, *xz(f, 2.9, 3.95), 0.3, 0.42)
+    cart(S, 75.6, 10.2, 0.12)
+    # 15. The herbalist's: small and steep, its gable to the road, and the physic garden fenced in behind it, a step off its back
+    # wall, entered at its south-east corner: beds of herbs in rows, and a frame for the linen.
+    f = house(S, 84.0, 10.0, S_, 8.0, 7.0, {
+        "h1": 2.9, "h2": 2.4, "jetty": 0.0, "ground": [W(20, True), W(18), W(16), W(16)], "upper": U(9, 11, 12),
+        "gable": "wall_12", "roof": "roof_3", "ridge": "z", "pitch": 60, "sag": 0.12, "chimney": (2.4, 0.3), "over_x": 0.45,
+        "windows_front": [(1.5, 4.4)], "windows_left": [(-1.2, 4.4)], "windows_right": [(1.2, 4.4)],
+        "doors": [{"x": -1.0}], "glow": [(1.8, 1.7, 4.1)],
+    })
+    # Bunches drying under the girt, beside the door.
+    beam(S.b, f, "wood", (0.55, 2.55, 3.62), (3.45, 2.55, 3.62), 0.025, 0.025)
+    for k in range(6):
+        hx_ = 0.8 + k * 0.5
+        box(S.b, f, "wood", hx_, 2.42, 3.62, 0.006, 0.12, 0.006, uv_scale=(0.2, 0.2))
+        box(S.b, f, "leaves", hx_, 2.2, 3.62, 0.09, 0.15, 0.07, uv_scale=(0.6, 0.6))
+    fence(S, [(86.0, 16.5), (79.4, 16.5), (79.4, 23.6), (88.6, 23.6), (88.6, 19.6)])
+    herb_bed(S, 81.7, 19.9, 1.7, 0.55, 51)
+    herb_bed(S, 81.7, 22.4, 1.7, 0.5, 52)
+    herb_bed(S, 86.3, 22.4, 1.3, 0.5, 53)
+    rack(S, Frame(0.0, 0.0, 0.0), 84.6, 17.6, 2.4, "cloth_oat", 2)
+    # Where the town ends to the east, a post with a rag on it, for what's up the road.
+    signpost(S, 97.0, 0.1, 2.9, -1.2, red=True)
+
     # Where the two roads up the hill leave the town, and where they end. (Heights from src/core/terrain.js.)
     signpost(S, -29.0, ROAD_SIGN_Y[0], 22.5, 0.63)
     signpost(S, -27.0, ROAD_SIGN_Y[1], -5.6, 0.0, red=True)
@@ -1365,7 +1562,7 @@ def write_indoor(S):
         jx, jz = (h["jet"], 0.0) if turned else (0.0, h["jet"])
         y1, top = h["h1"] + 0.1, h["h1"] + 0.3 + h["h2"] - 0.23
         tests.append(f"inHome(p, {h['mid'][0]:.2f}, {h['mid'][1]:.2f}, {hx:.2f}, {hz:.2f}, {jx:.2f}, {jz:.2f}, {y1:.2f}, {top:.2f})")
-    body = "    return select(0.0, 1.0, " + "\n      || ".join(tests) + ");\n"
+    body = "    return select(0.0, 1.25, " + "\n      || ".join(tests) + ");\n"
     path = os.path.join(ROOT, "src", "gfx", "shaders.js")
     with open(path, encoding="utf8", newline="") as fh:
         src = fh.read()

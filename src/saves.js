@@ -9,12 +9,20 @@
 // what you carry and have on. Quests and the world's own state come in later as parts of their own, with addPart. A part
 // missing from a save (one made before the part existed) is loaded with null, and starts as in a new game. When a
 // part's shape changes, raise SAVE_VERSION and add a step to MIGRATIONS that brings the older saves up to it.
+//
+// A save also says where the church stood when it was made (`church`, CHURCH_X and CHURCH_Z: src/core/church.js). If it's
+// been moved since, and the save has you inside it, in the cathedral or anywhere under it, you go with it, to the same spot.
 
-export const SAVE_VERSION = 1;
+import { CHURCH_X, CHURCH_Z, inChurchFrame } from './core/church.js';
+
+export const SAVE_VERSION = 2;
 export const SLOT_COUNT = 10;
 
-// version -> (save) => the save at the next version. e.g. 1: (d) => { d.parts.player.cell = 'velscour'; d.v = 2; return d; }
-const MIGRATIONS = {};
+// version -> (save) => the save at the next version.
+const MIGRATIONS = {
+  // Version 1 saves were made with the church where it was first built, on the edge of the town.
+  1: (d) => { d.church = [0, 0]; d.v = 2; return d; },
+};
 
 const parts = new Map();
 
@@ -24,7 +32,7 @@ export function addPart(name, part) { parts.set(name, part); }
 
 /** Everything there is to save, now. */
 export async function capture() {
-  const out = { v: SAVE_VERSION, parts: {} };
+  const out = { v: SAVE_VERSION, church: [CHURCH_X, CHURCH_Z], parts: {} };
   for (const [name, p] of parts) out.parts[name] = await p.save();
   out.summary = [...parts].map(([name, p]) => p.summary?.(out.parts[name])).filter(Boolean);
   return out;
@@ -32,8 +40,18 @@ export async function capture() {
 
 /** Puts a save back, part by part. Throws on a save this version can't read. */
 export async function restore(data) {
-  const d = migrate(structuredClone(data));
+  const d = withChurch(migrate(structuredClone(data)));
   for (const [name, p] of parts) await p.load(d.parts[name] ?? null, d);
+}
+
+// Where you stood, moved with the church if you were in it and it's stood somewhere else since.
+function withChurch(d) {
+  const [ox, oz] = Array.isArray(d.church) ? d.church : [CHURCH_X, CHURCH_Z], p = d.parts.player;
+  if ((ox !== CHURCH_X || oz !== CHURCH_Z) && p && Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z) && inChurchFrame(p.x - ox, p.y, p.z - oz)) {
+    p.x += CHURCH_X - ox; p.z += CHURCH_Z - oz;
+  }
+  d.church = [CHURCH_X, CHURCH_Z];
+  return d;
 }
 
 function migrate(d) {

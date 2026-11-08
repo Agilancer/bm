@@ -1,5 +1,7 @@
 // The pines round the town: where they stand. Worked out the same on every thread, for the renderer to draw and the sim to bump into.
 import { CAVE_PATH, openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, segDist2, sstep } from './terrain.js';
+import { churchSite } from './church.js';
+import { oldChurchGround } from './town.js';
 
 const LONG_PATHS = PATHS.filter((p) => p.pts.length >= 5);
 
@@ -9,7 +11,8 @@ export function forestAmount(x, z) {
   const clearing = 64 + (fbm(x * 0.021 + 3, z * 0.021 + 7, 2) - 0.5) * 22;
   let a = sstep(clearing, clearing + 16, r);
   if (a <= 0) return 0;
-  const site = Math.max(58 - x, x - 176, Math.abs(z) - 26);
+  // The church's ground, where it stands now and where it stood, which is the town's to build on: src/core/church.js, src/core/town.js.
+  const site = Math.min(oldChurchGround(x, z), churchSite(x, z));
   a *= sstep(8, 26, site);
   if (a <= 0) return 0;
   for (const p of PLOTS) {

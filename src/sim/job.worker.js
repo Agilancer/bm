@@ -4,6 +4,7 @@
 import { CTRL, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, mapShared } from '../core/layout.js';
 import { forestAmount, forestTrees } from '../core/forest.js';
 import { setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
+import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
 
 async function decode(url, flags) {
   const r = await fetch(url);
@@ -14,10 +15,12 @@ async function decode(url, flags) {
 }
 
 // The terrain grid: dense under the village and stretching to the horizon with a warped spacing.
-function buildTerrain({ n, extent, patch }) {
-  // The hill and its roads have a finer grid of their own: this one's cells are ten metres across out there, which a road can't be cut into.
-  const px = Math.round((patch.x1 - patch.x0) / patch.cell), pz = Math.round((patch.z1 - patch.z0) / patch.cell);
-  const verts = new Float32Array(((n + 1) * (n + 1) + (px + 1) * (pz + 1)) * 6);
+function buildTerrain({ n, extent, patches }) {
+  // The hill and its roads have a finer grid of their own: this one's cells are ten metres across out there, which a road can't be cut
+  // into. So has the ground round the church, which has a hole in it (src/core/church.js LAND_HOLE).
+  const dims = patches.map((p) => [Math.round((p.x1 - p.x0) / p.cell), Math.round((p.z1 - p.z0) / p.cell)]);
+  const fine = dims.reduce((m, [px, pz]) => m + (px + 1) * (pz + 1), 0), fineCells = dims.reduce((m, [px, pz]) => m + px * pz, 0);
+  const verts = new Float32Array(((n + 1) * (n + 1) + fine) * 6);
   // About 0.8 m a cell at the centre, stretching out to the horizon.
   const c = 0.4 * n;
   const warp = (t) => Math.sign(t) * (c * Math.abs(t) + (extent - c) * Math.abs(t) ** 4);
@@ -37,8 +40,8 @@ function buildTerrain({ n, extent, patch }) {
     }
   }
   // (A cell's left out only well inside it: the two overlap at the edge, and the ground's colour goes by where it is, so nothing shows.)
-  const under = (x, z) => x > patch.x0 + 12 && x < patch.x1 - 12 && z > patch.z0 + 12 && z < patch.z1 - 12;
-  const idx = new Uint32Array((n * n + px * pz) * 6);
+  const under = (x, z) => patches.some((p) => x > p.x0 + 12 && x < p.x1 - 12 && z > p.z0 + 12 && z < p.z1 - 12);
+  const idx = new Uint32Array((n * n + fineCells) * 6);
   let o = 0;
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
@@ -47,24 +50,32 @@ function buildTerrain({ n, extent, patch }) {
       idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
     }
   }
-  const first = (n + 1) * (n + 1), e = patch.cell;
-  for (let j = 0; j <= pz; j++) {
-    for (let i = 0; i <= px; i++) {
-      const x = patch.x0 + i * e, z = patch.z0 + j * e;
-      const dx = (terrainHeight(x + e, z) - terrainHeight(x - e, z)) / (2 * e);
-      const dz = (terrainHeight(x, z + e) - terrainHeight(x, z - e)) / (2 * e);
-      const l = 1 / Math.hypot(dx, 1, dz);
-      const k = (first + j * (px + 1) + i) * 6;
-      verts[k] = x; verts[k + 1] = terrainHeight(x, z); verts[k + 2] = z;
-      verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
+  let first = (n + 1) * (n + 1);
+  patches.forEach((patch, q) => {
+    const [px, pz] = dims[q], e = patch.cell, hole = patch.hole;
+    for (let j = 0; j <= pz; j++) {
+      for (let i = 0; i <= px; i++) {
+        const x = patch.x0 + i * e, z = patch.z0 + j * e;
+        const dx = (terrainHeight(x + e, z) - terrainHeight(x - e, z)) / (2 * e);
+        const dz = (terrainHeight(x, z + e) - terrainHeight(x, z - e)) / (2 * e);
+        const l = 1 / Math.hypot(dx, 1, dz);
+        const k = (first + j * (px + 1) + i) * 6;
+        verts[k] = x; verts[k + 1] = terrainHeight(x, z); verts[k + 2] = z;
+        verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
+      }
     }
-  }
-  for (let j = 0; j < pz; j++) {
-    for (let i = 0; i < px; i++) {
-      const a = first + j * (px + 1) + i, b = a + 1, c = a + px + 1, d = c + 1;
-      idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
+    for (let j = 0; j < pz; j++) {
+      for (let i = 0; i < px; i++) {
+        if (hole) {
+          const cx = patch.x0 + (i + 0.5) * e, cz = patch.z0 + (j + 0.5) * e;
+          if (cx > hole.x0 && cx < hole.x1 && cz > hole.z0 && cz < hole.z1) continue;
+        }
+        const a = first + j * (px + 1) + i, b = a + 1, c = a + px + 1, d = c + 1;
+        idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
+      }
     }
-  }
+    first += (px + 1) * (pz + 1);
+  });
   return { verts, idx: idx.subarray(0, o) };
 }
 
@@ -96,7 +107,8 @@ function buildFarRows({ size, half, rowStart, rowEnd }) {
         }
         dirt = Math.max(dirt, 1 - sstep(SUMMIT.r - 2, SUMMIT.r + 9, Math.hypot(x - SUMMIT.x, z - SUMMIT.z) + wob * 2));
       }
-      if (Math.abs(x) < 240 && Math.abs(z) < 240) dirt = Math.max(dirt, pathAmount(x, z));
+      // (The church's yard is out past the map over the village, so it's worn here: src/core/church.js.)
+      if (Math.abs(x) < 240 && Math.abs(z) < 240) dirt = Math.max(dirt, pathAmount(x, z), footprintDirt(x, z, [CHURCH_FOOTPRINT, CHURCH_WING]));
       data[o++] = Math.round(dirt * 255);
       data[o++] = Math.round(forestAmount(x, z) * 255);
       data[o++] = 0;

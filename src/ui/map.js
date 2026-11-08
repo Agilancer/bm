@@ -7,6 +7,7 @@
 import { C, CHARS_START, C_SIZE, H } from '../core/layout.js';
 import { forestTrees } from '../core/forest.js';
 import { LAND_EDGE, PATHS, PLOTS, ROADS, SUMMIT, terrainHeight } from '../core/terrain.js';
+import { CHURCH_SITE, churchAt } from '../core/church.js';
 
 const EDGE = LAND_EDGE;
 const PX = 600;                       // the paper's pixels across: 2 m to a pixel
@@ -108,13 +109,13 @@ export class WorldMap {
       g.restore();
     };
     // (A footprint's yaw turns it the other way on the paper, which is the land seen turned half round.)
-    const houses = (village?.footprints || []).concat((village?.colliders || []).filter((c) => c.h >= 3 && c.hx >= 2.5 && c.hz >= 1.2 && c.x < 58));
+    const houses = (village?.footprints || []).concat((village?.colliders || []).filter((c) => c.h >= 3 && c.hx >= 2.5 && c.hz >= 1.2 && c.x < CHURCH_SITE.x0));
     if (houses.length) for (const c of houses) rect(c.x, c.z, c.hx, c.hz, c.yaw);
     else for (const p of PLOTS) rect(p[0], p[1], p[2] * 0.8, p[3] * 0.8, 0);
 
-    // The cathedral.
+    // The cathedral, out east of the town (src/core/church.js).
     g.fillStyle = 'rgba(92, 38, 30, 0.95)'; g.strokeStyle = 'rgba(201, 163, 92, 0.9)';
-    rect(90, 0, 34, 22, 0);
+    rect(...churchAt(90, 0), 34, 22, 0);
     // The top of the hill.
     {
       const [px, py] = toPaper(SUMMIT.x, SUMMIT.z);
@@ -311,7 +312,7 @@ export class WorldMap {
       g.strokeText(text, ox + px * k, oy + py * k); g.fillText(text, ox + px * k, oy + py * k);
     };
     if (!snap) return;
-    label('The Cathedral', 90, -34);
+    label('The Cathedral', ...churchAt(90, -34));
     label('The Summit', SUMMIT.x, SUMMIT.z - 30);
     label('The Long Road', -262, 236, 11);
     label('The Fall', -300, 40, 11);

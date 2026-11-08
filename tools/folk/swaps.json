@@ -1,0 +1,1358 @@
+{
+ "_": "Palette swaps for tools/folk/swaps.py. Each region: refs, the base's own colours it takes (CIELAB, within sigma in a/b and sigma_l in lightness); not, colours it never takes (within not_sigma and not_sigma_l); parts and not_parts, the bones it does and does not lie on; height, the band of the body (0 feet, 1 crown); front, how far it faces forward; rough, its roughness band (cloth is rougher than leather); eyes, keep out of the eyes (for hair and beards); skin_ok, let it take skin-like colours (a red kerchief); feather, the mask's blur in texels; to, the target as [lightness, chroma, hue degrees]; contrast and chroma, how much of each texel's own difference from the region's mean it keeps; light, how far the mean lightness moves.",
+ "swaps": {
+  "kit": {
+   "base": "boy_1",
+   "note": "Pip's little brother: same face, russet hood, moss-green breeches, hair a shade lighter",
+   "regions": [
+    {
+     "name": "hood",
+     "refs": [
+      [
+       35,
+       -1.0,
+       9.9
+      ],
+      [
+       31,
+       -1.0,
+       7.7
+      ],
+      [
+       36,
+       -1.5,
+       7.2
+      ],
+      [
+       22,
+       0.2,
+       7.9
+      ],
+      [
+       23,
+       0.2,
+       5.3
+      ],
+      [
+       10,
+       0.4,
+       3.7
+      ]
+     ],
+     "sigma": 2.2,
+     "sigma_l": 18,
+     "not": [
+      [
+       34,
+       2.6,
+       7.4
+      ],
+      [
+       50,
+       1.9,
+       9.5
+      ],
+      [
+       38,
+       3.5,
+       7.6
+      ],
+      [
+       52,
+       2.1,
+       6.7
+      ],
+      [
+       65,
+       1.5,
+       7.2
+      ]
+     ],
+     "not_sigma": 1.6,
+     "parts": [
+      "torso",
+      "shoulder",
+      "neck",
+      "upperarm",
+      "head"
+     ],
+     "height": [
+      0.66,
+      1.0
+     ],
+     "to": [
+      27,
+      16,
+      43
+     ],
+     "contrast": 1.05,
+     "chroma": 0.8
+    },
+    {
+     "name": "breeches",
+     "refs": [
+      [
+       21,
+       2.8,
+       6.3
+      ],
+      [
+       32,
+       3.6,
+       6.8
+      ],
+      [
+       11,
+       1.8,
+       4.6
+      ]
+     ],
+     "sigma": 2.4,
+     "sigma_l": 14,
+     "parts": [
+      "thigh",
+      "shin",
+      "torso"
+     ],
+     "height": [
+      0.27,
+      0.56
+     ],
+     "rough": [
+      0.86,
+      1.01
+     ],
+     "to": [
+      25,
+      9,
+      112
+     ],
+     "contrast": 1.0,
+     "chroma": 0.8
+    },
+    {
+     "name": "hair",
+     "refs": [
+      [
+       14,
+       6.8,
+       10.6
+      ],
+      [
+       23,
+       7.1,
+       11.7
+      ],
+      [
+       34,
+       8.3,
+       12.8
+      ]
+     ],
+     "sigma": 3.5,
+     "sigma_l": 16,
+     "parts": [
+      "head"
+     ],
+     "height": [
+      0.86,
+      1.01
+     ],
+     "to": [
+      33,
+      17,
+      62
+     ],
+     "contrast": 1.1,
+     "chroma": 0.9
+    }
+   ]
+  },
+  "dob": {
+   "base": "dude",
+   "note": "Hob's twin brother: same face and hair, woad-blue shirt, oxblood jerkin, charcoal breeches",
+   "regions": [
+    {
+     "name": "shirt",
+     "refs": [
+      [
+       76,
+       1.1,
+       5.8
+      ],
+      [
+       68,
+       1.2,
+       5.9
+      ],
+      [
+       53,
+       1.1,
+       6.4
+      ],
+      [
+       41,
+       1.1,
+       6.4
+      ],
+      [
+       69,
+       1.4,
+       6.4
+      ]
+     ],
+     "sigma": 1.7,
+     "sigma_l": 30,
+     "parts": [
+      "torso",
+      "shoulder",
+      "neck",
+      "upperarm",
+      "forearm"
+     ],
+     "rough": [
+      0.6,
+      1.01
+     ],
+     "to": [
+      45,
+      9,
+      245
+     ],
+     "contrast": 0.8,
+     "chroma": 0.4,
+     "light": 1.0,
+     "not": [
+      [
+       32,
+       3.1,
+       9.8
+      ],
+      [
+       29,
+       2.8,
+       10.1
+      ],
+      [
+       22,
+       2.4,
+       8.9
+      ],
+      [
+       12,
+       2.9,
+       7.0
+      ],
+      [
+       34,
+       2.9,
+       10.5
+      ]
+     ],
+     "not_sigma": 2.0,
+     "not_sigma_l": 6
+    },
+    {
+     "name": "jerkin",
+     "refs": [
+      [
+       32,
+       3.1,
+       9.8
+      ],
+      [
+       29,
+       2.8,
+       10.1
+      ],
+      [
+       34,
+       2.9,
+       10.5
+      ],
+      [
+       22,
+       2.4,
+       8.9
+      ],
+      [
+       12,
+       2.9,
+       7.0
+      ],
+      [
+       40,
+       3.0,
+       11.0
+      ]
+     ],
+     "sigma": 2.2,
+     "sigma_l": 16,
+     "parts": [
+      "torso",
+      "shoulder",
+      "neck",
+      "thigh"
+     ],
+     "height": [
+      0.43,
+      0.86
+     ],
+     "rough": [
+      0.85,
+      1.01
+     ],
+     "to": [
+      27,
+      14,
+      28
+     ],
+     "contrast": 1.0,
+     "chroma": 0.8
+    },
+    {
+     "name": "breeches",
+     "refs": [
+      [
+       24,
+       3.3,
+       7.7
+      ],
+      [
+       33,
+       3.4,
+       9.5
+      ],
+      [
+       10,
+       1.8,
+       4.5
+      ],
+      [
+       23,
+       2.9,
+       6.9
+      ],
+      [
+       16,
+       2.6,
+       6.7
+      ],
+      [
+       32,
+       3.5,
+       8.1
+      ]
+     ],
+     "sigma": 2.4,
+     "sigma_l": 14,
+     "parts": [
+      "thigh",
+      "shin"
+     ],
+     "height": [
+      0.27,
+      0.47
+     ],
+     "rough": [
+      0.84,
+      1.01
+     ],
+     "to": [
+      23,
+      2.5,
+      250
+     ],
+     "contrast": 1.0,
+     "chroma": 0.4
+    }
+   ]
+  },
+  "hal": {
+   "base": "boy_2",
+   "note": "the baker's son: faded weld-yellow tunic, oatmeal linen breeches, straw hair",
+   "regions": [
+    {
+     "name": "tunic",
+     "refs": [
+      [
+       34,
+       -0.7,
+       10.6
+      ],
+      [
+       21,
+       0.5,
+       8.7
+      ],
+      [
+       8,
+       0.6,
+       5.5
+      ],
+      [
+       27,
+       -1.0,
+       8.6
+      ],
+      [
+       18,
+       -1.1,
+       7.7
+      ],
+      [
+       30,
+       -0.1,
+       9.4
+      ],
+      [
+       27,
+       -1.4,
+       8.2
+      ]
+     ],
+     "sigma": 2.2,
+     "sigma_l": 18,
+     "parts": [
+      "torso",
+      "shoulder",
+      "neck",
+      "upperarm",
+      "thigh",
+      "head"
+     ],
+     "height": [
+      0.35,
+      1.0
+     ],
+     "rough": [
+      0.84,
+      1.01
+     ],
+     "to": [
+      56,
+      18,
+      80
+     ],
+     "contrast": 0.88,
+     "chroma": 0.6
+    },
+    {
+     "name": "breeches",
+     "refs": [
+      [
+       20,
+       1.9,
+       7.5
+      ],
+      [
+       8,
+       1.4,
+       4.5
+      ],
+      [
+       23,
+       1.5,
+       5.9
+      ],
+      [
+       16,
+       1.9,
+       6.3
+      ],
+      [
+       33,
+       3.3,
+       9.2
+      ],
+      [
+       28,
+       2.0,
+       7.0
+      ]
+     ],
+     "sigma": 2.8,
+     "sigma_l": 20,
+     "not": [
+      [
+       30,
+       -0.1,
+       9.4
+      ],
+      [
+       21,
+       0.5,
+       8.7
+      ]
+     ],
+     "parts": [
+      "thigh",
+      "shin"
+     ],
+     "height": [
+      0.27,
+      0.56
+     ],
+     "rough": [
+      0.74,
+      1.01
+     ],
+     "to": [
+      56,
+      9,
+      78
+     ],
+     "contrast": 0.8,
+     "chroma": 0.5
+    },
+    {
+     "name": "hair",
+     "refs": [
+      [
+       29,
+       5.0,
+       9.6
+      ],
+      [
+       17,
+       5.5,
+       9.6
+      ],
+      [
+       43,
+       3.7,
+       8.0
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 18,
+     "parts": [
+      "head"
+     ],
+     "height": [
+      0.84,
+      1.01
+     ],
+     "to": [
+      58,
+      21,
+      78
+     ],
+     "contrast": 1.3,
+     "chroma": 0.8
+    }
+   ]
+  },
+  "bryony": {
+   "base": "girl_1",
+   "note": "the herbalist's daughter: moss-green dress and hood, chestnut hair",
+   "regions": [
+    {
+     "name": "dress",
+     "refs": [
+      [
+       37,
+       -0.3,
+       -6.9
+      ],
+      [
+       32,
+       -0.9,
+       -7.2
+      ],
+      [
+       35,
+       0.2,
+       -7.4
+      ],
+      [
+       34,
+       0.8,
+       -5.1
+      ],
+      [
+       20,
+       0.5,
+       -1.7
+      ],
+      [
+       17,
+       0.0,
+       -1.3
+      ],
+      [
+       45,
+       -0.5,
+       -8.0
+      ],
+      [
+       26,
+       0.0,
+       -5.0
+      ],
+      [
+       38,
+       -2.3,
+       -11.0
+      ],
+      [
+       30,
+       -2.0,
+       -10.0
+      ],
+      [
+       45,
+       -2.5,
+       -12.0
+      ],
+      [
+       26,
+       -1.5,
+       -8.5
+      ]
+     ],
+     "sigma": 2.6,
+     "sigma_l": 18,
+     "parts": [
+      "torso",
+      "shoulder",
+      "neck",
+      "head",
+      "thigh",
+      "upperarm",
+      "forearm",
+      "hand"
+     ],
+     "height": [
+      0.3,
+      1.0
+     ],
+     "to": [
+      32,
+      12,
+      118
+     ],
+     "contrast": 1.0,
+     "chroma": 0.7
+    },
+    {
+     "name": "hair",
+     "refs": [
+      [
+       29,
+       4.1,
+       7.6
+      ],
+      [
+       39,
+       5.1,
+       8.5
+      ],
+      [
+       53,
+       2.0,
+       6.1
+      ],
+      [
+       30,
+       5.3,
+       9.1
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 16,
+     "parts": [
+      "head"
+     ],
+     "height": [
+      0.8,
+      1.01
+     ],
+     "eyes": true,
+     "to": [
+      18,
+      13,
+      46
+     ],
+     "contrast": 0.8,
+     "chroma": 0.9
+    }
+   ]
+  },
+  "jory": {
+   "base": "worker_2",
+   "note": "the old night watchman: dark woad shirt, a charcoal-woad kerchief, grey hair and beard; the same leather apron",
+   "regions": [
+    {
+     "name": "shirt",
+     "refs": [
+      [
+       76,
+       0.5,
+       5.4
+      ],
+      [
+       67,
+       1.0,
+       5.6
+      ],
+      [
+       53,
+       1.2,
+       5.8
+      ],
+      [
+       62,
+       0.9,
+       5.7
+      ],
+      [
+       40,
+       1.2,
+       5.3
+      ],
+      [
+       84,
+       0.3,
+       4.0
+      ],
+      [
+       70,
+       2.5,
+       8.5
+      ]
+     ],
+     "sigma": 1.8,
+     "sigma_l": 30,
+     "parts": [
+      "torso",
+      "shoulder",
+      "neck",
+      "upperarm",
+      "forearm"
+     ],
+     "rough": [
+      0.7,
+      1.01
+     ],
+     "to": [
+      27,
+      8,
+      250
+     ],
+     "contrast": 0.6,
+     "chroma": 0.5,
+     "not": [
+      [
+       16,
+       1.9,
+       5.5
+      ],
+      [
+       23,
+       1.1,
+       4.9
+      ],
+      [
+       9,
+       0.9,
+       3.8
+      ],
+      [
+       23,
+       2.9,
+       7.5
+      ],
+      [
+       17,
+       3.1,
+       6.8
+      ]
+     ],
+     "not_sigma": 2.5,
+     "not_sigma_l": 6
+    },
+    {
+     "name": "kerchief",
+     "refs": [
+      [
+       19,
+       17.2,
+       9.9
+      ],
+      [
+       17,
+       14.9,
+       10.4
+      ],
+      [
+       25,
+       23.4,
+       11.6
+      ],
+      [
+       26,
+       16.9,
+       7.5
+      ]
+     ],
+     "sigma": 5.0,
+     "sigma_l": 14,
+     "parts": [
+      "neck",
+      "torso",
+      "head",
+      "shoulder"
+     ],
+     "height": [
+      0.7,
+      0.9
+     ],
+     "skin_ok": true,
+     "to": [
+      20,
+      7,
+      250
+     ],
+     "contrast": 0.9,
+     "chroma": 0.4
+    },
+    {
+     "name": "hair",
+     "refs": [
+      [
+       12,
+       2.3,
+       4.9
+      ],
+      [
+       22,
+       3.3,
+       6.4
+      ],
+      [
+       14,
+       4.0,
+       7.1
+      ],
+      [
+       27,
+       6.6,
+       11.3
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 14,
+     "parts": [
+      "head",
+      "neck"
+     ],
+     "height": [
+      0.925,
+      1.01
+     ],
+     "eyes": true,
+     "to": [
+      52,
+      2.0,
+      80
+     ],
+     "contrast": 1.8,
+     "chroma": 0.25
+    },
+    {
+     "name": "beard",
+     "refs": [
+      [
+       14,
+       4.0,
+       7.1
+      ],
+      [
+       12,
+       2.3,
+       4.9
+      ],
+      [
+       22,
+       3.3,
+       6.4
+      ],
+      [
+       27,
+       6.6,
+       11.3
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 12,
+     "parts": [
+      "head",
+      "neck"
+     ],
+     "height": [
+      0.85,
+      0.925
+     ],
+     "eyes": true,
+     "to": [
+      38,
+      2.5,
+      75
+     ],
+     "contrast": 1.5,
+     "chroma": 0.3,
+     "feather": 1.6
+    }
+   ]
+  },
+  "magda": {
+   "base": "crone",
+   "note": "Elspeth's twin sister: same face and hair, a wine skirt over a plum-black underskirt, a near-black leather bodice",
+   "regions": [
+    {
+     "name": "skirt",
+     "refs": [
+      [
+       41,
+       2.5,
+       18.4
+      ],
+      [
+       29,
+       3.6,
+       16.2
+      ],
+      [
+       37,
+       3.7,
+       17.2
+      ],
+      [
+       50,
+       3.0,
+       19.0
+      ],
+      [
+       22,
+       3.5,
+       13.5
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 18,
+     "parts": [
+      "thigh",
+      "shin",
+      "torso"
+     ],
+     "height": [
+      0.05,
+      0.6
+     ],
+     "rough": [
+      0.85,
+      1.01
+     ],
+     "to": [
+      30,
+      17,
+      12
+     ],
+     "contrast": 1.0,
+     "chroma": 0.6,
+     "not": [
+      [
+       67,
+       3.0,
+       13.6
+      ],
+      [
+       58,
+       3.1,
+       12.6
+      ],
+      [
+       75,
+       2.5,
+       12.0
+      ],
+      [
+       50,
+       3.5,
+       13.0
+      ],
+      [
+       47,
+       4.3,
+       15.9
+      ],
+      [
+       54,
+       4.3,
+       13.8
+      ]
+     ],
+     "not_sigma": 2.0,
+     "not_sigma_l": 6
+    },
+    {
+     "name": "underskirt",
+     "refs": [
+      [
+       17,
+       5.1,
+       11.3
+      ],
+      [
+       8,
+       4.2,
+       5.5
+      ],
+      [
+       26,
+       8.4,
+       15.0
+      ],
+      [
+       16,
+       4.1,
+       10.4
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 12,
+     "parts": [
+      "thigh",
+      "shin"
+     ],
+     "height": [
+      0.1,
+      0.45
+     ],
+     "rough": [
+      0.75,
+      1.01
+     ],
+     "to": [
+      15,
+      8,
+      340
+     ],
+     "contrast": 1.0,
+     "chroma": 0.6,
+     "not": [
+      [
+       29,
+       3.6,
+       16.2
+      ],
+      [
+       37,
+       3.7,
+       17.2
+      ],
+      [
+       41,
+       2.5,
+       18.4
+      ]
+     ],
+     "not_sigma": 2.0,
+     "not_sigma_l": 8
+    },
+    {
+     "name": "bodice",
+     "refs": [
+      [
+       28,
+       6.6,
+       11.8
+      ],
+      [
+       25,
+       6.2,
+       9.5
+      ],
+      [
+       33,
+       6.5,
+       13.2
+      ],
+      [
+       36,
+       6.2,
+       12.8
+      ],
+      [
+       26,
+       6.0,
+       11.2
+      ],
+      [
+       45,
+       7.2,
+       15.8
+      ],
+      [
+       40,
+       7.0,
+       14.5
+      ],
+      [
+       31,
+       6.8,
+       13.0
+      ],
+      [
+       35,
+       6.6,
+       13.8
+      ],
+      [
+       48,
+       5.7,
+       14.2
+      ],
+      [
+       30.5,
+       5.9,
+       13.0
+      ],
+      [
+       19,
+       5.4,
+       10.3
+      ]
+     ],
+     "sigma": 3.4,
+     "sigma_l": 16,
+     "parts": [
+      "torso",
+      "shoulder"
+     ],
+     "height": [
+      0.52,
+      0.8
+     ],
+     "rough": [
+      0.5,
+      0.75
+     ],
+     "to": [
+      18,
+      4,
+      45
+     ],
+     "contrast": 0.6,
+     "chroma": 0.4,
+     "feather": 1.8
+    }
+   ]
+  },
+  "bram": {
+   "base": "elder",
+   "note": "the innkeeper at fifty: the same clothes, his dark hair and beard gone salt-and-pepper",
+   "regions": [
+    {
+     "name": "hair",
+     "refs": [
+      [
+       16,
+       3.1,
+       5.1
+      ],
+      [
+       8,
+       2.6,
+       3.8
+      ],
+      [
+       13,
+       4.7,
+       7.3
+      ],
+      [
+       32,
+       11.3,
+       14.3
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 14,
+     "parts": [
+      "head",
+      "neck"
+     ],
+     "height": [
+      0.905,
+      1.01
+     ],
+     "eyes": true,
+     "to": [
+      58,
+      2.5,
+      70
+     ],
+     "contrast": 1.25,
+     "chroma": 0.25
+    },
+    {
+     "name": "beard",
+     "refs": [
+      [
+       16,
+       3.1,
+       5.1
+      ],
+      [
+       8,
+       2.6,
+       3.8
+      ],
+      [
+       13,
+       4.7,
+       7.3
+      ],
+      [
+       32,
+       11.3,
+       14.3
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 12,
+     "parts": [
+      "head",
+      "neck"
+     ],
+     "height": [
+      0.85,
+      0.905
+     ],
+     "eyes": true,
+     "to": [
+      42,
+      3.0,
+      65
+     ],
+     "contrast": 1.5,
+     "chroma": 0.3,
+     "feather": 1.6
+    }
+   ],
+   "age": {
+    "height": [
+     0.86,
+     0.97
+    ],
+    "lines": 2.2,
+    "fade": 0.18,
+    "darken": 2.0
+   }
+  },
+  "silas": {
+   "base": "old_man",
+   "note": "the undertaker at sixty-eight: the same blacks, his hair and beard gone grey-white",
+   "regions": [
+    {
+     "name": "hair",
+     "refs": [
+      [
+       29,
+       2.1,
+       5.1
+      ],
+      [
+       19,
+       3.0,
+       5.8
+      ],
+      [
+       18,
+       4.4,
+       7.8
+      ],
+      [
+       33,
+       9.0,
+       13.5
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 14,
+     "parts": [
+      "head",
+      "neck"
+     ],
+     "height": [
+      0.88,
+      1.01
+     ],
+     "eyes": true,
+     "to": [
+      64,
+      2.0,
+      80
+     ],
+     "contrast": 1.8,
+     "chroma": 0.25
+    },
+    {
+     "name": "beard",
+     "refs": [
+      [
+       29,
+       2.1,
+       5.1
+      ],
+      [
+       19,
+       3.0,
+       5.8
+      ],
+      [
+       18,
+       4.4,
+       7.8
+      ],
+      [
+       33,
+       9.0,
+       13.5
+      ]
+     ],
+     "sigma": 3.0,
+     "sigma_l": 12,
+     "parts": [
+      "head",
+      "neck"
+     ],
+     "height": [
+      0.85,
+      0.925
+     ],
+     "eyes": true,
+     "to": [
+      60,
+      2.0,
+      80
+     ],
+     "contrast": 1.5,
+     "chroma": 0.3,
+     "feather": 1.6
+    }
+   ],
+   "age": {
+    "height": [
+     0.86,
+     0.97
+    ],
+    "lines": 2.2,
+    "fade": 0.2,
+    "darken": 1.0
+   }
+  }
+ }
+}

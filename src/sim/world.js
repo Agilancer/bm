@@ -3,15 +3,21 @@
 import { floorAt, homeFloor, inPit, setFloors } from '../core/interior.js';
 import { forestTrees, trunkRadius } from '../core/forest.js';
 import { LAND_EDGE, terrainHeight } from '../core/terrain.js';
+import { CHURCH_BOUNDS } from '../core/church.js';
 
-// (Big enough to reach the catacombs. Cells nobody can stand on are walled off, so the search stays small.)
-const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_REACH = 150;
+// (Big enough to reach the catacombs, wherever the church stands: src/core/church.js. Cells nobody can stand on are walled off, so the search
+// stays small.) Its north-west corner and how many cells it is each way, for the tools and tests that read a field: cell (i, j) is row j * NAV_W.
+export const NAV_CELL = 1.0, NAV_X0 = -256, NAV_Z0 = Math.min(-256, Math.floor(CHURCH_BOUNDS.z0) - 8);
+export const NAV_W = Math.ceil((Math.max(256, CHURCH_BOUNDS.x1 + 8) - NAV_X0) / NAV_CELL), NAV_H = Math.ceil((Math.max(256, CHURCH_BOUNDS.z1 + 8) - NAV_Z0) / NAV_CELL);
+const NAV_REACH = 150;
 const NAV_RADIUS = 0.86;
 const NAV_EDGE = 250;      // Past this nothing's worked out where to walk: whatever's chasing you stops at it, and the land goes on to LAND_EDGE.
 
 const OUT_OF_THE_WAY = 1e9;  // (a box only those with their feet above this run into)
 const TRUNK_CELL = 16, TOWN = 50;     // (The forest stands clear of the town, so nobody in it looks for a trunk.)
 const trunkKey = (i, j) => (i + 1000) * 2000 + j + 1000;
+// Down in the catacombs, under the land: the pines standing up on it aren't down there. (Over them, floorAt gives their floor.)
+const underLand = (x, z) => { const f = floorAt(x, z); return f !== null && f < -2; };
 
 export class World {
   constructor(data, interior) {
@@ -27,15 +33,15 @@ export class World {
     this.spawns = interior.spawns;
     this.colliders = data.colliders.concat(interior.colliders).map((c) => ({ ...c, s: Math.sin(c.yaw), co: Math.cos(c.yaw) }));
     this.lightsData = data.lights;
-    this.grid = new Uint8Array(NAV_SIZE * NAV_SIZE);
+    this.grid = new Uint8Array(NAV_W * NAV_H);
     this.slots = new Map();
-    this.queue = new Int32Array(NAV_SIZE * NAV_SIZE * 4);
+    this.queue = new Int32Array(NAV_W * NAV_H * 4);
     this.heights = new Float32Array(257 * 257);
     for (let j = 0; j < 257; j++) for (let i = 0; i < 257; i++) this.heights[j * 257 + i] = terrainHeight(i - 128, j - 128);
-    for (let j = 0; j < NAV_SIZE; j++) {
-      for (let i = 0; i < NAV_SIZE; i++) {
-        const x = (i + 0.5) * NAV_CELL - NAV_HALF, z = (j + 0.5) * NAV_CELL - NAV_HALF;
-        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, NAV_RADIUS) ? 1 : 0;
+    for (let j = 0; j < NAV_H; j++) {
+      for (let i = 0; i < NAV_W; i++) {
+        const x = (i + 0.5) * NAV_CELL + NAV_X0, z = (j + 0.5) * NAV_CELL + NAV_Z0;
+        this.grid[j * NAV_W + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, NAV_RADIUS) ? 1 : 0;
       }
     }
     // The doors: each leaf a box in its doorway when it's shut and a box against the wall when it's open, one of them out of the way. (Not in the grid above: they come and go.)
@@ -83,7 +89,7 @@ export class World {
         for (let i = ci - 1; i <= ci + 1; i++) {
           const list = this.trunks.get(trunkKey(i, j));
           if (!list) continue;
-          for (let k = 0; k < list.length; k += 3) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return true;
+          for (let k = 0; k < list.length; k += 3) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return !underLand(x, z);
         }
       }
     }
@@ -112,7 +118,7 @@ export class World {
         x += px * c.co + pz * c.s; z += -px * c.s + pz * c.co;
         hit = true;
       }
-      if (Math.abs(x) > TOWN || Math.abs(z) > TOWN) {
+      if ((Math.abs(x) > TOWN || Math.abs(z) > TOWN) && feet > -2) {
         const ci = Math.floor(x / TRUNK_CELL), cj = Math.floor(z / TRUNK_CELL);
         for (let j = cj - 1; j <= cj + 1; j++) {
           for (let i = ci - 1; i <= ci + 1; i++) {
@@ -159,7 +165,7 @@ export class World {
     // And the pines, stepping along the ray a cell at a time.
     const flat2 = dx * dx + dz * dz;
     const ex = ox + dx * maxT, ez = oz + dz * maxT;
-    if (flat2 > 1e-6 && (Math.abs(ox) > TOWN || Math.abs(oz) > TOWN || Math.abs(ex) > TOWN || Math.abs(ez) > TOWN)) {
+    if (flat2 > 1e-6 && (oy > -2 || oy + dy * maxT > -2) && (Math.abs(ox) > TOWN || Math.abs(oz) > TOWN || Math.abs(ex) > TOWN || Math.abs(ez) > TOWN)) {
       const step = TRUNK_CELL / Math.sqrt(flat2);
       let lastKey = -1;
       for (let s = 0; s <= maxT + step; s += step) {
@@ -188,28 +194,28 @@ export class World {
   // Slot 0 is the player, shared by everyone hunting them. Anyone going elsewhere keeps a slot of their own.
   updateField(x, z, now, slot = 0) {
     let f = this.slots.get(slot);
-    if (!f) { f = { field: new Float32Array(NAV_SIZE * NAV_SIZE), x: 1e9, z: 1e9, t: -1e9 }; this.slots.set(slot, f); }
+    if (!f) { f = { field: new Float32Array(NAV_W * NAV_H), x: 1e9, z: 1e9, t: -1e9 }; this.slots.set(slot, f); }
     if (Math.abs(now - f.t) < 0.2 && Math.hypot(x - f.x, z - f.z) < 2) return;
     f.t = now; f.x = x; f.z = z;
     const { field } = f;
     const { grid, queue } = this;
     field.fill(1e9);
-    const si = Math.max(0, Math.min(NAV_SIZE - 1, ((x + NAV_HALF) / NAV_CELL) | 0)), sj = Math.max(0, Math.min(NAV_SIZE - 1, ((z + NAV_HALF) / NAV_CELL) | 0));
+    const si = Math.max(0, Math.min(NAV_W - 1, ((x - NAV_X0) / NAV_CELL) | 0)), sj = Math.max(0, Math.min(NAV_H - 1, ((z - NAV_Z0) / NAV_CELL) | 0));
     let head = 0, tail = 0;
-    queue[tail++] = sj * NAV_SIZE + si; field[sj * NAV_SIZE + si] = 0;
+    queue[tail++] = sj * NAV_W + si; field[sj * NAV_W + si] = 0;
     const cap = queue.length;
     while (head < tail) {
       const k = queue[head++];
-      const i = k % NAV_SIZE, j = (k / NAV_SIZE) | 0;
+      const i = k % NAV_W, j = (k / NAV_W) | 0;
       const d = field[k];
       for (let dj = -1; dj <= 1; dj++) {
         for (let di = -1; di <= 1; di++) {
           if (!di && !dj) continue;
           const ni = i + di, nj = j + dj;
-          if (ni < 0 || nj < 0 || ni >= NAV_SIZE || nj >= NAV_SIZE) continue;
-          const nk = nj * NAV_SIZE + ni;
+          if (ni < 0 || nj < 0 || ni >= NAV_W || nj >= NAV_H) continue;
+          const nk = nj * NAV_W + ni;
           if (grid[nk]) continue;
-          if (di && dj && (grid[j * NAV_SIZE + ni] || grid[nj * NAV_SIZE + i])) continue;
+          if (di && dj && (grid[j * NAV_W + ni] || grid[nj * NAV_W + i])) continue;
           const nd = d + (di && dj ? 1.414 : 1);
           if (nd > NAV_REACH) continue;
           if (nd < field[nk] - 1e-3 && tail < cap) { field[nk] = nd; queue[tail++] = nk; }
@@ -220,17 +226,17 @@ export class World {
 
   // Unit direction along the flow field toward the target, or straight there if off the grid.
   flow(out, x, z, tx, tz, slot = 0) {
-    const i = ((x + NAV_HALF) / NAV_CELL) | 0, j = ((z + NAV_HALF) / NAV_CELL) | 0;
+    const i = ((x - NAV_X0) / NAV_CELL) | 0, j = ((z - NAV_Z0) / NAV_CELL) | 0;
     let bx = tx - x, bz = tz - z;
     const field = this.slots.get(slot)?.field;
-    if (field && i >= 1 && j >= 1 && i < NAV_SIZE - 1 && j < NAV_SIZE - 1) {
-      let best = field[j * NAV_SIZE + i];
+    if (field && i >= 1 && j >= 1 && i < NAV_W - 1 && j < NAV_H - 1) {
+      let best = field[j * NAV_W + i];
       let found = false;
       for (let dj = -1; dj <= 1; dj++) {
         for (let di = -1; di <= 1; di++) {
-          if ((!di && !dj) || this.grid[(j + dj) * NAV_SIZE + i + di]) continue;
-          if (di && dj && (this.grid[j * NAV_SIZE + i + di] || this.grid[(j + dj) * NAV_SIZE + i])) continue;
-          const v = field[(j + dj) * NAV_SIZE + i + di];
+          if ((!di && !dj) || this.grid[(j + dj) * NAV_W + i + di]) continue;
+          if (di && dj && (this.grid[j * NAV_W + i + di] || this.grid[(j + dj) * NAV_W + i])) continue;
+          const v = field[(j + dj) * NAV_W + i + di];
           if (v < best - 0.01) {
             const cost = v + (di && dj ? 1.414 : 1);
             if (!found || cost < best + 1e8) { best = v; bx = di; bz = dj; found = true; }

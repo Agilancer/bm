@@ -1,6 +1,7 @@
 // The simulation thread. Runs the world at a fixed rate, independent of the display, and publishes
 // complete snapshots for the render thread. Nothing in here waits on the GPU or the DOM.
 import { FIELD_CREATURES } from '../core/field-creatures.js';
+import { mapFolk } from '../folk/layout.js';
 import { FieldCreature } from './field-creature.js';
 import { setOpeningTerrain } from '../core/terrain.js';
 import { CAVE_WALLS, OPENING, OPENING_REVISION, OPENING_YAW } from '../core/opening.js';
@@ -16,17 +17,20 @@ import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
-import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepWoods, TOWN_R, Zombie } from './undead.js';
+import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepWoods, Zombie } from './undead.js';
+import { CHURCH_GUARD, churchAt } from '../core/church.js';
+import { inTown } from '../core/town.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { Player } from './player.js';
 import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
-// Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on.
+// Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
+// into the town (keep: Knight.letGo).
 const BLACK = {
-  spawn: [60, 0], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
-  route: [[60, 0]], pauseClip: null,   // On guard before the cathedral's great door, and no further.
+  spawn: [...CHURCH_GUARD], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
+  route: [[...CHURCH_GUARD]], pauseClip: null, keep: true,   // On guard before the cathedral's great door, and no further.
 };
 const SILVER = {
   spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
@@ -37,7 +41,9 @@ const SILVER = {
 const GRAVEHART = { spawn: [12, -128], lair: [-14, -150], yaw: 0.4, hp: 380, territory: 30 };
 // Lies up in the south, and doesn't go looking for anyone.
 // Down in the rift under the catacombs, on its burning floor, east of the bridge and the scaffold stair: see gulf() in tools/interior/build_interior.py. pit: where it can go.
-const HYDRA = { spawn: [208, -128], lair: [217, -127], yaw: -1.57, hp: 900, territory: 24, pit: { y: -44.25, x0: 150, x1: 222, z0: -133, z1: -123 } };
+// (All in the church's own frame, and moved with it: src/core/church.js.)
+const PIT = [churchAt(150, -133), churchAt(222, -123)];
+const HYDRA = { spawn: churchAt(208, -128), lair: churchAt(217, -127), yaw: -1.57, hp: 900, territory: 24, pit: { y: -44.25, x0: PIT[0][0], x1: PIT[1][0], z0: PIT[0][1], z1: PIT[1][1] } };
 
 const CRABS = [
   { spawn: [-92, -58], yaw: 1.0, hp: 55, delay: 20, flank: 1.1 },
@@ -142,8 +148,8 @@ class Sim {
         k.pushX *= fall; k.pushZ *= fall;
         if (Math.abs(k.pushX) + Math.abs(k.pushZ) < 0.4) { k.pushX = 0; k.pushZ = 0; }
       }
-      // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there.)
-      if (k.kind !== 1 && Math.hypot(k.x, k.z) < TOWN_R && Math.hypot(ox, oz) >= TOWN_R) { k.x = ox; k.z = oz; }
+      // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there.) src/core/town.js.
+      if (k.kind !== 1 && inTown(k.x, k.z) && !inTown(ox, oz)) { k.x = ox; k.z = oz; }
       if (k.champion && !k.dead && this.tick % 10 === 0) this.event(EV.CHAMPION, k.x, k.y + 1.3, k.z);
       // Each death leaves its loot once.
       if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
@@ -183,7 +189,7 @@ class Sim {
       const pit = body.opts?.pit;
       if (pit && (x < pit.x0 || x > pit.x1 || z < pit.z0 || z > pit.z1)) return false;
       if (!pit && (body instanceof Zombie ? inPit(x, z) : floorAt(x, z) !== null)) return false;
-      if (body.kind !== 1 && Math.hypot(x, z) < TOWN_R && Math.hypot(body.x, body.z) >= TOWN_R) return false;
+      if (body.kind !== 1 && inTown(x, z) && !inTown(body.x, body.z)) return false;
     }
     const pos = this.nudgePosition;
     pos[0] = x; pos[2] = z;
@@ -418,6 +424,7 @@ async function boot(msg) {
   self.addEventListener('message', (e) => {
     const m = e.data;
     if (m.type === 'openingName' && sim.opening?.stage === OPENING.NAME) sim.opening.setStage(OPENING.LEAVE);
+    if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {
       console.error(err);
@@ -463,5 +470,7 @@ ${err.stack}` }); }
 }
 
 self.addEventListener('message', (e) => {
+  // Where the townsfolk stand (src/folk/layout.js bodies: x, z, radius, y), for the player to bump into.
+  if (e.data.type === 'folk') { globalThis.folkBodies = mapFolk(e.data.buffer).bodies; return; }
   if (e.data.type === 'boot') boot(e.data).catch((err) => self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }));
 });
