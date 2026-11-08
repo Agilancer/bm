@@ -54,11 +54,13 @@ const OWN = {
   // The holy suns write.
   angels_dawn: ['runes', '#ffe08a'], sunpillar_staff: ['runes', '#ffd27a'],
   // The dead.
-  lichs_lantern: ['souls', '#50ffb0', '#d8fff0'], shroud_of_the_lich: ['souls', '#a05aff'], bonecrystal_staff: ['souls', '#b06aff'],
+  lichs_lantern: ['souls', '#40ffb0', '#60ffd0'], shroud_of_the_lich: ['souls', '#a05aff'], bonecrystal_staff: ['souls', '#b06aff'],
   ironcrystal_staff: ['void'], amethyst_staff: ['prism', '#b89aff'],
   // Growing things.
   oakroot_staff: ['spores', '#5aff6a'], greenmoon_staff: ['moonphase', '#5aff7a', '#d8ffd8'], forest_charm: ['sap'],
   vinewood_staff: ['spores', '#40ff7a'], mossgem_staff: ['toxic'],
+  // The old crook's brass ball on its pin: a gold whirl, the crook's own spiral turning inside it.
+  old_crook: ['wind', '#ffb040', '#fff0c0'],
 };
 
 // tier -> how strong (the first twelve count as common).

@@ -145,10 +145,11 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
     case 11u: {
       // Moonphase: the lit side wanders round the stone, new to full and back, a cold rim on the lit edge.
       let ph = t * 0.6;
-      let L = normalize(vec3f(sin(ph), 0.15, cos(ph) * 0.5 - 0.25));
+      // (Mostly a crescent or a half, full only for a moment: a full moon on white paint reads as a plate.)
+      let L = normalize(vec3f(sin(ph), 0.15, cos(ph) * 0.6 - 0.45));
       let side = dot(normalize(q + vec3f(0.0, 0.0, 0.35)), L);
       let lit = smoothstep(-0.1, 0.18, side);
-      let mare = 0.7 + 0.4 * vn2(p * 4.0 + 3.0);
+      let mare = 0.55 + 0.6 * vn2(p * 4.0 + 3.0);
       e = mix(A, B, 0.45) * lit * mare * 1.1 + A * ringAt(side, 0.0, 0.12) * 0.8;
       dark = 0.45 + (1.0 - lit) * 0.53;
     }
@@ -272,13 +273,15 @@ const STAFF_LIGHT = /* wgsl */ `
       let peak = max(max(em.r, em.g), em.b);
       if (peak > 1.1) { em *= (1.1 + (peak - 1.1) * 0.12) / peak; }
       // (What the light swallows reaches a little past the gate: a pupil or a void is dark to its edge.)
-      c = c * (1.0 - L.a * inside * mix(0.5, 1.0, gem)) + em;
+      let swallow = L.a * inside * mix(0.5, 1.0, gem);
+      c = c * (1.0 - swallow) + em;
       if (u32(M.fxA.w + 0.5) == 1u) {
         let crust = (1.0 - inside) * (1.0 - smoothstep(2.2, 4.5, r3)) * smoothstep(0.7, 0.9, near);
         c *= 1.0 - 0.72 * crust;
       }
       // What holds the stone catches its light: the claws and prongs nearest it, falling off with distance.
-      let spill = (1.0 - smoothstep(0.8, 1.9, r3)) * (1.0 - inside * gem);
+      // (Never on what the light swallows: the moon's dark side, a pupil, a void stay dark.)
+      let spill = (1.0 - smoothstep(0.8, 1.9, r3)) * (1.0 - inside * gem) * (1.0 - swallow);
       c += albedo * A * spill * 1.4 * M.fxB.w * (0.8 + 0.2 * sin(tm * 2.1));
     }
   }

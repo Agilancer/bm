@@ -33,8 +33,8 @@ PLACED = {
 
     "forest_charm": (0.0, 0.44, 0.055), "shroud_of_the_lich": (-0.035, 0.505, 0.07), "frostbanner_staff": (-0.03, 0.425, 0.06),
     "oakroot_staff": (-0.02, 0.505, 0.07), "sapphire_staff": (-0.005, 0.495, 0.06), "lavaroot_staff": (-0.01, 0.45, 0.09),
-    "pale_crescent": (0.005, 0.53, 0.075), "mossgem_staff": (0.015, 0.535, 0.06), "cobalt_staff": (0.0, 0.52, 0.06),
-    "ember_staff": (0.0, 0.49, 0.07), "twilight_staff": (0.0, 0.50, 0.09), "moonstone_staff": (-0.01, 0.51, 0.065),
+    "pale_crescent": (0.005, 0.53, 0.095), "mossgem_staff": (0.015, 0.535, 0.06), "cobalt_staff": (0.0, 0.52, 0.06),
+    "ember_staff": (0.0, 0.49, 0.07), "twilight_staff": (0.0, 0.50, 0.09), "moonstone_staff": (-0.01, 0.51, 0.11),
 
     "amethyst_staff": (0.0, 0.50, 0.06), "old_crook": (-0.05, 0.49, 0.045), "wayfinder_staff": (0.0, 0.47, 0.05),
     "driftwood_staff": (-0.015, 0.525, 0.065), "copper_sun_staff": (0.0, 0.44, 0.06), "vinewood_staff": (0.0, 0.49, 0.045),
