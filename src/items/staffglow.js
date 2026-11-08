@@ -3,7 +3,9 @@ import { STAFFS2 } from './staffs2.js';
 
 // Every staff turns this far about its own shaft in the hand, from the frame its model was cut in: the head's face to the eye
 // rather than its edge. (The owner's call, 2026-11-07: "turned 90 degrees in the player's hand".)
-export const STAFF_SPIN = Math.PI / 2;
+// (It was +90 at first, which showed the hand the backs of the heads: measured 2026-11-08, the eye sits about 127 degrees off
+// their painted faces that way, and about 53 this way.)
+export const STAFF_SPIN = -Math.PI / 2;
 
 const C = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 

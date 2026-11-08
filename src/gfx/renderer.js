@@ -28,6 +28,10 @@ import { HYDRA_SCALE } from '../sim/hydra.js';
 import { SKIN } from './shaders.js';
 import { Dangles } from './dangles.js';
 import { STAFF_GLOW, STAFF_SPIN } from '../items/staffglow.js';
+import { STAFF_CORES } from '../items/staffcores.js';
+import { staffEffect, BARE } from '../items/staffeffects.js';
+import { VIEWMODEL_STAFF, STAFF_FX_OFFSET, STAFF_AXES_OFFSET, STAFF_UBO_SIZE } from './stafffx.js';
+import { eyeAxes, staffBind } from './dangles.js';
 import { STAFFS2 } from '../items/staffs2.js';
 
 const STAFFS2_IDS = new Set(STAFFS2.map((s) => s.id));
@@ -706,6 +710,16 @@ export class Renderer {
           for (let v = 0; v < prim.pos.length; v++) prim.pos[v] *= OLD_STAFF_HELD;
           s.tip *= OLD_STAFF_HELD;
         }
+        // Its power point's light (src/gfx/stafffx.js): the point turned and sized as the staff was, then the kind and colours.
+        const core = STAFF_CORES[id];
+        if (core) {
+          const k = painted ? 1 : OLD_STAFF_HELD, at = spinPoint(core, STAFF_SPIN), fx = staffEffect(id);
+          s.fx = new Float32Array([at[0] * k, at[1] * k, at[2] * k, core[3] * k, fx[1], fx[2], fx[3], fx[0], fx[4], fx[5], fx[6], fx[7]]);
+          s.fxAt = [at[0] * k, at[1] * k, at[2] * k];
+          s.fxBind = staffBind(vm.weaponBind);
+          s.fxAxes = new Float32Array(8);
+          s.fxBare = BARE.has(id) ? 1 : 0;
+        }
       }
       this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
       // What hangs off it: one more joint each past the rig's own, swung by Dangles each frame.
@@ -737,7 +751,8 @@ export class Renderer {
       this.onWeaponJoint(prim, vm.shieldJoint, vm.shieldBind);
     }
     s.hand = this.makeSkinned([prim], vm.jointCount + (s.extraJoints || 0));
-    s.ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    s.ubo = device.createBuffer({ size: s.fx ? STAFF_UBO_SIZE : 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    if (s.fx) device.queue.writeBuffer(s.ubo, STAFF_FX_OFFSET, s.fx);
     s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: s.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
@@ -1111,6 +1126,14 @@ export class Renderer {
       layout: layout(this.bgl0, this.bglArmor),
       vertex: { module: vmMod, entryPoint: 'vs', buffers: vmVB },
       fragment: { module: vmMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: depth(), multisample: ms,
+    });
+    const vmStaffMod = module(VIEWMODEL_STAFF);
+    this.pVMStaff = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArmor),
+      vertex: { module: vmStaffMod, entryPoint: 'vs', buffers: vmVB },
+      fragment: { module: vmStaffMod, entryPoint: 'fs', targets },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
@@ -1822,6 +1845,12 @@ export class Renderer {
       q.writeBuffer(h.hand.params, 0, skinParams);
       vmData[17] = 0; vmData[18] = weapon?.hands === 3 ? 0 : 1; vmData[19] = h.tip;
       q.writeBuffer(h.ubo, 0, vmData);
+      if (h.fx) {
+        const at = VM_PALETTE + this.vm.weaponJoint * 8;
+        eyeAxes(snap.subarray(at, at + 8), h.fxBind, vmData, h.fxAt, h.fxAxes);
+        h.fxAxes[3] = h.fxBare;
+        q.writeBuffer(h.ubo, STAFF_AXES_OFFSET, h.fxAxes);
+      }
     }
     if (this.onArm) {
       const h = this.onArm;
@@ -2133,11 +2162,13 @@ export class Renderer {
       }
       if (this.held && !this.vmDown) {
         const h = this.held;
+        if (h.fx) mp.setPipeline(this.pVMStaff);
         mp.setVertexBuffer(0, h.hand.outBuf);
         mp.setVertexBuffer(1, h.hand.sideVB);
         mp.setIndexBuffer(h.hand.IB, 'uint32');
         mp.setBindGroup(1, h.bg);
         mp.drawIndexed(h.hand.indices);
+        if (h.fx) mp.setPipeline(this.pVM);
       }
       for (const h of this.shieldParts) {
         mp.setVertexBuffer(0, h.hand.outBuf);
