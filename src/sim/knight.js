@@ -1,6 +1,6 @@
 // A knight on the UAL skeleton: layered animation, plate hits and wounds, and the brain.
 import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, C_PROPS, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH, TACTICS } from '../core/layout.js';
-import { clamp, damp, lerp, mat4FromQT, quatMul, quatNlerp, quatRotate, smoothstep, wrapAngle } from '../core/math.js';
+import { clamp, damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, smoothstep, wrapAngle } from '../core/math.js';
 import { Pose, solveFK, writePalette } from './anim.js';
 import { PlateBVH } from './world.js';
 
@@ -135,15 +135,49 @@ export class Knight {
       this.swordEase = new Float32Array(frame(mix3(k, 0.5, f, 0.87), f));
       this.swordT.set(off(f, L * 0.66, p, L * 0.3));
     }
+    // How a shield is carried, after the period sources: the board rides on the outside of the forearm, close to the
+    // body. At ease the arm hangs, palm to the thigh, and the board hangs against his left side, face out, its top a
+    // hand below the shoulder and its point by the shin. On guard the forearm crosses the chest and the board stands
+    // upright before it, face to the foe, top at the chin, over his left side and centre. Each hold is found on this
+    // body in its own pose, then rides the forearm as if strapped to it.
+    const axis = (j) => norm([...rig.restT.subarray(j * 3, j * 3 + 3)]);
+    const ua = rig.index.get('upperarm_l'), fl = rig.index.get('lowerarm_l'), hl = rig.index.get('hand_l');
+    this.carryJ = [[ua, axis(fl), CARRY_UPPER], [fl, axis(hl), CARRY_FORE]];
+    this.foreAxis = axis(hl);
+    this.shieldEase = new Float32Array(4); this.shieldFight = new Float32Array(4);
+    this.shieldTEase = new Float32Array(3); this.shieldTFight = new Float32Array(3);
+    this.aimQ = new Float32Array(4); this.aimD = new Float32Array(3);
+    this.foreHang = [0, 0, 0]; this.foreGuard = [0, 0, 0];
+    this.fistOff = new Float32Array(grip.l.fingers.map((v) => v * lenOf('l') * 0.62));
     {
-      const { fingers: f, palm: p, knuckles: k } = grip.l;
-      const L = lenOf('l');
-      // The arm sits behind the board with air between, and the board leans out from the forearm a little.
-      const lean = 0.12;
-      this.shieldFight = new Float32Array(frame(k, mix3(p, Math.cos(lean), f, -Math.sin(lean))));
-      // With the arm hanging, the board hangs beside the leg, face out, not carried flat like a tray.
-      this.shieldEase = new Float32Array(frame([-f[0], -f[1], -f[2]], mix3(p, Math.cos(lean), f, Math.sin(lean))));
-      this.shieldT.set(off(f, L * 0.62, p, -L * 0.42));
+      const pose = new Pose(rig), u = rig.height / 1.92, L = lenOf('l');
+      const place = (clip, carry, face, up, aside, qOut, tOut, aim) => {
+        pose.rot.set(rig.restR); pose.pelvis.set(bank.pelvisRest);
+        bank.sample(clip, 0, pose.rot, pose.pelvis);
+        if (carry) this.carryArm(pose.rot, 1);
+        solveFK(pose, 0, 0, 0, 0, null, null);
+        const q = [0, 0, 0, 1], inv = [0, 0, 0, 1], fist = [0, 0, 0], d = [0, 0, 0];
+        quatMul(q, 0, pose.wq, fl * 4, rig.restR, hl * 4);
+        inv[0] = -q[0]; inv[1] = -q[1]; inv[2] = -q[2]; inv[3] = q[3];
+        quatRotate(fist, 0, q, 0, grip.l.fingers.map((v) => v * L * 0.62), 0);
+        // The board: +Y up, +Z its back toward him (the painted face is -Z). Facing (yaw 0) is +Z, his left +X.
+        const B = frame(up, [-face[0], -face[1], -face[2]]);
+        const back = [0, 0, 0]; quatRotate(back, 0, B, 0, [0, 0, 1], 0);
+        // The grip sits in the fist; the board stands off the knuckles by the handle's depth.
+        for (let i = 0; i < 3; i++) d[i] = fist[i] - back[i] * 0.09 * u + (i === 0 ? aside * u : 0);
+        quatMul(qOut, 0, inv, 0, B, 0);
+        quatRotate(tOut, 0, inv, 0, d, 0);
+        // Where the forearm points in this pose, seen from the chest.
+        this.chestView(pose, aim ? this.foreGuard : this.foreHang);
+        if (aim) {
+          // The same guard, kept by the chest instead of the forearm, for blows that drive the board at the foe.
+          const s = pose.wq.subarray(this.J.spine3 * 4, this.J.spine3 * 4 + 4), sInv = [-s[0], -s[1], -s[2], s[3]];
+          quatMul(this.aimQ, 0, sInv, 0, B, 0);
+          quatRotate(this.aimD, 0, sInv, 0, [d[0] - fist[0], d[1] - fist[1], d[2] - fist[2]], 0);
+        }
+      };
+      place(bank.clips.Idle_Loop, true, [1, 0, 0.3], [0, 1, 0.1], 0, this.shieldEase, this.shieldTEase);
+      place(bank.clips.Idle_Shield_Loop, false, [-0.12, -0.05, 1], [-0.1, 1, 0.05], 0.12, this.shieldFight, this.shieldTFight, true);
     }
     // Where each joint stands on the ground in the bind pose, for keeping soles and bodies out of the earth.
     const bindY = (j) => {
@@ -187,7 +221,7 @@ export class Knight {
       seenSwings: { great_cut1: 0, great_cut2: 0, great_slam: 0, great_chop: 0, great_rise: 0, great_wide_r: 0, great_wide_l: 0 },
       habit: { total: 0, last: '', repeat: 0 }, moveYaw: opts.yaw ?? 0, backward: false, rollDirX: 0, rollDirZ: 0, wasOnAttack: false, activeOn: -1,
       armorHits: 0, prevClipT: 0, stamDelay: 0, lastRetreat: -99, poise: 100, groundLift: 0, windRate: 1, stats: { attacks: 0, landed: 0, blocks: 0, rolls: 0, hitsTaken: 0, chained: 0, breaks: 0, ripostes: 0, spellBlocks: 0, dives: 0, falls: 0 },
-      comboLeft: 0, outcome: '', recent: [], blockedRun: 0, chainTried: false, boltT: 0, riposte: false, travelDir: null, travelPrev: 0, down: false, gaitW: 0, gaitClip: null, leashed: false, holdW: 0, bodyTurn: 0, chainLen: 0, gloat: false, lastFall: -99,
+      comboLeft: 0, outcome: '', recent: [], blockedRun: 0, chainTried: false, boltT: 0, riposte: false, travelDir: null, travelPrev: 0, down: false, gaitW: 0, gaitClip: null, leashed: false, holdW: 0, bodyTurn: 0, chainLen: 0, gloat: false, lastFall: -99, hangW: 1, carryW: 1, aimW: 0,
     });
     this.pose.rot.set(this.rig.restR);
     this.pose.pelvis.set(this.bank.pelvisRest);
@@ -319,6 +353,13 @@ export class Knight {
     // And the body turns into the blow so it lands down his facing, eased in through the wind-up.
     const turnTo = mine && atk.turn ? atk.turn * smoothstep(0, atk.active[0][0] * 0.9, this.actT / this.action.dur) : 0;
     this.bodyTurn = damp(this.bodyTurn, turnTo, 14, dt);
+    // A shield blow, or a spell met on the board, drives it square at the foe instead of letting it roll with the fist.
+    const aimOn = this.action && !this.dead && (this.action.name === 'Shield_OneShot' || (mine && atk.shield)) ? 1 : 0;
+    this.aimW = damp(this.aimW, aimOn, 14, dt);
+    // A hanging shield arm carries the board at his side: turned palm to thigh (how far it hangs is last frame's).
+    // (Before the fade, whose pose from a moment ago is already turned.)
+    this.carryW = this.dead ? 0 : this.hangW;
+    if (this.carryW > 0.001) this.carryArm(rot, this.carryW);
     // Ease out of whatever was showing a moment ago.
     if (this.fromW > 0.001) {
       this.fromW = Math.max(0, this.fromW - dt / this.fadeTime);
@@ -343,8 +384,33 @@ export class Knight {
     this.nod.fill(0);
     this.nod[J.head] = this.lookPitch;
     solveFK(pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
+    {
+      // How far the shield arm hangs, from guard (0) to at ease (1), judged from his chest so a stoop isn't a hang.
+      const d = hangV, a = this.foreHang, g = this.foreGuard;
+      this.chestView(pose, d);
+      const ag = [a[0] - g[0], a[1] - g[1], a[2] - g[2]];
+      const t = ((d[0] - g[0]) * ag[0] + (d[1] - g[1]) * ag[1] + (d[2] - g[2]) * ag[2]) / (ag[0] * ag[0] + ag[1] * ag[1] + ag[2] * ag[2]);
+      this.hangW = smoothstep(0.3, 0.75, t);
+    }
     this.solveGround(dt, sim);
     this.writeProps(this.propMatrices, 0);
+  }
+
+  // The shield forearm's direction in the chest's own frame.
+  chestView(pose, out) {
+    const s = this.J.spine3 * 4, w = pose.wq;
+    quatRotate(hangF, 0, w, this.J.foreL * 4, this.foreAxis, 0);
+    hangC[0] = -w[s]; hangC[1] = -w[s + 1]; hangC[2] = -w[s + 2]; hangC[3] = w[s + 3];
+    quatRotate(out, 0, hangC, 0, hangF, 0);
+  }
+
+  // The shield arm at ease, turned palm to thigh: mostly in the forearm, a little at the shoulder. Each joint turns
+  // about its own length, so nothing bends and the elbow stays where the clip put it.
+  carryArm(rot, w) {
+    for (const [j, ax, a] of this.carryJ) {
+      quatAxisAngle(carryQ, 0, ax[0], ax[1], ax[2], a * w);
+      quatMul(rot, j * 4, rot, j * 4, carryQ, 0);
+    }
   }
 
   // How far sword or shield sits inside the body's capsules (squared metres summed over sample points). For tests:
@@ -392,7 +458,10 @@ export class Knight {
     const { pose, J } = this;
     const q = weaponQ, t = weaponT;
     quatNlerp(this.swordQ, 0, this.swordEase, 0, this.swordFight, 0, smoothstep(0.15, 0.85, Math.max(this.combat, this.action ? 1 : 0)));
-    quatNlerp(this.shieldQ, 0, this.shieldEase, 0, this.shieldFight, 0, smoothstep(0.2, 0.8, this.shieldUp));
+    // The board rides the forearm in the hold that fits what the arm is doing: hanging at ease, or across on guard.
+    const ease = this.carryW;
+    quatNlerp(this.shieldQ, 0, this.shieldFight, 0, this.shieldEase, 0, ease);
+    for (let i = 0; i < 3; i++) this.shieldT[i] = this.shieldTFight[i] + (this.shieldTEase[i] - this.shieldTFight[i]) * ease;
     quatMul(q, 0, pose.wq, J.handR * 4, this.swordQ, 0);
     quatRotate(t, 0, pose.wq, J.handR * 4, this.swordT, 0);
     t[0] += pose.wt[J.handR * 3]; t[1] += pose.wt[J.handR * 3 + 1]; t[2] += pose.wt[J.handR * 3 + 2];
@@ -409,9 +478,16 @@ export class Knight {
     quatMul(q, 0, armQ, 0, this.shieldQ, 0);
     quatRotate(t, 0, armQ, 0, this.shieldT, 0);
     t[0] += pose.wt[J.handL * 3]; t[1] += pose.wt[J.handL * 3 + 1]; t[2] += pose.wt[J.handL * 3 + 2];
+    if (this.aimW > 0.001) {
+      // Driven: upright with his chest, standing off the fist wherever the fist goes.
+      const w = this.aimW, f = aimF, d = aimV;
+      quatMul(aimR, 0, pose.wq, J.spine3 * 4, this.aimQ, 0);
+      quatNlerp(q, 0, q, 0, aimR, 0, w);
+      quatRotate(f, 0, armQ, 0, this.fistOff, 0);
+      quatRotate(d, 0, pose.wq, J.spine3 * 4, this.aimD, 0);
+      for (let i = 0; i < 3; i++) t[i] += (pose.wt[J.handL * 3 + i] + f[i] + d[i] - t[i]) * w;
+    }
     mat4FromQT(tmpM, q, 0, t, 0);
-    // The arm stands off the back of the board: the grip in the file is on it.
-    for (let i = 0; i < 3; i++) { t[i] -= tmpM[8 + i] * SHIELD_OFF; tmpM[12 + i] = t[i]; }
     this.shieldPos = [t[0], t[1], t[2]];
     this.shieldAxisX = [tmpM[0], tmpM[1], tmpM[2]];
     this.shieldAxisY = [tmpM[4], tmpM[5], tmpM[6]];
@@ -1462,7 +1538,10 @@ export class Knight {
 
 // Cross-module helpers.
 const tv = new Float32Array(3), lo = new Float32Array(3), ld = new Float32Array(3), hn = new Float32Array(3), tmp3 = new Float32Array(3);
-const SHIELD_OFF = 0.065;
+// The shield arm's turn at ease, in radians about each joint's own length: upper arm, forearm.
+const CARRY_UPPER = -0.15, CARRY_FORE = -0.75;
+const hangV = [0, 0, 0], hangF = [0, 0, 0], hangC = [0, 0, 0, 1];
+const carryQ = new Float32Array(4), aimR = new Float32Array(4), aimF = new Float32Array(3), aimV = new Float32Array(3);
 const BODY_CAPSULES = [[0, 1, 0.32], [1, 2, 0.19], [3, 4, 0.16], [4, 5, 0.12], [6, 7, 0.16], [7, 8, 0.12]];
 // Dense conservative surface samples in the shipped prop files' local coordinates.
 const SWORD_POINTS = Array.from({ length: 25 }, (_, i) => [-0.09, 0, 0.09].map(z => [0, -0.11 + i * 1.11 / 24, z])).flat();
