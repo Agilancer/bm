@@ -1,6 +1,7 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { FIELD_CREATURES } from '../core/field-creatures.js';
+import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
 import { OPENING, REVEAL_SWAP_AT } from '../core/opening.js';
@@ -205,7 +206,7 @@ export class Renderer {
     const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
       'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
-      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb')];
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
     // Fetch when building each model; don't retain every source GLB during startup.
     const loadModel = async (i) => {
       const res = await fetch(base + models[i]);
@@ -238,6 +239,14 @@ export class Renderer {
       body.flesh = 1;
       this.chars.push(body);
     }
+    // The knights in the other suits, in the sim's order. Plate like the first two; Tessariel's polished.
+    for (let i = 0; i < TOWN_KNIGHTS.length; i++) {
+      const knight = await this.buildCharacter(await loadModel(15 + BODIES.length + LISANDRA_FORMS.length + FIELD_CREATURES.length + i));
+      knight.armored = true; knight.steel = TOWN_KNIGHTS[i].kind === 1;
+      this.chars.push(knight);
+      tick();
+    }
+    this.chars[0].armored = this.chars[1].armored = true; this.chars[1].steel = true;
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
       const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
@@ -268,10 +277,18 @@ export class Renderer {
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.itemData = new Float32Array(16 * MAX_GROUND);
     tick();
+    // One prop instance per sword and shield in a knight's hands: the black knight's crimson and V, the silver's gilded
+    // and T, then each town knight's own pair, sharing those four models. propBase: a knight's first instance.
     this.props = [];
     for (const i of [4, 5, 6, 7]) this.props.push(await this.buildProp(await loadModel(i)));
-    this.propInstances = device.createBuffer({ size: 64 * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
-    this.propData = new Float32Array(64);
+    this.chars[0].propBase = 0; this.chars[1].propBase = 2;
+    const firstTown = this.chars.length - LISANDRA_FORMS.length - TOWN_KNIGHTS.length;
+    TOWN_KNIGHTS.forEach((k, i) => {
+      this.chars[firstTown + i].propBase = this.props.length;
+      this.props.push({ ...this.props[k.sword === 'crimson' ? 0 : 2] }, { ...this.props[k.shield === 'v' ? 1 : 3] });
+    });
+    this.propInstances = device.createBuffer({ size: 64 * this.props.length, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+    this.propData = new Float32Array(16 * this.props.length);
     tick();
     this.buildEnv();
     this.buildPipelines();
@@ -1650,7 +1667,7 @@ export class Renderer {
       const otherForm = stage && (i === this.chars.length - (pretty ? 1 : 2));
       if (otherForm || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
-      const r = i < 2 ? 2.6 : 5;
+      const r = c.armored ? 2.6 : 5;
       let inside = 1e9;
       for (let k = 0; k < 5; k++) inside = Math.min(inside, pl[k * 4] * x + pl[k * 4 + 1] * y + pl[k * 4 + 2] * z + pl[k * 4 + 3]);
       c.seen = inside > -r;
@@ -1741,16 +1758,16 @@ export class Renderer {
         q.writeBuffer(c.ubo, 24 * 64, snap.buffer, snap.byteOffset + (co + C_MASKS) * 4, 256);
       }
       c.gashData[0] = snap[co + C.HEART];
-      c.gashData[1] = i < 2 || c.flesh ? 1 : 0.62;
-      c.gashData[2] = i === 1 ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
+      c.gashData[1] = c.armored || c.flesh ? 1 : 0.62;
+      c.gashData[2] = c.steel ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
       c.gashData[3] = c.flesh ? 1 : 0;
       q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
       skinParamsU[0] = c.count;
       skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
       skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
       q.writeBuffer(c.params, 0, skinParams);
+      if (c.propBase !== undefined) this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 32), c.propBase * 16);
       if (i < 2) {
-        this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 32), i * 32);
         this.glintData = this.glintData || new Float32Array(4);
         this.glintData[0] = snap[co + C.GLINT];
         q.writeBuffer(this.props[i * 2].ubo, 0, this.glintData);

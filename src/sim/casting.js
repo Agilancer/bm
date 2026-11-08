@@ -448,6 +448,8 @@ export class Casting {
 
   hurt(sim, k, dmg, elem, x, y, z, fromX, fromZ, poise = dmg * 0.7, kind = 'gash') {
     if (k.dead) return;
+    // A knight's raised shield takes most of a spell from the front.
+    if (k.spellGuard) { const through = k.spellGuard(sim, fromX, fromZ, dmg); dmg *= through; poise *= through; }
     const a = this.affOf(k);
     k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE * this.power;
     // Leech: a drink for each hit, but a held spell's ticks don't add up to a fountain.

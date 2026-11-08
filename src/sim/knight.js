@@ -9,16 +9,54 @@ export const S = { PATROL: 0, ALERT: 1, APPROACH: 2, CIRCLE: 3, ATTACK: 4, BLOCK
 // Blows the knight knows. active is where in the clip the blade can land, as fractions, measured from the hand's
 // speed in each clip (see tools/armor/measure_blows.py). end cuts a combo's long recovery short.
 const ATTACKS = {
-  a: { clip: 'Sword_Regular_A', rec: 'Sword_Regular_A_Rec', rate: 0.62, active: [[0.4, 0.66]], reach: 2.7, dmg: 13, lunge: [0.2, 0.62, 3.4], stam: 6, range: [0, 2.9] },
-  b: { clip: 'Sword_Regular_B', rec: 'Sword_Regular_B_Rec', rate: 0.6, active: [[0.34, 0.6]], reach: 2.6, dmg: 13, lunge: [0.1, 0.56, 2.8], stam: 6, range: [0, 2.7] },
-  c: { clip: 'Sword_Regular_C', rate: 0.86, active: [[0.27, 0.37]], reach: 2.8, dmg: 20, lunge: [0.08, 0.33, 4.2], stam: 10, range: [1.0, 3.3], end: 0.62 },
-  over: { clip: 'Sword_Attack', rate: 0.92, active: [[0.19, 0.29]], reach: 2.7, dmg: 21, lunge: [0.08, 0.26, 2.6], stam: 10, range: [0, 3.0], end: 0.7 },
-  dash: { clip: 'Sword_Dash', rate: 0.95, active: [[0.15, 0.27]], reach: 2.9, dmg: 18, lunge: [0.03, 0.24, 7.6], stam: 14, range: [3.2, 6.8], end: 0.7 },
-  bash: { clip: 'Shield_Dash', rate: 0.95, active: [[0.22, 0.5]], reach: 1.5, dmg: 8, lunge: [0.1, 0.52, 7.2], stam: 12, range: [1.6, 5.2], knock: 7.5, shield: true },
-  hook: { clip: 'Melee_Hook', rec: 'Melee_Hook_Rec', rate: 0.72, active: [[0.36, 0.62]], reach: 1.5, dmg: 7, lunge: [0.2, 0.6, 1.8], stam: 5, range: [0, 1.9], knock: 3.5, shield: true },
-  combo: { clip: 'Sword_Regular_Combo', rate: 0.82, active: [[0.055, 0.105], [0.21, 0.27], [0.49, 0.535]], reach: 2.7, dmg: 12, lunge: [0.03, 0.52, 2.0], stam: 16, range: [0, 2.8], end: 0.68 },
-  heavy: { clip: 'Sword_Heavy_Combo', rate: 0.9, active: [[0.07, 0.13], [0.25, 0.29], [0.4, 0.44], [0.57, 0.605]], reach: 2.9, dmg: 17, lunge: [0.05, 0.6, 2.2], stam: 22, range: [0, 3.0], end: 0.74 },
+  a: { clip: 'Sword_Regular_A', rec: 'Sword_Regular_A_Rec', rate: 0.62, active: [[0.4, 0.66]], reach: 2.7, dmg: 13, lunge: [0.2, 0.62, 3.4], stam: 6, range: [0, 2.5], hold: true },
+  b: { clip: 'Sword_Regular_B', rec: 'Sword_Regular_B_Rec', rate: 0.6, active: [[0.34, 0.6]], reach: 2.6, dmg: 13, lunge: [0.1, 0.56, 2.8], stam: 6, range: [0, 2.4], hold: true },
+  c: { clip: 'Sword_Regular_C', rate: 0.86, active: [[0.27, 0.37]], reach: 2.8, dmg: 20, lunge: [0.08, 0.33, 4.2], stam: 10, range: [1.0, 2.8], end: 0.62, tele: true, hold: true },
+  over: { clip: 'Sword_Attack', rate: 0.92, active: [[0.19, 0.29]], reach: 2.7, dmg: 21, lunge: [0.08, 0.26, 2.6], stam: 10, range: [0, 2.5], end: 0.7, tele: true, hold: true },
+  dash: { clip: 'Sword_Dash', rate: 0.95, active: [[0.15, 0.27]], reach: 2.9, dmg: 18, lunge: [0.03, 0.24, 7.6], stam: 14, range: [3.0, 4.6], end: 0.7, hold: true },
+  bash: { clip: 'Shield_Dash', rate: 0.95, active: [[0.22, 0.5]], reach: 1.5, dmg: 8, lunge: [0.1, 0.52, 7.2], stam: 12, range: [1.6, 4.2], knock: 7.5, shield: true },
+  hook: { clip: 'Melee_Hook', rec: 'Melee_Hook_Rec', rate: 0.72, active: [[0.36, 0.62]], reach: 1.5, dmg: 7, lunge: [0.2, 0.6, 1.8], stam: 5, range: [0, 1.6], knock: 3.5, shield: true },
+  combo: { clip: 'Sword_Regular_Combo', rate: 0.82, active: [[0.055, 0.105], [0.21, 0.27], [0.49, 0.535]], reach: 2.7, dmg: 12, lunge: [0.03, 0.52, 2.0], stam: 16, range: [0, 2.4], end: 0.68, hold: true },
+  heavy: { clip: 'Sword_Heavy_Combo', rate: 0.9, active: [[0.07, 0.13], [0.25, 0.29], [0.4, 0.44], [0.57, 0.605]], reach: 2.9, dmg: 17, lunge: [0.05, 0.6, 2.2], stam: 22, range: [0, 2.6], end: 0.74, hold: true },
+  // Lisandra's, retargeted (tools/armor/lisandra_clips.py). Windows from where the striking limb passes in front of him.
+  // hold: her left hand is empty in these, so his shield arm keeps its guard instead of flinging the board overhead.
+  // turn: how far the body turns (radians, about up) by the blow, so it lands down his facing; measured on the clip.
+  // tele: a heavy wind-up played slow enough to read, then the blow fast.
+  slash: { clip: 'L_Slash', rate: 1.05, active: [[0.58, 0.72]], reach: 2.8, dmg: 16, lunge: [0.3, 0.62, 3.0], stam: 9, range: [0.6, 2.4], end: 0.76, link: 0.7, hold: true, turn: -0.4 },
+  chop: { clip: 'L_Chop', rate: 1.0, active: [[0.5, 0.66]], reach: 2.7, dmg: 19, lunge: [0.3, 0.56, 2.4], stam: 10, range: [0, 2.3], end: 0.78, link: 0.68, hold: true, turn: -0.4 },
+  kick: { clip: 'L_SnapKick', rate: 1.1, active: [[0.55, 0.66]], reach: 1.6, dmg: 7, lunge: [0.42, 0.7, 2.6], stam: 9, range: [0, 1.7], knock: 7, limb: 'ball_r', breaker: true, end: 0.9, link: 0.8, hold: true, turn: -1.2, tele: true },
+  // The leap only: he lands and the chop comes straight off it.
+  pounce: { clip: 'L_Pounce', rate: 1.0, active: [[0.6, 0.72]], reach: 2.8, dmg: 22, lunge: [0.16, 0.6, 8.4], stam: 18, range: [3.0, 4.6], end: 0.74, link: 0.66, hold: true, turn: -0.15, tele: true, then: ['chop', 'over'] },
+  jab: { clip: 'L_ShieldJab', rate: 1.15, active: [[0.4, 0.66]], reach: 1.5, dmg: 6, lunge: [0.3, 0.56, 2.6], stam: 6, range: [0, 1.6], knock: 4, shield: true, breaker: true, end: 0.85, link: 0.7 },
+  cross: { clip: 'L_ShieldCross', rate: 1.35, active: [[0.18, 0.42], [0.6, 0.82]], reach: 1.5, dmg: 6, lunge: [0.1, 0.75, 1.8], stam: 10, range: [0, 1.6], knock: 4.5, shield: true, breaker: true, end: 0.9, link: 0.86 },
 };
+// tip: how far ahead of his hips the blade, boot or board gets inside the blow's windows, on the 2.12 m black knight
+// (scaled to each knight's height). Measured with the shield hold and the turn on. He closes to where it lands.
+const TIP = { a: 1.71, b: 1.59, c: 1.79, over: 1.87, dash: 1.44, bash: 0.68, hook: 0.53, combo: 1.79, heavy: 1.79, slash: 1.36, chop: 0.92, kick: 1.12, pounce: 0.98, jab: 0.87, cross: 0.65 };
+for (const [k, a] of Object.entries(ATTACKS)) { a.key = k; a.tip = TIP[k]; }
+// What a blow's hit test allows past the tip: the blade's 0.42 m, the boot's 0.5, the board's 1.15 (less a margin).
+const PAD = (a) => (a.limb ? 0.35 : a.shield ? 0.9 : 0.3);
+// How close a knight comes, hips to hips: two knights stay a body apart; you keep your own space in first person.
+const GAP_KNIGHT = 1.3, GAP_PLAYER = 1.5;
+// Clips the shield arm keeps its guard through, besides the blows marked hold.
+const HOLD_CLIPS = new Set(['Roll', 'L_HitHead', 'L_HitBody', 'L_HitGut', 'Hit_Head', 'Hit_Chest']);
+// What can follow what, once a blow is past its link point. Read in chainNext by how the last one went.
+const NEXT = {
+  a: ['b', 'slash', 'kick', 'jab'], b: ['a', 'chop', 'c', 'kick'], c: ['jab', 'kick'], over: ['jab', 'kick', 'slash'],
+  dash: ['jab', 'slash', 'kick'], bash: ['chop', 'over', 'slash'], hook: ['chop', 'over', 'c'],
+  slash: ['kick', 'chop', 'jab', 'b'], chop: ['jab', 'slash', 'a', 'kick'],
+  kick: ['over', 'chop', 'slash', 'c'], pounce: ['chop'],
+  jab: ['chop', 'a', 'slash', 'over'], cross: ['over', 'chop', 'kick'],
+};
+const FAST = new Set(['a', 'b', 'slash', 'chop', 'jab', 'kick']);
+const HEAVY = new Set(['c', 'over', 'heavy', 'pounce']);
+// Who each knight is. Velscour's is a brute who stalks, kicks and hacks, and taunts a man he's put down. Tessariel's is a
+// duellist: shield first, quick blades, and a counter for every blow he stops.
+const STYLES = {
+  black: { aggro: 1.3, combo: [1, 3], likes: { over: 1.6, c: 1.4, kick: 1.8, pounce: 1.6, slash: 1.4, chop: 1.5, heavy: 0.6, hook: 0.5 }, taunt: 'L_Angry', alert: 'L_Point', gait: { walk: 'L_Stalk', jog: 'L_Run' }, riposte: 0.45, blockSpells: 0.55 },
+  silver: { aggro: 0.95, combo: [0, 2], likes: { a: 1.4, b: 1.4, jab: 1.8, cross: 1.2, slash: 1.2, bash: 1.4, kick: 0.6, pounce: 0.5 }, taunt: 'Idle_No_Loop', alert: 'Yes', gait: {}, riposte: 0.9, blockSpells: 0.85 },
+};
+const HIT_HIGH = ['L_HitHead', 'Hit_Head'], HIT_LOW = ['L_HitGut', 'L_HitBody', 'Hit_Chest'];
 
 const UPPER = { spine_01: 0.45, spine_02: 0.9, spine_03: 1, neck_01: 1, Head: 1 };
 
@@ -55,8 +93,28 @@ export class Knight {
       if (w === 0 && /^(clavicle|upperarm|lowerarm|hand|index|middle|ring|pinky|thumb)_/.test(name)) w = 1;
       this.upper[j] = w;
     });
+    // The shield arm, for holding its guard through a blow from a clip whose left hand is empty.
+    this.leftArm = new Float32Array(n);
+    names.forEach((name, j) => { if (/^(clavicle|upperarm|lowerarm|hand)(_twist_?\d+)?_l$/.test(name)) this.leftArm[j] = 1; });
+    this.rH = new Float32Array(n * 4);
     this.J = { spine1: rig.index.get('spine_01'), spine2: rig.index.get('spine_02'), spine3: rig.index.get('spine_03'), neck: rig.index.get('neck_01'), head: rig.index.get('Head'),
-      handR: rig.index.get('hand_r'), handL: rig.index.get('hand_l'), foreL: rig.index.get('lowerarm_l'), pelvis: rig.index.get('pelvis') };
+      handR: rig.index.get('hand_r'), handL: rig.index.get('hand_l'), foreL: rig.index.get('lowerarm_l'), pelvis: rig.index.get('pelvis'), ball_r: rig.index.get('ball_r') };
+    this.style = STYLES[opts.style] || STYLES.silver;
+    // Where each blow lands from on this body, and the furthest it can be started from: the lunge's ground on top.
+    this.reach = {};
+    const scale = rig.height / 2.12;
+    for (const [k, a] of Object.entries(ATTACKS)) {
+      const stop = a.tip * scale + PAD(a);
+      const lunge = a.lunge[2] * (a.lunge[1] - a.lunge[0]) * (bank.clips[a.clip]?.dur ?? 1) / a.rate * (2 / Math.PI);
+      // (The gap closers, dash and pounce, keep their own window: covering ground is what they are for.)
+      this.reach[k] = { stop, max: a.range[0] >= 3 ? a.range[1] : Math.min(a.range[1], stop + lunge * 0.75) };
+    }
+    // A gait of the knight's own in a fight: its clip and the ground one cycle covers, at this model's size.
+    this.gaits = {};
+    for (const [slot, name] of Object.entries(this.style.gait)) {
+      const c = bank.clips[name];
+      if (c?.travel) this.gaits[slot] = { clip: c, speed: c.travel[c.travel.length - 1] / c.dur * rig.motionScale };
+    }
     this.bvh = rig.pieces.map((p) => (p.kind === 'mail' ? null : new PlateBVH(rig.bindPos, rig.tris, p.tstart, p.tcount)));
     this.inv = rig.pieces.map(() => ({ q: new Float32Array(4), t: new Float32Array(3), r: new Float32Array(4) }));
     this.invTick = -1;
@@ -73,7 +131,8 @@ export class Knight {
       const { fingers: f, palm: p, knuckles: k } = grip.r;
       const L = lenOf('r');
       this.swordFight = new Float32Array(frame(mix3(k, Math.cos(0.32), f, Math.sin(0.32)), f));
-      this.swordEase = new Float32Array(this.swordFight);
+      // At ease the blade hangs point-down along the leg.
+      this.swordEase = new Float32Array(frame(mix3(k, 0.5, f, 0.87), f));
       this.swordT.set(off(f, L * 0.66, p, L * 0.3));
     }
     {
@@ -82,7 +141,8 @@ export class Knight {
       // The arm sits behind the board with air between, and the board leans out from the forearm a little.
       const lean = 0.12;
       this.shieldFight = new Float32Array(frame(k, mix3(p, Math.cos(lean), f, -Math.sin(lean))));
-      this.shieldEase = new Float32Array(this.shieldFight);
+      // With the arm hanging, the board hangs beside the leg, face out, not carried flat like a tray.
+      this.shieldEase = new Float32Array(frame([-f[0], -f[1], -f[2]], mix3(p, Math.cos(lean), f, Math.sin(lean))));
       this.shieldT.set(off(f, L * 0.62, p, -L * 0.42));
     }
     // Where each joint stands on the ground in the bind pose, for keeping soles and bodies out of the earth.
@@ -126,7 +186,8 @@ export class Knight {
       spellSeen: null, spellReactAt: 0, target: null, hitT: 10, swingBlade: null, coverX: 0, coverZ: 0, iframes: false, knock: 0, knockX: 0, knockZ: 0, lastAttack: '', tauntT: 6,
       seenSwings: { great_cut1: 0, great_cut2: 0, great_slam: 0, great_chop: 0, great_rise: 0, great_wide_r: 0, great_wide_l: 0 },
       habit: { total: 0, last: '', repeat: 0 }, moveYaw: opts.yaw ?? 0, backward: false, rollDirX: 0, rollDirZ: 0, wasOnAttack: false, activeOn: -1,
-      armorHits: 0, prevClipT: 0, stamDelay: 0, lastRetreat: -99, poise: 100, groundLift: 0, windRate: 1, stats: { attacks: 0, landed: 0, blocks: 0, rolls: 0, hitsTaken: 0 },
+      armorHits: 0, prevClipT: 0, stamDelay: 0, lastRetreat: -99, poise: 100, groundLift: 0, windRate: 1, stats: { attacks: 0, landed: 0, blocks: 0, rolls: 0, hitsTaken: 0, chained: 0, breaks: 0, ripostes: 0, spellBlocks: 0, dives: 0, falls: 0 },
+      comboLeft: 0, outcome: '', recent: [], blockedRun: 0, chainTried: false, boltT: 0, riposte: false, travelDir: null, travelPrev: 0, down: false, gaitW: 0, gaitClip: null, leashed: false, holdW: 0, bodyTurn: 0, chainLen: 0, gloat: false, lastFall: -99,
     });
     this.pose.rot.set(this.rig.restR);
     this.pose.pelvis.set(this.bank.pelvisRest);
@@ -142,6 +203,7 @@ export class Knight {
     this.fadeTime = fade;
     this.action = this.bank.clips[name];
     this.actT = 0; this.actRate = rate; this.actMask = mask; this.actW = 1;
+    if (this.shieldUp > 0.5) this.holdW = 1;
     this.prevClipT = 0;
   }
 
@@ -165,9 +227,16 @@ export class Knight {
     const stride = sp < WALK ? WALK : sp < JOG ? lerp(WALK, JOG, (sp - WALK) / (JOG - WALK)) : lerp(JOG, RUN, clamp((sp - JOG) / (RUN - JOG), 0, 1));
     const cycle = lerp(clips.Walk_Loop.dur, clips.Jog_Fwd_Loop.dur, smoothstep(WALK, JOG, sp));
     const before = this.phase;
+    // A knight's own fighting gait (Velscour's stalk and run) when he's going where he faces.
+    const along = sp > 0.25 ? Math.cos(wrapAngle(Math.atan2(this.vx, this.vz) - this.yaw)) : 0;
+    const wantGait = inFight > 0.5 && this.hostile && !this.backward && along > 0.82 && !this.action ? 1 : 0;
+    const gait = sp > (this.gaits.jog ? (this.gaits.walk ? WALK * 1.5 : 0) : Infinity) ? this.gaits.jog : this.gaits.walk;
+    if (gait !== this.gaitClip) { this.gaitClip = gait; this.gaitW = Math.min(this.gaitW, 0.3); }
+    this.gaitW = gait ? damp(this.gaitW, wantGait, 5, dt) : 0;
     if (sp > 0.05) {
       const dir = this.backward ? -1 : 1;
-      this.phase += dir * dt * (Math.max(sp, 0.3) / stride) / cycle;
+      const own = gait ? Math.max(sp, 0.3) / (gait.speed * gait.clip.dur) : 0;
+      this.phase += dir * dt * lerp((Math.max(sp, 0.3) / stride) / cycle, own, this.gaitW);
     }
     const ph = this.phase - Math.floor(this.phase);
     rot.set(rig.restR);
@@ -206,6 +275,11 @@ export class Knight {
           lerp3(pA, pA, pB, runW);
         }
       }
+      if (this.gaitW > 0.001) {
+        bank.sample(gait.clip, ph * gait.clip.dur, rB, pB);
+        blend(rA, rA, rB, this.gaitW, rig.count);
+        lerp3(pA, pA, pB, this.gaitW);
+      }
       blend(rot, rot, rA, moveW, rig.count);
       lerp3(pel, pel, pA, moveW);
       // Footfalls.
@@ -234,6 +308,17 @@ export class Knight {
       if (m) blendMask(rot, rot, rA, this.actW, m, rig.count);
       else { blend(rot, rot, rA, this.actW, rig.count); lerp3(pel, pel, pA, this.actW); }
     }
+    // The shield arm keeps its guard, whole joints from the guard idle, through a blow whose clip has no shield in it.
+    const atk = this.attack || this.reviewAttack, mine = atk && this.action === clips[atk.clip];
+    const holdOn = (mine && atk.hold) || (this.action && !this.down && HOLD_CLIPS.has(this.action.name)) ? 1 : 0;
+    this.holdW = holdOn ? Math.min(1, this.holdW + dt / 0.1) : Math.max(0, this.holdW - dt / 0.15);
+    if (this.holdW > 0.001) {
+      bank.sample(clips.Idle_Shield_Loop, sim.time, this.rH, null);
+      blendMask(rot, rot, this.rH, this.holdW, this.leftArm, rig.count);
+    }
+    // And the body turns into the blow so it lands down his facing, eased in through the wind-up.
+    const turnTo = mine && atk.turn ? atk.turn * smoothstep(0, atk.active[0][0] * 0.9, this.actT / this.action.dur) : 0;
+    this.bodyTurn = damp(this.bodyTurn, turnTo, 14, dt);
     // Ease out of whatever was showing a moment ago.
     if (this.fromW > 0.001) {
       this.fromW = Math.max(0, this.fromW - dt / this.fadeTime);
@@ -252,17 +337,19 @@ export class Knight {
     this.twist.fill(0);
     const off = this.action && this.actMask === 'full' ? 0 : clamp(wrapAngle(this.faceYaw - this.yaw), -0.62, 0.62);
     const { J } = this;
+    this.twist[J.pelvis] = this.bodyTurn;
     this.twist[J.spine1] = off * 0.28; this.twist[J.spine2] = off * 0.36; this.twist[J.spine3] = off * 0.36;
     this.twist[J.neck] = this.lookYaw * 0.45; this.twist[J.head] = this.lookYaw * 0.55;
     this.nod.fill(0);
     this.nod[J.head] = this.lookPitch;
     solveFK(pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
-    this.solveEquipment();
     this.solveGround(dt, sim);
+    this.writeProps(this.propMatrices, 0);
   }
 
-  // Keep equipment outside conservative body capsules by moving the arm, never the grip.
-  // The same corrected pose drives skinning, rendered props and combat hit tests.
+  // How far sword or shield sits inside the body's capsules (squared metres summed over sample points). For tests:
+  // the knights used to search their arms out of every overlap each frame, which flung them into scarecrow poses
+  // and made them jitter. The clips carry the arms now, and the ease holds keep a hanging shield off the leg.
   equipmentPenalty(side) {
     this.writeProps(this.propMatrices, 0);
     const m = this.propMatrices, off = side === 'r' ? 0 : 16;
@@ -282,29 +369,6 @@ export class Knight {
       }
     }
     return penalty;
-  }
-
-  solveEquipment() {
-    for (const side of ['r', 'l']) {
-      let best = this.equipmentPenalty(side);
-      if (best < 1e-8) continue;
-      for (let pass = 0; pass < 3 && best > 1e-8; pass++) {
-        for (const name of [`upperarm_${side}`, `lowerarm_${side}`]) {
-          const j = this.rig.index.get(name), original = this.pose.rot.slice(j * 4, j * 4 + 4);
-          let chosen = original;
-          search: for (const angle of [-1.2, -0.65, -0.3, 0.3, 0.65, 1.2]) for (let axis = 0; axis < 3; axis++) {
-            const q = [0, 0, 0, Math.cos(angle / 2)]; q[axis] = Math.sin(angle / 2);
-            quatMul(this.pose.rot, j * 4, original, 0, q, 0);
-            solveFK(this.pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
-            const score = this.equipmentPenalty(side);
-            if (score < best) { best = score; chosen = this.pose.rot.slice(j * 4, j * 4 + 4); if (best < 1e-8) break search; }
-          }
-          this.pose.rot.set(chosen, j * 4);
-          solveFK(this.pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
-        }
-      }
-    }
-    this.writeProps(this.propMatrices, 0);
   }
 
   // No clip knows about the earth at this model's size. Find whichever joint is nearest going under and move the
@@ -538,11 +602,19 @@ export class Knight {
     this.y = sim.world.height(this.x, this.z);
   }
 
+  // A guard on a post doesn't chase you across the land: past his leash from it, he lets you go.
+  outOfReach(p) {
+    const L = this.opts.leash;
+    // Six metres more for one he's already fighting, so he doesn't flicker between chase and home at the line.
+    // And it only stops a chase: anyone close enough to cut him gets fought, wherever he is.
+    return !!L && Math.hypot(p.x - this.x, p.z - this.z) > 6 && Math.hypot(p.x - this.opts.spawn[0], p.z - this.opts.spawn[1]) > L + (p === this.target ? 6 : 0);
+  }
+
   selectTarget(sim) {
     let target = sim.player;
-    let best = this.hostile && !target.dead ? Math.hypot(target.x - this.x, target.z - this.z) : Infinity;
+    let best = this.hostile && !target.dead && !this.outOfReach(target) ? Math.hypot(target.x - this.x, target.z - this.z) : Infinity;
     for (const other of sim.knights) {
-      if (!(other instanceof Knight) || other === this || other.kind === this.kind || other.dead) continue;
+      if (!(other instanceof Knight) || other === this || other.kind === this.kind || other.dead || this.outOfReach(other)) continue;
       const d = Math.hypot(other.x - this.x, other.z - this.z);
       if (d < 18 && d < best && sim.world.sees(this.x, this.y + 1.4, this.z, other.x, other.y + 1.4, other.z)) {
         target = other; best = d;
@@ -628,6 +700,16 @@ export class Knight {
     if (!this.action) return;
     const clip = this.action;
     const f = this.actT / clip.dur;
+    // A clip that travels (a dive, a fall) carries the body the way it was sent, at the clip's own pace.
+    if (clip.travel && this.travelDir && (this.state === S.ROLL || this.state === S.STAGGER)) {
+      const d = this.bank.travel(clip, this.actT) * this.rig.motionScale;
+      const v = dt > 0 ? (d - this.travelPrev) / dt : 0;
+      this.travelPrev = d;
+      this.vx = this.travelDir[0] * v; this.vz = this.travelDir[1] * v;
+      this.speed = 0;
+      if (this.state === S.ROLL) { this.iframes = f > 0.18 && f < 0.62; this.faceYaw = this.yaw; }
+      return;
+    }
     if (this.state === S.ROLL) {
       const v = f < 0.36 ? 2.5 : f < 0.66 ? 6.2 : f < 0.78 ? lerp(6.2, 0.4, (f - 0.66) / 0.12) : 0;
       this.vx = this.rollDirX * v; this.vz = this.rollDirZ * v;
@@ -637,14 +719,16 @@ export class Knight {
     } else if (this.attack && clip === this.bank.clips[this.attack.clip]) {
       const a = this.attack;
       // Slow through the wind-up, then the clip's own speed: nothing lands in under 0.45 s.
-      this.actRate = f < a.active[0][0] ? this.windRate : a.rate;
+      this.actRate = f < a.active[0][0] ? this.windRate : a.rate * (a.tele ? 1.3 : 1);
       const [l0, l1, lv] = a.lunge;
       const v = f > l0 && f < l1 ? lv * Math.sin((f - l0) / (l1 - l0) * Math.PI) : 0;
-      const close = this.dist < 1.05 ? 0 : 1;
+      // A blade wants its length of room; a boot or a board goes in closer. He doesn't lunge into a clinch.
+      // Closes to where this blow lands from, and no closer: no clinch, and no swing at air.
+      const close = this.dist < Math.max(this.reach[a.key].stop, p instanceof Knight ? GAP_KNIGHT : GAP_PLAYER) ? 0 : 1;
       this.vx = Math.sin(this.yaw) * v * close; this.vz = Math.cos(this.yaw) * v * close;
       this.speed = 0;
       // Track the player through the wind-up only.
-      if (f < a.active[0][0]) this.yaw = turn(this.yaw, this.toPlayer, (a === ATTACKS.dash ? 2.2 : 3.4) * dt);
+      if ((a.active[0][0] - f) * clip.dur / Math.max(this.actRate, 0.05) > 0.1) this.yaw = turn(this.yaw, this.toPlayer, (a === ATTACKS.dash ? 2.2 : 3.4) * dt);
       this.faceYaw = this.yaw;
       // Glint on the blade just before a blow, so it can be read.
       const nextOn = a.active.find((w) => f < w[0]);
@@ -667,7 +751,13 @@ export class Knight {
   strike(sim, p, a) {
     if (!this.bladeA || p.dead || sim.gameState !== 0) return;
     let d;
-    if (a.shield) {
+    if (a.limb) {
+      // A kick lands with the ball of the foot, on the body's capsule.
+      const j = this.J[a.limb] * 3, wt = this.pose.wt;
+      const foot = [wt[j], wt[j + 1], wt[j + 2]];
+      const res = segSegDist(foot, foot, [p.x, p.y + 0.2, p.z], [p.x, p.y + 1.6, p.z]);
+      if (res.dist > 0.5) return;
+    } else if (a.shield) {
       const s = this.shieldPos;
       d = Math.hypot(s[0] - p.x, s[2] - p.z);
       if (d > 1.15) return;
@@ -687,6 +777,7 @@ export class Knight {
       sim.hitStop(0.1);
       p.onParry(sim);
       this.onParried(sim);
+      this.outcome = 'parried';
       return;
     }
     this.attackUsed = true;
@@ -694,15 +785,37 @@ export class Knight {
     const bite = a.dmg * (this.opts.hostile ? 1.8 : 1);
     if (p instanceof Knight) {
       const frontal = Math.abs(wrapAngle(Math.atan2(this.x - p.x, this.z - p.z) - p.faceYaw)) < 1.2;
-      if (frontal && p.shieldUp > 0.65 && p.stam > 0 && !a.shield) { p.onBlocked(sim, a.dmg >= 20); return; }
+      const guarded = frontal && (p.shieldUp > 0.65 || p.state === S.BLOCK) && p.stam > 0 && p.state !== S.BREAK;
+      // A boot or a board driven into a raised shield breaks the guard behind it.
+      if (guarded && a.breaker) { this.outcome = 'broke'; this.stats.breaks++; p.guardBroken(sim, this.x, this.z, a.knock || 5); return; }
+      if (guarded && !a.shield) { this.outcome = 'blocked'; p.onBlocked(sim, a.dmg >= 20, this); return; }
+      this.outcome = 'hit';
       p.hp -= bite;
       const hostile = p.hostile;
-      p.onHit(sim, 'cut', this.x, this.z, a.dmg);
+      p.onHit(sim, a.limb ? 'kick' : 'cut', this.x, this.z, a.dmg + (a.knock || 0) * 4, a);
+      if (p.down) this.gloat = true;
       p.hostile = hostile; // A duel does not turn Tessariel's knight against the player.
       if (p.hp <= 0) p.die(sim);
       return;
     }
-    if (p.damage(sim, bite, this.x, this.z, a.knock || 0)) sim.event(EV.HURT, p.x, p.y + 1.2, p.z, bite);
+    // A kick goes through the player's guard as a shove: little harm, a long way back.
+    const through = !!a.limb;
+    const landed = p.damage(sim, bite, this.x, this.z, a.knock || 0, through);
+    this.outcome = landed ? 'hit' : 'blocked';
+    if (landed && HEAVY.has(a.key)) this.gloat = true;
+    if (landed) sim.event(EV.HURT, p.x, p.y + 1.2, p.z, bite);
+  }
+
+  // Kicked or bashed through a raised shield: the guard drops and he reels back, open.
+  guardBroken(sim, fromX, fromZ, knock) {
+    const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1;
+    this.attack = null; this.activeOn = -1;
+    this.knockX = dx / L; this.knockZ = dz / L; this.knock = Math.min(knock, 6);
+    this.stam = Math.max(0, this.stam - 30); this.stamDelay = 1.2;
+    this.shieldUp = 0.2; this.shieldTarget = 0;
+    this.play('Idle_Shield_Break', 1.25, 'full', 0.06);
+    this.setState(S.BREAK);
+    sim.event(EV.SHIELD_BREAK, this.x, this.y + 1.2, this.z);
   }
 
   onParried(sim) {
@@ -725,7 +838,7 @@ export class Knight {
         this.combatTarget = 1; this.shieldTarget = 1;
         this.steer(dt, 0, 0, 8, toPlayer);
         this.yaw = turn(this.yaw, toPlayer, 3 * dt);
-        if (this.stateT > 0.9) this.setState(S.APPROACH);
+        if (this.stateT > (this.style.alert === 'L_Point' ? 1.5 : 0.9)) this.setState(S.APPROACH);
         break;
       case S.APPROACH: this.thinkApproach(dt, sim, p, dist, toPlayer); break;
       case S.CIRCLE: this.thinkCircle(dt, sim, p, dist, toPlayer); break;
@@ -740,6 +853,12 @@ export class Knight {
         }
         break;
       case S.STAGGER:
+        if (this.down && (!this.action || this.actT >= this.action.dur)) {
+          // Back up off the floor.
+          this.down = false; this.travelDir = null;
+          this.play('LayToIdle', 1.3, 'full', 0.2);
+          break;
+        }
         if (!this.action || this.actT >= this.action.dur) {
           this.stopAction(0.22);
           this.setState(hostile || p instanceof Knight ? S.CIRCLE : S.PATROL);
@@ -760,7 +879,7 @@ export class Knight {
         break;
       case S.FEINT:
         this.steer(dt, 0, 0, 8, toPlayer);
-        if (this.actT / this.action?.dur > 0.17 || !this.action) {
+        if (this.actT / this.action?.dur > 0.08 || !this.action) {
           this.stopAction(0.16);
           this.setState(S.CIRCLE);
           this.attackT = 0.15 + Math.random() * 0.3;
@@ -787,7 +906,7 @@ export class Knight {
         else { const fx = (tx - this.x) / d, fz = (tz - this.z) / d; this.steer(dt, fx * this.opts.walk, fz * this.opts.walk, 4, Math.atan2(fx, fz)); }
       }
     }
-    if ((!this.hostile && !(p instanceof Knight)) || p.dead) return;
+    if ((!this.hostile && !(p instanceof Knight)) || p.dead || this.outOfReach(p)) return;
     // Sight is a cone. A sprint close by is heard, and anything at arm's length is felt.
     const sees = sim.world.sees(this.x, this.y + 1.7, this.z, p.x, p.y + 1.6, p.z);
     const inCone = Math.abs(wrapAngle(toPlayer - this.faceYaw)) < 1.9;
@@ -796,7 +915,8 @@ export class Knight {
       if (this.action) this.stopAction(0.2);
       sim.event(EV.ALERT, this.x, this.y + 1.5, this.z);
       this.setState(S.ALERT);
-      this.play('Yes', 1.2, 'upper', 0.25);
+      // Velscour's knight levels his blade at you; Tessariel's gives a nod.
+      this.play(this.style.alert, this.style.alert === 'L_Point' ? 1.3 : 1.2, 'upper', 0.25);
     }
   }
 
@@ -804,12 +924,15 @@ export class Knight {
     this.combatTarget = 1; this.shieldTarget = dist < 11 ? 1 : 0.4;
     if (this.action && this.actMask === 'upper' && this.actT >= this.action.dur - 0.1) this.stopAction(0.3);
     const lim = 1 - this.hurt * 0.35;
-    const speed = (dist > 7 ? 5.4 : p instanceof Knight ? 1.9 : 3.5) * lim;
+    // Spells in the air: he comes on behind the board at a walk, and runs the gaps between them.
+    const fire = !(p instanceof Knight) && this.boltThreat(sim, 1.3, 1.6);
+    if (fire) this.shieldTarget = 1;
+    const speed = (fire ? 2.1 : dist > 7 ? 5.4 : p instanceof Knight ? 1.9 : 3.5) * lim;
     this.goto(dt, sim, p.x, p.z, speed, undefined);
     this.faceYaw = dist < 8 ? turn(this.faceYaw, toPlayer, 7 * dt) : turn(this.faceYaw, this.yaw, 7 * dt);
     if (dist < 7.2 && sim.world.sees(this.x, this.y + 1.2, this.z, p.x, p.y + 1.2, p.z)) {
       // Close the last few metres behind the shield, or commit with a dash across open ground.
-      if (dist > 3.6 && dist < 6.4 && this.stam > 40 && Math.random() < dt * 0.9 && !p.dead) this.startAttack(sim, ATTACKS.dash);
+      if (dist > 3.0 && dist < 4.6 && this.stam > 40 && Math.random() < dt * 1.4 * this.style.aggro && !p.dead) this.startAttack(sim, Math.random() < 0.5 ? ATTACKS.pounce : ATTACKS.dash);
       else if (dist < 4.8) this.setState(S.CIRCLE);
     }
     this.reactToSwing(dt, sim, p, dist);
@@ -838,14 +961,15 @@ export class Knight {
     if (this.tacticT <= 0) this.chooseTactic(sim);
     const lim = 1 - this.hurt * 0.3;
     const name = TACTICS[this.tactic];
-    const ring = p instanceof Knight ? { press: 1.9, circle: 3.0, bait: 3.7, 'shield wall': 2.2, 'flank dash': 3.6, 'fall back': 6.5 }[name] : 2.1;
+    let ring = p instanceof Knight ? { press: 2.2, circle: 2.7, bait: 3.2, 'shield wall': 2.4, 'flank dash': 3.2, 'fall back': 6.5 }[name] : 2.4;
+    // Ready to swing and nothing reaches from here: he stalks in to where something does, rather than circle at range.
+    if (this.attackT <= 0 && name !== 'fall back') ring = Math.min(ring, 2.0);
     // Each plan shows in how he holds himself: bait drops the shield and dares you.
     this.shieldTarget = name === 'bait' ? 0.12 : 1;
     if (this.tacticStart) {
       this.tacticStart = false;
       if (name === 'fall back' && (this.bleeds.length || this.hurt > 0.05)) { this.startRetreat(sim, p); return; }
       if (name === 'flank dash' && this.rollCd <= 0 && this.stam > 45 && dist < 5.5) { this.startRoll(sim, p, false, true); return; }
-      if (p instanceof Knight && name === 'bait' && dist > 2.8) { this.play('Idle_No_Loop', 1, 'upper', 0.3); this.setState(S.TAUNT); sim.event(EV.TAUNT, this.x, this.y + 1.6, this.z); return; }
     }
     this.strafeT -= dt;
     // Protect the wounded side: keep it turned away from the player.
@@ -884,35 +1008,84 @@ export class Knight {
       if (pick) { this.startAttack(sim, pick); return; }
     }
     this.tauntT -= dt;
-    if (p instanceof Knight && this.tauntT <= 0 && dist > 3.4) {
+    // He taunts over a man he's put on the floor, not at the air.
+    if (this.gloat && this.tauntT <= 0 && dist > 2.6 && dist < 9 && !this.boltThreat(sim, 1.5, 2)) {
+      this.gloat = false;
       this.tauntT = 8 + Math.random() * 8;
-      this.play('Idle_No_Loop', 1, 'upper', 0.3);
+      this.play(this.style.taunt, 1.1, 'upper', 0.3);
       this.setState(S.TAUNT);
       sim.event(EV.TAUNT, this.x, this.y + 1.6, this.z);
     }
   }
 
+  // How shut the target is behind a shield, 0 to 1. A player who's blocked his last two blows counts as shut.
+  targetGuard(p) {
+    const up = p instanceof Knight ? (p.state === S.BLOCK ? 1 : p.state === S.BREAK ? 0 : p.shieldUp) : (p.blocking ? 1 : p.shieldUp || 0);
+    const learned = this.blockedRun >= 2 ? 0.7 : 0;
+    return Math.max(up, learned);
+  }
+
+  // The target is open: swinging and missed, reeling, on the floor, or guard broken.
+  targetOpen(p) {
+    return !!(p.recovering || (p instanceof Knight && (p.state === S.STAGGER || p.state === S.BREAK || p.down)));
+  }
+
   pickAttack(sim, p, dist, tactic) {
     // He keeps a reserve for the shield and the roll, unless he's dying anyway.
-    const reserve = this.hurt > 0.8 ? 0 : 30;
+    const reserve = this.hurt > 0.8 ? 0 : 24;
+    const guard = this.targetGuard(p), open = this.targetOpen(p), likes = this.style.likes;
     const out = [];
     for (const [k, a] of Object.entries(ATTACKS)) {
-      if (dist < a.range[0] || dist > a.range[1] || this.stam - a.stam < reserve) continue;
-      let w = 1;
-      if (k === 'combo' || k === 'heavy') w = this.hurt > 0.5 ? 1.6 : 0.5;
-      if (k === 'dash') w = tactic === 'flank dash' || tactic === 'bait' || p.recovering ? 4 : 1;
-      if (k === 'bash') w = tactic === 'shield wall' ? 3 : 1;
-      if (k === 'hook') w = p.recovering ? 0.4 : 1;
-      if (this.lastAttack === k) w *= 0.3;
+      if (dist < a.range[0] || dist > this.reach[k].max || this.stam - a.stam < reserve) continue;
+      if (!(p instanceof Knight) && a.range[0] < 3 && this.reach[k].stop + (a.limb ? 0.15 : a.shield ? 0.25 : 0.12) < GAP_PLAYER) continue;
+      let w = likes[k] ?? 1;
+      if (k === 'combo' || k === 'heavy') w *= this.hurt > 0.5 ? 1.6 : 0.5;
+      // A raised shield wants a boot or a board; an open one wants the big blow.
+      if (a.breaker) w *= 0.6 + guard * 4;
+      else if (!a.shield) w *= 1 - guard * 0.6;
+      if (open) w *= HEAVY.has(k) ? 3.2 : FAST.has(k) ? 1.6 : 1;
+      if (k === 'dash' || k === 'pounce') w *= tactic === 'flank dash' || tactic === 'bait' || p.recovering ? 3 : 1;
+      if (k === 'bash') w *= tactic === 'shield wall' ? 3 : 1;
+      // He's mid-swing at you: only something quick gets there first.
+      if (p.threat && !FAST.has(k)) w *= 0.3;
+      if (this.riposte) w *= FAST.has(k) ? 3 : 0.4;
+      // A caster at range is closed on hard.
+      if (!(p instanceof Knight) && dist > 3.3) w *= k === 'pounce' || k === 'dash' ? 2.2 : 1;
+      // And a knight with one idea is easy to read.
+      const n = this.recent.reduce((c, r) => c + (r === k), 0);
+      w *= n === 0 ? 1 : n === 1 ? 0.35 : 0.1;
       out.push([k, w]);
     }
+    this.riposte = false;
     if (!out.length) return null;
-    // A feint now and then, more when the player is the kind who swings first.
+    // A feint now and then, more when the target is the kind who swings first.
     const eager = this.habit.total > 4 ? 0.28 : 0.12;
-    if (p instanceof Knight && !p.recovering && dist < 3.4 && Math.random() < eager) return 'feint';
-    let sum = out.reduce((s, e) => s + e[1], 0), r = Math.random() * sum;
+    if (p instanceof Knight && !p.recovering && !open && dist < 2.5 && Math.random() < eager * (2 - this.style.aggro)) return 'feint';
+    let sum = out.reduce((t, e) => t + e[1], 0), r = Math.random() * sum;
     for (const [k, w] of out) { r -= w; if (r <= 0) { this.lastAttack = k; return ATTACKS[k]; } }
     return ATTACKS[out[0][0]];
+  }
+
+  // Past a blow's link point, what comes next depends on how it went: through a guard, the big one; into a
+  // shield, a boot to break it; landed, another quick one before they recover; at air, close the gap or stop.
+  chainNext(sim, p, dist) {
+    const o = this.outcome;
+    if (p.dead || o === 'parried' || !this.attack) return null;
+    const guard = this.targetGuard(p);
+    let best = null, bw = 0;
+    for (const k of NEXT[this.attack.key] || []) {
+      const a = ATTACKS[k];
+      if (this.stam - a.stam < 6 || dist < a.range[0] - 0.3 || dist > this.reach[k].max + 0.2) continue;
+      if (!(p instanceof Knight) && this.reach[k].stop + (a.limb ? 0.15 : a.shield ? 0.25 : 0.12) < GAP_PLAYER) continue;
+      let w = (this.style.likes[k] ?? 1) * (0.6 + Math.random() * 0.8);
+      if (o === 'blocked' || guard > 0.6) w *= a.breaker ? 4 : 0.4;
+      if (o === 'broke') w *= HEAVY.has(k) ? 6 : 0.7;
+      if (o === 'hit') w *= FAST.has(k) ? 2 : 1;
+      if (o === 'whiff') w *= dist > 3 ? (k === 'pounce' ? 3 : 0.4) : 0.8;
+      if (this.recent[this.recent.length - 1] === k) w *= 0.2;
+      if (w > bw) { bw = w; best = a; }
+    }
+    return best;
   }
 
   startFeint() {
@@ -920,23 +1093,49 @@ export class Knight {
     this.play('Sword_Attack', 1.1, 'full', 0.1);
   }
 
-  startAttack(sim, a) {
+  startAttack(sim, a, chained = false) {
     this.attack = a;
     this.attackUsed = false;
     this.activeOn = -1;
     this.glintDone = false;
+    this.chainTried = false;
     this.stam -= a.stam;
     this.stats.attacks++;
+    if (!chained) {
+      const [lo, hi] = this.style.combo;
+      this.comboLeft = lo + Math.floor(Math.random() * (hi - lo + 1));
+      if (this.stam < 35 || this.hurt > 0.7) this.comboLeft = Math.min(this.comboLeft, 1);
+    }
+    this.outcome = 'whiff';
+    this.recent.push(a.key);
+    if (this.recent.length > 4) this.recent.shift();
     const clipDur = this.bank.clips[a.clip].dur;
-    this.windRate = Math.min(a.rate, a.active[0][0] * clipDur / 0.45);
-    this.play(a.clip, this.windRate, 'full', 0.1);
+    // A first blow is slowed through its wind-up so it can be read; a follow-up keeps more of its pace.
+    this.windRate = Math.min(a.rate, a.active[0][0] * clipDur / (chained ? 0.3 : 0.45));
+    if (a.tele) this.windRate = Math.min(this.windRate, a.rate * (chained ? 0.8 : 0.65));
+    this.chainLen = chained ? this.chainLen + 1 : 1;
+    this.play(a.clip, this.windRate, 'full', chained ? 0.08 : 0.1);
     this.setState(S.ATTACK);
     this.yaw = this.faceYaw;
-    this.shieldTarget = 0.3;
+    this.shieldTarget = a.hold ? 1 : 0.3;
   }
 
   thinkAttack(dt, sim, p, dist) {
     if (!this.action) { this.setState(S.CIRCLE); return; }
+    const cur = this.attack;
+    if (cur && this.action.name === cur.clip && !this.chainTried && this.actT >= this.action.dur * (cur.link ?? (cur.end ? cur.end - 0.06 : 0.86))) {
+      this.chainTried = true;
+      if (this.outcome === 'blocked') this.blockedRun = (this.blockedRun || 0) + 1; else if (this.outcome === 'hit' || this.outcome === 'broke') this.blockedRun = 0;
+      const then = cur.then && ATTACKS[cur.then[p instanceof Knight ? 0 : 1]];
+      const forced = then && dist < then.range[1] + 0.6 && this.stam > 4 ? then : null;
+      const next = forced || (this.comboLeft > 0 || this.outcome === 'broke' ? this.chainNext(sim, p, dist) : null);
+      if (next) {
+        this.comboLeft = Math.max(0, this.comboLeft - 1);
+        this.stats.chained++;
+        this.startAttack(sim, next, true);
+        return;
+      }
+    }
     if (this.actT >= this.action.dur * (this.attack?.end || 1)) {
       if (this.attack?.rec && this.action.name === this.attack.clip) {
         const rec = this.attack.rec;
@@ -945,7 +1144,8 @@ export class Knight {
       } else {
         this.attack = null;
         this.stopAction(0.2);
-        this.attackT = 0.7 + Math.random() * 1.2;
+        // A run of three and he stands off to breathe; a caster gets a beat more to answer.
+        this.attackT = (this.chainLen >= 3 ? 1.2 + Math.random() * 0.6 : 0.7 + Math.random() * 1.2) + (p instanceof Knight ? 0 : 0.35);
         this.setState(S.CIRCLE);
       }
       return;
@@ -990,26 +1190,56 @@ export class Knight {
     return false;
   }
 
-  reactToSpell(dt, sim, p) {
-    // React to visible incoming projectiles, not the caster's inputs or aim.
-    let incoming = null, soonest = 0.85;
+  // The nearest bolt that will reach him within horizon seconds, passing within pad of his middle.
+  boltThreat(sim, horizon, pad) {
+    let incoming = null, soonest = horizon;
     for (const b of sim.casting?.bolts || []) {
       const v2 = b.vx ** 2 + b.vz ** 2;
       if (v2 < 1) continue;
       const t = ((this.x - b.x) * b.vx + (this.z - b.z) * b.vz) / v2;
-      if (t < 0.16 || t > soonest) continue;
-      if (Math.hypot(b.x + b.vx * t - this.x, b.z + b.vz * t - this.z) > this.bodyRadius + (b.size || 0.1)) continue;
+      if (t < 0.12 || t > soonest) continue;
+      if (Math.hypot(b.x + b.vx * t - this.x, b.z + b.vz * t - this.z) > (pad ?? this.bodyRadius) + (b.size || 0.1)) continue;
       const y = b.y + (b.vy || 0) * t;
       if (y < this.y || y > this.y + this.rig.height) continue;
       if (!sim.world.sees(this.x, this.y + 1.4, this.z, b.x, b.y, b.z)) continue;
       incoming = b; soonest = t;
     }
+    this.boltT = soonest;
+    return incoming;
+  }
+
+  reactToSpell(dt, sim, p) {
+    // React to visible incoming projectiles, not the caster's inputs or aim.
+    const incoming = this.boltThreat(sim, 0.85);
     if (!incoming) { this.spellSeen = null; this.spellReactAt = 0; return false; }
     if (this.spellSeen !== incoming) { this.spellSeen = incoming; this.spellReactAt = sim.time + 0.18; return false; }
-    if (sim.time < this.spellReactAt || this.rollCd > 0 || this.stam < 22) return false;
+    if (sim.time < this.spellReactAt) return false;
+    // Coming at the front, with the legs for it: the shield takes it. Otherwise he gets out of the way.
+    const from = Math.atan2(incoming.x - this.x, incoming.z - this.z);
+    const frontal = Math.abs(wrapAngle(from - this.faceYaw)) < 1.0;
+    if (frontal && this.stam > 26 && this.state !== S.BLOCK && this.state !== S.BREAK && Math.random() < this.style.blockSpells) {
+      this.spellReactAt = Infinity;
+      this.startBlock(sim, this.boltT + 0.2);
+      return true;
+    }
+    if (this.rollCd > 0 || this.stam < 22) return false;
     const before = this.state;
     this.startRoll(sim, p, false, true);
     return this.state !== before;
+  }
+
+  // A spell meets the board: most of it spent on the shield and on his legs. Returns the share that gets through.
+  spellGuard(sim, fromX, fromZ, dmg) {
+    if (this.dead || this.state === S.BREAK || this.state === S.ROLL || this.stam <= 0) return 1;
+    if (!(this.shieldUp > 0.6 || this.state === S.BLOCK) || Math.hypot(fromX - this.x, fromZ - this.z) < 0.5) return 1;   // (a burn from inside has no front)
+    if (Math.abs(wrapAngle(Math.atan2(fromX - this.x, fromZ - this.z) - this.faceYaw)) > 1.0) return 1;
+    this.stam -= 5 + dmg * 0.45; this.stamDelay = 0.8;
+    this.stats.spellBlocks++;
+    if (!this.action) this.play('Shield_OneShot', 1.3, 'upper', 0.05);
+    const sp = this.shieldPos || [this.x, this.y + 1.2, this.z];
+    sim.event(EV.BLOCK, sp[0], sp[1], sp[2], Math.sin(this.faceYaw), 0.2, Math.cos(this.faceYaw));
+    if (this.stam <= 0) { this.stam = 0; this.guardBroken(sim, fromX, fromZ, 3); return 0.5; }
+    return 0.15;
   }
 
   startBlock(sim, hold) {
@@ -1030,8 +1260,8 @@ export class Knight {
     if (this.blockT <= 0) {
       this.stopAction(0.2);
       this.setState(S.CIRCLE);
-      // Riposte: a blocked swing leaves the player open.
-      if (p.recovering) this.attackT = Math.min(this.attackT, 0.12);
+      // Riposte: a blocked swing leaves the attacker open, and he's straight back with something quick.
+      if (p.recovering || this.riposte) this.attackT = Math.min(this.attackT, 0.06);
     }
   }
 
@@ -1067,9 +1297,11 @@ export class Knight {
     this.faceYaw = this.yaw;
     this.stam -= 14;
     this.rollCd = 1.9;
-    // Into the tuck through a quick crouch, skipping the clip's leap.
+    // Into the tuck through a quick crouch, skipping the clip's leap. (Lisandra's dive went head first onto the
+    // kite shield and left him on his back: plate rolls, it doesn't dive.)
     this.play('Roll', 1.05, 'full', 0.15);
     this.actT = this.bank.clips.Roll.dur * 0.3;
+    this.travelDir = null;
     this.stats.rolls++;
     this.setState(S.ROLL);
     sim.event(EV.ROLL, this.x, this.y, this.z);
@@ -1112,18 +1344,22 @@ export class Knight {
     // Waits to get his breath, then comes back around the corner fast.
     if (this.stateT > 5.5 || (dist < 2.3 && this.stateT > 1.6) || (d <= 1 && this.stam > 70 && this.stateT > 1.6)) {
       this.tactic = 0; this.tacticT = 4;
-      if (dist > 3.2 && dist < 6.8 && this.stam > 25) this.startAttack(sim, ATTACKS.dash);
+      if (dist > 3.0 && dist < 4.6 && this.stam > 25) this.startAttack(sim, ATTACKS.dash);
       else this.setState(S.APPROACH);
     }
   }
 
   // ---- taking blows ---------------------------------------------------------------------------------
 
-  onBlocked(sim, heavy) {
+  onBlocked(sim, heavy, attacker) {
     const cost = heavy ? 38 : 16;
     this.stam -= cost;
     this.stamDelay = 1.5;
     this.stats.blocks++;
+    if (attacker && this.stam > 20 && Math.random() < this.style.riposte) {
+      this.riposte = true; this.stats.ripostes++;
+      if (this.state === S.CIRCLE) this.attackT = Math.min(this.attackT, 0.1);
+    }
     if (!this.action) this.play('Shield_OneShot', 1.2, 'upper', 0.05);
     if (this.stam <= 0) {
       this.stam = 0;
@@ -1133,7 +1369,7 @@ export class Knight {
     }
   }
 
-  onHit(sim, kind, fromX, fromZ, poise = 30) {
+  onHit(sim, kind, fromX, fromZ, poise = 30, by = null) {
     this.hitT = 0;
     this.recentHits += 1;
     const wasPatrol = this.state === S.PATROL || this.state === S.IDLE;
@@ -1154,17 +1390,26 @@ export class Knight {
       const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1;
       this.attack = null; this.activeOn = -1;
       this.yaw = Math.atan2(-dx, -dz); this.faceYaw = this.yaw;
-      if (kind === 'puncture') {
+      const floored = (this.state === S.BREAK || (by && HEAVY.has(by.key))) && sim.time - this.lastFall > 10 && (this.state === S.BREAK || this.hurt > 0.3 || Math.random() < 0.5);
+      if (floored) this.lastFall = sim.time;
+      if (floored) {
+        // Off his feet, facing the blow: he goes over backwards and lands on his back, where LayToIdle starts.
+        this.knockX = dx / L; this.knockZ = dz / L; this.knock = 5.5;
+        this.play('Hit_Knockback', 1.0, 'full', 0.06);
+        this.travelDir = null;
+        this.down = true; this.stats.falls++;
+      } else if (kind === 'puncture') {
         this.knockX = dx / L; this.knockZ = dz / L; this.knock = 4.5;
         this.play('Hit_Knockback', 1.05, 'full', 0.06);
       } else {
-        this.play(Math.random() < 0.5 ? 'Hit_Chest' : 'Hit_Head', 1.25, 'full', 0.06);
+        const pool = kind === 'kick' ? ['L_HitGut'] : Math.random() < 0.4 ? HIT_HIGH : HIT_LOW;
+        this.play(pool[Math.random() * pool.length | 0], 1.25, 'full', 0.06);
       }
       this.setState(S.STAGGER);
       sim.event(EV.GRUNT, this.x, this.y + 1.5, this.z, kind === 'puncture' ? 1 : 0.4);
     } else if (this.state === S.CIRCLE && !this.action) {
       // Rides the blow on the upper body and keeps moving.
-      this.play('Hit_Chest', 1.5, 'upper', 0.05);
+      this.play(Math.random() < 0.5 ? 'L_HitBody' : 'Hit_Chest', 1.5, 'upper', 0.05);
       this.attackT = Math.min(this.attackT, 0.5);
     }
   }

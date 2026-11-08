@@ -3,7 +3,7 @@
 
 import { STAFFS2 } from '../items/staffs2.js';
 
-export const MAX_CHARS = 40;
+export const MAX_CHARS = 48;
 export const MAX_JOINTS = 72;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;
