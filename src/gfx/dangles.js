@@ -116,3 +116,23 @@ export class Dangles {
     return this.out;
   }
 }
+
+// The way to the eye from a point on the held staff, in the staff's own frame, as two axes across the eye's view: [across, up],
+// each in its own 4 floats (src/gfx/stafffx.js lays a stone's light out on them). weapon, view: as step's; bind: dqFromMat of the
+// staff's bind; p: the point.
+export function staffBind(bind) { return dqFromMat(bind); }
+export function eyeAxes(weapon, bind, view, p, out) {
+  const M = [[weapon[0], weapon[1], weapon[2], weapon[3]], [weapon[4], weapon[5], weapon[6], weapon[7]]];
+  const toItem = dqMul(M, bind);
+  const at = mulPoint(view, dqApply(toItem, p));
+  // The eye is the view's origin: the way there, back through the sway (rigid, so its transpose) and the joint's turn.
+  const d = [-at[0], -at[1], -at[2]];
+  const back = [view[0] * d[0] + view[1] * d[1] + view[2] * d[2], view[4] * d[0] + view[5] * d[1] + view[6] * d[2], view[8] * d[0] + view[9] * d[1] + view[10] * d[2]];
+  const f = norm(rot(conj(toItem[0]), back));
+  // Up stays the staff's own up as near as it can, square to the eye.
+  const u = norm([-f[0] * f[1], 1 - f[1] * f[1], -f[2] * f[1]]);
+  const a = [u[1] * f[2] - u[2] * f[1], u[2] * f[0] - u[0] * f[2], u[0] * f[1] - u[1] * f[0]];
+  out[0] = a[0]; out[1] = a[1]; out[2] = a[2]; out[3] = 0;
+  out[4] = u[0]; out[5] = u[1]; out[6] = u[2]; out[7] = 0;
+  return out;
+}
