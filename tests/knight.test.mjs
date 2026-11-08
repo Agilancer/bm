@@ -30,8 +30,9 @@ test('the clips carry the arms: props stay finite and steady, and the guard hold
         k.combat = frame / 20; k.shieldUp = 1 - frame / 20;
         k.animate(1 / 120, sim);
         assert.ok([...k.propMatrices].every(Number.isFinite), `${kind}: ${clip.name} frame ${frame}`);
-        // Nothing searches the arms about any more: shoulders and elbows are exactly where the clip puts them.
-        want.set(k.rig.restR); bank.sample(clip, k.actT, want, null);
+        // Nothing searches the arms about any more: shoulders and elbows are exactly where the clip puts them
+        // (a hanging shield arm only turned about its own length, palm to thigh, to carry the board).
+        want.set(k.rig.restR); bank.sample(clip, k.actT, want, null); k.carryArm(want, k.carryW);
         for (const n of held ? ['upperarm_r', 'lowerarm_r'] : ['upperarm_r', 'lowerarm_r', 'upperarm_l', 'lowerarm_l']) {
           const j = k.rig.index.get(n) * 4, r = k.pose.rot;
           assert.ok(Math.abs(Math.abs(r[j] * want[j] + r[j + 1] * want[j + 1] + r[j + 2] * want[j + 2] + r[j + 3] * want[j + 3]) - 1) < 1e-4, `${kind}: ${clip.name} ${n}`);
@@ -63,6 +64,37 @@ test('a blow from a clip with an empty left hand keeps the shield arm in its gua
     assert.ok(Math.abs(r[j] * guard[j] + r[j + 1] * guard[j + 1] + r[j + 2] * guard[j + 2] + r[j + 3] * guard[j + 3]) > 0.999, n);
   }
   assert.ok(Math.abs(k.bodyTurn - ATTACKS.slash.turn) < 0.05, `turn ${k.bodyTurn}`);
+});
+// The board in the knight's own frame (facing +z, left +x): which way its face looks, which way its top points,
+// and how high its top and point stand.
+function board(k) {
+  const M = k.propMatrices.subarray(16, 32), s = Math.hypot(M[0], M[1], M[2]);
+  const [top, low] = k.kind ? [0.386, -0.533] : [0.294, -0.405];
+  return { face: [-M[8] / s, -M[9] / s, -M[10] / s], up: [M[4] / s, M[5] / s, M[6] / s], top: M[5] * top + M[13], point: M[5] * low + M[13] };
+}
+test('a knight carries his shield as it was carried: at his side at ease, upright before him on guard and in a shield blow', () => {
+  for (const kind of [0, 1]) {
+    const k = knight(kind), sim = simulation();
+    const run = (frames, set) => { for (let i = 0; i < frames; i++) { set(); sim.time += 1 / 60; k.animate(1 / 60, sim); } };
+    const shoulder = () => k.pose.wt[k.rig.index.get('upperarm_l') * 3 + 1];
+    for (const walk of [0, 1.4]) {
+      // At ease, standing or walking: hanging against his left side, face out, top below the shoulder, point off the ground.
+      run(90, () => { k.combat = k.combatTarget = 0; k.shieldUp = k.shieldTarget = 0; k.speed = walk; });
+      const b = board(k);
+      assert.ok(b.face[0] > 0.85 && b.up[1] > 0.95, `${kind} ${walk}: at his side, face ${b.face.map((v) => v.toFixed(2))} up ${b.up.map((v) => v.toFixed(2))}`);
+      assert.ok(b.top < shoulder() && b.top > shoulder() - 0.3 && b.point > 0.15, `${kind} ${walk}: top ${b.top.toFixed(2)} point ${b.point.toFixed(2)}`);
+      assert.ok(k.equipmentPenalty('l') < 0.01, `${kind} ${walk}: clear of the leg`);
+    }
+    // On guard: upright before him, face to the front, the top over his shoulder.
+    run(90, () => { k.combat = k.combatTarget = 1; k.shieldUp = k.shieldTarget = 1; k.speed = 0; });
+    let b = board(k);
+    assert.ok(b.face[2] > 0.95 && b.up[1] > 0.95 && b.top > shoulder(), `${kind} guard: face ${b.face.map((v) => v.toFixed(2))} up ${b.up.map((v) => v.toFixed(2))}`);
+    // Punched with the board: it stays upright and square to the front, not laid flat over his head.
+    k.startAttack(sim, ATTACKS.jab);
+    run(30, () => { k.actRate = 0; k.actT = k.action.dur * 0.5; });
+    b = board(k);
+    assert.ok(b.face[2] > 0.8 && b.up[1] > 0.85, `${kind} jab: face ${b.face.map((v) => v.toFixed(2))} up ${b.up.map((v) => v.toFixed(2))}`);
+  }
 });
 test('a blow into a raised shield is followed by a boot, and a broken guard by the big one', () => {
   const a = knight(), b = knight(1), sim = simulation([a, b]);

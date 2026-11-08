@@ -53,7 +53,10 @@ shield and answers every blocked blow. A run of blows branches on how the last o
 or a board to break it, through a broken guard the big one, and after a pounce the chop (or the overhead, against you).
 Every blow is gated by its measured reach (`TIP`): a knight closes to where it lands and no closer, so nobody swings at air
 or ends up chest to chest (knights keep 1.3 m apart, and 1.5 m from you). The shield arm keeps its guard through blows whose
-clip has an empty left hand. Big blows wind up slow and land fast, a heavy or a broken guard can put a knight on his back
+clip has an empty left hand. A shield is carried as the period sources show it: at ease the arm hangs palm to thigh and the board
+hangs against his left side, face out, its top a hand below the shoulder; on guard it stands upright before him, top at
+the chin; in a shield blow it is driven square at the foe instead of rolling with the fist. Each hold is found on each
+knight's own body when he loads. Big blows wind up slow and land fast, a heavy or a broken guard can put a knight on his back
 (once in ten seconds at most), and he taunts only over a man he's put down. Against spells, a knight raises his shield to
 fire from the front and walks in behind it. Great crabs come out of the fields from 20 seconds after first blood, from
 different sides.
