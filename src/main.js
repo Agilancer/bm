@@ -376,6 +376,7 @@ async function boot(plan, poolSize) {
   // The game keeps itself as it's played: that's Continue.
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
   game.onTaken = autosave;
+  if (openingHUD) game.drawOpening = (snap, cam) => openingHUD.feel(snap, cam);
   game.onTick = (dt) => {
     if (openingHUD) {
       const snap = game.currentSnap();

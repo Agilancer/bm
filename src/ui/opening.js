@@ -1,10 +1,11 @@
 // The opening on screen: the camera while the story has it, your eyes opening, the bars, her words, your name, the cards,
 // holding to skip, and its sound (src/ui/opening-sound.js). The sim keeps the clock and where everyone is (src/sim/opening.js).
-import { CUES, CUE_IDS, lineAt } from '../core/opening-script.js';
+import { CUES, CUE_IDS, emoteAt, lineAt } from '../core/opening-script.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from '../core/math.js';
-import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, OPENING, OPENING_REVISION, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, collapseEye } from '../core/opening.js';
+import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, OPENING, OPENING_REVISION, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, collapseEye, prettyShown } from '../core/opening.js';
 import { OpeningSound } from './opening-sound.js';
+import { Emotes } from './emotes.js';
 import { terrainHeight } from '../core/terrain.js';
 
 const HERD_CONTROL = 9.9;    // (src/sim/opening.js: when you can walk again)
@@ -47,6 +48,8 @@ export class OpeningHUD {
       <div class="op-track"></div>
       <div class="op-skip"><span></span><i></i></div>`;
     document.body.append(this.root);
+    // Her feelings over her head: in the world, so under your lids and the bars.
+    this.emotes = new Emotes(this.root, this.root.firstElementChild);
     const q = (s) => this.root.querySelector(s);
     this.eyes = q('.op-eyes'); this.flash = q('.op-flash'); this.sub = q('.op-sub'); this.who = q('.op-sub b'); this.line = q('.op-sub p');
     this.title = q('.op-title'); this.titleName = q('.op-title h1'); this.quest = q('.op-quest'); this.track = q('.op-track'); this.skipHint = q('.op-skip');
@@ -233,6 +236,19 @@ export class OpeningHUD {
           CAVE_OUT[0] * 0.35, 0.12, CAVE_OUT[1] * 0.35, 0.8, 0.1, 0.5, 0.8, 1.8, 3, 5);
       }
     }
+  }
+
+  // Her feelings over her head (src/ui/emotes.js), placed by the camera the frame was drawn with.
+  feel(snap, cam) {
+    const stage = snap[H.OPENING], t = snap[H.OPENING_TIME], cue = snap[H.OPENING_CUE];
+    const e = !this.root.hidden && cam ? emoteAt(stage, t, cue ? CUE_IDS[cue - 1] : null, snap[H.OPENING_CUE_T]) : null;
+    if (!e) { this.emotes.hide(); return; }
+    // The one of her you're looking at (the pretty one is the second to last), the middle of her head: 0.19 m over the head
+    // joint is her speech mark, the middle of the skull about 0.1.
+    const pretty = prettyShown(stage, t);
+    const co = CHARS_START + (snap[H.NCHARS] - (pretty ? 2 : 1)) * C_SIZE;
+    const head = [snap[co + C_PROPS], snap[co + C_PROPS + 1] - 0.09, snap[co + C_PROPS + 2]];
+    this.emotes.draw(cam, head, e.kind, e.age, e.dur, pretty ? 'pretty' : 'witch', this.root.classList.contains('bars') ? innerHeight * 0.105 : 0);
   }
 
   // ---- the camera -------------------------------------------------------------------------------------------------------

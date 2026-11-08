@@ -4,7 +4,7 @@ import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
-import { DUST_AT, OPENING, SWAP_AT } from '../core/opening.js';
+import { OPENING, prettyShown } from '../core/opening.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
@@ -1686,11 +1686,8 @@ export class Renderer {
   cullBodies(cam, snap) {
     const pl = this.planes;
     const stage = snap[H.OPENING];
-    // Lisandra as you see her: lovely while the glamour holds, the witch from the flash until she comes out of the dust, and
-    // lovely to you from then on (by day, once you're in town). Everyone else only ever sees the witch.
-    const t = snap[H.OPENING_TIME];
-    const pretty = (stage === OPENING.WAKE && t < SWAP_AT) || (stage === OPENING.COLLAPSE && t >= DUST_AT) || stage === OPENING.ESCORT
-      || (stage >= OPENING.ARRIVED && this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR);
+    // Lisandra as you see her (src/core/opening.js prettyShown). Everyone else only ever sees the witch.
+    const pretty = prettyShown(stage, snap[H.OPENING_TIME], this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR);
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
