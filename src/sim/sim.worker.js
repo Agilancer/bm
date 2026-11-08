@@ -4,7 +4,7 @@ import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { mapFolk } from '../folk/layout.js';
 import { FieldCreature } from './field-creature.js';
 import { setOpeningTerrain } from '../core/terrain.js';
-import { CAVE_WALLS, OPENING, OPENING_REVISION, OPENING_YAW } from '../core/opening.js';
+import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW, clutterBoxes } from '../core/opening.js';
 import { Opening } from './opening.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
@@ -21,6 +21,7 @@ import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepWoods, Zombie }
 import { CHURCH_GUARD, churchAt } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { ATTACKS, Knight, S } from './knight.js';
+import { TOWN_KNIGHTS } from '../core/knights.js';
 import { Player } from './player.js';
 import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
@@ -31,10 +32,13 @@ import { World } from './world.js';
 const BLACK = {
   spawn: [...CHURCH_GUARD], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
   route: [[...CHURCH_GUARD]], pauseClip: null, keep: true,   // On guard before the cathedral's great door, and no further.
+  // He may follow you off his ground, but only so far: past leash metres from his door he lets you go and walks back to it,
+  // and he lets you go at once when you're back in town (keep: Knight.letGo).
+  style: 'black', leash: 20,
 };
 const SILVER = {
   spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
-  route: [[-7, 13], [-7, 19], [0, 19], [0, 13]], pauseClip: 'Idle_FoldArms_Loop',
+  route: [[-7, 13], [-7, 19], [0, 19], [0, 13]], pauseClip: 'Idle_FoldArms_Loop', style: 'silver',
 };
 
 // Keeps to the woods north of the village. hp is how long it fights; territory is how far from spawn it minds you.
@@ -134,7 +138,7 @@ class Sim {
     this.casting.power = input[INPUT.POWER] || 1; this.casting.maxMana = MAX_MANA + input[INPUT.MANA_MAX]; this.casting.regen = input[INPUT.REGEN] || 1; this.casting.thrift = input[INPUT.THRIFT];
     if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
     if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + g); }
-    if (this.opening?.stage !== OPENING.NAME && this.opening?.stage !== OPENING.REVEAL) player.update(dt * (this.slow || 1), tdt, input, this);
+    if (!this.opening?.frozen()) player.update(dt * (this.slow || 1), tdt, input, this);
     for (const k of this.knights) {
       const ox = k.x, oz = k.z;
       k.update(this.frozen ? 0 : tdt * this.casting.rate(k) * (k.opts?.role ? CASTER_HASTE : HASTE[k.kind] ?? 1), this);
@@ -148,8 +152,9 @@ class Sim {
         k.pushX *= fall; k.pushZ *= fall;
         if (Math.abs(k.pushX) + Math.abs(k.pushZ) < 0.4) { k.pushX = 0; k.pushZ = 0; }
       }
-      // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there.) src/core/town.js.
-      if (k.kind !== 1 && inTown(k.x, k.z) && !inTown(ox, oz)) { k.x = ox; k.z = oz; }
+      // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there, and a knight on a post, on a
+      // leash from it, may cross its edge.) src/core/town.js.
+      if (k.kind !== 1 && !k.opts?.leash && inTown(k.x, k.z) && !inTown(ox, oz)) { k.x = ox; k.z = oz; }
       if (k.champion && !k.dead && this.tick % 10 === 0) this.event(EV.CHAMPION, k.x, k.y + 1.3, k.z);
       // Each death leaves its loot once.
       if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
@@ -167,9 +172,8 @@ class Sim {
     this.casting.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     this.villagers.forEach((v, i) => v.write(snap, this.charOffset(this.knights.length + i)));
-    snap[H.OPENING] = this.opening?.stage ?? OPENING.OFF;
-    snap[H.OPENING_TIME] = this.opening?.time ?? 0;
-    snap[H.OPENING_NEXT] = this.opening ? this.villagers[1].next : 0;
+    if (this.opening) this.opening.write(snap, H);
+    else snap[H.OPENING] = OPENING.OFF;
     player.sweep(snap, this);
     this.knights.forEach((k, i) => k.writeGashes(snap, this.charOffset(i), this));
     this.plan();
@@ -189,7 +193,7 @@ class Sim {
       const pit = body.opts?.pit;
       if (pit && (x < pit.x0 || x > pit.x1 || z < pit.z0 || z > pit.z1)) return false;
       if (!pit && (body instanceof Zombie ? inPit(x, z) : floorAt(x, z) !== null)) return false;
-      if (body.kind !== 1 && inTown(x, z) && !inTown(body.x, body.z)) return false;
+      if (body.kind !== 1 && !body.opts?.leash && inTown(x, z) && !inTown(body.x, body.z)) return false;
     }
     const pos = this.nudgePosition;
     pos[0] = x; pos[2] = z;
@@ -217,7 +221,8 @@ class Sim {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i], b = list[j];
         if (a.dead || b.dead || a.dormant || b.dormant) continue;
-        const R = (a.bodyRadius || 0.5) * 0.7 + (b.bodyRadius || 0.5) * 0.7;
+        // Two knights keep a body between them, so blades and boards don't pass through shoulders.
+        const R = a instanceof Knight && b instanceof Knight ? 1.3 : (a.bodyRadius || 0.5) * 0.7 + (b.bodyRadius || 0.5) * 0.7;
         const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
         if (d < R && d > 1e-3 && Math.abs(a.y - b.y) < 4) {
           const push = (R - d) / d * 0.5;
@@ -300,6 +305,16 @@ class Sim {
       case 14: this.manual = true; this.manualTicks = b; break;
       case 15: this.manual = false; break;
       case 12: this.knights.forEach((n) => { if (n.wakeAt !== undefined) n.wakeAt = 0; }); break;
+      case 23: console.log('[k] ' + JSON.stringify(this.knights.slice(0, 2).map((n) => ({ ...n.stats, hp: Math.round(n.hp), moves: n.recent })))); break;   // what the knights have been doing, for review logs
+      case 21: { // hold a knight still in clip b (by its place in the bank) at c seconds, for review sheets
+        const name = Object.keys(k.bank.clips)[b | 0];
+        k.hostile = false; k.target = null; k.state = S.IDLE; k.pauseT = 1e9; k.combat = k.combatTarget = 1; k.shieldUp = k.shieldTarget = 0;
+        k.play(name, 0, 'full', 0.0001); k.actT = c; k.fromW = 0;
+        // As a blow, so the shield arm's hold and the turn into it show as they do in a fight.
+        k.reviewAttack = Object.values(ATTACKS).find((x) => x.clip === name) || null;
+        if (k.reviewAttack?.hold) k.shieldUp = k.shieldTarget = 1;
+        break;
+      }
       default: break;
     }
   }
@@ -333,13 +348,7 @@ Sim.prototype.place = function (d) {
   p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
   p.onGround = p.y <= floor + 0.06;
   p.vx = 0; p.vy = 0; p.vz = 0; p.yaw = d.yaw;
-  if (this.opening && d.opening) {
-    this.opening.setStage(d.opening);
-    if (d.guide) for (const v of this.villagers) {
-      [v.x, v.z, v.yaw, v.next] = d.guide;
-      v.y = this.world.height(v.x, v.z);
-    }
-  }
+  if (this.opening && d.opening) this.opening.restore(d);
   this.input[INPUT.YAW] = d.yaw; this.input[INPUT.PITCH] = d.pitch;
   self.postMessage({ type: 'look', yaw: d.yaw, pitch: d.pitch });
 };
@@ -377,7 +386,15 @@ async function boot(msg) {
     fetchBuf(`${base}assets/fp/spell_raise.glb`),
     fetchBuf(`${base}assets/fp/arms_staff.glb`),
   ]);
-  if (msg.opening) village.colliders.push(...CAVE_WALLS);
+  if (msg.opening) {
+    // Lisandra's cave (src/core/opening.js): her clutter, the rock either side of its mouth, and the rubble that fills the
+    // mouth when it falls in (out of the way until then: src/sim/world.js setCaveSealed).
+    const w = CAVE_LINE[0][6], yaw = Math.atan2(CAVE_OUT[0], CAVE_OUT[1]), side = [CAVE_OUT[1], -CAVE_OUT[0]];
+    const at = (q, o) => [CAVE_MOUTH[0] + side[0] * q + CAVE_OUT[0] * o, CAVE_MOUTH[1] + side[1] * q + CAVE_OUT[1] * o];
+    const box = ([x, z], hx, hz, h, more) => ({ x, z, hx, hz, yaw, h, ...more });
+    village.colliders.push(...clutterBoxes(), box(at(w + 1.4, 0), 1.2, 1.2, 6), box(at(-w - 1.4, 0), 1.2, 1.2, 6),
+      box(at(0, -0.5), w + 0.8, 1.4, 3.5, { rubble: true }));
+  }
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village, await fetch(`${base}assets/game/interior/interior.json`).then((r) => r.json()));
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
@@ -409,6 +426,9 @@ async function boot(msg) {
     }
     sim.knights.push(new FieldCreature(sim.knights.length, rig, creature));
   }
+  // The knights in the other suits: Tessariel's walking the village, Velscour's man on the west road.
+  const townBufs = await Promise.all(TOWN_KNIGHTS.map((t) => fetchBuf(base + t.asset)));
+  TOWN_KNIGHTS.forEach((t, i) => sim.knights.push(new Knight(sim.knights.length, t.kind, new Rig(parseGLB(townBufs[i]), bank), bank, t)));
   for (const form of LISANDRA_FORMS) {
     sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
   }
@@ -423,7 +443,9 @@ async function boot(msg) {
   // Placing the player from a save, asked for by the render thread.
   self.addEventListener('message', (e) => {
     const m = e.data;
-    if (m.type === 'openingName' && sim.opening?.stage === OPENING.NAME) sim.opening.setStage(OPENING.LEAVE);
+    if (m.type === 'openingName') sim.opening?.named();
+    if (m.type === 'openingSkip') sim.opening?.skip();
+    if (m.type === 'openingPose' && sim.opening) sim.opening.pose = m.b;
     if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {

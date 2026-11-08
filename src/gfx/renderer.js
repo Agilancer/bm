@@ -1,9 +1,10 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { FIELD_CREATURES } from '../core/field-creatures.js';
+import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
-import { OPENING, REVEAL_SWAP_AT } from '../core/opening.js';
+import { DUST_AT, OPENING, SWAP_AT } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/church.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
@@ -32,13 +33,18 @@ import { Dangles } from './dangles.js';
 import { CURIO_GEMS, CURIO_TRAY_Y, MR as WARE_MR, PALETTE as WARE_PALETTE, SHADE as WARE_SHADE, wareMesh } from './wares.js';
 import { PLACES } from '../folk/town.js';
 import { STAFF_GLOW, STAFF_SPIN } from '../items/staffglow.js';
+import { STAFF_CORES } from '../items/staffcores.js';
+import { staffEffect, BARE } from '../items/staffeffects.js';
+import { VIEWMODEL_STAFF, STAFF_FX_OFFSET, STAFF_AXES_OFFSET, STAFF_UBO_SIZE } from './stafffx.js';
+const FX_STRENGTH = new Float32Array(1);
+import { eyeAxes, staffBind } from './dangles.js';
 import { STAFFS2 } from '../items/staffs2.js';
 
 const STAFFS2_IDS = new Set(STAFFS2.map((s) => s.id));
 const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
-const FRAME_FLOATS = 444;
+const FRAME_FLOATS = 448;
 // The surfing hand's one joint, as a dual quaternion: it leans and swings about the shoulder with the steering (-1 left, 1 right), and rises as it comes out.
 const SURF_PIVOT = [-0.33, -0.33, 0.2], surfPal = new Float32Array(8);
 function surfHandPose(tilt, up, time) {
@@ -56,7 +62,7 @@ function surfHandPose(tilt, up, time) {
 // The middle of the skull in the left hand, in the view's own space. Printed by tools/wizard/skull_arm.py.
 export const SKULL_AT = [-0.483, -0.159, -0.783];
 
-const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
+const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440, CAVE: 444 };
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
 // the forearm toward the elbow (fitted to the skinned arm, within a millimetre at both, on the rig's shield joint). Bigger than on the ground, to fill the owner's outline.
 const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCALE = 1.25, KITE_SEAT = [-0.06, -0.08, -0.023];
@@ -212,7 +218,7 @@ export class Renderer {
     const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
       'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
-      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb')];
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
     // Fetch when building each model; don't retain every source GLB during startup.
     const loadModel = async (i) => {
       const res = await fetch(base + models[i]);
@@ -245,6 +251,14 @@ export class Renderer {
       body.flesh = 1;
       this.chars.push(body);
     }
+    // The knights in the other suits, in the sim's order. Plate like the first two; Tessariel's polished.
+    for (let i = 0; i < TOWN_KNIGHTS.length; i++) {
+      const knight = await this.buildCharacter(await loadModel(15 + BODIES.length + LISANDRA_FORMS.length + FIELD_CREATURES.length + i));
+      knight.armored = true; knight.steel = TOWN_KNIGHTS[i].kind === 1;
+      this.chars.push(knight);
+      tick();
+    }
+    this.chars[0].armored = this.chars[1].armored = true; this.chars[1].steel = true;
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
       const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
@@ -277,10 +291,18 @@ export class Renderer {
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.itemData = new Float32Array(16 * MAX_GROUND);
     tick();
+    // One prop instance per sword and shield in a knight's hands: the black knight's crimson and V, the silver's gilded
+    // and T, then each town knight's own pair, sharing those four models. propBase: a knight's first instance.
     this.props = [];
     for (const i of [4, 5, 6, 7]) this.props.push(await this.buildProp(await loadModel(i)));
-    this.propInstances = device.createBuffer({ size: 64 * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
-    this.propData = new Float32Array(64);
+    this.chars[0].propBase = 0; this.chars[1].propBase = 2;
+    const firstTown = this.chars.length - LISANDRA_FORMS.length - TOWN_KNIGHTS.length;
+    TOWN_KNIGHTS.forEach((k, i) => {
+      this.chars[firstTown + i].propBase = this.props.length;
+      this.props.push({ ...this.props[k.sword === 'crimson' ? 0 : 2] }, { ...this.props[k.shield === 'v' ? 1 : 3] });
+    });
+    this.propInstances = device.createBuffer({ size: 64 * this.props.length, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+    this.propData = new Float32Array(16 * this.props.length);
     tick();
     this.buildEnv();
     this.buildPipelines();
@@ -716,6 +738,16 @@ export class Renderer {
           for (let v = 0; v < prim.pos.length; v++) prim.pos[v] *= OLD_STAFF_HELD;
           s.tip *= OLD_STAFF_HELD;
         }
+        // Its power point's light (src/gfx/stafffx.js): the point turned and sized as the staff was, then the kind and colours.
+        const core = STAFF_CORES[id];
+        if (core) {
+          const k = painted ? 1 : OLD_STAFF_HELD, at = spinPoint(core, STAFF_SPIN), fx = staffEffect(id);
+          s.fx = new Float32Array([at[0] * k, at[1] * k, at[2] * k, core[3] * k, fx[1], fx[2], fx[3], fx[0], fx[4], fx[5], fx[6], fx[7]]);
+          s.fxAt = [at[0] * k, at[1] * k, at[2] * k];
+          s.fxBind = staffBind(vm.weaponBind);
+          s.fxAxes = new Float32Array(8);
+          s.fxBare = BARE.has(id) ? 1 : 0;
+        }
       }
       this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
       // What hangs off it: one more joint each past the rig's own, swung by Dangles each frame.
@@ -747,7 +779,8 @@ export class Renderer {
       this.onWeaponJoint(prim, vm.shieldJoint, vm.shieldBind);
     }
     s.hand = this.makeSkinned([prim], vm.jointCount + (s.extraJoints || 0));
-    s.ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    s.ubo = device.createBuffer({ size: s.fx ? STAFF_UBO_SIZE : 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    if (s.fx) device.queue.writeBuffer(s.ubo, STAFF_FX_OFFSET, s.fx);
     s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: s.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
@@ -1251,6 +1284,14 @@ export class Renderer {
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
+    const vmStaffMod = module(VIEWMODEL_STAFF);
+    this.pVMStaff = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArmor),
+      vertex: { module: vmStaffMod, entryPoint: 'vs', buffers: vmVB },
+      fragment: { module: vmStaffMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: depth(), multisample: ms,
+    });
     this.skullEyes = new SkullEyes(device, this.bgl0, targets, DEPTH, this.msaa, module);
     const vmSkullMod = module(VIEWMODEL_SKULL);
     this.pVMSkull = device.createRenderPipeline({
@@ -1675,7 +1716,9 @@ export class Renderer {
     const d = this.frameData;
     const { W, H: Ht } = this;
     const aspect = W / Ht;
-    mat4Perspective(this.tmpP, WORLD_FOV, aspect, 0.08);
+    // (A cinematic camera can narrow the lens: cam.fov, in radians.)
+    const fov = cam.fov || WORLD_FOV;
+    mat4Perspective(this.tmpP, fov, aspect, 0.08);
     mat4LookTo(this.tmpV, cam.x, cam.y, cam.z, cam.fx, cam.fy, cam.fz, cam.ux, cam.uy, cam.uz);
     mat4Mul(this.tmpVP, this.tmpP, this.tmpV);
     mat4Invert(this.tmpI, this.tmpVP);
@@ -1697,7 +1740,7 @@ export class Renderer {
     // Cascades.
     this.turnDay(snap[H.TIME]);
     const n = this.tier.cascades;
-    const tan = Math.tan(WORLD_FOV / 2);
+    const tan = Math.tan(fov / 2);
     const sun = this.sunDir;
     this.pines.update(cam, aspect, tan);
     let prev = 0.1;
@@ -1756,7 +1799,8 @@ export class Renderer {
     this.homeLights.frame(this.folk?.slot || null, Math.min(0.25, (now - (this.homeLightsAt || now)) / 1000));
     this.homeLightsAt = now;
     // (Below, where every light there is is a flame, twice the tier's count. A phone keeps its two.)
-    const take = Math.min(lights.length, this.tier.lights * (cam.y < -6 && !this.tier.lean ? 2 : 1));
+    // (And in Lisandra's cave, lit by her candles.)
+    const take = Math.min(lights.length, this.tier.lights * ((cam.y < -6 || this.inCave) && !this.tier.lean ? 2 : 1));
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
     for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
@@ -1777,6 +1821,7 @@ export class Renderer {
     // A candle or a lamp the player's carrying (src/ui/folk.js: bought of Elspeth Tallow).
     if (this.carryLight && take + spellLights < 28) { const L = this.carryLight; d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i], O.LIGHTS + (take + spellLights++) * 8); }
     d.set([take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9], O.COUNTS);
+    d.set(this.caveAmb || [0, 0, 0, 0], O.CAVE);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);
   }
 
@@ -1785,15 +1830,18 @@ export class Renderer {
   cullBodies(cam, snap) {
     const pl = this.planes;
     const stage = snap[H.OPENING];
-    const afterReveal = stage >= OPENING.ESCORT || stage === OPENING.REVEAL && snap[H.OPENING_TIME] > REVEAL_SWAP_AT;
-    const pretty = afterReveal && this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR;
+    // Lisandra as you see her: lovely while the glamour holds, the witch from the flash until she comes out of the dust, and
+    // lovely to you from then on (by day, once you're in town). Everyone else only ever sees the witch.
+    const t = snap[H.OPENING_TIME];
+    const pretty = (stage === OPENING.WAKE && t < SWAP_AT) || (stage === OPENING.COLLAPSE && t >= DUST_AT) || stage === OPENING.ESCORT
+      || (stage >= OPENING.ARRIVED && this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR);
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
       const otherForm = stage && (i === this.chars.length - (pretty ? 1 : 2));
       if (otherForm || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
-      const r = i < 2 ? 2.6 : 5;
+      const r = c.armored ? 2.6 : 5;
       let inside = 1e9;
       for (let k = 0; k < 5; k++) inside = Math.min(inside, pl[k * 4] * x + pl[k * 4 + 1] * y + pl[k * 4 + 2] * z + pl[k * 4 + 3]);
       c.seen = inside > -r;
@@ -1886,16 +1934,16 @@ export class Renderer {
         q.writeBuffer(c.ubo, 24 * 64, snap.buffer, snap.byteOffset + (co + C_MASKS) * 4, 256);
       }
       c.gashData[0] = snap[co + C.HEART];
-      c.gashData[1] = i < 2 || c.flesh ? 1 : 0.62;
-      c.gashData[2] = i === 1 ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
+      c.gashData[1] = c.armored || c.flesh ? 1 : 0.62;
+      c.gashData[2] = c.steel ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
       c.gashData[3] = c.flesh ? 1 : 0;
       q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
       skinParamsU[0] = c.count;
       skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
       skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
       q.writeBuffer(c.params, 0, skinParams);
+      if (c.propBase !== undefined) this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 32), c.propBase * 16);
       if (i < 2) {
-        this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 32), i * 32);
         this.glintData = this.glintData || new Float32Array(4);
         this.glintData[0] = snap[co + C.GLINT];
         q.writeBuffer(this.props[i * 2].ubo, 0, this.glintData);
@@ -1968,6 +2016,16 @@ export class Renderer {
       q.writeBuffer(h.hand.params, 0, skinParams);
       vmData[17] = 0; vmData[18] = weapon?.hands === 3 ? 0 : 1; vmData[19] = h.tip;
       q.writeBuffer(h.ubo, 0, vmData);
+      if (h.fx) {
+        const at = VM_PALETTE + this.vm.weaponJoint * 8;
+        eyeAxes(snap.subarray(at, at + 8), h.fxBind, vmData, h.fxAt, h.fxAxes);
+        h.fxAxes[3] = h.fxBare;
+        q.writeBuffer(h.ubo, STAFF_AXES_OFFSET, h.fxAxes);
+        // A cast flares the stone for a breath and lets it fall back (main.js sets castFlare on each cast).
+        const age = (performance.now() - (this.castFlare ?? -1e9)) / 1000;
+        FX_STRENGTH[0] = h.fx[11] * (1 + 1.0 * Math.exp(-age * 3.5));
+        q.writeBuffer(h.ubo, STAFF_FX_OFFSET + 44, FX_STRENGTH);
+      }
     }
     if (this.onArm) {
       const h = this.onArm;
@@ -2062,7 +2120,7 @@ export class Renderer {
     let nGround = 0;
     const drawn = this.drawnItems || (this.drawnItems = []);
     drawn.length = 0;
-    this.openingStage?.append(drawn, snap, dt);
+    this.openingStage?.append(drawn, snap, dt, cam);
     for (const g of this.ground) drawn.push(g);
     if (this.chests.length && !this.chestModels) this.chestModel();
     for (const g of this.chests) drawn.push(g);
@@ -2284,11 +2342,13 @@ export class Renderer {
       }
       if (this.held && !this.vmDown) {
         const h = this.held;
+        if (h.fx) mp.setPipeline(this.pVMStaff);
         mp.setVertexBuffer(0, h.hand.outBuf);
         mp.setVertexBuffer(1, h.hand.sideVB);
         mp.setIndexBuffer(h.hand.IB, 'uint32');
         mp.setBindGroup(1, h.bg);
         mp.drawIndexed(h.hand.indices);
+        if (h.fx) mp.setPipeline(this.pVM);
       }
       for (const h of this.shieldParts) {
         mp.setVertexBuffer(0, h.hand.outBuf);
@@ -2387,6 +2447,7 @@ export class Renderer {
     mp.setPipeline(this.pSky);
     mp.draw(3);
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
+    this.openingStage?.drawGlow(mp);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);
       mp.setBindGroup(1, this.pDrawBG);

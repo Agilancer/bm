@@ -5,6 +5,7 @@ import { SKINS, rollPattern, rollSkin } from './skins.js';
 import { INPUT, WEAPONS } from '../core/layout.js';
 import { SPELLS } from '../sim/spells.js';
 import { STAFFS2 } from './staffs2.js';
+import { SHIELDS2 } from './shields2.js';
 
 export const RARITIES = [
   { name: 'Common', color: '#a8a8a8', weight: 60, affixes: [0, 0], quality: [0.92, 1.0], sockets: { 0: 80, 1: 20 } },
@@ -78,8 +79,10 @@ for (const id of ['dark_staff', 'death_staff', 'earth_staff', 'fire_staff', 'ice
 // What a staff's roll comes to in a bolt, against a blade's: see STAFF_BITE in src/sim/casting.js.
 const STAFF_SHOWN = 0.76;
 
-// The kite shields. rarity: what it comes as. side: whose it is. V is Velscour's knights' and T is Tessariel's and his followers', and neither is ever rolled or carried.
+// The kite shields, and with SHIELDS2 the 32 kites and 20 tower shields of the owner's second sheets. rarity: what it comes as. kind: kite (when it
+// isn't said) or tower. side: whose it is. V is Velscour's knights' and T is Tessariel's and his followers', and neither is ever rolled or carried.
 export const SHIELDS = {
+  ...SHIELDS2,
   kite_cross: { name: 'Crossed Kite Shield', rarity: 0 }, kite_lion: { name: 'Lion Kite Shield', rarity: 0 },
   kite_fleur: { name: 'Fleur Kite Shield', rarity: 0 }, kite_eagle: { name: 'Eagle Kite Shield', rarity: 0 },
   kite_royal_lion: { name: 'Royal Lion Kite Shield', rarity: 2 }, kite_silver_cross: { name: 'Silver Cross Kite Shield', rarity: 2 },
@@ -180,6 +183,7 @@ const SHIELD_AFFIXES = [
   { stat: 'regen', pos: 'suf', tiers: [['of Trickling', 0.06, 0.1], ['of the Spring', 0.11, 0.17], ['of the Flood', 0.18, 0.28]] },
 ];
 const SHIELD_WARD = [6, 8, 11, 15, 20];   // by rarity, before its quality
+const TOWER_WARD = 1.25;                  // a tower shield's ward, against a kite's of the same rarity
 const SHIELD_POWER_CHANCE = [0.25, 0.4, 0.6, 1, 1];
 // A shield's special ability, one at most. Its place in this list is what src/sim/player.js and surf.js are told. values: common, rare, epic.
 export const SHIELD_POWERS = [null,
@@ -290,16 +294,19 @@ export function rollWeapon(rng, opts = {}) {
   };
 }
 
-// A shield of whatever rarity comes up, or opts.base. Uncommon rolls as common and legendary as epic: the sheets have nothing else.
+// The shields any roll can come up as, at one rarity: kites and towers alike, never V's or T's.
+const shieldsAt = (rarity) => Object.keys(SHIELDS).filter((b) => !SHIELDS[b].side && SHIELDS[b].rarity === rarity);
+
+// A shield of whatever rarity comes up, or opts.base. A rarity no shield is drawn at rolls as the nearest under it that has one.
 export function rollShield(rng, opts = {}) {
-  const rolled = rollRarity(rng, opts.minRarity || 0);
-  const rarity = rolled === 1 ? 0 : Math.min(rolled, 3);
-  const base = opts.base || pick(rng, Object.keys(SHIELDS).filter((b) => !SHIELDS[b].side && SHIELDS[b].rarity === rarity));
+  let rarity = rollRarity(rng, opts.minRarity || 0);
+  while (rarity > 0 && !shieldsAt(rarity).length) rarity--;
+  const base = opts.base || pick(rng, shieldsAt(rarity));
   const shown = SHIELDS[base].rarity;
   const power = rng() < SHIELD_POWER_CHANCE[shown] ? pick(rng, SHIELD_POWERS.slice(1)) : null;
   return {
     type: 'shield', base, rarity: shown,
-    armor: Math.round(SHIELD_WARD[shown] * between(rng, RARITIES[shown].quality[0], RARITIES[shown].quality[1])),
+    armor: Math.round(SHIELD_WARD[shown] * (SHIELDS[base].kind === 'tower' ? TOWER_WARD : 1) * between(rng, RARITIES[shown].quality[0], RARITIES[shown].quality[1])),
     affixes: rollAffixes(rng, shown, SHIELD_AFFIXES),
     power: power && { id: power.id, value: power.values[shown > 2 ? 2 : shown > 0 ? 1 : 0] },
     sockets: opts.sockets ?? +weighted(rng, RARITIES[shown].sockets), gems: [],
@@ -353,11 +360,11 @@ export function rollLoot(rng, kind) {
   // The rank and file: mostly a few coins, and every so often something to look at.
   if (kind === 5) {
     const out = rng() < 0.55 ? [gold(2, 12)] : [];
-    if (rng() < 0.11) { const r = rng(); out.push(r < 0.2 ? rollWeapon(rng) : r < 0.42 ? rollSkull(rng) : r < 0.65 ? rollGem(rng) : rollRobe(rng)); }
+    if (rng() < 0.11) { const r = rng(); out.push(r < 0.2 ? rollWeapon(rng) : r < 0.4 ? rollSkull(rng) : r < 0.55 ? rollShield(rng) : r < 0.75 ? rollGem(rng) : rollRobe(rng)); }
     return out;
   }
   // A champion always leaves something worth stopping for.
-  if (kind === 8) { const m = { minRarity: rng() < 0.35 ? 2 : 1 }, r = rng(); return [gold(25, 70), r < 0.3 ? rollWeapon(rng, m) : r < 0.6 ? rollSkull(rng, m) : rollRobe(rng, m), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.15)]; }
+  if (kind === 8) { const m = { minRarity: rng() < 0.35 ? 2 : 1 }, r = rng(); return [gold(25, 70), r < 0.25 ? rollWeapon(rng, m) : r < 0.5 ? rollSkull(rng, m) : r < 0.75 ? rollShield(rng, m) : rollRobe(rng, m), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.15)]; }
   if (kind === 7) return [gold(15, 45), ...(rng() < 0.35 ? [rollWeapon(rng, { minRarity: 1 })] : rng() < 0.5 ? [rollSkull(rng, { minRarity: 1 })] : rng() < 0.4 ? [rollShield(rng)] : [rollGem(rng)]), ...robe(0.2, { minRarity: 1 }), ...scroll(0.3)];
   return [gold(8, 30), ...(rng() < 0.3 ? [rollWeapon(rng)] : rng() < 0.4 ? [rollSkull(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...robe(0.15)];
 }
@@ -380,7 +387,7 @@ export function rollChest(rng, tier) {
     out.push(r < 0.3 ? rollWeapon(rng, { minRarity: 1 }) : r < 0.6 ? rollSkull(rng, { minRarity: 1 }) : rollGem(rng));
     if (rng() < 0.25) out.push(rollShield(rng));
   } else if (rng() < 0.35) out.push(rollGem(rng));
-  else if (rng() < 0.3) out.push(rng() < 0.5 ? rollWeapon(rng) : rollSkull(rng));
+  else if (rng() < 0.3) { const r = rng(); out.push(r < 0.35 ? rollWeapon(rng) : r < 0.7 ? rollSkull(rng) : rollShield(rng)); }
   if (rng() < CHEST_ROBE[tier]) out.push(rollRobe(rng, { minRarity: tier }));
   if (rng() < [0.15, 0.5, 1][tier]) out.push(rollSpell(rng));
   return out;
@@ -441,7 +448,7 @@ export function linesOf(item) {
     return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: GEM_LOOK[item.kind], kind: 'sub' }, { text: 'Goes in an open socket on a staff, a skull or a shield, and stays there.', kind: 'sub' }];
   }
   if (item.type === 'shield') {
-    const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} kite shield`, kind: 'sub' }, { text: `Ward ${item.armor || 0}`, kind: 'stat' }];
+    const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} ${SHIELDS[item.base]?.kind || 'kite'} shield`, kind: 'sub' }, { text: `Ward ${item.armor || 0}`, kind: 'stat' }];
     for (const a of item.affixes || []) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
     const p = item.power && SHIELD_POWERS.find((s) => s?.id === item.power.id);
     if (p) out.push({ text: `${p.name}: ${p.text(item.power.value)}`, kind: 'gem', color: '#e8c15a' });

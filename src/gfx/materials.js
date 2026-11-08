@@ -715,37 +715,7 @@ fn vn2(p: vec2f) -> f32 {
   let worldViewZ = -(F.view * vec4f(in.p, 1.0)).z;
   let shadow = shadowAt(in.p, n0, max(worldViewZ, 0.1), ign(in.pos.xy));
   var c = shadePBR(in.p, n, v, albedo, rough, metal, 1.0, shadow);
-  if (in.staff > 0u && M.params.w > 0.0) {
-    // Model-space currents cling to the head through every walk and cast, rather than sliding with the camera.
-    let head = smoothstep(0.40, 0.68, in.bind.y / max(M.params.w, 0.01));
-    let tm = F.camPos.w;
-    let q = in.bind * 26.0;
-    let flow = vn2(q.xy + vec2f(tm * 0.7, -tm * 1.8));
-    let vein = abs(sin(q.y * 1.7 + q.z * 2.8 + flow * 7.0 + tm * 2.0));
-    let crack = 1.0 - smoothstep(0.025, 0.12, vein);
-    let pulse = 0.75 + 0.25 * sin(tm * 3.4 + q.y);
-    let flicker = pow(max(0.0, sin(tm * 19.0 + floor(q.y * 3.0) * 2.1)), 10.0);
-    // The staff's own colour, packed by the renderer: top bit, then 8-bit RGB, linear (src/items/staffglow.js).
-    let tint = vec3f(f32((in.staff >> 16u) & 255u), f32((in.staff >> 8u) & 255u), f32(in.staff & 255u)) / 255.0;
-    let facing = max(dot(n, v), 0.0);
-    let rim = pow(1.0 - facing, 3.0);
-    var lit = head;
-    if ((in.staff & 0x40000000u) != 0u) {
-      // A staff is held up against the dusk as often as not: a soft fill from the eye and a rim keep its carving in view
-      // (the critics, round 1: the painted heads read as black lumps in the hand at dusk).
-      c += albedo * vec3f(0.5, 0.47, 0.42) * (0.3 + 0.7 * facing) * 0.55 + albedo * rim * 0.5;
-      // The painted staffs (tools/staffs2) have their stones painted in: only what's bright, strongly coloured and near the
-      // staff's own colour lives, so the wood and the bone stay wood and bone.
-      let hi = max(max(albedo.r, albedo.g), albedo.b);
-      let sat = (hi - min(min(albedo.r, albedo.g), albedo.b)) / max(hi, 0.001);
-      let near = dot(normalize(albedo + 0.001), normalize(tint + 0.001));
-      lit = smoothstep(0.55, 0.9, hi) * smoothstep(0.55, 0.85, sat) * smoothstep(0.9, 0.98, near) * smoothstep(0.2, 0.45, in.bind.y / max(M.params.w, 0.01));
-      // A light inside the stone, brighter at its edges, breathing: no painted veins over the painted stone.
-      c += (albedo * 1.6 + tint * 0.35) * lit * (0.35 + flow * 0.45 + rim * 0.6) * pulse;
-    } else {
-      c += tint * lit * (0.12 + flow * 0.28 + rim * 0.7 + crack * (1.4 + flicker * 2.5)) * pulse;
-    }
-  }
+  // STAFF_LIGHT
   // The spell hands are held up against the light as often as not: a low, warm fill from the eye keeps the skin skin, and the fingers' roundness in view.
   // And a spell's light, so near, can colour them but not burn them out: the upper arm faces all of it.
   if (M.params.w < 0.0) {

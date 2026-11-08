@@ -2,7 +2,8 @@
 // for the flow field, and rays against the plates of a rigid armour.
 import { floorAt, homeFloor, inPit, setFloors } from '../core/interior.js';
 import { forestTrees, trunkRadius } from '../core/forest.js';
-import { LAND_EDGE, terrainHeight } from '../core/terrain.js';
+import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
+import { caveFloor, caveKeep } from '../core/opening.js';
 import { CHURCH_BOUNDS } from '../core/church.js';
 
 // (Big enough to reach the catacombs, wherever the church stands: src/core/church.js. Cells nobody can stand on are walled off, so the search
@@ -51,6 +52,15 @@ export class World {
       return { id: t.id, shut: box(t.shut), ajar: box(t.ajar) };
     });
     this.setDoors(-1);
+    // Lisandra's cave: open until it falls in, and then its mouth is rubble (src/sim/opening.js).
+    this.caveSealed = false;
+    this.caveRubble = this.colliders.filter((c) => c.rubble);
+    this.setCaveSealed(false);
+  }
+
+  setCaveSealed(sealed) {
+    this.caveSealed = sealed;
+    for (const c of this.caveRubble) c.b = sealed ? 0 : OUT_OF_THE_WAY;
   }
 
   // mask: a bit for each door that stands open. -1: all of them.
@@ -65,6 +75,7 @@ export class World {
   height(x, z) {
     const f = floorAt(x, z);
     if (f !== null) return f;
+    if (openingTerrain && !this.caveSealed) { const c = caveFloor(x, z); if (c !== null) return c; }
     const u = x + 128, v = z + 128;
     if (u < 0 || v < 0 || u >= 256 || v >= 256) return terrainHeight(x, z);
     const i = u | 0, j = v | 0, a = u - i, b = v - j, h = this.heights;
@@ -135,6 +146,8 @@ export class World {
       }
     }
     out[0] = x; out[2] = z;
+    // In the cave, its walls.
+    if (openingTerrain && !this.caveSealed && caveKeep(out, r, feet)) hit = true;
     return hit;
   }
 
