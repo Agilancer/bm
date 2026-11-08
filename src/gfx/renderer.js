@@ -254,7 +254,10 @@ export class Renderer {
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
       const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
-        const skirt = accessor(glb, glb.json.meshes[0].primitives[0].attributes._SKIRT);
+        // A form with no skirt (Pretty in her leathers) has no _SKIRT mask: nothing of her sways as a dress.
+        const mask = glb.json.meshes[0].primitives[0].attributes._SKIRT;
+        if (mask === undefined) return prim;
+        const skirt = accessor(glb, mask);
         const skirtDirection = new Uint16Array(skirt.length);
         for (let v = 0; v < skirt.length; v++) {
           const angle = Math.atan2(prim.pos[v * 3] / scale - skirtCenter[0], prim.pos[v * 3 + 2] / scale - skirtCenter[1]);
