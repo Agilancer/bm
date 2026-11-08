@@ -50,7 +50,15 @@ export class VillageWalker {
         if (!tr) continue;
         const travel = tr[tr.length - 1] - tr[2];
         for (let i = 0; i < c.frames; i++) tr[i * 3 + 2] -= travel * i / (c.frames - 1);
-        this.moveRate[name] = c.dur / (travel > 0.3 ? travel : name === 'Sprint_Loop' ? 3.4 : 2.3);
+        // In a gown she runs with the knees kept low and the stride short (quicker steps for the same speed), her arms
+        // closer in; the witch bent over a little even running.
+        let stride = 1;
+        if (form.gown) {
+          const g = form.gown, sprint = name === 'Sprint_Loop';
+          stride = sprint ? 0.8 : 0.72;
+          this.gownWalk(c, { stride, knee: sprint ? 1.25 : 1.0, inward: (g.inward ?? 0.04) * 0.7, shift: 0.01, roll: 0.03, arms: Math.min(1, (g.arms ?? 1) * 1.7), stoop: (g.stoop || 0) * 0.6 });
+        }
+        this.moveRate[name] = c.dur / ((travel > 0.3 ? travel : name === 'Sprint_Loop' ? 3.4 : 2.3) * stride);
       }
       this.storyPose();
     }
@@ -70,9 +78,14 @@ export class VillageWalker {
   }
 
   // A walk for a long gown: shorter steps, the knee kept from kicking the heel up into the skirt, the feet set nearer one
-  // line, and the hips carried out over the standing leg. Turns are made in the hips' parent space, like fitArms.
-  gownWalk(clip, { stride = 0.8, knee = 0.8, inward = 0.04, shift = 0.022, roll = 0.06 }) {
+  // line, the hips carried out over the standing leg, and the arms' swing kept small. stoop bends her over from the waist
+  // (the witch's shuffle), with the head lifted back to see where she's going. Turns are made in the hips' parent space,
+  // like fitArms.
+  gownWalk(clip, { stride = 0.8, knee = 0.8, inward = 0.04, shift = 0.022, roll = 0.06, arms = 1, stoop = 0 }) {
     const rig = this.rig;
+    // (In the clip's own space: with no root turn, not the one she's placed by.)
+    const rootQ = rig.rootQ, rootT = rig.rootT;
+    rig.rootQ = null; rig.rootT = null;
     const J = (n) => rig.index.get('mixamorig:' + n);
     const hips = J('Hips'), parentOf = (j) => rig.parent[j];
     const q = new Float32Array(4), d = new Float32Array(4), inv = new Float32Array(4), axis = new Float32Array(3);
@@ -131,6 +144,38 @@ export class VillageWalker {
         }
       }
     }
+    // The arms swing a part of what the clip swings: each key drawn toward the arm's average turn.
+    if (arms < 1) {
+      for (const n of ['LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm']) {
+        const tr = clip.rots[J(n)];
+        if (!tr) continue;
+        const m = new Float32Array(4);
+        for (let i = 0; i < frames; i++) {
+          const s0 = tr[i * 4] * tr[0] + tr[i * 4 + 1] * tr[1] + tr[i * 4 + 2] * tr[2] + tr[i * 4 + 3] * tr[3] < 0 ? -1 : 1;
+          for (let a = 0; a < 4; a++) m[a] += tr[i * 4 + a] * s0;
+        }
+        quatNormalize(m, 0);
+        for (let i = 0; i < frames; i++) {
+          const s0 = tr[i * 4] * m[0] + tr[i * 4 + 1] * m[1] + tr[i * 4 + 2] * m[2] + tr[i * 4 + 3] * m[3] < 0 ? -1 : 1;
+          for (let a = 0; a < 4; a++) tr[i * 4 + a] = m[a] + (tr[i * 4 + a] * s0 - m[a]) * arms;
+          quatNormalize(tr, i * 4);
+        }
+      }
+    }
+    // Bent over from the waist, the neck lifting the head back up: each a turn about her side, in body space.
+    if (stoop) {
+      for (const [n, angle] of [['Spine1', stoop * 0.55], ['Spine2', stoop * 0.45], ['Neck', -stoop * 0.5], ['Head', -stoop * 0.3]]) {
+        const j = J(n), tr = clip.rots[j], pj = parentOf(j);
+        if (!tr || pj < 0) continue;
+        for (let i = 0; i < frames; i++) {
+          rig.solve(clip, clip.dur * i / (frames - 1), 1, palette, 0);
+          inv.set([-rig.wq[pj * 4], -rig.wq[pj * 4 + 1], -rig.wq[pj * 4 + 2], rig.wq[pj * 4 + 3]]);
+          quatRotate(axis, 0, inv, 0, [1, 0, 0], 0);
+          quatAxisAngle(q, 0, axis[0], axis[1], axis[2], angle);
+          quatMul(tr, i * 4, q, 0, tr, i * 4);
+        }
+      }
+    }
     // The hips sway out over the standing leg, and its side rides up.
     const hr = clip.rots[hips], ht = clip.trs[hips];
     const p = parentOf(hips);
@@ -146,6 +191,7 @@ export class VillageWalker {
       quatAxisAngle(q, 0, axis[0], axis[1], axis[2], roll * f);
       quatMul(hr, i * 4, q, 0, hr, i * 4);
     }
+    rig.rootQ = rootQ; rig.rootT = rootT;
   }
 
   // Rotate the upper arms away from the dress in chest space. Recalculate the
@@ -315,7 +361,7 @@ export class VillageWalker {
       // Put somewhere new (a cut, a teleport), the cloth starts hanging still rather than flying after her.
       if (Math.hypot(this.x - (this.clothX ?? this.x), this.z - (this.clothZ ?? this.z)) > 1.5) this.cloth.reset();
       this.clothX = this.x; this.clothZ = this.z;
-      this.cloth.step(this.clothDt, snap, offset + C_PALETTE, this.wind || 0);
+      this.cloth.step(this.clothDt, snap, offset + C_PALETTE, this.wind || 0, this.y);
       this.clothDt = 0;
     }
     // The render pass uses the current thigh and shin shapes to keep the marked
@@ -334,6 +380,12 @@ export class VillageWalker {
     snap[offset + C_PROPS] = rig.wt[head];
     snap[offset + C_PROPS + 1] = rig.wt[head + 1] + 0.19;
     snap[offset + C_PROPS + 2] = rig.wt[head + 2];
+    // Her left hand, where it is and how it's turned, for the book when she clutches it (src/gfx/opening.js placeBook).
+    const hand = this.leftHand ??= rig.index.get('mixamorig:LeftHand');
+    if (hand !== undefined) {
+      for (let a = 0; a < 3; a++) snap[offset + C_PROPS + 4 + a] = rig.wt[hand * 3 + a];
+      for (let a = 0; a < 4; a++) snap[offset + C_PROPS + 7 + a] = rig.wq[hand * 4 + a];
+    }
     snap[offset + C.ACTIVE] = 1;
     snap[offset + C.X] = this.x;
     snap[offset + C.Y] = this.y;

@@ -1250,6 +1250,9 @@ class GameView {
       attack: () => { shared.input[INPUT.ATTACK] += 1; },
       // Starts the run over (with the opening on, from the first breath in the cave).
       replay: () => { shared.input[INPUT.RESTART] += 1; },
+      // For testing the opening: skip a scene, or hold Lisandra in a pose ({ at: [x, z], face, clip, from, hold, rate }; null lets go).
+      skip: () => sim.postMessage({ type: 'openingSkip' }),
+      pose: (b) => sim.postMessage({ type: 'openingPose', b }),
       wide: () => { shared.input[INPUT.WIDE] += 1; },
       spell: (i) => { const n = typeof i === 'number' ? i : SPELLS.findIndex((s) => s.key === i); view.spellbar.pick(n); return n; },
       cast: (held = 0) => { shared.input[INPUT.CAST_N] += 1; shared.input[INPUT.CAST] = held; },

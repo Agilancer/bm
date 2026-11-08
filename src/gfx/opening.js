@@ -2,11 +2,11 @@
 // the portal, the rubble when it falls in, and the lights that go with each. Everything keys off the story's clock
 // (src/core/opening.js), so a replay or a skip lands on the same picture.
 import { accessor, parseGLB } from '../core/glb.js';
-import { C, C_SIZE, CHARS_START, H } from '../core/layout.js';
+import { C, C_PROPS, C_SIZE, CHARS_START, H } from '../core/layout.js';
 import { damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatYaw, smoothstep, wrapAngle } from '../core/math.js';
 import {
-  CANDLES, CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CHAMBER_YAW, CIRCLE, CLUTTER, DUST_AT, OPENING, PORTAL, PORTAL_YAW,
-  SNAP_AT, SWAP_AT, caveNearest, chamberPoint, chamberShape,
+  CANDLES, CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_LEN, CHAMBER_YAW, CIRCLE, CLUTTER, DUST_AT, OPENING, PORTAL,
+  PORTAL_YAW, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, chamberShape,
 } from '../core/opening.js';
 import { terrainHeight } from '../core/terrain.js';
 import { makeBuffer } from './gpu.js';
@@ -144,17 +144,29 @@ function facePoint(k, t) {
   return [px, y, pz, CAVE_MOUTH[0] + inX * D, CAVE_MOUTH[1] + inZ * D];
 }
 
-// One rough boulder: a jittered, squashed icosahedron.
+// One rough boulder: a jittered, squashed icosahedron split once (80 faces), shaded mostly smooth with a little of each
+// face's own plane left in, so it reads as weathered stone rather than a cut gem. flat squashes it into a slab.
 const ICO = (() => {
   const t = (1 + Math.sqrt(5)) / 2;
   const v = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]].map((p) => { const l = Math.hypot(...p); return p.map((x) => x / l); });
-  const f = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+  const base = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+  const mids = new Map();
+  const mid = (a, b) => {
+    const key = a < b ? a * 64 + b : b * 64 + a;
+    if (!mids.has(key)) { const p = v[a].map((x, i) => x + v[b][i]), l = Math.hypot(...p); v.push(p.map((x) => x / l)); mids.set(key, v.length - 1); }
+    return mids.get(key);
+  };
+  const f = [];
+  for (const [a, b, c] of base) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); f.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); }
   return { v, f };
 })();
-function boulder(g, px, py, pz, size, uvK = 0.9) {
-  const sq = [size * rnd(0.8, 1.3), size * rnd(0.55, 0.9), size * rnd(0.8, 1.2)], yaw = rnd(0, 6.3);
+function boulder(g, px, py, pz, size, uvK = 0.9, flat = 1) {
+  const sq = [size * rnd(0.8, 1.3), size * rnd(0.55, 0.9) * flat, size * rnd(0.8, 1.2)], yaw = rnd(0, 6.3);
   const F = frame(px, py, pz, yaw, rnd(-0.4, 0.4));
-  const pts = ICO.v.map((p) => { const j = rnd(0.75, 1.15); return F.P(p[0] * sq[0] * j, p[1] * sq[1] * j, p[2] * sq[2] * j); });
+  const jit = ICO.v.map(() => rnd(0.84, 1.12));
+  const pts = ICO.v.map((p, i) => F.P(p[0] * sq[0] * jit[i], p[1] * sq[1] * jit[i], p[2] * sq[2] * jit[i]));
+  // The smooth normal: the squashed sphere's, turned into the world.
+  const smooth = ICO.v.map((p) => { const n = F.R(p[0] / sq[0], p[1] / sq[1], p[2] / sq[2]), l = Math.hypot(...n) || 1; return n.map((x) => x / l); });
   for (const [a, b, c] of ICO.f) {
     const A = pts[a], B = pts[b], Cc = pts[c];
     const e = B.map((x, i) => x - A[i]), f = Cc.map((x, i) => x - A[i]);
@@ -165,7 +177,8 @@ function boulder(g, px, py, pz, size, uvK = 0.9) {
     // Each face takes the texture flat along its own main axis, so steep faces aren't streaked.
     const ax = Math.abs(n[0]), ay = Math.abs(n[1]), az = Math.abs(n[2]);
     const uvs = [A, B, Cc].map((p) => (ay >= ax && ay >= az ? [p[0], p[2]] : ax >= az ? [p[2], p[1]] : [p[0], p[1]]).map((v) => v * uvK));
-    g.tri(g.v(A, n, ...uvs[0]), g.v(B, n, ...uvs[1]), g.v(Cc, n, ...uvs[2]));
+    const nv = (k) => { const m = smooth[k].map((x, i) => x * 0.7 + n[i] * 0.3), ml = Math.hypot(...m) || 1; return m.map((x) => x / ml); };
+    g.tri(g.v(A, nv(a), ...uvs[0]), g.v(B, nv(b), ...uvs[1]), g.v(Cc, nv(c), ...uvs[2]));
   }
 }
 
@@ -214,6 +227,20 @@ function caveRock() {
     const [px, y, pz] = facePoint(k, t);
     boulder(g, px, y, pz, rnd(0.3, 0.7), 1.3);
   }
+  // In the chamber: masses of rock standing out of the walls, slabs fallen at their feet, and the roof hanging lower in
+  // places, so it's a hollow in the hill and not a smooth barrel. Each sits mostly in the rock, bulging a little way in.
+  seed = 131;
+  const room = STATIONS.filter((st) => st[8] >= 2.5 && st[8] <= CHAMBER_LEN - 1.4);
+  const mass = (k, size, push, flat = 1) => {
+    const st = room[Math.floor(rnd(0, room.length))];
+    const [, , , , X, Y] = archPoint(st, k);
+    const l = Math.hypot(X, Y + 0.2) || 1, ox = X / l, oy = (Y + 0.2) / l;
+    const sx = st[3], sz = -st[2], d = size * push;
+    boulder(g, st[0] + sx * (X + ox * d), st[5] + Y + oy * d, st[1] + sz * (X + ox * d), size, 1.1, flat);
+  };
+  for (let i = 0; i < 26; i++) mass(rnd() < 0.5 ? rnd(1.2, 6) : ARCH - rnd(1.2, 6), rnd(0.6, 1.3), 0.62);
+  for (let i = 0; i < 10; i++) mass(rnd(8.5, 17.5), rnd(0.9, 1.8), 0.5);
+  for (let i = 0; i < 8; i++) mass(rnd() < 0.5 ? rnd(0.15, 0.6) : ARCH - rnd(0.15, 0.6), rnd(0.6, 1.0), 0.45, 0.4);
   return g.done();
 }
 
@@ -232,23 +259,25 @@ function caveFloor() {
   return g.done();
 }
 
-// The rubble that fills the mouth when it comes down, and spills out over the ledge.
+// The rubble that fills the mouth when it comes down, right up to the lintel and out in the sun, and spills down over the
+// ledge: big at the bottom, boulders rolled clear, stones scattered. (Her way out, down the middle, is left clear.)
 function caveRubble() {
   const g = new Geo();
   const m = STATIONS[0], inX = m[2], inZ = m[3], sx = m[3], sz = -m[2];
-  const rock = (D, X, Y, size) => boulder(g, CAVE_MOUTH[0] + inX * D + sx * X, m[5] + Y, CAVE_MOUTH[1] + inZ * D + sz * X, size);
+  const rock = (D, X, Y, size, flat = 1) => boulder(g, CAVE_MOUTH[0] + inX * D + sx * X, m[5] + Y, CAVE_MOUTH[1] + inZ * D + sz * X, size, 0.9, flat);
   seed = 23;
   const w = m[6], h = m[7];
-  // A wall of it behind, so nothing shows through, then the heap.
-  for (let k = 0; k < 7; k++) for (let j = 0; j < 6; j++) rock(1.4 + rnd(-0.2, 0.3), (j / 5 * 2 - 1) * (w + 0.1), 0.2 + k * (h + 0.3) / 6, rnd(0.45, 0.7));
+  for (let k = 0; k < 7; k++) for (let j = 0; j < 6; j++) rock(0.45 + rnd(-0.2, 0.25), (j / 5 * 2 - 1) * (w + 0.1), 0.25 + k * (h + 0.1) / 6, rnd(0.5, 0.75));
   for (let k = 0; k < 6; k++) {
     const n = 8 - k;
     for (let j = 0; j < n; j++) {
-      const across = (j / Math.max(1, n - 1) * 2 - 1) * (w + 0.25) * (1 - k * 0.08);
-      rock(rnd(-0.6, 0.9) + k * 0.12, across + rnd(-0.15, 0.15), k * 0.55 + rnd(0, 0.2), rnd(0.32, 0.62));
+      const across = (j / Math.max(1, n - 1) * 2 - 1) * (w + 0.5) * (1 - k * 0.1);
+      rock(-0.2 - (5 - k) * 0.28 + rnd(-0.25, 0.25), across + rnd(-0.15, 0.15), k * 0.5 + rnd(0, 0.2), rnd(0.4, 0.75) * (1.15 - k * 0.06));
     }
   }
-  for (let j = 0; j < 14; j++) rock(-rnd(0.8, 3.2), rnd(-w - 1.2, w + 1.2), 0.02, rnd(0.1, 0.32));
+  const aside = () => (rnd() < 0.5 ? -1 : 1) * rnd(1.0, w + 0.8);
+  for (let j = 0; j < 5; j++) rock(-rnd(1.6, 2.6), aside(), 0.15, rnd(0.35, 0.6));
+  for (let j = 0; j < 16; j++) rock(-rnd(0.8, 3.0), rnd(-w - 1.4, w + 1.4), 0.02, rnd(0.1, 0.3), 0.7);
   return g.done();
 }
 
@@ -502,8 +531,7 @@ class OpeningStage {
     this.lights = {
       portal: L([0.5, 0.13, 1], 8, 0, 0.65), book: L([0.55, 0.22, 1], 3.2, 0, 0.4),
       key: L([1, 0.78, 0.46], 4.5, 0, 0.1), rim: L([1, 0.86, 0.62], 4, 0, 0.1),
-      cauldron: L([0.35, 0.9, 0.3], 2.6, 0, 0.5),
-      fill: L([0.6, 0.45, 1], 4.5, 0, 0.2),
+      fill: L([0.6, 0.45, 1], 5.5, 0, 0.2),
     };
     this.groups = candleGroups().map((list) => {
       const n = list.length, c = [0, 0, 0];
@@ -511,9 +539,6 @@ class OpeningStage {
       return { list, c, light: L([1, 0.6, 0.28], list[0].ledge ? 3.6 : 8, 0, 0.45) };
     });
     r.lights.push(...Object.values(this.lights), ...this.groups.map((g) => g.light));
-    const cauldron = CLUTTER.find((c) => c[0] === 'cauldron');
-    const [cx, cz] = chamberPoint(cauldron[1], cauldron[2]);
-    this.cauldron = [cx, chamberShape(cauldron[1])[2] + 0.62, cz];
     // Light quads, written each frame and drawn added over the world (src/gfx/interior.js's glow pipeline).
     this.glow = new Float32Array(MAX_GLOW * 6 * 9);
     this.glowVB = makeBuffer(r.device, this.glow, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);
@@ -528,7 +553,8 @@ class OpeningStage {
     if (stage === OPENING.WAKE) {
       m.swirl = t < SNAP_AT ? smoothstep(0, 1.5, t) : 1 - smoothstep(SNAP_AT, SNAP_AT + 0.45, t);
       m.kick = smoothstep(SNAP_AT, SNAP_AT + 0.45, t);
-      m.glamour = t < SWAP_AT ? smoothstep(4, 6.5, t) : 0;
+      // (A first gold blur of her even on the first try.)
+      m.glamour = t < SWAP_AT ? 0.35 * smoothstep(2.6, 3.6, t) + 0.65 * smoothstep(4, 6.5, t) : 0;
       m.flash = Math.max(0, 1 - Math.abs(t - SWAP_AT) / 0.25);
       m.candles = t;
       m.circle = 1;
@@ -543,8 +569,9 @@ class OpeningStage {
       m.out = 3.0;   // the candles gutter out from here
       m.circle = 0.75 * (1 - smoothstep(2.6, 3.6, t));
       m.time = t;
-      m.rubble = t >= DUST_AT + 0.1;
-      m.inside = t < DUST_AT + 0.1;
+      // The rocks come down once she is clear of the heap (she leaves the mouth at 6 m/s as the dust goes up).
+      m.rubble = t >= DUST_AT + 0.35;
+      m.inside = t < DUST_AT + 0.35;
     } else m.rubble = true;
     return m;
   }
@@ -574,12 +601,12 @@ class OpeningStage {
     }
     const witch = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
     const wx = snap[witch + C.X], wy = snap[witch + C.Y], wz = snap[witch + C.Z], wyaw = snap[witch + C.YAW];
-    this.placeBook(items, stage, t, time, dt, wx, wy, wz, wyaw);
+    this.placeBook(items, stage, t, time, dt, wx, wy, wz, wyaw, snap.subarray(witch + C_PROPS + 4, witch + C_PROPS + 11));
     // The cave's own light, for the shader (src/gfx/shaders.js caveAt): violet before the candles, warm after, dark after.
     const lit = stage === OPENING.WAKE ? smoothstep(CANDLES_AT, CANDLES_AT + 1.4, t) : 1;
     const dark = stage === OPENING.COLLAPSE ? smoothstep(3.0, 4.4, t) : stage > OPENING.COLLAPSE ? 1 : 0;
     const boost = r.tier.lean ? 1.7 : 1;
-    const amb = [lerp(0.011, 0.074, lit), lerp(0.006, 0.048, lit), lerp(0.02, 0.03, lit)].map((v) => lerp(v, 0.008, dark) * boost);
+    const amb = [lerp(0.011, 0.13, lit), lerp(0.006, 0.084, lit), lerp(0.02, 0.046, lit)].map((v) => lerp(v, 0.008, dark) * boost);
     r.caveAmb = [...amb, 1];
     if (!m.inside) { this.park(); return; }
     // The portal, behind where you woke.
@@ -595,16 +622,15 @@ class OpeningStage {
     this.light(this.lights.book, this.position[0], this.position[1], this.position[2], (1.6 + 2.6 * m.swirl) * (stage === OPENING.WAKE ? 1 : 0.35));
     this.light(this.lights.key, wx + Math.sin(toYou) * 1.3, wy + 1.9, wz + Math.cos(toYou) * 1.3, 5.5 * m.glamour + 34 * (m.flash || 0) * (stage === OPENING.WAKE ? 1 : 0));
     this.light(this.lights.rim, wx - Math.sin(toYou) * 0.9, wy + 2.1, wz - Math.cos(toYou) * 0.9, 6.5 * m.glamour);
-    this.light(this.lights.cauldron, ...this.cauldron, 1.2 + 0.3 * Math.sin(time * 2.3));
-    // After the flash, before the candles: the swirl's spill on her face from your side, so she isn't only a shape.
-    const fill = stage === OPENING.WAKE && t > SWAP_AT ? 3.2 * (1 - smoothstep(CANDLES_AT, CANDLES_AT + 1.5, t)) : 0;
+    // After the flash, before the candles: the portal's violet behind you on her front, so she isn't only a shape.
+    const fill = stage === OPENING.WAKE && t > SWAP_AT ? 9 * (1 - smoothstep(CANDLES_AT, CANDLES_AT + 1.5, t)) : 0;
     this.light(this.lights.fill, wx + Math.sin(toYou) * 1.8, wy + 1.7, wz + Math.cos(toYou) * 1.8, fill);
     // The candles.
     for (const g of this.groups) {
       let k = 0;
       for (const c of g.list) k += this.candleLit(c, m);
       k /= g.list.length;
-      this.light(g.light, g.c[0], g.c[1], g.c[2], (g.list[0].ledge ? 2.6 : 11) * k);
+      this.light(g.light, g.c[0], g.c[1], g.c[2], (g.list[0].ledge ? 2.6 : 15) * k);
     }
     if (!cam) return;
     // ---- the light quads ----
@@ -636,7 +662,13 @@ class OpeningStage {
       const [cx, cz] = CIRCLE, cy = chamberShape(11.8)[2] + 0.02, pulse = 0.75 + 0.25 * Math.sin(time * 2.1);
       for (const [rad, wid, b] of [[1.25, 0.07, 1], [1.05, 0.035, 0.6], [0.45, 0.03, 0.45]]) this.ring(cx, cy, cz, rad, wid, [0.32, 0.08, 0.75].map((v) => v * b * m.circle * pulse));
     }
-    this.blob(this.cauldron, R, U, 0.35, 0.22, [0.04, 0.14, 0.035]);
+    // Down the tunnel behind her as she runs, the mouth burns white: the day outside, and the dust in it.
+    if (stage === OPENING.COLLAPSE && t > 4.6 && t < DUST_AT + 0.2) {
+      const k = smoothstep(4.6, 5.3, t) * (1 - smoothstep(DUST_AT - 0.1, DUST_AT + 0.2, t));
+      const mouth = [CAVE_MOUTH[0] + CAVE_OUT[0] * 0.3, CAVE_LINE[0][5] + CAVE_LINE[0][7] * 0.5, CAVE_MOUTH[1] + CAVE_OUT[1] * 0.3];
+      this.blob(mouth, R, U, CAVE_LINE[0][6] * 1.5, CAVE_LINE[0][7] * 0.75, [1.4 * k, 1.3 * k, 1.12 * k]);
+      this.blob(mouth, R, U, CAVE_LINE[0][6] * 2.6, CAVE_LINE[0][7] * 1.3, [0.5 * k, 0.45 * k, 0.38 * k]);
+    }
     if (this.glowN) r.device.queue.writeBuffer(this.glowVB, 0, this.glow, 0, this.glowN * 6 * 9);
   }
 
@@ -687,22 +719,32 @@ class OpeningStage {
     pass.draw(this.glowN * 6);
   }
 
-  // Her spellbook: open in her hands while she reads, shut under her arm after, and always with her.
-  placeBook(items, stage, t, time, dt, wx, wy, wz, yaw) {
+  // Her spellbook: floating open before her while she reads, shut at her side after, and always with her. When the cave
+  // comes down she snatches it out of the air and runs with it in her fist (hand: her left hand's place, from the sim),
+  // until she's on her feet again and lets it float.
+  placeBook(items, stage, t, time, dt, wx, wy, wz, yaw, hand) {
     const reading = stage === OPENING.WAKE && t < 6.6;
+    const clutch = stage === OPENING.COLLAPSE && t > 4.45 && t < 11.6 && Math.abs(hand[1] - wy) < 3;
     const side = reading ? -0.56 : -0.68, forward = reading ? 0.46 : -0.31;
-    const x = wx + Math.cos(yaw) * side + Math.sin(yaw) * forward;
-    const y = wy + (reading ? 1.10 : 1.04) + 0.065 * Math.sin(time * 2.85) + 0.018 * Math.sin(time * 5.8);
-    const z = wz - Math.sin(yaw) * side + Math.cos(yaw) * forward;
+    let x = wx + Math.cos(yaw) * side + Math.sin(yaw) * forward;
+    let y = wy + (reading ? 1.10 : 1.04) + 0.065 * Math.sin(time * 2.85) + 0.018 * Math.sin(time * 5.8);
+    let z = wz - Math.sin(yaw) * side + Math.cos(yaw) * forward;
+    if (clutch) {
+      // In her fist, against her side.
+      const ix = wx - hand[0], iz = wz - hand[2], il = Math.hypot(ix, iz) || 1;
+      x = hand[0] + ix / il * 0.05; y = hand[1] - 0.07; z = hand[2] + iz / il * 0.05;
+    }
     if (this.last === null || time < this.last || Math.hypot(x - this.position[0], z - this.position[2]) > 5) { this.position.set([x, y, z]); this.yaw = yaw; }
     this.last = time;
-    this.position[0] = damp(this.position[0], x, 5, dt);
-    this.position[1] = damp(this.position[1], y, 5, dt);
-    this.position[2] = damp(this.position[2], z, 5, dt);
-    this.yaw += wrapAngle(yaw - this.yaw) * (1 - Math.exp(-4 * dt));
+    const rate = clutch ? 40 : 5;
+    this.position[0] = damp(this.position[0], x, rate, dt);
+    this.position[1] = damp(this.position[1], y, rate, dt);
+    this.position[2] = damp(this.position[2], z, rate, dt);
+    this.yaw += wrapAngle(yaw - this.yaw) * (1 - Math.exp(-(clutch ? 20 : 4) * dt));
+    this.held = damp(this.held || 0, clutch ? 1 : 0, 8, dt);
     const shut = stage === OPENING.WAKE ? smoothstep(6.0, 6.9, t) : 1;
-    quatYaw(this.heading, 0, this.yaw + Math.PI + (reading ? -0.5 : 0.35));
-    quatAxisAngle(this.tilt, 0, 1, 0, 0, -0.92 + shut * 0.68 + Math.sin(time * 1.8) * 0.07);
+    quatYaw(this.heading, 0, this.yaw + Math.PI + (reading ? -0.5 : 0.35) + this.held * (Math.PI / 2 - 0.35));
+    quatAxisAngle(this.tilt, 0, 1, 0, 0, lerp(-0.92 + shut * 0.68 + Math.sin(time * 1.8) * 0.07, -1.45, this.held));
     quatMul(this.heading, 0, this.heading, 0, this.tilt, 0);
     if (shut > 0.92) {
       this.transform(this.book.closed, 0);

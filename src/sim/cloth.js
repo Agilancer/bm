@@ -3,11 +3,16 @@
 // rides on the body bone it hangs from, the rest swing. A skirt point is pulled a little toward where the sculpt put it,
 // so the dress keeps its cut; a sleeve hangs straight down from the arm. Every segment is pushed out of whatever it
 // would pass through. Points beside each other round the skirt hold their spacing, so it neither bunches nor tears.
-// Then each bone is turned to lie along its points.
+// No piece swings more than about 35 degrees off hanging straight (past its own cut), a kink straightens out, nothing goes
+// under the ground, and a leg's push moves the cloth without flinging it. Then each bone is turned to lie along its points.
 import { quatMul, quatNormalize, quatRotate } from '../core/math.js';
 
 const STEP = 1 / 120;
 const GRAVITY = 9.8;
+const SWING = 35 * Math.PI / 180;   // how far off straight down a piece may swing, past its own cut
+const BEND = 0.12;                  // how hard a kink is pulled straight, per pass
+const PUSH_KEEP = 0.3;              // of a push out of a leg, how much carries on as swing
+const GROUND = 0.012;               // cloth lies this far over the ground
 
 // Per kind: how hard each point is pulled toward its shape (per sixtieth of a second, top point to tip), how much speed
 // it keeps per step, what it collides with, and whether its shape is the sculpt's or simply hanging down.
@@ -31,13 +36,19 @@ export class Cloth {
       // A cloth bone is bound without a turn, so its bind position is minus its inverse bind translation.
       joints.forEach((j, k) => { for (let a = 0; a < 3; a++) rest[k * 3 + a] = -rig.ibT[j * 3 + a]; });
       for (let a = 0; a < 3; a++) rest[(n - 1) * 3 + a] = ch.tip[a] * scale;
-      const len = new Float32Array(n);
-      for (let k = 1; k < n; k++) len[k] = Math.hypot(rest[k * 3] - rest[k * 3 - 3], rest[k * 3 + 1] - rest[k * 3 - 2], rest[k * 3 + 2] - rest[k * 3 - 1]);
+      const len = new Float32Array(n), cap = new Float32Array(n);
       const kind = KINDS[ch.kind];
+      for (let k = 1; k < n; k++) {
+        const dx = rest[k * 3] - rest[k * 3 - 3], dy = rest[k * 3 + 1] - rest[k * 3 - 2], dz = rest[k * 3 + 2] - rest[k * 3 - 1];
+        len[k] = Math.hypot(dx, dy, dz);
+        // Its cut, as an angle off straight down (a sleeve's is straight down), and the swing allowed past it.
+        const cut = kind.hang ? 0 : Math.atan2(Math.hypot(dx, dz), Math.max(1e-4, -dy));
+        cap[k] = Math.min(Math.PI * 0.62, Math.max(SWING, cut + SWING * 0.45));
+      }
       // The top point is carried as the old skin carried the cloth there: a mix of body bones.
       const bones = (a) => ({ j: a.j.map((n) => rig.index.get(n)), w: a.w });
       const anchors = (ch.anchors || [{ j: [ch.parent], w: [1] }]).map(bones);
-      return { kind, anchor: anchors[0], anchors, name: ch.kind, side: ch.side, angle: ch.angle, joints, parent, n, rest, len, x: new Float32Array(n * 3), prev: new Float32Array(n * 3), target: new Float32Array(n * 3) };
+      return { kind, anchor: anchors[0], anchors, name: ch.kind, side: ch.side, angle: ch.angle, joints, parent, n, rest, len, cap, x: new Float32Array(n * 3), prev: new Float32Array(n * 3), target: new Float32Array(n * 3) };
     });
     // Neighbours round the skirt keep their spacing level by level. Angles run from the front round her left to the back;
     // an open skirt's first and last chains are the two sides of its slit. (A sleeve's two edges hang where they will.)
@@ -112,8 +123,10 @@ export class Cloth {
     }
   }
 
-  // After rig.solve(): move the cloth on by dt and rewrite its bones in the palette at out[off].
-  step(dt, out, off, wind = 0) {
+  // After rig.solve(): move the cloth on by dt and rewrite its bones in the palette at out[off]. ground: the height of the
+  // ground under her.
+  step(dt, out, off, wind = 0, ground = -Infinity) {
+    this.ground = ground;
     this.targets();
     if (this.fresh || dt > 0.5) {
       for (const c of this.chains) { c.x.set(c.target); c.prev.set(c.target); }
@@ -150,11 +163,40 @@ export class Cloth {
       }
     }
     for (let it = 0; it < 3; it++) {
+      for (const c of this.chains) this.straighten(c);
       for (const c of this.chains) this.lengths(c);
       for (const c of this.chains) if (c.ringTo) for (const [b, d] of c.ringTo) this.spacing(c, b, d);
       for (const c of this.chains) this.collide(c);
     }
-    for (const c of this.chains) this.lengths(c);
+    for (const c of this.chains) { this.lengths(c); this.floor(c); }
+  }
+
+  // A kink eased toward the line of the piece above it, and no piece swung further off straight down than its cap.
+  straighten(c) {
+    const x = c.x;
+    for (let k = 2; k < c.n; k++) {
+      const i = k * 3, h = i - 3, g = i - 6, s = c.len[k] / (c.len[k - 1] || 1);
+      for (let a = 0; a < 3; a++) x[i + a] += (x[h + a] + (x[h + a] - x[g + a]) * s - x[i + a]) * BEND;
+    }
+    for (let k = 1; k < c.n; k++) {
+      const i = k * 3, h = i - 3;
+      const dx = x[i] - x[h], dy = x[i + 1] - x[h + 1], dz = x[i + 2] - x[h + 2];
+      const across = Math.hypot(dx, dz), l = Math.hypot(across, dy) || 1e-6;
+      if (Math.atan2(across, -dy) <= c.cap[k]) continue;
+      const k2 = l * Math.sin(c.cap[k]) / (across || 1e-6);
+      x[i] = x[h] + dx * k2; x[i + 1] = x[h + 1] - l * Math.cos(c.cap[k]); x[i + 2] = x[h + 2] + dz * k2;
+    }
+  }
+
+  // Nothing under the ground: it lies on it, and stops there.
+  floor(c) {
+    const y = this.ground + GROUND, x = c.x, prev = c.prev;
+    for (let k = 1; k < c.n; k++) {
+      const i = k * 3;
+      if (x[i + 1] >= y) continue;
+      x[i + 1] = y; prev[i + 1] = y;
+      prev[i] += (x[i] - prev[i]) * 0.5; prev[i + 2] += (x[i + 2] - prev[i + 2]) * 0.5;
+    }
   }
 
   // Each point at its own distance from the one above.
@@ -224,6 +266,10 @@ export class Cloth {
         const m = Math.min(lift, 0.1) / (w0 * w0 + w1 * w1);
         x[h] += ux * m * w0; x[h + 2] += uz * m * w0;
         x[i] += ux * m * w1; x[i + 2] += uz * m * w1;
+        // Moved, not flung: most of the push doesn't carry on as speed.
+        const pv = c.prev, still = 1 - PUSH_KEEP;
+        if (k > 1) { pv[h] += ux * m * w0 * still; pv[h + 2] += uz * m * w0 * still; }
+        pv[i] += ux * m * w1 * still; pv[i + 2] += uz * m * w1 * still;
       }
     }
     // Sleeves stay outside the dress.

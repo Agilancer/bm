@@ -1,9 +1,9 @@
 // The opening on screen: the camera while the story has it, your eyes opening, the bars, her words, your name, the cards,
 // holding to skip, and its sound (src/ui/opening-sound.js). The sim keeps the clock and where everyone is (src/sim/opening.js).
 import { CUES, CUE_IDS, lineAt } from '../core/opening-script.js';
-import { C, CHARS_START, C_SIZE, H } from '../core/layout.js';
+import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from '../core/math.js';
-import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, OPENING, OPENING_REVISION, SWAP_AT, caveNearest, chamberPoint } from '../core/opening.js';
+import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, OPENING, OPENING_REVISION, SNAP_AT, SWAP_AT, caveNearest, chamberPoint } from '../core/opening.js';
 import { OpeningSound } from './opening-sound.js';
 
 const HERD_CONTROL = 9.9;    // (src/sim/opening.js: when you can walk again)
@@ -13,6 +13,8 @@ const yawTo = (a, b) => Math.atan2(b[0] - a[0], b[2] - a[2]);
 const pitchTo = (a, b) => Math.atan2(b[1] - a[1], Math.hypot(b[0] - a[0], b[2] - a[2]));
 const mix3 = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
 const bump = (t, a, b, c, d) => smoothstep(a, b, t) * (1 - smoothstep(c, d, t));
+// The lens that fits `span` metres of her, top to bottom, between the bars, from d metres off (the bars take a fifth).
+const framing = (d, span, lo = 9, hi = 64) => clamp(2 * Math.atan(span / 2 / Math.max(0.4, d)) / DEG / 0.79, lo, hi);
 // Out from the ledge through the notch the road goes down: the far hills toward the town, and the sun. (The ledge sits
 // between two banks, and from eye height the nearer one hides the town itself; the gap is narrow, so the lens is long.)
 const valley = (P) => {
@@ -92,9 +94,12 @@ export class OpeningHUD {
     return s >= OPENING.WAKE && s <= OPENING.COLLAPSE;
   }
 
+  // Where she stands, her heading, and the height of her head (the sim's speech mark, 0.19 m over the head joint): close
+  // shots are aimed by her head, so they find her eyes whether she's standing, kneeling or bent.
   her(snap) {
     const co = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
-    return [snap[co + C.X], snap[co + C.Y], snap[co + C.Z], snap[co + C.YAW]];
+    const head = snap[co + C_PROPS + 1] - 0.19;
+    return [snap[co + C.X], snap[co + C.Y], snap[co + C.Z], snap[co + C.YAW], head > snap[co + C.Y] + 0.3 ? head : snap[co + C.Y] + 1.5];
   }
 
   // ---- the words, the eyes, the cards ------------------------------------------------------------------------------------
@@ -218,7 +223,15 @@ export class OpeningHUD {
       }
       r.emit(3, 36, top[0], top[1], top[2], CAVE_OUT[0] * 1.5, 0.3, CAVE_OUT[1] * 1.5, 1.6, 1, 4.5, 0.08, 0.3, 0.8, 1.8);
     }
-    if (t > DUST_AT && t < 10 && every(0.3)) r.emit(4, 4, CAVE_MOUTH[0] + CAVE_OUT[0] * 1.2, CAVE_LINE[0][5] + 0.8, CAVE_MOUTH[1] + CAVE_OUT[1] * 1.2, CAVE_OUT[0] * 0.6, 0.25, CAVE_OUT[1] * 0.6, 1.2, 0.2, 0.9, 0.9, 1.9, 3, 5);
+    // And it hangs there, all across the heap, for a good few seconds.
+    if (t > DUST_AT && t < DUST_AT + 4.5 && every(0.2)) {
+      const [, , , , , floor, w, h] = CAVE_LINE[0];
+      for (let i = 0; i < 3; i++) {
+        const across = (Math.random() * 2 - 1) * (w + 0.6), out = 0.6 + Math.random() * 1.6;
+        r.emit(4, 3, CAVE_MOUTH[0] + CAVE_OUT[0] * out + CAVE_OUT[1] * across, floor + 0.3 + Math.random() * (h - 0.4), CAVE_MOUTH[1] + CAVE_OUT[1] * out - CAVE_OUT[0] * across,
+          CAVE_OUT[0] * 0.35, 0.12, CAVE_OUT[1] * 0.35, 0.8, 0.1, 0.5, 0.8, 1.8, 3, 5);
+      }
+    }
   }
 
   // ---- the camera -------------------------------------------------------------------------------------------------------
@@ -229,7 +242,7 @@ export class OpeningHUD {
     const P = [snap[H.PX], snap[H.PY], snap[H.PZ]];
     const h = this.her(snap);
     const shot = stage === OPENING.WAKE ? this.wakeShot(t, P, h)
-      : stage === OPENING.NAME ? { eye: [P[0], P[1] + 1.62, P[2]], look: [h[0], h[1] + 1.52, h[2]], fov: 56, free: 0.35, rate: 3 }
+      : stage === OPENING.NAME ? { eye: [P[0], P[1] + 1.62, P[2]], look: [h[0], h[1] + 1.12, h[2]], fov: framing(Math.hypot(h[0] - P[0], h[2] - P[2]), 1.7), free: 0.35, rate: 3 }
       : stage === OPENING.HERD && t < HERD_CONTROL ? this.herdShot(t, P, h)
       : stage === OPENING.COLLAPSE ? this.collapseShot(t, P, h) : null;
     if (!shot) {
@@ -293,26 +306,40 @@ export class OpeningHUD {
       const aim = [h[0], h[1] + [1.0, 1.3, 1.22][k], h[2]];
       return { eye, look: mix3(floor, aim, lift), fov: [40, 24, 11.5][k], fovRate: 30, rate: 7, sway: true, inside: true };
     }
-    let look = [h[0], h[1] + 1.0, h[2]];
-    if (t > CANDLES_AT && t < 18.6) look = mix3(look, [h[0], h[1] + 3.2, h[2]], bump(t, CANDLES_AT, 16.4, 17.6, 18.6) * 0.8);
-    if (t >= 17.6) look = mix3(look, [h[0], h[1] + 1.5, h[2]], smoothstep(17.6, 19.4, t));
-    // After the flash the lens stays long, so she fills the frame while you both back off; the candles open it up.
-    const fov = t < CANDLES_AT ? lerp(11.5, lerp(21, 27, smoothstep(SWAP_AT + 0.5, CANDLES_AT, t)), smoothstep(SWAP_AT, SWAP_AT + 0.5, t)) : lerp(27, t > 34.6 ? 58 : 64, smoothstep(CANDLES_AT, CANDLES_AT + 1.2, t));
-    return { eye, look, fov, fovRate: 14, rate: t < SWAP_AT + 0.6 ? 12 : 3.5, free: t < 18.9 ? 0.26 : 0.44, inside: true, shake: t < SWAP_AT + 0.35 ? 0.012 * (1 - scramble) : 0 };
+    // After the flash a long lens holds her knees up, through the scramble and her fright, lit violet from the portal
+    // behind you, until the snap; the candles open it out and lift it to them; then as she comes to you, waist up, her
+    // eyes in the top third, all the way in.
+    const D = Math.hypot(h[0] - eye[0], h[2] - eye[2]);
+    const knees = [h[0], h[1] + 1.12, h[2]], waist = [h[0], h[4] - 0.1, h[2]];
+    const up = [h[0], h[1] + 3.0, h[2]];
+    let look, fov;
+    if (t < SNAP_AT) {
+      look = knees; fov = framing(D, 1.65);
+    } else if (t < 18.0) {
+      look = mix3(knees, up, 0.75 * bump(t, CANDLES_AT - 0.2, 16.4, 17.2, 18.0));
+      fov = lerp(framing(D, 1.65), 46, smoothstep(SNAP_AT, CANDLES_AT + 0.6, t));
+    } else {
+      const k = smoothstep(18.0, 19.8, t);
+      look = mix3(knees, waist, k); fov = lerp(46, framing(D, 1.05, 18, 50), k);
+    }
+    return { eye, look, fov, fovRate: t < SWAP_AT + 0.6 ? 14 : 3, rate: t < SWAP_AT + 0.6 ? 12 : 3.5, free: t < 18.9 ? 0.2 : 0.3, inside: true, shake: t < SWAP_AT + 0.35 ? 0.012 * (1 - scramble) : 0 };
   }
 
   herdShot(t, P, h) {
     const eye = [P[0], P[1] + 1.62, P[2]];
-    let look = [h[0], h[1] + 1.5, h[2]];
+    let look = [h[0], h[4] - 0.1, h[2]];
     const tunnel = chamberPoint(0, 0);
     look = mix3(look, [tunnel[0], P[1] + 1.3, tunnel[1]], 0.4 * bump(t, 4.4, 5.2, 6.0, 6.7));
-    return { eye, look, fov: t > 9.2 ? 64 : 58, fovRate: 3, rate: 3.5, free: 0.44, inside: true };
+    return { eye, look, fov: t > 9.2 ? 64 : framing(Math.hypot(h[0] - P[0], h[2] - P[2]), 1.25, 30, 58), fovRate: 3, rate: 3.5, free: 0.44, inside: true };
   }
 
   // Act II, out on the ledge.
   collapseShot(t, P, h) {
-    const eye = [P[0], P[1] + 1.62, P[2]];
-    const face = [h[0], h[1] + 1.52, h[2]];
+    // (You drop to a crouch when it comes down, and get up as she does: you meet her eye, not the top of her head.)
+    const eye = [P[0], P[1] + 1.62 - 0.45 * bump(t, DUST_AT + 0.05, DUST_AT + 0.5, 10.2, 11.4), P[2]];
+    const D = Math.hypot(h[0] - P[0], h[2] - P[2]);
+    // Her eyes in the top third, from waist up.
+    const face = [h[0], h[4] - 0.1, h[2]], close = framing(D, 1.0, 24, 60);
     const mouth = [CAVE_MOUTH[0], CAVE_LINE[0][5] + 1.5, CAVE_MOUTH[1]];
     if (t >= 4.8 && t < DUST_AT) {
       // The one shot that isn't yours: down the tunnel behind her as she runs for the light.
@@ -331,22 +358,25 @@ export class OpeningHUD {
       look = mouth; rate = 2.4;
       shake = t > 4.6 && t < 5.6 ? 0.012 * (1 - (t - 4.6)) : 0;
     } else if (t < 9.0) {
-      look = mix3(mouth, [h[0], h[1] + 0.5, h[2]], smoothstep(DUST_AT, DUST_AT + 0.6, t)); rate = 6; cut = 'pov';
+      // Out of the dust and down on one knee: on her, low.
+      look = mix3(mouth, [h[0], h[4] - 0.25, h[2]], smoothstep(DUST_AT, DUST_AT + 0.6, t)); rate = 6; cut = 'pov';
+      fov = lerp(64, framing(D, 1.5, 30, 64), smoothstep(DUST_AT + 0.3, DUST_AT + 1.4, t));
       shake = t < 8.2 ? 0.02 * (1 - (t - DUST_AT) / 1.2) : 0;
     } else if (t < 12.0) {
-      look = [h[0], h[1] + lerp(0.6, 1.5, smoothstep(8.8, 11.5, t)), h[2]]; fov = lerp(64, 50, smoothstep(9, 12, t)); rate = 2;
+      // Getting up: room over her head, so it never rises into the bar.
+      look = [h[0], h[4] - 0.08, h[2]]; fov = framing(D, 1.6, 28, 62); rate = 5;
     } else if (t < 21.2) {
-      look = t < 15.2 ? face : [h[0], h[1] + 1.4, h[2]]; fov = 58; rate = 4;
+      look = face; fov = close; rate = 4;
     } else if (t < 23.6) {
       // The double take: her, the rubble, her.
-      look = t < 21.75 || t > 22.45 ? face : mouth; rate = 9; fov = 58;
+      look = t < 21.75 || t > 22.45 ? face : mouth; rate = 9; fov = close;
     } else if (t > 34.6 && t < 36.4) {
       // "That town." Down the road she's pointing along.
       look = valley(P); rate = 2.2; fov = 26;
     } else {
-      look = face; fov = t > 41 ? 64 : 56; rate = 3;
+      look = face; fov = t > 41 ? 64 : close; rate = 3;
     }
-    return { eye, look, fov, fovRate: t > 9 && t < 12 ? 0.8 : 4, rate, free, shake, cut };
+    return { eye, look, fov, fovRate: t > 9 && t < 12 ? 3 : 4, rate, free, shake, cut };
   }
 
   save(snap) {

@@ -10,11 +10,12 @@ import { clamp } from '../core/math.js';
 import { ambush } from './undead.js';
 
 export const HERD_CONTROL = 9.9;    // into HERD: you can walk again
+const WEAVE_FROM = 16.3;            // into WAKE: she starts toward you as the candles catch
 const LEAVE_PACE = 2.4;             // how fast you can go in the cave, until you're out
 const out = (d) => [CAVE_MOUTH[0] + CAVE_OUT[0] * d, CAVE_MOUTH[1] + CAVE_OUT[1] * d];
 export const VIEW_SPOT = out(5.6);  // where you stand on the ledge when the cave comes down
-const DIVE_TO = out(3.4);
-const STORM_TO = out(4.25);
+const DIVE_TO = out(3.0);    // where she comes down out of the dust: 2.6 m from you
+const STORM_TO = out(3.7);   // where she has it out with you: 1.9 m off
 const ASIDE = chamberPoint(10.1, 2.0);
 const PORTAL_XZ = [PORTAL[0], PORTAL[2]];
 const yawTo = (a, b) => Math.atan2(b[0] - a[0], b[1] - a[1]);
@@ -64,10 +65,11 @@ export const ESCORT_LEN = ROUTE.len;
 export class Opening {
   constructor(sim) {
     this.sim = sim;
-    // Her weave across the chamber, at a pace that brings her to you as she finishes her piece, with two pauses.
+    // Her weave across the chamber, from the candle wave, at a pace that brings her to you as she finishes her piece,
+    // with two pauses.
     let d = 0;
     for (let i = 1; i < WEAVE.length; i++) d += Math.hypot(WEAVE[i][0] - WEAVE[i - 1][0], WEAVE[i][1] - WEAVE[i - 1][1]);
-    this.weavePace = d / (34.6 - 18.9 - 4.0);
+    this.weavePace = d / (34.6 - WEAVE_FROM - 4.0);
     this.reset();
   }
 
@@ -189,6 +191,11 @@ export class Opening {
       default:
         b = { clip: 'idle', face: yawTo([w.x, w.z], you), look: eye };
     }
+    // (A pose held for testing: bm.pose in src/main.js.)
+    if (this.pose) {
+      b = this.pose;
+      if (b.at) { [w.x, w.z] = b.at; b.at = null; }
+    }
     // Both of her (the witch, and the face only you see) do the same from the same place.
     const p = villagers[0];
     if (p !== w) { p.x = w.x; p.z = w.z; p.yaw = w.yaw; }
@@ -202,7 +209,8 @@ export class Opening {
     const book = [w.x + Math.sin(w.yaw + 0.5) * 0.45, w.y + 1.15, w.z + Math.cos(w.yaw + 0.5) * 0.45];
     if (t < 6.0) return { clip: 'Spell_Simple_Idle_Loop', face, look: book };
     if (t < 6.9) return { clip: 'idle', face, look: eye };
-    if (t < SWAP_AT + 0.15) return { clip: 'hug', hold: 0.95, face, look: eye, blend: 3 };
+    // Her hand held out to you as your eyes come open, square on; the witch is caught in the same pose.
+    if (t < SWAP_AT + 0.15) return { clip: 'Interact', hold: 1.05, rate: 0.8, face, look: eye, blend: 3 };
     if (t < SWAP_AT + 0.5) {
       // Two quick steps back, as startled as you.
       const back = [WITCH_MARK[0] - Math.sin(face) * 0.7, WITCH_MARK[1] - Math.cos(face) * 0.7];
@@ -212,7 +220,7 @@ export class Opening {
     if (t < 12.1) return { clip: 'scared_02', face, look: PORTAL, whip: true, tremble: true };
     if (t < 14.3) return { clip: 'Idle_FoldArms_Loop', face, look: t < 13.2 ? PORTAL : eye, blend: 3 };
     if (t < 15.5) return { clip: 'Spell_Simple_Shoot', face, look: eye, snap: t - 14.3, rate: 0.55, blend: 10 };
-    if (t < 18.9) return { clip: 'idle', face, look: [w.x + Math.sin(face) * 3, w.y + 3.5, w.z + Math.cos(face) * 3] };
+    if (t < WEAVE_FROM) return { clip: 'idle', face, look: [w.x + Math.sin(face) * 3, w.y + 3.5, w.z + Math.cos(face) * 3] };
     if (t < 34.6) return this.weave(t, dt, w, you, eye);
     return { clip: t < 37.7 ? 'idle' : 'Idle_Talking_Loop', face: yawTo([w.x, w.z], you), look: eye };
   }
@@ -280,10 +288,12 @@ export class Opening {
       const ahead = CAVE_LINE[Math.max(0, n.i - 3)];
       return { to: n.s > 1 ? [ahead[0], ahead[1]] : CAVE_MOUTH, speed: 6.0, turn: 14 };
     }
-    if (t < DUST_AT + 0.5) return { to: DIVE_TO, speed: 6.8, keepFace: true, face: outward, clip: 'dive', from: 0.45, rate: 1.25, blend: 12 };
+    // Out of the dust at a run, and down onto one knee, a hand to the ground and the book held to her; she gets her breath,
+    // looks up at you, and gets up.
+    if (t < DUST_AT + 0.5) return { to: DIVE_TO, speed: 6.0, turn: 14 };
     if (t > DUST_AT + 0.6) world.setCaveSealed(true);
-    if (t < 8.8) return { clip: 'dive', face: outward, rate: 1.25, hold: 2.6 };
-    if (t < 10.7) return { clip: 'LayToIdle', face, rate: 0.8, look: t > 9.6 ? eye : null };
+    if (t < 9.3) return { clip: 'NinjaJump_Land', from: 0.05, rate: 0.8, hold: 0.3, face: outward, blend: 9, turn: 2, look: t > 8.3 ? eye : null };
+    if (t < 10.7) return { clip: 'NinjaJump_Land', rate: 0.7, face, turn: 3, look: eye };
     if (t < 12.0) return { clip: 'Consume', face, rate: 0.9 };
     if (t < 14.6) return { to: STORM_TO, speed: 1.7, clip: 'Talking to someone angrily', face, look: eye };
     if (t < 15.2) return { clip: 'idle', face, look: eye };
