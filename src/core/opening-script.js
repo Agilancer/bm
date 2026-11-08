@@ -30,7 +30,7 @@ export const SCRIPT = {
     { at: 9.9, dur: 3.3, text: 'I’ll be right behind you. I just need to… tidy.' },
   ],
   [OPENING.COLLAPSE]: [
-    { at: 4.0, dur: 1.8, text: 'No— no, no, no—', off: true },
+    { at: 4.0, dur: 1.8, text: 'No— no, no, no—' },
     { at: 12.0, dur: 2.0, text: 'WHAT HAVE YOU DONE?!', big: true },
     { at: 15.2, dur: 6.0, text: 'I’ve held that door open since before that town had a name. You walk through it once—' },
     { at: 23.6, dur: 2.8, text: '…Why are you looking at me like that?' },

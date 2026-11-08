@@ -235,12 +235,35 @@ export class VillageWalker {
       quatMul(rot, j * 4, turn, 0, rot, j * 4);
     };
     const UP = [0, 1, 0], SIDE = [1, 0, 0], FORE = [0, 0, 1];
-    this.lookYaw = 0; this.lookPitch = 0; this.snapT = -1;
+    // The way her face points in the head bone's own frame (she faces +Z in the bind pose).
+    const faceLocal = new Float32Array(3), hq = new Float32Array(4), fwd = new Float32Array(3), side = [1, 0, 0];
+    quatRotate(faceLocal, 0, rig.ibQ, head * 4, FORE, 0);
+    this.headJoint = head;
+    this.lookYaw = 0; this.lookPitch = 0; this.lookW = 0; this.snapT = -1;
     rig.poseModifier = (rot) => {
-      if (Math.abs(this.lookYaw) + Math.abs(this.lookPitch) > 1e-4) {
-        turnAbout(rot, neck, upNeck, UP, this.lookYaw * 0.4);
-        turnAbout(rot, head, upHead, UP, this.lookYaw * 0.6);
-        turnAbout(rot, head, upHead, SIDE, this.lookPitch);
+      if (this.lookW > 1e-3) {
+        // A real look: where the clip has her face pointing is measured, and the neck and head make up the difference to
+        // the mark, so a clip that bows her head doesn't leave her talking to the floor.
+        world.set([0, 0, 0, 1]);
+        for (const p of upHead) quatMul(world, 0, world, 0, rot, p * 4);
+        quatMul(hq, 0, world, 0, rot, head * 4);
+        quatRotate(fwd, 0, hq, 0, faceLocal, 0);
+        const hy = Math.atan2(fwd[0], fwd[2]), hp = Math.atan2(-fwd[1], Math.hypot(fwd[0], fwd[2]));
+        const dy = clamp(wrapAngle(this.lookYaw - hy), -1.2, 1.2) * this.lookW * 0.9;
+        const dp = clamp(this.lookPitch - hp, -1.3, 1.3) * this.lookW * 0.9;
+        turnAbout(rot, neck, upNeck, UP, dy * 0.4);
+        turnAbout(rot, head, upHead, UP, dy * 0.6);
+        side[0] = Math.cos(this.lookYaw); side[2] = -Math.sin(this.lookYaw);
+        // (A big lift, off the ground to your face, comes from the chest and neck as well as the head.)
+        turnAbout(rot, chest, upChest, side, dp * 0.25);
+        turnAbout(rot, neck, upNeck, side, dp * 0.3);
+        turnAbout(rot, head, upHead, side, dp * 0.45);
+      }
+      if (this.heave) {
+        // Winded: her chest heaving with each breath.
+        const k = Math.sin(this.breath * 4.4);
+        turnAbout(rot, chest, upChest, SIDE, k * 0.07);
+        turnAbout(rot, head, upHead, SIDE, -k * 0.03);
       }
       if (this.frightened) {
         const t = this.time;
@@ -338,18 +361,23 @@ export class VillageWalker {
     this.time += dt * rate;
     if (b.hold !== undefined) this.time = Math.min(this.time, b.hold);
     this.frightened = !!b.tremble;
+    this.heave = !!b.heave;
+    this.breath = (this.breath || 0) + dt;
     this.snapT = b.snap ?? -1;
-    let yaw = 0, pitch = 0;
+    const k = Math.min(1, dt * (b.whip ? 18 : 5));
+    this.lookW += ((b.look ? 1 : 0) - this.lookW) * Math.min(1, dt * 4);
     if (b.look) {
-      const lx = b.look[0] - this.x, lz = b.look[2] - this.z;
+      // From where her head really is (last frame's), so the look still finds you when she's down on one knee.
+      const h = this.headJoint !== undefined ? this.headJoint * 3 : -1, wt = this.rig.wt;
+      const hx = h >= 0 ? wt[h] : this.x, hy = h >= 0 && wt[h + 1] > this.y + 0.3 ? wt[h + 1] : this.y + 1.55, hz = h >= 0 ? wt[h + 2] : this.z;
+      const lx = b.look[0] - hx, lz = b.look[2] - hz;
       // On the move the head mostly keeps to the way she's going: a glance, not a turn, and never bowed so far that her
       // hair falls over her face.
-      yaw = clamp(wrapAngle(Math.atan2(lx, lz) - this.yaw), moving ? -0.7 : -1.15, moving ? 0.7 : 1.15);
-      pitch = clamp(Math.atan2(this.y + 1.55 - b.look[1], Math.max(0.5, Math.hypot(lx, lz))), -0.5, moving ? 0.18 : 0.6);
+      const yaw = clamp(wrapAngle(Math.atan2(lx, lz) - this.yaw), moving ? -0.7 : -1.15, moving ? 0.7 : 1.15);
+      const pitch = clamp(Math.atan2(hy - b.look[1], Math.max(0.5, Math.hypot(lx, lz))), -0.5, moving ? 0.18 : 0.6);
+      this.lookYaw += (yaw - this.lookYaw) * k;
+      this.lookPitch += (pitch - this.lookPitch) * k;
     }
-    const k = Math.min(1, dt * (b.whip ? 18 : 5));
-    this.lookYaw += (yaw - this.lookYaw) * k;
-    this.lookPitch += (pitch - this.lookPitch) * k;
   }
 
   write(snap, offset) {

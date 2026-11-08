@@ -3,8 +3,9 @@
 import { CUES, CUE_IDS, lineAt } from '../core/opening-script.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from '../core/math.js';
-import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, OPENING, OPENING_REVISION, SNAP_AT, SWAP_AT, caveNearest, chamberPoint } from '../core/opening.js';
+import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, OPENING, OPENING_REVISION, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, collapseEye } from '../core/opening.js';
 import { OpeningSound } from './opening-sound.js';
+import { terrainHeight } from '../core/terrain.js';
 
 const HERD_CONTROL = 9.9;    // (src/sim/opening.js: when you can walk again)
 const SKIP_HOLD = 1.0;
@@ -17,10 +18,8 @@ const bump = (t, a, b, c, d) => smoothstep(a, b, t) * (1 - smoothstep(c, d, t));
 const framing = (d, span, lo = 9, hi = 64) => clamp(2 * Math.atan(span / 2 / Math.max(0.4, d)) / DEG / 0.79, lo, hi);
 // Out from the ledge through the notch the road goes down: the far hills toward the town, and the sun. (The ledge sits
 // between two banks, and from eye height the nearer one hides the town itself; the gap is narrow, so the lens is long.)
-const valley = (P) => {
-  const a = Math.atan2(ESCORT_TO[0] - P[0], ESCORT_TO[1] - P[2]) + 0.08;
-  return [P[0] + Math.sin(a) * 60, P[1] - 1.0, P[2] + Math.cos(a) * 60];
-};
+// The town, far below the ledge (the woods leave a line of sight to it: src/core/forest.js viewLane).
+const valley = () => [ESCORT_TO[0], terrainHeight(ESCORT_TO[0], ESCORT_TO[1]) + 6, ESCORT_TO[1]];
 
 // How far your eyes are open in the first moments: three tries, and the flash.
 function lidsAt(t) {
@@ -39,11 +38,11 @@ export class OpeningHUD {
     this.root = el('div', 'opening');
     this.root.setAttribute('aria-live', 'polite');
     this.root.innerHTML = `
-      <div class="op-bar op-top"></div><div class="op-bar op-bottom"></div>
       <div class="op-eyes"><span></span><span></span><i></i></div>
       <div class="op-flash"></div>
+      <div class="op-bar op-top"></div><div class="op-bar op-bottom"></div>
       <div class="op-sub"><b></b><p></p></div>
-      <div class="op-title"><h1></h1><p>Tessariel · Beacon of the Infinite <em>[Wizard]</em></p></div>
+      <div class="op-title"><h1></h1><p>Tessariel · Beacon of the Infinite</p><p class="op-class">Wizard</p></div>
       <div class="op-quest"><small></small><span></span></div>
       <div class="op-track"></div>
       <div class="op-skip"><span></span><i></i></div>`;
@@ -53,8 +52,8 @@ export class OpeningHUD {
     this.title = q('.op-title'); this.titleName = q('.op-title h1'); this.quest = q('.op-quest'); this.track = q('.op-track'); this.skipHint = q('.op-skip');
     this.namePanel = el('section', 'opening-name-panel', `
       <form>
-        <label for="opening-name">Your name. The one you were born with.</label>
-        <div><input id="opening-name" maxlength="32" required autocomplete="off"><button type="submit">Answer</button></div>
+        <label for="opening-name">Your name</label>
+        <div><input id="opening-name" maxlength="32" required autocomplete="off" placeholder="Your name"><button type="submit">Answer</button></div>
       </form>`);
     this.namePanel.hidden = true;
     document.body.append(this.namePanel);
@@ -114,6 +113,8 @@ export class OpeningHUD {
     const cine = this.cinematic(snap);
     this.root.classList.toggle('bars', cine);
     document.body.classList.toggle('cinematic', cine);
+    // The first moments of the walk: no crosshair sitting on her while you get your bearings.
+    document.body.classList.toggle('op-handoff', stage === OPENING.ESCORT && t < 1.8);
     // Your eyes.
     const lids = stage === OPENING.WAKE ? lidsAt(t) : 1;
     const haze = stage !== OPENING.WAKE ? 0 : t < SWAP_AT ? (t < 4.6 ? 9 : t < 6.7 ? 6 : 3.5) : 3.5 * (1 - clamp((t - SWAP_AT) / 0.3, 0, 1));
@@ -242,7 +243,7 @@ export class OpeningHUD {
     const P = [snap[H.PX], snap[H.PY], snap[H.PZ]];
     const h = this.her(snap);
     const shot = stage === OPENING.WAKE ? this.wakeShot(t, P, h)
-      : stage === OPENING.NAME ? { eye: [P[0], P[1] + 1.62, P[2]], look: [h[0], h[1] + 1.12, h[2]], fov: framing(Math.hypot(h[0] - P[0], h[2] - P[2]), 1.7), free: 0.35, rate: 3 }
+      : stage === OPENING.NAME ? { eye: [P[0], P[1] + 1.62, P[2]], look: [h[0], h[1] + 1.12, h[2]], fov: framing(Math.hypot(h[0] - P[0], h[2] - P[2]), 1.35), free: 0.35, rate: 3 }
       : stage === OPENING.HERD && t < HERD_CONTROL ? this.herdShot(t, P, h)
       : stage === OPENING.COLLAPSE ? this.collapseShot(t, P, h) : null;
     if (!shot) {
@@ -336,7 +337,7 @@ export class OpeningHUD {
   // Act II, out on the ledge.
   collapseShot(t, P, h) {
     // (You drop to a crouch when it comes down, and get up as she does: you meet her eye, not the top of her head.)
-    const eye = [P[0], P[1] + 1.62 - 0.45 * bump(t, DUST_AT + 0.05, DUST_AT + 0.5, 10.2, 11.4), P[2]];
+    const eye = [P[0], P[1] + collapseEye(t), P[2]];
     const D = Math.hypot(h[0] - P[0], h[2] - P[2]);
     // Her eyes in the top third, from waist up.
     const face = [h[0], h[4] - 0.1, h[2]], close = framing(D, 1.0, 24, 60);
@@ -360,11 +361,14 @@ export class OpeningHUD {
     } else if (t < 9.0) {
       // Out of the dust and down on one knee: on her, low.
       look = mix3(mouth, [h[0], h[4] - 0.25, h[2]], smoothstep(DUST_AT, DUST_AT + 0.6, t)); rate = 6; cut = 'pov';
-      fov = lerp(64, framing(D, 1.5, 30, 64), smoothstep(DUST_AT + 0.3, DUST_AT + 1.4, t));
+      fov = lerp(64, framing(D, 1.5, 30, 64), smoothstep(DUST_AT - 0.1, DUST_AT + 0.45, t));
       shake = t < 8.2 ? 0.02 * (1 - (t - DUST_AT) / 1.2) : 0;
     } else if (t < 12.0) {
       // Getting up: room over her head, so it never rises into the bar.
       look = [h[0], h[4] - 0.08, h[2]]; fov = framing(D, 1.6, 28, 62); rate = 5;
+    } else if (t < 14.8) {
+      // The shout: wide enough for her arms flung up.
+      look = face; fov = framing(D, 1.45, 28, 60); rate = 4;
     } else if (t < 21.2) {
       look = face; fov = close; rate = 4;
     } else if (t < 23.6) {

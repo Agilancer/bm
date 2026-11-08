@@ -13,6 +13,8 @@ const SWING = 35 * Math.PI / 180;   // how far off straight down a piece may swi
 const BEND = 0.12;                  // how hard a kink is pulled straight, per pass
 const PUSH_KEEP = 0.3;              // of a push out of a leg, how much carries on as swing
 const GROUND = 0.012;               // cloth lies this far over the ground
+const POOL = 0.0025;                // how far a point lying on the ground slides out from her, per step (so a hem pools)
+const PART = [50 * Math.PI / 180, 85 * Math.PI / 180];   // thighs this far apart: the tabard hangs free instead of skinned
 
 // Per kind: how hard each point is pulled toward its shape (per sixtieth of a second, top point to tip), how much speed
 // it keeps per step, what it collides with, and whether its shape is the sculpt's or simply hanging down.
@@ -75,6 +77,7 @@ export class Cloth {
       this.colliders.push(cap(s + 'Hand', s + 'HandMiddle2', form.hand, form.hand * 0.8, 'hands'));
     }
     this.hipsJoint = J('Hips');
+    this.thighs = ['Left', 'Right'].map((s) => [J(s + 'UpLeg'), J(s + 'Leg')]);
     // How far her body and dress reach at her sides, by depth under the hips: the sleeves hang outside it.
     this.dress = (def.dress || []).map(([d, r]) => [d * scale, r * scale + (form.sleeveGap ?? 0.02)]);
     this.fresh = true;
@@ -90,8 +93,16 @@ export class Cloth {
   // Where each point wants to be. The top: where the old skin put it. Below that, the sculpted shape held still on the
   // body bone (through its skinning transform) and moved to hang from that top; or, for hanging cloth, straight down.
   targets() {
-    const { pq, pt } = this.rig;
+    const { pq, pt, wt } = this.rig;
     const v = this.v;
+    // How far her thighs are parted (a kneel, a long step): past a point the skinned tabard stops being carried between
+    // them, where it would stretch from one to the other like a board, and hangs from her waist over the forward knee.
+    const [[la, lb], [ra, rb]] = this.thighs;
+    const lx = wt[lb * 3] - wt[la * 3], ly = wt[lb * 3 + 1] - wt[la * 3 + 1], lz = wt[lb * 3 + 2] - wt[la * 3 + 2];
+    const rx = wt[rb * 3] - wt[ra * 3], ry = wt[rb * 3 + 1] - wt[ra * 3 + 1], rz = wt[rb * 3 + 2] - wt[ra * 3 + 2];
+    const cos = (lx * rx + ly * ry + lz * rz) / ((Math.hypot(lx, ly, lz) * Math.hypot(rx, ry, rz)) || 1);
+    const parted = Math.acos(Math.max(-1, Math.min(1, cos)));
+    const free = Math.max(0, Math.min(1, (parted - PART[0]) / (PART[1] - PART[0])));
     for (const c of this.chains) {
       const p = c.parent, tg = c.target;
       let ox = 0, oy = 0, oz = 0;
@@ -110,6 +121,14 @@ export class Cloth {
             x += (v[0] + pt[a.j[m] * 3]) * a.w[m]; y += (v[1] + pt[a.j[m] * 3 + 1]) * a.w[m]; z += (v[2] + pt[a.j[m] * 3 + 2]) * a.w[m];
           }
           tg[k * 3] = x; tg[k * 3 + 1] = y; tg[k * 3 + 2] = z;
+        }
+        if (free > 0) {
+          // Hanging straight down from its top instead.
+          let hy = tg[1];
+          for (let k = 1; k < c.n; k++) {
+            hy -= c.len[k];
+            tg[k * 3] += (tg[0] - tg[k * 3]) * free; tg[k * 3 + 1] += (hy - tg[k * 3 + 1]) * free; tg[k * 3 + 2] += (tg[2] - tg[k * 3 + 2]) * free;
+          }
         }
         continue;
       }
@@ -188,14 +207,18 @@ export class Cloth {
     }
   }
 
-  // Nothing under the ground: it lies on it, and stops there.
+  // Nothing under the ground: it lies on it, slowed, and what lies there spreads out from her so a long hem pools rather
+  // than piling up into a column under her.
   floor(c) {
-    const y = this.ground + GROUND, x = c.x, prev = c.prev;
+    const y = this.ground + GROUND, x = c.x, prev = c.prev, wt = this.rig.wt;
+    const hx = wt[this.hipsJoint * 3], hz = wt[this.hipsJoint * 3 + 2];
     for (let k = 1; k < c.n; k++) {
       const i = k * 3;
       if (x[i + 1] >= y) continue;
       x[i + 1] = y; prev[i + 1] = y;
       prev[i] += (x[i] - prev[i]) * 0.5; prev[i + 2] += (x[i + 2] - prev[i + 2]) * 0.5;
+      const ox = x[i] - hx, oz = x[i + 2] - hz, ol = Math.hypot(ox, oz);
+      if (ol > 1e-4) { x[i] += ox / ol * POOL; x[i + 2] += oz / ol * POOL; }
     }
   }
 

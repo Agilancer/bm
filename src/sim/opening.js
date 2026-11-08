@@ -2,7 +2,7 @@
 // the walk down to town. The camera, the words and the sound follow the same clock (src/ui/opening.js).
 import { CUE_IDS } from '../core/opening-script.js';
 import {
-  CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_AXIS, COLLAPSE_END, DUST_AT, ESCORT_TO, HERD_END, NAME_AT, OPENING, OPENING_SPAWN,
+  CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_AXIS, COLLAPSE_END, DUST_AT, KNEEL_UP, collapseEye, ESCORT_TO, HERD_END, NAME_AT, OPENING, OPENING_SPAWN,
   OPENING_YAW, PORTAL, SWAP_AT, TIDY_MARK, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP, caveNearest, chamberPoint,
 } from '../core/opening.js';
 import { CAVE_PATH, ROADS } from '../core/terrain.js';
@@ -16,6 +16,7 @@ const out = (d) => [CAVE_MOUTH[0] + CAVE_OUT[0] * d, CAVE_MOUTH[1] + CAVE_OUT[1]
 export const VIEW_SPOT = out(5.6);  // where you stand on the ledge when the cave comes down
 const DIVE_TO = out(3.0);    // where she comes down out of the dust: 2.6 m from you
 const STORM_TO = out(3.7);   // where she has it out with you: 1.9 m off
+const KNEEL_TURN = 0.35;      // how far round from facing you she comes down
 const ASIDE = chamberPoint(10.1, 2.0);
 const PORTAL_XZ = [PORTAL[0], PORTAL[2]];
 const yawTo = (a, b) => Math.atan2(b[0] - a[0], b[1] - a[1]);
@@ -210,15 +211,18 @@ export class Opening {
     if (t < 6.0) return { clip: 'Spell_Simple_Idle_Loop', face, look: book };
     if (t < 6.9) return { clip: 'idle', face, look: eye };
     // Her hand held out to you as your eyes come open, square on; the witch is caught in the same pose.
-    if (t < SWAP_AT + 0.15) return { clip: 'Interact', hold: 1.05, rate: 0.8, face, look: eye, blend: 3 };
-    if (t < SWAP_AT + 0.5) {
-      // Two quick steps back, as startled as you.
+    // The witch is caught in it too, square on, her hand still held out to you, for a long breath after the flash.
+    if (t < SWAP_AT + 0.85) return { clip: 'Interact', hold: 1.05, rate: 0.8, face, look: eye, blend: 3, tremble: t > SWAP_AT + 0.4 };
+    if (t < SWAP_AT + 1.25) {
+      // Then two quick steps back, her hands up, as startled as you.
       const back = [WITCH_MARK[0] - Math.sin(face) * 0.7, WITCH_MARK[1] - Math.cos(face) * 0.7];
-      return { to: back, speed: 2.2, keepFace: true, face, clip: 'scared_02', look: eye, tremble: true, blend: 14 };
+      return { to: back, speed: 1.8, keepFace: true, face, clip: 'frightened', from: 0.25, hold: 0.6, look: eye, tremble: true, blend: 12 };
     }
-    if (t < 11.0) return { clip: 'scared_02', face, look: eye, tremble: true };
-    if (t < 12.1) return { clip: 'scared_02', face, look: PORTAL, whip: true, tremble: true };
-    if (t < 14.3) return { clip: 'Idle_FoldArms_Loop', face, look: t < 13.2 ? PORTAL : eye, blend: 3 };
+    if (t < 11.0) return { clip: 'frightened', hold: 0.6, face, look: eye, tremble: true };
+    if (t < 12.1) return { clip: 'frightened', hold: 0.6, face, look: PORTAL, whip: true, tremble: true };
+    // "Oh, no.": her hands come up open and she sees them, old; then up at you.
+    const hands = [w.x + Math.sin(face) * 0.4, w.y + 0.95, w.z + Math.cos(face) * 0.4];
+    if (t < 14.3) return { clip: 'complain_01', from: 1.7, rate: 0.45, hold: 2.3, face, look: t < 13.25 ? hands : eye, blend: 4 };
     if (t < 15.5) return { clip: 'Spell_Simple_Shoot', face, look: eye, snap: t - 14.3, rate: 0.55, blend: 10 };
     if (t < WEAVE_FROM) return { clip: 'idle', face, look: [w.x + Math.sin(face) * 3, w.y + 3.5, w.z + Math.cos(face) * 3] };
     if (t < 34.6) return this.weave(t, dt, w, you, eye);
@@ -290,12 +294,17 @@ export class Opening {
     }
     // Out of the dust at a run, and down onto one knee, a hand to the ground and the book held to her; she gets her breath,
     // looks up at you, and gets up.
-    if (t < DUST_AT + 0.5) return { to: DIVE_TO, speed: 6.0, turn: 14 };
+    if (t < DUST_AT + 0.3) return { to: DIVE_TO, speed: 6.0, turn: 14 };
     if (t > DUST_AT + 0.6) world.setCaveSealed(true);
-    if (t < 9.3) return { clip: 'NinjaJump_Land', from: 0.05, rate: 0.8, hold: 0.3, face: outward, blend: 9, turn: 2, look: t > 8.3 ? eye : null };
-    if (t < 10.7) return { clip: 'NinjaJump_Land', rate: 0.7, face, turn: 3, look: eye };
-    if (t < 12.0) return { clip: 'Consume', face, rate: 0.9 };
-    if (t < 14.6) return { to: STORM_TO, speed: 1.7, clip: 'Talking to someone angrily', face, look: eye };
+    // (Down three-quarter on to you, the knee on the ground the near one.)
+    const kneel = outward + KNEEL_TURN, low = [eye[0], player.y + collapseEye(t), eye[2]];
+    if (t < DUST_AT + 0.75) return { to: DIVE_TO, speed: 3.0, clip: 'fall', from: 0.72, rate: 0.9, hold: 1.02, face: kneel, turn: 6, blend: 10 };
+    if (t < 9.5) return { clip: 'Farm_PlantSeed', from: 0.55, rate: 0.75, hold: 1.42, face: kneel, turn: 2, blend: 6, heave: true };
+    if (t < KNEEL_UP) return { clip: 'Farm_PlantSeed', rate: 0.66, hold: 1.95, face: kneel, look: low, heave: true };
+    if (t < 11.4) return { clip: 'Farm_PlantSeed', rate: 0.85, face, turn: 3, look: low };
+    if (t < 12.0) return { clip: 'idle', face, look: low, blend: 4 };
+    // "WHAT HAVE YOU DONE?!": a fist, a step at you with her finger in your face, then both arms flung up.
+    if (t < 14.6) return { to: STORM_TO, speed: 1.7, clip: 'angry_01', from: 0.25, rate: 1.0, face, look: low, blend: 6 };
     if (t < 15.2) return { clip: 'idle', face, look: eye };
     const rubble = yawTo([w.x, w.z], CAVE_MOUTH);
     if (t < 21.2) return { clip: t < 18 ? 'idle' : 'depressed', face: rubble, turn: 3 };

@@ -225,9 +225,10 @@
 #opening .op-sub.caption p{font-style:italic;color:#cfc6b8;font-size:clamp(16px,1.8vw,21px)}
 #opening .op-ghost{visibility:hidden}
 @keyframes op-jolt{0%{transform:scale(1.18)}60%{transform:scale(.98)}100%{transform:none}}
-#opening .op-title{position:absolute;left:0;right:0;top:15%;text-align:center;opacity:0;color:#f4ecdc;text-shadow:0 2px 6px #000,0 0 22px #000}
-#opening .op-title h1{margin:0;font:700 clamp(34px,6vw,72px)/1 "Cinzel Decorative",Cinzel,serif;letter-spacing:.08em}
-#opening .op-title p{margin:12px 0 0;font:500 clamp(14px,1.6vw,19px)/1.2 Cinzel,serif;letter-spacing:.18em;color:var(--gold)}
+#opening .op-title{position:absolute;left:0;right:0;top:11.6vh;text-align:center;opacity:0;color:#f4ecdc;text-shadow:0 2px 6px #000,0 0 22px #000}
+#opening .op-title h1{margin:0;font:700 clamp(30px,5vw,60px)/1 "Cinzel Decorative",Cinzel,serif;letter-spacing:.08em}
+#opening .op-title p{margin:8px 0 0;font:500 clamp(13px,1.4vw,17px)/1.2 Cinzel,serif;letter-spacing:.18em;color:var(--gold)}
+#opening .op-title .op-class{margin-top:5px;font:600 clamp(11px,1.15vw,14px)/1 Cinzel,serif;font-variant:small-caps;letter-spacing:.32em;color:#b9a7e6}
 #opening .op-title em{font-style:normal;color:#b9a7e6}
 #opening .op-quest{position:absolute;left:50%;top:15vh;transform:translateX(-50%);padding:12px 34px;opacity:0;text-align:center;background:linear-gradient(90deg,transparent,#0b0907d0 18%,#0b0907d0 82%,transparent);border-top:1px solid var(--gold-dim);border-bottom:1px solid var(--gold-dim)}
 #opening .op-quest small{display:block;font:700 12px Cinzel,serif;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
@@ -237,9 +238,10 @@
 #opening .op-skip{position:absolute;right:22px;bottom:3.4vh;font:600 13px "Alegreya Sans",serif;color:#cfc6b8;text-shadow:0 1px 2px #000;opacity:.8}
 #opening .op-skip i{display:block;height:2px;margin-top:4px;background:var(--gold);transform-origin:left;transform:scaleX(var(--k,0))}
 body.cinematic #hud,body.cinematic #mapMini,body.cinematic #touch{visibility:hidden}
-#opening-name-panel{position:fixed;z-index:13;bottom:1.6vh;left:50%;transform:translateX(-50%);padding:7px 16px;white-space:nowrap;background:#0b0907e8;color:#f4ecdc;border:1px solid var(--gold-dim);border-radius:4px;text-align:center;box-shadow:0 5px 22px #000a}
-#opening-name-panel label{display:inline;margin:0 12px 0 0;font:italic 600 18px "Alegreya Sans",Georgia,serif}
-#opening-name-panel input,#opening-name-panel button{font:600 17px "Alegreya Sans",Georgia,serif;color:#f4ecdc;background:#1b1611;border:1px solid var(--gold-dim);padding:8px 10px}
+#opening-name-panel{position:fixed;z-index:13;bottom:1.3vh;left:50%;transform:translateX(-50%);padding:4px 10px;white-space:nowrap;background:#0b0907e8;color:#f4ecdc;border:1px solid var(--gold-dim);border-radius:4px;text-align:center;box-shadow:0 5px 22px #000a}
+#opening-name-panel label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#opening-name-panel input,#opening-name-panel button{font:600 16px "Alegreya Sans",Georgia,serif;color:#f4ecdc;background:#1b1611;border:1px solid var(--gold-dim);padding:5px 9px}
+body.op-handoff #cross{opacity:0;transition:none}
 #opening-name-panel input{width:min(260px,56vw)}
 #opening-name-panel button{cursor:pointer;margin-left:6px;color:var(--gold)}
 #opening-eyes.reveal{backdrop-filter:none;background:radial-gradient(ellipse,#e5baff 0%,#9a56ef 43%,#3d1b63 100%);opacity:var(--flash,0)}

@@ -15,6 +15,11 @@ export const NAME_AT = 41.0;       // the name prompt
 export const HERD_END = 13.2;      // control comes back this long after the name
 export const COLLAPSE_END = 41.8;  // the bars slide away and the walk down begins
 export const DUST_AT = 7.0;        // in COLLAPSE: the mouth caves in, and she comes out of the dust pretty
+export const KNEEL_UP = 10.3;      // in COLLAPSE: she gets up off her knee
+// In COLLAPSE, your eye height: down to a crouch as the mouth comes down, up again as she gets up, then a hand's breadth
+// under full height until the walk, level with her eyes rather than looking down on her crown.
+export const collapseEye = (t) => 1.62 - 0.52 * smoothstep(DUST_AT + 0.05, DUST_AT + 0.5, t) * (1 - smoothstep(KNEEL_UP, KNEEL_UP + 1.1, t))
+  - 0.1 * smoothstep(DUST_AT, DUST_AT + 0.5, t) * (1 - smoothstep(COLLAPSE_END - 3.5, COLLAPSE_END - 0.6, t));
 
 // ---- the cave's plan ---------------------------------------------------------------------------------------------------
 // A centreline from the mouth in: x, z, the floor's height, the half width and the roof's height over the floor. It hooks
@@ -246,7 +251,7 @@ export const OPENING_CLIPS = [
   'Spell_Simple_Idle_Loop', 'Idle_Lantern_Loop', 'greet_01', 'greet_02', 'Interact', 'Hit_Knockback', 'scared_02', 'afraid',
   'frightened', 'fold_arms', 'Idle_FoldArms_Loop', 'wait', 'Spell_Simple_Shoot', 'Pointing into the distance', 'Pointing at an enemy',
   'complain_01', 'complain_02', 'Idle_Talking_Loop', 'Talking to someone angrily', 'PickUp_Table', 'look_around',
-  'Crouch_Idle_Loop', 'cry', 'depressed', 'standing_relax', 'Yes', 'agree', 'hug', 'angry_01', 'Consume', 'scratch', 'heart_pose',
-  'NinjaJump_Land',
+  'Crouch_Idle_Loop', 'cry', 'depressed', 'standing_relax', 'Yes', 'agree', 'hug', 'angry_01', 'scratch', 'heart_pose',
+  'fall', 'Farm_PlantSeed',
   ...OPENING_MOVES,
 ];
