@@ -1,6 +1,26 @@
 // The pines round the town: where they stand. Worked out the same on every thread, for the renderer to draw and the sim to bump into.
-import { CAVE_PATH, openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, segDist2, sstep } from './terrain.js';
-import { inCaveBox } from './opening.js';
+import { CAVE_PATH, openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, segDist2, sstep, terrainHeight } from './terrain.js';
+import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, inCaveBox } from './opening.js';
+
+// From the ledge outside Lisandra's cave you can see the town far below: along that line nothing grows that would stand up
+// into the sight of it. The gap widens with distance and its edges are soft, and where the ground falls away far enough
+// under the line the pines stand as they would; so from anywhere else it's only the woods a little thinner.
+const LEDGE = [CAVE_MOUTH[0] + CAVE_OUT[0] * 5.6, CAVE_MOUTH[1] + CAVE_OUT[1] * 5.6];
+let lane = null;
+function viewLane(x, z) {
+  if (!lane) {
+    const dx = ESCORT_TO[0] - LEDGE[0], dz = ESCORT_TO[1] - LEDGE[1], L = Math.hypot(dx, dz);
+    lane = { eye: terrainHeight(LEDGE[0], LEDGE[1]) + 1.6, town: terrainHeight(ESCORT_TO[0], ESCORT_TO[1]) + 5, ux: dx / L, uz: dz / L, L };
+  }
+  const { eye, town, ux, uz, L } = lane;
+  const px = x - LEDGE[0], pz = z - LEDGE[1];
+  const d = px * ux + pz * uz;
+  if (d < 10 || d > L - 70) return 1;
+  const half = 3 + d * 0.055, side = Math.abs(px * uz - pz * ux);
+  if (side > half * 1.8) return 1;
+  if (eye + (town - eye) * d / L - terrainHeight(x, z) > 24) return 1;
+  return sstep(half, half * 1.8, side);
+}
 
 const LONG_PATHS = PATHS.filter((p) => p.pts.length >= 5);
 
@@ -18,6 +38,7 @@ export function forestAmount(x, z) {
   }
   // (Nothing grows over Lisandra's cave: a trunk stands in the way at any height, and the ledge is bare rock.)
   if (openingTerrain && inCaveBox(x, z, 7)) return 0;
+  if (openingTerrain) { a *= viewLane(x, z); if (a <= 0) return 0; }
   if (r < 260) {
     for (const p of LONG_PATHS) {
       if (p === CAVE_PATH && !openingTerrain) continue;

@@ -356,7 +356,7 @@ async function boot(plan, poolSize) {
       return { x: s[H.PX], y: s[H.PY], z: s[H.PZ], yaw: input.yaw, pitch: input.pitch, ...openingHUD?.save(s) };
     },
     load: (d) => { openingHUD?.reset(d?.openingRevision === OPENING_REVISION ? d.name : ''); return simCall('place', d); },   // (a fresh world, and you where the save says; null: where a new game starts)
-    summary: () => 'Velscour village',
+    summary: () => 'Bellmourn',
   });
   addPart('stats', {
     save: () => ({ played: Math.round(played) }),
@@ -376,6 +376,7 @@ async function boot(plan, poolSize) {
   // The game keeps itself as it's played: that's Continue.
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
   game.onTaken = autosave;
+  if (openingHUD) game.drawOpening = (snap, cam) => openingHUD.feel(snap, cam);
   game.onTick = (dt) => {
     if (openingHUD) {
       const snap = game.currentSnap();

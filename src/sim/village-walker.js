@@ -1,7 +1,7 @@
 import { OPENING_CLIPS, OPENING_MOVES } from '../core/opening.js';
 import { LISANDRA_SCALE } from '../core/lisandra.js';
 import { C, C_PALETTE, C_PROPS } from '../core/layout.js';
-import { clamp, quatAxisAngle, quatMul, quatNormalize, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
+import { clamp, lerp, quatAxisAngle, quatMul, quatNormalize, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
 import { ArmsRig } from './anim.js';
 import { Cloth } from './cloth.js';
 
@@ -217,13 +217,30 @@ export class VillageWalker {
   }
 
   // The opening's touches on top of her clips, in body space so the rig's own bone axes don't matter: her head turned to
-  // something (act's b.look), a tremble when she's frightened, and a snap of her left fingers (this.snapT seconds in).
+  // something (act's b.look), a tremble when she's frightened, a snap of her left fingers (this.snapT seconds in), her
+  // hands put somewhere (b.reach), a finger pointed (b.point), fists (b.fists) and a lean into it (b.lean).
   storyPose() {
     const rig = this.rig, J = (n) => rig.index.get('mixamorig:' + n);
     const head = J('Head'), neck = J('Neck'), chest = J('Spine2');
     const chain = (j) => { const c = []; for (let p = rig.parent[j]; p >= 0; p = rig.parent[p]) c.unshift(p); return c; };
     const upNeck = chain(neck), upHead = chain(head), upChest = chain(chest);
-    const fingers = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'].map((f) => [1, 2, 3].map((k) => J(`LeftHand${f}${k}`)));
+    const spine = J('Spine1'), upSpine = spine !== undefined ? chain(spine) : [];
+    // A bow forward (or back, < 0) spread down her back.
+    const bow = (rot, a) => {
+      if (spine === undefined) { turnAbout(rot, chest, upChest, SIDE, a); return; }
+      turnAbout(rot, spine, upSpine, SIDE, a * 0.5);
+      turnAbout(rot, chest, upChest, SIDE, a * 0.5);
+    };
+    // Each arm: shoulder, elbow, wrist, the joints above each, and the knuckles that tell which way the hand faces.
+    const ARMS = {};
+    for (const [k, n] of [['L', 'Left'], ['R', 'Right']]) {
+      const A = { arm: J(`${n}Arm`), fore: J(`${n}ForeArm`), hand: J(`${n}Hand`), knuckle: J(`${n}HandMiddle1`), index: J(`${n}HandIndex1`), pinky: J(`${n}HandPinky1`), mirror: k === 'L' ? -1 : 1 };
+      if (A.arm === undefined || A.fore === undefined || A.hand === undefined) continue;
+      A.upArm = chain(A.arm); A.upFore = chain(A.fore); A.upHand = chain(A.hand);
+      A.fingers = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'].map((f) => [1, 2, 3].map((i) => J(`${n}Hand${f}${i}`)));
+      ARMS[k] = A;
+    }
+    const fingers = ARMS.L ? ARMS.L.fingers : [[], [], [], [], []];
     const world = new Float32Array(4), inv = new Float32Array(4), axis = new Float32Array(3), turn = new Float32Array(4);
     // Turn joint j by angle about an axis given in her body's space (list: the joints above it, root first).
     const turnAbout = (rot, j, list, ax, angle) => {
@@ -235,12 +252,114 @@ export class VillageWalker {
       quatMul(rot, j * 4, turn, 0, rot, j * 4);
     };
     const UP = [0, 1, 0], SIDE = [1, 0, 0], FORE = [0, 0, 1];
-    this.lookYaw = 0; this.lookPitch = 0; this.snapT = -1;
-    rig.poseModifier = (rot) => {
-      if (Math.abs(this.lookYaw) + Math.abs(this.lookPitch) > 1e-4) {
-        turnAbout(rot, neck, upNeck, UP, this.lookYaw * 0.4);
-        turnAbout(rot, head, upHead, UP, this.lookYaw * 0.6);
-        turnAbout(rot, head, upHead, SIDE, this.lookPitch);
+    // The way her face points in the head bone's own frame (she faces +Z in the bind pose).
+    const faceLocal = new Float32Array(3), hq = new Float32Array(4), fwd = new Float32Array(3), side = [1, 0, 0];
+    quatRotate(faceLocal, 0, rig.ibQ, head * 4, FORE, 0);
+    this.headJoint = head;
+    this.lookYaw = 0; this.lookPitch = 0; this.lookW = 0; this.snapT = -1;
+    this.reachW = { L: 0, R: 0 }; this.reachAt = { L: null, R: null }; this.pointW = 0; this.pointDir = null; this.fistW = 0; this.leanNow = 0;
+    // Where joint j is in her body's space as posed so far (its position into out).
+    const fq = new Float32Array(4), fv = new Float32Array(3);
+    const where = (rot, tr, j, out) => {
+      fq.set([0, 0, 0, 1]); out[0] = out[1] = out[2] = 0;
+      for (let p = j, list = [...chain(j), j], i = 0; i < list.length; i++) {
+        p = list[i];
+        quatRotate(fv, 0, fq, 0, tr, p * 3);
+        out[0] += fv[0]; out[1] += fv[1]; out[2] += fv[2];
+        quatMul(fq, 0, fq, 0, rot, p * 4);
+      }
+      return out;
+    };
+    const pS = new Float32Array(3), pE = new Float32Array(3), pH = new Float32Array(3), pA = new Float32Array(3), pB = new Float32Array(3);
+    const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], len = (v) => Math.hypot(v[0], v[1], v[2]);
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const angle = (a, b) => Math.acos(clamp((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / Math.max(1e-6, len(a) * len(b)), -1, 1));
+    const unit = (v, fallback) => { const l = len(v); return l > 1e-5 ? [v[0] / l, v[1] / l, v[2] / l] : fallback; };
+    // A hand to a point (body space) by the shoulder and the elbow, each turned whole at its joint: the elbow opens or
+    // closes to the distance, the shoulder swings the arm onto the point. Out of reach, she leans into it first. face:
+    // 'down' lays the palm flat on something, 'up' turns it up to look into, null leaves the wrist as the clip has it.
+    const reach = (rot, tr, A, T, w, face) => {
+      where(rot, tr, A.arm, pS); where(rot, tr, A.fore, pE); where(rot, tr, A.hand, pH);
+      const a = len(sub(pE, pS)), b = len(sub(pH, pE));
+      const want = [lerp(pH[0], T[0], w), lerp(pH[1], T[1], w), lerp(pH[2], T[2], w)];
+      const short = len(sub(want, pS)) - (a + b) * 0.97;
+      if (short > 0) {
+        bow(rot, Math.min(0.45, short * 3) * w);
+        where(rot, tr, A.arm, pS); where(rot, tr, A.fore, pE); where(rot, tr, A.hand, pH);
+      }
+      const u = sub(pS, pE), v = sub(pH, pE);
+      const d = clamp(len(sub(want, pS)), Math.abs(a - b) + 1e-3, (a + b) * 0.999);
+      const bend = Math.acos(clamp((a * a + b * b - d * d) / (2 * a * b), -1, 1));
+      turnAbout(rot, A.fore, A.upFore, unit(cross(u, v), [1, 0, 0]), bend - angle(u, v));
+      where(rot, tr, A.hand, pH);
+      const h = sub(pH, pS), t = sub(want, pS);
+      turnAbout(rot, A.arm, A.upArm, unit(cross(h, t), [1, 0, 0]), angle(h, t));
+      // The back of the hand (knuckles along, index to little finger across) turned to face up, or down.
+      if (face && A.knuckle !== undefined && A.index !== undefined && A.pinky !== undefined) {
+        where(rot, tr, A.hand, pH); where(rot, tr, A.knuckle, pE); where(rot, tr, A.index, pA); where(rot, tr, A.pinky, pB);
+        const c = cross(sub(pE, pH), sub(pA, pB)), back = unit([c[0] * A.mirror, c[1] * A.mirror, c[2] * A.mirror], null);
+        const to = face === 'up' ? [0, -1, 0] : UP;
+        if (back) turnAbout(rot, A.hand, A.upHand, unit(cross(back, to), [1, 0, 0]), angle(back, to) * w);
+      }
+    };
+    // Fingers closed by k (0..1): a fist, or with the index left out, a point. (Both hands' joints curl the same way round.)
+    const FIST = [[0.5, 0.35, 0.2], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9]];
+    const grip = (rot, A, k, point) => {
+      A.fingers.forEach((bones, f) => bones.forEach((j, i) => {
+        if (j === undefined || (point && f === 1)) return;
+        if (f === 0) quatAxisAngle(turn, 0, 0, 1, 0, -0.8 * FIST[f][i] * k);
+        else quatAxisAngle(turn, 0, 0, 0, 1, FIST[f][i] * k * FINGER_CURL);
+        quatMul(rot, j * 4, rot, j * 4, turn, 0);
+      }));
+    };
+    rig.poseModifier = (rot, tr) => {
+      // Leaning in, then hands where they're put, a finger at you, and fists.
+      if (Math.abs(this.leanNow) > 1e-3) bow(rot, this.leanNow);
+      for (const k of ['L', 'R']) {
+        if (!(this.reachW[k] > 1e-3 && this.reachAt[k] && ARMS[k])) continue;
+        // (A knee by name, 'LeftLeg' or 'RightLeg': the wrist just behind the top of it, the palm over the kneecap.)
+        let T = this.reachAt[k][1];
+        if (typeof T === 'string') {
+          const j = J(T);
+          if (j === undefined) continue;
+          where(rot, tr, j, pA);
+          T = [pA[0], pA[1] + 0.08, pA[2] - 0.05];
+        }
+        reach(rot, tr, ARMS[k], T, this.reachW[k], this.reachAt[k][2]);
+      }
+      if (this.pointW > 1e-3 && this.pointDir && ARMS.R) {
+        const A = ARMS.R, D = this.pointDir;
+        where(rot, tr, A.arm, pS); where(rot, tr, A.fore, pE); where(rot, tr, A.hand, pH);
+        const L = len(sub(pE, pS)) + len(sub(pH, pE));
+        reach(rot, tr, A, [pS[0] + D[0] * L, pS[1] + D[1] * L, pS[2] + D[2] * L], this.pointW, null);
+        grip(rot, A, this.pointW, true);
+      }
+      if (this.fistW > 1e-3) for (const k of ['L', 'R']) if (ARMS[k] && !(k === 'R' && this.pointW > 0.5)) grip(rot, ARMS[k], this.fistW, false);
+      if (this.lookW > 1e-3) {
+        // A real look: where the clip has her face pointing is measured, and the neck and head make up the difference to
+        // the mark, so a clip that bows her head doesn't leave her talking to the floor.
+        world.set([0, 0, 0, 1]);
+        for (const p of upHead) quatMul(world, 0, world, 0, rot, p * 4);
+        quatMul(hq, 0, world, 0, rot, head * 4);
+        quatRotate(fwd, 0, hq, 0, faceLocal, 0);
+        const hy = Math.atan2(fwd[0], fwd[2]), hp = Math.atan2(-fwd[1], Math.hypot(fwd[0], fwd[2]));
+        const dy = clamp(wrapAngle(this.lookYaw - hy), -1.2, 1.2) * this.lookW * 0.9;
+        const dp = clamp(this.lookPitch - hp, -1.3, 1.3) * this.lookW * 0.9;
+        turnAbout(rot, neck, upNeck, UP, dy * 0.4);
+        turnAbout(rot, head, upHead, UP, dy * 0.6);
+        side[0] = Math.cos(this.lookYaw); side[2] = -Math.sin(this.lookYaw);
+        // (A big lift, off the ground to your face, comes from the chest and neck as well as the head; with a hand put
+        // somewhere, from the neck and head only, so the hand stays put.)
+        const held = Math.max(this.reachW.L, this.reachW.R, this.pointW), fromChest = 0.25 * (1 - held);
+        turnAbout(rot, chest, upChest, side, dp * fromChest);
+        turnAbout(rot, neck, upNeck, side, dp * (0.3 + (0.25 - fromChest) * 0.5));
+        turnAbout(rot, head, upHead, side, dp * (0.45 + (0.25 - fromChest) * 0.5));
+      }
+      if (this.heave) {
+        // Winded: her chest heaving with each breath.
+        const k = Math.sin(this.breath * 4.4);
+        turnAbout(rot, chest, upChest, SIDE, k * 0.07);
+        turnAbout(rot, head, upHead, SIDE, -k * 0.03);
       }
       if (this.frightened) {
         const t = this.time;
@@ -338,18 +457,39 @@ export class VillageWalker {
     this.time += dt * rate;
     if (b.hold !== undefined) this.time = Math.min(this.time, b.hold);
     this.frightened = !!b.tremble;
+    this.heave = !!b.heave;
+    this.breath = (this.breath || 0) + dt;
     this.snapT = b.snap ?? -1;
-    let yaw = 0, pitch = 0;
+    // (A hand put somewhere eases there and back, and keeps its spot while it lets go.) b.reach: [[side, [x, y, z], face]],
+    // in her body's space (x to her left, y up from her feet, z ahead). b.point: a point in the world for her right finger.
+    const ease = Math.min(1, dt * 7);
+    for (const s of ['L', 'R']) {
+      const r = b.reach?.find((e) => e[0] === s);
+      if (r) this.reachAt[s] = r;
+      this.reachW[s] += ((r ? 1 : 0) - this.reachW[s]) * ease;
+    }
+    if (b.point) {
+      const dx = b.point[0] - this.x, dy = b.point[1] - (this.y + 1.35), dz = b.point[2] - this.z, c = Math.cos(this.yaw), s = Math.sin(this.yaw);
+      const bx = dx * c - dz * s, bz = dx * s + dz * c, l = Math.hypot(bx, dy, bz) || 1;
+      this.pointDir = [bx / l, dy / l, bz / l];
+    }
+    this.pointW += ((b.point ? 1 : 0) - this.pointW) * Math.min(1, dt * 9);
+    this.fistW += ((b.fists ? 1 : 0) - this.fistW) * Math.min(1, dt * 10);
+    this.leanNow += ((b.lean || 0) - this.leanNow) * Math.min(1, dt * 6);
+    const k = Math.min(1, dt * (b.whip ? 18 : 5));
+    this.lookW += ((b.look ? 1 : 0) - this.lookW) * Math.min(1, dt * 4);
     if (b.look) {
-      const lx = b.look[0] - this.x, lz = b.look[2] - this.z;
+      // From where her head really is (last frame's), so the look still finds you when she's down on one knee.
+      const h = this.headJoint !== undefined ? this.headJoint * 3 : -1, wt = this.rig.wt;
+      const hx = h >= 0 ? wt[h] : this.x, hy = h >= 0 && wt[h + 1] > this.y + 0.3 ? wt[h + 1] : this.y + 1.55, hz = h >= 0 ? wt[h + 2] : this.z;
+      const lx = b.look[0] - hx, lz = b.look[2] - hz;
       // On the move the head mostly keeps to the way she's going: a glance, not a turn, and never bowed so far that her
       // hair falls over her face.
-      yaw = clamp(wrapAngle(Math.atan2(lx, lz) - this.yaw), moving ? -0.7 : -1.15, moving ? 0.7 : 1.15);
-      pitch = clamp(Math.atan2(this.y + 1.55 - b.look[1], Math.max(0.5, Math.hypot(lx, lz))), -0.5, moving ? 0.18 : 0.6);
+      const yaw = clamp(wrapAngle(Math.atan2(lx, lz) - this.yaw), moving ? -0.7 : -1.15, moving ? 0.7 : 1.15);
+      const pitch = clamp(Math.atan2(hy - b.look[1], Math.max(0.5, Math.hypot(lx, lz))), -0.5, moving ? 0.18 : 0.6);
+      this.lookYaw += (yaw - this.lookYaw) * k;
+      this.lookPitch += (pitch - this.lookPitch) * k;
     }
-    const k = Math.min(1, dt * (b.whip ? 18 : 5));
-    this.lookYaw += (yaw - this.lookYaw) * k;
-    this.lookPitch += (pitch - this.lookPitch) * k;
   }
 
   write(snap, offset) {
@@ -386,6 +526,9 @@ export class VillageWalker {
       for (let a = 0; a < 3; a++) snap[offset + C_PROPS + 4 + a] = rig.wt[hand * 3 + a];
       for (let a = 0; a < 4; a++) snap[offset + C_PROPS + 7 + a] = rig.wq[hand * 4 + a];
     }
+    // And her right hand's place (where the story puts it: src/sim/opening.js).
+    const right = this.rightHand ??= rig.index.get('mixamorig:RightHand');
+    if (right !== undefined) for (let a = 0; a < 3; a++) snap[offset + C_PROPS + 12 + a] = rig.wt[right * 3 + a];
     snap[offset + C.ACTIVE] = 1;
     snap[offset + C.X] = this.x;
     snap[offset + C.Y] = this.y;

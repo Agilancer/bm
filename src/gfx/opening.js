@@ -185,12 +185,22 @@ function boulder(g, px, py, pz, size, uvK = 0.9, flat = 1) {
 function caveRock() {
   const g = new Geo();
   // The tunnel and the chamber: one swept arch.
+  // Its texture runs by the true distance round each ring (the arch's points aren't evenly spaced, and the rock bulges)
+  // and the true distance along the wall from ring to ring (where the chamber widens, a step down the cave is a long
+  // stretch of wall), so the stone keeps its proportions everywhere instead of smearing into streaks.
+  let prev = null;
+  const along = new Float64Array(ARCH + 1);
   const rows = STATIONS.map((st) => {
-    const perim = Math.PI * (st[6] + st[7]) * 0.5;
-    return Array.from({ length: ARCH + 1 }, (_, k) => {
+    let round = 0, last = null;
+    const row = Array.from({ length: ARCH + 1 }, (_, k) => {
       const p = archPoint(st, k);
-      return [p[0], p[1], p[2], (k / ARCH) * perim / 2.2, st[4] / 2.2, st[0] - p[0], st[5] + st[7] * 0.45 - p[1], st[1] - p[2]];
+      if (last) round += Math.hypot(p[0] - last[0], p[1] - last[1], p[2] - last[2]);
+      if (prev) along[k] += Math.hypot(p[0] - prev[k][0], p[1] - prev[k][1], p[2] - prev[k][2]);
+      last = p;
+      return [p[0], p[1], p[2], round / 2.2, along[k] / 2.2, st[0] - p[0], st[5] + st[7] * 0.45 - p[1], st[1] - p[2]];
     });
+    prev = row;
+    return row;
   });
   g.grid(rows);
   // The chamber's end: closed off just past the last ring.
@@ -569,9 +579,14 @@ class OpeningStage {
       m.out = 3.0;   // the candles gutter out from here
       m.circle = 0.75 * (1 - smoothstep(2.6, 3.6, t));
       m.time = t;
-      // The rocks come down once she is clear of the heap (she leaves the mouth at 6 m/s as the dust goes up).
-      m.rubble = t >= DUST_AT + 0.35;
-      m.inside = t < DUST_AT + 0.35;
+      // The rocks come down once she is clear of the heap (she leaves the mouth at 6 m/s as the dust goes up): the roof
+      // slumping into the mouth and spilling out of it over a third of a second, and the cave's lights out once it's shut.
+      // (Down and out from inside the mouth, never straight down: a heap dropped from above would sweep through where she
+      // stands in front of it.)
+      m.rubble = t >= DUST_AT + 0.3;
+      const fall = Math.min(1, Math.max(0, (t - DUST_AT - 0.3) / 0.32));
+      m.drop = 1 - fall * fall;
+      m.inside = t < DUST_AT + 0.65;
     } else m.rubble = true;
     return m;
   }
@@ -593,7 +608,11 @@ class OpeningStage {
     const t = snap[H.OPENING_TIME], time = snap[H.TIME];
     const m = this.moment(stage, t);
     items.push(this.rock, this.floor);
-    if (m.rubble) items.push(this.rubble);
+    if (m.rubble) {
+      const k = m.drop || 0;
+      mat4FromQT(this.rubble.mat, [0, 0, 0, 1], 0, [-CAVE_OUT[0] * 1.8 * k, 0.6 * k, -CAVE_OUT[1] * 1.8 * k], 0);
+      items.push(this.rubble);
+    }
     if (m.inside) items.push(this.wood, this.iron, this.cloth, this.burlap, this.paper, this.wax);
     if (cam) {
       const n = caveNearest(cam.x, cam.z);
@@ -601,7 +620,7 @@ class OpeningStage {
     }
     const witch = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
     const wx = snap[witch + C.X], wy = snap[witch + C.Y], wz = snap[witch + C.Z], wyaw = snap[witch + C.YAW];
-    this.placeBook(items, stage, t, time, dt, wx, wy, wz, wyaw, snap.subarray(witch + C_PROPS + 4, witch + C_PROPS + 11));
+    this.placeBook(items, stage, t, time, dt, wx, wy, wz, wyaw, snap.subarray(witch + C_PROPS, witch + C_PROPS + 3));
     // The cave's own light, for the shader (src/gfx/shaders.js caveAt): violet before the candles, warm after, dark after.
     const lit = stage === OPENING.WAKE ? smoothstep(CANDLES_AT, CANDLES_AT + 1.4, t) : 1;
     const dark = stage === OPENING.COLLAPSE ? smoothstep(3.0, 4.4, t) : stage > OPENING.COLLAPSE ? 1 : 0;
@@ -619,7 +638,9 @@ class OpeningStage {
     this.light(this.lights.portal, PORTAL[0], PORTAL[1], PORTAL[2], 17 * m.portal ** 1.5 + (m.flash && stage === OPENING.COLLAPSE ? 40 * m.flash : 0));
     // The swirl round her and her book, and her glamour's two lights, until the flash.
     const toYou = Math.atan2(snap[H.PX] - wx, snap[H.PZ] - wz);
-    this.light(this.lights.book, this.position[0], this.position[1], this.position[2], (1.6 + 2.6 * m.swirl) * (stage === OPENING.WAKE ? 1 : 0.35));
+    // (Out of the cave its glow fades with the cave's lights rather than going out in a frame.)
+    const bookFade = stage === OPENING.COLLAPSE ? 1 - smoothstep(DUST_AT - 0.1, DUST_AT + 0.6, t) : 1;
+    this.light(this.lights.book, this.position[0], this.position[1], this.position[2], (1.6 + 2.6 * m.swirl) * (stage === OPENING.WAKE ? 1 : 0.35) * bookFade);
     this.light(this.lights.key, wx + Math.sin(toYou) * 1.3, wy + 1.9, wz + Math.cos(toYou) * 1.3, 5.5 * m.glamour + 34 * (m.flash || 0) * (stage === OPENING.WAKE ? 1 : 0));
     this.light(this.lights.rim, wx - Math.sin(toYou) * 0.9, wy + 2.1, wz - Math.cos(toYou) * 0.9, 6.5 * m.glamour);
     // After the flash, before the candles: the portal's violet behind you on her front, so she isn't only a shape.
@@ -662,12 +683,17 @@ class OpeningStage {
       const [cx, cz] = CIRCLE, cy = chamberShape(11.8)[2] + 0.02, pulse = 0.75 + 0.25 * Math.sin(time * 2.1);
       for (const [rad, wid, b] of [[1.25, 0.07, 1], [1.05, 0.035, 0.6], [0.45, 0.03, 0.45]]) this.ring(cx, cy, cz, rad, wid, [0.32, 0.08, 0.75].map((v) => v * b * m.circle * pulse));
     }
-    // Down the tunnel behind her as she runs, the mouth burns white: the day outside, and the dust in it.
+    // Down the tunnel behind her as she runs, the mouth burns white: the day outside, and the dust in it. The glare is a
+    // card facing you, so it's kept well beyond her as she runs out through the mouth (grown to look the same size): a
+    // card she reached would whiten whatever of her was past it, head first.
     if (stage === OPENING.COLLAPSE && t > 4.6 && t < DUST_AT + 0.2) {
       const k = smoothstep(4.6, 5.3, t) * (1 - smoothstep(DUST_AT - 0.1, DUST_AT + 0.2, t));
-      const mouth = [CAVE_MOUTH[0] + CAVE_OUT[0] * 0.3, CAVE_LINE[0][5] + CAVE_LINE[0][7] * 0.5, CAVE_MOUTH[1] + CAVE_OUT[1] * 0.3];
-      this.blob(mouth, R, U, CAVE_LINE[0][6] * 1.5, CAVE_LINE[0][7] * 0.75, [1.4 * k, 1.3 * k, 1.12 * k]);
-      this.blob(mouth, R, U, CAVE_LINE[0][6] * 2.6, CAVE_LINE[0][7] * 1.3, [0.5 * k, 0.45 * k, 0.38 * k]);
+      const past = (wx - CAVE_MOUTH[0]) * CAVE_OUT[0] + (wz - CAVE_MOUTH[1]) * CAVE_OUT[1];
+      const at = (d) => [CAVE_MOUTH[0] + CAVE_OUT[0] * d, CAVE_LINE[0][5] + CAVE_LINE[0][7] * 0.5, CAVE_MOUTH[1] + CAVE_OUT[1] * d];
+      const near = at(0.3), mouth = at(Math.max(0.3, past + 2.0));
+      const grow = Math.hypot(mouth[0] - cam.x, mouth[1] - cam.y, mouth[2] - cam.z) / Math.max(0.5, Math.hypot(near[0] - cam.x, near[1] - cam.y, near[2] - cam.z));
+      this.blob(mouth, R, U, CAVE_LINE[0][6] * 1.5 * grow, CAVE_LINE[0][7] * 0.75 * grow, [1.4 * k, 1.3 * k, 1.12 * k]);
+      this.blob(mouth, R, U, CAVE_LINE[0][6] * 2.6 * grow, CAVE_LINE[0][7] * 1.3 * grow, [0.5 * k, 0.45 * k, 0.38 * k]);
     }
     if (this.glowN) r.device.queue.writeBuffer(this.glowVB, 0, this.glow, 0, this.glowN * 6 * 9);
   }
@@ -722,26 +748,30 @@ class OpeningStage {
   // Her spellbook: floating open before her while she reads, shut at her side after, and always with her. When the cave
   // comes down she snatches it out of the air and runs with it in her fist (hand: her left hand's place, from the sim),
   // until she's on her feet again and lets it float.
-  placeBook(items, stage, t, time, dt, wx, wy, wz, yaw, hand) {
+  // head: her speech mark (0.19 m over the head joint), so the book can keep to her shoulder when she's down on a knee.
+  placeBook(items, stage, t, time, dt, wx, wy, wz, yaw, head) {
     const reading = stage === OPENING.WAKE && t < 6.6;
-    const clutch = stage === OPENING.COLLAPSE && t > 4.45 && t < 11.6 && Math.abs(hand[1] - wy) < 3;
+    const close = stage === OPENING.COLLAPSE && t > 4.45 && t < 11.4 && head[1] > wy + 0.3 && head[1] - wy < 3;
     const side = reading ? -0.56 : -0.68, forward = reading ? 0.46 : -0.31;
     let x = wx + Math.cos(yaw) * side + Math.sin(yaw) * forward;
     let y = wy + (reading ? 1.10 : 1.04) + 0.065 * Math.sin(time * 2.85) + 0.018 * Math.sin(time * 5.8);
     let z = wz - Math.sin(yaw) * side + Math.cos(yaw) * forward;
-    if (clutch) {
-      // In her fist, against her side.
-      const ix = wx - hand[0], iz = wz - hand[2], il = Math.hypot(ix, iz) || 1;
-      x = hand[0] + ix / il * 0.05; y = hand[1] - 0.07; z = hand[2] + iz / il * 0.05;
+    if (close) {
+      // Through the escape it keeps in tight at her shoulder, just behind, the way a frightened cat keeps to your heels;
+      // once she's up and has her breath it drifts back out to where it floats.
+      const cs = -0.36, cf = -0.16;
+      x = head[0] + Math.cos(yaw) * cs + Math.sin(yaw) * cf;
+      y = head[1] - 0.5 + 0.025 * Math.sin(time * 4.1);
+      z = head[2] - Math.sin(yaw) * cs + Math.cos(yaw) * cf;
     }
     if (this.last === null || time < this.last || Math.hypot(x - this.position[0], z - this.position[2]) > 5) { this.position.set([x, y, z]); this.yaw = yaw; }
     this.last = time;
-    const rate = clutch ? 40 : 5;
+    const rate = close ? 16 : 5;
     this.position[0] = damp(this.position[0], x, rate, dt);
     this.position[1] = damp(this.position[1], y, rate, dt);
     this.position[2] = damp(this.position[2], z, rate, dt);
-    this.yaw += wrapAngle(yaw - this.yaw) * (1 - Math.exp(-(clutch ? 20 : 4) * dt));
-    this.held = damp(this.held || 0, clutch ? 1 : 0, 8, dt);
+    this.yaw += wrapAngle(yaw - this.yaw) * (1 - Math.exp(-(close ? 12 : 4) * dt));
+    this.held = 0;
     const shut = stage === OPENING.WAKE ? smoothstep(6.0, 6.9, t) : 1;
     quatYaw(this.heading, 0, this.yaw + Math.PI + (reading ? -0.5 : 0.35) + this.held * (Math.PI / 2 - 0.35));
     quatAxisAngle(this.tilt, 0, 1, 0, 0, lerp(-0.92 + shut * 0.68 + Math.sin(time * 1.8) * 0.07, -1.45, this.held));
