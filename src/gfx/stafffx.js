@@ -37,12 +37,17 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
       dark = (1.0 - inner) * 0.35;
     }
     case 1u: {
-      // Magma: a black crust over the heart, cracking, the seams running white-hot and churning.
-      let flow = fbm2(p * 2.6 + vec2f(t * 0.15, -t * 0.5));
-      let seam = 1.0 - smoothstep(0.0, 0.08, abs(fbm2(p * 2.2 + vec2f(-t * 0.12, -t * 0.3)) - 0.5));
-      let surge = 0.7 + 0.6 * pow(0.5 + 0.5 * sin(t * 2.6), 3.0);
-      e = A * flow * flow * inner * 1.2 + mix(A, B, 0.6) * seam * surge * 1.4;
-      dark = (1.0 - seam) * 0.55;
+      // Magma: a near-black crust over the heart, cracked by thin seams that run deep red at their edges and orange-gold down
+      // their middles (never white: white seams read as plaster), and one small hot heart pulsing slowly behind it all.
+      let n = abs(fbm2(p * 2.2 + vec2f(-t * 0.12, -t * 0.3)) - 0.5);
+      let seam = 1.0 - smoothstep(0.0, 0.07, n);
+      let core = 1.0 - smoothstep(0.0, 0.025, n);
+      let flick = 0.8 + 0.3 * vn2(vec2f(t * 5.0, p.x * 3.0));
+      let ramp = mix(vec3f(0.55, 0.04, 0.0), vec3f(1.0, 0.55, 0.1), core);
+      let pulse = 0.65 + 0.35 * sin(t * 1.9);
+      e = ramp * seam * flick * 1.5 * smoothstep(1.0, 0.35, rad);
+      e += vec3f(1.0, 0.62, 0.22) * pow(inner, 5.0) * pulse * 1.1;
+      dark = (1.0 - seam) * 0.88;
     }
     case 2u: {
       // Frost: a cold heart, bright in the middle and dark at the facets, rime creeping at its edge, and a glint or two.
@@ -81,10 +86,11 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
     }
     case 5u: {
       // Void: a black hole at the heart that eats the light, a thin rim round it, and the light spiralling in.
-      let swirl = sin(ang * 3.0 - log(max(rad, 0.03)) * 5.0 + t * 3.2);
+      // (The arms wind inward, toward the hole.)
+      let swirl = sin(ang * 3.0 + log(max(rad, 0.03)) * 5.0 + t * 3.2);
       let arms = smoothstep(0.45, 1.0, swirl) * smoothstep(0.35, 0.6, rad) * (1.0 - smoothstep(0.85, 1.05, rad));
-      let lip = ringAt(rad, 0.42 + 0.03 * sin(t * 3.0), 0.045);
-      e = A * arms * 0.9 + mix(A, B, 0.6) * lip * 1.8;
+      let lip = ringAt(rad, 0.42 + 0.03 * sin(t * 3.0), 0.04);
+      e = A * arms * 1.3 + mix(A, B, 0.6) * lip * (2.6 + 0.8 * sin(t * 4.1));
       dark = max((1.0 - smoothstep(0.3, 0.42, rad)) * 0.98, (1.0 - arms) * 0.35);
     }
     case 6u: {
@@ -139,19 +145,26 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
       // Sunflare: a hot heart that keeps its colour, rays turning out of it, a flickering corona.
       let rays = pow(0.5 + 0.5 * sin(ang * 12.0 + t * 1.3), 5.0) * (0.55 + 0.45 * sin(ang * 5.0 - t * 2.0));
       let flick = 0.85 + 0.15 * vn2(vec2f(t * 6.0, 2.0));
-      e = mix(A, B, 0.5) * pow(inner, 1.6) * 0.9 * flick + A * rays * smoothstep(0.2, 0.65, rad) * (1.0 - smoothstep(0.85, 1.0, rad)) * 1.3;
+      e = mix(A, B, 0.25) * pow(inner, 1.6) * 0.7 * flick + A * rays * smoothstep(0.2, 0.65, rad) * (1.0 - smoothstep(0.85, 1.0, rad)) * 1.4;
+      // (A darker field between the rays, so the corona has structure instead of a white disc.)
+      dark = 0.35 * (1.0 - rays) * smoothstep(0.2, 0.5, rad);
       e += B * ringAt(rad, 0.62, 0.06) * (0.5 + 0.5 * sin(ang * 3.0 + t * 2.5)) * 0.8;
     }
     case 11u: {
-      // Moonphase: the lit side wanders round the stone, new to full and back, a cold rim on the lit edge.
-      let ph = t * 0.6;
-      // (Mostly a crescent or a half, full only for a moment: a full moon on white paint reads as a plate.)
-      let L = normalize(vec3f(sin(ph), 0.15, cos(ph) * 0.6 - 0.45));
-      let side = dot(normalize(q + vec3f(0.0, 0.0, 0.35)), L);
-      let lit = smoothstep(-0.1, 0.18, side);
-      let mare = 0.55 + 0.6 * vn2(p * 4.0 + 3.0);
-      e = mix(A, B, 0.45) * lit * mare * 1.1 + A * ringAt(side, 0.0, 0.12) * 0.8;
-      dark = 0.45 + (1.0 - lit) * 0.53;
+      // Moonphase: a lit crescent that waxes to a fat half and wanes back to a sliver, its terminator sweeping across the face
+      // you see; the dark side near black with a cold earthshine, the lit side cratered, darker at its limb, never white,
+      // and a moonstone's pearly sheen sliding blue to lilac over it.
+      let nrm = normalize(q + vec3f(0.0, 0.0, 0.001));
+      let ph = 1.75 + 0.95 * sin(t * 0.55);
+      let L = vec3f(sin(ph), 0.12, cos(ph));
+      let side = dot(nrm, normalize(L));
+      let lit = smoothstep(-0.05, 0.08, side);
+      let mare = 0.5 + 0.65 * vn2(p * 4.0 + 3.0);
+      let limb = 0.55 + 0.45 * clamp(nrm.z, 0.0, 1.0);
+      let sheen = mix(vec3f(0.45, 0.6, 1.0), vec3f(0.8, 0.55, 1.0), 0.5 + 0.5 * sin(t * 0.8 + p.x * 3.0 + p.y * 2.0));
+      e = mix(A, B, 0.4) * 0.8 * lit * mare * limb + sheen * lit * 0.14 * (0.6 + 0.4 * sin(t * 1.3 + p.y * 4.0));
+      e += A * ringAt(side, 0.03, 0.05) * 0.5 + A * 0.025 * (1.0 - lit);
+      dark = 0.6 + (1.0 - lit) * 0.38;
     }
     case 12u: {
       // Starfield: a deep sky held in the stone, turning, its stars twinkling.
@@ -171,18 +184,19 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
     }
     case 14u: {
       // Souls: pale wisps circling and rising inside, each trailing its tail.
-      e = A * 0.4 * pow(inner, 1.2);
+      // (Three distinct tails over a dark inside, one colour throughout, so they read as things moving in the glass.)
+      e = A * 0.14 * pow(inner, 1.5);
       var w = 0.0;
       for (var i = 0; i < 3; i++) {
         let fi = f32(i);
         let head = t * (1.5 + 0.3 * fi) + fi * 2.1;
         let behind = wrapA(head - ang);
-        let tail = select(0.0, exp(-behind * 1.3), behind > 0.0);
-        let orbit = ringAt(rad, 0.5 + 0.15 * sin(t * 1.6 + fi * 2.0), 0.11);
+        let tail = select(0.0, exp(-behind * 2.4), behind > 0.0) * (0.55 + 0.45 * sin(t * 2.3 + fi));
+        let orbit = ringAt(rad, 0.48 + 0.15 * sin(t * 1.6 + fi * 2.0), 0.075);
         w += tail * orbit;
       }
-      e += B * w * 2.4;
-      dark = 0.65;
+      e += mix(A, B, 0.5) * w * 2.6;
+      dark = 0.85;
     }
     case 15u: {
       // Toxic: acid that bubbles and churns, dark scum drifting over it.
@@ -219,16 +233,17 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
       let inBand = step(0.0, rr) * step(rr, 1.0) * step(0.12, along) * step(along, 0.88);
       let glyph = step(0.45, h2(vec2f(seg * 7.0 + floor(along * 3.0), floor(rr * 3.0) + 5.0)));
       let gleam = pow(0.5 + 0.5 * cos(ang - t * 2.4), 8.0);
-      e = mix(B, A, 0.3) * inBand * glyph * (0.6 + 1.4 * gleam) + A * pow(inner, 2.0) * 0.45;
+      e = mix(B, A, 0.55) * inBand * glyph * (0.7 + 1.3 * gleam) + A * pow(inner, 2.0) * 0.35;
       // (The field inside the ring dims too, so the signs stand out against it.)
       dark = max(step(0.0, rr) * step(rr, 1.0) * (1.0 - glyph * inBand) * 0.6, (1.0 - step(0.0, rr)) * 0.45);
     }
     default: {
       // Wind: gusts wheeling round inside, streaked, the eye of it still.
-      let a = ang + t * 2.4 + rad * 2.5;
-      let streak = smoothstep(0.55, 0.92, vn2(vec2f(cos(a), sin(a)) * 2.2 + vec2f(rad * 9.0, t * 0.6)));
-      e = A * 0.15 * inner + mix(A, B, 0.6) * streak * 1.5 * smoothstep(1.0, 0.25, rad);
-      dark = (1.0 - streak) * 0.3;
+      // (A lit core behind the gusts, so it glows from inside and doesn't read as an engraving.)
+      let a = ang + t * 3.0 + rad * 2.5;
+      let streak = smoothstep(0.55, 0.9, vn2(vec2f(cos(a), sin(a)) * 2.2 + vec2f(rad * 9.0, t * 0.6)));
+      e = A * 0.75 * pow(inner, 1.8) * (0.85 + 0.15 * sin(t * 2.7)) + mix(A, B, 0.6) * streak * 1.9 * smoothstep(1.0, 0.25, rad);
+      dark = (1.0 - streak) * 0.45;
     }
   }
   return vec4f(e, dark);
@@ -263,8 +278,8 @@ const STAFF_LIGHT = /* wgsl */ `
       let dir = normalize(albedo + 0.001);
       let near = max(dot(dir, normalize(tint + 0.001)), dot(dir, normalize(A + 0.001)));
       // (A staff with no stone, only carving, says so in ax.w: its light takes whatever is in the sphere.)
-      let gem = max(max(smoothstep(0.08, 0.3, hi) * smoothstep(0.25, 0.55, sat) * smoothstep(0.75, 0.92, near),
-                        smoothstep(0.2, 0.5, hi) * (1.0 - smoothstep(0.12, 0.3, sat))), M.ax.w);
+      let tinted = smoothstep(0.08, 0.3, hi) * smoothstep(0.25, 0.55, sat) * smoothstep(0.75, 0.92, near);
+      let gem = max(max(tinted, smoothstep(0.2, 0.5, hi) * (1.0 - smoothstep(0.12, 0.3, sat))), M.ax.w);
       let L = staffLight(u32(M.fxA.w + 0.5), q, tm, A, B, rim);
       let k = inside * mix(0.05, 1.0, gem);
       let shade = dot(albedo, vec3f(0.3, 0.59, 0.11)) / max(hi, 0.05);
@@ -275,13 +290,20 @@ const STAFF_LIGHT = /* wgsl */ `
       // (What the light swallows reaches a little past the gate: a pupil or a void is dark to its edge.)
       let swallow = L.a * inside * mix(0.5, 1.0, gem);
       c = c * (1.0 - swallow) + em;
+      // Paint the colour of the light but outside its point (the other shards, the shell, the leaves round the gem) sits
+      // back, so the point is the brightest thing on the head (round 3: whole ice clusters and flame shells read as lit).
+      let head = 1.0 - smoothstep(1.4, 3.5, r3);
+      c *= 1.0 - 0.5 * tinted * (1.0 - inside) * head;
+      // Past a soft shoulder the stone only creeps brighter, keeping its hue and its pattern (round 3: discs clipped white).
+      let top = max(max(c.r, c.g), c.b);
+      if (top > 0.85) { c *= mix(1.0, (0.85 + (top - 0.85) * 0.3) / top, inside); }
       if (u32(M.fxA.w + 0.5) == 1u) {
         let crust = (1.0 - inside) * (1.0 - smoothstep(2.2, 4.5, r3)) * smoothstep(0.7, 0.9, near);
         c *= 1.0 - 0.72 * crust;
       }
       // What holds the stone catches its light: the claws and prongs nearest it, falling off with distance.
       // (Never on what the light swallows: the moon's dark side, a pupil, a void stay dark.)
-      let spill = (1.0 - smoothstep(0.8, 1.9, r3)) * (1.0 - inside * gem) * (1.0 - swallow);
+      let spill = (1.0 - smoothstep(0.8, 1.9, r3)) * (1.0 - inside * gem) * (1.0 - swallow) * (1.0 - 0.9 * tinted);
       c += albedo * A * spill * 1.4 * M.fxB.w * (0.8 + 0.2 * sin(tm * 2.1));
     }
   }
