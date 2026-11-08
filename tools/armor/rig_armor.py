@@ -9,7 +9,9 @@ Under the plates it adds short mail sleeves at each joint, softly weighted, so a
 mail and not onto the sky. Also merges the segments into one atlas and one draw call, and derives normal and metal/rough maps
 from the painted colour. The piece table goes in scene.extras for the game's hit tests.
 
-Usage: python rig_armor.py velscour|silver SOURCE.glb UAL_Master_Skeleton.glb OUT_FULL.glb OUT_GAME.glb
+Usage: python rig_armor.py velscour|silver|knight|t_purple|t_white|t_silver|t_pale SOURCE.glb UAL_Master_Skeleton.glb OUT_FULL.glb OUT_GAME.glb
+
+The first two suits are mapped by hand. The rest are read from their own skin weights (auto_parts).
 """
 import io
 import json
@@ -151,6 +153,60 @@ CONFIG = {
         },
     },
 }
+
+
+# The suits worn by the knights added after the first two: no hand-made table, each segment is read from its weights.
+AUTO = {"knight": 1.9, "t_purple": 1.94, "t_white": 1.94, "t_silver": 1.94, "t_pale": 1.94}
+for _suit, _h in AUTO.items():
+    CONFIG[_suit] = {"height": _h, "auto": True, "atlas": 2048, "pbr": 1024}
+
+RIGID = {"Hips": "pelvis", "Spine": "spine_01", "Spine1": "spine_02", "Spine2": "spine_03", "Neck": "neck_01", "Head": "Head"}
+for _S, _s in (("Left", "l"), ("Right", "r")):
+    RIGID.update({f"{_S}Shoulder": f"clavicle_{_s}", f"{_S}Arm": f"upperarm_{_s}", f"{_S}ForeArm": f"lowerarm_{_s}",
+                  f"{_S}UpLeg": f"thigh_{_s}", f"{_S}Leg": f"calf_{_s}", f"{_S}Foot": f"foot_{_s}",
+                  f"{_S}ToeBase": f"ball_{_s}", f"{_S}Toe_End": f"ball_{_s}"})
+
+
+def group_of(name):
+    """Source joint to the UAL joint a plate on it follows; a whole hand counts as one."""
+    for S, s in (("Left", "l"), ("Right", "r")):
+        if name.startswith(S + "Hand"):
+            return f"hand_{s}"
+    return RIGID.get(name)
+
+
+def auto_part(share, names):
+    """A segment's spec from where its weight sits (share: group -> fraction of the segment's weight)."""
+    g = lambda *k: sum(share.get(x, 0) for x in k)
+    if share.get("thigh_l", 0) > 0.2 and share.get("thigh_r", 0) > 0.2:
+        # Across both legs: a skirt of plates on the belt, or cloth that hangs.
+        return waist() if g("pelvis", "spine_01", "spine_02") > 0.25 else CLOTH
+    torso = g("spine_01", "spine_02", "spine_03", "neck_01", "pelvis") + (g("clavicle_l", "clavicle_r") if min(share.get("clavicle_l", 0), share.get("clavicle_r", 0)) > 0.08 else 0)
+    if share.get("Head", 0) > 0.4:
+        return mix(Head=1)
+    if torso > 0.5:
+        if share.get("neck_01", 0) > 0.5:
+            return mix(neck_01=1)
+        return mix(pelvis=0.5, spine_01=0.5) if g("pelvis", "spine_01") > g("spine_02", "spine_03") else mix(spine_03=0.6, spine_02=0.4)
+    for s in "lr":
+        if g(f"upperarm_{s}", f"clavicle_{s}") > 0.7 and share.get(f"lowerarm_{s}", 0) < 0.15:
+            return mix(**{f"upperarm_{s}": 0.6, f"clavicle_{s}": 0.4}) if share.get(f"clavicle_{s}", 0) >= 0.25 else mix(**{f"upperarm_{s}": 1})
+    # A limb shell: cut along the weights, a plate per joint (shoulder into the upper arm, hip into the thigh).
+    fold = {"clavicle_l": "upperarm_l", "clavicle_r": "upperarm_r", "pelvis": None, "spine_01": None, "spine_02": None, "spine_03": None, "neck_01": None}
+    classes = {}
+    for n in names:
+        grp = group_of(n)
+        if grp is None:
+            continue
+        grp = fold.get(grp, grp)
+        if grp is None:
+            continue
+        classes.setdefault(grp, []).append(n)
+    keep = [k for k in classes if share.get(k, 0) + sum(share.get(c, 0) for c, t in fold.items() if t == k) > 0.04]
+    if len(keep) <= 1:
+        k = keep[0] if keep else max(share, key=share.get)
+        return {"hand": k[-1]} if k.startswith("hand_") else mix(**{k: 1})
+    return by_weights(*[(tuple(classes[k]), {"hand": k[-1]} if k.startswith("hand_") else mix(**{k: 1})) for k in keep])
 
 
 def weld(pos, tol=2e-4):
@@ -344,8 +400,10 @@ def jpeg(arr, quality):
 
 
 def main():
+    global ALBEDO_ATLAS, PBR_ATLAS
     model, source, master, out_full, out_game = sys.argv[1:6]
     cfg = CONFIG[model]
+    ALBEDO_ATLAS, PBR_ATLAS = cfg.get("atlas", ALBEDO_ATLAS), cfg.get("pbr", PBR_ATLAS)
     src, src_blob = load_glb(source)
     ual, ual_blob = load_glb(master)
     src_nodes, ual_nodes = src["nodes"], ual["nodes"]
@@ -381,6 +439,20 @@ def main():
                       "tex": src["materials"][prim["material"]]["pbrMetallicRoughness"]["baseColorTexture"]["index"]})
         allpos.append(pos)
     allpos = np.concatenate(allpos)
+    if cfg.get("auto"):
+        cfg["parts"] = {}
+        for part in parts:
+            acc = {}
+            for j, w in zip(part["joints"].ravel(), part["weights"].ravel()):
+                grp = group_of(src_names[int(j)])
+                if grp:
+                    acc[grp] = acc.get(grp, 0) + float(w)
+            tot = sum(acc.values()) or 1
+            share = {k: v / tot for k, v in acc.items()}
+            cfg["parts"][part["name"]] = auto_part(share, src_names)
+            spec = cfg["parts"][part["name"]]
+            kind = "cloth" if spec is CLOTH else "split " + "/".join(str(c[1]) for c in spec["split"]) if "split" in spec else "waist" if "custom" in spec else str(spec)
+            print(f"  {part['name']}: {kind}")
     floor = allpos[:, 1].min()
     scale = cfg["height"] / (allpos[:, 1].max() - floor)
     origin = np.array([0, floor, 0])

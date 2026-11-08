@@ -5,7 +5,10 @@ so a sampler is an array lookup and the whole set is about a megabyte. Each clip
 it carries the pelvis horizontally, which the game turns into root motion.
 
 Writes assets/game/clips.json and assets/game/clips.bin.
-Usage: python pack_clips.py UAL_Master_Skeleton.glb OUT_DIR
+Usage: python pack_clips.py UAL_Master_Skeleton.glb OUT_DIR [LISANDRA_PRETTY.glb [--preview]]
+
+With Lisandra's GLB, her Mixamo clips in LISANDRA (lisandra_clips.py) are retargeted onto the master and packed
+as L_ clips; --preview packs every one of her clips whole instead, to choose from.
 """
 import json
 import os
@@ -14,6 +17,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from rig_to_ual import load_glb, read_accessor, world_matrices  # noqa: E402
 
 CLIPS = [
@@ -113,6 +117,34 @@ def main():
         pelvis_chunks.append(p.astype("<f4").tobytes())
         clips[name] = {"frames": n, "dur": dur, "loop": name in LOOPING, "tracks": table, "pelvis": pel_off}
         pel_off += p.size
+
+    def pack(name, q, p, loop, travel=None):
+        nonlocal rot_off, pel_off
+        n = q.shape[0]
+        table = []
+        for j in range(q.shape[1]):
+            r = q[:, j]
+            still = np.abs(r - r[0]).max() < 2e-4
+            data = np.round((r[:1] if still else r) * 32767).astype("<i2")
+            table.append([j, rot_off, 1 if still else 0])
+            rot_chunks.append(data.tobytes())
+            rot_off += data.size
+        pelvis_chunks.append(p.astype("<f4").tobytes())
+        clips[name] = {"frames": n, "dur": float((n - 1) / 30), "loop": loop, "tracks": table, "pelvis": pel_off}
+        if travel is not None:
+            clips[name]["travel"] = [round(float(v), 3) for v in travel]
+        pel_off += p.size
+
+    if len(sys.argv) > 3:
+        from retarget_mixamo import Source, retarget
+        from lisandra_clips import LISANDRA
+        lg, lblob = load_glb(sys.argv[3])
+        src = Source(lg, lblob)
+        specs = ({f"L{i:02d}_" + "".join(ch for ch in a["name"] if ch.isalnum())[:24]: {"src": a["name"]} for i, a in enumerate(lg["animations"])}
+                 if "--preview" in sys.argv else LISANDRA)
+        for name, spec in specs.items():
+            q, p, travel, n, dur = retarget(g, blob, skeleton, src, spec)
+            pack(name, q, p, spec.get("loop", False), travel)
 
     missing = [c for c in CLIPS if c not in clips]
     if missing:
