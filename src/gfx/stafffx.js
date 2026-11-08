@@ -52,7 +52,8 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
     case 2u: {
       // Frost: a cold heart, bright in the middle and dark at the facets, rime creeping at its edge, and a glint or two.
       let breathe = 0.75 + 0.25 * sin(t * 2.2);
-      e = A * (0.06 + 1.3 * pow(inner, 1.8) * breathe);
+      // (The very heart goes white-cyan, so it outshines ice painted the same blue as its light.)
+      e = mix(A, B, pow(inner, 3.0) * 0.65) * (0.06 + 1.5 * pow(inner, 1.8) * breathe);
       let rime = smoothstep(0.58, 0.78, fbm2(p * 5.0 + vec2f(t * 0.12, 0.0))) * smoothstep(0.45, 0.95, rad);
       e += B * rime * 0.7;
       let glint = speck(p * 3.2 + vec2f(floor(t * 1.5) * 1.37, 0.0), 0.35, 0.07, 1.0);
@@ -90,7 +91,7 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
       let swirl = sin(ang * 3.0 + log(max(rad, 0.03)) * 5.0 + t * 3.2);
       let arms = smoothstep(0.45, 1.0, swirl) * smoothstep(0.35, 0.6, rad) * (1.0 - smoothstep(0.85, 1.05, rad));
       let lip = ringAt(rad, 0.42 + 0.03 * sin(t * 3.0), 0.04);
-      e = A * arms * 1.3 + mix(A, B, 0.6) * lip * (2.6 + 0.8 * sin(t * 4.1));
+      e = A * arms * 1.4 + mix(A, B, 0.6) * lip * (3.2 + 0.8 * sin(t * 4.1));
       dark = max((1.0 - smoothstep(0.3, 0.42, rad)) * 0.98, (1.0 - arms) * 0.35);
     }
     case 6u: {
@@ -155,14 +156,14 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
       // you see; the dark side near black with a cold earthshine, the lit side cratered, darker at its limb, never white,
       // and a moonstone's pearly sheen sliding blue to lilac over it.
       let nrm = normalize(q + vec3f(0.0, 0.0, 0.001));
-      let ph = 1.75 + 0.95 * sin(t * 0.55);
+      let ph = 2.0 + 0.8 * sin(t * 0.55);
       let L = vec3f(sin(ph), 0.12, cos(ph));
       let side = dot(nrm, normalize(L));
       let lit = smoothstep(-0.05, 0.08, side);
-      let mare = 0.5 + 0.65 * vn2(p * 4.0 + 3.0);
+      let mare = 0.72 + 0.4 * vn2(p * 4.0 + 3.0);
       let limb = 0.55 + 0.45 * clamp(nrm.z, 0.0, 1.0);
       let sheen = mix(vec3f(0.45, 0.6, 1.0), vec3f(0.8, 0.55, 1.0), 0.5 + 0.5 * sin(t * 0.8 + p.x * 3.0 + p.y * 2.0));
-      e = mix(A, B, 0.4) * 0.8 * lit * mare * limb + sheen * lit * 0.14 * (0.6 + 0.4 * sin(t * 1.3 + p.y * 4.0));
+      e = mix(A, B, 0.4) * 0.95 * lit * mare * limb + sheen * lit * 0.14 * (0.6 + 0.4 * sin(t * 1.3 + p.y * 4.0));
       e += A * ringAt(side, 0.03, 0.05) * 0.5 + A * 0.025 * (1.0 - lit);
       dark = 0.6 + (1.0 - lit) * 0.38;
     }
@@ -237,12 +238,24 @@ fn staffLight(kind: u32, q: vec3f, t: f32, A: vec3f, B: vec3f, fres: f32) -> vec
       // (The field inside the ring dims too, so the signs stand out against it.)
       dark = max(step(0.0, rr) * step(rr, 1.0) * (1.0 - glyph * inBand) * 0.6, (1.0 - step(0.0, rr)) * 0.45);
     }
+    case 20u: {
+      // Compass: a four-point star needle that searches about north and settles, faint ticks at the four quarters inside the
+      // ring, and the ring's inner rim softly lit (the wayfinder's carved star and ring).
+      let sway = 0.34 * sin(t * 1.1) * (0.5 + 0.5 * sin(t * 0.23));
+      let arm = pow(abs(cos(2.0 * (ang - 1.5707963 - sway))), 18.0);
+      let star = 1.0 - smoothstep(-0.03, 0.03, rad - (0.1 + 0.4 * arm));
+      let north = pow(max(0.0, cos(ang - 1.5707963 - sway)), 24.0);
+      let tick = ringAt(rad, 0.74, 0.035) * pow(abs(cos(2.0 * ang)), 60.0);
+      let rim = ringAt(rad, 0.92, 0.05);
+      e = mix(A, B, 0.5) * star * (0.75 + 0.25 * sin(t * 2.0)) + B * north * star * 1.4 + A * tick * 1.1 + A * rim * 0.7;
+      dark = 0.35 * (1.0 - star) * (1.0 - rim);
+    }
     default: {
       // Wind: gusts wheeling round inside, streaked, the eye of it still.
       // (A lit core behind the gusts, so it glows from inside and doesn't read as an engraving.)
       let a = ang + t * 3.0 + rad * 2.5;
       let streak = smoothstep(0.55, 0.9, vn2(vec2f(cos(a), sin(a)) * 2.2 + vec2f(rad * 9.0, t * 0.6)));
-      e = A * 0.75 * pow(inner, 1.8) * (0.85 + 0.15 * sin(t * 2.7)) + mix(A, B, 0.6) * streak * 1.9 * smoothstep(1.0, 0.25, rad);
+      e = A * 1.0 * pow(inner, 1.8) * (0.85 + 0.15 * sin(t * 2.7)) + mix(A, B, 0.6) * streak * 1.9 * smoothstep(1.0, 0.25, rad);
       dark = (1.0 - streak) * 0.45;
     }
   }
@@ -293,7 +306,8 @@ const STAFF_LIGHT = /* wgsl */ `
       // Paint the colour of the light but outside its point (the other shards, the shell, the leaves round the gem) sits
       // back, so the point is the brightest thing on the head (round 3: whole ice clusters and flame shells read as lit).
       let head = 1.0 - smoothstep(1.4, 3.5, r3);
-      c *= 1.0 - 0.5 * tinted * (1.0 - inside) * head;
+      let alike = smoothstep(0.08, 0.3, hi) * smoothstep(0.12, 0.35, sat) * smoothstep(0.75, 0.92, near);
+      c *= 1.0 - 0.62 * alike * (1.0 - inside) * head;
       // Past a soft shoulder the stone only creeps brighter, keeping its hue and its pattern (round 3: discs clipped white).
       let top = max(max(c.r, c.g), c.b);
       if (top > 0.85) { c *= mix(1.0, (0.85 + (top - 0.85) * 0.3) / top, inside); }

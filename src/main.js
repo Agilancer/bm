@@ -1034,6 +1034,7 @@ class GameView {
     switch (type) {
       case EV.SWING: break;
       case EV.SPELL_CAST:
+        r.castFlare = performance.now();
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
         this.hud.once('cast', this.input.touch ? 'Tap a spell slot to select it, then use CAST. B changes your spells.' : '1 to 6 cast what is in each slot: hold to keep casting. B changes them. Alt gives you a cursor to click them with.', 5);
