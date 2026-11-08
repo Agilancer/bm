@@ -4,6 +4,8 @@ import { EV, FX_FLOATS, FX_START, H, INPUT, MAX_FX, SPELL_PALETTE, WEAPONS } fro
 import { SHIELD_FACE_POINT, shieldRise, shieldX, shieldY } from '../core/shield-pose.js';
 import { EYE } from './player.js';
 import { ELEM, FX, MANA_REGEN, MAX_MANA, SPELLS } from './spells.js';
+import { STAFFS2 } from '../items/staffs2.js';
+import { STAFF_GRAND, STAFF_SHOTS, installStaffShots } from './staffshots.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -40,6 +42,17 @@ const TO_WORLD = WORLD_HALF_TAN / Math.tan(38 * Math.PI / 180);
 const chestOf = (k) => k.y + (k.crawling ? 0.35 : k.opts?.height ? k.opts.height * 0.6 : [1.25, 1.25, 0.55, 1.3, 1.4, 1.2, 1.9][k.kind]);
 const radiusOf = (k) => k.opts?.radius ?? [0.55, 0.55, 1.15, 1.5, 1.7, 0.5, 0.8][k.kind];
 const heightOf = (k) => (k.crawling ? 0.7 : k.opts?.height ?? [2, 2, 1.2, 2.2, 3.1, 1.9, 2.9][k.kind]);
+
+// What a staff fires: the old twelve by their own tables, the new ones by the kind of shot their row names.
+const SHOT_OF = Object.fromEntries(STAFFS2.map((s) => [s.id, s.shot]));
+const OLD_SHOT = Object.fromEntries(Object.values(STAFF_SHOT).map((d) => [d.key, d]));
+function staffShot(id) {
+  if (STAFF_SHOT[id]) return STAFF_SHOT[id];
+  if (STAFF_BOLT[id]) return SPELLS.find((d) => d.key === STAFF_BOLT[id]);
+  const shot = SHOT_OF[id];
+  if (STAFF_GRAND[id]) return { ...STAFF_SHOTS[shot], ...STAFF_GRAND[id] };
+  return STAFF_SHOTS[shot] || OLD_SHOT[shot] || SPELLS.find((d) => d.key === shot) || SPELLS.find((d) => d.key === 'frost');
+}
 
 export class Casting {
   constructor(rigs) {
@@ -279,7 +292,7 @@ export class Casting {
     const p = sim.player;
     const t = p.staffSurf ? p.staffSurfT : p.clip === 'staff_cast' ? p.t : null;
     if (t === null) return;
-    const id = WEAPONS[p.weapon].id, def = STAFF_SHOT[id] || SPELLS.find((d) => d.key === STAFF_BOLT[id]), info = p.rigs[3].clips.staff_cast;
+    const id = WEAPONS[p.weapon].id, def = staffShot(id), info = p.rigs[3].clips.staff_cast;
     const from = this.staffOrigin(p, sim.input[INPUT.VIEW_ASPECT] || 16 / 9, out3);
     if (t < info.hit) {
       const k = smooth(t / info.hit);
@@ -289,7 +302,7 @@ export class Casting {
     }
     if (p.fired) return;
     p.fired = true;
-    const cost = (STAFF_SHOT[id] ? def.mana : STAFF_MANA) * (1 - this.thrift);
+    const cost = (def.mana && !SPELLS.includes(def) ? def.mana : STAFF_MANA) * (1 - this.thrift);
     if (this.mana < cost) {
       if (this.fizzleT <= 0) { sim.event(EV.SPELL_FIZZLE); this.fizzleT = 0.8; }
       return;
@@ -297,8 +310,11 @@ export class Casting {
     this.mana -= cost;
     this.charge = def.gather || 0;
     const k = STAFF_BITE * p.bite();
+    const scaled = {};
+    for (const f of def.scaled || []) scaled[f] = def[f] * k;
     if (def.key === 'gale') this.loose_gale({ ...def, dmg: def.dmg * k }, sim, from);
-    else this.cast_bolt({ ...def, staff: true, radius: Math.min(def.radius ?? STAFF_BLAST, STAFF_BLAST), dmg: def.dmg * k, lash: def.lash * k, dps: def.dps * k }, sim, [from[0], from[1], from[2]]);
+    else if (def.loose) this[`loose_${def.key}`]({ ...def, ...scaled, staff: true, dmg: def.dmg * k }, sim, [from[0], from[1], from[2]]);
+    else this.cast_bolt({ ...def, ...scaled, staff: true, radius: Math.min(def.radius ?? STAFF_BLAST, STAFF_BLAST), dmg: def.dmg * k, lash: def.lash * k, dps: def.dps * k }, sim, [from[0], from[1], from[2]]);
     sim.event(EV.SPELL_CAST, def.elem, SPELLS.indexOf(def), p.x, p.y + EYE, p.z);
   }
 
@@ -432,6 +448,8 @@ export class Casting {
 
   hurt(sim, k, dmg, elem, x, y, z, fromX, fromZ, poise = dmg * 0.7, kind = 'gash') {
     if (k.dead) return;
+    // A knight's raised shield takes most of a spell from the front.
+    if (k.spellGuard) { const through = k.spellGuard(sim, fromX, fromZ, dmg); dmg *= through; poise *= through; }
     const a = this.affOf(k);
     k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE * this.power;
     // Leech: a drink for each hit, but a held spell's ticks don't add up to a fountain.
@@ -611,6 +629,8 @@ export class Casting {
   }
 
   drawBolt(b, dx, dy, dz, sp, dt, sim) {
+    const fly = this[`fly_${b.def.key}`];
+    if (fly) { fly.call(this, b, dx, dy, dz, sp, dt, sim); return; }
     const { x, y, z, size, elem } = b, flown = b.age * sp, tail = Math.min(flown, 1);
     switch (b.def.key) {
       case 'vine': case 'bloom': case 'doom':
@@ -667,6 +687,8 @@ export class Casting {
 
   land(b, sim, foe, dx = 0, dy = 0, dz = 0, struck = true) {
     const { x, y, z, elem, def } = b;
+    const hit = this[`hit_${def.key}`];
+    if (hit) { hit.call(this, b, sim, foe, dx, dy, dz, struck); return; }
     switch (def.key) {
       case 'firebolt':
         this.explode(sim, x, y, z, def.radius * (0.55 + 0.45 * b.power), def.dmg * (0.3 + 0.7 * b.power), elem, 6 * b.power);
@@ -1454,3 +1476,5 @@ export class Casting {
     this.missiles = keep;
   }
 }
+
+installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, clamp, EYE });

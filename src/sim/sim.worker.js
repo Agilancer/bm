@@ -18,6 +18,7 @@ import { floorAt, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
 import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepWoods, TOWN_R, Zombie } from './undead.js';
 import { ATTACKS, Knight, S } from './knight.js';
+import { TOWN_KNIGHTS } from '../core/knights.js';
 import { Player } from './player.js';
 import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
@@ -27,10 +28,13 @@ import { World } from './world.js';
 const BLACK = {
   spawn: [60, 0], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
   route: [[60, 0]], pauseClip: null,   // On guard before the cathedral's great door, and no further.
+  // His post is on the town's edge, so he may follow you over it, but only so far: past leash metres from his door
+  // he lets you go and walks back to it. (He used to be held at the edge, swinging at air from the steps.)
+  style: 'black', leash: 20,
 };
 const SILVER = {
   spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
-  route: [[-7, 13], [-7, 19], [0, 19], [0, 13]], pauseClip: 'Idle_FoldArms_Loop',
+  route: [[-7, 13], [-7, 19], [0, 19], [0, 13]], pauseClip: 'Idle_FoldArms_Loop', style: 'silver',
 };
 
 // Keeps to the woods north of the village. hp is how long it fights; territory is how far from spawn it minds you.
@@ -143,7 +147,7 @@ class Sim {
         if (Math.abs(k.pushX) + Math.abs(k.pushZ) < 0.4) { k.pushX = 0; k.pushZ = 0; }
       }
       // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there.)
-      if (k.kind !== 1 && Math.hypot(k.x, k.z) < TOWN_R && Math.hypot(ox, oz) >= TOWN_R) { k.x = ox; k.z = oz; }
+      if (k.kind !== 1 && !k.opts?.leash && Math.hypot(k.x, k.z) < TOWN_R && Math.hypot(ox, oz) >= TOWN_R) { k.x = ox; k.z = oz; }
       if (k.champion && !k.dead && this.tick % 10 === 0) this.event(EV.CHAMPION, k.x, k.y + 1.3, k.z);
       // Each death leaves its loot once.
       if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
@@ -182,7 +186,7 @@ class Sim {
       const pit = body.opts?.pit;
       if (pit && (x < pit.x0 || x > pit.x1 || z < pit.z0 || z > pit.z1)) return false;
       if (!pit && (body instanceof Zombie ? inPit(x, z) : floorAt(x, z) !== null)) return false;
-      if (body.kind !== 1 && Math.hypot(x, z) < TOWN_R && Math.hypot(body.x, body.z) >= TOWN_R) return false;
+      if (body.kind !== 1 && !body.opts?.leash && Math.hypot(x, z) < TOWN_R && Math.hypot(body.x, body.z) >= TOWN_R) return false;
     }
     const pos = this.nudgePosition;
     pos[0] = x; pos[2] = z;
@@ -210,7 +214,8 @@ class Sim {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i], b = list[j];
         if (a.dead || b.dead || a.dormant || b.dormant) continue;
-        const R = (a.bodyRadius || 0.5) * 0.7 + (b.bodyRadius || 0.5) * 0.7;
+        // Two knights keep a body between them, so blades and boards don't pass through shoulders.
+        const R = a instanceof Knight && b instanceof Knight ? 1.3 : (a.bodyRadius || 0.5) * 0.7 + (b.bodyRadius || 0.5) * 0.7;
         const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
         if (d < R && d > 1e-3 && Math.abs(a.y - b.y) < 4) {
           const push = (R - d) / d * 0.5;
@@ -293,6 +298,16 @@ class Sim {
       case 14: this.manual = true; this.manualTicks = b; break;
       case 15: this.manual = false; break;
       case 12: this.knights.forEach((n) => { if (n.wakeAt !== undefined) n.wakeAt = 0; }); break;
+      case 23: console.log('[k] ' + JSON.stringify(this.knights.slice(0, 2).map((n) => ({ ...n.stats, hp: Math.round(n.hp), moves: n.recent })))); break;   // what the knights have been doing, for review logs
+      case 21: { // hold a knight still in clip b (by its place in the bank) at c seconds, for review sheets
+        const name = Object.keys(k.bank.clips)[b | 0];
+        k.hostile = false; k.target = null; k.state = S.IDLE; k.pauseT = 1e9; k.combat = k.combatTarget = 1; k.shieldUp = k.shieldTarget = 0;
+        k.play(name, 0, 'full', 0.0001); k.actT = c; k.fromW = 0;
+        // As a blow, so the shield arm's hold and the turn into it show as they do in a fight.
+        k.reviewAttack = Object.values(ATTACKS).find((x) => x.clip === name) || null;
+        if (k.reviewAttack?.hold) k.shieldUp = k.shieldTarget = 1;
+        break;
+      }
       default: break;
     }
   }
@@ -404,6 +419,9 @@ async function boot(msg) {
     }
     sim.knights.push(new FieldCreature(sim.knights.length, rig, creature));
   }
+  // The knights in the other suits: Tessariel's walking the village, Velscour's man on the west road.
+  const townBufs = await Promise.all(TOWN_KNIGHTS.map((t) => fetchBuf(base + t.asset)));
+  TOWN_KNIGHTS.forEach((t, i) => sim.knights.push(new Knight(sim.knights.length, t.kind, new Rig(parseGLB(townBufs[i]), bank), bank, t)));
   for (const form of LISANDRA_FORMS) {
     sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
   }

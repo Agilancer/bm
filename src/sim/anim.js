@@ -23,8 +23,17 @@ export class ClipBank {
         for (let i = 0; i < n; i++) quatNormalize(q, i * 4);
         tracks[j] = sameHemisphere(q);
       }
-      this.clips[name] = { name, frames: c.frames, dur: c.dur, loop: c.loop, tracks, pelvis: pel.subarray(c.pelvis, c.pelvis + c.frames * 3) };
+      // travel: how far a clip that goes somewhere has carried the body forward, frame by frame (master units).
+      this.clips[name] = { name, frames: c.frames, dur: c.dur, loop: c.loop, tracks, pelvis: pel.subarray(c.pelvis, c.pelvis + c.frames * 3), travel: c.travel ? Float32Array.from(c.travel) : null };
     }
+  }
+
+  // Forward distance a clip has carried the body by time t (0 for clips that stay put).
+  travel(clip, t) {
+    const tr = clip.travel;
+    if (!tr) return 0;
+    const f = Math.min(Math.max(t, 0) / clip.dur, 1) * (clip.frames - 1), i = Math.min(f | 0, clip.frames - 2);
+    return tr[i] + (tr[i + 1] - tr[i]) * (f - i);
   }
 
   // Writes joint rotations for this clip at time t (wrapped if looping). Joints with no track are left alone.

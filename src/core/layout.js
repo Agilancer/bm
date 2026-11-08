@@ -1,7 +1,9 @@
 // What the threads share. The sim thread writes whole snapshots into one of three slots and publishes
 // the slot index; the render thread reads the newest. Input flows the other way as a small block.
 
-export const MAX_CHARS = 40;
+import { STAFFS2 } from '../items/staffs2.js';
+
+export const MAX_CHARS = 48;
 export const MAX_JOINTS = 104;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;
@@ -102,6 +104,8 @@ export const WEAPONS = [
   { id: 'greenwood_staff', hands: 3 }, { id: 'crystal_staff', hands: 3 }, { id: 'skullhorn_staff', hands: 3 }, { id: 'gnarled_crook', hands: 3 },
   { id: 'dark_staff', hands: 3 }, { id: 'death_staff', hands: 3 }, { id: 'earth_staff', hands: 3 }, { id: 'fire_staff', hands: 3 },
   { id: 'ice_staff', hands: 3 }, { id: 'life_staff', hands: 3 }, { id: 'vine_staff', hands: 3 }, { id: 'wind_staff', hands: 3 },
+  // The 83 cut from the owner's eighteen sheets, after (so the first ones keep their places).
+  ...STAFFS2.map((s) => ({ id: s.id, hands: 3 })),
 ];
 
 export const STATE_NAMES = ['patrol', 'alert', 'approach', 'circle', 'attack', 'block', 'roll', 'stagger', 'retreat', 'break', 'dead', 'taunt', 'feint', 'idle'];

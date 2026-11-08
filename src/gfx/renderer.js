@@ -1,6 +1,7 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { FIELD_CREATURES } from '../core/field-creatures.js';
+import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
 import { DUST_AT, OPENING, SWAP_AT } from '../core/opening.js';
@@ -26,6 +27,16 @@ import { CRAB_SCALE } from '../sim/crab.js';
 import { GRAVEHART_SCALE } from '../sim/gravehart.js';
 import { HYDRA_SCALE } from '../sim/hydra.js';
 import { SKIN } from './shaders.js';
+import { Dangles } from './dangles.js';
+import { STAFF_GLOW, STAFF_SPIN } from '../items/staffglow.js';
+import { STAFF_CORES } from '../items/staffcores.js';
+import { staffEffect, BARE } from '../items/staffeffects.js';
+import { VIEWMODEL_STAFF, STAFF_FX_OFFSET, STAFF_AXES_OFFSET, STAFF_UBO_SIZE } from './stafffx.js';
+import { eyeAxes, staffBind } from './dangles.js';
+import { STAFFS2 } from '../items/staffs2.js';
+
+const STAFFS2_IDS = new Set(STAFFS2.map((s) => s.id));
+const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 448;
@@ -85,6 +96,21 @@ function clusterIndices({ pos, idx, uv, skinTag }, cell) {
     if (a !== b && b !== c && a !== c) { out[n++] = a; out[n++] = b; out[n++] = c; }
   }
   return out.subarray(0, n);
+}
+
+// A staff is held turned about its own shaft (STAFF_SPIN, src/items/staffglow.js), the head's face to the eye: its points and normals.
+function spinPoint(p, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [c * p[0] + s * p[2], p[1], -s * p[0] + c * p[2]];
+}
+function spinStaff(prim, a) {
+  const c = Math.cos(a), s = Math.sin(a), pos = new Float32Array(prim.pos), nrm = new Float32Array(prim.nrm);
+  for (let v = 0; v < pos.length; v += 3) {
+    const x = pos[v], z = pos[v + 2], nx = nrm[v], nz = nrm[v + 2];
+    pos[v] = c * x + s * z; pos[v + 2] = -s * x + c * z;
+    nrm[v] = c * nx + s * nz; nrm[v + 2] = -s * nx + c * nz;
+  }
+  prim.pos = pos; prim.nrm = nrm;
 }
 
 export class Renderer {
@@ -184,7 +210,7 @@ export class Renderer {
     const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
       'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
       'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
-      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb')];
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
     // Fetch when building each model; don't retain every source GLB during startup.
     const loadModel = async (i) => {
       const res = await fetch(base + models[i]);
@@ -217,6 +243,14 @@ export class Renderer {
       body.flesh = 1;
       this.chars.push(body);
     }
+    // The knights in the other suits, in the sim's order. Plate like the first two; Tessariel's polished.
+    for (let i = 0; i < TOWN_KNIGHTS.length; i++) {
+      const knight = await this.buildCharacter(await loadModel(15 + BODIES.length + LISANDRA_FORMS.length + FIELD_CREATURES.length + i));
+      knight.armored = true; knight.steel = TOWN_KNIGHTS[i].kind === 1;
+      this.chars.push(knight);
+      tick();
+    }
+    this.chars[0].armored = this.chars[1].armored = true; this.chars[1].steel = true;
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
       const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
@@ -247,10 +281,18 @@ export class Renderer {
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.itemData = new Float32Array(16 * MAX_GROUND);
     tick();
+    // One prop instance per sword and shield in a knight's hands: the black knight's crimson and V, the silver's gilded
+    // and T, then each town knight's own pair, sharing those four models. propBase: a knight's first instance.
     this.props = [];
     for (const i of [4, 5, 6, 7]) this.props.push(await this.buildProp(await loadModel(i)));
-    this.propInstances = device.createBuffer({ size: 64 * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
-    this.propData = new Float32Array(64);
+    this.chars[0].propBase = 0; this.chars[1].propBase = 2;
+    const firstTown = this.chars.length - LISANDRA_FORMS.length - TOWN_KNIGHTS.length;
+    TOWN_KNIGHTS.forEach((k, i) => {
+      this.chars[firstTown + i].propBase = this.props.length;
+      this.props.push({ ...this.props[k.sword === 'crimson' ? 0 : 2] }, { ...this.props[k.shield === 'v' ? 1 : 3] });
+    });
+    this.propInstances = device.createBuffer({ size: 64 * this.props.length, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+    this.propData = new Float32Array(16 * this.props.length);
     tick();
     this.buildEnv();
     this.buildPipelines();
@@ -674,8 +716,43 @@ export class Renderer {
     const vm = this.vms[w ? w.hands : 1];
     if (w) {
       // Carry the staff kind alongside its original model coordinates. Other gear stays untagged.
-      if (w.hands === 3) prim.piece = new Uint32Array(prim.pos.length / 3).fill(WEAPONS.indexOf(w));
+      if (w.hands === 3) {
+        // The staff's own glow colour rides each vertex (the head's living light, in materials.js): top bit set, then 8-bit RGB.
+        const g = STAFF_GLOW[id] || [255, 56, 6], painted = STAFFS2_IDS.has(id) ? 0x40000000 : 0;
+        prim.piece = new Uint32Array(prim.pos.length / 3).fill((0x80000000 | painted | (g[0] << 16) | (g[1] << 8) | g[2]) >>> 0);
+        spinStaff(prim, STAFF_SPIN);
+        // The first twelve are cut bigger than the painted ones: face-on after the turn they filled the view, so in the hand
+        // they're 0.8 of their size about the fist (the owner's call, 2026-11-08). The one on the ground keeps its size.
+        if (!painted) {
+          for (let v = 0; v < prim.pos.length; v++) prim.pos[v] *= OLD_STAFF_HELD;
+          s.tip *= OLD_STAFF_HELD;
+        }
+        // Its power point's light (src/gfx/stafffx.js): the point turned and sized as the staff was, then the kind and colours.
+        const core = STAFF_CORES[id];
+        if (core) {
+          const k = painted ? 1 : OLD_STAFF_HELD, at = spinPoint(core, STAFF_SPIN), fx = staffEffect(id);
+          s.fx = new Float32Array([at[0] * k, at[1] * k, at[2] * k, core[3] * k, fx[1], fx[2], fx[3], fx[0], fx[4], fx[5], fx[6], fx[7]]);
+          s.fxAt = [at[0] * k, at[1] * k, at[2] * k];
+          s.fxBind = staffBind(vm.weaponBind);
+          s.fxAxes = new Float32Array(8);
+          s.fxBare = BARE.has(id) ? 1 : 0;
+        }
+      }
       this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
+      // What hangs off it: one more joint each past the rig's own, swung by Dangles each frame.
+      const hang = w.hands === 3 && glb.json.meshes[0].extras?.dangles;
+      if (hang?.length && a._DANGLE !== undefined) {
+        const D = accessor(glb, a._DANGLE), n = prim.pos.length / 3;
+        prim.joints = new Uint8Array(n * 4); prim.weights = new Float32Array(n * 4);
+        for (let v = 0; v < n; v++) {
+          const k = D[v * 2], wt = D[v * 2 + 1];
+          prim.joints[v * 4] = vm.weaponJoint; prim.weights[v * 4] = 1 - (k ? wt : 0);
+          if (k) { prim.joints[v * 4 + 1] = vm.jointCount + k - 1; prim.weights[v * 4 + 1] = wt; }
+        }
+        const parts = hang.map((d) => ({ ...d, pivot: spinPoint(d.pivot, STAFF_SPIN) }));
+        s.dangles = new Dangles(parts, vm.weaponBind);
+        s.extraJoints = parts.length;
+      }
     }
     else {
       // (Not a weapon: a shield, on the arm's shield joint.)
@@ -690,8 +767,9 @@ export class Renderer {
       prim.pos = pos; prim.nrm = nrm;
       this.onWeaponJoint(prim, vm.shieldJoint, vm.shieldBind);
     }
-    s.hand = this.makeSkinned([prim], vm.jointCount);
-    s.ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    s.hand = this.makeSkinned([prim], vm.jointCount + (s.extraJoints || 0));
+    s.ubo = device.createBuffer({ size: s.fx ? STAFF_UBO_SIZE : 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    if (s.fx) device.queue.writeBuffer(s.ubo, STAFF_FX_OFFSET, s.fx);
     s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: s.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
@@ -1065,6 +1143,14 @@ export class Renderer {
       layout: layout(this.bgl0, this.bglArmor),
       vertex: { module: vmMod, entryPoint: 'vs', buffers: vmVB },
       fragment: { module: vmMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: depth(), multisample: ms,
+    });
+    const vmStaffMod = module(VIEWMODEL_STAFF);
+    this.pVMStaff = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArmor),
+      vertex: { module: vmStaffMod, entryPoint: 'vs', buffers: vmVB },
+      fragment: { module: vmStaffMod, entryPoint: 'fs', targets },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
@@ -1611,7 +1697,7 @@ export class Renderer {
       const otherForm = stage && (i === this.chars.length - (pretty ? 1 : 2));
       if (otherForm || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
-      const r = i < 2 ? 2.6 : 5;
+      const r = c.armored ? 2.6 : 5;
       let inside = 1e9;
       for (let k = 0; k < 5; k++) inside = Math.min(inside, pl[k * 4] * x + pl[k * 4 + 1] * y + pl[k * 4 + 2] * z + pl[k * 4 + 3]);
       c.seen = inside > -r;
@@ -1702,16 +1788,16 @@ export class Renderer {
         q.writeBuffer(c.ubo, 24 * 64, snap.buffer, snap.byteOffset + (co + C_MASKS) * 4, 256);
       }
       c.gashData[0] = snap[co + C.HEART];
-      c.gashData[1] = i < 2 || c.flesh ? 1 : 0.62;
-      c.gashData[2] = i === 1 ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
+      c.gashData[1] = c.armored || c.flesh ? 1 : 0.62;
+      c.gashData[2] = c.steel ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
       c.gashData[3] = c.flesh ? 1 : 0;
       q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
       skinParamsU[0] = c.count;
       skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
       skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
       q.writeBuffer(c.params, 0, skinParams);
+      if (c.propBase !== undefined) this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 32), c.propBase * 16);
       if (i < 2) {
-        this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 32), i * 32);
         this.glintData = this.glintData || new Float32Array(4);
         this.glintData[0] = snap[co + C.GLINT];
         q.writeBuffer(this.props[i * 2].ubo, 0, this.glintData);
@@ -1770,11 +1856,25 @@ export class Renderer {
     }
     if (this.held) {
       const h = this.held;
-      q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, h.hand.jointCount * 32);
+      const rigJoints = h.hand.jointCount - (h.extraJoints || 0);
+      q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, rigJoints * 32);
+      if (h.dangles) {
+        const wj = this.vm.weaponJoint, at = VM_PALETTE + wj * 8;
+        const swing = h.dangles.step(dt, snap.subarray(at, at + 8), vmData, this.frameData.subarray(O.VMW, O.VMW + 16), time);
+        q.writeBuffer(h.hand.palette, rigJoints * 32, swing);
+        if (this.lastHeld !== h) h.dangles.reset();
+      }
+      this.lastHeld = h;
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
       vmData[17] = 0; vmData[18] = weapon?.hands === 3 ? 0 : 1; vmData[19] = h.tip;
       q.writeBuffer(h.ubo, 0, vmData);
+      if (h.fx) {
+        const at = VM_PALETTE + this.vm.weaponJoint * 8;
+        eyeAxes(snap.subarray(at, at + 8), h.fxBind, vmData, h.fxAt, h.fxAxes);
+        h.fxAxes[3] = h.fxBare;
+        q.writeBuffer(h.ubo, STAFF_AXES_OFFSET, h.fxAxes);
+      }
     }
     if (this.onArm) {
       const h = this.onArm;
@@ -2086,11 +2186,13 @@ export class Renderer {
       }
       if (this.held && !this.vmDown) {
         const h = this.held;
+        if (h.fx) mp.setPipeline(this.pVMStaff);
         mp.setVertexBuffer(0, h.hand.outBuf);
         mp.setVertexBuffer(1, h.hand.sideVB);
         mp.setIndexBuffer(h.hand.IB, 'uint32');
         mp.setBindGroup(1, h.bg);
         mp.drawIndexed(h.hand.indices);
+        if (h.fx) mp.setPipeline(this.pVM);
       }
       for (const h of this.shieldParts) {
         mp.setVertexBuffer(0, h.hand.outBuf);

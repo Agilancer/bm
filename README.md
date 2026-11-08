@@ -43,7 +43,19 @@ the silver knight makes an enemy of them too.
 The black knight reads your swings after a human reaction time, and reads the ones you repeat sooner. They answer with the
 shield, a roll to clear ground on your flank, or a step back, and punish whiffs with a lunge. They feint, keep a wounded side
 turned away, and when badly hurt fall back behind a house and come around the corner fast. Their plans show in how they hold
-themselves: bait drops the shield and dares you. Great crabs come out of the fields from 20 seconds after first blood, from
+themselves: bait drops the shield and dares you.
+
+Knight fights are the template for every knight to come (`ATTACKS`, `NEXT` and `STYLES` in `src/sim/knight.js`). Besides
+the shipped sword clips they have moves from Lisandra's pack, retargeted onto the master skeleton: a slash, an overhand
+chop, a kick, a pounce, two shield blows, a stalk, a run, a point, a taunt and three flinches. Each knight has a style.
+Velscour's is a brute who stalks in, kicks and hacks in runs of up to three. Tessariel's is a duellist who leads with the
+shield and answers every blocked blow. A run of blows branches on how the last one went: into a raised shield comes a boot
+or a board to break it, through a broken guard the big one, and after a pounce the chop (or the overhead, against you).
+Every blow is gated by its measured reach (`TIP`): a knight closes to where it lands and no closer, so nobody swings at air
+or ends up chest to chest (knights keep 1.3 m apart, and 1.5 m from you). The shield arm keeps its guard through blows whose
+clip has an empty left hand. Big blows wind up slow and land fast, a heavy or a broken guard can put a knight on his back
+(once in ten seconds at most), and he taunts only over a man he's put down. Against spells, a knight raises his shield to
+fire from the front and walks in behind it. Great crabs come out of the fields from 20 seconds after first blood, from
 different sides.
 
 Two animals keep their own ground and want nothing to do with the duel. The Gravehart holds the north: it warns you off, lets
@@ -60,7 +72,7 @@ They don't go together. Anything with a V on it is never found anywhere near any
 
 ### How it plays
 
-You start on the road south of town with a common sword, a common staff and a common shield; X swaps sword and staff. The town (radius 58 m) is safe ground. Velscour's knight stands at the foot of the cathedral steps. Out in the woods, packs come out of the trees (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Spells are found as scrolls, except that this test build knows them all (`ALL_SPELLS` in `src/ui/spellbar.js`). Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
+You start on the road south of town with a common sword, a common staff and a common shield; X swaps sword and staff. The town (radius 58 m) is safe ground. Velscour's knight stands at the foot of the cathedral steps, and lets you go 20 m from it. Four of Tessariel's knights walk the village streets, one in each of the other suits, and a man-at-arms in plain plate with Velscour's shield keeps the west road (`TOWN_KNIGHTS` in `src/core/knights.js`). Out in the woods, packs come out of the trees (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Spells are found as scrolls, except that this test build knows them all (`ALL_SPELLS` in `src/ui/spellbar.js`). Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
 
 ### The cathedral and the catacombs
 
@@ -230,9 +242,12 @@ To check it yourself:
 | Path | What |
 | --- | --- |
 | `assets/armor/` | Both knights on the UAL master skeleton with all 85 clips, for any other use |
-| `assets/game/` | What the game loads: the knights without clips, the 41 clips it uses as a small binary, items, village, textures, audio |
-| `tools/armor/rig_armor.py` | Rigs a segmented Tripo armour on the master skeleton: `python tools/armor/rig_armor.py velscour|silver SOURCE MASTER OUT_FULL OUT_GAME` |
-| `tools/armor/pack_clips.py` | Packs the clips the game uses |
+| `assets/game/` | What the game loads: the knights without clips, the 54 clips it uses as a small binary, items, village, textures, audio |
+| `assets/game/knights/` | The town knights, one per armour suit, rigged from their own skin weights |
+| `tools/armor/rig_armor.py` | Rigs a segmented Tripo armour on the master skeleton: `python tools/armor/rig_armor.py velscour|silver|knight|t_purple|t_white|t_silver|t_pale SOURCE MASTER OUT_FULL OUT_GAME`. The first two are mapped by hand, the rest from their weights |
+| `tools/armor/pack_clips.py` | Packs the clips the game uses: `python tools/armor/pack_clips.py MASTER assets/game "F:/!    BM V2/! LISANDRA/LISANDRA - PRETTY.glb"` adds Lisandra's |
+| `tools/armor/lisandra_clips.py` | Which of Lisandra's clips the knights use, and which part of each |
+| `tools/armor/retarget_mixamo.py` | Retargets a Mixamo-rigged clip onto the master skeleton, joint by joint, with root travel taken out for the game to carry |
 | `tools/armor/measure_blows.py` | Measures where in each attack clip the blow falls, which sets the knight's hit windows |
 | `tools/armor/fit_shield.py` | Moves a kite shield's handle to where a knight's fist is |
 | `tools/village/build_textures.py` | Turns the paintings into colour and detail arrays, reading timber, plaster, glass and mortar from the paint |

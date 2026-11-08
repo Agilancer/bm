@@ -33,7 +33,7 @@ const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
 const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
 // Every new game begins with the witch in the cave.
-const OPENING_ENABLED = true;
+const OPENING_ENABLED = !params.has('noopening');   // (?noopening starts in the town, for tests)
 const CONSENT_KEY = 'bm-threads-consent';
 const AUTOSAVE_EVERY = 20;   // seconds of play between the saves Continue picks up
 const title = new Title();
