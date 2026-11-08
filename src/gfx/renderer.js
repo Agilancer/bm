@@ -4,7 +4,7 @@ import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
-import { OPENING, REVEAL_SWAP_AT } from '../core/opening.js';
+import { DUST_AT, OPENING, SWAP_AT } from '../core/opening.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
@@ -39,7 +39,7 @@ const STAFFS2_IDS = new Set(STAFFS2.map((s) => s.id));
 const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
-const FRAME_FLOATS = 444;
+const FRAME_FLOATS = 448;
 // The surfing hand's one joint, as a dual quaternion: it leans and swings about the shoulder with the steering (-1 left, 1 right), and rises as it comes out.
 const SURF_PIVOT = [-0.33, -0.33, 0.2], surfPal = new Float32Array(8);
 function surfHandPose(tilt, up, time) {
@@ -57,7 +57,7 @@ function surfHandPose(tilt, up, time) {
 // The middle of the skull in the left hand, in the view's own space. Printed by tools/wizard/skull_arm.py.
 export const SKULL_AT = [-0.483, -0.159, -0.783];
 
-const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440 };
+const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440, CAVE: 444 };
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
 // the forearm toward the elbow (fitted to the skinned arm, within a millimetre at both, on the rig's shield joint). Bigger than on the ground, to fill the owner's outline.
 const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCALE = 1.25, KITE_SEAT = [-0.06, -0.08, -0.023];
@@ -1578,7 +1578,9 @@ export class Renderer {
     const d = this.frameData;
     const { W, H: Ht } = this;
     const aspect = W / Ht;
-    mat4Perspective(this.tmpP, WORLD_FOV, aspect, 0.08);
+    // (A cinematic camera can narrow the lens: cam.fov, in radians.)
+    const fov = cam.fov || WORLD_FOV;
+    mat4Perspective(this.tmpP, fov, aspect, 0.08);
     mat4LookTo(this.tmpV, cam.x, cam.y, cam.z, cam.fx, cam.fy, cam.fz, cam.ux, cam.uy, cam.uz);
     mat4Mul(this.tmpVP, this.tmpP, this.tmpV);
     mat4Invert(this.tmpI, this.tmpVP);
@@ -1600,7 +1602,7 @@ export class Renderer {
     // Cascades.
     this.turnDay(snap[H.TIME]);
     const n = this.tier.cascades;
-    const tan = Math.tan(WORLD_FOV / 2);
+    const tan = Math.tan(fov / 2);
     const sun = this.sunDir;
     this.pines.update(cam, aspect, tan);
     let prev = 0.1;
@@ -1655,7 +1657,8 @@ export class Renderer {
     // next one takes its place, so none switches off in view.
     const lights = this.lights;
     // (Below, where every light there is is a flame, twice the tier's count. A phone keeps its two.)
-    const take = Math.min(lights.length, this.tier.lights * (cam.y < -6 && !this.tier.lean ? 2 : 1));
+    // (And in Lisandra's cave, lit by her candles.)
+    const take = Math.min(lights.length, this.tier.lights * ((cam.y < -6 || this.inCave) && !this.tier.lean ? 2 : 1));
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
     for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
@@ -1674,6 +1677,7 @@ export class Renderer {
       d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i], O.LIGHTS + (take + spellLights++) * 8);
     }
     d.set([take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9], O.COUNTS);
+    d.set(this.caveAmb || [0, 0, 0, 0], O.CAVE);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);
   }
 
@@ -1682,8 +1686,11 @@ export class Renderer {
   cullBodies(cam, snap) {
     const pl = this.planes;
     const stage = snap[H.OPENING];
-    const afterReveal = stage >= OPENING.ESCORT || stage === OPENING.REVEAL && snap[H.OPENING_TIME] > REVEAL_SWAP_AT;
-    const pretty = afterReveal && this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR;
+    // Lisandra as you see her: lovely while the glamour holds, the witch from the flash until she comes out of the dust, and
+    // lovely to you from then on (by day, once you're in town). Everyone else only ever sees the witch.
+    const t = snap[H.OPENING_TIME];
+    const pretty = (stage === OPENING.WAKE && t < SWAP_AT) || (stage === OPENING.COLLAPSE && t >= DUST_AT) || stage === OPENING.ESCORT
+      || (stage >= OPENING.ARRIVED && this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR);
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
@@ -1962,7 +1969,7 @@ export class Renderer {
     let nGround = 0;
     const drawn = this.drawnItems || (this.drawnItems = []);
     drawn.length = 0;
-    this.openingStage?.append(drawn, snap, dt);
+    this.openingStage?.append(drawn, snap, dt, cam);
     for (const g of this.ground) drawn.push(g);
     if (this.chests.length && !this.chestModels) this.chestModel();
     for (const g of this.chests) drawn.push(g);
@@ -2283,6 +2290,7 @@ export class Renderer {
     mp.setPipeline(this.pSky);
     mp.draw(3);
     if (vis.hall || vis.deep) drawGlow(this, mp, this.interior);
+    this.openingStage?.drawGlow(mp);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);
       mp.setBindGroup(1, this.pDrawBG);

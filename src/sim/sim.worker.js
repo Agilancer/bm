@@ -3,7 +3,7 @@
 import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { FieldCreature } from './field-creature.js';
 import { setOpeningTerrain } from '../core/terrain.js';
-import { CAVE_WALLS, OPENING, OPENING_REVISION, OPENING_YAW } from '../core/opening.js';
+import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW, clutterBoxes } from '../core/opening.js';
 import { Opening } from './opening.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
@@ -132,7 +132,7 @@ class Sim {
     this.casting.power = input[INPUT.POWER] || 1; this.casting.maxMana = MAX_MANA + input[INPUT.MANA_MAX]; this.casting.regen = input[INPUT.REGEN] || 1; this.casting.thrift = input[INPUT.THRIFT];
     if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
     if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + g); }
-    if (this.opening?.stage !== OPENING.NAME && this.opening?.stage !== OPENING.REVEAL) player.update(dt * (this.slow || 1), tdt, input, this);
+    if (!this.opening?.frozen()) player.update(dt * (this.slow || 1), tdt, input, this);
     for (const k of this.knights) {
       const ox = k.x, oz = k.z;
       k.update(this.frozen ? 0 : tdt * this.casting.rate(k) * (k.opts?.role ? CASTER_HASTE : HASTE[k.kind] ?? 1), this);
@@ -165,9 +165,8 @@ class Sim {
     this.casting.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     this.villagers.forEach((v, i) => v.write(snap, this.charOffset(this.knights.length + i)));
-    snap[H.OPENING] = this.opening?.stage ?? OPENING.OFF;
-    snap[H.OPENING_TIME] = this.opening?.time ?? 0;
-    snap[H.OPENING_NEXT] = this.opening ? this.villagers[1].next : 0;
+    if (this.opening) this.opening.write(snap, H);
+    else snap[H.OPENING] = OPENING.OFF;
     player.sweep(snap, this);
     this.knights.forEach((k, i) => k.writeGashes(snap, this.charOffset(i), this));
     this.plan();
@@ -342,13 +341,7 @@ Sim.prototype.place = function (d) {
   p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
   p.onGround = p.y <= floor + 0.06;
   p.vx = 0; p.vy = 0; p.vz = 0; p.yaw = d.yaw;
-  if (this.opening && d.opening) {
-    this.opening.setStage(d.opening);
-    if (d.guide) for (const v of this.villagers) {
-      [v.x, v.z, v.yaw, v.next] = d.guide;
-      v.y = this.world.height(v.x, v.z);
-    }
-  }
+  if (this.opening && d.opening) this.opening.restore(d);
   this.input[INPUT.YAW] = d.yaw; this.input[INPUT.PITCH] = d.pitch;
   self.postMessage({ type: 'look', yaw: d.yaw, pitch: d.pitch });
 };
@@ -386,7 +379,15 @@ async function boot(msg) {
     fetchBuf(`${base}assets/fp/spell_raise.glb`),
     fetchBuf(`${base}assets/fp/arms_staff.glb`),
   ]);
-  if (msg.opening) village.colliders.push(...CAVE_WALLS);
+  if (msg.opening) {
+    // Lisandra's cave (src/core/opening.js): her clutter, the rock either side of its mouth, and the rubble that fills the
+    // mouth when it falls in (out of the way until then: src/sim/world.js setCaveSealed).
+    const w = CAVE_LINE[0][6], yaw = Math.atan2(CAVE_OUT[0], CAVE_OUT[1]), side = [CAVE_OUT[1], -CAVE_OUT[0]];
+    const at = (q, o) => [CAVE_MOUTH[0] + side[0] * q + CAVE_OUT[0] * o, CAVE_MOUTH[1] + side[1] * q + CAVE_OUT[1] * o];
+    const box = ([x, z], hx, hz, h, more) => ({ x, z, hx, hz, yaw, h, ...more });
+    village.colliders.push(...clutterBoxes(), box(at(w + 1.4, 0), 1.2, 1.2, 6), box(at(-w - 1.4, 0), 1.2, 1.2, 6),
+      box(at(0, -0.5), w + 0.8, 1.4, 3.5, { rubble: true }));
+  }
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village, await fetch(`${base}assets/game/interior/interior.json`).then((r) => r.json()));
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
@@ -435,7 +436,8 @@ async function boot(msg) {
   // Placing the player from a save, asked for by the render thread.
   self.addEventListener('message', (e) => {
     const m = e.data;
-    if (m.type === 'openingName' && sim.opening?.stage === OPENING.NAME) sim.opening.setStage(OPENING.LEAVE);
+    if (m.type === 'openingName') sim.opening?.named();
+    if (m.type === 'openingSkip') sim.opening?.skip();
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {
       console.error(err);

@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
-import { OPENING, OPENING_REVISION, OPENING_YAW } from './core/opening.js';
+import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
@@ -323,14 +323,7 @@ async function boot(plan, poolSize) {
     input.menu = false;
     simWorker.postMessage({ type: 'openingName' });
     if (!input.touch && !AUTO) input.lock();
-  }) : null;
-  if (openingHUD) {
-    openingHUD.onBreath = (kind, snap) => {
-      const guide = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
-      audio.breath(kind, snap[guide + C.X], snap[guide + C.Y] + 1.5, snap[guide + C.Z]);
-    };
-    game.drawOpening = (snap, cam) => openingHUD.position(snap, cam);
-  }
+  }, { audio, renderer, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
   const enter = async (fresh = true) => {
     title.hide();
     game.idle = false;
@@ -388,7 +381,10 @@ async function boot(plan, poolSize) {
       const snap = game.currentSnap();
       if (snap) {
         const active = input.enabled && !state.paused;
-        openingHUD.draw(snap, active);
+        openingHUD.draw(snap, active, dt);
+        // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
+        if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
+        renderer.hideVM = openingHUD.cinematic(snap);
         if (active && snap[H.OPENING] === OPENING.NAME && !naming && !openingHUD.name) {
           naming = true;
           input.menu = true;
@@ -397,18 +393,6 @@ async function boot(plan, poolSize) {
         } else if (snap[H.OPENING] !== OPENING.NAME && naming) {
           naming = false;
           input.menu = false;
-        }
-        if (active && snap[H.OPENING] === OPENING.NAME) {
-          const t = snap[H.OPENING_TIME];
-          const wake = smoothstep(0.45, 3.25, t);
-          input.yaw = OPENING_YAW + (1 - wake) * 0.26;
-          input.pitch = lerp(-0.64, -0.11, wake);
-        }
-        if (active && snap[H.OPENING] === OPENING.REVEAL) {
-          const guide = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
-          const yaw = Math.atan2(snap[guide + C.X] - snap[H.PX], snap[guide + C.Z] - snap[H.PZ]);
-          input.yaw += wrapAngle(yaw - input.yaw) * Math.min(1, dt * 4);
-          input.pitch = damp(input.pitch, -0.10, 4, dt);
         }
       }
     }
@@ -842,7 +826,7 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.clock.set(r.hour);
       if (this.spellbar) this.spellbar.update(snap);
-      if (this.worldMap) this.worldMap.update(dt, snap, this.input.yaw, !this.idle && this.input.enabled && !this.input.menu && !(snap[H.OPENING] > 0 && snap[H.OPENING] < 4));
+      if (this.worldMap) this.worldMap.update(dt, snap, this.input.yaw, !this.idle && this.input.enabled && !this.input.menu && !(snap[H.OPENING] > 0 && snap[H.OPENING] < OPENING.ESCORT));
       if (this.spellSound) this.spellSound.channel(snap[H.CAST_HELD] | 0);
       if (this.onFrame) this.onFrame();
     };
@@ -1264,6 +1248,8 @@ class GameView {
       cmd,
       look: (yaw, pitch) => { view.input.yaw = yaw; view.input.pitch = pitch; },
       attack: () => { shared.input[INPUT.ATTACK] += 1; },
+      // Starts the run over (with the opening on, from the first breath in the cave).
+      replay: () => { shared.input[INPUT.RESTART] += 1; },
       wide: () => { shared.input[INPUT.WIDE] += 1; },
       spell: (i) => { const n = typeof i === 'number' ? i : SPELLS.findIndex((s) => s.key === i); view.spellbar.pick(n); return n; },
       cast: (held = 0) => { shared.input[INPUT.CAST_N] += 1; shared.input[INPUT.CAST] = held; },

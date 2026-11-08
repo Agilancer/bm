@@ -215,7 +215,8 @@ export class Player {
     }
     if (!stepSurf(this, dt, input, sim)) {
     const swingDrag = (this.guard ? GUARD_DRAG : this.swinging ? 0.8 : this.threat ? 0.9 : this.clip !== this.stance.idle ? 0.95 : 1) * sim.casting.drag;
-    const speed = (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2);
+    // (The opening slows you to a walk in the cave: sim.paceCap.)
+    const speed = Math.min(sim.paceCap ?? Infinity, (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2));
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     // Strafe right is -x when facing +z.
     const wx = (mx * -c + mz * s) * (len > 1 ? 1 / len : 1) * speed;
@@ -571,6 +572,8 @@ export class Player {
     this.hitDir = wrapAngle(this.yaw - Math.atan2(-dx, -dz));
     this.hitDirT = 0;
     this.knockX = dx / L * (2.2 + knock); this.knockZ = dz / L * (2.2 + knock);
+    // (On the road down in the opening you're knocked flat instead: src/sim/opening.js catchFall.)
+    if (this.hp <= 0 && !this.dead && sim.opening?.catchFall(this)) return;
     if (this.hp <= 0 && !this.dead) {
       this.hp = 0; this.dead = true; this.deadT = 0;
       this.swinging = false; this.threat = null;

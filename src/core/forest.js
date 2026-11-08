@@ -1,5 +1,6 @@
 // The pines round the town: where they stand. Worked out the same on every thread, for the renderer to draw and the sim to bump into.
 import { CAVE_PATH, openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, segDist2, sstep } from './terrain.js';
+import { inCaveBox } from './opening.js';
 
 const LONG_PATHS = PATHS.filter((p) => p.pts.length >= 5);
 
@@ -15,6 +16,8 @@ export function forestAmount(x, z) {
   for (const p of PLOTS) {
     if (Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]) < 8) return 0;
   }
+  // (Nothing grows over Lisandra's cave: a trunk stands in the way at any height, and the ledge is bare rock.)
+  if (openingTerrain && inCaveBox(x, z, 7)) return 0;
   if (r < 260) {
     for (const p of LONG_PATHS) {
       if (p === CAVE_PATH && !openingTerrain) continue;
