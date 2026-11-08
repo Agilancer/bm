@@ -295,7 +295,7 @@ def jpeg(arr, q):
     return b.getvalue()
 
 
-def write(path, name, P, N, UV, F, maps, dangle, extras):
+def write(path, name, P, N, UV, F, maps, dangle, extras, generator="bm tools/staffs2/cut.py"):
     b = Glb()
     images = [dict(bufferView=b.view(jpeg(maps[0], 88)), mimeType="image/jpeg", name=f"{name}_basecolor"),
               dict(bufferView=b.view(jpeg(maps[1], 85)), mimeType="image/jpeg", name=f"{name}_rm"),
@@ -306,7 +306,7 @@ def write(path, name, P, N, UV, F, maps, dangle, extras):
         # (Which hanging part a vertex is on, 0 for none, and how much of that part's swing it takes.)
         attrs["_DANGLE"] = b.accessor(dangle.astype(np.float32), "VEC2", 5126, 34962)
     prim = dict(attributes=attrs, indices=b.accessor(F.astype(np.uint32).ravel(), "SCALAR", 5125, 34963), material=0)
-    gltf = dict(asset=dict(version="2.0", generator="bm tools/staffs2/cut.py"), scene=0, scenes=[dict(name=name, nodes=[0])], nodes=[dict(name=name, mesh=0)],
+    gltf = dict(asset=dict(version="2.0", generator=generator), scene=0, scenes=[dict(name=name, nodes=[0])], nodes=[dict(name=name, mesh=0)],
                 meshes=[dict(name=name, primitives=[prim], extras=extras)],
                 materials=[dict(name=name, pbrMetallicRoughness=dict(baseColorTexture=dict(index=0), metallicRoughnessTexture=dict(index=1)), normalTexture=dict(index=2))],
                 textures=[dict(source=i, sampler=0) for i in range(3)], samplers=[dict(magFilter=9729, minFilter=9987, wrapS=33071, wrapT=33071)],

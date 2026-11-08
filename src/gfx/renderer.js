@@ -32,6 +32,7 @@ import { STAFF_GLOW, STAFF_SPIN } from '../items/staffglow.js';
 import { STAFF_CORES } from '../items/staffcores.js';
 import { staffEffect, BARE } from '../items/staffeffects.js';
 import { VIEWMODEL_STAFF, STAFF_FX_OFFSET, STAFF_AXES_OFFSET, STAFF_UBO_SIZE } from './stafffx.js';
+const FX_STRENGTH = new Float32Array(1);
 import { eyeAxes, staffBind } from './dangles.js';
 import { STAFFS2 } from '../items/staffs2.js';
 
@@ -1874,6 +1875,10 @@ export class Renderer {
         eyeAxes(snap.subarray(at, at + 8), h.fxBind, vmData, h.fxAt, h.fxAxes);
         h.fxAxes[3] = h.fxBare;
         q.writeBuffer(h.ubo, STAFF_AXES_OFFSET, h.fxAxes);
+        // A cast flares the stone for a breath and lets it fall back (main.js sets castFlare on each cast).
+        const age = (performance.now() - (this.castFlare ?? -1e9)) / 1000;
+        FX_STRENGTH[0] = h.fx[11] * (1 + 1.0 * Math.exp(-age * 3.5));
+        q.writeBuffer(h.ubo, STAFF_FX_OFFSET + 44, FX_STRENGTH);
       }
     }
     if (this.onArm) {

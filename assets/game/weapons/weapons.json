@@ -1,0 +1,4034 @@
+{
+ "kite_dawnstar": {
+  "id": "kite_dawnstar",
+  "name": "Dawnstar Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/items/kite_dawnstar.glb",
+  "source": "Shields/Kite Shields 1.glb",
+  "size": [
+   0.387,
+   0.852,
+   0.161
+  ],
+  "tris": 24520
+ },
+ "kite_blackwyrm": {
+  "id": "kite_blackwyrm",
+  "name": "Blackwyrm Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/items/kite_blackwyrm.glb",
+  "source": "Shields/Kite Shields 1.glb",
+  "size": [
+   0.4,
+   0.826,
+   0.159
+  ],
+  "tris": 27598
+ },
+ "kite_azure_wing": {
+  "id": "kite_azure_wing",
+  "name": "Azure Wing Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/items/kite_azure_wing.glb",
+  "source": "Shields/Kite Shields 1.glb",
+  "size": [
+   0.391,
+   0.844,
+   0.146
+  ],
+  "tris": 23634
+ },
+ "kite_greenwood": {
+  "id": "kite_greenwood",
+  "name": "Greenwood Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/items/kite_greenwood.glb",
+  "source": "Shields/Kite Shields 1.glb",
+  "size": [
+   0.378,
+   0.873,
+   0.145
+  ],
+  "tris": 23978
+ },
+ "kite_solar_crown": {
+  "id": "kite_solar_crown",
+  "name": "Solar Crown Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 4,
+  "note": "",
+  "file": "assets/game/items/kite_solar_crown.glb",
+  "source": "Shields/Kite Shields 2.glb",
+  "size": [
+   0.385,
+   0.858,
+   0.15
+  ],
+  "tris": 24630
+ },
+ "kite_bloodthorn": {
+  "id": "kite_bloodthorn",
+  "name": "Bloodthorn Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 4,
+  "note": "",
+  "file": "assets/game/items/kite_bloodthorn.glb",
+  "source": "Shields/Kite Shields 2.glb",
+  "size": [
+   0.392,
+   0.841,
+   0.177
+  ],
+  "tris": 25054
+ },
+ "kite_moonleaf": {
+  "id": "kite_moonleaf",
+  "name": "Moonleaf Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 4,
+  "note": "",
+  "file": "assets/game/items/kite_moonleaf.glb",
+  "source": "Shields/Kite Shields 2.glb",
+  "size": [
+   0.388,
+   0.85,
+   0.151
+  ],
+  "tris": 23940
+ },
+ "kite_rimespike": {
+  "id": "kite_rimespike",
+  "name": "Rimespike Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 4,
+  "note": "",
+  "file": "assets/game/items/kite_rimespike.glb",
+  "source": "Shields/Kite Shields 2.glb",
+  "size": [
+   0.378,
+   0.873,
+   0.155
+  ],
+  "tris": 24642
+ },
+ "kite_starcross": {
+  "id": "kite_starcross",
+  "name": "Starcross Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 4,
+  "note": "",
+  "file": "assets/game/items/kite_starcross.glb",
+  "source": "Shields/Kite Shields 3.glb",
+  "size": [
+   0.381,
+   0.866,
+   0.144
+  ],
+  "tris": 21968
+ },
+ "kite_spinedrake": {
+  "id": "kite_spinedrake",
+  "name": "Spinedrake Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 4,
+  "note": "",
+  "file": "assets/game/items/kite_spinedrake.glb",
+  "source": "Shields/Kite Shields 3.glb",
+  "size": [
+   0.396,
+   0.834,
+   0.129
+  ],
+  "tris": 28744
+ },
+ "kite_winterpine": {
+  "id": "kite_winterpine",
+  "name": "Winterpine Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 4,
+  "note": "",
+  "file": "assets/game/items/kite_winterpine.glb",
+  "source": "Shields/Kite Shields 3.glb",
+  "size": [
+   0.384,
+   0.859,
+   0.119
+  ],
+  "tris": 23342
+ },
+ "kite_lionheart": {
+  "id": "kite_lionheart",
+  "name": "Lionheart Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 4,
+  "note": "",
+  "file": "assets/game/items/kite_lionheart.glb",
+  "source": "Shields/Kite Shields 3.glb",
+  "size": [
+   0.378,
+   0.872,
+   0.163
+  ],
+  "tris": 24988
+ },
+ "kite_gilded_drake": {
+  "id": "kite_gilded_drake",
+  "name": "Gilded Drake Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/items/kite_gilded_drake.glb",
+  "source": "Shields/Kite Shields 4.glb",
+  "size": [
+   0.366,
+   0.901,
+   0.127
+  ],
+  "tris": 25718
+ },
+ "kite_ironthorn": {
+  "id": "kite_ironthorn",
+  "name": "Ironthorn Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/items/kite_ironthorn.glb",
+  "source": "Shields/Kite Shields 4.glb",
+  "size": [
+   0.37,
+   0.891,
+   0.132
+  ],
+  "tris": 26196
+ },
+ "kite_eclipse": {
+  "id": "kite_eclipse",
+  "name": "Eclipse Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/items/kite_eclipse.glb",
+  "source": "Shields/Kite Shields 4.glb",
+  "size": [
+   0.371,
+   0.89,
+   0.13
+  ],
+  "tris": 22696
+ },
+ "kite_palewyrm": {
+  "id": "kite_palewyrm",
+  "name": "Pale Wyrm Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/items/kite_palewyrm.glb",
+  "source": "Shields/Kite Shields 4.glb",
+  "size": [
+   0.367,
+   0.899,
+   0.128
+  ],
+  "tris": 24128
+ },
+ "kite_sunforged": {
+  "id": "kite_sunforged",
+  "name": "Sunforged Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/items/kite_sunforged.glb",
+  "source": "Shields/Kite Shields 5.glb",
+  "size": [
+   0.37,
+   0.891,
+   0.139
+  ],
+  "tris": 24148
+ },
+ "kite_cinderdrake": {
+  "id": "kite_cinderdrake",
+  "name": "Cinder Drake Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/items/kite_cinderdrake.glb",
+  "source": "Shields/Kite Shields 5.glb",
+  "size": [
+   0.374,
+   0.882,
+   0.15
+  ],
+  "tris": 24928
+ },
+ "kite_northstar": {
+  "id": "kite_northstar",
+  "name": "Northstar Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/items/kite_northstar.glb",
+  "source": "Shields/Kite Shields 5.glb",
+  "size": [
+   0.374,
+   0.882,
+   0.139
+  ],
+  "tris": 22250
+ },
+ "kite_twin_stag": {
+  "id": "kite_twin_stag",
+  "name": "Twin Stag Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/items/kite_twin_stag.glb",
+  "source": "Shields/Kite Shields 5.glb",
+  "size": [
+   0.371,
+   0.89,
+   0.147
+  ],
+  "tris": 22904
+ },
+ "kite_radiant": {
+  "id": "kite_radiant",
+  "name": "Radiant Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/items/kite_radiant.glb",
+  "source": "Shields/Kite Shields 6.glb",
+  "size": [
+   0.391,
+   0.844,
+   0.167
+  ],
+  "tris": 24466
+ },
+ "kite_coiled_dragon": {
+  "id": "kite_coiled_dragon",
+  "name": "Coiled Dragon Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/items/kite_coiled_dragon.glb",
+  "source": "Shields/Kite Shields 6.glb",
+  "size": [
+   0.383,
+   0.862,
+   0.164
+  ],
+  "tris": 26212
+ },
+ "kite_frozen_star": {
+  "id": "kite_frozen_star",
+  "name": "Frozen Star Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/items/kite_frozen_star.glb",
+  "source": "Shields/Kite Shields 6.glb",
+  "size": [
+   0.38,
+   0.868,
+   0.158
+  ],
+  "tris": 23426
+ },
+ "kite_stag_crown": {
+  "id": "kite_stag_crown",
+  "name": "Stag Crown Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/items/kite_stag_crown.glb",
+  "source": "Shields/Kite Shields 6.glb",
+  "size": [
+   0.393,
+   0.84,
+   0.169
+  ],
+  "tris": 24812
+ },
+ "kite_black_lion": {
+  "id": "kite_black_lion",
+  "name": "Black Lion Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/items/kite_black_lion.glb",
+  "source": "Shields/Kite Shields 7.glb",
+  "size": [
+   0.392,
+   0.841,
+   0.117
+  ],
+  "tris": 27482
+ },
+ "kite_compass": {
+  "id": "kite_compass",
+  "name": "Compass Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/items/kite_compass.glb",
+  "source": "Shields/Kite Shields 7.glb",
+  "size": [
+   0.394,
+   0.838,
+   0.112
+  ],
+  "tris": 23528
+ },
+ "kite_sun_cross": {
+  "id": "kite_sun_cross",
+  "name": "Sun Cross Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/items/kite_sun_cross.glb",
+  "source": "Shields/Kite Shields 7.glb",
+  "size": [
+   0.393,
+   0.84,
+   0.114
+  ],
+  "tris": 22192
+ },
+ "kite_griffin": {
+  "id": "kite_griffin",
+  "name": "Griffin Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/items/kite_griffin.glb",
+  "source": "Shields/Kite Shields 7.glb",
+  "size": [
+   0.393,
+   0.839,
+   0.111
+  ],
+  "tris": 25666
+ },
+ "kite_gold_lion": {
+  "id": "kite_gold_lion",
+  "name": "Gold Lion Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/items/kite_gold_lion.glb",
+  "source": "Shields/Kite Shields 8.glb",
+  "size": [
+   0.401,
+   0.823,
+   0.132
+  ],
+  "tris": 29160
+ },
+ "kite_red_cross": {
+  "id": "kite_red_cross",
+  "name": "Red Cross Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/items/kite_red_cross.glb",
+  "source": "Shields/Kite Shields 8.glb",
+  "size": [
+   0.405,
+   0.814,
+   0.134
+  ],
+  "tris": 25380
+ },
+ "kite_blue_fleur": {
+  "id": "kite_blue_fleur",
+  "name": "Blue Fleur Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/items/kite_blue_fleur.glb",
+  "source": "Shields/Kite Shields 8.glb",
+  "size": [
+   0.405,
+   0.815,
+   0.126
+  ],
+  "tris": 24640
+ },
+ "kite_chevron": {
+  "id": "kite_chevron",
+  "name": "Chevron Kite Shield",
+  "kind": "kite",
+  "hands": 0,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/items/kite_chevron.glb",
+  "source": "Shields/Kite Shields 8.glb",
+  "size": [
+   0.402,
+   0.821,
+   0.126
+  ],
+  "tris": 20172
+ },
+ "tower_sun": {
+  "id": "tower_sun",
+  "name": "Sun Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 2,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_sun.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 1.glb",
+  "size": [
+   0.449,
+   1.115,
+   0.168
+  ],
+  "tris": 23318
+ },
+ "tower_griffin": {
+  "id": "tower_griffin",
+  "name": "Griffin Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 2,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_griffin.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 1.glb",
+  "size": [
+   0.455,
+   1.099,
+   0.16
+  ],
+  "tris": 27000
+ },
+ "tower_red_star": {
+  "id": "tower_red_star",
+  "name": "Red Star Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 2,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_red_star.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 1.glb",
+  "size": [
+   0.454,
+   1.103,
+   0.174
+  ],
+  "tris": 21668
+ },
+ "tower_ivy": {
+  "id": "tower_ivy",
+  "name": "Ivy Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 2,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_ivy.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 1.glb",
+  "size": [
+   0.448,
+   1.115,
+   0.173
+  ],
+  "tris": 23044
+ },
+ "tower_sunburst": {
+  "id": "tower_sunburst",
+  "name": "Sunburst Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 3,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_sunburst.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 2.glb",
+  "size": [
+   0.457,
+   1.095,
+   0.19
+  ],
+  "tris": 23286
+ },
+ "tower_gold_lion": {
+  "id": "tower_gold_lion",
+  "name": "Gold Lion Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 3,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_gold_lion.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 2.glb",
+  "size": [
+   0.46,
+   1.087,
+   0.181
+  ],
+  "tris": 23900
+ },
+ "tower_eagle": {
+  "id": "tower_eagle",
+  "name": "Eagle Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 3,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_eagle.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 2.glb",
+  "size": [
+   0.461,
+   1.085,
+   0.185
+  ],
+  "tris": 22966
+ },
+ "tower_dragon": {
+  "id": "tower_dragon",
+  "name": "Dragon Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 3,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_dragon.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 2.glb",
+  "size": [
+   0.455,
+   1.098,
+   0.195
+  ],
+  "tris": 23992
+ },
+ "tower_lion_sun": {
+  "id": "tower_lion_sun",
+  "name": "Lion Sun Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 4,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_lion_sun.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 3.glb",
+  "size": [
+   0.446,
+   1.121,
+   0.169
+  ],
+  "tris": 20536
+ },
+ "tower_serpent": {
+  "id": "tower_serpent",
+  "name": "Serpent Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 4,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_serpent.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 3.glb",
+  "size": [
+   0.462,
+   1.083,
+   0.171
+  ],
+  "tris": 25118
+ },
+ "tower_laurel": {
+  "id": "tower_laurel",
+  "name": "Laurel Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 4,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_laurel.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 3.glb",
+  "size": [
+   0.462,
+   1.082,
+   0.147
+  ],
+  "tris": 23376
+ },
+ "tower_world_tree": {
+  "id": "tower_world_tree",
+  "name": "World Tree Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 4,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_world_tree.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 3.glb",
+  "size": [
+   0.46,
+   1.087,
+   0.147
+  ],
+  "tris": 25546
+ },
+ "tower_iron": {
+  "id": "tower_iron",
+  "name": "Iron Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 0,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_iron.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 4.glb",
+  "size": [
+   0.446,
+   1.121,
+   0.228
+  ],
+  "tris": 26550
+ },
+ "tower_red_stripe": {
+  "id": "tower_red_stripe",
+  "name": "Red Stripe Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 0,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_red_stripe.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 4.glb",
+  "size": [
+   0.445,
+   1.124,
+   0.182
+  ],
+  "tris": 22418
+ },
+ "tower_blue_lion": {
+  "id": "tower_blue_lion",
+  "name": "Blue Lion Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 0,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_blue_lion.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 4.glb",
+  "size": [
+   0.445,
+   1.123,
+   0.18
+  ],
+  "tris": 23580
+ },
+ "tower_gold_chevron": {
+  "id": "tower_gold_chevron",
+  "name": "Gold Chevron Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 0,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_gold_chevron.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 4.glb",
+  "size": [
+   0.446,
+   1.121,
+   0.21
+  ],
+  "tris": 23972
+ },
+ "tower_sun_cross": {
+  "id": "tower_sun_cross",
+  "name": "Sun Cross Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 1,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_sun_cross.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 5.glb",
+  "size": [
+   0.437,
+   1.145,
+   0.224
+  ],
+  "tris": 22375
+ },
+ "tower_white_griffin": {
+  "id": "tower_white_griffin",
+  "name": "White Griffin Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 1,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_white_griffin.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 5.glb",
+  "size": [
+   0.438,
+   1.142,
+   0.224
+  ],
+  "tris": 28216
+ },
+ "tower_lancer": {
+  "id": "tower_lancer",
+  "name": "Lancer's Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 1,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_lancer.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 5.glb",
+  "size": [
+   0.438,
+   1.142,
+   0.224
+  ],
+  "tris": 23416
+ },
+ "tower_keep": {
+  "id": "tower_keep",
+  "name": "Keep Tower Shield",
+  "kind": "tower",
+  "hands": 0,
+  "tier": 1,
+  "note": "Tessariel and the lancers",
+  "file": "assets/game/items/tower_keep.glb",
+  "source": "Shields/Tower Shields - Tessariel + Lancers - 5.glb",
+  "size": [
+   0.437,
+   1.145,
+   0.223
+  ],
+  "tris": 19414
+ },
+ "sunguard_sword": {
+  "id": "sunguard_sword",
+  "name": "Sunguard Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/sunguard_sword.glb",
+  "source": "Swords/1 Handed Swords 3 - RARE.glb",
+  "size": [
+   0.076,
+   1.068,
+   0.284
+  ],
+  "tris": 5942
+ },
+ "bloodfire_sword": {
+  "id": "bloodfire_sword",
+  "name": "Bloodfire Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/bloodfire_sword.glb",
+  "source": "Swords/1 Handed Swords 3 - RARE.glb",
+  "size": [
+   0.081,
+   1.081,
+   0.248
+  ],
+  "tris": 6754
+ },
+ "vinewrap_sword": {
+  "id": "vinewrap_sword",
+  "name": "Vinewrap Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/vinewrap_sword.glb",
+  "source": "Swords/1 Handed Swords 3 - RARE.glb",
+  "size": [
+   0.104,
+   1.086,
+   0.232
+  ],
+  "tris": 9398
+ },
+ "icevein_sword": {
+  "id": "icevein_sword",
+  "name": "Icevein Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/icevein_sword.glb",
+  "source": "Swords/1 Handed Swords 3 - RARE.glb",
+  "size": [
+   0.095,
+   1.1,
+   0.259
+  ],
+  "tris": 8698
+ },
+ "azure_sword": {
+  "id": "azure_sword",
+  "name": "Azure Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/azure_sword.glb",
+  "source": "Swords/1 Handed Swords 3 - RARE.glb",
+  "size": [
+   0.081,
+   1.087,
+   0.246
+  ],
+  "tris": 7138
+ },
+ "voidbolt_sword": {
+  "id": "voidbolt_sword",
+  "name": "Voidbolt Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/voidbolt_sword.glb",
+  "source": "Swords/1 Handed Swords 3 - RARE.glb",
+  "size": [
+   0.099,
+   0.958,
+   0.234
+  ],
+  "tris": 7122
+ },
+ "goldspur_sword": {
+  "id": "goldspur_sword",
+  "name": "Goldspur Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/goldspur_sword.glb",
+  "source": "Swords/1 Handed Swords 4 - RARE.glb",
+  "size": [
+   0.105,
+   1.069,
+   0.267
+  ],
+  "tris": 6412
+ },
+ "dusk_sword": {
+  "id": "dusk_sword",
+  "name": "Dusk Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/dusk_sword.glb",
+  "source": "Swords/1 Handed Swords 4 - RARE.glb",
+  "size": [
+   0.103,
+   1.08,
+   0.279
+  ],
+  "tris": 8766
+ },
+ "rimeshard_sword": {
+  "id": "rimeshard_sword",
+  "name": "Rimeshard Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/rimeshard_sword.glb",
+  "source": "Swords/1 Handed Swords 4 - RARE.glb",
+  "size": [
+   0.096,
+   1.094,
+   0.335
+  ],
+  "tris": 6974
+ },
+ "emberfang_sword": {
+  "id": "emberfang_sword",
+  "name": "Emberfang Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/emberfang_sword.glb",
+  "source": "Swords/1 Handed Swords 4 - RARE.glb",
+  "size": [
+   0.102,
+   1.088,
+   0.262
+  ],
+  "tris": 8122
+ },
+ "wildroot_sword": {
+  "id": "wildroot_sword",
+  "name": "Wildroot Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/wildroot_sword.glb",
+  "source": "Swords/1 Handed Swords 4 - RARE.glb",
+  "size": [
+   0.11,
+   1.084,
+   0.275
+  ],
+  "tris": 10430
+ },
+ "moonring_sword": {
+  "id": "moonring_sword",
+  "name": "Moonring Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 2,
+  "note": "rare",
+  "file": "assets/game/weapons/swords/moonring_sword.glb",
+  "source": "Swords/1 Handed Swords 4 - RARE.glb",
+  "size": [
+   0.099,
+   1.1,
+   0.214
+  ],
+  "tris": 6564
+ },
+ "spiked_longsword": {
+  "id": "spiked_longsword",
+  "name": "Spiked Longsword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/spiked_longsword.glb",
+  "source": "Swords/1 Handed Swords 5 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.105,
+   1.077,
+   0.267
+  ],
+  "tris": 6196
+ },
+ "bloodgem_sword": {
+  "id": "bloodgem_sword",
+  "name": "Bloodgem Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/bloodgem_sword.glb",
+  "source": "Swords/1 Handed Swords 5 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.113,
+   1.1,
+   0.28
+  ],
+  "tris": 7436
+ },
+ "greengrip_sword": {
+  "id": "greengrip_sword",
+  "name": "Greengrip Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/greengrip_sword.glb",
+  "source": "Swords/1 Handed Swords 5 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.107,
+   1.096,
+   0.253
+  ],
+  "tris": 6526
+ },
+ "bluegem_sword": {
+  "id": "bluegem_sword",
+  "name": "Bluegem Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/bluegem_sword.glb",
+  "source": "Swords/1 Handed Swords 5 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.205,
+   1.1,
+   0.29
+  ],
+  "tris": 9562
+ },
+ "lionguard_sword": {
+  "id": "lionguard_sword",
+  "name": "Lionguard Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/lionguard_sword.glb",
+  "source": "Swords/1 Handed Swords 5 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.219,
+   1.09,
+   0.301
+  ],
+  "tris": 10346
+ },
+ "scimitar": {
+  "id": "scimitar",
+  "name": "Scimitar",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/scimitar.glb",
+  "source": "Swords/1 Handed Swords 5 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.088,
+   1.078,
+   0.219
+  ],
+  "tris": 6596
+ },
+ "crossguard_sword": {
+  "id": "crossguard_sword",
+  "name": "Crossguard Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/crossguard_sword.glb",
+  "source": "Swords/1 Handed Swords 6 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.105,
+   1.052,
+   0.27
+  ],
+  "tris": 7052
+ },
+ "sawback_sword": {
+  "id": "sawback_sword",
+  "name": "Sawback Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/sawback_sword.glb",
+  "source": "Swords/1 Handed Swords 6 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.109,
+   1.098,
+   0.275
+  ],
+  "tris": 7658
+ },
+ "falchion": {
+  "id": "falchion",
+  "name": "Falchion",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/falchion.glb",
+  "source": "Swords/1 Handed Swords 6 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.148,
+   1.079,
+   0.287
+  ],
+  "tris": 7248
+ },
+ "iron_sword": {
+  "id": "iron_sword",
+  "name": "Iron Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/iron_sword.glb",
+  "source": "Swords/1 Handed Swords 6 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.142,
+   1.06,
+   0.258
+  ],
+  "tris": 9672
+ },
+ "bluesteel_sword": {
+  "id": "bluesteel_sword",
+  "name": "Bluesteel Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/bluesteel_sword.glb",
+  "source": "Swords/1 Handed Swords 6 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.108,
+   1.1,
+   0.272
+  ],
+  "tris": 6430
+ },
+ "copper_sword": {
+  "id": "copper_sword",
+  "name": "Copper Sword",
+  "kind": "sword",
+  "hands": 1,
+  "tier": 0,
+  "note": "basic enemies and monsters can use these",
+  "file": "assets/game/weapons/swords/copper_sword.glb",
+  "source": "Swords/1 Handed Swords 6 - Common - BASIC ENEMIES AND MONSTERS CAN USE THESE.glb",
+  "size": [
+   0.109,
+   1.095,
+   0.27
+  ],
+  "tris": 6802
+ },
+ "emberbanner_spear": {
+  "id": "emberbanner_spear",
+  "name": "Emberbanner Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/emberbanner_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 1.glb",
+  "size": [
+   0.298,
+   2.3,
+   0.299
+  ],
+  "tris": 27560
+ },
+ "skywing_spear": {
+  "id": "skywing_spear",
+  "name": "Skywing Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/skywing_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 1.glb",
+  "size": [
+   0.231,
+   2.298,
+   0.424
+  ],
+  "tris": 26272
+ },
+ "violet_coil_spear": {
+  "id": "violet_coil_spear",
+  "name": "Violet Coil Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/violet_coil_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 1.glb",
+  "size": [
+   0.107,
+   2.017,
+   0.323
+  ],
+  "tris": 12568
+ },
+ "greenbanner_spear": {
+  "id": "greenbanner_spear",
+  "name": "Greenbanner Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/greenbanner_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 1.glb",
+  "size": [
+   0.254,
+   2.294,
+   0.299
+  ],
+  "tris": 25780
+ },
+ "bloodthorn_spear": {
+  "id": "bloodthorn_spear",
+  "name": "Bloodthorn Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 4,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/bloodthorn_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 2.glb",
+  "size": [
+   0.228,
+   2.089,
+   0.319
+  ],
+  "tris": 23024
+ },
+ "starbanner_spear": {
+  "id": "starbanner_spear",
+  "name": "Starbanner Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 4,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/starbanner_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 2.glb",
+  "size": [
+   0.243,
+   2.287,
+   0.407
+  ],
+  "tris": 28914
+ },
+ "violet_orb_spear": {
+  "id": "violet_orb_spear",
+  "name": "Violet Orb Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 4,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/violet_orb_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 2.glb",
+  "size": [
+   0.222,
+   2.081,
+   0.386
+  ],
+  "tris": 19354
+ },
+ "sunbanner_spear": {
+  "id": "sunbanner_spear",
+  "name": "Sunbanner Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 4,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/sunbanner_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 2.glb",
+  "size": [
+   0.275,
+   2.3,
+   0.431
+  ],
+  "tris": 25960
+ },
+ "frostgem_spear": {
+  "id": "frostgem_spear",
+  "name": "Frostgem Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/frostgem_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 3.glb",
+  "size": [
+   0.173,
+   2.3,
+   0.381
+  ],
+  "tris": 24144
+ },
+ "crimson_twist_spear": {
+  "id": "crimson_twist_spear",
+  "name": "Crimson Twist Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/crimson_twist_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 3.glb",
+  "size": [
+   0.158,
+   2.122,
+   0.311
+  ],
+  "tris": 25482
+ },
+ "golden_spear": {
+  "id": "golden_spear",
+  "name": "Golden Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/golden_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 3.glb",
+  "size": [
+   0.154,
+   2.294,
+   0.338
+  ],
+  "tris": 21262
+ },
+ "violet_wraith_spear": {
+  "id": "violet_wraith_spear",
+  "name": "Violet Wraith Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/violet_wraith_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 3.glb",
+  "size": [
+   0.13,
+   2.031,
+   0.323
+  ],
+  "tris": 23998
+ },
+ "icefang_spear": {
+  "id": "icefang_spear",
+  "name": "Icefang Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/icefang_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 4.glb",
+  "size": [
+   0.141,
+   2.299,
+   0.3
+  ],
+  "tris": 23956
+ },
+ "redclaw_spear": {
+  "id": "redclaw_spear",
+  "name": "Redclaw Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/redclaw_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 4.glb",
+  "size": [
+   0.166,
+   2.297,
+   0.257
+  ],
+  "tris": 27106
+ },
+ "goldcross_spear": {
+  "id": "goldcross_spear",
+  "name": "Goldcross Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/goldcross_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 4.glb",
+  "size": [
+   0.138,
+   2.3,
+   0.379
+  ],
+  "tris": 23776
+ },
+ "duskspine_spear": {
+  "id": "duskspine_spear",
+  "name": "Duskspine Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 3,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/duskspine_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 4.glb",
+  "size": [
+   0.131,
+   2.286,
+   0.32
+  ],
+  "tris": 23766
+ },
+ "bluewrap_spear": {
+  "id": "bluewrap_spear",
+  "name": "Bluewrap Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 1,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/bluewrap_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 5.glb",
+  "size": [
+   0.118,
+   2.297,
+   0.228
+  ],
+  "tris": 24122
+ },
+ "redwrap_spear": {
+  "id": "redwrap_spear",
+  "name": "Redwrap Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 1,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/redwrap_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 5.glb",
+  "size": [
+   0.118,
+   2.297,
+   0.229
+  ],
+  "tris": 24494
+ },
+ "iron_spear": {
+  "id": "iron_spear",
+  "name": "Iron Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 1,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/iron_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 5.glb",
+  "size": [
+   0.128,
+   2.3,
+   0.178
+  ],
+  "tris": 22436
+ },
+ "winged_spear": {
+  "id": "winged_spear",
+  "name": "Winged Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 1,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/winged_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 5.glb",
+  "size": [
+   0.139,
+   2.289,
+   0.219
+  ],
+  "tris": 25426
+ },
+ "whitegold_spear": {
+  "id": "whitegold_spear",
+  "name": "Whitegold Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 2,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/whitegold_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 6.glb",
+  "size": [
+   0.172,
+   2.186,
+   0.296
+  ],
+  "tris": 21778
+ },
+ "crimson_spear": {
+  "id": "crimson_spear",
+  "name": "Crimson Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 2,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/crimson_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 6.glb",
+  "size": [
+   0.174,
+   2.29,
+   0.317
+  ],
+  "tris": 26104
+ },
+ "frost_spear": {
+  "id": "frost_spear",
+  "name": "Frost Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 2,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/frost_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 6.glb",
+  "size": [
+   0.185,
+   2.3,
+   0.328
+  ],
+  "tris": 21416
+ },
+ "vine_spear": {
+  "id": "vine_spear",
+  "name": "Vine Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 2,
+  "note": "dragoons",
+  "file": "assets/game/weapons/spears/vine_spear.glb",
+  "source": "Spears - Dragoon/Spears - Dragoon 6.glb",
+  "size": [
+   0.175,
+   2.247,
+   0.289
+  ],
+  "tris": 27984
+ },
+ "blue_pike": {
+  "id": "blue_pike",
+  "name": "Blue Pike",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 0,
+  "note": "enemies and dragoons can use these",
+  "file": "assets/game/weapons/spears/blue_pike.glb",
+  "source": "Spears - Dragoon/Spears - SPEARS THAT ENEMIES CAN USE + DRAGOONS 6.glb",
+  "size": [
+   0.12,
+   2.291,
+   0.3
+  ],
+  "tris": 18694
+ },
+ "red_pike": {
+  "id": "red_pike",
+  "name": "Red Pike",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 0,
+  "note": "enemies and dragoons can use these",
+  "file": "assets/game/weapons/spears/red_pike.glb",
+  "source": "Spears - Dragoon/Spears - SPEARS THAT ENEMIES CAN USE + DRAGOONS 6.glb",
+  "size": [
+   0.119,
+   2.283,
+   0.222
+  ],
+  "tris": 21740
+ },
+ "black_pike": {
+  "id": "black_pike",
+  "name": "Black Pike",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 0,
+  "note": "enemies and dragoons can use these",
+  "file": "assets/game/weapons/spears/black_pike.glb",
+  "source": "Spears - Dragoon/Spears - SPEARS THAT ENEMIES CAN USE + DRAGOONS 6.glb",
+  "size": [
+   0.13,
+   2.299,
+   0.233
+  ],
+  "tris": 21276
+ },
+ "pennon_spear": {
+  "id": "pennon_spear",
+  "name": "Pennon Spear",
+  "kind": "spear",
+  "hands": 2,
+  "tier": 0,
+  "note": "enemies and dragoons can use these",
+  "file": "assets/game/weapons/spears/pennon_spear.glb",
+  "source": "Spears - Dragoon/Spears - SPEARS THAT ENEMIES CAN USE + DRAGOONS 6.glb",
+  "size": [
+   0.142,
+   2.3,
+   0.262
+  ],
+  "tris": 37670
+ },
+ "lionsun_mace": {
+  "id": "lionsun_mace",
+  "name": "Lionsun Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/lionsun_mace.glb",
+  "source": "Maces/1 Handed Maces.glb",
+  "size": [
+   0.152,
+   0.737,
+   0.218
+  ],
+  "tris": 7050
+ },
+ "bloodspike_mace": {
+  "id": "bloodspike_mace",
+  "name": "Bloodspike Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/bloodspike_mace.glb",
+  "source": "Maces/1 Handed Maces.glb",
+  "size": [
+   0.148,
+   0.747,
+   0.214
+  ],
+  "tris": 7882
+ },
+ "icecrystal_mace": {
+  "id": "icecrystal_mace",
+  "name": "Ice Crystal Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/icecrystal_mace.glb",
+  "source": "Maces/1 Handed Maces.glb",
+  "size": [
+   0.143,
+   0.74,
+   0.224
+  ],
+  "tris": 7114
+ },
+ "thornvine_mace": {
+  "id": "thornvine_mace",
+  "name": "Thornvine Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/thornvine_mace.glb",
+  "source": "Maces/1 Handed Maces.glb",
+  "size": [
+   0.141,
+   0.74,
+   0.209
+  ],
+  "tris": 10770
+ },
+ "skull_mace": {
+  "id": "skull_mace",
+  "name": "Skull Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/skull_mace.glb",
+  "source": "Maces/1 Handed Maces.glb",
+  "size": [
+   0.165,
+   0.749,
+   0.215
+  ],
+  "tris": 12310
+ },
+ "voidorb_mace": {
+  "id": "voidorb_mace",
+  "name": "Void Orb Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/voidorb_mace.glb",
+  "source": "Maces/1 Handed Maces.glb",
+  "size": [
+   0.189,
+   0.74,
+   0.285
+  ],
+  "tris": 12784
+ },
+ "iron_maul": {
+  "id": "iron_maul",
+  "name": "Iron Maul",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/iron_maul.glb",
+  "source": "Maces/1 Handed Maces.glb",
+  "size": [
+   0.202,
+   0.75,
+   0.202
+  ],
+  "tris": 10164
+ },
+ "magma_mace": {
+  "id": "magma_mace",
+  "name": "Magma Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/magma_mace.glb",
+  "source": "Maces/1 Handed Maces.glb",
+  "size": [
+   0.165,
+   0.75,
+   0.263
+  ],
+  "tris": 9444
+ },
+ "gilded_lion_mace": {
+  "id": "gilded_lion_mace",
+  "name": "Gilded Lion Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/gilded_lion_mace.glb",
+  "source": "Maces/1 Handed Maces 2.glb",
+  "size": [
+   0.317,
+   0.716,
+   0.384
+  ],
+  "tris": 8396
+ },
+ "frostburst_mace": {
+  "id": "frostburst_mace",
+  "name": "Frostburst Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/frostburst_mace.glb",
+  "source": "Maces/1 Handed Maces 2.glb",
+  "size": [
+   0.432,
+   0.743,
+   0.402
+  ],
+  "tris": 9526
+ },
+ "emberheart_mace": {
+  "id": "emberheart_mace",
+  "name": "Emberheart Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/emberheart_mace.glb",
+  "source": "Maces/1 Handed Maces 2.glb",
+  "size": [
+   0.337,
+   0.73,
+   0.406
+  ],
+  "tris": 10882
+ },
+ "greeneye_mace": {
+  "id": "greeneye_mace",
+  "name": "Greeneye Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/greeneye_mace.glb",
+  "source": "Maces/1 Handed Maces 2.glb",
+  "size": [
+   0.303,
+   0.725,
+   0.431
+  ],
+  "tris": 12798
+ },
+ "bonecrown_mace": {
+  "id": "bonecrown_mace",
+  "name": "Bonecrown Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/bonecrown_mace.glb",
+  "source": "Maces/1 Handed Maces 2.glb",
+  "size": [
+   0.269,
+   0.692,
+   0.389
+  ],
+  "tris": 8842
+ },
+ "bluewheel_mace": {
+  "id": "bluewheel_mace",
+  "name": "Bluewheel Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/bluewheel_mace.glb",
+  "source": "Maces/1 Handed Maces 2.glb",
+  "size": [
+   0.381,
+   0.69,
+   0.391
+  ],
+  "tris": 6438
+ },
+ "kraken_mace": {
+  "id": "kraken_mace",
+  "name": "Kraken Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/kraken_mace.glb",
+  "source": "Maces/1 Handed Maces 2.glb",
+  "size": [
+   0.36,
+   0.743,
+   0.397
+  ],
+  "tris": 10378
+ },
+ "voidbloom_mace": {
+  "id": "voidbloom_mace",
+  "name": "Voidbloom Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/voidbloom_mace.glb",
+  "source": "Maces/1 Handed Maces 2.glb",
+  "size": [
+   0.313,
+   0.75,
+   0.395
+  ],
+  "tris": 9226
+ },
+ "morning_star": {
+  "id": "morning_star",
+  "name": "Morning Star",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/morning_star.glb",
+  "source": "Maces/1 Handed Maces 3.glb",
+  "size": [
+   0.289,
+   0.735,
+   0.279
+  ],
+  "tris": 8830
+ },
+ "flanged_mace": {
+  "id": "flanged_mace",
+  "name": "Flanged Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/flanged_mace.glb",
+  "source": "Maces/1 Handed Maces 3.glb",
+  "size": [
+   0.328,
+   0.747,
+   0.299
+  ],
+  "tris": 12562
+ },
+ "studded_mace": {
+  "id": "studded_mace",
+  "name": "Studded Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/studded_mace.glb",
+  "source": "Maces/1 Handed Maces 3.glb",
+  "size": [
+   0.297,
+   0.744,
+   0.244
+  ],
+  "tris": 9378
+ },
+ "ribbed_mace": {
+  "id": "ribbed_mace",
+  "name": "Ribbed Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/ribbed_mace.glb",
+  "source": "Maces/1 Handed Maces 3.glb",
+  "size": [
+   0.293,
+   0.724,
+   0.272
+  ],
+  "tris": 9576
+ },
+ "iron_morning_star": {
+  "id": "iron_morning_star",
+  "name": "Iron Morning Star",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/iron_morning_star.glb",
+  "source": "Maces/1 Handed Maces 3.glb",
+  "size": [
+   0.286,
+   0.743,
+   0.256
+  ],
+  "tris": 7978
+ },
+ "pointed_mace": {
+  "id": "pointed_mace",
+  "name": "Pointed Mace",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/pointed_mace.glb",
+  "source": "Maces/1 Handed Maces 3.glb",
+  "size": [
+   0.311,
+   0.742,
+   0.24
+  ],
+  "tris": 9828
+ },
+ "war_hammer": {
+  "id": "war_hammer",
+  "name": "War Hammer",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/war_hammer.glb",
+  "source": "Maces/1 Handed Maces 3.glb",
+  "size": [
+   0.191,
+   0.72,
+   0.411
+  ],
+  "tris": 8006
+ },
+ "blue_morning_star": {
+  "id": "blue_morning_star",
+  "name": "Blue Morning Star",
+  "kind": "mace",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/blue_morning_star.glb",
+  "source": "Maces/1 Handed Maces 3.glb",
+  "size": [
+   0.324,
+   0.75,
+   0.302
+  ],
+  "tris": 9752
+ },
+ "hellfire_maul": {
+  "id": "hellfire_maul",
+  "name": "Hellfire Maul",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/hellfire_maul.glb",
+  "source": "Maces/Two Handed Maces 1.glb",
+  "size": [
+   0.213,
+   1.35,
+   0.26
+  ],
+  "tris": 18710
+ },
+ "glacier_maul": {
+  "id": "glacier_maul",
+  "name": "Glacier Maul",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/glacier_maul.glb",
+  "source": "Maces/Two Handed Maces 1.glb",
+  "size": [
+   0.205,
+   1.347,
+   0.253
+  ],
+  "tris": 17324
+ },
+ "sunburst_maul": {
+  "id": "sunburst_maul",
+  "name": "Sunburst Maul",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/sunburst_maul.glb",
+  "source": "Maces/Two Handed Maces 1.glb",
+  "size": [
+   0.119,
+   1.349,
+   0.274
+  ],
+  "tris": 14510
+ },
+ "greenskull_maul": {
+  "id": "greenskull_maul",
+  "name": "Greenskull Maul",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/greenskull_maul.glb",
+  "source": "Maces/Two Handed Maces 1.glb",
+  "size": [
+   0.213,
+   1.348,
+   0.255
+  ],
+  "tris": 25162
+ },
+ "frostspire_maul": {
+  "id": "frostspire_maul",
+  "name": "Frostspire Maul",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/frostspire_maul.glb",
+  "source": "Maces/Two Handed Maces 2.glb",
+  "size": [
+   0.224,
+   1.35,
+   0.3
+  ],
+  "tris": 18266
+ },
+ "bloodspire_maul": {
+  "id": "bloodspire_maul",
+  "name": "Bloodspire Maul",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/bloodspire_maul.glb",
+  "source": "Maces/Two Handed Maces 2.glb",
+  "size": [
+   0.226,
+   1.301,
+   0.276
+  ],
+  "tris": 18366
+ },
+ "goldstar_maul": {
+  "id": "goldstar_maul",
+  "name": "Goldstar Maul",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/goldstar_maul.glb",
+  "source": "Maces/Two Handed Maces 2.glb",
+  "size": [
+   0.206,
+   1.35,
+   0.257
+  ],
+  "tris": 17432
+ },
+ "vinewrapped_maul": {
+  "id": "vinewrapped_maul",
+  "name": "Vinewrapped Maul",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/maces/vinewrapped_maul.glb",
+  "source": "Maces/Two Handed Maces 2.glb",
+  "size": [
+   0.202,
+   1.334,
+   0.277
+  ],
+  "tris": 23796
+ },
+ "great_morning_star": {
+  "id": "great_morning_star",
+  "name": "Great Morning Star",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/great_morning_star.glb",
+  "source": "Maces/Two Handed Maces 3.glb",
+  "size": [
+   0.263,
+   1.348,
+   0.264
+  ],
+  "tris": 17800
+ },
+ "great_flanged_mace": {
+  "id": "great_flanged_mace",
+  "name": "Great Flanged Mace",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/great_flanged_mace.glb",
+  "source": "Maces/Two Handed Maces 3.glb",
+  "size": [
+   0.212,
+   1.343,
+   0.212
+  ],
+  "tris": 17804
+ },
+ "great_studded_mace": {
+  "id": "great_studded_mace",
+  "name": "Great Studded Mace",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/great_studded_mace.glb",
+  "source": "Maces/Two Handed Maces 3.glb",
+  "size": [
+   0.283,
+   1.346,
+   0.24
+  ],
+  "tris": 21466
+ },
+ "great_ribbed_mace": {
+  "id": "great_ribbed_mace",
+  "name": "Great Ribbed Mace",
+  "kind": "great_mace",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/maces/great_ribbed_mace.glb",
+  "source": "Maces/Two Handed Maces 3.glb",
+  "size": [
+   0.211,
+   1.35,
+   0.201
+  ],
+  "tris": 19656
+ },
+ "silver_lance": {
+  "id": "silver_lance",
+  "name": "Silver Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 2,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/silver_lance.glb",
+  "source": "Lances/Lances for Lancers - 1.glb",
+  "size": [
+   0.43,
+   2.932,
+   0.439
+  ],
+  "tris": 21334
+ },
+ "blood_lance": {
+  "id": "blood_lance",
+  "name": "Blood Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 2,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/blood_lance.glb",
+  "source": "Lances/Lances for Lancers - 1.glb",
+  "size": [
+   0.445,
+   2.933,
+   0.392
+  ],
+  "tris": 23352
+ },
+ "gilded_lance": {
+  "id": "gilded_lance",
+  "name": "Gilded Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 2,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/gilded_lance.glb",
+  "source": "Lances/Lances for Lancers - 1.glb",
+  "size": [
+   0.47,
+   2.933,
+   0.428
+  ],
+  "tris": 24750
+ },
+ "frost_lance": {
+  "id": "frost_lance",
+  "name": "Frost Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 2,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/frost_lance.glb",
+  "source": "Lances/Lances for Lancers - 1.glb",
+  "size": [
+   0.452,
+   3.0,
+   0.435
+  ],
+  "tris": 25510
+ },
+ "lion_lance": {
+  "id": "lion_lance",
+  "name": "Lion Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/lion_lance.glb",
+  "source": "Lances/Lances for Lancers - 2.glb",
+  "size": [
+   0.414,
+   3.0,
+   0.411
+  ],
+  "tris": 21852
+ },
+ "dragon_lance": {
+  "id": "dragon_lance",
+  "name": "Dragon Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/dragon_lance.glb",
+  "source": "Lances/Lances for Lancers - 2.glb",
+  "size": [
+   0.407,
+   2.999,
+   0.394
+  ],
+  "tris": 24457
+ },
+ "sun_lance": {
+  "id": "sun_lance",
+  "name": "Sun Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/sun_lance.glb",
+  "source": "Lances/Lances for Lancers - 2.glb",
+  "size": [
+   0.407,
+   2.999,
+   0.39
+  ],
+  "tris": 24558
+ },
+ "shadow_lance": {
+  "id": "shadow_lance",
+  "name": "Shadow Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/shadow_lance.glb",
+  "source": "Lances/Lances for Lancers - 2.glb",
+  "size": [
+   0.408,
+   3.0,
+   0.403
+  ],
+  "tris": 23810
+ },
+ "blue_lion_lance": {
+  "id": "blue_lion_lance",
+  "name": "Blue Lion Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/blue_lion_lance.glb",
+  "source": "Lances/Lances for Lancers - 3.glb",
+  "size": [
+   0.437,
+   3.0,
+   0.407
+  ],
+  "tris": 23628
+ },
+ "black_dragon_lance": {
+  "id": "black_dragon_lance",
+  "name": "Black Dragon Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/black_dragon_lance.glb",
+  "source": "Lances/Lances for Lancers - 3.glb",
+  "size": [
+   0.437,
+   3.0,
+   0.402
+  ],
+  "tris": 24944
+ },
+ "white_lance": {
+  "id": "white_lance",
+  "name": "White Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/white_lance.glb",
+  "source": "Lances/Lances for Lancers - 3.glb",
+  "size": [
+   0.432,
+   3.0,
+   0.409
+  ],
+  "tris": 23718
+ },
+ "green_lance": {
+  "id": "green_lance",
+  "name": "Green Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/green_lance.glb",
+  "source": "Lances/Lances for Lancers - 3.glb",
+  "size": [
+   0.434,
+   2.999,
+   0.394
+  ],
+  "tris": 26284
+ },
+ "fleur_lance": {
+  "id": "fleur_lance",
+  "name": "Fleur Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/fleur_lance.glb",
+  "source": "Lances/Lances for Lancers - 4.glb",
+  "size": [
+   0.391,
+   2.982,
+   0.374
+  ],
+  "tris": 19146
+ },
+ "thorn_lance": {
+  "id": "thorn_lance",
+  "name": "Thorn Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/thorn_lance.glb",
+  "source": "Lances/Lances for Lancers - 4.glb",
+  "size": [
+   0.397,
+   3.0,
+   0.365
+  ],
+  "tris": 26354
+ },
+ "radiant_lance": {
+  "id": "radiant_lance",
+  "name": "Radiant Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/radiant_lance.glb",
+  "source": "Lances/Lances for Lancers - 4.glb",
+  "size": [
+   0.389,
+   3.0,
+   0.363
+  ],
+  "tris": 24460
+ },
+ "violet_lance": {
+  "id": "violet_lance",
+  "name": "Violet Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 3,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/violet_lance.glb",
+  "source": "Lances/Lances for Lancers - 4.glb",
+  "size": [
+   0.391,
+   2.98,
+   0.358
+  ],
+  "tris": 27008
+ },
+ "blue_tourney_lance": {
+  "id": "blue_tourney_lance",
+  "name": "Blue Tourney Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 1,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/blue_tourney_lance.glb",
+  "source": "Lances/Lances for Lancers - 5.glb",
+  "size": [
+   0.323,
+   2.999,
+   0.312
+  ],
+  "tris": 24022
+ },
+ "red_tourney_lance": {
+  "id": "red_tourney_lance",
+  "name": "Red Tourney Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 1,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/red_tourney_lance.glb",
+  "source": "Lances/Lances for Lancers - 5.glb",
+  "size": [
+   0.323,
+   2.998,
+   0.311
+  ],
+  "tris": 24116
+ },
+ "gold_tourney_lance": {
+  "id": "gold_tourney_lance",
+  "name": "Gold Tourney Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 1,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/gold_tourney_lance.glb",
+  "source": "Lances/Lances for Lancers - 5.glb",
+  "size": [
+   0.323,
+   2.999,
+   0.311
+  ],
+  "tris": 23176
+ },
+ "rose_tourney_lance": {
+  "id": "rose_tourney_lance",
+  "name": "Rose Tourney Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 1,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/rose_tourney_lance.glb",
+  "source": "Lances/Lances for Lancers - 5.glb",
+  "size": [
+   0.322,
+   3.0,
+   0.296
+  ],
+  "tris": 22822
+ },
+ "blue_jousting_lance": {
+  "id": "blue_jousting_lance",
+  "name": "Blue Jousting Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 1,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/blue_jousting_lance.glb",
+  "source": "Lances/Lances for Lancers - 6.glb",
+  "size": [
+   0.395,
+   2.999,
+   0.385
+  ],
+  "tris": 22888
+ },
+ "red_jousting_lance": {
+  "id": "red_jousting_lance",
+  "name": "Red Jousting Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 1,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/red_jousting_lance.glb",
+  "source": "Lances/Lances for Lancers - 6.glb",
+  "size": [
+   0.394,
+   2.999,
+   0.386
+  ],
+  "tris": 24490
+ },
+ "gold_jousting_lance": {
+  "id": "gold_jousting_lance",
+  "name": "Gold Jousting Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 1,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/gold_jousting_lance.glb",
+  "source": "Lances/Lances for Lancers - 6.glb",
+  "size": [
+   0.394,
+   2.999,
+   0.385
+  ],
+  "tris": 23368
+ },
+ "green_jousting_lance": {
+  "id": "green_jousting_lance",
+  "name": "Green Jousting Lance",
+  "kind": "lance",
+  "hands": 1,
+  "tier": 1,
+  "note": "lancers",
+  "file": "assets/game/weapons/lances/green_jousting_lance.glb",
+  "source": "Lances/Lances for Lancers - 6.glb",
+  "size": [
+   0.394,
+   3.0,
+   0.382
+  ],
+  "tris": 23862
+ },
+ "voidfang_dagger": {
+  "id": "voidfang_dagger",
+  "name": "Voidfang Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/voidfang_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 1.glb",
+  "size": [
+   0.079,
+   0.446,
+   0.098
+  ],
+  "tris": 6352
+ },
+ "sunspike_dagger": {
+  "id": "sunspike_dagger",
+  "name": "Sunspike Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/sunspike_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 1.glb",
+  "size": [
+   0.053,
+   0.446,
+   0.121
+  ],
+  "tris": 4624
+ },
+ "venom_dagger": {
+  "id": "venom_dagger",
+  "name": "Venom Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/venom_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 1.glb",
+  "size": [
+   0.048,
+   0.45,
+   0.106
+  ],
+  "tris": 7072
+ },
+ "frostbite_dagger": {
+  "id": "frostbite_dagger",
+  "name": "Frostbite Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/frostbite_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 1.glb",
+  "size": [
+   0.055,
+   0.438,
+   0.105
+  ],
+  "tris": 6474
+ },
+ "bloodletter": {
+  "id": "bloodletter",
+  "name": "Bloodletter",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/bloodletter.glb",
+  "source": "Daggers/Daggers for Stabbing - 1.glb",
+  "size": [
+   0.06,
+   0.45,
+   0.106
+  ],
+  "tris": 5516
+ },
+ "steel_dirk": {
+  "id": "steel_dirk",
+  "name": "Steel Dirk",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/steel_dirk.glb",
+  "source": "Daggers/Daggers for Stabbing - 1.glb",
+  "size": [
+   0.042,
+   0.441,
+   0.109
+  ],
+  "tris": 3742
+ },
+ "crescent_dagger": {
+  "id": "crescent_dagger",
+  "name": "Crescent Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/crescent_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 1.glb",
+  "size": [
+   0.044,
+   0.444,
+   0.106
+  ],
+  "tris": 4910
+ },
+ "bone_dagger": {
+  "id": "bone_dagger",
+  "name": "Bone Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/bone_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 1.glb",
+  "size": [
+   0.08,
+   0.439,
+   0.099
+  ],
+  "tris": 7138
+ },
+ "whitegem_dagger": {
+  "id": "whitegem_dagger",
+  "name": "Whitegem Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/whitegem_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 2.glb",
+  "size": [
+   0.045,
+   0.419,
+   0.106
+  ],
+  "tris": 4640
+ },
+ "rubyfang_dagger": {
+  "id": "rubyfang_dagger",
+  "name": "Rubyfang Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/rubyfang_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 2.glb",
+  "size": [
+   0.051,
+   0.433,
+   0.113
+  ],
+  "tris": 5224
+ },
+ "serpent_dagger": {
+  "id": "serpent_dagger",
+  "name": "Serpent Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/serpent_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 2.glb",
+  "size": [
+   0.053,
+   0.429,
+   0.114
+  ],
+  "tris": 6994
+ },
+ "icicle_dagger": {
+  "id": "icicle_dagger",
+  "name": "Icicle Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/icicle_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 2.glb",
+  "size": [
+   0.049,
+   0.438,
+   0.111
+  ],
+  "tris": 5470
+ },
+ "voidtwist_dagger": {
+  "id": "voidtwist_dagger",
+  "name": "Voidtwist Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/voidtwist_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 2.glb",
+  "size": [
+   0.06,
+   0.436,
+   0.104
+  ],
+  "tris": 8962
+ },
+ "sunflare_dagger": {
+  "id": "sunflare_dagger",
+  "name": "Sunflare Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/sunflare_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 2.glb",
+  "size": [
+   0.053,
+   0.439,
+   0.124
+  ],
+  "tris": 5514
+ },
+ "horned_dagger": {
+  "id": "horned_dagger",
+  "name": "Horned Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/horned_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 2.glb",
+  "size": [
+   0.057,
+   0.45,
+   0.113
+  ],
+  "tris": 5480
+ },
+ "frostcurve_dagger": {
+  "id": "frostcurve_dagger",
+  "name": "Frostcurve Dagger",
+  "kind": "dagger",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/daggers/frostcurve_dagger.glb",
+  "source": "Daggers/Daggers for Stabbing - 2.glb",
+  "size": [
+   0.045,
+   0.424,
+   0.106
+  ],
+  "tris": 5280
+ },
+ "hunting_bow": {
+  "id": "hunting_bow",
+  "name": "Hunting Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/weapons/bows/hunting_bow.glb",
+  "source": "Bows/Bows 1.glb",
+  "size": [
+   0.084,
+   1.406,
+   0.216
+  ],
+  "tris": 6386
+ },
+ "recurve_bow": {
+  "id": "recurve_bow",
+  "name": "Recurve Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/weapons/bows/recurve_bow.glb",
+  "source": "Bows/Bows 1.glb",
+  "size": [
+   0.115,
+   1.397,
+   0.238
+  ],
+  "tris": 8568
+ },
+ "leafwing_bow": {
+  "id": "leafwing_bow",
+  "name": "Leafwing Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/weapons/bows/leafwing_bow.glb",
+  "source": "Bows/Bows 1.glb",
+  "size": [
+   0.126,
+   1.41,
+   0.219
+  ],
+  "tris": 9624
+ },
+ "ironbound_bow": {
+  "id": "ironbound_bow",
+  "name": "Ironbound Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/weapons/bows/ironbound_bow.glb",
+  "source": "Bows/Bows 1.glb",
+  "size": [
+   0.129,
+   1.435,
+   0.264
+  ],
+  "tris": 10292
+ },
+ "bonewrap_bow": {
+  "id": "bonewrap_bow",
+  "name": "Bonewrap Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 1,
+  "note": "",
+  "file": "assets/game/weapons/bows/bonewrap_bow.glb",
+  "source": "Bows/Bows 1.glb",
+  "size": [
+   0.121,
+   1.45,
+   0.267
+  ],
+  "tris": 11942
+ },
+ "longbow": {
+  "id": "longbow",
+  "name": "Longbow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/bows/longbow.glb",
+  "source": "Bows/Bows 2.glb",
+  "size": [
+   0.113,
+   1.446,
+   0.244
+  ],
+  "tris": 7810
+ },
+ "blackwood_bow": {
+  "id": "blackwood_bow",
+  "name": "Blackwood Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/bows/blackwood_bow.glb",
+  "source": "Bows/Bows 2.glb",
+  "size": [
+   0.13,
+   1.447,
+   0.281
+  ],
+  "tris": 10542
+ },
+ "ashwood_bow": {
+  "id": "ashwood_bow",
+  "name": "Ashwood Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/bows/ashwood_bow.glb",
+  "source": "Bows/Bows 2.glb",
+  "size": [
+   0.109,
+   1.448,
+   0.251
+  ],
+  "tris": 8030
+ },
+ "bone_bow": {
+  "id": "bone_bow",
+  "name": "Bone Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/bows/bone_bow.glb",
+  "source": "Bows/Bows 2.glb",
+  "size": [
+   0.135,
+   1.45,
+   0.286
+  ],
+  "tris": 11878
+ },
+ "yew_bow": {
+  "id": "yew_bow",
+  "name": "Yew Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/bows/yew_bow.glb",
+  "source": "Bows/Bows 2.glb",
+  "size": [
+   0.113,
+   1.447,
+   0.278
+  ],
+  "tris": 8056
+ },
+ "blossom_bow": {
+  "id": "blossom_bow",
+  "name": "Blossom Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/blossom_bow.glb",
+  "source": "Bows/Bows 3.glb",
+  "size": [
+   0.192,
+   1.45,
+   0.424
+  ],
+  "tris": 10208
+ },
+ "frostshard_bow": {
+  "id": "frostshard_bow",
+  "name": "Frostshard Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/frostshard_bow.glb",
+  "source": "Bows/Bows 3.glb",
+  "size": [
+   0.144,
+   1.365,
+   0.415
+  ],
+  "tris": 9190
+ },
+ "sunmoon_bow": {
+  "id": "sunmoon_bow",
+  "name": "Sunmoon Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/sunmoon_bow.glb",
+  "source": "Bows/Bows 3.glb",
+  "size": [
+   0.136,
+   1.35,
+   0.449
+  ],
+  "tris": 8254
+ },
+ "nightshade_bow": {
+  "id": "nightshade_bow",
+  "name": "Nightshade Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/nightshade_bow.glb",
+  "source": "Bows/Bows 3.glb",
+  "size": [
+   0.136,
+   1.352,
+   0.388
+  ],
+  "tris": 7626
+ },
+ "dragonwing_bow": {
+  "id": "dragonwing_bow",
+  "name": "Dragonwing Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/dragonwing_bow.glb",
+  "source": "Bows/Bows 3.glb",
+  "size": [
+   0.117,
+   1.393,
+   0.422
+  ],
+  "tris": 9604
+ },
+ "seraph_bow": {
+  "id": "seraph_bow",
+  "name": "Seraph Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/seraph_bow.glb",
+  "source": "Bows/Bows 4.glb",
+  "size": [
+   0.104,
+   1.429,
+   0.385
+  ],
+  "tris": 9502
+ },
+ "voidthorn_bow": {
+  "id": "voidthorn_bow",
+  "name": "Voidthorn Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/voidthorn_bow.glb",
+  "source": "Bows/Bows 4.glb",
+  "size": [
+   0.064,
+   1.298,
+   0.392
+  ],
+  "tris": 4962
+ },
+ "emerald_bow": {
+  "id": "emerald_bow",
+  "name": "Emerald Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/emerald_bow.glb",
+  "source": "Bows/Bows 4.glb",
+  "size": [
+   0.148,
+   1.392,
+   0.385
+  ],
+  "tris": 12284
+ },
+ "frostfeather_bow": {
+  "id": "frostfeather_bow",
+  "name": "Frostfeather Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/frostfeather_bow.glb",
+  "source": "Bows/Bows 4.glb",
+  "size": [
+   0.122,
+   1.45,
+   0.415
+  ],
+  "tris": 13087
+ },
+ "cinder_bow": {
+  "id": "cinder_bow",
+  "name": "Cinder Bow",
+  "kind": "bow",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/bows/cinder_bow.glb",
+  "source": "Bows/Bows 4.glb",
+  "size": [
+   0.098,
+   1.433,
+   0.404
+  ],
+  "tris": 7388
+ },
+ "lion_boomerang": {
+  "id": "lion_boomerang",
+  "name": "Lion Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/lion_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 1.glb",
+  "size": [
+   0.104,
+   0.568,
+   0.355
+  ],
+  "tris": 23538
+ },
+ "frost_boomerang": {
+  "id": "frost_boomerang",
+  "name": "Frost Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/frost_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 1.glb",
+  "size": [
+   0.105,
+   0.567,
+   0.362
+  ],
+  "tris": 23702
+ },
+ "fire_boomerang": {
+  "id": "fire_boomerang",
+  "name": "Fire Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/fire_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 1.glb",
+  "size": [
+   0.109,
+   0.6,
+   0.377
+  ],
+  "tris": 24716
+ },
+ "verdant_boomerang": {
+  "id": "verdant_boomerang",
+  "name": "Verdant Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/verdant_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 1.glb",
+  "size": [
+   0.103,
+   0.589,
+   0.354
+  ],
+  "tris": 24856
+ },
+ "sun_boomerang": {
+  "id": "sun_boomerang",
+  "name": "Sun Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/sun_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 2.glb",
+  "size": [
+   0.115,
+   0.576,
+   0.373
+  ],
+  "tris": 22792
+ },
+ "blood_boomerang": {
+  "id": "blood_boomerang",
+  "name": "Blood Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/blood_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 2.glb",
+  "size": [
+   0.116,
+   0.58,
+   0.376
+  ],
+  "tris": 24742
+ },
+ "ice_boomerang": {
+  "id": "ice_boomerang",
+  "name": "Ice Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/ice_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 2.glb",
+  "size": [
+   0.115,
+   0.6,
+   0.377
+  ],
+  "tris": 23202
+ },
+ "vine_boomerang": {
+  "id": "vine_boomerang",
+  "name": "Vine Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/vine_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 2.glb",
+  "size": [
+   0.116,
+   0.574,
+   0.38
+  ],
+  "tris": 26326
+ },
+ "gold_lion_boomerang": {
+  "id": "gold_lion_boomerang",
+  "name": "Gold Lion Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/gold_lion_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 3.glb",
+  "size": [
+   0.147,
+   0.597,
+   0.369
+  ],
+  "tris": 22546
+ },
+ "black_thorn_boomerang": {
+  "id": "black_thorn_boomerang",
+  "name": "Black Thorn Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/black_thorn_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 3.glb",
+  "size": [
+   0.137,
+   0.6,
+   0.362
+  ],
+  "tris": 23588
+ },
+ "bronze_leaf_boomerang": {
+  "id": "bronze_leaf_boomerang",
+  "name": "Bronze Leaf Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/bronze_leaf_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 3.glb",
+  "size": [
+   0.138,
+   0.582,
+   0.388
+  ],
+  "tris": 22668
+ },
+ "crystal_boomerang": {
+  "id": "crystal_boomerang",
+  "name": "Crystal Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/crystal_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 3.glb",
+  "size": [
+   0.139,
+   0.591,
+   0.375
+  ],
+  "tris": 26148
+ },
+ "wooden_boomerang": {
+  "id": "wooden_boomerang",
+  "name": "Wooden Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/wooden_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 4.glb",
+  "size": [
+   0.084,
+   0.596,
+   0.33
+  ],
+  "tris": 22494
+ },
+ "brass_boomerang": {
+  "id": "brass_boomerang",
+  "name": "Brass Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/brass_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 4.glb",
+  "size": [
+   0.109,
+   0.6,
+   0.31
+  ],
+  "tris": 21250
+ },
+ "spiked_boomerang": {
+  "id": "spiked_boomerang",
+  "name": "Spiked Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/spiked_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 4.glb",
+  "size": [
+   0.126,
+   0.584,
+   0.325
+  ],
+  "tris": 29850
+ },
+ "blue_boomerang": {
+  "id": "blue_boomerang",
+  "name": "Blue Boomerang",
+  "kind": "boomerang",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/boomerangs/blue_boomerang.glb",
+  "source": "Boomerangs/Boomerangs - 4.glb",
+  "size": [
+   0.077,
+   0.584,
+   0.315
+  ],
+  "tris": 22200
+ },
+ "frost_axe": {
+  "id": "frost_axe",
+  "name": "Frost Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/axes/frost_axe.glb",
+  "source": "Axes/1 Handed Axes 1.glb",
+  "size": [
+   0.125,
+   0.734,
+   0.401
+  ],
+  "tris": 20076
+ },
+ "ember_axe": {
+  "id": "ember_axe",
+  "name": "Ember Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/axes/ember_axe.glb",
+  "source": "Axes/1 Handed Axes 1.glb",
+  "size": [
+   0.12,
+   0.737,
+   0.406
+  ],
+  "tris": 17254
+ },
+ "thornwood_axe": {
+  "id": "thornwood_axe",
+  "name": "Thornwood Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/axes/thornwood_axe.glb",
+  "source": "Axes/1 Handed Axes 1.glb",
+  "size": [
+   0.12,
+   0.738,
+   0.411
+  ],
+  "tris": 23406
+ },
+ "sunsteel_axe": {
+  "id": "sunsteel_axe",
+  "name": "Sunsteel Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/axes/sunsteel_axe.glb",
+  "source": "Axes/1 Handed Axes 1.glb",
+  "size": [
+   0.112,
+   0.75,
+   0.396
+  ],
+  "tris": 17994
+ },
+ "magma_axe": {
+  "id": "magma_axe",
+  "name": "Magma Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/magma_axe.glb",
+  "source": "Axes/1 Handed Axes 2.glb",
+  "size": [
+   0.146,
+   0.705,
+   0.369
+  ],
+  "tris": 8472
+ },
+ "gilded_axe": {
+  "id": "gilded_axe",
+  "name": "Gilded Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/gilded_axe.glb",
+  "source": "Axes/1 Handed Axes 2.glb",
+  "size": [
+   0.139,
+   0.741,
+   0.485
+  ],
+  "tris": 9364
+ },
+ "rime_axe": {
+  "id": "rime_axe",
+  "name": "Rime Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/rime_axe.glb",
+  "source": "Axes/1 Handed Axes 2.glb",
+  "size": [
+   0.149,
+   0.732,
+   0.453
+  ],
+  "tris": 7800
+ },
+ "moss_axe": {
+  "id": "moss_axe",
+  "name": "Moss Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/moss_axe.glb",
+  "source": "Axes/1 Handed Axes 2.glb",
+  "size": [
+   0.135,
+   0.73,
+   0.484
+  ],
+  "tris": 11640
+ },
+ "bone_axe": {
+  "id": "bone_axe",
+  "name": "Bone Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/bone_axe.glb",
+  "source": "Axes/1 Handed Axes 2.glb",
+  "size": [
+   0.172,
+   0.746,
+   0.449
+  ],
+  "tris": 12796
+ },
+ "sapphire_axe": {
+  "id": "sapphire_axe",
+  "name": "Sapphire Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/sapphire_axe.glb",
+  "source": "Axes/1 Handed Axes 2.glb",
+  "size": [
+   0.14,
+   0.72,
+   0.524
+  ],
+  "tris": 9326
+ },
+ "butcher_axe": {
+  "id": "butcher_axe",
+  "name": "Butcher Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/butcher_axe.glb",
+  "source": "Axes/1 Handed Axes 2.glb",
+  "size": [
+   0.163,
+   0.734,
+   0.476
+  ],
+  "tris": 10884
+ },
+ "voidmoon_axe": {
+  "id": "voidmoon_axe",
+  "name": "Voidmoon Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/voidmoon_axe.glb",
+  "source": "Axes/1 Handed Axes 2.glb",
+  "size": [
+   0.141,
+   0.75,
+   0.455
+  ],
+  "tris": 8982
+ },
+ "horned_axe": {
+  "id": "horned_axe",
+  "name": "Horned Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/horned_axe.glb",
+  "source": "Axes/1 Handed Axes 3.glb",
+  "size": [
+   0.184,
+   0.687,
+   0.417
+  ],
+  "tris": 12554
+ },
+ "bluegem_axe": {
+  "id": "bluegem_axe",
+  "name": "Bluegem Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/bluegem_axe.glb",
+  "source": "Axes/1 Handed Axes 3.glb",
+  "size": [
+   0.109,
+   0.75,
+   0.4
+  ],
+  "tris": 8788
+ },
+ "flame_axe": {
+  "id": "flame_axe",
+  "name": "Flame Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/flame_axe.glb",
+  "source": "Axes/1 Handed Axes 3.glb",
+  "size": [
+   0.16,
+   0.747,
+   0.404
+  ],
+  "tris": 9310
+ },
+ "vine_axe": {
+  "id": "vine_axe",
+  "name": "Vine Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/vine_axe.glb",
+  "source": "Axes/1 Handed Axes 3.glb",
+  "size": [
+   0.116,
+   0.722,
+   0.396
+  ],
+  "tris": 9032
+ },
+ "icespine_axe": {
+  "id": "icespine_axe",
+  "name": "Icespine Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/icespine_axe.glb",
+  "source": "Axes/1 Handed Axes 3.glb",
+  "size": [
+   0.168,
+   0.727,
+   0.401
+  ],
+  "tris": 9392
+ },
+ "deathskull_axe": {
+  "id": "deathskull_axe",
+  "name": "Deathskull Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/deathskull_axe.glb",
+  "source": "Axes/1 Handed Axes 3.glb",
+  "size": [
+   0.161,
+   0.721,
+   0.476
+  ],
+  "tris": 9970
+ },
+ "hammer_axe": {
+  "id": "hammer_axe",
+  "name": "Hammer Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/hammer_axe.glb",
+  "source": "Axes/1 Handed Axes 3.glb",
+  "size": [
+   0.138,
+   0.681,
+   0.437
+  ],
+  "tris": 9972
+ },
+ "rust_axe": {
+  "id": "rust_axe",
+  "name": "Rust Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 2,
+  "note": "",
+  "file": "assets/game/weapons/axes/rust_axe.glb",
+  "source": "Axes/1 Handed Axes 3.glb",
+  "size": [
+   0.123,
+   0.713,
+   0.397
+  ],
+  "tris": 7484
+ },
+ "bearded_axe": {
+  "id": "bearded_axe",
+  "name": "Bearded Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/bearded_axe.glb",
+  "source": "Axes/1 Handed Axes 4.glb",
+  "size": [
+   0.163,
+   0.747,
+   0.299
+  ],
+  "tris": 9556
+ },
+ "hatchet": {
+  "id": "hatchet",
+  "name": "Hatchet",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/hatchet.glb",
+  "source": "Axes/1 Handed Axes 4.glb",
+  "size": [
+   0.133,
+   0.747,
+   0.314
+  ],
+  "tris": 8364
+ },
+ "spiked_axe": {
+  "id": "spiked_axe",
+  "name": "Spiked Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/spiked_axe.glb",
+  "source": "Axes/1 Handed Axes 4.glb",
+  "size": [
+   0.14,
+   0.75,
+   0.409
+  ],
+  "tris": 11586
+ },
+ "blue_grip_axe": {
+  "id": "blue_grip_axe",
+  "name": "Blue Grip Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/blue_grip_axe.glb",
+  "source": "Axes/1 Handed Axes 4.glb",
+  "size": [
+   0.125,
+   0.744,
+   0.333
+  ],
+  "tris": 7970
+ },
+ "broad_axe": {
+  "id": "broad_axe",
+  "name": "Broad Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/broad_axe.glb",
+  "source": "Axes/1 Handed Axes 4.glb",
+  "size": [
+   0.135,
+   0.708,
+   0.309
+  ],
+  "tris": 8776
+ },
+ "iron_hatchet": {
+  "id": "iron_hatchet",
+  "name": "Iron Hatchet",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/iron_hatchet.glb",
+  "source": "Axes/1 Handed Axes 4.glb",
+  "size": [
+   0.143,
+   0.727,
+   0.304
+  ],
+  "tris": 8488
+ },
+ "horned_hatchet": {
+  "id": "horned_hatchet",
+  "name": "Horned Hatchet",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/horned_hatchet.glb",
+  "source": "Axes/1 Handed Axes 4.glb",
+  "size": [
+   0.136,
+   0.723,
+   0.434
+  ],
+  "tris": 13724
+ },
+ "green_grip_axe": {
+  "id": "green_grip_axe",
+  "name": "Green Grip Axe",
+  "kind": "axe",
+  "hands": 1,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/green_grip_axe.glb",
+  "source": "Axes/1 Handed Axes 4.glb",
+  "size": [
+   0.128,
+   0.716,
+   0.32
+  ],
+  "tris": 8538
+ },
+ "inferno_greataxe": {
+  "id": "inferno_greataxe",
+  "name": "Inferno Greataxe",
+  "kind": "great_axe",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/axes/inferno_greataxe.glb",
+  "source": "Axes/2 Handed Axes 1.glb",
+  "size": [
+   0.138,
+   1.396,
+   0.333
+  ],
+  "tris": 18298
+ },
+ "glacier_greataxe": {
+  "id": "glacier_greataxe",
+  "name": "Glacier Greataxe",
+  "kind": "great_axe",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/axes/glacier_greataxe.glb",
+  "source": "Axes/2 Handed Axes 1.glb",
+  "size": [
+   0.141,
+   1.365,
+   0.315
+  ],
+  "tris": 19254
+ },
+ "wildwood_greataxe": {
+  "id": "wildwood_greataxe",
+  "name": "Wildwood Greataxe",
+  "kind": "great_axe",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/axes/wildwood_greataxe.glb",
+  "source": "Axes/2 Handed Axes 1.glb",
+  "size": [
+   0.125,
+   1.35,
+   0.306
+  ],
+  "tris": 24446
+ },
+ "solar_greataxe": {
+  "id": "solar_greataxe",
+  "name": "Solar Greataxe",
+  "kind": "great_axe",
+  "hands": 2,
+  "tier": 3,
+  "note": "",
+  "file": "assets/game/weapons/axes/solar_greataxe.glb",
+  "source": "Axes/2 Handed Axes 1.glb",
+  "size": [
+   0.138,
+   1.4,
+   0.318
+  ],
+  "tris": 16910
+ },
+ "iron_greataxe": {
+  "id": "iron_greataxe",
+  "name": "Iron Greataxe",
+  "kind": "great_axe",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/iron_greataxe.glb",
+  "source": "Axes/2 Handed Axes 2.glb",
+  "size": [
+   0.119,
+   1.334,
+   0.297
+  ],
+  "tris": 19930
+ },
+ "brass_greataxe": {
+  "id": "brass_greataxe",
+  "name": "Brass Greataxe",
+  "kind": "great_axe",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/brass_greataxe.glb",
+  "source": "Axes/2 Handed Axes 2.glb",
+  "size": [
+   0.108,
+   1.367,
+   0.246
+  ],
+  "tris": 15368
+ },
+ "black_greataxe": {
+  "id": "black_greataxe",
+  "name": "Black Greataxe",
+  "kind": "great_axe",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/black_greataxe.glb",
+  "source": "Axes/2 Handed Axes 2.glb",
+  "size": [
+   0.125,
+   1.341,
+   0.279
+  ],
+  "tris": 22002
+ },
+ "blood_greataxe": {
+  "id": "blood_greataxe",
+  "name": "Blood Greataxe",
+  "kind": "great_axe",
+  "hands": 2,
+  "tier": 0,
+  "note": "",
+  "file": "assets/game/weapons/axes/blood_greataxe.glb",
+  "source": "Axes/2 Handed Axes 2.glb",
+  "size": [
+   0.112,
+   1.4,
+   0.282
+  ],
+  "tris": 19716
+ }
+}

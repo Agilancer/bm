@@ -2,6 +2,7 @@
 //
 //     node tools/items/check.mjs
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { BASES, GEMS, MAX_SOCKETS, RARITIES, ROBES, ROBE_PALETTES, SHIELDS, SKULLS, gearTotals, hands, linesOf, makeRng, nameOf, rollChest, rollGem, rollLoot, rollRobe, rollShield, rollSkull, rollWeapon, setFind } from '../../src/items/items.js';
 import { Pack, sizeOf } from '../../src/items/pack.js';
 import { levelPerks, stepXp, xpFor, XP_OF } from '../../src/items/levels.js';
@@ -26,6 +27,34 @@ for (let i = 0; i < 4000; i++) {
   for (const t of [0, 1, 2]) for (const it of rollChest(rng, t)) assert.notEqual(it.type, 'armor');
 }
 for (const t of ['weapon', 'skull', 'robe', 'gem', 'shield', 'spell', 'gold']) assert.ok(seen.has(t), `${t} drops`);
+
+// Every shield anyone may carry turns up, kites and towers, at all five rarities, from every chest and the fallen of every
+// kind that drops things, with its model and its icon on file. V's and T's never do. A tower wards more than a kite.
+{
+  const r2 = makeRng(11), bases = new Set(), rar = new Set(), chests = new Set(), fallen = new Set();
+  for (let i = 0; i < 40000; i++) {
+    const s = rollShield(r2);
+    bases.add(s.base); rar.add(s.rarity);
+    assert.ok(!SHIELDS[s.base].side && s.armor > 0 && linesOf(s)[1].text.endsWith(`${SHIELDS[s.base].kind || 'kite'} shield`));
+  }
+  const carried = Object.keys(SHIELDS).filter((b) => !SHIELDS[b].side);
+  assert.deepEqual([...bases].sort(), carried.sort(), 'every shield rolls');
+  assert.deepEqual([...rar].sort(), [0, 1, 2, 3, 4], 'shields at all five rarities');
+  assert.equal(carried.filter((b) => SHIELDS[b].kind === 'tower').length, 20, 'the twenty towers');
+  for (let i = 0; i < 20000; i++) {
+    for (const t of [0, 1, 2]) for (const it of rollChest(r2, t)) if (it.type === 'shield') chests.add(t);
+    for (const k of [0, 1, 5, 7, 8, 9]) for (const it of rollLoot(r2, k)) if (it.type === 'shield') fallen.add(k);
+  }
+  assert.deepEqual([...chests].sort(), [0, 1, 2], 'shields in every chest');
+  assert.deepEqual([...fallen].sort(), [0, 1, 5, 7, 8, 9], 'shields from the fallen');
+  const ward = (base) => { let t = 0; for (let i = 0; i < 2000; i++) t += rollShield(r2, { base }).armor; return t / 2000; };
+  assert.ok(ward('tower_iron') > ward('kite_chevron') * 1.15, 'a tower wards more');
+  for (const b of Object.keys(SHIELDS)) {
+    assert.ok(existsSync(new URL(`../../assets/game/items/${b}.glb`, import.meta.url)), `${b}.glb`);
+    assert.ok(existsSync(new URL(`../../assets/game/items/icons/${b}.webp`, import.meta.url)), `${b}.webp`);
+  }
+  console.log(`shields: ${carried.length} roll, ${Object.keys(SHIELDS).length - carried.length} never do`);
+}
 
 // A skull comes at all five rarities, a robe's rarity keeps its palette's floor.
 setFind(1);
