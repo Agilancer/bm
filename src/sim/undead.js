@@ -1307,6 +1307,21 @@ export function stepWoods(sim) {
   sim.packAt = sim.time + rnd(QUIET[0], QUIET[1]) * (out > 170 ? 0.6 : 1);   // Quieter near the town, relentless far out.
 }
 
+// The opening's ambush on the road down (src/sim/opening.js): n of the dead, slow ones, stood up around (cx, cz) and set on
+// you. Returns them, so the story knows when they're down.
+export function ambush(sim, cx, cz, n) {
+  const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || k.dead || !k.aggro);
+  const bodies = sim.knights.filter(free).slice(0, n);
+  bodies.forEach((b, i) => {
+    const a = i * 2.4 + rnd(-0.4, 0.4), r = rnd(1.5, 4);
+    let x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r;
+    if (sim.world.inside(x, z, 0.7)) { x = cx; z = cz; }
+    huntFrom(sim, b, x, z, 'shambler');
+  });
+  sim.event(EV.ROAR, cx, sim.world.height(cx, cz) + 1, cz, 1);
+  return bodies;
+}
+
 export async function addUndead(sim, base) {
   const fetchBuf = (m) => fetch(`${base}assets/monsters/zombie/${m}.glb`).then((r) => { if (!r.ok) throw new Error(`${m}: ${r.status}`); return r.arrayBuffer(); });
   const [zMeta, cMeta, buffers] = await Promise.all([

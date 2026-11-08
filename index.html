@@ -201,25 +201,47 @@
   #spellGrid .card kbd:empty { display: none; }
   #spellGhost { --c: #ccc; position: fixed; left: 0; top: 0; width: 38px; height: 38px; margin: -19px 0 0 -19px; display: none; z-index: 45; color: var(--c); pointer-events: none; filter: drop-shadow(0 2px 5px #000); }
   #spellGhost svg { display: block; width: 100%; height: 100%; }
-/* Bellmourn villagers.js Bubbles: parchment, double trim, dark ink and a speaker tail. */
-#opening-scene{position:fixed;z-index:12;transform:translate(-50%,-100%);width:max-content;max-width:min(340px,86vw);box-sizing:border-box;padding:11px 16px;color:#2a1a0e;background:#f6e8c6;border:2px solid #d8b870;border-radius:9px;outline:3px solid #19100d;box-shadow:0 5px 12px #0009,inset 0 0 0 2px #f6e8c6,inset 0 0 0 3px #8a6a3a;font:600 19px/1.2 "Segoe UI",sans-serif;text-align:center;pointer-events:none}
-#opening-scene::after{content:"";position:absolute;left:calc(50% - 7px);bottom:-11px;width:14px;height:14px;background:#f6e8c6;border-right:2px solid #19100d;border-bottom:2px solid #19100d;transform:rotate(45deg)}
-#opening-scene .opening-speaker{position:absolute;bottom:calc(100% + 6px);left:7px;white-space:nowrap;font:italic 600 14px "Segoe UI",sans-serif;color:#f6e8c6;text-shadow:0 1px 3px #19100d,0 0 4px #19100d}
-#opening-scene p{margin:0}
-#opening-scene.player-speaking{background:#f0dfbc;color:#302115}
-#opening-scene.player-speaking::after{top:-10px;bottom:auto;transform:rotate(225deg);background:#f0dfbc}
-#opening-name-panel{position:fixed;z-index:13;bottom:92px;left:50%;transform:translateX(-50%);padding:14px 20px;background:#f6e8c6;color:#2a1a0e;border:2px solid #d8b870;border-radius:8px;outline:3px solid #19100d;text-align:center;box-shadow:0 5px 16px #0008}
-#opening-name-panel label,#opening-name-panel small{display:block;margin:5px 0;font:16px Georgia,serif}
-#opening-name-panel small{font-size:12px}
-#opening-name-panel input,#opening-name-panel button{font:16px Georgia,serif;color:#2a1a0e;background:#fff4da;border:1px solid #8a6a3a;padding:8px}
-#opening-name-panel input{max-width:55%}
-#opening-name-panel button{cursor:pointer}
-#opening-scene[hidden],#opening-name-panel[hidden],#opening-name-panel [hidden]{display:none}
-#opening-eyes{position:fixed;inset:0;z-index:20;overflow:hidden;pointer-events:none;backdrop-filter:blur(var(--haze,0px))}
-#opening-eyes[hidden]{display:none}
-#opening-eyes span{position:absolute;left:-10%;width:120%;height:calc(var(--lid,57vh) + 24vh);background:#030207;box-shadow:0 0 26px 14px #030207}
-#opening-eyes span:first-child{top:-24vh;border-radius:0 0 50% 50% / 0 0 16% 16%}
-#opening-eyes span:last-child{bottom:-24vh;border-radius:50% 50% 0 0 / 16% 16% 0 0}
+/* The opening (src/ui/opening.js): bars, eyes, flash, her words, the cards, hold to skip. */
+#opening{position:fixed;inset:0;z-index:12;pointer-events:none;font-family:"Alegreya Sans",Georgia,serif}
+#opening[hidden],#opening [hidden],#opening-name-panel[hidden]{display:none!important}
+#opening .op-bar{position:absolute;left:0;right:0;height:10.5vh;background:#000;transition:transform .9s cubic-bezier(.6,0,.3,1)}
+#opening .op-top{top:0;transform:translateY(-101%)}
+#opening .op-bottom{bottom:0;transform:translateY(101%)}
+#opening.bars .op-top,#opening.bars .op-bottom{transform:none}
+#opening .op-eyes{position:absolute;inset:0;overflow:hidden;backdrop-filter:blur(var(--haze,0px));-webkit-backdrop-filter:blur(var(--haze,0px))}
+#opening .op-eyes span{position:absolute;left:-10%;width:120%;height:calc(var(--lid,51vh) + 24vh);background:#030207;box-shadow:0 0 30px 18px #030207}
+#opening .op-eyes span:first-child{top:-24vh;border-radius:0 0 50% 50% / 0 0 18% 18%}
+#opening .op-eyes span:nth-child(2){bottom:-24vh;border-radius:50% 50% 0 0 / 18% 18% 0 0}
+#opening .op-eyes i{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,transparent 38%,rgba(3,2,7,var(--vig,0)) 100%)}
+#opening .op-flash{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at 50% 45%,#fff 0%,#f1e6ff 35%,#b98cff 100%)}
+#opening .op-flash.dark{background:#000}
+#opening .op-sub{position:absolute;left:50%;bottom:1.2vh;transform:translateX(-50%);width:min(860px,88vw);text-align:center;color:#f4ecdc;text-shadow:0 2px 3px #000,0 0 12px #000a}
+#opening:not(.bars) .op-sub{bottom:24vh}
+#opening .op-sub b{display:block;margin-bottom:2px;font:700 13px/1 Cinzel,Georgia,serif;letter-spacing:.2em;color:var(--gold)}
+#opening .op-sub b:empty{display:none}
+#opening .op-sub p{margin:0;font:600 clamp(17px,2vw,24px)/1.22 "Alegreya Sans",Georgia,serif}
+#opening .op-sub.soft p{font-style:italic;color:#e4d8f2}
+#opening .op-sub.big p{font:900 clamp(28px,4vw,46px)/1.1 Cinzel,Georgia,serif;letter-spacing:.04em;color:#fff;animation:op-jolt .32s ease-out}
+#opening .op-sub.caption p{font-style:italic;color:#cfc6b8;font-size:clamp(16px,1.8vw,21px)}
+#opening .op-ghost{visibility:hidden}
+@keyframes op-jolt{0%{transform:scale(1.18)}60%{transform:scale(.98)}100%{transform:none}}
+#opening .op-title{position:absolute;left:0;right:0;top:15%;text-align:center;opacity:0;color:#f4ecdc;text-shadow:0 2px 6px #000,0 0 22px #000}
+#opening .op-title h1{margin:0;font:700 clamp(34px,6vw,72px)/1 "Cinzel Decorative",Cinzel,serif;letter-spacing:.08em}
+#opening .op-title p{margin:12px 0 0;font:500 clamp(14px,1.6vw,19px)/1.2 Cinzel,serif;letter-spacing:.18em;color:var(--gold)}
+#opening .op-title em{font-style:normal;color:#b9a7e6}
+#opening .op-quest{position:absolute;left:50%;top:15vh;transform:translateX(-50%);padding:12px 34px;opacity:0;text-align:center;background:linear-gradient(90deg,transparent,#0b0907d0 18%,#0b0907d0 82%,transparent);border-top:1px solid var(--gold-dim);border-bottom:1px solid var(--gold-dim)}
+#opening .op-quest small{display:block;font:700 12px Cinzel,serif;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
+#opening .op-quest span{display:block;margin-top:4px;font:600 clamp(18px,2vw,24px) "Alegreya Sans",serif;color:#f4ecdc}
+#opening .op-track{position:absolute;right:18px;top:clamp(150px,22vh,230px);font:600 15px "Alegreya Sans",serif;color:#f4ecdc;text-shadow:0 1px 3px #000}
+#opening .op-track:not(:empty)::before{content:"\25C6  ";color:var(--gold)}
+#opening .op-skip{position:absolute;right:22px;bottom:3.4vh;font:600 13px "Alegreya Sans",serif;color:#cfc6b8;text-shadow:0 1px 2px #000;opacity:.8}
+#opening .op-skip i{display:block;height:2px;margin-top:4px;background:var(--gold);transform-origin:left;transform:scaleX(var(--k,0))}
+body.cinematic #hud,body.cinematic #mapMini,body.cinematic #touch{visibility:hidden}
+#opening-name-panel{position:fixed;z-index:13;bottom:1.6vh;left:50%;transform:translateX(-50%);padding:7px 16px;white-space:nowrap;background:#0b0907e8;color:#f4ecdc;border:1px solid var(--gold-dim);border-radius:4px;text-align:center;box-shadow:0 5px 22px #000a}
+#opening-name-panel label{display:inline;margin:0 12px 0 0;font:italic 600 18px "Alegreya Sans",Georgia,serif}
+#opening-name-panel input,#opening-name-panel button{font:600 17px "Alegreya Sans",Georgia,serif;color:#f4ecdc;background:#1b1611;border:1px solid var(--gold-dim);padding:8px 10px}
+#opening-name-panel input{width:min(260px,56vw)}
+#opening-name-panel button{cursor:pointer;margin-left:6px;color:var(--gold)}
 #opening-eyes.reveal{backdrop-filter:none;background:radial-gradient(ellipse,#e5baff 0%,#9a56ef 43%,#3d1b63 100%);opacity:var(--flash,0)}
 #opening-eyes.reveal span{display:none}
 </style>

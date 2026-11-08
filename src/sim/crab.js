@@ -3,6 +3,7 @@
 import { EV } from '../core/layout.js';
 import { clamp, damp, quatMul, quatYaw, wrapAngle } from '../core/math.js';
 import { Beast } from './beast.js';
+import { OPENING } from '../core/opening.js';
 
 export const CRAB_SCALE = 2.6;
 const S = CRAB_SCALE;
@@ -110,7 +111,9 @@ export class Crab extends Beast {
     // They wake a while after the first blood is spilled, or in the end regardless, and then they know where you
     // are. They lose interest once the knight is dead, so a win isn't taken away by a crab.
     // (Only when you come near, or strike first.)
-    const awake = dist < 24 || this.hitOnce;
+    // (Not while Lisandra walks you down to town, the way the field creatures leave you be, unless you strike it.)
+    const story = sim.opening && sim.opening.stage < OPENING.ARRIVED;
+    const awake = (dist < 24 && !story) || this.hitOnce;
     const senses = awake && !p.dead && sim.gameState === 0;
     if (senses && !sim.crabWoke) { sim.crabWoke = true; sim.event(EV.CRAB_WAKE); }
     let dvx = 0, dvz = 0, want;

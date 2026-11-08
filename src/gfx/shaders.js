@@ -1,4 +1,42 @@
 // WGSL shared by the world's pipelines: the frame block, lighting, shadows, fog.
+import { CAVE_BOX, CAVE_LINE, CHAMBER_FIRST } from '../core/opening.js';
+
+// Lisandra's cave, as the shader sees it: a few straight pieces of its centreline, each with its half width and roof. How far
+// into it a point is, 0 out on the ledge to 1 a few metres in, takes the sun away and puts the cave's own light in its place.
+const CAVE_WGSL = (() => {
+  const L = CAVE_LINE, pick = [];
+  for (let i = 0; i < CHAMBER_FIRST; i += 6) pick.push(i);
+  pick.push(CHAMBER_FIRST, L.length - 1);
+  const A = [], B = [];
+  let y0 = 1e9, y1 = -1e9;
+  for (let k = 0; k + 1 < pick.length; k++) {
+    const a = L[pick[k]], b = L[pick[k + 1]], chamber = b[8] >= 0 && a[8] >= 0;
+    let w = 0, top = -1e9;
+    for (let i = pick[k]; i <= pick[k + 1]; i++) { w = Math.max(w, L[i][6]); top = Math.max(top, L[i][5] + L[i][7]); y0 = Math.min(y0, L[i][5]); }
+    top += chamber ? 1.0 : 0.4;
+    y1 = Math.max(y1, top);
+    A.push(`vec4f(${a[0].toFixed(3)}, ${a[1].toFixed(3)}, ${b[0].toFixed(3)}, ${b[1].toFixed(3)})`);
+    B.push(`vec4f(${a[4].toFixed(3)}, ${b[4].toFixed(3)}, ${(w + (chamber ? 1.0 : 0.6)).toFixed(3)}, ${top.toFixed(3)})`);
+  }
+  const N = A.length, f = (v) => v.toFixed(2);
+  return `
+var<private> CAVE_A: array<vec4f, ${N}> = array<vec4f, ${N}>(${A.join(', ')});
+var<private> CAVE_B: array<vec4f, ${N}> = array<vec4f, ${N}>(${B.join(', ')});
+fn caveAt(p: vec3f) -> f32 {
+  if (F.caveAmb.w < 0.5 || p.x < ${f(CAVE_BOX.x0)} || p.x > ${f(CAVE_BOX.x1)} || p.z < ${f(CAVE_BOX.z0)} || p.z > ${f(CAVE_BOX.z1)} || p.y < ${f(y0 - 1)} || p.y > ${f(y1)}) { return 0.0; }
+  var best = 1.0e9; var s = -1.0; var w = 0.0; var top = 0.0;
+  for (var i = 0; i < ${N}; i++) {
+    let a = CAVE_A[i]; let b = CAVE_B[i];
+    let e = a.zw - a.xy;
+    let raw = dot(p.xz - a.xy, e) / dot(e, e);
+    let t = clamp(raw, 0.0, 1.0);
+    let d = length(p.xz - (a.xy + e * t));
+    if (d < best) { best = d; s = mix(b.x, b.y, t); w = b.z; top = b.w; if (i == 0 && raw < 0.0) { s = raw * length(e); } }
+  }
+  if (best > w || p.y > top) { return 0.0; }
+  return smoothstep(-0.3, 3.5, s);
+}`;
+})();
 
 export const COMMON = /* wgsl */ `
 struct Light { posR: vec4f, colI: vec4f };
@@ -25,6 +63,7 @@ struct Frame {
   chars: array<vec4f, 6>, // bodies pressing the grass
   lights: array<Light, 28>,
   counts: vec4f,          // x = lights, y = cascades, z = pom, w = grass near radius
+  caveAmb: vec4f,         // Lisandra's cave: its own ambient light, w = whether it's there at all
 };
 
 @group(0) @binding(0) var<uniform> F: Frame;
@@ -157,15 +196,18 @@ fn indoorAt(p: vec3f) -> f32 {
   return select(0.0, 2.0, p.x < 262.0 && p.z > -176.0 && p.z < 45.0 && p.y < -6.0);
 }
 
+${CAVE_WGSL}
 fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32, ao: f32, shadow: f32) -> vec3f {
   let f0 = mix(vec3f(0.04), albedo, metal);
   let indoor = indoorAt(p);
+  let cave = caveAt(p);
   var c = vec3f(0.0);
-  if (indoor < 0.5) { c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow; }
+  if (indoor < 0.5 && cave < 0.99) { c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow * (1.0 - cave); }
   // Ambient: the sky's hemisphere for diffuse, its picture for reflections.
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   if (indoor > 1.5) { ambient = vec3f(0.044, 0.044, 0.048); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);
   let nv = max(dot(n, v), 0.0);
   let refl = reflect(-v, n);
   // On a phone only metal reads the sky's picture. On anything else it's a faint sheen, and this fit to that picture, as
@@ -184,6 +226,7 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   let horizon = smoothstep(-0.25, 0.12, refl.y);
   var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
   if (indoor > 0.5) { reflected *= select(0.22, 0.05, indoor > 1.5); }
+  reflected *= mix(1.0, 0.06, cave);
   let sunOcc = mix(0.55, 1.0, shadow);
   c += albedo * (1.0 - metal) * ambient * ao;
   c += reflected * fr * ao * sunOcc * envBoost;
@@ -203,6 +246,12 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
 
 fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
   let indoor = indoorAt(p);
+  let cave = caveAt(p);
+  if (cave > 0.01) {
+    // Deep in the hill the far end goes to murk, and seen from out on the ledge the tunnel is a dark throat.
+    let murk = mix(c, F.caveAmb.rgb * 0.4, clamp(1.0 - exp(-dist * 0.035), 0.0, 1.0));
+    return mix(c, murk, cave);
+  }
   if (indoor > 0.5) {
     // Dust, and at the bottom of the stair a damp that swallows the far end of a long gallery.
     let inside = select(vec3f(0.05, 0.045, 0.04), vec3f(0.012, 0.007, 0.0045), indoor > 1.5);

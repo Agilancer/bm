@@ -3,7 +3,8 @@
 // informed by however many cores the machine can spare.
 import { CTRL, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, mapShared } from '../core/layout.js';
 import { forestAmount, forestTrees } from '../core/forest.js';
-import { setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
+import { openingTerrain, setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
+import { CAVE_MOUTH, caveCuts } from '../core/opening.js';
 
 async function decode(url, flags) {
   const r = await fetch(url);
@@ -17,7 +18,15 @@ async function decode(url, flags) {
 function buildTerrain({ n, extent, patch }) {
   // The hill and its roads have a finer grid of their own: this one's cells are ten metres across out there, which a road can't be cut into.
   const px = Math.round((patch.x1 - patch.x0) / patch.cell), pz = Math.round((patch.z1 - patch.z0) / patch.cell);
-  const verts = new Float32Array(((n + 1) * (n + 1) + (px + 1) * (pz + 1)) * 6);
+  // And Lisandra's cave mouth one finer still, on whole cells of the hill's, with the hillside left open where the tunnel runs in.
+  const e = patch.cell;
+  const fine = openingTerrain ? (() => {
+    const i0 = Math.floor((CAVE_MOUTH[0] - 11 - patch.x0) / e), j0 = Math.floor((CAVE_MOUTH[1] - 11 - patch.z0) / e);
+    const cells = Math.ceil(22 / e);
+    return { i0, j0, i1: i0 + cells, j1: j0 + cells, x0: patch.x0 + i0 * e, z0: patch.z0 + j0 * e, size: cells * e, cell: 0.5, k: Math.round(e / 0.5) };
+  })() : null;
+  const fn = fine ? fine.size / fine.cell : 0;
+  const verts = new Float32Array(((n + 1) * (n + 1) + (px + 1) * (pz + 1) + (fine ? (fn + 1) * (fn + 1) : 0)) * 6);
   // About 0.8 m a cell at the centre, stretching out to the horizon.
   const c = 0.4 * n;
   const warp = (t) => Math.sign(t) * (c * Math.abs(t) + (extent - c) * Math.abs(t) ** 4);
@@ -38,7 +47,7 @@ function buildTerrain({ n, extent, patch }) {
   }
   // (A cell's left out only well inside it: the two overlap at the edge, and the ground's colour goes by where it is, so nothing shows.)
   const under = (x, z) => x > patch.x0 + 12 && x < patch.x1 - 12 && z > patch.z0 + 12 && z < patch.z1 - 12;
-  const idx = new Uint32Array((n * n + px * pz) * 6);
+  const idx = new Uint32Array((n * n + px * pz + fn * fn) * 6);
   let o = 0;
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
@@ -47,22 +56,49 @@ function buildTerrain({ n, extent, patch }) {
       idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
     }
   }
-  const first = (n + 1) * (n + 1), e = patch.cell;
+  const vertex = (k, x, z, y, g) => {
+    const dx = (terrainHeight(x + g, z) - terrainHeight(x - g, z)) / (2 * g);
+    const dz = (terrainHeight(x, z + g) - terrainHeight(x, z - g)) / (2 * g);
+    const l = 1 / Math.hypot(dx, 1, dz);
+    verts[k] = x; verts[k + 1] = y; verts[k + 2] = z;
+    verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
+  };
+  const first = (n + 1) * (n + 1);
   for (let j = 0; j <= pz; j++) {
     for (let i = 0; i <= px; i++) {
       const x = patch.x0 + i * e, z = patch.z0 + j * e;
-      const dx = (terrainHeight(x + e, z) - terrainHeight(x - e, z)) / (2 * e);
-      const dz = (terrainHeight(x, z + e) - terrainHeight(x, z - e)) / (2 * e);
-      const l = 1 / Math.hypot(dx, 1, dz);
-      const k = (first + j * (px + 1) + i) * 6;
-      verts[k] = x; verts[k + 1] = terrainHeight(x, z); verts[k + 2] = z;
-      verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
+      vertex((first + j * (px + 1) + i) * 6, x, z, terrainHeight(x, z), e);
     }
   }
   for (let j = 0; j < pz; j++) {
     for (let i = 0; i < px; i++) {
+      if (fine && i >= fine.i0 && i < fine.i1 && j >= fine.j0 && j < fine.j1) continue;
       const a = first + j * (px + 1) + i, b = a + 1, c = a + px + 1, d = c + 1;
       idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
+    }
+  }
+  if (fine) {
+    // Its rim takes the hill grid's own straight edges, so the two meet without a crack.
+    const second = first + (px + 1) * (pz + 1), m = fn + 1, k = fine.k;
+    const hill = (i, j) => terrainHeight(patch.x0 + i * e, patch.z0 + j * e);
+    for (let j = 0; j <= fn; j++) {
+      for (let i = 0; i <= fn; i++) {
+        const x = fine.x0 + i * fine.cell, z = fine.z0 + j * fine.cell;
+        let y = terrainHeight(x, z);
+        if (i === 0 || i === fn || j === 0 || j === fn) {
+          const ci = fine.i0 + Math.floor(i / k), cj = fine.j0 + Math.floor(j / k), fi = (i % k) / k, fj = (j % k) / k;
+          y = i === 0 || i === fn ? hill(ci, cj) + (hill(ci, cj + 1) - hill(ci, cj)) * fj : hill(ci, cj) + (hill(ci + 1, cj) - hill(ci, cj)) * fi;
+        }
+        vertex((second + j * m + i) * 6, x, z, y, fine.cell);
+      }
+    }
+    const cut = (i, j) => caveCuts(fine.x0 + i * fine.cell, fine.z0 + j * fine.cell, verts[(second + j * m + i) * 6 + 1]);
+    for (let j = 0; j < fn; j++) {
+      for (let i = 0; i < fn; i++) {
+        if (cut(i, j) || cut(i + 1, j) || cut(i, j + 1) || cut(i + 1, j + 1)) continue;
+        const a = second + j * m + i, b = a + 1, c = a + m, d = c + 1;
+        idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
+      }
     }
   }
   return { verts, idx: idx.subarray(0, o) };
