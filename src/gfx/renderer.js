@@ -27,6 +27,12 @@ import { CRAB_SCALE } from '../sim/crab.js';
 import { GRAVEHART_SCALE } from '../sim/gravehart.js';
 import { HYDRA_SCALE } from '../sim/hydra.js';
 import { SKIN } from './shaders.js';
+import { Dangles } from './dangles.js';
+import { STAFF_GLOW, STAFF_SPIN } from '../items/staffglow.js';
+import { STAFFS2 } from '../items/staffs2.js';
+
+const STAFFS2_IDS = new Set(STAFFS2.map((s) => s.id));
+const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 444;
@@ -86,6 +92,21 @@ function clusterIndices({ pos, idx, uv, skinTag }, cell) {
     if (a !== b && b !== c && a !== c) { out[n++] = a; out[n++] = b; out[n++] = c; }
   }
   return out.subarray(0, n);
+}
+
+// A staff is held turned about its own shaft (STAFF_SPIN, src/items/staffglow.js), the head's face to the eye: its points and normals.
+function spinPoint(p, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [c * p[0] + s * p[2], p[1], -s * p[0] + c * p[2]];
+}
+function spinStaff(prim, a) {
+  const c = Math.cos(a), s = Math.sin(a), pos = new Float32Array(prim.pos), nrm = new Float32Array(prim.nrm);
+  for (let v = 0; v < pos.length; v += 3) {
+    const x = pos[v], z = pos[v + 2], nx = nrm[v], nz = nrm[v + 2];
+    pos[v] = c * x + s * z; pos[v + 2] = -s * x + c * z;
+    nrm[v] = c * nx + s * nz; nrm[v + 2] = -s * nx + c * nz;
+  }
+  prim.pos = pos; prim.nrm = nrm;
 }
 
 export class Renderer {
@@ -691,8 +712,33 @@ export class Renderer {
     const vm = this.vms[w ? w.hands : 1];
     if (w) {
       // Carry the staff kind alongside its original model coordinates. Other gear stays untagged.
-      if (w.hands === 3) prim.piece = new Uint32Array(prim.pos.length / 3).fill(WEAPONS.indexOf(w));
+      if (w.hands === 3) {
+        // The staff's own glow colour rides each vertex (the head's living light, in materials.js): top bit set, then 8-bit RGB.
+        const g = STAFF_GLOW[id] || [255, 56, 6], painted = STAFFS2_IDS.has(id) ? 0x40000000 : 0;
+        prim.piece = new Uint32Array(prim.pos.length / 3).fill((0x80000000 | painted | (g[0] << 16) | (g[1] << 8) | g[2]) >>> 0);
+        spinStaff(prim, STAFF_SPIN);
+        // The first twelve are cut bigger than the painted ones: face-on after the turn they filled the view, so in the hand
+        // they're 0.8 of their size about the fist (the owner's call, 2026-11-08). The one on the ground keeps its size.
+        if (!painted) {
+          for (let v = 0; v < prim.pos.length; v++) prim.pos[v] *= OLD_STAFF_HELD;
+          s.tip *= OLD_STAFF_HELD;
+        }
+      }
       this.onWeaponJoint(prim, vm.weaponJoint, vm.weaponBind);
+      // What hangs off it: one more joint each past the rig's own, swung by Dangles each frame.
+      const hang = w.hands === 3 && glb.json.meshes[0].extras?.dangles;
+      if (hang?.length && a._DANGLE !== undefined) {
+        const D = accessor(glb, a._DANGLE), n = prim.pos.length / 3;
+        prim.joints = new Uint8Array(n * 4); prim.weights = new Float32Array(n * 4);
+        for (let v = 0; v < n; v++) {
+          const k = D[v * 2], wt = D[v * 2 + 1];
+          prim.joints[v * 4] = vm.weaponJoint; prim.weights[v * 4] = 1 - (k ? wt : 0);
+          if (k) { prim.joints[v * 4 + 1] = vm.jointCount + k - 1; prim.weights[v * 4 + 1] = wt; }
+        }
+        const parts = hang.map((d) => ({ ...d, pivot: spinPoint(d.pivot, STAFF_SPIN) }));
+        s.dangles = new Dangles(parts, vm.weaponBind);
+        s.extraJoints = parts.length;
+      }
     }
     else {
       // (Not a weapon: a shield, on the arm's shield joint.)
@@ -707,7 +753,7 @@ export class Renderer {
       prim.pos = pos; prim.nrm = nrm;
       this.onWeaponJoint(prim, vm.shieldJoint, vm.shieldBind);
     }
-    s.hand = this.makeSkinned([prim], vm.jointCount);
+    s.hand = this.makeSkinned([prim], vm.jointCount + (s.extraJoints || 0));
     s.ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     s.bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: s.ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
@@ -1780,7 +1826,15 @@ export class Renderer {
     }
     if (this.held) {
       const h = this.held;
-      q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, h.hand.jointCount * 32);
+      const rigJoints = h.hand.jointCount - (h.extraJoints || 0);
+      q.writeBuffer(h.hand.palette, 0, snap.buffer, snap.byteOffset + VM_PALETTE * 4, rigJoints * 32);
+      if (h.dangles) {
+        const wj = this.vm.weaponJoint, at = VM_PALETTE + wj * 8;
+        const swing = h.dangles.step(dt, snap.subarray(at, at + 8), vmData, this.frameData.subarray(O.VMW, O.VMW + 16), time);
+        q.writeBuffer(h.hand.palette, rigJoints * 32, swing);
+        if (this.lastHeld !== h) h.dangles.reset();
+      }
+      this.lastHeld = h;
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
       vmData[17] = 0; vmData[18] = weapon?.hands === 3 ? 0 : 1; vmData[19] = h.tip;

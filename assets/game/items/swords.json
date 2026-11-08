@@ -1221,6 +1221,4073 @@
      "front": 0.0127
     }
    ]
+  },
+  "dawnspire_staff": {
+   "file": "assets/game/items/dawnspire_staff.glb",
+   "icon": "assets/game/items/icons/dawnspire_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.2079,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": 0.0009,
+     "radius": 0.03,
+     "back": -0.0177,
+     "front": 0.0144
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0018,
+     "radius": 0.024,
+     "back": -0.0249,
+     "front": 0.0239
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.0039,
+     "radius": 0.024,
+     "back": -0.0186,
+     "front": 0.0163
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0015,
+     "radius": 0.028,
+     "back": -0.0272,
+     "front": 0.0262
+    }
+   ]
+  },
+  "nightflame_staff": {
+   "file": "assets/game/items/nightflame_staff.glb",
+   "icon": "assets/game/items/icons/nightflame_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1167,
+   "guard": 0.1591,
+   "frame": {
+    "y": [
+     -1.1367,
+     0.6563
+    ],
+    "z": 0.2241
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2156,
+     "z": 0.0034,
+     "radius": 0.03,
+     "back": -0.0747,
+     "front": 0.046
+    },
+    {
+     "slot": "blade",
+     "y": -0.135,
+     "z": -0.0013,
+     "radius": 0.024,
+     "back": -0.054,
+     "front": 0.0446
+    },
+    {
+     "slot": "blade",
+     "y": -0.696,
+     "z": 0.0013,
+     "radius": 0.024,
+     "back": -0.0264,
+     "front": 0.0173
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0115,
+     "z": 0.0001,
+     "radius": 0.028,
+     "back": -0.0447,
+     "front": 0.0341
+    }
+   ]
+  },
+  "riptide_staff": {
+   "file": "assets/game/items/riptide_staff.glb",
+   "icon": "assets/game/items/icons/riptide_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1354,
+   "guard": 0.1503,
+   "frame": {
+    "y": [
+     -1.1554,
+     0.667
+    ],
+    "z": 0.2278
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2192,
+     "z": 0.0083,
+     "radius": 0.03,
+     "back": -0.0602,
+     "front": 0.0598
+    },
+    {
+     "slot": "blade",
+     "y": -0.1373,
+     "z": 0.0295,
+     "radius": 0.024,
+     "back": -0.0207,
+     "front": 0.0138
+    },
+    {
+     "slot": "blade",
+     "y": -0.7076,
+     "z": 0.0202,
+     "radius": 0.024,
+     "back": -0.0425,
+     "front": 0.0397
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0285,
+     "z": 0.0117,
+     "radius": 0.028,
+     "back": -0.0331,
+     "front": 0.033
+    }
+   ]
+  },
+  "verdant_heart": {
+   "file": "assets/game/items/verdant_heart.glb",
+   "icon": "assets/game/items/icons/verdant_heart.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1337,
+   "guard": 0.1618,
+   "frame": {
+    "y": [
+     -1.1537,
+     0.6661
+    ],
+    "z": 0.2275
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2189,
+     "z": -0.042,
+     "radius": 0.03,
+     "back": -0.0609,
+     "front": 0.0119
+    },
+    {
+     "slot": "blade",
+     "y": -0.137,
+     "z": 0.0311,
+     "radius": 0.024,
+     "back": -0.0015,
+     "front": 0.0455
+    },
+    {
+     "slot": "blade",
+     "y": -0.7066,
+     "z": -0.0015,
+     "radius": 0.024,
+     "back": -0.0056,
+     "front": 0.0581
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0269,
+     "z": 0.0205,
+     "radius": 0.028,
+     "back": -0.0102,
+     "front": 0.0438
+    }
+   ]
+  },
+  "phoenix_ascendant": {
+   "file": "assets/game/items/phoenix_ascendant.glb",
+   "icon": "assets/game/items/icons/phoenix_ascendant.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1515,
+   "guard": 0.1892,
+   "frame": {
+    "y": [
+     -1.1715,
+     0.6762
+    ],
+    "z": 0.231
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2223,
+     "z": 0.0399,
+     "radius": 0.03,
+     "back": -0.0351,
+     "front": 0.0336
+    },
+    {
+     "slot": "blade",
+     "y": -0.1392,
+     "z": 0.0316,
+     "radius": 0.024,
+     "back": -0.0204,
+     "front": 0.0183
+    },
+    {
+     "slot": "blade",
+     "y": -0.7176,
+     "z": 0.0191,
+     "radius": 0.024,
+     "back": -0.0227,
+     "front": 0.0193
+    },
+    {
+     "slot": "pommel",
+     "y": -1.043,
+     "z": 0.023,
+     "radius": 0.028,
+     "back": -0.0322,
+     "front": 0.0293
+    }
+   ]
+  },
+  "sunbanner_staff": {
+   "file": "assets/game/items/sunbanner_staff.glb",
+   "icon": "assets/game/items/icons/sunbanner_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1367,
+   "guard": 0.1895,
+   "frame": {
+    "y": [
+     -1.1567,
+     0.6678
+    ],
+    "z": 0.2281
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2195,
+     "z": -0.0137,
+     "radius": 0.03,
+     "back": -0.0695,
+     "front": 0.0369
+    },
+    {
+     "slot": "blade",
+     "y": -0.1374,
+     "z": -0.0136,
+     "radius": 0.024,
+     "back": -0.0359,
+     "front": 0.0309
+    },
+    {
+     "slot": "blade",
+     "y": -0.7084,
+     "z": -0.0143,
+     "radius": 0.024,
+     "back": -0.0345,
+     "front": 0.0176
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0296,
+     "z": -0.0139,
+     "radius": 0.028,
+     "back": -0.0578,
+     "front": 0.0242
+    }
+   ]
+  },
+  "galaxy_coil": {
+   "file": "assets/game/items/galaxy_coil.glb",
+   "icon": "assets/game/items/icons/galaxy_coil.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1374,
+   "guard": 0.1418,
+   "frame": {
+    "y": [
+     -1.1574,
+     0.6681
+    ],
+    "z": 0.2282
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2196,
+     "z": 0.0008,
+     "radius": 0.03,
+     "back": -0.0832,
+     "front": 0.0598
+    },
+    {
+     "slot": "blade",
+     "y": -0.1375,
+     "z": 0.0264,
+     "radius": 0.024,
+     "back": -0.037,
+     "front": -0.0022
+    },
+    {
+     "slot": "blade",
+     "y": -0.7088,
+     "z": -0.0013,
+     "radius": 0.024,
+     "back": -0.0342,
+     "front": 0.0085
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0302,
+     "z": 0.0041,
+     "radius": 0.028,
+     "back": -0.0511,
+     "front": 0.027
+    }
+   ]
+  },
+  "emerald_thornheart": {
+   "file": "assets/game/items/emerald_thornheart.glb",
+   "icon": "assets/game/items/icons/emerald_thornheart.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1552,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0048,
+     "radius": 0.03,
+     "back": -0.0523,
+     "front": 0.0763
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": 0.0141,
+     "radius": 0.024,
+     "back": -0.0257,
+     "front": 0.0496
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": -0.0214,
+     "radius": 0.024,
+     "back": 0.0023,
+     "front": 0.0197
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0045,
+     "radius": 0.028,
+     "back": -0.0335,
+     "front": 0.0596
+    }
+   ]
+  },
+  "shardstorm_staff": {
+   "file": "assets/game/items/shardstorm_staff.glb",
+   "icon": "assets/game/items/icons/shardstorm_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1278,
+   "guard": 0.167,
+   "frame": {
+    "y": [
+     -1.1478,
+     0.6627
+    ],
+    "z": 0.2263
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2178,
+     "z": 0.0197,
+     "radius": 0.03,
+     "back": -0.0197,
+     "front": 0.0194
+    },
+    {
+     "slot": "blade",
+     "y": -0.1363,
+     "z": 0.0053,
+     "radius": 0.024,
+     "back": -0.0309,
+     "front": 0.0167
+    },
+    {
+     "slot": "blade",
+     "y": -0.7029,
+     "z": 0.0054,
+     "radius": 0.024,
+     "back": -0.026,
+     "front": 0.0219
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0216,
+     "z": 0.0118,
+     "radius": 0.028,
+     "back": -0.0465,
+     "front": 0.0469
+    }
+   ]
+  },
+  "bloodsigil_staff": {
+   "file": "assets/game/items/bloodsigil_staff.glb",
+   "icon": "assets/game/items/icons/bloodsigil_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1168,
+   "guard": 0.1562,
+   "frame": {
+    "y": [
+     -1.1368,
+     0.6564
+    ],
+    "z": 0.2242
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2156,
+     "z": 0.0008,
+     "radius": 0.03,
+     "back": -0.0104,
+     "front": 0.0121
+    },
+    {
+     "slot": "blade",
+     "y": -0.135,
+     "z": 0.007,
+     "radius": 0.024,
+     "back": -0.0236,
+     "front": 0.026
+    },
+    {
+     "slot": "blade",
+     "y": -0.696,
+     "z": 0.0005,
+     "radius": 0.024,
+     "back": -0.017,
+     "front": 0.0269
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0116,
+     "z": -0.0017,
+     "radius": 0.028,
+     "back": -0.0374,
+     "front": 0.0388
+    }
+   ]
+  },
+  "eye_of_the_maelstrom": {
+   "file": "assets/game/items/eye_of_the_maelstrom.glb",
+   "icon": "assets/game/items/icons/eye_of_the_maelstrom.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1814,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0101,
+     "radius": 0.03,
+     "back": -0.0812,
+     "front": 0.0386
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0031,
+     "radius": 0.024,
+     "back": -0.0661,
+     "front": 0.0021
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": -0.002,
+     "radius": 0.024,
+     "back": -0.0398,
+     "front": 0.0072
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0047,
+     "radius": 0.028,
+     "back": -0.0521,
+     "front": 0.0181
+    }
+   ]
+  },
+  "wildcage_staff": {
+   "file": "assets/game/items/wildcage_staff.glb",
+   "icon": "assets/game/items/icons/wildcage_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1381,
+   "guard": 0.1688,
+   "frame": {
+    "y": [
+     -1.1581,
+     0.6686
+    ],
+    "z": 0.2283
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2198,
+     "z": -0.0125,
+     "radius": 0.03,
+     "back": -0.0842,
+     "front": 0.0534
+    },
+    {
+     "slot": "blade",
+     "y": -0.1376,
+     "z": -0.0415,
+     "radius": 0.024,
+     "back": -0.0071,
+     "front": 0.0056
+    },
+    {
+     "slot": "blade",
+     "y": -0.7093,
+     "z": -0.0214,
+     "radius": 0.024,
+     "back": -0.0227,
+     "front": 0.0186
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0309,
+     "z": -0.0195,
+     "radius": 0.028,
+     "back": -0.0178,
+     "front": 0.0137
+    }
+   ]
+  },
+  "hourglass_of_ages": {
+   "file": "assets/game/items/hourglass_of_ages.glb",
+   "icon": "assets/game/items/icons/hourglass_of_ages.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1587,
+   "guard": 0.1429,
+   "frame": {
+    "y": [
+     -1.1787,
+     0.6803
+    ],
+    "z": 0.2324
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2237,
+     "z": 0.0073,
+     "radius": 0.03,
+     "back": -0.0641,
+     "front": 0.0644
+    },
+    {
+     "slot": "blade",
+     "y": -0.1401,
+     "z": -0.0043,
+     "radius": 0.024,
+     "back": -0.0197,
+     "front": 0.0199
+    },
+    {
+     "slot": "blade",
+     "y": -0.7221,
+     "z": -0.0005,
+     "radius": 0.024,
+     "back": -0.0211,
+     "front": 0.0179
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0496,
+     "z": 0.0005,
+     "radius": 0.028,
+     "back": -0.0168,
+     "front": 0.0196
+    }
+   ]
+  },
+  "frostfang_trident": {
+   "file": "assets/game/items/frostfang_trident.glb",
+   "icon": "assets/game/items/icons/frostfang_trident.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1574,
+   "guard": 0.1617,
+   "frame": {
+    "y": [
+     -1.1774,
+     0.6796
+    ],
+    "z": 0.2321
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2235,
+     "z": -0.0023,
+     "radius": 0.03,
+     "back": -0.0152,
+     "front": 0.0149
+    },
+    {
+     "slot": "blade",
+     "y": -0.1399,
+     "z": 0.0083,
+     "radius": 0.024,
+     "back": -0.025,
+     "front": 0.0171
+    },
+    {
+     "slot": "blade",
+     "y": -0.7214,
+     "z": -0.0083,
+     "radius": 0.024,
+     "back": -0.0177,
+     "front": 0.0178
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0484,
+     "z": 0.0022,
+     "radius": 0.028,
+     "back": -0.0286,
+     "front": 0.0287
+    }
+   ]
+  },
+  "blood_moon": {
+   "file": "assets/game/items/blood_moon.glb",
+   "icon": "assets/game/items/icons/blood_moon.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1531,
+   "guard": 0.1509,
+   "frame": {
+    "y": [
+     -1.1731,
+     0.6771
+    ],
+    "z": 0.2313
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2227,
+     "z": -0.0007,
+     "radius": 0.03,
+     "back": -0.014,
+     "front": 0.0193
+    },
+    {
+     "slot": "blade",
+     "y": -0.1394,
+     "z": 0.0016,
+     "radius": 0.024,
+     "back": -0.0162,
+     "front": 0.0217
+    },
+    {
+     "slot": "blade",
+     "y": -0.7187,
+     "z": 0.0066,
+     "radius": 0.024,
+     "back": -0.0205,
+     "front": 0.0218
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0445,
+     "z": 0.0002,
+     "radius": 0.028,
+     "back": -0.0267,
+     "front": 0.0322
+    }
+   ]
+  },
+  "sunspoke_staff": {
+   "file": "assets/game/items/sunspoke_staff.glb",
+   "icon": "assets/game/items/icons/sunspoke_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.12,
+   "guard": 0.1739,
+   "frame": {
+    "y": [
+     -1.14,
+     0.6582
+    ],
+    "z": 0.2248
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2163,
+     "z": 0.0098,
+     "radius": 0.03,
+     "back": -0.0326,
+     "front": 0.0357
+    },
+    {
+     "slot": "blade",
+     "y": -0.1354,
+     "z": -0.0039,
+     "radius": 0.024,
+     "back": -0.0216,
+     "front": 0.023
+    },
+    {
+     "slot": "blade",
+     "y": -0.698,
+     "z": -0.0009,
+     "radius": 0.024,
+     "back": -0.0227,
+     "front": 0.0374
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0145,
+     "z": -0.0006,
+     "radius": 0.028,
+     "back": -0.026,
+     "front": 0.0268
+    }
+   ]
+  },
+  "glacier_spire": {
+   "file": "assets/game/items/glacier_spire.glb",
+   "icon": "assets/game/items/icons/glacier_spire.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1346,
+   "guard": 0.1587,
+   "frame": {
+    "y": [
+     -1.1546,
+     0.6665
+    ],
+    "z": 0.2276
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2191,
+     "z": 0.0003,
+     "radius": 0.03,
+     "back": -0.0682,
+     "front": 0.0207
+    },
+    {
+     "slot": "blade",
+     "y": -0.1371,
+     "z": 0.0144,
+     "radius": 0.024,
+     "back": -0.0259,
+     "front": 0.0237
+    },
+    {
+     "slot": "blade",
+     "y": -0.7071,
+     "z": 0.0059,
+     "radius": 0.024,
+     "back": -0.0215,
+     "front": 0.028
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0277,
+     "z": 0.0066,
+     "radius": 0.028,
+     "back": -0.0252,
+     "front": 0.0224
+    }
+   ]
+  },
+  "duskorb_staff": {
+   "file": "assets/game/items/duskorb_staff.glb",
+   "icon": "assets/game/items/icons/duskorb_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -0.9888,
+   "guard": 0.1643,
+   "frame": {
+    "y": [
+     -1.0088,
+     0.5835
+    ],
+    "z": 0.199
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.1909,
+     "z": -0.0029,
+     "radius": 0.03,
+     "back": -0.0667,
+     "front": 0.0655
+    },
+    {
+     "slot": "blade",
+     "y": -0.1195,
+     "z": 0.0098,
+     "radius": 0.024,
+     "back": -0.0347,
+     "front": 0.0184
+    },
+    {
+     "slot": "blade",
+     "y": -0.6162,
+     "z": -0.0008,
+     "radius": 0.024,
+     "back": -0.0229,
+     "front": 0.04
+    },
+    {
+     "slot": "pommel",
+     "y": -0.8956,
+     "z": 0.0004,
+     "radius": 0.028,
+     "back": -0.0483,
+     "front": 0.0328
+    }
+   ]
+  },
+  "grovekeeper": {
+   "file": "assets/game/items/grovekeeper.glb",
+   "icon": "assets/game/items/icons/grovekeeper.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1047,
+   "guard": 0.1496,
+   "frame": {
+    "y": [
+     -1.1247,
+     0.6495
+    ],
+    "z": 0.2218
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2133,
+     "z": -0.0369,
+     "radius": 0.03,
+     "back": -0.0693,
+     "front": 0.0759
+    },
+    {
+     "slot": "blade",
+     "y": -0.1335,
+     "z": -0.0576,
+     "radius": 0.024,
+     "back": -0.0206,
+     "front": 0.0043
+    },
+    {
+     "slot": "blade",
+     "y": -0.6885,
+     "z": -0.017,
+     "radius": 0.024,
+     "back": -0.0357,
+     "front": 0.0256
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0006,
+     "z": -0.0419,
+     "radius": 0.028,
+     "back": -0.0056,
+     "front": 0.0128
+    }
+   ]
+  },
+  "stormcaller": {
+   "file": "assets/game/items/stormcaller.glb",
+   "icon": "assets/game/items/icons/stormcaller.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1532,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0228,
+     "radius": 0.03,
+     "back": -0.0856,
+     "front": 0.0836
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0001,
+     "radius": 0.024,
+     "back": -0.0246,
+     "front": 0.0221
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.0077,
+     "radius": 0.024,
+     "back": -0.0261,
+     "front": 0.0234
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0013,
+     "radius": 0.028,
+     "back": -0.0295,
+     "front": 0.0256
+    }
+   ]
+  },
+  "orrery_staff": {
+   "file": "assets/game/items/orrery_staff.glb",
+   "icon": "assets/game/items/icons/orrery_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1504,
+   "guard": 0.1508,
+   "frame": {
+    "y": [
+     -1.1704,
+     0.6756
+    ],
+    "z": 0.2308
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2221,
+     "z": 0.0016,
+     "radius": 0.03,
+     "back": -0.0418,
+     "front": 0.0249
+    },
+    {
+     "slot": "blade",
+     "y": -0.1391,
+     "z": 0.0003,
+     "radius": 0.024,
+     "back": -0.0303,
+     "front": 0.0317
+    },
+    {
+     "slot": "blade",
+     "y": -0.717,
+     "z": -0.0099,
+     "radius": 0.024,
+     "back": -0.0282,
+     "front": 0.0119
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0421,
+     "z": 0.0019,
+     "radius": 0.028,
+     "back": -0.02,
+     "front": 0.0023
+    }
+   ]
+  },
+  "thornwood_staff": {
+   "file": "assets/game/items/thornwood_staff.glb",
+   "icon": "assets/game/items/icons/thornwood_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.144,
+   "guard": 0.1442,
+   "frame": {
+    "y": [
+     -1.164,
+     0.6719
+    ],
+    "z": 0.2295
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2209,
+     "z": -0.0421,
+     "radius": 0.03,
+     "back": -0.0216,
+     "front": 0.0177
+    },
+    {
+     "slot": "blade",
+     "y": -0.1383,
+     "z": 0.0258,
+     "radius": 0.024,
+     "back": -0.0473,
+     "front": 0.0317
+    },
+    {
+     "slot": "blade",
+     "y": -0.713,
+     "z": 0.0048,
+     "radius": 0.024,
+     "back": -0.0457,
+     "front": 0.0193
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0363,
+     "z": 0.0072,
+     "radius": 0.028,
+     "back": -0.0149,
+     "front": 0.0098
+    }
+   ]
+  },
+  "winterstar": {
+   "file": "assets/game/items/winterstar.glb",
+   "icon": "assets/game/items/icons/winterstar.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1608,
+   "guard": 0.1562,
+   "frame": {
+    "y": [
+     -1.1808,
+     0.6815
+    ],
+    "z": 0.2328
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2241,
+     "z": -0.0108,
+     "radius": 0.03,
+     "back": -0.0531,
+     "front": 0.0769
+    },
+    {
+     "slot": "blade",
+     "y": -0.1403,
+     "z": -0.0121,
+     "radius": 0.024,
+     "back": -0.01,
+     "front": 0.0333
+    },
+    {
+     "slot": "blade",
+     "y": -0.7235,
+     "z": 0.0064,
+     "radius": 0.024,
+     "back": -0.0282,
+     "front": 0.0534
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0515,
+     "z": 0.0008,
+     "radius": 0.028,
+     "back": -0.0039,
+     "front": 0.0271
+    }
+   ]
+  },
+  "emberheart_staff": {
+   "file": "assets/game/items/emberheart_staff.glb",
+   "icon": "assets/game/items/icons/emberheart_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.0266,
+   "guard": 0.1596,
+   "frame": {
+    "y": [
+     -1.0466,
+     0.605
+    ],
+    "z": 0.2065
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.1982,
+     "z": 0.0043,
+     "radius": 0.03,
+     "back": -0.1001,
+     "front": 0.0976
+    },
+    {
+     "slot": "blade",
+     "y": -0.1241,
+     "z": 0.0102,
+     "radius": 0.024,
+     "back": -0.0315,
+     "front": 0.0513
+    },
+    {
+     "slot": "blade",
+     "y": -0.6398,
+     "z": 0.0076,
+     "radius": 0.024,
+     "back": -0.0338,
+     "front": 0.0301
+    },
+    {
+     "slot": "pommel",
+     "y": -0.9299,
+     "z": 0.0079,
+     "radius": 0.028,
+     "back": -0.0566,
+     "front": 0.0536
+    }
+   ]
+  },
+  "voidgaze_staff": {
+   "file": "assets/game/items/voidgaze_staff.glb",
+   "icon": "assets/game/items/icons/voidgaze_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1376,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": 0.008,
+     "radius": 0.03,
+     "back": -0.072,
+     "front": 0.0613
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": 0.0112,
+     "radius": 0.024,
+     "back": -0.0428,
+     "front": 0.0319
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.0068,
+     "radius": 0.024,
+     "back": -0.031,
+     "front": 0.02
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": 0.0057,
+     "radius": 0.028,
+     "back": -0.0237,
+     "front": 0.0124
+    }
+   ]
+  },
+  "cinderbloom_staff": {
+   "file": "assets/game/items/cinderbloom_staff.glb",
+   "icon": "assets/game/items/icons/cinderbloom_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1205,
+   "guard": 0.1249,
+   "frame": {
+    "y": [
+     -1.1405,
+     0.6585
+    ],
+    "z": 0.2249
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2164,
+     "z": -0.0196,
+     "radius": 0.03,
+     "back": -0.0371,
+     "front": 0.0375
+    },
+    {
+     "slot": "blade",
+     "y": -0.1354,
+     "z": -0.0122,
+     "radius": 0.024,
+     "back": -0.0273,
+     "front": 0.0293
+    },
+    {
+     "slot": "blade",
+     "y": -0.6983,
+     "z": -0.0081,
+     "radius": 0.024,
+     "back": -0.0323,
+     "front": 0.032
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0149,
+     "z": -0.0077,
+     "radius": 0.028,
+     "back": -0.0219,
+     "front": 0.0223
+    }
+   ]
+  },
+  "moonwane_staff": {
+   "file": "assets/game/items/moonwane_staff.glb",
+   "icon": "assets/game/items/icons/moonwane_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.0566,
+   "guard": 0.1208,
+   "frame": {
+    "y": [
+     -1.0766,
+     0.6221
+    ],
+    "z": 0.2123
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.204,
+     "z": -0.015,
+     "radius": 0.03,
+     "back": -0.0218,
+     "front": 0.0151
+    },
+    {
+     "slot": "blade",
+     "y": -0.1277,
+     "z": -0.0091,
+     "radius": 0.024,
+     "back": -0.0317,
+     "front": 0.0165
+    },
+    {
+     "slot": "blade",
+     "y": -0.6585,
+     "z": -0.0015,
+     "radius": 0.024,
+     "back": -0.0307,
+     "front": 0.0255
+    },
+    {
+     "slot": "pommel",
+     "y": -0.957,
+     "z": -0.0057,
+     "radius": 0.028,
+     "back": -0.0184,
+     "front": 0.0113
+    }
+   ]
+  },
+  "mossheart_staff": {
+   "file": "assets/game/items/mossheart_staff.glb",
+   "icon": "assets/game/items/icons/mossheart_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1336,
+   "guard": 0.1389,
+   "frame": {
+    "y": [
+     -1.1536,
+     0.666
+    ],
+    "z": 0.2274
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2189,
+     "z": -0.0265,
+     "radius": 0.03,
+     "back": -0.0369,
+     "front": 0.0657
+    },
+    {
+     "slot": "blade",
+     "y": -0.137,
+     "z": 0.0014,
+     "radius": 0.024,
+     "back": -0.0174,
+     "front": 0.0184
+    },
+    {
+     "slot": "blade",
+     "y": -0.7065,
+     "z": -0.0115,
+     "radius": 0.024,
+     "back": -0.0495,
+     "front": 0.0212
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0268,
+     "z": -0.0043,
+     "radius": 0.028,
+     "back": -0.0605,
+     "front": 0.0627
+    }
+   ]
+  },
+  "abyssal_eye": {
+   "file": "assets/game/items/abyssal_eye.glb",
+   "icon": "assets/game/items/icons/abyssal_eye.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1534,
+   "guard": 0.127,
+   "frame": {
+    "y": [
+     -1.1734,
+     0.6773
+    ],
+    "z": 0.2313
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2227,
+     "z": -0.0106,
+     "radius": 0.03,
+     "back": -0.025,
+     "front": 0.0394
+    },
+    {
+     "slot": "blade",
+     "y": -0.1394,
+     "z": 0.0119,
+     "radius": 0.024,
+     "back": -0.0121,
+     "front": 0.0598
+    },
+    {
+     "slot": "blade",
+     "y": -0.7188,
+     "z": 0.0019,
+     "radius": 0.024,
+     "back": -0.0149,
+     "front": 0.0293
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0447,
+     "z": 0.0023,
+     "radius": 0.028,
+     "back": -0.0069,
+     "front": 0.0171
+    }
+   ]
+  },
+  "seraphs_coil": {
+   "file": "assets/game/items/seraphs_coil.glb",
+   "icon": "assets/game/items/icons/seraphs_coil.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1526,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0401,
+     "radius": 0.03,
+     "back": -0.0413,
+     "front": 0.0287
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0523,
+     "radius": 0.024,
+     "back": -0.0611,
+     "front": 0.0388
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": -0.0235,
+     "radius": 0.024,
+     "back": -0.0373,
+     "front": 0.0215
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0229,
+     "radius": 0.028,
+     "back": -0.0277,
+     "front": 0.013
+    }
+   ]
+  },
+  "sunwheel_staff": {
+   "file": "assets/game/items/sunwheel_staff.glb",
+   "icon": "assets/game/items/icons/sunwheel_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1701,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0014,
+     "radius": 0.03,
+     "back": -0.0448,
+     "front": 0.0439
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0001,
+     "radius": 0.024,
+     "back": -0.0248,
+     "front": 0.0238
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": -0.0008,
+     "radius": 0.024,
+     "back": -0.0208,
+     "front": 0.021
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0015,
+     "radius": 0.028,
+     "back": -0.0249,
+     "front": 0.0238
+    }
+   ]
+  },
+  "lichs_lantern": {
+   "file": "assets/game/items/lichs_lantern.glb",
+   "icon": "assets/game/items/icons/lichs_lantern.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1024,
+   "guard": 0.1574,
+   "frame": {
+    "y": [
+     -1.1224,
+     0.6482
+    ],
+    "z": 0.2213
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2129,
+     "z": -0.02,
+     "radius": 0.03,
+     "back": -0.0252,
+     "front": 0.0267
+    },
+    {
+     "slot": "blade",
+     "y": -0.1333,
+     "z": -0.0131,
+     "radius": 0.024,
+     "back": -0.0181,
+     "front": 0.0195
+    },
+    {
+     "slot": "blade",
+     "y": -0.6871,
+     "z": -0.009,
+     "radius": 0.024,
+     "back": -0.0219,
+     "front": 0.0229
+    },
+    {
+     "slot": "pommel",
+     "y": -0.9986,
+     "z": -0.0077,
+     "radius": 0.028,
+     "back": -0.0219,
+     "front": 0.0232
+    }
+   ]
+  },
+  "ivyheart_staff": {
+   "file": "assets/game/items/ivyheart_staff.glb",
+   "icon": "assets/game/items/icons/ivyheart_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1503,
+   "guard": 0.1332,
+   "frame": {
+    "y": [
+     -1.1703,
+     0.6755
+    ],
+    "z": 0.2307
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2221,
+     "z": -0.0078,
+     "radius": 0.03,
+     "back": -0.0448,
+     "front": 0.04
+    },
+    {
+     "slot": "blade",
+     "y": -0.139,
+     "z": -0.0055,
+     "radius": 0.024,
+     "back": -0.0179,
+     "front": 0.0219
+    },
+    {
+     "slot": "blade",
+     "y": -0.7169,
+     "z": -0.0245,
+     "radius": 0.024,
+     "back": -0.0316,
+     "front": 0.0337
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0419,
+     "z": -0.0121,
+     "radius": 0.028,
+     "back": -0.0234,
+     "front": 0.0272
+    }
+   ]
+  },
+  "hoarfrost_staff": {
+   "file": "assets/game/items/hoarfrost_staff.glb",
+   "icon": "assets/game/items/icons/hoarfrost_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1575,
+   "guard": 0.1496,
+   "frame": {
+    "y": [
+     -1.1775,
+     0.6796
+    ],
+    "z": 0.2321
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2235,
+     "z": 0.0106,
+     "radius": 0.03,
+     "back": -0.0224,
+     "front": 0.0413
+    },
+    {
+     "slot": "blade",
+     "y": -0.1399,
+     "z": 0.0244,
+     "radius": 0.024,
+     "back": -0.01,
+     "front": 0.0569
+    },
+    {
+     "slot": "blade",
+     "y": -0.7214,
+     "z": 0.0231,
+     "radius": 0.024,
+     "back": -0.0359,
+     "front": 0.0537
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0485,
+     "z": 0.0211,
+     "radius": 0.028,
+     "back": -0.0147,
+     "front": 0.0329
+    }
+   ]
+  },
+  "wyrmcoil_staff": {
+   "file": "assets/game/items/wyrmcoil_staff.glb",
+   "icon": "assets/game/items/icons/wyrmcoil_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1494,
+   "guard": 0.1348,
+   "frame": {
+    "y": [
+     -1.1694,
+     0.675
+    ],
+    "z": 0.2306
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2219,
+     "z": -0.0162,
+     "radius": 0.03,
+     "back": -0.1187,
+     "front": 0.0282
+    },
+    {
+     "slot": "blade",
+     "y": -0.1389,
+     "z": -0.0149,
+     "radius": 0.024,
+     "back": -0.0392,
+     "front": 0.0108
+    },
+    {
+     "slot": "blade",
+     "y": -0.7163,
+     "z": -0.0181,
+     "radius": 0.024,
+     "back": -0.0597,
+     "front": 0.03
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0411,
+     "z": -0.0178,
+     "radius": 0.028,
+     "back": -0.0397,
+     "front": 0.0107
+    }
+   ]
+  },
+  "dawnwheel_staff": {
+   "file": "assets/game/items/dawnwheel_staff.glb",
+   "icon": "assets/game/items/icons/dawnwheel_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1555,
+   "guard": 0.1715,
+   "frame": {
+    "y": [
+     -1.1755,
+     0.6784
+    ],
+    "z": 0.2317
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2231,
+     "z": -0.0051,
+     "radius": 0.03,
+     "back": -0.0471,
+     "front": 0.051
+    },
+    {
+     "slot": "blade",
+     "y": -0.1397,
+     "z": -0.0074,
+     "radius": 0.024,
+     "back": -0.0198,
+     "front": 0.0234
+    },
+    {
+     "slot": "blade",
+     "y": -0.7201,
+     "z": -0.0032,
+     "radius": 0.024,
+     "back": -0.0215,
+     "front": 0.0251
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0466,
+     "z": 0.0025,
+     "radius": 0.028,
+     "back": -0.0185,
+     "front": 0.0199
+    }
+   ]
+  },
+  "icefall_staff": {
+   "file": "assets/game/items/icefall_staff.glb",
+   "icon": "assets/game/items/icons/icefall_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.13,
+   "guard": 0.144,
+   "frame": {
+    "y": [
+     -1.15,
+     0.6639
+    ],
+    "z": 0.2267
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2182,
+     "z": -0.0125,
+     "radius": 0.03,
+     "back": -0.059,
+     "front": 0.068
+    },
+    {
+     "slot": "blade",
+     "y": -0.1366,
+     "z": -0.0081,
+     "radius": 0.024,
+     "back": -0.0171,
+     "front": 0.0264
+    },
+    {
+     "slot": "blade",
+     "y": -0.7042,
+     "z": -0.0157,
+     "radius": 0.024,
+     "back": -0.0164,
+     "front": 0.0254
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0235,
+     "z": -0.0104,
+     "radius": 0.028,
+     "back": -0.0166,
+     "front": 0.026
+    }
+   ]
+  },
+  "whisper_spiral": {
+   "file": "assets/game/items/whisper_spiral.glb",
+   "icon": "assets/game/items/icons/whisper_spiral.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1603,
+   "guard": 0.1217,
+   "frame": {
+    "y": [
+     -1.1803,
+     0.6812
+    ],
+    "z": 0.2327
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2241,
+     "z": 0.0004,
+     "radius": 0.03,
+     "back": -0.0509,
+     "front": 0.0664
+    },
+    {
+     "slot": "blade",
+     "y": -0.1403,
+     "z": -0.0041,
+     "radius": 0.024,
+     "back": -0.0128,
+     "front": 0.028
+    },
+    {
+     "slot": "blade",
+     "y": -0.7232,
+     "z": 0.0015,
+     "radius": 0.024,
+     "back": -0.0072,
+     "front": 0.0223
+    },
+    {
+     "slot": "pommel",
+     "y": -1.051,
+     "z": 0.0041,
+     "radius": 0.028,
+     "back": -0.0266,
+     "front": 0.0412
+    }
+   ]
+  },
+  "druids_reliquary": {
+   "file": "assets/game/items/druids_reliquary.glb",
+   "icon": "assets/game/items/icons/druids_reliquary.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1314,
+   "guard": 0.1193,
+   "frame": {
+    "y": [
+     -1.1514,
+     0.6647
+    ],
+    "z": 0.227
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2185,
+     "z": 0.0096,
+     "radius": 0.03,
+     "back": -0.0584,
+     "front": 0.0534
+    },
+    {
+     "slot": "blade",
+     "y": -0.1368,
+     "z": 0.0449,
+     "radius": 0.024,
+     "back": -0.0045,
+     "front": 0.0215
+    },
+    {
+     "slot": "blade",
+     "y": -0.7051,
+     "z": -0.0059,
+     "radius": 0.024,
+     "back": -0.0341,
+     "front": 0.0176
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0248,
+     "z": 0.0061,
+     "radius": 0.028,
+     "back": -0.0378,
+     "front": 0.0324
+    }
+   ]
+  },
+  "stormeye_staff": {
+   "file": "assets/game/items/stormeye_staff.glb",
+   "icon": "assets/game/items/icons/stormeye_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1622,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": 0.0126,
+     "radius": 0.03,
+     "back": -0.0435,
+     "front": 0.0407
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": 0.0016,
+     "radius": 0.024,
+     "back": -0.024,
+     "front": 0.0203
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": -0.0004,
+     "radius": 0.024,
+     "back": -0.0273,
+     "front": 0.0238
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": 0.0006,
+     "radius": 0.028,
+     "back": -0.0218,
+     "front": 0.0193
+    }
+   ]
+  },
+  "angels_dawn": {
+   "file": "assets/game/items/angels_dawn.glb",
+   "icon": "assets/game/items/icons/angels_dawn.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1369,
+   "guard": 0.1566,
+   "frame": {
+    "y": [
+     -1.1569,
+     0.6679
+    ],
+    "z": 0.2281
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2195,
+     "z": -0.0069,
+     "radius": 0.03,
+     "back": -0.0265,
+     "front": 0.0272
+    },
+    {
+     "slot": "blade",
+     "y": -0.1374,
+     "z": 0.0228,
+     "radius": 0.024,
+     "back": -0.0256,
+     "front": 0.0198
+    },
+    {
+     "slot": "blade",
+     "y": -0.7086,
+     "z": 0.0206,
+     "radius": 0.024,
+     "back": -0.0204,
+     "front": 0.0209
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0298,
+     "z": 0.0178,
+     "radius": 0.028,
+     "back": -0.0289,
+     "front": 0.0286
+    }
+   ]
+  },
+  "wildroot_staff": {
+   "file": "assets/game/items/wildroot_staff.glb",
+   "icon": "assets/game/items/icons/wildroot_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1115,
+   "guard": 0.1355,
+   "frame": {
+    "y": [
+     -1.1315,
+     0.6534
+    ],
+    "z": 0.2231
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2146,
+     "z": -0.0164,
+     "radius": 0.03,
+     "back": -0.0589,
+     "front": 0.0331
+    },
+    {
+     "slot": "blade",
+     "y": -0.1344,
+     "z": -0.0252,
+     "radius": 0.024,
+     "back": -0.044,
+     "front": -0.0035
+    },
+    {
+     "slot": "blade",
+     "y": -0.6927,
+     "z": -0.0172,
+     "radius": 0.024,
+     "back": -0.0523,
+     "front": 0.0291
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0068,
+     "z": 0.0,
+     "radius": 0.028,
+     "back": -0.0298,
+     "front": -0.004
+    }
+   ]
+  },
+  "frostlance_staff": {
+   "file": "assets/game/items/frostlance_staff.glb",
+   "icon": "assets/game/items/icons/frostlance_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1246,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0006,
+     "radius": 0.03,
+     "back": -0.0274,
+     "front": 0.0276
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": 0.0066,
+     "radius": 0.024,
+     "back": -0.0119,
+     "front": 0.0115
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.0004,
+     "radius": 0.024,
+     "back": -0.019,
+     "front": 0.0181
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0003,
+     "radius": 0.028,
+     "back": -0.017,
+     "front": 0.0159
+    }
+   ]
+  },
+  "gravecaller": {
+   "file": "assets/game/items/gravecaller.glb",
+   "icon": "assets/game/items/icons/gravecaller.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.0943,
+   "guard": 0.1715,
+   "frame": {
+    "y": [
+     -1.1143,
+     0.6436
+    ],
+    "z": 0.2197
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2113,
+     "z": 0.0155,
+     "radius": 0.03,
+     "back": -0.0921,
+     "front": 0.092
+    },
+    {
+     "slot": "blade",
+     "y": -0.1323,
+     "z": -0.0042,
+     "radius": 0.024,
+     "back": -0.0179,
+     "front": 0.0169
+    },
+    {
+     "slot": "blade",
+     "y": -0.682,
+     "z": 0.0134,
+     "radius": 0.024,
+     "back": -0.0295,
+     "front": 0.0297
+    },
+    {
+     "slot": "pommel",
+     "y": -0.9912,
+     "z": 0.0148,
+     "radius": 0.028,
+     "back": -0.0291,
+     "front": 0.0269
+    }
+   ]
+  },
+  "drakescale_staff": {
+   "file": "assets/game/items/drakescale_staff.glb",
+   "icon": "assets/game/items/icons/drakescale_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1033,
+   "guard": 0.1454,
+   "frame": {
+    "y": [
+     -1.1233,
+     0.6487
+    ],
+    "z": 0.2215
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.213,
+     "z": -0.0206,
+     "radius": 0.03,
+     "back": -0.049,
+     "front": 0.0325
+    },
+    {
+     "slot": "blade",
+     "y": -0.1334,
+     "z": -0.0319,
+     "radius": 0.024,
+     "back": -0.0537,
+     "front": 0.0032
+    },
+    {
+     "slot": "blade",
+     "y": -0.6876,
+     "z": -0.0374,
+     "radius": 0.024,
+     "back": -0.0518,
+     "front": 0.0015
+    },
+    {
+     "slot": "pommel",
+     "y": -0.9994,
+     "z": -0.0143,
+     "radius": 0.028,
+     "back": -0.0289,
+     "front": 0.0127
+    }
+   ]
+  },
+  "sunrod": {
+   "file": "assets/game/items/sunrod.glb",
+   "icon": "assets/game/items/icons/sunrod.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1155,
+   "guard": 0.1567,
+   "frame": {
+    "y": [
+     -1.1355,
+     0.6557
+    ],
+    "z": 0.2239
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2154,
+     "z": -0.0009,
+     "radius": 0.03,
+     "back": -0.0276,
+     "front": 0.0249
+    },
+    {
+     "slot": "blade",
+     "y": -0.1348,
+     "z": -0.0002,
+     "radius": 0.024,
+     "back": -0.0194,
+     "front": 0.0167
+    },
+    {
+     "slot": "blade",
+     "y": -0.6952,
+     "z": -0.0,
+     "radius": 0.024,
+     "back": -0.0279,
+     "front": 0.0174
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0104,
+     "z": 0.001,
+     "radius": 0.028,
+     "back": -0.0336,
+     "front": 0.0325
+    }
+   ]
+  },
+  "bonelantern_staff": {
+   "file": "assets/game/items/bonelantern_staff.glb",
+   "icon": "assets/game/items/icons/bonelantern_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.102,
+   "guard": 0.124,
+   "frame": {
+    "y": [
+     -1.122,
+     0.648
+    ],
+    "z": 0.2213
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2128,
+     "z": 0.0141,
+     "radius": 0.03,
+     "back": -0.0495,
+     "front": 0.0475
+    },
+    {
+     "slot": "blade",
+     "y": -0.1332,
+     "z": 0.0097,
+     "radius": 0.024,
+     "back": -0.0292,
+     "front": 0.0235
+    },
+    {
+     "slot": "blade",
+     "y": -0.6868,
+     "z": 0.0036,
+     "radius": 0.024,
+     "back": -0.0247,
+     "front": 0.0227
+    },
+    {
+     "slot": "pommel",
+     "y": -0.9982,
+     "z": 0.01,
+     "radius": 0.028,
+     "back": -0.0282,
+     "front": 0.0264
+    }
+   ]
+  },
+  "hedgewitch_staff": {
+   "file": "assets/game/items/hedgewitch_staff.glb",
+   "icon": "assets/game/items/icons/hedgewitch_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1516,
+   "guard": 0.1348,
+   "frame": {
+    "y": [
+     -1.1716,
+     0.6762
+    ],
+    "z": 0.231
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2224,
+     "z": -0.0082,
+     "radius": 0.03,
+     "back": -0.0558,
+     "front": 0.0571
+    },
+    {
+     "slot": "blade",
+     "y": -0.1392,
+     "z": -0.007,
+     "radius": 0.024,
+     "back": -0.0335,
+     "front": 0.0281
+    },
+    {
+     "slot": "blade",
+     "y": -0.7177,
+     "z": -0.0289,
+     "radius": 0.024,
+     "back": -0.0199,
+     "front": 0.0214
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0431,
+     "z": -0.0258,
+     "radius": 0.028,
+     "back": 0.0308,
+     "front": 0.0596
+    }
+   ]
+  },
+  "frostwheel_staff": {
+   "file": "assets/game/items/frostwheel_staff.glb",
+   "icon": "assets/game/items/icons/frostwheel_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1118,
+   "guard": 0.1369,
+   "frame": {
+    "y": [
+     -1.1318,
+     0.6535
+    ],
+    "z": 0.2232
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2147,
+     "z": -0.0005,
+     "radius": 0.03,
+     "back": -0.0233,
+     "front": 0.0227
+    },
+    {
+     "slot": "blade",
+     "y": -0.1344,
+     "z": -0.0003,
+     "radius": 0.024,
+     "back": -0.0219,
+     "front": 0.0216
+    },
+    {
+     "slot": "blade",
+     "y": -0.6929,
+     "z": 0.0008,
+     "radius": 0.024,
+     "back": -0.0566,
+     "front": 0.0555
+    },
+    {
+     "slot": "pommel",
+     "y": -1.007,
+     "z": 0.0013,
+     "radius": 0.028,
+     "back": -0.0246,
+     "front": 0.0245
+    }
+   ]
+  },
+  "magma_heart": {
+   "file": "assets/game/items/magma_heart.glb",
+   "icon": "assets/game/items/icons/magma_heart.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1359,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0058,
+     "radius": 0.03,
+     "back": -0.0428,
+     "front": 0.0515
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": 0.0117,
+     "radius": 0.024,
+     "back": -0.0332,
+     "front": 0.0384
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.0116,
+     "radius": 0.024,
+     "back": -0.0197,
+     "front": 0.0327
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": 0.0236,
+     "radius": 0.028,
+     "back": -0.052,
+     "front": 0.0609
+    }
+   ]
+  },
+  "sunpillar_staff": {
+   "file": "assets/game/items/sunpillar_staff.glb",
+   "icon": "assets/game/items/icons/sunpillar_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1383,
+   "guard": 0.1742,
+   "frame": {
+    "y": [
+     -1.1583,
+     0.6686
+    ],
+    "z": 0.2284
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2198,
+     "z": -0.0001,
+     "radius": 0.03,
+     "back": -0.0343,
+     "front": 0.0337
+    },
+    {
+     "slot": "blade",
+     "y": -0.1376,
+     "z": 0.0005,
+     "radius": 0.024,
+     "back": -0.0141,
+     "front": 0.0145
+    },
+    {
+     "slot": "blade",
+     "y": -0.7094,
+     "z": 0.0004,
+     "radius": 0.024,
+     "back": -0.0379,
+     "front": 0.0377
+    },
+    {
+     "slot": "pommel",
+     "y": -1.031,
+     "z": -0.0016,
+     "radius": 0.028,
+     "back": -0.0372,
+     "front": 0.036
+    }
+   ]
+  },
+  "verdant_oath": {
+   "file": "assets/game/items/verdant_oath.glb",
+   "icon": "assets/game/items/icons/verdant_oath.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1397,
+   "guard": 0.1454,
+   "frame": {
+    "y": [
+     -1.1597,
+     0.6695
+    ],
+    "z": 0.2287
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2201,
+     "z": -0.0523,
+     "radius": 0.03,
+     "back": -0.0428,
+     "front": -0.0152
+    },
+    {
+     "slot": "blade",
+     "y": -0.1378,
+     "z": -0.0229,
+     "radius": 0.024,
+     "back": -0.0627,
+     "front": 0.0411
+    },
+    {
+     "slot": "blade",
+     "y": -0.7103,
+     "z": -0.023,
+     "radius": 0.024,
+     "back": -0.0232,
+     "front": 0.0305
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0324,
+     "z": -0.0232,
+     "radius": 0.028,
+     "back": -0.022,
+     "front": 0.0197
+    }
+   ]
+  },
+  "umbral_eye": {
+   "file": "assets/game/items/umbral_eye.glb",
+   "icon": "assets/game/items/icons/umbral_eye.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1499,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": 0.0023,
+     "radius": 0.03,
+     "back": -0.0493,
+     "front": 0.0529
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0002,
+     "radius": 0.024,
+     "back": -0.0218,
+     "front": 0.0239
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": -0.0066,
+     "radius": 0.024,
+     "back": -0.0209,
+     "front": 0.0275
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": 0.0014,
+     "radius": 0.028,
+     "back": -0.0462,
+     "front": 0.0493
+    }
+   ]
+  },
+  "icecrown_staff": {
+   "file": "assets/game/items/icecrown_staff.glb",
+   "icon": "assets/game/items/icons/icecrown_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1591,
+   "guard": 0.1324,
+   "frame": {
+    "y": [
+     -1.1791,
+     0.6806
+    ],
+    "z": 0.2325
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2238,
+     "z": -0.0102,
+     "radius": 0.03,
+     "back": -0.0373,
+     "front": 0.0332
+    },
+    {
+     "slot": "blade",
+     "y": -0.1401,
+     "z": -0.0009,
+     "radius": 0.024,
+     "back": -0.0176,
+     "front": 0.0144
+    },
+    {
+     "slot": "blade",
+     "y": -0.7224,
+     "z": -0.0007,
+     "radius": 0.024,
+     "back": -0.0364,
+     "front": 0.0323
+    },
+    {
+     "slot": "pommel",
+     "y": -1.05,
+     "z": 0.0014,
+     "radius": 0.028,
+     "back": -0.0244,
+     "front": 0.0168
+    }
+   ]
+  },
+  "dragonheart_staff": {
+   "file": "assets/game/items/dragonheart_staff.glb",
+   "icon": "assets/game/items/icons/dragonheart_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.0864,
+   "guard": 0.1379,
+   "frame": {
+    "y": [
+     -1.1064,
+     0.6391
+    ],
+    "z": 0.2182
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2098,
+     "z": 0.0183,
+     "radius": 0.03,
+     "back": -0.064,
+     "front": 0.0239
+    },
+    {
+     "slot": "blade",
+     "y": -0.1313,
+     "z": -0.0174,
+     "radius": 0.024,
+     "back": -0.057,
+     "front": 0.0345
+    },
+    {
+     "slot": "blade",
+     "y": -0.6771,
+     "z": -0.0171,
+     "radius": 0.024,
+     "back": -0.0519,
+     "front": 0.0292
+    },
+    {
+     "slot": "pommel",
+     "y": -0.9841,
+     "z": -0.018,
+     "radius": 0.028,
+     "back": -0.0529,
+     "front": 0.0311
+    }
+   ]
+  },
+  "emerald_vigil": {
+   "file": "assets/game/items/emerald_vigil.glb",
+   "icon": "assets/game/items/icons/emerald_vigil.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1269,
+   "guard": 0.1724,
+   "frame": {
+    "y": [
+     -1.1469,
+     0.6622
+    ],
+    "z": 0.2261
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2176,
+     "z": 0.0165,
+     "radius": 0.03,
+     "back": -0.0347,
+     "front": 0.0504
+    },
+    {
+     "slot": "blade",
+     "y": -0.1362,
+     "z": 0.0163,
+     "radius": 0.024,
+     "back": -0.0173,
+     "front": 0.0295
+    },
+    {
+     "slot": "blade",
+     "y": -0.7023,
+     "z": 0.0145,
+     "radius": 0.024,
+     "back": -0.0229,
+     "front": 0.0299
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0207,
+     "z": 0.0166,
+     "radius": 0.028,
+     "back": -0.0325,
+     "front": 0.0482
+    }
+   ]
+  },
+  "wraith_staff": {
+   "file": "assets/game/items/wraith_staff.glb",
+   "icon": "assets/game/items/icons/wraith_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1508,
+   "guard": 0.1352,
+   "frame": {
+    "y": [
+     -1.1708,
+     0.6758
+    ],
+    "z": 0.2308
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2222,
+     "z": -0.0008,
+     "radius": 0.03,
+     "back": -0.0478,
+     "front": 0.0301
+    },
+    {
+     "slot": "blade",
+     "y": -0.1391,
+     "z": 0.0118,
+     "radius": 0.024,
+     "back": -0.0389,
+     "front": 0.0103
+    },
+    {
+     "slot": "blade",
+     "y": -0.7172,
+     "z": 0.0952,
+     "radius": 0.024,
+     "back": 0.0219,
+     "front": 0.0333
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0424,
+     "z": 0.0024,
+     "radius": 0.028,
+     "back": -0.0365,
+     "front": 0.0187
+    }
+   ]
+  },
+  "celestial_orrery": {
+   "file": "assets/game/items/celestial_orrery.glb",
+   "icon": "assets/game/items/icons/celestial_orrery.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1361,
+   "guard": 0.2006,
+   "frame": {
+    "y": [
+     -1.1561,
+     0.6674
+    ],
+    "z": 0.2279
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2194,
+     "z": 0.0001,
+     "radius": 0.03,
+     "back": -0.0251,
+     "front": 0.0219
+    },
+    {
+     "slot": "blade",
+     "y": -0.1373,
+     "z": -0.0012,
+     "radius": 0.024,
+     "back": -0.0293,
+     "front": 0.0306
+    },
+    {
+     "slot": "blade",
+     "y": -0.7081,
+     "z": 0.0015,
+     "radius": 0.024,
+     "back": -0.0266,
+     "front": 0.023
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0291,
+     "z": -0.0009,
+     "radius": 0.028,
+     "back": -0.0153,
+     "front": 0.0119
+    }
+   ]
+  },
+  "rimeheart_staff": {
+   "file": "assets/game/items/rimeheart_staff.glb",
+   "icon": "assets/game/items/icons/rimeheart_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1491,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0051,
+     "radius": 0.03,
+     "back": -0.03,
+     "front": 0.0684
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0178,
+     "radius": 0.024,
+     "back": -0.0114,
+     "front": 0.0542
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.013,
+     "radius": 0.024,
+     "back": -0.0134,
+     "front": 0.0503
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0039,
+     "radius": 0.028,
+     "back": -0.009,
+     "front": 0.0471
+    }
+   ]
+  },
+  "moonlit_reliquary": {
+   "file": "assets/game/items/moonlit_reliquary.glb",
+   "icon": "assets/game/items/icons/moonlit_reliquary.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1562,
+   "guard": 0.15,
+   "frame": {
+    "y": [
+     -1.1762,
+     0.6789
+    ],
+    "z": 0.2319
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2233,
+     "z": 0.0088,
+     "radius": 0.03,
+     "back": -0.0294,
+     "front": 0.0312
+    },
+    {
+     "slot": "blade",
+     "y": -0.1398,
+     "z": 0.0015,
+     "radius": 0.024,
+     "back": -0.019,
+     "front": 0.0217
+    },
+    {
+     "slot": "blade",
+     "y": -0.7206,
+     "z": -0.0018,
+     "radius": 0.024,
+     "back": -0.0212,
+     "front": 0.0224
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0473,
+     "z": -0.0005,
+     "radius": 0.028,
+     "back": -0.0263,
+     "front": 0.0279
+    }
+   ]
+  },
+  "forest_charm": {
+   "file": "assets/game/items/forest_charm.glb",
+   "icon": "assets/game/items/icons/forest_charm.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1369,
+   "guard": 0.1387,
+   "frame": {
+    "y": [
+     -1.1569,
+     0.6679
+    ],
+    "z": 0.2281
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2195,
+     "z": -0.005,
+     "radius": 0.03,
+     "back": -0.0449,
+     "front": 0.0193
+    },
+    {
+     "slot": "blade",
+     "y": -0.1374,
+     "z": -0.0025,
+     "radius": 0.024,
+     "back": -0.0521,
+     "front": 0.0446
+    },
+    {
+     "slot": "blade",
+     "y": -0.7086,
+     "z": -0.0078,
+     "radius": 0.024,
+     "back": -0.0264,
+     "front": 0.0314
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0298,
+     "z": -0.0099,
+     "radius": 0.028,
+     "back": -0.0437,
+     "front": 0.0344
+    }
+   ]
+  },
+  "shroud_of_the_lich": {
+   "file": "assets/game/items/shroud_of_the_lich.glb",
+   "icon": "assets/game/items/icons/shroud_of_the_lich.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1305,
+   "guard": 0.1598,
+   "frame": {
+    "y": [
+     -1.1505,
+     0.6642
+    ],
+    "z": 0.2268
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2183,
+     "z": -0.0137,
+     "radius": 0.03,
+     "back": -0.0545,
+     "front": -0.0097
+    },
+    {
+     "slot": "blade",
+     "y": -0.1367,
+     "z": 0.0153,
+     "radius": 0.024,
+     "back": 0.0128,
+     "front": 0.0197
+    },
+    {
+     "slot": "blade",
+     "y": -0.7046,
+     "z": 0.0083,
+     "radius": 0.024,
+     "back": -0.014,
+     "front": 0.0273
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0241,
+     "z": 0.017,
+     "radius": 0.028,
+     "back": -0.0029,
+     "front": 0.0422
+    }
+   ]
+  },
+  "frostbanner_staff": {
+   "file": "assets/game/items/frostbanner_staff.glb",
+   "icon": "assets/game/items/icons/frostbanner_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1606,
+   "guard": 0.1871,
+   "frame": {
+    "y": [
+     -1.1806,
+     0.6814
+    ],
+    "z": 0.2328
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2241,
+     "z": -0.0207,
+     "radius": 0.03,
+     "back": -0.0308,
+     "front": 0.0356
+    },
+    {
+     "slot": "blade",
+     "y": -0.1403,
+     "z": 0.0245,
+     "radius": 0.024,
+     "back": 0.0037,
+     "front": 0.0536
+    },
+    {
+     "slot": "blade",
+     "y": -0.7233,
+     "z": 0.0324,
+     "radius": 0.024,
+     "back": 0.0071,
+     "front": 0.0424
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0513,
+     "z": 0.0281,
+     "radius": 0.028,
+     "back": 0.0052,
+     "front": 0.0602
+    }
+   ]
+  },
+  "oakroot_staff": {
+   "file": "assets/game/items/oakroot_staff.glb",
+   "icon": "assets/game/items/icons/oakroot_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1425,
+   "guard": 0.147,
+   "frame": {
+    "y": [
+     -1.1625,
+     0.671
+    ],
+    "z": 0.2292
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2206,
+     "z": 0.0147,
+     "radius": 0.03,
+     "back": 0.025,
+     "front": 0.0796
+    },
+    {
+     "slot": "blade",
+     "y": -0.1381,
+     "z": -0.0507,
+     "radius": 0.024,
+     "back": 0.0266,
+     "front": 0.057
+    },
+    {
+     "slot": "blade",
+     "y": -0.712,
+     "z": -0.0363,
+     "radius": 0.024,
+     "back": 0.0112,
+     "front": 0.055
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0348,
+     "z": -0.0284,
+     "radius": 0.028,
+     "back": -0.0142,
+     "front": 0.0256
+    }
+   ]
+  },
+  "sapphire_staff": {
+   "file": "assets/game/items/sapphire_staff.glb",
+   "icon": "assets/game/items/icons/sapphire_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1324,
+   "guard": 0.1166,
+   "frame": {
+    "y": [
+     -1.1524,
+     0.6653
+    ],
+    "z": 0.2272
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2186,
+     "z": -0.0033,
+     "radius": 0.03,
+     "back": -0.0223,
+     "front": 0.0439
+    },
+    {
+     "slot": "blade",
+     "y": -0.1369,
+     "z": 0.0001,
+     "radius": 0.024,
+     "back": -0.0256,
+     "front": 0.0458
+    },
+    {
+     "slot": "blade",
+     "y": -0.7057,
+     "z": -0.0053,
+     "radius": 0.024,
+     "back": -0.0119,
+     "front": 0.0322
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0257,
+     "z": -0.0046,
+     "radius": 0.028,
+     "back": -0.0387,
+     "front": 0.0588
+    }
+   ]
+  },
+  "lavaroot_staff": {
+   "file": "assets/game/items/lavaroot_staff.glb",
+   "icon": "assets/game/items/icons/lavaroot_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1476,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": 0.0007,
+     "radius": 0.03,
+     "back": -0.0559,
+     "front": 0.0506
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0051,
+     "radius": 0.024,
+     "back": -0.0325,
+     "front": 0.0353
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": -0.0032,
+     "radius": 0.024,
+     "back": -0.0292,
+     "front": 0.0229
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": 0.0004,
+     "radius": 0.028,
+     "back": -0.0624,
+     "front": 0.06
+    }
+   ]
+  },
+  "pale_crescent": {
+   "file": "assets/game/items/pale_crescent.glb",
+   "icon": "assets/game/items/icons/pale_crescent.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1437,
+   "guard": 0.1421,
+   "frame": {
+    "y": [
+     -1.1637,
+     0.6717
+    ],
+    "z": 0.2294
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2208,
+     "z": 0.0025,
+     "radius": 0.03,
+     "back": -0.0266,
+     "front": 0.0294
+    },
+    {
+     "slot": "blade",
+     "y": -0.1382,
+     "z": 0.0037,
+     "radius": 0.024,
+     "back": -0.0178,
+     "front": 0.0333
+    },
+    {
+     "slot": "blade",
+     "y": -0.7128,
+     "z": -0.0008,
+     "radius": 0.024,
+     "back": -0.0263,
+     "front": 0.0285
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0359,
+     "z": 0.0034,
+     "radius": 0.028,
+     "back": -0.0398,
+     "front": 0.0406
+    }
+   ]
+  },
+  "mossgem_staff": {
+   "file": "assets/game/items/mossgem_staff.glb",
+   "icon": "assets/game/items/icons/mossgem_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1301,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": 0.0075,
+     "radius": 0.03,
+     "back": -0.0315,
+     "front": 0.0306
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": 0.0169,
+     "radius": 0.024,
+     "back": -0.0171,
+     "front": 0.0477
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.0261,
+     "radius": 0.024,
+     "back": -0.0176,
+     "front": 0.0326
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": 0.0254,
+     "radius": 0.028,
+     "back": -0.0185,
+     "front": 0.0343
+    }
+   ]
+  },
+  "cobalt_staff": {
+   "file": "assets/game/items/cobalt_staff.glb",
+   "icon": "assets/game/items/icons/cobalt_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1342,
+   "guard": 0.086,
+   "frame": {
+    "y": [
+     -1.1542,
+     0.6663
+    ],
+    "z": 0.2276
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.219,
+     "z": 0.0018,
+     "radius": 0.03,
+     "back": -0.0301,
+     "front": 0.0237
+    },
+    {
+     "slot": "blade",
+     "y": -0.1371,
+     "z": 0.0,
+     "radius": 0.024,
+     "back": -0.0377,
+     "front": 0.0326
+    },
+    {
+     "slot": "blade",
+     "y": -0.7069,
+     "z": -0.0027,
+     "radius": 0.024,
+     "back": -0.0243,
+     "front": 0.0177
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0273,
+     "z": -0.002,
+     "radius": 0.028,
+     "back": -0.0716,
+     "front": 0.0649
+    }
+   ]
+  },
+  "ember_staff": {
+   "file": "assets/game/items/ember_staff.glb",
+   "icon": "assets/game/items/icons/ember_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1342,
+   "guard": 0.1353,
+   "frame": {
+    "y": [
+     -1.1542,
+     0.6663
+    ],
+    "z": 0.2276
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.219,
+     "z": -0.001,
+     "radius": 0.03,
+     "back": -0.0407,
+     "front": 0.0295
+    },
+    {
+     "slot": "blade",
+     "y": -0.1371,
+     "z": 0.0037,
+     "radius": 0.024,
+     "back": -0.0389,
+     "front": 0.0283
+    },
+    {
+     "slot": "blade",
+     "y": -0.7069,
+     "z": -0.0069,
+     "radius": 0.024,
+     "back": -0.0415,
+     "front": 0.0157
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0273,
+     "z": -0.0055,
+     "radius": 0.028,
+     "back": -0.0733,
+     "front": 0.0599
+    }
+   ]
+  },
+  "twilight_staff": {
+   "file": "assets/game/items/twilight_staff.glb",
+   "icon": "assets/game/items/icons/twilight_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1226,
+   "guard": 0.1213,
+   "frame": {
+    "y": [
+     -1.1426,
+     0.6597
+    ],
+    "z": 0.2253
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2168,
+     "z": 0.0167,
+     "radius": 0.03,
+     "back": -0.023,
+     "front": 0.0279
+    },
+    {
+     "slot": "blade",
+     "y": -0.1357,
+     "z": 0.0066,
+     "radius": 0.024,
+     "back": -0.0096,
+     "front": 0.0347
+    },
+    {
+     "slot": "blade",
+     "y": -0.6997,
+     "z": 0.0047,
+     "radius": 0.024,
+     "back": -0.0136,
+     "front": 0.0348
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0169,
+     "z": 0.007,
+     "radius": 0.028,
+     "back": -0.0618,
+     "front": 0.0839
+    }
+   ]
+  },
+  "moonstone_staff": {
+   "file": "assets/game/items/moonstone_staff.glb",
+   "icon": "assets/game/items/icons/moonstone_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1269,
+   "guard": 0.1215,
+   "frame": {
+    "y": [
+     -1.1469,
+     0.6622
+    ],
+    "z": 0.2261
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2176,
+     "z": 0.0185,
+     "radius": 0.03,
+     "back": -0.0539,
+     "front": 0.0405
+    },
+    {
+     "slot": "blade",
+     "y": -0.1362,
+     "z": 0.0142,
+     "radius": 0.024,
+     "back": -0.0397,
+     "front": 0.0175
+    },
+    {
+     "slot": "blade",
+     "y": -0.7023,
+     "z": 0.0128,
+     "radius": 0.024,
+     "back": -0.0385,
+     "front": 0.0261
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0208,
+     "z": 0.0085,
+     "radius": 0.028,
+     "back": -0.0436,
+     "front": -0.0026
+    }
+   ]
+  },
+  "amethyst_staff": {
+   "file": "assets/game/items/amethyst_staff.glb",
+   "icon": "assets/game/items/icons/amethyst_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.142,
+   "guard": 0.116,
+   "frame": {
+    "y": [
+     -1.162,
+     0.6708
+    ],
+    "z": 0.2291
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2205,
+     "z": 0.0013,
+     "radius": 0.03,
+     "back": -0.0218,
+     "front": 0.0225
+    },
+    {
+     "slot": "blade",
+     "y": -0.138,
+     "z": 0.0,
+     "radius": 0.024,
+     "back": -0.0221,
+     "front": 0.0234
+    },
+    {
+     "slot": "blade",
+     "y": -0.7117,
+     "z": 0.0008,
+     "radius": 0.024,
+     "back": -0.0268,
+     "front": 0.0291
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0344,
+     "z": 0.0035,
+     "radius": 0.028,
+     "back": -0.0486,
+     "front": 0.0507
+    }
+   ]
+  },
+  "old_crook": {
+   "file": "assets/game/items/old_crook.glb",
+   "icon": "assets/game/items/icons/old_crook.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1235,
+   "guard": 0.1665,
+   "frame": {
+    "y": [
+     -1.1435,
+     0.6602
+    ],
+    "z": 0.2255
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2169,
+     "z": -0.033,
+     "radius": 0.03,
+     "back": -0.0283,
+     "front": 0.0503
+    },
+    {
+     "slot": "blade",
+     "y": -0.1358,
+     "z": -0.0219,
+     "radius": 0.024,
+     "back": -0.0232,
+     "front": 0.0342
+    },
+    {
+     "slot": "blade",
+     "y": -0.7002,
+     "z": -0.0293,
+     "radius": 0.024,
+     "back": -0.0175,
+     "front": 0.0469
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0177,
+     "z": -0.0325,
+     "radius": 0.028,
+     "back": -0.0204,
+     "front": 0.006
+    }
+   ]
+  },
+  "wayfinder_staff": {
+   "file": "assets/game/items/wayfinder_staff.glb",
+   "icon": "assets/game/items/icons/wayfinder_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1559,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": 0.0003,
+     "radius": 0.03,
+     "back": -0.0284,
+     "front": 0.0287
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": 0.0009,
+     "radius": 0.024,
+     "back": -0.0273,
+     "front": 0.0276
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.0003,
+     "radius": 0.024,
+     "back": -0.0246,
+     "front": 0.0246
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": 0.0004,
+     "radius": 0.028,
+     "back": -0.0347,
+     "front": 0.0341
+    }
+   ]
+  },
+  "driftwood_staff": {
+   "file": "assets/game/items/driftwood_staff.glb",
+   "icon": "assets/game/items/icons/driftwood_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1398,
+   "guard": 0.1155,
+   "frame": {
+    "y": [
+     -1.1598,
+     0.6695
+    ],
+    "z": 0.2287
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2201,
+     "z": -0.0049,
+     "radius": 0.03,
+     "back": -0.0521,
+     "front": 0.0277
+    },
+    {
+     "slot": "blade",
+     "y": -0.1378,
+     "z": -0.0254,
+     "radius": 0.024,
+     "back": -0.0406,
+     "front": 0.0379
+    },
+    {
+     "slot": "blade",
+     "y": -0.7104,
+     "z": -0.0083,
+     "radius": 0.024,
+     "back": -0.039,
+     "front": 0.044
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0325,
+     "z": -0.0075,
+     "radius": 0.028,
+     "back": -0.0347,
+     "front": 0.0227
+    }
+   ]
+  },
+  "copper_sun_staff": {
+   "file": "assets/game/items/copper_sun_staff.glb",
+   "icon": "assets/game/items/icons/copper_sun_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1223,
+   "guard": 0.1351,
+   "frame": {
+    "y": [
+     -1.1423,
+     0.6596
+    ],
+    "z": 0.2252
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2167,
+     "z": -0.0011,
+     "radius": 0.03,
+     "back": -0.029,
+     "front": 0.0307
+    },
+    {
+     "slot": "blade",
+     "y": -0.1357,
+     "z": 0.0003,
+     "radius": 0.024,
+     "back": -0.0346,
+     "front": 0.0338
+    },
+    {
+     "slot": "blade",
+     "y": -0.6995,
+     "z": -0.0001,
+     "radius": 0.024,
+     "back": -0.018,
+     "front": 0.0189
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0166,
+     "z": 0.0003,
+     "radius": 0.028,
+     "back": -0.0481,
+     "front": 0.0483
+    }
+   ]
+  },
+  "vinewood_staff": {
+   "file": "assets/game/items/vinewood_staff.glb",
+   "icon": "assets/game/items/icons/vinewood_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1263,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": -0.0009,
+     "radius": 0.03,
+     "back": -0.044,
+     "front": 0.0541
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": -0.0177,
+     "radius": 0.024,
+     "back": -0.0171,
+     "front": 0.0197
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": -0.0236,
+     "radius": 0.024,
+     "back": -0.0037,
+     "front": 0.0193
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": -0.0005,
+     "radius": 0.028,
+     "back": -0.0344,
+     "front": 0.0345
+    }
+   ]
+  },
+  "ironcrystal_staff": {
+   "file": "assets/game/items/ironcrystal_staff.glb",
+   "icon": "assets/game/items/icons/ironcrystal_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1091,
+   "guard": 0.1083,
+   "frame": {
+    "y": [
+     -1.1291,
+     0.6521
+    ],
+    "z": 0.2226
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2142,
+     "z": -0.0014,
+     "radius": 0.03,
+     "back": -0.0238,
+     "front": 0.0275
+    },
+    {
+     "slot": "blade",
+     "y": -0.1341,
+     "z": 0.0003,
+     "radius": 0.024,
+     "back": -0.0195,
+     "front": 0.0229
+    },
+    {
+     "slot": "blade",
+     "y": -0.6913,
+     "z": -0.0012,
+     "radius": 0.024,
+     "back": -0.0274,
+     "front": 0.0298
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0047,
+     "z": 0.0001,
+     "radius": 0.028,
+     "back": -0.0379,
+     "front": 0.0402
+    }
+   ]
+  },
+  "stormwood_staff": {
+   "file": "assets/game/items/stormwood_staff.glb",
+   "icon": "assets/game/items/icons/stormwood_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1619,
+   "guard": 0.1232,
+   "frame": {
+    "y": [
+     -1.1819,
+     0.6821
+    ],
+    "z": 0.233
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2244,
+     "z": 0.009,
+     "radius": 0.03,
+     "back": -0.0294,
+     "front": 0.0292
+    },
+    {
+     "slot": "blade",
+     "y": -0.1404,
+     "z": 0.004,
+     "radius": 0.024,
+     "back": -0.0294,
+     "front": 0.0299
+    },
+    {
+     "slot": "blade",
+     "y": -0.7241,
+     "z": 0.001,
+     "radius": 0.024,
+     "back": -0.0227,
+     "front": 0.0215
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0524,
+     "z": 0.0091,
+     "radius": 0.028,
+     "back": -0.049,
+     "front": 0.0338
+    }
+   ]
+  },
+  "gilded_sun_staff": {
+   "file": "assets/game/items/gilded_sun_staff.glb",
+   "icon": "assets/game/items/icons/gilded_sun_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1582,
+   "guard": 0.1827,
+   "frame": {
+    "y": [
+     -1.1782,
+     0.68
+    ],
+    "z": 0.2323
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.2236,
+     "z": 0.0014,
+     "radius": 0.03,
+     "back": -0.0487,
+     "front": 0.0492
+    },
+    {
+     "slot": "blade",
+     "y": -0.14,
+     "z": 0.0006,
+     "radius": 0.024,
+     "back": -0.014,
+     "front": 0.0145
+    },
+    {
+     "slot": "blade",
+     "y": -0.7218,
+     "z": 0.0011,
+     "radius": 0.024,
+     "back": -0.0154,
+     "front": 0.0153
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0491,
+     "z": -0.0012,
+     "radius": 0.028,
+     "back": -0.0229,
+     "front": 0.0218
+    }
+   ]
+  },
+  "bonecrystal_staff": {
+   "file": "assets/game/items/bonecrystal_staff.glb",
+   "icon": "assets/game/items/icons/bonecrystal_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1447,
+   "guard": 0.1221,
+   "frame": {
+    "y": [
+     -1.1647,
+     0.6723
+    ],
+    "z": 0.2296
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.221,
+     "z": -0.0008,
+     "radius": 0.03,
+     "back": -0.0383,
+     "front": 0.0386
+    },
+    {
+     "slot": "blade",
+     "y": -0.1384,
+     "z": 0.0015,
+     "radius": 0.024,
+     "back": -0.0282,
+     "front": 0.027
+    },
+    {
+     "slot": "blade",
+     "y": -0.7134,
+     "z": -0.0009,
+     "radius": 0.024,
+     "back": -0.0243,
+     "front": 0.0252
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0369,
+     "z": -0.0006,
+     "radius": 0.028,
+     "back": -0.0344,
+     "front": 0.0333
+    }
+   ]
+  },
+  "greenmoon_staff": {
+   "file": "assets/game/items/greenmoon_staff.glb",
+   "icon": "assets/game/items/icons/greenmoon_staff.webp",
+   "hands": 3,
+   "tip": 0.5,
+   "pommel": -1.1496,
+   "guard": 0.1421,
+   "frame": {
+    "y": [
+     -1.1696,
+     0.6751
+    ],
+    "z": 0.2306
+   },
+   "sockets": [
+    {
+     "slot": "guard",
+     "y": 0.222,
+     "z": -0.0274,
+     "radius": 0.03,
+     "back": -0.03,
+     "front": 0.037
+    },
+    {
+     "slot": "blade",
+     "y": -0.139,
+     "z": -0.019,
+     "radius": 0.024,
+     "back": -0.0221,
+     "front": 0.0289
+    },
+    {
+     "slot": "blade",
+     "y": -0.7165,
+     "z": -0.0072,
+     "radius": 0.024,
+     "back": -0.0185,
+     "front": 0.0314
+    },
+    {
+     "slot": "pommel",
+     "y": -1.0413,
+     "z": -0.0111,
+     "radius": 0.028,
+     "back": -0.0387,
+     "front": 0.0447
+    }
+   ]
   }
  }
 }
