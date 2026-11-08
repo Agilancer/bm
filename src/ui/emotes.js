@@ -7,10 +7,11 @@ import { clamp } from '../core/math.js';
 const WORLD_FOV = 64 * Math.PI / 180;   // (the renderer's, when the camera doesn't narrow it)
 // The drawing is laid out in centimetres round the middle of the head: x right, y down.
 const BOX = { x: -60, y: -70, w: 120, h: 100 };
-// Where the mark and the side mark sit for each of her. The witch's hat is wide and tall, so hers sit further out.
+// Where the marks sit for each of her: the mark off the top of the head, the vein at the temple, the sweat drop on the
+// side of the head (behind the way she faces), the gloom cloud square over her. The witch's hat is wide and tall.
 const SPOT = {
-  pretty: { mark: [17, -27], side: [13, -18], sweat: [15, -6], ring: 17 },
-  witch: { mark: [30, -44], side: [20, -6], sweat: [20, -2], ring: 24 },
+  pretty: { mark: [17, -27], side: [13, -18], sweat: [16, 1], ring: 17, gloom: [3, -31] },
+  witch: { mark: [30, -44], side: [20, -6], sweat: [17, -5], ring: 24, gloom: [5, -53] },
 };
 const KINDS = ['startle', 'panic', 'question', 'anger', 'sweat', 'gloom'];
 
@@ -19,7 +20,7 @@ const glyph = (text, cls = '') => `<text class="em-glyph ${cls}" text-anchor="mi
 const vein = [[1, 1], [-1, 1], [1, -1], [-1, -1]].map(([a, b]) => `M${a * 1.3} ${b * 4.6}Q${a * 1.3} ${b * 1.3} ${a * 4.6} ${b * 1.3}`).join('');
 const drop = 'M0 -5.5C2.4 -1.6 4 1 4 3A4 4 0 0 1 -4 3C-4 1 -2.4 -1.6 0 -5.5Z';
 const cloud = 'M-9 2A4 4 0 0 1 -6 -4A5.5 5.5 0 0 1 3 -6A4.5 4.5 0 0 1 9 -1A3.5 3.5 0 0 1 7.5 4L-7.5 4A3 3 0 0 1 -9 2Z';
-const rain = [-5.5, -1.8, 1.8, 5.5].map((x, i) => `M${x} ${7 + (i % 2)}q1.2 2 0 4q-1.2 2 0 4`).join('');
+const rain = [-5.5, -1.8, 1.8, 5.5].map((x, i) => `M${x} ${6.5 + (i % 2) * 1.6}v2.6M${x} ${11.5 + (i % 2) * 1.6}v2.6`).join('');
 
 export class Emotes {
   constructor(parent, before = null) {
@@ -37,7 +38,7 @@ export class Emotes {
       <g data-k="panic"><g class="em-lines"></g><g class="em-mark"><g class="em-hop"><g transform="translate(-6 0) rotate(-9)">${glyph('!')}</g><g transform="translate(6 1) rotate(9)">${glyph('!')}</g></g></g></g>
       <g data-k="question"><g class="em-mark"><g class="em-hop">${glyph('?')}</g></g></g>
       <g data-k="anger"><g class="em-lines"></g><g class="em-side"><g transform="scale(1.9)"><path class="em-vein-ink" d="${vein}"/><path class="em-vein" d="${vein}"/></g></g></g>
-      <g data-k="sweat"><g class="em-side"><path class="em-drop" d="${drop}" transform="scale(1.25)"/><ellipse class="em-shine" cx="-1.3" cy="2.6" rx="0.9" ry="1.5"/></g></g>
+      <g data-k="sweat"><g class="em-side"><path class="em-drop" d="${drop}" transform="scale(0.9)"/><ellipse class="em-shine" cx="-0.95" cy="1.9" rx="0.65" ry="1.1"/></g></g>
       <g data-k="gloom"><g class="em-mark"><g class="em-hop"><path class="em-rain" d="${rain}"/><path class="em-cloud" d="${cloud}"/></g></g></g>`;
     parent.insertBefore(svg, before);
     this.groups = {};
@@ -66,7 +67,9 @@ export class Emotes {
       const r = s.ring, angles = kind === 'panic' ? [-160, -125, -90, -55, -20] : [-150, -112, -68, -30];
       for (const a of angles) {
         const c = Math.cos(a * Math.PI / 180), n = Math.sin(a * Math.PI / 180);
-        html += `<line x1="${(c * (r + 1)).toFixed(1)}" y1="${(n * (r + 1) - 4).toFixed(1)}" x2="${(c * (r + 8)).toFixed(1)}" y2="${(n * (r + 8) - 4).toFixed(1)}"/>`;
+        // (Each inked under, so it holds against a white sky.)
+        const at = `x1="${(c * (r + 1)).toFixed(1)}" y1="${(n * (r + 1) - 4).toFixed(1)}" x2="${(c * (r + 8)).toFixed(1)}" y2="${(n * (r + 8) - 4).toFixed(1)}"`;
+        html += `<line class="ink" ${at}/><line ${at}/>`;
       }
     } else if (kind === 'anger') {
       // Trembling: two arcs hugging each side of the head, like (( )).
@@ -80,7 +83,8 @@ export class Emotes {
 
   // cam: the frame's camera ({x, y, z, fx, fy, fz, ux, uy, uz, fov?}). head: the middle of her head, world metres. age and
   // dur: seconds into the feeling and how long it lasts. form: 'pretty' or 'witch'. bar: the cinema bar's height, px.
-  draw(cam, head, kind, age, dur, form, bar = 0) {
+  // facing: her heading (radians), so a sweat drop goes on the back of her head rather than off her nose.
+  draw(cam, head, kind, age, dur, form, bar = 0, facing = null) {
     const W = innerWidth, H = innerHeight;
     const dx = head[0] - cam.x, dy = head[1] - cam.y, dz = head[2] - cam.z;
     const z = dx * cam.fx + dy * cam.fy + dz * cam.fz;
@@ -127,11 +131,16 @@ export class Emotes {
       place(s.side, grp.side, ` scale(${beat.toFixed(3)})`, 9);
       grp.lines.setAttribute('transform', `translate(${(1.6 * jit(1) - 0.7).toFixed(2)} ${(jit(2) - 0.45).toFixed(2)})`);
     } else if (kind === 'sweat') {
-      place([s.sweat[0], s.sweat[1] + 3.5 * clamp(age / Math.max(0.5, dur), 0, 1)], grp.side, '', 6);
+      // Which way she's turned on screen: facing right, it goes on the left of her head.
+      const turned = facing === null ? 0 : Math.sin(facing) * rx + Math.cos(facing) * rz;
+      const x = s.sweat[0] * (turned > 0.3 ? -1 : 1);
+      place([x, s.sweat[1] + 2.5 * clamp(age / Math.max(0.5, dur), 0, 1)], grp.side, '', 6);
     } else if (kind === 'gloom') {
-      place(s.mark, grp.mark, '', 8);
-      grp.hop.setAttribute('transform', `translate(0 ${(0.8 * Math.sin(age * 2.2)).toFixed(2)})`);
-      grp.hop.firstElementChild.style.opacity = smooth((age - 0.15) / 0.4).toFixed(3);
+      place(s.gloom, grp.mark, '', 8);
+      grp.hop.setAttribute('transform', `translate(0 ${(0.6 * Math.sin(age * 2.2)).toFixed(2)})`);
+      const rainEl = grp.hop.firstElementChild;
+      rainEl.style.opacity = smooth((age - 0.15) / 0.4).toFixed(3);
+      rainEl.setAttribute('transform', `translate(0 ${((age * 9) % 5 - 1).toFixed(2)})`);
     }
   }
 }

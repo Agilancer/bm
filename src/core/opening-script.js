@@ -38,7 +38,7 @@ export const SCRIPT = {
     { at: 26.8, dur: 2.0, text: 'No. Don’t answer that.', emote: 'sweat', feel: 1.8 },
     { at: 29.4, dur: 2.4, text: 'I seem to have lost my home.', mutter: true, emote: 'gloom' },
     { at: 32.4, dur: 1.6, text: 'Lisandra.', named: true },
-    { at: 34.3, dur: 3.2, text: 'That town. You’re taking me there, {name}.', named: true },
+    { at: 34.3, dur: 3.2, text: 'Bellmourn. You’re taking me there, {name}.', named: true },
     { at: 37.8, dur: 3.8, text: 'And if anyone screams when they see me— keep walking.', named: true },
   ],
 };
@@ -63,7 +63,7 @@ export const CUE_IDS = Object.keys(CUES);
 
 // Feelings with no words: the witch's start when the glamour breaks, as she scrambles back from you.
 export const BEATS = {
-  [OPENING.WAKE]: [{ at: 9.9, dur: 1.4, emote: 'startle' }],
+  [OPENING.WAKE]: [{ at: 9.9, dur: 0.75, emote: 'startle' }],
 };
 
 // The feeling over her head at this moment, if any: { kind, age, dur }. cue and cueT: the cue said last, and how long ago.

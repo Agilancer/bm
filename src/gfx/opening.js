@@ -185,16 +185,22 @@ function boulder(g, px, py, pz, size, uvK = 0.9, flat = 1) {
 function caveRock() {
   const g = new Geo();
   // The tunnel and the chamber: one swept arch.
-  // Its texture runs by the true distance round each ring (the arch's points aren't evenly spaced, and the rock bulges),
-  // so the stone keeps its proportions up the walls instead of smearing into streaks.
+  // Its texture runs by the true distance round each ring (the arch's points aren't evenly spaced, and the rock bulges)
+  // and the true distance along the wall from ring to ring (where the chamber widens, a step down the cave is a long
+  // stretch of wall), so the stone keeps its proportions everywhere instead of smearing into streaks.
+  let prev = null;
+  const along = new Float64Array(ARCH + 1);
   const rows = STATIONS.map((st) => {
     let round = 0, last = null;
-    return Array.from({ length: ARCH + 1 }, (_, k) => {
+    const row = Array.from({ length: ARCH + 1 }, (_, k) => {
       const p = archPoint(st, k);
       if (last) round += Math.hypot(p[0] - last[0], p[1] - last[1], p[2] - last[2]);
+      if (prev) along[k] += Math.hypot(p[0] - prev[k][0], p[1] - prev[k][1], p[2] - prev[k][2]);
       last = p;
-      return [p[0], p[1], p[2], round / 2.2, st[4] / 2.2, st[0] - p[0], st[5] + st[7] * 0.45 - p[1], st[1] - p[2]];
+      return [p[0], p[1], p[2], round / 2.2, along[k] / 2.2, st[0] - p[0], st[5] + st[7] * 0.45 - p[1], st[1] - p[2]];
     });
+    prev = row;
+    return row;
   });
   g.grid(rows);
   // The chamber's end: closed off just past the last ring.
@@ -573,11 +579,13 @@ class OpeningStage {
       m.out = 3.0;   // the candles gutter out from here
       m.circle = 0.75 * (1 - smoothstep(2.6, 3.6, t));
       m.time = t;
-      // The rocks come down once she is clear of the heap (she leaves the mouth at 6 m/s as the dust goes up): dropping
-      // into the mouth over a third of a second, faster than a stone falls, and the cave's lights out once it's shut.
+      // The rocks come down once she is clear of the heap (she leaves the mouth at 6 m/s as the dust goes up): the roof
+      // slumping into the mouth and spilling out of it over a third of a second, and the cave's lights out once it's shut.
+      // (Down and out from inside the mouth, never straight down: a heap dropped from above would sweep through where she
+      // stands in front of it.)
       m.rubble = t >= DUST_AT + 0.3;
       const fall = Math.min(1, Math.max(0, (t - DUST_AT - 0.3) / 0.32));
-      m.drop = 1.3 * (1 - fall * fall);
+      m.drop = 1 - fall * fall;
       m.inside = t < DUST_AT + 0.65;
     } else m.rubble = true;
     return m;
@@ -601,7 +609,8 @@ class OpeningStage {
     const m = this.moment(stage, t);
     items.push(this.rock, this.floor);
     if (m.rubble) {
-      mat4FromQT(this.rubble.mat, [0, 0, 0, 1], 0, [0, m.drop || 0, 0], 0);
+      const k = m.drop || 0;
+      mat4FromQT(this.rubble.mat, [0, 0, 0, 1], 0, [-CAVE_OUT[0] * 1.8 * k, 0.6 * k, -CAVE_OUT[1] * 1.8 * k], 0);
       items.push(this.rubble);
     }
     if (m.inside) items.push(this.wood, this.iron, this.cloth, this.burlap, this.paper, this.wax);
@@ -674,12 +683,17 @@ class OpeningStage {
       const [cx, cz] = CIRCLE, cy = chamberShape(11.8)[2] + 0.02, pulse = 0.75 + 0.25 * Math.sin(time * 2.1);
       for (const [rad, wid, b] of [[1.25, 0.07, 1], [1.05, 0.035, 0.6], [0.45, 0.03, 0.45]]) this.ring(cx, cy, cz, rad, wid, [0.32, 0.08, 0.75].map((v) => v * b * m.circle * pulse));
     }
-    // Down the tunnel behind her as she runs, the mouth burns white: the day outside, and the dust in it.
+    // Down the tunnel behind her as she runs, the mouth burns white: the day outside, and the dust in it. The glare is a
+    // card facing you, so it's kept well beyond her as she runs out through the mouth (grown to look the same size): a
+    // card she reached would whiten whatever of her was past it, head first.
     if (stage === OPENING.COLLAPSE && t > 4.6 && t < DUST_AT + 0.2) {
       const k = smoothstep(4.6, 5.3, t) * (1 - smoothstep(DUST_AT - 0.1, DUST_AT + 0.2, t));
-      const mouth = [CAVE_MOUTH[0] + CAVE_OUT[0] * 0.3, CAVE_LINE[0][5] + CAVE_LINE[0][7] * 0.5, CAVE_MOUTH[1] + CAVE_OUT[1] * 0.3];
-      this.blob(mouth, R, U, CAVE_LINE[0][6] * 1.5, CAVE_LINE[0][7] * 0.75, [1.4 * k, 1.3 * k, 1.12 * k]);
-      this.blob(mouth, R, U, CAVE_LINE[0][6] * 2.6, CAVE_LINE[0][7] * 1.3, [0.5 * k, 0.45 * k, 0.38 * k]);
+      const past = (wx - CAVE_MOUTH[0]) * CAVE_OUT[0] + (wz - CAVE_MOUTH[1]) * CAVE_OUT[1];
+      const at = (d) => [CAVE_MOUTH[0] + CAVE_OUT[0] * d, CAVE_LINE[0][5] + CAVE_LINE[0][7] * 0.5, CAVE_MOUTH[1] + CAVE_OUT[1] * d];
+      const near = at(0.3), mouth = at(Math.max(0.3, past + 2.0));
+      const grow = Math.hypot(mouth[0] - cam.x, mouth[1] - cam.y, mouth[2] - cam.z) / Math.max(0.5, Math.hypot(near[0] - cam.x, near[1] - cam.y, near[2] - cam.z));
+      this.blob(mouth, R, U, CAVE_LINE[0][6] * 1.5 * grow, CAVE_LINE[0][7] * 0.75 * grow, [1.4 * k, 1.3 * k, 1.12 * k]);
+      this.blob(mouth, R, U, CAVE_LINE[0][6] * 2.6 * grow, CAVE_LINE[0][7] * 1.3 * grow, [0.5 * k, 0.45 * k, 0.38 * k]);
     }
     if (this.glowN) r.device.queue.writeBuffer(this.glowVB, 0, this.glow, 0, this.glowN * 6 * 9);
   }

@@ -14,6 +14,7 @@ const BEND = 0.12;                  // how hard a kink is pulled straight, per p
 const PUSH_KEEP = 0.3;              // of a push out of a leg, how much carries on as swing
 const GROUND = 0.012;               // cloth lies this far over the ground
 const POOL = 0.0025;                // how far a point lying on the ground slides out from her, per step (so a hem pools)
+const POOL_MAX = 0.05;              // and no further than this from where it came down (or a kneel swells into a dome)
 const PART = [50 * Math.PI / 180, 85 * Math.PI / 180];   // thighs this far apart: the tabard hangs free instead of skinned
 
 // Per kind: how hard each point is pulled toward its shape (per sixtieth of a second, top point to tip), how much speed
@@ -148,7 +149,7 @@ export class Cloth {
     this.ground = ground;
     this.targets();
     if (this.fresh || dt > 0.5) {
-      for (const c of this.chains) { c.x.set(c.target); c.prev.set(c.target); }
+      for (const c of this.chains) { c.x.set(c.target); c.prev.set(c.target); c.slid?.fill(0); }
       this.fresh = false;
       dt = 0;
     }
@@ -212,13 +213,14 @@ export class Cloth {
   floor(c) {
     const y = this.ground + GROUND, x = c.x, prev = c.prev, wt = this.rig.wt;
     const hx = wt[this.hipsJoint * 3], hz = wt[this.hipsJoint * 3 + 2];
+    const slid = c.slid ??= new Float32Array(c.n);
     for (let k = 1; k < c.n; k++) {
       const i = k * 3;
-      if (x[i + 1] >= y) continue;
+      if (x[i + 1] >= y) { slid[k] = Math.max(0, slid[k] - POOL * 0.5); continue; }
       x[i + 1] = y; prev[i + 1] = y;
       prev[i] += (x[i] - prev[i]) * 0.5; prev[i + 2] += (x[i + 2] - prev[i + 2]) * 0.5;
       const ox = x[i] - hx, oz = x[i + 2] - hz, ol = Math.hypot(ox, oz);
-      if (ol > 1e-4) { x[i] += ox / ol * POOL; x[i + 2] += oz / ol * POOL; }
+      if (ol > 1e-4 && slid[k] < POOL_MAX) { x[i] += ox / ol * POOL; x[i + 2] += oz / ol * POOL; slid[k] += POOL; }
     }
   }
 

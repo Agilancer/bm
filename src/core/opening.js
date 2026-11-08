@@ -255,7 +255,7 @@ export const OPENING_CLIPS = [
   'Spell_Simple_Idle_Loop', 'Idle_Lantern_Loop', 'greet_01', 'greet_02', 'Interact', 'Hit_Knockback', 'scared_02', 'afraid',
   'frightened', 'fold_arms', 'Idle_FoldArms_Loop', 'wait', 'Spell_Simple_Shoot', 'Pointing into the distance', 'Pointing at an enemy',
   'complain_01', 'complain_02', 'Idle_Talking_Loop', 'Talking to someone angrily', 'PickUp_Table', 'look_around',
-  'Crouch_Idle_Loop', 'cry', 'depressed', 'standing_relax', 'Yes', 'agree', 'hug', 'angry_01', 'scratch', 'heart_pose',
+  'Crouch_Idle_Loop', 'cry', 'depressed', 'standing_relax', 'Yes', 'agree', 'hug', 'angry_02', 'scratch', 'heart_pose',
   'fall', 'Farm_PlantSeed',
   ...OPENING_MOVES,
 ];

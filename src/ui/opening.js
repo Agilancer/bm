@@ -144,9 +144,9 @@ export class OpeningHUD {
     this.quest.style.opacity = q.toFixed(3);
     if (q > 0) {
       this.quest.querySelector('small').textContent = stage === OPENING.ARRIVED ? 'Quest complete' : 'Quest';
-      this.quest.querySelector('span').textContent = 'Go to town with Lisandra';
+      this.quest.querySelector('span').textContent = 'Go to Bellmourn with Lisandra';
     }
-    this.track.textContent = stage === OPENING.ESCORT && t > 5 ? 'Go to town with Lisandra' : '';
+    this.track.textContent = stage === OPENING.ESCORT && t > 5 ? 'Go to Bellmourn with Lisandra' : '';
     // Her words.
     this.words(snap, stage, t);
     // Holding to skip.
@@ -248,7 +248,7 @@ export class OpeningHUD {
     const pretty = prettyShown(stage, t);
     const co = CHARS_START + (snap[H.NCHARS] - (pretty ? 2 : 1)) * C_SIZE;
     const head = [snap[co + C_PROPS], snap[co + C_PROPS + 1] - 0.09, snap[co + C_PROPS + 2]];
-    this.emotes.draw(cam, head, e.kind, e.age, e.dur, pretty ? 'pretty' : 'witch', this.root.classList.contains('bars') ? innerHeight * 0.105 : 0);
+    this.emotes.draw(cam, head, e.kind, e.age, e.dur, pretty ? 'pretty' : 'witch', this.root.classList.contains('bars') ? innerHeight * 0.105 : 0, snap[co + C.YAW]);
   }
 
   // ---- the camera -------------------------------------------------------------------------------------------------------
@@ -391,7 +391,7 @@ export class OpeningHUD {
       // The double take: her, the rubble, her.
       look = t < 21.75 || t > 22.45 ? face : mouth; rate = 9; fov = close;
     } else if (t > 34.6 && t < 36.4) {
-      // "That town." Down the road she's pointing along.
+      // "Bellmourn." Down the road she's pointing along.
       look = valley(P); rate = 2.2; fov = 26;
     } else {
       look = face; fov = t > 41 ? 64 : close; rate = 3;
