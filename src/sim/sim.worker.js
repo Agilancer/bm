@@ -438,6 +438,7 @@ async function boot(msg) {
     const m = e.data;
     if (m.type === 'openingName') sim.opening?.named();
     if (m.type === 'openingSkip') sim.opening?.skip();
+    if (m.type === 'openingPose' && sim.opening) sim.opening.pose = m.b;
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {
       console.error(err);

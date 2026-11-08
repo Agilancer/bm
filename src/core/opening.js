@@ -174,7 +174,7 @@ export const PORTAL = (() => { const [x, z] = at(PORTAL_S, 0); return [x, chambe
 export const PORTAL_YAW = CHAMBER_YAW + Math.PI;
 export const CIRCLE = at(WAKE_S, 0);
 export const WITCH_MARK = at(2.9, -1.0);
-export const WITCH_STOP = at(10.45, 0.25);   // 1.3 m in front of you, when she's said her piece
+export const WITCH_STOP = at(9.9, 0.2);      // 1.9 m in front of you, when she's said her piece
 // Her way across, through her own mess.
 export const WEAVE = [at(2.9, -1.0), at(4.3, -2.1), at(6.0, -1.7), at(7.3, 0.8), at(8.8, 0.6), WITCH_STOP];
 // She tidies by the portal while you go, and runs for the mouth when it dies.
@@ -194,6 +194,9 @@ export const CLUTTER = [
   ['table', 7.6, 4.9, -0.12, 1], ['chest', 9.3, -5.5, 1.4, 1], ['books', 6.4, -3.3, 0.7, 1], ['books', 9.6, 4.6, -0.4, 0.8],
   ['bedroll', 13.6, 4.2, 0.35, 1], ['cauldron', 8.4, -3.9, 0, 1], ['lectern', 1.7, 1.15, 2.8, 1], ['sack', 3.0, -4.6, 0.2, 1],
   ['sack', 10.6, -5.2, 1.1, 0.9], ['crate', 12.2, -5.3, -0.3, 1], ['barrel', 11.8, 5.6, 0, 0.9],
+  // In the middle of the room, so she comes to you round her own mess.
+  ['crate', 5.4, 1.3, 0.4, 0.9], ['crate', 5.42, 1.28, 0.95, 0.6, 0.58], ['sack', 5.95, 1.8, 0.8, 0.85], ['barrel', 8.0, -1.05, 0.3, 0.8],
+  ['sack', 8.45, -1.45, 2.0, 0.8], ['crate', 6.8, 2.35, -0.5, 0.85], ['books', 6.78, 2.33, 0.4, 0.7, 0.55],
 ];
 // Half sizes across and along, and the height, by kind.
 export const CLUTTER_SIZE = {
@@ -207,18 +210,21 @@ export function clutterBoxes() {
   });
 }
 
-// The floating candles: where each hangs, and when it catches in the wave that rolls out from her past you.
+// The floating candles: where each hangs, and when it catches in the wave that rolls out from her past you. They hang low,
+// 1.8 to 2.6 m up, most of them over her things, so the light falls on the room's mess and not on bare rock.
 export const CANDLES = (() => {
   const out = [];
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  for (let i = 0; i < 44; i++) {
-    const s = 0.8 + rnd() * 14.2, [w, h, floor] = chamberShape(s);
-    const q = (rnd() * 2 - 1) * Math.max(0.6, w - 1.3);
-    const [x, z] = at(s, q);
-    const y = floor + 1.75 + rnd() * Math.max(0.3, Math.min(3.4, h - 2.6));
+  const hang = (s, q) => {
+    const [x, z] = at(s, q), floor = chamberShape(s)[2];
     const d = Math.hypot(x - WITCH_MARK[0], z - WITCH_MARK[1]);
-    out.push({ x, y, z, tall: 0.1 + rnd() * 0.12, phase: rnd() * 6.28, at: CANDLES_AT + 0.06 + d * 0.07 + rnd() * 0.08 });
+    out.push({ x, y: floor + 1.8 + rnd() * 0.8, z, tall: 0.1 + rnd() * 0.12, phase: rnd() * 6.28, at: CANDLES_AT + 0.06 + d * 0.07 + rnd() * 0.08 });
+  };
+  for (const [kind, s, q] of CLUTTER) if (kind !== 'lectern') hang(s + (rnd() - 0.5) * 0.6, q + (rnd() - 0.5) * 0.6);
+  while (out.length < 44) {
+    const s = 0.8 + rnd() * 14.2, w = chamberShape(s)[0];
+    hang(s, (rnd() * 2 - 1) * Math.max(0.6, w - 1.3));
   }
   // A few set on ledges down the tunnel, to see your way out by.
   for (const f of [0.22, 0.5, 0.78]) {
@@ -239,7 +245,8 @@ export const OPENING_MOVES = ['Jog_Fwd_Loop', 'Sprint_Loop'];
 export const OPENING_CLIPS = [
   'Spell_Simple_Idle_Loop', 'Idle_Lantern_Loop', 'greet_01', 'greet_02', 'Interact', 'Hit_Knockback', 'scared_02', 'afraid',
   'frightened', 'fold_arms', 'Idle_FoldArms_Loop', 'wait', 'Spell_Simple_Shoot', 'Pointing into the distance', 'Pointing at an enemy',
-  'complain_01', 'complain_02', 'Idle_Talking_Loop', 'Talking to someone angrily', 'PickUp_Table', 'look_around', 'dive', 'LayToIdle',
+  'complain_01', 'complain_02', 'Idle_Talking_Loop', 'Talking to someone angrily', 'PickUp_Table', 'look_around',
   'Crouch_Idle_Loop', 'cry', 'depressed', 'standing_relax', 'Yes', 'agree', 'hug', 'angry_01', 'Consume', 'scratch', 'heart_pose',
+  'NinjaJump_Land',
   ...OPENING_MOVES,
 ];
