@@ -1,5 +1,6 @@
 // Native Mixamo creatures using the existing monster wounds and spell damage.
 import { Beast } from './beast.js';
+import { foeOf } from './foes.js';
 import { clamp, quatYaw, wrapAngle } from '../core/math.js';
 import { EV } from '../core/layout.js';
 import { OPENING } from '../core/opening.js';
@@ -33,7 +34,7 @@ export class FieldCreature extends Beast {
 
   update(dt, sim) {
     if (dt <= 0) return;
-    const p = sim.player, o = this.opts;
+    const p = foeOf(this, sim), o = this.opts;
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.flinch = Math.max(0, this.flinch - dt);
     this.fade = Math.min(1, this.fade + dt * 5);

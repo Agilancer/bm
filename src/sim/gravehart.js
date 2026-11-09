@@ -6,6 +6,7 @@
 import { EV } from '../core/layout.js';
 import { clamp, damp, quatYaw, wrapAngle } from '../core/math.js';
 import { Beast } from './beast.js';
+import { foeOf } from './foes.js';
 
 export const GRAVEHART_SCALE = 3.0;
 const S = GRAVEHART_SCALE;
@@ -82,7 +83,7 @@ export class Gravehart extends Beast {
   update(dt, sim) {
     this.stateT += dt;
     this.fade = Math.min(1, this.fade + dt / 0.16);
-    const p = sim.player;
+    const p = foeOf(this, sim);
     const dx = p.x - this.x, dz = p.z - this.z, dist = Math.hypot(dx, dz), toPlayer = Math.atan2(dx, dz);
     this.heart += dt * 1.2;
     if (this.bleeds.length && !this.dead) { let flow_ = 0; for (const b of this.bleeds) flow_ += b.rate; this.hp -= dt * flow_ * 2.2; }
@@ -360,7 +361,7 @@ export class Gravehart extends Beast {
     this.used = true;
     this.bites++;
     const landed = p.damage(sim, a.dmg, this.x, this.z, a.knock || 0);
-    if (landed) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
+    if (landed && p === sim.player) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
   }
 
   thinkAttack(dt, sim, p, dist, toPlayer) {

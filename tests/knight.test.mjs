@@ -12,7 +12,8 @@ function knight(kind = 0) {
     { spawn: [0, 0], hp: 500, hostile: !kind, swordScale: kind ? 0.96 : 1.085, shieldScale: kind ? 1.25 : 1.6, bladeLen: 1, route: [[0, 0]], walk: 1.5, style: kind ? 'silver' : 'black' });
 }
 function world() {
-  return Object.assign(Object.create(World.prototype), { colliders: [], trunks: new Map(), height: () => 0 });
+  // A bare world: no boxes, no pines, no land sites (World's own constructor builds the whole land).
+  return Object.assign(Object.create(World.prototype), { colliders: [], trunks: new Map(), siteBoxes: new Map(), height: () => 0 });
 }
 function simulation(knights = []) {
   return { time: 0, tick: 0, gameState: 0, world: world(), knights, player: { x: 10, y: 0, z: 0, dead: false }, casting: { bolts: [] }, event() {}, slowMo() {}, tacticWeights: [1,1,1,1,1,1] };

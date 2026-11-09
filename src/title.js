@@ -46,7 +46,7 @@ const store = {
 // ---- settings ------------------------------------------------------------------------------------------------------
 
 const SETTINGS_KEY = 'velscour.settings';
-export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off' };
+export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto' };
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
 
 const when = (t) => {
@@ -66,9 +66,13 @@ const SETTINGS = `
     <label><span>Look speed</span><input data-k="look" type="range" min="0.4" max="2.5" step="0.1"></label>
     <label><span>Resolution</span><select data-k="res"><option value="auto">Auto (holds the frame rate)</option><option value="1">Full</option><option value="0.75">75%</option><option value="0.5">Half</option></select></label>
     <label><span>Graphics</span><select data-k="gfx"><option value="auto">Auto (from your GPU)</option><option value="ultra">Ultra</option><option value="high">High</option><option value="mobile">Low</option></select></label>
+    <label><span>Names over heads</span><select data-k="tags"><option value="full">Names and guilds</option><option value="names">Names only</option><option value="off">Off</option></select></label>
+    <label><span>Speech bubbles</span><select data-k="bubbles"><option value="on">On</option><option value="off">Off</option></select></label>
+    <label><span>Chat log</span><select data-k="chatlog"><option value="on">On</option><option value="off">Off</option></select></label>
+    <label><span>Other Tessariels</span><select data-k="heroes"><option value="auto">As many as the graphics allow</option><option value="few">A few</option><option value="off">None</option></select></label>
     <label><span>Frame rate readout</span><select data-k="perf"><option value="off">Off</option><option value="on">On</option></select></label>
   </div>
-  <p class="t-note">Graphics restarts the game to take hold.</p>
+  <p class="t-note">Graphics and Other Tessariels take hold when the game restarts.</p>
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 
 const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],

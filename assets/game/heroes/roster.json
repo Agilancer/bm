@@ -1,0 +1,706 @@
+[
+ {
+  "id": "archer_f1",
+  "cls": "archer",
+  "sex": "f",
+  "body": "FEMALE - ARCHER 1",
+  "groups": {
+   "helm": "FEMALE - ARCHER 1",
+   "chest": "FEMALE - ARCHER 1",
+   "shoulders": "FEMALE - ARCHER 1",
+   "arms": "FEMALE - ARCHER 1",
+   "legs": "FEMALE - ARCHER 1",
+   "boots": "FEMALE - ARCHER 1"
+  },
+  "palette": "native",
+  "height": 1.76
+ },
+ {
+  "id": "archer_f2",
+  "cls": "archer",
+  "sex": "f",
+  "body": "FEMALE - ARCHER 2",
+  "groups": {
+   "helm": "FEMALE - ARCHER 2",
+   "chest": "FEMALE - ARCHER 2",
+   "shoulders": "FEMALE - ARCHER 2",
+   "arms": "FEMALE - ARCHER 2",
+   "legs": "FEMALE - ARCHER 2",
+   "boots": "FEMALE - ARCHER 2"
+  },
+  "palette": "native",
+  "height": 1.76
+ },
+ {
+  "id": "archer_f3",
+  "cls": "archer",
+  "sex": "f",
+  "body": "FEMALE - ARCHER 3",
+  "groups": {
+   "helm": "FEMALE - ARCHER 3",
+   "chest": "FEMALE - ARCHER 3",
+   "shoulders": "FEMALE - ARCHER 3",
+   "arms": "FEMALE - ARCHER 3",
+   "legs": "FEMALE - ARCHER 3",
+   "boots": "FEMALE - ARCHER 3"
+  },
+  "palette": "native",
+  "height": 1.76
+ },
+ {
+  "id": "archer_f4",
+  "cls": "archer",
+  "sex": "f",
+  "body": "FEMALE - ARCHER 2",
+  "groups": {
+   "helm": "FEMALE - ARCHER 3",
+   "chest": "FEMALE - ARCHER 2",
+   "shoulders": "FEMALE - ARCHER 4",
+   "arms": "FEMALE - ARCHER 1",
+   "legs": "FEMALE - ARCHER 1",
+   "boots": "FEMALE - ARCHER 1"
+  },
+  "palette": "frost",
+  "height": 1.76
+ },
+ {
+  "id": "archer_f5",
+  "cls": "archer",
+  "sex": "f",
+  "body": "FEMALE - ARCHER 2",
+  "groups": {
+   "helm": "FEMALE - ARCHER 1",
+   "chest": "FEMALE - ARCHER 2",
+   "shoulders": "FEMALE - ARCHER 1",
+   "arms": "FEMALE - ARCHER 1",
+   "legs": "FEMALE - ARCHER 4",
+   "boots": "FEMALE - ARCHER 4"
+  },
+  "palette": "royal",
+  "height": 1.76
+ },
+ {
+  "id": "archer_f6",
+  "cls": "archer",
+  "sex": "f",
+  "body": "FEMALE - ARCHER 1",
+  "groups": {
+   "helm": "FEMALE - ARCHER 2",
+   "chest": "FEMALE - ARCHER 1",
+   "shoulders": "FEMALE - ARCHER 4",
+   "arms": "FEMALE - ARCHER 1",
+   "legs": "FEMALE - ARCHER 1",
+   "boots": "FEMALE - ARCHER 1"
+  },
+  "palette": "rose",
+  "height": 1.76
+ },
+ {
+  "id": "bard_f1",
+  "cls": "bard",
+  "sex": "f",
+  "body": "FEMALE - BARD 1",
+  "groups": {
+   "helm": "FEMALE - BARD 1",
+   "chest": "FEMALE - BARD 1",
+   "shoulders": "FEMALE - BARD 1",
+   "arms": "FEMALE - BARD 1",
+   "legs": "FEMALE - BARD 1",
+   "boots": "FEMALE - BARD 1"
+  },
+  "palette": "native",
+  "height": 1.76
+ },
+ {
+  "id": "bard_f2",
+  "cls": "bard",
+  "sex": "f",
+  "body": "FEMALE - BARD 2",
+  "groups": {
+   "helm": "FEMALE - BARD 1",
+   "chest": "FEMALE - BARD 2",
+   "shoulders": "FEMALE - BARD 1",
+   "arms": "FEMALE - BARD 1",
+   "legs": "FEMALE - BARD 1",
+   "boots": "FEMALE - BARD 1"
+  },
+  "palette": "ember",
+  "height": 1.76
+ },
+ {
+  "id": "bard_f3",
+  "cls": "bard",
+  "sex": "f",
+  "body": "FEMALE - BARD 1",
+  "groups": {
+   "helm": "FEMALE - BARD 2",
+   "chest": "FEMALE - BARD 1",
+   "shoulders": "FEMALE - BARD 1",
+   "arms": "FEMALE - BARD 2",
+   "legs": "FEMALE - BARD 1",
+   "boots": "FEMALE - BARD 1"
+  },
+  "palette": "teal",
+  "height": 1.76
+ },
+ {
+  "id": "bard_m1",
+  "cls": "bard",
+  "sex": "m",
+  "body": "MALE - BARD 1",
+  "groups": {
+   "helm": "MALE - BARD 1",
+   "chest": "MALE - BARD 1",
+   "shoulders": "MALE - BARD 1",
+   "arms": "MALE - BARD 1",
+   "legs": "MALE - BARD 1",
+   "boots": "MALE - BARD 1"
+  },
+  "palette": "native",
+  "height": 1.88
+ },
+ {
+  "id": "bard_m2",
+  "cls": "bard",
+  "sex": "m",
+  "body": "MALE - BARD 2",
+  "groups": {
+   "helm": "MALE - BARD 1",
+   "chest": "MALE - BARD 2",
+   "shoulders": "MALE - BARD 1",
+   "arms": "MALE - BARD 1",
+   "legs": "MALE - BARD 1",
+   "boots": "MALE - BARD 1"
+  },
+  "palette": "bone",
+  "height": 1.88
+ },
+ {
+  "id": "bard_m3",
+  "cls": "bard",
+  "sex": "m",
+  "body": "MALE - BARD 1",
+  "groups": {
+   "helm": "MALE - BARD 1",
+   "chest": "MALE - BARD 1",
+   "shoulders": "MALE - BARD 1",
+   "arms": "MALE - BARD 1",
+   "legs": "MALE - BARD 2",
+   "boots": "MALE - BARD 2"
+  },
+  "palette": "frost",
+  "height": 1.88
+ },
+ {
+  "id": "boomerang_f1",
+  "cls": "boomerang",
+  "sex": "f",
+  "body": "FEMALE - BOOMERANG KNIGHT 1",
+  "groups": {
+   "helm": "FEMALE - BOOMERANG KNIGHT 1",
+   "chest": "FEMALE - BOOMERANG KNIGHT 1",
+   "shoulders": "FEMALE - BOOMERANG KNIGHT 1",
+   "arms": "FEMALE - BOOMERANG KNIGHT 1",
+   "legs": "FEMALE - BOOMERANG KNIGHT 1",
+   "boots": "FEMALE - BOOMERANG KNIGHT 1"
+  },
+  "palette": "native",
+  "height": 1.76
+ },
+ {
+  "id": "boomerang_f2",
+  "cls": "boomerang",
+  "sex": "f",
+  "body": "FEMALE - BOOMERANG KNIGHT 3",
+  "groups": {
+   "helm": "FEMALE - BOOMERANG KNIGHT 4",
+   "chest": "FEMALE - BOOMERANG KNIGHT 3",
+   "shoulders": "FEMALE - BOOMERANG KNIGHT 1",
+   "arms": "FEMALE - BOOMERANG KNIGHT 1",
+   "legs": "FEMALE - BOOMERANG KNIGHT 4",
+   "boots": "FEMALE - BOOMERANG KNIGHT 4"
+  },
+  "palette": "frost",
+  "height": 1.76
+ },
+ {
+  "id": "boomerang_f3",
+  "cls": "boomerang",
+  "sex": "f",
+  "body": "FEMALE - BOOMERANG KNIGHT 4",
+  "groups": {
+   "helm": "FEMALE - BOOMERANG KNIGHT 2",
+   "chest": "FEMALE - BOOMERANG KNIGHT 4",
+   "shoulders": "FEMALE - BOOMERANG KNIGHT 4",
+   "arms": "FEMALE - BOOMERANG KNIGHT 1",
+   "legs": "FEMALE - BOOMERANG KNIGHT 1",
+   "boots": "FEMALE - BOOMERANG KNIGHT 1"
+  },
+  "palette": "frost",
+  "height": 1.76
+ },
+ {
+  "id": "boomerang_m1",
+  "cls": "boomerang",
+  "sex": "m",
+  "body": "MALE - BOOMERANG KNIGHT 1",
+  "groups": {
+   "helm": "MALE - BOOMERANG KNIGHT 1",
+   "chest": "MALE - BOOMERANG KNIGHT 1",
+   "shoulders": "MALE - BOOMERANG KNIGHT 1",
+   "arms": "MALE - BOOMERANG KNIGHT 1",
+   "legs": "MALE - BOOMERANG KNIGHT 1",
+   "boots": "MALE - BOOMERANG KNIGHT 1"
+  },
+  "palette": "native",
+  "height": 1.88
+ },
+ {
+  "id": "boomerang_m2",
+  "cls": "boomerang",
+  "sex": "m",
+  "body": "MALE - BOOMERANG KNIGHT 2",
+  "groups": {
+   "helm": "MALE - BOOMERANG KNIGHT 3",
+   "chest": "MALE - BOOMERANG KNIGHT 2",
+   "shoulders": "MALE - BOOMERANG KNIGHT 3",
+   "arms": "MALE - BOOMERANG KNIGHT 2",
+   "legs": "MALE - BOOMERANG KNIGHT 3",
+   "boots": "MALE - BOOMERANG KNIGHT 3"
+  },
+  "palette": "royal",
+  "height": 1.88
+ },
+ {
+  "id": "boomerang_m3",
+  "cls": "boomerang",
+  "sex": "m",
+  "body": "MALE - BOOMERANG KNIGHT 2",
+  "groups": {
+   "helm": "MALE - BOOMERANG KNIGHT 1",
+   "chest": "MALE - BOOMERANG KNIGHT 2",
+   "shoulders": "MALE - BOOMERANG KNIGHT 2",
+   "arms": "MALE - BOOMERANG KNIGHT 3",
+   "legs": "MALE - BOOMERANG KNIGHT 3",
+   "boots": "MALE - BOOMERANG KNIGHT 3"
+  },
+  "palette": "crimson",
+  "height": 1.88
+ },
+ {
+  "id": "dragoon_f1",
+  "cls": "dragoon",
+  "sex": "f",
+  "body": "FEMALE - DRAGOON 1 - PINK AND PURPLE",
+  "groups": {
+   "helm": "FEMALE - DRAGOON 1 - PINK AND PURPLE",
+   "chest": "FEMALE - DRAGOON 1 - PINK AND PURPLE",
+   "shoulders": "FEMALE - DRAGOON 1 - PINK AND PURPLE",
+   "arms": "FEMALE - DRAGOON 1 - PINK AND PURPLE",
+   "legs": "FEMALE - DRAGOON 1 - PINK AND PURPLE",
+   "boots": "FEMALE - DRAGOON 1 - PINK AND PURPLE"
+  },
+  "palette": "native",
+  "height": 1.76
+ },
+ {
+  "id": "dragoon_f2",
+  "cls": "dragoon",
+  "sex": "f",
+  "body": "FEMALE - DRAGOON 2",
+  "groups": {
+   "helm": "FEMALE - DRAGOON 2",
+   "chest": "FEMALE - DRAGOON 2",
+   "shoulders": "FEMALE - DRAGOON 2",
+   "arms": "FEMALE - DRAGOON 2",
+   "legs": "FEMALE - DRAGOON 2",
+   "boots": "FEMALE - DRAGOON 2"
+  },
+  "palette": "native",
+  "height": 1.76
+ },
+ {
+  "id": "dragoon_f3",
+  "cls": "dragoon",
+  "sex": "f",
+  "body": "FEMALE - DRAGOON 5",
+  "groups": {
+   "helm": "FEMALE - DRAGOON 3",
+   "chest": "FEMALE - DRAGOON 5",
+   "shoulders": "FEMALE - DRAGOON 4",
+   "arms": "FEMALE - DRAGOON 3",
+   "legs": "FEMALE - DRAGOON 4",
+   "boots": "FEMALE - DRAGOON 4"
+  },
+  "palette": "crimson",
+  "height": 1.76
+ },
+ {
+  "id": "dragoon_f4",
+  "cls": "dragoon",
+  "sex": "f",
+  "body": "FEMALE - DRAGOON 3",
+  "groups": {
+   "helm": "FEMALE - DRAGOON 4",
+   "chest": "FEMALE - DRAGOON 3",
+   "shoulders": "FEMALE - DRAGOON 2",
+   "arms": "FEMALE - DRAGOON 5",
+   "legs": "FEMALE - DRAGOON 1 - PINK AND PURPLE",
+   "boots": "FEMALE - DRAGOON 1 - PINK AND PURPLE"
+  },
+  "palette": "crimson",
+  "height": 1.76
+ },
+ {
+  "id": "dragoon_m1",
+  "cls": "dragoon",
+  "sex": "m",
+  "body": "MALE - DRAGOON 1",
+  "groups": {
+   "helm": "MALE - DRAGOON 1",
+   "chest": "MALE - DRAGOON 1",
+   "shoulders": "MALE - DRAGOON 1",
+   "arms": "MALE - DRAGOON 1",
+   "legs": "MALE - DRAGOON 1",
+   "boots": "MALE - DRAGOON 1"
+  },
+  "palette": "native",
+  "height": 1.88
+ },
+ {
+  "id": "dragoon_m2",
+  "cls": "dragoon",
+  "sex": "m",
+  "body": "MALE - DRAGOON 2",
+  "groups": {
+   "helm": "MALE - DRAGOON 2",
+   "chest": "MALE - DRAGOON 2",
+   "shoulders": "MALE - DRAGOON 2",
+   "arms": "MALE - DRAGOON 2",
+   "legs": "MALE - DRAGOON 2",
+   "boots": "MALE - DRAGOON 2"
+  },
+  "palette": "native",
+  "height": 1.88
+ },
+ {
+  "id": "dragoon_m3",
+  "cls": "dragoon",
+  "sex": "m",
+  "body": "MALE - DRAGOON 3",
+  "groups": {
+   "helm": "MALE - DRAGOON 2",
+   "chest": "MALE - DRAGOON 3",
+   "shoulders": "MALE - DRAGOON 2",
+   "arms": "MALE - DRAGOON 2",
+   "legs": "MALE - DRAGOON 4",
+   "boots": "MALE - DRAGOON 4"
+  },
+  "palette": "bone",
+  "height": 1.88
+ },
+ {
+  "id": "dragoon_m4",
+  "cls": "dragoon",
+  "sex": "m",
+  "body": "MALE - DRAGOON 2",
+  "groups": {
+   "helm": "MALE - DRAGOON 1",
+   "chest": "MALE - DRAGOON 2",
+   "shoulders": "MALE - DRAGOON 4",
+   "arms": "MALE - DRAGOON 4",
+   "legs": "MALE - DRAGOON 5",
+   "boots": "MALE - DRAGOON 5"
+  },
+  "palette": "verdant",
+  "height": 1.88
+ },
+ {
+  "id": "lancer_f1",
+  "cls": "lancer",
+  "sex": "f",
+  "body": "FEMALE - LANCER 1",
+  "groups": {
+   "helm": "FEMALE - LANCER 1",
+   "chest": "FEMALE - LANCER 1",
+   "shoulders": "FEMALE - LANCER 1",
+   "arms": "FEMALE - LANCER 1",
+   "legs": "FEMALE - LANCER 1",
+   "boots": "FEMALE - LANCER 1"
+  },
+  "palette": "native",
+  "height": 1.901
+ },
+ {
+  "id": "lancer_f2",
+  "cls": "lancer",
+  "sex": "f",
+  "body": "FEMALE - LANCER 3",
+  "groups": {
+   "helm": "FEMALE - LANCER 2",
+   "chest": "FEMALE - LANCER 3",
+   "shoulders": "FEMALE - LANCER 2",
+   "arms": "FEMALE - LANCER 3",
+   "legs": "FEMALE - LANCER 2",
+   "boots": "FEMALE - LANCER 2"
+  },
+  "palette": "rose",
+  "height": 1.901
+ },
+ {
+  "id": "lancer_f3",
+  "cls": "lancer",
+  "sex": "f",
+  "body": "FEMALE - LANCER 1",
+  "groups": {
+   "helm": "FEMALE - LANCER 2",
+   "chest": "FEMALE - LANCER 1",
+   "shoulders": "FEMALE - LANCER 1",
+   "arms": "FEMALE - LANCER 1",
+   "legs": "FEMALE - LANCER 1",
+   "boots": "FEMALE - LANCER 1"
+  },
+  "palette": "violet",
+  "height": 1.901
+ },
+ {
+  "id": "lancer_m1",
+  "cls": "lancer",
+  "sex": "m",
+  "body": "MALE - LANCER 1",
+  "groups": {
+   "helm": "MALE - LANCER 1",
+   "chest": "MALE - LANCER 1",
+   "shoulders": "MALE - LANCER 1",
+   "arms": "MALE - LANCER 1",
+   "legs": "MALE - LANCER 1",
+   "boots": "MALE - LANCER 1"
+  },
+  "palette": "native",
+  "height": 2.03
+ },
+ {
+  "id": "lancer_m2",
+  "cls": "lancer",
+  "sex": "m",
+  "body": "MALE - LANCER 3",
+  "groups": {
+   "helm": "MALE - LANCER 3",
+   "chest": "MALE - LANCER 3",
+   "shoulders": "MALE - LANCER 3",
+   "arms": "MALE - LANCER 3",
+   "legs": "MALE - LANCER 3",
+   "boots": "MALE - LANCER 3"
+  },
+  "palette": "native",
+  "height": 2.03
+ },
+ {
+  "id": "lancer_m3",
+  "cls": "lancer",
+  "sex": "m",
+  "body": "MALE - LANCER 1",
+  "groups": {
+   "helm": "MALE - LANCER 4",
+   "chest": "MALE - LANCER 1",
+   "shoulders": "MALE - LANCER 1",
+   "arms": "MALE - LANCER 3",
+   "legs": "MALE - LANCER 4",
+   "boots": "MALE - LANCER 4"
+  },
+  "palette": "ember",
+  "height": 2.03
+ },
+ {
+  "id": "lancer_m4",
+  "cls": "lancer",
+  "sex": "m",
+  "body": "MALE - LANCER 1",
+  "groups": {
+   "helm": "MALE - LANCER 3",
+   "chest": "MALE - LANCER 1",
+   "shoulders": "MALE - LANCER 1",
+   "arms": "MALE - LANCER 3",
+   "legs": "MALE - LANCER 4",
+   "boots": "MALE - LANCER 4"
+  },
+  "palette": "teal",
+  "height": 2.03
+ },
+ {
+  "id": "paladin_f1",
+  "cls": "paladin",
+  "sex": "f",
+  "body": "FEMALE - PALADIN 1",
+  "groups": {
+   "helm": "FEMALE - PALADIN 1",
+   "chest": "FEMALE - PALADIN 1",
+   "shoulders": "FEMALE - PALADIN 1",
+   "arms": "FEMALE - PALADIN 1",
+   "legs": "FEMALE - PALADIN 1",
+   "boots": "FEMALE - PALADIN 1"
+  },
+  "palette": "native",
+  "height": 1.795
+ },
+ {
+  "id": "paladin_f2",
+  "cls": "paladin",
+  "sex": "f",
+  "body": "FEMALE - PALADIN 2",
+  "groups": {
+   "helm": "FEMALE - PALADIN 3",
+   "chest": "FEMALE - PALADIN 2",
+   "shoulders": "FEMALE - PALADIN 1",
+   "arms": "FEMALE - PALADIN 3",
+   "legs": "FEMALE - PALADIN 3",
+   "boots": "FEMALE - PALADIN 3"
+  },
+  "palette": "rose",
+  "height": 1.795
+ },
+ {
+  "id": "paladin_m1",
+  "cls": "paladin",
+  "sex": "m",
+  "body": "MALE - PALADIN 1",
+  "groups": {
+   "helm": "MALE - PALADIN 1",
+   "chest": "MALE - PALADIN 1",
+   "shoulders": "MALE - PALADIN 1",
+   "arms": "MALE - PALADIN 1",
+   "legs": "MALE - PALADIN 1",
+   "boots": "MALE - PALADIN 1"
+  },
+  "palette": "native",
+  "height": 1.918
+ },
+ {
+  "id": "paladin_m2",
+  "cls": "paladin",
+  "sex": "m",
+  "body": "MALE - PALADIN 3",
+  "groups": {
+   "helm": "MALE - PALADIN 3",
+   "chest": "MALE - PALADIN 3",
+   "shoulders": "MALE - PALADIN 1",
+   "arms": "MALE - PALADIN 1",
+   "legs": "MALE - PALADIN 3",
+   "boots": "MALE - PALADIN 3"
+  },
+  "palette": "ash",
+  "height": 1.918
+ },
+ {
+  "id": "rogue_m1",
+  "cls": "rogue",
+  "sex": "m",
+  "body": "MALE ROGUE 1 - NO HELM",
+  "groups": {
+   "helm": "MALE ROGUE 1 - NO HELM",
+   "chest": "MALE ROGUE 1 - NO HELM",
+   "shoulders": "MALE ROGUE 1 - NO HELM",
+   "arms": "MALE ROGUE 1 - NO HELM",
+   "legs": "MALE ROGUE 1 - NO HELM",
+   "boots": "MALE ROGUE 1 - NO HELM"
+  },
+  "palette": "native",
+  "height": 1.842
+ },
+ {
+  "id": "rogue_m2",
+  "cls": "rogue",
+  "sex": "m",
+  "body": "MALE - ROGUE - 2",
+  "groups": {
+   "helm": "MALE - ROGUE - 2",
+   "chest": "MALE - ROGUE - 2",
+   "shoulders": "MALE - ROGUE - 2",
+   "arms": "MALE - ROGUE - 2",
+   "legs": "MALE - ROGUE - 2",
+   "boots": "MALE - ROGUE - 2"
+  },
+  "palette": "native",
+  "height": 1.842
+ },
+ {
+  "id": "rogue_m3",
+  "cls": "rogue",
+  "sex": "m",
+  "body": "MALE - ROGUE - 2",
+  "groups": {
+   "helm": "MALE - ROGUE - 2",
+   "chest": "MALE - ROGUE - 2",
+   "shoulders": "MALE - ROGUE - 2",
+   "arms": "MALE ROGUE 1 - NO HELM",
+   "legs": "MALE - ROGUE - 2",
+   "boots": "MALE - ROGUE - 2"
+  },
+  "palette": "ash",
+  "height": 1.842
+ },
+ {
+  "id": "rogue_m4",
+  "cls": "rogue",
+  "sex": "m",
+  "body": "MALE ROGUE 1 - NO HELM",
+  "groups": {
+   "helm": "MALE ROGUE 1 - NO HELM",
+   "chest": "MALE ROGUE 1 - NO HELM",
+   "shoulders": "MALE ROGUE 1 - NO HELM",
+   "arms": "MALE ROGUE 1 - NO HELM",
+   "legs": "MALE - ROGUE - 2",
+   "boots": "MALE - ROGUE - 2"
+  },
+  "palette": "royal",
+  "height": 1.842
+ },
+ {
+  "id": "ninja_m1",
+  "cls": "ninja",
+  "sex": "m",
+  "body": "MALE - NINJA 1",
+  "groups": {
+   "helm": "MALE - NINJA 1",
+   "chest": "MALE - NINJA 1",
+   "shoulders": "MALE - NINJA 1",
+   "arms": "MALE - NINJA 1",
+   "legs": "MALE - NINJA 1",
+   "boots": "MALE - NINJA 1"
+  },
+  "palette": "native",
+  "height": 1.842
+ },
+ {
+  "id": "ninja_m2",
+  "cls": "ninja",
+  "sex": "m",
+  "body": "MALE - NINJA 1",
+  "groups": {
+   "helm": "MALE - NINJA 2",
+   "chest": "MALE - NINJA 1",
+   "shoulders": "MALE - NINJA 1",
+   "arms": "MALE - NINJA 1",
+   "legs": "MALE - NINJA 1",
+   "boots": "MALE - NINJA 1"
+  },
+  "palette": "frost",
+  "height": 1.842
+ },
+ {
+  "id": "ninja_m3",
+  "cls": "ninja",
+  "sex": "m",
+  "body": "MALE - NINJA 1",
+  "groups": {
+   "helm": "MALE - NINJA 1",
+   "chest": "MALE - NINJA 1",
+   "shoulders": "MALE - NINJA 1",
+   "arms": "MALE - NINJA 2",
+   "legs": "MALE - NINJA 1",
+   "boots": "MALE - NINJA 1"
+  },
+  "palette": "frost",
+  "height": 1.842
+ }
+]
