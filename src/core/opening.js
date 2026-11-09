@@ -7,14 +7,21 @@ import { clamp, lerp, smoothstep } from './math.js';
 export const OPENING = { OFF: 0, WAKE: 1, NAME: 2, HERD: 3, LEAVE: 4, COLLAPSE: 5, ESCORT: 6, ARRIVED: 7 };
 export const OPENING_REVISION = 4;
 
-// The beats every part of the game keys off, in seconds into WAKE.
-export const SWAP_AT = 9.0;        // the flash: the glamour shorts out and the witch is standing there
-export const SNAP_AT = 14.6;       // her snap: the drone cuts dead
-export const CANDLES_AT = 15.6;    // the candles pop alight
-export const NAME_AT = 41.0;       // the name prompt
-export const HERD_CONTROL = 9.9;   // into HERD: you can walk again
-export const HERD_END = 13.2;      // and this long after the name, you're walking out
-export const COLLAPSE_END = 41.8;  // the bars slide away and the walk down begins
+// The beats every part of the game keys off, in seconds into WAKE: the scene is laid out in src/core/opening-cave.js, by how
+// long her lines take to say. Your eyes come open (if hazy) at GLAMOUR_AT, and the flash is at SWAP_AT.
+export { CAST_AT, CAVE, CLIMB, CANDLES_AT, GLAMOUR_AT, NAME_AT, REVEAL_AT, SNAP_AT, SPARK_AT, SWAP_AT } from './opening-cave.js';
+import { CANDLES_AT, CAVE, SWAP_AT } from './opening-cave.js';
+export const DAZZLE = 3.2;             // s after the flash: your eyes swim, and clear
+// In WAKE, your eyes: how high (lying in the circle, scrambling back at the flash, sitting up as she comes to you again,
+// on your feet from the candles), and how far back from where you lie (the scramble). Her looks find them there.
+export function wakeEyeH(t) {
+  const scramble = smoothstep(SWAP_AT, SWAP_AT + 0.28, t), sit = smoothstep(CAVE.oh - 0.3, CAVE.palm - 0.4, t);
+  return lerp(lerp(0.62, 0.46, scramble) + 0.4 * sit, 1.62, smoothstep(CANDLES_AT + 0.4, CANDLES_AT + 3.0, t));
+}
+export const wakeEyeBack = (t) => 0.5 * smoothstep(SWAP_AT, SWAP_AT + 0.28, t) * (1 - smoothstep(CANDLES_AT + 0.4, CANDLES_AT + 3.4, t));
+export const HERD_CONTROL = 10.6;  // into HERD: you can walk again
+export const HERD_END = 13.6;      // and this long after the name, you're walking out
+export const COLLAPSE_END = 49.4;  // the bars slide away and the walk down begins
 export const DUST_AT = 7.0;        // in COLLAPSE: the mouth caves in, and she comes out of the dust pretty
 export const KNEEL_UP = 10.3;
 // Whether the story holds you still: you can't move, and on a phone the thumbs are put away. The bars stay up past this, as
@@ -188,9 +195,26 @@ export const PORTAL = (() => { const [x, z] = at(PORTAL_S, 0); return [x, chambe
 export const PORTAL_YAW = CHAMBER_YAW + Math.PI;
 export const CIRCLE = at(WAKE_S, 0);
 export const WITCH_MARK = at(2.9, -1.0);
-export const WITCH_STOP = at(9.9, 0.2);      // 1.9 m in front of you, when she's said her piece
-// Her way across, through her own mess.
+export const WITCH_STOP = at(9.9, 0.2);      // 1.9 m in front of you, as the glamour breaks
+// Her way across to you as she talks you round, through her own mess.
 export const WEAVE = [at(2.9, -1.0), at(4.3, -2.1), at(6.0, -1.7), at(7.3, 0.8), at(8.8, 0.6), WITCH_STOP];
+// Her marks through the rest of the cave (docs/OPENING-SCRIPT.md): stooped over you for the palm; a step back; among her
+// clutter for the snap; close in to look you over; a little back, arms folded; round behind you to stand before the door;
+// the crate by the wall she sits on; two steps from it toward you; the two ends she paces between; and where she holds out
+// her hand for your name.
+export const PALM_SPOT = at(11.5, 0.04);    // 0.8 m short of your eyes (sat back at 12.3), for her palm across them
+export const SEEN_SPOT = at(10.45, 0.12);
+export const SNAP_SPOT = at(7.5, 1.5);
+export const LEAN_SPOT = at(10.75, 0.12);
+export const FOLD_SPOT = at(10.1, 0.2);
+export const DOOR_SPOT = at(13.6, 0.0);
+export const ROUND_R = 1.75;                // the half circle round you, on your left as you face her
+export const SIT_SPOT = at(12.2, -4.78);
+export const STEPS_TO = at(12.05, -3.75);
+export const PACE = [at(10.1, -2.1), at(9.8, 1.25)];
+export const OFFER_SPOT = at(10.2, 0.1);
+// Where she writes your name in the ledger, on her way out.
+export const WRITE_SPOT = at(2.45, 0.85);
 // She tidies by the portal while you go, and runs for the mouth when it dies.
 export const TIDY_MARK = at(13.0, 2.6);
 export const LECTERN = at(1.7, 1.15);
@@ -232,7 +256,7 @@ export const CANDLES = (() => {
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   const hang = (s, q) => {
     const [x, z] = at(s, q), floor = chamberShape(s)[2];
-    const d = Math.hypot(x - WITCH_MARK[0], z - WITCH_MARK[1]);
+    const d = Math.hypot(x - SNAP_SPOT[0], z - SNAP_SPOT[1]);
     out.push({ x, y: floor + 1.8 + rnd() * 0.8, z, tall: 0.1 + rnd() * 0.12, phase: rnd() * 6.28, at: CANDLES_AT + 0.06 + d * 0.07 + rnd() * 0.08 });
   };
   for (const [kind, s, q] of CLUTTER) if (kind !== 'lectern') hang(s + (rnd() - 0.5) * 0.6, q + (rnd() - 0.5) * 0.6);
@@ -249,6 +273,14 @@ export const CANDLES = (() => {
   out.push({ x: LECTERN[0], y: chamberShape(1.7)[2] + 1.85, z: LECTERN[1], tall: 0.16, phase: 1, at: CANDLES_AT });
   return out.sort((a, b) => a.at - b.at);
 })();
+// The candle nearest, of those hung in the room: her soft snap on the crate flares one, and your spark bursts another.
+const nearestCandle = ([x, z], y) => {
+  let best = -1, bd = 1e9;
+  CANDLES.forEach((c, i) => { const d = Math.hypot(c.x - x, c.z - z, (c.y - y) * 0.5); if (!c.ledge && d < bd) { bd = d; best = i; } });
+  return best;
+};
+export const SOFT_CANDLE = nearestCandle(SIT_SPOT, chamberShape(12.2)[2] + 2.2);
+export const BURST_CANDLE = nearestCandle([lerp(OPENING_SPAWN[0], STEPS_TO[0], 0.45), lerp(OPENING_SPAWN[1], STEPS_TO[1], 0.45)], chamberShape(11.8)[2] + 2.0);
 
 // ---- the walk down ------------------------------------------------------------------------------------------------------
 // From the ledge, down onto the Long Road and along it to the town's edge (src/sim/opening.js follows the road's own line).
@@ -261,6 +293,6 @@ export const OPENING_CLIPS = [
   'frightened', 'fold_arms', 'Idle_FoldArms_Loop', 'wait', 'Spell_Simple_Shoot', 'Pointing into the distance', 'Pointing at an enemy',
   'complain_01', 'complain_02', 'Idle_Talking_Loop', 'Talking to someone angrily', 'PickUp_Table', 'look_around',
   'Crouch_Idle_Loop', 'cry', 'depressed', 'standing_relax', 'Yes', 'agree', 'hug', 'angry_02', 'scratch', 'heart_pose',
-  'fall', 'Farm_PlantSeed',
+  'fall', 'Farm_PlantSeed', 'bow', 'Sitting_Enter', 'Sitting_Idle_Loop', 'Sitting_Exit', 'frustrated_01',
   ...OPENING_MOVES,
 ];

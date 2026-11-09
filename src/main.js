@@ -372,6 +372,9 @@ async function boot(plan, poolSize) {
     town, renderer, pack, input, hud, inventory, spellbar: null,
     act: {
       sound: (k) => audio.play(k, null, 0, 0, 0.7, 1, false),
+      // Lisandra's recorded lines (src/ui/folk.js speak).
+      voice: (id) => audio.voice(id, 1.1),
+      hushVoice: () => audio.hushVoice(),
       heal: (n) => { shared.input[INPUT.HEAL] += n; },
       hp: () => { const s = game.currentSnap(); return s ? s[H.HP] / (s[H.MAX_HP] || 1) : 1; },
       // A night's sleep: dawn, mended, and the game kept.
@@ -515,7 +518,7 @@ async function boot(plan, poolSize) {
         openingHUD.draw(snap, active, dt);
         // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
         if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
-        renderer.hideVM = openingHUD.cinematic(snap);
+        renderer.hideVM = openingHUD.cinematic(snap) && !openingHUD.handsUp(snap);
         if (active && snap[H.OPENING] === OPENING.NAME && !naming && !openingHUD.name) {
           naming = true;
           input.menu = true;

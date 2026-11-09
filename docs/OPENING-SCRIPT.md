@@ -4,7 +4,7 @@ Both critics approved this draft in round 3, 9 / 10 each. Their last small fixes
 
 ## The logic in eight sentences
 
-1. Three thousand years ago Tessariel broke Velscour on his throne, and swore to come back if he ever rose. Lisandra held Tessariel's lantern that night; before that, she had been Velscour's.
+1. Two hundred years ago Tessariel broke Velscour on his throne, and swore to come back if he ever rose. Lisandra held Tessariel's lantern that night; before that, she had been Velscour's.
 2. She keeps the door Tessariel is meant to come back through. The door keeps her alive while she keeps it. It doesn't keep her young: in the dark she is every one of her years, and only in the sun is she the girl she was.
 3. The door stood dark from the night the sky burned until a season ago. Then it woke, and it has been dropping ordinary people across the land ever since: forty-three of them.
 4. She meets each one wearing her old face, snaps, lights the candles, and the charm takes: she tells them they are Tessariel and sends them out in Tessariel's colours, so Velscour will chase forty-three Tessariels and never find the real one.
@@ -23,12 +23,8 @@ Her looks, as the engine already shows them (`prettyShown`), follow one rule: **
 ## Voices, names, recording
 
 - Two voices, as now: **young** (Lisandra) while you see her lovely, **old** (LisandraWitch) from the flash to the collapse.
-- Say: Tessariel = **Tess-are-ee-ell**. Velscour = **Vel-scower**. Eldravayne = **El-dra-vane**. Bellmourn = **Bell-morn**. (`tools/voice/say.json` still respells Tessariel "Tessa-ree-ell" and is fixed before any recording.)
-- Recording, so the voice is the same woman in every line:
-  1. Design each voice once, and approve one reference clip of it.
-  2. Clone every take from that clip (Qwen3-TTS's clone model), with the same seed. Nothing is described afresh.
-  3. Takes are cut by **intensity**, not by beat: a run of lines in one register is one take, read straight through as a paragraph. Beat 9 is three takes (the grim open, the climb to the shout, the hush). The collapse is three (panic, the shout, the understanding). "WHAT HAVE YOU DONE?!" is its own take, checked for pitch against the lines either side.
-  4. Several takes of each; the best chosen by pitch and pace; then cut into lines at the sentence breaks.
+- Say: Tessariel = **Tess-are-ee-ell**. Velscour = **VEL-skower**. Eldravayne = **El-dra-vane**. Bellmourn = **Bell-morn** (`tools/voice/say.json`).
+- Recording, so the voice is the same woman in every line: one model and one anchor per voice, one fixed note per kind of line, many takes of each line judged by the voice critics' rules (docs/VOICES.md, the method the owner approved).
 - Subtitles: no line on screen runs past about 90 characters. Longer lines split at a sentence break, or at a comma where there is none. Capitals and "?!" stay in the subtitle; the voice model gets the plain words.
 
 ## WAKE — the cave
@@ -121,7 +117,7 @@ The times on each beat are worked out at her measured pace, with the silences an
 
 *She walks a slow half circle round you, so the candles turn behind her and the camera turns with her. It ends with her standing between you and the door: for the first time you see the door you came through, violet behind her.*
 
-**LISANDRA**: Three thousand years ago, you walked out of the sunrise and broke Velscour on his own throne.
+**LISANDRA**: Two hundred years ago, you walked out of the sunrise and broke Velscour on his own throne.
 
 **LISANDRA**: You swore that if he ever rose again, you'd come back.
 
@@ -223,7 +219,7 @@ The times on each beat are worked out at her measured pace, with the silences an
 
 **LISANDRA** *(quietly)*: …I'm doing it again.
 
-**LISANDRA**: Three thousand years, and nobody to say it to.
+**LISANDRA**: Two hundred years, and nobody to say it to.
 
 ### 10 · The name (5:27 – 5:51)
 
@@ -281,7 +277,7 @@ The times on each beat are worked out at her measured pace, with the silences an
 
 *Take three, understanding.*
 
-**LISANDRA**: Three thousand years I held that door open. You walk through it once, and it lets go.
+**LISANDRA**: Two hundred years I held that door open. You walk through it once, and it lets go.
 
 **LISANDRA** *(quiet)*: It was only ever waiting for you.
 
@@ -313,7 +309,7 @@ The road from the ledge to Bellmourn is 415 m (`src/sim/opening.js`). The pines 
 
 | Where | Line | Seconds |
 |---|---|---|
-| You turn back toward the door | Out! / OUT. | |
+| You turn back toward the door | Not that way, dear. Back down the tunnel with you. / (again) I said out. Back down that tunnel before I lose my temper. | |
 | In the tunnel, the door straining | Hold. Please hold. Not now… | |
 | The ledge, as the walk starts | No door to keep me now. One day I'll die, like everyone else. I'd quite forgotten. | 6.1 |
 | The bend, 46 m | The others would be making a speech by now. Every one of them. | 4.6 |
