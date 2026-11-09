@@ -15,16 +15,16 @@ const flow = new Float32Array(2);
 const work = (sim, step) => { sim.foeWorks.push(step); };
 
 // A blow that can be stood in the way of goes in with block false: ground and beams pass a shield by.
-function strike(sim, dmg, x, z, knock = 0, unblockable = false) {
-  const p = sim.player;
+// p: who it's at, the player or one of the other Tessariels (src/sim/foes.js): sim.foeTarget while a spell is being made.
+function strike(sim, p, dmg, x, z, knock = 0, unblockable = false) {
   if (p.dead || p.iframes) return false;
   if (p.damage(sim, dmg, x, z, knock, unblockable) === false) return false;
-  sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
+  if (p === sim.player) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
   return true;
 }
 
 function boom(sim, elem, x, y, z, R, dmg, knock = 4) {
-  const c = sim.casting, p = sim.player, g = sim.world.height(x, z);
+  const c = sim.casting, p = sim.foeTarget || sim.player, g = sim.world.height(x, z);
   c.burst(FX.FLARE, elem, x, y, z, R * 0.9, R * 1.9, 0.3, { alpha: 1.3, light: 26 + R * 7, lightR: R * 4.5 });
   c.burst(FX.ORB, elem, x, y, z, R * 0.4, R * 0.85, 0.4, { alpha: 1.1, ease: 3 });
   c.burst(FX.SHOCK, elem, x, y, z, R * 0.3, R * 1.2, 0.45, { alpha: 0.9, ease: 3.2 });
@@ -32,13 +32,13 @@ function boom(sim, elem, x, y, z, R, dmg, knock = 4) {
   c.burst(FX.DISC, elem, x, g, z, R * 0.6, R * 0.85, 2, { alpha: 0.85, ease: 6 });
   sim.event(EV.SPELL_BOOM, elem, x, y, z, R);
   const near = Math.hypot(p.x - x, p.y + 1 - y, p.z - z);
-  p.trauma = Math.min(1, p.trauma + clamp(R * 0.2 / (1 + near * 0.16), 0, 0.7));
-  if (near < R) strike(sim, dmg * clamp(1.15 - near / R, 0.35, 1), x, z, knock, true);
+  if (p === sim.player) p.trauma = Math.min(1, p.trauma + clamp(R * 0.2 / (1 + near * 0.16), 0, 0.7));
+  if (near < R) strike(sim, p, dmg * clamp(1.15 - near / R, 0.35, 1), x, z, knock, true);
 }
 
 // Something flying. o.home is how hard it turns after you, and o.homeFor for how long; after that you can step out of it.
 function shot(sim, o) {
-  const c = sim.casting, p = sim.player;
+  const c = sim.casting, p = sim.foeTarget || sim.player;
   const b = { age: 0, home: 1.6, homeFor: 0.6, size: 0.14, life: 3.5, seed: Math.random(), R: 0, knock: 0, ...o };
   sim.event(EV.SPELL_LOOSE, b.elem, 0, b.x, b.y, b.z);
   work(sim, (dt) => {
@@ -56,7 +56,7 @@ function shot(sim, o) {
     if (hit || b.y < sim.world.height(b.x, b.z) || sim.world.inside(b.x, b.z, 0.05) || b.age > b.life) {
       if (b.R) boom(sim, b.elem, b.x, b.y, b.z, b.R, b.dmg, b.knock);
       else {
-        if (hit) strike(sim, b.dmg, b.x, b.z, b.knock);
+        if (hit) strike(sim, p, b.dmg, b.x, b.z, b.knock);
         c.burst(FX.FLARE, b.elem, b.x, b.y, b.z, 0.3, 0.9, 0.22, { alpha: 1.2, light: 18, lightR: 7 });
         sim.event(EV.BLINK, b.x, b.y, b.z);
       }
@@ -80,7 +80,7 @@ function thread(c, elem, ax, ay, az, bx, by, bz, wide, seed, flowing = 0) {
 
 // A patch of ground gone bad: stood in, it bites every half second.
 function patch(sim, elem, x, z, R, life, dps, flames) {
-  const c = sim.casting, p = sim.player, seed = Math.random();
+  const c = sim.casting, p = sim.foeTarget || sim.player, seed = Math.random();
   let t = 0, tick = 0.5;
   const y = sim.world.height(x, z);
   work(sim, (dt) => {
@@ -95,7 +95,7 @@ function patch(sim, elem, x, z, R, life, dps, flames) {
     }
     if (tick <= 0) {
       tick = 0.5;
-      if (Math.hypot(p.x - x, p.z - z) < R && Math.abs(p.y - y) < 1.6) strike(sim, dps * 0.5, x, z, 0, true);
+      if (Math.hypot(p.x - x, p.z - z) < R && Math.abs(p.y - y) < 1.6) strike(sim, p, dps * 0.5, x, z, 0, true);
     }
     return true;
   });
@@ -103,7 +103,7 @@ function patch(sim, elem, x, z, R, life, dps, flames) {
 
 // Fenced in. Inside it you can do as you like; getting out costs you, and the fence puts you back.
 function fence(sim, x, z, R, life, armed, dmg, draw) {
-  const c = sim.casting, p = sim.player;
+  const c = sim.casting, p = sim.foeTarget || sim.player;
   let t = 0, zapT = 0;
   const caught = () => Math.hypot(p.x - x, p.z - z) < R + 0.6;
   let held = caught();
@@ -116,7 +116,7 @@ function fence(sim, x, z, R, life, armed, dmg, draw) {
     if (L > limit) {
       p.x = x + dx / L * limit; p.z = z + dz / L * limit;
       p.vx *= -0.3; p.vz *= -0.3;
-      if (zapT <= 0) { zapT = 0.55; strike(sim, dmg, p.x + dx / L, p.z + dz / L, 3, true); c.burst(FX.FLARE, draw.elem, p.x + dx / L * 0.45, p.y + 1.1, p.z + dz / L * 0.45, 0.4, 1.3, 0.2, { alpha: 1.2, light: 16, lightR: 6 }); }
+      if (zapT <= 0) { zapT = 0.55; strike(sim, p, dmg, p.x + dx / L, p.z + dz / L, 3, true); c.burst(FX.FLARE, draw.elem, p.x + dx / L * 0.45, p.y + 1.1, p.z + dz / L * 0.45, 0.4, 1.3, 0.2, { alpha: 1.2, light: 16, lightR: 6 }); }
     }
     return true;
   });
@@ -263,7 +263,7 @@ export const FOE = {
         if (scorch <= 0) { scorch = 0.28; patch(sim, FIRE, ex, ez, 0.9, 1.6, 8, 1); }
         // The nearest it comes to you, in plan. Feet above it have cleared it.
         const s = clamp((p.x - ox) * dx + (p.z - oz) * dz, 0, L), nx = ox + dx * s - p.x, nz = oz + dz * s - p.z, beamY = oy + ny * s;
-        if (tick <= 0 && Math.hypot(nx, nz) < 0.75 && p.y < beamY + 0.15 && p.y + 1.8 > beamY) { tick = 0.2; strike(sim, 10, ox, oz, 1.5, true); }
+        if (tick <= 0 && Math.hypot(nx, nz) < 0.75 && p.y < beamY + 0.15 && p.y + 1.8 > beamY) { tick = 0.2; strike(sim, p, 10, ox, oz, 1.5, true); }
         return true;
       });
     },
@@ -278,7 +278,7 @@ export const FOE = {
       c.burst(FX.BEAM, ARCANE, h[0], h[1], h[2], 0.25, 0.45, 0.3, { ax: dx, ay: 0, az: dz, len: reach, extra: 2.8, alpha: 0.55 });
       c.burst(FX.FLARE, ARCANE, h[0], h[1], h[2], 0.3, 1.5, 0.2, { alpha: 1.2, light: 26, lightR: 8 });
       sim.event(EV.SPELL_BOOM, ARCANE, h[0], h[1], h[2], 3);
-      if (d < reach) { strike(sim, 20, k.x, k.z, 11); p.vy = Math.max(p.vy, 4.5); }
+      if (d < reach) { strike(sim, p, 20, k.x, k.z, 11); p.vy = Math.max(p.vy, 4.5); }
     },
   },
 
@@ -436,7 +436,7 @@ export const FOE = {
           const near = Math.hypot(p.x - x, p.z - z);
           if (near < 0.95 && p.y - sim.world.height(x, z) < 1) {
             done = true;
-            strike(sim, 22, x, z, 3, true);
+            strike(sim, p, 22, x, z, 3, true);
             p.vy = Math.max(p.vy, 6.5);
             sim.event(EV.SPELL_BOOM, BONE, x, p.y + 0.5, z, 2);
           } else if (gone > 26 || sim.world.inside(x, z, 0.1)) done = true;
@@ -469,7 +469,7 @@ export const FOE = {
         c.fx(FX.FLARE, DRAIN, h[0], h[1], h[2], 0.35, 0, 1, 0, 0, 1, 8, 5, 0.5, seed);
         if (tick <= 0) {
           tick = 0.3;
-          if (strike(sim, 3.5, k.x, k.z, 0, true)) k.hp = Math.min(k.maxHp, k.hp + 10);
+          if (strike(sim, p, 3.5, k.x, k.z, 0, true)) k.hp = Math.min(k.maxHp, k.hp + 10);
           k.seenHp = k.hp;
         }
         return true;
@@ -586,7 +586,7 @@ export const FOE = {
             c.burst(FX.COLUMN, POISON, x, y, z, 3.4, 4.6, 0.5, { len: 1.5, alpha: 1 });
             c.burst(FX.SHOCK, POISON, x, y + 0.4, z, 0.4, 2.4, 0.35, { alpha: 1, light: 16, lightR: 7 });
             sim.event(EV.SPELL_BOOM, POISON, x, y + 0.5, z, 1.5);
-            if (Math.hypot(p.x - x, p.z - z) < R && Math.abs(p.y - y) < 1.6) { strike(sim, 17, x, z, 0, true); p.vy = Math.max(p.vy, 4.5); }
+            if (Math.hypot(p.x - x, p.z - z) < R && Math.abs(p.y - y) < 1.6) { strike(sim, p, 17, x, z, 0, true); p.vy = Math.max(p.vy, 4.5); }
             patch(sim, POISON, x, z, 1.8, 3.5, 7, 1);
             return false;
           });
@@ -613,7 +613,7 @@ export const FOE = {
           const a = i * 1.57 + t * (1.6 + i * 0.3), r = 0.9 + Math.sin(t * 1.3 + i) * 0.5;
           c.fx(FX.PUFF, POISON, b.x + Math.cos(a) * r, y + Math.sin(t * 2 + i) * 0.45, b.z + Math.sin(a) * r, 1.15, 0, 1, 0, 0, 0.62 * kk, i === 0 ? 5 : 0, 4, 0, seed + i * 0.3);
         }
-        if (tick <= 0 && L < 2.1) { tick = 0.4; strike(sim, 5, b.x, b.z, 0, true); }
+        if (tick <= 0 && L < 2.1) { tick = 0.4; strike(sim, p, 5, b.x, b.z, 0, true); }
         return true;
       });
     },
@@ -633,7 +633,7 @@ export const FOE = {
         const kk = 1 - r / R * 0.75, g = sim.world.height(p.x, p.z);
         c.fx(FX.RING, POISON, x, y, z, r, 0, 1, 0, 0, kk, 8 * kk, r + 2, r / R * 0.7, seed);
         c.fx(FX.RING, POISON, x, y, z, Math.max(0.5, r - 0.8), 0, 1, 0, 0, kk * 0.6, 0, 0, r / R * 0.7, seed + 0.3);
-        if (!hit && Math.abs(Math.hypot(p.x - x, p.z - z) - r) < 0.65 && p.y - g < 0.45) { hit = true; strike(sim, 19, x, z, 5, true); p.vy = Math.max(p.vy, 4); }
+        if (!hit && Math.abs(Math.hypot(p.x - x, p.z - z) - r) < 0.65 && p.y - g < 0.45) { hit = true; strike(sim, p, 19, x, z, 5, true); p.vy = Math.max(p.vy, 4); }
         return true;
       });
     },

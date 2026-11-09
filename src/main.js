@@ -26,6 +26,8 @@ import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
 import { SpellSound } from './spellsound.js';
+import { HERO_SLOTS, makeCast } from './core/heroes.js';
+import { HeroTalk } from './ui/heroes.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -215,6 +217,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'error') { console.error(m.message); reject(new Error(m.message)); }
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
+      else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
       else if (m.type === 'restart') { input.yaw = m.yaw ?? Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
       else if (m.type === 'placed') {
         const c = calls.get(m.id);
@@ -226,7 +229,23 @@ async function boot(plan, poolSize) {
   });
   const pendingEvents = [];
   const hz = gpu.tier.sim;
-  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_ENABLED });
+  // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
+  // How many: by the tier, the setting, or ?heroes=N for tests.
+  const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
+    : Math.min(settings.heroes === 'few' ? 6 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
+  let cast = [];
+  if (heroCount > 0) {
+    try {
+      const [roster, kit, names] = await Promise.all(['roster', 'kit', 'names'].map((n) => fetch(`${BASE}assets/game/heroes/${n}.json`).then((r) => r.json())));
+      let kept = null;
+      try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
+      const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
+      try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
+      cast = makeCast(roster, kit, names, Math.min(heroCount, 16), seed);
+    } catch (e) { console.warn('heroes', e); cast = []; }
+  }
+  renderer.heroCast = cast;
+  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_ENABLED, heroes: cast, hour: renderer.hour });
 
   const hud = new Hud(gpu, plan, poolSize, isolated, input);
   const start = performance.now();
@@ -306,6 +325,12 @@ async function boot(plan, poolSize) {
     drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); },
   });
   Object.assign(game, { pack, inventory });
+  // What the other Tessariels say, and their names over their heads.
+  if (cast.length) {
+    game.heroTalk = new HeroTalk({ base: BASE, cast, renderer, sim: simWorker, settings, touch: input.touch,
+      playerName: () => { try { return openingHUD?.name || 'Tessariel'; } catch { return 'Tessariel'; } }, playerSkull: () => !!pack.slots.skull });
+    game.heroTalk.fetchScript();
+  }
   window.bm = game.api(shared, simWorker, buffer, pool);
   renderDiagnostics.attach(() => ({
     'Simulation tick': buffer ? Atomics.load(shared.ctrl, CTRL.TICK) : latestSnap?.[H.TICK],
@@ -825,6 +850,11 @@ class GameView {
       hs.gpuMs = r.stats.gpuMs; hs.busyMs = r.stats.busyMs; hs.W = r.W; hs.H = r.H; hs.scale = r.scale; hs.msaa = r.msaa; hs.demoted = r.demoted || 0; hs.vsync = this.vsyncMs;
       this.hud.update(dt, snap, hs);
       this.clock.set(r.hour);
+      if (this.heroTalk) {
+        this.heroTalk.update(dt, snap, r.hour, !this.idle && !this.input.menu);
+        // The sim keeps the heroes' day by this clock.
+        if ((this.hourT = (this.hourT ?? 0) - dt) <= 0) { this.hourT = 2; this.sim.postMessage({ type: 'hour', hour: r.hour }); }
+      }
       if (this.spellbar) this.spellbar.update(snap);
       if (this.worldMap) this.worldMap.update(dt, snap, this.input.yaw, !this.idle && this.input.enabled && !this.input.menu && !(snap[H.OPENING] > 0 && snap[H.OPENING] < OPENING.ESCORT));
       if (this.spellSound) this.spellSound.channel(snap[H.CAST_HELD] | 0);
@@ -1033,7 +1063,10 @@ class GameView {
     const r = this.renderer, au = this.audio;
     switch (type) {
       case EV.SWING: break;
+      case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
+      case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
+        this.heroTalk?.onSpell(b);
         r.castFlare = performance.now();
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
@@ -1044,6 +1077,7 @@ class GameView {
         this.spellSound.loose(a, c, d, e);
         break;
       case EV.SPELL_HIT:
+        this.heroTalk?.onSpellHit(f);
         this.spellSound?.hit(a, b, c, d);
         r.emit(16 + a, 16, b, c, d, 0, 0.4, 0, 1.4, 1, 5.5, 0.008, 0.02, 0.2, 0.6);
         if (a !== 0 && a !== 9) this.hud.crossHit();
@@ -1187,7 +1221,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); this.heroTalk?.onPlayerKill(d); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
@@ -1264,6 +1298,14 @@ class GameView {
       setTime: (h) => view.renderer.setHour(h),
       hour: () => view.renderer.hour,
       fixScale: (s) => { view.fixedScale = true; view.renderer.scale = s; },
+      // The other Tessariels, for review: heroes('dump') lists them; near, at, task, surf, gesture, skill, freeze stage scenes.
+      heroes: (cmd = 'dump', o = {}) => {
+        const id = Math.floor(Math.random() * 1e9);
+        sim.postMessage({ type: 'heroDebug', cmd, id, ...o });
+        if (cmd !== 'dump') return Promise.resolve(cmd);
+        return new Promise((resolve) => { const on = (e) => { if (e.data.type === 'heroState' && e.data.id === id) { sim.removeEventListener('message', on); resolve(e.data.heroes); } }; sim.addEventListener('message', on); });
+      },
+      heroSay: (slot, trig) => view.heroTalk?.say(view.heroTalk.heroes[slot], trig, null, {}),
       shot: (name) => new Promise((resolve) => {
         view.onFrame = () => {
           view.onFrame = null;

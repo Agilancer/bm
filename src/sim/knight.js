@@ -689,8 +689,9 @@ export class Knight {
   selectTarget(sim) {
     let target = sim.player;
     let best = this.hostile && !target.dead && !this.outOfReach(target) ? Math.hypot(target.x - this.x, target.z - this.z) : Infinity;
-    for (const other of sim.knights) {
-      if (!(other instanceof Knight) || other === this || other.kind === this.kind || other.dead || this.outOfReach(other)) continue;
+    // (And the other Tessariels, src/sim/hero.js, who are kind 1: Velscour's men fight them as they fight Tessariel's knights.)
+    for (const other of sim.heroes ? [...sim.knights, ...sim.heroes] : sim.knights) {
+      if (!(other instanceof Knight) || other === this || other.kind === this.kind || other.dead || other.hidden || other.below > 0 || this.outOfReach(other)) continue;
       const d = Math.hypot(other.x - this.x, other.z - this.z);
       if (d < 18 && d < best && sim.world.sees(this.x, this.y + 1.4, this.z, other.x, other.y + 1.4, other.z)) {
         target = other; best = d;
@@ -1583,4 +1584,4 @@ function blendMask(out, a, b, t, mask, n) {
 
 function lerp3(out, a, b, t) { out[0] = a[0] + (b[0] - a[0]) * t; out[1] = a[1] + (b[1] - a[1]) * t; out[2] = a[2] + (b[2] - a[2]) * t; }
 
-export { ATTACKS, segSegDist };
+export { ATTACKS, segSegDist, blend, blendMask, lerp3, turn, norm, cross, orth, matToQuat };

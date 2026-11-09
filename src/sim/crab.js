@@ -3,6 +3,7 @@
 import { EV } from '../core/layout.js';
 import { clamp, damp, quatMul, quatYaw, wrapAngle } from '../core/math.js';
 import { Beast } from './beast.js';
+import { foeOf } from './foes.js';
 import { OPENING } from '../core/opening.js';
 
 export const CRAB_SCALE = 2.6;
@@ -54,7 +55,7 @@ export class Crab extends Beast {
   update(dt, sim) {
     this.stateT += dt;
     this.fade = Math.min(1, this.fade + dt / 0.14);
-    const p = sim.player;
+    const p = foeOf(this, sim);
     const dx = p.x - this.x, dz = p.z - this.z, dist = Math.hypot(dx, dz);
     const toPlayer = Math.atan2(dx, dz);
     this.heart += dt * 1.1;
@@ -176,7 +177,7 @@ export class Crab extends Beast {
           this.used = true;
           this.bites++;
           const landed = p.damage(sim, a.dmg, this.x, this.z, a.knock || 0);
-          if (landed) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
+          if (landed && p === sim.player) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, a.dmg);
         }
       }
     }

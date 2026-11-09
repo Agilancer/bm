@@ -337,7 +337,7 @@ export class Player {
       if (ahead < -R || ahead > BASH_REACH + R || across > BASH_HALF + R || Math.abs(k.y - this.y) > 2.2) continue;
       if (sim.world.rayBoxes(this.x, this.y + EYE - 0.4, this.z, dx / d, 0, dz / d, Math.max(d - 0.4, 0.01)) > 0) continue;
       met = true;
-      k.hp -= BASH_DMG * this.bite() * (1 + this.poise);
+      k.hp -= BASH_DMG * this.bite() * (1 + this.poise); k.playerHitT = sim.time;
       if (k.reel) k.reel(sim, 1.1);
       else k.onHit(sim, 'gash', this.x, this.z, BASH_POISE * (1 + this.poise));
       // (The Gravehart and the Hydra are far too big to shift.)
@@ -789,7 +789,7 @@ export class Player {
       g.dir = [tx, ty, tz];
       g.a = [hit.lx - tx * half, hit.ly - ty * half, hit.lz - tz * half];
       g.b = [hit.lx + tx * half, hit.ly + ty * half, hit.lz + tz * half];
-      k.hp -= tag.dmg * MELEE * this.bite() * (k.kind === 0 ? PLATE : 1);
+      k.hp -= tag.dmg * MELEE * this.bite() * (k.kind === 0 ? PLATE : 1); k.playerHitT = sim.time;
       this.drink();
       this.hits++;
       sim.event(EV.GASH, wx, wy, wz, -dx, -dy, -dz, k.id);
@@ -820,7 +820,7 @@ export class Player {
     this.punctured = true;
     this.hits++;
     k.puncture(sim, g, hit.lx, hit.ly, hit.lz, hit.nx, hit.ny, hit.nz);
-    k.hp -= (wasOpen ? 18 : 40) * this.bite() * (1 + this.pierce) * (k.kind === 0 ? PLATE : 1);
+    k.hp -= (wasOpen ? 18 : 40) * this.bite() * (1 + this.pierce) * (k.kind === 0 ? PLATE : 1); k.playerHitT = sim.time;
     this.drink();
     this.bloodSword = Math.min(1, this.bloodSword + 0.35);
     k.plateTransforms(sim.scratch, sim.charOffset(sim.knights.indexOf(k)), sim.tick);

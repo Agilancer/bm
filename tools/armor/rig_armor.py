@@ -178,6 +178,10 @@ def group_of(name):
 def auto_part(share, names):
     """A segment's spec from where its weight sits (share: group -> fraction of the segment's weight)."""
     g = lambda *k: sum(share.get(x, 0) for x in k)
+    for s in "lr":
+        # Shoulder to calf on one side: half of a cape, cloth.
+        if g(f"clavicle_{s}", f"upperarm_{s}") > 0.12 and g(f"thigh_{s}", f"calf_{s}", f"foot_{s}") > 0.3:
+            return CLOTH
     if share.get("thigh_l", 0) > 0.2 and share.get("thigh_r", 0) > 0.2:
         # Across both legs: a skirt of plates on the belt, or cloth that hangs.
         return waist() if g("pelvis", "spine_01", "spine_02") > 0.25 else CLOTH
@@ -517,6 +521,10 @@ def main():
                 kind = "plate"
                 for joint, val in piece["plate"].items():
                     w[:, index[joint]] = val
+            elif "hand" in piece and cfg.get("rigid_hands"):
+                # Tripo's finger weights on a closed gauntlet are unreliable: the whole gauntlet rides the hand.
+                kind = "plate"
+                w[:, index[f"hand_{piece['hand']}"]] = 1
             elif "hand" in piece:
                 # Fingers keep their joints. Anything else on the gauntlet rides the hand.
                 kind = "flex"
@@ -536,6 +544,19 @@ def main():
                 flex = soft
                 w[:, keep[1:]] *= (0.55 + 0.3 * soft)[:, None]
                 w[:, index["pelvis"]] = 1 - w[:, keep[1:]].sum(1)
+                # Cloth that reaches up the back (a cape, a long coat) follows the spine above the waist, not the hips.
+                top = np.clip((pos[:, 1] - target["pelvis"][1] - 0.04 * cfg["height"]) / max(target["spine_03"][1] - target["pelvis"][1], 1e-3), 0, 1)
+                top = top * top * (3 - 2 * top)
+                if top.max() > 0:
+                    w *= (1 - top)[:, None]
+                    w[:, index["spine_03"]] += top * 0.7
+                    w[:, index["spine_02"]] += top * 0.3
+                # Whatever of it the source hung on an arm (a sleeve or strap cut with a cape) stays on that arm.
+                arms = [index[j] for j in ual_joints if j.split("_")[0] in ("clavicle", "upperarm", "lowerarm", "hand")]
+                on_arm = ual_w[:, arms].sum(1)
+                if on_arm.max() > 0.05:
+                    w *= (1 - on_arm)[:, None]
+                    w[:, arms] += ual_w[:, arms]
             mesh.add_piece(f"{part['name']}#{li}", kind, pos, part["nrm"], part["uv"], w, flex, sel)
         part["first_piece"] = len(mesh.pieces)
 

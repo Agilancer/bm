@@ -9,6 +9,7 @@ import { ArmsRig } from './anim.js';
 import { Beast } from './beast.js';
 import { CHILDREN, PART, partOfJoint } from './limbs.js';
 import { FOE, lastRite } from './foespells.js';
+import { foeOf, heroBusy } from './foes.js';
 import { ELEM, FX } from './spells.js';
 
 const P = PART;
@@ -245,10 +246,12 @@ export class Zombie extends Beast {
     this.bodyRadius = 0.45 * this.scale;
   }
 
-  onHit(sim, kind, fromX, fromZ, poise = 0) {
+  onHit(sim, kind, fromX, fromZ, poise = 0, by = null) {
     this.aggro = true; this.hostile = true;
-    this.lastX = sim.player.x; this.lastZ = sim.player.z; this.lastSense = sim.time;
-    if (this.goal !== GOAL.CHASE) { this.goal = GOAL.CHASE; this.alert(sim, 9); }
+    // (by: one of the other Tessariels, src/sim/hero.js. It turns on them instead: src/sim/foes.js.)
+    const who = by || sim.player;
+    this.lastX = who.x; this.lastZ = who.z; this.lastSense = sim.time;
+    if (this.goal !== GOAL.CHASE) { this.goal = GOAL.CHASE; this.alert(sim, 9, by); }
     // Blows don't move them and don't stop one that's already swinging. It only checks its stride.
     if (this.state !== STATE.MOVE || this.crawling) return;
     this.flinch(kind, poise);
@@ -268,13 +271,15 @@ export class Zombie extends Beast {
     this.setClipOver(pick(this.hitClips), 0.08);
   }
 
-  alert(sim, r) {
+  alert(sim, r, by = null) {
+    const who = by || sim.player;
     for (const k of sim.knights) {
       if (k === this || !(k instanceof Zombie) || k.dead) continue;
       const d = Math.hypot(k.x - this.x, k.z - this.z);
       if (d > r) continue;
       if (k.state === STATE.PLAYDEAD && d > r * 0.5) continue;
-      k.aggro = true; k.lastX = sim.player.x; k.lastZ = sim.player.z; k.lastSense = sim.time;
+      k.aggro = true; k.lastX = who.x; k.lastZ = who.z; k.lastSense = sim.time;
+      if (by) { k.heroFoe = by; k.heroFoeT = sim.time; }
       if (k.goal !== GOAL.CHASE) k.goal = GOAL.HUNT;
       if (k.state === STATE.PLAYDEAD) k.wake();
     }
@@ -338,7 +343,7 @@ export class Zombie extends Beast {
     this.stateT += dt;
     this.fade = Math.min(1, this.fade + dt / this.fadeTime);
     if (this.fade >= 1) this.fadeTime = 0.2;
-    const p = sim.player;
+    const p = foeOf(this, sim);
     const dx = p.x - this.x, dz = p.z - this.z, d = Math.hypot(dx, dz), toPlayer = Math.atan2(dx, dz);
     this.heart += dt * 0.9;
     const blow = this.seenHp - this.hp;
@@ -623,7 +628,7 @@ export class Zombie extends Beast {
       if (!this.used && !p.dead && !p.iframes && d < this.reach + 0.75 * this.scale && Math.abs(wrapAngle(toPlayer - this.yaw)) < 1.2 && Math.abs(p.y - this.y) < 1.7 * this.scale) {
         this.used = true; this.bites++;
         const dmg = a.dmg * this.dmgScale;
-        if (p.damage(sim, dmg, this.x, this.z, this.scale > 1.2 ? 4 : 0)) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
+        if (p.damage(sim, dmg, this.x, this.z, this.scale > 1.2 ? 4 : 0) && p === sim.player) sim.event(EV.HURT, p.x, p.y + 1.1, p.z, dmg);
       }
     }
     if (this.t >= c.dur) {
@@ -781,8 +786,8 @@ export class Caster extends Zombie {
     super.flinch(kind, poise);
   }
 
-  onHit(sim, kind, fromX, fromZ, poise = 0) {
-    super.onHit(sim, kind, fromX, fromZ, poise);
+  onHit(sim, kind, fromX, fromZ, poise = 0, by = null) {
+    super.onHit(sim, kind, fromX, fromZ, poise, by);
     this.lastHurtAt = sim.time;
     if (Math.random() < 0.3) this.blinkAsk = true;
     // A blow or two in the middle of a working, and it's lost. A throw's already gone.
@@ -1045,7 +1050,8 @@ export class Caster extends Zombie {
     const s = this.casting;
     s.fired = true;
     const h = this.handAt(s.def.how === 'lob');
-    s.def.fire(this, sim, p, d, s.token, [h[0], h[1], h[2]], s.target);
+    sim.foeTarget = p === sim.player ? null : p;
+    try { s.def.fire(this, sim, p, d, s.token, [h[0], h[1], h[2]], s.target); } finally { sim.foeTarget = null; }
   }
 
   endCast() {
@@ -1213,7 +1219,7 @@ export function stepCatacombs(sim) {
   if (p.x < 125 || sim.time < nextLook) return;
   nextLook = sim.time + 0.5;
   const spawns = sim.world.spawns;
-  const idle = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
+  const idle = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
   LORDS.forEach((l, n) => {
     if (lordsDone.has(n) || !l.when(p)) return;
     lordsDone.add(n);
@@ -1286,7 +1292,7 @@ export function stepWoods(sim) {
     found = Math.hypot(cx, cz) > TOWN_R + 6 && floorAt(cx, cz) === null && !sim.world.inside(cx, cz, 1);
   }
   if (!found) return;
-  const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 60));
+  const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 60));
   const bodies = list.filter(free).slice(0, Math.min(12, 6 + Math.floor(out / 60)));
   if (bodies.length < 3) return;
   const first = Math.ceil(bodies.length / 2);
@@ -1299,7 +1305,7 @@ export function stepWoods(sim) {
   sim.wave = { at: sim.time + WAVE_GAP, bodies: bodies.slice(first), x: cx, z: cz };
   // A caster at the back, once in a while, if one's free.
   if (Math.random() < 0.4) {
-    const c = list.find((k) => k.opts?.role && ((k.dead && k.deadT > 45) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 90)));
+    const c = list.find((k) => k.opts?.role && !heroBusy(k, sim) && ((k.dead && k.deadT > 45) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 90)));
     const x = cx + (cx - p.x) * 0.3, z = cz + (cz - p.z) * 0.3;
     if (c && !sim.world.inside(x, z, 0.8) && floorAt(x, z) === null && Math.hypot(x, z) > TOWN_R + 6) huntFrom(sim, c, x, z, undefined);
   }
@@ -1310,7 +1316,7 @@ export function stepWoods(sim) {
 // The opening's ambush on the road down (src/sim/opening.js): n of the dead, slow ones, stood up around (cx, cz) and set on
 // you. Returns them, so the story knows when they're down.
 export function ambush(sim, cx, cz, n) {
-  const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || k.dead || !k.aggro);
+  const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || k.dead || !k.aggro);
   const bodies = sim.knights.filter(free).slice(0, n);
   bodies.forEach((b, i) => {
     const a = i * 2.4 + rnd(-0.4, 0.4), r = rnd(1.5, 4);
