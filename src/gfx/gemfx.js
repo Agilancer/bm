@@ -1,6 +1,7 @@
 // What a gem does to what it's set in, to look at. Every kind has its own particles, motion and light, and they add up: a staff with
 // a ruby and a sapphire smoulders and snows at once. A better cut does it harder, and a Flawless stone adds a flourish of its own.
 // All of it is on the render thread and owes the sim nothing. Particle kinds 16 + an element are the spells' own colours (src/sim/spells.js).
+import { toChurch } from '../core/church.js';
 import { H } from '../core/layout.js';
 import { SKULL_AT } from './renderer.js';
 import { SKINS } from '../items/skins.js';
@@ -105,7 +106,8 @@ export class GemFx {
     const { main, off, skull } = pack.slots;
     // A skull is a lantern: faint by day, and a good light at night and in the dark places below. It feels what its eyes feel: src/gfx/skulleyes.js.
     if (skull) {
-      const L = this.fill, sun = this.r.light?.sun || [0, 0, 0], eyes = this.r.skullEyes?.now, deep = cam.y < -6 || (cam.x >= 124.5 && cam.x < 176 && Math.abs(cam.z) < 3);
+      const [sx, sz] = toChurch(cam.x, cam.z);   // (the stair down, in the church's own frame: src/core/church.js)
+      const L = this.fill, sun = this.r.light?.sun || [0, 0, 0], eyes = this.r.skullEyes?.now, deep = cam.y < -6 || (sx >= 124.5 && sx < 176 && Math.abs(sz) < 3);
       const dark = deep ? 1 : Math.min(1, Math.max(0, 1 - (sun[0] + sun[1] + sun[2]) / 5));
       const glow = eyes ? Math.min(eyes.glow, 1.6) : 1, hue = eyes ? eyes.hue : 0, h = Math.min(1, Math.abs(hue)), to = hue > 0 ? RAGE_LIGHT : PALE_LIGHT;
       const own = SKINS[skull.skin]?.eyes?.[0] || LANTERN;

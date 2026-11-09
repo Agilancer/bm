@@ -4,7 +4,7 @@
 import { ARMOR_K } from '../items/items.js';
 import { floorAt } from '../core/interior.js';
 import { LAND_EDGE } from '../core/terrain.js';
-import { EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
+import { ABIL, EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { clamp, damp, wrapAngle } from '../core/math.js';
 import { S } from './knight.js';
 import { leanAmount } from './anim.js';
@@ -188,6 +188,7 @@ export class Player {
     this.queuedT -= dt;
     if (this.queuedT <= 0) this.queued = null;
     const mx = input[INPUT.MOVE_X], mz = input[INPUT.MOVE_Z];
+    const abil = input[INPUT.ABIL] | 0;   // (charms and the skull's cheats: ABIL in src/core/layout.js)
     this.steerX = mx;
     const len = Math.hypot(mx, mz);
     const sprint = input[INPUT.SPRINT] > 0.5 && mz > 0.3 && !this.winded && !this.surfing && !this.guard;
@@ -213,7 +214,15 @@ export class Player {
         sim.event(EV.DODGE, this.x, this.y, this.z, lx);
       }
     }
-    if (!stepSurf(this, dt, input, sim)) {
+    if (abil & ABIL.FLY) {
+      // The skull's no-clip: fly where you look, through anything (Space up, Shift fast).
+      const sp = input[INPUT.SPRINT] > 0.5 ? 60 : 14, s = Math.sin(this.yaw), c = Math.cos(this.yaw), cp = Math.cos(this.pitch);
+      this.x += (mx * -c + mz * s * cp) * sp * dt;
+      this.z += (mx * s + mz * c * cp) * sp * dt;
+      this.y += (mz * Math.sin(this.pitch) + (input[INPUT.JUMP_HELD] > 0.5 ? 1 : 0)) * sp * dt;
+      this.y = Math.max(this.y, sim.world.height(this.x, this.z) - 40);
+      this.vx = this.vz = this.vy = 0; this.onGround = false; this.surfing = false;
+    } else if (!stepSurf(this, dt, input, sim)) {
     const swingDrag = (this.guard ? GUARD_DRAG : this.swinging ? 0.8 : this.threat ? 0.9 : this.clip !== this.stance.idle ? 0.95 : 1) * sim.casting.drag;
     // (The opening slows you to a walk in the cave: sim.paceCap.)
     const speed = Math.min(sim.paceCap ?? Infinity, (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2));
@@ -229,14 +238,34 @@ export class Player {
       const v = DODGE_SPEED * clamp(this.dodgeT / DODGE_TIME + 0.2, 0, 1);
       this.vx = this.dodgeX * v; this.vz = this.dodgeZ * v;
     }
-    if (this.onGround && input[INPUT.JUMP] !== this.jumpSeen && this.stamina > 6) {
-      this.spend(8);
-      this.vy = 5.0; this.onGround = false;
-      sim.event(EV.JUMP, this.x, this.y, this.z);
+    if (this.onGround) this.airJumps = 0;
+    if (input[INPUT.JUMP] !== this.jumpSeen) {
+      if (this.onGround && this.stamina > 6) {
+        this.spend(8);
+        this.vy = 5.4; this.onGround = false;
+        sim.event(EV.JUMP, this.x, this.y, this.z);
+      } else if (!this.onGround && (abil & ABIL.DOUBLE_JUMP) && !this.airJumps && this.stamina > 4) {
+        // The Wingbell: the air rings back, and holds you up for one more step.
+        this.spend(6);
+        this.airJumps = 1;
+        this.vy = Math.max(this.vy, 0) * 0.3 + 5.0;
+        sim.event(EV.JUMP, this.x, this.y, this.z, 1);
+      }
     }
     this.jumpSeen = input[INPUT.JUMP];
-    this.vy -= 14 * dt;
+    // Floatier than it was: lighter on the way up while jump's held, and a gentler fall.
+    this.vy -= (this.vy > 0 && input[INPUT.JUMP_HELD] > 0.5 ? 8.5 : 12) * dt;
     this.x += this.vx * dt; this.z += this.vz * dt; this.y += this.vy * dt;
+    // The townsfolk: stepped round, not walked through.
+    const fb = globalThis.folkBodies;
+    if (fb) {
+      for (let k = 0; k < fb.length; k += 4) {
+        const r = fb[k + 2];
+        if (!r || Math.abs(fb[k + 3] - this.y) > 1.4) continue;
+        const dx = this.x - fb[k], dz = this.z - fb[k + 1], d = Math.hypot(dx, dz), min = r + 0.3;
+        if (d < min && d > 1e-4) { this.x = fb[k] + dx / d * min; this.z = fb[k + 1] + dz / d * min; }
+      }
+    }
     tmp[0] = this.x; tmp[2] = this.z;
     sim.world.resolve(tmp, 0.36, this.y + 0.2);
     this.x = tmp[0]; this.z = tmp[2];
@@ -545,6 +574,7 @@ export class Player {
   // Returns whether it landed: a shield can stop it. (unblockable: it comes up out of the ground under you.)
   damage(sim, amount, fromX, fromZ, knock, unblockable = false) {
     if (sim.gameState !== 0) return false;
+    if (sim.input && ((sim.input[INPUT.ABIL] | 0) & (ABIL.NO_DAMAGE | ABIL.GOD | ABIL.FLY))) return false;
     // Aegis: this one never lands, whatever it was.
     if (this.shPower === 1 && !this.aegisT) {
       this.aegisT = this.shValue;

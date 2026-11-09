@@ -10,6 +10,7 @@
 import { C, C_HERO, C_SIZE, CHARS_START, H } from '../core/layout.js';
 import { CAUSES, CLASSES, GESTURES, MOBS, MOB_KEYS, MOVE_KEYS, PLACES, PLACE_IDS, TRIGGERS, WALK_ENDS, hourBand, rng } from '../core/heroes.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
+import { townDist } from '../core/town.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { ELEM, SPELLS } from '../sim/spells.js';
@@ -34,8 +35,6 @@ const THINGS = ['kite shield', 'tower shield', 'skull focus', 'robe', 'staff', '
 // Monsters by what the sim's LOOT event calls them (src/main.js FOE_NAMES), for the player's big kills.
 // The triggers that tell of deeds from the world log (their lines gated by event).
 const EVENT_TRIGS = new Set(['gossip', 'gossip_player', 'bard_perform', 'guild_chat']);
-// The town's edge, as the sim draws it (src/sim/undead.js TOWN_R).
-const TOWN_EDGE = 58;
 // The engine's spell elements by number (src/sim/spells.js), for the script's spell_elements map.
 const ELEM_NAMES = Object.keys(ELEM).sort((a, b) => ELEM[a] - ELEM[b]);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -417,11 +416,11 @@ export class HeroTalk {
       if (near < 6 && !h.fighting && !P.dead && this.t - h.greetT > 300 && h.busyT <= 0) {
         h.greetT = this.t;
         // One who'd stand by the player offers to walk out with them: kept, if the player heads out soon after.
-        if (this.say(h, 'player_greet') && this.lastPool?.walk_offer && Math.hypot(P.x, P.z) < TOWN_EDGE) h.walkOffer = this.t + 45;
+        if (this.say(h, 'player_greet') && this.lastPool?.walk_offer && townDist(P.x, P.z) < 0) h.walkOffer = this.t + 45;
       }
-      if (h.walkOffer > this.t && !P.dead && near < 25 && Math.hypot(P.x, P.z) > TOWN_EDGE - 8 && P.x * snap[H.VX] + P.z * snap[H.VZ] > 0) { h.walkOffer = 0; this.walkWith(h, 90); }
+      if (h.walkOffer > this.t && !P.dead && near < 25 && townDist(P.x, P.z) > -8 && P.x * snap[H.VX] + P.z * snap[H.VZ] > 0) { h.walkOffer = 0; this.walkWith(h, 90); }
       // By night a romantic trails the player and the lady, as far as the edge of town and no further.
-      if (band === 'night' && her && !P.dead && near < 18 && Math.hypot(her.x - P.x, her.z - P.z) < 12 && Math.hypot(P.x, P.z) < TOWN_EDGE - 6
+      if (band === 'night' && her && !P.dead && near < 18 && Math.hypot(her.x - P.x, her.z - P.z) < 12 && townDist(P.x, P.z) < -6
         && this.persona(h) === 'romantic' && !h.fighting && h.busyT <= 0 && this.t - (this.trailT ?? -1e9) > 240 && this.say(h, 'lisandra_follow')) {
         this.trailT = this.t; this.walkWith(h, 150, 'edge');
       }

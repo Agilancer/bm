@@ -11,7 +11,9 @@ import { clamp, damp, mat4FromQT, quatMul, quatRotate, wrapAngle } from '../core
 import { floorAt, inPit } from '../core/interior.js';
 import { ELEM, FX } from './spells.js';
 import { Knight, S, matToQuat, norm, orth, cross, turn } from './knight.js';
-import { Caster, TOWN_R, Zombie } from './undead.js';
+import { Caster, Zombie } from './undead.js';
+import { townDist } from '../core/town.js';
+
 import { Crab } from './crab.js';
 import { Gravehart } from './gravehart.js';
 import { Hydra } from './hydra.js';
@@ -610,7 +612,7 @@ export class Hero extends Knight {
       s.v *= 0.4;
     }
     if (s.crash) { s.crash -= dt; s.v *= 1 - dt * 2; if (s.crash <= 0) { s.crash = 0; } }
-    if (s.d <= 20 || Math.hypot(x, z) < TOWN_R - 10) world.surfDone(this);
+    if (s.d <= 20 || townDist(x, z) < -10) world.surfDone(this);
     this.animT += dt;
     if (this.visible) { this.animate(this.animT, sim); this.animT = 0; }
   }
@@ -777,10 +779,10 @@ export class HeroWorld {
     // Dawn and dusk, said once each by someone in town.
     const band = hourBand(this.hour);
     if (this.lastBand !== undefined && band !== this.lastBand) {
-      const inTown = this.heroes.filter((h) => h.active && !h.dead && Math.hypot(h.x, h.z) < TOWN_R);
+      const inTown = this.heroes.filter((h) => h.active && !h.dead && townDist(h.x, h.z) < 0);
       const h = inTown[Math.floor(Math.random() * inTown.length)];
       if (h) h.say(sim, band === 1 ? 'dawn' : band === 3 ? 'dusk_town' : band === 0 ? 'goodnight' : 'town_idle');
-      if (band === 3) for (const x of this.heroes) if (x.task && x.task.kind === 'hunt' && Math.hypot(x.x, x.z) > TOWN_R + 30 && Math.random() < 0.5) { x.say(sim, 'night_falls_out'); this.goHome(x); }
+      if (band === 3) for (const x of this.heroes) if (x.task && x.task.kind === 'hunt' && townDist(x.x, x.z) > 30 && Math.random() < 0.5) { x.say(sim, 'night_falls_out'); this.goHome(x); }
     }
     this.lastBand = band;
   }
@@ -1006,7 +1008,7 @@ export class HeroWorld {
     this.care(h);
     if (h.foe) {
       // Too hurt and on their own: back to the town's ground, where nothing follows.
-      if (h.hp < h.maxHp * 0.25 && !h.party && Math.hypot(h.x, h.z) > TOWN_R) { h.foe = null; this.goHome(h, true); }
+      if (h.hp < h.maxHp * 0.25 && !h.party && townDist(h.x, h.z) > 0) { h.foe = null; this.goHome(h, true); }
       return;
     }
     if (h.hold > 0 || h.swing) return;
@@ -1213,7 +1215,8 @@ export class HeroWorld {
     const out = Math.hypot(place.spot[0], place.spot[1]);
     // Leave the town by the nearest gap in its ring, then across.
     const a = Math.atan2(place.spot[0], place.spot[1]);
-    return out > TOWN_R ? [[Math.sin(a) * (TOWN_R - 6), Math.cos(a) * (TOWN_R - 6)], place.spot] : [place.spot];
+    // (Out of town: first to a point well inside its edge on the way, so they leave by the streets, not through the houses.)
+    return townDist(place.spot[0], place.spot[1]) > 0 ? [[Math.sin(a) * 52, Math.cos(a) * 52], place.spot] : [place.spot];
   }
 
   travel(h, t, dt, speed) {
@@ -1449,7 +1452,7 @@ export class HeroWorld {
   walking(h) {
     const sim = this.sim, p = sim.player, w = h.walkWith;
     const d = Math.hypot(p.x - h.x, p.z - h.z);
-    const edge = w.mode === 'edge' && Math.hypot(p.x, p.z) > TOWN_R;
+    const edge = w.mode === 'edge' && townDist(p.x, p.z) > 0;
     if (sim.time > w.until || p.dead || h.party || d > 45 || edge) {
       h.walkWith = null; h.goal = null; h.hold = edge ? 2.5 : 0.6;
       h.holdFace = Math.atan2(p.x - h.x, p.z - h.z);
@@ -1496,7 +1499,7 @@ export class HeroWorld {
     switch (m.cmd) {
       case 'near': hs.forEach((h, i) => { const a = p.yaw + (i - (hs.length - 1) / 2) * Math.min(0.35, 1.7 / Math.max(1, hs.length - 1)); place(h, p.x + Math.sin(a) * (m.r || 7), p.z + Math.cos(a) * (m.r || 7)); h.yaw = h.faceYaw = Math.atan2(p.x - h.x, p.z - h.z); }); break;
       case 'at': hs.forEach((h, i) => place(h, m.x + (i % 4) * 1.6, m.z + Math.floor(i / 4) * 1.6)); break;
-      case 'task': hs.forEach((h) => { if (h.party) this.disband(h.party); h.task = null; h.foe = null; if (['hunt', 'delve', 'summit'].includes(m.kind)) this.plan(h, m.kind); }); break;
+      case 'task': hs.forEach((h) => { if (h.party) this.disband(h.party); h.task = null; h.foe = null; if (h.sitting) { h.sitting = false; h.stopAction(0.2); } if (['hunt', 'delve', 'summit'].includes(m.kind)) this.plan(h, m.kind); }); break;
       case 'surf': hs.forEach((h, i) => { const top = THE_FALL.line[THE_FALL.line.length - 1]; place(h, top[0], top[1]); this.startSurf(h, i, hs.length > 1); }); break;
       case 'gesture': hs.forEach((h) => h.gesture_(m.name, m.seconds)); break;
       case 'skill': hs.forEach((h) => { const f = this.targets.filter(fightable).sort((a, b) => Math.hypot(a.x - h.x, a.z - h.z) - Math.hypot(b.x - h.x, b.z - h.z))[0]; if (f) { h.foe = f; h.skill(sim, m.key, f); } }); break;

@@ -1,6 +1,7 @@
 // A knight on the UAL skeleton: layered animation, plate hits and wounds, and the brain.
 import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, C_PROPS, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH, TACTICS } from '../core/layout.js';
 import { clamp, damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, smoothstep, wrapAngle } from '../core/math.js';
+import { inTown } from '../core/town.js';
 import { Pose, solveFK, writePalette } from './anim.js';
 import { PlateBVH } from './world.js';
 
@@ -688,7 +689,7 @@ export class Knight {
 
   selectTarget(sim) {
     let target = sim.player;
-    let best = this.hostile && !target.dead && !this.outOfReach(target) ? Math.hypot(target.x - this.x, target.z - this.z) : Infinity;
+    let best = this.hostile && !target.dead && !this.letGo(target) && !this.outOfReach(target) ? Math.hypot(target.x - this.x, target.z - this.z) : Infinity;
     // (And the other Tessariels, src/sim/hero.js, who are kind 1: Velscour's men fight them as they fight Tessariel's knights.)
     for (const other of sim.heroes ? [...sim.knights, ...sim.heroes] : sim.knights) {
       if (!(other instanceof Knight) || other === this || other.kind === this.kind || other.dead || other.hidden || other.below > 0 || this.outOfReach(other)) continue;
@@ -699,6 +700,10 @@ export class Knight {
     }
     return Number.isFinite(best) ? target : null;
   }
+
+  // Velscour's knight keeps the church (opts.keep): he won't follow anyone into the town, or near it, and goes back to his door. Nobody
+  // in the town is anything to him. (Put down in the town, he fights where he stands: the review scenes do that.) src/core/town.js.
+  letGo(p) { return !!this.opts.keep && inTown(p.x, p.z, 6) && !inTown(this.x, this.z); }
 
   get threat() {
     if (!this.attack || !this.action) return null;
@@ -983,7 +988,7 @@ export class Knight {
         else { const fx = (tx - this.x) / d, fz = (tz - this.z) / d; this.steer(dt, fx * this.opts.walk, fz * this.opts.walk, 4, Math.atan2(fx, fz)); }
       }
     }
-    if ((!this.hostile && !(p instanceof Knight)) || p.dead || this.outOfReach(p)) return;
+    if ((!this.hostile && !(p instanceof Knight)) || p.dead || this.letGo(p) || this.outOfReach(p)) return;
     // Sight is a cone. A sprint close by is heard, and anything at arm's length is felt.
     const sees = sim.world.sees(this.x, this.y + 1.7, this.z, p.x, p.y + 1.6, p.z);
     const inCone = Math.abs(wrapAngle(toPlayer - this.faceYaw)) < 1.9;

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { parseGLB } from '../src/core/glb.js';
 import { ClipBank, Rig } from '../src/sim/anim.js';
 import { Knight, ATTACKS, S } from '../src/sim/knight.js';
-import { World } from '../src/sim/world.js';
+import { NAV_H, NAV_W, NAV_X0, NAV_Z0, World } from '../src/sim/world.js';
 const bytes = path => { const b = fs.readFileSync(new URL(path, import.meta.url)); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
 const bank = new ClipBank(JSON.parse(fs.readFileSync(new URL('../assets/game/clips.json', import.meta.url))), bytes('../assets/game/clips.bin'));
 function knight(kind = 0) {
@@ -12,7 +12,8 @@ function knight(kind = 0) {
     { spawn: [0, 0], hp: 500, hostile: !kind, swordScale: kind ? 0.96 : 1.085, shieldScale: kind ? 1.25 : 1.6, bladeLen: 1, route: [[0, 0]], walk: 1.5, style: kind ? 'silver' : 'black' });
 }
 function world() {
-  return Object.assign(Object.create(World.prototype), { colliders: [], trunks: new Map(), height: () => 0 });
+  // A bare world: no boxes, no pines, no land sites (World's own constructor builds the whole land).
+  return Object.assign(Object.create(World.prototype), { colliders: [], trunks: new Map(), siteBoxes: new Map(), height: () => 0 });
 }
 function simulation(knights = []) {
   return { time: 0, tick: 0, gameState: 0, world: world(), knights, player: { x: 10, y: 0, z: 0, dead: false }, casting: { bolts: [] }, event() {}, slowMo() {}, tacticWeights: [1,1,1,1,1,1] };
@@ -138,9 +139,9 @@ test('a charge cannot tunnel through a thin wall and reports actual movement aft
 });
 test('navigation rejects a centerline shortcut that leaves no shoulder clearance', () => {
   const w = world();
-  w.grid = new Uint8Array(512 * 512); w.slots = new Map();
-  const field = new Float32Array(512 * 512).fill(1e9), cell = 256 * 512 + 256;
-  field[cell] = 5; field[cell + 512] = 4;
+  w.grid = new Uint8Array(NAV_W * NAV_H); w.slots = new Map();
+  const field = new Float32Array(NAV_W * NAV_H).fill(1e9), cell = -NAV_Z0 * NAV_W - NAV_X0;   // (the cell at 0, 0)
+  field[cell] = 5; field[cell + NAV_W] = 4;
   w.slots.set(0, { field });
   w.colliders.push({ x: 2, z: 0.7, hx: 0.6, hz: 0.1, h: 3, b: 0, s: 0, co: 1 });
   const out = new Float32Array(2); w.flow(out, 0, 0, 5, 0);

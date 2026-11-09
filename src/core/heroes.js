@@ -21,6 +21,7 @@
 // its stair route.
 
 import { ROADS, SUMMIT } from './terrain.js';
+import { CHURCH_DOOR, churchAt } from './church.js';
 
 // How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU.
 export const HERO_SLOTS = { desktop: 16, lean: 6 };
@@ -98,7 +99,8 @@ export const PLACES = [
   { id: 'plague_field', name: 'the plague field', kind: 'hunt', spot: [82, -72], r: 18, mobs: ['plaguebearer'] },
   { id: 'gravehart_lair', name: 'the Gravehart\'s ground', kind: 'hunt', spot: [0, -138], r: 26, mobs: ['gravehart'] },
   { id: 'crab_shore_w', name: 'the crab field', kind: 'hunt', spot: [-92, -58], r: 16, mobs: ['crab'] },
-  { id: 'cathedral', name: 'the Cathedral', kind: 'delve', spot: [52, 9], r: 4, door: [57, 9] },
+  // (Out east of the town, a field away: src/core/church.js. They gather below the steps and go in at the great door.)
+  { id: 'cathedral', name: 'the Cathedral', kind: 'delve', spot: churchAt(52, 6), r: 4, door: CHURCH_DOOR },
   { id: 'summit', name: 'the Summit', kind: 'summit', spot: [SUMMIT.x, SUMMIT.z], r: SUMMIT.r - 4 },
 ];
 export const PLACE_IDS = PLACES.map((p) => p.id);

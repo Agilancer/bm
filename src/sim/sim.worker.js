@@ -1,6 +1,7 @@
 // The simulation thread. Runs the world at a fixed rate, independent of the display, and publishes
 // complete snapshots for the render thread. Nothing in here waits on the GPU or the DOM.
 import { FIELD_CREATURES } from '../core/field-creatures.js';
+import { mapFolk } from '../folk/layout.js';
 import { FieldCreature } from './field-creature.js';
 import { setOpeningTerrain } from '../core/terrain.js';
 import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW, clutterBoxes } from '../core/opening.js';
@@ -16,7 +17,9 @@ import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
-import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepWoods, TOWN_R, Zombie } from './undead.js';
+import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepWoods, Zombie } from './undead.js';
+import { CHURCH_GUARD, churchAt } from '../core/church.js';
+import { inTown } from '../core/town.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { Player } from './player.js';
@@ -24,14 +27,16 @@ import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
 import { Hero, HeroWorld, mobKind } from './hero.js';
 import { MOB_KEYS, TRIG } from '../core/heroes.js';
+import { Slimes } from './slimes.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
-// Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on.
+// Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
+// into the town (keep: Knight.letGo).
 const BLACK = {
-  spawn: [60, 0], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
-  route: [[60, 0]], pauseClip: null,   // On guard before the cathedral's great door, and no further.
-  // His post is on the town's edge, so he may follow you over it, but only so far: past leash metres from his door
-  // he lets you go and walks back to it. (He used to be held at the edge, swinging at air from the steps.)
+  spawn: [...CHURCH_GUARD], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
+  route: [[...CHURCH_GUARD]], pauseClip: null, keep: true,   // On guard before the cathedral's great door, and no further.
+  // He may follow you off his ground, but only so far: past leash metres from his door he lets you go and walks back to it,
+  // and he lets you go at once when you're back in town (keep: Knight.letGo).
   style: 'black', leash: 20,
 };
 const SILVER = {
@@ -43,7 +48,9 @@ const SILVER = {
 const GRAVEHART = { spawn: [12, -128], lair: [-14, -150], yaw: 0.4, hp: 380, territory: 30 };
 // Lies up in the south, and doesn't go looking for anyone.
 // Down in the rift under the catacombs, on its burning floor, east of the bridge and the scaffold stair: see gulf() in tools/interior/build_interior.py. pit: where it can go.
-const HYDRA = { spawn: [208, -128], lair: [217, -127], yaw: -1.57, hp: 900, territory: 24, pit: { y: -44.25, x0: 150, x1: 222, z0: -133, z1: -123 } };
+// (All in the church's own frame, and moved with it: src/core/church.js.)
+const PIT = [churchAt(150, -133), churchAt(222, -123)];
+const HYDRA = { spawn: churchAt(208, -128), lair: churchAt(217, -127), yaw: -1.57, hp: 900, territory: 24, pit: { y: -44.25, x0: PIT[0][0], x1: PIT[1][0], z0: PIT[0][1], z1: PIT[1][1] } };
 
 const CRABS = [
   { spawn: [-92, -58], yaw: 1.0, hp: 55, delay: 20, flank: 1.1 },
@@ -61,6 +68,8 @@ class Sim {
     this.time = 0; this.tick = 0; this.timeScale = 1; this.stopT = 0; this.slowT = 0; this.gameState = 0; this.gameT = 0;
     this.firstBloodAt = -1; this.crabWoke = false;
     this.knights = [];
+    // The slimes out in the wet places; the spells look for them with the knights, as sim.foes.
+    this.slimes = new Slimes();
     this.villagers = [];
     // The other Tessariels (src/sim/hero.js): not knights, so nothing of the player's touches them. Drawn between the knights and the villagers.
     this.heroes = [];
@@ -77,6 +86,12 @@ class Sim {
   }
 
   charOffset(i) { return CHARS_START + i * C_SIZE; }
+
+  // Whatever a spell can hit: the knights and the dead, and the slimes (src/sim/slimes.js). Made once a tick.
+  get foes() {
+    if (this.foesTick !== this.tick) { this.foesTick = this.tick; this.foesList = this.slimes.list.length ? this.knights.concat(this.slimes.list) : this.knights; }
+    return this.foesList;
+  }
 
   event(type, a = 0, b = 0, c = 0, d = 0, e = 0, f = 0, g = 0) {
     if (this.shared) {
@@ -152,8 +167,9 @@ class Sim {
         k.pushX *= fall; k.pushZ *= fall;
         if (Math.abs(k.pushX) + Math.abs(k.pushZ) < 0.4) { k.pushX = 0; k.pushZ = 0; }
       }
-      // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there.)
-      if (k.kind !== 1 && !k.opts?.leash && Math.hypot(k.x, k.z) < TOWN_R && Math.hypot(ox, oz) >= TOWN_R) { k.x = ox; k.z = oz; }
+      // And the town is safe ground: nothing that hunts you comes in. (The silver knight lives there, and a knight on a post, on a
+      // leash from it, may cross its edge.) src/core/town.js.
+      if (k.kind !== 1 && !k.opts?.leash && inTown(k.x, k.z) && !inTown(ox, oz)) { k.x = ox; k.z = oz; }
       if (k.champion && !k.dead && this.tick % 10 === 0) this.event(EV.CHAMPION, k.x, k.y + 1.3, k.z);
       // Each death leaves its loot once.
       // (What one of the other Tessariels kills is theirs: src/sim/hero.js.)
@@ -181,12 +197,14 @@ class Sim {
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     // (After the spells' update, which clears the frame's shapes.)
     this.heroWorld?.drawFx();
+    if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) stepWoods(this);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
+    this.slimes.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     const nk = this.knights.length, nh = this.heroes.length;
     this.heroes.forEach((h, i) => h.write(snap, this.charOffset(nk + i), this));
@@ -212,7 +230,7 @@ class Sim {
       const pit = body.opts?.pit;
       if (pit && (x < pit.x0 || x > pit.x1 || z < pit.z0 || z > pit.z1)) return false;
       if (!pit && (body instanceof Zombie ? inPit(x, z) : floorAt(x, z) !== null)) return false;
-      if (body.kind !== 1 && !body.opts?.leash && Math.hypot(x, z) < TOWN_R && Math.hypot(body.x, body.z) >= TOWN_R) return false;
+      if (body.kind !== 1 && !body.opts?.leash && inTown(x, z) && !inTown(body.x, body.z)) return false;
     }
     const pos = this.nudgePosition;
     pos[0] = x; pos[2] = z;
@@ -484,6 +502,7 @@ async function boot(msg) {
     if (m.type === 'heroHold') sim.heroWorld?.holdFor(m.slots, m.seconds);
     if (m.type === 'heroWalk') sim.heroWorld?.walkFor(m.slot, m.seconds, m.mode);
     if (m.type === 'heroDebug') sim.heroWorld?.debug(m);
+    if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {
       console.error(err);
@@ -529,5 +548,7 @@ ${err.stack}` }); }
 }
 
 self.addEventListener('message', (e) => {
+  // Where the townsfolk stand (src/folk/layout.js bodies: x, z, radius, y), for the player to bump into.
+  if (e.data.type === 'folk') { globalThis.folkBodies = mapFolk(e.data.buffer).bodies; return; }
   if (e.data.type === 'boot') boot(e.data).catch((err) => self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }));
 });

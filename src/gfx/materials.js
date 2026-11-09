@@ -1,10 +1,12 @@
 // WGSL for everything drawn in the world pass.
 import { COMMON } from './shaders.js';
+import { CHURCH_Z } from '../core/church.js';
 
 export const TERRAIN = COMMON + /* wgsl */ `
 @group(1) @binding(0) var groundColor: texture_2d_array<f32>;
 @group(1) @binding(1) var groundDetail: texture_2d_array<f32>;
 @group(1) @binding(2) var farMap: texture_2d<f32>;
+@group(1) @binding(3) var farTint: texture_2d<f32>;
 
 struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) viewZ: f32 };
 @vertex fn vs(@location(0) p: vec3f, @location(1) n: vec3f) -> V {
@@ -26,7 +28,10 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let gm = textureSampleLevel(groundMap, clampSmp, gmUv, 0.0);
   let inMap = step(0.0, gmUv.x) * step(gmUv.x, 1.0) * step(0.0, gmUv.y) * step(gmUv.y, 1.0);
   // Past the fine map of the village there's a coarse one of all the land: the roads, and where the pines stand.
-  let fm = textureSampleLevel(farMap, clampSmp, p.xz / 2048.0 + 0.5, 0.0);
+  let fuv = p.xz / FAR_SPAN + 0.5;
+  let fm = textureSampleLevel(farMap, clampSmp, fuv, 0.0);
+  // The far countries (src/core/lands.js): their tint and wet, snow on the heights, rock on the steeps.
+  let ft = textureSampleLevel(farTint, clampSmp, fuv, 0.0);
   let dirtBase = mix(fm.r, gm.r, inMap);
   let macro2 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.043 + 0.31, 0.0);
 
@@ -72,12 +77,22 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let farDry = smoothstep(90.0, 420.0, length(p.xz));
   albedo = mix(albedo, mix(vec3f(dot(albedo, vec3f(0.3, 0.6, 0.1))), albedo, 0.55) * vec3f(0.92, 0.9, 0.76), farDry * 0.85);
   albedo *= 0.8 + macro2.r * 0.45;
+  albedo *= ft.rgb * 1.5;
+  // Wet country: dark, peaty, with standing sheen.
+  albedo = mix(albedo, albedo * vec3f(0.5, 0.56, 0.46), ft.a * (0.55 + 0.45 * macro2.g));
+  // Bare rock, the dirt's own grain gone grey; and snow over all, thinning where the slope's too steep to hold it.
+  let grey = dot(dirtCol.rgb, vec3f(0.3, 0.6, 0.1));
+  let rockCol = vec3f(grey) * vec3f(0.72, 0.72, 0.76) * (0.75 + 0.5 * dirtDet.a);
+  albedo = mix(albedo, rockCol, fm.a * smoothstep(0.1, 0.4, fm.a + (macro2.b - 0.5) * 0.3));
+  let snowCol = vec3f(0.84, 0.87, 0.93) * (0.88 + 0.16 * grassDet.a);
+  let snowAmt = smoothstep(0.25, 0.6, fm.b + (macro2.r - 0.5) * 0.3) * smoothstep(0.55, 0.8, in.n.y);
+  albedo = mix(albedo, snowCol, snowAmt);
   // Under the pines, nothing but old needles and the dark.
   albedo = mix(albedo, vec3f(0.045, 0.034, 0.022), fm.g * 0.82 * (1.0 - dirt * 0.7));
   // Under the blades the soil sits in shade.
   let grassCover = gm.g * inMap * (1.0 - smoothstep(F.counts.w * 0.75, F.counts.w, dist));
   albedo *= 1.0 - grassCover * 0.38;
-  var rough = mix(0.95, det.b, 0.7);
+  var rough = mix(mix(0.95, det.b, 0.7), 0.55, snowAmt * 0.6 + ft.a * 0.3);
   var n = perturb(normalize(in.n), p, uvA, det.rg, 0.9 - 0.5 * smoothstep(8.0, 30.0, dist));
 
   // Blood soaked into the earth.
@@ -123,7 +138,7 @@ struct V {
 @vertex fn vs(@location(0) pIn: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f, @location(3) layer: u32) -> V {
   var o: V;
   var p = pIn;
-  let params = layers[min(layer, 63u)];
+  let params = layers[min(layer % 1000u, 63u)];
   if (params.w > 0.0) {
     // Leaves stir, in gusts that travel across the trees.
     let t = F.camPos.w;
@@ -137,7 +152,34 @@ struct V {
   return o;
 }
 
+// The slimes' kinds (src/sim/slimes.js SPECIES, in order): colour and glow, and the rim's sheen.
+const SLIME_LOOK = array<vec4f, 9>(
+  vec4f(0.062, 0.399, 0.028, 0.05),
+  vec4f(0.111, 0.101, 0.012, 0.00),
+  vec4f(0.019, 0.267, 1.000, 0.22),
+  vec4f(0.488, 0.003, 0.019, 0.06),
+  vec4f(1.000, 0.235, 0.002, 0.50),
+  vec4f(0.198, 0.021, 1.000, 0.45),
+  vec4f(0.330, 0.752, 0.004, 0.65),
+  vec4f(0.002, 0.001, 0.002, 0.00),
+  vec4f(0.619, 0.573, 0.369, 0.03));
+const SLIME_RIM = array<vec3f, 9>(
+  vec3f(0.339, 1.000, 0.164),
+  vec3f(0.442, 0.399, 0.117),
+  vec3f(0.330, 0.723, 1.000),
+  vec3f(1.000, 0.145, 0.145),
+  vec3f(1.000, 0.639, 0.117),
+  vec3f(0.639, 0.359, 1.000),
+  vec3f(0.828, 1.000, 0.220),
+  vec3f(0.145, 0.041, 1.000),
+  vec3f(1.000, 0.924, 0.694));
+
 fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
+  if (id == 110u) { return vec4f(0.012, 0.024, 0.028, 0.04); }  // lake
+  if (id == 111u) { return vec4f(0.7, 0.78, 0.82, 0.3); }      // falling water
+  if (id == 112u) { return vec4f(0.52, 0.64, 0.74, 0.12); }    // ice
+  if (id == 113u) { return vec4f(0.04, 0.06, 0.1, 0.25); }     // a seal's face
+  if (id == 114u) { return vec4f(0.014, 0.012, 0.018, 0.07); }  // black glass (the Crown of Teeth)
   // rgb + roughness for the few materials with no painting.
   if (id == 100u) { return vec4f(0.035, 0.034, 0.036, 0.42); }  // iron
   if (id == 101u) { return vec4f(1.0, 0.6, 0.2, 1.0); }         // flame (emissive below)
@@ -155,9 +197,12 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   var o: Out;
   o.depth = in.viewZ;
   var uv = in.uv;
-  let flat_ = in.layer >= 100u;
-  let params = layers[min(in.layer, 63u)];
-  let layerI = i32(min(in.layer, 63u));
+  // (A thousand times which other light it's in, over the layer: dark, pale, frost. src/core/sites.js)
+  let lay = in.layer % 1000u;
+  let tintK = in.layer / 1000u;
+  let flat_ = lay >= 100u;
+  let params = layers[min(lay, 63u)];
+  let layerI = i32(min(lay, 63u));
   if (!front && params.x == 0.0) { n0 = -n0; }
   var albedo: vec3f; var rough = 0.8; var metal = 0.0; var emissive = vec3f(0.0); var ao = 1.0;
   let dx = dpdx(uv); let dy = dpdy(uv);
@@ -210,10 +255,49 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     det = mix(da, db, w);
   }
   if (flat_) {
-    let m = flatMaterial(in.layer, p, F.camPos.w);
+    let m = flatMaterial(lay, p, F.camPos.w);
     albedo = m.rgb; rough = m.a;
-    if (in.layer == 100u || in.layer == 105u) { metal = 0.9; }
-    if (in.layer == 101u) {
+    let t = F.camPos.w;
+    if (lay == 110u || lay == 112u) {
+      // Open water stirs in two sets of ripples; ice lies still, cracked.
+      let a = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.045 + vec2f(t * 0.011, t * 0.007), 0.0).rg - 0.5;
+      let b = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.13 - vec2f(t * 0.019, -t * 0.013), 0.0).ba - 0.5;
+      if (lay == 110u) { n = normalize(vec3f((a.x + b.x) * 0.22, 1.0, (a.y + b.y) * 0.22)); }
+      else {
+        let c = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.21, 0.0).r;
+        albedo *= mix(0.7, 1.08, smoothstep(0.46, 0.5, abs(c - 0.5) + 0.46)) * (0.9 + a.x * 0.4);
+        n = normalize(vec3f(a.x * 0.08, 1.0, a.y * 0.08));
+      }
+    }
+    if (lay == 111u) {
+      // The falls: streaks running down, foam where they land.
+      let s = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.uv.x * 3.0, in.uv.y * 0.6 - t * 0.9), 0.0);
+      albedo *= 0.55 + 0.6 * s.r;
+      emissive = albedo * 0.12 * F.sunColor.a;
+      n = normalize(n0 + vec3f((s.g - 0.5) * 0.4, 0.0, (s.b - 0.5) * 0.4));
+    }
+    if (lay == 113u) {
+      // A seal: blue light moving under the stone, slow, like breath.
+      let s = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.19 + vec2f(sin(t * 0.3), cos(t * 0.23)) * 0.1, 0.0);
+      let rune = smoothstep(0.47, 0.5, abs(s.r - 0.5) + 0.47) * (1.0 - smoothstep(0.5, 0.56, abs(s.g - 0.5) + 0.5));
+      emissive = vec3f(0.25, 0.55, 1.3) * (0.35 + 0.25 * sin(t * 1.3) + rune * 1.6);
+    }
+    if (lay >= 120u && lay < 130u) {
+      // Jelly: dark and clear where you look straight through it, lit at the rim, its own glow in it; white for a moment when struck.
+      let L = SLIME_LOOK[lay - 120u];
+      let fres = pow(1.0 - clamp(abs(dot(n0, v)), 0.0, 1.0), 2.2);
+      let heart = smoothstep(0.35, 0.95, in.uv.x) * (1.0 - fres);
+      albedo = L.rgb * mix(0.55, 0.18, heart);
+      rough = 0.06;
+      emissive = L.rgb * (L.w * 2.2 + 0.05) * (1.0 - 0.6 * heart) + SLIME_RIM[lay - 120u] * fres * 0.55 + vec3f(in.uv.y * 1.6);
+    }
+    if (lay == 100u || lay == 105u) { metal = 0.9; }
+    if (lay == 101u) {
+      // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
+      for (var li = 0u; li < u32(F.counts.x); li++) {
+        let L = F.lights[li];
+        if (L.colI.w < 0.03 && distance(p, L.posR.xyz) < 0.45) { discard; }
+      }
       let f = 0.85 + 0.15 * sin(F.camPos.w * 11.0 + p.x * 9.0) * sin(F.camPos.w * 7.3);
       // (Without bloom to carry it, that heat would only be a white square, so it's a plain gold instead.)
       emissive = select(vec3f(14.0, 7.0, 2.4), vec3f(2.2, 1.2, 0.3), F.blood.w < 0.5) * f;
@@ -223,6 +307,13 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     if (params.x > 0.0 && tex.a < 0.5) { discard; }
     albedo = tex.rgb;
     rough = det.b;
+    if (tintK > 0u) {
+      let lum = dot(albedo, vec3f(0.3, 0.55, 0.15));
+      // Velscour's black stone, with a little of the red in it; limestone bleached and bone; stone under rime, whitest on top.
+      if (tintK == 1u) { albedo = vec3f(lum) * vec3f(0.27, 0.22, 0.22); rough = rough * 0.8; }
+      if (tintK == 2u) { albedo = mix(albedo, vec3f(lum * 1.25 + 0.16) * vec3f(1.0, 0.97, 0.9), 0.8); }
+      if (tintK == 3u) { albedo = mix(vec3f(lum) * vec3f(0.85, 0.92, 1.05), vec3f(0.82, 0.86, 0.92), smoothstep(0.2, 0.8, n0.y) * 0.8 + 0.12); }
+    }
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
     if (params.z < 0.0) {
       // What the damp has done, in world space, so it runs on across every tile and joint. Mortar and hollows first.
@@ -231,7 +322,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       ao *= mix(0.5, 1.0, cav);
       // Grey stone. The warmth is the flames', so what they don't reach falls away cold, and a lit pool stands off its shadow.
       albedo = mix(vec3f(dot(albedo, vec3f(0.3, 0.55, 0.15))), albedo, 0.62);
-      let level = select(-16.25, -24.25, p.z < -54.0);   // (the catacombs' two floors: north of the Sexton's Stair is the lower)
+      let level = select(-16.25, -24.25, p.z < ${(CHURCH_Z - 54).toFixed(1)});   // (the catacombs' two floors: north of the Sexton's Stair is the lower; src/core/church.js)
       let q = select(vec2f(p.x + p.z, p.y), p.xz, abs(n0.y) > 0.6);
       let m = textureSampleLevel(noiseTex, repeatSmp, q * 0.047, 0.0);
       // Old stone is never one colour: blotches of dark, and a drift between ochre and grey.
@@ -269,7 +360,8 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       let room = textureSampleLevel(noiseTex, repeatSmp, floor(uv * vec2f(5.0, 3.0)) * 0.137 + 0.11 * vec2f(in.f32Layer()), 0.0).r;
       let lit = smoothstep(0.48, 0.62, room);
       let flick = 0.86 + 0.14 * sin(F.camPos.w * 3.1 + room * 40.0);
-      emissive = glass * lit * vec3f(1.9, 0.92, 0.3) * flick * mix(1.7, 0.75, F.skyAmb.a);
+      // (A window's one face looks out. Seen from indoors, its back, it's the day outside that comes through, or none at night.)
+      emissive = select(glass * vec3f(0.85, 0.9, 1.0) * F.sunColor.a * 1.3, glass * lit * vec3f(1.9, 0.92, 0.3) * flick * mix(1.7, 0.75, F.skyAmb.a), front);
       metal = glass * 0.3;
     }
   }

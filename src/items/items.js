@@ -358,7 +358,7 @@ export function rollLoot(rng, kind) {
   if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollSkull(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 }), ...robe(0.6, { minRarity: 2 }), rollSpell(rng), gold(120, 240)];
   if (kind === 1) return [rng() < 0.5 ? rollWeapon(rng, { minRarity: 1 }) : rollSkull(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...robe(0.4, { minRarity: 1 }), gold(40, 90)];
   // The rank and file: mostly a few coins, and every so often something to look at.
-  if (kind === 5) {
+  if (kind === 5 || kind === 9) {
     const out = rng() < 0.55 ? [gold(2, 12)] : [];
     if (rng() < 0.11) { const r = rng(); out.push(r < 0.2 ? rollWeapon(rng) : r < 0.4 ? rollSkull(rng) : r < 0.55 ? rollShield(rng) : r < 0.75 ? rollGem(rng) : rollRobe(rng)); }
     return out;
@@ -393,9 +393,21 @@ export function rollChest(rng, tier) {
   return out;
 }
 
+// What's brought up from the dead to be made into something: kept in a satchel by the count, not in the pack's grid. Who works
+// each: src/folk/shops.js. Where each comes from: src/items/drops.js.
+export const MATS = {
+  bone: { name: 'Bone Shard', plural: 'Bone Shards', color: '#d8ccae', note: 'Old bone, nobody in particular. Silas Crane carves skulls from it.' },
+  iron: { name: 'Grave Iron', plural: 'Grave Iron', color: '#7c766e', note: 'Coffin nails, hinges and fittings off the dead. Homunculus forges staffs and shields from it.' },
+  silk: { name: 'Shroud Silk', plural: 'Shroud Silk', color: '#cdbf9f', note: "A length of Reed silk the dead went down in. Tamsin Reed sews robes from it." },
+  wax: { name: 'Grave Wax', plural: 'Grave Wax', color: '#e2cf8e', note: 'Candle-ends off the crypt shelves. Elspeth Tallow makes grave candles from it.' },
+  ember: { name: 'Soul Ember', plural: 'Soul Embers', color: '#ff6a2a', note: 'What was left burning in one of the strong dead. Worked into a piece, it makes it finer.' },
+};
+export const matName = (kind, n = 1) => (n === 1 ? MATS[kind].name : MATS[kind].plural);
+
 export function nameOf(item) {
   if (item.type === 'spell') return `Scroll of ${SPELLS[item.spell].name}`;
   if (item.type === 'gold') return `${item.amount} gold`;
+  if (item.type === 'mat') return `${item.n > 1 ? `${item.n} ` : ''}${matName(item.kind, item.n || 1)}`;
   if (item.type === 'gem') return `${GEM_GRADES[item.grade].name} ${GEMS[item.kind].name}`;
   if (item.type === 'shield') {
     const pre = item.affixes?.find((a) => a.pos === 'pre'), suf = item.affixes?.find((a) => a.pos === 'suf');
@@ -410,7 +422,7 @@ export function nameOf(item) {
   return [pre?.name, named, suf?.name].filter(Boolean).join(' ');
 }
 
-export const colorOf = (item) => (item.type === 'gold' ? '#e8c15a' : item.type === 'gem' ? GEMS[item.kind].color : RARITIES[item.rarity].color);
+export const colorOf = (item) => (item.type === 'gold' ? '#e8c15a' : item.type === 'mat' ? MATS[item.kind].color : item.type === 'gem' ? GEMS[item.kind].color : RARITIES[item.rarity].color);
 
 export function gemLine(gem) {
   const g = GEMS[gem.kind];

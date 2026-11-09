@@ -75,6 +75,39 @@ export class Audio {
     this.loop('wind', 0.34);
   }
 
+  // A loop fetched the first time it's wanted, its level eased toward gain: the falls, the wind on the heights (src/ui/lands.js).
+  bed(name, gain) {
+    if (!this.ready) return;
+    this.beds = this.beds || {};
+    let b = this.beds[name];
+    if (!b) {
+      if (gain < 0.005) return;
+      b = this.beds[name] = { g: this.ctx.createGain() };
+      b.g.gain.value = 0;
+      b.g.connect(this.amb);
+      this.fetchBuffer(name).then((buf) => {
+        const s = this.ctx.createBufferSource();
+        s.buffer = buf; s.loop = true; s.connect(b.g); s.start(this.ctx.currentTime, Math.random() * buf.duration);
+      }).catch(() => {});
+    }
+    b.g.gain.setTargetAtTime(gain, this.ctx.currentTime, 0.9);
+  }
+
+  // A sound heard once, wherever you are, fetched the first time it's wanted.
+  once(name, gain = 1) {
+    if (!this.ready) return;
+    this.fetchBuffer(name).then((buf) => {
+      const s = this.ctx.createBufferSource(), g = this.ctx.createGain();
+      g.gain.value = gain; s.buffer = buf; s.connect(g); g.connect(this.master); s.start();
+    }).catch(() => {});
+  }
+
+  fetchBuffer(name) {
+    if (this.buffers[name]) return Promise.resolve(this.buffers[name]);
+    this.pending = this.pending || {};
+    return this.pending[name] || (this.pending[name] = fetch(`${this.base}assets/game/audio/${name}.mp3`).then((r) => r.arrayBuffer()).then((a) => this.ctx.decodeAudioData(a)).then((buf) => (this.buffers[name] = buf)));
+  }
+
   loop(bank, gain) {
     const src = this.ctx.createBufferSource();
     src.buffer = this.buffers[BANKS[bank][0]];
