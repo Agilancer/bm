@@ -5,9 +5,11 @@ import { accessor, parseGLB } from '../core/glb.js';
 import { C, C_PROPS, C_SIZE, CHARS_START, H } from '../core/layout.js';
 import { damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatYaw, smoothstep, wrapAngle } from '../core/math.js';
 import {
-  CANDLES, CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_LEN, CHAMBER_YAW, CIRCLE, CLUTTER, DUST_AT, OPENING, PORTAL,
-  PORTAL_YAW, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, chamberShape,
+  BURST_CANDLE, CANDLES, CANDLES_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_LEN, CHAMBER_YAW, CIRCLE, CLIMB, CLUTTER, DUST_AT, OPENING,
+  PORTAL, PORTAL_YAW, REVEAL_AT, SNAP_AT, SOFT_CANDLE, SPARK_AT, SWAP_AT, caveNearest, chamberPoint, chamberShape,
 } from '../core/opening.js';
+
+const bump = (t, a, b, c, d) => smoothstep(a, b, t) * (1 - smoothstep(c, d, t));
 import { terrainHeight } from '../core/terrain.js';
 import { routeDir } from '../core/escort.js';
 import { groundAt } from '../core/interior.js';
@@ -575,6 +577,13 @@ class OpeningStage {
       m.flash = Math.max(0, 1 - Math.abs(t - SWAP_AT) / 0.25);
       m.candles = t;
       m.circle = 1;
+      // On her name for you the door swells behind her and every flame leans toward you; her soft snap on the crate flares
+      // the candle nearest her; your spark bursts another; and as her voice climbs in beat 9, they gutter.
+      m.portal = 1 + 0.22 * bump(t, REVEAL_AT + 0.1, REVEAL_AT + 0.5, REVEAL_AT + 1.3, REVEAL_AT + 2.4);
+      m.lean = bump(t, REVEAL_AT + 0.1, REVEAL_AT + 0.5, REVEAL_AT + 1.4, REVEAL_AT + 2.6);
+      m.soft = t - CAVE.softSnap - 0.6;
+      m.burst = t < SPARK_AT + 0.25 ? 0 : Math.max(0, 1 - (t - SPARK_AT - 0.25) / 1.8);
+      m.gutter = t > CLIMB[0] && t < CLIMB[1] ? smoothstep(CLIMB[0], CLIMB[1] - 1, t) : 0;
     } else if (stage <= OPENING.LEAVE) {
       m.candles = 99; m.circle = 0.75;
       // It hitches as you go: the door she's holding open slipping.
@@ -658,27 +667,38 @@ class OpeningStage {
     this.light(this.lights.rim, wx - Math.sin(toYou) * 0.9, wy + 2.1, wz - Math.cos(toYou) * 0.9, 6.5 * m.glamour);
     // After the flash, before the candles: the portal's violet behind you on her front, so she isn't only a shape.
     const fill = stage === OPENING.WAKE && t > SWAP_AT ? 9 * (1 - smoothstep(CANDLES_AT, CANDLES_AT + 1.5, t)) : 0;
-    this.light(this.lights.fill, wx + Math.sin(toYou) * 1.8, wy + 1.7, wz + Math.cos(toYou) * 1.8, fill);
+    // (Later the same light is the candle your spark bursts.)
+    const burst = CANDLES[BURST_CANDLE];
+    if (m.burst > 0.01) this.light(this.lights.fill, burst.x, burst.y + 0.25, burst.z, 34 * m.burst * m.burst);
+    else this.light(this.lights.fill, wx + Math.sin(toYou) * 1.8, wy + 1.7, wz + Math.cos(toYou) * 1.8, fill);
     // The candles.
     for (const g of this.groups) {
       let k = 0;
       for (const c of g.list) k += this.candleLit(c, m);
       k /= g.list.length;
-      this.light(g.light, g.c[0], g.c[1], g.c[2], (g.list[0].ledge ? 2.6 : 15) * k);
+      const gut = m.gutter ? 1 - m.gutter * (0.25 + 0.2 * Math.sin(time * 17 + g.c[0]) * Math.sin(time * 6.1 + g.c[2])) : 1;
+      this.light(g.light, g.c[0], g.c[1], g.c[2], (g.list[0].ledge ? 2.6 : 15) * k * gut);
     }
     if (!cam) return;
     // ---- the light quads ----
     const rx = cam.fy * cam.uz - cam.fz * cam.uy, ry = cam.fz * cam.ux - cam.fx * cam.uz, rz = cam.fx * cam.uy - cam.fy * cam.ux;
     const R = [rx, ry, rz], U = [cam.ux, cam.uy, cam.uz];
-    for (const c of CANDLES) {
+    const px = snap[H.PX], pz = snap[H.PZ];
+    CANDLES.forEach((c, i) => {
       const k = this.candleLit(c, m);
-      if (k <= 0) continue;
-      const age = m.candles - c.at, flare = 1 + 2.2 * Math.max(0, 1 - age / 0.3);
-      const fl = 0.85 + 0.15 * Math.sin(time * 13 + c.phase * 7) + 0.08 * Math.sin(time * 29 + c.phase);
-      const top = [c.x, c.y + c.tall + 0.035, c.z];
-      this.blob(top, R, U, 0.028 * fl * flare, 0.05 * fl * flare, [1.5 * k, 0.95 * k, 0.42 * k], 0.02);
+      if (k <= 0) return;
+      const age = m.candles - c.at;
+      let flare = 1 + 2.2 * Math.max(0, 1 - age / 0.3);
+      if (i === SOFT_CANDLE && m.soft > 0) flare += 2.4 * Math.max(0, 1 - m.soft / 0.7);
+      if (i === BURST_CANDLE && m.burst > 0) flare += 7 * m.burst * m.burst;
+      let fl = 0.85 + 0.15 * Math.sin(time * 13 + c.phase * 7) + 0.08 * Math.sin(time * 29 + c.phase);
+      if (m.gutter) fl *= 1 - m.gutter * (0.3 + 0.3 * Math.sin(time * 23 + c.phase * 5));
+      // (Leaning toward you: the flame's tip pulled your way, and drawn out.)
+      const lean = m.lean || 0, dx = px - c.x, dz = pz - c.z, dl = Math.hypot(dx, dz) || 1;
+      const top = [c.x + dx / dl * 0.04 * lean, c.y + c.tall + 0.035 - 0.01 * lean, c.z + dz / dl * 0.04 * lean];
+      this.blob(top, R, U, 0.028 * fl * flare, 0.05 * fl * flare * (1 + 0.5 * lean), [1.5 * k, 0.95 * k, 0.42 * k], 0.02);
       this.blob(top, R, U, 0.3 * flare, 0.3 * flare, [0.16 * k, 0.075 * k, 0.025 * k]);
-    }
+    });
     if (m.swirl > 0.01) {
       const ox = this.position[0], oy = wy, oz = this.position[2];
       for (const mo of this.motes) {

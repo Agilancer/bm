@@ -19,6 +19,11 @@ import { CRAFTS, GOODS, MAX_EMBERS, TRADES, matsText, offerFor, priceText, rollS
 import { DAYS, partOfDay } from '../folk/days.js';
 import { MATS, colorOf, makeRng, matName, nameOf } from '../items/items.js';
 import { SPELLS } from '../sim/spells.js';
+import { VOICED } from '../core/voiced.js';
+import { unnamed, voiceKey } from '../core/voicekey.js';
+import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
+
+const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
 
 const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLIS };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
@@ -392,6 +397,7 @@ export class TownUI {
   // The panel: whose it is, what was just said (and by whom, if not them), anything handed over to read, and what you can say.
   show(line, speaker, opts, paper = null) {
     const p = this.person(this.with);
+    if (line !== this.view?.line || speaker !== this.view?.speaker) this.speak(line, speaker || p.id);
     this.view = { line, speaker, opts, paper };
     const sp = speaker && speaker !== p.id ? `<span class="sp">${firstName(this.people.find((q) => q.id === speaker) || { name: speaker, id: speaker })}:</span>` : '';
     this.panel.innerHTML = `<div class="tk-head"><span class="tk-name">${p.name}</span><span class="tk-title">${p.title || (p.age < 15 ? 'a child of the town' : '')}</span><span class="tk-purse">${this.pack.purse() ? priceText(this.pack.purse()) : 'No coin'}</span></div>
@@ -751,8 +757,18 @@ export class TownUI {
 
   // ---- closing ----
 
+  // Said aloud, if it's recorded: only Lisandra's lines are, in the voice of whichever of her you see (lovely by day, the
+  // crone by night: src/gfx/renderer.js), as the opening's are (src/core/opening-script.js voiceOf).
+  speak(line, who) {
+    this.act.hushVoice?.();
+    if (who !== LISANDRA.id || typeof line !== 'string') return;
+    const h = this.act.hour(), voice = h >= DAWN_HOUR && h < DUSK_HOUR ? 'Lisandra' : 'LisandraWitch', key = voiceKey(unnamed(line));
+    if (HAVE.get(voice)?.has(key)) this.act.voice?.(`${voice}/${key}`);
+  }
+
   close(bye) {
     if (!this.open) return;
+    this.act.hushVoice?.();
     const i = this.with, L = this.lines(i);
     this.open = false; this.mode = 'talk';
     this.panel.style.display = 'none';

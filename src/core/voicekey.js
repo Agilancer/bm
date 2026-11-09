@@ -1,6 +1,10 @@
 // The name a recorded line is filed under: a hash of its exact words (cyrb53, in base 36), so the
 // game finds a speaker's recording of a line without any table of file names: its voice, then this.
 // The recorder (tools/voice/script.mjs) names the files with the very same function. (From the Bellmourn repository.)
+// A line as its recording says it: the typed name can't be recorded, so it's left out ("I can count, {name}." is said "I
+// can count."), and the key is of what's said.
+export const unnamed = (t) => t.replace(/,\s*\{name\}/g, '').replace(/\{name\},\s*/g, '').replace(/\s*\{name\}/g, '');
+
 export function voiceKey(text, seed = 0) {
   let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
   for (let i = 0; i < text.length; i++) {

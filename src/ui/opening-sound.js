@@ -1,18 +1,35 @@
-// The opening's sound, made on the spot (no files): the summons' drone and the portal's roar, the zap when the glamour
-// breaks, her snap, the candles catching, the cave falling in, and the scream at the edge of town. Played off the story's
-// clock, so a moment is heard once, as it's crossed. And her voice, which is recorded (below).
+// The opening's sound: made on the spot (the summons' drone and the portal's roar, the zap when the glamour breaks, her
+// snap, the candles popping, the scream at the edge of town), with the game's sound packs over it (assets/game/audio: the
+// cave's air and drips, her book, the flash's burst, the candles catching and burning, the portal dying and the cave
+// coming down). Played off the story's clock, so a moment is heard once, as it's crossed. And her voice, which is recorded
+// (below).
 import { H } from '../core/layout.js';
-import { CANDLES, CANDLES_AT, OPENING, PORTAL, SNAP_AT, SWAP_AT } from '../core/opening.js';
+import { smoothstep } from '../core/math.js';
+import {
+  BURST_CANDLE, CANDLES, CANDLES_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CLIMB, DAZZLE, DUST_AT, OPENING, PORTAL, REVEAL_AT, SNAP_AT, SOFT_CANDLE, SPARK_AT,
+  SWAP_AT,
+} from '../core/opening.js';
+import { CUES, SCRIPT, spoken, voiceOf } from '../core/opening-script.js';
 import { VOICED } from '../core/voiced.js';
 import { voiceKey } from '../core/voicekey.js';
 
 // Her voice (docs/VOICES.md): every line recorded ahead of time in the voice of whichever of her you see, one MP3 a line
-// under assets/voice/<voice>/<key>.mp3, all fetched and decoded as soon as there's a context. A line with no recording is
-// only shown.
+// under assets/voice/<voice>/<key>.mp3, the opening's all fetched and decoded as soon as there's a context. A line with no
+// recording is only shown.
 const VOICE_LEVEL = 1.1;
 const VOICE_LATE = 0.6;      // s: a line whose recording wasn't ready as it came up is still said this far in
 const VOICE_WAIT = 0.7;      // s: a line waits this long at most for the one before to finish; longer, and that one's cut
 const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
+// Just the opening's lines, of all her recordings (her lines in the town are fetched as they're said: src/ui/folk.js).
+const OPENING_LINES = new Set([
+  ...Object.entries(SCRIPT).flatMap(([stage, ls]) => ls.map((l) => [Number(stage), l])),
+  ...Object.values(CUES).map((l) => [OPENING.ESCORT, l]),
+].filter(([, l]) => spoken(l)).map(([stage, l]) => `${voiceOf(stage, l)}/${voiceKey(spoken(l))}`));
+
+// The pack sounds it uses, fetched as soon as there's sound, so none comes late.
+const PACK = ['cave', 'cave_drips', 'fire_medium', 'page_turn', 'book_close', 'spell_impact_2', 'firebuff_1', 'light_torch_1', 'light_torch_2',
+  'rock_meteor_throw_1', 'rock_meteor_throw_2', 'rock_meteor_swarm_1', 'rock_meteor_swarm_2', 'rock_wall_1', 'rock_wall_2', 'fireball_2',
+  'clothing_1', 'firebuff_2', 'firespray_1', 'torch_impact_1', 'fireball_1', 'wind_calm'];
 
 export class OpeningSound {
   constructor(audio) {
@@ -89,6 +106,17 @@ export class OpeningSound {
     this.drone = { g, oscs };
   }
 
+  // On "Tessariel.": the door's hum comes back for one breath, and goes.
+  breath() {
+    if (this.drone) return;
+    this.startDrone();
+    const d = this.drone, now = this.a.ctx.currentTime;
+    d.g.gain.cancelScheduledValues(now); d.g.gain.setValueAtTime(0.0001, now);
+    d.g.gain.exponentialRampToValueAtTime(0.16, now + 0.35); d.g.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+    for (const o of d.oscs) o.stop(now + 2.3);
+    this.drone = null;
+  }
+
   cutDrone() {
     if (!this.drone) return;
     const now = this.a.ctx.currentTime, { g, oscs } = this.drone;
@@ -101,7 +129,38 @@ export class OpeningSound {
     this.hush(); this.saidId = null;
     this.cutDrone();
     for (const k of ['roar', 'room']) if (this[k]) { this[k].src.stop(); this[k] = null; }
+    for (const l of Object.values(this.loops || {})) { l.g.gain.setTargetAtTime(0, this.a.ctx.currentTime, 0.1); setTimeout(() => l.src?.stop(), 600); }
+    this.loops = {};
+    for (const id of this.timers || []) clearTimeout(id);
+    this.timers = [];
     this.setAmb(1);
+  }
+
+  // One of the pack's sounds, from (x, y, z), or in your head with no x; `later` seconds from now.
+  fx(name, x, y, z, gain = 1, rate = 1, later = 0) {
+    if (!later) { this.a.sound(name, x, y, z, gain, rate, true); return; }
+    this.timers = this.timers || [];
+    const id = setTimeout(() => { this.timers = this.timers.filter((k) => k !== id); this.a.sound(name, x, y, z, gain, rate, true); }, later * 1000);
+    this.timers.push(id);
+  }
+
+  // One of the pack's loops, eased toward gain. (Its own, not the lands' beds: those are set from where you are.)
+  loop(name, gain) {
+    this.loops = this.loops || {};
+    let l = this.loops[name];
+    if (!l) {
+      if (gain < 0.005) return;
+      const g = this.a.ctx.createGain();
+      g.gain.value = 0; g.connect(this.out(null, 0, 0, 0.15));
+      l = this.loops[name] = { g, src: null };
+      this.a.fetchBuffer(name).then((buf) => {
+        if (this.loops[name] !== l) return;
+        const src = this.a.ctx.createBufferSource();
+        src.buffer = buf; src.loop = true; src.connect(g); src.start(0, Math.random() * buf.duration);
+        l.src = src;
+      }).catch(() => {});
+    }
+    l.g.gain.setTargetAtTime(gain, this.a.ctx.currentTime, 0.6);
   }
 
   // The birds and the wind, turned down in the cave (on top of the player's own setting).
@@ -120,6 +179,7 @@ export class OpeningSound {
     for (const [v, keys] of HAVE) {
       for (const k of keys) {
         const id = `${v}/${k}`;
+        if (!OPENING_LINES.has(id)) continue;
         fetch(`${a.base}assets/voice/${id}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(r.status)))
           .then((b) => a.ctx.decodeAudioData(b)).then((buf) => this.voices.set(id, buf)).catch(() => {});
       }
@@ -163,6 +223,35 @@ export class OpeningSound {
     this.tone(d, now, 0.28, 'square', 90, 1900, 0.09, 0.002);
     this.tone(d, now + 0.02, 0.22, 'sawtooth', 2600, 600, 0.05, 0.002);
     this.noise(e, now, 0.5, 'highpass', 6000, 3000, 0.7, 0.12, 0.001);
+  }
+
+  // The glamour bursting in your face: a crack and a deep whump of magic, and your ears ringing while your eyes swim.
+  flashBurst(x, y, z) {
+    this.zap(x, y, z);
+    this.fx('spell_impact_2', x, y, z, 0.95);
+    this.fx('firebuff_1', x, y, z, 0.8, 0.72);
+    const now = this.a.ctx.currentTime, e = this.out(null, 0, 0, 0);
+    this.tone(e, now + 0.05, DAZZLE, 'sine', 3520, 3380, 0.035, 0.08);
+    this.tone(e, now + 0.05, DAZZLE * 0.7, 'sine', 5270, 5100, 0.012, 0.1);
+  }
+
+  // The portal dying, deep in the cave behind you: a blast that comes up through your feet.
+  portalBlast() {
+    this.thoom();
+    this.fx('fireball_2', null, 0, 0, 0.75, 0.55);
+    this.fx('rock_wall_1', null, 0, 0, 0.5, 0.7, 0.12);
+  }
+
+  // The mouth coming down: the crash, a roar of rock, and the last of it settling.
+  caveIn(x, y, z) {
+    this.crash(x, y, z);
+    const m = [CAVE_MOUTH[0], CAVE_LINE[0][5] + 1.5, CAVE_MOUTH[1]];
+    this.fx('rock_meteor_swarm_1', m[0], m[1], m[2], 1.0, 0.8);
+    this.fx('rock_wall_1', m[0], m[1] + 1, m[2], 0.9, 0.75, 0.22);
+    this.fx('rock_meteor_swarm_2', m[0], m[1] + 1.5, m[2], 0.75, 0.68, 0.5);
+    this.fx('rock_wall_2', null, 0, 0, 0.4, 0.6, 0.9);
+    this.fx('rock_meteor_throw_1', m[0], m[1] - 1, m[2], 0.35, 0.8, 2.1);
+    this.fx('rock_meteor_throw_2', m[0], m[1] - 1, m[2], 0.25, 0.7, 3.4);
   }
 
   crackThud(gain = 1) {
@@ -247,26 +336,66 @@ export class OpeningSound {
     if (this.room) this.room.g.gain.setTargetAtTime(wantRoom ? 0.02 : 0, now, 0.5);
     if (!wantRoom && this.room && stage > OPENING.LEAVE) { const r = this.room; setTimeout(() => r.src.stop(), 2000); this.room = null; }
     this.setAmb(Math.round(amb * 10) / 10);
+    if (!this.packed) { this.packed = true; for (const k of PACK) this.a.fetchBuffer(k).catch(() => {}); }
+    // The cave's own air and its drips while you're in it, and the candles burning once they're lit.
+    const cave = stage >= OPENING.WAKE && stage <= OPENING.LEAVE ? 1 - 0.7 * amb : 0;
+    const lit = stage > OPENING.WAKE || t > CANDLES_AT;
+    this.loop('cave', 0.22 * cave);
+    this.loop('cave_drips', 0.18 * cave);
+    this.loop('fire_medium', lit ? 0.1 * cave : 0);
+    const climb = stage === OPENING.WAKE && t > CLIMB[0] && t < CLIMB[1] ? smoothstep(CLIMB[0], CLIMB[1] - 1, t) : 0;
+    this.loop('wind_calm', 0.2 * climb);
+    const book = [her[0], her[1] + 1.1, her[2]];
     switch (stage) {
       case OPENING.WAKE:
         if (t < SNAP_AT && !this.drone && prev < 0.5) this.startDrone();
-        if (crossed(SWAP_AT)) this.zap(her[0], her[1] + 1.3, her[2]);
+        // Her book: a page turned as she reads the summons, and shut as she looks up at you.
+        if (crossed(2.3) || crossed(5.0)) this.fx('page_turn', book[0], book[1], book[2], 0.35);
+        if (crossed(6.85)) this.fx('book_close', book[0], book[1], book[2], 0.45);
+        if (crossed(SWAP_AT)) this.flashBurst(her[0], her[1] + 1.3, her[2]);
         if (crossed(SWAP_AT + 0.25)) this.hush();      // the glamour's gone, and her young voice with it
-        if (crossed(11.0)) this.crackThud();
+        if (crossed(SWAP_AT + 2.0)) { this.crackThud(); this.fx('rock_meteor_throw_2', PORTAL[0], PORTAL[1], PORTAL[2], 0.3, 0.7); }
+        // Her sleeve as her palm passes across your eyes.
+        if (crossed(CAVE.palm + 0.3)) this.fx('clothing_1', her[0], her[1] + 1.0, her[2], 0.4, 1.1);
         if (crossed(SNAP_AT)) { this.cutDrone(); this.snap(her[0], her[1] + 1.4, her[2]); }
+        // The candles: a whoosh as the wave of them catches, and again as it reaches the ledge's.
+        if (crossed(CANDLES_AT)) this.fx('light_torch_1', her[0], her[1] + 2, her[2], 0.5);
+        if (crossed(CANDLES_AT + 1.3)) this.fx('light_torch_2', snap[H.PX], snap[H.PY] + 2, snap[H.PZ], 0.3, 0.9);
         for (const k of CANDLES) if (crossed(k.at)) this.pop(k.x, k.y, k.z);
+        // Her name for you: the door breathes once more behind her, and the flames lean in.
+        if (crossed(REVEAL_AT + 0.15)) { this.breath(); this.whine(); this.crackThud(0.4); }
+        // Her soft snap on the crate, and the candle nearest flaring.
+        if (crossed(CAVE.softSnap + 0.6)) {
+          const c = CANDLES[SOFT_CANDLE];
+          this.snap(her[0], her[1] + 1.0, her[2]);
+          this.fx('light_torch_2', c.x, c.y, c.z, 0.28, 1.1);
+        }
+        // Embers on your knuckles; the spark; the candle bursting.
+        if (crossed(CAVE.hands + 0.3)) this.fx('firebuff_2', snap[H.PX], snap[H.PY] + 1.1, snap[H.PZ], 0.22, 0.9);
+        if (crossed(SPARK_AT)) this.fx('firespray_1', snap[H.PX], snap[H.PY] + 1.2, snap[H.PZ], 0.45, 1.3);
+        if (crossed(SPARK_AT + 0.25)) {
+          const c = CANDLES[BURST_CANDLE];
+          this.fx('torch_impact_1', c.x, c.y, c.z, 0.6); this.fx('fireball_1', c.x, c.y, c.z, 0.35, 1.2);
+        }
+        // As her voice climbs: the candles gutter in a draught that wasn't there, and grit sifts from the roof; at her
+        // shout the rock groans; when she stops, it all stops.
+        if (t > CLIMB[0] && t < CLIMB[1] && Math.floor(t / 2.7) !== Math.floor(prev / 2.7)) this.fx('rock_meteor_throw_1', snap[H.PX], snap[H.PY] + 3, snap[H.PZ], 0.1, 0.55);
+        if (crossed(CAVE.shout)) this.rumble(1.6, 0.32);
         break;
       case OPENING.HERD:
         if (crossed(6.4)) this.whine();
         break;
       case OPENING.LEAVE:
-        // The door slipping as you go.
-        if (Math.floor(t / 4.7) !== Math.floor(prev / 4.7) && prev > 0) this.crackThud(0.45);
+        // The door slipping as you go, and grit coming down from the roof.
+        if (Math.floor(t / 4.7) !== Math.floor(prev / 4.7) && prev > 0) {
+          this.crackThud(0.45);
+          this.fx('rock_meteor_throw_1', snap[H.PX], snap[H.PY] + 2.6, snap[H.PZ], 0.22, 0.6);
+        }
         break;
       case OPENING.COLLAPSE:
-        if (crossed(3.0)) this.thoom();
-        if (crossed(4.6)) this.rumble(1.1, 0.5);
-        if (crossed(6.95)) this.crash(her[0], her[1] + 1.5, her[2]);
+        if (crossed(3.0)) this.portalBlast();
+        if (crossed(4.6)) { this.rumble(1.1, 0.5); this.fx('rock_wall_2', null, 0, 0, 0.45, 0.6); }
+        if (crossed(DUST_AT - 0.05)) this.caveIn(her[0], her[1] + 1.5, her[2]);
         break;
     }
   }

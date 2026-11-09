@@ -256,7 +256,9 @@ class Sim {
   // Bodies don't pass through each other: plate armour shoulders the player aside, and knights too.
   separate() {
     const p = this.player;
-    const list = [...this.knights, ...this.heroes.filter((h) => h.active && !h.surf && !h.jump), ...(this.opening ? this.villagers.slice(1) : this.villagers)];
+    // (Not her while you wake in the cave: you can't move, and she has to come close enough to pass a palm across your eyes.)
+    const her = !this.opening ? this.villagers : this.opening.stage === OPENING.WAKE ? [] : this.villagers.slice(1);
+    const list = [...this.knights, ...this.heroes.filter((h) => h.active && !h.surf && !h.jump), ...her];
     for (const k of list) {
       if (k.dead || k.dormant) continue;
       const P = k.bodyRadius || 0.82;

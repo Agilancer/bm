@@ -145,6 +145,31 @@ export class Audio {
     }).catch(() => {});
   }
 
+  // A recorded line (assets/voice/<voice>/<key>.mp3), heard in your head; the line before it is cut off. Fetched the first
+  // time it's wanted; one that's taken too long to come is dropped, rather than said over whatever's on the panel by then.
+  voice(id, gain = 1) {
+    if (!this.ready) return;
+    this.hushVoice();
+    const want = (this.voiceWant = { at: performance.now() }), name = `voice:${id}`;
+    const got = this.buffers[name] ? Promise.resolve(this.buffers[name])
+      : fetch(`${this.base}assets/voice/${id}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(r.status))).then((a) => this.ctx.decodeAudioData(a)).then((buf) => (this.buffers[name] = buf));
+    got.then((buf) => {
+      if (this.voiceWant !== want || performance.now() - want.at > 1500) return;
+      const s = this.ctx.createBufferSource(), g = this.ctx.createGain();
+      g.gain.value = gain; s.buffer = buf; s.connect(g); g.connect(this.master); s.start();
+      this.voiceNow = { s, g };
+      s.onended = () => { if (this.voiceNow?.s === s) this.voiceNow = null; };
+    }).catch(() => {});
+  }
+
+  hushVoice() {
+    this.voiceWant = null;
+    const v = this.voiceNow;
+    if (!v) return;
+    v.g.gain.setTargetAtTime(0, this.ctx.currentTime, 0.04); v.s.stop(this.ctx.currentTime + 0.25);
+    this.voiceNow = null;
+  }
+
   fetchBuffer(name) {
     if (this.buffers[name]) return Promise.resolve(this.buffers[name]);
     this.pending = this.pending || {};

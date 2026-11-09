@@ -5615,7 +5615,7 @@
     "The first thing I ever saw was her face, lit by nothing at all.",
     "I remember the cold, the black, then her voice. In that order. Always.",
     "I woke {woke}. I screamed. She waited till I'd finished.",
-    "No lantern, no fire. Just her. Bright enough.",
+    "One snap, and candles everywhere. And her, brighter than all of them.",
     "She held my face and said {herphrase}",
     "I didn't know the world. I knew her. That was enough to start with.",
     "I woke {woke}. Darkness. Then the most beautiful thing."
@@ -11448,11 +11448,11 @@
     },
     {
      "who": "B",
-     "line": "A thousand years. One does not interrogate a miracle, {you}."
+     "line": "Two hundred years. One does not interrogate a miracle, {you}."
     },
     {
      "who": "A",
-     "line": "A thousand years. And she looked, what, twenty-five?"
+     "line": "Two hundred years. And she looked, what, twenty-five?"
     },
     {
      "who": "B",
@@ -26068,7 +26068,7 @@
  ],
  "herphrases": [
   "\"You are the one.\"",
-  "\"I waited a thousand years for you.\"",
+  "\"I waited two hundred years for you.\"",
   "\"You have the light in you.\"",
   "\"Rise, my bright one.\"",
   "\"Hush. You were always coming.\"",
