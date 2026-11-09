@@ -42,6 +42,17 @@ import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
 const TAU = Math.PI * 2;
 const wrap = (a) => { a %= TAU; return a > Math.PI ? a - TAU : a < -Math.PI ? a + TAU : a; };
 const dist = (ax, az, bx, bz) => Math.hypot(bx - ax, bz - az);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// The point `far` metres on along a path from (x, z): where a walker's eyes are while their feet are on the next step.
+function ahead(x, z, pts, far) {
+  let px = x, pz = z, left = far;
+  for (const [qx, qz] of pts) {
+    const L = dist(px, pz, qx, qz);
+    if (L >= left) return [px + (qx - px) * left / L, pz + (qz - pz) * left / L];
+    left -= L; px = qx; pz = qz;
+  }
+  return [px, pz];
+}
 const SP = Object.fromEntries(SPELLS.map((s, i) => [s.key, i]));
 const NAME = 'Jamie';   // what it answers Lisandra with, if nobody has yet
 const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
@@ -433,7 +444,7 @@ export class Brain {
   }
 
   // Stand still. (A cast under way is let go when its time is up, not here.)
-  halt() { this.want = null; this.auto.mx = 0; this.auto.mz = 0; this.auto.run = false; }
+  halt() { this.want = null; this.look = null; this.auto.mx = 0; this.auto.mz = 0; this.auto.run = false; }
 
   // ---- thinking
 
@@ -572,6 +583,8 @@ export class Brain {
       if (d < 3 && hers > mine) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
       this.face = null;
       this.steer(ax - m.x, az - m.z, d > 9);
+      // (Its eyes on the road ahead: her, and the way she's going.)
+      this.look = routeAt(Math.min(ROUTE.len, mine + 6));
       // Down the long slope on its shield, and she gets on hers.
       const [rx, rz] = routeDir(mine);
       this.board(0.12, m, rx, rz, ROUTE.len - mine);
@@ -613,14 +626,20 @@ export class Brain {
     if (!live.length) { this.target = null; this.kite = null; return false; }
     const near = live.reduce((a, b) => (a.d < b.d ? a : b)), dn = near.d;
     const close = live.filter((f) => f.d < 5.5).length;
-    // Low, and still in it: off toward the town, a Mend when there's room for one.
+    // Low, and still in it: off toward the town, a Mend when there's room for one. From something slow a few strides off it
+    // backs away with its staff still on it, shooting as it goes; anything quicker or closer, it turns and runs from.
+    let retreat = null;
     if (m.hpf < 0.28 && dn < 10) {
       if (m.mana >= 25 && this.known(SP.mend) && dn > 7 && this.castCool <= 0) { this.cast(SP.mend, 0.35); this.castCool = 1.2; }
       const [ex, ez] = this.escape(m, live, true);
-      this.face = null;
-      this.steer(ex, ez, true);
-      this.say('Hurt: falling back.');
-      return true;
+      if (Math.hypot(near.vx || 0, near.vz || 0) < 3.5 && dn > 3.5 && close < 2) retreat = [ex, ez];
+      else {
+        this.face = null;
+        this.kite = null;
+        this.steer(ex, ez, true);
+        this.say('Hurt: falling back.');
+        return true;
+      }
     }
     // A blade flashing before it falls: the shield up, if it has one in hand (no skull), or a sidestep; after a person's moment.
     const flash = live.find((f) => f.glint > 0.08 && f.glint < 0.6 && f.d < 4.5);
@@ -652,24 +671,36 @@ export class Brain {
       this.dodgeDir = [px * side, pz * side]; this.dodgeCool = 1.4;
       if (roll.d < 4) this.o.shared.input[INPUT.DODGE] += 1;
     }
-    // Kiting: something's on it, so it turns and runs a few strides to open ground, then turns back to face them.
-    const K = this.kite;
+    // Kiting: something's on it, so it gives ground toward open country. Mostly it backs away facing them, its staff still on
+    // them and shooting as it goes (backwards is a walk, as it is for you). With something quick on its heels, a crowd at its
+    // elbows, or its back to a wall, it turns and runs a few strides instead, then turns back to face them.
+    let K = this.kite;
     if (K) {
       K.t -= 0.12;
-      this.face = Math.atan2(K.x, K.z);
-      this.steer(K.x, K.z, true);
-      this.say(`Kiting ${live.length > 1 ? `${live.length} foes` : this.foeName(near)}.`);
-      if (K.t <= 0 || dn > 12) { this.kite = null; this.reactT = 0.3; }
-      return true;
+      // (Backing into something: round, and a run for it.)
+      if (K.back && this.backedUp > 0.5) { const [ex, ez] = this.escape(m, live); K = this.kite = { x: ex, z: ez, t: 1 + Math.random() * 0.5, back: false }; this.backedUp = 0; }
+      if (K.t <= 0 || dn > (K.back ? 9 : 12)) { if (!K.back) this.reactT = 0.3; this.kite = K = null; }
+      else if (K.back) { const [ex, ez] = this.escape(m, live); K.x = ex; K.z = ez; }
+      else {
+        this.face = Math.atan2(K.x, K.z);
+        this.steer(K.x, K.z, true);
+        this.say(`Kiting ${live.length > 1 ? `${live.length} foes` : this.foeName(near)}.`);
+        return true;
+      }
     }
-    if ((dn < 3 || (close >= 2 && dn < 4.5) || this.backedUp > 0.8) && this.kiteCool <= 0) {
+    if (!K && !retreat && (dn < 3 || (close >= 2 && dn < 4.5) || this.backedUp > 0.8) && this.kiteCool <= 0) {
       // Frozen first, if it's a crowd.
       if (close >= 3 && m.mana >= 32 && !this.auto.cast && this.cast(SP.nova, 0.3)) this.castCool = 0.5;
       const [ex, ez] = this.escape(m, live);
-      this.kite = { x: ex, z: ez, t: 1.1 + Math.random() * 0.7 };
-      this.kiteCool = 2.6; this.backedUp = 0;
-      return true;
+      // (It backs off at a walk, a little slower while it shoots: what's quicker than that and already at its heels, it can't
+      // back away from. Nor from what's right on it, a crowd all round, or a wall behind.)
+      const quick = Math.hypot(near.vx || 0, near.vz || 0) > 4.6;
+      const turn = (quick && dn < 2.5) || dn < 1.4 || close >= 4 || this.backedUp > 0.8;
+      K = this.kite = { x: ex, z: ez, t: turn ? 1.1 + Math.random() * 0.7 : 1.3 + Math.random() * 0.9, back: !turn };
+      this.kiteCool = turn ? 2.6 : 1.6; this.backedUp = 0;
+      if (turn) return true;
     }
+    if (K?.back && !retreat) retreat = [K.x, K.z];
     // Its mark: what's coming for it first, then the nearest. A new one takes a moment to settle on.
     const pick = live.reduce((a, b) => ((a.d - (a.hostile ? 6 : 0)) <= (b.d - (b.hostile ? 6 : 0)) ? a : b));
     if (this.target?.id !== pick.id) { this.target = pick; this.reactT = 0.2 + Math.random() * 0.25; } else Object.assign(this.target, pick);
@@ -690,9 +721,13 @@ export class Brain {
     // Footwork: back off what's close while it shoots, close in on what's far, step side to side between.
     let mx = 0, mz = 0;
     const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1), bx = (m.x - near.x) / (dn || 1), bz = (m.z - near.z) / (dn || 1);
-    if (dn < 7.5) { mx = bx; mz = bz; } else if (d > 20) { mx = fx; mz = fz; }
     if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.2 + Math.random() * 2.2; this.strafe = Math.random() < 0.75 ? -this.strafe : this.strafe; }
-    mx += -fz * this.strafe * 0.6; mz += fx * this.strafe * 0.6;
+    // Giving ground (kiting, or hurt): straight back along the way it's chosen, its eyes and its staff on its mark.
+    if (retreat) { [mx, mz] = retreat; mx += -fz * this.strafe * 0.15; mz += fx * this.strafe * 0.15; }
+    else {
+      if (dn < 7.5) { mx = bx; mz = bz; } else if (d > 20) { mx = fx; mz = fz; }
+      mx += -fz * this.strafe * 0.6; mz += fx * this.strafe * 0.6;
+    }
     if (this.dodgeCool > 1.1) { if (this.dodgeDir) [mx, mz] = this.dodgeDir; else { mx = -fz * this.dodgeSide; mz = fx * this.dodgeSide; } }
     this.steer(mx, mz, false, true);
     // (Backing into something: noted, and the next close call turns into a run instead.)
@@ -702,7 +737,8 @@ export class Brain {
     const inLine = live.filter((f) => { const a = (f.x - m.x) * ux + (f.z - m.z) * uz; return a > 0 && a < 40 && Math.abs((f.x - m.x) * uz - (f.z - m.z) * ux) < 1.5; }).length;
     const sp = Math.hypot(T.vx || 0, T.vz || 0), coming = ((T.vx || 0) * -fx + (T.vz || 0) * -fz) > 1;
     this.shoot(snap, m, { T, d, dn, close, around, aimed, hpf: m.hpf, fast: sp > 4, still: sp < 1.5, big: T.maxHp > 150, inLine, coming, bladesUp: this.t - (this.bladesT ?? -99) < 20, shield: false });
-    this.say(`Fighting ${live.length > 1 ? `${live.length} foes` : this.foeName(T)}.`);
+    const who = live.length > 1 ? `${live.length} foes` : this.foeName(T);
+    this.say(retreat ? `Backing away from ${who}, shooting.` : `Fighting ${who}.`);
     return true;
   }
 
@@ -1323,6 +1359,7 @@ export class Brain {
       }
       if (this.door(dt, m, tx - m.x, tz - m.z)) return;
       this.steer(tx - m.x, tz - m.z, g.run && d > 8);
+      if (this.sub) this.lookOn(m, this.sub, g.run && d > 8);
       if (!m.town) { const L = dist(m.x, m.z, W.x, W.z) || 1; this.board(dt, m, (W.x - m.x) / L, (W.z - m.z) / L, d); }
     } else {
       // Across country: a stretch at a time, by a short path round whatever stands in the way (a wall, a light well, a stand of
@@ -1350,6 +1387,7 @@ export class Brain {
       }
       if (this.door(dt, m, hx, hz)) return;
       this.steer(hx, hz, g.run && d > 8);
+      if (pts?.length) this.lookOn(m, pts, g.run && d > 8);
       this.board(dt, m, sx, sz, d);
     }
   }
@@ -1542,24 +1580,37 @@ export class Brain {
   // Move along (ux, uz) in the world. run: break into a run (forward only). strafe: keep facing where `face` says.
   steer(ux, uz, run, strafe = false) {
     const L = Math.hypot(ux, uz);
+    this.look = null;
     if (L < 1e-4) { this.want = null; return; }
     this.want = { x: ux / L, z: uz / L, run, strafe };
+  }
+
+  // Where its eyes are while it walks: a few strides on along its way (more at a run), so it looks round a bend before its feet
+  // get there, as you do.
+  lookOn(m, pts, run) {
+    const [x, z] = ahead(m.x, m.z, pts, run ? 6 : 4);
+    this.look = dist(m.x, m.z, x, z) > 1.2 ? [x, z] : null;
   }
 
   motor(dt, m) {
     const inp = this.o.input, a = this.auto;
     const w = this.want;
-    // Where to look: where it's aiming in a fight, at whoever it's talking to, or the way it's going.
+    const fight = this.fighting, surf = m.surf;
+    // Where to look: where it's aiming in a fight, at a door it's opening, at whoever it's talking to; otherwise the way it's
+    // going, its eyes a few strides on along its path (round the bend before its feet), but never so far off its next step
+    // that it would have to stop and turn.
     let yaw = this.face;
-    if (yaw === null || yaw === undefined) yaw = w ? Math.atan2(w.x, w.z) : inp.yaw;
+    if (yaw === null || yaw === undefined) {
+      yaw = w ? Math.atan2(w.x, w.z) : inp.yaw;
+      if (w && this.look && !fight && !w.strafe) yaw += clamp(wrap(Math.atan2(this.look[0] - m.x, this.look[1] - m.z) - yaw), -0.5, 0.5);
+    }
     // A hand on a mouse: it speeds into a turn and eases out of it, and no faster than a person sweeps the view (quicker in a
     // fight, slow and steady on a shield). Through Input.look, so the hands sway with it as they do for the mouse.
-    const fight = this.fighting, surf = m.surf;
     const dy = wrap(yaw - inp.yaw);
     const vMax = fight ? 4.2 : surf ? 1.6 : 3, acc = fight ? 14 : surf ? 5 : 10;
     const want = Math.abs(dy) < 0.012 ? 0 : Math.max(-vMax, Math.min(vMax, dy * (fight ? 6.5 : 3.8)));
     this.yawV += Math.max(-acc * dt, Math.min(acc * dt, want - this.yawV));
-    const pitch = Math.max(-1.1, Math.min(1.1, fight || this.talk ? this.pitch : surf ? -0.12 : -0.06));
+    const pitch = clamp(fight || this.talk ? this.pitch : surf ? -0.12 : this.slope(m, inp.yaw), -1.1, 1.1);
     const dp = pitch - inp.pitch, pWant = Math.abs(dp) < 0.01 ? 0 : Math.max(-1.3, Math.min(1.3, dp * 4));
     this.pitchV += Math.max(-5 * dt, Math.min(5 * dt, pWant - this.pitchV));
     inp.look(-this.yawV * dt, -this.pitchV * dt);
@@ -1569,12 +1620,13 @@ export class Brain {
     // Into the keys' frame: strafe and forward, from where it's looking now (so it can walk one way while it turns).
     const c = Math.cos(inp.yaw), s = Math.sin(inp.yaw);
     let mx = -c * w.x + s * w.z, mz = s * w.x + c * w.z;
-    // Walking as a person does (W and the mouse): it faces the way it's going and goes forward, with only a touch of A or D
-    // to keep to its line. Well turned away, it turns on the spot first. (In a fight, and on the shield, it moves while it
-    // turns: backing off, sidestepping, running from something, carving.)
+    // Walking as a person does (W and the mouse): it faces the way it's going and goes forward, with a touch of A or D to
+    // keep to its line round a bend. Turned well away from its next step (a sharp corner, a new way to go), it slows, or
+    // turns on the spot first. (In a fight, and on the shield, it moves while it turns: backing off, sidestepping, running
+    // from something, carving.)
     if (!w.strafe && !fight && !surf) {
-      const off = Math.abs(dy);
-      if (off > 0.6) { mx = 0; mz = 0; } else { mx *= 0.4; mz = Math.max(0, mz) * (off > 0.3 ? 0.6 : 1); }
+      const off = Math.abs(wrap(Math.atan2(w.x, w.z) - inp.yaw));
+      if (off > 1.0) { mx = 0; mz = 0; } else if (off > 0.6) { mx *= 0.5; mz *= 0.5; }
     }
     const L = Math.max(1, Math.hypot(mx, mz));
     a.mx = mx / L; a.mz = mz / L;
@@ -1587,6 +1639,17 @@ export class Brain {
       if (this.stuck.act === 3) { a.mx = sd * 0.4; a.mz = -1; }
       if (this.stuck.actT <= 0) this.stuck.act = 0;
     }
+  }
+
+  // How it holds its eyes, walking: a little down, at the ground a few strides on, and up or down a hill with the slope (not
+  // indoors, nor below, where the floor is its own).
+  slope(m, yaw) {
+    if (this.t - (this.slopeT ?? -1) < 0.2) return this.slopeP;
+    this.slopeT = this.t;
+    const h0 = terrainHeight(m.x, m.z);
+    if (m.below || Math.abs(m.y - h0) > 0.6) return (this.slopeP = -0.06);
+    const h = terrainHeight(m.x + Math.sin(yaw) * 8, m.z + Math.cos(yaw) * 8) - h0;
+    return (this.slopeP = clamp(Math.atan2(h, 8) * 0.6 - 0.07, -0.3, 0.22));
   }
 
   // The shield under its feet, down a long slope: a run, a jump, Space held, and it carves along the way it's going (the move
