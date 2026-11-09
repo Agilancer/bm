@@ -348,7 +348,13 @@ async function boot(plan, poolSize) {
   // What the other Tessariels say, and their names over their heads.
   if (cast.length) {
     game.heroTalk = new HeroTalk({ base: BASE, cast, renderer, sim: simWorker, settings, touch: input.touch,
-      playerName: () => { try { return openingHUD?.name || 'Tessariel'; } catch { return 'Tessariel'; } }, playerSkull: () => !!pack.slots.skull });
+      playerName: () => { try { return openingHUD?.name || 'Tessariel'; } catch { return 'Tessariel'; } }, playerSkull: () => !!pack.slots.skull,
+      // A word with a hero (E): the same menu hold as the townsfolk's panel.
+      ui: {
+        opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
+        closed: () => { input.menu = false; resume(); },
+        click: () => title.chime?.(),
+      } });
     game.heroTalk.fetchScript();
   }
   // A word with the town (src/ui/folk.js): E to someone, J for the journal.
@@ -599,7 +605,7 @@ async function boot(plan, poolSize) {
   applySetting('res', settings.res);
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
-    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book) return;
+    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open) return;
     if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
@@ -898,6 +904,7 @@ class GameView {
       if (this.lands?.use()) return;
       if (this.nearChest) this.chests.open(this.nearChest);
       else if (this.nearFolk) { if (!this.nearFolk.busy) { this.townUI.talk(this.nearFolk.i); this.takeShown = undefined; } }
+      else if (this.nearHero) { if (!this.nearHero.busy) { this.heroTalk.talkTo(this.nearHero.h); this.takeShown = undefined; } }
       else if (this.nearDoor) {
         if (this.locked(this.nearDoor)) { this.hud.tip('Locked, and solid. Silas Crane at the coffin yard keeps the key.', 3); return; }
         this.doors.toggle(this.nearDoor); this.takeShown = undefined;
@@ -929,17 +936,24 @@ class GameView {
     const door = this.doors.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     this.nearDoor = this.input.enabled && !this.input.menu ? door : null;
     // Someone to talk to, if there's nothing to take or open first.
-    const folk = this.input.enabled && !this.input.menu && !d && !this.nearChest && this.townUI ? this.townUI.nearest(snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw) : null;
-    this.nearFolk = folk;
-    const near = d || this.nearChest || (folk && folk.label) || this.nearDoor;
+    const free = this.input.enabled && !this.input.menu && !d && !this.nearChest;
+    let folk = free && this.townUI ? this.townUI.nearest(snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw) : null;
+    // Or one of the other Tessariels: E stops them for a word (src/ui/heroes.js talkTo). Whichever of the two is nearer.
+    let hero = free && this.heroTalk ? this.heroTalk.nearest(snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw) : null;
+    if (folk && hero) {
+      const w = this.townUI.whereOf(folk.i);
+      if (w && hero.h.dist < Math.hypot(w.x - snap[H.PX], w.z - snap[H.PZ])) folk = null; else hero = null;
+    }
+    this.nearFolk = folk; this.nearHero = hero;
+    const near = d || this.nearChest || (folk && folk.label) || hero?.label || this.nearDoor;
     if (near === this.takeShown) return;
     this.takeShown = near;
     $('take').style.display = near ? 'block' : 'none';
     $('bTake').style.display = near && this.input.touch ? 'flex' : 'none';
-    const shuts = !d && !this.nearChest && !folk && this.nearDoor?.open;
-    const locked = !d && !this.nearChest && !folk && this.nearDoor && this.locked(this.nearDoor);
-    $('bTake').textContent = d || !near ? 'TAKE' : folk ? 'TALK' : shuts ? 'SHUT' : locked ? 'TRY' : 'OPEN';
-    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : folk ? folk.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
+    const shuts = !d && !this.nearChest && !folk && !hero && this.nearDoor?.open;
+    const locked = !d && !this.nearChest && !folk && !hero && this.nearDoor && this.locked(this.nearDoor);
+    $('bTake').textContent = d || !near ? 'TAKE' : folk || hero ? 'TALK' : shuts ? 'SHUT' : locked ? 'TRY' : 'OPEN';
+    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy || hero?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : folk ? folk.label : hero ? hero.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
   }
 
   gameState() { const s = this.currentSnap(); return s ? s[H.GAME] : 0; }
@@ -1007,7 +1021,8 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.clock.set(r.hour);
       if (this.heroTalk) {
-        this.heroTalk.update(dt, snap, r.hour, !this.idle && !this.input.menu);
+        // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
+        this.heroTalk.update(dt, snap, r.hour, !this.idle && (!this.input.menu || !!this.heroTalk.open));
         // The sim keeps the heroes' day by this clock.
         if ((this.hourT = (this.hourT ?? 0) - dt) <= 0) { this.hourT = 2; this.sim.postMessage({ type: 'hour', hour: r.hour }); }
       }
@@ -1261,6 +1276,15 @@ class GameView {
       case EV.WHOOSH:
         au.play('attack', d === 1 ? null : a, b, c, d === 1 ? 0.8 : 0.9, d === 1 ? 0.92 : 1.05);
         break;
+      case EV.BITE:
+        // One of the other Tessariels' blows landing (src/sim/hero.js): (x, y, z, how hard 0-1, flesh). Heard and seen
+        // where it lands; nothing on your HUD, since it isn't your hit.
+        au.play('impact', a, b, c, 0.55 + d * 0.5, 0.95 + Math.random() * 0.12);
+        if (e) {
+          if (d > 0.4) au.play('splat', a, b, c, 0.35 + d * 0.3);
+          r.emit(0, Math.ceil(50 + 150 * d), a, b, c, 0, 0.3, 0, 0.9, 0.6, 3.5, 0.0014, 0.008, 0.5, 1.4);
+        } else r.emit(2, Math.ceil(10 + 30 * d), a, b, c, 0, 0.3, 0, 1.1, 1, 5, 0.0018, 0.005, 0.15, 0.45);
+        break;
       case EV.GASH:
         au.play('impact', a, b, c, 1.1, 0.92);
         if (r.chars[g]?.flesh) {
@@ -1349,7 +1373,6 @@ class GameView {
         break;
       case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
-      case EV.CRAB_WAKE: this.hud.once('crab', 'Something is coming out of the fields.'); break;
       case EV.HYDRA_NOTICE: this.hud.once('hydra', 'Three heads have turned your way. It has given you one warning.', 5); break;
       case EV.FIRE: {
         // One head's breath, this instant. A hiss under it, not on every puff, and a roar of flame as a gout begins.
@@ -1473,8 +1496,9 @@ class GameView {
       heroes: (cmd = 'dump', o = {}) => {
         const id = Math.floor(Math.random() * 1e9);
         sim.postMessage({ type: 'heroDebug', cmd, id, ...o });
-        if (cmd !== 'dump') return Promise.resolve(cmd);
-        return new Promise((resolve) => { const on = (e) => { if (e.data.type === 'heroState' && e.data.id === id) { sim.removeEventListener('message', on); resolve(e.data.heroes); } }; sim.addEventListener('message', on); });
+        if (cmd !== 'dump' && cmd !== 'undead') return Promise.resolve(cmd);
+        // (undead: where every zombie and caster is and what it's doing, and the other monsters' places.)
+        return new Promise((resolve) => { const on = (e) => { if (e.data.type === 'heroState' && e.data.id === id) { sim.removeEventListener('message', on); if (e.data.undead) { resolve({ undead: e.data.undead, others: e.data.others }); return; } window.bmHeroFx = { zones: e.data.zones, shots: e.data.shots, dots: e.data.dots }; resolve(e.data.heroes); } }; sim.addEventListener('message', on); });
       },
       heroSay: (slot, trig) => view.heroTalk?.say(view.heroTalk.heroes[slot], trig, null, {}),
       shot: (name) => new Promise((resolve) => {

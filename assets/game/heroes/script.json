@@ -1149,6 +1149,70 @@
    "move": "kite"
   },
   {
+   "id": "h_skill_smite",
+   "when": "class_skill",
+   "channel": "say",
+   "class": "paladin",
+   "persona": "any",
+   "lines": [
+    "Smite!",
+    "Board in your teeth. Kneel.",
+    "Down, and stay down a moment.",
+    "Light in the face. It stings, doesn't it?",
+    "Back! All of you, back!",
+    "That's a holy shove. Very holy. Very shove."
+   ],
+   "move": "smite"
+  },
+  {
+   "id": "h_skill_strafe",
+   "when": "class_skill",
+   "channel": "say",
+   "class": "archer",
+   "persona": "any",
+   "lines": [
+    "Strafe! Eight in the time it takes to blink!",
+    "Don't count them. I don't.",
+    "Loose, loose, loose, loose!",
+    "Aim's for people with time. I've got arrows.",
+    "Something in there's bound to be hit.",
+    "Pin it! Pin all of it!"
+   ],
+   "move": "strafe"
+  },
+  {
+   "id": "h_skill_rain_of_arrows",
+   "when": "class_skill",
+   "channel": "say",
+   "class": "archer",
+   "persona": "any",
+   "lines": [
+    "Rain of arrows! Out of the ring!",
+    "Look up. No, don't look up. Run.",
+    "One up, a hundred down.",
+    "Forecast says arrows.",
+    "Stand clear of the ring, I mean it!",
+    "Up it goes. Mind your heads when it comes back with friends."
+   ],
+   "move": "rain_of_arrows"
+  },
+  {
+   "id": "h_skill_spear_barrage",
+   "when": "class_skill",
+   "channel": "say",
+   "class": "dragoon",
+   "persona": "any",
+   "lines": [
+    "Barrage!",
+    "Spears, down!",
+    "From above, all of them!",
+    "Stand still for me. Good.",
+    "A ring of steel. Don't step out of it. Oh, you can't.",
+    "All that jumping was for this."
+   ],
+   "move": "spear_barrage"
+  },
+  {
    "id": "h_skill_flurry",
    "when": "class_skill",
    "channel": "say",
@@ -4738,6 +4802,37 @@
    "anim": "look_around"
   },
   {
+   "id": "p_walk_ask_yes",
+   "when": "player_walk_ask",
+   "channel": "say",
+   "class": "any",
+   "persona": "any",
+   "in_party": false,
+   "anim": "yes",
+   "lines": [
+    "Lead on, {player}. I'll keep a few steps back.",
+    "Gladly. Two of us are harder to eat.",
+    "A walk with the caster? I'll be telling this one.",
+    "Go on, then. I'll watch your back. Someone should.",
+    "Lead the way. If anything jumps out, I saw it first.",
+    "Why not. The square's dull today.",
+    "After you, {player}. Mind the trees."
+   ]
+  },
+  {
+   "id": "p_walk_ask_party",
+   "when": "player_walk_ask",
+   "channel": "say",
+   "class": "any",
+   "persona": "any",
+   "in_party": true,
+   "lines": [
+    "Can't, {player}. My party's waiting on me.",
+    "Another time. I've a party to keep alive.",
+    "My lot would never forgive me. Another day, {player}."
+   ]
+  },
+  {
    "id": "p_walk_end_any",
    "when": "player_walk_end",
    "channel": "say",
@@ -6360,7 +6455,7 @@
     "mouth_field",
     "plague_field",
     "gravehart_lair",
-    "crab_shore_w",
+    "hill_woods",
     "cathedral",
     "summit"
    ]
@@ -24383,6 +24478,7 @@
    "place": [
     "north_woods",
     "south_woods",
+    "hill_woods",
     "wolf_wood"
    ]
   },
@@ -24663,8 +24759,7 @@
    "place": [
     "west_fields",
     "plague_field",
-    "mouth_field",
-    "crab_shore_w"
+    "mouth_field"
    ]
   },
   {
@@ -25098,6 +25193,12 @@
   }
  ],
  "triggers": {
+  "player_walk_ask": {
+   "desc": "The player stops the hero (E) and asks them to walk along a while. A hero in a party says no (gate in_party).",
+   "tokens": [],
+   "cooldown": 0,
+   "chance": 1
+  },
   "_defaults": {
    "desc": "Defaults for every trigger unless it says otherwise. cooldown: seconds per hero per pool; chance: 0-1 that an eligible hero speaks; priority 1-3 (3 wins earshot); audience: the channel the engine uses if a bark gives none. Always-filled tokens: {me} {you} {player} {guild} {level} {class} {a_class} {woke} {herphrase} {inn_count} {hero_count}; {tally} only for zealots; {string} only for archers; {saved_from} only with a rescue memory; {duel_record} only with needs_mem duel_record and duel_lead; {actor} and {ago} only with an event gate. See engine.md.",
    "cooldown": 25,
@@ -26006,7 +26107,8 @@
    "hammer_throw",
    "blessed_hammers",
    "consecration",
-   "holy_light"
+   "holy_light",
+   "smite"
   ],
   "lancer": [
    "charge",
@@ -26017,7 +26119,9 @@
   "archer": [
    "aimed_shot",
    "volley",
-   "kite"
+   "kite",
+   "strafe",
+   "rain_of_arrows"
   ],
   "rogue": [
    "flurry",
@@ -26033,7 +26137,8 @@
   "dragoon": [
    "jump",
    "jump_land",
-   "spear_combo"
+   "spear_combo",
+   "spear_barrage"
   ],
   "boomerang": [
    "throw",

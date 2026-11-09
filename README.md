@@ -58,8 +58,8 @@ hangs against his left side, face out, its top a hand below the shoulder; on gua
 the chin; in a shield blow it is driven square at the foe instead of rolling with the fist. Each hold is found on each
 knight's own body when he loads. Big blows wind up slow and land fast, a heavy or a broken guard can put a knight on his back
 (once in ten seconds at most), and he taunts only over a man he's put down. Against spells, a knight raises his shield to
-fire from the front and walks in behind it. Great crabs come out of the fields from 20 seconds after first blood, from
-different sides.
+fire from the front and walks in behind it. Great crabs keep the shore of the pool under Brightwater Falls, and come at you
+from different sides.
 
 Two animals keep their own ground and want nothing to do with the duel. The Gravehart holds the north: it warns you off, lets
 you leave if you do, and stalks you if you don't. The Bone Hydra lies at the bottom of the rift under the catacombs, and its heads can be cut off.
@@ -75,7 +75,7 @@ They don't go together. Anything with a V on it is never found anywhere near any
 
 ### How it plays
 
-You start on the road south of town with a common sword, a common staff and a common shield; X swaps sword and staff. The town is safe ground: nothing out of it follows you in (`inTown` in `src/core/town.js`, the box from x = -62 to 95 and z = -58 to 62). Velscour's knight stands at the foot of the cathedral steps, out east of the town, and lets you go 20 m from it, or once you're back in town. Four of Tessariel's knights walk the village streets, one in each of the other suits, and a man-at-arms in plain plate with Velscour's shield keeps the west road (`TOWN_KNIGHTS` in `src/core/knights.js`). Out in the woods, packs come out of the trees (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Spells are found as scrolls, except that this test build knows them all (`ALL_SPELLS` in `src/ui/spellbar.js`). Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
+You start on the road south of town with a common sword, a common staff and a common shield; X swaps sword and staff. The town is safe ground: nothing out of it follows you in (`inTown` in `src/core/town.js`, the box from x = -62 to 95 and z = -58 to 62). Velscour's knight stands at the foot of the cathedral steps, out east of the town, and lets you go 20 m from it, or once you're back in town. Four of Tessariel's knights walk the village streets, one in each of the other suits, and a man-at-arms in plain plate with Velscour's shield keeps the west road (`TOWN_KNIGHTS` in `src/core/knights.js`). Out in the woods, packs climb out of the ground ahead of you (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Every zombie outside the catacombs comes up out of the earth (`Zombie.rise`); four burial grounds in the woods break open as you come near (`stepGraves`, `GRAVEYARDS`). Spells are found as scrolls, except that this test build knows them all (`ALL_SPELLS` in `src/ui/spellbar.js`). Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
 
 ### The cathedral and the catacombs
 
