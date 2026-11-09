@@ -74,11 +74,31 @@ there, and neither are the weapons it holds. Townsfolk get the same test. The sh
 Measured (GPU ms per frame, main → branch): cave 2.83 → 2.84, ledge 3.28 → 3.06, town 4.24 → 4.17, woods 4.12 → 4.04.
 The nearest cascade halves (0.17–0.19 → 0.08 ms in the cave and on the ledge). The game was already at 144 fps here.
 
-**Next, not done:** the bigger shadow cost is the pines. Cascades 0 and 1 draw every full-detail tree within 84 m (up
-to 256 trees with cut-out needles), even though cascade 0 covers only a few metres. Trees are stored in 32 m chunks
-(`pines.js`); recording each chunk's run in list L0 and drawing only the runs that touch each cascade's square
-(`firstInstance`) would give identical maps for less work. The far cascade is redrawn every other frame at
-1.3–3.2 ms, so frame times alternate between cheap and expensive.
+### Pine shadows: tried culling, it doesn't help (2026-11-09)
+
+The pines are most of the shadows' cost. With pine shadows switched off, the shadow passes take 0.2–0.8 ms per frame
+instead of 1.4–3.2 ms (Ultra, 1280×720). So I tried leaving out, per cascade, the trees that can't reach its square.
+The maps would be identical. Both versions were measured with culling switched on and off every 2 s in one run, so
+other load on the PC cancels out. Neither was kept:
+
+- **By 32 m chunk** (`firstInstance` runs). A chunk's sphere is about 40 m across, so little was left out (the woods'
+  smallest cascade still drew 65 of 91 full trees). No measurable change.
+- **By tree** (an exact sphere per tree, each cascade its own instance list). This leaves out a lot: the woods'
+  smallest cascade drew 19 full trees instead of 91, the cave's 1 instead of 43. GPU time still didn't move
+  (0.49 → 0.48 ms, and ±1% everywhere else).
+
+**Why:** the GPU already throws away triangles outside a cascade almost for free. The cost is filling the alpha-cut
+boughs of the trees that do land in a cascade: every texel runs the cut-out test, which also turns off early depth
+testing. Nothing that keeps the maps identical can remove that.
+
+**What would help, but changes the picture slightly** (the owner's call):
+
+- draw the far cascade's pines with the lighter "big cards" mesh;
+- redraw the far cascade less often, or cache the world's part of it;
+- give the far cascade a smaller map.
+
+The far cascade is redrawn every other frame at 1.3–3.2 ms, so frame times alternate between cheap and expensive.
+Spreading that work evenly would smooth the frame rate even where the average doesn't change.
 
 ## How "nothing else changed" was checked
 
