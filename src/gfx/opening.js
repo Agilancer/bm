@@ -9,6 +9,9 @@ import {
   PORTAL_YAW, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, chamberShape,
 } from '../core/opening.js';
 import { terrainHeight } from '../core/terrain.js';
+import { routeDir } from '../core/escort.js';
+import { groundAt } from '../core/interior.js';
+import { boardPose } from '../items/drops.js';
 import { makeBuffer } from './gpu.js';
 
 const BOOK_ASSET = 'assets/game/lisandra/spellbook.glb';
@@ -455,6 +458,7 @@ function part(indices, positions, normals, uv, select, origin) {
   return { pos: new Float32Array(pos), nrm: new Float32Array(nrm), uv: new Float32Array(tex), idx };
 }
 
+const HER_BOARD = 'kite_tree';
 const item = (model, noShadow = true) => ({ openingModel: model, mat: new Float32Array(16), noShadow });
 
 async function loadBook(renderer, base) {
@@ -536,6 +540,9 @@ class OpeningStage {
     this.position = new Float32Array(3); this.heading = new Float32Array(4); this.tilt = new Float32Array(4);
     this.hinge = new Float32Array(4); this.rotation = new Float32Array(4); this.q = new Float32Array(4);
     this.yaw = 0; this.last = null;
+    // The shield she rides down the road when you ride yours: an old tree on green, nobody's colours (never a V or a T).
+    this.herBoard = { sword: HER_BOARD, mat: new Float32Array(16), slot: -1, model: null };
+    r.sword(HER_BOARD);   // (Loaded now, so it's there the moment she jumps on.)
     // The lights: the portal, the book, her glamour (a key and a rim), the candles, the cauldron.
     const L = (c, r, i, flicker) => ({ p: [...PARKED], r, c, i, flicker });
     this.lights = {
@@ -621,6 +628,12 @@ class OpeningStage {
     const witch = CHARS_START + (snap[H.NCHARS] - 1) * C_SIZE;
     const wx = snap[witch + C.X], wy = snap[witch + C.Y], wz = snap[witch + C.Z], wyaw = snap[witch + C.YAW];
     this.placeBook(items, stage, t, time, dt, wx, wy, wz, wyaw, snap.subarray(witch + C_PROPS, witch + C_PROPS + 3));
+    // (Its point down the road, flat on the ground's slope under her boots: src/sim/opening.js rides her on it.)
+    if (stage === OPENING.ESCORT && snap[H.OPENING_RIDE] > 0.5) {
+      const [hx, hz] = routeDir(snap[H.OPENING_NEXT]);
+      boardPose(this.herBoard.mat, wx, groundAt(wx, wz), wz, hx, hz, true);
+      items.push(this.herBoard);
+    }
     // The cave's own light, for the shader (src/gfx/shaders.js caveAt): violet before the candles, warm after, dark after.
     const lit = stage === OPENING.WAKE ? smoothstep(CANDLES_AT, CANDLES_AT + 1.4, t) : 1;
     const dark = stage === OPENING.COLLAPSE ? smoothstep(3.0, 4.4, t) : stage > OPENING.COLLAPSE ? 1 : 0;

@@ -49,6 +49,27 @@ const HOW = {
   'Keep walking.': 'Low and tense.',
   'Slow down! Some of us just lost a cave.': 'Calling after someone far ahead, breathless and annoyed.',
   'Wait!': 'Calling urgently after someone running ahead.',
+  // The road down: she leads, and talks over her shoulder the whole way.
+  'This way. Stay close, and mind the edge.': 'Brisk and businesslike, over her shoulder, leading the way.',
+  'Three thousand years in that cave. I had it just how I liked it.': 'Wistful and a little sour, half to herself.',
+  'You don’t say much, do you? I like that in a legend.': 'Dry and amused, teasing.',
+  'My good kettle’s under that rock. And my books. And my other kettle.': 'Grumbling, with comic indignation.',
+  'Don’t look at me like that. It’s the dust. I am not crying.': 'Brittle and defensive, quickly covering.',
+  'The last one who stopped to admire this view went over that edge.': 'Dry, deadpan warning.',
+  'Bellmourn’s at the bottom. Bells, mud and gossip. You’ll love it.': 'Sardonic, a wry sales pitch.',
+  'There! In the trees! Don’t let them close!': 'Sharp and alarmed, calling out a warning.',
+  'Burn them! That’s what the hands are for!': 'Urgent and fierce, shouting encouragement.',
+  'The dead didn’t used to get up round here. Not till Velscour stirred.': 'Low and grim, matter-of-fact.',
+  'In Bellmourn they call me Old Lis. You’ll hear worse. Most of it’s true.': 'Wry and unbothered, a little proud.',
+  'They see a crone with a stick. What you see is your own business.': 'Cool and pointed, not looking at him.',
+  'Bram Kettle keeps the inn, north of the well. Tell him I sent you. Then duck.': 'Brisk directions, dry at the end.',
+  'And don’t buy Elspeth’s candles. She says beeswax. It’s sheep.': 'Gossipy and scornful, conspiratorial.',
+  'If you hear the bell at midnight, stay in. Nobody living rings it.': 'Quiet and serious, a real warning.',
+  'This way!': 'Calling back to someone lagging behind, impatient.',
+  'Bellmourn’s down the hill. It won’t come up and fetch you.': 'Calling back, exasperated.',
+  'I’m not carrying you.': 'Calling back, sharp and annoyed.',
+  'Oh, we’re riding, are we? Fine. Don’t you dare laugh.': 'Startled, then gamely indignant, slightly breathless.',
+  'Three thousand years, and nobody ever showed me this!': 'Breathless and delighted, laughing with the speed.',
 };
 
 // Takes chosen over the first (record.py's seed shift), for a line that came out too high for her, with words that weren't

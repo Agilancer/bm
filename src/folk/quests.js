@@ -80,6 +80,7 @@ export class QuestBook {
     this.q = {};            // id -> { stage: 'active' | 'making' | 'done', step, n, ready }
     this.told = {};         // quest -> person -> how many of their lines on it they've said
     this.flags = new Set(); // what the town knows (src/folk/talk.js): 'arrived', 'quest:<id>', 'quest:<id>:done'
+    this.follow = null;     // the quest the trail leads you to (src/ui/trail.js): an id, 'off', or null for the newest
   }
 
   state(id) { return this.q[id] || null; }
@@ -87,13 +88,36 @@ export class QuestBook {
   active() { return Object.keys(this.q).filter((id) => this.q[id].stage !== 'done'); }
   done(id) { return this.q[id]?.stage === 'done'; }
 
+  // The quest you're following: the one picked in the journal while it's under way, else the newest under way; before
+  // anything's asked of you, 'start' (go and see Bram Kettle). Null when you've put the trail away.
+  followed() {
+    if (this.follow === 'off') return null;
+    if (this.follow === 'start' && !this.started()) return 'start';
+    const live = this.active();
+    if (live.includes(this.follow)) return this.follow;
+    if (live.length) return live[live.length - 1];
+    return this.started() ? null : 'start';
+  }
+
+  // Whether you've taken up your first work in town: Bram's bed, or Lisandra's round of the town.
+  started() { return !!(this.q.bed_and_bell || this.q.lisandra_work); }
+
+  // Picked in the journal: follow it, or (picked again) put the trail away.
+  pick(id) {
+    this.follow = this.followed() === id ? 'off' : id;
+    this.on.change();
+  }
+
   // The quests this person has to give, now.
   offers(who) {
     return Object.keys(RULES).filter((id) => QUESTS[id].giver === who && !this.q[id] && (!RULES[id].needs || this.done(RULES[id].needs)));
   }
 
   begin(id) {
+    // (Taken on, it's the one followed; but not over a round of the town still under way, which this is part of.)
+    const was = this.followed();
     this.q[id] = { stage: 'active', step: 0, n: 0 };
+    if (!(was && this.step(was)?.start)) this.follow = id;
     this.flags.add(`quest:${id}`);
     this.on.toast(`New quest: ${QUESTS[id].title}`, 'quest');
     this.on.begun?.(id);
@@ -228,11 +252,12 @@ export class QuestBook {
 
   // ---- saving ----
 
-  save() { return { q: structuredClone(this.q), told: structuredClone(this.told), flags: [...this.flags] }; }
+  save() { return { q: structuredClone(this.q), told: structuredClone(this.told), flags: [...this.flags], follow: this.follow }; }
   load(d) {
     this.q = structuredClone(d?.q || {});
     this.told = structuredClone(d?.told || {});
     this.flags = new Set(d?.flags || []);
+    this.follow = d?.follow ?? null;
     this.on.change();
   }
 }

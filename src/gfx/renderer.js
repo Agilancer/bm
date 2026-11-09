@@ -31,6 +31,7 @@ import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
 import { buildGlowPipeline, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
+import { TrailFX } from './trail.js';
 import { HomeLights } from './homelights.js';
 import { CRAB_SCALE } from '../sim/crab.js';
 import { GRAVEHART_SCALE } from '../sim/gravehart.js';
@@ -1356,6 +1357,7 @@ export class Renderer {
       { shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' },
       { shaderLocation: 2, offset: 24, format: 'float32x2' }, { shaderLocation: 3, offset: 32, format: 'uint32' }] }];
     this.pGlow = buildGlowPipeline(this, module, layout, DEPTH, ms);
+    this.trail ||= new TrailFX(this);
     const staticMod = module(STATIC);
     const staticPipeline = (mod) => device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglStatic),
@@ -2594,6 +2596,7 @@ export class Renderer {
     mp.draw(3);
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
     this.openingStage?.drawGlow(mp);
+    this.trail?.draw(mp);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);
       mp.setBindGroup(1, this.pDrawBG);
