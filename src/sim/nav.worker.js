@@ -1,0 +1,208 @@
+// Auto-play's sense of the ground (src/ui/autoplay.js): the same World the sim walks everyone on (src/sim/world.js), built here
+// on a thread of its own so the frame never waits on it. It answers two questions:
+//
+//   path   from a point to a point over the ground the sim's nav grid covers (the town, the woods round it, the cathedral and
+//          the catacombs): A* on a half-metre grid of its own, kept off any circles it's told to keep clear of (a knight's post),
+//          then pulled straight. (The sim's grid is a metre, and fattened for a knight: too coarse for the Sexton's passage and
+//          the office door, which the sim's own walkers only get through by walking straight at them.)
+//   probe  out past the grid, where only the pines and the places' walls stand in the way: which way to step, nearest the way
+//          wanted, that's clear for a few metres.
+//
+// Started only once someone has spoken the skull's word for auto-play: it costs a few seconds of a thread to build.
+import { NAV_CELL, NAV_H, NAV_W, NAV_X0, NAV_Z0, World } from './world.js';
+import { floorAt, inPit } from '../core/interior.js';
+import { setOpeningTerrain } from '../core/terrain.js';
+
+let world = null;
+const CELL = 0.5, BODY = 0.42, EDGE = 250;
+const X0 = NAV_X0, Z0 = NAV_Z0, W = Math.round(NAV_W * NAV_CELL / CELL), H = Math.round(NAV_H * NAV_CELL / CELL), N = W * H;
+// Each cell's ground, worked out the first time a search reaches it: 0 not yet, 1 free, 2 solid.
+const ground = new Uint8Array(N);
+const g = new Float32Array(N), parent = new Int32Array(N), seen = new Uint16Array(N), shut = new Uint16Array(N), avoidMark = new Uint16Array(N);
+let stamp = 1;
+// A binary heap of cells by f.
+const HEAP = 1 << 20;
+const heapK = new Int32Array(HEAP), heapF = new Float32Array(HEAP);
+let heapN = 0;
+const push = (k, f) => {
+  if (heapN >= HEAP) return;
+  let i = heapN++;
+  while (i > 0) {
+    const p = (i - 1) >> 1;
+    if (heapF[p] <= f) break;
+    heapK[i] = heapK[p]; heapF[i] = heapF[p]; i = p;
+  }
+  heapK[i] = k; heapF[i] = f;
+};
+const pop = () => {
+  const top = heapK[0], k = heapK[--heapN], f = heapF[heapN];
+  let i = 0;
+  for (;;) {
+    let c = 2 * i + 1;
+    if (c >= heapN) break;
+    if (c + 1 < heapN && heapF[c + 1] < heapF[c]) c++;
+    if (heapF[c] >= f) break;
+    heapK[i] = heapK[c]; heapF[i] = heapF[c]; i = c;
+  }
+  heapK[i] = k; heapF[i] = f;
+  return top;
+};
+
+const cellOf = (x, z) => {
+  const i = Math.floor((x - X0) / CELL), j = Math.floor((z - Z0) / CELL);
+  return i < 0 || j < 0 || i >= W || j >= H ? -1 : j * W + i;
+};
+const cx = (k) => ((k % W) + 0.5) * CELL + X0;
+const cz = (k) => (((k / W) | 0) + 0.5) * CELL + Z0;
+// As the sim's grid has it: out past the woods only the floors under the land (the catacombs) count, and nothing in the rift.
+function solidCell(k) {
+  let v = ground[k];
+  if (!v) {
+    const x = cx(k), z = cz(k);
+    v = ground[k] = ((Math.abs(x) > EDGE || Math.abs(z) > EDGE) && (floorAt(x, z) === null || inPit(x, z))) || world.inside(x, z, BODY) ? 2 : 1;
+  }
+  return v === 2;
+}
+
+// Circles to keep out of, marked for this one search (a cell is kept clear by its stamp).
+function markAvoid(avoid, a, b) {
+  for (const [x, z, r] of avoid || []) {
+    // (Not a circle you're starting in, or ending in: those you have to get out of, or into, somehow.)
+    if (Math.hypot(a[0] - x, a[1] - z) < r || Math.hypot(b[0] - x, b[1] - z) < r) continue;
+    const i0 = Math.max(0, Math.floor((x - r - X0) / CELL)), i1 = Math.min(W - 1, Math.floor((x + r - X0) / CELL));
+    const j0 = Math.max(0, Math.floor((z - r - Z0) / CELL)), j1 = Math.min(H - 1, Math.floor((z + r - Z0) / CELL));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (Math.hypot(cx(j * W + i) - x, cz(j * W + i) - z) < r) avoidMark[j * W + i] = stamp;
+  }
+}
+const blocked = (k) => avoidMark[k] === stamp || solidCell(k);
+
+// The nearest free cell to a point, a few metres round at most.
+function freeNear(x, z) {
+  const k0 = cellOf(x, z);
+  if (k0 < 0) return -1;
+  if (!blocked(k0)) return k0;
+  const i0 = k0 % W, j0 = (k0 / W) | 0;
+  for (let r = 1; r <= 8; r++) {
+    let best = -1, bd = Infinity;
+    for (let dj = -r; dj <= r; dj++) {
+      for (let di = -r; di <= r; di++) {
+        if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+        const i = i0 + di, j = j0 + dj;
+        if (i < 0 || j < 0 || i >= W || j >= H) continue;
+        const k = j * W + i;
+        if (blocked(k)) continue;
+        const d = Math.hypot(cx(k) - x, cz(k) - z);
+        if (d < bd) { bd = d; best = k; }
+      }
+    }
+    if (best >= 0) return best;
+  }
+  return -1;
+}
+
+// Can you walk straight from a to b over free cells?
+function straight(ax, az, bx, bz) {
+  const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / 0.2);
+  for (let s = 1; s <= n; s++) {
+    const t = s / n, k = cellOf(ax + (bx - ax) * t, az + (bz - az) * t);
+    if (k < 0 || blocked(k)) return false;
+  }
+  return true;
+}
+
+function path(from, to, avoid) {
+  if (++stamp > 65000) { stamp = 1; seen.fill(0); shut.fill(0); avoidMark.fill(0); }
+  markAvoid(avoid, from, to);
+  const s = freeNear(from[0], from[1]), t = freeNear(to[0], to[1]);
+  if (s < 0 || t < 0) return null;
+  if (s === t) return [[to[0], to[1]]];
+  const tx = cx(t), tz = cz(t);
+  const h = (k) => { const dx = Math.abs(cx(k) - tx), dz = Math.abs(cz(k) - tz); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+  heapN = 0;
+  g[s] = 0; parent[s] = -1; seen[s] = stamp;
+  push(s, h(s));
+  let found = false, budget = 400000;
+  while (heapN && budget-- > 0) {
+    const k = pop();
+    if (shut[k] === stamp) continue;
+    shut[k] = stamp;
+    if (k === t) { found = true; break; }
+    const i = k % W, j = (k / W) | 0;
+    for (let dj = -1; dj <= 1; dj++) {
+      for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue;
+        const ni = i + di, nj = j + dj;
+        if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+        const nk = nj * W + ni;
+        if (shut[nk] === stamp || blocked(nk)) continue;
+        if (di && dj && (blocked(j * W + ni) || blocked(nj * W + i))) continue;
+        const ng = g[k] + (di && dj ? 1.414 : 1) * CELL;
+        if (seen[nk] === stamp && ng >= g[nk]) continue;
+        seen[nk] = stamp; g[nk] = ng; parent[nk] = k;
+        push(nk, ng + h(nk));
+      }
+    }
+  }
+  if (!found) return null;
+  const cells = [];
+  for (let k = t; k >= 0; k = parent[k]) cells.push(k);
+  cells.reverse();
+  // Pulled straight: from each point, on to the furthest one it can see.
+  const pts = [[from[0], from[1]]].concat(cells.map((k) => [cx(k), cz(k)]));
+  pts[pts.length - 1] = [to[0], to[1]];
+  const out = [];
+  let a = 0;
+  while (a < pts.length - 1) {
+    let b = pts.length - 1;
+    while (b > a + 1 && !straight(pts[a][0], pts[a][1], pts[b][0], pts[b][1])) b--;
+    out.push(pts[b]);
+    a = b;
+  }
+  return out;
+}
+
+// Out past the grid: a box of a place's, or a pine, within r.
+function solidAt(x, z, r) {
+  if (world.inside(x, z, r)) return true;
+  for (const c of world.sitesNear(x, z) || []) {
+    const dx = x - c.x, dz = z - c.z;
+    if (Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r) return true;
+  }
+  return false;
+}
+function clearFor(x, z, dx, dz, look) {
+  for (let s = 0.4; s <= look; s += 0.4) if (solidAt(x + dx * s, z + dz * s, 0.45)) return s - 0.4;
+  return look;
+}
+const TURNS = [0, 0.25, -0.25, 0.5, -0.5, 0.8, -0.8, 1.1, -1.1, 1.45, -1.45, 1.9, -1.9, 2.5, -2.5, Math.PI];
+function probe(x, z, hx, hz, look) {
+  const a0 = Math.atan2(hx, hz);
+  let best = null, bc = -1;
+  for (const t of TURNS) {
+    const a = a0 + t, dx = Math.sin(a), dz = Math.cos(a);
+    const c = clearFor(x, z, dx, dz, look);
+    if (c >= look) return [dx, dz, c];
+    if (c > bc + 0.3) { bc = c; best = [dx, dz, c]; }
+  }
+  return best;
+}
+
+self.onmessage = async (e) => {
+  const m = e.data;
+  try {
+    if (m.type === 'boot') {
+      setOpeningTerrain(m.opening);
+      const [village, interior] = await Promise.all(['village.json', 'interior/interior.json'].map((f) => fetch(`${m.base}assets/game/${f}`).then((r) => r.json())));
+      world = new World(village, interior);
+      self.postMessage({ type: 'ready', spawns: world.spawns.map((s) => [s.x, s.z]), bounds: [X0, Z0, X0 + W * CELL, Z0 + H * CELL] });
+    } else if (!world) {
+      self.postMessage({ type: m.type, id: m.id, result: null });
+    } else if (m.type === 'path') {
+      self.postMessage({ type: 'path', id: m.id, result: path(m.from, m.to, m.avoid) });
+    } else if (m.type === 'probe') {
+      self.postMessage({ type: 'probe', id: m.id, result: probe(m.x, m.z, m.hx, m.hz, m.look || 5) });
+    }
+  } catch (err) {
+    self.postMessage({ type: m.type, id: m.id, result: null, error: String(err?.message || err) });
+  }
+};

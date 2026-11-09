@@ -145,6 +145,62 @@ readout.
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
 
+### Auto-play
+
+Velscour's Skull (beside the corner map with the mouse free, or the `` ` `` key) takes a second word: **Jamie**, in any case.
+It wakes the **Auto** button under the skull, taken from Velscour (`assets/ui/btn_auto.webp`, and its blue glow from
+Velscour's `css/style.css`). The button, or **P**, turns auto-play on and off. Like the cheats, it lasts until the page is
+reloaded.
+
+While it's on, the game plays itself as a player would. It works the same controls as you: the move keys, the look, the staff,
+the casts, jump, dodge and E. Nothing is moved or handed to it.
+
+- **The opening.** It waits out the cave and answers Lisandra with a name (Jamie, if nobody has yet). It walks out, then
+  follows her down the Long Road to Bellmourn, waiting when she falls behind and fighting the dead on the road.
+- **Quests.** It takes every quest the town has, talks each step through, and hands in. It does them in an order that suits
+  its level (`PLAN` in `src/ui/autobrain.js`), and does night work by night. When something waits on the morning, it sleeps
+  at the Tolling Bell.
+- **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. The countries
+  are reached by the roads and across country, through the seals it has woken.
+- **Fighting.** It keeps its distance and uses Firebolt, the staff, Chain Lightning, a Meteor into a crowd, Frost Nova when
+  they're on it, and Mend. It runs from what it can't beat yet: the knights of Velscour, the Gravehart, the Hydra, the
+  dragons and anything else too strong for its level.
+- **Loot and gear.** It picks up what falls and opens the chests it passes. It wears the best of what it carries, sets gems
+  in open sockets, sells what it won't wear, and buys a mending when it's hurt.
+- **Grinding.** It grinds for levels when no quest suits it yet.
+
+Its status shows under the button, with its level and how many quests are done. When every quest is done and there's
+nothing left but grinding, a menu asks where:
+
+- the woods round Bellmourn
+- the catacombs
+- the monster lairs it can take
+- the jelly camps
+- roaming the land
+
+The menu keeps the last choice after 12 seconds, and it comes back when you click the status line.
+
+While it's on, the mouse is left free: no pointer lock, so the button and the menu can be clicked. Esc pauses and resumes.
+Pressing a move key (or the stick) takes the controls back for as long as you hold it.
+
+**Files.**
+
+- `src/ui/autoplay.js`: the button, the status line and the menu.
+- `src/ui/autobrain.js`: the head.
+- `src/sim/nav.worker.js`: its paths. This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
+  as paths need it. The sim's grid is a metre, made wide for a knight, and is too coarse for the Sexton's passage.
+- `Input.auto` and `Input.free` in `src/input.js`.
+
+**Known limits.**
+
+- It doesn't take stairs, so it only talks to people on a ground floor. Someone upstairs, or asleep upstairs, is left until
+  later.
+- It doesn't ride the shield.
+- It doesn't fight the black knight; it goes round him.
+- The far countries are a long walk until their seals are woken.
+- It has been run headless on a software GPU with the drawing switched off, not by a person watching it. Watch the first
+  hour of a new game with it.
+
 ### Swords, gems and the pack
 
 You start with empty hands and the old greatsword in the pack. `I` (or `PACK`) opens it and holds the fight. Click or drag to

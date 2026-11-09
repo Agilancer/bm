@@ -34,6 +34,7 @@ import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
 import { matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
+import { AutoPlay } from './ui/autoplay.js';
 import { groundAt, setHomes } from './ui/places.js';
 
 const BASE = new URL('..', import.meta.url).href;
@@ -429,6 +430,8 @@ async function boot(plan, poolSize) {
       inventory.render();
       return `${items.length} things of ${tiers.map((r) => RARITIES[r].name).join(', ')}, and ${kind === 'god' ? '25,000' : '2,500'} gold${dropped ? `; ${dropped} on the ground at your feet, the pack being full` : ''}.`;
     },
+    // The other word: auto-play's button (src/ui/autoplay.js).
+    autoplay: () => game.autoplay?.unlock(),
   });
   lands.load(null);
   game.lands = lands;
@@ -545,8 +548,9 @@ async function boot(plan, poolSize) {
   const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
   const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
-  const resume = () => { if (input.touch || AUTO) input.onPauseChange(false); else input.lock(); };
+  const resume = () => { if (input.touch || AUTO || input.free) input.onPauseChange(false); else input.lock(); };
   const toTitle = async () => {
+    game.autoplay?.toggle(false);
     await autosave();
     input.enabled = false;
     state.paused = false;
@@ -649,6 +653,11 @@ async function boot(plan, poolSize) {
   });
   game.closeBook = closeBook;
   townUI.spellbar = game.spellbar;
+  // Auto-play, behind the skull's word Jamie: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
+  game.autoplay = new AutoPlay({
+    base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
+    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on),
+  });
   const closePack = (viaEsc) => {
     inventory.hide();
     input.menu = false;
@@ -1008,6 +1017,7 @@ class GameView {
       this.emitBleeds(dt, snap);
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
+      this.autoplay?.frame(dt, snap);
       const c = this.overrideCam || this.cam;
       if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       renderDiagnostics.stage = 'renderer';

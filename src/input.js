@@ -14,6 +14,10 @@ export class Input {
     this.sprintToggle = false;
     this.enabled = false;
     this.menu = false;   // a menu is up: the hands and feet are off duty
+    // Auto-play (src/ui/autoplay.js): free is the mouse left free to click (no pointer lock, as on a touch screen), and auto
+    // is the bot's hands and feet, { mx, mz, run, jumpHeld, cast }, read here in place of the keys'.
+    this.free = false;
+    this.auto = null;
     this.sens = 1;   // the Look speed setting
     this.onPauseChange = null;
     this.touch = /Android|iPhone|iPad/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches);
@@ -58,7 +62,7 @@ export class Input {
       this.look(e.movementX * SENS * this.sens, e.movementY * SENS * this.sens);
     });
     this.canvas.addEventListener('mousedown', (e) => {
-      if (!this.enabled || this.menu) return;
+      if (!this.enabled || this.menu || this.free) return;
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
       if (this.soft) { if (e.button === 0) this.softPress?.(this.softX, this.softY); return; }
       if (e.button === 0) this.fire(INPUT.ATTACK);
@@ -69,7 +73,7 @@ export class Input {
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === this.canvas;
-      if (this.onPauseChange && !this.touch) this.onPauseChange(!locked);
+      if (this.onPauseChange && !this.touch && !this.free) this.onPauseChange(!locked);
     });
   }
 
@@ -83,7 +87,7 @@ export class Input {
   }
 
   lock() {
-    if (this.touch) return;
+    if (this.touch || this.free) return;
     const p = this.canvas.requestPointerLock({ unadjustedMovement: true });
     if (p && p.catch) p.catch(() => { const q = this.canvas.requestPointerLock(); if (q && q.catch) q.catch(() => { if (this.onLockRefused) this.onLockRefused(); }); });
   }
@@ -174,6 +178,12 @@ export class Input {
     btn('bSprint', (el) => { this.sprintToggle = !this.sprintToggle; el.classList.toggle('on', this.sprintToggle); });
   }
 
+  // A person's own hands on the move keys or the stick, right now (auto-play gives way to them).
+  get handsOn() {
+    const k = this.keys;
+    return k.has('KeyW') || k.has('KeyA') || k.has('KeyS') || k.has('KeyD') || k.has('ArrowUp') || k.has('ArrowDown') || k.has('ArrowLeft') || k.has('ArrowRight') || !!(this.stickX || this.stickY);
+  }
+
   update() {
     const s = this.s, k = this.keys;
     let mx = 0, mz = 0;
@@ -184,15 +194,17 @@ export class Input {
       if (k.has('KeyA') || k.has('ArrowLeft')) mx -= 1;
       if (this.stickX || this.stickY) { mx = this.stickX || 0; mz = this.stickY || 0; }
     }
+    const a = this.enabled && !this.menu ? this.auto : null;
+    if (a) { mx = a.mx; mz = a.mz; }
     this.moveX = mx; this.moveZ = mz;
     s[INPUT.MOVE_X] = mx;
     s[INPUT.MOVE_Z] = mz;
     s[INPUT.YAW] = this.yaw;
     s[INPUT.PITCH] = this.pitch;
     s[INPUT.VIEW_ASPECT] = this.canvas.width / Math.max(1, this.canvas.height);
-    s[INPUT.SPRINT] = (k.has('ShiftLeft') || k.has('ShiftRight') || this.sprintToggle || this.stickRun) ? 1 : 0;
-    s[INPUT.JUMP_HELD] = this.enabled && !this.menu && (k.has('Space') || this.jumpTouch) ? 1 : 0;
-    s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch || this.castSlot) ? 1 : 0;
+    s[INPUT.SPRINT] = (k.has('ShiftLeft') || k.has('ShiftRight') || this.sprintToggle || this.stickRun || a?.run) ? 1 : 0;
+    s[INPUT.JUMP_HELD] = this.enabled && !this.menu && (k.has('Space') || this.jumpTouch || a?.jumpHeld) ? 1 : 0;
+    s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch || this.castSlot || a?.cast) ? 1 : 0;
     s[INPUT.BLOCK] = this.enabled && !this.menu && (this.guardMouse || this.guardTouch) ? 1 : 0;
   }
 }
