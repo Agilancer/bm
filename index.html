@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Bellmourn : Velscour's Throne</title>
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:,">
 <link rel="preload" as="image" href="assets/title/blastorama.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/title/herrington.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/title/bellmourn.webp" fetchpriority="high">
@@ -107,7 +108,7 @@
   body.touch #foe { top: calc(10px + env(safe-area-inset-top)); left: auto; right: calc(14px + env(safe-area-inset-right)); transform: none; width: 44vw; }
 
   /* The pack */
-  #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; }
+  #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: safe center; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; overflow: auto; }
   #invBody { display: flex; gap: 10px; align-items: stretch; }
   #inv .panel { background: rgba(11,9,7,.93); border: 1px solid var(--gold-dim); padding: 8px 10px 10px; }
   #inv .label { color: var(--gold); margin-bottom: 7px; opacity: 1; }
@@ -117,7 +118,7 @@
   #xpBar { height: 5px; margin-top: 2px; background: rgba(0,0,0,.55); border: 1px solid rgba(140,115,68,.6); }
   #xpBar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #8a5cf0, #d6b4ff); }
   .slot { position: relative; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(140,115,68,.42); background: rgba(255,255,255,.025); min-width: 0; min-height: 0; overflow: hidden; }
-  .slot span { font-size: 10.5px; letter-spacing: .1em; opacity: .42; text-transform: uppercase; }
+  .slot span { font-size: clamp(7px, calc(var(--cell) * 0.2), 10.5px); letter-spacing: .04em; opacity: .42; text-transform: uppercase; }
   .slot.full { border-color: var(--rc); background: linear-gradient(0deg, rgba(0,0,0,.25), rgba(255,255,255,.05)); }
   .slot[data-slot="main"] { border-color: var(--gold-dim); }
   .slot[data-slot="main"].full { border-color: var(--rc); }
@@ -147,6 +148,9 @@
   #invNote { color: var(--gold); min-width: 8em; }
   #invClose { font: inherit; font-size: 12.5px; letter-spacing: .1em; padding: 5px 14px; color: var(--bone); background: transparent; border: 1px solid var(--gold-dim); cursor: pointer; flex: none; }
   #invClose:hover { background: rgba(201,163,92,.2); }
+  /* A phone on its side: the stats and the charms go beside the slots, so the pack and its CLOSE fit on the screen. */
+  @media (max-height: 460px) { #invBody > .panel:first-child { display: grid; grid-template-columns: max-content minmax(0, 190px); grid-template-rows: auto auto 1fr; column-gap: 10px; align-content: start; }
+    #invBody > .panel:first-child > .label { grid-column: 1 / -1; } #eqGrid { grid-row: 2 / 4; } #invStats { width: auto; } #charmRow { margin-top: 4px; } #charmRow .ch { width: 26px; height: 26px; } }
   @media (max-height: 460px) { #invBar { font-size: 10.5px; gap: 10px; } #invNote { min-width: 0; } #inv { gap: 3px; padding: 3px; } #inv .panel { padding: 4px 6px 6px; } #inv .label { margin-bottom: 3px; font-size: 10px; } #invStats { font-size: 11.5px; margin-top: 5px; } }
   body.touch #foe { background: rgba(8,6,4,.68); }
   body.touch #bleed { font-size: 14px; color: #ff6a4a; }
@@ -166,7 +170,7 @@
   #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
   #softCursor { position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin: -2px 0 0 -2px; display: none; z-index: 40; pointer-events: none; }
   #softCursor::before { content: ''; display: block; width: 0; height: 0; border-left: 11px solid #e7cf9a; border-bottom: 16px solid transparent; filter: drop-shadow(0 1px 2px #000); }
-  #spellbook { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; padding: calc(22px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(5,4,3,.82); backdrop-filter: blur(5px); z-index: 30; pointer-events: auto; overflow: auto; box-sizing: border-box; }
+  #spellbook { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; padding: calc(22px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(5,4,3,.82); backdrop-filter: blur(5px); z-index: 30; pointer-events: auto; overflow: auto; scrollbar-width: thin; scrollbar-color: rgba(201,163,92,.55) transparent; box-sizing: border-box; }
   #spellbook.open { display: flex; }
   #spellbook h2 { margin: 0 0 12px; font-size: 18px; font-weight: 400; letter-spacing: .3em; color: var(--gold); }
   #spellGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 7px; width: min(1220px, 100%); flex: none; }
@@ -186,6 +190,9 @@
   body.touch #spells .spell { width: 42px; height: 42px; padding: 7px; }
   body.touch #spellOpen { width: 36px; height: 36px; }
   body.touch #bPause { bottom: auto; top: calc(6px + env(safe-area-inset-top)); }
+  body.touch #bMap { bottom: auto; top: calc(6px + env(safe-area-inset-top)); margin-left: -70px; }
+  body.touch #vskull { top: calc(66px + env(safe-area-inset-top)); right: calc(176px + env(safe-area-inset-right)); width: 38px; height: 38px; }
+  body.touch #vskullTag { top: calc(106px + env(safe-area-inset-top)); right: calc(156px + env(safe-area-inset-right)); }
   body.touch #bTake { bottom: calc(112px + env(safe-area-inset-bottom)); }
   #spellHint { margin: 0 0 8px; font-size: 13px; color: #cfc3a8; text-align: center; }
   #spellSlots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; width: min(860px, 100%); margin-bottom: 12px; flex: none; }
@@ -249,6 +256,9 @@
 #opening .op-skip{position:absolute;right:22px;bottom:3.4vh;font:600 13px "Alegreya Sans",serif;color:#cfc6b8;text-shadow:0 1px 2px #000;opacity:.8}
 #opening .op-skip i{display:block;height:2px;margin-top:4px;background:var(--gold);transform-origin:left;transform:scaleX(var(--k,0))}
 body.cinematic #hud,body.cinematic #mapMini,body.cinematic #touch{visibility:hidden}
+/* Over the pack, the spellbook, the big map and the pause screen, the world's own marks don't show through. */
+body.cinematic :is(#vskull,#vskullTag),body:has(#inv[style*="flex"]) :is(#vskull,#vskullTag),body:has(#spellbook.open) :is(#vskull,#vskullTag),body:has(#mapBig.open) :is(#vskull,#vskullTag,#spells,#heroChat){display:none}
+body:has(#pause[style*="flex"]) :is(#heroLayer,#heroChat,#folkSay,#cross,#vskullTag){visibility:hidden}
 #opening-name-panel{position:fixed;z-index:13;bottom:1.3vh;left:50%;transform:translateX(-50%);padding:4px 10px;white-space:nowrap;background:#0b0907e8;color:#f4ecdc;border:1px solid var(--gold-dim);border-radius:4px;text-align:center;box-shadow:0 5px 22px #000a}
 #opening-name-panel label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #opening-name-panel input,#opening-name-panel button{font:600 16px "Alegreya Sans",Georgia,serif;color:#f4ecdc;background:#1b1611;border:1px solid var(--gold-dim);padding:5px 9px}

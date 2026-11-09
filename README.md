@@ -139,7 +139,7 @@ A save is a set of named parts (`src/saves.js`), each written and read by the sy
 raise `SAVE_VERSION` and add a step to `MIGRATIONS`, so older saves are brought up to date as they load.
 
 Settings: volume, music, ambience, look speed, resolution (Auto lets the frame-rate governor choose), graphics (Auto
-picks from your GPU; changing it restarts the game, back to the menu with your game kept for Continue) and the frame rate
+picks from your GPU; a phone or tablet is held to Low, since High and Ultra crashed phones; changing it restarts the game, back to the menu with your game kept for Continue) and the frame rate
 readout.
 
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
