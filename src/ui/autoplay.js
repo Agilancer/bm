@@ -107,6 +107,8 @@ export class AutoPlay {
     this.wake();
     const { input, audio, hud } = this.o;
     input.menu = false;
+    // Paused, with the mouse left free (not taken back by the view), so the button under the skull can be clicked.
+    if (document.pointerLockElement) document.exitPointerLock();
     if (!this.o.paused()) this.o.pause(true);
     audio.once?.('lock_unlock', 0.7);
     if (!this.unlocked) {

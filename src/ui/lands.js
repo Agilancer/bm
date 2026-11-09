@@ -173,8 +173,8 @@ export class Lands {
     const ok = word === PASSWORD;
     this.word.value = '';
     this.pass.classList.remove('on');
+    // (Not closed() here: that hands the mouse back to the game, and the Auto button wants clicking. Auto-play keeps it free.)
     if (word.toLowerCase() === AUTO_WORD && this.o.autoplay) {
-      this.o.closed();
       this.o.autoplay();
       return;
     }
