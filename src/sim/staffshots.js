@@ -36,7 +36,7 @@ export const STAFF_GRAND = {
 // helpers: chestOf, radiusOf, hash, smooth, clamp from casting.js.
 export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, clamp, EYE }) {
   const P = Casting.prototype;
-  const foes = (sim) => sim.knights.filter((k) => !k.dead && k.hostile);
+  const foes = (sim) => sim.foes.filter((k) => !k.dead && k.hostile);
 
   // ---- Sunburst: a mote of the sun. Where it lands, a pillar of light, and rays to the nearest. ----
   P.fly_sunburst = function (b, dx, dy, dz, sp) {

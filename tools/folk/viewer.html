@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Townsfolk viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #2b2d31; color: #ddd; font: 13px system-ui, sans-serif; overflow: hidden; }
+  #ui { position: fixed; left: 8px; top: 8px; z-index: 2; background: #0009; padding: 8px; border-radius: 6px; display: grid; gap: 6px; max-width: 340px; }
+  #ui select, #ui input, #ui button { font: inherit; }
+  #info { white-space: pre; font: 11px ui-monospace, monospace; color: #bbb; }
+  canvas { display: block; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="ui">
+  <label>Bodies <input id="ids" value="young_3 boy_1 worker" size="30"></label>
+  <label>Clip <select id="clip"></select></label>
+  <label>Speed <input id="speed" type="range" min="0" max="2" step="0.05" value="1"> <span id="sp">1</span></label>
+  <label>Time <input id="scrub" type="range" min="0" max="1" step="0.001" value="0"> (when speed is 0)</label>
+  <label>Look <input id="look" type="range" min="-1.2" max="1.2" step="0.05" value="0"></label>
+  <label><input id="walkon" type="checkbox"> carry them by their stride</label>
+  <div id="info"></div>
+</div>
+<script type="module">
+// A test bench for src/folk/rig.js: the bodies built by tools/folk/build_folk.py, playing Lisandra's clips through the same
+// retargeting and the same dual-quaternion palette the game skins with (here skinned on the CPU and drawn with three.js).
+// Served by tools/serve.py: http://localhost:<port>/tools/folk/viewer.html?ids=young_3,boy_1&clip=walk
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { accessor, parseGLB } from '../../src/core/glb.js';
+import { FolkClips, FolkRig, FolkPose, SKIRT_JOINTS } from '../../src/folk/rig.js';
+
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+if (q.get('ids')) $('ids').value = q.get('ids').replaceAll(',', ' ');
+const base = '../../assets/game/folk/';
+const [meta, bin] = await Promise.all([fetch(base + 'clips.json').then((r) => r.json()), fetch(base + 'clips.bin').then((r) => r.arrayBuffer())]);
+const clips = new FolkClips(meta, bin);
+for (const name of Object.keys(clips.clips)) $('clip').add(new Option(name, name));
+$('clip').value = q.get('clip') || 'walk';
+let folkJson = null;
+try { folkJson = await fetch(base + 'folk.json').then((r) => (r.ok ? r.json() : null)); } catch { folkJson = null; }
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x3a3d42);
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.05, 200);
+camera.position.set(0, 1.4, 6);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.95, 0);
+scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x4a4030, 1.3));
+const sun = new THREE.DirectionalLight(0xffffff, 1.7); sun.position.set(3, 6, 4); scene.add(sun);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshLambertMaterial({ color: 0x55594f }));
+floor.rotation.x = -Math.PI / 2; scene.add(floor);
+scene.add(new THREE.GridHelper(40, 40, 0x777777, 0x666666));
+// A 1 m and a 2 m mark, for heights.
+for (const h of [1, 2]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.6), new THREE.MeshBasicMaterial({ color: 0xffcc66 })); m.position.set(-2.2, h, 0); scene.add(m); }
+
+const tex = new THREE.TextureLoader();
+const bodies = [];
+
+async function addBody(id, x) {
+  const model = folkJson?.models?.[id] || folkJson?.models?.[folkJson?.swaps?.[id]?.base];
+  const glbId = folkJson?.swaps?.[id]?.base || id;
+  const buf = await fetch(`${base}${glbId}.glb`).then((r) => { if (!r.ok) throw new Error(`${glbId}.glb ${r.status}`); return r.arrayBuffer(); });
+  const glb = parseGLB(buf);
+  const rig = new FolkRig(glb, clips, { armOut: model?.armOut || 0, skirt: model?.skirt || null });
+  const pose = new FolkPose(rig);
+  const pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
+  const pos = accessor(glb, a.POSITION), nrm = accessor(glb, a.NORMAL), uv = accessor(glb, a.TEXCOORD_0);
+  const joints = accessor(glb, a.JOINTS_0), weights = accessor(glb, a.WEIGHTS_0), idx = accessor(glb, pr.indices);
+  const g = new THREE.BufferGeometry();
+  const P = new Float32Array(pos.length), N = new Float32Array(nrm.length);
+  g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(idx), 1));
+  const mat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.8, metalness: 0 });
+  const c = folkJson?.swaps?.[id]?.c || model?.c;
+  if (c) tex.load(base + c, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; mat.map = t; mat.color.set(0xffffff); mat.needsUpdate = true; });
+  const mesh = new THREE.Mesh(g, mat);
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+  const pal = new Float32Array((rig.count + SKIRT_JOINTS) * 8);
+  const label = document.createElement('div');
+  bodies.push({ id, rig, pose, pos, nrm, joints, weights, P, N, g, pal, x, z: 0 });
+}
+
+// Dual-quaternion skinning, as the SKIN compute shader does it.
+function skin(b) {
+  const { pos, nrm, joints, weights, P, N, pal } = b;
+  const n = pos.length / 3;
+  for (let i = 0; i < n; i++) {
+    const j0 = joints[i * 4], w0 = weights[i * 4];
+    const q0 = j0 * 8;
+    let rx = 0, ry = 0, rz = 0, rw = 0, dx = 0, dy = 0, dz = 0, dw = 0;
+    for (let k = 0; k < 4; k++) {
+      const w = weights[i * 4 + k];
+      if (!w) continue;
+      const o = joints[i * 4 + k] * 8;
+      const s = pal[o] * pal[q0] + pal[o + 1] * pal[q0 + 1] + pal[o + 2] * pal[q0 + 2] + pal[o + 3] * pal[q0 + 3] < 0 ? -w : w;
+      rx += pal[o] * s; ry += pal[o + 1] * s; rz += pal[o + 2] * s; rw += pal[o + 3] * s;
+      dx += pal[o + 4] * s; dy += pal[o + 5] * s; dz += pal[o + 6] * s; dw += pal[o + 7] * s;
+    }
+    const il = 1 / Math.hypot(rx, ry, rz, rw);
+    rx *= il; ry *= il; rz *= il; rw *= il; dx *= il; dy *= il; dz *= il; dw *= il;
+    const tx = 2 * (rw * dx - dw * rx + (ry * dz - rz * dy));
+    const ty = 2 * (rw * dy - dw * ry + (rz * dx - rx * dz));
+    const tz = 2 * (rw * dz - dw * rz + (rx * dy - ry * dx));
+    for (const [src, dst, add] of [[pos, P, 1], [nrm, N, 0]]) {
+      const vx = src[i * 3], vy = src[i * 3 + 1], vz = src[i * 3 + 2];
+      // v + 2 r x (r x v + w v)
+      const cx = ry * vz - rz * vy + rw * vx, cy = rz * vx - rx * vz + rw * vy, cz = rx * vy - ry * vx + rw * vz;
+      dst[i * 3] = vx + 2 * (ry * cz - rz * cy) + (add ? tx : 0);
+      dst[i * 3 + 1] = vy + 2 * (rz * cx - rx * cz) + (add ? ty : 0);
+      dst[i * 3 + 2] = vz + 2 * (rx * cy - ry * cx) + (add ? tz : 0);
+    }
+  }
+  b.g.attributes.position.needsUpdate = true;
+  b.g.attributes.normal.needsUpdate = true;
+  b.g.computeBoundingSphere();
+}
+
+async function load() {
+  for (const b of bodies) scene.remove(scene.children.find((o) => o.geometry === b.g));
+  bodies.length = 0;
+  const ids = $('ids').value.trim().split(/\s+/).filter(Boolean);
+  await Promise.all(ids.map((id, i) => addBody(id, (i - (ids.length - 1) / 2) * 1.1)));
+  bodies.sort((a, b) => a.x - b.x);
+  play();
+  info();
+}
+
+function play() {
+  for (const b of bodies) b.pose.play($('clip').value, { fade: 0.25 });
+}
+
+function info() {
+  const lines = bodies.map((b) => `${b.id.padEnd(14)} joints ${b.rig.count}  hips ${b.rig.hipsHeight.toFixed(3)}  x${b.rig.hipsScale.toFixed(2)}  head ${b.rig.headTop.toFixed(2)}${b.rig.unmatched.length ? '  unmatched: ' + b.rig.unmatched.map((n) => n.replace('mixamorig:', '')).join(' ') : ''}`);
+  const c = clips.clips[$('clip').value];
+  lines.push(`${c.name}: ${c.dur.toFixed(2)} s, ${c.frames} frames, ${c.loop ? 'loops' : 'once'}${c.travel ? `, travel ${c.travel.toFixed(2)}` : ''}`);
+  $('info').textContent = lines.join('\n');
+}
+
+$('ids').addEventListener('change', load);
+$('clip').addEventListener('change', () => { play(); info(); });
+$('speed').addEventListener('input', () => { $('sp').textContent = $('speed').value; });
+let last = performance.now();
+window.folkView = { bodies, clips, camera, controls, view(x, y, z, tx = 0, ty = 0.9, tz = 0) { camera.position.set(x, y, z); controls.target.set(tx, ty, tz); controls.update(); }, set clip(n) { $('clip').value = n; play(); info(); }, frameAt(t) { for (const b of bodies) b.pose.a.t = t; } };
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const speed = +$('speed').value;
+  for (const b of bodies) {
+    if (speed === 0) b.pose.a.t = +$('scrub').value * b.pose.a.clip.dur;
+    b.pose.step(dt * speed);
+    b.pose.wantYaw = +$('look').value;
+    const c = b.pose.a.clip;
+    if ($('walkon').checked && c.travel) b.z = (b.z + b.rig.stride(c) * dt * speed + 6) % 12 - 6; else b.z = 0;
+    b.pose.solve(b.x, 0, b.z, 0, b.pal, 0);
+    skin(b);
+  }
+  renderer.render(scene, camera);
+}
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+await load();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

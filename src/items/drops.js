@@ -1,7 +1,8 @@
 // What's on the ground, where it fell. This is the render thread's: the sim only says something died, and what's taken up
 // goes to the pack. Everything hangs in the air, a small copy of the thing itself, slowly turning and glowing the colour of its rarity.
 import { groundAt as terrainHeight } from '../core/interior.js';
-import { GEMS, RARITIES, hands, makeRng, rollLoot, setFind } from './items.js';
+import { GEMS, MATS, RARITIES, hands, makeRng, rollLoot, setFind } from './items.js';
+import { inChurch } from '../core/church.js';
 
 const MAX = 64;
 const GRAB = 1.9;   // coins and orbs come to you, for walking near them: there's no stopping in a fight
@@ -32,6 +33,25 @@ export function boardPose(m, x, y, z, hx, hz, grounded) {
   m.set([...X, 0, ...Y, 0, ...n, 0, x, y + BOARD_LIFT, z, 1]);
 }
 
+// What the dead leave to be made into something (items.js MATS): far more of it down in the catacombs, where they were
+// buried in it, than out in the fields. kind as rollLoot has it: 5 the dead, 6 an ogre, 7 a caster, 8 a champion.
+const MAT_ODDS = {
+  deep: { 5: [['bone', 0.65, 1, 2], ['silk', 0.35, 1, 1], ['iron', 0.3, 1, 1], ['wax', 0.12, 1, 1], ['ember', 0.015, 1, 1]],
+    6: [['bone', 1, 2, 3], ['iron', 0.6, 1, 2], ['ember', 0.15, 1, 1]],
+    7: [['wax', 0.55, 1, 2], ['bone', 0.4, 1, 1], ['silk', 0.3, 1, 1], ['ember', 0.1, 1, 1]],
+    8: [['bone', 1, 2, 2], ['iron', 0.7, 1, 2], ['silk', 0.4, 1, 2], ['ember', 0.35, 1, 1]] },
+  out: { 5: [['bone', 0.3, 1, 1], ['iron', 0.08, 1, 1], ['ember', 0.005, 1, 1]],
+    6: [['bone', 1, 1, 2], ['iron', 0.4, 1, 1], ['ember', 0.08, 1, 1]],
+    7: [['wax', 0.35, 1, 1], ['bone', 0.3, 1, 1], ['ember', 0.05, 1, 1]],
+    8: [['bone', 0.8, 1, 2], ['iron', 0.4, 1, 1], ['ember', 0.25, 1, 1]],
+    0: [['iron', 1, 2, 3], ['ember', 1, 1, 1]], 3: [['bone', 1, 3, 4], ['ember', 1, 2, 2]], 4: [['bone', 1, 3, 4], ['ember', 1, 1, 2]] },
+};
+export function matsOf(rng, kind, deep) {
+  const out = [];
+  for (const [k, p, lo, hi] of (deep ? MAT_ODDS.deep[kind] : null) || MAT_ODDS.out[kind] || []) if (rng() < p) out.push({ type: 'mat', kind: k, n: lo + Math.floor(rng() * (hi - lo + 1)), rarity: 0 });
+  return out;
+}
+
 export class Drops {
   constructor(renderer, audio) {
     this.renderer = renderer;
@@ -55,6 +75,7 @@ export class Drops {
     else if (item.type === 'orb') { d.gem = item.kind === 'life' ? GEMS.ruby.color : (GEMS.sapphire || GEMS.ruby).color; d.auto = true; }
     else if (item.type === 'spell') d.gem = (GEMS.amethyst || GEMS.ruby).color;
     else if (item.type === 'gold') { d.coins = true; d.auto = true; }
+    else if (item.type === 'mat') { d.stuff = item.kind; d.gem = MATS[item.kind].color; d.auto = true; }
     else {
       d.sword = item.base;
       d.glow = RARITIES[item.rarity].color;
@@ -73,7 +94,7 @@ export class Drops {
     const orbs = [];
     if ((kind | 0) >= 2 && Math.random() < (this.low ? 0.45 : 0.2)) orbs.push({ type: 'orb', kind: 'life', rarity: 0 });
     if ((kind | 0) >= 2 && Math.random() < 0.1) orbs.push({ type: 'orb', kind: 'mana', rarity: 0 });
-    for (const item of [...rollLoot(this.rng, kind | 0), ...orbs]) {
+    for (const item of [...rollLoot(this.rng, kind | 0), ...orbs, ...matsOf(this.rng, kind | 0, y < -6 && inChurch(x, y + 1, z))]) {
       const a = Math.random() * 6.28, r = 0.7 + Math.random() * 0.8;
       this.spawn(item, x + Math.cos(a) * r, z + Math.sin(a) * r, [x, y + 1.1, z]);
     }
@@ -144,6 +165,6 @@ export class Drops {
 
   take(d) {
     this.list.splice(this.list.indexOf(d), 1);
-    this.audio.play('draw', null, 0, 0, d.gem || d.coins ? 0.4 : 0.8, d.coins ? 1.9 : d.gem ? 1.6 : 1.15, false);
+    this.audio.play('draw', null, 0, 0, d.gem || d.coins ? 0.4 : 0.8, d.coins ? 1.9 : d.stuff ? 1.3 : d.gem ? 1.6 : 1.15, false);
   }
 }

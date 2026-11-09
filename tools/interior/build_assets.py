@@ -37,6 +37,107 @@ DEEP.update({n: 1 for n in ('skulls', 'skulls2', 'skulls3', 'femurs', 'niches', 
 # How deep the relief cuts, as a share of a tile: what's heaped stands further out than what's coursed.
 RELIEF = {'cata_wall': 0.04, 'cata_wall2': 0.04, 'cata_wall3': 0.04, 'cata_wall4': 0.04, 'skulls': 0.035, 'skulls2': 0.035, 'skulls3': 0.035, 'femurs': 0.035, 'niches': 0.05, 'candles': 0.04, 'candles_v': 0.04, 'cata_rubble': 0.016, 'cata_block': 0.03, 'panel': 0.022, 'panel2': 0.022}
 TILES.update({f'wood_{s}{k}': (f'lacquer_{s}_{k}', 'wood', 2.2) for s in 'abc' for k in range(4)})
+# For the townsfolk's houses, not the church: plaster limewashed over (made here), and plain boards and old dark oak (the lacquered
+# planks and straight grain, their colour taken back to wood that's been walked on and smoked).
+TILES.update({'limewash': ('gen:limewash', 'other', 2.4), 'boards': ('gen:boards', 'wood', 2.2), 'beam': ('gen:beam', 'wood', 1.8),
+              'soot': ('gen:soot', 'stone', 3.4)})
+# The townsfolk's cloth: their own wool for the bedspreads and hangings (madder, woad, moss, walnut: the woad with grey-white, never
+# gold), a rag rug for the floors, a cured hide, and linen for the pillows. The church's red-and-gold cloth (cloth_red, carpet) is
+# Velscour's and stays in the church.
+TILES.update({'wool_red': ('gen:wool_red', 'other', 1.2), 'wool_blue': ('gen:wool_blue', 'other', 1.2), 'wool_green': ('gen:wool_green', 'other', 1.2),
+              'wool_brown': ('gen:wool_brown', 'other', 1.2), 'rag_rug': ('gen:rag_rug', 'other', 1.6), 'hide': ('gen:hide', 'other', 1.4),
+              'linen': ('gen:linen', 'other', 0.8)})
+WOOL = {'wool_red': ((118, 40, 30), (200, 186, 156), (44, 22, 16)), 'wool_blue': ((50, 64, 90), (196, 196, 190), (26, 30, 42)),
+        'wool_green': ((72, 82, 50), (198, 186, 156), (40, 32, 22)), 'wool_brown': ((100, 76, 54), (198, 186, 156), (118, 40, 30))}
+
+
+def tile_noise(n, size, rng, stretch=1.0):
+    """Noise that wraps at the tile's edges, its features about size pixels across (stretched along x by stretch)."""
+    f = np.fft.fft2(rng.standard_normal((n, n)))
+    ky, kx = np.fft.fftfreq(n)[:, None], np.fft.fftfreq(n)[None, :]
+    k = np.sqrt((kx * stretch) ** 2 + ky ** 2) * size
+    b = np.real(np.fft.ifft2(f * np.exp(-k * k)))
+    return (b - b.mean()) / (b.std() + 1e-6)
+
+
+def regrade(src, dark, light, lo=0.08, hi=0.6):
+    """A painted wood with its colour taken out and put back as another: its light and dark kept, and a little of its own hue."""
+    a = np.asarray(Image.open(f'{CUT}/{src}.webp').convert('RGB'), np.float32) / 255
+    lum = a @ np.array([0.3, 0.55, 0.15], np.float32)
+    lo_, hi_ = np.percentile(lum, 2), np.percentile(lum, 98)
+    t = np.clip((lum - lo_) / max(hi_ - lo_, 1e-3), 0, 1)[..., None] * (hi - lo) + lo
+    t = t / hi
+    rgb = np.array(dark, np.float32) + (np.array(light, np.float32) - np.array(dark, np.float32)) * t
+    return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8))
+
+
+def gen(name):
+    rng = np.random.default_rng({'limewash': 11, 'boards': 12, 'beam': 13, 'soot': 14, 'wool_red': 15, 'wool_blue': 16, 'wool_green': 17,
+                                 'wool_brown': 18, 'rag_rug': 19, 'hide': 20, 'linen': 21}[name])
+    n = 1024
+    y, x = np.mgrid[0:n, 0:n]
+    if name in WOOL:
+        # A twill, threads about 4 px, the dye uneven and the yarn slubbed; two bands across (pale between dark) every half tile.
+        base, band, edge = WOOL[name]
+        tw = np.where(((x + y) // 4) % 4 < 2, 1.05, 0.95)
+        lum = tw * (1 + tile_noise(n, 2.5, rng, stretch=0.12) * 0.05 + tile_noise(n, 70, rng) * 0.05 + tile_noise(n, 14, rng) * 0.03)
+        col = np.broadcast_to(np.array(base, np.float32), (n, n, 3)).copy()
+        for y0 in (0.06, 0.56):
+            for a, h, c in ((y0, 0.008, edge), (y0 + 0.012, 0.022, band), (y0 + 0.038, 0.008, edge)):
+                m = (y >= a * n) & (y < (a + h) * n)
+                col[m] = c
+        return Image.fromarray(np.clip(col * lum[..., None], 0, 255).astype(np.uint8))
+    if name == 'rag_rug':
+        # Strips of old cloth plaited and sewn round: bands of muted colour, each a twist of short slanted ridges.
+        # (No grey and no mulberry: under the rooms' cool ambient they read blue, and the oatmeal beside them gold. Blue with gold
+        # is Tessariel's. So the greys are warm, the oatmeal is undyed, and all of it a quarter less saturated, below.)
+        pal = [(118, 40, 30), (100, 76, 54), (72, 82, 50), (140, 130, 112), (62, 52, 42), (110, 62, 40), (90, 76, 58), (84, 58, 42)]
+        col = np.zeros((n, n, 3), np.float32)
+        rows, yy = [], 0
+        while yy < n:
+            h = int(rng.integers(12, 26)) if n - yy > 40 else n - yy
+            rows.append((yy, h, pal[int(rng.integers(0, len(pal)))]))
+            yy += h
+        ridge = np.zeros((n, n), np.float32)
+        for y0, h, c in rows:
+            m = (y >= y0) & (y < y0 + h)
+            col[m] = c
+            t = (y - y0) / h
+            ridge[m] = (0.82 + 0.18 * np.sin(np.pi * t) + 0.1 * np.sin(2 * np.pi * (x * 96 / n + t * 0.8 * (1 if y0 % 2 else -1))))[m]
+        lum = ridge * (1 + tile_noise(n, 3, rng) * 0.05 + tile_noise(n, 60, rng) * 0.06)
+        grey = col.mean(axis=2, keepdims=True)
+        col = grey + (col - grey) * 0.75
+        return Image.fromarray(np.clip(col * lum[..., None], 0, 255).astype(np.uint8))
+    if name == 'hide':
+        lum = 1 + tile_noise(n, 90, rng) * 0.09 + tile_noise(n, 20, rng) * 0.05 + tile_noise(n, 3, rng) * 0.03
+        scar = np.clip((np.abs(tile_noise(n, 40, rng, stretch=0.3)) < 0.04) * 0.12, 0, 0.12)
+        rgb = np.array([150, 112, 74], np.float32) * (lum - scar)[..., None]
+        return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8))
+    if name == 'linen':
+        tw = np.where(((x // 3) + (y // 3)) % 2 == 0, 1.025, 0.975)
+        lum = tw * (1 + tile_noise(n, 2.5, rng, stretch=0.1) * 0.03 + tile_noise(n, 80, rng) * 0.025)
+        rgb = np.array([206, 199, 182], np.float32) * lum[..., None]
+        return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8))
+    if name == 'limewash':
+        n = 1024
+        big, mid, fine = tile_noise(n, 120, rng), tile_noise(n, 22, rng), tile_noise(n, 3, rng)
+        streak = tile_noise(n, 18, rng, stretch=0.18)
+        base = np.array([214, 204, 182], np.float32)
+        lum = 1 + big * 0.045 + mid * 0.025 + fine * 0.012 + streak * 0.02
+        # Where it's worn thin, the plaster shows through warmer; and a little smoke and handling, here and there.
+        thin = np.clip((tile_noise(n, 170, rng) - 1.2) * 0.7, 0, 0.45)[..., None]
+        rgb = base * lum[..., None]
+        rgb = rgb * (1 - thin) + np.array([176, 150, 118], np.float32) * lum[..., None] * thin
+        dirt = np.clip((big - 0.8) * 0.25, 0, 0.14)[..., None]
+        rgb = rgb * (1 - dirt) + np.array([96, 84, 70], np.float32) * dirt
+        return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8))
+    if name == 'soot':
+        # The back of a fireplace: the same blocks as the church's, blackened by years of smoke.
+        return regrade('church_3_1', (10, 8, 7), (58, 48, 40))
+    if name == 'boards':
+        return regrade('lacquer_c_2', (62, 46, 31), (156, 124, 86))
+    return regrade('lacquer_a_0', (30, 22, 15), (98, 74, 50))
+
 FROM_VILLAGE = {'roof': ('assets/game/tex/roof_1_c.webp', 'roof', 4.0)}
 # This is Velscour's church: V banners and the demon's windows only. Tessariel's banners (tess_*) and the angels' panes (glass_*_0, glass_c_1, glass_d_1) stay cut in art/interior/cut, and never ship here.
 PAIRS = [[f'{n}_{k}' for k in (0, 1)] for n in ('vel_a', 'vel_b', 'vel_c', 'vel_d')] + [['glass_a_1', 'glass_b_1'], ['glass_e_1'], ['rose_0']]
@@ -54,13 +155,18 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     layers = []
     for name, (src, kind, m) in {**TILES, **FROM_VILLAGE}.items():
-        path = src if src.endswith('.webp') else f'{CUT}/{src}.webp'
-        im = Image.open(path).convert('RGB')
+        if src.startswith('gen:'):
+            im = gen(src[4:])
+        else:
+            path = src if src.endswith('.webp') else f'{CUT}/{src}.webp'
+            im = Image.open(path).convert('RGB')
         # What each is for, not what it was painted as: pale marble in a dark nave reads as lit paper, lacquer as one red mass;
         # the outside wall has weathered, and bones want to stand out of the dark.
         grade = {'marble': (0.72, 1.0), 'wall_rough': (0.62, 0.6), 'skulls': (1.35, 0.55, 1.6), 'skulls2': (1.35, 0.55, 1.6), 'panel': (1.1, 0.8, 0.7), 'cata_v_floor': (0.88, 0.75), 'cata_floor': (1.05, 0.78), 'cata_floor2': (1.1, 0.8), 'cata_bones': (1.0, 0.72), 'niches': (1.25, 0.9), 'floor_diamond': (0.9, 0.9, 0.62), 'cata_floor3': (1.08, 0.82), 'cata_floor4': (1.1, 0.85), 'cata_earth': (0.95, 0.85), 'skulls3': (1.15, 0.6, 1.15), 'femurs': (1.1, 0.6, 1.15), 'cata_blood': (0.95, 0.85)}.get(name)
         if name.startswith('wood_'):
             grade = (0.6, 0.72)
+        if name in ('boards', 'beam'):
+            grade = (0.78, 0.85)
         if grade:
             a = np.asarray(im, np.float32)
             g = a.mean(-1, keepdims=True)

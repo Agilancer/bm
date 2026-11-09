@@ -22,6 +22,10 @@ export const TOWN_KNIGHTS = [
   { suit: 'knight', kind: 0, sword: 'crimson', shield: 'v', style: 'black', hostile: true, hp: 460, walk: 1.45, leash: 22,
     // Velscour's man on the west road, outside the town's ring.
     route: [[-72, 4], [-84, -2], [-72, -10], [-84, -2]], yaw: -1.6 },
+  { suit: 'paladin_bellwright', kind: 1, sword: 'gilded', shield: 't', style: 'silver', hostile: false, hp: 900, walk: 0.9,
+    // Ser Anselm Toller, the Bellwright, a Tessariel's paladin: before his door at the Bell Tower of the Four Watches, on the
+    // knoll far east (src/core/lands.js KNOLL; sites.js spots.bellwright). Talked to through src/folk/lines/beyond.js.
+    route: [[2440.6, -531.6], [2445.4, -531.8]], yaw: Math.PI, bellwright: true },
 ].map((k) => {
   const height = k.suit === 'knight' ? 1.9 : 1.94;
   // The black knight is 2.12 m and holds the crimson sword and V board; the silver one is 1.92 m with the gilded and T.

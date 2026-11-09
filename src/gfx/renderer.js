@@ -4,7 +4,11 @@ import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
-import { OPENING, prettyShown } from '../core/opening.js';
+import { WORLD_EDGE } from '../core/lands.js';
+import { buildSites } from '../core/sites.js';
+import { SlimeBodies } from './slimes.js';
+import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
+import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/church.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
@@ -23,11 +27,14 @@ import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TE
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { buildGlowPipeline, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
+import { HomeLights } from './homelights.js';
 import { CRAB_SCALE } from '../sim/crab.js';
 import { GRAVEHART_SCALE } from '../sim/gravehart.js';
 import { HYDRA_SCALE } from '../sim/hydra.js';
 import { SKIN } from './shaders.js';
 import { Dangles } from './dangles.js';
+import { CURIO_GEMS, CURIO_TRAY_Y, MR as WARE_MR, PALETTE as WARE_PALETTE, SHADE as WARE_SHADE, wareMesh } from './wares.js';
+import { PLACES } from '../folk/town.js';
 import { STAFF_GLOW, STAFF_SPIN } from '../items/staffglow.js';
 import { STAFF_CORES } from '../items/staffcores.js';
 import { staffEffect, BARE } from '../items/staffeffects.js';
@@ -66,12 +73,16 @@ const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCA
 const SHIELD_SOCKET = [0.99692, -0.01765, 0.07643, 0.00000, 0.00000, 0.97437, 0.22495, 0.00000, -0.07844, -0.22426, 0.97137, 0.00000, 0.05418, -0.29743, -0.51052, 1.00000];
 // A shield on the socket, as the owner's outline has it: this wide and its top this high, its inner face to the eye and on the back of the arm. SHIELD_FACE: which way its inner face looks in its own model.
 const SHIELD_WIDTH = 0.675, SHIELD_TOP = 0.4932, SHIELD_FACE = 1, SHIELD_PLANE = -0.018, SHIELD_ARM_Y = 0.107;
-const FAR_HALF = 1024;       // What the coarse map of the land covers, either way.
+const FAR_HALF = WORLD_EDGE + 32;   // What the coarse map of the land covers, either way: all of it (src/core/lands.js).
+// Out past this from where the land's grid and the pines were last laid, they're laid again round you (followLand).
+const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
-const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104 };
-const MAX_GROUND = 96;
+const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114 };
+// A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
+const TINTS = { dark: 1, pale: 2, frost: 3 };
+const MAX_GROUND = 160;
 
 const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y * l, z * l]; };
 
@@ -135,7 +146,7 @@ export class Renderer {
     this.flash = 0;
     // Mid-afternoon going gold, over the shoulder as you come up the road, so plate and faces read.
     this.hour = DAWN_HOUR;
-    this.farSize = gpu.tier.lean ? 512 : 1024;
+    this.farSize = gpu.tier.lean ? 1024 : 2048;
     this.sunDir = norm3(-0.78, 0.5, 0.38);
     this.splits = gpu.tier.splits || [12, 38, 130];
     this.shadowFrame = 0;
@@ -183,16 +194,26 @@ export class Renderer {
     const rowsEach = Math.ceil(GROUND_SIZE / Math.max(1, pool.size));
     const groundJobs = [];
     for (let r = 0; r < GROUND_SIZE; r += rowsEach) {
-      groundJobs.push(pool.run('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat(village.footprints || [], [{ x: 90, z: 0, hx: 34, hz: 22, yaw: 0, h: 9 }]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
+      groundJobs.push(pool.run('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat(village.footprints || [], [CHURCH_FOOTPRINT, CHURCH_WING]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
     }
     const farEach = Math.ceil(this.farSize / Math.max(1, pool.size));
     const farJobs = [];
     for (let r = 0; r < this.farSize; r += farEach) farJobs.push(pool.run('farground', { opening: this.openingEnabled, size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + farEach) }));
-    const patch = { x0: -614, x1: -90, z0: -44, z1: 344, cell: tier.lean ? 4 : 2 };
-    const [terrain, forest, ...rest] = await Promise.all([pool.run('terrain', { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patch }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH }), ...farJobs, ...groundJobs]);
+    // Finer patches of the land where the coarse grid won't do: the hill and its roads, and round the church, with a hole left under
+    // the wing over its stair (src/core/church.js).
+    const cell = tier.lean ? 4 : 2;
+    const patches = [{ x0: -614, x1: -90, z0: -44, z1: 344, cell }, { ...CHURCH_PATCH, cell, hole: LAND_HOLE }];
+    this.terrainArgs = { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patches };
+    this.landAt = [0, 0]; this.landBusy = false;
+    const [terrain, forest, ...rest] = await Promise.all([pool.run('terrain', this.terrainArgs), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH }), ...farJobs, ...groundJobs]);
     const farRows = rest.slice(0, farJobs.length), rows = rest.slice(farJobs.length);
     this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    for (const row of farRows) device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, row.data.length / 4 / this.farSize]);
+    this.farTint = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    for (const row of farRows) {
+      const rowsN = row.data.length / 4 / this.farSize;
+      device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
+      device.queue.writeTexture({ texture: this.farTint, origin: [0, row.rowStart] }, row.tint, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
+    }
     tick();
     this.groundMap = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.heightTex = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'r32float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
@@ -224,6 +245,7 @@ export class Renderer {
     this.buildBaseLayouts();
     this.buildStatics(await loadModel(0), layerNames, manifest.layers, village.trees);
     this.pines = new Pines(this, forest.trees, layerNames);
+    this.slimeBodies = new SlimeBodies(this);
     this.interior = await loadInterior(this, base, pool, tier);
     tick();
     this.chars = [
@@ -280,6 +302,8 @@ export class Renderer {
     this.gauntletSets = new Map();
     this.chests = [];
     this.doorItems = [];
+    this.stallItems = null;               // the market's wares and their tarps (src/gfx/wares.js), made the first time they're drawn
+    this.stallsOpen = new Set();          // which stalls have their wares out (src/folk/brain.js, stall)
     this.things = (village.things || []).concat(this.interior.data.things || []);
     this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
     this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
@@ -303,6 +327,7 @@ export class Renderer {
     this.buildParticles();
     this.buildGrass();
     this.lights = village.lights.concat(this.interior.data.lights);
+    this.homeLights = new HomeLights(device, this.interior, this.interior.data.lights);
     if (this.openingEnabled) this.openingStage = await loadOpeningStage(this, base);
     this.smokeT = 0;
     this.moteT = 0;
@@ -366,6 +391,7 @@ export class Renderer {
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 1, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 2, visibility: VF, texture: { sampleType: 'float' } },
+      { binding: 3, visibility: VF, texture: { sampleType: 'float' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -393,9 +419,32 @@ export class Renderer {
       { binding: 0, resource: this.groundColor.createView({ dimension: '2d-array' }) },
       { binding: 1, resource: this.groundDetail.createView({ dimension: '2d-array' }) },
       { binding: 2, resource: this.farMap.createView() },
+      { binding: 3, resource: this.farTint.createView() },
     ] });
     this.skinModule = device.createShaderModule({ code: SKIN });
     this.skinPipeline = device.createComputePipeline({ layout: device.createPipelineLayout({ bindGroupLayouts: [this.bglSkin] }), compute: { module: this.skinModule, entryPoint: 'main' } });
+  }
+
+  // Out in the countries the land's grid and the pines are laid again round you, a few hundred metres at a time, in the pool's
+  // threads; the old ones are drawn till the new are ready. Near the town both stay as they were laid at the start.
+  followLand(cam) {
+    const pool = this.landPool || this.pool;
+    if (this.landBusy || !pool) return;
+    const near = Math.abs(cam.x) < 700 && Math.abs(cam.z) < 700;
+    const cx = near ? 0 : Math.round(cam.x / 128) * 128, cz = near ? 0 : Math.round(cam.z / 128) * 128;
+    if (cx === this.landAt[0] && cz === this.landAt[1]) return;
+    if (!near && Math.hypot(cam.x - this.landAt[0], cam.z - this.landAt[1]) < FOLLOW_AT) return;
+    this.landBusy = true;
+    Promise.all([pool.run('terrain', { ...this.terrainArgs, cx, cz }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH, cx, cz })]).then(([terrain, forest]) => {
+      const old = [this.terrainVB, this.terrainIB];
+      this.terrainVB = makeBuffer(this.device, terrain.verts, GPUBufferUsage.VERTEX);
+      this.terrainIB = makeBuffer(this.device, terrain.idx, GPUBufferUsage.INDEX);
+      this.terrainCount = terrain.idx.length;
+      this.pines.setTrees(forest.trees);
+      this.landAt = [cx, cz];
+      // (Gone once this frame's work that drew them is done: nothing new is recorded with them.)
+      setTimeout(() => { for (const b of old) b.destroy(); }, 500);
+    }).catch((e) => console.warn('followLand', e)).finally(() => { this.landBusy = false; });
   }
 
   buildStatics(glb, layerNames, layers, oaks) {
@@ -411,6 +460,14 @@ export class Renderer {
         const cutout = layer < 100 && layers[layer].cutout;
         prims.push({ layer, cutout, pos: accessor(glb, pr.attributes.POSITION), nrm: accessor(glb, pr.attributes.NORMAL), uv: accessor(glb, pr.attributes.TEXCOORD_0), idx: accessor(glb, pr.indices) });
       }
+    }
+    // And everything out in the countries.
+    for (const [name, part] of buildSites().parts) {
+      const m = /^(dark|pale|frost):(.*)$/.exec(name), base = m ? m[2] : name;
+      let layer = layerNames.indexOf(base);
+      if (layer < 0) layer = FLAT[base] ?? 100;
+      const cutout = layer < 100 && layers[layer].cutout;
+      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });
     }
     prims.sort((a, b) => a.cutout - b.cutout);
     let nv = 0, ni = 0;
@@ -954,6 +1011,133 @@ export class Renderer {
     return m;
   }
 
+  // What's brought up from the dead (items.js MATS), a small heap of each: splinters of bone, bent coffin nails and a strap,
+  // a folded length of shroud, candle-ends, and an ember that burns.
+  stuff(kind) {
+    const have = (this.stuffs ||= new Map()).get(kind);
+    if (have) return have;
+    if (kind === 'ember') { const m = this.gem('#ff6a2a'); this.stuffs.set(kind, m); return m; }
+    const pos = [], nrm = [], uv = [];
+    let seed = 11 + kind.length * 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const tri = (a, b, c) => {
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      const n = norm3(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]);
+      for (const q of [a, b, c]) { pos.push(...q); nrm.push(...n); uv.push(0.5, 0.5); }
+    };
+    // A prism from a to b, its ends r0 and r1 across, `sides` faces round, capped.
+    const prism = (a, b, r0, r1, sides, twist = 0) => {
+      const d = norm3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      const up = Math.abs(d[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+      const e1 = norm3(d[1] * up[2] - d[2] * up[1], d[2] * up[0] - d[0] * up[2], d[0] * up[1] - d[1] * up[0]);
+      const e2 = [d[1] * e1[2] - d[2] * e1[1], d[2] * e1[0] - d[0] * e1[2], d[0] * e1[1] - d[1] * e1[0]];
+      const ring = (o, r) => Array.from({ length: sides }, (_, k) => { const t = twist + k / sides * 6.283; return [o[0] + (e1[0] * Math.cos(t) + e2[0] * Math.sin(t)) * r, o[1] + (e1[1] * Math.cos(t) + e2[1] * Math.sin(t)) * r, o[2] + (e1[2] * Math.cos(t) + e2[2] * Math.sin(t)) * r]; });
+      const A = ring(a, r0), B = ring(b, r1);
+      for (let k = 0; k < sides; k++) {
+        const k1 = (k + 1) % sides;
+        tri(A[k], B[k], B[k1]); tri(A[k], B[k1], A[k1]);
+        tri(a, A[k1], A[k]); tri(b, B[k], B[k1]);
+      }
+    };
+    const box = (c, hx, hy, hz, yaw = 0) => {
+      const cs = Math.cos(yaw), sn = Math.sin(yaw);
+      const P = (x, y, z) => [c[0] + x * cs + z * sn, c[1] + y, c[2] - x * sn + z * cs];
+      const v = [P(-hx, -hy, -hz), P(hx, -hy, -hz), P(hx, hy, -hz), P(-hx, hy, -hz), P(-hx, -hy, hz), P(hx, -hy, hz), P(hx, hy, hz), P(-hx, hy, hz)];
+      for (const [a, b, c2, d] of [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]]) { tri(v[a], v[b], v[c2]); tri(v[a], v[c2], v[d]); }
+    };
+    let color, mr, glow = [0, 0, 0, 0];
+    if (kind === 'bone') {
+      // Splinters, crossed over each other, broken off ragged at one end.
+      for (let i = 0; i < 5; i++) {
+        const a = rnd() * 6.283, l = 0.09 + rnd() * 0.08, y = 0.012 + i * 0.011;
+        const cx = (rnd() - 0.5) * 0.06, cz = (rnd() - 0.5) * 0.06;
+        prism([cx - Math.cos(a) * l / 2, y, cz - Math.sin(a) * l / 2], [cx + Math.cos(a) * l / 2, y + (rnd() - 0.5) * 0.02, cz + Math.sin(a) * l / 2], 0.013 + rnd() * 0.008, 0.004 + rnd() * 0.006, 5, rnd());
+      }
+      color = [216, 204, 174]; mr = [255, 205, 0, 255];
+    } else if (kind === 'iron') {
+      // Coffin nails, bent, and a hinge strap.
+      for (let i = 0; i < 5; i++) {
+        const a = rnd() * 6.283, cx = (rnd() - 0.5) * 0.08, cz = (rnd() - 0.5) * 0.08, y = 0.008 + i * 0.006, l = 0.07 + rnd() * 0.03;
+        const m = [cx, y + 0.01, cz], bend = (rnd() - 0.5) * 0.9;
+        const p0 = [cx - Math.cos(a) * l / 2, y, cz - Math.sin(a) * l / 2], p1 = [cx + Math.cos(a + bend) * l / 2, y + 0.004, cz + Math.sin(a + bend) * l / 2];
+        prism(p0, m, 0.006, 0.0055, 4); prism(m, p1, 0.0055, 0.0015, 4);
+        prism([p0[0] - Math.cos(a) * 0.004, p0[1], p0[2] - Math.sin(a) * 0.004], [p0[0] + Math.cos(a) * 0.003, p0[1], p0[2] + Math.sin(a) * 0.003], 0.013, 0.013, 6);
+      }
+      box([0.01, 0.006, -0.01], 0.075, 0.004, 0.017, 0.5);
+      color = [128, 116, 102]; mr = [255, 130, 200, 255];
+    } else if (kind === 'silk') {
+      // A length folded on itself, each fold a little off the one under it, the top one turned back.
+      for (let i = 0; i < 4; i++) box([(rnd() - 0.5) * 0.012, 0.008 + i * 0.014, (rnd() - 0.5) * 0.012], 0.085 - i * 0.004, 0.0065, 0.06 - i * 0.003, (rnd() - 0.5) * 0.12);
+      box([0.03, 0.066, 0.0], 0.05, 0.004, 0.058, 0.05);
+      color = [205, 191, 159]; mr = [255, 235, 0, 255];
+    } else {
+      // Candle-ends of every height, burnt down crooked, each with its wick.
+      for (let i = 0; i < 4; i++) {
+        const a = i * 1.7 + rnd(), r = i ? 0.035 : 0, x = Math.cos(a) * r, z = Math.sin(a) * r, h = 0.025 + rnd() * 0.045, w = 0.017 + rnd() * 0.006;
+        prism([x, 0, z], [x + (rnd() - 0.5) * 0.006, h, z + (rnd() - 0.5) * 0.006], w, w * 0.92, 9, rnd());
+        prism([x, h, z], [x, h + 0.012, z], 0.0018, 0.0012, 4);
+      }
+      color = [226, 207, 142]; mr = [255, 120, 0, 255]; glow = [0.05, 0.035, 0.01, 0];
+    }
+    // (Drawn a little larger than life, to be seen on the ground in a fight.)
+    for (let k = 0; k < pos.length; k++) pos[k] *= 1.8;
+    const idx = new Uint32Array(pos.length / 3).map((_, i) => i);
+    const m = this.lyingModel({ pos: new Float32Array(pos), nrm: new Float32Array(nrm), uv: new Float32Array(uv), idx }, this.pixel('rgba8unorm-srgb', [...color, 255]), this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255])),
+      this.pixel('rgba8unorm', mr), glow);
+    this.stuffs.set(kind, m);
+    return m;
+  }
+
+  // The market's stalls: what's on each counter while it's open, the tarp over it when it's not, and the curios stall's gems.
+  // Placed in each stall's own frame (`stall` in src/folk/town.js PLACES), on the village's ground.
+  makeStalls() {
+    // (lx, ly, lz) in the stall's frame, turned a further `spin` on its own spot, scaled k.
+    const at = (x, z, yaw, lx = 0, ly = 0, lz = 0, spin = 0, k = 1) => {
+      const c = Math.cos(yaw), s = Math.sin(yaw), c2 = Math.cos(yaw + spin) * k, s2 = Math.sin(yaw + spin) * k;
+      return new Float32Array([c2, 0, -s2, 0, 0, k, 0, 0, s2, 0, c2, 0, x + lx * c + lz * s, ly, z - lx * s + lz * c, 1]);
+    };
+    const out = [];
+    for (const p of PLACES) {
+      if (!p.stall) continue;
+      const [x, z, yaw] = p.stall;
+      out.push({ id: p.id, open: true, ware: p.id, mat: at(x, z, yaw), slot: -1, model: null });
+      out.push({ id: p.id, open: false, ware: 'tarp', mat: at(x, z, yaw), slot: -1, model: null });
+      if (p.id === 'curios') CURIO_GEMS.forEach(([gx, gz, hex], i) => out.push({ id: p.id, open: true, gem: hex, glow: hex, mat: at(x, z, yaw, gx, CURIO_TRAY_Y, gz, i * 2.1, 0.62), slot: -1, model: null }));
+    }
+    return out;
+  }
+
+  stallOpen(id, open) {
+    if (open) this.stallsOpen.add(id); else this.stallsOpen.delete(id);
+  }
+
+  // A place set at table for one of the townsfolk (src/folk/brain.js, setPlace): kind 'setting' or 'tankard', on the table top
+  // at `at`, turned to face away from the one sat at it.
+  dish(id, on, kind, at, yaw) {
+    const m = (this.dishes ||= new Map());
+    if (!on) { m.delete(id); return; }
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    m.set(id, { ware: kind, mat: new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, at[0], at[1], at[2], 1]), slot: -1, model: null });
+  }
+
+  // A stall's wares, coloured from one small palette by their uvs (src/gfx/wares.js).
+  ware(kind) {
+    const have = (this.wares ||= new Map()).get(kind);
+    if (have) return have;
+    if (!this.warePalette) {
+      // Two rows: each colour, and its shade (a vertex's v runs between them).
+      const tex = (format, rows, shade) => {
+        const n = rows.length, t = this.device.createTexture({ size: [n, 2], format, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+        this.device.queue.writeTexture({ texture: t }, new Uint8Array([...rows, ...shade].flatMap((r) => [...r, 255].slice(0, 4))), { bytesPerRow: n * 4 }, [n, 2]);
+        return t;
+      };
+      this.warePalette = { alb: tex('rgba8unorm-srgb', WARE_PALETTE, WARE_SHADE), mr: tex('rgba8unorm', WARE_MR, WARE_MR) };
+    }
+    const m = this.lyingModel(wareMesh(kind), this.warePalette.alb, this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255])), this.warePalette.mr, [0, 0, 0, 0]);
+    this.wares.set(kind, m);
+    return m;
+  }
+
   // A heap of coins on the ground, each an eight-sided disc lying as it fell.
   coins() {
     if (this.coinHeap) return this.coinHeap;
@@ -1103,7 +1287,7 @@ export class Renderer {
     const layout = (...g) => device.createPipelineLayout({ bindGroupLayouts: g });
     const module = (code) => this.shader(code);
 
-    const terrainMod = module(TERRAIN);
+    const terrainMod = module(TERRAIN.replaceAll('FAR_SPAN', (2 * FAR_HALF).toFixed(1)));
     this.pTerrain = device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglArr2),
       vertex: { module: terrainMod, entryPoint: 'vs', buffers: [{ arrayStride: 24, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }] }] },
@@ -1608,6 +1792,8 @@ export class Renderer {
     const n = this.tier.cascades;
     const tan = Math.tan(fov / 2);
     const sun = this.sunDir;
+    this.followLand(cam);
+    this.slimeBodies?.update(snap, snap[H.TIME], cam);
     this.pines.update(cam, aspect, tan);
     let prev = 0.1;
     // The far cascade is drawn less often, and keeps the matrix it was drawn with until the next.
@@ -1660,6 +1846,10 @@ export class Renderer {
     // Lanterns, the nearest to the camera first. When there are more than the tier can light, each fades out before the
     // next one takes its place, so none switches off in view.
     const lights = this.lights;
+    // (The houses' lamps go out when everyone in is asleep: src/gfx/homelights.js sets L.dim.)
+    const now = performance.now();
+    this.homeLights.frame(this.folk?.slot || null, Math.min(0.25, (now - (this.homeLightsAt || now)) / 1000));
+    this.homeLightsAt = now;
     // (Below, where every light there is is a flame, twice the tier's count. A phone keeps its two.)
     // (And in Lisandra's cave, lit by her candles.)
     const take = Math.min(lights.length, this.tier.lights * ((cam.y < -6 || this.inCave) && !this.tier.lean ? 2 : 1));
@@ -1672,7 +1862,7 @@ export class Renderer {
       const L = lit[i].L;
       const fl = 1 + L.flicker * 0.25 * (Math.sin(t * 9.1 + i * 2.1) * 0.6 + Math.sin(t * 17.3 + i) * 0.4);
       const fade = Math.min(1, nextD - lit[i].d);
-      d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i * fl * fade], O.LIGHTS + i * 8);
+      d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i * fl * fade * (L.dim ?? 1)], O.LIGHTS + i * 8);
     }
     let spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
     // The light off the gems you carry. src/gfx/gemfx.js.
@@ -1680,6 +1870,8 @@ export class Renderer {
       if (take + spellLights >= 28) break;
       d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i], O.LIGHTS + (take + spellLights++) * 8);
     }
+    // A candle or a lamp the player's carrying (src/ui/folk.js: bought of Elspeth Tallow).
+    if (this.carryLight && take + spellLights < 28) { const L = this.carryLight; d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i], O.LIGHTS + (take + spellLights++) * 8); }
     d.set([take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9], O.COUNTS);
     d.set(this.caveAmb || [0, 0, 0, 0], O.CAVE);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);
@@ -1706,6 +1898,8 @@ export class Renderer {
       // (Different distances each way, so a body standing right at the line doesn't flicker between the two.)
       c.far = Math.hypot(x - cam.x, z - cam.z) > (c.far ? 14 : 16);
     }
+    // The townsfolk (src/gfx/folk.js).
+    if (this.folk) this.folk.cull(cam, pl);
   }
 
   // The gems on the skull in the left hand, in its own pattern: one mesh, made when what's on it changes. An empty socket is a small black stone.
@@ -1805,6 +1999,7 @@ export class Renderer {
       }
     }
     q.writeBuffer(this.propInstances, 0, this.propData);
+    if (this.folk) this.folk.upload(q, time, skinParams, skinParamsU);
     this.stage = 'viewmodel uploads';
     // View model: the arms the snapshot posed, and what's in them.
     const weapon = WEAPONS[snap[H.WEAPON] | 0] || null;
@@ -1980,9 +2175,12 @@ export class Renderer {
     for (const g of this.chests) drawn.push(g);
     if (this.doorItems.length && !this.doorModels) this.doorModel();
     for (const g of this.doorItems) drawn.push(g);
+    this.stallItems ||= this.makeStalls();
+    for (const g of this.stallItems) if (this.stallsOpen.has(g.id) === g.open) drawn.push(g);
+    if (this.dishes) for (const g of this.dishes.values()) drawn.push(g);
     if (snap[H.SURF] > 1.5 && this.board.sword) drawn.push(this.board);
     for (const g of drawn) {
-      let model = g.openingModel ?? (g.door ? this.doorModels?.[g.piece] : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
+      let model = g.openingModel ?? (g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
@@ -2033,6 +2231,7 @@ export class Renderer {
       cp.setBindGroup(0, c.bg);
       cp.dispatchWorkgroups(Math.ceil(c.count / 128));
     }
+    if (this.folk) this.folk.compute(cp);
     cp.setBindGroup(0, this.vm.bg);
     cp.dispatchWorkgroups(Math.ceil(this.vm.count / 128));
     if (this.held) {
@@ -2094,6 +2293,7 @@ export class Renderer {
       // (The cathedral's shell shades the green. What's under the ground has no sun to shade.)
       if (this.camNow.y > -6) this.pines.drawShadow(sp, c, c === tier.cascades - 1, this.shCutBG);
       sp.setPipeline(this.pShStatic);
+      if (c < 2) this.slimeBodies?.draw(sp);
       sp.setVertexBuffer(0, this.interior.tiles.VB);
       sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
       sp.drawIndexed(this.interior.tiles.cath);
@@ -2105,6 +2305,7 @@ export class Renderer {
         sp.setIndexBuffer(ch.lodIB, 'uint32');
         sp.drawIndexed(ch.lodCount);
       }
+      if (this.folk) this.folk.shadow(sp);
       sp.setPipeline(this.pShProp);
       sp.setVertexBuffer(1, this.propInstances);
       this.props.forEach((pr, i) => {
@@ -2243,6 +2444,7 @@ export class Renderer {
         mp.drawIndexed(ch.indices);
       }
     }
+    if (this.folk) this.folk.draw(mp, tier.lean);
     mp.setPipeline(this.pProp);
     mp.setVertexBuffer(1, this.propInstances);
     this.props.forEach((pr, i) => {
@@ -2264,8 +2466,8 @@ export class Renderer {
     }
     const vis = visibility(this.interior.data.f0, this.camNow);
     drawOpaque(this, mp, this.interior, vis);
-    // (From under the ground, none of the world above can be seen.)
-    if (!vis.deep) {
+    // (From under the ground, none of the world above can be seen; but see visibility.)
+    if (vis.world) {
     mp.setPipeline(this.pStatic);
     mp.setBindGroup(1, this.staticBG);
     mp.setVertexBuffer(0, this.staticVB);
@@ -2275,6 +2477,7 @@ export class Renderer {
       mp.setPipeline(this.pStaticCut);
       mp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
     }
+    if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     this.pines.draw(mp);
     // Grass before the ground it stands on: its shader is next to nothing, and the ground's is the costliest there is.
     if (this.grassOn) {
@@ -2294,7 +2497,7 @@ export class Renderer {
     }
     mp.setPipeline(this.pSky);
     mp.draw(3);
-    if (vis.hall || vis.deep) drawGlow(this, mp, this.interior);
+    drawGlow(this, mp, this.interior, vis.hall || vis.deep);
     this.openingStage?.drawGlow(mp);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);

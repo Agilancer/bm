@@ -14,7 +14,7 @@ export class Doors {
     this.doors = [];
     for (const l of this.leaves) {
       let d = this.doors.find((o) => o.id === l.id);
-      if (!d) { d = { id: l.id, leaves: [], open: false, cx: l.cx, cz: l.cz, y: l.y, reach: l.reach, far: l.far }; this.doors.push(d); }
+      if (!d) { d = { id: l.id, leaves: [], open: false, cx: l.cx, cz: l.cz, y: l.y, reach: l.reach, far: l.far, lock: l.lock || null }; this.doors.push(d); }
       d.leaves.push(l);
     }
     // What fills the corners over a house's arched door stays put.
@@ -52,6 +52,7 @@ export class Doors {
         }
       }
       const dx = d.cx - px, dz = d.cz - pz, dist = Math.hypot(dx, dz), dy = Math.abs(d.y - py);
+      if (d.shutting && (dist > 1.6 || dy > 2.5)) { d.shutting = false; d.folk = false; this.toggle(d, true); }
       if (dy > 14 || dist > d.far) continue;
       const lod = dist > NEAR;
       for (const l of d.leaves) {
@@ -64,7 +65,16 @@ export class Doors {
     return best;
   }
 
-  toggle(d) {
+  // The townsfolk come and go (src/folk/client.js): a door one of them opened they shut behind them, once you're out of
+  // the way of it, unless you've had your hand on it since.
+  byFolk(id, open) {
+    const d = this.doors.find((o) => o.id === id);
+    if (!d) return;
+    if (open) { if (!d.open) { this.toggle(d, true); d.folk = true; } d.shutting = false; } else if (d.folk && d.open) d.shutting = true;
+  }
+
+  toggle(d, folk = false) {
+    if (!folk) { d.folk = false; d.shutting = false; }
     d.open = !d.open;
     this.mask();
     const big = d.reach > 3 ? 0.7 : 1;

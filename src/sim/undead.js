@@ -3,7 +3,9 @@
 // with no head goes by ear. Only running out of body stops them. Over them are the casters, who think: see Caster below, and foespells.js
 // for what they throw.
 import { C, EV } from '../core/layout.js';
+import { churchAt, churchSite, toChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
+import { inTown } from '../core/town.js';
 import { clamp, damp, quatYaw, wrapAngle, quatRotate } from '../core/math.js';
 import { ArmsRig } from './anim.js';
 import { Beast } from './beast.js';
@@ -1176,10 +1178,10 @@ export function raiseZombie(sim, x, z, owner, calm = false) {
 // Where the first bodies stand: scattered over the fields round the village, a good way from it.
 function fieldSpot(i, world) {
   for (let tries = 0; tries < 24; tries++) {
-    // In fours, out in the woods: none in the town, none on the church's ground, none where you start.
+    // In fours, out in the woods: none in the town, none on the ground east of it out to the church and on past it, none where you start.
     const g = Math.floor(i / 4), a = (g + tries * 0.37) * 2.399963 + (i % 4) * 0.05, r = 82 + ((g * 23 + tries * 11) % 90) + (i % 4) * 2;
     const x = Math.sin(a) * r, z = Math.cos(a) * r;
-    if (!world.inside(x, z, 0.8) && Math.hypot(x - 7.5, z - 72) > 95 && !(x > 40 && Math.abs(z) < 45)) return [x, z];
+    if (!world.inside(x, z, 0.8) && Math.hypot(x - 7.5, z - 72) > 95 && !inTown(x, z, 10) && !(x > 40 && Math.abs(z) < 45)) return [x, z];
   }
   return [-Math.abs(Math.sin(i)) * 90, Math.cos(i) * 90];
 }
@@ -1189,12 +1191,14 @@ function fieldSpot(i, world) {
 // Below ground there are more places to stand than there are bodies, so bodies with nothing better to do are stood ahead of you as
 // you go down: first the ones nobody's using, then the long dead, then whoever's still in the fields, a long way above. Each place is
 // filled once, so what you've cleared stays clear. The big ones and the casters have rooms of their own, when you get near them.
+// (Where, in the church's own frame, and moved with it: src/core/church.js.)
+const along = (p) => toChurch(p.x, p.z)[0];
 const LORDS = [
-  { model: 'zombie_necromancer', when: (p) => p.y < -10, near: [205, -33] },
-  { model: 'necromancer', when: (p) => p.y < -20, near: [186, -100] },
-  { model: 'zombie_ogre', when: (p) => p.y < -20, near: [197, -78] },
-  { model: 'zombie_ogre', when: (p) => p.y < -20 && p.x > 200, near: [236, -86] },
-  { model: 'evil_wizard', when: (p) => p.y < -20 && p.x > 200, near: [250, -86] },
+  { model: 'zombie_necromancer', when: (p) => p.y < -10, near: churchAt(205, -33) },
+  { model: 'necromancer', when: (p) => p.y < -20, near: churchAt(186, -100) },
+  { model: 'zombie_ogre', when: (p) => p.y < -20, near: churchAt(197, -78) },
+  { model: 'zombie_ogre', when: (p) => p.y < -20 && along(p) > 200, near: churchAt(236, -86) },
+  { model: 'evil_wizard', when: (p) => p.y < -20 && along(p) > 200, near: churchAt(250, -86) },
 ];
 const NEAR = 12, FAR = 32, OUT_OF_SIGHT = 20;
 const used = new Set();
@@ -1210,7 +1214,7 @@ function standAt(sim, body, s) {
 
 export function stepCatacombs(sim) {
   const p = sim.player;
-  if (p.x < 125 || sim.time < nextLook) return;
+  if (along(p) < 125 || sim.time < nextLook) return;   // (Past the office, at the head of the stair down.)
   nextLook = sim.time + 0.5;
   const spawns = sim.world.spawns;
   const idle = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
@@ -1226,6 +1230,17 @@ export function stepCatacombs(sim) {
     body.below = true;
     standAt(sim, body, spawns[best]);
   });
+  // The Bell Crypt's warden, at night, while the quest wants it (src/folk/quests.js): a champion of the dead, stood up in the
+  // crypt as you come down the stair to it.
+  if (sim.wardenWanted && p.y < -8 && along(p) > 150 && along(p) < 200 && Math.abs(toChurch(p.x, p.z)[1]) < 14) {
+    const body = sim.knights.find((k) => idle(k) && (k.dormant || k.dead)) || sim.knights.find(idle);
+    if (body) {
+      sim.wardenWanted = false;
+      const at = churchAt(194, 0);
+      standAt(sim, body, { x: at[0], z: at[1], yaw: -Math.PI / 2 });
+      body.champion = true; body.hp = body.maxHp = body.hp * 6; body.dmgScale *= 1.8; body.pace *= 1.1;
+    }
+  }
   let room = 2;
   for (let i = 0; i < spawns.length && room > 0; i++) {
     if (used.has(i)) continue;
@@ -1243,8 +1258,8 @@ export function stepCatacombs(sim) {
 
 // ---- the woods -----------------------------------------------------------------------------------------------
 // Between the quiet stretches, a pack comes for you out of the trees: a champion and its followers, and sometimes a caster behind them.
-// The bodies are the same few as ever, stood up again wherever you are. Nothing comes while you're near the town, or indoors.
-export const TOWN_R = 58;
+// The bodies are the same few as ever, stood up again wherever you are. Nothing comes while you're near the town (src/core/town.js), or
+// indoors, or on the church's ground, where its knight is enough.
 const PACK_NEAR = 20, PACK_FAR = 30, QUIET = [18, 34], MOST_AT_ONCE = 14, MELEE_AT_ONCE = 4, WAVE_GAP = 4;
 
 function standPack(sim, b, cx, cz) {
@@ -1274,8 +1289,8 @@ export function stepWoods(sim) {
   if (p.dead || sim.time < sim.packAt) return;
   sim.packAt = sim.time + 1;
   const out = Math.hypot(p.x, p.z);
-  if (out < 40 || out > 125) sim.reachedTown = true;   // In the town, or gone out past it: until then the woods hold their packs back.
-  if (!sim.reachedTown || out < TOWN_R + 26 || floorAt(p.x, p.z) !== null || Math.abs(p.x) > 235 || Math.abs(p.z) > 235) return;
+  if (inTown(p.x, p.z, -12) || out > 125) sim.reachedTown = true;   // In the town, or gone out past it: until then the woods hold their packs back.
+  if (!sim.reachedTown || inTown(p.x, p.z, 26) || churchSite(p.x, p.z) < 6 || floorAt(p.x, p.z) !== null || Math.abs(p.x) > 235 || Math.abs(p.z) > 235) return;
   const list = sim.knights;
   if (list.filter((k) => k instanceof Zombie && !k.dead && !k.dormant && k.aggro && Math.hypot(k.x - p.x, k.z - p.z) < 50).length >= MOST_AT_ONCE) return;
   // Somewhere ahead or to the side, and off the path of what's clear.
@@ -1283,7 +1298,7 @@ export function stepWoods(sim) {
   for (let t = 0; t < 12 && !found; t++) {
     const a = p.yaw + rnd(-1.9, 1.9), r = rnd(PACK_NEAR, PACK_FAR);
     cx = p.x + Math.sin(a) * r; cz = p.z + Math.cos(a) * r;
-    found = Math.hypot(cx, cz) > TOWN_R + 6 && floorAt(cx, cz) === null && !sim.world.inside(cx, cz, 1);
+    found = !inTown(cx, cz, 6) && churchSite(cx, cz) > 0 && floorAt(cx, cz) === null && !sim.world.inside(cx, cz, 1);
   }
   if (!found) return;
   const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 60));
@@ -1301,7 +1316,7 @@ export function stepWoods(sim) {
   if (Math.random() < 0.4) {
     const c = list.find((k) => k.opts?.role && ((k.dead && k.deadT > 45) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 90)));
     const x = cx + (cx - p.x) * 0.3, z = cz + (cz - p.z) * 0.3;
-    if (c && !sim.world.inside(x, z, 0.8) && floorAt(x, z) === null && Math.hypot(x, z) > TOWN_R + 6) huntFrom(sim, c, x, z, undefined);
+    if (c && !sim.world.inside(x, z, 0.8) && floorAt(x, z) === null && !inTown(x, z, 6)) huntFrom(sim, c, x, z, undefined);
   }
   sim.event(EV.ROAR, cx, sim.world.height(cx, cz) + 1, cz, 1);
   sim.packAt = sim.time + rnd(QUIET[0], QUIET[1]) * (out > 170 ? 0.6 : 1);   // Quieter near the town, relentless far out.
@@ -1340,12 +1355,13 @@ export async function addUndead(sim, base) {
       c.loop = !!m.loop; c.speed = m.speed || 0; c.reach = m.reach; c.root = m.root;
     }
     for (let i = 0; i < b.count; i++) {
+      // (An ogre and the plaguebearer keep the woods north of the church, and went out east with it, off the town's new ground.)
       if (b.model === 'zombie_ogre') {
-        sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-72, -78] : [118, -64], yaw: i * 2, hp: 130, limbs: 2.4, dmg: 2.2, type: 'runner' }));
+        sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-72, -78] : churchAt(28, -64), yaw: i * 2, hp: 130, limbs: 2.4, dmg: 2.2, type: 'runner' }));
       } else if (b.model === 'necromancer') {
         sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-98, 12], yaw: 1.4, hp: 90, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7 }));
       } else if (b.model === 'zombie_necromancer') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [82, -72], yaw: -1.7, hp: 90, limbs: 1.8, role: 'plaguebearer', boltElem: ELEM.POISON, lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: churchAt(-8, -72), yaw: -1.7, hp: 90, limbs: 1.8, role: 'plaguebearer', boltElem: ELEM.POISON, lootKind: 7 }));
       } else if (b.model === 'evil_wizard') {
         sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: i ? [-88, 70] : [26, -108], yaw: i ? 2.2 : -0.4, hp: 80, limbs: 1.8, role: 'wizard', boltElem: i ? ELEM.FIRE : ELEM.ARCANE, lootKind: 7 }));
       } else {

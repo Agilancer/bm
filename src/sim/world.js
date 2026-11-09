@@ -1,42 +1,60 @@
 // Collision and navigation against the village: oriented boxes on a height function, a flat ground grid
 // for the flow field, and rays against the plates of a rigid armour.
 import { floorAt, homeFloor, inPit, setFloors } from '../core/interior.js';
-import { forestTrees, trunkRadius } from '../core/forest.js';
+import { CELL, TREE_FLOATS, treesInCells, trunkRadius } from '../core/forest.js';
 import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { caveFloor, caveKeep } from '../core/opening.js';
+import { CHURCH_BOUNDS } from '../core/church.js';
+import { buildSites } from '../core/sites.js';
 
-// (Big enough to reach the catacombs. Cells nobody can stand on are walled off, so the search stays small.)
-const NAV_SIZE = 512, NAV_CELL = 1.0, NAV_HALF = NAV_SIZE * NAV_CELL / 2, NAV_REACH = 150;
+// The places out in the countries (src/core/sites.js): their boxes kept by 64 m cell, so a body only looks at the ones near it.
+const SITE_CELL = 64;
+const siteKey = (i, j) => (i + 200) * 400 + j + 200;
+
+// (Big enough to reach the catacombs, wherever the church stands: src/core/church.js. Cells nobody can stand on are walled off, so the search
+// stays small.) Its north-west corner and how many cells it is each way, for the tools and tests that read a field: cell (i, j) is row j * NAV_W.
+export const NAV_CELL = 1.0, NAV_X0 = -256, NAV_Z0 = Math.min(-256, Math.floor(CHURCH_BOUNDS.z0) - 8);
+export const NAV_W = Math.ceil((Math.max(256, CHURCH_BOUNDS.x1 + 8) - NAV_X0) / NAV_CELL), NAV_H = Math.ceil((Math.max(256, CHURCH_BOUNDS.z1 + 8) - NAV_Z0) / NAV_CELL);
+const NAV_REACH = 150;
 const NAV_RADIUS = 0.86;
 const NAV_EDGE = 250;      // Past this nothing's worked out where to walk: whatever's chasing you stops at it, and the land goes on to LAND_EDGE.
 
 const OUT_OF_THE_WAY = 1e9;  // (a box only those with their feet above this run into)
 const TRUNK_CELL = 16, TOWN = 50;     // (The forest stands clear of the town, so nobody in it looks for a trunk.)
-const trunkKey = (i, j) => (i + 1000) * 2000 + j + 1000;
+const trunkKey = (i, j) => (i + 1000) * 2000 + j + 1000;   // (11 km is 700 trunk cells: well inside)
+// Down in the catacombs, under the land: the pines standing up on it aren't down there. (Over them, floorAt gives their floor.)
+const underLand = (x, z) => { const f = floorAt(x, z); return f !== null && f < -2; };
 
 export class World {
   constructor(data, interior) {
     // The pines' trunks, by the cell they're in. As far as you can go, and no further.
+    // (Worked out a cell at a time, the first time anyone comes near it: the land's 11 km across.)
     this.trunks = new Map();
-    const t = forestTrees(LAND_EDGE + 24);
-    for (let i = 0; i < t.length; i += 6) {
-      const key = trunkKey(Math.floor(t[i] / TRUNK_CELL), Math.floor(t[i + 1] / TRUNK_CELL));
-      if (!this.trunks.has(key)) this.trunks.set(key, []);
-      this.trunks.get(key).push(t[i], t[i + 1], trunkRadius(t[i + 2], t[i + 3]));
-    }
     setFloors(interior.floors, interior.homes);
     this.spawns = interior.spawns;
     this.colliders = data.colliders.concat(interior.colliders).map((c) => ({ ...c, s: Math.sin(c.yaw), co: Math.cos(c.yaw) }));
+    this.siteBoxes = new Map();
+    for (const c0 of buildSites().colliders) {
+      const c = { ...c0, s: Math.sin(c0.yaw), co: Math.cos(c0.yaw) }, R = Math.hypot(c.hx, c.hz);
+      for (let j = Math.floor((c.z - R) / SITE_CELL); j <= Math.floor((c.z + R) / SITE_CELL); j++) {
+        for (let i = Math.floor((c.x - R) / SITE_CELL); i <= Math.floor((c.x + R) / SITE_CELL); i++) {
+          const k = siteKey(i, j);
+          let list = this.siteBoxes.get(k);
+          if (!list) this.siteBoxes.set(k, list = []);
+          list.push(c);
+        }
+      }
+    }
     this.lightsData = data.lights;
-    this.grid = new Uint8Array(NAV_SIZE * NAV_SIZE);
+    this.grid = new Uint8Array(NAV_W * NAV_H);
     this.slots = new Map();
-    this.queue = new Int32Array(NAV_SIZE * NAV_SIZE * 4);
+    this.queue = new Int32Array(NAV_W * NAV_H * 4);
     this.heights = new Float32Array(257 * 257);
     for (let j = 0; j < 257; j++) for (let i = 0; i < 257; i++) this.heights[j * 257 + i] = terrainHeight(i - 128, j - 128);
-    for (let j = 0; j < NAV_SIZE; j++) {
-      for (let i = 0; i < NAV_SIZE; i++) {
-        const x = (i + 0.5) * NAV_CELL - NAV_HALF, z = (j + 0.5) * NAV_CELL - NAV_HALF;
-        this.grid[j * NAV_SIZE + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, NAV_RADIUS) ? 1 : 0;
+    for (let j = 0; j < NAV_H; j++) {
+      for (let i = 0; i < NAV_W; i++) {
+        const x = (i + 0.5) * NAV_CELL + NAV_X0, z = (j + 0.5) * NAV_CELL + NAV_Z0;
+        this.grid[j * NAV_W + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, NAV_RADIUS) ? 1 : 0;
       }
     }
     // The doors: each leaf a box in its doorway when it's shut and a box against the wall when it's open, one of them out of the way. (Not in the grid above: they come and go.)
@@ -50,6 +68,25 @@ export class World {
     this.caveSealed = false;
     this.caveRubble = this.colliders.filter((c) => c.rubble);
     this.setCaveSealed(false);
+  }
+
+  // The trunks standing in one of the trunk grid's cells: [x, z, radius, ...], or null.
+  trunkCell(i, j) {
+    const key = trunkKey(i, j);
+    let list = this.trunks.get(key);
+    if (list === undefined) {
+      const x0 = i * TRUNK_CELL, z0 = j * TRUNK_CELL;
+      // (A forest cell's tree can stand up to 0.9 of a cell from its corner: take the cells round about and keep what falls in this one.)
+      const t = treesInCells(Math.floor(x0 / CELL) - 1, Math.ceil((x0 + TRUNK_CELL) / CELL) + 1, Math.floor(z0 / CELL) - 1, Math.ceil((z0 + TRUNK_CELL) / CELL) + 1);
+      list = [];
+      for (let k = 0; k < t.length; k += TREE_FLOATS) {
+        if (t[k] < x0 || t[k] >= x0 + TRUNK_CELL || t[k + 1] < z0 || t[k + 1] >= z0 + TRUNK_CELL) continue;
+        list.push(t[k], t[k + 1], trunkRadius(t[k + 2], t[k + 3]));
+      }
+      list = list.length ? list : null;
+      this.trunks.set(key, list);
+    }
+    return list;
   }
 
   setCaveSealed(sealed) {
@@ -92,42 +129,50 @@ export class World {
       const ci = Math.floor(x / TRUNK_CELL), cj = Math.floor(z / TRUNK_CELL);
       for (let j = cj - 1; j <= cj + 1; j++) {
         for (let i = ci - 1; i <= ci + 1; i++) {
-          const list = this.trunks.get(trunkKey(i, j));
+          const list = this.trunkCell(i, j);
           if (!list) continue;
-          for (let k = 0; k < list.length; k += 3) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return true;
+          for (let k = 0; k < list.length; k += 3) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return !underLand(x, z);
         }
       }
     }
     return false;
   }
 
+  // The boxes of the places out in the land within a cell of x, z (or null).
+  sitesNear(x, z) {
+    return this.siteBoxes.get(siteKey(Math.floor(x / SITE_CELL), Math.floor(z / SITE_CELL))) || null;
+  }
+
   // Push a circle out of boxes. feet is the circle's height: low boxes can be jumped over.
   resolve(out, r, feet) {
     let x = out[0], z = out[2];
     let hit = false;
+    const push = (c) => {
+      const dx = x - c.x, dz = z - c.z;
+      if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) return;
+      if (feet > (c.t ?? c.h + 0.02 + this.height(c.x, c.z)) || feet < c.b) return;
+      const lx = dx * c.co - dz * c.s, lz = dx * c.s + dz * c.co;
+      const qx = Math.abs(lx) - c.hx, qz = Math.abs(lz) - c.hz;
+      if (qx > r || qz > r) return;
+      const sx = lx < 0 ? -1 : 1, sz = lz < 0 ? -1 : 1;
+      let px = 0, pz = 0;
+      if (qx > 0 && qz > 0) {
+        const d = Math.hypot(qx, qz);
+        if (d >= r) return;
+        px = sx * qx / d * (r - d); pz = sz * qz / d * (r - d);
+      } else if (qx > qz) { px = sx * (r - qx); } else { pz = sz * (r - qz); }
+      x += px * c.co + pz * c.s; z += -px * c.s + pz * c.co;
+      hit = true;
+    };
     for (let pass = 0; pass < 2; pass++) {
-      for (const c of this.colliders) {
-        const dx = x - c.x, dz = z - c.z;
-        if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) continue;
-        if (feet > (c.t ?? c.h + 0.02 + this.height(c.x, c.z)) || feet < c.b) continue;
-        const lx = dx * c.co - dz * c.s, lz = dx * c.s + dz * c.co;
-        const qx = Math.abs(lx) - c.hx, qz = Math.abs(lz) - c.hz;
-        if (qx > r || qz > r) continue;
-        const sx = lx < 0 ? -1 : 1, sz = lz < 0 ? -1 : 1;
-        let px = 0, pz = 0;
-        if (qx > 0 && qz > 0) {
-          const d = Math.hypot(qx, qz);
-          if (d >= r) continue;
-          px = sx * qx / d * (r - d); pz = sz * qz / d * (r - d);
-        } else if (qx > qz) { px = sx * (r - qx); } else { pz = sz * (r - qz); }
-        x += px * c.co + pz * c.s; z += -px * c.s + pz * c.co;
-        hit = true;
-      }
-      if (Math.abs(x) > TOWN || Math.abs(z) > TOWN) {
+      for (const c of this.colliders) push(c);
+      const near = this.sitesNear(x, z);
+      if (near) for (const c of near) push(c);
+      if ((Math.abs(x) > TOWN || Math.abs(z) > TOWN) && feet > -2) {
         const ci = Math.floor(x / TRUNK_CELL), cj = Math.floor(z / TRUNK_CELL);
         for (let j = cj - 1; j <= cj + 1; j++) {
           for (let i = ci - 1; i <= ci + 1; i++) {
-            const list = this.trunks.get(trunkKey(i, j));
+            const list = this.trunkCell(i, j);
             if (!list) continue;
             for (let k = 0; k < list.length; k += 3) {
               const dx = x - list[k], dz = z - list[k + 1], d = Math.hypot(dx, dz), R = list[k + 2] + r;
@@ -169,10 +214,33 @@ export class World {
       if (c.h >= 3.5 && yAt > 7) continue;
       if (best < 0 || t0 < best) best = t0;
     }
+    // The places' walls, near where the ray starts and ends (rays are short), by their height over the land.
+    const seen = new Set();
+    for (const list of [this.sitesNear(ox, oz), this.sitesNear(ox + dx * maxT, oz + dz * maxT)]) {
+      if (!list) continue;
+      for (const c of list) {
+        if (seen.has(c)) continue;
+        seen.add(c);
+        const rx = ox - c.x, rz = oz - c.z;
+        const lox = rx * c.co - rz * c.s, loz = rx * c.s + rz * c.co;
+        const ldx = dx * c.co - dz * c.s, ldz = dx * c.s + dz * c.co;
+        let t0 = 0, t1 = maxT;
+        const slab = (o, d, h) => {
+          if (Math.abs(d) < 1e-6) return Math.abs(o) <= h;
+          let a = (-h - o) / d, b = (h - o) / d;
+          if (a > b) { const s = a; a = b; b = s; }
+          t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+          return t0 <= t1;
+        };
+        if (!slab(lox, ldx, c.hx) || !slab(loz, ldz, c.hz)) continue;
+        if (oy + dy * t0 > c.h + terrainHeight(c.x, c.z)) continue;
+        if (best < 0 || t0 < best) best = t0;
+      }
+    }
     // And the pines, stepping along the ray a cell at a time.
     const flat2 = dx * dx + dz * dz;
     const ex = ox + dx * maxT, ez = oz + dz * maxT;
-    if (flat2 > 1e-6 && (Math.abs(ox) > TOWN || Math.abs(oz) > TOWN || Math.abs(ex) > TOWN || Math.abs(ez) > TOWN)) {
+    if (flat2 > 1e-6 && (oy > -2 || oy + dy * maxT > -2) && (Math.abs(ox) > TOWN || Math.abs(oz) > TOWN || Math.abs(ex) > TOWN || Math.abs(ez) > TOWN)) {
       const step = TRUNK_CELL / Math.sqrt(flat2);
       let lastKey = -1;
       for (let s = 0; s <= maxT + step; s += step) {
@@ -201,28 +269,28 @@ export class World {
   // Slot 0 is the player, shared by everyone hunting them. Anyone going elsewhere keeps a slot of their own.
   updateField(x, z, now, slot = 0) {
     let f = this.slots.get(slot);
-    if (!f) { f = { field: new Float32Array(NAV_SIZE * NAV_SIZE), x: 1e9, z: 1e9, t: -1e9 }; this.slots.set(slot, f); }
+    if (!f) { f = { field: new Float32Array(NAV_W * NAV_H), x: 1e9, z: 1e9, t: -1e9 }; this.slots.set(slot, f); }
     if (Math.abs(now - f.t) < 0.2 && Math.hypot(x - f.x, z - f.z) < 2) return;
     f.t = now; f.x = x; f.z = z;
     const { field } = f;
     const { grid, queue } = this;
     field.fill(1e9);
-    const si = Math.max(0, Math.min(NAV_SIZE - 1, ((x + NAV_HALF) / NAV_CELL) | 0)), sj = Math.max(0, Math.min(NAV_SIZE - 1, ((z + NAV_HALF) / NAV_CELL) | 0));
+    const si = Math.max(0, Math.min(NAV_W - 1, ((x - NAV_X0) / NAV_CELL) | 0)), sj = Math.max(0, Math.min(NAV_H - 1, ((z - NAV_Z0) / NAV_CELL) | 0));
     let head = 0, tail = 0;
-    queue[tail++] = sj * NAV_SIZE + si; field[sj * NAV_SIZE + si] = 0;
+    queue[tail++] = sj * NAV_W + si; field[sj * NAV_W + si] = 0;
     const cap = queue.length;
     while (head < tail) {
       const k = queue[head++];
-      const i = k % NAV_SIZE, j = (k / NAV_SIZE) | 0;
+      const i = k % NAV_W, j = (k / NAV_W) | 0;
       const d = field[k];
       for (let dj = -1; dj <= 1; dj++) {
         for (let di = -1; di <= 1; di++) {
           if (!di && !dj) continue;
           const ni = i + di, nj = j + dj;
-          if (ni < 0 || nj < 0 || ni >= NAV_SIZE || nj >= NAV_SIZE) continue;
-          const nk = nj * NAV_SIZE + ni;
+          if (ni < 0 || nj < 0 || ni >= NAV_W || nj >= NAV_H) continue;
+          const nk = nj * NAV_W + ni;
           if (grid[nk]) continue;
-          if (di && dj && (grid[j * NAV_SIZE + ni] || grid[nj * NAV_SIZE + i])) continue;
+          if (di && dj && (grid[j * NAV_W + ni] || grid[nj * NAV_W + i])) continue;
           const nd = d + (di && dj ? 1.414 : 1);
           if (nd > NAV_REACH) continue;
           if (nd < field[nk] - 1e-3 && tail < cap) { field[nk] = nd; queue[tail++] = nk; }
@@ -233,17 +301,17 @@ export class World {
 
   // Unit direction along the flow field toward the target, or straight there if off the grid.
   flow(out, x, z, tx, tz, slot = 0) {
-    const i = ((x + NAV_HALF) / NAV_CELL) | 0, j = ((z + NAV_HALF) / NAV_CELL) | 0;
+    const i = ((x - NAV_X0) / NAV_CELL) | 0, j = ((z - NAV_Z0) / NAV_CELL) | 0;
     let bx = tx - x, bz = tz - z;
     const field = this.slots.get(slot)?.field;
-    if (field && i >= 1 && j >= 1 && i < NAV_SIZE - 1 && j < NAV_SIZE - 1) {
-      let best = field[j * NAV_SIZE + i];
+    if (field && i >= 1 && j >= 1 && i < NAV_W - 1 && j < NAV_H - 1) {
+      let best = field[j * NAV_W + i];
       let found = false;
       for (let dj = -1; dj <= 1; dj++) {
         for (let di = -1; di <= 1; di++) {
-          if ((!di && !dj) || this.grid[(j + dj) * NAV_SIZE + i + di]) continue;
-          if (di && dj && (this.grid[j * NAV_SIZE + i + di] || this.grid[(j + dj) * NAV_SIZE + i])) continue;
-          const v = field[(j + dj) * NAV_SIZE + i + di];
+          if ((!di && !dj) || this.grid[(j + dj) * NAV_W + i + di]) continue;
+          if (di && dj && (this.grid[j * NAV_W + i + di] || this.grid[(j + dj) * NAV_W + i])) continue;
+          const v = field[(j + dj) * NAV_W + i + di];
           if (v < best - 0.01) {
             const cost = v + (di && dj ? 1.414 : 1);
             if (!found || cost < best + 1e8) { best = v; bx = di; bz = dj; found = true; }
