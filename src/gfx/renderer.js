@@ -14,6 +14,7 @@ import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
+import { Rocks } from './rocks.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
@@ -30,6 +31,7 @@ import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
 import { buildGlowPipeline, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
+import { TrailFX } from './trail.js';
 import { HomeLights } from './homelights.js';
 import { CRAB_SCALE } from '../sim/crab.js';
 import { GRAVEHART_SCALE } from '../sim/gravehart.js';
@@ -212,10 +214,16 @@ export class Renderer {
     const farRows = rest.slice(0, farJobs.length), rows = rest.slice(farJobs.length);
     this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.farTint = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    this.farKind = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    // The roads close round you, finely (src/gfx/rocks.js followRoads): where it lies (x, z), one over its size, and whether it's laid.
+    this.nearRoad = device.createTexture({ size: [512, 512], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    this.nearRoadU = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(this.nearRoadU, 0, new Float32Array([0, 0, 0, 0]));
     for (const row of farRows) {
       const rowsN = row.data.length / 4 / this.farSize;
       device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
       device.queue.writeTexture({ texture: this.farTint, origin: [0, row.rowStart] }, row.tint, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
+      device.queue.writeTexture({ texture: this.farKind, origin: [0, row.rowStart] }, row.kind, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
     }
     tick();
     this.groundMap = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
@@ -248,6 +256,8 @@ export class Renderer {
     this.buildBaseLayouts();
     this.buildStatics(await loadModel(0), layerNames, manifest.layers, village.trees);
     this.pines = new Pines(this, forest.trees, layerNames);
+    this.farSpan = 2 * FAR_HALF;
+    this.rocks = new Rocks(this);
     this.slimeBodies = new SlimeBodies(this);
     this.interior = await loadInterior(this, base, pool, tier);
     tick();
@@ -432,6 +442,9 @@ export class Renderer {
       { binding: 1, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 2, visibility: VF, texture: { sampleType: 'float' } },
       { binding: 3, visibility: VF, texture: { sampleType: 'float' } },
+      { binding: 4, visibility: VF, texture: { sampleType: 'float' } },
+      { binding: 5, visibility: VF, texture: { sampleType: 'float' } },
+      { binding: 6, visibility: VF, buffer: { type: 'uniform' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -460,6 +473,9 @@ export class Renderer {
       { binding: 1, resource: this.groundDetail.createView({ dimension: '2d-array' }) },
       { binding: 2, resource: this.farMap.createView() },
       { binding: 3, resource: this.farTint.createView() },
+      { binding: 4, resource: this.farKind.createView() },
+      { binding: 5, resource: this.nearRoad.createView() },
+      { binding: 6, resource: { buffer: this.nearRoadU } },
     ] });
     this.skinModule = device.createShaderModule({ code: SKIN });
     this.skinPipeline = device.createComputePipeline({ layout: device.createPipelineLayout({ bindGroupLayouts: [this.bglSkin] }), compute: { module: this.skinModule, entryPoint: 'main' } });
@@ -1341,6 +1357,7 @@ export class Renderer {
       { shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' },
       { shaderLocation: 2, offset: 24, format: 'float32x2' }, { shaderLocation: 3, offset: 32, format: 'uint32' }] }];
     this.pGlow = buildGlowPipeline(this, module, layout, DEPTH, ms);
+    this.trail ||= new TrailFX(this);
     const staticMod = module(STATIC);
     const staticPipeline = (mod) => device.createRenderPipeline({
       layout: layout(this.bgl0, this.bglStatic),
@@ -1455,6 +1472,7 @@ export class Renderer {
     ] });
     this.shCutBG = device.createBindGroup({ layout: this.bglShCut, entries: [{ binding: 0, resource: this.colorArr.createView({ dimension: '2d-array' }) }, { binding: 1, resource: this.repeatSmp }] });
     this.pines.buildPipelines(...this.pineArgs, shDepth, this.bglShadow, this.bglShCut);
+    this.rocks.buildPipelines(...this.pineArgs.slice(0, 4), shDepth, this.bglShadow);
     this.pShCut = device.createRenderPipeline({
       layout: layout(this.bglShadow, this.bglShCut),
       vertex: { module: shMod, entryPoint: 'vsCut', buffers: [{ arrayStride: 36, attributes: [
@@ -1846,6 +1864,8 @@ export class Renderer {
     this.followLand(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
     this.pines.update(cam, aspect, tan);
+    this.rocks.update(cam, aspect, tan);
+    this.rocks.updateTumblers(snap, cam);
     let prev = 0.1;
     // The far cascade is drawn less often, and keeps the matrix it was drawn with until the next.
     this.shadowFrame++;
@@ -2358,6 +2378,7 @@ export class Renderer {
       sp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
       // (The cathedral's shell shades the green. What's under the ground has no sun to shade.)
       if (this.camNow.y > -6) this.pines.drawShadow(sp, c, c === tier.cascades - 1, this.shCutBG);
+      if (this.camNow.y > -6 && this.rocksOn !== false) this.rocks.drawShadow(sp, c === tier.cascades - 1);
       sp.setPipeline(this.pShStatic);
       if (c < 2) this.slimeBodies?.draw(sp);
       sp.setVertexBuffer(0, this.interior.tiles.VB);
@@ -2554,6 +2575,7 @@ export class Renderer {
     }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     this.pines.draw(mp);
+    if (this.rocksOn !== false) this.rocks.draw(mp, this.terrainBG);
     // Grass before the ground it stands on: its shader is next to nothing, and the ground's is the costliest there is.
     if (this.grassOn) {
       mp.setBindGroup(1, this.terrainBG);
@@ -2574,6 +2596,7 @@ export class Renderer {
     mp.draw(3);
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
     this.openingStage?.drawGlow(mp);
+    this.trail?.draw(mp);
     if (tier.lean) {
       mp.setPipeline(this.pDraw);
       mp.setBindGroup(1, this.pDrawBG);

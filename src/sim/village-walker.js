@@ -440,11 +440,13 @@ export class VillageWalker {
       } else if (b.pace > 0.05) pace = b.pace;
     }
     if ((!pace || b.keepFace) && b.face !== undefined && b.face !== null) this.yaw += wrapAngle(b.face - this.yaw) * Math.min(1, (b.turn ?? 6) * dt);
-    this.y = world.height(this.x, this.z);
+    // (b.lift: off the ground, stood on a shield or in a hop.)
+    this.y = world.height(this.x, this.z) + (b.lift || 0);
     const moving = pace && !b.keepFace;
-    // Walk, jog or sprint by pace, a little either side of each change so a pace on the line doesn't flick between them.
-    const jog = this.clip === 'Jog_Fwd_Loop', run = this.clip === 'Sprint_Loop';
-    const clip = moving ? (pace < (jog || run ? 1.7 : 2.1) ? this.walk : pace < (run ? 4.1 : 4.7) ? 'Jog_Fwd_Loop' : 'Sprint_Loop') : (b.clip || 'idle');
+    // Walk, jog or sprint by pace (b.gaits: where the jog and the sprint begin), a little either side of each change so a
+    // pace on the line doesn't flick between them.
+    const jog = this.clip === 'Jog_Fwd_Loop', run = this.clip === 'Sprint_Loop', [toJog, toRun] = b.gaits || [2.1, 4.7];
+    const clip = moving ? (pace < (jog || run ? toJog - 0.4 : toJog) ? this.walk : pace < (run ? toRun - 0.6 : toRun) ? 'Jog_Fwd_Loop' : 'Sprint_Loop') : (b.clip || 'idle');
     if (clip !== this.clip) {
       this.rig.capture();
       this.clip = clip;

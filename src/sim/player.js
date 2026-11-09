@@ -225,7 +225,9 @@ export class Player {
     } else if (!stepSurf(this, dt, input, sim)) {
     const swingDrag = (this.guard ? GUARD_DRAG : this.swinging ? 0.8 : this.threat ? 0.9 : this.clip !== this.stance.idle ? 0.95 : 1) * sim.casting.drag;
     // (The opening slows you to a walk in the cave: sim.paceCap.)
-    const speed = Math.min(sim.paceCap ?? Infinity, (sprint ? SPRINT : WALK) * swingDrag * (1 - this.weak * 0.2));
+    // (Bog or frost in your legs: src/sim/tumblers.js.)
+    const mired = this.miredUntil > sim.time ? 0.55 : 1;
+    const speed = Math.min(sim.paceCap ?? Infinity, (sprint ? SPRINT : WALK) * swingDrag * mired * (1 - this.weak * 0.2));
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     // Strafe right is -x when facing +z.
     const wx = (mx * -c + mz * s) * (len > 1 ? 1 / len : 1) * speed;

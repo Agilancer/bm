@@ -3,12 +3,11 @@
 import { CUES, CUE_IDS, emoteAt, lineAt, spoken, voiceOf } from '../core/opening-script.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from '../core/math.js';
-import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, OPENING, OPENING_REVISION, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, collapseEye, prettyShown } from '../core/opening.js';
+import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, HERD_CONTROL, OPENING, OPENING_REVISION, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, collapseEye, prettyShown, storyHolds } from '../core/opening.js';
 import { OpeningSound } from './opening-sound.js';
 import { Emotes } from './emotes.js';
 import { terrainHeight } from '../core/terrain.js';
 
-const HERD_CONTROL = 9.9;    // (src/sim/opening.js: when you can walk again)
 const SKIP_HOLD = 1.0;
 const DEG = Math.PI / 180;
 const yawTo = (a, b) => Math.atan2(b[0] - a[0], b[2] - a[2]);
@@ -116,6 +115,8 @@ export class OpeningHUD {
     const cine = this.cinematic(snap);
     this.root.classList.toggle('bars', cine);
     document.body.classList.toggle('cinematic', cine);
+    // The thumbs go only while you're held still: walking out of the cave is under the bars too, and needs them.
+    document.body.classList.toggle('op-held', storyHolds(stage, t));
     // The first moments of the walk: no crosshair sitting on her while you get your bearings.
     document.body.classList.toggle('op-handoff', stage === OPENING.ESCORT && t < 1.8);
     // Your eyes.
@@ -155,7 +156,8 @@ export class OpeningHUD {
     const held = canSkip && this.skipped !== stage && (this.holding.key || (touchOK && this.holding.touch > 0));
     this.holdT = held ? this.holdT + dt : 0;
     if (this.holdT >= SKIP_HOLD) { this.holdT = 0; this.skipped = stage; this.sound?.hush(); this.onSkip?.(); }
-    this.skipHint.hidden = !canSkip || this.skipped === stage || (stage === OPENING.WAKE && t < 2);
+    // (On a phone, a thumb held while you walk out is walking: only Space skips that, so the hint isn't offered.)
+    this.skipHint.hidden = !canSkip || this.skipped === stage || (stage === OPENING.WAKE && t < 2) || (this.touched && !touchOK);
     this.skipHint.querySelector('span').textContent = this.touched ? 'Hold to skip' : 'Hold Space to skip';
     this.skipHint.style.setProperty('--k', (this.holdT / SKIP_HOLD).toFixed(3));
     // Dust and stones when it comes down.
