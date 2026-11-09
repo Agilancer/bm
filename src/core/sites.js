@@ -196,6 +196,21 @@ class Kit {
     this.collide(x, z, w, t, yaw, y + h);
   }
 
+  // Tessariel's sunburst, flat on a wall: a boss and twelve rays, long and short. (x, y, z) its middle; face: the wall's
+  // outward direction in the ground plane, [nx, nz].
+  sunburst(layer, x, y, z, face, r) {
+    const [nx, nz] = face, rx = nz, rz = -nx, P = (u, v) => [x + rx * u + nx * 0.02, y + v, z + rz * u + nz * 0.02];
+    const two = (a, b, c) => { this.tri(layer, a, b, c); this.tri(layer, a, c, b); };
+    for (let i = 0; i < 12; i++) {
+      const t = i / 12 * TAU, w = 0.13, L = r * (i % 2 ? 0.62 : 1);
+      two(P(Math.cos(t - w) * r * 0.3, Math.sin(t - w) * r * 0.3), P(Math.cos(t) * L, Math.sin(t) * L), P(Math.cos(t + w) * r * 0.3, Math.sin(t + w) * r * 0.3));
+    }
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * TAU, b = (i + 1) / 12 * TAU, c = r * 0.34;
+      two(P(0, 0), P(Math.cos(a) * c, Math.sin(a) * c), P(Math.cos(b) * c, Math.sin(b) * c));
+    }
+  }
+
   // A tapering spike of a few sides: obsidian teeth, icicles turned up.
   spike(layer, x, y, z, r, h, sides = 5, turn = 0, lean = [0, 0]) {
     const p = this.part(layer);
@@ -293,9 +308,8 @@ function downs(K) {
     K.drum('iron', x, by + 31.6 - D, z, D, D * 1.15, 14, { r2: D * 0.42, collide: false });
     K.box('wood', x, by + 33, z, 0.15, 0.3, 1.2, sx ? Math.PI / 2 : 0, { collide: false });
   }
-  // (Tessariel's: a T in gilt over the door.)
-  K.box('fruit2', b.x, by + 6, b.z + 5.08, 0.9, 0.22, 0.05, 0, { collide: false });
-  K.box('fruit2', b.x, by + 4.4, b.z + 5.08, 0.22, 1.6, 0.05, 0, { collide: false });
+  // (Tessariel's: his sunburst in gilt over the door.)
+  K.sunburst('fruit2', b.x, by + 6.2, b.z + 5.04, [0, 1], 1.5);
   K.quad('door_4', [b.x - 1, by + 1, b.z + 5.04], [b.x + 1, by + 1, b.z + 5.04], [b.x + 1, by + 3.9, b.z + 5.04], [b.x - 1, by + 3.9, b.z + 5.04], [0, 0, 1], [[0, 1], [1, 1], [1, 0], [0, 0]]);
   K.spots.bellwright = [b.x + 2.8, by + 1, b.z + 7.5, Math.PI];
 }
@@ -333,13 +347,14 @@ function rustwood(K) {
   K.wall('stone', a.x + L, a.z - Wd, a.x + L, a.z + Wd, 1.4, 16);
   K.wall('stone', a.x - L, a.z - Wd, a.x - L, a.z + Wd, 1.4, 14, { gap: 2 });
   for (let i = -2; i <= 2; i++) K.box('stone', a.x + i * 8, ay - 0.3, a.z + Wd + 0.9, 0.9, 12, 0.6, 0, { collide: false });
-  K.box('stone', a.x - L, ay + 14, a.z, 0.8, 4, 2.2, 0, { collide: false });
-  K.drum('iron', a.x - L, ay + 15.2, a.z, 0.8, 0.9, 12, { r2: 0.35, collide: false });
   for (let i = 0; i < 6; i++) { const x = a.x + 6 - i * 4.4; K.box('roof_3', x, ay + 2 + (i % 2), a.z - 2 + (i % 3), 2.4, 0.3, 3, 0.3 * i, { collide: false }); }
   for (let i = 0; i < 6; i++) K.drum('stone', a.x - 18 + i * 6, ay - 0.3, a.z - Wd - 14, 0.45, 4.5, 8);
   K.box('stone', a.x - 3, ay - 0.3, a.z - Wd - 14, 18, 0.6, 1.4, 0, { collide: false, top: 'stone' });
-  K.box('fruit2', a.x + L + 0.75, ay + 13.5, a.z, 0.05, 0.25, 1.1, 0, { collide: false });
-  K.box('fruit2', a.x + L + 0.75, ay + 11.6, a.z, 0.05, 2.1, 0.28, 0, { collide: false });
+  K.sunburst('fruit2', a.x + L + 0.72, ay + 12.4, a.z, [1, 0], 1.6);
+  // The bell-cote over the west door (Orrin asks after it): two piers, a lintel, a small bell, a little gable.
+  for (const s of [-1, 1]) K.box('stone', a.x - L, ay + 14, a.z + s * 1.6, 0.6, 5, 0.6, 0, { collide: false });
+  K.box('stone', a.x - L, ay + 19, a.z, 0.7, 0.6, 2.3, 0, { collide: false });
+  K.drum('iron', a.x - L, ay + 16.2, a.z, 0.75, 0.9, 12, { r2: 0.32, collide: false });
   // The Fungal Ring: caps the height of a man, in a ring.
   const f = at('fungus');
   for (let i = 0; i < 13; i++) {
@@ -387,6 +402,7 @@ function ashen(K) {
       K.collide(x0, b.z + side * 9, 0.5, 0.5, 0, Y(x0, b.z) + 3);
     }
   }
+  // (The horn of whatever this was, at the ribs' east end.)
   K.spike('pale:stone', b.x + 34, Y(b.x + 34, b.z) - 2, b.z, 6, 9, 7, 0.3);
   K.box('wood', b.x - 30, Y(b.x - 30, b.z + 3) - 0.3, b.z + 3, 0.1, 5, 0.1, 0);
   K.quad('cloth_red', [b.x - 29.9, Y(b.x - 30, b.z + 3) + 4.6, b.z + 3], [b.x - 29.9, Y(b.x - 30, b.z + 3) + 4.6, b.z + 4.8], [b.x - 29.9, Y(b.x - 30, b.z + 3) + 2.6, b.z + 4.6], [b.x - 29.9, Y(b.x - 30, b.z + 3) + 2.6, b.z + 3]);
@@ -420,16 +436,19 @@ function keep(K) {
   K.collide(k.x + HX, k.z, 1.5, 4.2, 0, y0 + 7.5);   // (the gate's shut: he doesn't open it to you yet)
   // The keep: a great block on a plinth, a crown of merlons, a tower at its back corner taller than everything, his red down its face.
   K.box(R, k.x - 12, y0 - 1, k.z, 30, 3, 26, 0);
-  K.box(G, k.x - 12, y0 + 2, k.z, 26, 30, 22, 0, { top: R });
+  K.box(G, k.x - 12, y0 + 2, k.z, 26, 44, 22, 0, { top: R });
   for (let i = 0; i < 16; i++) {
     const u = (i + 0.5) / 16 * 2 - 1;
-    K.box(G, k.x - 12 + u * 26, y0 + 32, k.z - 22, 1, 1.8, 0.8, 0, { collide: false });
-    K.box(G, k.x - 12 + u * 26, y0 + 32, k.z + 22, 1, 1.8, 0.8, 0, { collide: false });
-    K.box(G, k.x - 12 - 26, y0 + 32, k.z + u * 22, 0.8, 1.8, 1, 0, { collide: false });
-    K.box(G, k.x - 12 + 26, y0 + 32, k.z + u * 22, 0.8, 1.8, 1, 0, { collide: false });
+    K.box(G, k.x - 12 + u * 26, y0 + 46, k.z - 22, 1, 1.8, 0.8, 0, { collide: false });
+    K.box(G, k.x - 12 + u * 26, y0 + 46, k.z + 22, 1, 1.8, 0.8, 0, { collide: false });
+    K.box(G, k.x - 12 - 26, y0 + 46, k.z + u * 22, 0.8, 1.8, 1, 0, { collide: false });
+    K.box(G, k.x - 12 + 26, y0 + 46, k.z + u * 22, 0.8, 1.8, 1, 0, { collide: false });
   }
-  K.tower(G, k.x - 34, k.z - 18, 8, 52, 'dark:roof_2', { y: y0, steep: 2.4, sides: 16 });
-  for (const dz of [-12, 0, 12]) K.quad('cloth_red', [k.x + 14.05, y0 + 28, k.z + dz - 2.2], [k.x + 14.05, y0 + 28, k.z + dz + 2.2], [k.x + 14.05, y0 + 12, k.z + dz + 2.2], [k.x + 14.05, y0 + 12, k.z + dz - 2.2], [1, 0, 0], [[0, 0], [1, 0], [1, 3], [0, 3]]);
+  K.tower(G, k.x - 34, k.z - 18, 9, 78, 'dark:roof_2', { y: y0, steep: 2.4, sides: 16 });
+  // His red, long, down the road side of the corner towers and the tall tower, so the road sees it from far off.
+  for (const sz of [-1, 1]) K.quad('cloth_red', [k.x + HX + 7.1, y0 + 22, k.z + sz * HZ - 2.2], [k.x + HX + 7.1, y0 + 22, k.z + sz * HZ + 2.2], [k.x + HX + 7.1, y0 + 4, k.z + sz * HZ + 2.2], [k.x + HX + 7.1, y0 + 4, k.z + sz * HZ - 2.2], [1, 0, 0], [[0, 0], [1, 0], [1, 3], [0, 3]]);
+  K.quad('cloth_red', [k.x - 24.9, y0 + 72, k.z - 21], [k.x - 24.9, y0 + 72, k.z - 15], [k.x - 24.9, y0 + 34, k.z - 15], [k.x - 24.9, y0 + 34, k.z - 21], [1, 0, 0], [[0, 0], [1, 0], [1, 5], [0, 5]]);
+  for (const dz of [-12, 0, 12]) K.quad('cloth_red', [k.x + 14.05, y0 + 42, k.z + dz - 2.2], [k.x + 14.05, y0 + 42, k.z + dz + 2.2], [k.x + 14.05, y0 + 12, k.z + dz + 2.2], [k.x + 14.05, y0 + 12, k.z + dz - 2.2], [1, 0, 0], [[0, 0], [1, 0], [1, 3], [0, 3]]);
   K.quad('door_5', [k.x + 14.05, y0 + 2, k.z - 2.5], [k.x + 14.05, y0 + 2, k.z + 2.5], [k.x + 14.05, y0 + 8.5, k.z + 2.5], [k.x + 14.05, y0 + 8.5, k.z - 2.5], [1, 0, 0], [[1, 1], [0, 1], [0, 0], [1, 0]]);
   for (const dz of [-5, 5]) K.brazier(k.x + 18, k.z + dz, 1.6);
   K.quad('cloth_red', [k.x + HX + 3.05, y0 + 15, k.z - 2], [k.x + HX + 3.05, y0 + 15, k.z + 2], [k.x + HX + 3.05, y0 + 8, k.z + 2], [k.x + HX + 3.05, y0 + 8, k.z - 2], [1, 0, 0], [[0, 0], [1, 0], [1, 2], [0, 2]]);
@@ -521,16 +540,16 @@ function sorrowhorn(K) {
   K.disc('ice', MOUNT.x, ly, MOUNT.z, MOUNT.lake + 2, 48);
   for (let i = 0; i < 9; i++) {
     const t = i / 9 * TAU, r = i ? 6 + hash2(i, 1) * 5 : 0;
-    K.spike('dark:stone', MOUNT.x + Math.cos(t) * r, ly - 1, MOUNT.z + Math.sin(t) * r, i ? 2 + hash2(i, 2) * 1.5 : 4.5, i ? 12 + hash2(i, 3) * 14 : 46, 5, t, [(hash2(i, 4) - 0.5) * 0.3, (hash2(i, 5) - 0.5) * 0.3]);
+    K.spike('obsidian', MOUNT.x + Math.cos(t) * r, ly - 1, MOUNT.z + Math.sin(t) * r, i ? 2.4 + hash2(i, 2) * 1.8 : 8, i ? 16 + hash2(i, 3) * 20 : 84, i ? 5 : 7, t, [(hash2(i, 4) - 0.5) * 0.3, (hash2(i, 5) - 0.5) * 0.3]);
   }
-  for (let i = 0; i < 26; i++) { const t = i / 26 * TAU; K.spike('ice', MOUNT.x + Math.cos(t) * 4.5, ly + 3 + hash2(i, 6) * 18, MOUNT.z + Math.sin(t) * 4.5, 0.6, 2 + hash2(i, 7) * 3, 4, t, [Math.cos(t) * 0.5, Math.sin(t) * 0.5]); }
+  for (let i = 0; i < 26; i++) { const t = i / 26 * TAU; K.spike('ice', MOUNT.x + Math.cos(t) * 7.5, ly + 3 + hash2(i, 6) * 26, MOUNT.z + Math.sin(t) * 7.5, 0.6, 2 + hash2(i, 7) * 3, 4, t, [Math.cos(t) * 0.5, Math.sin(t) * 0.5]); }
   for (let i = 0; i < 12; i++) {
     const t = i / 12 * TAU, x = MOUNT.x + Math.cos(t) * (MOUNT.lake + 26), z = MOUNT.z + Math.sin(t) * (MOUNT.lake + 26);
     K.drum('pale:stone', x, Y(x, z) - 0.5, z, 1.2, i % 4 === 1 ? 4 : 11, 10);
   }
   for (let i = 0; i < 40; i++) {
     const t = i / 40 * TAU + hash2(i, 9) * 0.1, r = MOUNT.crown - 6 + hash2(i, 10) * 14, x = MOUNT.x + Math.cos(t) * r, z = MOUNT.z + Math.sin(t) * r;
-    K.spike('dark:stone', x, Y(x, z) - 2, z, 2 + hash2(i, 11) * 2, 8 + hash2(i, 12) * 16, 5, t, [(hash2(i, 13) - 0.5) * 0.4, (hash2(i, 14) - 0.5) * 0.4]);
+    K.spike('obsidian', x, Y(x, z) - 2, z, 2 + hash2(i, 11) * 2, 8 + hash2(i, 12) * 16, 5, t, [(hash2(i, 13) - 0.5) * 0.4, (hash2(i, 14) - 0.5) * 0.4]);
   }
 }
 

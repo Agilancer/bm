@@ -99,7 +99,7 @@ const TOGGLES = [
   ['noDamage', 'No Enemy Damage', 'Nothing an enemy does can hurt you', ABIL.NO_DAMAGE],
   ['fly', 'No-Clip / Inspect', 'Fly where you look, through anything: Space up, Shift fast', ABIL.FLY],
   ['god', 'GOD MODE', 'No damage, and everything dies at one blow', ABIL.GOD],
-  ['doubleJump', 'Double Jump', "The Wingbell's gift without the charm: jump again in the air", ABIL.DOUBLE_JUMP],
+  ['doubleJump', 'Double Jump', 'Jump again in the air, with no charm', ABIL.DOUBLE_JUMP],
 ];
 const TAGS = { god: 'GOD', fly: 'NO-CLIP', noDamage: 'NO DMG', doubleJump: '2X JUMP' };
 

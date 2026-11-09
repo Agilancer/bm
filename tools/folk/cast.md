@@ -281,49 +281,53 @@ After these, merchants' stocks and crafting open up, and the townsfolk's talk mo
 
 Bellmourn sits in a small clearing in a very big country. Everything past the pines is far: a long walk, kilometres, not
 minutes. Most townsfolk have never been further than the hill road. A few have (Corran, the carters, Hob's cousin Wat), and
-they're the ones who talk about it. Writers: nobody in town has been everywhere, and what they know is second-hand and wrong
+they're the ones who talk about it. (The carters and Corran go out the east side, where the downs open: the downs road
+forks off before the hill road climbs to the church, so nothing of the Bellwright's is on the church's road.) Writers: nobody in town has been everywhere, and what they know is second-hand and wrong
 in the details.
 
 **The countries**, by compass from the town. Each place is a **V** (Velscour's), a **T** (Tessariel's) or neither, and the
 two-letter rule holds out here too: no V place is near a T place, and nobody puts the two in one line.
 
 - **The Green Downs** (east, a long day). Sheep, barley, chalk. **Millhaven**, a hamlet with a farm and a windmill; Hob's
-  cousin **Wat** farms there. **Brightwater Falls** down the cliff. On a knoll: **the Bell Tower of the Four Watches** (T).
+  cousin **Abel** farms there (not Wat: Wat Cotter is Silas's dead man). **Brightwater Falls** down the cliff. On a knoll: **the Bell Tower of the Four Watches** (T).
 - **The Weeping Fen** (north). Reed, black water, mist. **Sallowmere**, the big mere, with a jetty nobody uses now; Sabine's
   bog myrtle grows on its east shore. Further in, **the Drowned Chapel** (T), half under the water.
 - **The Rustwood** (far north-east). Red-leaved, always autumn. **The Abbey of Saint Ossery** (T), a ruin with its bell-cote
   standing; **the Fungal Ring**; **the Woodcutters' Camp**.
 - **The Ashen Waste** (far west). Grey ground, no birds. **The Caravanserai of Khel**, where the carters used to rest; **the Bone
-  Field** (V); **the Black Obelisks** (V), with braziers. At the end of the west road, **Blackvigil Keep** (V): Velscour's keep,
+  Field** (V, well south-west of Khel); **the Black Obelisks** (V), with braziers. At the end of the west road, **Blackvigil Keep** (V): Velscour's keep,
   black stone, red cloth, a curtain wall and four towers and a great keep, gibbets and braziers lit day and night all along
-  **the Vigil Road**. Its gate is shut. Nobody in town knows who's inside; Corwin Ashby knows more than he says and says nothing.
+  **the Vigil Road**. Its gate is shut, and it has no seal: the order never had a house there. Nobody in town knows who's inside; Corwin Ashby knows more than he says and says nothing.
 - **The Barrow Moor** (far south-west). Mounds. Lights at night (the jellies of bone, see below). **The Nine Maidens**, a ring of stones.
 - **The Rimeholt Fells** (far south). Snow, pines heavy with it. **Frostwatch**, an old watch-fort; **the Frozen Shrine** (T),
   where Edric's grandmother was married when it wasn't frozen.
 - **The Gallowswood** (far south-east). **Hangman's Cross**, **Mother Grawl's Hut** (a witch; not Lis, and nothing like her),
   **the Twisted Grove**.
 - **The Deepwood** (north-west, near). **The Hermit's Hollow**.
-- **The Sorrowhorn** (north-west), the mountain seen from the square on a clear day. **The Broken Stair** is the old way up.
+- **The Sorrowhorn** (north-west), the mountain seen from the top of the hill road on a clear day (the pines hide it from the town). **The Broken Stair** is the old way up.
   At the top, **the Crown of Teeth**: a lake frozen to the bottom, a spire of black glass standing out of it, twelve white
   pillars bearing nothing, and a rim of black stone teeth. Neither V nor T. Nobody knows whose. Orrin wants to.
 
-**The Four Watches.** Before the Throne, Tessariel's order rang the four watches of the night from four houses: the Bell
-Tower on the downs, the abbey in the Rustwood, the chapel on the fen and the shrine in the snow. While they rang, the dead in
-the land kept their beds (this is why the dead don't come into Bellmourn: the tower's tenor bell is still hung, whole and
-silent, and the dead remember it; the watch thinks it's the lamps; Orrin always said it was older than lamps). Forty years ago
-the Throne forbade the ringing. Bellmourn's own great bell went quiet the same year.
+**The Four Watches.** The order rang the four watches of the night on four bells hung in the Bell Tower on the downs, and
+its three houses answered each from their own bell-cotes: the abbey in the Rustwood, the chapel on the fen, the shrine in the
+snow. (First watch at dusk, the third the worst, the fourth done at first light; no watch by day.) While they rang, the dead in
+the land kept their beds. The tower's tenor, the oldest, was cast in Bellmourn, in a pit on the green, when Bellmourn was a
+crossroads; it's still hung, whole and silent, and the dead remember where it was cast. That's why they roam the pines but
+don't come into the town (the watch thinks it's the lamps; Orrin always said it was older than lamps). Forty years ago the
+ringing was forbidden, and stopped. (Writers: the Bellwright never says who forbade it, and never speaks of the church.)
 
 **Ser Anselm Toller, the Bellwright** (`paladin_bellwright`, a TOWN_KNIGHTS entry; lines in `src/folk/lines/beyond.js`).
-64. The last of the order: a paladin in white plate with a gilded sword and the T on his board, who keeps four bells he's
+64. Sworn at fourteen; he rang the first watch himself as a boy, before the ringing stopped. The last of the order: a paladin in white plate with a gilded sword and the T on his board, who keeps four bells he's
 forbidden to ring. Gruff, dry, lonely, very precise; counts the watches out loud. Not a Tessariel claimant, and he's seen the
-claimants (three came over his knoll singing). He's the first person who takes the player seriously for the right reason:
-the seal by his door woke when they came over the rise. A **T**: nothing of his goes near the church or the west road, he
+claimants (two came over his knoll singing). He's the first person who takes the player seriously for the right reason:
+the seal by his door woke when they came over the rise, the first time in forty years. A **T**: nothing of his goes near the church or the west road, he
 never goes west, and no Ashby speaks of him. He has met Old Lis by day and a lovely young woman on the same road the same
 night, and has thought about it.
 
 **The seals.** Rings of pale stone, one at each house of the order and one at every road worth keeping. A woken seal lets you
 step to any other woken seal. They woke for the order's wardens, then for nobody for forty years. They wake for the player.
-They never woke for any of the twelve Tessariels. (Gameplay: `src/ui/lands.js`; there's one by Bellmourn's west road.)
+They never woke for any of the twelve Tessariels. No seal stands at any of Velscour's places, or within a long walk of one
+(`node tools/lands/check-vt.mjs` checks it). (Gameplay: `src/ui/lands.js`; there's one in a clearing just outside Bellmourn.)
 
 **The jellies** (slimes, `src/sim/slimes.js`). Folk call them jellies. They came up out of the water a year or two back:
 the mere, the fen pools, the millpond, the falls pool. Slow until they aren't; they hold on; the big ones split. The barrow
@@ -336,10 +340,11 @@ gift: a bell the size of a thumb; ring it in the air and the air holds you one s
 
 9. **The Long Way Round** (Corran). The dead walk wide of a knoll far east. Go to the Bell Tower, ask the Bellwright why, tell
    Corran. (He says: the bells.)
-10. **Jelly in the Millpond** (Hob). Something in Wat's millpond at Millhaven ate a ewe. Put down 8 jellies round Millhaven.
-11. **The Four Watches** (the Bellwright). Stand in the abbey, the chapel and the shrine, in that order, and see if their seals
+10. **Jelly in the Millpond** (Hob). Something in Wat's millpond at Millhaven ate a ewe. Put down 8 jellies round Millhaven. Paid with Abel's money ("He'd rather pay than come").
+11. **The Four Watches** (the Bellwright). Stand in the abbey, the chapel and the shrine, in any order, and see if their seals
     wake. Reward: the Wingbell (double jump).
-12. **What the Fen Keeps** (Sabine). Clear 10 jellies from the fen so she can reach the bog myrtle for the winter fevers.
+12. **What the Fen Keeps** (Sabine). Clear 10 jellies from the fen so she can reach the bog myrtle for the winter fevers. Paid in coin
+    (robes are Tamsin's trade, not hers).
 13. **The Black Road** (Aldric). Go and look at what's at the end of the west road. Only look. (Blackvigil.)
 14. **The Crown of Teeth** (Orrin, after the Toll). Climb the Sorrowhorn and tell him what's at the top. Reward: a scroll and a true page.
 15. **Lights on the Barrow Moor** (Jory). Go at night; put down 6 of whatever carries the lights. (Jellies full of bones.)

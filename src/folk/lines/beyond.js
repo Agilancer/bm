@@ -237,7 +237,7 @@ export const QUESTS = {
     giver: 'orrin',
     needs: 'toll_of_bell',
     offer: [
-      "You see the mountain from the square on a clear day. The Sorrowhorn. My books put a lake at the top of it that never thaws, and in the lake a spire of black glass, and round it a ring of teeth.",
+      "Walk up the hill road on a clear day and look north-west. The mountain. The Sorrowhorn. My books put a lake at the top of it that never thaws, and in the lake a spire of black glass, and round it a ring of teeth.",
       "Every author contradicts the one before, which is how I know it's there. Nobody living has been up. I'm seventy. Would you? I'd like one account written by someone who came back down.",
     ],
     accept: "I'll climb it.",

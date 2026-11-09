@@ -179,6 +179,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   if (id == 111u) { return vec4f(0.7, 0.78, 0.82, 0.3); }      // falling water
   if (id == 112u) { return vec4f(0.52, 0.64, 0.74, 0.12); }    // ice
   if (id == 113u) { return vec4f(0.04, 0.06, 0.1, 0.25); }     // a seal's face
+  if (id == 114u) { return vec4f(0.014, 0.012, 0.018, 0.07); }  // black glass (the Crown of Teeth)
   // rgb + roughness for the few materials with no painting.
   if (id == 100u) { return vec4f(0.035, 0.034, 0.036, 0.42); }  // iron
   if (id == 101u) { return vec4f(1.0, 0.6, 0.2, 1.0); }         // flame (emissive below)
@@ -309,7 +310,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
     if (tintK > 0u) {
       let lum = dot(albedo, vec3f(0.3, 0.55, 0.15));
       // Velscour's black stone, with a little of the red in it; limestone bleached and bone; stone under rime, whitest on top.
-      if (tintK == 1u) { albedo = vec3f(lum) * vec3f(0.42, 0.36, 0.36); rough = rough * 0.8; }
+      if (tintK == 1u) { albedo = vec3f(lum) * vec3f(0.27, 0.22, 0.22); rough = rough * 0.8; }
       if (tintK == 2u) { albedo = mix(albedo, vec3f(lum * 1.25 + 0.16) * vec3f(1.0, 0.97, 0.9), 0.8); }
       if (tintK == 3u) { albedo = mix(vec3f(lum) * vec3f(0.85, 0.92, 1.05), vec3f(0.82, 0.86, 0.92), smoothstep(0.2, 0.8, n0.y) * 0.8 + 0.12); }
     }

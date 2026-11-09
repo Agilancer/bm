@@ -59,7 +59,7 @@ export const SITES = {
   cutters: { x: 4700, z: -1300, r: 45, name: "The Woodcutters' Camp", pad: 18 },
   // The Ashen Waste
   khel: { x: -3700, z: -700, r: 80, name: 'The Caravanserai of Khel', pad: 34, portal: true },
-  bones: { x: -3300, z: -1550, r: 70, name: 'The Bone Field', keep: true },
+  bones: { x: -4500, z: -2000, r: 70, name: 'The Bone Field', keep: true },
   obelisks: { x: -4700, z: -2600, r: 60, name: 'The Black Obelisks', pad: 22, keep: true },
   keep: { x: -5000, z: 200, r: 150, name: 'Blackvigil Keep', pad: 120, keep: true },
   // The Barrow Moor

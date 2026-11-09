@@ -79,7 +79,7 @@ const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
-const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, lake: 110, falls: 111, ice: 112, seal: 113 };
+const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3 };
 const MAX_GROUND = 160;
