@@ -2,14 +2,13 @@
 // the walk down to town. The camera, the words and the sound follow the same clock (src/ui/opening.js).
 import { CUE_IDS } from '../core/opening-script.js';
 import {
-  CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_AXIS, COLLAPSE_END, DUST_AT, KNEEL_UP, collapseEye, ESCORT_TO, HERD_END, NAME_AT, OPENING, OPENING_SPAWN,
-  OPENING_YAW, PORTAL, SWAP_AT, TIDY_MARK, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP, caveNearest, chamberPoint,
+  CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_AXIS, COLLAPSE_END, DUST_AT, KNEEL_UP, collapseEye, ESCORT_TO, HERD_CONTROL, HERD_END, NAME_AT, OPENING,
+  OPENING_SPAWN, OPENING_YAW, PORTAL, SWAP_AT, TIDY_MARK, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP, caveNearest, chamberPoint, storyHolds,
 } from '../core/opening.js';
 import { CAVE_PATH, ROADS } from '../core/terrain.js';
 import { clamp } from '../core/math.js';
 import { ambush } from './undead.js';
 
-export const HERD_CONTROL = 9.9;    // into HERD: you can walk again
 const WEAVE_FROM = 16.3;            // into WAKE: she starts toward you as the candles catch
 const LEAVE_PACE = 2.4;             // how fast you can go in the cave, until you're out
 const out = (d) => [CAVE_MOUTH[0] + CAVE_OUT[0] * d, CAVE_MOUTH[1] + CAVE_OUT[1] * d];
@@ -120,8 +119,7 @@ export class Opening {
 
   // You can't move while the story has the camera.
   frozen() {
-    const s = this.stage;
-    return s === OPENING.WAKE || s === OPENING.NAME || s === OPENING.COLLAPSE || (s === OPENING.HERD && this.time < HERD_CONTROL);
+    return storyHolds(this.stage, this.time);
   }
 
   // Your name's given: on with it.
