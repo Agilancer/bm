@@ -77,7 +77,7 @@ export const TUMBLER_CAMPS = [
 const CROW = { R: 0.3, hp: 14, motherR: 0.75, motherHp: 140, high: 15, motherHigh: 10, speed: 9, dive: 17, every: [3.4, 5.4], dmg: 5, scatter: 6 };
 const NEAR = 240, FAR = 340, REFILL = 540;   // (metres: a camp wakes, sleeps; seconds before a cleared camp fills again)
 // The Mire Mound: how far under it lies, how near you must come, how often it spits, how many before it goes down again.
-const MIRE = { deep: 2.4, wake: 18, every: 1.15, spits: 3, glob: 0.22, g: 14 };
+const MIRE = { deep: 2.4, wake: 18, every: 1.15, spits: 3, glob: 0.14, g: 14 };
 
 let nextId = 6000;
 

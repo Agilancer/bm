@@ -825,7 +825,6 @@ export class Player {
       this.drink();
       this.hits++;
       sim.event(EV.GASH, wx, wy, wz, -dx, -dy, -dz, k.id);
-      sim.firstBlood();
       if (first) { sim.hitStop(tag.heavy ? 0.1 : 0.07); k.onHit(sim, 'gash', this.x, this.z, tag.poise * (1 + this.poise)); }
     }
     this.contact = { k, piece: hit.piece, gash: g, count: (sameKnight ? c.count : 0) + 1 };

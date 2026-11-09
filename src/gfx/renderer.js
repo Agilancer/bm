@@ -1,6 +1,8 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { FIELD_CREATURES } from '../core/field-creatures.js';
+import { TRIPO_BASE, TRIPO_SLOTS } from '../core/tripo-monsters.js';
+import { TripoSlots } from './tripo-slots.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
@@ -285,6 +287,9 @@ export class Renderer {
     }
     this.chars[0].armored = this.chars[1].armored = true; this.chars[1].steel = true;
     this.firstTown = this.chars.length - TOWN_KNIGHTS.length;
+    // The Tripo monsters' slots, in the sim's order: after the town knights. Built when the sim stands a monster in one.
+    const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
+    this.tripo = new TripoSlots(this, base, tripoRoster, tripoPalettes, this.chars.length, TRIPO_SLOTS);
     // The other Tessariels this session (src/core/heroes.js makeCast, chosen in src/main.js), in the sim's order: after the
     // knights, before Lisandra. Fetched together, built one by one.
     const cast = this.heroCast || [];
@@ -362,6 +367,7 @@ export class Renderer {
       const off = k.off || (k.style === 'daggers' || k.style === 'boomerang' ? k.main : null);
       for (const id of [k.main, off, k.back]) this.props.push(id ? { ...(await kitModel(id)), owner: this.firstHero + i } : { empty: true });
     }
+    this.tripo.reserveProps();
     this.propInstances = device.createBuffer({ size: 64 * this.props.length, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.propData = new Float32Array(16 * this.props.length);
     tick();
@@ -1951,7 +1957,7 @@ export class Renderer {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
       const otherForm = stage && (i === this.chars.length - (pretty ? 1 : 2));
-      if (otherForm || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
+      if (otherForm || c.pending || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
       const r = c.armored ? 2.6 : 5;
       c.bx = x; c.by = y; c.bz = z; c.br = bodyRadius(r, c.bindR);
@@ -2036,6 +2042,7 @@ export class Renderer {
     this.resize();
     this.stage = 'frame uniforms';
     this.writeFrame(cam, snap);
+    this.tripo?.sync(snap);
     this.cullBodies(cam, snap);
     const time = this.frameData[O.CAM + 3];
 
@@ -2047,7 +2054,7 @@ export class Renderer {
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
-      if (snap[co + C.ACTIVE] < 0.5) continue;
+      if (snap[co + C.ACTIVE] < 0.5 || c.pending) continue;
       if (c.casts) q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
       const ver = snap[co + C.GASH_VERSION];
       if (ver !== this.gashVersions[i]) {

@@ -17,7 +17,8 @@ import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
-import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepWoods, Zombie } from './undead.js';
+import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepGraves, stepWoods, Zombie } from './undead.js';
+import { POOL } from '../core/lands.js';
 import { CHURCH_GUARD, churchAt } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { ATTACKS, Knight, S } from './knight.js';
@@ -29,6 +30,8 @@ import { Hero, HeroWorld, mobKind } from './hero.js';
 import { MOB_KEYS, TRIG } from '../core/heroes.js';
 import { Slimes } from './slimes.js';
 import { Tumblers } from './tumblers.js';
+import { TripoEmpty, TripoWorld } from './tripo.js';
+import { TRIPO_BASE, TRIPO_SLOTS } from '../core/tripo-monsters.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
@@ -46,17 +49,20 @@ const SILVER = {
 };
 
 // Keeps to the woods north of the village. hp is how long it fights; territory is how far from spawn it minds you.
-const GRAVEHART = { spawn: [12, -128], lair: [-14, -150], yaw: 0.4, hp: 380, territory: 30 };
+// (Back in the trees, west of the Fen Way: it used to lie up right beside the road.)
+const GRAVEHART = { spawn: [-40, -150], lair: [-62, -168], yaw: 0.4, hp: 380, territory: 30 };
 // Lies up in the south, and doesn't go looking for anyone.
 // Down in the rift under the catacombs, on its burning floor, east of the bridge and the scaffold stair: see gulf() in tools/interior/build_interior.py. pit: where it can go.
 // (All in the church's own frame, and moved with it: src/core/church.js.)
 const PIT = [churchAt(150, -133), churchAt(222, -123)];
 const HYDRA = { spawn: churchAt(208, -128), lair: churchAt(217, -127), yaw: -1.57, hp: 900, territory: 24, pit: { y: -44.25, x0: PIT[0][0], x1: PIT[1][0], z0: PIT[0][1], z1: PIT[1][1] } };
 
+// The great crabs keep the shore of the pool under Brightwater Falls (src/core/lands.js), north and south of it, clear of the seal
+// on its west bank. (They used to come up out of the fields round the town after the first blood: that's gone.)
 const CRABS = [
-  { spawn: [-92, -58], yaw: 1.0, hp: 55, delay: 20, flank: 1.1 },
-  { spawn: [-120, 96], yaw: -0.9, hp: 55, delay: 50, flank: -1.2 },
-  { spawn: [112, 92], yaw: -2.0, hp: 55, delay: 80, flank: 0.3 },
+  { spawn: [POOL.x - 12, POOL.z - 38], yaw: 1.0, hp: 55, flank: 1.1 },
+  { spawn: [POOL.x + 6, POOL.z - 37], yaw: -0.9, hp: 55, flank: -1.2 },
+  { spawn: [POOL.x - 4, POOL.z + 38], yaw: -2.0, hp: 55, flank: 0.3 },
 ];
 
 // How much faster than their clips each kind goes, by kind: knight, silver knight, crab, Gravehart, Hydra, undead, ogre.
@@ -67,7 +73,6 @@ class Sim {
   constructor() {
     this.packAt = 0; this.healSeen = 0; this.manaSeen = 0;
     this.time = 0; this.tick = 0; this.timeScale = 1; this.stopT = 0; this.slowT = 0; this.gameState = 0; this.gameT = 0;
-    this.firstBloodAt = -1; this.crabWoke = false;
     this.knights = [];
     // The slimes out in the wet places; the spells look for them with the knights, as sim.foes.
     this.slimes = new Slimes();
@@ -112,19 +117,18 @@ class Sim {
 
   slowMo(t) { this.slowT = Math.max(this.slowT, t); }
 
-  firstBlood() { if (this.firstBloodAt < 0) this.firstBloodAt = this.time; }
-
   restart() {
     this.player.reset();
     this.player.y = this.world.height(this.player.x, this.player.z);
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
+    this.tripo?.reset();
     this.villagers.forEach((v) => v.reset());
     if (this.heroWorld) this.heroWorld.killed = [];
     this.opening?.reset();
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0; this.stopT = 0; this.timeScale = 1;
-    this.reachedTown = false; this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.firstBloodAt = -1; this.crabWoke = false; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
+    this.reachedTown = false; this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.graveAt = 0; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
     p.atkSeen = inp[INPUT.ATTACK]; p.wideSeen = inp[INPUT.WIDE]; p.jumpSeen = inp[INPUT.JUMP]; p.dodgeSeen = inp[INPUT.DODGE];
@@ -204,7 +208,8 @@ class Sim {
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.tumblers.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
-    if (!this.opening || this.opening.stage === OPENING.ARRIVED) stepWoods(this);
+    if (!this.opening || this.opening.stage === OPENING.ARRIVED) { stepWoods(this); stepGraves(this); }
+    this.tripo?.step();
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
@@ -241,6 +246,8 @@ class Sim {
     pos[0] = x; pos[2] = z;
     if (this.world.resolve(pos, radius, body.y + 0.2)) return false;
     body.x = x; body.z = z;
+    // (A hero shouldered aside takes the steps: src/sim/hero.js turns this into a walk on the spot.)
+    if (body.opts?.hero) body.nudged = (body.nudged || 0) + Math.hypot(dx, dz);
     if (body === this.player) body.keepToLand();
     return true;
   }
@@ -351,6 +358,8 @@ class Sim {
       case 14: this.manual = true; this.manualTicks = b; break;
       case 15: this.manual = false; break;
       case 12: this.knights.forEach((n) => { if (n.wakeAt !== undefined) n.wakeAt = 0; }); break;
+      case 24: this.tripo?.standHere(a | 0, b, c); break;   // a Tripo monster (its place in roster.json) stood at b, c, facing you, for tests and reviews
+      case 25: if (this.tripo) this.tripo.testPal = this.tripo.palNames[a | 0]; break;   // and the palette those wear (palettes.json, by place)
       case 23: console.log('[k] ' + JSON.stringify(this.knights.slice(0, 2).map((n) => ({ ...n.stats, hp: Math.round(n.hp), moves: n.recent })))); break;   // what the knights have been doing, for review logs
       case 21: { // hold a knight still in clip b (by its place in the bank) at c seconds, for review sheets
         const name = Object.keys(k.bank.clips)[b | 0];
@@ -475,6 +484,11 @@ async function boot(msg) {
   // The knights in the other suits: Tessariel's walking the village, Velscour's man on the west road.
   const townBufs = await Promise.all(TOWN_KNIGHTS.map((t) => fetchBuf(base + t.asset)));
   TOWN_KNIGHTS.forEach((t, i) => sim.knights.push(new Knight(sim.knights.length, t.kind, new Rig(parseGLB(townBufs[i]), bank), bank, t)));
+  // The Tripo monsters' slots, empty until you come near a lair (src/sim/tripo.js).
+  const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
+  const firstTripo = sim.knights.length;
+  for (let i = 0; i < TRIPO_SLOTS; i++) sim.knights.push(new TripoEmpty(sim.knights.length));
+  sim.tripo = new TripoWorld(sim, base, tripoRoster, tripoPalettes, firstTripo, TRIPO_SLOTS);
   // The other Tessariels: the render thread chose who's in the world this session (src/core/heroes.js makeCast).
   if (msg.heroes?.length) {
     const [hMeta, hBin, kit] = await Promise.all([
@@ -510,6 +524,7 @@ async function boot(msg) {
     if (m.type === 'heroAct') sim.heroWorld?.act(m.slot, m.name, m.seconds);
     if (m.type === 'heroHold') sim.heroWorld?.holdFor(m.slots, m.seconds);
     if (m.type === 'heroWalk') sim.heroWorld?.walkFor(m.slot, m.seconds, m.mode);
+    if (m.type === 'heroTalk') sim.heroWorld?.talkTo(m.slot, m.on);
     if (m.type === 'heroDebug') sim.heroWorld?.debug(m);
     if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;

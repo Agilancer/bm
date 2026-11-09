@@ -580,7 +580,7 @@ struct V {
     // Wet black bog, weed over its top, and the sickly light only in the thinnest seams of it.
     let seam = 1.0 - smoothstep(0.0, 0.022, abs(vein.g - 0.5));
     fire = FIRE[kind] * seam * glow * pulse * 5.0;
-    albedo = mix(col * vec3f(0.42, 0.4, 0.34), m * vec3f(0.45, 0.55, 0.3), smoothstep(0.1, 0.6, ln.y + (det.a - 0.5)) * 0.7);
+    albedo = mix(col * vec3f(0.42, 0.4, 0.34), m * vec3f(0.45, 0.55, 0.3), smoothstep(0.1, 0.6, ln.y + (det.a - 0.5)) * select(0.7, 0.12, in.look.w < 0.3));
     // (Matte peat, wet only in streaks running down it.)
     let streak = smoothstep(0.58, 0.7, textureSampleLevel(noiseTex, repeatSmp, vec2f(atan2(lp.z, lp.x) * 0.9, lp.y * 0.12), 0.0).r);
     rough0 = mix(0.72, 0.16, streak);

@@ -31,12 +31,14 @@ export const HERO_SLOTS = { desktop: 16, lean: 6 };
 export const CLASSES = {
   paladin: { hp: 280, range: 2.0, walk: 1.0, run: 1.0, ranged: false, title: 'Paladin' },
   lancer: { hp: 340, range: 2.8, walk: 0.95, run: 0.95, ranged: false, title: 'Lancer' },
-  archer: { hp: 190, range: 18, walk: 1.05, run: 1.05, ranged: true, title: 'Archer' },
+  archer: { hp: 190, range: 18, want: 8, walk: 1.05, run: 1.05, ranged: true, title: 'Archer' },
   rogue: { hp: 210, range: 1.6, walk: 1.08, run: 1.1, ranged: false, title: 'Rogue' },
   ninja: { hp: 200, range: 1.7, walk: 1.1, run: 1.12, ranged: false, title: 'Ninja' },
   dragoon: { hp: 240, range: 2.6, walk: 1.0, run: 1.02, ranged: false, title: 'Dragoon' },
-  boomerang: { hp: 210, range: 12, walk: 1.04, run: 1.05, ranged: true, title: 'Boomerang Knight' },
-  bard: { hp: 210, range: 2.0, walk: 1.0, run: 1.0, ranged: false, title: 'Bard' },
+  // (want: where a ranged class stands to fight. The boomerang throws from close, so the rang cuts through the pack twice;
+  // the bard plucks notes from a few strides off, as he does in Velscour.)
+  boomerang: { hp: 210, range: 8, want: 5.5, walk: 1.04, run: 1.05, ranged: true, title: 'Boomerang Knight' },
+  bard: { hp: 210, range: 9, want: 6, walk: 1.0, run: 1.0, ranged: true, title: 'Bard' },
 };
 export const CLASS_NAMES = Object.keys(CLASSES);
 
@@ -89,16 +91,18 @@ export const PLACES = [
   { id: 'west_homes', name: 'the west homes', kind: 'town', spot: [-28, 2], r: 5 },
   { id: 'south_lane', name: 'the south lane', kind: 'town', spot: [-8, -38], r: 5 },
   { id: 'east_gate', name: 'the east road', kind: 'town', spot: [34, 2], r: 4 },
-  { id: 'west_fields', name: 'the west fields', kind: 'hunt', spot: [-118, 30], r: 40, mobs: ['zombie', 'necromancer'] },
-  { id: 'north_woods', name: 'the north woods', kind: 'hunt', spot: [10, 118], r: 45, mobs: ['zombie', 'crab'] },
-  { id: 'south_woods', name: 'the south woods', kind: 'hunt', spot: [-10, -125], r: 45, mobs: ['zombie', 'wizard'] },
+  // (Where the monsters keep, off the roads: src/sim/undead.js addUndead and GRAVEYARDS, src/core/field-creatures.js, GRAVEHART in
+  // src/sim/sim.worker.js. The great crabs are out at Brightwater Falls, too far for a day's hunting.)
+  { id: 'west_fields', name: 'the west woods', kind: 'hunt', spot: [-150, -72], r: 34, mobs: ['zombie', 'necromancer'] },
+  { id: 'north_woods', name: 'the north woods', kind: 'hunt', spot: [-45, 150], r: 45, mobs: ['zombie'] },
+  { id: 'south_woods', name: 'the south woods', kind: 'hunt', spot: [20, -125], r: 45, mobs: ['zombie', 'wizard'] },
+  { id: 'hill_woods', name: 'the hill woods', kind: 'hunt', spot: [-160, 60], r: 26, mobs: ['zombie', 'wizard'] },
   { id: 'ogre_hollow_w', name: 'the western hollow', kind: 'hunt', spot: [-72, -78], r: 20, mobs: ['ogre'] },
   { id: 'ogre_hollow_e', name: 'the eastern hollow', kind: 'hunt', spot: [118, -64], r: 20, mobs: ['ogre'] },
-  { id: 'wolf_wood', name: 'the werewolf\'s wood', kind: 'hunt', spot: [-58, 74], r: 22, mobs: ['werewolf'] },
-  { id: 'mouth_field', name: 'the Mouth\'s field', kind: 'hunt', spot: [74, 75], r: 22, mobs: ['mouth'] },
-  { id: 'plague_field', name: 'the plague field', kind: 'hunt', spot: [82, -72], r: 18, mobs: ['plaguebearer'] },
-  { id: 'gravehart_lair', name: 'the Gravehart\'s ground', kind: 'hunt', spot: [0, -138], r: 26, mobs: ['gravehart'] },
-  { id: 'crab_shore_w', name: 'the crab field', kind: 'hunt', spot: [-92, -58], r: 16, mobs: ['crab'] },
+  { id: 'wolf_wood', name: 'the werewolf\'s wood', kind: 'hunt', spot: [40, 160], r: 22, mobs: ['werewolf'] },
+  { id: 'mouth_field', name: 'the Mouth\'s hollow', kind: 'hunt', spot: [150, 110], r: 22, mobs: ['mouth'] },
+  { id: 'plague_field', name: 'the plague wood', kind: 'hunt', spot: [90, -112], r: 24, mobs: ['plaguebearer', 'zombie'] },
+  { id: 'gravehart_lair', name: 'the Gravehart\'s ground', kind: 'hunt', spot: [-48, -158], r: 26, mobs: ['gravehart'] },
   // (Out east of the town, a field away: src/core/church.js. They gather below the steps and go in at the great door.)
   { id: 'cathedral', name: 'the Cathedral', kind: 'delve', spot: churchAt(52, 6), r: 4, door: CHURCH_DOOR },
   { id: 'summit', name: 'the Summit', kind: 'summit', spot: [SUMMIT.x, SUMMIT.z], r: SUMMIT.r - 4 },
@@ -156,9 +160,9 @@ export const WALK_ENDS = ['time', 'party', 'edge', 'gave_up'];
 
 // The classes' moves by the writers' names (script.json moves; class_skill's extra is an index into MOVE_KEYS).
 export const MOVES = {
-  paladin: ['hammer_throw', 'blessed_hammers', 'consecration', 'holy_light'], lancer: ['charge', 'lance_thrust', 'shield_wall', 'shield_bash'],
-  archer: ['aimed_shot', 'volley', 'kite'], rogue: ['flurry', 'vanish', 'backstab'], ninja: ['shadow_step', 'throwing_stars', 'leaping_kick', 'ninja_flurry'],
-  dragoon: ['jump', 'jump_land', 'spear_combo'], boomerang: ['throw', 'double_throw', 'catch'], bard: ['war_song', 'marching_song', 'mending_song'],
+  paladin: ['hammer_throw', 'blessed_hammers', 'consecration', 'holy_light', 'smite'], lancer: ['charge', 'lance_thrust', 'shield_wall', 'shield_bash'],
+  archer: ['aimed_shot', 'volley', 'kite', 'strafe', 'rain_of_arrows'], rogue: ['flurry', 'vanish', 'backstab'], ninja: ['shadow_step', 'throwing_stars', 'leaping_kick', 'ninja_flurry'],
+  dragoon: ['jump', 'jump_land', 'spear_combo', 'spear_barrage'], boomerang: ['throw', 'double_throw', 'catch'], bard: ['war_song', 'marching_song', 'mending_song'],
 };
 export const MOVE_KEYS = Object.values(MOVES).flat();
 
