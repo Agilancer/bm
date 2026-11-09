@@ -248,7 +248,10 @@
 #opening .op-track:not(:empty)::before{content:"\25C6  ";color:var(--gold)}
 #opening .op-skip{position:absolute;right:22px;bottom:3.4vh;font:600 13px "Alegreya Sans",serif;color:#cfc6b8;text-shadow:0 1px 2px #000;opacity:.8}
 #opening .op-skip i{display:block;height:2px;margin-top:4px;background:var(--gold);transform-origin:left;transform:scaleX(var(--k,0))}
-body.cinematic #hud,body.cinematic #mapMini,body.cinematic #touch{visibility:hidden}
+body.cinematic #hud,body.cinematic #mapMini{visibility:hidden}
+/* A phone's thumbs: gone while the story holds you still, but walking out of the cave is under the bars too, so they're
+   back then, with only what walks you out (src/core/opening.js storyHolds). */
+body.op-held #touch,body.cinematic #touch .tbtn:not(#bSprint):not(#bJump):not(#bPause){visibility:hidden}
 #opening-name-panel{position:fixed;z-index:13;bottom:1.3vh;left:50%;transform:translateX(-50%);padding:4px 10px;white-space:nowrap;background:#0b0907e8;color:#f4ecdc;border:1px solid var(--gold-dim);border-radius:4px;text-align:center;box-shadow:0 5px 22px #000a}
 #opening-name-panel label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #opening-name-panel input,#opening-name-panel button{font:600 16px "Alegreya Sans",Georgia,serif;color:#f4ecdc;background:#1b1611;border:1px solid var(--gold-dim);padding:5px 9px}
