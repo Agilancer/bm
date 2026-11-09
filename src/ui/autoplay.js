@@ -97,7 +97,7 @@ export class AutoPlay {
     this.brain ||= new Brain({
       game: o.game, shared: o.shared, input: o.input, pack: o.pack, inventory: o.inventory, townUI: o.townUI, lands: o.lands,
       get spellbar() { return o.spellbar(); }, renderer: o.renderer, town: o.town, base: o.base, opening: o.opening,
-      heroCount: () => o.renderer.heroCast?.length || 0,
+      heroCount: () => o.renderer.heroCast?.length || 0, foeNames: o.foeNames,
       say: (t) => this.status(t), note: (t) => o.townUI.note(t, 'hint'), allDone: () => this.askGrind(), log: this.log,
     });
   }

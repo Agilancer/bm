@@ -31,6 +31,7 @@ import { SPELLS } from '../sim/spells.js';
 import { RULES, isNight } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { PEOPLE } from '../folk/people.js';
+import { BEYOND } from '../folk/lines/beyond.js';
 import { TRADES, offerFor, worth } from '../folk/shops.js';
 import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
 
@@ -58,18 +59,22 @@ const LAIR_LEVEL = {
   bone_field: 18, ash_dragon: 24, ash_worm: 16, crown_dragon: 24, stair_demons: 12, hollow_dolls: 8, barrow_lords: 10, barrow_wyrm: 20,
   maiden_coven: 9, fell_harpies: 9, gallows_plague: 14, grawl_bats: 10, grove_demons: 12,
 };
-// What it'll stand and fight, by kind (FOE_NAMES in src/main.js) and its level.
-function fightable(kind, lvl) {
-  if (kind === 5 || kind === 9 || kind === 7 || kind === 8) return true;   // the risen, the jellies
+// What it'll stand and fight, by kind (FOE_NAMES in src/main.js) and its level. A kind added since it was taught (KNOWN_KINDS), it
+// judges by its life against its own level; coverage() below names it, so it can be taught properly.
+const KNOWN_KINDS = new Set([0, 1, 2, 3, 4, 5, 6, 9, 10]);
+function fightable(kind, lvl, maxHp = 0, slime = false) {
+  if (slime || kind === 5) return true;                // the jellies (their own list), the risen
+  if (kind === 9) return lvl >= 6;                     // the werewolf
   if (kind === 2) return lvl >= 2;                     // the falls' crabs
   if (kind === 6) return lvl >= 4;                     // an ogre
   if (kind === 10) return lvl >= 8;                    // the Abyssal Mouth
   if (kind === 3) return lvl >= 14;                    // the Gravehart
   if (kind === 0) return lvl >= 18;                    // a knight of Velscour
   if (kind >= TRIPO_KIND) {
-    const hp = GROUPS[GROUP_KEYS[kind - TRIPO_KIND]]?.hp || 999;
+    const hp = GROUPS[GROUP_KEYS[kind - TRIPO_KIND]]?.hp || maxHp || 999;
     return lvl >= (hp <= 60 ? 1 : hp <= 90 ? 3 : hp <= 170 ? 6 : hp <= 240 ? 10 : hp <= 520 ? 15 : 24);
   }
+  if (!KNOWN_KINDS.has(kind)) return maxHp > 0 && maxHp <= 60 + lvl * 30;
   return false;                                        // the Hydra; Tessariel's knights; the other Tessariels
 }
 
@@ -80,6 +85,9 @@ const PLAN = [
   ['crown_of_teeth', 11], ['black_road', 13],
 ];
 const LEVEL_OF = Object.fromEntries(PLAN);
+// A quest added since the plan was written goes on the end of it, at a level guessed from what it pays (coverage() names it).
+const guessLevel = (id) => Math.max(1, Math.min(20, Math.round((RULES[id].xp || 200) / 110)));
+const PLAN_ALL = PLAN.filter(([id]) => RULES[id]).concat(Object.keys(RULES).filter((id) => !(id in LEVEL_OF)).map((id) => [id, guessLevel(id)]));
 
 // Where each place in a quest's steps is, for walking to: a point, and how near counts.
 const area = (k) => {
@@ -130,6 +138,38 @@ function escortRoute() {
   for (let i = k - 1; i >= 0; i--) pts.push([road[i][0], road[i][1]]);
   pts.push([...ESCORT_TO]);
   return pts;
+}
+
+// ---------------------------------------------------------------- what it knows, against what the game has
+
+// Everything in the game that auto-play doesn't know how to play: a quest it has no place for in PLAN, a kind of quest step it
+// can't do, somewhere it can't find, a foe or a lair it has no measure of, a spell it casts that's gone, a shop it doesn't use.
+// Warned in the console when it starts, and the failing list of tools/autoplay/check.mjs. When something's added to the game,
+// it's taught here (and the check run), so auto-play keeps playing the whole of it. foeNames: FOE_NAMES from src/main.js.
+const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden']);
+const CASTS = ['firebolt', 'chain', 'nova', 'meteor', 'mend', 'wisp'];
+const FARMS = new Set(['bone', 'iron', 'silk']);
+const STOCKS = new Set(['staffs', 'robes', 'skulls', 'curios', 'scrolls']);
+export function coverage(foeNames = null) {
+  const out = [], people = new Set([...PEOPLE, ...BEYOND].map((p) => p.id));
+  for (const id of Object.keys(RULES)) {
+    const R = RULES[id];
+    if (!(id in LEVEL_OF)) out.push(`quest ${id}: not in PLAN, so it's taken on last, at a guessed level (${guessLevel(id)})`);
+    if (!QUESTS[id]?.giver || !people.has(QUESTS[id].giver)) out.push(`quest ${id}: its giver isn't anyone it can find`);
+    for (const st of R.steps) {
+      for (const k of Object.keys(st)) if (!STEP_KEYS.has(k)) out.push(`quest ${id}: a step with "${k}", which it doesn't know how to do`);
+      for (const a of [st.enter, st.kill, ...(st.visit || [])].filter((q) => typeof q === 'string')) if (!area(a)) out.push(`quest ${id}: nowhere to walk to for "${a}" (area())`);
+      if (st.kill && st.kill !== 'catacombs' && !HUNTS[st.kill]) out.push(`quest ${id}: no hunting grounds for "${st.kill}" (HUNTS): it hunts round its middle`);
+      if (st.bring && !FARMS.has(st.bring)) out.push(`quest ${id}: wants ${st.bring}, which it doesn't know where to farm`);
+      if (st.talk && !people.has(st.talk)) out.push(`quest ${id}: a word with "${st.talk}", who isn't anyone it can find`);
+    }
+  }
+  for (const l of LAIRS) if (!(l.key in LAIR_LEVEL)) out.push(`lair ${l.key}: no level in LAIR_LEVEL, so it keeps clear of it till level 10`);
+  for (const g of GROUP_KEYS) if (!(GROUPS[g].hp > 0)) out.push(`monster group ${g}: no hp to measure it by`);
+  for (const k of CASTS) if (!(k in SP)) out.push(`spell ${k}: it casts this, and it's gone from SPELLS`);
+  for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
+  if (foeNames) foeNames.slice(0, TRIPO_KIND).forEach((n, k) => { if (n && !KNOWN_KINDS.has(k)) out.push(`foe kind ${k} (${n}): no rule in fightable(), so it's judged by its life alone`); });
+  return out;
 }
 
 // ---------------------------------------------------------------- the nav thread
@@ -203,6 +243,8 @@ export class Brain {
   constructor(o) {
     this.o = o;
     this.nav = new Nav(o.base, o.opening);
+    const gaps = coverage(o.foeNames);
+    if (gaps.length) console.warn(`auto-play doesn't know all of the game yet (teach it in src/ui/autobrain.js; node tools/autoplay/check.mjs):\n  ${gaps.join('\n  ')}`);
     this.auto = { mx: 0, mz: 0, run: false, jumpHeld: false, cast: false };
     this.t = 0;
     this.grind = 'woods';
@@ -434,19 +476,19 @@ export class Brain {
     const lvl = m.lvl;
     this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12;
     // What it can't beat yet, coming for it: away over open ground, toward the town.
-    const scary = foes.filter((f) => !fightable(f.kind, lvl) && f.kind !== 1 && f.hostile && f.d < 26);
+    const scary = foes.filter((f) => !fightable(f.kind, lvl, f.maxHp, f.slime) && f.kind !== 1 && f.hostile && f.d < 26);
     if (scary.length) {
       const f = scary.reduce((a, b) => (a.d < b.d ? a : b));
       const [ex, ez] = this.escape(m, scary, true);
       this.face = null;
       this.steer(ex, ez, true);
-      this.say(`Running from ${f.kind === 0 ? 'a knight of Velscour' : f.kind === 3 ? 'the Gravehart' : f.kind === 4 ? 'the Hydra' : 'something too strong'}.`);
+      this.say(`Running from ${[0, 3, 4, 9, 10].includes(f.kind) ? this.foeName(f) : 'something too strong'}.`);
       return true;
     }
     const hunting = this.job?.kind === 'hunt' || this.job?.kind === 'grind';
     // On the way somewhere, only what's on it; hunting, whatever's about. (Once it's in a fight, it finishes it.)
     const reach = hunting || this.target ? 30 : 14;
-    const live = foes.filter((f) => fightable(f.kind, lvl) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
+    const live = foes.filter((f) => fightable(f.kind, lvl, f.maxHp, f.slime) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
     if (!live.length) { this.target = null; this.kite = null; return false; }
     const near = live.reduce((a, b) => (a.d < b.d ? a : b)), dn = near.d;
     const close = live.filter((f) => f.d < 5.5).length;
@@ -550,7 +592,7 @@ export class Brain {
     if (f.slime) return 'a jelly';
     if (f.kind === 5) return f.maxHp > 150 ? 'a champion of the dead' : 'one of the risen';
     if (f.kind >= TRIPO_KIND) return `a ${GROUPS[GROUP_KEYS[f.kind - TRIPO_KIND]]?.name.toLowerCase() || 'monster'}`;
-    return ['a knight of Velscour', 'a knight', 'a great crab', 'the Gravehart', 'the Bone Hydra', 'one of the risen', 'an ogre'][f.kind] || 'the Abyssal Mouth';
+    return ['a knight of Velscour', 'a knight', 'a great crab', 'the Gravehart', 'the Bone Hydra', 'one of the risen', 'an ogre', '', '', 'the werewolf', 'the Abyssal Mouth'][f.kind] || 'something';
   }
 
   // ---- loot and chests
@@ -689,7 +731,7 @@ export class Brain {
     if (wantsTown && !m.town && !this.skipping('town')) return { kind: 'go', why: 'town', x: 2, z: 3, r: 6, say: room < 10 ? 'Back to Bellmourn: the pack is full.' : 'Back to Bellmourn to sell.' };
     // By night, what can only be done by night.
     if (isNight(m.hour) || m.hour >= 19.5) {
-      for (const [id, lvl] of PLAN) {
+      for (const [id, lvl] of PLAN_ALL) {
         const st = Q.step(id);
         if (!st || this.skipping(`q:${id}`) || !(st.night || st.warden)) continue;
         const job = this.questJob(id, m, lvl);
@@ -697,7 +739,7 @@ export class Brain {
       }
     }
     // What's ready to hand in, or a word that moves a quest on: before more work.
-    for (const [id, lvl] of PLAN) {
+    for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
       const ready = st?.talk || st?.back || (st?.bring && (pack.mats[st.bring] || 0) >= st.n) || (s.stage === 'making' && this.o.town.day >= s.ready);
@@ -706,7 +748,7 @@ export class Brain {
       if (job) return job;
     }
     // The quests, in order.
-    for (const [id, lvl] of PLAN) {
+    for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
       const job = this.questJob(id, m, lvl);
@@ -761,18 +803,20 @@ export class Brain {
     if (st.enter) {
       if (st.night && !isNight(m.hour) && !(m.hour >= 19.5)) return null;
       const a = area(st.enter);
+      if (!a) return null;
       return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: a.r, below: a.below, say: `${title}: to ${st.enter === 'catacombs' ? 'the catacombs' : st.enter === 'bellcrypt' ? 'the Bell Crypt' : SITES[st.enter]?.name || st.enter}${st.night ? ', by night' : ''}.` };
     }
     if (st.visit) {
       const seen = s.seen || [];
-      const left = st.visit.filter((v) => !seen.includes(v)).map((v) => ({ v, a: area(v) })).sort((a, b) => dist(m.x, m.z, a.a.x, a.a.z) - dist(m.x, m.z, b.a.x, b.a.z));
+      const left = st.visit.filter((v) => !seen.includes(v)).map((v) => ({ v, a: area(v) })).filter((q) => q.a).sort((a, b) => dist(m.x, m.z, a.a.x, a.a.z) - dist(m.x, m.z, b.a.x, b.a.z));
       if (!left.length) return null;
       const { v, a } = left[0];
       return { kind: 'go', why: `q:${id}`, x: a.x, z: a.z, r: Math.min(a.r, 25), say: `${title}: to ${SITES[v].name} (${seen.length} of ${st.visit.length}).` };
     }
     if (st.kill) {
       if (st.kill === 'catacombs') return this.grindJob(m, 'catacombs', `q:${id}`, `${title}: the dead below (${s.n} of ${st.n}).`);
-      return { kind: 'hunt', why: `q:${id}`, spots: HUNTS[st.kill] || HUNTS.woods, say: `${title}: ${st.n - s.n} more to put down.` };
+      const a = area(st.kill);
+      return { kind: 'hunt', why: `q:${id}`, spots: HUNTS[st.kill] || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
     }
     if (st.warden) {
       if (!isNight(m.hour)) return null;
@@ -797,7 +841,7 @@ export class Brain {
   offerJob(m) {
     const { townUI } = this.o, Q = townUI.quests;
     let best = null, bd = Infinity;
-    for (const [id, lvl] of PLAN) {
+    for (const [id, lvl] of PLAN_ALL) {
       if (Q.state(id) || (RULES[id].needs && !Q.done(RULES[id].needs))) continue;
       const giver = this.personIndex(QUESTS[id].giver);
       if (giver < 0 || giver >= PEOPLE.length || this.skipping(`p:${giver}`) || !this.reachable(giver)) continue;
@@ -816,7 +860,7 @@ export class Brain {
     if (!here) return null;
     const { townUI, pack } = this.o, Q = townUI.quests;
     // (The quests' own talk in the town comes through questJob and offerJob: those first, wherever it is.)
-    for (const [id] of PLAN) {
+    for (const [id] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done') continue;
       const q = QUESTS[id], giver = this.personIndex(q.giver);
@@ -848,7 +892,7 @@ export class Brain {
     // A night at the Tolling Bell: when a quest waits on tomorrow, or it's late and it's tired.
     const h = m.hour;
     const making = Object.keys(RULES).some((id) => Q.state(id)?.stage === 'making' && this.o.town.day >= 0 && this.o.town.day < Q.state(id).ready);
-    const nightWork = PLAN.some(([id, lvl]) => { const st = Q.step(id); return st && (st.night || st.warden || (st.kill === 'barrows')) && m.lvl >= lvl; });
+    const nightWork = PLAN_ALL.some(([id, lvl]) => { const st = Q.step(id); return st && (st.night || st.warden || (st.kill === 'barrows')) && m.lvl >= lvl; });
     if (h >= 18.3 && h < 23.5 && (making || (m.hpf < 0.5)) && !nightWork && pack.purse() >= 4) {
       const i = PEOPLE.findIndex((p) => p.trade === 'inn');
       if (i >= 0 && !this.skipping(`p:${i}`) && this.reachable(i)) return { kind: 'talk', why: 'bed', who: i, say: `A bed at the Tolling Bell${making ? ': a quest waits on the morning' : ''}.` };

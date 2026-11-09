@@ -207,11 +207,21 @@ it back, it comes back to it two levels stronger, so the log shows where the dif
 While it's on, the mouse is left free: no pointer lock, so the button and the menu can be clicked. Esc pauses and resumes.
 Pressing a move key (or the stick) takes the controls back for as long as you hold it.
 
+**Keeping it up with the game.** It has to be taught what's added to the game. Quests, steps, places, foes, lairs, spells
+and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`). `coverage()` there lists
+whatever the game has that it doesn't know, in the console when auto-play starts, and from `node tools/autoplay/check.mjs`,
+which fails until the list is empty. Until it's taught, it makes do:
+
+- a new quest goes on the end of its plan, at a level guessed from what it pays
+- a new foe is judged by its life against its own level
+- a new place is found from `SITES`
+
 **Files.**
 
 - `src/ui/autoplay.js`: the button, the status line and the menu.
 - `src/ui/autobrain.js`: the head.
 - `src/ui/autolog.js`: the balance log.
+- `tools/autoplay/check.mjs`: does it know the whole game?
 - `src/sim/nav.worker.js`: its paths. This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
   as paths need it. The sim's grid is a metre, made wide for a knight, and is too coarse for the Sexton's passage. Out in the
   countries it lays a fresh half-metre grid round each short stretch, at the land's own height.

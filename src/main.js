@@ -656,7 +656,7 @@ async function boot(plan, poolSize) {
   // Auto-play, behind the skull's word Jamie: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
-    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on),
+    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES,
   });
   const closePack = (viaEsc) => {
     inventory.hide();
