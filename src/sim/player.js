@@ -90,7 +90,7 @@ export class Player {
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
       guard: 0, guardAt: -9, bashed: false, blockEvT: 0, hasShield: false, blockHeld: false, staffSurfT: null,
-      surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
+      surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfLow: 0, surfRight: 0, surfPose: false, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
     });
   }
 
@@ -108,6 +108,7 @@ export class Player {
     this.arms = this.rigs[hands];
     this.stance = STANCES[hands];
     this.staffSurf = false; this.staffSurfT = null;
+    this.surfRight = 0;
     this.surfArm = 0; this.surfTilt = 0; this.surfYaw = 0; this.steerX = 0;
     Object.assign(this, {
       clip: this.stance.idle, rest: this.stance.idle, t: 0, fade: 1, rate: 1, swingRate: 1, queued: null, combo: 0, comboT: 0, swinging: false, recovering: false,
@@ -475,7 +476,16 @@ export class Player {
     // The raised arm's way up its line: quick up, and it starts down the instant the button's let go.
     const shieldWant = this.guard && this.guard !== G.DOWN;
     this.shieldUp = shieldWant ? Math.min(1, this.shieldUp + dt / SHIELD_RISE) : Math.max(0, this.shieldUp - dt / SHIELD_FALL);
-    if (this.surfing !== !!this.surfPose) this.poseForSurf();
+    // Keep the current rig visible as the right arm leaves toward the bottom right.
+    // Swap poses only once it is off screen, then bring the new pose back the same way.
+    if (this.surfing !== !!this.surfPose) {
+      this.surfRight = Math.min(1, this.surfRight + dt / 0.10);
+      this.swinging = false; this.threat = null;
+      if (this.surfRight < 1) return;
+      this.poseForSurf();
+    } else {
+      this.surfRight = Math.max(0, this.surfRight - dt / 0.14);
+    }
     // Time the hidden staff's cast without swapping out the surfing arms.
     if (this.staffSurfT !== null) {
       this.staffSurfT += tdt * this.staffSurfRate;
@@ -623,22 +633,24 @@ export class Player {
     const { arms } = this;
     arms.solve(arms.clips[this.clip === this.stance.idle ? this.rest : this.clip], this.t, this.fade, snap, VM_PALETTE);
     if (sim.casting.armDown > 0) this.lowerSwordArm(snap, sim.casting.armDown);
+    const surfRight = this.surfRight * this.surfRight * (3 - 2 * this.surfRight);
+    if (surfRight > 0) this.lowerSwordArm(snap, surfRight, surfRight);
     const tp = arms.tip * 3, rp = arms.weapon * 3, w = arms.wt;
     snap[H.TIP_X] = w[tp]; snap[H.TIP_Y] = w[tp + 1]; snap[H.TIP_Z] = w[tp + 2];
     snap[H.ROOT_X] = w[rp]; snap[H.ROOT_Y] = w[rp + 1]; snap[H.ROOT_Z] = w[rp + 2];
   }
 
   // The sword arm goes down out of the way of the casting hand, and the shield arm stays where it is.
-  lowerSwordArm(snap, k) {
+  lowerSwordArm(snap, k, right = 0) {
     const { arms } = this;
     const chain = arms.swordArm || (arms.swordArm = arms.names.flatMap((n, j) => (/_R$/.test(n) || n === 'weapon' || n === 'weapon_tip' ? [j] : [])));
-    const ty = -1.6 * k, tz = 0.2 * k;
+    const tx = 1.2 * right, ty = -1.6 * k, tz = 0.2 * k;
     for (const j of chain) {
       const o = VM_PALETTE + j * 8, x = snap[o], y = snap[o + 1], z = snap[o + 2], w = snap[o + 3];
-      snap[o + 4] += 0.5 * (ty * z - tz * y);
-      snap[o + 5] += 0.5 * (ty * w + tz * x);
-      snap[o + 6] += 0.5 * (-ty * x + tz * w);
-      snap[o + 7] += -0.5 * (ty * y + tz * z);
+      snap[o + 4] += 0.5 * (tx * w + ty * z - tz * y);
+      snap[o + 5] += 0.5 * (-tx * z + ty * w + tz * x);
+      snap[o + 6] += 0.5 * (tx * y - ty * x + tz * w);
+      snap[o + 7] += -0.5 * (tx * x + ty * y + tz * z);
     }
   }
 
