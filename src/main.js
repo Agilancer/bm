@@ -1015,7 +1015,7 @@ class GameView {
       renderDiagnostics.presented();
       renderDiagnostics.stage = 'HUD';
       this.drawOpening?.(snap, c);
-      this.townUI?.frame(dt, c, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
+      this.townUI?.frame(dt, c, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw, !!this.shared.input[INPUT.PAUSE] || !!this.idle, snap);
       this.lands?.frame(snap);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
       if (!this.idle) this.govern(dt);
