@@ -15,7 +15,7 @@ export class Input {
     this.enabled = false;
     this.menu = false;   // a menu is up: the hands and feet are off duty
     // Auto-play (src/ui/autoplay.js): free is the mouse left free to click (no pointer lock, as on a touch screen), and auto
-    // is the bot's hands and feet, { mx, mz, run, jumpHeld, cast }, read here in place of the keys'.
+    // is the bot's hands and feet, { mx, mz, run, jumpHeld, cast, block }, read here in place of the keys'.
     this.free = false;
     this.auto = null;
     this.sens = 1;   // the Look speed setting
@@ -205,6 +205,6 @@ export class Input {
     s[INPUT.SPRINT] = (k.has('ShiftLeft') || k.has('ShiftRight') || this.sprintToggle || this.stickRun || a?.run) ? 1 : 0;
     s[INPUT.JUMP_HELD] = this.enabled && !this.menu && (k.has('Space') || this.jumpTouch || a?.jumpHeld) ? 1 : 0;
     s[INPUT.CAST] = this.enabled && !this.menu && (k.has('KeyF') || this.castMouse || this.castTouch || this.castSlot || a?.cast) ? 1 : 0;
-    s[INPUT.BLOCK] = this.enabled && !this.menu && (this.guardMouse || this.guardTouch) ? 1 : 0;
+    s[INPUT.BLOCK] = this.enabled && !this.menu && (this.guardMouse || this.guardTouch || a?.block) ? 1 : 0;
   }
 }

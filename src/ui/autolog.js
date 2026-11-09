@@ -7,7 +7,7 @@ import { QUESTS } from '../folk/lines/quests.js';
 import { countryAt } from '../core/lands.js';
 
 const KEY = 'bm.autoplay.log';
-const fresh = () => ({ v: 1, started: new Date().toISOString(), t: 0, level: 0, levels: [], quests: {}, fights: {}, kills: {}, falls: [], gold: 0 });
+const fresh = () => ({ v: 1, started: new Date().toISOString(), t: 0, level: 0, levels: [], quests: {}, fights: {}, kills: {}, falls: [], gold: 0, bosses: {} });
 
 export class AutoLog {
   constructor() {
@@ -57,9 +57,20 @@ export class AutoLog {
     b.where[f.where] = (b.where[f.where] || 0) + 1;
   }
 
+  // A spell cast, or a shot of the staff.
+  cast(key) { const c = (this.d.casts ||= {}); c[key] = (c[key] || 0) + 1; }
+
   kill(name) {
     this.d.kills[name] = (this.d.kills[name] || 0) + 1;
     if (this.fight) this.fight.kills++;
+  }
+
+  // A boss (the black knight): each go at him, and when he went down, at what level and after how long.
+  boss(key, what, m) {
+    const b = (this.d.bosses ||= {})[key] || (this.d.bosses[key] = { tries: 0 });
+    if (what === 'try') { b.tries++; b.lastTry = Math.round(this.d.t); b.levelTry = this.d.level; }
+    if (what === 'killed' && b.killed === undefined) { b.killed = Math.round(this.d.t); b.level = this.d.level; b.minutes = +((b.killed - (b.lastTry ?? b.killed)) / 60).toFixed(1); }
+    this.save();
   }
 
   // Beaten back to the town's edge: when, at what level, where, doing what.
@@ -82,6 +93,8 @@ export class AutoLog {
       <h3>Levels</h3>${rows(['Level', 'At (min)', 'Took (min)', 'Hour'], d.levels.map((l, i) => [l.level, min(l.t), min(l.t - (i ? d.levels[i - 1].t : 0)), l.hour]))}
       <h3>Quests</h3>${rows(['Quest', 'Taken (min, lvl)', 'Done (min, lvl)', 'Took (min)', 'Beaten back'], qs.map(([, q]) => [q.title, `${min(q.taken)}, ${q.levelTaken}`, q.done !== undefined ? `${min(q.done)}, ${q.levelDone}` : '—', q.minutes ?? '—', q.falls]))}
       <h3>Fights by level</h3>${rows(['Level', 'Fights', 'Avg secs', 'Avg life lost', 'Kills', 'Lowest life', 'Where'], fights.map(([k, b]) => [k, b.n, (b.secs / b.n).toFixed(1), (b.lost / b.n).toFixed(0), b.kills, `${Math.round(b.low * 100)}%`, Object.entries(b.where).map(([w, n]) => `${w} ${n}`).join(', ')]))}
+      <h3>Bosses</h3>${rows(['Boss', 'Goes at him', 'Down at (min, lvl)', 'Last go took (min)'], Object.entries(d.bosses || {}).map(([k, b]) => [k === 'black' ? 'The black knight' : k, b.tries, b.killed !== undefined ? `${min(b.killed)}, ${b.level}` : '—', b.minutes ?? '—']))}
+      <h3>Spells and the staff</h3>${rows(['Cast', 'Times'], Object.entries(d.casts || {}).sort((a, b) => b[1] - a[1]))}
       <h3>Kills</h3>${rows(['Foe', 'Killed'], kills)}
       <h3>Beaten back</h3>${rows(['At (min)', 'Level', 'Where', 'Doing'], d.falls.map((f) => [min(f.t), f.level, f.where, f.doing]))}`;
   }

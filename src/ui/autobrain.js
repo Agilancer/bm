@@ -17,13 +17,15 @@
 //
 // Where it walks: in the town, the woods round it and the catacombs, by paths from src/sim/nav.worker.js; out in the countries,
 // by the roads (src/core/lands.js ROUTES) and across country, the pines stepped round by the same worker, and the woken seals.
-import { C, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, SLIME_FLOATS, SLIMES_START } from '../core/layout.js';
-import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, OPENING, RUN_OUT } from '../core/opening.js';
-import { CAVE_PATH, ROADS, terrainHeight } from '../core/terrain.js';
+import * as LAYOUT from '../core/layout.js';
+import { C, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
+import { CAVE_MOUTH, CAVE_OUT, OPENING, RUN_OUT } from '../core/opening.js';
+import { ROUTE, routeAt, routeDir, routeNear } from '../core/escort.js';
+import { ROADS, terrainHeight } from '../core/terrain.js';
 import { ROUTES, SITES } from '../core/lands.js';
 import { SEALS } from '../core/sites.js';
 import { inTown, townDist } from '../core/town.js';
-import { churchAt, inChurch } from '../core/church.js';
+import { CHURCH_GUARD, churchAt, inChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
 import { GROUP_KEYS, GROUPS, LAIRS, TRIPO_KIND } from '../core/tripo-monsters.js';
 import { CAMPS } from '../sim/slimes.js';
@@ -32,6 +34,8 @@ import { RULES, isNight } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { PEOPLE } from '../folk/people.js';
 import { BEYOND } from '../folk/lines/beyond.js';
+import { LISANDRA } from '../folk/lines/lisandra.js';
+import { TUMBLER_SIZES } from '../sim/tumblers.js';
 import { TRADES, offerFor, worth } from '../folk/shops.js';
 import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
 
@@ -46,7 +50,10 @@ const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
 
 // Posts it keeps clear of until it's strong enough: [x, z, how wide, from what level]. (Velscour's man on the west road and the
 // black knight on the cathedral's steps keep a post and a leash: src/core/knights.js, src/sim/sim.worker.js BLACK.)
-const CATHEDRAL_GUARD = { x: 150, z: 0 };
+const CATHEDRAL_GUARD = { x: CHURCH_GUARD[0], z: CHURCH_GUARD[1] };
+// The black knight: his post, his leash (BLACK.leash in src/sim/sim.worker.js), where it stands to work on him, and the level it
+// goes for him at (raised two each time he sends it back to the town).
+const BLACK_POST = CHURCH_GUARD, BLACK_LEASH = 20, SIEGE_RING = 29, BOSS_LEVEL = 8;
 const HYDRA_AT = churchAt(208, -128);
 const POSTS = [
   [-78, -3, 30, 18], [CATHEDRAL_GUARD.x, CATHEDRAL_GUARD.z, 28, 99], [-40, -150, 44, 14], [150, 110, 26, 8],
@@ -80,7 +87,7 @@ function fightable(kind, lvl, maxHp = 0, slime = false) {
 
 // The quests, in the order it takes them on, and the level it wants for each.
 const PLAN = [
-  ['bed_and_bell', 1], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
+  ['lisandra_work', 1], ['bed_and_bell', 1], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
   ['long_way_round', 4], ['toll_of_bell', 5], ['millhaven_jelly', 5], ['barrow_lights', 8], ['sallowmere', 8], ['four_watches', 9],
   ['crown_of_teeth', 11], ['black_road', 13],
 ];
@@ -129,16 +136,35 @@ function gearScore(slots) {
   return s;
 }
 
-// The road it walks from Lisandra's ledge to the town, as she does (src/sim/opening.js ROUTE).
-function escortRoute() {
-  const road = ROADS[0].line, end = CAVE_PATH.pts.at(-1);
-  let k = 0, best = 1e9;
-  road.forEach((p, i) => { const d = dist(p[0], p[1], end[0], end[1]); if (d < best) { best = d; k = i; } });
-  const pts = CAVE_PATH.pts.slice(1).map((p) => [p[0], p[1]]);
-  for (let i = k - 1; i >= 0; i--) pts.push([road[i][0], road[i][1]]);
-  pts.push([...ESCORT_TO]);
-  return pts;
-}
+// What each spell's for, as a score for the fight as it stands (c: d to its mark, dn to the nearest, close within 5.5 m,
+// around its mark, hpf, fast, still, big, inLine, coming): 0 when it's no use. SELF: cast on itself, no aim. GROUND: aimed
+// at the feet. BOLTS: what a raised shield stops. CORE: always on its bar. A spell added to the game is taught here too.
+const USE = {
+  firebolt: (c) => c.d < 42 && 3,
+  frost: (c) => c.d < 32 && 2.2 + (c.fast ? 2 : 0),
+  lightning: (c) => c.d > 6 && c.d < 30 && (c.around >= 2 ? 4 : 1.6),
+  missiles: (c) => c.d < 30 && 2.6,
+  arcaneblast: (c) => c.d < 8.5 && (c.close >= 2 ? 5.5 : 2.4),
+  firebeam: (c) => c.d < 16 && (c.around >= 2 ? 3.4 : 2.6),
+  chain: (c) => c.d < 24 && (c.around >= 2 ? 4.6 : 2.2),
+  nova: (c) => c.close >= 3 && 8,
+  meteor: (c) => c.d > 11 && c.d < 55 && (c.around >= 3 ? 6 : c.still && c.big ? 4.5 : 0),
+  blizzard: (c) => c.d > 8 && c.d < 36 && (c.around >= 3 ? 5 : c.still && c.big ? 3 : 0),
+  drain: (c) => c.d < 16 && c.hpf < 0.8 && 3.5 + (1 - c.hpf) * 4,
+  lance: (c) => c.d < 40 && (c.inLine >= 2 ? 5 : 2.6),
+  well: (c) => c.d > 8 && c.d < 28 && c.around >= 3 && 5.5,
+  plague: (c) => c.d > 6 && c.d < 22 && (c.around >= 2 ? 4 : 1.5),
+  blades: (c) => c.close >= 2 && !c.bladesUp && 5,
+  spikes: (c) => c.d < 14 && (c.inLine >= 2 ? 4.5 : 2.4),
+  wallfire: (c) => c.d > 6 && c.d < 20 && c.around >= 2 && c.coming && 4,
+  mend: (c) => c.hpf < 0.4 && c.dn > 6 && 9,
+  wisp: () => 0,
+  blink: () => 0,
+};
+const SELF = new Set(['nova', 'mend', 'blades', 'wisp']);
+const GROUND = new Set(['meteor', 'blizzard', 'wallfire']);
+const BOLTS = new Set(['firebolt', 'frost', 'lightning', 'missiles', 'lance', 'chain', 'firebeam', 'spikes', 'arcaneblast']);
+const CORE = ['firebolt', 'mend', 'nova', 'meteor'];
 
 // ---------------------------------------------------------------- what it knows, against what the game has
 
@@ -146,12 +172,14 @@ function escortRoute() {
 // can't do, somewhere it can't find, a foe or a lair it has no measure of, a spell it casts that's gone, a shop it doesn't use.
 // Warned in the console when it starts, and the failing list of tools/autoplay/check.mjs. When something's added to the game,
 // it's taught here (and the check run), so auto-play keeps playing the whole of it. foeNames: FOE_NAMES from src/main.js.
-const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden']);
+const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start']);
+// The blocks of the snapshot it reads (foes() and the rest); a new one is something in the world it can't see yet.
+const BLOCKS = new Set(['FX_START', 'CHARS_START', 'SLIMES_START', 'TUMBLERS_START']);
 const CASTS = ['firebolt', 'chain', 'nova', 'meteor', 'mend', 'wisp'];
 const FARMS = new Set(['bone', 'iron', 'silk']);
 const STOCKS = new Set(['staffs', 'robes', 'skulls', 'curios', 'scrolls']);
 export function coverage(foeNames = null) {
-  const out = [], people = new Set([...PEOPLE, ...BEYOND].map((p) => p.id));
+  const out = [], people = new Set([...PEOPLE, ...BEYOND, LISANDRA].map((p) => p.id));
   for (const id of Object.keys(RULES)) {
     const R = RULES[id];
     if (!(id in LEVEL_OF)) out.push(`quest ${id}: not in PLAN, so it's taken on last, at a guessed level (${guessLevel(id)})`);
@@ -166,7 +194,9 @@ export function coverage(foeNames = null) {
   }
   for (const l of LAIRS) if (!(l.key in LAIR_LEVEL)) out.push(`lair ${l.key}: no level in LAIR_LEVEL, so it keeps clear of it till level 10`);
   for (const g of GROUP_KEYS) if (!(GROUPS[g].hp > 0)) out.push(`monster group ${g}: no hp to measure it by`);
+  for (const k of Object.keys(LAYOUT)) if (k.endsWith('_START') && !BLOCKS.has(k)) out.push(`snapshot block ${k}: something new in the world it can't see (foes())`);
   for (const k of CASTS) if (!(k in SP)) out.push(`spell ${k}: it casts this, and it's gone from SPELLS`);
+  for (const sp of SPELLS) if (!(sp.key in USE)) out.push(`spell ${sp.key}: no use for it in USE, so it never casts it`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
   if (foeNames) foeNames.slice(0, TRIPO_KIND).forEach((n, k) => { if (n && !KNOWN_KINDS.has(k)) out.push(`foe kind ${k} (${n}): no rule in fightable(), so it's judged by its life alone`); });
   return out;
@@ -245,14 +275,14 @@ export class Brain {
     this.nav = new Nav(o.base, o.opening);
     const gaps = coverage(o.foeNames);
     if (gaps.length) console.warn(`auto-play doesn't know all of the game yet (teach it in src/ui/autobrain.js; node tools/autoplay/check.mjs):\n  ${gaps.join('\n  ')}`);
-    this.auto = { mx: 0, mz: 0, run: false, jumpHeld: false, cast: false };
+    this.auto = { mx: 0, mz: 0, run: false, jumpHeld: false, cast: false, block: false };
     this.t = 0;
     this.grind = 'woods';
     this.reset();
   }
 
   reset() {
-    Object.assign(this.auto, { mx: 0, mz: 0, run: false, jumpHeld: false, cast: false });
+    Object.assign(this.auto, { mx: 0, mz: 0, run: false, jumpHeld: false, cast: false, block: false });
     this.want = null; this.face = null; this.pitch = 0; this.run = false;
     this.goal = null; this.macro = null; this.sub = null; this.subFor = null; this.probeDir = null; this.probeT = 0;
     this.job = null; this.jobKey = ''; this.thinkT = 0; this.planT = 0;
@@ -262,6 +292,7 @@ export class Brain {
     this.track = new Map();
     this.engage = new Map();   // what it's been fighting, and since when it last hurt it
     this.kite = null; this.kiteCool = 0; this.dodgeCool = 0; this.dodgeSide = 1; this.reactT = 0; this.backedUp = 0; this.esc = null;
+    this.guardT = 0; this.guardCool = 0; this.spellAt = 0;
     this.wobble = 0; this.wobbleT = 0; this.yawV = 0; this.pitchV = 0; this.surfCool = 0; this.surfAt = -9;
     this.skip = new Map();     // things it's given up on for a while: key -> until
     this.patrol = null; this.wispT = 0; this.gearT = 0; this.strafe = 1; this.strafeT = 0;
@@ -272,7 +303,8 @@ export class Brain {
   start() { this.reset(); this.o.input.auto = this.auto; }
   stop() {
     this.o.input.auto = null;
-    this.auto.cast = false;
+    this.letGo();
+    this.auto.block = false;
     if (this.o.townUI.open) this.o.townUI.close(false);
     if (this.o.lands.isOpen) this.o.lands.close();
   }
@@ -307,6 +339,16 @@ export class Brain {
       if (d > 60 || Math.abs(y - m.y) > 8) continue;
       out.push({ id: 1000 + i, kind: 9, x, y, z, d, hp: 1, maxHp: 1, hostile: d < 14, h: Math.max(0.25, snap[o + 4] * 0.6), slime: true });
     }
+    // The tumblers: living stone among the boulders, the Mire Mound under the fen, the crows over the Downs (src/sim/tumblers.js).
+    // Asleep they look like any boulder: awake, they glow. Their life is by their size.
+    for (let i = 0; i < MAX_TUMBLERS; i++) {
+      const o = TUMBLERS_START + i * TUMBLER_FLOATS;
+      if (snap[o] < 0.5) continue;
+      const x = snap[o + 1], y = snap[o + 2], z = snap[o + 3], R = snap[o + 4], d = dist(m.x, m.z, x, z);
+      if (d > 60 || Math.abs(y - m.y) > 20) continue;
+      const size = Object.values(TUMBLER_SIZES).reduce((a, b) => (Math.abs(b.R - R) < Math.abs(a.R - R) ? b : a));
+      out.push({ id: 2000 + i, kind: 99, x, y, z, d, hp: 1, maxHp: size.hp, hostile: snap[o + 6] > 0.05, h: R, tumbler: true, slime: false });
+    }
     // Where each was a moment ago: how it's moving, to lead it.
     const now = this.t;
     for (const f of out) {
@@ -320,7 +362,11 @@ export class Brain {
   // The posts and lairs it should keep clear of at this level, as circles.
   avoid(m) {
     const out = [];
-    for (const [x, z, r, lvl] of POSTS) if (m.lvl < lvl) out.push([x, z, r]);
+    for (const [x, z, r, lvl] of POSTS) {
+      // (The black knight's door is open ground once he's down, his loot and all.)
+      if (x === CATHEDRAL_GUARD.x && z === CATHEDRAL_GUARD.z && !this.blackKnight(this.snap)) continue;
+      if (m.lvl < lvl) out.push([x, z, r]);
+    }
     for (const l of LAIRS) if (m.lvl < (LAIR_LEVEL[l.key] || 10)) out.push([l.x, l.z, (l.wake || 110) + 15]);
     return out;
   }
@@ -340,6 +386,7 @@ export class Brain {
 
   step(dt, snap) {
     this.t += dt;
+    this.snap = snap;
     const m = this.me(snap);
     const g = this.o.game;
     // Fallen, with no opening to catch it (?noopening): up again, as R does.
@@ -370,15 +417,16 @@ export class Brain {
     if (this.o.lands.isOpen) { this.halt(); if (this.sealTo || this.t - (this.sealT ?? -99) < 4) this.travelling(); return; }
     if (this.o.inventory.open || this.o.townUI.book) { this.halt(); return; }
     this.castT -= dt; this.castCool -= dt; this.staffCool -= dt;
-    if (this.castT <= 0) this.auto.cast = false;
+    if (this.castT <= 0) this.letGo();
     this.thinkT -= dt;
     if (this.thinkT <= 0) { this.thinkT = 0.12; this.think(snap, m); }
     this.boardFrame = false;
     this.walk(dt, m);
     // (Space is only held while it's on the shield, or getting on it.)
     if (!this.boardFrame) this.auto.jumpHeld = false;
+    if (!this.fighting && this.auto.block) { this.auto.block = false; this.guardT = 0; }
     this.motor(dt, m);
-    if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); }
+    if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); this.bar(); }
     // A light underfoot down among the dead, for whoever's watching.
     if (m.below && !this.fighting && (this.wispT -= dt) <= 0 && m.mana > 40) { this.wispT = 85; this.cast(SP.wisp, 0.3); }
     void g;
@@ -399,7 +447,8 @@ export class Brain {
     // A fight, or getting away from one.
     if (!m.town && this.combat(snap, m, foes)) { this.fighting = true; return; }
     // Hurt and out of it: mend, or rest a little.
-    if (m.hpf < 0.6 && m.mana >= 30 && this.known(SP.mend) && this.castCool <= 0 && !m.town) { this.face = null; this.halt(); this.cast(SP.mend, 0.35); this.castCool = 1.6; this.say('Mending.'); return; }
+    // (Low and out of the fight: a Mend, now and then. Otherwise its life comes back on its own, given a few quiet seconds.)
+    if (m.hpf < 0.45 && m.mana >= 30 && this.known(SP.mend) && this.t >= (this.mendAt || 0) && !m.town) { this.face = null; this.halt(); this.cast(SP.mend, 0.35); this.mendAt = this.t + 4; this.say('Mending.'); return; }
     // What's underfoot, and the chests it passes.
     if (!m.town && this.loot(m, foes)) return;
     // The job in hand, or a new one.
@@ -410,15 +459,75 @@ export class Brain {
 
   known(i) { return this.o.spellbar.known.has(i); }
 
+  // ---- spells and the staff
+
+  // Its bar, set in the book as a player sets theirs: the four it leans on (Firebolt, Mend, Frost Nova, Meteor), and two more
+  // that come round in turn every four minutes, so that in time every spell it knows has been in its hands (and in the log).
+  bar() {
+    const sb = this.o.spellbar, known = [...sb.known].sort((a, b) => a - b);
+    const core = CORE.map((k) => SP[k]).filter((i) => i !== undefined && sb.known.has(i));
+    const rest = known.filter((i) => !core.includes(i) && !SPELLS[i].noBar && USE[SPELLS[i].key]);
+    const turn = Math.floor((this.o.log?.d.t ?? this.t) / 240), want = core.slice(0, 6);
+    for (let k = 0; want.length < 6 && k < rest.length; k++) { const i = rest[(turn * 2 + k) % rest.length]; if (!want.includes(i)) want.push(i); }
+    want.forEach((i, k) => { if (sb.loadout[k] !== i) sb.assign(k, i); });
+  }
+
+  // A cast: from its slot on the bar if it's there (the slot's key, as 1 to 6 do), else chosen in the book and cast with F. Held
+  // for `hold` seconds: a Firebolt gathering, a channel pouring.
   cast(i, hold) {
-    if (!this.known(i) || this.auto.cast) return false;
-    const sp = SPELLS[i], m = this.o.game.currentSnap();
+    if (!this.known(i) || this.auto.cast || this.slotHeld) return false;
+    const sp = SPELLS[i], m = this.o.game.currentSnap(), sb = this.o.spellbar;
     if (m && m[H.MANA] < sp.mana) return false;
-    this.o.spellbar.pick(i);
-    this.o.input.fire(INPUT.CAST_N);
-    this.auto.cast = true;
+    const k = sb.loadout.indexOf(i);
+    if (k >= 0) { sb.press(k, 'auto'); this.slotHeld = true; } else { sb.pick(i); this.o.input.fire(INPUT.CAST_N); this.auto.cast = true; }
     this.castT = hold;
+    this.lastSpell = sp.key;
+    this.o.log?.cast(sp.key);
     return true;
+  }
+
+  letGo() {
+    this.auto.cast = false;
+    if (this.slotHeld) { this.o.spellbar.release('auto'); this.slotHeld = false; }
+  }
+
+  // What to throw now: the spell on its bar that suits the moment best (a little at random, and not the same one every time),
+  // or a shot of the staff between spells, as a player clicks while a spell's cooling. c: the fight as it stands.
+  shoot(snap, m, c) {
+    if (this.auto.cast || this.slotHeld || snap[H.CAST_HELD] > 0.5 || snap[H.SWINGING] > 0.5) return;
+    const mana = m.mana;
+    const staff = () => {
+      if (!c.aimed || this.staffCool > 0 || mana < 5 || c.d > 40) return;
+      this.o.shared.input[INPUT.ATTACK] += 1;
+      this.staffCool = 0.65 + Math.random() * 0.4;
+      this.o.log?.cast('staff');
+    };
+    if (this.castCool > 0) { staff(); return; }
+    let best = null, bs = 0;
+    for (const i of this.o.spellbar.loadout) {
+      const sp = SPELLS[i], U = sp && USE[sp.key];
+      if (!U || mana < sp.mana + (sp.channel ? 10 : 0)) continue;
+      if (!SELF.has(sp.key) && !c.aimed) continue;
+      let s = U(c) || 0;
+      if (c.shield && BOLTS.has(sp.key)) s *= 0.25;
+      s *= (0.8 + Math.random() * 0.4) * (this.lastSpell === sp.key ? 0.7 : 1);
+      if (s > bs) { bs = s; best = sp; }
+    }
+    // The staff is what it fights with. A spell is for now and then: at once when it's in trouble (a Mend, a Nova), otherwise
+    // only every few seconds, and only when the moment suits one (a crowd, something big or quick) or, once in a while, anyway.
+    const urgent = best && bs >= 7.5 && this.t >= (this.urgentAt || 0);
+    const suits = best && this.t >= this.spellAt && (bs >= 3.6 || (bs >= 2 && Math.random() < 0.25));
+    if (!urgent && !suits) { staff(); return; }
+    this.spellAt = this.t + 3 + Math.random() * 4;
+    if (urgent) this.urgentAt = this.t + 3;
+    const key = best.key;
+    if (GROUND.has(key)) this.pitch = Math.atan2(c.T.y - (m.y + 1.62), Math.max(1, c.d));
+    if (key === 'plague') this.pitch += 0.5 * Math.asin(Math.min(1, 12 * c.d / (17 * 17)));
+    const hold = key === 'firebolt' ? (c.d > 14 ? 0.95 : 0.5) : best.channel ? 1.4 + Math.random() * 0.6 : 0.3;
+    if (this.cast(SPELLS.indexOf(best), hold)) {
+      this.castCool = best.channel ? 0.4 : 0.35 + Math.random() * 0.35 + (key === 'meteor' || key === 'blizzard' || key === 'well' ? 0.8 : 0);
+      if (key === 'blades') this.bladesT = this.t;
+    }
   }
 
   // ---- the opening
@@ -452,22 +561,32 @@ export class Brain {
     if (st === OPENING.ESCORT) {
       const foes = this.foes(snap, m).filter((f) => f.hostile && f.d < 30);
       if (foes.length && this.combat(snap, m, foes)) { this.fighting = true; this.say(`Fighting the dead on the road (${foes.length}).`); return; }
-      const route = this.escort || (this.escort = escortRoute());
-      // Lisandra: the last body in the snapshot.
-      const n = snap[H.NCHARS] | 0, o = CHARS_START + (n - 1) * C_SIZE, lx = snap[o + C.X], lz = snap[o + C.Z];
-      const her = dist(m.x, m.z, lx, lz);
-      const end = route.at(-1);
-      if (dist(m.x, m.z, end[0], end[1]) < 7) { this.face = Math.atan2(lx - m.x, lz - m.z); this.say('Bellmourn. Waiting on Lisandra.'); return; }
-      if (her > 8) { this.face = Math.atan2(lx - m.x, lz - m.z); this.say('Waiting for Lisandra to catch up.'); return; }
-      // The point on the road a few metres on from where it stands.
-      let k = 0, best = 1e9;
-      route.forEach((p, i) => { const d = dist(p[0], p[1], m.x, m.z); if (d < best) { best = d; k = i; } });
-      let j = k;
-      while (j < route.length - 1 && dist(route[j][0], route[j][1], m.x, m.z) < 4) j++;
+      // She leads the way down (src/sim/opening.js): it follows a few strides behind her on the road, at her pace. Too close
+      // and it lets her get on; she waits if it falls back.
+      const her = this.lisandra(snap);
+      if (!her) { this.say('Following Lisandra down to Bellmourn.'); return; }
+      const hers = routeNear(her.x, her.z), mine = routeNear(m.x, m.z, hers, 60), d = dist(m.x, m.z, her.x, her.z);
+      const end = ROUTE.pts.at(-1);
+      if (dist(m.x, m.z, end[0], end[1]) < 6 || (hers >= ROUTE.len - 0.5 && d < 6)) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Bellmourn. Lisandra has her say.'); return; }
+      const [ax, az] = routeAt(Math.min(ROUTE.len, Math.max(mine + 3, hers - 3.5)));
+      if (d < 3 && hers > mine) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
       this.face = null;
-      this.steer(route[j][0] - m.x, route[j][1] - m.z, false);
-      this.say('Following Lisandra down to Bellmourn.');
+      this.steer(ax - m.x, az - m.z, d > 9);
+      // Down the long slope on its shield, and she gets on hers.
+      const [rx, rz] = routeDir(mine);
+      this.board(0.12, m, rx, rz, ROUTE.len - mine);
+      if (!m.surf) this.say('Following Lisandra down to Bellmourn.');
     }
+  }
+
+  // Lisandra, whichever of her two forms is out: the last bodies in the snapshot (as src/ui/folk.js finds her).
+  lisandra(snap) {
+    const n = snap[H.NCHARS] | 0;
+    for (let i = n - 1; i >= n - 2 && i >= 0; i--) {
+      const o = CHARS_START + i * C_SIZE;
+      if (snap[o + C.ACTIVE] > 0.5) return { x: snap[o + C.X], z: snap[o + C.Z] };
+    }
+    return null;
   }
 
   // ---- fighting
@@ -476,7 +595,9 @@ export class Brain {
     const lvl = m.lvl;
     this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12;
     // What it can't beat yet, coming for it: away over open ground, toward the town.
-    const scary = foes.filter((f) => !fightable(f.kind, lvl, f.maxHp, f.slime) && f.kind !== 1 && f.hostile && f.d < 26);
+    const boss = this.job?.kind === 'boss';
+    if (boss && this.blackKnight(snap) && dist(m.x, m.z, BLACK_POST[0], BLACK_POST[1]) < 60 && !foes.some((f) => f.id !== 0 && f.d < 8 && fightable(f.kind, lvl, f.maxHp, f.slime))) return false;
+    const scary = foes.filter((f) => !fightable(f.kind, lvl, f.maxHp, f.slime) && f.kind !== 1 && f.hostile && f.d < 26 && !(boss && f.id === 0));
     if (scary.length) {
       const f = scary.reduce((a, b) => (a.d < b.d ? a : b));
       const [ex, ez] = this.escape(m, scary, true);
@@ -501,9 +622,36 @@ export class Brain {
       this.say('Hurt: falling back.');
       return true;
     }
-    // A blade flashing before it falls: a sidestep, after a person's moment.
+    // A blade flashing before it falls: the shield up, if it has one in hand (no skull), or a sidestep; after a person's moment.
     const flash = live.find((f) => f.glint > 0.08 && f.glint < 0.6 && f.d < 4.5);
-    if (flash && this.dodgeCool <= 0 && Math.random() < 0.7) { this.dodgeCool = 1.4; this.dodgeSide = Math.random() < 0.5 ? -1 : 1; this.o.shared.input[INPUT.DODGE] += 1; }
+    const board = !!this.o.pack.slots.off && !this.o.pack.slots.skull && m.stam > 15;
+    if (this.guardT > 0) {
+      // Behind the shield: facing what's on it, giving ground a little, till it comes down again.
+      this.guardT -= 0.12;
+      if (this.guardT <= 0) { this.auto.block = false; this.guardCool = 1.6 + Math.random(); }
+      const t = flash || near;
+      this.face = Math.atan2(t.x - m.x, t.z - m.z);
+      this.steer(m.x - t.x, m.z - t.z, false, true);
+      this.say(`Behind the shield: ${this.foeName(t)}.`);
+      return true;
+    }
+    this.guardCool -= 0.12;
+    if (board && this.guardCool <= 0 && !this.auto.cast && !this.slotHeld && ((flash && Math.random() < 0.65) || (dn < 2.4 && !near.slime && !near.tumbler))) {
+      // Up with a shove (the right button), held a moment.
+      this.o.shared.input[INPUT.WIDE] += 1;
+      this.auto.block = true;
+      this.guardT = 0.5 + Math.random() * 0.6;
+      this.o.log?.cast('shield');
+      return true;
+    }
+    if (flash && this.dodgeCool <= 0 && Math.random() < 0.7) { this.dodgeCool = 1.4; this.dodgeSide = Math.random() < 0.5 ? -1 : 1; this.dodgeDir = null; this.o.shared.input[INPUT.DODGE] += 1; }
+    // A tumbler rolling straight at it: it can't turn quickly, so a step aside and it goes by (src/sim/tumblers.js).
+    const roll = live.find((f) => f.tumbler && f.d < 9 && ((f.vx || 0) * (m.x - f.x) + (f.vz || 0) * (m.z - f.z)) / (f.d || 1) > 3.5);
+    if (roll && this.dodgeCool <= 0) {
+      const v = Math.hypot(roll.vx, roll.vz) || 1, px = -roll.vz / v, pz = roll.vx / v, side = px * (m.x - roll.x) + pz * (m.z - roll.z) >= 0 ? 1 : -1;
+      this.dodgeDir = [px * side, pz * side]; this.dodgeCool = 1.4;
+      if (roll.d < 4) this.o.shared.input[INPUT.DODGE] += 1;
+    }
     // Kiting: something's on it, so it turns and runs a few strides to open ground, then turns back to face them.
     const K = this.kite;
     if (K) {
@@ -530,7 +678,7 @@ export class Brain {
     const tk = this.engage.get(T.id) || { since: this.t, best: T.hp };
     if (T.hp < tk.best - 0.5) { tk.best = T.hp; tk.since = this.t; }
     this.engage.set(T.id, tk);
-    if (this.t - tk.since > (T.slime ? 20 : 12)) { this.giveUp(`foe:${T.id}`, 45); this.engage.delete(T.id); this.target = null; }
+    if (this.t - tk.since > (T.slime || T.tumbler ? 20 : 12)) { this.giveUp(`foe:${T.id}`, 45); this.engage.delete(T.id); this.target = null; }
     const around = live.filter((f) => dist(f.x, f.z, T.x, T.z) < 5.5).length;
     // Where it'll be when the bolt gets there, and a hand that isn't perfect: a little off, more so on something quick.
     const tt = d / 34, ax = T.x + (T.vx || 0) * tt, az = T.z + (T.vz || 0) * tt;
@@ -545,21 +693,15 @@ export class Brain {
     if (dn < 7.5) { mx = bx; mz = bz; } else if (d > 20) { mx = fx; mz = fz; }
     if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.2 + Math.random() * 2.2; this.strafe = Math.random() < 0.75 ? -this.strafe : this.strafe; }
     mx += -fz * this.strafe * 0.6; mz += fx * this.strafe * 0.6;
-    if (this.dodgeCool > 1.1) { mx = -fz * this.dodgeSide; mz = fx * this.dodgeSide; }
+    if (this.dodgeCool > 1.1) { if (this.dodgeDir) [mx, mz] = this.dodgeDir; else { mx = -fz * this.dodgeSide; mz = fx * this.dodgeSide; } }
     this.steer(mx, mz, false, true);
     // (Backing into something: noted, and the next close call turns into a run instead.)
     this.backedUp = dn < 7.5 && Math.hypot(m.vx, m.vz) < 1 ? (this.backedUp || 0) + 0.12 : 0;
-    const sw = snap[H.SWINGING] > 0.5, busy = this.auto.cast || snap[H.CAST_HELD] > 0.5 || sw;
-    if (!busy && this.castCool <= 0) {
-      const mana = m.mana;
-      if (close >= 3 && mana >= 32 && this.cast(SP.nova, 0.3)) this.castCool = 0.9;
-      else if (m.hpf < 0.45 && mana >= 25 && dn > 6 && this.cast(SP.mend, 0.35)) this.castCool = 1.2;
-      else if (!aimed) { /* settling onto it */ }
-      else if (around >= 3 && d > 11 && d < 55 && mana >= 45 && this.cast(SP.meteor, 0.3)) { this.pitch = Math.atan2(T.y - (m.y + 1.62), Math.max(1, d)); this.castCool = 1.4; }
-      else if (around >= 2 && d < 22 && mana >= 30 && this.cast(SP.chain, 1.6)) this.castCool = 0.5;
-      else if (d < 42 && mana >= 12 && this.cast(SP.firebolt, d > 14 ? 0.9 : 0.5)) this.castCool = 0.45 + Math.random() * 0.3;
-      else if (d < 40 && this.staffCool <= 0 && mana >= 5) { this.o.shared.input[INPUT.ATTACK] += 1; this.staffCool = 0.8 + Math.random() * 0.3; }
-    }
+    // What's lined up behind its mark (for what goes through), how it's moving, how big it is.
+    const ux = fx, uz = fz;
+    const inLine = live.filter((f) => { const a = (f.x - m.x) * ux + (f.z - m.z) * uz; return a > 0 && a < 40 && Math.abs((f.x - m.x) * uz - (f.z - m.z) * ux) < 1.5; }).length;
+    const sp = Math.hypot(T.vx || 0, T.vz || 0), coming = ((T.vx || 0) * -fx + (T.vz || 0) * -fz) > 1;
+    this.shoot(snap, m, { T, d, dn, close, around, aimed, hpf: m.hpf, fast: sp > 4, still: sp < 1.5, big: T.maxHp > 150, inLine, coming, bladesUp: this.t - (this.bladesT ?? -99) < 20, shield: false });
     this.say(`Fighting ${live.length > 1 ? `${live.length} foes` : this.foeName(T)}.`);
     return true;
   }
@@ -725,6 +867,8 @@ export class Brain {
     // (Only while there's someone open to buy it: at night the town's counters are shut, and it keeps at its work.)
     const buyer = junk.length > 0 && PEOPLE.some((p, i) => TRADES[p.trade]?.buys && this.o.townUI.isOpen(i));
     const wantsTown = ((room < 10 || junk.length >= 6) && buyer) || (m.hpf < 0.45 && !this.known(SP.mend));
+    // Once it's at the black knight, it sees him through (unless he's done it in, and it's falling back to mend).
+    if (this.job?.kind === 'boss' && this.blackKnight(this.snap) && m.hpf > 0.4) return this.job;
     // In the town, its errands: the quest talk first, then the shops.
     const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60);
     if (errand) return errand;
@@ -746,6 +890,10 @@ export class Brain {
       if (!ready) continue;
       const job = this.questJob(id, m, lvl);
       if (job) return job;
+    }
+    // The black knight on the cathedral's steps, once it's strong enough for him.
+    if (this.blackKnight(this.snap) && m.lvl >= BOSS_LEVEL + (this.bump['boss:black'] || 0) && !this.skipping('boss:black') && !(isNight(m.hour) && m.lvl < BOSS_LEVEL + 4)) {
+      return { kind: 'boss', why: 'boss:black', say: 'To the cathedral steps: the black knight.' };
     }
     // The quests, in order.
     for (const [id, lvl] of PLAN_ALL) {
@@ -791,6 +939,16 @@ export class Brain {
       return this.talkJob(who, 'quest', `${title}: a word with ${this.o.townUI.people[who]?.name}.`);
     }
     if (st.back) return this.talkJob(giver, 'quest', `${title}: back to ${this.o.townUI.people[giver]?.name}.`);
+    if (st.start) {
+      // Work from each of a list of people: the nearest it can reach that it hasn't had any from.
+      const seen = s.seen || [], W = this.o.townUI;
+      let best = null, bd = Infinity;
+      for (const p of st.start) {
+        const i = this.personIndex(p), w = i >= 0 && !seen.includes(p) && !this.skipping(`p:${i}`) && this.reachable(i) ? W.whereOf(i) : null;
+        if (w && dist(m.x, m.z, w.x, w.z) < bd) { bd = dist(m.x, m.z, w.x, w.z); best = i; }
+      }
+      return best === null ? null : this.talkJob(best, 'offer', `${title}: to ${W.people[best].name} for work (${seen.length} of ${st.start.length}).`);
+    }
     if (st.bring) {
       if ((this.o.pack.mats[st.bring] || 0) >= st.n) return this.talkJob(giver, 'quest', `${title}: ${st.n} ${matName(st.bring, st.n)} to hand over.`);
       // Bone the woods' dead give up; iron and silk come from those buried down in the catacombs.
@@ -844,12 +1002,14 @@ export class Brain {
     for (const [id, lvl] of PLAN_ALL) {
       if (Q.state(id) || (RULES[id].needs && !Q.done(RULES[id].needs))) continue;
       const giver = this.personIndex(QUESTS[id].giver);
-      if (giver < 0 || giver >= PEOPLE.length || this.skipping(`p:${giver}`) || !this.reachable(giver)) continue;
+      if (giver < 0 || this.skipping(`p:${giver}`) || !this.reachable(giver)) continue;
       // (Far-off work can wait till it's nearly ready for it.)
       if (m.lvl + 3 < lvl) continue;
       const w = townUI.whereOf(giver);
       if (!w) continue;
       const d = dist(m.x, m.z, w.x, w.z);
+      // (Someone out past the town, like the Bellwright: only on the way.)
+      if (giver >= PEOPLE.length && d > 300) continue;
       if (d < bd) { bd = d; best = this.talkJob(giver, 'offer', `To ${townUI.people[giver].name}: there's work.`); }
     }
     return best;
@@ -971,6 +1131,7 @@ export class Brain {
       return;
     }
     if (j.kind === 'talk') { this.approach(m, j); return; }
+    if (j.kind === 'boss') { this.siege(snap, m); return; }
     if (j.kind === 'hunt') { this.hunt(m, j, foes); return; }
     this.halt();
   }
@@ -1268,6 +1429,85 @@ export class Brain {
     if (this.t - this.sealT < 1.2) return;
     if (this.sealTo) { const s = this.sealTo; this.sealTo = null; lands.go(s); this.macro = null; this.sub = null; return; }
     lands.close();
+  }
+
+  // ---- the black knight
+
+  // Velscour's knight on the cathedral's steps (sim.knights[0]: src/sim/sim.worker.js BLACK), as the snapshot has him, or null
+  // once he's down.
+  blackKnight(snap) {
+    if (!snap) return null;
+    const o = CHARS_START;
+    if (snap[o + C.ACTIVE] < 0.5 || (snap[o + C.KIND] | 0) !== 0 || snap[o + C.STATE] === 10 || snap[o + C.HP] <= 0) return null;
+    return { x: snap[o + C.X], y: snap[o + C.Y], z: snap[o + C.Z], yaw: snap[o + C.YAW], hp: snap[o + C.HP], maxHp: snap[o + C.MAX_HP], glint: snap[o + C.GLINT] };
+  }
+
+  // Putting him down, as a careful player does. He keeps his post: he won't chase past 20 m of it (26 once he's after you), and
+  // he lets anyone in the town go. So it stands on his flank just outside that, and works on him from there: a Meteor (from
+  // above: his shield's no use), Firebolts and Chain Lightning when he's turned from it. If he comes out after it, it backs off
+  // past his leash shooting all the way, and as he walks back to his door it has his back. Hurt, it falls back to the town.
+  siege(snap, m) {
+    const K = this.blackKnight(snap);
+    if (!K) {
+      if (this.siegeFor === this.jobT) { this.o.log?.boss('black', 'killed', m); this.o.note?.('Auto-play: the black knight is down.'); this.siegeFor = -1; }
+      this.job = null;
+      return;
+    }
+    if (this.siegeFor !== this.jobT) { this.siegeFor = this.jobT; this.o.log?.boss('black', 'try', m); }
+    const P = BLACK_POST, fromPost = dist(m.x, m.z, P[0], P[1]), dk = dist(m.x, m.z, K.x, K.z), kOut = dist(K.x, K.z, P[0], P[1]);
+    this.say(`The black knight: ${Math.round(K.hp)} of ${Math.round(K.maxHp)} left.`);
+    // Done in by him: off to the town (he lets it go there) to mend, and back.
+    if (m.hpf < 0.4) {
+      this.fighting = true;
+      this.steer(-m.x - (K.x - m.x) * 0.5, -m.z - (K.z - m.z) * 0.5, true);
+      if (dk > 14 && m.mana >= 25 && this.castCool <= 0 && this.cast(SP.mend, 0.35)) this.castCool = 1.2;
+      this.say('The black knight: falling back to mend.');
+      return;
+    }
+    // Where to stand: his flank (north or south of his door, whichever's nearer), just past his reach.
+    const side = m.z >= P[1] ? 1 : -1, stand = [P[0] - 4, P[1] + side * SIEGE_RING];
+    const atRing = fromPost > BLACK_LEASH + 1;
+    // Getting there, while he stands at his door.
+    if (dk > 34 && dist(m.x, m.z, stand[0], stand[1]) > 3) { this.goTo(stand[0], stand[1], 2, true); return; }
+    this.fighting = true;
+    // His aim: what it throws leads him; how he stands says whether his shield is in the way.
+    const vx = (K.x - (this.kPrev?.[0] ?? K.x)) / 0.12, vz = (K.z - (this.kPrev?.[1] ?? K.z)) / 0.12;
+    this.kPrev = [K.x, K.z];
+    const tt = dk / 34, ax = K.x + vx * tt, az = K.z + vz * tt;
+    if ((this.wobbleT -= 0.12) <= 0) { this.wobbleT = 0.5 + Math.random() * 0.5; this.wobble = (Math.random() - 0.5) * 0.03; }
+    const yaw = Math.atan2(ax - m.x, az - m.z) + this.wobble;
+    this.face = yaw;
+    this.pitch = Math.atan2(K.y + 1.3 - (m.y + 1.62), Math.max(1, dk));
+    const facing = Math.cos(wrap(Math.atan2(m.x - K.x, m.z - K.z) - K.yaw)) > 0.35;   // his front (and his shield) toward it
+    const aimed = Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.03, Math.atan2(0.7, dk));
+    // Footwork: never inside his reach; back off what's coming; along the ring otherwise, a step at a time.
+    let mx = 0, mz = 0;
+    const ox = (m.x - P[0]) / (fromPost || 1), oz = (m.z - P[1]) / (fromPost || 1);
+    if (dk < 13 || fromPost < BLACK_LEASH + 2) { mx = (m.x - K.x) / (dk || 1) + ox * 0.6; mz = (m.z - K.z) / (dk || 1) + oz * 0.6; }
+    else if (fromPost > SIEGE_RING + 6) { mx = -ox; mz = -oz; }
+    else { if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.5 + Math.random() * 2; this.strafe = -this.strafe; } mx = -oz * this.strafe * 0.4; mz = ox * this.strafe * 0.4; }
+    // Right on it: turn and run for it (he's slower than its sprint), then turn back.
+    if (dk < 6 && this.kiteCool <= 0) {
+      const away = [(m.x - K.x) / (dk || 1) + ox, (m.z - K.z) / (dk || 1) + oz], L = Math.hypot(away[0], away[1]) || 1;
+      this.kite = { x: away[0] / L, z: away[1] / L, t: 1.4 };
+      this.kiteCool = 2.5;
+    }
+    if (this.kite) {
+      this.kite.t -= 0.12;
+      this.face = Math.atan2(this.kite.x, this.kite.z);
+      this.steer(this.kite.x, this.kite.z, true);
+      if (this.kite.t <= 0) { this.kite = null; this.reactT = 0.3; }
+      return;
+    }
+    this.kiteCool -= 0.12; this.reactT -= 0.12;
+    this.steer(mx, mz, false, true);
+    // A blade flash, close: a sidestep.
+    if (K.glint > 0.08 && dk < 5 && this.dodgeCool <= 0) { this.dodgeCool = 1.4; this.o.shared.input[INPUT.DODGE] += 1; }
+    this.dodgeCool -= 0.12;
+    if (this.reactT > 0) return;
+    // His shield stops what comes at his front: the sky (a Meteor, a Blizzard) doesn't care which way he faces.
+    const still = Math.hypot(vx, vz) < 2.5;
+    this.shoot(snap, m, { T: { ...K, maxHp: K.maxHp }, d: dk, dn: dk, close: dk < 5.5 ? 1 : 0, around: 1, aimed, hpf: m.hpf, fast: !still, still, big: true, inLine: 1, coming: dk < 20, bladesUp: this.t - (this.bladesT ?? -99) < 20, shield: facing && kOut < 6 && atRing });
   }
 
   // ---- the hands and feet
