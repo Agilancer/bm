@@ -1,8 +1,18 @@
 // The opening's sound, made on the spot (no files): the summons' drone and the portal's roar, the zap when the glamour
 // breaks, her snap, the candles catching, the cave falling in, and the scream at the edge of town. Played off the story's
-// clock, so a moment is heard once, as it's crossed.
+// clock, so a moment is heard once, as it's crossed. And her voice, which is recorded (below).
 import { H } from '../core/layout.js';
 import { CANDLES, CANDLES_AT, OPENING, PORTAL, SNAP_AT, SWAP_AT } from '../core/opening.js';
+import { VOICED } from '../core/voiced.js';
+import { voiceKey } from '../core/voicekey.js';
+
+// Her voice (docs/VOICES.md): every line recorded ahead of time in the voice of whichever of her you see, one MP3 a line
+// under assets/voice/<voice>/<key>.mp3, all fetched and decoded as soon as there's a context. A line with no recording is
+// only shown.
+const VOICE_LEVEL = 1.1;
+const VOICE_LATE = 0.6;      // s: a line whose recording wasn't ready as it came up is still said this far in
+const VOICE_WAIT = 0.7;      // s: a line waits this long at most for the one before to finish; longer, and that one's cut
+const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
 
 export class OpeningSound {
   constructor(audio) {
@@ -10,6 +20,8 @@ export class OpeningSound {
     this.stage = -1; this.t = 0;
     this.drone = null; this.roar = null; this.room = null;
     this.ambK = 1;
+    this.voices = null; this.saidId = null; this.speaking = null;
+    this.loadVoices();
   }
 
   get ok() { const a = this.a; return !!(a && a.ready && a.ctx && a.ctx.state === 'running'); }
@@ -86,6 +98,7 @@ export class OpeningSound {
   }
 
   stopAll() {
+    this.hush(); this.saidId = null;
     this.cutDrone();
     for (const k of ['roar', 'room']) if (this[k]) { this[k].src.stop(); this[k] = null; }
     this.setAmb(1);
@@ -97,6 +110,50 @@ export class OpeningSound {
     this.ambK = k;
     const a = this.a;
     if (a.amb) a.amb.gain.setTargetAtTime(a.ambienceLevel * k, a.ctx.currentTime, 0.25);
+  }
+
+  // ---- her voice ----
+  loadVoices() {
+    const a = this.a;
+    if (this.voices || !a?.ctx) return;
+    this.voices = new Map();
+    for (const [v, keys] of HAVE) {
+      for (const k of keys) {
+        const id = `${v}/${k}`;
+        fetch(`${a.base}assets/voice/${id}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(r.status)))
+          .then((b) => a.ctx.decodeAudioData(b)).then((buf) => this.voices.set(id, buf)).catch(() => {});
+      }
+    }
+  }
+
+  // Say a line once (id: which line; age: seconds since it came up), from (x, y, z), or in your head with no x. Called
+  // every frame it's up, so a recording that's still decoding is said when it's ready, if that's soon enough.
+  say(id, voice, text, age, x, y, z, wet = 0.25) {
+    if (!this.ok || id === this.saidId) return;
+    this.loadVoices();
+    const key = text && voiceKey(text);
+    if (!key || !HAVE.get(voice)?.has(key)) { this.saidId = id; return; }
+    const buf = this.voices.get(`${voice}/${key}`);
+    if (!buf) { if (age > VOICE_LATE) this.saidId = id; return; }
+    this.saidId = id;
+    // The line before nearly done: this one waits for it, rather than cutting her off mid-word.
+    const now = this.a.ctx.currentTime, left = this.speaking ? this.speaking.ends - now : 0;
+    const at = left > 0 && left <= VOICE_WAIT ? now + left : now;
+    if (at === now) this.hush();
+    const src = this.a.ctx.createBufferSource(), g = this.out(x, y, z, wet);
+    src.buffer = buf; g.gain.value = VOICE_LEVEL;
+    src.connect(g); src.start(at);
+    this.speaking = { src, g, ends: at + buf.duration };
+    src.onended = () => { if (this.speaking?.src === src) this.speaking = null; };
+  }
+
+  // Cut her off: a new line, or the scene skipped.
+  hush() {
+    const s = this.speaking;
+    if (!s) return;
+    const now = this.a.ctx.currentTime;
+    s.g.gain.setTargetAtTime(0, now, 0.04); s.src.stop(now + 0.25);
+    this.speaking = null;
   }
 
   // ---- the moments ----
@@ -194,6 +251,7 @@ export class OpeningSound {
       case OPENING.WAKE:
         if (t < SNAP_AT && !this.drone && prev < 0.5) this.startDrone();
         if (crossed(SWAP_AT)) this.zap(her[0], her[1] + 1.3, her[2]);
+        if (crossed(SWAP_AT + 0.25)) this.hush();      // the glamour's gone, and her young voice with it
         if (crossed(11.0)) this.crackThud();
         if (crossed(SNAP_AT)) { this.cutDrone(); this.snap(her[0], her[1] + 1.4, her[2]); }
         for (const k of CANDLES) if (crossed(k.at)) this.pop(k.x, k.y, k.z);
