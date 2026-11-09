@@ -1184,6 +1184,7 @@ export class Brain {
       }
       return;
     }
+    this.face = null;
     this.goTo(w.x, w.z, 1.4, d > 12, true);
   }
 
@@ -1320,6 +1321,7 @@ export class Brain {
         while (this.sub.length > 1 && dist(m.x, m.z, this.sub[0][0], this.sub[0][1]) < 0.9) this.sub.shift();
         [tx, tz] = this.sub[0];
       }
+      if (this.door(dt, m, tx - m.x, tz - m.z)) return;
       this.steer(tx - m.x, tz - m.z, g.run && d > 8);
       if (!m.town) { const L = dist(m.x, m.z, W.x, W.z) || 1; this.board(dt, m, (W.x - m.x) / L, (W.z - m.z) / L, d); }
     } else {
@@ -1346,9 +1348,34 @@ export class Brain {
         }
         if (this.probeDir && this.probeDir[2] > 0.5) { hx = this.probeDir[0]; hz = this.probeDir[1]; }
       }
+      if (this.door(dt, m, hx, hz)) return;
       this.steer(hx, hz, g.run && d > 8);
       this.board(dt, m, sx, sz, d);
     }
+  }
+
+  // A shut door on its way (a house's, the Sexton's): it stops, turns to face it, opens it as E does, and gives it a moment to
+  // swing before it goes on. True while it's busy with one. (A locked one it leaves: its path shouldn't need it.)
+  door(dt, m, hx, hz) {
+    const g = this.o.game;
+    if (this.doorWait > 0) { this.doorWait -= dt; this.want = null; return true; }
+    const L = Math.hypot(hx, hz) || 1;
+    let best = null, bd = 2.8;
+    for (const d of g.doors.doors) {
+      if (d.open || Math.abs(d.y - m.y) > 2.2 || g.locked(d)) continue;
+      const dx = d.cx - m.x, dz = d.cz - m.z, k = Math.hypot(dx, dz);
+      if (k > bd || k > d.reach + 0.8) continue;
+      // (Ahead of it on its way, or right at it.)
+      if (k > 1.3 && (dx * hx + dz * hz) / (k * L) < 0.5) continue;
+      bd = k; best = d;
+    }
+    if (!best) return false;
+    this.face = Math.atan2(best.cx - m.x, best.cz - m.z);
+    this.want = null;
+    this.say('Opening a door.');
+    if (g.nearDoor === best) { g.doors.toggle(best); this.doorWait = 0.7; }
+    else if (bd > best.reach - 0.3) this.steer(best.cx - m.x, best.cz - m.z, false);
+    return true;
   }
 
   // The long way: straight there on the nav ground; past it, a route over the roads and across country, by the seals when
@@ -1529,7 +1556,7 @@ export class Brain {
     // fight, slow and steady on a shield). Through Input.look, so the hands sway with it as they do for the mouse.
     const fight = this.fighting, surf = m.surf;
     const dy = wrap(yaw - inp.yaw);
-    const vMax = fight ? 4.2 : surf ? 1.6 : 2.4, acc = fight ? 14 : surf ? 5 : 8;
+    const vMax = fight ? 4.2 : surf ? 1.6 : 3, acc = fight ? 14 : surf ? 5 : 10;
     const want = Math.abs(dy) < 0.012 ? 0 : Math.max(-vMax, Math.min(vMax, dy * (fight ? 6.5 : 3.8)));
     this.yawV += Math.max(-acc * dt, Math.min(acc * dt, want - this.yawV));
     const pitch = Math.max(-1.1, Math.min(1.1, fight || this.talk ? this.pitch : surf ? -0.12 : -0.06));
@@ -1537,13 +1564,18 @@ export class Brain {
     this.pitchV += Math.max(-5 * dt, Math.min(5 * dt, pWant - this.pitchV));
     inp.look(-this.yawV * dt, -this.pitchV * dt);
     if (!fight && !this.talk) this.pitch = -0.06;
-    if (!fight && this.job?.kind !== 'talk') this.face = null;
+    if (!fight && this.job?.kind !== 'talk' && !(this.doorWait > 0)) this.face = null;
     if (!w) { a.mx = 0; a.mz = 0; a.run = false; this.unstick(dt, m, false); return; }
     // Into the keys' frame: strafe and forward, from where it's looking now (so it can walk one way while it turns).
     const c = Math.cos(inp.yaw), s = Math.sin(inp.yaw);
     let mx = -c * w.x + s * w.z, mz = s * w.x + c * w.z;
-    // Turned well away from the way it means to go (and not fighting): slower until it's round.
-    if (!w.strafe && Math.abs(dy) > 1.2) { mx *= 0.35; mz *= 0.35; }
+    // Walking as a person does (W and the mouse): it faces the way it's going and goes forward, with only a touch of A or D
+    // to keep to its line. Well turned away, it turns on the spot first. (In a fight, and on the shield, it moves while it
+    // turns: backing off, sidestepping, running from something, carving.)
+    if (!w.strafe && !fight && !surf) {
+      const off = Math.abs(dy);
+      if (off > 0.6) { mx = 0; mz = 0; } else { mx *= 0.4; mz = Math.max(0, mz) * (off > 0.3 ? 0.6 : 1); }
+    }
     const L = Math.max(1, Math.hypot(mx, mz));
     a.mx = mx / L; a.mz = mz / L;
     a.run = w.run && a.mz > 0.6 && m.stam > 22;
