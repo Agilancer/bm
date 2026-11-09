@@ -479,6 +479,8 @@ export class TripoWorld {
         const mine = this.slots().filter((k) => k instanceof TripoMonster && k.lair === lair);
         if (lair.spawned && lair.killed >= lair.spawned && !this.loading.has(lair)) { lair.state = 'cleared'; lair.at = sim.time; }
         else if (d > lair.wake * 2.2 && mine.every((k) => k.dead || !k.aggro)) this.sleep(lair);
+        // Woke when every slot was busy, and so has nobody: try again next time round.
+        else if (!lair.spawned && !mine.length && !this.loading.has(lair)) lair.state = 'asleep';
       } else if (lair.state === 'asleep' && d < lair.wake && !p.dead) this.wake(lair);
     }
   }

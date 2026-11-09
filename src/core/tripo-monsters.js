@@ -28,16 +28,18 @@ export const GROUPS = {
   "Velscour's Knights": { name: 'KNIGHT OF VELSCOUR', hp: 200, damage: 20, speed: 3.8, reach: 2.5, ai: 'melee', loot: 6 },
   'Night Paralysis Demons': { name: 'NIGHT DEMON', hp: 240, damage: 22, speed: 5.2, reach: 2.7, ai: 'stalker', loot: 6 },
   Necromancers: { name: 'NECROMANCER', hp: 95, damage: 9, speed: 3.4, reach: 1.6, ai: 'caster', loot: 7 },
-  'Plague Giants': { name: 'PLAGUE GIANT', hp: 340, damage: 28, speed: 2.8, reach: 3.4, ai: 'melee', loot: 6 },
-  'Bone Giants': { name: 'BONE GIANT', hp: 420, damage: 32, speed: 2.6, reach: 3.8, ai: 'melee', loot: 8 },
-  'Giant Worms': { name: 'GIANT WORM', hp: 520, damage: 26, speed: 3.0, reach: 4.0, ai: 'breather', loot: 8, breathRange: 12, breathDps: 18 },
-  Dragons: { name: 'DRAGON', hp: 1100, damage: 38, speed: 5.5, reach: 4.6, ai: 'breather', loot: 8, breathRange: 16, breathDps: 26 },
+  'Plague Giants': { name: 'PLAGUE GIANT', hp: 340, damage: 28, speed: 2.8, reach: 3.4, ai: 'melee', loot: 8 },
+  'Bone Giants': { name: 'BONE GIANT', hp: 420, damage: 32, speed: 2.6, reach: 3.8, ai: 'melee', loot: 1 },
+  'Giant Worms': { name: 'GIANT WORM', hp: 520, damage: 26, speed: 3.0, reach: 4.0, ai: 'breather', loot: 1, breathRange: 12, breathDps: 18 },
+  Dragons: { name: 'DRAGON', hp: 1100, damage: 38, speed: 5.5, reach: 4.6, ai: 'breather', loot: 0, breathRange: 16, breathDps: 26 },
 };
 export const GROUP_KEYS = Object.keys(GROUPS);
 export const kindOfGroup = (g) => TRIPO_KIND + GROUP_KEYS.indexOf(g);
 // One model's own changes from its group's.
+// (loot: what it drops and the experience it's worth, by drops.js and src/items/levels.js XP_OF: 5 the rank and file, 6 and 7
+// more, 8 a champion's, 1 a great beast's, 0 a dragon's hoard, as Velscour's black knight leaves.)
 export const MODEL_STATS = {
-  flesh_spider_demon: { name: 'FLESH DEMON', hp: 260, damage: 22, speed: 4.6, reach: 2.4, loot: 6 },
+  flesh_spider_demon: { name: 'FLESH DEMON', hp: 260, damage: 22, speed: 4.6, reach: 2.4, loot: 8 },
   harpy_queen: { name: 'HARPY QUEEN', hp: 150, damage: 16 },
   necromancer_lord: { name: 'NECROMANCER LORD', hp: 170, damage: 13, loot: 8 },
   necromancer_lord_2: { name: 'NECROMANCER LORD', hp: 170, damage: 13, loot: 8 },
@@ -78,9 +80,9 @@ export const LAIRS = [
   { key: 'mill_dolls', x: 1835, z: 380, r: 5, pick: MANNEQUINS, n: 3, pal: ['Base', 'Bone-white'] },
   { key: 'falls_drake', x: 2700, z: -300, r: 4, boss: ['dragonling_black'], pick: GOBLINS, n: 2, pal: ['Base', 'Infernal'] },
   // The Weeping Fen.
-  { key: 'sallow_drowned', x: -260, z: -3300, r: 8, pick: POSSESSED.concat(CHILDREN), n: 5, pal: ['Base', 'Blighted', 'Abyssal'] },
-  { key: 'fen_worm', x: 300, z: -3000, r: 4, boss: ['worm_1'], n: 0, pal: ['Base', 'Blighted'], wake: 140 },
-  { key: 'fen_harpies', x: -560, z: -3880, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Blighted', 'Ashen'] },
+  { key: 'sallow_drowned', x: -253, z: -3281, r: 8, pick: POSSESSED.concat(CHILDREN), n: 5, pal: ['Base', 'Blighted', 'Abyssal'] },
+  { key: 'fen_worm', x: 309, z: -2951, r: 4, boss: ['worm_1'], n: 0, pal: ['Base', 'Blighted'], wake: 140 },
+  { key: 'fen_harpies', x: -560, z: -3830, r: 9, pick: ['harpy_undead_1', 'harpy_undead_2'], n: 3, pal: ['Base', 'Blighted', 'Ashen'] },
   { key: 'fen_dragon', x: -980, z: -4080, r: 4, boss: ['dragon_green'], n: 0, pal: ['Base'], wake: 200 },
   // The Rustwood.
   { key: 'cutter_raiders', x: 4640, z: -1360, r: 8, pick: RED_GOBLINS, n: 5, pal: ['Base', 'Base', 'Infernal'] },
