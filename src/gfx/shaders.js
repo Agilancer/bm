@@ -383,7 +383,10 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
     let angle = (f32(v.piece) / 65535.0 - 0.5) * 6.2831853 + palette[start + 6u].x;
     let direction = vec2f(sin(angle), cos(angle));
     let flex = -v.flex;
-    let sway = 0.009 * sin(P.time * 4.6 - v.pos.y * 12.0 + angle * 1.5) * flex;
+    // A skirt ripples a little as it hangs (the townsfolk's). Not the witch's gown: on the owner's word it moves with her
+    // body alone, so it doesn't dance while she stands and talks. P.wind.w is 1 for her and 0 for everyone else, so
+    // theirs is multiplied by exactly 1 and comes out the same to the bit (docs/RENDERING.md).
+    let sway = 0.009 * sin(P.time * 4.6 - v.pos.y * 12.0 + angle * 1.5) * flex * (1.0 - P.wind.w);
     p += vec3f(direction.x, 0.0, direction.y) * sway;
     var lift = 0.0;
     for (var j = 0u; j < 6u; j += 3u) {
