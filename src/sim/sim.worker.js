@@ -333,7 +333,7 @@ class Sim {
       case 9: k.hp = 1; break;
       case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
       case 18: if (k.force) k.force(this, b | 0); break;
-      case 19: if (k.sever) k.sever(this, b | 0); break;
+      case 22: if (k.sever) k.sever(this, b | 0); break;   // (was a second 19, which the teleport above always took)
       case 20: if (k.startCast) { k.goal = 1; k.aggro = true; k.hostile = true; k.startCast(this, Object.keys(FOE)[b | 0]); } break;
       case 10: k.hostile = true; k.combat = 1; k.combatTarget = 1; k.shieldUp = 1; k.shieldTarget = 1; k.pauseT = 0; break;
       case 11: this.restart(); break;

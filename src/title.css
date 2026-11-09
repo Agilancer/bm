@@ -103,7 +103,7 @@
   .t-scrim.on { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .25s; }
   #title .panel { pointer-events: auto; }
   #title .panel.saves { background: linear-gradient(#1c1511, #0d0a08); border-color: #9a7638; box-shadow: 0 0 0 1px #000, 0 24px 70px rgba(0, 0, 0, .92); }
-  .t-frame { position: absolute; left: 50%; top: 50%; width: min(560px, 92vw); max-height: 90vh; overflow: auto; box-sizing: border-box; padding: 26px 30px 22px;
+  .t-frame { position: absolute; left: 50%; top: 50%; width: min(560px, 92vw); max-height: 90vh; overflow: auto; scrollbar-width: thin; scrollbar-color: rgba(201,163,92,.55) transparent; box-sizing: border-box; padding: 26px 30px 22px;
              background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(120, 84, 30, .22), transparent 70%), linear-gradient(#1c1511, #0d0a08);
              border: 1px solid #9a7638; outline: 1px solid rgba(154, 118, 56, .35); outline-offset: 4px;
              box-shadow: 0 0 0 1px #000, 0 24px 70px rgba(0, 0, 0, .92), inset 0 0 50px rgba(0, 0, 0, .55);

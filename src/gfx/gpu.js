@@ -17,8 +17,9 @@ export const TIERS = {
   mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
 
+// A phone or a tablet. Chrome's userAgentData says mobile: false on an Android tablet, so the user agent is read as well.
 export function isMobileDevice() {
-  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') return navigator.userAgentData.mobile;
+  if (navigator.userAgentData?.mobile === true) return true;
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
 }
 
@@ -45,8 +46,9 @@ export async function initGPU(tierOverride = 'auto') {
   // Browsers won't say whether a GPU is integrated. Start high on anything that might be a discrete card, and
   // let the renderer step down at runtime when the timings say so (Renderer.demote).
   const discrete = /nvidia|amd|ati/.test(vendor);
-  // The Graphics setting can name a tier outright.
-  const tierName = TIERS[tierOverride] ? tierOverride : mobile ? 'mobile' : discrete ? 'ultra' : 'high';
+  // The Graphics setting can name a tier outright, except on a phone: High and Ultra's textures run a phone out of
+  // memory and the tab crashes, so a phone always gets the Low tier.
+  const tierName = mobile ? 'mobile' : TIERS[tierOverride] ? tierOverride : discrete ? 'ultra' : 'high';
   return {
     adapter, device, info, mobile, tierName,
     tier: { ...TIERS[tierName] },

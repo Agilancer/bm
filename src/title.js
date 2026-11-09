@@ -11,6 +11,7 @@
 // sound is booked on the audio clock at that moment, so they keep time however hard the loading holds the thread.
 
 import { SLOT_COUNT, saves } from './saves.js';
+import { isMobileDevice } from './gfx/gpu.js';
 
 const LOGOS = {
   blastorama: 'assets/title/blastorama.webp',
@@ -48,6 +49,9 @@ const store = {
 const SETTINGS_KEY = 'velscour.settings';
 export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto' };
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
+// A phone's Graphics stops at Low (initGPU holds it there too): High and Ultra crash a phone.
+const PHONE = isMobileDevice();
+if (PHONE && settings.gfx !== 'auto' && settings.gfx !== 'mobile') settings.gfx = 'mobile';
 
 const when = (t) => {
   const d = new Date(t);
@@ -75,23 +79,25 @@ const SETTINGS = `
   <p class="t-note">Graphics and Other Tessariels take hold when the game restarts.</p>
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 
-const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],
-  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
+const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump; hold it to ride your shield'], ['Q', 'dodge'],
+  ['Left click', 'fire your staff'], ['Right click', 'raise the shield; hold to guard'], ['1 to 6', 'cast the spell in that slot'],
+  ['F', 'cast the chosen spell'], ['B', 'spellbook: fill the six slots'], ['I', 'pack: staffs, skulls, robes, gems'],
+  ['E', 'take, open, talk'], ['M', 'map'], ['J', 'journal'], ['Alt', 'a cursor for the spell bar'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time']];
 const HOWTO = `
   <h2>How to Play</h2><div class="t-rule"></div>
   <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
   <div class="t-touchkeys">
     <p><b>Left thumb</b> moves (push it right out to run); <b>right thumb</b> looks, on or off the buttons.</p>
-    <p><b>Staff</b> fires your staff. <b>DODGE</b> gets you out, <b>JUMP</b>, <b>RUN</b>, <b>PACK</b> holds your swords and gems, <b>TAKE</b> takes up what's on the ground, and <b>II</b> pauses.</p>
+    <p><b>Staff</b> fires your staff, and a tap on a spell casts it. <b>GUARD</b> raises the shield while you hold it. <b>JUMP</b> (hold it to ride your shield), <b>DODGE</b>, <b>RUN</b>, <b>PACK</b> holds your staffs, skulls, robes and gems, <b>MAP</b>, <b>TAKE</b> takes up, opens or talks, and <b>II</b> pauses.</p>
   </div>
   <h3>Along the way</h3>
   <ul class="t-tips">
-    <li>A gem set on a sword goes in an open socket, for good. Only the rarest swords have four.</li>
-    <li>Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.</li>
-    <li>A cut opens a gash in the plate. A second blow on that gash goes through, and it bleeds. Your X turns <b>red</b> over a cut you could go through.</li>
-    <li>A blade <b>flashes</b> before it falls: dodge, or swing into it to parry.</li>
-    <li>Slams and chops break a guard faster than cuts. Running, dodging and swinging all spend your breath.</li>
-    <li>Hitting the silver knight makes an enemy of them too. Great crabs come out of the fields after first blood.</li>
+    <li>Hold <b>jump</b> as you leave the ground and the shield goes under your feet. Downhill it carries you fast.</li>
+    <li>A gem set in a staff, a skull or a shield goes in an open socket, for good.</li>
+    <li>With a skull in your left hand you can't guard, but you can still ride the shield.</li>
+    <li>Kills pay experience. Each level adds spell damage, life and mana, and fills you up.</li>
+    <li>The town is safe ground: nothing from the woods follows you in. Better loot lies further out and deeper down.</li>
+    <li>Velscour's cathedral stands east of the town, and the catacombs lie beneath it.</li>
     <li>The game keeps itself as you play: <b>Continue</b> picks up where you were. Pause to keep a copy in one of ten save slots.</li>
   </ul>
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
@@ -229,6 +235,10 @@ export class Title {
     this.modal = R.appendChild(el('div', 't-modal'));
     this.scrim = el('div', 't-scrim');
     this.settings = el('div', 't-frame t-settings', SETTINGS);
+    if (PHONE) {
+      for (const o of this.settings.querySelectorAll('[data-k="gfx"] option[value="ultra"], [data-k="gfx"] option[value="high"]')) o.remove();
+      this.settings.querySelector('[data-k="gfx"] option[value="auto"]').textContent = 'Auto (Low on a phone)';
+    }
     this.howto = el('div', 't-frame t-howto', HOWTO);
     this.slotsEl = el('div', 't-frame t-slots');
     this.dialog = el('div', 't-frame t-dialog', DIALOG);
