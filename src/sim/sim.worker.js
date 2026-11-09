@@ -28,6 +28,7 @@ import { World } from './world.js';
 import { Hero, HeroWorld, mobKind } from './hero.js';
 import { MOB_KEYS, TRIG } from '../core/heroes.js';
 import { Slimes } from './slimes.js';
+import { Tumblers } from './tumblers.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
@@ -70,6 +71,8 @@ class Sim {
     this.knights = [];
     // The slimes out in the wet places; the spells look for them with the knights, as sim.foes.
     this.slimes = new Slimes();
+    // And the living stones in the countries (src/sim/tumblers.js).
+    this.tumblers = new Tumblers();
     this.villagers = [];
     // The other Tessariels (src/sim/hero.js): not knights, so nothing of the player's touches them. Drawn between the knights and the villagers.
     this.heroes = [];
@@ -89,7 +92,7 @@ class Sim {
 
   // Whatever a spell can hit: the knights and the dead, and the slimes (src/sim/slimes.js). Made once a tick.
   get foes() {
-    if (this.foesTick !== this.tick) { this.foesTick = this.tick; this.foesList = this.slimes.list.length ? this.knights.concat(this.slimes.list) : this.knights; }
+    if (this.foesTick !== this.tick) { this.foesTick = this.tick; this.foesList = this.slimes.list.length || this.tumblers.list.length ? this.knights.concat(this.slimes.list, this.tumblers.list) : this.knights; }
     return this.foesList;
   }
 
@@ -198,6 +201,7 @@ class Sim {
     // (After the spells' update, which clears the frame's shapes.)
     this.heroWorld?.drawFx();
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
+    if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.tumblers.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) stepWoods(this);
@@ -205,6 +209,7 @@ class Sim {
     player.write(snap, this);
     this.casting.write(snap);
     this.slimes.write(snap);
+    this.tumblers.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     const nk = this.knights.length, nh = this.heroes.length;
     this.heroes.forEach((h, i) => h.write(snap, this.charOffset(nk + i), this));
@@ -337,6 +342,10 @@ class Sim {
       case 20: if (k.startCast) { k.goal = 1; k.aggro = true; k.hostile = true; k.startCast(this, Object.keys(FOE)[b | 0]); } break;
       case 10: k.hostile = true; k.combat = 1; k.combatTarget = 1; k.shieldUp = 1; k.shieldTarget = 1; k.pauseT = 0; break;
       case 11: this.restart(); break;
+      // The tumblers, for review: 40 fills the camp nearest (b, c) now; 41 wakes them all.
+      case 40: this.tumblers.debugFill(b, c, this); break;
+      case 41: for (const t of this.tumblers.list) t.wake(this); break;
+      case 42: this.tumblers.debugSpawn(Math.floor(a / 10), a % 10, b, c, this); break;
       case 13: this.slow = b; break;
       case 17: p.damage(this, 1000, p.x + 1, p.z, 0); break;
       case 14: this.manual = true; this.manualTicks = b; break;
