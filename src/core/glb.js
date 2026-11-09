@@ -14,6 +14,18 @@ export function parseGLB(buffer) {
 
 export function accessor(glb, index) {
   const a = glb.json.accessors[index];
+  // Packed integers that stand for -1..1 or 0..1 (the Tripo monsters' rotation keys, src/core/tripo-monsters.js): read as floats.
+  if (a.normalized && a.componentType !== 5126) {
+    const raw = rawAccessor(glb, a);
+    const max = { 5120: 127, 5121: 255, 5122: 32767, 5123: 65535 }[a.componentType];
+    const out = new Float32Array(raw.length);
+    for (let i = 0; i < raw.length; i++) out[i] = Math.max(raw[i] / max, -1);
+    return out;
+  }
+  return rawAccessor(glb, a);
+}
+
+function rawAccessor(glb, a) {
   const bv = glb.json.bufferViews[a.bufferView];
   const Type = COMPONENT[a.componentType];
   const n = COUNT[a.type];

@@ -34,7 +34,8 @@ export function mobKind(m) {
   if (m instanceof Hydra) return 'hydra';
   if (m instanceof Gravehart) return 'gravehart';
   if (m instanceof Crab) return 'crab';
-  if (m instanceof FieldCreature) return m.opts.name === 'WEREWOLF' ? 'werewolf' : 'mouth';
+  // (A Tripo monster, src/sim/tripo.js, has its meta: the heroes know the werewolf by name, the rest as monsters.)
+  if (m instanceof FieldCreature) return m.opts.name === 'WEREWOLF' ? 'werewolf' : m.meta ? null : 'mouth';
   if (m instanceof Caster) return m.opts.role === 'wizard' ? 'wizard' : m.opts.role;
   if (m instanceof Zombie) return m.opts.model === 'zombie_ogre' ? 'ogre' : m.champion ? 'champion' : 'zombie';
   if (m instanceof Knight) return m.opts.suit === 'knight' ? 'sentry' : 'black_knight';
@@ -1403,6 +1404,8 @@ export class HeroWorld {
       // (A killing blow leaves hp at 0 a tick or two before the body's own update calls it dead: still the hero's.)
       if (!m.dead && m.hp > 0) { m.heroKill = false; return false; }
       if (!m.dead) return sim.time - k.at < 60;
+      // (A Tripo monster's lair stands its dead again itself: src/sim/tripo.js TripoWorld.)
+      if (m.lair) return false;
       if (sim.time - k.at < k.after) return true;
       const sp = m.opts?.spawn;
       if (!sp || Math.hypot(p.x - sp[0], p.z - sp[1]) < 70) return true;
