@@ -255,6 +255,18 @@
   "dirt_3",
   "grass_1",
   "grass_2",
-  "grass_3"
+  "grass_3",
+  "road_1",
+  "snow_1",
+  "snowrock_1",
+  "granite_1",
+  "frost_1",
+  "basalt_1",
+  "limestone_1",
+  "moss_1",
+  "pinefloor_1",
+  "fen_1",
+  "ash_1",
+  "rust_1"
  ]
 }

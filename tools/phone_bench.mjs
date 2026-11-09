@@ -78,6 +78,7 @@ if (mode === 'frames') {
     if (off) await page.evaluate(off);
   };
   await stage('everything');
+  await stage('no rocks', 'bm.renderer.rocksOn=false', 'bm.renderer.rocksOn=true');
   await stage('no grass', 'bm.renderer.grassOn=false', 'bm.renderer.grassOn=true');
   await stage('no bloom', 'bm.renderer.useBloom=false', 'bm.renderer.useBloom=true');
   await stage('no arms', 'bm.renderer.hideVM=true', 'bm.renderer.hideVM=false');
