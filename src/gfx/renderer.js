@@ -7,7 +7,7 @@ import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
 import { buildSites } from '../core/sites.js';
 import { SlimeBodies } from './slimes.js';
-import { DUST_AT, OPENING, SWAP_AT } from '../core/opening.js';
+import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/church.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
@@ -277,7 +277,10 @@ export class Renderer {
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
       const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
-        const skirt = accessor(glb, glb.json.meshes[0].primitives[0].attributes._SKIRT);
+        // A form with no skirt (Pretty in her leathers) has no _SKIRT mask: nothing of her sways as a dress.
+        const mask = glb.json.meshes[0].primitives[0].attributes._SKIRT;
+        if (mask === undefined) return prim;
+        const skirt = accessor(glb, mask);
         const skirtDirection = new Uint16Array(skirt.length);
         for (let v = 0; v < skirt.length; v++) {
           const angle = Math.atan2(prim.pos[v * 3] / scale - skirtCenter[0], prim.pos[v * 3 + 2] / scale - skirtCenter[1]);
@@ -1879,11 +1882,8 @@ export class Renderer {
   cullBodies(cam, snap) {
     const pl = this.planes;
     const stage = snap[H.OPENING];
-    // Lisandra as you see her: lovely while the glamour holds, the witch from the flash until she comes out of the dust, and
-    // lovely to you from then on (by day, once you're in town). Everyone else only ever sees the witch.
-    const t = snap[H.OPENING_TIME];
-    const pretty = (stage === OPENING.WAKE && t < SWAP_AT) || (stage === OPENING.COLLAPSE && t >= DUST_AT) || stage === OPENING.ESCORT
-      || (stage >= OPENING.ARRIVED && this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR);
+    // Lisandra as you see her (src/core/opening.js prettyShown). Everyone else only ever sees the witch.
+    const pretty = prettyShown(stage, snap[H.OPENING_TIME], this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR);
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;

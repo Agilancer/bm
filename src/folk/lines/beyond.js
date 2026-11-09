@@ -12,12 +12,12 @@ export const LINES = {
   bellwright: {
     first: [
       "Stop there. Let me see your hands. No sword. No sunburst. A staff, and something in the other hand that looks back. Well. The seal by my door woke when you came over the rise. First time in forty years.",
-      { met: 'corran', say: "Corran Thrale's tracks came to my door last autumn and went away again. Now he sends people. He says Bellmourn counts you thirteenth. The seal by my door doesn't count. It woke. First time in forty years." },
+      { after: 'quest:long_way_round', say: "Corran Thrale's tracks came as far as my bracken last autumn, and went away again. Now he sends people. The seal by my door woke for you. First time in forty years." },
     ],
     greet: {
       morning: [
         "First light. Fourth watch done. I count them still, with nothing to ring.",
-        "You came back. The road from Bellmourn is long. I walked it once a month, when I had knees.",
+        "You came back. The road from Bellmourn is long. I walked to Millhaven and back in a day, when I had knees.",
       ],
       day: [
         "No watch by day. The bells want oil whether they ring or not. Hold the ladder, or stand out of the light.",
@@ -87,7 +87,7 @@ export const QUESTS = {
       "Go back to Corran Thrale at the hunter's lodge and tell him what the Bellwright said.",
     ],
     progress: [
-      "East. Past where the hill road gives up. You'll see the tower long before you're there.",
+      "East, on the downs road. Leave the hill road to the hill. You'll see the tower long before you're there.",
       "Still here? It doesn't come to you.",
     ],
     done: [
@@ -131,7 +131,7 @@ export const QUESTS = {
       "Abel sent this. He'd rather pay than come. Bess says take it and don't argue.",
     ],
     after: [
-      "Abel sent a cheese. He's never sent anything. I think you frightened him into manners.",
+      "Abel sent a cheese as well. He's never sent a cheese in his life. I think you frightened him into manners.",
     ],
     others: {
       bess: ["Hob's sent you to Abel's? Good. Don't eat anything Abel cooks."],
@@ -147,7 +147,7 @@ export const QUESTS = {
       "Walk to all three. Stand in each. If their seals wake for you too, I'll know the order isn't only me. I've something for you if they do. It isn't much. It rings.",
     ],
     accept: "I'll walk to all three.",
-    acceptLine: "North-east for the abbey, through the rust wood. North past Sallowmere for the chapel; mind the water. South, a long way, for the shrine. Your feet will hate you. Then the seals will forgive them.",
+    acceptLine: "North-east for the abbey, through the rust wood. North-west past Sallowmere for the chapel; mind the water. South-west, a long way, for the shrine. Your feet will hate you. Then the seals will forgive them.",
     decline: "Not yet.",
     declineLine: "Forty years they've waited. They'll wait a little longer.",
     journal: [
@@ -197,7 +197,7 @@ export const QUESTS = {
       "The myrtle's drying in the rafters. The house smells like a fen in summer. Bryony loves it.",
     ],
     others: {
-      bryony: ["Mother says the jellies have bones in them. Bring me one. A bone, I mean. Not a jelly. Well."],
+      bryony: ["Jory says the moor's jellies have bones in them. Bring me one. A bone, I mean. Not a jelly. Well."],
     },
   },
 
@@ -205,7 +205,7 @@ export const QUESTS = {
     title: 'The Black Road',
     giver: 'aldric',
     offer: [
-      "The carters won't take the west fork past the ash country anymore. Braziers along the road, they say, lit day and night, all the way to a keep nobody remembers building. Black stone. Red cloth.",
+      "The carters won't take the west fork into the ash country anymore. Braziers along the road, they say, lit day and night, all the way to a keep nobody remembers building. Black stone. Red cloth.",
       "I'm not sending the watch. We're two watchmen and my brother. But I'd know what's sitting at the end of that road. Go and look. Only look. Don't knock.",
     ],
     accept: "I'll go and look.",
@@ -237,7 +237,7 @@ export const QUESTS = {
     giver: 'orrin',
     needs: 'toll_of_bell',
     offer: [
-      "Walk up the hill road on a clear day and look north-west. The mountain. The Sorrowhorn. My books put a lake at the top of it that never thaws, and in the lake a spire of black glass, and round it a ring of teeth.",
+      "Walk partway up the hill road on a clear day, no further, and look north-west. The mountain. The Sorrowhorn. My books put a lake at the top of it that never thaws, and in the lake a spire of black glass, and round it a ring of teeth.",
       "Every author contradicts the one before, which is how I know it's there. Nobody living has been up. I'm seventy. Would you? I'd like one account written by someone who came back down.",
     ],
     accept: "I'll climb it.",

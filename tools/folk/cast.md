@@ -280,7 +280,7 @@ After these, merchants' stocks and crafting open up, and the townsfolk's talk mo
 ## Beyond Bellmourn (the lands, `src/core/lands.js`, `src/core/sites.js`)
 
 Bellmourn sits in a small clearing in a very big country. Everything past the pines is far: a long walk, kilometres, not
-minutes. Most townsfolk have never been further than the hill road. A few have (Corran, the carters, Hob's cousin Wat), and
+minutes. Most townsfolk have never been further than the hill road. A few have (Corran, the carters, Hob's cousin Abel), and
 they're the ones who talk about it. (The carters and Corran go out the east side, where the downs open: the downs road
 forks off before the hill road climbs to the church, so nothing of the Bellwright's is on the church's road.) Writers: nobody in town has been everywhere, and what they know is second-hand and wrong
 in the details.
@@ -304,7 +304,7 @@ two-letter rule holds out here too: no V place is near a T place, and nobody put
 - **The Gallowswood** (far south-east). **Hangman's Cross**, **Mother Grawl's Hut** (a witch; not Lis, and nothing like her),
   **the Twisted Grove**.
 - **The Deepwood** (north-west, near). **The Hermit's Hollow**.
-- **The Sorrowhorn** (north-west), the mountain seen from the top of the hill road on a clear day (the pines hide it from the town). **The Broken Stair** is the old way up.
+- **The Sorrowhorn** (north-west), the mountain seen from partway up the hill road on a clear day (the pines hide it from the town). **The Broken Stair** is the old way up.
   At the top, **the Crown of Teeth**: a lake frozen to the bottom, a spire of black glass standing out of it, twelve white
   pillars bearing nothing, and a rim of black stone teeth. Neither V nor T. Nobody knows whose. Orrin wants to.
 
@@ -340,7 +340,7 @@ gift: a bell the size of a thumb; ring it in the air and the air holds you one s
 
 9. **The Long Way Round** (Corran). The dead walk wide of a knoll far east. Go to the Bell Tower, ask the Bellwright why, tell
    Corran. (He says: the bells.)
-10. **Jelly in the Millpond** (Hob). Something in Wat's millpond at Millhaven ate a ewe. Put down 8 jellies round Millhaven. Paid with Abel's money ("He'd rather pay than come").
+10. **Jelly in the Millpond** (Hob). Something in Abel's millpond at Millhaven ate a ewe. Put down 8 jellies round Millhaven. Paid with Abel's money ("He'd rather pay than come").
 11. **The Four Watches** (the Bellwright). Stand in the abbey, the chapel and the shrine, in any order, and see if their seals
     wake. Reward: the Wingbell (double jump).
 12. **What the Fen Keeps** (Sabine). Clear 10 jellies from the fen so she can reach the bog myrtle for the winter fevers. Paid in coin
