@@ -161,26 +161,41 @@ function path(from, to, avoid) {
   return out;
 }
 
-// Out past the grid: a box of a place's, or a pine, within r.
-function solidAt(x, z, r) {
-  if (world.inside(x, z, r)) return true;
-  for (const c of world.sitesNear(x, z) || []) {
-    const dx = x - c.x, dz = z - c.z;
-    if (Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r) return true;
+// Out past the grid: a box, a place's wall or a pine within r of feet at height y. (Height counts: the land over the catacombs
+// has their walls under it, which World.inside, being flat, would see. A box is in the way between its foot and its top, as
+// World.resolve has it.)
+const topOf = (c) => (c.top ??= c.t ?? c.h + 0.02 + world.height(c.x, c.z));
+function boxHit(c, x, z, r, y) {
+  const dx = x - c.x, dz = z - c.z;
+  if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) return false;
+  if (y > topOf(c) || y < (c.b || -1e9) - 1) return false;
+  return Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r;
+}
+function solidAt(x, z, r, y) {
+  for (const c of world.colliders) if (boxHit(c, x, z, r, y)) return true;
+  for (const c of world.sitesNear(x, z) || []) if ((c.top ??= c.h + world.height(c.x, c.z)) >= y && boxHit(c, x, z, r, y)) return true;
+  if ((Math.abs(x) > 50 || Math.abs(z) > 50) && y > -2) {
+    const ci = Math.floor(x / 16), cj = Math.floor(z / 16);
+    for (let j = cj - 1; j <= cj + 1; j++) {
+      for (let i = ci - 1; i <= ci + 1; i++) {
+        const list = world.trunkCell(i, j);
+        if (list) for (let k = 0; k < list.length; k += 3) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return true;
+      }
+    }
   }
   return false;
 }
-function clearFor(x, z, dx, dz, look) {
-  for (let s = 0.4; s <= look; s += 0.4) if (solidAt(x + dx * s, z + dz * s, 0.45)) return s - 0.4;
+function clearFor(x, z, y, dx, dz, look) {
+  for (let s = 0.4; s <= look; s += 0.4) if (solidAt(x + dx * s, z + dz * s, 0.45, y)) return s - 0.4;
   return look;
 }
 const TURNS = [0, 0.25, -0.25, 0.5, -0.5, 0.8, -0.8, 1.1, -1.1, 1.45, -1.45, 1.9, -1.9, 2.5, -2.5, Math.PI];
-function probe(x, z, hx, hz, look) {
+function probe(x, z, y, hx, hz, look) {
   const a0 = Math.atan2(hx, hz);
   let best = null, bc = -1;
   for (const t of TURNS) {
     const a = a0 + t, dx = Math.sin(a), dz = Math.cos(a);
-    const c = clearFor(x, z, dx, dz, look);
+    const c = clearFor(x, z, y, dx, dz, look);
     if (c >= look) return [dx, dz, c];
     if (c > bc + 0.3) { bc = c; best = [dx, dz, c]; }
   }
@@ -200,7 +215,7 @@ self.onmessage = async (e) => {
     } else if (m.type === 'path') {
       self.postMessage({ type: 'path', id: m.id, result: path(m.from, m.to, m.avoid) });
     } else if (m.type === 'probe') {
-      self.postMessage({ type: 'probe', id: m.id, result: probe(m.x, m.z, m.hx, m.hz, m.look || 5) });
+      self.postMessage({ type: 'probe', id: m.id, result: probe(m.x, m.z, m.y ?? 0, m.hx, m.hz, m.look || 5) });
     }
   } catch (err) {
     self.postMessage({ type: m.type, id: m.id, result: null, error: String(err?.message || err) });

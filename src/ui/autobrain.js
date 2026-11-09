@@ -31,7 +31,7 @@ import { SPELLS } from '../sim/spells.js';
 import { RULES, isNight } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { PEOPLE } from '../folk/people.js';
-import { TRADES, offerFor } from '../folk/shops.js';
+import { TRADES, offerFor, worth } from '../folk/shops.js';
 import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
 
 const TAU = Math.PI * 2;
@@ -157,11 +157,12 @@ class Nav {
     });
   }
 
-  // On the worker's grid: the town, the woods round it, and the cathedral's floors under the land.
-  inGrid(x, z) {
+  // On the worker's grid: the town and the woods round it, and (below: down there, not on the land over them) the cathedral's
+  // floors under the land.
+  inGrid(x, z, below = false) {
     if (Math.abs(x) < 246 && Math.abs(z) < 246) return true;
     const b = this.bounds;
-    return !!b && x > b[0] + 2 && z > b[1] + 2 && x < b[2] - 2 && z < b[3] - 2 && floorAt(x, z) !== null;
+    return below && !!b && x > b[0] + 2 && z > b[1] + 2 && x < b[2] - 2 && z < b[3] - 2 && floorAt(x, z) !== null;
   }
 }
 
@@ -217,6 +218,7 @@ export class Brain {
     this.stuck = { t: 0, x: 0, z: 0, n: 0, act: 0, actT: 0, side: 1 };
     this.talk = null; this.waitT = 0; this.hold = 0;
     this.track = new Map();
+    this.engage = new Map();   // what it's been fighting, and since when it last hurt it
     this.skip = new Map();     // things it's given up on for a while: key -> until
     this.patrol = null; this.wispT = 0; this.gearT = 0; this.strafe = 1; this.strafeT = 0;
     this.lastPos = null; this.lastHpf = 1;
@@ -278,6 +280,12 @@ export class Brain {
     return out;
   }
 
+  // Inside ground it's keeping clear of (a knight's post, a lair it isn't ready for).
+  kept(m, x, z) {
+    if (!this.avoidFor || this.t - this.avoidFor.t > 2) this.avoidFor = { t: this.t, list: this.avoid(m) };
+    return this.avoidFor.list.some(([ax, az, r]) => dist(x, z, ax, az) < r);
+  }
+
   skipping(k) { const u = this.skip.get(k); return u !== undefined && u > this.t; }
   giveUp(k, secs) { this.skip.set(k, this.t + secs); }
 
@@ -326,7 +334,8 @@ export class Brain {
     void g;
   }
 
-  halt() { this.want = null; this.auto.mx = 0; this.auto.mz = 0; this.auto.run = false; this.auto.cast = false; }
+  // Stand still. (A cast under way is let go when its time is up, not here.)
+  halt() { this.want = null; this.auto.mx = 0; this.auto.mz = 0; this.auto.run = false; }
 
   // ---- thinking
 
@@ -429,7 +438,9 @@ export class Brain {
       return true;
     }
     const hunting = this.job?.kind === 'hunt' || this.job?.kind === 'grind';
-    const live = foes.filter((f) => fightable(f.kind, lvl) && (f.hostile ? f.d < 30 : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4)));
+    // On the way somewhere, only what's on it; hunting, whatever's about. (Once it's in a fight, it finishes it.)
+    const reach = hunting || this.target ? 30 : 14;
+    const live = foes.filter((f) => fightable(f.kind, lvl) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
     if (!live.length) { this.target = null; return false; }
     // Low, and still in it: get out toward the town, mending when there's room.
     if (m.hpf < 0.28 && live.some((f) => f.d < 10)) {
@@ -445,6 +456,11 @@ export class Brain {
     const pick = live.reduce((a, b) => ((a.d - (a.hostile ? 6 : 0)) <= (b.d - (b.hostile ? 6 : 0)) ? a : b));
     if (this.target?.id !== pick.id) this.target = pick; else Object.assign(this.target, pick);
     const T = this.target, d = T.d;
+    // Nothing it throws is landing (behind a wall, across a gap): leave that one be for a while.
+    const tk = this.engage.get(T.id) || { since: this.t, best: T.hp };
+    if (T.hp < tk.best - 0.5) { tk.best = T.hp; tk.since = this.t; }
+    this.engage.set(T.id, tk);
+    if (this.t - tk.since > (T.slime ? 20 : 12)) { this.giveUp(`foe:${T.id}`, 45); this.engage.delete(T.id); this.target = null; }
     const close = live.filter((f) => f.d < 5.5).length, around = live.filter((f) => dist(f.x, f.z, T.x, T.z) < 5.5).length;
     // Lead what it throws: the bolt's speed, the time to get there.
     const speed = 34, tt = d / speed;
@@ -489,30 +505,37 @@ export class Brain {
   loot(m, foes) {
     if (foes.some((f) => f.hostile && f.d < 18)) return false;
     const g = this.o.game, pack = this.o.pack;
-    let best = null, bd = 22;
+    // (On the way somewhere: only what's close by.)
+    const hunting = this.job?.kind === 'hunt';
+    let best = null, bd = hunting ? 22 : 10;
     for (const d of g.drops.list) {
-      if (Math.abs(d.y - m.y) > 3 || this.skipping(d) || inTown(d.x, d.z, 2)) continue;
+      if (Math.abs(d.y - m.y) > 3 || this.skipping(d) || inTown(d.x, d.z, 2) || this.kept(m, d.x, d.z)) continue;
       if (!d.auto && !d.coins && !this.roomFor(d.item)) continue;
       const k = dist(m.x, m.z, d.x, d.z);
       if (k < bd) { bd = k; best = d; }
     }
     if (best) {
       if (!this.lootT || this.lootFor !== best) { this.lootFor = best; this.lootT = this.t; }
-      if (this.t - this.lootT > 14) { this.giveUp(best, 120); return false; }
+      if (this.t - this.lootT > 9) { this.giveUp(best, 120); return false; }
       this.say(best.auto || best.coins ? 'Picking up what fell.' : 'Taking up something worth having.');
       if (!best.auto && !best.coins && bd < 1.7) {
+        // E, as you'd press it; or, a step off from it, the same thing E does: a scroll read, the rest into the pack.
         if (g.nearDrop === best) g.takeNearest();
-        else if (pack.add(best.item)) { g.drops.take(best); g.onTaken?.(); } else this.giveUp(best, 600);
+        else if (best.item.type === 'spell') {
+          if (!this.o.spellbar.learn(best.item.spell)) pack.gold += 40;
+          g.drops.take(best); g.onTaken?.();
+        } else if (pack.add(best.item)) { g.drops.take(best); g.onTaken?.(); } else this.giveUp(best, 600);
         return true;
       }
-      this.goTo(best.x, best.z, 0.4, false);
+      // (Coin, orbs and stuff come to hand within two metres; gear wants E within that.)
+      this.goTo(best.x, best.z, best.auto || best.coins ? 1.1 : 1.2, false, false, m.below);
       return true;
     }
     // A chest it's near and hasn't opened.
-    let ch = null, cd = 40;
+    let ch = null, cd = hunting ? 40 : 14;
     for (const c of g.chests.list) {
       // (Not the houses' chests in the town: those are the townsfolk's.)
-      if (c.open || Math.abs(c.y - m.y) > 2.5 || this.skipping(c) || inTown(c.x, c.z, 4)) continue;
+      if (c.open || Math.abs(c.y - m.y) > 2.5 || this.skipping(c) || inTown(c.x, c.z, 4) || this.kept(m, c.x, c.z)) continue;
       const k = dist(m.x, m.z, c.x, c.z);
       if (k < cd) { cd = k; ch = c; }
     }
@@ -527,7 +550,7 @@ export class Brain {
         else if (cd < 1.6 && Math.abs(wrap(this.face - this.o.input.yaw)) < 0.3) { g.chests.open(ch); }
         return true;
       }
-      this.goTo(ch.x, ch.z, 1.2, false);
+      this.goTo(ch.x, ch.z, 1.2, false, false, m.below);
       return true;
     }
     return false;
@@ -604,11 +627,31 @@ export class Brain {
     // A full pack, or a deal of things to sell: to the town.
     const junk = this.junk();
     const room = this.freeCells();
-    const wantsTown = room < 10 || junk.length >= 6 || (m.hpf < 0.45 && !this.known(SP.mend));
+    // (Only while there's someone open to buy it: at night the town's counters are shut, and it keeps at its work.)
+    const buyer = junk.length > 0 && PEOPLE.some((p, i) => TRADES[p.trade]?.buys && this.o.townUI.isOpen(i));
+    const wantsTown = ((room < 10 || junk.length >= 6) && buyer) || (m.hpf < 0.45 && !this.known(SP.mend));
     // In the town, its errands: the quest talk first, then the shops.
     const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60);
     if (errand) return errand;
     if (wantsTown && !m.town && !this.skipping('town')) return { kind: 'go', why: 'town', x: 2, z: 3, r: 6, say: room < 10 ? 'Back to Bellmourn: the pack is full.' : 'Back to Bellmourn to sell.' };
+    // By night, what can only be done by night.
+    if (isNight(m.hour) || m.hour >= 19.5) {
+      for (const [id, lvl] of PLAN) {
+        const st = Q.step(id);
+        if (!st || this.skipping(`q:${id}`) || !(st.night || st.warden)) continue;
+        const job = this.questJob(id, m, lvl);
+        if (job) return job;
+      }
+    }
+    // What's ready to hand in, or a word that moves a quest on: before more work.
+    for (const [id, lvl] of PLAN) {
+      const s = Q.state(id), st = Q.step(id);
+      if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
+      const ready = st?.talk || st?.back || (st?.bring && (pack.mats[st.bring] || 0) >= st.n) || (s.stage === 'making' && this.o.town.day >= s.ready);
+      if (!ready) continue;
+      const job = this.questJob(id, m, lvl);
+      if (job) return job;
+    }
     // The quests, in order.
     for (const [id, lvl] of PLAN) {
       const s = Q.state(id);
@@ -647,7 +690,11 @@ export class Brain {
       return this.talkJob(giver, 'quest', `${title}: to collect it.`);
     }
     if (!st) return null;
-    if (st.talk) return this.talkJob(this.personIndex(st.talk), 'quest', `${title}: a word with ${this.o.townUI.people[this.personIndex(st.talk)]?.name}.`);
+    if (st.talk) {
+      const who = this.personIndex(st.talk);
+      if (who >= PEOPLE.length && m.lvl < lvl + (this.bump[`q:${id}`] || 0)) return null;
+      return this.talkJob(who, 'quest', `${title}: a word with ${this.o.townUI.people[who]?.name}.`);
+    }
     if (st.back) return this.talkJob(giver, 'quest', `${title}: back to ${this.o.townUI.people[giver]?.name}.`);
     if (st.bring) {
       if ((this.o.pack.mats[st.bring] || 0) >= st.n) return this.talkJob(giver, 'quest', `${title}: ${st.n} ${matName(st.bring, st.n)} to hand over.`);
@@ -737,6 +784,9 @@ export class Brain {
       }
       if (best !== null) return { kind: 'talk', why: 'sell', who: best, say: `Selling to ${PEOPLE[best].name}.` };
     }
+    // Buying: whatever an open counter has that's better than what it wears, or a spell it doesn't know, with coin to spare.
+    const buy = this.shopping(m);
+    if (buy) return buy;
     // Mended at the herbalist's, if it's hurt and has the coin.
     if (m.hpf < 0.7 && pack.purse() >= 12) {
       const i = PEOPLE.findIndex((p) => p.trade === 'healing');
@@ -751,6 +801,26 @@ export class Brain {
       if (i >= 0 && !this.skipping(`p:${i}`) && this.reachable(i)) return { kind: 'talk', why: 'bed', who: i, say: `A bed at the Tolling Bell${making ? ': a quest waits on the morning' : ''}.` };
     }
     return null;
+  }
+
+  // The best buy in the town's stock today: { kind: 'talk', why: 'buy', who, item }, or null.
+  shopping(m) {
+    const { townUI, pack } = this.o, purse = pack.purse(), base = gearScore(pack.slots);
+    let best = null, most = 0;
+    for (let i = 0; i < PEOPLE.length; i++) {
+      const t = PEOPLE[i].trade;
+      if (!TRADES[t]?.stock || this.skipping(`buy:${i}`) || !townUI.isOpen(i) || !this.reachable(i)) continue;
+      for (const it of townUI.stockOf(t)) {
+        const price = (it.type === 'spell' ? 120 : worth(it)) * 10;
+        // (Never more than two thirds of what's in the purse.)
+        if (price > purse * 0.66) continue;
+        let gain = 0;
+        if (it.type === 'spell') gain = this.known(it.spell) ? 0 : 40;
+        else if (SLOT_OF(it)) gain = gearScore({ ...pack.slots, [SLOT_OF(it)]: it }) - base;
+        if (gain > 3 && gain / Math.sqrt(price) > most) { most = gain / Math.sqrt(price); best = { kind: 'talk', why: 'buy', who: i, item: it, say: `Buying from ${PEOPLE[i].name}.` }; }
+      }
+    }
+    return best;
   }
 
   grindJob(m, where, why, say) {
@@ -791,6 +861,7 @@ export class Brain {
     if (!j) { this.halt(); this.say('Thinking.'); return; }
     if (j.kind === 'go') {
       this.say(j.say);
+      if (j.why === 'town' && m.town) { this.giveUp('town', 60); this.job = null; this.halt(); return; }
       if (dist(m.x, m.z, j.x, j.z) < j.r && (!j.below || m.below)) {
         // There: the quest moves on as the town sees it (QuestBook.where, twice a second).
         this.halt();
@@ -799,7 +870,7 @@ export class Brain {
         return;
       }
       this.arriveT = this.t;
-      this.goTo(j.x, j.z, Math.min(j.r * 0.6, 4), true);
+      this.goTo(j.x, j.z, Math.min(j.r * 0.6, 4), true, false, !!j.below);
       return;
     }
     if (j.kind === 'talk') { this.approach(m, j); return; }
@@ -830,7 +901,7 @@ export class Brain {
       }
       return;
     }
-    this.goTo(px, pz, 2.5, true);
+    this.goTo(px, pz, 2.5, true, false, !!j.below);
     void foes;
   }
 
@@ -881,7 +952,7 @@ export class Brain {
     }
     if (k >= 0) { townUI.choose(k); return; }
     // The counter.
-    if (T.why === 'sell' || T.why === 'mend' || T.why === 'bed') {
+    if (T.why === 'sell' || T.why === 'mend' || T.why === 'bed' || T.why === 'buy') {
       const p = townUI.people[T.who], trade = TRADES[p.trade];
       if (townUI.mode !== 'shop') {
         if (T.shopped) { townUI.close(true); return; }
@@ -899,6 +970,13 @@ export class Brain {
         const keep = Object.keys(RULES).some((qid) => townUI.quests.state(qid)?.stage !== 'done' && RULES[qid].steps.some((s) => s.bring === 'bone'));
         if (trade.buysMats?.bone && !keep && (pack.mats.bone || 0) > 0) { townUI.sellMat('bone', trade.buysMats.bone); return; }
       } else if (T.why === 'mend' && !T.done) { T.done = true; townUI.buyGood('dressing'); return; }
+      else if (T.why === 'buy' && !T.done) {
+        T.done = true;
+        const items = townUI.stockOf(p.trade), k = items.indexOf(this.job?.item);
+        if (k >= 0) townUI.buyItem(k, (items[k].type === 'spell' ? 120 : worth(items[k])) * 10);
+        this.giveUp(`buy:${T.who}`, 120);
+        return;
+      }
       else if (T.why === 'bed' && !T.done) {
         T.done = true;
         townUI.buyGood('bed');
@@ -934,11 +1012,11 @@ export class Brain {
   // ---- getting about
 
   // Walks to (x, z): by the nav worker's paths on its ground, by the roads and the seals beyond it.
-  goTo(x, z, near = 1, run = true, person = false) {
+  goTo(x, z, near = 1, run = true, person = false, below = false) {
     this.useGoal = true;
     const g = this.goal;
-    if (!g || dist(g.x, g.z, x, z) > (person ? 2.5 : 3)) {
-      this.goal = { x, z, near, run, t: this.t };
+    if (!g || dist(g.x, g.z, x, z) > (person ? 2.5 : 3) || !!g.below !== below) {
+      this.goal = { x, z, near, run, t: this.t, below };
       this.macro = null; this.sub = null; this.subFor = null;
     } else { g.near = near; g.run = run; if (person) { g.x = x; g.z = z; } }
   }
@@ -960,11 +1038,11 @@ export class Brain {
     let tx = W.x, tz = W.z;
     // Leaving the nav ground for somewhere past it: a path to its edge on the way, then on across country.
     let edge = null;
-    if (this.nav.inGrid(m.x, m.z) && !this.nav.inGrid(W.x, W.z)) {
+    if (this.nav.inGrid(m.x, m.z, m.below) && !this.nav.inGrid(W.x, W.z, !!W.below)) {
       const L = dist(m.x, m.z, W.x, W.z);
       for (let s = 0; s <= L; s += 4) {
         const x = m.x + (W.x - m.x) * s / L, z = m.z + (W.z - m.z) * s / L;
-        if (!this.nav.inGrid(x, z) || Math.abs(x) > 236 || Math.abs(z) > 236) break;
+        if (!this.nav.inGrid(x, z, m.below) || Math.abs(x) > 236 || Math.abs(z) > 236) break;
         edge = { x, z };
       }
       if (edge && dist(m.x, m.z, edge.x, edge.z) < 6) edge = null;
@@ -972,7 +1050,7 @@ export class Brain {
       else if (edge) edge.edgeOf = W;
     }
     const leg = edge || W;
-    if (this.nav.inGrid(m.x, m.z) && this.nav.inGrid(leg.x, leg.z)) {
+    if (this.nav.inGrid(m.x, m.z, m.below) && this.nav.inGrid(leg.x, leg.z, edge ? m.below : !!W.below)) {
       // (A fresh path when the leg changes, when what it's walking to has moved, and now and then anyway.)
       if (this.subFor !== leg || (this.sub && this.t - this.subT > 12) || (this.subTo && dist(this.subTo[0], this.subTo[1], leg.x, leg.z) > 2.5)) {
         this.subFor = leg; this.sub = null; this.subT = this.t; this.subTo = [leg.x, leg.z];
@@ -992,7 +1070,7 @@ export class Brain {
       hx /= L; hz /= L;
       if ((this.probeT -= dt) <= 0) {
         this.probeT = 0.25;
-        this.nav.ask('probe', { x: m.x, z: m.z, hx, hz, look: 5 }).then((r) => { this.probeDir = r; });
+        this.nav.ask('probe', { x: m.x, z: m.z, y: m.y + 0.2, hx, hz, look: 5 }).then((r) => { this.probeDir = r; });
       }
       if (this.probeDir && this.probeDir[2] > 0.5) { hx = this.probeDir[0]; hz = this.probeDir[1]; }
       this.steer(hx, hz, g.run && d > 8);
@@ -1003,7 +1081,7 @@ export class Brain {
   // that's shorter, kept off the lairs and posts it isn't ready for.
   longWay(m, g) {
     const end = g;
-    if (this.nav.inGrid(m.x, m.z) && this.nav.inGrid(g.x, g.z)) return [end];
+    if (this.nav.inGrid(m.x, m.z, m.below) && this.nav.inGrid(g.x, g.z, !!g.below)) return [end];
     const direct = dist(m.x, m.z, g.x, g.z);
     const { nodes, edges } = roadNodes();
     const avoid = this.avoid(m);

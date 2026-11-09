@@ -45,6 +45,7 @@ body.touch #autoStatus b { font-size: 10px; }
 #autoMenu .foot button:hover { border-color: #8fe0ff; }
 `;
 
+const lower = (s) => s[0].toLowerCase() + s.slice(1);
 const el = (tag, id, cls, html) => { const e = document.createElement(tag); if (id) e.id = id; if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 export class AutoPlay {
@@ -150,7 +151,7 @@ export class AutoPlay {
     if (this.menuT > 0 && this.menu.classList.contains('on') && !this.o.paused()) {
       this.menuT -= dt;
       const w = this.menu.querySelector('.wait');
-      if (w) w.textContent = `Keeps to ${GRINDS[this.brain.grind].name.toLowerCase()} in ${Math.ceil(this.menuT)} s`;
+      if (w) w.textContent = `Keeps to ${lower(GRINDS[this.brain.grind].name)} in ${Math.ceil(this.menuT)} s`;
       if (this.menuT <= 0) this.pickGrind(this.brain.grind);
     }
     if (!this.on || !snap) return;
@@ -188,7 +189,7 @@ export class AutoPlay {
     this.brain.grind = k;
     this.brain.job = null; this.brain.jobKey = '';
     this.closeMenu();
-    this.o.hud.tip(`Grinding: ${GRINDS[k].name.toLowerCase()}.`, 3);
+    this.o.hud.tip(`Grinding: ${lower(GRINDS[k].name)}.`, 3);
   }
 
   closeMenu() { this.menu.classList.remove('on'); this.menuT = 0; }
