@@ -1,4 +1,8 @@
-"""The touch-ups on the new Pretty (the owner's Tripo model, LISANDRA - PRETTY NEW + RIGGING.glb), for both tools:
+"""The touch-ups on the new Pretty (the owner's Tripo model, LISANDRA - PRETTY NEW + RIGGING.glb), for both tools.
+
+NOT IN THE GAME: the owner wants her model and skin exactly as supplied ("Do not edit the model or the skin at all, just
+rig it up as needed", 2026-11-08). assets/game/lisandra/pretty.glb is transfer_clips.py's output alone: their mesh, weights
+and textures byte for byte, with her clips added. Kept for reference:
 
     python tools/lisandra/transfer_clips.py tools/build/lisandra/pretty_src.glb NEW_RIG.glb tools/build/lisandra/new/pretty_new_clips.glb
     python tools/lisandra/surface_paste.py tools/build/lisandra/new/pretty_new_clips.glb tools/build/lisandra/new/pretty_new_painted.glb tools/lisandra/pretty_new_fixes.py
