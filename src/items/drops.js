@@ -139,7 +139,9 @@ export class Drops {
       if (d.t < 1) {
         d.t += dt / FALL;
         if (d.t >= 1) {
-          this.audio.play('land', d.x, d.y, d.z, d.gem ? 0.25 : 0.5, d.gem ? 2.2 : 1.7);
+          if (d.coins) this.audio.play('coinLand', d.x, d.y, d.z, 0.5);
+          else if (d.gem) this.audio.play('gemLand', d.x, d.y, d.z, 0.3, 1.1);
+          else this.audio.play('land', d.x, d.y, d.z, 0.5, 1.7);
           this.renderer.emit(3, 4, d.x, d.y + 0.05, d.z, 0, 0.5, 0, 1, 0.15, 0.5, 0.04, 0.09, 0.4, 0.8);
         }
         d.spin += dt * 2.5;
@@ -165,6 +167,9 @@ export class Drops {
 
   take(d) {
     this.list.splice(this.list.indexOf(d), 1);
-    this.audio.play('draw', null, 0, 0, d.gem || d.coins ? 0.4 : 0.8, d.coins ? 1.9 : d.stuff ? 1.3 : d.gem ? 1.6 : 1.15, false);
+    // What it is, by its sound: coin, a life or mana orb, a scroll, a gem or a stone, a robe, a skull, a staff or a shield.
+    const t = d.item.type;
+    const bank = d.coins ? 'coin' : t === 'orb' ? 'orb' : t === 'spell' ? 'scroll' : d.gem ? 'gem' : t === 'robe' ? 'takeRobe' : t === 'skull' ? 'takeThing' : 'takeGear';
+    this.audio.play(bank, null, 0, 0, d.coins ? 0.45 : t === 'orb' ? 0.5 : d.gem ? 0.4 : 0.7, t === 'orb' && d.item.kind === 'mana' ? 1.15 : 1, false);
   }
 }

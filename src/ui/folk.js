@@ -134,6 +134,8 @@ export class TownUI {
       change: () => { this.town.setFlags(this.quests.flags); if (this.book) this.drawBook(); },
       toast: (t, kind) => this.note(t, kind),
       done: () => {},
+      // (Silas hands over the Sexton's Door's key with this one: src/main.js locked.)
+      begun: (id) => { if (id === 'dead_cant_wait') this.act.sound?.('keys'); },
     });
     const css = document.createElement('style');
     css.textContent = STYLE;
@@ -689,8 +691,8 @@ export class TownUI {
 
   // ---- the journal ----
 
-  openBook() { this.book = true; this.act.opened(); this.drawBook(); this.bookEl.style.display = 'block'; }
-  closeBook() { this.book = false; this.bookEl.style.display = 'none'; this.act.closed(); }
+  openBook() { this.book = true; this.act.sound?.('bookOpen'); this.act.opened(); this.drawBook(); this.bookEl.style.display = 'block'; }
+  closeBook() { this.book = false; this.act.sound?.('bookClose'); this.bookEl.style.display = 'none'; this.act.closed(); }
 
   drawBook(read = -1) {
     const Q = this.quests;

@@ -5,19 +5,55 @@ import { isMobileDevice } from './gfx/gpu.js';
 const PHONE = isMobileDevice();
 const PANNING = PHONE ? 'equalpower' : 'HRTF';
 
+const n = (base, k) => Array.from({ length: k }, (_, i) => `${base}_${i + 1}`);
+// Decoded at load, before the game starts: what a fight and a walk on the dirt need the instant they happen.
 const BANKS = {
-  attack: ['sword_attack_1', 'sword_attack_2', 'sword_attack_3'],
-  impact: ['sword_impact_hit_1', 'sword_impact_hit_2', 'sword_impact_hit_3'],
-  blocked: ['sword_blocked_1', 'sword_blocked_2', 'sword_blocked_3'],
-  parry: ['sword_parry_1', 'sword_parry_2', 'sword_parry_3'],
+  attack: n('sword_attack', 3), impact: n('sword_impact_hit', 3), blocked: n('sword_blocked', 3), parry: n('sword_parry', 3),
   draw: ['sword_unsheath_1'],
-  walk: ['dirt_walk_1', 'dirt_walk_2', 'dirt_walk_3', 'dirt_walk_4', 'dirt_walk_5'],
-  run: ['dirt_run_1', 'dirt_run_2', 'dirt_run_3', 'dirt_run_4', 'dirt_run_5'],
-  armorWalk: ['dirt_chain_walk_1', 'dirt_chain_walk_2', 'dirt_chain_walk_3', 'dirt_chain_walk_4', 'dirt_chain_walk_5'],
-  armorRun: ['dirt_chain_run_1', 'dirt_chain_run_2', 'dirt_chain_run_3', 'dirt_chain_run_4', 'dirt_chain_run_5'],
+  walk: n('dirt_walk', 5), run: n('dirt_run', 5), armorWalk: n('dirt_chain_walk', 5), armorRun: n('dirt_chain_run', 5),
   jump: ['dirt_jump'], land: ['dirt_land'], armorLand: ['dirt_chain_land'],
   birds: ['birds'], wind: ['wind_calm'],
 };
+const CORE = new Set(Object.values(BANKS).flat());
+// The rest of TomMusic's Free Fantasy SFX Pack (tools/audio/build_fantasy_sfx.py), fetched once the game's begun. Asked for before
+// it's in, a sound's fetched there and then and plays a moment late.
+// Steps on each ground the pack has (src/ui/places.js groundAt): walk_stone, armorRun_wood, land_water, ...
+for (const g of ['dirt', 'stone', 'wood', 'water']) {
+  Object.assign(BANKS, {
+    [`walk_${g}`]: n(`${g}_walk`, 5), [`run_${g}`]: n(`${g}_run`, 5), [`armorWalk_${g}`]: n(`${g}_chain_walk`, 5), [`armorRun_${g}`]: n(`${g}_chain_run`, 5),
+    [`jump_${g}`]: [`${g}_jump`], [`land_${g}`]: [`${g}_land`], [`armorJump_${g}`]: [`${g}_chain_jump`], [`armorLand_${g}`]: [`${g}_chain_land`],
+  });
+}
+Object.assign(BANKS, {
+  // A knight's sword out (src/main.js ALERT).
+  unsheath: n('sword_unsheath', 2),
+  // Doors (src/items/doors.js): a house's or the church's iron ones, and the cathedral's great doors.
+  doorOpen: n('door_open', 2), doorClose: n('door_close', 2), gateOpen: ['gate_open'], gateClose: ['gate_close'], unlock: ['lock_unlock'],
+  chestOpen: n('chest_open', 2),
+  // The town at work (src/folk/folk.worker.js blows), and the camp in the Rustwood.
+  chop: n('chop', 4), anvil: n('mine', 5),
+  // The pack opened and shut: the rustle of a strap and leather.
+  packOpen: ['bow_take_out_1'], packClose: ['bow_put_away_1'],
+  // Spells (src/spellsound.js), each over its element's own made sound.
+  fireball: n('fireball', 3), firebuff: n('firebuff', 2), firespray: n('firespray', 2), fireCatch: n('light_torch_with_starting_loop', 2),
+  torchImpact: n('torch_impact', 2), torchStrike: n('torch_attack_strike', 2), kindle: n('light_torch', 2),
+  iceThrow: n('ice_throw', 2), iceFreeze: n('ice_freeze', 2), iceBarrage: n('ice_barrage', 2), iceWall: n('ice_wall', 2),
+  rockThrow: n('rock_meteor_throw', 2), rockSwarm: n('rock_meteor_swarm', 2), rockWall: n('rock_wall', 2),
+  spellImpact: n('spell_impact', 3), splash: n('waterspray', 2), wave: n('wave_attack', 2), thunk: n('bow_impact_hit', 3),
+});
+// From two general packs (tools/audio/build_extra_sfx.py): what's picked up, the book and the map, bone and gore, the panels' clicks.
+Object.assign(BANKS, {
+  coin: ['coin_collect', 'coins_gather_small', 'coins_gather_quick'], coinLand: ['coin_jingle_small'],
+  gem: ['gem_collect'], gemLand: ['glass_ping_small'], orb: ['heart_collect'],
+  takeGear: ['weapon_pick_up'], takeRobe: ['clothing_1'], takeThing: ['wood_small_pickup'], scroll: ['page_turn'],
+  equip: ['item_equip'], equipStaff: ['weapon_equip'], keys: ['keys_jingling'],
+  bookOpen: ['book_open'], bookClose: ['book_close'], mapOpen: ['map_open'], mapClose: ['map_close'],
+  boneSnap: ['bone_snap', 'crunch'], crunch: ['crunch_splat', 'crunch_splat_2'], squelch: n('squelching', 4), splat: ['splat_quick', 'crunch_quick'],
+  uiHover: ['ui_pointer'], uiConfirm: ['ui_confirm'], uiCancel: ['ui_cancel'], uiOpen: ['ui_popup'], uiClose: ['ui_popdown'],
+});
+// The least time between two of a bank, so a volley or a line of spikes doesn't stack up into one roar.
+const GAP = { spellImpact: 0.07, torchImpact: 0.1, iceFreeze: 0.1, thunk: 0.08, rockWall: 0.3, splash: 0.2, rockThrow: 0.12, fireball: 0.08, anvil: 0.2, chop: 0.2,
+  coin: 0.06, coinLand: 0.05, gem: 0.08, gemLand: 0.05, orb: 0.1, squelch: 0.1, splat: 0.08, crunch: 0.1, uiHover: 0.05 };
 
 export class Audio {
   // ctx and dest: the title's context and its Volume, so the title and the game share one line out.
@@ -58,21 +94,28 @@ export class Audio {
     this.noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const nd = this.noise.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    const names = new Set(Object.values(BANKS).flat());
-    await Promise.all([...names].map(async (n) => {
+    await Promise.all([...CORE].map(async (n) => {
       const res = await fetch(`${this.base}assets/game/audio/${n}.mp3`);
       this.buffers[n] = await ctx.decodeAudioData(await res.arrayBuffer());
     }));
+    this.lastAt = {};
     this.ready = true;
+    if (this.wantStart) this.start();
   }
 
   start() {
-    if (!this.ready) return;
+    // (Asked before the sounds are in, as ?auto does: it starts once they are.)
+    if (!this.ready) { this.wantStart = true; return; }
     this.ctx.resume();
     if (this.started) return;
     this.started = true;
-    this.loop('birds', 0.16);
-    this.loop('wind', 0.34);
+    // (Beds, so the lands can bring them down indoors and under the ground: src/ui/lands.js sounds.)
+    this.bed('birds', 0.16);
+    this.bed('wind_calm', 0.34);
+    // The rest of the effects, a few at a time, out of the way of everything else loading.
+    const rest = [...new Set(Object.values(BANKS).flat())].filter((k) => !CORE.has(k));
+    const next = () => { const k = rest.shift(); if (k) this.fetchBuffer(k).catch(() => {}).then(() => setTimeout(next, 30)); };
+    for (let i = 0; i < 4; i++) setTimeout(next, 1500 + i * 40);
   }
 
   // A loop fetched the first time it's wanted, its level eased toward gain: the falls, the wind on the heights (src/ui/lands.js).
@@ -106,17 +149,6 @@ export class Audio {
     if (this.buffers[name]) return Promise.resolve(this.buffers[name]);
     this.pending = this.pending || {};
     return this.pending[name] || (this.pending[name] = fetch(`${this.base}assets/game/audio/${name}.mp3`).then((r) => r.arrayBuffer()).then((a) => this.ctx.decodeAudioData(a)).then((buf) => (this.buffers[name] = buf)));
-  }
-
-  loop(bank, gain) {
-    const src = this.ctx.createBufferSource();
-    src.buffer = this.buffers[BANKS[bank][0]];
-    src.loop = true;
-    const g = this.ctx.createGain();
-    g.gain.value = gain;
-    src.connect(g);
-    g.connect(this.amb);
-    src.start();
   }
 
   // The shield's scrape, its rumble, and the wind when you're fast. Bellmourn's board loop. speed 0 is silence; in the air only the wind's left.
@@ -157,12 +189,51 @@ export class Audio {
     }
   }
 
+  // A loop heard from one place, which can move (the nearest flame: src/ui/lands.js), eased toward gain. Fetched the first time.
+  spot(key, name, x, y, z, gain) {
+    if (!this.ready) return;
+    this.spots = this.spots || {};
+    let s = this.spots[key];
+    if (!s) {
+      if (gain < 0.005) return;
+      const p = this.ctx.createPanner();
+      p.panningModel = PANNING; p.distanceModel = 'inverse'; p.refDistance = 1.5; p.rolloffFactor = 1.2;
+      const g = this.ctx.createGain(); g.gain.value = 0;
+      g.connect(p); p.connect(this.amb);
+      s = this.spots[key] = { p, g };
+      this.fetchBuffer(name).then((buf) => {
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf; src.loop = true; src.connect(g); src.start(this.ctx.currentTime, Math.random() * buf.duration);
+      }).catch(() => {});
+    }
+    const t = this.ctx.currentTime, { p } = s;
+    if (p.positionX) { p.positionX.setTargetAtTime(x, t, 0.1); p.positionY.setTargetAtTime(y, t, 0.1); p.positionZ.setTargetAtTime(z, t, 0.1); } else p.setPosition(x, y, z);
+    s.g.gain.setTargetAtTime(gain, t, 0.4);
+  }
+
   // bank name, position (null for "in your head"), volume, rate
   play(bank, x, y, z, gain = 1, rate = 1, wet = true) {
     if (!this.ready || this.ctx.state !== 'running') return;
     const list = BANKS[bank];
+    if (!list) return;
+    if (GAP[bank]) {
+      const now = this.ctx.currentTime;
+      if (now - (this.lastAt[bank] ?? -1) < GAP[bank]) return;
+      this.lastAt[bank] = now;
+    }
+    this.sound(list[(Math.random() * list.length) | 0], x, y, z, gain, rate, wet);
+  }
+
+  // One file by name (play's, once it's picked one of a bank).
+  sound(name, x, y, z, gain = 1, rate = 1, wet = true) {
+    if (!this.buffers[name]) {
+      // (Not in yet: as soon as it is, unless that's too late to still belong to what made it.)
+      const asked = performance.now();
+      this.fetchBuffer(name).then(() => { if (performance.now() - asked < 400) this.sound(name, x, y, z, gain, rate, wet); }).catch(() => {});
+      return;
+    }
     const src = this.ctx.createBufferSource();
-    src.buffer = this.buffers[list[(Math.random() * list.length) | 0]];
+    src.buffer = this.buffers[name];
     src.playbackRate.value = rate * (0.94 + Math.random() * 0.12);
     const g = this.ctx.createGain();
     g.gain.value = gain;

@@ -109,6 +109,8 @@ export const EV = {
   GROAN: 45, DIRT: 46, CHANT: 47, BLINK: 48, UNDEAD_DIE: 49, CHAMPION: 50,
   // The other Tessariels (src/sim/hero.js): a line to say (slot, trigger, other slot, place, mob, extra), a level, a duel's end.
   HERO: 51, HERO_LEVEL: 52, HERO_DUEL: 53,
+  // A spell laid on the ground away from you (elem, which spell, x, y, z, how long): for its sound to be heard there (src/spellsound.js zone).
+  SPELL_ZONE: 54,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.

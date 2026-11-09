@@ -111,9 +111,25 @@ function frame(dt) {
   const player = [inb[FIN.PX], inb[FIN.PY], inb[FIN.PZ]];
   life.update(dt, { hour: inb[FIN.HOUR], day: inb[FIN.DAY] | 0, player, dangers });
   talk.update(dt, { player, cast: inb[FIN.CAST] | 0 });
+  blows(player);
   tick++;
   write(inb[FIN.CAMX], inb[FIN.CAMY], inb[FIN.CAMZ]);
   if (events.length) { self.postMessage({ type: 'events', list: events.splice(0) }); }
+}
+
+// The work you can hear: the axe at the woodpile and the smith's hammer, the moment each lands (seconds into its clip, read off
+// the right hand stopping dead), told to the main thread to sound (src/main.js townEvent). Only within earshot.
+const BLOWS = { chop_wood: { at: 0.21, kind: 'chop' }, cleave: { at: 0.78, kind: 'anvil' } };
+function blows(player) {
+  for (const me of life.folk) {
+    const c = me.pose.clip, b = c && BLOWS[c.name];
+    if (!b) { me.blowT = -1; continue; }
+    const t = c.loop ? me.pose.time % c.dur : me.pose.time;
+    if (me.blowT >= 0 && me.blowT < b.at && t >= b.at && Math.hypot(me.x - player[0], me.z - player[2]) < 45) {
+      emit({ type: 'work', kind: b.kind, at: [me.x, me.y + 0.6, me.z] });
+    }
+    me.blowT = t;
+  }
 }
 
 // Everyone into a slot: where they are, and their pose. Poses are solved less often the further they are from the eye

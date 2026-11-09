@@ -33,6 +33,7 @@ import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
 import { matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
+import { groundAt, setHomes } from './ui/places.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -341,6 +342,7 @@ async function boot(plan, poolSize) {
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
     change: arm,
     drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); },
+    sound: (k) => audio.play({ open: 'packOpen', close: 'packClose', socket: 'gemLand' }[k] || k, null, 0, 0, 0.55, 1, false),
   });
   Object.assign(game, { pack, inventory });
   // What the other Tessariels say, and their names over their heads.
@@ -359,6 +361,7 @@ async function boot(plan, poolSize) {
   const townUI = new TownUI({
     town, renderer, pack, input, hud, inventory, spellbar: null,
     act: {
+      sound: (k) => audio.play(k, null, 0, 0, 0.7, 1, false),
       heal: (n) => { shared.input[INPUT.HEAL] += n; },
       hp: () => { const s = game.currentSnap(); return s ? s[H.HP] / (s[H.MAX_HP] || 1) : 1; },
       // A night's sleep: dawn, mended, and the game kept.
@@ -389,6 +392,8 @@ async function boot(plan, poolSize) {
     cmd: (code, a = 0, b = 0, c = 0) => { shared.input[INPUT.ASPECT] = code; shared.input[INPUT.CMD_A] = a; shared.input[INPUT.CMD_B] = b; shared.input[INPUT.CMD_C] = c; shared.input[INPUT.CMD] += 1; },
     snap: () => game.currentSnap(),
     hour: () => renderer.hour,
+    // The hearths, braziers and torches (the lights that flicker like a fire does), for their crackle.
+    flames: renderer.lights.filter((L) => L.flicker >= 0.79),
     opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
     closed: () => { input.menu = false; resume(); },
     canMenu: () => input.enabled && !input.menu && !naming,
@@ -615,11 +620,13 @@ async function boot(plan, poolSize) {
     shared.input[INPUT.PAUSE] = 1;
     input.menu = true;
     input.releaseControls();
+    if (!bookOpen) audio.play('bookOpen', null, 0, 0, 0.7, 1, false);
     bookOpen = true;
     $('spellbook').classList.add('open');
     if (document.pointerLockElement) document.exitPointerLock();
   };
   const closeBook = (viaEsc) => {
+    if (bookOpen) audio.play('bookClose', null, 0, 0, 0.7, 1, false);
     bookOpen = false;
     $('spellbook').classList.remove('open');
     input.menu = false;
@@ -647,6 +654,22 @@ async function boot(plan, poolSize) {
     shared.input[INPUT.PAUSE] = hidden || state.paused ? 1 : 0;
     if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
   });
+  // The game's own panels (the talk, the shops, the seals, the skull's menu, the book, the pack): a tick under the pointer and a
+  // click as one's pressed (MenuSFX, by Kevin Fowler). The title and the pause menu have their own (src/title.js chime, tick).
+  let uiHover = null;
+  const ownUI = (e) => { const b = e.target.closest?.('button'); return b && !b.disabled && !b.closest('#title, #pause, .t-btn') ? b : null; };
+  document.addEventListener('pointerover', (e) => { const b = ownUI(e); if (b && b !== uiHover && e.pointerType === 'mouse') audio.play('uiHover', null, 0, 0, 0.18, 1, false); uiHover = b; });
+  document.addEventListener('click', (e) => {
+    const b = ownUI(e);
+    if (b) audio.play(/^\s*(stay|close|cancel|back|leave|no|goodbye|farewell)\b/i.test(b.textContent) ? 'uiCancel' : 'uiConfirm', null, 0, 0, 0.35, 1, false);
+  }, true);
+  // The big map unrolled and rolled up again.
+  const toggleMap = () => {
+    const was = worldMap.open;
+    worldMap.toggle();
+    const now = worldMap.open;
+    if (now !== was) audio.play(now ? 'mapOpen' : 'mapClose', null, 0, 0, 0.6, 1, false);
+  };
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat || naming) return;
@@ -655,11 +678,11 @@ async function boot(plan, poolSize) {
     if (e.code === 'Escape' && bookOpen) closeBook(true);
     if (e.code === 'Escape' && inventory.open) closePack(true);
     if (e.code === 'KeyE' && !input.menu && !state.paused) game.takeNearest();
-    if (e.code === 'KeyM' && !input.menu && !state.paused) worldMap.toggle();
+    if (e.code === 'KeyM' && !input.menu && !state.paused) toggleMap();
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
   $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) openPack(); }, { passive: false });
-  $('bMap').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) worldMap.toggle(); }, { passive: false });
+  $('bMap').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) toggleMap(); }, { passive: false });
   $('bTake').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) game.takeNearest(); }, { passive: false });
   $('touch').addEventListener('touchstart', () => {
     const snap = game.currentSnap();
@@ -807,6 +830,13 @@ class GameView {
     this.nearChest = null;
     this.doors = new Doors(renderer, audio, renderer.things, { set value(m) { shared.input[INPUT.DOORS] = m; } });
     this.nearDoor = null;
+    setHomes(renderer.interior.data.homes);
+    this.underfoot = 'dirt';
+    // A house's lamps lit again as someone comes home or wakes: heard if you're near.
+    renderer.homeLights.onLit = (L) => {
+      const c = this.cam;
+      if (L && Math.hypot(L.p[0] - c.x, L.p[2] - c.z) < 16) audio.play('kindle', L.p[0], L.p[1], L.p[2], 0.7);
+    };
     this.nearDrop = null;
     this.nearFolk = null;
     this.takeShown = null;
@@ -852,6 +882,7 @@ class GameView {
     if (e.type === 'door') this.doors.byFolk(e.id, e.open);
     else if (e.type === 'stall') this.renderer.stallOpen(e.id, e.open);
     else if (e.type === 'dish') this.renderer.dish(e.id, e.on, e.kind, e.at, e.yaw);
+    else if (e.type === 'work') this.audio.play(e.kind, e.at[0], e.at[1], e.at[2], e.kind === 'chop' ? 1.1 : 0.8, e.kind === 'anvil' ? 1.25 : 1);
     else if (this.onTownEvent) this.onTownEvent(e);
   }
 
@@ -1082,6 +1113,8 @@ class GameView {
     const eyeY = snap[H.PY] + 1.62 + bobY - snap[H.CAM_DROP] - Math.min(snap[H.DODGE], 0.2) * 0.45;
     const eyeZ = snap[H.PZ] + snap[H.VZ] * age + rz * bobX;
     this.audio.surf(snap[H.SURF] > 0.5 && inp.enabled ? Math.hypot(snap[H.VX], snap[H.VZ]) : 0, snap[H.ON_GROUND] > 0.5);
+    // What's under your own feet, for their sound (onEvent STEP), looked up a few times a second.
+    if (!(this.groundT-- > 0)) { this.groundT = 8; this.underfoot = groundAt(snap[H.PX], snap[H.PY], snap[H.PZ]); }
     if (snap[H.SURF] > 0.5) {
       const hs = Math.hypot(snap[H.VX], snap[H.VZ]);
       if (hs > 0.5) { this.boardX = snap[H.VX] / hs; this.boardZ = snap[H.VZ] / hs; } else if (this.boardX === undefined) { this.boardX = 0; this.boardZ = 1; }
@@ -1200,7 +1233,10 @@ class GameView {
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
-        this.spellSound.loose(a, c, d, e);
+        this.spellSound.loose(a, c, d, e, SPELLS[b]?.key ?? null);
+        break;
+      case EV.SPELL_ZONE:
+        this.spellSound?.zone(SPELLS[b]?.key, c, d, e, f);
         break;
       case EV.SPELL_HIT:
         this.heroTalk?.onSpellHit(f);
@@ -1230,6 +1266,7 @@ class GameView {
         if (r.chars[g]?.flesh) {
           // Rotten meat: no steel to ring or throw sparks, only the blood it was holding.
           au.gore(a, b, c, 0.8, 0.34, 1600);
+          au.play('splat', a, b, c, 0.8);
           r.emit(0, 220, a, b, c, d, e + 0.1, f, 0.6, 0.8, 5.5, 0.0014, 0.009, 0.8, 2);
         } else {
           au.play('blocked', a, b, c, 0.7, 1.2);
@@ -1243,6 +1280,7 @@ class GameView {
         au.play('impact', a, b, c, 1.2, 0.72);
         au.gore(a, b, c, 1.2, 0.5, 1100);
         au.gore(a, b, c, 0.9, 0.34, 2200);
+        if (r.chars[g]?.flesh) au.play('squelch', a, b, c, 1);
         r.emit(0, 900, a, b, c, d, e + 0.1, f, 0.5, 0.8, 6.8, 0.0014, 0.011, 1.2, 3);
         r.emit(0, 80, a, b, c, d, e, f, 0.1, 5.5, 9, 0.002, 0.01, 1, 2);
         r.emit(1, 22, a, b, c, d, e, f, 0.9, 0.4, 2.5, 0.03, 0.08, 0.4, 0.9);
@@ -1274,14 +1312,16 @@ class GameView {
         r.emit(0, 60, a, b, c, 0, 0.2, 0, 1.2, 0.8, 2.6, 0.0025, 0.006, 0.8, 1.5);
         break;
       case EV.STEP: {
+        // Each on what it's walking on: dirt, stone, boards or water (src/ui/places.js). Dust only off dry ground.
         const loud = d;
-        if (f === -1) au.play(loud > 0.7 ? 'run' : 'walk', null, 0, 0, 0.2 + loud * 0.15, 1, false);
-        else if (e === 2) {
-          au.play('armorWalk', a, b, c, 0.35 + loud * 0.35, 1.55);
-          if (loud > 0.6) r.emit(3, 1, a, b + 0.05, c, 0, 0.5, 0, 1, 0.15, 0.5, 0.05, 0.1, 0.4, 0.8);
+        if (f === -1) { au.play(`${loud > 0.7 ? 'run' : 'walk'}_${this.underfoot}`, null, 0, 0, 0.2 + loud * 0.15, 1, false); break; }
+        const g = groundAt(a, b, c), dust = g === 'dirt';
+        if (e === 2) {
+          au.play(`armorWalk_${g}`, a, b, c, 0.35 + loud * 0.35, 1.55);
+          if (loud > 0.6 && dust) r.emit(3, 1, a, b + 0.05, c, 0, 0.5, 0, 1, 0.15, 0.5, 0.05, 0.1, 0.4, 0.8);
         } else {
-          au.play(loud > 0.6 ? 'armorRun' : 'armorWalk', a, b, c, 0.75 + loud * 0.4);
-          if (loud > 0.45) r.emit(3, 2, a, b + 0.05, c, 0, 0.5, 0, 1, 0.15, 0.5, 0.05, 0.1, 0.5, 1);
+          au.play(`${loud > 0.6 ? 'armorRun' : 'armorWalk'}_${g}`, a, b, c, 0.75 + loud * 0.4);
+          if (loud > 0.45 && dust) r.emit(3, 2, a, b + 0.05, c, 0, 0.5, 0, 1, 0.15, 0.5, 0.05, 0.1, 0.5, 1);
         }
         break;
       }
@@ -1307,12 +1347,14 @@ class GameView {
         r.emit(2, 3, a, b, c, 0, 1, 0, 2, 0.1, 0.5, 0.004, 0.008, 0.1, 0.2);
         this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. DODGE, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
         break;
-      case EV.JUMP: au.play('jump', null, 0, 0, 0.32, 1, false); break;
-      case EV.DODGE: au.play('run', null, 0, 0, 0.5, 1.15, false); break;
+      case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
+      case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
       case EV.CRAB_WAKE: this.hud.once('crab', 'Something is coming out of the fields.'); break;
       case EV.HYDRA_NOTICE: this.hud.once('hydra', 'Three heads have turned your way. It has given you one warning.', 5); break;
       case EV.FIRE: {
-        // One head's breath, this instant. A hiss under it, not on every puff.
+        // One head's breath, this instant. A hiss under it, not on every puff, and a roar of flame as a gout begins.
+        if (performance.now() - (this.breathAt || 0) > 700) au.play('torchStrike', a, b, c, 1.4, 0.65);
+        this.breathAt = performance.now();
         r.emit(7, 8, a, b, c, d, e, f, 0.13, 9, 16, 0.07, 0.24, 0.5, 0.95);
         if (Math.random() < 0.35) r.emit(6, 2, a, b, c, d, e + 0.15, f, 0.3, 4, 10, 0.012, 0.03, 0.6, 1.3);
         if (Math.random() < 0.2) r.emit(4, 1, a + d * 2, b + e * 2 + 0.5, c + f * 2, 0, 1, 0, 0.5, 0.4, 1.2, 0.4, 0.8, 1.2, 2.4);
@@ -1330,6 +1372,8 @@ class GameView {
       case EV.SEVER:
         // It comes off with a crack of bone, and everything that was in the neck comes after it.
         au.play('impact', a, b, c, 1.5, 0.7);
+        au.play('boneSnap', a, b, c, 1.3, 0.85);
+        au.play('squelch', a, b, c, 1, 0.9);
         au.gore(a, b, c, 1, 0.8, 420);
         r.emit(0, 170, a, b, c, d, e + 0.6, f, 1.1, 1.5, 6, 0.004, 0.012, 0.8, 1.7);
         r.emit(1, 30, a, b, c, 0, 0.5, 0, 1.4, 0.4, 1.8, 0.1, 0.28, 0.7, 1.4);
@@ -1369,11 +1413,12 @@ class GameView {
         break;
       case EV.UNDEAD_DIE:
         au.gore(a, b, c, 0.8, 0.6, 300);
+        au.play('crunch', a, b, c, 1.1, 0.85);
         r.emit(3, 26, a, b, c, 0, 0.6, 0, 1.4, 0.4, 1.6, 0.08, 0.2, 0.7, 1.5);
         break;
       case EV.LOSE: au.play('armorLand', null, 0, 0, 1, 0.7); break;
-      case EV.LAND: au.play('land', null, 0, 0, 0.25 + d * 0.4, 1, false); break;
-      case EV.ALERT: au.play('draw', a, b, c, 1.2); break;
+      case EV.LAND: au.play(`land_${this.underfoot}`, null, 0, 0, 0.25 + d * 0.4, 1, false); break;
+      case EV.ALERT: au.play('unsheath', a, b, c, 1.2); break;
       case EV.SHIELD_BREAK:
         au.play('blocked', a, b, c, 1.4, 0.55);
         r.emit(2, 60, a, b, c, 0, 0.2, 0, 1.5, 1, 5, 0.0022, 0.005, 0.2, 0.6);

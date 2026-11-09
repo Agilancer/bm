@@ -101,6 +101,23 @@ All twelve houses can be entered: furnished, with a stair and an upper floor, bu
 
 Chests (`src/items/chests.js`, placed by `chest(...)` in the builder) open on `E`, the lid swings up on its hinge and gold, gems and gear spill out. Which are open is saved. Gold is counted in the pack.
 
+### Sound
+
+Everything is MP3 in `assets/game/audio/`, named in `BANKS` in `src/audio.js`. The fight's and the dirt steps' sounds load before the
+game starts; the rest come in the background once it has.
+
+- **TomMusic's Free Fantasy SFX Pack** (all 204 files, `tools/audio/build_fantasy_sfx.py`): footsteps on dirt, stone, boards and water
+  (`src/ui/places.js` says which is underfoot; knights in plate get the chain ones), doors and the cathedral's great doors, the
+  Sexton's lock, chests, the woodpile's axe and the smith's hammer (`blows` in `src/folk/folk.worker.js`), a lamp lit as someone
+  comes home, the nearest fire's crackle, and a layer over each spell's own made sound (`src/spellsound.js`). Its 60 s beds play by
+  where you are (`sounds` in `src/ui/lands.js`): the woods by day and by night, rain on the Weeping Fen and on Sallowmere's shore, a
+  storm over Velscour's keep, a house's quiet, the cathedral with the storm on its roof, the catacombs, the Rift, the falls.
+  Not used anywhere yet: the sea's three beds, the beach's plain and stormy ones, the rain and storm beds for a house, the cave in the rain, the river
+  stream, the portcullis, the chest closing, the sword sheathed, the bow's shot and its block.
+- **400 Sounds Pack** (`tools/audio/build_extra_sfx.py`; the zip carries no licence): coins, gems and orbs picked up and landing, a
+  scroll, robe, skull or staff taken, the spellbook and the journal, the big map, bone snapping and gore on the undead.
+- **MenuSFX** by Kevin Fowler (CC BY): the clicks of the game's own panels (`ui_*`). The title and the pause menu keep their own.
+
 ### The title, saves and settings
 
 `src/title.js`, from Bellmourn's title screen: Blastorama Gaming's card, then Jamie Herrington's, each with glints flaring on

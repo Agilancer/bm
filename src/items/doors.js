@@ -77,9 +77,11 @@ export class Doors {
     if (!folk) { d.folk = false; d.shutting = false; }
     d.open = !d.open;
     this.mask();
-    const big = d.reach > 3 ? 0.7 : 1;
-    this.audio.play('draw', d.cx, d.y + 1.2, d.cz, 0.3, (d.open ? 0.42 : 0.36) * big);
-    if (!d.open) this.audio.play('land', d.cx, d.y + 1, d.cz, 0.4, 0.5 * big);
+    // The cathedral's great doors groan open like a gate; the rest are doors. A lock's turned the first time it's opened.
+    const big = d.reach > 3, y = d.y + 1.2;
+    if (d.open && d.lock && !d.unlocked) { d.unlocked = true; this.audio.play('unlock', d.cx, y, d.cz, 0.9); }
+    if (big) this.audio.play(d.open ? 'gateOpen' : 'gateClose', d.cx, y, d.cz, 1.3, 0.8);
+    else this.audio.play(d.open ? 'doorOpen' : 'doorClose', d.cx, y, d.cz, 0.9);
   }
 
   // What goes in a save: which are open, by id.

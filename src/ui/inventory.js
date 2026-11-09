@@ -50,6 +50,7 @@ export class Inventory {
   }
 
   show() {
+    if (!this.open) this.on.sound?.('open');
     this.open = true;
     this.root.style.display = 'flex';
     this.render();
@@ -57,6 +58,7 @@ export class Inventory {
 
   hide() {
     this.putBack();
+    if (this.open) this.on.sound?.('close');
     this.open = false;
     this.press = null;
     this.root.style.display = 'none';
@@ -239,6 +241,7 @@ export class Inventory {
     // A gem on a sword goes in. Anywhere else it is a thing like any other.
     if (item.type === 'gem' && SOCKETED.has(t.item?.type)) {
       if (this.pack.socket(t.item, item)) {
+        this.on.sound?.('socket');
         this.carry = null;
         this.on.change();
         this.render();
@@ -257,6 +260,7 @@ export class Inventory {
       const prev = this.pack.slots[t.name];
       this.pack.slots[t.name] = item;
       this.carry = prev ? { item: prev, from: null } : null;
+      this.on.sound?.(item.type === 'weapon' ? 'equipStaff' : 'equip');
       this.on.change();
     } else if (t.kind === 'ground') {
       this.carry = null;
