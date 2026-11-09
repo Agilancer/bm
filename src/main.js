@@ -35,6 +35,7 @@ import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
 import { matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
+import { AutoPlay } from './ui/autoplay.js';
 import { groundAt, setHomes } from './ui/places.js';
 
 const BASE = new URL('..', import.meta.url).href;
@@ -435,6 +436,8 @@ async function boot(plan, poolSize) {
       inventory.render();
       return `${items.length} things of ${tiers.map((r) => RARITIES[r].name).join(', ')}, and ${kind === 'god' ? '25,000' : '2,500'} gold${dropped ? `; ${dropped} on the ground at your feet, the pack being full` : ''}.`;
     },
+    // The other word: auto-play's button (src/ui/autoplay.js).
+    autoplay: () => game.autoplay?.unlock(),
   });
   lands.load(null);
   game.lands = lands;
@@ -551,8 +554,9 @@ async function boot(plan, poolSize) {
   const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
   const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
-  const resume = () => { if (input.touch || AUTO) input.onPauseChange(false); else input.lock(); };
+  const resume = () => { if (input.touch || AUTO || input.free) input.onPauseChange(false); else input.lock(); };
   const toTitle = async () => {
+    game.autoplay?.toggle(false);
     await autosave();
     input.enabled = false;
     state.paused = false;
@@ -655,6 +659,11 @@ async function boot(plan, poolSize) {
   });
   game.closeBook = closeBook;
   townUI.spellbar = game.spellbar;
+  // Auto-play, behind the skull's word Jamie: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
+  game.autoplay = new AutoPlay({
+    base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
+    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES,
+  });
   const closePack = (viaEsc) => {
     inventory.hide();
     input.menu = false;
@@ -1014,6 +1023,7 @@ class GameView {
       this.emitBleeds(dt, snap);
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
+      this.autoplay?.frame(dt, snap);
       const c = this.overrideCam || this.cam;
       if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       this.questTrail?.frame(dt, snap);
@@ -1424,7 +1434,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:

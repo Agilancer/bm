@@ -6,7 +6,7 @@
 // great place. Walk onto one and it wakes; E on a woken one lists every other woken one, and takes you there.
 //
 // The skull: beside the corner map (with the mouse free: Esc first), or the ` key. The right word opens the menu; the cheats
-// last until the page is reloaded.
+// last until the page is reloaded. Another word, Jamie, wakes the Auto button under it (src/ui/autoplay.js).
 
 import { SEALS } from '../core/sites.js';
 import { CLIFF, POOL, SITES, WATERS, countryAt } from '../core/lands.js';
@@ -14,6 +14,8 @@ import { roomAt } from './places.js';
 import { ABIL, H, INPUT } from '../core/layout.js';
 
 const PASSWORD = '6669';
+// The word for auto-play: any case.
+const AUTO_WORD = 'jamie';
 // The countries thick with trees, where the woods' own sounds are heard.
 const WOODS = new Set(['darkwood', 'deepwood', 'rustwood', 'gallows']);
 const SKULL = 'assets/ui/velscour_skull.png';
@@ -108,7 +110,7 @@ const TAGS = { god: 'GOD', fly: 'NO-CLIP', noDamage: 'NO DMG', doubleJump: '2X J
 
 export class Lands {
   /** o: { shared, input, hud, audio, pack, worldMap, cmd(code, a, b, c), snap(), hour(), opened(), closed(), canMenu(), arm(),
-   * level(+1|-1), gear('god'|'peasant') -> line, bells() } */
+   * level(+1|-1), gear('god'|'peasant') -> line, bells(), autoplay() (the word Jamie: the Auto button) } */
   constructor(o) {
     this.o = o;
     this.cheats = { noDamage: false, fly: false, god: false, doubleJump: false };
@@ -122,7 +124,7 @@ export class Lands {
     this.skull.addEventListener('click', (e) => { e.stopPropagation(); this.skull.blur(); this.ask(); });
     this.skull.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); this.ask(); }, { passive: false });
     this.pass = el('div', 'lands-panel', `<div class="head"><img src="${SKULL}" alt=""><div><h2>Velscour's Skull</h2><div>Speak the word, and the skull will answer.</div></div></div>
-      <form autocomplete="off" style="margin-top:12px"><input type="password" inputmode="numeric" maxlength="16" aria-label="The word" placeholder="&bull; &bull; &bull; &bull;">
+      <form autocomplete="off" style="margin-top:12px"><input type="password" inputmode="text" autocapitalize="off" spellcheck="false" maxlength="16" aria-label="The word" placeholder="&bull; &bull; &bull; &bull;">
       <div class="foot"><button type="button" class="cancel">Cancel</button><button type="submit">Unlock</button></div></form>`);
     this.word = this.pass.querySelector('input');
     this.pass.querySelector('form').addEventListener('submit', (e) => { e.preventDefault(); this.unlock(); });
@@ -167,9 +169,15 @@ export class Lands {
   }
 
   unlock() {
-    const ok = this.word.value.trim() === PASSWORD;
+    const word = this.word.value.trim();
+    const ok = word === PASSWORD;
     this.word.value = '';
     this.pass.classList.remove('on');
+    // (Not closed() here: that hands the mouse back to the game, and the Auto button wants clicking. Auto-play keeps it free.)
+    if (word.toLowerCase() === AUTO_WORD && this.o.autoplay) {
+      this.o.autoplay();
+      return;
+    }
     if (!ok) { this.o.closed(); this.o.hud.tip('The skull says nothing.', 2); return; }
     this.note = '';
     this.render();
