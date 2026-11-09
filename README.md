@@ -594,6 +594,12 @@ python tools/crab_monster/build.py
 The skeleton and weights are in `tools/crab_monster/rig.py`, and the clips, as eased keys, are in `tools/crab_monster/anim.py`.
 Source art and the Blender file are in `art/crab_monster/`.
 
+## Lisandra's clips
+
+To watch every clip in `assets/game/lisandra/pretty.glb` (176 of them), run `lisandra-player.bat`, which opens `lisandra.html` on
+`http://localhost:8402/lisandra.html`. Clips are grouped Idle, Move, Combat and Emote, with a search box (**/** to focus it) and
+**Up**/**Down** to step through them. **Hold in place** pins her hips over the origin for clips that travel.
+
 ## The Gravehart
 
 `assets/monsters/gravehart/gravehart.glb` (6.8 MB) is a Tripo model of an antlered death-beast on its own 56-bone skeleton,
