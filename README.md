@@ -151,6 +151,123 @@ readout.
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
 
+### Auto-play
+
+Velscour's Skull (beside the corner map with the mouse free, or the `` ` `` key) takes a second word: **Jamie**, in any case.
+It wakes the **Auto** button under the skull, taken from Velscour (`assets/ui/btn_auto.webp`, and its blue glow from
+Velscour's `css/style.css`). The button, or **P**, turns auto-play on and off. Like the cheats, it lasts until the page is
+reloaded.
+
+While it's on, the game plays itself as a player would. It works the same controls as you: the move keys, the look, the staff,
+the casts, jump, dodge and E. Nothing is moved or handed to it.
+
+- **The opening.** It waits out the cave and answers Lisandra with a name (Jamie, if nobody has yet). It walks out, then
+  follows her down the Long Road to Bellmourn, a few strides behind her as she leads. It rides its shield down the steep
+  stretches, so she rides hers, and it fights the dead on the road. In town it takes her round of the townsfolk first.
+- **Quests.** It takes every quest the town has, talks each step through, and hands in. It does them in an order that suits
+  its level (`PLAN` in `src/ui/autobrain.js`), and does night work by night. When something waits on the morning, it sleeps
+  at the Tolling Bell.
+- **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. The countries
+  are reached by the roads and across country, through the seals it has woken (it steps onto each one it passes near).
+  It works its way round walls, the catacombs' light wells and stands of pines by short paths a stretch at a time.
+- **The shield.** Before a long downhill stretch it takes a run, jumps and holds Space to ride the shield, and carves with the
+  move keys along the way it's going. It steps off where the ground levels out and it's slowing, near where it's going, or
+  when there's a fight.
+- **Fighting, as a person would.**
+  - It takes a moment to settle on a new target and only lets fly once its aim is on. The aim leads a moving target, and is a
+    little off, more so on something quick.
+  - It backs off from what's close while it shoots, steps side to side, and closes on what's far. When something is right on
+    it, or it's backed into a wall, it turns and runs a few strides to open ground, then turns back.
+  - It dodges a knight's blade flash, or takes it on its shield. With a shield in hand and no skull, it raises the shield with
+    a shove when something's on it, holds it a moment, and backs off to shoot again. It steps aside from a tumbler rolling at
+    it, which can't turn quickly.
+  - **The staff is what it fights with.** A spell comes every few seconds at most, and only when the moment suits one: a crowd,
+    something big or quick, or once in a while anyway. In trouble it casts at once: a Mend when it's low, a Frost Nova when
+    it's surrounded.
+  - **It sets its own spell bar**, as you do in the book (B), and casts from it as the 1 to 6 keys do. It keeps four spells
+    always: Firebolt, Mend, Frost Nova, Meteor. The other two slots change every four minutes, so in time every spell it knows
+    has been in its hands and in the log.
+  - It picks the spell that suits the moment from what's on its bar (`USE` in `src/ui/autobrain.js`):
+    - Arcane Blast when they're close.
+    - Bone Lance or Earthsplitter down a line of them.
+    - Gravity Well, Blizzard or a Meteor into a crowd.
+    - Life Drain when it's hurt.
+    - Frost Shards on something quick.
+  - It runs from what it can't beat yet: the knights of Velscour, the Gravehart, the Hydra, the dragons and anything else too
+    strong for its level.
+- **The camera** turns like a hand on a mouse: it eases into and out of every turn, at no more than about 2.4 rad/s walking,
+  4.2 in a fight and 1.6 on the shield. It moves through `Input.look`, so the hands sway as they do for the mouse.
+- **The black knight.** From level 8 it goes after Velscour's knight on the cathedral steps:
+  - It stands on his flank, just past the 20 m he keeps from his door.
+  - It works on him with the staff and Meteors, which fall from the sky where his shield can't stop them. Bolts wait till
+    he's turned from it.
+  - If he comes out after it, it backs off, shooting all the way, and runs a few strides when he gets close.
+  - If he beats it back to the town, it tries again two levels stronger.
+
+  In tests at level 8 he went down in 36 seconds once and in about a minute and a half the next time, without the bot falling
+  below 80% of its life. The balance log keeps every attempt.
+- **Loot and gear.** It picks up what falls and opens the chests it passes. It wears the best of what it carries, sets gems
+  in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
+- **Grinding.** It grinds for levels when no quest suits it yet.
+
+Its status shows under the button, with its level and how many quests are done. When every quest is done and there's
+nothing left but grinding, a menu asks where:
+
+- the woods round Bellmourn
+- the catacombs
+- the monster lairs it can take
+- the jelly camps
+- roaming the land
+
+The menu keeps the last choice after 12 seconds, and it comes back when you click the status line.
+
+**For balancing.** Auto-play keeps a log, for reading a whole run afterwards. Open it with **log** under its status line, or
+**Balance log** in the menu. It lists:
+
+- each level and how long it took
+- each quest, from taken to done, with the level at each end and how often it was beaten back
+- fights by level: how many, how long, life lost, kills, lowest life, and where
+- kills by foe, the bosses it's been at, and every spell, staff shot and raised shield
+- every time it was beaten back, and what it was doing
+
+The log is kept in this browser across reloads until you start a new one, and **Save as JSON** downloads it. When a quest beats
+it back, it comes back to it two levels stronger, so the log shows where the difficulty jumps.
+
+While it's on, the mouse is left free: no pointer lock, so the button and the menu can be clicked. Esc pauses and resumes.
+Pressing a move key (or the stick) takes the controls back for as long as you hold it.
+
+**Keeping it up with the game.** It has to be taught what's added to the game. Quests, steps, places, foes, lairs, spells
+and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`). `coverage()` there lists
+whatever the game has that it doesn't know, in the console when auto-play starts, and from `node tools/autoplay/check.mjs`,
+which fails until the list is empty. Until it's taught, it makes do:
+
+- a new quest goes on the end of its plan, at a level guessed from what it pays
+- a new foe is judged by its life against its own level
+- a new place is found from `SITES`
+
+The check also names a new kind of quest step, a spell it has no use for, and a new block of monsters in the snapshot it
+doesn't read yet.
+
+**Files.**
+
+- `src/ui/autoplay.js`: the button, the status line and the menu.
+- `src/ui/autobrain.js`: the head.
+- `src/ui/autolog.js`: the balance log.
+- `tools/autoplay/check.mjs`: does it know the whole game?
+- `src/sim/nav.worker.js`: its paths. This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
+  as paths need it. The sim's grid is a metre, made wide for a knight, and is too coarse for the Sexton's passage. Out in the
+  countries it lays a fresh half-metre grid round each short stretch, at the land's own height.
+- `Input.auto` and `Input.free` in `src/input.js`.
+
+**Known limits.**
+
+- It doesn't take stairs, so it only talks to people on a ground floor. Someone upstairs, or asleep upstairs, is left until
+  later.
+- It leaves Velscour's man on the west road alone until level 18.
+- The far countries are a long walk until their seals are woken.
+- It has been run headless on a software GPU with the drawing switched off, not by a person watching it. Watch the first
+  hour of a new game with it.
+
 ### Swords, gems and the pack
 
 You start with empty hands and the old greatsword in the pack. `I` (or `PACK`) opens it and holds the fight. Click or drag to
