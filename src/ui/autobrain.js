@@ -19,7 +19,7 @@
 // by the roads (src/core/lands.js ROUTES) and across country, the pines stepped round by the same worker, and the woken seals.
 import { C, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, SLIME_FLOATS, SLIMES_START } from '../core/layout.js';
 import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, OPENING, RUN_OUT } from '../core/opening.js';
-import { CAVE_PATH, ROADS } from '../core/terrain.js';
+import { CAVE_PATH, ROADS, terrainHeight } from '../core/terrain.js';
 import { ROUTES, SITES } from '../core/lands.js';
 import { SEALS } from '../core/sites.js';
 import { inTown, townDist } from '../core/town.js';
@@ -219,6 +219,8 @@ export class Brain {
     this.talk = null; this.waitT = 0; this.hold = 0;
     this.track = new Map();
     this.engage = new Map();   // what it's been fighting, and since when it last hurt it
+    this.kite = null; this.kiteCool = 0; this.dodgeCool = 0; this.dodgeSide = 1; this.reactT = 0; this.backedUp = 0; this.esc = null;
+    this.wobble = 0; this.wobbleT = 0; this.yawV = 0; this.pitchV = 0; this.surfCool = 0; this.surfAt = -9;
     this.skip = new Map();     // things it's given up on for a while: key -> until
     this.patrol = null; this.wispT = 0; this.gearT = 0; this.strafe = 1; this.strafeT = 0;
     this.lastPos = null; this.lastHpf = 1;
@@ -240,6 +242,7 @@ export class Brain {
     return {
       x: snap[H.PX], y: snap[H.PY], z: snap[H.PZ], hp: snap[H.HP], maxHp: snap[H.MAX_HP] || 1, mana: snap[H.MANA], maxMana: snap[H.MAX_MANA] || 1,
       hpf: snap[H.HP] / (snap[H.MAX_HP] || 1), lvl: p.level, stam: snap[H.STAMINA], opening: snap[H.OPENING], openT: snap[H.OPENING_TIME],
+      vx: snap[H.VX], vz: snap[H.VZ], ground: snap[H.ON_GROUND] > 0.5, surf: snap[H.SURF] > 0.5,
       town: inTown(snap[H.PX], snap[H.PZ], 0), below: snap[H.PY] < -6, hour: this.o.renderer.hour,
     };
   }
@@ -309,6 +312,7 @@ export class Brain {
       // Caught falling, and set down by the town: whatever it was at was too much for it yet. Two levels more first.
       if (this.lastHpf < 0.35 && townDist(m.x, m.z) < 40 && this.job) {
         const why = this.job.why;
+        this.o.log?.fell(m, m.lvl, this.job.say, why.startsWith('q:') ? why.slice(2) : null);
         this.bump[why] = (this.bump[why] || 0) + 2;
         this.giveUp(why, 300);
         this.o.note?.(`Auto-play: beaten back. ${this.job.say ? 'It will come back to that stronger.' : ''}`);
@@ -316,6 +320,7 @@ export class Brain {
       this.goal = null; this.macro = null; this.sub = null; this.job = null; this.patrol = null;
     }
     this.lastPos = [m.x, m.z]; this.lastHpf = m.hpf;
+    this.o.log?.tick(dt, m, this.o.pack, this.o.townUI.quests, !!this.fighting);
     if (this.hold > 0) { this.hold -= dt; this.halt(); this.motor(dt, m); return; }
     // A panel up: the talk is its own, the rest it shuts.
     if (this.o.townUI.open) { this.halt(); this.converse(dt, m); this.motor(dt, m); return; }
@@ -326,7 +331,10 @@ export class Brain {
     if (this.castT <= 0) this.auto.cast = false;
     this.thinkT -= dt;
     if (this.thinkT <= 0) { this.thinkT = 0.12; this.think(snap, m); }
+    this.boardFrame = false;
     this.walk(dt, m);
+    // (Space is only held while it's on the shield, or getting on it.)
+    if (!this.boardFrame) this.auto.jumpHeld = false;
     this.motor(dt, m);
     if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); }
     // A light underfoot down among the dead, for whoever's watching.
@@ -424,16 +432,14 @@ export class Brain {
 
   combat(snap, m, foes) {
     const lvl = m.lvl;
-    // What it can't beat yet, coming for it: away, toward the town.
+    this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12;
+    // What it can't beat yet, coming for it: away over open ground, toward the town.
     const scary = foes.filter((f) => !fightable(f.kind, lvl) && f.kind !== 1 && f.hostile && f.d < 26);
     if (scary.length) {
       const f = scary.reduce((a, b) => (a.d < b.d ? a : b));
-      let ax = m.x - f.x, az = m.z - f.z;
-      const L = Math.hypot(ax, az) || 1;
-      const tx = -m.x, tz = -m.z, T = Math.hypot(tx, tz) || 1;
-      ax = ax / L + (T > 30 ? tx / T * 0.6 : 0); az = az / L + (T > 30 ? tz / T * 0.6 : 0);
+      const [ex, ez] = this.escape(m, scary, true);
       this.face = null;
-      this.steer(ax, az, true);
+      this.steer(ex, ez, true);
       this.say(`Running from ${f.kind === 0 ? 'a knight of Velscour' : f.kind === 3 ? 'the Gravehart' : f.kind === 4 ? 'the Hydra' : 'something too strong'}.`);
       return true;
     }
@@ -441,56 +447,103 @@ export class Brain {
     // On the way somewhere, only what's on it; hunting, whatever's about. (Once it's in a fight, it finishes it.)
     const reach = hunting || this.target ? 30 : 14;
     const live = foes.filter((f) => fightable(f.kind, lvl) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
-    if (!live.length) { this.target = null; return false; }
-    // Low, and still in it: get out toward the town, mending when there's room.
-    if (m.hpf < 0.28 && live.some((f) => f.d < 10)) {
-      const f = live.reduce((a, b) => (a.d < b.d ? a : b));
-      if (m.mana >= 25 && this.known(SP.mend) && f.d > 7 && this.castCool <= 0) { this.cast(SP.mend, 0.35); this.castCool = 1.2; }
-      const tx = -m.x, tz = -m.z, T = Math.hypot(tx, tz) || 1, ax = (m.x - f.x) / f.d, az = (m.z - f.z) / f.d;
+    if (!live.length) { this.target = null; this.kite = null; return false; }
+    const near = live.reduce((a, b) => (a.d < b.d ? a : b)), dn = near.d;
+    const close = live.filter((f) => f.d < 5.5).length;
+    // Low, and still in it: off toward the town, a Mend when there's room for one.
+    if (m.hpf < 0.28 && dn < 10) {
+      if (m.mana >= 25 && this.known(SP.mend) && dn > 7 && this.castCool <= 0) { this.cast(SP.mend, 0.35); this.castCool = 1.2; }
+      const [ex, ez] = this.escape(m, live, true);
       this.face = null;
-      this.steer(ax + (T > 20 ? tx / T * 0.7 : 0), az + (T > 20 ? tz / T * 0.7 : 0), true);
+      this.steer(ex, ez, true);
       this.say('Hurt: falling back.');
       return true;
     }
-    // Its mark: near and coming first, then the nearest.
+    // A blade flashing before it falls: a sidestep, after a person's moment.
+    const flash = live.find((f) => f.glint > 0.08 && f.glint < 0.6 && f.d < 4.5);
+    if (flash && this.dodgeCool <= 0 && Math.random() < 0.7) { this.dodgeCool = 1.4; this.dodgeSide = Math.random() < 0.5 ? -1 : 1; this.o.shared.input[INPUT.DODGE] += 1; }
+    // Kiting: something's on it, so it turns and runs a few strides to open ground, then turns back to face them.
+    const K = this.kite;
+    if (K) {
+      K.t -= 0.12;
+      this.face = Math.atan2(K.x, K.z);
+      this.steer(K.x, K.z, true);
+      this.say(`Kiting ${live.length > 1 ? `${live.length} foes` : this.foeName(near)}.`);
+      if (K.t <= 0 || dn > 12) { this.kite = null; this.reactT = 0.3; }
+      return true;
+    }
+    if ((dn < 3 || (close >= 2 && dn < 4.5) || this.backedUp > 0.8) && this.kiteCool <= 0) {
+      // Frozen first, if it's a crowd.
+      if (close >= 3 && m.mana >= 32 && !this.auto.cast && this.cast(SP.nova, 0.3)) this.castCool = 0.5;
+      const [ex, ez] = this.escape(m, live);
+      this.kite = { x: ex, z: ez, t: 1.1 + Math.random() * 0.7 };
+      this.kiteCool = 2.6; this.backedUp = 0;
+      return true;
+    }
+    // Its mark: what's coming for it first, then the nearest. A new one takes a moment to settle on.
     const pick = live.reduce((a, b) => ((a.d - (a.hostile ? 6 : 0)) <= (b.d - (b.hostile ? 6 : 0)) ? a : b));
-    if (this.target?.id !== pick.id) this.target = pick; else Object.assign(this.target, pick);
+    if (this.target?.id !== pick.id) { this.target = pick; this.reactT = 0.2 + Math.random() * 0.25; } else Object.assign(this.target, pick);
     const T = this.target, d = T.d;
     // Nothing it throws is landing (behind a wall, across a gap): leave that one be for a while.
     const tk = this.engage.get(T.id) || { since: this.t, best: T.hp };
     if (T.hp < tk.best - 0.5) { tk.best = T.hp; tk.since = this.t; }
     this.engage.set(T.id, tk);
     if (this.t - tk.since > (T.slime ? 20 : 12)) { this.giveUp(`foe:${T.id}`, 45); this.engage.delete(T.id); this.target = null; }
-    const close = live.filter((f) => f.d < 5.5).length, around = live.filter((f) => dist(f.x, f.z, T.x, T.z) < 5.5).length;
-    // Lead what it throws: the bolt's speed, the time to get there.
-    const speed = 34, tt = d / speed;
-    const ax = T.x + (T.vx || 0) * tt, az = T.z + (T.vz || 0) * tt;
-    const yaw = Math.atan2(ax - m.x, az - m.z);
+    const around = live.filter((f) => dist(f.x, f.z, T.x, T.z) < 5.5).length;
+    // Where it'll be when the bolt gets there, and a hand that isn't perfect: a little off, more so on something quick.
+    const tt = d / 34, ax = T.x + (T.vx || 0) * tt, az = T.z + (T.vz || 0) * tt;
+    if ((this.wobbleT -= 0.12) <= 0) { this.wobbleT = 0.5 + Math.random() * 0.5; this.wobble = (Math.random() - 0.5) * (0.02 + Math.hypot(T.vx || 0, T.vz || 0) * 0.006); }
+    const yaw = Math.atan2(ax - m.x, az - m.z) + this.wobble;
     this.face = yaw;
     this.pitch = Math.atan2(T.y + T.h - (m.y + 1.62), Math.max(1, d));
-    const aimed = Math.abs(wrap(yaw - this.o.input.yaw)) < 0.12;
-    // Keep its distance: back off from what's close, close in on what's far, sidestep in between.
+    const aimed = this.reactT <= 0 && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.035, Math.atan2(0.8, d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.12;
+    // Footwork: back off what's close while it shoots, close in on what's far, step side to side between.
     let mx = 0, mz = 0;
-    const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1);
-    if (close >= 1 && d < 7) { mx = -fx; mz = -fz; }
-    else if (d > 20) { mx = fx; mz = fz; }
-    if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.5 + Math.random() * 2; this.strafe = -this.strafe; }
-    mx += -fz * this.strafe * 0.55; mz += fx * this.strafe * 0.55;
+    const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1), bx = (m.x - near.x) / (dn || 1), bz = (m.z - near.z) / (dn || 1);
+    if (dn < 7.5) { mx = bx; mz = bz; } else if (d > 20) { mx = fx; mz = fz; }
+    if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.2 + Math.random() * 2.2; this.strafe = Math.random() < 0.75 ? -this.strafe : this.strafe; }
+    mx += -fz * this.strafe * 0.6; mz += fx * this.strafe * 0.6;
+    if (this.dodgeCool > 1.1) { mx = -fz * this.dodgeSide; mz = fx * this.dodgeSide; }
     this.steer(mx, mz, false, true);
-    if (close >= 1 && d < 2.6 && Math.random() < 0.08) this.o.shared.input[INPUT.DODGE] += 1;
+    // (Backing into something: noted, and the next close call turns into a run instead.)
+    this.backedUp = dn < 7.5 && Math.hypot(m.vx, m.vz) < 1 ? (this.backedUp || 0) + 0.12 : 0;
     const sw = snap[H.SWINGING] > 0.5, busy = this.auto.cast || snap[H.CAST_HELD] > 0.5 || sw;
     if (!busy && this.castCool <= 0) {
       const mana = m.mana;
       if (close >= 3 && mana >= 32 && this.cast(SP.nova, 0.3)) this.castCool = 0.9;
-      else if (m.hpf < 0.45 && mana >= 25 && d > 6 && this.cast(SP.mend, 0.35)) this.castCool = 1.2;
-      else if (!aimed) { /* turning onto it */ }
+      else if (m.hpf < 0.45 && mana >= 25 && dn > 6 && this.cast(SP.mend, 0.35)) this.castCool = 1.2;
+      else if (!aimed) { /* settling onto it */ }
       else if (around >= 3 && d > 11 && d < 55 && mana >= 45 && this.cast(SP.meteor, 0.3)) { this.pitch = Math.atan2(T.y - (m.y + 1.62), Math.max(1, d)); this.castCool = 1.4; }
-      else if (around >= 2 && d < 22 && mana >= 30 && this.cast(SP.chain, 1.6)) this.castCool = 0.4;
-      else if (d < 42 && mana >= 12 && this.cast(SP.firebolt, d > 14 ? 0.9 : 0.5)) this.castCool = 0.35;
-      else if (d < 40 && this.staffCool <= 0 && mana >= 5) { this.o.shared.input[INPUT.ATTACK] += 1; this.staffCool = 0.75; }
+      else if (around >= 2 && d < 22 && mana >= 30 && this.cast(SP.chain, 1.6)) this.castCool = 0.5;
+      else if (d < 42 && mana >= 12 && this.cast(SP.firebolt, d > 14 ? 0.9 : 0.5)) this.castCool = 0.45 + Math.random() * 0.3;
+      else if (d < 40 && this.staffCool <= 0 && mana >= 5) { this.o.shared.input[INPUT.ATTACK] += 1; this.staffCool = 0.8 + Math.random() * 0.3; }
     }
     this.say(`Fighting ${live.length > 1 ? `${live.length} foes` : this.foeName(T)}.`);
     return true;
+  }
+
+  // Which way to get away: the open side, away from all of them (toward the town, if home), never into ground it keeps clear of;
+  // then the nav thread's word on what's clear that way (a wall, a pine), taken up as soon as it comes. Held a moment, so it
+  // doesn't dither.
+  escape(m, from, home = false) {
+    if (this.esc && this.t - this.esc.t < 0.4) return this.esc.dir;
+    let best = [0, 1], bs = -Infinity;
+    for (let k = 0; k < 16; k++) {
+      const a = k / 16 * TAU, dx = Math.sin(a), dz = Math.cos(a), px = m.x + dx * 6, pz = m.z + dz * 6;
+      let s = 0;
+      for (const f of from) s += Math.min(10, dist(px, pz, f.x, f.z));
+      if (home && !m.below) s += (dist(m.x, m.z, 0, 0) - dist(px, pz, 0, 0)) * 0.6;
+      if (this.kept(m, px, pz)) s -= 40;
+      if (this.esc) s += (dx * this.esc.dir[0] + dz * this.esc.dir[1]) * 2;
+      if (s > bs) { bs = s; best = [dx, dz]; }
+    }
+    const esc = this.esc = { t: this.t, dir: best };
+    this.nav.ask('probe', { x: m.x, z: m.z, y: m.y + 0.2, hx: best[0], hz: best[1], look: 4 }).then((r) => {
+      if (!r || this.esc !== esc) return;
+      esc.dir = [r[0], r[1]];
+      if (this.kite) { this.kite.x = r[0]; this.kite.z = r[1]; }
+    });
+    return best;
   }
 
   foeName(f) {
@@ -611,7 +664,7 @@ export class Brain {
     const prev = this.jobKey;
     const job = this.choose(m);
     const key = job ? `${job.kind}:${job.why}:${job.who ?? ''}:${job.x ?? ''}` : '';
-    if (key !== prev) { this.job = job; this.jobKey = key; this.patrol = null; this.jobT = this.t; }
+    if (key !== prev || !this.job) { this.job = job; this.jobKey = key; this.patrol = null; this.jobT = this.t; }
     else if (job && this.job) Object.assign(this.job, job);
   }
 
@@ -1028,7 +1081,7 @@ export class Brain {
     if (d < g.near) { this.halt(); return; }
     // The way: on the grid both ends, a path; otherwise the long way round by the roads. (Used up short of it, as when someone it's
     // walking up to has moved on: worked out again.)
-    if (!this.macro || !this.macro.length) { this.macro = this.longWay(m, g); this.sub = null; this.subFor = null; }
+    if (!this.macro || !this.macro.length) { this.macro = this.longWay(m, g); this.sub = null; this.subFor = null; this.loc = null; }
     let W = this.macro[0];
     while (W && dist(m.x, m.z, W.x, W.z) < (W.seal ? 2.2 : W === this.macro.at(-1) ? g.near : 3.5) && !W.seal) { this.macro.shift(); this.sub = null; W = this.macro[0]; }
     if (!W) { this.halt(); return; }
@@ -1063,17 +1116,33 @@ export class Brain {
         [tx, tz] = this.sub[0];
       }
       this.steer(tx - m.x, tz - m.z, g.run && d > 8);
+      if (!m.town) { const L = dist(m.x, m.z, W.x, W.z) || 1; this.board(dt, m, (W.x - m.x) / L, (W.z - m.z) / L, d); }
     } else {
-      // Across country: straight on, round the pines as the worker sees them.
+      // Across country: a stretch at a time, by a short path round whatever stands in the way (a wall, a light well, a stand of
+      // pines), worked out on the nav thread; till it comes, straight on, stepping round what the probe finds.
       let hx = tx - m.x, hz = tz - m.z;
       const L = Math.hypot(hx, hz) || 1;
       hx /= L; hz /= L;
-      if ((this.probeT -= dt) <= 0) {
-        this.probeT = 0.25;
-        this.nav.ask('probe', { x: m.x, z: m.z, y: m.y + 0.2, hx, hz, look: 5 }).then((r) => { this.probeDir = r; });
+      const sx = hx, sz = hz, far = Math.min(L, 45), aim = [m.x + hx * far, m.z + hz * far];
+      const lp = this.loc;
+      if (!lp || (!lp.pending && (lp.leg !== W || this.t - lp.t > 6 || dist(m.x, m.z, lp.to[0], lp.to[1]) < 5))) {
+        const ask = this.loc = { leg: W, t: this.t, to: aim, pts: lp?.leg === W ? lp.pts : null, pending: true };
+        this.nav.ask('local', { from: [m.x, m.z], to: aim }).then((pts) => { if (this.loc === ask) { ask.pending = false; ask.pts = pts; ask.t = this.t; } });
       }
-      if (this.probeDir && this.probeDir[2] > 0.5) { hx = this.probeDir[0]; hz = this.probeDir[1]; }
+      const pts = this.loc?.pts;
+      while (pts && pts.length > 1 && dist(m.x, m.z, pts[0][0], pts[0][1]) < 1.2) pts.shift();
+      if (pts?.length && dist(m.x, m.z, pts[0][0], pts[0][1]) > 0.5) {
+        const k = dist(m.x, m.z, pts[0][0], pts[0][1]);
+        hx = (pts[0][0] - m.x) / k; hz = (pts[0][1] - m.z) / k;
+      } else {
+        if ((this.probeT -= dt) <= 0) {
+          this.probeT = 0.25;
+          this.nav.ask('probe', { x: m.x, z: m.z, y: m.y + 0.2, hx, hz, look: 5 }).then((r) => { this.probeDir = r; });
+        }
+        if (this.probeDir && this.probeDir[2] > 0.5) { hx = this.probeDir[0]; hz = this.probeDir[1]; }
+      }
       this.steer(hx, hz, g.run && d > 8);
+      this.board(dt, m, sx, sz, d);
     }
   }
 
@@ -1168,27 +1237,33 @@ export class Brain {
 
   motor(dt, m) {
     const inp = this.o.input, a = this.auto;
-    const w = this.want && this.want !== 'manual' ? this.want : null;
-    // Where to look: where it's facing for a fight or a word, or where it's going.
+    const w = this.want;
+    // Where to look: where it's aiming in a fight, at whoever it's talking to, or the way it's going.
     let yaw = this.face;
     if (yaw === null || yaw === undefined) yaw = w ? Math.atan2(w.x, w.z) : inp.yaw;
-    const rate = this.fighting ? 9 : 5;
+    // A hand on a mouse: it speeds into a turn and eases out of it, and no faster than a person sweeps the view (quicker in a
+    // fight, slow and steady on a shield). Through Input.look, so the hands sway with it as they do for the mouse.
+    const fight = this.fighting, surf = m.surf;
     const dy = wrap(yaw - inp.yaw);
-    inp.yaw += Math.max(-rate * dt, Math.min(rate * dt, dy));
-    const pitch = this.fighting || this.talk ? this.pitch : -0.06;
-    inp.pitch += (Math.max(-1.2, Math.min(1.2, pitch)) - inp.pitch) * Math.min(1, dt * 6);
-    if (!this.fighting && !this.talk) this.pitch = -0.06;
-    if (!this.fighting && this.job?.kind !== 'talk') this.face = null;
+    const vMax = fight ? 4.2 : surf ? 1.6 : 2.4, acc = fight ? 14 : surf ? 5 : 8;
+    const want = Math.abs(dy) < 0.012 ? 0 : Math.max(-vMax, Math.min(vMax, dy * (fight ? 6.5 : 3.8)));
+    this.yawV += Math.max(-acc * dt, Math.min(acc * dt, want - this.yawV));
+    const pitch = Math.max(-1.1, Math.min(1.1, fight || this.talk ? this.pitch : surf ? -0.12 : -0.06));
+    const dp = pitch - inp.pitch, pWant = Math.abs(dp) < 0.01 ? 0 : Math.max(-1.3, Math.min(1.3, dp * 4));
+    this.pitchV += Math.max(-5 * dt, Math.min(5 * dt, pWant - this.pitchV));
+    inp.look(-this.yawV * dt, -this.pitchV * dt);
+    if (!fight && !this.talk) this.pitch = -0.06;
+    if (!fight && this.job?.kind !== 'talk') this.face = null;
     if (!w) { a.mx = 0; a.mz = 0; a.run = false; this.unstick(dt, m, false); return; }
-    // Into the keys' frame: strafe and forward.
+    // Into the keys' frame: strafe and forward, from where it's looking now (so it can walk one way while it turns).
     const c = Math.cos(inp.yaw), s = Math.sin(inp.yaw);
     let mx = -c * w.x + s * w.z, mz = s * w.x + c * w.z;
-    // Not facing the way yet (and not fighting): turn first, then go.
-    if (!w.strafe && Math.abs(dy) > 1.2) { mx *= 0.25; mz *= 0.25; }
+    // Turned well away from the way it means to go (and not fighting): slower until it's round.
+    if (!w.strafe && Math.abs(dy) > 1.2) { mx *= 0.35; mz *= 0.35; }
     const L = Math.max(1, Math.hypot(mx, mz));
     a.mx = mx / L; a.mz = mz / L;
     a.run = w.run && a.mz > 0.6 && m.stam > 22;
-    this.unstick(dt, m, true);
+    this.unstick(dt, m, !surf);
     if (this.stuck.act > 0) {
       this.stuck.actT -= dt;
       const sd = this.stuck.side;
@@ -1196,6 +1271,29 @@ export class Brain {
       if (this.stuck.act === 3) { a.mx = sd * 0.4; a.mz = -1; }
       if (this.stuck.actT <= 0) this.stuck.act = 0;
     }
+  }
+
+  // The shield under its feet, down a long slope: a run, a jump, Space held, and it carves along the way it's going (the move
+  // keys steer it as they do yours). Off again where the ground levels out and it's slowing, near where it's going, or in a fight.
+  board(dt, m, hx, hz, left) {
+    this.boardFrame = true;
+    const a = this.auto, can = !!this.o.pack.slots.off && !m.town && !m.below && !inChurch(m.x, m.y + 1, m.z) && !this.fighting && left > 40;
+    const h0 = terrainHeight(m.x, m.z), drop = (k) => (h0 - terrainHeight(m.x + hx * k, m.z + hz * k)) / k;
+    const speed = Math.hypot(m.vx, m.vz);
+    this.surfCool -= dt;
+    if (m.surf) {
+      const keep = can && (drop(25) > 0.025 || speed > 7.5) && left > 18;
+      a.jumpHeld = keep;
+      if (!keep) this.surfCool = 2;
+      this.say(`Riding the shield down (${speed.toFixed(0)} m/s).`);
+      return;
+    }
+    if (this.surfCool > 0) { if (this.t - this.surfAt > 0.9) a.jumpHeld = false; return; }
+    if (can && drop(25) > 0.1 && drop(55) > 0.08 && m.ground && speed > 3.5) {
+      this.o.shared.input[INPUT.JUMP] += 1;
+      a.jumpHeld = true;
+      this.surfAt = this.t; this.surfCool = 2.5;
+    } else a.jumpHeld = false;
   }
 
   // Not getting anywhere: a door to open, a hop, a step aside, a step back, a new path; at length, something else to do.
@@ -1212,7 +1310,7 @@ export class Brain {
     if (door && !door.open && !g.locked(door)) { g.doors.toggle(door); return; }
     if (S.n === 1 || S.n === 4) { this.o.shared.input[INPUT.JUMP] += 1; return; }
     if (S.n === 2 || S.n === 5) { S.act = 2; S.actT = 0.8; S.side = Math.random() < 0.5 ? -1 : 1; return; }
-    if (S.n === 3 || S.n === 6) { S.act = 3; S.actT = 0.6; this.sub = null; this.subFor = null; return; }
+    if (S.n === 3 || S.n === 6) { S.act = 3; S.actT = 0.6; this.sub = null; this.subFor = null; this.loc = null; return; }
     if (S.n >= 8) {
       S.n = 0;
       // Give it up for a while: whatever it was going for.
@@ -1229,4 +1327,3 @@ export class Brain {
   allQuestsDone() { const Q = this.o.townUI.quests; return Object.keys(RULES).every((id) => Q.done(id)); }
 }
 
-export { inChurch };

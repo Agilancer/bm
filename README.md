@@ -161,10 +161,22 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   its level (`PLAN` in `src/ui/autobrain.js`), and does night work by night. When something waits on the morning, it sleeps
   at the Tolling Bell.
 - **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. The countries
-  are reached by the roads and across country, through the seals it has woken.
-- **Fighting.** It keeps its distance and uses Firebolt, the staff, Chain Lightning, a Meteor into a crowd, Frost Nova when
-  they're on it, and Mend. It runs from what it can't beat yet: the knights of Velscour, the Gravehart, the Hydra, the
-  dragons and anything else too strong for its level.
+  are reached by the roads and across country, through the seals it has woken (it steps onto each one it passes near).
+  It works its way round walls, the catacombs' light wells and stands of pines by short paths a stretch at a time.
+- **The shield.** Before a long downhill stretch it takes a run, jumps and holds Space to ride the shield, and carves with the
+  move keys along the way it's going. It steps off where the ground levels out and it's slowing, near where it's going, or
+  when there's a fight.
+- **Fighting, as a person would.**
+  - It takes a moment to settle on a new target and only lets fly once its aim is on. The aim leads a moving target, and is a
+    little off, more so on something quick.
+  - It backs off from what's close while it shoots, steps side to side, and closes on what's far. When something is right on
+    it, or it's backed into a wall, it turns and runs a few strides to open ground, then turns back.
+  - It dodges a knight's blade flash.
+  - Its spells: Firebolt, the staff, Chain Lightning, a Meteor into a crowd, Frost Nova when they're on it, and Mend.
+  - It runs from what it can't beat yet: the knights of Velscour, the Gravehart, the Hydra, the dragons and anything else too
+    strong for its level.
+- **The camera** turns like a hand on a mouse: it eases into and out of every turn, at no more than about 2.4 rad/s walking,
+  4.2 in a fight and 1.6 on the shield. It moves through `Input.look`, so the hands sway as they do for the mouse.
 - **Loot and gear.** It picks up what falls and opens the chests it passes. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys a mending when it's hurt.
 - **Grinding.** It grinds for levels when no quest suits it yet.
@@ -180,6 +192,18 @@ nothing left but grinding, a menu asks where:
 
 The menu keeps the last choice after 12 seconds, and it comes back when you click the status line.
 
+**For balancing.** Auto-play keeps a log, for reading a whole run afterwards. Open it with **log** under its status line, or
+**Balance log** in the menu. It lists:
+
+- each level and how long it took
+- each quest, from taken to done, with the level at each end and how often it was beaten back
+- fights by level: how many, how long, life lost, kills, lowest life, and where
+- kills by foe
+- every time it was beaten back, and what it was doing
+
+The log is kept in this browser across reloads until you start a new one, and **Save as JSON** downloads it. When a quest beats
+it back, it comes back to it two levels stronger, so the log shows where the difficulty jumps.
+
 While it's on, the mouse is left free: no pointer lock, so the button and the menu can be clicked. Esc pauses and resumes.
 Pressing a move key (or the stick) takes the controls back for as long as you hold it.
 
@@ -187,15 +211,16 @@ Pressing a move key (or the stick) takes the controls back for as long as you ho
 
 - `src/ui/autoplay.js`: the button, the status line and the menu.
 - `src/ui/autobrain.js`: the head.
+- `src/ui/autolog.js`: the balance log.
 - `src/sim/nav.worker.js`: its paths. This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
-  as paths need it. The sim's grid is a metre, made wide for a knight, and is too coarse for the Sexton's passage.
+  as paths need it. The sim's grid is a metre, made wide for a knight, and is too coarse for the Sexton's passage. Out in the
+  countries it lays a fresh half-metre grid round each short stretch, at the land's own height.
 - `Input.auto` and `Input.free` in `src/input.js`.
 
 **Known limits.**
 
 - It doesn't take stairs, so it only talks to people on a ground floor. Someone upstairs, or asleep upstairs, is left until
   later.
-- It doesn't ride the shield.
 - It doesn't fight the black knight; it goes round him.
 - The far countries are a long walk until their seals are woken.
 - It has been run headless on a software GPU with the drawing switched off, not by a person watching it. Watch the first

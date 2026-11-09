@@ -7,6 +7,7 @@
 import { INPUT } from '../core/layout.js';
 import { RULES } from '../folk/quests.js';
 import { Brain, GRINDS } from './autobrain.js';
+import { AutoLog } from './autolog.js';
 
 const BTN = 'assets/ui/btn_auto.webp';
 const MENU_WAIT = 12;   // seconds the menu waits for a choice before it keeps the last one
@@ -24,6 +25,18 @@ body.playing #autoStatus.shown { display: block; }
 #autoStatus b { display: inline-block; padding: 2px 8px; border: 1px solid #2a6a8a; border-radius: 4px; background: rgba(4,20,30,.72); font: 700 12px Georgia, serif; color: #8fe0ff;
   letter-spacing: .3px; text-shadow: 0 0 4px #000; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #autoStatus small { display: block; margin-top: 3px; font: 11px Georgia, serif; color: #9fb8c4; text-shadow: 0 1px 2px #000; }
+#autoStatus u { pointer-events: auto; cursor: pointer; color: #8fe0ff; text-decoration: underline dotted; margin-left: 6px; }
+#autoLog { position: fixed; z-index: 48; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(760px, 96vw); max-height: 90vh; overflow: auto; display: none;
+  background: rgba(8, 12, 16, .97); border: 1px solid #2a6a8a; box-shadow: 0 10px 40px #000c; color: #d8e6ec; font: 13px Georgia, serif; padding: 16px 18px; box-sizing: border-box; }
+#autoLog.on { display: block; }
+#autoLog h2 { margin: 0 0 6px; font: 700 18px Cinzel, Georgia, serif; color: #8fe0ff; }
+#autoLog h3 { margin: 14px 0 4px; font: 700 12px Cinzel, Georgia, serif; color: #8fb8c8; letter-spacing: .1em; text-transform: uppercase; }
+#autoLog table { border-collapse: collapse; width: 100%; font-size: 12px; }
+#autoLog th, #autoLog td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #1c3440; }
+#autoLog th { color: #8fb8c8; font-weight: 400; }
+#autoLog .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; position: sticky; bottom: -16px; background: rgba(8,12,16,.97); padding: 8px 0; }
+#autoLog .foot button { font: inherit; color: #d8e8ee; background: #142028; border: 1px solid #2a4a5a; padding: 7px 12px; cursor: pointer; }
+#autoLog .foot button:hover { border-color: #8fe0ff; }
 #autoStatus.grinding { pointer-events: auto; cursor: pointer; }
 body.touch #autoBtn { width: 38px; height: 41px; top: 250px; right: 12px; }
 body.touch #autoStatus { top: 296px; }
@@ -60,15 +73,21 @@ export class AutoPlay {
     this.btn.title = 'Auto-play (P): he plays on his own';
     this.statusEl = el('div', 'autoStatus', null, '<b></b><small></small>');
     this.menu = el('div', 'autoMenu');
-    document.body.append(this.btn, this.statusEl, this.menu);
+    this.logEl = el('div', 'autoLog');
+    this.log = new AutoLog();
+    document.body.append(this.btn, this.statusEl, this.menu, this.logEl);
     const press = (e) => { e.preventDefault(); e.stopPropagation(); this.btn.blur(); this.toggle(); };
     this.btn.addEventListener('click', press);
     this.btn.addEventListener('touchend', press, { passive: false });
-    for (const t of [this.btn, this.statusEl, this.menu]) {
+    for (const t of [this.btn, this.statusEl, this.menu, this.logEl]) {
       t.addEventListener('pointerdown', (e) => e.stopPropagation());
       t.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
     }
-    this.statusEl.addEventListener('click', (e) => { e.stopPropagation(); if (this.on && this.brain?.allQuestsDone()) this.askGrind(); });
+    this.statusEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (e.target.tagName === 'U') this.showLog();
+      else if (this.on && this.brain?.allQuestsDone()) this.askGrind();
+    });
     addEventListener('keydown', (e) => this.key(e));
   }
 
@@ -79,7 +98,7 @@ export class AutoPlay {
       game: o.game, shared: o.shared, input: o.input, pack: o.pack, inventory: o.inventory, townUI: o.townUI, lands: o.lands,
       get spellbar() { return o.spellbar(); }, renderer: o.renderer, town: o.town, base: o.base, opening: o.opening,
       heroCount: () => o.renderer.heroCast?.length || 0,
-      say: (t) => this.status(t), note: (t) => o.townUI.note(t, 'hint'), allDone: () => this.askGrind(),
+      say: (t) => this.status(t), note: (t) => o.townUI.note(t, 'hint'), allDone: () => this.askGrind(), log: this.log,
     });
   }
 
@@ -108,6 +127,7 @@ export class AutoPlay {
     // With the mouse left free, Esc is the pause (there's no pointer lock for the browser to take back).
     if (e.code === 'Escape' && this.on && input.enabled && this.calm) {
       if (this.menu.classList.contains('on')) { this.closeMenu(); return; }
+      if (this.logEl.classList.contains('on')) { this.logEl.classList.remove('on'); return; }
       this.o.pause(!this.o.paused());
     }
   }
@@ -127,6 +147,7 @@ export class AutoPlay {
       if (this.brain.allQuestsDone()) this.askGrind();
     } else {
       this.brain?.stop();
+      this.log.endFight(); this.log.save();
       input.free = false;
       input.releaseControls();
       this.closeMenu();
@@ -141,7 +162,9 @@ export class AutoPlay {
     const Q = this.o.townUI.quests, all = Object.keys(RULES), n = all.filter((id) => Q.done(id)).length;
     const grinding = this.on && n === all.length;
     this.statusEl.classList.toggle('grinding', grinding);
-    this.statusEl.querySelector('small').textContent = this.on ? `Level ${this.o.pack.level} · quests ${n} of ${all.length} done${grinding ? ' · click to choose where' : ''}` : '';
+    const small = this.statusEl.querySelector('small');
+    small.textContent = this.on ? `Level ${this.o.pack.level} · quests ${n} of ${all.length} done${grinding ? ' · click to choose where' : ''}` : '';
+    if (this.unlocked) small.insertAdjacentHTML('beforeend', '<u>log</u>');
   }
 
   // Every frame of play.
@@ -175,10 +198,11 @@ export class AutoPlay {
     const g = this.brain.grind;
     this.menu.innerHTML = `<h2>Every quest is done</h2><p>Nothing's asked of him now but to get stronger. Where should he grind?</p>
       <div class="cards">${Object.entries(GRINDS).map(([k, v]) => `<button type="button" class="card${k === g ? ' sel' : ''}" data-g="${k}"><b>${v.name}</b><span>${v.line}</span></button>`).join('')}</div>
-      <div class="foot"><span class="wait"></span><span><button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Keep grinding</button></span></div>`;
+      <div class="foot"><span class="wait"></span><span><button type="button" data-a="log">Balance log</button> <button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Keep grinding</button></span></div>`;
     for (const b of this.menu.querySelectorAll('[data-g]')) b.onclick = () => this.pickGrind(b.dataset.g);
     this.menu.querySelector('[data-a="stop"]').onclick = () => { this.closeMenu(); this.toggle(false); };
     this.menu.querySelector('[data-a="keep"]').onclick = () => this.pickGrind(this.brain.grind);
+    this.menu.querySelector('[data-a="log"]').onclick = () => { this.closeMenu(); this.showLog(); };
     this.menu.classList.add('on');
     this.menuT = MENU_WAIT;
     this.o.audio.play?.('uiOpen', null, 0, 0, 0.4, 1, false);
@@ -193,4 +217,23 @@ export class AutoPlay {
   }
 
   closeMenu() { this.menu.classList.remove('on'); this.menuT = 0; }
+
+  // A kill of the player's, by what it was (src/main.js EV.LOOT): for the log, while it's playing.
+  kill(name) { if (this.on) this.log.kill(name); }
+
+  // The balance log: what the run has come to so far, and a way to keep it.
+  showLog() {
+    this.logEl.innerHTML = `<h2>Auto-play log</h2>${this.log.html()}<div class="foot"><button type="button" data-a="save">Save as JSON</button><button type="button" data-a="reset">Start a new log</button><button type="button" data-a="close">Close</button></div>`;
+    this.logEl.querySelector('[data-a="close"]').onclick = () => this.logEl.classList.remove('on');
+    this.logEl.querySelector('[data-a="reset"]').onclick = () => { this.log.reset(); this.showLog(); };
+    this.logEl.querySelector('[data-a="save"]').onclick = () => {
+      this.log.save();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(this.log.d, null, 1)], { type: 'application/json' }));
+      a.download = `bm-autoplay-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    };
+    this.logEl.classList.add('on');
+  }
 }

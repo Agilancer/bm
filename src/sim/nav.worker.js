@@ -11,7 +11,7 @@
 // Started only once someone has spoken the skull's word for auto-play: it costs a few seconds of a thread to build.
 import { NAV_CELL, NAV_H, NAV_W, NAV_X0, NAV_Z0, World } from './world.js';
 import { floorAt, inPit } from '../core/interior.js';
-import { setOpeningTerrain } from '../core/terrain.js';
+import { setOpeningTerrain, terrainHeight } from '../core/terrain.js';
 
 let world = null;
 const CELL = 0.5, BODY = 0.42, EDGE = 250;
@@ -171,8 +171,25 @@ function boxHit(c, x, z, r, y) {
   if (y > topOf(c) || y < (c.b || -1e9) - 1) return false;
   return Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r;
 }
+// The boxes by the 16 m cell they reach into, so a point only looks at its own few.
+let boxIndex = null;
+function boxesNear(x, z) {
+  if (!boxIndex) {
+    boxIndex = new Map();
+    for (const c of world.colliders) {
+      const R = Math.hypot(c.hx, c.hz) + 1;
+      for (let j = Math.floor((c.z - R) / 16); j <= Math.floor((c.z + R) / 16); j++) for (let i = Math.floor((c.x - R) / 16); i <= Math.floor((c.x + R) / 16); i++) {
+        const k = (i + 1000) * 2000 + j + 1000;
+        let l = boxIndex.get(k);
+        if (!l) boxIndex.set(k, l = []);
+        l.push(c);
+      }
+    }
+  }
+  return boxIndex.get((Math.floor(x / 16) + 1000) * 2000 + Math.floor(z / 16) + 1000) || [];
+}
 function solidAt(x, z, r, y) {
-  for (const c of world.colliders) if (boxHit(c, x, z, r, y)) return true;
+  for (const c of boxesNear(x, z)) if (boxHit(c, x, z, r, y)) return true;
   for (const c of world.sitesNear(x, z) || []) if ((c.top ??= c.h + world.height(c.x, c.z)) >= y && boxHit(c, x, z, r, y)) return true;
   if ((Math.abs(x) > 50 || Math.abs(z) > 50) && y > -2) {
     const ci = Math.floor(x / 16), cj = Math.floor(z / 16);
@@ -202,6 +219,63 @@ function probe(x, z, y, hx, hz, look) {
   return best;
 }
 
+// Out in the land, a short way: A* on a half-metre grid laid round both ends just for this, each cell solid or not at the land's
+// own height there (so the catacombs' walls under it don't count, and their light wells, which stand up through it, do).
+const LW = 280, LN = LW * LW, lSolid = new Uint8Array(LN), lG = new Float32Array(LN), lPar = new Int32Array(LN), lSeen = new Uint16Array(LN), lShut = new Uint16Array(LN);
+let lStamp = 1;
+function local(from, to) {
+  if (++lStamp > 65000) { lStamp = 1; lSeen.fill(0); lShut.fill(0); }
+  lSolid.fill(0);
+  const C = 0.5, cx0 = Math.min(from[0], to[0]) - 25, cz0 = Math.min(from[1], to[1]) - 25;
+  if (Math.max(from[0], to[0]) + 25 - cx0 > LW * C || Math.max(from[1], to[1]) + 25 - cz0 > LW * C) return null;
+  const cell = (x, z) => { const i = Math.floor((x - cx0) / C), j = Math.floor((z - cz0) / C); return i < 0 || j < 0 || i >= LW || j >= LW ? -1 : j * LW + i; };
+  const px = (k) => ((k % LW) + 0.5) * C + cx0, pz = (k) => (((k / LW) | 0) + 0.5) * C + cz0;
+  const solid = (k) => { let v = lSolid[k]; if (!v) { const x = px(k), z = pz(k); v = lSolid[k] = solidAt(x, z, 0.42, terrainHeight(x, z) + 0.25) ? 2 : 1; } return v === 2; };
+  let s = cell(from[0], from[1]), t = cell(to[0], to[1]);
+  if (s < 0 || t < 0) return null;
+  // (Starting or ending against something: the nearest clear cell instead.)
+  const clear = (k0) => { if (!solid(k0)) return k0; const i0 = k0 % LW, j0 = (k0 / LW) | 0; for (let r = 1; r < 8; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < LW && j < LW && !solid(j * LW + i)) return j * LW + i; } return -1; };
+  s = clear(s); t = clear(t);
+  if (s < 0 || t < 0) return null;
+  const tx = px(t), tz = pz(t), h = (k) => { const dx = Math.abs(px(k) - tx), dz = Math.abs(pz(k) - tz); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+  heapN = 0; lG[s] = 0; lPar[s] = -1; lSeen[s] = lStamp; push(s, h(s));
+  let found = false, budget = 60000;
+  while (heapN && budget-- > 0) {
+    const k = pop();
+    if (lShut[k] === lStamp) continue;
+    lShut[k] = lStamp;
+    if (k === t) { found = true; break; }
+    const i = k % LW, j = (k / LW) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue;
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= LW || nj >= LW) continue;
+      const nk = nj * LW + ni;
+      if (lShut[nk] === lStamp || solid(nk)) continue;
+      if (di && dj && (solid(j * LW + ni) || solid(nj * LW + i))) continue;
+      const ng = lG[k] + (di && dj ? 1.414 : 1) * C;
+      if (lSeen[nk] === lStamp && ng >= lG[nk]) continue;
+      lSeen[nk] = lStamp; lG[nk] = ng; lPar[nk] = k;
+      push(nk, ng + h(nk));
+    }
+  }
+  if (!found) return null;
+  const cells = [];
+  for (let k = t; k >= 0; k = lPar[k]) cells.push(k);
+  cells.reverse();
+  const pts = [[from[0], from[1]]].concat(cells.map((k) => [px(k), pz(k)]));
+  const see = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25); for (let q = 1; q <= n; q++) { const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n); if (k < 0 || solid(k)) return false; } return true; };
+  const out = [];
+  let a = 0;
+  while (a < pts.length - 1) {
+    let b = pts.length - 1;
+    while (b > a + 1 && !see(pts[a], pts[b])) b--;
+    out.push(pts[b]);
+    a = b;
+  }
+  return out;
+}
+
 self.onmessage = async (e) => {
   const m = e.data;
   try {
@@ -214,6 +288,8 @@ self.onmessage = async (e) => {
       self.postMessage({ type: m.type, id: m.id, result: null });
     } else if (m.type === 'path') {
       self.postMessage({ type: 'path', id: m.id, result: path(m.from, m.to, m.avoid) });
+    } else if (m.type === 'local') {
+      self.postMessage({ type: 'local', id: m.id, result: local(m.from, m.to) });
     } else if (m.type === 'probe') {
       self.postMessage({ type: 'probe', id: m.id, result: probe(m.x, m.z, m.y ?? 0, m.hx, m.hz, m.look || 5) });
     }
