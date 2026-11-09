@@ -2,6 +2,7 @@
 // for the flow field, and rays against the plates of a rigid armour.
 import { floorAt, homeFloor, inPit, setFloors } from '../core/interior.js';
 import { CELL, TREE_FLOATS, treesInCells, trunkRadius } from '../core/forest.js';
+import { BOULDER_CELL, ROCK_FLOATS, rockRadius, rocksInCells } from '../core/rocks.js';
 import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { caveFloor, caveKeep } from '../core/opening.js';
 import { CHURCH_BOUNDS } from '../core/church.js';
@@ -70,7 +71,7 @@ export class World {
     this.setCaveSealed(false);
   }
 
-  // The trunks standing in one of the trunk grid's cells: [x, z, radius, ...], or null.
+  // The trunks standing in one of the trunk grid's cells, and the boulders lying in it: [x, z, radius, ...], or null.
   trunkCell(i, j) {
     const key = trunkKey(i, j);
     let list = this.trunks.get(key);
@@ -81,7 +82,15 @@ export class World {
       list = [];
       for (let k = 0; k < t.length; k += TREE_FLOATS) {
         if (t[k] < x0 || t[k] >= x0 + TRUNK_CELL || t[k + 1] < z0 || t[k + 1] >= z0 + TRUNK_CELL) continue;
-        list.push(t[k], t[k + 1], trunkRadius(t[k + 2], t[k + 3]));
+        list.push(t[k], t[k + 1], trunkRadius(t[k + 2], t[k + 3]), 1e9);
+      }
+      // And the boulders big enough to walk into (src/core/rocks.js), as circles like the trunks.
+      const b = rocksInCells(Math.floor(x0 / BOULDER_CELL) - 1, Math.ceil((x0 + TRUNK_CELL) / BOULDER_CELL) + 1, Math.floor(z0 / BOULDER_CELL) - 1, Math.ceil((z0 + TRUNK_CELL) / BOULDER_CELL) + 1, true);
+      for (let k = 0; k < b.length; k += ROCK_FLOATS) {
+        if (b[k] < x0 || b[k] >= x0 + TRUNK_CELL || b[k + 2] < z0 || b[k + 2] >= z0 + TRUNK_CELL) continue;
+        const r = rockRadius(b[k + 3], b[k + 6], b[k + 8]);
+        // (Its top, over which a jump or a spell goes: about seven tenths of its size up.)
+        if (r > 0) list.push(b[k], b[k + 2], r, b[k + 1] + b[k + 3] * b[k + 6] * 0.75);
       }
       list = list.length ? list : null;
       this.trunks.set(key, list);
@@ -131,7 +140,7 @@ export class World {
         for (let i = ci - 1; i <= ci + 1; i++) {
           const list = this.trunkCell(i, j);
           if (!list) continue;
-          for (let k = 0; k < list.length; k += 3) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return !underLand(x, z);
+          for (let k = 0; k < list.length; k += 4) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return !underLand(x, z);
         }
       }
     }
@@ -174,7 +183,8 @@ export class World {
           for (let i = ci - 1; i <= ci + 1; i++) {
             const list = this.trunkCell(i, j);
             if (!list) continue;
-            for (let k = 0; k < list.length; k += 3) {
+            for (let k = 0; k < list.length; k += 4) {
+              if (feet > list[k + 3]) continue;
               const dx = x - list[k], dz = z - list[k + 1], d = Math.hypot(dx, dz), R = list[k + 2] + r;
               if (d >= R || d < 1e-4) continue;
               x = list[k] + dx / d * R; z = list[k + 1] + dz / d * R;
@@ -249,9 +259,10 @@ export class World {
         lastKey = key;
         const list = this.trunks.get(key);
         if (!list) continue;
-        for (let k = 0; k < list.length; k += 3) {
+        for (let k = 0; k < list.length; k += 4) {
           const qx = list[k] - ox, qz = list[k + 1] - oz;
           const t = Math.max(0, Math.min(maxT, (qx * dx + qz * dz) / flat2));
+          if (oy + dy * t > list[k + 3]) continue;
           if (Math.hypot(ox + dx * t - list[k], oz + dz * t - list[k + 1]) < list[k + 2] && (best < 0 || t < best)) best = t;
         }
       }

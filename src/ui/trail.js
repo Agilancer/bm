@@ -180,13 +180,20 @@ export class QuestTrail {
       const i = T.people.findIndex((p) => p.id === who), w = i >= 0 ? T.whereOf(i) : null;
       return w ? { x: w.x, z: w.z, near: 1.6 } : null;
     };
-    if (id === 'start') return person('bram');
+    // (Before any work: Lisandra, waiting where the road comes into town, if she's there; else Bram at the inn.)
+    if (id === 'start') return (T.lisI !== undefined && T.whereOf(T.lisI) && person('lisandra')) || person('bram');
     const s = Q.state(id), q = QUESTS[id];
     if (!s || s.stage === 'done') return null;
     if (s.stage === 'making') return person(q.giver);
     const st = RULES[id].steps[s.step];
     if (!st) return null;
     if (st.talk) return person(st.talk);
+    // Work to take on from each of a list of people: the nearest you've still to see (one with work to give you first).
+    if (st.start) {
+      const left = st.start.filter((p) => !(s.seen || []).includes(p)).map((p) => [p, person(p)]).filter(([, at]) => at);
+      const by = (a, b) => (Q.offers(b[0]).length > 0) - (Q.offers(a[0]).length > 0) || Math.hypot(a[1].x - px, a[1].z - pz) - Math.hypot(b[1].x - px, b[1].z - pz);
+      return left.sort(by)[0]?.[1] ?? null;
+    }
     if (st.back || st.bring) return person(q.giver);
     const below = (to) => {
       const key = !!Q.state('dead_cant_wait');

@@ -7,6 +7,9 @@ export const TERRAIN = COMMON + /* wgsl */ `
 @group(1) @binding(1) var groundDetail: texture_2d_array<f32>;
 @group(1) @binding(2) var farMap: texture_2d<f32>;
 @group(1) @binding(3) var farTint: texture_2d<f32>;
+@group(1) @binding(4) var farKind: texture_2d<f32>;
+@group(1) @binding(5) var nearRoad: texture_2d<f32>;
+@group(1) @binding(6) var<uniform> NR: vec4f;
 
 struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) viewZ: f32 };
 @vertex fn vs(@location(0) p: vec3f, @location(1) n: vec3f) -> V {
@@ -32,20 +35,48 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let fm = textureSampleLevel(farMap, clampSmp, fuv, 0.0);
   // The far countries (src/core/lands.js): their tint and wet, snow on the heights, rock on the steeps.
   let ft = textureSampleLevel(farTint, clampSmp, fuv, 0.0);
-  let dirtBase = mix(fm.r, gm.r, inMap);
+  let fk = textureSampleLevel(farKind, clampSmp, fuv, 0.0);
   let macro2 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.043 + 0.31, 0.0);
+  // Close round you, the roads from their fine map (src/gfx/rocks.js followRoads): a hard, ragged edge where the far map's is a
+  // blur, and how far across the road this is, for its ruts and crown.
+  var roadFine = 0.0; var nearIn = 0.0; var dc = 99.0; var rw = 0.0;
+  if (!LEAN && NR.w > 0.5) {
+    let nuv = (p.xz - NR.xy) * NR.z;
+    let nr = textureSampleLevel(nearRoad, clampSmp, nuv, 0.0);
+    nearIn = smoothstep(0.0, 0.08, min(min(nuv.x, 1.0 - nuv.x), min(nuv.y, 1.0 - nuv.y)));
+    dc = nr.r * 12.0; rw = nr.g * 8.0;
+    let wob = (macro2.a - 0.5) * 0.9 + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.9, 0.0).r - 0.5) * 0.6;
+    roadFine = (1.0 - smoothstep(rw - 0.3, rw + 0.3, dc + wob)) * step(0.2, rw);
+  }
+  let dirtBase = mix(mix(fm.r, roadFine, nearIn), max(gm.r, roadFine * nearIn), inMap);
+  let steep = 1.0 - in.n.y;
 
   let uvA = p.xz * 0.2;
+  // The Tripo grounds (tools/world/build_ground.py), on a scale and turn of their own: the road's gravel, snow, stone, forest floor.
+  let uvC = rot(p.xz, 0.6) * 0.17 + 0.11;
+  let dxC = dpdx(uvC); let dyC = dpdy(uvC);
+  // Stone on a steep face is painted on the face, not stretched down it from above.
+  let side = select(p.zy, p.xy, abs(in.n.z) > abs(in.n.x)) * vec2f(0.13, -0.13);
+  let dxS = dpdx(side); let dyS = dpdy(side);
+  // Roads: worn gravel and set stones wherever the ground's trodden hard. Rock: on the steeps and the far map's bare ground.
+  let roadAmt = smoothstep(0.42, 0.78, dirtBase + (macro2.g - 0.5) * 0.25);
+  let rock0 = max(fm.a, smoothstep(0.2, 0.42, steep));
+  let rockAmt = rock0 * smoothstep(0.1, 0.4, rock0 + (macro2.b - 0.5) * 0.3) * (1.0 - roadAmt * 0.8);
+  let snowAmt = smoothstep(0.25, 0.6, fm.b + (macro2.r - 0.5) * 0.3) * smoothstep(0.55, 0.8, in.n.y);
   var grassCol: vec4f; var grassDet: vec4f; var dirtCol: vec4f; var dirtDet: vec4f;
+  var rockCol = vec3f(0.0); var rockDet = vec4f(0.5, 0.5, 0.9, 0.5); var haveRock = false;
+  var snowTex = vec4f(0.0); var haveSnow = false;
+  var floorCol = vec3f(0.0); var haveFloor = false;
+  var fenCol = vec3f(0.0); var ashCol = vec3f(0.0);
   if (LEAN) {
     // One painting of each ground and one detail map on a phone (the paintings nearest the average of their kind, and
     // the relief of whichever ground this mostly is): the ground covers half the screen, so these three reads in place of
-    // eight are the biggest saving in the frame.
+    // eight are the biggest saving in the frame. (Where it's mostly road, the road's gravel in place of the dirt: no extra read.)
     grassCol = textureSample(groundColor, repeatSmp, uvA, 5);
     // The patchwork the other paintings gave: warmer and cooler stretches, and dry ones.
     grassCol = vec4f(grassCol.rgb * mix(vec3f(1.2, 1.02, 0.85), vec3f(0.88, 1.0, 1.08), smoothstep(0.3, 0.7, macro2.g)), grassCol.a);
     grassCol = vec4f(mix(grassCol.rgb, vec3f(0.24, 0.2, 0.09), smoothstep(0.52, 0.78, macro2.r) * 0.38), grassCol.a);
-    dirtCol = textureSample(groundColor, repeatSmp, uvA, 1);
+    dirtCol = textureSample(groundColor, repeatSmp, uvA, select(1, 6, dirtBase > 0.5));
     grassDet = textureSample(groundDetail, repeatSmp, uvA, select(3, 1, dirtBase > 0.5));
     dirtDet = vec4f(grassDet.rgb, 1.0 - grassDet.a);
   } else {
@@ -66,6 +97,41 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
     grassDet = mix(textureSampleGrad(groundDetail, repeatSmp, uvA, 3 + g0, dxA, dyA), textureSampleGrad(groundDetail, repeatSmp, uvB, 3 + g1, dxB, dyB), gFade);
     dirtCol = mix(textureSampleGrad(groundColor, repeatSmp, uvB, d0, dxB, dyB), textureSampleGrad(groundColor, repeatSmp, uvA, d1, dxA, dyA), dFade);
     dirtDet = mix(textureSampleGrad(groundDetail, repeatSmp, uvB, d0, dxB, dyB), textureSampleGrad(groundDetail, repeatSmp, uvA, d1, dxA, dyA), dFade);
+    // The road's own gravel and stones over the dirt.
+    if (roadAmt > 0.002) {
+      dirtCol = mix(dirtCol, textureSampleGrad(groundColor, repeatSmp, uvC, 6, dxC, dyC), roadAmt);
+      dirtDet = mix(dirtDet, textureSampleGrad(groundDetail, repeatSmp, uvC, 6, dxC, dyC), roadAmt);
+    }
+    // Which stone: grey granite round the town, black basalt in the Ashen Waste and on the Sorrowhorn, rust-red in the Rustwood,
+    // pale limestone on the Downs and the moor, frost-split where the snow lies. Picked per spot with a little noise, so where two
+    // countries meet their stones come in clumps rather than along a line.
+    if (rockAmt > 0.002) {
+      let j = macro1.b - 0.5;
+      var layer = 9;
+      var bw = max(0.0, 1.0 - fk.r - fk.g - fk.b - fk.a) + j * 0.5;
+      if (fk.r + fk.a - j * 0.4 > bw) { layer = 11; bw = fk.r + fk.a - j * 0.4; }
+      if (fk.g + j * 0.3 > bw) { layer = 17; bw = fk.g + j * 0.3; }
+      if (fk.b - j * 0.35 > bw) { layer = 12; bw = fk.b - j * 0.35; }
+      if (fm.b + j * 0.3 > max(bw, 0.35)) { layer = 10; }
+      let top = textureSampleGrad(groundColor, repeatSmp, uvC * 0.8, layer, dxC * 0.8, dyC * 0.8);
+      let face = textureSampleGrad(groundColor, repeatSmp, side, layer, dxS, dyS);
+      rockCol = mix(face.rgb, top.rgb, smoothstep(0.55, 0.85, in.n.y));
+      rockDet = textureSampleGrad(groundDetail, repeatSmp, uvC * 0.8, layer, dxC * 0.8, dyC * 0.8);
+      haveRock = true;
+    }
+    // Snow with its own drifts, and stones breaking through it where it's thin or the ground steepens.
+    if (snowAmt > 0.002) {
+      let sn = textureSampleGrad(groundColor, repeatSmp, uvC * 0.7, 7, dxC * 0.7, dyC * 0.7);
+      let sr = textureSampleGrad(groundColor, repeatSmp, uvC * 0.9, 8, dxC * 0.9, dyC * 0.9);
+      let stony = max(smoothstep(0.58, 0.8, macro1.a + (macro2.a - 0.5) * 0.25), smoothstep(0.12, 0.3, steep)) * smoothstep(0.95, 0.5, snowAmt * 0.75);
+      snowTex = vec4f(mix(sn.rgb, sr.rgb, stony), stony);
+      haveSnow = true;
+    }
+    // Under the pines, a floor of old needles and cones, not plain dark.
+    if (fm.g > 0.02) { floorCol = textureSampleGrad(groundColor, repeatSmp, uvA * 0.8, 14, dxA * 0.8, dyA * 0.8).rgb; haveFloor = true; }
+    // Fen and ash, in the countries that have them.
+    if (ft.a > 0.2) { fenCol = textureSampleGrad(groundColor, repeatSmp, uvB, 15, dxB, dyB).rgb; }
+    if (fk.r > 0.15) { ashCol = textureSampleGrad(groundColor, repeatSmp, uvC, 16, dxC, dyC).rgb; }
   }
 
   // Dirt shows through where the grass's own height runs low.
@@ -77,22 +143,52 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let farDry = smoothstep(90.0, 420.0, length(p.xz));
   albedo = mix(albedo, mix(vec3f(dot(albedo, vec3f(0.3, 0.6, 0.1))), albedo, 0.55) * vec3f(0.92, 0.9, 0.76), farDry * 0.85);
   albedo *= 0.8 + macro2.r * 0.45;
+  // And a broader wash over the meadows, some sixty metres across: greener, yellower, greyer stretches, so the grass's paintings
+  // never show their repeat from a hilltop.
+  if (!LEAN) {
+    let wash = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.017 + 0.71, 0.0);
+    let grassy = 1.0 - dirt;
+    albedo *= mix(vec3f(1.0), mix(vec3f(0.9, 0.97, 0.84), vec3f(1.1, 1.04, 0.92), wash.g) * (0.9 + 0.2 * wash.b), grassy);
+  }
+  // The fen's reeds and black water; the Ashen Waste's grey cinders.
+  if (!LEAN) {
+    let fenAmt = smoothstep(0.25, 0.6, ft.a + (macro2.g - 0.5) * 0.3) * (1.0 - dirt * 0.6);
+    albedo = mix(albedo, fenCol * 0.85, fenAmt);
+    let ashAmt = smoothstep(0.2, 0.55, fk.r + (macro2.b - 0.5) * 0.3) * (1.0 - roadAmt * 0.5);
+    albedo = mix(albedo, ashCol * 0.9, ashAmt);
+  }
+  // The road's two ruts, darker and, in the wet, holding water; the crown between them greening over; its dust lighter than the dirt.
+  var rut = 0.0;
+  if (!LEAN && nearIn > 0.0 && rw > 1.3) {
+    let rc = rw * 0.42;
+    rut = (1.0 - smoothstep(0.1, 0.32, abs(dc - rc))) * nearIn * roadAmt;
+    let crown = (1.0 - smoothstep(rc * 0.3, rc * 0.68, dc)) * nearIn * roadAmt * step(1.9, rw);
+    albedo *= (1.0 + 0.2 * roadAmt * nearIn) * (1.0 - rut * 0.24);
+    albedo = mix(albedo, mix(vec3f(dot(grassCol.rgb, vec3f(0.3, 0.6, 0.1))), grassCol.rgb, 0.5) * vec3f(0.58, 0.57, 0.4), crown * 0.4 * smoothstep(0.35, 0.65, grassDet.a + 0.2));
+  }
   albedo *= ft.rgb * 1.5;
   // Wet country: dark, peaty, with standing sheen.
-  albedo = mix(albedo, albedo * vec3f(0.5, 0.56, 0.46), ft.a * (0.55 + 0.45 * macro2.g));
-  // Bare rock, the dirt's own grain gone grey; and snow over all, thinning where the slope's too steep to hold it.
-  let grey = dot(dirtCol.rgb, vec3f(0.3, 0.6, 0.1));
-  let rockCol = vec3f(grey) * vec3f(0.72, 0.72, 0.76) * (0.75 + 0.5 * dirtDet.a);
-  albedo = mix(albedo, rockCol, fm.a * smoothstep(0.1, 0.4, fm.a + (macro2.b - 0.5) * 0.3));
-  let snowCol = vec3f(0.84, 0.87, 0.93) * (0.88 + 0.16 * grassDet.a);
-  let snowAmt = smoothstep(0.25, 0.6, fm.b + (macro2.r - 0.5) * 0.3) * smoothstep(0.55, 0.8, in.n.y);
+  albedo = mix(albedo, albedo * vec3f(0.5, 0.56, 0.46), ft.a * (0.35 + 0.35 * macro2.g));
+  // Bare rock: the stone of the country (on a phone, the dirt's own grain gone grey).
+  if (!haveRock) {
+    let grey = dot(dirtCol.rgb, vec3f(0.3, 0.6, 0.1));
+    rockCol = vec3f(grey) * vec3f(0.72, 0.72, 0.76) * (0.75 + 0.5 * dirtDet.a);
+  }
+  albedo = mix(albedo, rockCol * (1.0 + 0.18 * fk.a), rockAmt);
+  det = mix(det, rockDet, rockAmt * select(0.0, 1.0, haveRock));
+  // Snow over all, thinning where the slope's too steep to hold it.
+  var snowCol = vec3f(0.84, 0.87, 0.93) * (0.88 + 0.16 * grassDet.a);
+  if (haveSnow) { snowCol = snowTex.rgb * mix(vec3f(1.04, 1.05, 1.08), vec3f(1.0), snowTex.a); }
   albedo = mix(albedo, snowCol, snowAmt);
-  // Under the pines, nothing but old needles and the dark.
-  albedo = mix(albedo, vec3f(0.045, 0.034, 0.022), fm.g * 0.82 * (1.0 - dirt * 0.7));
+  // Under the pines, old needles in the dark (less where the snow's got in).
+  // (Where the stand's thick, the whole floor is needles, its edge wandering out into the grass.)
+  let floorAmt = select(fm.g, smoothstep(0.12, 0.55, fm.g + (macro2.g - 0.5) * 0.3), haveFloor) * (1.0 - dirt * 0.7) * (1.0 - snowAmt * 0.6);
+  albedo = mix(albedo, select(vec3f(0.045, 0.034, 0.022), floorCol * 0.62, haveFloor), floorAmt * 0.85);
   // Under the blades the soil sits in shade.
   let grassCover = gm.g * inMap * (1.0 - smoothstep(F.counts.w * 0.75, F.counts.w, dist));
   albedo *= 1.0 - grassCover * 0.38;
   var rough = mix(mix(0.95, det.b, 0.7), 0.55, snowAmt * 0.6 + ft.a * 0.3);
+  rough = mix(rough, 0.25, rut * ft.a);
   var n = perturb(normalize(in.n), p, uvA, det.rg, 0.9 - 0.5 * smoothstep(8.0, 30.0, dist));
 
   // Blood soaked into the earth.
@@ -117,6 +213,8 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let seed = ign(in.pos.xy);
   let shadow = shadowAt(p, normalize(in.n), in.viewZ, seed);
   var c = shadePBR(p, n, v, albedo, rough, 0.0, 1.0, shadow);
+  // Low mist lying over the fen's wet ground, thicker out from you.
+  if (!LEAN) { c = mix(c, F.skyAmb.rgb * 0.62 + F.sunColor.rgb * 0.05, ft.a * smoothstep(6.0, 70.0, dist) * 0.38 * (0.7 + 0.6 * macro2.g)); }
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);

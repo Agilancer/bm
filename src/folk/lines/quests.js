@@ -8,6 +8,7 @@ const notYetIn = (say) => ({ before: 'quest:dead_cant_wait', say });
 const WAY_IN = notYetIn("The cathedral's great door has a knight in it. Silas Crane, the coffin maker, keeps the key to another way in.");
 
 import { QUESTS as BEYOND_QUESTS } from './beyond.js';
+import { QUESTS as LISANDRA_QUESTS } from './lisandra.js';
 
 export const QUESTS = {
   bed_and_bell: {
@@ -301,3 +302,5 @@ export const QUESTS = {
 
 // The quests that go out past the town (src/folk/lines/beyond.js).
 Object.assign(QUESTS, BEYOND_QUESTS);
+// And Lisandra's, which sends you round to all the rest (src/folk/lines/lisandra.js).
+Object.assign(QUESTS, LISANDRA_QUESTS);

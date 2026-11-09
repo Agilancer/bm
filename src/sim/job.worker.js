@@ -6,7 +6,8 @@ import { TREE_FLOATS, forestAmount, forestTrees } from '../core/forest.js';
 import { openingTerrain, setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
 import { CAVE_MOUTH, caveCuts } from '../core/opening.js';
-import { COUNTRIES, COUNTRY_KEYS, SITES, SITE_KEYS, countryWeights, groundCover, routeDist } from '../core/lands.js';
+import { roadEdge, rocksAround } from '../core/rocks.js';
+import { COUNTRIES, COUNTRY_KEYS, MOUNT, SITES, SITE_KEYS, countryWeights, groundCover, routeDist } from '../core/lands.js';
 
 async function decode(url, flags) {
   const r = await fetch(url);
@@ -134,10 +135,14 @@ function buildForest({ reach, cx = 0, cz = 0 }) {
 
 // A coarse map of all the land there is, for what the map over the village doesn't reach: r = worn road, g = under the pines,
 // b = snow, a = bare rock. And beside it the countries' look (src/core/lands.js): rgb their tint over 1.5, a how wet.
+// And a third, what kind of stone and ground: r the Ashen Waste (ash and basalt), g the Rustwood (rust-red stone), b the Downs and
+// the Barrow Moor (pale limestone), a the Sorrowhorn's flanks (black stone). None of them: grey granite, as round the town.
 // (Snow, rock and the tint change slowly, so they're worked out once to a block of four texels by four.)
+const KIND_OF = { ashen: [1, 0, 0, 0], rustwood: [0, 1, 0, 0], downs: [0, 0, 1, 0], barrow: [0, 0, 0.8, 0] };
 function buildFarRows({ size, half, rowStart, rowEnd }) {
   const data = new Uint8Array((rowEnd - rowStart) * size * 4);
   const tint = new Uint8Array((rowEnd - rowStart) * size * 4);
+  const kind = new Uint8Array((rowEnd - rowStart) * size * 4);
   const cw = new Float32Array(COUNTRY_KEYS.length);
   const blocks = new Map();
   const block = (bi, bj) => {
@@ -145,7 +150,7 @@ function buildFarRows({ size, half, rowStart, rowEnd }) {
     let b = blocks.get(key);
     if (b) return b;
     const x = (bi * 4 + 2) / size * 2 * half - half, z = (bj * 4 + 2) / size * 2 * half - half;
-    b = [0, 0, 170, 170, 170, 0];
+    b = [0, 0, 170, 170, 170, 0, 0, 0, 0, 0];
     if (Math.hypot(x, z) > 1000) {
       const g = 4, h = terrainHeight(x, z);
       const dx = (terrainHeight(x + g, z) - terrainHeight(x - g, z)) / (2 * g), dz = (terrainHeight(x, z + g) - terrainHeight(x, z - g)) / (2 * g);
@@ -156,7 +161,11 @@ function buildFarRows({ size, half, rowStart, rowEnd }) {
       COUNTRY_KEYS.forEach((k, c) => { const t = COUNTRIES[k]; r += cw[c] * t.tint[0]; gg += cw[c] * t.tint[1]; bb += cw[c] * t.tint[2]; wet += cw[c] * t.wet; });
       // (The near land keeps its own colour: the tint comes in past 1.15 km.)
       const k = sstep(1150, 1700, Math.hypot(x, z));
-      b = [snow, rock, (1 + (r - 1) * k) / 1.5 * 255, (1 + (gg - 1) * k) / 1.5 * 255, (1 + (bb - 1) * k) / 1.5 * 255, wet * k * 255];
+      const kd = [0, 0, 0, 0];
+      COUNTRY_KEYS.forEach((key, c) => { const f = KIND_OF[key]; if (f) for (let q = 0; q < 4; q++) kd[q] += cw[c] * f[q]; });
+      const md = Math.hypot(x - MOUNT.x, z - MOUNT.z);
+      kd[3] = md < MOUNT.R ? sstep(0.15, 0.55, 1 - md / MOUNT.R) : 0;
+      b = [snow, rock, (1 + (r - 1) * k) / 1.5 * 255, (1 + (gg - 1) * k) / 1.5 * 255, (1 + (bb - 1) * k) / 1.5 * 255, wet * k * 255, ...kd.map((v) => v * k * 255)];
     }
     blocks.set(key, b);
     return b;
@@ -190,13 +199,14 @@ function buildFarRows({ size, half, rowStart, rowEnd }) {
       }
       const b = block(i >> 2, j >> 2);
       tint[o] = b[2]; tint[o + 1] = b[3]; tint[o + 2] = b[4]; tint[o + 3] = b[5];
+      kind[o] = b[6]; kind[o + 1] = b[7]; kind[o + 2] = b[8]; kind[o + 3] = b[9];
       data[o++] = Math.round(dirt * 255);
       data[o++] = Math.round(forestAmount(x, z) * 255);
       data[o++] = Math.round(b[0] * 255);
       data[o++] = Math.round(b[1] * 255);
     }
   }
-  return { data, tint, rowStart };
+  return { data, tint, kind, rowStart };
 }
 
 // Ground map over the village: r = worn dirt, g = grass density, b = large scale variation.
@@ -327,9 +337,28 @@ self.addEventListener('message', async (e) => {
         result = buildForest(args);
         transfer = [result.trees.buffer];
         break;
+      case 'roadmap': {
+        // The roads round (cx, cz) finely, for the ground's shader: how far each half-metre is from the nearest road's middle,
+        // and that road's half-width (src/gfx/rocks.js followRoads).
+        const N = 512, data = new Uint8Array(N * N * 4), x0 = args.cx - N * 0.25, z0 = args.cz - N * 0.25;
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+          const e = roadEdge(x0 + (i + 0.5) * 0.5, z0 + (j + 0.5) * 0.5), o = (j * N + i) * 4;
+          const far = e.d > 1e8;
+          data[o] = far ? 255 : Math.min(255, Math.max(0, Math.round((e.d + e.w) / 12 * 255)));
+          data[o + 1] = far ? 0 : Math.min(255, Math.round(e.w / 8 * 255));
+          data[o + 3] = 255;
+        }
+        result = { data, x0, z0 };
+        transfer = [data.buffer];
+        break;
+      }
+      case 'rocks':
+        result = rocksAround(args.cx, args.cz, args.sreach, args.breach);
+        transfer = [result.stones.buffer, result.boulders.buffer];
+        break;
       case 'farground':
         result = buildFarRows(args);
-        transfer = [result.data.buffer, result.tint.buffer];
+        transfer = [result.data.buffer, result.tint.buffer, result.kind.buffer];
         break;
       case 'ground':
         result = buildGroundRows(args);

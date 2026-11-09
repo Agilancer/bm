@@ -3,7 +3,7 @@ import { CAVE_PATH, openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nea
 import { churchSite } from './church.js';
 import { oldChurchGround } from './town.js';
 import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, inCaveBox } from './opening.js';
-import { landTrees, treeCode } from './lands.js';
+import { landTrees, routeDist, treeCode } from './lands.js';
 
 // From the ledge outside Lisandra's cave you can see the town far below: along that line nothing grows that would stand up
 // into the sight of it. The gap widens with distance and its edges are soft, and where the ground falls away far enough
@@ -62,6 +62,12 @@ export function forestAmount(x, z) {
   }
   // Out past the near woods it comes in stands, with the hillsides' grass between them.
   if (r > 240) a *= sstep(0.36, 0.5, fbm(x * 0.0072 + 20, z * 0.0072 - 8, 3)) * (1 - 0.35 * sstep(240, 420, r));
+  // Nothing grows on the roads out to the countries, nor right up to their edges.
+  if (r > 250 && a > 0) {
+    const rd = routeDist(x, z);
+    if (rd.road) a *= sstep(rd.road.w + 2.5, rd.road.w + 8, rd.d);
+    if (a <= 0) return 0;
+  }
   // And out in the countries, as thick as each one grows them (src/core/lands.js).
   if (r > 1150 && a > 0) a = Math.min(1, a * landTrees(x, z));
   return a;

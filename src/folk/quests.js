@@ -8,13 +8,18 @@
 //   warden put down the Bell Crypt's warden
 //   back   go back to the giver
 //   bring  bring the giver n of a material (items.js MATS); handed over at the giver
+//   start  take on a quest from each of a list of people, in any order (Lisandra's: src/folk/lines/lisandra.js)
 // wait: what's handed over is made overnight, and collected the next day.
 import { churchAt, inChurch } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { QUESTS } from './lines/quests.js';
 import { SITES } from '../core/lands.js';
+import { BY_ID, first } from './people.js';
+import { GIVERS } from './lines/lisandra.js';
 
 export const RULES = {
+  // Lisandra's, at the edge of town once she's walked you down: go round everyone with work and start each of their quests.
+  lisandra_work: { steps: [{ start: GIVERS }, { back: true, say: "They've all given me something to do." }], gold: 40, xp: 250 },
   bed_and_bell: { steps: [{ talk: 'silas', say: 'Bram Kettle sent me.' }, { back: true, say: "I've been to see Silas." }], xp: 40 },
   dead_cant_wait: { steps: [{ enter: 'catacombs' }, { kill: 'catacombs', n: 8 }, { back: true, say: 'Eight of them are at rest.' }], gold: 60, xp: 200 },
   bones_for_carver: { needs: 'dead_cant_wait', steps: [{ bring: 'bone', n: 10 }], wait: true, item: 'skull', xp: 150 },
@@ -87,12 +92,15 @@ export class QuestBook {
   // anything's asked of you, 'start' (go and see Bram Kettle). Null when you've put the trail away.
   followed() {
     if (this.follow === 'off') return null;
-    if (this.follow === 'start' && !this.q.bed_and_bell) return 'start';
+    if (this.follow === 'start' && !this.started()) return 'start';
     const live = this.active();
     if (live.includes(this.follow)) return this.follow;
     if (live.length) return live[live.length - 1];
-    return this.q.bed_and_bell ? null : 'start';
+    return this.started() ? null : 'start';
   }
+
+  // Whether you've taken up your first work in town: Bram's bed, or Lisandra's round of the town.
+  started() { return !!(this.q.bed_and_bell || this.q.lisandra_work); }
 
   // Picked in the journal: follow it, or (picked again) put the trail away.
   pick(id) {
@@ -106,12 +114,48 @@ export class QuestBook {
   }
 
   begin(id) {
+    // (Taken on, it's the one followed; but not over a round of the town still under way, which this is part of.)
+    const was = this.followed();
     this.q[id] = { stage: 'active', step: 0, n: 0 };
-    this.follow = id;
+    if (!(was && this.step(was)?.start)) this.follow = id;
     this.flags.add(`quest:${id}`);
     this.on.toast(`New quest: ${QUESTS[id].title}`, 'quest');
     this.on.begun?.(id);
+    this.took(id);
     this.on.change();
+  }
+
+  // Someone's given you work: a tick on any list of people to take work from (a `start` step). Taking on the list itself
+  // counts whoever's given you work already.
+  took(id) {
+    for (const k of this.active()) {
+      const st = this.step(k);
+      if (!st?.start) continue;
+      const s = this.q[k], seen = (s.seen = s.seen || []);
+      const who = k === id ? st.start.filter((p) => Object.keys(RULES).some((q) => q !== k && QUESTS[q].giver === p && this.q[q])) : [QUESTS[id].giver];
+      const fresh = who.filter((p) => st.start.includes(p) && !seen.includes(p));
+      if (!fresh.length) continue;
+      seen.push(...fresh);
+      if (seen.length >= st.start.length) this.advance(k);
+      else if (k !== id) this.on.toast(`${QUESTS[k].title}: ${seen.length} of ${st.start.length}`, 'count');
+    }
+  }
+
+  // What hangs over someone's head (src/ui/folk.js marks): 'ready' (a yellow ?) when there's a quest to hand in to them or
+  // a step that's theirs to hear; 'offer' (a yellow !) when they've work to give; 'busy' (a grey ?) when work of theirs is
+  // under way; else null. mats: what's in the satchel. day: today.
+  mark(who, mats, day) {
+    let busy = false;
+    for (const id of Object.keys(RULES)) {
+      const s = this.q[id];
+      if (!s || s.stage === 'done') continue;
+      const st = this.step(id), giver = QUESTS[id].giver === who;
+      if (st?.talk === who) return 'ready';
+      if (!giver) continue;
+      if (s.stage === 'making' ? day >= s.ready : st?.back || (st?.bring && (mats[st.bring] || 0) >= st.n)) return 'ready';
+      busy = true;
+    }
+    return this.offers(who).length ? 'offer' : busy ? 'busy' : null;
   }
 
   // On to the next step (or to the end of the last).
@@ -148,8 +192,11 @@ export class QuestBook {
     const line = text.journal[Math.min(s.step, text.journal.length - 1)];
     // (The way in, for work that's down among the dead and given before Silas has handed over his key.)
     const hint = s.step === 0 ? sayable([text.hint], this.flags)[0] : null;
-    const count = step.kill ? ` (${s.n} of ${step.n})` : step.visit ? ` (${(s.seen || []).length} of ${step.visit.length})` : '';
-    return `${line}${count}${hint ? ` ${hint}` : ''}`;
+    const list = step.visit || step.start;
+    const count = step.kill ? ` (${s.n} of ${step.n})` : list ? ` (${(s.seen || []).length} of ${list.length})` : '';
+    // Who's still to give you work, by name.
+    const left = step.start ? step.start.filter((p) => !(s.seen || []).includes(p)).map((p) => first(BY_ID[p])) : [];
+    return `${line}${count}${hint ? ` ${hint}` : ''}${left.length ? ` Still to see: ${left.join(', ')}.` : ''}`;
   }
 
   // ---- what the world reports ----
@@ -172,7 +219,8 @@ export class QuestBook {
   where(x, y, z, hour) {
     if (!this.flags.has('arrived') && inTown(x, z, 0)) {
       this.flags.add('arrived');
-      if (!this.q.bed_and_bell) this.on.toast('Bellmourn. The inn, the Tolling Bell, is just north of the well. (J: your journal)', 'hint');
+      if (!this.q.bed_and_bell && !this.q.lisandra_work && this.lisHere) this.on.toast('Bellmourn. Lisandra has a word for you before you go in. (J: your journal)', 'hint');
+      else if (!this.q.bed_and_bell) this.on.toast('Bellmourn. The inn, the Tolling Bell, is just north of the well. (J: your journal)', 'hint');
       this.on.change();
     }
     for (const id of this.active()) {

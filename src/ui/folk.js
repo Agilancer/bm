@@ -1,12 +1,18 @@
 // Talking with Bellmourn: what's said in the street, over the speaker's head; a word with someone (E), with what they've to
 // say, what they'll tell you, the work they've got, and their counter if they keep one; the journal (J); and the notes
-// that come up as things happen. What's said is src/folk/lines/; quests' workings src/folk/quests.js; trade src/folk/shops.js.
+// that come up as things happen; and the ! and ? over the heads of those with work. Lisandra, once she's walked you down,
+// stands where the Long Road comes in and is talked to here too (src/folk/lines/lisandra.js). What's said is src/folk/lines/;
+// quests' workings src/folk/quests.js; trade src/folk/shops.js.
 import { PEOPLE, first as firstName } from '../folk/people.js';
 import { LINES as LA } from '../folk/lines/town_a.js';
 import { LINES as LB } from '../folk/lines/town_b.js';
 import { LINES as LC } from '../folk/lines/town_c.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { BEYOND, LINES as LBEY } from '../folk/lines/beyond.js';
+import { LISANDRA, LINES as LLIS } from '../folk/lines/lisandra.js';
+import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
+import { LISANDRA_FORMS } from '../core/lisandra.js';
+import { OPENING } from '../core/opening.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { QuestBook, RULES, sayable } from '../folk/quests.js';
 import { CRAFTS, GOODS, MAX_EMBERS, TRADES, matsText, offerFor, priceText, rollStock, worth } from '../folk/shops.js';
@@ -14,7 +20,7 @@ import { DAYS, partOfDay } from '../folk/days.js';
 import { MATS, colorOf, makeRng, matName, nameOf } from '../items/items.js';
 import { SPELLS } from '../sim/spells.js';
 
-const LINES = { ...LA, ...LB, ...LC, ...LBEY };
+const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLIS };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
 const BEYOND_AT = Object.fromEntries(BEYOND.map((b) => {
   const k = TOWN_KNIGHTS.find((t) => t[b.id]), r = k.route;
@@ -25,6 +31,7 @@ const REACH = 2.3;
 // A keeper behind a stall's counter is further than that from anyone in front of it: the counter's 1.2 m deep, and they stand back of it.
 const STALL_REACH = 3.4;
 const SEEN = 19;               // balloons further off than this aren't shown
+const MARK_SEEN = 70;          // nor quest marks further off than this (the Bellwright's tower, out on its knoll, further)
 const FOV = 64;                // the camera's, top to bottom (src/gfx/renderer.js)
 
 // What the player asks about, in their own words.
@@ -33,6 +40,8 @@ const TOPICS = { tessariels: 'The other Tessariels', knight: 'The knight at the 
 const OLD = "She wasn't beautiful. She was old.";
 // The journal's first page, till Bram's given you his errand.
 const START = 'You came down into Bellmourn with nothing: no coin, no bed. North of the well is the inn, the Tolling Bell. Bram Kettle keeps it, and counts every stranger through his door. Start with him.';
+// Or, before that, till Lisandra's said her piece.
+const LIS_START = 'You came down into Bellmourn with nothing: no coin, no bed. Lisandra is waiting where the Long Road comes into town, with something to say. She always has something to say.';
 
 const STYLE = `
 body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
@@ -96,6 +105,13 @@ body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
 .fn.quest, .fn.done { color: #f1d78f; border-color: rgba(232,193,90,.7); font-size: 16px; }
 .fn.mat { font-size: 14px; }
 .fn.gone { opacity: 0; transform: translateY(-6px); }
+#folkMarks { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+body:not(.playing) #folkMarks, body.cinematic #folkMarks { display: none; }
+.qm { position: absolute; transform: translate(-50%, -100%); font: 900 var(--s, 34px)/1 Georgia, "Times New Roman", serif; color: #ffd21f;
+  -webkit-text-stroke: .09em #2a1700; paint-order: stroke fill; text-shadow: 0 0 .18em #000c, 0 .06em .1em #000; }
+.qm span { display: block; animation: qmBob 1.6s ease-in-out infinite; }
+.qm.busy { color: #b9b6ae; -webkit-text-stroke-color: #1a1a1a; }
+@keyframes qmBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.12em); } }
 #folkFade { position: fixed; inset: 0; z-index: 11; background: #000; opacity: 0; pointer-events: none; transition: opacity 1.1s; display: flex; align-items: center; justify-content: center; font: italic 18px Georgia, serif; color: #cdbd98; }
 `;
 
@@ -125,7 +141,9 @@ export class TownUI {
   //      opened(), closed(), player(), saved() } }
   constructor(o) {
     Object.assign(this, o);
-    this.people = PEOPLE.concat(BEYOND);   // the town's, then those out past it (no body in the town's worker)
+    this.people = PEOPLE.concat(BEYOND, [LISANDRA]);   // the town's, then those out past it (no body in the town's worker), then her
+    this.lisI = this.people.length - 1;
+    this.marks = new Map();         // person -> { el, kind }: the ! and ? over the heads of those with work
     this.balloons = new Map();
     this.with = -1; this.open = false; this.book = false;
     this.met = new Set();
@@ -150,6 +168,7 @@ export class TownUI {
     this.panel = div('folkTalk');
     this.bookEl = div('folkBook');
     this.notes = div('folkNotes');
+    this.markEl = div('folkMarks');
     this.fade = div('folkFade');
     for (const el of [this.panel, this.bookEl]) {
       for (const t of ['touchstart', 'touchmove', 'touchend']) el.addEventListener(t, (e) => e.stopPropagation(), { passive: true });
@@ -163,8 +182,41 @@ export class TownUI {
   // Where someone stands: the town's worker's word, or (out past the town) the beat they keep.
   whereOf(i) {
     if (i < PEOPLE.length) return this.renderer.folk?.where(i);
+    if (i === this.lisI) return this.lisandra();
     const at = BEYOND_AT[this.people[i]?.id];
-    return at ? { ...at, busy: 0, sleep: false, house: -1, beyond: true } : null;
+    if (!at) return null;
+    // Their body in the sim, walking its beat, if it's there; else the middle of the beat.
+    const k = this.snap && this.bodyNear(at.x, at.z, 6);
+    return k ? { x: k.x, y: k.y, z: k.z, hx: k.x, hy: k.y + 1.85, hz: k.z, busy: 0, sleep: false, house: -1, beyond: true }
+      : { ...at, busy: 0, sleep: false, house: -1, beyond: true };
+  }
+
+  // The nearest body in the sim to (x, z), within r metres: { x, y, z }, or null.
+  bodyNear(x, z, r) {
+    const s = this.snap, n = s[H.NCHARS];
+    let best = null, bd = r;
+    for (let i = 0; i < n; i++) {
+      const o = CHARS_START + i * C_SIZE;
+      if (s[o + C.ACTIVE] < 0.5) continue;
+      const d = Math.hypot(s[o + C.X] - x, s[o + C.Z] - z);
+      if (d < bd) { bd = d; best = { x: s[o + C.X], y: s[o + C.Y], z: s[o + C.Z] }; }
+    }
+    return best;
+  }
+
+  // Lisandra, once she's walked you down to the town (src/sim/opening.js keeps her where the road comes in): whichever of
+  // her two forms is out, the last chars in the sim's list (as src/ui/heroes.js finds her).
+  lisandra() {
+    const s = this.snap;
+    if (!s || s[H.OPENING] !== OPENING.ARRIVED) return null;
+    const n = s[H.NCHARS];
+    for (let i = n - 1; i >= n - LISANDRA_FORMS.length && i >= 0; i--) {
+      const o = CHARS_START + i * C_SIZE;
+      if (s[o + C.ACTIVE] < 0.5) continue;
+      const y = s[o + C.Y], head = s[o + C_PROPS + 1] - 0.19;
+      return { x: s[o + C.X], y, z: s[o + C.Z], hx: s[o + C.X], hy: head > y + 0.3 && head < y + 3 ? head : y + 1.6, hz: s[o + C.Z], busy: 0, sleep: false, house: -1, beyond: true };
+    }
+    return null;
   }
   lines(i) { return LINES[this.people[i].id] || {}; }
   fill(t) { return String(t).replaceAll('{name}', this.name || 'stranger'); }
@@ -220,9 +272,11 @@ export class TownUI {
   }
 
   // Every frame: the balloons follow their speakers; the light you carry burns down.
-  frame(dt, cam, px, py, pz, yaw, paused) {
+  frame(dt, cam, px, py, pz, yaw, paused, snap = null) {
+    this.snap = snap;
     const now = performance.now();
     const ph = this.houseOf(px, py, pz);
+    this.drawMarks(cam, px, pz, ph);
     for (const [i, b] of this.balloons) {
       const w = this.renderer.folk?.where(i);
       if (!w || now > b.until) { b.el.remove(); this.balloons.delete(i); continue; }
@@ -246,7 +300,37 @@ export class TownUI {
       r.carryLight = { p: [px + Math.sin(yaw) * 0.35 + Math.cos(yaw) * 0.25, py + 1.45, pz + Math.cos(yaw) * 0.35 - Math.sin(yaw) * 0.25], r: L.r, c: L.c, i: L.i * fl };
     } else r.carryLight = null;
     // What you can step up and talk to.
-    if (!paused && (this.qT = (this.qT || 0) - dt) <= 0) { this.qT = 0.5; this.quests.where(px, py, pz, this.act.hour()); }
+    if (!paused && (this.qT = (this.qT || 0) - dt) <= 0) { this.qT = 0.5; this.quests.lisHere = !!this.lisandra(); this.quests.where(px, py, pz, this.act.hour()); }
+  }
+
+  // The marks over the heads of those with work (src/folk/quests.js QuestBook.mark): a yellow ! for work to give, a grey ?
+  // for work of theirs under way, a yellow ? for work to hand in. Seen as the balloons are: not through a house's walls.
+  drawMarks(cam, px, pz, ph) {
+    const day = this.act.day(), seen = new Set();
+    for (let i = 0; i < this.people.length; i++) {
+      const kind = this.quests.mark(this.people[i].id, this.pack.mats, day);
+      if (!kind) continue;
+      const w = this.whereOf(i);
+      if (!w || w.hy == null) continue;
+      const d = Math.hypot(w.x - px, w.z - pz);
+      const there = w.beyond || d < 4 || w.house === ph || (w.house < 0 && ph < 0);
+      const s = there && d < (w.beyond ? MARK_SEEN * 3 : MARK_SEEN) ? this.project(cam, w.hx, w.hy + 0.42, w.hz) : null;
+      if (!s || s[0] < -60 || s[0] > innerWidth + 60 || s[1] < -60) continue;
+      let m = this.marks.get(i);
+      if (!m) { m = { el: document.createElement('div') }; m.el.innerHTML = '<span></span>'; this.markEl.appendChild(m.el); this.marks.set(i, m); }
+      if (m.kind !== kind) {
+        m.kind = kind;
+        m.el.className = `qm${kind === 'busy' ? ' busy' : ''}`;
+        m.el.firstChild.textContent = kind === 'offer' ? '!' : '?';
+      }
+      // About half a metre tall in the world, but never too small to see nor so big it hides them.
+      const tall = 0.5 * innerHeight / (2 * Math.tan(FOV * Math.PI / 360)) / s[2];
+      m.el.style.setProperty('--s', `${Math.max(20, Math.min(56, tall)).toFixed(0)}px`);
+      m.el.style.left = `${s[0].toFixed(0)}px`;
+      m.el.style.top = `${s[1].toFixed(0)}px`;
+      seen.add(i);
+    }
+    for (const [i, m] of this.marks) if (!seen.has(i)) { m.el.remove(); this.marks.delete(i); }
   }
 
   // Who's in front of you and near enough to talk to: { i, label }, or null.
@@ -708,7 +792,7 @@ export class TownUI {
     // (The one you follow has the trail on the ground to it: src/ui/trail.js. Pick another, or the same again to put it away.)
     const on = Q.followed();
     const entry = (id, title, text) => `<div class="qf${on === id ? ' on' : ''}" data-q="${id}"><div class="qt">${title}</div><div class="qs">${esc(text)}</div></div>`;
-    const start = Q.state('bed_and_bell') ? '' : entry('start', 'Bellmourn', START);
+    const start = Q.started() ? '' : entry('start', 'Bellmourn', this.whereOf(this.lisI) ? LIS_START : START);
     this.bookEl.innerHTML = `<h3>Journal</h3>${start}
       ${live.length ? live.map((id) => entry(id, QUESTS[id].title, Q.journalLine(id))).join('') : start ? '' : '<div class="qs" style="opacity:.7">Nothing asked of you yet. The town has work, for anyone who\'ll talk to it.</div>'}
       ${start || live.length ? `<div class="qhint">${on ? 'The gold trail on the ground leads to the marked one. Tap another to follow it, or the same to hide the trail.' : 'Tap one to follow it: a gold trail on the ground leads you there.'}</div>` : ''}
