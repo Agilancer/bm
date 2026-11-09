@@ -1,5 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
+import { GROUPS, GROUP_KEYS } from './core/tripo-monsters.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { Audio } from './audio.js';
@@ -49,7 +50,9 @@ window.bmTitle = title;
 
 // ---- job pool ----------------------------------------------------------------------------------------------
 
-const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE', '', '', 'WEREWOLF', 'ABYSSAL MOUTH'];
+// (From 11 on, the Tripo monsters' groups: src/core/tripo-monsters.js.)
+const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE', '', '', 'WEREWOLF', 'ABYSSAL MOUTH',
+  ...GROUP_KEYS.map((g) => GROUPS[g].name)];
 
 class Pool {
   constructor(size) {

@@ -32,7 +32,8 @@ export function mobKind(m) {
   if (m instanceof Hydra) return 'hydra';
   if (m instanceof Gravehart) return 'gravehart';
   if (m instanceof Crab) return 'crab';
-  if (m instanceof FieldCreature) return m.opts.name === 'WEREWOLF' ? 'werewolf' : 'mouth';
+  // (A Tripo monster, src/sim/tripo.js, has its meta: the heroes know the werewolf by name, the rest as monsters.)
+  if (m instanceof FieldCreature) return m.opts.name === 'WEREWOLF' ? 'werewolf' : m.meta ? null : 'mouth';
   if (m instanceof Caster) return m.opts.role === 'wizard' ? 'wizard' : m.opts.role;
   if (m instanceof Zombie) return m.opts.model === 'zombie_ogre' ? 'ogre' : m.champion ? 'champion' : 'zombie';
   if (m instanceof Knight) return m.opts.suit === 'knight' ? 'sentry' : 'black_knight';

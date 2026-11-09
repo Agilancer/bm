@@ -8,6 +8,7 @@
 // line back until its time, its bond or its memory is true. Lisandra is talked about only by daylight or by dark, never in
 // the minutes either side of dawn and dusk, when the glamour turns.
 import { C, C_HERO, C_SIZE, CHARS_START, H } from '../core/layout.js';
+import { kindOfGroup } from '../core/tripo-monsters.js';
 import { CAUSES, CLASSES, GESTURES, MOBS, MOB_KEYS, MOVE_KEYS, PLACES, PLACE_IDS, TRIGGERS, WALK_ENDS, hourBand, rng } from '../core/heroes.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { townDist } from '../core/town.js';
@@ -40,7 +41,8 @@ const ELEM_NAMES = Object.keys(ELEM).sort((a, b) => ELEM[a] - ELEM[b]);
 const rand = (a, b) => a + Math.random() * (b - a);
 // What a hero remembers, kept between sessions: rescues both ways and the debts still open, duels, spells seen, the Tally.
 const freshMem = (m = {}) => ({ savedBy: {}, saved: {}, debts: {}, owed: {}, spells: [], tallyNo: {}, ...m });
-const BIG_KILL = { 0: 'black_knight', 3: 'gravehart', 4: 'hydra', 6: 'ogre', 9: 'werewolf', 10: 'mouth' };
+// (The werewolf is a Tripo monster now: its group's kind, src/core/tripo-monsters.js.)
+const BIG_KILL = { 0: 'black_knight', 3: 'gravehart', 4: 'hydra', 6: 'ogre', [kindOfGroup('Werewolf')]: 'werewolf', 10: 'mouth' };
 
 export class HeroTalk {
   constructor({ base, cast, renderer, sim, settings, playerName, playerSkull, touch }) {

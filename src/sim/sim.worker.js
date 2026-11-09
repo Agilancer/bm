@@ -28,6 +28,8 @@ import { World } from './world.js';
 import { Hero, HeroWorld, mobKind } from './hero.js';
 import { MOB_KEYS, TRIG } from '../core/heroes.js';
 import { Slimes } from './slimes.js';
+import { TripoEmpty, TripoWorld } from './tripo.js';
+import { TRIPO_BASE, TRIPO_SLOTS } from '../core/tripo-monsters.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
@@ -116,6 +118,7 @@ class Sim {
     this.player.y = this.world.height(this.player.x, this.player.z);
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
+    this.tripo?.reset();
     this.villagers.forEach((v) => v.reset());
     if (this.heroWorld) this.heroWorld.killed = [];
     this.opening?.reset();
@@ -201,6 +204,7 @@ class Sim {
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) stepWoods(this);
+    this.tripo?.step();
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
@@ -342,6 +346,8 @@ class Sim {
       case 14: this.manual = true; this.manualTicks = b; break;
       case 15: this.manual = false; break;
       case 12: this.knights.forEach((n) => { if (n.wakeAt !== undefined) n.wakeAt = 0; }); break;
+      case 24: this.tripo?.standHere(a | 0, b, c); break;   // a Tripo monster (its place in roster.json) stood at b, c, facing you, for tests and reviews
+      case 25: if (this.tripo) this.tripo.testPal = this.tripo.palNames[a | 0]; break;   // and the palette those wear (palettes.json, by place)
       case 23: console.log('[k] ' + JSON.stringify(this.knights.slice(0, 2).map((n) => ({ ...n.stats, hp: Math.round(n.hp), moves: n.recent })))); break;   // what the knights have been doing, for review logs
       case 21: { // hold a knight still in clip b (by its place in the bank) at c seconds, for review sheets
         const name = Object.keys(k.bank.clips)[b | 0];
@@ -466,6 +472,11 @@ async function boot(msg) {
   // The knights in the other suits: Tessariel's walking the village, Velscour's man on the west road.
   const townBufs = await Promise.all(TOWN_KNIGHTS.map((t) => fetchBuf(base + t.asset)));
   TOWN_KNIGHTS.forEach((t, i) => sim.knights.push(new Knight(sim.knights.length, t.kind, new Rig(parseGLB(townBufs[i]), bank), bank, t)));
+  // The Tripo monsters' slots, empty until you come near a lair (src/sim/tripo.js).
+  const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
+  const firstTripo = sim.knights.length;
+  for (let i = 0; i < TRIPO_SLOTS; i++) sim.knights.push(new TripoEmpty(sim.knights.length));
+  sim.tripo = new TripoWorld(sim, base, tripoRoster, tripoPalettes, firstTripo, TRIPO_SLOTS);
   // The other Tessariels: the render thread chose who's in the world this session (src/core/heroes.js makeCast).
   if (msg.heroes?.length) {
     const [hMeta, hBin, kit] = await Promise.all([

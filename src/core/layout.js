@@ -3,8 +3,8 @@
 
 import { STAFFS2 } from '../items/staffs2.js';
 
-// (Room for the other Tessariels, src/sim/hero.js: HERO_SLOTS in src/core/heroes.js.)
-export const MAX_CHARS = 64;
+// (Room for the other Tessariels, src/sim/hero.js: HERO_SLOTS in src/core/heroes.js; and the Tripo monsters' slots, TRIPO_SLOTS.)
+export const MAX_CHARS = 80;
 export const MAX_JOINTS = 104;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;
@@ -51,7 +51,9 @@ export const H = {
 // Per-character block
 export const C = {
   ACTIVE: 0, KIND: 1, X: 2, Y: 3, Z: 4, YAW: 5, HP: 6, MAX_HP: 7, BLEED: 8, STATE: 9, GASH_VERSION: 10, GASH_COUNT: 11,
-  N_BLEEDS: 12, HOSTILE: 13, STAM: 14, SPEED: 15, GLINT: 16, HEART: 17, ARMOR: 18, LANDED: 19, CUT: 20, SIZE_HEAD: 21,
+  N_BLEEDS: 12, HOSTILE: 13, STAM: 14, SPEED: 15, GLINT: 16, HEART: 17, ARMOR: 18, LANDED: 19, CUT: 20,
+  // A Tripo monster's slot (src/sim/tripo.js): which model, 1 + its place in roster.json (0: none), and which palette.
+  MODEL: 21, PAL: 22, SIZE_HEAD: 23,
 };
 export const C_PALETTE = C.SIZE_HEAD;
 export const C_PROPS = C_PALETTE + MAX_JOINTS * 8;
