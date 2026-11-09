@@ -45,22 +45,50 @@ export const SCRIPT = {
   ],
 };
 
-// Said once, when something happens rather than at a time: walking out, and on the road down. witch: said walking out,
-// while you'd still see the witch (the rest are on the road down, where she's lovely to you).
+// Said when something happens rather than at a time: walking out, and on the road down. witch: said walking out, while you'd
+// still see the witch (the rest are on the road down, where she's lovely to you). On the road she leads you down and talks
+// the whole way: her lines wait their turn and never overlap (src/sim/opening.js talk), and each waits until you're near
+// enough to hear it, but for a call: shouted back to you, from wherever she is.
 export const CUES = {
   back: { dur: 1.5, text: 'Out!', emote: 'anger', witch: true },
   back2: { dur: 1.5, text: 'OUT.', big: true, emote: 'anger', witch: true },
   tunnel: { dur: 2.4, text: 'Hold. Please hold. Not now…', off: true, witch: true },
+  // The hill, from the ledge down to the pines.
+  lead: { dur: 3.2, text: 'This way. Stay close, and mind the edge.' },
+  hill1: { dur: 5.0, text: 'Three thousand years in that cave. I had it just how I liked it.', emote: 'gloom', feel: 2.4 },
   bend: { dur: 4.2, text: 'The others made speeches. Every one of them. On this road.' },
+  bend2: { dur: 4.0, text: 'You don’t say much, do you? I like that in a legend.' },
+  hill2: { dur: 5.2, text: 'My good kettle’s under that rock. And my books. And my other kettle.' },
+  hill3: { dur: 4.5, text: 'Don’t look at me like that. It’s the dust. I am not crying.', emote: 'sweat', feel: 2.2 },
+  hill4: { dur: 5.0, text: 'The last one who stopped to admire this view went over that edge.' },
+  hill5: { dur: 5.0, text: 'Bellmourn’s at the bottom. Bells, mud and gossip. You’ll love it.' },
   woods: { dur: 4.6, text: 'Stay on the road. The dead in those pines don’t read prophecies.' },
+  // The dead, coming up out of the pines.
+  risen: { dur: 3.2, text: 'There! In the trees! Don’t let them close!', emote: 'panic', feel: 2.2, call: true },
+  fight: { dur: 3.2, text: 'Burn them! That’s what the hands are for!', call: true },
   after: { dur: 1.8, text: '…You’ll do.', mutter: true },
+  // The low road, on down to the town.
+  low1: { dur: 5.4, text: 'The dead didn’t used to get up round here. Not till Velscour stirred.' },
   half: { dur: 3.0, text: 'Velscour used to laugh at his own jokes.' },
   half2: { dur: 2.0, text: 'Before. So I’m told.' },
+  low2: { dur: 5.5, text: 'In Bellmourn they call me Old Lis. You’ll hear worse. Most of it’s true.' },
+  low3: { dur: 5.1, text: 'They see a crone with a stick. What you see is your own business.' },
   sight: { dur: 2.6, text: 'There it is. Let me do the talking.' },
+  low4: { dur: 6.0, text: 'Bram Kettle keeps the inn, north of the well. Tell him I sent you. Then duck.' },
+  low5: { dur: 4.9, text: 'And don’t buy Elspeth’s candles. She says beeswax. It’s sheep.' },
+  low6: { dur: 5.1, text: 'If you hear the bell at midnight, stay in. Nobody living rings it.' },
   scream: { dur: 1.8, text: '[a scream]', caption: true },
   walk: { dur: 1.6, text: 'Keep walking.', emote: 'sweat' },
-  slow: { dur: 2.6, text: 'Slow down! Some of us just lost a cave.', emote: 'anger', feel: 2.0 },
-  wait: { dur: 1.6, text: '{name}! Wait!', say: 'Wait!', emote: 'startle' },
+  // You've fallen behind, and she's waiting for you; or you've run on past her.
+  keep1: { dur: 1.5, text: 'This way!', call: true },
+  keep2: { dur: 4.5, text: 'Bellmourn’s down the hill. It won’t come up and fetch you.', call: true },
+  keep3: { dur: 2.2, text: 'I’m not carrying you, {name}.', say: 'I’m not carrying you.', emote: 'anger', feel: 1.6, call: true },
+  slow: { dur: 2.6, text: 'Slow down! Some of us just lost a cave.', emote: 'anger', feel: 2.0, call: true },
+  wait: { dur: 1.6, text: '{name}! Wait!', say: 'Wait!', emote: 'startle', call: true },
+  // You ride your shield, and so does she, to stay ahead of you.
+  board: { dur: 4.1, text: 'Oh, we’re riding, are we? Fine. Don’t you dare laugh.', emote: 'sweat', feel: 2.0, call: true },
+  fast: { dur: 3.7, text: 'Three thousand years, and nobody ever showed me this!', call: true },
+  off: { dur: 2.9, text: '…Again. Later. When nobody’s looking.', mutter: true },
 };
 export const CUE_IDS = Object.keys(CUES);
 

@@ -182,6 +182,8 @@ self.addEventListener('message', (e) => {
   const m = e.data;
   if (m.type === 'boot') { boot(m).catch((err) => self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` })); return; }
   if (m.type === 'inbox' && map) { map.inbox.set(m.inbox); return; }
+  // A way across the town on foot for the player, for the quest trail (src/ui/trail.js): the folk's own walking grid.
+  if (m.type === 'route') { self.postMessage({ type: 'route', id: m.id, pts: life ? life.ground.find(0, m.ax, m.az, m.bx, m.bz, 60000) : null }); return; }
   if (!talk) return;
   if (m.type === 'talk') talk.talkTo(m.i);
   else if (m.type === 'flags') talk.flags = new Set(m.flags);

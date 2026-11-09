@@ -82,6 +82,11 @@ body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
 #folkBook h3 { margin: 0 0 10px; font: 700 20px Cinzel, Georgia, serif; color: var(--gold); letter-spacing: .08em; }
 #folkBook h4 { margin: 14px 0 6px; font: 600 13px Georgia, serif; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-dim); }
 #folkBook .qt { font: 600 16px Georgia, serif; color: #f1d78f; margin-top: 8px; }
+#folkBook .qf { cursor: pointer; padding: 1px 8px 5px 22px; margin: 2px -8px 0 -22px; border-left: 2px solid transparent; position: relative; }
+#folkBook .qf:hover { background: rgba(201,163,92,.08); }
+#folkBook .qf.on { border-left-color: #e8c15a; background: rgba(232,193,90,.07); }
+#folkBook .qf.on .qt::before { content: "\\25C6"; position: absolute; left: 6px; color: #e8c15a; font-size: 11px; margin-top: 3px; }
+#folkBook .qhint { font-size: 12.5px; opacity: .6; margin-top: 8px; font-style: italic; }
 #folkBook .qs { font-size: 14.5px; line-height: 1.45; opacity: .9; }
 #folkBook .qd { font-size: 14px; opacity: .55; }
 #folkBook button { font: 13px Georgia, serif; color: var(--bone); background: rgba(255,255,255,.05); border: 1px solid rgba(140,115,68,.5); padding: 3px 10px; margin: 4px 6px 0 0; cursor: pointer; }
@@ -700,14 +705,19 @@ export class TownUI {
     const done = Object.keys(RULES).filter((id) => Q.done(id));
     const sat = Object.entries(this.pack.mats).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${matName(k, n)}`).join(', ');
     // Before anyone's asked anything of you: where to start (the opening leaves you outside the town with nothing).
-    const start = Q.state('bed_and_bell') ? '' : `<div class="qt">Bellmourn</div><div class="qs">${esc(START)}</div>`;
+    // (The one you follow has the trail on the ground to it: src/ui/trail.js. Pick another, or the same again to put it away.)
+    const on = Q.followed();
+    const entry = (id, title, text) => `<div class="qf${on === id ? ' on' : ''}" data-q="${id}"><div class="qt">${title}</div><div class="qs">${esc(text)}</div></div>`;
+    const start = Q.state('bed_and_bell') ? '' : entry('start', 'Bellmourn', START);
     this.bookEl.innerHTML = `<h3>Journal</h3>${start}
-      ${live.length ? live.map((id) => `<div class="qt">${QUESTS[id].title}</div><div class="qs">${esc(Q.journalLine(id))}</div>`).join('') : start ? '' : '<div class="qs" style="opacity:.7">Nothing asked of you yet. The town has work, for anyone who\'ll talk to it.</div>'}
+      ${live.length ? live.map((id) => entry(id, QUESTS[id].title, Q.journalLine(id))).join('') : start ? '' : '<div class="qs" style="opacity:.7">Nothing asked of you yet. The town has work, for anyone who\'ll talk to it.</div>'}
+      ${start || live.length ? `<div class="qhint">${on ? 'The gold trail on the ground leads to the marked one. Tap another to follow it, or the same to hide the trail.' : 'Tap one to follow it: a gold trail on the ground leads you there.'}</div>` : ''}
       ${done.length ? `<h4>Done</h4>${done.map((id) => `<div class="qd">${QUESTS[id].title}</div>`).join('')}` : ''}
       ${this.papers.length ? `<h4>Kept</h4>${this.papers.map((p, k) => `<button data-r="${k}">${esc(p.title)}</button>`).join('')}${read >= 0 ? `<div class="tk-paper">${esc(this.papers[read].text)}</div>` : ''}` : ''}
       <h4>Satchel</h4><div class="qs">${sat || 'Empty.'}</div>
       <div class="foot">J or Esc to close</div>`;
     for (const b of this.bookEl.querySelectorAll('[data-r]')) b.onclick = () => this.drawBook(+b.dataset.r === read ? -1 : +b.dataset.r);
+    for (const b of this.bookEl.querySelectorAll('[data-q]')) b.onclick = () => { this.act.sound?.('ui_confirm'); Q.pick(b.dataset.q); };
   }
 
   // ---- notes as things happen ----

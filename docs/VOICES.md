@@ -8,7 +8,10 @@ shown and not said.
 
 ## What's recorded
 
-Lisandra, all of the opening (`src/core/opening-script.js`): 38 lines in two voices.
+Lisandra, all of the opening (`src/core/opening-script.js`): 59 lines in two voices. The 21 lines she says leading you down
+the road (the hill, the fight, the low road, calling you on, riding a shield) are written but **not yet recorded**: they're
+shown and not said, and `tests/voice.test.mjs` lists them until they are. Their delivery notes are in `tools/voice/script.mjs`
+(`HOW`), so the three commands under Recording below do them.
 
 | Voice | Who | When |
 |---|---|---|

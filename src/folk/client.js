@@ -15,6 +15,7 @@ export class TownClient {
     this.cast = 0;
     this.ready = false;
     this.listeners = [];
+    this.routes = new Map();
     this.worker = new Worker(new URL('./folk.worker.js', import.meta.url), { type: 'module' });
     this.worker.onmessage = (e) => this.message(e.data);
     this.worker.onerror = (e) => console.error('town worker', e.message);
@@ -33,6 +34,7 @@ export class TownClient {
       return;
     }
     if (m.type === 'error') { console.error('town:', m.message); return; }
+    if (m.type === 'route') { this.routes.get(m.id)?.(m.pts); this.routes.delete(m.id); return; }
     if (m.type === 'events') { for (const e of m.list) for (const fn of this.listeners) fn(e); return; }
     if (m.type === 'slot') {
       // (No shared memory: the worker posts each slot whole, and it's kept as slot 0.)
@@ -68,6 +70,12 @@ export class TownClient {
   }
 
   talkTo(i) { this.worker.postMessage({ type: 'talk', i }); }
+  // A way on foot across the town from (ax, az) to (bx, bz), round the houses: a list of [x, z], or null.
+  route(ax, az, bx, bz) {
+    if (!this.ready) return Promise.resolve(null);
+    const id = this.routeN = (this.routeN || 0) + 1;
+    return new Promise((resolve) => { this.routes.set(id, resolve); this.worker.postMessage({ type: 'route', id, ax, az, bx, bz }); });
+  }
   setFlags(flags) { this.flags = new Set(flags); this.worker.postMessage({ type: 'flags', flags: [...flags] }); }
   setName(name) { this.name = name; this.worker.postMessage({ type: 'name', name }); }
 

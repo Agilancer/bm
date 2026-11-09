@@ -1,20 +1,16 @@
 // The opening, as the sim plays it: where Lisandra stands and what she does, when you can move, the cave falling in, and
 // the walk down to town. The camera, the words and the sound follow the same clock (src/ui/opening.js).
-import { CUE_IDS } from '../core/opening-script.js';
+import { CUES, CUE_IDS } from '../core/opening-script.js';
 import {
-  CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_AXIS, COLLAPSE_END, DUST_AT, KNEEL_UP, collapseEye, ESCORT_TO, HERD_CONTROL, HERD_END, NAME_AT, OPENING,
+  CAVE_LINE, CAVE_MOUTH, CHAMBER_AXIS, COLLAPSE_END, DUST_AT, KNEEL_UP, collapseEye, HERD_CONTROL, HERD_END, NAME_AT, OPENING,
   OPENING_SPAWN, OPENING_YAW, PORTAL, SWAP_AT, TIDY_MARK, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP, caveNearest, chamberPoint, storyHolds,
 } from '../core/opening.js';
-import { CAVE_PATH, ROADS } from '../core/terrain.js';
+import { DIVE_TO, ROUTE, STORM_TO, VIEW_SPOT, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { clamp } from '../core/math.js';
 import { ambush } from './undead.js';
 
 const WEAVE_FROM = 16.3;            // into WAKE: she starts toward you as the candles catch
 const LEAVE_PACE = 2.4;             // how fast you can go in the cave, until you're out
-const out = (d) => [CAVE_MOUTH[0] + CAVE_OUT[0] * d, CAVE_MOUTH[1] + CAVE_OUT[1] * d];
-export const VIEW_SPOT = out(5.6);  // where you stand on the ledge when the cave comes down
-const DIVE_TO = out(3.0);    // where she comes down out of the dust: 2.6 m from you
-const STORM_TO = out(3.7);   // where she has it out with you: 1.9 m off
 const KNEEL_TURN = 0.35;     // how far round from facing you she comes down
 const AWAY_TURN = 0.8;       // turned to the rubble, how far round toward you she stays (three-quarters from behind)
 // Hands put somewhere, in her body's space (x to her left, y up, z ahead): src/sim/village-walker.js act's b.reach.
@@ -28,45 +24,29 @@ const yawTo = (a, b) => Math.atan2(b[0] - a[0], b[1] - a[1]);
 // Where she starts her run, out of sight down the tunnel, when the portal dies.
 const RUN_FROM = (() => { const p = CAVE_LINE.find((q) => q[4] >= 15); return [p[0], p[1]]; })();
 
-// The way down: off the ledge onto the Long Road, and along it to the town's edge. Marks every ~4 m, with their distance.
-const ROUTE = (() => {
-  const road = ROADS[0].line;
-  const end = CAVE_PATH.pts.at(-1);
-  let k = 0, best = 1e9;
-  road.forEach((p, i) => { const d = Math.hypot(p[0] - end[0], p[1] - end[1]); if (d < best) { best = d; k = i; } });
-  const pts = [STORM_TO, ...CAVE_PATH.pts.slice(1)];
-  for (let i = k - 1; i >= 0; i--) pts.push([road[i][0], road[i][1]]);
-  pts.push(ESCORT_TO);
-  const line = [pts[0]], s = [0];
-  for (let i = 1; i < pts.length; i++) {
-    const a = line.at(-1), b = pts[i], d = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    if (d < 0.05) continue;
-    const n = Math.max(1, Math.round(d / 4));
-    for (let j = 1; j <= n; j++) { line.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); s.push(s.at(-1) + d / n); }
-  }
-  return { pts: line, s, len: s.at(-1) };
-})();
-function routeAt(d) {
-  const { pts, s } = ROUTE;
-  let i = 0;
-  while (i + 2 < s.length && s[i + 1] < d) i++;
-  const t = clamp((d - s[i]) / (s[i + 1] - s[i]), 0, 1);
-  return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t];
-}
-function routeNear(x, z, around = null, within = 90) {
-  let best = 1e9, at = 0;
-  ROUTE.pts.forEach((p, i) => {
-    if (around !== null && Math.abs(ROUTE.s[i] - around) > within) return;
-    const d = Math.hypot(p[0] - x, p[1] - z);
-    if (d < best) { best = d; at = ROUTE.s[i]; }
-  });
-  return at;
-}
-// Where on the road things happen, as distances along it.
+// Where on the road down (src/core/escort.js) things happen, as distances along it.
 const MARKS = { bend: 46, ambush: routeNear(-214, 180), sight: routeNear(-84, 63) };
 MARKS.woods = MARKS.ambush - 34;
 MARKS.half = ROUTE.len * 0.6;
-export const ESCORT_LEN = ROUTE.len;
+
+// How she leads you down: this far ahead of you on foot, and further on a shield, where it's fast. Come up on her back and
+// she hurries; fall back past FAR and she stops and waits for you. With you stood still she strolls on ahead to there.
+const LEAD = 5.5, LEAD_RIDE = 9, FAR = 14, STROLL = 1.5;
+const FOOT_MAX = 9.6;        // flat out on foot: a little over your sprint, so she can always get back in front
+const RIDE_MAX = 30;         // on the shield: over what yours can do
+const OFF_AT = 5.5;          // you're off yours, and she's slowed to this: she steps off hers
+const RIDE_LIFT = 0.16;      // her soles over the ground, stood on the board (its face 0.09 up: src/items/drops.js boardPose)
+const HOP = 0.32;            // s: the little jump on and off it
+// Her walk, jog and run, by pace: the jog kept on longer than in the cave, so keeping ahead of your walk is a quick jog.
+const GAITS = [2.2, 6.6];
+// What she says on the road (CUES in src/core/opening-script.js): one line at a time, TALK_GAP s between, each waiting till
+// you're within HEAR of her (calls don't). Between the lines a place on the road brings, these, in turn: the hill's while
+// she's still above the pines, the low road's once the dead in them are down.
+const TALK_GAP = 1.1, HEAR = 17;
+const HILL = ['hill1', 'hill2', 'hill3', 'hill4', 'hill5'];
+const LOW = ['low1', 'low2', 'low3', 'low4', 'low5', 'low6'];
+const KEEP = ['keep1', 'keep2', 'keep3'];
+const ROAD_TALK = new Set([...HILL, ...LOW, 'lead', 'bend', 'bend2', 'woods']);
 
 export class Opening {
   constructor(sim) {
@@ -102,7 +82,12 @@ export class Opening {
     this.weaveI = 1; this.pauseLeft = 0;
     this.back = 0; this.deepest = 1e9; this.towardT = 0;
     this.prog = 0; this.pace = 0; this.ambushed = null; this.ambushDone = false; this.aheadT = 0; this.slowAt = undefined;
-    this.halfT = 0; this.endT = -1; this.fellT = undefined;
+    this.endT = -1; this.fellT = undefined;
+    // On the road: what she's yet to say, how long till she can say the next, and how long she's stood waiting for you.
+    this.queued = []; this.talkLeft = 0; this.waitT = 0; this.keepAt = -99; this.keepN = 0;
+    this.then = null; this.arrived = false; this.marked = new Set();
+    // On a shield: whether, for how long, since when (the hop on or off), and which foot leads.
+    this.riding = false; this.rideT = 0; this.hopT = 9; this.rode = false;
     this.sim.paceCap = stage === OPENING.HERD || stage === OPENING.LEAVE ? LEAVE_PACE : undefined;
     // (The rubble is down from partway into COLLAPSE: see collapse.)
     this.sim.world.setCaveSealed(stage > OPENING.COLLAPSE);
@@ -111,10 +96,22 @@ export class Opening {
   // A line said when something happens (CUES in src/core/opening-script.js), once.
   say(id) {
     if (this.fired.has(id)) return false;
+    this.speak(id);
+    return true;
+  }
+
+  // Said now, whatever's up, and the next waits for it to finish.
+  speak(id) {
     this.fired.add(id);
     this.cue = CUE_IDS.indexOf(id) + 1;
     this.cueT = 0;
-    return true;
+    this.talkLeft = CUES[id].dur + TALK_GAP;
+  }
+
+  // Next on the road, once she's done with what she's saying (first: ahead of whatever else is waiting). Said once.
+  queue(id, first = false) {
+    if (this.fired.has(id) || this.queued.includes(id)) return;
+    if (first) this.queued.unshift(id); else this.queued.push(id);
   }
 
   // You can't move while the story has the camera.
@@ -329,18 +326,26 @@ export class Opening {
   }
 
   // ---- Act III: the walk down ---------------------------------------------------------------------------------------------
+  // She leads you down to Bellmourn: out ahead of you on the road, at your pace, talking the whole way. Fall back and she
+  // waits for you; come up on her back and she hurries on; ride your shield and she rides one too, so you never get past.
   escort(dt, w, you, eye) {
     const { player } = this.sim;
-    // Where you are along the road, looked for near where she is.
+    // Where you are along the road (looked for near her), how fast you're coming down it, and how far ahead she is.
     const mine = routeNear(player.x, player.z, this.prog);
-    const gap = mine - this.prog;
-    // Run on far ahead and she calls after you.
-    this.aheadT = gap > 28 ? this.aheadT + dt : 0;
+    const [rx, rz] = routeDir(mine);
+    const along = player.vx * rx + player.vz * rz;
+    const gap = this.prog - mine;
+    const far = Math.hypot(player.x - w.x, player.z - w.z);
+    this.hopT += dt;
+    if (this.time > 0.4) this.mark('lead');
+    // Run on past her and she calls after you.
+    this.aheadT = -gap > 28 && !(this.ambushed && !this.ambushDone) ? this.aheadT + dt : 0;
     if (this.aheadT > 1.2) {
-      if (this.say('slow')) this.slowAt = this.time;
-      else if (this.time - this.slowAt > 16) this.say('wait');
+      if (!this.fired.has('slow')) { this.queue('slow', true); this.slowAt = this.time; } else if (this.time - this.slowAt > 16) this.queue('wait', true);
     }
-    // The ambush, in the pines at the woods' edge: she gets down and leaves it to you.
+    this.talk(dt, far < HEAR);
+    // The ambush, in the pines at the woods' edge: on foot she gets down and leaves it to you; on a shield she rides on
+    // through, out ahead of you still.
     if (!this.ambushDone && this.prog >= MARKS.ambush) {
       if (!this.ambushed) {
         const [ax, az] = routeAt(this.prog + 16), [hx, hz] = routeAt(this.prog + 17);
@@ -348,32 +353,115 @@ export class Opening {
         this.ambushed = ambush(this.sim, ax - dz / l * 9 * side, az + dx / l * 9 * side, 3);
         this.ambushT = this.time;
         if (!this.ambushed.length) this.ambushDone = true;
+        else this.queue('risen', true);
       }
       const left = this.ambushed.filter((k) => !k.dead).length;
-      if (!this.ambushDone && (!left || this.time - this.ambushT > 80)) { this.ambushDone = true; this.say('after'); }
-      return { clip: 'Crouch_Idle_Loop', face: yawTo([w.x, w.z], you), look: eye };
+      if (left && this.time - this.ambushT > 7) this.queue('fight', true);
+      if (!this.ambushDone && (!left || this.time - this.ambushT > 80)) { this.ambushDone = true; this.queue('after', true); }
+      if (!this.ambushDone && !this.riding) {
+        this.pace = 0;
+        return { clip: 'Crouch_Idle_Loop', face: yawTo([w.x, w.z], you), look: eye, lift: this.hopLift() };
+      }
     }
-    // She keeps a few steps behind you, and waits if you fall back. (Once you're at the road's end, or into town past it,
-    // she comes the whole way; or wait for her at the gate and she'd stop those few steps short of the end for good.)
-    const want = Math.min(ROUTE.len, Math.max(this.prog, mine > ROUTE.len - 14 ? ROUTE.len : mine - 2.5));
-    const speed = clamp((want - this.prog) * 1.15, 0, 6.6);
-    this.pace += (speed - this.pace) * Math.min(1, dt * 3);
+    // On a shield when you get on yours; off it once you're off yours and she's slowed, or at the road's end.
+    if (player.surfing && !this.riding && this.prog < ROUTE.len - 20) this.getOn();
+    else if (this.riding && ((!player.surfing && this.pace < OFF_AT) || this.prog >= ROUTE.len - 1)) this.getOff();
+    if (this.riding) {
+      this.rideT += dt;
+      this.fastT = this.pace > 15 ? (this.fastT || 0) + dt : 0;
+      if (this.fastT > 1) this.queue('fast', true);
+    }
+    // Her lead kept on you at your own pace; with you stood still, a stroll on ahead; far enough ahead, or with you gone off
+    // somewhere else, she stops and waits.
+    let want = along + ((this.riding ? LEAD_RIDE : LEAD) - gap) * (this.riding ? 1.2 : 1.4);
+    if (gap < FAR && !this.riding) want = Math.max(want, STROLL);
+    if (far > 30) want = 0;
+    want = clamp(want, 0, this.riding ? RIDE_MAX : FOOT_MAX);
+    this.pace += (want - this.pace) * Math.min(1, dt * (this.riding ? 2.5 : 3));
+    if (this.prog >= ROUTE.len - 0.3) this.pace = 0;
     this.prog = Math.min(ROUTE.len, this.prog + this.pace * dt);
     const to = routeAt(this.prog);
-    // Lines along the way.
-    if (this.prog > MARKS.bend) this.say('bend');
-    if (this.prog > MARKS.woods) this.say('woods');
-    if (this.prog > MARKS.half && this.say('half')) this.halfT = this.time;
-    if (this.halfT && this.time - this.halfT > 3.4) this.say('half2');
-    if (this.prog > MARKS.sight) this.say('sight');
-    if (this.prog >= ROUTE.len - 0.3) {
-      if (this.say('scream')) this.endT = this.time;
+    // Stood waiting for you: after a moment, she calls you on (again now and then, if you're still dawdling).
+    const waiting = this.pace < 0.3 && !this.riding && (gap > FAR - 1.5 || far > 30);
+    this.waitT = waiting && along < 1 ? this.waitT + dt : 0;
+    if (this.waitT > 2.5 && this.time - this.keepAt > 10) {
+      const id = KEEP[this.keepN++ % KEEP.length];
+      this.fired.delete(id);
+      this.queue(id, true);
+      this.keepAt = this.time;
+    }
+    // Lines that wait for a place on the road.
+    if (this.prog > MARKS.bend) this.mark('bend');
+    if (this.prog > MARKS.woods && !this.ambushed) this.mark('woods');
+    if (this.prog > MARKS.half && this.ambushDone) this.mark('half');
+    if (this.prog > MARKS.sight) this.mark('sight');
+    // At the town's edge, with you there too (or on into town past her): once she's done talking, the scream.
+    if (this.prog >= ROUTE.len - 0.3 && (far < 10 || mine > ROUTE.len - 2) && !this.arrived) {
+      this.arrived = true;
+      this.queued = this.queued.filter((id) => !ROAD_TALK.has(id));
+    }
+    if (this.arrived && this.endT < 0 && this.talkLeft <= 0 && !this.queued.length && !this.then) { this.speak('scream'); this.endT = this.time; }
+    if (this.endT >= 0) {
       if (this.time - this.endT > 1.9) this.say('walk');
       if (this.time - this.endT > 3.8) this.setStage(OPENING.ARRIVED);
     }
-    if (this.pace < 0.25 && Math.hypot(to[0] - w.x, to[1] - w.z) < 0.3) return { clip: 'idle', face: yawTo([w.x, w.z], you), look: eye };
+    // Talking, she looks back at you over her shoulder.
+    const talking = this.cue && this.cueT < CUES[CUE_IDS[this.cue - 1]].dur;
+    const look = talking || gap < 0 || far > 9 ? eye : null;
+    if (this.riding) {
+      // Side-on on the board, left foot leading, crouched, her eyes going between the road and you.
+      const [tx, tz] = routeDir(this.prog);
+      return { to, speed: Math.max(this.pace, Math.hypot(to[0] - w.x, to[1] - w.z) / Math.max(dt, 1e-3)), pace: this.pace, keepFace: true,
+        face: Math.atan2(tx, tz) - Math.PI / 2, turn: 12, clip: 'Crouch_Idle_Loop', lift: RIDE_LIFT + this.hopLift(), look: talking ? eye : null };
+    }
+    if (this.pace < 0.25 && Math.hypot(to[0] - w.x, to[1] - w.z) < 0.3) {
+      return { clip: this.waitT > 3 ? 'wait' : 'idle', face: yawTo([w.x, w.z], you), look: eye, lift: this.hopLift() };
+    }
     // (Put on the road outright: she follows it, the trees stand clear of it, and nothing turns her aside.)
-    return { to, speed: Math.max(this.pace, Math.hypot(to[0] - w.x, to[1] - w.z) / Math.max(dt, 1e-3)), pace: this.pace, look: gap > 4 ? eye : null };
+    return { to, speed: Math.max(this.pace, Math.hypot(to[0] - w.x, to[1] - w.z) / Math.max(dt, 1e-3)), pace: this.pace, look, gaits: GAITS, lift: this.hopLift() };
+  }
+
+  // A line a place on the road brings on: next up, once.
+  mark(id) {
+    if (this.marked.has(id)) return;
+    this.marked.add(id);
+    this.queue(id, true);
+  }
+
+  // Onto a shield, and off it: a little hop either way.
+  getOn() {
+    this.riding = true; this.rideT = 0; this.hopT = 0; this.fastT = 0;
+    if (!this.rode) { this.rode = true; this.queue('board', true); }
+  }
+
+  getOff() {
+    this.riding = false; this.hopT = 0;
+    this.queued = this.queued.filter((id) => id !== 'board' && id !== 'fast');
+    if (this.rideT > 3 && this.fired.has('board')) this.queue('off');
+  }
+
+  hopLift() { return this.hopT < HOP ? Math.sin(Math.PI * this.hopT / HOP) * 0.3 : 0; }
+
+  // Her lines on the road: the next once she's done with the last and you're near enough to hear it (or it's called back to
+  // you). Between the lines a place brings on, the stretch's own talk, in turn.
+  talk(dt, near) {
+    this.talkLeft -= dt;
+    // (Overtaken by the road: the hill's talk, and the warning, once the dead are up; the fight's once it's over.)
+    if (this.ambushed) this.queued = this.queued.filter((id) => !HILL.includes(id) && id !== 'lead' && id !== 'bend' && id !== 'bend2' && id !== 'woods');
+    if (this.ambushDone) this.queued = this.queued.filter((id) => id !== 'risen' && id !== 'fight');
+    if (this.talkLeft > 0) return;
+    if (!this.queued.length && near && !this.arrived && this.fired.has('lead')) {
+      const run = this.ambushDone ? LOW : !this.ambushed ? HILL : null;
+      const next = run?.find((id) => !this.fired.has(id));
+      if (next) this.queued.push(next);
+    }
+    // (Some lines run straight on into the next. At the town's edge she says what's left wherever you are.)
+    if (this.then) { this.speak(this.then); this.then = null; return; }
+    const i = this.queued.findIndex((id) => near || this.arrived || CUES[id].call);
+    if (i < 0) return;
+    const [id] = this.queued.splice(i, 1);
+    this.speak(id);
+    this.then = { bend: 'bend2', half: 'half2' }[id] || null;
   }
 
   write(snap, H) {
@@ -383,6 +471,7 @@ export class Opening {
     snap[H.OPENING_CUE] = this.cue;
     snap[H.OPENING_CUE_T] = this.cueT;
     snap[H.OPENING_FELL] = this.fellT !== undefined ? this.time - this.fellT : 99;
+    snap[H.OPENING_RIDE] = this.riding ? 1 : 0;
   }
 
   // A saved game (src/ui/opening.js save: the stage, her place and how far down the road, your name), picked up where it can
@@ -404,8 +493,14 @@ export class Opening {
       [w.x, w.z] = routeAt(this.prog);
       if (this.prog <= 0) { [player.x, player.z] = VIEW_SPOT; player.y = world.height(player.x, player.z); }
       this.ambushDone = this.prog > MARKS.ambush - 10;
+      // (What she'd have said by there isn't said again.)
+      if (this.prog > 0) this.fired.add('lead');
       for (const id of ['bend', 'woods', 'half', 'sight']) if (this.prog > MARKS[id]) this.fired.add(id);
+      if (this.fired.has('bend')) this.fired.add('bend2');
       if (this.fired.has('half')) this.fired.add('half2');
+      if (this.ambushDone) for (const id of [...HILL, 'woods', 'risen', 'fight', 'after']) this.fired.add(id);
+      // (The low road's talk, about as far through as she'd be.)
+      if (this.ambushDone) for (const id of LOW.slice(0, Math.floor(LOW.length * clamp((this.prog - MARKS.ambush) / (ROUTE.len - MARKS.ambush), 0, 1)))) this.fired.add(id);
     }
     for (const v of villagers) { v.x = w.x; v.z = w.z; v.y = world.height(w.x, w.z); v.yaw = yawTo([w.x, w.z], [player.x, player.z]); v.cloth?.reset(); }
   }

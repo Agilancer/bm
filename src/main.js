@@ -3,6 +3,7 @@ import { setOpeningTerrain } from './core/terrain.js';
 import { GROUPS, GROUP_KEYS } from './core/tripo-monsters.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
+import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
@@ -394,6 +395,8 @@ async function boot(plan, poolSize) {
     },
   });
   game.townUI = townUI;
+  // The gold trail on the ground to the quest you follow (or, in the opening, down the road after Lisandra).
+  game.questTrail = new QuestTrail({ renderer, townUI, town });
   addPart('folk', { save: () => townUI.save(), load: (d) => townUI.load(d) });
   // Out past the town: the seals, the charms, the countries' sounds, and Velscour's Skull (src/ui/lands.js).
   const lands = new Lands({
@@ -1010,6 +1013,7 @@ class GameView {
       this.updateDrops(dt, snap);
       const c = this.overrideCam || this.cam;
       if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
+      this.questTrail?.frame(dt, snap);
       renderDiagnostics.stage = 'renderer';
       this.renderer.frame(c, snap, this.sway, dt);
       renderDiagnostics.presented();
