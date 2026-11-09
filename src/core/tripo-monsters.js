@@ -68,7 +68,7 @@ const DEMONS = ['night_demon_black', 'night_demon_blue', 'night_demon_red'];
 
 export const LAIRS = [
   // The Darkwood, round Bellmourn.
-  { key: 'werewolf', x: -58, z: 74, r: 2, boss: ['werewolf_brown'], n: 0, pal: ['Base'] },
+  { key: 'werewolf', x: 40, z: 160, r: 2, boss: ['werewolf_brown'], n: 0, pal: ['Base'] },
   { key: 'nest', x: -150, z: 150, r: 6, boss: ['flesh_spider_demon'], pick: SPIDERS, n: 3, pal: ['Base', 'Base', 'Bloodsoaked', 'Ashen'] },
   { key: 'goblin_camp', x: -185, z: -105, r: 7, pick: GOBLINS, n: 4, pal: ['Base', 'Base', 'Blighted', 'Ashen'] },
   { key: 'kobold_den', x: 175, z: -160, r: 6, pick: KOBOLDS, n: 4, pal: ['Base', 'Base', 'Infernal', 'Abyssal'] },

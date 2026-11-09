@@ -84,7 +84,7 @@ export class Zombie extends Beast {
       chunks: [], jets: [], alive: new Array(15).fill(true), bit: new Array(15).fill(0), cutMask: 0, limb: { ...LIMB_HP }, crawling: false, headless: false, hobble: false,
       state: STATE.MOVE, stateT: 0, goal: GOAL.WANDER, aggro: false, attack: null, used: false, activeOn: -1, cool: rnd(0.5, 2), pounceCool: rnd(2, 6), senseT: Math.random() * 0.25,
       lastX: opts.spawn[0], lastZ: opts.spawn[1], lastSense: -99, wx: opts.spawn[0], wz: opts.spawn[1], wanderT: rnd(0, 5), moving: false, searchT: 0, rush: 0, orbit: 0, stuckT: 1, stuckX: opts.spawn[0], stuckZ: opts.spawn[1], sideT: 0, sideA: 0,
-      groanT: rnd(2, 8), chasers: 0, stagger: 0, sink: 0, dirtT: 0, stepClock: 0, fadeTime: 0.2, dormant: false, looted: false, champion: false, owner: null, flank: this.id % 3 - 1, pace: rnd(0.88, 1.12), clip: null, t: 0, fade: 1,
+      groanT: rnd(2, 8), chasers: 0, stagger: 0, sink: 0, dirtT: 0, stepClock: 0, fadeTime: 0.2, dormant: false, looted: false, champion: false, owner: null, home: opts.spawn, riseRate: 1, riseLift: 0.5, graveUp: false, flank: this.id % 3 - 1, pace: rnd(0.88, 1.12), clip: null, t: 0, fade: 1,
     });
     this.takes(opts);
     this.bodyRadius = 0.5 * S;
@@ -115,14 +115,28 @@ export class Zombie extends Beast {
   }
 
   // Up out of the ground, at someone's word. Calm, it's a servant, and follows its master about until there's something to do.
-  raiseAt(sim, x, z, owner, calm = false) {
-    this.reset({ ...this.opts, sleeper: false, type: 'shambler', spawn: [x, z], yaw: Math.atan2(sim.player.x - x, sim.player.z - z) });
+  // (A body lying where it fell just gets up off the ground. Any other comes up out of it.)
+  raiseAt(sim, x, z, owner, calm = false, type = 'shambler') {
+    const lying = this.dead && !this.dormant && Math.hypot(this.x - x, this.z - z) < 1;
+    this.reset({ ...this.opts, sleeper: false, type, spawn: [x, z], yaw: Math.atan2(sim.player.x - x, sim.player.z - z) });
     this.owner = owner;
     this.y = sim.world.height(x, z);
-    this.state = STATE.RISE; this.stateT = 0; this.sink = -0.4;
-    this.setClip(this.riseClip); this.fade = 1;
+    this.rise(sim, lying);
     if (!calm) { this.aggro = true; this.goal = GOAL.CHASE; this.lastX = sim.player.x; this.lastZ = sim.player.z; this.lastSense = sim.time; }
-    sim.event(EV.DIRT, x, this.y, z, 1.5);
+  }
+
+  // Every body that comes into the world outside the catacombs comes up out of the earth. It starts a body's depth down and
+  // claws its way up as it gets to its feet, slower than the clip runs on its own, with the ground breaking round it the whole
+  // way. (Casters have no getting-up clip: they come up standing, out of a deeper hole.)
+  rise(sim, shallow = false) {
+    const caster = this.riseClip === this.idleClip, deep = (shallow ? 0.4 : caster ? 1.9 : 1.15) * this.scale;
+    this.state = STATE.RISE; this.stateT = 0;
+    this.setClip(this.riseClip); this.t = 0; this.fade = 1;
+    this.riseRate = shallow || caster ? 1 : 0.55;
+    this.sink = -deep;
+    this.riseLift = shallow ? 0.5 : deep / (this.rig.clips[this.riseClip].dur / this.riseRate * 0.8);
+    this.dirtT = 0;
+    sim.event(EV.DIRT, this.x, this.y, this.z, shallow ? 1.5 : 2.2);
   }
 
   // Blown apart: nothing of it gets up again.
@@ -265,9 +279,10 @@ export class Zombie extends Beast {
     this.setClipOver(pick(this.hitClips), 0.08);
   }
 
-  // A shield in the face knocks it off its stride, whatever it was doing, unless it's on the ground.
-  reel(sim, seconds) {
-    this.onHit(sim, 'bash', sim.player.x, sim.player.z);
+  // A shield in the face knocks it off its stride, whatever it was doing, unless it's on the ground. by: who did it, if
+  // not the player (one of the other Tessariels), so it turns on them and not on you.
+  reel(sim, seconds, by = null) {
+    this.onHit(sim, 'bash', by ? by.x : sim.player.x, by ? by.z : sim.player.z, 0, by);
     if (this.crawling || this.state === STATE.RISE || this.state === STATE.PLAYDEAD || this.state === STATE.DEAD) return;
     this.state = STATE.STAGGER; this.stateT = 0; this.stagger = seconds;
     this.setClipOver(pick(this.hitClips), 0.08);
@@ -414,12 +429,12 @@ export class Zombie extends Beast {
   thinkRise(dt, sim, p, d) {
     this.halt(dt);
     const c = this.rig.clips[this.clip];
-    this.t += dt;
-    this.sink = Math.min(0, this.sink + dt * 0.5);
+    this.t += dt * this.riseRate;
+    this.sink = Math.min(0, this.sink + dt * this.riseLift);
     this.dirtT -= dt;
-    if (this.stateT < 1.6 && this.dirtT <= 0 && this.opts.summoned !== false) { this.dirtT = 0.14; sim.event(EV.DIRT, this.x, this.y, this.z, 0.3); }
+    if ((this.stateT < 1.6 || this.sink < -0.05) && this.dirtT <= 0 && this.opts.summoned !== false) { this.dirtT = 0.14; sim.event(EV.DIRT, this.x, this.y, this.z, this.sink < -0.3 ? 0.5 : 0.3); }
     if (this.t >= c.dur) {
-      this.sink = 0; this.hostile = true;
+      this.sink = 0; this.hostile = true; this.riseRate = 1; this.riseLift = 0.5;
       this.setState(STATE.MOVE); this.setClip(this.idleClip);
       if (d < 28 && this.aggro) this.goal = GOAL.CHASE;
     }
@@ -547,7 +562,7 @@ export class Zombie extends Beast {
       // A servant's home is wherever its master has got to.
       const master = this.owner && !this.owner.dead ? [this.owner.x, this.owner.z] : null;
       if (master) { this.wanderT = rnd(2, 4); this.moving = true; }
-      const home = master || this.opts.spawn;
+      const home = master || this.home;
       for (let i = 0; i < 6; i++) {
         this.wx = home[0] + rnd(-6, 6); this.wz = home[1] + rnd(-6, 6);
         if (!sim.world.inside(this.wx, this.wz, 0.5)) break;
@@ -1181,15 +1196,15 @@ export function raiseZombie(sim, x, z, owner, calm = false) {
 
 // ---- who's out there ----------------------------------------------------------------------------------------
 
-// Where the first bodies stand: scattered over the fields round the village, a good way from it.
-function fieldSpot(i, world) {
-  for (let tries = 0; tries < 24; tries++) {
-    // In fours, out in the woods: none in the town, none on the ground east of it out to the church and on past it, none where you start.
-    const g = Math.floor(i / 4), a = (g + tries * 0.37) * 2.399963 + (i % 4) * 0.05, r = 82 + ((g * 23 + tries * 11) % 90) + (i % 4) * 2;
-    const x = Math.sin(a) * r, z = Math.cos(a) * r;
-    if (!world.inside(x, z, 0.8) && Math.hypot(x - 7.5, z - 72) > 95 && !inTown(x, z, 10) && !(x > 40 && Math.abs(z) < 45)) return [x, z];
-  }
-  return [-Math.abs(Math.sin(i)) * 90, Math.cos(i) * 90];
+// Where the woods' dead are buried: four old burial grounds out in the trees, three to each, 40 m and more off the roads and
+// 70 m and more from the town. By the necromancer's post in the west woods, by the plague wood, in the hill woods by the fire
+// wizard's, and in the pines south-west of where you start. (src/core/heroes.js PLACES sends the other Tessariels to them.)
+const GRAVEYARDS = [[-128, -90], [100, -128], [-170, 70], [-62, 160]];
+const GRAVE_ROW = [[0, 0], [2.4, 0.9], [-1.2, 2.6]];
+function graveSpot(i, world) {
+  const [cx, cz] = GRAVEYARDS[Math.floor(i / 3) % GRAVEYARDS.length], [ox, oz] = GRAVE_ROW[i % 3];
+  for (let t = 0; t < 8; t++) if (!world.inside(cx + ox + t * 1.3, cz + oz, 0.8)) return [cx + ox + t * 1.3, cz + oz];
+  return [cx + ox, cz + oz];
 }
 
 // ---- the catacombs -------------------------------------------------------------------------------------------
@@ -1278,11 +1293,40 @@ function standPack(sim, b, cx, cz) {
   huntFrom(sim, b, x, z, Math.random() < 0.6 ? 'runner' : 'shambler');
 }
 
+// Up out of the ground at (x, z), and after you. (Nothing just appears: Zombie.rise.)
 function huntFrom(sim, b, x, z, type) {
   const p = sim.player;
   b.reset({ ...b.opts, sleeper: false, type, spawn: [x, z], yaw: Math.atan2(p.x - x, p.z - z) });
   b.y = sim.world.height(x, z);
   b.aggro = true; b.hostile = true; b.goal = GOAL.HUNT; b.lastX = p.x; b.lastZ = p.z; b.lastSense = sim.time;
+  b.rise(sim);
+}
+
+// Graves' own dead are the last the packs call on, so a grave you come to still has someone in it.
+const graveLast = (a, b) => (a.opts.grave ? 1 : 0) - (b.opts.grave ? 1 : 0);
+
+// ---- the graves ----------------------------------------------------------------------------------------------
+// Half the woods' dead lie in graves out in the trees (graveSpot), and come up out of them when someone living comes by: after
+// you, or, for one of the other Tessariels, standing about for them to find. One at a time, so a grave of four breaks open in turn.
+// A body that's up and gone (to a pack, to a necromancer) leaves its grave empty until it's back in the ground.
+const GRAVE_WAKE = 22, GRAVE_HERO = 16;
+
+export function stepGraves(sim) {
+  if (sim.time < (sim.graveAt || 0)) return;
+  sim.graveAt = sim.time + 0.4;
+  const p = sim.player;
+  for (const k of sim.knights) {
+    const g = k.opts?.grave;
+    if (!g || !(k instanceof Zombie) || !k.dormant || k.graveUp || heroBusy(k, sim)) continue;
+    let hero = null;
+    const you = !p.dead && Math.hypot(p.x - g[0], p.z - g[1]) < GRAVE_WAKE;
+    if (!you) hero = sim.heroes.find((h) => h.active && !h.dead && Math.hypot(h.x - g[0], h.z - g[1]) < GRAVE_HERO);
+    if (!you && !hero) continue;
+    k.raiseAt(sim, g[0], g[1], null, !you, k.opts.type);
+    if (hero) k.yaw = Math.atan2(hero.x - g[0], hero.z - g[1]);
+    k.graveUp = true;
+    return;
+  }
 }
 
 export function stepWoods(sim) {
@@ -1308,7 +1352,7 @@ export function stepWoods(sim) {
   }
   if (!found) return;
   const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 60));
-  const bodies = list.filter(free).slice(0, Math.min(12, 6 + Math.floor(out / 60)));
+  const bodies = list.filter(free).sort(graveLast).slice(0, Math.min(12, 6 + Math.floor(out / 60)));
   if (bodies.length < 3) return;
   const first = Math.ceil(bodies.length / 2);
   sim.packN = (sim.packN || 0) + 1;
@@ -1332,7 +1376,7 @@ export function stepWoods(sim) {
 // you. Returns them, so the story knows when they're down.
 export function ambush(sim, cx, cz, n) {
   const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || k.dead || !k.aggro);
-  const bodies = sim.knights.filter(free).slice(0, n);
+  const bodies = sim.knights.filter(free).sort(graveLast).slice(0, n);
   bodies.forEach((b, i) => {
     const a = i * 2.4 + rnd(-0.4, 0.4), r = rnd(1.5, 4);
     let x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r;
@@ -1365,18 +1409,19 @@ export async function addUndead(sim, base) {
       if (b.model === 'zombie_ogre') {
         sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-72, -78] : churchAt(28, -64), yaw: i * 2, hp: 130, limbs: 2.4, dmg: 2.2, type: 'runner' }));
       } else if (b.model === 'necromancer') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-98, 12], yaw: 1.4, hp: 90, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-150, -75], yaw: 1.4, hp: 90, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7 }));
       } else if (b.model === 'zombie_necromancer') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: churchAt(-8, -72), yaw: -1.7, hp: 90, limbs: 1.8, role: 'plaguebearer', boltElem: ELEM.POISON, lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: churchAt(-8, -100), yaw: -1.7, hp: 90, limbs: 1.8, role: 'plaguebearer', boltElem: ELEM.POISON, lootKind: 7 }));
       } else if (b.model === 'evil_wizard') {
-        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: i ? [-88, 70] : [26, -108], yaw: i ? 2.2 : -0.4, hp: 80, limbs: 1.8, role: 'wizard', boltElem: i ? ELEM.FIRE : ELEM.ARCANE, lootKind: 7 }));
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: i ? [-160, 60] : [50, -128], yaw: i ? 2.2 : -0.4, hp: 80, limbs: 1.8, role: 'wizard', boltElem: i ? ELEM.FIRE : ELEM.ARCANE, lootKind: 7 }));
       } else {
-        // Half stand in the fields from the start. The rest are in the ground, for the necromancers to call on.
-        const sleeper = i >= 2;
-        const r = (spot * 0.381966) % 1, type = sleeper ? 'shambler' : r < 0.08 ? 'lurker' : r < 0.4 ? 'runner' : 'shambler';
-        const at = sleeper ? [0, 0] : fieldSpot(spot, sim.world);
-        if (!sleeper) spot++;
-        sim.knights.push(new Zombie(id++, 5, rig, { model: b.model, scale: 1, spawn: at, yaw: spot * 1.7, hp: 34, type, sleeper }));
+        // All of them start in the ground. Half in graves out in the woods (stepGraves); the rest anywhere, for the packs and the
+        // necromancers to call on.
+        const buried = i < 2;
+        const r = (spot * 0.381966) % 1, type = !buried ? 'shambler' : r < 0.08 ? 'lurker' : r < 0.4 ? 'runner' : 'shambler';
+        const at = buried ? graveSpot(spot, sim.world) : [0, 0];
+        if (buried) spot++;
+        sim.knights.push(new Zombie(id++, 5, rig, { model: b.model, scale: 1, spawn: at, yaw: spot * 1.7, hp: 34, type, sleeper: true, grave: buried ? at : null }));
       }
     }
   });

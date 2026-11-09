@@ -26,6 +26,8 @@ const VIEW = 170;                // past this from the player a hero isn't drawn
 const RESPAWN = [150, 300];      // seconds before something a hero killed stands again, MMO-style
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+// Gestures the whole body makes: never begun on the move, and stopped if the hero sets off.
+const WHOLE_BODY = new Set(['dance', 'sit', 'kneel', 'bow', 'hug', 'defeat', 'cry', 'warm', 'sing']);
 
 // What a monster is, to a hero.
 export function mobKind(m) {
@@ -67,16 +69,27 @@ const BLOWS = {
 const BLOW_MOVE = { lancer: 'lance_thrust', archer: 'aimed_shot', rogue: 'flurry', ninja: 'ninja_flurry', dragoon: 'spear_combo', boomerang: 'throw', paladin: null, bard: null };
 
 // Each class's special moves: how often, and what they need. The words name them by these keys (class_skill, extra).
+// The first one ready that fits is used, so each list runs in order of what the class reaches for first. They follow how
+// the classes play in Velscour (the isometric game): the paladin's hammers spiral round him as his main attack, the
+// dragoon leaps again and again and then plants a ring of spears, the archer keeps her distance and rains arrows.
+// crowd: that many standing near the foe (orUndead: or the foe is one of the dead). after: only once the class's
+// rhythm says so (the dragoon's barrage, after so many leaps).
 export const SKILLS = {
-  paladin: [{ key: 'hammer_throw', cd: 7, range: [3, 16] }, { key: 'blessed_hammers', cd: 14, range: [0, 5], crowd: 2 }, { key: 'consecration', cd: 18, range: [0, 4], undead: true }, { key: 'holy_light', cd: 9, heal: true }],
-  lancer: [{ key: 'charge', cd: 9, range: [5, 14] }, { key: 'shield_wall', cd: 16, range: [0, 6], crowd: 3 }],
-  archer: [{ key: 'volley', cd: 11, range: [6, 20], crowd: 2 }],
-  rogue: [{ key: 'vanish', cd: 13, range: [0, 8] }],
-  ninja: [{ key: 'throwing_stars', cd: 6, range: [4, 15] }, { key: 'shadow_step', cd: 9, range: [4, 14] }],
-  dragoon: [{ key: 'jump', cd: 13, range: [3, 14] }],
-  boomerang: [{ key: 'double_throw', cd: 10, range: [4, 13] }],
+  paladin: [{ key: 'blessed_hammers', cd: 4, range: [0, 3] }, { key: 'hammer_throw', cd: 7, range: [3, 16] }, { key: 'smite', cd: 6, range: [0, 1.6] }, { key: 'consecration', cd: 15, range: [0, 3.5], crowd: 2, orUndead: true }, { key: 'holy_light', cd: 9, heal: true }],
+  lancer: [{ key: 'charge', cd: 8, range: [4, 9] }, { key: 'shield_wall', cd: 16, range: [0, 6], crowd: 3 }, { key: 'shield_bash', cd: 7, range: [0, 1.6] }],
+  archer: [{ key: 'rain_of_arrows', cd: 14, range: [5, 20], crowd: 2 }, { key: 'volley', cd: 9, range: [4, 20], crowd: 2 }, { key: 'strafe', cd: 5, range: [2, 14] }],
+  rogue: [{ key: 'vanish', cd: 13, range: [0, 8] }, { key: 'flurry', cd: 5, range: [0, 1.4] }],
+  ninja: [{ key: 'shadow_step', cd: 9, range: [4, 9.7] }, { key: 'leaping_kick', cd: 7, range: [2.5, 7] }, { key: 'throwing_stars', cd: 6, range: [4, 15] }, { key: 'ninja_flurry', cd: 6, range: [0, 1.5] }],
+  dragoon: [{ key: 'spear_barrage', cd: 8, range: [0, 2.6], after: true }, { key: 'jump', cd: 2.6, range: [0, 12] }],
+  boomerang: [{ key: 'double_throw', cd: 10, range: [3, 8] }],
   bard: [{ key: 'war_song', cd: 30, song: true }, { key: 'marching_song', cd: 40, song: true, travel: true }, { key: 'mending_song', cd: 26, song: true, heal: true }],
 };
+// Leaps and dashes: how a class flies at its foe (see Hero.leap). T: seconds in the air. apex: metres up. r: the landing's reach.
+const LEAPS = {
+  jump: { T: 0.8, apex: 3, r: 2, dmg: 14, elem: ELEM.SPIRIT, lance: 1.7, air: 'NinjaJump_Idle_Loop' },
+  leaping_kick: { T: 0.6, apex: 2.2, r: 2.7, dmg: 12, elem: ELEM.SPIRIT, air: 'LP_front_kick_02', airRate: 1.6 },
+};
+const BLEED = 3;                 // seconds a bleeding cut runs, at 30% of the blow each second (Velscour's)
 
 // ---- the body -------------------------------------------------------------------------------------------------------
 
@@ -125,7 +138,8 @@ export class Hero extends Knight {
       task: null, goal: null, party: null, foe: null, swing: null, hold: 0, holdFace: null, gestureT: 0, idleT: rand(2, 12),
       hidden: false, below: 0, ghostT: 0, surf: null, air: 0, airV: 0, jump: null, buff: null, buffT: 0, hurtSay: false,
       kills: 0, bag: 0, xp: 0, stuckT: 0, lastX: this.x, lastZ: this.z, meetT: rand(10, 40), lastSay: -99, aimT: 0, draw: 0,
-      shotCd: 0, animTick: 0, losT: 0, clear: true, fieldAt: null, vanishT: 0, playerSeen: false, helpT: 0, visible: true, animT: 0, sitting: false,
+      shotCd: 0, animTick: 0, losT: 0, clear: true, fieldAt: null, vanishT: 0, playerSeen: false, helpT: 0, visible: true, animT: 0, sitting: false, talkUntil: 0,
+      iframesT: 0, guardT: 0, kiteT: 0, charge: null, leaps: 0, leapGoal: 3 + Math.floor(Math.random() * 4),
     });
     this.hostile = false;
   }
@@ -141,15 +155,21 @@ export class Hero extends Knight {
 
   // A hit from a monster (src/sim/undead.js and the beasts call the player's damage(); a hero answers the same way).
   damage(sim, amount, fromX, fromZ, knock = 0) {
-    if (this.dead || !this.active || this.surf || this.iframes) return false;
+    // (Untouchable for a moment in the air of a leap, or through a dash: Velscour's heroes are.)
+    if (this.dead || !this.active || this.surf || this.iframes || this.iframesT > 0) return false;
     // Plate, mail or leather: a lancer shrugs off what a rogue can't. A raised shield takes most of it from the front.
     const armor = { lancer: 0.6, paladin: 0.7, dragoon: 0.8 }[this.person.cls] ?? 0.9;
     const front = Math.abs(wrapAngle(Math.atan2(fromX - this.x, fromZ - this.z) - this.faceYaw)) < 1.1;
-    const guard = this.shieldUp > 0.6 && front ? 0.25 : 1;
+    // A shield wall (the lancer's) turns most of it from any side, for a few seconds.
+    const guard = (this.shieldUp > 0.6 && front ? 0.25 : 1) * (this.guardT > 0 ? 0.4 : 1);
     this.hp -= amount * armor * guard * (this.party ? 0.8 : 1);
     this.lastHitBy = { x: fromX, z: fromZ, t: sim.time };
     if (knock > 0) { const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1; this.knockX = dx / L; this.knockZ = dz / L; this.knock = Math.min(knock, 5); }
-    if (!this.swing && !this.action) this.play(Math.random() < 0.5 ? 'L_HitBody' : 'Hit_Chest', 1.4, 'upper', 0.05);
+    // Thrown back, the whole body staggers with it (the legs never run on the spot while the hips slide); a plain hit is in the chest.
+    if (knock > 1.5 && this.bank.clips.Hit_Knockback && !this.surf && !this.jump) {
+      if (this.gesture) this.gesture = null;
+      this.swing = null; this.speed = 0; this.play('Hit_Knockback', 1.05, 'full', 0.06);
+    } else if (!this.swing && !this.action) this.play(Math.random() < 0.5 ? 'L_HitBody' : 'Hit_Chest', 1.4, 'upper', 0.05);
     if (!this.hurtSay && this.hp < this.maxHp * 0.35) { this.hurtSay = true; this.say(sim, 'hunt_low_health'); }
     if (this.hp <= 0) this.die(sim);
     return true;
@@ -184,6 +204,7 @@ export class Hero extends Knight {
     this.visible = this.active && this.near < VIEW;
     for (const s of this.skills) s.t -= dt;
     this.shotCd -= dt; this.buffT -= dt; this.gestureT -= dt; this.hold -= dt; this.vanishT -= dt;
+    this.iframesT -= dt; this.guardT -= dt; this.kiteT -= dt;
     if (this.buffT <= 0) this.buff = null;
     if (this.dead) return this.updateDead(dt, sim, world);
     if (this.below) return this.updateBelow(dt, sim, world);
@@ -204,6 +225,20 @@ export class Hero extends Knight {
     }
     this.combat = damp(this.combat, this.foe ? 1 : 0, 4, dt);
     this.shieldUp = damp(this.shieldUp, this.shieldTarget, 8, dt);
+    // Anything that moves the body moves the feet: turning on the spot, or being shouldered aside, is walked, never slid.
+    const turned = Math.abs(wrapAngle(this.yaw - (this.prevYaw ?? this.yaw))) / Math.max(dt, 1e-4);
+    this.prevYaw = this.yaw;
+    const shoved = (this.nudged || 0) / Math.max(dt, 1e-4);
+    this.nudged = 0;
+    const free = !this.action && !this.sitting && !this.surf && !this.jump && this.air <= 0;
+    this.turnStep = free && this.speed < 0.4 ? Math.max(turned > 0.9 ? clamp(turned * 0.35, 0.45, 0.9) : 0, shoved > 0.15 ? Math.min(1.4, shoved) : 0) : 0;
+    // Head toward the player when near, as the town's knights do; square on while being talked to.
+    const pdx = p.x - this.x, pdz = p.z - this.z, to = Math.atan2(pdx, pdz);
+    // (Only close by: a street of strangers all turning to stare would be uncanny.)
+    const off = wrapAngle(to - this.faceYaw), near = this.near < (this.talkUntil ? 9 : 4.5) && Math.abs(off) < 1.6 && !this.foe;
+    this.lookYaw = damp(this.lookYaw || 0, near ? clamp(off, -1, 1) : 0, 5, dt);
+    const eyeDrop = (p.y + 1.6) - (this.y + this.rig.height * 0.9);
+    this.lookPitch = damp(this.lookPitch || 0, near ? clamp(Math.atan2(-eyeDrop, Math.max(this.near, 0.5)), -0.5, 0.5) : 0, 5, dt);
     // Far off and unseen there's no body to pose: just think, and walk the map.
     this.animT += dt;
     if (this.visible || this.foe) {
@@ -288,19 +323,24 @@ export class Hero extends Knight {
       if (s.t > 0 || s.song) continue;
       if (s.heal) continue;
       if (s.range && (d - R < s.range[0] || d - R > s.range[1])) continue;
-      if (s.crowd && world.crowd(m.x, m.z, 5) < s.crowd) continue;
+      if (s.crowd && world.crowd(m.x, m.z, 5) < s.crowd && !(s.orUndead && m instanceof Zombie)) continue;
       if (s.undead && !(m instanceof Zombie)) continue;
+      // The dragoon's rhythm: leap, and leap again, and after so many leaps the barrage.
+      if (s.after && this.leaps < this.leapGoal) continue;
+      if (s.key === 'jump' && this.leaps >= this.leapGoal && d - R < 2.6) continue;
       if (this.r() < 0.6) { s.t = s.cd * rand(0.9, 1.3); this.skill(sim, s.key, m); return; }
     }
     if (this.cls.ranged) {
-      // Keep the ground between: back off from what comes close, and shoot from where it can't reach.
-      const want = this.cls.range * 0.7;
-      if (d < 5 && this.r() < 0.02) this.goal = { x: this.x - dx / d * 6, z: this.z - dz / d * 6, speed: 4.2, face: to };
+      // Keep the ground between: step off from what comes close (between shots), and shoot from where it can't reach.
+      const want = this.cls.want ?? this.cls.range * 0.7;
+      if (this.kiteT > 0) { /* still stepping */ }
+      else if (this.shotCd > 0 && this.kite(sim, world, m)) { /* a step chosen */ }
       else if (d > this.cls.range) this.goal = { x: m.x - dx / d * want, z: m.z - dz / d * want, speed: 3.6, face: to };
       else this.goal = null;
       if (d < 2.2) { if (this.shotCd <= 0) this.blow(sim, m); return; }
-      if (d <= this.cls.range && this.shotCd <= 0) {
+      if (d <= this.cls.range && this.shotCd <= 0 && this.kiteT <= 0) {
         if (this.style === 'bow') this.shoot(sim, m);
+        else if (this.person.cls === 'bard') this.pluck(sim, m);
         else this.throwBoomerang(sim, m, 0);
       }
       return;
@@ -312,18 +352,85 @@ export class Hero extends Knight {
     this.shieldTarget = this.style === 'lance' && d < 4 ? 1 : 0;
   }
 
-  // An ordinary blow, landing at its marks in the clip on whatever's in reach in front.
+  // A step away, Velscour's ranger's way: only when it's needed (a pack at the elbow, something that bites in reach, or
+  // hurt with anything near), 2.5 m to the best of ten spots: far from them all and not into a wall. Kept to for a moment.
+  kite(sim, world, m) {
+    const near = [];
+    let close = 0, biter = false;
+    for (const k of world.targets) {
+      if (!fightable(k)) continue;
+      const dd = Math.hypot(k.x - this.x, k.z - this.z) - radiusOf(k);
+      if (dd > 14) continue;
+      near.push(k);
+      if (dd < 2.5) close++;
+      if (dd < 3.1 && !(k instanceof Caster)) biter = true;
+    }
+    const hurt = this.hp < this.maxHp * 0.5 && near.some((k) => Math.hypot(k.x - this.x, k.z - this.z) < 5);
+    if (!(close >= 3 || biter || hurt)) return false;
+    let best = null, bs = -Infinity;
+    const a0 = this.r() * 6.283;
+    for (let i = 0; i < 10; i++) {
+      const a = a0 + i * 0.6283, ux = Math.sin(a), uz = Math.cos(a);
+      const room = sim.world.clearance(this.x, this.z, ux, uz, 2.5, 0.45);
+      if (room < 1.4) continue;
+      const x = this.x + ux * room, z = this.z + uz * room;
+      if (floorAt(x, z) !== null) continue;
+      let sc = 0.6 * room;
+      for (const k of near) sc += Math.min(7, Math.hypot(k.x - x, k.z - z));
+      if (sc > bs) { bs = sc; best = [x, z]; }
+    }
+    if (!best) return false;
+    this.goal = { x: best[0], z: best[1], speed: 4.6, face: Math.atan2(m.x - this.x, m.z - this.z), stop: 0.25 };
+    this.kiteT = 0.45;
+    if (this.person.cls === 'archer' && this.r() < 0.1) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf('kite'));
+    return true;
+  }
+
+  // An ordinary blow, landing at its marks in the clip on whatever's in reach in front. A lance or a spear thrusts down a
+  // line and takes all of it (with a flash of the lance, as Velscour's lancers and dragoons do); a rogue's knife bites
+  // deeper in a back.
   blow(sim, m) {
     const b = pick(this.blows);
     const speed = 1 + (this.buff?.dmg ? 0.1 : 0);
     const move = BLOW_MOVE[this.person.cls];
     if (move && this.r() < 0.06) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf(move));
+    const thrust = (this.style === 'lance' || this.style === 'spear') && b.clip !== 'L_ShieldJab' && b.clip !== 'L_Chop';
     this.startSwing(b.clip, b.rate * speed, b.hit, (i) => {
       const lvl = 1 + this.person.level * 0.035;
-      this.strikeAround(sim, b.reach, 1.0, b.dmg * lvl * (this.buff?.dmg || 1), b.knock || 0, 1);
+      let dmg = b.dmg * lvl * (this.buff?.dmg || 1);
+      if (this.person.cls === 'rogue') dmg *= this.backstab(sim, m);
+      if (thrust) this.thrust(sim, b.reach, dmg, b.knock || 0);
+      else this.strikeAround(sim, b.reach, 1.0, dmg, b.knock || 0, 1);
     }, { lunge: 2.2 });
     this.shotCd = rand(0.25, 0.7);
   }
+
+  // The lance's flash down the thrust, and everything on that line takes it.
+  thrust(sim, reach, dmg, knock) {
+    const lancer = this.person.cls === 'lancer', elem = lancer ? ELEM.STORM : ELEM.SPIRIT;
+    const ax = Math.sin(this.yaw), az = Math.cos(this.yaw), len = reach + 0.7;
+    if (this.fxOk()) {
+      const h = this.handPos('r'), wd = (lancer ? 0.06 : 0.04) + 0.005 * Math.min(20, this.person.level);
+      sim.casting.burst(FX.BEAM, elem, h[0], h[1], h[2], wd, wd * 0.5, 0.2, { ax, ay: 0, az, len, light: 6, lightR: 3, extra: wd * 0.3 });
+      sim.casting.burst(FX.FLARE, elem, h[0] + ax * len, h[1], h[2] + az * len, 0.3, 0.08, 0.16);
+    }
+    const hit = sim.heroWorld.line(this, this.x, this.z, this.yaw, reach + 0.3, 0.45, dmg, { kind: 'puncture', poise: 30, knock });
+    if (hit.length) sim.event(EV.WHOOSH, this.x, this.y + 1.2, this.z);
+  }
+
+  // From behind (within 60 degrees of its back), a blow counts nearly double.
+  backstab(sim, m) {
+    if (!m || Math.abs(wrapAngle(Math.atan2(this.x - m.x, this.z - m.z) - (m.yaw ?? 0))) < 2.1) return 1;
+    if (this.fxOk()) sim.casting.burst(FX.FLARE, ELEM.DRAIN, m.x, m.y + 1.2, m.z, 0.45, 0.1, 0.25, { light: 8, lightR: 4 });
+    if (this.r() < 0.12 && sim.time - this.lastSay > 6) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf('backstab'));
+    return 1.8;
+  }
+
+  // Effects only where someone might see them: they share the frame's shapes with the player's spells.
+  fxOk() { return this.visible && this.near < 80; }
+  ahead(d, up = 1.2) { return [this.x + Math.sin(this.yaw) * d, this.y + up, this.z + Math.cos(this.yaw) * d]; }
+  // Somewhere a body can stand near a point: out of walls and boxes.
+  clearSpot(sim, x, z) { const o = [x, 0, z]; sim.world.resolve(o, 0.42, sim.world.height(x, z) + 0.2); return [o[0], o[2]]; }
 
   startSwing(clip, rate, hits, fn, o = {}) {
     if (!this.bank.clips[clip]) clip = 'Sword_Regular_A';
@@ -341,47 +448,70 @@ export class Hero extends Knight {
       const v = s.lunge * (this.foe && Math.hypot(this.foe.x - this.x, this.foe.z - this.z) < 1.4 ? 0 : 1);
       this.vx = Math.sin(this.yaw) * v; this.vz = Math.cos(this.yaw) * v;
     }
-    // The lancer's charge: a long run behind the board, through what's in the way.
+    // The lancer's charge: a short, fast run behind the board and the couched lance, through what's in the way. Each thing
+    // on the line is run through once and thrown aside, and nothing touches him while he runs.
     if (this.charge && s.root) {
-      const v = 11 * Math.sin(Math.min(1, f / 0.15) * Math.PI / 2) * (f > 0.7 ? Math.max(0, (0.95 - f) / 0.25) : 1);
-      this.vx = Math.sin(this.charge.dir) * v; this.vz = Math.cos(this.charge.dir) * v;
-      if (((sim.tick + this.slot) & 7) === 0) sim.event(EV.STEP, this.x, this.y, this.z, 1, 1, this.id);
+      const c = this.charge, v = c.left > 0 ? c.v : 0;
+      c.left -= v * dt;
+      this.vx = Math.sin(c.dir) * v; this.vz = Math.cos(c.dir) * v;
+      if (v) {
+        const rx = Math.cos(c.dir), rz = -Math.sin(c.dir);
+        for (const k of sim.heroWorld.targets) {
+          if (c.hitSet.has(k) || !fightable(k) || Math.hypot(k.x - this.x, k.z - this.z) > 1.3 + radiusOf(k)) continue;
+          c.hitSet.add(k);
+          this.hit(sim, k, 16 * this.power(), 'puncture', 60, 0, { stun: 0.6 });
+          const side = Math.sign((k.x - this.x) * rx + (k.z - this.z) * rz) || 1;
+          if (radiusOf(k) <= 1) sim.casting.shove(k, Math.sin(c.dir) * 4 + rx * side * 5, Math.cos(c.dir) * 4 + rz * side * 5);
+        }
+        if (((sim.tick + this.slot) & 3) === 0) sim.event(EV.STEP, this.x, this.y, this.z, 1, 1, this.id);
+      }
     }
     if (f >= s.end) { this.swing = null; this.charge = null; this.stopAction(0.2); s.after?.(sim); }
   }
 
-  // Everything fightable within reach in front of the hero takes the blow.
-  strikeAround(sim, reach, arc, dmg, knock, most = 1) {
-    let n = 0;
+  // Everything fightable within reach in front of the hero takes the blow (up to `most` of them). Returns what it struck.
+  strikeAround(sim, reach, arc, dmg, knock, most = 1, o = {}) {
+    const struck = [];
     for (const m of sim.heroWorld.targets) {
       if (!fightable(m)) continue;
       const dx = m.x - this.x, dz = m.z - this.z, d = Math.hypot(dx, dz) - radiusOf(m);
       if (d > reach || Math.abs(m.y - this.y) > 2.5) continue;
       if (Math.abs(wrapAngle(Math.atan2(dx, dz) - this.yaw)) > arc) continue;
-      this.hit(sim, m, dmg, 'gash', 25, knock);
-      if (++n >= most) break;
+      if (this.hit(sim, m, dmg, o.kind || 'gash', o.poise ?? 25, knock, o)) struck.push(m);
+      if (struck.length >= most) break;
     }
-    if (n) sim.event(EV.WHOOSH, this.x, this.y + 1.2, this.z);
+    if (struck.length) sim.event(EV.WHOOSH, this.x, this.y + 1.2, this.z);
+    return struck;
   }
 
-  hit(sim, m, dmg, kind = 'gash', poise = 25, knock = 0) {
-    if (!fightable(m)) return;
+  // o: stun (seconds reeling), shove (m/s, out from fromX/fromZ or the hero), bleed (a cut that runs), dot (a tick of
+  // burning or bleeding: no flinch, no sound), quiet (no sound).
+  hit(sim, m, dmg, kind = 'gash', poise = 25, knock = 0, o = {}) {
+    if (!fightable(m)) return false;
     // (Someone else already at it: kept, so the kill can be a rescue or a theft.)
     if (m.heroFoe && m.heroFoe !== this && sim.time - (m.heroFoeT ?? -1e9) < 4) { m.otherFoe = m.heroFoe; m.otherFoeT = sim.time; }
     m.heroFoe = this; m.heroFoeT = sim.time;
     if (m instanceof Knight) {
       // Velscour's guards hold: a party can hold one off and slip by, not cut it down for the player to find gone.
       m.hp = Math.max(m.maxHp * 0.4, m.hp - dmg * 0.5);
-      m.onHit(sim, kind, this.x, this.z, poise, null);
-      return;
+      if (!o.dot) m.onHit(sim, kind, this.x, this.z, poise, null);
+      return true;
     }
-    const was = m.hp;
+    const w = sim.heroWorld, was = m.hp;
     m.hp -= dmg;
     if (m instanceof Zombie) m.seenHp = m.hp;
-    m.onHit?.(sim, kind, this.x, this.z, poise, this);
-    if (knock && m instanceof Zombie && !m.crawling) m.reel?.(sim, 0.4);
-    sim.event(EV.BITE, m.x, m.y + 1.1, m.z, Math.min(1, dmg / 20));
-    if (was > 0 && m.hp <= 0) sim.heroWorld.onKill(this, m);
+    if (!o.dot) m.onHit?.(sim, kind, this.x, this.z, poise, this);
+    if (o.stun) w.stun(m, o.stun, this);
+    else if (knock && m instanceof Zombie && !m.crawling) m.reel?.(sim, 0.4, this);
+    if (o.shove && radiusOf(m) <= 1 && !(m instanceof Gravehart)) {
+      const dx = m.x - (o.fromX ?? this.x), dz = m.z - (o.fromZ ?? this.z), L = Math.hypot(dx, dz) || 1;
+      sim.casting.shove(m, dx / L * o.shove, dz / L * o.shove, o.up || 0);
+    }
+    if (o.bleed) w.bleed(this, m, dmg * 0.3);
+    // The blow heard and seen where it lands (main.js, EV.BITE): steel on bone, or on a shell.
+    if (!o.dot && !o.quiet && Math.hypot(sim.player.x - m.x, sim.player.z - m.z) < 60) sim.event(EV.BITE, m.x, m.y + 1.1, m.z, Math.min(1, dmg / 20), m instanceof Crab ? 0 : 1);
+    if (was > 0 && m.hp <= 0) w.onKill(this, m);
+    return true;
   }
 
   // ---- specials ----
@@ -399,58 +529,121 @@ export class Hero extends Knight {
         break;
       }
       case 'blessed_hammers':
-        this.startSwing('Spell_Simple_Shoot', 1.0, [0.4], () => { w.zones.push({ kind: 'blessed', owner: this, x: this.x, z: this.z, t: 0, life: 4, a0: Math.random() * 6.28, hitT: new Map() }); }, { still: true });
+        // Three blessed hammers spiral out round him and keep turning as he fights on: Velscour's paladin's main attack.
+        this.startSwing('Spell_Simple_Shoot', 1.0, [0.4], () => { w.zones.push({ kind: 'blessed', owner: this, t: 0, life: 2.8, a0: Math.random() * 6.28, hitT: new Map() }); }, { mask: 'upper' });
         break;
+      case 'smite': {
+        // The board (or the maul) in its face, and a ring of light: it reels, and up to three about it are thrown back.
+        const board = this.style === 'sword_board';
+        this.startSwing(board ? 'L_ShieldJab' : 'Sword_Attack', board ? 1.2 : 1.0, [board ? 0.55 : 0.24], () => {
+          this.strikeAround(sim, 1.8, 0.6, 9 * this.power(), 0, 3, { kind: 'bash', poise: 70, stun: 1.1, shove: 6 });
+          if (this.fxOk()) {
+            const f = this.ahead(0.9);
+            sim.casting.burst(FX.RING, ELEM.LIGHT, f[0], f[1], f[2], 0.3, 1.0, 0.3, { ax: Math.sin(this.yaw), ay: 0, az: Math.cos(this.yaw) });
+            sim.casting.burst(FX.FLARE, ELEM.LIGHT, f[0], f[1], f[2], 0.45, 0.1, 0.25, { light: 10, lightR: 5 });
+          }
+        });
+        break;
+      }
       case 'consecration':
-        this.startSwing('LP_2_handed_fancy_spell_casting', 1.4, [0.5], () => { w.zones.push({ kind: 'consecrate', owner: this, x: this.x, z: this.z, y: sim.world.height(this.x, this.z), t: 0, life: 7, r: 4.2 }); }, { still: true, end: 0.8 });
+        // Holy ground where he stands: it burns what stands on it (the dead twice over) and mends his own side. He casts it
+        // with one hand and fights on.
+        this.startSwing('Spell_Simple_Shoot', 0.9, [0.45], () => { w.zones.push({ kind: 'consecrate', owner: this, x: this.x, z: this.z, y: sim.world.height(this.x, this.z), t: 0, life: 7, r: 2.8, tick: 0 }); }, { mask: 'upper' });
         break;
       case 'charge': {
-        // Head down behind the board, a long run through whatever's in the way.
+        // Head down behind the board, lance couched: a short, fast run through whatever's in the way.
         const to = Math.atan2(m.x - this.x, m.z - this.z);
         this.yaw = this.faceYaw = to;
         this.shieldTarget = 1;
-        this.startSwing('Sword_Dash', 0.8, [0.1, 0.25, 0.4, 0.55], () => {
-          for (const k of w.targets) {
-            if (!fightable(k) || Math.hypot(k.x - this.x, k.z - this.z) > 2 + radiusOf(k)) continue;
-            this.hit(sim, k, 12 * this.power(), 'puncture', 60, 6);
-          }
-        }, { root: true });
-        this.charge = { t: 0, dir: to };
+        const len = Math.min(8.5, Math.hypot(m.x - this.x, m.z - this.z) + 1.4), T = len / 15;
+        this.startSwing('Shield_Dash', 1.1 / (T + 0.3), [], () => {}, { root: true });
+        this.charge = { dir: to, left: len, v: 15, hitSet: new Set() };
+        this.iframesT = T + 0.05;
         break;
       }
       case 'shield_wall':
+        // Behind the board for a few seconds, and little gets through it from any side.
         this.shieldTarget = 1;
-        this.startSwing('Idle_Shield_Loop', 1, [0.5], () => { this.buff = { guard: 1 }; this.buffT = 4; }, { still: true, end: 0.6, mask: 'upper' });
+        this.startSwing('Idle_Shield_Loop', 1, [0.5], () => { this.guardT = 4; }, { still: true, end: 0.6, mask: 'upper' });
+        break;
+      case 'shield_bash':
+        this.startSwing('L_ShieldJab', 1.2, [0.55], () => {
+          this.strikeAround(sim, 1.8, 0.6, 8 * this.power(), 0, 3, { kind: 'bash', poise: 70, stun: 1.1, shove: 6 });
+          if (this.fxOk()) { const f = this.ahead(0.8); sim.casting.burst(FX.RING, ELEM.STORM, f[0], f[1], f[2], 0.3, 0.9, 0.25, { ax: Math.sin(this.yaw), ay: 0, az: Math.cos(this.yaw) }); }
+        });
         break;
       case 'volley':
+        // Five arrows in a wide fan.
         this.aimT = 0;
         this.startSwing('Spell_Simple_Shoot', 0.9, [0.55], () => {
-          for (let i = -2; i <= 2; i++) this.loose(sim, m, i * 0.12, 9 * this.power());
+          for (let i = -2; i <= 2; i++) this.loose(sim, m, i * 0.185, 9 * this.power());
         }, { still: true, mask: 'upper' });
         this.draw = 1;
         break;
+      case 'strafe':
+        // Eight arrows as fast as the string will go, anywhere near it.
+        this.aimT = 0;
+        this.startSwing('Spell_Simple_Shoot', 1.6, [0.55], () => {
+          for (let i = 0; i < 8; i++) w.later(i * 0.035, () => { if (!this.dead && fightable(m)) this.loose(sim, m, rand(-0.54, 0.54), 6 * this.power(), i % 2 === 1); });
+        }, { still: true, mask: 'upper' });
+        this.draw = 1;
+        break;
+      case 'rain_of_arrows': {
+        // One arrow straight up, a ring on the ground where it will come down, and then the downpour.
+        const cx = m.x, cz = m.z, cy = sim.world.height(cx, cz);
+        this.aimT = 0;
+        this.startSwing('Spell_Simple_Shoot', 0.9, [0.55], () => {
+          const h = this.handPos('l');
+          w.shots.push({ kind: 'arrow', owner: this, x: h[0], y: h[1], z: h[2], vx: 0, vy: 32, vz: 0, t: 0, dmg: 0, elem: this.stringElem, up: true });
+          sim.event(EV.WHOOSH, h[0], h[1], h[2]);
+          if (this.fxOk()) sim.casting.burst(FX.RING, this.stringElem, cx, cy + 0.05, cz, 0.5, 3.5, 1.4);
+          w.zones.push({ kind: 'rain', owner: this, x: cx, z: cz, y: cy, r: 3.5, t: -0.5, life: 1.2, n: 20, dropped: 0, elem: this.stringElem });
+        }, { still: true, mask: 'upper' });
+        this.draw = 1;
+        break;
+      }
+      case 'flurry': {
+        // Six quick cuts, every one left bleeding (Velscour's Blade Flurry).
+        const b0 = this.blows.reduce((a, q) => a + q.dmg, 0) / this.blows.length;
+        this.startSwing('LP_box_01', 2.0, [0.14, 0.26, 0.38, 0.5, 0.62, 0.74], (i) => {
+          this.strikeAround(sim, 1.6, 1.0, 0.6 * b0 * this.power() * this.backstab(sim, m), 0, 2, { bleed: true, poise: 15 });
+          if (this.fxOk()) {
+            const f = this.ahead(0.8), k = i % 2 ? 1 : -1;
+            sim.casting.burst(FX.BLADE, ELEM.SPIRIT, f[0], f[1], f[2], 0.05, 0.03, 0.12, { ax: Math.cos(this.yaw) * k * 0.7, ay: 0.7, az: -Math.sin(this.yaw) * k * 0.7, len: 0.7 });
+          }
+        }, { lunge: 1.5 });
+        break;
+      }
       case 'vanish': {
-        // Smoke, and gone; then behind it, and the knife goes in.
+        // Smoke, and gone; then behind it, and the knife goes in. The smoke hangs where they stood.
         w.puff(this.x, this.y + 1, this.z, ELEM.VOID);
+        sim.event(EV.BLINK, this.x, this.y + 1, this.z);
+        w.zones.push({ kind: 'smoke', owner: this, x: this.x, z: this.z, y: this.y, t: 0, life: 4, r: 3.3, seed: Math.random() * 6.28 });
         this.vanishT = 1.1; this.hidden = true;
         w.later(1.1, () => {
           this.hidden = false;
+          if (this.dead || !fightable(m)) return;
           const a = (m.yaw ?? Math.atan2(this.x - m.x, this.z - m.z)) + Math.PI;
-          this.x = m.x + Math.sin(a) * (radiusOf(m) + 0.9); this.z = m.z + Math.cos(a) * (radiusOf(m) + 0.9);
+          [this.x, this.z] = this.clearSpot(sim, m.x + Math.sin(a) * (radiusOf(m) + 0.9), m.z + Math.cos(a) * (radiusOf(m) + 0.9));
           this.y = sim.world.height(this.x, this.z);
           this.yaw = this.faceYaw = Math.atan2(m.x - this.x, m.z - this.z);
           w.puff(this.x, this.y + 1, this.z, ELEM.VOID);
-          this.startSwing('Sword_Regular_C', 1.0, [0.33], () => this.hit(sim, m, 26 * this.power(), 'puncture', 80));
+          sim.event(EV.BLINK, this.x, this.y + 1, this.z);
+          this.startSwing('Sword_Regular_C', 1.0, [0.33], () => this.hit(sim, m, 26 * this.power() * this.backstab(sim, m), 'puncture', 80, 0, { bleed: true }));
         });
         break;
       }
       case 'shadow_step': {
+        // Gone in smoke, and out of the dark behind it with a burst that knocks the breath from all about; then the kick.
         const a = (m.yaw ?? 0) + Math.PI;
-        sim.casting.burst(FX.FLARE, ELEM.ARCANE, this.x, this.y + 1, this.z, 0.2, 0.9, 0.3, { light: 6, lightR: 4 });
-        this.x = m.x + Math.sin(a) * (radiusOf(m) + 1); this.z = m.z + Math.cos(a) * (radiusOf(m) + 1);
+        w.puff(this.x, this.y + 1, this.z, ELEM.VOID);
+        sim.event(EV.BLINK, this.x, this.y + 1, this.z);
+        [this.x, this.z] = this.clearSpot(sim, m.x + Math.sin(a) * (radiusOf(m) + 1), m.z + Math.cos(a) * (radiusOf(m) + 1));
         this.y = sim.world.height(this.x, this.z);
         this.yaw = this.faceYaw = Math.atan2(m.x - this.x, m.z - this.z);
-        sim.casting.burst(FX.FLARE, ELEM.ARCANE, this.x, this.y + 1, this.z, 0.2, 0.9, 0.3, { light: 6, lightR: 4 });
+        sim.event(EV.BLINK, this.x, this.y + 1, this.z);
+        if (this.fxOk()) sim.casting.burst(FX.SHOCK, ELEM.VOID, this.x, this.y + 0.4, this.z, 0.4, 2.5, 0.38, { light: 6, lightR: 4 });
+        w.blast(this, this.x, this.z, this.y, 2.5, 6 * this.power(), { kind: 'bash', poise: 30, skip: m });
         this.startSwing('LP_front_kick_01', 1.15, [0.45], () => this.hit(sim, m, 14 * this.power(), 'gash', 50, 5));
         break;
       }
@@ -463,10 +656,30 @@ export class Hero extends Knight {
           }
         });
         break;
-      case 'jump': {
-        // Up past the treetops, and down on it.
-        this.jump = { t: 0, x0: this.x, z0: this.z, x1: m.x, z1: m.z, phase: 0, foe: m };
-        this.play('NinjaJump_Start', 1.2, 'full', 0.08);
+      case 'ninja_flurry': {
+        // A string of six blows, then the kick, and seven strokes of gold round it (Velscour's Seven-Sided Strike).
+        this.startSwing('LP_box_02', 2.2, [0.12, 0.22, 0.32, 0.42, 0.52, 0.62], () => {
+          const hit = this.strikeAround(sim, 1.6, 1.0, 5 * this.power(), 0, 2, { poise: 15 });
+          if (hit.length && this.fxOk()) { const k = hit[0]; sim.casting.burst(FX.RING, ELEM.SPIRIT, k.x, k.y + 1.1, k.z, 0.3, 0.9, 0.2, { ax: Math.sin(this.yaw), ay: 0, az: Math.cos(this.yaw) }); }
+        }, { lunge: 1.5, end: 0.7, after: () => this.sevenSided(sim, m) });
+        break;
+      }
+      case 'jump': case 'leaping_kick':
+        this.leap(sim, m, LEAPS[key]);
+        break;
+      case 'spear_barrage': {
+        // After the leaps, planted: a ring of spears comes down round it, all at once (Velscour's Thousandfold).
+        this.leaps = 0; this.leapGoal = 3 + Math.floor(this.r() * 4);
+        this.startSwing('Sword_Regular_C', 1.6, [0.33], () => {
+          const cx = m.x, cz = m.z, cy = sim.world.height(cx, cz);
+          w.zones.push({ kind: 'barrage', owner: this, x: cx, z: cz, y: cy, t: 0, life: 1.7, R: 2.9, seed: Math.random() * 6.28 });
+          if (this.fxOk()) sim.casting.burst(FX.RING, ELEM.FROST, cx, cy + 0.05, cz, 0.5, 3.1, 0.6);
+          w.later(0.22, () => {
+            if (this.dead) return;
+            w.blast(this, cx, cz, cy, 2.9, 20 * this.power(), { kind: 'puncture', poise: 80 });
+            sim.event(EV.GROUND, cx, cy, cz);
+          });
+        }, { still: true });
         break;
       }
       case 'double_throw':
@@ -480,6 +693,48 @@ export class Hero extends Knight {
 
   power() { return (1 + this.person.level * 0.035) * (this.buff?.dmg || 1); }
 
+  // The ninja's finisher: the kick, then seven strokes of gold across a circle round the foe, point to point in a
+  // seven-pointed star, and everything inside it reels.
+  sevenSided(sim, m) {
+    if (this.dead || !fightable(m)) return;
+    const w = sim.heroWorld;
+    this.startSwing('LP_front_kick_02', 1.2, [0.45], () => {
+      const cx = m.x, cz = m.z, cy = m.y + 0.7, R = 1.4;
+      if (this.fxOk()) {
+        for (let k = 0; k < 7; k++) {
+          w.later(k * 0.045, () => {
+            const a0 = k * 0.8976, a1 = ((k + 3) % 7) * 0.8976;
+            const x0 = cx + Math.sin(a0) * R, z0 = cz + Math.cos(a0) * R, x1 = cx + Math.sin(a1) * R, z1 = cz + Math.cos(a1) * R;
+            const L = Math.hypot(x1 - x0, z1 - z0);
+            sim.casting.burst(FX.BEAM, ELEM.LIGHT, x0, cy, z0, 0.05, 0.02, 0.14, { ax: (x1 - x0) / L, ay: 0, az: (z1 - z0) / L, len: L, light: 6, lightR: 4, extra: 0.02 });
+          });
+        }
+      }
+      w.later(0.32, () => {
+        if (this.dead) return;
+        w.blast(this, cx, cz, m.y, 2.8, 12 * this.power(), { kind: 'gash', poise: 60, stun: 1.1, shove: 7 });
+        sim.event(EV.WHOOSH, cx, cy, cz);
+      });
+      if (this.r() < 0.3) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf('ninja_flurry'));
+    });
+  }
+
+  // Up and down on it: the dragoon's jump, again and again, and the ninja's flying kick. Untouchable in the air.
+  leap(sim, m, L) {
+    this.jump = { t: 0, x0: this.x, z0: this.z, x1: m.x, z1: m.z, phase: 0, foe: m, L };
+    this.play('NinjaJump_Start', 2, 'full', 0.06);
+  }
+
+  // A bard's note: plucked, and off after the foe, bending toward it as it flies.
+  pluck(sim, m) {
+    this.startSwing('Spell_Simple_Shoot', 0.9, [0.5], () => {
+      const h = this.handPos('r'), a = Math.atan2(m.x - h[0], m.z - h[2]);
+      sim.heroWorld.shots.push({ kind: 'note', owner: this, x: h[0], y: h[1], z: h[2], vx: Math.sin(a) * 11, vy: 0, vz: Math.cos(a) * 11, t: 0, dmg: 7 * this.power(), foe: m, elem: ELEM.ARCANE });
+      sim.event(EV.WHOOSH, h[0], h[1], h[2]);
+    }, { mask: 'upper' });
+    this.shotCd = rand(0.8, 1.3);
+  }
+
   // An arrow: drawn, the string lit in the archer's colour, and loosed.
   shoot(sim, m) {
     this.draw = 0;
@@ -487,13 +742,13 @@ export class Hero extends Knight {
     this.shotCd = rand(0.7, 1.4);
   }
 
-  loose(sim, m, spread, dmg) {
+  loose(sim, m, spread, dmg, hush = false) {
     const h = this.handPos('l');
     const ty = m.y + (m instanceof Gravehart ? 1.8 : 1.1);
     const a = Math.atan2(m.x - h[0], m.z - h[2]) + spread, d = Math.hypot(m.x - h[0], m.z - h[2]);
     const v = 42, t = d / v;
     sim.heroWorld.shots.push({ kind: 'arrow', owner: this, x: h[0], y: h[1], z: h[2], vx: Math.sin(a) * v, vy: (ty - h[1]) / t + 2.5 * t, vz: Math.cos(a) * v, t: 0, dmg, elem: this.stringElem });
-    sim.event(EV.WHOOSH, h[0], h[1], h[2]);
+    if (!hush) sim.event(EV.WHOOSH, h[0], h[1], h[2]);
     this.draw = 0;
   }
 
@@ -501,7 +756,7 @@ export class Hero extends Knight {
     if (this.flight && this.flight.length >= 2) return;
     this.startSwing('OverhandThrow', 1.15, [0.42], () => {
       const h = this.handPos(hand ? 'l' : 'r');
-      const out = Math.min(14, Math.hypot(m.x - this.x, m.z - this.z) + 2);
+      const out = Math.min(9, Math.hypot(m.x - this.x, m.z - this.z) + 2.5);
       const dir = Math.atan2(m.x - this.x, m.z - this.z);
       (this.flight ||= []).push({ hand, t: 0, dur: 1.5, x0: h[0], y0: h[1], z0: h[2], dir, out, side: hand ? -1 : 1, hitSet: new Set(), dmg: 9 * this.power(), x: h[0], y: h[1], z: h[2] });
     });
@@ -512,46 +767,65 @@ export class Hero extends Knight {
     if (!this.flight) return;
     for (const f of this.flight) {
       f.t += dt;
-      // Out along a curve and back to the hand that threw it.
+      // Out along a curve and back to the hand that threw it, cutting what it passes both ways.
       const u = Math.min(1, f.t / f.dur), a = u * Math.PI * 2;
+      if (u >= 0.5 && !f.back) { f.back = true; f.hitSet.clear(); }
+      const px = f.x, pz = f.z;
       const fwd = Math.sin(a * 0.5) * f.out, side = (1 - Math.cos(a)) * 0.5 * f.out * 0.35 * f.side;
       const h = this.handPos(f.hand ? 'l' : 'r');
       const bx = f.x0 + (h[0] - f.x0) * u, bz = f.z0 + (h[2] - f.z0) * u;
       f.x = bx + Math.sin(f.dir) * fwd + Math.cos(f.dir) * side;
       f.z = bz + Math.cos(f.dir) * fwd - Math.sin(f.dir) * side;
       f.y = f.y0 + (h[1] - f.y0) * u + Math.sin(u * Math.PI) * 0.4;
-      f.spin = (f.spin || 0) + dt * 22;
+      f.spin = (f.spin || 0) + dt * 20;
+      const tx = f.x - px, tz = f.z - pz, tl = Math.hypot(tx, tz);
+      if (tl > 1e-4) { f.tx = tx / tl; f.tz = tz / tl; }
       for (const m of sim.heroWorld.targets) {
         if (!fightable(m) || f.hitSet.has(m) || Math.hypot(m.x - f.x, m.z - f.z) > radiusOf(m) + 0.6 || Math.abs(m.y + 1 - f.y) > 1.6) continue;
         f.hitSet.add(m); this.hit(sim, m, f.dmg, 'gash', 20);
       }
+    }
+    // Caught: a flash at the hand.
+    for (const f of this.flight) {
+      if (f.t < f.dur) continue;
+      const h = this.handPos(f.hand ? 'l' : 'r');
+      if (this.fxOk()) sim.casting.burst(FX.FLARE, ELEM.SPIRIT, h[0], h[1], h[2], 0.05, 0.25, 0.2, { light: 4, lightR: 2 });
+      if (this.foe && this.r() < 0.06 && sim.time - this.lastSay > 8) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf('catch'));
     }
     this.flight = this.flight.filter((f) => f.t < f.dur);
     if (!this.flight.length) this.flight = null;
   }
 
   updateJump(dt, sim) {
-    const j = this.jump;
+    const j = this.jump, L = j.L || LEAPS.jump, w = sim.heroWorld;
     j.t += dt;
-    const T = 1.5;
-    if (j.phase === 0 && j.t > 0.25) { j.phase = 1; j.t = 0; this.play('NinjaJump_Idle_Loop', 1, 'full', 0.1); sim.event(EV.JUMP, this.x, this.y, this.z); }
+    if (j.phase === 0 && j.t > 0.15) { j.phase = 1; j.t = 0; this.play(L.air, L.airRate || 1, 'full', 0.08); sim.event(EV.WHOOSH, this.x, this.y + 1, this.z); }
     if (j.phase === 1) {
-      const u = Math.min(1, j.t / T);
+      const u = Math.min(1, j.t / L.T);
       if (j.foe && fightable(j.foe)) { j.x1 = j.foe.x; j.z1 = j.foe.z; }
-      const ex = j.x1 - Math.sin(Math.atan2(j.x1 - j.x0, j.z1 - j.z0)) * 1.2, ez = j.z1 - Math.cos(Math.atan2(j.x1 - j.x0, j.z1 - j.z0)) * 1.2;
+      const head = Math.atan2(j.x1 - j.x0, j.z1 - j.z0);
+      const ex = j.x1 - Math.sin(head) * 1.2, ez = j.z1 - Math.cos(head) * 1.2;
       this.x = j.x0 + (ex - j.x0) * u; this.z = j.z0 + (ez - j.z0) * u;
-      this.air = Math.sin(u * Math.PI) * 9;
+      this.air = Math.sin(u * Math.PI) * L.apex;
       this.y = sim.world.height(this.x, this.z) + this.air;
       this.vx = 0; this.vz = 0;
+      this.iframesT = 0.1;
+      j.u = u; j.head = head;
       if (u >= 1) {
         j.phase = 2; this.air = 0; this.y = sim.world.height(this.x, this.z);
-        this.play('NinjaJump_Land', 1, 'full', 0.05);
-        sim.casting.burst(FX.SHOCK, ELEM.STONE, this.x, this.y + 0.2, this.z, 0.5, 3.5, 0.45, { light: 10, lightR: 6 });
-        sim.casting.burst(FX.RING, ELEM.STONE, this.x, this.y + 0.05, this.z, 0.5, 4, 0.6);
-        sim.event(EV.LAND, this.x, this.y, this.z, 1);
-        for (const m of sim.heroWorld.targets) if (fightable(m) && Math.hypot(m.x - this.x, m.z - this.z) < 3.5 + radiusOf(m)) this.hit(sim, m, 22 * this.power(), 'puncture', 70, 5);
+        this.play('NinjaJump_Land', 1.6, 'full', 0.05);
+        if (this.fxOk()) {
+          sim.casting.burst(FX.SHOCK, L.elem, this.x, this.y + 0.2, this.z, 0.4, L.r * 1.2, 0.4, { light: 10, lightR: 6 });
+          sim.casting.burst(FX.RING, L.elem, this.x, this.y + 0.05, this.z, 0.4, L.r + 0.5, 0.5);
+        }
+        sim.event(EV.GROUND, this.x, this.y, this.z);
+        const fx = this.x + Math.sin(head) * 0.9, fz = this.z + Math.cos(head) * 0.9;
+        w.blast(this, fx, fz, this.y, L.r, L.dmg * this.power(), { kind: L.lance ? 'puncture' : 'bash', poise: 70, shove: 5 });
+        // The dragoon's lance goes into the ground where he lands, and shatters.
+        if (L.lance) w.zones.push({ kind: 'planted', owner: this, x: fx, z: fz, y: this.y, dir: head, t: 0, life: 0.5, elem: L.elem, len: L.lance });
+        this.leaps++;
       }
-    } else if (j.phase === 2 && j.t > 0.6) { this.jump = null; this.stopAction(0.2); }
+    } else if (j.phase === 2 && j.t > 0.4) { this.jump = null; this.stopAction(0.2); }
   }
 
   // Where a hand is now (the fist's middle).
@@ -660,8 +934,13 @@ export class Hero extends Knight {
       for (const f of this.flight) {
         const o = off + (f.hand ? 16 : 0);
         const c = Math.cos(f.spin), s = Math.sin(f.spin);
-        // Flat, spinning about the up axis: its long axis turns in the ground's plane.
-        out.set([c, 0, -s, 0, s, 0, c, 0, 0, -1, 0, 0, f.x, f.y, f.z, 1], o);
+        // Spinning about its own face, and banked about the way it's flying: nearly on edge as it leaves the hand, laid
+        // nearly flat by the far end of its loop, a little tipped on the way home (as Velscour's rang flies).
+        const u = Math.min(1, f.t / f.dur), k = Math.min(1, u / 0.5), e = k * k * (3 - 2 * k);
+        const bank = (u < 0.5 ? 1.15 - 0.9 * e : 0.22) * f.side;
+        const tx = f.tx ?? Math.sin(f.dir), tz = f.tz ?? Math.cos(f.dir);
+        const a = bankAbout([c, 0, -s], tx, tz, bank), b = bankAbout([s, 0, c], tx, tz, bank), n = bankAbout([0, -1, 0], tx, tz, bank);
+        out.set([a[0], a[1], a[2], 0, b[0], b[1], b[2], 0, n[0], n[1], n[2], 0, f.x, f.y, f.z, 1], o);
       }
     }
     // The board: on the back, or under the feet on the Fall.
@@ -688,6 +967,11 @@ export class Hero extends Knight {
       if (this.gesture && this.gestureT <= 0) { this.gesture = null; this.stopAction(0.3); }
       else if (!this.gesture && !c.loop && this.actT >= c.dur * 0.95) this.stopAction(0.25);
       else if (!this.gesture && !this.sitting && c.loop && c.name !== 'Crouch_Idle_Loop') this.stopAction(0.25);
+      // Set off walking mid-gesture: a wave or a word stays in the arms and the legs walk; a dance or a kneel just stops.
+      else if (this.gesture && this.actMask === 'full' && !this.sitting && this.speed > 0.35) {
+        if (WHOLE_BODY.has(this.gesture)) { this.gesture = null; this.stopAction(0.25); }
+        else { this.rFrom.set(this.pose.rot); this.pFrom.set(this.pose.pelvis); this.fromW = 1; this.fadeTime = 0.25; this.actMask = 'upper'; }
+      }
     }
     super.animate(dt, sim);
   }
@@ -696,9 +980,11 @@ export class Hero extends Knight {
     if (this.dead || this.swing || this.surf || this.foe || !this.active) return;
     const list = GESTURES[name];
     if (!list) return;
+    const moving = this.speed > 0.35 && !this.sitting;
+    if (moving && WHOLE_BODY.has(name)) return;
     const clip = list[Math.floor(Math.random() * list.length)];
     if (!this.bank.clips[clip]) return;
-    this.play(clip, 1, 'full', 0.25);
+    this.play(clip, 1, moving ? 'upper' : 'full', 0.25);
     this.gesture = name;
     this.gestureT = seconds ?? Math.min(6, this.bank.clips[clip].dur * (this.bank.clips[clip].loop ? 2 : 1));
   }
@@ -733,13 +1019,18 @@ export class Hero extends Knight {
 export const ACT_NAMES = ['town', 'hunt', 'delve', 'summit', 'surf', 'errands', 'social', 'perform', 'rest', 'return', 'duel', 'help'];
 const ACT_CODES = Object.fromEntries(ACT_NAMES.map((n, i) => [n, i]));
 const propQ = new Float32Array(4), propT = new Float32Array(3), propM = new Float32Array(16), flowDir = new Float32Array(2);
+// A direction turned by `ang` about the level axis (kx, 0, kz) (Rodrigues).
+function bankAbout(v, kx, kz, ang) {
+  const c = Math.cos(ang), s = Math.sin(ang), d = (kx * v[0] + kz * v[2]) * (1 - c);
+  return [v[0] * c + (-kz * v[1]) * s + kx * d, v[1] * c + (kz * v[0] - kx * v[2]) * s, v[2] * c + (kx * v[1]) * s + kz * d];
+}
 
 // ---- the world of heroes: their days, their parties, their meetings ----------------------------------------------------
 
 export class HeroWorld {
   constructor(sim, heroes) {
     this.sim = sim; this.heroes = heroes;
-    this.shots = []; this.zones = []; this.timers = []; this.cords = [];
+    this.shots = []; this.zones = []; this.timers = []; this.cords = []; this.dots = [];
     this.parties = []; this.partyId = 1;
     this.hour = 12;
     this.killed = [];              // monsters heroes have killed, for standing them again
@@ -763,6 +1054,48 @@ export class HeroWorld {
   // How many fightable things stand near a point.
   crowd(x, z, r) { let n = 0; for (const m of this.targets) if (fightable(m) && Math.hypot(m.x - x, m.z - z) < r) n++; return n; }
 
+  // ---- how the classes hurt things (never through the player's spells: a hero's kill is the hero's) ----
+
+  // Everything fightable within r of a point (with its own girth): landings, novas, finishers. o as Hero.hit, plus skip.
+  blast(owner, x, z, y, r, dmg, o = {}) {
+    const struck = [];
+    for (const m of this.targets) {
+      if (!fightable(m) || m === o.skip || Math.hypot(m.x - x, m.z - z) > r + radiusOf(m) || Math.abs(m.y - y) > 2.5) continue;
+      if (owner.hit(this.sim, m, dmg, o.kind || 'bash', o.poise ?? 40, 0, { ...o, fromX: x, fromZ: z })) struck.push(m);
+    }
+    return struck;
+  }
+
+  // Everything within halfW of a line from (x0, z0), len long along dir: thrusts.
+  line(owner, x0, z0, dir, len, halfW, dmg, o = {}) {
+    const ux = Math.sin(dir), uz = Math.cos(dir), struck = [];
+    for (const m of this.targets) {
+      if (!fightable(m)) continue;
+      const dx = m.x - x0, dz = m.z - z0, along = dx * ux + dz * uz;
+      if (along < -0.3 || along > len + radiusOf(m) || Math.abs(dx * uz - dz * ux) > halfW + radiusOf(m) || Math.abs(m.y - owner.y) > 2.5) continue;
+      if (owner.hit(this.sim, m, dmg, o.kind || 'puncture', o.poise ?? 30, o.knock || 0, o)) struck.push(m);
+    }
+    return struck;
+  }
+
+  // Knocked off its stride for a moment (the dead reel; the rest only flinch, as they do from anything).
+  stun(m, seconds, by) { if (m instanceof Zombie && !m.crawling) m.reel?.(this.sim, seconds, by); }
+
+  // A cut that runs: 30% of the blow each second for three seconds. Another cut refreshes it rather than stacking.
+  bleed(owner, m, dps) {
+    const d = this.dots.find((q) => q.m === m);
+    if (d) { d.dps = Math.max(d.dps, dps); d.t = BLEED; d.owner = owner; }
+    else this.dots.push({ owner, m, dps, t: BLEED, tick: 0.5 });
+  }
+
+  stepDots(dt) {
+    for (const d of this.dots) {
+      d.t -= dt; d.tick -= dt;
+      if (d.tick <= 0) { d.tick += 0.5; if (!d.owner.dead) d.owner.hit(this.sim, d.m, d.dps * 0.5, 'gash', 0, 0, { dot: true }); }
+    }
+    this.dots = this.dots.filter((d) => d.t > 0 && fightable(d.m));
+  }
+
   step(dt) {
     const { sim } = this;
     this.targets = sim.knights.filter((k) => !k.dead && !k.dormant);
@@ -774,6 +1107,7 @@ export class HeroWorld {
     for (const h of this.heroes) h.update(dt, sim, this);
     this.stepShots(dt);
     this.stepZones(dt);
+    this.stepDots(dt);
     this.stepParties(dt);
     this.stepRespawns(dt);
     this.stepMeetings(dt);
@@ -796,6 +1130,7 @@ export class HeroWorld {
       c.fx(FX.BEAM, elem, a[0], a[1], a[2], 0.006, dx / L, dy / L, dz / L, L, 0.9 * k, 0.6 * k, 1.2, 0, 0, 0.006);
     }
     for (const s of this.shots) {
+      if (s.owner.near > 100) continue;
       if (s.kind === 'arrow') {
         const v = Math.hypot(s.vx, s.vy, s.vz) || 1;
         c.fx(FX.TRAIL, s.elem, s.x, s.y, s.z, 0.035, -s.vx / v, -s.vy / v, -s.vz / v, 0.9, 1, 1.5, 2, 0, s.seed ?? 0);
@@ -804,16 +1139,75 @@ export class HeroWorld {
       } else if (s.kind === 'hammer') {
         c.fx(FX.ORB, ELEM.LIGHT, s.x, s.y, s.z, 0.22, 0, 1, 0, 0, 1, 6, 5);
         c.fx(FX.ROCK, ELEM.LIGHT, s.x, s.y, s.z, 0.18, Math.sin(s.t * 18), 0, Math.cos(s.t * 18), 0.3, 1, 0, 0, 0, 0.4);
+      } else if (s.kind === 'note') {
+        // The song's own glyph, trailing the five lines of a stave.
+        const v = Math.hypot(s.vx, s.vy, s.vz) || 1;
+        c.fx(FX.RUNE, s.elem, s.x, s.y, s.z, 0.15, 0, 1, 0, 0, 0.9, 3, 3, 0, s.t * 2);
+        for (let k = 0; k < 5; k++) c.fx(FX.TRAIL, s.elem, s.x, s.y + (k - 2) * 0.05, s.z, 0.01, -s.vx / v, -s.vy / v, -s.vz / v, 0.7, 0.6, 0, 0, 0, k * 0.2);
       }
     }
+    // The lancer's couched lance as he charges; the dragoon's, aimed along his leap.
+    for (const h of this.heroes) {
+      if (!h.visible || h.near > 80) continue;
+      if (h.charge && h.charge.left > 0) {
+        const p = h.handPos('r'), ax = Math.sin(h.charge.dir), az = Math.cos(h.charge.dir);
+        c.fx(FX.BEAM, ELEM.STORM, p[0], p[1], p[2], 0.07, ax, 0, az, 2.8, 1, 6, 4, 0, 0, 0.03);
+        c.fx(FX.TRAIL, ELEM.STORM, p[0], p[1], p[2], 0.08, -ax, 0, -az, 1.6, 0.6);
+      }
+      const j = h.jump;
+      if (j && j.phase === 1 && j.L?.lance) {
+        const p = h.handPos('r'), up = Math.cos(j.u * Math.PI) * 0.85;
+        const L = Math.hypot(1, up), ax = Math.sin(j.head) / L, ay = up / L, az = Math.cos(j.head) / L;
+        c.fx(FX.BEAM, j.L.elem, p[0], p[1], p[2], 0.06, ax, ay, az, j.L.lance, 1, 6, 4, 0, 0, 0.02);
+        c.fx(FX.FLARE, j.L.elem, p[0] + ax * j.L.lance, p[1] + ay * j.L.lance, p[2] + az * j.L.lance, 0.2, 0, 1, 0, 0, 0.9);
+      }
+    }
+    // Bleeding: a drip or two.
+    for (const d of this.dots) {
+      const m = d.m;
+      if (Math.hypot(m.x - this.sim.player.x, m.z - this.sim.player.z) > 50) continue;
+      c.fx(FX.TRAIL, ELEM.DRAIN, m.x + (Math.random() - 0.5) * 0.4, m.y + 0.8 + Math.random() * 0.5, m.z + (Math.random() - 0.5) * 0.4, 0.02, 0, 1, 0, 0.25, 0.8);
+    }
     for (const z of this.zones) {
+      if (z.owner.near > 100) continue;
       if (z.kind === 'consecrate') {
         const k = Math.min(1, z.t * 3, (z.life - z.t) * 1.5);
         c.fx(FX.DISC, ELEM.LIGHT, z.x, z.y + 0.04, z.z, z.r, 0, 1, 0, 0, 0.75 * k, 10 * k, z.r * 2);
         c.fx(FX.RING, ELEM.LIGHT, z.x, z.y + 0.06, z.z, z.r * (0.94 + 0.04 * Math.sin(z.t * 6)), 0, 1, 0, 0, 0.9 * k);
         c.fx(FX.RUNE, ELEM.LIGHT, z.x, z.y + 0.08, z.z, z.r * 0.6, 0, 1, 0, 0, 0.6 * k, 0, 0, z.t * 0.1, 0.3);
       } else if (z.kind === 'blessed') {
-        for (const [hx, hy, hz] of this.hammers(z)) c.fx(FX.ORB, ELEM.LIGHT, hx, hy, hz, 0.2, 0, 1, 0, 0, 1, 4, 4);
+        // Tumbling hammers of light, each in its own glow, a short streak behind.
+        for (const [hx, hy, hz, a] of this.hammers(z)) {
+          c.fx(FX.ORB, ELEM.LIGHT, hx, hy, hz, 0.2, 0, 1, 0, 0, 0.8, 4, 4);
+          c.fx(FX.ROCK, ELEM.LIGHT, hx, hy, hz, 0.2, Math.sin(z.t * 16 + a), 0.4, Math.cos(z.t * 16 + a), 0.3, 1, 0, 0, 0, 0.4);
+          c.fx(FX.TRAIL, ELEM.LIGHT, hx, hy, hz, 0.06, Math.cos(a), 0, -Math.sin(a), 0.6, 0.6);
+        }
+      } else if (z.kind === 'smoke') {
+        // The rogue's smoke where they vanished: puffs rising and spreading, then thinning out.
+        const k = Math.min(1, z.t * 4, (z.life - z.t) * 0.8);
+        for (let i = 0; i < 10; i++) {
+          const a = z.seed + i * 0.63, rr = z.r * (((i * 0.37 + z.seed) % 1) * 0.8);
+          const y = z.y + 0.3 + ((z.t * 0.35 + i * 0.13) % 1) * 1.6;
+          c.fx(FX.PUFF, ELEM.VOID, z.x + Math.sin(a) * rr, y, z.z + Math.cos(a) * rr, 0.55 + z.t * 0.22, 0, 1, 0, 0, 0.45 * k, 0, 0, z.t / z.life, i * 0.1);
+        }
+      } else if (z.kind === 'barrage') {
+        // Eleven spears down round it on a spiral, staggered, near upright, held a moment in the ground.
+        for (let i = 0; i < 11; i++) {
+          const t0 = (i % 4) * 0.16, at = z.t - t0;
+          if (at < 0 || at > 1.17) continue;
+          const th = z.seed + i * 2.39996, rho = 0.92 * z.R * Math.sqrt((i + 0.5) / 11);
+          const tilt = 0.14 * Math.sin(th * 3.1), len = 1.6 + ((i * 0.618) % 1) * 0.7;
+          const dx = Math.sin(th) * tilt, dz = Math.cos(th) * tilt, dl = Math.hypot(dx, 1, dz);
+          const k = Math.min(1, at / 0.22), mid = 4 - (4 - 0.75) * k * k;
+          const ex = z.x + Math.sin(th) * rho, ez = z.z + Math.cos(th) * rho, ey = z.y + mid;
+          const fade = at > 0.95 ? 1 - (at - 0.95) / 0.22 : 1;
+          c.fx(FX.LANCE, ELEM.FROST, ex - dx / dl * len / 2, ey + len / 2, ez - dz / dl * len / 2, 0.05, dx / dl, -1 / dl, dz / dl, len, fade, k >= 1 ? 2 : 0, 2);
+        }
+      } else if (z.kind === 'planted') {
+        // Into the ground along the plunge, a third of it under.
+        const ax = Math.sin(z.dir) * 0.55, az = Math.cos(z.dir) * 0.55, L = Math.hypot(ax, 1, az);
+        const sx = z.x - ax / L * z.len * 0.7, sy = z.y + z.len * 0.7 / L, sz = z.z - az / L * z.len * 0.7;
+        c.fx(FX.BEAM, z.elem, sx, sy, sz, 0.06, ax / L, -1 / L, az / L, z.len, 1, 6, 4, 0, 0, 0.02);
       } else if (z.kind === 'song') {
         const o = z.owner;
         for (let i = 0; i < 3; i++) {
@@ -824,11 +1218,12 @@ export class HeroWorld {
     }
   }
 
+  // The blessed hammers: they spiral out from the paladin and turn round him wherever he goes.
   hammers(z) {
-    const o = z.owner, out = [];
+    const o = z.owner, out = [], r = Math.min(4, 0.45 + z.t * 2.4);
     for (let i = 0; i < 3; i++) {
-      const a = z.a0 + i * 2.094 + z.t * 3.4, r = 0.8 + z.t * 1.4;
-      out.push([z.x + Math.sin(a) * r, o.y + 1.1, z.z + Math.cos(a) * r]);
+      const a = z.a0 + i * 2.094 + z.t * 5;
+      out.push([o.x + Math.sin(a) * r, o.y + 1.1, o.z + Math.cos(a) * r, a]);
     }
     return out;
   }
@@ -841,7 +1236,8 @@ export class HeroWorld {
         // Out to where the foe stood, through what's there, and back to the paladin's hand.
         const o = s.owner, home = s.out ? [s.tx, s.ty, s.tz] : o.handPos('r');
         const dx = home[0] - s.x, dy = home[1] - s.y, dz = home[2] - s.z, L = Math.hypot(dx, dy, dz);
-        if (L < 0.6) { if (s.out) s.out = false; else s.done = true; }
+        // (Turned for home, it can cut what it passed on the way out again.)
+        if (L < 0.6) { if (s.out) { s.out = false; s.hitSet.clear(); } else s.done = true; }
         const step = Math.min(L, s.v * dt);
         s.x += dx / (L || 1) * step; s.y += dy / (L || 1) * step; s.z += dz / (L || 1) * step;
         for (const m of this.targets) {
@@ -852,14 +1248,29 @@ export class HeroWorld {
         if (s.t > 4) s.done = true;
         continue;
       }
-      s.vy -= (s.kind === 'arrow' ? 5 : 2) * dt;
+      if (s.kind === 'note') {
+        // A note bends toward its foe as it flies, never falling.
+        const m = s.foe;
+        if (m && fightable(m)) {
+          const want = Math.atan2(m.x - s.x, m.z - s.z), have = Math.atan2(s.vx, s.vz);
+          const a = have + clamp(wrapAngle(want - have), -3 * dt, 3 * dt), v = Math.hypot(s.vx, s.vz);
+          s.vx = Math.sin(a) * v; s.vz = Math.cos(a) * v;
+          s.vy = clamp((m.y + 1.2 - s.y) * 3, -4, 4);
+        }
+      } else s.vy -= (s.kind === 'arrow' ? (s.rain ? 0 : 5) : 2) * dt;
       s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt;
-      if (s.y < sim.world.height(s.x, s.z) || s.t > 1.6) { s.done = true; continue; }
+      const ground = sim.world.height(s.x, s.z);
+      if (s.up) { if (s.t > 0.8) s.done = true; continue; }
+      if (s.y < ground || s.t > (s.rain ? 2 : 1.6)) {
+        if (s.rain && s.y < ground + 0.3) this.rainHit(s, ground);
+        s.done = true; continue;
+      }
       for (const m of this.targets) {
         if (!fightable(m)) continue;
         const r = radiusOf(m) + 0.35;
         if (Math.hypot(m.x - s.x, m.z - s.z) > r || s.y < m.y || s.y > m.y + (m instanceof Gravehart ? 3.5 : 2.2) * (m.scale || 1)) continue;
-        s.owner.hit(sim, m, s.dmg, 'puncture', 30);
+        if (s.rain) this.rainHit(s, ground);
+        else s.owner.hit(sim, m, s.dmg, s.kind === 'note' ? 'bash' : 'puncture', 30);
         s.done = true;
         break;
       }
@@ -867,22 +1278,51 @@ export class HeroWorld {
     this.shots = this.shots.filter((s) => !s.done);
   }
 
+  // A falling arrow of the archer's rain, landed: a small burst where it goes in.
+  rainHit(s, ground) {
+    if (s.owner.dead) return;
+    this.blast(s.owner, s.x, s.z, ground, 0.9, s.dmg, { kind: 'puncture', poise: 15, quiet: true });
+    if (s.owner.fxOk()) this.sim.casting.burst(FX.RING, s.elem, s.x, ground + 0.05, s.z, 0.1, 0.7, 0.25);
+  }
+
   stepZones(dt) {
     const sim = this.sim;
     for (const z of this.zones) {
       z.t += dt;
       if (z.kind === 'consecrate') {
-        // Holy ground burns the dead that stand on it, and nothing else.
+        // Holy ground: every half second it burns what stands on it (the dead twice over), and mends whoever of his own
+        // side stands there, the player too.
+        if ((z.tick -= dt) > 0) continue;
+        z.tick += 0.5;
         for (const m of this.targets) {
-          if (!fightable(m) || !(m instanceof Zombie) || Math.hypot(m.x - z.x, m.z - z.z) > z.r + radiusOf(m)) continue;
-          if (((z.t * 4) | 0) !== (((z.t - dt) * 4) | 0)) z.owner.hit(sim, m, 3.2 * z.owner.power(), 'burn', 5);
+          if (!fightable(m) || Math.hypot(m.x - z.x, m.z - z.z) > z.r + radiusOf(m)) continue;
+          z.owner.hit(sim, m, 4 * z.owner.power() * (m instanceof Zombie ? 2 : 1), 'burn', 5, 0, { dot: true });
         }
+        for (const h of this.heroes) if (!h.dead && h.active && Math.hypot(h.x - z.x, h.z - z.z) < z.r) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * 0.03);
+        const p = sim.player;
+        if (!p.dead && Math.hypot(p.x - z.x, p.z - z.z) < z.r) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.03);
       } else if (z.kind === 'blessed') {
         for (const [hx, , hz] of this.hammers(z)) {
           for (const m of this.targets) {
             if (!fightable(m) || Math.hypot(m.x - hx, m.z - hz) > radiusOf(m) + 0.6) continue;
-            if (sim.time - (z.hitT.get(m) ?? -9) < 0.45) continue;
-            z.hitT.set(m, sim.time); z.owner.hit(sim, m, 6 * z.owner.power(), 'gash', 20);
+            if (sim.time - (z.hitT.get(m) ?? -9) < 0.33) continue;
+            z.hitT.set(m, sim.time); z.owner.hit(sim, m, 4 * z.owner.power(), 'bash', 20);
+          }
+        }
+      } else if (z.kind === 'rain') {
+        // The downpour: twenty arrows over a second and a bit, anywhere in the ring.
+        const due = z.t < 0 ? 0 : Math.min(z.n, Math.floor(z.t / z.life * z.n) + 1);
+        for (; z.dropped < due; z.dropped++) {
+          const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * z.r;
+          this.shots.push({ kind: 'arrow', owner: z.owner, x: z.x + Math.sin(a) * r - 0.6, y: z.y + 7 + Math.random() * 2, z: z.z + Math.cos(a) * r - 0.3, vx: 0.6, vy: -15, vz: 0.3, t: 0, dmg: 4 * z.owner.power(), elem: z.elem, rain: true });
+        }
+      } else if (z.kind === 'planted') {
+        // The lance shatters out of the ground.
+        if (z.t + dt >= z.life && !z.shattered && z.owner.fxOk()) {
+          z.shattered = true;
+          for (let i = 0; i < 12; i++) {
+            const a = Math.random() * 6.283, up = 0.4 + Math.random() * 0.8, L = Math.hypot(1, up);
+            sim.casting.burst(FX.BLADE, z.elem, z.x, z.y + 0.3, z.z, 0.04, 0.02, 0.4, { ax: Math.sin(a) / L, ay: up / L, az: Math.cos(a) / L, len: 0.25 + Math.random() * 0.2 });
           }
         }
       } else if (z.kind === 'song') {
@@ -964,6 +1404,8 @@ export class HeroWorld {
       // (A killing blow leaves hp at 0 a tick or two before the body's own update calls it dead: still the hero's.)
       if (!m.dead && m.hp > 0) { m.heroKill = false; return false; }
       if (!m.dead) return sim.time - k.at < 60;
+      // (A Tripo monster's lair stands its dead again itself: src/sim/tripo.js TripoWorld.)
+      if (m.lair) return false;
       if (sim.time - k.at < k.after) return true;
       const sp = m.opts?.spawn;
       if (!sp || Math.hypot(p.x - sp[0], p.z - sp[1]) < 70) return true;
@@ -1010,7 +1452,18 @@ export class HeroWorld {
     if (h.foe) {
       // Too hurt and on their own: back to the town's ground, where nothing follows.
       if (h.hp < h.maxHp * 0.25 && !h.party && townDist(h.x, h.z) > 0) { h.foe = null; this.goHome(h, true); }
+      if (h.talkUntil) h.talkUntil = 0;
       return;
+    }
+    // Stopped by the player for a word (E): stands where they are, square on to the player, until the talk ends,
+    // the player walks off, or something needs killing.
+    if (h.talkUntil) {
+      if (sim.time > h.talkUntil || p.dead || h.near > 9) { h.talkUntil = 0; h.hold = 0.8; }
+      else {
+        h.goal = null; h.hold = Math.max(h.hold, 0.3);
+        if (!h.sitting) h.holdFace = Math.atan2(p.x - h.x, p.z - h.z);
+        return;
+      }
     }
     if (h.hold > 0 || h.swing) return;
     if (h.walkWith && this.walking(h)) return;
@@ -1056,9 +1509,10 @@ export class HeroWorld {
         h.startSwing(pick(GESTURES.sing), 1, [0.1], () => {
           const elem = s.key === 'war_song' ? ELEM.FIRE : s.key === 'marching_song' ? ELEM.STORM : ELEM.HEAL;
           this.zones.push({ kind: 'song', owner: h, members, x: h.x, z: h.z, t: 0, life: 6, elem, heal: s.heal });
-          for (const o of members) { o.buff = s.key === 'war_song' ? { dmg: 1.25 } : s.key === 'marching_song' ? { speed: 1.25 } : o.buff; o.buffT = 20; }
+          // (Added to what each already has: a war song on a shield wall is both.)
+          if (s.key !== 'mending_song') for (const o of members) { o.buff = { ...(o.buff || {}), ...(s.key === 'war_song' ? { dmg: 1.25 } : { speed: 1.25 }) }; o.buffT = Math.max(o.buffT, 20); }
           if (Math.random() < 0.5) h.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf(s.key));
-        }, { still: !s.travel, mask: s.travel ? 'upper' : 'full', end: 0.7 });
+        }, { mask: 'upper', end: s.travel ? 0.7 : 0.2 });
         return;
       }
     }
@@ -1130,7 +1584,7 @@ export class HeroWorld {
       } else if (t.kind === 'perform' && t.began && h.gestureT <= 0) h.gesture_('sing', 8);
       else if (h.gestureT <= -rand(3, 10) && !h.sitting && Math.random() < dt * 0.15 * h.lean.show) h.gesture_(pick(['look', 'fold', 'warm', 'talk', 'proud']), rand(3, 6));
       // Wander within the place now and then.
-      if (!h.sitting && t.kind !== 'perform' && Math.random() < dt * 0.04) h.goal = this.spotIn(t.place, h);
+      if (!h.sitting && t.kind !== 'perform' && h.gestureT <= 0 && Math.random() < dt * 0.04) h.goal = this.spotIn(t.place, h);
       if (h.goal && Math.hypot(h.goal.x - h.x, h.goal.z - h.z) < 1) h.goal = null;
     }
     // Trade calls and show-offs carry across the town.
@@ -1243,7 +1697,7 @@ export class HeroWorld {
       const live = this.targets.filter((m) => fightable(m) && t.place.mobs.includes(mobKind(m)) && Math.hypot(m.x - t.place.spot[0], m.z - t.place.spot[1]) < t.place.r + 40);
       const m = live.sort((a, b) => Math.hypot(a.x - h.x, a.z - h.z) - Math.hypot(b.x - h.x, b.z - h.z))[0];
       t.live = live.length;
-      if (m) { h.goal = { x: m.x, z: m.z, speed: 2.4, stop: 6 }; if (!t.sighted?.has(m) && Math.random() < 0.5) { (t.sighted ||= new Set()).add(m); h.say(sim, MOBS[mobKind(m)]?.sight || 'mob_sighted', -1, PLACE_IDS.indexOf(t.place.id), MOB_KEYS.indexOf(mobKind(m))); } }
+      if (m) { h.goal = { x: m.x, z: m.z, speed: 1.8, stop: 6 }; if (!t.sighted?.has(m) && Math.random() < 0.5) { (t.sighted ||= new Set()).add(m); h.say(sim, MOBS[mobKind(m)]?.sight || 'mob_sighted', -1, PLACE_IDS.indexOf(t.place.id), MOB_KEYS.indexOf(mobKind(m))); } }
       else h.goal = this.spotIn({ spot: t.place.spot, r: t.place.r }, h);
     }
     const lead = !h.party || h.party.leader === h;
@@ -1406,7 +1860,7 @@ export class HeroWorld {
     const dist = Math.hypot(other.x - h.x, other.z - h.z);
     h.faceYaw = Math.atan2(other.x - h.x, other.z - h.z);
     h.combat = 1;
-    if (dist > 2.2) h.goal = { x: other.x, z: other.z, speed: 2.4, stop: 1.8 };
+    if (dist > 2.2) h.goal = { x: other.x, z: other.z, speed: 1.8, stop: 1.8 };
     else if (!h.swing && h.shotCd <= 0) {
       const b = pick(h.blows);
       h.startSwing(b.clip, b.rate, b.hit, () => { if (Math.hypot(other.x - h.x, other.z - h.z) < 2.6) { other.hp -= 6 + h.person.level * 0.3; if (!other.swing) other.play('Hit_Chest', 1.4, 'upper', 0.05); sim.event(EV.BITE, other.x, other.y + 1.1, other.z, 0.3); } });
@@ -1490,6 +1944,17 @@ export class HeroWorld {
 
   act(slot, name, seconds) { const h = this.heroes[slot]; if (h) h.gesture_(name, seconds); }
 
+  // The player stops a hero to talk (E in src/main.js), or lets them go. A fight, a surf or a duel can't be stopped.
+  talkTo(slot, on) {
+    const h = this.heroes[slot];
+    if (!h) return;
+    if (!on) { if (h.talkUntil) { h.talkUntil = 0; h.hold = 0.8; } return; }
+    if (!h.active || h.dead || h.foe || h.surf || h.jump || h.task?.kind === 'duel') return;
+    h.talkUntil = this.sim.time + 90;
+    h.goal = null;
+    if (h.gesture && WHOLE_BODY.has(h.gesture) && h.gesture !== 'sit') { h.gesture = null; h.stopAction(0.3); }
+  }
+
   // Keep the town's hours with the render thread's clock (it owns the sun).
   setHour(h) { this.hour = h; }
 
@@ -1512,7 +1977,18 @@ export class HeroWorld {
         break;
       }
       case 'freeze': hs.forEach((h) => { h.hold = m.seconds ?? 1e9; h.holdFace = m.face; }); break;
-      case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), follow: h.party && h.party.leader !== h ? h.party.leader.slot : null, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting })) }); break;
+      // (For staging a fight in the open for a screenshot: the nearest standing dead brought to a point.)
+      case 'pull': {
+        // (rise: up out of the ground there instead, the way they come into the world. Calm: no one to go after.)
+        const n = m.n || 1;
+        const z = m.rise ? [] : sim.knights.filter((k) => k instanceof Zombie && fightable(k) && !k.crawling).sort((u, v) => Math.hypot(u.x - p.x, u.z - p.z) - Math.hypot(v.x - p.x, v.z - p.z)).slice(0, n);
+        z.forEach((k, i) => { k.x = m.x + (i % 3) * 1.6; k.z = m.z + Math.floor(i / 3) * 1.6; k.y = sim.world.height(k.x, k.z); });
+        sim.knights.filter((k) => k instanceof Zombie && k.dormant && !k.opts.role && k.opts.model !== 'zombie_ogre').slice(0, n - z.length)
+          .forEach((k, j) => { const i = z.length + j; k.raiseAt(sim, m.x + (i % 3) * 1.6, m.z + Math.floor(i / 3) * 1.6, null, !!m.calm); });
+        break;
+      }
+      case 'undead': self.postMessage({ type: 'heroState', id: m.id, heroes: [], undead: sim.knights.filter((k) => k instanceof Zombie).map((k) => ({ id: k.id, model: k.opts.model, role: k.opts.role || null, x: +k.x.toFixed(1), z: +k.z.toFixed(1), sink: +k.sink.toFixed(2), state: k.state, dead: k.dead, dormant: k.dormant, grave: k.opts.grave || null, up: k.graveUp, aggro: k.aggro, clip: k.clip })), others: sim.knights.filter((k) => !(k instanceof Zombie)).map((k) => ({ id: k.id, kind: k.kind, name: k.opts?.name || k.constructor.name, x: +k.x.toFixed(0), z: +k.z.toFixed(0) })) }); break;
+      case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), follow: h.party && h.party.leader !== h ? h.party.leader.slot : null, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting, leaps: h.leaps, guard: h.guardT > 0, iframes: h.iframesT > 0, charge: !!h.charge, jump: !!h.jump, flight: h.flight?.length || 0 })), zones: this.zones.map((z) => z.kind), shots: this.shots.map((q) => q.kind + (q.rain ? ':rain' : q.up ? ':up' : '')), dots: this.dots.length }); break;
       default: break;
     }
   }

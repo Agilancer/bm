@@ -19,6 +19,7 @@ import { ELEM, SPELLS } from '../sim/spells.js';
 const BANDS = ['night', 'dawn', 'day', 'dusk'];
 const EARSHOT = 30;            // a Say is heard this far from the player
 const TAG_FAR = 46;            // names fade out by here
+const TALK_REACH = 3.2;        // E stops a hero this close for a word
 const SAVE_KEY = 'bm.heroes';
 const RECENT = 200;            // lines not heard twice within this many
 const A_MOB = { zombie: 'a zombie', champion: 'a champion', crab: 'a crab' };
@@ -45,8 +46,11 @@ const freshMem = (m = {}) => ({ savedBy: {}, saved: {}, debts: {}, owed: {}, spe
 const BIG_KILL = { 0: 'black_knight', 3: 'gravehart', 4: 'hydra', 6: 'ogre', [kindOfGroup('Werewolf')]: 'werewolf', 10: 'mouth' };
 
 export class HeroTalk {
-  constructor({ base, cast, renderer, sim, settings, playerName, playerSkull, touch }) {
-    Object.assign(this, { base, cast, renderer, sim, settings, playerName, playerSkull, touch });
+  constructor({ base, cast, renderer, sim, settings, playerName, playerSkull, touch, ui = {} }) {
+    Object.assign(this, { base, cast, renderer, sim, settings, playerName, playerSkull, touch, ui });
+    this.open = null;     // the hero the player has stopped for a word (E), while the panel is up
+    // (Listening before src/main.js does, so the E that opens the panel doesn't also close it.)
+    window.addEventListener('keydown', (e) => this.key(e));
     this.script = null; this.names = null;
     this.recent = []; this.recentSet = new Set(); this.convosUsed = [];
     this.heroes = cast.map((p) => ({ p, cool: new Map(), bubbleT: 0, busyT: 0, seenPlayer: false, magic: 0, herSeen: 0, mem: freshMem(), stage: 0, greetT: -1e9, x: 0, y: 0, z: 0, shown: false, tagY: 0 }));
@@ -151,11 +155,25 @@ export class HeroTalk {
       #heroChat div span.n { color: #bfe0ff; } #heroChat div span.c { opacity: .85; }
       body.touch #heroChat { bottom: 46%; width: 46vw; font-size: 11.5px; }
       body.cinematic #heroLayer, body.cinematic #heroChat { display: none; }
+      #heroTalk { position: fixed; z-index: 12; left: 50%; bottom: max(3vh, 14px); transform: translateX(-50%); width: min(680px, 94vw); padding: 13px 18px 10px; display: none; flex-direction: column;
+        background: rgba(11,9,7,.95); border: 1px solid var(--gold-dim, #8c7344); box-shadow: 0 10px 34px #000b; color: var(--bone, #e9dfc8); font-family: Georgia, serif; }
+      #heroTalk .tk-head { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid rgba(140,115,68,.42); padding-bottom: 6px; margin-bottom: 9px; }
+      #heroTalk .tk-name { font: 700 18px Cinzel, Georgia, serif; color: #bfe0ff; letter-spacing: .05em; }
+      #heroTalk .tk-title { font-size: 13px; opacity: .62; font-style: italic; }
+      #heroTalk .tk-guild { margin-left: auto; font-size: 13px; color: #8fe0a0; }
+      #heroTalk .tk-line { font-size: 17px; line-height: 1.5; min-height: 2.6em; animation: htkIn .28s ease-out; }
+      @keyframes htkIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+      #heroTalk ol { list-style: none; margin: 9px 0 0; padding: 0; }
+      #heroTalk li { display: flex; gap: 9px; align-items: baseline; padding: 4px 8px; cursor: pointer; font-size: 15.5px; color: #d6c8a5; border-radius: 3px; }
+      #heroTalk li:hover { background: rgba(201,163,92,.15); color: #fff4da; }
+      #heroTalk li kbd { flex: none; min-width: 1.5em; text-align: center; font: 12px Georgia, serif; color: var(--gold-dim, #8c7344); border: 1px solid rgba(140,115,68,.5); border-radius: 3px; padding: 0 3px; }
+      #heroTalk li.dim { opacity: .45; }
     `;
     document.head.appendChild(css);
     this.layer = document.createElement('div'); this.layer.id = 'heroLayer';
     this.chat = document.createElement('div'); this.chat.id = 'heroChat';
-    document.body.append(this.layer, this.chat);
+    this.panel = document.createElement('div'); this.panel.id = 'heroTalk';
+    document.body.append(this.layer, this.chat, this.panel);
     for (const h of this.heroes) {
       h.tag = document.createElement('div'); h.tag.className = 'tag';
       h.tag.innerHTML = `<b></b><i></i><u></u>`;
@@ -251,6 +269,7 @@ export class HeroTalk {
     for (const e of this.log2 || []) { e.t -= dt; if (e.t < 0 && !e.gone) { e.gone = true; e.el.style.opacity = 0; } if (e.t < -1.4) e.el.remove(); }
     if (this.log2?.length && this.log2[0].t < -1.4) this.log2 = this.log2.filter((e) => e.t >= -1.4);
     this.stepConvos(dt);
+    if (this.open) this.stepTalk(dt);
     if ((this.scanT -= dt) <= 0) { this.scanT = 0.25; this.scan(snap); }
     if ((this.chatterT -= dt) <= 0) { this.chatterT = 25 + Math.random() * 55; this.chatter(); }
     if ((this.saveT -= dt) <= 0) { this.saveT = 30; this.save(); }
@@ -873,6 +892,137 @@ export class HeroTalk {
       cv.t = b.dur + 0.35;
     }
     this.convo = this.convo.filter((c) => !c.done);
+  }
+
+  // ---- a word with a hero (E): they stop, turn to you, and talk -------------------------------------------------------
+
+  // The hero the player is facing, close enough for a word (the townsfolk's rule in src/ui/folk.js nearest).
+  nearest(px, py, pz, yaw) {
+    if (!this.script || this.open) return null;
+    const fx = Math.sin(yaw), fz = Math.cos(yaw);
+    let best = null, bs = Infinity;
+    for (const h of this.heroes) {
+      if (!h.shown || h.dead || h.below || Math.abs(h.y - py) > 1.6) continue;
+      const dx = h.x - px, dz = h.z - pz, d = Math.hypot(dx, dz);
+      if (d > TALK_REACH) continue;
+      const ahead = d < 0.01 ? 1 : (dx * fx + dz * fz) / d;
+      if (ahead < 0.45 && d > 1.1) continue;
+      const s = d * (1.6 - ahead);
+      if (s < bs) { bs = s; best = h; }
+    }
+    if (!best) return null;
+    return { h: best, busy: best.fighting, label: best.fighting ? `${best.p.name} is fighting` : `Talk to ${best.p.name}` };
+  }
+
+  // Stopped for a word: the sim holds them square on to the player (src/sim/hero.js talkTo), and they greet you.
+  talkTo(h) {
+    if (!h || h.dead || h.fighting || this.open || !this.script) return;
+    this.open = h; this.talkKeep = 30;
+    h.greetT = this.t; h.walkOffer = 0;
+    this.sim.postMessage({ type: 'heroTalk', slot: h.p.slot, on: true });
+    this.ui.opened?.();
+    this.panel.style.display = 'flex';
+    this.showTalk(this.talkLine(h, ['player_greet', 'greet']) || `${this.playerName()}.`);
+  }
+
+  showTalk(line) {
+    const h = this.open;
+    if (!h) return;
+    this.talkOpts = this.optsFor(h);
+    const title = `Level ${h.p.level} ${CLASSES[h.p.cls].title}`;
+    this.panel.innerHTML = `<div class="tk-head"><span class="tk-name">${esc(h.p.name)}</span><span class="tk-title">${esc(title)}</span><span class="tk-guild">${h.p.guild ? esc(`<${h.p.guild}>`) : ''}</span></div>
+      <div class="tk-line">${esc(line)}</div><ol></ol>`;
+    const ol = this.panel.querySelector('ol');
+    this.talkOpts.forEach((o, k) => {
+      const li = document.createElement('li');
+      li.className = o.dim ? 'dim' : '';
+      li.innerHTML = `<kbd>${k + 1}</kbd><span>${esc(o.label)}</span>`;
+      li.onclick = () => this.chooseTalk(k);
+      ol.appendChild(li);
+    });
+  }
+
+  // You never speak: what you can do is ask, by a look and a gesture, and they answer.
+  optsFor(h) {
+    const asked = (this.asked ||= new Map()).get(h) || new Set();
+    const o = (key, label, run) => ({ key, label, run, dim: asked.has(key) && key !== 'bye' && key !== 'walk' });
+    return [
+      o('woke', 'Ask where they woke', () => this.ask(h, 'woke', ['origin_story', 'player_rivalry'])),
+      o('claim', 'Ask if they are Tessariel', () => this.ask(h, 'claim', ['player_rivalry', 'tessariel_claim'])),
+      o('news', 'Ask for news', () => this.ask(h, 'news', ['gossip_player', 'gossip', 'town_idle'])),
+      o('work', 'Ask if anything needs killing', () => this.ask(h, 'work', ['player_request'], this.huntCtx())),
+      o('walk', 'Ask them to walk with you', () => this.askWalk(h)),
+      o('bye', 'Nod, and go', () => this.closeTalk(true)),
+    ];
+  }
+
+  chooseTalk(k) {
+    const o = this.talkOpts?.[k];
+    if (!o) return;
+    this.ui.click?.();
+    o.run();
+  }
+
+  ask(h, key, names, ctx = {}) {
+    ((this.asked ||= new Map()).get(h) || this.asked.set(h, new Set()).get(h)).add(key);
+    this.showTalk(this.talkLine(h, names, ctx) || 'Hm. Ask me another day.');
+  }
+
+  askWalk(h) {
+    const line = this.talkLine(h, ['player_walk_ask']);
+    // (A hero in a party says no: src/sim/hero.js walkFor would refuse anyway.)
+    if (h.party < 0) {
+      this.closeTalk(false, line);
+      this.walkWith(h, 120);
+    } else this.showTalk(line || 'My party is waiting on me.');
+  }
+
+  // Somewhere worth a hunt, and the thing to hunt there, for a request.
+  huntCtx() {
+    const spots = PLACES.filter((p) => p.kind === 'hunt' && p.mobs?.length);
+    const place = spots[Math.floor(Math.random() * spots.length)];
+    return { place, mob: place.mobs[Math.floor(Math.random() * place.mobs.length)] };
+  }
+
+  // A line from the first pool that has one for this hero, said out loud too (the bubble, the log, the gesture).
+  talkLine(h, names, ctx = {}) {
+    for (const name of names) {
+      const c = { ...ctx, name };
+      if (EVENT_TRIGS.has(name) && c.entry === undefined) c.entry = this.entryFor(name, h, null);
+      const tr = this.trig(name);
+      let line = this.pick(name, h, null, c, tr);
+      if (!line && c.entry) line = this.pick(name, h, null, { ...c, entry: null }, tr);
+      if (!line) continue;
+      h.cool.set(name, this.t);
+      this.speak(h, line.text, 'say', line.anim);
+      return line.text;
+    }
+    return null;
+  }
+
+  stepTalk(dt) {
+    const h = this.open;
+    // A fight, a fall, or out of sight: the talk is over.
+    if (h.dead || h.fighting || !h.shown || h.dist > 9) { this.closeTalk(false); return; }
+    // (The sim lets a talk lapse after a while; keep it held while the panel is up.)
+    if ((this.talkKeep -= dt) <= 0) { this.talkKeep = 30; this.sim.postMessage({ type: 'heroTalk', slot: h.p.slot, on: true }); }
+  }
+
+  closeTalk(bye, said = null) {
+    const h = this.open;
+    if (!h) return;
+    this.open = null;
+    this.panel.style.display = 'none';
+    this.sim.postMessage({ type: 'heroTalk', slot: h.p.slot, on: false });
+    if (said == null && bye) this.talkLine(h, ['farewell']);
+    this.ui.closed?.();
+  }
+
+  key(e) {
+    if (!this.open || e.repeat) return;
+    const n = e.code.startsWith('Digit') ? +e.code.slice(5) : e.code.startsWith('Numpad') ? +e.code.slice(6) : NaN;
+    if (!Number.isNaN(n) && n > 0) { e.preventDefault(); this.chooseTalk(n - 1); return; }
+    if (e.code === 'Escape' || e.code === 'KeyE' || e.code === 'Tab') { e.preventDefault(); this.closeTalk(e.code !== 'Escape'); }
   }
 
   // ---- the rest of the server: Trade and Shout from heroes who aren't standing in front of you -------------------------
