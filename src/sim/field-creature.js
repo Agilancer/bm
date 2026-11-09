@@ -4,6 +4,7 @@ import { foeOf } from './foes.js';
 import { clamp, quatYaw, wrapAngle } from '../core/math.js';
 import { EV } from '../core/layout.js';
 import { OPENING } from '../core/opening.js';
+import { townDist } from '../core/town.js';
 
 export class FieldCreature extends Beast {
   constructor(id, rig, opts) {
@@ -45,7 +46,7 @@ export class FieldCreature extends Beast {
     const yaw = Math.atan2(p.x - this.x, p.z - this.z);
     // The cave escort remains safe until its first quest finishes.
     const story = sim.opening && sim.opening.stage < OPENING.ARRIVED;
-    const canHunt = !story && !p.dead && sim.gameState === 0 && Math.hypot(p.x, p.z) > 45;
+    const canHunt = !story && !p.dead && sim.gameState === 0 && townDist(p.x, p.z) > 4;
     if (canHunt && distance < 24 && sim.world.sees(this.x, this.y + 1.2, this.z, p.x, p.y + 1, p.z)) this.aggro = true;
     if (!canHunt || distance > 42) this.aggro = false;
     let speed = 0;

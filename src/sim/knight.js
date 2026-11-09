@@ -254,13 +254,19 @@ export class Knight {
     const { bank, pose, rA, rB, pA, pB, rig, J: J0 } = this;
     const { clips } = bank;
     const rot = pose.rot, pel = pose.pelvis;
-    const sp = this.speed;
+    const hero = !!this.opts.hero;
+    // (A hero turning on the spot steps round on its feet rather than pivoting on still legs: see Hero.update's turnRate.)
+    const sp = hero ? Math.max(this.speed, this.turnStep || 0) : this.speed;
     const wounded = this.hurt;
     const inFight = this.combat;
     // Locomotion. The stride speeds below stop the feet skating at any pace.
     const WALK = 1.45 * rig.motionScale, JOG = 3.1 * rig.motionScale, RUN = 5.6 * rig.motionScale;
     const stride = sp < WALK ? WALK : sp < JOG ? lerp(WALK, JOG, (sp - WALK) / (JOG - WALK)) : lerp(JOG, RUN, clamp((sp - JOG) / (RUN - JOG), 0, 1));
     const cycle = lerp(clips.Walk_Loop.dur, clips.Jog_Fwd_Loop.dur, smoothstep(WALK, JOG, sp));
+    // Heroes walk until they mean to run: the jog comes in only past a brisk walk (about 2.1 m/s for a man's height), and
+    // the walk's own stride is played faster up to there, so the feet never skate.
+    const heroJog = hero ? smoothstep(1.9 * rig.motionScale, 2.35 * rig.motionScale, sp) : 0;
+    const heroRun = hero ? smoothstep(JOG * 1.05, RUN * 0.85, sp) : 0;
     const before = this.phase;
     // A knight's own fighting gait (Velscour's stalk and run) when he's going where he faces.
     const along = sp > 0.25 ? Math.cos(wrapAngle(Math.atan2(this.vx, this.vz) - this.yaw)) : 0;
@@ -268,7 +274,11 @@ export class Knight {
     const gait = sp > (this.gaits.jog ? (this.gaits.walk ? WALK * 1.5 : 0) : Infinity) ? this.gaits.jog : this.gaits.walk;
     if (gait !== this.gaitClip) { this.gaitClip = gait; this.gaitW = Math.min(this.gaitW, 0.3); }
     this.gaitW = gait ? damp(this.gaitW, wantGait, 5, dt) : 0;
-    if (sp > 0.05) {
+    if (hero && sp > 0.02) {
+      // Metres per cycle: a walk's, a jog's, a run's (the run is played on the jog's cycle, as below).
+      const per = lerp(lerp(WALK * clips.Walk_Loop.dur, JOG * clips.Jog_Fwd_Loop.dur, heroJog), RUN * clips.Jog_Fwd_Loop.dur, heroRun);
+      this.phase += (this.backward ? -1 : 1) * dt * Math.max(sp, 0.08) / per;
+    } else if (sp > 0.05) {
       const dir = this.backward ? -1 : 1;
       const own = gait ? Math.max(sp, 0.3) / (gait.speed * gait.clip.dur) : 0;
       this.phase += dir * dt * lerp((Math.max(sp, 0.3) / stride) / cycle, own, this.gaitW);
@@ -284,7 +294,8 @@ export class Knight {
       lerp3(pel, pel, pA, inFight);
     }
     if (wounded > 0.01) { bank.sample(clips.Zombie_Idle_Loop, sim.time, rA, null); blend(rot, rot, rA, wounded * 0.7, rig.count); }
-    const moveW = smoothstep(0.06, 0.7, sp);
+    // (A hero's legs are walking from the first step: a slow walk is a slow walk, never a slide on standing legs.)
+    const moveW = hero ? smoothstep(0.02, 0.16, sp) : smoothstep(0.06, 0.7, sp);
     if (moveW > 0.001) {
       bank.sample(clips.Walk_Formal_Loop, ph * clips.Walk_Formal_Loop.dur, rA, pA);
       if (inFight > 0.005) {
@@ -298,12 +309,12 @@ export class Knight {
         blend(rA, rA, rB, limp, rig.count);
         lerp3(pA, pA, pB, limp);
       }
-      const jogW = smoothstep(WALK * 1.05, JOG * 0.8, sp);
+      const jogW = hero ? heroJog : smoothstep(WALK * 1.05, JOG * 0.8, sp);
       if (jogW > 0.001) {
         bank.sample(clips.Jog_Fwd_Loop, ph * clips.Jog_Fwd_Loop.dur, rB, pB);
         blend(rA, rA, rB, jogW, rig.count);
         lerp3(pA, pA, pB, jogW);
-        const runW = smoothstep(JOG * 1.05, RUN * 0.85, sp);
+        const runW = hero ? heroRun : smoothstep(JOG * 1.05, RUN * 0.85, sp);
         if (runW > 0.001) {
           bank.sample(clips.Sprint_Loop, ph * clips.Sprint_Loop.dur, rB, pB);
           blend(rA, rA, rB, runW, rig.count);

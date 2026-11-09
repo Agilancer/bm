@@ -91,7 +91,7 @@ const HOWTO = `
     <li>A cut opens a gash in the plate. A second blow on that gash goes through, and it bleeds. Your X turns <b>red</b> over a cut you could go through.</li>
     <li>A blade <b>flashes</b> before it falls: dodge, or swing into it to parry.</li>
     <li>Slams and chops break a guard faster than cuts. Running, dodging and swinging all spend your breath.</li>
-    <li>Hitting the silver knight makes an enemy of them too. Great crabs come out of the fields after first blood.</li>
+    <li>Hitting the silver knight makes an enemy of them too.</li>
     <li>The game keeps itself as you play: <b>Continue</b> picks up where you were. Pause to keep a copy in one of ten save slots.</li>
   </ul>
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
