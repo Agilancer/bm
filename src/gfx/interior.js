@@ -1,5 +1,6 @@
 // The cathedral and the catacombs: their own geometry and their own texture arrays, since their tiles are small and square where
 // the village's are big and painted. Drawn only from where they can be seen, and the world outside isn't drawn from below.
+import { inSexton, toChurch } from '../core/church.js';
 import { accessor, parseGLB } from '../core/glb.js';
 import { setFloors } from '../core/interior.js';
 import { makeBuffer, loadTextureArray } from './gpu.js';
@@ -27,6 +28,25 @@ struct GO { @location(0) color: vec4f, @location(1) depth: f32 };
   } else if (in.layer < 100.5) {
     let e = 1.0 - abs(in.uv.x * 2.0 - 1.0);
     c = in.tint * smoothstep(0.0, 0.4, e) * (0.25 + 0.75 * in.uv.y);
+  } else if (in.layer > 102.5) {
+    // A tongue of fire on a card: noise climbing it, pinched in toward the tip and torn off at the top, white-gold at the root
+    // and deep red at the edges. Three of them, crossed, make a fire (hearth() in tools/interior/build_interior.py). tint.b also
+    // seeds it, so no two burn alike.
+    let T = F.camPos.w;
+    let u = in.uv.x * 2.0 - 1.0;
+    let v = 1.0 - in.uv.y;
+    let seed = fract(in.tint.b * 97.0) * 7.0;
+    let n1 = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.uv.x * 0.32 + seed, v * 0.42 - T * 0.5), 0.0).r;
+    let n2 = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.uv.x * 0.9 - seed, v * 1.2 - T * 1.15), 0.0).r;
+    let n = n1 * 0.65 + n2 * 0.35;
+    let sway = (n1 - 0.5) * 0.55 * v * v;
+    let width = (1.0 - v) * (1.0 - 0.35 * v) * (0.55 + 0.75 * n);
+    let edge = width - abs(u - sway);
+    let tear = smoothstep(0.92, 0.45, v + (0.5 - n2) * 0.65);
+    let body = smoothstep(0.0, 0.18, edge) * tear;
+    let core = smoothstep(0.12, 0.45, edge) * smoothstep(0.75, 0.1, v);
+    let col = mix(vec3f(0.85, 0.16, 0.02), vec3f(1.0, 0.55, 0.12), smoothstep(0.0, 0.3, edge)) + vec3f(1.0, 0.82, 0.45) * core;
+    c = in.tint.r * col * body;
   } else if (in.layer > 101.5) {
     // A light well: dust drifting in a soft beam, and nothing at all when you stand in it.
     let e = 1.0 - abs(in.uv.x * 2.0 - 1.0);
@@ -106,7 +126,15 @@ export async function loadInterior(r, base, pool, tier) {
   tiles.bg = bindGroup(tc, td, uniform((p) => man.layers.forEach((l, i) => { p[i * 4 + 1] = pom * (l.pom || POM[l.kind] || 0); p[i * 4 + 2] = -(l.deep || 0); })));
   const atlas = makeSet(r, glb, nodes, atlasNames);
   atlas.bg = bindGroup(ac, ad, uniform((p) => man.atlases.forEach((l, i) => { p[i * 4] = 1; p[i * 4 + 2] = l.kind === 'glass' ? (l.rose ? 4 : 2) : 0; })));
-  return { data, tiles, atlas, glowVB: makeBuffer(r.device, new Float32Array(data.glow), GPUBufferUsage.VERTEX), glowN: data.glow.length / 9 };
+  // The glow quads, the townsfolk's houses' first (their hearths, candles and windows: drawn wherever you are, since a house is
+  // never far) and then the church's (drawn only from inside it: visibility()).
+  const G = data.glow, homes = data.homes.filter((h) => h.route), town = [], church = [];
+  for (let i = 0; i < G.length; i += 27) {
+    const x = G[i], z = G[i + 2];
+    (homes.some((h) => x > h.x0 - 1 && x < h.x1 + 1 && z > h.z0 - 1 && z < h.z1 + 1) ? town : church).push(...G.slice(i, i + 27));
+  }
+  const glowCPU = new Float32Array([...town, ...church]);
+  return { data, tiles, atlas, glowVB: makeBuffer(r.device, glowCPU, GPUBufferUsage.VERTEX), glowCPU, glowN: G.length / 9, glowTown: town.length / 9 };
 }
 
 export function buildGlowPipeline(r, module, layout, depthFormat, multisample) {
@@ -126,10 +154,15 @@ export function buildGlowPipeline(r, module, layout, depthFormat, multisample) {
 
 // Where the camera is decides what's worth drawing. A wall can't be seen through, so it's simple.
 export function visibility(f0, cam) {
-  // (Below is the stair's own passage, or under the land. Behind the church, out in the open, is neither.)
-  const deep = cam.x >= 124.5 && ((cam.x < 176 && Math.abs(cam.z) < 3 && cam.y < f0 + 6.5) || cam.y < -6);
-  const hall = cam.x > 66 && cam.x < 124.5 && Math.abs(cam.z) < 14;
-  return { deep, hall, cath: !deep || cam.x < 160, below: deep || (hall && cam.x > 100) };
+  // (Below is the stair's own passage, or under the land. Behind the church, out in the open, is neither. In the church's own frame: src/core/church.js.)
+  const [x, z] = toChurch(cam.x, cam.z);
+  // The Sexton's passage, and the ground outside its door, see down into the stair; and from the head of the stair, through the
+  // passage and the door, the day outside can be seen. (src/core/church.js SEXTON.)
+  const passage = inSexton(x, cam.y, z) || (x > 122 && x < 132 && z > 8.9 && z < 16 && cam.y < f0 + 4);
+  const deep = !passage && x >= 124.5 && ((x < 176 && Math.abs(z) < 3 && cam.y < f0 + 6.5) || cam.y < -6);
+  const hall = x > 66 && x < 124.5 && Math.abs(z) < 14;
+  const world = !deep || (x < 131 && z > -1 && cam.y > f0 - 4.5);
+  return { deep, hall, world, cath: !deep || x < 160, below: deep || passage || (hall && x > 100) };
 }
 
 export function drawOpaque(r, mp, it, vis) {
@@ -147,10 +180,13 @@ export function drawOpaque(r, mp, it, vis) {
   if (vis.below) mp.drawIndexed(it.atlas.deep, 1, it.atlas.cath);
 }
 
-export function drawGlow(r, mp, it) {
+// all: the church's too; or only the houses'.
+export function drawGlow(r, mp, it, all) {
+  const n = all ? it.glowN : it.glowTown;
+  if (!n) return;
   mp.setPipeline(r.pGlow);
   mp.setBindGroup(1, it.atlas.bg);
   mp.setVertexBuffer(0, it.glowVB);
-  mp.draw(it.glowN);
+  mp.draw(n);
 }
 

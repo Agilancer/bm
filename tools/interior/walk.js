@@ -2,14 +2,16 @@
 // does: logs where it sticks and where it gets hit, and saves a shot on arriving at each named place. From the page, with ?auto=1&timer=1:
 //   const w = await import('/tools/interior/walk.js'); w.go(); then read window.__walk until window.__walk.done
 import { H } from '/src/core/layout.js';
+import { churchAt } from '/src/core/church.js';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// (Written where the church was first drawn, and moved to where it stands: src/core/church.js.)
 const ROUTE = [
   [55, 0, 'w00_outside'], [68, 0, 'w01_door'], [98, 0, 'w02_nave'], [104, -8], [110, -9.5, 'w03_stage_door'], [111.4, -11], [114.3, -11], [114.3, -8], [114.3, -4], [114.5, 0, 'w04_office'], [123, 0], [126, 0, 'w05_stair_top'],
   [150, 0, 'w06_stair_mid'], [172, 0, 'w07_stair_foot'], [179, 7, 'w08_crypt'], [186.2, 14], [186.2, 28, 'w09_reliquary'], [186.2, 14], [178, 7], [178, -6], [186.2, -11, 'w10_crypt_north'],
   [186.2, -29.5], [181.8, -29.5, 'w10c_cubiculum'], [186.2, -29.5], [186.2, -33, 'w11_gallery'], [197, -33], [205, -33, 'w12_ossuary'], [197, -33], [186.2, -33], [186.2, -43.5], [181.8, -43.5, 'w12c_bone_room'], [186.2, -43.5], [186.2, -53, 'w13_gallery_end'], [186.2, -70, 'w14_sexton'], [186.2, -73, 'w15_hall'],
   [197, -81, 'w16_hall_east'], [203, -86.6], [228, -86.6, 'w17_abbots'], [234, -86.6, 'w18_tomb'], [240, -86.6, 'w19_tomb_mid'],
-];
+].map(([x, z, name]) => [...churchAt(x, z), name]);
 
 export async function go({ start = 0, keep = true, shots = true, swing = true } = {}) {
   const b = window.bm;

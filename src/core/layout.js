@@ -15,6 +15,8 @@ export const GASH_FLOATS = 16;
 export const CTRL = { LATEST: 0, READING: 1, TICK: 2, EV_HEAD: 3, INPUT_SEQ: 4, PLAN_RUN: 5, PLAN_SEQ: 6, PUB_MS: 7, SIZE: 16 };
 
 // Input block (Float32Array)
+// INPUT.ABIL's bits: a charm's gift (double jump, sure foot), or the skull's cheats (src/ui/skull.js).
+export const ABIL = { DOUBLE_JUMP: 1, NO_DAMAGE: 2, FLY: 4, GOD: 8, SURE_FOOT: 16 };
 export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK: 5, WIDE: 6, JUMP: 7, RESTART: 8, ASPECT: 9, CMD: 10, CMD_A: 11, CMD_B: 12, CMD_C: 13, PAUSE: 14, DODGE: 15, TOUCH: 16,
   // The sword in hand, as an index into WEAPONS, and what it comes to with its rolls and gems. See src/items/items.js.
   WEAPON: 17, W_MIN: 18, W_MAX: 19, W_PIERCE: 20, W_POISE: 21, W_STAM: 22, W_SPEED: 23, W_LEECH: 24, W_LIFE: 25,
@@ -31,6 +33,8 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // What gear and level come to for spells; and a skull in the left hand, which puts the shield's guard away.
   POWER: 36, MANA_MAX: 37, REGEN: 38, THRIFT: 39, SKULL: 40,
   VIEW_ASPECT: 41,
+  // What the charms carried and the skull's cheats allow, a bit each: ABIL in src/sim/player.js.
+  ABIL: 42,
   // The shield's special ability and its strength: SHIELD_POWERS in src/items/items.js. 0 with a skull in hand.
   SH_POWER: 44, SH_VALUE: 45, SIZE: 46 };
 
@@ -62,7 +66,11 @@ export const FX_START = SPELL_PALETTE + VM_JOINTS * 8;
 export const FX_FLOATS = 16;
 export const MAX_FX = 256;
 export const CHARS_START = FX_START + MAX_FX * FX_FLOATS;
-export const SNAP_FLOATS = CHARS_START + MAX_CHARS * C_SIZE;
+// The slimes out in the wet places (src/sim/slimes.js write).
+export const MAX_SLIMES = 40;
+export const SLIME_FLOATS = 12;
+export const SLIMES_START = CHARS_START + MAX_CHARS * C_SIZE;
+export const SNAP_FLOATS = SLIMES_START + MAX_SLIMES * SLIME_FLOATS;
 
 export const EV_FLOATS = 8;
 export const EV_CAPACITY = 512;

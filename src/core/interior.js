@@ -3,8 +3,9 @@
 // exception, having an upstairs: see homeFloor.
 import { terrainHeight } from './terrain.js';
 
-let floors = [], homes = [];
-export const setFloors = (f, h = []) => { floors = f; homes = h; };
+// (churchWest: where the church's floors begin. West of it, which is all the town, a floor is a house's. See src/core/church.js.)
+let floors = [], homes = [], churchWest = Infinity;
+export const setFloors = (f, h = []) => { floors = f; homes = h; churchWest = f.reduce((m, q) => Math.min(m, q.x0), Infinity); };
 
 const levelOf = (f, x, z) => {
   if (f.y === f.y2) return f.y;
@@ -13,7 +14,7 @@ const levelOf = (f, x, z) => {
 };
 
 export function floorAt(x, z) {
-  if (x < 60) {
+  if (x < churchWest) {
     // (Only the player goes upstairs. Everyone and everything else is on the ground floor.)
     for (const h of homes) if (x >= h.ground[0] && x <= h.ground[2] && z >= h.ground[1] && z <= h.ground[3]) return h.y;
     return null;
