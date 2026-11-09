@@ -1417,7 +1417,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); this.heroTalk?.onPlayerKill(d); this.townUI?.kill(a, b, c, d | 0); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
