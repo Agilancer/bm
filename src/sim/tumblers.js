@@ -441,7 +441,7 @@ class Tumbler {
 
   surface(sim) {
     this.state = 'up'; this.t = 0; this.hostile = true;
-    sim.event(EV.DIRT, this.x, sim.world.height(this.x, this.z), this.z, 0.8 + this.R * 0.5);
+    sim.event(EV.DIRT, this.x, sim.world.height(this.x, this.z), this.z, 1.0);
     sim.event(EV.ALERT, this.x, this.y + this.R, this.z);
   }
 

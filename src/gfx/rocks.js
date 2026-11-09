@@ -505,9 +505,13 @@ struct V {
   if (look.x > 7.5 && look.x < 8.5) {
     let d = normalize(pIn - vec3f(0.0, 0.25, 0.0));
     let lump = 0.75 * (1.0 + 0.08 * sin(d.x * 5.0 + d.z * 3.0 + r0.w) + 0.05 * sin(d.z * 7.0 - d.y * 4.0 + r2.w));
-    let sag = 1.0 + 0.3 * (1.0 - smoothstep(-0.3, 0.5, d.y));
-    q = d * lump * vec3f(1.35 * sag, 0.6, 1.35 * sag) + vec3f(0.0, 0.05, 0.0);
-    nl = normalize(d * vec3f(1.0 / 1.35, 1.0 / 0.6, 1.0 / 1.35));
+    // (Its foot flares into a skirt of mud, and it's sunk so the rim lies a little under the bog: it swells out of the ground,
+    // not sitting on it. The 0.72 the renderer lifts every tumbler by is for a boulder's height, so most of it is taken back.)
+    let sag = 1.0 + 0.6 * (1.0 - smoothstep(-0.6, 0.3, d.y));
+    q = d * lump * vec3f(1.35 * sag, 0.6, 1.35 * sag) - vec3f(0.0, 0.37, 0.0);
+    nl = normalize(d * vec3f(1.0 / (1.35 * sag), 1.0 / 0.6, 1.0 / (1.35 * sag)));
+    // (A glob of it in flight, the little ones: a round lump, centred where the sim has it.)
+    if (look.w < 0.3) { q = d * lump * vec3f(1.0, 0.85, 1.15); nl = d; }
   }
   // A crow: its wings beat (how hard, the sim's glow), and fold back along it for a dive.
   if (look.x > 8.5) {
@@ -577,7 +581,10 @@ struct V {
     let seam = 1.0 - smoothstep(0.0, 0.022, abs(vein.g - 0.5));
     fire = FIRE[kind] * seam * glow * pulse * 5.0;
     albedo = mix(col * vec3f(0.42, 0.4, 0.34), m * vec3f(0.45, 0.55, 0.3), smoothstep(0.1, 0.6, ln.y + (det.a - 0.5)) * 0.7);
-    rough0 = 0.22;
+    // (Matte peat, wet only in streaks running down it.)
+    let streak = smoothstep(0.58, 0.7, textureSampleLevel(noiseTex, repeatSmp, vec2f(atan2(lp.z, lp.x) * 0.9, lp.y * 0.12), 0.0).r);
+    rough0 = mix(0.72, 0.16, streak);
+    albedo *= mix(1.0, 0.7, streak);
   }
   let ao = mix(0.6, 1.0, smoothstep(-0.6, 0.6, n0.y));
   let rough = rough0;
@@ -599,7 +606,13 @@ const SHADOW_TUMBLER = /* wgsl */ `
 struct U { m: mat4x4f, t: vec4f };
 @group(0) @binding(0) var<uniform> U_: U;
 @vertex fn vs(@location(0) pIn: vec3f, @location(5) r0: vec4f, @location(6) r1: vec4f, @location(7) r2: vec4f, @location(8) look: vec4f) -> @builtin(position) vec4f {
-  let q = pIn - vec3f(0.0, 0.16, 0.0);
+  var q = pIn - vec3f(0.0, 0.16, 0.0);
+  // (The Mire Mound's shadow from its own heap: as in TUMBLER.)
+  if (look.x > 7.5 && look.x < 8.5) {
+    let d = normalize(pIn - vec3f(0.0, 0.25, 0.0));
+    let sag = 1.0 + 0.6 * (1.0 - smoothstep(-0.6, 0.3, d.y));
+    q = d * 0.75 * vec3f(1.35 * sag, 0.6, 1.35 * sag) - vec3f(0.0, 0.37, 0.0);
+  }
   return U_.m * vec4f(vec3f(dot(r0.xyz, q), dot(r1.xyz, q), dot(r2.xyz, q)) + vec3f(r0.w, r1.w + look.w * 0.72, r2.w), 1.0);
 }
 `;
