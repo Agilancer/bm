@@ -53,7 +53,10 @@ export class HomeLights {
         if (!house || house.lit === !!up[h]) continue;
         house.lit = !!up[h];
         this.flames(house);
+        // (Someone's lit them: the sound of it, by src/main.js. Not on the first look round, when every house is set as it is.)
+        if (house.lit && this.seen) this.onLit?.(house.lamps[0] || house.fires[0]);
       }
+      this.seen = true;
     }
     // A lamp's put out in a breath, and lit as quick; a fire dies down slowly.
     for (const house of this.houses) {

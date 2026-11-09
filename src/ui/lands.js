@@ -9,10 +9,13 @@
 // last until the page is reloaded.
 
 import { SEALS } from '../core/sites.js';
-import { SITES, WATERS, countryAt } from '../core/lands.js';
+import { CLIFF, POOL, SITES, WATERS, countryAt } from '../core/lands.js';
+import { roomAt } from './places.js';
 import { ABIL, H, INPUT } from '../core/layout.js';
 
 const PASSWORD = '6669';
+// The countries thick with trees, where the woods' own sounds are heard.
+const WOODS = new Set(['darkwood', 'deepwood', 'rustwood', 'gallows']);
 const SKULL = 'assets/ui/velscour_skull.png';
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -143,6 +146,7 @@ export class Lands {
 
   open(p) {
     if (this.isOpen) return false;
+    this.o.audio.play('uiOpen', null, 0, 0, 0.4, 1, false);
     this.o.opened();
     p.classList.add('on');
     return true;
@@ -150,6 +154,7 @@ export class Lands {
 
   close() {
     if (!this.isOpen) return;
+    this.o.audio.play('uiClose', null, 0, 0, 0.4, 1, false);
     for (const p of [this.pass, this.menu, this.travel]) p.classList.remove('on');
     document.activeElement?.blur?.();
     this.o.closed();
@@ -299,23 +304,64 @@ export class Lands {
     this.sounds(px, snap[H.PY], pz);
   }
 
-  // The countries' sounds, eased in and out by where you are.
+  // The countries' sounds, eased in and out by where you are. Under a roof the land's own come through faint; under the
+  // ground, not at all, and the place's own take over (src/ui/places.js roomAt).
   sounds(px, py, pz) {
     this.soundT = (this.soundT || 0) + 1;
     if (this.soundT % 15) return;
-    const A = this.o.audio, hr = this.o.hour();
+    const A = this.o.audio, hr = this.o.hour(), night = hr < 5 || hr > 20.5;
     const near = (x, z, r) => Math.max(0, 1 - Math.hypot(x - px, z - pz) / r);
+    const room = roomAt(px, py, pz), out = room === 'out' ? 1 : room === 'house' || room === 'cathedral' ? 0.15 : 0;
+    const c = countryAt(px, pz), woods = WOODS.has(c) ? 1 : 0, fen = c === 'fen' ? 1 : 0;
+    // A storm over Velscour's ground in the Ashen Waste: thickest at his keep.
+    const k = SITES.keep, o = SITES.obelisks, bf = SITES.bones;
+    const storm = Math.min(1, 1.5 * Math.max(near(k.x, k.z, 700), near(o.x, o.z, 380), near(bf.x, bf.z, 380)));
+    const fair = (1 - storm) * (1 - fen);
+    // The birds and the wind, and the woods by day and by night (the Weeping Fen's in the rain).
+    A.bed('birds', night ? 0 : 0.16 * out * fair * (1 - woods));
+    A.bed('wind_calm', 0.34 * out * (1 - 0.6 * storm));
+    A.bed('forest_day', night ? 0 : 0.5 * out * woods * fair);
+    A.bed('forest_night', night ? 0.45 * out * woods * fair : 0);
+    A.bed('night', night ? 0.3 * out * (1 - woods) * fair : 0);
+    A.bed(night ? 'forest_night_rain' : 'forest_day_rain', 0.5 * out * fen);
+    A.bed(night ? 'forest_day_rain' : 'forest_night_rain', 0);
+    A.bed(night ? 'forest_night_storm' : 'forest_day_storm', 0.6 * out * storm);
+    A.bed(night ? 'forest_day_storm' : 'forest_night_storm', 0);
+    A.bed('wind_forest', out * (woods * 0.22 + 0.5 * Math.min(1, Math.max(0, (py - 260) / 400))));
+    // Water: the falls (their roar far off, the water's fall close to), the pool churning under them, the meres, Sallowmere's shore.
     const f = SITES.falls;
-    A.bed('waterfall_strong', 0.7 * near(f.x + 40, f.z, 220) ** 1.5);
+    A.bed('waterfall_strong', 0.7 * out * near(f.x + 40, f.z, 220) ** 1.5);
+    A.bed('waterfall_loop', 0.6 * out * near(CLIFF.x + 30, POOL.z, 90) ** 1.2);
+    A.bed('river_loop', 0.4 * out * near(POOL.x, POOL.z, POOL.r + 35));
     let water = 0;
     for (const w of WATERS) if (!w.frozen) water = Math.max(water, near(w.x, w.z, w.r + 70));
-    A.bed('stream', 0.35 * water);
-    const c = countryAt(px, pz);
-    A.bed('wind_forest', (c === 'rustwood' || c === 'deepwood' || c === 'darkwood' ? 0.22 : 0) + 0.5 * Math.min(1, Math.max(0, (py - 260) / 400)));
-    A.bed('night', hr < 5 || hr > 20.5 ? 0.3 : 0);
-    const k = SITES.keep, o = SITES.obelisks;
-    A.bed('fire_medium', 0.35 * Math.max(near(k.x + 90, k.z, 140), near(o.x, o.z, 60)));
-    A.bed('cave_drips', 0.3 * near(SITES.barrows.x, SITES.barrows.z, 120));
+    A.bed('stream', 0.35 * out * water);
+    const sm = WATERS.find((w) => w.key === 'sallow');
+    A.bed('beach_rain', 0.45 * out * near(sm.x, sm.z, sm.r + 60) ** 0.7);
+    A.bed('fire_medium', 0.35 * out * Math.max(near(k.x + 90, k.z, 140), near(o.x, o.z, 60)));
+    A.bed('cave_drips', 0.3 * out * near(SITES.barrows.x, SITES.barrows.z, 120));
+    // Inside: a house's quiet, the dark lord's cathedral with the storm on its roof, the catacombs, the Rift's rumble.
+    A.bed('inside_day', room === 'house' && !night ? 0.5 : 0);
+    A.bed('inside_night', room === 'house' && night ? 0.5 : 0);
+    A.bed('inside_day_storm', room === 'cathedral' && !night ? 0.45 : 0);
+    A.bed('inside_night_storm', room === 'cathedral' && night ? 0.45 : 0);
+    A.bed('cave', room === 'catacombs' ? 0.55 : 0);
+    A.bed('cave_storm', room === 'rift' ? 0.6 : 0);
+    // The nearest fire's crackle, heard from where it burns (as low as a banked hearth's, src/gfx/homelights.js).
+    let best = null, bd = 9;
+    for (const L of this.o.flames || []) {
+      const dy = L.p[1] - py;
+      if (dy < -3 || dy > 6) continue;
+      const d = Math.hypot(L.p[0] - px, L.p[2] - pz);
+      if (d < bd) { bd = d; best = L; }
+    }
+    if (best) A.spot('torch', 'torch_loop', best.p[0], best.p[1], best.p[2], 0.55 * (best.dim ?? 1));
+    else A.spot('torch', 'torch_loop', px, py, pz, 0);
+    // The Woodcutters' Camp, at work by day.
+    const cut = SITES.cutters, cd = near(cut.x, cut.z, 90);
+    if (cd > 0 && !night && hr > 7 && hr < 18 && Math.random() < 0.35) {
+      A.play('chop', cut.x + (Math.random() - 0.5) * 30, py + 1, cut.z + (Math.random() - 0.5) * 30, 1.6);
+    }
   }
 
   save() { return { awake: [...this.awake] }; }

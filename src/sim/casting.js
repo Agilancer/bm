@@ -954,6 +954,7 @@ export class Casting {
     const s = Math.sin(p.yaw), co = Math.cos(p.yaw);
     this.zones.push({ kind: 'wall', def, x: c[0], y: c[1], z: c[2], rx: -co, rz: s, t: 0, life: def.duration, tickT: 0, seed: Math.random() });
     sim.event(EV.SPELL_BOOM, def.elem, c[0], c[1] + 0.4, c[2], 2.2);
+    sim.event(EV.SPELL_ZONE, def.elem, SPELLS.indexOf(def), c[0], c[1] + 0.6, c[2], def.duration);
   }
 
   cast_cone(def, sim) {
@@ -1005,6 +1006,7 @@ export class Casting {
   cast_storm(def, sim) {
     const c = this.groundAim(sim, def.range, [0, 0, 0]);
     this.zones.push({ kind: 'storm', def, x: c[0], y: c[1], z: c[2], t: 0, life: def.duration, tickT: 0, seed: Math.random() });
+    sim.event(EV.SPELL_ZONE, def.elem, SPELLS.indexOf(def), c[0], c[1] + 1, c[2], def.duration);
   }
 
   cast_blink(def, sim) {

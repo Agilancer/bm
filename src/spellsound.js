@@ -15,6 +15,15 @@ const VOICE = [
   { n: [420, 80], q: 0.8, tone: [90, 38], type: 'sine', t: 0.32 },          // stone
 ];
 
+// Over the made sounds, the Fantasy SFX Pack's (src/audio.js BANKS): [bank, gain, rate].
+// As each spell leaves the hand, by its key (src/sim/spells.js):
+const LOOSE = {
+  firebolt: ['fireball', 0.6, 1], frost: ['iceThrow', 0.6, 1.05], firebeam: ['firespray', 0.55, 1], nova: ['iceWall', 1, 1],
+  wisp: ['kindle', 0.55, 1.15], spikes: ['rockThrow', 0.8, 0.8], meteor: ['torchStrike', 0.9, 0.6], arcaneblast: ['wave', 0.4, 1.35],
+};
+// Where an element strikes something, by ELEM (the rest: spellImpact).
+const HIT = { 0: ['torchImpact', 0.5, 1], 1: ['iceFreeze', 0.35, 1.3], 7: ['thunk', 0.8, 0.9], 11: ['rockThrow', 0.5, 1.2] };
+
 export class SpellSound {
   constructor(audio) {
     this.audio = audio;
@@ -64,14 +73,45 @@ export class SpellSound {
     o.stop(t + dur + 0.03);
   }
 
-  gather(e) { this.voice(e, null, 0, 0, 0.16, 1.5, 0.6); }
-  loose(e, x, y, z) { this.voice(e, x, y, z, 0.5, 1, 1 + Math.random() * 0.1); }
-  hit(e, x, y, z) { this.voice(e, x, y, z, 0.26, 0.5, 1.2 + Math.random() * 0.3); }
+  layer(s, x, y, z, k = 1) { if (s && this.live) this.audio.play(s[0], x, y, z, s[1] * k, s[2]); }
+
+  gather(e) {
+    this.voice(e, null, 0, 0, 0.16, 1.5, 0.6);
+    if (e === 0 && this.live) this.audio.play('firebuff', null, 0, 0, 0.3, 1.1, false);
+  }
+  // key: the spell's (null for a staff's own shot).
+  loose(e, x, y, z, key = null) {
+    this.voice(e, x, y, z, 0.5, 1, 1 + Math.random() * 0.1);
+    this.layer(LOOSE[key], x, y, z);
+  }
+  hit(e, x, y, z) {
+    this.voice(e, x, y, z, 0.26, 0.5, 1.2 + Math.random() * 0.3);
+    this.layer(HIT[e] || ['spellImpact', 0.4, 1.1], x, y, z);
+  }
   // Scaled by how big a thing went off.
   boom(e, x, y, z, size) {
     const big = Math.min(1, size / 5);
     this.voice(e, x, y, z, 0.35 + big * 0.9, 0.7 + big * 2.2, 1.1 - big * 0.45);
     if (size > 1.6) this.voice(0, x, y, z, 0.25 + big * 0.8, 1.4 + big * 2.4, 0.42);
+    if (!this.live) return;
+    const A = this.audio;
+    if (e === 0) {
+      // A meteor brings the sky's stones down with it; a bolt bursts; a beam's every touch hisses.
+      if (size >= 4) { A.play('fireball', x, y, z, 1.4, 0.65); A.play('rockSwarm', x, y, z, 1.3, 0.85); } else if (size >= 1) A.play('fireball', x, y, z, 0.6 + big * 0.6, 1.15 - big * 0.3);
+      else A.play('torchImpact', x, y, z, 0.3, 1.2);
+    } else if (e === 1) { if (size < 4) A.play('iceFreeze', x, y, z, 0.6, 1.1); }
+    else if (e === 11) A.play('rockWall', x, y, z, 0.7, 1.1);
+    else if (e === 9) { if (size >= 1.5) A.play('splash', x, y, z, 0.8, 0.9); }
+    else if (e === 7) A.play('thunk', x, y, z, 0.9, 0.85);
+    else A.play('spellImpact', x, y, z, 0.35 + big * 0.5, 1.2 - big * 0.5);
+  }
+
+  // A spell laid on the ground away from you, heard where it is: the wall of fire catching, the blizzard's ice coming down.
+  zone(key, x, y, z, dur) {
+    if (!this.live) return;
+    const A = this.audio;
+    if (key === 'wallfire') A.play('fireCatch', x, y, z, 1.3, 0.9);
+    else if (key === 'blizzard') for (let t = 0; t < dur - 1; t += 2.3) setTimeout(() => A.play('iceBarrage', x, y, z, 1.1, 0.9 + Math.random() * 0.15), t * 1000);
   }
   fizzle() { this.voice(11, null, 0, 0, 0.14, 0.5, 2.4); }
 

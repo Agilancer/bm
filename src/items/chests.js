@@ -67,8 +67,7 @@ export class Chests {
   open(ch) {
     if (ch.open) return;
     ch.open = true;
-    this.audio.play('land', ch.x, ch.y, ch.z, 0.5, 0.55);
-    this.audio.play('draw', ch.x, ch.y, ch.z, 0.35, 0.5);
+    this.audio.play('chestOpen', ch.x, ch.y + 0.5, ch.z, 1);
   }
 
   // Out over the front, a pace or so.

@@ -91,6 +91,7 @@ export class QuestBook {
     this.q[id] = { stage: 'active', step: 0, n: 0 };
     this.flags.add(`quest:${id}`);
     this.on.toast(`New quest: ${QUESTS[id].title}`, 'quest');
+    this.on.begun?.(id);
     this.on.change();
   }
 
