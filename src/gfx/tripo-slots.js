@@ -5,7 +5,7 @@
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { C, C_HERO, C_SIZE, CHARS_START } from '../core/layout.js';
 import { ARMS, TRIPO_BASE, armIds } from '../core/tripo-monsters.js';
-import { decodeScaledBitmap, makeBuffer, mipCountFor } from './gpu.js';
+import { makeBuffer, mipCountFor } from './gpu.js';
 
 const KEEP_MODELS = 10;
 const KEEP_SKINS = 12;
@@ -51,30 +51,15 @@ function handFrames(glb) {
   return { Right: frame('Right'), Left: frame('Left') };
 }
 
-// sRGB <-> linear, as tables: the palette sums are done on linear colour, like the bestiary's shader.
-const TO_LIN = new Float32Array(256).map((_, i) => { const c = i / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
-const TO_SRGB = new Uint8Array(4096).map((_, i) => { const c = i / 4095; return Math.round(255 * (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055)); });
-
-// monsters.html paletted(): hue turned, saturation and value scaled, then mixed toward a tint by its brightness.
-function bake(px, p) {
-  const hue = (p.hue || 0) / 360, sat = p.sat ?? 1, val = p.val ?? 1, tamt = p.tamt || 0, tint = p.tint || [1, 1, 1];
-  for (let i = 0; i < px.length; i += 4) {
-    const r = TO_LIN[px[i]], g = TO_LIN[px[i + 1]], b = TO_LIN[px[i + 2]];
-    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
-    let h = 0;
-    if (d > 1e-6) h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    h = (h / 6 + hue) % 1;
-    const s = Math.min(1, (max > 1e-6 ? d / max : 0) * sat), v = max * val;
-    const k = (n) => { const x = (n + h * 6) % 6; return v - v * s * Math.max(0, Math.min(x, 4 - x, 1)); };
-    let R = k(5), G = k(3), B = k(1);
-    if (tamt) {
-      const l = R * 0.3 + G * 0.59 + B * 0.11;
-      R += (l * tint[0] * 2 - R) * tamt; G += (l * tint[1] * 2 - G) * tamt; B += (l * tint[2] * 2 - B) * tamt;
-    }
-    px[i] = TO_SRGB[Math.min(4095, Math.max(0, (R * 4095) | 0))];
-    px[i + 1] = TO_SRGB[Math.min(4095, Math.max(0, (G * 4095) | 0))];
-    px[i + 2] = TO_SRGB[Math.min(4095, Math.max(0, (B * 4095) | 0))];
+// The palette bake runs in a worker of its own: a 4096 map takes most of a second, which would be a hitch here.
+let baker = null, bakeId = 0;
+const bakes = new Map();
+function bakeOff(blob, scale, pal) {
+  if (!baker) {
+    baker = new Worker(new URL('./bake.worker.js', import.meta.url), { type: 'module' });
+    baker.onmessage = (e) => { const b = bakes.get(e.data.id); bakes.delete(e.data.id); if (e.data.error) b.no(new Error(e.data.error)); else b.ok(e.data.bmp); };
   }
+  return new Promise((ok, no) => { const id = ++bakeId; bakes.set(id, { ok, no }); baker.postMessage({ id, blob, scale, pal }); });
 }
 
 export class TripoSlots {
@@ -167,16 +152,11 @@ export class TripoSlots {
     const r = this.r, p = this.palettes[pal] || {};
     const plain = !p.hue && (p.sat ?? 1) === 1 && (p.val ?? 1) === 1 && !p.tamt;
     s = plain ? r.imageTexture(m.glb, m.albSrc, 'rgba8unorm-srgb', r.tier.texScale) : (async () => {
-      const bmp = await decodeScaledBitmap(imageBytes(m.glb, m.albSrc), r.tier.texScale);
-      const cv = new OffscreenCanvas(bmp.width, bmp.height), cx = cv.getContext('2d', { willReadFrequently: true });
-      cx.drawImage(bmp, 0, 0);
-      bmp.close();
-      const img = cx.getImageData(0, 0, cv.width, cv.height);
-      bake(img.data, p);
-      cx.putImageData(img, 0, 0);
+      const cv = await bakeOff(imageBytes(m.glb, m.albSrc), r.tier.texScale, p);
       const fmt = 'rgba8unorm-srgb', mips = mipCountFor(cv.width, cv.height);
       const tex = r.device.createTexture({ size: [cv.width, cv.height], format: fmt, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
       r.device.queue.copyExternalImageToTexture({ source: cv }, { texture: tex, premultipliedAlpha: false }, [cv.width, cv.height]);
+      cv.close();
       const enc = r.device.createCommandEncoder();
       r.mip.generate(tex, fmt, 1, mips, enc);
       r.device.queue.submit([enc.finish()]);

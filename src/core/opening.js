@@ -12,10 +12,15 @@ export const SWAP_AT = 9.0;        // the flash: the glamour shorts out and the 
 export const SNAP_AT = 14.6;       // her snap: the drone cuts dead
 export const CANDLES_AT = 15.6;    // the candles pop alight
 export const NAME_AT = 41.0;       // the name prompt
-export const HERD_END = 13.2;      // control comes back this long after the name
+export const HERD_CONTROL = 9.9;   // into HERD: you can walk again
+export const HERD_END = 13.2;      // and this long after the name, you're walking out
 export const COLLAPSE_END = 41.8;  // the bars slide away and the walk down begins
 export const DUST_AT = 7.0;        // in COLLAPSE: the mouth caves in, and she comes out of the dust pretty
 export const KNEEL_UP = 10.3;
+// Whether the story holds you still: you can't move, and on a phone the thumbs are put away. The bars stay up past this, as
+// you walk out of the cave, and then the thumbs must be there, or a phone can't leave it.
+export const storyHolds = (stage, t) => stage === OPENING.WAKE || stage === OPENING.NAME || stage === OPENING.COLLAPSE
+  || (stage === OPENING.HERD && t < HERD_CONTROL);
 // Which of her you see: lovely while the glamour holds, the witch from the flash until she comes out of the dust, and lovely
 // to you from then on (in town, only by day). Everyone else only ever sees the witch.
 export const prettyShown = (stage, t, day = true) => (stage === OPENING.WAKE && t < SWAP_AT) || (stage === OPENING.COLLAPSE && t >= DUST_AT)

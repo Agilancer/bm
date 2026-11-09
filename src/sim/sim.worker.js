@@ -194,7 +194,8 @@ class Sim {
         const h = k.heroFoe;
         this.event(EV.HERO, h.slot, TRIG[h.hp < h.maxHp * 0.35 ? 'saved_by_player' : 'player_steals_kill'], -1, -1, MOB_KEYS.indexOf(mobKind(k)), 0, 0);
       }
-      if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
+      // (d: what it drops, by drops.js; e: 1 + what it is, by KIND, for the heroes' talk.)
+      if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind, 1 + k.kind); }
       if (!k.dead) k.looted = false;
     }
     if (this.opening) this.opening.update(tdt);
