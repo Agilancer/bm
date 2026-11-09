@@ -3,7 +3,8 @@
 
 import { STAFFS2 } from '../items/staffs2.js';
 
-export const MAX_CHARS = 48;
+// (Room for the other Tessariels, src/sim/hero.js: HERO_SLOTS in src/core/heroes.js.)
+export const MAX_CHARS = 64;
 export const MAX_JOINTS = 104;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;
@@ -54,7 +55,13 @@ export const C = {
 };
 export const C_PALETTE = C.SIZE_HEAD;
 export const C_PROPS = C_PALETTE + MAX_JOINTS * 8;
-export const C_BLEEDS = C_PROPS + 2 * 16;
+// Three things in a character's hands and on its back, a matrix each: main hand, off hand (a knight's shield), the back.
+export const PROPS_PER_CHAR = 3;
+// What the render thread needs of one of the other Tessariels (src/sim/hero.js writeHero): shown, tag height, x, y, z,
+// hp fraction, level, party, activity, dead, below, fighting.
+export const C_HERO = C_PROPS + PROPS_PER_CHAR * 16;
+export const HERO_FLOATS = 16;
+export const C_BLEEDS = C_HERO + HERO_FLOATS;
 export const C_GASH = C_BLEEDS + MAX_BLEEDS * 8;
 export const C_MASKS = C_GASH + MAX_GASH * GASH_FLOATS;
 export const C_SIZE = C_MASKS + MAX_PIECES;
@@ -99,7 +106,9 @@ export const EV = {
   GROUND: 13, GLINT: 14, BLOOD: 15, JUMP: 16, LAND: 17, SHIELD_BREAK: 18, DUST: 19, WHOOSH: 20, ALERT: 21, TAUNT: 22, WIN: 23, LOSE: 24,
   CRAB_HIT: 25, CRAB_DIE: 26, DODGE: 27, CRAB_WAKE: 28, ROAR: 29, BEAST_NOTICE: 30, FIRE: 31, FIRE_HIT: 32, SEVER: 33, STUMP: 34, CHUNK_LAND: 35, HYDRA_NOTICE: 36, BURN: 37, LOOT: 38, EMPTY_HANDS: 39,
   SPELL_CAST: 40, SPELL_LOOSE: 41, SPELL_HIT: 42, SPELL_BOOM: 43, SPELL_FIZZLE: 44,
-  GROAN: 45, DIRT: 46, CHANT: 47, BLINK: 48, UNDEAD_DIE: 49, CHAMPION: 50, CHAMPION: 50,
+  GROAN: 45, DIRT: 46, CHANT: 47, BLINK: 48, UNDEAD_DIE: 49, CHAMPION: 50,
+  // The other Tessariels (src/sim/hero.js): a line to say (slot, trigger, other slot, place, mob, extra), a level, a duel's end.
+  HERO: 51, HERO_LEVEL: 52, HERO_DUEL: 53,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.

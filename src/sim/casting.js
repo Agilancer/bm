@@ -452,10 +452,11 @@ export class Casting {
     if (k.spellGuard) { const through = k.spellGuard(sim, fromX, fromZ, dmg); dmg *= through; poise *= through; }
     const a = this.affOf(k);
     k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE * this.power;
+    k.playerHitT = sim.time;     // (The player had a hand in it: src/sim/sim.worker.js, whose kill it is.)
     // Leech: a drink for each hit, but a held spell's ticks don't add up to a fountain.
     if (sim.time > this.leechT) { this.leechT = sim.time + 0.25; sim.player.drink(); }
     k.onHit(sim, kind, fromX, fromZ, poise);
-    sim.event(EV.SPELL_HIT, elem, x, y, z, dmg);
+    sim.event(EV.SPELL_HIT, elem, x, y, z, dmg, sim.mobIndex ? sim.mobIndex(k) : -1);
   }
 
   shove(k, vx, vz, up = 0) {

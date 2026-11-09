@@ -25,6 +25,8 @@ import { TOWN_KNIGHTS } from '../core/knights.js';
 import { Player } from './player.js';
 import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
+import { Hero, HeroWorld, mobKind } from './hero.js';
+import { MOB_KEYS, TRIG } from '../core/heroes.js';
 import { Slimes } from './slimes.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
@@ -69,6 +71,9 @@ class Sim {
     // The slimes out in the wet places; the spells look for them with the knights, as sim.foes.
     this.slimes = new Slimes();
     this.villagers = [];
+    // The other Tessariels (src/sim/hero.js): not knights, so nothing of the player's touches them. Drawn between the knights and the villagers.
+    this.heroes = [];
+    this.mobIndex = (k) => MOB_KEYS.indexOf(mobKind(k));     // (What a spell hit, for the heroes' words: casting.js.)
     this.nudgePosition = new Float32Array(3);
     this.scratch = new Float32Array(SNAP_FLOATS);
     this.snapU = new Uint32Array(this.scratch.buffer);
@@ -112,6 +117,7 @@ class Sim {
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.villagers.forEach((v) => v.reset());
+    if (this.heroWorld) this.heroWorld.killed = [];
     this.opening?.reset();
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0; this.stopT = 0; this.timeScale = 1;
@@ -166,13 +172,31 @@ class Sim {
       if (k.kind !== 1 && !k.opts?.leash && inTown(k.x, k.z) && !inTown(ox, oz)) { k.x = ox; k.z = oz; }
       if (k.champion && !k.dead && this.tick % 10 === 0) this.event(EV.CHAMPION, k.x, k.y + 1.3, k.z);
       // Each death leaves its loot once.
+      // (What one of the other Tessariels kills is theirs: src/sim/hero.js.)
+      // (And one that bled out or fell apart after a hero's blow, with no hand of the player's in it, is theirs too.)
+      // (A summoner's dead fall with it: theirs whose kill the summoner was.)
+      if (k.dead && !k.looted && !k.heroKill) {
+        const mine = this.time - (k.playerHitT ?? -1e9) < 30 || (k.owner && this.time - (k.owner.playerHitT ?? -1e9) < 30);
+        const theirs = k.heroFoe && this.time - (k.heroFoeT ?? -1e9) < 30;
+        if (!mine && theirs) { k.heroKill = true; this.heroWorld?.onKill(k.heroFoe, k); }
+        else if (!mine && k.owner?.heroKill) k.heroKill = true;
+      }
+      if (k.dead && !k.looted && k.heroKill) k.looted = true;
+      // You took one a hero was fighting: a kill stolen, or a life saved.
+      if (k.dead && !k.looted && k.heroFoe && !k.heroFoe.dead && this.time - (k.heroFoeT ?? -1e9) < 6) {
+        const h = k.heroFoe;
+        this.event(EV.HERO, h.slot, TRIG[h.hp < h.maxHp * 0.35 ? 'saved_by_player' : 'player_steals_kill'], -1, -1, MOB_KEYS.indexOf(mobKind(k)), 0, 0);
+      }
       if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind); }
       if (!k.dead) k.looted = false;
     }
     if (this.opening) this.opening.update(tdt);
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
+    if (this.heroWorld && !this.frozen && tdt > 0) this.heroWorld.step(tdt);
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
+    // (After the spells' update, which clears the frame's shapes.)
+    this.heroWorld?.drawFx();
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);
     stepCatacombs(this);
@@ -182,14 +206,16 @@ class Sim {
     this.casting.write(snap);
     this.slimes.write(snap);
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
-    this.villagers.forEach((v, i) => v.write(snap, this.charOffset(this.knights.length + i)));
+    const nk = this.knights.length, nh = this.heroes.length;
+    this.heroes.forEach((h, i) => h.write(snap, this.charOffset(nk + i), this));
+    this.villagers.forEach((v, i) => v.write(snap, this.charOffset(nk + nh + i)));
     if (this.opening) this.opening.write(snap, H);
     else snap[H.OPENING] = OPENING.OFF;
     player.sweep(snap, this);
     this.knights.forEach((k, i) => k.writeGashes(snap, this.charOffset(i), this));
     this.plan();
     snap[H.TIME] = this.time; snap[H.TICK] = this.tick;
-    snap[H.NCHARS] = this.knights.length + this.villagers.length;
+    snap[H.NCHARS] = this.knights.length + this.heroes.length + this.villagers.length;
     snap[H.GAME] = this.gameState; snap[H.GAME_T] = this.gameT;
     snap[H.TIME_SCALE] = this.timeScale * (this.slowT > 0 ? 0.25 : 1);
     snap[H.TACTIC] = this.knights[0].tactic;
@@ -217,7 +243,7 @@ class Sim {
   // Bodies don't pass through each other: plate armour shoulders the player aside, and knights too.
   separate() {
     const p = this.player;
-    const list = [...this.knights, ...(this.opening ? this.villagers.slice(1) : this.villagers)];
+    const list = [...this.knights, ...this.heroes.filter((h) => h.active && !h.surf && !h.jump), ...(this.opening ? this.villagers.slice(1) : this.villagers)];
     for (const k of list) {
       if (k.dead || k.dormant) continue;
       const P = k.bodyRadius || 0.82;
@@ -440,6 +466,19 @@ async function boot(msg) {
   // The knights in the other suits: Tessariel's walking the village, Velscour's man on the west road.
   const townBufs = await Promise.all(TOWN_KNIGHTS.map((t) => fetchBuf(base + t.asset)));
   TOWN_KNIGHTS.forEach((t, i) => sim.knights.push(new Knight(sim.knights.length, t.kind, new Rig(parseGLB(townBufs[i]), bank), bank, t)));
+  // The other Tessariels: the render thread chose who's in the world this session (src/core/heroes.js makeCast).
+  if (msg.heroes?.length) {
+    const [hMeta, hBin, kit] = await Promise.all([
+      fetch(`${base}assets/game/heroes/clips.json`).then((r) => r.json()),
+      fetchBuf(`${base}assets/game/heroes/clips.bin`),
+      fetch(`${base}assets/game/heroes/kit.json`).then((r) => r.json()),
+    ]);
+    const heroBank = new ClipBank(hMeta, hBin);
+    const bufs = await Promise.all(msg.heroes.map((p) => fetchBuf(`${base}assets/game/heroes/${p.body}.glb`)));
+    msg.heroes.forEach((person, i) => sim.heroes.push(new Hero(i, new Rig(parseGLB(bufs[i]), heroBank), heroBank, person, kit.props)));
+    sim.heroWorld = new HeroWorld(sim, sim.heroes);
+    if (msg.hour !== undefined) sim.heroWorld.setHour(msg.hour);
+  }
   for (const form of LISANDRA_FORMS) {
     sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
   }
@@ -457,6 +496,12 @@ async function boot(msg) {
     if (m.type === 'openingName') sim.opening?.named();
     if (m.type === 'openingSkip') sim.opening?.skip();
     if (m.type === 'openingPose' && sim.opening) sim.opening.pose = m.b;
+    // The other Tessariels: the town's clock, a gesture the words want, two or more held to talk, a review command.
+    if (m.type === 'hour') sim.heroWorld?.setHour(m.hour);
+    if (m.type === 'heroAct') sim.heroWorld?.act(m.slot, m.name, m.seconds);
+    if (m.type === 'heroHold') sim.heroWorld?.holdFor(m.slots, m.seconds);
+    if (m.type === 'heroWalk') sim.heroWorld?.walkFor(m.slot, m.seconds, m.mode);
+    if (m.type === 'heroDebug') sim.heroWorld?.debug(m);
     if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {

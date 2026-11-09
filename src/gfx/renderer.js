@@ -274,6 +274,21 @@ export class Renderer {
       tick();
     }
     this.chars[0].armored = this.chars[1].armored = true; this.chars[1].steel = true;
+    this.firstTown = this.chars.length - TOWN_KNIGHTS.length;
+    // The other Tessariels this session (src/core/heroes.js makeCast, chosen in src/main.js), in the sim's order: after the
+    // knights, before Lisandra. Fetched together, built one by one.
+    const cast = this.heroCast || [];
+    this.firstHero = this.chars.length;
+    const heroGlbs = await Promise.all(cast.map((p) => fetch(`${base}assets/game/heroes/${p.body}.glb`).then((r) => {
+      if (!r.ok) throw new Error(`hero ${p.body}: ${r.status}`);
+      return r.arrayBuffer();
+    }).then((b) => parseGLB(b))));
+    for (const glb of heroGlbs) {
+      const hero = await this.buildCharacter(glb);
+      hero.armored = true; hero.hero = true;
+      this.chars.push(hero);
+    }
+    tick();
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
       const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
@@ -314,11 +329,25 @@ export class Renderer {
     this.props = [];
     for (const i of [4, 5, 6, 7]) this.props.push(await this.buildProp(await loadModel(i)));
     this.chars[0].propBase = 0; this.chars[1].propBase = 2;
-    const firstTown = this.chars.length - LISANDRA_FORMS.length - TOWN_KNIGHTS.length;
+    const firstTown = this.firstTown;
     TOWN_KNIGHTS.forEach((k, i) => {
       this.chars[firstTown + i].propBase = this.props.length;
       this.props.push({ ...this.props[k.sword === 'crimson' ? 0 : 2] }, { ...this.props[k.shield === 'v' ? 1 : 3] });
     });
+    // Each hero's three: main hand, off hand, the board on the back (assets/game/heroes/kit, tools/heroes/kit.py). One model per
+    // item, shared. owner: drawn only while its hero is (an empty hand draws nothing).
+    const kitModels = new Map();
+    const kitModel = (id) => {
+      if (!kitModels.has(id)) kitModels.set(id, fetch(`${base}assets/game/heroes/kit/${id}.glb`).then((r) => r.arrayBuffer()).then((b) => this.buildProp(parseGLB(b))));
+      return kitModels.get(id);
+    };
+    for (let i = 0; i < cast.length; i++) {
+      const c = this.chars[this.firstHero + i], k = cast[i].kit || {};
+      c.propBase = this.props.length; c.propCount = 3;
+      // (Two daggers or two boomerangs: the same item in both hands.)
+      const off = k.off || (k.style === 'daggers' || k.style === 'boomerang' ? k.main : null);
+      for (const id of [k.main, off, k.back]) this.props.push(id ? { ...(await kitModel(id)), owner: this.firstHero + i } : { empty: true });
+    }
     this.propInstances = device.createBuffer({ size: 64 * this.props.length, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.propData = new Float32Array(16 * this.props.length);
     tick();
@@ -1895,6 +1924,15 @@ export class Renderer {
       for (let k = 0; k < 5; k++) inside = Math.min(inside, pl[k * 4] * x + pl[k * 4 + 1] * y + pl[k * 4 + 2] * z + pl[k * 4 + 3]);
       c.seen = inside > -r;
       c.casts = inside > -(r + 5);
+      // The other Tessariels are many and wander far: past 120 m one is a speck in the haze, past 50 m its shadow is a
+      // smudge. Neither is worth skinning sixteen bodies into every cascade for.
+      // (casts also decides skinning, so a hero in view keeps it; noShadow only leaves it out of the shadow passes.)
+      c.noShadow = false;
+      if (c.hero) {
+        const d = Math.hypot(x - cam.x, z - cam.z);
+        if (d > 120) { c.seen = false; c.casts = false; }
+        if (d > 50) { c.noShadow = true; if (!c.seen) c.casts = false; }
+      }
       // (Different distances each way, so a body standing right at the line doesn't flicker between the two.)
       c.far = Math.hypot(x - cam.x, z - cam.z) > (c.far ? 14 : 16);
     }
@@ -1991,7 +2029,7 @@ export class Renderer {
       skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
       skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
       q.writeBuffer(c.params, 0, skinParams);
-      if (c.propBase !== undefined) this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 32), c.propBase * 16);
+      if (c.propBase !== undefined) this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 16 * (c.propCount || 2)), c.propBase * 16);
       if (i < 2) {
         this.glintData = this.glintData || new Float32Array(4);
         this.glintData[0] = snap[co + C.GLINT];
@@ -2300,7 +2338,7 @@ export class Renderer {
       sp.setPipeline(this.pShSkin);
       for (let i = 0; i < this.chars.length; i++) {
         const ch = this.chars[i];
-        if (!ch.casts) continue;
+        if (!ch.casts || ch.noShadow) continue;
         sp.setVertexBuffer(0, ch.outBuf);
         sp.setIndexBuffer(ch.lodIB, 'uint32');
         sp.drawIndexed(ch.lodCount);
@@ -2309,6 +2347,7 @@ export class Renderer {
       sp.setPipeline(this.pShProp);
       sp.setVertexBuffer(1, this.propInstances);
       this.props.forEach((pr, i) => {
+        if (pr.empty || (pr.owner !== undefined && (!this.chars[pr.owner].casts || this.chars[pr.owner].noShadow))) return;
         sp.setVertexBuffer(0, pr.VB);
         sp.setIndexBuffer(pr.IB, 'uint32');
         sp.drawIndexed(pr.count, 1, 0, 0, i);
@@ -2448,6 +2487,7 @@ export class Renderer {
     mp.setPipeline(this.pProp);
     mp.setVertexBuffer(1, this.propInstances);
     this.props.forEach((pr, i) => {
+      if (pr.empty || (pr.owner !== undefined && !this.chars[pr.owner].seen)) return;
       mp.setBindGroup(1, pr.bg);
       mp.setVertexBuffer(0, pr.VB);
       mp.setIndexBuffer(pr.IB, 'uint32');

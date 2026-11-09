@@ -1,0 +1,885 @@
+{
+ "heroes": {
+  "archer_f1": {
+   "main": "ironbound_bow",
+   "off": null,
+   "back": "kite_greenwood",
+   "string": "gold",
+   "style": "bow"
+  },
+  "archer_f2": {
+   "main": "yew_bow",
+   "off": null,
+   "back": "kite_gold_lion",
+   "string": "azure",
+   "style": "bow"
+  },
+  "archer_f3": {
+   "main": "leafwing_bow",
+   "off": null,
+   "back": "kite_palewyrm",
+   "string": "emerald",
+   "style": "bow"
+  },
+  "archer_f4": {
+   "main": "seraph_bow",
+   "off": null,
+   "back": "kite_compass",
+   "string": "violet",
+   "style": "bow"
+  },
+  "archer_f5": {
+   "main": "dragonwing_bow",
+   "off": null,
+   "back": "kite_sun_cross",
+   "string": "crimson",
+   "style": "bow"
+  },
+  "archer_f6": {
+   "main": "recurve_bow",
+   "off": null,
+   "back": "kite_chevron",
+   "string": "silver",
+   "style": "bow"
+  },
+  "bard_f1": {
+   "main": "dusk_sword",
+   "off": null,
+   "back": "kite_eclipse",
+   "string": null,
+   "style": "blade"
+  },
+  "bard_f2": {
+   "main": "moonring_sword",
+   "off": null,
+   "back": "kite_blue_fleur",
+   "string": null,
+   "style": "blade"
+  },
+  "bard_f3": {
+   "main": "emberfang_sword",
+   "off": null,
+   "back": "kite_red_cross",
+   "string": null,
+   "style": "blade"
+  },
+  "bard_m1": {
+   "main": "wildroot_sword",
+   "off": null,
+   "back": "kite_azure_wing",
+   "string": null,
+   "style": "blade"
+  },
+  "bard_m2": {
+   "main": "sunguard_sword",
+   "off": null,
+   "back": "kite_gilded_drake",
+   "string": null,
+   "style": "blade"
+  },
+  "bard_m3": {
+   "main": "rimeshard_sword",
+   "off": null,
+   "back": "kite_dawnstar",
+   "string": null,
+   "style": "blade"
+  },
+  "boomerang_f1": {
+   "main": "spiked_boomerang",
+   "off": "spiked_boomerang",
+   "back": "kite_griffin",
+   "string": null,
+   "style": "boomerang"
+  },
+  "boomerang_f2": {
+   "main": "lion_boomerang",
+   "off": "lion_boomerang",
+   "back": "kite_blue_fleur",
+   "string": null,
+   "style": "boomerang"
+  },
+  "boomerang_f3": {
+   "main": "blue_boomerang",
+   "off": "blue_boomerang",
+   "back": "kite_azure_wing",
+   "string": null,
+   "style": "boomerang"
+  },
+  "boomerang_m1": {
+   "main": "fire_boomerang",
+   "off": "fire_boomerang",
+   "back": "kite_compass",
+   "string": null,
+   "style": "boomerang"
+  },
+  "boomerang_m2": {
+   "main": "wooden_boomerang",
+   "off": "wooden_boomerang",
+   "back": "kite_azure_wing",
+   "string": null,
+   "style": "boomerang"
+  },
+  "boomerang_m3": {
+   "main": "verdant_boomerang",
+   "off": "verdant_boomerang",
+   "back": "kite_eclipse",
+   "string": null,
+   "style": "boomerang"
+  },
+  "dragoon_f1": {
+   "main": "red_pike",
+   "off": null,
+   "back": "kite_griffin",
+   "string": null,
+   "style": "spear"
+  },
+  "dragoon_f2": {
+   "main": "frost_spear",
+   "off": null,
+   "back": "kite_greenwood",
+   "string": null,
+   "style": "spear"
+  },
+  "dragoon_f3": {
+   "main": "goldcross_spear",
+   "off": null,
+   "back": "kite_palewyrm",
+   "string": null,
+   "style": "spear"
+  },
+  "dragoon_f4": {
+   "main": "icefang_spear",
+   "off": null,
+   "back": "kite_gold_lion",
+   "string": null,
+   "style": "spear"
+  },
+  "dragoon_m1": {
+   "main": "blue_pike",
+   "off": null,
+   "back": "kite_palewyrm",
+   "string": null,
+   "style": "spear"
+  },
+  "dragoon_m2": {
+   "main": "crimson_twist_spear",
+   "off": null,
+   "back": "kite_gold_lion",
+   "string": null,
+   "style": "spear"
+  },
+  "dragoon_m3": {
+   "main": "pennon_spear",
+   "off": null,
+   "back": "kite_gilded_drake",
+   "string": null,
+   "style": "spear"
+  },
+  "dragoon_m4": {
+   "main": "whitegold_spear",
+   "off": null,
+   "back": "kite_blue_fleur",
+   "string": null,
+   "style": "spear"
+  },
+  "lancer_f1": {
+   "main": "gold_tourney_lance",
+   "off": "tower_laurel",
+   "back": null,
+   "string": null,
+   "style": "lance"
+  },
+  "lancer_f2": {
+   "main": "gold_jousting_lance",
+   "off": "tower_sunburst",
+   "back": null,
+   "string": null,
+   "style": "lance"
+  },
+  "lancer_f3": {
+   "main": "lion_lance",
+   "off": "tower_blue_lion",
+   "back": null,
+   "string": null,
+   "style": "lance"
+  },
+  "lancer_m1": {
+   "main": "blue_tourney_lance",
+   "off": "tower_gold_lion",
+   "back": null,
+   "string": null,
+   "style": "lance"
+  },
+  "lancer_m2": {
+   "main": "silver_lance",
+   "off": "tower_griffin",
+   "back": null,
+   "string": null,
+   "style": "lance"
+  },
+  "lancer_m3": {
+   "main": "violet_lance",
+   "off": "tower_ivy",
+   "back": null,
+   "string": null,
+   "style": "lance"
+  },
+  "lancer_m4": {
+   "main": "green_jousting_lance",
+   "off": "tower_eagle",
+   "back": null,
+   "string": null,
+   "style": "lance"
+  },
+  "paladin_f1": {
+   "main": "frostspire_maul",
+   "off": null,
+   "back": "kite_palewyrm",
+   "string": null,
+   "style": "two_hand"
+  },
+  "paladin_f2": {
+   "main": "bluewheel_mace",
+   "off": "kite_gold_lion",
+   "back": null,
+   "string": null,
+   "style": "sword_board"
+  },
+  "paladin_m1": {
+   "main": "great_morning_star",
+   "off": null,
+   "back": "kite_azure_wing",
+   "string": null,
+   "style": "two_hand"
+  },
+  "paladin_m2": {
+   "main": "icecrystal_mace",
+   "off": "kite_radiant",
+   "back": null,
+   "string": null,
+   "style": "sword_board"
+  },
+  "rogue_m1": {
+   "main": "whitegem_dagger",
+   "off": "whitegem_dagger",
+   "back": "kite_gilded_drake",
+   "string": null,
+   "style": "daggers"
+  },
+  "rogue_m2": {
+   "main": "serpent_dagger",
+   "off": "serpent_dagger",
+   "back": "kite_blue_fleur",
+   "string": null,
+   "style": "daggers"
+  },
+  "rogue_m3": {
+   "main": "venom_dagger",
+   "off": "venom_dagger",
+   "back": "kite_palewyrm",
+   "string": null,
+   "style": "daggers"
+  },
+  "rogue_m4": {
+   "main": "horned_dagger",
+   "off": "horned_dagger",
+   "back": "kite_sun_cross",
+   "string": null,
+   "style": "daggers"
+  },
+  "ninja_m1": {
+   "main": "rubyfang_dagger",
+   "off": "rubyfang_dagger",
+   "back": "kite_eclipse",
+   "string": null,
+   "style": "daggers"
+  },
+  "ninja_m2": {
+   "main": "crescent_dagger",
+   "off": "crescent_dagger",
+   "back": "kite_dawnstar",
+   "string": null,
+   "style": "daggers"
+  },
+  "ninja_m3": {
+   "main": "icicle_dagger",
+   "off": "icicle_dagger",
+   "back": "kite_azure_wing",
+   "string": null,
+   "style": "daggers"
+  }
+ },
+ "strings": {
+  "gold": [
+   1.0,
+   0.78,
+   0.32
+  ],
+  "azure": [
+   0.35,
+   0.7,
+   1.0
+  ],
+  "emerald": [
+   0.3,
+   1.0,
+   0.55
+  ],
+  "violet": [
+   0.75,
+   0.45,
+   1.0
+  ],
+  "crimson": [
+   1.0,
+   0.3,
+   0.3
+  ],
+  "silver": [
+   0.92,
+   0.95,
+   1.0
+  ],
+  "ember": [
+   1.0,
+   0.55,
+   0.2
+  ],
+  "rose": [
+   1.0,
+   0.55,
+   0.8
+  ]
+ },
+ "items": [
+  "blue_boomerang",
+  "blue_pike",
+  "blue_tourney_lance",
+  "bluewheel_mace",
+  "crescent_dagger",
+  "crimson_twist_spear",
+  "dragonwing_bow",
+  "dusk_sword",
+  "emberfang_sword",
+  "fire_boomerang",
+  "frost_spear",
+  "frostspire_maul",
+  "gold_jousting_lance",
+  "gold_tourney_lance",
+  "goldcross_spear",
+  "great_morning_star",
+  "green_jousting_lance",
+  "horned_dagger",
+  "icecrystal_mace",
+  "icefang_spear",
+  "icicle_dagger",
+  "ironbound_bow",
+  "kite_azure_wing",
+  "kite_blue_fleur",
+  "kite_chevron",
+  "kite_compass",
+  "kite_dawnstar",
+  "kite_eclipse",
+  "kite_gilded_drake",
+  "kite_gold_lion",
+  "kite_greenwood",
+  "kite_griffin",
+  "kite_palewyrm",
+  "kite_radiant",
+  "kite_red_cross",
+  "kite_sun_cross",
+  "leafwing_bow",
+  "lion_boomerang",
+  "lion_lance",
+  "moonring_sword",
+  "pennon_spear",
+  "recurve_bow",
+  "red_pike",
+  "rimeshard_sword",
+  "rubyfang_dagger",
+  "seraph_bow",
+  "serpent_dagger",
+  "silver_lance",
+  "spiked_boomerang",
+  "sunguard_sword",
+  "tower_blue_lion",
+  "tower_eagle",
+  "tower_gold_lion",
+  "tower_griffin",
+  "tower_ivy",
+  "tower_laurel",
+  "tower_sunburst",
+  "venom_dagger",
+  "verdant_boomerang",
+  "violet_lance",
+  "whitegem_dagger",
+  "whitegold_spear",
+  "wildroot_sword",
+  "wooden_boomerang",
+  "yew_bow"
+ ],
+ "props": {
+  "blue_boomerang": {
+   "kind": "boomerang",
+   "length": 0.5837,
+   "reach": 0.2919,
+   "butt": 0.2919
+  },
+  "blue_pike": {
+   "kind": "spear",
+   "length": 2.2912,
+   "reach": 1.4205,
+   "butt": 0.8707
+  },
+  "blue_tourney_lance": {
+   "kind": "lance",
+   "length": 2.9993,
+   "reach": 2.3995,
+   "butt": 0.5999
+  },
+  "bluewheel_mace": {
+   "kind": "mace",
+   "length": 0.6897,
+   "reach": 0.607,
+   "butt": 0.0828
+  },
+  "crescent_dagger": {
+   "kind": "dagger",
+   "length": 0.4435,
+   "reach": 0.3725,
+   "butt": 0.071
+  },
+  "crimson_twist_spear": {
+   "kind": "spear",
+   "length": 2.1209,
+   "reach": 1.315,
+   "butt": 0.8059
+  },
+  "dragonwing_bow": {
+   "tips": [
+    [
+     0.0011,
+     0.6813,
+     0.1247
+    ],
+    [
+     0.0022,
+     -0.6813,
+     0.1226
+    ]
+   ],
+   "kind": "bow",
+   "length": 1.3891,
+   "reach": 0.6946,
+   "butt": 0.6946
+  },
+  "dusk_sword": {
+   "kind": "sword",
+   "length": 1.0803,
+   "reach": 0.9615,
+   "butt": 0.1188
+  },
+  "emberfang_sword": {
+   "kind": "sword",
+   "length": 1.0886,
+   "reach": 0.9689,
+   "butt": 0.1197
+  },
+  "fire_boomerang": {
+   "kind": "boomerang",
+   "length": 0.5995,
+   "reach": 0.2997,
+   "butt": 0.2997
+  },
+  "frost_spear": {
+   "kind": "spear",
+   "length": 2.2988,
+   "reach": 1.4253,
+   "butt": 0.8735
+  },
+  "frostspire_maul": {
+   "kind": "great_mace",
+   "length": 1.3521,
+   "reach": 1.0817,
+   "butt": 0.2704
+  },
+  "gold_jousting_lance": {
+   "kind": "lance",
+   "length": 2.9983,
+   "reach": 2.3986,
+   "butt": 0.5997
+  },
+  "gold_tourney_lance": {
+   "kind": "lance",
+   "length": 2.9978,
+   "reach": 2.3982,
+   "butt": 0.5996
+  },
+  "goldcross_spear": {
+   "kind": "spear",
+   "length": 2.2992,
+   "reach": 1.4255,
+   "butt": 0.8737
+  },
+  "great_morning_star": {
+   "kind": "great_mace",
+   "length": 1.3484,
+   "reach": 1.0787,
+   "butt": 0.2697
+  },
+  "green_jousting_lance": {
+   "kind": "lance",
+   "length": 3.0008,
+   "reach": 2.4006,
+   "butt": 0.6002
+  },
+  "horned_dagger": {
+   "kind": "dagger",
+   "length": 0.4504,
+   "reach": 0.3783,
+   "butt": 0.0721
+  },
+  "icecrystal_mace": {
+   "kind": "mace",
+   "length": 0.7407,
+   "reach": 0.6518,
+   "butt": 0.0889
+  },
+  "icefang_spear": {
+   "kind": "spear",
+   "length": 2.2988,
+   "reach": 1.4253,
+   "butt": 0.8736
+  },
+  "icicle_dagger": {
+   "kind": "dagger",
+   "length": 0.4376,
+   "reach": 0.3675,
+   "butt": 0.07
+  },
+  "ironbound_bow": {
+   "tips": [
+    [
+     -0.0015,
+     0.7126,
+     0.0904
+    ],
+    [
+     -0.0004,
+     -0.7134,
+     0.0911
+    ]
+   ],
+   "kind": "bow",
+   "length": 1.435,
+   "reach": 0.7175,
+   "butt": 0.7175
+  },
+  "kite_azure_wing": {
+   "kind": "kite",
+   "length": 0.8446,
+   "reach": 0.4223,
+   "butt": 0.4223
+  },
+  "kite_blue_fleur": {
+   "kind": "kite",
+   "length": 0.8155,
+   "reach": 0.4078,
+   "butt": 0.4078
+  },
+  "kite_chevron": {
+   "kind": "kite",
+   "length": 0.8214,
+   "reach": 0.4107,
+   "butt": 0.4107
+  },
+  "kite_compass": {
+   "kind": "kite",
+   "length": 0.8374,
+   "reach": 0.4187,
+   "butt": 0.4187
+  },
+  "kite_dawnstar": {
+   "kind": "kite",
+   "length": 0.8525,
+   "reach": 0.4263,
+   "butt": 0.4263
+  },
+  "kite_eclipse": {
+   "kind": "kite",
+   "length": 0.8896,
+   "reach": 0.4448,
+   "butt": 0.4448
+  },
+  "kite_gilded_drake": {
+   "kind": "kite",
+   "length": 0.9001,
+   "reach": 0.4501,
+   "butt": 0.4501
+  },
+  "kite_gold_lion": {
+   "kind": "kite",
+   "length": 0.8227,
+   "reach": 0.4114,
+   "butt": 0.4114
+  },
+  "kite_greenwood": {
+   "kind": "kite",
+   "length": 0.8742,
+   "reach": 0.4371,
+   "butt": 0.4371
+  },
+  "kite_griffin": {
+   "kind": "kite",
+   "length": 0.8381,
+   "reach": 0.419,
+   "butt": 0.419
+  },
+  "kite_palewyrm": {
+   "kind": "kite",
+   "length": 0.8974,
+   "reach": 0.4487,
+   "butt": 0.4487
+  },
+  "kite_radiant": {
+   "kind": "kite",
+   "length": 0.8462,
+   "reach": 0.4231,
+   "butt": 0.4231
+  },
+  "kite_red_cross": {
+   "kind": "kite",
+   "length": 0.814,
+   "reach": 0.407,
+   "butt": 0.407
+  },
+  "kite_sun_cross": {
+   "kind": "kite",
+   "length": 0.8398,
+   "reach": 0.4199,
+   "butt": 0.4199
+  },
+  "leafwing_bow": {
+   "tips": [
+    [
+     0.0005,
+     0.7011,
+     0.0586
+    ],
+    [
+     0.0005,
+     -0.7005,
+     0.0733
+    ]
+   ],
+   "kind": "bow",
+   "length": 1.4093,
+   "reach": 0.7046,
+   "butt": 0.7046
+  },
+  "lion_boomerang": {
+   "kind": "boomerang",
+   "length": 0.5678,
+   "reach": 0.2839,
+   "butt": 0.2839
+  },
+  "lion_lance": {
+   "kind": "lance",
+   "length": 2.9981,
+   "reach": 2.3985,
+   "butt": 0.5996
+  },
+  "moonring_sword": {
+   "kind": "sword",
+   "length": 1.0997,
+   "reach": 0.9787,
+   "butt": 0.121
+  },
+  "pennon_spear": {
+   "kind": "spear",
+   "length": 2.2991,
+   "reach": 1.4254,
+   "butt": 0.8737
+  },
+  "recurve_bow": {
+   "tips": [
+    [
+     0.0001,
+     0.6836,
+     0.0991
+    ],
+    [
+     -0.0009,
+     -0.6835,
+     0.0992
+    ]
+   ],
+   "kind": "bow",
+   "length": 1.3971,
+   "reach": 0.6986,
+   "butt": 0.6986
+  },
+  "red_pike": {
+   "kind": "spear",
+   "length": 2.2826,
+   "reach": 1.4152,
+   "butt": 0.8674
+  },
+  "rimeshard_sword": {
+   "kind": "sword",
+   "length": 1.0938,
+   "reach": 0.9735,
+   "butt": 0.1203
+  },
+  "rubyfang_dagger": {
+   "kind": "dagger",
+   "length": 0.4335,
+   "reach": 0.3642,
+   "butt": 0.0694
+  },
+  "seraph_bow": {
+   "tips": [
+    [
+     -0.0014,
+     0.7004,
+     0.1774
+    ],
+    [
+     0.0025,
+     -0.6989,
+     0.1763
+    ]
+   ],
+   "kind": "bow",
+   "length": 1.4317,
+   "reach": 0.7158,
+   "butt": 0.7158
+  },
+  "serpent_dagger": {
+   "kind": "dagger",
+   "length": 0.4295,
+   "reach": 0.3607,
+   "butt": 0.0687
+  },
+  "silver_lance": {
+   "kind": "lance",
+   "length": 2.9298,
+   "reach": 2.3439,
+   "butt": 0.586
+  },
+  "spiked_boomerang": {
+   "kind": "boomerang",
+   "length": 0.5847,
+   "reach": 0.2924,
+   "butt": 0.2924
+  },
+  "sunguard_sword": {
+   "kind": "sword",
+   "length": 1.0676,
+   "reach": 0.9502,
+   "butt": 0.1174
+  },
+  "tower_blue_lion": {
+   "kind": "tower",
+   "length": 1.1234,
+   "reach": 0.5617,
+   "butt": 0.5617
+  },
+  "tower_eagle": {
+   "kind": "tower",
+   "length": 1.0866,
+   "reach": 0.5433,
+   "butt": 0.5433
+  },
+  "tower_gold_lion": {
+   "kind": "tower",
+   "length": 1.0886,
+   "reach": 0.5443,
+   "butt": 0.5443
+  },
+  "tower_griffin": {
+   "kind": "tower",
+   "length": 1.0999,
+   "reach": 0.5499,
+   "butt": 0.5499
+  },
+  "tower_ivy": {
+   "kind": "tower",
+   "length": 1.1158,
+   "reach": 0.5579,
+   "butt": 0.5579
+  },
+  "tower_laurel": {
+   "kind": "tower",
+   "length": 1.0824,
+   "reach": 0.5412,
+   "butt": 0.5412
+  },
+  "tower_sunburst": {
+   "kind": "tower",
+   "length": 1.0966,
+   "reach": 0.5483,
+   "butt": 0.5483
+  },
+  "venom_dagger": {
+   "kind": "dagger",
+   "length": 0.4497,
+   "reach": 0.3778,
+   "butt": 0.072
+  },
+  "verdant_boomerang": {
+   "kind": "boomerang",
+   "length": 0.5898,
+   "reach": 0.2949,
+   "butt": 0.2949
+  },
+  "violet_lance": {
+   "kind": "lance",
+   "length": 2.9795,
+   "reach": 2.3836,
+   "butt": 0.5959
+  },
+  "whitegem_dagger": {
+   "kind": "dagger",
+   "length": 0.4192,
+   "reach": 0.3522,
+   "butt": 0.0671
+  },
+  "whitegold_spear": {
+   "kind": "spear",
+   "length": 2.1852,
+   "reach": 1.3548,
+   "butt": 0.8304
+  },
+  "wildroot_sword": {
+   "kind": "sword",
+   "length": 1.0846,
+   "reach": 0.9653,
+   "butt": 0.1193
+  },
+  "wooden_boomerang": {
+   "kind": "boomerang",
+   "length": 0.5952,
+   "reach": 0.2976,
+   "butt": 0.2976
+  },
+  "yew_bow": {
+   "tips": [
+    [
+     0.0197,
+     0.7191,
+     0.1091
+    ],
+    [
+     0.0174,
+     -0.7195,
+     0.1098
+    ]
+   ],
+   "kind": "bow",
+   "length": 1.4463,
+   "reach": 0.7232,
+   "butt": 0.7232
+  }
+ }
+}
