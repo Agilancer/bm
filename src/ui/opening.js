@@ -1,6 +1,6 @@
 // The opening on screen: the camera while the story has it, your eyes opening, the bars, her words, your name, the cards,
 // holding to skip, and its sound (src/ui/opening-sound.js). The sim keeps the clock and where everyone is (src/sim/opening.js).
-import { CUES, CUE_IDS, emoteAt, lineAt } from '../core/opening-script.js';
+import { CUES, CUE_IDS, emoteAt, lineAt, spoken, voiceOf } from '../core/opening-script.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from '../core/math.js';
 import { CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, DUST_AT, ESCORT_TO, OPENING, OPENING_REVISION, SNAP_AT, SWAP_AT, caveNearest, chamberPoint, collapseEye, prettyShown } from '../core/opening.js';
@@ -148,13 +148,13 @@ export class OpeningHUD {
     }
     this.track.textContent = stage === OPENING.ESCORT && t > 5 ? 'Go to Bellmourn with Lisandra' : '';
     // Her words.
-    this.words(snap, stage, t);
+    this.words(snap, stage, t, her);
     // Holding to skip.
     const canSkip = stage === OPENING.WAKE || stage === OPENING.COLLAPSE || stage === OPENING.LEAVE || (stage === OPENING.HERD && t < HERD_CONTROL);
     const touchOK = stage !== OPENING.LEAVE;
     const held = canSkip && this.skipped !== stage && (this.holding.key || (touchOK && this.holding.touch > 0));
     this.holdT = held ? this.holdT + dt : 0;
-    if (this.holdT >= SKIP_HOLD) { this.holdT = 0; this.skipped = stage; this.onSkip?.(); }
+    if (this.holdT >= SKIP_HOLD) { this.holdT = 0; this.skipped = stage; this.sound?.hush(); this.onSkip?.(); }
     this.skipHint.hidden = !canSkip || this.skipped === stage || (stage === OPENING.WAKE && t < 2);
     this.skipHint.querySelector('span').textContent = this.touched ? 'Hold to skip' : 'Hold Space to skip';
     this.skipHint.style.setProperty('--k', (this.holdT / SKIP_HOLD).toFixed(3));
@@ -177,7 +177,7 @@ export class OpeningHUD {
     this.lastStage = stage; this.lastT = t;
   }
 
-  words(snap, stage, t) {
+  words(snap, stage, t, her) {
     let l = lineAt(stage, t), cueLine = false;
     const cue = snap[H.OPENING_CUE], cueT = snap[H.OPENING_CUE_T];
     if (!l && cue) {
@@ -185,6 +185,14 @@ export class OpeningHUD {
       if (c && cueT < c.dur) { l = c; cueLine = true; }
     }
     if (!l) { this.sub.hidden = true; this.shown = null; return; }
+    // Said aloud, in the voice of whichever of her you're seeing: from her mouth, the summons in your head (your eyes
+    // aren't open yet), and from out of sight with the tunnel's echo.
+    if (this.sound) {
+      const id = cueLine ? `c${cue}` : `${stage}:${l.at}`, age = cueLine ? cueT : t - l.at;
+      const wet = l.vo || l.off ? 0.6 : stage <= OPENING.LEAVE ? 0.3 : 0.12;
+      if (l.vo) this.sound.say(id, voiceOf(stage, l), spoken(l), age, null, 0, 0, wet);
+      else this.sound.say(id, voiceOf(stage, l), spoken(l), age, her[0], her[4] - 0.1, her[2], wet);
+    }
     const named = stage >= OPENING.ESCORT || l.named || (cueLine && stage >= OPENING.ESCORT);
     const who = l.caption ? '' : named ? 'LISANDRA' : 'THE WITCH';
     const text = l.text.replace('{name}', this.name || 'Tessariel');
