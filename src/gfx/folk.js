@@ -6,6 +6,7 @@ import { F, F_PALETTE, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/layout.j
 import { SKIRT_JOINTS } from '../folk/rig.js';
 import { PEOPLE } from '../folk/people.js';
 import { Blankets } from './blankets.js';
+import { bodyRadius, inCascade } from './shadowcull.js';
 
 const UBO_BYTES = 24 * 64 + 256 + 16;
 
@@ -85,6 +86,7 @@ export class FolkBodies {
       const o = SLOT_HEAD + i * FOLK_STRIDE;
       if (!s || s[o + F.ACTIVE] < 0.5) { b.seen = b.casts = false; continue; }
       const x = s[o + F.X], y = s[o + F.Y] + 0.9, z = s[o + F.Z];
+      b.bx = x; b.by = y; b.bz = z; b.br = bodyRadius(1.4, b.bindR);
       let inside = 1e9;
       for (let k = 0; k < 5; k++) inside = Math.min(inside, planes[k * 4] * x + planes[k * 4 + 1] * y + planes[k * 4 + 2] * z + planes[k * 4 + 3]);
       b.seen = inside > -1.4;
@@ -127,10 +129,12 @@ export class FolkBodies {
     }
   }
 
-  shadow(sp) {
+  // m, o: the cascade's matrix (renderer frameData at o), to leave out anyone wholly outside its square (shadowcull.js).
+  shadow(sp, m, o) {
     this.blankets.shadow(sp);
     for (const b of this.bodies) {
       if (!b || !b.casts || b.posed < 0) continue;
+      if (m && !inCascade(m, o, b.bx, b.by, b.bz, b.br)) continue;
       sp.setVertexBuffer(0, b.outBuf);
       sp.setIndexBuffer(b.lodIB, 'uint32');
       sp.drawIndexed(b.lodCount);

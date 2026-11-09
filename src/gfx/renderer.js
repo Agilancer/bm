@@ -23,9 +23,10 @@ import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
-import { ARMOR, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL } from './materials.js';
+import { ARMOR, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
+import { bodyRadius, inCascade } from './shadowcull.js';
 import { buildGlowPipeline, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
 import { HomeLights } from './homelights.js';
 import { CRAB_SCALE } from '../sim/crab.js';
@@ -304,6 +305,10 @@ export class Renderer {
         return { ...prim, flex: Float32Array.from(skirt, (weight) => -weight), skirtDirection };
       }, SKIRT_PALETTE_JOINTS);
       form.flesh = 1;
+      // Her gown moves with her body alone (the skinning shader's ripple is off for her), and she is drawn with the
+      // model-true shading (ARMOR_TRUE): see docs/RENDERING.md.
+      form.stillSkirt = true;
+      form.trueLook = true;
       this.chars.push(form);
     }
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
@@ -580,7 +585,7 @@ export class Renderer {
     const sf = new Float32Array(side), su = new Uint32Array(side);
     const indices = new Uint32Array(ni);
     const ranges = [];
-    let vo = 0, io = 0;
+    let vo = 0, io = 0, bindR = 0;
     for (const p of prims) {
       const base = vo;
       ranges.push({ first: io, count: p.idx.length });
@@ -606,6 +611,8 @@ export class Renderer {
         su[s + 3] = p.piece ? p.piece[i] : 0;
         sf[s + 4] = p.uv[i * 2]; sf[s + 5] = p.uv[i * 2 + 1];
         sf[s + 6] = p.nrm[i * 3]; sf[s + 7] = p.nrm[i * 3 + 1]; sf[s + 8] = p.nrm[i * 3 + 2];
+        // (How far the bind pose reaches from the body's origin, for the shadow cascades' culling: shadowcull.js.)
+        bindR = Math.max(bindR, Math.hypot(p.pos[i * 3], p.pos[i * 3 + 1], p.pos[i * 3 + 2]));
         vo++;
       }
       for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
@@ -620,7 +627,7 @@ export class Renderer {
       { binding: 0, resource: { buffer: params } }, { binding: 1, resource: { buffer: palette } },
       { binding: 2, resource: { buffer: srcBuf } }, { binding: 3, resource: { buffer: outBuf } },
     ] });
-    return { count: nv, indices: ni, ranges, sideVB, IB, srcBuf, outBuf, palette, params, bg, jointCount };
+    return { count: nv, indices: ni, ranges, sideVB, IB, srcBuf, outBuf, palette, params, bg, jointCount, bindR };
   }
 
   addLod(sk, prim, cell) {
@@ -1354,6 +1361,15 @@ export class Renderer {
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth(), multisample: ms,
     });
+    // The same, with the model-true shading (materials.js ARMOR_TRUE), for the bodies marked trueLook: Lisandra's forms.
+    const armorTrueMod = module(ARMOR_TRUE);
+    this.pArmorTrue = device.createRenderPipeline({
+      layout: layout(this.bgl0, this.bglArmor),
+      vertex: { module: armorTrueMod, entryPoint: 'vs', buffers: skinnedVB },
+      fragment: { module: armorTrueMod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: depth(), multisample: ms,
+    });
     const vmMod = module(VIEWMODEL);
     const vmVB = [skinnedVB[0], { arrayStride: 36, attributes: skinnedVB[1].attributes.slice(0, 3) }];
     this.pVM = device.createRenderPipeline({
@@ -1920,6 +1936,7 @@ export class Renderer {
       if (otherForm || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
       const r = c.armored ? 2.6 : 5;
+      c.bx = x; c.by = y; c.bz = z; c.br = bodyRadius(r, c.bindR);
       let inside = 1e9;
       for (let k = 0; k < 5; k++) inside = Math.min(inside, pl[k * 4] * x + pl[k * 4 + 1] * y + pl[k * 4 + 2] * z + pl[k * 4 + 3]);
       c.seen = inside > -r;
@@ -2028,6 +2045,8 @@ export class Renderer {
       skinParamsU[0] = c.count;
       skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
       skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
+      // (1: a still gown, no ripple of its own: Lisandra's, on the owner's word. 0 for everyone else.)
+      skinParams[7] = c.stillSkirt ? 1 : 0;
       q.writeBuffer(c.params, 0, skinParams);
       if (c.propBase !== undefined) this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 16 * (c.propCount || 2)), c.propBase * 16);
       if (i < 2) {
@@ -2037,6 +2056,8 @@ export class Renderer {
       }
     }
     q.writeBuffer(this.propInstances, 0, this.propData);
+    // (Everything skinned from here on, the townsfolk and the arms, keeps its ripple: the slot goes back to 0.)
+    skinParams[7] = 0;
     if (this.folk) this.folk.upload(q, time, skinParams, skinParamsU);
     this.stage = 'viewmodel uploads';
     // View model: the arms the snapshot posed, and what's in them.
@@ -2336,18 +2357,22 @@ export class Renderer {
       sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
       sp.drawIndexed(this.interior.tiles.cath);
       sp.setPipeline(this.pShSkin);
+      // Only the bodies (and what they hold) that reach this cascade's square: the rest couldn't darken a texel of it
+      // (shadowcull.js). Most bodies in view are far past the near cascades, so this halves the shadows' cost or better.
+      const cm = this.frameData, co = O.CASC + c * 16;
       for (let i = 0; i < this.chars.length; i++) {
         const ch = this.chars[i];
-        if (!ch.casts || ch.noShadow) continue;
+        ch.inCascade = ch.casts && !ch.noShadow && inCascade(cm, co, ch.bx, ch.by, ch.bz, ch.br);
+        if (!ch.inCascade) continue;
         sp.setVertexBuffer(0, ch.outBuf);
         sp.setIndexBuffer(ch.lodIB, 'uint32');
         sp.drawIndexed(ch.lodCount);
       }
-      if (this.folk) this.folk.shadow(sp);
+      if (this.folk) this.folk.shadow(sp, cm, co);
       sp.setPipeline(this.pShProp);
       sp.setVertexBuffer(1, this.propInstances);
       this.props.forEach((pr, i) => {
-        if (pr.empty || (pr.owner !== undefined && (!this.chars[pr.owner].casts || this.chars[pr.owner].noShadow))) return;
+        if (pr.empty || (pr.owner !== undefined && !this.chars[pr.owner].inCascade)) return;
         sp.setVertexBuffer(0, pr.VB);
         sp.setIndexBuffer(pr.IB, 'uint32');
         sp.drawIndexed(pr.count, 1, 0, 0, i);
@@ -2468,10 +2493,7 @@ export class Renderer {
     }
     mp.setViewport(0, 0, this.W, this.H, 0, 0.96);
     this.spellfx.drawSolid(mp);
-    mp.setPipeline(this.pArmor);
-    for (let i = 0; i < this.chars.length; i++) {
-      const ch = this.chars[i];
-      if (!ch.seen) continue;
+    const drawBody = (ch) => {
       mp.setBindGroup(1, ch.matBG);
       mp.setVertexBuffer(0, ch.outBuf);
       mp.setVertexBuffer(1, ch.sideVB);
@@ -2482,7 +2504,13 @@ export class Renderer {
         mp.setIndexBuffer(ch.IB, 'uint32');
         mp.drawIndexed(ch.indices);
       }
-    }
+    };
+    // Lisandra first, with the model-true shading. Then the armour shader goes back on for everyone else, in the same
+    // order as ever, and stays on for the townsfolk, who draw with whatever is bound (folk.js draw).
+    mp.setPipeline(this.pArmorTrue);
+    for (const ch of this.chars) if (ch.seen && ch.trueLook) drawBody(ch);
+    mp.setPipeline(this.pArmor);
+    for (const ch of this.chars) if (ch.seen && !ch.trueLook) drawBody(ch);
     if (this.folk) this.folk.draw(mp, tier.lean);
     mp.setPipeline(this.pProp);
     mp.setVertexBuffer(1, this.propInstances);
