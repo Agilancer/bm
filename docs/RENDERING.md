@@ -48,10 +48,17 @@ same normal-map problem.
 
 On the owner's word ("so her cloth doesn't dance at the beginning when she talks to you"):
 
-- `assets/game/lisandra/witch.glb` is back to the file from commit d6a0f3d (2026-11-06). That is the owner's
-  `LISANDRA - UGLY OLD WITCH.glb` mesh, skin weights, bind pose and textures, byte for byte. It has the same 175 clips
-  (checked against the cloth version, which only added cloth-bone channels) and the `_SKIRT` mask. It has 65 joints
-  and no `cloth_*` bones.
+- `assets/game/lisandra/witch.glb` is the owner's new witch (`LISANDRA - UGLY OLD WITCH NEW.glb`, 2026-11-09): her
+  mesh, skin weights, bind pose and textures byte for byte, with her own `walk` and `run` (Tripo named them `walk.001`
+  and `run.001`) as the walk and run the game plays. The other 174 clips came across from the old witch with
+  `tools/lisandra/transfer_clips.py` (the old walk kept as `walk_gown`, 176 clips in all), and the `_SKIRT` mask from
+  `tools/lisandra_skirt.py witch`. It has 65 joints and no `cloth_*` bones. Rebuild:
+
+      python tools/lisandra/transfer_clips.py <old witch.glb> "LISANDRA - UGLY OLD WITCH NEW.glb" clips.glb
+      python tools/lisandra_skirt.py witch clips.glb assets/game/lisandra/witch.glb
+
+  (The old witch's clips are in git: `git show f7ad16b:assets/game/lisandra/witch.glb`.) She has fitted sleeves, so her
+  arms are turned out from the gown by 0.1 rad (`armClearance`), not the old ragged sleeves' 0.19.
 - Her form in `src/core/lisandra.js` has no `cloth` entry, so `village-walker.js` makes no `Cloth`. `src/sim/cloth.js`
   and `tools/lisandra/cloth_rig.py` are kept but unused.
 - The skinning shader's 9 mm skirt ripple is turned off for her alone. `renderer.js` writes `skinParams[7] = 1` for
@@ -201,7 +208,7 @@ What's left is mostly the browser's: putting a 3440×1440 frame on screen costs 
   - takes the three swaps back out of `ARMOR_TRUE` and gets `ARMOR` character for character;
   - checks that `ARMOR` has none of the new code;
   - checks the cascade test never drops a sphere that touches the square;
-  - checks the witch file has no cloth bones and still has 175 clips.
+  - checks the witch file has no cloth bones and has 176 clips, with her own walk and run.
 - All test files pass. Run each on its own: `node --test tests/<file>`.
 
 Still to do: a human look in the game. The cave and ledge shots with the new shading haven't been compared side by side
