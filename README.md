@@ -215,6 +215,17 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 
   In tests at level 8 he went down in 36 seconds once and in about a minute and a half the next time, without the bot falling
   below 80% of its life. The balance log keeps every attempt.
+- **Its party.** From level 6, once it can pay, it walks to the nearer quartermaster of the Free Company, opens his books
+  with E, and hires a lancer first, then a paladin, then the best two others it can afford (`hiring` in
+  `src/ui/autowarrens.js`).
+- **The Hollowfang Warrens.** From level 7 with a full party it goes in by the portal and walks the caves room by room,
+  by the caves' own flow field (the nav thread's grid stops at the edge of the world). Before each boss's room it waits
+  for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of a circle or a fire before
+  anything else, at Venomaw's side and well off when she's down, behind the pillar away from her when she flies, away
+  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. Three wipes count as beaten back: it
+  leaves by the way in and comes back two levels stronger. Once Venomaw's dead it goes out by the far portal.
+- **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
+  it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
 - **Loot and gear.** It picks up what falls and opens the chests it passes. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
 - **Grinding.** It grinds for levels when no quest suits it yet.
@@ -246,7 +257,8 @@ While it's on, the mouse is left free: no pointer lock, so the button and the me
 Pressing a move key (or the stick) takes the controls back for as long as you hold it.
 
 **Keeping it up with the game.** It has to be taught what's added to the game. Quests, steps, places, foes, lairs, spells
-and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`). `coverage()` there lists
+and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`); the Warrens' rooms, packs
+and bosses in `src/ui/autowarrens.js` (`WAY`, `KNOWN`, `tactics`). `coverage()` there lists
 whatever the game has that it doesn't know, in the console when auto-play starts, and from `node tools/autoplay/check.mjs`,
 which fails until the list is empty. Until it's taught, it makes do:
 
@@ -261,6 +273,7 @@ doesn't read yet.
 
 - `src/ui/autoplay.js`: the button, the status line and the menu.
 - `src/ui/autobrain.js`: the head.
+- `src/ui/autowarrens.js`: hiring a party, and the Hollowfang Warrens.
 - `src/ui/autolog.js`: the balance log.
 - `tools/autoplay/check.mjs`: does it know the whole game?
 - `src/sim/nav.worker.js`: its paths. This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
@@ -276,6 +289,73 @@ doesn't read yet.
 - The far countries are a long walk until their seals are woken.
 - It has been run headless on a software GPU with the drawing switched off, not by a person watching it. Watch the first
   hour of a new game with it.
+- The party and the Warrens were watched the same way (headless Chromium on a software GPU, `?auto&noopening&timer`, the
+  renderer's frame stubbed so the game runs at full speed): from level 7 it hired a party, cleared every pack, beat
+  Grubnash and the twins first time, wiped once on Venomaw's flight (since fixed: see the Warrens), killed her on the next
+  go and left by the far portal. On the Fall it boarded at the top, carved down at up to 19 m/s and hopped the rises.
+  Nobody has watched it with their own eyes.
+
+### The Free Company: a party of your own
+
+Two quartermasters of the Free Company hire out the other Tessariels: Aldous Fenn by the square, and Captain Merrow Vale at
+the Hollowfang Warrens' portal (`BROKERS` in `src/core/heroes.js`, `BROKER_SPOTS` in `src/core/dungeon.js`). E opens his
+books (`src/ui/party.js`): up to four at a time, each with a name of the Company's and a level near yours, paid once, in
+gold by their level (`hirePrice`). Their levels go up with yours. The party is kept in the save, and down the left of the
+screen is a frame for each, with their life.
+
+- **Lancers tank, paladins heal, everyone else does the damage** (`roleOf` in `src/core/dungeon.js`). The tank holds what
+  he hits and every few seconds turns anything loose on the rest of you onto himself (`tauntBy` in `src/sim/foes.js`). The
+  healer keeps nine metres back and mends whoever needs it most, with a quick light or, for someone low, a great one. The
+  rest take the fight's adds first, then what the tank's holding, then what you're shooting.
+- **They go where you go**, along your own path, so they come round corners after you, at your pace (they run when you
+  do), and stand round you when you stop (`heel` in `src/sim/hero.js`). Left far behind, or through a portal without
+  them, they catch you up.
+- **They ride the shield with you.** When you get on your board, they get on theirs, beside and behind you, and step off
+  when you do (`updateFreeSurf`).
+- **They fall and get up.** One who falls lies there till the fight's over, then gets up with half their life.
+- What they kill is yours: its loot and its experience.
+- A word with one of them (E) lets them go back to the Company.
+
+The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
+both). The quartermasters are two more bodies after them.
+
+### The Hollowfang Warrens
+
+The first party dungeon (`src/core/dungeon.js`, `src/sim/dungeon.js`): a cave system the kobolds dug and the goblins took,
+with Venomaw, the green dragon, asleep on her hoard at the bottom. Its portal stands in a heap of rock in the woods
+north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. It lets in only a full party: four
+with you, a lancer and a paladin among them. Inside, a portal by the way in takes you back out at any time, and one behind
+the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 gold, and it all stands again after.
+
+- **Where it is.** Out past the edge of the world and fifty metres under it, so nothing on the surface is ever near it. Its
+  shape is nine rooms and the tunnels between them (`ROOMS`, `TUNNELS`, `PILLARS`), made into one field of how far each
+  point is from the rock. The sim walks against that field (`src/sim/world.js`), monsters and the party find their way by
+  a flow field of its own (`CaveNav`), and its walls, floor, roof, stalagmites and torches are built from it with the
+  world's places (`cave` in `src/core/sites.js`), lit by the torches (sixty-odd lights) and nothing else.
+- **The packs.** Five rooms of kobolds and goblins, which wake as you come into them and stay dead till the Warrens reset.
+- **Grubnash the Tunnel-King**, a kobold three times the size. Every few seconds he brings the roof down: a circle on the
+  ground under each of you, and rocks a moment later. At seven tenths and a third of his life he calls his diggers out of
+  three holes round his dig; they run to him, and each one that reaches him is eaten and makes him hit harder. Kill them.
+- **Skrit and Skrat**, goblin twins. They share their pain: whichever has less life left takes half of what lands on it,
+  so keep them even. Skrit throws firepots that burn the ground; Skrat spins his blades in a whirlwind. When one dies the
+  other goes wild.
+- **Venomaw, Mother of the Warren.** Only the tank should face her: her breath burns everyone in front of her, and her
+  tail sweeps anyone behind. She spits acid that pools. At a little over half her life she takes to the air above her
+  hoard and breathes across the whole cavern every few seconds: only rock between you and her keeps it off, so hide
+  behind a pillar, while her whelps hatch. Then she lands, frenzied.
+- **Every mechanic is called out** on the screen as it happens, with what to do about it (`WARNINGS`), and each boss has a
+  bar of its own at the top of the screen.
+- **A wipe** stands you and your party at the way in, with everything you'd killed still dead and the boss you fell to at
+  its full life again. A save made inside loads at the portal outside.
+- **The bosses** are bigger, recoloured copies of the rank and file (`VARIANTS` in `src/core/tripo-monsters.js`): the same
+  models and clips, a height and a palette of their own.
+
+`node tools/dungeon/check.mjs` walks it: every room reachable from the way in, every pack's and boss's room in the open, the
+portals clear of the rock, the roofs high enough and under the line the shaders call underground.
+
+Tuning, headless (the sim in Node with no GPU): with a level 8 party and a player doing what a level 8 player's staff
+does, Grubnash took about a minute and a half, the twins about two minutes and Venomaw nearly five, with the tank as low as
+half his life and nobody dying. Its numbers are `BOSSES` in `src/core/dungeon.js` and the mechanics' in `src/sim/dungeon.js`.
 
 ### Swords, gems and the pack
 

@@ -7,6 +7,7 @@ import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { caveFloor, caveKeep } from '../core/opening.js';
 import { CHURCH_BOUNDS } from '../core/church.js';
 import { buildSites } from '../core/sites.js';
+import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, inDungeon } from '../core/dungeon.js';
 
 // The places out in the countries (src/core/sites.js): their boxes kept by 64 m cell, so a body only looks at the ones near it.
 const SITE_CELL = 64;
@@ -24,7 +25,13 @@ const OUT_OF_THE_WAY = 1e9;  // (a box only those with their feet above this run
 const TRUNK_CELL = 16, TOWN = 50;     // (The forest stands clear of the town, so nobody in it looks for a trunk.)
 const trunkKey = (i, j) => (i + 1000) * 2000 + j + 1000;   // (11 km is 700 trunk cells: well inside)
 // Down in the catacombs, under the land: the pines standing up on it aren't down there. (Over them, floorAt gives their floor.)
-const underLand = (x, z) => { const f = floorAt(x, z); return f !== null && f < -2; };
+const underLand = (x, z) => { if (inDungeon(x, z)) return true; const f = floorAt(x, z); return f !== null && f < -2; };
+// The boxes, kept by 8 m cell: each in every cell its footprint reaches, padded by BOX_PAD, in the order of this.colliders (resolve's
+// pushes depend on the order). A circle of up to BOX_R (times 1.42 for a box's corner) at a point in a cell can only touch the boxes
+// in that cell's list, with a metre over for what one pass of resolve pushes it; a wider one looks at them all. So a body looks at a
+// few dozen boxes instead of all thousand. (The widest anyone tests is 1.8 m, a big Tripo monster.)
+const BOX_CELL = 8, BOX_PAD = 4, BOX_R = 2, NO_BOXES = [];
+const boxKey = (i, j) => (i + 4096) * 8192 + j + 4096;
 
 export class World {
   constructor(data, interior) {
@@ -71,6 +78,28 @@ export class World {
     this.setCaveSealed(false);
   }
 
+  // The boxes that could touch a circle of radius r at x, z, in collider order.
+  boxesNear(x, z, r) {
+    const all = this.colliders;
+    if (r > BOX_R) return all;
+    // (Boxes are only ever added, at the end: the doors after the walking grid, the tests' own. Any new since are put in first.)
+    if (this.boxedN !== all.length) {
+      if (!this.boxGrid || !(this.boxedN < all.length)) { this.boxGrid = new Map(); this.boxedN = 0; }
+      for (; this.boxedN < all.length; this.boxedN++) {
+        const c = all[this.boxedN], R = Math.hypot(c.hx, c.hz) + BOX_PAD;
+        for (let j = Math.floor((c.z - R) / BOX_CELL); j <= Math.floor((c.z + R) / BOX_CELL); j++) {
+          for (let i = Math.floor((c.x - R) / BOX_CELL); i <= Math.floor((c.x + R) / BOX_CELL); i++) {
+            const k = boxKey(i, j);
+            let list = this.boxGrid.get(k);
+            if (!list) this.boxGrid.set(k, list = []);
+            list.push(c);
+          }
+        }
+      }
+    }
+    return this.boxGrid.get(boxKey(Math.floor(x / BOX_CELL), Math.floor(z / BOX_CELL))) || NO_BOXES;
+  }
+
   // The trunks standing in one of the trunk grid's cells, and the boulders lying in it: [x, z, radius, ...], or null.
   trunkCell(i, j) {
     const key = trunkKey(i, j);
@@ -113,6 +142,8 @@ export class World {
   }
 
   height(x, z) {
+    // (The Hollowfang Warrens lie out past the edge of the world, under it: src/core/dungeon.js.)
+    if (inDungeon(x, z)) return caveFloorY(x, z);
     const f = floorAt(x, z);
     if (f !== null) return f;
     if (openingTerrain && !this.caveSealed) { const c = caveFloor(x, z); if (c !== null) return c; }
@@ -129,7 +160,10 @@ export class World {
   }
 
   inside(x, z, r) {
-    for (const c of this.colliders) {
+    if (inDungeon(x, z)) return caveRoom(x, z) < r;
+    const boxes = this.boxesNear(x, z, r);
+    for (let n = 0; n < boxes.length; n++) {
+      const c = boxes[n];
       if (c.b || c.t !== undefined) continue;   // (Upstairs, or down in the rift: nobody who goes by this is there.)
       const dx = x - c.x, dz = z - c.z;
       if (Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r) return true;
@@ -140,7 +174,7 @@ export class World {
         for (let i = ci - 1; i <= ci + 1; i++) {
           const list = this.trunkCell(i, j);
           if (!list) continue;
-          for (let k = 0; k < list.length; k += 4) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return !underLand(x, z);
+          for (let k = 0; k < list.length; k += 4) { const ex = x - list[k], ez = z - list[k + 1], R = list[k + 2] + r; if (ex * ex + ez * ez < R * R) return !underLand(x, z); }
         }
       }
     }
@@ -154,6 +188,7 @@ export class World {
 
   // Push a circle out of boxes. feet is the circle's height: low boxes can be jumped over.
   resolve(out, r, feet) {
+    if (inDungeon(out[0], out[2])) return warrenKeep(out, r);
     let x = out[0], z = out[2];
     let hit = false;
     const push = (c) => {
@@ -174,7 +209,9 @@ export class World {
       hit = true;
     };
     for (let pass = 0; pass < 2; pass++) {
-      for (const c of this.colliders) push(c);
+      // (The boxes round where the circle is at the start of each pass.)
+      const boxes = this.boxesNear(x, z, r);
+      for (let n = 0; n < boxes.length; n++) push(boxes[n]);
       const near = this.sitesNear(x, z);
       if (near) for (const c of near) push(c);
       if ((Math.abs(x) > TOWN || Math.abs(z) > TOWN) && feet > -2) {
@@ -202,6 +239,13 @@ export class World {
 
   // Does a ray hit a box tall enough to block it? Returns distance, or -1.
   rayBoxes(ox, oy, oz, dx, dy, dz, maxT) {
+    // (In the Warrens the rock goes floor to roof: only the plan matters.)
+    if (inDungeon(ox, oz)) {
+      const L = Math.hypot(dx, dz);
+      if (L < 1e-5) return -1;
+      const s = caveRay(ox, oz, dx / L, dz / L, maxT * L);
+      return s < 0 ? -1 : s / L;
+    }
     let best = -1;
     for (const c of this.colliders) {
       const rx = ox - c.x, rz = oz - c.z;
@@ -279,6 +323,7 @@ export class World {
   // Breadth-first distance field to a point, so the knight can path around the houses.
   // Slot 0 is the player, shared by everyone hunting them. Anyone going elsewhere keeps a slot of their own.
   updateField(x, z, now, slot = 0) {
+    if (inDungeon(x, z)) { (this.cave ||= new CaveNav()).field(x, z, now); return; }
     let f = this.slots.get(slot);
     if (!f) { f = { field: new Float32Array(NAV_W * NAV_H), x: 1e9, z: 1e9, t: -1e9 }; this.slots.set(slot, f); }
     if (Math.abs(now - f.t) < 0.2 && Math.hypot(x - f.x, z - f.z) < 2) return;
@@ -290,28 +335,36 @@ export class World {
     let head = 0, tail = 0;
     queue[tail++] = sj * NAV_W + si; field[sj * NAV_W + si] = 0;
     const cap = queue.length;
+    const W = NAV_W;
     while (head < tail) {
       const k = queue[head++];
-      const i = k % NAV_W, j = (k / NAV_W) | 0;
+      const j = (k / W) | 0, i = k - j * W;
       const d = field[k];
-      for (let dj = -1; dj <= 1; dj++) {
-        for (let di = -1; di <= 1; di++) {
-          if (!di && !dj) continue;
-          const ni = i + di, nj = j + dj;
-          if (ni < 0 || nj < 0 || ni >= NAV_W || nj >= NAV_H) continue;
-          const nk = nj * NAV_W + ni;
-          if (grid[nk]) continue;
-          if (di && dj && (grid[j * NAV_W + ni] || grid[nj * NAV_W + i])) continue;
-          const nd = d + (di && dj ? 1.414 : 1);
-          if (nd > NAV_REACH) continue;
-          if (nd < field[nk] - 1e-3 && tail < cap) { field[nk] = nd; queue[tail++] = nk; }
-        }
+      // (Past the reach for every neighbour: a straight step is the shortest.)
+      if (d + 1 > NAV_REACH) continue;
+      // The eight neighbours in the order they've always been taken in (the row above, either side, the row below), unrolled:
+      // a diagonal only past two open sides, and nothing off the grid.
+      const l = i > 0, r = i < W - 1, u = j > 0, dn = j < NAV_H - 1;
+      const gL = l ? grid[k - 1] : 1, gR = r ? grid[k + 1] : 1, gU = u ? grid[k - W] : 1, gD = dn ? grid[k + W] : 1;
+      const dd = d + 1.414, ds = d + 1, diag = dd <= NAV_REACH;
+      if (u) {
+        if (diag && l && !gL && !gU && !grid[k - W - 1] && dd < field[k - W - 1] - 1e-3 && tail < cap) { field[k - W - 1] = dd; queue[tail++] = k - W - 1; }
+        if (!gU && ds < field[k - W] - 1e-3 && tail < cap) { field[k - W] = ds; queue[tail++] = k - W; }
+        if (diag && r && !gR && !gU && !grid[k - W + 1] && dd < field[k - W + 1] - 1e-3 && tail < cap) { field[k - W + 1] = dd; queue[tail++] = k - W + 1; }
+      }
+      if (!gL && ds < field[k - 1] - 1e-3 && tail < cap) { field[k - 1] = ds; queue[tail++] = k - 1; }
+      if (!gR && ds < field[k + 1] - 1e-3 && tail < cap) { field[k + 1] = ds; queue[tail++] = k + 1; }
+      if (dn) {
+        if (diag && l && !gL && !gD && !grid[k + W - 1] && dd < field[k + W - 1] - 1e-3 && tail < cap) { field[k + W - 1] = dd; queue[tail++] = k + W - 1; }
+        if (!gD && ds < field[k + W] - 1e-3 && tail < cap) { field[k + W] = ds; queue[tail++] = k + W; }
+        if (diag && r && !gR && !gD && !grid[k + W + 1] && dd < field[k + W + 1] - 1e-3 && tail < cap) { field[k + W + 1] = dd; queue[tail++] = k + W + 1; }
       }
     }
   }
 
   // Unit direction along the flow field toward the target, or straight there if off the grid.
   flow(out, x, z, tx, tz, slot = 0) {
+    if (inDungeon(x, z) && inDungeon(tx, tz)) return (this.cave ||= new CaveNav()).flow(out, x, z, tx, tz, this.now ?? 0);
     const i = ((x - NAV_X0) / NAV_CELL) | 0, j = ((z - NAV_Z0) / NAV_CELL) | 0;
     let bx = tx - x, bz = tz - z;
     const field = this.slots.get(slot)?.field;
@@ -330,7 +383,8 @@ export class World {
         }
       }
       // With a clear line, head straight there and skip the grid's stair-steps.
-      if (this.clearance(x, z, (tx - x) / (Math.hypot(tx - x, tz - z) || 1), (tz - z) / (Math.hypot(tx - x, tz - z) || 1), Math.hypot(tx - x, tz - z), NAV_RADIUS) >= Math.hypot(tx - x, tz - z)) { bx = tx - x; bz = tz - z; }
+      const D = Math.hypot(tx - x, tz - z);
+      if (this.clearance(x, z, (tx - x) / (D || 1), (tz - z) / (D || 1), D, NAV_RADIUS) >= D) { bx = tx - x; bz = tz - z; }
     }
     const L = Math.hypot(bx, bz) || 1;
     out[0] = bx / L; out[1] = bz / L;

@@ -1,4 +1,5 @@
 // The cathedral and the catacombs: their own geometry and their own texture arrays, since their tiles are small and square where
+import { inDungeon } from '../core/dungeon.js';
 // the village's are big and painted. Drawn only from where they can be seen, and the world outside isn't drawn from below.
 import { inSexton, toChurch } from '../core/church.js';
 import { accessor, parseGLB } from '../core/glb.js';
@@ -154,6 +155,8 @@ export function buildGlowPipeline(r, module, layout, depthFormat, multisample) {
 
 // Where the camera is decides what's worth drawing. A wall can't be seen through, so it's simple.
 export function visibility(f0, cam) {
+  // (Down the Hollowfang Warrens, out past the world's edge: only their own rock, which is drawn with the world's places.)
+  if (inDungeon(cam.x, cam.z)) return { deep: false, hall: false, world: true, cath: false, below: false, warrens: true };
   // (Below is the stair's own passage, or under the land. Behind the church, out in the open, is neither. In the church's own frame: src/core/church.js.)
   const [x, z] = toChurch(cam.x, cam.z);
   // The Sexton's passage, and the ground outside its door, see down into the stair; and from the head of the stair, through the

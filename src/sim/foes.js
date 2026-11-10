@@ -4,6 +4,9 @@
 export const FOE_MEMORY = 8;
 
 export function foeOf(m, sim) {
+  // Held by a tank of your party (src/sim/hero.js companion): it goes for them, whoever else is hitting it.
+  const t = m.tauntBy;
+  if (t && !t.dead && !t.hidden && !t.surf && sim.time < m.tauntT) return t;
   const p = sim.player, f = m.heroFoe;
   if (!f || f.dead || f.hidden || sim.time - (m.heroFoeT ?? -1e9) > FOE_MEMORY) return p;
   const dp = p.dead ? 1e9 : Math.hypot(p.x - m.x, p.z - m.z), df = Math.hypot(f.x - m.x, f.z - m.z);

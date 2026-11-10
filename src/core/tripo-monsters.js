@@ -47,6 +47,21 @@ export const MODEL_STATS = {
   velscour_lancer: { name: 'LANCER OF VELSCOUR', reach: 3.2 },
   werebat: { name: 'WEREBAT', hp: 130, damage: 15 },
 };
+// The Hollowfang Warrens' bosses (src/core/dungeon.js), and the dragon's whelps: bigger copies of the rank and file, each
+// with a palette of its own. Added to roster.json's models as each thread loads it (withVariants), after them, so both threads
+// count them the same. src: the model they're made from; height: theirs; the rest from the model's own entry.
+export const VARIANTS = {
+  hf_grubnash: { src: 'kobold_armored_3', height: 2.7, name: 'GRUBNASH THE TUNNEL-KING' },
+  hf_skrit: { src: 'goblin_red_armored_1', height: 2.1, name: 'SKRIT' },
+  hf_skrat: { src: 'goblin_green_armored_2', height: 2.1, name: 'SKRAT' },
+  hf_venomaw: { src: 'dragon_green', height: 6.2, name: 'VENOMAW' },
+  hf_whelp: { src: 'dragonling_black', height: 1.25, name: 'VENOMAW WHELP' },
+};
+export function withVariants(roster) {
+  for (const [id, v] of Object.entries(VARIANTS)) if (roster[v.src] && !roster[id]) roster[id] = { ...roster[v.src], ...v, id };
+  return roster;
+}
+
 // What's in a monster's hands crosses to the render thread in its C_HERO block (a Tripo slot is no hero): 1 + the weapon's place
 // in armIds(roster), 0 for an empty hand.
 export const ARMS = { RIGHT: 14, LEFT: 15 };

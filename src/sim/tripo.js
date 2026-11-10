@@ -13,6 +13,16 @@ import { clamp, mat4FromQT, quatMul, quatRotate, quatYaw, wrapAngle } from '../c
 import { OPENING } from '../core/opening.js';
 import { inTown } from '../core/town.js';
 import { ARMS, BREATH_ELEM, GROUPS, LAIRS, MODEL_STATS, TRIPO_BASE, armIds, kindOfGroup } from '../core/tripo-monsters.js';
+import { BOSSES, PACKS, roomSpot } from '../core/dungeon.js';
+
+// The Warrens' packs and bosses, as lairs (src/core/dungeon.js). A pack wakes as you come into its room; a boss only when
+// the Warrens stand it (src/sim/dungeon.js), which is why its wake is nothing.
+function dungeonLairs() {
+  const out = [];
+  for (const p of PACKS) { const [x, , z] = roomSpot(p.room); out.push({ key: p.key, x, z, r: 6, pick: p.pick, n: p.n, pal: p.pal, wake: 34, dungeon: true, state: 'asleep', at: -1e9 }); }
+  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, state: 'asleep', at: -1e9, bossLair: true }); }
+  return out;
+}
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -101,7 +111,7 @@ function prepare(id, meta, buffer) {
 function rigFor(id, meta, base) {
   let r = rigs.get(id);
   if (r) { rigs.delete(id); rigs.set(id, r); return r; }
-  r = fetch(`${base}${TRIPO_BASE}${id}.glb`).then((res) => {
+  r = fetch(`${base}${TRIPO_BASE}${meta?.src || id}.glb`).then((res) => {
     if (!res.ok) throw new Error(`${id}: ${res.status}`);
     return res.arrayBuffer();
   }).then((b) => prepare(id, meta, b));
@@ -163,15 +173,19 @@ export class TripoMonster extends FieldCreature {
   }
 
   update(dt, sim) {
-    if (dt <= 0) return;
+    // (Frozen stiff still dies: a spell's freeze runs the update at no time at all.)
+    if (dt <= 0) { if (this.hp <= 0 && !this.dead) this.die(sim); return; }
     const p = foeOf(this, sim), o = this.opts, rig = this.rig, ai = o.ai;
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.breathCd -= dt; this.castCd -= dt;
     this.flinch = Math.max(0, this.flinch - dt);
+    this.flinchCd = (this.flinchCd || 0) - dt;
     this.fade = Math.min(1, this.fade + dt * 5);
     this.heart += dt;
     if (this.bleeds.length && !this.dead) this.hp -= dt * this.bleeds.reduce((sum, b) => sum + b.rate, 0) * 3;
     if (this.hp <= 0 && !this.dead) this.die(sim);
+    // A boss's own fight (src/sim/dungeon.js): it may take the body over for a while (a flight, a spin, a run to its master).
+    if (this.script && !this.dead && this.script(this, dt, sim, p)) { this.settle(dt, sim, false); return; }
     const distance = Math.hypot(p.x - this.x, p.z - this.z);
     const yaw = Math.atan2(p.x - this.x, p.z - this.z);
     const story = sim.opening && sim.opening.stage < OPENING.ARRIVED;
@@ -275,7 +289,13 @@ export class TripoMonster extends FieldCreature {
         this.t += dt * (speed > 0 ? clamp(speed / clip.speed, 0.4, 1.8) : 1);
       }
     }
-    if (this.dead || this.state !== STATE.MOVE || frozen) this.vx = this.vz = 0;
+    this.settle(dt, sim, this.dead || this.state !== STATE.MOVE || frozen);
+  }
+
+  // Where the move took it: out of the walls, on the ground (or up off it on its wings), and the rig there.
+  settle(dt, sim, still) {
+    const o = this.opts;
+    if (still) this.vx = this.vz = 0;
     if (!this.dead) {
       const pos = this.position;
       pos[0] = this.x + this.vx * dt; pos[1] = this.y; pos[2] = this.z + this.vz * dt;
@@ -285,7 +305,7 @@ export class TripoMonster extends FieldCreature {
     this.speed = Math.hypot(this.vx, this.vz);
     this.y = sim.world.height(this.x, this.z);
     // Wings: up off the ground as the move says (roster.json hover, as a share of the height).
-    const lift = this.dead ? 0 : (this.meta.hover?.[this.clip] || 0) * this.meta.height;
+    const lift = this.dead ? 0 : (this.meta.hover?.[this.clip] || 0) * this.meta.height + (this.liftExtra || 0);
     this.hover += (lift - this.hover) * Math.min(1, dt * 2.5);
     this.stepBlobs(dt, sim);
     quatYaw(this.rig.rootQ, 0, this.yaw);
@@ -375,8 +395,9 @@ export class TripoMonster extends FieldCreature {
     try { FOE.bolt.fire(this, sim, p, d, null, at); } finally { sim.foeTarget = null; }
   }
 
-  onHit(sim) {
-    this.flinch = 0.18;
+  onHit(sim, kind, fx, fz, poise = 20) {
+    // (A flinch only for a blow with weight, and not again straight away: a beam's ticks can't hold it still.)
+    if (poise >= 10 && !(this.flinchCd > 0)) { this.flinch = 0.18; this.flinchCd = 0.7; }
     if (!this.aggro && sim) this.notice(sim);
     this.aggro = true;
     this.buried = false;
@@ -420,6 +441,7 @@ export class TripoWorld {
     this.palNames = Object.keys(palettes);
     this.first = first; this.count = count;
     this.lairs = LAIRS.map((l) => ({ ...l, wake: l.wake || 110, state: 'asleep', at: -1e9, left: null }));
+    this.lairs.push(...dungeonLairs());
     this.nextLook = 0;
     this.loading = new Set();
   }
@@ -429,7 +451,7 @@ export class TripoWorld {
   // A new game: every slot empty, every lair waiting.
   reset() {
     for (let i = this.first; i < this.first + this.count; i++) this.sim.knights[i] = new TripoEmpty(i);
-    this.lairs = this.lairs.filter((l) => l.key !== 'test');
+    this.lairs = this.lairs.filter((l) => l.key !== 'test' && !l.temp);
     this.nextLook = 0; this.claimed?.clear(); this.loading.clear();
     for (const l of this.lairs) { l.state = 'asleep'; l.at = -1e9; }
   }
@@ -472,16 +494,19 @@ export class TripoWorld {
     const sim = this.sim, p = sim.player;
     if (sim.time < this.nextLook || (sim.opening && sim.opening.stage < OPENING.ARRIVED)) return;
     this.nextLook = sim.time + 1;
+    // (A fight's adds, once they're all dead, are done with: src/sim/dungeon.js.)
+    if (this.lairs.some((l) => l.temp && l.state === 'cleared')) this.lairs = this.lairs.filter((l) => !(l.temp && l.state === 'cleared'));
     for (const lair of this.lairs) {
       const d = Math.hypot(p.x - lair.x, p.z - lair.z);
-      if (lair.state === 'cleared' && sim.time - lair.at > 600 && d > lair.wake * 2) lair.state = 'asleep';
+      // (The Warrens' packs stay dead till the Warrens say otherwise: src/sim/dungeon.js.)
+      if (lair.state === 'cleared' && !lair.dungeon && sim.time - lair.at > 600 && d > lair.wake * 2) lair.state = 'asleep';
       if (lair.state === 'awake') {
         const mine = this.slots().filter((k) => k instanceof TripoMonster && k.lair === lair);
         if (lair.spawned && lair.killed >= lair.spawned && !this.loading.has(lair)) { lair.state = 'cleared'; lair.at = sim.time; }
-        else if (d > lair.wake * 2.2 && mine.every((k) => k.dead || !k.aggro)) this.sleep(lair);
+        else if (lair.wake > 0 && d > lair.wake * 2.2 && mine.every((k) => k.dead || !k.aggro)) this.sleep(lair);
         // Woke when every slot was busy, and so has nobody: try again next time round.
         else if (!lair.spawned && !mine.length && !this.loading.has(lair)) lair.state = 'asleep';
-      } else if (lair.state === 'asleep' && d < lair.wake && !p.dead) this.wake(lair);
+      } else if (lair.state === 'asleep' && lair.wake > 0 && d < lair.wake && !p.dead) this.wake(lair);
     }
   }
 
@@ -538,6 +563,7 @@ export class TripoWorld {
         lair.spawned++;
         m.y = sim.world.height(x, z);
         sim.knights[slot] = m;
+        lair.onSpawn?.(m);
       }).catch((e) => { this.claimed.delete(slot); console.error('tripo', id, e); })
         .finally(() => { if (--pending === 0) this.loading.delete(lair); });
     });
