@@ -68,6 +68,10 @@ const CRABS = [
 // How much faster than their clips each kind goes, by kind: knight, silver knight, crab, Gravehart, Hydra, undead, ogre.
 // (Eased when the swords went: they have to cross open ground under fire, and a wizard has no parry.)
 const HASTE = [1.1, 0.95, 1.1, 1, 1, 1.05, 1], CASTER_HASTE = 1.1;
+// Sim.poseGap's distances (metres from the player) and gaps (seconds): within close, every tick whatever; drawn, every tick within
+// near, then midGap to mid, then farGap; not drawn, hidden.
+const POSE_GAP = { close: 16, near: 45, mid: 90, midGap: 1 / 70, farGap: 1 / 40, hidden: 1 / 8 };
+const POSE_GAP_LEAN = { close: 12, near: 25, mid: 50, midGap: 1 / 30, farGap: 1 / 20, hidden: 1 / 5 };
 
 class Sim {
   constructor() {
@@ -111,6 +115,17 @@ class Sim {
     } else {
       this.pendingEvents.push(type, a, b, c, d, e, f, g);
     }
+  }
+
+  // Seconds between full poses for a body (k, in character slot `slot`). Every tick near the player, or on screen near enough to be
+  // looked at; less often on screen far off; seldom when it isn't drawn at all (INPUT.SEEN, from the renderer). Between them the
+  // last pose is carried along with the body (src/core/carry.js), so it glides; only the limbs of something far off are a beat
+  // behind. Posing is over half of a tick's work. A phone poses less.
+  poseGap(k, slot) {
+    const p = this.player, d = Math.hypot(k.x - p.x, k.z - p.z), g = this.lean ? POSE_GAP_LEAN : POSE_GAP;
+    if (d < g.close || !(slot >= 0)) return 0;
+    if (!(this.input[INPUT.SEEN + slot] > 0.5)) return g.hidden;
+    return d < g.near ? 0 : d < g.mid ? g.midGap : g.farGap;
   }
 
   hitStop(t) { this.stopT = Math.max(this.stopT, t); }
@@ -161,8 +176,10 @@ class Sim {
     if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
     if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + g); }
     if (!this.opening?.frozen()) player.update(dt * (this.slow || 1), tdt, input, this);
-    for (const k of this.knights) {
-      const ox = k.x, oz = k.z;
+    for (let i = 0; i < this.heroes.length; i++) this.heroes[i].lodSlot = this.knights.length + i;
+    for (let i = 0; i < this.knights.length; i++) {
+      const k = this.knights[i], ox = k.x, oz = k.z;
+      k.lodSlot = i;
       k.update(this.frozen ? 0 : tdt * this.casting.rate(k) * (k.opts?.role ? CASTER_HASTE : HASTE[k.kind] ?? 1), this);
       // Velscour's church is the undead's. What lives in the fields stops at its door.
       // (The Hydra is the exception. The pit is where it lives.)
@@ -421,6 +438,7 @@ async function fetchBuf(path) {
 
 async function boot(msg) {
   const sim = new Sim();
+  sim.lean = !!msg.lean;
   const base = msg.base;
   setOpeningTerrain(msg.opening);
   if (msg.buffer) {

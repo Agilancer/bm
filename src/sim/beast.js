@@ -1,10 +1,12 @@
 // What monsters have in common: their own pose over shared clips, one soft skin that the blade tests against spheres
 // riding its joints, and wounds that work like the knights': a cut, then a second blow through the same cut, and it bleeds.
 import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH } from '../core/layout.js';
+import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
 import { clamp, quatMul, quatNormalize, quatRotate } from '../core/math.js';
 
 const GRAVITY = 15;
 const tv = new Float32Array(3), tv2 = new Float32Array(3), out3 = new Float32Array(3), tq = new Float32Array(4), tq2 = new Float32Array(4);
+const beastCarry = new Float32Array(8);
 
 export class Beast {
   constructor(id, kind, rig, opts) {
@@ -221,6 +223,11 @@ export class Beast {
   }
 
   // The chunks' palette goes on top of what the clip wrote.
+  isChunk(j) {
+    if (this.chunks) for (const c of this.chunks) if (c.js.includes(j)) return true;
+    return false;
+  }
+
   writeChunks(snap, off) {
     const pq = this.rig.pq, pt = this.rig.pt;
     for (const c of this.chunks) {
@@ -246,7 +253,18 @@ export class Beast {
   write(snap, cOff, sim) {
     const { rig } = this;
     const clip = rig.clips[this.clip];
-    rig.solve(clip, this.t, this.fade, snap, cOff + C_PALETTE);
+    // A full pose when one's due (Sim.poseGap: every tick near the player or on screen near by), or at once on a new clip; in
+    // between the last one, carried to where the body's got to (src/core/carry.js). this.carried is that carry, or null.
+    const pal = this.posePal || (this.posePal = new Float32Array(rig.count * 8));
+    const gap = sim?.poseGap ? sim.poseGap(this, this.lodSlot) : 0;
+    if (this.posedYaw === undefined || !gap || this.clip !== this.posedClip || sim.time - this.posedAt >= gap - 1e-6) {
+      rig.solve(clip, this.t, this.fade, pal, 0);
+      this.posedAt = sim?.time ?? 0; this.posedClip = this.clip;
+      this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw;
+      this.carried = null;
+    } else this.carried = carryFrame(beastCarry, this.posedYaw, this.posedX, this.posedY, this.posedZ, this.yaw, this.x, this.y, this.z) ? beastCarry : null;
+    if (this.carried) carryPalette(pal, 0, snap, cOff + C_PALETTE, rig.count, this.carried);
+    else snap.set(pal, cOff + C_PALETTE);
     if (this.chunks) this.writeChunks(snap, cOff + C_PALETTE);
     snap[cOff + C.ACTIVE] = 1;
     snap[cOff + C.KIND] = this.kind;
@@ -265,9 +283,13 @@ export class Beast {
     this.bleeds.forEach((b, i) => {
       const o = cOff + C_BLEEDS + i * 8;
       this.bindToWorld(out3, b.piece, b.p[0], b.p[1], b.p[2]);
+      // (Where the pose has been carried, the wound goes with it; not on a piece that's come off, which flies on its own.)
+      const c = this.carried && !this.isChunk(b.piece) ? this.carried : null;
+      if (c) carryPoint(out3, 0, out3, 0, c);
       snap[o] = out3[0]; snap[o + 1] = out3[1]; snap[o + 2] = out3[2];
       tv[0] = b.n[0]; tv[1] = b.n[1]; tv[2] = b.n[2];
       quatRotate(out3, 0, this.inv[b.piece].q, 0, tv, 0);
+      if (c) { const x = out3[0]; out3[0] = x * c[5] + out3[2] * c[6]; out3[2] = -x * c[6] + out3[2] * c[5]; }
       snap[o + 3] = out3[0]; snap[o + 4] = out3[1]; snap[o + 5] = out3[2];
       snap[o + 6] = b.rate; snap[o + 7] = b.born;
     });

@@ -238,7 +238,8 @@ export class Zombie extends Beast {
     const stump = { [P.HEAD]: 'neck_01', [P.HIPS]: 'spine_01', [P.UPPER_L]: 'clavicle_l', [P.UPPER_R]: 'clavicle_r', [P.FORE_L]: 'upperarm_l', [P.FORE_R]: 'upperarm_r', [P.HAND_L]: 'lowerarm_l', [P.HAND_R]: 'lowerarm_r', [P.THIGH_L]: 'pelvis', [P.THIGH_R]: 'pelvis', [P.SHIN_L]: 'thigh_l', [P.SHIN_R]: 'thigh_r', [P.FOOT_L]: 'calf_l', [P.FOOT_R]: 'calf_r' }[part];
     this.bleedFrom(sim, stump, part === P.HIPS ? 14 : 9);
     this.buildSpheres();
-    sim.hitStop(0.05);
+    // (No hit-stop here: it held the whole world still for anyone's blow anywhere, a hero's a hundred metres off included. The
+    // player's own blows hold it, in src/sim/player.js.)
     if (this.dead) return;
     if (part === P.HEAD) {
       this.headless = true;

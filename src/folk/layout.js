@@ -20,7 +20,9 @@ export const FCTRL = { LATEST: 0, READING: 1, TICK: 2, READY: 3, PACE_US: 4, PAC
 export const FIN = {
   HOUR: 0, PX: 1, PY: 2, PZ: 3, YAW: 4, PAUSED: 5, CAST: 6, TALKING: 7, CAMX: 8, CAMY: 9, CAMZ: 10, DAY: 11, IDLE: 12,
   // Up to 8 dangers the town should run from (anything hunting within reach of town): x, z pairs, and how many.
-  DANGER_N: 13, DANGER: 14, SIZE: 64,
+  DANGER_N: 13, DANGER: 14,
+  // Per person (by body), 1 when the renderer drew them or their shadow last frame (src/gfx/folk.js cull): they're posed more often.
+  SEEN: 32, SIZE: 80,
 };
 
 // Per person, in a slot.

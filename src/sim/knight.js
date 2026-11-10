@@ -1,5 +1,6 @@
 // A knight on the UAL skeleton: layered animation, plate hits and wounds, and the brain.
-import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, C_PROPS, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH, TACTICS } from '../core/layout.js';
+import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, C_PROPS, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH, PROPS_PER_CHAR, TACTICS } from '../core/layout.js';
+import { carryFrame, carryMat4, carryPalette } from '../core/carry.js';
 import { clamp, damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, smoothstep, wrapAngle } from '../core/math.js';
 import { inTown } from '../core/town.js';
 import { Pose, solveFK, writePalette } from './anim.js';
@@ -396,6 +397,8 @@ export class Knight {
     this.nod.fill(0);
     this.nod[J.head] = this.lookPitch;
     solveFK(pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
+    // (Where the pose was made: write carries it on to wherever he's got to since. See src/core/carry.js.)
+    this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw; this.poseVer = (this.poseVer || 0) + 1;
     {
       // How far the shield arm hangs, from guard (0) to at ease (1), judged from his chest so a stoop isn't a hang.
       const d = hangV, a = this.foreHang, g = this.foreGuard;
@@ -770,7 +773,7 @@ export class Knight {
       this.vx = damp(this.vx, 0, 6, dt); this.vz = damp(this.vz, 0, 6, dt); this.speed = 0;
       this.deadT += dt;
       this.move(dt, sim);
-      this.animate(dt, sim);
+      this.animateDue(dt, sim);
       return;
     }
     // Heads turn toward a nearby player, in peace or war.
@@ -786,7 +789,17 @@ export class Knight {
     this.combat = damp(this.combat, this.combatTarget, 5, dt);
     this.shieldUp = damp(this.shieldUp, this.shieldTarget, 8, dt);
     this.move(dt, sim);
-    this.animate(dt, sim);
+    this.animateDue(dt, sim);
+  }
+
+  // A full pose when one's due (Sim.poseGap), with all the time since the last; write carries that one along in between. Every
+  // tick in a fight or a move of his own.
+  animateDue(dt, sim) {
+    this.poseT = (this.poseT || 0) + dt;
+    const gap = this.combat > 0.05 || this.action || !sim.poseGap ? 0 : sim.poseGap(this, this.lodSlot);
+    if (this.posedYaw !== undefined && this.poseT < gap - 1e-6) return;
+    this.animate(this.poseT, sim);
+    this.poseT = 0;
   }
 
   applyAction(dt, sim, p) {
@@ -1514,7 +1527,8 @@ export class Knight {
     this.attack = null;
     this.iframes = false;
     this.play('Death01', 1, 'full', 0.15);
-    sim.slowMo(1.3);
+    // The slow fall of a knight the player has just cut down close by; not the whole world slowed for any knight anywhere.
+    if (sim.time - (this.playerHitT ?? -1e9) < 1 && sim.player && Math.hypot(sim.player.x - this.x, sim.player.z - this.z) < 25) sim.slowMo(1.3);
     this.setState(S.DEAD);
     this.combatTarget = 0;
     this.shieldTarget = 0;
@@ -1537,9 +1551,23 @@ export class Knight {
     snap[cOff + C.ARMOR] = this.armor;
     snap[cOff + C.LANDED] = this.stats.landed;
     snap[cOff + C.SPEED] = this.speed;
-    writePalette(this.pose, snap, cOff + C_PALETTE);
-    this.writeProps(snap, cOff + C_PROPS);
-    this.plateTransforms(snap, cOff, sim.tick);
+    // The palette and what's in the hands are worked out once for each pose (they cost about what the pose did) and kept. Moved
+    // since the pose was made (posed only now and then far off, or shouldered aside after), they're carried along with him, so he
+    // glides rather than standing and jumping (src/core/carry.js).
+    const n = this.rig.count, fresh = !this.palKept || this.keptVer !== this.poseVer;
+    const pal = this.palKept || (this.palKept = new Float32Array(n * 8)), props = this.propsKept || (this.propsKept = new Float32Array(PROPS_PER_CHAR * 16));
+    if (fresh) { this.keptVer = this.poseVer; writePalette(this.pose, pal, 0); this.writeProps(props, 0); }
+    const c = this.posedYaw !== undefined && carryFrame(bodyCarry, this.posedYaw, this.posedX, this.posedY, this.posedZ, this.yaw, this.x, this.y, this.z) ? bodyCarry : null;
+    if (c) {
+      carryPalette(pal, 0, snap, cOff + C_PALETTE, n, c);
+      for (let o = 0; o < PROPS_PER_CHAR * 16; o += 16) {
+        if (props[o + 15] !== 0) carryMat4(props, o, snap, cOff + C_PROPS + o, c); else snap.set(props.subarray(o, o + 16), cOff + C_PROPS + o);
+      }
+    } else { snap.set(pal, cOff + C_PALETTE); snap.set(props, cOff + C_PROPS); }
+    // The plates' frames, for where a blow lands and where the blood runs from: kept up whenever a blow could come (near the player,
+    // in a fight) or he's bleeding. Otherwise worked out when something asks (plateTransforms, from the snapshot).
+    if (fresh || c && (this.bleeds.length || this.combat > 0.05 || this.foe || !sim.poseGap || !sim.poseGap(this, this.lodSlot))) this.plateTransforms(snap, cOff, sim.tick);
+    else if (c) this.invTick = -1;
     snap[cOff + C.N_BLEEDS] = this.bleeds.length;
     this.bleeds.forEach((b, i) => {
       const o = cOff + C_BLEEDS + i * 8;
@@ -1555,6 +1583,7 @@ export class Knight {
 }
 
 // Cross-module helpers.
+const bodyCarry = new Float32Array(8);
 const tv = new Float32Array(3), lo = new Float32Array(3), ld = new Float32Array(3), hn = new Float32Array(3), tmp3 = new Float32Array(3);
 // The shield arm's turn at ease, in radians about each joint's own length: upper arm, forearm.
 const CARRY_UPPER = -0.15, CARRY_FORE = -0.75;

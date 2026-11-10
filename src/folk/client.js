@@ -5,7 +5,7 @@ import { inTown } from '../core/town.js';
 import { FCTRL, FIN, FOLK_BYTES, mapFolk } from './layout.js';
 
 export class TownClient {
-  constructor(base, isolated) {
+  constructor(base, isolated, lean = false) {
     this.shared = isolated;
     this.buffer = isolated ? new SharedArrayBuffer(FOLK_BYTES) : null;
     this.map = mapFolk(this.buffer || new ArrayBuffer(FOLK_BYTES));
@@ -19,7 +19,7 @@ export class TownClient {
     this.worker = new Worker(new URL('./folk.worker.js', import.meta.url), { type: 'module' });
     this.worker.onmessage = (e) => this.message(e.data);
     this.worker.onerror = (e) => console.error('town worker', e.message);
-    this.worker.postMessage({ type: 'boot', buffer: this.buffer, base });
+    this.worker.postMessage({ type: 'boot', buffer: this.buffer, base, lean });
   }
 
   on(fn) { this.listeners.push(fn); }

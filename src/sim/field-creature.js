@@ -106,7 +106,7 @@ export class FieldCreature extends Beast {
     this.speed = Math.hypot(this.vx, this.vz);
     this.y = sim.world.height(this.x, this.z);
     quatYaw(this.rig.rootQ, 0, this.yaw);
-    this.rig.rootT.set([this.x, this.y, this.z]);
+    this.rig.rootT[0] = this.x; this.rig.rootT[1] = this.y; this.rig.rootT[2] = this.z;
   }
 
   onHit() { this.aggro = true; this.flinch = 0.18; }

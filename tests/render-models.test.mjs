@@ -4,24 +4,36 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { ARMOR, ARMOR_TRUE } from '../src/gfx/materials.js';
+import { COMMON } from '../src/gfx/shaders.js';
 import { bodyRadius, inCascade } from '../src/gfx/shadowcull.js';
 import { mat4LookTo, mat4Mul, mat4Ortho } from '../src/core/math.js';
 import { LISANDRA_FORMS } from '../src/core/lisandra.js';
 
-test('model-true shading is ARMOR with only its three changes', () => {
-  // The glTF normal map, no knight's steel, and the split-sum reflection.
-  assert.match(ARMOR_TRUE, /perturb\(n0, p, in\.uv, vec2f\(nm\.r, 1\.0 - nm\.g\), 1\.0\)/);
+test('model-true shading is ARMOR with only its two changes', () => {
+  // No knight's steel, and the split-sum reflection. (The normal map is read as everyone's is: see the next test.)
+  assert.match(ARMOR_TRUE, /var n = perturb\(n0, p, in\.uv, nm\.rg, 1\.0\);/);
   assert.doesNotMatch(ARMOR_TRUE, /darkPaint/);
   assert.match(ARMOR_TRUE, /var c = shadeTrue\(p, n, v, albedo, rough, metal, ao, shadow\);/);
   assert.match(ARMOR_TRUE, /fn envDFG\(/);
-  // Take the three changes back out and what's left is ARMOR, character for character.
+  // Take the two changes back out and what's left is ARMOR, character for character.
   const back = ARMOR_TRUE.slice(0, ARMOR_TRUE.indexOf('\n// The split-sum\'s reflectance'))
-    .replace('vec2f(nm.r, 1.0 - nm.g)', 'nm.rg')
     .replace('shadeTrue(p, n, v,', 'shadePBR(p, n, v,');
   const steel = ARMOR.match(/\/\/ Metals take their reflection tint from the paint\.[\s\S]*?sunSpecScale = mix\(1\.0, 0\.55, darkPaint\);/)[0];
   assert.equal(back.replace(/\/\/ \(No knight's steel[^\n]*\n {2}envBoost = 1\.0;\n {2}sunSpecScale = 1\.0;/, steel), ARMOR);
   // ...and ARMOR itself, which every other body is drawn with, has none of it.
   assert.doesNotMatch(ARMOR, /shadeTrue|envDFG|1\.0 - nm\.g/);
+});
+
+test('normal maps are read the glTF way: red along u, green up the picture, whichever way the screen runs', () => {
+  // perturbD's frame comes out scaled by the screen's handedness, and WebGPU's window y runs down, so for a face toward
+  // the eye it points along -u and -v. Checked on a GPU (a camera-facing quad with a (1, .5) and a (.5, 1) texel): red
+  // came out along -u until the frame was turned by sign(det), and green is read against v.
+  const at = COMMON.indexOf('fn perturbD('), f = COMMON.slice(at, COMMON.indexOf('\n}', at));
+  assert.match(f, /let det = dot\(dp1, dp2p\);/);
+  assert.match(f, /select\(1\.0, -1\.0, det < 0\.0\)/);
+  assert.match(f, /t \* inv \* mxy\.x - b \* inv \* mxy\.y/);
+  // No shader turns green over on top of that.
+  assert.doesNotMatch(ARMOR_TRUE, /1\.0 - nm\.g/);
 });
 
 // A cascade as renderer.js writeFrame makes one: a square 2·rad across round (cx, cz), seen from the sun.

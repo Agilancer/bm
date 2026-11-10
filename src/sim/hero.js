@@ -241,9 +241,10 @@ export class Hero extends Knight {
     this.lookPitch = damp(this.lookPitch || 0, near ? clamp(Math.atan2(-eyeDrop, Math.max(this.near, 0.5)), -0.5, 0.5) : 0, 5, dt);
     // Far off and unseen there's no body to pose: just think, and walk the map.
     this.animT += dt;
+    // (On screen near by, every tick; far off or out of sight less often, the pose carried along between: Sim.poseGap.)
     if (this.visible || this.foe) {
-      const every = this.near > 70 ? 3 : 1;
-      if (this.animTick++ % every === 0) { this.animate(this.animT, sim); this.animT = 0; }
+      const gap = this.swing || this.surf || this.jump || !sim.poseGap ? 0 : sim.poseGap(this, this.lodSlot);
+      if (this.animT >= gap - 1e-6) { this.animate(this.animT, sim); this.animT = 0; }
     }
     this.strings(sim);
   }
@@ -1004,7 +1005,7 @@ export class Hero extends Knight {
   writeHero(snap, cOff, shown) {
     const o = cOff + C_HERO, h = this.J.head * 3;
     snap[o] = shown ? 1 : 0;
-    snap[o + 1] = shown ? this.pose.wt[h + 1] + 0.32 * this.rig.height / 1.8 : 0;
+    snap[o + 1] = shown ? this.pose.wt[h + 1] + (this.y - (this.posedY ?? this.y)) + 0.32 * this.rig.height / 1.8 : 0;
     snap[o + 2] = this.x; snap[o + 3] = this.y; snap[o + 4] = this.z;
     snap[o + 5] = this.hp / this.maxHp;
     snap[o + 6] = this.person.level;

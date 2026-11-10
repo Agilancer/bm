@@ -23,7 +23,7 @@ import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
-import { settings, Title } from './title.js';
+import { saveSettings, settings, Title } from './title.js';
 import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
@@ -47,6 +47,9 @@ const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
 // Every new game begins with the witch in the cave.
 const OPENING_ENABLED = !params.has('noopening');   // (?noopening starts in the town, for tests)
 const CONSENT_KEY = 'bm-threads-consent';
+// What a start downloads, for the keep-files question: 375 MB over about 940 files, measured by tools/keep_check.mjs
+// (2026-11-09, a fresh browser, desktop graphics).
+const KEEP_MB = 375;
 const AUTOSAVE_EVERY = 20;   // seconds of play between the saves Continue picks up
 const title = new Title();
 window.bmTitle = title;
@@ -112,7 +115,7 @@ async function enableIsolation() {
   if (sessionStorage.getItem('bm-coi-tried')) return false;
   try {
     sessionStorage.setItem('bm-coi-tried', '1');
-    const reg = await navigator.serviceWorker.register('coi-sw.js');
+    const reg = await navigator.serviceWorker.register(settings.keep === 'yes' ? 'coi-sw.js?keep=1' : 'coi-sw.js');
     if (!navigator.serviceWorker.controller) {
       await new Promise((resolve) => {
         const sw = reg.installing || reg.waiting || reg.active;
@@ -130,6 +133,46 @@ async function enableIsolation() {
   }
 }
 
+// ---- keeping the game on this device (coi-sw.js) -------------------------------------------------------------------
+
+const canKeep = () => 'serviceWorker' in navigator && window.isSecureContext && 'caches' in window;
+
+/** Asked once, before the title. Kept, the next start reads the files from here and downloads only what has changed. */
+function askKeep() {
+  return new Promise((resolve) => {
+    $('card').style.display = '';
+    $('card').innerHTML = `<b>Keep Bellmourn on this device?</b><br>
+      The game downloads about ${KEEP_MB} MB as it starts. Kept here, the next start reads those files from your device and
+      downloads only what has changed since (it checks once, at the start). Not kept, they come down every time.
+      <div class="small">They're kept in this browser's storage for this site. You can change your mind in Settings, under Game files, which also clears them.</div>`;
+    $('buttons').innerHTML = '<button class="big" id="keepYes">KEEP IT HERE</button><button class="alt" id="keepNo">Download each time</button>';
+    const pick = (v) => {
+      title.unlock();
+      settings.keep = v;
+      saveSettings();
+      const sel = document.querySelector('[data-k="keep"]');
+      if (sel) sel.value = v;
+      $('card').textContent = 'Preparing...';
+      $('buttons').innerHTML = '';
+      resolve(v);
+    };
+    $('keepYes').onclick = () => pick('yes');
+    $('keepNo').onclick = () => pick('no');
+  });
+}
+
+/** The service worker as the player wants it: keeping the files, or not. (It also lends shared memory where the host can't.) */
+async function useStore(keep) {
+  if (!canKeep()) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const keeping = ((reg?.active || reg?.waiting || reg?.installing)?.scriptURL || '').includes('keep=1');
+    if (keep !== keeping && (keep || reg)) await navigator.serviceWorker.register(keep ? 'coi-sw.js?keep=1' : 'coi-sw.js');
+    if (keep) navigator.storage?.persist?.().catch(() => { /* the browser's call */ });
+    else await Promise.all(['bm-files-v1', 'bm-meta-v1'].map((k) => caches.delete(k)));
+  } catch (e) { console.warn('game files', e); }
+}
+
 function showFail(message) {
   $('card').innerHTML = `<b>This game needs WebGPU.</b><br>${message}<div class="small">Current versions of Chrome, Edge and Safari have it, on PC and on phones. Firefox has it on Windows. If yours is up to date, check that hardware acceleration is on.</div>`;
   $('buttons').innerHTML = '';
@@ -139,9 +182,12 @@ async function main() {
   const mobile = isMobileDevice();
   const plan = threadPlan(mobile);
   if (!navigator.gpu) { showFail('This browser does not offer it.'); return; }
-  if (AUTO) { boot(plan, plan.pool); return; }
+  // (?keep: keep the files, unasked, for tests of coi-sw.js.)
+  if (AUTO) { if (params.has('keep')) { settings.keep = 'yes'; await useStore(true); } boot(plan, plan.pool); return; }
   // The title comes up once the page won't reload under it for shared memory, and the game loads behind it.
   const go = async (pool) => {
+    if (settings.keep === 'ask' && canKeep()) await askKeep();
+    await useStore(settings.keep === 'yes');
     if (!window.crossOriginIsolated && (await enableIsolation())) return;
     $('gate').classList.add('gone');
     title.start();
@@ -183,10 +229,15 @@ async function boot(plan, poolSize) {
   $('card').style.display = 'none';
   $('buttons').innerHTML = '';
   $('bar').style.display = 'block';
-  const setProgress = (t, msg) => {
-    $('bar').firstElementChild.style.width = `${Math.round(t * 100)}%`;
+  // The bar only goes forward, and holds short of the end until the game is ready to play: 100% is shown as the title's
+  // menu comes up, and not before. (It used to count past 100%, to 114%, on a guess at how many steps the load had.)
+  let shown = 0;
+  const setProgress = (t, msg, final = false) => {
+    shown = final ? 1 : Math.max(shown, Math.min(0.99, t));
+    const pct = Math.floor(shown * 100);
+    $('bar').firstElementChild.style.width = `${pct}%`;
     if (msg) $('status').textContent = msg;
-    if (title.up) title.progress(Math.round(t * 100));
+    if (title.up) title.progress(pct);
   };
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
@@ -213,7 +264,7 @@ async function boot(plan, poolSize) {
   setOpeningTerrain(OPENING_ENABLED);
   const simWorker = new Worker(new URL('./sim/sim.worker.js', import.meta.url), { type: 'module' });
   // The townsfolk, on a thread of their own (src/folk/). The sim has where they stand, to bump you off them.
-  const town = new TownClient(BASE, isolated);
+  const town = new TownClient(BASE, isolated, !!gpu.mobile);
   renderer.folk = new FolkBodies(renderer, town.map);
   town.onReady = (m) => renderer.folk.setBeds(m.beds);
   if (town.buffer) simWorker.postMessage({ type: 'folk', buffer: town.buffer });
@@ -262,7 +313,7 @@ async function boot(plan, poolSize) {
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
-  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_ENABLED, heroes: cast, hour: renderer.hour });
+  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_ENABLED, heroes: cast, hour: renderer.hour, lean: !!gpu.mobile });
 
   const hud = new Hud(gpu, plan, poolSize, isolated, input);
   const start = performance.now();
@@ -280,7 +331,7 @@ async function boot(plan, poolSize) {
     return;
   }
   const loadMs = performance.now() - start;
-  setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`);
+  setProgress(0.99, 'Opening the gates...');
   // Tasks for the pool once the load is done: thinking about the fight.
   if (buffer) {
     shared.ctrl[CTRL.PLAN_RUN] = 1;
@@ -609,6 +660,8 @@ async function boot(plan, poolSize) {
     else if (k === 'res') {
       game.fixedScale = v !== 'auto';
       if (game.fixedScale) renderer.scale = Number(v);
+    } else if (k === 'keep') {
+      useStore(v === 'yes');
     } else if (k === 'gfx') {
       title.confirm({ title: 'Restart?', text: 'The graphics setting takes hold when the game restarts. Where you are is kept for Continue.', yes: 'Restart Now', no: 'Later' })
         .then(async (yes) => { if (yes) { await autosave(); title.reload(); } });
@@ -720,6 +773,7 @@ async function boot(plan, poolSize) {
     : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> journal';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
+  setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`, true);
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
   if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
 }
@@ -1067,6 +1121,8 @@ class GameView {
       this.questTrail?.frame(dt, snap);
       renderDiagnostics.stage = 'renderer';
       this.renderer.frame(c, snap, this.sway, dt);
+      // Who's drawn, body or shadow: the world poses them every tick (if near) and everyone else less often.
+      { const seen = this.shared.input, rc = this.renderer.chars; for (let i = 0; i < MAX_CHARS; i++) seen[INPUT.SEEN + i] = rc[i]?.casts ? 1 : 0; }
       // The townsfolk are paced the same way, but asked once the renderer has drawn them: their next poses have until the next
       // frame to be ready.
       if (!this.unpaced) this.town?.pace(now);

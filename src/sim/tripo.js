@@ -9,6 +9,7 @@ import { FOE } from './foespells.js';
 import { ELEM, FX } from './spells.js';
 import { parseGLB } from '../core/glb.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
+import { carryMat4 } from '../core/carry.js';
 import { clamp, mat4FromQT, quatMul, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
 import { OPENING } from '../core/opening.js';
 import { inTown } from '../core/town.js';
@@ -405,6 +406,7 @@ export class TripoMonster extends FieldCreature {
     const hold = (j, o) => { if (j === null) snap.fill(0, o, o + 16); else mat4FromQT(handM, wq, j * 4, wt, j * 3), snap.set(handM, o); };
     hold(this.opts.armR ? this.rig.hand : null, cOff + C_PROPS);
     hold(this.opts.armL ? this.rig.handL : null, cOff + C_PROPS + 16);
+    if (this.carried) for (const o of [cOff + C_PROPS, cOff + C_PROPS + 16]) if (snap[o + 15] !== 0) carryMat4(snap, o, snap, o, this.carried);
   }
 
   writeGashes(snap, cOff, sim) { if (!this.buried) super.writeGashes(snap, cOff, sim); }
