@@ -294,8 +294,8 @@ export class Hero extends Knight {
     if (!this.clear || this.stuckT > 1.2) {
       const fa = this.fieldAt;
       if (!fa || Math.hypot(fa.x - g.x, fa.z - g.z) > 2) this.fieldAt = { x: g.x, z: g.z, t: sim.time };
-      sim.world.updateField(this.fieldAt.x, this.fieldAt.z, this.fieldAt.t, 1 + this.id);
-      sim.world.flow(flowDir, this.x, this.z, g.x, g.z, 1 + this.id);
+      sim.world.updateField(this.fieldAt.x, this.fieldAt.z, this.fieldAt.t, `h${this.id}`);
+      sim.world.flow(flowDir, this.x, this.z, g.x, g.z, `h${this.id}`);
       this.steer(dt, flowDir[0] * sp, flowDir[1] * sp, 7, g.face ?? Math.atan2(flowDir[0], flowDir[1]));
     } else this.steer(dt, dx / d * sp, dz / d * sp, 6, g.face ?? Math.atan2(dx, dz));
     // Stuck on something: a moment on the field, then the field.

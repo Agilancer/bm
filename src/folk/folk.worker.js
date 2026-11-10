@@ -1,6 +1,6 @@
 // The town's own thread: everyone's day (src/folk/brain.js), what they say (src/folk/talk.js), and their poses, written
-// into the folk buffer (src/folk/layout.js) for the renderer to skin. It runs at 60 a second at its own pace; the fight's
-// thread never waits on it, and it never waits on the fight.
+// into the folk buffer (src/folk/layout.js) for the renderer to skin. It runs a frame for each of the screen's, when they ask
+// (TownClient.pace), or else at 60 a second at its own pace; the fight's thread never waits on it, and it never waits on the fight.
 //
 // main -> here:  { type: 'boot', buffer, base }   then the inbox (FIN) every frame, and
 //                { type: 'talk', i }  the player's opened (or, i = -1, shut) a word with someone
@@ -19,7 +19,7 @@ import { LINES as LA } from './lines/town_a.js';
 import { LINES as LB } from './lines/town_b.js';
 import { LINES as LC } from './lines/town_c.js';
 import { SCENES, SMALLTALK } from './lines/scenes.js';
-import { F, F_PALETTE, FIN, FOLK_BYTES, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
+import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
 
 const HZ = 60;
 // The world the town's laid out in: the village, the fields and woods round it, the old church ground.
@@ -85,21 +85,58 @@ export const modelOf = (folk, body) => (folk.models[body] ? body : folk.swaps?.[
 
 // ---- the loop ----
 
-let tick = 0, last = 0;
+let tick = 0, last = 0, clock = 0;
 const head = [0, 0, 0];
+
+// One frame of the town, timed for the Frame rate readout. A bug in one is told once and the town carries on.
+function tickTown(dt) {
+  const t0 = performance.now();
+  try { frame(dt); } catch (err) {
+    if (!run.told) { run.told = true; self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }); }
+  }
+  if (shared) { Atomics.add(map.ctrl, FCTRL.COST_US, Math.round((performance.now() - t0) * 1000)); Atomics.add(map.ctrl, FCTRL.FRAMES, 1); }
+}
 
 function run() {
   last = performance.now();
+  if (shared && Atomics.waitAsync) { paced(); return; }
   const step = () => {
     const now = performance.now();
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    try { frame(dt); } catch (err) {
-      if (!run.told) { run.told = true; self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }); }
-    }
+    tickTown(dt);
     setTimeout(step, Math.max(1, 1000 / HZ - (performance.now() - now)));
   };
   step();
+}
+
+// Paced by the screen, as the sim is (its loop in src/sim/sim.worker.js): a frame of the town for each of the screen's, by the time
+// each asks for, so the people in the street move on the same amount every frame. (At its own 60 a second on a 144 Hz screen,
+// three frames in five showed them where they'd been.) A frame shorter than SHORTEST waits for the next. When no frames come, its
+// own 60. (Only where it can wait without blocking, for the talk, flags and routes it's sent.)
+async function paced() {
+  const c = map.ctrl, SHORTEST = 1000 / 170, FRAMELESS = 100;
+  let seq = Atomics.load(c, FCTRL.PACE_SEQ), done = Atomics.load(c, FCTRL.PACE_US), frameAt = -1e9;
+  for (;;) {
+    const asked = Atomics.load(c, FCTRL.PACE_SEQ), now = performance.now();
+    if (asked !== seq) {
+      seq = asked;
+      const want = Atomics.load(c, FCTRL.PACE_US);
+      if (now - frameAt > FRAMELESS) done = want;
+      else {
+        const owed = ((want - done) | 0) / 1000;
+        if (owed >= SHORTEST) { tickTown(Math.min(owed, 100) / 1000); done = want; }
+      }
+      frameAt = now; last = now;
+    } else if (now - frameAt > FRAMELESS && now - last >= 1000 / HZ - 0.5) {
+      tickTown(Math.min((now - last) / 1000, 0.1));
+      last = now; done = Atomics.load(c, FCTRL.PACE_US);
+    }
+    // (On its own 60, a timer: a waitAsync's timeout only wakes on Windows's 15 ms tick, so 16 ms took 30.)
+    const t = performance.now();
+    if (t - frameAt > FRAMELESS) await new Promise((r) => setTimeout(r, Math.max(1, 1000 / HZ - (t - last))));
+    else { const r = Atomics.waitAsync(c, FCTRL.PACE_SEQ, seq, FRAMELESS); if (r.async) await r.value; }
+  }
 }
 
 function frame(dt) {
@@ -112,7 +149,7 @@ function frame(dt) {
   life.update(dt, { hour: inb[FIN.HOUR], day: inb[FIN.DAY] | 0, player, dangers });
   talk.update(dt, { player, cast: inb[FIN.CAST] | 0 });
   blows(player);
-  tick++;
+  tick++; clock += dt;
   write(inb[FIN.CAMX], inb[FIN.CAMY], inb[FIN.CAMZ]);
   if (events.length) { self.postMessage({ type: 'events', list: events.splice(0) }); }
 }
@@ -133,22 +170,24 @@ function blows(player) {
 }
 
 // Everyone into a slot: where they are, and their pose. Poses are solved less often the further they are from the eye
-// (a person 60 m off moving at 15 a second can't be told from 60), and the last one kept for the ticks between.
+// (a person 60 m off moving at 15 a second can't be told from 60), and the last one kept for the frames between. (By the clock, in
+// sixtieths of a second, so a faster screen poses those near you more often and nobody else; spread over the frames by who's who.)
 function write(cx, cy, cz) {
   const si = shared ? freeSlot(map) : 0, slot = map.slots[si], bodies = map.bodies;
   slot[SH.COUNT] = life.folk.length; slot[SH.TICK] = tick; slot[SH.HOUR] = map.inbox[FIN.HOUR];
   for (const me of life.folk) {
     const o = SLOT_HEAD + me.i * FOLK_STRIDE;
     const d = Math.hypot(me.x - cx, me.y - cy, me.z - cz);
-    const every = d < 22 ? 1 : d < 45 ? 2 : d < 90 ? 4 : 8;
+    const every = d < 22 ? 0 : d < 45 ? 2 : d < 90 ? 4 : 8;
     // (Tucked in once they're down in a bed: the same moment the blanket's drawn over them, below.)
     const tuck = me.posture === 'lie' && me.pose.rest > 0.5 && me.bed?.bed && bedIndex.has(me.bed.bed) ? 1 : 0;
     if (tuck !== me.pose.tuck) { me.pose.tuck = tuck; me.posedAt = -1; }
-    if (me.posedAt < 0 || (tick + me.i) % every === 0) {
+    if (me.posedAt < 0 || !every || clock >= me.poseDue - 0.002) {
       me.pose.solve(me.x, me.y, me.z, me.yaw, me.pal, 0);
       me.pose.at(me.rig.head, head);
       me.hx = head[0]; me.hy = head[1]; me.hz = head[2];
       me.posedAt = tick;
+      me.poseDue = clock + (every / 60) * (me.poseDue === undefined ? ((me.i % 8) + 1) / 8 : 1);
     }
     slot[o + F.ACTIVE] = 1;
     slot[o + F.X] = me.x; slot[o + F.Y] = me.y; slot[o + F.Z] = me.z; slot[o + F.YAW] = me.yaw;

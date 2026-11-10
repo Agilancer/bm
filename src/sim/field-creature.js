@@ -82,9 +82,9 @@ export class FieldCreature extends Beast {
         this.state = 3; this.used = false; this.setClip('attack');
         sim.event(EV.GRUNT, this.x, this.y + 1.1, this.z, 2);
       } else {
-        sim.world.updateField(tx, tz, sim.time, this.id + 1);
+        sim.world.updateField(tx, tz, sim.time, `f${this.id}`);
         const flow = this.flow;
-        sim.world.flow(flow, this.x, this.z, tx, tz, this.id + 1);
+        sim.world.flow(flow, this.x, this.z, tx, tz, `f${this.id}`);
         speed = this.flinch > 0 ? 0 : this.aggro ? o.speed : 0.75;
         this.vx = flow[0] * speed; this.vz = flow[1] * speed;
         if (Math.hypot(...flow) > 0.1) {

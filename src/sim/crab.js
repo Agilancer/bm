@@ -127,8 +127,8 @@ export class Crab extends Beast {
       // They spread out and come at you from different sides.
       const side = toPlayer + Math.PI + this.flankAngle * clamp(dist / 12, 0, 1);
       const tx = p.x + Math.sin(side) * Math.min(dist * 0.55, 6), tz = p.z + Math.cos(side) * Math.min(dist * 0.55, 6);
-      sim.world.updateField(p.x, p.z, sim.time);
-      sim.world.flow(flow, this.x, this.z, tx, tz);
+      sim.world.updateField(p.x, p.z, sim.time, p === sim.player ? 0 : p);
+      sim.world.flow(flow, this.x, this.z, tx, tz, p === sim.player ? 0 : p);
       const speed = dist > 5 ? 5.5 : 2.7;
       const sp = speed * (1 - this.bleeds.length * 0.1);
       dvx = flow[0] * sp; dvz = flow[1] * sp;

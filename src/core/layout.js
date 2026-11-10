@@ -13,7 +13,11 @@ export const MAX_BLEEDS = 8;
 export const GASH_FLOATS = 16;
 
 // Control words (Int32Array)
-export const CTRL = { LATEST: 0, READING: 1, TICK: 2, EV_HEAD: 3, INPUT_SEQ: 4, PLAN_RUN: 5, PLAN_SEQ: 6, PUB_MS: 7, SIZE: 16 };
+// PACE_US, PACE_SEQ: the time the render thread's frames have asked the sim for (microseconds, a running count that wraps), and a
+// count of the asks to wake on. SNAP_US: for each of the three snapshot slots, the PACE_US the world had reached when it was written.
+// STEP_US, STEPS, STEP_MAX: what the sim's ticks have cost since the render thread last took the totals (microseconds), for the
+// Frame rate readout. (src/sim/sim.worker.js's loop, GameView.pace in src/main.js.)
+export const CTRL = { LATEST: 0, READING: 1, TICK: 2, EV_HEAD: 3, INPUT_SEQ: 4, PLAN_RUN: 5, PLAN_SEQ: 6, PUB_MS: 7, PACE_US: 8, PACE_SEQ: 9, SNAP_US: 10, STEP_US: 13, STEPS: 14, STEP_MAX: 15, SIZE: 16 };
 
 // Input block (Float32Array)
 // INPUT.ABIL's bits: a charm's gift (double jump, sure foot), or the skull's cheats (src/ui/skull.js).

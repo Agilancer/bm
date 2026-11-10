@@ -829,7 +829,7 @@ class Hud {
 ${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}
 render ${stats.W}x${stats.H}  scale ${stats.scale.toFixed(2)}  msaa ${stats.msaa}  effects -${stats.demoted}  refresh ${stats.vsync.toFixed(1)} ms
 threads ${this.plan.cores} logical, ${this.poolSize + 2} used, shared ${this.isolated ? 'yes' : 'no'}
-sim ${k.sim} Hz  planner rollouts ${(snap[H.ROLLOUTS] / 1000).toFixed(0)}k
+sim ${stats.sim ? `${stats.sim.ms.toFixed(1)} ms a tick, worst ${stats.sim.worst.toFixed(1)}, ${stats.sim.rate.toFixed(0)} a second${stats.sim.paced ? ', by the frames' : ` (own clock, ${k.sim} Hz)`}` : `${k.sim} Hz`}${stats.sim?.town ? `  town ${stats.sim.town.ms.toFixed(1)} ms, ${stats.sim.town.rate.toFixed(0)} a second` : ''}  planner rollouts ${(snap[H.ROLLOUTS] / 1000).toFixed(0)}k
 knight ${STATE_NAMES[snap[co + C.STATE]]}  tactic ${TACTICS[snap[H.TACTIC]]}
 hp ${snap[co + C.HP].toFixed(0)}  stam ${snap[co + C.STAM].toFixed(0)}  gashes ${snap[co + C.GASH_COUNT]}  bleeds ${bleeds}`;
     }
@@ -870,6 +870,11 @@ class GameView {
     // Frames queued beyond this are only input lag. A phone's governor, and what it goes by.
     this.maxInFlight = gpu.tier.lean ? 2 : 3;
     this.vsyncMs = 1000 / 60; this.rafLast = 0; this.rafGaps = new Float32Array(45); this.rafN = 0; this.rafSkip = 0;
+    // The sim's ticks go by the screen's frames (pace), except on a phone, which keeps the sim's own clock (it takes every other
+    // frame of a fast screen, and its ticks cost more). ?unpaced, or view.unpaced = true, for the old way, to compare.
+    this.unpaced = gpu.mobile || params.has('unpaced');
+    this.paceAt = -1; this.snapSlot = 0; this.snapUs = 0; this.pacedSnap = false;
+    this.simT = 0; this.simStats = { ms: 0, worst: 0, rate: 0, paced: false };
     if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { renderer.scale = s; }, demote: () => renderer.demote() });
     this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
     renderer.onBusy = (ms) => {
@@ -892,6 +897,29 @@ class GameView {
     this.governor.seed(typical);
     r.resize();
     this.benched = true;
+  }
+
+  // Asks the sim (src/sim/sim.worker.js, its loop) for this frame's time: how long since the last frame began, up to a tenth of a
+  // second. After a gap longer than a quarter of one (a hidden tab), the sim has kept its own time, so nothing's asked for it.
+  pace(now) {
+    if (!this.buffer || this.unpaced) { this.paceAt = -1; return; }
+    const ctrl = this.shared.ctrl, ms = now - this.paceAt;
+    if (this.paceAt >= 0 && ms > 0 && ms < 250) {
+      Atomics.store(ctrl, CTRL.PACE_US, (Atomics.load(ctrl, CTRL.PACE_US) + Math.round(Math.min(ms, 100) * 1000)) | 0);
+      Atomics.add(ctrl, CTRL.PACE_SEQ, 1);
+      Atomics.notify(ctrl, CTRL.PACE_SEQ);
+    }
+    this.paceAt = now;
+  }
+
+  // What the sim's ticks have cost, each second, for the Frame rate readout.
+  watchSim(dt) {
+    if (!this.buffer || (this.simT += dt) < 1) return;
+    const c = this.shared.ctrl, n = Atomics.exchange(c, CTRL.STEPS, 0), us = Atomics.exchange(c, CTRL.STEP_US, 0), worst = Atomics.exchange(c, CTRL.STEP_MAX, 0);
+    Object.assign(this.simStats, { ms: n ? us / n / 1000 : 0, worst: worst / 1000, rate: n / this.simT, paced: !this.unpaced && this.paceAt >= 0 });
+    const town = this.town?.takeCost();
+    this.simStats.town = town ? { ms: town.ms, rate: town.n / this.simT } : null;
+    this.simT = 0;
   }
 
   // What the display refreshes at, from the time between callbacks.
@@ -989,6 +1017,7 @@ class GameView {
         latest = Atomics.load(ctrl, CTRL.LATEST);
         Atomics.store(ctrl, CTRL.READING, latest);
       } while (Atomics.load(ctrl, CTRL.LATEST) !== latest);
+      this.snapSlot = latest;
       return snaps[latest];
     }
     return this.getNonSharedSnap();
@@ -1006,13 +1035,20 @@ class GameView {
       // A phone on a 120 Hz screen takes every other refresh: a steady 60 is as smooth to the eye, and the battery and the
       // heat are what would slow it down later.
       if (this.gpu.mobile && this.vsyncMs < 10 && (this.rafSkip++ & 1)) return;
+      // Paced (see pace): this frame draws the world the last frame asked for, and then asks for its own frame's time. Taken
+      // before asking, so a quick tick can never land in it: every frame is the same one step on from the last.
+      renderDiagnostics.stage = 'snapshot';
+      const paced = this.buffer && !this.unpaced ? this.currentSnap() : null;
+      if (paced) this.snapUs = Atomics.load(this.shared.ctrl, CTRL.SNAP_US + this.snapSlot);
+      this.pace(now);
+      this.pacedSnap = !!paced;
       // Don't get ahead of the GPU: what's on its way to the screen is already out of date.
       // (Unless a browser has stopped saying when the GPU's done, which mustn't freeze the game.)
       if (this.renderer.inFlight >= (this.idle ? 1 : this.maxInFlight) && performance.now() - this.renderer.lastSent < 1000) return;
       const dt = Math.min((now - this.last) / 1000, 0.1);
       this.last = now;
-      renderDiagnostics.stage = 'snapshot';
-      const snap = this.currentSnap();
+      this.watchSim(dt);
+      const snap = paced || this.currentSnap();
       if (!snap) return;
       // Under the title the village isn't drawn: a few frames, so the pipelines are built (and on a phone, timed), then nothing.
       if (this.idle) { if (this.idleFrames > (this.governor && !this.benched ? 40 : 3)) return; this.idleFrames = (this.idleFrames || 0) + 1; } else this.idleFrames = 0;
@@ -1031,6 +1067,9 @@ class GameView {
       this.questTrail?.frame(dt, snap);
       renderDiagnostics.stage = 'renderer';
       this.renderer.frame(c, snap, this.sway, dt);
+      // The townsfolk are paced the same way, but asked once the renderer has drawn them: their next poses have until the next
+      // frame to be ready.
+      if (!this.unpaced) this.town?.pace(now);
       renderDiagnostics.presented();
       renderDiagnostics.stage = 'HUD';
       this.drawOpening?.(snap, c);
@@ -1040,6 +1079,7 @@ class GameView {
       if (!this.idle) this.govern(dt);
       const r = this.renderer, hs = this.hudStats;
       hs.gpuMs = r.stats.gpuMs; hs.busyMs = r.stats.busyMs; hs.W = r.W; hs.H = r.H; hs.scale = r.scale; hs.msaa = r.msaa; hs.demoted = r.demoted || 0; hs.vsync = this.vsyncMs;
+      hs.sim = this.simStats;
       this.hud.update(dt, snap, hs);
       this.clock.set(r.hour);
       if (this.heroTalk) {
@@ -1126,9 +1166,12 @@ class GameView {
     const bobA = clamp(sp / 6, 0, 1);
     const bobY = Math.sin(this.bobT * 2) * 0.03 * bobA;
     const bobX = Math.cos(this.bobT) * 0.018 * bobA;
-    // Extrapolate from the newest sim state, so high refresh rates stay smooth.
+    // The eye is put where the player is now, on from where the snapshot has them: by the frames' time since it (paced: a frame,
+    // the same every frame), or else by the clock since it was written.
     let age = 0;
-    if (this.buffer) {
+    if (this.buffer && this.pacedSnap && this.snapUs) {
+      age = clamp(((Atomics.load(this.shared.ctrl, CTRL.PACE_US) - this.snapUs) | 0) / 1e6, 0, 0.04);
+    } else if (this.buffer) {
       const now = (performance.timeOrigin + performance.now()) % 2147483647;
       age = clamp((now - Atomics.load(this.shared.ctrl, CTRL.PUB_MS)) / 1000, 0, 0.02);
     }

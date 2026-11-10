@@ -138,8 +138,8 @@ export class Gravehart extends Beast {
 
   // Steers along the village's flow field, with the wide, committed turns of something this heavy.
   go(dt, sim, tx, tz, speed, clipName, turnRate) {
-    sim.world.updateField(tx, tz, sim.time, 7);
-    sim.world.flow(flow, this.x, this.z, tx, tz, 7);
+    sim.world.updateField(tx, tz, sim.time, 'gravehart');
+    sim.world.flow(flow, this.x, this.z, tx, tz, 'gravehart');
     const k = 1 - Math.exp(-3.6 * dt);
     this.vx += (flow[0] * speed - this.vx) * k; this.vz += (flow[1] * speed - this.vz) * k;
     this.speed = Math.hypot(this.vx, this.vz);

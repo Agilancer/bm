@@ -261,9 +261,9 @@ export class TripoMonster extends FieldCreature {
       }
       if (want) {
         if (speed > 0) {
-          sim.world.updateField(tx, tz, sim.time, this.id + 1);
+          sim.world.updateField(tx, tz, sim.time, `t${this.id}`);
           const flow = this.flow;
-          sim.world.flow(flow, this.x, this.z, tx, tz, this.id + 1);
+          sim.world.flow(flow, this.x, this.z, tx, tz, `t${this.id}`);
           this.vx = flow[0] * speed; this.vz = flow[1] * speed;
           if (Math.hypot(flow[0], flow[1]) > 0.1) this.yaw += clamp(wrapAngle(Math.atan2(flow[0], flow[1]) - this.yaw), -dt * 3.5, dt * 3.5);
         } else {

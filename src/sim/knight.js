@@ -646,7 +646,7 @@ export class Knight {
   }
 
   goto(dt, sim, tx, tz, speed, face) {
-    const slot = tx === sim.player.x && tz === sim.player.z ? 0 : 1 + this.id;
+    const slot = tx === sim.player.x && tz === sim.player.z ? 0 : `k${this.id}`;
     sim.world.updateField(tx, tz, sim.time, slot);
     sim.world.flow(flowDir, this.x, this.z, tx, tz, slot);
     this.steer(dt, flowDir[0] * speed, flowDir[1] * speed, 7, face);
@@ -1001,9 +1001,10 @@ export class Knight {
     }
     if ((!this.hostile && !(p instanceof Knight)) || p.dead || this.letGo(p) || this.outOfReach(p)) return;
     // Sight is a cone. A sprint close by is heard, and anything at arm's length is felt.
-    const sees = sim.world.sees(this.x, this.y + 1.7, this.z, p.x, p.y + 1.6, p.z);
+    // (The ray only when it could matter: in the cone and in range.)
     const inCone = Math.abs(wrapAngle(toPlayer - this.faceYaw)) < 1.9;
-    if ((sees && inCone && dist < (this.opts.hostile ? 18 : 22)) || (dist < 9 && p.sprinting) || dist < 5) {
+    const sees = inCone && dist < (this.opts.hostile ? 18 : 22) && sim.world.sees(this.x, this.y + 1.7, this.z, p.x, p.y + 1.6, p.z);
+    if (sees || (dist < 9 && p.sprinting) || dist < 5) {
       this.seen = true;
       if (this.action) this.stopAction(0.2);
       sim.event(EV.ALERT, this.x, this.y + 1.5, this.z);

@@ -485,8 +485,8 @@ export class Zombie extends Beast {
     const moveAs = (speed, tx, tz, useField) => {
       let ax = tx - this.x, az = tz - this.z;
       if (useField) {
-        sim.world.updateField(p.x, p.z, sim.time, 0);
-        sim.world.flow(flow, this.x, this.z, p.x, p.z, 0);
+        sim.world.updateField(p.x, p.z, sim.time, p === sim.player ? 0 : p);
+        sim.world.flow(flow, this.x, this.z, p.x, p.z, p === sim.player ? 0 : p);
         ax = flow[0]; az = flow[1];
       }
       this.steer(dt, sim, ax, az, speed, turnRate);
@@ -928,8 +928,8 @@ export class Caster extends Zombie {
     const { near, far } = this.manner;
     if (!sees || d > far + 3) {
       const fast = d > far + 9;
-      sim.world.updateField(p.x, p.z, sim.time, 0);
-      sim.world.flow(flow, this.x, this.z, p.x, p.z, 0);
+      sim.world.updateField(p.x, p.z, sim.time, p === sim.player ? 0 : p);
+      sim.world.flow(flow, this.x, this.z, p.x, p.z, p === sim.player ? 0 : p);
       this.steer(dt, sim, flow[0], flow[1], fast ? this.rig.clips.run.speed * this.pace : this.rig.clips[this.walkClip].speed * this.walkPush * this.pace, 3.2);
       this.stride(fast ? 'run' : this.walkClip, this.speed, dt, sim);
       return;
