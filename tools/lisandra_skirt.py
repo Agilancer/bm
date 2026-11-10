@@ -1,6 +1,6 @@
 """Mark the original skirt surfaces for the game's leg collision pass.
 
-Usage: python tools/lisandra_skirt.py pretty input.glb output.glb
+Usage: python tools/lisandra_skirt.py pretty|witch input.glb output.glb
 Requires NumPy and SciPy. Output must be a new file.
 """
 import argparse
@@ -29,17 +29,31 @@ def smooth(low, high, values):
     return t * t * (3 - 2 * t)
 
 
-def skirt_mask(form, pos, triangles):
+def bind_joints(doc, data):
+    """Each joint's place in the bind pose, by its short name (LeftLeg, not mixamorig:LeftLeg)."""
+    skin = doc["skins"][0]
+    ibm = read_accessor(doc, data, skin["inverseBindMatrices"], "<f4", 16).reshape(-1, 4, 4).transpose(0, 2, 1)
+    names = [doc["nodes"][j]["name"].split(":")[-1] for j in skin["joints"]]
+    return {name: np.linalg.inv(m.astype(np.float64))[:3, 3] for name, m in zip(names, ibm)}
+
+
+def from_segment(pos, a, b):
+    ab = b - a
+    t = np.clip(((pos - a) @ ab) / (ab @ ab), 0, 1)
+    return np.linalg.norm(pos - (a + t[:, None] * ab), axis=1)
+
+
+def skirt_mask(form, pos, triangles, joints):
     x, y, z = pos.T
     if form == "witch":
-        # The boot tops and inner lining are welded to the coat. Isolate the outer
-        # shell with the lower hem silhouette so the shader never pushes the boots.
-        side = smooth(0.102, 0.124, abs(x - 0.006))
-        front = smooth(0.055, 0.077, z)
-        back = smooth(0.061, 0.086, -z)
-        outer = np.maximum.reduce([side, front, back])
-        skirt = np.maximum(outer * smooth(0.09, 0.16, y), smooth(0.16, 0.205, y))
-        return skirt * (1 - smooth(0.35, 0.47, y))
+        # The owner's witch (LISANDRA - UGLY OLD WITCH NEW.glb, 2026-11-09) is one welded shell: gown, boots and body.
+        # Her boots hug her leg bones (within 4 cm up to the hem), and the gown hangs 6 cm or more off them, so the gown
+        # is what lies off the bones. It fades out up at the hips, which carry it.
+        bones = [(side + a, side + b) for side in ("Left", "Right")
+                 for a, b in (("UpLeg", "Leg"), ("Leg", "Foot"), ("Foot", "ToeBase"))]
+        off = np.min([from_segment(pos.astype(np.float64), joints[a], joints[b]) for a, b in bones], axis=0)
+        boot = (1 - smooth(0.035, 0.05, off)) * (1 - smooth(0.11, 0.13, y))
+        return (1 - boot) * smooth(0.05, 0.07, y) * (1 - smooth(0.36, 0.48, y))
 
     # Below the thigh seams the coat, center tabard and the legs are separate
     # components. Weld coincident UV seams before identifying the two panels.
@@ -69,7 +83,7 @@ def main():
     index = primitive["indices"]
     dtype = {5123: "<u2", 5125: "<u4"}[doc["accessors"][index]["componentType"]]
     triangles = read_accessor(doc, data, index, dtype, 1).reshape(-1, 3)
-    mask = skirt_mask(args.form, pos, triangles).astype("<f4").tobytes()
+    mask = skirt_mask(args.form, pos, triangles, bind_joints(doc, data)).astype("<f4").tobytes()
     del pos, triangles
 
     data.extend(b"\0" * (-len(data) % 4))

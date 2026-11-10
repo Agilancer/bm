@@ -76,7 +76,11 @@ test('the witch is the owner\'s model with no cloth bones, and her gown has no c
   assert.equal(joints.length, 65);
   assert.deepEqual(joints.filter((n) => n.startsWith('cloth')), []);
   assert.equal(json.extras?.cloth, undefined);
-  assert.equal(json.animations.length, 175);
+  assert.equal(json.animations.length, 176);
+  // Her walk and run are the ones the owner's model came with (Tripo's walk.001 and run.001); the old walk is kept aside.
+  const clips = json.animations.map((a) => a.name);
+  for (const name of ['walk', 'run', 'walk_gown']) assert.ok(clips.includes(name), name);
+  assert.deepEqual(clips.filter((n) => /^(walk|run)\.\d{3}$/.test(n)), []);
   // (Her gown keeps the _SKIRT mask, which only pushes it out of a leg that would cut through it.)
   assert.ok(json.meshes[0].primitives[0].attributes._SKIRT !== undefined);
 });
