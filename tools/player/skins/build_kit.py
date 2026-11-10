@@ -33,6 +33,12 @@ SHOWN = "crimson_regalia"     # the example set that goes in the kit whole
 VIEWS = [("front", 0.0), ("front_side", 0.75), ("back", np.pi), ("back_side", np.pi + 0.75)]
 TINT = np.array([[1, 1, 1], [1, 0.25, 0.25], [1, 0.85, 0.1], [0.2, 0.9, 0.3], [0.25, 0.5, 1], [1, 0.3, 1]])
 # Where emblems go: a name, the part it's on, the way it faces, and where (two of x, y, z: the third is found on him).
+# The paint-over templates: each part of his gear laid out flat from six sides, on one sheet of three panels by two, as he
+# was sculpted (arms out). (name, the way the panel looks from, the way that's up on it.)
+PANEL = 1024
+PANELS = [("front", [0, 0, 1], [0, 1, 0]), ("back", [0, 0, -1], [0, 1, 0]), ("left", [1, 0, 0], [0, 1, 0]),
+          ("right", [-1, 0, 0], [0, 1, 0]), ("top", [0, 1, 0], [0, 0, -1]), ("under", [0, -1, 0], [0, 0, 1])]
+WORDS = {"front": "FRONT", "back": "BACK", "left": "HIS LEFT SIDE", "right": "HIS RIGHT SIDE", "top": "FROM ABOVE (his front is at the bottom)", "under": "FROM BELOW (his front is at the top)"}
 ANCHORS = [
     ("chest", "chest", [0, 0, 1], {"x": 0, "y": 1.3}, 0.16, "the middle of the chest"),
     ("back", "chest", [0, 0, -1], {"x": 0, "y": 1.27}, 0.24, "between the shoulder blades"),
@@ -65,6 +71,101 @@ def fill(valid, rounds=96):
             hole = src < 0
     src[src < 0] = 0
     return src
+
+
+def label(img, xy, text, size=30, fill=(20, 20, 20)):
+    try:
+        from PIL import ImageFont
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size)
+        ImageDraw.Draw(img).text(xy, text, font=font, fill=fill)
+    except OSError:
+        small = Image.new("L", (len(text) * 7, 12), 0)
+        ImageDraw.Draw(small).text((0, 0), text, fill=255)
+        big = small.resize((small.width * size // 11, small.height * size // 11), Image.NEAREST)
+        img.paste(Image.new("RGB", big.size, fill), xy, big)
+
+
+def edges(mask):
+    """The pixels of a mask that have a neighbour outside it."""
+    inner = mask.copy()
+    for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+        inner &= np.roll(mask, (dy, dx), (0, 1))
+    return mask & ~inner
+
+
+def thicken(mask, n):
+    out = mask.copy()
+    for _ in range(n):
+        grown = out.copy()
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            grown |= np.roll(out, (dy, dx), (0, 1))
+        out = grown
+    return out
+
+
+def templates(kit, tpl, mesh, col, part, trim):
+    """For each part: a sheet of its outlines to paint on, the same sheet with the paint it came in, a mask of what's him on
+    the sheet, and (template/skin_views.npz) how the sheet lies on his body, so paint on it can be put back."""
+    tris, uv, pos = mesh["tris"], mesh["uv"], mesh["pos"]
+    folder = os.path.join(kit, "templates")
+    os.makedirs(folder, exist_ok=True)
+    views = {"panel": np.int32(PANEL), "names": np.array([n for n, _, _ in PANELS])}
+    for pid, name in enumerate(P.PARTS):
+        if pid == 0:
+            continue
+        sel = tris[part == pid]
+        used = np.unique(sel)
+        # One size for all six panels of a part, so a pattern painted across them is the same size on him.
+        scale, frames = 1e9, []
+        for _, toward, up in PANELS:
+            t, u = np.array(toward, float), np.array(up, float)
+            r = np.cross(u, t)
+            a, b = pos[used] @ r, pos[used] @ u
+            scale = min(scale, PANEL * 0.9 / max(a.max() - a.min(), b.max() - b.min()))
+            frames.append((r, u, t, (a.max() + a.min()) / 2, (b.max() + b.min()) / 2))
+        lines = Image.new("RGB", (PANEL * 3, PANEL * 2), (150, 150, 150))
+        paint = Image.new("RGB", (PANEL * 3, PANEL * 2), (60, 60, 60))
+        mask = Image.new("L", (PANEL * 3, PANEL * 2), 0)
+        zs, centres = [], []
+        for k, ((vname, _, _), (r, u, t, ca, cb)) in enumerate(zip(PANELS, frames)):
+            xy = np.stack([PANEL / 2 + (pos @ r - ca) * scale, PANEL / 2 - (pos @ u - cb) * scale], 1)
+            d = pos @ t
+            tri, bary = raster(xy, sel, PANEL, PANEL, depth=-d)
+            hit = tri >= 0
+            cn = sel[tri[hit]]
+            w = bary[hit][:, :, None]
+            tuv = (uv[cn] * w).sum(1)
+            ty, tx = np.clip((tuv[:, 1] * SIZE).astype(int), 0, SIZE - 1), np.clip((tuv[:, 0] * SIZE).astype(int), 0, SIZE - 1)
+            z = np.full((PANEL, PANEL), -9.0, np.float32)
+            z[hit] = (d[cn] * bary[hit]).sum(1)
+            # (Kept at half size, the nearest of each four: enough to tell what's in front.)
+            zs.append(z.reshape(PANEL // 2, 2, PANEL // 2, 2).max((1, 3)).astype(np.float16))
+            centres.append([ca, cb])
+            x0, y0 = (k % 3) * PANEL, (k // 3) * PANEL
+            img = np.full((PANEL, PANEL, 3), 60, np.uint8)
+            img[hit] = (col[ty, tx] * 255).astype(np.uint8)
+            paint.paste(Image.fromarray(img), (x0, y0))
+            mask.paste(Image.fromarray((hit * 255).astype(np.uint8)), (x0, y0))
+            # The lines: his outline heavy, the sculpt's gilt work light, so you can see what's where without its colours.
+            gilt = np.zeros((PANEL, PANEL), bool)
+            gilt[hit] = trim[ty, tx] > 0.5
+            sheet = np.full((PANEL, PANEL, 3), 150, np.uint8)
+            sheet[hit] = 255
+            sheet[thicken(edges(gilt), 1) & hit] = 185
+            sheet[thicken(edges(hit), 2)] = 0
+            lines.paste(Image.fromarray(sheet), (x0, y0))
+            for im, ink in ((lines, (20, 20, 20)), (paint, (235, 235, 235))):
+                label(im, (x0 + 18, y0 + 14), WORDS[vname], 30, ink)
+                ImageDraw.Draw(im).rectangle((x0, y0, x0 + PANEL - 1, y0 + PANEL - 1), outline=(110, 110, 110))
+        label(lines, (18, PANEL * 2 - 46), f"{name.upper()}: paint inside the black outlines. Grey lines are the sculpt's raised trim.", 26)
+        lines.save(os.path.join(folder, f"{name}_lines.png"), optimize=True)
+        paint.save(os.path.join(folder, f"{name}_original.jpg"), quality=93)
+        mask.save(os.path.join(folder, f"{name}_mask.png"), optimize=True)
+        views[f"{name}_scale"] = np.float32(scale)
+        views[f"{name}_centre"] = np.array(centres, np.float32)
+        views[f"{name}_z"] = np.stack(zs)
+        print(f"template {name}: {scale:.0f} pixels a metre")
+    np.savez_compressed(os.path.join(tpl, "skin_views.npz"), **views)
 
 
 def main():
@@ -160,6 +261,8 @@ def main():
     sys.path.insert(0, os.path.join(kit, "scripts"))
     import wizardskin as W
     T = W.Template(tpl)
+    # The paint-over templates, a sheet for each part.
+    templates(kit, tpl, mesh, col, part, T.mat["trim"])
     W.preview(T, T.base, before=False).save(os.path.join(ref, "wizard_as_he_is.jpg"), quality=92)
     tinted = T.base * 0.45 + (T.base.mean(-1, keepdims=True) * 0.6 + 0.4) * TINT[T.parts].astype(np.float32) * 0.55
     sheet = W.preview(T, tinted.astype(np.float32), before=False)
@@ -194,6 +297,7 @@ def main():
     # The example sets, baked with the kit's own script, so what's in the zip is known to run.
     made = []
     import subprocess
+    subprocess.run([sys.executable, os.path.join(kit, "scripts", "example_skins.py")], check=True)
     for f in sorted(os.listdir(os.path.join(kit, "recipes"))):
         if f.endswith(".json"):
             subprocess.run([sys.executable, os.path.join(kit, "scripts", "make_set.py"), os.path.join(kit, "recipes", f)], check=True)

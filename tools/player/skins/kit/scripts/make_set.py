@@ -31,6 +31,8 @@ def files_of(recipe):
                 out.append(v["swatch"])
         if part.get("pattern"):
             out.append(part["pattern"]["image"])
+        if part.get("skin"):
+            out.append(part["skin"])
         for d in part.get("decals", []):
             out.append(d["image"])
     return sorted(set(out))

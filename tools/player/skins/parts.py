@@ -92,4 +92,6 @@ def classify(mesh, color):
     # (Fingers and thumbs are skin whatever shade they're painted.)
     fingers = np.array([any(f in n for f in ("Index", "Mid", "Ring", "Pinky", "Thumb")) for n in names])[w.argmax(1)]
     part[fingers] = 0
+    # (Past the sleeves' cuffs the arms are bare, shadowed or not.)
+    part[on("Upperarm", "Forearm", "Hand") & (x > 0.52)] = 0
     return part, {"dark": dark}

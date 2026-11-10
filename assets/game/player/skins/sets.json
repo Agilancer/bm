@@ -1,41 +1,11 @@
 {
  "sets": [
   {
-   "id": "amethyst_regalia",
-   "name": "Amethyst Regalia",
-   "blurb": "Royal purple and silver, the richest of the five.",
-   "wears": {
-    "palette": "amethyst"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ]
-  },
-  {
    "id": "ash_regalia",
    "name": "Ashen Regalia",
    "blurb": "Undyed wool and pewter: what a hedge wizard can afford.",
    "wears": {
     "palette": "ash"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ]
-  },
-  {
-   "id": "crimson_regalia",
-   "name": "Crimson Regalia",
-   "blurb": "Blood-red velvet under bright gold, with a brocade of diamonds.",
-   "wears": {
-    "palette": "crimson"
    },
    "pieces": [
     "head",
@@ -66,6 +36,36 @@
    "blurb": "Deep blue velvet sewn with small gold stars.",
    "wears": {
     "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ]
+  },
+  {
+   "id": "crimson_regalia",
+   "name": "Crimson Regalia",
+   "blurb": "Blood-red velvet under bright gold, with a brocade of diamonds.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ]
+  },
+  {
+   "id": "amethyst_regalia",
+   "name": "Amethyst Regalia",
+   "blurb": "Royal purple and silver, the richest of the five.",
+   "wears": {
+    "palette": "amethyst"
    },
    "pieces": [
     "head",

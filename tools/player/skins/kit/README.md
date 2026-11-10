@@ -11,10 +11,16 @@ If you are an AI assistant reading this for someone: read `PROMPT.md` next. It s
 
 The wizard's colour map (`template/base_color.png`) was cut by a machine into hundreds of scraps
 (`reference/wizard_as_he_is.jpg` is him; open `base_color.png` to see the scraps). Nobody can paint on it by eye, and an
-image model can't either. So you don't paint the map. You write a **recipe**: what the cloth, the gilt trim and the
-leather of each part become, as colours, tiling pictures, woven patterns and emblems. The script paints him in 3D from
-the recipe, keeps the sculpt's own folds and stitching on top, leaves his skin and hair alone, renders a preview, and
-zips the set.
+image model can't either. So you don't paint the map. There are two ways to say what a part looks like, and a set can
+use either for each part, or both together:
+
+- **A skin file**: a picture you paint over that part's **template**. `templates/` has one sheet for each of the five
+  parts, with the part's outlines drawn from six sides. One skin file for each part: a hat file, a chest file, and so on.
+- **A recipe**: what the part's cloth, gilt trim and leather become, as colours, tiling pictures, woven patterns and
+  emblems. No painting at all.
+
+Either way the script puts the paint on him in 3D, keeps the sculpt's own folds and stitching on top, leaves his skin
+and hair alone, renders a preview, and zips the set.
 
 ## What's in here
 
@@ -23,7 +29,11 @@ zips the set.
 | `PROMPT.md` | The instructions to give an AI assistant along with this zip |
 | `scripts/make_set.py` | Bakes a recipe into a set and zips it: `python scripts/make_set.py recipes/my_set.json` |
 | `scripts/swatches.py` | Makes tiling cloth, leather, metal, patterns and simple emblems from numbers: `python scripts/swatches.py list` |
+| `scripts/paint_helpers.py` | Small helpers for painting a skin file by program: open a template, find a panel, clip to the outlines |
+| `scripts/example_skins.py` | Paints the two skin files of the `harlequin_example` recipe, as a worked example |
 | `scripts/wizardskin.py` | The baking itself. You don't need to edit it |
+| `templates/` | **The templates.** For each part: `<part>_lines.png` (its outlines, to paint on), `<part>_original.jpg` (the same sheet with the paint it came in), `<part>_mask.png` (white where the sheet is him) |
+| `skins/` | Skin files: yours go here. The two there are the example's |
 | `recipes/` | Five finished recipes to copy from, one for each robe colour in the game |
 | `swatches/`, `decals/` | The pictures those recipes use. Put your own here too |
 | `template/` | His colour map, which part each texel is, where each lies on his body, the preview views, the emblem places. Don't edit |
@@ -34,12 +44,65 @@ Needs Python 3 with `numpy` and `Pillow`. Nothing else.
 
 ## Making a set
 
-1. Copy a recipe in `recipes/` to a new name and edit it (the fields are below).
-2. Make or draw any pictures it needs into `swatches/` and `decals/`.
+1. Copy a recipe in `recipes/` to a new name and edit it (the fields are below). `harlequin_example.json` is the one
+   that uses skin files; the five `_regalia` ones are recipes only.
+2. Paint any skin files into `skins/`, and make or draw any other pictures it needs into `swatches/` and `decals/`.
 3. `python scripts/make_set.py recipes/your_set.json`
 4. Look at `out/your_set/preview.jpg`: the top row is him as he came, the bottom row is your set, front, front
    three-quarter, back, back three-quarter. Change the recipe and run it again until it's right.
 5. `out/your_set.zip` is the set. One zip for each set.
+
+## Skin files: painting a part on its template
+
+Open `templates/head_lines.png`. It's one sheet of six panels, three across and two down, the same for every part:
+
+| | | |
+| --- | --- | --- |
+| **front** | **back** | **his left side** |
+| **his right side** | **from above** (his front at the bottom) | **from below** (his front at the top) |
+
+Black lines are the part's outline in that view. Light grey lines are the sculpt's raised trim (the stars, bands and
+edging), so you can see where they are. `<part>_original.jpg` is the same sheet with the paint he came in.
+
+A **skin file** is that sheet painted: one file for one part. Put it in `skins/` and name it in the recipe:
+
+```json
+"parts": {
+  "head":      { "skin": "skins/emberwake_hat.png" },
+  "shoulders": { "skin": "skins/emberwake_mantle.png" },
+  "chest":     { "skin": "skins/emberwake_tunic.png" },
+  "legs":      { "skin": "skins/emberwake_legs.png" },
+  "feet":      { "skin": "skins/emberwake_boots.png" }
+}
+```
+
+The rules that make it work:
+
+- **Keep every shape exactly where it is.** The script reads each panel at the template's own places. Paint that has
+  drifted, grown or shrunk lands in the wrong spot on him. Any size is fine as long as the sheet is still 3 wide to
+  2 high (1536 x 1024 from an image model, or the template's own 3072 x 2048).
+- **Paint all six panels**, and paint the same thing where they meet: the front and the left side both see the front-left
+  of him, and the script blends them. A hat striped in the front panel should be striped the same in the side panels.
+- **Outside the outlines doesn't matter.** It's thrown away, so paint past the lines rather than short of them.
+- **Transparent means "not painted".** Where a skin file (a PNG with alpha) is transparent, the recipe's materials show
+  if the part has any, else the original. So a skin can be just a few painted details over a recipe.
+- **Flat colour and pattern, not lighting.** Don't paint shadows, highlights or a 3D look: the game lights him, and the
+  script presses the sculpt's own fine relief back into your paint (`"skin_detail"`, 0 to 1, usually 0.6; 0 for none).
+- What no panel can see (deep in a fold, inside a sleeve) is filled for you: with the recipe's materials if the part
+  has any, else with your paint's average colours.
+- A part can have a `skin` **and** materials, a `pattern` and `decals`: the materials go on first, the skin over them,
+  the emblems last.
+
+Three ways to make one:
+
+1. **With an image model.** Give it `templates/<part>_lines.png` (or `_original.jpg`, for "this, but ...") and ask it
+   to paint that part in every panel as flat game-texture colour, changing nothing about the layout: same canvas, same
+   panels, every outline exactly where it is, no perspective, no shading, no new objects, nothing moved. Then look at
+   what came back beside the template. If the shapes have drifted, don't use it: ask again, or use way 2 or 3.
+2. **By program**, which never drifts. `scripts/paint_helpers.py` opens a template, gives a panel's rectangle and clips
+   to the outlines; draw with Pillow on top. `scripts/example_skins.py` is a short worked example (a diamond hat, boots
+   with gold toes). You can also paste an image-model texture through the mask: `tiled("chest", "swatches/x.png")`.
+3. **By hand**, in any paint program, over the lines.
 
 ## The recipe
 
@@ -91,6 +154,7 @@ A material is a colour (`"#7a1f1a"`), or an object:
 
 A part can also have:
 
+- **`skin`**: its skin file (above), and `skin_detail`.
 - **`keep_trim`**: `false` paints the sculpt's gilt lines over as cloth, for a plain garment. (Also allowed in `defaults`.)
 - **`pattern`**: a second colour woven into the cloth. `image`: white (or opaque) is where it goes. `color`, `scale`
   (metres a tile), `strength` (0 to 1), `tile`.
@@ -143,6 +207,10 @@ replaces that look if it has the same `id`, or wins over it if it's more exact (
 
 ## Things to know
 
+- **A skin file or a recipe?** A recipe is the sure way to a good-looking set: it can't go wrong at a seam, and it keeps
+  the sculpt's gilt linework. A skin file is for what a recipe can't say: stripes that follow the hat, a painted scene
+  on the back, two-colour halves, flames licking up from the hems. Mixing them is usual: recipe everywhere, a skin file
+  on the one or two parts that need it.
 - **The shapes don't change.** The hat is always a pointed hat with a brim, the tunic always this tunic: a set is new
   cloth, metal, leather, pattern and emblems on the same body. A "hood" in the game wears the hat's paint.
 - **The sculpt's gilt linework stays** (the stars, the edging) unless `keep_trim` is false. Recolour it with `trim`:

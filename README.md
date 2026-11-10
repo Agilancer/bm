@@ -144,13 +144,16 @@ shapes don't either: a hood wears the hat's paint.
 - The game ships a set for each of the five palettes (`assets/game/player/skins/`, listed in `sets.json`). Their recipes
   are `tools/player/skins/kit/recipes/`.
 - **The skin kit** (`tools/player/skins/`) is how sets are made, by the owner with ChatGPT or by anyone:
-  - Tripo cut his colour map into hundreds of scraps, so nobody paints on it. A set is a **recipe** instead: what each
-    part's cloth, gilt trim and leather become (a colour, or a tiling picture laid over him in 3D), a second-colour
-    pattern in the cloth, and emblems projected onto named places (chest, back, tabard, hat, shoulders, knees). The
-    kit's `scripts/make_set.py` bakes it, keeping the sculpt's own folds on top, and zips the set with a preview.
+  - Tripo cut his colour map into hundreds of scraps, so nobody paints on it. Each part is said one of two ways, or both:
+    a **skin file**, a picture painted over that part's template (`templates/<part>_lines.png`: its outlines from six
+    sides on one sheet, one file for each part), which the bake puts back on him from those six sides; or a **recipe**,
+    what the part's cloth, gilt trim and leather become (a colour, or a tiling picture laid over him in 3D), a
+    second-colour pattern in the cloth, and emblems projected onto named places (chest, back, tabard, hat, shoulders,
+    knees). The kit's `scripts/make_set.py` bakes it, keeping the sculpt's own folds on top, and zips the set with a
+    preview.
   - `python tools/player/skins/build_kit.py` (after `node tools/player/skins/pose.mjs tools/build/player_posed.f32`)
     makes `tools/build/wizard_skin_kit.zip`: the template (his map, the parts, where each texel lies on him, the preview
-    views, the emblem places), the scripts, `README.md` and `PROMPT.md` (what to paste into ChatGPT with the zip), and
+    views, the emblem places), the five parts' paint-over templates, the scripts, `README.md` and `PROMPT.md` (what to paste into ChatGPT with the zip), and
     the five example sets. It also writes `parts.png`. The parts are told apart in `tools/player/skins/parts.py`, by
     what moves each triangle, where it is and how it's painted.
   - **A set comes back as one zip** (`set.json`, `color.jpg`, `preview.jpg`, `source/`).

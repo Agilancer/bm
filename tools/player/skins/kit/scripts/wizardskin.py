@@ -82,6 +82,13 @@ class Template:
     def mask(self, part):
         return self.parts == PARTS.index(part)
 
+    @property
+    def skin_views(self):
+        """How each part's paint-over template lies on his body (templates/<part>_lines.png): made once, when first asked."""
+        if not hasattr(self, "_skin_views"):
+            self._skin_views = np.load(os.path.join(self.folder, "skin_views.npz"))
+        return self._skin_views
+
 
 def load_image(path, mode="RGB"):
     return np.asarray(Image.open(path).convert(mode), np.float32) / 255
@@ -187,12 +194,98 @@ def bake(recipe, template=None, folder="."):
             shade = np.clip(lum / max(ref, 0.02), 0.05, 3.0)
             ink = np.clip(rgb_of(pat.get("color", "#d8b25a")) * shade[:, None], 0, 1)
             result = result * (1 - amount[:, None]) + ink * amount[:, None]
+        # A skin file: the part painted by hand (or by an image model) over its template. Over the materials above where
+        # there were any; where the sheet can't see, those show.
+        if spec.get("skin"):
+            said = any(spec.get(k2) is not None or defaults.get(k2) is not None for k2 in MATERIALS)
+            result = paint_skin(T, part, os.path.join(folder, spec["skin"]), pos, nrm, lum, result, weights, float(spec.get("skin_detail", 0.6)), fill=True if said else None)
         # Emblems, projected onto him from in front of where they go.
         for d in spec.get("decals", []):
             result = _decal(T, d, folder, pos, nrm, lum, result, weights)
         out[m] = np.clip(result, 0, 1)
         done.append(part)
     return out, done
+
+
+# The six panels of a paint-over template, in the order they're laid out (three across, two down): the way each looks
+# from, and the way that's up on it.
+PANELS = [("front", [0, 0, 1], [0, 1, 0]), ("back", [0, 0, -1], [0, 1, 0]), ("left", [1, 0, 0], [0, 1, 0]),
+          ("right", [-1, 0, 0], [0, 1, 0]), ("top", [0, 1, 0], [0, 0, -1]), ("under", [0, -1, 0], [0, 0, 1])]
+
+
+def _bilinear(img, x, y):
+    h, w = img.shape[:2]
+    x = np.clip(x, 0, w - 1.001)
+    y = np.clip(y, 0, h - 1.001)
+    x0, y0 = x.astype(np.int32), y.astype(np.int32)
+    fx, fy = (x - x0)[:, None], (y - y0)[:, None]
+    if img.ndim == 2:
+        fx, fy = fx[:, 0], fy[:, 0]
+    return (img[y0, x0] * (1 - fx) + img[y0, x0 + 1] * fx) * (1 - fy) + (img[y0 + 1, x0] * (1 - fx) + img[y0 + 1, x0 + 1] * fx) * fy
+
+
+def paint_skin(T, part, path, pos, nrm, lum, under, weights, detail=0.6, fill=None):
+    """A part painted from its skin file: a picture drawn over templates/<part>_lines.png (any size, the same shape).
+    Each texel takes its paint from the panels that see it, most from the one it faces. What no panel sees (a fold, the
+    inside of a sleeve) takes `under`: the recipe's own bake if the part had one, else the painted colours' average on
+    the sculpt's shading. detail: how much of the sculpt's fine relief is pressed back into the paint (0 none, 1 all)."""
+    V = T.skin_views
+    panel, scale, centres, zbuf = int(V["panel"]), float(V[part + "_scale"]), V[part + "_centre"], V[part + "_z"]
+    skin = np.asarray(Image.open(path).convert("RGBA"), np.float32) / 255
+    sh, sw = skin.shape[:2]
+    if abs(sw / sh - 1.5) > 0.02:
+        raise SystemExit(f"{path}: {sw} x {sh} isn't the template's shape (three panels across, two down: 3 to 2)")
+    k = sw / (panel * 3)                              # (the skin's pixels to the template's)
+    tdir = os.path.join(os.path.dirname(T.folder), "templates")
+    inside = np.asarray(Image.open(os.path.join(tdir, part + "_mask.png")).resize((sw, sh), Image.BILINEAR), np.float32) / 255
+    original = np.asarray(Image.open(os.path.join(tdir, part + "_original.jpg")).convert("L").resize((sw, sh), Image.BILINEAR), np.float32) / 255
+    colour = np.zeros_like(under)
+    total = np.zeros(len(pos), np.float32)
+    relief = np.zeros(len(pos), np.float32)
+    for i, (_, toward, up) in enumerate(PANELS):
+        t, u = np.array(toward, np.float32), np.array(up, np.float32)
+        r = np.cross(u, t)
+        x = panel / 2 + (pos @ r - centres[i, 0]) * scale
+        y = panel / 2 - (pos @ u - centres[i, 1]) * scale
+        ok = (x >= 0) & (x < panel) & (y >= 0) & (y < panel)
+        zi = zbuf[i][np.clip(y / 2, 0, panel // 2 - 1).astype(np.int32), np.clip(x / 2, 0, panel // 2 - 1).astype(np.int32)].astype(np.float32)
+        seen = ok & (pos @ t > zi - 0.012)
+        w = np.clip(nrm @ t, 0, 1) ** 2 * seen
+        if not w.any():
+            continue
+        sx, sy = ((i % 3) * panel + x) * k - 0.5, ((i // 3) * panel + y) * k - 0.5
+        hit = w > 0
+        px = _bilinear(skin, sx[hit], sy[hit])
+        # Only what's inside his outline on the sheet, and painted (a transparent skin is paint only where it's opaque).
+        w_hit = w[hit] * px[:, 3] * smooth(_bilinear(inside, sx[hit], sy[hit]), 0.5, 0.95)
+        colour[hit] += px[:, :3] * w_hit[:, None]
+        relief[hit] += _bilinear(original, sx[hit], sy[hit]) * w_hit
+        total[hit] += w_hit
+    got = total > 1e-4
+    out = under.copy()
+    if not got.any():
+        return out
+    paint = colour[got] / total[got][:, None]
+    # The sculpt's fine relief (stitching, the edges of the gilt), which the sheet is too coarse to carry: the map's own
+    # light against the sheet's at the same place.
+    if detail > 0:
+        ratio = np.clip(lum[got] / np.maximum(relief[got] / total[got], 0.03), 0.7, 1.4)
+        paint = np.clip(paint * (1 + (ratio[:, None] - 1) * detail), 0, 1)
+    if fill is None:
+        # Nothing baked under it: what the panels don't see takes the paint's own colours, by what the sculpt had there.
+        for name in MATERIALS:
+            m = weights[name] > 0.5
+            both = m[got]
+            if both.sum() < 20:
+                continue
+            mean = paint[both].mean(0)
+            ref = np.median(lum[m])
+            shade = np.clip(lum / max(ref, 0.02), 0.2, 2.0)
+            miss = m & ~got
+            out[miss] = np.clip(mean * shade[miss][:, None], 0, 1)
+    blend = smooth(total[got], 0.0, 0.12)[:, None]
+    out[got] = out[got] * (1 - blend) + paint * blend
+    return out
 
 
 def _decal(T, d, folder, pos, nrm, lum, result, weights):
