@@ -22,6 +22,7 @@ import { SPELLS } from '../sim/spells.js';
 import { VOICED } from '../core/voiced.js';
 import { unnamed, voiceKey } from '../core/voicekey.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
+import { CLOSE_X } from './menu-x.js';
 
 const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
 
@@ -62,6 +63,7 @@ body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
 #folkTalk .tk-name { font: 700 18px Cinzel, Georgia, serif; color: var(--gold); letter-spacing: .05em; }
 #folkTalk .tk-title { font-size: 13px; opacity: .62; font-style: italic; }
 #folkTalk .tk-purse { margin-left: auto; font-size: 13px; color: #e8c15a; }
+#folkTalk .tk-head .menu-x { align-self: center; margin: -6px -10px 0 4px; }
 #folkTalk .tk-line { font-size: 17px; line-height: 1.5; min-height: 2.6em; animation: tkIn .28s ease-out; }
 #folkTalk .tk-line .sp { color: var(--gold); font-style: italic; margin-right: .35em; }
 @keyframes tkIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
@@ -400,9 +402,11 @@ export class TownUI {
     if (line !== this.view?.line || speaker !== this.view?.speaker) this.speak(line, speaker || p.id);
     this.view = { line, speaker, opts, paper };
     const sp = speaker && speaker !== p.id ? `<span class="sp">${firstName(this.people.find((q) => q.id === speaker) || { name: speaker, id: speaker })}:</span>` : '';
-    this.panel.innerHTML = `<div class="tk-head"><span class="tk-name">${p.name}</span><span class="tk-title">${p.title || (p.age < 15 ? 'a child of the town' : '')}</span><span class="tk-purse">${this.pack.purse() ? priceText(this.pack.purse()) : 'No coin'}</span></div>
+    this.panel.innerHTML = `<div class="tk-head"><span class="tk-name">${p.name}</span><span class="tk-title">${p.title || (p.age < 15 ? 'a child of the town' : '')}</span><span class="tk-purse">${this.pack.purse() ? priceText(this.pack.purse()) : 'No coin'}</span>${CLOSE_X}</div>
       <div class="tk-line">${sp}${esc(this.fill(line))}</div>${paper ? `<div class="tk-paper">${esc(paper)}</div>` : ''}<div class="tk-shop"></div><ol></ol>`;
     if (this.mode === 'shop') this.drawShop();
+    // The × in the corner: the talk's over at once, as Esc ends it.
+    this.panel.querySelector('.menu-x').onclick = () => this.close(false);
     const ol = this.panel.querySelector('ol');
     opts.forEach((o, k) => {
       const li = document.createElement('li');

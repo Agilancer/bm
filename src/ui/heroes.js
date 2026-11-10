@@ -15,6 +15,7 @@ import { townDist } from '../core/town.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { ELEM, SPELLS } from '../sim/spells.js';
+import { CLOSE_X } from './menu-x.js';
 
 const BANDS = ['night', 'dawn', 'day', 'dusk'];
 const EARSHOT = 30;            // a Say is heard this far from the player
@@ -161,6 +162,7 @@ export class HeroTalk {
       #heroTalk .tk-name { font: 700 18px Cinzel, Georgia, serif; color: #bfe0ff; letter-spacing: .05em; }
       #heroTalk .tk-title { font-size: 13px; opacity: .62; font-style: italic; }
       #heroTalk .tk-guild { margin-left: auto; font-size: 13px; color: #8fe0a0; }
+      #heroTalk .tk-head .menu-x { align-self: center; margin: -6px -10px 0 4px; }
       #heroTalk .tk-line { font-size: 17px; line-height: 1.5; min-height: 2.6em; animation: htkIn .28s ease-out; }
       @keyframes htkIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
       #heroTalk ol { list-style: none; margin: 9px 0 0; padding: 0; }
@@ -930,8 +932,10 @@ export class HeroTalk {
     if (!h) return;
     this.talkOpts = this.optsFor(h);
     const title = `Level ${h.p.level} ${CLASSES[h.p.cls].title}`;
-    this.panel.innerHTML = `<div class="tk-head"><span class="tk-name">${esc(h.p.name)}</span><span class="tk-title">${esc(title)}</span><span class="tk-guild">${h.p.guild ? esc(`<${h.p.guild}>`) : ''}</span></div>
+    this.panel.innerHTML = `<div class="tk-head"><span class="tk-name">${esc(h.p.name)}</span><span class="tk-title">${esc(title)}</span><span class="tk-guild">${h.p.guild ? esc(`<${h.p.guild}>`) : ''}</span>${CLOSE_X}</div>
       <div class="tk-line">${esc(line)}</div><ol></ol>`;
+    // The × in the corner: the talk's over at once, as Esc ends it.
+    this.panel.querySelector('.menu-x').onclick = () => this.closeTalk(false);
     const ol = this.panel.querySelector('ol');
     this.talkOpts.forEach((o, k) => {
       const li = document.createElement('li');

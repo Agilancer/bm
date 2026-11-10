@@ -672,6 +672,7 @@ async function boot(plan, poolSize) {
     if (viaEsc && !input.touch && !AUTO) input.onPauseChange(true); else resume();
   };
   $('invClose').onclick = () => closePack(false);
+  $('invX').onclick = () => closePack(false);
   $('bPause').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); input.onPauseChange(true); }, { passive: false });
   document.addEventListener('visibilitychange', () => {
     const hidden = document.hidden;
@@ -686,7 +687,7 @@ async function boot(plan, poolSize) {
   document.addEventListener('pointerover', (e) => { const b = ownUI(e); if (b && b !== uiHover && e.pointerType === 'mouse') audio.play('uiHover', null, 0, 0, 0.18, 1, false); uiHover = b; });
   document.addEventListener('click', (e) => {
     const b = ownUI(e);
-    if (b) audio.play(/^\s*(stay|close|cancel|back|leave|no|goodbye|farewell)\b/i.test(b.textContent) ? 'uiCancel' : 'uiConfirm', null, 0, 0, 0.35, 1, false);
+    if (b) audio.play(/^\s*(stay|close|cancel|back|leave|no|goodbye|farewell)\b/i.test(b.getAttribute('aria-label') || b.textContent) ? 'uiCancel' : 'uiConfirm', null, 0, 0, 0.35, 1, false);
   }, true);
   // The big map unrolled and rolled up again.
   const toggleMap = () => {
