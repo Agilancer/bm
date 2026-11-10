@@ -356,10 +356,16 @@ knights it's drawn as ring mail, bright on a bright suit and blackened on a dark
 ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is dark iron, not its outer paint
 (`heroLook` in `src/gfx/materials.js`; `docs/RENDERING.md`).
 
+- **A chest put back on the body.** On six bodies (lancer_f2, archer_f2, archer_f4, archer_f5, rogue_m1, rogue_m4) the
+  armour tool had cut the chest onto the limbs: the two halves of the breastplate rode the upper arms, the belly and
+  skirt a thigh. Arms down, the chest swung up to the ears and left a hole. `python tools/heroes/rebind.py` finds a
+  chest cut that way and gives it a coat's weights instead: the trunk by height, only the shoulder caps on the arms, the
+  skirts shared between the legs. It also mirrors an arm plate that's on one side only (paladin_f2's right vambrace).
+  Run it before `mail.py`, after `build.py`.
 - `python tools/heroes/gaps.py [ids] --out DIR` poses each body with the game's clips, skins it as the GPU does, and
   counts what shows from four sides: see-through holes, the insides of plates, and the covers. Over all 44 bodies and six
-  poses, holes fell from a mean of 0.15% of the outline to 0.09%, and lancer_f2's chest (2.5%, standing still) closed.
-  The worst left are in deep crouches: archer_f4 2.6%, lancer_f2 mid-swing 1.7%.
+  poses, holes fell from a mean of 0.15% of the outline to under 0.1%, and lancer_f2's chest (2.5%, standing still)
+  closed. With her coat back on her, archer_f4's crouch went from 2.5% to 0.01%.
 - It was reviewed twice by two reviewers briefed as character artists of thirty years (2026-11-10), from game frames
   taken headless. Left undone from their lists: knee and elbow cops bound half to each bone (the piece table doesn't
   say which plate is one), the lower back in a deep crouch, and the lances' black and yellow stripes.
