@@ -25,11 +25,12 @@ voices in the demo aren't consistent").
     Young voice: 190-240 Hz, cap 320. A young shout peaks no higher than 360 Hz.
   - **Tone:** voiced share at least 0.5, flatness at most 0.01. On a calm line, the low band is within 0.15 of the
     sample's.
-  - **Pace:** within 25% of the sample's syllables a second.
+  - **Pace:** within 25% of the voice's syllables a second: the old voice's sample, and for the young voice the owner's
+    approved take (`refs.json` `pace`).
   - **Likeness:** to the sample, by the Chatterbox voice encoder: at least 0.84 calm, 0.82 raised.
 
   The best passing take ships. A line with fewer than two passing takes is **rewritten**, never let through by loosening
-  a rule.
+  a rule (`docs/VOICE-REWRITES.md` lists them).
 - **Lines written for her voice:** no lone words or barks (a lone "Out!" never came out as her), no "!" for the model
   (the subtitle keeps it), and an order said late in a whole sentence.
 - **Loudness, one meter:** calm -22 dB, quiet -24, orders and calls +2, shouts +4.
@@ -38,51 +39,47 @@ voices in the demo aren't consistent").
 The owner approved the method on four lines: "Hold still. It doesn't hurt. It never hurts.", the two tunnel orders, and
 "What have you done?!". Those four takes are kept as they are (`<key>.a.wav` in the takes folder).
 
-## Where the recording stopped (2026-11-09), to come back to
+## Recording status (2026-11-10)
 
-The owner asked for what was made to go in the game unjudged, to be gone back through later. So **every line has a
-recording, but most aren't yet the keepers:**
+**The run is done.** Every line got all its takes (8, or 16 for orders, calls and shouts) with the notes in
+`anchors.json` as they are now. Each line's best take is in the game. `tools/voice/shipped.json` lists, for each line,
+its shipped take, its status, its passing takes, the rules the shipped take misses, its pitch, pace and likeness, and
+whether it's on the rewrite list.
 
-- **What shipped:** `tools/voice/shipped.json` lists each line's shipped take and its status.
-  - `approved`: 4 lines, the owner's four.
-  - `passed`: 39 lines that passed the critics' rules.
-  - `unchecked`: 136 lines whose first take failed a rule, shipped anyway.
+| | Old voice | Young voice | All |
+|---|---|---|---|
+| Lines | 97 | 82 | 179 |
+| `approved`: the owner's own take | 3 | 1 | 4 |
+| `passed`: a take that passed every rule | 68 | 55 | 123 |
+| `unchecked`: no take passed; the one missing the fewest rules shipped | 26 | 26 | 52 |
+| On the rewrite list (under two passes) | 39 | 46 | 85 |
 
-  It also gives each line's failed rules, pitch and likeness.
-- **Takes made:**
-  - Round 0 (the first take of every line) is done: 175 takes, all judged.
-  - Round 1 (the second take) stopped after 116 of 175. That covers the whole opening in both voices. None of the
-    town lines has a second take yet, except one young one.
-  - Of round 1's takes, only 10 were judged. The rest are unjudged.
+- **What a line ships with:** the owner's approved take, if there is one. If not, the passing take most like her
+  sample. If nothing passed, the take that missed the fewest rules, then the one most like her.
+- **The rewrite list:** `docs/VOICE-REWRITES.md` lists the 85 lines in plain words. 52 have no passing take and 33 have
+  one. The critics' rule is new words for these, not looser rules, and new words are the owner's call. Until then
+  each line plays its best take.
+- **What the misses are:**
+  - The young voice often has less chest than her sample, or comes out under her band (about 170-188 Hz).
+  - The witch often has more boom than hers.
+  - Short lines ("…Oh.", "Velscour's.", "No. No, no, no.") come out drawn out, and less like her.
+  - A few long town lines had a word misheard.
+- **How the run went:**
+  - The first run's notes made both voices slow and the young one low.
+  - A note test fixed both, and the run was restarted from round 0 with the new notes.
+  - The takes made with the old notes are kept in `C:\Users\agila\tts\anchor_all\old_note` (with `notes.json`). None
+    of them ship, so no kind of line mixes two notes.
+- **Her young pace (the owner's call, 2026-11-09):** "Yes, use my take". So her pace is judged against the owner's
+  approved young shout (`refs.json` `pace`, about 3.0 syllables a second), not her sample, which the old model made
+  about 30% faster than this one ever speaks.
 - **Where the takes are:** outside the repo, in `C:\Users\agila\tts\anchor_all`:
-  - the takes: `<voice>/<key>.<round>.wav`, with `.ship.mp3` beside each judged one;
-  - `scores.json`: the numbers for every judged take;
-  - `lines.json`: the line list;
-  - `report.json`: out of date until `pick.py` runs again.
-- **Why so few pass:** about one take in five passed in round 0.
-  - **The young voice comes out low and slow:** a median about 195 Hz against her sample's 216; 31 of 81 takes under
-    190 Hz; a median pace 26% slow.
-  - **The old voice is slow and boomy:** 13% slow, and its low band runs over the sample's.
-  - **Likely cause:** the calm notes, which say "low" and "evenly". The notes behind the four approved takes said "at her
-    normal speaking pitch" instead.
-- **Next, before more takes:**
-  1. **Test new calm notes.** `C:\Users\agila\tts\note_test\note_test.py` records 12 lines (6 per voice) with two new
-     calm notes per voice, at round 0's seeds, so the note is the only change. Then `pick.py` judges each variant's
-     folder (`--takes C:\Users\agila\tts\note_test\YA`, YB, WA, WB). The notes:
-     - young: "Dry and amused, at her normal speaking pitch and a brisk, natural pace." or "She talks easily and
-       quickly, at her normal speaking pitch, dry and amused, like conversation.";
-     - old: "Plain and matter-of-fact, at her normal speaking pitch and a brisk, natural pace. Dry and rasping." or
-       "Firm and flat, at her normal speaking pitch, at a brisk, natural pace. Dry and rasping.";
-     - each ending "Each sentence falls at its end."
-  2. **If a note does better:**
-     - put it in `anchors.json`;
-     - delete that voice's calm takes made with the old note, and their `scores.json` entries (one note per kind, so the
-       voice stays one woman);
-     - run `record_all.py` from round 0.
-  3. **If not:** carry on with `record_all.py ... --start 1`. It skips takes already made.
-  4. **Ship:** `pick.py --ship assets/voice` replaces each line's file once a take passes. A line still under two passes
-     after all its takes goes to the owner for new words. Expect the lone words ("Tessariel.", "Velscour's.",
-     "Lovely.", "Wait!") there.
+  - the takes: `<voice>/<key>.<round>.wav`, with the shipped form beside each as `.ship.mp3`;
+  - `scores.json`: every take's numbers;
+  - `report.json`: each line's passes, pick and the `rewrite` list;
+  - `lines.json`: the line list.
+
+  `pick.py` works out each take's rules afresh from its stored numbers, so a rule change needs no take judged again.
+- **Not done:** no human has listened to the new set. The critics can't hear; their numbers are not the owner's ear.
 
 ## What's recorded
 
