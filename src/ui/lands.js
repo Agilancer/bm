@@ -97,6 +97,12 @@ const CSS = `
 #charmRow { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
 #charmRow .ch { width: 30px; height: 30px; border: 1px solid #4a3e5e; background: #120f18; display: flex; align-items: center; justify-content: center; }
 #charmRow .ch img { width: 24px; height: 24px; image-rendering: pixelated; }
+/* A short screen: two rows of ten, small, so the pack fits (index.html sizes its cells to this). */
+@media (max-height: 640px) {
+  #charmRow { display: grid; grid-template-columns: repeat(10, 22px); gap: 3px; margin-top: 5px; }
+  #charmRow .ch { width: 22px; height: 22px; }
+  #charmRow .ch img { width: 18px; height: 18px; }
+}
 `;
 
 // What the cheat switches are: [key, name, what it does, the bit it sets].

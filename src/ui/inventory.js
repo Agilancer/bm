@@ -170,7 +170,7 @@ export class Inventory {
   // ---- hands on -------------------------------------------------------------------------------
 
   onDown(e) {
-    if (e.target.closest('#invClose')) return;
+    if (e.target.closest('#invClose, #invX')) return;
     if (e.button === 2) { this.quick(this.targetAt(e)); return; }
     if (e.button !== 0) return;
     const t = this.targetAt(e);
