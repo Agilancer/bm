@@ -289,6 +289,11 @@ doesn't read yet.
 - The far countries are a long walk until their seals are woken.
 - It has been run headless on a software GPU with the drawing switched off, not by a person watching it. Watch the first
   hour of a new game with it.
+- The party and the Warrens were watched the same way (headless Chromium on a software GPU, `?auto&noopening&timer`, the
+  renderer's frame stubbed so the game runs at full speed): from level 7 it hired a party, cleared every pack, beat
+  Grubnash and the twins first time, wiped once on Venomaw's flight (since fixed: see the Warrens), killed her on the next
+  go and left by the far portal. On the Fall it boarded at the top, carved down at up to 19 m/s and hopped the rises.
+  Nobody has watched it with their own eyes.
 
 ### The Free Company: a party of your own
 
