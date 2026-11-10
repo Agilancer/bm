@@ -3,25 +3,41 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { ARMOR, ARMOR_TRUE } from '../src/gfx/materials.js';
+import { ARMOR, ARMOR_TRUE, MOUTH_WGSL } from '../src/gfx/materials.js';
+import { COMMON } from '../src/gfx/shaders.js';
 import { bodyRadius, inCascade } from '../src/gfx/shadowcull.js';
 import { mat4LookTo, mat4Mul, mat4Ortho } from '../src/core/math.js';
 import { LISANDRA_FORMS } from '../src/core/lisandra.js';
 
-test('model-true shading is ARMOR with only its three changes', () => {
-  // The glTF normal map, no knight's steel, and the split-sum reflection.
-  assert.match(ARMOR_TRUE, /perturb\(n0, p, in\.uv, vec2f\(nm\.r, 1\.0 - nm\.g\), 1\.0\)/);
+test('model-true shading is ARMOR with only its changes', () => {
+  // No knight's steel, the split-sum reflection, and the witch's mouth. (The normal map is read as everyone's is: see the
+  // normal-map test below.)
+  assert.match(ARMOR_TRUE, /var n = perturb\(n0, p, in\.uv, nm\.rg, 1\.0\);/);
   assert.doesNotMatch(ARMOR_TRUE, /darkPaint/);
   assert.match(ARMOR_TRUE, /var c = shadeTrue\(p, n, v, albedo, rough, metal, ao, shadow\);/);
   assert.match(ARMOR_TRUE, /fn envDFG\(/);
-  // Take the three changes back out and what's left is ARMOR, character for character.
+  assert.ok(ARMOR_TRUE.includes(MOUTH_WGSL));
+  // Take the changes back out and what's left is ARMOR, character for character.
   const back = ARMOR_TRUE.slice(0, ARMOR_TRUE.indexOf('\n// The split-sum\'s reflectance'))
-    .replace('vec2f(nm.r, 1.0 - nm.g)', 'nm.rg')
-    .replace('shadeTrue(p, n, v,', 'shadePBR(p, n, v,');
+    .replace('shadeTrue(p, n, v,', 'shadePBR(p, n, v,')
+    .replace('info: vec4f, mouth: vec4f, lip: vec4f };', 'info: vec4f };')
+    .replace(MOUTH_WGSL, '');
   const steel = ARMOR.match(/\/\/ Metals take their reflection tint from the paint\.[\s\S]*?sunSpecScale = mix\(1\.0, 0\.55, darkPaint\);/)[0];
   assert.equal(back.replace(/\/\/ \(No knight's steel[^\n]*\n {2}envBoost = 1\.0;\n {2}sunSpecScale = 1\.0;/, steel), ARMOR);
   // ...and ARMOR itself, which every other body is drawn with, has none of it.
-  assert.doesNotMatch(ARMOR, /shadeTrue|envDFG|1\.0 - nm\.g/);
+  assert.doesNotMatch(ARMOR, /shadeTrue|envDFG|1\.0 - nm\.g|C\.mouth|C\.lip/);
+});
+
+test('normal maps are read the glTF way: red along u, green up the picture, whichever way the screen runs', () => {
+  // perturbD's frame comes out scaled by the screen's handedness, and WebGPU's window y runs down, so for a face toward
+  // the eye it points along -u and -v. Checked on a GPU (a camera-facing quad with a (1, .5) and a (.5, 1) texel): red
+  // came out along -u until the frame was turned by sign(det), and green is read against v.
+  const at = COMMON.indexOf('fn perturbD('), f = COMMON.slice(at, COMMON.indexOf('\n}', at));
+  assert.match(f, /let det = dot\(dp1, dp2p\);/);
+  assert.match(f, /select\(1\.0, -1\.0, det < 0\.0\)/);
+  assert.match(f, /t \* inv \* mxy\.x - b \* inv \* mxy\.y/);
+  // No shader turns green over on top of that.
+  assert.doesNotMatch(ARMOR_TRUE, /1\.0 - nm\.g/);
 });
 
 // A cascade as renderer.js writeFrame makes one: a square 2·rad across round (cx, cz), seen from the sun.
@@ -73,10 +89,23 @@ test('the witch is the owner\'s model with no cloth bones, and her gown has no c
   const b = fs.readFileSync(new URL('../assets/game/lisandra/witch.glb', import.meta.url));
   const json = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'));
   const joints = json.skins[0].joints.map((j) => json.nodes[j].name);
-  assert.equal(joints.length, 65);
+  // Tripo's 65 bones and her jaw (tools/lisandra/jaw_rig.py), last, under her head, which no clip moves.
+  assert.equal(joints.length, 66);
+  assert.equal(joints[65], 'Jaw');
+  const jawNode = json.skins[0].joints[65];
+  assert.ok(json.nodes.find((n) => n.name === 'mixamorig:Head').children.includes(jawNode));
+  assert.ok(json.animations.every((a) => a.channels.every((c) => c.target.node !== jawNode)));
+  const jaw = json.scenes[0].extras.jaw;
+  assert.equal(jaw.joint, 'Jaw');
+  assert.ok(jaw.open > 0.05 && jaw.open < 0.2 && Math.abs(Math.hypot(...jaw.axis) - 1) < 1e-6);
+  for (const k of ['y0', 'k', 'mid', 'half', 'z', 'rise', 'perRad']) assert.ok(Number.isFinite(jaw.lip[k]), k);
   assert.deepEqual(joints.filter((n) => n.startsWith('cloth')), []);
   assert.equal(json.extras?.cloth, undefined);
-  assert.equal(json.animations.length, 175);
+  assert.equal(json.animations.length, 176);
+  // Her walk and run are the ones the owner's model came with (Tripo's walk.001 and run.001); the old walk is kept aside.
+  const clips = json.animations.map((a) => a.name);
+  for (const name of ['walk', 'run', 'walk_gown']) assert.ok(clips.includes(name), name);
+  assert.deepEqual(clips.filter((n) => /^(walk|run)\.\d{3}$/.test(n)), []);
   // (Her gown keeps the _SKIRT mask, which only pushes it out of a leg that would cut through it.)
   assert.ok(json.meshes[0].primitives[0].attributes._SKIRT !== undefined);
 });

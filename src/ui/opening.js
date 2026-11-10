@@ -236,6 +236,11 @@ export class OpeningHUD {
     }
   }
 
+  // How open the witch's mouth is, by what she's saying aloud (src/ui/opening-sound.js mouth): the sim turns her jaw by it.
+  mouth() {
+    return this.sound?.mouth() ?? 0;
+  }
+
   // Beat 8: your hand in view, with the staff in it (src/main.js shows it under the bars).
   handsUp(snap) {
     const t = snap[H.OPENING_TIME];

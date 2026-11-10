@@ -1,13 +1,15 @@
 // The frame graph: compute (skinning, grass, particles) -> shadows -> forward HDR pass with MSAA ->
 // AO, sun shafts, particles at full resolution -> bloom -> composite. WebGPU only, from the start.
 import { FIELD_CREATURES } from '../core/field-creatures.js';
-import { TRIPO_BASE, TRIPO_SLOTS } from '../core/tripo-monsters.js';
+import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
 import { TripoSlots } from './tripo-slots.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
 import { buildSites } from '../core/sites.js';
+import { terrainHeight } from '../core/terrain.js';
+import { EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, toWorld, torches } from '../core/dungeon.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/church.js';
@@ -24,7 +26,7 @@ import { ShadowCache } from './shadowcache.js';
 import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
 import { PATTERNS, SKINS } from '../items/skins.js';
 import { BODIES } from '../sim/undead.js';
-import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
+import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
 import { ARMOR, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL } from './materials.js';
@@ -54,6 +56,8 @@ const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 448;
+// A body's uniforms (materials.js CharU): its wounds, the pieces cut off, info, and the witch's mouth and lip line.
+const CHAR_UBO = 24 * 64 + 256 + 48;
 // The surfing hand's one joint, as a dual quaternion: it leans and swings about the shoulder with the steering (-1 left, 1 right), and rises as it comes out.
 const SURF_PIVOT = [-0.33, -0.33, 0.2], surfPal = new Float32Array(8);
 function surfHandPose(tilt, up, time) {
@@ -72,6 +76,9 @@ function surfHandPose(tilt, up, time) {
 export const SKULL_AT = [-0.483, -0.159, -0.783];
 
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440, CAVE: 444 };
+// Four floats, or a light's eight, into the frame's uniforms at o: as d.set([...], o) did, without an array each time.
+const put4 = (d, o, a, b, c, e) => { d[o] = a; d[o + 1] = b; d[o + 2] = c; d[o + 3] = e; };
+const putLight = (d, o, L, i) => { d[o] = L.p[0]; d[o + 1] = L.p[1]; d[o + 2] = L.p[2]; d[o + 3] = L.r; d[o + 4] = L.c[0]; d[o + 5] = L.c[1]; d[o + 6] = L.c[2]; d[o + 7] = i; };
 // The kite shield on the arm, as the owner's photo has it: its point straight down the screen as shield_hold has it, and its inner face lying on the top of the hand and along
 // the forearm toward the elbow (fitted to the skinned arm, within a millimetre at both, on the rig's shield joint). Bigger than on the ground, to fill the owner's outline.
 const KITE_TURN = -2 * Math.PI / 180, KITE_TILT = -9.5 * Math.PI / 180, KITE_SCALE = 1.25, KITE_SEAT = [-0.06, -0.08, -0.023];
@@ -188,7 +195,17 @@ export class Renderer {
     const tw = Math.round(manifest.size[0] * tier.texScale), th = Math.round(manifest.size[1] * tier.texScale);
     const dw = Math.round(manifest.detail[0] * tier.texScale), dh = Math.round(manifest.detail[1] * tier.texScale);
     const gs = Math.round(1024 * tier.texScale), gd = Math.round(512 * tier.texScale);
-    total = manifest.layers.length * 2 + manifest.ground.length * 2 + 17;
+    const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
+      'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
+      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
+    // Every step that ticks, counted: each picture decoded, each model fetched, each hero, and the steps below that tick
+    // on their own (EXTRA_TICKS: after the pictures, the far land, the interior, the undead, each town knight, the
+    // heroes, the view models, the props and the opening). The bar can't run past its end (main.js holds it short of
+    // 100% until the game is up), but a miscount here shows as a stall or a jump.
+    const cast = this.heroCast || [];
+    const EXTRA_TICKS = 8 + TOWN_KNIGHTS.length;
+    total = manifest.layers.length * 2 + manifest.ground.length * 2 + models.length + cast.length + EXTRA_TICKS;
     const shrink = tier.texScale !== 1;
     const decode = (name, width, height) => pool.run('decode', { url: `${base}assets/game/tex/${name}.webp`, ...(shrink ? { width, height } : {}) }).then((b) => { tick(); return b; });
     this.colorArr = await loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb');
@@ -241,10 +258,6 @@ export class Renderer {
     // Tiling noise for clouds and macro variation: four channels of smooth noise.
     this.noiseTex = this.makeNoise();
 
-    const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
-      'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
-      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
-      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
     // Fetch when building each model; don't retain every source GLB during startup.
     const loadModel = async (i) => {
       const res = await fetch(base + models[i]);
@@ -291,24 +304,26 @@ export class Renderer {
     this.firstTown = this.chars.length - TOWN_KNIGHTS.length;
     // The Tripo monsters' slots, in the sim's order: after the town knights. Built when the sim stands a monster in one.
     const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
-    this.tripo = new TripoSlots(this, base, tripoRoster, tripoPalettes, this.chars.length, TRIPO_SLOTS);
+    this.tripo = new TripoSlots(this, base, withVariants(tripoRoster), tripoPalettes, this.chars.length, TRIPO_SLOTS);
     // The other Tessariels this session (src/core/heroes.js makeCast, chosen in src/main.js), in the sim's order: after the
     // knights, before Lisandra. Fetched together, built one by one.
-    const cast = this.heroCast || [];
     this.firstHero = this.chars.length;
     const heroGlbs = await Promise.all(cast.map((p) => fetch(`${base}assets/game/heroes/${p.body}.glb`).then((r) => {
       if (!r.ok) throw new Error(`hero ${p.body}: ${r.status}`);
       return r.arrayBuffer();
-    }).then((b) => parseGLB(b))));
-    for (const glb of heroGlbs) {
-      const hero = await this.buildCharacter(glb);
+    }).then((b) => { tick(); return parseGLB(b); })));
+    for (let i = 0; i < heroGlbs.length; i++) {
+      const hero = await this.buildCharacter(heroGlbs[i]);
       hero.armored = true; hero.hero = true;
+      // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -1 for the rest.)
+      hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : -1;
       this.chars.push(hero);
     }
     tick();
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
-      const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
+      const model = await loadModel(15 + BODIES.length + i);
+      const [form] = await this.buildCrabs(model, 1, LISANDRA_SCALE, (prim, glb, scale) => {
         // A form with no skirt (Pretty in her leathers) has no _SKIRT mask: nothing of her sways as a dress.
         const mask = glb.json.meshes[0].primitives[0].attributes._SKIRT;
         if (mask === undefined) return prim;
@@ -325,6 +340,13 @@ export class Renderer {
       // model-true shading (ARMOR_TRUE): see docs/RENDERING.md.
       form.stillSkirt = true;
       form.trueLook = true;
+      // The witch's jaw (tools/lisandra/jaw_rig.py): where the line between her lips is, in bind space, for the dark
+      // that opens there as she speaks (materials.js MOUTH_WGSL).
+      const jaw = model.json.scenes[0].extras?.jaw, s = LISANDRA_SCALE;
+      if (jaw?.lip) {
+        const l = jaw.lip;
+        form.jaw = { y0: l.y0 * s, k: l.k / s, mid: l.mid * s, half: l.half * s, front: (l.z - 0.02) * s, rise: l.rise * s, gap: jaw.open * l.perRad * s };
+      }
       this.chars.push(form);
     }
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
@@ -377,13 +399,18 @@ export class Renderer {
     this.buildPipelines();
     this.buildParticles();
     this.buildGrass();
-    this.lights = village.lights.concat(this.interior.data.lights);
+    // (And the Hollowfang Warrens' torches, and the fires either side of its portal: src/core/dungeon.js.)
+    const warrens = torches().map(([x, y, z, nx, nz]) => ({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: [1, 0.56, 0.24], r: 11, i: 3.4, flicker: 0.8 }));
+    warrens.push({ p: [PORTAL.x, terrainHeight(PORTAL.x, PORTAL.z) + 2, PORTAL.z], c: [0.45, 0.65, 1], r: 9, i: 2.2, flicker: 0.2 });
+    for (const q of [EXIT_IN, EXIT_OUT]) { const [x, z] = toWorld(q.x, q.z); warrens.push({ p: [x, caveFloorY(x, z) + 2, z], c: [0.45, 0.65, 1], r: 9, i: 2.6, flicker: 0.2 }); }
+    this.lights = village.lights.concat(this.interior.data.lights, warrens);
     this.homeLights = new HomeLights(device, this.interior, this.interior.data.lights);
     if (this.openingEnabled) this.openingStage = await loadOpeningStage(this, base);
     this.smokeT = 0;
     this.moteT = 0;
     this.resize();
     tick();
+    if (done !== total) console.warn(`loading bar: ${done} steps ticked of ${total} counted (renderer.js load)`);
   }
 
   makeNoise() {
@@ -696,11 +723,11 @@ export class Renderer {
     const out = [];
     for (let i = 0; i < count; i++) {
       const sk = i === 0 ? base : this.cloneSkinned(base);
-      const ubo = this.device.createBuffer({ size: 24 * 64 + 256 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+      const ubo = this.device.createBuffer({ size: CHAR_UBO, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
         { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
       ] });
-      out.push({ ...sk, ubo, matBG: bg, gashData: new Float32Array((24 * 64 + 256 + 16) / 4) });
+      out.push({ ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4) });
     }
     return out;
   }
@@ -719,11 +746,11 @@ export class Renderer {
     const [alb, nrm, mr] = await Promise.all([
       this.imageTexture(glb, 0, 'rgba8unorm-srgb', scale), this.imageTexture(glb, 1, 'rgba8unorm', scale), this.imageTexture(glb, 2, 'rgba8unorm', scale),
     ]);
-    const ubo = this.device.createBuffer({ size: 24 * 64 + 256 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const ubo = this.device.createBuffer({ size: CHAR_UBO, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
-    return { ...sk, ubo, matBG: bg, gashData: new Float32Array((24 * 64 + 256 + 16) / 4) };
+    return { ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4) };
   }
 
   async buildViewModel(glb) {
@@ -1862,7 +1889,7 @@ export class Renderer {
     d.set(this.tmpP, O.VMP);
     // View model space to world: the camera's own frame at the eye.
     const rx = cam.fy * cam.uz - cam.fz * cam.uy, ry = cam.fz * cam.ux - cam.fx * cam.uz, rz = cam.fx * cam.uy - cam.fy * cam.ux;
-    d.set([rx, ry, rz, 0, cam.ux, cam.uy, cam.uz, 0, -cam.fx, -cam.fy, -cam.fz, 0, cam.x, cam.y, cam.z, 1], O.VMW);
+    put4(d, O.VMW, rx, ry, rz, 0); put4(d, O.VMW + 4, cam.ux, cam.uy, cam.uz, 0); put4(d, O.VMW + 8, -cam.fx, -cam.fy, -cam.fz, 0); put4(d, O.VMW + 12, cam.x, cam.y, cam.z, 1);
     // Cascades.
     this.turnDay(snap[H.TIME]);
     const n = this.tier.cascades;
@@ -1882,8 +1909,13 @@ export class Renderer {
     const kept = this.shCache;
     let shSun = sun;
     if (kept) {
-      this.keptLit = { under: cam.y <= -6, rocks: this.rocksOn !== false };
-      const key = `${this.shadowEpoch}|${this.keptLit.under}|${this.keptLit.rocks}`;
+      // (A new key, and what's lit, only when one of them changes.)
+      const under = cam.y <= -6, rocks = this.rocksOn !== false;
+      if (!this.keptLit || this.keptLit.under !== under || this.keptLit.rocks !== rocks || this.keptKeyEpoch !== this.shadowEpoch) {
+        this.keptLit = { under, rocks }; this.keptKeyEpoch = this.shadowEpoch;
+        this.keptKey = `${this.shadowEpoch}|${under}|${rocks}`;
+      }
+      const key = this.keptKey;
       for (let c = 1; c < n; c++) kept.plan(c, cam, this.splits[c], tan, aspect, sun, key, d, O.CASC + c * 16);
       shSun = kept.sunFor(sun);
     }
@@ -1911,25 +1943,25 @@ export class Renderer {
     d[O.CAM] = cam.x; d[O.CAM + 1] = cam.y; d[O.CAM + 2] = cam.z; d[O.CAM + 3] = snap[H.TIME] + (this.renderTimeOffset || 0);
     d[O.SUN] = sun[0]; d[O.SUN + 1] = sun[1]; d[O.SUN + 2] = sun[2]; d[O.SUN + 3] = 2.4 / this.tier.shadowSize;
     const day = this.light;
-    d.set([day.sun[0], day.sun[1], day.sun[2], day.glass], O.SUNC);
-    d.set([day.sky[0], day.sky[1], day.sky[2], day.day], O.SKY);
-    d.set([day.gnd[0], day.gnd[1], day.gnd[2], 0], O.GND);
+    put4(d, O.SUNC, day.sun[0], day.sun[1], day.sun[2], day.glass);
+    put4(d, O.SKY, day.sky[0], day.sky[1], day.sky[2], day.day);
+    put4(d, O.GND, day.gnd[0], day.gnd[1], day.gnd[2], 0);
     d.set(day.fog, O.FOG);
-    d.set([0.018, 0.8, 0, 0], O.FOGP);
-    d.set(n === 2 ? [this.splits[0], this.splits[2], this.splits[2], 0] : [this.splits[0], this.splits[1], this.splits[2], 0], O.SPLIT);
-    d.set([W, Ht, 1 / W, 1 / Ht], O.SCREEN);
+    put4(d, O.FOGP, 0.018, 0.8, 0, 0);
+    put4(d, O.SPLIT, this.splits[0], this.splits[n === 2 ? 2 : 1], this.splits[2], 0);
+    put4(d, O.SCREEN, W, Ht, 1 / W, 1 / Ht);
     const t = d[O.CAM + 3];
     const gust = 0.42 + 0.3 * Math.sin(t * 0.21) + 0.15 * Math.sin(t * 0.67);
-    d.set([0.82, gust, 0.57, t], O.WIND);
-    d.set([-GROUND_HALF, -GROUND_HALF, 1 / (2 * GROUND_HALF), 0], O.GROUND);
-    d.set([-BLOOD_HALF, -BLOOD_HALF, 1 / (2 * BLOOD_HALF), this.useBloom ? 1 : 0], O.BLOOD);
+    put4(d, O.WIND, 0.82, gust, 0.57, t);
+    put4(d, O.GROUND, -GROUND_HALF, -GROUND_HALF, 1 / (2 * GROUND_HALF), 0);
+    put4(d, O.BLOOD, -BLOOD_HALF, -BLOOD_HALF, 1 / (2 * BLOOD_HALF), this.useBloom ? 1 : 0);
     // Bodies in the grass.
     let bi = 0;
-    d.set([snap[H.PX], snap[H.PY], snap[H.PZ], 0.45], O.CHARS);
+    put4(d, O.CHARS, snap[H.PX], snap[H.PY], snap[H.PZ], 0.45);
     bi = 1;
     for (let i = 0; i < 5; i++) {
       const co = CHARS_START + i * C_SIZE;
-      if (snap[co + C.ACTIVE] > 0.5) { d.set([snap[co + C.X], snap[co + C.Y], snap[co + C.Z], i < 2 ? 0.6 : 1.5], O.CHARS + bi * 4); bi++; }
+      if (snap[co + C.ACTIVE] > 0.5) { put4(d, O.CHARS + bi * 4, snap[co + C.X], snap[co + C.Y], snap[co + C.Z], i < 2 ? 0.6 : 1.5); bi++; }
     }
     for (; bi < 6; bi++) d[O.CHARS + bi * 4 + 3] = 0;
     // Lanterns, the nearest to the camera first. When there are more than the tier can light, each fades out before the
@@ -1951,18 +1983,18 @@ export class Renderer {
       const L = lit[i].L;
       const fl = 1 + L.flicker * 0.25 * (Math.sin(t * 9.1 + i * 2.1) * 0.6 + Math.sin(t * 17.3 + i) * 0.4);
       const fade = Math.min(1, nextD - lit[i].d);
-      d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i * fl * fade * (L.dim ?? 1)], O.LIGHTS + i * 8);
+      putLight(d, O.LIGHTS + i * 8, L, L.i * fl * fade * (L.dim ?? 1));
     }
     let spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
     // The light off the gems you carry. src/gfx/gemfx.js.
     for (const L of this.gemLights || []) {
       if (take + spellLights >= 28) break;
-      d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i], O.LIGHTS + (take + spellLights++) * 8);
+      putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
     }
     // A candle or a lamp the player's carrying (src/ui/folk.js: bought of Elspeth Tallow).
-    if (this.carryLight && take + spellLights < 28) { const L = this.carryLight; d.set([L.p[0], L.p[1], L.p[2], L.r, L.c[0], L.c[1], L.c[2], L.i], O.LIGHTS + (take + spellLights++) * 8); }
-    d.set([take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9], O.COUNTS);
-    d.set(this.caveAmb || [0, 0, 0, 0], O.CAVE);
+    if (this.carryLight && take + spellLights < 28) { const L = this.carryLight; putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i); }
+    put4(d, O.COUNTS, take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9);
+    if (this.caveAmb) d.set(this.caveAmb, O.CAVE); else put4(d, O.CAVE, 0, 0, 0, 0);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);
   }
 
@@ -2139,24 +2171,36 @@ export class Renderer {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
       if (snap[co + C.ACTIVE] < 0.5 || c.pending) continue;
-      if (c.casts) q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
-      const ver = snap[co + C.GASH_VERSION];
-      if (ver !== this.gashVersions[i]) {
-        this.gashVersions[i] = ver;
-        q.writeBuffer(c.ubo, 0, snap.buffer, snap.byteOffset + (co + C_GASH) * 4, 24 * 64);
-        q.writeBuffer(c.ubo, 24 * 64, snap.buffer, snap.byteOffset + (co + C_MASKS) * 4, 256);
+      // Not skinned this frame, so not drawn either (seen needs casts): its palette, wounds and params wait until it is. (The wound
+      // version is only taken once it's written, so a wound made off screen goes up the first frame it's back.) What it holds
+      // still goes in: the knights' own swords and shields have no owner, so they're drawn whether the knight is or not.
+      if (c.casts) {
+        q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
+        const ver = snap[co + C.GASH_VERSION];
+        if (ver !== this.gashVersions[i]) {
+          this.gashVersions[i] = ver;
+          q.writeBuffer(c.ubo, 0, snap.buffer, snap.byteOffset + (co + C_GASH) * 4, 24 * 64);
+          q.writeBuffer(c.ubo, 24 * 64, snap.buffer, snap.byteOffset + (co + C_MASKS) * 4, 256);
+        }
+        c.gashData[0] = snap[co + C.HEART];
+        c.gashData[1] = c.armored || c.flesh ? 1 : 0.62;
+        c.gashData[2] = c.steel ? 1 : c.heroLook || 0; // polished steel: its dark paint is shadow, not blackening; a hero's own look (materials.js)
+        c.gashData[3] = c.flesh ? 1 : 0;
+        if (c.jaw) {
+          // Her lips part by mouth * gap, and the triangles across the line, rise tall at rest, stretch by that much: of
+          // them in bind space, the share that's new is the dark between her lips.
+          const J = c.jaw, d = c.gashData, m = Math.min(Math.max(snap[co + C_PROPS + 15] || 0, 0), 1), g = m * J.gap;
+          d[4] = smoothstep(0.02, 0.12, m); d[5] = g * J.rise / (2 * (J.rise + g)); d[6] = J.front; d[7] = J.half;
+          d[8] = J.y0; d[9] = J.k; d[10] = J.mid; d[11] = 0;
+          q.writeBuffer(c.ubo, 24 * 64 + 256, d, 0, 12);
+        } else q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
+        skinParamsU[0] = c.count;
+        skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
+        skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
+        // (1: a still gown, no ripple of its own: Lisandra's, on the owner's word. 0 for everyone else.)
+        skinParams[7] = c.stillSkirt ? 1 : 0;
+        q.writeBuffer(c.params, 0, skinParams);
       }
-      c.gashData[0] = snap[co + C.HEART];
-      c.gashData[1] = c.armored || c.flesh ? 1 : 0.62;
-      c.gashData[2] = c.steel ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
-      c.gashData[3] = c.flesh ? 1 : 0;
-      q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
-      skinParamsU[0] = c.count;
-      skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
-      skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
-      // (1: a still gown, no ripple of its own: Lisandra's, on the owner's word. 0 for everyone else.)
-      skinParams[7] = c.stillSkirt ? 1 : 0;
-      q.writeBuffer(c.params, 0, skinParams);
       if (c.propBase !== undefined) this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 16 * (c.propCount || 2)), c.propBase * 16);
       if (i < 2) {
         this.glintData = this.glintData || new Float32Array(4);
@@ -2645,6 +2689,8 @@ export class Renderer {
       mp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
     }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
+    // (Down the Warrens nothing of the land above can be seen: its rock is all there is.)
+    if (!vis.warrens) {
     this.pines.draw(mp);
     if (this.rocksOn !== false) this.rocks.draw(mp, this.terrainBG);
     // Grass before the ground it stands on: its shader is next to nothing, and the ground's is the costliest there is.
@@ -2663,8 +2709,8 @@ export class Renderer {
     mp.setIndexBuffer(this.terrainIB, 'uint32');
     mp.drawIndexed(this.terrainCount);
     }
-    mp.setPipeline(this.pSky);
-    mp.draw(3);
+    }
+    if (!vis.warrens) { mp.setPipeline(this.pSky); mp.draw(3); }
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
     this.openingStage?.drawGlow(mp);
     this.trail?.draw(mp);

@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
-import { GROUPS, GROUP_KEYS } from './core/tripo-monsters.js';
+import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { QuestTrail } from './ui/trail.js';
@@ -23,14 +23,15 @@ import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
-import { settings, Title } from './title.js';
+import { saveSettings, settings, Title } from './title.js';
 import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
 import { SpellSound } from './spellsound.js';
-import { HERO_SLOTS, makeCast } from './core/heroes.js';
+import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
+import { PartyUI } from './ui/party.js';
 import { TownClient } from './folk/client.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
@@ -47,6 +48,9 @@ const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
 // Every new game begins with the witch in the cave.
 const OPENING_ENABLED = !params.has('noopening');   // (?noopening starts in the town, for tests)
 const CONSENT_KEY = 'bm-threads-consent';
+// What a start downloads, for the keep-files question: 375 MB over about 940 files, measured by tools/keep_check.mjs
+// (2026-11-09, a fresh browser, desktop graphics).
+const KEEP_MB = 375;
 const AUTOSAVE_EVERY = 20;   // seconds of play between the saves Continue picks up
 const title = new Title();
 window.bmTitle = title;
@@ -112,7 +116,7 @@ async function enableIsolation() {
   if (sessionStorage.getItem('bm-coi-tried')) return false;
   try {
     sessionStorage.setItem('bm-coi-tried', '1');
-    const reg = await navigator.serviceWorker.register('coi-sw.js');
+    const reg = await navigator.serviceWorker.register(settings.keep === 'yes' ? 'coi-sw.js?keep=1' : 'coi-sw.js');
     if (!navigator.serviceWorker.controller) {
       await new Promise((resolve) => {
         const sw = reg.installing || reg.waiting || reg.active;
@@ -130,6 +134,46 @@ async function enableIsolation() {
   }
 }
 
+// ---- keeping the game on this device (coi-sw.js) -------------------------------------------------------------------
+
+const canKeep = () => 'serviceWorker' in navigator && window.isSecureContext && 'caches' in window;
+
+/** Asked once, before the title. Kept, the next start reads the files from here and downloads only what has changed. */
+function askKeep() {
+  return new Promise((resolve) => {
+    $('card').style.display = '';
+    $('card').innerHTML = `<b>Keep Bellmourn on this device?</b><br>
+      The game downloads about ${KEEP_MB} MB as it starts. Kept here, the next start reads those files from your device and
+      downloads only what has changed since (it checks once, at the start). Not kept, they come down every time.
+      <div class="small">They're kept in this browser's storage for this site. You can change your mind in Settings, under Game files, which also clears them.</div>`;
+    $('buttons').innerHTML = '<button class="big" id="keepYes">KEEP IT HERE</button><button class="alt" id="keepNo">Download each time</button>';
+    const pick = (v) => {
+      title.unlock();
+      settings.keep = v;
+      saveSettings();
+      const sel = document.querySelector('[data-k="keep"]');
+      if (sel) sel.value = v;
+      $('card').textContent = 'Preparing...';
+      $('buttons').innerHTML = '';
+      resolve(v);
+    };
+    $('keepYes').onclick = () => pick('yes');
+    $('keepNo').onclick = () => pick('no');
+  });
+}
+
+/** The service worker as the player wants it: keeping the files, or not. (It also lends shared memory where the host can't.) */
+async function useStore(keep) {
+  if (!canKeep()) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const keeping = ((reg?.active || reg?.waiting || reg?.installing)?.scriptURL || '').includes('keep=1');
+    if (keep !== keeping && (keep || reg)) await navigator.serviceWorker.register(keep ? 'coi-sw.js?keep=1' : 'coi-sw.js');
+    if (keep) navigator.storage?.persist?.().catch(() => { /* the browser's call */ });
+    else await Promise.all(['bm-files-v1', 'bm-meta-v1'].map((k) => caches.delete(k)));
+  } catch (e) { console.warn('game files', e); }
+}
+
 function showFail(message) {
   $('card').innerHTML = `<b>This game needs WebGPU.</b><br>${message}<div class="small">Current versions of Chrome, Edge and Safari have it, on PC and on phones. Firefox has it on Windows. If yours is up to date, check that hardware acceleration is on.</div>`;
   $('buttons').innerHTML = '';
@@ -139,9 +183,12 @@ async function main() {
   const mobile = isMobileDevice();
   const plan = threadPlan(mobile);
   if (!navigator.gpu) { showFail('This browser does not offer it.'); return; }
-  if (AUTO) { boot(plan, plan.pool); return; }
+  // (?keep: keep the files, unasked, for tests of coi-sw.js.)
+  if (AUTO) { if (params.has('keep')) { settings.keep = 'yes'; await useStore(true); } boot(plan, plan.pool); return; }
   // The title comes up once the page won't reload under it for shared memory, and the game loads behind it.
   const go = async (pool) => {
+    if (settings.keep === 'ask' && canKeep()) await askKeep();
+    await useStore(settings.keep === 'yes');
     if (!window.crossOriginIsolated && (await enableIsolation())) return;
     $('gate').classList.add('gone');
     title.start();
@@ -183,10 +230,15 @@ async function boot(plan, poolSize) {
   $('card').style.display = 'none';
   $('buttons').innerHTML = '';
   $('bar').style.display = 'block';
-  const setProgress = (t, msg) => {
-    $('bar').firstElementChild.style.width = `${Math.round(t * 100)}%`;
+  // The bar only goes forward, and holds short of the end until the game is ready to play: 100% is shown as the title's
+  // menu comes up, and not before. (It used to count past 100%, to 114%, on a guess at how many steps the load had.)
+  let shown = 0;
+  const setProgress = (t, msg, final = false) => {
+    shown = final ? 1 : Math.max(shown, Math.min(0.99, t));
+    const pct = Math.floor(shown * 100);
+    $('bar').firstElementChild.style.width = `${pct}%`;
     if (msg) $('status').textContent = msg;
-    if (title.up) title.progress(Math.round(t * 100));
+    if (title.up) title.progress(pct);
   };
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
@@ -213,7 +265,7 @@ async function boot(plan, poolSize) {
   setOpeningTerrain(OPENING_ENABLED);
   const simWorker = new Worker(new URL('./sim/sim.worker.js', import.meta.url), { type: 'module' });
   // The townsfolk, on a thread of their own (src/folk/). The sim has where they stand, to bump you off them.
-  const town = new TownClient(BASE, isolated);
+  const town = new TownClient(BASE, isolated, !!gpu.mobile);
   renderer.folk = new FolkBodies(renderer, town.map);
   town.onReady = (m) => renderer.folk.setBeds(m.beds);
   if (town.buffer) simWorker.postMessage({ type: 'folk', buffer: town.buffer });
@@ -235,6 +287,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
+      else if (m.type === 'warrens') game?.party?.onWarrens(m);
       else if (m.type === 'restart') { input.yaw = m.yaw ?? Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
       else if (m.type === 'placed') {
         const c = calls.get(m.id);
@@ -258,11 +311,11 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = makeCast(roster, kit, names, Math.min(heroCount, 16), seed);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed), roster, kit);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
-  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_ENABLED, heroes: cast, hour: renderer.hour });
+  simWorker.postMessage({ type: 'boot', buffer, hz, base: BASE, opening: OPENING_ENABLED, heroes: cast, hour: renderer.hour, lean: !!gpu.mobile });
 
   const hud = new Hud(gpu, plan, poolSize, isolated, input);
   const start = performance.now();
@@ -280,7 +333,7 @@ async function boot(plan, poolSize) {
     return;
   }
   const loadMs = performance.now() - start;
-  setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`);
+  setProgress(0.99, 'Opening the gates...');
   // Tasks for the pool once the load is done: thinking about the fight.
   if (buffer) {
     shared.ctrl[CTRL.PLAN_RUN] = 1;
@@ -333,10 +386,14 @@ async function boot(plan, poolSize) {
     $('xpBar').firstElementChild.style.width = `${Math.min(100, (pack.xp - lo) / (hi - lo) * 100)}%`;
   };
   // A kill's worth of experience, and whatever that buys. The sim only says something died.
-  game.gainXp = (kind) => {
+  // (kind: what it leaves, drops.js; what: 1 + what it was. A Tripo monster's worth goes by its life too, so the tough ones
+  // out in the countries pay for the time they take: src/core/tripo-monsters.js GROUPS.)
+  game.gainXp = (kind, what = 0) => {
     renderer.skullEyes?.feel('glee', 3);
-    if (!stepXp(pack, XP_OF[kind | 0] ?? 10)) { showLevel(); return; }
+    const g = what - 1 >= TRIPO_KIND ? GROUPS[GROUP_KEYS[what - 1 - TRIPO_KIND]] : null;
+    if (!stepXp(pack, Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0))) { showLevel(); return; }
     arm();
+    game.party?.levelled();
     // A new level fills you up, as it should.
     shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999;
     const snap = game.currentSnap();
@@ -360,13 +417,26 @@ async function boot(plan, poolSize) {
         opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
         closed: () => { input.menu = false; resume(); },
         click: () => title.chime?.(),
+        // (The Free Company: a quartermaster's books, and your own party: src/ui/party.js.)
+        broker: (h) => game.party?.talkTo(h),
+        isMember: (slot) => !!game.party?.member(slot),
+        dismiss: (slot) => game.party?.dismiss(slot),
       } });
     game.heroTalk.fetchScript();
+    game.party = new PartyUI({ base: BASE, cast, sim: simWorker, pack, heroTalk: game.heroTalk, level: () => pack.level,
+      firstHero: () => renderer.firstHero, tip: (t, s) => hud.tip(t, s),
+      opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
+      closed: () => { input.menu = false; resume(); },
+      click: () => title.chime?.(),
+      cleared: () => { giveXp?.(1500); pack.gold += 250; hud.tip('The Free Company pays out 250 gold for the Warrens, and the tale is worth more.', 5); autosave(); },
+    });
+    addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
   }
   // A word with the town (src/ui/folk.js): E to someone, J for the journal.
   const giveXp = (n) => {
     if (!stepXp(pack, n)) { showLevel(); return; }
     arm();
+    game.party?.levelled();
     shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999;
     hud.tip(`Level ${pack.level}. Your spells bite harder, and your well runs deeper.`, 4);
   };
@@ -380,7 +450,10 @@ async function boot(plan, poolSize) {
       heal: (n) => { shared.input[INPUT.HEAL] += n; },
       hp: () => { const s = game.currentSnap(); return s ? s[H.HP] / (s[H.MAX_HP] || 1) : 1; },
       // A night's sleep: dawn, mended, and the game kept.
-      sleep: () => { renderer.setHour(6.1); shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999; autosave(); },
+      sleep: () => {
+        // (Slept from the evening: the morning is the next day's. The town's clock only counts a day on its own as it turns past midnight.)
+        if (renderer.hour > 6.1) { town.day++; town.lastHour = -1; }
+        renderer.setHour(6.1); shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999; autosave(); },
       give: (item) => {
         if (pack.add(item)) return;
         const snap = game.currentSnap();
@@ -520,6 +593,7 @@ async function boot(plan, poolSize) {
       if (snap) {
         const active = input.enabled && !state.paused;
         openingHUD.draw(snap, active, dt);
+        shared.input[INPUT.MOUTH] = openingHUD.mouth();
         // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
         if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
         renderer.hideVM = openingHUD.cinematic(snap) && !openingHUD.handsUp(snap);
@@ -586,6 +660,10 @@ async function boot(plan, poolSize) {
       worldMap.load(null);
       townUI.load(null);
       town.load(null);
+      game.party?.load(null);
+      // (The seals woken and the hour of the day are the old game's too.)
+      game.lands?.load(null);
+      renderer.setHour(15);
       enter(true);
     } else if (a === 'continue') {
       const d = saves.newest();
@@ -609,6 +687,8 @@ async function boot(plan, poolSize) {
     else if (k === 'res') {
       game.fixedScale = v !== 'auto';
       if (game.fixedScale) renderer.scale = Number(v);
+    } else if (k === 'keep') {
+      useStore(v === 'yes');
     } else if (k === 'gfx') {
       title.confirm({ title: 'Restart?', text: 'The graphics setting takes hold when the game restarts. Where you are is kept for Continue.', yes: 'Restart Now', no: 'Later' })
         .then(async (yes) => { if (yes) { await autosave(); title.reload(); } });
@@ -619,7 +699,7 @@ async function boot(plan, poolSize) {
   applySetting('res', settings.res);
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
-    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open) return;
+    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open || game.party?.open) return;
     if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
@@ -720,6 +800,7 @@ async function boot(plan, poolSize) {
     : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> equip spells &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> journal';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
+  setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`, true);
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
   if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
 }
@@ -829,7 +910,7 @@ class Hud {
 ${this.gpu.info.vendor || ''} ${this.gpu.info.architecture || ''}  tier ${k.name}
 render ${stats.W}x${stats.H}  scale ${stats.scale.toFixed(2)}  msaa ${stats.msaa}  effects -${stats.demoted}  refresh ${stats.vsync.toFixed(1)} ms
 threads ${this.plan.cores} logical, ${this.poolSize + 2} used, shared ${this.isolated ? 'yes' : 'no'}
-sim ${k.sim} Hz  planner rollouts ${(snap[H.ROLLOUTS] / 1000).toFixed(0)}k
+sim ${stats.sim ? `${stats.sim.ms.toFixed(1)} ms a tick, worst ${stats.sim.worst.toFixed(1)}, ${stats.sim.rate.toFixed(0)} a second${stats.sim.paced ? ', by the frames' : ` (own clock, ${k.sim} Hz)`}` : `${k.sim} Hz`}${stats.sim?.town ? `  town ${stats.sim.town.ms.toFixed(1)} ms, ${stats.sim.town.rate.toFixed(0)} a second` : ''}  planner rollouts ${(snap[H.ROLLOUTS] / 1000).toFixed(0)}k
 knight ${STATE_NAMES[snap[co + C.STATE]]}  tactic ${TACTICS[snap[H.TACTIC]]}
 hp ${snap[co + C.HP].toFixed(0)}  stam ${snap[co + C.STAM].toFixed(0)}  gashes ${snap[co + C.GASH_COUNT]}  bleeds ${bleeds}`;
     }
@@ -870,6 +951,11 @@ class GameView {
     // Frames queued beyond this are only input lag. A phone's governor, and what it goes by.
     this.maxInFlight = gpu.tier.lean ? 2 : 3;
     this.vsyncMs = 1000 / 60; this.rafLast = 0; this.rafGaps = new Float32Array(45); this.rafN = 0; this.rafSkip = 0;
+    // The sim's ticks go by the screen's frames (pace), except on a phone, which keeps the sim's own clock (it takes every other
+    // frame of a fast screen, and its ticks cost more). ?unpaced, or view.unpaced = true, for the old way, to compare.
+    this.unpaced = gpu.mobile || params.has('unpaced');
+    this.paceAt = -1; this.snapSlot = 0; this.snapUs = 0; this.pacedSnap = false;
+    this.simT = 0; this.simStats = { ms: 0, worst: 0, rate: 0, paced: false };
     if (gpu.mobile || gpu.tier.lean) this.governor = new Governor({ apply: (s) => { renderer.scale = s; }, demote: () => renderer.demote() });
     this.busySum = 0; this.busyN = 0; this.timed = []; this.benched = false;
     renderer.onBusy = (ms) => {
@@ -892,6 +978,29 @@ class GameView {
     this.governor.seed(typical);
     r.resize();
     this.benched = true;
+  }
+
+  // Asks the sim (src/sim/sim.worker.js, its loop) for this frame's time: how long since the last frame began, up to a tenth of a
+  // second. After a gap longer than a quarter of one (a hidden tab), the sim has kept its own time, so nothing's asked for it.
+  pace(now) {
+    if (!this.buffer || this.unpaced) { this.paceAt = -1; return; }
+    const ctrl = this.shared.ctrl, ms = now - this.paceAt;
+    if (this.paceAt >= 0 && ms > 0 && ms < 250) {
+      Atomics.store(ctrl, CTRL.PACE_US, (Atomics.load(ctrl, CTRL.PACE_US) + Math.round(Math.min(ms, 100) * 1000)) | 0);
+      Atomics.add(ctrl, CTRL.PACE_SEQ, 1);
+      Atomics.notify(ctrl, CTRL.PACE_SEQ);
+    }
+    this.paceAt = now;
+  }
+
+  // What the sim's ticks have cost, each second, for the Frame rate readout.
+  watchSim(dt) {
+    if (!this.buffer || (this.simT += dt) < 1) return;
+    const c = this.shared.ctrl, n = Atomics.exchange(c, CTRL.STEPS, 0), us = Atomics.exchange(c, CTRL.STEP_US, 0), worst = Atomics.exchange(c, CTRL.STEP_MAX, 0);
+    Object.assign(this.simStats, { ms: n ? us / n / 1000 : 0, worst: worst / 1000, rate: n / this.simT, paced: !this.unpaced && this.paceAt >= 0 });
+    const town = this.town?.takeCost();
+    this.simStats.town = town ? { ms: town.ms, rate: town.n / this.simT } : null;
+    this.simT = 0;
   }
 
   // What the display refreshes at, from the time between callbacks.
@@ -989,6 +1098,7 @@ class GameView {
         latest = Atomics.load(ctrl, CTRL.LATEST);
         Atomics.store(ctrl, CTRL.READING, latest);
       } while (Atomics.load(ctrl, CTRL.LATEST) !== latest);
+      this.snapSlot = latest;
       return snaps[latest];
     }
     return this.getNonSharedSnap();
@@ -1006,13 +1116,20 @@ class GameView {
       // A phone on a 120 Hz screen takes every other refresh: a steady 60 is as smooth to the eye, and the battery and the
       // heat are what would slow it down later.
       if (this.gpu.mobile && this.vsyncMs < 10 && (this.rafSkip++ & 1)) return;
+      // Paced (see pace): this frame draws the world the last frame asked for, and then asks for its own frame's time. Taken
+      // before asking, so a quick tick can never land in it: every frame is the same one step on from the last.
+      renderDiagnostics.stage = 'snapshot';
+      const paced = this.buffer && !this.unpaced ? this.currentSnap() : null;
+      if (paced) this.snapUs = Atomics.load(this.shared.ctrl, CTRL.SNAP_US + this.snapSlot);
+      this.pace(now);
+      this.pacedSnap = !!paced;
       // Don't get ahead of the GPU: what's on its way to the screen is already out of date.
       // (Unless a browser has stopped saying when the GPU's done, which mustn't freeze the game.)
       if (this.renderer.inFlight >= (this.idle ? 1 : this.maxInFlight) && performance.now() - this.renderer.lastSent < 1000) return;
       const dt = Math.min((now - this.last) / 1000, 0.1);
       this.last = now;
-      renderDiagnostics.stage = 'snapshot';
-      const snap = this.currentSnap();
+      this.watchSim(dt);
+      const snap = paced || this.currentSnap();
       if (!snap) return;
       // Under the title the village isn't drawn: a few frames, so the pipelines are built (and on a phone, timed), then nothing.
       if (this.idle) { if (this.idleFrames > (this.governor && !this.benched ? 40 : 3)) return; this.idleFrames = (this.idleFrames || 0) + 1; } else this.idleFrames = 0;
@@ -1031,6 +1148,11 @@ class GameView {
       this.questTrail?.frame(dt, snap);
       renderDiagnostics.stage = 'renderer';
       this.renderer.frame(c, snap, this.sway, dt);
+      // Who's drawn, body or shadow: the world poses them every tick (if near) and everyone else less often.
+      { const seen = this.shared.input, rc = this.renderer.chars; for (let i = 0; i < MAX_CHARS; i++) seen[INPUT.SEEN + i] = rc[i]?.casts ? 1 : 0; }
+      // The townsfolk are paced the same way, but asked once the renderer has drawn them: their next poses have until the next
+      // frame to be ready.
+      if (!this.unpaced) this.town?.pace(now);
       renderDiagnostics.presented();
       renderDiagnostics.stage = 'HUD';
       this.drawOpening?.(snap, c);
@@ -1040,11 +1162,13 @@ class GameView {
       if (!this.idle) this.govern(dt);
       const r = this.renderer, hs = this.hudStats;
       hs.gpuMs = r.stats.gpuMs; hs.busyMs = r.stats.busyMs; hs.W = r.W; hs.H = r.H; hs.scale = r.scale; hs.msaa = r.msaa; hs.demoted = r.demoted || 0; hs.vsync = this.vsyncMs;
+      hs.sim = this.simStats;
       this.hud.update(dt, snap, hs);
       this.clock.set(r.hour);
       if (this.heroTalk) {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
         this.heroTalk.update(dt, snap, r.hour, !this.idle && (!this.input.menu || !!this.heroTalk.open));
+        this.party?.update(dt, snap);
         // The sim keeps the heroes' day by this clock.
         if ((this.hourT = (this.hourT ?? 0) - dt) <= 0) { this.hourT = 2; this.sim.postMessage({ type: 'hour', hour: r.hour }); }
       }
@@ -1126,9 +1250,12 @@ class GameView {
     const bobA = clamp(sp / 6, 0, 1);
     const bobY = Math.sin(this.bobT * 2) * 0.03 * bobA;
     const bobX = Math.cos(this.bobT) * 0.018 * bobA;
-    // Extrapolate from the newest sim state, so high refresh rates stay smooth.
+    // The eye is put where the player is now, on from where the snapshot has them: by the frames' time since it (paced: a frame,
+    // the same every frame), or else by the clock since it was written.
     let age = 0;
-    if (this.buffer) {
+    if (this.buffer && this.pacedSnap && this.snapUs) {
+      age = clamp(((Atomics.load(this.shared.ctrl, CTRL.PACE_US) - this.snapUs) | 0) / 1e6, 0, 0.04);
+    } else if (this.buffer) {
       const now = (performance.timeOrigin + performance.now()) % 2147483647;
       age = clamp((now - Atomics.load(this.shared.ctrl, CTRL.PUB_MS)) / 1000, 0, 0.02);
     }
@@ -1245,6 +1372,7 @@ class GameView {
     switch (type) {
       case EV.SWING: break;
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
+      case EV.DELVE: this.party?.onDelve(a, b, c, d); break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);
@@ -1422,7 +1550,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : 'FOE'); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
@@ -1508,6 +1636,12 @@ class GameView {
         // (undead: where every zombie and caster is and what it's doing, and the other monsters' places.)
         return new Promise((resolve) => { const on = (e) => { if (e.data.type === 'heroState' && e.data.id === id) { sim.removeEventListener('message', on); if (e.data.undead) { resolve({ undead: e.data.undead, others: e.data.others }); return; } window.bmHeroFx = { zones: e.data.zones, shots: e.data.shots, dots: e.data.dots }; resolve(e.data.heroes); } }; sim.addEventListener('message', on); });
       },
+      // Your party and the Hollowfang Warrens, for tests: hire(n) takes the first n offered (a tank and a healer first);
+      // warrens('enter' | 'boss', { n }) goes straight in, or to the nth boss's door; warrens('hurt', { n, frac }).
+      hire: (n = 4) => { const P = view.party; if (!P) return []; P.makeOffers(); const by = (r) => P.offers.filter((o) => (o.cls === 'lancer') === (r === 'tank') && (o.cls === 'paladin') === (r === 'heal'));
+        for (const o of [...by('tank').slice(0, 1), ...by('heal').slice(0, 1), ...by('dps')].slice(0, n)) P.hire(o, true); return P.members; },
+      warrens: (cmd = 'enter', o = {}) => sim.postMessage({ type: 'warrensDebug', cmd, ...o }),
+      warrensState: () => view.party?.warrens,
       heroSay: (slot, trig) => view.heroTalk?.say(view.heroTalk.heroes[slot], trig, null, {}),
       shot: (name) => new Promise((resolve) => {
         view.onFrame = () => {

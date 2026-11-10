@@ -13,7 +13,11 @@ export const MAX_BLEEDS = 8;
 export const GASH_FLOATS = 16;
 
 // Control words (Int32Array)
-export const CTRL = { LATEST: 0, READING: 1, TICK: 2, EV_HEAD: 3, INPUT_SEQ: 4, PLAN_RUN: 5, PLAN_SEQ: 6, PUB_MS: 7, SIZE: 16 };
+// PACE_US, PACE_SEQ: the time the render thread's frames have asked the sim for (microseconds, a running count that wraps), and a
+// count of the asks to wake on. SNAP_US: for each of the three snapshot slots, the PACE_US the world had reached when it was written.
+// STEP_US, STEPS, STEP_MAX: what the sim's ticks have cost since the render thread last took the totals (microseconds), for the
+// Frame rate readout. (src/sim/sim.worker.js's loop, GameView.pace in src/main.js.)
+export const CTRL = { LATEST: 0, READING: 1, TICK: 2, EV_HEAD: 3, INPUT_SEQ: 4, PLAN_RUN: 5, PLAN_SEQ: 6, PUB_MS: 7, PACE_US: 8, PACE_SEQ: 9, SNAP_US: 10, STEP_US: 13, STEPS: 14, STEP_MAX: 15, SIZE: 16 };
 
 // Input block (Float32Array)
 // INPUT.ABIL's bits: a charm's gift (double jump, sure foot), or the skull's cheats (src/ui/skull.js).
@@ -37,7 +41,12 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // What the charms carried and the skull's cheats allow, a bit each: ABIL in src/sim/player.js.
   ABIL: 42,
   // The shield's special ability and its strength: SHIELD_POWERS in src/items/items.js. 0 with a skull in hand.
-  SH_POWER: 44, SH_VALUE: 45, SIZE: 46 };
+  SH_POWER: 44, SH_VALUE: 45,
+  // How open the witch's mouth is as she speaks in the opening, 0 to 1, from her voice (src/ui/opening-sound.js mouth).
+  MOUTH: 46,
+  // For each character slot, 1 when the renderer drew it or its shadow last frame (renderer.chars[i].casts, written after each frame
+  // by GameView in src/main.js): the sim poses those often and the rest seldom (Sim.poseGap in src/sim/sim.worker.js).
+  SEEN: 47, SIZE: 47 + MAX_CHARS };
 
 // Snapshot header (float offsets)
 export const H = {
@@ -117,6 +126,8 @@ export const EV = {
   HERO: 51, HERO_LEVEL: 52, HERO_DUEL: 53,
   // A spell laid on the ground away from you (elem, which spell, x, y, z, how long): for its sound to be heard there (src/spellsound.js zone).
   SPELL_ZONE: 54,
+  // The Hollowfang Warrens (src/sim/dungeon.js): code (DELVE in src/core/dungeon.js), and what goes with it.
+  DELVE: 55,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.

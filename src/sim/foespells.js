@@ -312,8 +312,8 @@ export const FOE = {
       sim.event(EV.SPELL_LOOSE, ARCANE, 0, b.x, h[1], b.z);
       work(sim, (dt) => {
         t += dt;
-        sim.world.updateField(p.x, p.z, sim.time, 0);
-        sim.world.flow(flow, b.x, b.z, p.x, p.z, 0);
+        sim.world.updateField(p.x, p.z, sim.time, p === sim.player ? 0 : p);
+        sim.world.flow(flow, b.x, b.z, p.x, p.z, p === sim.player ? 0 : p);
         const L = Math.hypot(flow[0], flow[1]) || 1, k2 = 1 - Math.exp(-5 * dt);
         ax += (flow[0] / L - ax) * k2; az += (flow[1] / L - az) * k2;
         b.x += ax * 7.5 * dt; b.z += az * 7.5 * dt;

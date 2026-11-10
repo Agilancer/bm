@@ -77,6 +77,20 @@ export class VillageWalker {
     this.rig.rootQ = new Float32Array(4);
     this.rig.rootT = new Float32Array(3);
     this.walkTravel = travel;
+    // Her jaw, if she has one (the witch: tools/lisandra/jaw_rig.py), turned down as far as she's speaking. mouth, 0 to 1,
+    // is set from her voice each tick (src/ui/opening-sound.js mouth); no clip moves the jaw, so it's put on after the
+    // story's own pose.
+    const jaw = this.rig.extras.jaw, jawJoint = jaw && this.rig.index.get(jaw.joint);
+    this.mouth = 0;
+    if (jawJoint !== undefined) {
+      const story = this.rig.poseModifier, turn = new Float32Array(4), [ax, ay, az] = jaw.axis, k = jawJoint * 4;
+      this.rig.poseModifier = (rot, tr) => {
+        story?.(rot, tr);
+        if (!(this.mouth > 1e-3)) return;
+        quatAxisAngle(turn, 0, ax, ay, az, Math.min(this.mouth, 1) * jaw.open);
+        quatMul(rot, k, rot, k, turn, 0);
+      };
+    }
     this.reset();
   }
 
@@ -527,7 +541,7 @@ export class VillageWalker {
   write(snap, offset) {
     const rig = this.rig;
     quatYaw(rig.rootQ, 0, this.yaw);
-    rig.rootT.set([this.x, this.y, this.z]);
+    rig.rootT[0] = this.x; rig.rootT[1] = this.y; rig.rootT[2] = this.z;
     rig.solve(rig.clips[this.clip], this.time, this.fade, snap, offset + C_PALETTE);
     if (this.cloth) {
       // Put somewhere new (a cut, a teleport), the cloth starts hanging still rather than flying after her.
@@ -561,6 +575,8 @@ export class VillageWalker {
     // And her right hand's place (where the story puts it: src/sim/opening.js).
     const right = this.rightHand ??= rig.index.get('mixamorig:RightHand');
     if (right !== undefined) for (let a = 0; a < 3; a++) snap[offset + C_PROPS + 12 + a] = rig.wt[right * 3 + a];
+    // How open her mouth is, for the dark between her lips (src/gfx/materials.js TRUE_SWAPS).
+    snap[offset + C_PROPS + 15] = this.mouth;
     snap[offset + C.ACTIVE] = 1;
     snap[offset + C.X] = this.x;
     snap[offset + C.Y] = this.y;

@@ -11,13 +11,18 @@ export const FOLK_MAX = 48;
 // Palette joints a person can have: their own (55 at most in the owner's models) and the four the skirt borrows.
 export const FOLK_JOINTS = 72;
 
-export const FCTRL = { LATEST: 0, READING: 1, TICK: 2, READY: 3, SIZE: 8 };
+// PACE_US, PACE_SEQ: the time the render thread's frames have asked the town for (microseconds, a running count that wraps), and a
+// count of the asks to wake on (TownClient.pace, and the loop in folk.worker.js). COST_US, FRAMES: what the town's frames have cost
+// since the render thread last took the totals, for the Frame rate readout.
+export const FCTRL = { LATEST: 0, READING: 1, TICK: 2, READY: 3, PACE_US: 4, PACE_SEQ: 5, COST_US: 6, FRAMES: 7, SIZE: 8 };
 
 // main -> worker, written every frame by the main thread.
 export const FIN = {
   HOUR: 0, PX: 1, PY: 2, PZ: 3, YAW: 4, PAUSED: 5, CAST: 6, TALKING: 7, CAMX: 8, CAMY: 9, CAMZ: 10, DAY: 11, IDLE: 12,
   // Up to 8 dangers the town should run from (anything hunting within reach of town): x, z pairs, and how many.
-  DANGER_N: 13, DANGER: 14, SIZE: 64,
+  DANGER_N: 13, DANGER: 14,
+  // Per person (by body), 1 when the renderer drew them or their shadow last frame (src/gfx/folk.js cull): they're posed more often.
+  SEEN: 32, SIZE: 80,
 };
 
 // Per person, in a slot.

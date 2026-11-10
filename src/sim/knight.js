@@ -1,5 +1,6 @@
 // A knight on the UAL skeleton: layered animation, plate hits and wounds, and the brain.
-import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, C_PROPS, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH, TACTICS } from '../core/layout.js';
+import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, C_PROPS, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH, PROPS_PER_CHAR, TACTICS } from '../core/layout.js';
+import { carryFrame, carryMat4, carryPalette } from '../core/carry.js';
 import { clamp, damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, smoothstep, wrapAngle } from '../core/math.js';
 import { inTown } from '../core/town.js';
 import { Pose, solveFK, writePalette } from './anim.js';
@@ -396,6 +397,8 @@ export class Knight {
     this.nod.fill(0);
     this.nod[J.head] = this.lookPitch;
     solveFK(pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
+    // (Where the pose was made: write carries it on to wherever he's got to since. See src/core/carry.js.)
+    this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw; this.poseVer = (this.poseVer || 0) + 1;
     {
       // How far the shield arm hangs, from guard (0) to at ease (1), judged from his chest so a stoop isn't a hang.
       const d = hangV, a = this.foreHang, g = this.foreGuard;
@@ -514,16 +517,17 @@ export class Knight {
   plateTransforms(snap, cOff, tick) {
     if (this.invTick === tick) return;
     this.invTick = tick;
-    const pal = cOff + C_PALETTE;
-    this.rig.pieces.forEach((p, i) => {
-      const iv = this.inv[i];
+    const pal = cOff + C_PALETTE, inv = this.inv;
+    // Each plate's joints and weights flat, [j, w, j, w, ...], worked out once for the rig.
+    const jws = this.rig.plateJW || (this.rig.plateJW = this.rig.pieces.map((p) => p.joints.flat()));
+    for (let i = 0; i < jws.length; i++) {
+      const jw = jws[i], iv = inv[i];
       let qx = 0, qy = 0, qz = 0, qw = 0, dx = 0, dy = 0, dz = 0, dw = 0;
-      let sign0 = null;
-      for (const [j, w] of p.joints) {
-        const o = pal + j * 8;
-        let s = w;
-        if (sign0 === null) sign0 = o;
-        else if (snap[o] * snap[sign0] + snap[o + 1] * snap[sign0 + 1] + snap[o + 2] * snap[sign0 + 2] + snap[o + 3] * snap[sign0 + 3] < 0) s = -w;
+      const sign0 = pal + jw[0] * 8;
+      for (let n = 0; n < jw.length; n += 2) {
+        const o = pal + jw[n] * 8;
+        let s = jw[n + 1];
+        if (n && snap[o] * snap[sign0] + snap[o + 1] * snap[sign0 + 1] + snap[o + 2] * snap[sign0 + 2] + snap[o + 3] * snap[sign0 + 3] < 0) s = -s;
         qx += snap[o] * s; qy += snap[o + 1] * s; qz += snap[o + 2] * s; qw += snap[o + 3] * s;
         dx += snap[o + 4] * s; dy += snap[o + 5] * s; dz += snap[o + 6] * s; dw += snap[o + 7] * s;
       }
@@ -535,7 +539,7 @@ export class Knight {
       iv.t[2] = 2 * (-dw * qz - dx * qy + dy * qx + dz * qw);
       iv.q[0] = qx; iv.q[1] = qy; iv.q[2] = qz; iv.q[3] = qw;
       iv.r[0] = -qx; iv.r[1] = -qy; iv.r[2] = -qz; iv.r[3] = qw;
-    });
+    }
   }
 
   // Nearest plate along a world ray. Returns the bind-space point and normal.
@@ -646,7 +650,7 @@ export class Knight {
   }
 
   goto(dt, sim, tx, tz, speed, face) {
-    const slot = tx === sim.player.x && tz === sim.player.z ? 0 : 1 + this.id;
+    const slot = tx === sim.player.x && tz === sim.player.z ? 0 : `k${this.id}`;
     sim.world.updateField(tx, tz, sim.time, slot);
     sim.world.flow(flowDir, this.x, this.z, tx, tz, slot);
     this.steer(dt, flowDir[0] * speed, flowDir[1] * speed, 7, face);
@@ -770,7 +774,7 @@ export class Knight {
       this.vx = damp(this.vx, 0, 6, dt); this.vz = damp(this.vz, 0, 6, dt); this.speed = 0;
       this.deadT += dt;
       this.move(dt, sim);
-      this.animate(dt, sim);
+      this.animateDue(dt, sim);
       return;
     }
     // Heads turn toward a nearby player, in peace or war.
@@ -786,7 +790,17 @@ export class Knight {
     this.combat = damp(this.combat, this.combatTarget, 5, dt);
     this.shieldUp = damp(this.shieldUp, this.shieldTarget, 8, dt);
     this.move(dt, sim);
-    this.animate(dt, sim);
+    this.animateDue(dt, sim);
+  }
+
+  // A full pose when one's due (Sim.poseGap), with all the time since the last; write carries that one along in between. Every
+  // tick in a fight or a move of his own.
+  animateDue(dt, sim) {
+    this.poseT = (this.poseT || 0) + dt;
+    const gap = this.combat > 0.05 || this.action || !sim.poseGap ? 0 : sim.poseGap(this, this.lodSlot);
+    if (this.posedYaw !== undefined && this.poseT < gap - 1e-6) return;
+    this.animate(this.poseT, sim);
+    this.poseT = 0;
   }
 
   applyAction(dt, sim, p) {
@@ -1001,9 +1015,10 @@ export class Knight {
     }
     if ((!this.hostile && !(p instanceof Knight)) || p.dead || this.letGo(p) || this.outOfReach(p)) return;
     // Sight is a cone. A sprint close by is heard, and anything at arm's length is felt.
-    const sees = sim.world.sees(this.x, this.y + 1.7, this.z, p.x, p.y + 1.6, p.z);
+    // (The ray only when it could matter: in the cone and in range.)
     const inCone = Math.abs(wrapAngle(toPlayer - this.faceYaw)) < 1.9;
-    if ((sees && inCone && dist < (this.opts.hostile ? 18 : 22)) || (dist < 9 && p.sprinting) || dist < 5) {
+    const sees = inCone && dist < (this.opts.hostile ? 18 : 22) && sim.world.sees(this.x, this.y + 1.7, this.z, p.x, p.y + 1.6, p.z);
+    if (sees || (dist < 9 && p.sprinting) || dist < 5) {
       this.seen = true;
       if (this.action) this.stopAction(0.2);
       sim.event(EV.ALERT, this.x, this.y + 1.5, this.z);
@@ -1513,7 +1528,8 @@ export class Knight {
     this.attack = null;
     this.iframes = false;
     this.play('Death01', 1, 'full', 0.15);
-    sim.slowMo(1.3);
+    // The slow fall of a knight the player has just cut down close by; not the whole world slowed for any knight anywhere.
+    if (sim.time - (this.playerHitT ?? -1e9) < 1 && sim.player && Math.hypot(sim.player.x - this.x, sim.player.z - this.z) < 25) sim.slowMo(1.3);
     this.setState(S.DEAD);
     this.combatTarget = 0;
     this.shieldTarget = 0;
@@ -1536,9 +1552,23 @@ export class Knight {
     snap[cOff + C.ARMOR] = this.armor;
     snap[cOff + C.LANDED] = this.stats.landed;
     snap[cOff + C.SPEED] = this.speed;
-    writePalette(this.pose, snap, cOff + C_PALETTE);
-    this.writeProps(snap, cOff + C_PROPS);
-    this.plateTransforms(snap, cOff, sim.tick);
+    // The palette and what's in the hands are worked out once for each pose (they cost about what the pose did) and kept. Moved
+    // since the pose was made (posed only now and then far off, or shouldered aside after), they're carried along with him, so he
+    // glides rather than standing and jumping (src/core/carry.js).
+    const n = this.rig.count, fresh = !this.palKept || this.keptVer !== this.poseVer;
+    const pal = this.palKept || (this.palKept = new Float32Array(n * 8)), props = this.propsKept || (this.propsKept = new Float32Array(PROPS_PER_CHAR * 16));
+    if (fresh) { this.keptVer = this.poseVer; writePalette(this.pose, pal, 0); this.writeProps(props, 0); }
+    const c = this.posedYaw !== undefined && carryFrame(bodyCarry, this.posedYaw, this.posedX, this.posedY, this.posedZ, this.yaw, this.x, this.y, this.z) ? bodyCarry : null;
+    if (c) {
+      carryPalette(pal, 0, snap, cOff + C_PALETTE, n, c);
+      for (let o = 0; o < PROPS_PER_CHAR * 16; o += 16) {
+        if (props[o + 15] !== 0) carryMat4(props, o, snap, cOff + C_PROPS + o, c); else snap.set(props.subarray(o, o + 16), cOff + C_PROPS + o);
+      }
+    } else { snap.set(pal, cOff + C_PALETTE); snap.set(props, cOff + C_PROPS); }
+    // The plates' frames, for where a blow lands and where the blood runs from: kept up whenever a blow could come (near the player,
+    // in a fight) or he's bleeding. Otherwise worked out when something asks (plateTransforms, from the snapshot).
+    if (fresh || c && (this.bleeds.length || this.combat > 0.05 || this.foe || !sim.poseGap || !sim.poseGap(this, this.lodSlot))) this.plateTransforms(snap, cOff, sim.tick);
+    else if (c) this.invTick = -1;
     snap[cOff + C.N_BLEEDS] = this.bleeds.length;
     this.bleeds.forEach((b, i) => {
       const o = cOff + C_BLEEDS + i * 8;
@@ -1554,6 +1584,7 @@ export class Knight {
 }
 
 // Cross-module helpers.
+const bodyCarry = new Float32Array(8);
 const tv = new Float32Array(3), lo = new Float32Array(3), ld = new Float32Array(3), hn = new Float32Array(3), tmp3 = new Float32Array(3);
 // The shield arm's turn at ease, in radians about each joint's own length: upper arm, forearm.
 const CARRY_UPPER = -0.15, CARRY_FORE = -0.75;

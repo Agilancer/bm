@@ -9,10 +9,8 @@ Tripo's viewer is three.js. It lights a model with a bright studio environment (
 of it), and reads the textures by the glTF rules. The game drew her with the knights' armour shader (`ARMOR` in
 `src/gfx/materials.js`), which differs in four ways:
 
-1. **Her normal map was read upside-down.** glTF's normal maps have green pointing up the picture. The engine builds
-   its tangent frame from the UVs (`perturb` in `src/gfx/shaders.js`), and v runs down the picture, so green comes out
-   reversed. three.js turns green over for exactly this case; the engine didn't. Every fold, lace and stitch was lit
-   from the wrong side, so the surface detail looked muddy.
+1. **Her normal map was read the wrong way round.** (Corrected 2026-11-09, for every body: see "Normal maps" below.
+   The first fix turned green over here, which was the half that had been right.)
 2. **She was shaded as blackened steel.** Her metal/roughness texture marks leather, hair and cloth as partly metal:
    the median is 0.29, and 14% of texels are above 0.5. ARMOR treats dark, partly-metal paint as blackened plate, so it
    greyed her colours toward neutral, darkened metal areas' paint and raised their roughness.
@@ -25,9 +23,8 @@ of it), and reads the textures by the glTF rules. The game drew her with the kni
 
 ## Model-true shading (Lisandra only)
 
-`ARMOR_TRUE` in `src/gfx/materials.js` is `ARMOR` with three swaps (`TRUE_SWAPS`) and one added function, `shadeTrue`:
+`ARMOR_TRUE` in `src/gfx/materials.js` is `ARMOR` with two swaps (`TRUE_SWAPS`) and one added function, `shadeTrue`:
 
-- the normal map's green is turned over (glTF convention);
 - the knight's-steel block is removed, so paint, roughness and metal are used as the texture has them;
 - the sky's reflection uses an analytic DFG term (Karis 2014), with multiple-scattering energy given back
   (Fdez-Agüera 2019). The diffuse keeps only what the reflection leaves, and the sky keeps its own colour.
@@ -44,14 +41,34 @@ To give another model the same treatment, set `trueLook = true` on its body in `
 model looks, so only do it with the owner's say-so. The other Tripo bodies (heroes, undead, field creatures) have the
 same normal-map problem.
 
+## The other Tessariels: their own paint, not a knight's steel
+
+The heroes are drawn with `ARMOR`, but their metal and roughness were guessed from their paint when they were built
+(`derive_pbr` in `tools/armor/rig_armor.py`): faces, hair, cloth and leather came out as polished metal, and `ARMOR`'s
+knight's steel then turned their dark paint into blackened plate, so every hero who wasn't a lancer read as a dark chrome
+statue. Each hero body sets `heroLook` in `renderer.js` (`-1`, or `-2` for the classes in plate, lancers and paladins), sent
+as `info.z`. In `ARMOR`, `heroLook` keeps metal only where the paint is steel-grey or gilt (on the plate classes, anywhere
+but skin and the darkest cloth), turns skin matte, skips the dark-paint block, and draws the knights' mail tubes that
+`rig_armor.py` adds to every body as dark cloth. A rebuild with Tripo's own metal and roughness maps (`compose` in
+`tools/heroes/build.py`) would do this properly; this does it without one.
+
 ## The witch's gown: no cloth bones, no ripple
 
 On the owner's word ("so her cloth doesn't dance at the beginning when she talks to you"):
 
-- `assets/game/lisandra/witch.glb` is back to the file from commit d6a0f3d (2026-11-06). That is the owner's
-  `LISANDRA - UGLY OLD WITCH.glb` mesh, skin weights, bind pose and textures, byte for byte. It has the same 175 clips
-  (checked against the cloth version, which only added cloth-bone channels) and the `_SKIRT` mask. It has 65 joints
-  and no `cloth_*` bones.
+- `assets/game/lisandra/witch.glb` is the owner's new witch (`LISANDRA - UGLY OLD WITCH NEW.glb`, 2026-11-09): her
+  mesh, skin weights, bind pose and textures byte for byte, with her own `walk` and `run` (Tripo named them `walk.001`
+  and `run.001`) as the walk and run the game plays. The other 174 clips came across from the old witch with
+  `tools/lisandra/transfer_clips.py` (the old walk kept as `walk_gown`, 176 clips in all), and the `_SKIRT` mask from
+  `tools/lisandra_skirt.py witch`, and a jaw from `tools/lisandra/jaw_rig.py` (below). It has 66 joints (Tripo's 65 and
+  `Jaw`) and no `cloth_*` bones. Rebuild:
+
+      python tools/lisandra/transfer_clips.py <old witch.glb> "LISANDRA - UGLY OLD WITCH NEW.glb" clips.glb
+      python tools/lisandra_skirt.py witch clips.glb skirt.glb
+      python tools/lisandra/jaw_rig.py skirt.glb assets/game/lisandra/witch.glb
+
+  (The old witch's clips are in git: `git show f7ad16b:assets/game/lisandra/witch.glb`.) She has fitted sleeves, so her
+  arms are turned out from the gown by 0.1 rad (`armClearance`), not the old ragged sleeves' 0.19.
 - Her form in `src/core/lisandra.js` has no `cloth` entry, so `village-walker.js` makes no `Cloth`. `src/sim/cloth.js`
   and `tools/lisandra/cloth_rig.py` are kept but unused.
 - The skinning shader's 9 mm skirt ripple is turned off for her alone. `renderer.js` writes `skinParams[7] = 1` for
@@ -59,6 +76,30 @@ On the owner's word ("so her cloth doesn't dance at the beginning when she talks
   the arms. In `SKIN` the ripple is multiplied by `(1.0 - P.wind.w)`, which is exactly 1 for everyone else, so the
   townsfolk's skirts come out the same to the bit.
 - The `_SKIRT` leg-clearance push stays. It only moves the gown when a leg would cut through it, as when she walks.
+
+## The witch's mouth
+
+She speaks in the opening, so her jaw moves with her voice. Her face is the owner's sculpt with the lips painted on: no
+inside to the mouth, and none is added (her mesh, weights and textures are as supplied, but for the jaw's share below).
+
+- `tools/lisandra/jaw_rig.py` adds one bone, `Jaw`, the last joint, a child of her head at the hinge of the jaw, which no
+  clip moves. It takes everything below the painted line between her lips (measured off her texture), cut sharp
+  between the corners, with the cheeks and the skin under the chin going part of the way. Only weight her head held is
+  handed over, so her neck blends as before. The scene's extras carry `jaw: {joint, axis, open, lip}`: the axis she
+  opens about, the most she opens (0.12 rad, about a centimetre between her lips), and her lip line for the shader.
+- When the jaw turns down, the few triangles across the lip line stretch. Stretched, they would only show taller lips,
+  so `ARMOR_TRUE` darkens the part of them that's new: in bind space, a lens round the lip line as tall as the gap she's
+  opened, scaled by how much those triangles have grown (`MOUTH_WGSL` in `src/gfx/materials.js`, two more swaps in
+  `TRUE_SWAPS`). `renderer.js` writes `mouth` and `lip` after `info` in her uniforms (`CHAR_UBO`); for everyone else
+  `mouth` stays 0 and nothing changes.
+- Her voice drives it. `src/ui/opening-sound.js` measures each witch line said from her mouth (not the summons in your
+  head) as it starts: loudness every 10 ms over 30 ms, opening evenly from 30 dB under the line's loudest to 2 dB under
+  it, opening in 30 ms and shutting in 70 ms, read 40 ms ahead of the sound. `src/main.js` puts it in `INPUT.MOUTH`;
+  the worker hands it to her (`VillageWalker.mouth`), whose `poseModifier` turns the jaw after the story's pose, and
+  she writes it to her free prop slot (`C_PROPS + 15`) for the renderer.
+- Checked headless: the jaw and dark gap at four openings, close and at 1.3 m, and the opening's first 45 s of her
+  lines (shut between lines, about half open on average while she speaks). Not checked: a human watching it, the
+  phone, and her in town at night (her lines there are in your head, so her mouth stays shut).
 
 ## Shadow culling (all bodies, identical pictures)
 
@@ -198,11 +239,30 @@ What's left is mostly the browser's: putting a 3440×1440 frame on screen costs 
   only by the `(1.0 - P.wind.w)` factor, which is exactly 1 for everyone but Lisandra. The only new module is
   `ARMOR_TRUE`.
 - `tests/render-models.test.mjs`:
-  - takes the three swaps back out of `ARMOR_TRUE` and gets `ARMOR` character for character;
+  - takes the swaps (and the witch's mouth) back out of `ARMOR_TRUE` and gets `ARMOR` character for character;
   - checks that `ARMOR` has none of the new code;
   - checks the cascade test never drops a sphere that touches the square;
-  - checks the witch file has no cloth bones and still has 175 clips.
+  - checks the witch file has no cloth bones and has 176 clips, with her own walk and run, and her jaw: 66 joints,
+    `Jaw` last under her head, moved by no clip, and the lip line in the scene's extras.
 - All test files pass. Run each on its own: `node --test tests/<file>`.
 
 Still to do: a human look in the game. The cave and ledge shots with the new shading haven't been compared side by side
 with Tripo's viewer yet, and the phone (Mobile tier) is untested.
+
+## Normal maps
+
+Every normal map is read by `perturbD` in `src/gfx/shaders.js`, the glTF way: red along u, green up the picture (v runs
+down it). The tangent frame is built from screen derivatives (no tangents in the meshes), and it comes out scaled by the
+screen's handedness. WebGPU's window y runs down, so for a face toward the eye the raw frame points along -u and -v;
+`sign(det)` turns it right. Until 2026-11-09 red was read backwards on every model, so folds, seams and bumps were lit
+from the wrong side left to right; green happened to be right. Checked on a GPU with a camera-facing quad and a (1, .5)
+and a (.5, 1) texel. `tests/render-models.test.mjs` pins it.
+
+## Metal maps from the armour tool
+
+`tools/armor/rig_armor.py` makes a metal/roughness map from the paint alone (`derive_pbr`). Until 2026-11-09 it marked
+every non-cloth texel 96% metal unless it was dark saturated leather, so skin, hair, leather and coloured cloth on the
+43 heroes, Paladin Bellwright and the town knights were drawn as steel. ARMOR greys dark paint that's metal into
+blackened plate, and metal takes no diffuse light, so faces came out nearly black. `paint_metal` now keeps metal for
+greys (steel) and gold, and nothing else; `tools/armor/fix_metal.py` rewrote the shipped models' maps with it (the
+paint and normal maps untouched). Townsfolk have their own maps and were fine.

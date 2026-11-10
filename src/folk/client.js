@@ -5,7 +5,7 @@ import { inTown } from '../core/town.js';
 import { FCTRL, FIN, FOLK_BYTES, mapFolk } from './layout.js';
 
 export class TownClient {
-  constructor(base, isolated) {
+  constructor(base, isolated, lean = false) {
     this.shared = isolated;
     this.buffer = isolated ? new SharedArrayBuffer(FOLK_BYTES) : null;
     this.map = mapFolk(this.buffer || new ArrayBuffer(FOLK_BYTES));
@@ -19,7 +19,7 @@ export class TownClient {
     this.worker = new Worker(new URL('./folk.worker.js', import.meta.url), { type: 'module' });
     this.worker.onmessage = (e) => this.message(e.data);
     this.worker.onerror = (e) => console.error('town worker', e.message);
-    this.worker.postMessage({ type: 'boot', buffer: this.buffer, base });
+    this.worker.postMessage({ type: 'boot', buffer: this.buffer, base, lean });
   }
 
   on(fn) { this.listeners.push(fn); }
@@ -67,6 +67,26 @@ export class TownClient {
     }
     inb[FIN.DANGER_N] = n;
     if (!this.shared) this.worker.postMessage({ type: 'inbox', inbox: inb.slice() });
+  }
+
+  // Asks the town's thread for this frame's time (its loop in folk.worker.js), once the frame has drawn the town's people: they're
+  // then ready for the next. After a gap longer than a quarter of a second it has kept its own time, so nothing's asked for it.
+  pace(now) {
+    if (!this.shared) return;
+    const c = this.map.ctrl, ms = now - (this.paceAt ?? -1e9);
+    if (ms > 0 && ms < 250) {
+      Atomics.store(c, FCTRL.PACE_US, (Atomics.load(c, FCTRL.PACE_US) + Math.round(Math.min(ms, 100) * 1000)) | 0);
+      Atomics.add(c, FCTRL.PACE_SEQ, 1);
+      Atomics.notify(c, FCTRL.PACE_SEQ);
+    }
+    this.paceAt = now;
+  }
+
+  // What the town's frames have cost since last asked: { ms a frame, frames }.
+  takeCost() {
+    if (!this.shared) return null;
+    const c = this.map.ctrl, n = Atomics.exchange(c, FCTRL.FRAMES, 0), us = Atomics.exchange(c, FCTRL.COST_US, 0);
+    return { ms: n ? us / n / 1000 : 0, n };
   }
 
   talkTo(i) { this.worker.postMessage({ type: 'talk', i }); }

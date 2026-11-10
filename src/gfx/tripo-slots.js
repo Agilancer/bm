@@ -115,7 +115,7 @@ export class TripoSlots {
     let m = this.models.get(id);
     if (m) { this.models.delete(id); this.models.set(id, m); return m; }
     const r = this.r;
-    m = fetch(`${this.base}${TRIPO_BASE}${id}.glb`).then((res) => {
+    m = fetch(`${this.base}${TRIPO_BASE}${this.roster[id]?.src || id}.glb`).then((res) => {
       if (!res.ok) throw new Error(`${id}: ${res.status}`);
       return res.arrayBuffer();
     }).then(async (buf) => {

@@ -109,6 +109,14 @@ export class HeroTalk {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seed: prev?.seed, people: { ...(prev?.people || {}), ...people }, bonds: Object.fromEntries(this.bonds), log: this.log.slice(-40), gameH: this.gameH })); } catch { /* full */ }
   }
 
+  // A new name for one of them (hired of the Free Company: src/ui/party.js), over their head too.
+  renamed(slot) {
+    const h = this.heroes[slot];
+    if (!h?.tag) return;
+    h.tag.querySelector('b').textContent = h.p.name;
+    h.tag.querySelector('i').textContent = h.p.guild ? `<${h.p.guild}>` : '';
+  }
+
   // A pair's bond, kept by the pair: { b: 'friend' | 'rival' | 'respect', c: { [name]: what made it, from their side } }.
   bond(a, b) { const v = this.bonds.get(a < b ? `${a}|${b}` : `${b}|${a}`); return typeof v === 'string' ? { b: v, c: {} } : v; }
   setBond(h, o, b, ch, co) { this.bonds.set(h.p.name < o.p.name ? `${h.p.name}|${o.p.name}` : `${o.p.name}|${h.p.name}`, { b, c: { [h.p.name]: ch, [o.p.name]: co } }); }
@@ -197,8 +205,8 @@ export class HeroTalk {
     if (this.timers.length) { const due = this.timers.filter((x) => x.t <= this.t); this.timers = this.timers.filter((x) => x.t > this.t); for (const x of due) x.fn(); }
     this.snap = snap;
     const show = active && this.settings.tags !== 'off';
-    this.layer.style.display = active ? '' : 'none';
-    this.chat.style.display = active && this.settings.chatlog !== 'off' ? '' : 'none';
+    css(this.layer, 'display', active ? '' : 'none');
+    css(this.chat, 'display', active && this.settings.chatlog !== 'off' ? '' : 'none');
     const nk = snap[H.NCHARS] - this.heroes.length - LISANDRA_FORMS.length;
     this.firstHero = nk;
     const px = snap[H.PX], py = snap[H.PY], pz = snap[H.PZ];
@@ -219,14 +227,14 @@ export class HeroTalk {
       h.dist = Math.hypot(h.x - px, h.z - pz);
       h.bubbleT -= dt; h.markT = (h.markT || 0) - dt;
       const s = h.shown && h.dist < TAG_FAR ? toScreen(h.x, h.tagY || h.y + 2, h.z) : null;
-      if (!s) { h.tag.style.opacity = 0; h.bub.style.opacity = 0; h.mark.style.opacity = 0; return; }
+      if (!s) { css(h.tag, 'opacity', 0); css(h.bub, 'opacity', 0); css(h.mark, 'opacity', 0); return; }
       const k = Math.max(0.55, Math.min(1.05, 9 / s[2]));
       const fade = Math.min(1, (TAG_FAR - h.dist) / 10);
       if (show) {
-        h.tag.className = 'tag' + (h.dead ? ' dead' : '');
-        h.tag.querySelector('i').style.display = this.settings.tags === 'names' ? 'none' : '';
+        { const cn = 'tag' + (h.dead ? ' dead' : ''); if (h.tag.className !== cn) h.tag.className = cn; }
+        css(h.tagI || (h.tagI = h.tag.querySelector('i')), 'display', this.settings.tags === 'names' ? 'none' : '');
         const near = h.dist < 12;
-        const u = h.tag.querySelector('u');
+        const u = h.tagU || (h.tagU = h.tag.querySelector('u'));
         const line = near ? `Level ${h.p.level} ${CLASSES[h.p.cls].title}` : '';
         if (u.textContent !== line || !h.tagW) { u.textContent = line; h.tagW = h.tag.offsetWidth; h.tagH = h.tag.offsetHeight; }
       }
@@ -244,12 +252,12 @@ export class HeroTalk {
         const r = { x: s[0] - h.tagW * k / 2, y: s[1] - h.tagH * k, w: h.tagW * k, h: h.tagH * k };
         const under = !!hit(r, tags);
         tags.push(r);
-        h.tag.style.opacity = (h.fade * (under ? 0.28 : 1)).toFixed(2);
-        h.tag.style.transform = `translate(${s[0].toFixed(1)}px, ${s[1].toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`;
-      } else h.tag.style.opacity = 0;
+        css(h.tag, 'opacity', (h.fade * (under ? 0.28 : 1)).toFixed(2));
+        css(h.tag, 'transform', `translate(${s[0].toFixed(1)}px, ${s[1].toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`);
+      } else css(h.tag, 'opacity', 0);
       const lift = show ? 44 * k : 10;
       const talking = h.bubbleT > 0 && this.settings.bubbles !== 'off' && h.dist < 38;
-      h.bub.style.opacity = talking ? Math.min(1, h.bubbleT * 3, h.fade).toFixed(2) : 0;
+      css(h.bub, 'opacity', talking ? Math.min(1, h.bubbleT * 3, h.fade).toFixed(2) : 0);
       let top = s[1] - lift;
       if (talking) {
         const bk = Math.max(0.7, k), w = (h.bubW || 200) * bk, bh = (h.bubH || 40) * bk;
@@ -259,12 +267,12 @@ export class HeroTalk {
         r.y = Math.max(4, r.y);
         bubs.push(r);
         top = r.y + 3 + bh;
-        h.bub.style.transform = `translate(${(x + w / 2).toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${bk.toFixed(3)})`;
+        css(h.bub, 'transform', `translate(${(x + w / 2).toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${bk.toFixed(3)})`);
         top -= bh + 6;
       }
       const marked = h.markT > 0;
-      h.mark.style.opacity = marked ? Math.min(1, h.markT * 3, h.fade).toFixed(2) : 0;
-      if (marked) h.mark.style.transform = `translate(${s[0].toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`;
+      css(h.mark, 'opacity', marked ? Math.min(1, h.markT * 3, h.fade).toFixed(2) : 0);
+      if (marked) css(h.mark, 'transform', `translate(${s[0].toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`);
     }
     // The log fades line by line.
     // (Gone lines leave the page, so the log's backing goes with the last of them.)
@@ -913,11 +921,14 @@ export class HeroTalk {
       if (s < bs) { bs = s; best = h; }
     }
     if (!best) return null;
+    if (best.p.broker) return { h: best, busy: false, label: `Hire a party of ${best.p.name}` };
     return { h: best, busy: best.fighting, label: best.fighting ? `${best.p.name} is fighting` : `Talk to ${best.p.name}` };
   }
 
   // Stopped for a word: the sim holds them square on to the player (src/sim/hero.js talkTo), and they greet you.
   talkTo(h) {
+    // (A quartermaster of the Free Company opens his books instead: src/ui/party.js.)
+    if (h?.p.broker) { this.ui.broker?.(h); return; }
     if (!h || h.dead || h.fighting || this.open || !this.script) return;
     this.open = h; this.talkKeep = 30;
     h.greetT = this.t; h.walkOffer = 0;
@@ -950,6 +961,13 @@ export class HeroTalk {
   optsFor(h) {
     const asked = (this.asked ||= new Map()).get(h) || new Set();
     const o = (key, label, run) => ({ key, label, run, dim: asked.has(key) && key !== 'bye' && key !== 'walk' });
+    // One of your party: a word, or let them go back to the Company.
+    if (this.ui.isMember?.(h.p.slot)) return [
+      o('news', 'Ask how they fare', () => this.ask(h, 'news', ['player_request', 'gossip_player', 'town_idle'], this.huntCtx())),
+      o('woke', 'Ask where they woke', () => this.ask(h, 'woke', ['origin_story', 'player_rivalry'])),
+      o('dismiss', 'Let them go from your party', () => { this.closeTalk(false, ''); this.ui.dismiss?.(h.p.slot); }),
+      o('bye', 'Nod, and go', () => this.closeTalk(true)),
+    ];
     return [
       o('woke', 'Ask where they woke', () => this.ask(h, 'woke', ['origin_story', 'player_rivalry'])),
       o('claim', 'Ask if they are Tessariel', () => this.ask(h, 'claim', ['player_rivalry', 'tessariel_claim'])),
@@ -1048,4 +1066,6 @@ export class HeroTalk {
   }
 }
 
+// A style set only when it changes: a frame's worth of writes to the page is otherwise a frame's worth of style work.
+const css = (el, k, v) => { const c = el._css || (el._css = {}); v = String(v); if (c[k] !== v) { c[k] = v; el.style[k] = v; } };
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));

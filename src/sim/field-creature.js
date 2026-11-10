@@ -34,10 +34,11 @@ export class FieldCreature extends Beast {
   }
 
   update(dt, sim) {
-    if (dt <= 0) return;
+    if (dt <= 0) { if (this.hp <= 0 && !this.dead) this.die(sim); return; }
     const p = foeOf(this, sim), o = this.opts;
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.flinch = Math.max(0, this.flinch - dt);
+    this.flinchCd = (this.flinchCd || 0) - dt;
     this.fade = Math.min(1, this.fade + dt * 5);
     this.heart += dt;
     if (this.bleeds.length && !this.dead) this.hp -= dt * this.bleeds.reduce((sum, b) => sum + b.rate, 0) * 3;
@@ -82,9 +83,9 @@ export class FieldCreature extends Beast {
         this.state = 3; this.used = false; this.setClip('attack');
         sim.event(EV.GRUNT, this.x, this.y + 1.1, this.z, 2);
       } else {
-        sim.world.updateField(tx, tz, sim.time, this.id + 1);
+        sim.world.updateField(tx, tz, sim.time, `f${this.id}`);
         const flow = this.flow;
-        sim.world.flow(flow, this.x, this.z, tx, tz, this.id + 1);
+        sim.world.flow(flow, this.x, this.z, tx, tz, `f${this.id}`);
         speed = this.flinch > 0 ? 0 : this.aggro ? o.speed : 0.75;
         this.vx = flow[0] * speed; this.vz = flow[1] * speed;
         if (Math.hypot(...flow) > 0.1) {
@@ -106,10 +107,10 @@ export class FieldCreature extends Beast {
     this.speed = Math.hypot(this.vx, this.vz);
     this.y = sim.world.height(this.x, this.z);
     quatYaw(this.rig.rootQ, 0, this.yaw);
-    this.rig.rootT.set([this.x, this.y, this.z]);
+    this.rig.rootT[0] = this.x; this.rig.rootT[1] = this.y; this.rig.rootT[2] = this.z;
   }
 
-  onHit() { this.aggro = true; this.flinch = 0.18; }
+  onHit(sim, kind, fx, fz, poise = 20) { this.aggro = true; if (poise >= 10 && !(this.flinchCd > 0)) { this.flinch = 0.18; this.flinchCd = 0.7; } }
 
   die() {
     this.dead = true; this.hp = 0; this.state = 10; this.deadT = 0;

@@ -9,7 +9,7 @@ import {
   BURST_CANDLE, CANDLES, CANDLES_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CLIMB, DAZZLE, DUST_AT, OPENING, PORTAL, REVEAL_AT, SNAP_AT, SOFT_CANDLE, SPARK_AT,
   SWAP_AT,
 } from '../core/opening.js';
-import { CUES, SCRIPT, spoken, voiceOf } from '../core/opening-script.js';
+import { CUES, SCRIPT, VOICE, spoken, voiceOf } from '../core/opening-script.js';
 import { VOICED } from '../core/voiced.js';
 import { voiceKey } from '../core/voicekey.js';
 
@@ -19,6 +19,40 @@ import { voiceKey } from '../core/voicekey.js';
 const VOICE_LEVEL = 1.1;
 const VOICE_LATE = 0.6;      // s: a line whose recording wasn't ready as it came up is still said this far in
 const VOICE_WAIT = 0.7;      // s: a line waits this long at most for the one before to finish; longer, and that one's cut
+// Her mouth, from the loudness of what she says (mouth): measured this many times a second, over a window this long,
+// opening evenly in dB from this far under the line's loudest (shut) up to this far under it (wide), so most syllables
+// open it part way; opening this fast and shutting this fast (s); and a little ahead of the sound, as a jaw moves before
+// the voice it makes.
+const MOUTH_RATE = 100, MOUTH_WINDOW = 0.03, MOUTH_FLOOR = 30, MOUTH_FULL = 2;
+const MOUTH_OPEN = 0.03, MOUTH_SHUT = 0.07, MOUTH_LEAD = 0.04;
+const mouths = new WeakMap();
+
+// How open her mouth is through a recording, MOUTH_RATE times a second, 0 to 1.
+function mouthOf(buf) {
+  let env = mouths.get(buf);
+  if (env) return env;
+  const rate = buf.sampleRate, hop = rate / MOUTH_RATE, half = Math.round(rate * MOUTH_WINDOW / 2);
+  const chans = Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c));
+  const n = Math.ceil(buf.length / hop), db = new Float32Array(n);
+  let peak = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const mid = Math.round(i * hop), a = Math.max(0, mid - half), b = Math.min(buf.length, mid + half);
+    let sum = 0;
+    for (const ch of chans) for (let s = a; s < b; s++) sum += ch[s] * ch[s];
+    db[i] = 10 * Math.log10(sum / Math.max(1, (b - a) * chans.length) + 1e-10);
+    peak = Math.max(peak, db[i]);
+  }
+  env = new Float32Array(n);
+  const up = 1 - Math.exp(-1 / (MOUTH_RATE * MOUTH_OPEN)), down = 1 - Math.exp(-1 / (MOUTH_RATE * MOUTH_SHUT));
+  let m = 0;
+  for (let i = 0; i < n; i++) {
+    const want = Math.min(Math.max((db[i] - peak + MOUTH_FLOOR) / (MOUTH_FLOOR - MOUTH_FULL), 0), 1);
+    m += (want - m) * (want > m ? up : down);
+    env[i] = m;
+  }
+  mouths.set(buf, env);
+  return env;
+}
 const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
 // Just the opening's lines, of all her recordings (her lines in the town are fetched as they're said: src/ui/folk.js).
 const OPENING_LINES = new Set([
@@ -203,8 +237,26 @@ export class OpeningSound {
     const src = this.a.ctx.createBufferSource(), g = this.out(x, y, z, wet);
     src.buffer = buf; g.gain.value = VOICE_LEVEL;
     src.connect(g); src.start(at);
-    this.speaking = { src, g, ends: at + buf.duration };
-    src.onended = () => { if (this.speaking?.src === src) this.speaking = null; };
+    // (The line before, if it's finishing, still moves her mouth till it's done.)
+    this.tail = at > now ? this.speaking : null;
+    // Said from her mouth (not in your head) in the witch's voice: her jaw follows it (mouth).
+    const env = x !== null && voice === VOICE.witch ? mouthOf(buf) : null;
+    this.speaking = { src, g, at, env, ends: at + buf.duration };
+    src.onended = () => { if (this.speaking?.src === src) this.speaking = null; if (this.tail?.src === src) this.tail = null; };
+  }
+
+  // How open the witch's mouth is now, 0 to 1, by what she's saying aloud.
+  mouth() {
+    if (!this.ok) return 0;
+    const now = this.a.ctx.currentTime + MOUTH_LEAD;
+    let m = 0;
+    for (const s of [this.speaking, this.tail]) {
+      if (!s?.env) continue;
+      const f = (now - s.at) * MOUTH_RATE, i = Math.floor(f);
+      if (i < 0 || i >= s.env.length) continue;
+      m = Math.max(m, s.env[i] + ((s.env[i + 1] ?? 0) - s.env[i]) * (f - i));
+    }
+    return m;
   }
 
   // Cut her off: a new line, or the scene skipped.
@@ -214,6 +266,7 @@ export class OpeningSound {
     const now = this.a.ctx.currentTime;
     s.g.gain.setTargetAtTime(0, now, 0.04); s.src.stop(now + 0.25);
     this.speaking = null;
+    this.tail?.src.stop(now); this.tail = null;
   }
 
   // ---- the moments ----
