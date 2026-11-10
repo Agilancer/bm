@@ -20,6 +20,7 @@ import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHA
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { SkullEyes } from './skulleyes.js';
+import { ShadowCache } from './shadowcache.js';
 import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
 import { PATTERNS, SKINS } from '../items/skins.js';
 import { BODIES } from '../sim/undead.js';
@@ -497,6 +498,7 @@ export class Renderer {
       this.terrainIB = makeBuffer(this.device, terrain.idx, GPUBufferUsage.INDEX);
       this.terrainCount = terrain.idx.length;
       this.pines.setTrees(forest.trees);
+      this.shadowEpoch = (this.shadowEpoch || 0) + 1;
       this.landAt = [cx, cz];
       // (Gone once this frame's work that drew them is done: nothing new is recorded with them.)
       setTimeout(() => { for (const b of old) b.destroy(); }, 500);
@@ -560,6 +562,7 @@ export class Renderer {
     this.staticIB = makeBuffer(device, indices, GPUBufferUsage.INDEX);
     this.staticOpaque = cutStart < 0 ? ni : cutStart;
     this.staticTotal = ni;
+    this.shadowEpoch = (this.shadowEpoch || 0) + 1;
     // Per-layer parameters: cutout, parallax depth in uv, has windows, foliage.
     const params = new Float32Array(64 * 4);
     const pomDepth = this.tier.pom > 0 ? 1 : 0;
@@ -1451,7 +1454,8 @@ export class Renderer {
     });
 
     // Shadow pipelines.
-    this.shadowU = device.createBuffer({ size: 256 * 3, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    // (Slots 0-2 the cascades; 3 and 4 the kept maps being drawn, src/gfx/shadowcache.js.)
+    this.shadowU = device.createBuffer({ size: 256 * 5, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.bglShadow = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: 80 } }] });
     this.shadowBG = device.createBindGroup({ layout: this.bglShadow, entries: [{ binding: 0, resource: { buffer: this.shadowU, size: 80 } }] });
     const shMod = device.createShaderModule({ code: SHADOW });
@@ -1480,7 +1484,10 @@ export class Renderer {
       fragment: { module: shMod, entryPoint: 'fsCut', targets: [] },
       primitive: { cullMode: 'none' }, depthStencil: shDepth,
     });
-    this.shadowTex = device.createTexture({ size: [tier.shadowSize, tier.shadowSize, tier.cascades], format: DEPTH, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+    this.shadowTex = device.createTexture({ size: [tier.shadowSize, tier.shadowSize, tier.cascades], format: DEPTH, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    // The middle and far cascades keep what never moves from frame to frame (not on a phone: it hasn't the memory to spare).
+    this.shCache?.destroy();
+    this.shCache = !tier.lean && tier.cascades === 3 && this.keepShadows !== false ? new ShadowCache(this) : null;
     this.shadowViews = Array.from({ length: tier.cascades }, (_, i) => this.shadowTex.createView({ dimension: '2d', baseArrayLayer: i, arrayLayerCount: 1 }));
     this.bloodMap = device.createTexture({ size: [tier.bloodSize, tier.bloodSize], format: 'rg8unorm', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
     this.bloodView = null;
@@ -1870,14 +1877,25 @@ export class Renderer {
     // The far cascade is drawn less often, and keeps the matrix it was drawn with until the next.
     this.shadowFrame++;
     this.farNow = this.shadowFrame % this.farShadowEvery === 1 % this.farShadowEvery;
+    // The kept cascades first (src/gfx/shadowcache.js), so the near one can take the sun they were drawn with and the
+    // three agree where they meet.
+    const kept = this.shCache;
+    let shSun = sun;
+    if (kept) {
+      this.keptLit = { under: cam.y <= -6, rocks: this.rocksOn !== false };
+      const key = `${this.shadowEpoch}|${this.keptLit.under}|${this.keptLit.rocks}`;
+      for (let c = 1; c < n; c++) kept.plan(c, cam, this.splits[c], tan, aspect, sun, key, d, O.CASC + c * 16);
+      shSun = kept.sunFor(sun);
+    }
     for (let c = 0; c < n; c++) {
+      if (kept && c > 0) break;
       if (c === n - 1 && !this.farNow) break;
       const far = this.splits[n === 2 && c === 1 ? 2 : c];
       const mid = (prev + far) / 2;
       const hf = far * tan, wf = hf * aspect, hn = prev * tan, wn = hn * aspect;
       const rad = Math.ceil(Math.max(Math.hypot(far - mid, wf, hf), Math.hypot(mid - prev, wn, hn)));
       const cx = cam.x + cam.fx * mid, cy = cam.y + cam.fy * mid, cz = cam.z + cam.fz * mid;
-      mat4LookTo(this.tmpV, 0, 0, 0, -sun[0], -sun[1], -sun[2], 0, 1, 0);
+      mat4LookTo(this.tmpV, 0, 0, 0, -shSun[0], -shSun[1], -shSun[2], 0, 1, 0);
       // Snap the centre to the shadow map's texels, so edges don't crawl as you move.
       const texel = 2 * rad / this.tier.shadowSize;
       const lx = this.tmpV[0] * cx + this.tmpV[4] * cy + this.tmpV[8] * cz;
@@ -2028,6 +2046,70 @@ export class Renderer {
     ] });
     cache.set(key, h);
     return h;
+  }
+
+  // What never moves, into cascade c's map: the ground (in the far cascade only), the buildings, the trees, the rocks, the
+  // cathedral's floor. (The cathedral's shell shades the green. What's under the ground has no sun to shade.)
+  drawStillShadows(sp, c, last) {
+    sp.setPipeline(this.pShTerrain);
+    if (c === 2) {
+      sp.setVertexBuffer(0, this.terrainVB);
+      sp.setIndexBuffer(this.terrainIB, 'uint32');
+      sp.drawIndexed(this.terrainCount);
+    }
+    sp.setPipeline(this.pShStatic);
+    sp.setVertexBuffer(0, this.staticVB);
+    sp.setIndexBuffer(this.staticIB, 'uint32');
+    sp.drawIndexed(this.staticOpaque);
+    sp.setPipeline(this.pShCut);
+    sp.setBindGroup(1, this.shCutBG);
+    sp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
+    if (this.camNow.y > -6) this.pines.drawShadow(sp, c, last, this.shCutBG);
+    if (this.camNow.y > -6 && this.rocksOn !== false) this.rocks.drawShadow(sp, last);
+    sp.setPipeline(this.pShStatic);
+    sp.setVertexBuffer(0, this.interior.tiles.VB);
+    sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
+    sp.drawIndexed(this.interior.tiles.cath);
+  }
+
+  // The draws that make a kept shadow map (src/gfx/shadowcache.js), in pieces of about a frame's worth each: what never
+  // moves, round where its box was set.
+  keptShadowJobs(k, b) {
+    const c = k.c, last = c === this.tier.cascades - 1, [x, z] = b.at, lit = this.keptLit;
+    const jobs = [(sp) => {
+      if (c === 2) {
+        sp.setPipeline(this.pShTerrain);
+        sp.setVertexBuffer(0, this.terrainVB);
+        sp.setIndexBuffer(this.terrainIB, 'uint32');
+        sp.drawIndexed(this.terrainCount);
+      }
+      sp.setPipeline(this.pShStatic);
+      sp.setVertexBuffer(0, this.staticVB);
+      sp.setIndexBuffer(this.staticIB, 'uint32');
+      sp.drawIndexed(this.staticOpaque);
+      sp.setPipeline(this.pShCut);
+      sp.setBindGroup(1, this.shCutBG);
+      sp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
+      sp.setPipeline(this.pShStatic);
+      sp.setVertexBuffer(0, this.interior.tiles.VB);
+      sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
+      sp.drawIndexed(this.interior.tiles.cath);
+    }];
+    if (lit.under) return jobs;
+    // (The full trees are most of the work: in four pieces, or two and the next ring's three in the far cascade.)
+    this.pines.fillShadowSet(k.pines, x, z, last);
+    (last ? [2, 3] : [4]).forEach((m, lod) => {
+      const n = k.pines.n[lod];
+      for (let i = 0; i < m; i++) {
+        const a = Math.floor(n * i / m), e = Math.floor(n * (i + 1) / m);
+        if (e > a) jobs.push((sp) => this.pines.drawShadowSet(sp, k.pines, this.shCutBG, lod, a, e));
+      }
+    });
+    if (lit.rocks) {
+      this.rocks.fillShadowSet(k.rocks, x, z, last);
+      jobs.push((sp) => this.rocks.drawShadowSet(sp, k.rocks));
+    }
+    return jobs;
   }
 
   frame(cam, snap, vmSway, dt) {
@@ -2356,34 +2438,23 @@ export class Renderer {
     cp.end();
 
     // ---- shadows, the far cascades on alternating frames ----
-    const shadowData = this.shadowData || (this.shadowData = new Float32Array(64 * 3));
+    const shadowData = this.shadowData || (this.shadowData = new Float32Array(64 * 5));
     for (let c = 0; c < tier.cascades; c++) shadowData.set(this.frameData.subarray(O.CASC + c * 16, O.CASC + c * 16 + 16), c * 64);
+    const kept = this.shCache;
+    if (kept) kept.slots(shadowData);
     q.writeBuffer(this.shadowU, 0, shadowData);
+    // (The kept maps' next few draws, src/gfx/shadowcache.js: before they're copied in below.)
+    if (kept) kept.encode(enc, this.shadowBG);
     for (let c = 0; c < tier.cascades; c++) {
-      if (c === tier.cascades - 1 && !this.farNow) continue;
-      const sp = enc.beginRenderPass({ colorAttachments: [], depthStencilAttachment: { view: this.shadowViews[c], depthLoadOp: 'clear', depthClearValue: 1, depthStoreOp: 'store' } });
+      const isKept = kept && c > 0;
+      if (isKept) { if (!kept.copy(enc, c, this.farNow, this.shadowTex)) continue; } else if (c === tier.cascades - 1 && !this.farNow) continue;
+      const sp = enc.beginRenderPass({ colorAttachments: [], depthStencilAttachment: { view: this.shadowViews[c], depthLoadOp: isKept ? 'load' : 'clear', depthClearValue: 1, depthStoreOp: 'store' } });
       sp.setBindGroup(0, this.shadowBG, [c * 256]);
-      sp.setPipeline(this.pShTerrain);
-      if (c === 2) {
-        sp.setVertexBuffer(0, this.terrainVB);
-        sp.setIndexBuffer(this.terrainIB, 'uint32');
-        sp.drawIndexed(this.terrainCount);
-      }
-      sp.setPipeline(this.pShStatic);
-      sp.setVertexBuffer(0, this.staticVB);
-      sp.setIndexBuffer(this.staticIB, 'uint32');
-      sp.drawIndexed(this.staticOpaque);
-      sp.setPipeline(this.pShCut);
-      sp.setBindGroup(1, this.shCutBG);
-      sp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
-      // (The cathedral's shell shades the green. What's under the ground has no sun to shade.)
-      if (this.camNow.y > -6) this.pines.drawShadow(sp, c, c === tier.cascades - 1, this.shCutBG);
-      if (this.camNow.y > -6 && this.rocksOn !== false) this.rocks.drawShadow(sp, c === tier.cascades - 1);
+      // A kept cascade has all that never moves already: only the rocks that tumble are left of it.
+      if (!isKept) this.drawStillShadows(sp, c, c === tier.cascades - 1);
+      else if (this.camNow.y > -6 && this.rocksOn !== false && this.rocks.pShadow) this.rocks.drawTumblers(sp, true);
       sp.setPipeline(this.pShStatic);
       if (c < 2) this.slimeBodies?.draw(sp);
-      sp.setVertexBuffer(0, this.interior.tiles.VB);
-      sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
-      sp.drawIndexed(this.interior.tiles.cath);
       sp.setPipeline(this.pShSkin);
       // Only the bodies (and what they hold) that reach this cascade's square: the rest couldn't darken a texel of it
       // (shadowcull.js). Most bodies in view are far past the near cascades, so this halves the shadows' cost or better.

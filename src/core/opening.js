@@ -287,7 +287,10 @@ export const BURST_CANDLE = nearestCandle([lerp(OPENING_SPAWN[0], STEPS_TO[0], 0
 export const ESCORT_TO = [-30, 21];
 
 // Her clips in the opening (the walk is the form's own). Those that aren't a way of moving are kept on her mark.
-export const OPENING_MOVES = ['Jog_Fwd_Loop', 'Sprint_Loop'];
+// Her run on the road is her own 'run' (the owner's pick in lisandra.html: an even stride, light on her feet), and flat out
+// the sprint.
+export const OPENING_RUN = 'run';
+export const OPENING_MOVES = [OPENING_RUN, 'Sprint_Loop'];
 export const OPENING_CLIPS = [
   'Spell_Simple_Idle_Loop', 'Idle_Lantern_Loop', 'greet_01', 'greet_02', 'Interact', 'Hit_Knockback', 'scared_02', 'afraid',
   'frightened', 'fold_arms', 'Idle_FoldArms_Loop', 'wait', 'Spell_Simple_Shoot', 'Pointing into the distance', 'Pointing at an enemy',

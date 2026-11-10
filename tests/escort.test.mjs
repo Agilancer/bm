@@ -8,8 +8,9 @@ import { COLLAPSE_END, OPENING } from '../src/core/opening.js';
 import { CUES, CUE_IDS } from '../src/core/opening-script.js';
 import { ROUTE, routeAt, routeDir } from '../src/core/escort.js';
 
-// Plays the walk with the player going `speed(t)` m/s down the road (surfing while `surf(t)`), from just behind her.
-function play(speed, surf = () => false, limit = 240) {
+// Plays the walk with the player going `speed(t)` m/s down the road (surfing while `surf(t)`, `side(t)` m off it to the
+// left), from just behind her.
+function play(speed, surf = () => false, limit = 240, side = () => 0) {
   const world = { height: () => 0, setCaveSealed() {}, inside: () => false };
   const body = () => ({ x: 0, z: 0, y: 0, yaw: 0, act(dt, w, b) {
     this.b = b;
@@ -33,13 +34,13 @@ function play(speed, surf = () => false, limit = 240) {
     const v = speed(t);
     player.surfing = surf(t);
     s += v * dt;
-    const [x, z] = routeAt(s), [dx, dz] = routeDir(s);
-    Object.assign(player, { x, z, vx: dx * v, vz: dz * v });
+    const [x, z] = routeAt(s), [dx, dz] = routeDir(s), off = side(t);
+    Object.assign(player, { x: x - dz * off, z: z + dx * off, vx: dx * v, vz: dz * v });
     op.update(dt);
     t += dt;
     if (op.cue && op.cueT < lastCueT) said.push({ t, id: CUE_IDS[op.cue - 1] });
     lastCueT = op.cueT;
-    if (op.stage === OPENING.ESCORT) log.push({ t, you: Math.max(0, s), her: op.prog, riding: op.riding, lift: sim.villagers[1].y, clip: sim.villagers[1].b?.clip });
+    if (op.stage === OPENING.ESCORT) log.push({ t, you: Math.max(0, s), far: Math.hypot(player.x - sim.villagers[1].x, player.z - sim.villagers[1].z), her: op.prog, riding: op.riding, lift: sim.villagers[1].y, clip: sim.villagers[1].b?.clip });
   }
   return { op, said, log, t };
 }
@@ -60,9 +61,25 @@ test('at a sprint she still keeps in front', () => {
 test('stand still and she goes on a little, waits, and calls you on', () => {
   const { said, log } = play((t) => (t < 30 ? 0 : 5.6));
   const stood = log.filter((e) => e.t > 20 && e.t < 30);
-  for (const e of stood) assert.ok(e.her - e.you > 10 && e.her - e.you < 16, `${(e.her - e.you).toFixed(1)} m off while you stand`);
+  for (const e of stood) assert.ok(e.her - e.you > 6.5 && e.her - e.you < 9.5, `${(e.her - e.you).toFixed(1)} m off while you stand`);
   assert.ok(Math.max(...stood.map((e) => e.her)) - Math.min(...stood.map((e) => e.her)) < 0.5, 'she waits rather than wandering off');
   assert.ok(said.some((l) => l.id.startsWith('keep') && l.t < 30), 'she calls you on');
+});
+
+test('go off the road and she stops where she is and waits for you', () => {
+  // Down the road a way, then off into the trees beside it, and back.
+  const { log, op } = play((t) => (t < 10 ? 5.6 : t < 30 ? 0 : 5.6), () => false, 240, (t) => (t < 10 ? 0 : t < 30 ? Math.min(30, (t - 10) * 5) : Math.max(0, 30 - (t - 30) * 5)));
+  const off = log.filter((e) => e.t > 17 && e.t < 30);
+  assert.ok(Math.max(...off.map((e) => e.her)) - Math.min(...off.map((e) => e.her)) < 0.3, 'she waits rather than going on without you');
+  assert.ok(off.every((e) => e.clip === 'idle' || e.clip === 'wait'), 'stood, turned to you');
+  assert.equal(op.stage, OPENING.ARRIVED, 'and leads on once you are back');
+});
+
+test('run on far ahead of her and she comes after you, gets in front again, and on to town', () => {
+  const { log, op } = play((t) => (t < 5 ? 20 : 5.6));
+  assert.ok(log.some((e) => e.you - e.her > 40), 'you got well ahead');
+  assert.ok(log.some((e) => e.t > 20 && e.her > e.you + 3), 'she caught up and leads again');
+  assert.equal(op.stage, OPENING.ARRIVED);
 });
 
 test('ride your shield and she rides hers, ahead of you, and steps off after', () => {

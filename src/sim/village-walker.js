@@ -1,4 +1,4 @@
-import { OPENING_CLIPS, OPENING_MOVES } from '../core/opening.js';
+import { OPENING_CLIPS, OPENING_MOVES, OPENING_RUN } from '../core/opening.js';
 import { LISANDRA_SCALE } from '../core/lisandra.js';
 import { C, C_PALETTE, C_PROPS } from '../core/layout.js';
 import { clamp, lerp, quatAxisAngle, quatMul, quatNormalize, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
@@ -62,8 +62,6 @@ export class VillageWalker {
       }
       this.storyPose();
     }
-    this.rig.rootQ = new Float32Array(4);
-    this.rig.rootT = new Float32Array(3);
     const clip = this.rig.clips[this.walk];
     clip.loop = true;
     if (form.gown) this.gownWalk(clip, form.gown);
@@ -73,6 +71,11 @@ export class VillageWalker {
     for (let i = 0; i < clip.frames; i++) hips[i * 3 + 2] -= travel * i / (clip.frames - 1);
     // An in-place clip has no travel to measure; then its stride is given.
     this.walkRate = SPEED * clip.dur / ((travel > 0.2 ? travel : form.stride * 2) * (form.gown?.stride ?? 1));
+    // Her step in each way of moving, so a change of gait carries it on (act).
+    this.stride = {};
+    for (const name of [this.walk, ...(opening ? OPENING_MOVES : [])]) if (this.rig.clips[name]) this.stride[name] = this.strideOf(this.rig.clips[name]);
+    this.rig.rootQ = new Float32Array(4);
+    this.rig.rootT = new Float32Array(3);
     this.walkTravel = travel;
     this.reset();
   }
@@ -426,6 +429,27 @@ export class VillageWalker {
   // (or, with b.keepFace, stepping there in b.clip while still facing b.face). Otherwise she stands in b.clip, turning to
   // b.face; b.hold stops the clip that many seconds in. b.look: a point to turn her head to (b.whip: fast). b.snap: seconds
   // into a snap of her fingers. b.tremble: she's shaking.
+
+  // Where in a clip's loop her left heel comes down (its left knee furthest ahead of the right), as a part of the loop, and
+  // how many strides the loop holds.
+  strideOf(clip) {
+    const rig = this.rig, rootQ = rig.rootQ, rootT = rig.rootT;
+    rig.rootQ = null; rig.rootT = null;
+    const L = rig.index.get('mixamorig:LeftLeg'), R = rig.index.get('mixamorig:RightLeg');
+    const N = 64, s = [], palette = new Float32Array(rig.count * 8);
+    for (let i = 0; i < N; i++) {
+      rig.solve(clip, clip.dur * i / N, 1, palette, 0);
+      s.push(rig.wt[L * 3 + 2] - rig.wt[R * 3 + 2]);
+    }
+    rig.rootQ = rootQ; rig.rootT = rootT;
+    const mean = s.reduce((a, b) => a + b, 0) / N;
+    let at = 0, n = 0;
+    for (let i = 0; i < N; i++) {
+      if (s[i] > s[at]) at = i;
+      if (s[i] <= mean && s[(i + 1) % N] > mean) n++;
+    }
+    return { at: at / N, n: Math.max(1, n) };
+  }
   act(dt, world, b) {
     let pace = 0;
     if (b.to && b.speed > 0) {
@@ -445,12 +469,18 @@ export class VillageWalker {
     const moving = pace && !b.keepFace;
     // Walk, jog or sprint by pace (b.gaits: where the jog and the sprint begin), a little either side of each change so a
     // pace on the line doesn't flick between them.
-    const jog = this.clip === 'Jog_Fwd_Loop', run = this.clip === 'Sprint_Loop', [toJog, toRun] = b.gaits || [2.1, 4.7];
-    const clip = moving ? (pace < (jog || run ? toJog - 0.4 : toJog) ? this.walk : pace < (run ? toRun - 0.6 : toRun) ? 'Jog_Fwd_Loop' : 'Sprint_Loop') : (b.clip || 'idle');
+    const jog = this.clip === OPENING_RUN, run = this.clip === 'Sprint_Loop', [toJog, toRun] = b.gaits || [2.1, 4.7];
+    const clip = moving ? (pace < (jog || run ? toJog - 0.4 : toJog) ? this.walk : pace < (run ? toRun - 0.6 : toRun) ? OPENING_RUN : 'Sprint_Loop') : (b.clip || 'idle');
     if (clip !== this.clip) {
+      // From one way of moving to another, her step carries on: the new clip picks up at the same point in her stride
+      // (left heel down, right, ...) as the one she was in, rather than at its first frame, so her feet don't skip.
+      const was = this.stride?.[this.clip], now = this.stride?.[clip], from = this.rig.clips[this.clip];
       this.rig.capture();
+      if (moving && was && now && from && b.from === undefined) {
+        const ph = ((((this.time % from.dur) / from.dur - was.at) * was.n) % 1 + 1) % 1;
+        this.time = ((now.at + ph / now.n) % 1) * this.rig.clips[clip].dur;
+      } else this.time = b.from ?? 0;
       this.clip = clip;
-      this.time = b.from ?? 0;
       this.fade = 0;
     }
     this.clothDt += dt;

@@ -1,0 +1,253 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lisandra's Runs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Her run clips side by side, each on its own moving floor at the speed the game would play it, so a sliding or bounding
+   foot shows. Pick one and she runs with it on the road down to Bellmourn. */
+:root{
+  color-scheme:dark;
+  --bench:#1d2628; --panel:#253033; --panel-hi:#2f3d40; --line:#3d4d50;
+  --bone:#e7dfcd; --dim:#9fada9; --gold:#d6a24e; --blood:#b9553f; --moss:#6f9a52;
+  --display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",Consolas,monospace;
+}
+html,body{height:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bench);color:var(--bone);font:14px/1.4 var(--display);overflow:hidden}
+#app{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;height:100%}
+#rack{grid-row:1/3;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px;gap:12px}
+h1{font-size:20px;font-weight:700;margin:0;line-height:1.15}
+.sub{color:var(--dim);font-size:12.5px;margin-top:4px;line-height:1.4}
+h2{font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:6px 0 2px}
+.clip{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:8px 9px;border-radius:5px;border:1px solid transparent}
+.clip:hover{background:var(--panel-hi)}
+.clip[aria-pressed=true]{border-color:var(--gold);background:var(--panel-hi)}
+.clip .nm{font-weight:700}
+.clip .tag{font:500 10.5px var(--mono);padding:1px 6px;border-radius:3px;align-self:center}
+.tag.now{background:var(--blood);color:#fff}.tag.picked{background:var(--moss);color:#fff}
+.clip .ds{grid-column:1/3;font-size:12px;color:var(--dim);line-height:1.35}
+.clip .num{grid-column:1/3;font:400 11.5px var(--mono);font-variant-numeric:tabular-nums;color:var(--bone);opacity:.85}
+.clip:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+#picked{border:1px solid var(--moss);border-radius:6px;padding:10px;font-size:13px;display:none}
+#picked b{color:#cfe8bd}
+#stage{position:relative;min-width:0;min-height:0;background:#56646a}
+#stage canvas{display:block;width:100%;height:100%}
+#labels{position:absolute;inset:0;pointer-events:none}
+.lab{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:auto;white-space:nowrap}
+.lab .t{font:700 13px var(--display);color:#fff;text-shadow:0 1px 3px #000c;background:#1d2628b0;padding:2px 8px;border-radius:4px}
+.lab .s{font:500 11px var(--mono);color:#e7dfcd;text-shadow:0 1px 2px #000c}
+.lab button{min-height:26px;padding:2px 10px}
+#hud{position:absolute;left:12px;bottom:10px;font:500 12px var(--mono);color:#fff;text-shadow:0 1px 2px #000a;pointer-events:none;max-width:calc(100% - 24px)}
+#cams{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#status[hidden]{display:none}
+#status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 14px var(--mono);color:#fff;padding-inline:16px;text-align:center}
+button,select{font:500 12.5px var(--display);color:var(--bone);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 9px;cursor:pointer;min-height:30px}
+button:hover,select:hover{background:var(--panel-hi)}
+button[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#231a0a}
+button.pick{background:var(--moss);border-color:var(--moss);color:#fff;font-weight:700}
+#transport{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-block:9px;padding-left:12px;padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border-top:1px solid var(--line)}
+#play{min-width:68px;font-weight:700}
+label.sel{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim)}
+@media (max-width:760px){
+  body{overflow:auto}
+  #app{display:flex;flex-direction:column;height:auto}
+  #stage{height:60vh;order:1;flex:none}
+  #transport{order:2;padding-left:max(16px,env(safe-area-inset-left,0px))}
+  #rack{order:3;border-right:0;padding-right:max(16px,env(safe-area-inset-right,0px));overflow:visible}
+}
+</style>
+<div id="app">
+  <aside id="rack">
+    <div>
+      <h1>Lisandra's Runs</h1>
+      <div class="sub">Her model as the game draws her, each run on its own moving floor. A floor that keeps pace with her feet means no sliding. Pick the one she should run with on the road down to Bellmourn.</div>
+    </div>
+    <div id="picked"></div>
+    <h2>Run clips in her file</h2>
+    <div id="clips" style="display:flex;flex-direction:column;gap:4px"></div>
+    <div class="sub" style="margin-top:auto">In the game she walks below 2.2 m/s and runs above it, to stay a few metres ahead of you. Your walk is 5.6 m/s and your sprint 8.6 m/s, so most of the road she's running at about your walking pace. Each clip is sped up or slowed to the floor's speed, as the game does.</div>
+  </aside>
+  <main id="stage">
+    <div id="status">Loading Lisandra…</div>
+    <div id="labels"></div>
+    <div id="hud"></div>
+    <div id="cams"></div>
+  </main>
+  <div id="transport">
+    <button id="play" aria-label="Play or pause">Pause</button>
+    <label class="sel" for="pace">Floor
+      <select id="pace">
+        <option value="5.6" selected>5.6 m/s: just ahead of your walk (most of the road)</option>
+        <option value="3.5">3.5 m/s: an easy run, catching you up</option>
+        <option value="8.6">8.6 m/s: keeping ahead of your sprint</option>
+        <option value="own">Each at her own natural speed</option>
+      </select>
+    </label>
+    <label class="sel" for="rate">Slow motion
+      <select id="rate"><option value="1">1×</option><option value="0.5">½×</option><option value="0.25">¼×</option></select>
+    </label>
+    <button id="tAll" aria-pressed="true">All side by side</button>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+const $=id=>document.getElementById(id);
+const SCALE=1.75;      // LISANDRA_SCALE in src/core/lisandra.js
+// The runs in pretty.glb. now: what the game plays today. Speeds, cadence and bob are measured from the game's own rig.
+const RUNS=[
+  {clip:'run',name:'Run',ds:'Her own run from the file: an even stride, light on her feet.'},
+  {clip:'Jog_Fwd_Loop',name:'Jog (in the game now)',now:true,ds:'What she runs with today: long bounding strides with a big bounce.'},
+  {clip:'Sprint_Loop',name:'Sprint (in the game now, flat out)',now:true,ds:'What she switches to above 6.6 m/s, to stay ahead of your sprint.'},
+  {clip:'Running',name:'Running',ds:'A slower, upright jog with a lot of bounce.'},
+  {clip:'proud run',name:'Proud run',ds:'Chest out, slow and showy.'},
+  {clip:'flee_01',name:'Flee 1',ds:'Running away scared: arms up, looking back.'},
+  {clip:'flee_02',name:'Flee 2',ds:'A panicked dash with a leap in it, so not an even loop.'},
+];
+let picked=null;try{picked=localStorage.getItem('bm.lisandraRun')}catch(e){}
+
+const stage=$('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+stage.prepend(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x56646a);scene.fog=new THREE.Fog(0x56646a,16,40);
+scene.environment=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),0.04).texture;
+const camera=new THREE.PerspectiveCamera(32,1,.05,120);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.54;
+scene.add(new THREE.HemisphereLight(0xdfe8ee,0x4a4038,0.7));
+const key=new THREE.DirectionalLight(0xfff0dc,2.2);key.position.set(4,8,6);key.castShadow=true;key.shadow.mapSize.set(4096,2048);
+Object.assign(key.shadow.camera,{left:-8,right:8,top:3,bottom:-3,near:1,far:30});key.shadow.bias=-.0005;key.shadow.normalBias=.02;scene.add(key);
+
+// A floor of 25 cm squares, with a heavy line each metre, under each runner.
+const cv=document.createElement('canvas');cv.width=cv.height=512;const g=cv.getContext('2d');
+g.fillStyle='#6d7a7d';g.fillRect(0,0,512,512);
+g.fillStyle='#627073';for(let i=0;i<4;i++)for(let j=0;j<4;j++)if((i+j)%2)g.fillRect(i*128,j*128,128,128);
+g.strokeStyle='#323e42';g.lineWidth=8;g.strokeRect(0,0,512,512);
+const LANE=1.7, TILE=[LANE*0.92,4];
+const lanes=[];
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(stage);resize();
+
+let all=true, focus=0, playing=true, rate=1, paceSel='5.6';
+const CAMS={Side:[0,1.0,1],'3/4':[0.75,0.8,0.75],Front:[1,0.6,0],Back:[-1,0.9,0.2]};
+function frameCam(n){
+  const v=CAMS[n];
+  if(all){const mid=(lanes.length-1)*LANE/2;controls.target.set(mid,0.9,0);camera.position.set(mid+v[0]*7,0.9+v[1]*0.9,v[2]*14+(v[2]?0:2));}
+  else{const x=lanes[focus].x;controls.target.set(x,0.95,0);camera.position.set(x+v[0]*3.4,0.95+v[1]*0.5,v[2]*3.4+(v[2]?0:0.6));}
+  controls.update();
+  document.querySelectorAll('#cams button').forEach(b=>b.setAttribute('aria-pressed',b.textContent===n));
+}
+Object.keys(CAMS).forEach(n=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>frameCam(n);$('cams').append(b)});
+
+// Takes the clip's travel out of the hips, as the game does, so she runs on the spot and the floor does the moving. The
+// game takes out the forward drift; any sideways drift goes too, or she'd jump back sideways at the end of each loop.
+function inPlace(clip,hipsParentScale){
+  const c=clip.clone();
+  const tr=c.tracks.find(t=>/Hips\.position$/.test(t.name));
+  if(!tr)return{clip:c,speed:0};
+  const v=tr.values,n=v.length/3,dur=c.duration;
+  // The axis the hips stand up along: of the two they end the loop about where they began on, the one they're highest on.
+  const d=[v[(n-1)*3]-v[0],v[(n-1)*3+1]-v[1],v[(n-1)*3+2]-v[2]];
+  const mean=a=>{let m=0;for(let i=0;i<n;i++)m+=v[i*3+a];return Math.abs(m/n)};
+  const still=[0,1,2].sort((a,b)=>Math.abs(d[a])-Math.abs(d[b])).slice(0,2);
+  const up=mean(still[0])>mean(still[1])?still[0]:still[1];
+  d[up]=0;
+  for(let i=0;i<n;i++){const k=tr.times[i]/dur;for(let a=0;a<3;a++)if(a!==up)v[i*3+a]-=d[a]*k;}
+  // (And centred over her own floor: the hips' mean spot along the ground at the middle.)
+  for(let a=0;a<3;a++){if(a===up)continue;let m=0;for(let i=0;i<n;i++)m+=v[i*3+a];m/=n;for(let i=0;i<n;i++)v[i*3+a]-=m;}
+  return{clip:c,speed:Math.hypot(...d)*hipsParentScale/dur};
+}
+
+(async()=>{
+  try{
+    const buf=await(await fetch('assets/game/lisandra/pretty.glb')).arrayBuffer();
+    const gltf=await new Promise((ok,no)=>new GLTFLoader().parse(buf,'',ok,no));
+    const src=gltf.scene;src.scale.setScalar(SCALE);src.updateMatrixWorld(true);
+    let hips=null;src.traverse(o=>{if(o.isBone&&/Hips$/.test(o.name)&&!hips)hips=o});
+    const ps=hips.parent.getWorldScale(new THREE.Vector3()).x;
+    RUNS.forEach((r,i)=>{
+      const raw=gltf.animations.find(a=>a.name===r.clip);
+      if(!raw)return;
+      const {clip,speed}=inPlace(raw,ps);
+      const m=SkeletonUtils.clone(src);m.position.x=i*LANE;
+      m.rotation.y=Math.PI/2;   // facing +x: seen side on from the front of the row
+      m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false}});
+      scene.add(m);
+      const mixer=new THREE.AnimationMixer(m),act=mixer.clipAction(clip);act.play();
+      const tex=new THREE.CanvasTexture(cv);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=8;tex.repeat.set(TILE[0]/1,TILE[1]/1);
+      const floor=new THREE.Mesh(new THREE.PlaneGeometry(TILE[0],TILE[1]),new THREE.MeshStandardMaterial({map:tex,roughness:.95}));
+      floor.rotation.x=-Math.PI/2;floor.rotation.z=Math.PI/2;floor.position.set(i*LANE,0,0);floor.receiveShadow=true;scene.add(floor);
+      const lab=document.createElement('div');lab.className='lab';
+      lab.innerHTML=`<span class="t">${r.name}</span><span class="s"></span><button>Pick</button>`;
+      lab.querySelector('button').onclick=()=>pick(r.clip);
+      $('labels').append(lab);
+      lanes.push({...r,id:r.clip,x:i*LANE,m,mixer,act,clip,speed,tex,floor,lab,dur:clip.duration});
+    });
+    buildRack();
+    frameCam('Side');
+    show();
+    $('status').hidden=true;
+    window.__runs={lanes,pick,setAll,setFocus};
+  }catch(e){$('status').textContent='Lisandra did not load: '+e.message+'. Reload the page to try again.';console.error(e)}
+})();
+
+function paceOf(l){return paceSel==='own'?l.speed:+paceSel}
+function buildRack(){
+  $('clips').innerHTML='';
+  lanes.forEach((l,i)=>{
+    const b=document.createElement('button');b.className='clip';b.setAttribute('aria-pressed',!all&&i===focus);
+    const tag=picked===l.id?'<span class="tag picked">PICKED</span>':l.now?'<span class="tag now">NOW</span>':'<span></span>';
+    b.innerHTML=`<span class="nm">${l.name}</span>${tag}<span class="ds">${l.ds}</span><span class="num">natural ${l.speed.toFixed(1)} m/s · loop ${l.dur.toFixed(2)} s · "${l.id}"</span>`;
+    b.onclick=()=>setFocus(i);
+    $('clips').append(b);
+  });
+  const p=lanes.find(l=>l.id===picked);
+  $('picked').style.display=p?'block':'none';
+  if(p)$('picked').innerHTML=`You picked <b>${p.name}</b>. Tell Claude in the chat, and she'll run with it.`;
+}
+function show(){
+  lanes.forEach((l,i)=>{const on=all||i===focus;l.m.visible=l.floor.visible=on;l.lab.style.display=on?'flex':'none'});
+  $('tAll').setAttribute('aria-pressed',all);
+  buildRack();
+}
+function setAll(v){all=v;show();frameCam('Side')}
+function setFocus(i){focus=i;all=false;show();frameCam('3/4')}
+function pick(clip){picked=clip;try{localStorage.setItem('bm.lisandraRun',clip)}catch(e){}buildRack()}
+$('tAll').onclick=()=>setAll(!all);
+$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'Pause':'Play'};
+$('pace').onchange=e=>{paceSel=e.target.value};
+$('rate').onchange=e=>{rate=+e.target.value};
+addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='BUTTON'&&e.target.tagName!=='SELECT'){e.preventDefault();$('play').click()}});
+
+const clock=new THREE.Clock(),v=new THREE.Vector3();
+renderer.setAnimationLoop(()=>{
+  const dt=clock.getDelta()*(playing?rate:0);controls.update();
+  const w=stage.clientWidth,h=stage.clientHeight;
+  for(const l of lanes){
+    const pace=paceOf(l);
+    // As the game plays it: the clip sped up or slowed so her stride covers the floor (src/sim/village-walker.js moveRate).
+    const k=l.speed>0.05?pace/l.speed:1;
+    l.mixer.update(dt*k);
+    // (One texture square is a metre; the floor runs back under her feet, toward -x.)
+    l.tex.offset.y=(l.tex.offset.y-pace*dt)%1;
+    if(l.m.visible){
+      v.set(l.x,2.05,0).project(camera);
+      l.lab.style.left=((v.x+1)/2*w)+'px';l.lab.style.top=((1-v.y)/2*h)+'px';
+      l.lab.querySelector('.s').textContent=`${pace.toFixed(1)} m/s · played at ${(k).toFixed(2)}×`;
+    }
+  }
+  const f=lanes[focus];
+  $('hud').textContent=all?`Floor ${paceSel==='own'?'at each one\'s own speed':paceSel+' m/s'} · drag to orbit · click a name in the list to see one up close`:`${f.name} · "${f.id}" · natural ${f.speed.toFixed(2)} m/s, here ${paceOf(f).toFixed(1)} m/s (${(paceOf(f)/f.speed).toFixed(2)}×)`;
+  renderer.render(scene,camera);
+});
+</script>

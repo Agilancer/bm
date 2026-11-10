@@ -9,6 +9,7 @@ import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, 
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
+import { STEPS as DESK_STEPS, deskStep } from './gfx/deskscale.js';
 import { RenderDiagnostics } from './gfx/render-diagnostics.js';
 import { Clock } from './clock.js';
 import { Renderer } from './gfx/renderer.js';
@@ -1082,7 +1083,8 @@ class GameView {
     inp.pitch += (target.pitch - inp.pitch) * strength * 0.7;
   }
 
-  // Dynamic resolution: hold the display's refresh rate, spend what's left on pixels. (Phones: gfx/governor.js.)
+  // Dynamic resolution: hold the display's refresh rate, spend what's left on pixels. (PCs: gfx/deskscale.js. Phones:
+  // gfx/governor.js.)
   govern(dt) {
     const r = this.renderer;
     this.govT += dt; this.govMs += dt * 1000; this.govN++;
@@ -1098,24 +1100,9 @@ class GameView {
       this.governor.update(frameMs, busyMs, performance.now() / 1000);
       return;
     }
-    const budget = Math.max(1000 / 144, Math.min(frameMs, 1000 / 60));
-    const gpuMs = r.stats.gpuMs || busyMs;
-    // Resolution moves in fixed steps, so each only has to be built once.
-    const STEPS = [1, 0.88, 0.76, 0.66, 0.55];
-    let step = STEPS.indexOf(r.scale);
-    if (step < 0) step = 0;
-    const tooSlow = gpuMs > budget * 0.92;
-    const roomy = gpuMs < budget * 0.55;
-    // Chasing a high-refresh display only ever spends resolution. Effects go only when 60 Hz itself is out of reach.
-    const below60 = gpuMs > 15.3;
-    this.fastRuns = roomy ? (this.fastRuns || 0) + 1 : 0;
-    if (below60) {
-      if (step < 2) step++;
-      else if (!r.demote()) step = Math.min(step + 1, STEPS.length - 1);
-    } else if (tooSlow) {
-      if (step < 2) step++;
-    } else if (this.fastRuns >= 3 && step > 0) { step--; this.fastRuns = 0; }
-    r.scale = STEPS[step];
+    const step = Math.max(0, DESK_STEPS.indexOf(r.scale));
+    this.deskScale ||= {};
+    r.scale = DESK_STEPS[deskStep(this.deskScale, r.stats.gpuMs || busyMs, frameMs, step, () => r.demote())];
   }
 
   updateCamera(dt, snap) {
