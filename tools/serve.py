@@ -1,5 +1,7 @@
 """Serves bm with the headers that give the game shared memory across threads. POST /shot?name=x saves a
-screenshot to tools/build/shots/x.png, for reviews.
+screenshot to tools/build/shots/x.png, for reviews. GET /files.json is made fresh each time (tools/files.py): the
+version of every game file, which the game's service worker reads at each start to keep the game on the player's device
+and download only what changed.
 
     python tools/serve.py [port] [--no-open]
 
@@ -18,8 +20,27 @@ import threading
 import urllib.parse
 import webbrowser
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from files import listing  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHOTS = os.path.join(ROOT, "tools", "build", "shots")
+
+
+_files = {"t": 0.0, "body": b""}
+_files_lock = threading.Lock()
+
+
+def files_json():
+    """files.json from the files as they are now (a second's grace, for the burst of requests at a start)."""
+    import time
+    with _files_lock:
+        now = time.monotonic()
+        if now - _files["t"] > 1.0:
+            import json
+            _files["body"] = json.dumps(listing(ROOT), separators=(",", ":")).encode()
+            _files["t"] = now
+        return _files["body"]
 
 
 class ServerV6(http.server.ThreadingHTTPServer):
@@ -49,6 +70,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self._hidden():
             self.send_error(404)
+            return
+        if urllib.parse.urlparse(self.path).path == "/files.json":
+            body = files_json()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
             return
         super().do_GET()
 

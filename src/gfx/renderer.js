@@ -195,7 +195,17 @@ export class Renderer {
     const tw = Math.round(manifest.size[0] * tier.texScale), th = Math.round(manifest.size[1] * tier.texScale);
     const dw = Math.round(manifest.detail[0] * tier.texScale), dh = Math.round(manifest.detail[1] * tier.texScale);
     const gs = Math.round(1024 * tier.texScale), gd = Math.round(512 * tier.texScale);
-    total = manifest.layers.length * 2 + manifest.ground.length * 2 + 17;
+    const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
+      'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
+      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
+    // Every step that ticks, counted: each picture decoded, each model fetched, each hero, and the steps below that tick
+    // on their own (EXTRA_TICKS: after the pictures, the far land, the interior, the undead, each town knight, the
+    // heroes, the view models, the props and the opening). The bar can't run past its end (main.js holds it short of
+    // 100% until the game is up), but a miscount here shows as a stall or a jump.
+    const cast = this.heroCast || [];
+    const EXTRA_TICKS = 8 + TOWN_KNIGHTS.length;
+    total = manifest.layers.length * 2 + manifest.ground.length * 2 + models.length + cast.length + EXTRA_TICKS;
     const shrink = tier.texScale !== 1;
     const decode = (name, width, height) => pool.run('decode', { url: `${base}assets/game/tex/${name}.webp`, ...(shrink ? { width, height } : {}) }).then((b) => { tick(); return b; });
     this.colorArr = await loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb');
@@ -248,10 +258,6 @@ export class Renderer {
     // Tiling noise for clouds and macro variation: four channels of smooth noise.
     this.noiseTex = this.makeNoise();
 
-    const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
-      'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
-      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
-      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
     // Fetch when building each model; don't retain every source GLB during startup.
     const loadModel = async (i) => {
       const res = await fetch(base + models[i]);
@@ -301,12 +307,11 @@ export class Renderer {
     this.tripo = new TripoSlots(this, base, withVariants(tripoRoster), tripoPalettes, this.chars.length, TRIPO_SLOTS);
     // The other Tessariels this session (src/core/heroes.js makeCast, chosen in src/main.js), in the sim's order: after the
     // knights, before Lisandra. Fetched together, built one by one.
-    const cast = this.heroCast || [];
     this.firstHero = this.chars.length;
     const heroGlbs = await Promise.all(cast.map((p) => fetch(`${base}assets/game/heroes/${p.body}.glb`).then((r) => {
       if (!r.ok) throw new Error(`hero ${p.body}: ${r.status}`);
       return r.arrayBuffer();
-    }).then((b) => parseGLB(b))));
+    }).then((b) => { tick(); return parseGLB(b); })));
     for (let i = 0; i < heroGlbs.length; i++) {
       const hero = await this.buildCharacter(heroGlbs[i]);
       hero.armored = true; hero.hero = true;
@@ -405,6 +410,7 @@ export class Renderer {
     this.moteT = 0;
     this.resize();
     tick();
+    if (done !== total) console.warn(`loading bar: ${done} steps ticked of ${total} counted (renderer.js load)`);
   }
 
   makeNoise() {

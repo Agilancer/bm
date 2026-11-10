@@ -83,9 +83,9 @@ export class FieldCreature extends Beast {
         this.state = 3; this.used = false; this.setClip('attack');
         sim.event(EV.GRUNT, this.x, this.y + 1.1, this.z, 2);
       } else {
-        sim.world.updateField(tx, tz, sim.time, this.id + 1);
+        sim.world.updateField(tx, tz, sim.time, `f${this.id}`);
         const flow = this.flow;
-        sim.world.flow(flow, this.x, this.z, tx, tz, this.id + 1);
+        sim.world.flow(flow, this.x, this.z, tx, tz, `f${this.id}`);
         speed = this.flinch > 0 ? 0 : this.aggro ? o.speed : 0.75;
         this.vx = flow[0] * speed; this.vz = flow[1] * speed;
         if (Math.hypot(...flow) > 0.1) {
@@ -107,7 +107,7 @@ export class FieldCreature extends Beast {
     this.speed = Math.hypot(this.vx, this.vz);
     this.y = sim.world.height(this.x, this.z);
     quatYaw(this.rig.rootQ, 0, this.yaw);
-    this.rig.rootT.set([this.x, this.y, this.z]);
+    this.rig.rootT[0] = this.x; this.rig.rootT[1] = this.y; this.rig.rootT[2] = this.z;
   }
 
   onHit(sim, kind, fx, fz, poise = 20) { this.aggro = true; if (poise >= 10 && !(this.flinchCd > 0)) { this.flinch = 0.18; this.flinchCd = 0.7; } }

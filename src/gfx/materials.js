@@ -762,16 +762,15 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
 }
 `;
 
-// Model-true shading (docs/RENDERING.md, "Model-true shading"): the character shader above with three things changed,
+// Model-true shading (docs/RENDERING.md, "Model-true shading"): the character shader above with two things changed,
 // for a body whose model should look as its maker made it. Only Lisandra's two forms use it (renderer.js `trueLook`);
 // every other body is drawn with ARMOR exactly as it was.
-// 1. The normal map is read the glTF way. glTF's green points up the picture; perturb() builds its tangent frame from
-//    the UVs, whose v runs down the picture, so green is turned over. (three.js turns it over too, for a glTF model with
-//    no tangents.) Read as ARMOR reads it, every fold, stitch and lace is lit from the wrong side.
-// 2. No knight's steel. ARMOR greys dark paint that's partly metal into blackened plate, darkens metal's paint and
+// (Her normal map is read the glTF way, as everyone's is: perturbD() in shaders.js does that for every shader now. It
+// used to turn green over here, on top of a frame that already had it right, which lit her folds upside down.)
+// 1. No knight's steel. ARMOR greys dark paint that's partly metal into blackened plate, darkens metal's paint and
 //    floors its roughness. A Tripo texture marks leather, hair and cloth partly metal, so that greyed and dulled her.
 //    Here the paint, roughness and metal are used as the texture has them.
-// 3. The sky's reflection by the split-sum approximation: an analytic fit of the reflectance (Karis 2014, "Physically
+// 2. The sky's reflection by the split-sum approximation: an analytic fit of the reflectance (Karis 2014, "Physically
 //    Based Shading on Mobile") with the energy a rough surface loses to single scattering given back (Fdez-Agüera 2019),
 //    the diffuse keeping only what the reflection leaves, and the sky's own colour. That is how a glTF viewer (three.js,
 //    which Tripo's site runs on) lights a model. The scene's ambient, sun, lamps, shadows and fog are the same as
@@ -794,7 +793,6 @@ export const MOUTH_WGSL = `  if (C.mouth.x > 0.0 && in.bind.z > C.mouth.z) {
 `;
 
 const TRUE_SWAPS = [
-  ['var n = perturb(n0, p, in.uv, nm.rg, 1.0);', 'var n = perturb(n0, p, in.uv, vec2f(nm.r, 1.0 - nm.g), 1.0);'],
   [/\/\/ Metals take their reflection tint from the paint\.[\s\S]*?sunSpecScale = mix\(1\.0, 0\.55, darkPaint\);/, '// (No knight\'s steel: the paint, roughness and metal as the texture has them.)\n  envBoost = 1.0;\n  sunSpecScale = 1.0;'],
   ['var c = shadePBR(p, n, v, albedo, rough, metal, ao, shadow);', 'var c = shadeTrue(p, n, v, albedo, rough, metal, ao, shadow);'],
   // The witch's mouth (renderer.js writes mouth and lip; zero for anyone without a jaw).

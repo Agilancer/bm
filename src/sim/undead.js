@@ -238,7 +238,8 @@ export class Zombie extends Beast {
     const stump = { [P.HEAD]: 'neck_01', [P.HIPS]: 'spine_01', [P.UPPER_L]: 'clavicle_l', [P.UPPER_R]: 'clavicle_r', [P.FORE_L]: 'upperarm_l', [P.FORE_R]: 'upperarm_r', [P.HAND_L]: 'lowerarm_l', [P.HAND_R]: 'lowerarm_r', [P.THIGH_L]: 'pelvis', [P.THIGH_R]: 'pelvis', [P.SHIN_L]: 'thigh_l', [P.SHIN_R]: 'thigh_r', [P.FOOT_L]: 'calf_l', [P.FOOT_R]: 'calf_r' }[part];
     this.bleedFrom(sim, stump, part === P.HIPS ? 14 : 9);
     this.buildSpheres();
-    sim.hitStop(0.05);
+    // (No hit-stop here: it held the whole world still for anyone's blow anywhere, a hero's a hundred metres off included. The
+    // player's own blows hold it, in src/sim/player.js.)
     if (this.dead) return;
     if (part === P.HEAD) {
       this.headless = true;
@@ -487,8 +488,8 @@ export class Zombie extends Beast {
     const moveAs = (speed, tx, tz, useField) => {
       let ax = tx - this.x, az = tz - this.z;
       if (useField) {
-        sim.world.updateField(p.x, p.z, sim.time, 0);
-        sim.world.flow(flow, this.x, this.z, p.x, p.z, 0);
+        sim.world.updateField(p.x, p.z, sim.time, p === sim.player ? 0 : p);
+        sim.world.flow(flow, this.x, this.z, p.x, p.z, p === sim.player ? 0 : p);
         ax = flow[0]; az = flow[1];
       }
       this.steer(dt, sim, ax, az, speed, turnRate);
@@ -930,8 +931,8 @@ export class Caster extends Zombie {
     const { near, far } = this.manner;
     if (!sees || d > far + 3) {
       const fast = d > far + 9;
-      sim.world.updateField(p.x, p.z, sim.time, 0);
-      sim.world.flow(flow, this.x, this.z, p.x, p.z, 0);
+      sim.world.updateField(p.x, p.z, sim.time, p === sim.player ? 0 : p);
+      sim.world.flow(flow, this.x, this.z, p.x, p.z, p === sim.player ? 0 : p);
       this.steer(dt, sim, flow[0], flow[1], fast ? this.rig.clips.run.speed * this.pace : this.rig.clips[this.walkClip].speed * this.walkPush * this.pace, 3.2);
       this.stride(fast ? 'run' : this.walkClip, this.speed, dt, sim);
       return;

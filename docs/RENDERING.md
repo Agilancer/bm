@@ -9,10 +9,8 @@ Tripo's viewer is three.js. It lights a model with a bright studio environment (
 of it), and reads the textures by the glTF rules. The game drew her with the knights' armour shader (`ARMOR` in
 `src/gfx/materials.js`), which differs in four ways:
 
-1. **Her normal map was read upside-down.** glTF's normal maps have green pointing up the picture. The engine builds
-   its tangent frame from the UVs (`perturb` in `src/gfx/shaders.js`), and v runs down the picture, so green comes out
-   reversed. three.js turns green over for exactly this case; the engine didn't. Every fold, lace and stitch was lit
-   from the wrong side, so the surface detail looked muddy.
+1. **Her normal map was read the wrong way round.** (Corrected 2026-11-09, for every body: see "Normal maps" below.
+   The first fix turned green over here, which was the half that had been right.)
 2. **She was shaded as blackened steel.** Her metal/roughness texture marks leather, hair and cloth as partly metal:
    the median is 0.29, and 14% of texels are above 0.5. ARMOR treats dark, partly-metal paint as blackened plate, so it
    greyed her colours toward neutral, darkened metal areas' paint and raised their roughness.
@@ -25,9 +23,8 @@ of it), and reads the textures by the glTF rules. The game drew her with the kni
 
 ## Model-true shading (Lisandra only)
 
-`ARMOR_TRUE` in `src/gfx/materials.js` is `ARMOR` with three swaps (`TRUE_SWAPS`) and one added function, `shadeTrue`:
+`ARMOR_TRUE` in `src/gfx/materials.js` is `ARMOR` with two swaps (`TRUE_SWAPS`) and one added function, `shadeTrue`:
 
-- the normal map's green is turned over (glTF convention);
 - the knight's-steel block is removed, so paint, roughness and metal are used as the texture has them;
 - the sky's reflection uses an analytic DFG term (Karis 2014), with multiple-scattering energy given back
   (Fdez-Agüera 2019). The diffuse keeps only what the reflection leaves, and the sky keeps its own colour.
@@ -251,3 +248,21 @@ What's left is mostly the browser's: putting a 3440×1440 frame on screen costs 
 
 Still to do: a human look in the game. The cave and ledge shots with the new shading haven't been compared side by side
 with Tripo's viewer yet, and the phone (Mobile tier) is untested.
+
+## Normal maps
+
+Every normal map is read by `perturbD` in `src/gfx/shaders.js`, the glTF way: red along u, green up the picture (v runs
+down it). The tangent frame is built from screen derivatives (no tangents in the meshes), and it comes out scaled by the
+screen's handedness. WebGPU's window y runs down, so for a face toward the eye the raw frame points along -u and -v;
+`sign(det)` turns it right. Until 2026-11-09 red was read backwards on every model, so folds, seams and bumps were lit
+from the wrong side left to right; green happened to be right. Checked on a GPU with a camera-facing quad and a (1, .5)
+and a (.5, 1) texel. `tests/render-models.test.mjs` pins it.
+
+## Metal maps from the armour tool
+
+`tools/armor/rig_armor.py` makes a metal/roughness map from the paint alone (`derive_pbr`). Until 2026-11-09 it marked
+every non-cloth texel 96% metal unless it was dark saturated leather, so skin, hair, leather and coloured cloth on the
+43 heroes, Paladin Bellwright and the town knights were drawn as steel. ARMOR greys dark paint that's metal into
+blackened plate, and metal takes no diffuse light, so faces came out nearly black. `paint_metal` now keeps metal for
+greys (steel) and gold, and nothing else; `tools/armor/fix_metal.py` rewrote the shipped models' maps with it (the
+paint and normal maps untouched). Townsfolk have their own maps and were fine.

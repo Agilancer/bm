@@ -251,9 +251,10 @@ export class Hero extends Knight {
     this.lookPitch = damp(this.lookPitch || 0, near ? clamp(Math.atan2(-eyeDrop, Math.max(this.near, 0.5)), -0.5, 0.5) : 0, 5, dt);
     // Far off and unseen there's no body to pose: just think, and walk the map.
     this.animT += dt;
+    // (On screen near by, every tick; far off or out of sight less often, the pose carried along between: Sim.poseGap.)
     if (this.visible || this.foe) {
-      const every = this.near > 70 ? 3 : 1;
-      if (this.animTick++ % every === 0) { this.animate(this.animT, sim); this.animT = 0; }
+      const gap = this.swing || this.surf || this.jump || !sim.poseGap ? 0 : sim.poseGap(this, this.lodSlot);
+      if (this.animT >= gap - 1e-6) { this.animate(this.animT, sim); this.animT = 0; }
     }
     this.strings(sim);
   }
@@ -306,8 +307,8 @@ export class Hero extends Knight {
     if (!this.clear || this.stuckT > 1.2) {
       const fa = this.fieldAt;
       if (!fa || Math.hypot(fa.x - g.x, fa.z - g.z) > 2) this.fieldAt = { x: g.x, z: g.z, t: sim.time };
-      sim.world.updateField(this.fieldAt.x, this.fieldAt.z, this.fieldAt.t, 1 + this.id);
-      sim.world.flow(flowDir, this.x, this.z, g.x, g.z, 1 + this.id);
+      sim.world.updateField(this.fieldAt.x, this.fieldAt.z, this.fieldAt.t, `h${this.id}`);
+      sim.world.flow(flowDir, this.x, this.z, g.x, g.z, `h${this.id}`);
       this.steer(dt, flowDir[0] * sp, flowDir[1] * sp, 7, g.face ?? Math.atan2(flowDir[0], flowDir[1]));
     } else this.steer(dt, dx / d * sp, dz / d * sp, 6, g.face ?? Math.atan2(dx, dz));
     // Stuck on something: a moment on the field, then the field.
@@ -1083,7 +1084,7 @@ export class Hero extends Knight {
   writeHero(snap, cOff, shown) {
     const o = cOff + C_HERO, h = this.J.head * 3;
     snap[o] = shown ? 1 : 0;
-    snap[o + 1] = shown ? this.pose.wt[h + 1] + 0.32 * this.rig.height / 1.8 : 0;
+    snap[o + 1] = shown ? this.pose.wt[h + 1] + (this.y - (this.posedY ?? this.y)) + 0.32 * this.rig.height / 1.8 : 0;
     snap[o + 2] = this.x; snap[o + 3] = this.y; snap[o + 4] = this.z;
     snap[o + 5] = this.hp / this.maxHp;
     snap[o + 6] = this.person.level;

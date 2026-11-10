@@ -366,6 +366,39 @@ def pack_atlas(sizes, size):
     return rects
 
 
+def smooth(e0, e1, x):
+    t = np.clip((x - e0) / (e1 - e0), 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def paint_metal(a):
+    """How much of a texel is metal, from its paint alone (0-1 floats, HxWx3). Steel, silver and iron are grey; Tripo's
+    gold is a strongly saturated orange-yellow (hue 25-45, saturation 0.5-0.75). Skin is the same hue but paler
+    (saturation 0.12-0.45 on the townsfolk), and so are ivory and cream plate, which can't be told from pale skin by
+    colour: those go to paint, not steel, since steel skin is what drew faces nearly black. Leather, wood and coloured
+    cloth are none of these."""
+    mx, mn = a.max(-1), a.min(-1)
+    sat = (mx - mn) / np.maximum(mx, 1e-3)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    # Hue in degrees for the warm half of the wheel (red 0, yellow 60); cool colours land outside both bands below.
+    hue = np.where(r >= g, 60 * (g - b) / np.maximum(mx - mn, 1e-3), 60 * (2 + (b - r) / np.maximum(mx - mn, 1e-3)))
+    warm = (r >= b) & (g >= b)
+    grey = 1 - smooth(0.16, 0.30, sat)
+    skin = warm * (1 - smooth(40, 46, hue)) * smooth(0.10, 0.16, sat) * (1 - smooth(0.42, 0.55, sat)) * smooth(0.28, 0.42, mx)
+    gold = warm * smooth(22, 28, hue) * (1 - smooth(55, 65, hue)) * smooth(0.40, 0.60, sat) * smooth(0.35, 0.50, mx)
+    return np.maximum(grey * (1 - skin), gold)
+
+
+def repaint_metal(a, metal, rough):
+    """The metal a painted map should have (never more than it had), and what stopped being metal no glossier than
+    satin (0.55: skin, enamel, oiled leather). Where the metal is unchanged, so is the roughness."""
+    # (Softened by a texel: decided texel by texel, Tripo's speckled paint flips between steel and paint, which shimmers.)
+    soft = np.asarray(Image.fromarray((paint_metal(a) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8)), dtype=np.float32) / 255
+    new = np.minimum(metal, soft)
+    gone = np.clip(metal - new, 0, 1)
+    return new, rough + (np.maximum(rough, 0.55) - rough) * gone
+
+
 def derive_pbr(rgb, is_cloth, strength):
     """Normal and metal/rough from a painted colour map (0-255 floats, HxWx3)."""
     a = rgb / 255.0
@@ -393,6 +426,8 @@ def derive_pbr(rgb, is_cloth, strength):
         leather = np.clip((sat - 0.3) * 4, 0, 1) * np.clip((0.3 - lum) * 6, 0, 1)
         metal = np.clip(0.96 - leather, 0, 1)
         rough = np.clip(0.36 - gold * 0.12 + speck * 2.2 + leather * 0.4 + (1 - np.clip(lum * 3, 0, 1)) * 0.12, 0.12, 1)
+        # Only steel and gold stay metal (fix_metal.py did the same to the models already shipped).
+        metal, rough = repaint_metal(a, metal, rough)
     mr = np.stack([np.ones_like(lum), rough, metal], -1)
     return normal, mr
 

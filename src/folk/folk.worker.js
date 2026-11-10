@@ -1,8 +1,8 @@
 // The town's own thread: everyone's day (src/folk/brain.js), what they say (src/folk/talk.js), and their poses, written
-// into the folk buffer (src/folk/layout.js) for the renderer to skin. It runs at 60 a second at its own pace; the fight's
-// thread never waits on it, and it never waits on the fight.
+// into the folk buffer (src/folk/layout.js) for the renderer to skin. It runs a frame for each of the screen's, when they ask
+// (TownClient.pace), or else at 60 a second at its own pace; the fight's thread never waits on it, and it never waits on the fight.
 //
-// main -> here:  { type: 'boot', buffer, base }   then the inbox (FIN) every frame, and
+// main -> here:  { type: 'boot', buffer, base, lean }   then the inbox (FIN) every frame, and
 //                { type: 'talk', i }  the player's opened (or, i = -1, shut) a word with someone
 //                { type: 'flags', flags: [...] }  what's happened that the town knows of (quests, the player's arrival)
 //                { type: 'name', name }  what the player's called
@@ -19,19 +19,27 @@ import { LINES as LA } from './lines/town_a.js';
 import { LINES as LB } from './lines/town_b.js';
 import { LINES as LC } from './lines/town_c.js';
 import { SCENES, SMALLTALK } from './lines/scenes.js';
-import { F, F_PALETTE, FIN, FOLK_BYTES, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
+import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
+import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
 
 const HZ = 60;
+// Seconds between full poses: for someone drawn (body or shadow) within near metres of the eye (every frame), within mid, and past
+// it; and for someone not drawn at all. Between poses the last one is carried along with them (src/core/carry.js), so nobody
+// stands still and then jumps: only a far body's limbs are a beat behind. A phone poses less.
+const POSE_GAP = { near: 40, mid: 80, midGap: 1 / 72, farGap: 1 / 40, hidden: 1 / 6 };
+const POSE_GAP_LEAN = { near: 24, mid: 50, midGap: 1 / 36, farGap: 1 / 20, hidden: 1 / 4 };
 // The world the town's laid out in: the village, the fields and woods round it, the old church ground.
 const BOUNDS = [-80, -75, 110, 80];
 
-let life = null, talk = null, map = null, shared = false;
+let life = null, talk = null, map = null, shared = false, gaps = POSE_GAP;
 const beds = [], bedIndex = new Map();
 const events = [];
 const emit = (e) => events.push(e);
+const carry = new Float32Array(8), headAt = new Float32Array(3);
 
-async function boot({ buffer, base }) {
+async function boot({ buffer, base, lean }) {
   shared = !!buffer;
+  if (lean) gaps = POSE_GAP_LEAN;
   map = mapFolk(buffer || new ArrayBuffer(FOLK_BYTES));
   if (!shared) map.inbox[FIN.HOUR] = -1;
   const get = async (p) => { const r = await fetch(base + p); if (!r.ok) throw new Error(`${p}: ${r.status}`); return r; };
@@ -85,21 +93,58 @@ export const modelOf = (folk, body) => (folk.models[body] ? body : folk.swaps?.[
 
 // ---- the loop ----
 
-let tick = 0, last = 0;
+let tick = 0, last = 0, clock = 0;
 const head = [0, 0, 0];
+
+// One frame of the town, timed for the Frame rate readout. A bug in one is told once and the town carries on.
+function tickTown(dt) {
+  const t0 = performance.now();
+  try { frame(dt); } catch (err) {
+    if (!run.told) { run.told = true; self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }); }
+  }
+  if (shared) { Atomics.add(map.ctrl, FCTRL.COST_US, Math.round((performance.now() - t0) * 1000)); Atomics.add(map.ctrl, FCTRL.FRAMES, 1); }
+}
 
 function run() {
   last = performance.now();
+  if (shared && Atomics.waitAsync) { paced(); return; }
   const step = () => {
     const now = performance.now();
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    try { frame(dt); } catch (err) {
-      if (!run.told) { run.told = true; self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }); }
-    }
+    tickTown(dt);
     setTimeout(step, Math.max(1, 1000 / HZ - (performance.now() - now)));
   };
   step();
+}
+
+// Paced by the screen, as the sim is (its loop in src/sim/sim.worker.js): a frame of the town for each of the screen's, by the time
+// each asks for, so the people in the street move on the same amount every frame. (At its own 60 a second on a 144 Hz screen,
+// three frames in five showed them where they'd been.) A frame shorter than SHORTEST waits for the next. When no frames come, its
+// own 60. (Only where it can wait without blocking, for the talk, flags and routes it's sent.)
+async function paced() {
+  const c = map.ctrl, SHORTEST = 1000 / 170, FRAMELESS = 100;
+  let seq = Atomics.load(c, FCTRL.PACE_SEQ), done = Atomics.load(c, FCTRL.PACE_US), frameAt = -1e9;
+  for (;;) {
+    const asked = Atomics.load(c, FCTRL.PACE_SEQ), now = performance.now();
+    if (asked !== seq) {
+      seq = asked;
+      const want = Atomics.load(c, FCTRL.PACE_US);
+      if (now - frameAt > FRAMELESS) done = want;
+      else {
+        const owed = ((want - done) | 0) / 1000;
+        if (owed >= SHORTEST) { tickTown(Math.min(owed, 100) / 1000); done = want; }
+      }
+      frameAt = now; last = now;
+    } else if (now - frameAt > FRAMELESS && now - last >= 1000 / HZ - 0.5) {
+      tickTown(Math.min((now - last) / 1000, 0.1));
+      last = now; done = Atomics.load(c, FCTRL.PACE_US);
+    }
+    // (On its own 60, a timer: a waitAsync's timeout only wakes on Windows's 15 ms tick, so 16 ms took 30.)
+    const t = performance.now();
+    if (t - frameAt > FRAMELESS) await new Promise((r) => setTimeout(r, Math.max(1, 1000 / HZ - (t - last))));
+    else { const r = Atomics.waitAsync(c, FCTRL.PACE_SEQ, seq, FRAMELESS); if (r.async) await r.value; }
+  }
 }
 
 function frame(dt) {
@@ -112,7 +157,7 @@ function frame(dt) {
   life.update(dt, { hour: inb[FIN.HOUR], day: inb[FIN.DAY] | 0, player, dangers });
   talk.update(dt, { player, cast: inb[FIN.CAST] | 0 });
   blows(player);
-  tick++;
+  tick++; clock += dt;
   write(inb[FIN.CAMX], inb[FIN.CAMY], inb[FIN.CAMZ]);
   if (events.length) { self.postMessage({ type: 'events', list: events.splice(0) }); }
 }
@@ -132,29 +177,42 @@ function blows(player) {
   }
 }
 
-// Everyone into a slot: where they are, and their pose. Poses are solved less often the further they are from the eye
-// (a person 60 m off moving at 15 a second can't be told from 60), and the last one kept for the ticks between.
+// Everyone into a slot: where they are, and their pose. Full poses are solved less often the further they are from the eye, and
+// seldom for anyone not drawn (POSE_GAP); in the frames between, the last one is carried to where they are now. (By the clock, so a
+// faster screen poses those near you more often and nobody else; spread over the frames by who's who.)
 function write(cx, cy, cz) {
   const si = shared ? freeSlot(map) : 0, slot = map.slots[si], bodies = map.bodies;
   slot[SH.COUNT] = life.folk.length; slot[SH.TICK] = tick; slot[SH.HOUR] = map.inbox[FIN.HOUR];
   for (const me of life.folk) {
     const o = SLOT_HEAD + me.i * FOLK_STRIDE;
     const d = Math.hypot(me.x - cx, me.y - cy, me.z - cz);
-    const every = d < 22 ? 1 : d < 45 ? 2 : d < 90 ? 4 : 8;
+    const seen = map.inbox[FIN.SEEN + me.i] > 0.5, sighted = seen && !me.seen;
+    me.seen = seen;
+    const every = !seen ? gaps.hidden : d < gaps.near ? 0 : d < gaps.mid ? gaps.midGap : gaps.farGap;
     // (Tucked in once they're down in a bed: the same moment the blanket's drawn over them, below.)
     const tuck = me.posture === 'lie' && me.pose.rest > 0.5 && me.bed?.bed && bedIndex.has(me.bed.bed) ? 1 : 0;
     if (tuck !== me.pose.tuck) { me.pose.tuck = tuck; me.posedAt = -1; }
-    if (me.posedAt < 0 || (tick + me.i) % every === 0) {
+    let posed = false;
+    // (Posed at once when they come into view, so nobody's seen in a pose a sixth of a second old.)
+    if (me.posedAt < 0 || !every || sighted || clock >= me.poseDue - 0.002) {
       me.pose.solve(me.x, me.y, me.z, me.yaw, me.pal, 0);
       me.pose.at(me.rig.head, head);
       me.hx = head[0]; me.hy = head[1]; me.hz = head[2];
       me.posedAt = tick;
+      me.x0 = me.x; me.y0 = me.y; me.z0 = me.z; me.yaw0 = me.yaw;
+      me.poseDue = clock + every * (me.poseDue === undefined ? ((me.i % 8) + 1) / 8 : 1);
+      posed = true;
     }
+    const moved = !posed && carryFrame(carry, me.yaw0, me.x0, me.y0, me.z0, me.yaw, me.x, me.y, me.z);
     slot[o + F.ACTIVE] = 1;
     slot[o + F.X] = me.x; slot[o + F.Y] = me.y; slot[o + F.Z] = me.z; slot[o + F.YAW] = me.yaw;
-    slot[o + F.HX] = me.hx; slot[o + F.HY] = me.hy; slot[o + F.HZ] = me.hz;
+    if (moved) {
+      headAt[0] = me.hx; headAt[1] = me.hy; headAt[2] = me.hz;
+      carryPoint(headAt, 0, slot, o + F.HX, carry);
+    } else { slot[o + F.HX] = me.hx; slot[o + F.HY] = me.hy; slot[o + F.HZ] = me.hz; }
     slot[o + F.BODY] = me.i;
-    slot[o + F.POSED] = me.posedAt;
+    // (A new palette whenever it's been carried: the renderer uploads it when this changes.)
+    slot[o + F.POSED] = moved ? tick : me.posedAt;
     slot[o + F.HOUSE] = me.house;
     slot[o + F.LEVEL] = me.level;
     slot[o + F.SLEEP] = me.act === ACT.SLEEP && (me.posture === 'lie' || me.posture === 'floor') && !me.woken ? 1 : 0;
@@ -167,7 +225,18 @@ function write(cx, cy, cz) {
       else if (me.posture === 'floor' && me.bed?.pallet && bedIndex.has(me.bed.pallet)) bed = bedIndex.get(me.bed.pallet) * 4 + 1;
     }
     slot[o + F.BED] = bed;
-    slot.set(me.pal, o + F_PALETTE);
+    if (!moved) slot.set(me.pal, o + F_PALETTE);
+    else {
+      const n = me.rig.count, p = o + F_PALETTE;
+      carryPalette(me.pal, 0, slot, p, n, carry);
+      if (me.joints > n) {
+        // The skirt's six leg points (and their radii) after the joints, and the facing it hangs from.
+        const s = n * 8;
+        for (let k = s; k < me.joints * 8; k++) slot[p + k] = me.pal[k];
+        for (let i = 0; i < 6; i++) carryPoint(me.pal, s + i * 4, slot, p + s + i * 4, carry);
+        slot[p + s + 24] = me.yaw;
+      }
+    }
     // For the player to bump into: not when they're lying down, or sat (the furniture's in the way already).
     const b = me.i * 4;
     const solid = me.posture === 'stand';

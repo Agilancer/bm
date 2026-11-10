@@ -5,3 +5,6 @@ tools/bone_hydra/build/
 __pycache__/
 *.pyc
 tools/build/
+
+# The game files list for a static host (tools/files.py), made when the game is put up: never committed.
+files.json

@@ -70,6 +70,10 @@ const CRABS = [
 // How much faster than their clips each kind goes, by kind: knight, silver knight, crab, Gravehart, Hydra, undead, ogre.
 // (Eased when the swords went: they have to cross open ground under fire, and a wizard has no parry.)
 const HASTE = [1.1, 0.95, 1.1, 1, 1, 1.05, 1], CASTER_HASTE = 1.1;
+// Sim.poseGap's distances (metres from the player) and gaps (seconds): within close, every tick whatever; drawn, every tick within
+// near, then midGap to mid, then farGap; not drawn, hidden.
+const POSE_GAP = { close: 16, near: 45, mid: 90, midGap: 1 / 70, farGap: 1 / 40, hidden: 1 / 8 };
+const POSE_GAP_LEAN = { close: 12, near: 25, mid: 50, midGap: 1 / 30, farGap: 1 / 20, hidden: 1 / 5 };
 
 class Sim {
   constructor() {
@@ -113,6 +117,17 @@ class Sim {
     } else {
       this.pendingEvents.push(type, a, b, c, d, e, f, g);
     }
+  }
+
+  // Seconds between full poses for a body (k, in character slot `slot`). Every tick near the player, or on screen near enough to be
+  // looked at; less often on screen far off; seldom when it isn't drawn at all (INPUT.SEEN, from the renderer). Between them the
+  // last pose is carried along with the body (src/core/carry.js), so it glides; only the limbs of something far off are a beat
+  // behind. Posing is over half of a tick's work. A phone poses less.
+  poseGap(k, slot) {
+    const p = this.player, d = Math.hypot(k.x - p.x, k.z - p.z), g = this.lean ? POSE_GAP_LEAN : POSE_GAP;
+    if (d < g.close || !(slot >= 0)) return 0;
+    if (!(this.input[INPUT.SEEN + slot] > 0.5)) return g.hidden;
+    return d < g.near ? 0 : d < g.mid ? g.midGap : g.farGap;
   }
 
   hitStop(t) { this.stopT = Math.max(this.stopT, t); }
@@ -168,8 +183,10 @@ class Sim {
     if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
     if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + g); }
     if (!this.opening?.frozen()) player.update(dt * (this.slow || 1), tdt, input, this);
-    for (const k of this.knights) {
-      const ox = k.x, oz = k.z;
+    for (let i = 0; i < this.heroes.length; i++) this.heroes[i].lodSlot = this.knights.length + i;
+    for (let i = 0; i < this.knights.length; i++) {
+      const k = this.knights[i], ox = k.x, oz = k.z;
+      k.lodSlot = i;
       k.update(this.frozen ? 0 : tdt * this.casting.rate(k) * (k.opts?.role ? CASTER_HASTE : HASTE[k.kind] ?? 1), this);
       // Velscour's church is the undead's. What lives in the fields stops at its door.
       // (The Hydra is the exception. The pit is where it lives.)
@@ -393,13 +410,15 @@ class Sim {
     }
   }
 
-  publish() {
+  // paced: the frames' time (CTRL.PACE_US) the world has reached, when the screen is pacing it (boot's loop).
+  publish(paced = 0) {
     if (this.shared) {
       const { ctrl, snaps } = this.shared;
       const latest = Atomics.load(ctrl, CTRL.LATEST), reading = Atomics.load(ctrl, CTRL.READING);
       let slot = 0;
       while (slot === latest || slot === reading) slot++;
       snaps[slot].set(this.scratch);
+      Atomics.store(ctrl, CTRL.SNAP_US + slot, paced);
       Atomics.store(ctrl, CTRL.PUB_MS, (performance.timeOrigin + performance.now()) % 2147483647);
       Atomics.store(ctrl, CTRL.LATEST, slot);
       Atomics.add(ctrl, CTRL.TICK, 1);
@@ -437,6 +456,7 @@ async function fetchBuf(path) {
 
 async function boot(msg) {
   const sim = new Sim();
+  sim.lean = !!msg.lean;
   const base = msg.base;
   setOpeningTerrain(msg.opening);
   if (msg.buffer) {
@@ -563,39 +583,88 @@ async function boot(msg) {
   });
   self.postMessage({ type: 'ready', bytes: TOTAL_BYTES });
 
-  // Fixed step. In a worker Atomics.wait is an exact sleep; without shared memory fall back to timers.
+  // A tick, timed for the Frame rate readout (CTRL.STEP_US and the rest: GameView.simStats in src/main.js).
+  // A bug in one tick is logged once and the world carries on, rather than the game freezing.
+  const tickOf = (d) => {
+    const t0 = performance.now();
+    try { sim.step(d); } catch (err) {
+      if (!sim.reported) { sim.reported = true; self.postMessage({ type: 'error', message: `${err.message}
+${err.stack}` }); }
+    }
+    if (sim.shared) {
+      const us = Math.round((performance.now() - t0) * 1000), c = sim.shared.ctrl;
+      Atomics.add(c, CTRL.STEP_US, us); Atomics.add(c, CTRL.STEPS, 1);
+      if (us > Atomics.load(c, CTRL.STEP_MAX)) Atomics.store(c, CTRL.STEP_MAX, us);
+    }
+  };
+
+  // The world's own clock: a fixed step at hz. Without shared memory it's all there is (on timers); with it, it's what keeps the
+  // world going when no frames are asking (below).
   const hz = msg.hz, dt = 1 / hz;
   let next = performance.now();
   let lastPublish = 0;
-  const sleeper = msg.buffer ? new Int32Array(new SharedArrayBuffer(4)) : null;
   const iterate = () => {
     const now = performance.now();
     let steps = 0;
-    while (now >= next && steps < 6) {
-      // A bug in one tick is logged once and the world carries on, rather than the game freezing.
-      try { sim.step(dt); } catch (err) {
-        if (!sim.reported) { sim.reported = true; self.postMessage({ type: 'error', message: `${err.message}
-${err.stack}` }); }
-      }
-      next += 1000 / hz; steps++;
-    }
+    while (now >= next && steps < 6) { tickOf(dt); next += 1000 / hz; steps++; }
     if (now - next > 250) next = now;
     if (steps) {
       if (sim.shared || now - lastPublish > 7) { sim.publish(); lastPublish = now; }
     }
   };
-  if (sleeper) {
-    let yielded = performance.now();
-    for (;;) {
-      iterate();
-      const wait = next - performance.now();
-      if (wait > 0.2) Atomics.wait(sleeper, 0, 0, wait);
-      // Let queued messages through (saves and loads) a few times a second, paused or not.
-      if (performance.now() - yielded > 100) { yielded = performance.now(); await new Promise((r) => setTimeout(r, 0)); }
-    }
-  } else {
+  if (!msg.buffer) {
     const loop = () => { iterate(); setTimeout(loop, 2); };
     loop();
+    return;
+  }
+
+  // Paced by the screen. Each frame the render thread asks for the time since its last one (GameView.pace in src/main.js), and the
+  // world steps through exactly that and is published once: one tick at 144 Hz, two at 60, never longer than a tick at hz. So each
+  // frame shows the world the same time on from the one before. (On its own clock it drifted against the screen's, and frames
+  // showed no step, or two or three, unevenly: a judder in everything but the camera, at any frame rate.) A frame shorter than
+  // SHORTEST isn't stepped for: its time goes with the next. With no frames coming (a hidden tab, a phone, which isn't paced, a
+  // page with nothing drawn) it goes back to its own clock, and to the frames again when they come.
+  const ctrl = sim.shared.ctrl;
+  const TICK_MS = 1000 / hz, SHORTEST = 1000 / 170, FRAMELESS = 100, MOST = 100;
+  let seq = Atomics.load(ctrl, CTRL.PACE_SEQ), done = Atomics.load(ctrl, CTRL.PACE_US), frameAt = -1e9;
+  // (Waited for without blocking where the browser can, so messages, saves and loads, come in between ticks. Otherwise an exact
+  // sleep, let go now and then for them.)
+  const nap = Atomics.waitAsync
+    ? (ms) => { const r = Atomics.waitAsync(ctrl, CTRL.PACE_SEQ, seq, ms); return r.async ? r.value : null; }
+    : (ms) => { Atomics.wait(ctrl, CTRL.PACE_SEQ, seq, ms); return null; };
+  let yielded = performance.now();
+  for (;;) {
+    const asked = Atomics.load(ctrl, CTRL.PACE_SEQ);
+    if (asked !== seq) {
+      seq = asked;
+      const want = Atomics.load(ctrl, CTRL.PACE_US), now = performance.now();
+      if (now - frameAt > FRAMELESS) {
+        // (Back from its own clock, which has kept up: the frames' time runs from here.)
+        done = want;
+      } else {
+        const owed = ((want - done) | 0) / 1000;
+        if (owed >= SHORTEST) {
+          // (A stall longer than MOST is let go, as the fixed step lets go of one.)
+          const t = Math.min(owed, MOST), n = Math.max(1, Math.ceil(t / TICK_MS - 0.05));
+          for (let i = 0; i < n; i++) tickOf(t / n / 1000);
+          done = want;
+          sim.publish(done);
+        }
+      }
+      frameAt = now;
+      next = performance.now();
+    } else if (performance.now() - frameAt > FRAMELESS) {
+      iterate();
+      done = Atomics.load(ctrl, CTRL.PACE_US);
+    }
+    const own = performance.now() - frameAt > FRAMELESS, ms = own ? next - performance.now() : FRAMELESS;
+    // (On its own clock, a timer: a waitAsync's timeout only wakes on Windows's 15 ms tick, so a sleep of 8 ms took 15 and the
+    // ticks came in twos. A frame coming then is seen at the next tick.)
+    if (ms > 0.2) {
+      if (own && Atomics.waitAsync) await new Promise((r) => setTimeout(r, ms));
+      else { const p = nap(ms); if (p) await p; }
+    }
+    if (!Atomics.waitAsync && performance.now() - yielded > 100) { yielded = performance.now(); await new Promise((r) => setTimeout(r, 0)); }
   }
 }
 

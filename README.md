@@ -19,6 +19,14 @@ The game is now ranged spell combat. Everything below about swords and armour de
 Run `play.bat`, or `python tools/serve.py`, and open `http://localhost:8402/`. It needs a WebGPU browser: current Chrome,
 Edge and Safari on PC and phones, or Firefox on Windows. On a static host it reaches the same state through `coi-sw.js`.
 
+**Game files kept on the device.** The first start asks once whether to keep the game here (a start downloads about
+375 MB). Kept, `coi-sw.js` stores each file as it first comes down; every start after that reads `files.json` (every
+file's version, about 130 KB) and downloads only the files that changed. Settings, "Game files", turns it off and clears
+them. `tools/serve.py` makes `files.json` fresh on each request, so an edit shows at the next start. On a static host,
+run `python tools/files.py` each time the game is put up (it's never committed: a stale one would hide changes).
+Without `files.json` every file comes from the network as before. Checked by `node tools/keep_check.mjs` (three starts:
+375 MB, then the page's first files only, then just the file that was touched).
+
 | | PC | Phone |
 | --- | --- | --- |
 | Move | `W` `A` `S` `D` | Left thumb |

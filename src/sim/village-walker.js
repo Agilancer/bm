@@ -541,7 +541,7 @@ export class VillageWalker {
   write(snap, offset) {
     const rig = this.rig;
     quatYaw(rig.rootQ, 0, this.yaw);
-    rig.rootT.set([this.x, this.y, this.z]);
+    rig.rootT[0] = this.x; rig.rootT[1] = this.y; rig.rootT[2] = this.z;
     rig.solve(rig.clips[this.clip], this.time, this.fade, snap, offset + C_PALETTE);
     if (this.cloth) {
       // Put somewhere new (a cut, a teleport), the cloth starts hanging still rather than flying after her.

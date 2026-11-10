@@ -289,7 +289,10 @@ fn bumpNormal(n: vec3f, p: vec3f, h: f32) -> vec3f {
   return normalize(abs(det) * n - g);
 }
 
-// Tangent frame from screen derivatives, for normal maps on meshes with no tangents.
+// Tangent frame from screen derivatives, for normal maps on meshes with no tangents. Maps are read the glTF way: red
+// along u, green up the picture (v runs down it). The frame comes out scaled by the screen's handedness, and WebGPU's
+// window y runs down, so for a face toward the eye it points along -u and -v; sign(det) turns it the right way round,
+// front face or back. (Before, red was read backwards: every fold and seam lit from the wrong side, left to right.)
 fn perturb(n: vec3f, p: vec3f, uv: vec2f, m: vec2f, strength: f32) -> vec3f {
   return perturbD(n, dpdx(p), dpdy(p), dpdx(uv), dpdy(uv), m, strength);
 }
@@ -297,10 +300,11 @@ fn perturbD(n: vec3f, dp1: vec3f, dp2: vec3f, duv1: vec2f, duv2: vec2f, m: vec2f
   let dp2p = cross(dp2, n); let dp1p = cross(n, dp1);
   let t = dp2p * duv1.x + dp1p * duv2.x;
   let b = dp2p * duv1.y + dp1p * duv2.y;
-  let inv = 1.0 / sqrt(max(max(dot(t, t), dot(b, b)), 1e-12));
+  let det = dot(dp1, dp2p);
+  let inv = select(1.0, -1.0, det < 0.0) / sqrt(max(max(dot(t, t), dot(b, b)), 1e-12));
   let mxy = (m * 2.0 - 1.0) * strength;
   let mz = sqrt(clamp(1.0 - dot(mxy, mxy), 0.0, 1.0));
-  return normalize(t * inv * mxy.x + b * inv * mxy.y + n * mz);
+  return normalize(t * inv * mxy.x - b * inv * mxy.y + n * mz);
 }
 
 struct Out { @location(0) color: vec4f, @location(1) depth: f32 };

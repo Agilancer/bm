@@ -2,7 +2,7 @@
 // GPU from the pose the town's thread wrote (src/folk/folk.worker.js), lit and shadowed as the knights are. Bodies load in
 // the background once the village is up; anyone not loaded yet just isn't drawn.
 import { accessor, parseGLB } from '../core/glb.js';
-import { F, F_PALETTE, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/layout.js';
+import { F, F_PALETTE, FIN, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/layout.js';
 import { SKIRT_JOINTS } from '../folk/rig.js';
 import { PEOPLE } from '../folk/people.js';
 import { Blankets } from './blankets.js';
@@ -84,7 +84,7 @@ export class FolkBodies {
       const b = this.bodies[i];
       if (!b) continue;
       const o = SLOT_HEAD + i * FOLK_STRIDE;
-      if (!s || s[o + F.ACTIVE] < 0.5) { b.seen = b.casts = false; continue; }
+      if (!s || s[o + F.ACTIVE] < 0.5) { b.seen = b.casts = false; this.map.inbox[FIN.SEEN + i] = 0; continue; }
       const x = s[o + F.X], y = s[o + F.Y] + 0.9, z = s[o + F.Z];
       b.bx = x; b.by = y; b.bz = z; b.br = bodyRadius(1.4, b.bindR);
       let inside = 1e9;
@@ -95,6 +95,8 @@ export class FolkBodies {
       b.far = d > (b.far ? 14 : 16);
       // (Shadows from far off are lost in the cascade's texels anyway.)
       if (d > 70) b.casts = b.seen;
+      // (For the town's thread: whoever's drawn, body or shadow, is posed often; whoever isn't, seldom.)
+      this.map.inbox[FIN.SEEN + i] = b.casts ? 1 : 0;
     }
   }
 
