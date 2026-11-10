@@ -6,7 +6,8 @@ its kind's loudness by the one meter (meter() below; anchors.json types), and th
   2. pitch from every 40 ms frame whose autocorrelation periodicity is >= 0.6 and within 35 dB of the loudest: the median
      in the voice's band, the 90th percentile under its cap (anchors.json voices band), a young shout's peak <= 360 Hz;
   3. voiced share >= 0.5, spectral flatness <= 0.01; a calm line's low band (80-400 Hz share) within 0.15 of the sample's;
-  4. pace (syllables a second, pauses cut to 250 ms) within 25% of the sample's; a line of under five words from -40% to
+  4. pace (syllables a second, pauses cut to 250 ms) within 25% of the voice's (its sample's, or the recording refs.json
+     names as its `pace`: for the young voice, the owner's own approved take); a line of under five words from -40% to
      +25%, and no more than 0.45 s a syllable;
   5. Chatterbox likeness to the voice's approved sample >= 0.84 (calm) or 0.82 (raised); the highest passing take wins.
 An owner-approved take (<key>.a.wav) is shipped whatever it scores. A line whose takes are all made with fewer than two
@@ -185,41 +186,59 @@ def main():
         e = ve.embeds_from_wavs([y16], sample_rate=16000)[0]
         return e / np.linalg.norm(e)
 
+    # Each voice's sample: what a take's likeness and colour are measured against. Its pace is the sample's too, unless
+    # refs.json names another recording for it (`pace`): the owner chose her own approved take for the young voice,
+    # whose sample was made by the old model and runs about 30% faster than this one ever speaks.
     ref = {}
     for v, r in refs.items():
         y = librosa.load(os.path.join(HERE, r['audio']), sr=16000)[0]
         yt = librosa.effects.trim(y, top_db=40)[0]
-        ref[v] = dict(e=emb(y), sps=syllables(r['text']) / speech_secs(y), low=colour(yt)[0])
+        sample_sps = syllables(r['text']) / speech_secs(y)
+        sps = sample_sps
+        if r.get('pace'):
+            yp = librosa.load(os.path.join(HERE, r['pace']['audio']), sr=16000)[0]
+            sps = syllables(r['pace']['text']) / speech_secs(yp)
+        ref[v] = dict(e=emb(y), sps=sps, sample_sps=sample_sps, low=colour(yt)[0])
+        print(f"{v}: pace {sps:.2f} syllables a second{' (from ' + r['pace']['audio'] + ')' if r.get('pace') else ''}", flush=True)
 
     def judge(ln, path):
-        T, V = cfg['types'][ln['type']], cfg['voices'][ln['voice']]
+        """What's measured on a take (kept in scores.json); rules() says which rules it fails."""
+        T = cfg['types'][ln['type']]
         y, y16, mp3 = shape(path, T['loud'])
         with open(path[:-4] + '.ship.mp3', 'wb') as fh: fh.write(mp3)
         pad = np.zeros(6400, np.float32)
         heard = asr(np.concatenate([pad, y16, pad]))['text'].strip()
         med, p90, top, vs = acpitch(y16)
         low, flat = colour(y16)
-        secs = speech_secs(y16)
-        syl = syllables(ln['say'])
-        pace = syl / secs / ref[ln['voice']]['sps'] - 1
+        sps = syllables(ln['say']) / speech_secs(y16)
         like = float(emb(y16) @ ref[ln['voice']]['e'])
+        return dict(heard=heard, median=round(med), p90=round(p90), peak=round(top), voiced=round(vs, 2), flatness=round(flat, 4),
+                    low_band=round(low, 2), sps=round(sps, 3), likeness=round(like, 3), loudness=round(meter(y16), 1),
+                    secs=round(len(y) / SR, 2))
+
+    def rules(ln, t):
+        """The critics' rules on a take's numbers: the rules it fails (and its pace against the voice's, in t)."""
+        T, V, R = cfg['types'][ln['type']], cfg['voices'][ln['voice']], ref[ln['voice']]
+        if 'sps' not in t:   # judged before pace was kept as syllables a second: from its pace against the sample
+            t['sps'] = round((1 + t['pace_pct'] / 100) * R['sample_sps'], 3)
+        syl = syllables(ln['say'])
+        pace = t['sps'] / R['sps'] - 1
+        t['pace_pct'] = round(100 * pace)
         lo, hi, cap = V['band']
         fails = []
-        if not heard_as_written(ln['say'], heard): fails.append('words')
-        if not lo <= med <= hi: fails.append(f'median {med:.0f}')
-        if p90 > cap: fails.append(f'p90 {p90:.0f}')
-        if ln['type'] == 'shout' and 'shoutPeak' in V and top > V['shoutPeak']: fails.append(f'peak {top:.0f}')
-        if vs < 0.5: fails.append(f'voiced {vs:.2f}')
-        if flat > 0.01: fails.append(f'flatness {flat:.3f}')
-        if not T['raised'] and abs(low - ref[ln['voice']]['low']) > 0.15: fails.append(f'low band {low:.2f}')
+        if not heard_as_written(ln['say'], t['heard']): fails.append('words')
+        if not lo <= t['median'] <= hi: fails.append(f"median {t['median']}")
+        if t['p90'] > cap: fails.append(f"p90 {t['p90']}")
+        if ln['type'] == 'shout' and 'shoutPeak' in V and t['peak'] > V['shoutPeak']: fails.append(f"peak {t['peak']}")
+        if t['voiced'] < 0.5: fails.append(f"voiced {t['voiced']:.2f}")
+        if t['flatness'] > 0.01: fails.append(f"flatness {t['flatness']:.3f}")
+        if not T['raised'] and abs(t['low_band'] - R['low']) > 0.15: fails.append(f"low band {t['low_band']:.2f}")
         if len(re.findall(r"[A-Za-z']+", ln['say'])) < 5:
             if not -0.40 <= pace <= 0.25: fails.append(f'pace {100 * pace:+.0f}%')
-            if secs / syl > 0.45: fails.append(f'{secs / syl:.2f} s a syllable')
+            if 1 / t['sps'] > 0.45: fails.append(f"{1 / t['sps']:.2f} s a syllable")
         elif abs(pace) > 0.25: fails.append(f'pace {100 * pace:+.0f}%')
-        if like < (0.82 if T['raised'] else 0.84): fails.append(f'likeness {like:.3f}')
-        return dict(heard=heard, median=round(med), p90=round(p90), peak=round(top), voiced=round(vs, 2), flatness=round(flat, 4),
-                    low_band=round(low, 2), pace_pct=round(100 * pace), likeness=round(like, 3), loudness=round(meter(y16), 1),
-                    secs=round(len(y) / SR, 2), fails=fails)
+        if t['likeness'] < (0.82 if T['raised'] else 0.84): fails.append(f"likeness {t['likeness']:.3f}")
+        return fails
 
     report, n_new = {'lines': [], 'rewrite': [], 'missing': []}, 0
     for ln in lines:
@@ -229,9 +248,12 @@ def main():
         for p in paths:
             name = f"{ln['voice']}/{os.path.basename(p)[:-4]}"
             c = cache['takes'].get(name)
-            if not c or c.get('mtime') != os.path.getmtime(p) or not os.path.exists(p[:-4] + '.ship.mp3'):
+            new = not c or c.get('mtime') != os.path.getmtime(p) or not os.path.exists(p[:-4] + '.ship.mp3')
+            if new:
                 c = judge(ln, p); c['mtime'] = os.path.getmtime(p)
                 cache['takes'][name] = c; n_new += 1
+            c['fails'] = rules(ln, c)
+            if new:
                 print(name, ln['type'], {k: c[k] for k in ('median', 'p90', 'likeness', 'pace_pct', 'fails')}, '|', c['heard'][:60], flush=True)
                 if n_new % 10 == 0:
                     json.dump(cache, open(cache_path, 'w', encoding='utf-8'), indent=0)

@@ -4,9 +4,13 @@
  "voices": {
   "LisandraWitch": {
    "who": "A very old woman in her late eighties, with a cultivated southern English accent, received pronunciation. A low, cracked, dry, rasping voice, thin and frayed with age, speaking low in her chest. Natural and human. Sharp-tongued and imperious, with a weary bitterness underneath.",
-   "band": [181, 228, 280],
+   "band": [
+    181,
+    228,
+    280
+   ],
    "notes": {
-    "calm": "She speaks evenly at her normal pace, on her own low, dry, rasping note. Each sentence falls at its end.",
+    "calm": "Firm and flat, at her normal speaking pitch, at a brisk, natural pace. Dry and rasping. Each sentence falls at its end.",
     "quiet": "Quietly, half to herself, at her normal pace and pitch, low and dry. Each sentence falls at its end.",
     "order": "Firm and flat, at her normal speaking pitch, a cold order. Low and dry. Each sentence falls at its end.",
     "raised": "Firm and flat, at her normal speaking pitch, a cold order. Low and dry. Louder and sharper, at the same pitch. Each sentence falls at its end.",
@@ -16,12 +20,16 @@
   },
   "Lisandra": {
    "who": "A woman in her mid-thirties with a deep, low, husky voice and a cultivated southern English accent, received pronunciation, like a classically trained English stage actress. Mature and grounded, speaking from a rich chest resonance. Dry, amused and theatrical, with a sardonic bite.",
-   "band": [190, 240, 320],
+   "band": [
+    190,
+    240,
+    320
+   ],
    "shoutPeak": 360,
    "notes": {
-    "calm": "She speaks evenly at her normal pace, low and dry, from her chest. Each sentence falls at its end.",
-    "quiet": "Quietly, half to herself, at her normal pace and pitch, low and husky. Each sentence falls at its end.",
-    "vo": "Softly and slowly, an incantation, low and even, at her normal pitch, from her chest.",
+    "calm": "Dry and amused, at her normal speaking pitch and a brisk, natural pace. Each sentence falls at its end.",
+    "quiet": "Quietly, half to herself, at her normal speaking pitch and a natural pace, dry. Each sentence falls at its end.",
+    "vo": "Softly, an incantation, even and flowing, at her normal speaking pitch.",
     "call": "She calls out to someone some way ahead of her, louder, projecting from her chest, at her normal speaking pitch. Each sentence falls at its end.",
     "shout": "She projects from her chest like a stage actress, loud and forceful, furious and devastated. The volume rises; the voice stays in her speaking range."
    }
@@ -29,14 +37,46 @@
  },
  "_types": "takes: how many a line gets (the critics: 8, and 16 for orders and shouts). loud: the one loudness meter's target, dB (calm -22, orders +2, shouts +4). raised: judged as a raised line (likeness >= 0.82, no low-band check) rather than a calm one (>= 0.84, low band within 0.15 of the sample's).",
  "types": {
-  "calm": {"takes": 8, "loud": -22, "raised": false},
-  "quiet": {"takes": 8, "loud": -24, "raised": false},
-  "vo": {"takes": 8, "loud": -24, "raised": false},
-  "order": {"takes": 16, "loud": -20, "raised": false},
-  "call": {"takes": 16, "loud": -20, "raised": true},
-  "raised": {"takes": 16, "loud": -18, "raised": true},
-  "shout": {"takes": 16, "loud": -18, "raised": true},
-  "off": {"takes": 8, "loud": -24, "raised": true}
+  "calm": {
+   "takes": 8,
+   "loud": -22,
+   "raised": false
+  },
+  "quiet": {
+   "takes": 8,
+   "loud": -24,
+   "raised": false
+  },
+  "vo": {
+   "takes": 8,
+   "loud": -24,
+   "raised": false
+  },
+  "order": {
+   "takes": 16,
+   "loud": -20,
+   "raised": false
+  },
+  "call": {
+   "takes": 16,
+   "loud": -20,
+   "raised": true
+  },
+  "raised": {
+   "takes": 16,
+   "loud": -18,
+   "raised": true
+  },
+  "shout": {
+   "takes": 16,
+   "loud": -18,
+   "raised": true
+  },
+  "off": {
+   "takes": 8,
+   "loud": -24,
+   "raised": true
+  }
  },
  "temperature": 0.65,
  "shortTemperature": 0.55,

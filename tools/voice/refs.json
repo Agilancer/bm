@@ -1,4 +1,5 @@
 {
- "Lisandra": {"audio": "refs/young.mp3", "text": "Stay on the road. The dead in those pines don't read prophecies."},
+ "Lisandra": {"audio": "refs/young.mp3", "text": "Stay on the road. The dead in those pines don't read prophecies.",
+              "pace": {"audio": "../../assets/voice/Lisandra/xqw6llmwnq.mp3", "text": "What have you done?", "why": "The owner's approved young take (2026-11-09): her pace is judged against it, not the sample, which the old model made about 30% faster than this one speaks."}},
  "LisandraWitch": {"audio": "refs/old.mp3", "text": "You were brought here to kill Velscour, Dark Lord of Eldravayne."}
 }
