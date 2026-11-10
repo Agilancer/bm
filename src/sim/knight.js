@@ -1009,7 +1009,13 @@ export class Knight {
       const d = Math.hypot(tx - this.x, tz - this.z);
       if (d < 1.1) { this.routeI = (this.routeI + 1) % route.length; this.pauseT = 1 + Math.random() * 3.5; }
       else {
-        if (sim.world.clearance(this.x, this.z, (tx - this.x) / d, (tz - this.z) / d, d, this.bodyRadius) < d) this.goto(dt, sim, tx, tz, this.opts.walk, Math.atan2(tx - this.x, tz - this.z));
+        // Whether the way to the post is clear, looked at five times a second, not every tick: it's a walk of the whole line
+        // in steps of a hand, and nothing on it moves. (A new post is looked at straight away.)
+        if ((this.lineT = (this.lineT || 0) - dt) <= 0 || this.lineTo !== this.routeI) {
+          this.lineT = 0.2; this.lineTo = this.routeI;
+          this.lineClear = sim.world.clearance(this.x, this.z, (tx - this.x) / d, (tz - this.z) / d, d, this.bodyRadius) >= d;
+        }
+        if (!this.lineClear) this.goto(dt, sim, tx, tz, this.opts.walk, Math.atan2(tx - this.x, tz - this.z));
         else { const fx = (tx - this.x) / d, fz = (tz - this.z) / d; this.steer(dt, fx * this.opts.walk, fz * this.opts.walk, 4, Math.atan2(fx, fz)); }
       }
     }

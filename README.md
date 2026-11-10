@@ -639,6 +639,13 @@ To check it yourself:
   under the title, before anyone's looking, so the first fight starts at a resolution it can hold. A strong phone climbs to as
   much as 1.7 million pixels; a slow one drops multisampling, then grass and bloom, to as few as 0.23 million, which is the
   one step that gives up a good deal of the look: the field goes to a flat lawn.
+- **Far bodies** (PCs). Past the distance where a 4.5 cm cell is under a pixel, a body is drawn with a welded mesh of
+  a fifth of the triangles, and the far shadow cascade always uses it. Past 40 m a body's pose is made at most 65 times a
+  second, past 90 m 33 (phones too), and it holds its pose between. Swords, shields, doors and stalls are left out of the view and
+  of any shadow cascade they can't reach. See "Far bodies" in `docs/RENDERING.md`.
+- **Edges and contact** (PCs). A leaf's or a needle's cut-out takes a share of each pixel's samples, so foliage is
+  smoothed like any other edge. The ground is dark under whoever stands on it where the sun gives no shadow, and the
+  grass bends for the five bodies nearest you. See "The look" in `docs/RENDERING.md`.
 - **Plates stay plates.** Each armour segment is bound to one joint, or to one constant mix of two joints across its whole
   surface, and blended as dual quaternions, so it moves rigidly. Shells that span a joint are cut along their weights. Only
   fingers and cloth keep soft weights. Because plates are rigid, the blade tests against a bind-space BVH of each plate, and

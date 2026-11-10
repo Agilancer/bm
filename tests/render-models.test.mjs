@@ -109,3 +109,24 @@ test('the witch is the owner\'s model with no cloth bones, and her gown has no c
   // (Her gown keeps the _SKIRT mask, which only pushes it out of a leg that would cut through it.)
   assert.ok(json.meshes[0].primitives[0].attributes._SKIRT !== undefined);
 });
+
+test("the witch's hat has no tassel hanging from its brim", async () => {
+  // (tools/lisandra/hat_tassel.py: 312 triangles in a narrow box under the brim, over her left shoulder, left out of
+  // the index list. Every vertex is still in the file, so nothing else of her changed.)
+  const { parseGLB, accessor } = await import('../src/core/glb.js');
+  const b = fs.readFileSync(new URL('../assets/game/lisandra/witch.glb', import.meta.url));
+  const glb = parseGLB(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength));
+  const pr = glb.json.meshes[0].primitives[0];
+  const pos = accessor(glb, pr.attributes.POSITION), idx = accessor(glb, pr.indices);
+  const box = [[0.116, 0.131], [0.778, 0.856], [0.009, 0.0215]];
+  let inBox = 0;
+  for (let t = 0; t < idx.length; t += 3) {
+    let all = true;
+    for (let k = 0; k < 3 && all; k++) for (let a = 0; a < 3; a++) { const v = pos[idx[t + k] * 3 + a]; if (v <= box[a][0] || v >= box[a][1]) { all = false; break; } }
+    if (all) inBox++;
+  }
+  assert.equal(inBox, 0);
+  assert.equal(idx.length / 3, 39050);
+  assert.equal(pos.length / 3, 32911, 'and every vertex she came with');
+});
+
