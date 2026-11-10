@@ -4,6 +4,8 @@ import { isMobileDevice } from './gfx/gpu.js';
 // Head-related filtering is a convolution for every sound playing, for a phone's speakers to throw away.
 const PHONE = isMobileDevice();
 const PANNING = PHONE ? 'equalpower' : 'HRTF';
+// Under this at the ear (50 dB down), a sound isn't played at all: play, sound.
+const UNHEARD = 0.003;
 
 const n = (base, k) => Array.from({ length: k }, (_, i) => `${base}_${i + 1}`);
 // Decoded at load, before the game starts: what a fight and a walk on the dirt need the instant they happen.
@@ -202,6 +204,7 @@ export class Audio {
   setAmbience(v) { this.ambienceLevel = v; if (this.amb) this.amb.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }
 
   listener(x, y, z, fx, fy, fz, ux, uy, uz) {
+    this.earX = x; this.earY = y; this.earZ = z;
     if (!this.ready) return;
     if (PHONE && (this.listenerTurn = (this.listenerTurn + 1 || 0) % 3)) return;
     const l = this.ctx.listener, t = this.ctx.currentTime;
@@ -236,11 +239,22 @@ export class Audio {
     s.g.gain.setTargetAtTime(gain, t, 0.4);
   }
 
+  // How loud a sound from (x, y, z) reaches the ear, by the same falling off its panner would give it (sound, below).
+  reaches(x, y, z, gain) {
+    if (x === null || x === undefined || this.earX === undefined) return gain;
+    const d = Math.hypot(x - this.earX, y - this.earY, z - this.earZ);
+    return gain * 2.5 / (2.5 + 1.1 * Math.max(0, d - 2.5));
+  }
+
   // bank name, position (null for "in your head"), volume, rate
   play(bank, x, y, z, gain = 1, rate = 1, wet = true) {
     if (!this.ready || this.ctx.state !== 'running') return;
     const list = BANKS[bank];
     if (!list) return;
+    // Too far off to hear: not played, and it doesn't take the bank's turn from one that can be. (Every knight's every
+    // footfall in the land comes through here, fifty a second, most from hundreds of metres off: each one was three
+    // audio nodes made and wired to play 50 dB down or lower.)
+    if (this.reaches(x, y, z, gain) < UNHEARD) return;
     if (GAP[bank]) {
       const now = this.ctx.currentTime;
       if (now - (this.lastAt[bank] ?? -1) < GAP[bank]) return;
@@ -251,6 +265,7 @@ export class Audio {
 
   // One file by name (play's, once it's picked one of a bank).
   sound(name, x, y, z, gain = 1, rate = 1, wet = true) {
+    if (this.reaches(x, y, z, gain) < UNHEARD) return;
     if (!this.buffers[name]) {
       // (Not in yet: as soon as it is, unless that's too late to still belong to what made it.)
       const asked = performance.now();

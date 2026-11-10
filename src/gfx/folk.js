@@ -155,9 +155,7 @@ export class FolkBodies {
       mp.setBindGroup(1, b.matBG);
       mp.setVertexBuffer(0, b.outBuf);
       mp.setVertexBuffer(1, b.sideVB);
-      if (lean ? b.far : b.detail === 1) { mp.setIndexBuffer(b.lodIB, 'uint32'); mp.drawIndexed(b.lodCount); }
-      else if (b.detail === 2) { mp.setIndexBuffer(b.lod2IB, 'uint32'); mp.drawIndexed(b.lod2Count); }
-      else { mp.setIndexBuffer(b.IB, 'uint32'); mp.drawIndexed(b.indices); }
+      if (lean ? b.far : b.detail) { mp.setIndexBuffer(b.lodIB, 'uint32'); mp.drawIndexed(b.lodCount); } else { mp.setIndexBuffer(b.IB, 'uint32'); mp.drawIndexed(b.indices); }
     }
   }
 

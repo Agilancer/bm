@@ -18,7 +18,7 @@ import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { Rocks } from './rocks.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
-import { C, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
+import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SLIMES_START, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
 import { SkullEyes } from './skulleyes.js';
@@ -96,9 +96,10 @@ const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, lake:
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3 };
 const MAX_GROUND = 160;
-// A PC's far bodies (addLod, bodyDetail): the coarser meshes' cells in metres, and how many pixels a cell may be before its
-// mesh is used. Under a pixel, the welded mesh and the whole one fill the same pixels.
-const LOD_CELLS = [0.045, 0.11];
+// A PC's far bodies (addLod, bodyDetail): the coarse mesh's cell in metres, and how much of a pixel a cell must have shrunk
+// to before that mesh is drawn. At 4.5 cm it keeps 95% or more of a body's outline (a fifth of the triangles); a coarser
+// one was tried for the farthest and thinned them (11 cm kept 70 to 80%: arms weld away), so there's the one.
+const LOD_CELL = 0.045;
 const LOD_PIXELS = 0.8;
 // How far off a body's pose is made less often than the screen's drawn (skinEvery), and how often it's still made, a second.
 const SKIN_MID = 40, SKIN_FAR = 90, SKIN_MID_HZ = 65, SKIN_FAR_HZ = 33;
@@ -706,29 +707,22 @@ export class Renderer {
     return { count: nv, indices: ni, ranges, sideVB, IB, srcBuf, outBuf, palette, params, bg, jointCount, bindR };
   }
 
-  // Coarser index lists over the same skinned vertices. A phone has one, of the cell given: for every shadow, and for
-  // bodies past 16 m. A PC has two (LOD_CELLS), for bodies so far off that a cell is under a pixel (bodyDetail); the
-  // first is also what the far shadow cascade draws, whose texels are wider than its cells.
+  // A coarser index list over the same skinned vertices. On a phone, of the cell given: for every shadow, and for bodies
+  // past 16 m. On a PC, of LOD_CELL: for bodies so far off that a cell is under a pixel (bodyDetail), and for the far
+  // shadow cascade, whose texels are wider than its cells.
   addLod(sk, prim, cell) {
-    const make = (size) => {
-      const idx = clusterIndices(prim, size);
-      return idx.length && idx.length < sk.indices ? [makeBuffer(this.device, idx, GPUBufferUsage.INDEX), idx.length] : [sk.IB, sk.indices];
-    };
-    if (this.tier.lean) {
-      const idx = clusterIndices(prim, cell);
-      sk.lodIB = makeBuffer(this.device, idx, GPUBufferUsage.INDEX); sk.lodCount = idx.length;
-      sk.lod2IB = sk.lodIB; sk.lod2Count = sk.lodCount;
-      return;
-    }
-    [sk.lodIB, sk.lodCount] = make(LOD_CELLS[0]);
-    [sk.lod2IB, sk.lod2Count] = make(LOD_CELLS[1]);
+    const idx = clusterIndices(prim, this.tier.lean ? cell : LOD_CELL);
+    // (A mesh too small or too plain to gain by it keeps its own.)
+    if (!this.tier.lean && (!idx.length || idx.length >= sk.indices)) { sk.lodIB = sk.IB; sk.lodCount = sk.indices; return; }
+    sk.lodIB = makeBuffer(this.device, idx, GPUBufferUsage.INDEX);
+    sk.lodCount = idx.length;
   }
 
-  // Which mesh a body d metres off is drawn with on a PC: 0 the whole one, 1 and 2 the coarser (addLod). was: what it had
-  // last frame, so one standing right at a line doesn't flicker between the two.
+  // Which mesh a body d metres off is drawn with on a PC: 0 the whole one, 1 the coarse (addLod). was: what it had last
+  // frame, so one standing right at the line doesn't flicker between the two.
   bodyDetail(d, was) {
     if (this.tier.lean || this.fullDetail) return 0;
-    return d > this.lodAt[1] * (was > 1 ? 0.94 : 1.06) ? 2 : d > this.lodAt[0] * (was > 0 ? 0.94 : 1.06) ? 1 : 0;
+    return d > this.lodAt * (was ? 0.94 : 1.06) ? 1 : 0;
   }
 
   // Every how many frames a body d metres off is skinned again: its skinned mesh is kept from frame to frame, in the world's
@@ -2204,21 +2198,32 @@ export class Renderer {
     // Keep worker-owned memory out of WebGPU uploads. Safari versions differ in
     // whether writeBuffer accepts a bare SharedArrayBuffer. One reusable local
     // copy also gives all palette/wound uploads the same pose for this frame.
+    // (Not all of it: half a megabyte out of shared memory every frame was the slowest line in this function. What every
+    // frame reads of it, here; a body's pose and wounds when they're uploaded, below. The snapshot is this frame's own for
+    // as long as the frame lasts, so the parts taken later are of the same tick.)
+    const live = snap;
     if (typeof SharedArrayBuffer !== 'undefined' && snap.buffer instanceof SharedArrayBuffer) {
       if (this.uploadSnap?.length !== snap.length) this.uploadSnap = new Float32Array(snap.length);
-      this.uploadSnap.set(snap);
-      snap = this.uploadSnap;
+      const up = this.uploadSnap;
+      up.set(snap.subarray(0, CHARS_START));
+      up.set(snap.subarray(SLIMES_START), SLIMES_START);
+      for (let i = 0, co = CHARS_START; i < MAX_CHARS; i++, co += C_SIZE) {
+        // (Whether it's there at all; and of one that is, its head, what it holds and its hero's card: not its pose, bleeds, wounds or masks.)
+        if ((up[co + C.ACTIVE] = snap[co + C.ACTIVE]) < 0.5) continue;
+        for (let k = co + 1; k < co + C_PALETTE; k++) up[k] = snap[k];
+        for (let k = co + C_PROPS; k < co + C_BLEEDS; k++) up[k] = snap[k];
+      }
+      snap = up;
     }
     this.stage = 'resize';
     this.resize();
     this.stage = 'frame uniforms';
     this.writeFrame(cam, snap);
     this.tripo?.sync(snap);
-    // How far off a coarser mesh's cells are LOD_PIXELS of a pixel, at this lens and this many pixels; and how many frames
+    // How far off the coarse mesh's cells are LOD_PIXELS of a pixel, at this lens and this many pixels; and how many frames
     // apart the far bodies' poses are made, at the rate frames are coming.
-    const lens = this.H / (2 * Math.tan((cam.fov || WORLD_FOV) / 2)) / LOD_PIXELS;
-    const lodAt = this.lodAt || (this.lodAt = [1e9, 1e9]), skinSteps = this.skinSteps || (this.skinSteps = [1, 1]);
-    lodAt[0] = LOD_CELLS[0] * lens; lodAt[1] = LOD_CELLS[1] * lens;
+    this.lodAt = LOD_CELL * this.H / (2 * Math.tan((cam.fov || WORLD_FOV) / 2)) / LOD_PIXELS;
+    const skinSteps = this.skinSteps || (this.skinSteps = [1, 1]);
     this.frameDt = lerp(this.frameDt ?? 1 / 60, Math.min(Math.max(dt || 1 / 60, 0.002), 0.1), 0.05);
     skinSteps[0] = Math.max(1, Math.min(3, Math.floor(1 / SKIN_MID_HZ / this.frameDt + 0.2)));
     skinSteps[1] = Math.max(1, Math.min(6, Math.floor(1 / SKIN_FAR_HZ / this.frameDt + 0.2)));
@@ -2238,10 +2243,14 @@ export class Renderer {
       // version is only taken once it's written, so a wound made off screen goes up the first frame it's back.) What it holds
       // still goes in: the knights' own swords and shields have no owner, so they're drawn whether the knight is or not.
       if (c.casts) {
-        if (c.skin) q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
+        if (c.skin) {
+          if (live !== snap) snap.set(live.subarray(co + C_PALETTE, co + C_PALETTE + c.jointCount * 8), co + C_PALETTE);
+          q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
+        }
         const ver = snap[co + C.GASH_VERSION];
         if (ver !== this.gashVersions[i]) {
           this.gashVersions[i] = ver;
+          if (live !== snap) snap.set(live.subarray(co + C_GASH, co + C_SIZE), co + C_GASH);
           q.writeBuffer(c.ubo, 0, snap.buffer, snap.byteOffset + (co + C_GASH) * 4, 24 * 64);
           q.writeBuffer(c.ubo, 24 * 64, snap.buffer, snap.byteOffset + (co + C_MASKS) * 4, 256);
         }
@@ -2720,12 +2729,9 @@ export class Renderer {
       mp.setBindGroup(1, ch.matBG);
       mp.setVertexBuffer(0, ch.outBuf);
       mp.setVertexBuffer(1, ch.sideVB);
-      if (tier.lean ? ch.far : ch.detail === 1) {
+      if (tier.lean ? ch.far : ch.detail) {
         mp.setIndexBuffer(ch.lodIB, 'uint32');
         mp.drawIndexed(ch.lodCount);
-      } else if (ch.detail === 2) {
-        mp.setIndexBuffer(ch.lod2IB, 'uint32');
-        mp.drawIndexed(ch.lod2Count);
       } else {
         mp.setIndexBuffer(ch.IB, 'uint32');
         mp.drawIndexed(ch.indices);

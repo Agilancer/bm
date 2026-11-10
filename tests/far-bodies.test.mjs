@@ -1,4 +1,4 @@
-// Far bodies on a PC: the coarser meshes by distance, and poses made less often than frames (src/gfx/renderer.js
+// Far bodies on a PC: the coarse mesh by distance, and poses made less often than frames (src/gfx/renderer.js
 // bodyDetail, skinEvery, cullBodies). Run with node --test tests/far-bodies.test.mjs. No browser or GPU required.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +10,7 @@ function fixture(tier = TIERS.high, n = 1) {
   // (Every plane lets everything in: all of it's in view.)
   const planes = new Float32Array(20); for (let k = 0; k < 5; k++) planes[k * 4 + 3] = 1;
   return Object.assign(Object.create(Renderer.prototype), {
-    tier, planes, hour: 12, folk: null, lodAt: [60, 150], skinSteps: [2, 4],
+    tier, planes, hour: 12, folk: null, lodAt: 60, skinSteps: [2, 4],
     chars: Array.from({ length: n }, () => ({})),
   });
 }
@@ -25,7 +25,7 @@ test('a PC draws a far body with a coarser mesh, and a nearer one whole', () => 
   const r = fixture();
   assert.equal(r.bodyDetail(10, 0), 0);
   assert.equal(r.bodyDetail(100, 0), 1);
-  assert.equal(r.bodyDetail(400, 0), 2);
+  assert.equal(r.bodyDetail(400, 0), 1);
 });
 
 test('a body standing at a line keeps the mesh it has', () => {
@@ -35,8 +35,6 @@ test('a body standing at a line keeps the mesh it has', () => {
   assert.equal(r.bodyDetail(62, 0), 0);
   assert.equal(r.bodyDetail(55, 1), 0);
   assert.equal(r.bodyDetail(65, 0), 1);
-  assert.equal(r.bodyDetail(146, 2), 2);
-  assert.equal(r.bodyDetail(154, 1), 1);
 });
 
 test("a phone keeps its own rule, and the switch for comparing turns the PC's off", () => {
@@ -61,7 +59,7 @@ test('a far body is posed the frame it comes into view, then every few frames, a
   assert.equal(posed[1][0], 1, 'posed the first frame it casts');
   assert.equal(posed[1].slice(1).reduce((a, b) => a + b), 3, 'then one frame in four');
   assert.ok(r.chars[1].casts && r.chars[1].seen, 'drawn every frame all the same');
-  assert.equal(r.chars[1].detail, 2);
+  assert.equal(r.chars[1].detail, 1);
   assert.equal(r.chars[0].detail, 0);
 });
 
