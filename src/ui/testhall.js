@@ -51,12 +51,18 @@ export class HallUI {
       #hallStatus { position: fixed; left: 50%; top: calc(80px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 5; display: none; pointer-events: none; max-width: min(760px, 90vw);
         padding: 4px 14px 5px; background: rgba(12,14,18,.55); border: 1px solid rgba(220,225,235,.35); border-radius: 4px; font: 14px Georgia, serif; color: #eef1f6; text-align: center; text-shadow: 0 1px 2px #000; }
       #hallStatus b { font: 700 12px Cinzel, Georgia, serif; letter-spacing: .12em; color: #fff; margin-right: 8px; }
-      #hallPanel { position: fixed; z-index: 12; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(980px, 96vw); max-height: 88vh; display: none; flex-direction: column;
+      #hallPanel { position: fixed; z-index: 12; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(980px, 96vw); max-height: 88vh; display: none; flex-direction: column; box-sizing: border-box; overflow: hidden;
         background: rgba(11,9,7,.97); border: 1px solid var(--gold-dim, #8c7344); box-shadow: 0 10px 34px #000b; color: var(--bone, #e9dfc8); font-family: Georgia, serif; padding: 13px 18px 12px; }
-      #hallPanel .tk-head { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid rgba(140,115,68,.42); padding-bottom: 6px; margin-bottom: 8px; }
+      #hallPanel > * { flex: none; }
+      /* (Velscour's Skull and auto-play's button stand over every panel, by the corner map: out of the way while one of these
+         is up, which on a phone fills the screen. src/ui/lands.js, src/ui/autoplay.js.) */
+      body.hall-open #vskull, body.hall-open #vskullTag, body.hall-open #autoBtn, body.hall-open #autoStatus { visibility: hidden; }
+      #hallPanel.foes { height: min(88vh, 780px); }
+      #hallPanel .tk-head { display: flex; align-items: baseline; gap: 10px; min-width: 0; border-bottom: 1px solid rgba(140,115,68,.42); padding-bottom: 6px; margin-bottom: 8px; }
       #hallPanel .tk-name { font: 700 18px Cinzel, Georgia, serif; color: #bfe0ff; letter-spacing: .05em; }
       #hallPanel .tk-title { font-size: 13px; opacity: .62; font-style: italic; }
-      #hallPanel .tk-head .menu-x { margin-left: auto; align-self: center; margin-top: -6px; margin-right: -10px; }
+      #hallPanel .tk-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+      #hallPanel .tk-head .menu-x { margin-left: auto; align-self: center; margin-top: -6px; margin-right: -6px; }
       #hallPanel .line { font-size: 15px; line-height: 1.45; margin-bottom: 8px; }
       #hallPanel .row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; align-items: center; }
       #hallPanel button.hb { font: 14px Georgia, serif; color: #e9dfc8; background: rgba(201,163,92,.08); border: 1px solid rgba(140,115,68,.5); border-radius: 3px; padding: 3px 9px; cursor: pointer; }
@@ -65,30 +71,66 @@ export class HallUI {
       #hallPanel button.hb:disabled { opacity: .4; cursor: default; }
       #hallPanel button.big { font: 700 16px Cinzel, Georgia, serif; letter-spacing: .08em; padding: 6px 22px; color: #fff; background: rgba(150,40,30,.55); border-color: #d0694f; }
       #hallPanel button.big:hover { background: rgba(190,60,40,.75); }
-      #hallPanel .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px; overflow-y: auto; max-height: 52vh; padding-right: 4px; }
+      #hallPanel .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px; overflow-y: auto; max-height: 52vh; padding-right: 4px; flex: 0 1 auto; min-height: 0; }
       #hallPanel .grid button { text-align: left; }
       #hallPanel h4 { margin: 8px 0 4px; font: 600 12.5px Georgia, serif; color: #c9a35c; letter-spacing: .08em; text-transform: uppercase; }
-      #hallPanel .cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; min-height: 0; }
-      #hallPanel .book { overflow-y: auto; max-height: 62vh; padding-right: 6px; border-right: 1px solid rgba(140,115,68,.25); }
+      #hallPanel .cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 16px; flex: 1 1 auto; min-height: 0; }
+      #hallPanel .book { overflow-y: auto; min-height: 0; padding-right: 6px; border-right: 1px solid rgba(140,115,68,.25); overscroll-behavior: contain; }
       #hallPanel .book li { list-style: none; display: flex; gap: 8px; align-items: baseline; padding: 2px 8px; cursor: pointer; font-size: 14.5px; color: #d6c8a5; border-radius: 3px; }
       #hallPanel .book li:hover { background: rgba(201,163,92,.14); color: #fff4da; }
       #hallPanel .book li.on { background: rgba(201,163,92,.3); color: #fff; }
       #hallPanel .book li em { font-style: normal; font-size: 12px; opacity: .55; margin-left: auto; white-space: nowrap; }
       #hallPanel .book ol { margin: 0 0 6px; padding: 0; }
-      #hallPanel .side { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+      #hallPanel .side { display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-padding-bottom: 76px; }
+      #hallPanel .side > * { flex: none; }
+      /* (Summon stays in sight at the foot of its column, however long the list above it.) */
+      #hallPanel .go { position: sticky; bottom: 0; margin: auto 0 0; padding: 6px 0 2px; background: rgba(11,9,7,.97); border-top: 1px solid rgba(140,115,68,.25); }
+      #hallPanel .go .note { flex-basis: 100%; }
       #hallPanel .pickName { font: 700 16px Cinzel, Georgia, serif; color: #f1d68a; }
       #hallPanel .note { font-size: 13.5px; opacity: .75; font-style: italic; }
       #hallPanel input[type=number], #hallPanel input[type=search], #hallPanel select { font: 14px Georgia, serif; background: #1a1611; color: #f3ead6; border: 1px solid rgba(140,115,68,.6); border-radius: 3px; padding: 3px 6px; }
       #hallPanel input[type=number] { width: 4.2em; text-align: center; }
       #hallPanel input[type=search] { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
-      #hallPanel .wave { list-style: none; margin: 0; padding: 0; overflow-y: auto; max-height: 26vh; }
+      #hallPanel .wave { list-style: none; margin: 0; padding: 0; }
       #hallPanel .wave li { display: flex; gap: 8px; align-items: baseline; padding: 2px 4px; font-size: 14.5px; }
       #hallPanel .wave li button { margin-left: auto; padding: 0 7px; }
       #hallPanel .dim { opacity: .55; }
       body.touch #hallStatus { top: calc(8px + env(safe-area-inset-top)); left: 34%; max-width: 46vw; font-size: 12px; }
-      body.touch #hallPanel { width: 98vw; max-height: 94vh; padding: 9px 10px; }
-      body.touch #hallPanel .cols { grid-template-columns: 1fr; }
-      body.touch #hallPanel .book { max-height: 34vh; border-right: 0; }
+      /* A finger's worth to each row and button. */
+      body.touch #hallPanel .book li { padding: 7px 8px; }
+      body.touch #hallPanel button.hb { padding: 6px 11px; }
+      body.touch #hallPanel .menu-x { width: 36px; height: 36px; }
+      /* A short screen (a phone on its side, as the game holds it): the whole screen, the words cut to what's needed, the
+         two columns side by side and each scrolled on its own. */
+      @media (max-height: 560px) {
+        #hallPanel, #hallPanel.foes { top: max(6px, env(safe-area-inset-top)); bottom: max(6px, env(safe-area-inset-bottom)); left: max(6px, env(safe-area-inset-left)); right: max(6px, env(safe-area-inset-right));
+          transform: none; width: auto; height: auto; max-height: none; padding: 7px 10px 6px; }
+        #hallPanel .tk-head { padding-bottom: 4px; margin-bottom: 5px; }
+        #hallPanel .tk-name { font-size: 15px; }
+        #hallPanel .line { font-size: 13px; line-height: 1.3; margin-bottom: 5px; }
+        #hallPanel.foes .line, #hallPanel .side .note:not(.foes-state) { display: none; }
+        #hallPanel .row { margin-bottom: 5px; }
+        #hallPanel h4 { margin: 4px 0 2px; }
+        #hallPanel .grid { max-height: none; flex: 1 1 auto; }
+        #hallPanel .cols { gap: 10px; }
+        #hallPanel .book li { font-size: 13.5px; }
+        #hallPanel .side .most { display: none; }
+        #hallPanel .side { gap: 3px; }
+        #hallPanel .side .row { gap: 4px; margin-bottom: 3px; }
+        body.touch #hallPanel .side button.hb { padding: 5px 9px; }
+        #hallPanel .side input[type=number] { width: 3.2em; }
+      }
+      /* A narrow one (a phone held up): the book above, what's chosen below, each with half the room. */
+      @media (max-width: 640px) and (orientation: portrait) {
+        #hallPanel, #hallPanel.foes { top: max(6px, env(safe-area-inset-top)); bottom: max(6px, env(safe-area-inset-bottom)); left: max(6px, env(safe-area-inset-left)); right: max(6px, env(safe-area-inset-right));
+          transform: none; width: auto; height: auto; max-height: none; padding: 9px 10px 8px; }
+        #hallPanel .cols { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+        #hallPanel .book { border-right: 0; border-bottom: 1px solid rgba(140,115,68,.25); padding-bottom: 4px; }
+        #hallPanel .grid { max-height: none; flex: 1 1 auto; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+        #hallPanel.foes .line, #hallPanel .side .note:not(.foes-state), #hallPanel .side .most { display: none; }
+        #hallPanel .side { gap: 3px; }
+        #hallPanel .side .row { gap: 4px; margin-bottom: 3px; }
+      }
     `;
     document.head.appendChild(css);
     this.status = document.createElement('div'); this.status.id = 'hallStatus';
@@ -162,6 +204,7 @@ export class HallUI {
       const P = this.party?.();
       if (!P) { this.openPanel('party'); this.panel.innerHTML = this.head('party', 'The Free Company', 'Nobody to hire') + '<div class="line">The other Tessariels are off in Settings, so there is nobody on the Company\'s books. Turn them on (Settings, Other Tessariels) to hire a party.</div>'; this.wireClose(); return; }
       const h = this.person('town') || { p: { name: 'The Free Company', title: 'Swords for the asking', broker: 'hall' } };
+      document.body.classList.add('hall-open');
       P.talkTo(h);
       return;
     }
@@ -173,13 +216,16 @@ export class HallUI {
   openPanel(key) {
     if (!this.open) this.opened?.();
     this.open = key;
+    this.panel.className = key;
     this.panel.style.display = 'flex';
+    document.body.classList.add('hall-open');
   }
 
   close() {
     if (!this.open) return;
     this.open = null;
     this.panel.style.display = 'none';
+    document.body.classList.remove('hall-open');
     this.closed?.();
   }
 
@@ -219,7 +265,10 @@ export class HallUI {
       html += `<h4>Mending</h4><div class="row"><button class="hb" data-act="fill">Fill your life and mana</button></div>`;
       html += `<h4>Your pack</h4><div class="row"><button class="hb" data-act="empty">Empty the pack (what you have on stays on)</button><button class="hb" data-act="gold">10,000 gold</button></div>`;
     }
+    const keep = this.panel.querySelector('.grid')?.scrollTop || 0, tab = this.panel.dataset.tab;
     this.panel.innerHTML = html;
+    this.panel.dataset.tab = this.tab;
+    if (tab === this.tab && this.panel.querySelector('.grid')) this.panel.querySelector('.grid').scrollTop = keep;
     this.wireClose();
     for (const b of this.panel.querySelectorAll('[data-tab]')) b.onclick = () => { this.click?.(); this.tab = b.dataset.tab; this.showGear(); };
     for (const b of this.panel.querySelectorAll('[data-r]')) b.onclick = () => { this.click?.(); this.rarity = +b.dataset.r; this.showGear(); };
@@ -286,17 +335,20 @@ export class HallUI {
     if (p) {
       html += `<div class="pickName">${esc(p.name)}</div>${p.note ? `<div class="note">${esc(p.note)}</div>` : ''}`;
       html += `<div class="row"><span class="dim">How many:</span><button class="hb" data-n="-1">−</button><input type="number" min="1" max="${p.most}" value="${this.count || 1}"><button class="hb" data-n="1">+</button><button class="hb" data-n="5">+5</button>`;
-      html += `<span class="dim">(up to ${p.most} at once)</span></div>`;
+      html += `<span class="dim most">(up to ${p.most} at once)</span></div>`;
       if (p.sizes) html += `<div class="row"><span class="dim">Size:</span>${p.sizes.map((s) => `<button class="hb ${(this.size || p.size) === s ? 'on' : ''}" data-size="${s}">${s}</button>`).join('')}</div>`;
       if (p.pal) html += `<div class="row"><span class="dim">Colours:</span><select>${(this.pals || ['Base']).map((n) => `<option ${n === (this.pal || 'Base') ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>`;
       html += `<div class="row"><button class="hb" data-add>Add to the summoning</button></div>`;
     } else html += `<div class="note">Choose a monster from the book.</div>`;
     html += `<h4>The summoning</h4>`;
     html += this.wave.length ? `<ol class="wave">${this.wave.map((w, i) => `<li><span>${w.n} × ${esc(w.name)}${w.opt.size ? ` (${w.opt.size})` : ''}${w.opt.pal && w.opt.pal !== 'Base' ? ` (${esc(w.opt.pal)})` : ''}</span><button class="hb" data-del="${i}" aria-label="Remove">✕</button></li>`).join('')}</ol>` : '<div class="note">Nothing yet.</div>';
-    html += `<div class="row"><button class="hb big" data-go ${this.canSummon() ? '' : 'disabled'}>Summon</button><button class="hb" data-clear ${this.wave.length ? '' : 'disabled'}>Clear the list</button></div>`;
-    html += `<div class="note foes-state">${esc(this.doorLine())}</div>`;
+    html += `<div class="row go"><button class="hb big" data-go ${this.canSummon() ? '' : 'disabled'}>Summon</button><button class="hb" data-clear ${this.wave.length ? '' : 'disabled'}>Clear the list</button>`;
+    html += `<div class="note foes-state">${esc(this.doorLine())}</div></div>`;
     html += `</div></div>`;
+    // (Where the book and the list were scrolled to stays put as the panel's drawn again: a pick far down the book.)
+    const keep = ['.book', '.side'].map((q) => this.panel.querySelector(q)?.scrollTop || 0);
     this.panel.innerHTML = html;
+    ['.book', '.side'].forEach((q, i) => { const e = this.panel.querySelector(q); if (e) e.scrollTop = keep[i]; });
     this.wireClose();
     // (What's typed in the book's boxes is the box's, not the game's keys.)
     for (const i of this.panel.querySelectorAll('input')) i.onkeydown = (e) => { if (e.code !== 'Escape') e.stopPropagation(); };

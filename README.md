@@ -385,6 +385,9 @@ end. Three people stand behind counters, and E at a counter talks to them:
   its group (the Warrens' bosses with them), every slime and every tumbler. Choose one, how many (and a size, or colours),
   add it to the summoning, and add more. **Summon** stands them in the arena past the door, and the door rises on them.
 
+The panels fit a phone, on its side as the game holds it or upright: they fill the screen, the book and what you've chosen
+scroll on their own, and Summon stays in sight. Velscour's Skull and auto-play's button are put out of the way while one is up.
+
 Once everything past the door is down (whatever they raised or split into as well), and you're back on this side of it, the
 door comes down again and you can summon more. A fall stands you back at the start a moment later, with the arena cleared and
 the door down. Nothing in the Test Dungeon is kept: no save is made while you're in it, so **Continue** is still the game you

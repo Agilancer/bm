@@ -430,7 +430,8 @@ async function boot(plan, poolSize) {
     game.party = new PartyUI({ base: BASE, cast, sim: simWorker, pack, heroTalk: game.heroTalk, level: () => pack.level,
       firstHero: () => renderer.firstHero, tip: (t, s) => hud.tip(t, s),
       opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
-      closed: () => { input.menu = false; resume(); },
+      // (Opened at the Test Dungeon's counter, it had the skull put out of its way: src/ui/testhall.js.)
+      closed: () => { input.menu = false; document.body.classList.remove('hall-open'); resume(); },
       click: () => title.chime?.(),
       cleared: () => { giveXp?.(1500); pack.gold += 250; hud.tip('The Free Company pays out 250 gold for the Warrens, and the tale is worth more.', 5); autosave(); },
     });
