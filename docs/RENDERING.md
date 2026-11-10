@@ -276,7 +276,7 @@ Town at noon, same view, `fullDetail` on and then off in one run (2560x1440, Hig
 |---|---|---|
 | triangles into the shadow maps | 1.37 M (main) | 0.94 M |
 | triangles into the view | 2.35 M | 1.87 M |
-| draws | 400 (main) | 330 |
+| draws | 420 (main) | 340 |
 | vertices skinned, at 60 fps | 782,000 | 572,000 |
 | vertices skinned, at 144 fps | 782,000 | 300,000 |
 
