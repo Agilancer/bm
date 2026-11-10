@@ -1734,7 +1734,20 @@ export class Brain {
     const speed = Math.hypot(m.vx, m.vz);
     this.surfCool -= dt;
     if (m.surf) {
-      const keep = can && (drop(25) > 0.025 || speed > 7.5) && left > 18;
+      // A rise ahead at speed (the short ones at the foot of the Fall's pitches): a hop over it, as you'd do it, Space let go
+      // for a moment and pressed again (src/sim/surf.js: let go for longer and you're off).
+      if (this.hopPhase > 0) {
+        this.hopPhase -= dt; a.jumpHeld = false;
+        if (this.hopPhase <= 0) { this.o.shared.input[INPUT.JUMP] += 1; a.jumpHeld = true; this.hopCool = 1.1; this.o.log?.cast?.('hop'); }
+        return;
+      }
+      this.hopCool = (this.hopCool || 0) - dt;
+      const ux = speed > 1 ? m.vx / speed : hx, uz = speed > 1 ? m.vz / speed : hz;
+      const rise = (k) => (terrainHeight(m.x + ux * k, m.z + uz * k) - h0) / k;
+      if (m.ground && speed > 4.5 && this.hopCool <= 0 && (rise(3) > 0.1 || rise(6) > 0.09)) { this.hopPhase = 0.06; a.jumpHeld = false; this.say('Hopping a rise on the shield.'); return; }
+      // Kept on while it's quick, or the slope will make it so: through a flat or a rise with more slope beyond, since what's
+      // coming matters more than where it is. Slower than a run on gentle ground, it steps off and runs.
+      const keep = can && left > 18 && (speed > 7.5 || drop(25) > 0.06 || (speed > 4.5 && (drop(25) > 0.025 || drop(60) > 0.04)));
       a.jumpHeld = keep;
       if (!keep) this.surfCool = 2;
       this.say(`Riding the shield down (${speed.toFixed(0)} m/s).`);

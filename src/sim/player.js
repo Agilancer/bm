@@ -133,7 +133,9 @@ export class Player {
   // A blow's weight against what the swings were balanced on, which is a sword of 20.
   bite() { return (this.dmgMin + (this.dmgMax - this.dmgMin) * Math.random()) / 20; }
 
-  drink() { if (this.leech) this.hp = Math.min(this.maxHp, this.hp + this.leech); }
+  // (Leech is a flat drink a hit, four a second at most: past about 12 it gives diminishing returns, so stacked emeralds
+  // and affixes can't outheal a lair's worth of blows.)
+  drink() { if (this.leech) this.hp = Math.min(this.maxHp, this.hp + (this.leech <= 12 ? this.leech : 12 + Math.sqrt(this.leech - 12) * 2)); }
 
   // The moment around a swing's hit, when it can meet a blow.
   parryOpen() {

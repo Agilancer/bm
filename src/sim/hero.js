@@ -2306,7 +2306,7 @@ export class HeroWorld {
       x = p.x + Math.sin(a) * r; z = p.z + Math.cos(a) * r;
     }
     const far = Math.hypot(x - h.x, z - h.z);
-    h.goal = { x, z, speed: far > 9 ? 8.8 : far > 3 ? Math.max(2.2, pv * 1.15) : Math.max(1.3, pv), stop: 0.7, face: pv > 0.6 ? Math.atan2(p.vx, p.vz) : p.yaw };
+    h.goal = { x, z, speed: far > 9 ? Math.max(9.8, pv * 1.25) : far > 3 ? Math.max(2.2, pv * 1.15) : Math.max(1.3, pv), stop: 0.7, face: pv > 0.6 ? Math.atan2(p.vx, p.vz) : p.yaw };
     if (h.sitting) { h.sitting = false; h.stopAction(0.3); }
   }
 
