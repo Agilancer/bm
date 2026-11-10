@@ -261,7 +261,8 @@ cascade it reached.
   frame holds the pose it had. Past 40 m a pose is made at most 65 times a second, past 90 m 33 (`skinEvery`): at
   60 fps that's every frame and every other; at 144, every other and every fourth. They're spread over the frames by
   slot, so no frame takes them all. A body is always skinned the frame it comes back into view. What it holds still
-  moves every frame, so a far sword can lead its hand by a frame or two; at 90 m that's under a pixel.
+  moves every frame, so a far sword can lead its hand by a frame or two; at 90 m that's under a pixel. This one is on
+  every tier, the phone's too (where at 60 fps it's only the bodies past 90 m, every other frame).
 - **Swords, shields, doors and stalls.** The eight knights' swords and shields have no owner, and were drawn into
   the view and all three cascades wherever in the land they were (86,000 triangles a pass); so were the town's 37
   doors and stalls. Each prop and ground item now has a bounding sphere (`placeSphere`), tested against the view
