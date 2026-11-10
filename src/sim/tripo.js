@@ -163,11 +163,13 @@ export class TripoMonster extends FieldCreature {
   }
 
   update(dt, sim) {
-    if (dt <= 0) return;
+    // (Frozen stiff still dies: a spell's freeze runs the update at no time at all.)
+    if (dt <= 0) { if (this.hp <= 0 && !this.dead) this.die(sim); return; }
     const p = foeOf(this, sim), o = this.opts, rig = this.rig, ai = o.ai;
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.breathCd -= dt; this.castCd -= dt;
     this.flinch = Math.max(0, this.flinch - dt);
+    this.flinchCd = (this.flinchCd || 0) - dt;
     this.fade = Math.min(1, this.fade + dt * 5);
     this.heart += dt;
     if (this.bleeds.length && !this.dead) this.hp -= dt * this.bleeds.reduce((sum, b) => sum + b.rate, 0) * 3;
@@ -375,8 +377,9 @@ export class TripoMonster extends FieldCreature {
     try { FOE.bolt.fire(this, sim, p, d, null, at); } finally { sim.foeTarget = null; }
   }
 
-  onHit(sim) {
-    this.flinch = 0.18;
+  onHit(sim, kind, fx, fz, poise = 20) {
+    // (A flinch only for a blow with weight, and not again straight away: a beam's ticks can't hold it still.)
+    if (poise >= 10 && !(this.flinchCd > 0)) { this.flinch = 0.18; this.flinchCd = 0.7; }
     if (!this.aggro && sim) this.notice(sim);
     this.aggro = true;
     this.buried = false;

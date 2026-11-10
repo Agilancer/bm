@@ -444,7 +444,7 @@ export class TownUI {
     // What they've to say about someone else's quest under way.
     for (const qid of Object.keys(RULES)) {
       const said = this.ok(QUESTS[qid].others?.[id]);
-      if (!said.length || !Q.state(qid) || Q.done(qid) || QUESTS[qid].giver === id || Q.step(qid)?.talk === id) continue;
+      if (!said.length || !Q.state(qid) || Q.done(qid) || QUESTS[qid].giver === id || RULES[qid].steps.some((s) => s.talk === id)) continue;
       out.push({ label: `${QUESTS[qid].title}?`, cls: 'gossip', run: () => this.show(pick(said, this.count(id, `q:${qid}`)), id, this.root()) });
     }
     out.push({ label: 'Ask about...', run: () => this.asks() });

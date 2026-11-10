@@ -380,7 +380,10 @@ async function boot(plan, poolSize) {
       heal: (n) => { shared.input[INPUT.HEAL] += n; },
       hp: () => { const s = game.currentSnap(); return s ? s[H.HP] / (s[H.MAX_HP] || 1) : 1; },
       // A night's sleep: dawn, mended, and the game kept.
-      sleep: () => { renderer.setHour(6.1); shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999; autosave(); },
+      sleep: () => {
+        // (Slept from the evening: the morning is the next day's. The town's clock only counts a day on its own as it turns past midnight.)
+        if (renderer.hour > 6.1) { town.day++; town.lastHour = -1; }
+        renderer.setHour(6.1); shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999; autosave(); },
       give: (item) => {
         if (pack.add(item)) return;
         const snap = game.currentSnap();
@@ -587,6 +590,9 @@ async function boot(plan, poolSize) {
       worldMap.load(null);
       townUI.load(null);
       town.load(null);
+      // (The seals woken and the hour of the day are the old game's too.)
+      game.lands?.load(null);
+      renderer.setHour(15);
       enter(true);
     } else if (a === 'continue') {
       const d = saves.newest();

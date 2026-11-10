@@ -90,7 +90,7 @@ export class Player {
       stride: 0, bloodSword: 0, recoilT: 0, tipPrev: new Float32Array(3), midPrev: new Float32Array(3), havePrev: false, hitDir: 0, hitDirT: 9, sprinting: false, landKick: 0,
       struckGround: false, struckWall: false, regenT: 0, swingCount: 0, whiffCount: 0, aggression: 0, lastSwing: -9, knockX: 0, knockZ: 0, weak: 0,
       guard: 0, guardAt: -9, bashed: false, blockEvT: 0, hasShield: false, blockHeld: false, staffSurfT: null,
-      surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0,
+      surfing: false, surfAir: false, surfHold: 0, surfCool: 0, surfSlow: 0, surfLow: 0, stamina: 100, staminaT: 0, winded: false, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, dodgeSeen: 0, iframes: false, aimWound: false, hits: 0, shoveAt: -9,
     });
   }
 
@@ -575,7 +575,8 @@ export class Player {
 
   // Returns whether it landed: a shield can stop it. (unblockable: it comes up out of the ground under you.)
   damage(sim, amount, fromX, fromZ, knock, unblockable = false) {
-    if (sim.gameState !== 0) return false;
+    // (A dodge is a dodge whatever swung at it: the beasts, the jellies and the stones as much as the knights.)
+    if (sim.gameState !== 0 || this.iframes) return false;
     if (sim.input && ((sim.input[INPUT.ABIL] | 0) & (ABIL.NO_DAMAGE | ABIL.GOD | ABIL.FLY))) return false;
     // Aegis: this one never lands, whatever it was.
     if (this.shPower === 1 && !this.aegisT) {

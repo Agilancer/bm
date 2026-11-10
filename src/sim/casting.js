@@ -450,6 +450,9 @@ export class Casting {
     if (k.dead) return;
     // A knight's raised shield takes most of a spell from the front.
     if (k.spellGuard) { const through = k.spellGuard(sim, fromX, fromZ, dmg); dmg *= through; poise *= through; }
+    // (A jelly's own make-up: amber shrugs off fire, pitch burns: src/sim/slimes.js SPECIES resist.)
+    const res = k.sp?.resist?.[elem];
+    if (res !== undefined) { dmg *= res; poise *= res; }
     const a = this.affOf(k);
     k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE * this.power;
     k.playerHitT = sim.time;     // (The player had a hand in it: src/sim/sim.worker.js, whose kill it is.)
@@ -529,8 +532,18 @@ export class Casting {
     }
   }
 
+  // Frozen for so long, less each time within a few seconds of the last thaw, and less again for the great ones: a fight
+  // can be slowed by ice, not held still by it.
+  freezeFor(sim, f, secs) {
+    const a = this.affOf(f), again = (a.thawAt ?? -1e9) > sim.time - 6;
+    const s = secs * (again ? 0.35 : 1) * (f.maxHp >= 400 ? 0.4 : 1);
+    if (s > a.freeze) { a.freeze = s; a.thawAt = sim.time + s; }
+  }
+
   stepAfflictions(dt, sim) {
     for (const [k, a] of this.aff) {
+      // (A body that's dead and still: forgotten, or every slime and lair monster ever touched stays in here for good.)
+      if (k.dead && !(a.h > 0) && Math.abs(a.vx) + Math.abs(a.vz) <= 0.02) { this.aff.delete(k); continue; }
       // Thrown about: a slide on the ground and a flight off it.
       if (Math.abs(a.vx) + Math.abs(a.vz) > 0.02) {
         out3[0] = k.x + a.vx * dt; out3[1] = 0; out3[2] = k.z + a.vz * dt;
@@ -733,7 +746,7 @@ export class Casting {
         for (const k of sim.foes) if (!k.dead && k.hostile && Math.hypot(k.x - x, chestOf(k) - y, k.z - z) < def.radius + radiusOf(k)) this.affOf(k).burn = Math.max(this.affOf(k).burn, 2.5);
         break;
       case 'rime':
-        if (foe) { this.hurt(sim, foe, def.dmg, elem, x, y, z, x, z, 20); this.affOf(foe).freeze = Math.max(this.affOf(foe).freeze, def.freeze); }
+        if (foe) { this.hurt(sim, foe, def.dmg, elem, x, y, z, x, z, 20); this.freezeFor(sim, foe, def.freeze); }
         sim.event(EV.SPELL_BOOM, elem, x, y, z, 1.4);
         this.burst(FX.SHOCK, elem, x, y, z, 0.3, 2.2, 0.3, { light: 12, lightR: 7 });
         this.spray(b, foe, def.spray, (a, off) => this.bolts.push({ ...b, def: { ...def, key: 'frost', dmg: def.dmg * 0.45, chill: 3 }, x: x + Math.cos(a) * off, y: y + 0.5, z: z + Math.sin(a) * off, vx: Math.cos(a) * 22, vy: 0, vz: Math.sin(a) * 22, age: 0, maxAge: 0.45 }));
@@ -927,7 +940,7 @@ export class Casting {
 
   cast_heal(def, sim) {
     const p = sim.player;
-    p.hp = Math.min(p.maxHp, p.hp + def.amount);
+    p.hp = Math.min(p.maxHp, p.hp + def.amount + 0.15 * p.maxHp);
     this.zones.push({ kind: 'mend', def, x: p.x, y: p.y, z: p.z, t: 0, life: 1.6, seed: Math.random() });
   }
 
@@ -1207,7 +1220,7 @@ export class Casting {
       if (Math.hypot(f.x - z.x, f.z - z.z) > wave + radiusOf(f)) continue;
       z.hit.add(f);
       this.hurt(sim, f, def.dmg, e, f.x, chestOf(f), f.z, z.x, z.z, 0);
-      this.affOf(f).freeze = def.freeze;
+      this.freezeFor(sim, f, def.freeze);
       sim.event(EV.SPELL_BOOM, e, f.x, chestOf(f), f.z, 1.4);
     }
   }
@@ -1378,8 +1391,10 @@ export class Casting {
     this.tickT -= dt;
     if (this.tickT > 0) return;
     this.tickT = TICK;
+    // (What it drinks is what it took: a knight's board or the Hydra's bone gives back less.)
+    const before = k.hp;
     this.hurt(sim, k, def.dmg, e, k.x, c, k.z, p.x, p.z, 5);
-    p.hp = Math.min(p.maxHp, p.hp + def.dmg * def.heal);
+    p.hp = Math.min(p.maxHp, p.hp + Math.max(0, before - k.hp) * def.heal / (SPELL_BITE * this.power || 1) * Math.min(this.power, 1.6));
   }
 
   waiting() { let n = 0; for (const m of this.missiles) if (m.state !== 'seek') n++; return n; }
