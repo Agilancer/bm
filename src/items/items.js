@@ -72,8 +72,9 @@ export const SHOT_NOTE = {
 // What the 83 staffs hit for, by their rarity: the finer the look, the harder.
 const TIER_DMG = [[12, 18], [14, 20], [17, 24], [20, 28], [24, 33]];
 for (const s of STAFFS2) BASES[s.id] = { name: s.name, dmg: TIER_DMG[s.tier], grade: 'staff', tier: s.tier, shot: s.shot, note: SHOT_NOTE[s.shot] };
-// The first twelve fall in with them: the four plain ones as common, the elementals as uncommon.
-for (const id of ['greenwood_staff', 'crystal_staff', 'skullhorn_staff', 'gnarled_crook']) BASES[id].tier = 0;
+// The first twelve fall in with them: the four plain ones as common, the elementals as uncommon. The plain four fire a spell's
+// bolt (STAFF_BOLT in src/sim/casting.js), named here as their shot so a new game can pick its staff by what it fires.
+for (const [id, shot] of Object.entries({ greenwood_staff: 'plague', crystal_staff: 'frost', skullhorn_staff: 'firebolt', gnarled_crook: 'lightning' })) Object.assign(BASES[id], { tier: 0, shot });
 for (const id of ['dark_staff', 'death_staff', 'earth_staff', 'fire_staff', 'ice_staff', 'life_staff', 'vine_staff', 'wind_staff']) BASES[id].tier = 1;
 
 // What a staff's roll comes to in a bolt, against a blade's: see STAFF_BITE in src/sim/casting.js.
@@ -254,12 +255,13 @@ function rollRarity(rng, min) {
   return +weighted(rng, table);
 }
 
+// The staffs a roll can come up as, at one tier.
+const staffsAt = (tier) => Object.keys(BASES).filter((b) => BASES[b].tier === tier && (BASES[b].grade === 'common' || BASES[b].grade === 'staff'));
+
 function rollBase(rng, rarity) {
   // Tessariel carries no blade: only the staffs are ever rolled, and a staff comes as fine as its rarity: a legendary roll is one
   // of the legendary-looking staffs. (Mythical is for skulls; past legendary, the legendary ones.)
-  const tier = Math.min(rarity, 4);
-  const staffs = Object.keys(BASES).filter((b) => BASES[b].tier !== undefined && (BASES[b].grade === 'common' || BASES[b].grade === 'staff'));
-  return pick(rng, staffs.filter((b) => BASES[b].tier === tier));
+  return pick(rng, staffsAt(Math.min(rarity, 4)));
 }
 
 function rollAffixes(rng, rarity, table = AFFIXES) {
@@ -292,6 +294,14 @@ export function rollWeapon(rng, opts = {}) {
     affixes: rollAffixes(rng, rarity, WIZ_AFFIXES),
     sockets, gems: [],
   };
+}
+
+// What a new game puts in Tessariel's hand: a common staff of the lowest tier. What it fires is picked first, then a staff
+// that fires it, so every kind of shot is as likely as any other, however many staffs share it.
+export function rollStarterStaff(rng) {
+  const commons = staffsAt(0);
+  const shot = pick(rng, [...new Set(commons.map((b) => BASES[b].shot))]);
+  return rollWeapon(rng, { base: pick(rng, commons.filter((b) => BASES[b].shot === shot)), rarity: 0 });
 }
 
 // The shields any roll can come up as, at one rarity: kites and towers alike, never V's or T's.

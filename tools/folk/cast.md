@@ -256,6 +256,7 @@ fittings, old blades), **Shroud Silk** (burial cloth), **Grave Wax** (rarer), **
 1. **A Bed and a Bell** (Bram). The player is Tessariel number thirteen. Bram's had twelve; eleven are dead or gone mad. The
    thirteenth gets a bed and a warning, and if they actually mean to *do* something, Bram says: go and see Silas, who's got
    a problem that needs someone foolish. (Talk to Silas; then tell Bram, or just take the bed he's keeping you that night.)
+   Reward: the player's first skull, a plain common one Silas sends up with his word. A new game starts with none.
    Till it's taken, the journal's first page points the player at Bram Kettle at the Tolling Bell.
 2. **The Dead Can't Wait** (Silas). Nine coffins, no burials, and the crypts are emptying upward. He gives the player the key
    to the Sexton's Door, in the churchyard wall out of the black knight's sight, which leads down to the Reliquary. Put down

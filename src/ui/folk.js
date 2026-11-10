@@ -17,7 +17,7 @@ import { TOWN_KNIGHTS } from '../core/knights.js';
 import { QuestBook, RULES, sayable } from '../folk/quests.js';
 import { CRAFTS, GOODS, MAX_EMBERS, TRADES, matsText, offerFor, priceText, rollStock, worth } from '../folk/shops.js';
 import { DAYS, partOfDay } from '../folk/days.js';
-import { MATS, colorOf, makeRng, matName, nameOf } from '../items/items.js';
+import { MATS, colorOf, makeRng, matName, nameOf, rollSkull } from '../items/items.js';
 import { SPELLS } from '../sim/spells.js';
 import { VOICED } from '../core/voiced.js';
 import { unnamed, voiceKey } from '../core/voicekey.js';
@@ -552,7 +552,7 @@ export class TownUI {
     if (R.xp) this.act.xp(R.xp);
     const rng = makeRng((Math.random() * 2 ** 32) >>> 0);
     let item = null;
-    if (R.item === 'skull') item = CRAFTS.skull.make(rng, 2);
+    if (R.item === 'skull') item = R.rarity === undefined ? CRAFTS.skull.make(rng, 2) : rollSkull(rng, { rarity: R.rarity });
     else if (R.item === 'staff') item = CRAFTS.staff.make(rng, 2);
     else if (R.item === 'robe') item = CRAFTS.robe.make(rng, 2);
     else if (R.charm) { if (this.act.charm?.(R.charm)) this.note(`Received: ${R.charmName || 'a charm'}. (I: your pack.)`, 'quest'); }

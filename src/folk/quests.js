@@ -10,6 +10,7 @@
 //   bring  bring the giver n of a material (items.js MATS); handed over at the giver
 //   start  take on a quest from each of a list of people, in any order (Lisandra's: src/folk/lines/lisandra.js)
 // wait: what's handed over is made overnight, and collected the next day.
+// item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull.
 import { churchAt, inChurch } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { QUESTS } from './lines/quests.js';
@@ -20,7 +21,8 @@ import { GIVERS } from './lines/lisandra.js';
 export const RULES = {
   // Lisandra's, at the edge of town once she's walked you down: go round everyone with work and start each of their quests.
   lisandra_work: { steps: [{ start: GIVERS }, { back: true, say: "They've all given me something to do." }], gold: 40, xp: 250 },
-  bed_and_bell: { steps: [{ talk: 'silas', say: 'Bram Kettle sent me.' }, { back: true, say: "I've been to see Silas." }], xp: 40 },
+  // The first errand in town pays the first skull, a common one of Silas's: a new game starts with none (src/items/pack.js).
+  bed_and_bell: { steps: [{ talk: 'silas', say: 'Bram Kettle sent me.' }, { back: true, say: "I've been to see Silas." }], item: 'skull', rarity: 0, xp: 40 },
   dead_cant_wait: { steps: [{ enter: 'catacombs' }, { kill: 'catacombs', n: 8 }, { back: true, say: 'Eight of them are at rest.' }], gold: 60, xp: 200 },
   bones_for_carver: { needs: 'dead_cant_wait', steps: [{ bring: 'bone', n: 10 }], wait: true, item: 'skull', xp: 150 },
   iron_from_dead: { steps: [{ bring: 'iron', n: 8 }], item: 'staff', xp: 150 },

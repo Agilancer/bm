@@ -32,6 +32,7 @@ export const QUESTS = {
     ],
     done: [
       "Silas sent word you'd been. Said you didn't laugh and didn't run. That's two things the other twelve couldn't manage between them.",
+      "He sent this up with the word. A skull, for your left hand. Plain work, he says; if you want better, you'll bring him bone. I didn't ask whose it was.",
       "Your stroke's still up there with nothing owing by it and no hill. Keep it that way.",
     ],
     after: [
