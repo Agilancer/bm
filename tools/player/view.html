@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The player's body</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #6d7780; color: #f4ecdc; font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #bar { position: fixed; left: 8px; top: 8px; display: flex; flex-wrap: wrap; gap: 4px; max-width: 70vw; }
+  #bar button, #bar select { font: inherit; padding: 3px 8px; background: #1b1611; color: #f4ecdc; border: 1px solid #8a7340; border-radius: 3px; cursor: pointer; }
+  #bar button.on { background: #8a7340; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="bar"></div>
+<script type="module">
+// The third-person body on its own, for judging its poses and how it holds things: the same src/sim/playerbody.js the game
+// runs, drawn with three.js. Serve the repo (python tools/serve.py) and open /tools/player/view.html.
+//   ?do=run&staff=amethyst_staff&skull=skull_01&shield=kite_tree    what he's doing and holding
+//   ?sheet=idle,walk,run&views=front,side,back&t=0.3                a still sheet of several, for review (window.ready when drawn)
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { PlayerBody } from '../../src/sim/playerbody.js';
+
+const q = new URLSearchParams(location.search);
+const BASE = new URL('../../', import.meta.url).href;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x6d7780);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x4a5040, 2.4));
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.2); sun.position.set(-2, 4, 3); scene.add(sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x4f7a3a, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+const grid = new THREE.GridHelper(40, 40, 0x35552a, 0x44682f); grid.position.y = 0.002; scene.add(grid);
+
+const loader = new GLTFLoader();
+const buffer = await fetch(`${BASE}assets/game/player/wizard.glb`).then((r) => r.arrayBuffer());
+const body = new PlayerBody(buffer.slice(0));
+const gltf = await new Promise((res, rej) => loader.parse(buffer, '', res, rej));
+let mesh; gltf.scene.traverse((o) => { if (o.isSkinnedMesh) mesh = o; });
+mesh.removeFromParent(); mesh.frustumCulled = false; scene.add(mesh);
+const bones = mesh.skeleton.bones;
+for (const b of bones) b.removeFromParent();
+
+// What's held: the game's own item models, placed by the body's own matrices.
+const items = {};
+async function item(id) {
+  if (!id) return null;
+  if (!items[id]) {
+    const g = await loader.loadAsync(`${BASE}assets/game/items/${id}.glb`);
+    const o = g.scene; o.matrixAutoUpdate = false; o.visible = false; scene.add(o);
+    items[id] = o;
+  }
+  return items[id];
+}
+const held = { staff: await item(q.get('staff') ?? 'amethyst_staff'), skull: await item(q.get('skull') ?? 'skull_01'), shield: await item(q.get('shield') ?? 'kite_tree') };
+const has = { staff: q.get('staff') !== '', skull: q.get('skull') !== '', shield: q.get('shield') !== '' };
+
+// What he's doing, by name: each gives the state for a time t.
+const cast = (kind, hands, wind, hit, dur) => (t) => {
+  const u = t % (dur + 0.6);
+  if (u > dur) return null;
+  const sm = (x) => { const v = Math.min(1, Math.max(0, x)); return v * v * (3 - 2 * v); };
+  return { kind, hands, wind: u < wind ? sm(u / wind) : 1, hit: u < wind ? 0 : sm((u - wind) / (hit - wind)), w: u < hit ? Math.max(sm(u / (wind * 0.7)), 0) : 1 - sm(((u - hit) / (dur - hit) - 0.15) / 0.85), shake: 0 };
+};
+const CAST = { shot: cast('shot', 1, 0.24, 0.4, 1), throw1: cast('throw', 1, 0.22, 0.27, 0.95), throw2: cast('throw', 2, 0.22, 0.27, 0.95), raise1: cast('raise', 1, 0.3, 0.4, 1), raise2: cast('raise', 2, 0.3, 0.4, 1) };
+const DO = {
+  idle: () => ({}),
+  walk: () => ({ vz: 1.3 }),
+  jog: () => ({ vz: 2.6 }),
+  run: () => ({ vz: 5.6 }),
+  sprint: () => ({ vz: 8.6, sprinting: true }),
+  back: () => ({ vz: -3 }),
+  left: () => ({ vx: 5.6 }),
+  right: () => ({ vx: -5.6 }),
+  jump: () => ({ vz: 4, onGround: false }),
+  guard: () => ({ guard: 1 }),
+  lookup: () => ({ pitch: 0.7 }),
+  lookdown: () => ({ pitch: -0.7 }),
+  ride: (t) => ({ vz: 9, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: Math.sin(t) * 0.5, air: false } }),
+  rideslope: () => ({ vz: 9, surf: { hx: 0, hz: 1, nx: 0, ny: 0.94, nz: 0.34, tilt: 0, air: false } }),
+  death: (t) => ({ dead: true, deadT: t }),
+};
+for (const [k, f] of Object.entries(CAST)) {
+  DO[k] = (t) => ({ cast: f(t) });
+  DO[`${k}_run`] = (t) => ({ vz: 5.6, cast: f(t) });
+  DO[`${k}_at`] = (t) => ({ cast: f(t) });
+}
+let doing = q.get('do') || 'idle', time = 0;
+const stateOf = (name, t) => {
+  const base = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, vx: 0, vz: 0, onGround: true, sprinting: false, dodge: 0, dead: false, deadT: 0, guard: 0, surf: null, cast: null, staff: has.staff, skull: has.skull, shield: has.shield };
+  return Object.assign(base, (DO[name] || DO.idle)(t));
+};
+
+const snap = new Float32Array(4096 + body.count * 8);
+const m4 = new THREE.Matrix4(), p3 = new THREE.Vector3(), q4 = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+function pose(name, t, dt) {
+  const s = stateOf(name, t);
+  body.update(dt, s);
+  body.write(snap, 0, true);
+  const { wq, wt } = body.rig;
+  for (let j = 0; j < bones.length; j++) bones[j].matrixWorld.compose(p3.set(wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]), q4.set(wq[j * 4], wq[j * 4 + 1], wq[j * 4 + 2], wq[j * 4 + 3]), one);
+  const show = (o, at) => { if (!o) return; m4.fromArray(body.props, at); o.visible = body.props[at + 15] > 0; o.matrix.copy(m4); o.matrixWorld.copy(m4); o.matrixWorldNeedsUpdate = false; for (const c of o.children) c.updateMatrixWorld(true); };
+  for (const o of Object.values(items)) o.visible = false;
+  show(held.staff, 0);
+  // (The left hand's is the skull if he has one; the back's is the shield then, or the board under him.)
+  show(s.skull ? held.skull : held.shield, 16);
+  if (s.skull || s.surf) show(held.shield, 32);
+  return s;
+}
+// Settle into a pose: a second or so of ticks, so the eases have run.
+function settle(name, t) { body.reset(); const n = 90; for (let i = 0; i < n; i++) pose(name, Math.max(0, t - (n - 1 - i) / 60), 1 / 60); }
+
+const VIEWS = { front: [0, 1.15, 3.6], side: [-3.6, 1.15, 0], left: [3.6, 1.15, 0], back: [0, 1.25, -3.6], q: [-2.3, 1.6, 2.6], qb: [2.2, 1.8, -2.8], hand: [-0.9, 1.3, 1.1], lhand: [0.9, 1.3, 1.1], top: [0.01, 4.6, 0.01], behind: [-0.5, 1.9, -3.2] };
+const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 100);
+
+if (q.has('sheet')) {
+  // A sheet of stills: every pose named, from every view named, at each time.
+  const names = q.get('sheet').split(','), views = (q.get('views') || 'front,side,back').split(','), times = (q.get('t') || '0.5').split(',').map(Number);
+  const cells = []; for (const n of names) for (const t of times) for (const v of views) cells.push([n, t, v]);
+  const cols = +(q.get('cols') || Math.min(cells.length, views.length * Math.max(1, Math.floor(6 / views.length)))), rows = Math.ceil(cells.length / cols);
+  const W = innerWidth, H = innerHeight, cw = Math.floor(W / cols), ch = Math.floor(H / rows);
+  renderer.setPixelRatio(1); renderer.setSize(W, H); renderer.setScissorTest(true); renderer.autoClear = false;
+  const zoom = +(q.get('zoom') || 1);
+  cells.forEach(([n, t, v], i) => {
+    settle(n, t);
+    const at = VIEWS[v] || VIEWS.front, lookY = v === 'hand' || v === 'lhand' ? 1.1 : +(q.get('y') || 0.95);
+    camera.aspect = cw / ch; camera.fov = 32 / zoom; camera.updateProjectionMatrix();
+    camera.position.set(at[0], at[1], at[2]); camera.lookAt(v === 'hand' ? -0.3 : v === 'lhand' ? 0.3 : 0, lookY, v === 'hand' || v === 'lhand' ? 0.25 : 0);
+    const x = (i % cols) * cw, y = H - ch - Math.floor(i / cols) * ch;
+    renderer.setViewport(x, y, cw, ch); renderer.setScissor(x, y, cw, ch); renderer.clear(); renderer.render(scene, camera);
+  });
+  window.ready = true;
+} else {
+  const bar = document.getElementById('bar');
+  for (const name of Object.keys(DO)) {
+    if (name.endsWith('_at')) continue;
+    const b = document.createElement('button'); b.textContent = name; b.onclick = () => { doing = name; time = 0; for (const o of bar.children) o.classList.toggle('on', o === b); };
+    bar.appendChild(b);
+  }
+  for (const k of ['staff', 'skull', 'shield']) { const b = document.createElement('button'); b.textContent = k; b.className = has[k] ? 'on' : ''; b.onclick = () => { has[k] = !has[k]; b.classList.toggle('on', has[k]); }; bar.appendChild(b); }
+  const controls = new OrbitControls(camera, renderer.domElement);
+  camera.position.set(-2.3, 1.6, 2.6); controls.target.set(0, 1, 0);
+  const size = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
+  addEventListener('resize', size); size();
+  let last = performance.now();
+  const frame = (now) => {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
+    pose(doing, time, dt);
+    controls.update(); renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  window.ready = true;
+}
+</script>
+</body>
+</html>

@@ -350,6 +350,17 @@ export class Renderer {
       }
       this.chars.push(form);
     }
+    this.firstForm = this.chars.length - LISANDRA_FORMS.length;
+    // Your own body, for the third-person view (src/sim/playerbody.js, tools/player/build.mjs): the slot after hers, drawn
+    // only while that view is on. What it holds are the items' own models, laid where the sim says its hands are (selfItems).
+    {
+      const glb = parseGLB(await fetch(`${base}assets/game/player/wizard.glb`).then((r) => { if (!r.ok) throw new Error(`the player's body: ${r.status}`); return r.arrayBuffer(); }));
+      const [self] = await this.buildCrabs(glb, 1, 1);
+      self.flesh = 1; self.trueLook = true; self.self = true;
+      this.selfSlot = this.chars.length;
+      this.chars.push(self);
+      this.selfItems = [0, 1, 2].map(() => ({ mat: new Float32Array(16), sword: null, slot: -1, model: null }));
+    }
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
     this.vms = { 1: await this.buildViewModel(await loadModel(9)), 2: await this.buildViewModel(await loadModel(3)), 3: await this.buildViewModel(await loadModel(14)) };
     this.vm = this.vms[1];
@@ -2042,8 +2053,9 @@ export class Renderer {
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
-      const otherForm = stage && (i === this.chars.length - (pretty ? 1 : 2));
-      if (otherForm || c.pending || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
+      const otherForm = stage && (i === this.firstForm + (pretty ? 1 : 0));
+      // (Your own body: only in the third-person view, and not with the camera right up against its back.)
+      if (otherForm || c.pending || snap[co + C.ACTIVE] < 0.5 || (c.self && !this.third)) { c.seen = false; c.casts = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
       const r = c.armored ? 2.6 : 5;
       c.bx = x; c.by = y; c.bz = z; c.br = bodyRadius(r, c.bindR);
@@ -2062,6 +2074,7 @@ export class Renderer {
       }
       // (Different distances each way, so a body standing right at the line doesn't flicker between the two.)
       c.far = Math.hypot(x - cam.x, z - cam.z) > (c.far ? 14 : 16);
+      if (c.self) { c.casts = true; c.seen = !this.thirdNear; c.far = false; }
     }
     // The townsfolk (src/gfx/folk.js).
     if (this.folk) this.folk.cull(cam, pl);
@@ -2426,7 +2439,21 @@ export class Renderer {
     this.stallItems ||= this.makeStalls();
     for (const g of this.stallItems) if (this.stallsOpen.has(g.id) === g.open) drawn.push(g);
     if (this.dishes) for (const g of this.dishes.values()) drawn.push(g);
-    if (snap[H.SURF] > 1.5 && this.board.sword) drawn.push(this.board);
+    if (snap[H.SURF] > 1.5 && this.board.sword && !this.third) drawn.push(this.board);
+    // In third person, what your body holds: the staff, the left hand's (the skull, or the shield on the arm), and the
+    // shield on the back or under the feet. The sim says where (a matrix each, none if there's nothing: PlayerBody.hold).
+    if (this.third && !this.thirdNear) {
+      const at = CHARS_START + this.selfSlot * C_SIZE + C_PROPS, riding = snap[H.SURF] > 0.5;
+      const ids = [this.mainHand, this.skull || this.board.sword, this.board.sword];
+      for (let k = 0; k < 3; k++) {
+        const g = this.selfItems[k];
+        if (!ids[k] || !(snap[at + k * 16 + 15] > 0.5)) { g.slot = -1; continue; }
+        g.sword = ids[k];
+        g.glow = k === 2 && riding ? this.board.glow : null;
+        g.mat.set(snap.subarray(at + k * 16, at + k * 16 + 16));
+        drawn.push(g);
+      }
+    }
     for (const g of drawn) {
       let model = g.openingModel ?? g.mesh ?? (g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow);
@@ -2579,13 +2606,15 @@ export class Renderer {
       stainPass.end();
     }
 
+    // (The first-person arms: not under the story's bars, nor in third person.)
+    const noVM = this.hideVM || this.third;
     this.stage = 'world pass';
     // ---- the world ----
     const mp = enc.beginRenderPass(this.worldPass);
     mp.setBindGroup(0, this.frameBG);
     // Nearest first, so what's behind fails the depth test before it's lit: the arms, in front of everything, with their
     // own camera, and then the knights.
-    if (!this.hideVM) {
+    if (!noVM) {
       mp.setViewport(0, 0, this.W, this.H, 0.97, 1);
       mp.setPipeline(this.pVM);
       if (this.spellVM) {
@@ -2755,14 +2784,14 @@ export class Renderer {
       mp.setBindGroup(1, this.pDrawBG);
       mp.drawIndirect(this.pArgs, 0);
       this.spellfx.draw(mp);
-      if (this.trailCount >= 4 && !this.hideVM) {
+      if (this.trailCount >= 4 && !noVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
         mp.setViewport(0, 0, this.W, this.H, 0.97, 1);
         mp.setPipeline(this.pTrail);
         mp.setVertexBuffer(0, this.trailVB);
         mp.draw(this.trailCount);
       }
-      if (this.eyesOn && !this.skullDown && !this.hideVM) { mp.setViewport(0, 0, this.W, this.H, 0.97, 1); this.skullEyes.drawAura(mp); }
+      if (this.eyesOn && !this.skullDown && !noVM) { mp.setViewport(0, 0, this.W, this.H, 0.97, 1); this.skullEyes.drawAura(mp); }
     }
     mp.end();
 
@@ -2783,8 +2812,8 @@ export class Renderer {
       pp.setBindGroup(1, this.pDrawBG);
       pp.drawIndirect(this.pArgs, 0);
       this.spellfx.draw(pp);
-      if (this.eyesOn && !this.skullDown && !this.hideVM) this.skullEyes.drawAura(pp);
-      if (this.trailCount >= 4 && !this.hideVM) {
+      if (this.eyesOn && !this.skullDown && !noVM) this.skullEyes.drawAura(pp);
+      if (this.trailCount >= 4 && !noVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
         pp.setPipeline(this.pTrail);
         pp.setVertexBuffer(0, this.trailVB);

@@ -99,6 +99,8 @@
   #bDodge { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(112px + env(safe-area-inset-bottom)); }
   #bPause { width: 40px; height: 40px; left: 50%; margin-left: -20px; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 15px; letter-spacing: 0; }
   #bPack { width: 56px; height: 56px; left: calc(30px + env(safe-area-inset-left)); bottom: calc(256px + env(safe-area-inset-bottom)); }
+  /* First person or third (src/ui/view.js): not there until you're out of the cave. */
+  #bView { width: 56px; height: 56px; left: calc(96px + env(safe-area-inset-left)); bottom: calc(256px + env(safe-area-inset-bottom)); display: none; }
   #bMap { width: 40px; height: 40px; left: 50%; margin-left: 30px; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: .04em; }
   #bTake { width: 66px; height: 66px; right: calc(218px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); display: none; background: rgba(201,163,92,.32); }
   #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #0b0907; z-index: 30; font-size: 18px; text-align: center; padding: 30px; color: var(--gold); }
@@ -178,6 +180,10 @@
   #spells .spell.short { opacity: .42; filter: saturate(.3); }
   #spells .spell.empty { background: rgba(8,6,4,.3); border-style: dashed; }
   #spells .spell.up { box-shadow: 0 0 26px -2px var(--c), inset 0 0 18px -5px var(--c); transform: translateY(-3px); }
+  #viewBtn { position: relative; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
+  #viewBtn.on { background: rgba(201,163,92,.38); color: #f4ecdc; }
+  #viewBtn kbd { position: absolute; right: 2px; bottom: 0; font: inherit; font-size: 8px; color: #b9ad94; }
+  body.touch #viewBtn { display: none !important; }
   #spellOpen { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; font-size: 13px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
   #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
   #softCursor { position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin: -2px 0 0 -2px; display: none; z-index: 40; pointer-events: none; }
@@ -319,6 +325,7 @@ body.op-handoff #cross{opacity:0;transition:none}
   <div class="tbtn" id="bAttack">Staff</div>
   <div class="tbtn" id="bPause">II</div>
   <div class="tbtn" id="bPack">PACK</div>
+  <div class="tbtn" id="bView">3RD</div>
   <div class="tbtn" id="bTake">TAKE</div>
   <div class="tbtn" id="bMap">MAP</div>
   <div class="tbtn" id="bCast">CAST</div>
