@@ -282,7 +282,7 @@ export class PartyUI {
       case DELVE.WARN: this.warn(WARNINGS[a | 0] || '', 5); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
-      case DELVE.WIPE: this.hideBoss(); this.warn('Your party falls... and wakes at the Warrens\' mouth.', 5); break;
+      case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.warn('Your party falls... and wakes at the Warrens\' mouth.', 5); break;
       default: break;
     }
   }

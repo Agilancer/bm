@@ -138,7 +138,7 @@ export class Warrens {
   resetAll() {
     const t = this.sim.tripo;
     this.down.clear(); this.fight = null; this.hazards.length = 0;
-    if (t) for (const l of t.lairs) if (l.dungeon) { if (l.state === 'awake') t.sleep(l); l.state = 'asleep'; l.clearedOnce = false; }
+    if (t) for (const l of t.lairs) if (l.dungeon) { if (l.state === 'awake') t.sleep(l); l.state = 'asleep'; l.clearedOnce = false; l.spawned = 0; l.killed = 0; }
     this.sim.event(EV.DELVE, DELVE.RESET);
   }
 

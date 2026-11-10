@@ -38,6 +38,9 @@ import { LISANDRA } from '../folk/lines/lisandra.js';
 import { TUMBLER_SIZES } from '../sim/tumblers.js';
 import { TRADES, offerFor, worth } from '../folk/shops.js';
 import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
+import { inDungeon } from '../core/dungeon.js';
+import { EXIT_IN, toWorld as caveWorld } from '../core/dungeon.js';
+import { caveStep, doHire, doWarrens, hireJob, hiring, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
 
 const TAU = Math.PI * 2;
 const wrap = (a) => { a %= TAU; return a > Math.PI ? a - TAU : a < -Math.PI ? a + TAU : a; };
@@ -80,7 +83,7 @@ const LAIR_LEVEL = {
 // What it'll stand and fight, by kind (FOE_NAMES in src/main.js) and its level. A kind added since it was taught (KNOWN_KINDS), it
 // judges by its life against its own level; coverage() below names it, so it can be taught properly.
 const KNOWN_KINDS = new Set([0, 1, 2, 3, 4, 5, 6, 9, 10]);
-function fightable(kind, lvl, maxHp = 0, slime = false) {
+function fightableAt(kind, lvl, maxHp = 0, slime = false) {
   if (slime || kind === 5) return true;                // the jellies (their own list), the risen
   if (kind === 9) return lvl >= 6;                     // the werewolf
   if (kind === 2) return lvl >= 2;                     // the falls' crabs
@@ -209,6 +212,7 @@ export function coverage(foeNames = null) {
   for (const k of CASTS) if (!(k in SP)) out.push(`spell ${k}: it casts this, and it's gone from SPELLS`);
   for (const sp of SPELLS) if (!(sp.key in USE)) out.push(`spell ${sp.key}: no use for it in USE, so it never casts it`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
+  out.push(...warrensCoverage());
   if (foeNames) foeNames.slice(0, TRIPO_KIND).forEach((n, k) => { if (n && !KNOWN_KINDS.has(k)) out.push(`foe kind ${k} (${n}): no rule in fightable(), so it's judged by its life alone`); });
   return out;
 }
@@ -425,6 +429,8 @@ export class Brain {
     // A panel up: the talk is its own, the rest it shuts.
     if (this.o.townUI.open) { this.halt(); this.converse(dt, m); this.motor(dt, m); return; }
     if (this.talk && !this.o.townUI.open) this.talk = null;
+    // A quartermaster's books open: the party chosen, then shut (src/ui/autowarrens.js).
+    if (g.party?.open) { hiring(this); this.motor(dt, m); return; }
     if (this.o.lands.isOpen) { this.halt(); if (this.sealTo || this.t - (this.sealT ?? -99) < 4) this.travelling(); return; }
     if (this.o.inventory.open || this.o.townUI.book) { this.halt(); return; }
     this.castT -= dt; this.castCool -= dt; this.staffCool -= dt;
@@ -455,6 +461,8 @@ export class Brain {
     // The opening has its own way to go.
     if (m.opening > 0 && m.opening < OPENING.ARRIVED) { this.opening(snap, m); return; }
     const foes = this.foes(snap, m);
+    // Down the Warrens, a boss's calls come first: out of the circles, at the dragon's side, behind a pillar.
+    if (inDungeon(m.x, m.z) && this.delve(snap, m, foes)) { this.fighting = true; return; }
     // A fight, or getting away from one.
     if (!m.town && this.combat(snap, m, foes)) { this.fighting = true; return; }
     // Hurt and out of it: mend, or rest a little.
@@ -604,8 +612,33 @@ export class Brain {
 
   // ---- fighting
 
+  // In the Warrens with a call to answer: where tactics() says to stand, the staff on what it says to hit. False when there's
+  // nothing to answer, and combat() fights as ever (everything in there fightable with the party at its back).
+  delve(snap, m, foes) {
+    const t = tactics(this, m, foes);
+    if (t.why === 'Out of the circle!' || t.wipe) this.o.log?.cast?.('dodge');
+    if (!t.to) return false;
+    const d = dist(m.x, m.z, t.to[0], t.to[1]);
+    const T = t.target;
+    if (T) {
+      const yaw = Math.atan2(T.x - m.x, T.z - m.z);
+      this.face = yaw;
+      this.pitch = Math.atan2(T.y + T.h - (m.y + 1.62), Math.max(1, T.d));
+      const aimed = Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.05, Math.atan2(0.9, T.d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.15;
+      if (d > 0.6) this.steer(t.to[0] - m.x, t.to[1] - m.z, t.run && d > 3, true); else this.halt();
+      this.shoot(snap, m, { T, d: T.d, dn: T.d, close: 0, around: 1, aimed, hpf: m.hpf, fast: false, still: true, big: T.maxHp > 150, inLine: 1, coming: false, bladesUp: true, shield: false });
+    } else {
+      this.face = null;
+      if (d > 0.5) this.steer(t.to[0] - m.x, t.to[1] - m.z, t.run && d > 2); else this.halt();
+    }
+    this.say(t.why);
+    return true;
+  }
+
   combat(snap, m, foes) {
     const lvl = m.lvl;
+    // (Down the Warrens with a party: everything there is for fighting. src/ui/autowarrens.js.)
+    const fightable = inDungeon(m.x, m.z) ? () => true : fightableAt;
     this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12;
     // What it can't beat yet, coming for it: away over open ground, toward the town.
     const boss = this.job?.kind === 'boss';
@@ -905,6 +938,12 @@ export class Brain {
     const wantsTown = ((room < 10 || junk.length >= 6) && buyer) || (m.hpf < 0.45 && !this.known(SP.mend));
     // Once it's at the black knight, it sees him through (unless he's done it in, and it's falling back to mend).
     if (this.job?.kind === 'boss' && this.blackKnight(this.snap) && m.hpf > 0.4) return this.job;
+    // Down the Warrens, the Warrens; a party to hire when it's ready for one; then the Warrens themselves when it's strong enough.
+    if (inDungeon(m.x, m.z)) return warrensJob(this, m);
+    const hire = hireJob(this, m);
+    if (hire) return hire;
+    const delve = warrensJob(this, m);
+    if (delve && !wantsTown) return delve;
     // In the town, its errands: the quest talk first, then the shops.
     const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60);
     if (errand) return errand;
@@ -1168,8 +1207,31 @@ export class Brain {
     }
     if (j.kind === 'talk') { this.approach(m, j); return; }
     if (j.kind === 'boss') { this.siege(snap, m); return; }
+    if (j.kind === 'hire') { doHire(this, m, j); return; }
+    if (j.kind === 'warrens') { this.warrensRun(m, foes); return; }
     if (j.kind === 'hunt') { this.hunt(m, j, foes); return; }
     this.halt();
+  }
+
+  // The Warrens, with three wipes on the same go counting as beaten back: out by the way in, and two levels more first.
+  warrensRun(m, foes) {
+    const P = this.o.game.party;
+    const wipes = P?.wipes || 0;
+    if (this.wipeSeen === undefined) this.wipeSeen = wipes;
+    if (wipes > this.wipeSeen) { this.wipeSeen = wipes; this.warrensWipes = (this.warrensWipes || 0) + 1; }
+    if (this.warrensWipes >= 3 && inDungeon(m.x, m.z)) {
+      this.say('Beaten back by the Warrens: out, and stronger first.');
+      const [x, z] = caveWorld(EXIT_IN.x, EXIT_IN.z);
+      this.goTo(x, z, 0.5, true);
+      return;
+    }
+    if (this.warrensWipes >= 3) {
+      this.warrensWipes = 0; this.bump.warrens = (this.bump.warrens || 0) + 2; this.giveUp('warrens', 900);
+      this.o.log?.fell?.(m, m.lvl, 'The Hollowfang Warrens', null);
+      this.job = null;
+      return;
+    }
+    doWarrens(this, m, foes);
   }
 
   hunt(m, j, foes) {
@@ -1321,6 +1383,13 @@ export class Brain {
     if (!g || !this.useGoal || this.fighting) return;
     const d = dist(m.x, m.z, g.x, g.z);
     if (d < g.near) { this.halt(); return; }
+    // In the Warrens: by their own field (src/ui/autowarrens.js caveStep), at a run between the rooms.
+    if (inDungeon(m.x, m.z) && inDungeon(g.x, g.z)) {
+      const [ux, uz] = caveStep(this, m, g);
+      this.steer(ux, uz, g.run && d > 6);
+      this.look = null;
+      return;
+    }
     // The way: on the grid both ends, a path; otherwise the long way round by the roads. (Used up short of it, as when someone it's
     // walking up to has moved on: worked out again.)
     if (!this.macro || !this.macro.length) { this.macro = this.longWay(m, g); this.sub = null; this.subFor = null; this.loc = null; }
@@ -1630,7 +1699,10 @@ export class Brain {
     }
     const L = Math.max(1, Math.hypot(mx, mz));
     a.mx = mx / L; a.mz = mz / L;
-    a.run = w.run && a.mz > 0.6 && m.stam > 22;
+    // (Shift held for the run while there's breath for it: let go when it's short, taken up again once it's back, so it
+    // runs in long stretches and doesn't flicker between a run and a walk.)
+    this.running = w.run && a.mz > 0.6 && m.stam > (this.running ? 10 : 38);
+    a.run = this.running;
     this.unstick(dt, m, !surf);
     if (this.stuck.act > 0) {
       this.stuck.actT -= dt;

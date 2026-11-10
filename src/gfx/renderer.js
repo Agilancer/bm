@@ -307,9 +307,11 @@ export class Renderer {
       if (!r.ok) throw new Error(`hero ${p.body}: ${r.status}`);
       return r.arrayBuffer();
     }).then((b) => parseGLB(b))));
-    for (const glb of heroGlbs) {
-      const hero = await this.buildCharacter(glb);
+    for (let i = 0; i < heroGlbs.length; i++) {
+      const hero = await this.buildCharacter(heroGlbs[i]);
       hero.armored = true; hero.hero = true;
+      // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -1 for the rest.)
+      hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : -1;
       this.chars.push(hero);
     }
     tick();
@@ -2176,7 +2178,7 @@ export class Renderer {
         }
         c.gashData[0] = snap[co + C.HEART];
         c.gashData[1] = c.armored || c.flesh ? 1 : 0.62;
-        c.gashData[2] = c.steel ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
+        c.gashData[2] = c.steel ? 1 : c.heroLook || 0; // polished steel: its dark paint is shadow, not blackening; a hero's own look (materials.js)
         c.gashData[3] = c.flesh ? 1 : 0;
         if (c.jaw) {
           // Her lips part by mouth * gap, and the triangles across the line, rise tall at rest, stretch by that much: of
@@ -2681,6 +2683,8 @@ export class Renderer {
       mp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
     }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
+    // (Down the Warrens nothing of the land above can be seen: its rock is all there is.)
+    if (!vis.warrens) {
     this.pines.draw(mp);
     if (this.rocksOn !== false) this.rocks.draw(mp, this.terrainBG);
     // Grass before the ground it stands on: its shader is next to nothing, and the ground's is the costliest there is.
@@ -2699,8 +2703,8 @@ export class Renderer {
     mp.setIndexBuffer(this.terrainIB, 'uint32');
     mp.drawIndexed(this.terrainCount);
     }
-    mp.setPipeline(this.pSky);
-    mp.draw(3);
+    }
+    if (!vis.warrens) { mp.setPipeline(this.pSky); mp.draw(3); }
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
     this.openingStage?.drawGlow(mp);
     this.trail?.draw(mp);
