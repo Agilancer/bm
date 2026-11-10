@@ -520,6 +520,7 @@ async function boot(plan, poolSize) {
       if (snap) {
         const active = input.enabled && !state.paused;
         openingHUD.draw(snap, active, dt);
+        shared.input[INPUT.MOUTH] = openingHUD.mouth();
         // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
         if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
         renderer.hideVM = openingHUD.cinematic(snap) && !openingHUD.handsUp(snap);

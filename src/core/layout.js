@@ -37,7 +37,9 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   // What the charms carried and the skull's cheats allow, a bit each: ABIL in src/sim/player.js.
   ABIL: 42,
   // The shield's special ability and its strength: SHIELD_POWERS in src/items/items.js. 0 with a skull in hand.
-  SH_POWER: 44, SH_VALUE: 45, SIZE: 46 };
+  SH_POWER: 44, SH_VALUE: 45,
+  // How open the witch's mouth is as she speaks in the opening, 0 to 1, from her voice (src/ui/opening-sound.js mouth).
+  MOUTH: 46, SIZE: 47 };
 
 // Snapshot header (float offsets)
 export const H = {
