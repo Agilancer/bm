@@ -268,9 +268,14 @@ class Sim {
     const p = this.player;
     // (Not her while you wake in the cave: you can't move, and she has to come close enough to pass a palm across your eyes.)
     const her = !this.opening ? this.villagers : this.opening.stage === OPENING.WAKE ? [] : this.villagers.slice(1);
-    const list = [...this.knights, ...this.heroes.filter((h) => h.active && !h.surf && !h.jump), ...her];
+    // (One list, kept between ticks, of the bodies that are up and about: the dead and the dormant are never pushed.)
+    const list = this.sepList || (this.sepList = []);
+    list.length = 0;
+    for (const k of this.knights) if (!k.dead && !k.dormant) list.push(k);
+    for (const h of this.heroes) if (h.active && !h.surf && !h.jump && !h.dead) list.push(h);
+    for (let i = this.opening && this.opening.stage !== OPENING.WAKE ? 1 : 0; i < (this.opening?.stage === OPENING.WAKE ? 0 : this.villagers.length); i++) if (!this.villagers[i].dead && !this.villagers[i].dormant) list.push(this.villagers[i]);
+    void her;
     for (const k of list) {
-      if (k.dead || k.dormant) continue;
       const P = k.bodyRadius || 0.82;
       const dx = p.x - k.x, dz = p.z - k.z, d = Math.hypot(dx, dz);
       if (d < P && d > 1e-3 && !k.iframes && Math.abs(p.y - k.y) < 4) {
@@ -282,10 +287,11 @@ class Sim {
     for (let i = 0; i < list.length; i++) {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i], b = list[j];
-        if (a.dead || b.dead || a.dormant || b.dormant) continue;
         // Two knights keep a body between them, so blades and boards don't pass through shoulders.
         const R = a instanceof Knight && b instanceof Knight ? 1.3 : (a.bodyRadius || 0.5) * 0.7 + (b.bodyRadius || 0.5) * 0.7;
-        const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+        const dx = b.x - a.x, dz = b.z - a.z;
+        if (dx * dx + dz * dz >= R * R) continue;
+        const d = Math.hypot(dx, dz);
         if (d < R && d > 1e-3 && Math.abs(a.y - b.y) < 4) {
           const push = (R - d) / d * 0.5;
           this.nudgeBody(b, dx * push, dz * push, 0.4);

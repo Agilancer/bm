@@ -1,6 +1,6 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
-import { GROUPS, GROUP_KEYS } from './core/tripo-monsters.js';
+import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { QuestTrail } from './ui/trail.js';
@@ -335,9 +335,12 @@ async function boot(plan, poolSize) {
     $('xpBar').firstElementChild.style.width = `${Math.min(100, (pack.xp - lo) / (hi - lo) * 100)}%`;
   };
   // A kill's worth of experience, and whatever that buys. The sim only says something died.
-  game.gainXp = (kind) => {
+  // (kind: what it leaves, drops.js; what: 1 + what it was. A Tripo monster's worth goes by its life too, so the tough ones
+  // out in the countries pay for the time they take: src/core/tripo-monsters.js GROUPS.)
+  game.gainXp = (kind, what = 0) => {
     renderer.skullEyes?.feel('glee', 3);
-    if (!stepXp(pack, XP_OF[kind | 0] ?? 10)) { showLevel(); return; }
+    const g = what - 1 >= TRIPO_KIND ? GROUPS[GROUP_KEYS[what - 1 - TRIPO_KIND]] : null;
+    if (!stepXp(pack, Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0))) { showLevel(); return; }
     arm();
     game.party?.levelled();
     // A new level fills you up, as it should.
@@ -1448,7 +1451,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : 'FOE'); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
