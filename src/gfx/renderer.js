@@ -388,7 +388,7 @@ export class Renderer {
     this.smokeT = 0;
     this.moteT = 0;
     this.resize();
-    tick();
+    tick();
     if (done !== total) console.warn(`loading bar: ${done} steps ticked of ${total} counted (renderer.js load)`);
   }
 
