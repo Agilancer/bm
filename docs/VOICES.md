@@ -38,6 +38,52 @@ voices in the demo aren't consistent").
 The owner approved the method on four lines: "Hold still. It doesn't hurt. It never hurts.", the two tunnel orders, and
 "What have you done?!". Those four takes are kept as they are (`<key>.a.wav` in the takes folder).
 
+## Where the recording stopped (2026-11-09), to come back to
+
+The owner asked for what was made to go in the game unjudged, to be gone back through later. So **every line has a
+recording, but most aren't yet the keepers:**
+
+- **What shipped:** `tools/voice/shipped.json` lists each line's shipped take and its status.
+  - `approved`: 4 lines, the owner's four.
+  - `passed`: 39 lines that passed the critics' rules.
+  - `unchecked`: 136 lines whose first take failed a rule, shipped anyway.
+
+  It also gives each line's failed rules, pitch and likeness.
+- **Takes made:**
+  - Round 0 (the first take of every line) is done: 175 takes, all judged.
+  - Round 1 (the second take) stopped after 116 of 175. That covers the whole opening in both voices. None of the
+    town lines has a second take yet, except one young one.
+  - Of round 1's takes, only 10 were judged. The rest are unjudged.
+- **Where the takes are:** outside the repo, in `C:\Users\agila\tts\anchor_all`:
+  - the takes: `<voice>/<key>.<round>.wav`, with `.ship.mp3` beside each judged one;
+  - `scores.json`: the numbers for every judged take;
+  - `lines.json`: the line list;
+  - `report.json`: out of date until `pick.py` runs again.
+- **Why so few pass:** about one take in five passed in round 0.
+  - **The young voice comes out low and slow:** a median about 195 Hz against her sample's 216; 31 of 81 takes under
+    190 Hz; a median pace 26% slow.
+  - **The old voice is slow and boomy:** 13% slow, and its low band runs over the sample's.
+  - **Likely cause:** the calm notes, which say "low" and "evenly". The notes behind the four approved takes said "at her
+    normal speaking pitch" instead.
+- **Next, before more takes:**
+  1. **Test new calm notes.** `C:\Users\agila\tts\note_test\note_test.py` records 12 lines (6 per voice) with two new
+     calm notes per voice, at round 0's seeds, so the note is the only change. Then `pick.py` judges each variant's
+     folder (`--takes C:\Users\agila\tts\note_test\YA`, YB, WA, WB). The notes:
+     - young: "Dry and amused, at her normal speaking pitch and a brisk, natural pace." or "She talks easily and
+       quickly, at her normal speaking pitch, dry and amused, like conversation.";
+     - old: "Plain and matter-of-fact, at her normal speaking pitch and a brisk, natural pace. Dry and rasping." or
+       "Firm and flat, at her normal speaking pitch, at a brisk, natural pace. Dry and rasping.";
+     - each ending "Each sentence falls at its end."
+  2. **If a note does better:**
+     - put it in `anchors.json`;
+     - delete that voice's calm takes made with the old note, and their `scores.json` entries (one note per kind, so the
+       voice stays one woman);
+     - run `record_all.py` from round 0.
+  3. **If not:** carry on with `record_all.py ... --start 1`. It skips takes already made.
+  4. **Ship:** `pick.py --ship assets/voice` replaces each line's file once a take passes. A line still under two passes
+     after all its takes goes to the owner for new words. Expect the lone words ("Tessariel.", "Velscour's.",
+     "Lovely.", "Wait!") there.
+
 ## What's recorded
 
 Lisandra: the whole opening (`src/core/opening-script.js` with the cave's long story in `src/core/opening-cave.js`), and
