@@ -7,6 +7,7 @@ import { churchAt, churchSite, toChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
 import { inTown } from '../core/town.js';
 import { clamp, damp, quatYaw, wrapAngle, quatRotate } from '../core/math.js';
+import { getFile } from '../core/files.js';
 import { ArmsRig } from './anim.js';
 import { Beast } from './beast.js';
 import { CHILDREN, PART, partOfJoint } from './limbs.js';
@@ -1403,10 +1404,10 @@ export function ambush(sim, cx, cz, n) {
 }
 
 export async function addUndead(sim, base) {
-  const fetchBuf = (m) => fetch(`${base}assets/monsters/zombie/${m}.glb`).then((r) => { if (!r.ok) throw new Error(`${m}: ${r.status}`); return r.arrayBuffer(); });
+  const fetchBuf = (m) => getFile(`${base}assets/monsters/zombie/${m}.glb`);
   const [zMeta, cMeta, buffers] = await Promise.all([
-    fetch(`${base}assets/monsters/zombie/clips.json`).then((r) => r.json()),
-    fetch(`${base}assets/monsters/zombie/caster_clips.json`).then((r) => r.json()),
+    getFile(`${base}assets/monsters/zombie/clips.json`, 'json'),
+    getFile(`${base}assets/monsters/zombie/caster_clips.json`, 'json'),
     Promise.all(BODIES.map((b) => fetchBuf(b.model))),
   ]);
   let id = sim.knights.length, spot = 0;

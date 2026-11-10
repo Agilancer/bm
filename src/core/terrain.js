@@ -173,17 +173,36 @@ function segDist2(px, pz, ax, az, bx, bz) {
   return ex * ex + ez * ez;
 }
 
+// Every stretch of the paths, laid flat for the functions that go over them a million times as the land is drawn (pathAmount
+// here, forestAmount in src/core/forest.js), each with the box past which it's too far off to matter (reach(w) metres from
+// it). The sums are the same ones as before, in the same order: only the stretches that would have come to nothing are
+// passed by, so the land comes out exactly as it did.
+export function pathStretches(paths, reach) {
+  const out = [];
+  for (const p of paths) {
+    const m = reach(p.w);
+    for (let i = 0; i + 1 < p.pts.length; i++) {
+      const [ax, az] = p.pts[i], [bx, bz] = p.pts[i + 1];
+      out.push({ ax, az, bx, bz, w: p.w, lo: p.w * 0.45, hi: p.w * 1.2, cave: p === CAVE_PATH,
+        x0: Math.min(ax, bx) - m, x1: Math.max(ax, bx) + m, z0: Math.min(az, bz) - m, z1: Math.max(az, bz) + m });
+    }
+  }
+  return out;
+}
+// (A path wears the ground out to 1.2 of its width, and the wobble is never under -0.8: past that and a hair, nothing.)
+let worn = null;
+
 export function pathAmount(x, z) {
   // Wobble the edge, and bleed into a worn square around the well.
   const wob = (fbm(x * 0.35, z * 0.35, 3) - 0.5) * 1.6;
   let best = 0;
-  for (const p of PATHS) {
-    if (p === CAVE_PATH && !openingTerrain) continue;
-    for (let i = 0; i + 1 < p.pts.length; i++) {
-      const [ax, az] = p.pts[i], [bx, bz] = p.pts[i + 1];
-      const d = Math.sqrt(segDist2(x, z, ax, az, bx, bz));
-      best = Math.max(best, 1 - sstep(p.w * 0.45, p.w * 1.2, d + wob));
-    }
+  if (!worn) worn = pathStretches(PATHS, (w) => w * 1.2 + 0.81);
+  for (let i = 0; i < worn.length; i++) {
+    const s = worn[i];
+    if (x < s.x0 || x > s.x1 || z < s.z0 || z > s.z1) continue;
+    if (s.cave && !openingTerrain) continue;
+    const d = Math.sqrt(segDist2(x, z, s.ax, s.az, s.bx, s.bz));
+    best = Math.max(best, 1 - sstep(s.lo, s.hi, d + wob));
   }
   const square = Math.hypot((x + 1.5) * 0.9, z - 1) + wob * 1.8;
   return Math.max(best, 1 - sstep(4.5, 10.5, square));

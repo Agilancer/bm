@@ -27,6 +27,20 @@ run `python tools/files.py` each time the game is put up (it's never committed: 
 Without `files.json` every file comes from the network as before. Checked by `node tools/keep_check.mjs` (three starts:
 375 MB, then the page's first files only, then just the file that was touched).
 
+**The start.** While the game loads, the title shows how far it is and the file coming down. Everything is asked for at
+once and comes in side by side (`src/gfx/renderer.js` `load`): the pictures a few at a time, the models fetched a few
+ahead of the ones being built, and the land worked out in the pool's threads meanwhile, in bands of sixteen rows so a
+thread is never long on one. A phone has fewer in hand at once (two pictures, one model being built) because every
+decoded picture is held whole in memory; a PC has six and four, and lends the load the two threads kept for the
+simulation and the drawing. What's built is still put together in the one order the simulation counts on. Every file
+goes through `src/core/files.js`, which is what names it on the screen. `node tools/load_time.mjs` times two starts
+(nothing cached, then the cache full) and says when the simulation, the land, the pictures and the models were ready,
+and whether any file came over the network twice. On a 4-core machine with a software GPU, where the processor does the
+GPU's work too, the start went from 84 s to about 48 s at a PC's graphics and from 41 s to about 19 s at a phone's; no
+real GPU or phone has been timed. What's left, by size: the simulation and the renderer each read every model (the
+second read is from the browser's cache, about 236 MB of it); a phone downloads the same full-size pictures as a PC and
+shrinks them to a quarter; and the far land's map is 15 s of one thread's work on a PC, split across the pool.
+
 | | PC | Phone |
 | --- | --- | --- |
 | Move | `W` `A` `S` `D` | Left thumb |
@@ -667,7 +681,7 @@ To check it yourself:
   is one vertex buffer and one draw call against a texture array.
 - **Threads.** The game asks first, then uses all but one logical core on PC and caps itself on phones. The simulation runs on
   its own thread at 120 Hz (90 on phones) and publishes snapshots through shared memory, so the render thread never waits on
-  it. The pool decodes textures and builds the land at load, then spends a few milliseconds of every 40 playing out the duel,
+  it. The pool decodes textures and builds the land at load (alongside the models, not after them), then spends a few milliseconds of every 40 playing out the duel,
   and those rollouts weight the knight's tactics (on a phone only two threads, 2 ms of every 80, since heat is what limits it).
   Browsers have no real permission prompt for threads, so that question is the game's own. Without cross-origin isolation it
   falls back to messages between threads.
@@ -714,6 +728,8 @@ To check it yourself:
 | `tools/review.js`, `tools/sheet.py` | Stage scenes and screenshots, and run a scripted fight, for reviews |
 | `tools/test_governor.mjs` | The phone governor against simulated phones |
 | `tools/phone_bench.mjs` | The game at a phone's screen size on a software GPU: frame costs, and the governor under real load |
+| `tools/load_time.mjs` | How long a start takes and where the time goes: two starts, nothing cached and then the cache full |
+| `src/core/files.js` | The start's files: fetched through here so the loading screen can name them, and how many are in hand at once |
 | `src/sim/` | The simulation thread: knights, AI, crabs, player, collisions |
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |

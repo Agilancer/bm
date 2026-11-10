@@ -65,10 +65,14 @@
   .t-under > * { grid-area: 1 / 1; }
   .t-status { align-self: start; display: grid; justify-items: center; gap: 12px; opacity: 0; }
   .t-status span { font: 600 13px Cinzel, serif; letter-spacing: .28em; text-transform: uppercase; color: #b89a62; text-shadow: 0 1px 4px #000; text-align: center; transition: opacity .5s; }
-  .t-bar { width: min(320px, 60vw); height: 1px; background: rgba(184, 154, 98, .18); opacity: 0; transition: opacity .5s; }
+  /* The loading bar, filling from the left, and under it the file coming down. */
+  .t-bar { width: min(380px, 66vw); height: 5px; padding: 1px; border: 1px solid rgba(184, 154, 98, .42); border-radius: 3px; background: rgba(11, 9, 7, .6);
+           box-shadow: 0 1px 6px rgba(0, 0, 0, .8); opacity: 0; transition: opacity .5s; box-sizing: content-box; }
   .t-status.has-bar .t-bar { opacity: 1; }
-  .t-bar i { display: block; height: 100%; transform: scaleX(0); transition: transform .4s ease; box-shadow: 0 0 6px rgba(255, 210, 120, .7);
-             background: linear-gradient(90deg, rgba(255, 220, 140, 0), #f2cf82 30%, #fff0c0 50%, #f2cf82 70%, rgba(255, 220, 140, 0)); }
+  .t-bar i { display: block; height: 100%; border-radius: 2px; transform: scaleX(0); transform-origin: 0 50%; transition: transform .25s ease-out;
+             box-shadow: 0 0 6px rgba(255, 210, 120, .55); background: linear-gradient(90deg, #8c7344, #f2cf82 70%, #fff0c0); }
+  .t-file { min-height: 1.3em; max-width: min(92vw, 640px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: italic 600 13px 'Alegreya Sans', Georgia, serif;
+            letter-spacing: .04em; color: #8c7a58; text-shadow: 0 1px 4px #000; margin-top: -4px; }
   .t-main.menu-on .t-status > * { opacity: 0; }
   .t-menu { display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none; }
   .t-main.menu-on .t-menu { pointer-events: auto; }
