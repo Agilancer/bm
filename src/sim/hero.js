@@ -19,6 +19,8 @@ import { Gravehart } from './gravehart.js';
 import { Hydra } from './hydra.js';
 import { FieldCreature } from './field-creature.js';
 import { Pose, solveFK } from './anim.js';
+import { BROKER_SPOTS, PORTAL, inDungeon, roleOf } from '../core/dungeon.js';
+import { foeOf } from './foes.js';
 
 const STRING_ELEM = { gold: ELEM.LIGHT, azure: ELEM.FROST, emerald: ELEM.HEAL, violet: ELEM.ARCANE, crimson: ELEM.DRAIN, silver: ELEM.SPIRIT, ember: ELEM.FIRE, rose: ELEM.STORM };
 const GAP = 1.2;                 // hips to hips, hero to anything
@@ -49,7 +51,8 @@ function fightable(m) {
   return floorAt(m.x, m.z) === null && !inPit(m.x, m.z);
 }
 
-const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreature ? 1 : m.scale > 1.2 ? 1 : m instanceof Crab ? 1.4 : 0.5);
+// (A Tripo monster has its own girth: a dragon's is far past a goblin's.)
+const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreature ? Math.max(0.6, m.meta ? m.opts.radius * 1.2 : 1) : m.scale > 1.2 ? 1 : m instanceof Crab ? 1.4 : 0.5);
 
 // ---- class moves ----------------------------------------------------------------------------------------------------
 // clip: from the heroes' bank. hit: when in the clip it lands (fractions). dmg: before level. reach: past the hips.
@@ -130,6 +133,8 @@ export class Hero extends Knight {
       this.backT = new Float32Array(3); quatRotate(this.backT, 0, inv, 0, d, 0);
     }
     this.flight = null;     // a boomerang or a hammer on its way
+    // (A quartermaster of the Free Company: stands at a post and hires out the party: HeroWorld.atPost.)
+    this.broker = person.broker || null;
     this.heroReset();
   }
 
@@ -140,6 +145,7 @@ export class Hero extends Knight {
       kills: 0, bag: 0, xp: 0, stuckT: 0, lastX: this.x, lastZ: this.z, meetT: rand(10, 40), lastSay: -99, aimT: 0, draw: 0,
       shotCd: 0, animTick: 0, losT: 0, clear: true, fieldAt: null, vanishT: 0, playerSeen: false, helpT: 0, visible: true, animT: 0, sitting: false, talkUntil: 0,
       iframesT: 0, guardT: 0, kiteT: 0, charge: null, leaps: 0, leapGoal: 3 + Math.floor(Math.random() * 4),
+      dodgeT: 0, post: null, reviveT: 0, tauntCd: 0, healCd: 0, bigHealCd: 0,
     });
     this.hostile = false;
   }
@@ -154,15 +160,19 @@ export class Hero extends Knight {
   }
 
   // A hit from a monster (src/sim/undead.js and the beasts call the player's damage(); a hero answers the same way).
-  damage(sim, amount, fromX, fromZ, knock = 0) {
-    // (Untouchable for a moment in the air of a leap, or through a dash: Velscour's heroes are.)
-    if (this.dead || !this.active || this.surf || this.iframes || this.iframesT > 0) return false;
+  damage(sim, amount, fromX, fromZ, knock = 0, unblockable = false) {
+    // (Untouchable for a moment in the air of a leap, or through a dash: Velscour's heroes are. The Free Company's
+    // quartermasters aren't in anyone's fight.)
+    if (this.dead || !this.active || this.surf || this.iframes || this.iframesT > 0 || this.broker) return false;
     // Plate, mail or leather: a lancer shrugs off what a rogue can't. A raised shield takes most of it from the front.
     const armor = { lancer: 0.6, paladin: 0.7, dragoon: 0.8 }[this.person.cls] ?? 0.9;
     const front = Math.abs(wrapAngle(Math.atan2(fromX - this.x, fromZ - this.z) - this.faceYaw)) < 1.1;
     // A shield wall (the lancer's) turns most of it from any side, for a few seconds.
-    const guard = (this.shieldUp > 0.6 && front ? 0.25 : 1) * (this.guardT > 0 ? 0.4 : 1);
-    this.hp -= amount * armor * guard * (this.party ? 0.8 : 1);
+    // (A hired tank's board turns about half: enough to hold a boss with a healer behind him, not so much he needs none.
+    // What falls from the roof or burns on the floor no board stops.)
+    const guard = unblockable ? 1 : this.hired ? (this.shieldUp > 0.6 && front ? 0.65 : 1) * (this.guardT > 0 ? 0.6 : 1)
+      : (this.shieldUp > 0.6 && front ? 0.25 : 1) * (this.guardT > 0 ? 0.4 : 1);
+    this.hp -= amount * armor * guard * (this.party && !this.hired ? 0.8 : 1);
     this.lastHitBy = { x: fromX, z: fromZ, t: sim.time };
     if (knock > 0) { const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1; this.knockX = dx / L; this.knockZ = dz / L; this.knock = Math.min(knock, 5); }
     // Thrown back, the whole body staggers with it (the legs never run on the spot while the hips slide); a plain hit is in the chest.
@@ -204,7 +214,7 @@ export class Hero extends Knight {
     this.visible = this.active && this.near < VIEW;
     for (const s of this.skills) s.t -= dt;
     this.shotCd -= dt; this.buffT -= dt; this.gestureT -= dt; this.hold -= dt; this.vanishT -= dt;
-    this.iframesT -= dt; this.guardT -= dt; this.kiteT -= dt;
+    this.iframesT -= dt; this.guardT -= dt; this.kiteT -= dt; this.dodgeT -= dt; this.tauntCd -= dt; this.healCd -= dt; this.bigHealCd -= dt;
     if (this.buffT <= 0) this.buff = null;
     if (this.dead) return this.updateDead(dt, sim, world);
     if (this.below) return this.updateBelow(dt, sim, world);
@@ -215,7 +225,7 @@ export class Hero extends Knight {
 
     world.think(this, dt);
     this.flyThings(dt, sim);
-    if (this.surf) this.updateSurf(dt, sim, world);
+    if (this.surf) { if (this.surf.free) this.updateFreeSurf(dt, sim, world); else this.updateSurf(dt, sim, world); }
     else {
       if (this.foe) this.fight(dt, sim, world);
       this.runSwing(dt, sim);
@@ -255,6 +265,8 @@ export class Hero extends Knight {
       this.move(dt, sim);
       if (this.visible) this.animate(dt, sim);
     }
+    // (One of your party lies where they fell till the fight's over: HeroWorld.stepCompany gets them up.)
+    if (this.hired) return;
     // Lies where they fell a while, then is gone: back at the well, in a minute or so, a little sheepish.
     if (this.deadT > 22 && !this.hidden) { this.hidden = true; this.ghostT = rand(25, 55); }
     if (this.hidden) {
@@ -318,6 +330,9 @@ export class Hero extends Knight {
     const R = radiusOf(m);
     this.faceYaw = turn(this.faceYaw, to, 6 * dt);
     if (this.swing || this.jump) return;
+    // Your party's: stepping out of something (HeroWorld.companion set the goal), or fighting from a place it was given.
+    if (this.dodgeT > 0) return;
+    if (this.post) return this.fightFrom(sim, world, m, d, R, to);
     // A special when one's ready and it suits.
     for (const s of this.skills) {
       if (s.t > 0 || s.song) continue;
@@ -396,8 +411,7 @@ export class Hero extends Knight {
     if (move && this.r() < 0.06) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf(move));
     const thrust = (this.style === 'lance' || this.style === 'spear') && b.clip !== 'L_ShieldJab' && b.clip !== 'L_Chop';
     this.startSwing(b.clip, b.rate * speed, b.hit, (i) => {
-      const lvl = 1 + this.person.level * 0.035;
-      let dmg = b.dmg * lvl * (this.buff?.dmg || 1);
+      let dmg = b.dmg * this.power();
       if (this.person.cls === 'rogue') dmg *= this.backstab(sim, m);
       if (thrust) this.thrust(sim, b.reach, dmg, b.knock || 0);
       else this.strikeAround(sim, b.reach, 1.0, dmg, b.knock || 0, 1);
@@ -491,6 +505,9 @@ export class Hero extends Knight {
     // (Someone else already at it: kept, so the kill can be a rescue or a theft.)
     if (m.heroFoe && m.heroFoe !== this && sim.time - (m.heroFoeT ?? -1e9) < 4) { m.otherFoe = m.heroFoe; m.otherFoeT = sim.time; }
     m.heroFoe = this; m.heroFoeT = sim.time;
+    // (Your tank holds what he hits; a twin's ward takes its share of anyone's blow.)
+    if (this.hired && this.role === 'tank') { m.tauntBy = this; m.tauntT = sim.time + 5; }
+    dmg *= m.ward ?? 1;
     if (m instanceof Knight) {
       // Velscour's guards hold: a party can hold one off and slip by, not cut it down for the player to find gone.
       m.hp = Math.max(m.maxHp * 0.4, m.hp - dmg * 0.5);
@@ -691,7 +708,8 @@ export class Hero extends Knight {
     say();
   }
 
-  power() { return (1 + this.person.level * 0.035) * (this.buff?.dmg || 1); }
+  // (Your party keeps pace with you, level for level: src/items/levels.js gives you 7% a level.)
+  power() { return (1 + this.person.level * (this.hired ? 0.065 : 0.035)) * (this.buff?.dmg || 1); }
 
   // The ninja's finisher: the kick, then seven strokes of gold across a circle round the foe, point to point in a
   // seven-pointed star, and everything inside it reels.
@@ -892,6 +910,64 @@ export class Hero extends Knight {
     if (this.visible) { this.animate(this.animT, sim); this.animT = 0; }
   }
 
+  // ---- your party's ways of fighting ----------------------------------------------------------------------------------
+
+  // From a place the party was given (HeroWorld.stance): the healer's distance, a dragon's flank, out of a whirlwind's
+  // reach. Walk there; strike or shoot whatever's in reach from it.
+  fightFrom(sim, world, m, d, R, to) {
+    const [px, pz] = this.post, dp = Math.hypot(px - this.x, pz - this.z);
+    this.goal = dp > 0.7 ? { x: px, z: pz, speed: dp > 5 ? 7 : 3.2, stop: 0.35, face: to } : null;
+    this.shieldTarget = this.style === 'lance' && d < 4 ? 1 : 0;
+    if (this.shotCd > 0) return;
+    if (this.role === 'heal') {
+      const s = this.skills.find((q) => q.key === 'hammer_throw');
+      if (s && s.t <= 0 && d - R < 16) { s.t = s.cd * 0.6; this.skill(sim, 'hammer_throw', m); this.shotCd = 1; }
+      return;
+    }
+    if (this.cls.ranged) {
+      if (d <= this.cls.range + 2) {
+        if (this.style === 'bow') this.shoot(sim, m);
+        else if (this.person.cls === 'bard') this.pluck(sim, m);
+        else this.throwBoomerang(sim, m, 0);
+      }
+      return;
+    }
+    if (d - R < this.blows[0].reach - 0.1 && Math.abs(wrapAngle(to - this.yaw)) < 0.8) this.blow(sim, m);
+  }
+
+  // On the board beside you, wherever you ride yours: a place behind you and to one side, kept at your pace, and off it
+  // when you step off.
+  updateFreeSurf(dt, sim, world) {
+    const s = this.surf, p = sim.player;
+    const pv = Math.hypot(p.vx || 0, p.vz || 0);
+    let ux = pv > 0.8 ? p.vx / pv : Math.sin(p.yaw), uz = pv > 0.8 ? p.vz / pv : Math.cos(p.yaw);
+    const back = 3.2 + Math.floor(s.i / 2) * 2.6, side = (s.i % 2 ? 1 : -1) * (1.6 + 0.3 * Math.floor(s.i / 2));
+    const tx = p.x - ux * back + uz * side, tz = p.z - uz * back - ux * side;
+    const dx = tx - this.x, dz = tz - this.z, d = Math.hypot(dx, dz);
+    if (d > 45) { this.x = this.lastX = tx; this.z = this.lastZ = tz; }
+    s.v = damp(s.v, clamp(pv + d * 1.4 - 0.5, 0, 30), 4, dt);
+    if (d > 0.3) { const k = clamp(d / 6, 0.15, 0.9); ux = ux * (1 - k) + dx / d * k; uz = uz * (1 - k) + dz / d * k; const L = Math.hypot(ux, uz) || 1; ux /= L; uz /= L; }
+    const out = surfPos;
+    out[0] = this.x + ux * s.v * dt; out[1] = this.y; out[2] = this.z + uz * s.v * dt;
+    sim.world.resolve(out, 0.4, this.y + 0.2);
+    this.vx = (out[0] - this.x) / dt; this.vz = (out[2] - this.z) / dt;
+    this.x = out[0]; this.z = out[2];
+    this.y = sim.world.height(this.x, this.z) + 0.26;
+    this.speed = 0;
+    s.travel = Math.atan2(ux, uz);
+    this.yaw = this.faceYaw = wrapAngle(s.travel + Math.PI / 2 * s.foot);
+    if (this.action?.name !== 'Crouch_Idle_Loop') this.play('Crouch_Idle_Loop', 1, 'full', 0.25);
+    // Off it a moment after you are.
+    s.off = p.surfing ? 0 : (s.off || 0) + dt;
+    if (s.off > 0.3 || p.dead) {
+      this.surf = null; this.stopAction(0.2);
+      this.y = sim.world.height(this.x, this.z);
+      sim.event(EV.LAND, this.x, this.y, this.z, 0.4);
+    }
+    this.animT += dt;
+    if (this.visible) { this.animate(this.animT, sim); this.animT = 0; }
+  }
+
   // ---- what's in the hands -------------------------------------------------------------------------------------------
 
   writeProps(out, off) {
@@ -1013,12 +1089,17 @@ export class Hero extends Knight {
     snap[o + 9] = this.dead ? 1 : 0;
     snap[o + 10] = this.below > 0 ? 1 : 0;
     snap[o + 11] = this.foe ? 1 : 0;
+    // Your party: hired, what they're for (1 tank, 2 healer, 3 damage); and a quartermaster's post (1 town, 2 the Warrens).
+    snap[o + 12] = this.hired ? 1 : 0;
+    snap[o + 13] = this.hired ? { tank: 1, heal: 2, dps: 3 }[this.role] : 0;
+    snap[o + 14] = this.broker ? (this.broker === 'town' ? 1 : 2) : 0;
+    snap[o + 15] = this.hp;
   }
 }
 
 export const ACT_NAMES = ['town', 'hunt', 'delve', 'summit', 'surf', 'errands', 'social', 'perform', 'rest', 'return', 'duel', 'help'];
 const ACT_CODES = Object.fromEntries(ACT_NAMES.map((n, i) => [n, i]));
-const propQ = new Float32Array(4), propT = new Float32Array(3), propM = new Float32Array(16), flowDir = new Float32Array(2);
+const propQ = new Float32Array(4), propT = new Float32Array(3), propM = new Float32Array(16), flowDir = new Float32Array(2), surfPos = new Float32Array(3);
 // A direction turned by `ang` about the level axis (kx, 0, kz) (Rodrigues).
 function bankAbout(v, kx, kz, ang) {
   const c = Math.cos(ang), s = Math.sin(ang), d = (kx * v[0] + kz * v[2]) * (1 - c);
@@ -1037,10 +1118,13 @@ export class HeroWorld {
     this.targets = [];
     this.firsts = new Set();       // big monsters someone has already had the first kill of
     this.duels = [];
+    // Your party, hired of the Free Company's quartermasters: up to four, who go where you go (companion, below).
+    this.company = { id: 900, leader: null, members: new Set(), kind: 'company', place: null, state: 'going', t: 0, want: 4, company: true };
+    this.trail = [];
     // Everyone starts about the town, at their own business.
     const town = PLACES.filter((p) => p.kind === 'town');
     for (const h of heroes) {
-      const g = this.spotIn(pick(town), h);
+      const g = h.broker ? { x: BROKER_SPOTS[h.broker][0], z: BROKER_SPOTS[h.broker][1] } : this.spotIn(pick(town), h);
       h.x = h.lastX = g.x; h.z = h.lastZ = g.z; h.y = sim.world.height(h.x, h.z);
       h.yaw = h.faceYaw = Math.random() * 6.28;
       h.meetT = rand(4, 30);
@@ -1109,6 +1193,7 @@ export class HeroWorld {
     this.stepZones(dt);
     this.stepDots(dt);
     this.stepParties(dt);
+    this.stepCompany(dt);
     this.stepRespawns(dt);
     this.stepMeetings(dt);
     // Dawn and dusk, said once each by someone in town.
@@ -1336,6 +1421,8 @@ export class HeroWorld {
   // ---- killing, dying, coming back -----------------------------------------------------------------------------------
 
   onKill(h, m) {
+    // (What your party kills is yours: its loot and its worth, as if your hand had done it. src/sim/sim.worker.js.)
+    if (h.hired) { if (h.foe === m) h.foe = null; return; }
     m.heroKill = true;
     if (h.foe === m) h.foe = null;
     // Another hero was fighting it: low on life, that's a rescue (a debt, and likely a friend); hale, a kill taken from them.
@@ -1376,6 +1463,12 @@ export class HeroWorld {
 
   onDeath(h) {
     const sim = this.sim;
+    if (h.hired) {
+      h.foe = null; h.reviveT = 0;
+      if (h.role === 'tank' && sim.warrens?.fight) sim.warrens.warn(14, 20);
+      for (const o of [...this.company.members].filter((x) => !x.dead).slice(0, 1)) this.later(rand(0.6, 2), () => o.say(sim, 'ally_down', h.slot));
+      return;
+    }
     if (h.party) {
       const alive = [...h.party.members].filter((o) => !o.dead);
       for (const o of alive.slice(0, 2)) this.later(rand(0.6, 2), () => o.say(sim, 'ally_down', h.slot));
@@ -1421,6 +1514,8 @@ export class HeroWorld {
   think(h, dt) {
     const sim = this.sim, p = sim.player;
     if (h.vanishT > 0) return;
+    if (h.broker) return this.atPost(h);
+    if (h.hired) return this.companion(h, dt);
     // A fight comes first: something at them, something at their party, or the player in trouble close by.
     if (!h.foe && !h.surf && !h.task?.peace) {
       let best = null, bd = h.cls.ranged ? 20 : 14;
@@ -1482,6 +1577,7 @@ export class HeroWorld {
 
   care(h) {
     const sim = this.sim, p = sim.player;
+    if (h.hired || h.broker) return;
     for (const s of h.skills) {
       if (s.t > 0 || h.swing || h.surf || h.jump) continue;
       if (s.key === 'holy_light') {
@@ -1953,6 +2049,285 @@ export class HeroWorld {
     h.talkUntil = this.sim.time + 90;
     h.goal = null;
     if (h.gesture && WHOLE_BODY.has(h.gesture) && h.gesture !== 'sit') { h.gesture = null; h.stopAction(0.3); }
+  }
+
+  // ---- the Free Company: the quartermasters, and the party you hire of them --------------------------------------------
+
+  // A quartermaster keeps his post (in town, by the well; at the Warrens' portal) and turns to whoever comes to talk.
+  atPost(h) {
+    const sim = this.sim, p = sim.player, [x, z] = BROKER_SPOTS[h.broker];
+    h.foe = null; h.task = { kind: 'town', place: null, t: 0, peace: true };
+    if (Math.hypot(x - h.x, z - h.z) > 0.7) { h.goal = { x, z, speed: 1.6, stop: 0.4 }; return; }
+    h.goal = null; h.hold = 0.3;
+    const near = Math.hypot(p.x - h.x, p.z - h.z) < 7;
+    h.holdFace = near ? Math.atan2(p.x - h.x, p.z - h.z) : h.broker === 'portal' ? PORTAL.yaw + Math.PI : Math.PI;
+    if (!near && !h.gesture && Math.random() < 0.002) h.gesture_(pick(['fold', 'look', 'talk']), 4);
+  }
+
+  // Hired: out of the world's day, into yours. A new name and a level near yours, from the quartermaster (src/ui/party.js).
+  hire(slot, o) {
+    const sim = this.sim, h = this.heroes[slot];
+    if (!h || h.broker || h.hired || this.company.members.size >= 4) return false;
+    if (h.party && h.party !== this.company) this.disband(h.party);
+    h.walkWith = null; h.talkUntil = 0; h.task = { kind: 'help', t: 0 }; h.foe = null; h.goal = null; h.surf = null; h.below = 0; h.hidden = false;
+    if (o.name) { h.person.name = o.name; h.person.full = o.name; h.person.guild = 'The Free Company'; }
+    if (h.dead) this.revive(h, 1);
+    h.hired = true; h.role = roleOf(h.person.cls);
+    h.party = this.company; this.company.members.add(h);
+    this.setLevel(h, o.level ?? h.person.level);
+    h.hp = h.maxHp;
+    // Up at your side, as if they'd been waiting for the word.
+    if (!o.stay) this.bringTo(h);
+    h.say(sim, 'player_joins_party');
+    return true;
+  }
+
+  dismiss(slot) {
+    const h = this.heroes[slot];
+    if (!h || !h.hired) return;
+    if (h.dead) this.revive(h, 1);
+    h.hired = false; h.role = null; h.post = null;
+    this.company.members.delete(h);
+    h.party = null; h.task = null; h.foe = null;
+    if (h.surf?.free) { h.surf = null; h.stopAction(0.2); h.y = this.sim.world.height(h.x, h.z); }
+    h.say(this.sim, 'player_party_end');
+    // (Back to the town from wherever you left them; from the Warrens, out by the portal first.)
+    if (inDungeon(h.x, h.z)) this.place(h, PORTAL.x + 3, PORTAL.z + 3);
+    this.goHome(h);
+  }
+
+  // A level for one of yours: their life and their blows go with it.
+  setLevel(h, level) {
+    h.person.level = Math.max(1, Math.round(level));
+    const was = h.maxHp || 1;
+    h.maxHp = Math.round(h.cls.hp * (1 + 0.05 * (h.person.level - 1)));
+    h.opts.hp = h.maxHp;
+    h.hp = Math.min(h.maxHp, h.hp * h.maxHp / was);
+    this.sim.event(EV.HERO_LEVEL, h.slot, h.person.level);
+  }
+
+  place(h, x, z, yaw = h.yaw) {
+    const sim = this.sim;
+    h.x = h.lastX = x; h.z = h.lastZ = z; h.y = sim.world.height(x, z); h.vx = h.vz = 0;
+    h.yaw = h.faceYaw = yaw; h.goal = null; h.stuckT = 0; h.fieldAt = null;
+  }
+
+  // Next to the player, somewhere clear, with a puff: for one lost behind, or come through a portal.
+  bringTo(h) {
+    const sim = this.sim, p = sim.player, i = [...this.company.members].indexOf(h);
+    if (!h.dead) this.puff(h.x, h.y + 1, h.z, ELEM.FROST);
+    for (let t = 0; t < 10; t++) {
+      const a = p.yaw + Math.PI + (i - 1.5) * 0.6 + t * 0.5, r = 2.6 + (t % 3) * 0.9;
+      const x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
+      if (!sim.world.inside(x, z, 0.5)) { this.place(h, x, z, p.yaw); break; }
+    }
+    this.puff(h.x, h.y + 1, h.z, ELEM.FROST);
+  }
+
+  // Up again: at (x, z) if given, else where they fell, with frac of their life.
+  revive(h, frac = 0.5, x, z) {
+    const keep = { hired: h.hired, role: h.role, party: h.party, task: h.task, maxHp: h.maxHp, level: h.person.level };
+    h.reset({ ...h.opts, spawn: [x ?? h.x, z ?? h.z] });
+    h.heroReset();
+    Object.assign(h, { hired: keep.hired, role: keep.role, party: keep.party, task: keep.task });
+    h.person.level = keep.level;
+    h.maxHp = keep.maxHp || h.maxHp;
+    h.hp = h.maxHp * frac;
+    h.y = this.sim.world.height(h.x, h.z);
+    h.stopAction(0.01);
+    this.sim.casting.burst(FX.COLUMN, ELEM.LIGHT, h.x, h.y, h.z, 0.5, 1, 0.8, { light: 10, lightR: 5, len: 2.5 });
+  }
+
+  // What's fighting you and yours: anything awake and at one of you, or that you've hit, within a stone's throw.
+  companyFight() {
+    const sim = this.sim, p = sim.player;
+    if (this.fightTick === sim.tick) return this.fightList;
+    const out = this.fightList || (this.fightList = []);
+    out.length = 0;
+    this.fightTick = sim.tick;
+    for (const m of this.targets) {
+      if (!fightable(m)) continue;
+      const dp = Math.hypot(m.x - p.x, m.z - p.z);
+      if (dp > 36) continue;
+      const f = foeOf(m, sim);
+      const onUs = m.aggro && (f === p || f.hired || (m.heroFoe?.hired && sim.time - (m.heroFoeT ?? -1e9) < 8));
+      const hitByYou = sim.time - (m.playerHitT ?? -1e9) < 6;
+      const boss = m.boss && m.aggro;
+      if (onUs || hitByYou || boss) out.push(m);
+    }
+    return out;
+  }
+
+  // Each tick, for one of yours.
+  companion(h, dt) {
+    const sim = this.sim, p = sim.player, W = sim.warrens;
+    const d = Math.hypot(h.x - p.x, h.z - p.z);
+    const fight = this.companyFight();
+    h.post = null;
+    // A word with you: stand and listen, unless something needs killing.
+    if (h.talkUntil && !fight.length) {
+      if (sim.time > h.talkUntil || p.dead || h.near > 9) { h.talkUntil = 0; h.hold = 0.5; }
+      else { h.goal = null; h.hold = Math.max(h.hold, 0.3); h.holdFace = Math.atan2(p.x - h.x, p.z - h.z); return; }
+    }
+    // Lost: through a portal without them, or left far behind out of a fight.
+    if (!p.dead && !fight.length && !h.swing && (d > 60 || inDungeon(p.x, p.z) !== inDungeon(h.x, h.z))) { this.bringTo(h); return; }
+    if (h.surf) return;
+    // On the board when you are.
+    if (p.surfing && !fight.length && Math.hypot(p.vx || 0, p.vz || 0) > 2.5 && !h.swing && !h.jump) { this.freeSurf(h); return; }
+    if (W?.inside) {
+      // Behind a pillar while the dragon's up, shooting what can be shot from there.
+      const hide = W.hideFrom(h.x, h.z);
+      if (hide) {
+        h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
+        const dh = Math.hypot(hide[0] - h.x, hide[1] - h.z);
+        if (dh > 0.6 || !h.foe) { h.goal = { x: hide[0], z: hide[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; }
+        else h.post = hide;
+        if (h.role === 'heal') this.mend(h, true);
+        return;
+      }
+      // Out of the circles and the burning.
+      const out = W.danger(h.x, h.z);
+      if (out) { h.goal = { x: out[0], z: out[1], speed: 7.5, stop: 0.2 }; h.dodgeT = 0.35; if (h.role === 'heal') this.mend(h, true); return; }
+    }
+    if (h.role === 'heal' && this.mend(h)) return;
+    h.foe = this.pickFoe(h, fight);
+    if (h.foe) { this.stance(h, h.foe, fight); return; }
+    this.heel(h);
+  }
+
+  // Whom to go for. The tank: whatever's loose on the rest of you, then what he has. Everyone else: the fight's adds first
+  // (diggers, whelps), then what the tank's holding, then what you're on.
+  pickFoe(h, fight) {
+    const sim = this.sim, p = sim.player;
+    if (!fight.length) return null;
+    const near = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+    const by = (list, from) => { let best = null, bd = Infinity; for (const m of list) { const d = near(m, from); if (d < bd) { bd = d; best = m; } } return best; };
+    if (h.role === 'tank') {
+      const loose = fight.filter((m) => foeOf(m, sim) !== h && !m.flying);
+      // (A taunt for what's loose near him: everything within eleven metres turns on him.)
+      if (loose.length && h.tauntCd <= 0 && !h.dead) {
+        const close = loose.filter((m) => near(m, h) < 11);
+        if (close.length) {
+          h.tauntCd = 7;
+          for (const m of close) { m.tauntBy = h; m.tauntT = sim.time + 6; m.heroFoe = h; m.heroFoeT = sim.time; }
+          if (h.fxOk()) sim.casting.burst(FX.RING, ELEM.STORM, h.x, h.y + 0.1, h.z, 0.5, 10, 0.5, { light: 8, lightR: 6 });
+          sim.event(EV.ROAR, h.x, h.y + 1.6, h.z, 0.6);
+          if (Math.random() < 0.3) h.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf('shield_wall'));
+        }
+      }
+      const healer = [...this.company.members].find((o) => o.role === 'heal' && !o.dead) || p;
+      if (loose.length) return by(loose, healer);
+      if (h.foe && fight.includes(h.foe)) return h.foe;
+      return by(fight.filter((m) => !m.flying), h) || by(fight, h);
+    }
+    const adds = fight.filter((m) => m.lair?.add);
+    if (adds.length) return by(adds, h);
+    const tank = [...this.company.members].find((o) => o.role === 'tank' && !o.dead);
+    if (tank?.foe && fight.includes(tank.foe) && !tank.foe.flying) return tank.foe;
+    const mine = fight.filter((m) => sim.time - (m.playerHitT ?? -1e9) < 4);
+    if (mine.length) return by(mine, p);
+    if (h.foe && fight.includes(h.foe)) return h.foe;
+    return by(fight, p);
+  }
+
+  // Where to fight from, if it matters: the healer back from the tank, a dragon's flanks, out of a twin's whirlwind.
+  stance(h, m) {
+    const p = this.sim.player;
+    const away = (from, r) => { const dx = h.x - from.x, dz = h.z - from.z, L = Math.hypot(dx, dz) || 1; return [from.x + dx / L * r, from.z + dz / L * r]; };
+    if (m.spin > 0 && Math.hypot(h.x - m.x, h.z - m.z) < 7.5) { h.post = away(m, 7.5); return; }
+    if (m.bossKey === 'venomaw' && !m.flying && h.role !== 'tank') {
+      // At her side: the side of her nearer to them, past her girth, farther off for those who shoot.
+      const rx = Math.cos(m.yaw), rz = -Math.sin(m.yaw), side = (h.x - m.x) * rx + (h.z - m.z) * rz >= 0 ? 1 : -1;
+      const far = h.cls.ranged || h.role === 'heal';
+      const r = far ? 11 : radiusOf(m) + 1.1, fwd = far ? -1.5 : -0.6;
+      h.post = [m.x + rx * side * r + Math.sin(m.yaw) * fwd, m.z + rz * side * r + Math.cos(m.yaw) * fwd];
+      return;
+    }
+    if (h.role === 'heal') {
+      const tank = [...this.company.members].find((o) => o.role === 'tank' && !o.dead) || p;
+      const from = Math.hypot(tank.x - m.x, tank.z - m.z) < 6 ? tank : m;
+      h.post = away(from, 9);
+    }
+  }
+
+  // The healer's work: the lowest of you, by need, with the quick light or the great one. True if it's casting.
+  mend(h, moving = false) {
+    const sim = this.sim, p = sim.player;
+    if (h.swing || h.dead) return !!h.swing;
+    let who = null, need = 0;
+    for (const o of [p, ...this.company.members]) {
+      if (o.dead) continue;
+      const want = (o.role === 'tank' ? 0.85 : 0.75) - o.hp / o.maxHp;
+      if (want > need) { need = want; who = o; }
+    }
+    if (!who) return false;
+    const d = Math.hypot(who.x - h.x, who.z - h.z);
+    const big = who.hp / who.maxHp < 0.45 && h.bigHealCd <= 0;
+    if (!big && h.healCd > 0) return false;
+    if (d > 24 || !sim.world.sees(h.x, h.y + 1.6, h.z, who.x, who.y + 1.2, who.z)) {
+      if (moving) return false;
+      h.goal = { x: who.x, z: who.z, speed: 7, stop: 12 };
+      return true;
+    }
+    const lvl = 1 + h.person.level * 0.04;
+    if (big) h.bigHealCd = 7; else h.healCd = 1.8;
+    h.yaw = h.faceYaw = Math.atan2(who.x - h.x, who.z - h.z);
+    h.startSwing('Spell_Simple_Shoot', big ? 1.0 : 1.5, [0.45], () => {
+      if (who.dead) return;
+      const amt = (big ? 0.38 : 0.15) * who.maxHp + (big ? 14 : 7) * lvl;
+      who.hp = Math.min(who.maxHp, who.hp + amt);
+      sim.casting.burst(FX.COLUMN, ELEM.LIGHT, who.x, who.y, who.z, 0.6, 1.1, big ? 1.1 : 0.7, { light: big ? 14 : 8, lightR: 6, len: 3 });
+      sim.casting.burst(FX.RING, ELEM.LIGHT, who.x, who.y + 0.05, who.z, 0.3, 1.3, 0.6);
+      if (who === p && Math.random() < 0.25) h.say(sim, 'player_heal');
+    }, { still: !moving, mask: 'upper' });
+    return true;
+  }
+
+  // Out of a fight: at heel, along the way you came, a few strides back and a little to the side; round you when you stop.
+  heel(h) {
+    const sim = this.sim, p = sim.player, i = [...this.company.members].indexOf(h);
+    const pv = Math.hypot(p.vx || 0, p.vz || 0);
+    let x, z;
+    if (pv > 0.6 && this.trail.length > 2) {
+      // Back along the trail so far, then out to the side.
+      let want = 2.6 + i * 1.6, ax = p.x, az = p.z, k = this.trail.length - 1;
+      while (k >= 0) {
+        const bx = this.trail[k][0], bz = this.trail[k][1], L = Math.hypot(bx - ax, bz - az);
+        if (L >= want) { ax += (bx - ax) * want / L; az += (bz - az) * want / L; want = 0; break; }
+        want -= L; ax = bx; az = bz; k--;
+      }
+      const ux = p.vx / pv, uz = p.vz / pv, side = (i % 2 ? 1 : -1) * 0.9;
+      x = ax + uz * side; z = az - ux * side;
+    } else {
+      const a = p.yaw + Math.PI + (i - 1.5) * 0.55, r = 2.8 + (i % 2) * 0.6;
+      x = p.x + Math.sin(a) * r; z = p.z + Math.cos(a) * r;
+    }
+    const far = Math.hypot(x - h.x, z - h.z);
+    h.goal = { x, z, speed: far > 9 ? 8.8 : far > 3 ? Math.max(2.2, pv * 1.15) : Math.max(1.3, pv), stop: 0.7, face: pv > 0.6 ? Math.atan2(p.vx, p.vz) : p.yaw };
+    if (h.sitting) { h.sitting = false; h.stopAction(0.3); }
+  }
+
+  freeSurf(h) {
+    const i = [...this.company.members].indexOf(h), p = this.sim.player;
+    h.surf = { free: true, i, v: Math.hypot(p.vx || 0, p.vz || 0), foot: i % 2 ? 1 : -1, travel: h.yaw, off: 0, hitSet: new Set() };
+    h.goal = null; h.foe = null;
+    if (h.gesture) { h.gesture = null; }
+    this.sim.event(EV.JUMP, h.x, h.y, h.z);
+  }
+
+  // The player's way, kept for the party to follow round corners; and getting the fallen up once a fight's done.
+  stepCompany(dt) {
+    const sim = this.sim, p = sim.player, t = this.trail;
+    const last = t[t.length - 1];
+    if (!last || Math.hypot(p.x - last[0], p.z - last[1]) > 25) { t.length = 0; t.push([p.x, p.z]); }
+    else if (Math.hypot(p.x - last[0], p.z - last[1]) > 0.8) { t.push([p.x, p.z]); if (t.length > 60) t.shift(); }
+    if (!this.company.members.size) return;
+    const fighting = this.companyFight().length > 0 || !!sim.warrens?.fight;
+    for (const h of this.company.members) {
+      if (!h.dead) continue;
+      h.reviveT = fighting || p.dead ? 0 : h.reviveT + dt;
+      if (h.reviveT > 4) { this.revive(h, 0.5); h.say(sim, 'hero_return'); }
+    }
   }
 
   // Keep the town's hours with the render thread's clock (it owns the sun).

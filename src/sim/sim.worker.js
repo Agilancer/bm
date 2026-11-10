@@ -31,7 +31,9 @@ import { MOB_KEYS, TRIG } from '../core/heroes.js';
 import { Slimes } from './slimes.js';
 import { Tumblers } from './tumblers.js';
 import { TripoEmpty, TripoWorld } from './tripo.js';
-import { TRIPO_BASE, TRIPO_SLOTS } from '../core/tripo-monsters.js';
+import { Warrens } from './dungeon.js';
+import { PORTAL, inDungeon } from '../core/dungeon.js';
+import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
@@ -118,6 +120,8 @@ class Sim {
   slowMo(t) { this.slowT = Math.max(this.slowT, t); }
 
   restart() {
+    // (Fallen in the Hollowfang Warrens: back at its way in, not out on the road. src/sim/dungeon.js afterRestart.)
+    const inWarrens = !!this.player && inDungeon(this.player.x, this.player.z) && this.tick > 0;
     this.player.reset();
     this.player.y = this.world.height(this.player.x, this.player.z);
     this.casting.reset();
@@ -138,6 +142,7 @@ class Sim {
     this.input[INPUT.YAW] = yaw;
     this.input[INPUT.PITCH] = 0;
     self.postMessage({ type: 'restart', yaw });
+    this.warrens?.afterRestart(inWarrens);
   }
 
   step(dt) {
@@ -186,13 +191,14 @@ class Sim {
       // (A summoner's dead fall with it: theirs whose kill the summoner was.)
       if (k.dead && !k.looted && !k.heroKill) {
         const mine = this.time - (k.playerHitT ?? -1e9) < 30 || (k.owner && this.time - (k.owner.playerHitT ?? -1e9) < 30);
-        const theirs = k.heroFoe && this.time - (k.heroFoeT ?? -1e9) < 30;
+        // (Your party's blows are yours.)
+        const theirs = k.heroFoe && !k.heroFoe.hired && this.time - (k.heroFoeT ?? -1e9) < 30;
         if (!mine && theirs) { k.heroKill = true; this.heroWorld?.onKill(k.heroFoe, k); }
         else if (!mine && k.owner?.heroKill) k.heroKill = true;
       }
       if (k.dead && !k.looted && k.heroKill) k.looted = true;
       // You took one a hero was fighting: a kill stolen, or a life saved.
-      if (k.dead && !k.looted && k.heroFoe && !k.heroFoe.dead && this.time - (k.heroFoeT ?? -1e9) < 6) {
+      if (k.dead && !k.looted && k.heroFoe && !k.heroFoe.dead && !k.heroFoe.hired && this.time - (k.heroFoeT ?? -1e9) < 6) {
         const h = k.heroFoe;
         this.event(EV.HERO, h.slot, TRIG[h.hp < h.maxHp * 0.35 ? 'saved_by_player' : 'player_steals_kill'], -1, -1, MOB_KEYS.indexOf(mobKind(k)), 0, 0);
       }
@@ -203,10 +209,12 @@ class Sim {
     if (this.opening) this.opening.update(tdt);
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     if (this.heroWorld && !this.frozen && tdt > 0) this.heroWorld.step(tdt);
+    if (!this.frozen && tdt > 0) this.warrens?.step(tdt);
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     // (After the spells' update, which clears the frame's shapes.)
     this.heroWorld?.drawFx();
+    this.warrens?.drawFx();
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.tumblers.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);
@@ -403,6 +411,8 @@ class Sim {
 Sim.prototype.place = function (d) {
   this.restart();
   if (!d || (this.opening && d.openingRevision !== OPENING_REVISION)) return;
+  // (A game kept down in the Warrens loads at their portal, out in the woods: the Warrens start again from nothing.)
+  if (inDungeon(d.x, d.z)) d = { ...d, x: PORTAL.x + Math.sin(PORTAL.yaw) * 4, z: PORTAL.z + Math.cos(PORTAL.yaw) * 4, y: -1e9, yaw: PORTAL.yaw };
   const p = this.player;
   const floor = this.world.heightFor(d.x, d.z, d.y);
   p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
@@ -493,7 +503,7 @@ async function boot(msg) {
   const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
   const firstTripo = sim.knights.length;
   for (let i = 0; i < TRIPO_SLOTS; i++) sim.knights.push(new TripoEmpty(sim.knights.length));
-  sim.tripo = new TripoWorld(sim, base, tripoRoster, tripoPalettes, firstTripo, TRIPO_SLOTS);
+  sim.tripo = new TripoWorld(sim, base, withVariants(tripoRoster), tripoPalettes, firstTripo, TRIPO_SLOTS);
   // The other Tessariels: the render thread chose who's in the world this session (src/core/heroes.js makeCast).
   if (msg.heroes?.length) {
     const [hMeta, hBin, kit] = await Promise.all([
@@ -507,6 +517,8 @@ async function boot(msg) {
     sim.heroWorld = new HeroWorld(sim, sim.heroes);
     if (msg.hour !== undefined) sim.heroWorld.setHour(msg.hour);
   }
+  // The Hollowfang Warrens (src/sim/dungeon.js): after the Tripo lairs and the heroes, which it uses.
+  sim.warrens = new Warrens(sim);
   for (const form of LISANDRA_FORMS) {
     sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
   }
@@ -531,6 +543,11 @@ async function boot(msg) {
     if (m.type === 'heroWalk') sim.heroWorld?.walkFor(m.slot, m.seconds, m.mode);
     if (m.type === 'heroTalk') sim.heroWorld?.talkTo(m.slot, m.on);
     if (m.type === 'heroDebug') sim.heroWorld?.debug(m);
+    // Your party, of the Free Company (src/ui/party.js): hired, let go, a level for each.
+    if (m.type === 'hire') { const ok = sim.heroWorld?.hire(m.slot, m) || false; self.postMessage({ type: 'hired', slot: m.slot, ok, id: m.id }); }
+    if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
+    if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
+    if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
     if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {

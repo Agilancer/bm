@@ -454,7 +454,8 @@ export class Casting {
     const res = k.sp?.resist?.[elem];
     if (res !== undefined) { dmg *= res; poise *= res; }
     const a = this.affOf(k);
-    k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE * this.power;
+    // (ward: a share the body shrugs off, as a twin does while his brother's hurt worse: src/sim/dungeon.js.)
+    k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE * this.power * (k.ward ?? 1);
     k.playerHitT = sim.time;     // (The player had a hand in it: src/sim/sim.worker.js, whose kill it is.)
     // Leech: a drink for each hit, but a held spell's ticks don't add up to a fountain.
     if (sim.time > this.leechT) { this.leechT = sim.time + 0.25; sim.player.drink(); }

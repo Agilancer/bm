@@ -11,7 +11,8 @@
 
 import { terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, SITES, WATERS, waterLevel } from './lands.js';
-import { hash2 } from './terrain-noise.js';
+import { hash2, vnoise } from './terrain-noise.js';
+import { DUNGEON, DUNGEON_CELL, ENTRY, EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, caveRoofY, caveRoom, grid, toWorld, torches } from './dungeon.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -243,6 +244,118 @@ class Kit {
     }
     this.spots[`seal_${key}`] = [x, y + 0.27, z, look];
   }
+}
+
+
+// ---------------------------------------------------------------- the Hollowfang Warrens (src/core/dungeon.js)
+
+// Its walls, floor and roof, from the dungeon's field: the walls where the field crosses zero, stood from under the floor to
+// over the roof and pushed back into the rock by a lumpy amount so they read as cut stone and not as a drawn line; the floor
+// and the roof on a two-metre grid that runs a little under the walls. No colliders: World walks the field itself.
+function cave(K) {
+  const g = grid(), C = DUNGEON_CELL, S = 2;           // (walls on every second cell of the field: a metre)
+  const f = (i, j) => g.sdf[Math.min(g.H - 1, j) * g.W + Math.min(g.W - 1, i)];
+  const wx = (i) => g.x0 + i * C, wz = (j) => g.z0 + j * C;
+  // Back into the rock, by height and place: the same for every wall piece that shares an edge, so nothing cracks.
+  const lump = (x, y, z) => 0.15 + 0.55 * vnoise(x * 0.45 + y * 0.3, z * 0.45 - y * 0.2) + 0.25 * vnoise(x * 1.3, z * 1.3 + y);
+  const grad = (x, z) => { const e = 0.3, gx = caveRoom(x + e, z) - caveRoom(x - e, z), gz = caveRoom(x, z + e) - caveRoom(x, z - e), L = Math.hypot(gx, gz) || 1; return [gx / L, gz / L]; };
+  const BANDS = 4;
+  const wall = (ax, az, bx, bz) => {
+    const ga = grad(ax, az), gb = grad(bx, bz);
+    const fa = caveFloorY(ax, az) - 0.5, fb = caveFloorY(bx, bz) - 0.5, ra = caveRoofY(ax, az) + 0.6, rb = caveRoofY(bx, bz) + 0.6;
+    const P = (x, z, gg, y0, y1, k) => { const y = y0 + (y1 - y0) * k, o = lump(x, y, z) * (k > 0.05 && k < 0.95 ? 1 : 0.4); return [x - gg[0] * o, y, z - gg[1] * o]; };
+    for (let b = 0; b < BANDS; b++) {
+      const k0 = b / BANDS, k1 = (b + 1) / BANDS;
+      // (Wound so the face looks out of the rock, into the cave: the field rises that way.)
+      const A0 = P(ax, az, ga, fa, ra, k0), B0 = P(bx, bz, gb, fb, rb, k0), B1 = P(bx, bz, gb, fb, rb, k1), A1 = P(ax, az, ga, fa, ra, k1);
+      const ux = B0[0] - A0[0], uz = B0[2] - A0[2], nx = -uz, nz = ux;
+      if (nx * (ga[0] + gb[0]) + nz * (ga[1] + gb[1]) < 0) K.quad('rubble', A0, B0, B1, A1); else K.quad('rubble', B0, A0, A1, B1);
+    }
+  };
+  // Marching squares on the field, a metre at a time.
+  const lerp = (a, b) => a / (a - b);
+  for (let j = 0; j + S < g.H; j += S) {
+    for (let i = 0; i + S < g.W; i += S) {
+      const v0 = f(i, j), v1 = f(i + S, j), v2 = f(i + S, j + S), v3 = f(i, j + S);
+      const code = (v0 > 0 ? 1 : 0) | (v1 > 0 ? 2 : 0) | (v2 > 0 ? 4 : 0) | (v3 > 0 ? 8 : 0);
+      if (code === 0 || code === 15) continue;
+      const x0 = wx(i), z0 = wz(j), d = S * C;
+      const e = [
+        () => [x0 + d * lerp(v0, v1), z0], () => [x0 + d, z0 + d * lerp(v1, v2)],
+        () => [x0 + d * (1 - lerp(v2, v3)), z0 + d], () => [x0, z0 + d * (1 - lerp(v3, v0))],
+      ];
+      const segs = { 1: [[3, 0]], 2: [[0, 1]], 3: [[3, 1]], 4: [[1, 2]], 5: [[3, 0], [1, 2]], 6: [[0, 2]], 7: [[3, 2]], 8: [[2, 3]], 9: [[0, 2]], 10: [[0, 1], [2, 3]], 11: [[1, 2]], 12: [[1, 3]], 13: [[0, 1]], 14: [[3, 0]] }[code];
+      for (const [p, q] of segs) { const a = e[p](), b = e[q](); wall(a[0], a[1], b[0], b[1]); }
+    }
+  }
+  // The floor and the roof, two metres a cell, wherever a corner is in the open or near it.
+  const F = 4;
+  for (let j = 0; j + F < g.H; j += F) {
+    for (let i = 0; i + F < g.W; i += F) {
+      if (Math.max(f(i, j), f(i + F, j), f(i + F, j + F), f(i, j + F)) < -0.6) continue;
+      const pts = [[i, j], [i + F, j], [i + F, j + F], [i, j + F]].map(([a, b]) => [wx(a), wz(b)]);
+      const fl = pts.map(([x, z]) => [x, caveFloorY(x, z), z]), rf = pts.map(([x, z]) => [x, caveRoofY(x, z), z]);
+      K.quad('rubble', fl[0], fl[3], fl[2], fl[1]);
+      K.quad('dark:rubble', rf[0], rf[1], rf[2], rf[3]);
+    }
+  }
+  // Stalagmites here and there, off the ways, and rubble heaps against the walls.
+  for (let j = 0; j < g.H; j += 9) for (let i = 0; i < g.W; i += 9) {
+    const x = wx(i) + hash2(i, j) * 3, z = wz(j) + hash2(j, i) * 3, d = caveRoom(x, z);
+    if (d < 0.9 || d > 2.4 || hash2(i * 3, j * 7) > 0.45) continue;
+    const y = caveFloorY(x, z), h = 0.7 + hash2(i, j * 3) * 1.8;
+    K.spike('dark:rubble', x, y - 0.1, z, 0.3 + h * 0.12, h, 5, hash2(i, j) * 3);
+  }
+  // The torches: a bracket of iron, the flame on it.
+  for (const [x, y, z, nx, nz] of torches()) {
+    K.box('iron', x - nx * 0.25, y - 0.55, z - nz * 0.25, 0.05, 0.5, 0.05, 0, { collide: false });
+    K.drum('iron', x, y - 0.05, z, 0.1, 0.12, 6, { r2: 0.16, collide: false, open: true });
+    K.cone('flame', x, y + 0.05, z, 0.14, 0.42, 5);
+  }
+  // The portals inside: the way back out by the way in, and the way out past Venomaw.
+  for (const [q, key] of [[EXIT_IN, 'hf_in'], [EXIT_OUT, 'hf_out']]) {
+    const [x, z] = toWorld(q.x, q.z);
+    portalArch(K, x, caveFloorY(x, z), z, key === 'hf_in' ? 0 : Math.PI, key);
+  }
+}
+
+// A portal: a ring of dark stones standing on its edge, the blue of a seal filling it. key names its spot (K.spots).
+function portalArch(K, x, y, z, yaw, key) {
+  const c = Math.cos(yaw), s = Math.sin(yaw), R = 1.7, cy = y + R + 0.15;
+  const P = (u, v, w = 0) => [x + u * c + w * s, cy + v, z - u * s + w * c];
+  const n = 14;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU, b = (i + 1) / n * TAU;
+    const o = (t, r, w) => P(Math.cos(t) * r, Math.sin(t) * r, w);
+    // The ring's stones: an outer and an inner face, and their two sides.
+    K.quad('dark:stone', o(a, R + 0.45, -0.35), o(b, R + 0.45, -0.35), o(b, R + 0.45, 0.35), o(a, R + 0.45, 0.35));
+    K.quad('dark:stone', o(a, R, 0.35), o(b, R, 0.35), o(b, R, -0.35), o(a, R, -0.35));
+    K.quad('dark:stone', o(a, R, -0.35), o(b, R, -0.35), o(b, R + 0.45, -0.35), o(a, R + 0.45, -0.35));
+    K.quad('dark:stone', o(b, R, 0.35), o(a, R, 0.35), o(a, R + 0.45, 0.35), o(b, R + 0.45, 0.35));
+    // The face, both ways.
+    K.tri('seal', P(0, 0, 0.02), o(a, R, 0.02), o(b, R, 0.02));
+    K.tri('seal', P(0, 0, -0.02), o(b, R, -0.02), o(a, R, -0.02));
+  }
+  K.box('dark:stone', x, y - 0.2, z, 1.4, 0.32, 0.6, yaw, { collide: false });
+  K.spots[key] = [x, y, z, yaw];
+}
+
+// The way in, out in the woods near the kobolds' den: a heap of rock with the portal in its mouth.
+function warrensMouth(K) {
+  const { x, z, yaw } = PORTAL, y = terrainHeight(x, z);
+  portalArch(K, x, y, z, yaw, 'hf_portal');
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  // The rock it's set in: boulders piled behind and either side, leaving the front open.
+  for (let i = 0; i < 9; i++) {
+    const a = -1.9 + i / 8 * 3.8, r = 3.2 + (i % 2) * 0.7;
+    const bx = x + Math.sin(a) * -r * s + Math.cos(a) * r * c * 0, bz = z;
+    const u = Math.sin(a) * r, w = -Math.cos(a) * r * 0.8 - 0.6;
+    const px = x + u * c + w * s, pz = z - u * s + w * c;
+    K.drum('dark:rubble', px, terrainHeight(px, pz) - 0.4, pz, 1.1 + 0.3 * (i % 3), 2.4 + 1.6 * Math.sin(i * 1.3) ** 2, 7, { r2: 0.5, turn: i });
+    void bx; void bz;
+  }
+  // Torches either side, on posts.
+  for (const side of [-1, 1]) { const u = side * 2.6, w = 0.8; K.brazier(x + u * c + w * s, z - u * s + w * c, 1.4); }
 }
 
 // ---------------------------------------------------------------- the places
@@ -569,6 +682,7 @@ export function buildSites() {
   if (built) return built;
   const K = new Kit();
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
+  cave(K); warrensMouth(K);
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   built = { parts: K.parts, colliders: K.colliders, spots: K.spots };
   return built;

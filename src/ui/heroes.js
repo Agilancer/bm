@@ -109,6 +109,14 @@ export class HeroTalk {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seed: prev?.seed, people: { ...(prev?.people || {}), ...people }, bonds: Object.fromEntries(this.bonds), log: this.log.slice(-40), gameH: this.gameH })); } catch { /* full */ }
   }
 
+  // A new name for one of them (hired of the Free Company: src/ui/party.js), over their head too.
+  renamed(slot) {
+    const h = this.heroes[slot];
+    if (!h?.tag) return;
+    h.tag.querySelector('b').textContent = h.p.name;
+    h.tag.querySelector('i').textContent = h.p.guild ? `<${h.p.guild}>` : '';
+  }
+
   // A pair's bond, kept by the pair: { b: 'friend' | 'rival' | 'respect', c: { [name]: what made it, from their side } }.
   bond(a, b) { const v = this.bonds.get(a < b ? `${a}|${b}` : `${b}|${a}`); return typeof v === 'string' ? { b: v, c: {} } : v; }
   setBond(h, o, b, ch, co) { this.bonds.set(h.p.name < o.p.name ? `${h.p.name}|${o.p.name}` : `${o.p.name}|${h.p.name}`, { b, c: { [h.p.name]: ch, [o.p.name]: co } }); }
@@ -913,11 +921,14 @@ export class HeroTalk {
       if (s < bs) { bs = s; best = h; }
     }
     if (!best) return null;
+    if (best.p.broker) return { h: best, busy: false, label: `Hire a party of ${best.p.name}` };
     return { h: best, busy: best.fighting, label: best.fighting ? `${best.p.name} is fighting` : `Talk to ${best.p.name}` };
   }
 
   // Stopped for a word: the sim holds them square on to the player (src/sim/hero.js talkTo), and they greet you.
   talkTo(h) {
+    // (A quartermaster of the Free Company opens his books instead: src/ui/party.js.)
+    if (h?.p.broker) { this.ui.broker?.(h); return; }
     if (!h || h.dead || h.fighting || this.open || !this.script) return;
     this.open = h; this.talkKeep = 30;
     h.greetT = this.t; h.walkOffer = 0;
@@ -950,6 +961,13 @@ export class HeroTalk {
   optsFor(h) {
     const asked = (this.asked ||= new Map()).get(h) || new Set();
     const o = (key, label, run) => ({ key, label, run, dim: asked.has(key) && key !== 'bye' && key !== 'walk' });
+    // One of your party: a word, or let them go back to the Company.
+    if (this.ui.isMember?.(h.p.slot)) return [
+      o('news', 'Ask how they fare', () => this.ask(h, 'news', ['player_request', 'gossip_player', 'town_idle'], this.huntCtx())),
+      o('woke', 'Ask where they woke', () => this.ask(h, 'woke', ['origin_story', 'player_rivalry'])),
+      o('dismiss', 'Let them go from your party', () => { this.closeTalk(false, ''); this.ui.dismiss?.(h.p.slot); }),
+      o('bye', 'Nod, and go', () => this.closeTalk(true)),
+    ];
     return [
       o('woke', 'Ask where they woke', () => this.ask(h, 'woke', ['origin_story', 'player_rivalry'])),
       o('claim', 'Ask if they are Tessariel', () => this.ask(h, 'claim', ['player_rivalry', 'tessariel_claim'])),

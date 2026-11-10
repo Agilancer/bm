@@ -9,6 +9,7 @@ import { clamp, damp, wrapAngle } from '../core/math.js';
 import { S } from './knight.js';
 import { leanAmount } from './anim.js';
 import { stepSurf } from './surf.js';
+import { inDungeon } from '../core/dungeon.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
@@ -96,7 +97,8 @@ export class Player {
 
   // The unseen wall at the edge of the grass. Indoors there's no such edge.
   keepToLand() {
-    if ((Math.abs(this.x) > LAND_EDGE || Math.abs(this.z) > LAND_EDGE) && floorAt(this.x, this.z) === null) {
+    // (The Hollowfang Warrens lie out past the edge, under it: src/core/dungeon.js.)
+    if ((Math.abs(this.x) > LAND_EDGE || Math.abs(this.z) > LAND_EDGE) && floorAt(this.x, this.z) === null && !inDungeon(this.x, this.z)) {
       this.x = clamp(this.x, -LAND_EDGE, LAND_EDGE); this.z = clamp(this.z, -LAND_EDGE, LAND_EDGE);
     }
   }

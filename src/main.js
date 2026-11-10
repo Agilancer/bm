@@ -29,8 +29,9 @@ import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
 import { SpellSound } from './spellsound.js';
-import { HERO_SLOTS, makeCast } from './core/heroes.js';
+import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
+import { PartyUI } from './ui/party.js';
 import { TownClient } from './folk/client.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
@@ -235,6 +236,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
+      else if (m.type === 'warrens') game?.party?.onWarrens(m);
       else if (m.type === 'restart') { input.yaw = m.yaw ?? Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
       else if (m.type === 'placed') {
         const c = calls.get(m.id);
@@ -258,7 +260,7 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = makeCast(roster, kit, names, Math.min(heroCount, 16), seed);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed), roster, kit);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
@@ -337,6 +339,7 @@ async function boot(plan, poolSize) {
     renderer.skullEyes?.feel('glee', 3);
     if (!stepXp(pack, XP_OF[kind | 0] ?? 10)) { showLevel(); return; }
     arm();
+    game.party?.levelled();
     // A new level fills you up, as it should.
     shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999;
     const snap = game.currentSnap();
@@ -360,13 +363,26 @@ async function boot(plan, poolSize) {
         opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
         closed: () => { input.menu = false; resume(); },
         click: () => title.chime?.(),
+        // (The Free Company: a quartermaster's books, and your own party: src/ui/party.js.)
+        broker: (h) => game.party?.talkTo(h),
+        isMember: (slot) => !!game.party?.member(slot),
+        dismiss: (slot) => game.party?.dismiss(slot),
       } });
     game.heroTalk.fetchScript();
+    game.party = new PartyUI({ base: BASE, cast, sim: simWorker, pack, heroTalk: game.heroTalk, level: () => pack.level,
+      firstHero: () => renderer.firstHero, tip: (t, s) => hud.tip(t, s),
+      opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
+      closed: () => { input.menu = false; resume(); },
+      click: () => title.chime?.(),
+      cleared: () => { giveXp?.(1500); pack.gold += 250; hud.tip('The Free Company pays out 250 gold for the Warrens, and the tale is worth more.', 5); autosave(); },
+    });
+    addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
   }
   // A word with the town (src/ui/folk.js): E to someone, J for the journal.
   const giveXp = (n) => {
     if (!stepXp(pack, n)) { showLevel(); return; }
     arm();
+    game.party?.levelled();
     shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999;
     hud.tip(`Level ${pack.level}. Your spells bite harder, and your well runs deeper.`, 4);
   };
@@ -590,6 +606,7 @@ async function boot(plan, poolSize) {
       worldMap.load(null);
       townUI.load(null);
       town.load(null);
+      game.party?.load(null);
       // (The seals woken and the hour of the day are the old game's too.)
       game.lands?.load(null);
       renderer.setHour(15);
@@ -626,7 +643,7 @@ async function boot(plan, poolSize) {
   applySetting('res', settings.res);
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
-    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open) return;
+    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open || game.party?.open) return;
     if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
@@ -1052,6 +1069,7 @@ class GameView {
       if (this.heroTalk) {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
         this.heroTalk.update(dt, snap, r.hour, !this.idle && (!this.input.menu || !!this.heroTalk.open));
+        this.party?.update(dt, snap);
         // The sim keeps the heroes' day by this clock.
         if ((this.hourT = (this.hourT ?? 0) - dt) <= 0) { this.hourT = 2; this.sim.postMessage({ type: 'hour', hour: r.hour }); }
       }
@@ -1252,6 +1270,7 @@ class GameView {
     switch (type) {
       case EV.SWING: break;
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
+      case EV.DELVE: this.party?.onDelve(a, b, c, d); break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);
@@ -1515,6 +1534,12 @@ class GameView {
         // (undead: where every zombie and caster is and what it's doing, and the other monsters' places.)
         return new Promise((resolve) => { const on = (e) => { if (e.data.type === 'heroState' && e.data.id === id) { sim.removeEventListener('message', on); if (e.data.undead) { resolve({ undead: e.data.undead, others: e.data.others }); return; } window.bmHeroFx = { zones: e.data.zones, shots: e.data.shots, dots: e.data.dots }; resolve(e.data.heroes); } }; sim.addEventListener('message', on); });
       },
+      // Your party and the Hollowfang Warrens, for tests: hire(n) takes the first n offered (a tank and a healer first);
+      // warrens('enter' | 'boss', { n }) goes straight in, or to the nth boss's door; warrens('hurt', { n, frac }).
+      hire: (n = 4) => { const P = view.party; if (!P) return []; P.makeOffers(); const by = (r) => P.offers.filter((o) => (o.cls === 'lancer') === (r === 'tank') && (o.cls === 'paladin') === (r === 'heal'));
+        for (const o of [...by('tank').slice(0, 1), ...by('heal').slice(0, 1), ...by('dps')].slice(0, n)) P.hire(o, true); return P.members; },
+      warrens: (cmd = 'enter', o = {}) => sim.postMessage({ type: 'warrensDebug', cmd, ...o }),
+      warrensState: () => view.party?.warrens,
       heroSay: (slot, trig) => view.heroTalk?.say(view.heroTalk.heroes[slot], trig, null, {}),
       shot: (name) => new Promise((resolve) => {
         view.onFrame = () => {
