@@ -2,9 +2,9 @@
 // (main.js), and it stays with you through a new fight; only New Game starts it over.
 import { WEAPONS } from '../core/layout.js';
 import { settleSkull } from './skins.js';
-import { GEMS, MAX_SOCKETS, ROBES, SKULLS, makeRng, robeSize, rollGem, rollRobe, rollShield, rollSkull, rollWeapon } from './items.js';
+import { GEMS, MAX_SOCKETS, ROBES, SKULLS, makeRng, robeSize, rollGem, rollRobe, rollShield, rollSkull, rollStarterStaff, rollWeapon } from './items.js';
 
-const ELEMENTAL_STAFFS = ['vine_staff', 'wind_staff', 'fire_staff', 'ice_staff', 'earth_staff', 'dark_staff', 'death_staff', 'life_staff'];
+const freshRng = () => makeRng((Math.random() * 2 ** 32) >>> 0);
 
 export const PACK_W = 12, PACK_H = 8;
 export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'shoulders', 'skull', 'ring1', 'legs', 'feet', 'ring2'];
@@ -87,7 +87,7 @@ export class Pack {
   }
 
   // What goes in a save. Items are plain data.
-  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, copper: this.copper, mats: this.mats, kite: true, elementals: true, aurora: true, xp: this.xp, level: this.level, charms: this.charms }); }
+  save() { return structuredClone({ slots: this.slots, entries: this.entries, gold: this.gold, copper: this.copper, mats: this.mats, kite: true, xp: this.xp, level: this.level, charms: this.charms }); }
 
   // A saved pack back in hand, or with null, what a new game starts with.
   load(d) {
@@ -114,33 +114,19 @@ export class Pack {
     delete this.slots.hands;
     for (const k of Object.keys(this.slots)) if (this.slots[k] && RETIRED(this.slots[k])) this.slots[k] = null;
     this.entries = this.entries.filter((e) => !RETIRED(e.item));
-    if (!d.elementals) this.addElementals();
-    if (!d.aurora) this.addAurora();
+    // (A save keeps what it has, the old test kit's eight staffs, Aurora skull and gems too if it had them; nothing is put in.)
     if (!this.slots.main) {
       const staff = this.entries.find((e) => e.item.type === 'weapon');
-      if (staff) { this.slots.main = staff.item; this.remove(staff); } else this.slots.main = rollWeapon(makeRng(1793), { base: 'skullhorn_staff', rarity: 0, sockets: 0 });
+      if (staff) { this.slots.main = staff.item; this.remove(staff); } else this.slots.main = rollStarterStaff(freshRng());
     }
   }
 
-  // One common of each of the eight, for a new game and for a save from before them.
-  addElementals() {
-    const rng = makeRng(2207);
-    for (const base of ELEMENTAL_STAFFS) this.add(rollWeapon(rng, { base, rarity: 0, sockets: 0 }));
-  }
-
-  // For testing, in the pack of every game and every save: a Mythical Aurora skull with its six sockets open, and a flawless stone of each kind to fill them.
-  addAurora() {
-    const rng = makeRng(2026);
-    this.add(rollSkull(rng, { base: 'skull_03', rarity: 5, skin: 'aurora', pattern: 50, sockets: 6 }));
-    for (const kind of ['ruby', 'sapphire', 'emerald', 'amethyst', 'topaz', 'diamond']) this.add(rollGem(rng, { kind, grade: 2 }));
-  }
-
+  // A new game: a common staff, of a different kind most games, and a plain kite shield. No skull and no gems: the first
+  // skull is the reward for Bram Kettle's errand (src/folk/quests.js bed_and_bell), and gems are found.
   startingKit() {
-    const rng = makeRng(1793);
-    this.slots.main = rollWeapon(rng, { base: 'fire_staff', rarity: 0, sockets: 1 });
-    this.slots.off = rollShield(rng, { base: 'kite_cross', sockets: 1 });
-    this.addElementals();
-    this.addAurora();
+    const rng = freshRng();
+    this.slots.main = rollStarterStaff(rng);
+    this.slots.off = rollShield(rng, { base: 'kite_cross' });
     if (!TEST_KIT) return;
     for (const base of ['crystal_staff', 'greenwood_staff', 'gnarled_crook']) this.add(rollWeapon(rng, { base, rarity: 2, sockets: 3 }));
     for (const base of Object.keys(SKULLS).slice(0, 3)) this.add(rollSkull(rng, { base, rarity: 3, sockets: 3 }));
