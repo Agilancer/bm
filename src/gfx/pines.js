@@ -1,7 +1,7 @@
 // The forest. A pine in three meshes, all in units of its own height and stretched to each tree as it's drawn, with whichever
 // mesh suits how far off the tree is. Trees go by the 32 m chunk; the lists of what's near only change as the camera moves.
 import { makeBuffer } from './gpu.js';
-import { SHADOW, STATIC } from './materials.js';
+import { SHADOW, STATIC, cutMaskWGSL } from './materials.js';
 
 const CHUNK = 32, FLOATS = 8;
 const NEAR = 84, MID = 232;       // Metres to a chunk's middle: the full tree, then the whorls of big cards, then the painted tree.
@@ -132,7 +132,7 @@ function pineMeshes(pine, far, bark) {
 }
 
 // The static shader, with the tree's height, place and turn on every vertex, and each tree its own darkness, darker toward the trunk and the ground.
-const PINE = STATIC
+export const PINE = STATIC
   .replace('@location(4) viewZ: f32,', '@location(4) viewZ: f32, @location(5) tone: f32,')
   .replace(`@location(3) layer: u32) -> V {
   var o: V;
@@ -171,6 +171,22 @@ const PINE = STATIC
   if (textureSample(colorArr, repeatSmp, in.uv, layerI).a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }
 }
 `;
+
+// PINE with its depth pass's cut-out by the sample (buildPipelines).
+const HARD_DEPTH = `@fragment fn fsDepth(in: V) {
+  let layerI = i32(min(in.layer % 1000u, 63u));
+  let dist = length(F.camPos.xyz - in.p);
+  if (textureSample(colorArr, repeatSmp, in.uv, layerI).a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }
+}`;
+export function softDepth(code, samples) {
+  if (code.split(HARD_DEPTH).length !== 2) throw new Error('softDepth: PINE has changed under it');
+  return code.replace(HARD_DEPTH, `@fragment fn fsDepth(in: V) -> @builtin(sample_mask) u32 {
+  let layerI = i32(min(in.layer % 1000u, 63u));
+  let dist = length(F.camPos.xyz - in.p);
+  let a = textureSample(colorArr, repeatSmp, in.uv, layerI).a;
+  return cutMask(a, mix(0.5, 0.14, smoothstep(14.0, 90.0, dist)), fwidth(a));
+}`) + cutMaskWGSL(samples);
+}
 
 const SHADOW_PINE = SHADOW + /* wgsl */ `
 @vertex fn vsPine(@location(0) pIn: vec3f, @location(2) uv: vec2f, @location(3) layer: u32, @location(5) at: vec4f, @location(6) spin: vec4f) -> VC {
@@ -273,7 +289,12 @@ export class Pines {
     // On a PC the trees go in twice: their depth, then their colour where it matched (the cut-out already done, so no
     // discard to keep the GPU from skipping what's hidden). A phone's GPU sorts what's hidden for itself.
     const twice = !this.lean;
-    const mod = r.shader(twice ? code.replace('if (tex.a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }', '') : code);
+    // And in a multisampled frame the depth pass gives a needle's edge a share of each pixel's samples (materials.js
+    // cutMaskWGSL), which the colour pass's equal test then follows sample by sample: no stair of whole pixels along
+    // every bough. (r.hardCut keeps the old all-or-nothing test, for comparing.)
+    const soft = twice && r.msaa > 1 && !r.hardCut;
+    const full = soft ? softDepth(code, r.msaa) : code;
+    const mod = r.shader(twice ? full.replace('if (tex.a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }', '') : code);
     const buffers = [...staticVB, INSTANCE];
     const prim = { topology: 'triangle-list', cullMode: 'none' };
     this.pMain = device.createRenderPipeline({

@@ -29,7 +29,7 @@ import { BODIES } from '../sim/undead.js';
 import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
-import { ARMOR, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL } from './materials.js';
+import { ARMOR, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL, staticSoftCut } from './materials.js';
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
@@ -1440,7 +1440,9 @@ export class Renderer {
     });
     // A shader that can discard turns off the early depth test and a tiled GPU's hidden surface removal, so only the
     // leaves get one.
-    this.pStaticCut = staticPipeline(staticMod);
+    // (In a multisampled frame their edges take a share of each pixel's samples, not all or none: materials.js staticSoftCut.
+    // renderer.hardCut = true before the pipelines are made keeps the old test, for comparing.)
+    this.pStaticCut = staticPipeline(this.msaa > 1 && !tier.lean && !this.hardCut ? module(staticSoftCut(this.msaa)) : staticMod);
     this.pStatic = staticPipeline(module(STATIC.replace('if (params.x > 0.0 && tex.a < 0.5) { discard; }', '')));
     this.staticVBLayout = staticVB;
     this.pineArgs = [layout, targets, depth, ms, staticVB];
