@@ -36,8 +36,9 @@ MARKS.woods = MARKS.ambush - 34;
 MARKS.star = MARKS.sight - 45;
 
 // How she leads you down: this far ahead of you on foot, and further on a shield, where it's fast. Come up on her back and
-// she hurries; fall back past FAR and she stops and waits for you. With you stood still she strolls on ahead to there.
-const LEAD = 5.5, LEAD_RIDE = 9, FAR = 14, STROLL = 1.5;
+// she hurries. Stand still and she goes on a step or two, to STOP ahead, and waits there for you, turned to you; fall back
+// past FAR along the road, or go off more than WANDER from her, and she stops where she is and waits.
+const LEAD = 5.5, LEAD_RIDE = 9, STOP = 8, FAR = 10, WANDER = 16, STROLL = 1.2;
 const FOOT_MAX = 9.6;        // flat out on foot: a little over your sprint, so she can always get back in front
 const RIDE_MAX = 30;         // on the shield: over what yours can do
 const OFF_AT = 5.5;          // you're off yours, and she's slowed to this: she steps off hers
@@ -533,18 +534,23 @@ export class Opening {
       this.fastT = this.pace > 15 ? (this.fastT || 0) + dt : 0;
       if (this.fastT > 1) this.queue('fast', true);
     }
-    // Her lead kept on you at your own pace; with you stood still, a stroll on ahead; far enough ahead, or with you gone off
-    // somewhere else, she stops and waits.
+    // Her lead kept on you at your own pace; with you stood still, a stroll on that eases to a stop STOP ahead; with you
+    // fallen back, or gone off the road beside or behind her, she stops and waits. (Gone on ahead of her, she comes after
+    // you: waiting there, she'd never reach the town.)
     let want = along + ((this.riding ? LEAD_RIDE : LEAD) - gap) * (this.riding ? 1.2 : 1.4);
-    if (gap < FAR && !this.riding) want = Math.max(want, STROLL);
-    if (far > 30) want = 0;
+    const behind = gap > -4;
+    if (!this.riding) {
+      if (gap < STOP) want = Math.max(want, Math.min(STROLL, (STOP - gap) * 1.5));
+      if (gap > FAR || (far > WANDER && behind)) want = 0;
+    }
+    if (far > 30 && behind) want = 0;
     want = clamp(want, 0, this.riding ? RIDE_MAX : FOOT_MAX);
     this.pace += (want - this.pace) * Math.min(1, dt * (this.riding ? 2.5 : 3));
     if (this.prog >= ROUTE.len - 0.3) this.pace = 0;
     this.prog = Math.min(ROUTE.len, this.prog + this.pace * dt);
     const to = routeAt(this.prog);
     // Stood waiting for you: after a moment, she calls you on (again now and then, if you're still dawdling).
-    const waiting = this.pace < 0.3 && !this.riding && (gap > FAR - 1.5 || far > 30);
+    const waiting = this.pace < 0.3 && !this.riding && (gap > STOP - 0.5 || (far > WANDER && behind));
     this.waitT = waiting && along < 1 ? this.waitT + dt : 0;
     if (this.waitT > 2.5 && this.time - this.keepAt > 10) {
       const id = KEEP[this.keepN++ % KEEP.length];

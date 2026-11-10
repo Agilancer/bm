@@ -753,6 +753,58 @@ export class Rocks {
       L.cpu = new Float32Array(L.cap * FLOATS);
     }
     this.dirty = true;
+    this.r.shadowEpoch = (this.r.shadowEpoch || 0) + 1;
+  }
+
+  // The rocks for a kept shadow map (src/gfx/shadowcache.js) round x, z: those drawShadow would take, but whichever way
+  // you face, since the map is kept as you turn.
+  fillShadowSet(set, x, z, last) {
+    const { device } = this.r;
+    set.lists = set.lists || [0, 1].map(() => ({ buf: null, cpu: new Float32Array(0), cap: 0, count: 0, runs: new Array(VARIANTS).fill(null).map(() => [0, 0]) }));
+    const picks = [[], []];
+    for (const c of this.chunks) {
+      const d = Math.hypot(c.x - x, c.z - z);
+      if (d > this.reach[c.set] + CHUNK) continue;
+      const lod = Math.min(2, (d < NEAR && !this.lean ? 0 : d < MID ? 1 : 2) + (c.small && d > 14 ? 1 : 0));
+      if (lod > (last ? 1 : 0)) continue;
+      picks[lod].push(c);
+    }
+    picks.forEach((list, lod) => {
+      const L = set.lists[lod];
+      const total = list.reduce((m, c) => m + c.n, 0);
+      if (L.cap < total) {
+        const old = L.buf;
+        if (old) setTimeout(() => old.destroy(), 500);
+        L.cap = Math.ceil(total * 1.25) + 64;
+        L.buf = device.createBuffer({ size: L.cap * FLOATS * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+        L.cpu = new Float32Array(L.cap * FLOATS);
+      }
+      let o = 0;
+      for (let v = 0; v < VARIANTS; v++) {
+        const start = o;
+        for (const c of list) { const a = c.runs[v]; if (a.length) { L.cpu.set(a, o * FLOATS); o += a.length / FLOATS; } }
+        L.runs[v][0] = start; L.runs[v][1] = o - start;
+      }
+      L.count = o;
+      if (o) device.queue.writeBuffer(L.buf, 0, L.cpu, 0, o * FLOATS);
+    });
+  }
+
+  drawShadowSet(sp, set) {
+    if (!this.pShadow || !set.lists) return;
+    sp.setPipeline(this.pShadow);
+    sp.setVertexBuffer(0, this.VB);
+    sp.setIndexBuffer(this.IB, 'uint32');
+    set.lists.forEach((L, lod) => {
+      if (!L.count) return;
+      sp.setVertexBuffer(1, L.buf);
+      for (let v = 0; v < VARIANTS; v++) {
+        const [first, n] = L.runs[v];
+        if (!n || v === PUDDLE) continue;
+        const part = this.parts[lod * VARIANTS + v];
+        sp.drawIndexed(part.count, n, part.first, 0, first);
+      }
+    });
   }
 
   update(cam, aspect, tanHalf) {

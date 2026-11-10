@@ -159,7 +159,18 @@ const PINE = STATIC
     if (tcode == 3.0) { albedo = vec3f(lum) * select(vec3f(0.95, 0.9, 0.85), vec3f(0.7, 0.66, 0.6), needle); }
     rough = det.b;`)
   // (The smaller a painting's copy, the more its needles have faded into the gaps between them. Kept, the trees stay as thick from far off.)
-  .replace('if (params.x > 0.0 && tex.a < 0.5) { discard; }', 'if (tex.a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }');
+  .replace('if (params.x > 0.0 && tex.a < 0.5) { discard; }', 'if (tex.a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }')
+  // (The same place on screen to the bit in both passes below, so the second's equal test finds the first's depth.)
+  .replace('@builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f,', '@builtin(position) @invariant pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f,')
+  // Depth first: only the needles' cut-out, so the lighting below is worked out once a pixel, not once for every bough
+  // drawn over another. (docs/RENDERING.md, "The forest's depth pass")
+  + /* wgsl */ `
+@fragment fn fsDepth(in: V) {
+  let layerI = i32(min(in.layer % 1000u, 63u));
+  let dist = length(F.camPos.xyz - in.p);
+  if (textureSample(colorArr, repeatSmp, in.uv, layerI).a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }
+}
+`;
 
 const SHADOW_PINE = SHADOW + /* wgsl */ `
 @vertex fn vsPine(@location(0) pIn: vec3f, @location(2) uv: vec2f, @location(3) layer: u32, @location(5) at: vec4f, @location(6) spin: vec4f) -> VC {
@@ -215,21 +226,78 @@ export class Pines {
       return { buf: device.createBuffer({ size: Math.max(1, cap) * FLOATS * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }), cpu: new Float32Array(cap * FLOATS), cap, count: 0, lod: i };
     });
     this.lastX = 1e9; this.lastZ = 1e9; this.lastFx = 0; this.lastFz = 0;
+    this.r.shadowEpoch = (this.r.shadowEpoch || 0) + 1;
+  }
+
+  // The trees for a kept shadow map (src/gfx/shadowcache.js) round x, z, whichever way you face: the full trees, and in
+  // the last cascade the next ring too, as drawShadow takes them.
+  fillShadowSet(set, x, z, last) {
+    const { device } = this.r;
+    if (!set.cpu || set.cpu.length < this.data.length) {
+      const old = set.buf;
+      if (old) setTimeout(() => old.destroy(), 500);
+      set.cpu = new Float32Array(Math.max(FLOATS, this.data.length));
+      set.buf = device.createBuffer({ size: set.cpu.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+    }
+    let o = 0;
+    set.first = [0, 0]; set.n = [0, 0];
+    for (let lod = 0; lod < (last ? 2 : 1); lod++) {
+      set.first[lod] = o;
+      for (const c of this.chunks) {
+        const d = Math.hypot(c.x - x, c.z - z);
+        if (lod === 0 ? d >= this.near : d < this.near || d >= this.mid) continue;
+        set.cpu.set(this.data.subarray(c.a, c.b), o * FLOATS);
+        o += c.n;
+      }
+      set.n[lod] = o - set.first[lod];
+    }
+    if (o) device.queue.writeBuffer(set.buf, 0, set.cpu, 0, o * FLOATS);
+  }
+
+  // Trees a to b of a kept set's mesh lod.
+  drawShadowSet(sp, set, cutBG, lod, a, b) {
+    if (b <= a) return;
+    sp.setPipeline(this.pShadow);
+    sp.setBindGroup(1, cutBG);
+    sp.setVertexBuffer(0, this.VB);
+    sp.setIndexBuffer(this.IB, 'uint32');
+    sp.setVertexBuffer(1, set.buf);
+    sp.drawIndexed(this.lods[lod].count, b - a, this.lods[lod].first, 0, set.first[lod] + a);
   }
 
   buildPipelines(layout, targets, depth, ms, staticVB, shDepth, bglShadow, bglShCut) {
     const { r } = this;
     const { device } = r;
     const at = (n) => `${this.names.indexOf(n)}u`;
-    const mod = r.shader(PINE.replace('PINE_LAYERu', at('pine')).replace('PINE_2u', at('pine_2')).replace('BARK_LAYERu', at('pine_bark')).replace('BARK_2u', at('pine_bark_2')));
+    const code = PINE.replace('PINE_LAYERu', at('pine')).replace('PINE_2u', at('pine_2')).replace('BARK_LAYERu', at('pine_bark')).replace('BARK_2u', at('pine_bark_2'));
+    // On a PC the trees go in twice: their depth, then their colour where it matched (the cut-out already done, so no
+    // discard to keep the GPU from skipping what's hidden). A phone's GPU sorts what's hidden for itself.
+    const twice = !this.lean;
+    const mod = r.shader(twice ? code.replace('if (tex.a < mix(0.5, 0.14, smoothstep(14.0, 90.0, dist))) { discard; }', '') : code);
     const buffers = [...staticVB, INSTANCE];
+    const prim = { topology: 'triangle-list', cullMode: 'none' };
     this.pMain = device.createRenderPipeline({
       layout: layout(r.bgl0, r.bglStatic),
       vertex: { module: mod, entryPoint: 'vs', buffers },
       fragment: { module: mod, entryPoint: 'fs', targets },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: depth(), multisample: ms,
+      primitive: prim,
+      depthStencil: twice ? depth(false, 'equal') : depth(), multisample: ms,
     });
+    this.pDepth = twice ? device.createRenderPipeline({
+      layout: layout(r.bgl0, r.bglStatic),
+      vertex: { module: mod, entryPoint: 'vs', buffers },
+      fragment: { module: mod, entryPoint: 'fsDepth', targets: targets.map((t) => ({ ...t, writeMask: 0 })) },
+      primitive: prim,
+      depthStencil: depth(), multisample: ms,
+    }) : null;
+    // (And the old way, in one go, for measuring the two against each other: bm.renderer.pines.once = true.)
+    const one = twice ? r.shader(code) : mod;
+    this.pOnce = twice ? device.createRenderPipeline({
+      layout: layout(r.bgl0, r.bglStatic),
+      vertex: { module: one, entryPoint: 'vs', buffers },
+      fragment: { module: one, entryPoint: 'fs', targets },
+      primitive: prim, depthStencil: depth(), multisample: ms,
+    }) : this.pMain;
     const sh = device.createShaderModule({ code: SHADOW_PINE });
     this.pShadow = device.createRenderPipeline({
       layout: layout(bglShadow, bglShCut),
@@ -271,13 +339,15 @@ export class Pines {
   }
 
   draw(mp) {
-    mp.setPipeline(this.pMain);
     mp.setVertexBuffer(0, this.VB);
     mp.setIndexBuffer(this.IB, 'uint32');
-    for (const L of this.lists) {
-      if (!L.count) continue;
-      mp.setVertexBuffer(1, L.buf);
-      mp.drawIndexed(this.lods[L.lod].count, L.count, this.lods[L.lod].first);
+    for (const p of this.pDepth && !this.once ? [this.pDepth, this.pMain] : [this.pOnce]) {
+      mp.setPipeline(p);
+      for (const L of this.lists) {
+        if (!L.count) continue;
+        mp.setVertexBuffer(1, L.buf);
+        mp.drawIndexed(this.lods[L.lod].count, L.count, this.lods[L.lod].first);
+      }
     }
   }
 
