@@ -565,8 +565,9 @@ export class TownUI {
     else if (R.item === 'robe') item = CRAFTS.robe.make(rng, 2);
     else if (R.charm) { if (this.act.charm?.(R.charm)) this.note(`Received: ${R.charmName || 'a charm'}. (I: your pack.)`, 'quest'); }
     else if (R.item === 'scroll') {
-      const left = SPELLS.map((_, i) => i).filter((i) => !this.spellbar.known.has(i));
-      if (left.length) { const sp = left[Math.floor(rng() * left.length)]; this.spellbar.learn(sp); this.note(`You learn ${SPELLS[sp].name}. B to set your spells.`, 'quest'); } else { this.pack.gold += 120; this.note('120 gold', 'mat'); }
+      // (A scroll you can read and haven't: of the trees' second and third tiers, at your level. Its first rank costs no point.)
+      const barred = this.spellbar.noScroll?.() ?? this.spellbar.known, left = SPELLS.map((_, i) => i).filter((i) => !barred.has(i));
+      if (left.length) { const sp = left[Math.floor(rng() * left.length)]; this.spellbar.learn(sp); this.note(`You learn ${SPELLS[sp].name}. B: your spellbook.`, 'quest'); } else { this.pack.gold += 120; this.note('120 gold', 'mat'); }
     }
     if (item) { this.act.give(item); this.note(`Received: ${nameOf(item)}`, 'quest'); }
     this.act.saved();
@@ -606,7 +607,7 @@ export class TownUI {
   stockOf(trade) {
     const day = this.act.day();
     if (!TRADES[trade].stock) return [];
-    if (this.stock[trade]?.day !== day) this.stock[trade] = { day, items: rollStock(trade, day, this.spellbar.known) };
+    if (this.stock[trade]?.day !== day) this.stock[trade] = { day, items: rollStock(trade, day, this.spellbar.noScroll?.() ?? this.spellbar.known) };
     return this.stock[trade].items;
   }
 
@@ -689,9 +690,9 @@ export class TownUI {
     if (!it) return;
     if (this.pack.purse() < price) { this.short(); return; }
     if (it.type === 'spell') {
+      if (!this.spellbar.learn(it.spell)) { this.show(this.spellbar.known.has(it.spell) ? 'You know that one already.' : "That one's beyond you yet. Come back with more behind you.", p.id, this.shopOpts()); return; }
       this.pack.pay(price); items.splice(k, 1);
-      this.spellbar.learn(it.spell);
-      this.note(`You learn ${SPELLS[it.spell].name}. B to set your spells.`, 'quest');
+      this.note(`You learn ${SPELLS[it.spell].name}. B: your spellbook.`, 'quest');
     } else {
       if (!this.pack.add(it)) { this.show("Your pack's full. Make room, then we'll talk.", p.id, this.shopOpts()); return; }
       this.pack.pay(price); items.splice(k, 1);

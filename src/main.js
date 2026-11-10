@@ -27,6 +27,7 @@ import { saveSettings, settings, Title } from './title.js';
 import { ViewSwitch } from './ui/view.js';
 import { THIRD } from './core/third.js';
 import { SPELLS } from './sim/spells.js';
+import { TIER_LEVEL, TIER_OF } from './sim/skills.js';
 import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
@@ -387,6 +388,8 @@ async function boot(plan, poolSize) {
     if (skull) renderer.sword('skull_gems');
     renderer.board.glow = off?.gems?.length ? GEM_COLOR(off.gems[0]) : null;
     showLevel();
+    // (Your level may have changed: the points it's earned, on the book's button and in the book.)
+    if (game.spellbar) { game.spellbar.skills.fit(); game.spellbar.draw(); if ($('spellbook').classList.contains('open')) game.spellbar.drawMenu(); }
   };
   const showLevel = () => {
     $('levelNum').textContent = `Level ${pack.level}`;
@@ -407,7 +410,7 @@ async function boot(plan, poolSize) {
     const snap = game.currentSnap();
     for (const e of [4, 5, 10]) renderer.emit(16 + e, 90, snap[H.PX], snap[H.PY] + 1, snap[H.PZ], 0, 1, 0, 1.6, 1, 5, 0.012, 0.03, 0.5, 1.4);
     audio.play('draw', null, 0, 0, 1, 0.6, false);
-    hud.tip(`Level ${pack.level}. Your spells bite harder, and your well runs deeper.`, 4);
+    hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook (B).`, 5);
   };
   arm();
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
@@ -446,7 +449,7 @@ async function boot(plan, poolSize) {
     arm();
     game.party?.levelled();
     shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999;
-    hud.tip(`Level ${pack.level}. Your spells bite harder, and your well runs deeper.`, 4);
+    hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook (B).`, 5);
   };
   const townUI = new TownUI({
     town, renderer, pack, input, hud, inventory, spellbar: null,
@@ -526,7 +529,7 @@ async function boot(plan, poolSize) {
   // The Test Dungeon's three counters (src/ui/testhall.js): off till the main menu's Test Dungeon.
   game.hallUI = new HallUI({
     base: BASE, sim: simWorker, pack, renderer, audio,
-    party: () => game.party, heroTalk: () => game.heroTalk, inventory: () => inventory,
+    party: () => game.party, heroTalk: () => game.heroTalk, inventory: () => inventory, skills: () => game.spellbar?.skills,
     give: (item) => {
       if (pack.add(item)) { inventory.render(); return; }
       const snap = game.currentSnap();
@@ -792,7 +795,11 @@ async function boot(plan, poolSize) {
     if (viaEsc === true && !input.touch && !AUTO) input.onPauseChange(true); else resume();
   };
   let bookOpen = false;
-  game.spellbar = new SpellBar(shared, input, { openBook, closeBook, tip: (t) => hud.tip(t, 2.5) });
+  game.spellbar = new SpellBar(shared, input, { openBook, closeBook, tip: (t) => hud.tip(t, 2.5), level: () => pack.level,
+    gold: { have: () => pack.gold, pay: (n) => { pack.gold -= n; } }, sound: (k) => audio.play(k, null, 0, 0, 0.6, 1, false) });
+  // What's learned in the six trees goes to the sim, which casts the spells with it (Casting.setSkills).
+  game.spellbar.onSkills = (ranks) => simWorker.postMessage({ type: 'skills', ranks });
+  game.spellbar.refresh();
   addPart('spells', {
     save: () => game.spellbar.save(),
     load: (d) => game.spellbar.load(d),
@@ -1104,7 +1111,9 @@ class GameView {
     }
     if (d.item.type === 'spell') {
       const name = nameOf(d.item);
-      if (this.spellbar.learn(d.item.spell)) this.hud.tip(`${name} read. B to set your spells, F to cast.`, 3);
+      // (A scroll past your level stays where it lies, for when you can read it.)
+      if (!this.spellbar.known.has(d.item.spell) && !this.spellbar.canRead(d.item.spell)) { this.hud.tip(`${name}: you can't make sense of it yet. Level ${TIER_LEVEL[TIER_OF[d.item.spell]]}.`, 3); return; }
+      if (this.spellbar.learn(d.item.spell)) this.hud.tip(`${name} read: its first rank is yours, for no point. B: your spellbook.`, 3.5);
       else { this.pack.gold += 40; this.hud.tip('You know that one already. Sold for 40 gold.', 2.5); }
     } else if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
     this.drops.take(d);
@@ -1704,6 +1713,17 @@ class GameView {
       cast: (held = 0) => { shared.input[INPUT.CAST_N] += 1; shared.input[INPUT.CAST] = held; },
       castKey: () => shared.input[INPUT.CAST],
       book: () => $('spellbook').classList.toggle('open'),
+      // The six trees, for tests: skills() is what's learned; skills('spend', id), skills('give', n) points, skills('all') learns
+      // everything, skills('unlearn'), skills('level', n) sets your level.
+      skills: (cmd, a) => {
+        const S = view.spellbar.skills;
+        if (cmd === 'spend') return S.spend(a) || S.why(a);
+        if (cmd === 'give') S.give(a | 0);
+        if (cmd === 'all') S.learnAll();
+        if (cmd === 'unlearn') S.unlearn();
+        if (cmd === 'level') { view.pack.level = Math.max(1, Math.min(50, a | 0)); view.pack.xp = xpFor(view.pack.level); view.spellbar.refresh(); }
+        return { level: view.pack.level, points: S.points, spent: S.spent, ranks: { ...S.ranks } };
+      },
       jump: () => { shared.input[INPUT.JUMP] += 1; },
       setCam: (c) => { view.overrideCam = c; },
       setTime: (h) => view.renderer.setHour(h),

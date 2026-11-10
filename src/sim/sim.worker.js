@@ -687,6 +687,8 @@ async function boot(msg) {
     if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
     if (m.type === 'hall') sim.testHall?.message(m);
+    // What's been bought in the six trees (src/items/skillbook.js): the spells are cast with it from now on.
+    if (m.type === 'skills') { sim.casting.setSkills(m.ranks); return; }
     if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {

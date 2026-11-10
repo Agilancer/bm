@@ -216,6 +216,8 @@ export class HallUI {
     if (this.tab === 'gem') html += `<div class="grid">${Object.keys(GEMS).flatMap((k) => GEM_GRADES.map((g, i) => `<button class="hb" data-item="${k}:${i}" style="color:${GEMS[k].color}">${esc(`${g.name} ${GEMS[k].name}`)}</button>`)).join('')}</div>`;
     if (this.tab === 'you') {
       html += `<h4>Your level: ${P.level}</h4><div class="row">${LEVELS.map((l) => `<button class="hb ${P.level === l ? 'on' : ''}" data-lv="${l}">${l}</button>`).join('')}<button class="hb" data-lvd="-1">−1</button><button class="hb" data-lvd="1">+1</button></div>`;
+      const S = this.skills?.();
+      if (S) html += `<h4>Your spells: ${S.points} point${S.points === 1 ? '' : 's'} to spend, ${S.spent} spent (B: your spellbook)</h4><div class="row"><button class="hb" data-act="pts5">5 more points</button><button class="hb" data-act="pts20">20 more points</button><button class="hb" data-act="all">Learn everything: every spell in full, and a branch of each</button><button class="hb" data-act="unlearn">Unlearn everything</button></div>`;
       html += `<h4>Mending</h4><div class="row"><button class="hb" data-act="fill">Fill your life and mana</button></div>`;
       html += `<h4>Your pack</h4><div class="row"><button class="hb" data-act="empty">Empty the pack (what you have on stays on)</button><button class="hb" data-act="gold">10,000 gold</button></div>`;
     }
@@ -231,6 +233,11 @@ export class HallUI {
       if (a === 'fill') { this.fill?.(); this.tip?.('Mended, and your well is full.', 2); }
       if (a === 'empty') { P.entries.length = 0; this.inventory?.()?.render?.(); this.tip?.('Your pack is empty.', 2); }
       if (a === 'gold') { P.gold += 10000; this.tip?.('10,000 gold.', 2); }
+      const S = this.skills?.();
+      if (S && a === 'pts5') { S.give(5); this.showGear(); }
+      if (S && a === 'pts20') { S.give(20); this.showGear(); }
+      if (S && a === 'all') { S.learnAll(); this.tip?.('Every spell is yours, in full. B: your spellbook.', 2.5); this.showGear(); }
+      if (S && a === 'unlearn') { S.unlearn(); this.tip?.('Unlearned: every point is back.', 2); this.showGear(); }
     };
   }
 

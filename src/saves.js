@@ -5,8 +5,8 @@
 //
 //   { v: SAVE_VERSION, at, summary: [lines for the slot list], parts: { player: {...}, stats: {...}, ... } }
 //
-// Today there are three (main.js): `player`, where you stand and which way you face, `stats`, the time played, and `pack`,
-// what you carry and have on. Quests and the world's own state come in later as parts of their own, with addPart. A part
+// Among them (main.js): `player`, where you stand and which way you face, `stats`, the time played, `pack`, what you carry
+// and have on, and `spells`, your bar and what you've learned in the six trees. Quests and the world's own state come in later as parts of their own, with addPart. A part
 // missing from a save (one made before the part existed) is loaded with null, and starts as in a new game. When a
 // part's shape changes, raise SAVE_VERSION and add a step to MIGRATIONS that brings the older saves up to it.
 //
@@ -15,13 +15,16 @@
 
 import { CHURCH_X, CHURCH_Z, inChurchFrame } from './core/church.js';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const SLOT_COUNT = 10;
 
 // version -> (save) => the save at the next version.
 const MIGRATIONS = {
   // Version 1 saves were made with the church where it was first built, on the edge of the town.
   1: (d) => { d.church = [0, 0]; d.v = 2; return d; },
+  // Version 2 saves were made when every spell was known from the start. The six trees came with version 3: such a save keeps
+  // its level and its bar, knows the six first spells, and has every point its level has earned to spend (src/ui/spellbar.js load).
+  2: (d) => { if (d.parts.spells) { delete d.parts.spells.known; d.parts.spells.skills = null; } d.v = 3; return d; },
 };
 
 const parts = new Map();

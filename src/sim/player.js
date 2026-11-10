@@ -600,6 +600,9 @@ export class Player {
 
   applyHurt(sim, amount, fromX, fromZ, knock) {
     amount *= ARMOR_K / (ARMOR_K + (this.armor || 0));
+    // What the spells on you turn of it: Stoneskin, an Aegis, hallowed ground (src/sim/treespells.js absorb).
+    amount = sim.casting.absorb(amount, sim);
+    if (amount <= 0) return;
     // Manaward: a share of it paid in mana, as far as there's any to pay with.
     if (this.shPower === 3) { const paid = Math.min(sim.casting.mana, amount * this.shValue); sim.casting.mana -= paid; amount -= paid; }
     this.hp -= amount;
