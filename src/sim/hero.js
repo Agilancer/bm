@@ -2057,14 +2057,18 @@ export class HeroWorld {
 
   // ---- the Free Company: the quartermasters, and the party you hire of them --------------------------------------------
 
+  // Where a quartermaster's post is: his own (src/core/dungeon.js BROKER_SPOTS), or, while the Test Dungeon's on, his counter in
+  // its hall (src/sim/testhall.js). [x, z, yaw or undefined]
+  postOf(h) { return this.sim.testHall?.postOf(h.broker) || BROKER_SPOTS[h.broker]; }
+
   // A quartermaster keeps his post (in town, by the well; at the Warrens' portal) and turns to whoever comes to talk.
   atPost(h) {
-    const sim = this.sim, p = sim.player, [x, z] = BROKER_SPOTS[h.broker];
+    const sim = this.sim, p = sim.player, [x, z, face] = this.postOf(h);
     h.foe = null; h.task = { kind: 'town', place: null, t: 0, peace: true };
     if (Math.hypot(x - h.x, z - h.z) > 0.7) { h.goal = { x, z, speed: 1.6, stop: 0.4 }; return; }
     h.goal = null; h.hold = 0.3;
     const near = Math.hypot(p.x - h.x, p.z - h.z) < 7;
-    h.holdFace = near ? Math.atan2(p.x - h.x, p.z - h.z) : h.broker === 'portal' ? PORTAL.yaw + Math.PI : Math.PI;
+    h.holdFace = near ? Math.atan2(p.x - h.x, p.z - h.z) : face ?? (h.broker === 'portal' ? PORTAL.yaw + Math.PI : Math.PI);
     if (!near && !h.gesture && Math.random() < 0.002) h.gesture_(pick(['fold', 'look', 'talk']), 4);
   }
 

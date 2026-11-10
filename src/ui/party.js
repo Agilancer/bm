@@ -114,7 +114,8 @@ export class PartyUI {
   hire(o, free = false) {
     if (this.full()) { this.tip('Your party is full: four is as many as the Company will send with you.', 3); return false; }
     if (this.member(o.slot)) return false;
-    if (!free && !this.pack.pay(o.price)) { this.tip(`You can't pay ${priceText(o.price)}.`, 2.5); return false; }
+    // (Nobody's paid in the Test Dungeon: src/ui/testhall.js.)
+    if (!free && !this.freeHire?.() && !this.pack.pay(o.price)) { this.tip(`You can't pay ${priceText(o.price)}.`, 2.5); return false; }
     const c = this.cast[o.slot];
     c.name = o.name; c.full = o.name; c.guild = 'The Free Company'; c.level = o.level;
     this.members.push({ slot: o.slot, name: o.name, level: o.level, off: o.off ?? 0, cls: c.cls });
@@ -169,14 +170,15 @@ export class PartyUI {
     const want = [!r.tank && 'a lancer to take the blows', !r.heal && 'a paladin to keep you standing', 'blades to do the work'].filter(Boolean);
     const need = this.fit() ? 'That is a party fit for the Hollowfang Warrens.'
       : `For the Warrens you'll want four at your back: ${want.length > 1 ? `${want.slice(0, -1).join(', ')} and ${want.at(-1)}` : want[0]}.`;
-    const say = line || (h.p.broker === 'portal'
+    const gratis = !!this.freeHire?.();
+    const say = line || (gratis ? `In this hall the Company sends whoever you ask for, and asks nothing for them. ${need}` : h.p.broker === 'portal'
       ? `The Warrens won't let one through alone, nor two. Four at your back, or the kobolds have you before the first bend. ${need}`
       : `The Free Company, at your service. Swords for hire: paid once, up front, and they're yours till you let them go. ${need}`);
     this.opts = [];
     const li = (o) => { this.opts.push(o); return o; };
     let html = `<div class="tk-head"><span class="tk-name">${esc(h.p.name)}</span><span class="tk-title">${esc(h.p.title || 'Quartermaster')}</span><span class="tk-purse">${this.pack.purse() ? priceText(this.pack.purse()) : 'No coin'}</span>${CLOSE_X}</div>
       <div class="line">${esc(say)}</div>`;
-    const row = (o, k) => `<li class="${o.dim ? 'dim' : ''}" data-k="${k}"><kbd>${k + 1}</kbd><span class="rl" style="color:${ROLE[o.role][1]}">${ROLE[o.role][2]}</span><span>${esc(o.label)}</span>${o.price ? `<span class="pr">${priceText(o.price)}</span>` : ''}</li>`;
+    const row = (o, k) => `<li class="${o.dim ? 'dim' : ''}" data-k="${k}"><kbd>${k + 1}</kbd><span class="rl" style="color:${ROLE[o.role][1]}">${ROLE[o.role][2]}</span><span>${esc(o.label)}</span>${o.price ? `<span class="pr">${gratis ? 'Free' : priceText(o.price)}</span>` : ''}</li>`;
     if (this.members.length) {
       html += `<h4>Your party (${this.members.length} of ${PARTY.size})</h4><ol>`;
       for (const m of this.members) {

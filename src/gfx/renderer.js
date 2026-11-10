@@ -10,6 +10,7 @@ import { WORLD_EDGE } from '../core/lands.js';
 import { buildSites } from '../core/sites.js';
 import { terrainHeight } from '../core/terrain.js';
 import { EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, toWorld, torches } from '../core/dungeon.js';
+import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/church.js';
@@ -92,7 +93,7 @@ const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
-const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114 };
+const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3 };
 const MAX_GROUND = 160;
@@ -403,7 +404,9 @@ export class Renderer {
     const warrens = torches().map(([x, y, z, nx, nz]) => ({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: [1, 0.56, 0.24], r: 11, i: 3.4, flicker: 0.8 }));
     warrens.push({ p: [PORTAL.x, terrainHeight(PORTAL.x, PORTAL.z) + 2, PORTAL.z], c: [0.45, 0.65, 1], r: 9, i: 2.2, flicker: 0.2 });
     for (const q of [EXIT_IN, EXIT_OUT]) { const [x, z] = toWorld(q.x, q.z); warrens.push({ p: [x, caveFloorY(x, z) + 2, z], c: [0.45, 0.65, 1], r: 9, i: 2.6, flicker: 0.2 }); }
-    this.lights = village.lights.concat(this.interior.data.lights, warrens);
+    // (And the Test Dungeon's panels of light, white, steady and wide: src/core/testhall.js.)
+    const hall = hallLights().map(([x, y, z]) => ({ p: [x, y - 0.5, z], c: [1, 0.98, 0.95], r: 15, i: 2.4, flicker: 0 }));
+    this.lights = village.lights.concat(this.interior.data.lights, warrens, hall);
     this.homeLights = new HomeLights(device, this.interior, this.interior.data.lights);
     if (this.openingEnabled) this.openingStage = await loadOpeningStage(this, base);
     this.smokeT = 0;
@@ -1271,6 +1274,37 @@ export class Renderer {
       ]);
       this.chestModels = { body: this.lyingModel(body, alb, nrm, mr, [0, 0, 0, 0]), lid: this.lyingModel(lid, alb, nrm, mr, [0, 0, 0, 0]) };
     })().catch((e) => console.error('chest', e));
+  }
+
+  // The Test Dungeon's door: one slab of grey iron the width of its doorway, banded across, that slides straight up into the wall
+  // over it and down again. Where it should be (0 down, 1 up) is the sim's (src/sim/testhall.js, the 'hall' message in src/main.js),
+  // and it's moved here at the sim's own pace, so the two keep together.
+  hallDoorItem(dt) {
+    const d = this.hallDoor ||= { k: 0, want: 0, item: { mesh: null, mat: new Float32Array(16) } };
+    d.want = this.hallDoorWant ?? 0;
+    // (Where the sim has it, when that's far from here: a load, a fall.)
+    if (this.hallDoorSync !== undefined) { if (Math.abs(this.hallDoorSync - d.k) > 0.25) d.k = this.hallDoorSync; this.hallDoorSync = undefined; }
+    const step = Math.min(0.1, dt || 0) / DOOR.open;
+    d.k = d.want > d.k ? Math.min(d.want, d.k + step) : Math.max(d.want, d.k - step);
+    if (!d.item.mesh) {
+      const pos = [], nrm = [], uv = [];
+      const box = (x0, x1, y0, y1, z0, z1) => {
+        const P = [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]];
+        const faces = [[[0, 3, 2, 1], [0, 0, -1]], [[4, 5, 6, 7], [0, 0, 1]], [[0, 4, 7, 3], [-1, 0, 0]], [[1, 2, 6, 5], [1, 0, 0]], [[3, 7, 6, 2], [0, 1, 0]], [[0, 1, 5, 4], [0, -1, 0]]];
+        for (const [q, n] of faces) for (const t of [0, 1, 2, 0, 2, 3]) { pos.push(...P[q[t]]); nrm.push(...n); uv.push(0, 0); }
+      };
+      const w = (DOOR.x1 - DOOR.x0) / 2 + 0.25, h = DOOR.h + 0.3, t = (DOOR.slab[1] - DOOR.slab[0]) / 2;
+      box(-w, w, 0, h, -t, t);
+      // Bands across both faces, and a heavy foot.
+      for (let y = 0.9; y < h - 0.4; y += 1.6) box(-w + 0.15, w - 0.15, y, y + 0.28, -t - 0.07, t + 0.07);
+      box(-w, w, 0, 0.35, -t - 0.1, t + 0.1);
+      const idx = new Uint32Array(pos.length / 3).map((_, i) => i);
+      d.item.mesh = this.lyingModel({ pos: new Float32Array(pos), nrm: new Float32Array(nrm), uv: new Float32Array(uv), idx }, this.pixel('rgba8unorm-srgb', [118, 121, 128, 255]),
+        this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255])), this.pixel('rgba8unorm', [255, 140, 90, 255]), [0, 0, 0, 0]);
+    }
+    const k = d.k * d.k * (3 - 2 * d.k);
+    d.item.mat.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, HALL.x + (DOOR.x0 + DOOR.x1) / 2, HALL.y + k * (DOOR.h + 0.2), HALL.z + (DOOR.slab[0] + DOOR.slab[1]) / 2, 1]);
+    return d.item;
   }
 
   // The doors, the first time one comes near: every leaf from one glb, on one set of maps. See src/items/doors.js and tools/doors/model.py.
@@ -2387,12 +2421,14 @@ export class Renderer {
     for (const g of this.chests) drawn.push(g);
     if (this.doorItems.length && !this.doorModels) this.doorModel();
     for (const g of this.doorItems) drawn.push(g);
+    // The Test Dungeon's door, sliding up into its wall and down again (src/core/testhall.js), from wherever in the hall you are.
+    if (inHall(cam.x, cam.z)) drawn.push(this.hallDoorItem(dt));
     this.stallItems ||= this.makeStalls();
     for (const g of this.stallItems) if (this.stallsOpen.has(g.id) === g.open) drawn.push(g);
     if (this.dishes) for (const g of this.dishes.values()) drawn.push(g);
     if (snap[H.SURF] > 1.5 && this.board.sword) drawn.push(this.board);
     for (const g of drawn) {
-      let model = g.openingModel ?? (g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
+      let model = g.openingModel ?? g.mesh ?? (g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }

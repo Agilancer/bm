@@ -126,8 +126,8 @@ game starts; the rest come in the background once it has.
   comes home, the nearest fire's crackle, and a layer over each spell's own made sound (`src/spellsound.js`). Its 60 s beds play by
   where you are (`sounds` in `src/ui/lands.js`): the woods by day and by night, rain on the Weeping Fen and on Sallowmere's shore, a
   storm over Velscour's keep, a house's quiet, the cathedral with the storm on its roof, the catacombs, the Rift, the falls.
-  Not used anywhere yet: the sea's three beds, the beach's plain and stormy ones, the rain and storm beds for a house, the cave in the rain, the river
-  stream, the portcullis, the chest closing, the sword sheathed, the bow's shot and its block.
+  The portcullis is the Test Dungeon's door. Not used anywhere yet: the sea's three beds, the beach's plain and stormy ones, the rain and storm beds
+  for a house, the cave in the rain, the river stream, the chest closing, the sword sheathed, the bow's shot and its block.
 - **400 Sounds Pack** (`tools/audio/build_extra_sfx.py`; the zip carries no licence): coins, gems and orbs picked up and landing, a
   scroll, robe, skull or staff taken, the spellbook and the journal, the big map, bone snapping and gore on the undead.
 - **MenuSFX** by Kevin Fowler (CC BY): the clicks of the game's own panels (`ui_*`). The title and the pause menu keep their own.
@@ -140,7 +140,7 @@ church bells ("Orthodox Church Bells Ringing", Free Sounds Library, CC BY 4.0) a
 Bellmourn's music). A click, a tap or a key skips a card. The game loads behind the black, and the village isn't drawn
 until you start: the title stays on black.
 
-**New Game**, **Continue**, **Load**, **Settings**, **How to Play**. Esc (or `II`) pauses: **Resume**, **Save Game**,
+**New Game**, **Continue**, **Load**, **Test Dungeon** (below), **Settings**, **How to Play**. Esc (or `II`) pauses: **Resume**, **Save Game**,
 **Load Game**, **Settings**, **How to Play**, **Main Menu**. There are ten save slots, and the game keeps itself every 20 s
 of play, whenever you pause, and when you close the pack or take something up; Continue picks up the newest of those. A save
 holds where you stand and which way you face, the time played, and your pack and what's on you: loading starts the world
@@ -237,6 +237,8 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **Loot and gear.** It picks up what falls and opens the chests it passes. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
 - **Grinding.** It grinds for levels when no quest suits it yet.
+- **The Test Dungeon.** It fights whatever's been summoned, going in after it once the door's up, and otherwise waits in the
+  hall, mended. It never summons anything itself (`hallRun`).
 
 Its status shows under the button, with its level and how many quests are done. When every quest is done and there's
 nothing left but grinding, a menu asks where:
@@ -265,7 +267,8 @@ While it's on, the mouse is left free: no pointer lock, so the button and the me
 Pressing a move key (or the stick) takes the controls back for as long as you hold it.
 
 **Keeping it up with the game.** It has to be taught what's added to the game. Quests, steps, places, foes, lairs, spells
-and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`); the Warrens' rooms, packs
+and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`, and the Test Dungeon's
+counters in `HALL_COUNTERS`); the Warrens' rooms, packs
 and bosses in `src/ui/autowarrens.js` (`WAY`, `KNOWN`, `tactics`). `coverage()` there lists
 whatever the game has that it doesn't know, in the console when auto-play starts, and from `node tools/autoplay/check.mjs`,
 which fails until the list is empty. Until it's taught, it makes do:
@@ -364,6 +367,55 @@ portals clear of the rock, the roofs high enough and under the line the shaders 
 Tuning, headless (the sim in Node with no GPU): with a level 8 party and a player doing what a level 8 player's staff
 does, Grubnash took about a minute and a half, the twins about two minutes and Venomaw nearly five, with the tank as low as
 half his life and nobody dying. Its numbers are `BOSSES` in `src/core/dungeon.js` and the mechanics' in `src/sim/dungeon.js`.
+
+### The Test Dungeon
+
+**Test Dungeon** on the main menu is a place for trying out the monsters. You're stood at the south end of a bright white
+hall, tiled, with a darker line in the floor every five metres to judge a distance by, and a big iron door at its north
+end. Three people stand behind counters, and E at a counter talks to them:
+
+- **Captain Merrow Vale, the Hall Stores.** Any staff, skull, shield, robe or gem in the game, at any rarity, for nothing:
+  pick a rarity, then what you want, and it goes in your pack (at your feet if the pack's full). Under **Yourself**: your
+  level, set to anything from 1 to 50; your life and mana filled; the pack emptied; gold. No V or T shields: those are the
+  knights' own.
+- **Aldous Fenn, the Free Company.** The quartermaster's own books (src/ui/party.js), and in here nobody's paid. With the
+  other Tessariels off in Settings there's nobody on them.
+- **Ysolde Marr, the Summoning.** A book of every monster in the game (`src/core/testhall-foes.js`): the risen and their
+  masters, the great crabs, the Gravehart, the Bone Hydra, the Abyssal Mouth and Velscour's knights, every Tripo model by
+  its group (the Warrens' bosses with them), every slime and every tumbler. Choose one, how many (and a size, or colours),
+  add it to the summoning, and add more. **Summon** stands them in the arena past the door, and the door rises on them.
+
+Once everything past the door is down (whatever they raised or split into as well), and you're back on this side of it, the
+door comes down again and you can summon more. A fall stands you back at the start a moment later, with the arena cleared and
+the door down. Nothing in the Test Dungeon is kept: no save is made while you're in it, so **Continue** is still the game you
+were playing, and **Main Menu** from the pause screen takes you out.
+
+How many can stand at once is what the world has bodies for (each line of the book says): 12 Tripo monsters in all, the risen
+23 (the four kinds of them share their bodies), 40 slimes, 48 tumblers, 3 crabs, and one each of the rest. The one-of-a-kind
+beasts are the world's own bodies, brought here with their ground moved under them (the Hydra's pit is the arena), and sent
+home after. The Hydra is too big for the door: go in to it.
+
+- `src/core/testhall.js`: where it all is, out past the world's west edge and fifty metres down, the far side of the world
+  from the Warrens. Like theirs, its shape is a field the sim walks (`hallRoom`), with the door's way through open or shut,
+  and its walls, floors, counters and lights are built from the same numbers (`buildHall`, for `src/core/sites.js`). The
+  shaders light it white (`indoorAt` gives it 3).
+- `src/sim/testhall.js`: the sim's side: the summoning, the door, what counts as down, a fall. `src/ui/testhall.js`: the
+  counters' panels and the line at the top of the screen. `src/core/testhall-foes.js`: the keeper's book.
+- `bm.hall('summon', { list: [{ id: 'tripo:kobold_1', n: 3 }] })`, `bm.hall('kill')` and `bm.hallState()` in the console,
+  for tests.
+- `node tools/testhall/check.mjs` walks the hall (every counter reached, the arena shut off with the door down and reached
+  with it up, the doorway wide enough for a dragon) and fails until the book has every monster in the game. **A new
+  monster, group, slime or tumbler goes in the book** (`src/core/testhall-foes.js`), and if it's a new family of body, in
+  `spawn` in `src/sim/testhall.js`.
+
+Auto-play knows it: in the Test Dungeon it fights whatever's been summoned, going in after it when the door's up, and
+otherwise waits in the hall. It never summons, dresses or hires there: that's for whoever's testing.
+
+Known limits: it has been driven through by a script in headless Chromium on a software GPU, on the Low and High tiers
+(every counter; a summoning of every kind of body, 19 at once; the door up and down; a fall; auto-play clearing a pack and
+coming back through the door; back to the title and a new game), not played by hand, and nobody has heard it. The monsters'
+models come in as they're summoned, so the first summoning of a kind waits a moment for them. The Keeper is one more of the
+Company's bodies, loaded with the rest whenever the other Tessariels are on.
 
 ### Swords, gems and the pack
 

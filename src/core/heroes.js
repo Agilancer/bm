@@ -24,14 +24,17 @@ import { ROADS, SUMMIT } from './terrain.js';
 import { CHURCH_DOOR, churchAt } from './church.js';
 
 // How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU. (And the
-// Free Company's two quartermasters besides, BROKERS below.)
+// Free Company's two quartermasters and the Test Dungeon's keeper besides, BROKERS below.)
 export const HERO_SLOTS = { desktop: 16, lean: 6 };
 
 // The Free Company's quartermasters, who hire out a party (src/ui/party.js): one in town by the square, one at the
-// Hollowfang Warrens' portal (src/core/dungeon.js BROKER_SPOTS). Bodies of the heroes' own, people of their own.
+// Hollowfang Warrens' portal (src/core/dungeon.js BROKER_SPOTS). Bodies of the heroes' own, people of their own. While the
+// Test Dungeon is on, the two stand at its counters instead (src/sim/testhall.js postOf).
 export const BROKERS = [
   { broker: 'town', body: 'bard_m2', name: 'Aldous Fenn', title: 'Quartermaster of the Free Company' },
   { broker: 'portal', body: 'bard_m3', name: 'Captain Merrow Vale', title: 'Quartermaster of the Free Company' },
+  // The Test Dungeon's keeper (src/core/testhall.js), who summons whatever you'd fight. Only ever in its hall.
+  { broker: 'hall', body: 'bard_f1', name: 'Ysolde Marr', title: 'Keeper of the Test Dungeon', guild: 'The Test Dungeon' },
 ];
 
 // The classes, as the sim fights them. hp: how much they take. range: where they like to fight from. move: their pace
@@ -239,7 +242,7 @@ export function withBrokers(cast, roster, kit) {
     const h = roster.find((x) => x.id === b.body) || roster.find((x) => x.cls === 'bard');
     if (!h) continue;
     const k = kit.heroes[h.id] || {};
-    out.push({ slot: out.length, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name: b.name, full: b.name, guild: 'The Free Company', persona: 'kind', level: 30,
+    out.push({ slot: out.length, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name: b.name, full: b.name, guild: b.guild || 'The Free Company', persona: 'kind', level: 30,
       gold: 0, kit: k, string: k.string ? kit.strings[k.string] : null, seed: 7 + out.length, broker: b.broker, title: b.title });
   }
   return out;
