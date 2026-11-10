@@ -245,14 +245,14 @@ def limb(B, chain, sizes, starts, name):
         n = int((~np.isnan(sec)).sum())
         if n >= SIDES * 0.6:
             # Under plate: just inside it, the bend a centimetre further in. Never fatter than twice a limb's own size.
-            r = np.minimum(fill(sec * SHRINK - INSET * u, default), default * 2.0) - (0.01 * u if recessed else 0)
+            r = np.minimum(fill(sec * SHRINK - INSET * u, default), default * 2.0) * (0.85 if recessed else 1) - (0.015 * u if recessed else 0)
             r = np.maximum(r, default * 0.6)
         else:
             # Bare: an arm's own size, inside the plate where there's some of it.
             r = np.full(SIDES, default)
             have = ~np.isnan(sec)
             r[have] = np.minimum(r[have], np.maximum(sec[have] * SHRINK - INSET * u, default * 0.6))
-            r = fill(r, default) - (0.006 * u if recessed else 0)
+            r = fill(r, default) * (0.85 if recessed else 1) - (0.006 * u if recessed else 0)
         rings.append({"c": p, "ax": ax, "r": np.clip(r, 0.02 * u, 0.2 * u), "w": w})
     for i in range(1, len(rings)):
         rings[i]["r"] = np.minimum(rings[i]["r"], rings[i - 1]["r"] * 1.25 + 0.004)
@@ -278,7 +278,7 @@ def liner(B):
         d = np.outer(np.cos(ang), sa) + np.outer(np.sin(ang), sb)
         wide, deep = (0.165 if B.male else 0.15) * u, (0.125 if B.male else 0.115) * u
         cap = 1 / np.sqrt((d[:, 0] / wide) ** 2 + (d[:, 2] / deep) ** 2 + 1e-9)
-        cap = np.minimum(cap, wide) * (0.8 if i >= len(path) - 2 else 1.0)
+        cap = np.minimum(cap, wide) * (0.8 if i >= len(path) - 2 else 0.82 if i in (1, 2) else 0.92)
         r = np.minimum(fill(sec * SHRINK - INSET * u, 0.11 * u), cap)
         rings.append({"c": c, "ax": ax, "r": np.clip(r, 0.05 * u, 0.2 * u)})
     bottom = B.binding_near(rings[0]["c"], float(np.mean(rings[0]["r"])), {B.j("pelvis"): 0.5, B.j("spine_01"): 0.5})
@@ -301,16 +301,20 @@ def coif(B):
              (s3 + (nk - s3) * 0.8, 0.09, {B.j("spine_03"): 0.5, B.j("neck_01"): 0.5}, False),
              (nk + up * 0.03 * u, 0.068, {B.j("neck_01"): 1.0}, False),
              (nk + (hd - nk) * 0.7, 0.07, {B.j("neck_01"): 0.4, B.j("Head"): 0.6}, False),
-             (hd + up * 0.02 * u, 0.085, {B.j("Head"): 1.0}, True),
-             (hd + up * 0.08 * u, 0.08, {B.j("Head"): 1.0}, True),
-             (hd + up * 0.13 * u, 0.05, {B.j("Head"): 1.0}, True)]
+             (hd + up * 0.01 * u, 0.066, {B.j("Head"): 1.0}, True),
+             (hd + up * 0.05 * u, 0.05, {B.j("Head"): 1.0}, True)]
     rings = []
     for c, r0, w, deep in stops:
         sec, n = section(pts, c, up, 0.03 * u, 0.16 * u)
         r = np.full(SIDES, r0 * u)
         have = ~np.isnan(sec)
-        r[have] = np.minimum(r[have], np.maximum(sec[have] * SHRINK - INSET * u, r0 * u * 0.6))
-        rings.append({"c": c, "ax": up, "r": np.clip(fill(r, r0 * u), 0.03 * u, 0.16 * u), "w": w, "deep": deep})
+        # (Well inside a helm: its shell is thin and close, and the dark of the coif must never come through it.)
+        r[have] = np.minimum(r[have], np.maximum(sec[have] * (0.78 if deep else SHRINK) - INSET * u, r0 * u * 0.5))
+        r = fill(r, r0 * u)
+        # (Inside a helm, no wider anywhere than three quarters of its narrowest: a closed visor has few points to go by.)
+        if deep and have.any():
+            r = np.minimum(r, np.nanmin(sec) * 0.75)
+        rings.append({"c": c, "ax": up, "r": np.clip(r, 0.025 * u, 0.16 * u), "w": w, "deep": deep})
     return "mail_coif", rings, "neck_01"
 
 
@@ -329,7 +333,7 @@ def skirt(B, tone):
         c = top_c + down * (0.02 + 0.28 * t) * u
         sec, n = section(pts, c, down, 0.08 * u, 0.24 * u)
         r = fill(sec * SHRINK - INSET * u, 0.15 * u)
-        rings.append({"c": c, "ax": down, "r": np.clip(r, 0.06 * u, 0.24 * u), "t": t, "w": {B.j("pelvis"): 1.0}})
+        rings.append({"c": c, "ax": down, "r": np.clip(r, 0.06 * u, (0.16 if B.male else 0.15) * u), "t": t, "w": {B.j("pelvis"): 1.0}})
     # (Inside whatever's worn over it, never forced out past it; no ring much wider than the one above.)
     for i in range(1, len(rings)):
         rings[i]["r"] = np.minimum(rings[i]["r"], rings[i - 1]["r"] * 1.12 + 0.004)
@@ -446,8 +450,10 @@ def rebuild(body_id, dry=False, out_dir=None):
     def add_rings(name, rings, joint, caps=(True, True)):
         adds.append((name, tube(rings, njoints, tone, caps), joint))
 
-    add_rings(*liner(B))
-    add_rings(*coif(B))
+    # (The liner's top is inside the coif's foot, and the coif's foot inside the liner: neither needs closing, and a lit
+    # cap there showed as a pale disc down an open helm.)
+    add_rings(*liner(B), caps=(True, False))
+    add_rings(*coif(B), caps=(False, True))
     for s in "lr":
         add_rings(*limb(B, [f"upperarm_{s}", f"lowerarm_{s}", f"hand_{s}", f"middle_01_{s}"], (ARM["upper"], ARM["fore"], ARM["wrist"]), 0.04, f"mail_arm_{s}"))
         add_rings(*limb(B, [f"thigh_{s}", f"calf_{s}", f"foot_{s}", f"ball_{s}"], (LEG["thigh"], LEG["knee"], LEG["ankle"]), 0.05, f"mail_leg_{s}"))

@@ -347,6 +347,24 @@ screen is a frame for each, with their life.
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
 both). The quartermasters are two more bodies after them.
 
+### The heroes' armour: what's between the plates
+
+A hero's plates are rigid, so where two part as a joint bends, something has to show. `tools/heroes/mail.py` makes it for
+all 44 bodies from each one's own plates (run it again after `build.py`): a mail liner under the torso, one sleeve down
+each arm and leg, a coif, armpit gussets and a skirt, every end closed. On lancers, paladins, dragoons and boomerang
+knights it's drawn as ring mail, bright on a bright suit and blackened on a dark one; on archers, bards, rogues and
+ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is dark iron, not its outer paint
+(`heroLook` in `src/gfx/materials.js`; `docs/RENDERING.md`).
+
+- `python tools/heroes/gaps.py [ids] --out DIR` poses each body with the game's clips, skins it as the GPU does, and
+  counts what shows from four sides: see-through holes, the insides of plates, and the covers. Over all 44 bodies and six
+  poses, holes fell from a mean of 0.15% of the outline to 0.09%, and lancer_f2's chest (2.5%, standing still) closed.
+  The worst left are in deep crouches: archer_f4 2.6%, lancer_f2 mid-swing 1.7%.
+- It was reviewed twice by two reviewers briefed as character artists of thirty years (2026-11-10), from game frames
+  taken headless. Left undone from their lists: knee and elbow cops bound half to each bone (the piece table doesn't
+  say which plate is one), the lower back in a deep crouch, and the lances' black and yellow stripes.
+- The frames were of ten bodies on a software GPU at one sample a pixel; nobody has looked at the result on a real GPU.
+
 ### The Hollowfang Warrens
 
 The first party dungeon (`src/core/dungeon.js`, `src/sim/dungeon.js`): a cave system the kobolds dug and the goblins took,

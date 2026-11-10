@@ -53,10 +53,14 @@ turns skin matte and skips the dark-paint block. A rebuild with Tripo's own meta
 `tools/heroes/build.py`) would do this properly; this does it without one.
 
 What shows where a hero's plates part (the gap covers, `tools/heroes/mail.py`: anything with u past the atlas) is drawn
-by the same code: on `-2` and `-3`, the knights' rings in iron a shade lighter than their blackened links (rings 0.05 to
-0.34, between them 0.16; metal 0.9, roughness 0.42 to 0.55), so a gap reads as mail under the plate; on `-1`, a padded
-coat, dark linen (0.2, 0.16, 0.115) quilted in diamonds. Until 2026-11-10 both were flat near-black cloth (0.075), which
-read as holes in the armour.
+by the same code. The covers carry their own coordinates (u: metres round the tube, plus 2 on a blackened suit; v: metres
+along it, plus 100 up inside a helm). On `-2` and `-3` it's ring mail, rings 15 mm across in rows 7.5 mm apart: crowns
+0.40 on a bright suit and 0.14 on a blackened one, 0.015 between them; a few strides off the rings melt to bands by row
+(0.30 or 0.06, metal 0.25 or 0.4, roughness 0.6) and then to an even tone, with the sky's reflection cut to about half so
+it doesn't go blue. On `-1` it's a padded coat, dark linen (0.07, 0.05, 0.035) quilted in 30 mm diamonds. Inside a helm
+it's shadow; the inside of a cover is its own stuff at 40%. The inside of a plate (a back face that isn't cloth: cloth is
+marked in the piece number, `CLOTH_BIT`) is dark iron on `-2` and `-3` and a dark lining on `-1`. Until 2026-11-10 the
+covers were short flat near-black tubes, which read as grey rubber, and plate insides wore their outer paint.
 
 ## The witch's gown: no cloth bones, no ripple
 
