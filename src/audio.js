@@ -1,4 +1,5 @@
 // Positional sound on Web Audio. Everything is decoded up front, so a blow is heard the instant it lands.
+import { getFile } from './core/files.js';
 import { isMobileDevice } from './gfx/gpu.js';
 
 // Head-related filtering is a convolution for every sound playing, for a phone's speakers to throw away.
@@ -99,8 +100,7 @@ export class Audio {
     const nd = this.noise.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     await Promise.all([...CORE].map(async (n) => {
-      const res = await fetch(`${this.base}assets/game/audio/${n}.mp3`);
-      this.buffers[n] = await ctx.decodeAudioData(await res.arrayBuffer());
+      this.buffers[n] = await ctx.decodeAudioData(await getFile(`${this.base}assets/game/audio/${n}.mp3`));
     }));
     this.lastAt = {};
     this.ready = true;

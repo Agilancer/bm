@@ -4,6 +4,7 @@ import { inHall } from '../core/testhall.js';
 // the village's are big and painted. Drawn only from where they can be seen, and the world outside isn't drawn from below.
 import { inSexton, toChurch } from '../core/church.js';
 import { accessor, parseGLB } from '../core/glb.js';
+import { getFile, watched } from '../core/files.js';
 import { setFloors } from '../core/interior.js';
 import { makeBuffer, loadTextureArray } from './gpu.js';
 import { COMMON } from './shaders.js';
@@ -100,23 +101,27 @@ function makeSet(r, glb, nodes, layerNames) {
   return { VB: makeBuffer(r.device, new Float32Array(verts), GPUBufferUsage.VERTEX), IB: makeBuffer(r.device, indices, GPUBufferUsage.INDEX), cath: deepAt, deep: ni - deepAt };
 }
 
-export async function loadInterior(r, base, pool, tier) {
+// pictures: the lanes its pictures share with the world's (src/core/files.js lanes); steps: the loading bar's count, to add to and tick.
+export async function loadInterior(r, base, pool, tier, pictures, steps) {
   const dir = `${base}assets/game/interior/`;
-  const [man, data, glbBuf] = await Promise.all([
-    fetch(`${dir}manifest.json`).then((x) => x.json()), fetch(`${dir}interior.json`).then((x) => x.json()), fetch(`${dir}interior.glb`).then((x) => x.arrayBuffer()),
-  ]);
+  steps.add(2);   // (the model, and the pieces built from it)
+  const glbFile = getFile(`${dir}interior.glb`).then((b) => { steps.tick(); return b; });
+  glbFile.catch(() => {});
+  const [man, data] = await Promise.all([getFile(`${dir}manifest.json`, 'json'), getFile(`${dir}interior.json`, 'json')]);
   setFloors(data.floors, data.homes);
   const scale = tier.texScale;
-  const load = async (names, cs, ds) => {
-    const px = (s) => Math.max(64, Math.round(s * scale));
-    const decode = (n, s) => pool.run('decode', { url: `${dir}${n}.webp`, ...(scale !== 1 ? { width: px(s), height: px(s) } : {}) });
-    const c = await loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_c`, cs), 'rgba8unorm-srgb');
-    const d = await loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_d`, ds), 'rgba8unorm');
-    return [c, d];
-  };
   const tileNames = man.layers.map((l) => l.name), atlasNames = man.atlases.map((l) => l.name);
-  const [tc, td] = await load(tileNames, man.tile[0], man.tile[1]);
-  const [ac, ad] = await load(atlasNames, man.atlas[0], man.atlas[1]);
+  steps.add((tileNames.length + atlasNames.length) * 2);
+  const px = (s) => Math.max(64, Math.round(s * scale));
+  const decode = (n, s) => {
+    const url = `${dir}${n}.webp`;
+    return watched(url, pool.run('decode', { url, ...(scale !== 1 ? { width: px(s), height: px(s) } : {}) })).then((b) => { steps.tick(); return b; });
+  };
+  const array = (names, size, kind, format) => loadTextureArray(r.device, r.mip, names, (n) => decode(`${n}_${kind}`, size), format, pictures);
+  const [tc, td, ac, ad, glbBuf] = await Promise.all([
+    array(tileNames, man.tile[0], 'c', 'rgba8unorm-srgb'), array(tileNames, man.tile[1], 'd', 'rgba8unorm'),
+    array(atlasNames, man.atlas[0], 'c', 'rgba8unorm-srgb'), array(atlasNames, man.atlas[1], 'd', 'rgba8unorm'), glbFile,
+  ]);
 
   const glb = parseGLB(glbBuf);
   const nodes = glb.json.nodes.filter((n) => n.mesh !== undefined && n.name.includes('|'));
@@ -136,6 +141,7 @@ export async function loadInterior(r, base, pool, tier) {
     (homes.some((h) => x > h.x0 - 1 && x < h.x1 + 1 && z > h.z0 - 1 && z < h.z1 + 1) ? town : church).push(...G.slice(i, i + 27));
   }
   const glowCPU = new Float32Array([...town, ...church]);
+  steps.tick();
   return { data, tiles, atlas, glowVB: makeBuffer(r.device, glowCPU, GPUBufferUsage.VERTEX), glowCPU, glowN: G.length / 9, glowTown: town.length / 9 };
 }
 

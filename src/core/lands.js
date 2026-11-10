@@ -137,12 +137,14 @@ export function routeDist(x, z) {
 
 // The weight of each country at (x, z), into out (an array as long as COUNTRY_KEYS).
 const W = new Float32Array(LIST.length);
+const CENTRES = LIST.map((c) => Float64Array.from(c.c.flat()));   // (each country's centres, laid flat: this is worked out for every texel of the far land)
 export function countryWeights(x, z, out = W) {
   const wx = x + (fbm(x * 0.0011, z * 0.0011, 3) - 0.5) * 900, wz = z + (fbm(x * 0.0011 + 17, z * 0.0011 + 9, 3) - 0.5) * 900;
   let dmin = 1e18;
   for (let i = 0; i < LIST.length; i++) {
     let d = 1e18;
-    for (const [cx, cz] of LIST[i].c) d = Math.min(d, Math.hypot(wx - cx, wz - cz));
+    const c = CENTRES[i];
+    for (let k = 0; k < c.length; k += 2) d = Math.min(d, Math.hypot(wx - c[k], wz - c[k + 1]));
     out[i] = d; dmin = Math.min(dmin, d);
   }
   let tot = 0;
@@ -271,16 +273,17 @@ export function waterAt(x, z) {
 export function landTrees(x, z) {
   const r = Math.hypot(x, z);
   if (r < 1150) return 1;
-  const w = countryWeights(x, z);
-  let t = 0;
-  for (let i = 0; i < LIST.length; i++) t += w[i] * LIST[i].trees;
-  t = 1 + (t - 1) * sstep(1150, 1700, r);
   // Not on the roads, the places, the water, the cliff's face, or high on the mountain.
+  // (Asked first: they're quick to tell, and where one holds there's no need to weigh the countries.)
   const rd = routeDist(x, z);
   if (rd.road && rd.d < rd.road.w + 7) return 0;
   if (siteAt(x, z, 15)) return 0;
   for (const wt of WATERS) if ((x - wt.x) ** 2 + (z - wt.z) ** 2 < (wt.r + 10) ** 2) return 0;
   if (Math.abs(x - CLIFF.x) < 14 && z > CLIFF.z0 && z < CLIFF.z1) return 0;
+  const w = countryWeights(x, z);
+  let t = 0;
+  for (let i = 0; i < LIST.length; i++) t += w[i] * LIST[i].trees;
+  t = 1 + (t - 1) * sstep(1150, 1700, r);
   const md = Math.hypot(x - MOUNT.x, z - MOUNT.z);
   if (md < MOUNT.R) t *= sstep(0.42, 0.62, md / MOUNT.R);
   return t;

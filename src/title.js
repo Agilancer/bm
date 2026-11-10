@@ -208,7 +208,7 @@ export class Title {
     this.main = el('div', 't-main', `
       <div class="t-logo t-mainlogo"><img alt="Bellmourn" src="${LOGOS.bellmourn}" draggable="false">
         <div class="t-shine" style="--m:url(${LOGOS.bellmourn})"><i></i></div><div class="t-glints"></div><div class="t-motes"></div></div>
-      <div class="t-under"><div class="t-status"><span></span><div class="t-bar"><i></i></div></div><nav class="t-menu"></nav></div>`);
+      <div class="t-under"><div class="t-status"><span></span><div class="t-bar"><i></i></div><em class="t-file"></em></div><nav class="t-menu"></nav></div>`);
     this.mainLogo = this.main.querySelector('.t-mainlogo');
     this.statusEl = this.main.querySelector('.t-status');
     this.menuEl = this.main.querySelector('.t-menu');
@@ -451,10 +451,12 @@ export class Title {
     }
   }
 
-  progress(pct) { this.status(`Loading… ${pct}%`, pct); }
+  /** How far the load is, and the file coming down (src/main.js). */
+  progress(pct, file = '') { this.status(`Loading… ${pct}%`, pct, file); }
 
-  status(text, pct = null) {
+  status(text, pct = null, file = '') {
     this.statusEl.querySelector('span').textContent = text;
+    this.statusEl.querySelector('.t-file').textContent = file;
     this.statusEl.classList.toggle('has-bar', pct != null);
     if (pct != null) this.statusEl.querySelector('.t-bar i').style.transform = `scaleX(${Math.max(0, Math.min(1, pct / 100))})`;
   }

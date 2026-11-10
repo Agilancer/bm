@@ -2,6 +2,7 @@
 // the portal, the rubble when it falls in, and the lights that go with each. Everything keys off the story's clock
 // (src/core/opening.js), so a replay or a skip lands on the same picture.
 import { accessor, parseGLB } from '../core/glb.js';
+import { getFile } from '../core/files.js';
 import { C, C_PROPS, C_SIZE, CHARS_START, H } from '../core/layout.js';
 import { damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatYaw, smoothstep, wrapAngle } from '../core/math.js';
 import {
@@ -464,9 +465,7 @@ const HER_BOARD = 'kite_tree';
 const item = (model, noShadow = true) => ({ openingModel: model, mat: new Float32Array(16), noShadow });
 
 async function loadBook(renderer, base) {
-  const response = await fetch(base + BOOK_ASSET);
-  if (!response.ok) throw new Error(`${BOOK_ASSET}: ${response.status}`);
-  const glb = parseGLB(await response.arrayBuffer());
+  const glb = parseGLB(await getFile(base + BOOK_ASSET));
   const pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
   const geo = [accessor(glb, pr.indices), accessor(glb, a.POSITION), accessor(glb, a.NORMAL), accessor(glb, a.TEXCOORD_0)];
   const mat = glb.json.materials[pr.material], pbr = mat.pbrMetallicRoughness;
@@ -493,19 +492,24 @@ const PORTAL_MESH = {
 };
 
 // ---- loading ------------------------------------------------------------------------------------------------------------
+// The cave's pictures and her book come in with everything else; what's given back makes the stage, once the renderer's arms
+// are built (her board, below, is one of its sword()s, which are fitted to them).
 export async function loadOpeningStage(renderer, base) {
   const scale = renderer.tier.texScale;
-  const tex = async (name, srgb) => renderer.bitmapTexture(await fetch(base + TEX + name + '.webp').then((r) => r.blob()), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale);
+  const tex = async (name, srgb) => renderer.bitmapTexture(await getFile(base + TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale);
   const flat = renderer.flatNormal || (renderer.flatNormal = renderer.pixel('rgba8unorm', [128, 128, 255, 255]));
   const rough = (r, m = 0) => renderer.pixel('rgba8unorm', [255, r, m, 255]);
+  const book = loadBook(renderer, base);
+  book.catch(() => {});
   const [rockC, rockD, earthC, earthD, rubbleC, rubbleD, woodC, woodD, clothC, clothD, paperC] = await Promise.all([
     tex('wall_rough_c', true), tex('wall_rough_d'), tex('cata_earth_c', true), tex('cata_earth_d'), tex('cata_rubble_c', true), tex('cata_rubble_d'),
     tex('wood_b1_c', true), tex('wood_b1_d'), tex('cloth_red_c', true), tex('cloth_red_d'),
     paperTexture().then((b) => renderer.bitmapTexture(b, 'rgba8unorm-srgb', 1)),
   ]);
+  const pages = await book;
   const props = clutter();
   const model = (prim, alb, nrm, mr, glow = [0, 0, 0, 0]) => renderer.lyingModel(prim, alb, nrm, mr, glow);
-  const stage = new OpeningStage(renderer, {
+  return () => new OpeningStage(renderer, {
     rock: item(model(caveRock(), rockC, rockD, rough(238)), false),
     floor: item(model(caveFloor(), earthC, earthD, rough(245))),
     rubble: item(model(caveRubble(), rubbleC, rubbleD, rough(240)), false),
@@ -516,8 +520,7 @@ export async function loadOpeningStage(renderer, base) {
     paper: item(model(props.paper, paperC, flat, rough(215))),
     wax: item(model(props.wax, renderer.pixel('rgba8unorm-srgb', [226, 210, 178, 255]), flat, rough(150), [0.05, 0.03, 0.01, 0.5])),
     portal: item(model(PORTAL_MESH, rockC, flat, rough(200), [0, 0, 0, -1])),
-  }, await loadBook(renderer, base));
-  return stage;
+  }, pages);
 }
 
 // ---- each frame -------------------------------------------------------------------------------------------------------

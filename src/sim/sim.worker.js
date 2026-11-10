@@ -12,6 +12,7 @@ import { STAFF_CORES } from '../items/staffcores.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
 import { parseGLB } from '../core/glb.js';
+import { getFile, watchFiles } from '../core/files.js';
 import { CHARS_START, CTRL, C, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, WEAPONS, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
 import { Casting } from './casting.js';
@@ -556,11 +557,8 @@ Sim.prototype.place = function (d) {
   self.postMessage({ type: 'look', yaw: d.yaw, pitch: d.pitch });
 };
 
-async function fetchBuf(path) {
-  const r = await fetch(path);
-  if (!r.ok) throw new Error(`${path}: ${r.status}`);
-  return r.arrayBuffer();
-}
+const fetchBuf = (path) => getFile(path);
+const fetchJSON = (path) => getFile(path, 'json');
 
 async function boot(msg) {
   const sim = new Sim();
@@ -576,13 +574,13 @@ async function boot(msg) {
   }
   sim.input[INPUT.YAW] = Math.PI;
   const [clipsMeta, clipsBin, black, silver, arms2h, arms1h, village, crabBuf, heartBuf, hydraBuf, spellAttack, spellRaise, armsStaff] = await Promise.all([
-    fetch(`${base}assets/game/clips.json`).then((r) => r.json()),
+    fetchJSON(`${base}assets/game/clips.json`),
     fetchBuf(`${base}assets/game/clips.bin`),
     fetchBuf(`${base}assets/game/velscour_knight.glb`),
     fetchBuf(`${base}assets/game/silver_knight.glb`),
     fetchBuf(`${base}assets/fp/arms_2h.glb`),
     fetchBuf(`${base}assets/fp/arms_1h.glb`),
-    fetch(`${base}assets/game/village.json`).then((r) => r.json()),
+    fetchJSON(`${base}assets/game/village.json`),
     fetchBuf(`${base}assets/monsters/crab_monster/crab_monster.glb`),
     fetchBuf(`${base}assets/monsters/gravehart/gravehart.glb`),
     fetchBuf(`${base}assets/monsters/bone_hydra/bone_hydra.glb`),
@@ -600,7 +598,7 @@ async function boot(msg) {
       box(at(0, -0.5), w + 0.8, 1.4, 3.5, { rubble: true }));
   }
   const bank = new ClipBank(clipsMeta, clipsBin);
-  sim.world = new World(village, await fetch(`${base}assets/game/interior/interior.json`).then((r) => r.json()));
+  sim.world = new World(village, await fetchJSON(`${base}assets/game/interior/interior.json`));
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
   sim.player.y = sim.world.height(sim.player.x, sim.player.z);
   sim.casting = new Casting({ attack: new ArmsRig(spellAttack), raise: new ArmsRig(spellRaise) });
@@ -634,16 +632,16 @@ async function boot(msg) {
   const townBufs = await Promise.all(TOWN_KNIGHTS.map((t) => fetchBuf(base + t.asset)));
   TOWN_KNIGHTS.forEach((t, i) => sim.knights.push(new Knight(sim.knights.length, t.kind, new Rig(parseGLB(townBufs[i]), bank), bank, t)));
   // The Tripo monsters' slots, empty until you come near a lair (src/sim/tripo.js).
-  const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
+  const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetchJSON(base + TRIPO_BASE + f)));
   const firstTripo = sim.knights.length;
   for (let i = 0; i < TRIPO_SLOTS; i++) sim.knights.push(new TripoEmpty(sim.knights.length));
   sim.tripo = new TripoWorld(sim, base, withVariants(tripoRoster), tripoPalettes, firstTripo, TRIPO_SLOTS);
   // The other Tessariels: the render thread chose who's in the world this session (src/core/heroes.js makeCast).
   if (msg.heroes?.length) {
     const [hMeta, hBin, kit] = await Promise.all([
-      fetch(`${base}assets/game/heroes/clips.json`).then((r) => r.json()),
+      fetchJSON(`${base}assets/game/heroes/clips.json`),
       fetchBuf(`${base}assets/game/heroes/clips.bin`),
-      fetch(`${base}assets/game/heroes/kit.json`).then((r) => r.json()),
+      fetchJSON(`${base}assets/game/heroes/kit.json`),
     ]);
     const heroBank = new ClipBank(hMeta, hBin);
     const bufs = await Promise.all(msg.heroes.map((p) => fetchBuf(`${base}assets/game/heroes/${p.body}.glb`)));
@@ -784,5 +782,7 @@ ${err.stack}` }); }
 self.addEventListener('message', (e) => {
   // Where the townsfolk stand (src/folk/layout.js bodies: x, z, radius, y), for the player to bump into.
   if (e.data.type === 'folk') { globalThis.folkBodies = mapFolk(e.data.buffer).bodies; return; }
+  // (What it fetches as it starts is named on the loading screen, with the render thread's own: src/core/files.js.)
+  if (e.data.type === 'boot') watchFiles((f) => self.postMessage({ type: 'file', name: f.name, state: f.state }));
   if (e.data.type === 'boot') boot(e.data).catch((err) => self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }));
 });

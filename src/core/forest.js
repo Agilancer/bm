@@ -1,5 +1,5 @@
 // The pines round the town: where they stand. Worked out the same on every thread, for the renderer to draw and the sim to bump into.
-import { CAVE_PATH, openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, segDist2, sstep, terrainHeight } from './terrain.js';
+import { openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, pathStretches, segDist2, sstep, terrainHeight } from './terrain.js';
 import { churchSite } from './church.js';
 import { oldChurchGround } from './town.js';
 import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, inCaveBox } from './opening.js';
@@ -25,13 +25,18 @@ function viewLane(x, z) {
   return sstep(half, half * 1.8, side);
 }
 
-const LONG_PATHS = PATHS.filter((p) => p.pts.length >= 5);
+// The long paths' stretches, each with the box past which a tree is clear of it (src/core/terrain.js pathStretches).
+const LONG_PATHS = pathStretches(PATHS.filter((p) => p.pts.length >= 5), (w) => w + 5.001);
 
 // How thick the forest would stand here, 0 to 1: nothing in the town's clearing, on the church's ground or the roads, or on top of the hill.
 export function forestAmount(x, z) {
   const r = Math.hypot(x, z);
-  const clearing = 64 + (fbm(x * 0.021 + 3, z * 0.021 + 7, 2) - 0.5) * 22;
-  let a = sstep(clearing, clearing + 16, r);
+  // (The clearing's edge is never past 86 m out, so beyond that there's no need to work out where it is.)
+  let a = 1;
+  if (r < 92) {
+    const clearing = 64 + (fbm(x * 0.021 + 3, z * 0.021 + 7, 2) - 0.5) * 22;
+    a = sstep(clearing, clearing + 16, r);
+  }
   if (a <= 0) return 0;
   // The church's ground, where it stands now and where it stood, which is the town's to build on: src/core/church.js, src/core/town.js.
   const site = Math.min(oldChurchGround(x, z), churchSite(x, z));
@@ -44,12 +49,11 @@ export function forestAmount(x, z) {
   if (openingTerrain && inCaveBox(x, z, 7)) return 0;
   if (openingTerrain) { a *= viewLane(x, z); if (a <= 0) return 0; }
   if (r < 260) {
-    for (const p of LONG_PATHS) {
-      if (p === CAVE_PATH && !openingTerrain) continue;
-      for (let i = 0; i + 1 < p.pts.length; i++) {
-        const [ax, az] = p.pts[i], [bx, bz] = p.pts[i + 1];
-        if (segDist2(x, z, ax, az, bx, bz) < (p.w + 5) * (p.w + 5)) return 0;
-      }
+    for (let i = 0; i < LONG_PATHS.length; i++) {
+      const s = LONG_PATHS[i];
+      if (x < s.x0 || x > s.x1 || z < s.z0 || z > s.z1) continue;
+      if (s.cave && !openingTerrain) continue;
+      if (segDist2(x, z, s.ax, s.az, s.bx, s.bz) < (s.w + 5) * (s.w + 5)) return 0;
     }
   }
   if (x < -10) {
