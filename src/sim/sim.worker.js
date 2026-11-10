@@ -12,7 +12,7 @@ import { STAFF_CORES } from '../items/staffcores.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
 import { parseGLB } from '../core/glb.js';
-import { CHARS_START, CTRL, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, WEAPONS, mapShared } from '../core/layout.js';
+import { CHARS_START, CTRL, C, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, WEAPONS, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
 import { Casting } from './casting.js';
 import { CRAB_SCALE, Crab } from './crab.js';
@@ -35,6 +35,7 @@ import { Slimes } from './slimes.js';
 import { Tumblers } from './tumblers.js';
 import { TripoEmpty, TripoWorld } from './tripo.js';
 import { Warrens } from './dungeon.js';
+import { foeOf } from './foes.js';
 import { PORTAL, inDungeon } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 import { TestHall } from './testhall.js';
@@ -175,6 +176,23 @@ class Sim {
     snap[H.TP_SIDE] = side; snap[H.TP_DROP] = drop;
     this.sight = this.sight || [0, 0, 0];
     this.sight[0] = px; this.sight[1] = py; this.sight[2] = pz;
+  }
+
+  // Who each body is after (C.AFTER): a monster's mark (src/sim/foes.js), a hero's foe. Auto-play reads it to take what's on
+  // its healer, and to shoot what its tank is holding (src/ui/autobrain.js).
+  writeAfter(snap, nk) {
+    const at = this.afterIx || (this.afterIx = new Map()), p = this.player;
+    at.clear();
+    this.knights.forEach((k, i) => at.set(k, i));
+    this.heroes.forEach((h, i) => at.set(h, nk + i));
+    this.knights.forEach((k, i) => {
+      let w = -2;
+      if (!k.dead && (k.aggro || k.hostile)) { const f = foeOf(k, this); w = f === p ? -1 : at.get(f) ?? -2; }
+      snap[this.charOffset(i) + C.AFTER] = w;
+    });
+    this.heroes.forEach((h, i) => { snap[this.charOffset(nk + i) + C.AFTER] = h.foe && !h.foe.dead ? at.get(h.foe) ?? -2 : -2; });
+    const nv = this.villagers.length;
+    for (let i = 0; i < nv; i++) snap[this.charOffset(nk + this.heroes.length + i) + C.AFTER] = -2;
   }
 
   // Whatever a spell can hit: the knights and the dead, and the slimes (src/sim/slimes.js). Made once a tick.
@@ -333,6 +351,7 @@ class Sim {
     const nk = this.knights.length, nh = this.heroes.length;
     this.heroes.forEach((h, i) => h.write(snap, this.charOffset(nk + i), this));
     this.villagers.forEach((v, i) => { v.mouth = input[INPUT.MOUTH]; v.write(snap, this.charOffset(nk + nh + i)); });
+    this.writeAfter(snap, nk);
     if (this.opening) this.opening.write(snap, H);
     else snap[H.OPENING] = OPENING.OFF;
     player.sweep(snap, this);

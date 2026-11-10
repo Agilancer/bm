@@ -43,6 +43,9 @@ fn caveAt(p: vec3f) -> f32 {
 }`;
 })();
 
+// How many lamps a frame can light (Frame.lights below; renderer.js and spellfx.js fill them).
+export const MAX_LIT = 36;
+
 export const COMMON = /* wgsl */ `
 struct Light { posR: vec4f, colI: vec4f };
 struct Frame {
@@ -66,7 +69,7 @@ struct Frame {
   ground: vec4f,          // ground map: min x, min z, 1/size, grass tint
   blood: vec4f,           // blood map: min x, min z, 1/size, whether there's bloom
   chars: array<vec4f, 6>, // bodies pressing the grass
-  lights: array<Light, 28>,
+  lights: array<Light, ${MAX_LIT}>,
   counts: vec4f,          // x = lights, y = cascades, z = pom, w = grass near radius
   caveAmb: vec4f,         // Lisandra's cave: its own ambient light, w = whether it's there at all
 };

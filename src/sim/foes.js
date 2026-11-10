@@ -4,6 +4,10 @@
 export const FOE_MEMORY = 8;
 
 export function foeOf(m, sim) {
+  // Turned on someone of its own accord: down the Warrens a boss, or one of a pack, now and then breaks from the tank and
+  // comes for you (src/sim/dungeon.js turnOn, stepPacks). Nothing holds it till that passes.
+  const o = m.fixOn;
+  if (o && !o.dead && sim.time < m.fixT) return o;
   // Held by a tank of your party (src/sim/hero.js companion): it goes for them, whoever else is hitting it.
   const t = m.tauntBy;
   if (t && !t.dead && !t.hidden && !t.surf && sim.time < m.tauntT) return t;

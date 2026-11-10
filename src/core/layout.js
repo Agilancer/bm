@@ -67,7 +67,10 @@ export const C = {
   ACTIVE: 0, KIND: 1, X: 2, Y: 3, Z: 4, YAW: 5, HP: 6, MAX_HP: 7, BLEED: 8, STATE: 9, GASH_VERSION: 10, GASH_COUNT: 11,
   N_BLEEDS: 12, HOSTILE: 13, STAM: 14, SPEED: 15, GLINT: 16, HEART: 17, ARMOR: 18, LANDED: 19, CUT: 20,
   // A Tripo monster's slot (src/sim/tripo.js): which model, 1 + its place in roster.json (0: none), and which palette.
-  MODEL: 21, PAL: 22, SIZE_HEAD: 23,
+  MODEL: 21, PAL: 22,
+  // Who it's after, by its place in the snapshot: -1 the player, -2 no one. A monster's mark, or one of the other
+  // Tessariels' foe (written in src/sim/sim.worker.js; read by auto-play to help its party, src/ui/autobrain.js).
+  AFTER: 23, SIZE_HEAD: 24,
 };
 export const C_PALETTE = C.SIZE_HEAD;
 export const C_PROPS = C_PALETTE + MAX_JOINTS * 8;

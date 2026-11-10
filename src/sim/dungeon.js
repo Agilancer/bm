@@ -6,12 +6,13 @@
 // do about each. What lands on the ground is a hazard here: a circle that's drawn first, then goes off (rocks), or a patch
 // that burns while you stand in it (fire, acid). The hired party (src/sim/hero.js companion) reads the same hazards and
 // the same calls: out of the circles, at the dragon's sides, behind a pillar.
-import { ADDS, BOSSES, DELVE, ENTRY, EXIT_IN, EXIT_OUT, HOLES, PARTY, PERCH, PILLARS, PORTAL, caveClear, caveFloorY, caveRoom, inDungeon, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
+import { ADDS, BOSSES, DELVE, ENTRY, EXIT_IN, EXIT_OUT, HOLES, PARTY, PERCH, PILLARS, PORTAL, TURN_WARN, caveClear, caveFloorY, caveRoom, inDungeon, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
 import { EV, INPUT } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
 import { terrainHeight } from '../core/terrain.js';
 import { ELEM, FX } from './spells.js';
 import { TripoMonster } from './tripo.js';
+import { foeOf } from './foes.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -99,6 +100,7 @@ export class Warrens {
     if (t && (sim.tick & 31) === 0) for (const l of t.lairs) if (l.dungeon && !l.add && l.state === 'cleared') l.clearedOnce = true;
     if (!this.inside) { if (this.hazards.length) this.hazards.length = 0; this.fight = null; return; }
     this.stepHazards(dt);
+    this.stepPacks(dt);
     this.stepBosses(dt);
     this.post(dt);
   }
@@ -278,7 +280,44 @@ export class Warrens {
         this.fight.t += dt;
         for (const m of live) { m.aggro = true; if (Math.hypot(m.x - rx, m.z - rz) > R + 6 && !m.flying) { m.vx = (rx - m.x) * 0.3; } }
         this[b.key](dt, this.fight, live);
+        this.turnOn(this.fight, live);
       } else if (!this.fight && dRoom < R - BOSS_ROOM_PAD && live.some((m) => !m.aggro)) for (const m of live) m.notice(sim);
+    }
+  }
+
+  // Now and then the boss turns from the tank and comes for you: called out first, a moment to get behind the tank or out
+  // of its reach, then a few seconds when nothing holds it (foeOf). Not while it flies, spins or breathes, and not if
+  // you're on your own (then it's on you anyway).
+  turnOn(f, live) {
+    const sim = this.sim, p = sim.player, now = sim.time, t = f.turn;
+    if (t) {
+      if (!t.on && now >= t.at && !t.m.dead) { t.on = true; t.m.fixOn = p; t.m.fixT = t.until; sim.event(EV.ROAR, t.m.x, t.m.y + 2, t.m.z, 1.1); }
+      if (now >= t.until || t.m.dead || p.dead) { t.m.fixOn = null; f.turn = null; }
+      return;
+    }
+    if (p.dead || !this.party().some((h) => !h.dead)) return;
+    const able = live.filter((m) => !m.flying && !m.spin && !m.breathing && !m.script);
+    if (!able.length || !this.every(f, 'turn', f.boss.key === 'venomaw' ? 22 : 17)) return;
+    const m = pick(able), wait = 1.3;
+    f.turn = { m, at: now + wait, until: now + wait + (f.boss.key === 'venomaw' ? 4 : 5), on: false };
+    this.warn(TURN_WARN[f.boss.key]);
+  }
+
+  // The packs' kobolds and goblins mostly keep to the tank once he has them, but now and then one breaks off and comes
+  // for you for a few seconds (two at most at once, and only one that's near): hold your ground, or get back to him. The
+  // tank goes after whatever's loose (src/sim/hero.js pickFoe), and takes it back when it lets go.
+  stepPacks(dt) {
+    const sim = this.sim, p = sim.player, t = sim.tripo, now = sim.time;
+    if (!t || p.dead || !this.party().some((h) => !h.dead)) return;
+    const list = t.slots().filter((k) => k instanceof TripoMonster && k.lair?.dungeon && !k.boss && !k.dead && k.aggro && !k.script);
+    let on = list.filter((k) => k.fixOn === p && now < k.fixT).length;
+    for (const k of list) {
+      k.turnCd = (k.turnCd ?? rnd(5, 12)) - dt;
+      if (k.turnCd > 0) continue;
+      k.turnCd = rnd(9, 16);
+      if (on >= 2 || Math.hypot(k.x - p.x, k.z - p.z) > 24 || foeOf(k, sim) === p || Math.random() > 0.45) continue;
+      k.fixOn = p; k.fixT = now + rnd(3.5, 5.5); on++;
+      sim.event(EV.ROAR, k.x, k.y + 1.2, k.z, 0.6);
     }
   }
 
@@ -309,7 +348,7 @@ export class Warrens {
     const sim = this.sim, [rx, , rz] = roomSpot(b.room);
     for (const m of live) {
       m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.home = [rx, rz];
-      m.x = rx + rnd(-2, 2); m.z = rz + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null;
+      m.x = rx + rnd(-2, 2); m.z = rz + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
     }
     // (Its adds go with it.)
     for (const a of this.adds()) a.hp = 0;
@@ -448,7 +487,8 @@ export class Warrens {
       return;
     }
     // On the ground: the breath at the tank, the tail at whoever's behind, acid at someone.
-    if (!m.breathing && m.state === 0 && this.every(f, 'breath', f.phase === 2 ? 10 : 13)) {
+    // (Not while she's turned on you: her head's away from the tank, and a breath then would be the end of you.)
+    if (!m.breathing && m.state === 0 && !f.turn?.on && this.every(f, 'breath', f.phase === 2 ? 10 : 13)) {
       this.warn(8);
       // (Her own breath, at whoever she's on: src/sim/tripo.js BREATH. The cone below is for everyone else in front of her.)
       m.breathing = true; m.state = 4; m.setClip(m.rig.clips.breath2 && Math.random() < 0.4 ? 'breath2' : 'breath');
@@ -573,7 +613,7 @@ export class Warrens {
     const f = this.fight;
     self.postMessage({
       type: 'warrens', inside: true, down: [...this.down],
-      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, breathing: !!m.breathing, spin: m.spin > 0 })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
+      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
       hazards: this.hazards.map((h) => ({ x: h.x, z: h.z, r: h.r, live: h.kind === 'pool' ? h.t >= h.fuse : true })),
     });
   }

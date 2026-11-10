@@ -17,6 +17,9 @@ export const FX = {
   ORB: 0, BEAM: 1, BOLT: 2, RING: 3, DISC: 4, FLAME: 5, PUFF: 6, FLARE: 7, TRAIL: 8, RUNE: 9, COLUMN: 10, VORTEX: 11, SHOCK: 12, KITE: 13,
   ICE: 16, SPIKE: 17, LANCE: 18, BLADE: 19, ROCK: 20, FLASK: 21, LIGHT: 31,
 };
+// A LIGHT with this as its extra is one somebody carries (your party's: src/sim/hero.js partyLights). The renderer keeps
+// them a place among the frame's lights of their own, ahead of the spells' (src/gfx/spellfx.js), so they're never crowded out.
+export const FX_CARRIED = 7;
 
 const { FIRE, FROST, ARCANE, STORM, HEAL, LIGHT, DRAIN, BONE, VOID, POISON, SPIRIT, STONE } = ELEM;
 
