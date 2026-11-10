@@ -1,0 +1,2754 @@
+[
+ {
+  "voice": "LisandraWitch",
+  "key": "26rw5r4epli",
+  "text": "…Oh.",
+  "type": "calm",
+  "take": "1",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.77",
+   "pace -54%",
+   "0.72 s a syllable",
+   "likeness 0.602"
+  ],
+  "median_hz": 195,
+  "likeness": 0.602
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "j8d0fbs593",
+  "text": "You can see me.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.94",
+   "likeness 0.758"
+  ],
+  "median_hz": 203,
+  "likeness": 0.758
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1172wi5pi2r",
+  "text": "Not the pretty one. Me.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.92",
+   "pace -46%",
+   "likeness 0.804"
+  ],
+  "median_hz": 222,
+  "likeness": 0.804
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "15r1n3bq482",
+  "text": "Oh, no.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.83",
+   "0.49 s a syllable",
+   "likeness 0.657"
+  ],
+  "median_hz": 182,
+  "likeness": 0.657
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1js3mgu49cx",
+  "text": "Hold still. It doesn’t hurt. It never hurts.",
+  "type": "calm",
+  "take": "a",
+  "status": "approved",
+  "takes_made": 0,
+  "takes_wanted": 8,
+  "fails": [
+   "voiced 0.50",
+   "pace -32%"
+  ],
+  "median_hz": 222,
+  "likeness": 0.868
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "mxvxdp6su3",
+  "text": "There’s meant to be a look now. Soft. Grateful. Like a calf at a gate.",
+  "type": "calm",
+  "take": "1",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 209,
+  "likeness": 0.884
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1lj2o63a9hs",
+  "text": "Not you. You’re still in there, looking back.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -30%"
+  ],
+  "median_hz": 222,
+  "likeness": 0.882
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "14mnzhrkgts",
+  "text": "Forty-three before you. Every one got the snap, the lights, and a pretty girl telling them who they were.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 184,
+  "likeness": 0.901
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "23bbydp23on",
+  "text": "And every one of them believed it. I made sure.",
+  "type": "calm",
+  "take": "1",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 211,
+  "likeness": 0.895
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1xra3mtxjab",
+  "text": "I won’t have to make you believe anything. Will I.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.79"
+  ],
+  "median_hz": 189,
+  "likeness": 0.869
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "244m1jmyfap",
+  "text": "Nobody has ever seen through that face.",
+  "type": "calm",
+  "take": "1",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 242"
+  ],
+  "median_hz": 242,
+  "likeness": 0.842
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "oyoqk2yc5b",
+  "text": "Kings have kissed this hand and called it soft.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 180",
+   "voiced 0.39",
+   "flatness 0.018",
+   "low band 0.67"
+  ],
+  "median_hz": 180,
+  "likeness": 0.869
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "myhc3nqn2v",
+  "text": "The face held while your eyes were still waking.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 203,
+  "likeness": 0.916
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "b9ao9g3kqf",
+  "text": "The old songs give one pair of eyes that no glamour fools. The light that does not set.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -26%"
+  ],
+  "median_hz": 219,
+  "likeness": 0.904
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "2bic7tcxfbq",
+  "text": "That door was dark from the night the sky burned. It woke a season ago.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.70"
+  ],
+  "median_hz": 185,
+  "likeness": 0.885
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "25890r6e9cg",
+  "text": "It drops the others in a ditch somewhere. Or a pigsty. It put you in my circle.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 201,
+  "likeness": 0.889
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "18d5jfp8sou",
+  "text": "You’re not some poor farmer I dressed up in a prophecy.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace +38%"
+  ],
+  "median_hz": 218,
+  "likeness": 0.877
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "7osuumob4d",
+  "text": "And the songs say you only come back when the dark is at its worst. Not a day before.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.69"
+  ],
+  "median_hz": 195,
+  "likeness": 0.916
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "13ht534atm7",
+  "text": "And you see everything as it is. Me included.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 229",
+   "low band 0.71"
+  ],
+  "median_hz": 229,
+  "likeness": 0.881
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "2a3osbcl7ii",
+  "text": "Two hundred years ago, you walked out of the sunrise and broke Velscour on his own throne.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 205,
+  "likeness": 0.953
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "2futjamjw7f",
+  "text": "You swore that if he ever rose again, you’d come back.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 213,
+  "likeness": 0.941
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1o1k18bdyd2",
+  "text": "He rose. Slowly.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.70",
+   "pace -42%",
+   "0.58 s a syllable",
+   "likeness 0.825"
+  ],
+  "median_hz": 183,
+  "likeness": 0.825
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1bnnzd6dob",
+  "text": "And here you are. You kept your word.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.71",
+   "pace -49%",
+   "likeness 0.817"
+  ],
+  "median_hz": 219,
+  "likeness": 0.817
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "okpfzkwhvc",
+  "text": "Tessariel.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "words",
+   "pace -71%",
+   "1.15 s a syllable",
+   "likeness 0.778"
+  ],
+  "median_hz": 216,
+  "likeness": 0.778
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "2bki9n93bpj",
+  "text": "I’m Lisandra. You won’t remember me.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.80",
+   "pace -31%",
+   "likeness 0.813"
+  ],
+  "median_hz": 208,
+  "likeness": 0.813
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1dk94pws12e",
+  "text": "I held your lantern on the last night of the war, the night the sky burned.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 222,
+  "likeness": 0.882
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "xongnwwyt1",
+  "text": "The girl you saw was me. That was my face, the last time you saw it.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 213,
+  "likeness": 0.921
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "12guqouymxs",
+  "text": "The door keeps me alive while I keep it. It never promised to keep me young.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 216,
+  "likeness": 0.907
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "dc4vwro8zx",
+  "text": "Down here, out of the sun, the dark keeps count.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 237",
+   "p90 291",
+   "low band 0.21",
+   "likeness 0.836"
+  ],
+  "median_hz": 237,
+  "likeness": 0.836
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1pzmhm25pki",
+  "text": "And nobody follows a crone into a war. So I wear the girl.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 222,
+  "likeness": 0.899
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1qj2tx0j90g",
+  "text": "Before I carried your lantern, I was his.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 235",
+   "p90 291",
+   "low band 0.22"
+  ],
+  "median_hz": 235,
+  "likeness": 0.862
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "q31p1up13t",
+  "text": "Velscour’s.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.18",
+   "pace -64%",
+   "0.93 s a syllable"
+  ],
+  "median_hz": 205,
+  "likeness": 0.864
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "28n5c0u5ano",
+  "text": "He taught me the snap. Every candle in a winter market, all lit at once, just to make me laugh.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "p90 296"
+  ],
+  "median_hz": 219,
+  "likeness": 0.873
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "b0rx61w3q9",
+  "text": "He was a healer, once.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 213,
+  "likeness": 0.842
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1znq2jnfj2j",
+  "text": "The horns came later.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.82",
+   "likeness 0.785"
+  ],
+  "median_hz": 193,
+  "likeness": 0.785
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1h7v6xq8jmk",
+  "text": "And then there’s that.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "voiced 0.32",
+   "flatness 0.025",
+   "low band 0.64",
+   "pace -65%",
+   "0.94 s a syllable",
+   "likeness 0.677"
+  ],
+  "median_hz": 186,
+  "likeness": 0.677
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "15y9h53iski",
+  "text": "I gave them swords, spears, bows. One asked for a lute. One asked for a boomerang, and I still don’t know why.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "words"
+  ],
+  "median_hz": 208,
+  "likeness": 0.86
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "z9kiphokp3",
+  "text": "I sent them all out in your colours, so he’d chase forty-three Tessariels and never find you.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 193,
+  "likeness": 0.883
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1kxbptw97jd",
+  "text": "Not one of them came through with fire in their hands.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.31"
+  ],
+  "median_hz": 222,
+  "likeness": 0.86
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "6hj9cr70z",
+  "text": "Nobody’s been born with magic since you broke him. He drank every spark to live.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.71"
+  ],
+  "median_hz": 195,
+  "likeness": 0.878
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1zi8tk9jqz6",
+  "text": "All but a few old tricks, like mine.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -45%"
+  ],
+  "median_hz": 211,
+  "likeness": 0.884
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "22j4ct2lev0",
+  "text": "Every spark you throw is one he’s lost. He’ll know it, on his throne.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.73",
+   "pace -30%",
+   "likeness 0.836"
+  ],
+  "median_hz": 190,
+  "likeness": 0.836
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "j5xq4xx0z2",
+  "text": "A thing like him doesn’t feel its grip slip and let go. It squeezes.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.67",
+   "pace -29%"
+  ],
+  "median_hz": 216,
+  "likeness": 0.874
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1s61675ad8a",
+  "text": "Mothers will hide their children in root cellars, and the cellars won’t be deep enough.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 216,
+  "likeness": 0.881
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1nexbpl0qlm",
+  "text": "His bell already rings at midnight with no hand on the rope. Soon it’ll ring at noon.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 211,
+  "likeness": 0.878
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "cw583xu3hk",
+  "text": "His knights will stop guarding doors, and start kicking them in.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 213,
+  "likeness": 0.84
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1gmfiqd29dv",
+  "text": "Three heads in his Rift, and all of them hungry.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 198,
+  "likeness": 0.91
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "l59i16h9ah",
+  "text": "The dead will come up under Bellmourn.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 172",
+   "low band 0.74"
+  ],
+  "median_hz": 172,
+  "likeness": 0.869
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "89j43541yv",
+  "text": "They won’t wait for dark.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "likeness 0.836"
+  ],
+  "median_hz": 203,
+  "likeness": 0.836
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1bpkw98k3xv",
+  "text": "And he’ll send it all after you. Every knight. Every dead thing. Every—",
+  "type": "shout",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [],
+  "median_hz": 225,
+  "likeness": 0.857
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "byl26qj241",
+  "text": "…I’m doing it again.",
+  "type": "quiet",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 239",
+   "low band 0.79",
+   "likeness 0.783"
+  ],
+  "median_hz": 239,
+  "likeness": 0.783
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "ebq3fu2oz1",
+  "text": "Two hundred years, and nobody to say it to.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.74"
+  ],
+  "median_hz": 213,
+  "likeness": 0.872
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1mrwiigrfwa",
+  "text": "So. The real one. Of all the times to get it right.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 254",
+   "p90 320",
+   "low band 0.15"
+  ],
+  "median_hz": 254,
+  "likeness": 0.84
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "yf4it4v68y",
+  "text": "Go down to Bellmourn. Learn what those hands can do. And then finish him.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.65"
+  ],
+  "median_hz": 205,
+  "likeness": 0.868
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "16hrkq8onp2",
+  "text": "I can’t come with you. Somebody has to mind the door.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 235",
+   "p90 296"
+  ],
+  "median_hz": 235,
+  "likeness": 0.844
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "29dw8kisrp4",
+  "text": "Your name. The one you were born with. The others, I named.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 176",
+   "low band 0.67",
+   "likeness 0.821"
+  ],
+  "median_hz": 176,
+  "likeness": 0.821
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1q9gtygxd82",
+  "text": "It’s your own name.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 242",
+   "low band 0.77",
+   "likeness 0.796"
+  ],
+  "median_hz": 242,
+  "likeness": 0.796
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1t4khpt33y",
+  "text": "You’ve had it all your life.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 229",
+   "p90 291",
+   "low band 0.23"
+  ],
+  "median_hz": 229,
+  "likeness": 0.843
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "oisrri8eo9",
+  "text": "Take your time. The door won’t.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -34%"
+  ],
+  "median_hz": 205,
+  "likeness": 0.859
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "24o3zgc8ql",
+  "text": "Lovely.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "words",
+   "low band 0.86",
+   "pace -62%",
+   "0.88 s a syllable",
+   "likeness 0.739"
+  ],
+  "median_hz": 211,
+  "likeness": 0.739
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "167i9pg5qa2",
+  "text": "Out’s through there.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 320",
+   "p90 432",
+   "low band 0.18",
+   "pace -46%",
+   "0.61 s a syllable",
+   "likeness 0.687"
+  ],
+  "median_hz": 320,
+  "likeness": 0.687
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "apwef6qrsg",
+  "text": "Go on. And stop looking at me. I know what you see.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.67",
+   "pace -34%"
+  ],
+  "median_hz": 195,
+  "likeness": 0.865
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1kdk1gnqaw1",
+  "text": "No. No, no, no.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.81",
+   "0.55 s a syllable",
+   "likeness 0.627"
+  ],
+  "median_hz": 219,
+  "likeness": 0.627
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "9dslty6d9f",
+  "text": "Not that way, dear. Back down the tunnel with you.",
+  "type": "order",
+  "take": "a",
+  "status": "approved",
+  "takes_made": 0,
+  "takes_wanted": 16,
+  "fails": [],
+  "median_hz": 213,
+  "likeness": 0.895
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1ehutc9lahz",
+  "text": "I said out. Back down that tunnel before I lose my temper.",
+  "type": "raised",
+  "take": "a",
+  "status": "approved",
+  "takes_made": 0,
+  "takes_wanted": 16,
+  "fails": [],
+  "median_hz": 216,
+  "likeness": 0.867
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "2abk1plvu2l",
+  "text": "I’ll see you as far as the ledge. Then I’ve a door to mind.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 225,
+  "likeness": 0.873
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "17vi3x3xvqf",
+  "text": "Hold. Please hold. Not now…",
+  "type": "off",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -67%"
+  ],
+  "median_hz": 211,
+  "likeness": 0.859
+ },
+ {
+  "voice": "Lisandra",
+  "key": "14mdtve5rsu",
+  "text": "…by the light that does not set… cross over. Come home.",
+  "type": "vo",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 157",
+   "pace -39%"
+  ],
+  "median_hz": 157,
+  "likeness": 0.842
+ },
+ {
+  "voice": "Lisandra",
+  "key": "f16er672g6",
+  "text": "Shh. Everyone’s frightened at first.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 160"
+  ],
+  "median_hz": 160,
+  "likeness": 0.845
+ },
+ {
+  "voice": "Lisandra",
+  "key": "gvgjhnjpy1",
+  "text": "There you are. Easy. Breathe.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 186",
+   "pace -48%",
+   "likeness 0.817"
+  ],
+  "median_hz": 186,
+  "likeness": 0.817
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1r7qffb60uv",
+  "text": "You’ve come such a long way to find me. Further than you know.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 186",
+   "low band 0.68",
+   "likeness 0.812"
+  ],
+  "median_hz": 186,
+  "likeness": 0.812
+ },
+ {
+  "voice": "Lisandra",
+  "key": "28kdhufdxvj",
+  "text": "Don’t get up yet. Just look at me.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -52%"
+  ],
+  "median_hz": 198,
+  "likeness": 0.859
+ },
+ {
+  "voice": "Lisandra",
+  "key": "hlz4km6ojp",
+  "text": "Now, then. Let me tell you who you are—",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 184",
+   "low band 0.63",
+   "pace -35%"
+  ],
+  "median_hz": 184,
+  "likeness": 0.87
+ },
+ {
+  "voice": "Lisandra",
+  "key": "xqw6llmwnq",
+  "text": "What have you done?!",
+  "type": "shout",
+  "take": "a",
+  "status": "approved",
+  "takes_made": 0,
+  "takes_wanted": 16,
+  "fails": [
+   "peak 364"
+  ],
+  "median_hz": 216,
+  "likeness": 0.869
+ },
+ {
+  "voice": "Lisandra",
+  "key": "ztulkmfzkl",
+  "text": "Two hundred years I held that door open. You walk through it once, and it lets go.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -26%"
+  ],
+  "median_hz": 204,
+  "likeness": 0.848
+ },
+ {
+  "voice": "Lisandra",
+  "key": "216r5qh08mz",
+  "text": "It was only ever waiting for you.",
+  "type": "quiet",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 264",
+   "p90 333",
+   "low band 0.15",
+   "pace -41%",
+   "likeness 0.759"
+  ],
+  "median_hz": 264,
+  "likeness": 0.759
+ },
+ {
+  "voice": "Lisandra",
+  "key": "23uvoxah8ql",
+  "text": "…Why are you looking at me like that?",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.24",
+   "likeness 0.816"
+  ],
+  "median_hz": 213,
+  "likeness": 0.816
+ },
+ {
+  "voice": "Lisandra",
+  "key": "hsx6wmn2ng",
+  "text": "…Oh. The sun’s up.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 180",
+   "low band 0.92",
+   "likeness 0.705"
+  ],
+  "median_hz": 180,
+  "likeness": 0.705
+ },
+ {
+  "voice": "Lisandra",
+  "key": "2eq13llc7t7",
+  "text": "No. Don’t answer that.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 150",
+   "low band 0.63",
+   "pace -54%",
+   "0.50 s a syllable",
+   "likeness 0.840"
+  ],
+  "median_hz": 150,
+  "likeness": 0.84
+ },
+ {
+  "voice": "Lisandra",
+  "key": "hnm51al9va",
+  "text": "I seem to have lost my home.",
+  "type": "quiet",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 250",
+   "pace -32%",
+   "likeness 0.769"
+  ],
+  "median_hz": 250,
+  "likeness": 0.769
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1qrphfvf8ny",
+  "text": "Bellmourn, then. You’re taking me there.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -35%",
+   "likeness 0.790"
+  ],
+  "median_hz": 213,
+  "likeness": 0.79
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1lil12jojrh",
+  "text": "Somebody has to get you down this road alive.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 195,
+  "likeness": 0.899
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1cwut7ngmsb",
+  "text": "Down there I’m Old Lis. Old Lis is what they’ll see.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 254",
+   "p90 327",
+   "low band 0.13",
+   "pace -43%"
+  ],
+  "median_hz": 254,
+  "likeness": 0.888
+ },
+ {
+  "voice": "Lisandra",
+  "key": "17zf6g306m5",
+  "text": "This way. Stay close, and mind the edge.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 173",
+   "pace -48%"
+  ],
+  "median_hz": 173,
+  "likeness": 0.871
+ },
+ {
+  "voice": "Lisandra",
+  "key": "24j3rx2y3um",
+  "text": "No door to keep me now. One day I’ll die, like everyone else. I’d quite forgotten.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 205,
+  "likeness": 0.854
+ },
+ {
+  "voice": "Lisandra",
+  "key": "o4k76ogb2r",
+  "text": "The others would be making a speech by now. Every one of them.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 186"
+  ],
+  "median_hz": 186,
+  "likeness": 0.86
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1pothau1t1r",
+  "text": "You don’t say much, do you? I like that in a legend.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 188"
+  ],
+  "median_hz": 188,
+  "likeness": 0.864
+ },
+ {
+  "voice": "Lisandra",
+  "key": "bn29zhp3wc",
+  "text": "He used to laugh at his own jokes. Velscour. Before he’d finished telling them.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 170"
+  ],
+  "median_hz": 170,
+  "likeness": 0.883
+ },
+ {
+  "voice": "Lisandra",
+  "key": "16u8d3m773p",
+  "text": "I laughed too. Every time.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 187",
+   "low band 0.21",
+   "likeness 0.807"
+  ],
+  "median_hz": 187,
+  "likeness": 0.807
+ },
+ {
+  "voice": "Lisandra",
+  "key": "24rbth73nne",
+  "text": "Two hundred years in that cave. I had it just how I liked it.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -33%"
+  ],
+  "median_hz": 211,
+  "likeness": 0.884
+ },
+ {
+  "voice": "Lisandra",
+  "key": "vcyuzlaval",
+  "text": "My good kettle’s under that rock. And my books. And my other kettle.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.22"
+  ],
+  "median_hz": 195,
+  "likeness": 0.858
+ },
+ {
+  "voice": "Lisandra",
+  "key": "16y7muo8qno",
+  "text": "Don’t look at me like that. It’s the dust. I am not crying.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.20"
+  ],
+  "median_hz": 193,
+  "likeness": 0.889
+ },
+ {
+  "voice": "Lisandra",
+  "key": "172kwu8hteb",
+  "text": "The last one who stopped to admire this view went over that edge.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -25%",
+   "likeness 0.826"
+  ],
+  "median_hz": 219,
+  "likeness": 0.826
+ },
+ {
+  "voice": "Lisandra",
+  "key": "2cbz8df8kob",
+  "text": "Bellmourn’s at the bottom. Bells, mud and gossip. You’ll love it.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.16",
+   "pace -30%"
+  ],
+  "median_hz": 219,
+  "likeness": 0.911
+ },
+ {
+  "voice": "Lisandra",
+  "key": "dcrjacf3z",
+  "text": "Stay on the road. The dead in those pines don’t read prophecies.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 163",
+   "pace -45%"
+  ],
+  "median_hz": 163,
+  "likeness": 0.895
+ },
+ {
+  "voice": "Lisandra",
+  "key": "qvx6sctqw9",
+  "text": "There! In the trees! Don’t let them close!",
+  "type": "call",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [
+   "pace -49%"
+  ],
+  "median_hz": 190,
+  "likeness": 0.828
+ },
+ {
+  "voice": "Lisandra",
+  "key": "11wjk65bnvw",
+  "text": "Burn them! That’s what the hands are for!",
+  "type": "call",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [],
+  "median_hz": 192,
+  "likeness": 0.829
+ },
+ {
+  "voice": "Lisandra",
+  "key": "99c6e15z7t",
+  "text": "…You’ll do.",
+  "type": "quiet",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 172",
+   "low band 0.80",
+   "pace -68%",
+   "0.73 s a syllable",
+   "likeness 0.712"
+  ],
+  "median_hz": 172,
+  "likeness": 0.712
+ },
+ {
+  "voice": "Lisandra",
+  "key": "y3sr00zegg",
+  "text": "Velscour sat up with the dying every night, and held their hands until they went cold.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 163",
+   "pace -31%"
+  ],
+  "median_hz": 163,
+  "likeness": 0.887
+ },
+ {
+  "voice": "Lisandra",
+  "key": "165zatl69z6",
+  "text": "Then he lost a little girl he’d sat with nine nights, and decided death was a door he could close.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 208,
+  "likeness": 0.898
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1lo5p0c2ppu",
+  "text": "So he closed it. When you broke him, it swung open.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 157",
+   "low band 0.79",
+   "pace -34%",
+   "likeness 0.770"
+  ],
+  "median_hz": 157,
+  "likeness": 0.77
+ },
+ {
+  "voice": "Lisandra",
+  "key": "q1mqxp8oiy",
+  "text": "Now he’s leaning on it again. That’s why the dead here won’t lie still.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 227,
+  "likeness": 0.857
+ },
+ {
+  "voice": "Lisandra",
+  "key": "25jgdx58858",
+  "text": "He calls it mercy.",
+  "type": "quiet",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 181",
+   "likeness 0.832"
+  ],
+  "median_hz": 181,
+  "likeness": 0.832
+ },
+ {
+  "voice": "Lisandra",
+  "key": "21c9o3n9yu9",
+  "text": "We were to be married in the spring. The little girl died that winter. There was no spring.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "likeness 0.760"
+  ],
+  "median_hz": 198,
+  "likeness": 0.76
+ },
+ {
+  "voice": "Lisandra",
+  "key": "13jj5kk8jjy",
+  "text": "He named a star for me once. I can’t find it anymore. I think he took it back.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 176"
+  ],
+  "median_hz": 176,
+  "likeness": 0.852
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1317eyjcg1f",
+  "text": "They see a crone with a stick. What you see is your own business.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.66"
+  ],
+  "median_hz": 234,
+  "likeness": 0.866
+ },
+ {
+  "voice": "Lisandra",
+  "key": "2fhn8cteu4g",
+  "text": "There it is. Let me do the talking.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.23",
+   "pace -26%"
+  ],
+  "median_hz": 200,
+  "likeness": 0.896
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1kg9x6z97x8",
+  "text": "Bram Kettle keeps the inn, north of the well. Tell him I sent you. Then duck.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "p90 333",
+   "low band 0.15",
+   "pace -36%"
+  ],
+  "median_hz": 229,
+  "likeness": 0.887
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1zerlv2ncm6",
+  "text": "And don’t buy Elspeth’s candles. She says beeswax. It’s sheep.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -42%"
+  ],
+  "median_hz": 193,
+  "likeness": 0.897
+ },
+ {
+  "voice": "Lisandra",
+  "key": "15o1vpo3t7h",
+  "text": "If you hear the bell at midnight, stay in. Nobody living rings it.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 205,
+  "likeness": 0.893
+ },
+ {
+  "voice": "Lisandra",
+  "key": "21c0d3vkeft",
+  "text": "Keep walking.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 188",
+   "likeness 0.685"
+  ],
+  "median_hz": 188,
+  "likeness": 0.685
+ },
+ {
+  "voice": "Lisandra",
+  "key": "h3s15odu9z",
+  "text": "This way!",
+  "type": "call",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [
+   "median 145",
+   "pace -44%",
+   "likeness 0.707"
+  ],
+  "median_hz": 145,
+  "likeness": 0.707
+ },
+ {
+  "voice": "Lisandra",
+  "key": "546b3qxqw2",
+  "text": "Bellmourn’s down the hill. It won’t come up and fetch you.",
+  "type": "call",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [
+   "likeness 0.801"
+  ],
+  "median_hz": 222,
+  "likeness": 0.801
+ },
+ {
+  "voice": "Lisandra",
+  "key": "zkv9g9paiz",
+  "text": "I’m not carrying you.",
+  "type": "call",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [
+   "likeness 0.770"
+  ],
+  "median_hz": 229,
+  "likeness": 0.77
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1swxb6ibhy0",
+  "text": "Slow down! Some of us just lost a cave.",
+  "type": "call",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [
+   "pace -31%"
+  ],
+  "median_hz": 229,
+  "likeness": 0.846
+ },
+ {
+  "voice": "Lisandra",
+  "key": "avzp5a8cuz",
+  "text": "Wait!",
+  "type": "call",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [
+   "median 170",
+   "pace -74%",
+   "0.88 s a syllable",
+   "likeness 0.698"
+  ],
+  "median_hz": 170,
+  "likeness": 0.698
+ },
+ {
+  "voice": "Lisandra",
+  "key": "oy3h5v2bh2",
+  "text": "Oh, we’re riding, are we? Fine. Don’t you dare laugh.",
+  "type": "call",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [
+   "median 162",
+   "pace -39%"
+  ],
+  "median_hz": 162,
+  "likeness": 0.878
+ },
+ {
+  "voice": "Lisandra",
+  "key": "2chnftspzqx",
+  "text": "Two hundred years, and nobody ever showed me this!",
+  "type": "call",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 2,
+  "takes_wanted": 16,
+  "fails": [],
+  "median_hz": 216,
+  "likeness": 0.875
+ },
+ {
+  "voice": "Lisandra",
+  "key": "im8jad6ueb",
+  "text": "…Again. Later. When nobody’s looking.",
+  "type": "quiet",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "median 158",
+   "low band 0.66",
+   "likeness 0.834"
+  ],
+  "median_hz": 158,
+  "likeness": 0.834
+ },
+ {
+  "voice": "Lisandra",
+  "key": "2bkhq1y1d60",
+  "text": "Still here? Good. The last one was halfway up the hill road by now, shouting at the knight. Come here. I've a word for you before you go in.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 2,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.21",
+   "pace -39%"
+  ],
+  "median_hz": 211,
+  "likeness": 0.864
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1o63w1uu7k7",
+  "text": "Lisandra. I had a cave, a ledger and a great many candles. Now I have you.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.20",
+   "pace -27%"
+  ],
+  "median_hz": 219,
+  "likeness": 0.876
+ },
+ {
+  "voice": "Lisandra",
+  "key": "19hu4asoosm",
+  "text": "Old Lis, they call me down there. To my face, only the children. I cuffed one this morning. He'd brought a frog.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.22"
+  ],
+  "median_hz": 229,
+  "likeness": 0.903
+ },
+ {
+  "voice": "Lisandra",
+  "key": "2g646q1ddl2",
+  "text": "Morning. I slept in a hedge. Don't ask how it was. It was a hedge.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 182",
+   "pace -46%"
+  ],
+  "median_hz": 182,
+  "likeness": 0.909
+ },
+ {
+  "voice": "Lisandra",
+  "key": "jw2s2w6s92",
+  "text": "First light. The baker's been out twice to look at me. Neither time did she bring bread.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 205,
+  "likeness": 0.92
+ },
+ {
+  "voice": "Lisandra",
+  "key": "14rc39njmda",
+  "text": "Go on, then. I'm only standing here. It's what I do now, it seems.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 200,
+  "likeness": 0.858
+ },
+ {
+  "voice": "Lisandra",
+  "key": "jufhup67vn",
+  "text": "Half the town's found a reason to walk past me. The other half's watching from behind its curtains.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 184"
+  ],
+  "median_hz": 184,
+  "likeness": 0.872
+ },
+ {
+  "voice": "Lisandra",
+  "key": "22a2p4jii23",
+  "text": "Lamps are coming on. Mind the pines tonight. The dead don't keep my hours.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 180",
+   "pace -36%"
+  ],
+  "median_hz": 180,
+  "likeness": 0.869
+ },
+ {
+  "voice": "Lisandra",
+  "key": "ccaerv4w5s",
+  "text": "Sun's going. Look at me while you can.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -40%"
+  ],
+  "median_hz": 225,
+  "likeness": 0.849
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1qq7splpnln",
+  "text": "Don't stare. It's the dark. Everyone looks older in the dark.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 176",
+   "pace -38%",
+   "likeness 0.762"
+  ],
+  "median_hz": 176,
+  "likeness": 0.762
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1blmiet9w2m",
+  "text": "You see the crone too, by night. I'd hoped you'd be spared that. Nobody else is.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 162",
+   "low band 0.66",
+   "pace -25%"
+  ],
+  "median_hz": 162,
+  "likeness": 0.841
+ },
+ {
+  "voice": "Lisandra",
+  "key": "ooml8vy6sn",
+  "text": "What about me? I'm standing in a road. Ask me something useful.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 190,
+  "likeness": 0.87
+ },
+ {
+  "voice": "Lisandra",
+  "key": "kdxrczt3aw",
+  "text": "I've been coming down here twice a year since before the inn had a sign. They still cross the street.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "words",
+   "low band 0.21"
+  ],
+  "median_hz": 232,
+  "likeness": 0.848
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1lwhiz393g7",
+  "text": "Twelve came before you, in borrowed armour, and every one of them made a speech. You haven't made one yet. Keep that up.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.23"
+  ],
+  "median_hz": 211,
+  "likeness": 0.912
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1vj21mdv2tj",
+  "text": "Who told them they were Tessariel? Couldn't say. Somebody with very poor judgement and very good cheekbones.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 194,
+  "likeness": 0.917
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1wue9f8k4lw",
+  "text": "Bellmourn. Named for a bell nobody rings. It rings itself now, at midnight, and nobody's said thank you.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -33%"
+  ],
+  "median_hz": 211,
+  "likeness": 0.843
+ },
+ {
+  "voice": "Lisandra",
+  "key": "6c3gji8jk0",
+  "text": "Small, poor, and frightened. Which makes it the best town in Eldravayne to be useful in.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 201,
+  "likeness": 0.86
+ },
+ {
+  "voice": "Lisandra",
+  "key": "n80njq0twd",
+  "text": "The pines are full of them. Keep to the road after dark, and if one gets up out of the ground near you, don't stop to be polite.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 193,
+  "likeness": 0.908
+ },
+ {
+  "voice": "Lisandra",
+  "key": "ima5js0tr3",
+  "text": "The black one at the cathedral? Not yet. Not with that staff, and not on your first day.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.12",
+   "pace -27%"
+  ],
+  "median_hz": 229,
+  "likeness": 0.851
+ },
+ {
+  "voice": "Lisandra",
+  "key": "243ntj8k151",
+  "text": "There it is. Bellmourn. Forty roofs, one well, and a cathedral the Dark Lord sits on. Don't make that face. It's lovely in spring.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -36%"
+  ],
+  "median_hz": 190,
+  "likeness": 0.865
+ },
+ {
+  "voice": "Lisandra",
+  "key": "xuks5yyc7g",
+  "text": "Nobody follows a prophecy. They follow whoever mended their roof. So: be useful. Everyone in that town with a trouble worth the name, find them and take it off their hands.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.22"
+  ],
+  "median_hz": 203,
+  "likeness": 0.908
+ },
+ {
+  "voice": "Lisandra",
+  "key": "tpil41x2tg",
+  "text": "Bram Kettle at the inn first: he counts strangers, so let him count you. Then the rest. You'll know them. They're the ones looking at you like you might be the answer to something.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -25%"
+  ],
+  "median_hz": 219,
+  "likeness": 0.908
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1vzn89j4uwe",
+  "text": "Good. I'll be here, being looked at. Come back when every one of them has given you something to do.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 193,
+  "likeness": 0.897
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1bk6tr7rlz5",
+  "text": "The other twelve said 'not yet' too. Ask Bram where they are now.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "words",
+   "median 182",
+   "pace -38%"
+  ],
+  "median_hz": 182,
+  "likeness": 0.869
+ },
+ {
+  "voice": "Lisandra",
+  "key": "28fhtd8x22d",
+  "text": "Still here? I can count. That's not all of them.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 178",
+   "low band 0.23",
+   "pace -37%"
+  ],
+  "median_hz": 178,
+  "likeness": 0.869
+ },
+ {
+  "voice": "Lisandra",
+  "key": "285pz4xvkz7",
+  "text": "Bram's at the inn. Silas is the one who smells of pine and doesn't blink. Off you go.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.14",
+   "pace -46%"
+  ],
+  "median_hz": 200,
+  "likeness": 0.891
+ },
+ {
+  "voice": "Lisandra",
+  "key": "140vamdxvls",
+  "text": "Ask around. In a town this size, everyone's trouble is everyone's business.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.15",
+   "pace -27%"
+  ],
+  "median_hz": 225,
+  "likeness": 0.856
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1rldq4opoma",
+  "text": "There. Look at them. Half the town's watching the road for you now instead of watching me. That's worth more than a cave.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 186"
+  ],
+  "median_hz": 186,
+  "likeness": 0.878
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1a2dxckul0n",
+  "text": "Here. For your trouble. Don't ask where I had it. I've lost my home; I'm allowed a purse.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 244",
+   "low band 0.11",
+   "pace -40%"
+  ],
+  "median_hz": 244,
+  "likeness": 0.892
+ },
+ {
+  "voice": "Lisandra",
+  "key": "1b6v640sxk9",
+  "text": "Every one of them asks after you. Not one asks after me. I'd be hurt, if I weren't delighted.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.21"
+  ],
+  "median_hz": 208,
+  "likeness": 0.87
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "2bkhq1y1d60",
+  "text": "Still here? Good. The last one was halfway up the hill road by now, shouting at the knight. Come here. I've a word for you before you go in.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "words"
+  ],
+  "median_hz": 203,
+  "likeness": 0.908
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1o63w1uu7k7",
+  "text": "Lisandra. I had a cave, a ledger and a great many candles. Now I have you.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.72",
+   "likeness 0.823"
+  ],
+  "median_hz": 198,
+  "likeness": 0.823
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "19hu4asoosm",
+  "text": "Old Lis, they call me down there. To my face, only the children. I cuffed one this morning. He'd brought a frog.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 262",
+   "p90 314"
+  ],
+  "median_hz": 262,
+  "likeness": 0.844
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "2g646q1ddl2",
+  "text": "Morning. I slept in a hedge. Don't ask how it was. It was a hedge.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "pace -58%"
+  ],
+  "median_hz": 205,
+  "likeness": 0.861
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "jw2s2w6s92",
+  "text": "First light. The baker's been out twice to look at me. Neither time did she bring bread.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.68"
+  ],
+  "median_hz": 195,
+  "likeness": 0.863
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "14rc39njmda",
+  "text": "Go on, then. I'm only standing here. It's what I do now, it seems.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.79"
+  ],
+  "median_hz": 216,
+  "likeness": 0.897
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "jufhup67vn",
+  "text": "Half the town's found a reason to walk past me. The other half's watching from behind its curtains.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "words"
+  ],
+  "median_hz": 198,
+  "likeness": 0.859
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "22a2p4jii23",
+  "text": "Lamps are coming on. Mind the pines tonight. The dead don't keep my hours.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 242",
+   "p90 286"
+  ],
+  "median_hz": 242,
+  "likeness": 0.859
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "ccaerv4w5s",
+  "text": "Sun's going. Look at me while you can.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.63"
+  ],
+  "median_hz": 222,
+  "likeness": 0.846
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1qq7splpnln",
+  "text": "Don't stare. It's the dark. Everyone looks older in the dark.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 180",
+   "low band 0.68",
+   "pace -34%"
+  ],
+  "median_hz": 180,
+  "likeness": 0.844
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1blmiet9w2m",
+  "text": "You see the crone too, by night. I'd hoped you'd be spared that. Nobody else is.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.66"
+  ],
+  "median_hz": 204,
+  "likeness": 0.896
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "ooml8vy6sn",
+  "text": "What about me? I'm standing in a road. Ask me something useful.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 246",
+   "low band 0.71",
+   "pace -31%",
+   "likeness 0.839"
+  ],
+  "median_hz": 246,
+  "likeness": 0.839
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "kdxrczt3aw",
+  "text": "I've been coming down here twice a year since before the inn had a sign. They still cross the street.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 262",
+   "p90 314"
+  ],
+  "median_hz": 262,
+  "likeness": 0.852
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1lwhiz393g7",
+  "text": "Twelve came before you, in borrowed armour, and every one of them made a speech. You haven't made one yet. Keep that up.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 193,
+  "likeness": 0.895
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1vj21mdv2tj",
+  "text": "Who told them they were Tessariel? Couldn't say. Somebody with very poor judgement and very good cheekbones.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 242",
+   "p90 320"
+  ],
+  "median_hz": 242,
+  "likeness": 0.901
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1wue9f8k4lw",
+  "text": "Bellmourn. Named for a bell nobody rings. It rings itself now, at midnight, and nobody's said thank you.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.82"
+  ],
+  "median_hz": 184,
+  "likeness": 0.864
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "6c3gji8jk0",
+  "text": "Small, poor, and frightened. Which makes it the best town in Eldravayne to be useful in.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.77",
+   "likeness 0.803"
+  ],
+  "median_hz": 200,
+  "likeness": 0.803
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "n80njq0twd",
+  "text": "The pines are full of them. Keep to the road after dark, and if one gets up out of the ground near you, don't stop to be polite.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 213,
+  "likeness": 0.922
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "ima5js0tr3",
+  "text": "The black one at the cathedral? Not yet. Not with that staff, and not on your first day.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 186,
+  "likeness": 0.853
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "243ntj8k151",
+  "text": "There it is. Bellmourn. Forty roofs, one well, and a cathedral the Dark Lord sits on. Don't make that face. It's lovely in spring.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 180",
+   "low band 0.71",
+   "pace -27%"
+  ],
+  "median_hz": 180,
+  "likeness": 0.893
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "xuks5yyc7g",
+  "text": "Nobody follows a prophecy. They follow whoever mended their roof. So: be useful. Everyone in that town with a trouble worth the name, find them and take it off their hands.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "words"
+  ],
+  "median_hz": 216,
+  "likeness": 0.91
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "tpil41x2tg",
+  "text": "Bram Kettle at the inn first: he counts strangers, so let him count you. Then the rest. You'll know them. They're the ones looking at you like you might be the answer to something.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 216,
+  "likeness": 0.864
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1vzn89j4uwe",
+  "text": "Good. I'll be here, being looked at. Come back when every one of them has given you something to do.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.76"
+  ],
+  "median_hz": 194,
+  "likeness": 0.887
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1bk6tr7rlz5",
+  "text": "The other twelve said 'not yet' too. Ask Bram where they are now.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "words",
+   "pace -31%"
+  ],
+  "median_hz": 193,
+  "likeness": 0.9
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "28fhtd8x22d",
+  "text": "Still here? I can count. That's not all of them.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.24",
+   "pace -32%"
+  ],
+  "median_hz": 200,
+  "likeness": 0.857
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "285pz4xvkz7",
+  "text": "Bram's at the inn. Silas is the one who smells of pine and doesn't blink. Off you go.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "low band 0.70"
+  ],
+  "median_hz": 205,
+  "likeness": 0.891
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "140vamdxvls",
+  "text": "Ask around. In a town this size, everyone's trouble is everyone's business.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 250",
+   "p90 327"
+  ],
+  "median_hz": 250,
+  "likeness": 0.882
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1rldq4opoma",
+  "text": "There. Look at them. Half the town's watching the road for you now instead of watching me. That's worth more than a cave.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 225,
+  "likeness": 0.895
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1a2dxckul0n",
+  "text": "Here. For your trouble. Don't ask where I had it. I've lost my home; I'm allowed a purse.",
+  "type": "calm",
+  "take": "0",
+  "status": "passed",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [],
+  "median_hz": 200,
+  "likeness": 0.948
+ },
+ {
+  "voice": "LisandraWitch",
+  "key": "1b6v640sxk9",
+  "text": "Every one of them asks after you. Not one asks after me. I'd be hurt, if I weren't delighted.",
+  "type": "calm",
+  "take": "0",
+  "status": "unchecked",
+  "takes_made": 1,
+  "takes_wanted": 8,
+  "fails": [
+   "median 232",
+   "low band 0.69"
+  ],
+  "median_hz": 232,
+  "likeness": 0.85
+ }
+]
