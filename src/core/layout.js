@@ -40,6 +40,8 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   VIEW_ASPECT: 41,
   // What the charms carried and the skull's cheats allow, a bit each: ABIL in src/sim/player.js.
   ABIL: 42,
+  // The third-person view is on (src/core/third.js): the sim poses your body (src/sim/playerbody.js) and aims from that camera.
+  THIRD: 43,
   // The shield's special ability and its strength: SHIELD_POWERS in src/items/items.js. 0 with a skull in hand.
   SH_POWER: 44, SH_VALUE: 45,
   // How open the witch's mouth is as she speaks in the opening, 0 to 1, from her voice (src/ui/opening-sound.js mouth).
@@ -54,7 +56,10 @@ export const H = {
   DMG_FLASH: 13, BLOOD_SWORD: 14, SWINGING: 15, SWING_T: 16, TIP_X: 17, TIP_Y: 18, TIP_Z: 19, ROOT_X: 20, ROOT_Y: 21, ROOT_Z: 22,
   NCHARS: 23, GAME: 24, GAME_T: 25, HIT_DIR: 26, HIT_DIR_T: 27, GROUND_SPEED: 28, ON_GROUND: 29, CAM_DROP: 30, WEAK: 31,
   TIME_SCALE: 32, TACTIC: 33, TACTIC_CONF: 34, ROLLOUTS: 35, BOB: 36, STAMINA: 37, AIM_WOUND: 38, DODGE: 39, PARRIED: 40, WEAPON: 41,
-  MANA: 42, MAX_MANA: 43, SPELL: 44, SPELL_RIG: 45, VM_LOWER: 46, CAST_HELD: 47, FX_N: 48, SURF: 49, SURF_ARM: 50, SURF_TILT: 51, SHIELD_UP: 52, CARRY_T: 53, CARRY_K: 54, SKULL_LOWER: 55, OPENING: 56, OPENING_TIME: 57, OPENING_NEXT: 58, OPENING_CUE: 59, OPENING_CUE_T: 60, OPENING_FELL: 61, OPENING_RIDE: 62, SIZE: 63,
+  MANA: 42, MAX_MANA: 43, SPELL: 44, SPELL_RIG: 45, VM_LOWER: 46, CAST_HELD: 47, FX_N: 48, SURF: 49, SURF_ARM: 50, SURF_TILT: 51, SHIELD_UP: 52, CARRY_T: 53, CARRY_K: 54, SKULL_LOWER: 55, OPENING: 56, OPENING_TIME: 57, OPENING_NEXT: 58, OPENING_CUE: 59, OPENING_CUE_T: 60, OPENING_FELL: 61, OPENING_RIDE: 62,
+  // The third-person view, as the sim has it (src/sim/sim.worker.js stepBody): on, how far back the camera can stand before
+  // something's in the way, how much of its step to the side there's room for, and how far the eye is down (on the shield).
+  TP: 63, TP_DIST: 64, TP_SIDE: 65, TP_DROP: 66, SIZE: 67,
 };
 
 // Per-character block

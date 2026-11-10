@@ -39,6 +39,7 @@ Without `files.json` every file comes from the network as before. Checked by `no
 | Cast the spell in a slot | `1` to `6`, or click its button | Tap its button |
 | Pack: staffs, skulls, robes and gems | `I` | `PACK` |
 | Take up what's on the ground, or open a chest | `E` | `TAKE` / `OPEN` |
+| First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | `3RD` / `1ST` |
 
 Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
 
@@ -84,6 +85,63 @@ They don't go together. Anything with a V on it is never found anywhere near any
 ### How it plays
 
 You start on the road south of town with a common staff of a random kind (a different one most games: `rollStarterStaff` in `src/items/items.js`) and a plain kite shield, and no skull or gems; your first skull is Bram Kettle's reward for A Bed and a Bell. The town is safe ground: nothing out of it follows you in (`inTown` in `src/core/town.js`, the box from x = -62 to 95 and z = -58 to 62). Velscour's knight stands at the foot of the cathedral steps, out east of the town, and lets you go 20 m from it, or once you're back in town. Four of Tessariel's knights walk the village streets, one in each of the other suits, and a man-at-arms in plain plate with Velscour's shield keeps the west road (`TOWN_KNIGHTS` in `src/core/knights.js`). Out in the woods, packs climb out of the ground ahead of you (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Every zombie outside the catacombs comes up out of the earth (`Zombie.rise`); four burial grounds in the woods break open as you come near (`stepGraves`, `GRAVEYARDS`). Spells are found as scrolls, except that this test build knows them all (`ALL_SPELLS` in `src/ui/spellbar.js`). Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
+
+### Third person
+
+`V` (or the eye at the end of the spell bar, or `3RD` on a phone) stands the camera behind you, and the same again brings it
+back. The controls don't change: you look, move, shoot, cast, guard and ride as before, and the X in the middle of the
+screen is still what you hit. Which view you left it in is kept with the settings.
+
+- **Not in Lisandra's cave.** The switch isn't shown until you're out and the walk down has begun (`thirdAllowed` in
+  `src/core/third.js`), and `V` only says so. Your staff and spells wait for the same moment (`Sim.unarmed` in
+  `src/sim/sim.worker.js`): from giving your name until the cave has fallen in, a click or a cast does nothing. The waking
+  scene's own cast is left as it was.
+- **The body** is the owner's Tripo wizard, `assets/game/player/wizard.glb`. It came as an FBX with a walk, a run and a fall;
+  `tools/player/build.mjs` (Node, with `three` and `sharp`: the usage is at its top) makes the GLB from it, in metres, sized
+  so its eyes stand at the first-person eye, the walk's and run's travel taken out, colour and normal at 2048.
+- **Everything he does** is `src/sim/playerbody.js`, on the sim thread, written into a character slot of the snapshot like
+  anyone else's (the slot after Lisandra's, not counted in `H.NCHARS`: everything that walks that list is looking for
+  someone else). Nothing is posed while the view is first person.
+  - *Standing* is the bind pose with the arms let down, breathing.
+  - *The legs* are the file's walk and run, mixed by pace and kept in step, played backwards going backwards. The hips turn
+    the way you're going and the chest keeps to where you look. A jump hangs in the run's flight. The fall is the death.
+    The game's run (5.6 m/s) and sprint (8.6) are well over the clip's own 4.2, so the legs only quicken so far (`QUICKEN`)
+    and past it the feet slide a little.
+  - *The hands* are put where they hold things by a two-bone solve from the shoulder, the fingers shut round them (`HOLD`):
+    the staff as a walking staff in the right fist, the skull under the left hand in a claw (as first person has it), or,
+    with no skull, the shield on the left forearm, raised across the chest when you guard. An empty hand swings as the clip
+    has it.
+  - *The shield on the back.* With the skull in hand the shield is slung on his back, leaned over so its point is down
+    toward one hip (`BACK_AT`, `BACK_LEAN`). On a ride it's under his feet instead.
+  - *The casts* (`CASTS`) are poses of the arms and chest alone, timed by the first-person hands' own clips, so they play
+    standing, walking or running, and a spell leaves on the same tick in either view: the staff's shot (a dip, straight
+    up, tipped forward as it fires); a spell thrown with one hand (the staff drawn back by the ear and thrust out) or
+    pushed with both (staff and skull, or open hand, or shield, shoved out together); one raised with one hand or with
+    both. A held spell keeps the pose, with a tremor.
+  - *The shield ride*: side on to the way the board's going, left foot ahead, knees bent, feet on the board's own slope,
+    head turned down the hill, the staff held up clear of the ground.
+- **What he holds** are the items' own models (the ones that lie on the ground), drawn where the sim says his hands and
+  back are (`PlayerBody.hold`, `selfItems` in `src/gfx/renderer.js`). The first-person arms aren't drawn.
+- **The camera** (`THIRD` in `src/core/third.js`, `GameView.updateCamera`) looks along the same line you do in first person,
+  from a point a step to the right of your eye and a little over it, 4 m back. So the X is still your aim: the sim
+  aims from that same point (`Casting.eye`), and bolts leave the staff's head or the palm you can see
+  (`Casting.bodyPalm`) for whatever is under the X. The sim finds how far back there's room (walls, the ground, a low roof
+  indoors) and the camera closes in at once and eases back out. Closer than a metre, the body isn't drawn.
+- `tools/player/view.html` shows the body alone with what it holds, every pose on a button, and makes sheets of stills:
+  `?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3`. `node --test tests/player-body.test.mjs` checks the poses with no
+  GPU: feet on the ground, things in the hands, the shield where it should be, the casts, and the cave's lock.
+
+Known limits:
+
+- Nobody has played it by hand. It was driven by script in Chromium on a software GPU, on the Mobile and High tiers, and
+  the poses judged from stills, not motion. Foot sliding at a sprint and the blends between poses want an eye on them.
+- The staff in his hand has no glow at its head and nothing dangles from it: those are the first-person staff's own.
+  A skull's gems and burning eyes aren't on the one he carries either.
+- Robes found in the game don't change what he wears, and Tripo's sculpt has short sleeves: his forearms are bare.
+- The other spells that start from the eye (the cone of Arcane Blast, a Blink's line) still do, half a step left of the
+  camera's line.
+- Indoors the roof is kept out of the camera's way by holding it low, not by testing the ceiling: looking steeply down in
+  a house brings it in close.
 
 ### The walk down, and the quest trail
 
@@ -609,6 +667,8 @@ To check it yourself:
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |
+| `src/sim/playerbody.js`, `src/core/third.js`, `src/ui/view.js` | The third-person view: your body's poses, where the camera stands, and the switch |
+| `tools/player/` | Makes the player's body from the owner's FBX (`build.mjs`), and shows it (`view.html`) |
 | `src/items/`, `src/ui/inventory.js` | Item rolls and gems, the pack, what's lying on the ground, and the pack's screen |
 | `assets/game/items/`, `art/swords/` | The swords, their icons and `swords.json`, and the sheets they came from |
 | `tools/swords/` | Separates the sheets into swords (in Blender), and renders their icons |

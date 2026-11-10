@@ -24,6 +24,8 @@ import { addPart, capture, restore, saves } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { saveSettings, settings, Title } from './title.js';
+import { ViewSwitch } from './ui/view.js';
+import { THIRD } from './core/third.js';
 import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
@@ -35,7 +37,7 @@ import { PartyUI } from './ui/party.js';
 import { TownClient } from './folk/client.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
-import { matName, RARITIES } from './items/items.js';
+import { hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
 import { groundAt, setHomes } from './ui/places.js';
@@ -376,6 +378,8 @@ async function boot(plan, poolSize) {
     shared.input[INPUT.SKULL] = skull ? 1 : 0;
     $('bWide').style.display = off && !skull ? 'flex' : '';
     renderer.offHand = off && !skull ? off.base : null;
+    // (What the body you see in third person holds: src/gfx/renderer.js selfItems.)
+    renderer.mainHand = pack.slots.main && hands(pack.slots.main.base) === 3 ? pack.slots.main.base : null;
     renderer.board.sword = off ? off.base : null;
     if (off) renderer.sword('surf_arm');     // (Ready before the first landing.)
     renderer.skull = skull ? skull.base : null;
@@ -795,6 +799,8 @@ async function boot(plan, poolSize) {
   });
   game.closeBook = closeBook;
   townUI.spellbar = game.spellbar;
+  // First person or third: V, the eye by the spell bar, VIEW on a phone.
+  game.viewSwitch = new ViewSwitch({ input, shared, settings, save: saveSettings, tip: (t, s) => hud.tip(t, s), busy: () => state.paused || naming });
   // Auto-play, behind the skull's word Jamie: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
@@ -1197,6 +1203,7 @@ class GameView {
       if (this.input.touch && this.input.enabled && !this.shared.input[INPUT.PAUSE]) this.aimAssist(dt, snap);
       renderDiagnostics.stage = 'scene update';
       this.processEvents(snap);
+      this.viewSwitch?.frame(snap);
       this.updateCamera(dt, snap);
       this.emitAmbient(dt, snap);
       this.emitBleeds(dt, snap);
@@ -1313,7 +1320,10 @@ class GameView {
     // The eye is put where the player is now, on from where the snapshot has them: by the frames' time since it (paced: a frame,
     // the same every frame), or else by the clock since it was written.
     let age = 0;
-    if (this.buffer && this.pacedSnap && this.snapUs) {
+    // (In third person your body is drawn where the snapshot has it, and the camera keeps to it: THIRD below.)
+    const third = snap[H.TP] > 0.5;
+    if (third) age = 0;
+    else if (this.buffer && this.pacedSnap && this.snapUs) {
       age = clamp(((Atomics.load(this.shared.ctrl, CTRL.PACE_US) - this.snapUs) | 0) / 1e6, 0, 0.04);
     } else if (this.buffer) {
       const now = (performance.timeOrigin + performance.now()) % 2147483647;
@@ -1325,12 +1335,23 @@ class GameView {
     this.audio.surf(snap[H.SURF] > 0.5 && inp.enabled ? Math.hypot(snap[H.VX], snap[H.VZ]) : 0, snap[H.ON_GROUND] > 0.5);
     // What's under your own feet, for their sound (onEvent STEP), looked up a few times a second.
     if (!(this.groundT-- > 0)) { this.groundT = 8; this.underfoot = groundAt(snap[H.PX], snap[H.PY], snap[H.PZ]); }
-    if (snap[H.SURF] > 0.5) {
+    // Third person (src/core/third.js): from a step to the right of the eye and a little over it, back along the same line
+    // you look along, as far as the sim found room for. Coming up to a wall it closes in at once, and eases back out after.
+    let cx = eyeX, cy = eyeY, cz = eyeZ;
+    if (third) {
+      const room = clamp(snap[H.TP_DIST], THIRD.near, THIRD.dist), side = THIRD.side * snap[H.TP_SIDE];
+      this.boom = this.boom === undefined ? THIRD.near : room < this.boom ? room : Math.min(room, this.boom + (room - this.boom) * (1 - Math.exp(-6 * dt)) + 0.4 * dt);
+      const px = snap[H.PX] + rx * side, py = snap[H.PY] + 1.62 - snap[H.TP_DROP] + THIRD.up, pz = snap[H.PZ] + rz * side;
+      cx = px - fx * this.boom; cy = py - fy * this.boom; cz = pz - fz * this.boom;
+    } else this.boom = undefined;
+    this.renderer.third = third;
+    this.renderer.thirdNear = third && this.boom < THIRD.hide;
+    if (snap[H.SURF] > 0.5 && !third) {
       const hs = Math.hypot(snap[H.VX], snap[H.VZ]);
       if (hs > 0.5) { this.boardX = snap[H.VX] / hs; this.boardZ = snap[H.VZ] / hs; } else if (this.boardX === undefined) { this.boardX = 0; this.boardZ = 1; }
       boardPose(this.renderer.board.mat, snap[H.PX] + snap[H.VX] * age, snap[H.PY], snap[H.PZ] + snap[H.VZ] * age, this.boardX, this.boardZ, snap[H.ON_GROUND] > 0.5);
     }
-    Object.assign(this.cam, { x: eyeX, y: eyeY, z: eyeZ, fx, fy, fz, ux, uy, uz });
+    Object.assign(this.cam, { x: cx, y: cy, z: cz, fx, fy, fz, ux, uy, uz });
     // The sword lags your hands a little. (It rides your steps in its own clip, great_idle.)
     this.swayX = damp(this.swayX, clamp(inp.yawVel * 1.5, -0.05, 0.05), 11, dt);
     this.swayY = damp(this.swayY, clamp(inp.pitchVel * 1.5, -0.05, 0.05), 11, dt);

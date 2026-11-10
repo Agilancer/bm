@@ -191,7 +191,8 @@ export class Player {
     if (input[INPUT.ATTACK] !== this.atkSeen) { this.atkSeen = input[INPUT.ATTACK]; this.queued = 'L'; this.queuedT = 0.5; }
     if (input[INPUT.WIDE] !== this.wideSeen) { this.wideSeen = input[INPUT.WIDE]; this.queued = 'R'; this.queuedT = 0.5; }
     this.queuedT -= dt;
-    if (this.queuedT <= 0) this.queued = null;
+    // (In Lisandra's cave your staff does nothing yet: Sim.unarmed.)
+    if (this.queuedT <= 0 || (sim.unarmed && this.queued === 'L')) this.queued = null;
     const mx = input[INPUT.MOVE_X], mz = input[INPUT.MOVE_Z];
     const abil = input[INPUT.ABIL] | 0;   // (charms and the skull's cheats: ABIL in src/core/layout.js)
     this.steerX = mx;
