@@ -17,7 +17,9 @@ vertex of it weights by where it is on the body in the bind pose, as a coat's wo
 The pieces become cloth in the piece table (bound per vertex; the table's joint is the trunk's, for the sim's hit tests).
 Their shape, paint and place in the bind pose are untouched.
 
-It also mirrors an arm's plate that's on one side only onto the other (mirror_arms: paladin_f2's right vambrace).
+It also mirrors an arm's plate that's on one side only onto the other (mirror_arms: paladin_f2's right vambrace), checks
+every rigid piece on every body against the bone it sits on (misplaced: two boomerang knights had a chest strap on the
+upper arm), and binds knee and elbow cops half to each bone so they ride the bend (cops).
 
 Run tools/heroes/mail.py after it, which sizes the covers from
 where the plates ride. `--dry` only lists what it would change.
@@ -179,6 +181,112 @@ def mirror_arms(body_id, dry=False):
     return done
 
 
+def _open(body_id):
+    path = os.path.join(HEROES, f"{body_id}.glb")
+    g, blob = load_glb(path)
+    prim = g["meshes"][0]["primitives"][0]
+    A = {k: np.array(accessor(g, blob, v)) for k, v in prim["attributes"].items()}
+    idx = np.array(accessor(g, blob, prim["indices"])).reshape(-1, 3)
+    pieces = [dict(p) for p in g["scenes"][0]["extras"]["pieces"]]
+    names = [g["nodes"][n]["name"] for n in g["skins"][0]["joints"]]
+    ibm = np.array(accessor(g, blob, g["skins"][0]["inverseBindMatrices"])).reshape(-1, 4, 4).transpose(0, 2, 1)
+    T = {n: np.linalg.inv(ibm[i])[:3, 3] for i, n in enumerate(names)}
+    return path, g, blob, A, idx, pieces, names, T
+
+
+def _bind(A, p, joints):
+    """A piece bound rigidly: every vertex the same joints and weights ([(joint index, weight), ...], up to four)."""
+    sl = slice(p["vstart"], p["vstart"] + p["vcount"])
+    j = np.zeros(4, np.int64); w = np.zeros(4, np.float32)
+    for k, (ji, wi) in enumerate(joints):
+        j[k] = ji; w[k] = wi
+    A["JOINTS_0"][sl] = j.astype(A["JOINTS_0"].dtype); A["WEIGHTS_0"][sl] = w
+    p["joints"] = [[int(ji), float(wi)] for ji, wi in joints]
+
+
+def cops(body_id, dry=False):
+    """Knee and elbow cops, bound half to each bone. A small plate over a knee or an elbow, wholly on the thigh or the
+    shin (or the upper arm or the forearm), swings off the joint with its one bone and leaves the point of the knee bare
+    in a bend; a shell there cut in two, a half on each bone, opens along its cut. Half and half, it rides the bisector
+    of the bend, as a real poleyn or couter is hung to do, and stays one rigid piece (the skinning is dual quaternion).
+    A cop: a rigid plate whose middle is within 7 cm of the joint and which runs under 17 cm along the limb."""
+    path, g, blob, A, idx, pieces, names, T = _open(body_id)
+    index = {n: i for i, n in enumerate(names)}
+    done = []
+    for p in pieces:
+        if p["kind"] != "plate" or p["vcount"] < 60:
+            continue
+        js = {names[j]: w for j, w in p.get("joints", [])}
+        P = A["POSITION"][p["vstart"]:p["vstart"] + p["vcount"]].astype(np.float64)
+        c = (P.min(0) + P.max(0)) / 2
+        for s in "lr":
+            for up, lo, what in ((f"thigh_{s}", f"calf_{s}", "knee"), (f"upperarm_{s}", f"lowerarm_{s}", "elbow")):
+                if not (js.get(up, 0) >= 0.9 or js.get(lo, 0) >= 0.9):
+                    continue
+                ax = T[lo] - T[up]; ax /= np.linalg.norm(ax)
+                al = (P - T[lo]) @ ax
+                if np.linalg.norm(c - T[lo]) < 0.07 and al.max() - al.min() < 0.17:
+                    _bind(A, p, [(index[up], 0.5), (index[lo], 0.5)])
+                    done.append((p["name"], p["vcount"], what, s))
+    if done and not dry:
+        write(path, g, blob, A, idx, pieces)
+    return done
+
+
+# For misplaced(): each bone to its child, and about how thick the body is round it.
+_CHILD = {"pelvis": "spine_01", "spine_01": "spine_02", "spine_02": "spine_03", "spine_03": "neck_01", "neck_01": "Head"}
+_RAD = {"pelvis": .13, "spine_01": .13, "spine_02": .14, "spine_03": .14, "neck_01": .06}
+for _s in "lr":
+    _CHILD.update({f"clavicle_{_s}": f"upperarm_{_s}", f"upperarm_{_s}": f"lowerarm_{_s}", f"lowerarm_{_s}": f"hand_{_s}",
+                   f"thigh_{_s}": f"calf_{_s}", f"calf_{_s}": f"foot_{_s}", f"foot_{_s}": f"ball_{_s}"})
+    _RAD.update({f"clavicle_{_s}": .09, f"upperarm_{_s}": .05, f"lowerarm_{_s}": .045, f"thigh_{_s}": .08, f"calf_{_s}": .055, f"foot_{_s}": .05})
+
+
+def _region(j):
+    if j in ("pelvis", "spine_01", "spine_02", "spine_03") or j.startswith("clavicle"):
+        return "trunk"
+    if j in ("neck_01", "Head"):
+        return "head"
+    return ("arm_" if any(k in j for k in ("upperarm", "lowerarm", "hand", "index", "middle", "ring", "pinky", "thumb")) else "leg_") + j[-1]
+
+
+def misplaced(body_id, dry=False):
+    """Every rigid piece checked against where it sits: one bound to an arm or a leg while most of it lies on the trunk
+    (a strap across the chest bound to the upper arm) goes onto the trunk, as a cuirass is bound. Returns what it found."""
+    path, g, blob, A, idx, pieces, names, T = _open(body_id)
+    index = {n: i for i, n in enumerate(names)}
+    bones = [n for n in _CHILD if n in T and _CHILD[n] in T]
+
+    def seg_d(P, a, b):
+        ab = b - a
+        t = np.clip(((P - a) @ ab) / max(ab @ ab, 1e-9), 0, 1)
+        return np.linalg.norm(P - (a + np.outer(t, ab)), axis=1)
+
+    done = []
+    for p in pieces:
+        if p["kind"] != "plate" or p["vcount"] < 120:
+            continue
+        js = [names[j] for j, w in p.get("joints", []) if w >= 0.3]
+        if not js or not any(j in bones for j in js):
+            continue
+        P = A["POSITION"][p["vstart"]:p["vstart"] + p["vcount"]].astype(np.float64)
+        D = np.array([np.maximum(seg_d(P, T[n], T[_CHILD[n]]) - _RAD[n], 0) for n in bones])
+        near = np.array([_region(n) for n in bones])[D.argmin(0)]
+        regs = {_region(j) for j in js}
+        own = np.min([D[bones.index(j)] for j in js if j in bones], axis=0)
+        far = np.array([r not in regs for r in near]) & (own > D.min(0) + 0.06)
+        if far.mean() > 0.4:
+            sits = max(set(near[far]), key=list(near[far]).count)
+            fixed = False
+            if sits == "trunk":
+                _bind(A, p, [(index["spine_03"], 0.6), (index["spine_02"], 0.4)] if P[:, 1].mean() > T["spine_02"][1] else [(index["pelvis"], 0.5), (index["spine_01"], 0.5)])
+                fixed = True
+            done.append((p["name"], p["vcount"], js, sits, round(float(far.mean()), 2), fixed))
+    if any(d[5] for d in done) and not dry:
+        write(path, g, blob, A, idx, pieces)
+    return done
+
+
 def main():
     args = [a for a in sys.argv[1:] if a != "--dry"]
     dry = "--dry" in sys.argv
@@ -190,6 +298,13 @@ def main():
             print(f"{b}: {name} ({count} vertices) was on {was}, now a coat on the body (mostly {now}){' (dry)' if dry else ''}")
         for name, count, a, c in mirror_arms(b, dry):
             print(f"{b}: {name} ({count} vertices) is on {a} and there's nothing on {c}: mirrored onto it{' (dry)' if dry else ''}")
+            done = True
+        for name, count, js, sits, frac, fixed in misplaced(b, dry):
+            print(f"{b}: {name} ({count} vertices) is bound to {js} but {frac * 100:.0f}% of it sits on the {sits}: {'bound to the trunk' if fixed else 'LEFT AS IT IS'}{' (dry)' if dry else ''}")
+            done = done or fixed
+        c = cops(b, dry)
+        if c:
+            print(f"{b}: {len(c)} knee and elbow cops bound half to each bone{' (dry)' if dry else ''}")
             done = True
         n += bool(done)
     print(f"{n} bodies {'would be ' if dry else ''}changed")
