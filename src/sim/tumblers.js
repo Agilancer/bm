@@ -469,6 +469,7 @@ export class Tumblers {
       const p = sim.player;
       for (const c of this.camps) {
         const d = Math.hypot(p.x - c.x, p.z - c.z);
+        if (c.keep) continue;
         if (!c.awake && d < NEAR && this.t - c.cleared > REFILL) this.fill(c, sim);
         else if (c.awake && d > FAR) { c.awake = false; this.list = this.list.filter((s) => s.camp !== c); }
       }
@@ -487,7 +488,7 @@ export class Tumblers {
     if (this.born.length) { this.list.push(...this.born); this.born.length = 0; }
     if (this.list.some((s) => s.dead)) {
       this.list = this.list.filter((s) => !s.dead);
-      for (const c of this.camps) if (c.awake && !this.list.some((s) => s.camp === c)) { c.cleared = this.t; c.awake = false; }
+      for (const c of this.camps) if (c.awake && !c.keep && !this.list.some((s) => s.camp === c)) { c.cleared = this.t; c.awake = false; }
     }
     if (this.list.length > MAX_TUMBLERS) this.list.length = MAX_TUMBLERS;
   }
@@ -578,6 +579,23 @@ export class Tumblers {
     // (A flock: bm.cmd(42, 90 + how many crows, x, z).)
     if (TUMBLER_KINDS[k].fly) { c.flock = true; c.n = size || 6; this.fill(c, sim); return; }
     this.list.push(new Tumbler(c, k, SIZE_KEYS[Math.min(3, size)], x, z, sim.world.height(x, z)));
+  }
+
+  // For the Test Dungeon (src/sim/testhall.js): one of a kind and a size (0 S .. 3 XL) at (x, z), or a Crowmother and n crows,
+  // each in a camp of its own that never fills by itself.
+  kindIndex(key) { return KIND[key] ?? -1; }
+  isFlock(k) { return !!TUMBLER_KINDS[k]?.fly; }
+  spawnOne(k, size, x, z, sim) {
+    const c = { x, z, r: 4, n: 0, kind: TUMBLER_KINDS[k].key, sizes: [1, 1, 1, 1], awake: true, cleared: -1e9, keep: true, hall: true };
+    this.camps.push(c);
+    if (this.list.length < MAX_TUMBLERS) this.list.push(new Tumbler(c, k, SIZE_KEYS[Math.max(0, Math.min(3, size | 0))], x, z, sim.world.height(x, z)));
+    return c;
+  }
+  spawnFlock(x, z, n, sim) {
+    const c = { x, z, r: 4, n: Math.max(1, n), kind: 'crow', sizes: [1, 1, 1, 1], awake: false, cleared: -1e9, keep: true, hall: true, flock: true };
+    this.camps.push(c);
+    this.fill(c, sim);
+    return c;
   }
 
   // Into the snapshot: [here, x, y, z, radius, kind, glow, flash, the turn's nine, which rock] each; then the bog in flight, as

@@ -2,7 +2,7 @@
 // Jamie Herrington, each fading in with glints flaring on the edges of its letters, a sheen across them, gold dust
 // rising and a tinkle of little glass bells for every glint; then Bellmourn's logo with its church bells ringing
 // out and trailing away under the title's song, over black while the game loads behind it; then the menu (New
-// Game, Continue, Load, Settings, How to Play). No village behind it: the title stays on black.
+// Game, Continue, Load, Test Dungeon, Settings, How to Play). No village behind it: the title stays on black.
 //
 // Here too: the Settings and How to Play windows, the save slots and the "are you sure" box (the pause screen
 // opens them as well), the settings themselves, and the "click to begin" a browser asks for before it plays sound.
@@ -30,7 +30,7 @@ const BELLS = { vol: 0.85, hold: 4.2, trail: 10.5, down: 42 };
 const ZONES = [[0, 0.2], [0.8, 1], [0.24, 0.5], [0.5, 0.76], [0.02, 0.3], [0.7, 0.98]];
 const SCALE = [1318.5, 1480, 1661.2, 1975.5, 2217.5, 2637, 2960];   // E major pentatonic, E6 .. F#7
 const TING = [[1, 1, 1.5], [2.0, 0.38, 0.75], [3.0, 0.16, 0.45], [4.2, 0.1, 0.28], [5.4, 0.05, 0.18]];
-const MENU = [['new', 'New Game'], ['continue', 'Continue'], ['load', 'Load'], ['settings', 'Settings'], ['howto', 'How to Play']];
+const MENU = [['new', 'New Game'], ['continue', 'Continue'], ['load', 'Load'], ['test', 'Test Dungeon'], ['settings', 'Settings'], ['howto', 'How to Play']];
 const MODS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Fn']);
 const TOUCH = /Android|iPhone|iPad/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches);
 
@@ -96,6 +96,7 @@ const HOWTO = `
     <li>Slams and chops break a guard faster than cuts. Running, dodging and swinging all spend your breath.</li>
     <li>Hitting the silver knight makes an enemy of them too.</li>
     <li>The game keeps itself as you play: <b>Continue</b> picks up where you were. Pause to keep a copy in one of ten save slots.</li>
+    <li><b>Test Dungeon</b> is a white hall for trying out the monsters: any gear and a party for nothing, and whatever you like summoned past its door. Nothing of it is kept.</li>
   </ul>
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 

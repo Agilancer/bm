@@ -166,6 +166,7 @@ export class Slimes {
       const p = sim.player;
       for (const c of this.camps) {
         const d = Math.hypot(p.x - c.x, p.z - c.z);
+        if (c.keep) continue;
         if (!c.awake && d < NEAR && this.t - c.cleared > REFILL) this.wake(c, sim);
         else if (c.awake && d > FAR) { c.awake = false; this.list = this.list.filter((s) => s.camp !== c); }
       }
@@ -177,7 +178,7 @@ export class Slimes {
     if (this.born.length) { this.list.push(...this.born); this.born.length = 0; }
     if (this.list.some((s) => s.dead)) {
       this.list = this.list.filter((s) => !s.dead);
-      for (const c of this.camps) if (c.awake && !this.list.some((s) => s.camp === c)) { c.cleared = this.t; c.awake = false; }
+      for (const c of this.camps) if (c.awake && !c.keep && !this.list.some((s) => s.camp === c)) { c.cleared = this.t; c.awake = false; }
     }
     if (this.list.length > MAX_SLIMES) this.list.length = MAX_SLIMES;
   }
@@ -191,6 +192,17 @@ export class Slimes {
       const a = Math.random() * 6.28, d = Math.sqrt(Math.random()) * c.r, x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d;
       this.list.push(new Slime(c, SP[c.kinds[i % c.kinds.length]], SIZE_KEYS[Math.min(4, k)], x, z, sim.world.height(x, z)));
     }
+  }
+
+  // For the Test Dungeon (src/sim/testhall.js): a camp of its own that never fills by itself, and one slime of a kind and a
+  // size stood in it.
+  speciesIndex(key) { return SP[key] ?? -1; }
+  addCamp(o) { const c = { n: 0, kinds: [], sizes: [0, 0, 0, 0, 0], ...o, awake: true, cleared: -1e9, keep: true }; this.camps.push(c); return c; }
+  spawn(camp, species, size, x, z, sim) {
+    if (this.list.length >= MAX_SLIMES) return null;
+    const s = new Slime(camp, species, SIZES[size] ? size : 'M', x, z, sim.world.height(x, z));
+    this.list.push(s);
+    return s;
   }
 
   // Into the snapshot: [here, x, y, z, radius, kind, stretch, lean x, lean z, flash, yaw, height for radius] each.

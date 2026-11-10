@@ -39,6 +39,8 @@ import { matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
 import { groundAt, setHomes } from './ui/places.js';
+import { HallUI } from './ui/testhall.js';
+import { HALL, SPAWN, hallAt } from './core/testhall.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -288,6 +290,8 @@ async function boot(plan, poolSize) {
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
       else if (m.type === 'warrens') game?.party?.onWarrens(m);
+      else if (m.type === 'hall') game?.hallUI?.onHall(m);
+      else if (m.type === 'hallSummoned') game?.hallUI?.onSummoned(m);
       else if (m.type === 'restart') { input.yaw = m.yaw ?? Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
       else if (m.type === 'placed') {
         const c = calls.get(m.id);
@@ -515,6 +519,24 @@ async function boot(plan, poolSize) {
   });
   lands.load(null);
   game.lands = lands;
+  // The Test Dungeon's three counters (src/ui/testhall.js): off till the main menu's Test Dungeon.
+  game.hallUI = new HallUI({
+    base: BASE, sim: simWorker, pack, renderer, audio,
+    party: () => game.party, heroTalk: () => game.heroTalk, inventory: () => inventory,
+    give: (item) => {
+      if (pack.add(item)) { inventory.render(); return; }
+      const snap = game.currentSnap();
+      game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw);
+      hud.tip('Your pack is full: it is on the ground at your feet.', 2.5);
+    },
+    fill: () => { shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999; },
+    level: (d) => { pack.level = Math.max(1, Math.min(50, pack.level + d)); pack.xp = xpFor(pack.level); arm(); game.party?.levelled(); },
+    tip: (t, secs) => hud.tip(t, secs),
+    opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
+    closed: () => { input.menu = false; resume(); },
+    click: () => title.chime?.(),
+  });
+  if (game.party) game.party.freeHire = () => !!game.hallUI?.on;
   addPart('lands', { save: () => lands.save(), load: (d) => lands.load(d) });
   window.bm = game.api(shared, simWorker, buffer, pool);
   renderDiagnostics.attach(() => ({
@@ -581,7 +603,9 @@ async function boot(plan, poolSize) {
   addPart('doors', { save: () => game.doors.save(), load: (d) => game.doors.load(d) });
   addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 6) });
   // Not while you lie fallen.
-  const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
+  // (Nor in the Test Dungeon: nothing of it is kept, and Continue stays the game you were playing.)
+  let testMode = false;
+  const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2 && !testMode;
   const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
   // The game keeps itself as it's played: that's Continue.
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
@@ -619,6 +643,7 @@ async function boot(plan, poolSize) {
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
   };
   const loadInto = async (data) => {
+    leaveTest();
     try { await restore(data); } catch (e) {
       await title.confirm({ title: 'Could not load', text: e.message, yes: 'Back', no: false });
       return false;
@@ -633,6 +658,7 @@ async function boot(plan, poolSize) {
   const toTitle = async () => {
     game.autoplay?.toggle(false);
     await autosave();
+    leaveTest();
     input.enabled = false;
     state.paused = false;
     shared.input[INPUT.PAUSE] = 1;
@@ -669,7 +695,36 @@ async function boot(plan, poolSize) {
       const d = saves.newest();
       if (d) startFrom(d);
     } else if (a === 'load') title.slots('load', slotOptions());
+    else if (a === 'test') enterTest();
   };
+  // The Test Dungeon (src/core/testhall.js): a white hall for trying the monsters, with all the gear and a party for nothing.
+  // A fresh pack and a fresh world, the story long over; nothing kept, so the game you were playing is still in Continue.
+  async function enterTest() {
+    testMode = true;
+    game.hallUI.setOn(true); hud.testHall = true; game.questTrail.off = true;
+    played = 0; playT = 0;
+    pack.load(null); arm(); game.drops.clear();
+    game.chests.load(null); game.spellbar.load(null); game.doors.load(null);
+    townUI.load(null); town.load(null);
+    game.party?.load(null);
+    renderer.setHour(12);
+    simWorker.postMessage({ type: 'hall', cmd: 'enter' });
+    const [x, z] = hallAt(SPAWN.x, SPAWN.z), name = openingHUD?.name || 'Tessariel';
+    openingHUD?.reset(name);
+    try { await simCall('place', { x, y: HALL.y, z, yaw: SPAWN.yaw, pitch: 0, openingRevision: OPENING_REVISION, opening: OPENING.ARRIVED, guide: [0, 0, 0, 0], name }); } catch (e) { console.error('test dungeon', e); }
+    hud.reset(); renderer.clearBlood();
+    await enter(false);
+    if (!input.touch && !AUTO) input.lock();
+    hud.tip('The Test Dungeon. Captain Vale keeps the stores, Aldous Fenn the Free Company, and Ysolde Marr by the door summons whatever you would fight. E to talk.', 9);
+  }
+  // Out of it, back to the title: whatever was hired goes back on the books, and the hall's own are sent home.
+  function leaveTest() {
+    if (!testMode) return;
+    testMode = false;
+    game.party?.load(null);
+    simWorker.postMessage({ type: 'hall', cmd: 'leave' });
+    game.hallUI.setOn(false); hud.testHall = false; game.questTrail.off = false;
+  }
   for (const b of $('pause').querySelectorAll('[data-p]')) {
     b.onclick = () => {
       title.chime();
@@ -699,7 +754,7 @@ async function boot(plan, poolSize) {
   applySetting('res', settings.res);
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
-    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open || game.party?.open) return;
+    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open || game.party?.open || game.hallUI?.open) return;
     if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
@@ -901,7 +956,7 @@ class Hud {
     if (g !== this.msgShown) {
       this.msgShown = g;
       const m = $('msg');
-      const again = this.input.touch ? 'Tap to play again' : 'R to play again';
+      const again = this.testHall ? 'Back to the hall in a moment' : this.input.touch ? 'Tap to play again' : 'R to play again';
       if (g === 2) { m.innerHTML = `You have fallen<small>${again}</small>`; m.style.opacity = 1; }
     }
     if (this.debug) {
@@ -1031,6 +1086,7 @@ class GameView {
     const d = this.nearDrop;
     if (!d) {
       if (this.lands?.use()) return;
+      if (this.nearStation) { this.hallUI.talk(this.nearStation.key); this.takeShown = undefined; return; }
       if (this.nearChest) this.chests.open(this.nearChest);
       else if (this.nearFolk) { if (!this.nearFolk.busy) { this.townUI.talk(this.nearFolk.i); this.takeShown = undefined; } }
       else if (this.nearHero) { if (!this.nearHero.busy) { this.heroTalk.talkTo(this.nearHero.h); this.takeShown = undefined; } }
@@ -1073,16 +1129,20 @@ class GameView {
       const w = this.townUI.whereOf(folk.i);
       if (w && hero.h.dist < Math.hypot(w.x - snap[H.PX], w.z - snap[H.PZ])) folk = null; else hero = null;
     }
+    // Or, in the Test Dungeon, one of its counters (src/ui/testhall.js): before anyone, and its people are only at them.
+    const station = free && this.hallUI?.on ? this.hallUI.nearest(snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw) : null;
+    if (station || (hero?.h.p.broker && this.hallUI?.on)) { folk = null; hero = null; }
+    this.nearStation = station;
     this.nearFolk = folk; this.nearHero = hero;
-    const near = d || this.nearChest || (folk && folk.label) || hero?.label || this.nearDoor;
+    const near = d || this.nearChest || station?.label || (folk && folk.label) || hero?.label || this.nearDoor;
     if (near === this.takeShown) return;
     this.takeShown = near;
     $('take').style.display = near ? 'block' : 'none';
     $('bTake').style.display = near && this.input.touch ? 'flex' : 'none';
-    const shuts = !d && !this.nearChest && !folk && !hero && this.nearDoor?.open;
-    const locked = !d && !this.nearChest && !folk && !hero && this.nearDoor && this.locked(this.nearDoor);
-    $('bTake').textContent = d || !near ? 'TAKE' : folk || hero ? 'TALK' : shuts ? 'SHUT' : locked ? 'TRY' : 'OPEN';
-    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy || hero?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : folk ? folk.label : hero ? hero.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
+    const shuts = !d && !this.nearChest && !station && !folk && !hero && this.nearDoor?.open;
+    const locked = !d && !this.nearChest && !station && !folk && !hero && this.nearDoor && this.locked(this.nearDoor);
+    $('bTake').textContent = d || !near ? 'TAKE' : station || folk || hero ? 'TALK' : shuts ? 'SHUT' : locked ? 'TRY' : 'OPEN';
+    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy || hero?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : station ? station.label : folk ? folk.label : hero ? hero.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
   }
 
   gameState() { const s = this.currentSnap(); return s ? s[H.GAME] : 0; }
@@ -1642,6 +1702,10 @@ class GameView {
         for (const o of [...by('tank').slice(0, 1), ...by('heal').slice(0, 1), ...by('dps')].slice(0, n)) P.hire(o, true); return P.members; },
       warrens: (cmd = 'enter', o = {}) => sim.postMessage({ type: 'warrensDebug', cmd, ...o }),
       warrensState: () => view.party?.warrens,
+      // The Test Dungeon, for tests: hall('summon', { list: [{ id: 'tripo:kobold_1', n: 3 }] }), hall('kill') drops everything
+      // past the door, hall('clear') empties the arena; hallState() is the sim's last word on it.
+      hall: (cmd, o = {}) => (cmd === 'summon' && view.hallUI ? view.hallUI.send(o.list || []) : sim.postMessage({ type: 'hall', cmd, ...o })),
+      hallState: () => view.hallUI?.hall,
       heroSay: (slot, trig) => view.heroTalk?.say(view.heroTalk.heroes[slot], trig, null, {}),
       shot: (name) => new Promise((resolve) => {
         view.onFrame = () => {

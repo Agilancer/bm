@@ -1308,6 +1308,15 @@ function huntFrom(sim, b, x, z, type) {
   b.rise(sim);
 }
 
+// Set on the player wherever they are, as a pack is (the Test Dungeon's, src/sim/testhall.js): kept on them if it's lost them.
+export function huntPlayer(sim, b) {
+  const p = sim.player;
+  if (b.dead || b.dormant || b.state === STATE.RISE || b.state === STATE.PLAYDEAD) return;
+  b.hostile = true;
+  if (b.aggro && sim.time - b.lastSense < 3) return;
+  b.aggro = true; b.goal = GOAL.HUNT; b.lastX = p.x; b.lastZ = p.z; b.lastSense = sim.time;
+}
+
 // Graves' own dead are the last the packs call on, so a grave you come to still has someone in it.
 const graveLast = (a, b) => (a.opts.grave ? 1 : 0) - (b.opts.grave ? 1 : 0);
 

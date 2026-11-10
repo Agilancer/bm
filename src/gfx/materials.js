@@ -283,6 +283,17 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   if (id == 101u) { return vec4f(1.0, 0.6, 0.2, 1.0); }         // flame (emissive below)
   if (id == 102u) { return vec4f(0.01, 0.018, 0.02, 0.05); }    // well water
   if (id == 103u) { return vec4f(0.45, 0.07, 0.05, 0.4); }      // apples
+  // The Test Dungeon (src/core/testhall.js): white stone, its white tiled floor, the panels of light in its ceilings.
+  if (id == 106u) { return vec4f(0.8, 0.8, 0.79, 0.85); }       // white
+  if (id == 107u) {
+    // A metre tile with a thin grey joint, and a darker line every five metres, to judge a distance by.
+    let g = abs(fract(p.xz) - 0.5);
+    let five = abs(fract(p.xz / 5.0) - 0.5) * 5.0;
+    let joint = smoothstep(0.475, 0.495, max(g.x, g.y));
+    let major = smoothstep(2.44, 2.48, max(five.x, five.y));
+    return vec4f(vec3f(0.78) * (1.0 - 0.22 * joint) * (1.0 - 0.3 * major), 0.5);
+  }
+  if (id == 108u) { return vec4f(1.0, 1.0, 1.0, 1.0); }         // a light panel (emissive below)
   return vec4f(0.62, 0.42, 0.1, 0.55);                          // pears
 }
 
@@ -390,6 +401,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       emissive = L.rgb * (L.w * 2.2 + 0.05) * (1.0 - 0.6 * heart) + SLIME_RIM[lay - 120u] * fres * 0.55 + vec3f(in.uv.y * 1.6);
     }
     if (lay == 100u || lay == 105u) { metal = 0.9; }
+    if (lay == 108u) { emissive = select(vec3f(6.0, 6.0, 5.6), vec3f(1.6, 1.6, 1.5), F.blood.w < 0.5); albedo = vec3f(0.0); }
     if (lay == 101u) {
       // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
       for (var li = 0u; li < u32(F.counts.x); li++) {
@@ -823,7 +835,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // A cool edge of sky around the silhouette separates dark plate from anything behind it.
   let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
   // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)
-  c += select(F.skyAmb.rgb * 0.32 * (0.35 + 0.65 * metal), vec3f(0.5, 0.31, 0.17), indoorAt(p) > 1.5) * rimT * C.info.y * rimK;
+  let rimIn = indoorAt(p);
+  c += select(select(F.skyAmb.rgb * 0.32 * (0.35 + 0.65 * metal), vec3f(0.5, 0.31, 0.17), rimIn > 1.5), vec3f(0.3, 0.31, 0.33), rimIn > 2.5) * rimT * C.info.y * rimK;
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);
@@ -891,7 +904,8 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   if (indoor < 0.5 && cave < 0.99) { c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow * (1.0 - cave); }
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
-  if (indoor > 1.5) { ambient = vec3f(0.044, 0.044, 0.048); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
+  else if (indoor > 1.5) { ambient = vec3f(0.044, 0.044, 0.048); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);
   let nv = max(dot(n, v), 1e-3);
@@ -902,7 +916,7 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   if (!LEAN || metal > 0.02) { env = envDir(refl, rough * 7.0); }
   let horizon = smoothstep(-0.25, 0.12, refl.y);
   var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
-  if (indoor > 0.5) { reflected *= select(0.22, 0.05, indoor > 1.5); }
+  if (indoor > 0.5) { reflected *= select(select(0.22, 0.05, indoor > 1.5), 0.5, indoor > 2.5); }
   reflected *= mix(1.0, 0.06, cave);
   let dfg = envDFG(rough, nv);
   let fss = f0 * dfg.x + dfg.y;

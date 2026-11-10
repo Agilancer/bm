@@ -288,6 +288,8 @@ export class QuestTrail {
   frame(dt, snap) {
     const fx = this.renderer.trail;
     if (!fx) return;
+    // (Nothing to follow in the Test Dungeon: src/ui/testhall.js.)
+    if (this.off) { fx.set(this.dots, 0); return; }
     this.planT -= dt;
     if (this.planT <= 0) { this.planT = REPLAN; this.path = this.plan(snap); }
     const path = this.path;

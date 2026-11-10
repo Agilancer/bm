@@ -3,6 +3,7 @@
 import { floorAt } from '../core/interior.js';
 import { CHURCH_BOUNDS, inChurch } from '../core/church.js';
 import { waterAt } from '../core/lands.js';
+import { inHall } from '../core/testhall.js';
 
 // The houses' boxes (src/core/interior.js homes; the first of them is the Rift's pit, not a house). setHomes once the interior's in.
 let houses = [];
@@ -13,14 +14,17 @@ const inHouse = (x, y, z) => {
   return false;
 };
 
-// 'out', 'house', 'cathedral' (the church above ground), 'catacombs', or 'rift' (the deep under them).
+// 'out', 'house', 'cathedral' (the church above ground), 'catacombs', 'rift' (the deep under them), or 'hall' (the Test Dungeon).
 export function roomAt(x, y, z) {
+  // (The Test Dungeon's white hall: src/core/testhall.js.)
+  if (inHall(x, z)) return 'hall';
   if (inChurch(x, y, z)) return y > 1 ? 'cathedral' : y > -20 ? 'catacombs' : 'rift';
   return inHouse(x, y, z) ? 'house' : 'out';
 }
 
 // 'dirt', 'stone', 'wood' or 'water': the footsteps the pack has. y is the feet.
 export function groundAt(x, y, z) {
+  if (inHall(x, z)) return 'stone';
   const w = waterAt(x, z);
   if (w !== null && y < w + 0.1) return 'water';
   if (x > CHURCH_BOUNDS.x0 && x < CHURCH_BOUNDS.x1 && z > CHURCH_BOUNDS.z0 && z < CHURCH_BOUNDS.z1 && (floorAt(x, z) !== null || inChurch(x, y + 0.5, z))) return 'stone';

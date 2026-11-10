@@ -13,6 +13,7 @@ import { terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, SITES, WATERS, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
 import { DUNGEON, DUNGEON_CELL, ENTRY, EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, caveRoofY, caveRoom, braziers, grid, toWorld, torches } from './dungeon.js';
+import { buildHall } from './testhall.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -689,6 +690,8 @@ export function buildSites() {
   const K = new Kit();
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   cave(K); warrensMouth(K);
+  // (The Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js.)
+  buildHall(K);
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   built = { parts: K.parts, colliders: K.colliders, spots: K.spots };
   return built;
