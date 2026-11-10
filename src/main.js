@@ -354,7 +354,7 @@ async function boot(plan, poolSize) {
   renderer.folk.load(BASE).catch((e) => console.warn('townsfolk', e));
   const pack = new Pack();
   pack.load(null);
-  const worldMap = new WorldMap(BASE, input.touch);
+  const worldMap = new WorldMap(BASE, input.touch, renderer.landPool);
   worldMap.load(null);
   game.worldMap = worldMap;
   // What of the land you've seen.

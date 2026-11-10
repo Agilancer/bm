@@ -287,6 +287,28 @@ function rollout(tactic, obs, rng) {
   return dealt * 1.5 - taken * (1.2 + (1 - obs[1]) * 1.5) + finish;
 }
 
+// The map's samples (src/ui/map.js rows), rows j0 to j1 of a paper `grid` samples across out to `edge`: the heights, and for
+// the whole land's paper its woods and its countries' tints too. The same sums in the same order as the map's own.
+function mapRows({ edge, grid, j0, j1, land }) {
+  const N = grid + 1, step = (2 * edge) / grid, n = (j1 - j0) * N;
+  const h = new Float32Array(n), wood = land ? new Float32Array(n) : null, tint = land ? new Float32Array(n * 3) : null;
+  const w = new Float32Array(COUNTRY_KEYS.length);
+  for (let j = j0; j < j1; j++) {
+    const z = edge - j * step;
+    for (let i = 0; i < N; i++) {
+      const x = edge - i * step, k = (j - j0) * N + i;
+      h[k] = terrainHeight(x, z);
+      if (!land) continue;
+      wood[k] = forestAmount(x, z);
+      countryWeights(x, z, w);
+      let r = 0, gg = 0, b = 0;
+      COUNTRY_KEYS.forEach((key, c) => { const t = COUNTRIES[key].tint; r += w[c] * t[0]; gg += w[c] * t[1]; b += w[c] * t[2]; });
+      tint[k * 3] = r; tint[k * 3 + 1] = gg; tint[k * 3 + 2] = b;
+    }
+  }
+  return { h, wood, tint };
+}
+
 let planning = false;
 function plannerLoop(shared, id, budgetMs, intervalMs) {
   let s = (id * 2654435761 + 1) >>> 0;
@@ -352,6 +374,10 @@ self.addEventListener('message', async (e) => {
         transfer = [data.buffer];
         break;
       }
+      case 'maprows':
+        result = mapRows(args);
+        transfer = result.wood ? [result.h.buffer, result.wood.buffer, result.tint.buffer] : [result.h.buffer];
+        break;
       case 'rocks':
         result = rocksAround(args.cx, args.cz, args.sreach, args.breach);
         transfer = [result.stones.buffer, result.boulders.buffer];

@@ -141,6 +141,7 @@ export class TripoSlots {
     this.trim(this.models, KEEP_MODELS, (k) => this.inUse((key) => this.ids[key.split(':')[0] - 1] === k), (v) => {
       v.base.srcBuf.destroy(); v.base.IB.destroy(); v.base.sideVB.destroy(); v.nrm.destroy(); v.mr.destroy();
       if (v.base.lodIB !== v.base.IB) v.base.lodIB.destroy();
+      if (v.base.lod2IB !== v.base.IB && v.base.lod2IB !== v.base.lodIB) v.base.lod2IB.destroy();
     });
     return m;
   }

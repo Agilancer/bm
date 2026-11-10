@@ -96,6 +96,30 @@ const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, lake:
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3 };
 const MAX_GROUND = 160;
+// A PC's far bodies (addLod, bodyDetail): the coarser meshes' cells in metres, and how many pixels a cell may be before its
+// mesh is used. Under a pixel, the welded mesh and the whole one fill the same pixels.
+const LOD_CELLS = [0.045, 0.11];
+const LOD_PIXELS = 0.8;
+// How far off a body's pose is made less often than the screen's drawn (skinEvery), and how often it's still made, a second.
+const SKIN_MID = 40, SKIN_FAR = 90, SKIN_MID_HZ = 65, SKIN_FAR_HZ = 33;
+
+// A rigid model's bounding sphere where its matrix (16 floats of m, at o) puts it: its own origin's place, and its radius
+// by the matrix's largest scale. Into t.sx, sy, sz, sr.
+function placeSphere(t, m, o, radius) {
+  t.sx = m[o + 12]; t.sy = m[o + 13]; t.sz = m[o + 14];
+  t.sr = radius * Math.sqrt(Math.max(m[o] * m[o] + m[o + 1] * m[o + 1] + m[o + 2] * m[o + 2], m[o + 4] * m[o + 4] + m[o + 5] * m[o + 5] + m[o + 6] * m[o + 6], m[o + 8] * m[o + 8] + m[o + 9] * m[o + 9] + m[o + 10] * m[o + 10]));
+}
+// Whether a sphere reaches into the camera's view (pl: its five planes, facing in).
+function inView(pl, x, y, z, r) {
+  for (let k = 0; k < 20; k += 4) if (pl[k] * x + pl[k + 1] * y + pl[k + 2] * z + pl[k + 3] < -r) return false;
+  return true;
+}
+// The farthest a mesh's points lie from its own origin.
+function reachOf(pos) {
+  let r = 0;
+  for (let i = 0; i < pos.length; i += 3) r = Math.max(r, pos[i] * pos[i] + pos[i + 1] * pos[i + 1] + pos[i + 2] * pos[i + 2]);
+  return Math.sqrt(r);
+}
 
 const norm3 = (x, y, z) => { const l = 1 / Math.hypot(x, y, z); return [x * l, y * l, z * l]; };
 
@@ -682,12 +706,36 @@ export class Renderer {
     return { count: nv, indices: ni, ranges, sideVB, IB, srcBuf, outBuf, palette, params, bg, jointCount, bindR };
   }
 
+  // Coarser index lists over the same skinned vertices. A phone has one, of the cell given: for every shadow, and for
+  // bodies past 16 m. A PC has two (LOD_CELLS), for bodies so far off that a cell is under a pixel (bodyDetail); the
+  // first is also what the far shadow cascade draws, whose texels are wider than its cells.
   addLod(sk, prim, cell) {
-    sk.lodIB = sk.IB; sk.lodCount = sk.indices;
-    if (!this.tier.lean) return;
-    const idx = clusterIndices(prim, cell);
-    sk.lodIB = makeBuffer(this.device, idx, GPUBufferUsage.INDEX);
-    sk.lodCount = idx.length;
+    const make = (size) => {
+      const idx = clusterIndices(prim, size);
+      return idx.length && idx.length < sk.indices ? [makeBuffer(this.device, idx, GPUBufferUsage.INDEX), idx.length] : [sk.IB, sk.indices];
+    };
+    if (this.tier.lean) {
+      const idx = clusterIndices(prim, cell);
+      sk.lodIB = makeBuffer(this.device, idx, GPUBufferUsage.INDEX); sk.lodCount = idx.length;
+      sk.lod2IB = sk.lodIB; sk.lod2Count = sk.lodCount;
+      return;
+    }
+    [sk.lodIB, sk.lodCount] = make(LOD_CELLS[0]);
+    [sk.lod2IB, sk.lod2Count] = make(LOD_CELLS[1]);
+  }
+
+  // Which mesh a body d metres off is drawn with on a PC: 0 the whole one, 1 and 2 the coarser (addLod). was: what it had
+  // last frame, so one standing right at a line doesn't flicker between the two.
+  bodyDetail(d, was) {
+    if (this.tier.lean || this.fullDetail) return 0;
+    return d > this.lodAt[1] * (was > 1 ? 0.94 : 1.06) ? 2 : d > this.lodAt[0] * (was > 0 ? 0.94 : 1.06) ? 1 : 0;
+  }
+
+  // Every how many frames a body d metres off is skinned again: its skinned mesh is kept from frame to frame, in the world's
+  // own space, so between times it holds the pose it had. Far enough off, 65 and then 33 poses a second can't be told from
+  // the screen's own rate, and they're most of a crowd's skinning.
+  skinEvery(d) {
+    return this.fullDetail ? 1 : d > SKIN_FAR ? this.skinSteps[1] : d > SKIN_MID ? this.skinSteps[0] : 1;
   }
 
   // Another body on the same mesh: its own pose buffers, sharing the geometry.
@@ -966,7 +1014,7 @@ export class Renderer {
     const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
-    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, maps: [alb, nrm, mr], tints: new Map() };
+    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, maps: [alb, nrm, mr], tints: new Map(), radius: reachOf(P) };
   }
 
   // The same model, glowing a colour: its rarity's, when it's dropped.
@@ -1311,7 +1359,7 @@ export class Renderer {
     const tex = await this.imageTexture(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source, 'rgba8unorm-srgb');
     const ubo = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const bg = device.createBindGroup({ layout: this.bglProp, entries: [{ binding: 0, resource: tex.createView() }, { binding: 1, resource: { buffer: ubo } }] });
-    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, ubo };
+    return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, ubo, radius: reachOf(pos) };
   }
 
   // Bake the sky panorama: every reflection in the game looks at this picture.
@@ -2002,6 +2050,7 @@ export class Renderer {
   // needn't even be skinned. On a phone a body far away is drawn from its coarse index list.
   cullBodies(cam, snap) {
     const pl = this.planes;
+    this.skinFrame = (this.skinFrame || 0) + 1;
     const stage = snap[H.OPENING];
     // Lisandra as you see her (src/core/opening.js prettyShown). Everyone else only ever sees the witch.
     const pretty = prettyShown(stage, snap[H.OPENING_TIME], this.hour >= DAWN_HOUR && this.hour < DUSK_HOUR);
@@ -2009,7 +2058,7 @@ export class Renderer {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
       const otherForm = stage && (i === this.chars.length - (pretty ? 1 : 2));
-      if (otherForm || c.pending || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; continue; }
+      if (otherForm || c.pending || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; c.skin = false; c.wasCast = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
       const r = c.armored ? 2.6 : 5;
       c.bx = x; c.by = y; c.bz = z; c.br = bodyRadius(r, c.bindR);
@@ -2021,13 +2070,19 @@ export class Renderer {
       // smudge. Neither is worth skinning sixteen bodies into every cascade for.
       // (casts also decides skinning, so a hero in view keeps it; noShadow only leaves it out of the shadow passes.)
       c.noShadow = false;
+      const d = Math.hypot(x - cam.x, z - cam.z);
       if (c.hero) {
-        const d = Math.hypot(x - cam.x, z - cam.z);
         if (d > 120) { c.seen = false; c.casts = false; }
         if (d > 50) { c.noShadow = true; if (!c.seen) c.casts = false; }
       }
       // (Different distances each way, so a body standing right at the line doesn't flicker between the two.)
-      c.far = Math.hypot(x - cam.x, z - cam.z) > (c.far ? 14 : 16);
+      c.far = d > (c.far ? 14 : 16);
+      // (Lisandra keeps her whole mesh: her mouth is shaded off it.)
+      c.detail = c.trueLook ? 0 : this.bodyDetail(d, c.detail);
+      // Skinned this frame? Always the first frame it's back, so it never shows a pose from before it left.
+      const every = this.skinEvery(d);
+      c.skin = c.casts && (!c.wasCast || every < 2 || (this.skinFrame + i) % every === 0);
+      c.wasCast = c.casts;
     }
     // The townsfolk (src/gfx/folk.js).
     if (this.folk) this.folk.cull(cam, pl);
@@ -2159,6 +2214,14 @@ export class Renderer {
     this.stage = 'frame uniforms';
     this.writeFrame(cam, snap);
     this.tripo?.sync(snap);
+    // How far off a coarser mesh's cells are LOD_PIXELS of a pixel, at this lens and this many pixels; and how many frames
+    // apart the far bodies' poses are made, at the rate frames are coming.
+    const lens = this.H / (2 * Math.tan((cam.fov || WORLD_FOV) / 2)) / LOD_PIXELS;
+    const lodAt = this.lodAt || (this.lodAt = [1e9, 1e9]), skinSteps = this.skinSteps || (this.skinSteps = [1, 1]);
+    lodAt[0] = LOD_CELLS[0] * lens; lodAt[1] = LOD_CELLS[1] * lens;
+    this.frameDt = lerp(this.frameDt ?? 1 / 60, Math.min(Math.max(dt || 1 / 60, 0.002), 0.1), 0.05);
+    skinSteps[0] = Math.max(1, Math.min(3, Math.floor(1 / SKIN_MID_HZ / this.frameDt + 0.2)));
+    skinSteps[1] = Math.max(1, Math.min(6, Math.floor(1 / SKIN_FAR_HZ / this.frameDt + 0.2)));
     this.cullBodies(cam, snap);
     const time = this.frameData[O.CAM + 3];
 
@@ -2175,7 +2238,7 @@ export class Renderer {
       // version is only taken once it's written, so a wound made off screen goes up the first frame it's back.) What it holds
       // still goes in: the knights' own swords and shields have no owner, so they're drawn whether the knight is or not.
       if (c.casts) {
-        q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
+        if (c.skin) q.writeBuffer(c.palette, 0, snap.buffer, snap.byteOffset + (co + C_PALETTE) * 4, c.jointCount * 32);
         const ver = snap[co + C.GASH_VERSION];
         if (ver !== this.gashVersions[i]) {
           this.gashVersions[i] = ver;
@@ -2194,12 +2257,14 @@ export class Renderer {
           d[8] = J.y0; d[9] = J.k; d[10] = J.mid; d[11] = 0;
           q.writeBuffer(c.ubo, 24 * 64 + 256, d, 0, 12);
         } else q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
-        skinParamsU[0] = c.count;
-        skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
-        skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
-        // (1: a still gown, no ripple of its own: Lisandra's, on the owner's word. 0 for everyone else.)
-        skinParams[7] = c.stillSkirt ? 1 : 0;
-        q.writeBuffer(c.params, 0, skinParams);
+        if (c.skin) {
+          skinParamsU[0] = c.count;
+          skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
+          skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;
+          // (1: a still gown, no ripple of its own: Lisandra's, on the owner's word. 0 for everyone else.)
+          skinParams[7] = c.stillSkirt ? 1 : 0;
+          q.writeBuffer(c.params, 0, skinParams);
+        }
       }
       if (c.propBase !== undefined) this.propData.set(snap.subarray(co + C_PROPS, co + C_PROPS + 16 * (c.propCount || 2)), c.propBase * 16);
       if (i < 2) {
@@ -2209,6 +2274,14 @@ export class Renderer {
       }
     }
     q.writeBuffer(this.propInstances, 0, this.propData);
+    // Where each sword and shield is, for leaving it out of the view or of a shadow cascade it can't reach. (A knight's
+    // have no owner to go by, and were drawn into everything wherever they were.)
+    for (let i = 0; i < this.props.length; i++) {
+      const pr = this.props[i];
+      if (pr.empty || pr.radius === undefined) continue;
+      placeSphere(pr, this.propData, i * 16, pr.radius);
+      pr.inView = inView(this.planes, pr.sx, pr.sy, pr.sz, pr.sr);
+    }
     // (Everything skinned from here on, the townsfolk and the arms, keeps its ripple: the slot goes back to 0.)
     skinParams[7] = 0;
     if (this.folk) this.folk.upload(q, time, skinParams, skinParamsU);
@@ -2398,6 +2471,8 @@ export class Renderer {
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
       g.slot = nGround;
       this.itemData.set(g.mat, nGround++ * 16);
+      // (Where it lies, for the same: out of view it isn't drawn, and it's in no cascade its shadow can't reach.)
+      if (model.radius !== undefined) { placeSphere(g, g.mat, 0, model.radius); g.inView = inView(this.planes, g.sx, g.sy, g.sz, g.sr); } else { g.sr = -1; g.inView = true; }
     }
     if (nGround) q.writeBuffer(this.itemInstances, 0, this.itemData, 0, nGround * 16);
 
@@ -2439,7 +2514,7 @@ export class Renderer {
     cp.setPipeline(this.skinPipeline);
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
-      if (!c.casts) continue;
+      if (!c.skin) continue;
       cp.setBindGroup(0, c.bg);
       cp.dispatchWorkgroups(Math.ceil(c.count / 128));
     }
@@ -2502,28 +2577,33 @@ export class Renderer {
       sp.setPipeline(this.pShSkin);
       // Only the bodies (and what they hold) that reach this cascade's square: the rest couldn't darken a texel of it
       // (shadowcull.js). Most bodies in view are far past the near cascades, so this halves the shadows' cost or better.
+      // (And into the far cascade, whose texels are wider than the coarse mesh's cells, the coarse mesh. A phone's shadows
+      // are all of its one coarse mesh.)
       const cm = this.frameData, co = O.CASC + c * 16;
+      const coarse = tier.lean || (c === tier.cascades - 1 && !this.fullDetail);
       for (let i = 0; i < this.chars.length; i++) {
         const ch = this.chars[i];
         ch.inCascade = ch.casts && !ch.noShadow && inCascade(cm, co, ch.bx, ch.by, ch.bz, ch.br);
         if (!ch.inCascade) continue;
         sp.setVertexBuffer(0, ch.outBuf);
-        sp.setIndexBuffer(ch.lodIB, 'uint32');
-        sp.drawIndexed(ch.lodCount);
+        if (coarse) { sp.setIndexBuffer(ch.lodIB, 'uint32'); sp.drawIndexed(ch.lodCount); } else { sp.setIndexBuffer(ch.IB, 'uint32'); sp.drawIndexed(ch.indices); }
       }
-      if (this.folk) this.folk.shadow(sp, cm, co);
+      if (this.folk) this.folk.shadow(sp, cm, co, coarse);
       sp.setPipeline(this.pShProp);
       sp.setVertexBuffer(1, this.propInstances);
-      this.props.forEach((pr, i) => {
-        if (pr.empty || (pr.owner !== undefined && !this.chars[pr.owner].inCascade)) return;
+      for (let i = 0; i < this.props.length; i++) {
+        const pr = this.props[i];
+        if (pr.empty || (pr.owner !== undefined && !this.chars[pr.owner].inCascade)) continue;
+        if (pr.radius !== undefined && !inCascade(cm, co, pr.sx, pr.sy, pr.sz, pr.sr)) continue;
         sp.setVertexBuffer(0, pr.VB);
         sp.setIndexBuffer(pr.IB, 'uint32');
         sp.drawIndexed(pr.count, 1, 0, 0, i);
-      });
+      }
       if (nGround) {
         sp.setVertexBuffer(1, this.itemInstances);
         for (const g of drawn) {
           if (g.slot < 0 || g.noShadow) continue;
+          if (g.sr >= 0 && !inCascade(cm, co, g.sx, g.sy, g.sz, g.sr)) continue;
           sp.setVertexBuffer(0, g.model.VB);
           sp.setIndexBuffer(g.model.IB, 'uint32');
           sp.drawIndexed(g.model.count, 1, 0, 0, g.slot);
@@ -2640,9 +2720,12 @@ export class Renderer {
       mp.setBindGroup(1, ch.matBG);
       mp.setVertexBuffer(0, ch.outBuf);
       mp.setVertexBuffer(1, ch.sideVB);
-      if (tier.lean && ch.far) {
+      if (tier.lean ? ch.far : ch.detail === 1) {
         mp.setIndexBuffer(ch.lodIB, 'uint32');
         mp.drawIndexed(ch.lodCount);
+      } else if (ch.detail === 2) {
+        mp.setIndexBuffer(ch.lod2IB, 'uint32');
+        mp.drawIndexed(ch.lod2Count);
       } else {
         mp.setIndexBuffer(ch.IB, 'uint32');
         mp.drawIndexed(ch.indices);
@@ -2657,18 +2740,19 @@ export class Renderer {
     if (this.folk) this.folk.draw(mp, tier.lean);
     mp.setPipeline(this.pProp);
     mp.setVertexBuffer(1, this.propInstances);
-    this.props.forEach((pr, i) => {
-      if (pr.empty || (pr.owner !== undefined && !this.chars[pr.owner].seen)) return;
+    for (let i = 0; i < this.props.length; i++) {
+      const pr = this.props[i];
+      if (pr.empty || (pr.owner !== undefined && !this.chars[pr.owner].seen) || (pr.radius !== undefined && !pr.inView)) continue;
       mp.setBindGroup(1, pr.bg);
       mp.setVertexBuffer(0, pr.VB);
       mp.setIndexBuffer(pr.IB, 'uint32');
       mp.drawIndexed(pr.count, 1, 0, 0, i);
-    });
+    }
     if (nGround) {
       mp.setPipeline(this.pItem);
       mp.setVertexBuffer(1, this.itemInstances);
       for (const g of drawn) {
-        if (g.slot < 0) continue;
+        if (g.slot < 0 || !g.inView) continue;
         mp.setBindGroup(1, g.model.bg);
         mp.setVertexBuffer(0, g.model.VB);
         mp.setIndexBuffer(g.model.IB, 'uint32');

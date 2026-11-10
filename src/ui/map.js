@@ -6,7 +6,7 @@
 
 import { C, CHARS_START, C_SIZE, H } from '../core/layout.js';
 import { forestAmount, forestTrees } from '../core/forest.js';
-import { LAND_EDGE, PATHS, PLOTS, ROADS, SUMMIT, terrainHeight } from '../core/terrain.js';
+import { LAND_EDGE, PATHS, PLOTS, ROADS, SUMMIT, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { CHURCH_SITE, churchAt } from '../core/church.js';
 import { COUNTRIES, COUNTRY_KEYS, ROUTES, SITES, WATERS, countryWeights } from '../core/lands.js';
 
@@ -31,8 +31,9 @@ const toWorld = (x, z) => [(WORLD - x) / WMPP, (WORLD - z) / WMPP];
 const TOWN_AT = (WORLD - EDGE) / WMPP, TOWN_SIZE = (2 * EDGE) / WMPP;
 
 export class WorldMap {
-  constructor(base, touch) {
-    this.base = base; this.touch = touch;
+  // pool: a thread pool to make the papers' samples on (rows), if there's one free of the fight's planning.
+  constructor(base, touch, pool = null) {
+    this.base = base; this.touch = touch; this.pool = pool;
     this.open = false;
     this.ready = false;
     this.paper = document.createElement('canvas'); this.paper.width = this.paper.height = PX;
@@ -58,7 +59,7 @@ export class WorldMap {
     try { village = await fetch(`${this.base}assets/game/village.json`).then((r) => r.json()); } catch { /* the map still has the land */ }
     const h = new Float32Array((GRID + 1) * (GRID + 1));
     const step = (2 * EDGE) / GRID;
-    for (let j = 0; j <= GRID;) {
+    for (let j = (await this.rows(EDGE, GRID, { h })) ? GRID + 1 : 0; j <= GRID;) {
       const until = performance.now() + 3;
       for (; j <= GRID && performance.now() < until; j++) {
         const z = EDGE - j * step;
@@ -142,12 +143,28 @@ export class WorldMap {
     this.ready = true;
   }
 
+  // A paper's samples, made on a thread of the pool's (src/sim/job.worker.js mapRows), a few rows a job so the land
+  // being laid round you isn't kept waiting behind them: three seconds of sums that were the render thread's, in the first
+  // half minute of play. False with no pool to ask (or a job that fails): then they're made here, as they were.
+  async rows(edge, grid, into) {
+    if (!this.pool) return false;
+    const N = grid + 1, each = 24;
+    try {
+      for (let j0 = 0; j0 < N; j0 += each) {
+        const res = await this.pool.run('maprows', { opening: openingTerrain, edge, grid, j0, j1: Math.min(N, j0 + each), land: !!into.wood });
+        into.h.set(res.h, j0 * N);
+        if (into.wood) { into.wood.set(res.wood, j0 * N); into.tint.set(res.tint, j0 * N * 3); }
+      }
+      return true;
+    } catch (e) { console.warn('map rows', e); return false; }
+  }
+
   // The whole land: its countries' colours by height, the woods, the water, the roads, and every named place.
   async buildLand() {
     const N = WGRID + 1, step = (2 * WORLD) / WGRID;
     const h = new Float32Array(N * N), wood = new Float32Array(N * N), tint = new Float32Array(N * N * 3);
     const w = new Float32Array(COUNTRY_KEYS.length);
-    for (let j = 0; j < N;) {
+    for (let j = (await this.rows(WORLD, WGRID, { h, wood, tint })) ? N : 0; j < N;) {
       const until = performance.now() + 4;
       for (; j < N && performance.now() < until; j++) {
         const z = WORLD - j * step;
