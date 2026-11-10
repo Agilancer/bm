@@ -113,6 +113,8 @@ whole line.
   line once as it comes up, placed at her mouth: the summons in your head, and the tunnel line from out of sight with an
   echo. If the line before has under 0.7 s left, the new one waits for it; otherwise, or on a skip, it's cut off. Her
   young voice stops a quarter of a second after the flash, so it never carries over the witch.
+- The witch's lines said from her mouth open her jaw by their loudness (`mouth`; docs/RENDERING.md, the witch's
+  mouth). A new recording needs nothing more: it's measured as it's first said.
 - In the town, `src/ui/folk.js` `speak` says her line as it comes up on the talk panel, in your head, in the voice of
   whichever of her you see (lovely from dawn to dusk, the crone at night: `DAWN_HOUR`, `DUSK_HOUR`). It's fetched as it's
   wanted (`Audio.voice`), and cut off by the next line or by closing the panel.

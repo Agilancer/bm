@@ -752,9 +752,29 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
 //    the diffuse keeping only what the reflection leaves, and the sky's own colour. That is how a glTF viewer (three.js,
 //    which Tripo's site runs on) lights a model. The scene's ambient, sun, lamps, shadows and fog are the same as
 //    everyone's, so she still stands in the same light as the people round her.
+// Her face has no inside to the mouth, so as her jaw turns down (tools/lisandra/jaw_rig.py) only the few triangles across
+// the painted line between her lips stretch. mouth.x > 0 while she speaks: then of those triangles, a lens round the line
+// in bind space (lip: y0 - k (x - mid)^2; mouth.w half as wide as her mouth, mouth.y half as tall as the gap she's
+// opened, on her front past z = mouth.z) is the dark inside of her mouth.
+export const MOUTH_WGSL = `  if (C.mouth.x > 0.0 && in.bind.z > C.mouth.z) {
+    let mx = in.bind.x - C.lip.z;
+    let lens = C.mouth.y * (1.0 - mx * mx / (C.mouth.w * C.mouth.w));
+    if (lens > 1e-5) {
+      let deep = 1.0 - abs(in.bind.y - (C.lip.x - C.lip.y * mx * mx)) / lens;
+      let inside = smoothstep(0.0, 0.45, deep) * C.mouth.x;
+      albedo = mix(albedo, mix(vec3f(0.075, 0.022, 0.02), vec3f(0.012, 0.004, 0.004), smoothstep(0.3, 1.0, deep)), inside);
+      rough = mix(rough, 0.85, inside);
+      metal = mix(metal, 0.0, inside);
+    }
+  }
+`;
+
 const TRUE_SWAPS = [
   [/\/\/ Metals take their reflection tint from the paint\.[\s\S]*?sunSpecScale = mix\(1\.0, 0\.55, darkPaint\);/, '// (No knight\'s steel: the paint, roughness and metal as the texture has them.)\n  envBoost = 1.0;\n  sunSpecScale = 1.0;'],
   ['var c = shadePBR(p, n, v, albedo, rough, metal, ao, shadow);', 'var c = shadeTrue(p, n, v, albedo, rough, metal, ao, shadow);'],
+  // The witch's mouth (renderer.js writes mouth and lip; zero for anyone without a jaw).
+  ['info: vec4f };', 'info: vec4f, mouth: vec4f, lip: vec4f };'],
+  ['  albedo *= C.info.y;\n', '  albedo *= C.info.y;\n' + MOUTH_WGSL],
 ];
 
 const SHADE_TRUE = /* wgsl */ `

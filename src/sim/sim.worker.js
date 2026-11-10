@@ -236,7 +236,7 @@ class Sim {
     this.knights.forEach((k, i) => k.write(snap, this.charOffset(i), this));
     const nk = this.knights.length, nh = this.heroes.length;
     this.heroes.forEach((h, i) => h.write(snap, this.charOffset(nk + i), this));
-    this.villagers.forEach((v, i) => v.write(snap, this.charOffset(nk + nh + i)));
+    this.villagers.forEach((v, i) => { v.mouth = input[INPUT.MOUTH]; v.write(snap, this.charOffset(nk + nh + i)); });
     if (this.opening) this.opening.write(snap, H);
     else snap[H.OPENING] = OPENING.OFF;
     player.sweep(snap, this);

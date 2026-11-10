@@ -42,9 +42,11 @@ export const INPUT = { MOVE_X: 0, MOVE_Z: 1, YAW: 2, PITCH: 3, SPRINT: 4, ATTACK
   ABIL: 42,
   // The shield's special ability and its strength: SHIELD_POWERS in src/items/items.js. 0 with a skull in hand.
   SH_POWER: 44, SH_VALUE: 45,
+  // How open the witch's mouth is as she speaks in the opening, 0 to 1, from her voice (src/ui/opening-sound.js mouth).
+  MOUTH: 46,
   // For each character slot, 1 when the renderer drew it or its shadow last frame (renderer.chars[i].casts, written after each frame
   // by GameView in src/main.js): the sim poses those often and the rest seldom (Sim.poseGap in src/sim/sim.worker.js).
-  SEEN: 46, SIZE: 46 + MAX_CHARS };
+  SEEN: 47, SIZE: 47 + MAX_CHARS };
 
 // Snapshot header (float offsets)
 export const H = {

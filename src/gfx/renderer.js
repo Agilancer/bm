@@ -24,7 +24,7 @@ import { ShadowCache } from './shadowcache.js';
 import { GEM_CUTS, SKULL_ANCHORS } from './skullgemdata.js';
 import { PATTERNS, SKINS } from '../items/skins.js';
 import { BODIES } from '../sim/undead.js';
-import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective } from '../core/math.js';
+import { lerp, mat4Invert, mat4LookTo, mat4Mul, mat4Ortho, mat4Perspective, smoothstep } from '../core/math.js';
 import { shieldPose } from '../core/shield-pose.js';
 import { MipGen, makeBuffer, mipCountFor, loadTextureArray, decodeScaledBitmap } from './gpu.js';
 import { ARMOR, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE, STATIC, TERRAIN, VIEWMODEL, VIEWMODEL_SKULL } from './materials.js';
@@ -54,6 +54,8 @@ const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const FRAME_FLOATS = 448;
+// A body's uniforms (materials.js CharU): its wounds, the pieces cut off, info, and the witch's mouth and lip line.
+const CHAR_UBO = 24 * 64 + 256 + 48;
 // The surfing hand's one joint, as a dual quaternion: it leans and swings about the shoulder with the steering (-1 left, 1 right), and rises as it comes out.
 const SURF_PIVOT = [-0.33, -0.33, 0.2], surfPal = new Float32Array(8);
 function surfHandPose(tilt, up, time) {
@@ -313,7 +315,8 @@ export class Renderer {
     tick();
     for (let i = 0; i < LISANDRA_FORMS.length; i++) {
       const { skirtCenter } = LISANDRA_FORMS[i];
-      const [form] = await this.buildCrabs(await loadModel(15 + BODIES.length + i), 1, LISANDRA_SCALE, (prim, glb, scale) => {
+      const model = await loadModel(15 + BODIES.length + i);
+      const [form] = await this.buildCrabs(model, 1, LISANDRA_SCALE, (prim, glb, scale) => {
         // A form with no skirt (Pretty in her leathers) has no _SKIRT mask: nothing of her sways as a dress.
         const mask = glb.json.meshes[0].primitives[0].attributes._SKIRT;
         if (mask === undefined) return prim;
@@ -330,6 +333,13 @@ export class Renderer {
       // model-true shading (ARMOR_TRUE): see docs/RENDERING.md.
       form.stillSkirt = true;
       form.trueLook = true;
+      // The witch's jaw (tools/lisandra/jaw_rig.py): where the line between her lips is, in bind space, for the dark
+      // that opens there as she speaks (materials.js MOUTH_WGSL).
+      const jaw = model.json.scenes[0].extras?.jaw, s = LISANDRA_SCALE;
+      if (jaw?.lip) {
+        const l = jaw.lip;
+        form.jaw = { y0: l.y0 * s, k: l.k / s, mid: l.mid * s, half: l.half * s, front: (l.z - 0.02) * s, rise: l.rise * s, gap: jaw.open * l.perRad * s };
+      }
       this.chars.push(form);
     }
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
@@ -702,11 +712,11 @@ export class Renderer {
     const out = [];
     for (let i = 0; i < count; i++) {
       const sk = i === 0 ? base : this.cloneSkinned(base);
-      const ubo = this.device.createBuffer({ size: 24 * 64 + 256 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+      const ubo = this.device.createBuffer({ size: CHAR_UBO, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
         { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
       ] });
-      out.push({ ...sk, ubo, matBG: bg, gashData: new Float32Array((24 * 64 + 256 + 16) / 4) });
+      out.push({ ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4) });
     }
     return out;
   }
@@ -725,11 +735,11 @@ export class Renderer {
     const [alb, nrm, mr] = await Promise.all([
       this.imageTexture(glb, 0, 'rgba8unorm-srgb', scale), this.imageTexture(glb, 1, 'rgba8unorm', scale), this.imageTexture(glb, 2, 'rgba8unorm', scale),
     ]);
-    const ubo = this.device.createBuffer({ size: 24 * 64 + 256 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const ubo = this.device.createBuffer({ size: CHAR_UBO, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
-    return { ...sk, ubo, matBG: bg, gashData: new Float32Array((24 * 64 + 256 + 16) / 4) };
+    return { ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4) };
   }
 
   async buildViewModel(glb) {
@@ -2156,7 +2166,14 @@ export class Renderer {
       c.gashData[1] = c.armored || c.flesh ? 1 : 0.62;
       c.gashData[2] = c.steel ? 1 : 0; // polished steel: its dark paint is shadow, not blackening
       c.gashData[3] = c.flesh ? 1 : 0;
-      q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
+      if (c.jaw) {
+        // Her lips part by mouth * gap, and the triangles across the line, rise tall at rest, stretch by that much: of
+        // them in bind space, the share that's new is the dark between her lips.
+        const J = c.jaw, d = c.gashData, m = Math.min(Math.max(snap[co + C_PROPS + 15] || 0, 0), 1), g = m * J.gap;
+        d[4] = smoothstep(0.02, 0.12, m); d[5] = g * J.rise / (2 * (J.rise + g)); d[6] = J.front; d[7] = J.half;
+        d[8] = J.y0; d[9] = J.k; d[10] = J.mid; d[11] = 0;
+        q.writeBuffer(c.ubo, 24 * 64 + 256, d, 0, 12);
+      } else q.writeBuffer(c.ubo, 24 * 64 + 256, c.gashData, 0, 4);
       skinParamsU[0] = c.count;
       skinParams[1] = 1; skinParams[2] = time; skinParamsU[3] = snap[co + C.CUT];
       skinParams[4] = 0.05; skinParams[5] = 0; skinParams[6] = 0.035;

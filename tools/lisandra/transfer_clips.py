@@ -9,10 +9,12 @@ new limb bone is laid along its old partner's rest bone, so a clip authored on t
 and fingers where it put the old one's. Hands are laid by two lines, the fingers and the knuckles, so the palm faces where it did.
 
 The hips' travel is scaled by the ratio of the two hip heights. Other bones keep the new rig's own lengths: only the
-hips' translation is written. The new model's own clips are kept; an old clip of the same name comes in renamed
-(`walk` becomes `walk_gown`). Needs NumPy.
+hips' translation is written. The new model's own clips are kept, and they win: a Blender copy suffix on one is dropped
+(`walk.001` becomes `walk`), so the game plays the model's own walk and run. An old clip of the same name comes in
+renamed (`walk` becomes `walk_gown`) or, with no rename, is left out. Needs NumPy.
 """
 import json
+import re
 import struct
 import sys
 
@@ -265,6 +267,8 @@ def main(old_path, new_path, out_path):
     print(f'hip height ratio {scale:.3f}')
 
     doc, buf = new.doc, new.buf
+    for a in doc.get('animations', []):
+        a['name'] = re.sub(r'\.\d{3}$', '', a['name'])
     have = {a['name'] for a in doc.get('animations', [])}
     doc.setdefault('animations', [])
 

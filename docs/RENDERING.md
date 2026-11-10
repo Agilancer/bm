@@ -45,10 +45,19 @@ same normal-map problem.
 
 On the owner's word ("so her cloth doesn't dance at the beginning when she talks to you"):
 
-- `assets/game/lisandra/witch.glb` is back to the file from commit d6a0f3d (2026-11-06). That is the owner's
-  `LISANDRA - UGLY OLD WITCH.glb` mesh, skin weights, bind pose and textures, byte for byte. It has the same 175 clips
-  (checked against the cloth version, which only added cloth-bone channels) and the `_SKIRT` mask. It has 65 joints
-  and no `cloth_*` bones.
+- `assets/game/lisandra/witch.glb` is the owner's new witch (`LISANDRA - UGLY OLD WITCH NEW.glb`, 2026-11-09): her
+  mesh, skin weights, bind pose and textures byte for byte, with her own `walk` and `run` (Tripo named them `walk.001`
+  and `run.001`) as the walk and run the game plays. The other 174 clips came across from the old witch with
+  `tools/lisandra/transfer_clips.py` (the old walk kept as `walk_gown`, 176 clips in all), and the `_SKIRT` mask from
+  `tools/lisandra_skirt.py witch`, and a jaw from `tools/lisandra/jaw_rig.py` (below). It has 66 joints (Tripo's 65 and
+  `Jaw`) and no `cloth_*` bones. Rebuild:
+
+      python tools/lisandra/transfer_clips.py <old witch.glb> "LISANDRA - UGLY OLD WITCH NEW.glb" clips.glb
+      python tools/lisandra_skirt.py witch clips.glb skirt.glb
+      python tools/lisandra/jaw_rig.py skirt.glb assets/game/lisandra/witch.glb
+
+  (The old witch's clips are in git: `git show f7ad16b:assets/game/lisandra/witch.glb`.) She has fitted sleeves, so her
+  arms are turned out from the gown by 0.1 rad (`armClearance`), not the old ragged sleeves' 0.19.
 - Her form in `src/core/lisandra.js` has no `cloth` entry, so `village-walker.js` makes no `Cloth`. `src/sim/cloth.js`
   and `tools/lisandra/cloth_rig.py` are kept but unused.
 - The skinning shader's 9 mm skirt ripple is turned off for her alone. `renderer.js` writes `skinParams[7] = 1` for
@@ -56,6 +65,30 @@ On the owner's word ("so her cloth doesn't dance at the beginning when she talks
   the arms. In `SKIN` the ripple is multiplied by `(1.0 - P.wind.w)`, which is exactly 1 for everyone else, so the
   townsfolk's skirts come out the same to the bit.
 - The `_SKIRT` leg-clearance push stays. It only moves the gown when a leg would cut through it, as when she walks.
+
+## The witch's mouth
+
+She speaks in the opening, so her jaw moves with her voice. Her face is the owner's sculpt with the lips painted on: no
+inside to the mouth, and none is added (her mesh, weights and textures are as supplied, but for the jaw's share below).
+
+- `tools/lisandra/jaw_rig.py` adds one bone, `Jaw`, the last joint, a child of her head at the hinge of the jaw, which no
+  clip moves. It takes everything below the painted line between her lips (measured off her texture), cut sharp
+  between the corners, with the cheeks and the skin under the chin going part of the way. Only weight her head held is
+  handed over, so her neck blends as before. The scene's extras carry `jaw: {joint, axis, open, lip}`: the axis she
+  opens about, the most she opens (0.12 rad, about a centimetre between her lips), and her lip line for the shader.
+- When the jaw turns down, the few triangles across the lip line stretch. Stretched, they would only show taller lips,
+  so `ARMOR_TRUE` darkens the part of them that's new: in bind space, a lens round the lip line as tall as the gap she's
+  opened, scaled by how much those triangles have grown (`MOUTH_WGSL` in `src/gfx/materials.js`, two more swaps in
+  `TRUE_SWAPS`). `renderer.js` writes `mouth` and `lip` after `info` in her uniforms (`CHAR_UBO`); for everyone else
+  `mouth` stays 0 and nothing changes.
+- Her voice drives it. `src/ui/opening-sound.js` measures each witch line said from her mouth (not the summons in your
+  head) as it starts: loudness every 10 ms over 30 ms, opening evenly from 30 dB under the line's loudest to 2 dB under
+  it, opening in 30 ms and shutting in 70 ms, read 40 ms ahead of the sound. `src/main.js` puts it in `INPUT.MOUTH`;
+  the worker hands it to her (`VillageWalker.mouth`), whose `poseModifier` turns the jaw after the story's pose, and
+  she writes it to her free prop slot (`C_PROPS + 15`) for the renderer.
+- Checked headless: the jaw and dark gap at four openings, close and at 1.3 m, and the opening's first 45 s of her
+  lines (shut between lines, about half open on average while she speaks). Not checked: a human watching it, the
+  phone, and her in town at night (her lines there are in your head, so her mouth stays shut).
 
 ## Shadow culling (all bodies, identical pictures)
 
@@ -195,10 +228,11 @@ What's left is mostly the browser's: putting a 3440×1440 frame on screen costs 
   only by the `(1.0 - P.wind.w)` factor, which is exactly 1 for everyone but Lisandra. The only new module is
   `ARMOR_TRUE`.
 - `tests/render-models.test.mjs`:
-  - takes the three swaps back out of `ARMOR_TRUE` and gets `ARMOR` character for character;
+  - takes the swaps (and the witch's mouth) back out of `ARMOR_TRUE` and gets `ARMOR` character for character;
   - checks that `ARMOR` has none of the new code;
   - checks the cascade test never drops a sphere that touches the square;
-  - checks the witch file has no cloth bones and still has 175 clips.
+  - checks the witch file has no cloth bones and has 176 clips, with her own walk and run, and her jaw: 66 joints,
+    `Jaw` last under her head, moved by no clip, and the lip line in the scene's extras.
 - All test files pass. Run each on its own: `node --test tests/<file>`.
 
 Still to do: a human look in the game. The cave and ledge shots with the new shading haven't been compared side by side
