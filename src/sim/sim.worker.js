@@ -33,6 +33,8 @@ import { Tumblers } from './tumblers.js';
 import { TripoEmpty, TripoWorld } from './tripo.js';
 import { Warrens } from './dungeon.js';
 import { PORTAL, inDungeon } from '../core/dungeon.js';
+import { inHall } from '../core/testhall.js';
+import { TestHall } from './testhall.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
@@ -137,6 +139,9 @@ class Sim {
   restart() {
     // (Fallen in the Hollowfang Warrens: back at its way in, not out on the road. src/sim/dungeon.js afterRestart.)
     const inWarrens = !!this.player && inDungeon(this.player.x, this.player.z) && this.tick > 0;
+    // (In the Test Dungeon, what it brought into its arena goes home first: src/sim/testhall.js.)
+    this.testHall?.beforeRestart();
+    this.wantRestart = false;
     this.player.reset();
     this.player.y = this.world.height(this.player.x, this.player.z);
     this.casting.reset();
@@ -158,6 +163,8 @@ class Sim {
     this.input[INPUT.PITCH] = 0;
     self.postMessage({ type: 'restart', yaw });
     this.warrens?.afterRestart(inWarrens);
+    // (And in the Test Dungeon you're stood back at its hall's south end.)
+    this.testHall?.afterRestart();
   }
 
   step(dt) {
@@ -172,6 +179,8 @@ class Sim {
       this.manualTicks--;
     }
     if (input[INPUT.RESTART] !== this.restartSeen) { this.restartSeen = input[INPUT.RESTART]; this.restart(); }
+    // (Fallen in the Test Dungeon: started over by itself, a moment after. src/sim/testhall.js.)
+    if (this.wantRestart) this.restart();
     if (input[INPUT.CMD] !== this.cmdSeen) { this.cmdSeen = input[INPUT.CMD]; this.command(input[INPUT.ASPECT], input[INPUT.CMD_A], input[INPUT.CMD_B], input[INPUT.CMD_C]); }
     if (this.stopT > 0) { this.stopT -= dt; this.timeScale = 0.08; } else this.timeScale = Math.min(1, this.timeScale + dt * 14);
     if (this.slowT > 0) this.slowT -= dt;
@@ -227,6 +236,8 @@ class Sim {
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     if (this.heroWorld && !this.frozen && tdt > 0) this.heroWorld.step(tdt);
     if (!this.frozen && tdt > 0) this.warrens?.step(tdt);
+    // (In real seconds: its door and its count after a fall don't slow with a slow-motion death.)
+    this.testHall?.step(dt);
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     // (After the spells' update, which clears the frame's shapes.)
@@ -438,6 +449,8 @@ Sim.prototype.place = function (d) {
   if (!d || (this.opening && d.openingRevision !== OPENING_REVISION)) return;
   // (A game kept down in the Warrens loads at their portal, out in the woods: the Warrens start again from nothing.)
   if (inDungeon(d.x, d.z)) d = { ...d, x: PORTAL.x + Math.sin(PORTAL.yaw) * 4, z: PORTAL.z + Math.cos(PORTAL.yaw) * 4, y: -1e9, yaw: PORTAL.yaw };
+  // (Nobody's kept in the Test Dungeon's hall but while it's on: src/sim/testhall.js. Anywhere else, the road into town.)
+  if (inHall(d.x, d.z) && !this.testHall?.on) d = { ...d, x: 7.5, z: 72, y: -1e9, yaw: Math.PI };
   const p = this.player;
   const floor = this.world.heightFor(d.x, d.z, d.y);
   p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
@@ -545,6 +558,8 @@ async function boot(msg) {
   }
   // The Hollowfang Warrens (src/sim/dungeon.js): after the Tripo lairs and the heroes, which it uses.
   sim.warrens = new Warrens(sim);
+  // The Test Dungeon (src/sim/testhall.js): off until the main menu asks for it.
+  sim.testHall = new TestHall(sim);
   for (const form of LISANDRA_FORMS) {
     sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
   }
@@ -574,6 +589,7 @@ async function boot(msg) {
     if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
     if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
+    if (m.type === 'hall') sim.testHall?.message(m);
     if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {

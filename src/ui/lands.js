@@ -354,8 +354,9 @@ export class Lands {
     A.bed('beach_rain', 0.45 * out * near(sm.x, sm.z, sm.r + 60) ** 0.7);
     A.bed('fire_medium', 0.35 * out * Math.max(near(k.x + 90, k.z, 140), near(o.x, o.z, 60)));
     A.bed('cave_drips', 0.3 * out * near(SITES.barrows.x, SITES.barrows.z, 120));
-    // Inside: a house's quiet, the dark lord's cathedral with the storm on its roof, the catacombs, the Rift's rumble.
-    A.bed('inside_day', room === 'house' && !night ? 0.5 : 0);
+    // Inside: a house's quiet (and the Test Dungeon's, by day whatever the hour), the dark lord's cathedral with the storm on
+    // its roof, the catacombs, the Rift's rumble.
+    A.bed('inside_day', (room === 'house' && !night) || room === 'hall' ? 0.5 : 0);
     A.bed('inside_night', room === 'house' && night ? 0.5 : 0);
     A.bed('inside_day_storm', room === 'cathedral' && !night ? 0.45 : 0);
     A.bed('inside_night_storm', room === 'cathedral' && night ? 0.45 : 0);

@@ -41,6 +41,7 @@ import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
 import { inDungeon } from '../core/dungeon.js';
 import { EXIT_IN, toWorld as caveWorld } from '../core/dungeon.js';
 import { caveStep, doHire, doWarrens, hireJob, hiring, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
+import { HallNav, STATIONS, hallAt, inArena, inHall } from '../core/testhall.js';
 
 const TAU = Math.PI * 2;
 const wrap = (a) => { a %= TAU; return a > Math.PI ? a - TAU : a < -Math.PI ? a + TAU : a; };
@@ -187,6 +188,10 @@ const CORE = ['firebolt', 'mend', 'nova', 'meteor'];
 // Warned in the console when it starts, and the failing list of tools/autoplay/check.mjs. When something's added to the game,
 // it's taught here (and the check run), so auto-play keeps playing the whole of it. foeNames: FOE_NAMES from src/main.js.
 const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start']);
+// The Test Dungeon's counters (src/core/testhall.js STATIONS), and what auto-play does with each: nothing. In there it fights
+// whatever's been summoned, and what that is, what it's wearing and who's with it are for whoever's testing to choose
+// (hallRun below). A new counter is named here, with what it's for, or coverage() says so.
+const HALL_COUNTERS = { gear: 'left to the tester: it fights in what it was given', party: 'left to the tester: it fights beside whoever was hired', foes: 'left to the tester: it fights what was summoned' };
 // The blocks of the snapshot it reads (foes() and the rest); a new one is something in the world it can't see yet.
 const BLOCKS = new Set(['FX_START', 'CHARS_START', 'SLIMES_START', 'TUMBLERS_START']);
 const CASTS = ['firebolt', 'chain', 'nova', 'meteor', 'mend', 'wisp'];
@@ -213,6 +218,7 @@ export function coverage(foeNames = null) {
   for (const sp of SPELLS) if (!(sp.key in USE)) out.push(`spell ${sp.key}: no use for it in USE, so it never casts it`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
   out.push(...warrensCoverage());
+  for (const st of STATIONS) if (!(st.key in HALL_COUNTERS)) out.push(`Test Dungeon counter ${st.key}: nothing in HALL_COUNTERS says what auto-play does with it`);
   if (foeNames) foeNames.slice(0, TRIPO_KIND).forEach((n, k) => { if (n && !KNOWN_KINDS.has(k)) out.push(`foe kind ${k} (${n}): no rule in fightable(), so it's judged by its life alone`); });
   return out;
 }
@@ -463,6 +469,8 @@ export class Brain {
     const foes = this.foes(snap, m);
     // Down the Warrens, a boss's calls come first: out of the circles, at the dragon's side, behind a pillar.
     if (inDungeon(m.x, m.z) && this.delve(snap, m, foes)) { this.fighting = true; return; }
+    // In the Test Dungeon: what's been summoned, and nothing else (hallRun).
+    if (inHall(m.x, m.z)) { this.hallRun(snap, m, foes); return; }
     // A fight, or getting away from one.
     if (!m.town && this.combat(snap, m, foes)) { this.fighting = true; return; }
     // Hurt and out of it: mend, or rest a little.
@@ -474,6 +482,20 @@ export class Brain {
     if ((this.planT -= 0.12) <= 0 || !this.job) { this.planT = 1.2; this.plan(m); }
     this.doJob(snap, m, foes);
     void g;
+  }
+
+  // The Test Dungeon (src/core/testhall.js): it fights whatever has been summoned, and never summons anything itself. With the
+  // door up it goes in after what's left; otherwise it comes back to the hall, mends, and waits for the next summoning.
+  hallRun(snap, m, foes) {
+    if (this.combat(snap, m, foes)) { this.fighting = true; return; }
+    if (this.loot(m, foes)) return;
+    const st = this.o.game.hallUI?.hall?.state || 'shut';
+    const left = foes.filter((f) => inArena(f.x, f.z)).sort((a, b) => a.d - b.d)[0];
+    if (st === 'open' && left) { this.goTo(left.x, left.z, 7, true); this.say('Into the arena after them.'); return; }
+    if (m.hpf < 0.7 && m.mana >= 30 && this.known(SP.mend) && this.t >= (this.mendAt || 0)) { this.face = null; this.halt(); this.cast(SP.mend, 0.35); this.mendAt = this.t + 4; this.say('Mending.'); return; }
+    const [x, z] = hallAt(0, 18);
+    this.goTo(x, z, 3, false);
+    this.say(st === 'shut' ? 'In the Test Dungeon, waiting for a summoning.' : 'Back through the door.');
   }
 
   known(i) { return this.o.spellbar.known.has(i); }
@@ -786,7 +808,7 @@ export class Brain {
       const a = k / 16 * TAU, dx = Math.sin(a), dz = Math.cos(a), px = m.x + dx * 6, pz = m.z + dz * 6;
       let s = 0;
       for (const f of from) s += Math.min(10, dist(px, pz, f.x, f.z));
-      if (home && !m.below) s += (dist(m.x, m.z, 0, 0) - dist(px, pz, 0, 0)) * 0.6;
+      if (home && !m.below && !inHall(m.x, m.z)) s += (dist(m.x, m.z, 0, 0) - dist(px, pz, 0, 0)) * 0.6;
       if (this.kept(m, px, pz)) s -= 40;
       if (this.esc) s += (dx * this.esc.dir[0] + dz * this.esc.dir[1]) * 2;
       if (s > bs) { bs = s; best = [dx, dz]; }
@@ -1384,6 +1406,13 @@ export class Brain {
     if (!g || !this.useGoal || this.fighting) return;
     const d = dist(m.x, m.z, g.x, g.z);
     if (d < g.near) { this.halt(); return; }
+    // In the Test Dungeon: by its own field, the door as the sim last said (src/core/testhall.js HallNav).
+    if (inHall(m.x, m.z) && inHall(g.x, g.z)) {
+      const [ux, uz] = (this.hallNav ||= new HallNav()).flow([0, 0], m.x, m.z, g.x, g.z, this.t);
+      this.steer(ux, uz, g.run && d > 6);
+      this.look = null;
+      return;
+    }
     // In the Warrens: by their own field (src/ui/autowarrens.js caveStep), at a run between the rooms.
     if (inDungeon(m.x, m.z) && inDungeon(g.x, g.z)) {
       const [ux, uz] = caveStep(this, m, g);

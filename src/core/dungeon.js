@@ -15,12 +15,14 @@
 // Then node tools/dungeon/check.mjs walks it: every room joined, every pack and boss on the floor, the portals clear.
 
 import { hash2, vnoise } from './terrain-noise.js';
+import { STATIONS, hallAt } from './testhall.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
 export const DUNGEON = { name: 'The Hollowfang Warrens', x: 5760, z: -40, y: -50 };
 // The cave mouth near the kobolds' den where its portal stands, and where the quartermaster waits.
 export const PORTAL = { x: 128, z: -212, yaw: 2.6, r: 2.2 };
-export const BROKER_SPOTS = { portal: [PORTAL.x + 4.2, PORTAL.z + 2.4], town: [5, -2] };
+// (And the Test Dungeon's keeper, at the summoning counter in its hall: src/core/testhall.js.)
+export const BROKER_SPOTS = { portal: [PORTAL.x + 4.2, PORTAL.z + 2.4], town: [5, -2], hall: (() => { const q = STATIONS.find((t) => t.who === 'hall'); return [...hallAt(q.x, q.z), q.yaw]; })() };
 
 // Rooms: id, middle (local: x east, z south of the entrance), radius, floor height over DUNGEON.y, how high the roof can rise.
 export const ROOMS = [

@@ -8,6 +8,7 @@ import { caveFloor, caveKeep } from '../core/opening.js';
 import { CHURCH_BOUNDS } from '../core/church.js';
 import { buildSites } from '../core/sites.js';
 import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, inDungeon } from '../core/dungeon.js';
+import { HallNav, hallFloorY, hallKeep, hallRay, hallRoom, inHall } from '../core/testhall.js';
 
 // The places out in the countries (src/core/sites.js): their boxes kept by 64 m cell, so a body only looks at the ones near it.
 const SITE_CELL = 64;
@@ -28,7 +29,7 @@ const byIndex = (a, b) => a.n - b.n;
 const TRUNK_CELL = 16, TOWN = 50;     // (The forest stands clear of the town, so nobody in it looks for a trunk.)
 const trunkKey = (i, j) => (i + 1000) * 2000 + j + 1000;   // (11 km is 700 trunk cells: well inside)
 // Down in the catacombs, under the land: the pines standing up on it aren't down there. (Over them, floorAt gives their floor.)
-const underLand = (x, z) => { if (inDungeon(x, z)) return true; const f = floorAt(x, z); return f !== null && f < -2; };
+const underLand = (x, z) => { if (inDungeon(x, z) || inHall(x, z)) return true; const f = floorAt(x, z); return f !== null && f < -2; };
 // Whether every point of trunk cell (i, j) is at least R from x, z: then none of the trunks standing in it (their middles are in it) is
 // within R either.
 const farFromCell = (x, z, i, j, R) => {
@@ -221,6 +222,8 @@ export class World {
   height(x, z) {
     // (The Hollowfang Warrens lie out past the edge of the world, under it: src/core/dungeon.js.)
     if (inDungeon(x, z)) return caveFloorY(x, z);
+    // (And the Test Dungeon, out past the other edge: src/core/testhall.js.)
+    if (inHall(x, z)) return hallFloorY();
     const f = floorAt(x, z);
     if (f !== null) return f;
     if (openingTerrain && !this.caveSealed) { const c = caveFloor(x, z); if (c !== null) return c; }
@@ -238,6 +241,7 @@ export class World {
 
   inside(x, z, r) {
     if (inDungeon(x, z)) return caveRoom(x, z) < r;
+    if (inHall(x, z)) return hallRoom(x, z) < r;
     const boxes = this.boxesNear(x, z, r);
     for (let n = 0; n < boxes.length; n++) {
       const c = boxes[n];
@@ -266,6 +270,7 @@ export class World {
   // Push a circle out of boxes. feet is the circle's height: low boxes can be jumped over.
   resolve(out, r, feet) {
     if (inDungeon(out[0], out[2])) return warrenKeep(out, r);
+    if (inHall(out[0], out[2])) return hallKeep(out, r);
     let x = out[0], z = out[2];
     let hit = false;
     const push = (c) => {
@@ -322,6 +327,13 @@ export class World {
       const L = Math.hypot(dx, dz);
       if (L < 1e-5) return -1;
       const s = caveRay(ox, oz, dx / L, dz / L, maxT * L);
+      return s < 0 ? -1 : s / L;
+    }
+    // (The Test Dungeon's walls go floor to ceiling too, and its door with them while it's shut.)
+    if (inHall(ox, oz)) {
+      const L = Math.hypot(dx, dz);
+      if (L < 1e-5) return -1;
+      const s = hallRay(ox, oz, dx / L, dz / L, maxT * L);
       return s < 0 ? -1 : s / L;
     }
     let best = -1;
@@ -407,6 +419,7 @@ export class World {
   // Those after someone else, a hero say, use that one as the key: all of them after the same one share it.
   updateField(x, z, now, slot = 0) {
     if (inDungeon(x, z)) { (this.cave ||= new CaveNav()).field(x, z, now); return; }
+    if (inHall(x, z)) { (this.hallNav ||= new HallNav()).field(x, z, now); return; }
     let f = this.slots.get(slot);
     if (!f) { f = this.freeField(now); this.slots.set(slot, f); }
     f.used = now;
@@ -465,6 +478,7 @@ export class World {
   // Unit direction along the flow field toward the target, or straight there if off the grid.
   flow(out, x, z, tx, tz, slot = 0) {
     if (inDungeon(x, z) && inDungeon(tx, tz)) return (this.cave ||= new CaveNav()).flow(out, x, z, tx, tz, this.now ?? 0);
+    if (inHall(x, z) && inHall(tx, tz)) return (this.hallNav ||= new HallNav()).flow(out, x, z, tx, tz, this.now ?? 0);
     const i = ((x - NAV_X0) / NAV_CELL) | 0, j = ((z - NAV_Z0) / NAV_CELL) | 0;
     let bx = tx - x, bz = tz - z;
     const field = this.slots.get(slot)?.field;
