@@ -3,6 +3,7 @@
 import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
 import { TripoSlots } from './tripo-slots.js';
+import { BodySkin } from './bodyskin.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
@@ -390,6 +391,9 @@ export class Renderer {
       this.selfSlot = this.chars.length;
       this.chars.push(self);
       this.selfItems = [0, 1, 2].map(() => ({ mat: new Float32Array(16), sword: null, slot: -1, model: null }));
+      // The gear you wear, painted onto it (src/gfx/bodyskin.js): main.js says what's worn.
+      const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
+      this.bodySkin = new BodySkin(this, base, self, imageBytes(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source));
     }
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
     this.vms = { 1: await this.buildViewModel(await loadModel(9)), 2: await this.buildViewModel(await loadModel(3)), 3: await this.buildViewModel(await loadModel(14)) };
@@ -790,7 +794,7 @@ export class Renderer {
       const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
         { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
       ] });
-      out.push({ ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4) });
+      out.push({ ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4), maps: [alb, nrm, mr] });
     }
     return out;
   }

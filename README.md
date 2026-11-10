@@ -131,13 +131,47 @@ screen is still what you hit. Which view you left it in is kept with the setting
   `?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3`. `node --test tests/player-body.test.mjs` checks the poses with no
   GPU: feet on the ground, things in the hands, the shield where it should be, the casts, and the cave's lock.
 
+#### Gear on the body
+
+The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle, tunic, legs
+and boots painted new. `assets/game/player/parts.png` says which of those five every texel of the map is, so the pieces
+mix: wear the Crimson hat and the Ashen boots and he has one set's hat and another's boots (`src/gfx/bodyskin.js`: the
+map is mixed on a canvas when what you wear changes, and the body's colour swapped for it). Which set a piece wears is
+`pickSets`: a set says what it's `wears` for, robes of a palette (and only some shapes, if it names them) or named items.
+A slot with no robe in it, or a robe nothing was made for, is as the sculpt came. Skin, hair and eyes never change. The
+shapes don't either: a hood wears the hat's paint.
+
+- The game ships a set for each of the five palettes (`assets/game/player/skins/`, listed in `sets.json`). Their recipes
+  are `tools/player/skins/kit/recipes/`.
+- **The skin kit** (`tools/player/skins/`) is how sets are made, by the owner with ChatGPT or by anyone:
+  - Tripo cut his colour map into hundreds of scraps, so nobody paints on it. Each part is said one of two ways, or both:
+    a **skin file**, a picture painted over that part's template (`templates/<part>_lines.png`: its outlines from six
+    sides on one sheet, one file for each part), which the bake puts back on him from those six sides; or a **recipe**,
+    what the part's cloth, gilt trim and leather become (a colour, or a tiling picture laid over him in 3D), a
+    second-colour pattern in the cloth, and emblems projected onto named places (chest, back, tabard, hat, shoulders,
+    knees). The kit's `scripts/make_set.py` bakes it, keeping the sculpt's own folds on top, and zips the set with a
+    preview.
+  - `python tools/player/skins/build_kit.py` (after `node tools/player/skins/pose.mjs tools/build/player_posed.f32`)
+    makes `tools/build/wizard_skin_kit.zip`: the template (his map, the parts, where each texel lies on him, the preview
+    views, the emblem places), the five parts' paint-over templates, the scripts, `README.md` and `PROMPT.md` (what to paste into ChatGPT with the zip), and
+    the five example sets. It also writes `parts.png`. The parts are told apart in `tools/player/skins/parts.py`, by
+    what moves each triangle, where it is and how it's painted.
+  - **A set comes back as one zip** (`set.json`, `color.jpg`, `preview.jpg`, `source/`).
+    `python tools/player/skins/import_set.py that.zip [more.zip]` checks it, writes `skins/<id>.webp`, lists it in
+    `sets.json` (the same id replaces), and keeps its recipe and pictures in `art/player/skins/<id>/`. `--list` and
+    `--remove <id>` do what they say.
+  - `bm.wear('crimson_regalia')` in the console dresses him whole in one set, whatever's in the pack; `bm.wear()` goes back.
+- `node --test tests/body-skin.test.mjs` checks the picking and that the shipped sets are whole.
+
 Known limits:
 
 - Nobody has played it by hand. It was driven by script in Chromium on a software GPU, on the Mobile and High tiers, and
   the poses judged from stills, not motion. Foot sliding at a sprint and the blends between poses want an eye on them.
 - The staff in his hand has no glow at its head and nothing dangles from it: those are the first-person staff's own.
   A skull's gems and burning eyes aren't on the one he carries either.
-- Robes found in the game don't change what he wears, and Tripo's sculpt has short sleeves: his forearms are bare.
+- A set changes colours, cloth, pattern and emblems, not shapes: every hat is his pointed hat, and Tripo's sculpt has
+  short sleeves, so his forearms are bare. Only colour is changed, not the normal or roughness maps: new cloth keeps the
+  old cloth's sheen.
 - The other spells that start from the eye (the cone of Arcane Blast, a Blink's line) still do, half a step left of the
   camera's line.
 - Indoors the roof is kept out of the camera's way by holding it low, not by testing the ceiling: looking steeply down in
@@ -686,6 +720,7 @@ To check it yourself:
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |
 | `src/sim/playerbody.js`, `src/core/third.js`, `src/ui/view.js` | The third-person view: your body's poses, where the camera stands, and the switch |
 | `tools/player/` | Makes the player's body from the owner's FBX (`build.mjs`), and shows it (`view.html`) |
+| `src/gfx/bodyskin.js`, `tools/player/skins/` | The gear you wear, on that body: mixing the sets in the game; the kit that makes sets, and the importer |
 | `src/items/`, `src/ui/inventory.js` | Item rolls and gems, the pack, what's lying on the ground, and the pack's screen |
 | `assets/game/items/`, `art/swords/` | The swords, their icons and `swords.json`, and the sheets they came from |
 | `tools/swords/` | Separates the sheets into swords (in Blender), and renders their icons |

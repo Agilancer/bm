@@ -1,0 +1,18 @@
+{
+ "id": "harlequin_example",
+ "name": "Harlequin (an example of skin files)",
+ "blurb": "Shows a painted skin file on two parts (the hat and the boots) beside a recipe on the rest. Not for the game.",
+ "wears": {},
+ "defaults": {
+  "cloth": {"color": "#6b1d2a"},
+  "trim": {"color": "#c9a227"},
+  "leather": {"color": "#1f1a17", "keep": 0.3}
+ },
+ "parts": {
+  "head": {"skin": "skins/harlequin_hat.png"},
+  "shoulders": {"cloth": {"color": "#c9a227"}, "trim": {"color": "#6b1d2a"}},
+  "chest": {},
+  "legs": {"cloth": {"color": "#2f5d3a"}},
+  "feet": {"skin": "skins/harlequin_boots.png", "skin_detail": 0.8}
+ }
+}
