@@ -2,7 +2,7 @@
 // world, and everything else (fire, light, force) as procedural HDR light after it, hot enough for the bloom to carry.
 import { FX_FLOATS, FX_START, H, MAX_FX } from '../core/layout.js';
 import { ELEM, ELEM_LIGHT, FX, FX_CARRIED } from '../sim/spells.js';
-import { COMMON } from './shaders.js';
+import { COMMON, MAX_LIT } from './shaders.js';
 
 // Each element's colours in linear light, white-hot first, down to the deep shade its edges fall off through.
 export const RAMP = /* wgsl */ `
@@ -587,14 +587,14 @@ export class SpellFX {
       if (snap[o + 13] > 0) (snap[o + 8] === FX.LIGHT && snap[o + 15] === FX_CARRIED ? held : lit).push(o);
       this.spray(snap, o, dt);
     }
-    const nh = Math.min(held.length, r.tier.lean ? 2 : 4, 28 - taken);
+    const nh = Math.min(held.length, r.tier.lean ? 2 : 4, MAX_LIT - taken);
     for (let i = 0; i < nh; i++) {
       const o = held[i], c = ELEM_LIGHT[snap[o + 9] | 0];
       d.set([snap[o], snap[o + 1], snap[o + 2], snap[o + 14], c[0], c[1], c[2], snap[o + 13]], lightsAt + (taken + i) * 8);
     }
     taken += nh;
     if (lit.length > 1) lit.sort((a, b) => snap[b + 13] - snap[a + 13]);
-    const room = Math.min(lit.length, r.tier.lean ? 2 : MAX_LIGHTS, 28 - taken);
+    const room = Math.min(lit.length, r.tier.lean ? 2 : MAX_LIGHTS, MAX_LIT - taken);
     const t = now * 0.001;
     for (let i = 0; i < room; i++) {
       const o = lit[i], c = ELEM_LIGHT[snap[o + 9] | 0];

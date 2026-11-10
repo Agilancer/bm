@@ -131,7 +131,7 @@ class Body:
         self.jnt = accessor(g, blob, at["JOINTS_0"]).astype(np.int64)
         self.wt = accessor(g, blob, at["WEIGHTS_0"]).astype(np.float64)
         self.idx = accessor(g, blob, prim["indices"]).reshape(-1, 3).astype(np.int64)
-        self.piece = accessor(g, blob, at["_PIECE"]).astype(np.int64).reshape(-1) if "_PIECE" in at else None
+        self.piece = (accessor(g, blob, at["_PIECE"]).astype(np.int64).reshape(-1) & 0x3FFF) if "_PIECE" in at else None   # (0x4000: cloth, tools/heroes/mail.py)
         skin = g["skins"][0]
         self.joints = skin["joints"]
         self.ibm = accessor(g, blob, skin["inverseBindMatrices"]).reshape(-1, 4, 4).transpose(0, 2, 1).astype(np.float64)

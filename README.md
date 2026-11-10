@@ -244,7 +244,8 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   by the caves' own flow field (the nav thread's grid stops at the edge of the world). Before each boss's room it waits
   for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of a circle or a fire before
   anything else, at Venomaw's side and well off when she's down, behind the pillar away from her when she flies, away
-  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. Three wipes count as beaten back: it
+  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. When a boss turns on it, it gets
+  behind the tank from it (or well out of its reach with no tank up) and shoots it as it comes. Three wipes count as beaten back: it
   leaves by the way in and comes back two levels stronger. Once Venomaw's dead it goes out by the far portal.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
@@ -358,7 +359,11 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   shape is nine rooms and the tunnels between them (`ROOMS`, `TUNNELS`, `PILLARS`), made into one field of how far each
   point is from the rock. The sim walks against that field (`src/sim/world.js`), monsters and the party find their way by
   a flow field of its own (`CaveNav`), and its walls, floor, roof, stalagmites and torches are built from it with the
-  world's places (`cave` in `src/core/sites.js`), lit by the torches (sixty-odd lights) and nothing else.
+  world's places (`cave` in `src/core/sites.js`), lit by its fires: about a hundred wall torches (one every seven
+  metres round a room, every six down a tunnel) and thirty-odd braziers on posts round the bigger rooms (`torches`,
+  `braziers` in `src/core/dungeon.js`). Down there a frame lights the thirty nearest of them (two and a half times the
+  tier's count; a phone keeps its two), and a frame's lamps went from 28 to 36 for it (`MAX_LIT` in
+  `src/gfx/shaders.js`).
 - **The packs.** Five rooms of kobolds and goblins, which wake as you come into them and stay dead till the Warrens reset.
 - **Grubnash the Tunnel-King**, a kobold three times the size. Every few seconds he brings the roof down: a circle on the
   ground under each of you, and rocks a moment later. At seven tenths and a third of his life he calls his diggers out of
@@ -370,6 +375,12 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   tail sweeps anyone behind. She spits acid that pools. At a little over half her life she takes to the air above her
   hoard and breathes across the whole cavern every few seconds: only rock between you and her keeps it off, so hide
   behind a pillar, while her whelps hatch. Then she lands, frenzied.
+- **They come for you too.** The tank doesn't hold everything for ever. Every seventeen seconds or so a boss turns from
+  him to you (Venomaw every twenty-two): it's called out, you have a breath to get behind the tank or out of its
+  reach, and for four or five seconds nothing holds it (`turnOn` in `src/sim/dungeon.js`, `fixOn` in
+  `src/sim/foes.js`). It doesn't turn while it flies, spins or breathes, and Venomaw holds her breath while her head's
+  on you. Among the packs, now and then one breaks off the tank and comes for you for a few seconds, two at most at once
+  (`stepPacks`); the tank goes after what's loose and takes it back.
 - **Every mechanic is called out** on the screen as it happens, with what to do about it (`WARNINGS`), and each boss has a
   bar of its own at the top of the screen.
 - **A wipe** stands you and your party at the way in, with everything you'd killed still dead and the boss you fell to at

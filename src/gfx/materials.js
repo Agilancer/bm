@@ -671,7 +671,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     rough = mix(max(rough, 0.68), rough, metal);
   }
   let pxSize = max(length(dpdx(in.bind)), length(dpdy(in.bind)));
-  let wound = evalWounds(in.bind, normalize(in.bindN), in.piece, F.camPos.w, pxSize);
+  // (A hero's cloth is marked in its piece number, tools/heroes/mail.py CLOTH_BIT: nobody else's pieces reach it.)
+  let isCloth = (in.piece & 0x4000u) != 0u;
+  let wound = evalWounds(in.bind, normalize(in.bindN), in.piece & 0x3FFFu, F.camPos.w, pxSize);
   var n = perturb(n0, p, in.uv, nm.rg, 1.0);
   // Mail under the plates: rows of little rings, from the bind pose so they ride with the body. They melt to an
   // even dull steel with distance rather than sparkling.
@@ -681,9 +683,18 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // (Larger on a phone, or at its resolution they melt away, and a visor's grille with them.)
   let g_ = qA * vec2f(115.0, 200.0) * select(1.0, 0.5, LEAN);
   let ringFade = 1.0 - smoothstep(0.12, 0.35, max(length(dpdx(g_)), length(dpdy(g_))));
-  // (A hero's padded coat's diamonds, and how far off they melt: worked out here, where derivatives may be taken.)
-  let q = qA * vec2f(24.0, 24.0) * select(1.0, 0.6, LEAN);
-  let qFade = 1.0 - smoothstep(0.15, 0.4, max(length(dpdx(q)), length(dpdy(q))));
+  // A hero's gap covers, in their own tube's coordinates (tools/heroes/mail.py: u past 2 is how far round, plus 2 on a
+  // blackened suit; v how far along, plus 100 up inside a helm). Rings nine millimetres across round the tube, rows four
+  // and a half apart; a padded coat's diamonds thirty. Worked out here, where derivatives may be taken.
+  let isCover = in.uv.x > 1.5 && heroLook;
+  let cu = in.uv.x - 2.0;
+  let darkSuit = cu >= 2.0;
+  let deepK = clamp(in.uv.y / 100.0, 0.0, 1.0);
+  let tubeUV = vec2f(cu - select(0.0, 2.0, darkSuit), in.uv.y - 100.0 * deepK);
+  let tg = tubeUV * vec2f(111.0, 222.0) * select(1.0, 0.5, LEAN);
+  let tFade = (1.0 - smoothstep(0.12, 0.35, max(length(dpdx(tg)), length(dpdy(tg))))) * select(0.0, 1.0, isCover);
+  let tq = tubeUV * 33.0 * select(1.0, 0.6, LEAN);
+  let qFade = (1.0 - smoothstep(0.15, 0.4, max(length(dpdx(tq)), length(dpdy(tq))))) * select(0.0, 1.0, isCover);
   var mailH = 0.0;
   if (isMail) {
     let row = floor(g_.y);
@@ -696,30 +707,54 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     metal = 1.0;
     n = n0;
   }
-  if (in.uv.x > 1.5 && heroLook) {
-    // A hero's gap covers (tools/heroes/mail.py), what shows where the plates part as a joint bends. On those in armour
-    // (info.z -2 and -3) it's mail: the knights' rings, but iron a shade lighter than their blackened links, so a gap reads
-    // as steel under steel rather than a hole. On the rest (-1) it's the padded coat under their clothes: dark linen
-    // quilted in diamonds.
+  var rimK = 1.0;
+  var backAO = 1.0;
+  if (isCover) {
+    // A hero's gap covers (tools/heroes/mail.py): what shows where the plates part, and where a suit has no plate at
+    // all. Laid out round each tube (cu: metres round it, uv.y: metres along it). On those in armour (info.z -2, -3)
+    // it's mail: steel crowns, dark between them, a step brighter than the plate (bright mail on a bright suit,
+    // blackened on a blackened one), so a gap reads as steel under steel, never as a hole or as grey rubber. On the
+    // rest (-1) it's the padded coat under their clothes: dark linen quilted in diamonds.
     if (C.info.z < -1.5) {
-      let row = floor(g_.y);
-      let cell = fract(vec2f(g_.x + row * 0.5, g_.y)) - 0.5;
+      let row = floor(tg.y);
+      let cell = fract(vec2f(tg.x + row * 0.5, tg.y)) - 0.5;
       let rr = length(cell);
       let ring = smoothstep(0.2, 0.3, rr) * (1.0 - smoothstep(0.42, 0.5, rr));
-      mailH = ring * 0.0022 * ringFade;
-      albedo = mix(vec3f(0.16, 0.16, 0.17), mix(vec3f(0.05, 0.05, 0.055), vec3f(0.34, 0.335, 0.33), ring), ringFade);
-      rough = mix(0.55, 0.42, ring * ringFade);
-      metal = 0.9;
+      // (Each ring catches the light a little differently: that sparkle is what says mail from a way off.)
+      let jit = h1(row * 7.31 + floor(tg.x + row * 0.5) * 3.17);
+      mailH = ring * 0.0012 * tFade;
+      let crown = select(vec3f(0.40, 0.40, 0.42), vec3f(0.14, 0.14, 0.16), darkSuit);
+      let melt = select(vec3f(0.22, 0.22, 0.23), vec3f(0.09, 0.09, 0.1), darkSuit);
+      albedo = mix(melt * (0.92 + 0.16 * jit), mix(vec3f(0.015), crown, ring), tFade);
+      rough = mix(0.5, mix(0.9, 0.25 + 0.2 * jit, ring), tFade);
+      metal = mix(0.6, ring, tFade);
     } else {
-      let s1 = abs(fract(q.x + q.y) - 0.5);
-      let s2 = abs(fract(q.x - q.y) - 0.5);
+      let s1 = abs(fract(tq.x + tq.y) - 0.5);
+      let s2 = abs(fract(tq.x - tq.y) - 0.5);
       // (Each diamond puffed up between its lines of stitching.)
       let puff = smoothstep(0.0, 0.22, min(s1, s2));
       mailH = puff * 0.0016 * qFade;
-      albedo = vec3f(0.2, 0.16, 0.115) * mix(0.82, 0.62 + 0.38 * puff, qFade);
-      rough = 0.88;
+      albedo = vec3f(0.07, 0.05, 0.035) * mix(0.85, 0.6 + 0.4 * puff, qFade);
+      rough = 0.8;
       metal = 0.0;
     }
+    rimK = 0.5;
+    // Up inside a helm (deep), or the inside of a cover: shadow, so an open helm is a dark opening and not a face of mail.
+    let dark = max(deepK, select(1.0, 0.0, front));
+    albedo = mix(albedo, vec3f(0.004), dark);
+    rough = mix(rough, 1.0, dark);
+    metal = mix(metal, 0.0, dark);
+    rimK = rimK * (1.0 - dark);
+    backAO = mix(1.0, 0.15, dark);
+    mailH = mailH * (1.0 - dark);
+    n = n0;
+  } else if (heroLook && !front && !isCloth) {
+    // The inside of a plate, seen where it's parted from the next: raw dark iron on those in armour, a dark lining on the
+    // rest, and in its own shadow. (Painted as its outside, a plate read paper-thin, bright where the eye wants shadow.)
+    if (C.info.z < -1.5) { albedo = vec3f(0.10, 0.098, 0.095); metal = 1.0; rough = 0.6; }
+    else { albedo = albedo * 0.35; metal = 0.0; rough = 0.85; }
+    backAO = 0.45;
+    rimK = 0.3;
     n = n0;
   }
   if (in.uv.x < -1.5) {
@@ -752,7 +787,7 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // Inside the cut: a dark slit, with one torn inner wall catching the light.
   albedo = mix(albedo, mix(vec3f(0.012), vec3f(0.2, 0.19, 0.18), wound.wall * 0.7), wound.cut * 0.97);
   rough = mix(rough, 0.6, wound.cut);
-  var ao = 1.0 - wound.cut * 0.55;
+  var ao = (1.0 - wound.cut * 0.55) * backAO;
   // The hole shows wet dark flesh.
   let pulse = 0.5 + 0.5 * sin(C.info.x * 6.28318);
   albedo = mix(albedo, vec3f(0.16, 0.006, 0.006) * (0.7 + 0.5 * pulse), wound.hole);
@@ -776,7 +811,7 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // A cool edge of sky around the silhouette separates dark plate from anything behind it.
   let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
   // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)
-  c += select(F.skyAmb.rgb * 0.32 * (0.35 + 0.65 * metal), vec3f(0.5, 0.31, 0.17), indoorAt(p) > 1.5) * rimT * C.info.y;
+  c += select(F.skyAmb.rgb * 0.32 * (0.35 + 0.65 * metal), vec3f(0.5, 0.31, 0.17), indoorAt(p) > 1.5) * rimT * C.info.y * rimK;
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);

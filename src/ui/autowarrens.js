@@ -172,6 +172,16 @@ export function tactics(b, m, foes) {
   if (!f) return { to: null, target: pickTarget(live, null, b, m), why: null };
   const bodies = f.bodies || [];
   const boss = bodies[0];
+  // A boss turned on it (src/sim/dungeon.js turnOn: called out, then a few seconds when nothing holds it): behind the tank
+  // from it, or well out of its reach with no tank up, shooting it as it comes.
+  const turned = bodies.find((q) => q.turning);
+  if (turned && !turned.flying) {
+    const tank = b.tankNear(m), away = (from, r) => { const dx = m.x - from.x, dz = m.z - from.z, L = Math.hypot(dx, dz) || 1; return [from.x + dx / L * r, from.z + dz / L * r]; };
+    let [tx, tz] = tank ? (() => { const dx = tank.x - turned.x, dz = tank.z - turned.z, L = Math.hypot(dx, dz) || 1; return [tank.x + dx / L * 3.5, tank.z + dz / L * 3.5]; })() : away(turned, 14);
+    if (caveRoom(tx, tz) < 0.8) [tx, tz] = away(turned, 9);
+    const T = live.find((q) => q.id === turned.id) || pickTarget(live, f, b, m);
+    return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 3, target: T, why: tank ? 'It turns on me: back behind the tank.' : 'It turns on me: out of its reach.' };
+  }
   if (f.boss === 'venomaw' && boss) {
     // Up over the hoard: behind the nearest pillar from her, shooting what's down here.
     if (boss.flying) {
