@@ -39,6 +39,7 @@ Without `files.json` every file comes from the network as before. Checked by `no
 | Cast the spell in a slot | `1` to `6`, or click its button | Tap its button |
 | Pack: staffs, skulls, robes and gems | `I` | `PACK` |
 | Take up what's on the ground, or open a chest | `E` | `TAKE` / `OPEN` |
+| First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | `3RD` / `1ST` |
 
 Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
 
@@ -85,6 +86,63 @@ They don't go together. Anything with a V on it is never found anywhere near any
 
 You start on the road south of town with a common staff of a random kind (a different one most games: `rollStarterStaff` in `src/items/items.js`) and a plain kite shield, and no skull or gems; your first skull is Bram Kettle's reward for A Bed and a Bell. The town is safe ground: nothing out of it follows you in (`inTown` in `src/core/town.js`, the box from x = -62 to 95 and z = -58 to 62). Velscour's knight stands at the foot of the cathedral steps, out east of the town, and lets you go 20 m from it, or once you're back in town. Four of Tessariel's knights walk the village streets, one in each of the other suits, and a man-at-arms in plain plate with Velscour's shield keeps the west road (`TOWN_KNIGHTS` in `src/core/knights.js`). Out in the woods, packs climb out of the ground ahead of you (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Every zombie outside the catacombs comes up out of the earth (`Zombie.rise`); four burial grounds in the woods break open as you come near (`stepGraves`, `GRAVEYARDS`). Spells are found as scrolls, except that this test build knows them all (`ALL_SPELLS` in `src/ui/spellbar.js`). Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
 
+### Third person
+
+`V` (or the eye at the end of the spell bar, or `3RD` on a phone) stands the camera behind you, and the same again brings it
+back. The controls don't change: you look, move, shoot, cast, guard and ride as before, and the X in the middle of the
+screen is still what you hit. Which view you left it in is kept with the settings.
+
+- **Not in Lisandra's cave.** The switch isn't shown until you're out and the walk down has begun (`thirdAllowed` in
+  `src/core/third.js`), and `V` only says so. Your staff and spells wait for the same moment (`Sim.unarmed` in
+  `src/sim/sim.worker.js`): from giving your name until the cave has fallen in, a click or a cast does nothing. The waking
+  scene's own cast is left as it was.
+- **The body** is the owner's Tripo wizard, `assets/game/player/wizard.glb`. It came as an FBX with a walk, a run and a fall;
+  `tools/player/build.mjs` (Node, with `three` and `sharp`: the usage is at its top) makes the GLB from it, in metres, sized
+  so its eyes stand at the first-person eye, the walk's and run's travel taken out, colour and normal at 2048.
+- **Everything he does** is `src/sim/playerbody.js`, on the sim thread, written into a character slot of the snapshot like
+  anyone else's (the slot after Lisandra's, not counted in `H.NCHARS`: everything that walks that list is looking for
+  someone else). Nothing is posed while the view is first person.
+  - *Standing* is the bind pose with the arms let down, breathing.
+  - *The legs* are the file's walk and run, mixed by pace and kept in step, played backwards going backwards. The hips turn
+    the way you're going and the chest keeps to where you look. A jump hangs in the run's flight. The fall is the death.
+    The game's run (5.6 m/s) and sprint (8.6) are well over the clip's own 4.2, so the legs only quicken so far (`QUICKEN`)
+    and past it the feet slide a little.
+  - *The hands* are put where they hold things by a two-bone solve from the shoulder, the fingers shut round them (`HOLD`):
+    the staff as a walking staff in the right fist, the skull under the left hand in a claw (as first person has it), or,
+    with no skull, the shield on the left forearm, raised across the chest when you guard. An empty hand swings as the clip
+    has it.
+  - *The shield on the back.* With the skull in hand the shield is slung on his back, leaned over so its point is down
+    toward one hip (`BACK_AT`, `BACK_LEAN`). On a ride it's under his feet instead.
+  - *The casts* (`CASTS`) are poses of the arms and chest alone, timed by the first-person hands' own clips, so they play
+    standing, walking or running, and a spell leaves on the same tick in either view: the staff's shot (a dip, straight
+    up, tipped forward as it fires); a spell thrown with one hand (the staff drawn back by the ear and thrust out) or
+    pushed with both (staff and skull, or open hand, or shield, shoved out together); one raised with one hand or with
+    both. A held spell keeps the pose, with a tremor.
+  - *The shield ride*: side on to the way the board's going, left foot ahead, knees bent, feet on the board's own slope,
+    head turned down the hill, the staff held up clear of the ground.
+- **What he holds** are the items' own models (the ones that lie on the ground), drawn where the sim says his hands and
+  back are (`PlayerBody.hold`, `selfItems` in `src/gfx/renderer.js`). The first-person arms aren't drawn.
+- **The camera** (`THIRD` in `src/core/third.js`, `GameView.updateCamera`) looks along the same line you do in first person,
+  from a point a step to the right of your eye and a little over it, 4 m back. So the X is still your aim: the sim
+  aims from that same point (`Casting.eye`), and bolts leave the staff's head or the palm you can see
+  (`Casting.bodyPalm`) for whatever is under the X. The sim finds how far back there's room (walls, the ground, a low roof
+  indoors) and the camera closes in at once and eases back out. Closer than a metre, the body isn't drawn.
+- `tools/player/view.html` shows the body alone with what it holds, every pose on a button, and makes sheets of stills:
+  `?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3`. `node --test tests/player-body.test.mjs` checks the poses with no
+  GPU: feet on the ground, things in the hands, the shield where it should be, the casts, and the cave's lock.
+
+Known limits:
+
+- Nobody has played it by hand. It was driven by script in Chromium on a software GPU, on the Mobile and High tiers, and
+  the poses judged from stills, not motion. Foot sliding at a sprint and the blends between poses want an eye on them.
+- The staff in his hand has no glow at its head and nothing dangles from it: those are the first-person staff's own.
+  A skull's gems and burning eyes aren't on the one he carries either.
+- Robes found in the game don't change what he wears, and Tripo's sculpt has short sleeves: his forearms are bare.
+- The other spells that start from the eye (the cone of Arcane Blast, a Blink's line) still do, half a step left of the
+  camera's line.
+- Indoors the roof is kept out of the camera's way by holding it low, not by testing the ceiling: looking steeply down in
+  a house brings it in close.
+
 ### The walk down, and the quest trail
 
 After the cave falls in, Lisandra leads you down the Long Road to Bellmourn (`escort` in `src/sim/opening.js`, the road itself in `src/core/escort.js`). She keeps about 5.5 m ahead of you at your own pace: come up on her back and she hurries on, stand still and she strolls on to about 14 m and waits for you, calling you on. Ride your shield and she jumps on one of her own (the Old Tree kite shield, green with a silver tree: no V, no T) and rides about 9 m ahead, so you never get past her. She talks the whole way: her road lines (`CUES` in `src/core/opening-script.js`) wait their turn and never overlap, a place on the road (the bend, the pines, the town in sight) brings its own line to the front, and between them she runs through the hill's talk above the pines and the low road's after the fight.
@@ -126,8 +184,8 @@ game starts; the rest come in the background once it has.
   comes home, the nearest fire's crackle, and a layer over each spell's own made sound (`src/spellsound.js`). Its 60 s beds play by
   where you are (`sounds` in `src/ui/lands.js`): the woods by day and by night, rain on the Weeping Fen and on Sallowmere's shore, a
   storm over Velscour's keep, a house's quiet, the cathedral with the storm on its roof, the catacombs, the Rift, the falls.
-  Not used anywhere yet: the sea's three beds, the beach's plain and stormy ones, the rain and storm beds for a house, the cave in the rain, the river
-  stream, the portcullis, the chest closing, the sword sheathed, the bow's shot and its block.
+  The portcullis is the Test Dungeon's door. Not used anywhere yet: the sea's three beds, the beach's plain and stormy ones, the rain and storm beds
+  for a house, the cave in the rain, the river stream, the chest closing, the sword sheathed, the bow's shot and its block.
 - **400 Sounds Pack** (`tools/audio/build_extra_sfx.py`; the zip carries no licence): coins, gems and orbs picked up and landing, a
   scroll, robe, skull or staff taken, the spellbook and the journal, the big map, bone snapping and gore on the undead.
 - **MenuSFX** by Kevin Fowler (CC BY): the clicks of the game's own panels (`ui_*`). The title and the pause menu keep their own.
@@ -140,7 +198,7 @@ church bells ("Orthodox Church Bells Ringing", Free Sounds Library, CC BY 4.0) a
 Bellmourn's music). A click, a tap or a key skips a card. The game loads behind the black, and the village isn't drawn
 until you start: the title stays on black.
 
-**New Game**, **Continue**, **Load**, **Settings**, **How to Play**. Esc (or `II`) pauses: **Resume**, **Save Game**,
+**New Game**, **Continue**, **Load**, **Test Dungeon** (below), **Settings**, **How to Play**. Esc (or `II`) pauses: **Resume**, **Save Game**,
 **Load Game**, **Settings**, **How to Play**, **Main Menu**. There are ten save slots, and the game keeps itself every 20 s
 of play, whenever you pause, and when you close the pack or take something up; Continue picks up the newest of those. A save
 holds where you stand and which way you face, the time played, and your pack and what's on you: loading starts the world
@@ -225,18 +283,35 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   below 80% of its life. The balance log keeps every attempt.
 - **Its party.** From level 6, once it can pay, it walks to the nearer quartermaster of the Free Company, opens his books
   with E, and hires a lancer first, then a paladin, then the best two others it can afford (`hiring` in
-  `src/ui/autowarrens.js`).
+  `src/ui/autowarrens.js`). With them at its back it plays as a group does (`helpPick`, `tankNear`, `partyStrong` in
+  `src/ui/autobrain.js`):
+  - It takes what's on the healer, or on one of the others, off them first: the healer before anyone, then whoever's
+    lowest. What's on the tank it leaves to him.
+  - Otherwise it shoots what the tank is holding, so the damage goes on one and nothing it pulls is loose.
+  - What's on one of them is its fight too, out to 30 m, even on its way somewhere.
+  - When something's on it, it backs off toward the tank, so he can take it, rather than off into open ground.
+  - With a tank and another standing near, it stands up to what it could take two levels on. Velscour's knights and the
+    Gravehart it still judges at its own level.
+  - One of them down, it stays by them till they're up again, a few seconds after the fight (ten seconds at most).
+  - Down the Warrens it goes on to the next room only with the party up and with it (up to twenty seconds' wait), and
+    in a boss fight it takes the rank and file off the healer after the adds.
+
+  It reads who each monster is after, and what each of its party is on, from the snapshot (`C.AFTER`, written by
+  `writeAfter` in `src/sim/sim.worker.js`).
 - **The Hollowfang Warrens.** From level 7 with a full party it goes in by the portal and walks the caves room by room,
   by the caves' own flow field (the nav thread's grid stops at the edge of the world). Before each boss's room it waits
   for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of a circle or a fire before
   anything else, at Venomaw's side and well off when she's down, behind the pillar away from her when she flies, away
-  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. Three wipes count as beaten back: it
+  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. When a boss turns on it, it gets
+  behind the tank from it (or well out of its reach with no tank up) and shoots it as it comes. Three wipes count as beaten back: it
   leaves by the way in and comes back two levels stronger. Once Venomaw's dead it goes out by the far portal.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
 - **Loot and gear.** It picks up what falls and opens the chests it passes. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
 - **Grinding.** It grinds for levels when no quest suits it yet.
+- **The Test Dungeon.** It fights whatever's been summoned, going in after it once the door's up, and otherwise waits in the
+  hall, mended. It never summons anything itself (`hallRun`).
 
 Its status shows under the button, with its level and how many quests are done. When every quest is done and there's
 nothing left but grinding, a menu asks where:
@@ -265,7 +340,8 @@ While it's on, the mouse is left free: no pointer lock, so the button and the me
 Pressing a move key (or the stick) takes the controls back for as long as you hold it.
 
 **Keeping it up with the game.** It has to be taught what's added to the game. Quests, steps, places, foes, lairs, spells
-and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`); the Warrens' rooms, packs
+and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`, and the Test Dungeon's
+counters in `HALL_COUNTERS`); the Warrens' rooms, packs
 and bosses in `src/ui/autowarrens.js` (`WAY`, `KNOWN`, `tactics`). `coverage()` there lists
 whatever the game has that it doesn't know, in the console when auto-play starts, and from `node tools/autoplay/check.mjs`,
 which fails until the list is empty. Until it's taught, it makes do:
@@ -321,11 +397,40 @@ screen is a frame for each, with their life.
 - **They ride the shield with you.** When you get on your board, they get on theirs, beside and behind you, and step off
   when you do (`updateFreeSurf`).
 - **They fall and get up.** One who falls lies there till the fight's over, then gets up with half their life.
+- **They carry a light.** A spirit-light floats over each one's shoulder, as your Wisp Light does over yours
+  (`partyLights` in `src/sim/hero.js`). By night, in the Warrens and below ground it lights them and a pool round their
+  feet, so you can see them in the dark; by day it's a small glow over them and lights nothing. The renderer keeps their
+  lights a place of their own ahead of the spells' (`FX_CARRIED`, `carried` in `src/gfx/spellfx.js`), so the torches
+  and the fighting never put them out: four of them, or the nearest two on a phone.
 - What they kill is yours: its loot and its experience.
 - A word with one of them (E) lets them go back to the Company.
 
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
 both). The quartermasters are two more bodies after them.
+
+### The heroes' armour: what's between the plates
+
+A hero's plates are rigid, so where two part as a joint bends, something has to show. `tools/heroes/mail.py` makes it for
+all 44 bodies from each one's own plates (run it again after `build.py`): a mail liner under the torso, one sleeve down
+each arm and leg, a coif, armpit gussets and a skirt, every end closed. On lancers, paladins, dragoons and boomerang
+knights it's drawn as ring mail, bright on a bright suit and blackened on a dark one; on archers, bards, rogues and
+ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is dark iron, not its outer paint
+(`heroLook` in `src/gfx/materials.js`; `docs/RENDERING.md`).
+
+- **A chest put back on the body.** On six bodies (lancer_f2, archer_f2, archer_f4, archer_f5, rogue_m1, rogue_m4) the
+  armour tool had cut the chest onto the limbs: the two halves of the breastplate rode the upper arms, the belly and
+  skirt a thigh. Arms down, the chest swung up to the ears and left a hole. `python tools/heroes/rebind.py` finds a
+  chest cut that way and gives it a coat's weights instead: the trunk by height, only the shoulder caps on the arms, the
+  skirts shared between the legs. It also mirrors an arm plate that's on one side only (paladin_f2's right vambrace).
+  Run it before `mail.py`, after `build.py`.
+- `python tools/heroes/gaps.py [ids] --out DIR` poses each body with the game's clips, skins it as the GPU does, and
+  counts what shows from four sides: see-through holes, the insides of plates, and the covers. Over all 44 bodies and six
+  poses, holes fell from a mean of 0.15% of the outline to under 0.1%, and lancer_f2's chest (2.5%, standing still)
+  closed. With her coat back on her, archer_f4's crouch went from 2.5% to 0.01%.
+- It was reviewed twice by two reviewers briefed as character artists of thirty years (2026-11-10), from game frames
+  taken headless. Left undone from their lists: knee and elbow cops bound half to each bone (the piece table doesn't
+  say which plate is one), the lower back in a deep crouch, and the lances' black and yellow stripes.
+- The frames were of ten bodies on a software GPU at one sample a pixel; nobody has looked at the result on a real GPU.
 
 ### The Hollowfang Warrens
 
@@ -339,7 +444,11 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   shape is nine rooms and the tunnels between them (`ROOMS`, `TUNNELS`, `PILLARS`), made into one field of how far each
   point is from the rock. The sim walks against that field (`src/sim/world.js`), monsters and the party find their way by
   a flow field of its own (`CaveNav`), and its walls, floor, roof, stalagmites and torches are built from it with the
-  world's places (`cave` in `src/core/sites.js`), lit by the torches (sixty-odd lights) and nothing else.
+  world's places (`cave` in `src/core/sites.js`), lit by its fires: about a hundred wall torches (one every seven
+  metres round a room, every six down a tunnel) and thirty-odd braziers on posts round the bigger rooms (`torches`,
+  `braziers` in `src/core/dungeon.js`). Down there a frame lights the thirty nearest of them (two and a half times the
+  tier's count; a phone keeps its two), and a frame's lamps went from 28 to 36 for it (`MAX_LIT` in
+  `src/gfx/shaders.js`).
 - **The packs.** Five rooms of kobolds and goblins, which wake as you come into them and stay dead till the Warrens reset.
 - **Grubnash the Tunnel-King**, a kobold three times the size. Every few seconds he brings the roof down: a circle on the
   ground under each of you, and rocks a moment later. At seven tenths and a third of his life he calls his diggers out of
@@ -351,6 +460,12 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   tail sweeps anyone behind. She spits acid that pools. At a little over half her life she takes to the air above her
   hoard and breathes across the whole cavern every few seconds: only rock between you and her keeps it off, so hide
   behind a pillar, while her whelps hatch. Then she lands, frenzied.
+- **They come for you too.** The tank doesn't hold everything for ever. Every seventeen seconds or so a boss turns from
+  him to you (Venomaw every twenty-two): it's called out, you have a breath to get behind the tank or out of its
+  reach, and for four or five seconds nothing holds it (`turnOn` in `src/sim/dungeon.js`, `fixOn` in
+  `src/sim/foes.js`). It doesn't turn while it flies, spins or breathes, and Venomaw holds her breath while her head's
+  on you. Among the packs, now and then one breaks off the tank and comes for you for a few seconds, two at most at once
+  (`stepPacks`); the tank goes after what's loose and takes it back.
 - **Every mechanic is called out** on the screen as it happens, with what to do about it (`WARNINGS`), and each boss has a
   bar of its own at the top of the screen.
 - **A wipe** stands you and your party at the way in, with everything you'd killed still dead and the boss you fell to at
@@ -364,6 +479,55 @@ portals clear of the rock, the roofs high enough and under the line the shaders 
 Tuning, headless (the sim in Node with no GPU): with a level 8 party and a player doing what a level 8 player's staff
 does, Grubnash took about a minute and a half, the twins about two minutes and Venomaw nearly five, with the tank as low as
 half his life and nobody dying. Its numbers are `BOSSES` in `src/core/dungeon.js` and the mechanics' in `src/sim/dungeon.js`.
+
+### The Test Dungeon
+
+**Test Dungeon** on the main menu is a place for trying out the monsters. You're stood at the south end of a bright white
+hall, tiled, with a darker line in the floor every five metres to judge a distance by, and a big iron door at its north
+end. Three people stand behind counters, and E at a counter talks to them:
+
+- **Captain Merrow Vale, the Hall Stores.** Any staff, skull, shield, robe or gem in the game, at any rarity, for nothing:
+  pick a rarity, then what you want, and it goes in your pack (at your feet if the pack's full). Under **Yourself**: your
+  level, set to anything from 1 to 50; your life and mana filled; the pack emptied; gold. No V or T shields: those are the
+  knights' own.
+- **Aldous Fenn, the Free Company.** The quartermaster's own books (src/ui/party.js), and in here nobody's paid. With the
+  other Tessariels off in Settings there's nobody on them.
+- **Ysolde Marr, the Summoning.** A book of every monster in the game (`src/core/testhall-foes.js`): the risen and their
+  masters, the great crabs, the Gravehart, the Bone Hydra, the Abyssal Mouth and Velscour's knights, every Tripo model by
+  its group (the Warrens' bosses with them), every slime and every tumbler. Choose one, how many (and a size, or colours),
+  add it to the summoning, and add more. **Summon** stands them in the arena past the door, and the door rises on them.
+
+Once everything past the door is down (whatever they raised or split into as well), and you're back on this side of it, the
+door comes down again and you can summon more. A fall stands you back at the start a moment later, with the arena cleared and
+the door down. Nothing in the Test Dungeon is kept: no save is made while you're in it, so **Continue** is still the game you
+were playing, and **Main Menu** from the pause screen takes you out.
+
+How many can stand at once is what the world has bodies for (each line of the book says): 12 Tripo monsters in all, the risen
+23 (the four kinds of them share their bodies), 40 slimes, 48 tumblers, 3 crabs, and one each of the rest. The one-of-a-kind
+beasts are the world's own bodies, brought here with their ground moved under them (the Hydra's pit is the arena), and sent
+home after. The Hydra is too big for the door: go in to it.
+
+- `src/core/testhall.js`: where it all is, out past the world's west edge and fifty metres down, the far side of the world
+  from the Warrens. Like theirs, its shape is a field the sim walks (`hallRoom`), with the door's way through open or shut,
+  and its walls, floors, counters and lights are built from the same numbers (`buildHall`, for `src/core/sites.js`). The
+  shaders light it white (`indoorAt` gives it 3).
+- `src/sim/testhall.js`: the sim's side: the summoning, the door, what counts as down, a fall. `src/ui/testhall.js`: the
+  counters' panels and the line at the top of the screen. `src/core/testhall-foes.js`: the keeper's book.
+- `bm.hall('summon', { list: [{ id: 'tripo:kobold_1', n: 3 }] })`, `bm.hall('kill')` and `bm.hallState()` in the console,
+  for tests.
+- `node tools/testhall/check.mjs` walks the hall (every counter reached, the arena shut off with the door down and reached
+  with it up, the doorway wide enough for a dragon) and fails until the book has every monster in the game. **A new
+  monster, group, slime or tumbler goes in the book** (`src/core/testhall-foes.js`), and if it's a new family of body, in
+  `spawn` in `src/sim/testhall.js`.
+
+Auto-play knows it: in the Test Dungeon it fights whatever's been summoned, going in after it when the door's up, and
+otherwise waits in the hall. It never summons, dresses or hires there: that's for whoever's testing.
+
+Known limits: it has been driven through by a script in headless Chromium on a software GPU, on the Low and High tiers
+(every counter; a summoning of every kind of body, 19 at once; the door up and down; a fall; auto-play clearing a pack and
+coming back through the door; back to the title and a new game), not played by hand, and nobody has heard it. The monsters'
+models come in as they're summoned, so the first summoning of a kind waits a moment for them. The Keeper is one more of the
+Company's bodies, loaded with the rest whenever the other Tessariels are on.
 
 ### Swords, gems and the pack
 
@@ -510,6 +674,8 @@ To check it yourself:
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |
+| `src/sim/playerbody.js`, `src/core/third.js`, `src/ui/view.js` | The third-person view: your body's poses, where the camera stands, and the switch |
+| `tools/player/` | Makes the player's body from the owner's FBX (`build.mjs`), and shows it (`view.html`) |
 | `src/items/`, `src/ui/inventory.js` | Item rolls and gems, the pack, what's lying on the ground, and the pack's screen |
 | `assets/game/items/`, `art/swords/` | The swords, their icons and `swords.json`, and the sheets they came from |
 | `tools/swords/` | Separates the sheets into swords (in Blender), and renders their icons |

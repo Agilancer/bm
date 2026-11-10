@@ -9,7 +9,8 @@ import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
 import { buildSites } from '../core/sites.js';
 import { terrainHeight } from '../core/terrain.js';
-import { EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, toWorld, torches } from '../core/dungeon.js';
+import { EXIT_IN, EXIT_OUT, PORTAL, braziers, caveFloorY, inDungeon, toWorld, torches } from '../core/dungeon.js';
+import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/church.js';
@@ -39,7 +40,7 @@ import { HomeLights } from './homelights.js';
 import { CRAB_SCALE } from '../sim/crab.js';
 import { GRAVEHART_SCALE } from '../sim/gravehart.js';
 import { HYDRA_SCALE } from '../sim/hydra.js';
-import { SKIN } from './shaders.js';
+import { MAX_LIT, SKIN } from './shaders.js';
 import { Dangles } from './dangles.js';
 import { CURIO_GEMS, CURIO_TRAY_Y, MR as WARE_MR, PALETTE as WARE_PALETTE, SHADE as WARE_SHADE, wareMesh } from './wares.js';
 import { PLACES } from '../folk/town.js';
@@ -55,7 +56,8 @@ const STAFFS2_IDS = new Set(STAFFS2.map((s) => s.id));
 const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
-const FRAME_FLOATS = 504;
+// (The lights, and after them the dark under whoever stands near: writeFeet.)
+const FRAME_FLOATS = 224 + MAX_LIT * 8 + 56;
 // A body's uniforms (materials.js CharU): its wounds, the pieces cut off, info, and the witch's mouth and lip line.
 const CHAR_UBO = 24 * 64 + 256 + 48;
 // The surfing hand's one joint, as a dual quaternion: it leans and swings about the shoulder with the steering (-1 left, 1 right), and rises as it comes out.
@@ -75,7 +77,7 @@ function surfHandPose(tilt, up, time) {
 // The middle of the skull in the left hand, in the view's own space. Printed by tools/wizard/skull_arm.py.
 export const SKULL_AT = [-0.483, -0.159, -0.783];
 
-const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440, CAVE: 444, FEET: 448, FEET_BOX: 496, FEET_Y: 500 };
+const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 216 + MAX_LIT * 8, CAVE: 220 + MAX_LIT * 8, FEET: 224 + MAX_LIT * 8, FEET_BOX: 272 + MAX_LIT * 8, FEET_Y: 276 + MAX_LIT * 8 };
 // Four floats, or a light's eight, into the frame's uniforms at o: as d.set([...], o) did, without an array each time.
 const put4 = (d, o, a, b, c, e) => { d[o] = a; d[o + 1] = b; d[o + 2] = c; d[o + 3] = e; };
 const putLight = (d, o, L, i) => { d[o] = L.p[0]; d[o + 1] = L.p[1]; d[o + 2] = L.p[2]; d[o + 3] = L.r; d[o + 4] = L.c[0]; d[o + 5] = L.c[1]; d[o + 6] = L.c[2]; d[o + 7] = i; };
@@ -92,7 +94,7 @@ const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
-const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114 };
+const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3 };
 const MAX_GROUND = 160;
@@ -343,8 +345,9 @@ export class Renderer {
     for (let i = 0; i < heroGlbs.length; i++) {
       const hero = await this.buildCharacter(heroGlbs[i]);
       hero.armored = true; hero.hero = true;
-      // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -1 for the rest.)
-      hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : -1;
+      // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -3 in armour that isn't
+      // all steel, -1 for the rest. It also says what shows in their gaps: mail, or a padded coat. materials.js heroLook.)
+      hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : ['dragoon', 'boomerang'].includes(cast[i].cls) ? -3 : -1;
       this.chars.push(hero);
     }
     tick();
@@ -376,6 +379,17 @@ export class Renderer {
         form.jaw = { y0: l.y0 * s, k: l.k / s, mid: l.mid * s, half: l.half * s, front: (l.z - 0.02) * s, rise: l.rise * s, gap: jaw.open * l.perRad * s };
       }
       this.chars.push(form);
+    }
+    this.firstForm = this.chars.length - LISANDRA_FORMS.length;
+    // Your own body, for the third-person view (src/sim/playerbody.js, tools/player/build.mjs): the slot after hers, drawn
+    // only while that view is on. What it holds are the items' own models, laid where the sim says its hands are (selfItems).
+    {
+      const glb = parseGLB(await fetch(`${base}assets/game/player/wizard.glb`).then((r) => { if (!r.ok) throw new Error(`the player's body: ${r.status}`); return r.arrayBuffer(); }));
+      const [self] = await this.buildCrabs(glb, 1, 1);
+      self.flesh = 1; self.trueLook = true; self.self = true;
+      this.selfSlot = this.chars.length;
+      this.chars.push(self);
+      this.selfItems = [0, 1, 2].map(() => ({ mat: new Float32Array(16), sword: null, slot: -1, model: null }));
     }
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
     this.vms = { 1: await this.buildViewModel(await loadModel(9)), 2: await this.buildViewModel(await loadModel(3)), 3: await this.buildViewModel(await loadModel(14)) };
@@ -428,10 +442,14 @@ export class Renderer {
     this.buildParticles();
     this.buildGrass();
     // (And the Hollowfang Warrens' torches, and the fires either side of its portal: src/core/dungeon.js.)
-    const warrens = torches().map(([x, y, z, nx, nz]) => ({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: [1, 0.56, 0.24], r: 11, i: 3.4, flicker: 0.8 }));
+    // (And its braziers, bigger fires that light the floor where the fighting is.)
+    const warrens = torches().map(([x, y, z, nx, nz]) => ({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: [1, 0.56, 0.24], r: 12, i: 3.8, flicker: 0.8 }));
+    for (const [x, y, z] of braziers()) warrens.push({ p: [x, y + 1.9, z], c: [1, 0.6, 0.28], r: 15, i: 5.2, flicker: 0.9 });
     warrens.push({ p: [PORTAL.x, terrainHeight(PORTAL.x, PORTAL.z) + 2, PORTAL.z], c: [0.45, 0.65, 1], r: 9, i: 2.2, flicker: 0.2 });
     for (const q of [EXIT_IN, EXIT_OUT]) { const [x, z] = toWorld(q.x, q.z); warrens.push({ p: [x, caveFloorY(x, z) + 2, z], c: [0.45, 0.65, 1], r: 9, i: 2.6, flicker: 0.2 }); }
-    this.lights = village.lights.concat(this.interior.data.lights, warrens);
+    // (And the Test Dungeon's panels of light, white, steady and wide: src/core/testhall.js.)
+    const hall = hallLights().map(([x, y, z]) => ({ p: [x, y - 0.5, z], c: [1, 0.98, 0.95], r: 15, i: 2.4, flicker: 0 }));
+    this.lights = village.lights.concat(this.interior.data.lights, warrens, hall);
     this.homeLights = new HomeLights(device, this.interior, this.interior.data.lights);
     if (this.openingEnabled) this.openingStage = await loadOpeningStage(this, base);
     this.smokeT = 0;
@@ -1318,6 +1336,37 @@ export class Renderer {
     })().catch((e) => console.error('chest', e));
   }
 
+  // The Test Dungeon's door: one slab of grey iron the width of its doorway, banded across, that slides straight up into the wall
+  // over it and down again. Where it should be (0 down, 1 up) is the sim's (src/sim/testhall.js, the 'hall' message in src/main.js),
+  // and it's moved here at the sim's own pace, so the two keep together.
+  hallDoorItem(dt) {
+    const d = this.hallDoor ||= { k: 0, want: 0, item: { mesh: null, mat: new Float32Array(16) } };
+    d.want = this.hallDoorWant ?? 0;
+    // (Where the sim has it, when that's far from here: a load, a fall.)
+    if (this.hallDoorSync !== undefined) { if (Math.abs(this.hallDoorSync - d.k) > 0.25) d.k = this.hallDoorSync; this.hallDoorSync = undefined; }
+    const step = Math.min(0.1, dt || 0) / DOOR.open;
+    d.k = d.want > d.k ? Math.min(d.want, d.k + step) : Math.max(d.want, d.k - step);
+    if (!d.item.mesh) {
+      const pos = [], nrm = [], uv = [];
+      const box = (x0, x1, y0, y1, z0, z1) => {
+        const P = [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]];
+        const faces = [[[0, 3, 2, 1], [0, 0, -1]], [[4, 5, 6, 7], [0, 0, 1]], [[0, 4, 7, 3], [-1, 0, 0]], [[1, 2, 6, 5], [1, 0, 0]], [[3, 7, 6, 2], [0, 1, 0]], [[0, 1, 5, 4], [0, -1, 0]]];
+        for (const [q, n] of faces) for (const t of [0, 1, 2, 0, 2, 3]) { pos.push(...P[q[t]]); nrm.push(...n); uv.push(0, 0); }
+      };
+      const w = (DOOR.x1 - DOOR.x0) / 2 + 0.25, h = DOOR.h + 0.3, t = (DOOR.slab[1] - DOOR.slab[0]) / 2;
+      box(-w, w, 0, h, -t, t);
+      // Bands across both faces, and a heavy foot.
+      for (let y = 0.9; y < h - 0.4; y += 1.6) box(-w + 0.15, w - 0.15, y, y + 0.28, -t - 0.07, t + 0.07);
+      box(-w, w, 0, 0.35, -t - 0.1, t + 0.1);
+      const idx = new Uint32Array(pos.length / 3).map((_, i) => i);
+      d.item.mesh = this.lyingModel({ pos: new Float32Array(pos), nrm: new Float32Array(nrm), uv: new Float32Array(uv), idx }, this.pixel('rgba8unorm-srgb', [118, 121, 128, 255]),
+        this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255])), this.pixel('rgba8unorm', [255, 140, 90, 255]), [0, 0, 0, 0]);
+    }
+    const k = d.k * d.k * (3 - 2 * d.k);
+    d.item.mat.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, HALL.x + (DOOR.x0 + DOOR.x1) / 2, HALL.y + k * (DOOR.h + 0.2), HALL.z + (DOOR.slab[0] + DOOR.slab[1]) / 2, 1]);
+    return d.item;
+  }
+
   // The doors, the first time one comes near: every leaf from one glb, on one set of maps. See src/items/doors.js and tools/doors/model.py.
   doorModel() {
     this.doorModels = {};
@@ -1772,9 +1821,10 @@ export class Renderer {
     // Only the full tiers read depth back, for AO, sun shafts and soft particles.
     let ldMS = null, ld = null, aoTex = null, shaftTex = null;
     if (!lean) {
-      ldMS = make(W, H_, LINEAR_DEPTH, RT, this.msaa); ld = make(W, H_, LINEAR_DEPTH, RT | TB);
+      // (One sample a pixel, as after dropMSAA: the linear depth is drawn straight into, with nothing to resolve.)
+      ld = make(W, H_, LINEAR_DEPTH, RT | TB); ldMS = multi ? make(W, H_, LINEAR_DEPTH, RT, this.msaa) : null;
       aoTex = make(hw, hh, 'r8unorm', RT | TB); shaftTex = make(hw, hh, gpu.hdrFormat, RT | TB);
-      textures.push(ldMS, ld, aoTex, shaftTex);
+      textures.push(...(ldMS ? [ldMS] : []), ld, aoTex, shaftTex);
     }
     const bloomChain = [];
     let bw = hw, bh = hh;
@@ -1792,7 +1842,7 @@ export class Renderer {
       colorAttachments: [multi ? { view: hdrMSView, resolveTarget: hdrView, loadOp: 'clear', storeOp: 'discard', clearValue: clear } : { view: hdrView, loadOp: 'clear', storeOp: 'store', clearValue: clear }],
       depthStencilAttachment: { view: depthMS.createView(), depthLoadOp: 'clear', depthClearValue: 0, depthStoreOp: 'discard' },
     };
-    if (!lean) worldPass.colorAttachments.push({ view: ldMS.createView(), resolveTarget: ldView, loadOp: 'clear', storeOp: 'discard', clearValue: [4000, 0, 0, 1] });
+    if (!lean) worldPass.colorAttachments.push(multi ? { view: ldMS.createView(), resolveTarget: ldView, loadOp: 'clear', storeOp: 'discard', clearValue: [4000, 0, 0, 1] } : { view: ldView, loadOp: 'clear', storeOp: 'store', clearValue: [4000, 0, 0, 1] });
     const bgFor = (view) => device.createBindGroup({ layout: this.bglBloom, entries: [
       { binding: 0, resource: view }, { binding: 1, resource: this.clampSmp }, { binding: 2, resource: { buffer: this.bloomU, size: 16 } }] });
     const bloomDownBG = [bgFor(hdrView)];
@@ -2011,9 +2061,12 @@ export class Renderer {
     const now = performance.now();
     this.homeLights.frame(this.folk?.slot || null, Math.min(0.25, (now - (this.homeLightsAt || now)) / 1000));
     this.homeLightsAt = now;
-    // (Below, where every light there is is a flame, twice the tier's count. A phone keeps its two.)
+    // (Below, where every light there is is a flame, twice the tier's count; down the Warrens, with its torches and
+    // braziers, two and a half times. A phone keeps its two.)
     // (And in Lisandra's cave, lit by her candles.)
-    const take = Math.min(lights.length, this.tier.lights * ((cam.y < -6 || this.inCave) && !this.tier.lean ? 2 : 1));
+    // (Room kept for the lights your party carries: src/gfx/spellfx.js carried.)
+    const under = this.tier.lean || !(cam.y < -6 || this.inCave) ? 1 : inDungeon(cam.x, cam.z) ? 2.5 : 2;
+    const take = Math.min(lights.length, Math.round(this.tier.lights * under), MAX_LIT - this.spellfx.carried(snap));
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
     for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
@@ -2028,11 +2081,11 @@ export class Renderer {
     let spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
     // The light off the gems you carry. src/gfx/gemfx.js.
     for (const L of this.gemLights || []) {
-      if (take + spellLights >= 28) break;
+      if (take + spellLights >= MAX_LIT) break;
       putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
     }
     // A candle or a lamp the player's carrying (src/ui/folk.js: bought of Elspeth Tallow).
-    if (this.carryLight && take + spellLights < 28) { const L = this.carryLight; putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i); }
+    if (this.carryLight && take + spellLights < MAX_LIT) { const L = this.carryLight; putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i); }
     put4(d, O.COUNTS, take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9);
     if (this.caveAmb) d.set(this.caveAmb, O.CAVE); else put4(d, O.CAVE, 0, 0, 0, 0);
     this.writeFeet(d, snap, cam);
@@ -2097,8 +2150,9 @@ export class Renderer {
     for (let i = 0; i < this.chars.length; i++) {
       const c = this.chars[i];
       const co = CHARS_START + i * C_SIZE;
-      const otherForm = stage && (i === this.chars.length - (pretty ? 1 : 2));
-      if (otherForm || c.pending || snap[co + C.ACTIVE] < 0.5) { c.seen = false; c.casts = false; c.skin = false; c.wasCast = false; continue; }
+      const otherForm = stage && (i === this.firstForm + (pretty ? 1 : 0));
+      // (Your own body: only in the third-person view, and not with the camera right up against its back.)
+      if (otherForm || c.pending || snap[co + C.ACTIVE] < 0.5 || (c.self && !this.third)) { c.seen = false; c.casts = false; c.skin = false; c.wasCast = false; continue; }
       const x = snap[co + C.X], y = snap[co + C.Y] + 1, z = snap[co + C.Z];
       const r = c.armored ? 2.6 : 5;
       c.bx = x; c.by = y; c.bz = z; c.br = bodyRadius(r, c.bindR);
@@ -2117,6 +2171,7 @@ export class Renderer {
       }
       // (Different distances each way, so a body standing right at the line doesn't flicker between the two.)
       c.far = d > (c.far ? 14 : 16);
+      if (c.self) { c.casts = true; c.seen = !this.thirdNear; c.far = false; }
       // (Lisandra keeps her whole mesh: her mouth is shaded off it.)
       c.detail = c.trueLook ? 0 : this.bodyDetail(d, c.detail);
       // Skinned this frame? Always the first frame it's back, so it never shows a pose from before it left.
@@ -2515,12 +2570,28 @@ export class Renderer {
     for (const g of this.chests) drawn.push(g);
     if (this.doorItems.length && !this.doorModels) this.doorModel();
     for (const g of this.doorItems) drawn.push(g);
+    // The Test Dungeon's door, sliding up into its wall and down again (src/core/testhall.js), from wherever in the hall you are.
+    if (inHall(cam.x, cam.z)) drawn.push(this.hallDoorItem(dt));
     this.stallItems ||= this.makeStalls();
     for (const g of this.stallItems) if (this.stallsOpen.has(g.id) === g.open) drawn.push(g);
     if (this.dishes) for (const g of this.dishes.values()) drawn.push(g);
-    if (snap[H.SURF] > 1.5 && this.board.sword) drawn.push(this.board);
+    if (snap[H.SURF] > 1.5 && this.board.sword && !this.third) drawn.push(this.board);
+    // In third person, what your body holds: the staff, the left hand's (the skull, or the shield on the arm), and the
+    // shield on the back or under the feet. The sim says where (a matrix each, none if there's nothing: PlayerBody.hold).
+    if (this.third && !this.thirdNear) {
+      const at = CHARS_START + this.selfSlot * C_SIZE + C_PROPS, riding = snap[H.SURF] > 0.5;
+      const ids = [this.mainHand, this.skull || this.board.sword, this.board.sword];
+      for (let k = 0; k < 3; k++) {
+        const g = this.selfItems[k];
+        if (!ids[k] || !(snap[at + k * 16 + 15] > 0.5)) { g.slot = -1; continue; }
+        g.sword = ids[k];
+        g.glow = k === 2 && riding ? this.board.glow : null;
+        g.mat.set(snap.subarray(at + k * 16, at + k * 16 + 16));
+        drawn.push(g);
+      }
+    }
     for (const g of drawn) {
-      let model = g.openingModel ?? (g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
+      let model = g.openingModel ?? g.mesh ?? (g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
@@ -2678,13 +2749,15 @@ export class Renderer {
       stainPass.end();
     }
 
+    // (The first-person arms: not under the story's bars, nor in third person.)
+    const noVM = this.hideVM || this.third;
     this.stage = 'world pass';
     // ---- the world ----
     const mp = enc.beginRenderPass(this.worldPass);
     mp.setBindGroup(0, this.frameBG);
     // Nearest first, so what's behind fails the depth test before it's lit: the arms, in front of everything, with their
     // own camera, and then the knights.
-    if (!this.hideVM) {
+    if (!noVM) {
       mp.setViewport(0, 0, this.W, this.H, 0.97, 1);
       mp.setPipeline(this.pVM);
       if (this.spellVM) {
@@ -2855,14 +2928,14 @@ export class Renderer {
       mp.setBindGroup(1, this.pDrawBG);
       mp.drawIndirect(this.pArgs, 0);
       this.spellfx.draw(mp);
-      if (this.trailCount >= 4 && !this.hideVM) {
+      if (this.trailCount >= 4 && !noVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
         mp.setViewport(0, 0, this.W, this.H, 0.97, 1);
         mp.setPipeline(this.pTrail);
         mp.setVertexBuffer(0, this.trailVB);
         mp.draw(this.trailCount);
       }
-      if (this.eyesOn && !this.skullDown && !this.hideVM) { mp.setViewport(0, 0, this.W, this.H, 0.97, 1); this.skullEyes.drawAura(mp); }
+      if (this.eyesOn && !this.skullDown && !noVM) { mp.setViewport(0, 0, this.W, this.H, 0.97, 1); this.skullEyes.drawAura(mp); }
     }
     mp.end();
 
@@ -2883,8 +2956,8 @@ export class Renderer {
       pp.setBindGroup(1, this.pDrawBG);
       pp.drawIndirect(this.pArgs, 0);
       this.spellfx.draw(pp);
-      if (this.eyesOn && !this.skullDown && !this.hideVM) this.skullEyes.drawAura(pp);
-      if (this.trailCount >= 4 && !this.hideVM) {
+      if (this.eyesOn && !this.skullDown && !noVM) this.skullEyes.drawAura(pp);
+      if (this.trailCount >= 4 && !noVM) {
         q.writeBuffer(this.trailVB, 0, this.trailData, 0, this.trailCount * 4);
         pp.setPipeline(this.pTrail);
         pp.setVertexBuffer(0, this.trailVB);

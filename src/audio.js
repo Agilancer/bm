@@ -31,6 +31,8 @@ Object.assign(BANKS, {
   unsheath: n('sword_unsheath', 2),
   // Doors (src/items/doors.js): a house's or the church's iron ones, and the cathedral's great doors.
   doorOpen: n('door_open', 2), doorClose: n('door_close', 2), gateOpen: ['gate_open'], gateClose: ['gate_close'], unlock: ['lock_unlock'],
+  // The Test Dungeon's door going up and coming down (src/ui/testhall.js).
+  portcullis: ['portcullis_gate'],
   chestOpen: n('chest_open', 2),
   // The town at work (src/folk/folk.worker.js blows), and the camp in the Rustwood.
   chop: n('chop', 4), anvil: n('mine', 5),

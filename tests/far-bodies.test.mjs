@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { Renderer } from '../src/gfx/renderer.js';
 import { TIERS } from '../src/gfx/gpu.js';
 import { C, C_SIZE, CHARS_START, SNAP_FLOATS } from '../src/core/layout.js';
+import { MAX_LIT } from '../src/gfx/shaders.js';
 
 function fixture(tier = TIERS.high, n = 1) {
   // (Every plane lets everything in: all of it's in view.)
@@ -85,12 +86,13 @@ test('bodies the same distance off are posed on different frames, so no frame ta
 });
 
 // ---- who's near you: the grass they press, and the dark under them (writeFeet) ----
-const O_CHARS = 192, O_FEET = 448, O_FEET_BOX = 496, O_FEET_Y = 500;
+// (Where they are in the frame's uniforms: after the lights, src/gfx/renderer.js O.)
+const O_CHARS = 192, O_FEET = 224 + MAX_LIT * 8, O_FEET_BOX = O_FEET + 48, O_FEET_Y = O_FEET + 52;
 function feetFixture(tier, bodies) {
   const snap = new Float32Array(SNAP_FLOATS);
   bodies.forEach((b, i) => { const o = CHARS_START + i * C_SIZE; snap[o + C.ACTIVE] = 1; snap[o + C.X] = b.x; snap[o + C.Y] = b.y || 0; snap[o + C.Z] = b.z || 0; snap[o + C.STATE] = b.dead ? 10 : 0; });
   const r = Object.assign(Object.create(Renderer.prototype), { tier, folk: null, chars: bodies.map((b) => ({ casts: b.casts !== false, bindR: b.bindR })) });
-  const d = new Float32Array(504);
+  const d = new Float32Array(O_FEET + 56);
   r.writeFeet(d, snap, cam);
   return d;
 }

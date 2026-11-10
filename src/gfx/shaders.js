@@ -1,6 +1,7 @@
 // WGSL shared by the world's pipelines: the frame block, lighting, shadows, fog.
 import { CHURCH_X, CHURCH_Z, SEXTON } from '../core/church.js';
 import { DUNGEON_BOX } from '../core/dungeon.js';
+import { HALL_BOX } from '../core/testhall.js';
 
 const f32 = (v) => v.toFixed(2);   // (a number into WGSL, as a float)
 import { CAVE_BOX, CAVE_LINE, CHAMBER_FIRST } from '../core/opening.js';
@@ -42,6 +43,9 @@ fn caveAt(p: vec3f) -> f32 {
 }`;
 })();
 
+// How many lamps a frame can light (Frame.lights below; renderer.js and spellfx.js fill them).
+export const MAX_LIT = 36;
+
 export const COMMON = /* wgsl */ `
 struct Light { posR: vec4f, colI: vec4f };
 struct Frame {
@@ -65,7 +69,7 @@ struct Frame {
   ground: vec4f,          // ground map: min x, min z, 1/size, grass tint
   blood: vec4f,           // blood map: min x, min z, 1/size, whether there's bloom
   chars: array<vec4f, 6>, // bodies pressing the grass
-  lights: array<Light, 28>,
+  lights: array<Light, ${MAX_LIT}>,
   counts: vec4f,          // x = lights, y = cascades, z = pom, w = grass near radius
   caveAmb: vec4f,         // Lisandra's cave: its own ambient light, w = whether it's there at all
   feet: array<vec4f, 12>, // who stands near you, for the dark under them (underfoot): x, z, their soles' height, how wide
@@ -170,7 +174,7 @@ fn brdf(n: vec3f, v: vec3f, l: vec3f, albedo: vec3f, f0: vec3f, rough: f32, meta
   return (diff + spec) * nl;
 }
 
-// Indoors the sky doesn't reach. 0 outside, 1 in the cathedral, 1.25 in a house, 2 below. The boxes are the inside of tools/interior/build_interior.py's walls.
+// Indoors the sky doesn't reach. 0 outside, 1 in the cathedral, 1.25 in a house, 2 below, 3 in the Test Dungeon's white hall. The boxes are the inside of tools/interior/build_interior.py's walls.
 fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32, jx: f32, jz: f32, y1: f32, top: f32) -> bool {
   let up = p.y > y1;
   return p.y < top && abs(p.x - x) < hx + select(0.0, jx, up) && abs(p.z - z) < hz + select(0.0, jz, up);
@@ -179,6 +183,8 @@ fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32, jx: f32, jz: f32, y1: f32,
 fn indoorAt(p: vec3f) -> f32 {
   // The Hollowfang Warrens, out past the world's edge and deep under it (src/core/dungeon.js).
   if (p.x > ${f32(DUNGEON_BOX.x0)} && p.x < ${f32(DUNGEON_BOX.x1)} && p.z > ${f32(DUNGEON_BOX.z0)} && p.z < ${f32(DUNGEON_BOX.z1)} && p.y < -20.0) { return 2.0; }
+  // The Test Dungeon, out past the other edge and as deep (src/core/testhall.js).
+  if (p.x > ${f32(HALL_BOX.x0)} && p.x < ${f32(HALL_BOX.x1)} && p.z > ${f32(HALL_BOX.z0)} && p.z < ${f32(HALL_BOX.z1)} && p.y < ${f32(HALL_BOX.y1)}) { return 3.0; }
   if (p.x < ${f32(CHURCH_X + 65.9)}) {
     // The houses, to the inside of their walls, with the overhang upstairs. Written by tools/village/build_village.py, which is the one that knows.
     if (p.y < 0.0) { return 0.0; }
@@ -243,7 +249,9 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   // Ambient: the sky's hemisphere for diffuse, its picture for reflections.
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
-  if (indoor > 1.5) { ambient = vec3f(0.044, 0.044, 0.048); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  // (The Test Dungeon is lit white from its ceilings: bright from above, the floor's light thrown back up.)
+  if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
+  else if (indoor > 1.5) { ambient = vec3f(0.044, 0.044, 0.048); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   // (A house's rooms have only their windows: at night, about a fifth of the day's. F.sunColor.a is the day behind a window.)
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);
@@ -264,7 +272,7 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   // The ground's reflection, when the mirror direction looks down, is dim and warm.
   let horizon = smoothstep(-0.25, 0.12, refl.y);
   var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
-  if (indoor > 0.5) { reflected *= select(0.22, 0.05, indoor > 1.5); }
+  if (indoor > 0.5) { reflected *= select(select(0.22, 0.05, indoor > 1.5), 0.5, indoor > 2.5); }
   reflected *= mix(1.0, 0.06, cave);
   let sunOcc = mix(0.55, 1.0, shadow);
   let foot = underfoot(p);
@@ -292,6 +300,10 @@ fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
     // Deep in the hill the far end goes to murk, and seen from out on the ledge the tunnel is a dark throat.
     let murk = mix(c, F.caveAmb.rgb * 0.4, clamp(1.0 - exp(-dist * 0.035), 0.0, 1.0));
     return mix(c, murk, cave);
+  }
+  if (indoor > 2.5) {
+    // The Test Dungeon: a faint white haze down the length of the arena, no more.
+    return mix(c, vec3f(0.7, 0.72, 0.75), clamp(1.0 - exp(-dist * 0.0025), 0.0, 1.0));
   }
   if (indoor > 0.5) {
     // Dust, and at the bottom of the stair a damp that swallows the far end of a long gallery.

@@ -10,6 +10,7 @@ import { S } from './knight.js';
 import { leanAmount } from './anim.js';
 import { stepSurf } from './surf.js';
 import { inDungeon } from '../core/dungeon.js';
+import { inHall } from '../core/testhall.js';
 
 const WORLD_FOV = 64 * Math.PI / 180;
 const EYE = 1.62;
@@ -97,8 +98,8 @@ export class Player {
 
   // The unseen wall at the edge of the grass. Indoors there's no such edge.
   keepToLand() {
-    // (The Hollowfang Warrens lie out past the edge, under it: src/core/dungeon.js.)
-    if ((Math.abs(this.x) > LAND_EDGE || Math.abs(this.z) > LAND_EDGE) && floorAt(this.x, this.z) === null && !inDungeon(this.x, this.z)) {
+    // (The Hollowfang Warrens lie out past the edge, under it: src/core/dungeon.js. The Test Dungeon past the other: src/core/testhall.js.)
+    if ((Math.abs(this.x) > LAND_EDGE || Math.abs(this.z) > LAND_EDGE) && floorAt(this.x, this.z) === null && !inDungeon(this.x, this.z) && !inHall(this.x, this.z)) {
       this.x = clamp(this.x, -LAND_EDGE, LAND_EDGE); this.z = clamp(this.z, -LAND_EDGE, LAND_EDGE);
     }
   }
@@ -190,7 +191,8 @@ export class Player {
     if (input[INPUT.ATTACK] !== this.atkSeen) { this.atkSeen = input[INPUT.ATTACK]; this.queued = 'L'; this.queuedT = 0.5; }
     if (input[INPUT.WIDE] !== this.wideSeen) { this.wideSeen = input[INPUT.WIDE]; this.queued = 'R'; this.queuedT = 0.5; }
     this.queuedT -= dt;
-    if (this.queuedT <= 0) this.queued = null;
+    // (In Lisandra's cave your staff does nothing yet: Sim.unarmed.)
+    if (this.queuedT <= 0 || (sim.unarmed && this.queued === 'L')) this.queued = null;
     const mx = input[INPUT.MOVE_X], mz = input[INPUT.MOVE_Z];
     const abil = input[INPUT.ABIL] | 0;   // (charms and the skull's cheats: ABIL in src/core/layout.js)
     this.steerX = mx;

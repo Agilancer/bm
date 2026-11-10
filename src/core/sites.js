@@ -12,7 +12,8 @@
 import { terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, SITES, WATERS, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
-import { DUNGEON, DUNGEON_CELL, ENTRY, EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, caveRoofY, caveRoom, grid, toWorld, torches } from './dungeon.js';
+import { DUNGEON, DUNGEON_CELL, ENTRY, EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, caveRoofY, caveRoom, braziers, grid, toWorld, torches } from './dungeon.js';
+import { buildHall } from './testhall.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -311,6 +312,12 @@ function cave(K) {
     K.box('iron', x - nx * 0.25, y - 0.55, z - nz * 0.25, 0.05, 0.5, 0.05, 0, { collide: false });
     K.drum('iron', x, y - 0.05, z, 0.1, 0.12, 6, { r2: 0.16, collide: false, open: true });
     K.cone('flame', x, y + 0.05, z, 0.14, 0.42, 5);
+  }
+  // The braziers round the bigger rooms: a post of stone, an iron bowl, the fire in it.
+  for (const [x, y, z] of braziers()) {
+    K.drum('dark:stone', x, y - 0.2, z, 0.22, 1.35, 6);
+    K.drum('iron', x, y + 1.15, z, 0.22, 0.32, 8, { r2: 0.42, collide: false, open: true });
+    K.cone('flame', x, y + 1.3, z, 0.3, 0.85, 6);
   }
   // The portals inside: the way back out by the way in, and the way out past Venomaw.
   for (const [q, key] of [[EXIT_IN, 'hf_in'], [EXIT_OUT, 'hf_out']]) {
@@ -683,6 +690,8 @@ export function buildSites() {
   const K = new Kit();
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   cave(K); warrensMouth(K);
+  // (The Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js.)
+  buildHall(K);
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   built = { parts: K.parts, colliders: K.colliders, spots: K.spots };
   return built;

@@ -6,16 +6,19 @@ import { FieldCreature } from './field-creature.js';
 import { setOpeningTerrain } from '../core/terrain.js';
 import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW, clutterBoxes } from '../core/opening.js';
 import { Opening } from './opening.js';
+import { PlayerBody } from './playerbody.js';
+import { THIRD, thirdAllowed } from '../core/third.js';
+import { STAFF_CORES } from '../items/staffcores.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
 import { parseGLB } from '../core/glb.js';
-import { CHARS_START, CTRL, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, mapShared } from '../core/layout.js';
+import { CHARS_START, CTRL, C, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, WEAPONS, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
 import { Casting } from './casting.js';
 import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
-import { floorAt, inPit } from '../core/interior.js';
+import { floorAt, homeFloor, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
 import { addUndead, corpsesNear, raiseZombie, resetCatacombs, stepCatacombs, stepGraves, stepWoods, Zombie } from './undead.js';
 import { POOL } from '../core/lands.js';
@@ -32,7 +35,10 @@ import { Slimes } from './slimes.js';
 import { Tumblers } from './tumblers.js';
 import { TripoEmpty, TripoWorld } from './tripo.js';
 import { Warrens } from './dungeon.js';
+import { foeOf } from './foes.js';
 import { PORTAL, inDungeon } from '../core/dungeon.js';
+import { inHall } from '../core/testhall.js';
+import { TestHall } from './testhall.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
@@ -101,6 +107,94 @@ class Sim {
 
   charOffset(i) { return CHARS_START + i * C_SIZE; }
 
+  // In Lisandra's cave, until you're out of it: no staff and no spells (and no third-person view: thirdAllowed). The waking
+  // itself is left as it was: you're held still for it, and its one cast is the story's own.
+  get unarmed() { const stage = this.opening ? this.opening.stage : OPENING.OFF; return stage > OPENING.WAKE && stage < OPENING.ESCORT; }
+
+  // Your own body, for the third-person view (src/sim/playerbody.js): posed from what you're doing, into the slot after
+  // Lisandra's; and where that view's camera can stand (src/core/third.js). Before the spells' update, which draws from its hands.
+  stepBody(dt) {
+    const body = this.body, snap = this.scratch, p = this.player, c = this.casting, input = this.input;
+    this.third = !!body && input[INPUT.THIRD] > 0.5 && thirdAllowed(this.opening ? this.opening.stage : OPENING.OFF);
+    snap[H.TP] = this.third ? 1 : 0;
+    if (!body) return;
+    const off = this.charOffset(this.knights.length + this.heroes.length + this.villagers.length);
+    if (!this.third) { if (this.bodyShown) { body.reset(); this.bodyShown = false; } body.write(snap, off, false); return; }
+    const s = this.bodyState || (this.bodyState = { surfAt: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: 0, air: false }, castAt: { kind: 'shot', hands: 1, wind: 0, hit: 0, w: 0, shake: 0 } });
+    s.x = p.x; s.y = p.y; s.z = p.z; s.yaw = p.yaw; s.pitch = p.pitch; s.vx = p.vx; s.vz = p.vz;
+    s.onGround = p.onGround; s.sprinting = p.sprinting; s.dodge = Math.max(0, p.dodgeT) / 0.3; s.dead = p.dead; s.deadT = p.deadT;
+    const staff = WEAPONS[p.weapon]?.hands === 3 ? WEAPONS[p.weapon].id : null;
+    s.staff = !!staff; s.staffHead = staff && STAFF_CORES[staff] ? STAFF_CORES[staff][1] : 0.5;
+    s.skull = p.hasSkull; s.shield = p.hasShield; s.guard = p.hasSkull ? 0 : p.shieldUp || 0;
+    if (p.surfing) {
+      // The board: the way it's going (the way it last went, when it's all but stopped) and the lie of the ground under it.
+      const b = s.surfAt, hs = Math.hypot(p.vx, p.vz), w = this.world, e = 0.3;
+      if (hs > 0.5) { b.hx = p.vx / hs; b.hz = p.vz / hs; }
+      if (p.surfAir) { b.nx = 0; b.ny = 1; b.nz = 0; } else {
+        const nx = w.height(p.x - e, p.z) - w.height(p.x + e, p.z), nz = w.height(p.x, p.z - e) - w.height(p.x, p.z + e), l = 1 / Math.hypot(nx, 2 * e, nz);
+        b.nx += (nx * l - b.nx) * 0.3; b.ny += (2 * e * l - b.ny) * 0.3; b.nz += (nz * l - b.nz) * 0.3;
+      }
+      b.tilt = p.surfTilt || 0; b.air = p.surfAir;
+      s.surf = b;
+    } else s.surf = null;
+    // The cast: a spell's hands by where their own clip is, or the staff's shot.
+    const k = s.castAt, sm = (v) => { const u = Math.min(1, Math.max(0, v)); return u * u * (3 - 2 * u); };
+    s.cast = null;
+    let t = null, info = null;
+    if (c.state !== 'idle' && c.rig && c.def) {
+      info = c.rig.clips[c.clipName('cast')];
+      k.kind = c.def.rig === 'raise' ? 'raise' : 'throw'; k.hands = c.def.hands;
+      t = c.state === 'gather' ? info.wind : c.state === 'hold' ? info.hit : c.state === 'wind' ? Math.min(c.t, info.hit) : Math.max(c.t, info.hit);
+      k.shake = c.state === 'gather' ? 1 : c.state === 'hold' ? 0.7 : 0;
+    } else {
+      t = p.staffSurf ? p.staffSurfT : p.clip === 'staff_cast' ? p.t : null;
+      if (t !== null) { info = p.rigs[3].clips.staff_cast; k.kind = 'shot'; k.hands = 1; k.shake = 0; }
+    }
+    if (t !== null && info) {
+      const wind = info.wind || info.hit * 0.6, out = c.state === 'out' || (k.kind === 'shot' && t > info.hit);
+      k.wind = t < wind ? sm(t / wind) : 1;
+      k.hit = t < wind ? 0 : sm((t - wind) / Math.max(info.hit - wind, 0.02));
+      k.w = out ? 1 - sm(((t - info.hit) / (info.dur - info.hit) - 0.12) / 0.88) : c.gathered || c.state === 'gather' || c.state === 'hold' ? 1 : sm(t / (wind * 0.6));
+      s.cast = k;
+    }
+    if (!this.bodyShown) { body.reset(); this.bodyShown = true; }
+    body.update(dt, s);
+    body.write(snap, off, true);
+    // The camera: from the point beside the eye, back along where you look until something's in the way.
+    const sy = Math.sin(p.yaw), cy = Math.cos(p.yaw), sp = Math.sin(p.pitch), cp = Math.cos(p.pitch);
+    const fx = sy * cp, fy = sp, fz = cy * cp, rx = -cy, rz = sy;
+    const drop = (p.surfLow || 0) * 0.75 + (p.landKick || 0) * 0.5 + (p.dead ? Math.min(p.deadT * 0.5, 0.7) : 0);
+    const ex = p.x, ey = p.y + 1.62 - drop, ez = p.z, w = this.world;
+    // (The step to the side first: against a wall on your right there's no room for it.)
+    const reach = THIRD.side + THIRD.skin, hitSide = w.rayBoxes(ex, ey, ez, rx, 0, rz, reach);
+    const side = hitSide >= 0 ? Math.max(0, hitSide - THIRD.skin) / THIRD.side : 1;
+    const px = ex + rx * THIRD.side * side, py = ey + THIRD.up, pz = ez + rz * THIRD.side * side;
+    let dist = c.trace(this, px, py, pz, -fx, -fy, -fz, THIRD.dist + THIRD.skin) - THIRD.skin;
+    // (Under a roof the camera keeps low: the rooms' ceilings aren't in the walls it's tested against.)
+    if (fy < 0 && (floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null) && -fy * dist > THIRD.indoors) dist = THIRD.indoors / -fy;
+    snap[H.TP_DIST] = Math.max(THIRD.near, Math.min(THIRD.dist, dist));
+    snap[H.TP_SIDE] = side; snap[H.TP_DROP] = drop;
+    this.sight = this.sight || [0, 0, 0];
+    this.sight[0] = px; this.sight[1] = py; this.sight[2] = pz;
+  }
+
+  // Who each body is after (C.AFTER): a monster's mark (src/sim/foes.js), a hero's foe. Auto-play reads it to take what's on
+  // its healer, and to shoot what its tank is holding (src/ui/autobrain.js).
+  writeAfter(snap, nk) {
+    const at = this.afterIx || (this.afterIx = new Map()), p = this.player;
+    at.clear();
+    this.knights.forEach((k, i) => at.set(k, i));
+    this.heroes.forEach((h, i) => at.set(h, nk + i));
+    this.knights.forEach((k, i) => {
+      let w = -2;
+      if (!k.dead && (k.aggro || k.hostile)) { const f = foeOf(k, this); w = f === p ? -1 : at.get(f) ?? -2; }
+      snap[this.charOffset(i) + C.AFTER] = w;
+    });
+    this.heroes.forEach((h, i) => { snap[this.charOffset(nk + i) + C.AFTER] = h.foe && !h.foe.dead ? at.get(h.foe) ?? -2 : -2; });
+    const nv = this.villagers.length;
+    for (let i = 0; i < nv; i++) snap[this.charOffset(nk + this.heroes.length + i) + C.AFTER] = -2;
+  }
+
   // Whatever a spell can hit: the knights and the dead, and the slimes (src/sim/slimes.js). Made once a tick.
   get foes() {
     if (this.foesTick !== this.tick) { this.foesTick = this.tick; this.foesList = this.slimes.list.length || this.tumblers.list.length ? this.knights.concat(this.slimes.list, this.tumblers.list) : this.knights; }
@@ -137,6 +231,9 @@ class Sim {
   restart() {
     // (Fallen in the Hollowfang Warrens: back at its way in, not out on the road. src/sim/dungeon.js afterRestart.)
     const inWarrens = !!this.player && inDungeon(this.player.x, this.player.z) && this.tick > 0;
+    // (In the Test Dungeon, what it brought into its arena goes home first: src/sim/testhall.js.)
+    this.testHall?.beforeRestart();
+    this.wantRestart = false;
     this.player.reset();
     this.player.y = this.world.height(this.player.x, this.player.z);
     this.casting.reset();
@@ -158,6 +255,8 @@ class Sim {
     this.input[INPUT.PITCH] = 0;
     self.postMessage({ type: 'restart', yaw });
     this.warrens?.afterRestart(inWarrens);
+    // (And in the Test Dungeon you're stood back at its hall's south end.)
+    this.testHall?.afterRestart();
   }
 
   step(dt) {
@@ -172,6 +271,8 @@ class Sim {
       this.manualTicks--;
     }
     if (input[INPUT.RESTART] !== this.restartSeen) { this.restartSeen = input[INPUT.RESTART]; this.restart(); }
+    // (Fallen in the Test Dungeon: started over by itself, a moment after. src/sim/testhall.js.)
+    if (this.wantRestart) this.restart();
     if (input[INPUT.CMD] !== this.cmdSeen) { this.cmdSeen = input[INPUT.CMD]; this.command(input[INPUT.ASPECT], input[INPUT.CMD_A], input[INPUT.CMD_B], input[INPUT.CMD_C]); }
     if (this.stopT > 0) { this.stopT -= dt; this.timeScale = 0.08; } else this.timeScale = Math.min(1, this.timeScale + dt * 14);
     if (this.slowT > 0) this.slowT -= dt;
@@ -227,7 +328,10 @@ class Sim {
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     if (this.heroWorld && !this.frozen && tdt > 0) this.heroWorld.step(tdt);
     if (!this.frozen && tdt > 0) this.warrens?.step(tdt);
+    // (In real seconds: its door and its count after a fall don't slow with a slow-motion death.)
+    this.testHall?.step(dt);
     this.separate();
+    this.stepBody(dt * (this.slow || 1));
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     // (After the spells' update, which clears the frame's shapes.)
     this.heroWorld?.drawFx();
@@ -247,12 +351,14 @@ class Sim {
     const nk = this.knights.length, nh = this.heroes.length;
     this.heroes.forEach((h, i) => h.write(snap, this.charOffset(nk + i), this));
     this.villagers.forEach((v, i) => { v.mouth = input[INPUT.MOUTH]; v.write(snap, this.charOffset(nk + nh + i)); });
+    this.writeAfter(snap, nk);
     if (this.opening) this.opening.write(snap, H);
     else snap[H.OPENING] = OPENING.OFF;
     player.sweep(snap, this);
     this.knights.forEach((k, i) => k.writeGashes(snap, this.charOffset(i), this));
     this.plan();
     snap[H.TIME] = this.time; snap[H.TICK] = this.tick;
+    // (Your own body's slot is the one after these, and isn't counted: everything that walks the list is looking for someone else.)
     snap[H.NCHARS] = this.knights.length + this.heroes.length + this.villagers.length;
     snap[H.GAME] = this.gameState; snap[H.GAME_T] = this.gameT;
     snap[H.TIME_SCALE] = this.timeScale * (this.slowT > 0 ? 0.25 : 1);
@@ -438,6 +544,8 @@ Sim.prototype.place = function (d) {
   if (!d || (this.opening && d.openingRevision !== OPENING_REVISION)) return;
   // (A game kept down in the Warrens loads at their portal, out in the woods: the Warrens start again from nothing.)
   if (inDungeon(d.x, d.z)) d = { ...d, x: PORTAL.x + Math.sin(PORTAL.yaw) * 4, z: PORTAL.z + Math.cos(PORTAL.yaw) * 4, y: -1e9, yaw: PORTAL.yaw };
+  // (Nobody's kept in the Test Dungeon's hall but while it's on: src/sim/testhall.js. Anywhere else, the road into town.)
+  if (inHall(d.x, d.z) && !this.testHall?.on) d = { ...d, x: 7.5, z: 72, y: -1e9, yaw: Math.PI };
   const p = this.player;
   const floor = this.world.heightFor(d.x, d.z, d.y);
   p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
@@ -545,9 +653,13 @@ async function boot(msg) {
   }
   // The Hollowfang Warrens (src/sim/dungeon.js): after the Tripo lairs and the heroes, which it uses.
   sim.warrens = new Warrens(sim);
+  // The Test Dungeon (src/sim/testhall.js): off until the main menu asks for it.
+  sim.testHall = new TestHall(sim);
   for (const form of LISANDRA_FORMS) {
     sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
   }
+  // Your own body, for the third-person view: the slot after hers.
+  sim.body = new PlayerBody(await fetchBuf(base + 'assets/game/player/wizard.glb'));
   if (msg.opening) {
     sim.opening = new Opening(sim);
     sim.opening.reset();
@@ -574,6 +686,7 @@ async function boot(msg) {
     if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
     if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
+    if (m.type === 'hall') sim.testHall?.message(m);
     if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {

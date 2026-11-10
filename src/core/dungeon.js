@@ -15,12 +15,14 @@
 // Then node tools/dungeon/check.mjs walks it: every room joined, every pack and boss on the floor, the portals clear.
 
 import { hash2, vnoise } from './terrain-noise.js';
+import { STATIONS, hallAt } from './testhall.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
 export const DUNGEON = { name: 'The Hollowfang Warrens', x: 5760, z: -40, y: -50 };
 // The cave mouth near the kobolds' den where its portal stands, and where the quartermaster waits.
 export const PORTAL = { x: 128, z: -212, yaw: 2.6, r: 2.2 };
-export const BROKER_SPOTS = { portal: [PORTAL.x + 4.2, PORTAL.z + 2.4], town: [5, -2] };
+// (And the Test Dungeon's keeper, at the summoning counter in its hall: src/core/testhall.js.)
+export const BROKER_SPOTS = { portal: [PORTAL.x + 4.2, PORTAL.z + 2.4], town: [5, -2], hall: (() => { const q = STATIONS.find((t) => t.who === 'hall'); return [...hallAt(q.x, q.z), q.yaw]; })() };
 
 // Rooms: id, middle (local: x east, z south of the entrance), radius, floor height over DUNGEON.y, how high the roof can rise.
 export const ROOMS = [
@@ -108,7 +110,12 @@ export const WARNINGS = [
   /* 14 */ 'The tank is down! Healer, get them up, everyone else back off!',
   /* 15 */ 'Grubnash is enraged!',
   /* 16 */ 'Venomaw is enraged: she will kill you all!',
+  /* 17 */ 'Grubnash turns on you! Get behind the tank, or out of his reach, till he lets go.',
+  /* 18 */ 'A twin turns on you! Get behind the tank, or out of his reach, till he lets go.',
+  /* 19 */ 'Venomaw turns her head to you! Get behind the tank, out of her reach, till she looks away.',
 ];
+// Which of those a boss calls when it turns on you (src/sim/dungeon.js turnOn).
+export const TURN_WARN = { grubnash: 17, twins: 18, venomaw: 19 };
 
 // The digger who runs from his hole to Grubnash, and the dragon's whelps.
 export const ADDS = { digger: 'kobold_1', whelp: 'hf_whelp' };
@@ -303,11 +310,12 @@ export function torches() {
     }
     const e = 0.25, gx = caveRoom(x + e, z) - caveRoom(x - e, z), gz = caveRoom(x, z + e) - caveRoom(x, z - e), L = Math.hypot(gx, gz) || 1;
     if (caveRoom(x, z) < 0.2 || caveRoom(x, z) > 1.2) return;
-    if (TORCHES.some((t) => Math.hypot(t[0] - x, t[2] - z) < 6)) return;
+    if (TORCHES.some((t) => Math.hypot(t[0] - x, t[2] - z) < 4.2)) return;
     TORCHES.push([x, caveFloorY(x, z) + 2.3, z, gx / L, gz / L]);
   };
+  // (A torch every seven metres or so round each room's wall, and every six down the tunnels.)
   for (const r of ROOMS) {
-    const n = Math.max(4, Math.round(r.r * 6.28 / 11));
+    const n = Math.max(5, Math.round(r.r * 6.28 / 7));
     for (let i = 0; i < n; i++) {
       const a = (i + 0.5) / n * 6.28, [x, z] = toWorld(r.x + Math.cos(a) * r.r * 0.6, r.z + Math.sin(a) * r.r * 0.6);
       place(x, z);
@@ -318,7 +326,7 @@ export function torches() {
     for (let q = 1; q < t.pts.length; q++) {
       const a = t.pts[q - 1], b = t.pts[q], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
       const nx = -(b[1] - a[1]) / L, nz = (b[0] - a[0]) / L;
-      for (let s = 4; s < L; s += 9) {
+      for (let s = 3; s < L; s += 6) {
         const side = (Math.round(s) + q) % 2 ? 1 : -1;
         const [x, z] = toWorld(a[0] + (b[0] - a[0]) * s / L + nx * side, a[1] + (b[1] - a[1]) * s / L + nz * side);
         place(x, z);
@@ -326,6 +334,35 @@ export function torches() {
     }
   }
   return TORCHES;
+}
+
+// Braziers standing round the bigger rooms, a couple of strides out from the wall between its torches: fires on posts
+// that light the floor where the fighting is (src/core/sites.js builds them, src/gfx/renderer.js lights them). Clear of
+// the portals and the way in. [x, floor y, z]
+let BRAZIERS = null;
+export function braziers() {
+  if (BRAZIERS) return BRAZIERS;
+  BRAZIERS = [];
+  const keep = [ENTRY, EXIT_IN, EXIT_OUT].map((q) => toWorld(q.x, q.z));
+  for (const r of ROOMS) {
+    if (r.r < 9) continue;
+    const n = r.r >= 25 ? 6 : r.r >= 14 ? 4 : 3;
+    for (let i = 0; i < n; i++) {
+      const a = (i + 0.25) / n * 6.28;
+      let [x, z] = toWorld(r.x + Math.cos(a) * r.r * 0.5, r.z + Math.sin(a) * r.r * 0.5);
+      // Out toward the rock till it's two metres off it.
+      for (let k = 0; k < 24 && caveRoom(x, z) > 2.2; k++) {
+        const e = 0.25, gx = caveRoom(x + e, z) - caveRoom(x - e, z), gz = caveRoom(x, z + e) - caveRoom(x, z - e), L = Math.hypot(gx, gz) || 1;
+        x -= gx / L * 0.5; z -= gz / L * 0.5;
+      }
+      const d = caveRoom(x, z);
+      if (d < 1.6 || d > 2.8) continue;
+      if (keep.some(([kx, kz]) => Math.hypot(kx - x, kz - z) < 6)) continue;
+      if (BRAZIERS.some((b) => Math.hypot(b[0] - x, b[2] - z) < 5)) continue;
+      BRAZIERS.push([x, caveFloorY(x, z), z]);
+    }
+  }
+  return BRAZIERS;
 }
 
 // ---- the dungeon's flow field, for whatever chases or follows inside it ---------------------------------------------------

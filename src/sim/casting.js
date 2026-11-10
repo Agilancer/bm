@@ -196,7 +196,8 @@ export class Casting {
       this.lower = Math.max(0, this.lower - dt * 3.2);
       this.skullLower = Math.max(0, (this.skullLower || 0) - dt * 3.2);
       this.armLower = Math.max(0, this.armLower - dt * 3.2);
-      if (want && !p.dead && !p.swinging && !p.guard && p.staffSurfT === null && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
+      if (sim.unarmed) this.asked = 0;      // (No spells in Lisandra's cave, until you're out of it.)
+      else if (want && !p.dead && !p.swinging && !p.guard && p.staffSurfT === null && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
       if (this.state === 'idle') return;
     }
     const def = this.def;
@@ -251,6 +252,7 @@ export class Casting {
 
   // Where a palm is on screen, as a point in the world this far along the ray under that pixel.
   palm(side, dist, sim, out) {
+    if (sim.third) return this.bodyPalm(side, sim, out);
     const r = this.rig, p = sim.player, w = r.wt;
     let vx, vy, vz;
     if (side === 'both') {
@@ -267,8 +269,26 @@ export class Casting {
     return out;
   }
 
+  // In the third-person view a spell leaves the body you can see: the staff's head (it's what the right hand casts with), the
+  // left palm, or between them for one that takes both.
+  bodyPalm(side, sim, out) {
+    const b = sim.body, R = sim.player.stance.shoots || sim.player.staffSurf ? b.staffTip : b.palmR, L = b.palmL;
+    if (side === 'both') { out[0] = (R[0] + L[0]) / 2; out[1] = (R[1] + L[1]) / 2; out[2] = (R[2] + L[2]) / 2; }
+    else { const h = side === 'L' ? L : R; out[0] = h[0]; out[1] = h[1]; out[2] = h[2]; }
+    return out;
+  }
+
+  // Where the crosshair's line starts: your eye, or in the third-person view the point beside it the camera looks along.
+  eye(sim, out) {
+    const p = sim.player;
+    if (sim.third && sim.sight) { out[0] = sim.sight[0]; out[1] = sim.sight[1]; out[2] = sim.sight[2]; }
+    else { out[0] = p.x; out[1] = p.y + EYE; out[2] = p.z; }
+    return out;
+  }
+
   // Use the staff tip's screen ray on foot, or the off-screen hand at the lower-right corner when surfing.
-  staffOrigin(p, aspect, out) {
+  staffOrigin(p, aspect, out, sim) {
+    if (sim?.third) { const t = sim.body.staffTip; out[0] = t[0]; out[1] = t[1]; out[2] = t[2]; return out; }
     let sx, sy, eyeY = p.y + EYE;
     if (p.surfing) {
       const edge = 1.1 * WORLD_HALF_TAN;
@@ -293,7 +313,7 @@ export class Casting {
     const t = p.staffSurf ? p.staffSurfT : p.clip === 'staff_cast' ? p.t : null;
     if (t === null) return;
     const id = WEAPONS[p.weapon].id, def = staffShot(id), info = p.rigs[3].clips.staff_cast;
-    const from = this.staffOrigin(p, sim.input[INPUT.VIEW_ASPECT] || 16 / 9, out3);
+    const from = this.staffOrigin(p, sim.input[INPUT.VIEW_ASPECT] || 16 / 9, out3, sim);
     if (t < info.hit) {
       const k = smooth(t / info.hit);
       this.fx(FX.FLARE, def.elem, from[0], from[1], from[2], 0.015 + 0.035 * k, 0, 1, 0, 0, -(0.2 + 0.5 * k), 0, 0, 0, 0.3);
@@ -320,6 +340,7 @@ export class Casting {
 
   // The hands are lit from where they're drawn, which is further off than they look: this is that place.
   palmShading(side, sim, out) {
+    if (sim.third) return this.bodyPalm(side === 'both' ? 'R' : side, sim, out);
     const r = this.rig, p = sim.player, w = r.wt, a = r.index.get(`palm_${side}`) * 3;
     const s = Math.sin(p.yaw), c = Math.cos(p.yaw), sp = Math.sin(p.pitch), cp = Math.cos(p.pitch);
     const px = w[a], py = w[a + 1], pz = -w[a + 2] + 0.03;
@@ -403,11 +424,11 @@ export class Casting {
 
   // The foe nearest the line of sight, within so many radians.
   lockOn(sim, range, angle) {
-    const p = sim.player, f = this.forward(p, []), ey = p.y + EYE;
+    const p = sim.player, f = this.forward(p, []), e = this.eye(sim, []), ey = p.y + EYE;
     let best = null, bestA = angle;
     for (const k of sim.foes) {
       if (k.dead) continue;
-      const dx = k.x - p.x, dy = chestOf(k) - ey, dz = k.z - p.z, d = Math.hypot(dx, dy, dz);
+      const dx = k.x - e[0], dy = chestOf(k) - e[1], dz = k.z - e[2], d = Math.hypot(dx, dy, dz);
       if (d > range || d < 0.01) continue;
       const a = Math.acos(clamp((dx * f[0] + dy * f[1] + dz * f[2]) / d, -1, 1));
       // A knight who hasn't turned on you isn't sought out, unless you're looking right at him.
@@ -429,11 +450,11 @@ export class Casting {
 
   // Where the crosshair lands, a little kindly: on a body if one's right there.
   aim(sim, range, out) {
-    const p = sim.player, f = this.forward(p, []), ey = p.y + EYE;
+    const p = sim.player, f = this.forward(p, []), e = this.eye(sim, []);
     const lock = this.lockOn(sim, range, 0.06);
     if (lock) { out[0] = lock.x; out[1] = chestOf(lock); out[2] = lock.z; return lock; }
-    const t = this.trace(sim, p.x, ey, p.z, f[0], f[1], f[2], range);
-    out[0] = p.x + f[0] * t; out[1] = ey + f[1] * t; out[2] = p.z + f[2] * t;
+    const t = this.trace(sim, e[0], e[1], e[2], f[0], f[1], f[2], range);
+    out[0] = e[0] + f[0] * t; out[1] = e[1] + f[1] * t; out[2] = e[2] + f[2] * t;
     return null;
   }
 

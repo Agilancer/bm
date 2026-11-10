@@ -158,6 +158,8 @@ export class Opening {
   // On the road down you can't die: you're knocked flat, and come to on the road beside her.
   catchFall(player) {
     if (this.stage !== OPENING.ESCORT && this.stage !== OPENING.ARRIVED) return false;
+    // (In the Test Dungeon a fall is a fall, and it stands you back at its start: src/sim/testhall.js.)
+    if (this.sim.testHall?.on) return false;
     const w = this.sim.villagers[1];
     player.hp = Math.max(1, Math.round(player.maxHp * 0.5));
     player.x = w.x + Math.cos(w.yaw) * 1.6; player.z = w.z - Math.sin(w.yaw) * 1.6;

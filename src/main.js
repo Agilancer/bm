@@ -24,6 +24,8 @@ import { addPart, capture, restore, saves } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { saveSettings, settings, Title } from './title.js';
+import { ViewSwitch } from './ui/view.js';
+import { THIRD } from './core/third.js';
 import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
@@ -35,10 +37,12 @@ import { PartyUI } from './ui/party.js';
 import { TownClient } from './folk/client.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
-import { matName, RARITIES } from './items/items.js';
+import { hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
 import { groundAt, setHomes } from './ui/places.js';
+import { HallUI } from './ui/testhall.js';
+import { HALL, SPAWN, hallAt } from './core/testhall.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -288,6 +292,8 @@ async function boot(plan, poolSize) {
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
       else if (m.type === 'warrens') game?.party?.onWarrens(m);
+      else if (m.type === 'hall') game?.hallUI?.onHall(m);
+      else if (m.type === 'hallSummoned') game?.hallUI?.onSummoned(m);
       else if (m.type === 'restart') { input.yaw = m.yaw ?? Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
       else if (m.type === 'placed') {
         const c = calls.get(m.id);
@@ -372,6 +378,8 @@ async function boot(plan, poolSize) {
     shared.input[INPUT.SKULL] = skull ? 1 : 0;
     $('bWide').style.display = off && !skull ? 'flex' : '';
     renderer.offHand = off && !skull ? off.base : null;
+    // (What the body you see in third person holds: src/gfx/renderer.js selfItems.)
+    renderer.mainHand = pack.slots.main && hands(pack.slots.main.base) === 3 ? pack.slots.main.base : null;
     renderer.board.sword = off ? off.base : null;
     if (off) renderer.sword('surf_arm');     // (Ready before the first landing.)
     renderer.skull = skull ? skull.base : null;
@@ -515,6 +523,24 @@ async function boot(plan, poolSize) {
   });
   lands.load(null);
   game.lands = lands;
+  // The Test Dungeon's three counters (src/ui/testhall.js): off till the main menu's Test Dungeon.
+  game.hallUI = new HallUI({
+    base: BASE, sim: simWorker, pack, renderer, audio,
+    party: () => game.party, heroTalk: () => game.heroTalk, inventory: () => inventory,
+    give: (item) => {
+      if (pack.add(item)) { inventory.render(); return; }
+      const snap = game.currentSnap();
+      game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw);
+      hud.tip('Your pack is full: it is on the ground at your feet.', 2.5);
+    },
+    fill: () => { shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999; },
+    level: (d) => { pack.level = Math.max(1, Math.min(50, pack.level + d)); pack.xp = xpFor(pack.level); arm(); game.party?.levelled(); },
+    tip: (t, secs) => hud.tip(t, secs),
+    opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
+    closed: () => { input.menu = false; resume(); },
+    click: () => title.chime?.(),
+  });
+  if (game.party) game.party.freeHire = () => !!game.hallUI?.on;
   addPart('lands', { save: () => lands.save(), load: (d) => lands.load(d) });
   window.bm = game.api(shared, simWorker, buffer, pool);
   renderDiagnostics.attach(() => ({
@@ -581,7 +607,9 @@ async function boot(plan, poolSize) {
   addPart('doors', { save: () => game.doors.save(), load: (d) => game.doors.load(d) });
   addPart('clock', { save: () => ({ hour: renderer.hour }), load: (d) => renderer.setHour(d?.hour ?? 6) });
   // Not while you lie fallen.
-  const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2;
+  // (Nor in the Test Dungeon: nothing of it is kept, and Continue stays the game you were playing.)
+  let testMode = false;
+  const canSave = () => input.enabled && !!game.currentSnap() && game.gameState() !== 2 && !testMode;
   const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
   // The game keeps itself as it's played: that's Continue.
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
@@ -619,6 +647,7 @@ async function boot(plan, poolSize) {
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
   };
   const loadInto = async (data) => {
+    leaveTest();
     try { await restore(data); } catch (e) {
       await title.confirm({ title: 'Could not load', text: e.message, yes: 'Back', no: false });
       return false;
@@ -633,6 +662,7 @@ async function boot(plan, poolSize) {
   const toTitle = async () => {
     game.autoplay?.toggle(false);
     await autosave();
+    leaveTest();
     input.enabled = false;
     state.paused = false;
     shared.input[INPUT.PAUSE] = 1;
@@ -669,7 +699,36 @@ async function boot(plan, poolSize) {
       const d = saves.newest();
       if (d) startFrom(d);
     } else if (a === 'load') title.slots('load', slotOptions());
+    else if (a === 'test') enterTest();
   };
+  // The Test Dungeon (src/core/testhall.js): a white hall for trying the monsters, with all the gear and a party for nothing.
+  // A fresh pack and a fresh world, the story long over; nothing kept, so the game you were playing is still in Continue.
+  async function enterTest() {
+    testMode = true;
+    game.hallUI.setOn(true); hud.testHall = true; game.questTrail.off = true;
+    played = 0; playT = 0;
+    pack.load(null); arm(); game.drops.clear();
+    game.chests.load(null); game.spellbar.load(null); game.doors.load(null);
+    townUI.load(null); town.load(null);
+    game.party?.load(null);
+    renderer.setHour(12);
+    simWorker.postMessage({ type: 'hall', cmd: 'enter' });
+    const [x, z] = hallAt(SPAWN.x, SPAWN.z), name = openingHUD?.name || 'Tessariel';
+    openingHUD?.reset(name);
+    try { await simCall('place', { x, y: HALL.y, z, yaw: SPAWN.yaw, pitch: 0, openingRevision: OPENING_REVISION, opening: OPENING.ARRIVED, guide: [0, 0, 0, 0], name }); } catch (e) { console.error('test dungeon', e); }
+    hud.reset(); renderer.clearBlood();
+    await enter(false);
+    if (!input.touch && !AUTO) input.lock();
+    hud.tip('The Test Dungeon. Captain Vale keeps the stores, Aldous Fenn the Free Company, and Ysolde Marr by the door summons whatever you would fight. E to talk.', 9);
+  }
+  // Out of it, back to the title: whatever was hired goes back on the books, and the hall's own are sent home.
+  function leaveTest() {
+    if (!testMode) return;
+    testMode = false;
+    game.party?.load(null);
+    simWorker.postMessage({ type: 'hall', cmd: 'leave' });
+    game.hallUI.setOn(false); hud.testHall = false; game.questTrail.off = false;
+  }
   for (const b of $('pause').querySelectorAll('[data-p]')) {
     b.onclick = () => {
       title.chime();
@@ -699,7 +758,7 @@ async function boot(plan, poolSize) {
   applySetting('res', settings.res);
   if (settings.perf === 'on') hud.setDebug(true);
   input.onPauseChange = (paused) => {
-    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open || game.party?.open) return;
+    if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open || game.party?.open || game.hallUI?.open) return;
     if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
     $('pause').style.display = paused ? 'flex' : 'none';
@@ -740,6 +799,8 @@ async function boot(plan, poolSize) {
   });
   game.closeBook = closeBook;
   townUI.spellbar = game.spellbar;
+  // First person or third: V, the eye by the spell bar, VIEW on a phone.
+  game.viewSwitch = new ViewSwitch({ input, shared, settings, save: saveSettings, tip: (t, s) => hud.tip(t, s), busy: () => state.paused || naming });
   // Auto-play, behind the skull's word Jamie: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
@@ -901,7 +962,7 @@ class Hud {
     if (g !== this.msgShown) {
       this.msgShown = g;
       const m = $('msg');
-      const again = this.input.touch ? 'Tap to play again' : 'R to play again';
+      const again = this.testHall ? 'Back to the hall in a moment' : this.input.touch ? 'Tap to play again' : 'R to play again';
       if (g === 2) { m.innerHTML = `You have fallen<small>${again}</small>`; m.style.opacity = 1; }
     }
     if (this.debug) {
@@ -1031,6 +1092,7 @@ class GameView {
     const d = this.nearDrop;
     if (!d) {
       if (this.lands?.use()) return;
+      if (this.nearStation) { this.hallUI.talk(this.nearStation.key); this.takeShown = undefined; return; }
       if (this.nearChest) this.chests.open(this.nearChest);
       else if (this.nearFolk) { if (!this.nearFolk.busy) { this.townUI.talk(this.nearFolk.i); this.takeShown = undefined; } }
       else if (this.nearHero) { if (!this.nearHero.busy) { this.heroTalk.talkTo(this.nearHero.h); this.takeShown = undefined; } }
@@ -1073,16 +1135,20 @@ class GameView {
       const w = this.townUI.whereOf(folk.i);
       if (w && hero.h.dist < Math.hypot(w.x - snap[H.PX], w.z - snap[H.PZ])) folk = null; else hero = null;
     }
+    // Or, in the Test Dungeon, one of its counters (src/ui/testhall.js): before anyone, and its people are only at them.
+    const station = free && this.hallUI?.on ? this.hallUI.nearest(snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw) : null;
+    if (station || (hero?.h.p.broker && this.hallUI?.on)) { folk = null; hero = null; }
+    this.nearStation = station;
     this.nearFolk = folk; this.nearHero = hero;
-    const near = d || this.nearChest || (folk && folk.label) || hero?.label || this.nearDoor;
+    const near = d || this.nearChest || station?.label || (folk && folk.label) || hero?.label || this.nearDoor;
     if (near === this.takeShown) return;
     this.takeShown = near;
     $('take').style.display = near ? 'block' : 'none';
     $('bTake').style.display = near && this.input.touch ? 'flex' : 'none';
-    const shuts = !d && !this.nearChest && !folk && !hero && this.nearDoor?.open;
-    const locked = !d && !this.nearChest && !folk && !hero && this.nearDoor && this.locked(this.nearDoor);
-    $('bTake').textContent = d || !near ? 'TAKE' : folk || hero ? 'TALK' : shuts ? 'SHUT' : locked ? 'TRY' : 'OPEN';
-    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy || hero?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : folk ? folk.label : hero ? hero.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
+    const shuts = !d && !this.nearChest && !station && !folk && !hero && this.nearDoor?.open;
+    const locked = !d && !this.nearChest && !station && !folk && !hero && this.nearDoor && this.locked(this.nearDoor);
+    $('bTake').textContent = d || !near ? 'TAKE' : station || folk || hero ? 'TALK' : shuts ? 'SHUT' : locked ? 'TRY' : 'OPEN';
+    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy || hero?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : station ? station.label : folk ? folk.label : hero ? hero.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
   }
 
   gameState() { const s = this.currentSnap(); return s ? s[H.GAME] : 0; }
@@ -1137,6 +1203,7 @@ class GameView {
       if (this.input.touch && this.input.enabled && !this.shared.input[INPUT.PAUSE]) this.aimAssist(dt, snap);
       renderDiagnostics.stage = 'scene update';
       this.processEvents(snap);
+      this.viewSwitch?.frame(snap);
       this.updateCamera(dt, snap);
       this.emitAmbient(dt, snap);
       this.emitBleeds(dt, snap);
@@ -1253,7 +1320,10 @@ class GameView {
     // The eye is put where the player is now, on from where the snapshot has them: by the frames' time since it (paced: a frame,
     // the same every frame), or else by the clock since it was written.
     let age = 0;
-    if (this.buffer && this.pacedSnap && this.snapUs) {
+    // (In third person your body is drawn where the snapshot has it, and the camera keeps to it: THIRD below.)
+    const third = snap[H.TP] > 0.5;
+    if (third) age = 0;
+    else if (this.buffer && this.pacedSnap && this.snapUs) {
       age = clamp(((Atomics.load(this.shared.ctrl, CTRL.PACE_US) - this.snapUs) | 0) / 1e6, 0, 0.04);
     } else if (this.buffer) {
       const now = (performance.timeOrigin + performance.now()) % 2147483647;
@@ -1265,12 +1335,23 @@ class GameView {
     this.audio.surf(snap[H.SURF] > 0.5 && inp.enabled ? Math.hypot(snap[H.VX], snap[H.VZ]) : 0, snap[H.ON_GROUND] > 0.5);
     // What's under your own feet, for their sound (onEvent STEP), looked up a few times a second.
     if (!(this.groundT-- > 0)) { this.groundT = 8; this.underfoot = groundAt(snap[H.PX], snap[H.PY], snap[H.PZ]); }
-    if (snap[H.SURF] > 0.5) {
+    // Third person (src/core/third.js): from a step to the right of the eye and a little over it, back along the same line
+    // you look along, as far as the sim found room for. Coming up to a wall it closes in at once, and eases back out after.
+    let cx = eyeX, cy = eyeY, cz = eyeZ;
+    if (third) {
+      const room = clamp(snap[H.TP_DIST], THIRD.near, THIRD.dist), side = THIRD.side * snap[H.TP_SIDE];
+      this.boom = this.boom === undefined ? THIRD.near : room < this.boom ? room : Math.min(room, this.boom + (room - this.boom) * (1 - Math.exp(-6 * dt)) + 0.4 * dt);
+      const px = snap[H.PX] + rx * side, py = snap[H.PY] + 1.62 - snap[H.TP_DROP] + THIRD.up, pz = snap[H.PZ] + rz * side;
+      cx = px - fx * this.boom; cy = py - fy * this.boom; cz = pz - fz * this.boom;
+    } else this.boom = undefined;
+    this.renderer.third = third;
+    this.renderer.thirdNear = third && this.boom < THIRD.hide;
+    if (snap[H.SURF] > 0.5 && !third) {
       const hs = Math.hypot(snap[H.VX], snap[H.VZ]);
       if (hs > 0.5) { this.boardX = snap[H.VX] / hs; this.boardZ = snap[H.VZ] / hs; } else if (this.boardX === undefined) { this.boardX = 0; this.boardZ = 1; }
       boardPose(this.renderer.board.mat, snap[H.PX] + snap[H.VX] * age, snap[H.PY], snap[H.PZ] + snap[H.VZ] * age, this.boardX, this.boardZ, snap[H.ON_GROUND] > 0.5);
     }
-    Object.assign(this.cam, { x: eyeX, y: eyeY, z: eyeZ, fx, fy, fz, ux, uy, uz });
+    Object.assign(this.cam, { x: cx, y: cy, z: cz, fx, fy, fz, ux, uy, uz });
     // The sword lags your hands a little. (It rides your steps in its own clip, great_idle.)
     this.swayX = damp(this.swayX, clamp(inp.yawVel * 1.5, -0.05, 0.05), 11, dt);
     this.swayY = damp(this.swayY, clamp(inp.pitchVel * 1.5, -0.05, 0.05), 11, dt);
@@ -1642,6 +1723,10 @@ class GameView {
         for (const o of [...by('tank').slice(0, 1), ...by('heal').slice(0, 1), ...by('dps')].slice(0, n)) P.hire(o, true); return P.members; },
       warrens: (cmd = 'enter', o = {}) => sim.postMessage({ type: 'warrensDebug', cmd, ...o }),
       warrensState: () => view.party?.warrens,
+      // The Test Dungeon, for tests: hall('summon', { list: [{ id: 'tripo:kobold_1', n: 3 }] }), hall('kill') drops everything
+      // past the door, hall('clear') empties the arena; hallState() is the sim's last word on it.
+      hall: (cmd, o = {}) => (cmd === 'summon' && view.hallUI ? view.hallUI.send(o.list || []) : sim.postMessage({ type: 'hall', cmd, ...o })),
+      hallState: () => view.hallUI?.hall,
       heroSay: (slot, trig) => view.heroTalk?.say(view.heroTalk.heroes[slot], trig, null, {}),
       shot: (name) => new Promise((resolve) => {
         view.onFrame = () => {

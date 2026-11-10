@@ -1,8 +1,8 @@
 // Spells on the screen. The sim writes what's alive as a list of shapes; solid things (ice, stone, bone, blades) are drawn lit in the
 // world, and everything else (fire, light, force) as procedural HDR light after it, hot enough for the bloom to carry.
 import { FX_FLOATS, FX_START, H, MAX_FX } from '../core/layout.js';
-import { ELEM, ELEM_LIGHT, FX } from '../sim/spells.js';
-import { COMMON } from './shaders.js';
+import { ELEM, ELEM_LIGHT, FX, FX_CARRIED } from '../sim/spells.js';
+import { COMMON, MAX_LIT } from './shaders.js';
 
 // Each element's colours in linear light, white-hot first, down to the deep shade its edges fall off through.
 export const RAMP = /* wgsl */ `
@@ -578,23 +578,38 @@ export class SpellFX {
     const q = r.device.queue;
     if (nG) q.writeBuffer(this.glowBuf, 0, g, 0, nG * FX_FLOATS);
     if (nS) q.writeBuffer(this.solidBuf, 0, s, 0, nS * FX_FLOATS);
-    // The brightest few light the world, however many the tier otherwise affords.
-    const lit = this.spare;
-    lit.length = 0;
+    // The lights your party carries first (FX_CARRIED: the renderer left them room, carried() below), steady; then the
+    // brightest few of the rest light the world, however many the tier otherwise affords.
+    const lit = this.spare, held = this.held || (this.held = []);
+    lit.length = 0; held.length = 0;
     for (let i = 0; i < n; i++) {
       const o = FX_START + i * FX_FLOATS;
-      if (snap[o + 13] > 0) lit.push(o);
+      if (snap[o + 13] > 0) (snap[o + 8] === FX.LIGHT && snap[o + 15] === FX_CARRIED ? held : lit).push(o);
       this.spray(snap, o, dt);
     }
+    const nh = Math.min(held.length, r.tier.lean ? 2 : 4, MAX_LIT - taken);
+    for (let i = 0; i < nh; i++) {
+      const o = held[i], c = ELEM_LIGHT[snap[o + 9] | 0];
+      d.set([snap[o], snap[o + 1], snap[o + 2], snap[o + 14], c[0], c[1], c[2], snap[o + 13]], lightsAt + (taken + i) * 8);
+    }
+    taken += nh;
     if (lit.length > 1) lit.sort((a, b) => snap[b + 13] - snap[a + 13]);
-    const room = Math.min(lit.length, r.tier.lean ? 2 : MAX_LIGHTS, 28 - taken);
+    const room = Math.min(lit.length, r.tier.lean ? 2 : MAX_LIGHTS, MAX_LIT - taken);
     const t = now * 0.001;
     for (let i = 0; i < room; i++) {
       const o = lit[i], c = ELEM_LIGHT[snap[o + 9] | 0];
       const fl = 0.86 + 0.14 * Math.sin(t * 23 + i * 2.1) * Math.sin(t * 13.7 + i);
       d.set([snap[o], snap[o + 1], snap[o + 2], snap[o + 14], c[0], c[1], c[2], snap[o + 13] * fl], lightsAt + (taken + i) * 8);
     }
-    return room;
+    return nh + room;
+  }
+
+  // How many carried lights the snapshot has (as many as frame() will place), so the lanterns and torches leave room.
+  carried(snap) {
+    const n = snap[H.FX_N] | 0;
+    let k = 0;
+    for (let i = 0; i < n; i++) { const o = FX_START + i * FX_FLOATS; if (snap[o + 8] === FX.LIGHT && snap[o + 15] === FX_CARRIED && snap[o + 13] > 0) k++; }
+    return Math.min(k, this.r.tier.lean ? 2 : 4);
   }
 
   spray(snap, o, dt) {

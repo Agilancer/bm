@@ -9,7 +9,8 @@ import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { clamp, damp, mat4FromQT, quatMul, quatRotate, wrapAngle } from '../core/math.js';
 import { floorAt, inPit } from '../core/interior.js';
-import { ELEM, FX } from './spells.js';
+import { ELEM, FX, FX_CARRIED } from './spells.js';
+import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { Knight, S, matToQuat, norm, orth, cross, turn } from './knight.js';
 import { Caster, Zombie } from './undead.js';
 import { townDist } from '../core/town.js';
@@ -1211,9 +1212,39 @@ export class HeroWorld {
     this.lastBand = band;
   }
 
+  // Your party's lights: a spirit-light over each one's shoulder, as the Wisp Light is over yours, so you can see them, and
+  // they the ground, in the dark. By night, in the Warrens and below ground it lights them and a pool round their feet; by
+  // day it's a small glow over them and lights nothing. Drawn each tick with the rest (drawFx). The lights themselves go
+  // out as FX_CARRIED, which the renderer puts before the spells' own (src/gfx/spellfx.js).
+  partyLights() {
+    const sim = this.sim, c = sim.casting, now = sim.time, dt = clamp(now - (this.lampT ?? now), 0, 0.1);
+    this.lampT = now;
+    const night = this.hour < DAWN_HOUR + 0.5 || this.hour >= DUSK_HOUR - 0.5;
+    // (Nearest first: a phone has room for only two of them.)
+    const lit = [...this.company.members].filter((h) => !h.dead && !h.hidden && h.visible && h.near < 90).sort((a, b) => a.near - b.near);
+    for (const h of this.company.members) if (!lit.includes(h)) h.wisp = null;
+    for (const h of lit) {
+      const s = Math.sin(h.yaw), co = Math.cos(h.yaw), side = h.slot % 2 ? 1 : -1;
+      // Over the shoulder and a little ahead, clear of the head, so it lights the face and chest rather than the inside of
+      // the helm (a point light casts no shadow), and its pool falls round their feet.
+      const tx = h.x + s * 0.28 + co * side * 0.5, tz = h.z + co * 0.28 - s * side * 0.5, ty = h.y + h.rig.height + 0.28;
+      const w = h.wisp || (h.wisp = { x: tx, y: ty, z: tz, t: (h.slot * 1.7) % 6 });
+      w.t += dt;
+      const k = 1 - Math.exp(-dt * 6);
+      w.x += (tx - w.x) * k; w.y += (ty + Math.sin(w.t * 1.9) * 0.06 - w.y) * k; w.z += (tz - w.z) * k;
+      const dark = night || h.y < -6 || inDungeon(h.x, h.z);
+      c.fx(FX.ORB, ELEM.LIGHT, w.x, w.y, w.z, dark ? 0.045 : 0.032, 0, 1, 0, 0, dark ? 0.9 : 0.45, 0, 0, 0, 0.7);
+      if (dark) {
+        c.fx(FX.FLARE, ELEM.LIGHT, w.x, w.y, w.z, 0.13, 0, 1, 0, 0, 0.2, 0, 0, 0.5, 0.3);
+        c.fx(FX.LIGHT, ELEM.LIGHT, w.x, w.y, w.z, 0, 0, 1, 0, 0, 1, 4.2, 10, 0, 0, FX_CARRIED);
+      }
+    }
+  }
+
   // Drawn after the spells' own shapes each tick (Sim.step), so they share the frame's budget without being wiped.
   drawFx() {
     const c = this.sim.casting;
+    this.partyLights();
     for (const [a, b, elem, k] of this.cords) {
       const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz) || 1;
       c.fx(FX.BEAM, elem, a[0], a[1], a[2], 0.006, dx / L, dy / L, dz / L, L, 0.9 * k, 0.6 * k, 1.2, 0, 0, 0.006);
@@ -2057,14 +2088,18 @@ export class HeroWorld {
 
   // ---- the Free Company: the quartermasters, and the party you hire of them --------------------------------------------
 
+  // Where a quartermaster's post is: his own (src/core/dungeon.js BROKER_SPOTS), or, while the Test Dungeon's on, his counter in
+  // its hall (src/sim/testhall.js). [x, z, yaw or undefined]
+  postOf(h) { return this.sim.testHall?.postOf(h.broker) || BROKER_SPOTS[h.broker]; }
+
   // A quartermaster keeps his post (in town, by the well; at the Warrens' portal) and turns to whoever comes to talk.
   atPost(h) {
-    const sim = this.sim, p = sim.player, [x, z] = BROKER_SPOTS[h.broker];
+    const sim = this.sim, p = sim.player, [x, z, face] = this.postOf(h);
     h.foe = null; h.task = { kind: 'town', place: null, t: 0, peace: true };
     if (Math.hypot(x - h.x, z - h.z) > 0.7) { h.goal = { x, z, speed: 1.6, stop: 0.4 }; return; }
     h.goal = null; h.hold = 0.3;
     const near = Math.hypot(p.x - h.x, p.z - h.z) < 7;
-    h.holdFace = near ? Math.atan2(p.x - h.x, p.z - h.z) : h.broker === 'portal' ? PORTAL.yaw + Math.PI : Math.PI;
+    h.holdFace = near ? Math.atan2(p.x - h.x, p.z - h.z) : face ?? (h.broker === 'portal' ? PORTAL.yaw + Math.PI : Math.PI);
     if (!near && !h.gesture && Math.random() < 0.002) h.gesture_(pick(['fold', 'look', 'talk']), 4);
   }
 
@@ -2347,6 +2382,12 @@ export class HeroWorld {
       case 'task': hs.forEach((h) => { if (h.party) this.disband(h.party); h.task = null; h.foe = null; if (h.sitting) { h.sitting = false; h.stopAction(0.2); } if (['hunt', 'delve', 'summit'].includes(m.kind)) this.plan(h, m.kind); }); break;
       case 'surf': hs.forEach((h, i) => { const top = THE_FALL.line[THE_FALL.line.length - 1]; place(h, top[0], top[1]); this.startSurf(h, i, hs.length > 1); }); break;
       case 'gesture': hs.forEach((h) => h.gesture_(m.name, m.seconds)); break;
+      // (A clip held at a point in it, for looking a body over: pose({ slot, clip, at: 0-1 }); clip null lets go.)
+      case 'pose': hs.forEach((h) => {
+        const c = m.clip && h.bank.clips[m.clip];
+        if (!c) { h.gesture = null; h.stopAction(0.1); return; }
+        h.play(m.clip, 0, 'full', 0); h.actT = (m.at ?? 0.5) * c.dur; h.gesture = 'review'; h.gestureT = 1e9;
+      }); break;
       case 'skill': hs.forEach((h) => { const f = this.targets.filter(fightable).sort((a, b) => Math.hypot(a.x - h.x, a.z - h.z) - Math.hypot(b.x - h.x, b.z - h.z))[0]; if (f) { h.foe = f; h.skill(sim, m.key, f); } }); break;
       // A staged fight: the nearest living monster (of kind m.mob, if given) to the player, with these heroes around it.
       case 'fight': {
