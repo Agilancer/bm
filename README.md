@@ -176,8 +176,11 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **Fighting, as a person would.**
   - It takes a moment to settle on a new target and only lets fly once its aim is on. The aim leads a moving target, and is a
     little off, more so on something quick.
-  - It backs off from what's close while it shoots, steps side to side, and closes on what's far. When something is right on
-    it, or it's backed into a wall, it turns and runs a few strides to open ground, then turns back.
+  - It backs off from what's close while it shoots, steps side to side, and closes on what's far. When something gets on it,
+    it walks backwards toward open ground, still facing it and shooting as it goes (backwards is a walk, as it is for you, a
+    little slower while it shoots). Only when it can't back away (something quicker than that at its heels, something right
+    on it, a crowd all round, a wall behind) does it turn and run a few strides, then turn back. Hurt, it backs away from
+    something slow the same way, and runs from anything quicker.
   - It dodges a knight's blade flash, or takes it on its shield. With a shield in hand and no skull, it raises the shield with
     a shove when something's on it, holds it a moment, and backs off to shoot again. It steps aside from a tumbler rolling at
     it, which can't turn quickly.
@@ -195,8 +198,14 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     - Frost Shards on something quick.
   - It runs from what it can't beat yet: the knights of Velscour, the Gravehart, the Hydra, the dragons and anything else too
     strong for its level.
-- **The camera** turns like a hand on a mouse: it eases into and out of every turn, at no more than about 2.4 rad/s walking,
+- **The camera** turns like a hand on a mouse: it eases into and out of every turn, at no more than about 3 rad/s walking,
   4.2 in a fight and 1.6 on the shield. It moves through `Input.look`, so the hands sway as they do for the mouse.
+  - Getting about, it faces the way it's going and walks forward (W, with a touch of A or D to keep its line). Its eyes run
+    a few strides on along its path, so it looks round a bend before its feet get there. Turned well away from its way (a
+    sharp corner, somewhere new to go), it turns on the spot first. It looks a little down at the ground ahead, and up or
+    down a hill with the slope.
+  - It looks elsewhere only for a reason: at what it's fighting, at a door it's opening (it stops, turns to the door and
+    opens it), at whoever it's talking to, at a chest, and at Lisandra when she stops on the road.
 - **The black knight.** From level 8 it goes after Velscour's knight on the cathedral steps:
   - It stands on his flank, just past the 20 m he keeps from his door.
   - It works on him with the staff and Meteors, which fall from the sky where his shield can't stop them. Bolts wait till
