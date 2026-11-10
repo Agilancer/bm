@@ -225,12 +225,27 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   below 80% of its life. The balance log keeps every attempt.
 - **Its party.** From level 6, once it can pay, it walks to the nearer quartermaster of the Free Company, opens his books
   with E, and hires a lancer first, then a paladin, then the best two others it can afford (`hiring` in
-  `src/ui/autowarrens.js`).
+  `src/ui/autowarrens.js`). With them at its back it plays as a group does (`helpPick`, `tankNear`, `partyStrong` in
+  `src/ui/autobrain.js`):
+  - It takes what's on the healer, or on one of the others, off them first: the healer before anyone, then whoever's
+    lowest. What's on the tank it leaves to him.
+  - Otherwise it shoots what the tank is holding, so the damage goes on one and nothing it pulls is loose.
+  - What's on one of them is its fight too, out to 30 m, even on its way somewhere.
+  - When something's on it, it backs off toward the tank, so he can take it, rather than off into open ground.
+  - With a tank and another standing near, it stands up to what it could take two levels on. Velscour's knights and the
+    Gravehart it still judges at its own level.
+  - One of them down, it stays by them till they're up again, a few seconds after the fight (ten seconds at most).
+  - Down the Warrens it goes on to the next room only with the party up and with it (up to twenty seconds' wait), and
+    in a boss fight it takes the rank and file off the healer after the adds.
+
+  It reads who each monster is after, and what each of its party is on, from the snapshot (`C.AFTER`, written by
+  `writeAfter` in `src/sim/sim.worker.js`).
 - **The Hollowfang Warrens.** From level 7 with a full party it goes in by the portal and walks the caves room by room,
   by the caves' own flow field (the nav thread's grid stops at the edge of the world). Before each boss's room it waits
   for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of a circle or a fire before
   anything else, at Venomaw's side and well off when she's down, behind the pillar away from her when she flies, away
-  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. Three wipes count as beaten back: it
+  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. When a boss turns on it, it gets
+  behind the tank from it (or well out of its reach with no tank up) and shoots it as it comes. Three wipes count as beaten back: it
   leaves by the way in and comes back two levels stronger. Once Venomaw's dead it goes out by the far portal.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
@@ -324,11 +339,40 @@ screen is a frame for each, with their life.
 - **They ride the shield with you.** When you get on your board, they get on theirs, beside and behind you, and step off
   when you do (`updateFreeSurf`).
 - **They fall and get up.** One who falls lies there till the fight's over, then gets up with half their life.
+- **They carry a light.** A spirit-light floats over each one's shoulder, as your Wisp Light does over yours
+  (`partyLights` in `src/sim/hero.js`). By night, in the Warrens and below ground it lights them and a pool round their
+  feet, so you can see them in the dark; by day it's a small glow over them and lights nothing. The renderer keeps their
+  lights a place of their own ahead of the spells' (`FX_CARRIED`, `carried` in `src/gfx/spellfx.js`), so the torches
+  and the fighting never put them out: four of them, or the nearest two on a phone.
 - What they kill is yours: its loot and its experience.
 - A word with one of them (E) lets them go back to the Company.
 
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
 both). The quartermasters are two more bodies after them.
+
+### The heroes' armour: what's between the plates
+
+A hero's plates are rigid, so where two part as a joint bends, something has to show. `tools/heroes/mail.py` makes it for
+all 44 bodies from each one's own plates (run it again after `build.py`): a mail liner under the torso, one sleeve down
+each arm and leg, a coif, armpit gussets and a skirt, every end closed. On lancers, paladins, dragoons and boomerang
+knights it's drawn as ring mail, bright on a bright suit and blackened on a dark one; on archers, bards, rogues and
+ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is dark iron, not its outer paint
+(`heroLook` in `src/gfx/materials.js`; `docs/RENDERING.md`).
+
+- **A chest put back on the body.** On six bodies (lancer_f2, archer_f2, archer_f4, archer_f5, rogue_m1, rogue_m4) the
+  armour tool had cut the chest onto the limbs: the two halves of the breastplate rode the upper arms, the belly and
+  skirt a thigh. Arms down, the chest swung up to the ears and left a hole. `python tools/heroes/rebind.py` finds a
+  chest cut that way and gives it a coat's weights instead: the trunk by height, only the shoulder caps on the arms, the
+  skirts shared between the legs. It also mirrors an arm plate that's on one side only (paladin_f2's right vambrace).
+  Run it before `mail.py`, after `build.py`.
+- `python tools/heroes/gaps.py [ids] --out DIR` poses each body with the game's clips, skins it as the GPU does, and
+  counts what shows from four sides: see-through holes, the insides of plates, and the covers. Over all 44 bodies and six
+  poses, holes fell from a mean of 0.15% of the outline to under 0.1%, and lancer_f2's chest (2.5%, standing still)
+  closed. With her coat back on her, archer_f4's crouch went from 2.5% to 0.01%.
+- It was reviewed twice by two reviewers briefed as character artists of thirty years (2026-11-10), from game frames
+  taken headless. Left undone from their lists: knee and elbow cops bound half to each bone (the piece table doesn't
+  say which plate is one), the lower back in a deep crouch, and the lances' black and yellow stripes.
+- The frames were of ten bodies on a software GPU at one sample a pixel; nobody has looked at the result on a real GPU.
 
 ### The Hollowfang Warrens
 
@@ -342,7 +386,11 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   shape is nine rooms and the tunnels between them (`ROOMS`, `TUNNELS`, `PILLARS`), made into one field of how far each
   point is from the rock. The sim walks against that field (`src/sim/world.js`), monsters and the party find their way by
   a flow field of its own (`CaveNav`), and its walls, floor, roof, stalagmites and torches are built from it with the
-  world's places (`cave` in `src/core/sites.js`), lit by the torches (sixty-odd lights) and nothing else.
+  world's places (`cave` in `src/core/sites.js`), lit by its fires: about a hundred wall torches (one every seven
+  metres round a room, every six down a tunnel) and thirty-odd braziers on posts round the bigger rooms (`torches`,
+  `braziers` in `src/core/dungeon.js`). Down there a frame lights the thirty nearest of them (two and a half times the
+  tier's count; a phone keeps its two), and a frame's lamps went from 28 to 36 for it (`MAX_LIT` in
+  `src/gfx/shaders.js`).
 - **The packs.** Five rooms of kobolds and goblins, which wake as you come into them and stay dead till the Warrens reset.
 - **Grubnash the Tunnel-King**, a kobold three times the size. Every few seconds he brings the roof down: a circle on the
   ground under each of you, and rocks a moment later. At seven tenths and a third of his life he calls his diggers out of
@@ -354,6 +402,12 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   tail sweeps anyone behind. She spits acid that pools. At a little over half her life she takes to the air above her
   hoard and breathes across the whole cavern every few seconds: only rock between you and her keeps it off, so hide
   behind a pillar, while her whelps hatch. Then she lands, frenzied.
+- **They come for you too.** The tank doesn't hold everything for ever. Every seventeen seconds or so a boss turns from
+  him to you (Venomaw every twenty-two): it's called out, you have a breath to get behind the tank or out of its
+  reach, and for four or five seconds nothing holds it (`turnOn` in `src/sim/dungeon.js`, `fixOn` in
+  `src/sim/foes.js`). It doesn't turn while it flies, spins or breathes, and Venomaw holds her breath while her head's
+  on you. Among the packs, now and then one breaks off the tank and comes for you for a few seconds, two at most at once
+  (`stepPacks`); the tank goes after what's loose and takes it back.
 - **Every mechanic is called out** on the screen as it happens, with what to do about it (`WARNINGS`), and each boss has a
   bar of its own at the top of the screen.
 - **A wipe** stands you and your party at the way in, with everything you'd killed still dead and the boss you fell to at

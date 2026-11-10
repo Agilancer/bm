@@ -9,7 +9,7 @@ import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
 import { buildSites } from '../core/sites.js';
 import { terrainHeight } from '../core/terrain.js';
-import { EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, toWorld, torches } from '../core/dungeon.js';
+import { EXIT_IN, EXIT_OUT, PORTAL, braziers, caveFloorY, inDungeon, toWorld, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
@@ -40,7 +40,7 @@ import { HomeLights } from './homelights.js';
 import { CRAB_SCALE } from '../sim/crab.js';
 import { GRAVEHART_SCALE } from '../sim/gravehart.js';
 import { HYDRA_SCALE } from '../sim/hydra.js';
-import { SKIN } from './shaders.js';
+import { MAX_LIT, SKIN } from './shaders.js';
 import { Dangles } from './dangles.js';
 import { CURIO_GEMS, CURIO_TRAY_Y, MR as WARE_MR, PALETTE as WARE_PALETTE, SHADE as WARE_SHADE, wareMesh } from './wares.js';
 import { PLACES } from '../folk/town.js';
@@ -56,7 +56,7 @@ const STAFFS2_IDS = new Set(STAFFS2.map((s) => s.id));
 const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
-const FRAME_FLOATS = 448;
+const FRAME_FLOATS = 224 + MAX_LIT * 8;
 // A body's uniforms (materials.js CharU): its wounds, the pieces cut off, info, and the witch's mouth and lip line.
 const CHAR_UBO = 24 * 64 + 256 + 48;
 // The surfing hand's one joint, as a dual quaternion: it leans and swings about the shoulder with the steering (-1 left, 1 right), and rises as it comes out.
@@ -76,7 +76,7 @@ function surfHandPose(tilt, up, time) {
 // The middle of the skull in the left hand, in the view's own space. Printed by tools/wizard/skull_arm.py.
 export const SKULL_AT = [-0.483, -0.159, -0.783];
 
-const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440, CAVE: 444 };
+const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 216 + MAX_LIT * 8, CAVE: 220 + MAX_LIT * 8 };
 // Four floats, or a light's eight, into the frame's uniforms at o: as d.set([...], o) did, without an array each time.
 const put4 = (d, o, a, b, c, e) => { d[o] = a; d[o + 1] = b; d[o + 2] = c; d[o + 3] = e; };
 const putLight = (d, o, L, i) => { d[o] = L.p[0]; d[o + 1] = L.p[1]; d[o + 2] = L.p[2]; d[o + 3] = L.r; d[o + 4] = L.c[0]; d[o + 5] = L.c[1]; d[o + 6] = L.c[2]; d[o + 7] = i; };
@@ -316,8 +316,9 @@ export class Renderer {
     for (let i = 0; i < heroGlbs.length; i++) {
       const hero = await this.buildCharacter(heroGlbs[i]);
       hero.armored = true; hero.hero = true;
-      // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -1 for the rest.)
-      hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : -1;
+      // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -3 in armour that isn't
+      // all steel, -1 for the rest. It also says what shows in their gaps: mail, or a padded coat. materials.js heroLook.)
+      hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : ['dragoon', 'boomerang'].includes(cast[i].cls) ? -3 : -1;
       this.chars.push(hero);
     }
     tick();
@@ -401,7 +402,9 @@ export class Renderer {
     this.buildParticles();
     this.buildGrass();
     // (And the Hollowfang Warrens' torches, and the fires either side of its portal: src/core/dungeon.js.)
-    const warrens = torches().map(([x, y, z, nx, nz]) => ({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: [1, 0.56, 0.24], r: 11, i: 3.4, flicker: 0.8 }));
+    // (And its braziers, bigger fires that light the floor where the fighting is.)
+    const warrens = torches().map(([x, y, z, nx, nz]) => ({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: [1, 0.56, 0.24], r: 12, i: 3.8, flicker: 0.8 }));
+    for (const [x, y, z] of braziers()) warrens.push({ p: [x, y + 1.9, z], c: [1, 0.6, 0.28], r: 15, i: 5.2, flicker: 0.9 });
     warrens.push({ p: [PORTAL.x, terrainHeight(PORTAL.x, PORTAL.z) + 2, PORTAL.z], c: [0.45, 0.65, 1], r: 9, i: 2.2, flicker: 0.2 });
     for (const q of [EXIT_IN, EXIT_OUT]) { const [x, z] = toWorld(q.x, q.z); warrens.push({ p: [x, caveFloorY(x, z) + 2, z], c: [0.45, 0.65, 1], r: 9, i: 2.6, flicker: 0.2 }); }
     // (And the Test Dungeon's panels of light, white, steady and wide: src/core/testhall.js.)
@@ -1759,9 +1762,10 @@ export class Renderer {
     // Only the full tiers read depth back, for AO, sun shafts and soft particles.
     let ldMS = null, ld = null, aoTex = null, shaftTex = null;
     if (!lean) {
-      ldMS = make(W, H_, LINEAR_DEPTH, RT, this.msaa); ld = make(W, H_, LINEAR_DEPTH, RT | TB);
+      // (One sample a pixel, as after dropMSAA: the linear depth is drawn straight into, with nothing to resolve.)
+      ld = make(W, H_, LINEAR_DEPTH, RT | TB); ldMS = multi ? make(W, H_, LINEAR_DEPTH, RT, this.msaa) : null;
       aoTex = make(hw, hh, 'r8unorm', RT | TB); shaftTex = make(hw, hh, gpu.hdrFormat, RT | TB);
-      textures.push(ldMS, ld, aoTex, shaftTex);
+      textures.push(...(ldMS ? [ldMS] : []), ld, aoTex, shaftTex);
     }
     const bloomChain = [];
     let bw = hw, bh = hh;
@@ -1779,7 +1783,7 @@ export class Renderer {
       colorAttachments: [multi ? { view: hdrMSView, resolveTarget: hdrView, loadOp: 'clear', storeOp: 'discard', clearValue: clear } : { view: hdrView, loadOp: 'clear', storeOp: 'store', clearValue: clear }],
       depthStencilAttachment: { view: depthMS.createView(), depthLoadOp: 'clear', depthClearValue: 0, depthStoreOp: 'discard' },
     };
-    if (!lean) worldPass.colorAttachments.push({ view: ldMS.createView(), resolveTarget: ldView, loadOp: 'clear', storeOp: 'discard', clearValue: [4000, 0, 0, 1] });
+    if (!lean) worldPass.colorAttachments.push(multi ? { view: ldMS.createView(), resolveTarget: ldView, loadOp: 'clear', storeOp: 'discard', clearValue: [4000, 0, 0, 1] } : { view: ldView, loadOp: 'clear', storeOp: 'store', clearValue: [4000, 0, 0, 1] });
     const bgFor = (view) => device.createBindGroup({ layout: this.bglBloom, entries: [
       { binding: 0, resource: view }, { binding: 1, resource: this.clampSmp }, { binding: 2, resource: { buffer: this.bloomU, size: 16 } }] });
     const bloomDownBG = [bgFor(hdrView)];
@@ -2005,9 +2009,12 @@ export class Renderer {
     const now = performance.now();
     this.homeLights.frame(this.folk?.slot || null, Math.min(0.25, (now - (this.homeLightsAt || now)) / 1000));
     this.homeLightsAt = now;
-    // (Below, where every light there is is a flame, twice the tier's count. A phone keeps its two.)
+    // (Below, where every light there is is a flame, twice the tier's count; down the Warrens, with its torches and
+    // braziers, two and a half times. A phone keeps its two.)
     // (And in Lisandra's cave, lit by her candles.)
-    const take = Math.min(lights.length, this.tier.lights * ((cam.y < -6 || this.inCave) && !this.tier.lean ? 2 : 1));
+    // (Room kept for the lights your party carries: src/gfx/spellfx.js carried.)
+    const under = this.tier.lean || !(cam.y < -6 || this.inCave) ? 1 : inDungeon(cam.x, cam.z) ? 2.5 : 2;
+    const take = Math.min(lights.length, Math.round(this.tier.lights * under), MAX_LIT - this.spellfx.carried(snap));
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
     for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
@@ -2022,11 +2029,11 @@ export class Renderer {
     let spellLights = this.spellfx.frame(snap, d, O.LIGHTS, take);
     // The light off the gems you carry. src/gfx/gemfx.js.
     for (const L of this.gemLights || []) {
-      if (take + spellLights >= 28) break;
+      if (take + spellLights >= MAX_LIT) break;
       putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i);
     }
     // A candle or a lamp the player's carrying (src/ui/folk.js: bought of Elspeth Tallow).
-    if (this.carryLight && take + spellLights < 28) { const L = this.carryLight; putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i); }
+    if (this.carryLight && take + spellLights < MAX_LIT) { const L = this.carryLight; putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i); }
     put4(d, O.COUNTS, take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9);
     if (this.caveAmb) d.set(this.caveAmb, O.CAVE); else put4(d, O.CAVE, 0, 0, 0, 0);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);

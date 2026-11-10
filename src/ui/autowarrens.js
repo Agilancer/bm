@@ -133,6 +133,12 @@ export function doWarrens(b, m, foes) {
       return;
     }
   }
+  // On to the next room only with the party up and with it: the fallen get up once it's quiet, the tank back on his feet.
+  // (Not for ever: twenty seconds, then on.)
+  const party = b.party(b.snap);
+  const lagging = !hostile && d > r.r * 0.7 && party.some((h) => h.dead || dist(h.x, h.z, m.x, m.z) > 16 || (h.role === 'tank' && h.hpf < 0.5));
+  if (lagging && (b.partyWait = (b.partyWait || 0) + 0.12) < 20) { b.halt(); b.face = null; b.say('Waiting for the party.'); return; }
+  if (!lagging) b.partyWait = 0;
   b.say(boss && !down.has(boss.key) ? `In to ${boss.name}.` : `Through ${r.name}.`);
   b.goTo(rx, rz, boss ? r.r * 0.35 : r.r * 0.4, !hostile);
 }
@@ -161,44 +167,59 @@ export function tactics(b, m, foes) {
     const ux = d > 0.05 ? (m.x - h.x) / d : 1, uz = d > 0.05 ? (m.z - h.z) / d : 0;
     let tx = h.x + ux * (h.r + 2.2), tz = h.z + uz * (h.r + 2.2);
     if (caveRoom(tx, tz) < 0.8) { tx = m.x - uz * 4; tz = m.z + ux * 4; }
-    return { to: [tx, tz], run: true, target: pickTarget(live, f), why: 'Out of the circle!' };
+    return { to: [tx, tz], run: true, target: pickTarget(live, f, b, m), why: 'Out of the circle!' };
   }
-  if (!f) return { to: null, target: pickTarget(live, null), why: null };
+  if (!f) return { to: null, target: pickTarget(live, null, b, m), why: null };
   const bodies = f.bodies || [];
   const boss = bodies[0];
+  // A boss turned on it (src/sim/dungeon.js turnOn: called out, then a few seconds when nothing holds it): behind the tank
+  // from it, or well out of its reach with no tank up, shooting it as it comes.
+  const turned = bodies.find((q) => q.turning);
+  if (turned && !turned.flying) {
+    const tank = b.tankNear(m), away = (from, r) => { const dx = m.x - from.x, dz = m.z - from.z, L = Math.hypot(dx, dz) || 1; return [from.x + dx / L * r, from.z + dz / L * r]; };
+    let [tx, tz] = tank ? (() => { const dx = tank.x - turned.x, dz = tank.z - turned.z, L = Math.hypot(dx, dz) || 1; return [tank.x + dx / L * 3.5, tank.z + dz / L * 3.5]; })() : away(turned, 14);
+    if (caveRoom(tx, tz) < 0.8) [tx, tz] = away(turned, 9);
+    const T = live.find((q) => q.id === turned.id) || pickTarget(live, f, b, m);
+    return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 3, target: T, why: tank ? 'It turns on me: back behind the tank.' : 'It turns on me: out of its reach.' };
+  }
   if (f.boss === 'venomaw' && boss) {
     // Up over the hoard: behind the nearest pillar from her, shooting what's down here.
     if (boss.flying) {
       const hide = hideSpot(m, boss);
-      const t = pickTarget(live.filter((q) => q.id !== boss.id), f);
+      const t = pickTarget(live.filter((q) => q.id !== boss.id), f, b, m);
       return { to: hide, run: true, target: t && caveClear(m.x, m.z, t.x, t.z) ? t : null, why: 'Behind a pillar: Venomaw is in the air.', hide: true };
     }
     // On the ground: at her side, well off, never before her face or at her tail.
     const rx = Math.cos(boss.yaw), rz = -Math.sin(boss.yaw), side = (m.x - boss.x) * rx + (m.z - boss.z) * rz >= 0 ? 1 : -1;
     let tx = boss.x + rx * side * 13 - Math.sin(boss.yaw) * 2, tz = boss.z + rz * side * 13 - Math.cos(boss.yaw) * 2;
     if (caveRoom(tx, tz) < 1) { tx = boss.x - rx * side * 13; tz = boss.z - rz * side * 13; }
-    return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 5, target: pickTarget(live, f), why: 'At Venomaw\'s side.' };
+    return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 5, target: pickTarget(live, f, b, m), why: 'At Venomaw\'s side.' };
   }
   if (f.boss === 'twins') {
     const spinner = bodies.find((q) => q.spin);
     if (spinner && dist(m.x, m.z, spinner.x, spinner.z) < 9) {
       const d = dist(m.x, m.z, spinner.x, spinner.z) || 1;
-      return { to: [spinner.x + (m.x - spinner.x) / d * 11, spinner.z + (m.z - spinner.z) / d * 11], run: true, target: pickTarget(live, f), why: 'Away from the whirlwind.' };
+      return { to: [spinner.x + (m.x - spinner.x) / d * 11, spinner.z + (m.z - spinner.z) / d * 11], run: true, target: pickTarget(live, f, b, m), why: 'Away from the whirlwind.' };
     }
   }
-  return { to: null, target: pickTarget(live, f), why: null };
+  return { to: null, target: pickTarget(live, f, b, m), why: null };
 }
 
-// The add first (a digger, a whelp); of the twins, the healthier; else the boss; else the nearest.
-function pickTarget(live, f) {
+// The add first (a digger, a whelp); then anything of the rank and file on the healer or the others (helpPick in
+// src/ui/autobrain.js); of the twins, the healthier; else the boss; else what helps the party, else the nearest.
+function pickTarget(live, f, b, m) {
   if (!live.length) return null;
+  const help = b?.helpPick(live, m);
   if (f) {
     const adds = new Set((f.adds || []).map((a) => a.id));
     const add = live.filter((q) => adds.has(q.id)).sort((a, c) => a.d - c.d)[0];
     if (add) return add;
+    const bosses = new Set((f.bodies || []).map((q) => q.id));
+    if (help && !bosses.has(help.T.id)) return help.T;
     const ids = (f.bodies || []).filter((q) => !q.flying).sort((a, c) => c.hp - a.hp).map((q) => q.id);
     for (const id of ids) { const q = live.find((x) => x.id === id); if (q) return q; }
   }
+  if (help) return help.T;
   return live.reduce((a, c) => (a.d < c.d ? a : c));
 }
 
