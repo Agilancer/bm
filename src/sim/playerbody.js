@@ -131,7 +131,7 @@ const CASTS = {
   },
 };
 
-const SIDES = ['L', 'R'];
+const SIDES = ['L', 'R'], AIMS = ['at', 'f', 't', 'pole'];
 const FINGERS = ['Index', 'Mid', 'Ring', 'Pinky'];
 
 export class PlayerBody {
@@ -176,7 +176,7 @@ export class PlayerBody {
         hinge: [0, -sign, 0],                                              // the elbow bends the forearm forward
         f, t, n: nrm, fL: local(hand, f), tL: local(hand, t), nL: local(hand, nrm),
         // What the hand is doing, eased from one thing to the next.
-        now: null, w: 0, pose: { at: v3(), f: v3(), t: v3(), pole: v3(), curl: 0, thumb: 0, spread: 0 },
+        now: null, w: 0, pose: { at: v3(), f: v3(), t: v3(), pole: v3(), curl: 0, thumb: 0, spread: 0 }, keep: [up, lo, hand],
       };
       const th = J(`${s}_Thigh`), calf = J(`${s}_Calf`), foot = J(`${s}_Foot`), toe = J(`${s}_ToeBase`);
       this.legs[s] = {
@@ -249,7 +249,7 @@ export class PlayerBody {
 
   // A hold as one side has it: x mirrored for the right arm.
   side(h, sign, out) {
-    out.at = [h.at[0] * sign, h.at[1], h.at[2]]; out.f = [h.f[0] * sign, h.f[1], h.f[2]]; out.t = [h.t[0] * sign, h.t[1], h.t[2]]; out.pole = [h.pole[0] * sign, h.pole[1], h.pole[2]];
+    for (const k of AIMS) { const o = out[k] || (out[k] = v3()), a = h[k]; o[0] = a[0] * sign; o[1] = a[1]; o[2] = a[2]; }
     out.curl = h.curl ?? 0.3; out.thumb = h.thumb ?? 0.2; out.spread = h.spread ?? 0;
     return out;
   }
@@ -490,7 +490,7 @@ export class PlayerBody {
       }
       if (w < 0.002 || !h) continue;
       // The clip's own arm, kept to blend with.
-      const keep = [A.up, A.lo, A.hand];
+      const keep = A.keep;
       for (let k = 0; k < 3; k++) { const q = keep[k] * 4; KEEP[k * 4] = rot[q]; KEEP[k * 4 + 1] = rot[q + 1]; KEEP[k * 4 + 2] = rot[q + 2]; KEEP[k * 4 + 3] = rot[q + 3]; }
       this.reach(rot, A, h);
       this.shut(rot, A, h.curl, h.thumb, h.spread);

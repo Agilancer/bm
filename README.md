@@ -128,7 +128,7 @@ screen is still what you hit. Which view you left it in is kept with the setting
   (`Casting.bodyPalm`) for whatever is under the X. The sim finds how far back there's room (walls, the ground, a low roof
   indoors) and the camera closes in at once and eases back out. Closer than a metre, the body isn't drawn.
 - `tools/player/view.html` shows the body alone with what it holds, every pose on a button, and makes sheets of stills:
-  `?sheet=idle,run,throw2_at&views=front,side,back&t=0.3`. `node --test tests/player-body.test.mjs` checks the poses with no
+  `?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3`. `node --test tests/player-body.test.mjs` checks the poses with no
   GPU: feet on the ground, things in the hands, the shield where it should be, the casts, and the cave's lock.
 
 Known limits:

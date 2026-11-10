@@ -17,7 +17,7 @@
 // The third-person body on its own, for judging its poses and how it holds things: the same src/sim/playerbody.js the game
 // runs, drawn with three.js. Serve the repo (python tools/serve.py) and open /tools/player/view.html.
 //   ?do=run&staff=amethyst_staff&skull=skull_01&shield=kite_tree    what he's doing and holding
-//   ?sheet=idle,walk,run&views=front,side,back&t=0.3                a still sheet of several, for review (window.ready when drawn)
+//   ?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3  a sheet of stills, for review (window.ready when it's drawn)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -87,7 +87,6 @@ const DO = {
 for (const [k, f] of Object.entries(CAST)) {
   DO[k] = (t) => ({ cast: f(t) });
   DO[`${k}_run`] = (t) => ({ vz: 5.6, cast: f(t) });
-  DO[`${k}_at`] = (t) => ({ cast: f(t) });
 }
 let doing = q.get('do') || 'idle', time = 0;
 const stateOf = (name, t) => {
@@ -137,7 +136,6 @@ if (q.has('sheet')) {
 } else {
   const bar = document.getElementById('bar');
   for (const name of Object.keys(DO)) {
-    if (name.endsWith('_at')) continue;
     const b = document.createElement('button'); b.textContent = name; b.onclick = () => { doing = name; time = 0; for (const o of bar.children) o.classList.toggle('on', o === b); };
     bar.appendChild(b);
   }
