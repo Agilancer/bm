@@ -65,10 +65,17 @@ On the owner's word ("so her cloth doesn't dance at the beginning when she talks
 
       python tools/lisandra/transfer_clips.py <old witch.glb> "LISANDRA - UGLY OLD WITCH NEW.glb" clips.glb
       python tools/lisandra_skirt.py witch clips.glb skirt.glb
-      python tools/lisandra/jaw_rig.py skirt.glb assets/game/lisandra/witch.glb
+      python tools/lisandra/jaw_rig.py skirt.glb jaw.glb
+      python tools/lisandra/hat_tassel.py jaw.glb assets/game/lisandra/witch.glb
 
   (The old witch's clips are in git: `git show f7ad16b:assets/game/lisandra/witch.glb`.) She has fitted sleeves, so her
   arms are turned out from the gown by 0.1 rad (`armClearance`), not the old ragged sleeves' 0.19.
+- **No tassel on her hat** (the owner's word, 2026-11-10). The model came with a thin tassel hanging from the brim
+  over her left shoulder, one piece with the hat. Tripo's rig hung its top on her head and its bottom on her left arm,
+  so in the game it stretched from the brim to wherever her arm was. `tools/lisandra/hat_tassel.py` leaves its 312
+  triangles out of the index list and draws the ring it grew from in to a point on the brim, so there's no hole.
+  Every vertex is still in the file, and only the index list and those eight points differ from the file before
+  (checked byte by byte). Pretty has no hat. `tests/render-models.test.mjs` pins it.
 - Her form in `src/core/lisandra.js` has no `cloth` entry, so `village-walker.js` makes no `Cloth`. `src/sim/cloth.js`
   and `tools/lisandra/cloth_rig.py` are kept but unused.
 - The skinning shader's 9 mm skirt ripple is turned off for her alone. `renderer.js` writes `skinParams[7] = 1` for

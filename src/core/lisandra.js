@@ -6,7 +6,8 @@ export const SKIRT_PALETTE_JOINTS = 4;
 export const LISANDRA_FORMS = [
   { asset: 'assets/game/lisandra/pretty.glb', armClearance: 0.08, legRadii: [0.095, 0.068, 0.058], walk: 'walk', route: [[2, 5], [7, 5], [7, -7], [2, -7]] },
   // The witch is the owner's model as supplied (mesh, skin weights and textures byte for byte, but for the share of her
-  // head her new jaw takes: tools/lisandra/jaw_rig.py), with her own walk and run, the clips she shares with Pretty, and
+  // head her new jaw takes: tools/lisandra/jaw_rig.py; and the tassel that hung from her hat's brim, taken off on the
+  // owner's word: tools/lisandra/hat_tassel.py), with her own walk and run, the clips she shares with Pretty, and
   // the _SKIRT mask that keeps her gown clear of her legs as she walks. Her jaw opens as she speaks. Her sleeves
   // are fitted, so her arms are turned out only a little (armClearance). She has NO cloth bones: on the owner's word her gown
   // moves only with her body, so it doesn't dance while she talks (docs/RENDERING.md). The bone-chain cloth
