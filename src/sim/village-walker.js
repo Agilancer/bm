@@ -43,7 +43,7 @@ export class VillageWalker {
       for (const name of ['Spell_Simple_Idle_Loop', 'Idle_FoldArms_Loop', 'Crouch_Idle_Loop', 'wait', 'Idle_Talking_Loop', ...OPENING_MOVES]) {
         if (this.rig.clips[name]) this.rig.clips[name].loop = true;
       }
-      // Her stride in the jog and the run, with the travel taken out as for the walk.
+      // Her stride in the run, with the travel taken out as for the walk.
       this.moveRate = {};
       for (const name of OPENING_MOVES) {
         const c = this.rig.clips[name], tr = c?.trs[hipsJoint];
@@ -54,11 +54,11 @@ export class VillageWalker {
         // closer in; the witch bent over a little even running.
         let stride = 1;
         if (form.gown) {
-          const g = form.gown, sprint = name === 'Sprint_Loop';
-          stride = sprint ? 0.8 : 0.72;
-          this.gownWalk(c, { stride, knee: sprint ? 1.25 : 1.0, inward: (g.inward ?? 0.04) * 0.7, shift: 0.01, roll: 0.03, arms: Math.min(1, (g.arms ?? 1) * 1.7), stoop: (g.stoop || 0) * 0.6 });
+          const g = form.gown;
+          stride = 0.72;
+          this.gownWalk(c, { stride, knee: 1.0, inward: (g.inward ?? 0.04) * 0.7, shift: 0.01, roll: 0.03, arms: Math.min(1, (g.arms ?? 1) * 1.7), stoop: (g.stoop || 0) * 0.6 });
         }
-        this.moveRate[name] = c.dur / ((travel > 0.3 ? travel : name === 'Sprint_Loop' ? 3.4 : 2.3) * stride);
+        this.moveRate[name] = c.dur / ((travel > 0.3 ? travel : 2.3) * stride);
       }
       this.storyPose();
     }
@@ -467,10 +467,10 @@ export class VillageWalker {
     // (b.lift: off the ground, stood on a shield or in a hop.)
     this.y = world.height(this.x, this.z) + (b.lift || 0);
     const moving = pace && !b.keepFace;
-    // Walk, jog or sprint by pace (b.gaits: where the jog and the sprint begin), a little either side of each change so a
-    // pace on the line doesn't flick between them.
-    const jog = this.clip === OPENING_RUN, run = this.clip === 'Sprint_Loop', [toJog, toRun] = b.gaits || [2.1, 4.7];
-    const clip = moving ? (pace < (jog || run ? toJog - 0.4 : toJog) ? this.walk : pace < (run ? toRun - 0.6 : toRun) ? OPENING_RUN : 'Sprint_Loop') : (b.clip || 'idle');
+    // Walk or run by pace (b.gaits: where the run begins), a little either side of the change so a pace on the line doesn't
+    // flick between them. Faster, the run only quickens.
+    const ran = this.clip === OPENING_RUN, [toRun] = b.gaits || [2.1];
+    const clip = moving ? (pace < (ran ? toRun - 0.4 : toRun) ? this.walk : OPENING_RUN) : (b.clip || 'idle');
     if (clip !== this.clip) {
       // From one way of moving to another, her step carries on: the new clip picks up at the same point in her stride
       // (left heel down, right, ...) as the one she was in, rather than at its first frame, so her feet don't skip.

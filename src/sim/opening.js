@@ -44,8 +44,9 @@ const RIDE_MAX = 30;         // on the shield: over what yours can do
 const OFF_AT = 5.5;          // you're off yours, and she's slowed to this: she steps off hers
 const RIDE_LIFT = 0.16;      // her soles over the ground, stood on the board (its face 0.09 up: src/items/drops.js boardPose)
 const HOP = 0.32;            // s: the little jump on and off it
-// Her walk, jog and run, by pace: the jog kept on longer than in the cave, so keeping ahead of your walk is a quick jog.
-const GAITS = [2.2, 6.6];
+// Where her walk turns to a run, by pace (a touch later than in the cave). Her run is the one clip from there up, flat out
+// included, quickened to her speed.
+const GAITS = [2.2];
 // What she says on the road (CUES in src/core/opening-script.js): one line at a time, TALK_GAP s between, each waiting till
 // you're within HEAR of her (calls don't). Between the lines a place on the road brings, these, in turn: the hill's while
 // she's still above the pines, the low road's once the dead in them are down.
