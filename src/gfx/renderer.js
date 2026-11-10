@@ -315,8 +315,9 @@ export class Renderer {
     for (let i = 0; i < heroGlbs.length; i++) {
       const hero = await this.buildCharacter(heroGlbs[i]);
       hero.armored = true; hero.hero = true;
-      // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -1 for the rest.)
-      hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : -1;
+      // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -3 in armour that isn't
+      // all steel, -1 for the rest. It also says what shows in their gaps: mail, or a padded coat. materials.js heroLook.)
+      hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : ['dragoon', 'boomerang'].includes(cast[i].cls) ? -3 : -1;
       this.chars.push(hero);
     }
     tick();
@@ -1725,9 +1726,10 @@ export class Renderer {
     // Only the full tiers read depth back, for AO, sun shafts and soft particles.
     let ldMS = null, ld = null, aoTex = null, shaftTex = null;
     if (!lean) {
-      ldMS = make(W, H_, LINEAR_DEPTH, RT, this.msaa); ld = make(W, H_, LINEAR_DEPTH, RT | TB);
+      // (One sample a pixel, as after dropMSAA: the linear depth is drawn straight into, with nothing to resolve.)
+      ld = make(W, H_, LINEAR_DEPTH, RT | TB); ldMS = multi ? make(W, H_, LINEAR_DEPTH, RT, this.msaa) : null;
       aoTex = make(hw, hh, 'r8unorm', RT | TB); shaftTex = make(hw, hh, gpu.hdrFormat, RT | TB);
-      textures.push(ldMS, ld, aoTex, shaftTex);
+      textures.push(...(ldMS ? [ldMS] : []), ld, aoTex, shaftTex);
     }
     const bloomChain = [];
     let bw = hw, bh = hh;
@@ -1745,7 +1747,7 @@ export class Renderer {
       colorAttachments: [multi ? { view: hdrMSView, resolveTarget: hdrView, loadOp: 'clear', storeOp: 'discard', clearValue: clear } : { view: hdrView, loadOp: 'clear', storeOp: 'store', clearValue: clear }],
       depthStencilAttachment: { view: depthMS.createView(), depthLoadOp: 'clear', depthClearValue: 0, depthStoreOp: 'discard' },
     };
-    if (!lean) worldPass.colorAttachments.push({ view: ldMS.createView(), resolveTarget: ldView, loadOp: 'clear', storeOp: 'discard', clearValue: [4000, 0, 0, 1] });
+    if (!lean) worldPass.colorAttachments.push(multi ? { view: ldMS.createView(), resolveTarget: ldView, loadOp: 'clear', storeOp: 'discard', clearValue: [4000, 0, 0, 1] } : { view: ldView, loadOp: 'clear', storeOp: 'store', clearValue: [4000, 0, 0, 1] });
     const bgFor = (view) => device.createBindGroup({ layout: this.bglBloom, entries: [
       { binding: 0, resource: view }, { binding: 1, resource: this.clampSmp }, { binding: 2, resource: { buffer: this.bloomU, size: 16 } }] });
     const bloomDownBG = [bgFor(hdrView)];
@@ -1973,7 +1975,8 @@ export class Renderer {
     this.homeLightsAt = now;
     // (Below, where every light there is is a flame, twice the tier's count. A phone keeps its two.)
     // (And in Lisandra's cave, lit by her candles.)
-    const take = Math.min(lights.length, this.tier.lights * ((cam.y < -6 || this.inCave) && !this.tier.lean ? 2 : 1));
+    // (Room kept for the lights your party carries: src/gfx/spellfx.js carried.)
+    const take = Math.min(lights.length, this.tier.lights * ((cam.y < -6 || this.inCave) && !this.tier.lean ? 2 : 1), 28 - this.spellfx.carried(snap));
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
     for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);

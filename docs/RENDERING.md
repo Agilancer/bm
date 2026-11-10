@@ -46,11 +46,17 @@ same normal-map problem.
 The heroes are drawn with `ARMOR`, but their metal and roughness were guessed from their paint when they were built
 (`derive_pbr` in `tools/armor/rig_armor.py`): faces, hair, cloth and leather came out as polished metal, and `ARMOR`'s
 knight's steel then turned their dark paint into blackened plate, so every hero who wasn't a lancer read as a dark chrome
-statue. Each hero body sets `heroLook` in `renderer.js` (`-1`, or `-2` for the classes in plate, lancers and paladins), sent
-as `info.z`. In `ARMOR`, `heroLook` keeps metal only where the paint is steel-grey or gilt (on the plate classes, anywhere
-but skin and the darkest cloth), turns skin matte, skips the dark-paint block, and draws the knights' mail tubes that
-`rig_armor.py` adds to every body as dark cloth. A rebuild with Tripo's own metal and roughness maps (`compose` in
+statue. Each hero body sets `heroLook` in `renderer.js`, sent as `info.z`: `-2` for the classes in plate (lancers and
+paladins), `-3` for those in armour that isn't all steel (dragoons and boomerang knights), `-1` for the rest. In `ARMOR`,
+`heroLook` keeps metal only where the paint is steel-grey or gilt (on `-2`, anywhere but skin and the darkest cloth),
+turns skin matte and skips the dark-paint block. A rebuild with Tripo's own metal and roughness maps (`compose` in
 `tools/heroes/build.py`) would do this properly; this does it without one.
+
+What shows where a hero's plates part (the gap covers, `tools/heroes/mail.py`: anything with u past the atlas) is drawn
+by the same code: on `-2` and `-3`, the knights' rings in iron a shade lighter than their blackened links (rings 0.05 to
+0.34, between them 0.16; metal 0.9, roughness 0.42 to 0.55), so a gap reads as mail under the plate; on `-1`, a padded
+coat, dark linen (0.2, 0.16, 0.115) quilted in diamonds. Until 2026-11-10 both were flat near-black cloth (0.075), which
+read as holes in the armour.
 
 ## The witch's gown: no cloth bones, no ripple
 
@@ -266,3 +272,10 @@ every non-cloth texel 96% metal unless it was dark saturated leather, so skin, h
 blackened plate, and metal takes no diffuse light, so faces came out nearly black. `paint_metal` now keeps metal for
 greys (steel) and gold, and nothing else; `tools/armor/fix_metal.py` rewrote the shipped models' maps with it (the
 paint and normal maps untouched). Townsfolk have their own maps and were fine.
+
+## One sample a pixel on a full tier (2026-11-10)
+
+`buildTargetSet` in `renderer.js` gave the linear-depth target a resolve target whatever the sample count, so a full tier
+(not `lean`) drawn with one sample a pixel, as after `dropMSAA`, failed every frame ("cannot set a resolve target when the
+color attachment has a sample count of 1"). Only phones have a governor that drops MSAA, and they're lean, so no player
+met it; a review on a software GPU did. With one sample the depth is now drawn straight into its texture.

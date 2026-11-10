@@ -656,7 +656,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   var metal = mr.b;
   // The other Tessariels (info.z below zero; src/core/heroes.js): their metal was guessed from the paint when they were
   // built (tools/armor/rig_armor.py derive_pbr), so faces, hair, cloth and leather came out as polished metal. On them only
-  // what's painted like steel or gilt is metal (on the plate classes, info.z -2, anything but skin and the darkest cloth).
+  // what's painted like steel or gilt is metal (on the plate classes, info.z -2, anything but skin and the darkest cloth;
+  // -3 is in armour but not all steel, the dragoons and the boomerang knights: their paint as -1's, their gaps in mail).
   let heroLook = C.info.z < -0.5;
   if (heroLook) {
     let hi = max(albedo.r, max(albedo.g, albedo.b));
@@ -665,7 +666,7 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     let skin = smoothstep(0.12, 0.2, sat) * (1.0 - smoothstep(0.55, 0.7, sat)) * smoothstep(0.22, 0.35, hi) * step(albedo.b, albedo.g) * step(albedo.g, albedo.r) * smoothstep(0.04, 0.12, albedo.r - albedo.b);
     let grey = (1.0 - smoothstep(0.08, 0.2, sat)) * smoothstep(0.16, 0.38, hi);
     let gilt = smoothstep(0.45, 0.6, sat) * smoothstep(0.3, 0.55, hi) * step(albedo.b, albedo.g) * step(albedo.g, albedo.r) * smoothstep(0.15, 0.3, albedo.r - albedo.b);
-    let plate = select(max(grey, gilt), smoothstep(0.05, 0.14, hi), C.info.z < -1.5);
+    let plate = select(max(grey, gilt), smoothstep(0.05, 0.14, hi), C.info.z < -1.5 && C.info.z > -2.5);
     metal = metal * plate * (1.0 - skin);
     rough = mix(max(rough, 0.68), rough, metal);
   }
@@ -680,6 +681,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // (Larger on a phone, or at its resolution they melt away, and a visor's grille with them.)
   let g_ = qA * vec2f(115.0, 200.0) * select(1.0, 0.5, LEAN);
   let ringFade = 1.0 - smoothstep(0.12, 0.35, max(length(dpdx(g_)), length(dpdy(g_))));
+  // (A hero's padded coat's diamonds, and how far off they melt: worked out here, where derivatives may be taken.)
+  let q = qA * vec2f(24.0, 24.0) * select(1.0, 0.6, LEAN);
+  let qFade = 1.0 - smoothstep(0.15, 0.4, max(length(dpdx(q)), length(dpdy(q))));
   var mailH = 0.0;
   if (isMail) {
     let row = floor(g_.y);
@@ -693,10 +697,29 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     n = n0;
   }
   if (in.uv.x > 1.5 && heroLook) {
-    // (A hero's mail sleeves, built for the knights: dark quilted cloth under their own clothes.)
-    albedo = vec3f(0.075, 0.065, 0.055);
-    rough = 0.85;
-    metal = 0.0;
+    // A hero's gap covers (tools/heroes/mail.py), what shows where the plates part as a joint bends. On those in armour
+    // (info.z -2 and -3) it's mail: the knights' rings, but iron a shade lighter than their blackened links, so a gap reads
+    // as steel under steel rather than a hole. On the rest (-1) it's the padded coat under their clothes: dark linen
+    // quilted in diamonds.
+    if (C.info.z < -1.5) {
+      let row = floor(g_.y);
+      let cell = fract(vec2f(g_.x + row * 0.5, g_.y)) - 0.5;
+      let rr = length(cell);
+      let ring = smoothstep(0.2, 0.3, rr) * (1.0 - smoothstep(0.42, 0.5, rr));
+      mailH = ring * 0.0022 * ringFade;
+      albedo = mix(vec3f(0.16, 0.16, 0.17), mix(vec3f(0.05, 0.05, 0.055), vec3f(0.34, 0.335, 0.33), ring), ringFade);
+      rough = mix(0.55, 0.42, ring * ringFade);
+      metal = 0.9;
+    } else {
+      let s1 = abs(fract(q.x + q.y) - 0.5);
+      let s2 = abs(fract(q.x - q.y) - 0.5);
+      // (Each diamond puffed up between its lines of stitching.)
+      let puff = smoothstep(0.0, 0.22, min(s1, s2));
+      mailH = puff * 0.0016 * qFade;
+      albedo = vec3f(0.2, 0.16, 0.115) * mix(0.82, 0.62 + 0.38 * puff, qFade);
+      rough = 0.88;
+      metal = 0.0;
+    }
     n = n0;
   }
   if (in.uv.x < -1.5) {

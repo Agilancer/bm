@@ -225,7 +225,21 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   below 80% of its life. The balance log keeps every attempt.
 - **Its party.** From level 6, once it can pay, it walks to the nearer quartermaster of the Free Company, opens his books
   with E, and hires a lancer first, then a paladin, then the best two others it can afford (`hiring` in
-  `src/ui/autowarrens.js`).
+  `src/ui/autowarrens.js`). With them at its back it plays as a group does (`helpPick`, `tankNear`, `partyStrong` in
+  `src/ui/autobrain.js`):
+  - It takes what's on the healer, or on one of the others, off them first: the healer before anyone, then whoever's
+    lowest. What's on the tank it leaves to him.
+  - Otherwise it shoots what the tank is holding, so the damage goes on one and nothing it pulls is loose.
+  - What's on one of them is its fight too, out to 30 m, even on its way somewhere.
+  - When something's on it, it backs off toward the tank, so he can take it, rather than off into open ground.
+  - With a tank and another standing near, it stands up to what it could take two levels on. Velscour's knights and the
+    Gravehart it still judges at its own level.
+  - One of them down, it stays by them till they're up again, a few seconds after the fight (ten seconds at most).
+  - Down the Warrens it goes on to the next room only with the party up and with it (up to twenty seconds' wait), and
+    in a boss fight it takes the rank and file off the healer after the adds.
+
+  It reads who each monster is after, and what each of its party is on, from the snapshot (`C.AFTER`, written by
+  `writeAfter` in `src/sim/sim.worker.js`).
 - **The Hollowfang Warrens.** From level 7 with a full party it goes in by the portal and walks the caves room by room,
   by the caves' own flow field (the nav thread's grid stops at the edge of the world). Before each boss's room it waits
   for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of a circle or a fire before
@@ -321,6 +335,11 @@ screen is a frame for each, with their life.
 - **They ride the shield with you.** When you get on your board, they get on theirs, beside and behind you, and step off
   when you do (`updateFreeSurf`).
 - **They fall and get up.** One who falls lies there till the fight's over, then gets up with half their life.
+- **They carry a light.** A spirit-light floats over each one's shoulder, as your Wisp Light does over yours
+  (`partyLights` in `src/sim/hero.js`). By night, in the Warrens and below ground it lights them and a pool round their
+  feet, so you can see them in the dark; by day it's a small glow over them and lights nothing. The renderer keeps their
+  lights a place of their own ahead of the spells' (`FX_CARRIED`, `carried` in `src/gfx/spellfx.js`), so the torches
+  and the fighting never put them out: four of them, or the nearest two on a phone.
 - What they kill is yours: its loot and its experience.
 - A word with one of them (E) lets them go back to the Company.
 

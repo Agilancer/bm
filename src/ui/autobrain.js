@@ -18,7 +18,7 @@
 // Where it walks: in the town, the woods round it and the catacombs, by paths from src/sim/nav.worker.js; out in the countries,
 // by the roads (src/core/lands.js ROUTES) and across country, the pines stepped round by the same worker, and the woken seals.
 import * as LAYOUT from '../core/layout.js';
-import { C, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
+import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
 import { CAVE_MOUTH, CAVE_OUT, OPENING, RUN_OUT } from '../core/opening.js';
 import { ROUTE, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { ROADS, terrainHeight } from '../core/terrain.js';
@@ -57,6 +57,8 @@ function ahead(x, z, pts, far) {
   return [px, pz];
 }
 const SP = Object.fromEntries(SPELLS.map((s, i) => [s.key, i]));
+// A hired hero's part in the party, as the snapshot has it (src/sim/hero.js writeHero).
+const ROLE = ['', 'tank', 'heal', 'dps'];
 const NAME = 'Jamie';   // what it answers Lisandra with, if nobody has yet
 const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
 
@@ -345,7 +347,7 @@ export class Brain {
       const kind = snap[o + C.KIND] | 0, x = snap[o + C.X], y = snap[o + C.Y], z = snap[o + C.Z];
       const d = dist(m.x, m.z, x, z);
       if (d > 70 || Math.abs(y - m.y) > 8) continue;
-      out.push({ id: i, kind, x, y, z, d, hp: snap[o + C.HP], maxHp: snap[o + C.MAX_HP], hostile: snap[o + C.HOSTILE] > 0.5, h: kind >= TRIPO_KIND ? 1.1 : i < 2 ? 1.3 : 0.95, glint: snap[o + C.GLINT] });
+      out.push({ id: i, kind, x, y, z, d, hp: snap[o + C.HP], maxHp: snap[o + C.MAX_HP], hostile: snap[o + C.HOSTILE] > 0.5, h: kind >= TRIPO_KIND ? 1.1 : i < 2 ? 1.3 : 0.95, glint: snap[o + C.GLINT], after: snap[o + C.AFTER] });
     }
     for (let i = 0; i < MAX_SLIMES; i++) {
       const o = SLIMES_START + i * SLIME_FLOATS;
@@ -372,6 +374,63 @@ export class Brain {
       if (!k || now - k.t > 0.05) this.track.set(f.id, { x: f.x, z: f.z, t: now, vx: f.vx, vz: f.vz });
     }
     return out;
+  }
+
+  // Its party (src/sim/hero.js companion, src/ui/party.js): where each one is, what they're for, how they are, and what
+  // they're on. idx: their place in the snapshot, as a foe's `after` names them.
+  party(snap) {
+    const out = this.partyList || (this.partyList = []);
+    out.length = 0;
+    const nh = this.o.heroCount() || 0;
+    if (!nh) return out;
+    const nk = (snap[H.NCHARS] | 0) - nh - 2;
+    for (let i = 0; i < nh; i++) {
+      const co = CHARS_START + (nk + i) * C_SIZE, o = co + C_HERO;
+      if (snap[o + 12] < 0.5) continue;
+      out.push({ idx: nk + i, x: snap[o + 2], y: snap[o + 3], z: snap[o + 4], hpf: snap[o + 5], dead: snap[o + 9] > 0.5,
+        role: ROLE[snap[o + 13] | 0], foe: snap[co + C.AFTER] | 0 });
+    }
+    return out;
+  }
+
+  // Whom to shoot when there's a party at its back, as a player in a group would (null when nothing calls for it, and the
+  // fight goes as it would alone). First what's on the healer or one of the others, the healer first, then whoever's
+  // lowest: the tank wants what's on him, so that's left to him. Then what the tank's holding, so the damage all goes on
+  // one, and nothing it pulls is something the tank hasn't got. What's on itself, and close, it deals with as ever.
+  helpPick(live, m) {
+    const party = this.party(this.snap).filter((h) => !h.dead);
+    if (!party.length) return null;
+    const by = new Map(party.map((h) => [h.idx, h]));
+    let peel = null, ps = -Infinity;
+    for (const f of live) {
+      const h = by.get(f.after);
+      if (!h || h.role === 'tank' || !f.hostile) continue;
+      // (The healer first, then whoever's lowest; something already at them before something on its way.)
+      const s = (h.role === 'heal' ? 2 : 0) + (1 - h.hpf) * 3 - dist(f.x, f.z, h.x, h.z) * 0.08 - f.d * 0.02;
+      if (s > ps) { ps = s; peel = { f, h }; }
+    }
+    const mine = live.find((f) => f.after === -1 && f.d < 6);
+    if (peel && !mine) return { T: peel.f, why: `Taking ${this.foeName(peel.f)} off ${peel.h.role === 'heal' ? 'the healer' : 'one of the party'}.` };
+    if (mine) return null;
+    const tank = party.find((h) => h.role === 'tank');
+    const held = tank && live.find((f) => f.id === tank.foe);
+    if (held) return { T: held, why: `On the tank's ${this.foeName(held)}.` };
+    return null;
+  }
+
+  // A party that can take a fight with it: two or more standing and near, a tank among them.
+  partyStrong(m) {
+    if (!this.snap) return false;
+    const up = this.party(this.snap).filter((h) => !h.dead && h.hpf > 0.35 && dist(h.x, h.z, m.x, m.z) < 30);
+    return up.length >= 2 && up.some((h) => h.role === 'tank');
+  }
+
+  // Its tank, standing and near: somewhere to back off to, so what's on it comes within his reach (he turns whatever's loose
+  // on the rest of them onto himself).
+  tankNear(m) {
+    if (!this.snap) return null;
+    const t = this.party(this.snap).find((h) => h.role === 'tank' && !h.dead && h.hpf > 0.3);
+    return t && dist(t.x, t.z, m.x, m.z) < 26 ? t : null;
   }
 
   // The posts and lairs it should keep clear of at this level, as circles.
@@ -468,6 +527,11 @@ export class Brain {
     // Hurt and out of it: mend, or rest a little.
     // (Low and out of the fight: a Mend, now and then. Otherwise its life comes back on its own, given a few quiet seconds.)
     if (m.hpf < 0.45 && m.mana >= 30 && this.known(SP.mend) && this.t >= (this.mendAt || 0) && !m.town) { this.face = null; this.halt(); this.cast(SP.mend, 0.35); this.mendAt = this.t + 4; this.say('Mending.'); return; }
+    // One of its party down: they get up a few seconds after the fight's over (src/sim/hero.js stepCompany), so it stays by
+    // them till they do rather than leave them behind. (Ten seconds at most.)
+    const fallen = m.town ? null : this.party(snap).find((h) => h.dead && dist(h.x, h.z, m.x, m.z) < 40);
+    if (fallen && (this.fallenWait = (this.fallenWait || 0) + 0.12) < 10) { this.halt(); this.face = Math.atan2(fallen.x - m.x, fallen.z - m.z); this.say('Waiting for the party to get up.'); return; }
+    if (!fallen) this.fallenWait = 0;
     // What's underfoot, and the chests it passes.
     if (!m.town && this.loot(m, foes)) return;
     // The job in hand, or a new one.
@@ -636,9 +700,11 @@ export class Brain {
   }
 
   combat(snap, m, foes) {
-    const lvl = m.lvl;
+    // (With a party at its back, a tank among them, it stands up to a little more: what it could take two levels on. Not
+    // the knights of Velscour or the Gravehart, which it goes after at its own level or not at all.)
+    const lvl = m.lvl + (this.partyStrong(m) ? 2 : 0);
     // (Down the Warrens with a party: everything there is for fighting. src/ui/autowarrens.js.)
-    const fightable = inDungeon(m.x, m.z) ? () => true : fightableAt;
+    const fightable = inDungeon(m.x, m.z) ? () => true : (k, l, hp, sl) => fightableAt(k, k === 0 || k === 3 ? m.lvl : l, hp, sl);
     this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12;
     // What it can't beat yet, coming for it: away over open ground, toward the town.
     const boss = this.job?.kind === 'boss';
@@ -656,7 +722,9 @@ export class Brain {
     // On the way somewhere, only what's on it; hunting, whatever's about. (Once it's in a fight, it finishes it.)
     // (Down the Warrens, the whole room's fight is its fight: a boss across the cave is still its mark.)
     const reach = hunting || this.target || inDungeon(m.x, m.z) ? 30 : 14;
-    const live = foes.filter((f) => fightable(f.kind, lvl, f.maxHp, f.slime) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
+    // (And what's on one of its party, near by: their fight is its fight.)
+    const ours = new Set(this.party(snap).filter((h) => !h.dead).map((h) => h.idx));
+    const live = foes.filter((f) => fightable(f.kind, lvl, f.maxHp, f.slime) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach || (ours.has(f.after) && f.d < 30) : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
     if (!live.length) { this.target = null; this.kite = null; return false; }
     const near = live.reduce((a, b) => (a.d < b.d ? a : b)), dn = near.d;
     const close = live.filter((f) => f.d < 5.5).length;
@@ -735,8 +803,10 @@ export class Brain {
       if (turn) return true;
     }
     if (K?.back && !retreat) retreat = [K.x, K.z];
-    // Its mark: what's coming for it first, then the nearest. A new one takes a moment to settle on.
-    const pick = live.reduce((a, b) => ((a.d - (a.hostile ? 6 : 0)) <= (b.d - (b.hostile ? 6 : 0)) ? a : b));
+    // Its mark: with a party, what's on the healer or the others, then what the tank's holding (helpPick); else what's
+    // coming for it first, then the nearest. A new one takes a moment to settle on.
+    const help = this.helpPick(live, m);
+    const pick = help?.T || live.reduce((a, b) => ((a.d - (a.hostile ? 6 : 0)) <= (b.d - (b.hostile ? 6 : 0)) ? a : b));
     if (this.target?.id !== pick.id) { this.target = pick; this.reactT = 0.2 + Math.random() * 0.25; } else Object.assign(this.target, pick);
     const T = this.target, d = T.d;
     // Nothing it throws is landing (behind a wall, across a gap): leave that one be for a while.
@@ -772,7 +842,7 @@ export class Brain {
     const sp = Math.hypot(T.vx || 0, T.vz || 0), coming = ((T.vx || 0) * -fx + (T.vz || 0) * -fz) > 1;
     this.shoot(snap, m, { T, d, dn, close, around, aimed, hpf: m.hpf, fast: sp > 4, still: sp < 1.5, big: T.maxHp > 150, inLine, coming, bladesUp: this.t - (this.bladesT ?? -99) < 20, shield: false });
     const who = live.length > 1 ? `${live.length} foes` : this.foeName(T);
-    this.say(retreat ? `Backing away from ${who}, shooting.` : `Fighting ${who}.`);
+    this.say(retreat ? `Backing away from ${who}, shooting${this.tankNear(m) ? ', to the tank' : ''}.` : help && T.id === help.T.id ? help.why : `Fighting ${who}.`);
     return true;
   }
 
@@ -782,11 +852,14 @@ export class Brain {
   escape(m, from, home = false) {
     if (this.esc && this.t - this.esc.t < 0.4) return this.esc.dir;
     let best = [0, 1], bs = -Infinity;
+    // (Kiting with its tank about: back toward him, so what's on it comes into his reach and he takes it.)
+    const tank = home ? null : this.tankNear(m);
     for (let k = 0; k < 16; k++) {
       const a = k / 16 * TAU, dx = Math.sin(a), dz = Math.cos(a), px = m.x + dx * 6, pz = m.z + dz * 6;
       let s = 0;
       for (const f of from) s += Math.min(10, dist(px, pz, f.x, f.z));
       if (home && !m.below) s += (dist(m.x, m.z, 0, 0) - dist(px, pz, 0, 0)) * 0.6;
+      if (tank) s += (dist(m.x, m.z, tank.x, tank.z) - Math.max(2.5, dist(px, pz, tank.x, tank.z))) * 0.7;
       if (this.kept(m, px, pz)) s -= 40;
       if (this.esc) s += (dx * this.esc.dir[0] + dz * this.esc.dir[1]) * 2;
       if (s > bs) { bs = s; best = [dx, dz]; }
