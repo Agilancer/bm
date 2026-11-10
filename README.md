@@ -253,17 +253,18 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     a shove when something's on it, holds it a moment, and backs off to shoot again. It steps aside from a tumbler rolling at
     it, which can't turn quickly.
   - **The staff is what it fights with.** A spell comes every few seconds at most, and only when the moment suits one: a crowd,
-    something big or quick, or once in a while anyway. In trouble it casts at once: a Mend when it's low, a Frost Nova when
-    it's surrounded.
+    something big or quick, or once in a while anyway. In trouble it casts at once: a Mend when it's low; a Frost Nova, a
+    Thunderclap or Turn the Dead, whichever it knows and has ready, when it's surrounded.
   - **It spends its skill points**, as you do in the book (B), by a build written down for it (`BUILD` in
-    `src/ui/autobrain.js`), each thing as soon as it can be bought: a Mend first, a Wall of Fire by level 6 (its answer to
-    the black knight's shield at 8), Turn the Dead for the packs, a Frost Nova by 10, and Fire raised to a Meteor at 17, then
-    masteries and more ranks. Past the end of the build a point goes into the known spell with the fewest ranks. Every
-    point it spends is in the balance log.
-  - **It sets its own spell bar**, and casts from it as the 1 to 6 keys do. It keeps on it the four it leans on, once it
-    knows them: Firebolt, Mend, Frost Nova and Meteor (the Wall of Fire until it has a Meteor). The other slots change every
-    four minutes, so in time every spell it knows has been in its hands and in the log. It won't cast a spell that isn't
-    ready again yet.
+    `src/ui/autobrain.js`), each thing as soon as it can be bought: a Mend first; Lightning to a Thunderclap by level 6,
+    for when they're on it; Turn the Dead for the packs; a Thunderbolt at 11, which is what it takes to the black knight's
+    shield; then Fire, to a Meteor at 18; then masteries, more ranks, and Ice to a Frost Nova. Past the end of the build a
+    point goes into the known spell with the fewest ranks. Every point it spends is in the balance log.
+  - **It sets its own spell bar**, and casts from it as the 1 to 6 keys do. It keeps on it what it leans on, once it knows
+    them: Firebolt, Mend, Turn the Dead, the first it has of a Frost Nova or a Thunderclap (what it casts at once when
+    it's surrounded), and the first it has of a Meteor or a Thunderbolt (what it brings down on a raised shield). The other
+    slots change every four minutes, so in time every spell it knows has been in its hands and in the log. It won't cast a
+    spell that isn't ready again yet.
   - It picks the spell that suits the moment from what's on its bar (`USE` in `src/ui/autobrain.js`, a rule for each of
     the sixty). Some of them:
     - Arcane Blast, Cone of Cold, Thunderclap or Turn the Dead when they're close; Stoneskin or an Aegis when it's hurt
@@ -284,15 +285,16 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     down a hill with the slope.
   - It looks elsewhere only for a reason: at what it's fighting, at a door it's opening (it stops, turns to the door and
     opens it), at whoever it's talking to, at a chest, and at Lisandra when she stops on the road.
-- **The black knight.** From level 8 it goes after Velscour's knight on the cathedral steps:
+- **The black knight.** From level 11, when its build has a Thunderbolt, it goes after Velscour's knight on the cathedral
+  steps (it was level 8 when every spell was known from the start, and it had a Meteor):
   - It stands on his flank, just past the 20 m he keeps from his door.
-  - It works on him with the staff and Meteors, which fall from the sky where his shield can't stop them. Bolts wait till
-    he's turned from it.
+  - It works on him with the staff and with Thunderbolts, and later Meteors, which fall from the sky where his shield can't
+    stop them and reach the thirty paces it stands off at. Bolts wait till he's turned from it.
   - If he comes out after it, it backs off, shooting all the way, and runs a few strides when he gets close.
   - If he beats it back to the town, it tries again two levels stronger.
 
-  In tests at level 8 he went down in 36 seconds once and in about a minute and a half the next time, without the bot falling
-  below 80% of its life. The balance log keeps every attempt.
+  Before the six trees, at level 8 with a Meteor, he went down in 36 seconds once and in about a minute and a half the next
+  time, without the bot falling below 80% of its life. With the trees it was run once, headless, set to level 12 in the gear a new game starts with: it brought thirteen Thunderbolts down on him over about three minutes, between packs of the risen, was never beaten back, and went on to hire a party (his end is read from its status line, which went from "90 of 520 left" to its next job and a new level). An earlier build with only a Wall of Fire couldn't reach him from where it stands, which is why Thunderbolt is in the build and the level is 11. The balance log keeps every attempt.
 - **Its party.** From level 6, once it can pay, it walks to the nearer quartermaster of the Free Company, opens his books
   with E, and hires a lancer first, then a paladin, then the best two others it can afford (`hiring` in
   `src/ui/autowarrens.js`). With them at its back it plays as a group does (`helpPick`, `tankNear`, `partyStrong` in
@@ -1013,7 +1015,7 @@ That recolours the textures and only the textures, to the fist's skin, so the sw
 
 - **Nobody has seen the forty new spells drawn.** The machine this was built on has no graphics card, so the game's 3D view couldn't be rendered there. What was run: every spell through the sim with no page (above), all sixty cast through the real game's sim thread in a headless browser with no error, and the spellbook's screen, which is ordinary page and was looked at. The new spells are composed from shapes the renderer already drew, but their look, their brightness and how much of a first-person view they fill haven't been judged by an eye. The first thing to do is cast each one in the Test Dungeon.
 - **The numbers come from dummies that stand still** and don't hit back. That measures the spells against each other and flatters anything that lies on the ground (a Meteor's crater, a Wall of Fire, Inferno, Plague Flask). No fight has been played with the trees by a person.
-- **Auto-play with the trees** was run headless, as it was before them (see "Auto-play"), for the first minutes of a new game only: see `docs/SKILLS.md` for what it did.
+- **Auto-play with the trees** was run headless, as it was before them (see "Auto-play"), in three short runs: a new game to level 5, and from levels 10 and 12 set by hand. See `docs/SKILLS.md` for what it did and didn't show.
 - Renew, Aegis and the other spells that stay on you are yours only: they can't be put on one of your party. Mend's Shared Light is the one that reaches them.
 - Stillness slows the whole world but you and what you cast: your party slows with it.
 - There are no summoned creatures and no passive skills beyond the six masteries.

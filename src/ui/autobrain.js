@@ -5,8 +5,10 @@
 //
 // What it does, most pressing first:
 //   the opening   waits out the cave, answers to a name, walks out, and follows Lisandra down the Long Road to Bellmourn
-//   a fight       anything that means it harm, or what it's hunting: Firebolt and the staff from range, Chain Lightning and
-//                 a Meteor into a crowd, Frost Nova when they're on it, Mend when it's hurt; it backs off and keeps its distance
+//   a fight       anything that means it harm, or what it's hunting: the staff and Firebolt from range, and from what it's
+//                 learned in the six trees whatever suits the moment (USE): something wide into a crowd, a Frost Nova or
+//                 Turn the Dead when they're on it, a Mend when it's hurt; it backs off and keeps its distance
+//   its spells    every level's point spent in the book by its build (BUILD), and its bar set from what it knows
 //   running       from what it can't yet beat (the knights of Velscour, the Gravehart, the Hydra, a dragon), and home when it's low
 //   loot          gold, orbs and stuff underfoot, gear with E, chests it passes; the best gear on, gems in their sockets
 //   the town      every quest taken, steps talked through and handed in; sells what it won't wear, buys a mending, sleeps at the
@@ -71,7 +73,7 @@ const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
 const CATHEDRAL_GUARD = { x: CHURCH_GUARD[0], z: CHURCH_GUARD[1] };
 // The black knight: his post, his leash (BLACK.leash in src/sim/sim.worker.js), where it stands to work on him, and the level it
 // goes for him at (raised two each time he sends it back to the town).
-const BLACK_POST = CHURCH_GUARD, BLACK_LEASH = 20, SIEGE_RING = 29, BOSS_LEVEL = 8;
+const BLACK_POST = CHURCH_GUARD, BLACK_LEASH = 20, SIEGE_RING = 29, BOSS_LEVEL = 11;   // (11 since the six trees: the level its build has a Thunderbolt at)
 const HYDRA_AT = churchAt(208, -128);
 const POSTS = [
   [-78, -3, 30, 18], [CATHEDRAL_GUARD.x, CATHEDRAL_GUARD.z, 28, 99], [-40, -150, 44, 14], [150, 110, 26, 8],
@@ -235,21 +237,26 @@ const SELF = new Set(['nova', 'mend', 'blades', 'wisp', 'firenova', 'inferno', '
 const GROUND = new Set(['meteor', 'blizzard', 'wallfire', 'zero', 'quake', 'monolith', 'rune', 'starfall', 'thunder', 'tempest']);
 const BOLTS = new Set(['firebolt', 'frost', 'lightning', 'missiles', 'lance', 'chain', 'firebeam', 'spikes', 'arcaneblast', 'comet', 'wyrm', 'phoenix', 'bomb', 'coldcone', 'rime',
   'frostray', 'prism', 'stone', 'thorns', 'boulder', 'vine', 'crescent', 'stasis', 'disintegrate', 'spark', 'fork', 'seed']);
-// Always on its bar: the four it leans on. (Until it has a Meteor, the Wall of Fire is its answer to a raised shield.)
-const CORE = ['firebolt', 'mend', 'nova', 'meteor'], CORE_UNTIL = { meteor: 'wallfire' };
+// Always on its bar, once it knows them: Firebolt, Mend, the first it has of each of these two lists, and Turn the Dead.
+// PANIC: what it casts at once with three of them on it. SKY: what comes down on a raised shield from where the board can't
+// turn it, and reaches the thirty paces it stands off the black knight at (a Wall of Fire doesn't: 24).
+const PANIC = ['nova', 'thunderclap', 'turn'], SKY = ['meteor', 'thunder'];
+const CORE = ['firebolt', 'mend'], CORE_LAST = ['turn'];
 // Its own cold, after which a Shatter pays; the big slow casts it waits a moment after; its lightning.
 const ICED = new Set(['nova', 'coldcone', 'blizzard', 'zero', 'frostray', 'rime', 'orb']);
 const HEAVY = new Set(['meteor', 'blizzard', 'well', 'zero', 'quake', 'starfall', 'tempest', 'monolith', 'thunder']);
 const STORM = ['spark', 'chain', 'fork', 'lightning', 'thunder'];
 
 // The six trees (src/sim/skills.js): what it puts its points in, in this order, each as soon as it can be bought (a level, a
-// spell it grows from, points already in the school). It's a generalist's build that gives its head what it leans on: a Mend
-// first; a Wall of Fire by level 6, for the black knight's shield at 8; Turn the Dead for the packs; a Frost Nova by 10; and
-// Fire raised to a Meteor at 17. Past the end of the list, a point goes into whatever known spell has the fewest ranks.
+// spell it grows from, points already in the school). It's a build that gives its head what it leans on, when it needs it:
+// a Mend first; Lightning to a Thunderclap by level 6, for when they're on it; Turn the Dead for the packs; a Thunderbolt at
+// 11, which is what it takes to the black knight's shield (BOSS_LEVEL); then Fire, to a Meteor at 18; then masteries, more
+// ranks, and Ice to a Frost Nova. Past the end of the list, a point goes into whatever known spell has the fewest ranks.
 const BUILD = [
-  'mend', 'firebeam', 'firebolt', 'firebolt', 'coldcone', 'wallfire', 'turn', 'frost', 'frost', 'nova', 'firebolt:searing', 'comet', 'chain', 'firenova', 'bomb',
-  'mend', 'renew', 'firebolt', 'wallfire', 'meteor', '@fire', '@fire', 'frost', 'nova', 'blizzard', 'spark', 'fork', 'thunderclap', 'meteor', 'meteor:crater',
-  '@fire', '@fire', '@fire', 'aegis', 'spark', 'chain', 'thunder', 'shatter', 'stone', 'lance', 'meteor', 'meteor', 'blizzard', 'thunder', '@ice', '@ice',
+  'mend', 'chain', 'spark', 'spark', 'turn', 'thunderclap', 'spark', 'chain', 'firebeam', 'firebolt', 'firebolt', 'thunder',
+  'wallfire', 'comet', 'firenova', 'bomb', 'firebolt:searing', 'firebolt', 'wallfire', 'meteor', 'mend', 'renew', 'thunder', '@lightning', '@fire', '@fire',
+  'meteor', 'meteor:crater', 'coldcone', 'frost', 'frost', 'nova', '@fire', '@fire', '@fire', 'aegis', 'thunder', 'thunder:twice', 'fork', 'meteor', 'meteor',
+  '@lightning', '@lightning', 'stone', 'lance', 'frost', 'nova', 'blizzard',
 ];
 // Whether the build can be bought as written: it's played through from level 1 to 50, and what's still unbought at the end
 // (a spell that's gone, a branch whose other was taken, a tier it never has the points for) is named.
@@ -278,7 +285,7 @@ const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night'
 const HALL_COUNTERS = { gear: 'left to the tester: it fights in what it was given', party: 'left to the tester: it fights beside whoever was hired', foes: 'left to the tester: it fights what was summoned' };
 // The blocks of the snapshot it reads (foes() and the rest); a new one is something in the world it can't see yet.
 const BLOCKS = new Set(['FX_START', 'CHARS_START', 'SLIMES_START', 'TUMBLERS_START']);
-const CASTS = ['firebolt', 'chain', 'nova', 'meteor', 'mend', 'wisp'];
+const CASTS = ['firebolt', 'mend', 'wisp', ...PANIC, ...SKY];
 const FARMS = new Set(['bone', 'iron', 'silk']);
 const STOCKS = new Set(['staffs', 'robes', 'skulls', 'curios', 'scrolls']);
 export function coverage(foeNames = null) {
@@ -676,7 +683,8 @@ export class Brain {
 
   bar() {
     const sb = this.o.spellbar, known = [...sb.known].sort((a, b) => a - b);
-    const core = CORE.map((k) => (sb.known.has(SP[k]) ? SP[k] : SP[CORE_UNTIL[k]])).filter((i) => i !== undefined && sb.known.has(i));
+    const has = (k) => sb.known.has(SP[k]), first = (list) => list.find(has);
+    const core = [...new Set([...CORE, first(PANIC), first(SKY), ...CORE_LAST].filter((k) => k && has(k)).map((k) => SP[k]))].slice(0, 5);
     this.stormOnBar = STORM.some((k) => sb.loadout.includes(SP[k]));
     const rest = known.filter((i) => !core.includes(i) && !SPELLS[i].noBar && USE[SPELLS[i].key]);
     const turn = Math.floor((this.o.log?.d.t ?? this.t) / 240), want = core.slice(0, 6);
@@ -923,7 +931,9 @@ export class Brain {
     }
     if (!K && !retreat && (dn < 3 || (close >= 2 && dn < 4.5) || this.backedUp > 0.8) && this.kiteCool <= 0) {
       // Frozen first, if it's a crowd.
-      if (close >= 3 && m.mana >= 32 && !this.auto.cast && this.cast(SP.nova, 0.3)) this.castCool = 0.5;
+      // (Surrounded: the first it knows and has ready of a Frost Nova, a Thunderclap, Turn the Dead.)
+      const panic = close >= 3 && !this.auto.cast ? PANIC.map((k) => SP[k]).find((i) => this.known(i) && !(snap[H.COOL + i] > 0)) : undefined;
+      if (panic !== undefined && this.cast(panic, 0.3)) this.castCool = 0.5;
       const [ex, ez] = this.escape(m, live);
       // (It backs off at a walk, a little slower while it shoots: what's quicker than that and already at its heels, it can't
       // back away from. Nor from what's right on it, a crowd all round, or a wall behind.)

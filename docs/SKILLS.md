@@ -176,4 +176,24 @@ Not run:
 
 ## Auto-play with the trees
 
-AUTOPLAY_RESULT
+Auto-play was run in headless Chromium with the renderer's frame stubbed (there being no GPU to draw with), the way it was
+run before the trees. Three runs, eight or nine minutes each. Nobody watched them: what's below is read from its status
+line and its balance log every half minute.
+
+| Run | What it did |
+| --- | --- |
+| A new game, 9 minutes | Reached level 5. Spent each point as it came: Mend at 2, then its build in order. Put what it learned on its bar. 61 kills, one quest done, never beaten back. Cast Firebolt, Magic Missiles, Spark, Stone Shard, Frost Shards, Fire Beam, Cone of Cold and Mend, and the staff between them |
+| Set to level 10, 8 minutes, with its first build (Fire first: a Wall of Fire for the knight) | Spent its 11 points at once, in order. Went for the black knight and did him no harm: it stands 29 m off him and a Wall of Fire reaches 24. Beaten back once |
+| Set to level 12, 8 minutes, with the build it has now (Lightning first: Thunderclap, then Thunderbolt) | Spent 13 points in order. Brought 13 Thunderbolts down on the knight in about three minutes, between packs of the risen; its status went from "90 of 520 left" to hiring a party and a new level. Hired four, set off for the Warrens, reached level 14. 106 kills, never beaten back |
+
+What that changed: its build now takes Lightning to a Thunderclap by level 6 and a Thunderbolt at 11, and it goes for the
+black knight at 11, not 8 (`BUILD` and `BOSS_LEVEL` in `src/ui/autobrain.js`). Before the trees it had a Meteor from the
+start.
+
+What those runs didn't show:
+
+- It was never surrounded in them, so it never cast Thunderclap or Turn the Dead.
+- The levels in the second and third runs were set, not earned, so it was in the gear a new game starts with: weaker than a
+  real level 12.
+- Nothing past level 14: not the Meteor at 18, the masteries, the Warrens' bosses, or a whole game. Watch the first hour of
+  a new game with it, and read its balance log (it now lists every point spent, with the level).
