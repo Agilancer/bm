@@ -25,6 +25,7 @@ import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { saveSettings, settings, Title } from './title.js';
 import { ViewSwitch } from './ui/view.js';
+import { SKIN_PARTS, pickSets } from './gfx/bodyskin.js';
 import { THIRD } from './core/third.js';
 import { SPELLS } from './sim/spells.js';
 import { Inventory } from './ui/inventory.js';
@@ -367,6 +368,14 @@ async function boot(plan, poolSize) {
   addPart('map', { save: () => worldMap.save(), load: (d) => worldMap.load(d) });
   game.gemFx = new GemFx(renderer);
   const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
+  // (bm.wear('crimson_regalia') dresses the whole body in one set, to look at it; bm.wear() goes back to what's worn.)
+  let forcedSkin = null;
+  const wearSkins = () => {
+    const skin = renderer.bodySkin;
+    if (!skin) return;
+    skin.ready.then(() => skin.wear(forcedSkin ? Object.fromEntries(SKIN_PARTS.map((p) => [p, forcedSkin])) : pickSets(skin.sets, pack.slots))).catch((e) => console.warn('body skin', e));
+  };
+  game.wearSkin = (id) => { forcedSkin = id || null; wearSkins(); };
   const arm = () => {
     writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots), levelPerks(pack.level));
     // (GOD MODE, from the skull: everything dies at one blow.)
@@ -380,6 +389,8 @@ async function boot(plan, poolSize) {
     renderer.offHand = off && !skull ? off.base : null;
     // (What the body you see in third person holds: src/gfx/renderer.js selfItems.)
     renderer.mainHand = pack.slots.main && hands(pack.slots.main.base) === 3 ? pack.slots.main.base : null;
+    // And what it wears: the robes in the pack's slots, by the sets of gear made for them (src/gfx/bodyskin.js).
+    wearSkins();
     renderer.board.sword = off ? off.base : null;
     if (off) renderer.sword('surf_arm');     // (Ready before the first landing.)
     renderer.skull = skull ? skull.base : null;
@@ -1706,6 +1717,8 @@ class GameView {
       book: () => $('spellbook').classList.toggle('open'),
       jump: () => { shared.input[INPUT.JUMP] += 1; },
       setCam: (c) => { view.overrideCam = c; },
+      // The third-person body dressed whole in one set of gear (src/gfx/bodyskin.js), to look at it: wear() for what's really worn.
+      wear: (id) => view.wearSkin(id),
       setTime: (h) => view.renderer.setHour(h),
       hour: () => view.renderer.hour,
       fixScale: (s) => { view.fixedScale = true; view.renderer.scale = s; },

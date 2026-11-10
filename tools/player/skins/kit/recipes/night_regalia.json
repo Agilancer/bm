@@ -1,0 +1,66 @@
+{
+ "id": "night_regalia",
+ "name": "Midnight Regalia",
+ "blurb": "Deep blue velvet sewn with small gold stars.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/night_velvet.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1
+  },
+  "trim": {
+   "color": "#beaa60",
+   "bright": 1.1
+  },
+  "leather": {
+   "swatch": "swatches/night_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.25,
+   "keep": 0.25
+  }
+ },
+ "parts": {
+  "head": {},
+  "shoulders": {},
+  "chest": {
+   "pattern": {
+    "image": "swatches/stars.png",
+    "color": "#beaa60",
+    "scale": 0.16,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/moon.png",
+     "anchor": "back",
+     "size": 0.24,
+     "mode": "gilt",
+     "color": "#beaa60"
+    },
+    {
+     "image": "decals/moon.png",
+     "anchor": "chest",
+     "size": 0.1,
+     "mode": "gilt",
+     "color": "#beaa60"
+    }
+   ]
+  },
+  "legs": {
+   "leather": {
+    "swatch": "swatches/night_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "keep": 0.25
+   }
+  },
+  "feet": {}
+ }
+}
