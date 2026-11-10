@@ -14,6 +14,7 @@ import { OPENING } from '../core/opening.js';
 import { PATHS, ROADS } from '../core/terrain.js';
 import { inTown } from '../core/town.js';
 import { RULES } from '../folk/quests.js';
+import { CAMPS } from '../sim/slimes.js';
 import { QUESTS } from '../folk/lines/quests.js';
 
 const SPACING = 1.3;     // m between dots
@@ -194,20 +195,20 @@ export class QuestTrail {
       const by = (a, b) => (Q.offers(b[0]).length > 0) - (Q.offers(a[0]).length > 0) || Math.hypot(a[1].x - px, a[1].z - pz) - Math.hypot(b[1].x - px, b[1].z - pz);
       return left.sort(by)[0]?.[1] ?? null;
     }
-    if (st.back || st.bring) return person(q.giver);
     const below = (to) => {
       const key = !!Q.state('dead_cant_wait');
       return { x: to[0], z: to[1], near: 2, way: key ? SEXTON_WAY : GREAT_WAY, ways: [SEXTON_WAY, GREAT_WAY] };
     };
+    // (Something to bring: back to the giver once you have it all, else down among the dead where it's found.)
+    if (st.back || (st.bring && (T.pack?.mats?.[st.bring] || 0) >= (st.n || 1))) return person(q.giver);
+    if (st.bring) return py < -6 && inChurch(px, py + 1, pz) ? null : below(CRYPT);
     const site = (k) => ({ x: SITES[k].x, z: SITES[k].z, near: SITES[k].r * 0.8 });
     const place = (k, kill) => {
       if (k === 'catacombs') return kill && py < -6 && inChurch(px, py + 1, pz) ? null : below(CRYPT);
       if (k === 'bellcrypt') return below(CRYPT);
       if (k === 'woods') return inTown(px, pz, 10) ? { x: PINES[0], z: PINES[1], near: 6 } : null;
-      if (k === 'millhaven') {
-        const best = ['farm', 'mill', 'hamlet'].map((n) => [n, Math.hypot(SITES[n].x - px, SITES[n].z - pz)]).sort((a, b) => a[1] - b[1])[0][0];
-        return site(best);
-      }
+      // (The jellies keep the millpond, and wake only near it: not by the mill or the hamlet.)
+      if (k === 'millhaven') { const c = CAMPS.find((q) => q.key === 'millpond'); return c ? { x: c.x, z: c.z, near: 20 } : site('farm'); }
       if (k === 'fen') return site('sallow');
       return SITES[k] ? site(k) : null;
     };

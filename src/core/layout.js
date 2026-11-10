@@ -126,6 +126,8 @@ export const EV = {
   HERO: 51, HERO_LEVEL: 52, HERO_DUEL: 53,
   // A spell laid on the ground away from you (elem, which spell, x, y, z, how long): for its sound to be heard there (src/spellsound.js zone).
   SPELL_ZONE: 54,
+  // The Hollowfang Warrens (src/sim/dungeon.js): code (DELVE in src/core/dungeon.js), and what goes with it.
+  DELVE: 55,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.

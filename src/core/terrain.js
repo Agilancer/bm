@@ -190,17 +190,32 @@ export function pathAmount(x, z) {
 }
 
 // Building and prop footprints get bare dirt around them.
+// (A long list's boxes are worked out once. Past 1.4 m from a box's edge it adds nothing, so a box that far off is passed by.)
+const footprintBoxes = new WeakMap();
+const footprintBox = (c) => ({ c, s: Math.sin(c.yaw), co: Math.cos(c.yaw), R: Math.hypot(c.hx, c.hz) + 1.4 });
 export function footprintDirt(x, z, colliders) {
   let m = 0;
-  for (const c of colliders) {
-    if (c.hx < 1.0 && c.hz < 1.0) continue;
-    const s = Math.sin(c.yaw), co = Math.cos(c.yaw);
-    const dx = x - c.x, dz = z - c.z;
-    const lx = Math.abs(dx * co - dz * s) - c.hx, lz = Math.abs(dx * s + dz * co) - c.hz;
-    const d = Math.hypot(Math.max(lx, 0), Math.max(lz, 0)) + Math.min(Math.max(lx, lz), 0);
-    if (c.h >= 3) m = Math.max(m, 1 - sstep(0.1, 1.4, d));
-    if (d < 0) m = 1;
+  if (colliders.length < 16) {
+    // (A short list, made fresh by the caller: src/sim/job.worker.js's church footprint.)
+    for (const c of colliders) if (!(c.hx < 1.0 && c.hz < 1.0)) m = footprintAdd(m, x - c.x, z - c.z, c, Math.sin(c.yaw), Math.cos(c.yaw));
+    return m;
   }
+  let boxes = footprintBoxes.get(colliders);
+  if (!boxes) footprintBoxes.set(colliders, boxes = colliders.filter((c) => !(c.hx < 1.0 && c.hz < 1.0)).map(footprintBox));
+  for (let n = 0; n < boxes.length; n++) {
+    const b = boxes[n], c = b.c;
+    const dx = x - c.x, dz = z - c.z;
+    if (dx * dx + dz * dz >= b.R * b.R) continue;
+    m = footprintAdd(m, dx, dz, c, b.s, b.co);
+  }
+  return m;
+}
+
+function footprintAdd(m, dx, dz, c, s, co) {
+  const lx = Math.abs(dx * co - dz * s) - c.hx, lz = Math.abs(dx * s + dz * co) - c.hz;
+  const d = Math.hypot(Math.max(lx, 0), Math.max(lz, 0)) + Math.min(Math.max(lx, lz), 0);
+  if (c.h >= 3) m = Math.max(m, 1 - sstep(0.1, 1.4, d));
+  if (d < 0) m = 1;
   return m;
 }
 

@@ -80,7 +80,7 @@ export class Zombie extends Beast {
     const S = this.scale;
     Object.assign(this, {
       x: opts.spawn[0], z: opts.spawn[1], y: 0, yaw: opts.yaw, vx: 0, vz: 0, speed: 0, stam: 100, armor: 1, hp: opts.hp, maxHp: opts.hp, seenHp: opts.hp, rayPiece: -1,
-      dead: false, deadT: 0, hostile: false, iframes: false, shieldUp: 0, gashes: [], bleeds: [], heart: Math.random(), gashVersion: (this.gashVersion || 0) + 1, bites: 0,
+      dead: false, deadT: 0, hostile: false, iframes: false, shieldUp: 0, gashes: [], bleeds: [], heart: Math.random(), gashVersion: (this.gashVersion || 0) + 1, bites: 0, below: false,
       chunks: [], jets: [], alive: new Array(15).fill(true), bit: new Array(15).fill(0), cutMask: 0, limb: { ...LIMB_HP }, crawling: false, headless: false, hobble: false,
       state: STATE.MOVE, stateT: 0, goal: GOAL.WANDER, aggro: false, attack: null, used: false, activeOn: -1, cool: rnd(0.5, 2), pounceCool: rnd(2, 6), senseT: Math.random() * 0.25,
       lastX: opts.spawn[0], lastZ: opts.spawn[1], lastSense: -99, wx: opts.spawn[0], wz: opts.spawn[1], wanderT: rnd(0, 5), moving: false, searchT: 0, rush: 0, orbit: 0, stuckT: 1, stuckX: opts.spawn[0], stuckZ: opts.spawn[1], sideT: 0, sideA: 0,
@@ -357,7 +357,9 @@ export class Zombie extends Beast {
   // ---- each tick --------------------------------------------------------------------------------------------
 
   update(dt, sim) {
-    if (this.dormant || dt <= 0) { if (!this.dormant) this.t += 0; return; }
+    if (this.dormant) return;
+    // (Frozen stiff, a body run out of life still falls.)
+    if (dt <= 0) { if (!this.dead && this.hp <= 0) this.die(sim); return; }
     this.stateT += dt;
     this.fade = Math.min(1, this.fade + dt / this.fadeTime);
     if (this.fade >= 1) this.fadeTime = 0.2;
@@ -1226,6 +1228,8 @@ const NEAR = 12, FAR = 32, OUT_OF_SIGHT = 20;
 const used = new Set();
 const lordsDone = new Set();
 let nextLook = 0;
+// A new game, a death or a load: the catacombs are stood again from nothing (sim.time starts over too).
+export function resetCatacombs() { used.clear(); lordsDone.clear(); nextLook = 0; }
 
 function standAt(sim, body, s) {
   const r = Math.random();
@@ -1242,12 +1246,13 @@ export function stepCatacombs(sim) {
   const idle = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
   LORDS.forEach((l, n) => {
     if (lordsDone.has(n) || !l.when(p)) return;
-    lordsDone.add(n);
     const body = sim.knights.find((k) => k.opts && k.opts.model === l.model && !k.below && !k.aggro && !k.dead);
     if (!body) return;
     let best = null, bd = 1e9;
     spawns.forEach((s, i) => { const d = Math.hypot(s.x - l.near[0], s.z - l.near[1]); if (!used.has(i) && d < bd) { bd = d; best = i; } });
     if (best === null) return;
+    // (Only once the lord is found and placed: one out fighting, or dead, is looked for again next time.)
+    lordsDone.add(n);
     used.add(best);
     body.below = true;
     standAt(sim, body, spawns[best]);

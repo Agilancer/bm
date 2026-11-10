@@ -17,7 +17,7 @@ import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
-import { addUndead, corpsesNear, raiseZombie, stepCatacombs, stepGraves, stepWoods, Zombie } from './undead.js';
+import { addUndead, corpsesNear, raiseZombie, resetCatacombs, stepCatacombs, stepGraves, stepWoods, Zombie } from './undead.js';
 import { POOL } from '../core/lands.js';
 import { CHURCH_GUARD, churchAt } from '../core/church.js';
 import { inTown } from '../core/town.js';
@@ -31,7 +31,9 @@ import { MOB_KEYS, TRIG } from '../core/heroes.js';
 import { Slimes } from './slimes.js';
 import { Tumblers } from './tumblers.js';
 import { TripoEmpty, TripoWorld } from './tripo.js';
-import { TRIPO_BASE, TRIPO_SLOTS } from '../core/tripo-monsters.js';
+import { Warrens } from './dungeon.js';
+import { PORTAL, inDungeon } from '../core/dungeon.js';
+import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
@@ -133,6 +135,8 @@ class Sim {
   slowMo(t) { this.slowT = Math.max(this.slowT, t); }
 
   restart() {
+    // (Fallen in the Hollowfang Warrens: back at its way in, not out on the road. src/sim/dungeon.js afterRestart.)
+    const inWarrens = !!this.player && inDungeon(this.player.x, this.player.z) && this.tick > 0;
     this.player.reset();
     this.player.y = this.world.height(this.player.x, this.player.z);
     this.casting.reset();
@@ -143,6 +147,8 @@ class Sim {
     this.opening?.reset();
     this.foeWorks = []; this.foeBigAt = 0;
     this.gameState = 0; this.gameT = 0; this.time = 0; this.stopT = 0; this.timeScale = 1;
+    this.wardenWanted = false; this.groanAt = -9;
+    resetCatacombs();
     this.reachedTown = false; this.packAt = 0; this.packN = 0; this.wave = null; this.lastMeleeAt = -9; this.graveAt = 0; this.heartSeen = false; this.hydraSeen = false; this.slowT = 0; this.frozen = false; this.slow = 1;
     // Clicks made before the restart are spent.
     const p = this.player, inp = this.input;
@@ -151,6 +157,7 @@ class Sim {
     this.input[INPUT.YAW] = yaw;
     this.input[INPUT.PITCH] = 0;
     self.postMessage({ type: 'restart', yaw });
+    this.warrens?.afterRestart(inWarrens);
   }
 
   step(dt) {
@@ -201,13 +208,14 @@ class Sim {
       // (A summoner's dead fall with it: theirs whose kill the summoner was.)
       if (k.dead && !k.looted && !k.heroKill) {
         const mine = this.time - (k.playerHitT ?? -1e9) < 30 || (k.owner && this.time - (k.owner.playerHitT ?? -1e9) < 30);
-        const theirs = k.heroFoe && this.time - (k.heroFoeT ?? -1e9) < 30;
+        // (Your party's blows are yours.)
+        const theirs = k.heroFoe && !k.heroFoe.hired && this.time - (k.heroFoeT ?? -1e9) < 30;
         if (!mine && theirs) { k.heroKill = true; this.heroWorld?.onKill(k.heroFoe, k); }
         else if (!mine && k.owner?.heroKill) k.heroKill = true;
       }
       if (k.dead && !k.looted && k.heroKill) k.looted = true;
       // You took one a hero was fighting: a kill stolen, or a life saved.
-      if (k.dead && !k.looted && k.heroFoe && !k.heroFoe.dead && this.time - (k.heroFoeT ?? -1e9) < 6) {
+      if (k.dead && !k.looted && k.heroFoe && !k.heroFoe.dead && !k.heroFoe.hired && this.time - (k.heroFoeT ?? -1e9) < 6) {
         const h = k.heroFoe;
         this.event(EV.HERO, h.slot, TRIG[h.hp < h.maxHp * 0.35 ? 'saved_by_player' : 'player_steals_kill'], -1, -1, MOB_KEYS.indexOf(mobKind(k)), 0, 0);
       }
@@ -218,10 +226,12 @@ class Sim {
     if (this.opening) this.opening.update(tdt);
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     if (this.heroWorld && !this.frozen && tdt > 0) this.heroWorld.step(tdt);
+    if (!this.frozen && tdt > 0) this.warrens?.step(tdt);
     this.separate();
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     // (After the spells' update, which clears the frame's shapes.)
     this.heroWorld?.drawFx();
+    this.warrens?.drawFx();
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.tumblers.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);
@@ -275,9 +285,14 @@ class Sim {
     const p = this.player;
     // (Not her while you wake in the cave: you can't move, and she has to come close enough to pass a palm across your eyes.)
     const her = !this.opening ? this.villagers : this.opening.stage === OPENING.WAKE ? [] : this.villagers.slice(1);
-    const list = [...this.knights, ...this.heroes.filter((h) => h.active && !h.surf && !h.jump), ...her];
+    // (One list, kept between ticks, of the bodies that are up and about: the dead and the dormant are never pushed.)
+    const list = this.sepList || (this.sepList = []);
+    list.length = 0;
+    for (const k of this.knights) if (!k.dead && !k.dormant) list.push(k);
+    for (const h of this.heroes) if (h.active && !h.surf && !h.jump && !h.dead) list.push(h);
+    for (let i = this.opening && this.opening.stage !== OPENING.WAKE ? 1 : 0; i < (this.opening?.stage === OPENING.WAKE ? 0 : this.villagers.length); i++) if (!this.villagers[i].dead && !this.villagers[i].dormant) list.push(this.villagers[i]);
+    void her;
     for (const k of list) {
-      if (k.dead || k.dormant) continue;
       const P = k.bodyRadius || 0.82;
       const dx = p.x - k.x, dz = p.z - k.z, d = Math.hypot(dx, dz);
       if (d < P && d > 1e-3 && !k.iframes && Math.abs(p.y - k.y) < 4) {
@@ -289,10 +304,11 @@ class Sim {
     for (let i = 0; i < list.length; i++) {
       for (let j = i + 1; j < list.length; j++) {
         const a = list[i], b = list[j];
-        if (a.dead || b.dead || a.dormant || b.dormant) continue;
         // Two knights keep a body between them, so blades and boards don't pass through shoulders.
         const R = a instanceof Knight && b instanceof Knight ? 1.3 : (a.bodyRadius || 0.5) * 0.7 + (b.bodyRadius || 0.5) * 0.7;
-        const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+        const dx = b.x - a.x, dz = b.z - a.z;
+        if (dx * dx + dz * dz >= R * R) continue;
+        const d = Math.hypot(dx, dz);
         if (d < R && d > 1e-3 && Math.abs(a.y - b.y) < 4) {
           const push = (R - d) / d * 0.5;
           this.nudgeBody(b, dx * push, dz * push, 0.4);
@@ -365,7 +381,7 @@ class Sim {
       case 9: k.hp = 1; break;
       case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
       case 18: if (k.force) k.force(this, b | 0); break;
-      case 19: if (k.sever) k.sever(this, b | 0); break;
+      case 22: if (k.sever) k.sever(this, b | 0); break;   // (Was 19, which the stand-the-player command above already takes.)
       case 20: if (k.startCast) { k.goal = 1; k.aggro = true; k.hostile = true; k.startCast(this, Object.keys(FOE)[b | 0]); } break;
       case 10: k.hostile = true; k.combat = 1; k.combatTarget = 1; k.shieldUp = 1; k.shieldTarget = 1; k.pauseT = 0; break;
       case 11: this.restart(); break;
@@ -420,6 +436,8 @@ class Sim {
 Sim.prototype.place = function (d) {
   this.restart();
   if (!d || (this.opening && d.openingRevision !== OPENING_REVISION)) return;
+  // (A game kept down in the Warrens loads at their portal, out in the woods: the Warrens start again from nothing.)
+  if (inDungeon(d.x, d.z)) d = { ...d, x: PORTAL.x + Math.sin(PORTAL.yaw) * 4, z: PORTAL.z + Math.cos(PORTAL.yaw) * 4, y: -1e9, yaw: PORTAL.yaw };
   const p = this.player;
   const floor = this.world.heightFor(d.x, d.z, d.y);
   p.x = d.x; p.z = d.z; p.y = Math.max(d.y, floor);
@@ -511,7 +529,7 @@ async function boot(msg) {
   const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
   const firstTripo = sim.knights.length;
   for (let i = 0; i < TRIPO_SLOTS; i++) sim.knights.push(new TripoEmpty(sim.knights.length));
-  sim.tripo = new TripoWorld(sim, base, tripoRoster, tripoPalettes, firstTripo, TRIPO_SLOTS);
+  sim.tripo = new TripoWorld(sim, base, withVariants(tripoRoster), tripoPalettes, firstTripo, TRIPO_SLOTS);
   // The other Tessariels: the render thread chose who's in the world this session (src/core/heroes.js makeCast).
   if (msg.heroes?.length) {
     const [hMeta, hBin, kit] = await Promise.all([
@@ -525,6 +543,8 @@ async function boot(msg) {
     sim.heroWorld = new HeroWorld(sim, sim.heroes);
     if (msg.hour !== undefined) sim.heroWorld.setHour(msg.hour);
   }
+  // The Hollowfang Warrens (src/sim/dungeon.js): after the Tripo lairs and the heroes, which it uses.
+  sim.warrens = new Warrens(sim);
   for (const form of LISANDRA_FORMS) {
     sim.villagers.push(new VillageWalker(await fetchBuf(base + form.asset), form, msg.opening));
   }
@@ -549,6 +569,11 @@ async function boot(msg) {
     if (m.type === 'heroWalk') sim.heroWorld?.walkFor(m.slot, m.seconds, m.mode);
     if (m.type === 'heroTalk') sim.heroWorld?.talkTo(m.slot, m.on);
     if (m.type === 'heroDebug') sim.heroWorld?.debug(m);
+    // Your party, of the Free Company (src/ui/party.js): hired, let go, a level for each.
+    if (m.type === 'hire') { const ok = sim.heroWorld?.hire(m.slot, m) || false; self.postMessage({ type: 'hired', slot: m.slot, ok, id: m.id }); }
+    if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
+    if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
+    if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
     if (m.type === 'warden') { sim.wardenWanted = true; return; }
     if (m.type !== 'place') return;
     try { sim.place(m.data); self.postMessage({ type: 'placed', id: m.id }); } catch (err) {

@@ -41,6 +41,17 @@ To give another model the same treatment, set `trueLook = true` on its body in `
 model looks, so only do it with the owner's say-so. The other Tripo bodies (heroes, undead, field creatures) have the
 same normal-map problem.
 
+## The other Tessariels: their own paint, not a knight's steel
+
+The heroes are drawn with `ARMOR`, but their metal and roughness were guessed from their paint when they were built
+(`derive_pbr` in `tools/armor/rig_armor.py`): faces, hair, cloth and leather came out as polished metal, and `ARMOR`'s
+knight's steel then turned their dark paint into blackened plate, so every hero who wasn't a lancer read as a dark chrome
+statue. Each hero body sets `heroLook` in `renderer.js` (`-1`, or `-2` for the classes in plate, lancers and paladins), sent
+as `info.z`. In `ARMOR`, `heroLook` keeps metal only where the paint is steel-grey or gilt (on the plate classes, anywhere
+but skin and the darkest cloth), turns skin matte, skips the dark-paint block, and draws the knights' mail tubes that
+`rig_armor.py` adds to every body as dark cloth. A rebuild with Tripo's own metal and roughness maps (`compose` in
+`tools/heroes/build.py`) would do this properly; this does it without one.
+
 ## The witch's gown: no cloth bones, no ripple
 
 On the owner's word ("so her cloth doesn't dance at the beginning when she talks to you"):

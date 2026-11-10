@@ -208,7 +208,7 @@ export class QuestBook {
     for (const id of this.active()) {
       const st = this.step(id);
       if (!st) continue;
-      if (st.warden && kind === 8 && inCrypt(x, y, z)) { this.on.toast('The warden is down. Somewhere above, a rope goes slack.', 'step'); this.advance(id); continue; }
+      if (st.warden && kind === 8 && AREAS.catacombs(x, y, z)) { this.on.toast('The warden is down. Somewhere above, a rope goes slack.', 'step'); this.advance(id); continue; }
       if (!st.kill || !AREAS[st.kill](x, y, z) || kind === 2 || (st.of != null && kind !== st.of)) continue;
       const s = this.q[id];
       s.n++;

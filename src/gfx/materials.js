@@ -654,12 +654,27 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   let nm = textureSample(normalTex, repeatSmp, in.uv);
   var rough = mr.g;
   var metal = mr.b;
+  // The other Tessariels (info.z below zero; src/core/heroes.js): their metal was guessed from the paint when they were
+  // built (tools/armor/rig_armor.py derive_pbr), so faces, hair, cloth and leather came out as polished metal. On them only
+  // what's painted like steel or gilt is metal (on the plate classes, info.z -2, anything but skin and the darkest cloth).
+  let heroLook = C.info.z < -0.5;
+  if (heroLook) {
+    let hi = max(albedo.r, max(albedo.g, albedo.b));
+    let lo = min(albedo.r, min(albedo.g, albedo.b));
+    let sat = (hi - lo) / max(hi, 1e-3);
+    let skin = smoothstep(0.12, 0.2, sat) * (1.0 - smoothstep(0.55, 0.7, sat)) * smoothstep(0.22, 0.35, hi) * step(albedo.b, albedo.g) * step(albedo.g, albedo.r) * smoothstep(0.04, 0.12, albedo.r - albedo.b);
+    let grey = (1.0 - smoothstep(0.08, 0.2, sat)) * smoothstep(0.16, 0.38, hi);
+    let gilt = smoothstep(0.45, 0.6, sat) * smoothstep(0.3, 0.55, hi) * step(albedo.b, albedo.g) * step(albedo.g, albedo.r) * smoothstep(0.15, 0.3, albedo.r - albedo.b);
+    let plate = select(max(grey, gilt), smoothstep(0.05, 0.14, hi), C.info.z < -1.5);
+    metal = metal * plate * (1.0 - skin);
+    rough = mix(max(rough, 0.68), rough, metal);
+  }
   let pxSize = max(length(dpdx(in.bind)), length(dpdy(in.bind)));
   let wound = evalWounds(in.bind, normalize(in.bindN), in.piece, F.camPos.w, pxSize);
   var n = perturb(n0, p, in.uv, nm.rg, 1.0);
   // Mail under the plates: rows of little rings, from the bind pose so they ride with the body. They melt to an
   // even dull steel with distance rather than sparkling.
-  let isMail = in.uv.x > 1.5;
+  let isMail = in.uv.x > 1.5 && !heroLook;
   let ab_ = abs(normalize(in.bindN));
   let qA = select(select(in.bind.xy, in.bind.xz, ab_.y > ab_.z), in.bind.zy, ab_.x > ab_.y && ab_.x > ab_.z);
   // (Larger on a phone, or at its resolution they melt away, and a visor's grille with them.)
@@ -677,6 +692,13 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
     metal = 1.0;
     n = n0;
   }
+  if (in.uv.x > 1.5 && heroLook) {
+    // (A hero's mail sleeves, built for the knights: dark quilted cloth under their own clothes.)
+    albedo = vec3f(0.075, 0.065, 0.055);
+    rough = 0.85;
+    metal = 0.0;
+    n = n0;
+  }
   if (in.uv.x < -1.5) {
     // A stump: the cap inside a limb that shows once what was beyond it has gone. Bone at the middle, meat round it, blackening at the rim.
     let rad = -2.0 - in.uv.x;
@@ -690,9 +712,10 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // plates' shapes readable against a bright sky instead of leaving a cutout.
   // Dark paint is neutral blackened steel with a tighter highlight, so the black knight stays black in full sun.
   let paint = dot(albedo, vec3f(0.2126, 0.7152, 0.0722));
-  let darkPaint = (1.0 - smoothstep(0.06, 0.2, paint)) * metal * (1.0 - C.info.z);
+  let steelK = max(C.info.z, 0.0);
+  let darkPaint = (1.0 - smoothstep(0.06, 0.2, paint)) * metal * (1.0 - steelK) * select(1.0, 0.0, heroLook);
   albedo = mix(albedo, vec3f(paint), darkPaint * 0.75);
-  albedo = mix(albedo, max(albedo * 0.85 + 0.015, vec3f(0.07, 0.068, 0.066) * mix(1.0, 3.4, C.info.z)), metal);
+  albedo = mix(albedo, max(albedo * 0.85 + 0.015, vec3f(0.07, 0.068, 0.066) * mix(1.0, 3.4, steelK)), metal);
   rough = mix(rough, max(rough, mix(0.34, 0.22, darkPaint)), metal);
   envBoost = mix(1.0, 1.4, metal);
   sunSpecScale = mix(1.0, 0.55, darkPaint);

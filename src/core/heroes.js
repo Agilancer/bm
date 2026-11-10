@@ -23,8 +23,16 @@
 import { ROADS, SUMMIT } from './terrain.js';
 import { CHURCH_DOOR, churchAt } from './church.js';
 
-// How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU.
+// How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU. (And the
+// Free Company's two quartermasters besides, BROKERS below.)
 export const HERO_SLOTS = { desktop: 16, lean: 6 };
+
+// The Free Company's quartermasters, who hire out a party (src/ui/party.js): one in town by the square, one at the
+// Hollowfang Warrens' portal (src/core/dungeon.js BROKER_SPOTS). Bodies of the heroes' own, people of their own.
+export const BROKERS = [
+  { broker: 'town', body: 'bard_m2', name: 'Aldous Fenn', title: 'Quartermaster of the Free Company' },
+  { broker: 'portal', body: 'bard_m3', name: 'Captain Merrow Vale', title: 'Quartermaster of the Free Company' },
+];
 
 // The classes, as the sim fights them. hp: how much they take. range: where they like to fight from. move: their pace
 // multipliers. size: body scale over the model's own height (lancers are the biggest; build.py already scales by class).
@@ -192,13 +200,14 @@ export function makeCast(roster, kit, names, n, seed) {
   const byClass = {};
   for (const h of roster) (byClass[h.cls] ||= []).push(h);
   for (const list of Object.values(byClass)) list.sort(() => r() - 0.5);
-  // Paladins are rare: one in a few.
-  const order = ['lancer', 'archer', 'rogue', 'dragoon', 'boomerang', 'bard', 'ninja', 'paladin'];
+  // A lancer and a paladin come first, so even a small world has a tank and a healer for the Free Company to hire out.
+  const order = ['lancer', 'paladin', 'archer', 'rogue', 'dragoon', 'ninja', 'boomerang', 'bard'];
   const bodies = [];
   for (let round = 0; bodies.length < n && round < 12; round++) {
     for (const c of order) {
       if (bodies.length >= n) break;
-      if (c === 'paladin' && round % 2) continue;
+      // (Paladins are rare: past the first two, one in a few.)
+      if (c === 'paladin' && round > 1 && round % 2) continue;
       const h = byClass[c]?.[round];
       if (h) bodies.push(h);
     }
@@ -221,4 +230,17 @@ export function makeCast(roster, kit, names, n, seed) {
     return { slot: i, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name, full, guild, persona, level, gold: Math.floor(20 + r() * 400),
       kit: k, string: k.string ? kit.strings[k.string] : null, seed: Math.floor(r() * 1e9) };
   });
+}
+
+// The quartermasters, after the cast (so the cast keeps its slots).
+export function withBrokers(cast, roster, kit) {
+  const out = cast.slice();
+  for (const b of BROKERS) {
+    const h = roster.find((x) => x.id === b.body) || roster.find((x) => x.cls === 'bard');
+    if (!h) continue;
+    const k = kit.heroes[h.id] || {};
+    out.push({ slot: out.length, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name: b.name, full: b.name, guild: 'The Free Company', persona: 'kind', level: 30,
+      gold: 0, kit: k, string: k.string ? kit.strings[k.string] : null, seed: 7 + out.length, broker: b.broker, title: b.title });
+  }
+  return out;
 }
