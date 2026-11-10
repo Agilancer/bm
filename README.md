@@ -479,6 +479,9 @@ To check it yourself:
   a fifth of the triangles, and the far shadow cascade always uses it. Past 40 m a body's pose is made at most 65 times a
   second, past 90 m 33 (phones too), and it holds its pose between. Swords, shields, doors and stalls are left out of the view and
   of any shadow cascade they can't reach. See "Far bodies" in `docs/RENDERING.md`.
+- **Edges and contact** (PCs). A leaf's or a needle's cut-out takes a share of each pixel's samples, so foliage is
+  smoothed like any other edge. The ground is dark under whoever stands on it where the sun gives no shadow, and the
+  grass bends for the five bodies nearest you. See "The look" in `docs/RENDERING.md`.
 - **Plates stay plates.** Each armour segment is bound to one joint, or to one constant mix of two joints across its whole
   surface, and blended as dual quaternions, so it moves rigidly. Shells that span a joint are cut along their weights. Only
   fingers and cloth keep soft weights. Because plates are rigid, the blade tests against a bind-space BVH of each plate, and

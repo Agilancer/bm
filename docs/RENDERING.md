@@ -317,6 +317,74 @@ if it was clear (a tenth of the tick); he looks five times a second now.
 - **A proper simplified mesh** (edge collapses, built by the tools) would keep outlines far better than welding, and
   could come in nearer. The owner's call: it's a rebuild of every body.
 
+## The look: leaves, flames, feet (2026-11-10)
+
+Looked at real frames for what's wrong or could be better: the town at noon, dusk and night, a villager and a knight
+up close, a room, the woods, the church, the far countries, the Warrens, Lisandra's cave, the phone tier. About fifty
+frames, drawn by the game's own loop on a software GPU (SwiftShader, 960x540, High; a minute a frame), **not on a
+graphics card and not in motion**. Nothing was found broken. Three things were made better and one put right.
+Tests: `tests/soft-cut.test.mjs`, `tests/far-bodies.test.mjs`.
+
+### Leaves and needles, smoothed by the sample
+
+A leaf or a needle is a painting's alpha tested once a pixel: in or out. Multisampling only smooths a triangle's
+edge, so a cut-out's edge was a stair of whole pixels at any sample count: the oaks' leaves blocky against the sky,
+the pines' needles a pepper of single pixels up close (and in motion, the shimmer of a forest).
+
+`cutMaskWGSL` (`materials.js`) gives each pixel a share instead: how far the alpha is past the cut, over how fast it
+changes across the pixel, as that many of the pixel's samples (`@builtin(sample_mask)`). Alpha-to-coverage would do
+the same, but WebGPU won't have it on a target with no alpha, and the HDR target is `rg11b10ufloat`.
+
+- **The town's leaves** (`pStaticCut`, `staticSoftCut`): the slope from two more reads of the painting, half a pixel
+  along and down. (Where the test is, the shader has branched on the layer, and a derivative can't be asked for.)
+- **The pines**: in their depth pass (`softDepth` in `pines.js`), with `fwidth`. The colour pass's `equal` test then
+  follows the depth sample by sample, so it needed no change.
+- With one sample the test is the old one exactly, and the phone's shaders and the `once` pipeline are untouched.
+  The shadow maps still cut the old way. `renderer.hardCut = true` before the pipelines are made keeps the old test.
+- The same view cut both ways in one run: the frame's mean level moved by under 2 of 255 either way, so leaves are
+  neither thinned nor thickened.
+
+### Flames
+
+A flame is a flat material (`lay == 101` in `STATIC`), and was one colour so bright it came out white: a torch's cone
+a paper hat, a candle's a yellow diamond. It's now white-hot where it faces you and deepens to the orange of its own
+light toward its rim, with a lick running up it. A lantern's pane seen square on is as bright as before.
+
+### The dark under whoever stands on the ground
+
+Where the sun casts no shadow (Lisandra's cave, a room, the night, the shade of a wood) nothing tied a body to the
+floor. `underfoot` in `shaders.js` keeps the sky's light, and three quarters of a lamp's, off the ground under the
+twelve bodies nearest you (`writeFeet` in `renderer.js`): a soft round dark as wide as the body stands, from half a
+metre under its soles to a hand's breadth over them. The sun's light is left alone: it has a shadow.
+
+- Not under you, nor the dead, nor on a phone. It fades out by 30 m, or by the thirteenth body if more stand near.
+- It's in `shadePBR`, so everything lit that way takes it (ground, floors, the bottom of a boot or a hem). Lisandra's
+  own `shadeTrue` doesn't: the floor under her does.
+- A pixel outside the square that holds all twelve pays six comparisons; inside it, a short loop.
+- `renderer.noFeet = true` turns it off.
+
+### The grass bends for whoever's nearest
+
+The grass shader bends for six bodies. They were you and the first five in the world (the duel's two knights and
+the crabs), wherever those were: a villager or a hero crossed a field without stirring it. They're now you and the
+five nearest that are drawn, the townsfolk among them. (A phone's shader reads the first three.)
+
+### Traps, taking pictures without a graphics card
+
+- A harness that drops a frame's `queue.submit` to save time must drop only that: a texture's mips are made with a
+  submit too. Dropped, every model that came in during play had only its first mip, and from any way off was a pale
+  mirror. Two "bugs" (white doors at night, a blank doorway) were that.
+- The kept shadow maps are "drawn" by dropped frames into nothing, and stay that way: before a real frame, set each
+  kept cascade's `front` and `back` to null so it's made again, whole.
+- A frame drawn by hand must do all the loop does: the doors near you are listed by the HUD's part of the frame.
+- The phone tier's far cascade is drawn on alternate frames: take a picture after several real frames, not two.
+
+### Seen and left
+
+- The far countries' places (the abbey, the keep, the falls) are boxes and drums with a stone painting that repeats
+  as a pattern across a tall wall. That's their modelling, not the engine.
+- The pines far off are a brighter, more saturated green than the same trees near to, under the same light.
+
 ## How "nothing else changed" was checked
 
 - Every WGSL module the game compiles was fingerprinted on main and on the branch, using a test harness that wraps
