@@ -232,6 +232,90 @@ What's left is mostly the browser's: putting a 3440×1440 frame on screen costs 
 - With `--disable-frame-rate-limit`, frames come in bursts of three (the game lets three queue, and the browser reports
   them done in batches), so fps stops tracking GPU time. Measure frame pacing with vsync on.
 
+## Far bodies, and a once-over of the frame (2026-11-10)
+
+Looked for what a frame does that it needn't, on the render thread, the simulation's and the GPU. All of it was found
+and measured in headless Chromium on a software GPU (SwiftShader), **not on a graphics card**: counts of triangles,
+draws and vertices are exact, CPU times are a profiler's, and the gain in GPU milliseconds on a real card isn't
+measured. Tests: `tests/far-bodies.test.mjs`.
+
+### What was found
+
+On a PC there was no coarse mesh at all (`addLod` returned early unless `tier.lean`), and every body in view was
+skinned every frame at any distance. In the town at noon: 58 bodies, 780,000 vertices skinned a frame, some of them
+knights 200 m off and ten pixels tall, each drawn with all 25,000 of its triangles into the view and every shadow
+cascade it reached.
+
+### What changed
+
+- **A coarse mesh for far bodies.** `addLod` now makes one on a PC too, by welding vertices in 4.5 cm cells
+  (`LOD_CELL`): about a fifth of the triangles. A body is drawn with it once a cell is 0.8 of a pixel or less
+  (`bodyDetail`: past 65 m at 1440p, 49 m at 1080p, 97 m at 4K; it follows the resolution step and a narrowed lens),
+  with 6% of give either way so one at the line doesn't flicker. The far shadow cascade, whose texels (6 cm or more)
+  are wider than the cells, always draws it. The near and middle cascades and everything nearer are as they were.
+  Lisandra keeps her whole mesh. The phone's rule (its own cell, past 16 m, every shadow) is untouched.
+- **Why one mesh and not two.** A second, of 11 cm cells, was tried for the farthest. Measured against the whole mesh
+  in the bind pose, front and side, 4.5 cm keeps 95 to 98% of the outline (a knight side on, 91%); 7.5 cm 83 to 97%;
+  11 cm 70 to 93%: arms and shins weld to a line and vanish. In a frame it showed as thinner figures. So it's the one.
+- **Far poses less often.** A skinned mesh is in world space and kept from frame to frame, so a body not skinned this
+  frame holds the pose it had. Past 40 m a pose is made at most 65 times a second, past 90 m 33 (`skinEvery`): at
+  60 fps that's every frame and every other; at 144, every other and every fourth. They're spread over the frames by
+  slot, so no frame takes them all. A body is always skinned the frame it comes back into view. What it holds still
+  moves every frame, so a far sword can lead its hand by a frame or two; at 90 m that's under a pixel.
+- **Swords, shields, doors and stalls.** The eight knights' swords and shields have no owner, and were drawn into
+  the view and all three cascades wherever in the land they were (86,000 triangles a pass); so were the town's 37
+  doors and stalls. Each prop and ground item now has a bounding sphere (`placeSphere`), tested against the view
+  and each cascade's square, as bodies are (`shadowcull.js`). The maps and the picture are the same.
+- `renderer.fullDetail = true` turns the coarse mesh and the slower poses off, for comparing.
+
+### Measured
+
+Town at noon, same view, `fullDetail` on and then off in one run (2560x1440, High):
+
+| a frame | before | after |
+|---|---|---|
+| triangles into the shadow maps | 1.37 M (main) | 0.94 M |
+| triangles into the view | 2.35 M | 1.87 M |
+| draws | 400 (main) | 330 |
+| vertices skinned, at 60 fps | 782,000 | 572,000 |
+| vertices skinned, at 144 fps | 782,000 | 300,000 |
+
+Two real frames of a paused world, one whole and one with the changes, at 640x360 (where the coarse mesh starts at
+16 m, so nearly every body has it): 141 of 230,400 pixels differ by more than 2 levels, all of them on the far
+figures (two frames of the same thing differ in 3 to 34). The software GPU drew the frame 14% faster (16.6 s to
+14.3 s). That says the work is less; it doesn't say how much a card gains.
+
+### The render thread
+
+A frame's script was about 1.7 ms of a 2.2 ms task (the town, 60 fps), with style and layout at 0.016 ms: the HUD
+doesn't cost. Three things did:
+
+- `renderer.frame` copied the whole snapshot (483 KB) out of shared memory first thing every frame, the slowest line
+  in it (0.18 ms). It now takes what every frame reads (the header, each live body's head, props and card), and a
+  body's pose and wounds only when they're uploaded. The snapshot is the frame's own while the frame lasts, so the
+  parts taken later are of the same tick.
+- `audio.play` made three audio nodes, an HRTF panner among them, for every footfall of every knight in the land:
+  50 a second, most from hundreds of metres off. A sound that would reach the ear 50 dB down or lower isn't played
+  (`UNHEARD`), and no longer takes its bank's turn from one that can be heard.
+- The map's two papers (3 s of terrain sums) were made on the render thread in 4 ms slices during the first half
+  minute of play. They're made on the land pool's thread (`maprows` in `job.worker.js`), the same sums in the same order.
+
+### The simulation
+
+2 ms a tick of its 8.3. A patrolling knight walked the whole line to his next post in 20 cm steps every tick to see
+if it was clear (a tenth of the tick); he looks five times a second now.
+
+### Not done, and why
+
+- **The kept shadows' copies.** Each frame copies a whole kept map into its cascade (two 4096² depth maps on Ultra),
+  and WebGPU won't copy part of a depth texture. Restoring only the texels the moving things touched last frame, with
+  a small depth-writing pass, would save most of that. It needs a tight bound on everything that moves, and a wrong
+  one leaves shadow trails: not one to do without a card to look at.
+- **The grass's culling pass** runs over the whole lattice (3.5 M cells on Ultra) though the view takes a third of
+  it. Cheap per cell; would need the lattice dispatched by the view's footprint.
+- **A proper simplified mesh** (edge collapses, built by the tools) would keep outlines far better than welding, and
+  could come in nearer. The owner's call: it's a rebuild of every body.
+
 ## How "nothing else changed" was checked
 
 - Every WGSL module the game compiles was fingerprinted on main and on the branch, using a test harness that wraps
