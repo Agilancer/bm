@@ -161,7 +161,7 @@ export class TownUI {
     this.given = new Set();         // who's fed you for nothing, once (lines: `gift`)
     this.papers = [];               // letters and pages kept: { title, text }
     this.quests = new QuestBook({
-      change: () => { this.town.setFlags(this.quests.flags); if (this.book) this.drawBook(); },
+      change: () => { this.marksStale = true; this.town.setFlags(this.quests.flags); if (this.book) this.drawBook(); },
       toast: (t, kind) => this.note(t, kind),
       done: () => {},
       // (Silas hands over the Sexton's Door's key with this one: src/main.js locked.)
@@ -313,9 +313,17 @@ export class TownUI {
   // The marks over the heads of those with work (src/folk/quests.js QuestBook.mark): a yellow ! for work to give, a grey ?
   // for work of theirs under way, a yellow ? for work to hand in. Seen as the balloons are: not through a house's walls.
   drawMarks(cam, px, pz, ph) {
-    const day = this.act.day(), seen = new Set();
+    // Which mark each one has: worked out again whenever a quest moves, and four times a second for what the pack and the day
+    // change. (Asking every frame went through every quest for every one of them.)
+    const now = performance.now(), kinds = this.markKinds || (this.markKinds = new Array(this.people.length).fill(null));
+    if (this.marksStale !== false || now - (this.markKindsAt ?? -1e9) >= 250) {
+      this.marksStale = false; this.markKindsAt = now;
+      const day = this.act.day();
+      for (let i = 0; i < this.people.length; i++) kinds[i] = this.quests.mark(this.people[i].id, this.pack.mats, day);
+    }
+    const seen = new Set();
     for (let i = 0; i < this.people.length; i++) {
-      const kind = this.quests.mark(this.people[i].id, this.pack.mats, day);
+      const kind = kinds[i];
       if (!kind) continue;
       const w = this.whereOf(i);
       if (!w || w.hy == null) continue;

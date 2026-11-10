@@ -251,6 +251,8 @@ export class Knight {
   }
 
   animate(dt, sim) {
+    // (write puts the palette out only after this has moved the pose: see posed there.)
+    this.posed = true;
     const { bank, pose, rA, rB, pA, pB, rig, J: J0 } = this;
     const { clips } = bank;
     const rot = pose.rot, pel = pose.pelvis;
@@ -514,16 +516,17 @@ export class Knight {
   plateTransforms(snap, cOff, tick) {
     if (this.invTick === tick) return;
     this.invTick = tick;
-    const pal = cOff + C_PALETTE;
-    this.rig.pieces.forEach((p, i) => {
-      const iv = this.inv[i];
+    const pal = cOff + C_PALETTE, inv = this.inv;
+    // Each plate's joints and weights flat, [j, w, j, w, ...], worked out once for the rig.
+    const jws = this.rig.plateJW || (this.rig.plateJW = this.rig.pieces.map((p) => p.joints.flat()));
+    for (let i = 0; i < jws.length; i++) {
+      const jw = jws[i], iv = inv[i];
       let qx = 0, qy = 0, qz = 0, qw = 0, dx = 0, dy = 0, dz = 0, dw = 0;
-      let sign0 = null;
-      for (const [j, w] of p.joints) {
-        const o = pal + j * 8;
-        let s = w;
-        if (sign0 === null) sign0 = o;
-        else if (snap[o] * snap[sign0] + snap[o + 1] * snap[sign0 + 1] + snap[o + 2] * snap[sign0 + 2] + snap[o + 3] * snap[sign0 + 3] < 0) s = -w;
+      const sign0 = pal + jw[0] * 8;
+      for (let n = 0; n < jw.length; n += 2) {
+        const o = pal + jw[n] * 8;
+        let s = jw[n + 1];
+        if (n && snap[o] * snap[sign0] + snap[o + 1] * snap[sign0 + 1] + snap[o + 2] * snap[sign0 + 2] + snap[o + 3] * snap[sign0 + 3] < 0) s = -s;
         qx += snap[o] * s; qy += snap[o + 1] * s; qz += snap[o + 2] * s; qw += snap[o + 3] * s;
         dx += snap[o + 4] * s; dy += snap[o + 5] * s; dz += snap[o + 6] * s; dw += snap[o + 7] * s;
       }
@@ -535,7 +538,7 @@ export class Knight {
       iv.t[2] = 2 * (-dw * qz - dx * qy + dy * qx + dz * qw);
       iv.q[0] = qx; iv.q[1] = qy; iv.q[2] = qz; iv.q[3] = qw;
       iv.r[0] = -qx; iv.r[1] = -qy; iv.r[2] = -qz; iv.r[3] = qw;
-    });
+    }
   }
 
   // Nearest plate along a world ray. Returns the bind-space point and normal.
@@ -1536,9 +1539,13 @@ export class Knight {
     snap[cOff + C.ARMOR] = this.armor;
     snap[cOff + C.LANDED] = this.stats.landed;
     snap[cOff + C.SPEED] = this.speed;
-    writePalette(this.pose, snap, cOff + C_PALETTE);
+    // The pose only moves in animate (a far hero's comes round every third tick: src/sim/hero.js). Not moved since the last write,
+    // the snapshot's palette, and the plates read off it, already are what these would write.
+    const posed = this.posed !== false;
+    this.posed = false;
+    if (posed) writePalette(this.pose, snap, cOff + C_PALETTE);
     this.writeProps(snap, cOff + C_PROPS);
-    this.plateTransforms(snap, cOff, sim.tick);
+    if (posed) this.plateTransforms(snap, cOff, sim.tick);
     snap[cOff + C.N_BLEEDS] = this.bleeds.length;
     this.bleeds.forEach((b, i) => {
       const o = cOff + C_BLEEDS + i * 8;
