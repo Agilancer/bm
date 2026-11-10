@@ -68,6 +68,9 @@ struct Frame {
   lights: array<Light, 28>,
   counts: vec4f,          // x = lights, y = cascades, z = pom, w = grass near radius
   caveAmb: vec4f,         // Lisandra's cave: its own ambient light, w = whether it's there at all
+  feet: array<vec4f, 12>, // who stands near you, for the dark under them (underfoot): x, z, their soles' height, how wide
+  feetBox: vec4f,         // the square that holds them all: min x, min z, max x, max z
+  feetY: vec4f,           // the lowest and highest ground they could darken, how far off the dark has faded out, how many
 };
 
 @group(0) @binding(0) var<uniform> F: Frame;
@@ -210,6 +213,27 @@ fn indoorAt(p: vec3f) -> f32 {
 }
 
 ${CAVE_WGSL}
+// What stands on the ground keeps the sky's light, and most of a lamp's, off the ground right under it: a soft dark
+// round its feet. The sun casts a shadow of its own; a cave, a room, the night and the shade had nothing, and whoever
+// stood in them stood a little off the floor. Not on a phone. (renderer.js writeFeet says who.)
+fn underfoot(p: vec3f) -> f32 {
+  if (LEAN || p.x < F.feetBox.x || p.z < F.feetBox.y || p.x > F.feetBox.z || p.z > F.feetBox.w || p.y < F.feetY.x || p.y > F.feetY.y) { return 1.0; }
+  var k = 1.0;
+  let count = i32(F.feetY.w);
+  for (var i = 0; i < count; i++) {
+    let f = F.feet[i];
+    let d = p.xz - f.xy;
+    let q = dot(d, d) / (f.w * f.w);
+    // (From half a metre under their soles, for a step or a slope, to a hand's breadth over them: the floor, and the very
+    // bottom of a boot or a hem.)
+    let h = p.y - f.z;
+    if (q >= 1.0 || h > 0.3 || h < -0.5) { continue; }
+    let near = clamp((F.feetY.z - distance(F.camPos.xz, f.xy)) / 6.0, 0.0, 1.0);
+    k *= 1.0 - 0.62 * (1.0 - q) * (1.0 - q) * near * (1.0 - smoothstep(0.04, 0.3, h));
+  }
+  return k;
+}
+
 fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32, ao: f32, shadow: f32) -> vec3f {
   let f0 = mix(vec3f(0.04), albedo, metal);
   let indoor = indoorAt(p);
@@ -243,9 +267,11 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   if (indoor > 0.5) { reflected *= select(0.22, 0.05, indoor > 1.5); }
   reflected *= mix(1.0, 0.06, cave);
   let sunOcc = mix(0.55, 1.0, shadow);
-  c += albedo * (1.0 - metal) * ambient * ao;
-  c += reflected * fr * ao * sunOcc * envBoost;
+  let foot = underfoot(p);
+  c += albedo * (1.0 - metal) * ambient * ao * foot;
+  c += reflected * fr * ao * sunOcc * envBoost * foot;
   // Lanterns and lit windows.
+  let lampFoot = mix(1.0, foot, 0.75);
   let nl = i32(F.counts.x);
   for (var i = 0; i < nl; i++) {
     let L = F.lights[i];
@@ -254,7 +280,7 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
     let r = L.posR.w;
     if (d2 > r * r) { continue; }
     let att = pow(max(1.0 - d2 / (r * r), 0.0), 2.0) / max(d2, 0.25);
-    c += brdf(n, v, normalize(d), albedo, f0, rough, metal) * L.colI.rgb * L.colI.w * att;
+    c += brdf(n, v, normalize(d), albedo, f0, rough, metal) * L.colI.rgb * L.colI.w * att * lampFoot;
   }
   return c;
 }

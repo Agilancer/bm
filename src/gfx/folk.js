@@ -105,6 +105,17 @@ export class FolkBodies {
     }
   }
 
+  // Whoever of them is drawn, to add(x, y, z, width): where each stands, for the dark under them (renderer.js writeFeet).
+  feet(s, add) {
+    for (let i = 0; i < this.bodies.length; i++) {
+      const b = this.bodies[i];
+      if (!b || !b.casts || b.posed < 0) continue;
+      const o = SLOT_HEAD + i * FOLK_STRIDE;
+      if (s[o + F.ACTIVE] < 0.5) continue;
+      add(s[o + F.X], s[o + F.Y], s[o + F.Z], 0.42);
+    }
+  }
+
   upload(q, time, params, paramsU) {
     const s = this.slot;
     if (!s) return;

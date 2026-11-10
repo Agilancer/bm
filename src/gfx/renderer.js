@@ -55,7 +55,7 @@ const STAFFS2_IDS = new Set(STAFFS2.map((s) => s.id));
 const OLD_STAFF_HELD = 0.8;
 
 const WORLD_FOV = 64 * Math.PI / 180;
-const FRAME_FLOATS = 448;
+const FRAME_FLOATS = 504;
 // A body's uniforms (materials.js CharU): its wounds, the pieces cut off, info, and the witch's mouth and lip line.
 const CHAR_UBO = 24 * 64 + 256 + 48;
 // The surfing hand's one joint, as a dual quaternion: it leans and swings about the shoulder with the steering (-1 left, 1 right), and rises as it comes out.
@@ -75,7 +75,7 @@ function surfHandPose(tilt, up, time) {
 // The middle of the skull in the left hand, in the view's own space. Printed by tools/wizard/skull_arm.py.
 export const SKULL_AT = [-0.483, -0.159, -0.783];
 
-const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440, CAVE: 444 };
+const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 440, CAVE: 444, FEET: 448, FEET_BOX: 496, FEET_Y: 500 };
 // Four floats, or a light's eight, into the frame's uniforms at o: as d.set([...], o) did, without an array each time.
 const put4 = (d, o, a, b, c, e) => { d[o] = a; d[o + 1] = b; d[o + 2] = c; d[o + 3] = e; };
 const putLight = (d, o, L, i) => { d[o] = L.p[0]; d[o + 1] = L.p[1]; d[o + 2] = L.p[2]; d[o + 3] = L.r; d[o + 4] = L.c[0]; d[o + 5] = L.c[1]; d[o + 6] = L.c[2]; d[o + 7] = i; };
@@ -101,6 +101,9 @@ const MAX_GROUND = 160;
 // one was tried for the farthest and thinned them (11 cm kept 70 to 80%: arms weld away), so there's the one.
 const LOD_CELL = 0.045;
 const LOD_PIXELS = 0.8;
+// The dark the ground has under whoever stands on it (shaders.js underfoot): for the twelve bodies nearest you, out to
+// this far, where it's faded to nothing.
+const FEET = 12, FEET_REACH = 30;
 // How far off a body's pose is made less often than the screen's drawn (skinEvery), and how often it's still made, a second.
 const SKIN_MID = 40, SKIN_FAR = 90, SKIN_MID_HZ = 65, SKIN_FAR_HZ = 33;
 
@@ -1999,15 +2002,8 @@ export class Renderer {
     put4(d, O.WIND, 0.82, gust, 0.57, t);
     put4(d, O.GROUND, -GROUND_HALF, -GROUND_HALF, 1 / (2 * GROUND_HALF), 0);
     put4(d, O.BLOOD, -BLOOD_HALF, -BLOOD_HALF, 1 / (2 * BLOOD_HALF), this.useBloom ? 1 : 0);
-    // Bodies in the grass.
-    let bi = 0;
+    // Bodies in the grass: you, and whoever's nearest (writeFeet, below).
     put4(d, O.CHARS, snap[H.PX], snap[H.PY], snap[H.PZ], 0.45);
-    bi = 1;
-    for (let i = 0; i < 5; i++) {
-      const co = CHARS_START + i * C_SIZE;
-      if (snap[co + C.ACTIVE] > 0.5) { put4(d, O.CHARS + bi * 4, snap[co + C.X], snap[co + C.Y], snap[co + C.Z], i < 2 ? 0.6 : 1.5); bi++; }
-    }
-    for (; bi < 6; bi++) d[O.CHARS + bi * 4 + 3] = 0;
     // Lanterns, the nearest to the camera first. When there are more than the tier can light, each fades out before the
     // next one takes its place, so none switches off in view.
     const lights = this.lights;
@@ -2039,11 +2035,59 @@ export class Renderer {
     if (this.carryLight && take + spellLights < 28) { const L = this.carryLight; putLight(d, O.LIGHTS + (take + spellLights++) * 8, L, L.i); }
     put4(d, O.COUNTS, take + spellLights, this.tier.cascades, this.tier.pom, this.grassNearRadius * 1.9);
     if (this.caveAmb) d.set(this.caveAmb, O.CAVE); else put4(d, O.CAVE, 0, 0, 0, 0);
+    this.writeFeet(d, snap, cam);
     this.device.queue.writeBuffer(this.frameUBO, 0, d);
   }
 
   // What each body needs this frame. Off the screen it needn't be drawn, and if its shadow can't reach the screen either it
   // needn't even be skinned. On a phone a body far away is drawn from its coarse index list.
+  // Who's near you: for the grass they press flat (the five nearest, after you), and for the dark the ground has
+  // under whoever stands on it (shaders.js underfoot: the nearest twelve). Whoever was drawn last frame, the townsfolk
+  // among them, each where its soles are and as wide as it stands. (The grass used to bend for the first five bodies
+  // in the world and nobody else: the two knights of the duel and the crabs. A villager crossed a field like a ghost.)
+  // No dark under you, which you'd only see looking at your own boots, nor under the dead, who have no feet under
+  // them. If more than twelve stand near, the dark has faded out by the thirteenth, so nobody's comes or goes at a stroke.
+  writeFeet(d, snap, cam) {
+    const list = this.feetList || (this.feetList = []);
+    let n = 0;
+    const add = (x, y, z, r, down = false) => {
+      const dist = Math.hypot(x - cam.x, z - cam.z);
+      if (dist > FEET_REACH) return;
+      const e = list[n] || (list[n] = { x: 0, y: 0, z: 0, r: 0, d: 0, down: false });
+      e.x = x; e.y = y; e.z = z; e.r = r; e.d = dist; e.down = down; n++;
+    };
+    for (let i = 0; i < this.chars.length; i++) {
+      const c = this.chars[i], co = CHARS_START + i * C_SIZE;
+      if (!c.casts || snap[co + C.ACTIVE] < 0.5) continue;
+      add(snap[co + C.X], snap[co + C.Y], snap[co + C.Z], Math.min(3, Math.max(0.36, (c.bindR || 1.8) * 0.26)), snap[co + C.STATE] === 10);
+    }
+    const s = this.folk?.slot;
+    if (s) this.folk.feet(s, add);
+    list.length = n;
+    list.sort((a, b) => a.d - b.d);
+    // The grass: slots 1 to 5 (a phone's shader reads the first three).
+    for (let i = 1; i < 6; i++) {
+      const e = i <= n ? list[i - 1] : null;
+      if (e) put4(d, O.CHARS + i * 4, e.x, e.y, e.z, Math.min(1.8, Math.max(0.6, e.r * 1.3))); else d[O.CHARS + i * 4 + 3] = 0;
+    }
+    // The dark under them.
+    let take = 0, past = FEET_REACH;
+    let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9, y0 = 1e9, y1 = -1e9;
+    if (!this.tier.lean && !this.noFeet) {
+      for (let i = 0; i < n; i++) {
+        const e = list[i];
+        if (e.down) continue;
+        if (take === FEET) { past = e.d; break; }
+        const o = O.FEET + take++ * 4;
+        d[o] = e.x; d[o + 1] = e.z; d[o + 2] = e.y; d[o + 3] = e.r;
+        x0 = Math.min(x0, e.x - e.r); x1 = Math.max(x1, e.x + e.r); z0 = Math.min(z0, e.z - e.r); z1 = Math.max(z1, e.z + e.r);
+        y0 = Math.min(y0, e.y - 0.5); y1 = Math.max(y1, e.y + 0.3);
+      }
+    }
+    put4(d, O.FEET_BOX, x0, z0, x1, z1);
+    put4(d, O.FEET_Y, y0, y1, past, take);
+  }
+
   cullBodies(cam, snap) {
     const pl = this.planes;
     this.skinFrame = (this.skinFrame || 0) + 1;
