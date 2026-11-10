@@ -2,7 +2,7 @@
 // src/sim/dungeon.js): hiring a party at a quartermaster's post, walking the caves room by room with the party gathered, and
 // fighting the bosses by their calls: out of the circles and the fire, at the dragon's side, behind a pillar when she flies,
 // the adds first, the twins kept even. src/ui/autobrain.js calls in here; this keeps the Warrens' rules in one place.
-import { BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, ENTRY, EXIT_OUT, PACKS, PARTY, PILLARS, PORTAL, ROOMS, caveClear, caveFloorY, caveRoom, inDungeon, roleOf, roomOf, toWorld } from '../core/dungeon.js';
+import { BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, ENTRY, EXIT_OUT, PACKS, PARTY, PERCH, PILLARS, PORTAL, ROOMS, caveClear, caveFloorY, caveRoom, inDungeon, roleOf, roomOf, toWorld } from '../core/dungeon.js';
 import { hirePrice } from './party.js';
 
 // The level it goes down at, the first time (raised two each time the Warrens beat it three times over), and the level it
@@ -202,12 +202,15 @@ function pickTarget(live, f) {
   return live.reduce((a, c) => (a.d < c.d ? a : c));
 }
 
+// Behind a pillar from her perch (where she breathes from), not the one beside it.
 function hideSpot(m, boss) {
   let best = null, bd = Infinity;
+  const [sx, sz] = toWorld(PERCH.x, PERCH.z);
+  void boss;
   for (const [lx, lz, r] of PILLARS) {
     const [qx, qz] = toWorld(lx, lz);
-    if (dist(qx, qz, boss.x, boss.z) > 60) continue;
-    const ax = qx - boss.x, az = qz - boss.z, L = Math.hypot(ax, az) || 1;
+    const ax = qx - sx, az = qz - sz, L = Math.hypot(ax, az) || 1;
+    if (L < 12 || L > 60) continue;
     const hx = qx + ax / L * (r + 1.4), hz = qz + az / L * (r + 1.4);
     if (caveRoom(hx, hz) < 0.6) continue;
     const d = dist(hx, hz, m.x, m.z);

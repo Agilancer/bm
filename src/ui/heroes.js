@@ -205,8 +205,8 @@ export class HeroTalk {
     if (this.timers.length) { const due = this.timers.filter((x) => x.t <= this.t); this.timers = this.timers.filter((x) => x.t > this.t); for (const x of due) x.fn(); }
     this.snap = snap;
     const show = active && this.settings.tags !== 'off';
-    this.layer.style.display = active ? '' : 'none';
-    this.chat.style.display = active && this.settings.chatlog !== 'off' ? '' : 'none';
+    css(this.layer, 'display', active ? '' : 'none');
+    css(this.chat, 'display', active && this.settings.chatlog !== 'off' ? '' : 'none');
     const nk = snap[H.NCHARS] - this.heroes.length - LISANDRA_FORMS.length;
     this.firstHero = nk;
     const px = snap[H.PX], py = snap[H.PY], pz = snap[H.PZ];
@@ -227,14 +227,14 @@ export class HeroTalk {
       h.dist = Math.hypot(h.x - px, h.z - pz);
       h.bubbleT -= dt; h.markT = (h.markT || 0) - dt;
       const s = h.shown && h.dist < TAG_FAR ? toScreen(h.x, h.tagY || h.y + 2, h.z) : null;
-      if (!s) { h.tag.style.opacity = 0; h.bub.style.opacity = 0; h.mark.style.opacity = 0; return; }
+      if (!s) { css(h.tag, 'opacity', 0); css(h.bub, 'opacity', 0); css(h.mark, 'opacity', 0); return; }
       const k = Math.max(0.55, Math.min(1.05, 9 / s[2]));
       const fade = Math.min(1, (TAG_FAR - h.dist) / 10);
       if (show) {
-        h.tag.className = 'tag' + (h.dead ? ' dead' : '');
-        h.tag.querySelector('i').style.display = this.settings.tags === 'names' ? 'none' : '';
+        { const cn = 'tag' + (h.dead ? ' dead' : ''); if (h.tag.className !== cn) h.tag.className = cn; }
+        css(h.tagI || (h.tagI = h.tag.querySelector('i')), 'display', this.settings.tags === 'names' ? 'none' : '');
         const near = h.dist < 12;
-        const u = h.tag.querySelector('u');
+        const u = h.tagU || (h.tagU = h.tag.querySelector('u'));
         const line = near ? `Level ${h.p.level} ${CLASSES[h.p.cls].title}` : '';
         if (u.textContent !== line || !h.tagW) { u.textContent = line; h.tagW = h.tag.offsetWidth; h.tagH = h.tag.offsetHeight; }
       }
@@ -252,12 +252,12 @@ export class HeroTalk {
         const r = { x: s[0] - h.tagW * k / 2, y: s[1] - h.tagH * k, w: h.tagW * k, h: h.tagH * k };
         const under = !!hit(r, tags);
         tags.push(r);
-        h.tag.style.opacity = (h.fade * (under ? 0.28 : 1)).toFixed(2);
-        h.tag.style.transform = `translate(${s[0].toFixed(1)}px, ${s[1].toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`;
-      } else h.tag.style.opacity = 0;
+        css(h.tag, 'opacity', (h.fade * (under ? 0.28 : 1)).toFixed(2));
+        css(h.tag, 'transform', `translate(${s[0].toFixed(1)}px, ${s[1].toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`);
+      } else css(h.tag, 'opacity', 0);
       const lift = show ? 44 * k : 10;
       const talking = h.bubbleT > 0 && this.settings.bubbles !== 'off' && h.dist < 38;
-      h.bub.style.opacity = talking ? Math.min(1, h.bubbleT * 3, h.fade).toFixed(2) : 0;
+      css(h.bub, 'opacity', talking ? Math.min(1, h.bubbleT * 3, h.fade).toFixed(2) : 0);
       let top = s[1] - lift;
       if (talking) {
         const bk = Math.max(0.7, k), w = (h.bubW || 200) * bk, bh = (h.bubH || 40) * bk;
@@ -267,12 +267,12 @@ export class HeroTalk {
         r.y = Math.max(4, r.y);
         bubs.push(r);
         top = r.y + 3 + bh;
-        h.bub.style.transform = `translate(${(x + w / 2).toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${bk.toFixed(3)})`;
+        css(h.bub, 'transform', `translate(${(x + w / 2).toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${bk.toFixed(3)})`);
         top -= bh + 6;
       }
       const marked = h.markT > 0;
-      h.mark.style.opacity = marked ? Math.min(1, h.markT * 3, h.fade).toFixed(2) : 0;
-      if (marked) h.mark.style.transform = `translate(${s[0].toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`;
+      css(h.mark, 'opacity', marked ? Math.min(1, h.markT * 3, h.fade).toFixed(2) : 0);
+      if (marked) css(h.mark, 'transform', `translate(${s[0].toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`);
     }
     // The log fades line by line.
     // (Gone lines leave the page, so the log's backing goes with the last of them.)
@@ -1066,4 +1066,6 @@ export class HeroTalk {
   }
 }
 
+// A style set only when it changes: a frame's worth of writes to the page is otherwise a frame's worth of style work.
+const css = (el, k, v) => { const c = el._css || (el._css = {}); v = String(v); if (c[k] !== v) { c[k] = v; el.style[k] = v; } };
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));

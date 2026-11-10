@@ -437,7 +437,7 @@ export class Warrens {
     if (f.phase === 0 && frac < 0.55) {
       f.phase = 1; f.flyT = 26; f.breaths = 0;
       this.warn(10);
-      m.flying = true; f.clock.fly = 2.5;
+      m.flying = true; f.clock.fly = 5.5;
       this.spawnAdds('hf_whelps_1', ADDS.whelp, [m.x, m.z], 3, (w) => this.whelp(w), ['Blighted']);
       this.warn(12);
       m.script = (k, dt2, s2) => this.fly(k, dt2, s2, f, px, pz);
@@ -494,7 +494,7 @@ export class Warrens {
     if (d > 1.5) { k.vx = dx / d * 7; k.vz = dz / d * 7; k.yaw += clamp(wrapAngle(Math.atan2(dx, dz) - k.yaw), -dt * 2, dt * 2); }
     else { k.vx = k.vz = 0; k.yaw += clamp(wrapAngle(Math.atan2(cx - k.x, cz - k.z) - k.yaw), -dt * 2, dt * 2); }
     f.clock.fly -= dt;
-    if (f.clock.fly <= 0 && !f.flame) { f.flame = 1.2; this.warn(11); sim.event(EV.ROAR, k.x, k.y + 5, k.z, 1.6); }
+    if (f.clock.fly <= 0 && !f.flame) { f.flame = 2.2; this.warn(11); sim.event(EV.ROAR, k.x, k.y + 5, k.z, 1.6); }
     if (f.flame) {
       f.flame -= dt;
       if (f.flame <= 0) {
@@ -522,11 +522,13 @@ export class Warrens {
     if (!f || f.boss.key !== 'venomaw' || f.phase !== 1) return null;
     const m = this.bossBodies('venomaw').find((k) => !k.dead);
     if (!m) return null;
+    // (From her perch, where she breathes from: a pillar right beside it hides nothing.)
+    const [sx, sz] = toWorld(PERCH.x, PERCH.z);
     let best = null, bd = Infinity;
     for (const [lx, lz, r] of PILLARS) {
       const [qx, qz] = toWorld(lx, lz);
-      if (Math.hypot(qx - m.x, qz - m.z) > 60) continue;
-      const ax = qx - m.x, az = qz - m.z, L = Math.hypot(ax, az) || 1;
+      const ax = qx - sx, az = qz - sz, L = Math.hypot(ax, az) || 1;
+      if (L < 12 || L > 60) continue;
       const hx = qx + ax / L * (r + 1.3), hz = qz + az / L * (r + 1.3);
       if (caveRoom(hx, hz) < 0.6) continue;
       const d = Math.hypot(hx - x, hz - z);

@@ -654,7 +654,8 @@ export class Brain {
     }
     const hunting = this.job?.kind === 'hunt' || this.job?.kind === 'grind';
     // On the way somewhere, only what's on it; hunting, whatever's about. (Once it's in a fight, it finishes it.)
-    const reach = hunting || this.target ? 30 : 14;
+    // (Down the Warrens, the whole room's fight is its fight: a boss across the cave is still its mark.)
+    const reach = hunting || this.target || inDungeon(m.x, m.z) ? 30 : 14;
     const live = foes.filter((f) => fightable(f.kind, lvl, f.maxHp, f.slime) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
     if (!live.length) { this.target = null; this.kite = null; return false; }
     const near = live.reduce((a, b) => (a.d < b.d ? a : b)), dn = near.d;
