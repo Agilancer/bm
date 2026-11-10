@@ -27,8 +27,15 @@ export class SkillTree {
       this.tab = +b.dataset.tab;
       this.pick(TREES[this.tab].spells.find((n) => n.tier === 0).id);
     });
-    this.viewEl.addEventListener('click', (e) => { const n = e.target.closest('.tnode'); if (n && !this.bar.dragged) this.pick(n.dataset.id); });
-    this.viewEl.addEventListener('dblclick', (e) => { const n = e.target.closest('.tnode'); if (n) this.spend(n.dataset.id); });
+    // A click picks a node out; a second click on it within a moment spends a point in it. (The picture is drawn afresh at
+    // every pick, so the browser's own double click never sees the same element twice.)
+    this.viewEl.addEventListener('click', (e) => {
+      const n = e.target.closest('.tnode');
+      if (!n || this.bar.dragged) return;
+      const id = n.dataset.id, again = this.lastClick === id && performance.now() - this.lastAt < 400;
+      this.lastClick = again ? null : id; this.lastAt = performance.now();
+      if (again) this.spend(id); else this.pick(id);
+    });
     this.viewEl.addEventListener('mouseover', (e) => { const n = e.target.closest('.tnode.known[data-spell]'); this.bar.hover = n ? +n.dataset.spell : -1; });
     this.infoEl.addEventListener('click', (e) => {
       const b = e.target.closest('button');

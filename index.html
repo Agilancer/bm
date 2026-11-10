@@ -219,9 +219,9 @@
   #treeWrap { display: flex; gap: 12px; width: min(1240px, 100%); flex: 1 1 auto; min-height: 0; align-items: stretch; }
   #treeView { --c: #ccc; flex: 1 1 auto; min-width: 0; overflow: auto; background: rgba(12,9,6,.72); border: 1px solid rgba(201,163,92,.2); }
   .tcanvas { position: relative; margin: 6px auto; }
-  .tcanvas svg { position: absolute; left: 0; top: 0; pointer-events: none; }
-  .tcanvas path { fill: none; stroke: rgba(201,163,92,.22); stroke-width: 2; }
-  .tcanvas path.on { stroke: var(--c); stroke-opacity: .8; }
+  .tcanvas > svg { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .tcanvas > svg path { fill: none; stroke: rgba(201,163,92,.22); stroke-width: 2; }
+  .tcanvas > svg path.on { stroke: var(--c); stroke-opacity: .8; }
   .thead { position: absolute; top: 4px; text-align: center; font-size: 11px; letter-spacing: .1em; color: #8d8370; }
   .tblurb { position: absolute; font-size: 11px; line-height: 1.35; color: #a89d86; }
   .tnode { position: absolute; display: block; padding: 0; font: inherit; color: #6f675a; background: rgba(8,6,4,.85); border: 1px solid rgba(201,163,92,.25); cursor: pointer; transition: box-shadow .12s, border-color .12s, color .12s; }
