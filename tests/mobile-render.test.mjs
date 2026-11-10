@@ -20,7 +20,7 @@ function rendererFixture() {
       uploads.push({ source, values: Array.from(new Float32Array(source, dataOffset, size / 4)) });
       throw stop;
     } } },
-    chars: [{ casts: true, jointCount: 1, palette: {} }],
+    chars: [{ casts: true, skin: true, jointCount: 1, palette: {} }],   // (skin: posed this frame, which cullBodies decides)
     resize() {}, writeFrame() {}, cullBodies() {}, frameData: new Float32Array(444),
   });
   return { renderer, uploads, stop };

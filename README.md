@@ -457,13 +457,23 @@ ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is
   chest cut that way and gives it a coat's weights instead: the trunk by height, only the shoulder caps on the arms, the
   skirts shared between the legs. It also mirrors an arm plate that's on one side only (paladin_f2's right vambrace).
   Run it before `mail.py`, after `build.py`.
+- **Every piece checked against the bone it sits on** (`misplaced` in `rebind.py`, all 44 bodies): besides those six
+  chests, two boomerang knights had a chest strap bound to the left upper arm; it's on the trunk now. Nothing else
+  was bound to the wrong part of the body.
+- **Knee and elbow cops ride the bend** (`cops` in `rebind.py`): on 34 bodies the small plates over the knees and
+  elbows were each wholly on one bone, so they swung off the joint in a bend. They're bound half to each bone now, and
+  stay rigid.
+- **Where there's no plate at all.** The bodies are built from the armour parts of the source suits and nothing else:
+  no body under them. Where a suit shows bare arm or midriff (paladin_f2's upper arms: the single-suit female paladin
+  has none there either), there is nothing to restore, and the mail or the quilted coat is what covers it. Bodies made
+  from parts of several suits show more of it at rest (5.3% of the outline, against 3.2% for single-suit bodies).
 - `python tools/heroes/gaps.py [ids] --out DIR` poses each body with the game's clips, skins it as the GPU does, and
   counts what shows from four sides: see-through holes, the insides of plates, and the covers. Over all 44 bodies and six
   poses, holes fell from a mean of 0.15% of the outline to under 0.1%, and lancer_f2's chest (2.5%, standing still)
   closed. With her coat back on her, archer_f4's crouch went from 2.5% to 0.01%.
 - It was reviewed twice by two reviewers briefed as character artists of thirty years (2026-11-10), from game frames
-  taken headless. Left undone from their lists: knee and elbow cops bound half to each bone (the piece table doesn't
-  say which plate is one), the lower back in a deep crouch, and the lances' black and yellow stripes.
+  taken headless. Left undone from their lists: the lower back in a deep crouch (easing the liner onto the cuirass
+  sooner was tried and showed more cover, not less), and the lances' black and yellow stripes (the owner's item art).
 - The frames were of ten bodies on a software GPU at one sample a pixel; nobody has looked at the result on a real GPU.
 
 ### The Hollowfang Warrens
@@ -673,6 +683,13 @@ To check it yourself:
   under the title, before anyone's looking, so the first fight starts at a resolution it can hold. A strong phone climbs to as
   much as 1.7 million pixels; a slow one drops multisampling, then grass and bloom, to as few as 0.23 million, which is the
   one step that gives up a good deal of the look: the field goes to a flat lawn.
+- **Far bodies** (PCs). Past the distance where a 4.5 cm cell is under a pixel, a body is drawn with a welded mesh of
+  a fifth of the triangles, and the far shadow cascade always uses it. Past 40 m a body's pose is made at most 65 times a
+  second, past 90 m 33 (phones too), and it holds its pose between. Swords, shields, doors and stalls are left out of the view and
+  of any shadow cascade they can't reach. See "Far bodies" in `docs/RENDERING.md`.
+- **Edges and contact** (PCs). A leaf's or a needle's cut-out takes a share of each pixel's samples, so foliage is
+  smoothed like any other edge. The ground is dark under whoever stands on it where the sun gives no shadow, and the
+  grass bends for the five bodies nearest you. See "The look" in `docs/RENDERING.md`.
 - **Plates stay plates.** Each armour segment is bound to one joint, or to one constant mix of two joints across its whole
   surface, and blended as dual quaternions, so it moves rigidly. Shells that span a joint are cut along their weights. Only
   fingers and cloth keep soft weights. Because plates are rigid, the blade tests against a bind-space BVH of each plate, and

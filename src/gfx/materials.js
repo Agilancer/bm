@@ -410,7 +410,13 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       }
       let f = 0.85 + 0.15 * sin(F.camPos.w * 11.0 + p.x * 9.0) * sin(F.camPos.w * 7.3);
       // (Without bloom to carry it, that heat would only be a white square, so it's a plain gold instead.)
-      emissive = select(vec3f(14.0, 7.0, 2.4), vec3f(2.2, 1.2, 0.3), F.blood.w < 0.5) * f;
+      // White-hot where it faces you, deepening to the orange of its own light toward its rim, with a lick running up
+      // it: a flame, where it was one flat white shape (a torch's cone was a paper hat). A lantern's pane seen square on
+      // is as bright as ever.
+      let face = abs(dot(n0, v));
+      let lick = 0.5 + 0.5 * sin(p.y * 31.0 - F.camPos.w * 9.0 + (p.x + p.z) * 17.0);
+      let heat = smoothstep(0.12, 0.9, face) * (0.82 + 0.18 * lick);
+      emissive = select(mix(vec3f(2.2, 0.28, 0.02), vec3f(14.0, 7.0, 2.4), heat), mix(vec3f(1.2, 0.36, 0.04), vec3f(2.2, 1.2, 0.3), heat), F.blood.w < 0.5) * f;
       albedo = vec3f(0.0);
     }
   } else {
@@ -1131,6 +1137,41 @@ fn vn2(p: vec2f) -> f32 {
 `;
 
 // Grass, one instance per blade, lit per vertex.
+// A cut-out's edge in a multisampled frame. A leaf or a needle is a painting's alpha tested once a pixel: in or out, so
+// its edge is a stair of whole pixels however many samples the frame has (the samples only ever smooth a triangle's edge).
+// Here the test gives each pixel a share instead: how far the alpha is past the cut, over how fast it changes across the
+// pixel, as that many of the pixel's samples. With one sample it's the old test exactly.
+export const cutMaskWGSL = (samples) => /* wgsl */ `
+fn cutMask(a: f32, cut: f32, slope: f32) -> u32 {
+  let cov = clamp((a - cut) / max(slope, 0.0005) + 0.5, 0.0, 1.0);
+  let n = u32(cov * ${samples}.0 + 0.5);
+  return (1u << n) - 1u;
+}
+`;
+
+// STATIC with its leaves cut that way (renderer.js pStaticCut, on a PC). The alpha's slope comes from two more reads
+// of the painting half a pixel along and down: where the test is, the shader has already branched on the layer, and a
+// derivative can't be asked for there.
+const STATIC_HARD_CUT = 'if (params.x > 0.0 && tex.a < 0.5) { discard; }';
+export function staticSoftCut(samples) {
+  const swaps = [
+    ['@fragment fn fs(in: V, @builtin(front_facing) front: bool) -> Out {', '@fragment fn fs(in: V, @builtin(front_facing) front: bool) -> OutCut {'],
+    ['var o: Out;\n  o.depth = in.viewZ;', 'var o: OutCut;\n  o.mask = 0xFFFFFFFFu;\n  o.depth = in.viewZ;'],
+    [STATIC_HARD_CUT, `if (params.x > 0.0) {
+      let ax = textureSampleGrad(colorArr, repeatSmp, uv + dx * 0.5, layerI, dx, dy).a;
+      let ay = textureSampleGrad(colorArr, repeatSmp, uv + dy * 0.5, layerI, dx, dy).a;
+      o.mask = cutMask(tex.a, 0.5, (abs(ax - tex.a) + abs(ay - tex.a)) * 2.0);
+      if (o.mask == 0u) { discard; }
+    }`],
+  ];
+  let code = STATIC;
+  for (const [from, to] of swaps) {
+    if (code.split(from).length !== 2) throw new Error(`staticSoftCut: STATIC has changed under it (${from.slice(0, 40)})`);
+    code = code.replace(from, to);
+  }
+  return `${code}\nstruct OutCut { @location(0) color: vec4f, @builtin(sample_mask) mask: u32, @location(1) depth: f32 };\n${cutMaskWGSL(samples)}`;
+}
+
 export const GRASS = COMMON + /* wgsl */ `
 @group(1) @binding(0) var groundColor: texture_2d_array<f32>;
 @group(1) @binding(1) var groundDetail: texture_2d_array<f32>;

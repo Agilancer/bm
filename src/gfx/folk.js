@@ -84,7 +84,7 @@ export class FolkBodies {
       const b = this.bodies[i];
       if (!b) continue;
       const o = SLOT_HEAD + i * FOLK_STRIDE;
-      if (!s || s[o + F.ACTIVE] < 0.5) { b.seen = b.casts = false; this.map.inbox[FIN.SEEN + i] = 0; continue; }
+      if (!s || s[o + F.ACTIVE] < 0.5) { b.seen = b.casts = b.skin = b.wasCast = false; this.map.inbox[FIN.SEEN + i] = 0; continue; }
       const x = s[o + F.X], y = s[o + F.Y] + 0.9, z = s[o + F.Z];
       b.bx = x; b.by = y; b.bz = z; b.br = bodyRadius(1.4, b.bindR);
       let inside = 1e9;
@@ -95,8 +95,24 @@ export class FolkBodies {
       b.far = d > (b.far ? 14 : 16);
       // (Shadows from far off are lost in the cascade's texels anyway.)
       if (d > 70) b.casts = b.seen;
+      // A PC's far bodies: a coarser mesh, and a pose made less often than the screen's drawn (renderer.js bodyDetail, skinEvery).
+      b.detail = this.r.bodyDetail(d, b.detail);
+      const every = this.r.skinEvery(d);
+      b.skin = b.casts && (!b.wasCast || every < 2 || (this.r.skinFrame + i) % every === 0);
+      b.wasCast = b.casts;
       // (For the town's thread: whoever's drawn, body or shadow, is posed often; whoever isn't, seldom.)
       this.map.inbox[FIN.SEEN + i] = b.casts ? 1 : 0;
+    }
+  }
+
+  // Whoever of them is drawn, to add(x, y, z, width): where each stands, for the dark under them (renderer.js writeFeet).
+  feet(s, add) {
+    for (let i = 0; i < this.bodies.length; i++) {
+      const b = this.bodies[i];
+      if (!b || !b.casts || b.posed < 0) continue;
+      const o = SLOT_HEAD + i * FOLK_STRIDE;
+      if (s[o + F.ACTIVE] < 0.5) continue;
+      add(s[o + F.X], s[o + F.Y], s[o + F.Z], 0.42);
     }
   }
 
@@ -105,7 +121,7 @@ export class FolkBodies {
     if (!s) return;
     for (let i = 0; i < this.bodies.length; i++) {
       const b = this.bodies[i];
-      if (!b || !b.casts) continue;
+      if (!b || !b.skin) continue;
       const o = SLOT_HEAD + i * FOLK_STRIDE;
       const posed = s[o + F.POSED];
       if (posed !== b.posed) {
@@ -125,21 +141,21 @@ export class FolkBodies {
   compute(cp) {
     this.blankets.compute(cp);
     for (const b of this.bodies) {
-      if (!b || !b.casts || b.posed < 0) continue;
+      if (!b || !b.skin || b.posed < 0) continue;
       cp.setBindGroup(0, b.bg);
       cp.dispatchWorkgroups(Math.ceil(b.count / 128));
     }
   }
 
   // m, o: the cascade's matrix (renderer frameData at o), to leave out anyone wholly outside its square (shadowcull.js).
-  shadow(sp, m, o) {
+  // coarse: with the coarse mesh (every shadow on a phone, the far cascade's on a PC).
+  shadow(sp, m, o, coarse = true) {
     this.blankets.shadow(sp);
     for (const b of this.bodies) {
       if (!b || !b.casts || b.posed < 0) continue;
       if (m && !inCascade(m, o, b.bx, b.by, b.bz, b.br)) continue;
       sp.setVertexBuffer(0, b.outBuf);
-      sp.setIndexBuffer(b.lodIB, 'uint32');
-      sp.drawIndexed(b.lodCount);
+      if (coarse) { sp.setIndexBuffer(b.lodIB, 'uint32'); sp.drawIndexed(b.lodCount); } else { sp.setIndexBuffer(b.IB, 'uint32'); sp.drawIndexed(b.indices); }
     }
   }
 
@@ -150,7 +166,7 @@ export class FolkBodies {
       mp.setBindGroup(1, b.matBG);
       mp.setVertexBuffer(0, b.outBuf);
       mp.setVertexBuffer(1, b.sideVB);
-      if (lean && b.far) { mp.setIndexBuffer(b.lodIB, 'uint32'); mp.drawIndexed(b.lodCount); } else { mp.setIndexBuffer(b.IB, 'uint32'); mp.drawIndexed(b.indices); }
+      if (lean ? b.far : b.detail) { mp.setIndexBuffer(b.lodIB, 'uint32'); mp.drawIndexed(b.lodCount); } else { mp.setIndexBuffer(b.IB, 'uint32'); mp.drawIndexed(b.indices); }
     }
   }
 

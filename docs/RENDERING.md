@@ -75,10 +75,17 @@ On the owner's word ("so her cloth doesn't dance at the beginning when she talks
 
       python tools/lisandra/transfer_clips.py <old witch.glb> "LISANDRA - UGLY OLD WITCH NEW.glb" clips.glb
       python tools/lisandra_skirt.py witch clips.glb skirt.glb
-      python tools/lisandra/jaw_rig.py skirt.glb assets/game/lisandra/witch.glb
+      python tools/lisandra/jaw_rig.py skirt.glb jaw.glb
+      python tools/lisandra/hat_tassel.py jaw.glb assets/game/lisandra/witch.glb
 
   (The old witch's clips are in git: `git show f7ad16b:assets/game/lisandra/witch.glb`.) She has fitted sleeves, so her
   arms are turned out from the gown by 0.1 rad (`armClearance`), not the old ragged sleeves' 0.19.
+- **No tassel on her hat** (the owner's word, 2026-11-10). The model came with a thin tassel hanging from the brim
+  over her left shoulder, one piece with the hat. Tripo's rig hung its top on her head and its bottom on her left arm,
+  so in the game it stretched from the brim to wherever her arm was. `tools/lisandra/hat_tassel.py` leaves its 312
+  triangles out of the index list and draws the ring it grew from in to a point on the brim, so there's no hole.
+  Every vertex is still in the file, and only the index list and those eight points differ from the file before
+  (checked byte by byte). Pretty has no hat. `tests/render-models.test.mjs` pins it.
 - Her form in `src/core/lisandra.js` has no `cloth` entry, so `village-walker.js` makes no `Cloth`. `src/sim/cloth.js`
   and `tools/lisandra/cloth_rig.py` are kept but unused.
 - The skinning shader's 9 mm skirt ripple is turned off for her alone. `renderer.js` writes `skinParams[7] = 1` for
@@ -241,6 +248,159 @@ What's left is mostly the browser's: putting a 3440×1440 frame on screen costs 
   governor.
 - With `--disable-frame-rate-limit`, frames come in bursts of three (the game lets three queue, and the browser reports
   them done in batches), so fps stops tracking GPU time. Measure frame pacing with vsync on.
+
+## Far bodies, and a once-over of the frame (2026-11-10)
+
+Looked for what a frame does that it needn't, on the render thread, the simulation's and the GPU. All of it was found
+and measured in headless Chromium on a software GPU (SwiftShader), **not on a graphics card**: counts of triangles,
+draws and vertices are exact, CPU times are a profiler's, and the gain in GPU milliseconds on a real card isn't
+measured. Tests: `tests/far-bodies.test.mjs`.
+
+### What was found
+
+On a PC there was no coarse mesh at all (`addLod` returned early unless `tier.lean`), and every body in view was
+skinned every frame at any distance. In the town at noon: 58 bodies, 780,000 vertices skinned a frame, some of them
+knights 200 m off and ten pixels tall, each drawn with all 25,000 of its triangles into the view and every shadow
+cascade it reached.
+
+### What changed
+
+- **A coarse mesh for far bodies.** `addLod` now makes one on a PC too, by welding vertices in 4.5 cm cells
+  (`LOD_CELL`): about a fifth of the triangles. A body is drawn with it once a cell is 0.8 of a pixel or less
+  (`bodyDetail`: past 65 m at 1440p, 49 m at 1080p, 97 m at 4K; it follows the resolution step and a narrowed lens),
+  with 6% of give either way so one at the line doesn't flicker. The far shadow cascade, whose texels (6 cm or more)
+  are wider than the cells, always draws it. The near and middle cascades and everything nearer are as they were.
+  Lisandra keeps her whole mesh. The phone's rule (its own cell, past 16 m, every shadow) is untouched.
+- **Why one mesh and not two.** A second, of 11 cm cells, was tried for the farthest. Measured against the whole mesh
+  in the bind pose, front and side, 4.5 cm keeps 95 to 98% of the outline (a knight side on, 91%); 7.5 cm 83 to 97%;
+  11 cm 70 to 93%: arms and shins weld to a line and vanish. In a frame it showed as thinner figures. So it's the one.
+- **Far poses less often.** A skinned mesh is in world space and kept from frame to frame, so a body not skinned this
+  frame holds the pose it had. Past 40 m a pose is made at most 65 times a second, past 90 m 33 (`skinEvery`): at
+  60 fps that's every frame and every other; at 144, every other and every fourth. They're spread over the frames by
+  slot, so no frame takes them all. A body is always skinned the frame it comes back into view. What it holds still
+  moves every frame, so a far sword can lead its hand by a frame or two; at 90 m that's under a pixel. This one is on
+  every tier, the phone's too (where at 60 fps it's only the bodies past 90 m, every other frame).
+- **Swords, shields, doors and stalls.** The eight knights' swords and shields have no owner, and were drawn into
+  the view and all three cascades wherever in the land they were (86,000 triangles a pass); so were the town's 37
+  doors and stalls. Each prop and ground item now has a bounding sphere (`placeSphere`), tested against the view
+  and each cascade's square, as bodies are (`shadowcull.js`). The maps and the picture are the same.
+- `renderer.fullDetail = true` turns the coarse mesh and the slower poses off, for comparing.
+
+### Measured
+
+Town at noon, same view, `fullDetail` on and then off in one run (2560x1440, High):
+
+| a frame | before | after |
+|---|---|---|
+| triangles into the shadow maps | 1.37 M (main) | 0.94 M |
+| triangles into the view | 2.35 M | 1.87 M |
+| draws | 420 (main) | 340 |
+| vertices skinned, at 60 fps | 782,000 | 572,000 |
+| vertices skinned, at 144 fps | 782,000 | 300,000 |
+
+Two real frames of a paused world, one whole and one with the changes, at 640x360 (where the coarse mesh starts at
+16 m, so nearly every body has it): 141 of 230,400 pixels differ by more than 2 levels, all of them on the far
+figures (two frames of the same thing differ in 3 to 34). The software GPU drew the frame 14% faster (16.6 s to
+14.3 s). That says the work is less; it doesn't say how much a card gains.
+
+### The render thread
+
+A frame's script was about 1.7 ms of a 2.2 ms task (the town, 60 fps), with style and layout at 0.016 ms: the HUD
+doesn't cost. Three things did:
+
+- `renderer.frame` copied the whole snapshot (483 KB) out of shared memory first thing every frame, the slowest line
+  in it (0.18 ms). It now takes what every frame reads (the header, each live body's head, props and card), and a
+  body's pose and wounds only when they're uploaded. The snapshot is the frame's own while the frame lasts, so the
+  parts taken later are of the same tick.
+- `audio.play` made three audio nodes, an HRTF panner among them, for every footfall of every knight in the land:
+  50 a second, most from hundreds of metres off. A sound that would reach the ear 50 dB down or lower isn't played
+  (`UNHEARD`), and no longer takes its bank's turn from one that can be heard.
+- The map's two papers (3 s of terrain sums) were made on the render thread in 4 ms slices during the first half
+  minute of play. They're made on the land pool's thread (`maprows` in `job.worker.js`), the same sums in the same order.
+
+### The simulation
+
+2 ms a tick of its 8.3. A patrolling knight walked the whole line to his next post in 20 cm steps every tick to see
+if it was clear (a tenth of the tick); he looks five times a second now.
+
+### Not done, and why
+
+- **The kept shadows' copies.** Each frame copies a whole kept map into its cascade (two 4096² depth maps on Ultra),
+  and WebGPU won't copy part of a depth texture. Restoring only the texels the moving things touched last frame, with
+  a small depth-writing pass, would save most of that. It needs a tight bound on everything that moves, and a wrong
+  one leaves shadow trails: not one to do without a card to look at.
+- **The grass's culling pass** runs over the whole lattice (3.5 M cells on Ultra) though the view takes a third of
+  it. Cheap per cell; would need the lattice dispatched by the view's footprint.
+- **A proper simplified mesh** (edge collapses, built by the tools) would keep outlines far better than welding, and
+  could come in nearer. The owner's call: it's a rebuild of every body.
+
+## The look: leaves, flames, feet (2026-11-10)
+
+Looked at real frames for what's wrong or could be better: the town at noon, dusk and night, a villager and a knight
+up close, a room, the woods, the church, the far countries, the Warrens, Lisandra's cave, the phone tier. About fifty
+frames, drawn by the game's own loop on a software GPU (SwiftShader, 960x540, High; a minute a frame), **not on a
+graphics card and not in motion**. Nothing was found broken. Three things were made better and one put right.
+Tests: `tests/soft-cut.test.mjs`, `tests/far-bodies.test.mjs`.
+
+### Leaves and needles, smoothed by the sample
+
+A leaf or a needle is a painting's alpha tested once a pixel: in or out. Multisampling only smooths a triangle's
+edge, so a cut-out's edge was a stair of whole pixels at any sample count: the oaks' leaves blocky against the sky,
+the pines' needles a pepper of single pixels up close (and in motion, the shimmer of a forest).
+
+`cutMaskWGSL` (`materials.js`) gives each pixel a share instead: how far the alpha is past the cut, over how fast it
+changes across the pixel, as that many of the pixel's samples (`@builtin(sample_mask)`). Alpha-to-coverage would do
+the same, but WebGPU won't have it on a target with no alpha, and the HDR target is `rg11b10ufloat`.
+
+- **The town's leaves** (`pStaticCut`, `staticSoftCut`): the slope from two more reads of the painting, half a pixel
+  along and down. (Where the test is, the shader has branched on the layer, and a derivative can't be asked for.)
+- **The pines**: in their depth pass (`softDepth` in `pines.js`), with `fwidth`. The colour pass's `equal` test then
+  follows the depth sample by sample, so it needed no change.
+- With one sample the test is the old one exactly, and the phone's shaders and the `once` pipeline are untouched.
+  The shadow maps still cut the old way. `renderer.hardCut = true` before the pipelines are made keeps the old test.
+- The same view cut both ways in one run: the frame's mean level moved by under 2 of 255 either way, so leaves are
+  neither thinned nor thickened.
+
+### Flames
+
+A flame is a flat material (`lay == 101` in `STATIC`), and was one colour so bright it came out white: a torch's cone
+a paper hat, a candle's a yellow diamond. It's now white-hot where it faces you and deepens to the orange of its own
+light toward its rim, with a lick running up it. A lantern's pane seen square on is as bright as before.
+
+### The dark under whoever stands on the ground
+
+Where the sun casts no shadow (Lisandra's cave, a room, the night, the shade of a wood) nothing tied a body to the
+floor. `underfoot` in `shaders.js` keeps the sky's light, and three quarters of a lamp's, off the ground under the
+twelve bodies nearest you (`writeFeet` in `renderer.js`): a soft round dark as wide as the body stands, from half a
+metre under its soles to a hand's breadth over them. The sun's light is left alone: it has a shadow.
+
+- Not under you, nor the dead, nor on a phone. It fades out by 30 m, or by the thirteenth body if more stand near.
+- It's in `shadePBR`, so everything lit that way takes it (ground, floors, the bottom of a boot or a hem). Lisandra's
+  own `shadeTrue` doesn't: the floor under her does.
+- A pixel outside the square that holds all twelve pays six comparisons; inside it, a short loop.
+- `renderer.noFeet = true` turns it off.
+
+### The grass bends for whoever's nearest
+
+The grass shader bends for six bodies. They were you and the first five in the world (the duel's two knights and
+the crabs), wherever those were: a villager or a hero crossed a field without stirring it. They're now you and the
+five nearest that are drawn, the townsfolk among them. (A phone's shader reads the first three.)
+
+### Traps, taking pictures without a graphics card
+
+- A harness that drops a frame's `queue.submit` to save time must drop only that: a texture's mips are made with a
+  submit too. Dropped, every model that came in during play had only its first mip, and from any way off was a pale
+  mirror. Two "bugs" (white doors at night, a blank doorway) were that.
+- The kept shadow maps are "drawn" by dropped frames into nothing, and stay that way: before a real frame, set each
+  kept cascade's `front` and `back` to null so it's made again, whole.
+- A frame drawn by hand must do all the loop does: the doors near you are listed by the HUD's part of the frame.
+- The phone tier's far cascade is drawn on alternate frames: take a picture after several real frames, not two.
+
+### Seen and left
+
+- The far countries' places (the abbey, the keep, the falls) are boxes and drums with a stone painting that repeats
+  as a pattern across a tall wall. That's their modelling, not the engine.
+- The pines far off are a brighter, more saturated green than the same trees near to, under the same light.
 
 ## How "nothing else changed" was checked
 
