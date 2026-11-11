@@ -16,7 +16,7 @@ import { EV } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
 import { ELEM, FX, GLYPHS, MAT } from './spells.js';
 
-const { FIRE, FROST, ARCANE, STORM, HEAL, LIGHT, DRAIN, VOID, SPIRIT, POISON } = ELEM;
+const { FIRE, FROST, ARCANE, STORM, HEAL, LIGHT, DRAIN, VOID, SPIRIT, POISON, STONE } = ELEM;
 const TAU = Math.PI * 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -245,7 +245,9 @@ export function star3(c, x, y, z, spin, size, elem, mat = MAT.STEEL, n = 2, glow
 export function rang3(c, x, y, z, spin, size, elem, mat = MAT.GOLD, glow = 0.8, tilt = 0.12) {
   for (const k of [-1, 1]) {
     const a = spin + k * 0.95, dx = Math.sin(a), dz = Math.cos(a), dy = tilt * k;
-    c.fx(FX.BOX, elem, x + dx * size * 0.24, y + dy * size * 0.24, z + dz * size * 0.24, size * 0.085, dx, dy, dz, size * 0.56, glow, 0, 0, mat, 0, size * 0.022);
+    // (Each arm in two lengths, the outer the thinner: it narrows to its tip.)
+    c.fx(FX.BOX, elem, x + dx * size * 0.12, y + dy * size * 0.12, z + dz * size * 0.12, size * 0.08, dx, dy, dz, size * 0.32, glow, 0, 0, mat, 0, size * 0.02);
+    c.fx(FX.BOX, elem, x + dx * size * 0.4, y + dy * size * 0.4, z + dz * size * 0.4, size * 0.052, dx, dy, dz, size * 0.3, glow, 0, 0, mat, 0, size * 0.014);
   }
   c.fx(FX.DISC, elem, x, y - 0.01, z, size * 0.52, 0, 1, 0, 0, 0.14 * Math.min(1, glow));
 }
@@ -266,12 +268,11 @@ function spear3(c, x, y, z, ax, ay, az, len, elem, glow = 1, light = 0) {
   c.fx(FX.LANCE, elem, x, y, z, 0.05, ax, ay, az, len, 1, light, light ? 4 : 0);
   if (glow) c.fx(FX.BEAM, elem, x, y, z, 0.05 * glow, ax, ay, az, len, 0.8, 0, 0, 0, 0, 0.02);
 }
-// A blast, seen from any side: a flare and a burst of rays at its heart (the ring on the ground is the caller's). dome: a
-// thin shell of it going out as well, for the ones that go out all round a hero.
-function boom(c, elem, x, y, z, r, light = 0, dome = false) {
-  c.burst(FX.FLARE, elem, x, y, z, r * 0.25, r * 0.7, 0.2, light ? { light, lightR: 3 + r * 1.5 } : {});
-  c.burst(FX.GLYPH, elem, x, y, z, r * 0.3, r * 0.9, 0.18, { ay: 0, len: rand(0, TAU), extra: GLYPHS.SPARK, alpha: 0.8 });
-  if (dome) c.burst(FX.SHOCK, elem, x, y, z, r * 0.3, r * 1.1, 0.4, { alpha: 0.35 });
+// A blast, seen from any side: a flare and a burst of rays at its heart (the ring on the ground is the caller's, and it's
+// the ring that says how far it reached: the flare is never wider than a body is tall).
+function boom(c, elem, x, y, z, r, light = 0) {
+  c.burst(FX.FLARE, elem, x, y, z, Math.min(0.5, r * 0.25), Math.min(1.7, r * 0.7), 0.2, light ? { light, lightR: 3 + r * 1.5 } : {});
+  c.burst(FX.GLYPH, elem, x, y, z, Math.min(0.6, r * 0.3), Math.min(2.2, r * 0.9), 0.18, { ay: 0, len: rand(0, TAU), extra: GLYPHS.SPARK, alpha: 0.8 });
 }
 // A crescent of light where a blade went: level round him the way he faces (as far out as the weapon reaches), or upright
 // before him, tipped by `up` (0 forward, a quarter turn straight up). It is the size of the blow, lit in the class's colour
@@ -324,7 +325,7 @@ export function arrive(h, sim, elem) {
   const k = nearest(sim.heroWorld, h.x, h.z, 6);
   if (k) h.yaw = h.faceYaw = dirTo(h, k);
   if (!h.swing && !h.jump && h.bank.clips.Sword_Block) h.play('Sword_Block', 2, 'full', 0.08);
-  if (h.fxOk()) { const c = sim.casting; c.burst(FX.RING, elem, h.x, h.y + 0.05, h.z, 0.4, 2.2, 0.35); c.burst(FX.PUFF, SPIRIT, h.x, h.y + 0.3, h.z, 0.4, 1.2, 0.4, { alpha: 0.4 }); hfx(sim, HFX.THUD, h.x, h.y, h.z, 0.3); }
+  if (h.fxOk()) { const c = sim.casting; c.burst(FX.RING, elem, h.x, h.y + 0.05, h.z, 0.4, 2.2, 0.35); c.burst(FX.PUFF, STONE, h.x, h.y + 0.3, h.z, 0.4, 1.2, 0.4, { alpha: 0.4 }); hfx(sim, HFX.THUD, h.x, h.y, h.z, 0.3); }
 }
 // A sign that drifts: a note rising off the lute, a sleeper's breath. Drawn till it's gone.
 function drift(w, h, x, y, z, vx, vy, vz, glyph, elem, size, life, spin = 0) {
@@ -721,24 +722,26 @@ function boardFlight(s, upright, big = 1) {
   }
   return new Float32Array([X[0] * big, X[1] * big, X[2] * big, 0, Y[0] * big, Y[1] * big, Y[2] * big, 0, Z[0] * big, Z[1] * big, Z[2] * big, 0, s.x, s.y, s.z, 1]);
 }
-// The board thrown, off the arm that carries it: it strikes, hangs there a moment turning, and goes for the next within
-// eight metres, slower than it left him, and the next; the line it has taken is left in the air behind it, corner to
-// corner; then it comes home to the arm. The hero's own board if he carries one; a board of light if he doesn't.
+// The board thrown, off the arm that carries it. The paladin's goes from foe to foe: it strikes, hangs there a moment
+// turning, and goes for the next within eight metres slower than it left him, the line from each to the next left in the
+// air a moment. The lancer's (o.through) goes straight through the whole line of them, standing and turning, and comes
+// straight back through them again. Then it's home on the arm, which braces to take it. The hero's own board if he
+// carries one; a board of light if he doesn't.
 function throwBoard(h, sim, m, X, o) {
   const { w, c, P } = X, real = !!h.offP && h.shieldStyle, side = real ? 'l' : 'r';
   let last = null, n = 0;
   h.yaw = h.faceYaw = dirTo(h, m);
-  h.hold = Math.max(h.hold, 0.45); h.holdFace = h.yaw; h.shotCd = Math.max(h.shotCd, 0.9);
+  h.hold = Math.max(h.hold, 0.45); h.holdFace = h.yaw; h.shotCd = Math.max(h.shotCd, 1.7);
   h.toss(side, 0.5, () => {
     if (!E.fightable(m)) return;
     const hp = h.handPos(side), v = 17;
-    last = [hp[0], hp[1], hp[2]];
-    shot(w, h, { x: hp[0], y: hp[1] + 0.1, z: hp[2], ...toward(hp[0], hp[1] + 0.1, hp[2], m, v), v, hopV: 11, hopPause: 0.09, backV: 0.85, dmg: o.dmg * P, hk: 'bash', poise: 60, o: { stun: 0.5 }, r: 0.75, life: 4, bounce: o.bounce, hop: 8, ret: true, hand: real ? 1 : 0, elem: o.elem, skim: true,
+    const legs = o.through ? { pierce: true, hang: true, life: Math.min(1.6, 2 * (dist(h, m) + 4) / (v * 0.72)), backV: 1 } : { bounce: o.bounce, hop: 8, hopV: 8, hopPause: 0.14, backV: 0.85, life: 4 };
+    shot(w, h, { x: hp[0], y: hp[1] + 0.1, z: hp[2], ...toward(hp[0], hp[1] + 0.1, hp[2], m, v), v, dmg: o.dmg * P, hk: 'bash', poise: 60, o: { stun: 0.5, elem: o.elem }, r: 0.75, ret: true, hand: real ? 1 : 0, elem: o.elem, skim: true, ...legs,
       onHit: (k, s) => {
         n++;
         if (h.fxOk()) {
-          const p = [k.x, k.y + 1.1, k.z], dx = p[0] - last[0], dy = p[1] - last[1], dz = p[2] - last[2], L = Math.hypot(dx, dy, dz) || 1;
-          c.burst(FX.BEAM, o.elem, last[0], last[1], last[2], 0.07, 0.02, 0.75, { ax: dx / L, ay: dy / L, az: dz / L, len: L, alpha: 0.7, extra: 0.03 });
+          const p = [k.x, k.y + 1.1, k.z];
+          if (last && !o.through) { const dx = p[0] - last[0], dy = p[1] - last[1], dz = p[2] - last[2], L = Math.hypot(dx, dy, dz) || 1; c.burst(FX.BEAM, o.elem, last[0], last[1], last[2], 0.14, 0.03, 0.4, { ax: dx / L, ay: dy / L, az: dz / L, len: L, alpha: 0.6, extra: 0.02 }); }
           c.burst(FX.FLARE, o.elem, k.x, k.y + 1.1, k.z, 0.35, 1.1, 0.22, { light: 10, lightR: 5 });
           c.burst(FX.RING, o.elem, k.x, k.y + 0.05, k.z, 0.2, 1.1, 0.3);
           hfx(sim, o.elem === LIGHT ? HFX.CHIME : HFX.SPARKS, k.x, k.y + 1.1, k.z, o.elem === LIGHT ? 5 + n * 2 : 30, 0.5);
@@ -751,10 +754,9 @@ function throwBoard(h, sim, m, X, o) {
         const vv = Math.hypot(s.vx, s.vy, s.vz) || 1;
         if (!real) cc.fx(FX.KITE, o.elem, s.x, s.y, s.z, 0.6, Math.sin(s.t * 16), 0, Math.cos(s.t * 16), 0, 1, 0, 0, 0.3, 0);
         cc.fx(FX.ORB, o.elem, s.x, s.y, s.z, 0.55, 0, 1, 0, 0, real ? 0.3 : 0.5, 7, 5);
-        if (!(s.pause > 0)) cc.fx(FX.TRAIL, o.elem, s.x, s.y, s.z, 0.22, -s.vx / vv, -s.vy / vv, -s.vz / vv, 2, 0.7);
-        cc.fx(FX.GLYPH, o.elem, s.x, s.y + 0.02, s.z, 0.9, 0, 1, 0, s.t * 9, 0.5, 0, 0, 0, 0, GLYPHS.SPARK);
+        if (!(s.pause > 0)) cc.fx(FX.TRAIL, o.elem, s.x, s.y, s.z, 0.26, -s.vx / vv, -s.vy / vv, -s.vz / vv, 1.6, 0.6);
+        cc.fx(FX.DISC, o.elem, s.x, s.y - 0.02, s.z, 0.7, 0, 1, 0, 0, 0.18);
       },
-      // (Caught on the arm it left: the arm braced, a ring of sparks off it.)
       caught: () => { if (h.fxOk()) hfx(sim, HFX.SPARKS, h.x, h.y + 1.2, h.z, 12); if (!h.swing && !h.jump) h.play(real ? 'Shield_OneShot' : 'Sword_Block', 1.8, 'upper', 0.06); },
       end: (s) => { if (real) h.free[1] = null; if (h.fxOk()) c.burst(FX.FLARE, o.elem, s.x, s.y, s.z, 0.2, 0.7, 0.2, { light: 6, lightR: 3 }); },
     });
@@ -774,15 +776,18 @@ function pillar(h, sim, x, z, r, dmg, elem = LIGHT, o = {}) {
 
 // ---- paladin: hammers, the board, and the light out of the sky ----------------------------------------------------------
 
-// Five blows as fast as the arm will go, one way and then the other and the last from over his head: a thin crescent of
-// light where each went.
+// Five blows as fast as the arm will go, feet planted, no two alike and the last from over his head: a thin crescent of
+// light where each went, as it lands.
 CAST.zeal = (h, sim, m, { c, P }) => {
-  const A = ['Sword_Regular_A', 1.5, 0.55, 0.8], B = ['Sword_Regular_B', 1.5, 0.48, 0.78];
-  chain(h, sim, [A, B, A, B, ['Sword_Attack', 1.25, 0.24, 0.42]], (i) => {
+  const A = ['Sword_Regular_A', 1.5, 0.55, 0.8], B = ['Sword_Regular_B', 1.5, 0.48, 0.78], C = ['Sword_Regular_C', 2.4, 0.33, 0.5];
+  let i0 = 0;
+  const step = (i) => {
     const last = i === 4;
     h.strikeAround(sim, 2.3, 1.1, (last ? 10 : 6) * P, 0, 2, { poise: last ? 90 : 25, ...(last ? { shove: 4 } : {}) });
-    if (h.fxOk()) crescent(c, h, last ? 2.1 : 1.7, LIGHT, { up: last ? 1.2 : i % 2 ? -0.4 : 0.6, life: last ? 0.16 : 0.1 });
-  }, { lunge: 1.4 });
+    if (h.fxOk()) crescent(c, h, last ? 2.1 : 1.7, LIGHT, { up: last ? 1.2 : [0.6, -0.4, 0.2, -0.6][i], life: last ? 0.16 : 0.1 });
+    i0 = i;
+  };
+  chain(h, sim, [A, B, C, B], step, { lunge: 0.8, mask: 'upper', done: () => chain(h, sim, [['Sword_Attack', 1.25, 0.24, 0.42]], () => step(4), { lunge: 1.4 }) });
 };
 // A hammer of light made in the raised fist, flung end over end, and coming home to the hand: what it strikes first, it stops on.
 CAST.hammer_throw = (h, sim, m, { w, P, rk }) => {
@@ -808,7 +813,7 @@ CAST.smite = (h, sim, m, { c, P }) => {
     });
     const f = hit[0] ? [hit[0].x, hit[0].y + 1.2, hit[0].z] : h.ahead(0.9);
     hfx(sim, HFX.CHIME, f[0], f[1], f[2], 0, 0.5);
-  }, { lunge: 1.6 });
+  }, { lunge: 1.6, end: board ? 0.85 : 0.45 });
 };
 // The mace brought down into the ground at his feet, and the ground is hallowed where it struck: it burns what stands on it
 // (the dead twice over) and mends his own side.
@@ -830,7 +835,7 @@ CAST.holy_nova = (h, sim, m, { w, c, P, rk }) => {
     w.blast(h, h.x, h.z, h.y, r, 12 * P, { kind: 'bash', poise: 70, shove: 7, stun: 0.8 });
     for (const o of sideOf(h)) if (!o.dead && dist(o, h) < r + 1) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.08);
     if (h.fxOk()) {
-      boom(c, LIGHT, h.x, h.y + 0.6, h.z, r * 1.1, 16, true);
+      boom(c, LIGHT, h.x, h.y + 0.6, h.z, r * 1.1, 16);
       c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.5, r, 0.5);
       c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.3, r * 0.6, 0.6);
       c.burst(FX.COLUMN, LIGHT, h.x, h.y, h.z, 3, 4.5, 0.5, { len: 1.6 });
@@ -868,10 +873,10 @@ CAST.fist_of_heavens = (h, sim, m, { w, c, P, rk }) => {
         hfx(sim, HFX.CHIME, k.x, k.y + 1.2, k.z, 12 + i * 2, 0.55);
       }
     }));
-  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, marks.length * 0.09 + 0.25] });
+  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, marks.length * 0.09 + 0.1], aimed: SKY });
 };
 // A ward of light on whoever of his side is lowest: it takes the next blows for them, and mends a little. A shell of light
-// about them, three boards of it turning, and a pair of wings at their back.
+// about them and three boards of it turning; it flashes where a blow lands on it.
 CAST.divine_shield = (h, sim, m, { w, c, rk }) => {
   const who = lowest(w, h, 12, 0.6) || h;
   h.startSwing('LP_cheer', 1.0, [0.02], () => {
@@ -880,29 +885,34 @@ CAST.divine_shield = (h, sim, m, { w, c, rk }) => {
     if (who !== sim.player) { who.ward = who.maxHp * (0.2 + 0.03 * rk); who.wardT = 6; }
     else who.hp = Math.min(who.maxHp, who.hp + who.maxHp * 0.12);
     if (h.fxOk()) { c.burst(FX.COLUMN, LIGHT, who.x, who.y, who.z, 2.6, 3.4, 0.6, { len: 1.3, light: 12, lightR: 6 }); hfx(sim, HFX.CHIME, who.x, who.y + 1.4, who.z, 4, 0.6); }
+    let hp0 = who.ward ?? 0, flash = 0;
     zone(w, h, 5, (cc, z) => {
       if (who.dead) return;
-      const k = Math.min(1, z.t * 4, (5 - z.t) * 2), tall = who.rig ? who.rig.height : 1.8, open = Math.min(1, z.t * 2.5);
+      const k = Math.min(1, z.t * 4, (5 - z.t) * 2), tall = who.rig ? who.rig.height : 1.8;
       cc.fx(FX.RING, LIGHT, who.x, who.y + 0.06, who.z, 1.1, 0, 1, 0, 0, 0.8 * k);
-      cc.fx(FX.SHOCK, LIGHT, who.x, who.y + tall * 0.55, who.z, 1.25, 0, 1, 0, 0, 0.2 * k);
+      cc.fx(FX.SHOCK, LIGHT, who.x, who.y + tall * 0.55, who.z, 1.25, 0, 1, 0, 0, (0.2 + 0.6 * flash) * k);
       for (let i = 0; i < 3; i++) { const a = z.t * 2.2 + i * 2.094; cc.fx(FX.KITE, LIGHT, who.x + Math.sin(a) * 1.05, who.y + tall * 0.55, who.z + Math.cos(a) * 1.05, 0.5, Math.sin(a), 0, Math.cos(a), 0, 0.7 * k, 0, 0, 0.3, i); }
-      const s = Math.sin(who.yaw ?? 0), co = Math.cos(who.yaw ?? 0);
-      cc.fx(FX.GLYPH, LIGHT, who.x - s * 0.3, who.y + tall * 0.78, who.z - co * 0.3, 1.5 * (0.5 + 0.5 * open), -s, 0, -co, 0, 0.6 * k, 0, 0, 0, 0, GLYPHS.WING);
-    });
-  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, 0.35] });
+    }, (z, dt) => { const now = who.ward ?? 0; if (now < hp0 - 0.5) flash = 1; hp0 = now; flash = Math.max(0, flash - dt * 5); });
+  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, 0.35], aimed: SKY });
 };
 // The mace held up for as long as it lasts, and pillars of light where the foe and its fellows stand: a ring on the ground
-// first, then the pillar.
+// first, then the pillar, white at its heart.
 CAST.heavens_fury = (h, sim, m, { w, c, P, rk }) => {
   h.startSwing('LP_cheer', 1.0, [0.02], () => {
     const cx = m.x, cz = m.z, n = 4 + rk;
     for (let i = 0; i < n; i++) {
-      const k = i === 0 ? null : pick(foesIn(w, cx, cz, 4)), a = rand(0, TAU), r = Math.sqrt(Math.random()) * 2.6;
-      const x = i === 0 ? cx : k && Math.random() < 0.6 ? k.x : cx + Math.sin(a) * r, z = i === 0 ? cz : k && Math.random() < 0.6 ? k.z : cz + Math.cos(a) * r;
-      w.later(i * 1.6 / n, () => { if (!h.dead && h.fxOk()) c.burst(FX.RING, LIGHT, x, sim.world.height(x, z) + 0.05, z, 1.3, 1.2, 0.35); });
-      w.later(i * 1.6 / n + 0.35, () => { if (!h.dead) { pillar(h, sim, x, z, 1.3, 11 * P); if (h.fxOk()) hfx(sim, HFX.CHIME, x, sim.world.height(x, z) + 1, z, pick([0, 4, 7, 12]), 0.4); } });
+      // (On one of them where there's one to be on; where there isn't, near where they were, and never at his own feet.)
+      const k = i === 0 ? null : pick(foesIn(w, cx, cz, 4.5));
+      let x = cx, z = cz;
+      if (k) { x = k.x; z = k.z; } else if (i) for (let t = 0; t < 4; t++) { const a = rand(0, TAU), r = Math.sqrt(Math.random()) * 2.6; x = cx + Math.sin(a) * r; z = cz + Math.cos(a) * r; if (Math.hypot(x - h.x, z - h.z) > 2.2) break; }
+      w.later(i * 1.6 / n, () => { if (!h.dead && h.fxOk()) c.burst(FX.RING, LIGHT, x, sim.world.height(x, z) + 0.05, z, 1.3, 1.2, 0.33); });
+      w.later(i * 1.6 / n + 0.35, () => {
+        if (h.dead) return;
+        pillar(h, sim, x, z, 1.3, 11 * P);
+        if (h.fxOk()) { const y = sim.world.height(x, z); c.burst(FX.BEAM, LIGHT, x, y + 7, z, 0.22, 0.03, 0.14, { ax: 0, ay: -1, az: 0, len: 7, extra: 0.1, light: 10, lightR: 5 }); hfx(sim, HFX.CHIME, x, y + 1, z, pick([0, 4, 7, 12]), 0.4); }
+      });
     }
-  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, 1.9] });
+  }, { still: true, mask: 'upper', end: 0.05, hold: [0.03, 1.9], aimed: SKY });
 };
 // The mace levelled at the foe, the light gathering on its head; and then a beam of it, held on the foe as it moves, wide
 // at the mace and a point at its far end, beating as it burns down the whole line.
@@ -913,15 +923,18 @@ CAST.judgment_beam = (h, sim, m, { w, c, P, yaw }) => {
   const tip = () => { const p = h.handPos('r'), a = h.aim || [Math.sin(dir), 0, Math.cos(dir)]; return [p[0] + a[0] * reach, p[1] + a[1] * reach, p[2] + a[2] * reach]; };
   h.startSwing('Sword_Block', 1.2, [0.99], () => {}, { still: true, hold: [0.25, T0 + T + 0.1], end: 0.6 });
   h.pointAt([Math.sin(dir), 0.04, Math.cos(dir)], T0 + T + 0.15, { lean: 0.14 });
+  let far = len;
   gather(c, h, LIGHT, 2.2, T0);
   zone(w, h, T0 + T, (cc, z) => {
     const p = tip(), ax = Math.sin(dir), az = Math.cos(dir);
-    if (z.t < T0) { const k = z.t / T0; cc.fx(FX.ORB, LIGHT, p[0], p[1], p[2], 0.08 + 0.2 * k, 0, 1, 0, 0, 1, 8 * k, 4); cc.fx(FX.GLYPH, LIGHT, p[0], p[1], p[2], 0.7 * (1.3 - k), 0, 0, 0, z.t * 9, 0.7 * k, 0, 0, 0, 0, GLYPHS.STAR6); return; }
+    if (z.t < T0) { const k = z.t / T0; cc.fx(FX.ORB, LIGHT, p[0], p[1], p[2], 0.08 + 0.2 * k, 0, 1, 0, 0, 1, 8 * k, 4); cc.fx(FX.GLYPH, LIGHT, p[0], p[1], p[2], 0.6 * (1.3 - k), 0, 0, 0, z.t * 9, 0.7 * k, 0, 0, 0, 0, GLYPHS.STAR4); return; }
     const t = z.t - T0, k = Math.min(1, t * 8, (T - t) * 5), beat = 1 + 0.18 * Math.sin(t * 38);
-    cc.fx(FX.BEAM, LIGHT, p[0], p[1], p[2], 0.3 * k * beat, ax, 0, az, len, 0.3, 0, 0, 0, 0, 0.08 * k);
-    cc.fx(FX.BEAM, LIGHT, p[0], p[1], p[2], 0.12 * k * beat, ax, 0, az, len, 1, 14 * k, 7, 0, 0.3, 0.03 * k);
+    // (As far as the last of them it's burning and a stride past: wide at the mace, a point where it ends, and a flare there.)
+    cc.fx(FX.BEAM, LIGHT, p[0], p[1], p[2], 0.3 * k * beat, ax, 0, az, far, 0.3, 0, 0, 0, 0, 0.05 * k);
+    cc.fx(FX.BEAM, LIGHT, p[0], p[1], p[2], 0.12 * k * beat, ax, 0, az, far, 1, 14 * k, 7, 0, 0.3, 0.02 * k);
+    cc.fx(FX.FLARE, LIGHT, p[0] + ax * far, p[1], p[2] + az * far, 0.3 * k * beat, 0, 1, 0, 0, 0.9);
     cc.fx(FX.FLARE, LIGHT, p[0], p[1], p[2], 0.45 * k * beat, 0, 1, 0, 0, 1);
-    for (let i = 0; i < 3; i++) { const f = ((t * 2.2 + i / 3) % 1) * len; cc.fx(FX.GLYPH, LIGHT, p[0] + ax * f, p[1], p[2] + az * f, 0.4 * (1 - f / len * 0.6), ax, 0, az, t * 6 + i, 0.6 * k, 0, 0, 0, i, GLYPHS.STAR6); }
+    for (let i = 0; i < 3; i++) { const f = ((t * 2.2 + i / 3) % 1) * far; cc.fx(FX.GLYPH, LIGHT, p[0] + ax * f, p[1], p[2] + az * f, 0.4 * (1 - f / far * 0.6), ax, 0, az, t * 6 + i, 0.6 * k, 0, 0, 0, i, GLYPHS.STAR4); }
   }, (z, dt) => {
     if (E.fightable(m)) dir += clamp(wrapAngle(dirTo(h, m) - dir), -1.6 * dt, 1.6 * dt);
     h.yaw = h.faceYaw = dir;
@@ -929,19 +942,21 @@ CAST.judgment_beam = (h, sim, m, { w, c, P, yaw }) => {
     if (z.t < T0) { if (z.t + dt >= T0 && h.fxOk()) hfx(sim, HFX.CHIME, h.x, h.y + 1.4, h.z, 0, 0.7); return; }
     if ((tick -= dt) > 0) return;
     tick += 0.13;
-    const hit = w.line(h, h.x, h.z, dir, len, 0.5, 3.4 * P, { kind: 'burn', poise: 12, quiet: true });
-    if (h.fxOk()) for (const k of hit) c.burst(FX.FLARE, LIGHT, k.x, k.y + 1.1, k.z, 0.3, 0.7, 0.15);
+    const hit = w.line(h, h.x, h.z, dir, len, 0.5, 3.4 * P, { kind: 'burn', poise: 55, quiet: true });
+    let reach = 4;
+    for (const k of hit) { reach = Math.max(reach, dist(h, k) + 1); sim.casting.shove(k, Math.sin(dir) * 2.5, Math.cos(dir) * 2.5); if (h.fxOk()) c.burst(FX.FLARE, LIGHT, k.x, k.y + 1.1, k.z, 0.3, 0.7, 0.15); }
+    far += (Math.min(len, reach) - far) * 0.5;
   });
 };
-// A hammer of light as tall as a house, out of the sky onto the foe, brought down by his own arm: it lands as his blow
-// does, and the ground is hallowed where it lands.
+// A hammer of light as tall as a house: it's there over the foe, the light gathering on it, and then his own arm brings
+// it down. It lands as his blow does, and the ground is hallowed where it lands.
 CAST.solar_hammer = (h, sim, m, { w, c, P, rk }) => {
-  const x = m.x, z = m.z, y = sim.world.height(x, z), T = 0.4, r = 2.6 + 0.2 * rk, face = dirTo(h, m);
+  const x = m.x, z = m.z, y = sim.world.height(x, z), T0 = 0.26, T = 0.44, r = 2.6 + 0.2 * rk, face = dirTo(h, m);
   let struck = false;
   const strike = () => {
     if (struck || h.dead) return;
     struck = true;
-    w.blast(h, x, z, y, r, 34 * P, { kind: 'bash', poise: 100, stun: 1.5, shove: 5 });
+    w.blast(h, x, z, y, r, 34 * P, { kind: 'bash', poise: 100, stun: 1.5, shove: 5, fromX: x, fromZ: z });
     for (let i = 0; i < 4; i++) w.line(h, x, z, face + i * Math.PI / 2, 4.5, 0.6, 10 * P, { kind: 'burn', poise: 30, quiet: true });
     w.zones.push({ kind: 'consecrate', owner: h, x, z, y, t: 0, life: 6, r: 2.8, tick: 0 });
     if (h.fxOk()) {
@@ -954,44 +969,49 @@ CAST.solar_hammer = (h, sim, m, { w, c, P, rk }) => {
     sim.event(EV.GROUND, x, y, z);
   };
   if (h.fxOk()) c.burst(FX.RUNE, LIGHT, x, y + 0.06, z, r, r, T + 0.3, { alpha: 0.9, extra: 1 });
-  zone(w, h, T + 0.9, (cc, q) => {
-    const u = Math.min(1, q.t / T), fall = u * u, hy = y + 1.5 + (1 - fall) * 11;
-    const fade = q.t > T + 0.5 ? Math.max(0, 1 - (q.t - T - 0.5) / 0.4) : 1;
-    // (Head down: the haft stands up out of it. It leans in as it comes and stands upright in the ground.)
-    hammer3(cc, x, hy + 0.9, z, face, Math.PI + (1 - u) * 0.5, 3.2, LIGHT, 1.6 * fade, 18 * fade);
-    if (u < 1) for (let i = 0; i < 5; i++) { const a = i * 1.257 + q.t * 2; cc.fx(FX.BEAM, LIGHT, x + Math.sin(a) * 0.9, hy + 1.6, z + Math.cos(a) * 0.9, 0.05, 0, 1, 0, 4 + i * 0.5, 0.5, 0, 0, 0, i * 0.2, 0.2); }
+  zone(w, h, T + 0.45, (cc, q) => {
+    // (Hung four metres up, head down and leaning, growing out of the light; then down, faster as it comes; then gone in a third of a second.)
+    const hang = Math.min(1, q.t / T0), u = clamp((q.t - T0) / (T - T0), 0, 1), hy = y + 1.5 + (1 - u * u) * 3.6;
+    const fade = q.t > T + 0.1 ? Math.max(0, 1 - (q.t - T - 0.1) / 0.3) : 1;
+    hammer3(cc, x - Math.sin(face) * (1 - u) * 0.8, hy + 0.9, z - Math.cos(face) * (1 - u) * 0.8, face + 0.6, Math.PI + (1 - u) * 0.35, 3.2 * (0.5 + 0.5 * hang), LIGHT, 0.7 * fade * hang, 18 * fade * hang);
+    if (u < 1) for (let i = 0; i < 5; i++) { const a = i * 1.257 + q.t * 2; cc.fx(FX.BEAM, LIGHT, x + Math.sin(a) * 0.9, hy + 1.6, z + Math.cos(a) * 0.9, 0.05, 0, 1, 0, 3 + i * 0.4, 0.5 * hang, 0, 0, 0, i * 0.2, 0.2); }
     else cc.fx(FX.DISC, LIGHT, x, y + 0.04, z, r, 0, 1, 0, 0, 0.6 * fade, 8 * fade, r * 2);
   }, (q) => { if (q.t >= T + 0.06) strike(); });
   // (His own blow, from over his head, timed to it: the mace is down as the hammer is.)
-  h.startSwing('Sword_Attack', 0.92, [0.24], strike, { still: true, hold: [0.3, 0.3], end: 0.5 });
+  h.startSwing('Sword_Attack', 0.84, [0.24], strike, { still: true, hold: [0.3, 0.2], end: 0.45 });
 };
-// The mace held to the sky for as long as it lasts, and hammers out of it one after another, all over where the foe and
-// its fellows stand: a ring on the ground where each will land, and then the hammer.
+// The mace held to the sky for as long as it lasts, and hammers out of it three at a time, all over where the foe and its
+// fellows stand: a ring on the ground where each will land, and then the hammer.
 CAST.hammer_storm = (h, sim, m, { w, c, P, rk }) => {
-  const n = 8 + 2 * rk, T = 0.45, dur = 2.2;
+  const n = 12 + 3 * rk, T = 0.42, dur = 2.2, bursts = Math.ceil(n / 3);
   gather(c, h, LIGHT, 2.4, 0.25);
   h.startSwing('LP_cheer', 1.0, [0.02], () => {
     const cx = m.x, cz = m.z, drops = [];
-    for (let i = 0; i < n; i++) { const a = rand(0, TAU), r = Math.sqrt(Math.random()) * 4; drops.push({ x: cx + Math.sin(a) * r, z: cz + Math.cos(a) * r, t0: i * dur / n, a, hit: false }); }
-    if (h.fxOk()) c.burst(FX.RING, LIGHT, cx, sim.world.height(cx, cz) + 0.05, cz, 4, 4.2, dur + 0.2, { alpha: 0.7 });
+    for (let i = 0; i < n; i++) {
+      let x, z;
+      // (Never on himself.)
+      for (let tries = 0; tries < 4; tries++) { const a = rand(0, TAU), r = Math.sqrt(Math.random()) * 4; x = cx + Math.sin(a) * r; z = cz + Math.cos(a) * r; if (Math.hypot(x - h.x, z - h.z) > 2) break; }
+      drops.push({ x, z, t0: Math.floor(i / 3) * dur / bursts + (i % 3) * 0.08, a: rand(0, TAU), hit: false });
+    }
+    if (h.fxOk()) c.burst(FX.RING, LIGHT, cx, sim.world.height(cx, cz) + 0.05, cz, 4, 4.1, dur + 0.2, { alpha: 0.35 });
     zone(w, h, dur + T + 0.3, (cc, q) => {
       for (const d of drops) {
         const u = (q.t - d.t0) / T;
         if (u < -0.4 || u > 1) continue;
         const y = sim.world.height(d.x, d.z);
-        cc.fx(FX.RING, LIGHT, d.x, y + 0.06, d.z, 1.15, 0, 1, 0, 0, 0.7 * clamp(u + 0.4, 0, 1));
-        if (u >= 0) { hammer3(cc, d.x - Math.sin(d.a) * (1 - u) * 1.5, y + 0.6 + (1 - u * u) * 8, d.z - Math.cos(d.a) * (1 - u) * 1.5, d.a, u * 9, 1.9, LIGHT, 1.2, 0); cc.fx(FX.TRAIL, LIGHT, d.x, y + 0.8 + (1 - u * u) * 8, d.z, 0.16, 0, 1, 0, 2.4, 0.6); }
+        cc.fx(FX.RING, LIGHT, d.x, y + 0.06, d.z, 1.15, 0, 1, 0, 0, 0.6 * clamp(u + 0.4, 0, 1));
+        if (u >= 0) { hammer3(cc, d.x - Math.sin(d.a) * (1 - u) * 2.2, y + 0.7 + (1 - u * u) * 7, d.z - Math.cos(d.a) * (1 - u) * 2.2, d.a, u * 9, 2.2, LIGHT, 0.9, 0); cc.fx(FX.TRAIL, LIGHT, d.x - Math.sin(d.a) * (1 - u) * 2.2, y + 0.9 + (1 - u * u) * 7, d.z - Math.cos(d.a) * (1 - u) * 2.2, 0.16, -Math.sin(d.a) * 0.3, 1, -Math.cos(d.a) * 0.3, 2.4, 0.6); }
       }
     }, (q) => {
       for (const d of drops) {
         if (d.hit || q.t < d.t0 + T) continue;
         d.hit = true;
         const y = sim.world.height(d.x, d.z);
-        w.blast(h, d.x, d.z, y, 1.15, 9 * P, { kind: 'bash', poise: 50, quiet: true });
+        w.blast(h, d.x, d.z, y, 1.15, 9 * P, { kind: 'bash', poise: 50, quiet: true, fromX: d.x, fromZ: d.z });
         if (h.fxOk()) { boom(c, LIGHT, d.x, y + 0.2, d.z, 1.5, 9); c.burst(FX.RING, LIGHT, d.x, y + 0.05, d.z, 0.2, 1.3, 0.3); if (Math.random() < 0.5) hfx(sim, HFX.THUD, d.x, y, d.z, 0.3); }
       }
     });
-  }, { still: true, end: 0.05, hold: [0.03, dur + 0.2] });
+  }, { still: true, end: 0.05, hold: [0.03, dur + 0.2], aimed: SKY });
 };
 
 // ---- lancer: the lance's light, the boards that turn round him, and the run ---------------------------------------------
@@ -1031,25 +1051,26 @@ CAST.tower_shields = (h, sim, m, { w, c, P, rk }) => {
       } });
   }, { still: true, end: 0.8, hold: [0.32, 0.3] });
 };
-// The lance swung flat through everything before him.
+// The lance swung flat through everything before him: one arc, as far out as its point.
 CAST.sweeping_cleave = (h, sim, m, { c, P }) => {
   h.startSwing('Sword_Attack', 1.0, [0.24], () => {
     h.strikeAround(sim, 3.3, 1.75, 13 * P, 0, 8, { kind: 'bash', poise: 70, shove: 7 });
-    if (h.fxOk()) { crescent(c, h, 3.3, STORM, { life: 0.3, light: 8 }); crescent(c, h, 2.6, FROST, { life: 0.25, y: 0.9 }); }
-  }, { lunge: 1.5, aimed: SWEEP });
+    if (h.fxOk()) crescent(c, h, 2.6, STORM, { life: 0.18, light: 8 });
+  }, { lunge: 1.5, aimed: SWEEP, end: 0.5 });
 };
-CAST.shield_throw = (h, sim, m, X) => throwBoard(h, sim, m, X, { dmg: 13, bounce: 3 + Math.floor(X.rk / 2), elem: STORM, upright: true, onHit: (k) => taunt(sim, h, k, 4) });
-// A spear of the lance's own light, made in the fist and thrown: through everything on its line, and what it goes through reels.
+CAST.shield_throw = (h, sim, m, X) => throwBoard(h, sim, m, X, { dmg: 13, through: true, elem: STORM, upright: true, onHit: (k) => taunt(sim, h, k, 4) });
+// The light gathered on the lance's own point; and a spear of that light thrown off it: through everything on its line,
+// and what it goes through reels.
 CAST.sunspear = (h, sim, m, { w, c, P }) => {
-  const stop = inHand(h, 'r', 0.3, (cc, p, k) => { const s = Math.sin(h.yaw), co = Math.cos(h.yaw); spear3(cc, p[0] - s * 1.1 * k, p[1], p[2] - co * 1.1 * k, s, 0.05, co, 2.4 * k, LIGHT, 2, 6 * k); });
+  const z0 = zone(w, h, 0.6, (cc, q) => { const t = weaponTip(h), k = Math.min(1, q.t / 0.3); cc.fx(FX.ORB, LIGHT, t[0], t[1], t[2], 0.08 + 0.2 * k, 0, 1, 0, 0, 1, 8 * k, 4); });
   throwIt(h, 1.0, () => {
-    stop();
+    z0.done = true;
     if (!E.fightable(m)) return;
     const hp = h.handPos('r'), v = 30, vel = toward(hp[0], hp[1], hp[2], m, v);
-    shot(w, h, { x: hp[0], y: hp[1], z: hp[2], ...vel, dmg: 18 * P, hk: 'puncture', poise: 90, o: { stun: 0.8 }, pierce: true, r: 0.6, life: 0.7, elem: LIGHT,
-      draw: (cc, s) => { const ax = s.vx / v, ay = s.vy / v, az = s.vz / v; spear3(cc, s.x - ax * 1.2, s.y - ay * 1.2, s.z - az * 1.2, ax, ay, az, 2.4, LIGHT, 2, 10); cc.fx(FX.TRAIL, LIGHT, s.x - ax * 1.2, s.y - ay * 1.2, s.z - az * 1.2, 0.14, -ax, -ay, -az, 3, 0.8); cc.fx(FX.FLARE, LIGHT, s.x + ax * 1.2, s.y + ay * 1.2, s.z + az * 1.2, 0.35, 0, 1, 0, 0, 1); }, });
+    shot(w, h, { x: hp[0], y: hp[1], z: hp[2], ...vel, dmg: 18 * P, hk: 'puncture', poise: 90, o: { stun: 0.8, elem: LIGHT }, pierce: true, r: 0.6, life: 0.7, elem: LIGHT,
+      draw: (cc, s) => { const ax = s.vx / v, ay = s.vy / v, az = s.vz / v; pike3(cc, s.x - ax * 1.4, s.y - ay * 1.4, s.z - az * 1.4, ax, ay, az, 2.6, LIGHT, 2.2, 1.6); cc.fx(FX.TRAIL, LIGHT, s.x - ax * 1.2, s.y - ay * 1.2, s.z - az * 1.2, 0.14, -ax, -ay, -az, 2.4, 0.7); cc.fx(FX.FLARE, LIGHT, s.x + ax * 1.2, s.y + ay * 1.2, s.z + az * 1.2, 0.3, 0, 1, 0, 0, 1); }, });
     sim.event(EV.WHOOSH, hp[0], hp[1], hp[2]);
-  }, { mask: 'full', cut: stop });
+  }, { mask: 'full', end: 0.42, cut: () => { z0.done = true; } });
 };
 // The board into the ground: a ring of force, and boards of light flung out every way. What it throws back is his.
 CAST.bulwark_nova = (h, sim, m, { w, c, P, rk }) => {
@@ -1069,27 +1090,29 @@ CAST.bulwark_nova = (h, sim, m, { w, c, P, rk }) => {
     sim.event(EV.GROUND, h.x, h.y, h.z);
   }, { still: true, hold: [0.5, 0.22] });
 };
-// The lance's light let go down its whole length and eight metres past it.
+// Drawn back, the light gathering on its point; and let go: the lance's light down its whole length and eight metres past
+// it, wide at the point and thinning to nothing.
 CAST.lance_of_light = (h, sim, m, { w, c, P, yaw }) => {
   h.yaw = h.faceYaw = yaw;
-  h.startSwing('Sword_Regular_C', 0.85, [0.33], () => {
-    const p = h.handPos('r'), ax = Math.sin(h.yaw), az = Math.cos(h.yaw), len = 11;
-    const hit = w.line(h, h.x, h.z, h.yaw, len, 0.65, 22 * P, { kind: 'puncture', poise: 70, knock: 3 });
+  const z0 = zone(w, h, 0.6, (cc, q) => { const t = weaponTip(h), k = Math.min(1, q.t / 0.4); cc.fx(FX.ORB, STORM, t[0], t[1], t[2], 0.06 + 0.2 * k, 0, 1, 0, 0, 1, 8 * k, 4); });
+  h.startSwing('Sword_Regular_C', 1.6, [0.33], () => {
+    z0.done = true;
+    const p = weaponTip(h), ax = Math.sin(h.yaw), az = Math.cos(h.yaw), len = 9;
+    const hit = w.line(h, h.x, h.z, h.yaw, len + 2, 0.65, 22 * P, { kind: 'puncture', poise: 90, knock: 3 });
     if (h.fxOk()) {
-      c.burst(FX.BEAM, STORM, p[0], p[1], p[2], 0.5, 0.2, 0.45, { ax, ay: 0, az, len, extra: 0.35 });
-      c.burst(FX.BEAM, LIGHT, p[0], p[1], p[2], 0.2, 0.04, 0.45, { ax, ay: 0, az, len, extra: 0.1, light: 14, lightR: 8 });
-      boom(c, STORM, p[0] + ax * 0.8, p[1], p[2] + az * 0.8, 1, 0);
-      c.burst(FX.FLARE, LIGHT, p[0] + ax * len, p[1], p[2] + az * len, 0.5, 1.4, 0.3);
-      for (const k of hit) c.burst(FX.FLARE, STORM, k.x, k.y + 1.1, k.z, 0.3, 0.9, 0.2);
+      c.burst(FX.BEAM, STORM, p[0], p[1], p[2], 0.45, 0.15, 0.4, { ax, ay: 0, az, len, extra: 0.03 });
+      c.burst(FX.BEAM, LIGHT, p[0], p[1], p[2], 0.18, 0.04, 0.4, { ax, ay: 0, az, len, extra: 0.01, light: 14, lightR: 8 });
+      c.burst(FX.FLARE, STORM, p[0], p[1], p[2], 0.3, 0.9, 0.18);
+      for (const k of hit) slash(c, k.x, k.y + 1.1, k.z, h.yaw + Math.PI / 2, 0, 2, STORM, 0.2);
     }
     sim.event(EV.WHOOSH, p[0], p[1], p[2]);
-  }, { still: true, aimed: true });
+  }, { still: true, aimed: true, end: 0.6, cut: () => { z0.done = true; } });
 };
 // Up, board first, and down among them: the ground rings, and everything near is his.
-const VALIANT = { T: 0.62, apex: 2.2, snap: true, r: 3, dmg: 16, elem: STORM, air: 'NinjaJump_Idle_Loop', o: { stun: 0.9 }, landClip: 'Jump_Land', landRate: 2,
+const VALIANT = { T: 0.58, apex: 1.9, snap: true, r: 3, dmg: 16, elem: STORM, air: 'NinjaJump_Idle_Loop', o: { stun: 0.9 }, landClip: 'Jump_Land', landRate: 2,
   // (Board up before him, and the lance levelled down at where he'll land: not hanging from his fist.)
   tick: (h, sim, j) => { h.shieldTarget = 1; const dn = 0.25 + 0.5 * j.u, n = Math.hypot(1, dn); h.aim = [Math.sin(j.head) / n, -dn / n, Math.cos(j.head) / n]; },
-  draw: (c, h, j) => { const s = Math.sin(h.yaw), co = Math.cos(h.yaw); mark(c, h, j, STORM, 3); c.fx(FX.KITE, STORM, h.x + s * 0.7, h.y + 0.9, h.z + co * 0.7, 0.7, s, -0.5, co, 0, 0.8, 6, 5, 0.3, 0); c.fx(FX.TRAIL, STORM, h.x, h.y + 1, h.z, 0.25, -s, 0.4, -co, 2.2, 0.7); } };
+  draw: (c, h, j) => { const s = Math.sin(h.yaw), co = Math.cos(h.yaw); mark(c, h, j, STORM, 3); c.fx(FX.TRAIL, STORM, h.x, h.y + 1, h.z, 0.25, -s, 0.4, -co, 2.2, 0.7); } };
 CAST.valiant_leap = (h, sim, m, { w, c }) => {
   h.leap(sim, m, { ...VALIANT, land: (hh, s2, j, fx, fz) => {
     for (const k of w.blast(h, fx, fz, h.y, 3, 16 * h.power(), { kind: 'bash', poise: 80, stun: 0.9, shove: 6 })) taunt(sim, h, k, 6);
@@ -1126,15 +1149,14 @@ CAST.spear_wall = (h, sim, m, { w, c, P, rk, yaw }) => {
   h.startSwing('Sword_Regular_C', 1.3, [0.33], () => {
     const n = 7 + rk, s = Math.sin(h.yaw), co = Math.cos(h.yaw), d0 = clamp(E.fightable(m) ? dist(h, m) : 3, 2.2, 5), cx = h.x + s * d0, cz = h.z + co * d0, pts = [];
     for (let i = 0; i < n; i++) { const u = (i / (n - 1) - 0.5) * 2, f = (i % 2 ? 0.5 : -0.3) - u * u * 0.9, x = cx + s * f + co * u * 2.6, z = cz + co * f - s * u * 2.6; pts.push([x, sim.world.height(x, z), z, Math.abs(u) * 0.12, rand(1.7, 2.4)]); }
-    w.blast(h, cx, cz, h.y, 3, 14 * P, { kind: 'puncture', poise: 80, stun: 1 });
-    const ax = s * 0.3, az = co * 0.3, nn = Math.hypot(ax, 1, az);
-    zone(w, h, 1.15, (cc, q) => {
+    for (const k of w.blast(h, cx, cz, h.y, 3, 14 * P, { kind: 'puncture', poise: 90, stun: 1, shove: 1, up: 4.5 })) blood(sim, k, s, co, 0.5);
+    zone(w, h, 1.05, (cc, q) => {
       for (const [x, y, z, t0, L] of pts) {
-        const u = clamp((q.t - t0) / 0.1, 0, 1), sink = q.t > 0.8 ? (q.t - 0.8) / 0.35 : 0;
+        const u = clamp((q.t - t0) / 0.1, 0, 1), sink = q.t > 0.85 ? (q.t - 0.85) / 0.2 : 0, fan = (x - cx) * co - (z - cz) * s, ax = s * 0.3 + co * fan * 0.07, az = co * 0.3 - s * fan * 0.07, nn = Math.hypot(ax, 1, az);
         if (u > 0) pike3(cc, x, y - L * (1 - u + sink) - 0.15, z, ax / nn, 1 / nn, az / nn, L, STORM, 1.2, 1.4);
       }
     });
-    if (h.fxOk()) { c.burst(FX.RING, STORM, cx, h.y + 0.05, cz, 0.5, 3.2, 0.5); for (const [x, y, z] of pts) if (Math.random() < 0.6) c.burst(FX.PUFF, SPIRIT, x, y + 0.2, z, 0.2, 0.7, 0.4, { alpha: 0.4 }); hfx(sim, HFX.THUD, cx, h.y, cz, 0.6); }
+    if (h.fxOk()) { c.burst(FX.RING, STORM, cx, h.y + 0.05, cz, 0.5, 3.2, 0.5); for (const [x, y, z] of pts) if (Math.random() < 0.6) c.burst(FX.PUFF, STONE, x, y + 0.2, z, 0.2, 0.7, 0.4, { alpha: 0.4 }); hfx(sim, HFX.THUD, cx, h.y, cz, 0.6); }
     sim.event(EV.GROUND, cx, h.y, cz);
   }, { still: true });
 };
@@ -1142,6 +1164,8 @@ CAST.spear_wall = (h, sim, m, { w, c, P, rk, yaw }) => {
 CAST.charge_of_the_order = (h, sim, m, { w, c, P, yaw }) => {
   h.yaw = h.faceYaw = yaw;
   // (The clip is ten seconds of pointing: its first second is the arm coming up, which is all that's wanted.)
+  gather(c, h, STORM, 3, 0.3);
+  h.pointAt([Math.sin(yaw), 0, Math.cos(yaw)], 1.6);
   h.startSwing('LP_Pointing_at_an_enemy', 1.5, [0.05], () => {
     const s = Math.sin(yaw), co = Math.cos(yaw), riders = [];
     for (let i = 0; i < 5; i++) { const k = i - 2; riders.push({ x: h.x - s * (3.5 + Math.abs(k) * 1.2) + co * k * 1.5, z: h.z - co * (3.5 + Math.abs(k) * 1.2) - s * k * 1.5, hit: new Set() }); }
@@ -1155,8 +1179,9 @@ CAST.charge_of_the_order = (h, sim, m, { w, c, P, yaw }) => {
         cc.fx(FX.KITE, FROST, r.x, y + 1.5, r.z, 0.75, s, 0, co, 0, 0.8 * k, 0, 0, 0.3, 0);
         cc.fx(FX.BEAM, STORM, r.x, y + 1.3, r.z, 0.1, s, -0.05, co, 3.4, k, 6 * k, 4, 0, 0, 0.03);
         cc.fx(FX.FLARE, LIGHT, r.x + s * 3.4, y + 1.15, r.z + co * 3.4, 0.3, 0, 1, 0, 0, k);
-        cc.fx(FX.TRAIL, SPIRIT, r.x, y + 0.9, r.z, 0.5, -s, 0, -co, 3.5, 0.5 * k);
-        cc.fx(FX.PUFF, SPIRIT, r.x - s * 0.8, y + 0.4, r.z - co * 0.8, 0.7, 0, 1, 0, 0, 0.3 * k, 0, 0, q.t, r.x);
+        cc.fx(FX.TRAIL, STORM, r.x, y + 0.9, r.z, 0.4, -s, 0, -co, 3.5, 0.5 * k);
+        cc.fx(FX.COLUMN, STORM, r.x, y, r.z, 1.9, 0, 1, 0, 0.35, 0.3 * k);
+        cc.fx(FX.PUFF, STONE, r.x - s * 0.8, y + 0.4, r.z - co * 0.8, 0.7, 0, 1, 0, 0, 0.3 * k, 0, 0, q.t, r.x);
       }
     }, (q, dt) => {
       for (const r of riders) {
@@ -1744,10 +1769,13 @@ function spearGlow(c, h, elem, k = 1) {
 // Where a leap means to land, on the ground from the moment he's up: a ring that closes and brightens as he comes down.
 function mark(c, h, j, elem, r) {
   const y = h.simRef.world.height(j.x1, j.z1);
-  c.fx(FX.RING, elem, j.x1, y + 0.06, j.z1, r * (1.5 - 0.5 * j.u), 0, 1, 0, 0, 0.7 * j.u);
+  c.fx(FX.RING, elem, j.x1, y + 0.06, j.z1, r * (1.2 - 0.4 * j.u), 0, 1, 0, 0, 0.6 * j.u);
 }
-// The spear's point, where it is now.
-const spearTip = (h) => { const p = h.handPos('r'), a = h.aim || [Math.sin(h.yaw), 0, Math.cos(h.yaw)], r = h.mainP?.reach ?? 1.4; return [p[0] + a[0] * r, p[1] + a[1] * r, p[2] + a[2] * r, a]; };
+// The point of what's in his right hand, where it is now, and the way it's pointed.
+const weaponTip = (h) => { const m = h.propMatrices, r = h.mainP?.reach ?? 1.4; return m[15] ? [m[12] + m[4] * r, m[13] + m[5] * r, m[14] + m[6] * r, [m[4], m[5], m[6]]] : [...h.handPos('r'), [Math.sin(h.yaw), 0, Math.cos(h.yaw)]]; };
+const spearTip = weaponTip;
+// (Held to the sky: what's in the fist stood up along the raised arm, not lying across it.)
+const SKY = () => [0, 1, 0.02];
 // (A dragoon's leap: dark on the way up, so the dive is the loud part. The spear lit, and a tail of it off the point, on the way down.)
 export const diveDraw = (elem, r = 2) => (c, h, j) => {
   mark(c, h, j, elem, r);
@@ -1907,7 +1935,7 @@ function spearRain(h, sim, cx, cz, R, n, dur, dmg, elem, r = 0.9, thick = 1.5) {
       d.hit = true;
       const y = sim.world.height(d.x, d.z);
       w.blast(h, d.x, d.z, y, r, dmg, { kind: 'puncture', poise: thick > 2 ? 100 : 30, quiet: thick <= 2, ...(r > 1.2 ? { stun: 0.8 } : {}) });
-      if (h.fxOk()) { c.burst(FX.RING, elem, d.x, y + 0.05, d.z, 0.1, r + 0.2, 0.25); c.burst(FX.PUFF, SPIRIT, d.x, y + 0.2, d.z, 0.2, 0.7 * thick / 1.5, 0.4, { alpha: 0.4 }); }
+      if (h.fxOk()) { c.burst(FX.RING, elem, d.x, y + 0.05, d.z, 0.1, r + 0.2, 0.25); c.burst(FX.PUFF, STONE, d.x, y + 0.2, d.z, 0.2, 0.7 * thick / 1.5, 0.4, { alpha: 0.4 }); }
     }
   });
 }
@@ -1990,7 +2018,7 @@ CAST.spear_barrage = (h, sim, m, { w, c, P }) => {
     w.later(0.22, () => {
       if (h.dead) return;
       w.blast(h, cx, cz, cy, 2.9, 20 * P, { kind: 'puncture', poise: 90 });
-      if (h.fxOk()) { hfx(sim, HFX.THUD, cx, cy, cz, 0.6); for (let i = 0; i < 5; i++) { const a = i * 1.257; c.burst(FX.PUFF, SPIRIT, cx + Math.sin(a) * 1.8, cy + 0.2, cz + Math.cos(a) * 1.8, 0.3, 0.9, 0.45, { alpha: 0.4 }); } }
+      if (h.fxOk()) { hfx(sim, HFX.THUD, cx, cy, cz, 0.6); for (let i = 0; i < 5; i++) { const a = i * 1.257; c.burst(FX.PUFF, STONE, cx + Math.sin(a) * 1.8, cy + 0.2, cz + Math.cos(a) * 1.8, 0.3, 0.9, 0.45, { alpha: 0.4 }); } }
       sim.event(EV.GROUND, cx, cy, cz);
     });
   }, { still: true, aimed: true, hold: [0.45, 0.35], end: 0.6 });
@@ -2007,7 +2035,7 @@ function energyRang(h, sim, m, o) {
     draw: (cc, s) => {
       const vv = Math.hypot(s.vx, s.vz) || 1, big = s.size, spin = s.t * 17 * (o.spin || 1), tr = o.trail ?? 1;
       rang3(cc, s.x, s.y, s.z, spin, 0.62 * big, e, mat, o.glow ?? 0.8, 0.1);
-      cc.fx(FX.GLYPH, e, s.x, s.y + 0.02, s.z, 0.5 * big, 0, 1, 0, spin, o.halo ?? 0.45, o.light ?? 4, 3 + big, 0, 0, GLYPHS.RANG);
+      cc.fx(FX.ORB, e, s.x, s.y, s.z, 0.16 * big, 0, 1, 0, 0, o.halo ?? 0.35, o.light ?? 4, 3 + big);
       if (!(s.pause > 0)) cc.fx(FX.TRAIL, e, s.x, s.y, s.z, 0.09 * big * tr, -s.vx / vv, 0, -s.vz / vv, (0.7 + big * 0.35) * tr, 0.45);
       o.more?.(cc, s, big);
     },
@@ -2043,7 +2071,7 @@ CAST.wind_slash = (h, sim, m, { w, c, P, yaw }) => {
     const v = 18, s = Math.sin(yaw), co = Math.cos(yaw);
     shot(w, h, { x: h.x + s * 0.9, y: h.y + 1.1, z: h.z + co * 0.9, vx: s * v, vy: 0, vz: co * v, dmg: 12 * P, pierce: true, r: 1.0, life: 0.5, elem: LIGHT, skim: true, size: 1, grow: 1, sizeMax: 1.6, growDmg: 0, poise: 50, o: { elem: LIGHT },
       draw: (cc, q) => { for (let i = 0; i < 2; i++) cc.fx(FX.GLYPH, LIGHT, q.x - s * (0.6 + i * 0.35) * q.size, q.y, q.z - co * (0.6 + i * 0.35) * q.size, (1.15 - i * 0.25) * q.size, 0, 1, 0, yaw, 0.75 - i * 0.35, i ? 0 : 5, 4, 0, i, GLYPHS.CRESCENT); },
-      tick: (q) => { if (h.fxOk() && Math.random() < 0.25) c.burst(FX.PUFF, SPIRIT, q.x + rand(-0.8, 0.8), sim.world.height(q.x, q.z) + 0.15, q.z + rand(-0.8, 0.8), 0.15, 0.5, 0.35, { alpha: 0.3 }); } });
+      tick: (q) => { if (h.fxOk() && Math.random() < 0.25) c.burst(FX.PUFF, STONE, q.x + rand(-0.8, 0.8), sim.world.height(q.x, q.z) + 0.15, q.z + rand(-0.8, 0.8), 0.15, 0.5, 0.35, { alpha: 0.3 }); } });
     sim.event(EV.WHOOSH, h.x, h.y + 1.2, h.z);
   }, { end: 0.85, lunge: 0.6 });
 };
@@ -2181,13 +2209,13 @@ CAST.golden_boomerang = (h, sim, m, { w, c, P, rk }) => {
   h.shotCd = 2.2;
   gather(c, h, LIGHT, 3.2, T0);
   if (h.fxOk()) { c.burst(FX.RING, LIGHT, h.x, h.y + 0.06, h.z, 1.4, 1.5, T0, { alpha: 0.7 }); hfx(sim, HFX.CHIME, h.x, h.y + 1.4, h.z, 0, 0.8); }
-  const stop = inHand(h, 'r', T0, (cc, p, k) => { rang3(cc, p[0], p[1] + 0.3 + 0.5 * k, p[2], sim.time * (6 + 8 * k), 0.62 * big * (0.15 + 0.85 * k * k), LIGHT, MAT.GOLD, 0.9, 0.1); cc.fx(FX.ORB, LIGHT, p[0], p[1] + 0.3 + 0.5 * k, p[2], 0.2 + 0.5 * k, 0, 1, 0, 0, 0.35, 8 * k, 6); });
+  const stop = inHand(h, 'r', T0, (cc, p, k) => { rang3(cc, p[0], p[1] + 0.3 + 0.5 * k, p[2], sim.time * (6 + 8 * k), 0.62 * big * (0.15 + 0.85 * k * k), LIGHT, MAT.GOLD, 0.45, 0.1); cc.fx(FX.ORB, LIGHT, p[0], p[1] + 0.3 + 0.5 * k, p[2], 0.2 + 0.5 * k, 0, 1, 0, 0, 0.35, 8 * k, 6); });
   throwIt(h, 0.42, () => {
     stop();
     if (!E.fightable(m)) return;
     const threads = [];
     let last = null, pulse = 0;
-    energyRang(h, sim, m, { dmg: 34 * P, size: big, r: 0.33, v: 9.5, life: 2.7, spin: 0.75, glow: 0.9, halo: 0.3, trail: 0.45, light: 8, hk: 'bash', poise: 95, o: { stun: 0.6, shove: 6, elem: LIGHT },
+    energyRang(h, sim, m, { dmg: 34 * P, size: big, r: 0.33, v: 9.5, life: 2.7, spin: 0.75, glow: 0.45, halo: 0, trail: 0.3, light: 8, hk: 'bash', poise: 95, o: { stun: 0.6, shove: 6, elem: LIGHT },
       hit: (k) => { const p = [k.x, k.y + 1.1, k.z]; if (last) threads.push([last, p]); last = p; c.burst(FX.FLARE, LIGHT, k.x, k.y + 1.1, k.z, 0.4, 1.1, 0.2, { light: 8, lightR: 5 }); hfx(sim, HFX.CHIME, k.x, k.y + 1.1, k.z, threads.length * 2, 0.5); hfx(sim, HFX.THUD, k.x, k.y, k.z, 0.5); },
       more: (cc, s, sz) => {
         cc.fx(FX.DISC, LIGHT, s.x, sim.world.height(s.x, s.z) + 0.04, s.z, 0.3 * sz, 0, 1, 0, 0, 0.35);
@@ -2313,7 +2341,7 @@ CAST.shockwave_riff = (h, sim, m, { w, c, P, rk, yaw }) => {
       w.blast(h, x, z, y, 1.35, 8 * P, { kind: 'bash', poise: 55, quiet: i > 0, stun: 0.3, shove: 4, fromX: h.x, fromZ: h.z, elem: STORM });
       if (h.fxOk()) {
         c.burst(FX.RING, STORM, x, y + 0.05, z, 0.2, 1.5 + i * 0.12, 0.3, { light: i % 2 ? 0 : 6, lightR: 4 }); c.burst(FX.RING, STORM, x, y + 0.05, z, 0.1, 1.3 + i * 0.12, 0.3);
-        c.burst(FX.PUFF, SPIRIT, x, y + 0.2, z, 0.3, 1, 0.4, { alpha: 0.35 });
+        c.burst(FX.PUFF, STONE, x, y + 0.2, z, 0.3, 1, 0.4, { alpha: 0.35 });
         c.burst(FX.GLYPH, STORM, x, y + 0.5, z, 0.4, 1.3, 0.25, { ax: -co, ay: 0, az: s, len: 0, extra: GLYPHS.WAVES });
       }
     });
@@ -2366,7 +2394,7 @@ CAST.bass_drop = (h, sim, m, { w, c, P, rk }) => {
         c.burst(FX.DISC, ARCANE, x, y + 0.04, z, r, r * 1.1, 0.35, { alpha: 0.8, light: 16, lightR: 8 });
         for (let i = 0; i < 3; i++) c.burst(FX.RING, ARCANE, x, y + 0.05, z, 0.3, r * (0.7 + i * 0.4), 0.35 + i * 0.12);
         c.burst(FX.FLARE, ARCANE, x, y + 0.5, z, 0.5, 1.6, 0.18);
-        for (let i = 0; i < 6; i++) { const a = i * 1.047; drift(w, h, x, y + 0.6, z, Math.sin(a) * 3, 2.2, Math.cos(a) * 3, GLYPHS.NOTE, ARCANE, 0.25, 0.7, rand(-3, 3)); c.burst(FX.PUFF, SPIRIT, x + Math.sin(a) * r * 0.7, y + 0.2, z + Math.cos(a) * r * 0.7, 0.3, 1, 0.45, { alpha: 0.35 }); }
+        for (let i = 0; i < 6; i++) { const a = i * 1.047; drift(w, h, x, y + 0.6, z, Math.sin(a) * 3, 2.2, Math.cos(a) * 3, GLYPHS.NOTE, ARCANE, 0.25, 0.7, rand(-3, 3)); c.burst(FX.PUFF, STONE, x + Math.sin(a) * r * 0.7, y + 0.2, z + Math.cos(a) * r * 0.7, 0.3, 1, 0.45, { alpha: 0.35 }); }
         hfx(sim, HFX.THUD, x, y, z, 1); hfx(sim, HFX.PLUCK, x, y + 1, z, -12, 0.9);
       }
       sim.event(EV.GROUND, x, y, z);

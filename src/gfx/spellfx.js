@@ -406,7 +406,7 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
     }
     case 7u: {   // a cross
       m = max(ink(seg(uv, vec2f(0.0, -0.85), vec2f(0.0, 0.85)), 0.11), ink(seg(uv, vec2f(-0.5, 0.3), vec2f(0.5, 0.3)), 0.11));
-      hot = 1.0;
+      hot = 0.72;
     }
     case 8u: {   // a boomerang: two arms from an elbow, thinning to their tips
       let w = 0.2 - 0.11 * smoothstep(0.1, 0.9, abs(uv.x));
@@ -639,7 +639,7 @@ fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
     case 22u, 23u: {   // a block or a shard of something (MAT, in the age), lit along its edges by its element as much as its alpha says
       let mat = u32(age + 0.5);
       let lit = abs(I.x.x);
-      if (mat == 1u) { albedo = vec3f(0.95, 0.66, 0.22); rough = 0.28; metal = 1.0; }
+      if (mat == 1u) { albedo = vec3f(0.9, 0.52, 0.1); rough = 0.4; metal = 1.0; }      // (gold deep enough to stay gold under a noon sky)
       else if (mat == 2u) { albedo = mix(vec3f(0.2, 0.11, 0.05), vec3f(0.34, 0.2, 0.1), noise.g); rough = 0.75; }
       else if (mat == 3u) { albedo = vec3f(0.02); rough = 0.3; }
       else { albedo = vec3f(0.62, 0.66, 0.72); rough = 0.24; metal = 1.0; }

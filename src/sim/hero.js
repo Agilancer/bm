@@ -60,12 +60,12 @@ const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreatu
 // ---- class moves ----------------------------------------------------------------------------------------------------
 // clip: from the heroes' bank. hit: when in the clip it lands (fractions). dmg: before level. reach: past the hips.
 const BLOWS = {
-  two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.24], dmg: 16, reach: 2.4 }, { clip: 'L_Chop', rate: 1.0, hit: [0.6], dmg: 15, reach: 2.3 }, { clip: 'Sword_Regular_C', rate: 0.9, hit: [0.33], dmg: 14, reach: 2.5 }],
+  two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.24], dmg: 16, reach: 2.4, end: 0.55 }, { clip: 'L_Chop', rate: 1.4, from: 0.25, hit: [0.6], dmg: 15, reach: 2.3 }, { clip: 'Sword_Regular_C', rate: 0.9, hit: [0.33], dmg: 14, reach: 2.5 }],
   sword_board: [{ clip: 'Sword_Regular_A', rate: 0.8, hit: [0.55], dmg: 10, reach: 2.1 }, { clip: 'Sword_Regular_B', rate: 0.8, hit: [0.48], dmg: 10, reach: 2.0 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
   // (A lance or a spear goes in point first: a straight arm down the line, the body behind it. THRUST below.)
   lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 7, reach: 1.6, knock: 5 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
   daggers: [{ clip: 'Punch_Jab', rate: 1.2, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 7, reach: 1.4 }, { clip: 'Melee_Hook', rate: 0.9, hit: [0.5], dmg: 8, reach: 1.4 }, { clip: 'L_Slash', rate: 1.15, hit: [0.65], dmg: 9, reach: 1.6 }],
-  spear: [{ clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 13, reach: 2.9, thrust: true }, { clip: 'L_Chop', rate: 1.0, hit: [0.6], dmg: 12, reach: 2.4 }, { clip: 'Punch_Cross', rate: 1.5, hit: [0.42], dmg: 9, reach: 2.6, thrust: true }],
+  spear: [{ clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 13, reach: 2.9, thrust: true }, { clip: 'L_Chop', rate: 1.4, from: 0.25, hit: [0.6], dmg: 12, reach: 2.4 }, { clip: 'Punch_Cross', rate: 1.5, hit: [0.42], dmg: 9, reach: 2.6, thrust: true }],
   boomerang: [{ clip: 'Punch_Jab', rate: 1.15, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 6, reach: 1.6, knock: 5 }],
   blade: [{ clip: 'Sword_Regular_A', rate: 0.85, hit: [0.55], dmg: 9, reach: 2.0 }, { clip: 'Sword_Regular_B', rate: 0.85, hit: [0.48], dmg: 9, reach: 1.9 }, { clip: 'L_Slash', rate: 1.1, hit: [0.65], dmg: 10, reach: 2.0 }],
   bow: [{ clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 5, reach: 1.6, knock: 6 }],
@@ -273,6 +273,7 @@ export class Hero extends Knight {
     this.gcd -= dt; this.tumbleCd -= dt; this.wardT -= dt;
     // (A weapon is pointed only while the move that pointed it lasts, however that move ends.)
     if (this.aim && !this.swing?.aimed && !this.jump && !this.charge) this.aim = null;
+    this.aimBack = 0;
     // (A lancer in a fight carries the lance point up and forward between blows, not level through whatever stands before him.)
     if (this.style === 'lance' && this.foe && !this.swing && !this.jump && !this.charge && !this.dead) this.aim = [Math.sin(this.yaw) * 0.55, 0.83, Math.cos(this.yaw) * 0.55];
     if (this.wardT <= 0) this.ward = 0;
@@ -540,7 +541,7 @@ export class Hero extends Knight {
         // (A blade in each hand: the arc each one cuts, in the class's colour. A kick leaves none.)
         if (b.clip.startsWith('Punch') || b.clip === 'Melee_Hook' || b.clip === 'L_Slash') cutArc(this, sim, this.combo);
       }
-    }, { lunge: 2.2, aimed: thrust });
+    }, { lunge: 2.2, aimed: thrust, stab: thrust, from: b.from, end: b.end });
     this.shotCd = rand(0.25, 0.7);
   }
 
@@ -579,7 +580,7 @@ export class Hero extends Knight {
     // (from: begun part-way in, past a clip's slow start. hold: [where, seconds], the pose kept there that long: an arm held
     // up for as long as what it called down is still coming.)
     if (o.from) this.actT = o.from * this.bank.clips[clip].dur;
-    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut, aimed: o.aimed, hold: o.hold ? [o.hold[0], o.hold[1]] : null };
+    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut, aimed: o.aimed, stab: o.stab, hold: o.hold ? [o.hold[0], o.hold[1]] : null };
   }
 
   runSwing(dt, sim) {
@@ -592,6 +593,9 @@ export class Hero extends Knight {
     // (aimed: true), a sweep carries the point round (aimed: a turn for each moment of the clip).
     if (s.aimed) { const a = typeof s.aimed === 'function' ? s.aimed(this.actT / s.clip.dur) : 0; this.aim = Array.isArray(a) ? a : [Math.sin(this.yaw + a), -0.05, Math.cos(this.yaw + a)]; }
     const f = this.actT / s.clip.dur;
+    // (A stab: the shaft drawn back through the fist before it goes in and after, so the point clears what's before him
+    // between thrusts and is seen to travel. writeProps slides it.)
+    if (s.stab && s.hits.length) { const at = s.hits[0]; this.aimBack = 0.75 * (f < at ? 1 - ease(f / at) ** 2 : ease((f - at) / Math.max(0.05, s.end - at))); }
     while (s.done < s.hits.length && f >= s.hits[s.done]) { s.fn(s.done, sim); s.done++; }
     if (s.lunge && s.done < s.hits.length && f > s.hits[s.done] - 0.25) {
       const v = s.lunge * (this.foe && Math.hypot(this.foe.x - this.x, this.foe.z - this.z) < 1.4 ? 0 : 1);
@@ -611,7 +615,7 @@ export class Hero extends Knight {
           this.hit(sim, k, (c.dmg ?? 16) * this.power(), c.kind || 'puncture', 60, 0, c.o || { stun: 0.6 });
           c.onHit?.(k);
           const side = Math.sign((k.x - this.x) * rx + (k.z - this.z) * rz) || 1;
-          if (radiusOf(k) <= 1 && !c.noShove) sim.casting.shove(k, Math.sin(c.dir) * 4 + rx * side * 5, Math.cos(c.dir) * 4 + rz * side * 5);
+          if (radiusOf(k) <= 1 && !c.noShove) sim.casting.shove(k, Math.sin(c.dir) * 8 + rx * side * 11, Math.cos(c.dir) * 8 + rz * side * 11);
         }
         c.each?.(dt);
         if (((sim.tick + this.slot) & 3) === 0) sim.event(EV.STEP, this.x, this.y, this.z, 1, 1, this.id);
@@ -661,7 +665,11 @@ export class Hero extends Knight {
     else if (knock && m instanceof Zombie && !m.crawling) m.reel?.(sim, 0.4, this);
     if (o.shove && radiusOf(m) <= 1 && !(m instanceof Gravehart)) {
       const dx = m.x - (o.fromX ?? this.x), dz = m.z - (o.fromZ ?? this.z), L = Math.hypot(dx, dz) || 1;
-      sim.casting.shove(m, dx / L * o.shove, dz / L * o.shove, o.up || 0);
+      sim.casting.shove(m, dx / L * o.shove * 2.2, dz / L * o.shove * 2.2, o.up || 0);
+    } else if (!o.dot && !o.quiet && poise >= 50 && radiusOf(m) <= 1 && !(m instanceof Gravehart)) {
+      // (Anything heavy moves what it lands on: half a stride back from where it came, a stride for the heaviest.)
+      const dx = m.x - (o.fromX ?? this.x), dz = m.z - (o.fromZ ?? this.z), L = Math.hypot(dx, dz) || 1, v = poise >= 90 ? 7 : 4;
+      sim.casting.shove(m, dx / L * v, dz / L * v, 0);
     }
     if (o.bleed) w.bleed(this, m, dmg * 0.3);
     // Where it lands: a spark of the class's own colour at the point of the blow, on the tick of it. A heavy blow takes one
@@ -696,7 +704,7 @@ export class Hero extends Knight {
           const rk = rank(this);
           this.hammersUp = true;
           w.zones.push({ kind: 'blessed', owner: this, t: 0, life: 3.2 + 0.5 * rk, n: 3 + Math.floor(rk / 2), a0: Math.random() * 6.28, hitT: new Map(), end: () => { this.hammersUp = false; } });
-          if (this.fxOk()) { sim.casting.burst(FX.SHOCK, ELEM.LIGHT, this.x, this.y + 1.1, this.z, 0.3, 1.6, 0.3, { light: 10, lightR: 5 }); sim.event(EV.HERO_FX, 4, this.x, this.y + 1.3, this.z, 7, 0.5); }
+          if (this.fxOk()) { sim.casting.burst(FX.RING, ELEM.LIGHT, this.x, this.y + 0.06, this.z, 0.3, 1.8, 0.3, { light: 10, lightR: 5 }); sim.event(EV.HERO_FX, 4, this.x, this.y + 1.3, this.z, 7, 0.5); }
         }, { mask: 'upper' });
         break;
       case 'charge': {
@@ -706,7 +714,7 @@ export class Hero extends Knight {
         this.shieldTarget = 1;
         const len = Math.min(8.5, Math.hypot(m.x - this.x, m.z - this.z) + 1.4), T = len / 15;
         this.startSwing('Shield_Dash', 1.1 / (T + 0.3), [], () => {}, { root: true });
-        this.charge = { dir: to, left: len, v: 15, hitSet: new Set(), done: () => arrive(this, sim, ELEM.STORM) };
+        this.charge = { dir: to, left: len, v: 15, hitSet: new Set(), quick: true, lancer: true, done: () => arrive(this, sim, ELEM.STORM) };
         this.aim = [Math.sin(to), -0.03, Math.cos(to)];      // (the lance couched, level, the way he runs)
         this.iframesT = T + 0.05;
         break;
@@ -720,7 +728,7 @@ export class Hero extends Knight {
           const yaw = this.yaw;
           w.zones.push({ kind: 'fx', owner: this, t: 0, life: 4, draw: (c, z) => {
             const k = Math.min(1, z.t * 5, (4 - z.t) * 3), fx = Math.sin(yaw), fz = Math.cos(yaw);
-            for (let i = -2; i <= 2; i++) { const a = yaw + i * 0.42, r = 1.25; c.fx(FX.KITE, i % 2 ? ELEM.FROST : ELEM.STORM, this.x + Math.sin(a) * r, this.y + 1.0, this.z + Math.cos(a) * r, 0.62 * Math.min(1, z.t * 6 - Math.abs(i) * 0.3 + 0.6), Math.sin(a), 0, Math.cos(a), 0, 0.85 * k, i === 0 ? 6 * k : 0, 5, 0.3, i); }
+            for (let i = -2; i <= 2; i++) { const a = yaw + i * 0.56, r = 1.5; c.fx(FX.KITE, i % 2 ? ELEM.FROST : ELEM.STORM, this.x + Math.sin(a) * r, this.y + 1.0, this.z + Math.cos(a) * r, 0.7 * Math.min(1, z.t * 6 - Math.abs(i) * 0.3 + 0.6), Math.sin(a), 0, Math.cos(a), 0, 0.85 * k, i === 0 ? 6 * k : 0, 5, 0.3, i); }
             c.fx(FX.RING, ELEM.STORM, this.x + fx * 0.3, this.y + 0.06, this.z + fz * 0.3, 1.5, 0, 1, 0, 0, 0.6 * k);
           } });
           for (const k of w.targets) if (fightable(k) && Math.hypot(k.x - this.x, k.z - this.z) < 8) { k.tauntBy = this; k.tauntT = sim.time + 4; k.heroFoe = this; k.heroFoeT = sim.time; }
@@ -1138,6 +1146,7 @@ export class Hero extends Knight {
     if (this.aim && out[off + 15] !== 0) {
       const y = norm(this.aim), x = norm(cross(y, Math.abs(y[1]) > 0.95 ? [1, 0, 0] : [0, 1, 0])), z = cross(x, y);
       out.set([x[0], x[1], x[2], 0, y[0], y[1], y[2], 0, z[0], z[1], z[2], 0], off);
+      if (this.aimBack) { out[off + 12] -= y[0] * this.aimBack; out[off + 13] -= y[1] * this.aimBack; out[off + 14] -= y[2] * this.aimBack; }
     }
     // A bard's lute: across the back, or in the hands (afterPose put it there), or on its way round his right side between.
     // The sword is at the left hip while the hands are on the lute.
@@ -1183,6 +1192,9 @@ export class Hero extends Knight {
   afterPose(dt, sim) {
     this.luteLive = false;
     if (!this.dead) {
+      // (Some clips end a blow folded face down, or wind it up with the off arm straight out: a fighter does neither.)
+      if ((this.swing || this.charge || this.tossing) && !this.jump && !this.surf) this.capPitch(this.charge ? 0.6 : 0.72);
+      if (this.swing && this.swing.clip.name === 'Sword_Attack') this.guardArm();
       if (this.luteP && this.luteW > 0.01) this.poseLute();
       if (this.bowW > 0.01) this.poseBow();
       if (this.spread > 0.01) this.poseSpread();
@@ -1191,6 +1203,23 @@ export class Hero extends Knight {
       if (this.gripAt) this.reachTo('r', this.gripAt[0], this.gripAt[1], this.gripAt[2], [-Math.cos(this.yaw) * 0.4, -1, Math.sin(this.yaw) * 0.4], 1);
     }
     if (this.bodyFlip || this.bodyRoll) this.tumble();
+  }
+
+  // Folded further forward than `cap` (from upright, hips to chest), the body's straightened from the waist to that.
+  capPitch(cap) {
+    const { wt } = this.pose, p = this.J.pelvis * 3, c3 = this.J.spine3 * 3, s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    const pitch = Math.atan2((wt[c3] - wt[p]) * s + (wt[c3 + 2] - wt[p + 2]) * c, wt[c3 + 1] - wt[p + 1]);
+    if (pitch <= cap) return;
+    const sj = this.upperBody[0] * 3;
+    quatAxisAngle(ikQ, 0, c, 0, -s, cap - pitch);
+    this.rigid(this.upperBody, ikQ, wt[sj], wt[sj + 1], wt[sj + 2]);
+  }
+
+  // The off hand kept in at the chest through a blow whose clip throws it out wide.
+  guardArm() {
+    const { wt } = this.pose, c3 = this.J.spine3 * 3, s = Math.sin(this.yaw), c = Math.cos(this.yaw), k = this.rig.height / 1.8;
+    const w = 0.85 * ease(Math.min(this.actT / 0.12, 1));
+    this.reachTo('l', wt[c3] + (s * 0.3 + c * 0.14) * k, wt[c3 + 1] - 0.14 * k, wt[c3 + 2] + (c * 0.3 - s * 0.14) * k, [c * 0.7, -0.7, -s * 0.7], w);
   }
 
   // A shoulder to its wrist, as the arm is now.
@@ -1323,7 +1352,7 @@ export class Hero extends Knight {
     const t = tn ? tn.t : 0, v = tn ? tn.v : 0, bpm = tn?.rate || 1;
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     let across = 0, lift = 0.04, slide = 0, lean = 0, sway = 0, raise = 0, alongY = 0;
-    let twist = 0, nod = 0;
+    let twist = 0, nod = 0, wheel = 0, wheelOut = 0;
     if (v === 1) {
       // (Bent right over it, head down, the hand barely moving and quick: the body's the picture, bobbing with the run of notes.)
       const ph = t * 5.6 * bpm * 6.2832;
@@ -1336,7 +1365,7 @@ export class Hero extends Knight {
       const beat = (t * 0.95 * bpm) % 1;
       const th = (beat < 0.5 ? 0.5 * ease(beat / 0.5) : beat < 0.62 ? 0.5 : beat < 0.74 ? 0.5 + 0.5 * ((beat - 0.62) / 0.12) ** 1.5 : 1) * 6.2832;
       const past = beat >= 0.74 ? Math.sin((beat - 0.74) / 0.26 * Math.PI) : 0;
-      across = -0.48 * (1 - Math.cos(th)) * 0.5 + 0.16 * past; alongY = -0.3 * Math.sin(th) - 0.08 * past; lift = 0.05 + 0.16 * (1 - Math.cos(th)) * 0.5;
+      across = 0.16 * past; alongY = -0.08 * past; lift = 0.05; wheel = (1 - Math.cos(th)) * 0.5; wheelOut = Math.sin(th);
       raise = 0.3 + 0.1 * Math.sin(th); lean = -0.22 * (1 - Math.cos(th)) * 0.5 + 0.16 * past; sway = 0.05 * Math.sin(th); twist = -0.18 * Math.sin(th) * 0.5 - 0.12 * past; nod = 0.14 * past;
       slide = 0.04 * Math.sin(t * 1.3);
     } else {
@@ -1374,7 +1403,13 @@ export class Hero extends Knight {
     };
     // (His left is (c, 0, -s). The left elbow hangs down and out; the right is out behind the bowl.)
     put('l', at(L.neck[0], L.neck[1] + slide, L.neck[2] - L.neckR - 0.01), [c * 0.5 - s * 0.2, -1, -s * 0.5 - c * 0.2]);
-    put('r', at(across, L.strum + alongY, lift), [-c * 0.9 - s * 0.5, -0.45, s * 0.9 - c * 0.5]);
+    let pr = at(across, L.strum + alongY, lift);
+    // (The wheel: from the strings out and up to above his own right shoulder, the arm thrown high, and down before him onto them again.)
+    if (wheel) {
+      const U = this.arms.r.u * 3, rx = -c, rz = s, top = [wt[U] + (rx * 0.26 + s * 0.1) * u, wt[U + 1] + 0.52 * u, wt[U + 2] + (rz * 0.26 + c * 0.1) * u];
+      pr = [pr[0] + (top[0] - pr[0]) * wheel + rx * wheelOut * 0.16, pr[1] + (top[1] - pr[1]) * wheel, pr[2] + (top[2] - pr[2]) * wheel + rz * wheelOut * 0.16];
+    }
+    put('r', pr, [-c * 0.9 - s * 0.5, -0.45, s * 0.9 - c * 0.5]);
     this.luteLive = true;
   }
 
@@ -1614,7 +1649,6 @@ export class HeroWorld {
         const o = s.owner, big = 1.5 + 0.08 * rank(o), home = s.out ? [s.tx, s.ty, s.tz] : [o.x, o.y + 1.2, o.z], yaw = Math.atan2(home[0] - s.x, home[2] - s.z);
         hammer3(c, s.x, s.y, s.z, yaw, s.t * 15, big, ELEM.LIGHT, 1.3, 9);
         c.fx(FX.TRAIL, ELEM.LIGHT, s.x, s.y, s.z, 0.2, -Math.sin(yaw), 0, -Math.cos(yaw), 2, 0.7);
-        c.fx(FX.GLYPH, ELEM.LIGHT, s.x, s.y, s.z, 0.6, 0, 0, 0, s.t * 6, 0.5, 0, 0, 0, 0, 11);
       } else if (s.kind === 'note') {
         // The song's own glyph, trailing the five lines of a stave.
         const v = Math.hypot(s.vx, s.vy, s.vz) || 1;
@@ -1627,15 +1661,16 @@ export class HeroWorld {
       if (!h.visible || h.near > 80) continue;
       if (h.charge && h.charge.left > 0) {
         if (h.charge.draw) h.charge.draw(c, h);
-        else if (!h.charge.quick) {
+        else if (h.charge.lancer) {
           // The lancer's: the lance's light three deep down its length and past its point, a ring where the vamplate
           // is, and a board of light going before him.
           const p = h.handPos('r'), ax = Math.sin(h.charge.dir), az = Math.cos(h.charge.dir), big = 1 + 0.06 * rank(h);
           c.fx(FX.BEAM, ELEM.STORM, p[0], p[1], p[2], 0.2 * big, ax, 0, az, 3.4, 0.35, 0, 0, 0, 0, 0.03);
           c.fx(FX.BEAM, ELEM.STORM, p[0], p[1], p[2], 0.08 * big, ax, 0, az, 3.4, 1, 8, 5, 0, 0, 0.02);
-          c.fx(FX.FLARE, ELEM.LIGHT, p[0] + ax * 3.4, p[1], p[2] + az * 3.4, 0.35, 0, 1, 0, 0, 1);
+          // (The flare on the lance's own point, wherever that is.)
+          const pm = h.propMatrices, rr = h.mainP?.reach ?? 2;
+          c.fx(FX.FLARE, ELEM.LIGHT, pm[12] + pm[4] * rr, pm[13] + pm[5] * rr, pm[14] + pm[6] * rr, 0.3, 0, 1, 0, 0, 1);
           c.fx(FX.GLYPH, ELEM.STORM, p[0] + ax * 0.5, p[1], p[2] + az * 0.5, 0.42, ax, 0, az, 0, 0.8, 0, 0, 0, 0, 10);
-          c.fx(FX.KITE, ELEM.STORM, h.x + ax * 1.1, h.y + 1.05, h.z + az * 1.1, 0.7, ax, 0, az, 0, 0.6, 0, 0, 0.3, 0);
           for (let i = 0; i < 3; i++) c.fx(FX.TRAIL, ELEM.STORM, h.x - az * (i - 1) * 0.3, h.y + 0.6 + i * 0.35, h.z + ax * (i - 1) * 0.3, 0.14, -ax, 0, -az, 2.6, 0.6);
         }
       }
@@ -1666,10 +1701,10 @@ export class HeroWorld {
         const k = Math.min(1, z.t * 3, (z.life - z.t) * 1.5);
         c.fx(FX.DISC, ELEM.LIGHT, z.x, z.y + 0.04, z.z, z.r, 0, 1, 0, 0, 0.75 * k, 10 * k, z.r * 2);
         c.fx(FX.RING, ELEM.LIGHT, z.x, z.y + 0.06, z.z, z.r * (0.94 + 0.04 * Math.sin(z.t * 6)), 0, 1, 0, 0, 0.5 * k);
-        c.fx(FX.RUNE, ELEM.LIGHT, z.x, z.y + 0.08, z.z, z.r * 0.9, 0, 1, 0, 0, 0.6 * k, 0, 0, z.t * 0.1, 0.3, 1);   // (extra 1: the holy mark, rays and a cross)
+        c.fx(FX.RUNE, ELEM.LIGHT, z.x, z.y + 0.08, z.z, z.r * 0.9, 0, 1, 0, 0, 0.42 * k, 0, 0, z.t * 0.1, 0.3, 1);   // (extra 1: the holy mark, rays and a cross)
         // (Crosses of light rising off it, and a pillar's faint standing glow.)
         let n = 0;
-        for (const m of this.targets) { if (n >= 5 || !fightable(m) || Math.hypot(m.x - z.x, m.z - z.z) > z.r + 0.4) continue; const u = (z.t * 0.9 + n * 0.37) % 1; c.fx(FX.GLYPH, ELEM.LIGHT, m.x, m.y + 0.3 + u * 1.8, m.z, 0.15, 0, 0, 0, 0, 0.7 * k * (1 - u), 0, 0, 0, n, 7); c.fx(FX.FLAME, ELEM.LIGHT, m.x, m.y, m.z, 0.5, 0, 1, 0, 0.35, 0.6 * k, 0, 0, 0, n * 0.3); n++; }
+        for (const m of this.targets) { if (n >= 5 || !fightable(m) || Math.hypot(m.x - z.x, m.z - z.z) > z.r + 0.4) continue; const u = (z.t * 0.9 + n * 0.37) % 1; c.fx(FX.GLYPH, ELEM.LIGHT, m.x, m.y + 0.3 + u * 1.8, m.z, 0.15, 0, 0, 0, 0, 0.7 * k * (1 - u), 0, 0, 0, n, 7); c.fx(FX.RING, ELEM.LIGHT, m.x, m.y + 0.07, m.z, 0.45, 0, 1, 0, 0, 0.5 * k); n++; }
         c.fx(FX.COLUMN, ELEM.LIGHT, z.x, z.y, z.z, 2.6, 0, 1, 0, z.r * 1.3, 0.22 * k);
       } else if (z.kind === 'blessed') {
         // Hammers, gold-headed, tumbling end over end as they turn round him, each in its own light, a streak behind.
@@ -1740,8 +1775,17 @@ export class HeroWorld {
         const o = s.owner, home = s.out ? [s.tx, s.ty, s.tz] : o.handPos('r');
         const dx = home[0] - s.x, dy = home[1] - s.y, dz = home[2] - s.z, L = Math.hypot(dx, dy, dz);
         // (Turned for home, it can cut what it passed on the way out again.)
-        if (L < 0.6) { if (s.out) { s.out = false; s.hitSet.clear(); } else s.done = true; }
-        const step = Math.min(L, s.v * dt);
+        if (L < 0.6) {
+          if (s.out) { s.out = false; s.hitSet.clear(); }
+          else {
+            // (Home: the hand closes on it.)
+            s.done = true;
+            if (o.fxOk()) sim.casting.burst(FX.FLARE, ELEM.LIGHT, home[0], home[1], home[2], 0.15, 0.6, 0.2, { light: 6, lightR: 3 });
+            if (!o.swing && !o.jump && !o.dead) o.play('Sword_Block', 2.2, 'upper', 0.06);
+          }
+        }
+        // (Slower coming home than it went, so it's seen to come.)
+        const step = Math.min(L, s.v * (s.out ? 1 : 0.65) * dt);
         // (A wall in its way out turns it for home there: it doesn't go through.)
         if (s.out && L > 1e-3 && sim.world.rayBoxes(s.x, s.y, s.z, dx / L, dy / L, dz / L, step) >= 0) { s.out = false; s.hitSet.clear(); continue; }
         s.x += dx / (L || 1) * step; s.y += dy / (L || 1) * step; s.z += dz / (L || 1) * step;

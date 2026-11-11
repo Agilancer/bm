@@ -149,7 +149,8 @@ for (const s of plan.strips || []) {
     await MV.step(3);
     const [side, back, up] = s.cam, mid = bx - (s.mid ?? dist * 0.5), y = (await MV.hero(slot)).y;
     MV.cam(mid + side, y + up, bz - back, mid, y + (s.lookY ?? 1.0), bz, s.fov || fov);
-    bm.heroes('freeze', { slot, seconds: 0 });
+    // (Someone only playing is held where he stands: let go, he'd be off to whatever he was about.)
+    bm.heroes('freeze', { slot, seconds: s.tune !== undefined ? 1e9 : 0, face });
     if (s.tune !== undefined) bm.heroes('tune', { slot, v: s.tune, seconds: 30, rainbow: !!s.rainbow, bare: !!s.bare });
     else if (s.clip) bm.heroes('pose', { slot, clip: s.clip, at: 0 });
     else if (s.key) { bm.heroes('skill', { slot, key: s.key }); for (const k of s.also || []) bm.heroes('skill', { slot, key: k }); }

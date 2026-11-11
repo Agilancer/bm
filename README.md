@@ -638,7 +638,7 @@ where they began (`keepPace`): they used to stay the level they were made at.
 | --- | --- |
 | Paladin | Zeal (2), Blessed Shield (3: his board thrown, from foe to foe and home to his arm), Holy Nova (4), Crusader's Charge (5), Fist of the Heavens (6), Divine Shield (7), Heaven's Fury (8), Judgment Beam (9), Solar Hammer (12), Storm of Hammers (15) |
 | Lancer | Lance Barrage (2), Tower Shields (3: boards of light turning round him, that cut what they touch and call everything near onto him), Sweeping Cleave (4), Shield Throw (5), Sunspear (6), Bulwark Nova (7), Lance of Light (8), Valiant Leap (9), Phalanx Rush (10: three runs), Spear Wall (12), Charge of the Order (16) |
-| Archer | Disengage (1: a backward somersault out of reach, three arrows from the top of it), Piercing Arrow (2), Split Shot (3), Guided Arrow (4), Explosive Arrow (5), Frost Arrow (6), Sniper Shot (7), Constellation Shot (9), Arrow Storm (12), Black Hole Arrow (15) |
+| Archer | Disengage (1: sprung back out of reach, feet first and the bow never off the mark, three arrows before she's down), Piercing Arrow (2), Split Shot (3), Guided Arrow (4), Explosive Arrow (5), Frost Arrow (6), Sniper Shot (7), Constellation Shot (9), Arrow Storm (12), Black Hole Arrow (15) |
 | Rogue | Backflip (1), Flip Strike (2), Fan of Knives (4), Rupture (5), Whirling Blades (6), Smoke Bomb (7), Shadow Dance (9), Death from Above (11), Eviscerate (13) |
 | Ninja | Twin Fangs (1: both blades), Fire Star (2), Spin Kick (3), Star Storm (3), Frost Stars (4), Whirlwind (5), Storm Star (6), Rising Dragon (7), Spirit Star (8), Kick Chain (9), Substitution (10), Great Shuriken (12) |
 | Dragoon | Lance Flurry (2), Dragon Dive (3), Spearstep (3), Spiral Lance (4), Sweeping Lance (5), Comet Dive (6), Lance Barrier (8), Storm Dive (9), Spear Rain (10), Dragon Breath (12), Dragonfall (14), Heaven's Rain (17) |
@@ -646,22 +646,49 @@ where they began (`keepPace`): they used to stay the level they were made at.
 | Bard | Power Chord (2), Fan of Notes (3), Shockwave Riff (3), Echo (4), Dancing Notes (5), Bass Drop (6), Swashbuckle (6: the sword), Resonance Beam (7), Lullaby (8), Sonic Boom (9), Crescendo (10), The Grand Finale (14) |
 
 - **The dragoon's spear is the one he's holding.** His leap used to draw a spear of light from his hand. Now the spear
-  in his fist is pointed up on the rise and down the dive (`aim`), lit down its own length, driven into the ground where
-  he lands (it leaves his hand and stands there: `free`), and is back in his fist as it breaks out. Each of the five
-  dives has its own look: fire wound round him in two ribbons, a comet's tail, bolts round the landing, wings of fire.
-- **The paladin's board and the lancer's are their own too.** Thrown, the board on the arm leaves it, flies (flat like
-  a discus for the paladin, standing and turning for the lancer), strikes from one foe to the next and comes home to
-  the arm. A paladin who carries a maul throws a board of light.
-- **Hammers are hammers, stars are stars.** The paladin's hammers were a glowing rock. They, the ninja's stars and the
-  boomerangs of light are now built of two new spell shapes, `BOX` and `SHARD` (`src/gfx/spellfx.js`): gold-headed
-  hammers with wooden hafts that tumble end over end, four-pointed steel stars that turn. A third, `GLYPH`, draws signs
-  in light: the bards' notes, the arcs of their sound, the crescent a blade leaves, a wing, a cross.
+  in his fist is pointed up on the rise and down the dive (`aim`), lit on the dive only (its head and the top of its
+  haft, a tail of light off the point), driven into the ground a stride and a half before him at the slant it came down
+  on (it leaves his hand and stands there: `free`), with his fist still on the haft (`gripAt`), and is back in his hand
+  as it breaks out. Where he means to land is marked on the ground from the moment he's up (`mark`). Each of the five
+  dives has its own look: fire wound round the spear in two ribbons and left burning where he lands; a white-gold point
+  with a comet's tail and scorched ground; a bolt down the spear and bolts from it to everything near; wings of fire and
+  a sign burning on the ground.
+- **The paladin's board and the lancer's are their own too.** Thrown, off the arm that carries it, the board leaves that
+  arm, flies (flat like a discus for the paladin, standing and turning for the lancer), strikes, hangs there a moment
+  turning, and goes for the next slower than it left him; the line it has taken is left in the air behind it, corner to
+  corner; then it comes home to the arm, which braces to take it. A paladin who carries a maul throws a board of light.
+- **Hammers are hammers, stars are stars.** The paladin's hammers were a glowing rock. They, the ninja's stars, the
+  boomerangs and the spears that fall are now built of two new spell shapes, `BOX` and `SHARD` (`src/gfx/spellfx.js`):
+  gold-headed hammers with wooden hafts that tumble end over end (`hammer3`), steel stars edged in the ninja's violet or
+  stars of their element's own colour (`star3`), gold boomerangs whose arms narrow to their tips with the blur of their
+  turning under them (`rang3`), steel spears with a spear's head (`pike3`). An arrow has a shaft (`arrow3`). A third
+  shape, `GLYPH`, draws signs in light: the bards' notes, the arcs of their sound, the crescent a blade leaves, a pair
+  of wings, a cross.
+- **A move is performed, not only cast.** Each has a gather (light drawn in to his feet: `gather`), a moment it lands
+  on, and a pose held after it. A clip can be begun part-way in and held at one place for as long as the move wants
+  (`from` and `hold` on `startSwing`): the mace held to the sky while what it called down is still coming, the shield
+  braced behind a beam. Blows that come in a string are each their own short clip, one after another (`chain`). And
+  what no clip has in it the arms do themselves, after the pose is made (`afterPose` in `src/sim/hero.js`):
+  - `pointAt`: the weapon arm out along a line and the weapon down it. The paladin's beam comes off the head of his
+    levelled mace; the dragon's breath off the point of a levelled spear; a spear is held to the sky for the rain.
+  - `toss`: a throw from either arm, standing or at a run, the shoulders turning into it. The ninja throws across his
+    body at what he's running round, one hand and then the other; the boomerang knight's left hand throws its own; the
+    board leaves the shield arm.
+  - `poseBow`: the archer side-on behind the bow, the bow arm out straight at the mark (or at the sky, for arrows meant
+    to fall), the string hand back to the cheek as far as it's drawn, an arrow on the string, and the arm left up a
+    moment after it's gone.
+  - `poseSpread`: both arms out wide in a spin, so the blades are where the arcs are.
+  A throw leaves the hand as the hand comes past the shoulder (a quarter of the way into the clip, `THROW`), not after.
 - **Flips are the whole body turned over** (`bodyFlip`, `bodyRoll` and `tumble` in `src/sim/hero.js`), after the pose is
-  made: a rogue's forward somersault onto a foe, his backflip away, a cartwheel with both knives out, two turns from
-  roof height. A leap now hangs at its top rather than sliding along its arc at one speed.
-- **Blood.** A rogue's cuts, and anything else that bleeds a foe, throw its blood out along the blow and every way: the
-  render thread's own blood, which falls and soaks into the ground (`EV.HERO_FX`, `heroFx` in `src/main.js`), and red
-  streaks and drops in the air. Rupture goes on throwing it for three seconds.
+  made: a rogue's forward somersault onto a foe, his backflip away, a cartwheel through them with both knives out, two
+  turns from the height of an eave. A leap that means to land on something goes up fast, hangs a moment and comes down
+  faster than it rose (`snap`), no higher than it needs.
+- **Where a blow lands.** A spark in the class's own colour at the point of it; a heavy blow takes one of the dead off
+  its stride, and the heaviest, near you, holds the world a beat (`Hero.hit`). A cut leaves a streak across what it cut
+  (`slash`, two crossed where two blades went through the same thing: `xcut`): crimson and violet for the rogue, violet
+  for the ninja, gold for the boomerang knight. A rogue's cuts, and anything else that bleeds a foe, throw its blood out
+  along the blow: the render thread's own blood, which falls and soaks into the ground (`EV.HERO_FX`, `heroFx` in
+  `src/main.js`). Rupture goes on throwing it for three seconds.
 
 ### The bards' lutes
 
@@ -673,11 +700,15 @@ now carries four things, not three (`PROPS_PER_CHAR`).
   belly, neck up to his left, and both hands come to it: the left closes on the neck, the right is at the strings
   (`poseLute`, `reachTo`: the arms are turned to reach, shoulder to elbow to wrist, whatever the clip had them doing).
   The sword goes to his left hip while both hands are busy, and is back in his hand after.
-- **Three ways of playing** (`tune.v`): a steady strum, down and up across the strings, the body swaying with it;
-  picking, small and quick, bent over the neck with the left hand running up and down it; and the great wheeling strum,
-  the arm thrown up and round and down through every string, the neck raised and the back arched.
-- **What comes off it** (`strumFx`). On every stroke a note is thrown up off the strings (a quaver, a beamed pair, a
-  crotchet, turning as it rises), the sound of it goes out along the ground before him in arcs, and the string is heard:
+- **Three ways of playing** (`tune.v`): a steady strum, the hand well past the strings each way so the elbow's seen to
+  work, the shoulders turning against it and the head coming down on the downstroke; picking, the hand small and quick
+  and the body bent right over the neck, head down, the left hand running up and down it; and the great wheeling strum,
+  the arm thrown out and up above his own shoulder, held there a moment with his back arched, and brought down through
+  every string and past them to the hip.
+- **What comes off it** (`strumFx`). On every stroke a note is thrown off the strings, out from the lute's belly and
+  away before him (never up in his own face). Each way of playing has its own: a strum's notes, with the sound of it
+  going out along the ground in arcs on the downstroke; picking, a quick run of small single notes and nothing else;
+  the wheeling strum, three big ones at once and the ground rung under him. And the string is heard:
   a plucked string made in the page (`pluck` in `src/audio.js`), walking up and down a five-note scale, each bard from
   their own place in it.
 - A bard's ordinary blow is now a few bars and a note off the strings. The three songs are played as well as sung, and
