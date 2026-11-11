@@ -1,6 +1,6 @@
-// Auto-play: the game plays itself. Behind Velscour's Skull: the word Jamie wakes the Auto button under it (src/ui/lands.js), its
-// picture and its glow taken from Velscour (Agilancer/velscour assets/ui/btn_auto.webp, css/style.css .hbtn). The button or P turns
-// it on and off; moving yourself (the keys or the stick) takes the controls back for a moment. The head is src/ui/autobrain.js.
+// Auto-play: the game plays itself. The Auto button sits under Velscour's Skull whenever you're playing, its picture and its glow
+// taken from Velscour (Agilancer/velscour assets/ui/btn_auto.webp, css/style.css .hbtn). The button or P turns it on and off;
+// moving yourself (the keys or the stick) takes the controls back for a moment. The head is src/ui/autobrain.js.
 //
 // While it's on, the mouse is left free (no pointer lock), so the button and its menu can be clicked; Esc pauses and resumes.
 // When every quest is done and it's only grinding, a menu asks where (GRINDS), and keeps the last choice if nobody answers.
@@ -14,7 +14,7 @@ const MENU_WAIT = 12;   // seconds the menu waits for a choice before it keeps t
 
 const CSS = `
 #autoBtn { position: fixed; top: 268px; right: 22px; width: 52px; height: 56px; z-index: 45; border: 0; background: none; cursor: pointer; padding: 0; display: none; }
-body.playing #autoBtn.shown { display: block; }
+body.playing #autoBtn { display: block; }
 #autoBtn img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 2px 3px #000); transition: filter .12s, transform .12s; pointer-events: none; }
 #autoBtn:hover img { filter: drop-shadow(0 0 5px rgba(255,190,90,.75)) brightness(1.15); }
 #autoBtn:active img { transform: scale(.94); }
@@ -65,7 +65,7 @@ export class AutoPlay {
   // o: { base, opening, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town, spellbar(), paused(), pause(on) }
   constructor(o) {
     this.o = o;
-    this.unlocked = false; this.on = false; this.brain = null;
+    this.on = false; this.brain = null;
     this.yieldT = 0; this.calm = true;
     const style = el('style'); style.textContent = CSS; document.head.append(style);
     this.btn = el('button', 'autoBtn', null, `<img src="${BTN}" alt="Auto" draggable="false">`);
@@ -79,6 +79,8 @@ export class AutoPlay {
     const press = (e) => { e.preventDefault(); e.stopPropagation(); this.btn.blur(); this.toggle(); };
     this.btn.addEventListener('click', press);
     this.btn.addEventListener('touchend', press, { passive: false });
+    // (The pointer over it: a head start on the nav thread, which takes a few seconds to come up.)
+    this.btn.addEventListener('pointerenter', () => this.wake());
     for (const t of [this.btn, this.statusEl, this.menu, this.logEl]) {
       t.addEventListener('pointerdown', (e) => e.stopPropagation());
       t.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
@@ -91,7 +93,8 @@ export class AutoPlay {
     addEventListener('keydown', (e) => this.key(e));
   }
 
-  // Its head, and the thread it finds its way with (a few seconds to build: started as soon as the word is spoken).
+  // Its head, and the thread it finds its way with (a few seconds to build: started the first time it's wanted, not before, so a
+  // game nobody hands over to never pays for it).
   wake() {
     const o = this.o;
     this.brain ||= new Brain({
@@ -102,26 +105,8 @@ export class AutoPlay {
     });
   }
 
-  // The word spoken: the button wakes. The game stays paused with the mouse free, so it can be pressed.
-  unlock() {
-    this.wake();
-    const { input, audio, hud } = this.o;
-    input.menu = false;
-    // Paused, with the mouse left free (not taken back by the view), so the button under the skull can be clicked.
-    if (document.pointerLockElement) document.exitPointerLock();
-    if (!this.o.paused()) this.o.pause(true);
-    audio.once?.('lock_unlock', 0.7);
-    if (!this.unlocked) {
-      this.unlocked = true;
-      this.btn.classList.add('shown');
-      this.statusEl.classList.add('shown');
-      this.status('Auto-play is ready: press the button, or P.');
-    }
-    hud.tip('The skull grins. Auto-play wakes under it: the button, or P.', 5);
-  }
-
   key(e) {
-    if (e.repeat || !this.unlocked) return;
+    if (e.repeat) return;
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     const { input } = this.o;
@@ -135,12 +120,14 @@ export class AutoPlay {
   }
 
   toggle(v = !this.on) {
-    if (!this.unlocked || v === this.on) return;
+    if (v === this.on) return;
     const { input, hud } = this.o;
     this.on = v;
     this.btn.classList.toggle('on', v);
     if (v) {
       this.wake();
+      // (Its line under the button, from the first time it's on: what it's about, and the log.)
+      this.statusEl.classList.add('shown');
       input.free = true;
       if (document.pointerLockElement) document.exitPointerLock();
       this.brain.start();
@@ -166,7 +153,7 @@ export class AutoPlay {
     this.statusEl.classList.toggle('grinding', grinding);
     const small = this.statusEl.querySelector('small');
     small.textContent = this.on ? `Level ${this.o.pack.level} · quests ${n} of ${all.length} done${grinding ? ' · click to choose where' : ''}` : '';
-    if (this.unlocked) small.insertAdjacentHTML('beforeend', '<u>log</u>');
+    small.insertAdjacentHTML('beforeend', '<u>log</u>');
   }
 
   // Every frame of play.

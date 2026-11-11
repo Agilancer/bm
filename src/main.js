@@ -601,8 +601,6 @@ async function boot(plan, poolSize) {
       inventory.render();
       return `${items.length} things of ${tiers.map((r) => RARITIES[r].name).join(', ')}, and ${kind === 'god' ? '25,000' : '2,500'} gold${dropped ? `; ${dropped} on the ground at your feet, the pack being full` : ''}.`;
     },
-    // The other word: auto-play's button (src/ui/autoplay.js).
-    autoplay: () => game.autoplay?.unlock(),
   });
   lands.load(null);
   game.lands = lands;
@@ -892,7 +890,7 @@ async function boot(plan, poolSize) {
   townUI.spellbar = game.spellbar;
   // First person or third: V, the eye by the spell bar, VIEW on a phone.
   game.viewSwitch = new ViewSwitch({ input, shared, settings, save: saveSettings, tip: (t, s) => hud.tip(t, s), busy: () => state.paused || naming });
-  // Auto-play, behind the skull's word Jamie: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
+  // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES,
@@ -949,8 +947,8 @@ async function boot(plan, poolSize) {
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> opens your spellbook, where your points are spent and your bar is set. <b>PACK</b> holds your gear. <b>MAP</b> shows the land.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> journal';
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> opens your spellbook, where your points are spent and your bar is set. <b>PACK</b> holds your gear. <b>MAP</b> shows the land. <b>Auto</b>, under the skull, lets the game play itself.'
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> journal &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   watchFiles(null);
