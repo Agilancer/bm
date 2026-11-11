@@ -70,12 +70,12 @@ for (let i = 0; i < 6000; i++) {
 }
 assert.equal(rarities.size, RARITIES.length);
 assert.equal(robeRarities.size, RARITIES.length, 'robes come at every rarity');
-// A plain robe keeps its palette's floor; one asked for by its base comes as a set of that palette.
+// A plain robe keeps its palette's floor; one asked for by its base comes as a set of that palette, where there's one that rare.
 for (const b of Object.keys(ROBES)) {
   const plain = rollRobe(rng, { base: b, plain: true });
   assert.ok(!plain.set && plain.rarity >= ROBE_PALETTES[ROBES[b].palette].floor);
   const r = rollRobe(rng, { base: b, rarity: 2 });
-  assert.ok(r.base === b && ROBE_SETS[r.set].palette === ROBES[b].palette);
+  assert.ok(r.base === b && (!r.set || ROBE_SETS[r.set].palette === ROBES[b].palette));
 }
 // Every set: five pieces to roll, three bonuses on three stats, and they count when worn.
 for (const id of Object.keys(ROBE_SETS)) {

@@ -54,7 +54,9 @@ def main():
         colour, done = W.bake(recipe, T, folder)
         skin = T.parts == 0
         colour[skin] = T.base[skin]
-        Image.fromarray((colour * 255 + 0.5).astype(np.uint8)).save(os.path.join(SKINS, sid + ".webp"), quality=90, method=4)
+        # (A set held out of the game, import_set.py --hold, is baked for its preview only.)
+        if any(e["id"] == sid for e in listing["sets"]):
+            Image.fromarray((colour * 255 + 0.5).astype(np.uint8)).save(os.path.join(SKINS, sid + ".webp"), quality=90, method=4)
         W.preview(T, colour, before=False).save(os.path.join(folder, "preview.jpg"), quality=88)
         for s in listing["sets"]:
             if s["id"] == sid:

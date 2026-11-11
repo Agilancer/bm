@@ -65,7 +65,13 @@ test('the sets in the game are whole', () => {
     assert.equal(ROBE_SETS[s.id].rarity, s.rarity); assert.equal(ROBE_SETS[s.id].palette, s.wears.palette);
     assert.deepEqual([...s.pieces].sort(), [...SKIN_PARTS].sort(), `${s.id}: all five pieces`);
   }
-  // And every palette has a set at every rarity, so a robe asked for by its colour always comes as one.
-  for (const p of Object.keys(ROBE_PALETTES)) for (let r = 0; r < 6; r++) assert.ok(gear.some((s) => s.wears.palette === p && s.rarity === r), `${p} at rarity ${r}`);
+  // And there's a set at every rarity, so whatever comes up there's gear to roll.
+  for (let r = 0; r < 6; r++) assert.ok(gear.some((s) => s.rarity === r), `a set at rarity ${r}`);
+  // The sets held back for more work (import_set.py --hold) aren't in the game, and their recipes are kept.
+  const heldPath = new URL('../art/player/skins/held.json', import.meta.url);
+  for (const h of existsSync(heldPath) ? JSON.parse(readFileSync(heldPath)).sets : []) {
+    assert.ok(!shipped.some((s) => s.id === h.id) && !ROBE_SETS[h.id], `${h.id} is held, and in the game`);
+    assert.ok(existsSync(new URL(`../art/player/skins/${h.id}/recipe.json`, import.meta.url)), `${h.id}: recipe kept`);
+  }
   assert.ok(existsSync(new URL('../assets/game/player/parts.png', import.meta.url)));
 });

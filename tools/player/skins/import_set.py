@@ -3,6 +3,7 @@
     python tools/player/skins/import_set.py path/to/emberwake.zip [more.zip ...]
     python tools/player/skins/import_set.py path/to/folder             (a set unzipped, or a folder of them, however deep)
     python tools/player/skins/import_set.py --rarity rare garnet_court [more ids]
+    python tools/player/skins/import_set.py --hold garnet_court [more ids]     (out of the game for now; --release puts back)
     python tools/player/skins/import_set.py --list
     python tools/player/skins/import_set.py --remove emberwake
 
@@ -43,6 +44,16 @@ def save(data):
     json.dump(data, open(os.path.join(SKINS, "sets.json"), "w"), indent=1)
     open(os.path.join(SKINS, "sets.json"), "a").write("\n")
     write_items(data)
+
+
+def held_listing():
+    path = os.path.join(ART, "held.json")
+    return json.load(open(path)) if os.path.isfile(path) else {"sets": []}
+
+
+def save_held(data):
+    json.dump(data, open(os.path.join(ART, "held.json"), "w"), indent=1)
+    open(os.path.join(ART, "held.json"), "a").write("\n")
 
 
 def rarity_of(sid, said=None):
@@ -157,6 +168,36 @@ def main():
             if s["id"] in args[2:]:
                 s["rarity"] = RARITIES.index(args[1])
         save(data)
+    elif args[0] == "--hold":
+        # --hold id [id ...]: takes sets out of the game for now (not good enough yet). Their recipes stay in art/, and
+        # what the game knew of them goes to art/player/skins/held.json; their pictures are taken out of assets/.
+        data, held = listing(), held_listing()
+        for sid in args[1:]:
+            entry = next((s for s in data["sets"] if s["id"] == sid), None)
+            if not entry:
+                print(f"{sid}: not in the game")
+                continue
+            data["sets"] = [s for s in data["sets"] if s["id"] != sid]
+            held["sets"] = [s for s in held["sets"] if s["id"] != sid] + [entry]
+            f = os.path.join(SKINS, sid + ".webp")
+            if os.path.isfile(f):
+                os.remove(f)
+        save_held(held)
+        save(data)
+    elif args[0] == "--release":
+        # --release id [id ...]: puts held sets back in the game. Bake them after: rebake.py id [id ...].
+        data, held = listing(), held_listing()
+        for sid in args[1:]:
+            entry = next((s for s in held["sets"] if s["id"] == sid), None)
+            if not entry:
+                print(f"{sid}: not held")
+                continue
+            entry = {k: v for k, v in entry.items() if k != "notes"}
+            held["sets"] = [s for s in held["sets"] if s["id"] != sid]
+            data["sets"] = [s for s in data["sets"] if s["id"] != sid] + [entry]
+        save_held(held)
+        save(data)
+        print("Now bake them: python tools/player/skins/rebake.py " + " ".join(args[1:]))
     elif args[0] == "--list":
         for s in listing()["sets"]:
             print(f"{s['id']:24} {s['name']:28} {json.dumps(s['wears'])}  {', '.join(s['pieces'])}")
