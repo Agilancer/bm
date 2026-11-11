@@ -329,9 +329,27 @@ The big map is looked about freely. The **wheel** (or a **pinch**, or its + and 
 Under a roof both maps show the place's own chart instead, as Bellmourn's map does below ground: the passages and rooms come out of the dark as you walk them (`src/ui/undermap.js`). There's one chart each for the cathedral and its catacombs, the Hollowfang Warrens and the Test Dungeon, half a metre to a cell, made from the place's own shape: the church's floors and colliders in `interior.json`, the warrens' and the hall's fields. The filling-in runs along the floor from where you stand, 16 m at most, so it stops at walls and you never see into a room you haven't found the way to. Stone is warm near the surface and cold deep down, stairs are banded, a drop is red, doors are gold ticks, and rooms are named once you've stood in them. A new place under a roof wants a `Chart` there and a line in `chartAt`.
 
 The **Auto** button sits under Velscour's Skull whenever you're playing, taken from Velscour (`assets/ui/btn_auto.webp`,
-and its blue glow from Velscour's `css/style.css`). The button, or **P**, turns auto-play on and off; it needs no word. With
-the mouse held by the game, press P, or free the mouse (Esc or Alt) and click it. Its nav thread takes a few seconds to come
-up, so it isn't started until auto-play is first wanted (the pointer over the button is enough to start it).
+and its blue glow from Velscour's `css/style.css`). The button, or **P**, brings up a menu asking what it should do, and
+stops it once it's on; it needs no word. With the mouse held by the game, press P, or free the mouse (Esc or Alt) and click
+it. Its nav thread takes a few seconds to come up, so it isn't started until auto-play is first wanted (the pointer over the
+button is enough to start it).
+
+The menu (`MODES` in `src/ui/autobrain.js`) has three choices, and starts on the one picked last time:
+
+- **Complete Quests.** The whole game, as below: the quests in order, the black knight, the party and the Warrens.
+- **Grind monsters for XP.** It asks where (the grinding grounds below), and does only that: no quests taken, talked
+  through or handed in. It still sells, buys, mends and hires a party, and fights what comes at it.
+- **Dungeon Runs.** Round every dungeon you've finished, one after another, and round again, until it's stopped
+  (`DUNGEONS`, `dungeonJob` and `sweep`). The catacombs count once *The Dead Can't Wait* is done, the Bell Crypt once
+  *The Toll of the Bell* is, and the Hollowfang Warrens once Venomaw has died (the clears are kept in the save with the
+  party, `clears` in `src/ui/party.js`, so a Warrens cleared before this was added counts only from the next clear). A run
+  of the catacombs or the crypt walks to every spot in them and puts down what's there (fifteen minutes at most, ninety
+  seconds at most to reach a spot); a run of the Warrens goes through to Venomaw and out by the far portal, or on to the
+  next dungeon if it's beaten back three times. Without a party fit for the Warrens it hires one if it can pay, else
+  skips them that lap. With nothing finished the choice is greyed out.
+
+Clicking its status line while it plays brings the menu back, to change what it's at. Esc, P or Cancel shuts the menu
+without starting anything.
 
 While it's on, the game plays itself as a player would. It works the same controls as you: the move keys, the look, the staff,
 the casts, jump, dodge and E. Nothing is moved or handed to it.
@@ -519,8 +537,8 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **The Test Dungeon.** It fights whatever's been summoned, going in after it once the door's up, and otherwise waits in the
   hall, mended. It never summons anything itself (`hallRun`).
 
-Its status shows under the button, with its level and how many quests are done. When every quest is done and there's
-nothing left but grinding, a menu asks where:
+Its status shows under the button, with its level and how many quests are done. On the quests, when every quest is done
+and there's nothing left but grinding, a menu asks where (the same grounds Grind monsters for XP offers):
 
 - the woods round Bellmourn
 - the catacombs
@@ -528,7 +546,7 @@ nothing left but grinding, a menu asks where:
 - the jelly camps
 - roaming the land
 
-The menu keeps the last choice after 12 seconds, and it comes back when you click the status line.
+That menu keeps the last choice after 12 seconds.
 
 **For balancing.** Auto-play keeps a log, for reading a whole run afterwards. Open it with **log** under its status line, or
 **Balance log** in the menu. It lists:

@@ -147,6 +147,26 @@ export const GRINDS = {
   roam: { name: 'Roam the land', line: 'Every country and every seal, chests and fights wherever the road goes.' },
 };
 
+// What it can be set to (the menu under the Auto button, src/ui/autoplay.js): the quests, grinding where GRINDS says, or runs
+// through every dungeon the player has finished, one after another, round and round until it's stopped.
+export const MODES = {
+  quests: { name: 'Complete Quests', line: 'Every quest the town has, in an order that suits its level: taken, worked through and handed in.' },
+  grind: { name: 'Grind monsters for XP', line: 'No quests: only levels, wherever you send it.' },
+  dungeons: { name: 'Dungeon Runs', line: 'Through every dungeon you have finished, one after another, until you stop it.' },
+};
+
+// The dungeons it runs, and when one counts as finished: the catacombs once the Sexton's eight are at rest, the Bell Crypt once
+// its warden's down, the Warrens once Venomaw has died (src/ui/party.js clears, kept in the save). A run of the catacombs or
+// the crypt is every spot in them walked and what's there put down; a run of the Warrens is the way through to Venomaw and out.
+export const DUNGEONS = [
+  { key: 'catacombs', name: 'The catacombs', quest: 'dead_cant_wait' },
+  { key: 'bellcrypt', name: 'The Bell Crypt', quest: 'toll_of_bell' },
+  { key: 'warrens', name: 'The Hollowfang Warrens', cleared: (game) => (game.party?.clears || 0) > 0 },
+];
+export const finishedDungeons = (townUI, game) => DUNGEONS.filter((d) => (d.quest ? townUI.quests.done(d.quest) : d.cleared(game)));
+const lower = (s) => s[0].toLowerCase() + s.slice(1);
+const RUN_TIME = 900, SPOT_TIME = 90;   // (seconds: a run of spots at most, one spot at most, before it's left)
+
 const SLOT_OF = (it) => (it.type === 'weapon' ? 'main' : it.type === 'shield' ? 'off' : it.type === 'skull' ? 'skull' : it.type === 'robe' ? ROBES[it.base]?.slot : null);
 // What a set of gear is worth to a wizard: spell power first.
 const WORTH = { power: 260, thrift: 180, regen: 45, mana: 0.7, life: 0.9, armor: 1.2, leech: 5 };
@@ -332,6 +352,8 @@ export function coverage(foeNames = null) {
   for (const k of [...CORE_ALL, ...SLOT_A, ...SLOT_B]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
   out.push(...warrensCoverage());
+  // (Every place below ground a quest sends it into is a dungeon it can run again: DUNGEONS.)
+  for (const [id, r] of Object.entries(RULES)) for (const st of r.steps) if ((st.enter === 'catacombs' || st.enter === 'bellcrypt') && !DUNGEONS.some((d) => d.key === st.enter)) out.push(`quest ${id}: ${st.enter} isn't in DUNGEONS, so Dungeon Runs never go back there`);
   for (const st of STATIONS) if (!(st.key in HALL_COUNTERS)) out.push(`Test Dungeon counter ${st.key}: nothing in HALL_COUNTERS says what auto-play does with it`);
   if (foeNames) foeNames.slice(0, TRIPO_KIND).forEach((n, k) => { if (n && !KNOWN_KINDS.has(k)) out.push(`foe kind ${k} (${n}): no rule in fightable(), so it's judged by its life alone`); });
   return out;
@@ -415,6 +437,8 @@ export class Brain {
     this.auto = { mx: 0, mz: 0, run: false, jumpHeld: false, cast: false, block: false };
     this.t = 0;
     this.grind = 'woods';
+    this.mode = 'quests';   // MODES: what the menu set it to
+    this.runKey = null; this.laps = 0;
     this.reset();
   }
 
@@ -440,6 +464,7 @@ export class Brain {
     this.patrol = null; this.wispT = 0; this.gearT = 0; this.strafe = 1; this.strafeT = 0;
     this.lastPos = null; this.lastHpf = 1;
     this.bump = this.bump || {};
+    this.runState = null;
   }
 
   start() { this.reset(); this.o.input.auto = this.auto; }
@@ -1507,18 +1532,22 @@ export class Brain {
     // (Only while there's someone open to buy it: at night the town's counters are shut, and it keeps at its work.)
     const buyer = junk.length > 0 && PEOPLE.some((p, i) => TRADES[p.trade]?.buys && this.o.townUI.isOpen(i));
     const wantsTown = ((room < 10 || junk.length >= 6) && buyer) || (m.hpf < 0.45 && !this.known(SP.mend));
+    const questing = this.mode === 'quests';
     // Once it's at the black knight, it sees him through (unless he's done it in, and it's falling back to mend).
-    if (this.job?.kind === 'boss' && this.blackKnight(this.snap) && m.hpf > 0.4) return this.job;
+    if (questing && this.job?.kind === 'boss' && this.blackKnight(this.snap) && m.hpf > 0.4) return this.job;
     // Down the Warrens, the Warrens; a party to hire when it's ready for one; then the Warrens themselves when it's strong enough.
-    if (inDungeon(m.x, m.z)) return warrensJob(this, m);
+    if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : warrensJob(this, m);
     const hire = hireJob(this, m);
     if (hire) return hire;
-    const delve = warrensJob(this, m);
+    const delve = questing && warrensJob(this, m);
     if (delve && !wantsTown) return delve;
-    // In the town, its errands: the quest talk first, then the shops.
-    const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60);
+    // In the town, its errands: the quest talk first (only when it's on the quests), then the shops.
+    const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60, questing);
     if (errand) return errand;
     if (wantsTown && !m.town && !this.skipping('town')) return { kind: 'go', why: 'town', x: 2, z: 3, r: 6, say: room < 10 ? 'Back to Bellmourn: the pack is full.' : 'Back to Bellmourn to sell.' };
+    // Set to grinding: only that. Set to dungeon runs: the next dungeon round, or grinding while there's none it can run.
+    if (this.mode === 'grind') return this.grindJob(m, this.grind, 'grind');
+    if (this.mode === 'dungeons') return this.dungeonJob(m) || this.grindJob(m, this.grind, 'grind', 'No dungeon it can run just now: grinding meanwhile.');
     // By night, what can only be done by night.
     if (isNight(m.hour) || m.hour >= 19.5) {
       for (const [id, lvl] of PLAN_ALL) {
@@ -1662,18 +1691,18 @@ export class Brain {
   }
 
   // What the town's for, if it's there or near: quest talk, then selling, mending, a bed.
-  errand(m, here) {
+  errand(m, here, quests = true) {
     if (!here) return null;
     const { townUI, pack } = this.o, Q = townUI.quests;
     // (The quests' own talk in the town comes through questJob and offerJob: those first, wherever it is.)
-    for (const [id] of PLAN_ALL) {
+    if (quests) for (const [id] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done') continue;
       const q = QUESTS[id], giver = this.personIndex(q.giver);
       const talkTo = st?.talk ? this.personIndex(st.talk) : (st?.back || (st?.bring && (pack.mats[st.bring] || 0) >= st.n) || (s.stage === 'making' && this.o.town.day >= s.ready)) ? giver : -1;
       if (talkTo >= 0 && talkTo < PEOPLE.length && !this.skipping(`p:${talkTo}`) && this.reachable(talkTo)) return this.talkJob(talkTo, 'quest', `${q.title}: to ${townUI.people[talkTo].name}.`);
     }
-    const offer = this.offerJob(m);
+    const offer = quests && this.offerJob(m);
     if (offer && dist(m.x, m.z, 0, 0) < 140) return offer;
     // Selling: to whoever gives most for the most of it, while they're open.
     const junk = this.junk();
@@ -1698,7 +1727,7 @@ export class Brain {
     // A night at the Tolling Bell: when a quest waits on tomorrow, or it's late and it's tired.
     const h = m.hour;
     const making = Object.keys(RULES).some((id) => Q.state(id)?.stage === 'making' && this.o.town.day >= 0 && this.o.town.day < Q.state(id).ready);
-    const nightWork = PLAN_ALL.some(([id, lvl]) => { const st = Q.step(id); return st && (st.night || st.warden || (st.kill === 'barrows')) && m.lvl >= lvl; });
+    const nightWork = quests && PLAN_ALL.some(([id, lvl]) => { const st = Q.step(id); return st && (st.night || st.warden || (st.kill === 'barrows')) && m.lvl >= lvl; });
     if (h >= 18.3 && h < 23.5 && (making || (m.hpf < 0.5)) && !nightWork && pack.purse() >= 4) {
       const i = PEOPLE.findIndex((p) => p.trade === 'inn');
       if (i >= 0 && !this.skipping(`p:${i}`) && this.reachable(i)) return { kind: 'talk', why: 'bed', who: i, say: `A bed at the Tolling Bell${making ? ': a quest waits on the morning' : ''}.` };
@@ -1780,8 +1809,73 @@ export class Brain {
     if (j.kind === 'boss') { this.siege(snap, m); return; }
     if (j.kind === 'hire') { doHire(this, m, j); return; }
     if (j.kind === 'warrens') { this.warrensRun(m, foes); return; }
-    if (j.kind === 'hunt') { this.hunt(m, j, foes); return; }
+    if (j.kind === 'hunt') { if (j.run) this.sweep(m, j); else this.hunt(m, j, foes); return; }
     this.halt();
+  }
+
+  // ---- dungeon runs (the menu's Dungeon Runs: MODES, DUNGEONS)
+
+  // The job for the dungeon it's on, or the next it can run: null when there's none.
+  dungeonJob(m) {
+    const list = finishedDungeons(this.o.townUI, this.o.game);
+    if (!list.length) return null;
+    let at = list.findIndex((d) => d.key === this.runKey);
+    if (at < 0) { at = 0; this.runKey = list[0].key; this.runState = null; }
+    for (let i = 0; i < list.length; i++) {
+      const d = list[(at + i) % list.length];
+      const job = this.runJob(m, d);
+      if (job) { if (d.key !== this.runKey) { this.runKey = d.key; this.runState = null; } return job; }
+    }
+    return null;
+  }
+
+  runJob(m, d) {
+    const lap = `lap ${this.laps + 1}`;
+    if (d.key === 'warrens') {
+      // (With a party fit to go down: hireJob, before this, sees to one if it can pay.)
+      const P = this.o.game.party;
+      if (!inDungeon(m.x, m.z) && !P?.fit()) return null;
+      return { kind: 'warrens', why: 'run:warrens', say: `Dungeon runs, ${lap}: ${inDungeon(m.x, m.z) ? 'down the Hollowfang Warrens' : 'to the Hollowfang Warrens, with the party'}.` };
+    }
+    if (d.key === 'catacombs' && !this.o.townUI.quests.state('dead_cant_wait')) return null;
+    const spots = d.key === 'bellcrypt' ? HUNTS.bellcrypt : this.catacombSpots(m);
+    if (!spots.length) return null;
+    return { kind: 'hunt', why: `run:${d.key}`, run: d.key, spots, below: true, say: `Dungeon runs, ${lap}: ${lower(d.name)}` };
+  }
+
+  // A run through a dungeon's spots: each walked to and looked round once, what's there put down (the fight comes first, as it
+  // does anywhere), and then on to the next dungeon.
+  sweep(m, j) {
+    let R = this.runState;
+    if (!R || R.key !== j.run) R = this.runState = { key: j.run, left: new Set(j.spots.map(([x, z]) => `${x},${z}`)), n: j.spots.length, t0: this.t, at: null, atT: 0 };
+    const left = j.spots.filter(([x, z]) => R.left.has(`${x},${z}`));
+    if (!left.length || this.t - R.t0 > RUN_TIME) { this.ranDungeon(j.run); return; }
+    this.say(`${j.say} (${R.n - left.length} of ${R.n}).`);
+    const p = left.reduce((a, b) => (dist(m.x, m.z, a[0], a[1]) <= dist(m.x, m.z, b[0], b[1]) ? a : b));
+    const k = `${p[0]},${p[1]}`;
+    if (R.at !== k) { R.at = k; R.atT = this.t; R.look = 0; }
+    // (A spot it can't get to, or can't get to in time: left.)
+    if (this.noWay || this.t - R.atT > SPOT_TIME) { this.noWay = null; R.left.delete(k); R.at = null; return; }
+    if (dist(m.x, m.z, p[0], p[1]) < 4) {
+      this.halt();
+      this.face = this.o.input.yaw + 0.9;
+      if ((R.look += 0.12) > 2.5) { R.left.delete(k); R.at = null; }
+      return;
+    }
+    this.goTo(p[0], p[1], 2.5, true, false, true);
+  }
+
+  // Through one (or beaten back by it): on to the next dungeon, and once round them all, another lap.
+  ranDungeon(key, beaten = false) {
+    if (this.mode !== 'dungeons') return;
+    const list = finishedDungeons(this.o.townUI, this.o.game);
+    const d = DUNGEONS.find((x) => x.key === key);
+    const at = list.findIndex((x) => x.key === key);
+    const next = list.length ? list[(at + 1) % list.length] : null;
+    if (at < 0 || at + 1 >= list.length) this.laps++;
+    this.runKey = next?.key || null;
+    this.runState = null; this.job = null; this.patrol = null;
+    this.o.note?.(`Auto-play: ${beaten ? 'beaten back by' : 'through'} ${lower(d?.name || key)}.${next ? ` On to ${lower(next.name)}.` : ''}`);
   }
 
   // The Warrens, with three wipes on the same go counting as beaten back: out by the way in, and two levels more first.
@@ -1800,6 +1894,7 @@ export class Brain {
       this.warrensWipes = 0; this.bump.warrens = (this.bump.warrens || 0) + 2; this.giveUp('warrens', 900);
       this.o.log?.fell?.(m, m.lvl, 'The Hollowfang Warrens', null);
       this.job = null;
+      this.ranDungeon('warrens', true);
       return;
     }
     doWarrens(this, m, foes);
