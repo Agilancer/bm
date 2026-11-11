@@ -10,7 +10,7 @@ The game is now ranged spell combat. Everything below about swords and armour de
 - **Right hand:** staffs. Left click fires the staff's bolt. All twenty spells are on `1`-`6` and the book.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
-- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Every robe found is a piece of one of the 147 **sets of gear**, each with its own look on the third-person body and bonuses for wearing two, three and all five of it: see "Gear on the body".
+- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Every robe found is a piece of one of the 125 **sets of gear**, each with its own look on the third-person body and bonuses for wearing two, three and all five of it: see "Gear on the body".
 - **Gems:** socket into staffs, skulls and shields. Each kind has its own stat, particles, motion and light (`src/gfx/gemfx.js`), and a Flawless stone adds a flourish. A shield's show when you ride it.
 - **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, and fills you up. It's kept in the save.
 
@@ -156,13 +156,19 @@ A slot with no robe in it, or a robe nothing was made for, is as the sculpt came
 shapes don't either: a hood wears the hat's paint.
 
 **Sets of gear.** A set with a rarity (`rarity` in `sets.json`: its `set.json` says it, or the end of its id does, as in
-`hedgeway_common`) is gear of its own: 147 of them, common to mythical, listed for the dice in `src/items/robesets.js`
+`hedgeway_common`) is gear of its own: 125 of them, common to mythical, listed for the dice in `src/items/robesets.js`
 (written by the importer, not by hand). Each of its five pieces is an item to find, buy, sew or be paid with: a robe of
 the set's palette that names its set (`{ type: 'robe', base, set }`), called for it ("Vesperglass Pointed Hat"), always
 of the set's rarity, and dressed in that set's look whatever else is worn (`pickSets` looks at `item.set` first). Every
 robe rolled is a piece of some set (`rollRobe` in `src/items/items.js`: the rarity comes up, then a set that comes that
 rare; one legendary roll in eight is mythical, as with skulls). The five `_regalia` sets have no rarity: they dress the
 plain robes of older saves, by palette.
+
+**Held back.** Every set was put before two critics of textures, three rounds, and reworked between them
+( is each one as it stands). The 22 that still failed one of them are out of the game
+until they're better:  lists them with what each critic said was wrong and how to mend it,
+and  shows them. Their recipes are kept.  takes a set out
+like that, and  followed by  puts one back.
 
 **Set bonuses.** Wearing two, three and all five pieces of one set each add a stat (`setBonuses`): ward, life, spell
 damage, mana regeneration, mana or mana cost, three different ones for each set, picked by its id, and bigger the rarer

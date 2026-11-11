@@ -140,22 +140,6 @@
    "rarity": 2
   },
   {
-   "id": "porcelain_watch",
-   "name": "Porcelain Watch",
-   "blurb": "Pearl woven cloth, blue-steel edging, slate mantle and moon embroidery.",
-   "wears": {
-    "palette": "ash"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 2
-  },
-  {
    "id": "amaranth_celestarch_epic",
    "name": "Amaranth Celestarch",
    "blurb": "Epic-tier appearance. Amaranth crystal brocade, blue-silver guards and platinum crests.",
@@ -177,22 +161,6 @@
    "blurb": "Epic-tier appearance. Blackened wine velvet, copper-bone skulls and thorn embroidery.",
    "wears": {
     "palette": "crimson"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 3
-  },
-  {
-   "id": "briar_opal_epic",
-   "name": "Briar Opal",
-   "blurb": "Epic-tier appearance. Sage floral damask, pale opal guards and intricate champagne trim.",
-   "wears": {
-    "palette": "moss"
    },
    "pieces": [
     "head",
@@ -273,22 +241,6 @@
    "blurb": "Epic-tier appearance. Carmine feather brocade, burnished amber guards and rich gold flames.",
    "wears": {
     "palette": "crimson"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 3
-  },
-  {
-   "id": "venomcrypt_epic",
-   "name": "Venomcrypt Hierophant",
-   "blurb": "Epic-tier appearance. Poison-green scales, pale jade skulls and serpentine brocade.",
-   "wears": {
-    "palette": "moss"
    },
    "pieces": [
     "head",
@@ -668,43 +620,11 @@
    "rarity": 2
   },
   {
-   "id": "crabguard_rare",
-   "name": "Crabguard",
-   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered crab crest. All five pieces; assign item rarity during integration.",
-   "wears": {
-    "palette": "crimson"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 2
-  },
-  {
    "id": "eelcurrent_rare",
    "name": "Eelcurrent",
    "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered eel crest. All five pieces; assign item rarity during integration.",
    "wears": {
     "palette": "amethyst"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 2
-  },
-  {
-   "id": "elixirward_rare",
-   "name": "Elixirward",
-   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered potion vial crest. All five pieces; assign item rarity during integration.",
-   "wears": {
-    "palette": "night"
    },
    "pieces": [
     "head",
@@ -796,22 +716,6 @@
    "rarity": 2
   },
   {
-   "id": "amber_apiary_uncommon",
-   "name": "Amber Apiary",
-   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered beehive crest. All five pieces; assign item rarity during integration.",
-   "wears": {
-    "palette": "crimson"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 1
-  },
-  {
    "id": "azure_perch_uncommon",
    "name": "Azure Perch",
    "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered kingfisher crest. All five pieces; assign item rarity during integration.",
@@ -831,22 +735,6 @@
    "id": "burrowguard_uncommon",
    "name": "Burrowguard",
    "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered badger crest. All five pieces; assign item rarity during integration.",
-   "wears": {
-    "palette": "ash"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 1
-  },
-  {
-   "id": "damwright_uncommon",
-   "name": "Damwright",
-   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered beaver crest. All five pieces; assign item rarity during integration.",
    "wears": {
     "palette": "ash"
    },
@@ -897,38 +785,6 @@
    "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered maple leaf crest. All five pieces; assign item rarity during integration.",
    "wears": {
     "palette": "crimson"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 1
-  },
-  {
-   "id": "needlebough_uncommon",
-   "name": "Needlebough",
-   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered pine bough crest. All five pieces; assign item rarity during integration.",
-   "wears": {
-    "palette": "moss"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 1
-  },
-  {
-   "id": "riverwhisk_uncommon",
-   "name": "Riverwhisk",
-   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered otter crest. All five pieces; assign item rarity during integration.",
-   "wears": {
-    "palette": "night"
    },
    "pieces": [
     "head",
@@ -1228,22 +1084,6 @@
    "rarity": 3
   },
   {
-   "id": "astralkey_epic",
-   "name": "Astralkey Epic Gear",
-   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original ornate key stitch badge. Pearl ivory and sapphire panels, interlocked maze brocade, gilded shoulder plates and blue enamel clasps. Intended as an epic item alternative for the night palette.",
-   "wears": {
-    "palette": "night"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 3
-  },
-  {
    "id": "coralveil_epic",
    "name": "Coralveil Epic Gear",
    "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original jellyfish stitch badge. Amethyst and iridescent teal panels, beaded scallops, flowing tentacle embroidery and opal-colored trim. Intended as an epic item alternative for the amethyst palette.",
@@ -1372,22 +1212,6 @@
    "rarity": 3
   },
   {
-   "id": "astral_surveyor_legendary",
-   "name": "Astral Surveyor",
-   "blurb": "Legendary gear. Lapis velvet, smoked-brass mantle, platinum edging and astronomical arc brocade. Original telescope crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "night"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 4
-  },
-  {
    "id": "chrysalis_court_legendary",
    "name": "Chrysalis Court",
    "blurb": "Legendary gear. Turquoise silk, garnet mantle, champagne gold and wing-cell embroidery. Original butterfly crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
@@ -1500,118 +1324,6 @@
    "rarity": 4
   },
   {
-   "id": "ruby_covenant_legendary",
-   "name": "Ruby Covenant",
-   "blurb": "Legendary gear. Ruby velvet, indigo mantle, polished silver and interlocking gemstone brocade. Original gemstone ring crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "crimson"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 4
-  },
-  {
-   "id": "salamander_ember_legendary",
-   "name": "Salamander Ember",
-   "blurb": "Legendary gear. Ember velvet, blue-black mantle, bright steel and looping flame-scale damask. Original salamander crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "crimson"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 4
-  },
-  {
-   "id": "aurora_imperatrix_mythic",
-   "name": "Aurora Imperatrix",
-   "blurb": "Mythic gear. Aurora teal and orchid silk, iridescent-color weave, platinum edging and curtain crests. Original aurora curtain crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "moss"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 5
-  },
-  {
-   "id": "chronovault_eternal_mythic",
-   "name": "Chronovault Eternal",
-   "blurb": "Mythic gear. Night-blue and oxblood silk with platinum clockwork lattice and engraved greaves. Original clockwork dial crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "night"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 5
-  },
-  {
-   "id": "empyrean_seed_mythic",
-   "name": "Empyrean Seed",
-   "blurb": "Mythic gear. Royal-blue and solar-amber silk, platinum seed-filament weave and matching enamel crests. Original dandelion seedhead crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "night"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 5
-  },
-  {
-   "id": "geode_firstlight_mythic",
-   "name": "Geode of First Light",
-   "blurb": "Mythic gear. Amethyst and emerald brocade with champagne metalwork and faceted geode crests. Original crystal geode crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "amethyst"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 5
-  },
-  {
-   "id": "helix_creation_mythic",
-   "name": "Helix of Creation",
-   "blurb": "Mythic gear. Deep jade and amber silk with pale electrum helices and densely patterned leg guards. Original double helix crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "moss"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 5
-  },
-  {
    "id": "labyrinth_infinite_mythic",
    "name": "Labyrinth Infinite",
    "blurb": "Mythic gear. Obsidian-plum and amethyst with gilded labyrinth weave and dense metallic borders. Original labyrinth crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
@@ -1628,43 +1340,11 @@
    "rarity": 5
   },
   {
-   "id": "lastdusk_scorpion_mythic",
-   "name": "Scorpion of Last Dusk",
-   "blurb": "Mythic gear. Black-opal and oxblood with rich gold scale-brocade, scorpion crests and plated greaves. Original scorpion crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "crimson"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 5
-  },
-  {
    "id": "leviathan_dream_mythic",
    "name": "Leviathan Dream",
    "blurb": "Mythic gear. Abyss-blue and royal violet with silver tidal brocade and leviathan crests. Original whale crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
    "wears": {
     "palette": "night"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 5
-  },
-  {
-   "id": "orbital_apotheosis_mythic",
-   "name": "Orbital Apotheosis",
-   "blurb": "Mythic gear. Cosmic violet and star-gold with dense orbital brocade and matching planet crests. Original ringed planet crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
-   "wears": {
-    "palette": "amethyst"
    },
    "pieces": [
     "head",
@@ -1729,22 +1409,6 @@
    "blurb": "Epic gear. Ivory velvet, deep lagoon shoulders, champagne trim and featherlike interlaced arcs. Original swan crest. All five pieces; rarity is assigned to items during integration.",
    "wears": {
     "palette": "ash"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 3
-  },
-  {
-   "id": "pendulight_epic",
-   "name": "Pendulight Regalia",
-   "blurb": "Epic gear. Deep lilac velvet, pearl-grey mantle, pale silver and hanging-oval brocade. Original pendulum crest. All five pieces; rarity is assigned to items during integration.",
-   "wears": {
-    "palette": "amethyst"
    },
    "pieces": [
     "head",
@@ -1841,22 +1505,6 @@
    "blurb": "Rare gear. Olive twill, hazel mantle, old pewter and small sprig embroidery. Original hare crest. All five pieces; rarity is assigned to items during integration.",
    "wears": {
     "palette": "moss"
-   },
-   "pieces": [
-    "head",
-    "shoulders",
-    "chest",
-    "legs",
-    "feet"
-   ],
-   "rarity": 2
-  },
-  {
-   "id": "briarberry_rare",
-   "name": "Briarberry",
-   "blurb": "Rare gear. Mulberry twill, sage shoulders, tarnished silver and berry-cluster embroidery. Original berry branch crest. All five pieces; rarity is assigned to items during integration.",
-   "wears": {
-    "palette": "amethyst"
    },
    "pieces": [
     "head",
