@@ -94,8 +94,8 @@
     "swatch": "swatches/ink.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 1.1
+    "bright": 0.756,
+    "shading": 0.45
    }
   },
   "chest": {

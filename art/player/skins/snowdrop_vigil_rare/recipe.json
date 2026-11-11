@@ -10,16 +10,14 @@
    "swatch": "swatches/snowdrop_vigil_rare_cloth.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.16,
+   "bright": 1.12,
    "shading": 0.88,
    "keep": 0
   },
   "trim": {
-   "swatch": "swatches/silver.png",
-   "scale": 0.08,
-   "tile": "repeat",
-   "bright": 1.05,
-   "shading": 0.35
+   "color": "#e6ebf0",
+   "shading": 0.12,
+   "bright": 0.98
   },
   "leather": {
    "swatch": "swatches/slate.png",
@@ -40,10 +38,10 @@
     "keep": 0
    },
    "pattern": {
-    "image": "swatches/pat_drops.png",
-    "color": "#4f7480",
-    "scale": 0.24,
-    "strength": 0.4,
+    "image": "swatches/pat_diamonds.png",
+    "color": "#5f8792",
+    "scale": 0.17,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "leather": {
@@ -74,7 +72,7 @@
     "keep": 0
    },
    "pattern": {
-    "image": "swatches/pat_drops.png",
+    "image": "swatches/pat_diamonds.png",
     "color": "#bfe0da",
     "scale": 0.16,
     "strength": 0.3,
@@ -101,10 +99,10 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/pat_drops.png",
-    "color": "#4f7480",
-    "scale": 0.24,
-    "strength": 0.5,
+    "image": "swatches/pat_diamonds.png",
+    "color": "#5f8792",
+    "scale": 0.17,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [

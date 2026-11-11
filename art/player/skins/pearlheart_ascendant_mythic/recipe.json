@@ -21,7 +21,7 @@
    "shading": 0.9
   },
   "leather": {
-   "swatch": "swatches/belt.png",
+   "swatch": "swatches/trouser.png",
    "scale": 0.1,
    "tile": "repeat",
    "bright": 1.0,

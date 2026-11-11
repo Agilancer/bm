@@ -10,7 +10,7 @@
    "swatch": "swatches/ak_sapphire.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 0.92,
+   "bright": 0.88,
    "shading": 0.9,
    "keep": 0.0
   },
@@ -61,20 +61,23 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/ak_gilt.png",
-    "scale": 0.06,
+    "swatch": "swatches/ak_navy.png",
+    "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.6,
+    "bright": 0.9,
+    "shading": 0.9,
     "keep": 0.0
    },
-   "trim": {
-    "color": "#f0e4c4",
-    "bright": 1.0
+   "pattern": {
+    "image": "swatches/ak_fret.png",
+    "color": "#d0a440",
+    "scale": 0.14,
+    "strength": 0.5,
+    "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/key_sapphire.png",
+     "image": "decals/key_gold.png",
      "anchor": "shoulder_left",
      "size": 0.105,
      "mode": "paint",
@@ -82,7 +85,7 @@
      "opacity": 1.0
     },
     {
-     "image": "decals/key_sapphire.png",
+     "image": "decals/key_gold.png",
      "anchor": "shoulder_right",
      "size": 0.105,
      "mode": "paint",
@@ -128,8 +131,8 @@
     "swatch": "swatches/ak_gilt.png",
     "scale": 0.06,
     "tile": "repeat",
-    "bright": 0.95,
-    "shading": 0.6,
+    "bright": 1.0,
+    "shading": 0.35,
     "keep": 0.0
    },
    "trim": {
@@ -137,12 +140,12 @@
     "bright": 1.0
    },
    "leather": {
-    "swatch": "swatches/ak_leather.png",
+    "swatch": "swatches/ak_bronze.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.8,
-    "shading": 0.85,
-    "keep": 0.08
+    "bright": 0.85,
+    "shading": 0.7,
+    "keep": 0.0
    },
    "decals": [
     {
@@ -168,7 +171,7 @@
     "swatch": "swatches/ak_leather.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.3,
+    "bright": 1.05,
     "shading": 0.85,
     "keep": 0.1
    }

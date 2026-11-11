@@ -53,8 +53,8 @@
     "swatch": "swatches/umber_wool.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.95,
-    "shading": 1.0
+    "bright": 0.6839999999999999,
+    "shading": 0.45
    }
   },
   "chest": {

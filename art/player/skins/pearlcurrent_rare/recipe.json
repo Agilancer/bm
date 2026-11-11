@@ -65,8 +65,8 @@
     "swatch": "swatches/fx_pearl.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.95,
-    "shading": 0.95,
+    "bright": 0.9,
+    "shading": 0.6,
     "keep": 0
    },
    "leather": {
@@ -95,8 +95,8 @@
    "pattern": {
     "image": "swatches/pat_waves.png",
     "color": "#a9c6d6",
-    "scale": 0.18,
-    "strength": 0.34,
+    "scale": 0.2,
+    "strength": 0.36,
     "tile": "repeat"
    },
    "decals": [

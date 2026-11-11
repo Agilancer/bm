@@ -68,7 +68,7 @@
     {
      "image": "decals/hopper_gold.png",
      "anchor": "shoulder_left",
-     "size": 0.095,
+     "size": 0.105,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -76,7 +76,7 @@
     {
      "image": "decals/hopper_gold.png",
      "anchor": "shoulder_right",
-     "size": 0.095,
+     "size": 0.105,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -87,7 +87,7 @@
    "pattern": {
     "image": "swatches/pat_vines.png",
     "color": "#d8cf78",
-    "scale": 0.24,
+    "scale": 0.17,
     "strength": 0.4,
     "tile": "repeat"
    },
@@ -95,20 +95,20 @@
     {
      "image": "decals/hopper_gold.png",
      "anchor": "back",
-     "size": 0.25,
+     "size": 0.31,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.07,
+      -0.06,
       0
      ]
     },
     {
      "image": "decals/hopper_gold.png",
      "anchor": "tabard",
-     "size": 0.105,
+     "size": 0.12,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0

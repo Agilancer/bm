@@ -84,8 +84,8 @@
    "pattern": {
     "image": "swatches/gf_dashes.png",
     "color": "#aab6d4",
-    "scale": 0.16,
-    "strength": 0.32,
+    "scale": 0.2,
+    "strength": 0.2,
     "tile": "repeat"
    },
    "decals": [

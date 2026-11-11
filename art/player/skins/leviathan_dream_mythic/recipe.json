@@ -101,9 +101,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_tide2.png",
-    "color": "#aebad6",
+    "color": "#b4c0dc",
     "scale": 0.28,
-    "strength": 0.5,
+    "strength": 0.55,
     "tile": "repeat"
    },
    "decals": [

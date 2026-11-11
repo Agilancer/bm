@@ -62,8 +62,8 @@
     "swatch": "swatches/ochre_leather.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 1.0
+    "bright": 0.72,
+    "shading": 0.45
    }
   },
   "chest": {
@@ -71,7 +71,7 @@
     {
      "image": "decals/pinecone.png",
      "anchor": "back",
-     "size": 0.2,
+     "size": 0.21,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,

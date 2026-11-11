@@ -10,7 +10,7 @@
    "swatch": "swatches/ember2.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.82,
    "shading": 1.0
   },
   "trim": {
@@ -35,12 +35,12 @@
     "swatch": "swatches/hat2.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.85,
     "shading": 1.0
    },
    "pattern": {
     "image": "swatches/flamescale2.png",
-    "color": "#f0a03a",
+    "color": "#ea8f2e",
     "scale": 0.2,
     "strength": 0.45,
     "tile": "repeat"
@@ -67,12 +67,12 @@
     "swatch": "swatches/mantle2.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.8,
     "shading": 1.0
    },
    "pattern": {
     "image": "swatches/flamescale2.png",
-    "color": "#8fa3c2",
+    "color": "#5d7090",
     "scale": 0.2,
     "strength": 0.45,
     "tile": "repeat"
@@ -97,7 +97,7 @@
   "chest": {
    "pattern": {
     "image": "swatches/flamescale2.png",
-    "color": "#f0a03a",
+    "color": "#ea8f2e",
     "scale": 0.24,
     "strength": 0.52,
     "tile": "repeat"
@@ -121,13 +121,6 @@
      "size": 0.125,
      "mode": "paint",
      "under_trim": false
-    },
-    {
-     "image": "decals/flame.png",
-     "anchor": "tabard_back",
-     "size": 0.11,
-     "mode": "paint",
-     "under_trim": false
     }
    ]
   },
@@ -136,12 +129,12 @@
     "swatch": "swatches/mantle2.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.95,
+    "bright": 0.78,
     "shading": 1.0
    },
    "pattern": {
     "image": "swatches/flamescale2.png",
-    "color": "#8fa3c2",
+    "color": "#5d7090",
     "scale": 0.2,
     "strength": 0.45,
     "tile": "repeat"

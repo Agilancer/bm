@@ -41,9 +41,9 @@
    },
    "pattern": {
     "image": "swatches/pat_sunburst.png",
-    "color": "#d0a850",
+    "color": "#dcb45a",
     "scale": 0.3,
-    "strength": 0.6,
+    "strength": 0.7,
     "tile": "repeat"
    },
    "decals": [
@@ -94,16 +94,16 @@
     "swatch": "swatches/plate.png",
     "scale": 0.09,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 1.1
+    "bright": 0.72,
+    "shading": 0.45
    }
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_sunburst.png",
-    "color": "#d0a850",
+    "color": "#dcb45a",
     "scale": 0.3,
-    "strength": 0.6,
+    "strength": 0.7,
     "tile": "repeat"
    },
    "decals": [

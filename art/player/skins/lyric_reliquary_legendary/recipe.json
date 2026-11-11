@@ -73,7 +73,7 @@
     "scale": 0.12,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.85,
+    "shading": 0.45,
     "keep": 0
    },
    "leather": {
@@ -151,7 +151,7 @@
     "scale": 0.09,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.85,
+    "shading": 0.45,
     "keep": 0
    },
    "leather": {

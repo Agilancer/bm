@@ -80,8 +80,8 @@
     "swatch": "swatches/amethyst.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 1.1
+    "bright": 0.72,
+    "shading": 0.45
    }
   },
   "chest": {

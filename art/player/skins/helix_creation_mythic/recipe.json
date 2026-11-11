@@ -64,6 +64,13 @@
     "bright": 0.95,
     "shading": 0.85
    },
+   "leather": {
+    "swatch": "swatches/amberleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
+   },
    "pattern": {
     "image": "swatches/pat_diamonds.png",
     "color": "#f8ecb4",
@@ -129,6 +136,13 @@
     "tile": "repeat",
     "bright": 0.9,
     "shading": 0.7
+   },
+   "leather": {
+    "swatch": "swatches/amberleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
    },
    "pattern": {
     "image": "swatches/pat_diamonds.png",

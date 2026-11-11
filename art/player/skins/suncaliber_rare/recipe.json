@@ -41,13 +41,6 @@
     "shading": 0.95,
     "keep": 0
    },
-   "pattern": {
-    "image": "swatches/pat_suns.png",
-    "color": "#b8862a",
-    "scale": 0.18,
-    "strength": 0.4,
-    "tile": "repeat"
-   },
    "decals": [
     {
      "image": "decals/fx_dial_gold.png",
@@ -71,13 +64,6 @@
    "leather": {
     "color": "#34091a"
    },
-   "pattern": {
-    "image": "swatches/pat_suns.png",
-    "color": "#b8862a",
-    "scale": 0.16,
-    "strength": 0.4,
-    "tile": "repeat"
-   },
    "decals": [
     {
      "image": "decals/fx_dial_gold.png",
@@ -100,9 +86,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_suns.png",
-    "color": "#5e3a0c",
+    "color": "#f6e2a2",
     "scale": 0.2,
-    "strength": 0.5,
+    "strength": 0.42,
     "tile": "repeat"
    },
    "decals": [

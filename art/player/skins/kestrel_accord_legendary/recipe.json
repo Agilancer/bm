@@ -94,8 +94,8 @@
     "swatch": "swatches/sapphire.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 1.1
+    "bright": 0.72,
+    "shading": 0.45
    }
   },
   "chest": {
@@ -135,7 +135,7 @@
     "swatch": "swatches/sapphire_scales.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 1.0,
     "shading": 1.0
    },
    "leather": {

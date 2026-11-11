@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_plum.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.9,
    "shading": 0.95,
    "keep": 0
   },
@@ -38,7 +38,7 @@
     "swatch": "swatches/fx_hat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
+    "bright": 0.98,
     "shading": 0.95,
     "keep": 0
    },
@@ -101,15 +101,15 @@
    },
    "decals": [
     {
-     "image": "decals/fx_cyclone.png",
+     "image": "decals/fx_cyclone_medal.png",
      "anchor": "back",
-     "size": 0.2,
+     "size": 0.24,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.07,
+      -0.045,
       0
      ]
     },

@@ -62,7 +62,7 @@
     "image": "swatches/pat_petals.png",
     "color": "#3f8f78",
     "scale": 0.16,
-    "strength": 0.4,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
@@ -87,16 +87,16 @@
     "swatch": "swatches/jade.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 1.1
+    "bright": 0.756,
+    "shading": 0.45
    }
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_petals.png",
-    "color": "#3c1c44",
+    "color": "#45224e",
     "scale": 0.2,
-    "strength": 0.5,
+    "strength": 0.36,
     "tile": "repeat"
    },
    "decals": [

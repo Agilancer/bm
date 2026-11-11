@@ -10,7 +10,7 @@
    "swatch": "swatches/cv_night.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.9,
    "shading": 0.95,
    "keep": 0.0
   },
@@ -145,10 +145,10 @@
   "legs": {
    "cloth": {
     "swatch": "swatches/cv_plate.png",
-    "scale": 0.05,
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.95,
-    "shading": 0.55,
+    "bright": 1.0,
+    "shading": 0.45,
     "keep": 0.0
    },
    "trim": {
@@ -159,20 +159,13 @@
     "shading": 0.7,
     "keep": 0.0
    },
-   "pattern": {
-    "image": "swatches/cv_gears.png",
-    "color": "#4a5260",
-    "scale": 0.17,
-    "strength": 0.38,
-    "tile": "repeat"
-   },
    "leather": {
-    "swatch": "swatches/cv_lea.png",
+    "swatch": "swatches/cv_steel.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.8,
-    "shading": 0.85,
-    "keep": 0.08
+    "bright": 0.85,
+    "shading": 0.7,
+    "keep": 0.0
    },
    "decals": [
     {
@@ -198,7 +191,7 @@
     "swatch": "swatches/cv_lea.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.3,
+    "bright": 1.05,
     "shading": 0.85,
     "keep": 0.1
    }

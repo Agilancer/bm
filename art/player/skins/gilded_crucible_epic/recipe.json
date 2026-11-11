@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_copper.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.92,
    "shading": 0.95,
    "keep": 0
   },

@@ -10,7 +10,7 @@
    "swatch": "swatches/lapis.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 0.85,
+   "bright": 0.74,
    "shading": 0.95
   },
   "trim": {
@@ -36,7 +36,7 @@
     "swatch": "swatches/lapishat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.85,
+    "bright": 0.74,
     "shading": 0.95
    },
    "pattern": {
