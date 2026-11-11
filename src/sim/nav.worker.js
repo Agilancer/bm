@@ -8,6 +8,8 @@
 //          of a street or a room where there's one, never draws a line closer to a wall than a body and a little, and goes
 //          through every doorway square on: to a place a pace before its middle, then to one a pace beyond (DOORWAYS). Each
 //          point is [x, z, close, door]: close to a wall there (walk, don't run), and which doorway it's a side of, or -1.
+//          It ends at the nearest place to where it was asked for that a body can stand and get to (not a gap shut in
+//          behind a bed), and, asked for something to put a hand to (`touch`), one with nothing between it and that.
 //          Null: there's no way there.
 //   probe  out past the grid, where only the pines and the places' walls stand in the way: which way to step, nearest the way
 //          wanted, that's clear for a few metres.
@@ -20,7 +22,7 @@ import { NAV_CELL, NAV_H, NAV_W, NAV_X0, NAV_Z0, World } from './world.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { setOpeningTerrain, terrainHeight } from '../core/terrain.js';
 import { setHallDoor } from '../core/testhall.js';
-import { sight } from './sight.js';
+import { lineClear, sight } from './sight.js';
 
 let world = null;
 const CELL = 0.5, BODY = 0.42, EDGE = 250;
@@ -171,16 +173,92 @@ function pull(pts) {
   return out;
 }
 const freeAt = (x, z) => { const k = cellOf(x, z); return k >= 0 && !blocked(k); };
+
+// A pocket: a few free cells shut in on themselves (the gap behind a bed, the corner past a chest), too small a way in for a
+// body. Nowhere to walk to: the nearest free place to a chest in a corner is often one of these, with the room's own floor a
+// step further off. Found by filling out from the cell, and kept (the walls don't move).
+const POCKET = 220, pocket = new Map(), fill = new Int32Array(POCKET + 8);
+function inPocket(k0) {
+  let v = pocket.get(k0);
+  if (v !== undefined) return v;
+  const seenHere = new Set([k0]);
+  let head = 0, tail = 0;
+  fill[tail++] = k0;
+  while (head < tail && tail < POCKET) {
+    const k = fill[head++], i = k % W, j = (k / W) | 0;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+      const nk = nj * W + ni;
+      if (seenHere.has(nk) || solidCell(nk)) continue;
+      seenHere.add(nk);
+      fill[tail++] = nk;
+      if (tail >= POCKET) break;
+    }
+  }
+  v = tail < POCKET;
+  // (All of it is the one pocket, or none of it is.)
+  for (const k of seenHere) pocket.set(k, v);
+  return v;
+}
+// The nearest free cell to a point that isn't shut in a pocket of its own, a few metres round at most; or -1. `home`: a
+// cell that is itself in the pocket (where it's standing: then that's where it is, and no pocket to it). `touch`: the
+// height of something there to put a hand to or have a word with (a chest's lid, someone's chest): then only a place
+// with nothing between it and that, so it isn't sent to stand at the far side of a wall from it.
+function standNear(x, z, home = -1, touch = null) {
+  const k0 = cellOf(x, z);
+  if (k0 < 0) return -1;
+  const ok = (k) => !blocked(k) && (!inPocket(k) || (home >= 0 && pocket.get(home) && inPocket(home) && sameFill(k, home)))
+    && (touch === null || lineClear(world, cx(k), world.height(cx(k), cz(k)) + 1.5, cz(k), x, touch, z));
+  if (ok(k0)) return k0;
+  const i0 = k0 % W, j0 = (k0 / W) | 0;
+  let best = -1, bd = Infinity;
+  for (let r = 1; r <= 8; r++) {
+    for (let dj = -r; dj <= r; dj++) {
+      for (let di = -r; di <= r; di++) {
+        if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+        const i = i0 + di, j = j0 + dj;
+        if (i < 0 || j < 0 || i >= W || j >= H) continue;
+        const k = j * W + i;
+        if (!ok(k)) continue;
+        const d = Math.hypot(cx(k) - x, cz(k) - z);
+        if (d < bd) { bd = d; best = k; }
+      }
+    }
+    // (A ring's corners are further off than the next ring's sides: one more ring, to be sure of the nearest.)
+    if (best >= 0 && bd <= r * CELL) return best;
+  }
+  return best;
+}
+// Two cells of pockets: the same one? (Filled out from the one till the other's met, or it's all filled.)
+function sameFill(a, b) {
+  if (a === b) return true;
+  const seenHere = new Set([a]), q = [a];
+  while (q.length && seenHere.size < POCKET) {
+    const k = q.pop(), i = k % W, j = (k / W) | 0;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+      const nk = nj * W + ni;
+      if (nk === b) return true;
+      if (seenHere.has(nk) || solidCell(nk)) continue;
+      seenHere.add(nk); q.push(nk);
+    }
+  }
+  return false;
+}
 const point = (x, z, door = -1) => { const k = cellOf(x, z); return [x, z, door >= 0 || (k >= 0 && closeCell(k)) ? 1 : 0, door]; };
 
-function path(from, to, avoid) {
+function path(from, to, avoid, touch = null) {
   if (++stamp > 65000) { stamp = 1; seen.fill(0); shut.fill(0); avoidMark.fill(0); }
   markAvoid(avoid, from, to);
-  const s = freeNear(from[0], from[1]), t = freeNear(to[0], to[1]);
+  // (Where it's going: the nearest place to it a body can stand that isn't a pocket shut in on itself, unless that's the
+  // very pocket it's standing in.)
+  const s = freeNear(from[0], from[1]), t = s < 0 ? -1 : standNear(to[0], to[1], s, touch);
   if (s < 0 || t < 0) return null;
-  // (Where it ends: the place asked for if a body can stand there, else the nearest it can. Never a place in a wall, or
-  // behind a counter, to be walked at.)
-  const end = freeAt(to[0], to[1]) ? [to[0], to[1]] : [cx(t), cz(t)];
+  // (Where it ends: the place asked for if that's where it's going, else the nearest it can stand. Never a place in a
+  // wall, or behind a counter, to be walked at.)
+  const end = cellOf(to[0], to[1]) === t ? [to[0], to[1]] : [cx(t), cz(t)];
   if (s === t) return [point(end[0], end[1])];
   const tx = cx(t), tz = cz(t);
   const h = (k) => { const dx = Math.abs(cx(k) - tx), dz = Math.abs(cz(k) - tz); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
@@ -366,7 +444,7 @@ function local(from, to) {
 
 // For tests (tests/nav-ground.test.mjs): the same questions asked of a World built there, with no thread.
 export function navFor(w, interior = null) {
-  world = w; boxIndex = null; ground.fill(0); room.fill(0);
+  world = w; boxIndex = null; ground.fill(0); room.fill(0); pocket.clear();
   setDoorways(interior?.things);
   return { solidAt, clearFor, probe, local, path, straight, doorways: () => DOORWAYS, SNUG };
 }
@@ -384,7 +462,7 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
     } else if (!world) {
       self.postMessage({ type: m.type, id: m.id, result: null });
     } else if (m.type === 'path') {
-      self.postMessage({ type: 'path', id: m.id, result: path(m.from, m.to, m.avoid) });
+      self.postMessage({ type: 'path', id: m.id, result: path(m.from, m.to, m.avoid, m.touch ?? null) });
     } else if (m.type === 'local') {
       self.postMessage({ type: 'local', id: m.id, result: local(m.from, m.to) });
     } else if (m.type === 'probe') {
