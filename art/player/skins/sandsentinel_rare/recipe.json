@@ -1,0 +1,136 @@
+{
+ "id": "sandsentinel_rare",
+ "name": "Sandsentinel Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original hourglass stitch badge. Sand-gold cloth, wine panels, dense lozenge borders and brass-framed knee and shoulder guards. Intended as a rare item alternative for the crimson palette.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/ss_sand.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 0.93,
+   "shading": 0.65,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/ss_brass.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7,
+   "keep": 0.0
+  },
+  "leather": {
+   "swatch": "swatches/ss_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.85,
+   "keep": 0.08
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/ss_wine.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.85,
+    "keep": 0.0
+   },
+   "decals": [
+    {
+     "image": "decals/hourglass_brass.png",
+     "anchor": "hat",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/ss_wine.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.85,
+    "keep": 0.0
+   },
+   "decals": [
+    {
+     "image": "decals/hourglass_brass.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/hourglass_brass.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/ss_lozenge.png",
+    "color": "#6e3a2c",
+    "scale": 0.22,
+    "strength": 0.42,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/hourglass_wine.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/ss_wine.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.85,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/ss_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.08
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/ss_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.3,
+    "shading": 0.85,
+    "keep": 0.1
+   }
+  }
+ }
+}

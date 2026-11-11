@@ -1,0 +1,169 @@
+{
+ "id": "peacock_astromancer_epic",
+ "name": "Peacock Astromancer",
+ "blurb": "Epic-tier appearance. Peacock blue eye-pattern silk, violet guards and electrum edging.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/peacock_astromancer_epic_cloth.png",
+   "scale": 0.2,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/peacock_astromancer_epic_metal.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05
+  },
+  "leather": {
+   "swatch": "swatches/peacock_astromancer_epic_leather.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/peacock_eye.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/peacock_eye.png",
+     "anchor": "hat_back",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ],
+   "cloth": {
+    "swatch": "swatches/peacock_astromancer_epic_hat.png",
+    "scale": 0.2,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0,
+    "keep": 0.0
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/peacock_astromancer_epic_guards.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.82,
+    "shading": 0.95,
+    "keep": 0.15
+   },
+   "keep_trim": true,
+   "decals": [
+    {
+     "image": "decals/peacock_eye.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/peacock_eye.png",
+     "anchor": "shoulder_right",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ],
+   "pattern": {
+    "image": "swatches/peacock_astromancer_epic_brocade.png",
+    "color": "#b9a86c",
+    "scale": 0.2,
+    "strength": 0.22,
+    "tile": "repeat"
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/peacock_fan.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/peacock_eye.png",
+     "anchor": "tabard",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/peacock_astromancer_epic_guards.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.7,
+    "shading": 0.95,
+    "keep": 0.2
+   },
+   "decals": [
+    {
+     "image": "decals/peacock_eye.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/peacock_eye.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ],
+   "leather": {
+    "swatch": "swatches/peacock_astromancer_epic_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/peacock_astromancer_epic_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.15,
+    "keep": 0.1
+   },
+   "trim": {
+    "swatch": "swatches/peacock_astromancer_epic_metal.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   }
+  }
+ }
+}

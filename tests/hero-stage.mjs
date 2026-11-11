@@ -24,7 +24,9 @@ export function stage(cls, level = 30, nFoes = 6) {
     casting: { fx(shape, ...a) { fx.n++; fx.kinds.add(shape); assert.ok(a.slice(0, 13).every((v) => v === undefined || Number.isFinite(v)), `a shape ${shape} with a number that isn't one: ${a.slice(0, 13)}`); },
       burst(shape, elem, x, y, z, s0, s1, life, o = {}) { fx.bursts++; fx.kinds.add(shape); assert.ok([x, y, z, s0, s1, life, ...Object.values(o)].every(Number.isFinite), `a burst ${shape} with a number that isn't one`); },
       shove() {}, aff: new Map(), affOf(k) { if (!this.aff.has(k)) this.aff.set(k, { stun: 0, slow: 0 }); return this.aff.get(k); } },
-    event(type, ...a) { fx.events.push(type); assert.ok(a.every(Number.isFinite), `an event ${type} with a number that isn't one: ${a}`); }, poseGap: null };
+    event(type, ...a) { fx.events.push(type); assert.ok(a.every(Number.isFinite), `an event ${type} with a number that isn't one: ${a}`); }, poseGap: null,
+    // (Nothing marked on this ground for anyone to step out of: src/sim/perils.js.)
+    perils: { marks: [], danger: () => null, safe: () => true } };
   const cast = makeCast(roster, kit, names, 16, 7);
   const person = { ...cast.find((p) => p.cls === cls), slot: 0, level };
   const props = kit.props;

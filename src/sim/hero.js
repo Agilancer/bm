@@ -2716,8 +2716,12 @@ export class HeroWorld {
     if (h.surf) return;
     // On the board when you are.
     if (p.surfing && !fight.length && Math.hypot(p.vx || 0, p.vz || 0) > 2.5 && !h.swing && !h.jump) { this.freeSurf(h); return; }
+    // Out of whatever's marked on the ground under them (src/sim/perils.js), wherever they are: the circles, the strips, the
+    // cones, the burning.
+    const out = sim.perils.danger(h.x, h.z);
+    if (out) { h.goal = { x: out[0], z: out[1], speed: 7.5, stop: 0.2 }; h.dodgeT = 0.35; if (h.role === 'heal') this.mend(h, true); return; }
     if (W?.inside) {
-      // Behind a pillar while the dragon's up, shooting what can be shot from there.
+      // Behind a pillar while the dragon's on her perch, shooting what can be shot from there.
       const hide = W.hideFrom(h.x, h.z);
       if (hide) {
         h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
@@ -2727,9 +2731,6 @@ export class HeroWorld {
         if (h.role === 'heal') this.mend(h, true);
         return;
       }
-      // Out of the circles and the burning.
-      const out = W.danger(h.x, h.z);
-      if (out) { h.goal = { x: out[0], z: out[1], speed: 7.5, stop: 0.2 }; h.dodgeT = 0.35; if (h.role === 'heal') this.mend(h, true); return; }
     }
     if (h.role === 'heal' && this.mend(h)) return;
     h.foe = this.pickFoe(h, fight);

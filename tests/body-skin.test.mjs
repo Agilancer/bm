@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { SKIN_PARTS, pickSets } from '../src/gfx/bodyskin.js';
-import { ROBES, ROBE_PALETTES, ROBE_SHAPES } from '../src/items/items.js';
+import { ROBES, ROBE_PALETTES, ROBE_SETS, ROBE_SHAPES } from '../src/items/items.js';
 
 const all = ['head', 'shoulders', 'chest', 'legs', 'feet'];
 const sets = [
@@ -35,6 +35,13 @@ test('a set made for one item wins for it; a set tied to nothing is never picked
   assert.ok(!Object.values(pickSets(sets, slots('ash_curled_feet', 'ash_hood_head'))).includes('loose'));
 });
 
+test('a piece of a set of gear wears its own set, and such a set dresses nothing else', () => {
+  const gear = [...sets, { id: 'emberwake_rare', rarity: 2, wears: { palette: 'crimson' }, pieces: all }];
+  assert.deepEqual(pickSets(gear, { head: { base: 'crimson_pointed_head', set: 'emberwake_rare' }, legs: { base: 'crimson_pants_legs' } }), { head: 'emberwake_rare', legs: 'crimson_regalia' });
+  // (A set that's gone from the game: the piece falls back on its palette's.)
+  assert.equal(pickSets(gear, { head: { base: 'crimson_pointed_head', set: 'gone' } }).head, 'crimson_regalia');
+});
+
 test('other things in the slots are not robes', () => {
   assert.deepEqual(pickSets(sets, { head: { base: 'kite_tree' }, chest: null, main: { base: 'crystal_staff' } }), {});
 });
@@ -49,7 +56,22 @@ test('the sets in the game are whole', () => {
     if (s.wears.palette) assert.ok(ROBE_PALETTES[s.wears.palette], `${s.id}: palette`);
     for (const [part, shapes] of Object.entries(s.wears.shapes || {})) for (const sh of shapes) assert.equal(ROBE_SHAPES[sh]?.slot, part, `${s.id}: ${sh}`);
   }
-  // Every palette the game has is dressed.
-  for (const p of Object.keys(ROBE_PALETTES)) assert.ok(shipped.some((s) => s.wears.palette === p && SKIN_PARTS.every((q) => s.pieces.includes(q))), `nothing whole for ${p}`);
+  // Every palette the game has is dressed, for a plain robe (a set with a rarity dresses only its own pieces).
+  for (const p of Object.keys(ROBE_PALETTES)) assert.ok(shipped.some((s) => s.rarity == null && s.wears.palette === p && SKIN_PARTS.every((q) => s.pieces.includes(q))), `nothing whole for ${p}`);
+  // The sets that are gear: each listed for the dice (src/items/robesets.js) as it is here, and whole.
+  const gear = shipped.filter((s) => s.rarity != null);
+  assert.deepEqual(Object.keys(ROBE_SETS).sort(), gear.map((s) => s.id).sort());
+  for (const s of gear) {
+    assert.equal(ROBE_SETS[s.id].rarity, s.rarity); assert.equal(ROBE_SETS[s.id].palette, s.wears.palette);
+    assert.deepEqual([...s.pieces].sort(), [...SKIN_PARTS].sort(), `${s.id}: all five pieces`);
+  }
+  // And there's a set at every rarity, so whatever comes up there's gear to roll.
+  for (let r = 0; r < 6; r++) assert.ok(gear.some((s) => s.rarity === r), `a set at rarity ${r}`);
+  // The sets held back for more work (import_set.py --hold) aren't in the game, and their recipes are kept.
+  const heldPath = new URL('../art/player/skins/held.json', import.meta.url);
+  for (const h of existsSync(heldPath) ? JSON.parse(readFileSync(heldPath)).sets : []) {
+    assert.ok(!shipped.some((s) => s.id === h.id) && !ROBE_SETS[h.id], `${h.id} is held, and in the game`);
+    assert.ok(existsSync(new URL(`../art/player/skins/${h.id}/recipe.json`, import.meta.url)), `${h.id}: recipe kept`);
+  }
   assert.ok(existsSync(new URL('../assets/game/player/parts.png', import.meta.url)));
 });

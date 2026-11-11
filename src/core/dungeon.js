@@ -90,28 +90,31 @@ export const PACKS = [
   { key: 'hf_feast', room: 'feast', pick: GOBLINS.concat(KOBOLDS), n: 5, pal: ['Base', 'Ashen', 'Blighted'] },
   { key: 'hf_descent', room: 'descent', pick: ['goblin_green_armored_1', 'goblin_green_armored_2', 'kobold_armored_3'], n: 4, pal: ['Blighted', 'Corrupted'] },
 ];
+// What a pack's monsters are to their cousins in the woods (src/sim/tripo.js optsFor): this many times the life, this many
+// times the blow. They're a party's work: a pack of four takes the five of you the best part of half a minute.
+export const PACK_TOUGH = { hp: 16, damage: 2.5 };
 // The bosses, in the order they're met. model: roster.json (the bosses are bigger, recoloured copies of the rank and file:
 // see the hf_ entries there). The fights themselves are src/sim/dungeon.js.
 export const BOSSES = [
-  { key: 'grubnash', room: 'dig', name: 'Grubnash the Tunnel-King', models: ['hf_grubnash'], pal: ['Infernal'], hp: 9000, damage: 55, reach: 3.0, loot: 8 },
-  { key: 'twins', room: 'throne', name: 'Skrit and Skrat', models: ['hf_skrit', 'hf_skrat'], pal: ['Base'], hp: 5200, damage: 36, reach: 2.6, loot: 8 },
-  { key: 'venomaw', room: 'lair', name: 'Venomaw, Mother of the Warren', models: ['hf_venomaw'], pal: ['Base'], hp: 16000, damage: 70, reach: 5.2, loot: 0 },
+  { key: 'grubnash', room: 'dig', name: 'Grubnash the Tunnel-King', models: ['hf_grubnash'], pal: ['Infernal'], hp: 4600, damage: 55, reach: 3.0, loot: 8 },
+  { key: 'twins', room: 'throne', name: 'Skrit and Skrat', models: ['hf_skrit', 'hf_skrat'], pal: ['Base'], hp: 2900, damage: 36, reach: 2.6, loot: 8 },
+  { key: 'venomaw', room: 'lair', name: 'Venomaw, Mother of the Warren', models: ['hf_venomaw'], pal: ['Base'], hp: 7200, damage: 70, reach: 5.2, loot: 0 },
 ];
 export const BOSS_KEYS = BOSSES.map((b) => b.key);
 // What the fights call out, by number (src/sim/dungeon.js sends the number, src/ui/party.js shows the words): the mechanics,
 // and what to do about each. A boss's own lines are its name and then the words.
 export const WARNINGS = [
-  /* 0 */ 'Grubnash slams the roof! Rocks are coming down: get out of the circles!',
+  /* 0 */ 'Grubnash brings the roof down! Get out of the circles!',
   /* 1 */ 'Grubnash calls his diggers! Kill them before they reach him: each one he eats makes him stronger.',
   /* 2 */ 'Grubnash eats a digger and grows stronger!',
   /* 3 */ 'Skrit and Skrat share their pain: keep their health even, or the weaker one shrugs your blows off.',
-  /* 4 */ 'Skrit hurls a firepot! Move out of the fire.',
+  /* 4 */ 'Skrit hurls firepots! Move out of the fire.',
   /* 5 */ 'Skrat spins his blades! Get away from him until he stops.',
   /* 6 */ 'One twin is down: the other goes wild! Finish him fast.',
-  /* 7 */ 'Venomaw: stand at her sides. Her breath burns what is in front of her, her tail sweeps what is behind. Only the tank faces her.',
+  /* 7 */ 'Venomaw: stand at her shoulders. Her breath burns what is in front of her, her tail sweeps all behind her. Only the tank faces her.',
   /* 8 */ 'Venomaw draws breath! Only the tank in front of her!',
   /* 9 */ 'Venomaw spits acid! Move out of the green.',
-  /* 10 */ 'Venomaw takes to the air! Hide behind a stone pillar when she breathes!',
+  /* 10 */ 'Venomaw is in the air! When she makes for her perch, hide behind a stone pillar!',
   /* 11 */ 'Venomaw breathes across the hoard! Behind a pillar, now!',
   /* 12 */ 'Whelps hatch from the hoard! Kill them before they swarm the healer.',
   /* 13 */ 'Venomaw lands, frenzied! Burn her down!',
@@ -121,6 +124,19 @@ export const WARNINGS = [
   /* 17 */ 'Grubnash turns on you! Get behind the tank, or out of his reach, till he lets go.',
   /* 18 */ 'A twin turns on you! Get behind the tank, or out of his reach, till he lets go.',
   /* 19 */ 'Venomaw turns her head to you! Get behind the tank, out of her reach, till she looks away.',
+  /* 20 */ 'Grubnash splits the floor! Out of the lines.',
+  /* 21 */ 'Grubnash hurls a boulder! Away from where it lands: it bursts.',
+  /* 22 */ 'Grubnash stamps! Jump the ring as it reaches you.',
+  /* 23 */ 'Skrit lights a wheel of fire! Keep ahead of its arms, or get out past their ends.',
+  /* 24 */ 'Skrat marks a line: he is coming down it!',
+  /* 25 */ 'Blades fly from Skrat! Stand between two.',
+  /* 26 */ 'Venomaw coils her tail! Out from behind her, then jump the ring.',
+  /* 27 */ 'Venomaw rakes the ground! Out of the lines.',
+  /* 28 */ 'Venomaw beats her wings! Step between the gobs.',
+  /* 29 */ 'Venomaw swoops! Out of the strip: she burns the length of it.',
+  /* 30 */ 'Venomaw dives! Out of the circle, then jump the ring.',
+  /* 31 */ 'Venom rains from the roof! Keep moving.',
+  /* 32 */ 'Venomaw stamps! Step in behind each ring as it lands.',
 ];
 // Which of those a boss calls when it turns on you (src/sim/dungeon.js turnOn).
 export const TURN_WARN = { grubnash: 17, twins: 18, venomaw: 19 };

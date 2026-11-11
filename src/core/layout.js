@@ -4,7 +4,7 @@
 import { STAFFS2 } from '../items/staffs2.js';
 
 // (Room for the other Tessariels, src/sim/hero.js: HERO_SLOTS in src/core/heroes.js; and the Tripo monsters' slots, TRIPO_SLOTS.)
-export const MAX_CHARS = 100;   // (94 are up on a desktop: Lisandra's two forms, 16 Tessariels and their two quartermasters, and the rest, the road's own dead among them)
+export const MAX_CHARS = 100;   // (97 are up on a desktop: Lisandra's two forms, 16 Tessariels and their two quartermasters, and the rest, the road's own dead among them)
 export const MAX_JOINTS = 104;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;

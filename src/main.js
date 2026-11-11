@@ -17,7 +17,7 @@ import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
 import { Drops, boardPose } from './items/drops.js';
 import { settleSkull } from './items/skins.js';
-import { ROBES, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
+import { ROBES, ROBE_SETS, SET_PARTS, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
 import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
@@ -359,6 +359,8 @@ async function boot(plan, poolSize) {
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
       else if (m.type === 'warrens') game?.party?.onWarrens(m);
+      // (What monsters have marked on the ground and thrown, near you: src/sim/perils.js. Auto-play steps out of it.)
+      else if (m.type === 'perils') { if (game) game.perils = { marks: m.marks, shots: m.shots, at: performance.now() }; }
       else if (m.type === 'hall') game?.hallUI?.onHall(m);
       else if (m.type === 'hallSummoned') game?.hallUI?.onSummoned(m);
       else if (m.type === 'restart') { input.yaw = m.yaw ?? Math.PI; input.pitch = 0; hud.reset(); renderer.clearBlood(); game?.drops.clear(); }
@@ -1752,7 +1754,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : 'FOE'); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
@@ -1803,8 +1805,10 @@ class GameView {
     return {
       view, renderer: this.renderer, input: this.input, shared, pool, pack: this.pack, inventory: this.inventory, drops: this.drops,
       // bm.give('frost_sword', { rarity: 3, sockets: 4 }) or bm.give('gem', { kind: 'ruby', grade: 2 }), into the pack.
+      // bm.give('vesperglass_epic'): all five pieces of that set of gear.
       give: (base, opts = {}) => {
         const rng = makeRng((Math.random() * 4294967296) >>> 0);
+        if (ROBE_SETS[base]) return SET_PARTS.map((slot) => { const it = rollRobe(rng, { set: base, slot }); return view.pack.add(it) ? it : null; });
         const item = base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base, ...opts }) : SKULLS[base] ? rollSkull(rng, { base, ...opts }) : ROBES[base] ? rollRobe(rng, { base, ...opts }) : rollWeapon(rng, { base, ...opts });
         return view.pack.add(item) ? item : null;
       },

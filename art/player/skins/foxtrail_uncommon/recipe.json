@@ -1,0 +1,119 @@
+{
+ "id": "foxtrail_uncommon",
+ "name": "Foxtrail Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original fox paw stitch badge. Rust cloth with an asymmetrical dark inset, small copper studs and reinforced diagonal seams. Intended as an uncommon item alternative for the crimson palette.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/tunic.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.92,
+   "shading": 0.8
+  },
+  "trim": {
+   "color": "#bd7c4c",
+   "bright": 1.05
+  },
+  "leather": {
+   "swatch": "swatches/brown.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.85
+   },
+   "decals": [
+    {
+     "image": "decals/foxtrail_uncommon_c6a16b.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/slate.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/foxtrail_uncommon_c6a16b.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_stripes.png",
+    "color": "#5c2f1e",
+    "scale": 0.2,
+    "strength": 0.25,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/foxtrail_uncommon_c6a16b.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/foxtrail_uncommon_c6a16b.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/slate.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.9
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/slate.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9
+   }
+  }
+ }
+}

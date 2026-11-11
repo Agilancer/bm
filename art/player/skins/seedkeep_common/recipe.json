@@ -1,0 +1,104 @@
+{
+ "id": "seedkeep_common",
+ "name": "Seedkeep Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original acorn stitch badge. Angular tan-and-mauve paneling, narrow dark binding and patched knees. Intended as a common item alternative for the amethyst palette.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/tunic.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.8
+  },
+  "trim": {
+   "color": "#4a372c",
+   "bright": 0.9,
+   "shading": 0.6
+  },
+  "leather": {
+   "swatch": "swatches/darkleather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hatw.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.8
+   },
+   "decals": [
+    {
+     "image": "decals/acorn_patch.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/linen.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.6
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/acorn_patch.png",
+     "anchor": "back",
+     "size": 0.24,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.065,
+      0
+     ]
+    },
+    {
+     "image": "decals/acorn_patch.png",
+     "anchor": "tabard",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9
+   }
+  }
+ }
+}

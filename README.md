@@ -11,7 +11,7 @@ The game is now ranged spell combat. Everything below about swords and armour de
 - **Six schools:** Fire, Ice, Earth, Arcane, Lightning and Utility, ten spells each (sixty in all), in skill trees in the spellbook (`B`). You start with the first spell of each, and every level brings a point to spend. See "Spells" below.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
-- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Seen as drops and icons; there's no visible body to wear them on.
+- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Every robe found is a piece of one of the 125 **sets of gear**, each with its own look on the third-person body and bonuses for wearing two, three and all five of it: see "Gear on the body".
 - **Gems:** socket into staffs, skulls and shields. Each kind has its own stat, particles, motion and light (`src/gfx/gemfx.js`), and a Flawless stone adds a flourish. A shield's show when you ride it.
 - **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, fills you up, and brings a skill point (two at every fifth level). It's kept in the save.
 
@@ -149,13 +149,34 @@ screen is still what you hit. Which view you left it in is kept with the setting
 
 #### Gear on the body
 
-The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle, tunic, legs
+The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle (the shoulder guards, the sleeves under them and the collar), tunic, legs
 and boots painted new. `assets/game/player/parts.png` says which of those five every texel of the map is, so the pieces
 mix: wear the Crimson hat and the Ashen boots and he has one set's hat and another's boots (`src/gfx/bodyskin.js`: the
 map is mixed on a canvas when what you wear changes, and the body's colour swapped for it). Which set a piece wears is
 `pickSets`: a set says what it's `wears` for, robes of a palette (and only some shapes, if it names them) or named items.
 A slot with no robe in it, or a robe nothing was made for, is as the sculpt came. Skin, hair and eyes never change. The
 shapes don't either: a hood wears the hat's paint.
+
+**Sets of gear.** A set with a rarity (`rarity` in `sets.json`: its `set.json` says it, or the end of its id does, as in
+`hedgeway_common`) is gear of its own: 125 of them, common to mythical, listed for the dice in `src/items/robesets.js`
+(written by the importer, not by hand). Each of its five pieces is an item to find, buy, sew or be paid with: a robe of
+the set's palette that names its set (`{ type: 'robe', base, set }`), called for it ("Vesperglass Pointed Hat"), always
+of the set's rarity, and dressed in that set's look whatever else is worn (`pickSets` looks at `item.set` first). Every
+robe rolled is a piece of some set (`rollRobe` in `src/items/items.js`: the rarity comes up, then a set that comes that
+rare; one legendary roll in eight is mythical, as with skulls). The five `_regalia` sets have no rarity: they dress the
+plain robes of older saves, by palette.
+
+**Held back.** Every set was put before two critics of textures, three rounds, and reworked between them
+(`art/player/skins/<id>/recipe.json` is each one as it stands). The 22 that still failed one of them are out of the game
+until they're better: `art/player/skins/held.json` lists them with what each critic said was wrong and how to mend it,
+and `held.jpg` beside it shows them. Their recipes are kept. `python tools/player/skins/import_set.py --hold <ids>`
+takes a set out like that, and `--release <ids>` followed by `rebake.py <ids>` puts one back.
+
+**Set bonuses.** Wearing two, three and all five pieces of one set each add a stat (`setBonuses`): ward, life, spell
+damage, mana regeneration, mana or mana cost, three different ones for each set, picked by its id, and bigger the rarer
+the set (`SET_UNIT`; the five-piece bonus is three measures). `gearTotals` counts them, so the sim, the tooltip (which
+lists them, lit when they're on) and auto-play's choice of what to wear all see them. In the Test Dungeon, the Hall
+Stores' **Gear sets** tab hands over all five pieces of any set.
 
 - The game ships a set for each of the five palettes (`assets/game/player/skins/`, listed in `sets.json`). Their recipes
   are `tools/player/skins/kit/recipes/`.
@@ -176,6 +197,11 @@ shapes don't either: a hood wears the hat's paint.
     `python tools/player/skins/import_set.py that.zip [more.zip]` checks it, writes `skins/<id>.webp`, lists it in
     `sets.json` (the same id replaces), and keeps its recipe and pictures in `art/player/skins/<id>/`. `--list` and
     `--remove <id>` do what they say.
+  - A folder works as well as a zip: a set unzipped, or a folder of them however deep. `--rarity rare <ids>` says how
+    rare sets come that don't say so themselves.
+  - `python tools/player/skins/rebake.py <ids>` (or `--all`) bakes sets again from `art/player/skins/<id>/recipe.json`
+    after a recipe or one of its pictures has been changed, and writes a four-sided `preview.jpg` beside it. It needs
+    the kit built in `tools/build/` (the two commands above).
   - `bm.wear('crimson_regalia')` in the console dresses him whole in one set, whatever's in the pack; `bm.wear()` goes back.
 - `node --test tests/body-skin.test.mjs` checks the picking and that the shipped sets are whole.
 
@@ -195,7 +221,11 @@ Known limits:
 
 ### The walk down, and the quest trail
 
-After the cave falls in, Lisandra leads you down the Long Road to Bellmourn (`escort` in `src/sim/opening.js`, the road itself in `src/core/escort.js`). She keeps about 5.5 m ahead of you at your own pace: come up on her back and she hurries on, stand still and she strolls on to about 14 m and waits for you, calling you on. Ride your shield and she jumps on one of her own (the Old Tree kite shield, green with a silver tree: no V, no T) and rides about 9 m ahead, so you never get past her. She talks the whole way: her road lines (`CUES` in `src/core/opening-script.js`) wait their turn and never overlap, a place on the road (the bend, the pines, the town in sight) brings its own line to the front, and between them she runs through the hill's talk above the pines and the low road's after the fight.
+Lisandra's cave is high on a shoulder of the hill over the Long Road, its mouth looking out over the valley to the town (`src/core/opening.js`). It's where she lives: a hearth with her pot over it and a fire that catches with the candles, a worktable under a rail of herbs and pans, a pantry of jars, a desk and two bookcases, a bed, rugs, a chest, and a glass she keeps a cloth over (`CLUTTER`, drawn in `src/gfx/opening.js`). The rock is the hill's own granite at one scale on every surface, with stones along the foot of the walls and stone teeth hung from the roof; each cloth is cut from the middle of its picture, so no woven edge or texture seam shows. Until she sends you out, the view is hers: you can't look about. The script is in `docs/OPENING-SCRIPT.md`.
+
+After the cave falls in, she leads you down to Bellmourn (`escort` in `src/sim/opening.js`, the way itself in `src/core/escort.js`): along a shelf cut across the hillside, down four flights of stone steps that double back on each other, along a path at the foot of the hill, and then the Long Road, about 440 m in all (`WAY` in `src/core/opening.js`; the land is cut and banked to it in `src/core/terrain.js`, and the steps are laid on the slope you walk). She keeps about 5 m ahead of you at your own pace. Stop, and once she's a few steps on she stops too, turns round and looks at you; she turns back and goes on when you've come up to within a few steps of her, or gone past, and hurries to get in front again. Fall well back or wander off and she waits the same, and calls you on after a while. You keep to a walk on the shelf and the steps. Ride your shield and she jumps on one of her own (the Old Tree kite shield, green with a silver tree: no V, no T) and rides about 9 m ahead, so you never get past her. She talks the whole way: her lines (`CUES` in `src/core/opening-script.js`) wait their turn and never overlap, and a place on the way (the shelf, the head of the steps, the road, the pines, the town in sight) brings its own.
+
+In the pines the dead come up out of the ground (`fight` in `src/sim/opening.js`, `openingRaise` in `src/sim/undead.js`): twenty, five at a time; when eight or fewer are left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out of the trees on each side of the road, who raise what's fallen. All of them are easy, and on the way down you can't die. Lisandra stands with you and throws a weak fire bolt every couple of seconds. Bodies are kept for it (`reserve` in `BODIES`: nine more of the dead, ten children, two necromancers), and the woods' own packs hold off until she has you in town. Then she tells you why the dead walk, and you go on to the town's edge and her quest.
 
 A gold dotted line on the ground leads to whatever the quest you follow wants of you now (`src/ui/trail.js`, drawn in `src/gfx/trail.js`). In the journal (J), tap a quest to follow it, or the same one again to hide the trail; a new quest is followed as you take it, unless you're on Lisandra's round of the town, which stays followed (it leads to whoever you've still to see, nearest first). Before any work, it leads to Lisandra where the road comes into town, or to Bram at the inn. In the opening it runs down the road after Lisandra. In town it goes round the houses by the townsfolk's own walking grid (a route asked of `src/folk/folk.worker.js`), out past the town along the roads and paths where they're shorter, and into the cathedral by its own way down to the Bell Crypt (by the Sexton's Door once you have his key).
 
@@ -219,9 +249,17 @@ The Mourning Rift is a side branch off the north gate of the Founders' Hall, 30 
 
 ### The village's houses and chests
 
-All twelve houses can be entered: furnished, with a stair and an upper floor, built in `class Home` in `tools/interior/build_interior.py`. Colliders with a `b` only stop feet above that height, which is how an upstairs has its own walls. Every door is a model (`tools/doors/model.py`, in Blender, from the pictures by way of `tools/doors/trace.py`), shut until you press E at it, and E shuts it again. `src/items/doors.js` swings them; a shut one stops you, spells and sight.  The dead and the surface creatures don't come in.
+All fifteen houses can be entered: furnished, with a stair and an upper floor, built in `class Home` in `tools/interior/build_interior.py`. Colliders with a `b` only stop feet above that height, which is how an upstairs has its own walls. Every door is a model (`tools/doors/model.py`, in Blender, from the pictures by way of `tools/doors/trace.py`), shut until you press E at it, and E shuts it again. `src/items/doors.js` swings them; a shut one stops you, spells and sight.  The dead and the surface creatures don't come in.
 
 Chests (`src/items/chests.js`, placed by `chest(...)` in the builder) open on `E`, the lid swings up on its hinge and gold, gems and gear spill out. Which are open is saved. Gold is counted in the pack.
+
+Their outsides are `house(...)` in `tools/village/build_village.py`, each drawn a quarter bigger than its plan about its front wall (`HOUSE_SCALE`), roof and all: a roof whose ridge runs front to back has a frame of its own, scaled the same about the middle of the house. The house's own timber (corner posts, the girt under the upper floor, barge boards, fascias, door frames: the material `timber`) is cut from a beam that runs the width of one of the wall paintings, so it's the same oak as the timber painted on the walls, and so is everything else of wood in the town: stalls, carts, crates, barrels, fences, the well's frame, the coffins. A piece wider than a beam (a crate's side, a counter, a coffin's lid) is cut into boards side by side, and a round one into staves (`timber_planks`). `wood`, a redder plank, is left only for the cut ends of the logs in the woodpiles. The girt is as deep as the gap between the two floors' walls. After a build, `tools/village/shots.mjs` photographs every house in the game from the front and the back (it says how, on a machine with no GPU), and `node tools/village/fences.mjs` and `paths_clear.mjs` check the fences and the lanes. Nothing indoors may reach the outside face of a wall, or it flickers through it from outdoors: one bed did (`tools/interior/patch_bed.py`).
+
+### How the townsfolk get about
+
+`src/folk/ground.js` works the town into a walking grid at half a metre and finds each walk with A*. A step isn't just its length: over grass it costs most of twice what it does on a road, a lane or the worn square (`GRASS`; the ways are `PATHS` in `src/core/terrain.js`, the ones the land is painted with), and more again within three cells of a wall, a fence or a stall (`BESIDE`). So people keep to the lanes where the lanes serve, cut across where the lane goes a long way round, and don't rub along walls. The way is then pulled straight only where the straight line costs no more than the way round, and its corners are rounded so nobody walks to a point and turns on it. Indoors every step costs the same: rooms are too close for it. On the way (`walkTo` in `src/folk/brain.js`), someone ahead going the same way is followed at their pace, and someone coming the other way is stepped round to the right at once. The main thread's asks for a way (auto-play's walking, the quest trail) get the plain shortest one.
+
+`node tools/folk/tracks.mjs out.png` runs a day in the town without drawing it and puts every step anyone took outdoors on a map, over the roads and walls, with how much of the walking was on a road and how much beside a wall (82% and 3%; 31% and 21% when every way was the shortest one). `node tools/folk/life_test.mjs` runs the same day and lists anyone who got stuck (nobody, over three days), and `node tools/folk/town_check.mjs` whether every door, bed, seat and work place can be walked to.
 
 ### The smith at his anvil
 
@@ -299,8 +337,10 @@ While it's on, the game plays itself as a player would. It works the same contro
 the casts, jump, dodge and E. Nothing is moved or handed to it.
 
 - **The opening.** It waits out the cave and answers Lisandra with a name (Jamie, if nobody has yet). It walks out, then
-  follows her down the Long Road to Bellmourn, a few strides behind her as she leads. It rides its shield down the steep
-  stretches, so she rides hers, and it fights the dead on the road. In town it takes her round of the townsfolk first.
+  follows her down to Bellmourn (her shelf, her steps, the path and the Long Road), a few strides behind her as she
+  leads, coming up to her when she stops for it. It walks her steps; once on the road it rides its shield down the
+  steep stretches, so she rides hers; and it fights the road's waves of the dead as it fights the woods'. In town it
+  takes her round of the townsfolk first.
 - **Quests.** It takes every quest the town has, talks each step through, and hands in. It does them in an order that suits
   its level (`PLAN` in `src/ui/autobrain.js`), and does night work by night. When something waits on the morning, it sleeps
   at the Tolling Bell.
@@ -462,9 +502,10 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   `writeAfter` in `src/sim/sim.worker.js`).
 - **The Hollowfang Warrens.** From level 7 with a full party it goes in by the portal and walks the caves room by room,
   by the caves' own flow field (the nav thread's grid stops at the edge of the world). Before each boss's room it waits
-  for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of a circle or a fire before
-  anything else, at Venomaw's side and well off when she's down, behind the pillar away from her when she flies, away
-  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. When a boss turns on it, it gets
+  for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of whatever's marked on the
+  ground before anything else, across the way of what's thrown, over a ring that runs along the floor (`perilStep`, which
+  it does anywhere in the game), off Venomaw's shoulder and well out when she's down, at her whelps while she swoops and
+  dives, behind the pillar away from her perch when she makes for it, away from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. When a boss turns on it, it gets
   behind the tank from it (or well out of its reach with no tank up) and shoots it as it comes. Three wipes count as beaten back: it
   leaves by the way in and comes back two levels stronger. Once Venomaw's dead it goes out by the far portal.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
@@ -786,7 +827,10 @@ ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is
 
 The first party dungeon (`src/core/dungeon.js`, `src/sim/dungeon.js`): a cave system the kobolds dug and the goblins took,
 with Venomaw, the green dragon, asleep on her hoard at the bottom. Its portal stands in a heap of rock in the woods
-north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. It lets in only a full party: four
+north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. Its terrace is dug into the hillside, and
+you can walk onto it from every side but the wall's: a wide flight of sixteen steps comes down its front to meet the hill
+(a path through the woods ends at its foot), and its two ends are level with the ground or open to it (`portalWall` in
+`src/core/sites.js`). It lets in only a full party: four
 with you, a lancer and a paladin among them. Inside, a portal by the way in takes you back out at any time, and one behind
 the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 gold, and it all stands again after.
 
@@ -800,16 +844,41 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   tier's count; a phone keeps its two), and a frame's lamps went from 28 to 36 for it (`MAX_LIT` in
   `src/gfx/shaders.js`).
 - **The packs.** Five rooms of kobolds and goblins, which wake as you come into them and stay dead till the Warrens reset.
-- **Grubnash the Tunnel-King**, a kobold three times the size. Every few seconds he brings the roof down: a circle on the
-  ground under each of you, and rocks a moment later. At seven tenths and a third of his life he calls his diggers out of
-  three holes round his dig; they run to him, and each one that reaches him is eaten and makes him hit harder. Kill them.
+  They're a party's work, not one wizard's: each has sixteen times the life of its cousin in the woods and hits two and a
+  half times as hard (`PACK_TOUGH` in `src/core/dungeon.js`), and between its blows it plays its kind's tricks: a kobold
+  lobs a rock (a circle that follows you a moment, then stays where the rock will land) or splits the floor along a
+  line; a goblin throws a fan of knives (five from one in armour) or a pot of fire that burns where it breaks.
+- **Grubnash the Tunnel-King**, a kobold three times the size. Every four seconds or so, one of: the roof comes down (a
+  circle under each of you, and more wherever); his pick splits the floor along a line, three lines once he's under half
+  his life; a boulder at whoever's furthest off, which bursts into eight shards where it lands; a stamp that sends a ring
+  out along the floor, to be jumped; rubble coming up in a row at one of you. At seven tenths and a third of his life he
+  calls his diggers out of three holes round his dig; they run to him, and each one that reaches him is eaten and makes
+  him hit harder. Kill them.
 - **Skrit and Skrat**, goblin twins. They share their pain: whichever has less life left takes half of what lands on it,
-  so keep them even. Skrit throws firepots that burn the ground; Skrat spins his blades in a whirlwind. When one dies the
-  other goes wild.
-- **Venomaw, Mother of the Warren.** Only the tank should face her: her breath burns everyone in front of her, and her
-  tail sweeps anyone behind. She spits acid that pools. At a little over half her life she takes to the air above her
-  hoard and breathes across the whole cavern every few seconds: only rock between you and her keeps it off, so hide
-  behind a pillar, while her whelps hatch. Then she lands, frenzied.
+  so keep them even. Skrit is fire: three pots in a row across where you stand, two fans of bolts (the second through the
+  gaps of the first), a wheel of four bars of fire that turns about where he lit it for six seconds, and a row of bolts
+  coming on abreast with one way through. Skrat is blades: a whirlwind that cuts all within reach and throws blades off
+  as it turns, a line marked to one of you that he then comes down, and blades flung out all round, twice. When one dies
+  the other goes wild, and its moves come nearly twice as often.
+- **Venomaw, Mother of the Warren.** Only the tank should face her. On the ground, every four seconds or so, one of: her
+  breath, a cone before her that's aimed as she draws it and held there; acid spat high at three of you, a pool where
+  each gob lands; her tail, coiled to one side and then swung right round behind her as she turns (everything behind her
+  shoulders, and then a ring along the floor to jump); her claws, three furrows fanned out before her; her wings beaten,
+  fourteen gobs flung out all round, twice; a stamp, three rings out from her one after another. At six tenths of her
+  life she takes to the air and her whelps hatch: she swoops the length of the hoard twice, each along a strip that's
+  marked first and left burning, makes for her perch and breathes across the whole cavern (only rock between you and
+  her keeps that off, so hide behind a pillar), then dives onto one of you: a circle that follows you a while, and a
+  ring along the floor as she lands. Then she's frenzied: her moves come faster, and with them venom raining from the
+  roof and gobs poured out of her in turning streams.
+- **Her body's part in it** is new too. The tail whip is laid over whatever clip she's in (`bendTail` in
+  `src/sim/moves.js`): the tail's joints are found by name and turned one after another, so it coils, lashes and
+  ripples. In the air she noses down as she comes on and rolls onto a wing as she turns (`tipBody`), rises on her `jump`
+  clip, swoops on `fly2` and comes down on `land`: clips her model had and the game never played. Her claws, breath,
+  wings and stamp each play a clip of their own (`TripoMonster.perform`).
+- **A boss leaves a hoard**, on top of what its body drops (`rollLoot` 20 and 21 in `src/items/items.js`). Grubnash, and
+  the twins: a rare staff or better (epic, one time in three), two more pieces as good from skull, shield and robe, a
+  gem, a scroll and 150 to 260 gold. Venomaw: an epic staff, skull and shield at the least, a robe, one thing more
+  that's legendary, two gems, two scrolls and 400 to 700 gold, besides the dragon's own drop.
 - **They come for you too.** The tank doesn't hold everything for ever. Every seventeen seconds or so a boss turns from
   him to you (Venomaw every twenty-two): it's called out, you have a breath to get behind the tank or out of its
   reach, and for four or five seconds nothing holds it (`turnOn` in `src/sim/dungeon.js`, `fixOn` in
@@ -826,9 +895,72 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
 `node tools/dungeon/check.mjs` walks it: every room reachable from the way in, every pack's and boss's room in the open, the
 portals clear of the rock, the roofs high enough and under the line the shaders call underground.
 
-Tuning, headless (the sim in Node with no GPU): with a level 8 party and a player doing what a level 8 player's staff
-does, Grubnash took about a minute and a half, the twins about two minutes and Venomaw nearly five, with the tank as low as
-half his life and nobody dying. Its numbers are `BOSSES` in `src/core/dungeon.js` and the mechanics' in `src/sim/dungeon.js`.
+`node tools/dungeon/fight.mjs` plays the fights out, with no page and no GPU: the sim booted in Node as its worker boots
+it, a level 8 party hired (lancer, paladin, archer, rogue), and a player who shoots Firebolt at what the party's on, walks
+out of whatever's marked, steps across the way of shots and jumps the rings. `--slow` has that player see each mark and
+shot half a second late, as a person does; `--still` never moves. It fails on an error in a tick or a shape with a bad
+number in it. What it gave, over two to twenty-one fights of each:
+
+| | Seeing it at once | Half a second late | Standing still |
+| --- | --- | --- | --- |
+| A pack of four | 21 to 29 s, the player all but untouched | 27 to 29 s | won, the player down to two thirds |
+| Grubnash | 85 to 97 s, player down to 70% | 63 to 94 s, down to 37% | dead, or alive on a sliver |
+| Skrit and Skrat | 68 to 78 s, down to 32% | 61 to 85 s, down to 5%; fell once in 21 fights | dead in 30 to 60 s |
+| Venomaw | 145 to 148 s, down to 16% | 132 to 165 s, down to 16% | dead in 33 to 83 s, once alive at the end with nothing left |
+
+Before this pass the same player took 136 s over Grubnash, 124 s over the twins and 166 s over a Venomaw of 9,000 life
+(she had 16,000, and took nearly five minutes by the notes then), and standing still lived through the twins and the
+dragon. The bosses' lives are `BOSSES` in `src/core/dungeon.js`, the fights and their numbers `src/sim/dungeon.js`. That
+player aims perfectly and never tires, and its Firebolt is not a person's whole bar, so read the times against each other
+more than as what a person will get. **Nobody has played these fights by hand, and none of it has been seen drawn in
+the game**: see "Monsters' attacks" below.
+
+### Monsters' attacks: marks on the ground, and what flies
+
+Everything a monster throws or marks on the ground is one system, `sim.perils` (`src/sim/perils.js`), which anything in
+the game can call:
+
+```js
+sim.perils.mark({ shape: 'cone', x, z, yaw, r: 12, half: 0.6, fuse: 1.2, dmg: 40, elem: ELEM.FIRE });
+sim.perils.shot({ x, y, z, yaw, speed: 14, dmg: 12, look: 'blade' });
+MOVES.fissure(sim.perils, monster, target, monster.opts.damage);   // a named attack: src/sim/moves.js
+```
+
+- **A mark** is a warning drawn on the ground in one of five shapes (`src/core/perils.js`): a circle, a ring with a safe
+  middle, a cone, a strip, or crossed strips. It fills from where it starts to its far edge as its fuse runs out, then
+  lands on everyone in it. After that it can stay and burn (`dps`), turn (`spin`), travel (`vx`, `vz`), spread (`grow`),
+  or bite what touches it (`touch`); it can ride a body and point where that points (`ride`), follow someone until part
+  of its fuse has run (`follow`), or keep pointing at them (`aim`). One marked `jump` is cleared by a leap.
+- **A shot** flies: it hurts the first of you it meets, a raised shield turns it, and it may home, fall, skip off the
+  ground, go through, or leave a mark where it ends. `look` is an orb, a rock, a blade, a flask or a lance.
+- **Patterns** made of those: `fan`, `nova`, `spiral` and `wall` (shots); `lob`, `rain`, `march`, `rings` and `wave` (marks).
+- **Moves** (`MOVES` in `src/sim/moves.js`) are the named attacks made of those, twenty-six of them, each taking the
+  monster, its target and how hard: `rockLob`, `fissures`, `stompRings`, `quakeWave`, `boulder`, `knifeFan`, `bladeNova`,
+  `bloodLance`, `seekers`, `boltWall`, `spiral`, `firepots`, `fireWheel`, `spitFan`, `venomCone`, `plagueCross`,
+  `wailRing`, `boneMarch`, `threads`, `howlWave`, `ram`, `tailWhip` and the rest.
+- **Tricks** (`TRICKS`, same file) say which moves each of the eighteen kinds of Tripo monster has and how often. A
+  monster plays them only where its lair has `tricks: true`: the Warrens' packs and whelps, and whatever is summoned in
+  the Test Dungeon, where every kind can be tried. **Out in the countries they're off**: a lair in `LAIRS`
+  (`src/core/tripo-monsters.js`) gets them by adding `tricks: true` to its line, and nothing else is needed.
+- **Both hurt you and every other Tessariel standing there.** The party steps out of marks wherever it is (`danger` in
+  `src/sim/perils.js`, from `companion` in `src/sim/hero.js`); auto-play steps out of marks, across the way of shots,
+  and jumps rings, anywhere in the game (`perilStep` in `src/ui/autowarrens.js`), from what the sim posts ten times a
+  second.
+- **Drawn** as one new shape, `FX.MARK` in `src/gfx/spellfx.js`: a bright edge, the ground inside darkened and lit in the
+  element's colour, and a line that runs from its start to its far edge as the fuse runs. A frame's shapes went from 256
+  to 384 for it (`MAX_FX` in `src/core/layout.js`); the most a fight here used was 251.
+
+**Facing.** A Tripo monster now turns to whoever its blow is for all through the wind-up (it used to turn for the first
+third at a rate that couldn't finish, and swing beside them), won't start a blow until it's roughly square on, and looks
+at its mark rather than along its path once it's within a few strides. The undead, the crabs and the field creatures
+turn faster into their blows too.
+
+`node --test tests/perils.test.mjs` checks the shapes, the way out of each, and that every kind of monster's tricks are
+moves there are. Known limits: the mark's shader was compiled by Chromium's own compiler for both tiers and its five shapes
+drawn to a picture with it, but **the game itself couldn't be drawn on the machine this was made on** (its software GPU
+is lost while the game loads, with or without these changes), so the marks, the shots, the tail whip and the flight have
+not been seen in the game, by anyone. The sounds are the game's existing ones (a whoosh, a thud, a roar, a spell let
+go). The catacombs' dead and the beasts that aren't Tripo monsters have none of this yet beyond the facing.
 
 ### The Test Dungeon
 
@@ -845,7 +977,8 @@ end. Three people stand behind counters, and E at a counter talks to them:
   other Tessariels off in Settings there's nobody on them.
 - **Ysolde Marr, the Summoning.** A book of every monster in the game (`src/core/testhall-foes.js`): the risen and their
   masters, the great crabs, the Gravehart, the Bone Hydra, the Abyssal Mouth and Velscour's knights, every Tripo model by
-  its group (the Warrens' bosses with them), every slime and every tumbler. Choose one, how many (and a size, or colours),
+  its group (the Warrens' bosses with them), every slime and every tumbler. What's summoned here plays its kind's
+  tricks (see "Monsters' attacks"), so this is where to see them. Choose one, how many (and a size, or colours),
   add it to the summoning, and add more. **Summon** stands them in the arena past the door, and the door rises on them.
 
 Once everything past the door is down (whatever they raised or split into as well), and you're back on this side of it, the
@@ -923,12 +1056,14 @@ hand. There's no punch: with empty hands, a click tells you to open the pack.
 
 The town stands in a clearing in a forest of pines, about 16,000 of them out to 1 km, with six big oaks inside the clearing. `src/core/forest.js` says where each pine stands, the same on every thread, so what's drawn is what you walk into. `src/gfx/pines.js` draws one tree in three meshes: full boughs under about 84 m, big cards to 232 m, three crossed paintings past that. Only the two nearer rings throw shadows. Paint the bough and the far tree with `python tools/village/build_pines.py`, which needs nothing but numpy and Pillow.
 
+**The hunting grounds** (`src/core/hunts.js`). Where the woods' monsters stand, round Bellmourn (the six lairs, the four burial grounds, the casters' posts, the ogre's, the Gravehart's and the Abyssal Mouth's) and at every lair out in the countries, the pines open into a glade, the wood stands about half as thick for some thirty metres round it, and the pines left within about fifty metres have their boughs off below two fifths of their height (`TRIM_BELOW` in `src/gfx/pines.js`: the same mesh, its low boughs folded away on a trimmed tree), so you can see what you're fighting under them. No boulder lies in a glade's middle, and the opened floor has stumps, rough grass and ferns over it, none of it over the knee (`debrisInCell` in `src/core/rocks.js`). Eighteen paths (`HUNT_PATHS`, part of `PATHS`) lead in to the grounds from the south and north-east tracks, the foot of the Long Road and of the Fall, and the sexton's way, and one goes on up the hill to the foot of the Warrens' steps: nothing grows on them, the trail follows them and the map draws them. The two roads up the hill run on steep-sided ridges, so the ways west go up the hollows either side of the Fall. Move a monster's place and move its ground in `HUNT_GROUNDS`; `node --test tests/hunts.test.mjs` checks the lairs and field creatures have theirs, every ground has a path that joins the old ones, and nothing grows on a path.
+
 The land now goes on for 600 m either way (`LAND_EDGE`), and the hill to the west, at (-512, 166) and 146 m up, has two roads from the town, in `ROADS` in `src/core/terrain.js`. Both have a signpost where they leave the town, and a cairn with a fire on it where they end.
 
 - **The Long Road** leaves by the hunter's house: 1,080 m, winding, never over about 9 degrees. On a shield it holds a walking pace or a little better, and you have to bring the speed yourself.
 - **The Fall** leaves by the weaver's, with a rag on its post: 525 m, nearly straight, each pitch steeper than the last, up to about 28 degrees, about 19 m/s on a shield at the fastest. A short rise stands at the foot of each pitch. The shield clings on over these rather than leaving the ground, so use Space to hop.
 
-The roads have a 2 m grid of their own in the terrain mesh (`patch` in `buildTerrain`, `src/sim/job.worker.js`), and `farMap`, a coarse map of all the land, gives them and the forest floor their colour past the fine map of the village. Grass blades still stop at 128 m from the middle of the map. Nothing that hunts you goes past `NAV_EDGE`, 250 m out.
+The roads have a 2 m grid of their own in the terrain mesh (`src/core/ground-patches.js`, built by `buildTerrain` in `src/sim/job.worker.js`), and so have the woods round the town out to about 255 m, with a half-metre grid on the hillside round the Warrens' portal (4 m and 1 m on a phone). You walk on the land's own height and the stones lie on it, but the mesh is flat between its corners, and the one great grid's cells are 3 to 12 m across out in the woods: before these patches the drawn ground was as much as 1.5 m off where you stood at the portal on a PC (3.5 m on a phone) and half a metre off in the glades. `node --test tests/ground-mesh.test.mjs` builds the mesh and holds it to within 0.15 m at the portal and 0.25 m in the woods (0.35 and 0.6 on a phone). It costs about 75,000 more triangles of ground on High. And `farMap`, a coarse map of all the land, gives them and the forest floor their colour past the fine map of the village. Grass blades still stop at 128 m from the middle of the map. Nothing that hunts you goes past `NAV_EDGE`, 250 m out.
 
 Measured on the one machine in the table below, at 1024x768: the forest adds about 3 ms of GPU time a frame in the town and 7 ms among the trees. It has not been measured at a higher resolution or on a phone.
 

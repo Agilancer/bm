@@ -1,0 +1,157 @@
+{
+ "id": "pendulight_epic",
+ "name": "Pendulight Regalia",
+ "blurb": "Epic gear. Deep lilac velvet, pearl-grey mantle, pale silver and hanging-oval brocade. Original pendulum crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/pl_lilac.png",
+   "tile": "repeat",
+   "scale": 0.12,
+   "bright": 0.72,
+   "shading": 0.95,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/fx_silver.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.86,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/pl_hat.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.78,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pl_drops.png",
+    "color": "#9d86d6",
+    "scale": 0.15,
+    "strength": 0.18,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/bob.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      0.01,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/pl_pearl.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.74,
+    "shading": 0.85,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/bob.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/bob.png",
+     "anchor": "shoulder_right",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pl_drops.png",
+    "color": "#9d86d6",
+    "scale": 0.15,
+    "strength": 0.32,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/pendulum.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/bob.png",
+     "anchor": "tabard",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/pl_pearlmetal.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.85,
+    "shading": 0.85,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.86
+   },
+   "decals": [
+    {
+     "image": "decals/bob.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/bob.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "feet": {}
+ }
+}

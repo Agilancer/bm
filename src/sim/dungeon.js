@@ -3,10 +3,13 @@
 //
 // The fights are scripted the way an MMO's dungeon is: each boss has things it does on a clock or at so much of its life,
 // called out as it does them (EV.DELVE WARN: the words are WARNINGS in src/core/dungeon.js), and something the party has to
-// do about each. What lands on the ground is a hazard here: a circle that's drawn first, then goes off (rocks), or a patch
-// that burns while you stand in it (fire, acid). The hired party (src/sim/hero.js companion) reads the same hazards and
-// the same calls: out of the circles, at the dragon's sides, behind a pillar.
+// do about each. What lands on the ground and what flies is sim.perils' (src/sim/perils.js): a shape drawn first that then
+// goes off, a patch that burns while you stand in it, a ring to jump, shots to step between; most of it by the named moves
+// of src/sim/moves.js. The hired party (src/sim/hero.js companion) reads the same marks and the same calls: out of the
+// shapes, at the dragon's sides, behind a pillar.
 import { ADDS, BOSSES, DELVE, ENTRY, EXIT_IN, EXIT_OUT, HOLES, PARTY, PERCH, PILLARS, PORTAL, TURN_WARN, caveClear, caveFloorY, caveRoom, inDungeon, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
+import { markOut } from '../core/perils.js';
+import { MOVES, tipBody } from './moves.js';
 import { EV, INPUT } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
 import { terrainHeight } from '../core/terrain.js';
@@ -24,7 +27,6 @@ export class Warrens {
     this.sim = sim;
     this.inside = false;
     this.down = new Set();         // bosses dead
-    this.hazards = [];
     this.fight = null;             // the boss fight on, if there is one
     this.portalCd = 0;
     this.leftAt = -1e9;
@@ -98,8 +100,8 @@ export class Warrens {
     // (A pack once cleared is kept so, through a death: afterRestart.)
     const t = sim.tripo;
     if (t && (sim.tick & 31) === 0) for (const l of t.lairs) if (l.dungeon && !l.add && l.state === 'cleared') l.clearedOnce = true;
-    if (!this.inside) { if (this.hazards.length) this.hazards.length = 0; this.fight = null; return; }
-    this.stepHazards(dt);
+    if (!this.inside) { if (was) this.clearGround(); this.fight = null; return; }
+    this.dt = dt;
     this.stepPacks(dt);
     this.stepBosses(dt);
     this.post(dt);
@@ -139,7 +141,7 @@ export class Warrens {
   // Everything back as it was: every pack and boss stands again.
   resetAll() {
     const t = this.sim.tripo;
-    this.down.clear(); this.fight = null; this.hazards.length = 0;
+    this.down.clear(); this.fight = null; this.clearGround();
     if (t) for (const l of t.lairs) if (l.dungeon) { if (l.state === 'awake') t.sleep(l); l.state = 'asleep'; l.clearedOnce = false; l.spawned = 0; l.killed = 0; }
     this.sim.event(EV.DELVE, DELVE.RESET);
   }
@@ -148,7 +150,7 @@ export class Warrens {
   // you fell in here, you're stood at the way in with your party, the boss you fell to back at its full life.
   afterRestart(wasInside) {
     const sim = this.sim, t = sim.tripo;
-    this.fight = null; this.hazards.length = 0;
+    this.fight = null; this.clearGround();
     if (t) for (const l of t.lairs) if (l.dungeon && (l.clearedOnce || this.down.has(l.key))) l.state = 'cleared';
     if (wasInside) {
       const [x, z] = toWorld(ENTRY.x, ENTRY.z);
@@ -163,82 +165,13 @@ export class Warrens {
   }
 
   // ---- what lands on the ground ---------------------------------------------------------------------------------------
-  // kind: 'drop' goes off once when its fuse runs out (dmg); 'pool' burns what's in it each half second (dps) for life.
+  // All of it is sim.perils' (src/sim/perils.js): the marks drawn first that then go off, the patches that burn, what flies.
 
-  addHazard(h) {
-    const y = caveFloorY(h.x, h.z);
-    this.hazards.push({ t: 0, fuse: 0, life: 0, dmg: 0, dps: 0, knock: 0, elem: ELEM.FIRE, tick: 0, y, ...h });
-  }
+  clearGround() { this.sim.perils.clear(); }
 
-  stepHazards(dt) {
-    const sim = this.sim;
-    for (const h of this.hazards) {
-      h.t += dt;
-      if (h.kind === 'drop') {
-        if (h.t >= h.fuse && !h.done) {
-          h.done = true;
-          for (const b of this.bodies()) if (Math.hypot(b.x - h.x, b.z - h.z) < h.r + 0.3) this.hurt(b, h.dmg, h.x, h.z, h.knock);
-          sim.casting.burst(FX.SHOCK, h.elem, h.x, h.y + 0.3, h.z, 0.4, h.r * 1.1, 0.5, { light: 6, lightR: 6 });
-          for (let i = 0; i < 4; i++) sim.casting.burst(FX.ROCK, ELEM.STONE, h.x + rnd(-h.r, h.r) * 0.6, h.y + 0.25, h.z + rnd(-h.r, h.r) * 0.6, 0.35, 0.3, 1.2);
-          sim.event(EV.GROUND, h.x, h.y, h.z);
-        }
-      } else if (h.t >= h.fuse) {
-        h.tick -= dt;
-        if (h.tick <= 0) {
-          h.tick = 0.5;
-          for (const b of this.bodies()) if (Math.hypot(b.x - h.x, b.z - h.z) < h.r) this.hurt(b, h.dps * 0.5, h.x, h.z, 0);
-        }
-      }
-    }
-    this.hazards = this.hazards.filter((h) => (h.kind === 'drop' ? h.t < h.fuse + 0.4 : h.t < h.fuse + h.life));
-  }
-
-  // A hurt that a shield can't stop: it comes from above, or from the ground.
-  hurt(b, dmg, x, z, knock) {
-    const sim = this.sim;
-    if (b === sim.player) return b.damage(sim, dmg, x, z, knock, true);
-    return b.damage(sim, dmg, x, z, knock, true);
-  }
-
-  // Drawn after the spells' own shapes each tick: the circles before they go off, the patches while they burn.
-  drawFx() {
-    if (!this.inside) return;
-    const c = this.sim.casting;
-    for (const h of this.hazards) {
-      if (h.kind === 'drop') {
-        const k = clamp(h.t / h.fuse, 0, 1);
-        c.fx(FX.DISC, h.elem, h.x, h.y + 0.06, h.z, h.r, 0, 1, 0, 0, 0.18 + 0.4 * k, 0, 0, 0, h.seed || 0);
-        c.fx(FX.RING, h.elem, h.x, h.y + 0.08, h.z, h.r, 0, 1, 0, 0, 0.6 + 0.4 * k, 2 * k, 3, 0, 0);
-        c.fx(FX.RING, h.elem, h.x, h.y + 0.08, h.z, h.r * k, 0, 1, 0, 0, 0.8, 0, 0, 0, 0);
-      } else if (h.t >= h.fuse) {
-        const fade = clamp((h.fuse + h.life - h.t) / 1.5, 0, 1);
-        c.fx(FX.DISC, h.elem, h.x, h.y + 0.05, h.z, h.r, 0, 1, 0, 0, 0.5 * fade, 4 * fade, h.r * 1.5, 0, h.seed || 0);
-        if (((this.sim.tick + (h.seed * 100 | 0)) & 7) === 0) c.burst(h.elem === ELEM.FIRE ? FX.FLAME : FX.PUFF, h.elem, h.x + rnd(-h.r, h.r) * 0.6, h.y + 0.2, h.z + rnd(-h.r, h.r) * 0.6, 0.3, 0.9, 0.9, { alpha: 0.7 * fade });
-      } else {
-        c.fx(FX.RING, h.elem, h.x, h.y + 0.08, h.z, h.r, 0, 1, 0, 0, 0.8, 0, 0, 0, 0);
-      }
-    }
-  }
-
-  // Where a body at (x, z) should step to, out of every circle and patch it's in (or null if it's clear). For the party.
-  danger(x, z, pad = 0.8) {
-    let push = null;
-    for (const h of this.hazards) {
-      const d = Math.hypot(x - h.x, z - h.z);
-      if (d > h.r + pad) continue;
-      const L = d || 1, out = h.r + pad + 0.6 - d;
-      const ux = d > 0.05 ? (x - h.x) / L : Math.cos(h.seed * 6.28 || 1), uz = d > 0.05 ? (z - h.z) / L : Math.sin(h.seed * 6.28 || 1);
-      push = push || [0, 0];
-      push[0] += ux * out; push[1] += uz * out;
-    }
-    if (!push) return null;
-    // (Out into the open, not into the rock.)
-    let tx = x + push[0], tz = z + push[1];
-    if (caveRoom(tx, tz) < 0.8) { tx = x - push[1]; tz = z + push[0]; }
-    if (caveRoom(tx, tz) < 0.8) { tx = x + push[1]; tz = z - push[0]; }
-    return [tx, tz];
-  }
-  safe(x, z) { return !this.danger(x, z, 0.4); }
+  // Where a body at (x, z) should step to, out of every mark it's in (or null if it's clear). For the party.
+  danger(x, z, pad = 0.8) { return this.sim.perils.danger(x, z, pad); }
+  safe(x, z) { return this.sim.perils.safe(x, z); }
 
   // ---- the bosses ----------------------------------------------------------------------------------------------------
 
@@ -263,11 +196,13 @@ export class Warrens {
       for (const m of bodies) if (!m.setUp) this.setUp(m, b);
       if (lair.state === 'cleared' || (bodies.length && bodies.every((m) => m.dead) && lair.spawned >= b.models.length)) {
         this.down.add(b.key); lair.state = 'cleared'; lair.clearedOnce = true;
-        if (this.fight?.boss === b) { this.fight = null; this.hazards.length = 0; }
+        if (this.fight?.boss === b) { this.fight = null; this.clearGround(); }
         sim.event(EV.DELVE, DELVE.BOSS_DOWN, BOSSES.indexOf(b));
         // A boss's hoard: a few more things on the floor where it fell.
         const m = bodies[0];
-        if (m) for (let i = 0; i < (b.key === 'venomaw' ? 4 : 1); i++) sim.event(EV.LOOT, m.x + rnd(-2, 2), sim.world.height(m.x, m.z), m.z + rnd(-2, 2), b.key === 'venomaw' ? 8 : 6, 0);
+        // (On top of what its body leaves: rollLoot's 20 and 21 in src/items/items.js. Nothing the Warrens' rank and file
+        // drop comes near it.)
+        if (m) sim.event(EV.LOOT, m.x, sim.world.height(m.x, m.z), m.z, b.key === 'venomaw' ? 21 : 20, 0);
         continue;
       }
       const live = bodies.filter((m) => !m.dead);
@@ -296,7 +231,7 @@ export class Warrens {
       return;
     }
     if (p.dead || !this.party().some((h) => !h.dead)) return;
-    const able = live.filter((m) => !m.flying && !m.spin && !m.breathing && !m.script);
+    const able = live.filter((m) => !m.flying && !m.spin && !m.breathing && !m.script && m.state !== 7);
     if (!able.length || !this.every(f, 'turn', f.boss.key === 'venomaw' ? 22 : 17)) return;
     const m = pick(able), wait = 1.3;
     f.turn = { m, at: now + wait, until: now + wait + (f.boss.key === 'venomaw' ? 4 : 5), on: false };
@@ -335,7 +270,7 @@ export class Warrens {
   begin(b, live) {
     const sim = this.sim;
     this.fight = { boss: b, t: 0, clock: {}, phase: 0, stacks: 0 };
-    this.hazards.length = 0;
+    this.clearGround();
     for (const m of live) { m.notice(sim); m.hp = m.maxHp; }
     const [c0, c1] = live.map((m) => m.id);
     sim.event(EV.DELVE, DELVE.BOSS, BOSSES.indexOf(b), c0 ?? -1, c1 ?? -1);
@@ -347,22 +282,22 @@ export class Warrens {
   endFight(b, live) {
     const sim = this.sim, [rx, , rz] = roomSpot(b.room);
     for (const m of live) {
-      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.home = [rx, rz];
+      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx, rz];
       m.x = rx + rnd(-2, 2); m.z = rz + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
     }
     // (Its adds go with it.)
     for (const a of this.adds()) a.hp = 0;
-    this.fight = null; this.hazards.length = 0;
+    this.fight = null; this.clearGround();
   }
 
   // The fight's own monsters that aren't the boss: diggers and whelps.
   adds() { const t = this.sim.tripo; return t ? t.slots().filter((k) => k instanceof TripoMonster && k.lair?.add && !k.dead) : []; }
 
   // A few at once, at a place, as a lair of their own; each given its part when it stands (o.setUp).
-  spawnAdds(key, id, at, n, setUp, pal = ['Base']) {
+  spawnAdds(key, id, at, n, setUp, pal = ['Base'], tricks = false) {
     const t = this.sim.tripo;
     if (!t) return;
-    const lair = { key, x: at[0], z: at[1], r: 1.2, pick: [id], n, pal, wake: -1, dungeon: true, add: true, temp: true, state: 'asleep', at: -1e9, onSpawn: setUp };
+    const lair = { key, x: at[0], z: at[1], r: 1.2, pick: [id], n, pal, wake: -1, dungeon: true, add: true, temp: true, tricks, state: 'asleep', at: -1e9, onSpawn: setUp };
     t.lairs.push(lair);
     t.wake(lair);
   }
@@ -370,21 +305,38 @@ export class Warrens {
   every(f, name, secs) {
     const c = f.clock;
     if (c[name] === undefined) c[name] = secs * rnd(0.5, 0.8);
-    c[name] -= 1 / 120;
+    c[name] -= this.dt;
     if (c[name] > 0) return false;
     c[name] = secs * rnd(0.9, 1.15);
     return true;
   }
 
-  // ---- Grubnash: the cave-in, his diggers -----------------------------------------------------------------------------
+  // ---- the fights' own moves ------------------------------------------------------------------------------------------
+  // Everything a boss throws or marks on the ground goes through sim.perils (src/sim/perils.js), most of it by the moves
+  // in src/sim/moves.js. Each boss has a deck of them: every few seconds the next one it's free to make, never the same
+  // twice running, so there's always something on the floor to be out of or in the air to be clear of.
+
+  // Whoever isn't the tank (anyone, if that's all there is); and one of them: you, half the time.
+  others() { const all = this.bodies(), rest = all.filter((b) => b.role !== 'tank'); return rest.length ? rest : all; }
+  mark() { const p = this.sim.player, rest = this.others(); return !p.dead && Math.random() < 0.5 ? p : pick(rest); }
+
+  // The next of a boss's moves when its time comes round and its body is its own. Each is a method here: it says false if
+  // it couldn't be made just now, and is tried again.
+  deck(f, m, secs, list) {
+    const d = (f.decks ||= {})[m.id] ||= { t: secs * rnd(0.5, 0.8), bag: [], last: null };
+    d.t -= this.dt;
+    if (d.t > 0 || m.script || m.breathing || m.state !== 0 || f.turn?.m === m) return;
+    if (!d.bag.length) { d.bag = list.filter((n) => n !== d.last).sort(() => Math.random() - 0.5); }
+    const name = d.bag.pop();
+    if (this[name](f, m) === false) return;
+    d.last = name; d.t = secs * rnd(0.85, 1.15);
+  }
+
+  // ---- Grubnash: the cave-in, the split floor, the boulder, the stamp, his diggers ----------------------------------------
 
   grubnash(dt, f, [m]) {
     const sim = this.sim, frac = m.hp / m.maxHp;
-    if (this.every(f, 'cavein', 13)) {
-      this.warn(0);
-      for (const b of this.bodies()) this.addHazard({ kind: 'drop', x: b.x + rnd(-1, 1), z: b.z + rnd(-1, 1), r: 2.6, fuse: 2.4, dmg: 46, knock: 2, elem: ELEM.STONE, seed: Math.random() });
-      sim.event(EV.ROAR, m.x, m.y + 2, m.z, 1.2);
-    }
+    this.deck(f, m, frac < 0.35 ? 3.3 : 4.3, ['gCavein', 'gFissure', 'gBoulder', 'gStomp', 'gRubble']);
     // At seven tenths and a third of his life, the diggers come out of their holes and run to him.
     for (const [at, k] of [[0.7, 'd1'], [0.35, 'd2']]) {
       if (frac < at && !f[k]) {
@@ -402,12 +354,50 @@ export class Warrens {
         sim.event(EV.ROAR, m.x, m.y + 2, m.z, 1);
       }
     }
-    if (f.t > 240 && !f.enraged) { f.enraged = true; m.opts.damage *= 2; this.warn(15); }
+    if (f.t > 170 && !f.enraged) { f.enraged = true; m.opts.damage *= 2; this.warn(15); }
+  }
+
+  // The roof comes down: a circle under each of you, and more wherever.
+  gCavein(f, m) {
+    const sim = this.sim, P = sim.perils;
+    if (!m.perform({ clip: 'roar', secs: 1.3 })) return false;
+    this.warn(0, 20);
+    for (const b of this.bodies()) P.mark({ x: b.x, z: b.z, r: 2.6, fuse: 2.2, dmg: 69, knock: 2, elem: ELEM.STONE, follow: b, lock: 0.45, tag: 'cavein' });
+    P.rain(m.x, m.z, 17, f.stacks + 4, 1.4, { r: 2.3, fuse: 1.8, dmg: 60, knock: 2, elem: ELEM.STONE, tag: 'cavein' });
+    sim.event(EV.ROAR, m.x, m.y + 2, m.z, 1.2);
+  }
+
+  // His pick through the floor: a line of it, or three once he's hurt.
+  gFissure(f, m) {
+    const t = this.mark();
+    if (!t || !m.perform({ clip: 'atk3', face: t, secs: 1.3 })) return false;
+    this.warn(20, 25);
+    MOVES[m.hp < m.maxHp * 0.5 ? 'fissures' : 'fissure'](this.sim.perils, m, t, 26, { r: 18, w: 1.3, fuse: 1.1 });
+  }
+
+  // A boulder at whoever's furthest off, that bursts into shards.
+  gBoulder(f, m) {
+    const t = this.others().reduce((a, b) => (Math.hypot(b.x - m.x, b.z - m.z) > Math.hypot(a.x - m.x, a.z - m.z) ? b : a), this.sim.player);
+    if (!t || t.dead) return false;
+    if (!m.perform({ clip: 'atk1', face: t, at: 0.4, secs: 1.2, fn: () => MOVES.boulder(this.sim.perils, m, t, 27) })) return false;
+    this.warn(21, 25);
+  }
+
+  // A stamp that sends a ring out along the floor.
+  gStomp(f, m) {
+    if (!m.perform({ clip: 'jump', at: 0.5, secs: 1.4, fn: () => MOVES.quakeWave(this.sim.perils, m, null, 32, { reach: 24, speed: 10 }) })) return false;
+    this.warn(22, 25);
+  }
+
+  // Rubble coming up in a row, at one of you.
+  gRubble(f, m) {
+    const t = this.mark(), P = this.sim.perils;
+    if (!t || !m.perform({ clip: 'atk2', face: t, at: 0.4, secs: 1.2, fn: () => P.march(m.x, m.z, Math.atan2(t.x - m.x, t.z - m.z), 9, 2.3, 0.15, { r: 1.7, fuse: 0.85, dmg: 51, knock: 2, elem: ELEM.STONE, from: m, tag: 'rubble' }) })) return false;
   }
 
   // A digger runs for its master and nothing else; it only fights back if it's cornered.
   digger(d, boss) {
-    d.hp = d.maxHp = 110; d.opts.speed = 1.7; d.opts.name = 'DIGGER';
+    d.hp = d.maxHp = 260; d.opts.speed = 1.7; d.opts.name = 'DIGGER';
     d.aggro = true;
     d.script = (k, dt, sim) => {
       if (boss.dead) { k.script = null; return false; }
@@ -423,12 +413,12 @@ export class Warrens {
     };
   }
 
-  // ---- Skrit and Skrat: the shared pain, the firepot, the whirlwind ----------------------------------------------------
+  // ---- Skrit and Skrat: the shared pain; fire from the one, blades from the other -----------------------------------------
 
   twins(dt, f, live) {
     const sim = this.sim;
     const skrit = live.find((m) => m.opts.model === 'hf_skrit'), skrat = live.find((m) => m.opts.model === 'hf_skrat');
-    // Shared pain: the one with less life left takes half of what lands on it while they're far apart.
+    // Shared pain: the one with less life left takes half of what lands on it.
     if (skrit && skrat) {
       const a = skrit.hp / skrit.maxHp, b = skrat.hp / skrat.maxHp;
       skrit.ward = a < b - 0.15 ? 0.5 : 1; skrat.ward = b < a - 0.15 ? 0.5 : 1;
@@ -437,129 +427,303 @@ export class Warrens {
       const last = skrit || skrat;
       if (last && !f.wild) { f.wild = true; last.ward = 1; last.opts.damage *= 1.6; last.opts.pause = 0.5; this.warn(6); sim.event(EV.ROAR, last.x, last.y + 2, last.z, 1.3); }
     }
-    if (skrit && this.every(f, 'firepot', 9)) {
-      const all = this.bodies(), pool = all.filter((b) => b.role !== 'tank'), who = pick(pool.length ? pool : all);
-      if (who) {
-        this.warn(4);
-        this.addHazard({ kind: 'pool', x: who.x, z: who.z, r: 3.1, fuse: 1.8, life: 10, dps: 22, elem: ELEM.FIRE, seed: Math.random() });
-        sim.casting.burst(FX.FLARE, ELEM.FIRE, skrit.x, skrit.y + 1.6, skrit.z, 0.4, 0.1, 0.3, { light: 6, lightR: 4 });
-      }
-    }
-    if (skrat && !skrat.spin && this.every(f, 'whirl', 16)) {
-      this.warn(5);
-      skrat.spin = 3.4;
-      const clip = pick(skrat.rig.attacks);
-      skrat.script = (k, dt2, s2, foe) => {
-        k.spin -= dt2;
-        if (k.spin <= 0 || k.dead) { k.spin = 0; k.script = null; k.state = 0; k.setClip(k.idleClip); return false; }
-        k.yaw += dt2 * 9;
-        const L = Math.hypot(foe.x - k.x, foe.z - k.z) || 1;
-        k.vx = (foe.x - k.x) / L * 1.4; k.vz = (foe.z - k.z) / L * 1.4;
-        if (k.clip !== clip) k.setClip(clip);
-        k.t = (k.t + dt2 * 1.4) % k.rig.clips[clip].dur;
-        k.spinTick = (k.spinTick || 0) - dt2;
-        if (k.spinTick <= 0) {
-          k.spinTick = 0.5;
-          for (const b of this.bodies()) if (Math.hypot(b.x - k.x, b.z - k.z) < 5) this.hurt(b, 15, k.x, k.z, 1.5);
-          s2.event(EV.WHOOSH, k.x, k.y + 1.2, k.z);
-        }
-        if (s2.heroWorld && ((s2.tick & 3) === 0)) s2.casting.burst(FX.RING, ELEM.SPIRIT, k.x, k.y + 1, k.z, 1.5, 5, 0.3, { alpha: 0.5 });
-        return true;
-      };
-    }
+    if (skrit) this.deck(f, skrit, f.wild ? 3 : 5, ['sPots', 'sFan', 'sWheel', 'sWall']);
+    if (skrat && !skrat.spin) this.deck(f, skrat, f.wild ? 3.2 : 5.6, ['kWhirl', 'kDash', 'kNova']);
+    if (f.t > 200 && !f.enraged) { f.enraged = true; for (const m of live) m.opts.damage *= 2; }
   }
 
-  // ---- Venomaw: the breath in front, the tail behind, acid, the flight over the hoard, the whelps, the frenzy -------------
+  // Skrit: three pots of fire in a row across one of you.
+  sPots(f, m) {
+    const t = this.mark();
+    if (!t || !m.perform({ clip: 'atk1', face: t, at: 0.4, secs: 1.2, fn: () => MOVES.firepots(this.sim.perils, m, t, 22) })) return false;
+    this.warn(4, 20);
+  }
+
+  // Bolts of fire, fanned, and a second fan through the gaps of the first.
+  sFan(f, m) {
+    const t = this.mark(), P = this.sim.perils;
+    if (!t || !m.perform({ clip: 'atk2', face: t, at: 0.4, secs: 1.5, fn: () => {
+      MOVES.fireFan(P, m, t, 19, { n: 5, spread: 1 });
+      P.later(0.5, () => { if (!m.dead) MOVES.fireFan(P, m, t, 19, { n: 4, spread: 0.75 }); });
+    } })) return false;
+  }
+
+  // Crossed bars of fire, turning.
+  sWheel(f, m) {
+    if (!m.perform({ clip: 'roar', secs: 1.3 })) return false;
+    this.warn(23, 25);
+    MOVES.fireWheel(this.sim.perils, m, null, 24, { r: 11, life: 6, spin: Math.random() < 0.5 ? 0.75 : -0.75 });
+  }
+
+  // A row of fire coming on, with a way through.
+  sWall(f, m) {
+    const t = this.mark();
+    if (!t || !m.perform({ clip: 'atk4', face: t, at: 0.45, secs: 1.2, fn: () => MOVES.boltWall(this.sim.perils, m, t, 19, { width: 17, n: 10, speed: 7.5 }) })) return false;
+  }
+
+  // Skrat: the whirlwind. He spins after whoever he's on, cutting all within reach, and blades fly off him as he turns.
+  kWhirl(f, m) {
+    const P = this.sim.perils;
+    this.warn(5, 20);
+    m.spin = 3.6;
+    const clip = pick(m.rig.attacks);
+    let n = 0;
+    m.script = (k, dt2, s2, foe) => {
+      k.spin -= dt2;
+      if (k.spin <= 0 || k.dead) { k.spin = 0; k.script = null; k.state = 0; k.setClip(k.idleClip); return false; }
+      k.yaw += dt2 * 9;
+      const L = Math.hypot(foe.x - k.x, foe.z - k.z) || 1;
+      k.vx = (foe.x - k.x) / L * 1.6; k.vz = (foe.z - k.z) / L * 1.6;
+      if (k.clip !== clip) k.setClip(clip);
+      k.t = (k.t + dt2 * 1.4) % k.rig.clips[clip].dur;
+      k.spinTick = (k.spinTick || 0) - dt2;
+      if (k.spinTick <= 0) {
+        k.spinTick = 0.5;
+        for (const b of this.bodies()) if (Math.hypot(b.x - k.x, b.z - k.z) < 4.5) P.hurt(b, 22, k.x, k.z, 1.5, false, 'whirl');
+        s2.event(EV.WHOOSH, k.x, k.y + 1.2, k.z);
+        if (n++ % 2 === 1) MOVES.bladeNova(P, k, null, 16, { n: 8, speed: 9.5, turn: n * 0.39 });
+      }
+      if ((s2.tick & 3) === 0) s2.casting.burst(FX.RING, ELEM.SPIRIT, k.x, k.y + 1, k.z, 1.5, 4.5, 0.3, { alpha: 0.5 });
+      return true;
+    };
+  }
+
+  // A line marked to one of you, and then he comes down it.
+  kDash(f, m) {
+    const t = this.mark();
+    if (!t) return false;
+    this.warn(24, 25);
+    MOVES.ram(this.sim.perils, m, t, 25, { r: 17, w: 1.3, elem: ELEM.SPIRIT });
+  }
+
+  // Blades all round, and again through the gaps.
+  kNova(f, m) {
+    const P = this.sim.perils;
+    if (!m.perform({ clip: 'roar', at: 0.45, secs: 1.5, fn: () => {
+      const a = Math.random() * 6.28;
+      MOVES.bladeNova(P, m, null, 18, { n: 12, speed: 10, turn: a });
+      P.later(0.55, () => { if (!m.dead) MOVES.bladeNova(P, m, null, 18, { n: 12, speed: 10, turn: a + 0.26 }); });
+    } })) return false;
+    this.warn(25, 25);
+  }
+
+  // ---- Venomaw: breath, tail, claws and wings on the ground; the swoops, the breath across the hoard and the dive from the air ----
 
   venomaw(dt, f, [m]) {
-    const sim = this.sim, frac = m.hp / m.maxHp, [px, pz] = toWorld(PERCH.x, PERCH.z);
-    if (f.phase === 0 && frac < 0.55) {
-      f.phase = 1; f.flyT = 26; f.breaths = 0;
-      this.warn(10);
-      m.flying = true; f.clock.fly = 5.5;
-      this.spawnAdds('hf_whelps_1', ADDS.whelp, [m.x, m.z], 3, (w) => this.whelp(w), ['Blighted']);
-      this.warn(12);
-      m.script = (k, dt2, s2) => this.fly(k, dt2, s2, f, px, pz);
-    }
-    if (f.phase === 1) {
-      f.flyT -= dt;
-      if (f.flyT <= 0) { f.phase = 2; m.flying = false; m.liftExtra = 0; m.script = null; this.warn(13); m.opts.damage *= 1.25; this.spawnAdds('hf_whelps_2', ADDS.whelp, [m.x, m.z], 2, (w) => this.whelp(w), ['Blighted']); }
-      return;
-    }
-    // On the ground: the breath at the tank, the tail at whoever's behind, acid at someone.
-    // (Not while she's turned on you: her head's away from the tank, and a breath then would be the end of you.)
-    if (!m.breathing && m.state === 0 && !f.turn?.on && this.every(f, 'breath', f.phase === 2 ? 10 : 13)) {
-      this.warn(8);
-      // (Her own breath, at whoever she's on: src/sim/tripo.js BREATH. The cone below is for everyone else in front of her.)
-      m.breathing = true; m.state = 4; m.setClip(m.rig.clips.breath2 && Math.random() < 0.4 ? 'breath2' : 'breath');
-    }
-    if (m.breathing) {
-      if (m.state === 4) {
-        // (Everything in the cone in front of her takes it, not only the one she's looking at.)
-        const fx = Math.sin(m.yaw), fz = Math.cos(m.yaw);
-        for (const b of this.bodies()) {
-          if (b === m.heroFoe && b.role === 'tank') continue;
-          const dx = b.x - m.x, dz = b.z - m.z, d = Math.hypot(dx, dz) || 1;
-          if (d < 15 && (dx * fx + dz * fz) / d > 0.72) { b.venomBurn = (b.venomBurn || 0) + 30 * dt; if (b.venomBurn > 8) { this.hurt(b, b.venomBurn, m.x, m.z, 0.5); b.venomBurn = 0; } }
-        }
-      }
-      else { m.breathing = false; m.breathCd = 1e9; }
-    }
-    if (this.every(f, 'tail', 7)) {
-      const fx = Math.sin(m.yaw), fz = Math.cos(m.yaw);
-      const behind = this.bodies().filter((b) => { const dx = b.x - m.x, dz = b.z - m.z, d = Math.hypot(dx, dz) || 1; return d < 9 && (dx * fx + dz * fz) / d < -0.5; });
-      if (behind.length) {
-        for (const b of behind) this.hurt(b, 34, m.x, m.z, 6);
-        sim.event(EV.WHOOSH, m.x, m.y + 1, m.z); sim.event(EV.GROUND, m.x, m.y, m.z);
-        sim.casting.burst(FX.SHOCK, ELEM.POISON, m.x - fx * 5, m.y + 0.4, m.z - fz * 5, 0.5, 5, 0.4);
-      }
-    }
-    if (this.every(f, 'acid', f.phase === 2 ? 7 : 10)) {
-      const pool = this.bodies().filter((b) => b.role !== 'tank');
-      const who = pick(pool.length ? pool : this.bodies());
-      if (who) { this.warn(9); this.addHazard({ kind: 'pool', x: who.x, z: who.z, r: 3, fuse: 1.6, life: 14, dps: 18, elem: ELEM.POISON, seed: Math.random() }); }
-    }
-    if (f.t > 420 && !f.enraged) { f.enraged = true; m.opts.damage *= 3; this.warn(16); }
+    const frac = m.hp / m.maxHp;
+    // (Her breath over: her head's her own again.)
+    if (m.breathing && m.state !== 4) { m.breathing = false; m.breathHeld = false; m.breathCd = 1e9; }
+    if (f.phase === 0 && frac < 0.6 && !m.script && !m.breathing && m.state === 0) { this.takeOff(f, m); return; }
+    if (f.phase === 1) return;
+    this.deck(f, m, f.phase === 2 ? 3.3 : 4.4, f.phase === 2 ? ['vBreath', 'vAcid', 'vTail', 'vRake', 'vWings', 'vStomp', 'vRain', 'vSpiral'] : ['vBreath', 'vAcid', 'vTail', 'vRake', 'vWings', 'vStomp']);
+    if (f.t > 300 && !f.enraged) { f.enraged = true; m.opts.damage *= 3; this.warn(16); }
   }
 
-  // Up and over the hoard to her perch, breathing across the whole cavern every few seconds; only rock between her and
-  // you keeps it off.
-  fly(k, dt, sim, f, px, pz) {
-    const dx = px - k.x, dz = pz - k.z, d = Math.hypot(dx, dz);
-    k.liftExtra = Math.min(PERCH.up, (k.liftExtra || 0) + dt * 3);
-    const clip = k.rig.clips.fly ? 'fly' : 'idle';
-    if (k.clip !== clip) k.setClip(clip);
-    k.t = (k.t + dt) % k.rig.clips[clip].dur;
-    const [cx, , cz] = roomSpot('lair');
-    if (d > 1.5) { k.vx = dx / d * 7; k.vz = dz / d * 7; k.yaw += clamp(wrapAngle(Math.atan2(dx, dz) - k.yaw), -dt * 2, dt * 2); }
-    else { k.vx = k.vz = 0; k.yaw += clamp(wrapAngle(Math.atan2(cx - k.x, cz - k.z) - k.yaw), -dt * 2, dt * 2); }
-    f.clock.fly -= dt;
-    if (f.clock.fly <= 0 && !f.flame) { f.flame = 2.2; this.warn(11); sim.event(EV.ROAR, k.x, k.y + 5, k.z, 1.6); }
-    if (f.flame) {
-      f.flame -= dt;
-      if (f.flame <= 0) {
-        f.flame = 0; f.clock.fly = 6.5;
-        const mouth = [k.x, k.y + k.meta.height * 0.6 + k.hover, k.z];
-        for (const b of this.bodies()) {
-          if (!caveClear(mouth[0], mouth[2], b.x, b.z, 0.05)) continue;
-          this.hurt(b, 70, k.x, k.z, 1);
-          sim.event(EV.BURN, b.x, b.y + 1, b.z);
+  // Her breath: a cone before her, aimed as she draws it and held there. Everything in it burns but the tank, who has her
+  // own breath to stand in (src/sim/tripo.js breathe).
+  vBreath(f, m) {
+    const sim = this.sim, clip = m.rig.clips.breath2 && Math.random() < 0.4 ? 'breath2' : 'breath';
+    if (!m.rig.clips[clip] || f.turn?.on) return false;
+    this.warn(8, 20);
+    m.breathing = true; m.breathHeld = true; m.state = 4; m.setClip(clip); m.t = 0;
+    const w = m.meta.breathWin || [0.25, 0.8], dur = m.rig.clips[clip].dur, tank = foeOf(m, sim);
+    sim.perils.mark({ shape: 'cone', ride: m, r: 16, half: 0.6, fuse: w[0] * dur, life: (w[1] - w[0]) * dur, dps: 69, elem: ELEM.POISON, from: m, tag: 'breath',
+      spare: (b) => b === tank && b.role === 'tank' });
+  }
+
+  // Acid, spat high: a pool where each gob lands.
+  vAcid(f, m) {
+    const P = this.sim.perils, p = this.sim.player;
+    const who = [...new Set([p.dead ? null : p, ...this.others().sort(() => Math.random() - 0.5)])].filter(Boolean).slice(0, 3);
+    if (!who.length || !m.perform({ clip: 'atk2', face: who[0], at: 0.5, secs: 1.4, fn: () => {
+      const from = [m.x + Math.sin(m.yaw) * 3, m.y + m.meta.height * 0.7, m.z + Math.cos(m.yaw) * 3];
+      who.forEach((b, i) => P.later(i * 0.18, () => { if (!m.dead) P.lob(from, { x: b.x, z: b.z, r: 2.8, dmg: 33, life: 9, dps: 27, elem: ELEM.POISON, follow: b, lock: 0.5, from: m, tag: 'acid' }, { time: 1.4, look: 'orb', size: 0.42 }); }));
+    } })) return false;
+    this.warn(9, 20);
+  }
+
+  // Her tail, right round behind her, and the floor rings with it.
+  vTail(f, m) {
+    this.warn(26, 25);
+    MOVES.tailWhip(this.sim.perils, m, null, 58, { r: 11.5 });
+  }
+
+  // Her claws: three furrows fanned out before her.
+  vRake(f, m) {
+    const t = this.mark();
+    if (!t || !m.perform({ clip: pick(['atk1', 'atk3', 'atk4']), face: null, at: 0.9, secs: 1.5 })) return false;
+    this.warn(27, 25);
+    const yaw = Math.atan2(t.x - m.x, t.z - m.z);
+    for (const a of [-0.4, 0, 0.4]) this.sim.perils.mark({ shape: 'line', x: m.x, z: m.z, yaw: yaw + a, r: 15, w: 1, fuse: 1.1, dmg: 63, knock: 3, elem: ELEM.POISON, from: m, tag: 'rake' });
+  }
+
+  // Her wings beaten: gobs flung out all round, twice.
+  vWings(f, m) {
+    const P = this.sim.perils;
+    if (!m.perform({ clip: 'roar', at: 0.6, secs: 1.8, fn: () => {
+      const a = Math.random() * 6.28, o = { x: m.x, y: m.y + 1.3, z: m.z, speed: 8.5, dmg: 30, elem: ELEM.POISON, size: 0.3, life: 3, from: m, tag: 'wings' };
+      P.nova(o, 14, a);
+      P.later(0.6, () => { if (!m.dead) P.nova(o, 14, a + 0.224); });
+    } })) return false;
+    this.warn(28, 25);
+  }
+
+  // A stamp: three rings out from her, one after another.
+  vStomp(f, m) {
+    if (!m.perform({ clip: m.rig.clips.land ? 'land' : 'jump', secs: 1.6 })) return false;
+    this.warn(32, 25);
+    MOVES.stompRings(this.sim.perils, m, null, 38, { r: 5.5, elem: ELEM.POISON });
+  }
+
+  // Frenzied: venom from the roof, all over where you stand.
+  vRain(f, m) {
+    const t = this.mark();
+    if (!t || !m.perform({ clip: 'roar', secs: 1.4 })) return false;
+    this.warn(31, 25);
+    this.sim.perils.rain(t.x, t.z, 12, 11, 3, { r: 2.5, fuse: 1.4, dmg: 51, elem: ELEM.POISON, tag: 'rain' });
+  }
+
+  // And gobs poured out of her in turning streams.
+  vSpiral(f, m) {
+    if (!m.perform({ clip: 'roar', at: 0.5, secs: 3.4, fn: () => MOVES.spiral(this.sim.perils, m, null, 22, { arms: 4, secs: 2.8, turn: Math.random() < 0.5 ? 1.5 : -1.5 }) })) return false;
+    this.warn(28, 25);
+  }
+
+  // Into the air at six tenths of her life: her whelps hatch, and the flight below is hers till she comes down.
+  takeOff(f, m) {
+    f.phase = 1;
+    this.warn(10);
+    m.flying = true; m.state = 0;
+    this.spawnAdds('hf_whelps_1', ADDS.whelp, [m.x, m.z], 3, (w) => this.whelp(w), ['Blighted'], true);
+    this.warn(12);
+    const air = f.air = { stage: 'rise', t: 0, n: 0, pitch: 0, roll: 0, yawWas: m.yaw };
+    m.rig.poseModifier = (rot) => tipBody(m.rig, rot, air.pitch, air.roll);
+    m.script = (k, dt2, s2) => this.fly(k, dt2, s2, f);
+  }
+
+  // Her flight, stage by stage: up; two swoops down the hoard, each along a strip marked first and left burning; to her
+  // perch, to breathe across the whole cavern (only rock between her and you keeps that off); then a dive onto one of you.
+  fly(k, dt, sim, f) {
+    const a = f.air, P = sim.perils, [cx, , cz] = roomSpot('lair'), R = roomOf('lair').r - 5;
+    a.t += dt;
+    const clips = k.rig.clips, set = (n, loop = true) => { const c = clips[n] ? n : clips.fly ? 'fly' : k.idleClip; if (k.clip !== c) k.setClip(c); k.t = loop ? (k.t + dt) % clips[c].dur : Math.min(clips[c].dur, k.t + dt); };
+    const turnTo = (yaw, rate) => { k.yaw += clamp(wrapAngle(yaw - k.yaw), -dt * rate, dt * rate); };
+    // To (x, z), to be there in `left` seconds, no faster than top.
+    const goTo = (x, z, left, top = 30) => { const dx = x - k.x, dz = z - k.z, d = Math.hypot(dx, dz), v = Math.min(top, d / Math.max(left, dt)); k.vx = d > 0.05 ? dx / d * v : 0; k.vz = d > 0.05 ? dz / d * v : 0; return d; };
+    const lift = (to, rate) => { k.liftExtra = (k.liftExtra || 0) + clamp(to - (k.liftExtra || 0), -dt * rate, dt * rate); };
+    const next = (stage) => { a.stage = stage; a.t = 0; };
+    let pitch = 0;
+    switch (a.stage) {
+      case 'rise': {
+        k.vx = k.vz = 0;
+        set(a.t < 0.9 && clips.jump ? 'jump' : 'fly', a.t >= 0.9);
+        lift(5, 3.5);
+        if (a.t > 1.8) next('aim');
+        break;
+      }
+      case 'aim': {
+        // The strip: through one of you, right across the room, from the side she's nearer.
+        if (!a.line) {
+          const t = this.mark() || sim.player, ang = Math.random() * Math.PI;
+          const dx = Math.sin(ang), dz = Math.cos(ang), ox = t.x - cx, oz = t.z - cz, b = ox * dx + oz * dz, disc = b * b - (ox * ox + oz * oz - R * R);
+          const h = Math.sqrt(Math.max(disc, 1)), ends = [[t.x + dx * (-b - h), t.z + dz * (-b - h)], [t.x + dx * (-b + h), t.z + dz * (-b + h)]];
+          if (Math.hypot(ends[1][0] - k.x, ends[1][1] - k.z) < Math.hypot(ends[0][0] - k.x, ends[0][1] - k.z)) ends.reverse();
+          const len = Math.hypot(ends[1][0] - ends[0][0], ends[1][1] - ends[0][1]);
+          a.line = { from: ends[0], to: ends[1], yaw: Math.atan2(ends[1][0] - ends[0][0], ends[1][1] - ends[0][1]), len };
+          P.mark({ shape: 'line', x: ends[0][0], z: ends[0][1], yaw: a.line.yaw, r: len, w: 3.3, fuse: 2, dmg: 82, life: 5, dps: 39, elem: ELEM.POISON, from: k, tag: 'swoop' });
+          this.warn(29, 12);
         }
-        for (let i = 0; i < 10; i++) {
-          const a = Math.atan2(cx - k.x, cz - k.z) + (i - 4.5) * 0.12;
-          sim.casting.burst(FX.FLAME, ELEM.POISON, k.x + Math.sin(a) * 8, mouth[1] - 3, k.z + Math.cos(a) * 8, 1.2, 4, 1.1, { alpha: 0.8, light: 6, lightR: 10 });
-          sim.casting.burst(FX.PUFF, ELEM.POISON, k.x + Math.sin(a) * 18, caveFloorY(k.x, k.z) + 1, k.z + Math.cos(a) * 18, 1.5, 5, 1.6, { alpha: 0.6 });
+        set('fly');
+        lift(5, 3);
+        const d = goTo(a.line.from[0], a.line.from[1], 1.7 - a.t, 26);
+        turnTo(d > 2 ? Math.atan2(k.vx, k.vz) : a.line.yaw, 5);
+        if (a.t >= 2) { next('swoop'); sim.event(EV.ROAR, k.x, k.y + 4, k.z, 1.4); }
+        break;
+      }
+      case 'swoop': {
+        // Low and fast down the strip, her breath under her.
+        const secs = 1.5, L = a.line;
+        set(clips.fly2 ? 'fly2' : 'fly');
+        lift(2.6, 6);
+        pitch = 0.3;
+        goTo(L.to[0], L.to[1], secs - a.t, 40);
+        turnTo(L.yaw, 8);
+        if ((sim.tick & 3) === 0) {
+          const g = caveFloorY(k.x, k.z);
+          sim.casting.burst(FX.PUFF, ELEM.POISON, k.x + rnd(-2, 2), g + 0.8, k.z + rnd(-2, 2), 1, 3.2, 1, { alpha: 0.75, light: 5, lightR: 8 });
+          sim.casting.burst(FX.FLAME, ELEM.POISON, k.x, g + 0.2, k.z, 1.4, 3, 0.7, { alpha: 0.8, len: 2 });
+        }
+        if (a.t >= secs) { a.line = null; a.n++; next(a.n < 2 ? 'aim' : 'perch'); if (a.stage === 'perch') { f.perch = true; this.warn(10); } }
+        break;
+      }
+      case 'perch': {
+        const [px, pz] = toWorld(PERCH.x, PERCH.z);
+        set('fly');
+        lift(PERCH.up + 2, 3);
+        const d = goTo(px, pz, 0.1, 13);
+        turnTo(d > 1.5 ? Math.atan2(px - k.x, pz - k.z) : Math.atan2(cx - k.x, cz - k.z), 3);
+        if (!a.flame && (d < 1.5 || a.t > 4)) { a.flame = 2.4; this.warn(11); sim.event(EV.ROAR, k.x, k.y + 5, k.z, 1.6); }
+        if (a.flame) {
+          a.flame -= dt;
+          pitch = 0.25;
+          if (a.flame <= 0) {
+            const mouth = [k.x, k.y + k.meta.height * 0.6 + k.hover, k.z];
+            for (const b of this.bodies()) {
+              if (!caveClear(mouth[0], mouth[2], b.x, b.z, 0.05)) continue;
+              P.hurt(b, 110, k.x, k.z, 1, false, 'hoardBreath');
+              sim.event(EV.BURN, b.x, b.y + 1, b.z);
+            }
+            for (let i = 0; i < 10; i++) {
+              const ang = Math.atan2(cx - k.x, cz - k.z) + (i - 4.5) * 0.12;
+              sim.casting.burst(FX.FLAME, ELEM.POISON, k.x + Math.sin(ang) * 8, mouth[1] - 3, k.z + Math.cos(ang) * 8, 1.2, 4, 1.1, { alpha: 0.8, light: 6, lightR: 10 });
+              sim.casting.burst(FX.PUFF, ELEM.POISON, k.x + Math.sin(ang) * 18, caveFloorY(k.x, k.z) + 1, k.z + Math.cos(ang) * 18, 1.5, 5, 1.6, { alpha: 0.6 });
+            }
+            f.perch = false; a.flame = 0;
+            next('dive');
+          }
+        }
+        break;
+      }
+      default: {
+        // The dive: a circle under one of you, that follows a while, and then she's in it.
+        const fuse = 2.1;
+        if (!a.spot) {
+          const t = this.mark() || sim.player;
+          a.spot = P.mark({ x: t.x, z: t.z, r: 7.5, fuse, dmg: 112, knock: 8, elem: ELEM.POISON, follow: t, lock: 0.5, from: k, tag: 'dive',
+            then: (q) => P.wave(q.x, q.z, { speed: 11, reach: 26, touch: 45, knock: 3, elem: ELEM.POISON, r: 7.5, tag: 'diveWave' }) });
+          this.warn(30);
+        }
+        const left = fuse - a.t, s = a.spot;
+        set(left < 0.7 && clips.land ? 'land' : 'fly', !(left < 0.7 && clips.land));
+        goTo(s.x, s.z, Math.max(left - 0.25, 0.05), 30);
+        turnTo(Math.hypot(k.vx, k.vz) > 2 ? Math.atan2(k.vx, k.vz) : k.yaw, 5);
+        lift(left < 0.6 ? 0 : 6, left < 0.6 ? 14 : 3);
+        pitch = left < 0.9 ? 0.45 : 0.15;
+        if (left <= 0) {
+          // Down, and frenzied.
+          k.flying = false; k.liftExtra = 0; k.script = null; k.rig.poseModifier = null; k.vx = k.vz = 0; k.state = 0; k.setClip(k.idleClip);
+          f.phase = 2; f.air = null;
+          this.warn(13);
+          k.opts.damage *= 1.25;
+          sim.event(EV.GROUND, k.x, k.y, k.z); sim.event(EV.ROAR, k.x, k.y + 3, k.z, 1.6);
+          this.spawnAdds('hf_whelps_2', ADDS.whelp, [k.x, k.z], 2, (w) => this.whelp(w), ['Blighted'], true);
+          return true;
         }
       }
     }
+    // Nose down as she comes on, and over on a wing as she turns.
+    const turned = wrapAngle(k.yaw - a.yawWas) / Math.max(dt, 1e-4);
+    a.yawWas = k.yaw;
+    a.pitch += (pitch - a.pitch) * Math.min(1, dt * 4);
+    a.roll += (clamp(-turned * 0.22, -0.6, 0.6) - a.roll) * Math.min(1, dt * 3);
     return true;
   }
 
-  // Where to hide from the breath across the hoard: the side of the nearest pillar away from her (for the party). Null if
-  // she isn't flying.
+  // Where to hide from the breath across the hoard: the side of the nearest pillar away from her perch (for the party).
+  // Null unless she's on her way to it or on it.
   hideFrom(x, z) {
     const f = this.fight;
-    if (!f || f.boss.key !== 'venomaw' || f.phase !== 1) return null;
+    if (!f || f.boss.key !== 'venomaw' || f.phase !== 1 || !f.perch) return null;
     const m = this.bossBodies('venomaw').find((k) => !k.dead);
     if (!m) return null;
     // (From her perch, where she breathes from: a pillar right beside it hides nothing.)
@@ -577,7 +741,7 @@ export class Warrens {
     return best;
   }
 
-  whelp(w) { w.hp = w.maxHp = 160; w.opts.damage = 9; w.opts.name = 'WHELP'; w.aggro = true; w.opts.leash = 200; }
+  whelp(w) { w.hp = w.maxHp = 300; w.opts.damage = 9; w.opts.name = 'WHELP'; w.aggro = true; w.opts.leash = 200; }
 
   // For tests and reviews (bm.warrens in src/main.js): in at the way in, or straight to a boss's door; a boss nearly dead.
   debug(m) {
@@ -613,8 +777,8 @@ export class Warrens {
     const f = this.fight;
     self.postMessage({
       type: 'warrens', inside: true, down: [...this.down],
-      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
-      hazards: this.hazards.map((h) => ({ x: h.x, z: h.z, r: h.r, live: h.kind === 'pool' ? h.t >= h.fuse : true })),
+      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, perch: !!m.flying && !!f.perch, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
+      hazards: this.sim.perils.marks.map(markOut),
     });
   }
 }

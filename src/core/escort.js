@@ -16,7 +16,7 @@ export const ROUTE = (() => {
   let k = 0, best = 1e9;
   road.forEach((p, i) => { const d = Math.hypot(p[0] - end[0], p[1] - end[1]); if (d < best) { best = d; k = i; } });
   // (From where she has it out with you, along the shelf, down the steps and the path: src/core/opening.js WAY.)
-  const pts = [STORM_TO, ...CAVE_PATH.pts.slice(3)];
+  const pts = [STORM_TO, ...CAVE_PATH.pts.slice(2)];
   for (let i = k - 1; i >= 0; i--) pts.push([road[i][0], road[i][1]]);
   pts.push(ESCORT_TO);
   const line = [pts[0]], s = [0];

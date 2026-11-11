@@ -1,0 +1,137 @@
+{
+ "id": "orchidveil_rare",
+ "name": "Orchidveil Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original orchid stitch badge. Orchid satin, deep jade insets, petal lattice on cuffs and trailing embroidered hem florets. Intended as a rare item alternative for the amethyst palette.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/orchid_satin.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 1.1
+  },
+  "trim": {
+   "swatch": "swatches/silver.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/strap.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_satin.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.1
+   },
+   "decals": [
+    {
+     "image": "decals/orchid.png",
+     "anchor": "hat",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/jade.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.1
+   },
+   "pattern": {
+    "image": "swatches/pat_petals.png",
+    "color": "#3f8f78",
+    "scale": 0.16,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/orchid.png",
+     "anchor": "shoulder_left",
+     "size": 0.08,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/orchid.png",
+     "anchor": "shoulder_right",
+     "size": 0.08,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "leather": {
+    "swatch": "swatches/jade.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.756,
+    "shading": 0.45
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_petals.png",
+    "color": "#45224e",
+    "scale": 0.2,
+    "strength": 0.36,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/orchid.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/jade_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.0,
+    "keep": 0.08
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "feet": {}
+ }
+}

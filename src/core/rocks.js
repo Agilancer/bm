@@ -5,12 +5,14 @@
 // Where: a scatter everywhere, thicker in outcrops. Lining every road and path, kerb stones and broken bits along its edges
 // and a little gravel on it. In the woods, mossy boulders between the trunks. On the steeps and the far map's bare rock,
 // slabs and scree. In open snow, crags and slabs jutting out of it. Never in the town, on a place, in water, or on a road.
+import { oldChurchGround } from './town.js';
 import { CAVE_PATH, PATHS, PLOTS, ROADS, fbm, hash2, nearest, openingTerrain, segDist2, sstep, terrainHeight } from './terrain.js';
 import { forestAmount } from './forest.js';
 import { inCaveBox } from './opening.js';
 import { CLIFF, COUNTRY_KEYS, MOUNT, WATERS, countryWeights, groundCover, routeDist, siteAt } from './lands.js';
 import { churchSite } from './church.js';
 import { PORTAL } from './dungeon.js';
+import { huntEdge } from './hunts.js';
 
 export const STONE_CELL = 4, BOULDER_CELL = 12;
 // (x, y, z, size, cos, sin, how tall for its size, tone) and which of the meshes: src/gfx/rocks.js ROCK_VARIANTS.
@@ -58,12 +60,15 @@ export function roadEdge(x, z) {
 // Nowhere a stone may lie: the town, the church's ground, the houses' plots, the cave, the places, the water, the cliff's face.
 function barred(x, z) {
   if (Math.hypot(x, z) < TOWN) return true;
+  // (And the town's east end, built since on the ground the church stood on: the manor, the bakehouse and the herbalist's. A boulder
+  // lay against the herbalist's wall, and stones in the manor's forecourt.)
+  if (oldChurchGround(x, z) < 6) return true;
   if (churchSite(x, z) < 10) return true;
   for (const p of PLOTS) if (Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]) < 5) return true;
   if (openingTerrain && inCaveBox(x, z, 9)) return true;
   if (siteAt(x, z, 6)) return true;
-  // (The Warrens' portal and its platform, on the hillside: src/core/sites.js portalWall.)
-  if ((x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < 12 ** 2) return true;
+  // (The Warrens' portal, its platform and the steps down from it, on the hillside: src/core/sites.js portalWall.)
+  if ((x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < 18 ** 2) return true;
   for (const wt of WATERS) if ((x - wt.x) ** 2 + (z - wt.z) ** 2 < (wt.r + 4) ** 2) return true;
   if (Math.abs(x - CLIFF.x) < 16 && z > CLIFF.z0 && z < CLIFF.z1) return true;
   return false;
@@ -100,8 +105,9 @@ function rockInCell(i, j, big, out) {
   const x = (i + 0.1 + 0.8 * hash2(i + 3 * s0, j - 41)) * cell, z = (j + 0.1 + 0.8 * hash2(i - 59, j + 2 * s0)) * cell;
   if (barred(x, z)) return;
   const e = roadEdge(x, z);
-  // Not on a road, but for the odd stone of its gravel; boulders stand back from one.
-  if (big && e.d < 2) return;
+  // Not on a road, but for the odd stone of its gravel; boulders stand back from one, and out of a hunting ground's open
+  // middle, where they'd hide what you're fighting (src/core/hunts.js).
+  if (big && (e.d < 2 || huntEdge(x, z) < 3)) return;
   const on = e.d < -0.35;
   if (on && e.d < -e.w * 0.55) return;
   const L = lie(x, z);
@@ -256,6 +262,23 @@ function debrisInCell(i, j, out) {
     }
     if (u > 0.965) { put(pickOf(STUMP, v), x, z, h - 0.12, 0.6 + 0.4 * v, 0.7 + 0.5 * u, v); return; }
     if (u > 0.94) { put(pickOf(LOG, v), x, z, h - 0.1, 0.7 + 0.5 * v, 1, v); return; }
+  }
+  // About a hunting ground (src/core/hunts.js), where the pines were thinned and the floor lies open: the stumps of what was
+  // felled, and low cover over nearly all of it, rough grass in the glade and ferns with it under what's left standing.
+  // Nothing of it stands over the knee.
+  const glade = fen > 0.35 || !plants ? 1e9 : huntEdge(x, z);
+  if (glade < 30) {
+    const near = 1 - sstep(14, 30, glade);
+    if (u < 0.08 * near) { put(pickOf(STUMP, v), x, z, h - 0.1 - L.slope * 0.4, 0.8 + 0.6 * v, 0.45 + 0.4 * hash2(i, j), v); return; }
+    if (u < 0.9 * near) {
+      const open = glade < 3;
+      some(3 + Math.floor(4 * v), 1.7, (px, pz, q) => {
+        if (q && roadEdge(px, pz).d < 0.4) return;
+        if (!open && (q + i + j) % 2) put(FERN, px, pz, terrainHeight(px, pz) - 0.03, 0.7 + 0.6 * hash2(i + q, j - q), 0.8 + 0.4 * hash2(i - q, j), hash2(i + q, j + q));
+        else put(TUFT, px, pz, terrainHeight(px, pz) - 0.02, 0.55 + 0.6 * hash2(i - q, j + q), 0.8 + 0.5 * hash2(i + q, j), hash2(i, j - q));
+      });
+      return;
+    }
   }
   if (forest > 0.08 && ash < 0.5) {
     // The woods: fallen trunks, old stumps, ferns in the shade.

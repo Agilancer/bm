@@ -1,0 +1,136 @@
+{
+ "id": "moonthread_uncommon",
+ "name": "Moonthread Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original crescent moon stitch badge. Midnight cloth with a pale curved front panel, small hem dots and double pewter piping. Intended as an uncommon item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.74,
+   "shading": 0.95
+  },
+  "trim": {
+   "swatch": "swatches/pewter.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.6
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.74,
+    "shading": 0.95
+   },
+   "decals": [
+    {
+     "image": "decals/crescent.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.95
+   },
+   "decals": [
+    {
+     "image": "decals/crescent.png",
+     "anchor": "shoulder_left",
+     "size": 0.08,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/crescent.png",
+     "anchor": "shoulder_right",
+     "size": 0.08,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_dots.png",
+    "color": "#aab2c4",
+    "scale": 0.1,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/crescent.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/crescent.png",
+     "anchor": "tabard",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.78,
+    "shading": 0.95
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  },
+  "feet": {}
+ }
+}

@@ -1,0 +1,146 @@
+{
+ "id": "glassfen_uncommon",
+ "name": "Glassfen Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original dragonfly stitch badge. Indigo with moss shoulder panels, a narrow pale placket, paired cuff rings and silver-thread dashes. Intended as an uncommon item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/gf_tunic.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/gf_pewter.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7,
+   "keep": 0.0
+  },
+  "leather": {
+   "swatch": "swatches/gf_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.85,
+   "keep": 0.08
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/gf_hat.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/dragonfly_small.png",
+     "anchor": "hat",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/gf_moss.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/dragonfly_small.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/dragonfly_small.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/gf_dashes.png",
+    "color": "#aab6d4",
+    "scale": 0.2,
+    "strength": 0.2,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/dragonfly_big.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.07,
+      0
+     ]
+    },
+    {
+     "image": "decals/dragonfly_small.png",
+     "anchor": "tabard",
+     "size": 0.13,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/gf_mossl.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/gf_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.08
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/gf_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.2,
+    "shading": 0.85,
+    "keep": 0.1
+   }
+  }
+ }
+}

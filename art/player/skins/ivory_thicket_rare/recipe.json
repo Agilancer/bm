@@ -1,0 +1,143 @@
+{
+ "id": "ivory_thicket_rare",
+ "name": "Ivory Thicket",
+ "blurb": "Rare-tier appearance. Ivory botanical jacquard, forest guards and aged gold edging.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_ivory.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.8,
+   "shading": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/fx_gold.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.8
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "pattern": {
+    "image": "swatches/fx_leafsprig.png",
+    "color": "#8a6f2e",
+    "scale": 0.2,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.01,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_forest.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.95
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest_g.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest_g.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/fx_leafsprig.png",
+    "color": "#8a6f2e",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "back",
+     "size": 0.19,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.09,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_forestleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.95
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9
+   }
+  },
+  "feet": {}
+ }
+}

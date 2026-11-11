@@ -370,21 +370,25 @@ function ringFloor(plat, x, z, r0, r1, y, n = 16) {
 // level stone terrace that's built for it where it stands, the way you'd build one on a hillside, with the wall across its back.
 // Out on the land it faces down the hill and the hill's cut back under it (src/core/terrain.js portalCut), so its floor is
 // flush with the cut and the wall holds the hill; where the land falls away at the front it stands up on a wall, a plinth at its
-// foot and a pale coping round its top. Steps come down the front where a short flight reaches the ground, and otherwise down
-// its two ends along the hill, in front of the wall. Anywhere else it stands well over the ground, a parapet. A brazier at each
-// front corner.
+// foot and a pale coping round its top. Out on the land you can get onto it from every side but the wall's: a wide flight
+// comes down the front, as far down the hill as it takes to meet the ground, and at each end, in front of the wall, a flight
+// comes down along the hill, or the parapet's left open where the ground's level with the floor. (Down in the Warrens: steps
+// at the front where a short flight reaches the floor, and none at the ends.) Anywhere else it stands well over the ground,
+// a parapet. A brazier at each front corner.
 // x, z, yaw: where the portal stands and the way it faces (the model's own middle, on its dais). You walk on its floor, its
 // steps and the dais (K.floors, src/sim/world.js height), and its walls stop you where they stand more than a step over your
 // feet (K.colliders, t: their top less a step). ground is the land's height there (the land's, or the Warrens' floor, where
 // only the rock stops anyone). key names its spot (K.spots): the model's middle, on the terrace's floor.
-const PLAT = { lift: 0.3, edge: 0.14, rise: 0.19, tread: 0.42, stair: 1.3, ends: 1.15, cheek: 0.32, most: 12, drop: 0.9, rail: 0.75 };
+// (stair, ends: half the width of the front flight and the ends'. most: the steps in a short flight; far: in the front one on
+// the land, which goes on down the hill till it meets it.)
+const PLAT = { lift: 0.3, edge: 0.14, rise: 0.19, tread: 0.42, stair: 1.7, ends: 1.15, cheek: 0.32, most: 12, far: 30, drop: 0.9, rail: 0.75 };
 // The arch, in the model's units (tools/portal/pack.py): the wall's face behind its frame, the niche's half width (and the
 // radius of its head) and how high its head's middle is, how far back the niche goes, the dais's height, how far round it's
 // level and the step at its front, and the frame's posts (across and through). The wall's height over the floor, in metres.
 const ARCH = { face: 0.11, hole: 0.345, mid: 0.36, back: 0.42, deck: 0.107, deckR: 0.45, step: 0.044, frame: [0.28, 0.46], frameZ: [-0.16, 0.02], high: 7.2 };
 
 function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
-  const { lift, edge, rise, tread, stair, ends, cheek, most, drop, rail } = PLAT;
+  const { lift, edge, rise, tread, stair, ends, cheek, most, far, drop, rail } = PLAT;
   const { hu, hw, at } = PORTAL_PAD;
   const { scale: S, sink } = PORTAL_MODELS.dungeon;
   const land = ground === terrainHeight;
@@ -475,10 +479,11 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
   const stop = (sd, q, b, fa, fb, y) => { const [u, w] = on(sd, q, b); if (sd.n[0]) wall(u, w, fb, fa, y); else wall(u, w, fa, fb, y); };
   // Where along an edge is clear of the wall (along an end, the wall's where w < wf).
   const clear = (sd) => (sd.n[0] > 0 ? [wf, sd.half + edge] : sd.n[0] < 0 ? [-sd.half - edge, -wf] : [-sd.half - edge, sd.half + edge]);
-  // A flight down from an edge, hs wide either side of m: its steps, or null if a short flight never reaches the ground.
-  const flight = (sd, m, hs) => {
+  // A flight down from an edge, hs wide either side of m: its steps (none, where the ground's level with the floor there), or
+  // null if count of them never reach the ground.
+  const flight = (sd, m, hs, count = most) => {
     const steps = [];
-    for (let k = 0; k < most; k++) {
+    for (let k = 0; k < count; k++) {
       const b = edge + k * tread + tread / 2, y = top - (k + 1) * rise;
       const under = [-hs - cheek, 0, hs + cheek].map((q) => G(...on(sd, m + q, b)));
       // (Done where its middle meets the ground: across a slope its high side runs into the hill.)
@@ -502,12 +507,10 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
     n = n.map((v) => v / l);
     K.quad(cap, A, D, V(pts[2], pts[2].t), B, n);
   };
-  // (Out on the land, a front a short flight can't reach the ground from sends the steps round to the ends.)
-  const ahead = flight(sides[0], 0, stair);
-  const endsToo = land && ahead === null;
+  const ahead = flight(sides[0], 0, stair, land ? far : most);
   for (const sd of sides) {
     const hs = sd.way ? stair : ends, m = sd.mid;
-    const steps = sd.way ? ahead : endsToo ? flight(sd, m, hs) : null;
+    const steps = sd.way ? ahead : land ? flight(sd, m, hs) : null;
     const n = steps ? steps.length : 0;
     for (const { b, y, base: under } of steps || []) {
       along('pale:stone', sd, m, b, hs, tread / 2 + 0.01, under, y);
@@ -526,9 +529,10 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
         }
       }
     }
-    // A parapet where it stands well over the ground, but for the way down and where the wall is.
+    // A parapet where it stands well over the ground, but for the way down (steps, or on the land the level ground) and where
+    // the wall is.
     const [c0, c1] = clear(sd);
-    const gap = n ? hs + cheek : 0;
+    const gap = n || (land && steps) ? hs + cheek : 0;
     const segs = (gap ? [[c0, m - gap], [m + gap, c1]] : [[c0, c1]]).filter(([q0, q1]) => q1 - q0 > 0.3);
     for (const [q0, q1] of segs) {
       let under = Infinity;

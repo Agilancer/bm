@@ -30,7 +30,7 @@ fn rampColor(e: u32, t: f32) -> vec3f {
 }
 `;
 
-const LIGHT_SHAPES = /* wgsl */ `
+export const LIGHT_SHAPES = /* wgsl */ `
 struct Inst { p: vec4f, a: vec4f, m: vec4f, x: vec4f };  // p: place, size. a: axis, length. m: shape, element, seed, age. x: alpha, light, its reach, extra.
 @group(1) @binding(0) var<storage, read> fx: array<Inst>;
 @group(1) @binding(1) var depthTex: texture_2d<f32>;
@@ -67,7 +67,7 @@ const FLAME_ROOM = 1.4;   // and a flame's than the flame
       vp = (F.view * vec4f(P + side * q.x * w * room, 1.0)).xyz;
       o.uv = vec2f(q.x * room, s);
     }
-    case 3u, 4u, 9u: {
+    case 3u, 4u, 9u, 14u: {
       // Marks on the ground. With the depth to read, they are drawn from a card as wide as they are and laid onto whatever's
       // really there; from inside one, the whole screen is the card. A phone lays them flat.
       if (LEAN) {
@@ -97,7 +97,7 @@ const FLAME_ROOM = 1.4;   // and a flame's than the flame
       vp = (F.view * vec4f(I.p.xyz + side * q.x * size + vec3f(0.0, q.y * size * 1.25, 0.0), 1.0)).xyz;
       o.uv = q;
     }
-    case 14u: {
+    case 15u: {
       // A sign: turned to the eye, or (given a face to lie along) a card in the world.
       if (dot(I.a.xyz, I.a.xyz) > 0.25) {
         let n = normalize(I.a.xyz);
@@ -451,6 +451,53 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
   return vec4f(ramp(hot) * m * HOT * 0.4 * shimmer + ramp(0.5) * (glow + m * 0.7), 0.0);
 }
 
+// A warning on the ground (src/core/perils.js, src/sim/perils.js): where something is about to land, in the shape it lands
+// in. Its edge is a bright line, the ground inside it darkened and lit, and it fills from where it starts to its far edge
+// as its time runs out; once it's biting (fill at 1 or over) the whole of it burns. kind: 0 a circle, 1 a ring (A its inner
+// edge), 2 a cone (A half its angle), 3 a strip (A half its width, B its length), 4 crossed strips (as many as kind's
+// hundredths). dir: the way it points. A and B are in the mark's own radius, as uv is.
+fn stripSd(f: f32, s: f32, r: f32, w: f32) -> f32 {
+  let q = vec2f(abs(f - r * 0.5) - r * 0.5, abs(s) - w);
+  return length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0);
+}
+fn mark(uv: vec2f, dir: vec2f, A: f32, B: f32, kindF: f32, fill: f32, size: f32, seed: f32, T: f32) -> vec4f {
+  let r = length(uv);
+  if (r > 1.25) { return vec4f(0.0); }
+  let kind = u32(kindF);
+  let f = dot(uv, dir);
+  let s = uv.x * dir.y - uv.y * dir.x;
+  var d = r - 1.0;
+  var along = r;
+  switch kind {
+    case 1u: { d = max(r - 1.0, A - r); along = (r - A) / max(1.0 - A, 0.001); }
+    case 2u: {
+      let a = abs(atan2(s, f));
+      if (a <= A) { d = max(r - 1.0, -r * sin(min(A - a, 1.5708))); } else { d = max(r * sin(min(a - A, 1.5708)), r - 1.0); }
+    }
+    case 3u: { d = stripSd(f, s, B, A); along = f / max(B, 0.001); }
+    case 4u: {
+      let sec = 6.28318 / max(round(fract(kindF) * 100.0), 1.0);
+      let k = (fract(atan2(s, f) / sec + 0.5) - 0.5) * sec;
+      d = stripSd(r * cos(k), r * sin(k), B, A); along = r * cos(k) / max(B, 0.001);
+    }
+    default: {}
+  }
+  let px = d * size;
+  if (px > 0.6) { return vec4f(0.0); }
+  let inside = smoothstep(0.05, -0.05, px);
+  let rim = exp(-px * px / 0.005);
+  let glow = exp(-abs(px) * 4.0) * 0.3;
+  let n = cn(fbm(uv * size * 0.045 + vec2f(seed, T * 0.02)));
+  let live = step(1.0, fill);
+  let filled = inside * smoothstep(fill + 0.012, fill - 0.012, along);
+  let gap = (along - fill) * size / 0.2;
+  let front = inside * exp(-gap * gap) * (1.0 - live);
+  let beat = 0.72 + 0.28 * sin(T * 11.0 + seed * 20.0);
+  var heat = rim + glow + front * 0.9 + filled * (0.14 + n * 0.24) + inside * 0.04;
+  heat += live * inside * (0.22 + n * 0.55) * beat;
+  return vec4f(ramp(0.5 + 0.5 * max(rim, front)) * heat * HOT * 0.42, inside * (0.36 + 0.22 * filled));
+}
+
 @fragment fn fs(in: V) -> @location(0) vec4f {
   let I = fx[in.id];
   C[0] = in.c0; C[1] = in.c1; C[2] = in.c2; C[3] = in.c3;
@@ -464,7 +511,7 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
   var keep = 1.0;
   var scene = 1e6;
   if (!LEAN) { scene = textureLoad(depthTex, vec2i(in.pos.xy), 0).r; }
-  if (shape == 3u || shape == 4u || shape == 9u) {
+  if (shape == 3u || shape == 4u || shape == 9u || shape == 14u) {
     if (!LEAN) {
       // Back from the depth to the point in the world under this pixel.
       if (scene < 0.35) { discard; }
@@ -504,7 +551,8 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
     case 11u: { c = vortex(uv, seed, T); }
     case 12u: { c = shock(uv, age, seed, T); }
     case 13u: { c = kite(uv); }
-    case 14u: { c = glyph(uv, u32(I.x.w + 0.5), I.a.w, age, seed, T); }
+    case 14u: { c = mark(uv, I.a.xz, I.a.y, I.a.w, I.x.w, age, I.p.w, seed, T); }
+    case 15u: { c = glyph(uv, u32(I.x.w + 0.5), I.a.w, age, seed, T); }
     default: { discard; }
   }
   return c * alpha * keep;
@@ -662,7 +710,7 @@ fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
 }
 `;
 
-const GROUND = new Set([FX.RING, FX.DISC, FX.RUNE]);
+const GROUND = new Set([FX.RING, FX.DISC, FX.RUNE, FX.MARK]);
 const MAX_LIGHTS = 4;
 const STRIDE = FX_FLOATS * 4;
 
