@@ -600,6 +600,90 @@ screen is a frame for each, with their life.
   goes back behind the tank from it, where his taunt takes it off them and the healer can reach them, and fights on from
   there (`fallBack`).
 
+- **They stand round what they're fighting, not in a queue.** Coming in on a foe with someone already between him and
+  it, a hero comes in a stride round from them. Two who shoot don't stand shoulder to shoulder: one steps off
+  (`elbowRoom`).
+- **The fight is looked at again as it goes** (`rethink`, a little under once a second). A lancer or a paladin turns onto
+  whatever is on one of his own who's below half their life (you too, if you're near), and a lancer calls it onto
+  himself. Anyone finishes what's nearly down beside them rather than leave it standing.
+- **The move that suits the moment** (`chooseSkill` in `src/sim/heroskills.js`). They used to use the first move that
+  was ready. Now each ready move is weighed by what it's for: one that strikes many by how many there are, one that
+  closes a gap by the gap, a finisher by the foe's last third, one that saves him by his own hurt, the great ones kept
+  for a boss, a champion or a crowd, and anything that would knock a foe off its stride used at once on one that's
+  working a spell. What's gone longest unused is liked a little more, so a fight shows all of them. A breath between
+  two moves, so their ordinary blows are still most of a fight.
+- **What each does between its blows** (`classRoutine`). A rogue goes in, cuts three or four times, and runs back out
+  five strides, to come back with a leap. A ninja runs round his foe throwing stars of every kind as he goes, then goes
+  in with both blades, then round again. A boomerang knight is never still between throws. Anyone light on their feet
+  rolls out from under a blow now and then.
+- **Your party use their moves from where they're put.** One of yours fighting from a place it was given (the healer's
+  distance, a dragon's flank) used only its ordinary blows there. It now uses any move that doesn't take it off that
+  place; the healer too, between mendings.
+
+### Their moves
+
+Every class has its first moves (`SKILLS` in `src/sim/hero.js`) and eight to twelve more (`MORE_SKILLS` and `CAST` in
+`src/sim/heroskills.js`), after how the same class plays in Velscour, the isometric game (its `src/data/skilldata.js`;
+it has no rogue or ninja, so those two are from its ranger's tricks, its bard's trickery and its boomerang knight's
+bladework). 87 new ones in all.
+
+**They grow with their level.** Each move is come by at a level (`lvl`, 1 to 17; all of a class's by 17), and its numbers
+grow with the hero's rank, one every five levels (`rank`): more hammers round the paladin, more boards round the
+lancer, more bounces, wider novas. Your party's levels follow yours as before, and the quartermaster's books say how
+many moves each one has (hover for their names); when your level brings one of yours a new move, you're told. The other
+Tessariels out in the world now keep pace with you as well, each a few levels either side of yours and never below
+where they began (`keepPace`): they used to stay the level they were made at.
+
+| Class | New moves (level come by) |
+| --- | --- |
+| Paladin | Zeal (2), Blessed Shield (3: his board thrown, from foe to foe and home to his arm), Holy Nova (4), Crusader's Charge (5), Fist of the Heavens (6), Divine Shield (7), Heaven's Fury (8), Judgment Beam (9), Solar Hammer (12), Storm of Hammers (15) |
+| Lancer | Lance Barrage (2), Tower Shields (3: boards of light turning round him, that cut what they touch and call everything near onto him), Sweeping Cleave (4), Shield Throw (5), Sunspear (6), Bulwark Nova (7), Lance of Light (8), Valiant Leap (9), Phalanx Rush (10: three runs), Spear Wall (12), Charge of the Order (16) |
+| Archer | Disengage (1: a backward somersault out of reach, three arrows from the top of it), Piercing Arrow (2), Split Shot (3), Guided Arrow (4), Explosive Arrow (5), Frost Arrow (6), Sniper Shot (7), Constellation Shot (9), Arrow Storm (12), Black Hole Arrow (15) |
+| Rogue | Backflip (1), Flip Strike (2), Fan of Knives (4), Rupture (5), Whirling Blades (6), Smoke Bomb (7), Shadow Dance (9), Death from Above (11), Eviscerate (13) |
+| Ninja | Twin Fangs (1: both blades), Fire Star (2), Spin Kick (3), Star Storm (3), Frost Stars (4), Whirlwind (5), Storm Star (6), Rising Dragon (7), Spirit Star (8), Kick Chain (9), Substitution (10), Great Shuriken (12) |
+| Dragoon | Lance Flurry (2), Dragon Dive (3), Spearstep (3), Spiral Lance (4), Sweeping Lance (5), Comet Dive (6), Lance Barrier (8), Storm Dive (9), Spear Rain (10), Dragon Breath (12), Dragonfall (14), Heaven's Rain (17) |
+| Boomerang Knight | Cross Cut (1: both at once), Energy Boomerang (2), Wind Slash (3), Chakram (4), Orbiting Boomerangs (5), Homing Salvo (6: fifteen small ones that turn on the mark), Tempest Dash (7), Blade Ring (8), Bladestorm Dance (9), Golden Boomerang (10), Razor Tornado (12) |
+| Bard | Power Chord (2), Fan of Notes (3), Shockwave Riff (3), Echo (4), Dancing Notes (5), Bass Drop (6), Swashbuckle (6: the sword), Resonance Beam (7), Lullaby (8), Sonic Boom (9), Crescendo (10), The Grand Finale (14) |
+
+- **The dragoon's spear is the one he's holding.** His leap used to draw a spear of light from his hand. Now the spear
+  in his fist is pointed up on the rise and down the dive (`aim`), lit down its own length, driven into the ground where
+  he lands (it leaves his hand and stands there: `free`), and is back in his fist as it breaks out. Each of the five
+  dives has its own look: fire wound round him in two ribbons, a comet's tail, bolts round the landing, wings of fire.
+- **The paladin's board and the lancer's are their own too.** Thrown, the board on the arm leaves it, flies (flat like
+  a discus for the paladin, standing and turning for the lancer), strikes from one foe to the next and comes home to
+  the arm. A paladin who carries a maul throws a board of light.
+- **Hammers are hammers, stars are stars.** The paladin's hammers were a glowing rock. They, the ninja's stars and the
+  boomerangs of light are now built of two new spell shapes, `BOX` and `SHARD` (`src/gfx/spellfx.js`): gold-headed
+  hammers with wooden hafts that tumble end over end, four-pointed steel stars that turn. A third, `GLYPH`, draws signs
+  in light: the bards' notes, the arcs of their sound, the crescent a blade leaves, a wing, a cross.
+- **Flips are the whole body turned over** (`bodyFlip`, `bodyRoll` and `tumble` in `src/sim/hero.js`), after the pose is
+  made: a rogue's forward somersault onto a foe, his backflip away, a cartwheel with both knives out, two turns from
+  roof height. A leap now hangs at its top rather than sliding along its arc at one speed.
+- **Blood.** A rogue's cuts, and anything else that bleeds a foe, throw its blood out along the blow and every way: the
+  render thread's own blood, which falls and soaks into the ground (`EV.HERO_FX`, `heroFx` in `src/main.js`), and red
+  streaks and drops in the air. Rupture goes on throwing it for three seconds.
+
+### The bards' lutes
+
+Each of the six bards has one of the owner's six lutes (`tools/heroes/lutes.py` cuts them from the sheet, finds which
+way each soundboard faces, thins each to 3,200 triangles and gives it a colour map of its own; `kit.json` `lute`). A hero
+now carries four things, not three (`PROPS_PER_CHAR`).
+
+- It rides across the bard's back, over the board, till it's played. Then it comes round his right side to before his
+  belly, neck up to his left, and both hands come to it: the left closes on the neck, the right is at the strings
+  (`poseLute`, `reachTo`: the arms are turned to reach, shoulder to elbow to wrist, whatever the clip had them doing).
+  The sword goes to his left hip while both hands are busy, and is back in his hand after.
+- **Three ways of playing** (`tune.v`): a steady strum, down and up across the strings, the body swaying with it;
+  picking, small and quick, bent over the neck with the left hand running up and down it; and the great wheeling strum,
+  the arm thrown up and round and down through every string, the neck raised and the back arched.
+- **What comes off it** (`strumFx`). On every stroke a note is thrown up off the strings (a quaver, a beamed pair, a
+  crotchet, turning as it rises), the sound of it goes out along the ground before him in arcs, and the string is heard:
+  a plucked string made in the page (`pluck` in `src/audio.js`), walking up and down a five-note scale, each bard from
+  their own place in it.
+- A bard's ordinary blow is now a few bars and a note off the strings. The three songs are played as well as sung, and
+  so is a song at the well.
+- The quartermasters and the Test Dungeon's keeper wear bards' bodies, but carry no lute (`withBrokers`).
+
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
 both). The quartermasters are two more bodies after them.
 

@@ -402,7 +402,8 @@ const behind = (m, r) => { const a = (m.yaw ?? 0) + Math.PI; return [m.x + Math.
 
 // The move that suits the moment best, of those ready: come by at his level, in range, with a line if it needs one. Each
 // is weighed by what it's for (a crowd for what strikes many, a gap for what closes one, the foe's last third for a
-// finisher, his own hurt for what saves him) and by how long it's gone unused, so a fight shows all of them. posted: he
+// finisher, his own hurt for what saves him, a foe working a spell for whatever would stop it) and by how long it's gone
+// unused, so a fight shows all of them. posted: he
 // fights from a place he was given, so nothing that leaves it.
 export function chooseSkill(h, sim, w, m, d, R, line, _env, posted = false) {
   const lvl = h.person.level, gap = d - R;
@@ -430,6 +431,8 @@ export function chooseSkill(h, sim, w, m, d, R, line, _env, posted = false) {
     if (q.finish) sc *= x.mhp < 0.35 ? 2.5 : 0.7;
     if (q.def) sc *= x.hpF < 0.5 ? 3 : 0.2;
     if (q.big) sc *= worth ? 1.8 : 0.3;
+    // (Something working a spell: whatever would knock it out of it, now.)
+    if (m.casting && STUNS.has(q.key)) sc *= 3;
     sc *= 0.7 + Math.min(1.3, (sim.time - (h.used[q.key] ?? -30)) / 14);
     sc *= 0.75 + h.r() * 0.5;
     if (sc > bs) { bs = sc; best = s; }
@@ -437,6 +440,9 @@ export function chooseSkill(h, sim, w, m, d, R, line, _env, posted = false) {
   return best;
 }
 
+// What takes a foe off its stride, and so out of a spell it's working.
+const STUNS = new Set(['smite', 'holy_nova', 'fist_of_heavens', 'crusaders_charge', 'shield_bash', 'bulwark_nova', 'sunspear', 'charge', 'flip_strike', 'smoke_bomb', 'death_from_above', 'frost_star', 'kick_chain',
+  'storm_dive', 'golden_boomerang', 'bass_drop', 'lullaby', 'shockwave_riff', 'frost_arrow', 'sniper_shot', 'ninja_flurry']);
 const AGILE = new Set(['rogue', 'ninja', 'archer', 'boomerang', 'bard']);
 // What a class does between its blows. True if it has the body this tick (fight() then leaves it alone).
 //   Anyone light on their feet, struck: a roll out from under it, now and then.

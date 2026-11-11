@@ -402,7 +402,7 @@ export class Hero extends Knight {
       // (Something between them: on toward it, round whatever it is (walk() finds the way), till the line's clear.)
       else if (!line) this.goal = { x: m.x, z: m.z, speed: 3.6, stop: 2.5 };
       // (A boomerang knight is never still between throws: classRoutine gives him a step round at his distance.)
-      else this.goal = this.sideGoal || null;
+      else this.goal = this.sideGoal || this.elbowRoom(sim, world, to);
       if (d < 2.2 && !this.luteP) { if (this.shotCd <= 0) this.blow(sim, m); return; }
       if (line && d <= this.cls.range && this.shotCd <= 0 && this.kiteT <= 0) {
         if (this.style === 'bow') this.shoot(sim, m);
@@ -413,8 +413,19 @@ export class Hero extends Knight {
       return;
     }
     const reach = this.blows[0].reach + R - 0.2;
-    if (d > reach) this.goal = { x: m.x - dx / d * (reach - 0.4), z: m.z - dz / d * (reach - 0.4), speed: d > 8 ? 4.4 : 3.2, face: to, stop: 0.2 };
-    else {
+    if (d > reach) {
+      // To its side of the foe, not onto the back of whoever's already there: with someone between him and it, or at his
+      // elbow, he comes in a stride round from them, so three of them stand about it and not in a queue.
+      let mine = Math.atan2(-dx, -dz);
+      if (d < 7) for (const o of world.heroes) {
+        if (o === this || o.foe !== m || o.dead || !o.active || o.cls.ranged) continue;
+        const od = Math.hypot(o.x - m.x, o.z - m.z);
+        if (od > d) continue;
+        const off = wrapAngle(mine - Math.atan2(o.x - m.x, o.z - m.z));
+        if (Math.abs(off) < 0.6) mine += (Math.abs(off) > 0.05 ? Math.sign(off) : (this.slot % 2 ? 1 : -1)) * (0.75 - Math.abs(off));
+      }
+      this.goal = { x: m.x + Math.sin(mine) * (reach - 0.4), z: m.z + Math.cos(mine) * (reach - 0.4), speed: d > 8 ? 4.4 : 3.2, face: to, stop: 0.2 };
+    } else {
       // In reach. A rogue or a ninja, with someone else holding it, works round to its back between blows: a step at a
       // time round its flank, never across its front.
       this.goal = null;
@@ -429,6 +440,19 @@ export class Hero extends Knight {
     }
     // The lancer raises the tower board between blows.
     this.shieldTarget = this.style === 'lance' && d < 4 ? 1 : 0;
+  }
+
+  // Two who shoot, shoulder to shoulder: the one with the higher number takes a stride and a half off from the other.
+  elbowRoom(sim, world, face) {
+    for (const o of world.heroes) {
+      if (o === this || o.dead || !o.active || o.slot > this.slot) continue;
+      const dx = this.x - o.x, dz = this.z - o.z, d = Math.hypot(dx, dz);
+      if (d > 1.5) continue;
+      const a = d > 0.05 ? Math.atan2(dx, dz) : this.slot * 2.4;
+      if (sim.world.clearance(this.x, this.z, Math.sin(a), Math.cos(a), 1.8, 0.45) < 1.5) continue;
+      return { x: this.x + Math.sin(a) * 1.6, z: this.z + Math.cos(a) * 1.6, speed: 2.6, stop: 0.2, face };
+    }
+    return null;
   }
 
   // Is the way to its foe clear, for something shot or thrown: no wall, corner, pine or rise of the ground between, by a
@@ -1924,6 +1948,7 @@ export class HeroWorld {
     }
     // Paladins and bards look after people, in a fight or out of it.
     this.care(h);
+    if (h.foe && !h.swing && !h.jump && (h.rethinkT = (h.rethinkT || 0) - dt) <= 0) { h.rethinkT = 0.8 + (h.slot % 4) * 0.1; this.rethink(h); }
     if (h.foe) {
       // Too hurt and on their own: back to the town's ground, where nothing follows.
       if (h.hp < h.maxHp * 0.25 && !h.party && townDist(h.x, h.z) > 0) { h.foe = null; this.goHome(h, true); }
@@ -1952,6 +1977,34 @@ export class HeroWorld {
       case 'return': return this.returning(h, t, dt);
       case 'duel': return this.duel(h, t, dt);
       default: h.task = null;
+    }
+  }
+
+  // A fight looked at again, a little under once a second: is this still the one to be on?
+  //   Plate goes to whoever's in trouble: a lancer or a paladin turns onto whatever is on one of his own who's below half
+  //   their life (you too, if you're near), and a lancer calls it onto himself.
+  //   Anyone finishes what's nearly down beside them rather than leave it up.
+  rethink(h) {
+    const sim = this.sim, p = sim.player, m = h.foe, cls = h.person.cls;
+    const near = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+    if (cls === 'lancer' || cls === 'paladin') {
+      const mine = h.party ? [...h.party.members] : [];
+      if (!p.dead && near(p, h) < 18) mine.push(p);
+      let worst = null, low = 0.5;
+      for (const o of mine) if (o !== h && !o.dead && o.hp / o.maxHp < low) { low = o.hp / o.maxHp; worst = o; }
+      if (worst) {
+        const on = this.targets.find((k) => fightable(k) && k !== m && near(k, h) < 13 && (worst === p ? k.aggro && foeOf(k, sim) === p && near(k, p) < 6 : k.heroFoe === worst && sim.time - (k.heroFoeT ?? -9) < 4));
+        if (on) {
+          h.foe = on;
+          if (cls === 'lancer') { on.tauntBy = h; on.tauntT = sim.time + 5; on.heroFoe = h; on.heroFoeT = sim.time; if (h.fxOk()) sim.casting.burst(FX.RING, ELEM.STORM, h.x, h.y + 0.1, h.z, 0.5, 5, 0.4); }
+          return;
+        }
+      }
+    }
+    const mf = m.hp / (m.maxHp || m.hp || 1);
+    if (mf > 0.5) {
+      const weak = this.targets.find((k) => fightable(k) && k !== m && near(k, h) < (h.cls.ranged ? 12 : 3.5) && k.hp / (k.maxHp || k.hp || 1) < 0.2 && (!k.heroFoe || k.heroFoe === h || k.heroFoe.party === h.party));
+      if (weak) h.foe = weak;
     }
   }
 
@@ -2765,6 +2818,22 @@ export class HeroWorld {
       case 'tune': hs.forEach((h) => h.playLute(m.seconds ?? 6, m.v ?? 0, { elem: m.elem, rainbow: m.rainbow })); break;
       case 'level': hs.forEach((h) => this.setLevel(h, m.level ?? 20)); break;
       case 'ready': hs.forEach((h) => { for (const q of h.skills) q.t = 0; h.gcd = 0; }); break;
+      // (mute: nothing of its own accord but its ordinary blows, so one move can be looked at alone. still: not even those.)
+      case 'mute': hs.forEach((h) => { for (const q of h.skills) q.t = 1e9; h.gcd = 1e9; h.orbitCd = 1e9; h.tumbleCd = 1e9; if (m.still) h.shotCd = 1e9; }); break;
+      case 'face': hs.forEach((h) => { h.yaw = h.faceYaw = m.yaw ?? 0; }); break;
+      // (Whatever's still in the air or on the ground from the last thing looked at, gone.)
+      case 'clear': for (const z of this.zones) z.end?.(z); this.zones = []; for (const q of this.shots) q.end?.(q); this.shots = []; this.dots = []; this.timers = []; sim.casting.bursts = []; break;
+      // (Set on whatever's nearest, to fight it as it would.)
+      case 'attack': hs.forEach((h) => { const f = this.targets.filter(fightable).sort((a, b) => Math.hypot(a.x - h.x, a.z - h.z) - Math.hypot(b.x - h.x, b.z - h.z))[0]; if (f) { h.foe = f; h.hold = 0; h.shotCd = 0; } }); break;
+      // (Something to hit, for looking at a move: n of the plain dead up out of the ground at a point, standing, after no one.)
+      case 'dummies': {
+        const n = m.n || 3, near = (k) => Math.hypot(k.x - m.x, k.z - m.z);
+        const pool = sim.knights.filter((k) => k instanceof Zombie && !k.opts.role && !k.opts.reserve && k.opts.model !== 'zombie_ogre' && !k.boss).sort((u, v) => near(u) - near(v)).slice(0, n);
+        // (Anything else of theirs standing about is put well away, so only these are in the picture.)
+        for (const k of sim.knights) if (k instanceof Zombie && !pool.includes(k) && !k.dormant && near(k) < 60) { k.x += 600; k.z += 600; k.aggro = false; }
+        pool.forEach((k, i) => { const a = i * 2.4, r = i ? 1.2 + 0.4 * Math.floor((i - 1) / 3) : 0; k.raiseAt(sim, m.x + Math.sin(a) * r, m.z + Math.cos(a) * r, null, true); k.heroFoe = null; k.tauntBy = null; });
+        break;
+      }
       // (A clip held at a point in it, for looking a body over: pose({ slot, clip, at: 0-1 }); clip null lets go.)
       case 'pose': hs.forEach((h) => {
         const c = m.clip && h.bank.clips[m.clip];

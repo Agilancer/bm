@@ -242,7 +242,8 @@ export function withBrokers(cast, roster, kit) {
   for (const b of BROKERS) {
     const h = roster.find((x) => x.id === b.body) || roster.find((x) => x.cls === 'bard');
     if (!h) continue;
-    const k = kit.heroes[h.id] || {};
+    // (They wear bards' bodies, but they keep the Company's books, not a lute.)
+    const k = { ...(kit.heroes[h.id] || {}), lute: null };
     out.push({ slot: out.length, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name: b.name, full: b.name, guild: b.guild || 'The Free Company', persona: 'kind', level: 30,
       gold: 0, kit: k, string: k.string ? kit.strings[k.string] : null, seed: 7 + out.length, broker: b.broker, title: b.title });
   }
