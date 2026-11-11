@@ -158,6 +158,10 @@ fn vSmith(nv: f32, nl: f32, a: f32) -> f32 {
   return 0.25 / max((nv * (1.0 - k) + k) * (nl * (1.0 - k) + k), 1e-3);
 }
 fn fSchlick(f0: vec3f, vh: f32) -> vec3f { return f0 + (vec3f(1.0) - f0) * pow(1.0 - vh, 5.0); }
+// How rough a model's surface is at the least. Tripo's maps paint cloth, leather and skin about half rough (and staffs
+// nearly mirror-smooth), which under this sun and sky reads as wet plastic. What isn't metal is at least 0.7; metal at
+// least 0.42, so steel still shows a highlight but not chrome. Bodies, things in hand and things on the ground use it.
+fn matteRough(rough: f32, metal: f32) -> f32 { return max(rough, mix(0.7, 0.42, clamp(metal, 0.0, 1.0))); }
 
 fn brdf(n: vec3f, v: vec3f, l: vec3f, albedo: vec3f, f0: vec3f, rough: f32, metal: f32) -> vec3f {
   let nl = max(dot(n, l), 0.0);
