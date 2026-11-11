@@ -805,7 +805,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   albedo = mix(albedo, vec3f(paint), darkPaint * 0.75);
   albedo = mix(albedo, max(albedo * 0.85 + 0.015, vec3f(0.07, 0.068, 0.066) * mix(1.0, 3.4, steelK)), metal);
   rough = mix(rough, max(rough, mix(0.34, 0.22, darkPaint)), metal);
-  envBoost = mix(1.0, 1.4, metal) * coverEnv;
+  // (No plastic sheen: shaders.js matteRough. The black knight's dark steel keeps its tighter highlight.)
+  rough = max(matteRough(rough, metal) - 0.2 * darkPaint, rough);
+  envBoost = mix(1.0, 1.1, metal) * coverEnv;
   sunSpecScale = mix(1.0, 0.55, darkPaint);
   albedo *= C.info.y;
   // Bright scraped steel at the cut's lips and scratches.
@@ -842,7 +844,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
   // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)
   let rimIn = indoorAt(p);
-  c += select(select(F.skyAmb.rgb * 0.32 * (0.35 + 0.65 * metal), vec3f(0.5, 0.31, 0.17), rimIn > 1.5), vec3f(0.3, 0.31, 0.33), rimIn > 2.5) * rimT * C.info.y * rimK;
+  // (Outdoors it's a faint edge on cloth and skin, which is what keeps them from looking wet; more on plate.)
+  c += select(select(F.skyAmb.rgb * 0.24 * (0.15 + 0.85 * metal), vec3f(0.5, 0.31, 0.17), rimIn > 1.5), vec3f(0.3, 0.31, 0.33), rimIn > 2.5) * rimT * C.info.y * rimK;
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);
@@ -1046,7 +1049,7 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   let shadow = shadowAt(in.p, n0, in.viewZ, ign(in.pos.xy));
   // A dropped thing's rarity: a little all over, and strongest where it turns from the eye. (A gem's glow is flat: a = 0.)
   let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), 2.2);
-  var c = shadePBR(in.p, n, v, albedo, mr.g, mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 1.5 * rim * rim, I.glow.a);
+  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 1.5 * rim * rim, I.glow.a);
   c = applyFog(c, in.p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);
@@ -1093,7 +1096,7 @@ fn vn2(p: vec2f) -> f32 {
   var albedo = textureSample(albedoTex, repeatSmp, in.uv).rgb;
   let nm = textureSample(normalTex, repeatSmp, in.uv);
   let mr = textureSample(mrTex, repeatSmp, in.uv);
-  var rough = mr.g; var metal = mr.b;
+  var rough = matteRough(mr.g, mr.b); var metal = mr.b;
   var n = n0;
   if (M.params.y > 0.5) {
     // The greatsword: steel unless the paint says otherwise.

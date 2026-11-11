@@ -886,7 +886,8 @@ export class Renderer {
     }
     const sk = this.makeSkinned(prims, skin.joints.length);
     const flatNormal = this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255]));
-    const flatMR = this.pixel('rgba8unorm', [255, 128, 128, 255]);
+    // (A part with no metal/rough map: matte and not metal, not half-metal chrome.)
+    const flatMR = this.pixel('rgba8unorm', [255, 217, 0, 255]);
     const parts = [];
     for (let i = 0; i < prims.length; i++) {
       const { mat, name } = texOf[i];
