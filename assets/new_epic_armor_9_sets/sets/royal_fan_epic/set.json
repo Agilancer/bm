@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "royal_fan_epic",
+ "name": "Royal Fan",
+ "blurb": "Epic gear. Peacock-blue velvet, malachite shoulders, pale gold and fan-shaped brocade. Original peacock crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

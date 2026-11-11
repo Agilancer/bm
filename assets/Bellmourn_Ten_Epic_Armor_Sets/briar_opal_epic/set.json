@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "briar_opal_epic",
+ "name": "Briar Opal",
+ "blurb": "Epic-tier appearance. Sage floral damask, pale opal guards and intricate champagne trim.",
+ "wears": {
+  "palette": "moss"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

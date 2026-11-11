@@ -7,6 +7,7 @@ import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
+import { FileWatch, getFile, watchFiles } from './core/files.js';
 import { initGPU, isMobileDevice } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
 import { STEPS as DESK_STEPS, deskStep } from './gfx/deskscale.js';
@@ -25,6 +26,7 @@ import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { saveSettings, settings, Title } from './title.js';
 import { ViewSwitch } from './ui/view.js';
+import { SKIN_PARTS, pickSets } from './gfx/bodyskin.js';
 import { THIRD } from './core/third.js';
 import { SPELLS } from './sim/spells.js';
 import { TIER_LEVEL, TIER_OF } from './sim/skills.js';
@@ -66,33 +68,79 @@ window.bmTitle = title;
 const FOE_NAMES = ['KNIGHT OF VELSCOUR', 'KNIGHT OF TESSARIEL', 'GREAT CRAB', 'GRAVEHART', 'BONE HYDRA', 'THE RISEN', 'OGRE', '', '', 'WEREWOLF', 'ABYSSAL MOUTH',
   ...GROUP_KEYS.map((g) => GROUPS[g].name)];
 
+// A picture to decode is passed straight to the thread with the fewest in hand: the decoding is the browser's, off to one
+// side, and the thread is free again at once. Anything else is work that keeps its thread until it's done, so those wait
+// in a line and each thread takes one at a time: a picture then never waits behind more than one piece of it (the land is
+// cut into small pieces for that, src/gfx/renderer.js load).
 class Pool {
   constructor(size) {
-    this.size = size;
+    this.size = 0;
     this.workers = [];
     this.waiting = new Map();
     this.next = 1;
-    this.rr = 0;
-    for (let i = 0; i < size; i++) {
-      const w = new Worker(new URL('./sim/job.worker.js', import.meta.url), { type: 'module' });
-      w.onmessage = (e) => {
-        const { id, result, error } = e.data;
-        const p = this.waiting.get(id);
-        this.waiting.delete(id);
-        if (error) p.reject(new Error(error)); else p.resolve(result);
-      };
-      w.onerror = (e) => { console.error('job worker', e.message); };
-      this.workers.push(w);
-    }
+    this.line = [];        // work waiting for a thread
+    this.working = [];     // which threads have a piece of work
+    this.decoding = [];    // how many pictures each has in hand
+    this.leaving = [];     // lent for the load, and to go once idle
+    for (let i = 0; i < size; i++) this.add();
+  }
+
+  add() {
+    const i = this.workers.length;
+    const w = new Worker(new URL('./sim/job.worker.js', import.meta.url), { type: 'module' });
+    w.onmessage = (e) => {
+      const { id, result, error } = e.data;
+      const p = this.waiting.get(id);
+      this.waiting.delete(id);
+      if (!p) return;
+      if (p.light) this.decoding[i]--; else { this.working[i] = false; this.hand(); }
+      this.dismiss(i);
+      if (error) p.reject(new Error(error)); else p.resolve(result);
+    };
+    w.onerror = (e) => { console.error('job worker', e.message); };
+    this.workers.push(w);
+    this.working[i] = false; this.decoding[i] = 0;
+    this.size = this.workers.length;
+  }
+
+  /** More threads for the load: the two kept for the simulation and the drawing have little to do until the game is up. */
+  lend(n) { for (let k = 0; k < n; k++) this.add(); return n; }
+
+  /** And given back once the load is done: each as soon as it has nothing in hand. */
+  takeBack(n) {
+    this.size -= n;
+    for (let i = this.size; i < this.size + n; i++) { this.leaving[i] = true; this.dismiss(i); }
+  }
+
+  dismiss(i) {
+    if (this.leaving[i] && !this.working[i] && !this.decoding[i]) { this.workers[i].terminate(); this.leaving[i] = false; }
   }
 
   run(type, args, transfer) {
     const id = this.next++;
-    const w = this.workers[this.rr++ % this.size];
     return new Promise((resolve, reject) => {
-      this.waiting.set(id, { resolve, reject });
-      w.postMessage({ id, type, args }, transfer || []);
+      const job = { id, type, args, transfer, resolve, reject, light: type === 'decode' };
+      if (job.light) {
+        let to = 0;
+        for (let i = 1; i < this.size; i++) if (this.decoding[i] < this.decoding[to]) to = i;
+        this.decoding[to]++;
+        this.send(to, job);
+      } else { this.line.push(job); this.hand(); }
     });
+  }
+
+  /** The next pieces of work, to whichever threads have none. */
+  hand() {
+    for (let i = 0; i < this.size && this.line.length; i++) {
+      if (this.working[i]) continue;
+      this.working[i] = true;
+      this.send(i, this.line.shift());
+    }
+  }
+
+  send(i, job) {
+    this.waiting.set(job.id, job);
+    this.workers[i].postMessage({ id: job.id, type: job.type, args: job.args }, job.transfer || []);
   }
 
   startPlanners(buffer, budget, interval, threads = this.size) {
@@ -237,14 +285,28 @@ async function boot(plan, poolSize) {
   $('bar').style.display = 'block';
   // The bar only goes forward, and holds short of the end until the game is ready to play: 100% is shown as the title's
   // menu comes up, and not before. (It used to count past 100%, to 114%, on a guess at how many steps the load had.)
-  let shown = 0;
-  const setProgress = (t, msg, final = false) => {
-    shown = final ? 1 : Math.max(shown, Math.min(0.99, t));
+  // Under it, the file coming down: every thread's fetches are told to `files` (src/core/files.js).
+  let shown = 0, fileAsked = false;
+  const files = new FileWatch();
+  const paint = () => {
     const pct = Math.floor(shown * 100);
     $('bar').firstElementChild.style.width = `${pct}%`;
-    if (msg) $('status').textContent = msg;
-    if (title.up) title.progress(pct);
+    $('file').textContent = files.name;
+    if (title.up && shown < 1) title.progress(pct, files.name);
   };
+  const setProgress = (t, msg, final = false) => {
+    shown = final ? 1 : Math.max(shown, Math.min(0.99, t));
+    if (msg) $('status').textContent = msg;
+    paint();
+  };
+  // (Files come and go by the dozen: the name on screen is brought up to date once a frame.)
+  const fileNoted = (f) => {
+    files.note(f);
+    if (fileAsked) return;
+    fileAsked = true;
+    requestAnimationFrame(() => { fileAsked = false; if (shown < 1) paint(); });
+  };
+  watchFiles(fileNoted);
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
   try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
@@ -257,6 +319,9 @@ async function boot(plan, poolSize) {
   gpu.device.addEventListener('uncapturederror', (e) => { window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message); });
   const canvas = $('view');
   const pool = new Pool(poolSize);
+  // While the game loads, the threads kept back for the simulation and the drawing work on it too (not on a phone, where
+  // every thread is memory and heat, nor when fewer threads were asked for).
+  const lent = !gpu.mobile && poolSize === plan.pool ? pool.lend(Math.max(0, Math.min(2, plan.cores - 1 - poolSize))) : 0;
   const isolated = window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined' && !params.has('nosab');
   const buffer = isolated ? new SharedArrayBuffer(TOTAL_BYTES) : null;
   const shared = buffer ? mapShared(buffer) : mapShared(new ArrayBuffer(TOTAL_BYTES));
@@ -289,6 +354,7 @@ async function boot(plan, poolSize) {
       const m = e.data;
       if (m.type === 'ready') resolve();
       else if (m.type === 'error') { console.error(m.message); reject(new Error(m.message)); }
+      else if (m.type === 'file') fileNoted(m);
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
@@ -313,7 +379,7 @@ async function boot(plan, poolSize) {
   let cast = [];
   if (heroCount > 0) {
     try {
-      const [roster, kit, names] = await Promise.all(['roster', 'kit', 'names'].map((n) => fetch(`${BASE}assets/game/heroes/${n}.json`).then((r) => r.json())));
+      const [roster, kit, names] = await Promise.all(['roster', 'kit', 'names'].map((n) => getFile(`${BASE}assets/game/heroes/${n}.json`, 'json')));
       let kept = null;
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
@@ -326,12 +392,12 @@ async function boot(plan, poolSize) {
 
   const hud = new Hud(gpu, plan, poolSize, isolated, input);
   const start = performance.now();
-  let swordList, game = null;
+  let swordList, game = null, simMs = 0;
   try {
     await Promise.all([
-      fetch(`${BASE}assets/game/items/swords.json`).then((r) => r.json()).then((j) => { swordList = j; }),
+      getFile(`${BASE}assets/game/items/swords.json`, 'json').then((j) => { swordList = j; }),
       renderer.load(BASE, (t) => setProgress(0.05 + t * 0.9, 'Building the village...')),
-      simReady,
+      simReady.then(() => { simMs = performance.now() - start; }),
       audio.load().catch((e) => console.warn('audio', e)),
     ]);
   } catch (e) {
@@ -340,6 +406,7 @@ async function boot(plan, poolSize) {
     return;
   }
   const loadMs = performance.now() - start;
+  pool.takeBack(lent);
   setProgress(0.99, 'Opening the gates...');
   // Tasks for the pool once the load is done: thinking about the fight.
   if (buffer) {
@@ -363,11 +430,20 @@ async function boot(plan, poolSize) {
   pack.load(null);
   const worldMap = new WorldMap(BASE, input.touch, renderer.landPool);
   worldMap.load(null);
+  worldMap.input = input;
   game.worldMap = worldMap;
   // What of the land you've seen.
   addPart('map', { save: () => worldMap.save(), load: (d) => worldMap.load(d) });
   game.gemFx = new GemFx(renderer);
   const GEM_COLOR = (g) => ({ ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' }[g.kind]);
+  // (bm.wear('crimson_regalia') dresses the whole body in one set, to look at it; bm.wear() goes back to what's worn.)
+  let forcedSkin = null;
+  const wearSkins = () => {
+    const skin = renderer.bodySkin;
+    if (!skin) return;
+    skin.ready.then(() => skin.wear(forcedSkin ? Object.fromEntries(SKIN_PARTS.map((p) => [p, forcedSkin])) : pickSets(skin.sets, pack.slots))).catch((e) => console.warn('body skin', e));
+  };
+  game.wearSkin = (id) => { forcedSkin = id || null; wearSkins(); };
   const arm = () => {
     writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots), levelPerks(pack.level));
     // (GOD MODE, from the skull: everything dies at one blow.)
@@ -381,6 +457,8 @@ async function boot(plan, poolSize) {
     renderer.offHand = off && !skull ? off.base : null;
     // (What the body you see in third person holds: src/gfx/renderer.js selfItems.)
     renderer.mainHand = pack.slots.main && hands(pack.slots.main.base) === 3 ? pack.slots.main.base : null;
+    // And what it wears: the robes in the pack's slots, by the sets of gear made for them (src/gfx/bodyskin.js).
+    wearSkins();
     renderer.board.sword = off ? off.base : null;
     if (off) renderer.sword('surf_arm');     // (Ready before the first landing.)
     renderer.skull = skull ? skull.base : null;
@@ -546,6 +624,8 @@ async function boot(plan, poolSize) {
   if (game.party) game.party.freeHire = () => !!game.hallUI?.on;
   addPart('lands', { save: () => lands.save(), load: (d) => lands.load(d) });
   window.bm = game.api(shared, simWorker, buffer, pool);
+  // How long the start took, part by part (tools/load_time.mjs).
+  window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
   renderDiagnostics.attach(() => ({
     'Simulation tick': buffer ? Atomics.load(shared.ctrl, CTRL.TICK) : latestSnap?.[H.TICK],
     'GPU queue': `${renderer.inFlight} pending; last submit ${Math.round(performance.now() - renderer.lastSent)} ms ago`,
@@ -844,6 +924,7 @@ async function boot(plan, poolSize) {
     const now = worldMap.open;
     if (now !== was) audio.play(now ? 'mapOpen' : 'mapClose', null, 0, 0, 0.6, 1, false);
   };
+  worldMap.onClose = toggleMap;
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat || naming) return;
@@ -868,6 +949,8 @@ async function boot(plan, poolSize) {
     : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> journal';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
+  watchFiles(null);
+  files.last = '';
   setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`, true);
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
   if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
@@ -1497,7 +1580,9 @@ class GameView {
       case EV.SPELL_FIZZLE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.fizzle();
-        this.hud.tip('Not enough mana.', 1.2);
+        // (Yours comes with no place. One with a place is a caster of the dead's working, broken by a blow
+        // (src/sim/undead.js interrupt): heard, but it's not your mana that ran out.)
+        if (!a && !b && !c) this.hud.tip('Not enough mana.', 1.2);
         break;
       case EV.WHOOSH:
         au.play('attack', d === 1 ? null : a, b, c, d === 1 ? 0.8 : 0.9, d === 1 ? 0.92 : 1.05);
@@ -1671,7 +1756,10 @@ class GameView {
       case EV.SHIELD_BREAK:
         au.play('blocked', a, b, c, 1.4, 0.55);
         r.emit(2, 60, a, b, c, 0, 0.2, 0, 1.5, 1, 5, 0.0022, 0.005, 0.2, 0.6);
-        this.hud.tip('The guard is broken.', 2);
+        // (Yours, out of breath; or a knight's, opened up by a blow or a spell on his board.)
+        // (Only one near enough to be your doing, or your party's beside you.)
+        if (d > 0.5) this.hud.tip('Your guard is broken: out of breath.', 2);
+        else { const sn = this.currentSnap(); if (sn && Math.hypot(a - sn[H.PX], c - sn[H.PZ]) < 16) this.hud.tip('His guard is broken!', 2); }
         break;
       default: break;
     }
@@ -1726,6 +1814,8 @@ class GameView {
       },
       jump: () => { shared.input[INPUT.JUMP] += 1; },
       setCam: (c) => { view.overrideCam = c; },
+      // The third-person body dressed whole in one set of gear (src/gfx/bodyskin.js), to look at it: wear() for what's really worn.
+      wear: (id) => view.wearSkin(id),
       setTime: (h) => view.renderer.setHour(h),
       hour: () => view.renderer.hour,
       fixScale: (s) => { view.fixedScale = true; view.renderer.scale = s; },

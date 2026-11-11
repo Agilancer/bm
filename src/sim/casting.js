@@ -86,7 +86,7 @@ export class Casting {
   // How far the sword arm alone has gone down, for a shield that stays up.
   get armDown() { return smooth(this.armLower); }
   // What a spell does to how fast its target runs: frozen stops, chilled drags.
-  rate(k) { const a = this.aff.get(k); return !a ? 1 : a.freeze > 0 || a.stun > 0 ? 0 : a.slow > 0 ? 0.5 : 1; }
+  rate(k) { const a = this.aff.get(k); return !a || k.keeper ? 1 : a.freeze > 0 || a.stun > 0 ? 0 : a.slow > 0 ? 0.5 : 1; }
   // And to how fast you walk: slower with your hands up, faster with the wind at your back (Fleetfoot and the rest: haste()).
   get drag() {
     const hands = this.state === 'hold' || this.state === 'gather' ? 0.68 : this.state === 'idle' ? 1 : 0.85;
@@ -509,7 +509,8 @@ export class Casting {
 
   // Returns whether that killed it.
   hurt(sim, k, dmg, elem, x, y, z, fromX, fromZ, poise = dmg * 0.7, kind = 'gash') {
-    if (k.dead) return false;
+    // (Nothing of yours harms Tessariel's town guard: src/sim/town-watch.js.)
+    if (k.dead || k.keeper) return false;
     // A knight's raised shield takes most of a spell from the front.
     if (k.spellGuard) { const through = k.spellGuard(sim, fromX, fromZ, dmg); dmg *= through; poise *= through; }
     // (A jelly's own make-up: amber shrugs off fire, pitch burns: src/sim/slimes.js SPECIES resist.)
@@ -542,7 +543,8 @@ export class Casting {
   //   and either is 40% as long on the great ones (400 life and up).
   // Returns whether anything landed.
   holdFor(sim, f, secs, ice, hold = false) {
-    if (!(secs > 0) || f.dead) return false;
+    // (Nor is the town guard stopped by anything of yours.)
+    if (!(secs > 0) || f.dead || f.keeper) return false;
     const a = this.affOf(f), big = f.maxHp >= 400 ? 0.4 : 1, held = Math.max(a.freeze, a.stun);
     let s = secs * big;
     if (hold) {
@@ -561,6 +563,7 @@ export class Casting {
   stunFor(sim, f, secs, hold = false) { return this.holdFor(sim, f, secs, false, hold); }
 
   shove(k, vx, vz, up = 0) {
+    if (k.keeper) return;
     const a = this.affOf(k);
     a.vx += vx; a.vz += vz;
     if (up > 0) a.vh = Math.max(a.vh, up);

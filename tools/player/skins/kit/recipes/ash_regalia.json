@@ -1,0 +1,42 @@
+{
+ "id": "ash_regalia",
+ "name": "Ashen Regalia",
+ "blurb": "Undyed wool and pewter: what a hedge wizard can afford.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/ash_weave.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1
+  },
+  "trim": {
+   "color": "#a89e88",
+   "bright": 1.1
+  },
+  "leather": {
+   "swatch": "swatches/ash_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.25,
+   "keep": 0.25
+  }
+ },
+ "parts": {
+  "head": {},
+  "shoulders": {},
+  "chest": {},
+  "legs": {
+   "leather": {
+    "swatch": "swatches/ash_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "keep": 0.25
+   }
+  },
+  "feet": {}
+ }
+}

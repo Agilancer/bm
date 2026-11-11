@@ -12,6 +12,7 @@ import { STAFF_CORES } from '../items/staffcores.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
 import { parseGLB } from '../core/glb.js';
+import { getFile, watchFiles } from '../core/files.js';
 import { CHARS_START, CTRL, C, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, WEAPONS, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
 import { Casting } from './casting.js';
@@ -26,6 +27,7 @@ import { CHURCH_GUARD, churchAt } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
+import { TownWatch } from './town-watch.js';
 import { Player } from './player.js';
 import { MAX_MANA } from './spells.js';
 import { World } from './world.js';
@@ -54,6 +56,7 @@ const BLACK = {
 const SILVER = {
   spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
   route: [[-7, 13], [-7, 19], [0, 19], [0, 13]], pauseClip: 'Idle_FoldArms_Loop', style: 'silver',
+  guard: true,   // One of the town's guard too (src/sim/town-watch.js): he keeps the gate until he's needed.
 };
 
 // Keeps to the woods north of the village. hp is how long it fights; territory is how far from spawn it minds you.
@@ -315,6 +318,8 @@ class Sim {
         else if (!mine && k.owner?.heroKill) k.heroKill = true;
       }
       if (k.dead && !k.looted && k.heroKill) k.looted = true;
+      // (Nor does a guard of the town's who falls, or what the guard cut down with no hand of yours in it: src/sim/town-watch.js.)
+      if (k.dead && !k.looted && (k.opts?.guard || (this.time - (k.guardHitT ?? -1e9) < 30 && this.time - (k.playerHitT ?? -1e9) > 30 && !k.heroFoe))) k.looted = true;
       // You took one a hero was fighting: a kill stolen, or a life saved.
       if (k.dead && !k.looted && k.heroFoe && !k.heroFoe.dead && !k.heroFoe.hired && this.time - (k.heroFoeT ?? -1e9) < 6) {
         const h = k.heroFoe;
@@ -324,6 +329,7 @@ class Sim {
       if (k.dead && !k.looted) { k.looted = true; this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + 6); this.event(EV.LOOT, k.x, k.opts?.pit ? k.y : this.world.height(k.x, k.z), k.z, k.champion ? 8 : k.opts?.lootKind ?? k.kind, 1 + k.kind); }
       if (!k.dead) k.looted = false;
     }
+    if (this.watch && !this.frozen && tdt > 0) this.watch.step(tdt);
     if (this.opening) this.opening.update(tdt);
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     if (this.heroWorld && !this.frozen && tdt > 0) this.heroWorld.step(tdt);
@@ -502,6 +508,8 @@ class Sim {
       case 12: this.knights.forEach((n) => { if (n.wakeAt !== undefined) n.wakeAt = 0; }); break;
       case 24: this.tripo?.standHere(a | 0, b, c); break;   // a Tripo monster (its place in roster.json) stood at b, c, facing you, for tests and reviews
       case 25: if (this.tripo) this.tripo.testPal = this.tripo.palNames[a | 0]; break;   // and the palette those wear (palettes.json, by place)
+      // The town guard, for tests: where each is, what he's at, and what the watch has done (src/sim/town-watch.js).
+      case 43: console.log('[watch] ' + JSON.stringify({ guards: (this.watch?.guards || []).map((g) => ({ i: this.knights.indexOf(g), suit: g.opts.suit, x: +g.x.toFixed(1), z: +g.z.toFixed(1), state: g.state, hp: Math.round(g.hp), hostile: g.hostile, dead: g.dead, duty: g.duty ? this.knights.indexOf(g.duty) : -1, target: g.target ? (g.target === p ? 'player' : this.knights.indexOf(g.target)) : null, routeI: g.routeI })), velscour: this.knights.filter((n) => n instanceof Knight && n.kind === 0).map((n) => ({ i: this.knights.indexOf(n), x: +n.x.toFixed(1), z: +n.z.toFixed(1), state: n.state, hp: Math.round(n.hp), dead: n.dead, target: n.target ? (n.target === p ? 'player' : this.knights.indexOf(n.target)) : null })), player: [+p.x.toFixed(1), +p.z.toFixed(1), Math.round(p.hp)], log: this.watch?.log.slice(-12) })); break;
       case 23: console.log('[k] ' + JSON.stringify(this.knights.slice(0, 2).map((n) => ({ ...n.stats, hp: Math.round(n.hp), moves: n.recent })))); break;   // what the knights have been doing, for review logs
       case 21: { // hold a knight still in clip b (by its place in the bank) at c seconds, for review sheets
         const name = Object.keys(k.bank.clips)[b | 0];
@@ -556,11 +564,8 @@ Sim.prototype.place = function (d) {
   self.postMessage({ type: 'look', yaw: d.yaw, pitch: d.pitch });
 };
 
-async function fetchBuf(path) {
-  const r = await fetch(path);
-  if (!r.ok) throw new Error(`${path}: ${r.status}`);
-  return r.arrayBuffer();
-}
+const fetchBuf = (path) => getFile(path);
+const fetchJSON = (path) => getFile(path, 'json');
 
 async function boot(msg) {
   const sim = new Sim();
@@ -576,13 +581,13 @@ async function boot(msg) {
   }
   sim.input[INPUT.YAW] = Math.PI;
   const [clipsMeta, clipsBin, black, silver, arms2h, arms1h, village, crabBuf, heartBuf, hydraBuf, spellAttack, spellRaise, armsStaff] = await Promise.all([
-    fetch(`${base}assets/game/clips.json`).then((r) => r.json()),
+    fetchJSON(`${base}assets/game/clips.json`),
     fetchBuf(`${base}assets/game/clips.bin`),
     fetchBuf(`${base}assets/game/velscour_knight.glb`),
     fetchBuf(`${base}assets/game/silver_knight.glb`),
     fetchBuf(`${base}assets/fp/arms_2h.glb`),
     fetchBuf(`${base}assets/fp/arms_1h.glb`),
-    fetch(`${base}assets/game/village.json`).then((r) => r.json()),
+    fetchJSON(`${base}assets/game/village.json`),
     fetchBuf(`${base}assets/monsters/crab_monster/crab_monster.glb`),
     fetchBuf(`${base}assets/monsters/gravehart/gravehart.glb`),
     fetchBuf(`${base}assets/monsters/bone_hydra/bone_hydra.glb`),
@@ -600,7 +605,7 @@ async function boot(msg) {
       box(at(0, -0.5), w + 0.8, 1.4, 3.5, { rubble: true }));
   }
   const bank = new ClipBank(clipsMeta, clipsBin);
-  sim.world = new World(village, await fetch(`${base}assets/game/interior/interior.json`).then((r) => r.json()));
+  sim.world = new World(village, await fetchJSON(`${base}assets/game/interior/interior.json`));
   sim.player = new Player({ 1: new ArmsRig(arms1h), 2: new ArmsRig(arms2h), 3: new ArmsRig(armsStaff) });
   sim.player.y = sim.world.height(sim.player.x, sim.player.z);
   sim.casting = new Casting({ attack: new ArmsRig(spellAttack), raise: new ArmsRig(spellRaise) });
@@ -634,16 +639,18 @@ async function boot(msg) {
   const townBufs = await Promise.all(TOWN_KNIGHTS.map((t) => fetchBuf(base + t.asset)));
   TOWN_KNIGHTS.forEach((t, i) => sim.knights.push(new Knight(sim.knights.length, t.kind, new Rig(parseGLB(townBufs[i]), bank), bank, t)));
   // The Tripo monsters' slots, empty until you come near a lair (src/sim/tripo.js).
-  const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
+  const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetchJSON(base + TRIPO_BASE + f)));
   const firstTripo = sim.knights.length;
   for (let i = 0; i < TRIPO_SLOTS; i++) sim.knights.push(new TripoEmpty(sim.knights.length));
   sim.tripo = new TripoWorld(sim, base, withVariants(tripoRoster), tripoPalettes, firstTripo, TRIPO_SLOTS);
+  // Tessariel's knights keep the town: src/sim/town-watch.js.
+  sim.watch = new TownWatch(sim);
   // The other Tessariels: the render thread chose who's in the world this session (src/core/heroes.js makeCast).
   if (msg.heroes?.length) {
     const [hMeta, hBin, kit] = await Promise.all([
-      fetch(`${base}assets/game/heroes/clips.json`).then((r) => r.json()),
+      fetchJSON(`${base}assets/game/heroes/clips.json`),
       fetchBuf(`${base}assets/game/heroes/clips.bin`),
-      fetch(`${base}assets/game/heroes/kit.json`).then((r) => r.json()),
+      fetchJSON(`${base}assets/game/heroes/kit.json`),
     ]);
     const heroBank = new ClipBank(hMeta, hBin);
     const bufs = await Promise.all(msg.heroes.map((p) => fetchBuf(`${base}assets/game/heroes/${p.body}.glb`)));
@@ -786,5 +793,7 @@ ${err.stack}` }); }
 self.addEventListener('message', (e) => {
   // Where the townsfolk stand (src/folk/layout.js bodies: x, z, radius, y), for the player to bump into.
   if (e.data.type === 'folk') { globalThis.folkBodies = mapFolk(e.data.buffer).bodies; return; }
+  // (What it fetches as it starts is named on the loading screen, with the render thread's own: src/core/files.js.)
+  if (e.data.type === 'boot') watchFiles((f) => self.postMessage({ type: 'file', name: f.name, state: f.state }));
   if (e.data.type === 'boot') boot(e.data).catch((err) => self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` }));
 });

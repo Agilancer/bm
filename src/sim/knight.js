@@ -40,6 +40,8 @@ for (const [k, a] of Object.entries(ATTACKS)) { a.key = k; a.tip = TIP[k]; }
 const PAD = (a) => (a.limb ? 0.35 : a.shield ? 0.9 : 0.3);
 // How close a knight comes, hips to hips: two knights stay a body apart; you keep your own space in first person.
 const GAP_KNIGHT = 1.3, GAP_PLAYER = 1.5;
+// How much harder a town guard's blow falls on a beast or one of the dead than on plate (Knight.hitBeast).
+const GUARD_BITE = 2.2;
 // Clips the shield arm keeps its guard through, besides the blows marked hold.
 const HOLD_CLIPS = new Set(['Roll', 'L_HitHead', 'L_HitBody', 'L_HitGut', 'Hit_Head', 'Hit_Chest']);
 // What can follow what, once a blow is past its link point. Read in chainNext by how the last one went.
@@ -224,6 +226,7 @@ export class Knight {
       habit: { total: 0, last: '', repeat: 0 }, moveYaw: opts.yaw ?? 0, backward: false, rollDirX: 0, rollDirZ: 0, wasOnAttack: false, activeOn: -1,
       armorHits: 0, prevClipT: 0, stamDelay: 0, lastRetreat: -99, poise: 100, groundLift: 0, windRate: 1, stats: { attacks: 0, landed: 0, blocks: 0, rolls: 0, hitsTaken: 0, chained: 0, breaks: 0, ripostes: 0, spellBlocks: 0, dives: 0, falls: 0 },
       comboLeft: 0, outcome: '', recent: [], blockedRun: 0, chainTried: false, boltT: 0, riposte: false, travelDir: null, travelPrev: 0, down: false, gaitW: 0, gaitClip: null, leashed: false, holdW: 0, bodyTurn: 0, chainLen: 0, gloat: false, lastFall: -99, hangW: 1, carryW: 1, aimW: 0,
+      duty: null, foeR: 0,
     });
     this.pose.rot.set(this.rig.restR);
     this.pose.pelvis.set(this.bank.pelvisRest);
@@ -702,13 +705,31 @@ export class Knight {
     return !!L && Math.hypot(p.x - this.x, p.z - this.z) > 6 && Math.hypot(p.x - this.opts.spawn[0], p.z - this.opts.spawn[1]) > L + (p === this.target ? 6 : 0);
   }
 
+  // One of Tessariel's town guard (src/core/knights.js guard, src/sim/town-watch.js), as long as nothing's set him against you
+  // (the review scenes do that).
+  get keeper() { return !!this.opts.guard && !this.hostile; }
+
   selectTarget(sim) {
+    // The town's guard fights what the watch sends him to, and whoever of Velscour's comes at him; nothing else.
+    if (this.keeper) {
+      const d = this.duty;
+      if (d && !d.dead && !d.hidden && !d.dormant) return d;
+      for (const other of sim.knights) {
+        if (!(other instanceof Knight) || other.kind !== 0 || other.dead || other.hidden || other.target !== this) continue;
+        if (Math.hypot(other.x - this.x, other.z - this.z) < 7) return other;
+      }
+      return null;
+    }
     let target = sim.player;
     let best = this.hostile && !target.dead && !this.letGo(target) && !this.outOfReach(target) ? Math.hypot(target.x - this.x, target.z - this.z) : Infinity;
     // (And the other Tessariels, src/sim/hero.js, who are kind 1: Velscour's men fight them as they fight Tessariel's knights.)
     for (const other of sim.heroes ? [...sim.knights, ...sim.heroes] : sim.knights) {
-      if (!(other instanceof Knight) || other === this || other.kind === this.kind || other.dead || other.hidden || other.below > 0 || this.outOfReach(other)) continue;
+      // (A town guard come for him is fought wherever he's met: no leash lets him walk away from that.)
+      const comeFor = other.keeper && other.duty === this;
+      if (!(other instanceof Knight) || other === this || other.kind === this.kind || other.dead || other.hidden || other.below > 0 || (!comeFor && this.outOfReach(other))) continue;
       const d = Math.hypot(other.x - this.x, other.z - this.z);
+      // (A town guard walking his beat past a post is let by: only one come for him, or at arm's length, is fought.)
+      if (other.keeper && other.duty !== this && other.target !== this && d > 6) continue;
       if (d < 18 && d < best && sim.world.sees(this.x, this.y + 1.4, this.z, other.x, other.y + 1.4, other.z)) {
         target = other; best = d;
       }
@@ -763,10 +784,12 @@ export class Knight {
       this.stopAction(0.2);
       if (!target) this.setState(S.PATROL);
       else if (this.state !== S.PATROL && this.state !== S.IDLE) this.setState(S.APPROACH);
+      // (A beast's girth: the town guard measures to its hide, not its middle. Nothing for a man in a suit, or you.)
+      this.foeR = target && !(target instanceof Knight) && target !== sim.player ? Math.max(0, (target.bodyRadius || 0.5) * 0.7 - 0.3) : 0;
     }
     const p = target || sim.player;
     const dx = p.x - this.x, dz = p.z - this.z;
-    const dist = Math.hypot(dx, dz);
+    const dist = Math.max(0.2, Math.hypot(dx, dz) - (target ? this.foeR : 0));
     const toPlayer = Math.atan2(dx, dz);
     this.dist = dist; this.toPlayer = toPlayer;
 
@@ -857,22 +880,25 @@ export class Knight {
 
   strike(sim, p, a) {
     if (!this.bladeA || p.dead || sim.gameState !== 0) return;
+    // (A town guard never lays a blade on you, nor on the other Tessariels.)
+    if (this.keeper && (p === sim.player || p.kind === 1)) return;
     let d;
+    const girth = this.foeR;
     if (a.limb) {
       // A kick lands with the ball of the foot, on the body's capsule.
       const j = this.J[a.limb] * 3, wt = this.pose.wt;
       const foot = [wt[j], wt[j + 1], wt[j + 2]];
       const res = segSegDist(foot, foot, [p.x, p.y + 0.2, p.z], [p.x, p.y + 1.6, p.z]);
-      if (res.dist > 0.5) return;
+      if (res.dist > 0.5 + girth) return;
     } else if (a.shield) {
       const s = this.shieldPos;
       d = Math.hypot(s[0] - p.x, s[2] - p.z);
-      if (d > 1.15) return;
+      if (d > 1.15 + girth) return;
     } else {
       // Distance from the blade to the player's body, a vertical capsule.
       const bot = [p.x, p.y + 0.3, p.z], top = [p.x, p.y + 1.6, p.z];
       const res = segSegDist(this.bladeA, this.bladeB, bot, top);
-      if (res.dist > 0.42) return;
+      if (res.dist > 0.42 + girth) return;
     }
     if (!sim.world.sees(this.x, this.y + 1.2, this.z, p.x, p.y + 1.2, p.z)) return;
     if (p.iframes) return;
@@ -889,7 +915,8 @@ export class Knight {
     }
     this.attackUsed = true;
     this.stats.landed++;
-    const bite = a.dmg * (this.opts.hostile ? 1.8 : 1);
+    // (Velscour's men bite deep; the town's guard, whose duels must end, nearly as deep on them.)
+    const bite = a.dmg * (this.opts.hostile ? 1.8 : this.keeper && p instanceof Knight && p.kind === 0 ? 1.5 : 1);
     if (p instanceof Knight) {
       const frontal = Math.abs(wrapAngle(Math.atan2(this.x - p.x, this.z - p.z) - p.faceYaw)) < 1.2;
       const guarded = frontal && (p.shieldUp > 0.65 || p.state === S.BLOCK) && p.stam > 0 && p.state !== S.BREAK;
@@ -905,6 +932,8 @@ export class Knight {
       if (p.hp <= 0) p.die(sim);
       return;
     }
+    // One of the town guard at a beast or one of the dead (src/sim/town-watch.js): it turns on him.
+    if (p !== sim.player) { this.outcome = 'hit'; this.hitBeast(sim, p, a); return; }
     // A kick goes through the player's guard as a shove: little harm, a long way back.
     const through = !!a.limb;
     const landed = p.damage(sim, bite, this.x, this.z, a.knock || 0, through);
@@ -968,7 +997,7 @@ export class Knight {
         }
         if (!this.action || this.actT >= this.action.dur) {
           this.stopAction(0.22);
-          this.setState(hostile || p instanceof Knight ? S.CIRCLE : S.PATROL);
+          this.setState(hostile || p instanceof Knight || (p === this.duty && !p.dead) ? S.CIRCLE : S.PATROL);
           this.attackT = Math.min(this.attackT, 0.4 + Math.random() * 0.7);
           // Hurt and too close: gets out before the next one lands.
           if (hostile && dist < 3 && this.stam > 16 && this.rollCd <= 0 && Math.random() < 0.55 + this.hurt * 0.3) this.startRoll(sim, p, false);
@@ -1019,6 +1048,14 @@ export class Knight {
         else { const fx = (tx - this.x) / d, fz = (tz - this.z) / d; this.steer(dt, fx * this.opts.walk, fz * this.opts.walk, 4, Math.atan2(fx, fz)); }
       }
     }
+    // Sent by the watch (src/sim/town-watch.js): no looking about for it, he's on his way.
+    if (this.duty && p === this.duty && !p.dead) {
+      if (this.action) this.stopAction(0.2);
+      this.seen = true;
+      sim.event(EV.ALERT, this.x, this.y + 1.5, this.z);
+      this.setState(S.APPROACH);
+      return;
+    }
     if ((!this.hostile && !(p instanceof Knight)) || p.dead || this.letGo(p) || this.outOfReach(p)) return;
     // Sight is a cone. A sprint close by is heard, and anything at arm's length is felt.
     // (The ray only when it could matter: in the cone and in range.)
@@ -1039,7 +1076,7 @@ export class Knight {
     if (this.action && this.actMask === 'upper' && this.actT >= this.action.dur - 0.1) this.stopAction(0.3);
     const lim = 1 - this.hurt * 0.35;
     // Spells in the air: he comes on behind the board at a walk, and runs the gaps between them.
-    const fire = !(p instanceof Knight) && this.boltThreat(sim, 1.3, 1.6);
+    const fire = p === sim.player && this.boltThreat(sim, 1.3, 1.6);
     if (fire) this.shieldTarget = 1;
     const speed = (fire ? 2.1 : dist > 7 ? 5.4 : p instanceof Knight ? 1.9 : 3.5) * lim;
     this.goto(dt, sim, p.x, p.z, speed, undefined);
@@ -1270,7 +1307,7 @@ export class Knight {
 
   // Reading the player's swing: wait a human moment, then shield, roll or step out.
   reactToSwing(dt, sim, p, dist) {
-    if (!(p instanceof Knight)) return this.reactToSpell(dt, sim, p);
+    if (!(p instanceof Knight)) return p === sim.player ? this.reactToSpell(dt, sim, p) : false;
     const sw = p.threat;
     if (!sw) { this.reacted = false; this.reactT = -1; return false; }
     const aimed = dist < 3.9 && Math.abs(wrapAngle(Math.atan2(this.x - p.x, this.z - p.z) - p.yaw)) < 1.05;
@@ -1483,11 +1520,45 @@ export class Knight {
     }
   }
 
+  // A guard's blow on something that isn't a man in a suit: a beast, one of the dead, a Tripo monster. Hit hard (the town's
+  // swords are there to end it), and it holds on him a while instead of whoever it was after (src/sim/foes.js fixOn).
+  hitBeast(sim, m, a) {
+    const dmg = a.dmg * GUARD_BITE;
+    m.hp -= dmg;
+    if (m.seenHp !== undefined) m.seenHp = m.hp;
+    m.guardHitT = sim.time;
+    m.onHit?.(sim, a.limb ? 'kick' : 'gash', this.x, this.z, a.dmg + (a.knock || 0) * 4, null);
+    m.fixOn = this; m.fixT = sim.time + 5;
+    if (a.knock && (m.bodyRadius || 0.5) < 1 && sim.casting?.shove) {
+      const dx = m.x - this.x, dz = m.z - this.z, L = Math.hypot(dx, dz) || 1;
+      sim.casting.shove(m, dx / L * a.knock, dz / L * a.knock, 0);
+    }
+    if (Math.hypot(sim.player.x - m.x, sim.player.z - m.z) < 60) sim.event(EV.BITE, m.x, m.y + 1.1, m.z, Math.min(1, dmg / 20), m.bodyRadius > 1.2 ? 0 : 1);
+    if (m.hp <= 0 && !m.dead) m.die?.(sim);
+  }
+
+  // Bitten, clawed or burnt by a monster that's turned on him (src/sim/foes.js): the board takes it from the front.
+  damage(sim, amount, fromX, fromZ, knock = 0, unblockable = false) {
+    if (this.dead || this.iframes) return false;
+    const front = Math.abs(wrapAngle(Math.atan2(fromX - this.x, fromZ - this.z) - this.faceYaw)) < 1.1;
+    if (!unblockable && front && (this.shieldUp > 0.6 || this.state === S.BLOCK) && this.stam > 0 && this.state !== S.BREAK) {
+      this.hp -= amount * 0.15;
+      this.onBlocked(sim, amount >= 20, null);
+      return false;
+    }
+    this.hp -= amount;
+    if (knock > 0) { const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1; this.knockX = dx / L; this.knockZ = dz / L; this.knock = Math.min(knock, 5); }
+    this.onHit(sim, 'cut', fromX, fromZ, amount * 1.5, null);
+    if (this.hp <= 0 && !this.dead) this.die(sim);
+    return true;
+  }
+
   onHit(sim, kind, fromX, fromZ, poise = 30, by = null) {
     this.hitT = 0;
     this.recentHits += 1;
     const wasPatrol = this.state === S.PATROL || this.state === S.IDLE;
-    if (!this.hostile) { this.hostile = true; }
+    // (The town guard isn't turned by a blow: whatever struck him, it's not you he fights.)
+    if (!this.hostile && !this.opts.guard) { this.hostile = true; }
     if (wasPatrol) { sim.event(EV.ALERT, this.x, this.y + 1.5, this.z); }
     this.seen = true;
     this.combatTarget = 1;

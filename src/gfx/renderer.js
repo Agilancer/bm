@@ -3,6 +3,7 @@
 import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
 import { TripoSlots } from './tripo-slots.js';
+import { BodySkin } from './bodyskin.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
@@ -19,6 +20,7 @@ import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { Rocks } from './rocks.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
+import { getFile, lanes, watched } from '../core/files.js';
 import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SLIMES_START, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
 import { GEAR, ROBES, SKULLS } from '../items/items.js';
@@ -213,53 +215,157 @@ export class Renderer {
 
   // ---- loading -------------------------------------------------------------------------------------
 
+  // Everything is asked for at the start and comes in side by side: the pictures a few at a time, the models fetched a few
+  // ahead of the ones being built, and the land worked out in the pool's threads meanwhile. What's built is still put
+  // together in the one order the simulation counts on (this.chars, this.props). How much is in hand at once is set by the
+  // tier: a phone has little memory to spare, and every decoded picture is held whole.
   async load(base, progress) {
     const { device, tier, pool } = this;
     this.base = base;
-    let done = 0, total = 1;
-    const tick = () => { done++; progress(done / total); };
-    const manifest = await fetch(`${base}assets/game/tex/manifest.json`).then((r) => r.json());
-    const village = await fetch(`${base}assets/game/village.json`).then((r) => r.json());
+    const lean = !!tier.lean;
+    const pictures = lanes(lean ? 2 : 6);     // pictures decoding or going up to the GPU at once, over all the arrays
+    const ahead = lanes(lean ? 2 : 6);        // models fetched, waiting to be built or being built
+    const building = lanes(lean ? 1 : 4);     // models being built at once (each decodes its three pictures together)
+    // Every step that ticks is counted before it's begun: each picture, each model, each piece of the land, and the few
+    // steps below that tick on their own. The bar can't run past its end (main.js holds it short of 100% until the game is
+    // up), but a miscount here shows as a stall or a jump.
+    let done = 0, total = 0;
+    const steps = { add: (n = 1) => { total += n; }, tick: () => { done++; progress(done / Math.max(total, 1)); } };
+    const { tick } = steps;
+    // How long each part took, for tools/load_time.mjs (window.bm.loadLaps): [what, ms since the load began].
+    const began = performance.now();
+    this.loadLaps = [];
+    const lap = (what) => this.loadLaps.push([what, Math.round(performance.now() - began)]);
+    const timed = (what, work) => { work.then(() => lap(what), () => {}); return work; };
+    this.buildSamplers();
+    this.buildBaseLayouts();
+    // Swords are fetched the first time one is wanted, in the hand or on the ground, and kept: there are too many maps to load them all up front.
+    this.swords = new Map();
+    this.gems = new Map();
+    this.ground = [];
+    this.gauntletSets = new Map();
+    this.chests = [];
+    this.doorItems = [];
+    this.stallItems = null;               // the market's wares and their tarps (src/gfx/wares.js), made the first time they're drawn
+    this.stallsOpen = new Set();          // which stalls have their wares out (src/folk/brain.js, stall)
+    this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
+    this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+    this.itemData = new Float32Array(16 * MAX_GROUND);
+    // Tiling noise for clouds and macro variation: four channels of smooth noise.
+    this.noiseTex = this.makeNoise();
+
+    const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
+      'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
+      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
+      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
+    const cast = this.heroCast || [];
+    // A model: fetched when a place ahead is free, built when a builder is, and the place given up once it's built, so no
+    // more than a few files are held at once. Asked for in the order they're wanted below; make(glb) is what's kept.
+    // (A failure is the caller's to hear, where it awaits the model.)
+    const model = (path, make) => {
+      steps.add();
+      const made = ahead(async () => {
+        const glb = parseGLB(await getFile(base + path));
+        tick();
+        return building(() => make(glb));
+      });
+      made.catch(() => {});
+      return made;
+    };
+
+    const [manifest, village, tripoRoster, tripoPalettes] = await Promise.all([
+      getFile(`${base}assets/game/tex/manifest.json`, 'json'), getFile(`${base}assets/game/village.json`, 'json'),
+      getFile(base + TRIPO_BASE + 'roster.json', 'json'), getFile(base + TRIPO_BASE + 'palettes.json', 'json'),
+    ]);
     this.village = village;
     const layerNames = manifest.layers.map((l) => l.name);
     const tw = Math.round(manifest.size[0] * tier.texScale), th = Math.round(manifest.size[1] * tier.texScale);
     const dw = Math.round(manifest.detail[0] * tier.texScale), dh = Math.round(manifest.detail[1] * tier.texScale);
     const gs = Math.round(1024 * tier.texScale), gd = Math.round(512 * tier.texScale);
-    const models = ['assets/game/village.glb', 'assets/game/velscour_knight.glb', 'assets/game/silver_knight.glb', 'assets/fp/arms_2h.glb',
-      'assets/game/items/crimson_sword.glb', 'assets/game/items/kite_v_red.glb', 'assets/game/items/gilded_sword.glb', 'assets/game/items/kite_t_white.glb',
-      'assets/monsters/crab_monster/crab_monster.glb', 'assets/fp/arms_1h.glb', 'assets/monsters/gravehart/gravehart.glb', 'assets/monsters/bone_hydra/bone_hydra.glb', 'assets/fp/spell_attack.glb', 'assets/fp/spell_raise.glb', 'assets/fp/arms_staff.glb',
-      ...BODIES.map((b) => `assets/monsters/zombie/${b.model}.glb`), ...LISANDRA_FORMS.map((f) => f.asset), ...FIELD_CREATURES.map((c) => 'assets/monsters/new_creatures/' + c.model + '.glb'), ...TOWN_KNIGHTS.map((k) => k.asset)];
-    // Every step that ticks, counted: each picture decoded, each model fetched, each hero, and the steps below that tick
-    // on their own (EXTRA_TICKS: after the pictures, the far land, the interior, the undead, each town knight, the
-    // heroes, the view models, the props and the opening). The bar can't run past its end (main.js holds it short of
-    // 100% until the game is up), but a miscount here shows as a stall or a jump.
-    const cast = this.heroCast || [];
-    const EXTRA_TICKS = 8 + TOWN_KNIGHTS.length;
-    total = manifest.layers.length * 2 + manifest.ground.length * 2 + models.length + cast.length + EXTRA_TICKS;
-    const shrink = tier.texScale !== 1;
-    const decode = (name, width, height) => pool.run('decode', { url: `${base}assets/game/tex/${name}.webp`, ...(shrink ? { width, height } : {}) }).then((b) => { tick(); return b; });
-    this.colorArr = await loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb');
-    this.detailArr = await loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_d`, dw, dh), 'rgba8unorm');
-    this.groundColor = await loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_c`, gs, gs), 'rgba8unorm-srgb');
-    this.groundDetail = await loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_d`, gd, gd), 'rgba8unorm');
-    tick();
-    // Terrain and the ground map, split across the pool.
-    const rowsEach = Math.ceil(GROUND_SIZE / Math.max(1, pool.size));
-    const groundJobs = [];
-    for (let r = 0; r < GROUND_SIZE; r += rowsEach) {
-      groundJobs.push(pool.run('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: village.colliders.concat(village.footprints || [], [CHURCH_FOOTPRINT, CHURCH_WING]), rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + rowsEach) }));
-    }
-    const farEach = Math.ceil(this.farSize / Math.max(1, pool.size));
-    const farJobs = [];
-    for (let r = 0; r < this.farSize; r += farEach) farJobs.push(pool.run('farground', { opening: this.openingEnabled, size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + farEach) }));
+
+    // ---- the land, in the pool's threads ----
+    // Terrain and the ground maps, cut into bands of a few rows: a thread is never long on one, so the pictures it's also
+    // asked to decode aren't kept waiting (src/main.js Pool).
+    const BAND = 16;
+    const land = (type, args) => { steps.add(); return pool.run(type, args).then((r) => { tick(); return r; }); };
+    const groundJobs = [], farJobs = [];
+    const groundColliders = village.colliders.concat(village.footprints || [], [CHURCH_FOOTPRINT, CHURCH_WING]);
     // Finer patches of the land where the coarse grid won't do: the hill and its roads, and round the church, with a hole left under
     // the wing over its stair (src/core/church.js).
     const cell = tier.lean ? 4 : 2;
     const patches = [{ x0: -614, x1: -90, z0: -44, z1: 344, cell }, { ...CHURCH_PATCH, cell, hole: LAND_HOLE }];
     this.terrainArgs = { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patches };
     this.landAt = [0, 0]; this.landBusy = false;
-    const [terrain, forest, ...rest] = await Promise.all([pool.run('terrain', this.terrainArgs), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH }), ...farJobs, ...groundJobs]);
-    const farRows = rest.slice(0, farJobs.length), rows = rest.slice(farJobs.length);
+    const terrainJob = land('terrain', this.terrainArgs), forestJob = land('forest', { opening: this.openingEnabled, reach: FOREST_REACH });
+    for (let r = 0; r < GROUND_SIZE; r += BAND) groundJobs.push(land('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: groundColliders, rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + BAND) }));
+    for (let r = 0; r < this.farSize; r += BAND) farJobs.push(land('farground', { opening: this.openingEnabled, size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + BAND) }));
+    const landJobs = timed('the land worked out', Promise.all([terrainJob, forestJob, Promise.all(farJobs), Promise.all(groundJobs)]));
+    landJobs.catch(() => {});
+
+    // ---- the pictures ----
+    steps.add(manifest.layers.length * 2 + manifest.ground.length * 2);
+    const shrink = tier.texScale !== 1;
+    const decode = (name, width, height) => {
+      const url = `${base}assets/game/tex/${name}.webp`;
+      return watched(url, pool.run('decode', { url, ...(shrink ? { width, height } : {}) })).then((b) => { tick(); return b; });
+    };
+    const worldPictures = timed('the world\'s pictures', Promise.all([
+      loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_c`, tw, th), 'rgba8unorm-srgb', pictures),
+      loadTextureArray(device, this.mip, layerNames, (n) => decode(`${n}_d`, dw, dh), 'rgba8unorm', pictures),
+      loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_c`, gs, gs), 'rgba8unorm-srgb', pictures),
+      loadTextureArray(device, this.mip, manifest.ground, (n) => decode(`${n}_d`, gd, gd), 'rgba8unorm', pictures),
+    ]));
+    worldPictures.catch(() => {});
+    const interior = timed('the interiors', loadInterior(this, base, pool, tier, pictures, steps));
+    interior.catch(() => {});
+
+    // ---- the models, in the order they're wanted ----
+    const villageGlb = model(models[0], (glb) => glb);
+    const character = (i) => model(models[i], (glb) => this.buildCharacter(glb));
+    const crabs = (i, count, scale, prepare, extra) => model(models[i], (glb) => this.buildCrabs(glb, count, scale, prepare, extra));
+    const first = [character(1), character(2), crabs(8, 3, CRAB_SCALE), crabs(10, 1, GRAVEHART_SCALE), crabs(11, 1, HYDRA_SCALE)];
+    const undead = BODIES.map((b, i) => crabs(15 + i, b.count, b.scale, addStumps));
+    const creatures = FIELD_CREATURES.map((c, i) => crabs(15 + BODIES.length + LISANDRA_FORMS.length + i, 1, c.scale));
+    const townKnights = TOWN_KNIGHTS.map((k, i) => character(15 + BODIES.length + LISANDRA_FORMS.length + FIELD_CREATURES.length + i));
+    const heroes = cast.map((p) => model(`assets/game/heroes/${p.body}.glb`, (glb) => this.buildCharacter(glb)));
+    const forms = LISANDRA_FORMS.map(({ skirtCenter }, i) => model(models[15 + BODIES.length + i], async (glb) => {
+      const [form] = await this.buildCrabs(glb, 1, LISANDRA_SCALE, (prim, glb, scale) => {
+        // A form with no skirt (Pretty in her leathers) has no _SKIRT mask: nothing of her sways as a dress.
+        const mask = glb.json.meshes[0].primitives[0].attributes._SKIRT;
+        if (mask === undefined) return prim;
+        const skirt = accessor(glb, mask);
+        const skirtDirection = new Uint16Array(skirt.length);
+        for (let v = 0; v < skirt.length; v++) {
+          const angle = Math.atan2(prim.pos[v * 3] / scale - skirtCenter[0], prim.pos[v * 3 + 2] / scale - skirtCenter[1]);
+          skirtDirection[v] = Math.round((angle / (2 * Math.PI) + 0.5) * 65535);
+        }
+        return { ...prim, flex: Float32Array.from(skirt, (weight) => -weight), skirtDirection };
+      }, SKIRT_PALETTE_JOINTS);
+      return { form, jaw: glb.json.scenes[0].extras?.jaw };
+    }));
+    // (Your own body, and its colour picture as it came, for the gear painted onto it: src/gfx/bodyskin.js.)
+    const self = model('assets/game/player/wizard.glb', async (glb) => {
+      const [body] = await this.buildCrabs(glb, 1, 1);
+      const mat = glb.json.materials[glb.json.meshes[0].primitives[0].material];
+      return { body, colour: imageBytes(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source) };
+    });
+    const viewModel = (i) => model(models[i], (glb) => this.buildViewModel(glb));
+    const vms = [viewModel(9), viewModel(3), viewModel(14)], spellVMs = [viewModel(12), viewModel(13)];
+    const knightProps = [4, 5, 6, 7].map((i) => model(models[i], (glb) => this.buildProp(glb)));
+    // Each hero's three: main hand, off hand, the board on the back (assets/game/heroes/kit, tools/heroes/kit.py). One model per
+    // item, shared.
+    const kitModels = new Map();
+    const kitOf = (k) => [k.main, k.off || (k.style === 'daggers' || k.style === 'boomerang' ? k.main : null), k.back];   // (Two daggers or two boomerangs: the same item in both hands.)
+    for (const p of cast) for (const id of kitOf(p.kit || {})) if (id && !kitModels.has(id)) kitModels.set(id, model(`assets/game/heroes/kit/${id}.glb`, (glb) => this.buildProp(glb)));
+    // The opening's cave and her book (src/gfx/opening.js): their pictures now, the stage itself once the arms are built.
+    // (It waits its turn as a model does: its book's three pictures are as big as any.)
+    const openingStage = this.openingEnabled ? ahead(() => building(() => loadOpeningStage(this, base))) : null;
+    openingStage?.catch(() => {});
+    steps.add(3);   // (the three that tick on their own below: the village built, the last of the scene, the opening)
+
+    // ---- putting it together ----
+    [this.colorArr, this.detailArr, this.groundColor, this.groundDetail] = await worldPictures;
+    const [terrain, forest, farRows, rows] = await landJobs;
     this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.farTint = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.farKind = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
@@ -273,7 +379,6 @@ export class Renderer {
       device.queue.writeTexture({ texture: this.farTint, origin: [0, row.rowStart] }, row.tint, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
       device.queue.writeTexture({ texture: this.farKind, origin: [0, row.rowStart] }, row.kind, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
     }
-    tick();
     this.groundMap = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.heightTex = device.createTexture({ size: [GROUND_SIZE, GROUND_SIZE], format: 'r32float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     for (const row of rows) {
@@ -284,88 +389,47 @@ export class Renderer {
     this.terrainVB = makeBuffer(device, terrain.verts, GPUBufferUsage.VERTEX);
     this.terrainIB = makeBuffer(device, terrain.idx, GPUBufferUsage.INDEX);
     this.terrainCount = terrain.idx.length;
+    this.buildLandBindings();
 
-    // Tiling noise for clouds and macro variation: four channels of smooth noise.
-    this.noiseTex = this.makeNoise();
-
-    // Fetch when building each model; don't retain every source GLB during startup.
-    const loadModel = async (i) => {
-      const res = await fetch(base + models[i]);
-      if (!res.ok) throw new Error(`${models[i]}: ${res.status}`);
-      const glb = parseGLB(await res.arrayBuffer());
-      tick();
-      return glb;
-    };
-    this.buildSamplers();
-    this.buildBaseLayouts();
-    this.buildStatics(await loadModel(0), layerNames, manifest.layers, village.trees);
+    this.buildStatics(await villageGlb, layerNames, manifest.layers, village.trees);
     this.pines = new Pines(this, forest.trees, layerNames);
     this.farSpan = 2 * FAR_HALF;
     this.rocks = new Rocks(this);
     this.slimeBodies = new SlimeBodies(this);
-    this.interior = await loadInterior(this, base, pool, tier);
     tick();
-    this.chars = [
-      await this.buildCharacter(await loadModel(1)),
-      await this.buildCharacter(await loadModel(2)),
-      ...(await this.buildCrabs(await loadModel(8), 3, CRAB_SCALE)),
-      ...(await this.buildCrabs(await loadModel(10), 1, GRAVEHART_SCALE)),
-      ...(await this.buildCrabs(await loadModel(11), 1, HYDRA_SCALE)),
-    ];
+    lap('the village built');
+    this.interior = await interior;
+    this.chars = [await first[0], await first[1], ...(await first[2]), ...(await first[3]), ...(await first[4])];
     // The undead, in the order the sim adds them: a body per place in BODIES.count, sharing that model's mesh and paint.
-    for (let i = 0; i < BODIES.length; i++) {
-      const bodies = await this.buildCrabs(await loadModel(15 + i), BODIES[i].count, BODIES[i].scale, addStumps);
-      for (const b of bodies) { b.flesh = 1; this.chars.push(b); }
-    }
-    tick();
-    for (let i = 0; i < FIELD_CREATURES.length; i++) {
-      const [body] = await this.buildCrabs(await loadModel(15 + BODIES.length + LISANDRA_FORMS.length + i), 1, FIELD_CREATURES[i].scale);
+    for (const bodies of undead) for (const b of await bodies) { b.flesh = 1; this.chars.push(b); }
+    for (const creature of creatures) {
+      const [body] = await creature;
       body.flesh = 1;
       this.chars.push(body);
     }
     // The knights in the other suits, in the sim's order. Plate like the first two; Tessariel's polished.
     for (let i = 0; i < TOWN_KNIGHTS.length; i++) {
-      const knight = await this.buildCharacter(await loadModel(15 + BODIES.length + LISANDRA_FORMS.length + FIELD_CREATURES.length + i));
+      const knight = await townKnights[i];
       knight.armored = true; knight.steel = TOWN_KNIGHTS[i].kind === 1;
       this.chars.push(knight);
-      tick();
     }
     this.chars[0].armored = this.chars[1].armored = true; this.chars[1].steel = true;
     this.firstTown = this.chars.length - TOWN_KNIGHTS.length;
     // The Tripo monsters' slots, in the sim's order: after the town knights. Built when the sim stands a monster in one.
-    const [tripoRoster, tripoPalettes] = await Promise.all(['roster.json', 'palettes.json'].map((f) => fetch(base + TRIPO_BASE + f).then((r) => r.json())));
     this.tripo = new TripoSlots(this, base, withVariants(tripoRoster), tripoPalettes, this.chars.length, TRIPO_SLOTS);
     // The other Tessariels this session (src/core/heroes.js makeCast, chosen in src/main.js), in the sim's order: after the
-    // knights, before Lisandra. Fetched together, built one by one.
+    // knights, before Lisandra.
     this.firstHero = this.chars.length;
-    const heroGlbs = await Promise.all(cast.map((p) => fetch(`${base}assets/game/heroes/${p.body}.glb`).then((r) => {
-      if (!r.ok) throw new Error(`hero ${p.body}: ${r.status}`);
-      return r.arrayBuffer();
-    }).then((b) => { tick(); return parseGLB(b); })));
-    for (let i = 0; i < heroGlbs.length; i++) {
-      const hero = await this.buildCharacter(heroGlbs[i]);
+    for (let i = 0; i < heroes.length; i++) {
+      const hero = await heroes[i];
       hero.armored = true; hero.hero = true;
       // (Their paint read as theirs, not as a knight's blackened steel: -2 for the classes in plate, -3 in armour that isn't
       // all steel, -1 for the rest. It also says what shows in their gaps: mail, or a padded coat. materials.js heroLook.)
       hero.heroLook = ['lancer', 'paladin'].includes(cast[i].cls) ? -2 : ['dragoon', 'boomerang'].includes(cast[i].cls) ? -3 : -1;
       this.chars.push(hero);
     }
-    tick();
-    for (let i = 0; i < LISANDRA_FORMS.length; i++) {
-      const { skirtCenter } = LISANDRA_FORMS[i];
-      const model = await loadModel(15 + BODIES.length + i);
-      const [form] = await this.buildCrabs(model, 1, LISANDRA_SCALE, (prim, glb, scale) => {
-        // A form with no skirt (Pretty in her leathers) has no _SKIRT mask: nothing of her sways as a dress.
-        const mask = glb.json.meshes[0].primitives[0].attributes._SKIRT;
-        if (mask === undefined) return prim;
-        const skirt = accessor(glb, mask);
-        const skirtDirection = new Uint16Array(skirt.length);
-        for (let v = 0; v < skirt.length; v++) {
-          const angle = Math.atan2(prim.pos[v * 3] / scale - skirtCenter[0], prim.pos[v * 3 + 2] / scale - skirtCenter[1]);
-          skirtDirection[v] = Math.round((angle / (2 * Math.PI) + 0.5) * 65535);
-        }
-        return { ...prim, flex: Float32Array.from(skirt, (weight) => -weight), skirtDirection };
-      }, SKIRT_PALETTE_JOINTS);
+    for (const made of forms) {
+      const { form, jaw } = await made;
       form.flesh = 1;
       // Her gown moves with her body alone (the skinning shader's ripple is off for her), and she is drawn with the
       // model-true shading (ARMOR_TRUE): see docs/RENDERING.md.
@@ -373,7 +437,7 @@ export class Renderer {
       form.trueLook = true;
       // The witch's jaw (tools/lisandra/jaw_rig.py): where the line between her lips is, in bind space, for the dark
       // that opens there as she speaks (materials.js MOUTH_WGSL).
-      const jaw = model.json.scenes[0].extras?.jaw, s = LISANDRA_SCALE;
+      const s = LISANDRA_SCALE;
       if (jaw?.lip) {
         const l = jaw.lip;
         form.jaw = { y0: l.y0 * s, k: l.k / s, mid: l.mid * s, half: l.half * s, front: (l.z - 0.02) * s, rise: l.rise * s, gap: jaw.open * l.perRad * s };
@@ -384,59 +448,39 @@ export class Renderer {
     // Your own body, for the third-person view (src/sim/playerbody.js, tools/player/build.mjs): the slot after hers, drawn
     // only while that view is on. What it holds are the items' own models, laid where the sim says its hands are (selfItems).
     {
-      const glb = parseGLB(await fetch(`${base}assets/game/player/wizard.glb`).then((r) => { if (!r.ok) throw new Error(`the player's body: ${r.status}`); return r.arrayBuffer(); }));
-      const [self] = await this.buildCrabs(glb, 1, 1);
-      self.flesh = 1; self.trueLook = true; self.self = true;
+      const { body, colour } = await self;
+      body.flesh = 1; body.trueLook = true; body.self = true;
       this.selfSlot = this.chars.length;
-      this.chars.push(self);
+      this.chars.push(body);
       this.selfItems = [0, 1, 2].map(() => ({ mat: new Float32Array(16), sword: null, slot: -1, model: null }));
+      // The gear you wear, painted onto it (src/gfx/bodyskin.js): main.js says what's worn.
+      this.bodySkin = new BodySkin(this, base, body, colour);
     }
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
-    this.vms = { 1: await this.buildViewModel(await loadModel(9)), 2: await this.buildViewModel(await loadModel(3)), 3: await this.buildViewModel(await loadModel(14)) };
+    this.vms = { 1: await vms[0], 2: await vms[1], 3: await vms[2] };
     this.vm = this.vms[1];
-    this.spellVMs = { 1: await this.buildViewModel(await loadModel(12)), 2: await this.buildViewModel(await loadModel(13)) };
-    // Swords are fetched the first time one is wanted, in the hand or on the ground, and kept: there are too many maps to load them all up front.
-    this.swords = new Map();
-    this.gems = new Map();
-    this.ground = [];
-    this.gauntletSets = new Map();
-    this.chests = [];
-    this.doorItems = [];
-    this.stallItems = null;               // the market's wares and their tarps (src/gfx/wares.js), made the first time they're drawn
-    this.stallsOpen = new Set();          // which stalls have their wares out (src/folk/brain.js, stall)
+    this.spellVMs = { 1: await spellVMs[0], 2: await spellVMs[1] };
     this.things = (village.things || []).concat(this.interior.data.things || []);
-    this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
-    this.itemInstances = device.createBuffer({ size: 64 * MAX_GROUND, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
-    this.itemData = new Float32Array(16 * MAX_GROUND);
-    tick();
     // One prop instance per sword and shield in a knight's hands: the black knight's crimson and V, the silver's gilded
     // and T, then each town knight's own pair, sharing those four models. propBase: a knight's first instance.
     this.props = [];
-    for (const i of [4, 5, 6, 7]) this.props.push(await this.buildProp(await loadModel(i)));
+    for (const prop of knightProps) this.props.push(await prop);
     this.chars[0].propBase = 0; this.chars[1].propBase = 2;
     const firstTown = this.firstTown;
     TOWN_KNIGHTS.forEach((k, i) => {
       this.chars[firstTown + i].propBase = this.props.length;
       this.props.push({ ...this.props[k.sword === 'crimson' ? 0 : 2] }, { ...this.props[k.shield === 'v' ? 1 : 3] });
     });
-    // Each hero's three: main hand, off hand, the board on the back (assets/game/heroes/kit, tools/heroes/kit.py). One model per
-    // item, shared. owner: drawn only while its hero is (an empty hand draws nothing).
-    const kitModels = new Map();
-    const kitModel = (id) => {
-      if (!kitModels.has(id)) kitModels.set(id, fetch(`${base}assets/game/heroes/kit/${id}.glb`).then((r) => r.arrayBuffer()).then((b) => this.buildProp(parseGLB(b))));
-      return kitModels.get(id);
-    };
+    // The heroes' own: owner, drawn only while its hero is (an empty hand draws nothing).
     for (let i = 0; i < cast.length; i++) {
-      const c = this.chars[this.firstHero + i], k = cast[i].kit || {};
+      const c = this.chars[this.firstHero + i];
       c.propBase = this.props.length; c.propCount = 3;
-      // (Two daggers or two boomerangs: the same item in both hands.)
-      const off = k.off || (k.style === 'daggers' || k.style === 'boomerang' ? k.main : null);
-      for (const id of [k.main, off, k.back]) this.props.push(id ? { ...(await kitModel(id)), owner: this.firstHero + i } : { empty: true });
+      for (const id of kitOf(cast[i].kit || {})) this.props.push(id ? { ...(await kitModels.get(id)), owner: this.firstHero + i } : { empty: true });
     }
     this.tripo.reserveProps();
     this.propInstances = device.createBuffer({ size: 64 * this.props.length, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
     this.propData = new Float32Array(16 * this.props.length);
-    tick();
+    lap('the models built');
     this.buildEnv();
     this.buildPipelines();
     this.buildParticles();
@@ -451,11 +495,13 @@ export class Renderer {
     const hall = hallLights().map(([x, y, z]) => ({ p: [x, y - 0.5, z], c: [1, 0.98, 0.95], r: 15, i: 2.4, flicker: 0 }));
     this.lights = village.lights.concat(this.interior.data.lights, warrens, hall);
     this.homeLights = new HomeLights(device, this.interior, this.interior.data.lights);
-    if (this.openingEnabled) this.openingStage = await loadOpeningStage(this, base);
+    tick();
+    if (openingStage) this.openingStage = (await openingStage)();
     this.smokeT = 0;
     this.moteT = 0;
     this.resize();
     tick();
+    lap('done');
     if (done !== total) console.warn(`loading bar: ${done} steps ticked of ${total} counted (renderer.js load)`);
   }
 
@@ -541,7 +587,14 @@ export class Renderer {
       { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },
       { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
     ] });
-    // Land textures, whose bind group is shared by terrain and grass.
+    this.skinModule = device.createShaderModule({ code: SKIN });
+    this.skinPipeline = device.createComputePipeline({ layout: device.createPipelineLayout({ bindGroupLayouts: [this.bglSkin] }), compute: { module: this.skinModule, entryPoint: 'main' } });
+  }
+
+  // Land textures, whose bind group is shared by terrain and grass. (Made once the land's pictures and maps are in: the layouts
+  // above are wanted before then, by the models built while those come down.)
+  buildLandBindings() {
+    const { device } = this;
     this.terrainBG = device.createBindGroup({ layout: this.bglArr2, entries: [
       { binding: 0, resource: this.groundColor.createView({ dimension: '2d-array' }) },
       { binding: 1, resource: this.groundDetail.createView({ dimension: '2d-array' }) },
@@ -551,8 +604,6 @@ export class Renderer {
       { binding: 5, resource: this.nearRoad.createView() },
       { binding: 6, resource: { buffer: this.nearRoadU } },
     ] });
-    this.skinModule = device.createShaderModule({ code: SKIN });
-    this.skinPipeline = device.createComputePipeline({ layout: device.createPipelineLayout({ bindGroupLayouts: [this.bglSkin] }), compute: { module: this.skinModule, entryPoint: 'main' } });
   }
 
   // Out in the countries the land's grid and the pines are laid again round you, a few hundred metres at a time, in the pool's
@@ -790,7 +841,7 @@ export class Renderer {
       const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
         { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
       ] });
-      out.push({ ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4) });
+      out.push({ ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4), maps: [alb, nrm, mr] });
     }
     return out;
   }
@@ -835,7 +886,8 @@ export class Renderer {
     }
     const sk = this.makeSkinned(prims, skin.joints.length);
     const flatNormal = this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255]));
-    const flatMR = this.pixel('rgba8unorm', [255, 128, 128, 255]);
+    // (A part with no metal/rough map: matte and not metal, not half-metal chrome.)
+    const flatMR = this.pixel('rgba8unorm', [255, 217, 0, 255]);
     const parts = [];
     for (let i = 0; i < prims.length; i++) {
       const { mat, name } = texOf[i];

@@ -1,0 +1,59 @@
+{
+ "id": "amethyst_regalia",
+ "name": "Amethyst Regalia",
+ "blurb": "Royal purple and silver, the richest of the five.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/amethyst_velvet.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1
+  },
+  "trim": {
+   "color": "#cecee4",
+   "bright": 1.1
+  },
+  "leather": {
+   "swatch": "swatches/amethyst_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.25,
+   "keep": 0.25
+  }
+ },
+ "parts": {
+  "head": {},
+  "shoulders": {},
+  "chest": {
+   "pattern": {
+    "image": "swatches/runes.png",
+    "color": "#cecee4",
+    "scale": 0.16,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/flame.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "gilt",
+     "color": "#cecee4"
+    }
+   ]
+  },
+  "legs": {
+   "leather": {
+    "swatch": "swatches/amethyst_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "keep": 0.25
+   }
+  },
+  "feet": {}
+ }
+}

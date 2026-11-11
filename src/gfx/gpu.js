@@ -1,5 +1,6 @@
 // Getting the most out of whatever GPU is there: the high-performance adapter, every limit and useful
 // feature it offers, and a quality tier picked from what it is.
+import { lanes } from '../core/files.js';
 
 const WANTED_FEATURES = [
   'rg11b10ufloat-renderable', 'float32-filterable', 'timestamp-query', 'indirect-first-instance',
@@ -106,30 +107,35 @@ export class MipGen {
 
 export const mipCountFor = (w, h) => Math.floor(Math.log2(Math.max(w, h))) + 1;
 
-// Decode, upload and release one layer before asking for the next. Worker count does
-// not bound asynchronous image decodes; queuing the whole manifest exhausts iOS memory.
-export async function loadTextureArray(device, mipgen, names, decode, format) {
-  let tex, w, h, mips;
-  try {
-    for (let layer = 0; layer < names.length; layer++) {
-      const bmp = await decode(names[layer]);
-      try {
-        if (!tex) {
-          w = bmp.width; h = bmp.height; mips = mipCountFor(w, h);
-          tex = device.createTexture({ size: [w, h, names.length], format, mipLevelCount: mips,
-            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
-        }
-        if (bmp.width !== w || bmp.height !== h) throw new Error(`Texture layer size mismatch: ${names[layer]}`);
-        device.queue.copyExternalImageToTexture({ source: bmp }, { texture: tex, origin: [0, 0, layer], premultipliedAlpha: false }, [w, h]);
-      } finally { bmp.close(); }
-      const enc = device.createCommandEncoder();
-      mipgen.generate(tex, format, 1, mips, enc, layer);
-      device.queue.submit([enc.finish()]);
-      // Bound GPU staging memory as well as decoded bitmaps.
-      await device.queue.onSubmittedWorkDone();
-    }
-    return tex;
-  } catch (error) { tex?.destroy(); throw error; }
+// Decode, upload and release each layer before its lane takes the next. Worker count does not bound asynchronous image
+// decodes; queuing the whole manifest exhausts iOS memory. So `run` (src/core/files.js lanes) says how many layers are in
+// hand at once, across however many arrays share it: one lane, the default, is one layer at a time, in order.
+export async function loadTextureArray(device, mipgen, names, decode, format, run = lanes(1)) {
+  let tex, w, h, mips, failed = false;
+  const layerIn = async (layer) => {
+    if (failed) return;
+    const bmp = await decode(names[layer]);
+    try {
+      if (failed) return;   // (another layer failed while this one was decoding)
+      if (!tex) {
+        w = bmp.width; h = bmp.height; mips = mipCountFor(w, h);
+        tex = device.createTexture({ size: [w, h, names.length], format, mipLevelCount: mips,
+          usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+      }
+      if (bmp.width !== w || bmp.height !== h) throw new Error(`Texture layer size mismatch: ${names[layer]}`);
+      device.queue.copyExternalImageToTexture({ source: bmp }, { texture: tex, origin: [0, 0, layer], premultipliedAlpha: false }, [w, h]);
+    } finally { bmp.close(); }
+    const enc = device.createCommandEncoder();
+    mipgen.generate(tex, format, 1, mips, enc, layer);
+    device.queue.submit([enc.finish()]);
+    // Bound GPU staging memory as well as decoded bitmaps.
+    await device.queue.onSubmittedWorkDone();
+  };
+  // Every layer is seen through, or let go, before a failure is passed on: none is left writing to a texture that's gone.
+  const ends = await Promise.allSettled(names.map((_, layer) => run(() => layerIn(layer)).catch((error) => { failed = true; throw error; })));
+  const bad = ends.find((e) => e.status === 'rejected');
+  if (bad) { tex?.destroy(); throw bad.reason; }
+  return tex;
 }
 
 export async function decodeScaledBitmap(blob, scale) {

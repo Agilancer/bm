@@ -53,9 +53,12 @@ export function doHire(b, m, j) {
   if (!h || !P) { b.giveUp('hire', 300); b.job = null; return; }
   const d = dist(m.x, m.z, h.x, h.z);
   if (d > 2.4) { b.face = null; b.goTo(h.x, h.z, 1.6, d > 10, true); return; }
+  // (Face to face with him, nothing between: as with anyone it has a word with. src/ui/autobrain.js within().)
+  const reach = b.within(m, 'broker', h.x, m.y + 1.2, h.z);
+  if (reach === false) { b.face = null; b.goTo(h.x, h.z, 0.6, false, true); return; }
   b.halt();
   b.face = Math.atan2(h.x - m.x, h.z - m.z);
-  if ((b.hireWait = (b.hireWait || 0) + 0.12) < 0.6) return;
+  if (!reach || (b.hireWait = (b.hireWait || 0) + 0.12) < 0.6) return;
   b.hireWait = 0;
   // Face to face: E, as you'd press it (the quartermaster's books open), then the choosing (hiring(), next frames).
   if (g.nearHero?.h === h) g.takeNearest(); else P.talkTo(h);

@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "wintermaw_epic",
+ "name": "Wintermaw Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original wolf stitch badge. Glacial blue silk and pale steel panels, angular frost brocade, silver tracery and ice-blue clasps. Intended as an epic item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

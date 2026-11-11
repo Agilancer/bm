@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "stoneback_uncommon",
+ "name": "Stoneback Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original tortoise stitch badge. Sage panels, slate quilted shoulders, linked rectangular borders and pewter knee edging. Intended as an uncommon item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

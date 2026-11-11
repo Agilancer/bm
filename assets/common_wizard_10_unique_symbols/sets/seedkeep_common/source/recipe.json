@@ -1,0 +1,121 @@
+{
+ "id": "seedkeep_common",
+ "name": "Seedkeep Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original acorn stitch badge. Angular tan-and-mauve paneling, narrow dark binding and patched knees. Intended as a common item alternative for the amethyst palette.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#76616c",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#b09a70",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#493a31",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/seedkeep_common_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/seedkeep_common.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#daccaa",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#76616c",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/seedkeep_common_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/seedkeep_common.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#daccaa",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#b09a70",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/seedkeep_common_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/seedkeep_common.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#daccaa",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/seedkeep_common.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#daccaa",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/seedkeep_common.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#daccaa",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#76616c",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/seedkeep_common_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#493a31",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/seedkeep_common_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#493a31",
+    "shading": 0.18
+   }
+  }
+ }
+}

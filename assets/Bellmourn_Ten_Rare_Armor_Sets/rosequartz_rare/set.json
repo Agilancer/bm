@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "rosequartz_rare",
+ "name": "Rosequartz Savant",
+ "blurb": "Rare-tier appearance. Dusty rose floral velvet, plum guards and polished silver.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

@@ -37,6 +37,7 @@
   #bar { width: min(420px, 80vw); height: 6px; margin-top: 18px; background: rgba(255,255,255,.1); display: none; }
   #bar > i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .15s; }
   #status { margin-top: 10px; min-height: 1.3em; font-size: 13px; opacity: .78; }
+  #file { margin-top: 4px; min-height: 1.3em; max-width: 92vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; font-style: italic; opacity: .55; }
   #controls { margin-top: 14px; font-size: 13.5px; opacity: .85; line-height: 1.7; }
   kbd { padding: 1px 6px; border: 1px solid var(--gold-dim); font: inherit; font-size: 12px; color: var(--gold); }
 
@@ -78,14 +79,20 @@
   #take { position: absolute; left: 50%; top: 70%; transform: translateX(-50%); max-width: 70vw; text-align: center; font-size: 15px; letter-spacing: .03em; background: rgba(8,6,4,.62); padding: 6px 14px; display: none; }
   /* The map */
   #mapMini { position: absolute; right: calc(20px + env(safe-area-inset-right)); top: calc(18px + env(safe-area-inset-top)); width: 168px; height: 168px; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,.7); opacity: .92; display: none; }
-  #mapBig { position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 8px; background: rgba(4,3,2,.55); pointer-events: none; }
+  #mapBig { position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 6px; background: rgba(4,3,2,.55); pointer-events: none; }
   #mapBig.open { display: flex; }
-  #mapBigCanvas { width: min(86vh, 92vw); height: min(86vh, 92vw); border: 1px solid var(--gold-dim); opacity: .9; }
+  #mapBigCanvas { width: min(94vw, 150vh); height: min(82vh, calc(100vh - 86px)); border: 1px solid var(--gold-dim); opacity: .93; pointer-events: auto; touch-action: none; cursor: grab; }
+  #mapBigCanvas.held { cursor: grabbing; }
+  .mapWrap { position: relative; line-height: 0; }
+  .mapTitle { min-height: 20px; font-size: 17px; letter-spacing: .14em; color: var(--gold); text-shadow: 0 1px 4px #000; font-variant: small-caps; }
+  .mapBtns { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; line-height: 1; }
+  .mapBtns button { width: 34px; height: 34px; padding: 0; font: 700 18px Georgia, serif; color: var(--gold); background: rgba(8,6,4,.86); border: 1px solid var(--gold-dim); border-radius: 4px; cursor: pointer; touch-action: none; }
+  body.touch .mapBtns button { width: 42px; height: 42px; }
+  .mapKey .onTouch, body.touch .mapKey .onMouse { display: none; } body.touch .mapKey .onTouch { display: inline; }
   .mapKey { font-size: 12px; letter-spacing: .1em; color: var(--bone); text-shadow: 0 1px 3px #000; }
-  .mapKey span { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1px solid #000; vertical-align: -1px; }
+  .mapKey span.me, .mapKey span.foe, .mapKey span.kin { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1px solid #000; vertical-align: -1px; }
   .mapKey .me { background: #f1d68a; } .mapKey .foe { background: #d8402c; } .mapKey .kin { background: #e9dfc9; }
   .mapKey b { color: var(--gold); }
-  body.touch .mapKey .mapClose::after { content: 'AP'; }
   #pause { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.55); z-index: 15; }
 
   /* Touch controls */
@@ -415,7 +422,7 @@ body.op-handoff #cross{opacity:0;transition:none}
   <div id="debug"></div>
   <canvas id="mapMini"></canvas>
 </div>
-<div id="mapBig"><canvas id="mapBigCanvas"></canvas><div class="mapKey"><span class="me"></span> you &nbsp; <span class="foe"></span> foe &nbsp; <span class="kin"></span> townsfolk &nbsp;&nbsp; <b class="mapClose">M</b> for more, then to close</div></div>
+<div id="mapBig"><div class="mapTitle"></div><div class="mapWrap"><canvas id="mapBigCanvas"></canvas><div class="mapBtns"><button data-map="in" aria-label="Nearer">+</button><button data-map="out" aria-label="Further">&minus;</button><button data-map="me" aria-label="Back to you">&#9678;</button><button data-map="shut" aria-label="Close">&times;</button></div></div><div class="mapKey"><span class="me"></span> you &nbsp; <span class="foe"></span> foe &nbsp; <span class="kin"></span> townsfolk &nbsp;&nbsp; <span class="onMouse"><b>Wheel</b> nearer and further &nbsp; <b>hold the left button</b> and move to look about &nbsp; <b>Home</b> back to you &nbsp; <b>M</b> to close</span><span class="onTouch"><b>Pinch</b> nearer and further &nbsp; <b>drag</b> to look about &nbsp; <b>tap twice</b> back to you</span></div></div>
 
 <div id="touch">
   <div id="stick"><div id="nub"></div></div>
@@ -478,6 +485,7 @@ body.op-handoff #cross{opacity:0;transition:none}
   <div id="buttons"></div>
   <div id="bar"><i></i></div>
   <div id="status"></div>
+  <div id="file"></div>
   <div id="controls"></div>
 </div>
 

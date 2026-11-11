@@ -1,0 +1,77 @@
+{
+ "id": "hedgeway_common",
+ "name": "Hedgeway Common Gear",
+ "blurb": "Common brown travelling gear: coarse russet wool, darker mantle and trousers, worn saddle leather and plain bindings. No added insignia or precious trim. Intended as common-tier Ashen gear.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/common_brown_wool.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1,
+   "shading": 0.8
+  },
+  "trim": {
+   "swatch": "swatches/common_worn_binding.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.4
+  },
+  "leather": {
+   "swatch": "swatches/common_saddle_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.12,
+   "shading": 0.75
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {},
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/common_dark_wool.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.03,
+    "shading": 0.8
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/common_dark_wool.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.8
+   },
+   "leather": {
+    "swatch": "swatches/common_saddle_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.8
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/common_saddle_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.8
+   },
+   "leather": {
+    "swatch": "swatches/common_saddle_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.75
+   }
+  }
+ }
+}

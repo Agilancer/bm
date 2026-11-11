@@ -368,7 +368,7 @@ export class Player {
     sim.casting.ghostShield(BASH_REACH, BASH_HALF);
     let met = false;
     for (const k of sim.knights) {
-      if (k.dead || k.dormant || k.iframes) continue;
+      if (k.dead || k.dormant || k.iframes || k.keeper) continue;
       const dx = k.x - this.x, dz = k.z - this.z, d = Math.hypot(dx, dz) || 1;
       const ahead = dx * fx + dz * fz, across = Math.abs(dx * fz - dz * fx), R = (k.bodyRadius || 0.5) * 0.5;
       if (ahead < -R || ahead > BASH_REACH + R || across > BASH_HALF + R || Math.abs(k.y - this.y) > 2.2) continue;
@@ -441,7 +441,7 @@ export class Player {
     this.knockX = dx / L * push; this.knockZ = dz / L * push;
     if (this.stamina > 0) { this.hp = Math.max(1, this.hp - amount * GUARD_LEAK); this.regenT = 0; return false; }
     // Out of breath: the guard breaks, and half of it lands.
-    sim.event(EV.SHIELD_BREAK, hx, hy, hz);
+    sim.event(EV.SHIELD_BREAK, hx, hy, hz, 1);     // (1: yours. A knight's own guard breaking is the same event without it.)
     this.dropGuard();
     this.applyHurt(sim, amount * 0.5, fromX, fromZ, knock);
     return true;
@@ -727,7 +727,8 @@ export class Player {
     let wallT = sim.world.rayBoxes(x, ey, z, dx, dy, dz, reach);
     for (let i = 0; i < sim.knights.length; i++) {
       const k = sim.knights[i];
-      if (k.dead) continue;
+      // (Tessariel's town guard: your blade passes him by. src/sim/town-watch.js.)
+      if (k.dead || k.keeper) continue;
       if (k.iframes) { if (Math.hypot(k.x - x, k.z - z) < reach + 1) this.whiffed = true; continue; }
       if (Math.hypot(k.x - x, k.z - z) > 4.6) continue;
       if (wallT > 0 && wallT < Math.hypot(k.x - x, k.z - z) - 0.5) continue;

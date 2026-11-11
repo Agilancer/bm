@@ -1,0 +1,59 @@
+{
+ "id": "moss_regalia",
+ "name": "Mossgrown Regalia",
+ "blurb": "Forest green twill with old brass, for the road and the woods.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/moss_twill.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1
+  },
+  "trim": {
+   "color": "#a0883e",
+   "bright": 1.1
+  },
+  "leather": {
+   "swatch": "swatches/moss_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.25,
+   "keep": 0.25
+  }
+ },
+ "parts": {
+  "head": {},
+  "shoulders": {},
+  "chest": {
+   "pattern": {
+    "image": "swatches/vines.png",
+    "color": "#a0883e",
+    "scale": 0.3,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/leaf.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "gilt",
+     "color": "#a0883e"
+    }
+   ]
+  },
+  "legs": {
+   "leather": {
+    "swatch": "swatches/moss_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "keep": 0.25
+   }
+  },
+  "feet": {}
+ }
+}
