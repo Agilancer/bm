@@ -2,7 +2,7 @@
 // thread spends a small slice of every 40 ms playing out the duel to come, so the knight's next tactic is
 // informed by however many cores the machine can spare.
 import { CTRL, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, mapShared } from '../core/layout.js';
-import { TREE_FLOATS, forestAmount, forestTrees } from '../core/forest.js';
+import { TREE_FLOATS, TRIMMED, forestAmount, forestTrees } from '../core/forest.js';
 import { openingTerrain, setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
 import { WAY_BOX, caveCuts, wayDip } from '../core/opening.js';
@@ -21,6 +21,7 @@ async function decode(url, flags) {
 function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   // The hill and its roads have a finer grid of their own: this one's cells are ten metres across out there, which a road can't be cut
   // into. So has the ground round the church, which has a hole in it (src/core/church.js LAND_HOLE).
+  // And the woods round the town and the Warrens' portal's hillside (src/gfx/renderer.js, where the patches are named).
   const dims = patches.map((p) => [Math.round((p.x1 - p.x0) / p.cell), Math.round((p.z1 - p.z0) / p.cell)]);
   const fineVerts = dims.reduce((m, [px, pz]) => m + (px + 1) * (pz + 1), 0), fineCells = dims.reduce((m, [px, pz]) => m + px * pz, 0);
   // And Lisandra's cave mouth one finer still, on whole cells of the hill's (the first patch), with the hillside left open where the
@@ -55,7 +56,9 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
     }
   }
   // (A cell's left out only well inside it: the two overlap at the edge, and the ground's colour goes by where it is, so nothing shows.)
-  const under = (x, z) => patches.some((p) => x > p.x0 + 12 && x < p.x1 - 12 && z > p.z0 + 12 && z < p.z1 - 12);
+  // (Nor where a patch leaves the ground to this grid: its open skips, and twelve metres round them.)
+  const under = (x, z) => patches.some((p) => x > p.x0 + 12 && x < p.x1 - 12 && z > p.z0 + 12 && z < p.z1 - 12
+    && !(p.skip || []).some((r) => r.open && x > r.x0 - 12 && x < r.x1 + 12 && z > r.z0 - 12 && z < r.z1 + 12));
   const idx = new Uint32Array((n * n + fineCells + fnx * fnz) * 6);
   let o = 0;
   for (let j = 0; j < n; j++) {
@@ -74,7 +77,7 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   };
   let first = (n + 1) * (n + 1);
   patches.forEach((patch, q) => {
-    const [px, pz] = dims[q], e = patch.cell, hole = patch.hole;
+    const [px, pz] = dims[q], e = patch.cell, hole = patch.hole, skip = patch.skip || [];
     for (let j = 0; j <= pz; j++) {
       for (let i = 0; i <= px; i++) {
         const x = patch.x0 + i * e, z = patch.z0 + j * e;
@@ -88,6 +91,9 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
           const cx = patch.x0 + (i + 0.5) * e, cz = patch.z0 + (j + 0.5) * e;
           if (cx > hole.x0 && cx < hole.x1 && cz > hole.z0 && cz < hole.z1) continue;
         }
+        // (A cell wholly inside what another grid draws is left to it: skip.)
+        const sx = patch.x0 + i * e, sz = patch.z0 + j * e;
+        if (skip.some((r) => sx >= r.x0 && sx + e <= r.x1 && sz >= r.z0 && sz + e <= r.z1)) continue;
         const a = first + j * (px + 1) + i, b = a + 1, c = a + px + 1, d = c + 1;
         idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
       }
@@ -123,7 +129,8 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
 }
 
 // The pines: (x, y, z, height), (cos, sin, how wide, how dark), all the way out.
-// (How dark goes in the last float's fraction; the tint, lands.js treeCode, times ten on top: src/gfx/pines.js reads both.)
+// (How dark goes in the last float's fraction; the tint, lands.js treeCode, times ten on top; and a hundred more for a pine
+// with its low boughs off: src/gfx/pines.js reads all three.)
 function buildForest({ reach, cx = 0, cz = 0 }) {
   const t = forestTrees(reach, cx, cz), F = TREE_FLOATS, n = t.length / F;
   const trees = new Float32Array(n * 8);
@@ -131,7 +138,8 @@ function buildForest({ reach, cx = 0, cz = 0 }) {
     const x = t[i * F], z = t[i * F + 1], k = i * 8;
     trees[k] = x; trees[k + 1] = terrainHeight(x, z); trees[k + 2] = z; trees[k + 3] = t[i * F + 2];
     trees[k + 4] = t[i * F + 4]; trees[k + 5] = t[i * F + 5]; trees[k + 6] = t[i * F + 3];
-    trees[k + 7] = 0.72 + 0.42 * hash2(Math.round(x * 7), Math.round(z * 7)) + 10 * t[i * F + 6];
+    const code = t[i * F + 6], trim = code >= TRIMMED;
+    trees[k + 7] = 0.72 + 0.42 * hash2(Math.round(x * 7), Math.round(z * 7)) + 10 * (trim ? code - TRIMMED : code) + (trim ? 100 : 0);
   }
   return { trees, cx, cz };
 }

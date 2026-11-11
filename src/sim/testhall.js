@@ -202,7 +202,7 @@ export class TestHall {
       const free = t.slots().filter((k) => !(k instanceof TripoMonster) || k.dead || !inHall(k.x, k.z)).length - [...(t.claimed || [])].length;
       n = Math.min(n, Math.max(0, free));
       if (!n) return 0;
-      const lair = { key: `hall_${this.seq}_${this.lairs.length}`, x, z, r: Math.min(MUSTER.r, 2 + n * 1.2), boss: [key], pick: [key], n: n - 1, pal: [opt.pal || 'Base'], wake: -1, state: 'asleep', at: -1e9, temp: true, hall: true, face,
+      const lair = { key: `hall_${this.seq}_${this.lairs.length}`, x, z, r: Math.min(MUSTER.r, 2 + n * 1.2), boss: [key], pick: [key], n: n - 1, pal: [opt.pal || 'Base'], wake: -1, tricks: true, state: 'asleep', at: -1e9, temp: true, hall: true, face,
         onSpawn: (m) => { m.opts.sight = 120; m.opts.leash = 300; m.home = [m.x, m.z]; } };
       t.lairs.push(lair); this.lairs.push(lair);
       t.wake(lair);

@@ -502,9 +502,10 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   `writeAfter` in `src/sim/sim.worker.js`).
 - **The Hollowfang Warrens.** From level 7 with a full party it goes in by the portal and walks the caves room by room,
   by the caves' own flow field (the nav thread's grid stops at the edge of the world). Before each boss's room it waits
-  for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of a circle or a fire before
-  anything else, at Venomaw's side and well off when she's down, behind the pillar away from her when she flies, away
-  from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. When a boss turns on it, it gets
+  for the party to gather and mend. In a fight it answers the boss's calls (`tactics`): out of whatever's marked on the
+  ground before anything else, across the way of what's thrown, over a ring that runs along the floor (`perilStep`, which
+  it does anywhere in the game), off Venomaw's shoulder and well out when she's down, at her whelps while she swoops and
+  dives, behind the pillar away from her perch when she makes for it, away from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. When a boss turns on it, it gets
   behind the tank from it (or well out of its reach with no tank up) and shoots it as it comes. Three wipes count as beaten back: it
   leaves by the way in and comes back two levels stronger. Once Venomaw's dead it goes out by the far portal.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
@@ -681,7 +682,10 @@ ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is
 
 The first party dungeon (`src/core/dungeon.js`, `src/sim/dungeon.js`): a cave system the kobolds dug and the goblins took,
 with Venomaw, the green dragon, asleep on her hoard at the bottom. Its portal stands in a heap of rock in the woods
-north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. It lets in only a full party: four
+north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. Its terrace is dug into the hillside, and
+you can walk onto it from every side but the wall's: a wide flight of sixteen steps comes down its front to meet the hill
+(a path through the woods ends at its foot), and its two ends are level with the ground or open to it (`portalWall` in
+`src/core/sites.js`). It lets in only a full party: four
 with you, a lancer and a paladin among them. Inside, a portal by the way in takes you back out at any time, and one behind
 the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 gold, and it all stands again after.
 
@@ -695,16 +699,41 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   tier's count; a phone keeps its two), and a frame's lamps went from 28 to 36 for it (`MAX_LIT` in
   `src/gfx/shaders.js`).
 - **The packs.** Five rooms of kobolds and goblins, which wake as you come into them and stay dead till the Warrens reset.
-- **Grubnash the Tunnel-King**, a kobold three times the size. Every few seconds he brings the roof down: a circle on the
-  ground under each of you, and rocks a moment later. At seven tenths and a third of his life he calls his diggers out of
-  three holes round his dig; they run to him, and each one that reaches him is eaten and makes him hit harder. Kill them.
+  They're a party's work, not one wizard's: each has sixteen times the life of its cousin in the woods and hits two and a
+  half times as hard (`PACK_TOUGH` in `src/core/dungeon.js`), and between its blows it plays its kind's tricks: a kobold
+  lobs a rock (a circle that follows you a moment, then stays where the rock will land) or splits the floor along a
+  line; a goblin throws a fan of knives (five from one in armour) or a pot of fire that burns where it breaks.
+- **Grubnash the Tunnel-King**, a kobold three times the size. Every four seconds or so, one of: the roof comes down (a
+  circle under each of you, and more wherever); his pick splits the floor along a line, three lines once he's under half
+  his life; a boulder at whoever's furthest off, which bursts into eight shards where it lands; a stamp that sends a ring
+  out along the floor, to be jumped; rubble coming up in a row at one of you. At seven tenths and a third of his life he
+  calls his diggers out of three holes round his dig; they run to him, and each one that reaches him is eaten and makes
+  him hit harder. Kill them.
 - **Skrit and Skrat**, goblin twins. They share their pain: whichever has less life left takes half of what lands on it,
-  so keep them even. Skrit throws firepots that burn the ground; Skrat spins his blades in a whirlwind. When one dies the
-  other goes wild.
-- **Venomaw, Mother of the Warren.** Only the tank should face her: her breath burns everyone in front of her, and her
-  tail sweeps anyone behind. She spits acid that pools. At a little over half her life she takes to the air above her
-  hoard and breathes across the whole cavern every few seconds: only rock between you and her keeps it off, so hide
-  behind a pillar, while her whelps hatch. Then she lands, frenzied.
+  so keep them even. Skrit is fire: three pots in a row across where you stand, two fans of bolts (the second through the
+  gaps of the first), a wheel of four bars of fire that turns about where he lit it for six seconds, and a row of bolts
+  coming on abreast with one way through. Skrat is blades: a whirlwind that cuts all within reach and throws blades off
+  as it turns, a line marked to one of you that he then comes down, and blades flung out all round, twice. When one dies
+  the other goes wild, and its moves come nearly twice as often.
+- **Venomaw, Mother of the Warren.** Only the tank should face her. On the ground, every four seconds or so, one of: her
+  breath, a cone before her that's aimed as she draws it and held there; acid spat high at three of you, a pool where
+  each gob lands; her tail, coiled to one side and then swung right round behind her as she turns (everything behind her
+  shoulders, and then a ring along the floor to jump); her claws, three furrows fanned out before her; her wings beaten,
+  fourteen gobs flung out all round, twice; a stamp, three rings out from her one after another. At six tenths of her
+  life she takes to the air and her whelps hatch: she swoops the length of the hoard twice, each along a strip that's
+  marked first and left burning, makes for her perch and breathes across the whole cavern (only rock between you and
+  her keeps that off, so hide behind a pillar), then dives onto one of you: a circle that follows you a while, and a
+  ring along the floor as she lands. Then she's frenzied: her moves come faster, and with them venom raining from the
+  roof and gobs poured out of her in turning streams.
+- **Her body's part in it** is new too. The tail whip is laid over whatever clip she's in (`bendTail` in
+  `src/sim/moves.js`): the tail's joints are found by name and turned one after another, so it coils, lashes and
+  ripples. In the air she noses down as she comes on and rolls onto a wing as she turns (`tipBody`), rises on her `jump`
+  clip, swoops on `fly2` and comes down on `land`: clips her model had and the game never played. Her claws, breath,
+  wings and stamp each play a clip of their own (`TripoMonster.perform`).
+- **A boss leaves a hoard**, on top of what its body drops (`rollLoot` 20 and 21 in `src/items/items.js`). Grubnash, and
+  the twins: a rare staff or better (epic, one time in three), two more pieces as good from skull, shield and robe, a
+  gem, a scroll and 150 to 260 gold. Venomaw: an epic staff, skull and shield at the least, a robe, one thing more
+  that's legendary, two gems, two scrolls and 400 to 700 gold, besides the dragon's own drop.
 - **They come for you too.** The tank doesn't hold everything for ever. Every seventeen seconds or so a boss turns from
   him to you (Venomaw every twenty-two): it's called out, you have a breath to get behind the tank or out of its
   reach, and for four or five seconds nothing holds it (`turnOn` in `src/sim/dungeon.js`, `fixOn` in
@@ -721,9 +750,72 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
 `node tools/dungeon/check.mjs` walks it: every room reachable from the way in, every pack's and boss's room in the open, the
 portals clear of the rock, the roofs high enough and under the line the shaders call underground.
 
-Tuning, headless (the sim in Node with no GPU): with a level 8 party and a player doing what a level 8 player's staff
-does, Grubnash took about a minute and a half, the twins about two minutes and Venomaw nearly five, with the tank as low as
-half his life and nobody dying. Its numbers are `BOSSES` in `src/core/dungeon.js` and the mechanics' in `src/sim/dungeon.js`.
+`node tools/dungeon/fight.mjs` plays the fights out, with no page and no GPU: the sim booted in Node as its worker boots
+it, a level 8 party hired (lancer, paladin, archer, rogue), and a player who shoots Firebolt at what the party's on, walks
+out of whatever's marked, steps across the way of shots and jumps the rings. `--slow` has that player see each mark and
+shot half a second late, as a person does; `--still` never moves. It fails on an error in a tick or a shape with a bad
+number in it. What it gave, over two to twenty-one fights of each:
+
+| | Seeing it at once | Half a second late | Standing still |
+| --- | --- | --- | --- |
+| A pack of four | 21 to 29 s, the player all but untouched | 27 to 29 s | won, the player down to two thirds |
+| Grubnash | 85 to 97 s, player down to 70% | 63 to 94 s, down to 37% | dead, or alive on a sliver |
+| Skrit and Skrat | 68 to 78 s, down to 32% | 61 to 85 s, down to 5%; fell once in 21 fights | dead in 30 to 60 s |
+| Venomaw | 145 to 148 s, down to 16% | 132 to 165 s, down to 16% | dead in 33 to 83 s, once alive at the end with nothing left |
+
+Before this pass the same player took 136 s over Grubnash, 124 s over the twins and 166 s over a Venomaw of 9,000 life
+(she had 16,000, and took nearly five minutes by the notes then), and standing still lived through the twins and the
+dragon. The bosses' lives are `BOSSES` in `src/core/dungeon.js`, the fights and their numbers `src/sim/dungeon.js`. That
+player aims perfectly and never tires, and its Firebolt is not a person's whole bar, so read the times against each other
+more than as what a person will get. **Nobody has played these fights by hand, and none of it has been seen drawn in
+the game**: see "Monsters' attacks" below.
+
+### Monsters' attacks: marks on the ground, and what flies
+
+Everything a monster throws or marks on the ground is one system, `sim.perils` (`src/sim/perils.js`), which anything in
+the game can call:
+
+```js
+sim.perils.mark({ shape: 'cone', x, z, yaw, r: 12, half: 0.6, fuse: 1.2, dmg: 40, elem: ELEM.FIRE });
+sim.perils.shot({ x, y, z, yaw, speed: 14, dmg: 12, look: 'blade' });
+MOVES.fissure(sim.perils, monster, target, monster.opts.damage);   // a named attack: src/sim/moves.js
+```
+
+- **A mark** is a warning drawn on the ground in one of five shapes (`src/core/perils.js`): a circle, a ring with a safe
+  middle, a cone, a strip, or crossed strips. It fills from where it starts to its far edge as its fuse runs out, then
+  lands on everyone in it. After that it can stay and burn (`dps`), turn (`spin`), travel (`vx`, `vz`), spread (`grow`),
+  or bite what touches it (`touch`); it can ride a body and point where that points (`ride`), follow someone until part
+  of its fuse has run (`follow`), or keep pointing at them (`aim`). One marked `jump` is cleared by a leap.
+- **A shot** flies: it hurts the first of you it meets, a raised shield turns it, and it may home, fall, skip off the
+  ground, go through, or leave a mark where it ends. `look` is an orb, a rock, a blade, a flask or a lance.
+- **Patterns** made of those: `fan`, `nova`, `spiral` and `wall` (shots); `lob`, `rain`, `march`, `rings` and `wave` (marks).
+- **Moves** (`MOVES` in `src/sim/moves.js`) are the named attacks made of those, twenty-six of them, each taking the
+  monster, its target and how hard: `rockLob`, `fissures`, `stompRings`, `quakeWave`, `boulder`, `knifeFan`, `bladeNova`,
+  `bloodLance`, `seekers`, `boltWall`, `spiral`, `firepots`, `fireWheel`, `spitFan`, `venomCone`, `plagueCross`,
+  `wailRing`, `boneMarch`, `threads`, `howlWave`, `ram`, `tailWhip` and the rest.
+- **Tricks** (`TRICKS`, same file) say which moves each of the eighteen kinds of Tripo monster has and how often. A
+  monster plays them only where its lair has `tricks: true`: the Warrens' packs and whelps, and whatever is summoned in
+  the Test Dungeon, where every kind can be tried. **Out in the countries they're off**: a lair in `LAIRS`
+  (`src/core/tripo-monsters.js`) gets them by adding `tricks: true` to its line, and nothing else is needed.
+- **Both hurt you and every other Tessariel standing there.** The party steps out of marks wherever it is (`danger` in
+  `src/sim/perils.js`, from `companion` in `src/sim/hero.js`); auto-play steps out of marks, across the way of shots,
+  and jumps rings, anywhere in the game (`perilStep` in `src/ui/autowarrens.js`), from what the sim posts ten times a
+  second.
+- **Drawn** as one new shape, `FX.MARK` in `src/gfx/spellfx.js`: a bright edge, the ground inside darkened and lit in the
+  element's colour, and a line that runs from its start to its far edge as the fuse runs. A frame's shapes went from 256
+  to 384 for it (`MAX_FX` in `src/core/layout.js`); the most a fight here used was 251.
+
+**Facing.** A Tripo monster now turns to whoever its blow is for all through the wind-up (it used to turn for the first
+third at a rate that couldn't finish, and swing beside them), won't start a blow until it's roughly square on, and looks
+at its mark rather than along its path once it's within a few strides. The undead, the crabs and the field creatures
+turn faster into their blows too.
+
+`node --test tests/perils.test.mjs` checks the shapes, the way out of each, and that every kind of monster's tricks are
+moves there are. Known limits: the mark's shader was compiled by Chromium's own compiler for both tiers and its five shapes
+drawn to a picture with it, but **the game itself couldn't be drawn on the machine this was made on** (its software GPU
+is lost while the game loads, with or without these changes), so the marks, the shots, the tail whip and the flight have
+not been seen in the game, by anyone. The sounds are the game's existing ones (a whoosh, a thud, a roar, a spell let
+go). The catacombs' dead and the beasts that aren't Tripo monsters have none of this yet beyond the facing.
 
 ### The Test Dungeon
 
@@ -740,7 +832,8 @@ end. Three people stand behind counters, and E at a counter talks to them:
   other Tessariels off in Settings there's nobody on them.
 - **Ysolde Marr, the Summoning.** A book of every monster in the game (`src/core/testhall-foes.js`): the risen and their
   masters, the great crabs, the Gravehart, the Bone Hydra, the Abyssal Mouth and Velscour's knights, every Tripo model by
-  its group (the Warrens' bosses with them), every slime and every tumbler. Choose one, how many (and a size, or colours),
+  its group (the Warrens' bosses with them), every slime and every tumbler. What's summoned here plays its kind's
+  tricks (see "Monsters' attacks"), so this is where to see them. Choose one, how many (and a size, or colours),
   add it to the summoning, and add more. **Summon** stands them in the arena past the door, and the door rises on them.
 
 Once everything past the door is down (whatever they raised or split into as well), and you're back on this side of it, the
@@ -818,12 +911,14 @@ hand. There's no punch: with empty hands, a click tells you to open the pack.
 
 The town stands in a clearing in a forest of pines, about 16,000 of them out to 1 km, with six big oaks inside the clearing. `src/core/forest.js` says where each pine stands, the same on every thread, so what's drawn is what you walk into. `src/gfx/pines.js` draws one tree in three meshes: full boughs under about 84 m, big cards to 232 m, three crossed paintings past that. Only the two nearer rings throw shadows. Paint the bough and the far tree with `python tools/village/build_pines.py`, which needs nothing but numpy and Pillow.
 
+**The hunting grounds** (`src/core/hunts.js`). Where the woods' monsters stand, round Bellmourn (the six lairs, the four burial grounds, the casters' posts, the ogre's, the Gravehart's and the Abyssal Mouth's) and at every lair out in the countries, the pines open into a glade, the wood stands about half as thick for some thirty metres round it, and the pines left within about fifty metres have their boughs off below two fifths of their height (`TRIM_BELOW` in `src/gfx/pines.js`: the same mesh, its low boughs folded away on a trimmed tree), so you can see what you're fighting under them. No boulder lies in a glade's middle, and the opened floor has stumps, rough grass and ferns over it, none of it over the knee (`debrisInCell` in `src/core/rocks.js`). Eighteen paths (`HUNT_PATHS`, part of `PATHS`) lead in to the grounds from the south and north-east tracks, the foot of the Long Road and of the Fall, and the sexton's way, and one goes on up the hill to the foot of the Warrens' steps: nothing grows on them, the trail follows them and the map draws them. The two roads up the hill run on steep-sided ridges, so the ways west go up the hollows either side of the Fall. Move a monster's place and move its ground in `HUNT_GROUNDS`; `node --test tests/hunts.test.mjs` checks the lairs and field creatures have theirs, every ground has a path that joins the old ones, and nothing grows on a path.
+
 The land now goes on for 600 m either way (`LAND_EDGE`), and the hill to the west, at (-512, 166) and 146 m up, has two roads from the town, in `ROADS` in `src/core/terrain.js`. Both have a signpost where they leave the town, and a cairn with a fire on it where they end.
 
 - **The Long Road** leaves by the hunter's house: 1,080 m, winding, never over about 9 degrees. On a shield it holds a walking pace or a little better, and you have to bring the speed yourself.
 - **The Fall** leaves by the weaver's, with a rag on its post: 525 m, nearly straight, each pitch steeper than the last, up to about 28 degrees, about 19 m/s on a shield at the fastest. A short rise stands at the foot of each pitch. The shield clings on over these rather than leaving the ground, so use Space to hop.
 
-The roads have a 2 m grid of their own in the terrain mesh (`patch` in `buildTerrain`, `src/sim/job.worker.js`), and `farMap`, a coarse map of all the land, gives them and the forest floor their colour past the fine map of the village. Grass blades still stop at 128 m from the middle of the map. Nothing that hunts you goes past `NAV_EDGE`, 250 m out.
+The roads have a 2 m grid of their own in the terrain mesh (`src/core/ground-patches.js`, built by `buildTerrain` in `src/sim/job.worker.js`), and so have the woods round the town out to about 255 m, with a half-metre grid on the hillside round the Warrens' portal (4 m and 1 m on a phone). You walk on the land's own height and the stones lie on it, but the mesh is flat between its corners, and the one great grid's cells are 3 to 12 m across out in the woods: before these patches the drawn ground was as much as 1.5 m off where you stood at the portal on a PC (3.5 m on a phone) and half a metre off in the glades. `node --test tests/ground-mesh.test.mjs` builds the mesh and holds it to within 0.15 m at the portal and 0.25 m in the woods (0.35 and 0.6 on a phone). It costs about 75,000 more triangles of ground on High. And `farMap`, a coarse map of all the land, gives them and the forest floor their colour past the fine map of the village. Grass blades still stop at 128 m from the middle of the map. Nothing that hunts you goes past `NAV_EDGE`, 250 m out.
 
 Measured on the one machine in the table below, at 1024x768: the forest adds about 3 ms of GPU time a frame in the town and 7 ms among the trees. It has not been measured at a higher resolution or on a phone.
 

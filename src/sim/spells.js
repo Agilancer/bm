@@ -15,8 +15,9 @@ export const ELEM_LIGHT = [
 ];
 
 // Shapes the renderer draws them with. From ICE up they are solid things in the world; LIGHT only lights it.
+// (MARK: a warning on the ground in one of the shapes of src/core/perils.js: src/sim/perils.js draws them.)
 export const FX = {
-  ORB: 0, BEAM: 1, BOLT: 2, RING: 3, DISC: 4, FLAME: 5, PUFF: 6, FLARE: 7, TRAIL: 8, RUNE: 9, COLUMN: 10, VORTEX: 11, SHOCK: 12, KITE: 13,
+  ORB: 0, BEAM: 1, BOLT: 2, RING: 3, DISC: 4, FLAME: 5, PUFF: 6, FLARE: 7, TRAIL: 8, RUNE: 9, COLUMN: 10, VORTEX: 11, SHOCK: 12, KITE: 13, MARK: 14,
   ICE: 16, SPIKE: 17, LANCE: 18, BLADE: 19, ROCK: 20, FLASK: 21, LIGHT: 31,
 };
 // A LIGHT with this as its extra is one somebody carries (your party's: src/sim/hero.js partyLights). The renderer keeps

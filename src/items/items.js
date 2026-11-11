@@ -424,6 +424,19 @@ export function rollLoot(rng, kind) {
   const scroll = (chance) => (rng() < chance ? [rollSpell(rng)] : []);
   if (kind === 0) return [rollWeapon(rng, { minRarity: 2 }), rollSkull(rng, { minRarity: 2 }), rollGem(rng), rollShield(rng, { minRarity: 2 }), ...robe(0.6, { minRarity: 2 }), rollSpell(rng), gold(120, 240)];
   if (kind === 1) return [rng() < 0.5 ? rollWeapon(rng, { minRarity: 1 }) : rollSkull(rng, { minRarity: 1 }), rollShield(rng, { minRarity: 2 }), ...robe(0.4, { minRarity: 1 }), gold(40, 90)];
+  // A boss of the Hollowfang Warrens (src/sim/dungeon.js): a hoard, on top of what its body leaves. Always a rare staff or
+  // better (an epic one, one time in three), two more pieces as good, a gem, a scroll and a heap of gold.
+  if (kind === 20) {
+    const piece = [(m) => rollSkull(rng, m), (m) => rollShield(rng, m), (m) => rollRobe(rng, m)].sort(() => rng() - 0.5);
+    return [rollWeapon(rng, { minRarity: rng() < 0.35 ? 3 : 2 }), piece[0]({ minRarity: rng() < 0.3 ? 3 : 2 }), piece[1]({ minRarity: 2 }), rollGem(rng), rollSpell(rng), gold(150, 260)];
+  }
+  // And the dragon's, at the bottom of them: an epic staff, skull and shield at the least, a robe, one thing more that's
+  // legendary, two gems, two scrolls, and more gold than anything else in the game leaves.
+  if (kind === 21) {
+    const best = [(m) => rollWeapon(rng, m), (m) => rollSkull(rng, m), (m) => rollShield(rng, m), (m) => rollRobe(rng, m)][Math.floor(rng() * 4)];
+    return [rollWeapon(rng, { minRarity: 3 }), rollSkull(rng, { minRarity: 3 }), rollShield(rng, { minRarity: 3 }), rollRobe(rng, { minRarity: 2 }), best({ minRarity: 4 }),
+      rollGem(rng), rollGem(rng), rollSpell(rng), rollSpell(rng), gold(400, 700)];
+  }
   // The rank and file: mostly a few coins, and every so often something to look at.
   if (kind === 5 || kind === 9) {
     const out = rng() < 0.55 ? [gold(2, 12)] : [];

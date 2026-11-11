@@ -7,6 +7,7 @@ import { WORLD_EDGE, landHeight, setLandBase } from './lands.js';
 import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
 import { OLD_CHURCH_GROUND, oldChurchGround } from './town.js';
 import { PORTAL, PORTAL_PAD } from './dungeon.js';
+import { HUNT_PATHS } from './hunts.js';
 
 export let openingTerrain = false;
 export function setOpeningTerrain(enabled) { openingTerrain = !!enabled; }
@@ -194,6 +195,8 @@ export const PATHS = [
   // Out to the roads up the hill, from the ways by the west houses, and those as far as the map of the town goes.
   { pts: [[-26, 9.5], [-34, 26]], w: 1.6 }, { pts: [[-26, -8], [-26, 2], [-26, 9.5]], w: 1.6 },
   ...ROADS.map((road) => ({ pts: road.line.filter((p) => Math.abs(p[0]) < 150 && Math.abs(p[1]) < 150), w: road.w * 0.9 })),
+  // Out through the woods to where their monsters keep (src/core/hunts.js).
+  ...HUNT_PATHS,
 ];
 
 function segDist2(px, pz, ax, az, bx, bz) {
