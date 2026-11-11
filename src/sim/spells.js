@@ -17,8 +17,19 @@ export const ELEM_LIGHT = [
 // Shapes the renderer draws them with. From ICE up they are solid things in the world; LIGHT only lights it.
 export const FX = {
   ORB: 0, BEAM: 1, BOLT: 2, RING: 3, DISC: 4, FLAME: 5, PUFF: 6, FLARE: 7, TRAIL: 8, RUNE: 9, COLUMN: 10, VORTEX: 11, SHOCK: 12, KITE: 13,
-  ICE: 16, SPIKE: 17, LANCE: 18, BLADE: 19, ROCK: 20, FLASK: 21, LIGHT: 31,
+  // GLYPH: a sign drawn in light (GLYPHS below, by its extra): turned to the eye when its axis is nothing, else lying in the
+  // world with its axis as its face's normal; its length is how far it's turned in its own plane.
+  GLYPH: 14,
+  ICE: 16, SPIKE: 17, LANCE: 18, BLADE: 19, ROCK: 20, FLASK: 21,
+  // BOX: a block (its length along the axis, size its half width, extra its half depth, seed its turn about the axis), and
+  // SHARD: a flat diamond (two crossed make a throwing star). Both are of a MAT, in the age. The other Tessariels' hammers,
+  // stars and boomerangs are built of them (src/sim/heroskills.js).
+  BOX: 22, SHARD: 23, LIGHT: 31,
 };
+// What a GLYPH shows.
+export const GLYPHS = { NOTE: 0, NOTES: 1, CROTCHET: 2, WAVES: 3, STAR4: 4, CRESCENT: 5, DROP: 6, CROSS: 7, RANG: 8, HAMMER: 9, STAR6: 10, SPARK: 11, WING: 12, SHIELD: 13 };
+// What a BOX or a SHARD is made of: steel, gold, wood, or nothing but its element's light.
+export const MAT = { STEEL: 0, GOLD: 1, WOOD: 2, LIGHT: 3 };
 // A LIGHT with this as its extra is one somebody carries (your party's: src/sim/hero.js partyLights). The renderer keeps
 // them a place among the frame's lights of their own, ahead of the spells' (src/gfx/spellfx.js), so they're never crowded out.
 export const FX_CARRIED = 7;

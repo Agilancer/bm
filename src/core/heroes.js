@@ -25,7 +25,8 @@ import { CHURCH_DOOR, churchAt } from './church.js';
 
 // How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU. (And the
 // Free Company's two quartermasters and the Test Dungeon's keeper besides, BROKERS below.)
-export const HERO_SLOTS = { desktop: 16, lean: 6 };
+// (Eight on a phone: one of every class, so any of them can be hired there too.)
+export const HERO_SLOTS = { desktop: 16, lean: 8 };
 
 // The Free Company's quartermasters, who hire out a party (src/ui/party.js): one in town by the square, one at the
 // Hollowfang Warrens' portal (src/core/dungeon.js BROKER_SPOTS). Bodies of the heroes' own, people of their own. While the

@@ -294,6 +294,44 @@ export class Audio {
     src.start();
   }
 
+  // A plucked string, made here (a bard's lute: src/sim/heroskills.js): a burst of noise fed round a short delay and
+  // filtered a little each time round, so it rings at the note and dies away as a string does. One buffer a note, kept.
+  // semi: semitones above the lute's low D. bell: brighter and longer, for the paladin's light.
+  pluck(x, y, z, semi = 0, gain = 0.5, bell = false) {
+    if (!this.ready || this.ctx.state !== 'running') return;
+    if (this.reaches(x, y, z, gain) < UNHEARD) return;
+    const { ctx } = this;
+    const key = `${bell ? 'b' : 's'}${Math.round(semi)}`;
+    const cache = this.plucks || (this.plucks = {});
+    let buf = cache[key];
+    if (!buf) {
+      const sr = ctx.sampleRate, f = (bell ? 587.33 : 146.83) * 2 ** (Math.round(semi) / 12);
+      const N = Math.max(2, Math.round(sr / f)), len = Math.floor(sr * (bell ? 1.6 : 1.1));
+      buf = ctx.createBuffer(1, len, sr);
+      const d = buf.getChannelData(0), ring = new Float32Array(N);
+      // (The string's first shape: noise, smoothed for a lute's gut; left sharp for a bell.)
+      let last = 0;
+      for (let i = 0; i < N; i++) { const v = Math.random() * 2 - 1; last = bell ? v : last * 0.55 + v * 0.45; ring[i] = last; }
+      const damp = bell ? 0.9985 : 0.994;
+      for (let i = 0, k = 0; i < len; i++) {
+        const nx = (k + 1) % N, v = ring[k];
+        d[i] = v * Math.min(1, i / 40);
+        ring[k] = (v + ring[nx]) * 0.5 * damp;
+        k = nx;
+      }
+      cache[key] = buf;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = gain * 0.6;
+    const p = ctx.createPanner();
+    p.panningModel = PANNING; p.distanceModel = 'inverse'; p.refDistance = 2.5; p.rolloffFactor = 1.1;
+    if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z);
+    src.connect(g); g.connect(p); p.connect(this.master); p.connect(this.reverb);
+    src.start();
+  }
+
   // A close aspirated inhale: filtered air with a brief, quiet throat onset.
   // Synthesized locally so scene cues need no external voice service.
   breath(kind, x, y, z) {

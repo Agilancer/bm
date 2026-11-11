@@ -47,42 +47,48 @@
    "off": null,
    "back": "kite_eclipse",
    "string": null,
-   "style": "blade"
+   "style": "blade",
+   "lute": "lute_ivory"
   },
   "bard_f2": {
    "main": "moonring_sword",
    "off": null,
    "back": "kite_blue_fleur",
    "string": null,
-   "style": "blade"
+   "style": "blade",
+   "lute": "lute_greenwood"
   },
   "bard_f3": {
    "main": "emberfang_sword",
    "off": null,
    "back": "kite_red_cross",
    "string": null,
-   "style": "blade"
+   "style": "blade",
+   "lute": "lute_amber"
   },
   "bard_m1": {
    "main": "wildroot_sword",
    "off": null,
    "back": "kite_azure_wing",
    "string": null,
-   "style": "blade"
+   "style": "blade",
+   "lute": "lute_rosewood"
   },
   "bard_m2": {
    "main": "sunguard_sword",
    "off": null,
    "back": "kite_gilded_drake",
    "string": null,
-   "style": "blade"
+   "style": "blade",
+   "lute": "lute_sunburst"
   },
   "bard_m3": {
    "main": "rimeshard_sword",
    "off": null,
    "back": "kite_dawnstar",
    "string": null,
-   "style": "blade"
+   "style": "blade",
+   "lute": "lute_ebony"
   },
   "boomerang_f1": {
    "main": "spiked_boomerang",
@@ -391,6 +397,12 @@
   "leafwing_bow",
   "lion_boomerang",
   "lion_lance",
+  "lute_amber",
+  "lute_ebony",
+  "lute_greenwood",
+  "lute_ivory",
+  "lute_rosewood",
+  "lute_sunburst",
   "moonring_sword",
   "pennon_spear",
   "recurve_bow",
@@ -880,6 +892,96 @@
    "length": 1.4463,
    "reach": 0.7232,
    "butt": 0.7232
+  },
+  "lute_ivory": {
+   "kind": "lute",
+   "length": 0.8193,
+   "reach": 0.5462,
+   "butt": 0.2732,
+   "neck": [
+    -0.0034,
+    0.2676,
+    -0.0182
+   ],
+   "neckR": 0.0224,
+   "strum": -0.052,
+   "half": 0.1248,
+   "depth": 0.1581
+  },
+  "lute_rosewood": {
+   "kind": "lute",
+   "length": 0.816,
+   "reach": 0.5441,
+   "butt": 0.2719,
+   "neck": [
+    -0.0177,
+    0.2667,
+    -0.0816
+   ],
+   "neckR": 0.0306,
+   "strum": -0.0515,
+   "half": 0.1157,
+   "depth": 0.1412
+  },
+  "lute_sunburst": {
+   "kind": "lute",
+   "length": 0.8029,
+   "reach": 0.5353,
+   "butt": 0.2676,
+   "neck": [
+    0.0061,
+    0.2623,
+    -0.0204
+   ],
+   "neckR": 0.025,
+   "strum": -0.0509,
+   "half": 0.1317,
+   "depth": 0.1686
+  },
+  "lute_greenwood": {
+   "kind": "lute",
+   "length": 0.7598,
+   "reach": 0.5067,
+   "butt": 0.2531,
+   "neck": [
+    -0.0029,
+    0.2484,
+    -0.0146
+   ],
+   "neckR": 0.0256,
+   "strum": -0.0479,
+   "half": 0.111,
+   "depth": 0.1545
+  },
+  "lute_ebony": {
+   "kind": "lute",
+   "length": 0.7658,
+   "reach": 0.5107,
+   "butt": 0.255,
+   "neck": [
+    -0.0042,
+    0.2504,
+    -0.0078
+   ],
+   "neckR": 0.0237,
+   "strum": -0.0483,
+   "half": 0.108,
+   "depth": 0.1425
+  },
+  "lute_amber": {
+   "kind": "lute",
+   "length": 0.7214,
+   "reach": 0.4813,
+   "butt": 0.2401,
+   "neck": [
+    0.0058,
+    0.236,
+    -0.0058
+   ],
+   "neckR": 0.0233,
+   "strum": -0.0454,
+   "half": 0.1176,
+   "depth": 0.164
   }
  }
 }

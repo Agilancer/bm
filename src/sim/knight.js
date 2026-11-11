@@ -400,6 +400,8 @@ export class Knight {
     this.nod.fill(0);
     this.nod[J.head] = this.lookPitch;
     solveFK(pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
+    // (What a body does that no clip has in it: a hero's flips, a bard's hands on the lute. src/sim/hero.js afterPose.)
+    if (this.afterPose) this.afterPose(dt, sim);
     // (Where the pose was made: write carries it on to wherever he's got to since. See src/core/carry.js.)
     this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw; this.poseVer = (this.poseVer || 0) + 1;
     {

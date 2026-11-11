@@ -7,7 +7,7 @@
 // raise here as EV.HERO events: (slot, trigger, other slot, place, mob, extra).
 import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS, PERSONAS, PLACES, PLACE_IDS, THE_FALL, ACTIVITIES, TRIG, WALK_ENDS, hourBand, placeOf, rng } from '../core/heroes.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
-import { clamp, damp, mat4FromQT, quatMul, quatRotate, wrapAngle } from '../core/math.js';
+import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { ELEM, FX, FX_CARRIED } from './spells.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
@@ -23,6 +23,7 @@ import { Pose, solveFK } from './anim.js';
 import { BROKER_SPOTS, PORTAL, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
 import { cleanLine } from './sight.js';
+import { MORE_SKILLS, castSkill, chooseSkill, classRoutine, diveDraw, hammer3, install, pluckNote, rang3, rank, star3, stepShotX, strumFx, tintOf } from './heroskills.js';
 
 const STRING_ELEM = { gold: ELEM.LIGHT, azure: ELEM.FROST, emerald: ELEM.HEAL, violet: ELEM.ARCANE, crimson: ELEM.DRAIN, silver: ELEM.SPIRIT, ember: ELEM.FIRE, rose: ELEM.STORM };
 const GAP = 1.2;                 // hips to hips, hero to anything
@@ -91,7 +92,7 @@ export const SKILLS = {
 };
 // Leaps and dashes: how a class flies at its foe (see Hero.leap). T: seconds in the air. apex: metres up. r: the landing's reach.
 const LEAPS = {
-  jump: { T: 0.8, apex: 3, r: 2, dmg: 14, elem: ELEM.SPIRIT, lance: 1.7, air: 'NinjaJump_Idle_Loop' },
+  jump: { T: 0.8, apex: 3, r: 2, dmg: 14, elem: ELEM.SPIRIT, lance: true, hang: true, air: 'NinjaJump_Idle_Loop', draw: diveDraw(ELEM.SPIRIT) },
   leaping_kick: { T: 0.6, apex: 2.2, r: 2.7, dmg: 12, elem: ELEM.SPIRIT, air: 'LP_front_kick_02', airRate: 1.6 },
 };
 const BLEED = 3;                 // seconds a bleeding cut runs, at 30% of the blow each second (Velscour's)
@@ -108,13 +109,13 @@ export class Hero extends Knight {
     super(100 + slot, 1, rig, bank, { spawn: [-1.5 + Math.sin(slot) * 6, 4 + Math.cos(slot) * 6], yaw: slot, hp: cls.hp, style: 'silver', swordScale: 1, shieldScale: 1, bladeLen: 1, walk: 1.4, hero: true });
     this.slot = slot; this.person = person; this.cls = cls; this.style = person.kit.style;
     this.bodyRadius = 0.42;
-    this.propMatrices = new Float32Array(48);
+    this.propMatrices = new Float32Array(64);
     const P = (id) => (id ? { id, ...props[id] } : null);
     this.mainP = P(person.kit.main); this.offP = P(person.kit.off); this.backP = P(person.kit.back);
     this.shieldStyle = this.style === 'lance' || this.style === 'sword_board';
     this.stringElem = STRING_ELEM[person.kit.string] ?? ELEM.LIGHT;
     this.blows = this.style === 'daggers' && person.cls === 'ninja' ? BLOWS.ninja : BLOWS[this.style] || BLOWS.blade;
-    this.skills = (SKILLS[person.cls] || []).map((s) => ({ ...s, t: rand(2, s.cd) }));
+    this.skills = [...(SKILLS[person.cls] || []), ...(MORE_SKILLS[person.cls] || [])].map((s) => ({ ...s, t: rand(1, s.cd) }));
     this.lean = PERSONAS[person.persona] || PERSONAS.earnest;
     this.r = rng(person.seed);
     // The left hand's grip, as the right's is for the sword: an item held in the left fist (a dagger, a boomerang).
@@ -139,6 +140,34 @@ export class Hero extends Knight {
       this.backT = new Float32Array(3); quatRotate(this.backT, 0, inv, 0, d, 0);
     }
     this.flight = null;     // a boomerang or a hammer on its way
+    // The joints of each arm, for the hands' own work (afterPose): shoulder, elbow, wrist, and the fingers that go with the wrist.
+    const ji = (n) => rig.index.get(n);
+    const under = (top) => { const out = []; for (let j = 0; j < rig.count; j++) { let k = rig.parent[j]; while (k >= 0 && k !== top) k = rig.parent[k]; if (k === top) out.push(j); } return out; };
+    this.arms = { l: { u: ji('upperarm_l'), f: ji('lowerarm_l'), h: ji('hand_l'), fingers: under(ji('hand_l')) }, r: { u: ji('upperarm_r'), f: ji('lowerarm_r'), h: ji('hand_r'), fingers: under(ji('hand_r')) } };
+    this.upperBody = [ji('spine_01'), ...under(ji('spine_01'))];
+    // A bard's lute, the fourth thing carried: across the back, over the board, till it's played; then before the belly, its
+    // neck up to the left, the left hand on the neck and the right at the strings. Both places are found once on this body
+    // at rest, and kept by the chest. The sword goes to the left hip while both hands are on the lute.
+    this.luteP = P(person.kit.lute);
+    if (this.luteP) {
+      const pose = new Pose(rig), u = rig.height / 1.8;
+      pose.rot.set(rig.restR); pose.pelvis.set(bank.pelvisRest);
+      bank.sample(bank.clips.Idle_Loop, 0, pose.rot, pose.pelvis);
+      solveFK(pose, 0, 0, 0, 0, null, null);
+      const hold = (j, y, z, at) => {
+        const sq = pose.wq.subarray(j * 4, j * 4 + 4), inv = [-sq[0], -sq[1], -sq[2], sq[3]];
+        const q = new Float32Array(4), t = new Float32Array(3);
+        quatMul(q, 0, inv, 0, frame(y, z), 0);
+        quatRotate(t, 0, inv, 0, [at[0] - pose.wt[j * 3], at[1] - pose.wt[j * 3 + 1], at[2] - pose.wt[j * 3 + 2]], 0);
+        return [q, t];
+      };
+      const j = this.J.spine3, sy = pose.wt[j * 3 + 1], L = this.luteP;
+      // (Facing is +Z, his left +X. The lute's own axes: +Y up its neck, +Z out of the soundboard.)
+      [this.lutePlayQ, this.lutePlayT] = hold(j, [0.8, 0.52, 0.3], [-0.14, 0.36, 0.92], [-0.1 * u, sy - 0.33 * u, 0.115 * u + L.depth * 0.82]);
+      [this.luteBackQ, this.luteBackT] = hold(j, [-0.5, 0.86, -0.08], [0, 0.12, 1], [0.1 * u, sy - 0.2 * u, -0.34 * u]);
+      const pj = this.J.pelvis;
+      [this.sheathQ, this.sheathT] = hold(pj, [0.12, -0.86, -0.5], [1, 0.1, 0], [0.2 * u, pose.wt[pj * 3 + 1] + 0.02 * u, 0.03 * u]);
+    }
     // (A quartermaster of the Free Company: stands at a post and hires out the party: HeroWorld.atPost.)
     this.broker = person.broker || null;
     this.heroReset();
@@ -152,6 +181,12 @@ export class Hero extends Knight {
       shotCd: 0, animTick: 0, losT: 0, clear: true, fieldAt: null, vanishT: 0, playerSeen: false, helpT: 0, visible: true, animT: 0, sitting: false, talkUntil: 0,
       iframesT: 0, guardT: 0, kiteT: 0, charge: null, leaps: 0, leapGoal: 3 + Math.floor(Math.random() * 4),
       dodgeT: 0, post: null, reviveT: 0, tauntCd: 0, healCd: 0, bigHealCd: 0, lineT: 0, line: true, lineFoe: null,
+      // The moves past the first ones (src/sim/heroskills.js). gcd: a breath between two of them. bodyFlip, bodyRoll,
+      // bodySpin: the whole body turned over forward, sideways and about, in a leap. aim: where the main hand's weapon is
+      // pointed, whatever the fist is doing. free: a thing out of its hand (a thrown board, a spear in the ground), as a matrix.
+      // tune: the lute being played. luteW: how far it is from the back to the hands. skirm: a rogue's or a ninja's in and out.
+      gcd: rand(0.5, 2), used: {}, bodyFlip: 0, bodyRoll: 0, bodySpin: 0, aim: null, free: [null, null, null, null], tune: null, luteW: 0,
+      skirm: null, tumbleCd: 0, combo: 0, ward: 0, wardT: 0,
     });
     this.hostile = false;
   }
@@ -178,7 +213,10 @@ export class Hero extends Knight {
     // What falls from the roof or burns on the floor no board stops.)
     const guard = unblockable ? 1 : this.hired ? (this.shieldUp > 0.6 && front ? 0.65 : 1) * (this.guardT > 0 ? 0.6 : 1)
       : (this.shieldUp > 0.6 && front ? 0.25 : 1) * (this.guardT > 0 ? 0.4 : 1);
-    this.hp -= amount * armor * guard * (this.party && !this.hired ? 0.8 : 1);
+    let hurt = amount * armor * guard * (this.party && !this.hired ? 0.8 : 1);
+    // (A ward of light, a paladin's or a bard's, takes what it can first.)
+    if (this.ward > 0) { const took = Math.min(this.ward, hurt); this.ward -= took; hurt -= took; if (this.fxOk()) sim.casting.burst(FX.SHOCK, ELEM.LIGHT, this.x, this.y + 1.1, this.z, 0.5, 1.1, 0.25); }
+    this.hp -= hurt;
     this.lastHitBy = { x: fromX, z: fromZ, t: sim.time };
     if (knock > 0) { const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1; this.knockX = dx / L; this.knockZ = dz / L; this.knock = Math.min(knock, 5); }
     // Thrown back, the whole body staggers with it (the legs never run on the spot while the hips slide); a plain hit is in the chest.
@@ -222,6 +260,10 @@ export class Hero extends Knight {
     this.shotCd -= dt; this.buffT -= dt; this.gestureT -= dt; this.hold -= dt; this.vanishT -= dt;
     this.iframesT -= dt; this.guardT -= dt; this.kiteT -= dt; this.dodgeT -= dt; this.tauntCd -= dt; this.healCd -= dt; this.bigHealCd -= dt;
     if (this.buffT <= 0) this.buff = null;
+    this.gcd -= dt; this.tumbleCd -= dt; this.wardT -= dt;
+    if (this.wardT <= 0) this.ward = 0;
+    if (this.tune) { this.tune.t += dt; if (this.tune.t >= this.tune.dur || this.dead) this.tune = null; else if (this.visible) strumFx(this, sim, dt); }
+    this.luteW = damp(this.luteW, this.tune && !this.dead ? 1 : 0, this.tune ? 12 : 7, dt);
     if (this.dead) return this.updateDead(dt, sim, world);
     if (this.below) return this.updateBelow(dt, sim, world);
     this.hurt = damp(this.hurt, clamp((1 - this.hp / this.maxHp - 0.45) * 2, 0, 1), 1.5, dt);
@@ -342,19 +384,15 @@ export class Hero extends Knight {
     if (this.post) return this.fightFrom(sim, world, m, d, R, to);
     // A clear line to it, or not: nothing's shot, thrown, charged or leapt through a wall or round a corner.
     const line = this.lineTo(sim, m, d);
-    // A special when one's ready and it suits.
-    for (const s of this.skills) {
-      if (s.t > 0 || s.song) continue;
-      if (s.heal) continue;
-      if (s.range && (d - R < s.range[0] || d - R > s.range[1])) continue;
-      if (!line && LINE_SKILLS.has(s.key)) continue;
-      if (s.crowd && world.crowd(m.x, m.z, 5) < s.crowd && !(s.orUndead && m instanceof Zombie)) continue;
-      if (s.undead && !(m instanceof Zombie)) continue;
-      // The dragoon's rhythm: leap, and leap again, and after so many leaps the barrage.
-      if (s.after && this.leaps < this.leapGoal) continue;
-      if (s.key === 'jump' && this.leaps >= this.leapGoal && d - R < 2.6) continue;
-      if (this.r() < 0.6) { s.t = s.cd * rand(0.9, 1.3); this.skill(sim, s.key, m); return; }
+    // A special when one's ready and it suits: the one that suits best (chooseSkill, src/sim/heroskills.js), with a breath
+    // between two of them so the ordinary blows are still most of a fight.
+    if (this.gcd <= 0) {
+      const pickS = chooseSkill(this, sim, world, m, d, R, line);
+      if (pickS) { pickS.t = pickS.cd * rand(0.9, 1.3); this.gcd = pickS.gcd ?? rand(0.9, 1.7); this.used[pickS.key] = sim.time; this.skill(sim, pickS.key, m); return; }
+      this.gcd = 0.25;
     }
+    // What the class does between its blows: a rogue in and out, a ninja round and round (classRoutine). True if it has the body.
+    if (classRoutine(this, sim, world, m, d, R, line, dt)) return;
     if (this.cls.ranged) {
       // Keep the ground between: step off from what comes close (between shots), and shoot from where it can't reach.
       const want = this.cls.want ?? this.cls.range * 0.7;
@@ -363,12 +401,14 @@ export class Hero extends Knight {
       else if (d > this.cls.range) this.goal = { x: m.x - dx / d * want, z: m.z - dz / d * want, speed: 3.6, face: to };
       // (Something between them: on toward it, round whatever it is (walk() finds the way), till the line's clear.)
       else if (!line) this.goal = { x: m.x, z: m.z, speed: 3.6, stop: 2.5 };
-      else this.goal = null;
-      if (d < 2.2) { if (this.shotCd <= 0) this.blow(sim, m); return; }
+      // (A boomerang knight is never still between throws: classRoutine gives him a step round at his distance.)
+      else this.goal = this.sideGoal || null;
+      if (d < 2.2 && !this.luteP) { if (this.shotCd <= 0) this.blow(sim, m); return; }
       if (line && d <= this.cls.range && this.shotCd <= 0 && this.kiteT <= 0) {
         if (this.style === 'bow') this.shoot(sim, m);
         else if (this.person.cls === 'bard') this.pluck(sim, m);
-        else this.throwBoomerang(sim, m, 0);
+        // (One in each hand, thrown turn about.)
+        else this.throwBoomerang(sim, m, (this.throwN = (this.throwN || 0) + 1) % 2);
       }
       return;
     }
@@ -444,6 +484,7 @@ export class Hero extends Knight {
     const move = BLOW_MOVE[this.person.cls];
     if (move && this.r() < 0.06) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf(move));
     const thrust = (this.style === 'lance' || this.style === 'spear') && b.clip !== 'L_ShieldJab' && b.clip !== 'L_Chop';
+    this.combo++;
     this.startSwing(b.clip, b.rate * speed, b.hit, (i) => {
       let dmg = b.dmg * this.power();
       if (this.person.cls === 'rogue') dmg *= this.backstab(sim, m);
@@ -459,8 +500,10 @@ export class Hero extends Knight {
     const ax = Math.sin(this.yaw), az = Math.cos(this.yaw), len = reach + 0.7;
     if (this.fxOk()) {
       const h = this.handPos('r'), wd = (lancer ? 0.06 : 0.04) + 0.005 * Math.min(20, this.person.level);
-      sim.casting.burst(FX.BEAM, elem, h[0], h[1], h[2], wd, wd * 0.5, 0.2, { ax, ay: 0, az, len, light: 6, lightR: 3, extra: wd * 0.3 });
-      sim.casting.burst(FX.FLARE, elem, h[0] + ax * len, h[1], h[2] + az * len, 0.3, 0.08, 0.16);
+      sim.casting.burst(FX.BEAM, elem, h[0], h[1], h[2], wd * 2.6, wd, 0.2, { ax, ay: 0, az, len, alpha: 0.35, extra: wd * 0.5 });
+      sim.casting.burst(FX.BEAM, elem, h[0], h[1], h[2], wd, wd * 0.5, 0.2, { ax, ay: 0, az, len: len + 0.3, light: 6, lightR: 3, extra: wd * 0.3 });
+      sim.casting.burst(FX.FLARE, lancer ? ELEM.LIGHT : elem, h[0] + ax * (len + 0.3), h[1], h[2] + az * (len + 0.3), 0.35, 0.08, 0.16);
+      if (lancer) sim.casting.burst(FX.SHOCK, elem, h[0] + ax * 0.4, h[1], h[2] + az * 0.4, 0.12, 0.45, 0.16);
     }
     const hit = sim.heroWorld.line(this, this.x, this.z, this.yaw, reach + 0.3, 0.45, dmg, { kind: 'puncture', poise: 30, knock });
     if (hit.length) sim.event(EV.WHOOSH, this.x, this.y + 1.2, this.z);
@@ -483,13 +526,14 @@ export class Hero extends Knight {
   startSwing(clip, rate, hits, fn, o = {}) {
     if (!this.bank.clips[clip]) clip = 'Sword_Regular_A';
     this.play(clip, rate, o.mask || 'full', 0.1);
-    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after };
+    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut };
   }
 
   runSwing(dt, sim) {
     const s = this.swing;
     if (!s) return;
-    if (this.action !== s.clip) { this.swing = null; this.charge = null; return; }
+    if (this.action !== s.clip) { this.swing = null; this.charge = null; s.cut?.(); return; }
+    s.tick?.(dt, this.actT / s.clip.dur);
     const f = this.actT / s.clip.dur;
     while (s.done < s.hits.length && f >= s.hits[s.done]) { s.fn(s.done, sim); s.done++; }
     if (s.lunge && s.done < s.hits.length && f > s.hits[s.done] - 0.25) {
@@ -507,14 +551,18 @@ export class Hero extends Knight {
         for (const k of sim.heroWorld.targets) {
           if (c.hitSet.has(k) || !fightable(k) || Math.hypot(k.x - this.x, k.z - this.z) > 1.3 + radiusOf(k)) continue;
           c.hitSet.add(k);
-          this.hit(sim, k, 16 * this.power(), 'puncture', 60, 0, { stun: 0.6 });
+          this.hit(sim, k, (c.dmg ?? 16) * this.power(), c.kind || 'puncture', 60, 0, c.o || { stun: 0.6 });
+          c.onHit?.(k);
           const side = Math.sign((k.x - this.x) * rx + (k.z - this.z) * rz) || 1;
-          if (radiusOf(k) <= 1) sim.casting.shove(k, Math.sin(c.dir) * 4 + rx * side * 5, Math.cos(c.dir) * 4 + rz * side * 5);
+          if (radiusOf(k) <= 1 && !c.noShove) sim.casting.shove(k, Math.sin(c.dir) * 4 + rx * side * 5, Math.cos(c.dir) * 4 + rz * side * 5);
         }
+        c.each?.(dt);
         if (((sim.tick + this.slot) & 3) === 0) sim.event(EV.STEP, this.x, this.y, this.z, 1, 1, this.id);
       }
     }
-    if (f >= s.end) { this.swing = null; this.charge = null; this.stopAction(0.2); s.after?.(sim); }
+    // (A dash is over when its ground's covered, whatever's left of the clip.)
+    if (this.charge && s.root && this.charge.left <= 0 && this.charge.quick) { const c = this.charge; this.swing = null; this.charge = null; this.stopAction(0.18); c.done?.(); s.after?.(sim); return; }
+    if (f >= s.end) { const c = this.charge; this.swing = null; this.charge = null; this.stopAction(0.2); c?.done?.(); s.after?.(sim); }
   }
 
   // Everything fightable within reach in front of the hero takes the blow (up to `most` of them). Returns what it struck.
@@ -581,7 +629,12 @@ export class Hero extends Knight {
       }
       case 'blessed_hammers':
         // Three blessed hammers spiral out round him and keep turning as he fights on: Velscour's paladin's main attack.
-        this.startSwing('Spell_Simple_Shoot', 1.0, [0.4], () => { w.zones.push({ kind: 'blessed', owner: this, t: 0, life: 2.8, a0: Math.random() * 6.28, hitT: new Map() }); }, { mask: 'upper' });
+        this.startSwing('Spell_Simple_Shoot', 1.0, [0.4], () => {
+          const rk = rank(this);
+          this.hammersUp = true;
+          w.zones.push({ kind: 'blessed', owner: this, t: 0, life: 3.2 + 0.5 * rk, n: 3 + Math.floor(rk / 2), a0: Math.random() * 6.28, hitT: new Map(), end: () => { this.hammersUp = false; } });
+          if (this.fxOk()) { sim.casting.burst(FX.SHOCK, ELEM.LIGHT, this.x, this.y + 1.1, this.z, 0.3, 1.6, 0.3, { light: 10, lightR: 5 }); sim.event(EV.HERO_FX, 4, this.x, this.y + 1.3, this.z, 7, 0.5); }
+        }, { mask: 'upper' });
         break;
       case 'smite': {
         // The board (or the maul) in its face, and a ring of light: it reels, and up to three about it are thrown back.
@@ -590,8 +643,13 @@ export class Hero extends Knight {
           this.strikeAround(sim, 1.8, 0.6, 9 * this.power(), 0, 3, { kind: 'bash', poise: 70, stun: 1.1, shove: 6 });
           if (this.fxOk()) {
             const f = this.ahead(0.9);
-            sim.casting.burst(FX.RING, ELEM.LIGHT, f[0], f[1], f[2], 0.3, 1.0, 0.3, { ax: Math.sin(this.yaw), ay: 0, az: Math.cos(this.yaw) });
-            sim.casting.burst(FX.FLARE, ELEM.LIGHT, f[0], f[1], f[2], 0.45, 0.1, 0.25, { light: 10, lightR: 5 });
+            sim.casting.burst(FX.SHOCK, ELEM.LIGHT, f[0], f[1], f[2], 0.3, 1.5, 0.3);
+            sim.casting.burst(FX.FLARE, ELEM.LIGHT, f[0], f[1], f[2], 0.45, 0.1, 0.25, { light: 12, lightR: 6 });
+            // (The light comes down with the blow: a pillar on it, and a cross of it left hanging a moment.)
+            sim.casting.burst(FX.COLUMN, ELEM.LIGHT, f[0], this.y, f[2], 3.5, 5, 0.35, { len: 0.9 });
+            sim.casting.burst(FX.RING, ELEM.LIGHT, f[0], this.y + 0.05, f[2], 0.3, 1.6, 0.35);
+            sim.casting.burst(FX.GLYPH, ELEM.LIGHT, f[0], f[1] + 0.5, f[2], 0.3, 0.7, 0.5, { ay: 0, extra: 7 });
+            sim.event(EV.HERO_FX, 4, f[0], f[1], f[2], 0, 0.5);
           }
         });
         break;
@@ -737,7 +795,7 @@ export class Hero extends Knight {
         this.throwBoomerang(sim, m, 0);
         w.later(0.35, () => { if (fightable(m)) this.throwBoomerang(sim, m, 1); });
         break;
-      default: break;
+      default: castSkill(this, sim, key, m); return;
     }
     say();
   }
@@ -772,13 +830,25 @@ export class Hero extends Knight {
   }
 
   // Up and down on it: the dragoon's jump, again and again, and the ninja's flying kick. Untouchable in the air.
-  leap(sim, m, L) {
-    this.jump = { t: 0, x0: this.x, z0: this.z, x1: m.x, z1: m.z, phase: 0, foe: m, L };
-    this.play('NinjaJump_Start', 2, 'full', 0.06);
+  // L (LEAPS, and the leaps of src/sim/heroskills.js): T seconds in the air, apex metres up, r the landing's reach, and
+  // what the body does on the way: flip (turns forward; negative, backward), roll (sideways), spin (about), back (facing
+  // where it came from: a backflip away), lance (the spear in the fist is aimed down the dive and driven into the ground),
+  // draw (c, hero, jump) each tick it's in the air, land (hero, sim, jump, x, z) for a landing of its own.
+  // o.to: a place to land instead of the foe. o.after: once it's up again.
+  leap(sim, m, L, o = {}) {
+    this.jump = { t: 0, x0: this.x, z0: this.z, x1: o.to ? o.to[0] : m.x, z1: o.to ? o.to[1] : m.z, phase: 0, foe: o.to ? null : m, aimAt: m, L, o, u: 0, head: this.yaw };
+    this.play(L.start || 'NinjaJump_Start', L.startRate || 2, 'full', 0.06);
+  }
+
+  // Off the ground for a move that isn't a leap at a foe: a backflip away, a vault. Same body, same rules.
+  endJump() {
+    this.jump = null; this.bodyFlip = 0; this.bodyRoll = 0; this.aim = null; this.air = 0;
   }
 
   // A bard's note: plucked, and off after the foe, bending toward it as it flies.
   pluck(sim, m) {
+    // (With a lute: a few bars on it, and the note comes off the strings. src/sim/heroskills.js.)
+    if (this.luteP) { pluckNote(this, sim, m); this.shotCd = rand(0.8, 1.3); return; }
     this.startSwing('Spell_Simple_Shoot', 0.9, [0.5], () => {
       const h = this.handPos('r'), a = Math.atan2(m.x - h[0], m.z - h[2]);
       sim.heroWorld.shots.push({ kind: 'note', owner: this, x: h[0], y: h[1], z: h[2], vx: Math.sin(a) * 11, vy: 0, vz: Math.cos(a) * 11, t: 0, dmg: 7 * this.power(), foe: m, elem: ELEM.ARCANE });
@@ -806,12 +876,14 @@ export class Hero extends Knight {
 
   throwBoomerang(sim, m, hand) {
     if (this.flight && this.flight.length >= 2) return;
+    if (this.flight?.some((f) => f.hand === hand)) hand = hand ? 0 : 1;
     this.startSwing('OverhandThrow', 1.15, [0.42], () => {
+      if (this.flight?.some((f) => f.hand === hand)) return;
       const h = this.handPos(hand ? 'l' : 'r');
       const out = Math.min(9, Math.hypot(m.x - this.x, m.z - this.z) + 2.5);
       const dir = Math.atan2(m.x - this.x, m.z - this.z);
-      (this.flight ||= []).push({ hand, t: 0, dur: 1.5, x0: h[0], y0: h[1], z0: h[2], dir, out, side: hand ? -1 : 1, hitSet: new Set(), dmg: 9 * this.power(), x: h[0], y: h[1], z: h[2] });
-    });
+      (this.flight ||= []).push({ hand, t: 0, dur: 1.5, x0: h[0], y0: h[1], z0: h[2], dir, out, side: hand ? -1 : 1, hitSet: new Set(), dmg: 9 * this.power(), x: h[0], y: h[1], z: h[2], glow: tintOf(this) });
+    }, this.speed > 0.6 ? { mask: 'upper' } : {});
     this.shotCd = rand(0.9, 1.5);
   }
 
@@ -851,33 +923,54 @@ export class Hero extends Knight {
   updateJump(dt, sim) {
     const j = this.jump, L = j.L || LEAPS.jump, w = sim.heroWorld;
     j.t += dt;
-    if (j.phase === 0 && j.t > 0.15) { j.phase = 1; j.t = 0; this.play(L.air, L.airRate || 1, 'full', 0.08); sim.event(EV.WHOOSH, this.x, this.y + 1, this.z); }
+    if (j.phase === 0 && j.t > (L.crouch ?? 0.15)) { j.phase = 1; j.t = 0; this.play(L.air, L.airRate || 1, 'full', 0.08); sim.event(EV.WHOOSH, this.x, this.y + 1, this.z); }
     if (j.phase === 1) {
       const u = Math.min(1, j.t / L.T);
       if (j.foe && fightable(j.foe)) { j.x1 = j.foe.x; j.z1 = j.foe.z; }
-      const head = Math.atan2(j.x1 - j.x0, j.z1 - j.z0);
-      const ex = j.x1 - Math.sin(head) * 1.2, ez = j.z1 - Math.cos(head) * 1.2;
-      this.x = j.x0 + (ex - j.x0) * u; this.z = j.z0 + (ez - j.z0) * u;
+      const head = Math.abs(j.x1 - j.x0) + Math.abs(j.z1 - j.z0) < 0.05 ? j.head : Math.atan2(j.x1 - j.x0, j.z1 - j.z0), short = j.o.to ? 0 : L.short ?? 1.2;
+      const ex = j.x1 - Math.sin(head) * short, ez = j.z1 - Math.cos(head) * short;
+      // (Out of the crouch fast and hanging at the top, as a leap is: not a steady slide along its arc.)
+      const along = L.hang ? u * u * (3 - 2 * u) * 0.35 + u * 0.65 : u;
+      this.x = j.x0 + (ex - j.x0) * along; this.z = j.z0 + (ez - j.z0) * along;
       this.air = Math.sin(u * Math.PI) * L.apex;
       this.y = sim.world.height(this.x, this.z) + this.air;
       this.vx = 0; this.vz = 0;
       this.iframesT = 0.1;
       j.u = u; j.head = head;
+      // The body over itself: tucked through the middle of the leap, open at both ends, so it lands on its feet.
+      const turn = u * u * (3 - 2 * u);
+      this.bodyFlip = (L.flip || 0) * 6.2832 * turn;
+      this.bodyRoll = (L.roll || 0) * 6.2832 * turn;
+      this.yaw = this.faceYaw = wrapAngle((L.back ? head + Math.PI : head) + (L.spin || 0) * 6.2832 * turn);
+      // The spear in the fist, up on the rise and down on the dive.
+      if (L.lance) { const up = Math.cos(u * Math.PI) * 0.9 - 0.25 * u, n = Math.hypot(1, up); this.aim = [Math.sin(head) / n, up / n, Math.cos(head) / n]; }
+      L.tick?.(this, sim, j, dt);
       if (u >= 1) {
-        j.phase = 2; this.air = 0; this.y = sim.world.height(this.x, this.z);
-        this.play('NinjaJump_Land', 1.6, 'full', 0.05);
-        if (this.fxOk()) {
-          sim.casting.burst(FX.SHOCK, L.elem, this.x, this.y + 0.2, this.z, 0.4, L.r * 1.2, 0.4, { light: 10, lightR: 6 });
-          sim.casting.burst(FX.RING, L.elem, this.x, this.y + 0.05, this.z, 0.4, L.r + 0.5, 0.5);
-        }
-        sim.event(EV.GROUND, this.x, this.y, this.z);
+        j.phase = 2; j.t = 0; this.air = 0; this.y = sim.world.height(this.x, this.z);
+        this.bodyFlip = 0; this.bodyRoll = 0; this.yaw = this.faceYaw = L.back ? wrapAngle(head + Math.PI) : head;
+        this.play(L.landClip || 'NinjaJump_Land', L.landRate || 1.6, 'full', 0.05);
         const fx = this.x + Math.sin(head) * 0.9, fz = this.z + Math.cos(head) * 0.9;
-        w.blast(this, fx, fz, this.y, L.r, L.dmg * this.power(), { kind: L.lance ? 'puncture' : 'bash', poise: 70, shove: 5 });
-        // The dragoon's lance goes into the ground where he lands, and shatters.
-        if (L.lance) w.zones.push({ kind: 'planted', owner: this, x: fx, z: fz, y: this.y, dir: head, t: 0, life: 0.5, elem: L.elem, len: L.lance });
+        if (L.land) L.land(this, sim, j, fx, fz);
+        else {
+          if (this.fxOk()) {
+            sim.casting.burst(FX.SHOCK, L.elem, this.x, this.y + 0.2, this.z, 0.4, L.r * 1.2, 0.4, { light: 10, lightR: 6 });
+            sim.casting.burst(FX.RING, L.elem, this.x, this.y + 0.05, this.z, 0.4, L.r + 0.5, 0.5);
+          }
+          sim.event(EV.GROUND, this.x, this.y, this.z);
+          w.blast(this, fx, fz, this.y, L.r, L.dmg * this.power(), { kind: L.lance ? 'puncture' : 'bash', poise: 70, shove: 5, ...(L.o || {}) });
+        }
+        // The dragoon's own spear goes into the ground where he lands, stands there a moment in its light, and is back in his fist.
+        if (L.lance) {
+          const reach = this.mainP?.reach ?? 1.4, d = norm([Math.sin(head) * 0.5, -1, Math.cos(head) * 0.5]);
+          const gx = fx - d[0] * reach * 0.72, gy = this.y - d[1] * reach * 0.72, gz = fz - d[2] * reach * 0.72;
+          const x = norm(cross(d, [0, 1, 0])), z = cross(x, d);
+          this.free[0] = new Float32Array([x[0], x[1], x[2], 0, d[0], d[1], d[2], 0, z[0], z[1], z[2], 0, gx, gy, gz, 1]);
+          this.aim = null;
+          w.zones.push({ kind: 'planted', owner: this, x: fx, z: fz, y: this.y, dir: head, t: 0, life: 0.5, elem: L.elem, len: reach, at: [gx, gy, gz], d, end: () => { this.free[0] = null; } });
+        }
         this.leaps++;
       }
-    } else if (j.phase === 2 && j.t > 0.4) { this.jump = null; this.stopAction(0.2); }
+    } else if (j.phase === 2 && j.t > (L.rest ?? 0.4)) { const after = j.o.after; this.endJump(); this.stopAction(0.2); after?.(); }
   }
 
   // Where a hand is now (the fist's middle).
@@ -955,18 +1048,20 @@ export class Hero extends Knight {
     const [px, pz] = this.post, dp = Math.hypot(px - this.x, pz - this.z);
     this.goal = dp > 0.7 ? { x: px, z: pz, speed: dp > 5 ? 7 : 3.2, stop: 0.35, face: to } : null;
     this.shieldTarget = this.style === 'lance' && d < 4 ? 1 : 0;
-    if (this.shotCd > 0) return;
     const line = this.lineTo(sim, m, d);
-    if (this.role === 'heal') {
-      const s = this.skills.find((q) => q.key === 'hammer_throw');
-      if (line && s && s.t <= 0 && d - R < 16) { s.t = s.cd * 0.6; this.skill(sim, 'hammer_throw', m); this.shotCd = 1; }
-      return;
+    // (Any move that doesn't take him off the place he was given.)
+    if (this.gcd <= 0) {
+      const pickS = chooseSkill(this, sim, world, m, d, R, line, null, true);
+      if (pickS) { pickS.t = pickS.cd * rand(0.9, 1.3); this.gcd = pickS.gcd ?? rand(1.1, 2); this.used[pickS.key] = sim.time; this.skill(sim, pickS.key, m); return; }
+      this.gcd = 0.3;
     }
+    if (this.shotCd > 0) return;
+    if (this.role === 'heal') return;
     if (this.cls.ranged) {
       if (line && d <= this.cls.range + 2) {
         if (this.style === 'bow') this.shoot(sim, m);
         else if (this.person.cls === 'bard') this.pluck(sim, m);
-        else this.throwBoomerang(sim, m, 0);
+        else this.throwBoomerang(sim, m, (this.throwN = (this.throwN || 0) + 1) % 2);
       }
       return;
     }
@@ -1047,7 +1142,7 @@ export class Hero extends Knight {
     if (this.flight) {
       for (const f of this.flight) {
         const o = off + (f.hand ? 16 : 0);
-        const c = Math.cos(f.spin), s = Math.sin(f.spin);
+        const c = Math.cos(f.spin || 0), s = Math.sin(f.spin || 0);   // (Thrown this tick, it hasn't turned yet.)
         // Spinning about its own face, and banked about the way it's flying: nearly on edge as it leaves the hand, laid
         // nearly flat by the far end of its loop, a little tipped on the way home (as Velscour's rang flies).
         const u = Math.min(1, f.t / f.dur), k = Math.min(1, u / 0.5), e = k * k * (3 - 2 * k);
@@ -1072,6 +1167,173 @@ export class Hero extends Knight {
       if (this.shieldStyle) zero(bo);
     } else if (this.backP && !(this.dead && this.deadT > 1.5)) fromHand(bo, J.spine3, this.backQ, this.backT);
     else zero(bo);
+    // The main hand's weapon pointed where a move wants it (a dragoon's spear down his dive), still in the fist.
+    if (this.aim && out[off + 15] !== 0) {
+      const y = norm(this.aim), x = norm(cross(y, Math.abs(y[1]) > 0.95 ? [1, 0, 0] : [0, 1, 0])), z = cross(x, y);
+      out.set([x[0], x[1], x[2], 0, y[0], y[1], y[2], 0, z[0], z[1], z[2], 0], off);
+    }
+    // A bard's lute: across the back, or in the hands (afterPose put it there), or on its way round his right side between.
+    // The sword is at the left hip while the hands are on the lute.
+    if (this.luteP) {
+      const lo = off + 48, w = this.luteW, e = w * w * (3 - 2 * w), j = J.spine3;
+      if (this.dead && this.deadT > 1.5) zero(lo);
+      else {
+        quatMul(propQ, 0, wq, j * 4, this.luteBackQ, 0);
+        quatRotate(propT, 0, wq, j * 4, this.luteBackT, 0);
+        propT[0] += wt[j * 3]; propT[1] += wt[j * 3 + 1]; propT[2] += wt[j * 3 + 2];
+        if (e > 0.001) {
+          if (!this.luteLive) {
+            quatMul(this.luteQ, 0, wq, j * 4, this.lutePlayQ, 0);
+            quatRotate(this.luteT, 0, wq, j * 4, this.lutePlayT, 0);
+            this.luteT[0] += wt[j * 3]; this.luteT[1] += wt[j * 3 + 1]; this.luteT[2] += wt[j * 3 + 2];
+          }
+          quatNlerp(propQ, 0, propQ, 0, this.luteQ, 0, e);
+          const out2 = Math.sin(e * Math.PI) * 0.42, rx = -Math.cos(this.yaw), rz = Math.sin(this.yaw);
+          propT[0] += (this.luteT[0] - propT[0]) * e + rx * out2; propT[1] += (this.luteT[1] - propT[1]) * e; propT[2] += (this.luteT[2] - propT[2]) * e + rz * out2;
+        }
+        mat4FromQT(propM, propQ, 0, propT, 0);
+        out.set(propM, lo);
+      }
+      if (e > 0.001 && out[off + 15] !== 0 && !this.free[0]) {
+        const pj = J.pelvis;
+        const q0 = matToQuat([out[off], out[off + 1], out[off + 2]], [out[off + 4], out[off + 5], out[off + 6]], [out[off + 8], out[off + 9], out[off + 10]]);
+        quatMul(propQ, 0, wq, pj * 4, this.sheathQ, 0);
+        quatRotate(propT, 0, wq, pj * 4, this.sheathT, 0);
+        propT[0] += wt[pj * 3]; propT[1] += wt[pj * 3 + 1]; propT[2] += wt[pj * 3 + 2];
+        quatNlerp(propQ, 0, q0, 0, propQ, 0, e);
+        for (let i = 0; i < 3; i++) propT[i] = out[off + 12 + i] + (propT[i] - out[off + 12 + i]) * e;
+        mat4FromQT(propM, propQ, 0, propT, 0);
+        out.set(propM, off);
+      }
+    }
+    // Out of its hand altogether: a board thrown, a spear standing in the ground.
+    for (let i = 0; i < 4; i++) if (this.free[i]) out.set(this.free[i], off + i * 16);
+  }
+
+  // ---- what no clip has in it ---------------------------------------------------------------------------------------
+
+  // After the pose is made and before the ground and the hands' things are worked out from it (Knight.animate).
+  afterPose(dt, sim) {
+    this.luteLive = false;
+    if (this.luteP && this.luteW > 0.01 && !this.dead) this.poseLute();
+    if (this.bodyFlip || this.bodyRoll) this.tumble();
+  }
+
+  // Joints moved as one piece: turned by q about a point.
+  rigid(list, q, px, py, pz) {
+    const { wq, wt } = this.pose;
+    for (const j of list) {
+      ikV[0] = wt[j * 3] - px; ikV[1] = wt[j * 3 + 1] - py; ikV[2] = wt[j * 3 + 2] - pz;
+      quatRotate(ikV, 0, q, 0, ikV, 0);
+      wt[j * 3] = px + ikV[0]; wt[j * 3 + 1] = py + ikV[1]; wt[j * 3 + 2] = pz + ikV[2];
+      quatMul(wq, j * 4, q, 0, wq, j * 4);
+    }
+  }
+
+  // The whole body turned over about its hips: forward (a flip) and sideways (a cartwheel).
+  tumble() {
+    const { wt } = this.pose, pj = this.J.pelvis * 3, s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    quatAxisAngle(ikQ, 0, c, 0, -s, this.bodyFlip);
+    if (this.bodyRoll) { quatAxisAngle(ikQ2, 0, s, 0, c, this.bodyRoll); quatMul(ikQ, 0, ikQ2, 0, ikQ, 0); }
+    if (!this.allJoints) this.allJoints = Array.from({ length: this.rig.count }, (_, i) => i);
+    this.rigid(this.allJoints, ikQ, wt[pj], wt[pj + 1] + 0.1, wt[pj + 2]);
+  }
+
+  // One arm's hand put at a point: shoulder where it is, the elbow out toward `pole`, upper arm and forearm turned to
+  // reach, and the hand and its fingers carried with the forearm. w: how far from where the clip had it (0) to there (1).
+  reachTo(side, tx, ty, tz, pole, w = 1) {
+    const { wq, wt } = this.pose, A = this.arms[side], U = A.u * 3, F = A.f * 3, H = A.h * 3;
+    const sx = wt[U], sy = wt[U + 1], sz = wt[U + 2];
+    const e0 = [wt[F] - sx, wt[F + 1] - sy, wt[F + 2] - sz], h0 = [wt[H] - wt[F], wt[H + 1] - wt[F + 1], wt[H + 2] - wt[F + 2]];
+    const L1 = Math.hypot(...e0), L2 = Math.hypot(...h0);
+    tx = wt[H] + (tx - wt[H]) * w; ty = wt[H + 1] + (ty - wt[H + 1]) * w; tz = wt[H + 2] + (tz - wt[H + 2]) * w;
+    let dx = tx - sx, dy = ty - sy, dz = tz - sz, d = Math.hypot(dx, dy, dz) || 1e-6;
+    const most = (L1 + L2) * 0.995;
+    if (d > most) { dx *= most / d; dy *= most / d; dz *= most / d; d = most; }
+    const ux = dx / d, uy = dy / d, uz = dz / d;
+    const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d), hgt = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+    const pd = pole[0] * ux + pole[1] * uy + pole[2] * uz;
+    const pp = norm([pole[0] - ux * pd, pole[1] - uy * pd, pole[2] - uz * pd]);
+    const ex = ux * a + pp[0] * hgt, ey = uy * a + pp[1] * hgt, ez = uz * a + pp[2] * hgt;
+    // The upper arm onto its new line, then the forearm (already carried by that) onto its own.
+    fromTo(ikQ, norm(e0), norm([ex, ey, ez]));
+    quatRotate(ikV2, 0, ikQ, 0, h0, 0);
+    fromTo(ikQ2, norm([ikV2[0], ikV2[1], ikV2[2]]), norm([dx - ex, dy - ey, dz - ez]));
+    quatMul(ikQ3, 0, ikQ2, 0, ikQ, 0);
+    quatMul(wq, A.u * 4, ikQ, 0, wq, A.u * 4);
+    quatMul(wq, A.f * 4, ikQ3, 0, wq, A.f * 4);
+    const hx = wt[H], hy = wt[H + 1], hz = wt[H + 2];
+    wt[F] = sx + ex; wt[F + 1] = sy + ey; wt[F + 2] = sz + ez;
+    this.rigid(A.fingers, ikQ3, hx, hy, hz);
+    quatMul(wq, A.h * 4, ikQ3, 0, wq, A.h * 4);
+    const mx = sx + dx - hx, my = sy + dy - hy, mz = sz + dz - hz;
+    wt[H] = sx + dx; wt[H + 1] = sy + dy; wt[H + 2] = sz + dz;
+    for (const k of A.fingers) { wt[k * 3] += mx; wt[k * 3 + 1] += my; wt[k * 3 + 2] += mz; }
+  }
+
+  // The lute in the hands, and the hands on it: the left on the neck, the right at the strings, doing what the tune asks.
+  // Three ways of playing (tune.v): 0 a steady strum, down and up across the strings, the body swaying with it;
+  // 1 picking, small and quick, bent over the neck with the left hand running up and down it; 2 the great wheeling strum,
+  // the arm thrown up and round and down through every string, the neck raised and the back arched.
+  poseLute() {
+    const { wq, wt } = this.pose, tn = this.tune, w = this.luteW, L = this.luteP, u = this.rig.height / 1.8;
+    const t = tn ? tn.t : 0, v = tn ? tn.v : 0, bpm = tn?.rate || 1;
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    let across = 0, lift = 0.04, slide = 0, lean = 0, sway = 0, raise = 0, alongY = 0;
+    if (v === 1) {
+      const ph = t * 5.6 * bpm * 6.2832;
+      across = 0.026 * Math.sin(ph); lift = 0.03 + 0.012 * Math.cos(ph * 2);
+      slide = 0.085 * Math.sin(t * 1.7 * bpm) + 0.03 * Math.sin(t * 4.3 * bpm);
+      lean = 0.2 + 0.03 * Math.sin(t * 2.8 * bpm); sway = 0.03 * Math.sin(t * 2.8 * bpm);
+    } else if (v === 2) {
+      // (One wheel a beat: slow up and over, fast down through the strings.)
+      const beat = (t * 0.95 * bpm) % 1, th = (beat < 0.62 ? 0.5 * (1 - Math.cos(beat / 0.62 * Math.PI)) * 0.72 : 0.72 + 0.28 * ((beat - 0.62) / 0.38) ** 0.6) * 6.2832;
+      across = -0.3 * (1 - Math.cos(th)) * 0.5; alongY = -0.2 * Math.sin(th); lift = 0.05 + 0.1 * (1 - Math.cos(th)) * 0.5;
+      raise = 0.3 + 0.08 * Math.sin(th); lean = -0.16 - 0.05 * Math.cos(th); sway = 0.05 * Math.sin(th);
+      slide = 0.04 * Math.sin(t * 1.3);
+    } else {
+      const ph = t * 2.7 * bpm * 6.2832;
+      // (Down on the beat a little harder than up: the hand travels further on the downstroke.)
+      across = 0.07 * Math.sin(ph) + 0.015 * Math.sin(ph * 2); lift = 0.035 + 0.02 * Math.cos(ph);
+      slide = 0.03 * Math.round(Math.sin(t * 0.9 * bpm) * 1.4);
+      lean = 0.05 + 0.03 * Math.sin(ph * 0.5); sway = 0.06 * Math.sin(ph * 0.5);
+    }
+    // The body with the tune, from the waist.
+    if (lean || sway) {
+      const sj = this.upperBody[0] * 3;
+      quatAxisAngle(ikQ, 0, c, 0, -s, lean * w);
+      quatAxisAngle(ikQ2, 0, s, 0, c, sway * w);
+      quatMul(ikQ, 0, ikQ2, 0, ikQ, 0);
+      this.rigid(this.upperBody, ikQ, wt[sj], wt[sj + 1], wt[sj + 2]);
+    }
+    // The lute by the chest.
+    const j = this.J.spine3, lq = this.luteQ || (this.luteQ = new Float32Array(4)), lt = this.luteT || (this.luteT = new Float32Array(3));
+    quatMul(lq, 0, wq, j * 4, this.lutePlayQ, 0);
+    quatRotate(lt, 0, wq, j * 4, this.lutePlayT, 0);
+    lt[0] += wt[j * 3]; lt[1] += wt[j * 3 + 1]; lt[2] += wt[j * 3 + 2];
+    if (raise) { quatAxisAngle(ikQ, 0, 0, 0, 1, raise * w); quatMul(lq, 0, lq, 0, ikQ, 0); }
+    const X = [0, 0, 0], Y = [0, 0, 0], Z = [0, 0, 0];
+    quatRotate(X, 0, lq, 0, [1, 0, 0], 0); quatRotate(Y, 0, lq, 0, [0, 1, 0], 0); quatRotate(Z, 0, lq, 0, [0, 0, 1], 0);
+    const at = (x, y, z) => [lt[0] + X[0] * x + Y[0] * y + Z[0] * z, lt[1] + X[1] * x + Y[1] * y + Z[1] * z, lt[2] + X[2] * x + Y[2] * y + Z[2] * z];
+    // Each wrist a fist's length short of what the fist is on, along the way the forearm comes to it.
+    const put = (side, p, pole) => {
+      const A = this.arms[side], U = A.u * 3;
+      const dx = p[0] - wt[U], dy = p[1] - wt[U + 1], dz = p[2] - wt[U + 2], d = Math.hypot(dx, dy, dz) || 1, k = 0.07 * u / d;
+      this.reachTo(side, p[0] - dx * k, p[1] - dy * k, p[2] - dz * k, pole, w);
+    };
+    // (His left is (c, 0, -s). The left elbow hangs down and out; the right is out behind the bowl.)
+    put('l', at(L.neck[0], L.neck[1] + slide, L.neck[2] - L.neckR - 0.01), [c * 0.5 - s * 0.2, -1, -s * 0.5 - c * 0.2]);
+    put('r', at(across, L.strum + alongY, lift), [-c * 0.9 - s * 0.5, -0.45, s * 0.9 - c * 0.5]);
+    this.luteLive = true;
+  }
+
+  // Take up the lute and play: for so many seconds, in one of the three ways (poseLute). The notes and the sound it throws
+  // off are drawn while it's played (strumFx, src/sim/heroskills.js). o: elem (the notes' colour), rate (how fast), quiet.
+  playLute(seconds, v = 0, o = {}) {
+    if (!this.luteP || this.dead) return false;
+    if (this.tune) { this.tune.dur = Math.max(this.tune.dur, this.tune.t + seconds); this.tune.v = v; Object.assign(this.tune, o); }
+    else this.tune = { t: 0, dur: seconds, v, beat: -1, ...o };
+    return true;
   }
 
   animate(dt, sim) {
@@ -1106,7 +1368,7 @@ export class Hero extends Knight {
   write(snap, cOff, sim) {
     if (!this.visible && !(this.dead && !this.hidden && this.near < VIEW)) {
       snap[cOff + C.ACTIVE] = 0;
-      snap.fill(0, cOff + C_PROPS, cOff + C_PROPS + 48);
+      snap.fill(0, cOff + C_PROPS, cOff + C_PROPS + 64);
       this.writeHero(snap, cOff, 0);
       return;
     }
@@ -1138,6 +1400,14 @@ export class Hero extends Knight {
 export const ACT_NAMES = ['town', 'hunt', 'delve', 'summit', 'surf', 'errands', 'social', 'perform', 'rest', 'return', 'duel', 'help'];
 const ACT_CODES = Object.fromEntries(ACT_NAMES.map((n, i) => [n, i]));
 const propQ = new Float32Array(4), propT = new Float32Array(3), propM = new Float32Array(16), flowDir = new Float32Array(2), surfPos = new Float32Array(3);
+const ikQ = new Float32Array(4), ikQ2 = new Float32Array(4), ikQ3 = new Float32Array(4), ikV = new Float32Array(3), ikV2 = new Float32Array(3);
+// The least turn that takes one unit direction onto another.
+function fromTo(out, a, b) {
+  const d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  if (d < -0.9999) { const x = Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0], k = norm(cross(a, x)); out[0] = k[0]; out[1] = k[1]; out[2] = k[2]; out[3] = 0; return; }
+  const cx = a[1] * b[2] - a[2] * b[1], cy = a[2] * b[0] - a[0] * b[2], cz = a[0] * b[1] - a[1] * b[0], w = 1 + d, l = 1 / Math.hypot(cx, cy, cz, w);
+  out[0] = cx * l; out[1] = cy * l; out[2] = cz * l; out[3] = w * l;
+}
 // A direction turned by `ang` about the level axis (kx, 0, kz) (Rodrigues).
 function bankAbout(v, kx, kz, ang) {
   const c = Math.cos(ang), s = Math.sin(ang), d = (kx * v[0] + kz * v[2]) * (1 - c);
@@ -1284,14 +1554,20 @@ export class HeroWorld {
     }
     for (const s of this.shots) {
       if (s.owner.near > 100) continue;
+      if (s.draw) { if (!(s.wait > 0)) s.draw(c, s); continue; }
       if (s.kind === 'arrow') {
         const v = Math.hypot(s.vx, s.vy, s.vz) || 1;
         c.fx(FX.TRAIL, s.elem, s.x, s.y, s.z, 0.035, -s.vx / v, -s.vy / v, -s.vz / v, 0.9, 1, 1.5, 2, 0, s.seed ?? 0);
       } else if (s.kind === 'star') {
-        c.fx(FX.BLADE, ELEM.SPIRIT, s.x, s.y, s.z, 0.1, Math.sin(s.t * 30), 0.2, Math.cos(s.t * 30), 0.16, 1, 0.6, 1.5);
+        // A throwing star: steel, four points, turning level.
+        star3(c, s.x, s.y, s.z, s.t * 28, 0.16, ELEM.SPIRIT);
+        c.fx(FX.TRAIL, ELEM.SPIRIT, s.x, s.y, s.z, 0.02, -s.vx / 26, 0, -s.vz / 26, 0.5, 0.5);
       } else if (s.kind === 'hammer') {
-        c.fx(FX.ORB, ELEM.LIGHT, s.x, s.y, s.z, 0.22, 0, 1, 0, 0, 1, 6, 5);
-        c.fx(FX.ROCK, ELEM.LIGHT, s.x, s.y, s.z, 0.18, Math.sin(s.t * 18), 0, Math.cos(s.t * 18), 0.3, 1, 0, 0, 0, 0.4);
+        // The paladin's hammer: a hammer, gold-headed, tumbling end over end the way it flies, in its own light.
+        const o = s.owner, big = 1.5 + 0.08 * rank(o), home = s.out ? [s.tx, s.ty, s.tz] : [o.x, o.y + 1.2, o.z], yaw = Math.atan2(home[0] - s.x, home[2] - s.z);
+        hammer3(c, s.x, s.y, s.z, yaw, s.t * 15, big, ELEM.LIGHT, 1.3, 9);
+        c.fx(FX.TRAIL, ELEM.LIGHT, s.x, s.y, s.z, 0.2, -Math.sin(yaw), 0, -Math.cos(yaw), 2, 0.7);
+        c.fx(FX.GLYPH, ELEM.LIGHT, s.x, s.y, s.z, 0.6, 0, 0, 0, s.t * 6, 0.5, 0, 0, 0, 0, 11);
       } else if (s.kind === 'note') {
         // The song's own glyph, trailing the five lines of a stave.
         const v = Math.hypot(s.vx, s.vy, s.vz) || 1;
@@ -1303,16 +1579,30 @@ export class HeroWorld {
     for (const h of this.heroes) {
       if (!h.visible || h.near > 80) continue;
       if (h.charge && h.charge.left > 0) {
-        const p = h.handPos('r'), ax = Math.sin(h.charge.dir), az = Math.cos(h.charge.dir);
-        c.fx(FX.BEAM, ELEM.STORM, p[0], p[1], p[2], 0.07, ax, 0, az, 2.8, 1, 6, 4, 0, 0, 0.03);
-        c.fx(FX.TRAIL, ELEM.STORM, p[0], p[1], p[2], 0.08, -ax, 0, -az, 1.6, 0.6);
+        if (h.charge.draw) h.charge.draw(c, h);
+        else if (!h.charge.quick) {
+          // The lancer's: the lance's light three deep down its length and past its point, a ring where the vamplate
+          // is, and a board of light going before him.
+          const p = h.handPos('r'), ax = Math.sin(h.charge.dir), az = Math.cos(h.charge.dir), big = 1 + 0.06 * rank(h);
+          c.fx(FX.BEAM, ELEM.STORM, p[0], p[1], p[2], 0.2 * big, ax, 0, az, 3.4, 0.35, 0, 0, 0, 0, 0.03);
+          c.fx(FX.BEAM, ELEM.STORM, p[0], p[1], p[2], 0.08 * big, ax, 0, az, 3.4, 1, 8, 5, 0, 0, 0.02);
+          c.fx(FX.FLARE, ELEM.LIGHT, p[0] + ax * 3.4, p[1], p[2] + az * 3.4, 0.35, 0, 1, 0, 0, 1);
+          c.fx(FX.GLYPH, ELEM.STORM, p[0] + ax * 0.5, p[1], p[2] + az * 0.5, 0.42, ax, 0, az, 0, 0.8, 0, 0, 0, 0, 10);
+          c.fx(FX.KITE, ELEM.STORM, h.x + ax * 1.1, h.y + 1.05, h.z + az * 1.1, 0.7, ax, 0, az, 0, 0.6, 0, 0, 0.3, 0);
+          for (let i = 0; i < 3; i++) c.fx(FX.TRAIL, ELEM.STORM, h.x - az * (i - 1) * 0.3, h.y + 0.6 + i * 0.35, h.z + ax * (i - 1) * 0.3, 0.14, -ax, 0, -az, 2.6, 0.6);
+        }
       }
+      // (A leap's own look while it's in the air: the dragoon's spear lit down its length, a rogue's colours.)
       const j = h.jump;
-      if (j && j.phase === 1 && j.L?.lance) {
-        const p = h.handPos('r'), up = Math.cos(j.u * Math.PI) * 0.85;
-        const L = Math.hypot(1, up), ax = Math.sin(j.head) / L, ay = up / L, az = Math.cos(j.head) / L;
-        c.fx(FX.BEAM, j.L.elem, p[0], p[1], p[2], 0.06, ax, ay, az, j.L.lance, 1, 6, 4, 0, 0, 0.02);
-        c.fx(FX.FLARE, j.L.elem, p[0] + ax * j.L.lance, p[1] + ay * j.L.lance, p[2] + az * j.L.lance, 0.2, 0, 1, 0, 0, 0.9);
+      if (j && j.phase === 1) j.L?.draw?.(c, h, j);
+    }
+    // The boomerang knights' own, in the air: each in its colour, a streak behind it and a ring of it turning.
+    for (const h of this.heroes) {
+      if (!h.flight || !h.visible || h.near > 80) continue;
+      for (const f of h.flight) {
+        const e = f.glow ?? ELEM.SPIRIT;
+        c.fx(FX.TRAIL, e, f.x, f.y, f.z, 0.1, -(f.tx ?? 0), 0, -(f.tz ?? 1), 1.3, 0.8);
+        c.fx(FX.GLYPH, e, f.x, f.y + 0.02, f.z, 0.42, 0, 1, 0, f.spin || 0, 0.7, 3, 3, 0, 0, 8);
       }
     }
     // Bleeding: a drip or two.
@@ -1323,18 +1613,23 @@ export class HeroWorld {
     }
     for (const z of this.zones) {
       if (z.owner.near > 100) continue;
+      if (z.draw) { z.draw(c, z); continue; }
       if (z.kind === 'consecrate') {
         const k = Math.min(1, z.t * 3, (z.life - z.t) * 1.5);
         c.fx(FX.DISC, ELEM.LIGHT, z.x, z.y + 0.04, z.z, z.r, 0, 1, 0, 0, 0.75 * k, 10 * k, z.r * 2);
         c.fx(FX.RING, ELEM.LIGHT, z.x, z.y + 0.06, z.z, z.r * (0.94 + 0.04 * Math.sin(z.t * 6)), 0, 1, 0, 0, 0.9 * k);
         c.fx(FX.RUNE, ELEM.LIGHT, z.x, z.y + 0.08, z.z, z.r * 0.6, 0, 1, 0, 0, 0.6 * k, 0, 0, z.t * 0.1, 0.3);
+        // (Crosses of light rising off it, and a pillar's faint standing glow.)
+        for (let i = 0; i < 4; i++) { const a = i * 1.57 + z.t * 0.5, u = (z.t * 0.45 + i * 0.25) % 1; c.fx(FX.GLYPH, ELEM.LIGHT, z.x + Math.sin(a) * z.r * 0.6, z.y + 0.2 + u * 1.9, z.z + Math.cos(a) * z.r * 0.6, 0.16, 0, 0, 0, 0, 0.7 * k * (1 - u), 0, 0, 0, i, 7); }
+        c.fx(FX.COLUMN, ELEM.LIGHT, z.x, z.y, z.z, 2.6, 0, 1, 0, z.r * 1.3, 0.22 * k);
       } else if (z.kind === 'blessed') {
-        // Tumbling hammers of light, each in its own glow, a short streak behind.
-        for (const [hx, hy, hz, a] of this.hammers(z)) {
-          c.fx(FX.ORB, ELEM.LIGHT, hx, hy, hz, 0.2, 0, 1, 0, 0, 0.8, 4, 4);
-          c.fx(FX.ROCK, ELEM.LIGHT, hx, hy, hz, 0.2, Math.sin(z.t * 16 + a), 0.4, Math.cos(z.t * 16 + a), 0.3, 1, 0, 0, 0, 0.4);
-          c.fx(FX.TRAIL, ELEM.LIGHT, hx, hy, hz, 0.06, Math.cos(a), 0, -Math.sin(a), 0.6, 0.6);
-        }
+        // Hammers, gold-headed, tumbling end over end as they turn round him, each in its own light, a streak behind.
+        const k = Math.min(1, z.t * 4, (z.life - z.t) * 3), big = 0.95 + 0.07 * rank(z.owner);
+        this.hammers(z).forEach(([hx, hy, hz, a], i) => {
+          hammer3(c, hx, hy, hz, a + Math.PI / 2, z.t * 13 + i * 1.3, big * k, ELEM.LIGHT, 1.25, i === 0 ? 7 : 0);
+          c.fx(FX.TRAIL, ELEM.LIGHT, hx, hy, hz, 0.11, Math.cos(a), 0, -Math.sin(a), 1.2, 0.7 * k);
+        });
+        c.fx(FX.RING, ELEM.LIGHT, z.owner.x, z.owner.y + 0.06, z.owner.z, Math.min(4, 0.45 + z.t * 2.4), 0, 1, 0, 0, 0.35 * k);
       } else if (z.kind === 'smoke') {
         // The rogue's smoke where they vanished: puffs rising and spreading, then thinning out.
         const k = Math.min(1, z.t * 4, (z.life - z.t) * 0.8);
@@ -1357,10 +1652,10 @@ export class HeroWorld {
           c.fx(FX.LANCE, ELEM.FROST, ex - dx / dl * len / 2, ey + len / 2, ez - dz / dl * len / 2, 0.05, dx / dl, -1 / dl, dz / dl, len, fade, k >= 1 ? 2 : 0, 2);
         }
       } else if (z.kind === 'planted') {
-        // Into the ground along the plunge, a third of it under.
-        const ax = Math.sin(z.dir) * 0.55, az = Math.cos(z.dir) * 0.55, L = Math.hypot(ax, 1, az);
-        const sx = z.x - ax / L * z.len * 0.7, sy = z.y + z.len * 0.7 / L, sz = z.z - az / L * z.len * 0.7;
-        c.fx(FX.BEAM, z.elem, sx, sy, sz, 0.06, ax / L, -1 / L, az / L, z.len, 1, 6, 4, 0, 0, 0.02);
+        // The dragoon's own spear, standing in the ground where he drove it: its light down its length, brightest where it goes in.
+        const [gx, gy, gz] = z.at, d = z.d, butt = z.owner.mainP?.butt ?? 0.8, k = 1 - z.t / z.life * 0.5;
+        c.fx(FX.BEAM, z.elem, gx - d[0] * butt, gy - d[1] * butt, gz - d[2] * butt, 0.07 * k, d[0], d[1], d[2], z.len + butt, 0.9 * k, 6, 4, 0, 0, 0.03);
+        c.fx(FX.FLARE, z.elem, z.x, z.y + 0.1, z.z, 0.4 * k, 0, 1, 0, 0, 1);
       } else if (z.kind === 'song') {
         const o = z.owner;
         for (let i = 0; i < 3; i++) {
@@ -1371,11 +1666,12 @@ export class HeroWorld {
     }
   }
 
-  // The blessed hammers: they spiral out from the paladin and turn round him wherever he goes.
+  // The blessed hammers: they spiral out from the paladin and turn round him wherever he goes. Three, and one more for
+  // every second rank of his (z.n).
   hammers(z) {
-    const o = z.owner, out = [], r = Math.min(4, 0.45 + z.t * 2.4);
-    for (let i = 0; i < 3; i++) {
-      const a = z.a0 + i * 2.094 + z.t * 5;
+    const o = z.owner, out = [], r = Math.min(4, 0.45 + z.t * 2.4), n = z.n || 3;
+    for (let i = 0; i < n; i++) {
+      const a = z.a0 + i * 6.2832 / n + z.t * 5;
       out.push([o.x + Math.sin(a) * r, o.y + 1.1, o.z + Math.cos(a) * r, a]);
     }
     return out;
@@ -1385,6 +1681,7 @@ export class HeroWorld {
     const sim = this.sim;
     for (const s of this.shots) {
       s.t += dt;
+      if (s.kind === 'x') { stepShotX(this, s, dt); continue; }
       if (s.kind === 'hammer') {
         // Out to where the foe stood, through what's there, and back to the paladin's hand.
         const o = s.owner, home = s.out ? [s.tx, s.ty, s.tz] : o.handPos('r');
@@ -1452,6 +1749,8 @@ export class HeroWorld {
     const sim = this.sim;
     for (const z of this.zones) {
       z.t += dt;
+      if (z.step) { z.step(z, dt); continue; }
+      if (z.kind === 'fx') continue;
       if (z.kind === 'consecrate') {
         // Holy ground: every half second it burns what stands on it (the dead twice over), and mends whoever of his own
         // side stands there, the player too.
@@ -1487,13 +1786,16 @@ export class HeroWorld {
             const a = Math.random() * 6.283, up = 0.4 + Math.random() * 0.8, L = Math.hypot(1, up);
             sim.casting.burst(FX.BLADE, z.elem, z.x, z.y + 0.3, z.z, 0.04, 0.02, 0.4, { ax: Math.sin(a) / L, ay: up / L, az: Math.cos(a) / L, len: 0.25 + Math.random() * 0.2 });
           }
+          sim.casting.burst(FX.SHOCK, z.elem, z.x, z.y + 0.3, z.z, 0.2, 1.4, 0.25);
+          {
+          }
         }
       } else if (z.kind === 'song') {
         z.x = z.owner.x; z.z = z.owner.z;
         if (z.heal) for (const h of z.members) if (!h.dead) h.hp = Math.min(h.maxHp, h.hp + dt * 6);
       }
     }
-    this.zones = this.zones.filter((z) => z.t < z.life && !z.owner.dead);
+    this.zones = this.zones.filter((z) => { const keep = z.t < z.life && !z.owner.dead && !z.done; if (!keep) z.end?.(z); return keep; });
   }
 
   // ---- killing, dying, coming back -----------------------------------------------------------------------------------
@@ -1680,6 +1982,9 @@ export class HeroWorld {
         const members = h.party ? [...h.party.members] : [h];
         if (s.heal && !members.some((o) => o.hp < o.maxHp * 0.7)) continue;
         s.t = s.cd;
+        // (With a lute it's played, not only sung: the great wheeling strum for the war song, picking for the mending.)
+        const tune = s.key === 'war_song' ? [2, ELEM.FIRE] : s.key === 'marching_song' ? [0, ELEM.STORM] : [1, ELEM.HEAL];
+        if (h.luteP) h.playLute(s.travel ? 5 : 3.2, tune[0], { elem: tune[1] });
         h.startSwing(pick(GESTURES.sing), 1, [0.1], () => {
           const elem = s.key === 'war_song' ? ELEM.FIRE : s.key === 'marching_song' ? ELEM.STORM : ELEM.HEAL;
           this.zones.push({ kind: 'song', owner: h, members, x: h.x, z: h.z, t: 0, life: 6, elem, heal: s.heal });
@@ -1755,7 +2060,11 @@ export class HeroWorld {
           o.goal = { x: h.x + Math.sin(a) * 3.2, z: h.z + Math.cos(a) * 3.2, speed: 1.6, face: Math.atan2(-Math.sin(a), -Math.cos(a)), stop: 0.6 };
           this.later(rand(4, 10), () => { if (o.task?.audience === h) { o.gesture_(Math.random() < 0.55 ? 'dance' : 'clap', rand(5, 12)); if (Math.random() < 0.35) o.say(sim, Math.random() < 0.5 ? 'dance' : 'bard_tip', h.slot); } });
         }
-      } else if (t.kind === 'perform' && t.began && h.gestureT <= 0) h.gesture_('sing', 8);
+      } else if (t.kind === 'perform' && t.began && h.gestureT <= 0) {
+        // (A song at the well: sung, and played on the lute, a different way of playing each verse.)
+        h.gesture_('sing', 8);
+        if (h.luteP) h.playLute(8.5, (t.verse = (t.verse ?? h.slot) + 1) % 3, { elem: [ELEM.ARCANE, ELEM.HEAL, ELEM.LIGHT, ELEM.FROST][h.slot % 4], rainbow: t.verse % 3 === 2 });
+      }
       else if (h.gestureT <= -rand(3, 10) && !h.sitting && Math.random() < dt * 0.15 * h.lean.show) h.gesture_(pick(['look', 'fold', 'warm', 'talk', 'proud']), rand(3, 6));
       // Wander within the place now and then.
       if (!h.sitting && t.kind !== 'perform' && h.gestureT <= 0 && Math.random() < dt * 0.04) h.goal = this.spotIn(t.place, h);
@@ -2170,6 +2479,7 @@ export class HeroWorld {
     if (h.dead) this.revive(h, 1);
     h.hired = false; h.role = null; h.post = null;
     this.company.members.delete(h);
+    h.baseLevel = Math.min(h.baseLevel ?? h.person.level, h.person.level);
     h.party = null; h.task = null; h.foe = null;
     if (h.surf?.free) { h.surf = null; h.stopAction(0.2); h.y = this.sim.world.height(h.x, h.z); }
     h.say(this.sim, 'player_party_end');
@@ -2178,7 +2488,20 @@ export class HeroWorld {
     this.goHome(h);
   }
 
-  // A level for one of yours: their life and their blows go with it.
+  // The other Tessariels keep pace with you: each is a few levels either side of yours (their own number, kept), and
+  // never below where they began. Sent by the render thread when your level changes (src/ui/party.js). Your party's own
+  // levels come by hireLevel.
+  keepPace(level) {
+    this.playerLevel = level;
+    for (const h of this.heroes) {
+      if (h.hired || h.broker) continue;
+      h.baseLevel ??= h.person.level;
+      const want = Math.max(h.baseLevel, Math.min(50, level + ((h.slot * 5) % 7) - 3));
+      if (want !== h.person.level) { const up = want > h.person.level; this.setLevel(h, want); if (up && h.active && !h.dead && Math.random() < 0.25) h.say(this.sim, 'level_up'); }
+    }
+  }
+
+  // A level for one of yours: their life and their blows go with it, and the moves they've come by (heroskills.js lvl).
   setLevel(h, level) {
     h.person.level = Math.max(1, Math.round(level));
     const was = h.maxHp || 1;
@@ -2438,6 +2761,10 @@ export class HeroWorld {
       case 'task': hs.forEach((h) => { if (h.party) this.disband(h.party); h.task = null; h.foe = null; if (h.sitting) { h.sitting = false; h.stopAction(0.2); } if (['hunt', 'delve', 'summit'].includes(m.kind)) this.plan(h, m.kind); }); break;
       case 'surf': hs.forEach((h, i) => { const top = THE_FALL.line[THE_FALL.line.length - 1]; place(h, top[0], top[1]); this.startSurf(h, i, hs.length > 1); }); break;
       case 'gesture': hs.forEach((h) => h.gesture_(m.name, m.seconds)); break;
+      // (A bard at the lute: tune({ slot, v: 0-2, seconds }). A level for anyone: level({ slot, level }).)
+      case 'tune': hs.forEach((h) => h.playLute(m.seconds ?? 6, m.v ?? 0, { elem: m.elem, rainbow: m.rainbow })); break;
+      case 'level': hs.forEach((h) => this.setLevel(h, m.level ?? 20)); break;
+      case 'ready': hs.forEach((h) => { for (const q of h.skills) q.t = 0; h.gcd = 0; }); break;
       // (A clip held at a point in it, for looking a body over: pose({ slot, clip, at: 0-1 }); clip null lets go.)
       case 'pose': hs.forEach((h) => {
         const c = m.clip && h.bank.clips[m.clip];
@@ -2469,3 +2796,6 @@ export class HeroWorld {
     }
   }
 }
+
+// (What src/sim/heroskills.js needs of this file, handed over once both are loaded.)
+install({ fightable, radiusOf, Zombie, Caster, Gravehart, Knight, LEAPS, LINE_SKILLS });
