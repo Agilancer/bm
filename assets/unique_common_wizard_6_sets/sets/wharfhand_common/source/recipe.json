@@ -1,0 +1,85 @@
+{
+ "id": "wharfhand_common",
+ "name": "Wharfhand Common Gear",
+ "blurb": "Common-tier gear. Faded blue pinstriped canvas, russet shoulder cape, navy hat and salt-worn brown leather. No added heraldry or precious trim.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/wharfhand_common_cloth.png",
+   "tile": "repeat",
+   "scale": 0.25,
+   "bright": 1,
+   "shading": 0.7
+  },
+  "trim": {
+   "swatch": "swatches/wharfhand_common_binding.png",
+   "tile": "repeat",
+   "scale": 0.1,
+   "bright": 0.85,
+   "shading": 0.35
+  },
+  "leather": {
+   "swatch": "swatches/wharfhand_common_leather.png",
+   "tile": "repeat",
+   "scale": 0.12,
+   "bright": 1.1,
+   "shading": 0.75
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/wharfhand_common_hat.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1,
+    "shading": 0.7
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/wharfhand_common_mantle.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 1,
+    "shading": 0.7
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/wharfhand_common_mantle.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 0.85,
+    "shading": 0.7
+   },
+   "leather": {
+    "swatch": "swatches/wharfhand_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.96,
+    "shading": 0.7
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/wharfhand_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1,
+    "shading": 0.7
+   },
+   "leather": {
+    "swatch": "swatches/wharfhand_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1.08,
+    "shading": 0.7
+   }
+  }
+ }
+}

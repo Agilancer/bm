@@ -60,6 +60,9 @@ export class AutoLog {
   // A spell cast, or a shot of the staff.
   cast(key) { const c = (this.d.casts ||= {}); c[key] = (c[key] || 0) + 1; }
 
+  // A point spent in the six trees: what it went into, the rank that made it, and when.
+  learned(id, rank, level) { (this.d.learned ||= []).push({ t: Math.round(this.d.t), level, id, rank }); }
+
   kill(name) {
     this.d.kills[name] = (this.d.kills[name] || 0) + 1;
     if (this.fight) this.fight.kills++;
@@ -95,6 +98,7 @@ export class AutoLog {
       <h3>Fights by level</h3>${rows(['Level', 'Fights', 'Avg secs', 'Avg life lost', 'Kills', 'Lowest life', 'Where'], fights.map(([k, b]) => [k, b.n, (b.secs / b.n).toFixed(1), (b.lost / b.n).toFixed(0), b.kills, `${Math.round(b.low * 100)}%`, Object.entries(b.where).map(([w, n]) => `${w} ${n}`).join(', ')]))}
       <h3>Bosses</h3>${rows(['Boss', 'Goes at him', 'Down at (min, lvl)', 'Last go took (min)'], Object.entries(d.bosses || {}).map(([k, b]) => [k === 'black' ? 'The black knight' : k, b.tries, b.killed !== undefined ? `${min(b.killed)}, ${b.level}` : '—', b.minutes ?? '—']))}
       <h3>Spells and the staff</h3>${rows(['Cast', 'Times'], Object.entries(d.casts || {}).sort((a, b) => b[1] - a[1]))}
+      <h3>Points spent in the six trees</h3>${rows(['At (min)', 'Level', 'Into', 'Rank'], (d.learned || []).map((q) => [min(q.t), q.level ?? '', q.id, q.rank]))}
       <h3>Kills</h3>${rows(['Foe', 'Killed'], kills)}
       <h3>Beaten back</h3>${rows(['At (min)', 'Level', 'Where', 'Doing'], d.falls.map((f) => [min(f.t), f.level, f.where, f.doing]))}`;
   }

@@ -6,6 +6,7 @@ import { fbm, hash2, sstep } from './terrain-noise.js';
 import { WORLD_EDGE, landHeight, setLandBase } from './lands.js';
 import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
 import { OLD_CHURCH_GROUND, oldChurchGround } from './town.js';
+import { PORTAL, PORTAL_PAD } from './dungeon.js';
 
 export let openingTerrain = false;
 export function setOpeningTerrain(enabled) { openingTerrain = !!enabled; }
@@ -126,6 +127,8 @@ export function terrainHeight(x, z) {
     const d = Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]);
     if (d < 6) level += (PLOT_Y - level) * (1 - sstep(0, 6, d));
   }
+  // The Warrens' portal, dug into its hillside.
+  level = portalCut(x, z, level);
   // Lisandra's ledge, a shelf of level ground in front of her cave's mouth on the Long Road. (The cave itself is a mesh of
   // its own under the hill: src/gfx/opening.js. The hillside is left open where it runs in, by the terrain's builder.)
   if (!openingTerrain) return level;
@@ -136,6 +139,31 @@ export function terrainHeight(x, z) {
   const inward = (x - CAVE_MOUTH[0]) * -CAVE_OUT[0] + (z - CAVE_MOUTH[1]) * -CAVE_OUT[1];
   const shelf = (1 - sstep(4.2, 10, Math.hypot(lx, lz))) * (1 - sstep(-0.4, 2.6, inward));
   return level + (LEDGE_Y - level) * shelf;
+}
+
+// The hill cut back for the Warrens' portal's terrace (src/core/sites.js portalWall): down to a little under its floor over the
+// whole of it and a little round, and from there a bank going up at 40 degrees to meet the hill. Never raised: where the land's
+// lower than the floor, at the front, the terrace stands on its own walls. The floor is the hill's own height PORTAL_PAD.level
+// in front of the wall, worked out once (the terrain's own height, without the cut).
+let CUT = null;
+const BANK = Math.tan(40 * Math.PI / 180);
+export function portalFloor() {
+  if (!CUT) {
+    CUT = 'busy';
+    const { hu, hw, at, level } = PORTAL_PAD, c = Math.cos(PORTAL.yaw), s = Math.sin(PORTAL.yaw);
+    const ox = PORTAL.x - at * s, oz = PORTAL.z - at * c, w = at + level;
+    const y = terrainHeight(ox + w * s, oz + w * c);
+    CUT = { ox, oz, c, s, hu, hw, y };
+  }
+  return CUT === 'busy' ? null : CUT.y;
+}
+function portalCut(x, z, level) {
+  const dx = x - PORTAL.x, dz = z - PORTAL.z;
+  if (dx * dx + dz * dz > 50 * 50 || portalFloor() === null) return level;
+  const { ox, oz, c, s, hu, hw, y } = CUT, px = x - ox, pz = z - oz;
+  const u = px * c - pz * s, w = px * s + pz * c;
+  const d = Math.max(0, Math.abs(u) - hu - 0.8, Math.abs(w) - hw - 0.8);
+  return Math.min(level, y - 0.15 + d * BANK);
 }
 
 // How far you can go, either way along x and z. An unseen wall stands here. (Only so much of it is worked out for the things that hunt you: NAV_EDGE, in src/sim/world.js.)

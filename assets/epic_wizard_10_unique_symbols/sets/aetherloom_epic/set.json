@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "aetherloom_epic",
+ "name": "Aetherloom Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original armillary sphere stitch badge. Deep turquoise and blue-silver panels, orbital lattice brocade, platinum piping and inset teal cabochons. Intended as an epic item alternative for the moss palette.",
+ "wears": {
+  "palette": "moss"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

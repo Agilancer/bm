@@ -1,0 +1,142 @@
+{
+ "id": "bellfield_common",
+ "name": "Bellfield",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched handbell crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/bellfield_common_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.06,
+   "shading": 0.88,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/bellfield_common_trim.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.83,
+   "shading": 0.45,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/bellfield_common_leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.88,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/bellfield_common_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.04,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/bellfield_common.png",
+     "anchor": "hat",
+     "size": 0.063,
+     "mode": "gilt",
+     "color": "#bfb59c",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/bellfield_common_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.03,
+    "shading": 0.88,
+    "keep": 0
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/bellfield_common_pattern.png",
+    "color": "#7e7455",
+    "scale": 0.2,
+    "strength": 0.07,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/bellfield_common.png",
+     "anchor": "chest",
+     "size": 0.13,
+     "mode": "gilt",
+     "color": "#bfb59c",
+     "under_trim": false
+    },
+    {
+     "image": "decals/bellfield_common.png",
+     "anchor": "back",
+     "size": 0.18,
+     "mode": "gilt",
+     "color": "#bfb59c",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/bellfield_common.png",
+     "anchor": "tabard",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#bfb59c",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/bellfield_common_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/bellfield_common_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.88,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/bellfield_common_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/bellfield_common_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.13,
+    "shading": 0.88,
+    "keep": 0.14
+   }
+  }
+ }
+}

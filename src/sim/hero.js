@@ -22,6 +22,7 @@ import { FieldCreature } from './field-creature.js';
 import { Pose, solveFK } from './anim.js';
 import { BROKER_SPOTS, PORTAL, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
+import { cleanLine } from './sight.js';
 
 const STRING_ELEM = { gold: ELEM.LIGHT, azure: ELEM.FROST, emerald: ELEM.HEAL, violet: ELEM.ARCANE, crimson: ELEM.DRAIN, silver: ELEM.SPIRIT, ember: ELEM.FIRE, rose: ELEM.STORM };
 const GAP = 1.2;                 // hips to hips, hero to anything
@@ -94,6 +95,10 @@ const LEAPS = {
   leaping_kick: { T: 0.6, apex: 2.2, r: 2.7, dmg: 12, elem: ELEM.SPIRIT, air: 'LP_front_kick_02', airRate: 1.6 },
 };
 const BLEED = 3;                 // seconds a bleeding cut runs, at 30% of the blow each second (Velscour's)
+// Who goes round behind what someone else is holding (a knife in the back counts nearly double: backstab).
+const FLANKERS = new Set(['rogue', 'ninja']);
+// What needs a clear line to its foe, past its own reach: anything shot, thrown, charged or leapt. (The rest is done where it stands.)
+const LINE_SKILLS = new Set(['hammer_throw', 'charge', 'volley', 'strafe', 'rain_of_arrows', 'throwing_stars', 'shadow_step', 'leaping_kick', 'jump', 'double_throw', 'vanish']);
 
 // ---- the body -------------------------------------------------------------------------------------------------------
 
@@ -146,7 +151,7 @@ export class Hero extends Knight {
       kills: 0, bag: 0, xp: 0, stuckT: 0, lastX: this.x, lastZ: this.z, meetT: rand(10, 40), lastSay: -99, aimT: 0, draw: 0,
       shotCd: 0, animTick: 0, losT: 0, clear: true, fieldAt: null, vanishT: 0, playerSeen: false, helpT: 0, visible: true, animT: 0, sitting: false, talkUntil: 0,
       iframesT: 0, guardT: 0, kiteT: 0, charge: null, leaps: 0, leapGoal: 3 + Math.floor(Math.random() * 4),
-      dodgeT: 0, post: null, reviveT: 0, tauntCd: 0, healCd: 0, bigHealCd: 0,
+      dodgeT: 0, post: null, reviveT: 0, tauntCd: 0, healCd: 0, bigHealCd: 0, lineT: 0, line: true, lineFoe: null,
     });
     this.hostile = false;
   }
@@ -335,11 +340,14 @@ export class Hero extends Knight {
     // Your party's: stepping out of something (HeroWorld.companion set the goal), or fighting from a place it was given.
     if (this.dodgeT > 0) return;
     if (this.post) return this.fightFrom(sim, world, m, d, R, to);
+    // A clear line to it, or not: nothing's shot, thrown, charged or leapt through a wall or round a corner.
+    const line = this.lineTo(sim, m, d);
     // A special when one's ready and it suits.
     for (const s of this.skills) {
       if (s.t > 0 || s.song) continue;
       if (s.heal) continue;
       if (s.range && (d - R < s.range[0] || d - R > s.range[1])) continue;
+      if (!line && LINE_SKILLS.has(s.key)) continue;
       if (s.crowd && world.crowd(m.x, m.z, 5) < s.crowd && !(s.orUndead && m instanceof Zombie)) continue;
       if (s.undead && !(m instanceof Zombie)) continue;
       // The dragoon's rhythm: leap, and leap again, and after so many leaps the barrage.
@@ -353,9 +361,11 @@ export class Hero extends Knight {
       if (this.kiteT > 0) { /* still stepping */ }
       else if (this.shotCd > 0 && this.kite(sim, world, m)) { /* a step chosen */ }
       else if (d > this.cls.range) this.goal = { x: m.x - dx / d * want, z: m.z - dz / d * want, speed: 3.6, face: to };
+      // (Something between them: on toward it, round whatever it is (walk() finds the way), till the line's clear.)
+      else if (!line) this.goal = { x: m.x, z: m.z, speed: 3.6, stop: 2.5 };
       else this.goal = null;
       if (d < 2.2) { if (this.shotCd <= 0) this.blow(sim, m); return; }
-      if (d <= this.cls.range && this.shotCd <= 0 && this.kiteT <= 0) {
+      if (line && d <= this.cls.range && this.shotCd <= 0 && this.kiteT <= 0) {
         if (this.style === 'bow') this.shoot(sim, m);
         else if (this.person.cls === 'bard') this.pluck(sim, m);
         else this.throwBoomerang(sim, m, 0);
@@ -364,9 +374,31 @@ export class Hero extends Knight {
     }
     const reach = this.blows[0].reach + R - 0.2;
     if (d > reach) this.goal = { x: m.x - dx / d * (reach - 0.4), z: m.z - dz / d * (reach - 0.4), speed: d > 8 ? 4.4 : 3.2, face: to, stop: 0.2 };
-    else { this.goal = null; if (this.shotCd <= 0 && Math.abs(wrapAngle(to - this.yaw)) < 0.7) this.blow(sim, m); }
+    else {
+      // In reach. A rogue or a ninja, with someone else holding it, works round to its back between blows: a step at a
+      // time round its flank, never across its front.
+      this.goal = null;
+      if (FLANKERS.has(this.person.cls) && m.yaw !== undefined && foeOf(m, sim) !== this) {
+        const mine = Math.atan2(this.x - m.x, this.z - m.z), off = wrapAngle(m.yaw + Math.PI - mine);
+        if (Math.abs(off) > 0.55) {
+          const a = mine + clamp(off, -0.8, 0.8), r = Math.max(R + 0.7, reach - 0.3);
+          this.goal = { x: m.x + Math.sin(a) * r, z: m.z + Math.cos(a) * r, speed: 3.4, face: to, stop: 0.2 };
+        }
+      }
+      if (this.shotCd <= 0 && Math.abs(wrapAngle(to - this.yaw)) < 0.7) this.blow(sim, m);
+    }
     // The lancer raises the tower board between blows.
     this.shieldTarget = this.style === 'lance' && d < 4 ? 1 : 0;
+  }
+
+  // Is the way to its foe clear, for something shot or thrown: no wall, corner, pine or rise of the ground between, by a
+  // hand's width either side (src/sim/sight.js: an arrow leaves the bow beside the eye). Looked at a few times a second,
+  // and at once for a new foe.
+  lineTo(sim, m, d) {
+    if (m === this.lineFoe && sim.time < this.lineT) return this.line;
+    this.lineFoe = m; this.lineT = sim.time + 0.25 + (this.slot % 5) * 0.02;
+    if (d < 2.5) return (this.line = true);
+    return (this.line = cleanLine(sim.world, this.x, this.y + 1.45, this.z, m.x, m.y + Math.min(1.1, (m.opts?.height ?? 1.8) * 0.6), m.z, 0.3));
   }
 
   // A step away, Velscour's ranger's way: only when it's needed (a pack at the elbow, something that bites in reach, or
@@ -924,13 +956,14 @@ export class Hero extends Knight {
     this.goal = dp > 0.7 ? { x: px, z: pz, speed: dp > 5 ? 7 : 3.2, stop: 0.35, face: to } : null;
     this.shieldTarget = this.style === 'lance' && d < 4 ? 1 : 0;
     if (this.shotCd > 0) return;
+    const line = this.lineTo(sim, m, d);
     if (this.role === 'heal') {
       const s = this.skills.find((q) => q.key === 'hammer_throw');
-      if (s && s.t <= 0 && d - R < 16) { s.t = s.cd * 0.6; this.skill(sim, 'hammer_throw', m); this.shotCd = 1; }
+      if (line && s && s.t <= 0 && d - R < 16) { s.t = s.cd * 0.6; this.skill(sim, 'hammer_throw', m); this.shotCd = 1; }
       return;
     }
     if (this.cls.ranged) {
-      if (d <= this.cls.range + 2) {
+      if (line && d <= this.cls.range + 2) {
         if (this.style === 'bow') this.shoot(sim, m);
         else if (this.person.cls === 'bard') this.pluck(sim, m);
         else this.throwBoomerang(sim, m, 0);
@@ -1359,6 +1392,8 @@ export class HeroWorld {
         // (Turned for home, it can cut what it passed on the way out again.)
         if (L < 0.6) { if (s.out) { s.out = false; s.hitSet.clear(); } else s.done = true; }
         const step = Math.min(L, s.v * dt);
+        // (A wall in its way out turns it for home there: it doesn't go through.)
+        if (s.out && L > 1e-3 && sim.world.rayBoxes(s.x, s.y, s.z, dx / L, dy / L, dz / L, step) >= 0) { s.out = false; s.hitSet.clear(); continue; }
         s.x += dx / (L || 1) * step; s.y += dy / (L || 1) * step; s.z += dz / (L || 1) * step;
         for (const m of this.targets) {
           if (!fightable(m) || s.hitSet.has(m) || Math.hypot(m.x - s.x, m.z - s.z) > radiusOf(m) + 0.7) continue;
@@ -1378,6 +1413,14 @@ export class HeroWorld {
           s.vy = clamp((m.y + 1.2 - s.y) * 3, -4, 4);
         }
       } else s.vy -= (s.kind === 'arrow' ? (s.rain ? 0 : 5) : 2) * dt;
+      // A wall, a corner or a pine in its way stops it there. (Not the arrows that go up for the rain, nor the rain itself.)
+      if (!s.up && !s.rain) {
+        const v = Math.hypot(s.vx, s.vy, s.vz);
+        if (v > 1e-3 && sim.world.rayBoxes(s.x, s.y, s.z, s.vx / v, s.vy / v, s.vz / v, v * dt) >= 0) {
+          if (s.owner.fxOk()) sim.casting.burst(FX.PUFF, s.elem ?? ELEM.SPIRIT, s.x, s.y, s.z, 0.12, 0.3, 0.25);
+          s.done = true; continue;
+        }
+      }
       s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt;
       const ground = sim.world.height(s.x, s.z);
       if (s.up) { if (s.t > 0.8) s.done = true; continue; }
@@ -2230,8 +2273,21 @@ export class HeroWorld {
     }
     if (h.role === 'heal' && this.mend(h)) return;
     h.foe = this.pickFoe(h, fight);
-    if (h.foe) { this.stance(h, h.foe, fight); return; }
+    if (h.foe) { this.stance(h, h.foe, fight); this.fallBack(h, fight); return; }
     this.heel(h);
+  }
+
+  // One of yours, badly hurt, with something on them and the tank up: back behind him from it, where his taunt takes it
+  // off them and the healer can reach them, fighting on from there. (The tank and the healer keep their own places.)
+  fallBack(h, fight) {
+    if (h.role !== 'dps' || h.post || h.hp > h.maxHp * 0.35) return;
+    const sim = this.sim, tank = [...this.company.members].find((o) => o.role === 'tank' && !o.dead && o.hp > o.maxHp * 0.25);
+    if (!tank) return;
+    const on = fight.find((m) => foeOf(m, sim) === h && Math.hypot(m.x - h.x, m.z - h.z) < 6);
+    if (!on) return;
+    const dx = tank.x - on.x, dz = tank.z - on.z, L = Math.hypot(dx, dz) || 1;
+    const x = tank.x + dx / L * 3, z = tank.z + dz / L * 3;
+    if (!sim.world.inside(x, z, 0.5)) h.post = [x, z];
   }
 
   // Whom to go for. The tank: whatever's loose on the rest of you, then what he has. Everyone else: the fight's adds first

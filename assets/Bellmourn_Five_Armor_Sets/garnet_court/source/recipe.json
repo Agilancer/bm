@@ -1,0 +1,94 @@
+{
+ "id": "garnet_court",
+ "name": "Garnet Court",
+ "blurb": "Garnet velvet brocade, champagne gold, plum mantle and a flame crest.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/garnet_court_cloth.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05
+  },
+  "trim": {
+   "color": "#d0ad68"
+  },
+  "leather": {
+   "swatch": "swatches/garnet_court_leather.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/flame.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#d0ad68"
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/garnet_court_mantle.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.05
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/garnet_court_pattern.png",
+    "color": "#d0ad68",
+    "scale": 0.3,
+    "strength": 0.34,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/flame.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#d0ad68"
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "color": "#503043"
+   },
+   "leather": {
+    "swatch": "swatches/garnet_court_leather.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.85,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/garnet_court_leather.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.18,
+    "keep": 0.15
+   },
+   "trim": {
+    "color": "#d0ad68"
+   }
+  }
+ }
+}

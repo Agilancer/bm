@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "dawnstitch_uncommon",
+ "name": "Dawnstitch Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original rising sun stitch badge. Warm ochre cloth, wine shoulders, a wide wine hem and short radial embroidery stitches. Intended as an uncommon item alternative for the crimson palette.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

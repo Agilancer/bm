@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "shellpath_common",
+ "name": "Shellpath Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original spiral shell stitch badge. Grey-green body, slate shoulders, scalloped borders and cuff bands. Intended as a common item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

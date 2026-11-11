@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "phoenix_carmine_epic",
+ "name": "Phoenix Carmine",
+ "blurb": "Epic-tier appearance. Carmine feather brocade, burnished amber guards and rich gold flames.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

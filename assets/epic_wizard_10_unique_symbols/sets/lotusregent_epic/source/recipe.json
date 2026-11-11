@@ -1,0 +1,121 @@
+{
+ "id": "lotusregent_epic",
+ "name": "Lotusregent Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original lotus stitch badge. Wine silk, champagne layered panels, petal brocade and pale gold ornamental borders. Intended as an epic item alternative for the crimson palette.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#8a2e51",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#c19b73",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#3a2533",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/lotusregent_epic_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/lotusregent_epic.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#ebd4ab",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#8a2e51",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/lotusregent_epic_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/lotusregent_epic.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#ebd4ab",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#c19b73",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/lotusregent_epic_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/lotusregent_epic.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#ebd4ab",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/lotusregent_epic.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#ebd4ab",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/lotusregent_epic.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#ebd4ab",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#8a2e51",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/lotusregent_epic_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#3a2533",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/lotusregent_epic_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#3a2533",
+    "shading": 0.18
+   }
+  }
+ }
+}

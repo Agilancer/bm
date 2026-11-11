@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "obsidianwatch_epic",
+ "name": "Obsidianwatch Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original watchtower stitch badge. Obsidian cloth and jade plates, bronze architectural fretwork, square enamel insets and plated shins. Intended as an epic item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

@@ -4,8 +4,10 @@ import { EV, FX_FLOATS, FX_START, H, INPUT, MAX_FX, SPELL_PALETTE, WEAPONS } fro
 import { SHIELD_FACE_POINT, shieldRise, shieldX, shieldY } from '../core/shield-pose.js';
 import { EYE } from './player.js';
 import { ELEM, FX, MANA_REGEN, MAX_MANA, SPELLS } from './spells.js';
+import { DMG_FIELDS, effectiveAll } from './skills.js';
 import { STAFFS2 } from '../items/staffs2.js';
 import { STAFF_GRAND, STAFF_SHOTS, installStaffShots } from './staffshots.js';
+import { BUFFS, installTreeSpells } from './treespells.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -60,14 +62,22 @@ export class Casting {
     this.data = new Float32Array(MAX_FX * FX_FLOATS);
     this.n = 0;
     this.castSeen = -1;
+    // Every spell as it's cast: its row in SPELLS grown by the ranks and branches bought (setSkills; src/sim/skills.js).
+    this.defs = effectiveAll(null);
     this.reset();
   }
+
+  // What's been bought in the six trees, from the page (src/items/skillbook.js): { node id: rank }.
+  setSkills(ranks) { this.defs = effectiveAll(ranks || null); }
 
   reset() {
     Object.assign(this, {
       waves: [], power: 1, maxMana: MAX_MANA, regen: 1, thrift: 0, leechT: 0, mana: MAX_MANA, state: 'idle', def: null, rig: null, clip: null, t: 0, fade: 1, fadeRate: 10, side: 'R', keep: false, lower: 0, armOnly: false, armLower: 0, asked: 0,
       gathered: false, charge: 0, held: 0, tickT: 0, fizzleT: 0, selected: 0, summonT: 0, launchT: 0, heldNow: false, flip: false,
       bolts: [], zones: [], bursts: [], missiles: [], spikes: [], blades: null, wisp: null,
+      // clock: time as you live it (the world's own can be slowed: Stillness). cool: when each spell is ready again, by that clock.
+      // buffs: what's on you, by name (BUFFS in src/sim/treespells.js): { t, life, def, ... }.
+      clock: 0, cool: new Float32Array(SPELLS.length), buffs: {}, sparkN: 0, beamOn: null, beamT: 0, ramp: 0, font: 0,
     });
     this.aff = new Map();
   }
@@ -76,13 +86,16 @@ export class Casting {
   // How far the sword arm alone has gone down, for a shield that stays up.
   get armDown() { return smooth(this.armLower); }
   // What a spell does to how fast its target runs: frozen stops, chilled drags.
-  rate(k) { const a = this.aff.get(k); return !a ? 1 : a.freeze > 0 ? 0 : a.slow > 0 ? 0.5 : 1; }
-  // And to how fast you walk with your hands up.
-  get drag() { return this.state === 'hold' || this.state === 'gather' ? 0.68 : this.state === 'idle' ? 1 : 0.85; }
+  rate(k) { const a = this.aff.get(k); return !a || k.keeper ? 1 : a.freeze > 0 || a.stun > 0 ? 0 : a.slow > 0 ? 0.5 : 1; }
+  // And to how fast you walk: slower with your hands up, faster with the wind at your back (Fleetfoot and the rest: haste()).
+  get drag() {
+    const hands = this.state === 'hold' || this.state === 'gather' ? 0.68 : this.state === 'idle' ? 1 : 0.85;
+    return (this.buffs.haste?.def.slip ? 1 : hands) * (1 + this.haste());
+  }
 
   affOf(k) {
     let a = this.aff.get(k);
-    if (!a) { a = { burn: 0, freeze: 0, slow: 0, rot: 0, vx: 0, vz: 0, h: 0, vh: 0, tickT: 0, frozeT: 0 }; this.aff.set(k, a); }
+    if (!a) { a = { burn: 0, freeze: 0, slow: 0, rot: 0, stun: 0, shock: 0, vx: 0, vz: 0, h: 0, vh: 0, tickT: 0, frozeT: 0 }; this.aff.set(k, a); }
     return a;
   }
 
@@ -98,14 +111,18 @@ export class Casting {
     if (none) this.asked = 0;
     const held = input[INPUT.CAST] > 0.5 && !none;
     this.selected = clamp(input[INPUT.SPELL] | 0, 0, SPELLS.length - 1);
-    if (this.state !== 'hold') this.mana = Math.min(this.maxMana, this.mana + MANA_REGEN * this.regen * dt);
+    this.clock += dt;
+    if (this.state !== 'hold') this.mana = Math.min(this.maxMana, this.mana + MANA_REGEN * this.regen * (1 + this.font) * dt);
     this.fizzleT -= dt;
+    this.stepBuffs(dt, tdt, sim);
     this.stepHands(dt, held || this.asked > 0, held, sim);
-    this.stepBolts(tdt, sim);
-    this.stepZones(tdt, sim);
-    this.stepMissiles(tdt, sim);
-    this.stepSpikes(tdt, sim);
-    this.stepBlades(tdt, sim);
+    // (Stillness slows the world and not you: what you've cast keeps your time, not the world's.)
+    const mine = this.buffs.still ? dt : tdt;
+    this.stepBolts(mine, sim);
+    this.stepZones(mine, sim);
+    this.stepMissiles(mine, sim);
+    this.stepSpikes(mine, sim);
+    this.stepBlades(mine, sim);
     this.stepWisp(tdt, sim);
     this.stepAfflictions(tdt, sim);
     this.stepBursts(tdt);
@@ -124,6 +141,9 @@ export class Casting {
     }
     snap[H.FX_N] = this.n;
     snap.set(this.data.subarray(0, this.n * FX_FLOATS), FX_START);
+    // For the bar: how long till each spell is ready, and how much is left of whatever's on you.
+    for (let i = 0; i < SPELLS.length; i++) snap[H.COOL + i] = Math.max(0, this.cool[i] - this.clock);
+    for (let i = 0; i < BUFFS.length; i++) { const b = this.buffs[BUFFS[i]]; snap[H.BUFFS + i] = b ? Math.max(0.01, b.life - b.t) : 0; }
   }
 
   // One shape. alpha < 0 draws it over the hands, not behind them. `extra` is the shape's own: a beam's far width, a bolt's jaggedness.
@@ -165,12 +185,15 @@ export class Casting {
   }
 
   begin(sim) {
-    const def = SPELLS[this.selected], p = sim.player;
-    if (this.mana < def.mana * (1 - this.thrift)) {
+    const def = this.defs[this.selected], p = sim.player;
+    // Not ready yet (a cooldown), or not the mana for it.
+    if (this.cool[def.i] > this.clock || this.mana < def.mana * this.cost()) {
       if (this.fizzleT <= 0) { sim.event(EV.SPELL_FIZZLE); this.fizzleT = 0.8; }
       return;
     }
-    this.mana -= def.mana * (1 - this.thrift);
+    this.mana -= def.mana * this.cost();
+    // (A spell that lasts isn't ready again until that long after it's over.)
+    if (def.cd) this.cool[def.i] = this.clock + def.cd + (def.cast === 'buff' ? def.duration : 0);
     this.asked = 0;
     const swordHands = WEAPONS[p.weapon]?.hands || 0, shield = swordHands === 1 && p.hasShield;
     // A free hand beside a one-handed sword casts, and the sword stays up. With a shield on the other arm the sword goes away and the sword hand casts,
@@ -178,7 +201,7 @@ export class Casting {
     this.side = def.hands === 2 ? 'both' : swordHands === 1 && !shield ? 'L' : 'R';
     this.keep = def.hands === 1 && swordHands === 1 && !shield;
     this.armOnly = def.hands === 1 && shield;
-    this.def = def;
+    this.def = this.empowered(def);
     this.rig = this.rigs[def.rig];
     this.clip = null;
     this.setClip(this.clipName('cast'), 0, 10);
@@ -225,14 +248,17 @@ export class Casting {
         break;
       case 'gather':
         this.charge += dt;
-        this.palmGlow(def, 0.55 + 0.45 * this.charge / def.gather, sim);
-        if (this.charge >= def.gather || (!held && this.charge >= def.minGather)) { this.gathered = true; this.state = 'wind'; }
+        this.palmGlow(def, 0.55 + 0.45 * Math.min(1, this.charge / def.gather), sim);
+        // (Banked: a full gather waits in the hand a while.)
+        if (this.charge >= def.gather + (def.bank || 0) || (!held && this.charge >= def.minGather)) { this.gathered = true; this.state = 'wind'; }
         break;
       case 'hold':
         this.t += dt;
         this.held += dt;
         // A full fan of missiles costs little to keep.
-        this.mana = Math.max(0, this.mana - (1 - this.thrift) * def.drain * dt * (def.cast === 'swarm' && this.waiting() >= def.max ? 0.15 : 1));
+        this.mana = Math.max(0, this.mana - this.cost() * def.drain * dt * (def.cast === 'swarm' && this.waiting() >= def.max ? 0.15 : 1));
+        // (Empowered: a held spell spends one of its strengthened casts every second and a half.)
+        if (this.amped && (this.ampT -= dt) <= 0) { const m = this.buffs.might; if (m && m.charges > 0) { m.charges--; this.ampT = 1.5; } else { this.def = this.defs[def.i]; this.amped = false; } }
         if ((!held && this.held >= def.minHold) || this.mana <= 0) {
           this.setClip(this.clipName('cast'), this.rig.clips[this.clipName('cast')].hit + RESUME, 10);
           this.state = 'out';
@@ -248,7 +274,21 @@ export class Casting {
     }
   }
 
-  endCast() { this.state = 'idle'; this.rig = null; this.clip = null; this.def = null; }
+  endCast() { this.state = 'idle'; this.rig = null; this.clip = null; this.def = null; this.beamOn = null; this.ramp = 0; }
+
+  // What a cast costs of its listed mana: gear's thrift, and Empower's Clear Mind while a strengthened cast is left.
+  cost() { const m = this.buffs.might; return (1 - this.thrift) * (1 - (m && m.charges > 0 ? m.def.surge || 0 : 0)); }
+
+  // Empower: the next few spells bite harder. Each takes one of its casts as it begins.
+  empowered(def) {
+    const m = this.buffs.might;
+    this.amped = false;
+    if (!m || m.charges <= 0 || def.cast === 'buff' || !DMG_FIELDS.some((f) => typeof def[f] === 'number')) return def;
+    m.charges--; this.amped = true; this.ampT = 1.5;
+    const out = { ...def };
+    for (const f of DMG_FIELDS) if (typeof out[f] === 'number') out[f] *= 1 + m.def.might;
+    return out;
+  }
 
   // Where a palm is on screen, as a point in the world this far along the ray under that pixel.
   palm(side, dist, sim, out) {
@@ -467,24 +507,63 @@ export class Casting {
 
   // ---- what they do to whoever's there ----
 
+  // Returns whether that killed it.
   hurt(sim, k, dmg, elem, x, y, z, fromX, fromZ, poise = dmg * 0.7, kind = 'gash') {
-    if (k.dead) return;
+    // (Nothing of yours harms Tessariel's town guard: src/sim/town-watch.js.)
+    if (k.dead || k.keeper) return false;
     // A knight's raised shield takes most of a spell from the front.
     if (k.spellGuard) { const through = k.spellGuard(sim, fromX, fromZ, dmg); dmg *= through; poise *= through; }
     // (A jelly's own make-up: amber shrugs off fire, pitch burns: src/sim/slimes.js SPECIES resist.)
     const res = k.sp?.resist?.[elem];
     if (res !== undefined) { dmg *= res; poise *= res; }
     const a = this.affOf(k);
+    // (Charged, by a Spark or a Storm Seed: every spell finds it a little easier.)
+    if (a.shock > 0) dmg *= 1.1;
+    // Frozen, it takes half again; the first blow on something a Brittle nova froze does double.
+    const iced = a.freeze > 0 ? (a.brittle ? 2 : 1.5) : 1;
+    if (a.freeze > 0 && a.brittle && dmg > 1) a.brittle = false;
     // (ward: a share the body shrugs off, as a twin does while his brother's hurt worse: src/sim/dungeon.js.)
-    k.hp -= (a.freeze > 0 ? dmg * 1.5 : dmg) * SPELL_BITE * this.power * (k.ward ?? 1);
+    k.hp -= dmg * iced * SPELL_BITE * this.power * (1 + (this.buffs.still?.def.sight || 0)) * (k.ward ?? 1);
     k.playerHitT = sim.time;     // (The player had a hand in it: src/sim/sim.worker.js, whose kill it is.)
     // Leech: a drink for each hit, but a held spell's ticks don't add up to a fountain.
     if (sim.time > this.leechT) { this.leechT = sim.time + 0.25; sim.player.drink(); }
     k.onHit(sim, kind, fromX, fromZ, poise);
     sim.event(EV.SPELL_HIT, elem, x, y, z, dmg, sim.mobIndex ? sim.mobIndex(k) : -1);
+    // Lightning into something that bears a Storm Seed, or stands on one, leaps on from it (src/sim/treespells.js).
+    if (elem === ELEM.STORM && !this.relaying) this.relay(sim, k, dmg);
+    return k.dead || k.hp <= 0;
   }
 
+  // Stopped where it stands: frozen (and so taking half again) or stunned. One rule for every spell that does it, so a fight
+  // can be slowed by them and not held still. Which kind a spell's is, is the spell's own (the caller says), not its length:
+  //   a stagger   the passing kind (a shard, a hailstone, a clap on the ear). Nothing on something already held for longer;
+  //               within three seconds of the last stagger only what it has over that one's length lands.
+  //   a hold      the kind a spell is cast for (Frost Nova, Deadwinter, a Ray held on, Vines, Thunderclap, Stasis, a Binding
+  //               Rune). 35% as long within six seconds of the last hold's end.
+  //   and either is 40% as long on the great ones (400 life and up).
+  // Returns whether anything landed.
+  holdFor(sim, f, secs, ice, hold = false) {
+    // (Nor is the town guard stopped by anything of yours.)
+    if (!(secs > 0) || f.dead || f.keeper) return false;
+    const a = this.affOf(f), big = f.maxHp >= 400 ? 0.4 : 1, held = Math.max(a.freeze, a.stun);
+    let s = secs * big;
+    if (hold) {
+      if ((a.thawAt ?? -1e9) > sim.time - 6) s *= 0.35;
+      if (s <= held) return false;
+      a.thawAt = sim.time + s;
+    } else {
+      const recent = (a.stagAt ?? -1e9) > sim.time - 3;
+      if (recent) { const more = s - a.stagLen; if (more <= 0) return false; a.stagLen = s; s = more + held; } else a.stagLen = s;
+      if (s <= held) return false;
+      a.stagAt = sim.time + s;
+    }
+    if (ice) a.freeze = Math.max(a.freeze, s); else a.stun = Math.max(a.stun, s);
+    return true;
+  }
+  stunFor(sim, f, secs, hold = false) { return this.holdFor(sim, f, secs, false, hold); }
+
   shove(k, vx, vz, up = 0) {
+    if (k.keeper) return;
     const a = this.affOf(k);
     a.vx += vx; a.vz += vz;
     if (up > 0) a.vh = Math.max(a.vh, up);
@@ -530,7 +609,7 @@ export class Casting {
   explode(sim, x, y, z, radius, dmg, elem, force, up = 0, skip = null) {
     const p = sim.player;
     for (const k of sim.foes) {
-      if (k.dead || (skip && skip === k)) continue;
+      if (k.dead || (skip && (skip === k || skip.has?.(k)))) continue;
       // Measured from a knight's width in, so a blast on the flank of something huge isn't a near miss.
       const dx = k.x - x, dz = k.z - z, d = Math.max(0, Math.hypot(dx, dz, chestOf(k) - y) - (radiusOf(k) - 0.55));
       if (d > radius + 0.55) continue;
@@ -554,13 +633,7 @@ export class Casting {
     }
   }
 
-  // Frozen for so long, less each time within a few seconds of the last thaw, and less again for the great ones: a fight
-  // can be slowed by ice, not held still by it.
-  freezeFor(sim, f, secs) {
-    const a = this.affOf(f), again = (a.thawAt ?? -1e9) > sim.time - 6;
-    const s = secs * (again ? 0.35 : 1) * (f.maxHp >= 400 ? 0.4 : 1);
-    if (s > a.freeze) { a.freeze = s; a.thawAt = sim.time + s; }
-  }
+  freezeFor(sim, f, secs, hold = false) { return this.holdFor(sim, f, secs, true, hold); }
 
   stepAfflictions(dt, sim) {
     for (const [k, a] of this.aff) {
@@ -579,7 +652,9 @@ export class Casting {
         if (a.h <= 0) { a.h = 0; a.vh = 0; }
       }
       k.y += a.h;
-      if (k.dead) { a.freeze = 0; a.slow = 0; a.rot = 0; }
+      if (k.dead) { a.freeze = 0; a.slow = 0; a.rot = 0; a.stun = 0; a.shock = 0; }
+      a.stun = Math.max(0, a.stun - dt);
+      a.shock = Math.max(0, a.shock - dt);
       a.freeze = Math.max(0, a.freeze - dt);
       a.slow = Math.max(0, a.slow - dt);
       a.burn = Math.max(0, a.burn - dt);
@@ -587,7 +662,8 @@ export class Casting {
       a.tickT -= dt;
       if (a.tickT <= 0 && (a.burn > 0 || a.rot > 0) && !k.dead) {
         a.tickT = 0.5;
-        if (a.burn > 0) this.hurt(sim, k, 3.5, ELEM.FIRE, k.x, chestOf(k), k.z, k.x, k.z, 0);
+        // (What's rotting burns twice as fast: dry rot.)
+        if (a.burn > 0) this.hurt(sim, k, a.rot > 0 ? 7 : 3.5, ELEM.FIRE, k.x, chestOf(k), k.z, k.x, k.z, 0);
         if (a.rot > 0) this.hurt(sim, k, 2.5, ELEM.POISON, k.x, chestOf(k), k.z, k.x, k.z, 0);
       }
       const tall = heightOf(k), wide = radiusOf(k);
@@ -602,8 +678,11 @@ export class Casting {
           const ox = Math.cos(ang), oz = Math.sin(ang), L = 0.55 + hash(i * 3.1) * 0.5;
           this.fx(FX.ICE, ELEM.FROST, k.x + ox * r * 0.6, k.y + y - 0.15, k.z + oz * r * 0.6, 0.14 * size * L * 1.6, ox * 0.75, 0.66, oz * 0.75, L * size, 1, i === 0 ? 4 : 0, 4, 0, i * 0.37);
         }
-      } else a.frozeT = 0;
+      } else { a.frozeT = 0; a.brittle = false; }
       if (a.rot > 0 && !k.dead) this.fx(FX.PUFF, ELEM.POISON, k.x, k.y + tall * 0.55, k.z, tall * 0.65, 0, 1, 0, 0, 0.35, 0, 0, 0, k.id * 0.17);
+      // Stunned: sparks wheel round its head. Charged: a flicker of lightning over it.
+      if (a.stun > 0 && a.freeze <= 0 && !k.dead) for (let i = 0; i < 3; i++) { const g = sim.time * 5 + i * 2.094; this.fx(FX.FLARE, ELEM.STORM, k.x + Math.cos(g) * wide * 0.6, k.y + tall + 0.15, k.z + Math.sin(g) * wide * 0.6, 0.09, 0, 1, 0, 0, Math.min(1, a.stun * 3), 0, 0, 0.5, i * 0.3); }
+      if (a.shock > 0 && !k.dead) { const g = hash(Math.floor(sim.time * 12) + k.id) * TAU; this.fx(FX.BOLT, ELEM.STORM, k.x, k.y + tall * 0.2, k.z, 0.2, Math.cos(g) * 0.3, 0.9, Math.sin(g) * 0.3, tall * 0.7, 0.55, 0, 0, 0, Math.floor(sim.time * 12) * 0.13 + k.id, 0.5); }
       if (a.slow > 0 && a.freeze <= 0 && !k.dead) this.fx(FX.RING, ELEM.FROST, k.x, k.y, k.z, wide * 1.6, 0, 1, 0, 0, 0.5, 0, 0, 0.3, k.id * 0.13);
     }
   }
@@ -612,20 +691,21 @@ export class Casting {
 
   fire(def, sim) {
     this[`cast_${def.cast}`](def, sim);
-    sim.event(EV.SPELL_LOOSE, def.elem, SPELLS.indexOf(def), sim.player.x, sim.player.y + EYE, sim.player.z);
+    sim.event(EV.SPELL_LOOSE, def.elem, def.i, sim.player.x, sim.player.y + EYE, sim.player.z);
   }
 
   cast_bolt(def, sim, head = null) {
     const aim = [0, 0, 0], from = head || this.palm(this.side, 0.85, sim, [0, 0, 0]);
     this.aim(sim, 90, aim);
-    const n = def.shards || 1;
+    // (twin: a branch's second of the same, thrown wide of the first.)
+    const n = def.shards || (def.twin ? 2 : 1), spread = def.spread ?? 0.16;
     for (let i = 0; i < n; i++) {
       let dx = aim[0] - from[0], dy = aim[1] - from[1], dz = aim[2] - from[2];
       const L = 1 / (Math.hypot(dx, dy, dz) || 1);
       dx *= L; dy *= L; dz *= L;
       if (n > 1) {
         // A fan, side by side across the view.
-        const off = (i - (n - 1) / 2) * def.spread, px = -dz, pz = dx;
+        const off = (i - (n - 1) / 2) * spread, px = -dz, pz = dx;
         dx += px * off + (Math.random() - 0.5) * 0.01; dy += (Math.random() - 0.5) * 0.02; dz += pz * off + (Math.random() - 0.5) * 0.01;
       }
       if (def.lift) dy += def.lift;
@@ -647,13 +727,21 @@ export class Casting {
       b.vy -= b.grav * dt;
       const sp = Math.hypot(b.vx, b.vy, b.vz) || 1, dx = b.vx / sp, dy = b.vy / sp, dz = b.vz / sp, step = sp * dt;
       const end = this.trace(sim, b.x, b.y, b.z, dx, dy, dz, step);
-      const foe = this.foeOn(sim, b.x, b.y, b.z, dx, dy, dz, end, b.size * 0.3, b.through);
+      // (ghost: it goes through bodies as if they weren't there, and does its work its own way: the Frozen Orb.)
+      const foe = b.def.ghost ? null : this.foeOn(sim, b.x, b.y, b.z, dx, dy, dz, end, b.size * 0.3, b.through);
       if (foe) {
         const x = b.x + dx * foe.t, y = b.y + dy * foe.t, z = b.z + dz * foe.t;
-        if (!b.through) { b.x = x; b.y = y; b.z = z; this.land(b, sim, foe.k); continue; }
+        if (!b.through) { b.x = x; b.y = y; b.z = z; this.land(b, sim, foe.k, dx, dy, dz); continue; }
+        const def = b.def, first = b.through.size === 0;
         b.through.add(foe.k);
-        this.hurt(sim, foe.k, b.def.dmg, b.elem, x, y, z, b.x, b.z, 45, 'puncture');
+        this.hurt(sim, foe.k, def.dmg * (first && def.impale ? 1 + def.impale : 1), b.elem, x, y, z, b.x, b.z, 45, 'puncture');
         this.shove(foe.k, dx * 3.5, dz * 3.5);
+        // What it leaves in each body it runs through: cold, ice, a wound, and splinters out to the sides.
+        const a = this.affOf(foe.k);
+        if (def.chill) a.slow = Math.max(a.slow, def.chill);
+        if (def.freeze) this.freezeFor(sim, foe.k, def.freeze);
+        if (def.bleed && first) a.rot = Math.max(a.rot, def.bleed);
+        if (def.splinters) for (const side of [-1, 1]) this.bolts.push({ def: { ...def, key: 'thorns', dmg: def.dmg * 0.3, bleed: 0, pierce: false, splinters: 0 }, elem: b.elem, x: x - dz * side * (radiusOf(foe.k) + 0.4), y, z: z + dx * side * (radiusOf(foe.k) + 0.4), vx: (-dz * side + dx * 0.5) * 30, vy: 1, vz: (dx * side + dz * 0.5) * 30, age: 0, size: 0.2, power: 1, grav: 4, through: null, seed: Math.random(), lashT: 0, maxAge: 0.5 });
         sim.event(EV.SPELL_BOOM, b.elem, x, y, z, 0.6);
       }
       b.x += dx * end; b.y += dy * end; b.z += dz * end;
@@ -702,7 +790,7 @@ export class Casting {
           for (const k of sim.foes) {
             if (k.dead) continue;
             const c = chestOf(k), d = Math.hypot(k.x - x, c - y, k.z - z);
-            if (d > 7 || !k.hostile) continue;
+            if (d > (b.def.lashReach || 7) || !k.hostile) continue;
             this.hurt(sim, k, b.def.lash, elem, k.x, c, k.z, x, z, 8);
             this.burst(FX.BOLT, elem, x, y, z, 0.7, 0.7, 0.2, { ax: (k.x - x) / d, ay: (c - y) / d, az: (k.z - z) / d, len: d, extra: 1.1 });
           }
@@ -728,10 +816,17 @@ export class Casting {
     switch (def.key) {
       case 'firebolt':
         this.explode(sim, x, y, z, def.radius * (0.55 + 0.45 * b.power), def.dmg * (0.3 + 0.7 * b.power), elem, 6 * b.power);
-        if (foe && !def.staff) this.affOf(foe).burn = Math.max(this.affOf(foe).burn, 3);
+        if (foe && !def.staff) this.affOf(foe).burn = Math.max(this.affOf(foe).burn, def.burn ?? 3);
+        if (def.embers && !def.staff) this.embers(b, foe, def.embers, def.dmg * 0.25 * b.power);
         break;
       case 'frost':
-        if (foe) { this.hurt(sim, foe, def.dmg, elem, x, y, z, x - b.vx * 0.01, z - b.vz * 0.01, 14); this.affOf(foe).slow = Math.max(this.affOf(foe).slow, def.chill); }
+        if (foe) {
+          // (Deep Chill's last rank: a shard into something already slowed stops it dead a moment.)
+          const was = this.affOf(foe).slow > 0;
+          this.hurt(sim, foe, def.dmg, elem, x, y, z, x - b.vx * 0.01, z - b.vz * 0.01, 14);
+          this.affOf(foe).slow = Math.max(this.affOf(foe).slow, def.chill);
+          if (def.snap && was) this.freezeFor(sim, foe, def.snap);
+        }
         sim.event(EV.SPELL_BOOM, elem, x, y, z, 0.9);
         this.burst(FX.FLARE, elem, x, y, z, 0.5, 1, 0.16, { light: 10, lightR: 6 });
         this.burst(FX.SHOCK, elem, x, y, z, 0.2, 1.1, 0.26);
@@ -742,6 +837,7 @@ export class Casting {
         break;
       case 'lightning':
         this.explode(sim, x, y, z, def.radius, def.dmg, elem, 7);
+        if (def.stun) for (const k of sim.foes) if (!k.dead && k.hostile && Math.hypot(k.x - x, chestOf(k) - y, k.z - z) < def.radius + radiusOf(k)) this.stunFor(sim, k, def.stun);
         for (let i = 0; i < 9; i++) {
           const a = i / 9 * TAU, ax = Math.cos(a), az = Math.sin(a), ay = (hash(i) - 0.4) * 0.8;
           this.burst(FX.BOLT, elem, x, y, z, 0.7, 0.7, 0.28 + hash(i + 3) * 0.2, { ax, ay, az, len: this.trace(sim, x, y, z, ax, ay, az, 6 + hash(i + 7) * 3), extra: 1 });
@@ -760,12 +856,13 @@ export class Casting {
       }
       case 'vine': this.land_vine(b, sim, foe); break;
       case 'comet':
-        this.explode(sim, x, y, z, def.radius, def.dmg, elem, 6);
-        this.spray(b, foe, def.embers, (a, off) => this.bolts.push({ ...b, def: { ...def, key: 'ember', dmg: def.dmg * 0.35, radius: 1.5 }, x: x + Math.cos(a) * off, y: y + 0.4, z: z + Math.sin(a) * off, vx: Math.cos(a) * 7, vy: 7 + Math.random() * 3, vz: Math.sin(a) * 7, size: 0.16, grav: 18, age: 0, maxAge: 2 }));
+        this.explode(sim, x, y, z, def.radius, def.dmg, elem, 6, def.launch || 0);
+        this.embers(b, foe, def.embers, def.dmg * 0.35);
         break;
       case 'ember':
         this.explode(sim, x, y, z, def.radius, def.dmg, elem, 2);
         for (const k of sim.foes) if (!k.dead && k.hostile && Math.hypot(k.x - x, chestOf(k) - y, k.z - z) < def.radius + radiusOf(k)) this.affOf(k).burn = Math.max(this.affOf(k).burn, 2.5);
+        if (def.emberFire) this.zones.push({ kind: 'burning', x, y: sim.world.height(x, z), z, r: 1.3, t: 0, life: def.emberFire, seed: b.seed });
         break;
       case 'rime':
         if (foe) { this.hurt(sim, foe, def.dmg, elem, x, y, z, x, z, 20); this.freezeFor(sim, foe, def.freeze); }
@@ -774,10 +871,20 @@ export class Casting {
         this.spray(b, foe, def.spray, (a, off) => this.bolts.push({ ...b, def: { ...def, key: 'frost', dmg: def.dmg * 0.45, chill: 3 }, x: x + Math.cos(a) * off, y: y + 0.5, z: z + Math.sin(a) * off, vx: Math.cos(a) * 22, vy: 0, vz: Math.sin(a) * 22, age: 0, maxAge: 0.45 }));
         break;
       case 'boulder': {
-        this.explode(sim, x, y, z, def.radius, def.dmg, elem, 6, 6);
-        const hops = b.hops ?? def.bounces;
+        // (gain: Momentum, each bound harder than the last. part: a piece of one that broke, at half.)
+        const hops = b.hops ?? def.bounces, bound = def.bounces - hops, hit = def.dmg * (1 + (def.gain || 0) * bound) * (b.part || 1);
+        // (One boulder hurts a body once, however many times it bounds on it: the pieces of one that broke share what it's struck.)
+        const struckBy = (b.struck ||= new Set()), R = def.radius * (b.part ? 0.7 : 1);
+        const caught = sim.foes.filter((k) => !k.dead && !struckBy.has(k) && Math.hypot(k.x - x, k.z - z, chestOf(k) - y) - (radiusOf(k) - 0.55) <= R + 0.55);
+        this.explode(sim, x, y, z, R, hit, elem, 6, 6, struckBy);
+        for (const k of caught) struckBy.add(k);
         // Off the ground or a body it goes on, lower each time. A wall or the end of its time stops it.
-        if (hops > 0 && struck && (foe || (dy < -0.2 && Math.abs(dy) > Math.hypot(dx, dz) * 0.3))) this.bolts.push({ ...b, y: y + 0.2, vx: b.vx * 0.85, vz: b.vz * 0.85, vy: Math.max(4, Math.abs(b.vy) * 0.65), hops: hops - 1 });
+        if (hops > 0 && struck && (foe || (dy < -0.2 && Math.abs(dy) > Math.hypot(dx, dz) * 0.3))) {
+          const on = { ...b, y: y + 0.2, vx: b.vx * 0.85, vz: b.vz * 0.85, vy: Math.max(4, Math.abs(b.vy) * 0.65), hops: hops - 1, age: 0 };
+          // Landslide: at its first bound it breaks into three, each going its own way.
+          if (def.split && bound === 0 && !b.part) for (let i = 0; i < def.split; i++) { const t = (i - (def.split - 1) / 2) * 0.5, c = Math.cos(t), sn = Math.sin(t); this.bolts.push({ ...on, vx: on.vx * c - on.vz * sn, vz: on.vx * sn + on.vz * c, size: b.size * 0.6, part: 0.5, seed: Math.random() }); }
+          else this.bolts.push(on);
+        }
         break;
       }
       case 'shade':
@@ -805,6 +912,12 @@ export class Casting {
     }
   }
 
+  // Embers out of a burst, each a small fire of its own where it comes down.
+  embers(b, foe, n, dmg) {
+    const { x, y, z, def } = b;
+    this.spray(b, foe, n, (a, off) => this.bolts.push({ ...b, def: { ...def, key: 'ember', dmg, radius: 1.5, embers: 0 }, through: null, x: x + Math.cos(a) * off, y: y + 0.4, z: z + Math.sin(a) * off, vx: Math.cos(a) * 7, vy: 7 + Math.random() * 3, vz: Math.sin(a) * 7, size: 0.16, grav: 18, age: 0, maxAge: 2 }));
+  }
+
   // Things thrown out all round from a landing: clear of the body it struck, or the first thing they'd hit is that.
   spray(b, foe, n, make) {
     const off = foe ? radiusOf(foe) + 0.5 : 0.3, turn = Math.random() * TAU;
@@ -823,7 +936,9 @@ export class Casting {
     }
     sim.event(EV.SPELL_BOOM, elem, x, y, z, 1.2);
     this.burst(FX.RING, elem, x, g + 0.05, z, 0.4, 2.4, 0.5);
-    if (ties.length) this.zones.push({ kind: 'vines', def, x, y: foe ? y : g + 0.15, z, t: 0, life: 1.1, anchor: foe, ties });
+    if (ties.length) this.zones.push({ kind: 'vines', def, x, y: foe ? y : g + 0.15, z, t: 0, life: def.root ? def.root + 0.2 : 1.1, anchor: foe, ties });
+    // Bramble: they stay as a thicket where they came up, tearing at and slowing what's in it.
+    if (def.bramble) this.zones.push({ kind: 'cloud', def: { ...def, radius: 3.6, duration: def.bramble, dps: def.dmg * 0.15, staff: true, bramble: 0, contagion: false }, x, y: g, z, t: 0, life: def.bramble, seed: b.seed, tickT: 0 });
   }
 
   zone_vines(z, dt, sim) {
@@ -832,8 +947,14 @@ export class Casting {
     const reach = smooth(z.t / 0.18), fade = 1 - smooth((z.t - z.life + 0.2) / 0.2);
     for (const t of z.ties) {
       const k = t.k, c = chestOf(k);
-      if (reach >= 1 && !t.bit) { t.bit = true; this.hurt(sim, k, def.dmg, e, k.x, c, k.z, z.x, z.z, 30); if (z.anchor) this.hurt(sim, z.anchor, def.dmg * 0.25, e, z.x, z.y, z.z, k.x, k.z, 0); }
+      if (reach >= 1 && !t.bit) { t.bit = true; this.hurt(sim, k, def.dmg, e, k.x, c, k.z, z.x, z.z, 30); if (def.strangle) this.affOf(k).rot = Math.max(this.affOf(k).rot, def.strangle); if (def.root) this.stunFor(sim, k, def.root, true); if (z.anchor) this.hurt(sim, z.anchor, def.dmg * 0.25, e, z.x, z.y, z.z, k.x, k.z, 0); }
       if (k.dead) continue;
+      // The spell's vines come up under each and hold it where it stands; the staff's drag them together.
+      if (def.root) {
+        const g = sim.world.height(k.x, k.z), r = radiusOf(k) + 0.5;
+        for (let i = 0; i < 3; i++) { const a = t.seed * 9 + i * 2.094; this.drawVine(e, k.x + Math.cos(a) * r, g, k.z + Math.sin(a) * r, k.x + Math.cos(a + 1.2) * 0.2, g + (c - g) * reach, k.z + Math.sin(a + 1.2) * 0.2, t.seed + i, z.t, fade); }
+        continue;
+      }
       const dx = z.x - k.x, dz = z.z - k.z, d = Math.hypot(dx, dz) || 1, stop = radiusOf(k) + (z.anchor ? radiusOf(z.anchor) : 0) + 0.3;
       if (reach >= 1 && d > stop) { const a = this.affOf(k), sp = Math.min(17, (d - stop) * 7); a.vx = dx / d * sp; a.vz = dz / d * sp; a.slow = Math.max(a.slow, 0.5); }
       this.drawVine(e, z.x, z.y, z.z, z.x + (k.x - z.x) * reach, z.y + (c - z.y) * reach, z.z + (k.z - z.z) * reach, t.seed, z.t, fade);
@@ -931,7 +1052,7 @@ export class Casting {
     this.fx(FX.ORB, e, k.x, k.y + heightOf(k) + 0.35, k.z, 0.12 + u * 0.12, 0, 1, 0, 0, 1, 0, 0, 0, z.seed);
     if (u < 1 && !k.dead) return;
     if (!k.dead) this.hurt(sim, k, def.dmg, e, k.x, c, k.z, k.x, k.z, 50, 'puncture');
-    this.explode(sim, k.x, c, k.z, 2, def.dmg * 0.25, e, 3, 0, k);
+    this.explode(sim, k.x, c, k.z, def.radius ?? 2, def.dmg * (def.blast ?? 0.25), e, 3, 0, k);
     this.burst(FX.COLUMN, e, k.x, k.y, k.z, 1.4, 2, 0.45, { len: 0.7, light: 16, lightR: 7 });
     if (k.dead && z.gen < def.leaps) {
       const seen = new Set([k]);
@@ -964,11 +1085,18 @@ export class Casting {
     const p = sim.player;
     p.hp = Math.min(p.maxHp, p.hp + def.amount + 0.15 * p.maxHp);
     this.zones.push({ kind: 'mend', def, x: p.x, y: p.y, z: p.z, t: 0, life: 1.6, seed: Math.random() });
+    // Lingering Mend: it goes on, a little at a time. Shared Light: your company's wounds too, and a burn for whatever's close.
+    if (def.linger) this.buffs.renew = { t: 0, life: 6, def: { ...def, amount: def.linger, duration: 6, well: 0 } };
+    if (def.shared) for (const h of sim.heroes || []) if (h.hired && !h.dead && Math.hypot(h.x - p.x, h.z - p.z) < 10) { h.hp = Math.min(h.maxHp, h.hp + def.amount + 0.15 * h.maxHp); this.burst(FX.RUNE, def.elem, h.x, h.y, h.z, 0.4, 1.4, 0.9, { alpha: 0.8 }); }
+    if (def.radiant) {
+      for (const k of sim.foes) if (!k.dead && k.hostile && Math.hypot(k.x - p.x, k.z - p.z) < 4 + radiusOf(k)) this.hurt(sim, k, def.radiant, ELEM.LIGHT, k.x, chestOf(k), k.z, p.x, p.z, 20);
+      this.burst(FX.RING, ELEM.LIGHT, p.x, p.y + 0.1, p.z, 0.5, 4, 0.4, { light: 14, lightR: 8 });
+    }
   }
 
   cast_wisp(def, sim) {
     const from = this.palm(this.side, 0.85, sim, [0, 0, 0]);
-    this.wisp = { x: from[0], y: from[1], z: from[2], t: 0, life: def.duration, elem: def.elem };
+    this.wisp = { x: from[0], y: from[1], z: from[2], t: 0, life: def.duration, elem: def.elem, def, searT: 1 };
   }
 
   stepWisp(dt, sim) {
@@ -980,9 +1108,20 @@ export class Casting {
     const tx = p.x + s * 1.2 - c * 0.85, ty = p.y + EYE + 0.5 + Math.sin(w.t * 1.7) * 0.12, tz = p.z + c * 1.2 + s * 0.85;
     const k = 1 - Math.exp(-dt * 3.2);
     w.x += (tx - w.x) * k; w.y += (ty - w.y) * k; w.z += (tz - w.z) * k;
-    const fade = smooth((w.life - w.t) / 2) * smooth(w.t / 0.3);
-    this.fx(FX.ORB, w.elem, w.x, w.y, w.z, 0.11 * fade, 0, 1, 0, 0, fade, 13 * fade, 16, 0, 0.7);
-    this.fx(FX.FLARE, w.elem, w.x, w.y, w.z, 0.3 * fade, 0, 1, 0, 0, 0.35 * fade, 0, 0, 0.5, 0.3);
+    const fade = smooth((w.life - w.t) / 2) * smooth(w.t / 0.3), glow = w.def?.glow || 1;
+    this.fx(FX.ORB, w.elem, w.x, w.y, w.z, 0.11 * fade * (0.8 + 0.2 * glow), 0, 1, 0, 0, fade, 13 * fade * glow, 16 * glow, 0, 0.7);
+    this.fx(FX.FLARE, w.elem, w.x, w.y, w.z, 0.3 * fade * glow, 0, 1, 0, 0, 0.35 * fade, 0, 0, 0.5, 0.3);
+    // Searing Light: it burns the nearest thing that means you harm, now and then.
+    if (w.def?.sear && (w.searT -= dt) <= 0) {
+      w.searT = 1.5;
+      const k = this.nearestFoe(sim, w.x, w.y, w.z, 8);
+      if (k) {
+        const cy = chestOf(k), L = Math.hypot(k.x - w.x, cy - w.y, k.z - w.z) || 1;
+        this.hurt(sim, k, w.def.sear, w.elem, k.x, cy, k.z, w.x, w.z, 6);
+        this.burst(FX.BEAM, w.elem, w.x, w.y, w.z, 0.07, 0.02, 0.25, { ax: (k.x - w.x) / L, ay: (cy - w.y) / L, az: (k.z - w.z) / L, len: L, extra: 0.05, light: 6, lightR: 4 });
+        this.burst(FX.FLARE, w.elem, k.x, cy, k.z, 0.2, 0.7, 0.2);
+      }
+    }
   }
 
   cast_wall(def, sim) {
@@ -990,7 +1129,7 @@ export class Casting {
     const s = Math.sin(p.yaw), co = Math.cos(p.yaw);
     this.zones.push({ kind: 'wall', def, x: c[0], y: c[1], z: c[2], rx: -co, rz: s, t: 0, life: def.duration, tickT: 0, seed: Math.random() });
     sim.event(EV.SPELL_BOOM, def.elem, c[0], c[1] + 0.4, c[2], 2.2);
-    sim.event(EV.SPELL_ZONE, def.elem, SPELLS.indexOf(def), c[0], c[1] + 0.6, c[2], def.duration);
+    sim.event(EV.SPELL_ZONE, def.elem, def.i ?? SPELLS.indexOf(def), c[0], c[1] + 0.6, c[2], def.duration);
   }
 
   cast_cone(def, sim) {
@@ -1004,7 +1143,11 @@ export class Casting {
       if (!sim.world.sees(p.x, ey, p.z, k.x, chestOf(k), k.z)) continue;
       this.hurt(sim, k, def.dmg, def.elem, k.x, chestOf(k), k.z, p.x, p.z, 90, 'puncture');
       const L = Math.hypot(dx, dz) || 1;
-      this.shove(k, dx / L * def.force, dz / L * def.force, 3);
+      this.shove(k, dx / L * def.force, dz / L * def.force, def.elem === ELEM.FROST ? 0 : 3);
+      // What a cone leaves them with: stunned (Concussion), slowed (Cone of Cold), frozen if they were close (Flash Freeze).
+      if (def.stun) this.stunFor(sim, k, def.stun);
+      if (def.chill) this.affOf(k).slow = Math.max(this.affOf(k).slow, def.chill);
+      if (def.flash && d < def.range * 0.5 + radiusOf(k)) this.freezeFor(sim, k, def.flash);
     }
     p.trauma = Math.min(1, p.trauma + 0.55);
     const reach = this.trace(sim, from[0], from[1], from[2], f[0], f[1], f[2], def.range);
@@ -1022,6 +1165,14 @@ export class Casting {
       const at = reach * i / 3.4;
       this.burst(FX.SHOCK, def.elem, from[0] + f[0] * at, from[1] + f[1] * at, from[2] + f[2] * at, at * 0.25, at * Math.tan(def.angle) * 1.25, 0.2 + i * 0.09, { alpha: 0.5 });
     }
+    // Cold: splinters of ice carried out along it, and frost on the ground where it passed.
+    if (def.elem === ELEM.FROST) {
+      for (let i = 0; i < 9; i++) {
+        const t = (hash(i * 3.7) - 0.5) * 2 * def.angle, c = Math.cos(t), sn = Math.sin(t), ax = f[0] * c - f[2] * sn, az = f[0] * sn + f[2] * c, at = reach * (0.3 + 0.7 * hash(i * 1.9));
+        this.burst(FX.ICE, def.elem, from[0] + ax * at * 0.4, from[1] + f[1] * at * 0.4 - 0.2, from[2] + az * at * 0.4, 0.09, 0.02, 0.45, { ax, ay: f[1] + 0.1, az, len: 0.6 + hash(i) * 0.6 });
+      }
+      this.burst(FX.DISC, def.elem, p.x + f[0] * reach * 0.55, sim.world.height(p.x + f[0] * reach * 0.55, p.z + f[2] * reach * 0.55), p.z + f[2] * reach * 0.55, reach * 0.4, reach * 0.5, 2.5, { alpha: 0.7, ease: 5 });
+    }
   }
 
   cast_nova(def, sim) {
@@ -1029,6 +1180,8 @@ export class Casting {
     this.zones.push({ kind: 'nova', def, x: p.x, y: p.y, z: p.z, t: 0, life: 3.4, seed: Math.random(), hit: new Set() });
     p.trauma = Math.min(1, p.trauma + 0.5);
     sim.event(EV.SPELL_BOOM, def.elem, p.x, p.y + 0.6, p.z, 5);
+    // Rime Guard: the burst leaves you rimed, and blows land softer for a while.
+    if (def.guard) this.buffs.guard = { t: 0, life: def.guard, def: { ...def, ward: 0.25 } };
   }
 
   cast_meteor(def, sim) {
@@ -1037,22 +1190,34 @@ export class Casting {
     const L = Math.hypot(c[0] - p.x, c[2] - p.z) || 1;
     const fx = c[0] - (c[0] - p.x) / L * 16 + 7, fz = c[2] - (c[2] - p.z) / L * 16 + 5;
     this.zones.push({ kind: 'meteor', def, x: c[0], y: c[1], z: c[2], fx, fy: c[1] + 46, fz, t: 0, life: def.fall, seed: Math.random() });
+    // Meteor Shower: smaller stones beside the first, one after another.
+    for (let i = 1; i <= (def.shower || 0); i++) {
+      const a = Math.random() * TAU, r = def.radius * (0.7 + Math.random() * 0.5), x = c[0] + Math.cos(a) * r, z = c[2] + Math.sin(a) * r;
+      this.zones.push({ kind: 'meteor', def: { ...def, dmg: def.dmg * 0.6, radius: def.radius * 0.6, small: 0.6 }, x, y: sim.world.height(x, z), z, fx: fx + x - c[0], fy: c[1] + 46, fz: fz + z - c[2], t: -0.35 * i, life: def.fall, seed: Math.random() });
+    }
   }
 
   cast_storm(def, sim) {
     const c = this.groundAim(sim, def.range, [0, 0, 0]);
     this.zones.push({ kind: 'storm', def, x: c[0], y: c[1], z: c[2], t: 0, life: def.duration, tickT: 0, seed: Math.random() });
-    sim.event(EV.SPELL_ZONE, def.elem, SPELLS.indexOf(def), c[0], c[1] + 1, c[2], def.duration);
+    sim.event(EV.SPELL_ZONE, def.elem, def.i ?? SPELLS.indexOf(def), c[0], c[1] + 1, c[2], def.duration);
   }
 
   cast_blink(def, sim) {
-    const p = sim.player, s = Math.sin(p.yaw), c = Math.cos(p.yaw);
+    const p = sim.player;
+    let s = Math.sin(p.yaw), c = Math.cos(p.yaw);
     const sx = p.x, sy = p.y, sz = p.z;
     // As far as the way is clear, on the level, along where you face.
-    let t = def.range;
+    let t = def.range, mark = null;
+    // (Stormstep: to the foe you look at, and no further than it.)
+    if (def.charge && (mark = this.lockOn(sim, def.range + 2, 0.25))) {
+      const dx = mark.x - p.x, dz = mark.z - p.z, L = Math.hypot(dx, dz) || 1;
+      s = dx / L; c = dz / L; t = Math.min(t, Math.max(0, L - radiusOf(mark) - 0.7));
+    }
     for (const h of [0.5, 1.4]) { const b = sim.world.rayBoxes(p.x, p.y + h, p.z, s, 0, c, t); if (b > 0 && b < t) t = b; }
     t = Math.max(0, t - 0.6);
     const seen = new Set();
+    if (mark) seen.add(mark);
     const tear = this.foeOn(sim, sx, sy + 1, sz, s, 0, c, t, 0.5, seen);
     let foe = tear;
     while (foe) {
@@ -1067,10 +1232,22 @@ export class Casting {
     p.x = out3[0]; p.z = out3[2];
     p.y = Math.max(p.y, sim.world.height(p.x, p.z));
     p.trauma = Math.min(1, p.trauma + 0.3);
+    if (mark && !mark.dead) {
+      this.hurt(sim, mark, def.dmg, def.elem, mark.x, chestOf(mark), mark.z, sx, sz, 80, 'puncture');
+      this.stunFor(sim, mark, def.stun);
+      this.burst(FX.SHOCK, def.elem, mark.x, chestOf(mark), mark.z, 0.3, 2.2, 0.3, { light: 20, lightR: 9 });
+    }
     const e = def.elem, ey = EYE - 0.3;
     this.burst(FX.COLUMN, e, sx, sy, sz, 2.6, 2.6, 0.5, { len: 0.8, light: 18, lightR: 8 });
     this.burst(FX.SHOCK, e, sx, sy + ey, sz, 0.3, 2, 0.34);
-    this.burst(FX.BEAM, e, sx, sy + ey, sz, 0.1, 0.02, 0.28, { ax: s, ay: 0, az: c, len: t, extra: 0.3 });
+    // (Stormstep: the way you went is a stroke of lightning, not a streak of light.)
+    if (e === ELEM.STORM) for (let i = 0; i < 3; i++) this.burst(FX.BOLT, e, sx, sy + ey - 0.3 + i * 0.25, sz, 0.6, 0.5, 0.3 + i * 0.06, { ax: s, ay: 0, az: c, len: t, extra: 1.1, light: i ? 0 : 16, lightR: 9 });
+    else this.burst(FX.BEAM, e, sx, sy + ey, sz, 0.1, 0.02, 0.28, { ax: s, ay: 0, az: c, len: t, extra: 0.3 });
+    // Phase Rift: where you left, a tear that hangs a moment and bursts. Charged Wake: the way you went lashes what crosses it.
+    if (def.rift) this.zones.push({ kind: 'rift', def, x: sx, y: sy + 1.1, z: sz, t: 0, life: 0.6, seed: Math.random() });
+    if (def.wake && t > 1) this.zones.push({ kind: 'wake', def, x: sx, y: sy, z: sz, dx: s, dz: c, len: t, t: 0, life: def.wake, tickT: 0, seed: Math.random() });
+    // Thunderous Arrival: a clap of thunder where you come out.
+    if (def.arrive) { this.explode(sim, p.x, p.y + 1, p.z, 4, def.dmg * def.arrive, e, 6, 2); for (const k of sim.foes) if (!k.dead && k.hostile && Math.hypot(k.x - p.x, k.z - p.z) < 4 + radiusOf(k)) this.stunFor(sim, k, 0.6); }
     // It leaves you stepping out of a bright split in the air ahead of what you were looking at.
     this.burst(FX.SHOCK, e, p.x + s * 1.2, p.y + EYE, p.z + c * 1.2, 0.2, 2.6, 0.3, { alpha: 0.8, light: 18, lightR: 8 });
     sim.event(EV.SPELL_BOOM, e, sx, sy + 1, sz, 1.2);
@@ -1086,9 +1263,23 @@ export class Casting {
     if (!b) return;
     const def = b.def, p = sim.player;
     b.t += dt;
-    if (b.t >= def.duration) { this.blades = null; return; }
+    if (b.t >= def.duration) {
+      // Blade Volley: their time up, each flies at the nearest foe.
+      if (def.fling) {
+        const seen = new Set(), r = def.radius;
+        for (let i = 0; i < def.count; i++) {
+          const a = b.ang + i * TAU / def.count, x = p.x + Math.cos(a) * r, y = p.y + 1.1, z = p.z + Math.sin(a) * r;
+          const k = this.nearestFoe(sim, x, y, z, 22, seen) || this.nearestFoe(sim, x, y, z, 22);
+          if (!k) continue;
+          seen.add(k);
+          const L = Math.hypot(k.x - x, chestOf(k) - y, k.z - z) || 1;
+          this.bolts.push({ def: { ...def, key: 'bladeshot', dmg: def.dmg * def.fling }, elem: b.elem, x, y, z, vx: (k.x - x) / L * 30, vy: (chestOf(k) - y) / L * 30, vz: (k.z - z) / L * 30, age: 0, size: 0.3, power: 1, grav: 0, through: null, seed: Math.random(), lashT: 0, maxAge: 1.2 });
+        }
+      }
+      this.blades = null; return;
+    }
     const k = smooth(b.t / 0.5) * smooth((def.duration - b.t) / 1.5);
-    b.ang += dt * 3.4;
+    b.ang += dt * 3.4 * (def.spin || 1);
     const r = def.radius * (0.4 + 0.6 * Math.min(1, b.t / 0.5));
     for (let i = 0; i < def.count; i++) {
       const a = b.ang + i * TAU / def.count, ox = Math.cos(a), oz = Math.sin(a);
@@ -1127,8 +1318,11 @@ export class Casting {
       px = x; py = y; pz = z;
       const h = 1.3 + Math.random() * 0.9 + i * 0.04;
       this.spikes.push({ def, x, y, z, t: -i * 0.05, h, s, c, hit, up: false, i, seed: Math.random() });
+      // Aftershock: up again a moment later, for half.
+      if (def.aftershock) this.spikes.push({ def: { ...def, dmg: def.dmg * def.aftershock }, x, y, z, t: -0.9 - i * 0.05, h: h * 0.75, s, c, hit: (this.again ||= new Set()), up: false, i, seed: Math.random() });
       made++;
     }
+    this.again = null;
     if (made) p.trauma = Math.min(1, p.trauma + 0.35);
   }
 
@@ -1143,10 +1337,11 @@ export class Casting {
         sim.event(EV.SPELL_BOOM, s.def.elem, s.x, s.y + 0.1, s.z, 1.1);
         this.burst(FX.RING, s.def.elem, s.x, s.y, s.z, 0.4, 2, 0.36);
         for (const k of sim.foes) {
-          if (k.dead || s.hit.has(k) || Math.hypot(k.x - s.x, k.z - s.z) > radiusOf(k) + 0.6 || Math.abs(k.y - s.y) > 1.6) continue;
+          if (k.dead || s.hit.has(k) || Math.hypot(k.x - s.x, k.z - s.z) > radiusOf(k) + 1 || Math.abs(k.y - s.y) > 1.6) continue;
           s.hit.add(k);
           this.hurt(sim, k, s.def.dmg, s.def.elem, k.x, k.y + 0.8, k.z, s.x, s.z, 70, 'puncture');
           this.shove(k, s.s * 2, s.c * 2, 7.5);
+          if (s.def.stun) this.stunFor(sim, k, s.def.stun);
         }
       }
       const rise = smooth(s.t / 0.09), sink = smooth((s.t - 1.9) / 0.6), lift = 1 - rise + sink, sx = -s.c, sz = s.s;
@@ -1204,6 +1399,8 @@ export class Casting {
       this.hurt(sim, f, def.dps * 0.25, e, f.x, chestOf(f), f.z, f.x, f.z, 3);
       const a = this.affOf(f);
       a.burn = Math.max(a.burn, def.burn);
+      // Backdraft: thrown back off it, to the side it came from.
+      if (def.backdraft) { const side = dx * z.rz - dz * z.rx >= 0 ? 1 : -1; this.shove(f, z.rz * side * def.backdraft, -z.rx * side * def.backdraft, 1.5); }
     }
   }
 
@@ -1220,7 +1417,7 @@ export class Casting {
     z.tickT = 0.3;
     for (const f of sim.foes) {
       if (f.dead || Math.hypot(f.x - z.x, f.z - z.z) > z.r + radiusOf(f) * 0.5) continue;
-      this.hurt(sim, f, 4, ELEM.FIRE, f.x, chestOf(f), f.z, f.x, f.z, 2);
+      this.hurt(sim, f, 4 * (z.hot || 1), ELEM.FIRE, f.x, chestOf(f), f.z, f.x, f.z, 2);
       this.affOf(f).burn = Math.max(this.affOf(f).burn, 2);
     }
   }
@@ -1242,26 +1439,29 @@ export class Casting {
       if (Math.hypot(f.x - z.x, f.z - z.z) > wave + radiusOf(f)) continue;
       z.hit.add(f);
       this.hurt(sim, f, def.dmg, e, f.x, chestOf(f), f.z, z.x, z.z, 0);
-      this.freezeFor(sim, f, def.freeze);
+      this.freezeFor(sim, f, def.freeze, true);
+      if (def.brittle && this.affOf(f).freeze > 0) this.affOf(f).brittle = true;
       sim.event(EV.SPELL_BOOM, e, f.x, chestOf(f), f.z, 1.4);
     }
   }
 
   zone_meteor(z, dt, sim) {
-    const def = z.def, u = clamp(z.t / z.life, 0, 1), f = u * u * (0.6 + 0.4 * u), e = def.elem;
+    if (z.t < 0) return;   // (one of a shower, waiting its turn)
+    const def = z.def, u = clamp(z.t / z.life, 0, 1), f = u * u * (0.6 + 0.4 * u), e = def.elem, big = def.small || 1;
     const x = z.fx + (z.x - z.fx) * f, y = z.fy + (z.y - z.fy) * f, c = z.fz + (z.z - z.fz) * f;
     this.fx(FX.RUNE, e, z.x, z.y, z.z, def.radius * smooth(z.t / 0.25), 0, 1, 0, 0, 0.7 + u * 0.5, 0, 0, u, z.seed);
     let dx = z.x - z.fx, dy = z.y - z.fy, dz = z.z - z.fz;
     const L = 1 / Math.hypot(dx, dy, dz);
     dx *= L; dy *= L; dz *= L;
-    this.fx(FX.ROCK, e, x - dx * 1.4, y - dy * 1.4, c - dz * 1.4, 1.5, dx, dy, dz, 2.8, 1, 42, 30, u, z.seed);
-    this.fx(FX.ORB, e, x, y, c, 2.9, 0, 1, 0, 0, 0.9, 0, 0, 0, z.seed);
-    this.fx(FX.TRAIL, e, x, y, c, 1.85, -dx, -dy, -dz, 15, 1, 0, 0, 0, z.seed);
+    this.fx(FX.ROCK, e, x - dx * 1.4 * big, y - dy * 1.4 * big, c - dz * 1.4 * big, 1.5 * big, dx, dy, dz, 2.8 * big, 1, 42 * big, 30, u, z.seed);
+    this.fx(FX.ORB, e, x, y, c, 2.9 * big, 0, 1, 0, 0, 0.9, 0, 0, 0, z.seed);
+    this.fx(FX.TRAIL, e, x, y, c, 1.85 * big, -dx, -dy, -dz, 15, 1, 0, 0, 0, z.seed);
     if (u < 1) return;
     this.explode(sim, z.x, z.y + 1, z.z, def.radius, def.dmg, e, 10, 6.5);
-    this.burst(FX.COLUMN, e, z.x, z.y, z.z, 13, 15, 0.5, { len: def.radius * 0.7, alpha: 0.8 });
-    sim.player.trauma = Math.min(1, sim.player.trauma + 0.5);
-    this.zones.push({ kind: 'burning', x: z.x, y: z.y, z: z.z, r: def.radius * 0.8, t: 0, life: 7, seed: z.seed });
+    this.burst(FX.COLUMN, e, z.x, z.y, z.z, 13 * big, 15 * big, 0.5, { len: def.radius * 0.7, alpha: 0.8 });
+    sim.player.trauma = Math.min(1, sim.player.trauma + 0.5 * big);
+    // (Molten Crater: the whole of it burns, longer and hotter.)
+    this.zones.push({ kind: 'burning', x: z.x, y: z.y, z: z.z, r: def.radius * (def.crater ? 1 : 0.8), t: 0, life: def.crater ? 10 : 7, hot: def.crater ? 1.25 : 1, seed: z.seed });
     return false;
   }
 
@@ -1282,6 +1482,19 @@ export class Casting {
       const ax = lean, ay = -1, az = lean * 0.6, L = 1 / Math.hypot(ax, ay, az);
       this.fx(FX.ICE, e, x + (1 - ff) * 3, y, c + (1 - ff) * 1.8, 0.11, ax * L, ay * L, az * L, 1.15, 1, 0, 0, 0, s);
       this.fx(FX.TRAIL, e, x + (1 - ff) * 3, y + 0.1, c + (1 - ff) * 1.8, 0.07, -ax * L, -ay * L, -az * L, 2.2, 0.35, 0, 0, 0, s);
+    }
+    // Hailstones: a great one on somebody under it, every second or so, that stops them where they stand.
+    if (def.hail && k > 0.3 && (z.hailT = (z.hailT ?? 0.6) - dt) <= 0) {
+      z.hailT = 1.2;
+      const under = sim.foes.filter((f) => !f.dead && f.hostile && Math.hypot(f.x - z.x, f.z - z.z) < R + radiusOf(f) * 0.5);
+      const f = under[Math.floor(Math.random() * under.length)];
+      if (f) {
+        this.hurt(sim, f, def.hail, e, f.x, chestOf(f), f.z, f.x, f.z, 40, 'puncture');
+        this.stunFor(sim, f, 0.6);
+        this.burst(FX.ICE, e, f.x + 0.6, f.y + heightOf(f) + 3.5, f.z + 0.4, 0.45, 0.3, 0.22, { ax: -0.16, ay: -0.98, az: -0.1, len: 3.6, light: 8, lightR: 5 });
+        this.burst(FX.SHOCK, e, f.x, chestOf(f), f.z, 0.3, 1.8, 0.3);
+        sim.event(EV.SPELL_BOOM, e, f.x, chestOf(f), f.z, 1.5);
+      }
     }
     z.tickT -= dt;
     if (z.tickT > 0 || k < 0.3) return;
@@ -1306,10 +1519,12 @@ export class Casting {
     z.tickT = 0.5;
     for (const f of sim.foes) {
       if (f.dead || Math.hypot(f.x - z.x, f.z - z.z) > R + radiusOf(f) * 0.5) continue;
-      this.hurt(sim, f, def.dps * 0.5, e, f.x, chestOf(f), f.z, f.x, f.z, 2);
+      const died = this.hurt(sim, f, def.dps * 0.5, e, f.x, chestOf(f), f.z, f.x, f.z, 2);
       const a = this.affOf(f);
       if (!def.staff) a.rot = Math.max(a.rot, 1.6);
       a.slow = Math.max(a.slow, 1.2);
+      // Contagion: what dies in it bursts into a small cloud of its own.
+      if (died && def.contagion) { this.zones.push({ kind: 'cloud', def: { ...def, radius: 2.5, duration: 4, contagion: false }, x: f.x, y: sim.world.height(f.x, f.z), z: f.z, t: 0, life: 4, seed: Math.random(), tickT: 0 }); sim.event(EV.SPELL_BOOM, e, f.x, chestOf(f), f.z, 1.6); }
     }
   }
 
@@ -1325,8 +1540,13 @@ export class Casting {
       this.shove(f, dx / d * a, dz / d * a);
       if (!f.dead) { const af = this.affOf(f); af.slow = Math.max(af.slow, 0.3); }
     }
+    // Crushing Depth: what it drags is crushed as it goes.
+    if (def.crush && (z.tickT = (z.tickT || 0) - dt) <= 0) {
+      z.tickT = 0.5;
+      for (const f of sim.foes) if (!f.dead && f.hostile && Math.hypot(z.x - f.x, z.z - f.z) < def.radius) this.hurt(sim, f, def.crush * 0.5, e, f.x, chestOf(f), f.z, z.x, z.z, 0);
+    }
     if (z.t < z.life) return;
-    this.explode(sim, z.x, c, z.z, 5.5, def.dmg, e, 13, 5);
+    this.explode(sim, z.x, c, z.z, 5.5 * (def.wide || 1), def.dmg, e, 13, 5);
     this.burst(FX.SHOCK, e, z.x, c, z.z, 1, 9, 0.5, { alpha: 1.2, light: 40, lightR: 20 });
     return false;
   }
@@ -1337,35 +1557,88 @@ export class Casting {
     this[`hold_${def.cast}`](def, dt, sim, first);
   }
 
+  // A beam held on what you look at: the Fire Beam, the Ray of Frost, Disintegrate. What each does beyond biting is its row's:
+  // pierce (everything in the line), fan (a short wide spray, not a line), ramp (hotter the longer it's held), chill and
+  // freezeAfter (cold that stops what it's held on), split (forks on from what it strikes), unmake (what it kills bursts).
   hold_beam(def, dt, sim) {
     const from = this.palm('both', 0.85, sim, [0, 0, 0]), to = [0, 0, 0];
-    const p = sim.player;
+    const p = sim.player, e = def.elem;
     this.aim(sim, def.range, to);
     let dx = to[0] - from[0], dy = to[1] - from[1], dz = to[2] - from[2];
     const L = 1 / (Math.hypot(dx, dy, dz) || 1);
     dx *= L; dy *= L; dz *= L;
     let t = this.trace(sim, from[0], from[1], from[2], dx, dy, dz, def.range);
-    const foe = this.foeOn(sim, from[0], from[1], from[2], dx, dy, dz, t, 0.3);
-    if (foe) t = foe.t;
+    // Whoever it's on: the first in the line, everyone in it, or everyone in the fan.
+    const struck = [];
+    if (def.fan) {
+      for (const k of sim.foes) {
+        if (k.dead) continue;
+        const fx = k.x - from[0], fy = chestOf(k) - from[1], fz = k.z - from[2], d = Math.hypot(fx, fy, fz);
+        if (d > t + radiusOf(k) || d < 0.01 || Math.acos(clamp((fx * dx + fy * dy + fz * dz) / d, -1, 1)) > def.fan + 0.1) continue;
+        if (sim.world.sees(p.x, p.y + EYE, p.z, k.x, chestOf(k), k.z)) struck.push({ k, t: d });
+      }
+    } else {
+      const seen = new Set();
+      let hit = this.foeOn(sim, from[0], from[1], from[2], dx, dy, dz, t, 0.3, seen);
+      while (hit) { struck.push(hit); seen.add(hit.k); hit = def.pierce ? this.foeOn(sim, from[0], from[1], from[2], dx, dy, dz, t, 0.3, seen) : null; }
+      if (struck.length && !def.pierce) t = struck[0].t;
+    }
+    const first = struck[0]?.k || null;
     const x = from[0] + dx * t, y = from[1] + dy * t, z = from[2] + dz * t;
-    const wide = 0.2 + t * 0.055 + 0.03 * Math.sin(this.held * 24);
+    const hot = def.ramp ? this.ramp / (def.rampMax || 1) : 0;
+    const wide = 0.2 + t * 0.055 + 0.03 * Math.sin(this.held * 24) + hot * 0.12;
     // One out of each palm, to where they both land. (The aim is between them; the light is out at the far end.)
+    const rays = def.fan ? [-def.fan * 0.7, 0, def.fan * 0.7] : [0];
     for (const side of this.side === 'both' ? ['R', 'L'] : [this.side]) {
       this.palm(side, 0.85, sim, out3);
-      const bx = x - out3[0], by = y - out3[1], bz = z - out3[2], len = Math.hypot(bx, by, bz) || 1, seed = side === 'R' ? 0 : 0.23;
-      this.fx(FX.BEAM, def.elem, out3[0], out3[1], out3[2], 0.1, bx / len, by / len, bz / len, len, 1, 0, 0, 0, 0.41 + seed, wide * 0.7);
-      this.fx(FX.BEAM, def.elem, out3[0], out3[1], out3[2], 0.04, bx / len, by / len, bz / len, len, 1, 0, 0, 0, 0.77 + seed, wide * 0.3);
+      for (const turn of rays) {
+        const c = Math.cos(turn), sn = Math.sin(turn), ex = from[0] + (dx * c - dz * sn) * t, ez = from[2] + (dx * sn + dz * c) * t;
+        const bx = ex - out3[0], by = y - out3[1], bz = ez - out3[2], len = Math.hypot(bx, by, bz) || 1, seed = (side === 'R' ? 0 : 0.23) + turn;
+        this.fx(FX.BEAM, e, out3[0], out3[1], out3[2], 0.1, bx / len, by / len, bz / len, len, 1, 0, 0, 0, 0.41 + seed, wide * (def.fan ? 1.6 : 0.7));
+        this.fx(FX.BEAM, e, out3[0], out3[1], out3[2], 0.04, bx / len, by / len, bz / len, len, 1, 0, 0, 0, 0.77 + seed, wide * 0.3);
+        // (White Heat, a Burning Glass: its core whitens as it climbs.)
+        if (hot > 0.05) this.fx(FX.BEAM, ELEM.LIGHT, out3[0], out3[1], out3[2], 0.03, bx / len, by / len, bz / len, len, hot, 0, 0, 0, 0.19 + seed, wide * 0.18);
+      }
     }
-    this.fx(FX.ORB, def.elem, x, y, z, 0.8 + wide, 0, 1, 0, 0, 1, 24, 10, 0, 0.13);
-    this.fx(FX.FLAME, def.elem, x, sim.world.height(x, z), z, foe ? 0.3 : 1.2, 0, 1, 0, 0.9, 0.8, 0, 0, 0, 0.31);
+    if (e === ELEM.FIRE) {
+      this.fx(FX.ORB, e, x, y, z, 0.8 + wide, 0, 1, 0, 0, 1, 24, 10, 0, 0.13);
+      this.fx(FX.FLAME, e, x, sim.world.height(x, z), z, first ? 0.3 : 1.2, 0, 1, 0, 0.9, 0.8, 0, 0, 0, 0.31);
+    } else if (e === ELEM.FROST) {
+      this.fx(FX.FLARE, e, x, y, z, 0.5 + wide, 0, 1, 0, 0, 1, 16, 9, 0.5, 0.13);
+      for (let i = 0; i < 4; i++) { const a = i * 1.57 + this.held * 6; this.fx(FX.ICE, e, x, y, z, 0.05, Math.cos(a) * 0.7, 0.6, Math.sin(a) * 0.7, 0.35 + 0.1 * Math.sin(this.held * 30 + i), 1, 0, 0, 0, i * 0.3); }
+    } else {
+      this.fx(FX.ORB, e, x, y, z, 0.35 + wide * 0.6, 0, 1, 0, 0, 1, 22, 10, 0, 0.13);
+      this.fx(FX.SHOCK, e, x, y, z, 0.3 + (this.held * 3 % 1) * (0.8 + hot), 0, 1, 0, 0, 0.8 * (1 - this.held * 3 % 1), 0, 0, this.held * 3 % 1, 0.4);
+    }
+    // How long it's been on the same one, for the cold that stops it.
+    if (first && this.beamOn === first) this.beamT += dt; else { this.beamOn = first; this.beamT = 0; }
     this.tickT -= dt;
     if (this.tickT > 0) return;
     this.tickT = TICK;
-    if (foe) {
-      this.hurt(sim, foe.k, def.dmg, def.elem, x, y, z, p.x, p.z, 7);
-      this.affOf(foe.k).burn = Math.max(this.affOf(foe.k).burn, def.burn);
+    const bite = def.dmg * (1 + this.ramp);
+    if (def.ramp) this.ramp = struck.length ? Math.min(def.rampMax, this.ramp + def.ramp) : 0;
+    for (const h of struck) {
+      const k = h.k, c = chestOf(k), a = this.affOf(k);
+      const died = this.hurt(sim, k, bite, e, k.x, c, k.z, p.x, p.z, 7);
+      if (def.burn) a.burn = Math.max(a.burn, def.burn);
+      if (def.chill) a.slow = Math.max(a.slow, def.chill);
+      if (died && def.unmake) { this.explode(sim, k.x, c, k.z, 3, def.unmake, e, 5, 2, k); this.burst(FX.VORTEX, e, k.x, c, k.z, 1.6, 0.1, 0.35, { light: 14, lightR: 7 }); }
     }
-    sim.event(EV.SPELL_BOOM, def.elem, x, y, z, 0.35);
+    if (first && def.freezeAfter && this.beamT >= def.freezeAfter && !first.dead) { this.freezeFor(sim, first, def.freeze, true); this.beamT = 0; }
+    // Splitting Ray: on from what it strikes to the nearest others, for half.
+    if (first && def.split) {
+      const seen = new Set([first]), c = chestOf(first);
+      for (let i = 0; i < def.split; i++) {
+        const o = this.nearestFoe(sim, first.x, c, first.z, 7, seen);
+        if (!o) break;
+        seen.add(o);
+        const oc = chestOf(o), d = Math.hypot(o.x - first.x, oc - c, o.z - first.z) || 1;
+        this.hurt(sim, o, bite * 0.5, e, o.x, oc, o.z, first.x, first.z, 4);
+        if (def.chill) this.affOf(o).slow = Math.max(this.affOf(o).slow, def.chill);
+        this.burst(FX.BEAM, e, first.x, c, first.z, 0.06, 0.03, TICK * 1.2, { ax: (o.x - first.x) / d, ay: (oc - c) / d, az: (o.z - first.z) / d, len: d, extra: 0.08 });
+      }
+    }
+    sim.event(EV.SPELL_BOOM, e, x, y, z, 0.35);
   }
 
   hold_chain(def, dt, sim) {
@@ -1390,7 +1663,7 @@ export class Casting {
       this.fx(FX.BOLT, e, x, y, z, 0.48, (k.x - x) / d, (c - y) / d, (k.z - z) / d, d, 1, i < 3 ? 18 : 0, 10, 0, seedT + i, 1.05);
       this.fx(FX.BOLT, e, x, y, z, 0.3, (k.x - x) / d, (c - y) / d, (k.z - z) / d, d, 0.65, 0, 0, 0, seedT * 1.7 + i + 0.5, 0.8);
       this.fx(FX.FLARE, e, k.x, c, k.z, 0.9, 0, 1, 0, 0, 1, 0, 0, 0.5, seedT);
-      if (bite) this.hurt(sim, k, def.dmg * (1 - i * 0.1), e, k.x, c, k.z, p.x, p.z, 7);
+      if (bite) this.hurt(sim, k, def.dmg * (def.steady ? 1 : 1 - i * 0.1), e, k.x, c, k.z, p.x, p.z, 7);
       x = k.x; y = c; z = k.z;
       k = this.nearestFoe(sim, x, y, z, def.reach, seen);
     }
@@ -1414,9 +1687,25 @@ export class Casting {
     if (this.tickT > 0) return;
     this.tickT = TICK;
     // (What it drinks is what it took: a knight's board or the Hydra's bone gives back less.)
-    const before = k.hp;
-    this.hurt(sim, k, def.dmg, e, k.x, c, k.z, p.x, p.z, 5);
-    p.hp = Math.min(p.maxHp, p.hp + Math.max(0, before - k.hp) * def.heal / (SPELL_BITE * this.power || 1) * Math.min(this.power, 1.6));
+    const drink = (f, share) => {
+      const before = f.hp;
+      this.hurt(sim, f, def.dmg * share, e, f.x, chestOf(f), f.z, p.x, p.z, 5);
+      p.hp = Math.min(p.maxHp, p.hp + Math.max(0, before - f.hp) * def.heal / (SPELL_BITE * this.power || 1) * Math.min(this.power, 1.6));
+      if (def.tap) this.mana = Math.min(this.maxMana, this.mana + def.tap * share);
+    };
+    drink(k, 1);
+    // Blood Bond: threads on the nearest others as well, for half.
+    if (def.bond) {
+      const seen = new Set([k]);
+      for (let i = 0; i < def.bond; i++) {
+        const o = this.nearestFoe(sim, k.x, c, k.z, 8, seen);
+        if (!o) break;
+        seen.add(o);
+        drink(o, 0.5);
+        const oc = chestOf(o), L = Math.hypot(o.x - k.x, oc - c, o.z - k.z) || 1;
+        this.burst(FX.BEAM, e, k.x, c, k.z, 0.04, 0.02, TICK, { ax: (o.x - k.x) / L, ay: (oc - c) / L, az: (o.z - k.z) / L, len: L, extra: 0.05 });
+      }
+    }
   }
 
   waiting() { let n = 0; for (const m of this.missiles) if (m.state !== 'seek') n++; return n; }
@@ -1453,23 +1742,28 @@ export class Casting {
     const p = sim.player, keep = [];
     p.t0 = sim.time;
     this.launchT -= dt;
-    if (this.launchT <= 0) {
+    // Barrage: while they're held they wait, and when the hand lets go all that hang fly at once, each the harder for it.
+    const holding = this.state === 'hold' && this.def.cast === 'swarm';
+    let salvo = 0, most = 1;
+    while (this.launchT <= 0 && salvo < most) {
       let m = null;
       for (const o of this.missiles) if (o.state === 'hover' && (!m || o.hoverT > m.hoverT)) m = o;
-      if (m) {
-        const foe = this.lockOn(sim, 60, 1.1) || this.nearestFoe(sim, m.x, m.y, m.z, 40);
-        // Nothing to hunt for long, it goes where you look.
-        if (foe || (m.hoverT > 8 && this.state !== 'hold')) {
-          m.state = 'seek'; m.target = foe; m.age = 0;
-          const to = [0, 0, 0];
-          if (foe) { to[0] = foe.x; to[1] = chestOf(foe); to[2] = foe.z; } else this.aim(sim, 60, to);
-          const d = Math.hypot(to[0] - m.x, to[1] - m.y, to[2] - m.z) || 1;
-          m.vx = (to[0] - m.x) / d * 7; m.vy = (to[1] - m.y) / d * 7; m.vz = (to[2] - m.z) / d * 7;
-          this.launchT = m.def.interval;
-          sim.event(EV.SPELL_LOOSE, m.def.elem, 6, m.x, m.y, m.z);
-        }
-      }
+      if (!m || (m.def.barrage && holding)) break;
+      const foe = this.lockOn(sim, 60, 1.1) || this.nearestFoe(sim, m.x, m.y, m.z, 40);
+      // Nothing to hunt for long, it goes where you look.
+      if (!foe && !(m.hoverT > 8 && this.state !== 'hold')) break;
+      m.state = 'seek'; m.target = foe; m.age = 0;
+      if (m.def.barrage) m.amp = 1 + m.def.barrage;
+      const to = [0, 0, 0];
+      if (foe) { to[0] = foe.x; to[1] = chestOf(foe); to[2] = foe.z; } else this.aim(sim, 60, to);
+      const d = Math.hypot(to[0] - m.x, to[1] - m.y, to[2] - m.z) || 1;
+      m.vx = (to[0] - m.x) / d * 7; m.vy = (to[1] - m.y) / d * 7; m.vz = (to[2] - m.z) / d * 7;
+      sim.event(EV.SPELL_LOOSE, m.def.elem, m.def.i ?? 6, m.x, m.y, m.z);
+      // (salvo: at its third and fifth ranks they leave two, then three, at a time.)
+      most = m.def.barrage ? 99 : m.def.salvo || 1;
+      if (++salvo >= most) this.launchT = m.def.interval;
     }
+    if (salvo && this.launchT <= 0) this.launchT = 0.1;
     for (const m of this.missiles) {
       m.age += dt;
       const e = m.def.elem;
@@ -1487,7 +1781,7 @@ export class Casting {
         continue;
       }
       if (m.target && m.target.dead) m.target = this.nearestFoe(sim, m.x, m.y, m.z, 40);
-      const sp = Math.min(26, 7 + m.age * 45);
+      const sp = Math.min(m.def.speed || 26, 7 + m.age * 90);
       let dx = m.vx, dy = m.vy, dz = m.vz;
       const L = 1 / (Math.hypot(dx, dy, dz) || 1);
       dx *= L; dy *= L; dz *= L;
@@ -1502,7 +1796,16 @@ export class Casting {
       const foe = this.foeOn(sim, m.x, m.y, m.z, dx, dy, dz, end, 0.08);
       if (foe || end < step - 1e-4 || m.age > 4) {
         const t = foe ? foe.t : end, x = m.x + dx * t, y = m.y + dy * t, z = m.z + dz * t;
-        if (foe) this.hurt(sim, foe.k, m.def.dmg, e, x, y, z, m.x, m.z, 10);
+        if (foe) {
+          this.hurt(sim, foe.k, m.def.dmg * (m.amp || 1), e, x, y, z, m.x, m.z, 10);
+          // Arcing Missiles: a spark of it leaps on to another near.
+          const o = m.def.arc ? this.nearestFoe(sim, x, y, z, 6, new Set([foe.k])) : null;
+          if (o) {
+            const oc = chestOf(o), L = Math.hypot(o.x - x, oc - y, o.z - z) || 1;
+            this.hurt(sim, o, m.def.dmg * m.def.arc, e, o.x, oc, o.z, x, z, 5);
+            this.burst(FX.BOLT, e, x, y, z, 0.3, 0.3, 0.16, { ax: (o.x - x) / L, ay: (oc - y) / L, az: (o.z - z) / L, len: L, extra: 0.6 });
+          }
+        }
         sim.event(EV.SPELL_BOOM, e, x, y, z, 0.5);
         this.burst(FX.FLARE, e, x, y, z, 0.4, 0.9, 0.16, { light: 10, lightR: 6 });
         this.burst(FX.SHOCK, e, x, y, z, 0.1, 0.8, 0.2);
@@ -1518,3 +1821,4 @@ export class Casting {
 }
 
 installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, clamp, EYE });
+installTreeSpells(Casting, { chestOf, radiusOf, hash, smooth, clamp, EYE });

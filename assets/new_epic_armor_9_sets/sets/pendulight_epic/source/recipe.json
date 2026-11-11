@@ -1,0 +1,175 @@
+{
+ "id": "pendulight_epic",
+ "name": "Pendulight Regalia",
+ "blurb": "Epic gear. Deep lilac velvet, pearl-grey mantle, pale silver and hanging-oval brocade. Original pendulum crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/pendulight_epic_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/pendulight_epic_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.07,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/pendulight_epic_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.18,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/pendulight_epic_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/pendulight_epic.png",
+     "anchor": "hat",
+     "size": 0.083,
+     "mode": "gilt",
+     "color": "#e7e2d2",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/pendulight_epic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pendulight_epic_pattern.png",
+    "color": "#c9c8b7",
+    "scale": 0.23,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/pendulight_epic.png",
+     "anchor": "shoulder_left",
+     "size": 0.08,
+     "mode": "gilt",
+     "color": "#e7e2d2",
+     "under_trim": false
+    },
+    {
+     "image": "decals/pendulight_epic.png",
+     "anchor": "shoulder_right",
+     "size": 0.08,
+     "mode": "gilt",
+     "color": "#e7e2d2",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pendulight_epic_pattern.png",
+    "color": "#9c9eb4",
+    "scale": 0.27,
+    "strength": 0.38,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/pendulight_epic.png",
+     "anchor": "chest",
+     "size": 0.18,
+     "mode": "gilt",
+     "color": "#e7e2d2",
+     "under_trim": false
+    },
+    {
+     "image": "decals/pendulight_epic.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "gilt",
+     "color": "#e7e2d2",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/pendulight_epic.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "gilt",
+     "color": "#e7e2d2",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/pendulight_epic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/pendulight_epic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.86,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/pendulight_epic_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.7,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/pendulight_epic_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/pendulight_epic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.14,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

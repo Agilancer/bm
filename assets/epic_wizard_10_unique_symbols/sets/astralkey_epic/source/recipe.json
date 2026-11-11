@@ -1,0 +1,121 @@
+{
+ "id": "astralkey_epic",
+ "name": "Astralkey Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original ornate key stitch badge. Pearl ivory and sapphire panels, interlocked maze brocade, gilded shoulder plates and blue enamel clasps. Intended as an epic item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#a5a799",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#304f78",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#303344",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/astralkey_epic_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/astralkey_epic.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#ead8ad",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#a5a799",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/astralkey_epic_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/astralkey_epic.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#ead8ad",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#304f78",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/astralkey_epic_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/astralkey_epic.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#ead8ad",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/astralkey_epic.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#ead8ad",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/astralkey_epic.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#ead8ad",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#a5a799",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/astralkey_epic_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#303344",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/astralkey_epic_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#303344",
+    "shading": 0.18
+   }
+  }
+ }
+}

@@ -19,10 +19,18 @@ import { STATIONS, hallAt } from './testhall.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
 export const DUNGEON = { name: 'The Hollowfang Warrens', x: 5760, z: -40, y: -50 };
-// The cave mouth near the kobolds' den where its portal stands, and where the quartermaster waits.
-export const PORTAL = { x: 128, z: -212, yaw: 2.6, r: 2.2 };
+// The cave mouth near the kobolds' den where its portal stands, and where the quartermaster waits. It's built into a wall
+// across the hillside (src/core/sites.js portalWall), facing down the hill, the wall holding the hill back behind it: yaw is
+// straight down the slope there.
+export const PORTAL = { x: 128, z: -212, yaw: -0.71, r: 2.2 };
+// Its terrace: half its width and depth, and where the portal stands on it, along its depth from its middle (+ is out the
+// front). The hill's cut away under it and behind it (src/core/terrain.js portalCut), down to its floor, which is the hill's
+// own height a little in front of the wall: so it's dug in at the back and stands out a step or two at the front.
+export const PORTAL_PAD = { hu: 6.6, hw: 4.4, at: 0.2, level: 1.5 };
 // (And the Test Dungeon's keeper, at the summoning counter in its hall: src/core/testhall.js.)
-export const BROKER_SPOTS = { portal: [PORTAL.x + 4.2, PORTAL.z + 2.4], town: [5, -2], hall: (() => { const q = STATIONS.find((t) => t.who === 'hall'); return [...hallAt(q.x, q.z), q.yaw]; })() };
+// (The portal's quartermaster: on its terrace, at the front to its left, clear of the dais. See src/core/sites.js portalWall.)
+const BROKER_AT_PORTAL = (() => { const c = Math.cos(PORTAL.yaw), s = Math.sin(PORTAL.yaw), u = -4.6, w = 2.2; return [PORTAL.x + u * c + w * s, PORTAL.z - u * s + w * c]; })();
+export const BROKER_SPOTS = { portal: BROKER_AT_PORTAL, town: [5, -2], hall: (() => { const q = STATIONS.find((t) => t.who === 'hall'); return [...hallAt(q.x, q.z), q.yaw]; })() };
 
 // Rooms: id, middle (local: x east, z south of the entrance), radius, floor height over DUNGEON.y, how high the roof can rise.
 export const ROOMS = [

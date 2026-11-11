@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "rimecrofter_common",
+ "name": "Rimecrofter Common Gear",
+ "blurb": "Common-tier gear. Bone-grey herringbone wool, muted blue-green hat and mantle, tan work boots and plain bindings. No added heraldry or precious trim.",
+ "wears": {
+  "palette": "ash"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

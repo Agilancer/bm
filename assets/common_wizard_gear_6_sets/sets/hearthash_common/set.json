@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "hearthash_common",
+ "name": "Hearthash Common Gear",
+ "blurb": "Common-tier travelling gear. Undyed oatmeal wool, charcoal mantle and worn brown leather. Plain bindings; no added insignia or precious decoration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

@@ -805,7 +805,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   albedo = mix(albedo, vec3f(paint), darkPaint * 0.75);
   albedo = mix(albedo, max(albedo * 0.85 + 0.015, vec3f(0.07, 0.068, 0.066) * mix(1.0, 3.4, steelK)), metal);
   rough = mix(rough, max(rough, mix(0.34, 0.22, darkPaint)), metal);
-  envBoost = mix(1.0, 1.4, metal) * coverEnv;
+  // (No plastic sheen: shaders.js matteRough. The black knight's dark steel keeps its tighter highlight.)
+  rough = max(matteRough(rough, metal) - 0.2 * darkPaint, rough);
+  envBoost = mix(1.0, 1.1, metal) * coverEnv;
   sunSpecScale = mix(1.0, 0.55, darkPaint);
   albedo *= C.info.y;
   // Bright scraped steel at the cut's lips and scratches.
@@ -842,7 +844,8 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
   // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)
   let rimIn = indoorAt(p);
-  c += select(select(F.skyAmb.rgb * 0.32 * (0.35 + 0.65 * metal), vec3f(0.5, 0.31, 0.17), rimIn > 1.5), vec3f(0.3, 0.31, 0.33), rimIn > 2.5) * rimT * C.info.y * rimK;
+  // (Outdoors it's a faint edge on cloth and skin, which is what keeps them from looking wet; more on plate.)
+  c += select(select(F.skyAmb.rgb * 0.24 * (0.15 + 0.85 * metal), vec3f(0.5, 0.31, 0.17), rimIn > 1.5), vec3f(0.3, 0.31, 0.33), rimIn > 2.5) * rimT * C.info.y * rimK;
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);
@@ -1016,6 +1019,63 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   return o;
 }
 @fragment fn fs(in: V, @builtin(front_facing) front: bool) -> Out {
+  if (I.glow.a < -1.5) {
+    // A portal's whirl (src/gfx/renderer.js portalModels): the face the owner painted it on, drawn moving. uv is the face's place
+    // in the model (tools/portal/pack.py), glow.xy the whirl's middle there and glow.z its radius. a -2: the Warrens' portal,
+    // a funnel going back into its wall, seen from the front; a -3: a seal's, a disc lying in its dais, seen from over it.
+    // A whirl that winds down into a deep blue well: wide arms of blue and a finer counter-turning weave of violet-white over
+    // them, rings of light falling away inward, clouds carried round, sparks carried round and in, a white heart that
+    // breathes, now and then a crackle of lightning across it, and a hot rim that flickers like a held flame.
+    let t = F.camPos.w;
+    let lying = I.glow.a < -2.5;
+    let d = (in.uv - I.glow.xy) / I.glow.z;
+    let r = length(d);
+    let a = atan2(d.y, d.x);
+    let lr = log(r + 0.02);
+    let w1 = a + lr * 2.6 - t * 1.5;
+    let n1 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(w1), sin(w1)) * 0.23 + vec2f(lr * 0.35 - t * 0.11, t * 0.03), 0.0);
+    let arms = pow(0.5 + 0.5 * sin(w1 * 4.0 + (n1.r - 0.5) * 5.0), 3.0) * smoothstep(0.02, 0.35, r);
+    let w2 = a - lr * 4.1 + t * 2.2;
+    let n2 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(w2), sin(w2)) * 0.31 + vec2f(t * 0.07, lr * 0.5), 0.0);
+    let weave = pow(0.5 + 0.5 * sin(w2 * 7.0 + (n2.g - 0.5) * 7.0), 12.0) * smoothstep(0.1, 0.5, r);
+    let fall = 1.0 / (r + 0.25);
+    let rings = pow(0.5 + 0.5 * sin(fall * 9.0 + t * 3.4 + (n1.g - 0.5) * 3.0), 6.0) * smoothstep(0.08, 0.6, r);
+    // Clouds: the paint's pale vapour, wound round with the arms and drifting in.
+    let w3 = a + lr * 1.7 - t * 0.9;
+    let n5 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(w3), sin(w3)) * 0.45 + vec2f(lr * 0.6 - t * 0.2, 0.37), 0.0);
+    let cloud = smoothstep(0.35, 0.85, n5.r * 0.7 + n1.b * 0.5) * smoothstep(0.05, 0.4, r);
+    let n3 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(w1), sin(w1)) * 0.9 + vec2f(lr * 1.7 - t * 0.45, 0.13), 0.0);
+    let spark = smoothstep(0.83, 0.96, n3.b) * (0.6 + 0.4 * sin(t * 9.0 + n3.r * 40.0));
+    let breath = 0.82 + 0.18 * sin(t * 2.3) + 0.06 * sin(t * 7.1);
+    let heart = exp(-r * 9.0) * breath;
+    // The lightning: the noise's half-way line, thin, at a new place every few frames, and only some of the time.
+    let beat = floor(t * 7.0);
+    let n4 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(a), sin(a)) * 0.12 + vec2f(r * 0.33, fract(beat * 0.137)), 0.0);
+    let on = step(0.55, fract(sin(beat * 12.9898) * 43758.5453));
+    let bolt = (1.0 - smoothstep(0.0, 0.03, abs(n4.r - 0.5))) * on * smoothstep(0.25, 0.7, r);
+    var c = vec3f(0.004, 0.012, 0.06) + vec3f(0.01, 0.04, 0.2) * smoothstep(1.6, 0.2, r);
+    c += arms * vec3f(0.06, 0.26, 1.1) * (0.35 + n1.b) * smoothstep(1.8, 0.4, r);
+    c += cloud * select(vec3f(0.05, 0.13, 0.45), vec3f(0.12, 0.26, 0.75), lying);
+    c += weave * vec3f(0.75, 0.42, 2.2);
+    c += rings * vec3f(0.04, 0.14, 0.6);
+    c += spark * vec3f(2.8, 3.2, 4.0);
+    c += heart * select(vec3f(1.8, 2.6, 4.2), vec3f(2.4, 3.2, 4.6), lying);
+    c += bolt * vec3f(1.4, 2.4, 5.0);
+    // (Not so bright it reads as a lamp: the whirl's to be seen.)
+    c *= 0.55;
+    // The rim, flickering, and a glow in from it.
+    let edge = r - 1.0;
+    let flick = 0.75 + 0.25 * sin(a * 11.0 - t * 5.0) * sin(a * 23.0 + t * 7.3);
+    c += exp(-abs(edge) * 14.0) * vec3f(0.5, 1.2, 3.0) * flick;
+    c += exp(-max(-edge, 0.0) * 4.0) * vec3f(0.06, 0.18, 0.7);
+    let toCam = F.camPos.xyz - in.p;
+    let dist = length(toCam);
+    c = applyFog(c, in.p, -toCam / dist, dist);
+    var out: Out;
+    out.color = vec4f(c, 1.0);
+    out.depth = in.viewZ;
+    return out;
+  }
   if (I.glow.a < 0.0) {
     let p = in.uv * 2.0 - 1.0;
     let r = length(p);
@@ -1046,7 +1106,12 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   let shadow = shadowAt(in.p, n0, in.viewZ, ign(in.pos.xy));
   // A dropped thing's rarity: a little all over, and strongest where it turns from the eye. (A gem's glow is flat: a = 0.)
   let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), 2.2);
-  var c = shadePBR(in.p, n, v, albedo, mr.g, mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 1.5 * rim * rim, I.glow.a);
+  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 1.5 * rim * rim, I.glow.a);
+  // A portal's stone (src/gfx/renderer.js portalModels): its runes and gems, painted the whirl's blue, glow of themselves.
+  if (I.glow.a > 1.5) {
+    let lit = smoothstep(0.22, 0.5, albedo.b) * smoothstep(0.08, 0.3, albedo.b - max(albedo.r, albedo.g * 0.85));
+    c += albedo * lit * I.glow.a * (0.85 + 0.15 * sin(F.camPos.w * 2.3));
+  }
   c = applyFog(c, in.p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);
@@ -1093,7 +1158,7 @@ fn vn2(p: vec2f) -> f32 {
   var albedo = textureSample(albedoTex, repeatSmp, in.uv).rgb;
   let nm = textureSample(normalTex, repeatSmp, in.uv);
   let mr = textureSample(mrTex, repeatSmp, in.uv);
-  var rough = mr.g; var metal = mr.b;
+  var rough = matteRough(mr.g, mr.b); var metal = mr.b;
   var n = n0;
   if (M.params.y > 0.5) {
     // The greatsword: steel unless the paint says otherwise.

@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "helix_creation_mythic",
+ "name": "Helix of Creation",
+ "blurb": "Mythic gear. Deep jade and amber silk with pale electrum helices and densely patterned leg guards. Original double helix crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

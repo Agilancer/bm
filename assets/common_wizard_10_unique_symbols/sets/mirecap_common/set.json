@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "mirecap_common",
+ "name": "Mirecap Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original mushroom stitch badge. Uneven clay repair patches, moss cloth, stitched pocket panels. Intended as a common item alternative for the moss palette.",
+ "wears": {
+  "palette": "moss"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}
