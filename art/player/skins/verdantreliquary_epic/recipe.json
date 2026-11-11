@@ -1,0 +1,159 @@
+{
+ "id": "verdantreliquary_epic",
+ "name": "Verdant Reliquary Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original rooted tree stitch badge. Deep forest and burnished gold, branching vine brocade, inset green enamels and engraved leg guards. Intended as an epic item alternative for the moss palette.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.8,
+   "shading": 0.95
+  },
+  "trim": {
+   "color": "#e4ba50",
+   "bright": 1.12
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_vine.png",
+    "color": "#d4ac4c",
+    "scale": 0.2,
+    "strength": 0.36,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/tree.png",
+     "anchor": "hat",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.03,
+      0
+     ]
+    },
+    {
+     "image": "decals/tree.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.6
+   },
+   "leather": {
+    "color": "#7a6028",
+    "shading": 0.6
+   },
+   "decals": [
+    {
+     "image": "decals/tree.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/tree.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_vine.png",
+    "color": "#dcb454",
+    "scale": 0.22,
+    "strength": 0.46,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/tree.png",
+     "anchor": "back",
+     "size": 0.24,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/tree.png",
+     "anchor": "tabard",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.8
+   },
+   "pattern": {
+    "image": "swatches/pat_vine.png",
+    "color": "#c8a044",
+    "scale": 0.16,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  },
+  "feet": {}
+ }
+}

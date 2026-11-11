@@ -1,0 +1,148 @@
+{
+ "id": "burrowguard_uncommon",
+ "name": "Burrowguard",
+ "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered badger crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/burrowguard_uncommon_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.06,
+   "shading": 0.88,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/burrowguard_uncommon_trim.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.96,
+   "shading": 0.67,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/burrowguard_uncommon_leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.88,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/burrowguard_uncommon_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.04,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/badger.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "pattern": {
+    "image": "swatches/burrowguard_uncommon_pattern.png",
+    "color": "#aaa797",
+    "scale": 0.225,
+    "strength": 0.07,
+    "tile": "repeat"
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/burrowguard_uncommon_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.03,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/burrowguard_uncommon_pattern.png",
+    "color": "#aaa797",
+    "scale": 0.225,
+    "strength": 0.12,
+    "tile": "repeat"
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/burrowguard_uncommon_pattern.png",
+    "color": "#aaa797",
+    "scale": 0.225,
+    "strength": 0.18,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/badger.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/badger.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/burrowguard_uncommon_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/burrowguard_uncommon_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.88,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/burrowguard_uncommon_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/burrowguard_uncommon_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.13,
+    "shading": 0.88,
+    "keep": 0.14
+   }
+  }
+ }
+}

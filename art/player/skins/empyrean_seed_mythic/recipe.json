@@ -1,0 +1,204 @@
+{
+ "id": "empyrean_seed_mythic",
+ "name": "Empyrean Seed",
+ "blurb": "Mythic gear. Royal-blue and solar-amber silk, platinum seed-filament weave and matching enamel crests. Original dandelion seedhead crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/es_lapis.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95
+  },
+  "trim": {
+   "swatch": "swatches/es_platinum.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.75
+  },
+  "leather": {
+   "swatch": "swatches/es_bronze.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.12
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/es_hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_drift.png",
+    "color": "#e2d6ae",
+    "scale": 0.22,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/seedhead_small.png",
+     "anchor": "hat",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/seedhead_small.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/es_amber.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.95
+   },
+   "leather": {
+    "swatch": "swatches/es_umber.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/pat_drift.png",
+    "color": "#8f5a12",
+    "scale": 0.2,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/seedhead_small.png",
+     "anchor": "shoulder_left",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/seedhead_small.png",
+     "anchor": "shoulder_right",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_drift.png",
+    "color": "#e2d6ae",
+    "scale": 0.27,
+    "strength": 0.6,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/seedhead.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.08,
+      0
+     ]
+    },
+    {
+     "image": "decals/seedhead_small.png",
+     "anchor": "tabard",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
+    },
+    {
+     "image": "decals/seedhead_small.png",
+     "anchor": "tabard_back",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/es_amberplate.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.95
+   },
+   "leather": {
+    "swatch": "swatches/es_bronze.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/seedhead_small.png",
+     "anchor": "knee_left",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/seedhead_small.png",
+     "anchor": "knee_right",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/es_bronze.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.25,
+    "shading": 0.95,
+    "keep": 0.12
+   }
+  }
+ }
+}

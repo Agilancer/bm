@@ -103,7 +103,8 @@ def on_loom(self, lx, lz, y, across_x=True):
 
 for name, fn in (("table", on_table), ("chair", on_chair), ("bench", on_bench), ("bed", on_bed), ("hearth", on_hearth), ("loom", on_loom)):
     wrap(name, fn)
-wrap("anvil", lambda self, lx, lz, y: rec(self, "anvil", lx, lz, y))
+# (dir: the side the smith stands.)
+wrap("anvil", lambda self, lx, lz, y, nx=-1.0, nz=0.0: rec(self, "anvil", lx, lz, y, nx, nz))
 wrap("vat", lambda self, lx, lz, y, r=0.55: rec(self, "vat", lx, lz, y, r=r3(r * self.k)))
 wrap("trestle", lambda self, lx, lz, y, hx, hz, h=0.72: rec(self, "trestle", lx, lz, y + h, hx=r3(world_half(self, hx, hz)[0]), hz=r3(world_half(self, hx, hz)[1])))
 wrap("coffin", lambda self, lx, lz, y, along_x=False, up=False: rec(self, "coffin", lx, lz, y, up=bool(up)))

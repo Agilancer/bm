@@ -1,0 +1,182 @@
+{
+ "id": "geode_firstlight_mythic",
+ "name": "Geode of First Light",
+ "blurb": "Mythic gear. Amethyst and emerald brocade with champagne metalwork and faceted geode crests. Original crystal geode crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/amethyst_facets.png",
+   "scale": 0.2,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.95
+  },
+  "trim": {
+   "color": "#e6d4a4",
+   "bright": 1.08
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.86,
+   "keep": 0.07
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "pattern": {
+    "image": "swatches/pat_crystals.png",
+    "color": "#e3c98c",
+    "scale": 0.2,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/geode.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/geode.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "cloth": {
+    "swatch": "swatches/amethyst_facets.png",
+    "scale": 0.2,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.95
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/emerald_deep.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.95
+   },
+   "decals": [
+    {
+     "image": "decals/geode_small.png",
+     "anchor": "shoulder_left",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/geode_small.png",
+     "anchor": "shoulder_right",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_crystals.png",
+    "color": "#e3c98c",
+    "scale": 0.2,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/geode.png",
+     "anchor": "back",
+     "size": 0.23,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    },
+    {
+     "image": "decals/geode_small.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/geode_small.png",
+     "anchor": "tabard_back",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/emerald_deep.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.72,
+    "shading": 0.95
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.86,
+    "keep": 0.07
+   },
+   "decals": [
+    {
+     "image": "decals/geode_small.png",
+     "anchor": "knee_left",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/geode_small.png",
+     "anchor": "knee_right",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.9
+   }
+  }
+ }
+}

@@ -1397,7 +1397,7 @@ export class Brain {
         return true;
       }
       // (Coin, orbs and stuff come to hand within two metres; gear wants E within that.)
-      this.goTo(best.x, best.z, best.auto || best.coins ? 1.1 : bd < 1.7 ? 0.5 : 1.2, false, false, m.below);
+      this.goTo(best.x, best.z, best.auto || best.coins ? 1.1 : bd < 1.7 ? 0.5 : 1.2, false, false, m.below, best.auto || best.coins ? null : best.y + 0.3);
       if (this.noWay) { this.giveUp(best, 240); this.noWay = null; }
       return true;
     }
@@ -1425,7 +1425,7 @@ export class Brain {
           return true;
         }
       }
-      this.goTo(ch.x, ch.z, cd < 2 ? 0.5 : 1.2, false, false, m.below);
+      this.goTo(ch.x, ch.z, cd < 2 ? 0.5 : 1.2, false, false, m.below, ch.y + 0.5);
       if (this.noWay) { this.giveUp(ch, 600); this.noWay = null; }
       return true;
     }
@@ -1859,7 +1859,7 @@ export class Brain {
     }
     this.face = null;
     // (Close, with a wall between: on round to them, as near as a body can stand.)
-    this.goTo(w.x, w.z, near ? 0.5 : 1.4, d > 12, true);
+    this.goTo(w.x, w.z, near ? 0.5 : 1.4, d > 12, true, false, (w.beyond ? m.y : w.y ?? m.y) + 1.2);
     // (No way to them at all: upstairs, shut in. Later.)
     if (this.noWay) { this.noWay = null; this.giveUp(`p:${j.who}`, 240); this.job = null; }
   }
@@ -1947,13 +1947,17 @@ export class Brain {
   // ---- getting about
 
   // Walks to (x, z): by the nav worker's paths on its ground, by the roads and the seals beyond it.
-  goTo(x, z, near = 1, run = true, person = false, below = false) {
+  // touch: the height of something there it means to put a hand to or have a word with (a chest, someone): its path then
+  // ends where there's nothing between it and that, or there's no way.
+  goTo(x, z, near = 1, run = true, person = false, below = false, touch = null) {
     this.useGoal = true;
     const g = this.goal;
-    if (!g || dist(g.x, g.z, x, z) > (person ? 2.5 : 3) || !!g.below !== below) {
-      this.goal = { x, z, near, run, t: this.t, below };
+    // (The same errand only if it's the same place, or someone who's moved a little. Anything else within a few strides is
+    // somewhere else: it used to keep walking to whoever stood outside a door when it meant the chest just inside it.)
+    if (!g || dist(g.x, g.z, x, z) > (person ? 2.5 : 0.75) || !!g.person !== person || !!g.below !== below || (g.touch === null) !== (touch === null)) {
+      this.goal = { x, z, near, run, t: this.t, below, touch, person };
       this.macro = null; this.sub = null; this.subFor = null; this.noWay = null;
-    } else { g.near = near; g.run = run; if (person) { g.x = x; g.z = z; } }
+    } else { g.near = near; g.run = run; g.touch = touch; g.x = x; g.z = z; }
   }
 
   walk(dt, m) {
@@ -2008,7 +2012,7 @@ export class Brain {
       if (!this.subAsk && this.nav.ready && (fresh || this.t - this.subT > 12 || (this.subTo && dist(this.subTo[0], this.subTo[1], leg.x, leg.z) > 2.5))) {
         this.subFor = leg; this.subT = this.t; this.subTo = [leg.x, leg.z]; this.subAsk = true;
         const want = leg, avoid = this.avoid(this.me(this.o.game.currentSnap())).concat(this.lockedDoors());
-        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid }).then((pts) => {
+        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid, touch: leg === g ? g.touch : null }).then((pts) => {
           this.subAsk = false;
           if (this.subFor !== want) return;
           this.subT = this.t;
@@ -2058,6 +2062,10 @@ export class Brain {
         if (P[0][2]) run = false;
         else if (P.length > 1 && Math.abs(wrap(Math.atan2(P[1][0] - tx, P[1][1] - tz) - Math.atan2(tx - m.x, tz - m.z))) > 0.6) run = false;
       }
+      // (Its eyes on the way it's going: not left on the door it just opened, or on whoever it's to talk to next. With an
+      // errand to talk to someone in hand the motor keeps where it's looking, and it stood at a door for ever, unable to
+      // turn from it to walk through.)
+      this.face = null;
       this.steer(tx - m.x, tz - m.z, run);
       this.lookOn(m, P, run);
       if (!m.town) { const L = dist(m.x, m.z, W.x, W.z) || 1; this.board(dt, m, (W.x - m.x) / L, (W.z - m.z) / L, d); }
@@ -2086,6 +2094,7 @@ export class Brain {
         if (this.probeDir && this.probeDir[2] > 0.5) { hx = this.probeDir[0]; hz = this.probeDir[1]; }
       }
       if (this.door(dt, m, hx, hz)) return;
+      this.face = null;
       this.steer(hx, hz, g.run && d > 8);
       if (pts?.length) this.lookOn(m, pts, g.run && d > 8);
       this.board(dt, m, sx, sz, d);
@@ -2339,7 +2348,10 @@ export class Brain {
     if (!w.strafe && !fight && !surf) {
       const off = Math.abs(wrap(Math.atan2(w.x, w.z) - inp.yaw));
       if (off > 1.0) { mx = 0; mz = 0; } else if (off > 0.6) { mx *= 0.5; mz *= 0.5; }
-    }
+      // (A turn on the spot takes a second at most. One that goes on is its look held somewhere else: let go.)
+      this.turnT = off > 1.0 ? (this.turnT || 0) + dt : 0;
+      if (this.turnT > 2) { this.face = null; this.look = null; }
+    } else this.turnT = 0;
     const L = Math.max(1, Math.hypot(mx, mz));
     a.mx = mx / L; a.mz = mz / L;
     // (Shift held for the run while there's breath for it: let go when it's short, taken up again once it's back, so it
@@ -2348,7 +2360,7 @@ export class Brain {
     this.running = w.run && a.mz > 0.6 && m.stam > (this.running ? 10 : this.ride ? 12 : 38);
     a.run = this.running;
     // (Turning on the spot before a step isn't being stuck: only wanting to go and not going is.)
-    this.unstick(dt, m, !surf && (a.mx !== 0 || a.mz !== 0));
+    this.unstick(dt, m, !surf && (a.mx !== 0 || a.mz !== 0 || this.turnT > 2.5));
     if (this.stuck.act > 0) {
       this.stuck.actT -= dt;
       const sd = this.stuck.side;

@@ -1,0 +1,127 @@
+{
+ "id": "damwright_uncommon",
+ "name": "Damwright",
+ "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered beaver crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/dw_tunic.png",
+   "scale": 0.085,
+   "tile": "repeat",
+   "bright": 0.92,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/dw_brass.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/dw_leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/dw_teal.png",
+    "scale": 0.085,
+    "tile": "repeat",
+    "bright": 0.88,
+    "shading": 0.85,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/beaver_small.png",
+     "anchor": "hat",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/dw_teal.png",
+    "scale": 0.085,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.85,
+    "keep": 0
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/beaver.png",
+     "anchor": "back",
+     "size": 0.225,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0.008,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/beaver_small.png",
+     "anchor": "tabard",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/dw_guard.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/dw_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/dw_teal.png",
+    "scale": 0.085,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.85,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/dw_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  }
+ }
+}

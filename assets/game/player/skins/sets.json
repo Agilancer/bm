@@ -74,6 +74,2006 @@
     "legs",
     "feet"
    ]
+  },
+  {
+   "id": "abyssal_current",
+   "name": "Abyssal Current",
+   "blurb": "Petrol-blue scale cloth, silver edging, deep teal mantle and pale moon crest.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "copperleaf_rover",
+   "name": "Copperleaf Rover",
+   "blurb": "Autumn bronze twill, pale flax edging, pine mantle, chestnut leather and leaf embroidery.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "garnet_court",
+   "name": "Garnet Court",
+   "blurb": "Garnet velvet brocade, champagne gold, plum mantle and a flame crest.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "orchid_observatory",
+   "name": "Orchid Observatory",
+   "blurb": "Orchid velvet, silver starfield, indigo mantle and a radiant celestial crest.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "amaranth_celestarch_epic",
+   "name": "Amaranth Celestarch",
+   "blurb": "Epic-tier appearance. Amaranth crystal brocade, blue-silver guards and platinum crests.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "bloodwake_lich_epic",
+   "name": "Bloodwake Lich",
+   "blurb": "Epic-tier appearance. Blackened wine velvet, copper-bone skulls and thorn embroidery.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "drowned_reliquary_epic",
+   "name": "Drowned Reliquary",
+   "blurb": "Epic-tier appearance. Abyssal blue tide embroidery, sea-bone skulls and tarnished silver.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "heliodor_sovereign_epic",
+   "name": "Heliodor Sovereign",
+   "blurb": "Epic-tier appearance. Champagne solar damask, heavy gold guards and sunburst crests.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "ossuary_regent_epic",
+   "name": "Ossuary Regent",
+   "blurb": "Epic-tier appearance. Charcoal funerary brocade, aged bone skulls and ivory edging.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "peacock_astromancer_epic",
+   "name": "Peacock Astromancer",
+   "blurb": "Epic-tier appearance. Peacock blue eye-pattern silk, violet guards and electrum edging.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "phoenix_carmine_epic",
+   "name": "Phoenix Carmine",
+   "blurb": "Epic-tier appearance. Carmine feather brocade, burnished amber guards and rich gold flames.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "voidbone_oracle_epic",
+   "name": "Voidbone Oracle",
+   "blurb": "Epic-tier appearance. Deep violet orbital silk, cold lilac skulls and blackened guards.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "amberwake_rare",
+   "name": "Amberwake Arcanist",
+   "blurb": "Rare-tier appearance. Burnished amber damask, oxblood guards and pale gold sun crests.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "carmine_eclipse_rare",
+   "name": "Carmine Eclipse",
+   "blurb": "Rare-tier appearance. Deep carmine star silk, charcoal guards and cold silver crests.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "ivory_thicket_rare",
+   "name": "Ivory Thicket",
+   "blurb": "Rare-tier appearance. Ivory botanical jacquard, forest guards and aged gold edging.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "jadecoil_rare",
+   "name": "Jadecoil Custodian",
+   "blurb": "Rare-tier appearance. Jade scale silk, antique gold, dark verdigris guards and leaf crests.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "lapis_conclave_rare",
+   "name": "Lapis Conclave",
+   "blurb": "Rare-tier appearance. Royal lapis brocade, bronze guards and rich gold latticework.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "malachite_court_rare",
+   "name": "Malachite Court",
+   "blurb": "Rare-tier appearance. Olive geometric brocade, champagne guards and gilded leaf insignia.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "rimeglass_rare",
+   "name": "Rimeglass Adjudicator",
+   "blurb": "Rare-tier appearance. Ice-blue scale silk, midnight guards and platinum star embroidery.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "rosequartz_rare",
+   "name": "Rosequartz Savant",
+   "blurb": "Rare-tier appearance. Dusty rose floral velvet, plum guards and polished silver.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "sable_orbit_rare",
+   "name": "Sable Orbit",
+   "blurb": "Rare-tier appearance. Ink-blue celestial velvet, pewter guards and warm electrum trim.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "violet_cinder_rare",
+   "name": "Violet Cinder",
+   "blurb": "Rare-tier appearance. Violet pinstripe silk, petrol guards and rose-gold flame embroidery.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "bellfield_common",
+   "name": "Bellfield",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched handbell crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "bristleway_common",
+   "name": "Bristleway",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched broom crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "claypour_common",
+   "name": "Claypour",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched earthen jug crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "cooperrun_common",
+   "name": "Cooperrun",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched barrel crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "farrier_rest_common",
+   "name": "Farrier Rest",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched horseshoe crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "hearthcomb_common",
+   "name": "Hearthcomb",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched comb crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "mudsole_common",
+   "name": "Mudsole",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched work boot crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "sackcloth_pilgrim_common",
+   "name": "Sackcloth Pilgrim",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched grain sack crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "spindlepath_common",
+   "name": "Spindlepath",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched thread spool crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "willowcreel_common",
+   "name": "Willowcreel",
+   "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched woven basket crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "beaconwake_rare",
+   "name": "Beaconwake",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered lighthouse crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "cicadachime_rare",
+   "name": "Cicadachime",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered cicada crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "eelcurrent_rare",
+   "name": "Eelcurrent",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered eel crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "evenbalance_rare",
+   "name": "Evenbalance",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered balance scales crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "foxglint_rare",
+   "name": "Foxglint",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered fox face crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "herbal_crucible_rare",
+   "name": "Herbal Crucible",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered mortar and pestle crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "snowdrop_vigil_rare",
+   "name": "Snowdrop Vigil",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered snowdrop flower crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "suncaliber_rare",
+   "name": "Suncaliber",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered sundial crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "azure_perch_uncommon",
+   "name": "Azure Perch",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered kingfisher crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "burrowguard_uncommon",
+   "name": "Burrowguard",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered badger crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "dewtrail_uncommon",
+   "name": "Dewtrail",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered snail crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "fernlace_uncommon",
+   "name": "Fernlace",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered fern frond crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "maplewatch_uncommon",
+   "name": "Maplewatch",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered maple leaf crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "roundwatch_uncommon",
+   "name": "Roundwatch",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered round shield crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "barleybound_common",
+   "name": "Barleybound Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original barley sheaf stitch badge. Alternating harvest stripes, plain dark mantle and wrapped ochre shins. Intended as a common item alternative for the ash palette.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "hivehand_common",
+   "name": "Hivehand Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original bee stitch badge. Ochre body with dark yoke, honeycomb stitching along hems and guards. Intended as a common item alternative for the crimson palette.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "lamplight_common",
+   "name": "Lamplight Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original lantern stitch badge. Charcoal coat with a tobacco bib and rectangular ochre seam frames. Intended as a common item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "mirecap_common",
+   "name": "Mirecap Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original mushroom stitch badge. Uneven clay repair patches, moss cloth, stitched pocket panels. Intended as a common item alternative for the moss palette.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "oakward_common",
+   "name": "Oakward Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original oak leaf stitch badge. Long green center panels, oatmeal sleeves, double running-stitch hems. Intended as a common item alternative for the moss palette.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "quillroad_common",
+   "name": "Quillroad Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original feather stitch badge. A broad diagonal linen sash over russet, dark sleeves and linen mantle. Intended as a common item alternative for the crimson palette.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "rainstitch_common",
+   "name": "Rainstitch Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original raindrop stitch badge. Split blue and fog-grey cloth, dotted sleeve borders and high dark boots. Intended as a common item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "rillkeep_common",
+   "name": "Rillkeep Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original fish stitch badge. Pale side panels and cuffs, blue-green torso, paired tide bands. Intended as a common item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "seedkeep_common",
+   "name": "Seedkeep Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original acorn stitch badge. Angular tan-and-mauve paneling, narrow dark binding and patched knees. Intended as a common item alternative for the amethyst palette.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "shellpath_common",
+   "name": "Shellpath Common Gear",
+   "blurb": "Common cloth and leather gear bearing an original spiral shell stitch badge. Grey-green body, slate shoulders, scalloped borders and cuff bands. Intended as a common item alternative for the ash palette.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "clayroad_common",
+   "name": "Clayroad Common Gear",
+   "blurb": "Common-tier travelling gear. Dusty brick-red wool, dark russet mantle and chestnut leather. Plain bindings; no added insignia or precious decoration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "duskfield_common",
+   "name": "Duskfield Common Gear",
+   "blurb": "Common-tier travelling gear. Faded heather cloth, dark plum shoulders and plain brown leather. Plain bindings and a stitched half-sun over a field; no precious decoration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "hearthash_common",
+   "name": "Hearthash Common Gear",
+   "blurb": "Common-tier travelling gear. Undyed oatmeal wool, charcoal mantle and worn brown leather. Plain bindings; no added insignia or precious decoration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "hedgeway_common",
+   "name": "Hedgeway Common Gear",
+   "blurb": "Common brown travelling gear: coarse russet wool, darker mantle and trousers, a weathered grey-green hat, worn saddle leather and plain bindings. A plain stitched hedge-leaf badge on the back; no precious trim. Intended as common-tier Ashen gear.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "rainward_common",
+   "name": "Rainward Common Gear",
+   "blurb": "Common-tier travelling gear. Weathered slate-blue cloth, darker shoulders and soot-brown boots. Plain bindings; no added insignia or precious decoration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "reedwalker_common",
+   "name": "Reedwalker Common Gear",
+   "blurb": "Common-tier travelling gear. Faded olive twill, dark moss shoulders and weathered saddle leather. Plain bindings; no added insignia or precious decoration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "aetherloom_epic",
+   "name": "Aetherloom Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original armillary sphere stitch badge. Deep turquoise and blue-silver panels, orbital lattice brocade, platinum piping and inset teal cabochons. Intended as an epic item alternative for the moss palette.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "coralveil_epic",
+   "name": "Coralveil Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original jellyfish stitch badge. Amethyst and iridescent teal panels, beaded scallops, flowing tentacle embroidery and opal-colored trim. Intended as an epic item alternative for the amethyst palette.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "eclipseforge_epic",
+   "name": "Eclipseforge Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original eclipsed sun stitch badge. Midnight and antique gold, broad engraved shoulder plates, radiating hem brocade and amber enamel studs. Intended as an epic item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "lotusregent_epic",
+   "name": "Lotusregent Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original lotus stitch badge. Wine silk, champagne layered panels, petal brocade and pale gold ornamental borders. Intended as an epic item alternative for the crimson palette.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "obsidianwatch_epic",
+   "name": "Obsidianwatch Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original watchtower stitch badge. Obsidian cloth and jade plates, bronze architectural fretwork, square enamel insets and plated shins. Intended as an epic item alternative for the ash palette.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "sapphirecarapace_epic",
+   "name": "Sapphirecarapace Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original scarab stitch badge. Lapis and gilded ochre, segmented metal panels, repeating scale brocade and blue enamel details. Intended as an epic item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "tempestspine_epic",
+   "name": "Tempestspine Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original cyclone stitch badge. Storm plum and slate steel, sweeping spiral brocade, ribbed cuffs and layered silver armor edging. Intended as an epic item alternative for the amethyst palette.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "verdantreliquary_epic",
+   "name": "Verdant Reliquary Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original rooted tree stitch badge. Deep forest and burnished gold, branching vine brocade, inset green enamels and engraved leg guards. Intended as an epic item alternative for the moss palette.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "wintermaw_epic",
+   "name": "Wintermaw Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original wolf stitch badge. Glacial blue silk and pale steel panels, angular frost brocade, silver tracery and ice-blue clasps. Intended as an epic item alternative for the ash palette.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "chrysalis_court_legendary",
+   "name": "Chrysalis Court",
+   "blurb": "Legendary gear. Turquoise silk, garnet mantle, champagne gold and wing-cell embroidery. Original butterfly crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4
+  },
+  {
+   "id": "coffer_ages_legendary",
+   "name": "Coffer of Ages",
+   "blurb": "Legendary gear. Emerald silk, warm bronze mantle, heavy gold and linked-box ceremonial fretwork. Original relic coffer crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4
+  },
+  {
+   "id": "galleon_veil_legendary",
+   "name": "Galleon of the Veil",
+   "blurb": "Legendary gear. Midnight velvet, ocean-teal mantle, maritime gold and rolling sail-pattern weave. Original galleon crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4
+  },
+  {
+   "id": "gildmane_regent_legendary",
+   "name": "Gildmane Regent",
+   "blurb": "Legendary gear. Ivory silk, deep blue mantle, sovereign gold and circular mane-like damask. Original lion mane crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4
+  },
+  {
+   "id": "kestrel_accord_legendary",
+   "name": "Kestrel Accord",
+   "blurb": "Legendary gear. Violet velvet, sapphire mantle, antique gold and feathered lattice brocade. Original kestrel crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4
+  },
+  {
+   "id": "lyric_reliquary_legendary",
+   "name": "Lyric Reliquary",
+   "blurb": "Legendary gear. Steel-blue silk, warm ivory mantle, pale rose gold and lyrical loop brocade. Original lyre crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4
+  },
+  {
+   "id": "nettle_sovereign_legendary",
+   "name": "Nettle Sovereign",
+   "blurb": "Legendary gear. Wine silk, forest-green mantle, rose gold and serrated-leaf embroidery. Original nettle sprig crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4
+  },
+  {
+   "id": "labyrinth_infinite_mythic",
+   "name": "Labyrinth Infinite",
+   "blurb": "Mythic gear. Obsidian-plum and amethyst with gilded labyrinth weave and dense metallic borders. Original labyrinth crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5
+  },
+  {
+   "id": "leviathan_dream_mythic",
+   "name": "Leviathan Dream",
+   "blurb": "Mythic gear. Abyss-blue and royal violet with silver tidal brocade and leviathan crests. Original whale crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5
+  },
+  {
+   "id": "pearlheart_ascendant_mythic",
+   "name": "Pearlheart Ascendant",
+   "blurb": "Mythic gear. Pearl-ivory and opal-teal ceremonial cloth, ornate pale gold and pearl-shell crests. Original pearl clam crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5
+  },
+  {
+   "id": "axleweave_epic",
+   "name": "Axleweave Artificer",
+   "blurb": "Epic gear. Verdigris velvet, dark bronze mantle and warm brass with linked-cog brocade. Original gear crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "gilded_crucible_epic",
+   "name": "Gilded Crucible",
+   "blurb": "Epic gear. Copper-brown velvet, petroleum-blue mantle and engraved gold fretwork. Original anvil crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "morrowplume_epic",
+   "name": "Morrowplume",
+   "blurb": "Epic gear. Ivory velvet, deep lagoon shoulders, champagne trim and featherlike interlaced arcs. Original swan crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "rosethorn_duelist_epic",
+   "name": "Rosethorn Duelist",
+   "blurb": "Epic gear. Garnet velvet, deep jade shoulders, rose-gold edging and rosette damask. Original rose crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "royal_fan_epic",
+   "name": "Royal Fan",
+   "blurb": "Epic gear. Peacock-blue velvet, malachite shoulders, pale gold and fan-shaped brocade. Original peacock crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "scrollbound_epic",
+   "name": "Scrollbound Magistrate",
+   "blurb": "Epic gear. Parchment-colored twill, ink-grey mantle and intricate brass scrollwork. Original unfurled scroll crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "silken_arachnist_epic",
+   "name": "Silken Arachnist",
+   "blurb": "Epic gear. Plum velvet, blue-black mantle, silver filigree and fine web brocade. Original spider web crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "waystar_sovereign_epic",
+   "name": "Waystar Sovereign",
+   "blurb": "Epic gear. Midnight velvet, violet shoulders, platinum edging and interlaced orbit brocade. Original compass rose crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
+  },
+  {
+   "id": "brackenhare_rare",
+   "name": "Brackenhare",
+   "blurb": "Rare gear. Olive twill, hazel mantle, old pewter and small sprig embroidery. Original hare crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "burrwarden_rare",
+   "name": "Burrwarden",
+   "blurb": "Rare gear. Walnut weave, moss-grey shoulders, brushed brass and rounded seed-burr motifs. Original hedgehog crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "cairnkeeper_rare",
+   "name": "Cairnkeeper",
+   "blurb": "Rare gear. Slate weave, blue-grey mantle, brushed steel and staggered rounded-stone motifs. Original stone cairn crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "candlewick_rare",
+   "name": "Candlewick",
+   "blurb": "Rare gear. Amber weave, dark wine mantle, aged brass and restrained droplet stitching. Original candle crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "fenhopper_rare",
+   "name": "Fenhopper",
+   "blurb": "Rare gear. Fen-green twill, reed shoulders, muted silver and looping water ripples. Original frog crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "meadowstride_rare",
+   "name": "Meadowstride",
+   "blurb": "Rare gear. Meadow-green weave, dark fern mantle, dull gold and reed-stem stitching. Original grasshopper crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "saltharbor_rare",
+   "name": "Saltharbor",
+   "blurb": "Rare gear. Faded marine-blue twill, salt-grey shoulders, pewter and braided-rope embroidery. Original anchor crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "seamkeeper_rare",
+   "name": "Seamkeeper",
+   "blurb": "Rare gear. Petrol-blue weave, flax-grey shoulders, pale pewter and looping thread embroidery. Original needle and thread crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "shearweft_rare",
+   "name": "Shearweft",
+   "blurb": "Rare gear. Dusty periwinkle twill, taupe mantle, steel trim and paired running stitches. Original scissors crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "cinderweave_rare",
+   "name": "Cinderweave Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original triple flame stitch badge. Burgundy cloth, charcoal diamond panels, copper-gold flame hems and studded shoulder bands. Intended as a rare item alternative for the crimson palette.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "coilwarden_rare",
+   "name": "Coilwarden Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original coiled serpent stitch badge. Emerald cloth, antique-brass insets, linked scale embroidery and sinuous double borders. Intended as a rare item alternative for the moss palette.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "deepcoil_rare",
+   "name": "Deepcoil Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original octopus stitch badge. Deep teal cloth, plum marine panels, scalloped cuff embroidery and repeating silver-ring hems. Intended as a rare item alternative for the moss palette.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "orchidveil_rare",
+   "name": "Orchidveil Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original orchid stitch badge. Orchid satin, deep jade insets, petal lattice on cuffs and trailing embroidered hem florets. Intended as a rare item alternative for the amethyst palette.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "pearlcurrent_rare",
+   "name": "Pearlcurrent Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original seahorse stitch badge. Peacock-blue cloth, pearl-lilac panels, interlaced wave bands and silver-thread dots. Intended as a rare item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "ravencrest_rare",
+   "name": "Ravencrest Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original raven stitch badge. Aubergine cloth, a dark feather-shaped yoke, silver braid, scalloped side panels and engraved cuff bands. Intended as a rare item alternative for the amethyst palette.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "rimeblossom_rare",
+   "name": "Rimeblossom Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original snowflake stitch badge. Sapphire cloth, pale ice panels, crystalline lattice stitching and layered silver borders. Intended as a rare item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "sandsentinel_rare",
+   "name": "Sandsentinel Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original hourglass stitch badge. Sand-gold cloth, wine panels, dense lozenge borders and brass-framed knee and shoulder guards. Intended as a rare item alternative for the crimson palette.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "stormweft_rare",
+   "name": "Stormweft Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original thundercloud stitch badge. Storm-blue cloth, violet diagonal panels, angular silver stitching and banded leather guards. Intended as a rare item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "vaultscribe_rare",
+   "name": "Vaultscribe Rare Gear",
+   "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original open book stitch badge. Warm bronze cloth, ink-blue scholar panels, rectangular fretwork and gold-bound cuffs. Intended as a rare item alternative for the ash palette.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2
+  },
+  {
+   "id": "dawnstitch_uncommon",
+   "name": "Dawnstitch Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original rising sun stitch badge. Warm ochre cloth, wine shoulders, a wide wine hem and short radial embroidery stitches. Intended as an uncommon item alternative for the crimson palette.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "foxtrail_uncommon",
+   "name": "Foxtrail Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original fox paw stitch badge. Rust cloth with an asymmetrical dark inset, small copper studs and reinforced diagonal seams. Intended as an uncommon item alternative for the crimson palette.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "glassfen_uncommon",
+   "name": "Glassfen Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original dragonfly stitch badge. Indigo with moss shoulder panels, a narrow pale placket, paired cuff rings and silver-thread dashes. Intended as an uncommon item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "gloamwing_uncommon",
+   "name": "Gloamwing Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original moth stitch badge. A dark plum center panel, pale folded cuffs, scalloped hem embroidery and pewter edging. Intended as an uncommon item alternative for the amethyst palette.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "moonthread_uncommon",
+   "name": "Moonthread Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original crescent moon stitch badge. Midnight cloth with a pale curved front panel, small hem dots and double pewter piping. Intended as an uncommon item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "pinewarden_uncommon",
+   "name": "Pinewarden Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original pinecone stitch badge. Forest-green twill, amber collar panels, layered scale-shaped hem stitches and muted brass fittings. Intended as an uncommon item alternative for the moss palette.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "reedheron_uncommon",
+   "name": "Reedheron Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original heron stitch badge. Reed-green cloth, ivory shoulder panels, double flowing hem bands and brass clasps. Intended as an uncommon item alternative for the moss palette.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "starwake_uncommon",
+   "name": "Starwake Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original comet stitch badge. Cobalt and mulberry stepped panels, offset sleeve bands and small silver-tone stud rows. Intended as an uncommon item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "stoneback_uncommon",
+   "name": "Stoneback Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original tortoise stitch badge. Sage panels, slate quilted shoulders, linked rectangular borders and pewter knee edging. Intended as an uncommon item alternative for the ash palette.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "thistleguard_uncommon",
+   "name": "Thistleguard Uncommon Gear",
+   "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original thistle stitch badge. Heather cloth framed by a dark green bib, small embroidered florets and steel-toned binding. Intended as an uncommon item alternative for the amethyst palette.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1
+  },
+  {
+   "id": "coalstitch_common",
+   "name": "Coalstitch Common Gear",
+   "blurb": "Common-tier gear. Charcoal cloth with rough rectangular repairs, ash-grey hat, dark mantle and soot-brown leather. No added heraldry or precious trim.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "copperfield_common",
+   "name": "Copperfield Common Gear",
+   "blurb": "Common-tier gear. Copper-brown basket-woven tunic, ochre hat, dark earth mantle and chestnut boots. No added heraldry or precious trim.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "flaxbinder_common",
+   "name": "Flaxbinder Common Gear",
+   "blurb": "Common-tier gear. Coarse flax window-check tunic, moss-green mantle, undyed cap and saddle leather. No added heraldry or precious trim.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "peatmender_common",
+   "name": "Peatmender Common Gear",
+   "blurb": "Common-tier gear. Olive cloth with broad alternating repair panels, rust cap, tawny leather shoulders and dark boots. No added heraldry or precious trim.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "rimecrofter_common",
+   "name": "Rimecrofter Common Gear",
+   "blurb": "Common-tier gear. Bone-grey herringbone wool, muted blue-green hat and mantle, tan work boots and plain bindings. No added heraldry or precious trim.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "wharfhand_common",
+   "name": "Wharfhand Common Gear",
+   "blurb": "Common-tier gear. Faded blue pinstriped canvas, russet shoulder cape, navy hat and salt-worn brown leather. No added heraldry or precious trim.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 0
+  },
+  {
+   "id": "vesperglass_epic",
+   "name": "Vesperglass Regalia",
+   "blurb": "Epic gear for the Midnight palette: midnight velvet, emerald mantle, pale-gold gilt, looping woven brocade and an aquamarine crystal inlay crest. All five pieces retain the sculpted folds, stitching and metal relief. Assign epic item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3
   }
  ]
 }

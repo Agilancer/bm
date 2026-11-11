@@ -11,7 +11,7 @@ The game is now ranged spell combat. Everything below about swords and armour de
 - **Six schools:** Fire, Ice, Earth, Arcane, Lightning and Utility, ten spells each (sixty in all), in skill trees in the spellbook (`B`). You start with the first spell of each, and every level brings a point to spend. See "Spells" below.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
-- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Seen as drops and icons; there's no visible body to wear them on.
+- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Every robe found is a piece of one of the 125 **sets of gear**, each with its own look on the third-person body and bonuses for wearing two, three and all five of it: see "Gear on the body".
 - **Gems:** socket into staffs, skulls and shields. Each kind has its own stat, particles, motion and light (`src/gfx/gemfx.js`), and a Flawless stone adds a flourish. A shield's show when you ride it.
 - **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, fills you up, and brings a skill point (two at every fifth level). It's kept in the save.
 
@@ -149,13 +149,34 @@ screen is still what you hit. Which view you left it in is kept with the setting
 
 #### Gear on the body
 
-The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle, tunic, legs
+The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle (the shoulder guards, the sleeves under them and the collar), tunic, legs
 and boots painted new. `assets/game/player/parts.png` says which of those five every texel of the map is, so the pieces
 mix: wear the Crimson hat and the Ashen boots and he has one set's hat and another's boots (`src/gfx/bodyskin.js`: the
 map is mixed on a canvas when what you wear changes, and the body's colour swapped for it). Which set a piece wears is
 `pickSets`: a set says what it's `wears` for, robes of a palette (and only some shapes, if it names them) or named items.
 A slot with no robe in it, or a robe nothing was made for, is as the sculpt came. Skin, hair and eyes never change. The
 shapes don't either: a hood wears the hat's paint.
+
+**Sets of gear.** A set with a rarity (`rarity` in `sets.json`: its `set.json` says it, or the end of its id does, as in
+`hedgeway_common`) is gear of its own: 125 of them, common to mythical, listed for the dice in `src/items/robesets.js`
+(written by the importer, not by hand). Each of its five pieces is an item to find, buy, sew or be paid with: a robe of
+the set's palette that names its set (`{ type: 'robe', base, set }`), called for it ("Vesperglass Pointed Hat"), always
+of the set's rarity, and dressed in that set's look whatever else is worn (`pickSets` looks at `item.set` first). Every
+robe rolled is a piece of some set (`rollRobe` in `src/items/items.js`: the rarity comes up, then a set that comes that
+rare; one legendary roll in eight is mythical, as with skulls). The five `_regalia` sets have no rarity: they dress the
+plain robes of older saves, by palette.
+
+**Held back.** Every set was put before two critics of textures, three rounds, and reworked between them
+(`art/player/skins/<id>/recipe.json` is each one as it stands). The 22 that still failed one of them are out of the game
+until they're better: `art/player/skins/held.json` lists them with what each critic said was wrong and how to mend it,
+and `held.jpg` beside it shows them. Their recipes are kept. `python tools/player/skins/import_set.py --hold <ids>`
+takes a set out like that, and `--release <ids>` followed by `rebake.py <ids>` puts one back.
+
+**Set bonuses.** Wearing two, three and all five pieces of one set each add a stat (`setBonuses`): ward, life, spell
+damage, mana regeneration, mana or mana cost, three different ones for each set, picked by its id, and bigger the rarer
+the set (`SET_UNIT`; the five-piece bonus is three measures). `gearTotals` counts them, so the sim, the tooltip (which
+lists them, lit when they're on) and auto-play's choice of what to wear all see them. In the Test Dungeon, the Hall
+Stores' **Gear sets** tab hands over all five pieces of any set.
 
 - The game ships a set for each of the five palettes (`assets/game/player/skins/`, listed in `sets.json`). Their recipes
   are `tools/player/skins/kit/recipes/`.
@@ -176,6 +197,11 @@ shapes don't either: a hood wears the hat's paint.
     `python tools/player/skins/import_set.py that.zip [more.zip]` checks it, writes `skins/<id>.webp`, lists it in
     `sets.json` (the same id replaces), and keeps its recipe and pictures in `art/player/skins/<id>/`. `--list` and
     `--remove <id>` do what they say.
+  - A folder works as well as a zip: a set unzipped, or a folder of them however deep. `--rarity rare <ids>` says how
+    rare sets come that don't say so themselves.
+  - `python tools/player/skins/rebake.py <ids>` (or `--all`) bakes sets again from `art/player/skins/<id>/recipe.json`
+    after a recipe or one of its pictures has been changed, and writes a four-sided `preview.jpg` beside it. It needs
+    the kit built in `tools/build/` (the two commands above).
   - `bm.wear('crimson_regalia')` in the console dresses him whole in one set, whatever's in the pack; `bm.wear()` goes back.
 - `node --test tests/body-skin.test.mjs` checks the picking and that the shipped sets are whole.
 
@@ -227,6 +253,19 @@ All twelve houses can be entered: furnished, with a stair and an upper floor, bu
 
 Chests (`src/items/chests.js`, placed by `chest(...)` in the builder) open on `E`, the lid swings up on its hinge and gold, gems and gear spill out. Which are open is saved. Gold is counted in the pack.
 
+### The smith at his anvil
+
+Homunculus works at a proper anvil: horn, step, face and waist on a banded block of oak (`Home.anvil` in `tools/interior/build_interior.py`). He takes his hammer up off it, works a heat of five to ten blows, each one down on the anvil's face with the ring of it timed to the moment it lands, stands back with the hammer at his side, and now and then lays it down to fold his arms over the work. He lays it down before he goes to his dinner, and it stays on the anvil when he's not there.
+
+- The three clips he works by (`hammer`, `hammer_hold`, `hammer_take`) are made, not taken from Lisandra's: `node tools/folk/smith_clips.mjs` works out where the hammer has to be at each moment on his own body, bends his arm and back to put it there, and writes the result into `assets/game/folk/clips.*` as turns of her bones like every other clip. Run it after `tools/folk/pack_clips.py`. `--check` only reports how near the hammer comes.
+- `src/folk/smithy.js` holds what the pieces share: how far he stands from the anvil and how high its face is (`FORGE`), the hammer's shape and how his hand holds it, and where it's left. The town's thread writes the hammer's place as one more joint after his own (`src/folk/folk.worker.js`), and `src/gfx/folktools.js` draws it.
+- The anvil's height and distance are in `build_interior.py` too (`ANVIL_FACE`, `ANVIL_OFF`), and `tests/smithy.test.mjs` fails if the two disagree, or if a blow lands anywhere but the face.
+- `python tools/interior/patch_anvil.py` puts the anvil into the built interior without Blender or the skulls' sheet, for when only the anvil has changed. A whole build gives the same one.
+- To look at him: `tools/folk/viewer.html?ids=smith&clip=hammer&forge` (served by `tools/serve.py`) shows the hammer in his hand and a block where the anvil's face is.
+- Not yet watched in the game's own view: the machine this was made on loses its software GPU before the town is drawn. It was watched in the folk viewer, on the same clips, body and hammer, and the town's thread was run through a morning of it in `tests/smithy.test.mjs`.
+
+The `push` clip is gone from the town: nobody's work asks for it, and it's out of the packed clips (so is `cleave`, the smith's old swing, a left-handed chop that stopped at chest height).
+
 ### Sound
 
 Everything is MP3 in `assets/game/audio/`, named in `BANKS` in `src/audio.js`. The fight's and the dirt steps' sounds load before the
@@ -234,7 +273,7 @@ game starts; the rest come in the background once it has.
 
 - **TomMusic's Free Fantasy SFX Pack** (all 204 files, `tools/audio/build_fantasy_sfx.py`): footsteps on dirt, stone, boards and water
   (`src/ui/places.js` says which is underfoot; knights in plate get the chain ones), doors and the cathedral's great doors, the
-  Sexton's lock, chests, the woodpile's axe and the smith's hammer (`blows` in `src/folk/folk.worker.js`), a lamp lit as someone
+  Sexton's lock, chests, the woodpile's axe and the smith's hammer on the anvil (`blows` in `src/folk/folk.worker.js`), a lamp lit as someone
   comes home, the nearest fire's crackle, and a layer over each spell's own made sound (`src/spellsound.js`). Its 60 s beds play by
   where you are (`sounds` in `src/ui/lands.js`): the woods by day and by night, rain on the Weeping Fen and on Sallowmere's shore, a
   storm over Velscour's keep, a house's quiet, the cathedral with the storm on its roof, the catacombs, the Rift, the falls.
@@ -318,6 +357,16 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     pace before its middle and then to one a pace beyond (`DOORWAYS`), so it comes up to the door facing it, opens it,
     and walks through down the middle, and leaves a house the same way. It opens only the doors its path goes through,
     not every one it passes. A door it can't open yet (the Sexton's, before his quest) its paths keep clear of.
+  - **Where a path ends.** At the nearest place to where it's going that a body can stand and get to: not a gap shut in
+    behind a bed, which is often the nearest free floor to a chest in a corner. Going to something it means to put a
+    hand to or have a word with (a chest, a thing on the ground, someone), the path ends where nothing stands between
+    it and that, so it isn't sent to the far side of a wall from it. One house chest stands behind a screen with a way
+    in too narrow for its half-metre grid: that one it leaves at once.
+  - **One errand at a time.** Sent somewhere new, it goes there, even when that's a stride or two from where it was
+    going: it used to carry on to whoever stood outside a door when it meant the chest just inside it.
+  - **Its eyes are on the way it's going.** With an errand to talk to someone in hand and a chest to fetch first, its
+    look used to stay on the door it had just opened, and it stood there unable to turn and walk through, till it gave
+    the chest up. A turn on the spot that goes on past two seconds now lets its look go, and counts as being stuck.
   (The nav thread used to read the world's list of pines and boulders three numbers at a time where there are four to
   each, so across the northern half of the land every wood read as solid: no path through it, no way to back off in a
   fight there. It reads them right now.)
@@ -534,11 +583,14 @@ bought as written (it's played through from level 1 to 50), and a new block of m
   it; and neither "Not enough mana" nor a broken guard came up once. It has not been watched down the Warrens or at the
   black knight since, nor by a person at all: watch a fight or two with it.
 - Its walking in the town (doors, walls, the houses' chests, a word only face to face) was watched the same way, against
-  a second copy of the world kept on the page to judge it by. In 230 seconds it went through house doors fifteen times,
-  never more than 0.18 m off a doorway's middle and square on each time (before: up to 0.44 m off, which rubs the jamb),
-  and opened seven of the houses' chests, each from within two metres with nothing between. It then got stuck behind
-  one of the townsfolk standing just inside a door; it now goes on past a place it can't get nearer to, and that last
-  change, and its talking after it, have not been watched through. Watch it take a quest or two in the town.
+  a second copy of the world kept on the page to judge it by. In the last run, four minutes from a new game: thirteen
+  goings through house doors, none more than 0.17 m off a doorway's middle and all square on (before: up to 0.44 m off,
+  which rubs the jamb); five house chests opened, each from within a metre and a half with nothing between; three quests
+  taken, none through a wall; nothing got it stuck; and it was against a wall for 1.1% of the time it was walking (5.2%
+  before). Two faults showed in the runs before that one and are mended: it stood at a door unable to turn from it
+  when it had someone to talk to next, and it walked to whoever stood outside a door when it meant the chest inside.
+  Not watched: a quest handed in indoors, the shops, and the catacombs' doors since. Nobody has watched it with their
+  own eyes.
 
 ### The Free Company: a party of your own
 

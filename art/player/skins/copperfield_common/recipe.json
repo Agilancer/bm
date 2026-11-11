@@ -1,0 +1,133 @@
+{
+ "id": "copperfield_common",
+ "name": "Copperfield Common Gear",
+ "blurb": "Common-tier gear. Copper-brown basket-woven tunic, ochre hat, dark earth mantle and chestnut boots. No added heraldry or precious trim.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/cf_tunic.png",
+   "tile": "repeat",
+   "scale": 0.2,
+   "bright": 0.82,
+   "shading": 0.8,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/cf_binding.png",
+   "tile": "repeat",
+   "scale": 0.1,
+   "bright": 0.7,
+   "shading": 0.6,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/cf_leather.png",
+   "tile": "repeat",
+   "scale": 0.12,
+   "bright": 1.0,
+   "shading": 0.85,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/cf_hat.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 0.95,
+    "shading": 0.75,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/cf_binding.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 1.0,
+    "shading": 0.8,
+    "keep": 0
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/cf_mantle.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 1.0,
+    "shading": 0.8,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/cf_strap.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.9,
+    "shading": 0.85,
+    "keep": 0.1
+   }
+  },
+  "chest": {
+   "leather": {
+    "swatch": "swatches/cf_strap.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.9,
+    "shading": 0.85,
+    "keep": 0.1
+   },
+   "decals": [
+    {
+     "image": "decals/pot.png",
+     "anchor": "back",
+     "size": 0.19,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/cf_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/cf_trousers.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.95,
+    "shading": 0.85,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/cf_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1.05,
+    "shading": 0.85,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/cf_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1.1,
+    "shading": 0.85,
+    "keep": 0.2
+   }
+  }
+ }
+}

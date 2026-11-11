@@ -1,0 +1,156 @@
+{
+ "id": "fernlace_uncommon",
+ "name": "Fernlace",
+ "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered fern frond crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/f2_green.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.82,
+   "shading": 0.9,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/fernlace_uncommon_trim.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.96,
+   "shading": 0.67,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/fernlace_uncommon_leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.88,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/f2_hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.0
+   },
+   "decals": [
+    {
+     "image": "decals/frond_s_cream.png",
+     "anchor": "hat",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/f2_tan.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.0
+   },
+   "pattern": {
+    "image": "swatches/fernlace_uncommon_pattern.png",
+    "color": "#c9b88a",
+    "scale": 0.225,
+    "strength": 0.12,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/frond_green.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/fernlace_uncommon_pattern.png",
+    "color": "#aab18c",
+    "scale": 0.225,
+    "strength": 0.18,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/frond_cream.png",
+     "anchor": "back",
+     "size": 0.24,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    },
+    {
+     "image": "decals/frond_s_cream.png",
+     "anchor": "tabard",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/f2_greave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/fernlace_uncommon_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.88,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/f2_green.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/fernlace_uncommon_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.13,
+    "shading": 0.88,
+    "keep": 0.14
+   }
+  }
+ }
+}

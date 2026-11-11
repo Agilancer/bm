@@ -1,0 +1,90 @@
+{
+ "id": "rainward_common",
+ "name": "Rainward Common Gear",
+ "blurb": "Common-tier travelling gear. Weathered slate-blue cloth, darker shoulders and soot-brown boots. Plain bindings; no added insignia or precious decoration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/rw_tunic.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.85
+  },
+  "trim": {
+   "swatch": "swatches/rainward_common_binding.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.4
+  },
+  "leather": {
+   "swatch": "swatches/rw_soot.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.85,
+   "keep": 0.2
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/rw_hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.85
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/rw_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/rw_soot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.25,
+    "shading": 0.95,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/rw_soot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.2
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/rw_soot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/rw_soot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.85,
+    "keep": 0.2
+   }
+  }
+ }
+}

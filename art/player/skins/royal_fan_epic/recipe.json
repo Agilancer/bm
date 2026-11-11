@@ -1,0 +1,172 @@
+{
+ "id": "royal_fan_epic",
+ "name": "Royal Fan",
+ "blurb": "Epic gear. Peacock-blue velvet, malachite shoulders, pale gold and fan-shaped brocade. Original peacock crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/rf2_blue.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.78,
+   "shading": 0.95,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/rf2_gold.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.7,
+   "keep": 0.0
+  },
+  "leather": {
+   "swatch": "swatches/rf2_dark.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/rf2_mal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.74,
+    "shading": 0.95,
+    "keep": 0.0
+   },
+   "decals": [
+    {
+     "image": "decals/peacock.png",
+     "anchor": "hat",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/rf2_mal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.78,
+    "shading": 0.95,
+    "keep": 0.0
+   },
+   "pattern": {
+    "image": "swatches/rf2_fans.png",
+    "color": "#e2cf8e",
+    "scale": 0.16,
+    "strength": 0.2,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/peacock.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/peacock.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/rf2_fans.png",
+    "color": "#dcc47a",
+    "scale": 0.19,
+    "strength": 0.42,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/peacock.png",
+     "anchor": "back",
+     "size": 0.225,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/peacock.png",
+     "anchor": "tabard",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/rf2_mallea.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.9,
+    "keep": 0.18
+   },
+   "leather": {
+    "swatch": "swatches/rf2_dkgreen.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.86,
+    "keep": 0.1
+   },
+   "trim": {
+    "swatch": "swatches/rf2_gold.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.7,
+    "keep": 0.0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/rf2_blue.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.7,
+    "shading": 0.9,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/rf2_dark.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.86,
+    "keep": 0.1
+   }
+  }
+ }
+}

@@ -1,0 +1,132 @@
+{
+ "id": "willowcreel_common",
+ "name": "Willowcreel",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched woven basket crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/willowcreel_common_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.93,
+   "shading": 0.88,
+   "keep": 0,
+   "color": "#dfe2cc"
+  },
+  "trim": {
+   "swatch": "swatches/willowcreel_common_trim.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.83,
+   "shading": 0.45,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/willowcreel_common_leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.88,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/willowcreel_common_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.84,
+    "shading": 0.88,
+    "keep": 0,
+    "color": "#dfe2cc"
+   },
+   "decals": [
+    {
+     "image": "decals/creel.png",
+     "anchor": "hat",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/willowcreel_common_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.03,
+    "shading": 0.88,
+    "keep": 0
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/willowcreel_common_pattern.png",
+    "color": "#827654",
+    "scale": 0.2,
+    "strength": 0.07,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/creel.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/willowcreel_common_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/willowcreel_common_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.88,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/willowcreel_common_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.88,
+    "keep": 0,
+    "color": "#dfe2cc"
+   },
+   "leather": {
+    "swatch": "swatches/willowcreel_common_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.13,
+    "shading": 0.88,
+    "keep": 0.14
+   }
+  }
+ }
+}

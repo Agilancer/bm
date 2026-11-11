@@ -1,7 +1,7 @@
 # Bellmourn: the wizard's gear kit
 
 This kit makes new sets of gear for the wizard you play in Bellmourn's third-person view: a hat, a mantle (shoulder
-guards and collar), a tunic, legs (trousers, knee guards, greaves) and boots. Each set you make comes out as one zip.
+guards, the sleeves under them and the collar), a tunic, legs (trousers, knee guards, greaves) and boots. Each set you make comes out as one zip.
 Give that zip to Claude in the game's repository and it goes into the game: when the player wears a robe piece the set
 was made for, that part of the wizard's body changes to match.
 
@@ -171,8 +171,8 @@ part's `decals`.
 
 | Anchor | Part | Where | Usual size |
 | --- | --- | --- | --- |
-| `chest` | chest | the middle of the chest | 0.16 |
-| `back` | chest | between the shoulder blades (the biggest clear space) | 0.24 |
+| `chest` | chest | the middle of the chest. **Best left empty**: a sculpted star and the placket sit there and cut an emblem to pieces | 0.16 |
+| `back` | chest | between the shoulder blades (the biggest clear space). Keep its top under the mantle's strap: no bigger than about 0.22, a little low (`"offset": [0, -0.04, 0]`) | 0.24 |
 | `tabard` | chest | the panel that hangs in front below the belt | 0.13 |
 | `tabard_back` | chest | the panel that hangs behind | 0.15 |
 | `belt` | chest | the buckle | 0.07 |
@@ -181,6 +181,18 @@ part's `decals`.
 | `shoulder_left`, `shoulder_right` | shoulders | each shoulder guard, from the side | 0.11 |
 | `knee_left`, `knee_right` | legs | each knee guard | 0.07 |
 | `shin_left`, `shin_right` | legs | each greave | 0.06 |
+
+What two rounds of critics taught, on 147 sets:
+
+- An emblem is a bold filled shape that reads as its subject when it's 40 pixels tall: not hairlines, not a pictogram.
+  A flat white one looks like a sticker: give it a dark outline and a little light from above, in a thread or metal
+  colour of the set's own.
+- No letters or numerals, and nothing that reads as one small: a post under a crossbeam (T), an open wedge or open
+  scissors (V), a fork (Y), a bare cross, loops side by side (8).
+- A woven pattern is neither invisible nor a loud grid: a mid-size motif two steps off the cloth, strongest on the
+  tunic. Tartan, argyle and quilting read cheap.
+- Gold is a deep warm gold, not lemon; platinum isn't chalk white. Give the mantle and greaves a value or hue of
+  their own, and a common set no metal sheen at all.
 
 ### What it's worn for (`wears`)
 

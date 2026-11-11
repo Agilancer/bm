@@ -1,0 +1,148 @@
+{
+ "id": "cairnkeeper_rare",
+ "name": "Cairnkeeper",
+ "blurb": "Rare gear. Slate weave, blue-grey mantle, brushed steel and staggered rounded-stone motifs. Original stone cairn crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/ck_slate.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/ck_steel.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/ck_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.88,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/ck_hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/ck_cobble.png",
+    "color": "#aab2b8",
+    "scale": 0.22,
+    "strength": 0.1,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/cairn_small.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/ck_mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/ck_cobble.png",
+    "color": "#a3acb8",
+    "scale": 0.22,
+    "strength": 0.15,
+    "tile": "repeat"
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/ck_cobble.png",
+    "color": "#b9c0c4",
+    "scale": 0.24,
+    "strength": 0.27,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/cairn.png",
+     "anchor": "back",
+     "size": 0.215,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/cairn_small.png",
+     "anchor": "tabard",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/ck_plate.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/ck_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.88,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/ck_mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/ck_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.88,
+    "keep": 0.15
+   }
+  }
+ }
+}

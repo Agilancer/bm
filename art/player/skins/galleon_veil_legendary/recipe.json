@@ -1,0 +1,213 @@
+{
+ "id": "galleon_veil_legendary",
+ "name": "Galleon of the Veil",
+ "blurb": "Legendary gear. Midnight velvet, ocean-teal mantle, maritime gold and rolling sail-pattern weave. Original galleon crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/midnight.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.85,
+   "shading": 0.95
+  },
+  "trim": {
+   "swatch": "swatches/gold.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/galleon_veil_legendary_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.86,
+   "keep": 0.07
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/teal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_waves.png",
+    "color": "#e2b85a",
+    "scale": 0.22,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/galleon.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/wheel.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/teal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_waves.png",
+    "color": "#e2b85a",
+    "scale": 0.22,
+    "strength": 0.42,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/wheel.png",
+     "anchor": "shoulder_left",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/wheel.png",
+     "anchor": "shoulder_right",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_waves.png",
+    "color": "#e2b85a",
+    "scale": 0.3,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/galleon.png",
+     "anchor": "back",
+     "size": 0.28,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/wheel.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/wheel.png",
+     "anchor": "tabard_back",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/teal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.95
+   },
+   "leather": {
+    "swatch": "swatches/galleon_veil_legendary_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.84,
+    "keep": 0.07
+   },
+   "trim": {
+    "swatch": "swatches/gold.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.7
+   },
+   "pattern": {
+    "image": "swatches/pat_waves.png",
+    "color": "#e2b85a",
+    "scale": 0.22,
+    "strength": 0.42,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/wheel.png",
+     "anchor": "knee_left",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/wheel.png",
+     "anchor": "knee_right",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/midnight.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.95
+   },
+   "leather": {
+    "swatch": "swatches/galleon_veil_legendary_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.16,
+    "shading": 0.85,
+    "keep": 0.08
+   }
+  }
+ }
+}

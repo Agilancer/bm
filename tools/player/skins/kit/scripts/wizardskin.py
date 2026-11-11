@@ -23,6 +23,7 @@ KIT = os.path.dirname(HERE)
 TEMPLATE = os.path.join(KIT, "template")
 PARTS = ["none", "head", "shoulders", "chest", "legs", "feet"]
 MATERIALS = ["cloth", "trim", "leather"]
+GUARDS_TOP = 0.56        # (m) the knee guards reach this high; above, the legs are trousers
 FORMAT = "bm-wizard-skin/1"
 PALETTES = ["ash", "moss", "night", "crimson", "amethyst"]
 SHAPES = {"head": ["pointed", "wide", "hood"], "chest": ["long", "jacket", "coat"], "shoulders": ["mantle", "cowl"], "legs": ["pants", "wraps"], "feet": ["boots", "curled"]}
@@ -76,7 +77,14 @@ class Template:
         b = self.base
         purple = smooth(b[..., 2] - np.maximum(b[..., 0] * 0.9, b[..., 1] * 1.05), 0.0, 0.05) * smooth(s, 0.1, 0.25)
         gold = gold * (1 - purple)
-        self.mat = {"trim": gold, "cloth": purple, "leather": np.clip(1 - gold - purple, 0, 1)}
+        leather = np.clip(1 - gold - purple, 0, 1)
+        # The greaves and knee guards are painted worn: their scuffs and shadows aren't purple, and would be taken for the
+        # trousers' leather, and show as stains of the trousers' colour on them. Below the knee guards' tops all that
+        # isn't gilt is the guards' own cloth.
+        guards = (self.parts == PARTS.index("legs")) & (self.pos[..., 1] < GUARDS_TOP)
+        purple = np.where(guards, purple + leather, purple)
+        leather = np.where(guards, 0, leather)
+        self.mat = {"trim": gold, "cloth": purple, "leather": leather}
         self.lum = (b * np.array([0.3, 0.59, 0.11], np.float32)).sum(-1)
 
     def mask(self, part):

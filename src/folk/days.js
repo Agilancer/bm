@@ -47,27 +47,27 @@ export const DAYS = {
 
 // Where each trade is plied, and how. house: whose house it's in (src/folk/town.js HOUSES); near: the piece of furniture they
 // stand at (off: how far off it; faceRoom: facing into the room rather than at it); hearth: at the house's hearth; oven: at
-// the bread oven's mouth, the peel worked in and out (push); seat:
+// the bread oven's mouth; forge: the smith's own work at his anvil (forge in src/folk/brain.js); seat:
 // sitting at the table nearest that furniture; place: somewhere outdoors (town.js PLACES). clips: what they do there, in turn.
 export const WORK = {
   inn_bar: { house: 'inn', near: 'barrel', off: 1.0, faceRoom: true, clips: ['interact', 'idle', 'fold_arms', 'wait', 'interact'], serve: 0.25 },
   inn_hearth: { house: 'inn', hearth: true, clips: ['interact', 'idle_ual', 'interact', 'pick_up', 'interact'], serve: 0.15 },
   inn_floor: { house: 'inn', near: 'barrel', off: 1.3, faceRoom: true, clips: ['wait', 'look_around', 'fold_arms'], serve: 0.6 },
   inn_corner: { house: 'inn', seat: 'corner', read: true },
-  chandler_vats: { house: 'chandler', near: 'vat', off: 0.5, clips: ['push', 'interact', 'idle_ual', 'push'] },
+  chandler_vats: { house: 'chandler', near: 'vat', off: 0.5, clips: ['interact', 'pick_up', 'idle_ual', 'interact'] },
   reeve_desk: { house: 'reeve', seat: 'table', read: true },
-  forge: { house: 'smith', near: 'anvil', off: 0.75, clips: ['cleave', 'cleave', 'cleave', 'idle_ual', 'cleave', 'fold_arms_ual'] },
-  bellows: { house: 'smith', hearth: true, clips: ['push', 'push', 'interact', 'pick_up', 'idle'] },
+  forge: { house: 'smith', forge: true },
+  bellows: { house: 'smith', hearth: true, clips: ['interact', 'crouch', 'interact', 'pick_up', 'idle'] },
   forge_watch: { house: 'smith', near: 'anvil', off: 2.0, watch: 'homunculus', clips: ['idle', 'fold_arms', 'crouch', 'look_around'] },
-  alewife_vats: { house: 'alewife', near: 'barrel', off: 0.9, clips: ['push', 'interact', 'idle', 'pick_up', 'push'] },
-  barn: { house: 'barn', near: 'sacks', off: 0.8, clips: ['pick_up', 'interact', 'idle_ual', 'push'], carry: 'barn' },
-  tannery_vats: { house: 'tannery', near: 'vat', off: 0.5, clips: ['push', 'push', 'interact', 'idle_ual'] },
-  loom: { house: 'weaver', near: 'loom', level: 0, clips: ['interact', 'push', 'interact', 'idle'] },
-  loom_up: { house: 'weaver', near: 'loom', level: 1, clips: ['interact', 'push', 'interact', 'idle'] },
+  alewife_vats: { house: 'alewife', near: 'barrel', off: 0.9, clips: ['interact', 'pick_up', 'idle', 'interact'] },
+  barn: { house: 'barn', near: 'sacks', off: 0.8, clips: ['pick_up', 'interact', 'idle_ual', 'interact'], carry: 'barn' },
+  tannery_vats: { house: 'tannery', near: 'vat', off: 0.5, clips: ['interact', 'pick_up', 'interact', 'idle_ual'] },
+  loom: { house: 'weaver', near: 'loom', level: 0, clips: ['interact', 'pick_up', 'interact', 'idle'] },
+  loom_up: { house: 'weaver', near: 'loom', level: 1, clips: ['interact', 'pick_up', 'interact', 'idle'] },
   fields: { place: 'fields', clips: ['harvest', 'plant', 'water', 'dig', 'harvest'] },
   woodpile: { place: 'woodpile', clips: ['chop_wood', 'chop_wood', 'pick_up', 'idle'] },
-  coffin_yard: { house: 'coffins', near: 'trestle', off: 0.75, clips: ['push', 'interact', 'push', 'idle_ual', 'scratch'] },
-  oven: { house: 'bakery', oven: true, clips: ['interact', 'idle_ual', 'push', 'interact', 'look_around', 'interact', 'pick_up'] },
+  coffin_yard: { house: 'coffins', near: 'trestle', off: 0.75, clips: ['interact', 'pick_up', 'interact', 'idle_ual', 'scratch'] },
+  oven: { house: 'bakery', oven: true, clips: ['interact', 'idle_ual', 'pick_up', 'interact', 'look_around', 'interact', 'pick_up'] },
   herb_garden: { place: 'herb_garden', clips: ['harvest', 'plant', 'water', 'harvest'] },
 };
 

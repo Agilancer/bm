@@ -1,0 +1,124 @@
+{
+ "id": "sackcloth_pilgrim_common",
+ "name": "Sackcloth Pilgrim",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched grain sack crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/sp_cloth.png",
+   "tile": "repeat",
+   "scale": 0.22,
+   "bright": 0.9,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/sp_trim.png",
+   "tile": "repeat",
+   "scale": 0.09,
+   "bright": 0.8,
+   "shading": 0.55,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/sp_leather.png",
+   "tile": "repeat",
+   "scale": 0.1,
+   "bright": 0.95,
+   "shading": 0.88,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/sp_hat.png",
+    "tile": "repeat",
+    "scale": 0.18,
+    "bright": 0.92,
+    "shading": 0.7,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/sack_bare.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/sp_mantle.png",
+    "tile": "repeat",
+    "scale": 0.18,
+    "bright": 1.0,
+    "shading": 0.75,
+    "keep": 0
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/sack_full.png",
+     "anchor": "back",
+     "size": 0.19,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/sack_bare.png",
+     "anchor": "tabard",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/sp_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.9,
+    "shading": 0.88,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/sp_trousers.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.95,
+    "shading": 0.88,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/sp_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.8,
+    "shading": 0.88,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/sp_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.85,
+    "shading": 0.88,
+    "keep": 0.2
+   }
+  }
+ }
+}

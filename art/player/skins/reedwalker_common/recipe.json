@@ -1,0 +1,93 @@
+{
+ "id": "reedwalker_common",
+ "name": "Reedwalker Common Gear",
+ "blurb": "Common-tier travelling gear. Faded olive twill, dark moss shoulders and weathered saddle leather. Plain bindings; no added insignia or precious decoration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/olive_twill.png",
+   "scale": 0.06,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.65
+  },
+  "trim": {
+   "color": "#5e5145",
+   "bright": 0.8
+  },
+  "leather": {
+   "swatch": "swatches/saddle.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.2
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_twill.png",
+    "scale": 0.06,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.65
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/moss_twill.png",
+    "scale": 0.06,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
+   },
+   "trim": {
+    "color": "#544a3e"
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/saddle.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/saddle_dark.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0.2
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/saddle_dark.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/saddle_dark.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "trim": {
+    "color": "#5a452e"
+   }
+  }
+ }
+}

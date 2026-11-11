@@ -1,0 +1,195 @@
+{
+ "id": "jadecoil_rare",
+ "name": "Jadecoil Custodian",
+ "blurb": "Rare-tier appearance. Jade scale silk, antique gold, dark verdigris guards and leaf crests.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/jadecoil_rare_cloth.png",
+   "scale": 0.25,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 0.9,
+   "color": "#c8d8d0"
+  },
+  "trim": {
+   "swatch": "swatches/jadecoil_rare_metal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/fx2_leather.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "shading": 0.95,
+   "bright": 0.9,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "hat",
+     "size": 0.08,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "cloth": {
+    "swatch": "swatches/fx2_hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.75
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx2_guard.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "shading": 0.95,
+    "bright": 0.7,
+    "keep": 0.15
+   },
+   "trim": {
+    "swatch": "swatches/jadecoil_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.1
+   },
+   "decals": [
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_scale.png",
+    "color": "#c1ad69",
+    "scale": 0.1,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/leaf_roundel.png",
+     "anchor": "back",
+     "size": 0.26,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "tabard",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx2_guard.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "shading": 0.95,
+    "bright": 0.7,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/fx2_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "shading": 0.95,
+    "bright": 0.6,
+    "keep": 0.15
+   },
+   "decals": [
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/fx2_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "shading": 0.95,
+    "bright": 0.95,
+    "keep": 0.15
+   },
+   "trim": {
+    "swatch": "swatches/jadecoil_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   },
+   "cloth": {
+    "swatch": "swatches/fx2_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "shading": 0.95,
+    "bright": 0.95,
+    "keep": 0.15
+   }
+  }
+ }
+}

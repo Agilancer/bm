@@ -17,7 +17,7 @@ import { Renderer } from './gfx/renderer.js';
 import { Input } from './input.js';
 import { Drops, boardPose } from './items/drops.js';
 import { settleSkull } from './items/skins.js';
-import { ROBES, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
+import { ROBES, ROBE_SETS, SET_PARTS, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
 import { levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
 import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
@@ -1778,8 +1778,10 @@ class GameView {
     return {
       view, renderer: this.renderer, input: this.input, shared, pool, pack: this.pack, inventory: this.inventory, drops: this.drops,
       // bm.give('frost_sword', { rarity: 3, sockets: 4 }) or bm.give('gem', { kind: 'ruby', grade: 2 }), into the pack.
+      // bm.give('vesperglass_epic'): all five pieces of that set of gear.
       give: (base, opts = {}) => {
         const rng = makeRng((Math.random() * 4294967296) >>> 0);
+        if (ROBE_SETS[base]) return SET_PARTS.map((slot) => { const it = rollRobe(rng, { set: base, slot }); return view.pack.add(it) ? it : null; });
         const item = base === 'gem' ? rollGem(rng, opts) : SHIELDS[base] ? rollShield(rng, { base, ...opts }) : SKULLS[base] ? rollSkull(rng, { base, ...opts }) : ROBES[base] ? rollRobe(rng, { base, ...opts }) : rollWeapon(rng, { base, ...opts });
         return view.pack.add(item) ? item : null;
       },

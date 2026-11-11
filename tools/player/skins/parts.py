@@ -1,5 +1,5 @@
 """Which part of his gear each triangle of the body is, by the game's own slots (ROBE_SHAPES in src/items/items.js):
-head (the hat), shoulders (the mantle: shoulder guards and collar), chest (tunic, sleeves, belt, skirts), legs (trousers,
+head (the hat), shoulders (the mantle: shoulder guards, the sleeves under them and the collar), chest (tunic, belt, skirts), legs (trousers,
 knee guards and greaves) and feet (the boots). Skin, hair and eyes are 0: no gear changes them.
 
 Tripo's sculpt is one fused mesh with one fragmented colour map, so the parts are told apart by what moves each point (its
@@ -12,6 +12,8 @@ BOOT_TOP = 0.19          # the boots' cuffs (m, bind pose)
 KNEE_TOP = 0.61          # the knee guards' tops: above, what isn't trouser is the tunic's skirt
 SHOULDER_LINE = 1.405    # the mantle sits above this, out from the neck
 COLLAR_LINE = 1.47
+BACK_COLLAR_LINE = 1.52  # behind the neck, the collar proper starts here
+SLEEVE_END = 1.2         # the sleeves' cuffs are above this
 
 
 def hsv(rgb):
@@ -89,6 +91,36 @@ def classify(mesh, color):
     # The mantle: the guards on the shoulders, and the collar.
     top = (part == CHEST) & (((y > SHOULDER_LINE) & (x > 0.085) & (x < 0.4)) | (y > COLLAR_LINE))
     part[top] = SHOULDERS
+    # A level line through the guards cut them raggedly, and left their lower halves the tunic's. So the mantle grows from
+    # there over what it touches, across the guards and down the sleeves they're one piece with, as far as the gilt
+    # rims and cuffs that end them (gilt joins it, and passes nothing on). Behind the neck the collar's line cut through
+    # the hood's drape: that's the tunic's up to the collar's own top.
+    xs = at[:, 0]
+    part[(part == SHOULDERS) & (x < 0.15) & (z < -0.04) & (y < BACK_COLLAR_LINE)] = CHEST
+    _, weld = np.unique(np.round(pos * 2000).astype(np.int64), axis=0, return_inverse=True)
+    wt = weld.reshape(-1)[tris]
+    rim = (h > 22) & (h < 62) & (s > 0.16) & (v > 0.3)
+    can = (part == CHEST) & (y > SLEEVE_END) & (x > np.where(y < 1.38, 0.21, 0.15)) & (x < 0.46)
+    reach = np.zeros(wt.max() + 1, bool)
+    reach[wt[(part == SHOULDERS) & (x > 0.15)].ravel()] = True
+    for _ in range(200):
+        touch = reach[wt].any(1) & can & (part == CHEST)
+        if not touch.any():
+            break
+        part[touch] = SHOULDERS
+        reach[wt[touch & ~rim].ravel()] = True
+    # And the line between the two smoothed: a triangle most of whose neighbours are the other's goes over to it.
+    for _ in range(6):
+        n2, n3 = np.zeros(wt.max() + 1), np.zeros(wt.max() + 1)
+        for k in range(3):
+            np.add.at(n2, wt[part == SHOULDERS][:, k], 1)
+            np.add.at(n3, wt[part == CHEST][:, k], 1)
+        a2 = n2[wt].sum(1) - 3 * (part == SHOULDERS)
+        a3 = n3[wt].sum(1) - 3 * (part == CHEST)
+        to2 = (part == CHEST) & (a2 > a3 * 1.5) & (y > 1.15)
+        to3 = (part == SHOULDERS) & (a3 > a2 * 1.5) & (y > 1.15)
+        part[to2] = SHOULDERS
+        part[to3] = CHEST
     # (Fingers and thumbs are skin whatever shade they're painted.)
     fingers = np.array([any(f in n for f in ("Index", "Mid", "Ring", "Pinky", "Thumb")) for n in names])[w.argmax(1)]
     part[fingers] = 0
