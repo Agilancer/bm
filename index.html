@@ -269,11 +269,47 @@
   .tback { margin-top: 4px; padding: 4px 8px; color: var(--gold); background: none; border: 1px solid rgba(201,163,92,.3); }
   .tfoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-top: 14px; padding-top: 9px; font-size: 12px; color: #a89d86; border-top: 1px solid rgba(201,163,92,.2); }
   .tfoot button { padding: 4px 8px; font-size: 12px; color: #d9a08a; background: none; border: 1px solid rgba(217,160,138,.4); }
-  @media (max-width: 860px), (max-height: 520px) {
+  /* A narrow, tall screen: the tree, and under it what's picked out. */
+  @media (max-width: 860px) and (min-height: 521px) {
     #treeWrap { flex-direction: column; flex: none; }
     #treeView { flex: none; }
     #treeInfo { flex: none; }
     #spellSlots .lslot { min-height: 54px; }
+  }
+  /* A phone on its side: little height, so the slots are one thin row, the tree and what's picked out stand side by side and
+     each scrolls on its own, and the button that spends a point is at the top of its panel, in reach without scrolling. */
+  @media (max-height: 520px) {
+    #spellbook { padding: calc(6px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left)); overflow: hidden; align-items: stretch; }
+    #spellbook h2, #spellHint { display: none; }
+    #spellClose { top: calc(6px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); height: 40px; padding: 0 10px; font-size: 12px; }
+    #spellSlots { width: auto; margin: 0 76px 5px 0; gap: 4px; }
+    #spellSlots .lslot { flex-direction: row; justify-content: center; gap: 5px; min-height: 0; height: 40px; padding: 2px 4px 2px 15px; }
+    #spellSlots .lslot b { left: 4px; top: 1px; font-size: 11px; }
+    #spellSlots .ic { flex: none; width: 24px; height: 24px; }
+    #spellSlots .nm { font-size: 10px; line-height: 1.1; text-align: left; overflow: hidden; }
+    #treeTabs { width: auto; flex-wrap: nowrap; gap: 4px; margin-bottom: 5px; overflow-x: auto; }
+    #treeTabs button { flex: none; padding: 5px 9px; font-size: 12px; letter-spacing: .05em; }
+    #treeTabs button i { font-size: 10px; }
+    #treePoints { flex: none; padding: 4px 8px; font-size: 12px; }
+    #treeWrap { width: auto; gap: 6px; }
+    #treeInfo { display: flex; flex-direction: column; flex: 0 0 min(300px, 38%); padding: 8px 10px; font-size: 12px; }
+    #treeInfo > * { flex: none; }
+    #treeInfo h3 { order: -4; font-size: 15px; }
+    #treeInfo h3 svg { width: 22px; height: 22px; }
+    #treeInfo .tsub { order: -3; margin: 2px 0 6px; }
+    #treeInfo .tspend, #treeInfo .twhy { order: -2; margin-bottom: 6px; }
+    #treeInfo .tslots { order: -1; margin: 0 0 8px; flex-wrap: wrap; }
+    #treeInfo .tslots button { width: 32px; height: 32px; }
+    .tcanvas { margin: 2px; }
+    /* (Velscour's skull floats over the right of the screen: out of the way of what's being read, while the book is open.) */
+    #spellbook.open ~ #vskull, #spellbook.open ~ #vskullTag { display: none; }
+  }
+  /* And a small phone on its side: the slots are their pictures alone, and the tabs lose their counts, so the points still show. */
+  @media (max-height: 520px) and (max-width: 700px) {
+    #spellSlots .nm { display: none; }
+    #spellSlots .lslot { padding-left: 4px; }
+    #treeTabs button i { display: none; }
+    #treeTabs button { padding: 5px 7px; }
   }
   /* On the bar: a spell cooling, the points waiting, and what's on you. */
   #spells .spell .cd { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 18px; color: #fff; text-shadow: 0 1px 3px #000; pointer-events: none; }

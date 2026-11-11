@@ -34,7 +34,8 @@ export class SkillTree {
       if (!n || this.bar.dragged) return;
       const id = n.dataset.id, again = this.lastClick === id && performance.now() - this.lastAt < 400;
       this.lastClick = again ? null : id; this.lastAt = performance.now();
-      if (again) this.spend(id); else this.pick(id);
+      // (Not on a touch screen: two taps of a thumb are too easy to make by mistake, and a point costs gold to take back.)
+      if (again && !this.bar.input.touch) this.spend(id); else this.pick(id);
     });
     this.viewEl.addEventListener('mouseover', (e) => { const n = e.target.closest('.tnode.known[data-spell]'); this.bar.hover = n ? +n.dataset.spell : -1; });
     this.infoEl.addEventListener('click', (e) => {

@@ -149,6 +149,9 @@ Run:
   learned: no error from the sim, cooldowns and what's on you reported to the page.
 - The spellbook's screen in that browser: the trees drawn, points spent, a second branch refused, a tier refused below its
   level.
+- The same as a phone: an emulated Pixel 7 and a first iPhone SE on their sides, by taps. The page's own way in reached the
+  game, ready, in touch mode; the book opened from the bar, a spell was learned and slotted, with no error. The book has its
+  own layout on a screen that short.
 - Auto-play in that browser from a new game, with the renderer's frame stubbed (the same way it was run before the trees).
   See below.
 - The rules as tests (`tests/skills.test.mjs`), and the game's other tests and checks, which pass.
