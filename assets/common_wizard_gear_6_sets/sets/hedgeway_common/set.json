@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "hedgeway_common",
+ "name": "Hedgeway Common Gear",
+ "blurb": "Common brown travelling gear: coarse russet wool, darker mantle and trousers, worn saddle leather and plain bindings. No added insignia or precious trim. Intended as common-tier Ashen gear.",
+ "wears": {
+  "palette": "ash"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

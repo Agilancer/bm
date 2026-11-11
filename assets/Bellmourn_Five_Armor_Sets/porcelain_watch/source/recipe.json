@@ -1,0 +1,94 @@
+{
+ "id": "porcelain_watch",
+ "name": "Porcelain Watch",
+ "blurb": "Pearl woven cloth, blue-steel edging, slate mantle and moon embroidery.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/porcelain_watch_cloth.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05
+  },
+  "trim": {
+   "color": "#344b60"
+  },
+  "leather": {
+   "swatch": "swatches/porcelain_watch_leather.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/moon.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#344b60"
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/porcelain_watch_mantle.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.05
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/porcelain_watch_pattern.png",
+    "color": "#344b60",
+    "scale": 0.24,
+    "strength": 0.2,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/moon.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#344b60"
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "color": "#728c9c"
+   },
+   "leather": {
+    "swatch": "swatches/porcelain_watch_leather.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.85,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/porcelain_watch_leather.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.18,
+    "keep": 0.15
+   },
+   "trim": {
+    "color": "#344b60"
+   }
+  }
+ }
+}

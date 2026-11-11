@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "lotusregent_epic",
+ "name": "Lotusregent Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original lotus stitch badge. Wine silk, champagne layered panels, petal brocade and pale gold ornamental borders. Intended as an epic item alternative for the crimson palette.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

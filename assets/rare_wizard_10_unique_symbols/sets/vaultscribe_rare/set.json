@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "vaultscribe_rare",
+ "name": "Vaultscribe Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original open book stitch badge. Warm bronze cloth, ink-blue scholar panels, rectangular fretwork and gold-bound cuffs. Intended as a rare item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

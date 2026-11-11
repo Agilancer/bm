@@ -1,0 +1,133 @@
+{
+ "id": "malachite_court_rare",
+ "name": "Malachite Court",
+ "blurb": "Rare-tier appearance. Olive geometric brocade, champagne guards and gilded leaf insignia.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/malachite_court_rare_cloth.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/malachite_court_rare_metal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/malachite_court_rare_leather.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "pattern": {
+    "image": "swatches/malachite_court_rare_brocade.png",
+    "color": "#d0bd8d",
+    "scale": 0.26,
+    "strength": 0.28,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/leaf.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#d0bd8d"
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/malachite_court_rare_guards.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   },
+   "trim": {
+    "swatch": "swatches/malachite_court_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.1
+   },
+   "decals": [
+    {
+     "image": "decals/leaf.png",
+     "anchor": "shoulder_left",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#d0bd8d"
+    },
+    {
+     "image": "decals/leaf.png",
+     "anchor": "shoulder_right",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#d0bd8d"
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/malachite_court_rare_brocade.png",
+    "color": "#d0bd8d",
+    "scale": 0.28,
+    "strength": 0.44,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/leaf.png",
+     "anchor": "back",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#d0bd8d"
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "color": "#98866b",
+    "shading": 1
+   },
+   "leather": {
+    "swatch": "swatches/malachite_court_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.9,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/malachite_court_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.2,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/malachite_court_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   }
+  }
+ }
+}

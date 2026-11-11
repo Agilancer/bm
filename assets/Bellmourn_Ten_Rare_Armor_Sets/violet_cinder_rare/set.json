@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "violet_cinder_rare",
+ "name": "Violet Cinder",
+ "blurb": "Rare-tier appearance. Violet pinstripe silk, petrol guards and rose-gold flame embroidery.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

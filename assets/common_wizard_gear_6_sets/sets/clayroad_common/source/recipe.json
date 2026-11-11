@@ -1,0 +1,77 @@
+{
+ "id": "clayroad_common",
+ "name": "Clayroad Common Gear",
+ "blurb": "Common-tier travelling gear. Dusty brick-red wool, dark russet mantle and chestnut leather. Plain bindings; no added insignia or precious decoration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/clayroad_common_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1,
+   "shading": 0.8
+  },
+  "trim": {
+   "swatch": "swatches/clayroad_common_binding.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.4
+  },
+  "leather": {
+   "swatch": "swatches/clayroad_common_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.12,
+   "shading": 0.75
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {},
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/clayroad_common_accent.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.03,
+    "shading": 0.8
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/clayroad_common_accent.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.8
+   },
+   "leather": {
+    "swatch": "swatches/clayroad_common_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.8
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/clayroad_common_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.8
+   },
+   "leather": {
+    "swatch": "swatches/clayroad_common_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.75
+   }
+  }
+ }
+}

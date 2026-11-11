@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "bristleway_common",
+ "name": "Bristleway",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched broom crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}
