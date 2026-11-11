@@ -1,0 +1,190 @@
+{
+ "id": "briar_opal_epic",
+ "name": "Briar Opal",
+ "blurb": "Epic-tier appearance. Sage floral damask, pale opal guards and intricate champagne trim.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/bo_tunic.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/bo_gold.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.8
+  },
+  "leather": {
+   "swatch": "swatches/bo_leather.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/bo_hat.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_briardamask.png",
+    "color": "#d9c38c",
+    "scale": 0.2,
+    "strength": 0.28,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/rose_bloom.png",
+     "anchor": "hat",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/rose_bloom.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/opal.png",
+    "scale": 0.3,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.6
+   },
+   "leather": {
+    "swatch": "swatches/bo_pearl.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
+   },
+   "decals": [
+    {
+     "image": "decals/rose_bloom.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/rose_bloom.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_briardamask.png",
+    "color": "#d9c38c",
+    "scale": 0.22,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/briar_rose.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.08,
+      0
+     ]
+    },
+    {
+     "image": "decals/rose_bloom.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/opal.png",
+    "scale": 0.3,
+    "tile": "repeat",
+    "bright": 0.76,
+    "shading": 0.6
+   },
+   "leather": {
+    "swatch": "swatches/bo_trouser.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/rose_bloom.png",
+     "anchor": "knee_left",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/rose_bloom.png",
+     "anchor": "knee_right",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/bo_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.9,
+    "keep": 0.15
+   },
+   "trim": {
+    "swatch": "swatches/bo_gold.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
+   }
+  }
+ }
+}

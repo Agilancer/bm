@@ -1,0 +1,146 @@
+{
+ "id": "pearlcurrent_rare",
+ "name": "Pearlcurrent Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original seahorse stitch badge. Peacock-blue cloth, pearl-lilac panels, interlaced wave bands and silver-thread dots. Intended as a rare item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_tunic.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.95,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/fx_silver.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pat_waves.png",
+    "color": "#a9c6d6",
+    "scale": 0.16,
+    "strength": 0.28,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_seahorse.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_pearl.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.6,
+    "keep": 0
+   },
+   "leather": {
+    "color": "#6a647c"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_seahorse_dark.png",
+     "anchor": "shoulder_left",
+     "size": 0.08,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_seahorse_dark.png",
+     "anchor": "shoulder_right",
+     "size": 0.08,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_waves.png",
+    "color": "#a9c6d6",
+    "scale": 0.2,
+    "strength": 0.36,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_seahorse.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_seahorse.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_guard.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.9,
+    "keep": 0.1
+   }
+  },
+  "feet": {}
+ }
+}

@@ -1,424 +1,305 @@
-# Bellmourn : Velscour's Throne — the opening, draft 3 (final)
+# Bellmourn : Velscour's Throne — the opening
 
-Both critics approved this draft in round 3, 9 / 10 each. Their last small fixes are in, listed at the end.
+The script in the game, from the first words in the dark to Lisandra's quest at the edge of Bellmourn. The owner read the
+lines and had them wired in (November 2026). The words live in `src/core/opening-cave.js` (the cave, the name, the
+ledge), `src/core/opening-script.js` (the summons, and everything said on the way down) and `src/folk/lines/lisandra.js`
+(the town). This page is written out from them; when they change, so should it.
 
 ## The logic in eight sentences
 
-1. Two hundred years ago Tessariel broke Velscour on his throne, and swore to come back if he ever rose. Lisandra held Tessariel's lantern that night; before that, she had been Velscour's.
-2. She keeps the door Tessariel is meant to come back through. The door keeps her alive while she keeps it. It doesn't keep her young: in the dark she is every one of her years, and only in the sun is she the girl she was.
-3. The door stood dark from the night the sky burned until a season ago. Then it woke, and it has been dropping ordinary people across the land ever since: forty-three of them.
-4. She meets each one wearing her old face, snaps, lights the candles, and the charm takes: she tells them they are Tessariel and sends them out in Tessariel's colours, so Velscour will chase forty-three Tessariels and never find the real one.
-5. You are the first the door has put in her own circle, and the first the charm can't touch. The old songs give one pair of eyes that no glamour fools. So you are Tessariel, and the songs say you only come back when the dark is at its worst.
-6. And you came through with fire in your hands. Nobody has been born with magic since Velscour drank every spark in the world to live through his defeat. Every spark you throw is one he has lost, and he will feel it, and squeeze.
-7. He was a healer who couldn't bear to lose anyone, so he shut the door of death. When Tessariel broke him it swung open; now he's back and leaning on it, which is why the dead here won't lie still. (Told on the road, after your first fight with the dead.)
-8. The door was only ever waiting for you. Once you're through, it lets go and falls in, and she has to come down to Bellmourn with you, where she has always been Old Lis.
+1. Two hundred years ago a stranger called Tessariel broke Velscour on his throne, left this world by a door, and swore
+   to come back through it if he ever rose. Lisandra carried Tessariel's lantern in that war, and was left to keep the door.
+2. He rose, slowly, and for forty years has had his throne back. She has kept the door, calling Tessariel home.
+3. A season ago the door began to answer: forty-three times, with the wrong people, dropped in ditches all over the
+   country. Twelve of them got as far as Bellmourn.
+4. She met each one wearing her old face, snapped her fingers (a charm: whoever it touches believes the next thing she
+   says), told them they were Tessariel, put a sword in their hand and sent them off to fight him. She had stopped
+   believing the real one would come.
+5. You are different, by three proofs: the door put you in her own circle; the charm ran off you and you saw her real
+   face (the old songs say nothing false gets past Tessariel's eyes); and you came through with fire in your hand.
+6. Nobody has been born with magic since Velscour drank every spark of it to live through his defeat. Every spark you
+   throw is one he has lost, and he will feel it. He is already hunting forty-three of you, which buys a little time.
+7. He was a healer who lost a child and shut the door of death. When he was broken it swung open; now he's back and
+   leaning on it, which is why the dead won't lie still. They were to be married. (Told on the road, after the fight.)
+8. The door was only ever waiting for you. Once you're through, it lets go and falls in, and she comes down to Bellmourn
+   with you, where she has always been Old Lis.
 
-Her looks, as the engine already shows them (`prettyShown`), follow one rule: **to your eyes she is what the light makes her.** In the dark cave, and in town at night, you see the old woman. In the sun, on the road and in town by day, you see the girl. The townsfolk see only her glamours: the crone they call Old Lis by day, and now and then a beautiful stranger by night. The clock is held at morning from WAKE to ARRIVED, so the sun is always up when she says it is.
+**Her looks.** To your eyes she is what the light makes her: in the dark (her cave, the town at night) the old woman; in
+the sun (the ledge, the road, the town by day) the girl she was when she took up the door. She says so on the ledge.
+Everyone else sees only her glamours: the crone they call Old Lis by day, and a beautiful stranger by night
+(`prettyShown` in `src/core/opening.js`). The clock is held at morning from the cave to the town.
 
-## Two things for the owner to decide
+**The V and T rule in the words.** No line names both sides: where one line needs both, one of them is "he" or "you".
 
-1. **The true running time.** The cave is **3,106 spoken characters**, about **4:40 to 5:00 of speech** at her measured pace. With the silences and moves written below, it is **about 5:40 to 6:00 to the name prompt**. Both critics timed her recorded clips (the old voice speaks about 11.8 characters a second on long lines and slower on short ones; the young about 13). Draft 2 claimed 4:40 because it was timed at the subtitle cap; measured the same way it was really about 6:30. You can look round her cave the whole time from beat 4, you throw a spark in beat 8, and hold-to-skip stays. The full table is at the end.
-2. **The decoys.** In beat 8 she says: *"I sent them all out in your colours, so he'd chase forty-three Tessariels and never find you."* This is why she lied to the others. It also means all 43 AI heroes, and the three who died on the hill, were bait she sent out. Their own script was written without it. If you'd rather not, the line can go, and beat 8 still works.
+## How it's told
 
-## Voices, names, recording
-
-- Two voices, as now: **young** (Lisandra) while you see her lovely, **old** (LisandraWitch) from the flash to the collapse.
-- Say: Tessariel = **Tess-are-ee-ell**. Velscour = **VEL-skower**. Eldravayne = **El-dra-vane**. Bellmourn = **Bell-morn** (`tools/voice/say.json`).
-- Recording, so the voice is the same woman in every line: one model and one anchor per voice, one fixed note per kind of line, many takes of each line judged by the voice critics' rules (docs/VOICES.md, the method the owner approved).
-- Subtitles: no line on screen runs past about 90 characters. Longer lines split at a sentence break, or at a comma where there is none. Capitals and "?!" stay in the subtitle; the voice model gets the plain words.
+- **Order.** She starts her usual speech, is caught, tries the charm, and then tells it straight: who she is, the door,
+  Velscour and Tessariel, the forty-three, three reasons you are the real one, what to do. Her own past with Velscour
+  is kept for the road.
+- **Time.** The cave is 2475 spoken characters and comes to the name prompt at about 4:31 at her measured
+  pace. Every scene is laid end to end by how long its lines take to say (their recordings' lengths, or her pace until
+  they're recorded), so it re-times itself as recordings come in (`lay` in `src/core/opening-cave.js`).
+- **The view is hers** from your waking until she has sent you out: no look of your own in the cave, at the name prompt
+  or while she takes your name. Holding to skip stays.
+- **Lines written for her voice** (docs/VOICES.md): whole sentences, no lone words or barks.
 
 ## WAKE — the cave
 
-The times on each beat are worked out at her measured pace, with the silences and moves added; the table at the end shows the sums. The free look widens from about 0.25 rad to about 0.8 rad from beat 4 to beat 9, so you can look round her cave while she talks, and eases back to her on the lines marked ●.
+### 1 · The glamour (0:00 – 0:22, young voice)
 
-### 1 · The glamour (0:00 – 0:14, young voice)
+*Black. The door's hum, violet light from the portal behind you. She reads the summons from her book across the cave, then comes to you through her things, lovely, her hand held out. Your sight is hazed: you are still waking. She is giving you the speech she has given forty-three times when the flash cuts her off.*
 
-*Black. The door's hum. Violet light from the portal behind you. She comes toward you out of the dark from the far side of the cave, lovely, in leathers, her hand held out. Your sight is hazed: you are still waking. By the last line she is about two metres away.*
+**LISANDRA** *(heard before she's seen)*: By the light that does not set, I call you back. Cross over. Come home.
 
-**LISANDRA** *(heard before she's seen)*: …by the light that does not set… cross over. Come home.
+**LISANDRA**: Shh. There you are, little star. Don’t be afraid.
 
-**LISANDRA**: Shh. Little star. There you are.
+**LISANDRA**: Look at me. Only at me. I’m going to tell you who you are.
 
-**LISANDRA** *(softer and softer)*: Let me be the first beautiful thing you—
+**LISANDRA**: You are Tessariel. And I have waited two hundred years for you to—
 
-*The flash. Your eyes clear, and the glamour goes out like a struck lamp: an old woman in a gown and shawl is standing where the girl was, her hand still out.*
+### 2 · Seen (0:22 – 0:31)
 
-### 2 · Seen (0:14 – 0:26)
+*The flash. The glamour goes out like a struck lamp: an old woman stands where the girl was, her hand still out. She snatches it back and scrambles two steps away, her hands up; then they come down, one by way of her own cheek.*
 
-*She snatches the hand back and recoils two steps (!!).*
+**LISANDRA**: …You’re looking straight at me.
 
-**LISANDRA**: …Oh.
+**LISANDRA**: Not at the girl. At me.
 
-*She steps in again, slowly, and passes her palm across your eyes, a hand's breadth from them. You blink.*
+### 3 · The snap (0:31 – 1:00)
 
-**LISANDRA**: You can see me.
+*She backs away among her things, working her cold fingers, raises her right hand at you, and snaps. The hum cuts dead. A breath of silence. Then the candles catch in a wave from her hand, across the cave and past you, and the fire in her hearth with them. She comes back, watching your eyes the whole way, and leans in.*
 
-**LISANDRA**: Not the pretty one. Me.
+**LISANDRA**: Hold still. It doesn’t hurt. It never hurts.
 
-*Her hands drop. (sweat)*
+**LISANDRA**: That was a charm. Whoever it touches believes the next thing I tell them.
 
-**LISANDRA**: Oh, no.
+**LISANDRA**: It has worked on forty-three people. It hasn’t worked on you.
 
-### 3 · The snap (0:26 – 1:11)
+### 4 · The truth, then (1:00 – 1:25)
 
-*She backs away from you, four or five steps, into her clutter, working her fingers as she goes, fists opening and closing, the way an old woman loosens cold hands. Among the crates she raises the right one at you.*
+*She straightens, steps back and folds her arms. Her hand to her heart, and a slow, stiff bow: her name comes up on screen. Then her hand goes out past you, at the door you came through.*
 
-**LISANDRA**: Hold still. It doesn't hurt. It never hurts.
+**LISANDRA**: So you’d better have the truth. Bear with me. I’m out of practice.
 
-*SNAP. The door's hum cuts dead. A breath of silence. Then the candles catch, forty-four of them, in a wave that rolls out from her hand, across the cave and past you.*
+**LISANDRA**: My name is Lisandra. The girl was a glamour. Nobody follows an old woman into a war.
 
-*She comes back to you through her clutter, watching your eyes the whole way, stops close, leans in, and waits.*
+**LISANDRA**: That is a door behind you. You came through it a minute ago, from a long way off.
 
-**LISANDRA** ●: There's meant to be a look now. Soft. Grateful. Like a calf at a gate.
+### 5 · The old story (1:25 – 2:00)
 
-**LISANDRA**: Not you. You're still in there, looking back.
+*She crosses to her hearth, holds her hands to the fire, and tells it into the flames; turns round to you for the oath; steps to her table and lays a hand on the old lantern; and faces you again, arms folded.*
 
-*She turns her head to the lectern by the tunnel: her ledger, a page of names, every one struck through. The first candle to catch hangs over it.*
+**LISANDRA**: This country is Eldravayne. It belongs to Velscour, the Dark Lord.
 
-**LISANDRA**: Forty-three before you. Every one got the snap, the lights, and a pretty girl telling them who they were.
+**LISANDRA**: Two hundred years ago, a stranger called Tessariel broke him on his own throne.
 
-**LISANDRA**: And every one of them believed it. I made sure.
+**LISANDRA**: Then Tessariel left by that door, swearing to come back if he ever rose again.
 
-*She turns back to you, and leans in a little more. (?)*
+**LISANDRA**: I carried Tessariel’s lantern in that war. I have kept the door ever since.
 
-**LISANDRA**: I won't have to make you believe anything. Will I.
+**LISANDRA**: He rose. For forty years now, he has had his throne back.
 
-### 4 · Why she's afraid (1:11 – 2:07)
+### 6 · The forty-three (2:00 – 2:24)
 
-*She steps back and folds her arms tight, as people hold themselves in the cold.*
+*Her hand goes out down the room, at the ledger on its stand by the tunnel. Then her eyes go to the floor.*
 
-**LISANDRA**: Nobody has ever seen through that face.
+**LISANDRA**: A season ago, the door began to answer. Forty-three times, and every one the wrong person.
 
-*One hand comes out of the fold. She turns it over and looks at it.*
+**LISANDRA**: So I told each of them what I told you, put a sword in their hand, and sent them off to fight him.
 
-**LISANDRA**: Kings have kissed this hand and called it soft.
+**LISANDRA** *(under her breath)*: I had stopped believing the real one would come.
 
-*She looks up at you.*
+### 7 · Three proofs (2:24 – 3:18)
 
-**LISANDRA**: The face held while your eyes were still waking.
+*She comes back across the cave to you. One: she looks down, and points, at the circle round your feet. Two: her hand to her own face. Three: she stares at your right hand. The view tips down to it: the staff, and embers crawling over your knuckles. On screen, your cast key (or the cast button, on a phone). Cast, and a spark leaps to the nearest candle, which bursts; she flinches. If you don't, the spark goes on its own after four seconds.*
 
-**LISANDRA**: The old songs give one pair of eyes that no glamour fools. The light that does not set.
+**LISANDRA**: Then it sent you. And three things tell me you are not like them.
 
-**LISANDRA**: That door was dark from the night the sky burned. It woke a season ago.
+**LISANDRA**: One. It drops the others in ditches, all over the country. It put you here, at my feet.
 
-*She looks down at the candle ring round your feet.*
+**LISANDRA**: Two. You saw my real face. The old songs say nothing false gets past Tessariel’s eyes.
 
-**LISANDRA**: It drops the others in a ditch somewhere. Or a pigsty. It put you in my circle.
+**LISANDRA**: And the third is in your right hand. Look down.
 
-**LISANDRA**: You're not some poor farmer I dressed up in a prophecy.
+**LISANDRA**: That is magic. Nobody in this world has been born with it in two hundred years.
 
-*She grips her own arms tighter. A tremble runs through her. (sweat)*
+**LISANDRA**: When he was broken, he drank every spark of it to stay alive.
 
-**LISANDRA** ●: And the songs say you only come back when the dark is at its worst. Not a day before.
+**LISANDRA**: And you have just walked in with a fistful of fire.
 
-**LISANDRA**: And you see everything as it is. Me included.
+### 8 · Who you are (3:18 – 3:54)
 
-### 5 · Who you are (2:07 – 2:35)
+*A slow half circle round you, to stand between you and the door. On the name the door's hum comes back for one breath, the portal swells behind her, and every candle flame leans toward you.*
 
-*She walks a slow half circle round you, so the candles turn behind her and the camera turns with her. It ends with her standing between you and the door: for the first time you see the door you came through, violet behind her.*
+**LISANDRA**: So I’ll say it again, and this time it’s true.
 
-**LISANDRA**: Two hundred years ago, you walked out of the sunrise and broke Velscour on his own throne.
+**LISANDRA**: You are Tessariel. You said you’d come back, and you have.
 
-**LISANDRA**: You swore that if he ever rose again, you'd come back.
+**LISANDRA**: You won’t remember. Two hundred years beyond that door would wash anyone clean.
 
-**LISANDRA**: He rose. Slowly.
+**LISANDRA**: But he will know you. Every spark you throw is one he has lost, and he will feel it.
 
-**LISANDRA** ●: And here you are. You kept your word.
+**LISANDRA**: He is hunting forty-three of you already. My lies have bought you a little time.
 
-**LISANDRA** ●: Tessariel.
+### 9 · What to do (3:54 – 4:20)
 
-*On the name, the door's hum comes back for one breath, the portal swells behind her, and every candle flame leans toward you at once. Then the hum is gone again.*
+*Her hand out down the cave, past you, to the tunnel and the world. Then a look over her shoulder at the door behind her.*
 
-### 6 · Who she is (2:35 – 3:13)
+**LISANDRA**: So here is what you do with it.
 
-*Her hand goes to her heart, and she makes a slow, stiff bow. Her name comes up on screen.*
+**LISANDRA**: Take the Long Road down the hill to a town called Bellmourn. They need help there.
 
-**LISANDRA**: I'm Lisandra. You won't remember me.
+**LISANDRA**: Learn what those hands can do. Then go and finish what you started.
 
-**LISANDRA**: I held your lantern on the last night of the war, the night the sky burned.
+**LISANDRA**: I can’t come. That door keeps me alive, and I have never left it for long.
 
-*Her hand goes to her cheek.*
+### 10 · The name (4:20 – 4:31)
 
-**LISANDRA**: The girl you saw was me. That was my face, the last time you saw it.
+*She comes round in front of you again, and only now holds out her hand: the old one, where the young one was held out at the start.*
 
-*She sets off across the cave toward the crate by the wall, talking as she goes, and the free look follows her.*
+**LISANDRA**: One last thing. The others, I named myself. You, I’m asking.
 
-**LISANDRA**: The door keeps me alive while I keep it. It never promised to keep me young.
-
-**LISANDRA**: Down here, out of the sun, the dark keeps count.
-
-*At the crate, a dry flick of her fingers back at the empty air where the girl stood.*
-
-**LISANDRA**: And nobody follows a crone into a war. So I wear the girl.
-
-### 7 · Velscour (3:13 – 3:40)
-
-*She lowers herself onto the crate, an old woman's sit (Sitting_Enter), hands on her knees, looking past you.*
-
-**LISANDRA**: Before I carried your lantern, I was his.
-
-**LISANDRA**: Velscour's.
-
-*She looks up at the floating candles, lifts a hand and gives a soft snap. The candle nearest her flares.*
-
-**LISANDRA**: He taught me the snap. Every candle in a winter market, all lit at once, just to make me laugh.
-
-*She holds one of her hands in the other.*
-
-**LISANDRA**: He was a healer, once.
-
-*A beat. She gets up (Sitting_Exit).*
-
-**LISANDRA**: The horns came later.
-
-### 8 · The magic (3:40 – 4:37)
-
-*She takes two steps toward you from the crate and stops, staring at your hands. The view tips down, and for the first time you see your right hand: the fire staff in it, and embers crawling over your knuckles on their own. On screen: your cast key on PC, or the cast button on a phone. Press it, and a spark leaps from the staff, the nearest candle bursts into a gout of flame, and the view comes back up to her as she flinches (!!). If you don't press it within about four seconds, the spark goes on its own.*
-
-**LISANDRA**: And then there's that.
-
-**LISANDRA**: I gave them swords, spears, bows. One asked for a lute. One asked for a boomerang, and I still don't know why.
-
-**LISANDRA**: I sent them all out in your colours, so he'd chase forty-three Tessariels and never find you.
-
-**LISANDRA** ●: Not one of them came through with fire in their hands.
-
-**LISANDRA**: Nobody's been born with magic since you broke him. He drank every spark to live.
-
-*She looks at her own snapping hand.*
-
-**LISANDRA**: All but a few old tricks, like mine.
-
-*She looks back at yours.*
-
-**LISANDRA**: Every spark you throw is one he's lost. He'll know it, on his throne.
-
-**LISANDRA**: A thing like him doesn't feel its grip slip and let go. It squeezes.
-
-### 9 · How bad it gets (4:37 – 5:27)
-
-*Take one, grim and slow. She stands still and looks down the tunnel toward the world.*
-
-**LISANDRA**: Mothers will hide their children in root cellars, and the cellars won't be deep enough.
-
-*Take two. She starts pacing, and it runs away with her: arms going, pointing out down the tunnel. Each line is shorter and faster than the last. The candles gutter as her voice climbs, and dust sifts from the roof.*
-
-**LISANDRA**: His bell already rings at midnight with no hand on the rope. Soon it'll ring at noon.
-
-**LISANDRA**: His knights will stop guarding doors, and start kicking them in.
-
-**LISANDRA**: Three heads in his Rift, and all of them hungry.
-
-**LISANDRA**: The dead will come up under Bellmourn.
-
-**LISANDRA**: They won't wait for dark.
-
-**LISANDRA** *(shouting, panic)*: And he'll send it all after you! Every knight! Every dead thing! Every—
-
-*Take three. She stops dead. The candles steady. The dust settles. (gloom)*
-
-**LISANDRA** *(quietly)*: …I'm doing it again.
-
-**LISANDRA**: Two hundred years, and nobody to say it to.
-
-### 10 · The name (5:27 – 5:51)
-
-*She straightens up.*
-
-**LISANDRA**: So. The real one. Of all the times to get it right.
-
-**LISANDRA**: Go down to Bellmourn. Learn what those hands can do. And then finish him.
-
-**LISANDRA**: I can't come with you. Somebody has to mind the door.
-
-*Only now does she hold out her hand to you: the old hand, where the young one was held out at the start.*
-
-**LISANDRA** ●: Your name. The one you were born with. The others, I named.
+**LISANDRA**: What did they call you, on the far side?
 
 *The name prompt.*
 
 ## NAME — while the prompt waits
 
-**LISANDRA** *(at 10 s)*: It's your own name.
+**LISANDRA** *(at 10 s)*: It’s your own name. The one you had on the far side.
 
-**LISANDRA** *(at 20 s)*: You've had it all your life.
+**LISANDRA** *(at 20 s)*: You’ve had it all your life. It will come back to you.
 
-**LISANDRA** *(at 32 s)*: Take your time. The door won't.
+**LISANDRA** *(at 32 s)*: Take your time. I’ve waited two hundred years. I can wait a minute more.
 
 ## HERD — she takes the name and sends you out
 
-*She takes the name where she stands.*
+*She takes the name where she stands, points down the cave, and goes ahead of you to the lectern by the tunnel. You can
+look and walk again when she has finished speaking. When you pass the lectern she is writing your name in the ledger.*
 
 **LISANDRA**: {name}. *(on screen only; the name can't be recorded)*
 
-**LISANDRA**: Lovely.
+**LISANDRA**: Good. That goes in the book. It’s the first name in there I didn’t choose myself.
 
-**LISANDRA** *(pointing down the tunnel)*: Out's through there.
+**LISANDRA**: The way out is down that tunnel. Go on ahead of me.
 
-**LISANDRA**: Go on. And stop looking at me. I know what you see.
+**LISANDRA**: And stop looking at me like that. I know what you see.
 
-*She goes ahead of you to the lectern by the tunnel. When you pass it she is writing your name into the ledger, under the struck-through names, and you can stop and read the page.*
+| When | Line |
+|---|---|
+| You turn back toward the door | Not that way. You’ve only just come through it. The way out is down the tunnel. |
+| And again | I said out. That door doesn’t open for the asking. Down the tunnel with you. |
+| You pass her at the lectern, writing | I’ll see you as far as the ledge. After that, I’ve a door to mind. |
+| In the tunnel, the door straining (her voice from behind you) | Hold, door. Please. You’ve held for two hundred years. Hold one more morning… |
 
-**LISANDRA** *(as you pass)*: I'll see you as far as the ledge. Then I've a door to mind.
+## COLLAPSE — the ledge
 
-*She follows a few steps behind you, and is still in the tunnel mouth when you reach the ledge.*
-
-## COLLAPSE — the ledge, the cave-in
-
-*You step out onto the ledge, into the morning sun. Behind you the door gives way with a sound like a held breath let go, and the tunnel falls in. She comes out of the dust on her knees, into the sunlight, and to you she's the girl again (young voice from here).*
-
-*Take one, panic.*
+*You step out onto the ledge, into the morning sun, the valley and the town far below. Behind you the door gives way
+and the tunnel falls in. She comes out of the dust at a run and down on one knee; in the sunlight she is the girl
+again, and from the dust on she speaks in her young voice. She has it out with you; turns to the rubble; catches you
+staring; looks at her own hands in the sun; and points you along the shelf. The scene ends at about 1:10.*
 
 **LISANDRA**: No. No, no, no.
 
-*Take two, the shout.*
-
 **LISANDRA** *(shouting)*: WHAT HAVE YOU DONE?!
 
-*Take three, understanding.*
+**LISANDRA**: Two hundred years I kept that door open. You walk through it once, and it lets go.
 
-**LISANDRA**: Two hundred years I held that door open. You walk through it once, and it lets go.
+**LISANDRA** *(under her breath)*: I thought I was the one holding it. It was only ever waiting for you.
 
-**LISANDRA** *(quiet)*: It was only ever waiting for you.
+**LISANDRA**: …Why are you staring at me like that?
 
-*She looks up at you. (?)*
+**LISANDRA**: Oh. The sun. This is no glamour. Daylight gives me back the face I had when I took up the door.
 
-**LISANDRA**: …Why are you looking at me like that?
+**LISANDRA**: The dark takes it away again. You are the only one who sees either.
 
-*She looks down at her own hands, in the sun, and turns them over: the same move as in the cave.*
+**LISANDRA** *(under her breath)*: Well. I seem to have lost my home.
 
-**LISANDRA**: …Oh. The sun's up.
+**LISANDRA**: So I’m coming to Bellmourn with you, {name}. Somebody has to get you down this road in one piece.
 
-**LISANDRA** *(sweat)*: No. Don't answer that.
+**LISANDRA**: Down there I’m Old Lis, a hag who trades herbs for salt. That is the face they’ll see.
 
-*She gets up and brushes off the dust.*
+## The way down
 
-**LISANDRA** *(under her breath)*: I seem to have lost my home.
+From the ledge: a shelf cut across the hillside, four flights of stone steps that double back on each other, a path
+along the foot of the hill, and then the Long Road to the town's edge: 439 m in all, 142 m of it before
+the road (`WAY` in `src/core/opening.js`, `src/core/escort.js`). She leads, about five metres ahead, at your pace. Stop,
+and once she's a few steps on she stops, turns round and looks at you; she turns back and goes on when you've come up
+to her, or gone past. You keep to a walk on the shelf and the steps, and to her pace while she tells who Velscour was.
 
-**LISANDRA**: Bellmourn, then. You're taking me there, {name}.
-
-**LISANDRA**: Somebody has to get you down this road alive.
-
-**LISANDRA**: Down there I'm Old Lis. Old Lis is what they'll see.
-
-## In the cave on the way out, and on the road down
-
-The road from the ledge to Bellmourn is 415 m (`src/sim/opening.js`). The pines start at 139 m, the dead come out of them at 173 m, and Bellmourn comes in sight at 345 m. You walk at 5.6 m/s and sprint at 8.6. She keeps a few steps behind you, in her young voice now, in the sun.
-
-**The rule:** her lines queue and never overlap, and each one waits until you are near her. While she tells the healer story and the wedding (about 40 s), your pace is capped to hers, about 3 m/s (`sim.paceCap`, as in the cave). "There it is", the town's scream and ARRIVED all wait until the queue is empty.
+Her lines queue and never overlap, and each waits until you are near her (a call doesn't). Seconds are how long each
+stays up: its recording's length once it has one.
 
 | Where | Line | Seconds |
 |---|---|---|
-| You turn back toward the door | Not that way, dear. Back down the tunnel with you. / (again) I said out. Back down that tunnel before I lose my temper. | |
-| In the tunnel, the door straining | Hold. Please hold. Not now… | |
-| The ledge, as the walk starts | No door to keep me now. One day I'll die, like everyone else. I'd quite forgotten. | 6.1 |
-| The bend, 46 m | The others would be making a speech by now. Every one of them. | 4.6 |
-| After the bend | He used to laugh at his own jokes. Velscour. Before he'd finished telling them. I laughed too. Every time. | 7.8 |
-| The pines, 139 m | Stay on the road. The dead in those pines don't read prophecies. | 4.8 |
-| After the fight, 173 m on | …You'll do. | 1.0 |
-| … | Velscour sat up with the dying every night, and held their hands until they went cold. | 6.4 |
-| … | Then he lost a little girl he'd sat with nine nights, and decided death was a door he could close. | 7.3 |
-| … | So he closed it. When you broke him, it swung open. | 3.8 |
-| … | Now he's leaning on it again. That's why the dead here won't lie still. | 5.3 |
-| … | He calls it mercy. | 1.7 |
-| … | We were to be married in the spring. The little girl died that winter. There was no spring. | 6.8 |
-| The last stretch | He named a star for me once. I can't find it anymore. I think he took it back. | 5.8 |
-| Bellmourn in sight, 345 m | There it is. Let me do the talking. | 3.3 |
-| You run ahead | Slow down! Some of us just lost a cave. | |
-| You're far ahead | {name}! Wait! | |
+| The ledge, as the walk starts | This way. Stay close, and mind the edge. | 4.1 |
+|  | No door to keep me alive now. One day I’ll die, like everyone else. I’d quite forgotten. | 7.6 |
+| Along the shelf | I cut this shelf out of the hill myself. It took ten years. I had the time. | 6.6 |
+| The head of the steps, 26 m | Mind the steps. Two hundred winters of frost, and I only ever mended the ones I tripped on. | 7.8 |
+| Partway down them | You don’t say much, do you? Good. The others all made speeches. | 5.6 |
+| The road, 142 m | This is the Long Road. Bellmourn is at the bottom, on the far side of those pines. | 7.1 |
+|  | That staff is not a walking stick. When something comes at you, point it and let fly. | 7.4 |
+|  | And keep your distance. The others had armour. You have a robe. | 5.6 |
+| With nothing else to say, above the pines (in turn) | Two hundred years in that cave. I only left it for salt, and to fetch whoever the door had dropped. | 8.5 |
+|  | Everything I own is under that rock. I had a very good kettle. | 5.6 |
+|  | Don’t look at me like that. It’s the dust. I am not crying. | 5.6 |
+|  | I’ve walked this road twice a year since before Bellmourn had an inn. It doesn’t get any shorter. | 8.3 |
+|  | It’s a small town. Bells, mud and gossip. By nightfall they’ll all have an opinion of you. | 7.8 |
+| The pines | Stay on the road through the pines. The dead are in there, and they don’t read prophecies. | 7.8 |
+| The dead come up | There, in the trees! They’re coming up! Don’t let them near you! | 5.7 |
+|  | Point the staff and burn them! That’s what the fire is for! | 5.3 |
+|  | I’ve a few old tricks left. Keep them off me, and I’ll light what I can. | 6.3 |
+| The second wave | More of them, and children with them. He never lets anyone go. Not even the little ones. | 7.6 |
+| The necromancers | Necromancers, out of the trees! Burn them first, or the dead won’t stay down! | 6.7 |
+| The last of them down | Well. You’ll do. You’ll do very nicely. | 4.3 |
+| Who Velscour was (you keep to her pace) | You’ll want to know why the dead get up and walk. It began as a kindness. | 6.4 |
+|  | Velscour was a healer once. He sat up with the dying every night, and held their hands until they went cold. | 9.2 |
+|  | Then he lost a little girl he’d sat with nine nights, and decided death was a door he could close. | 6.8 |
+|  | So he closed it, and the dead stopped staying dead. | 4.7 |
+|  | When you broke him, it swung open again, and they could rest. | 5.5 |
+|  | Now he’s back, and leaning on it. That is why the dead here won’t lie still. | 6.7 |
+|  | He still calls it mercy. | 2.9 |
+| And what he was to her | I know, because I was there. We were to be married in the spring. | 5.8 |
+|  | The little girl died that winter. There was no spring. | 4.9 |
+|  | I left him the night the first of them got up and walked. | 5.2 |
+|  | Then I went looking for someone who could stop him, and I found you. | 6 |
+| The last stretch | He named a star for me once. I can’t find it any more. I think he took it back. | 6.9 |
+| Nearing the town (in turn, as there's room) | Now, Bellmourn. Twelve of my forty-three walked in there before you, so they’ve stopped being impressed. | 8.9 |
+|  | Bram Kettle keeps the inn, north of the well. He counts them on a slate. You’ll be his thirteenth. | 8.4 |
+|  | The cathedral is on the hill past the far end of town. It’s the Dark Lord’s now, and his knight is on the door. | 9.4 |
+|  | Three of the twelve went up to fight that knight. Stay off that hill until I say. | 7.1 |
+|  | And if you hear the bell at midnight, stay indoors. Nobody living rings it. | 6.6 |
+| Bellmourn in sight | There it is. Bellmourn. Let me do the talking. | 4.3 |
+| At the town's edge, after a scream from the far side of it | That came from the cathedral hill. Keep walking. There’s nothing you can do for them yet. | 7.7 |
+| You fall behind | This way! Keep up! | 2.8 |
+|  | Bellmourn’s down the hill. It won’t come up and fetch you. | 4.6 |
+|  | I’m not carrying you, {name}. | 2 |
+| You run on ahead | Slow down! Some of us just lost a cave. | 3.8 |
+|  | {name}! Wait for me! | 2.1 |
+| You ride your shield | Oh, we’re riding, are we? Fine. Don’t you dare laugh. | 5.2 |
+|  | Two hundred years, and nobody ever showed me this! | 4.4 |
+|  | …Again. Later. When nobody’s looking. | 3.9 |
 
-**The sums** (her young voice at about 13 characters a second, 1 to 1.5 s between lines):
-- **Ledge to the pines, 139 m:** 25 s at a walk, 16 s at a sprint. "No door…", the bend line and the jokes take about 21 s with the gaps, and end by 120 m at a walk, so the pines warning comes on time. At a sprint the queue still clears by about 137 m.
-- **The fight to the end, 242 m:** "…You'll do.", the five healer lines and the wedding take about 32 s of speech and 40 s with the gaps. At the capped 3 m/s that is about 120 m, so the run ends at about 300 m. The star then has 45 m of walking (8 s) for its 5.8 s, and the sight line plays at 345 m.
-- If there is no fight with the dead (they are all dead already, or you went round), the healer run starts as you leave the pines.
-- The star was moved to the end: it no longer fits before the pines, and after the wedding it is the last thing she says about him before the town.
+**The fight** (`fight` in `src/sim/opening.js`, `openingRaise` in `src/sim/undead.js`). In the pines, twenty of the
+dead come up out of the ground, five at a time. When eight or fewer are left, twenty more come up, ten of their
+children among them. When ten or fewer of those are left, a necromancer runs out of the trees on each side of the road;
+they raise what has fallen round them. All of them are easy: it is your first fight, and on the road you can't die
+(you're knocked flat and come to beside her). She stands with you and throws a weak fire bolt every couple of seconds
+at whichever of them is nearest her. When every one is down she tells you why the dead walk, and you go on to town.
 
-## What this asks of the game (after the words are approved)
+## The town's edge — her quest
 
-- **Timing.** WAKE runs about 5:40 to 6:00 instead of 41 s, so every time in `opening-script.js` and her moves in `src/sim/opening.js` are re-laid from the real takes.
-- **Her moves.**
-  - Beat 1: she walks in from `WITCH_MARK` (about 9 m off) and is about 2 m away by the flash.
-  - Beat 2: the recoil; the palm passes a hand's breadth (15–20 cm) from the camera, checked against the near plane before anyone animates it; your lids close once as it passes (`lidsAt` already exists).
-  - Beat 3: she backs four or five steps into the clutter, fists working, and snaps from there; the walk back and the lean; the look to the ledger.
-  - Beat 4: arms folded, a hand turned over, the look up, the look to the circle, the tremble.
-  - Beat 5: the half circle to the door.
-  - Beat 6: hand to heart and bow, hand to cheek, the walk to the crate at s 12.2 (about 5 m) over the last two lines, the finger flick.
-  - Beat 7: the sit and its beats, the soft snap, the stand. The crate is 0.64 m tall: check it against the sitting clip's seat height, and use a lower crate if it doesn't fit.
-  - Beat 8: two steps toward you from the crate, the stare at your hands, the flinch, the look to her own hand and back to yours.
-  - Beat 9: the still look down the tunnel, pacing and pointing, the stop.
-  - Beat 10: the old hand offered.
-  - HERD: she takes the name where she stands, goes ahead to the lectern and writes as you pass, then follows a few steps back and stays in the tunnel mouth.
-- **The clock** is held at morning from WAKE until ARRIVED.
-- **The free look** widens in beats 4 to 9 and eases back on the ● lines.
-- **The reveal**: the hum's one breath back, the portal swelling, the candle flames leaning toward you.
-- **Beat 7**: one candle flares on her soft snap.
-- **Beat 8**: the view tips down and only your right hand is drawn, the fire staff with embers on the knuckles (the kite shield on the left stays out of frame). The cast prompt names the player's real key binding on PC; on a phone the touch cast button is shown for this beat, since the cinematic hides the HUD. Then the spark, the bursting candle, the view back up, and her flinch with the !! mark. The spark goes on its own after about four seconds.
-- **Beat 9**: the candles gutter and dust sifts from the roof as she climbs; both stop when she stops.
-- **The ledger page**: every name struck through, and readable up close in HERD.
-- **Her name panel** moves from the collapse to "I'm Lisandra".
-- **The road cues** in the order above. They queue and never overlap, and each waits until you are near her. Your pace is capped to hers (about 3 m/s) for the healer run and the wedding. The sight line, the scream and ARRIVED wait until the queue is empty.
-- **Subtitles** over 90 characters split at a sentence break or a comma.
-- **The heroes' bark** "No lantern, no fire. Just her. Bright enough." (origin_story) changes to "One snap, and candles everywhere. And her, brighter than all of them.", since the owner asked for the snap and the lights to stay part of how she charms them.
-- **`tools/voice/say.json`**: Tessariel → Tess-are-ee-ell.
-- Hold-to-skip stays; the scene never replays when a save is restored.
-- Every line re-recorded as above.
+*At the edge of Bellmourn she stops, and everyone looks at her. Talk to her.*
 
-## Running time, worked out
+**LISANDRA**: Stop there a moment. I've a word for you before you go in.
 
-This table works the old voice at 11.8 characters a second on lines of 40 characters or more and 9.9 on shorter lines, the young at 13, with 0.4 s between lines, plus the silences and moves each beat's directions ask for. The veteran timed the shipped clips again: short lines run nearer 7.9 characters a second, and played back to back with each clip's own lead-in as the gap, the cave comes to 5:39; with 0.4 s more between lines, 6:03. So: about 5:40 to 6:00.
+**LISANDRA**: There it is. Forty roofs, one well, and the Dark Lord's cathedral looking down on all of it. You're not ready for that hill. You're not ready for his knight. You're ready for Bellmourn.
 
-| Beat | Characters | Speech | Silences and moves | Beat | Runs |
-|---|---|---|---|---|---|
-| 1 · The glamour | 127 | 11.0 s | 3 s | 14.0 s | 0:00 – 0:14 |
-| 2 · Seen | 49 | 6.5 s | 5 s | 11.5 s | 0:14 – 0:26 |
-| 3 · The snap | 361 | 33.0 s | 12.5 s | 45.5 s | 0:26 – 1:11 |
-| 4 · Why she's afraid | 556 | 51.4 s | 5 s | 56.4 s | 1:11 – 2:07 |
-| 5 · Who you are | 210 | 20.8 s | 7 s | 27.8 s | 2:07 – 2:35 |
-| 6 · Who she is | 361 | 33.6 s | 4.5 s | 38.1 s | 2:35 – 3:13 |
-| 7 · Velscour | 190 | 19.0 s | 8 s | 27.0 s | 3:13 – 3:40 |
-| 8 · The magic | 532 | 49.2 s | 8 s | 57.2 s | 3:40 – 4:37 |
-| 9 · How bad it gets | 484 | 46.0 s | 3.5 s | 49.5 s | 4:37 – 5:27 |
-| 10 · The name | 236 | 21.6 s | 2.5 s | 24.1 s | 5:27 – 5:51 |
-| **Total** | **3106** | **4:52** | **0:59** | **5:51** | to the name prompt |
+**LISANDRA**: Nobody follows a prophecy, {name}. They follow whoever mended their roof. So be useful. Everyone in that town with a trouble worth the name: find them, and take it off their hands. That's how you'll learn what your own can do.
 
-The silences: beat 1 the black and the flash; 2 the recoil, the palm and the blink; 3 backing off, the snap, the breath, the wave, the walk back and the lean; 4 the arms, the hand, the looks and the tremble; 5 the half circle and the door's breath; 6 the bow, the cheek and the end of the walk; 7 the sit, the soft snap, the hands and the stand; 8 her two steps from the crate, the hands shot, about 2.5 s of waiting for the cast, the spark and the flinch; 9 the look down the tunnel and the stop; 10 the hand held out.
+**LISANDRA**: Start with Bram Kettle at the inn. He counts strangers, so let him count you. Then the rest. You'll know them. They're the ones looking at you as if you might be the answer to something.
 
-## Round 3: the verdicts, and the last fixes
+*You: "I'll find them."*
 
-- **The veteran: APPROVE, 9 / 10**, on one condition, which changed no words: the road lines didn't fit the road. They are re-ordered above, with the queue rule, the capped pace and the sums. He also re-timed the clips: tell the owner about 5:40 to 6:00, not 5:20 to 5:50. Done, at the top.
-- **The young critic: APPROVE, 9 / 10.** Two one-word must-fixes and one should-fix:
-  - The road's healer story began with an unnamed "he", minutes after Velscour was last named, right after a fight. It now begins "Velscour sat up with the dying every night…".
-  - "Get you down this mountain alive": in the game the mountain is the Sorrowhorn, a named place far off. Now "get you down this road alive".
-  - Beat 7's "Velscour. Before the horns." stepped on "The horns came later." It is now "Velscour's."
-- **The veteran's nits:** "feel" was still said in two lines running in beat 8; the first is now "He'll know it, on his throne." The crate's height goes on the build list. In beat 8 she takes two steps toward you from the crate, and those seconds are in the table.
+**LISANDRA**: Good. I'll be here, being stared at. Come back when every one of them has given you something to do.
 
-## What changed from draft 2, critic by critic
-
-| Note | Fix |
-|---|---|
-| Running time (veteran MF1; young S1) | True times, worked out at her measured pace, in the header, on every beat and in the table above. The cave is cut from 3,551 to 3,106 characters: about 5:40 to 6:00 to the name prompt, against draft 2's real 6:30 or so. The overlapping beat times and the 4:15/4:40 mismatch are gone. |
-| The healer lines (veteran MF1) | Moved to the road, after your first fight with the dead, in her young voice. The cave keeps "Before I carried your lantern, I was his." / "Velscour's." / the winter-market snap / "He was a healer, once." / "The horns came later." |
-| "Keep you alive long enough to finish him" (veteran MF2) | "Somebody has to get you down this road alive." The game shows her doing it (`fellT`). ("Mountain" in round 3; the young critic pointed out that the mountain is the Sorrowhorn, far off.) |
-| The missing hinge (young S3) | "So he closed it. When you broke him, it swung open." on the road, and "the dead here" (veteran N1). |
-| Beat 8's order (veteran S1; young S2) | The decoys now sit with the other forty-three. The magic runs straight into the squeeze: "Every spark you throw is one he's lost. He'll know it, on his throne." That ties it to the spark the player just threw and gives "grip" something to hold. "Feel" is no longer said twice in a row. |
-| Beat 9's climb (veteran S2; young S4) | "Winter will come early" is cut. The climb really shortens, in characters: the bell 85, the knights 64, "Three heads in his Rift, and all of them hungry." 48, "The dead will come up under Bellmourn." 38, "They won't wait for dark." 25, then the shout in bursts: "And he'll send it all after you! Every knight! Every dead thing! Every—". "The dead" has its verb back. |
-| "It held on you…" (veteran S3) | "Kings have kissed this hand…" is on the hand look; she looks up for "The face held while your eyes were still waking." |
-| Where she stands (veteran S4; young S7) | About 2 m off at the flash; she backs four or five steps into her clutter and snaps from there, so the wave rolls across the cave and past you; then she comes back through it. |
-| "An inch" (veteran S5) | A hand's breadth, checked in the camera. |
-| The clock (veteran S6) | Held at morning from WAKE to ARRIVED. |
-| Road line 4 (veteran S7) | "No door to keep me now. One day I'll die, like everyone else. I'd quite forgotten." |
-| The walk to the chest (veteran S8; young S5) | She sits on the nearer crate (s 12.2, about 5 m), and walks there over "The door keeps me alive…" and "Down here, out of the sun…". |
-| The cast prompt (veteran S9; young S10) | The real key on PC, the touch button on phones, only the right hand framed. |
-| HERD and the lectern (young S6; veteran N7) | She speaks where she stands; you pass her writing at the lectern; she stays in the tunnel mouth. |
-| Road line 2 (young S8; veteran N5) | "We were to be married in the spring. The little girl died that winter. There was no spring." |
-| say.json (young S9) | In the build list. |
-| The !! mark (veteran N3; young S10) | On her flinch as the view comes back up. |
-| The decoys (young S11) | Put in front of the owner at the top. |
-| "The prophecy was about" (young S1) | Cut; "You're not some poor farmer I dressed up in a prophecy." stays. |
-| Beat 10 (veteran MF1) | "So. The real one. Of all the times to get it right." "Quickly, before the door changes its mind." is cut; the name prompt's "Take your time. The door won't." carries the hurry. |
-| Other trims | "The girl you saw was me." (was "…when you woke…"). "A thing like him doesn't feel its grip slip…" (no "And"). |
-| V and T (veteran N2) | "Before I carried your lantern, I was his." / "Velscour's." The lantern and the name are in separate lines. |
-| Long subtitles (veteran N4; young nit) | Split at a sentence break or a comma, in the build list. |
-| The change table (young nit) | Draft 2's misquotes are gone; every quote in this table is copied from the beats. |
-| The hero bark (young nit) | In the build list, with a new line. |
-| The ledger (veteran N6) | Every name struck through. |
+*The quest: Known in Bellmourn. Find everyone in town with work to give, and take some of it from each.*

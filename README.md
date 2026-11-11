@@ -11,7 +11,7 @@ The game is now ranged spell combat. Everything below about swords and armour de
 - **Six schools:** Fire, Ice, Earth, Arcane, Lightning and Utility, ten spells each (sixty in all), in skill trees in the spellbook (`B`). You start with the first spell of each, and every level brings a point to spend. See "Spells" below.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
-- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Seen as drops and icons; there's no visible body to wear them on.
+- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Every robe found is a piece of one of the 125 **sets of gear**, each with its own look on the third-person body and bonuses for wearing two, three and all five of it: see "Gear on the body".
 - **Gems:** socket into staffs, skulls and shields. Each kind has its own stat, particles, motion and light (`src/gfx/gemfx.js`), and a Flawless stone adds a flourish. A shield's show when you ride it.
 - **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, fills you up, and brings a skill point (two at every fifth level). It's kept in the save.
 
@@ -149,13 +149,34 @@ screen is still what you hit. Which view you left it in is kept with the setting
 
 #### Gear on the body
 
-The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle, tunic, legs
+The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle (the shoulder guards, the sleeves under them and the collar), tunic, legs
 and boots painted new. `assets/game/player/parts.png` says which of those five every texel of the map is, so the pieces
 mix: wear the Crimson hat and the Ashen boots and he has one set's hat and another's boots (`src/gfx/bodyskin.js`: the
 map is mixed on a canvas when what you wear changes, and the body's colour swapped for it). Which set a piece wears is
 `pickSets`: a set says what it's `wears` for, robes of a palette (and only some shapes, if it names them) or named items.
 A slot with no robe in it, or a robe nothing was made for, is as the sculpt came. Skin, hair and eyes never change. The
 shapes don't either: a hood wears the hat's paint.
+
+**Sets of gear.** A set with a rarity (`rarity` in `sets.json`: its `set.json` says it, or the end of its id does, as in
+`hedgeway_common`) is gear of its own: 125 of them, common to mythical, listed for the dice in `src/items/robesets.js`
+(written by the importer, not by hand). Each of its five pieces is an item to find, buy, sew or be paid with: a robe of
+the set's palette that names its set (`{ type: 'robe', base, set }`), called for it ("Vesperglass Pointed Hat"), always
+of the set's rarity, and dressed in that set's look whatever else is worn (`pickSets` looks at `item.set` first). Every
+robe rolled is a piece of some set (`rollRobe` in `src/items/items.js`: the rarity comes up, then a set that comes that
+rare; one legendary roll in eight is mythical, as with skulls). The five `_regalia` sets have no rarity: they dress the
+plain robes of older saves, by palette.
+
+**Held back.** Every set was put before two critics of textures, three rounds, and reworked between them
+(`art/player/skins/<id>/recipe.json` is each one as it stands). The 22 that still failed one of them are out of the game
+until they're better: `art/player/skins/held.json` lists them with what each critic said was wrong and how to mend it,
+and `held.jpg` beside it shows them. Their recipes are kept. `python tools/player/skins/import_set.py --hold <ids>`
+takes a set out like that, and `--release <ids>` followed by `rebake.py <ids>` puts one back.
+
+**Set bonuses.** Wearing two, three and all five pieces of one set each add a stat (`setBonuses`): ward, life, spell
+damage, mana regeneration, mana or mana cost, three different ones for each set, picked by its id, and bigger the rarer
+the set (`SET_UNIT`; the five-piece bonus is three measures). `gearTotals` counts them, so the sim, the tooltip (which
+lists them, lit when they're on) and auto-play's choice of what to wear all see them. In the Test Dungeon, the Hall
+Stores' **Gear sets** tab hands over all five pieces of any set.
 
 - The game ships a set for each of the five palettes (`assets/game/player/skins/`, listed in `sets.json`). Their recipes
   are `tools/player/skins/kit/recipes/`.
@@ -176,6 +197,11 @@ shapes don't either: a hood wears the hat's paint.
     `python tools/player/skins/import_set.py that.zip [more.zip]` checks it, writes `skins/<id>.webp`, lists it in
     `sets.json` (the same id replaces), and keeps its recipe and pictures in `art/player/skins/<id>/`. `--list` and
     `--remove <id>` do what they say.
+  - A folder works as well as a zip: a set unzipped, or a folder of them however deep. `--rarity rare <ids>` says how
+    rare sets come that don't say so themselves.
+  - `python tools/player/skins/rebake.py <ids>` (or `--all`) bakes sets again from `art/player/skins/<id>/recipe.json`
+    after a recipe or one of its pictures has been changed, and writes a four-sided `preview.jpg` beside it. It needs
+    the kit built in `tools/build/` (the two commands above).
   - `bm.wear('crimson_regalia')` in the console dresses him whole in one set, whatever's in the pack; `bm.wear()` goes back.
 - `node --test tests/body-skin.test.mjs` checks the picking and that the shipped sets are whole.
 
@@ -195,7 +221,11 @@ Known limits:
 
 ### The walk down, and the quest trail
 
-After the cave falls in, Lisandra leads you down the Long Road to Bellmourn (`escort` in `src/sim/opening.js`, the road itself in `src/core/escort.js`). She keeps about 5.5 m ahead of you at your own pace: come up on her back and she hurries on, stand still and she strolls on to about 14 m and waits for you, calling you on. Ride your shield and she jumps on one of her own (the Old Tree kite shield, green with a silver tree: no V, no T) and rides about 9 m ahead, so you never get past her. She talks the whole way: her road lines (`CUES` in `src/core/opening-script.js`) wait their turn and never overlap, a place on the road (the bend, the pines, the town in sight) brings its own line to the front, and between them she runs through the hill's talk above the pines and the low road's after the fight.
+Lisandra's cave is high on a shoulder of the hill over the Long Road, its mouth looking out over the valley to the town (`src/core/opening.js`). It's where she lives: a hearth with her pot over it and a fire that catches with the candles, a worktable under a rail of herbs and pans, a pantry of jars, a desk and two bookcases, a bed, rugs, a chest, and a glass she keeps a cloth over (`CLUTTER`, drawn in `src/gfx/opening.js`). The rock is the hill's own granite at one scale on every surface, with stones along the foot of the walls and stone teeth hung from the roof; each cloth is cut from the middle of its picture, so no woven edge or texture seam shows. Until she sends you out, the view is hers: you can't look about. The script is in `docs/OPENING-SCRIPT.md`.
+
+After the cave falls in, she leads you down to Bellmourn (`escort` in `src/sim/opening.js`, the way itself in `src/core/escort.js`): along a shelf cut across the hillside, down four flights of stone steps that double back on each other, along a path at the foot of the hill, and then the Long Road, about 440 m in all (`WAY` in `src/core/opening.js`; the land is cut and banked to it in `src/core/terrain.js`, and the steps are laid on the slope you walk). She keeps about 5 m ahead of you at your own pace. Stop, and once she's a few steps on she stops too, turns round and looks at you; she turns back and goes on when you've come up to within a few steps of her, or gone past, and hurries to get in front again. Fall well back or wander off and she waits the same, and calls you on after a while. You keep to a walk on the shelf and the steps. Ride your shield and she jumps on one of her own (the Old Tree kite shield, green with a silver tree: no V, no T) and rides about 9 m ahead, so you never get past her. She talks the whole way: her lines (`CUES` in `src/core/opening-script.js`) wait their turn and never overlap, and a place on the way (the shelf, the head of the steps, the road, the pines, the town in sight) brings its own.
+
+In the pines the dead come up out of the ground (`fight` in `src/sim/opening.js`, `openingRaise` in `src/sim/undead.js`): twenty, five at a time; when eight or fewer are left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out of the trees on each side of the road, who raise what's fallen. All of them are easy, and on the way down you can't die. Lisandra stands with you and throws a weak fire bolt every couple of seconds. Bodies are kept for it (`reserve` in `BODIES`: nine more of the dead, ten children, two necromancers), and the woods' own packs hold off until she has you in town. Then she tells you why the dead walk, and you go on to the town's edge and her quest.
 
 A gold dotted line on the ground leads to whatever the quest you follow wants of you now (`src/ui/trail.js`, drawn in `src/gfx/trail.js`). In the journal (J), tap a quest to follow it, or the same one again to hide the trail; a new quest is followed as you take it, unless you're on Lisandra's round of the town, which stays followed (it leads to whoever you've still to see, nearest first). Before any work, it leads to Lisandra where the road comes into town, or to Bram at the inn. In the opening it runs down the road after Lisandra. In town it goes round the houses by the townsfolk's own walking grid (a route asked of `src/folk/folk.worker.js`), out past the town along the roads and paths where they're shorter, and into the cathedral by its own way down to the Bell Crypt (by the Sexton's Door once you have his key).
 
@@ -299,8 +329,10 @@ While it's on, the game plays itself as a player would. It works the same contro
 the casts, jump, dodge and E. Nothing is moved or handed to it.
 
 - **The opening.** It waits out the cave and answers Lisandra with a name (Jamie, if nobody has yet). It walks out, then
-  follows her down the Long Road to Bellmourn, a few strides behind her as she leads. It rides its shield down the steep
-  stretches, so she rides hers, and it fights the dead on the road. In town it takes her round of the townsfolk first.
+  follows her down to Bellmourn (her shelf, her steps, the path and the Long Road), a few strides behind her as she
+  leads, coming up to her when she stops for it. It walks her steps; once on the road it rides its shield down the
+  steep stretches, so she rides hers; and it fights the road's waves of the dead as it fights the woods'. In town it
+  takes her round of the townsfolk first.
 - **Quests.** It takes every quest the town has, talks each step through, and hands in. It does them in an order that suits
   its level (`PLAN` in `src/ui/autobrain.js`), and does night work by night. When something waits on the morning, it sleeps
   at the Tolling Bell.

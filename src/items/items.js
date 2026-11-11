@@ -7,6 +7,9 @@ import { SPELLS } from '../sim/spells.js';
 import { SCROLLS } from '../sim/skills.js';
 import { STAFFS2 } from './staffs2.js';
 import { SHIELDS2 } from './shields2.js';
+import { ROBE_SETS } from './robesets.js';
+
+export { ROBE_SETS };
 
 export const RARITIES = [
   { name: 'Common', color: '#a8a8a8', weight: 60, affixes: [0, 0], quality: [0.92, 1.0], sockets: { 0: 80, 1: 20 } },
@@ -137,6 +140,41 @@ const ROBE_SLOTS = { head: { ward: 3, size: { w: 2, h: 2 } }, chest: { ward: 8, 
 export const ROBES = {};
 for (const p of Object.keys(ROBE_PALETTES)) for (const [sh, d] of Object.entries(ROBE_SHAPES)) ROBES[`${p}_${sh}_${d.slot}`] = { palette: p, shape: sh, slot: d.slot, name: `${ROBE_PALETTES[p].name} ${d.name}` };
 export const robeSize = (base) => ROBE_SLOTS[ROBES[base].slot].size;
+
+// The sets of gear (robesets.js): each has a look of its own on the body, and a rarity its pieces always come at. A piece
+// is a robe of the set's palette that says its set: { type: 'robe', base, set }. Wearing two, three and all five of one
+// set each add something, more the rarer the set: which three stats is the set's own, by its name.
+export const SET_PARTS = ['head', 'shoulders', 'chest', 'legs', 'feet'];
+const SET_WARD = [1, 1.1, 1.2, 1.4, 1.6, 1.8];   // a piece's ward by its set's rarity, where a plain robe has its palette's
+const SET_UNIT = {                               // one measure of each stat, by rarity
+  armor: [2, 3, 4, 6, 8, 10], life: [6, 9, 12, 16, 22, 30], power: [0.02, 0.03, 0.04, 0.05, 0.07, 0.09],
+  regen: [0.04, 0.06, 0.08, 0.1, 0.13, 0.16], mana: [6, 9, 12, 16, 22, 30], thrift: [0.01, 0.015, 0.02, 0.03, 0.04, 0.05],
+};
+const SET_STEPS = [[2, 1], [3, 1.5], [5, 3]];    // pieces worn, and how many measures that's worth
+const SET_INT = new Set(['armor', 'life', 'mana']);
+const bonusCache = {};
+// What a set gives: [{ need, stat, value }], for two, three and five of its pieces.
+export function setBonuses(id) {
+  const set = ROBE_SETS[id];
+  if (!set) return [];
+  if (bonusCache[id]) return bonusCache[id];
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619) >>> 0;
+  const left = Object.keys(SET_UNIT), out = [];
+  for (const [need, k] of SET_STEPS) {
+    const stat = left.splice(h % left.length, 1)[0];
+    h = Math.imul(h ^ (h >>> 13), 2654435761) >>> 0;
+    const v = SET_UNIT[stat][set.rarity] * k;
+    out.push({ need, stat, value: SET_INT.has(stat) ? Math.round(v) : Math.round(v * 1000) / 1000 });
+  }
+  return (bonusCache[id] = out);
+}
+// How many pieces of each set are on: { set id: count }.
+export function setsWorn(slots) {
+  const n = {};
+  for (const p of SET_PARTS) { const it = slots?.[p]; if (it?.type === 'robe' && ROBE_SETS[it.set]) n[it.set] = (n[it.set] || 0) + 1; }
+  return n;
+}
 
 export const hands = (base) => WEAPONS[weaponIndex(base)].hands;
 export const weaponIndex = (base) => WEAPONS.findIndex((w) => w && w.id === base);
@@ -333,14 +371,32 @@ export function rollSkull(rng, opts = {}) {
   return { type: 'skull', base: opts.base || pick(rng, Object.keys(SKULLS)), rarity, skin: opts.skin || rollSkin(rng, rarity), pattern: opts.pattern ?? rollPattern(rng, sockets), affixes: rollAffixes(rng, rarity, WIZ_AFFIXES), sockets, gems: [] };
 }
 
-// A hat, a robe, a jacket, pants... opts: base, rarity, minRarity.
+// A hat, a robe, a jacket, pants... a piece of one of the sets of gear, of whatever rarity comes up: the set is picked from
+// those that come that rare, and the piece is a robe of the set's palette. opts: set (a piece of that one), slot, base (a
+// set of its palette, at its palette's floor or finer), rarity, minRarity; plain: no set, a bare robe of a palette.
+const setsAt = (rarity, palette) => Object.keys(ROBE_SETS).filter((id) => ROBE_SETS[id].rarity === rarity && (!palette || ROBE_SETS[id].palette === palette));
 export function rollRobe(rng, opts = {}) {
-  const floor = opts.base ? ROBE_PALETTES[ROBES[opts.base].palette].floor : 0;
-  const rarity = Math.max(opts.rarity ?? rollRarity(rng, opts.minRarity || 0), floor);
-  const base = opts.base || pick(rng, Object.keys(ROBES).filter((b) => ROBE_PALETTES[ROBES[b].palette].floor <= rarity));
+  let set = ROBE_SETS[opts.set] ? opts.set : null, base = opts.base, rarity;
+  if (set) rarity = ROBE_SETS[set].rarity;
+  else {
+    const floor = base ? ROBE_PALETTES[ROBES[base].palette].floor : 0;
+    rarity = Math.max(opts.rarity ?? rollRarity(rng, opts.minRarity || 0), floor);
+    if (opts.rarity === undefined && rarity === 4 && rng() < 0.12) rarity = 5;     // One in eight of the legendary, as the skulls.
+    if (!opts.plain) {
+      const from = setsAt(rarity, base && ROBES[base].palette);
+      if (from.length) set = pick(rng, from);
+    }
+  }
+  if (set && (!base || ROBES[base].palette !== ROBE_SETS[set].palette)) {
+    const slot = opts.slot || (base ? ROBES[base].slot : pick(rng, SET_PARTS));
+    base = pick(rng, Object.keys(ROBES).filter((b) => ROBES[b].palette === ROBE_SETS[set].palette && ROBES[b].slot === slot));
+  }
+  if (!base) base = pick(rng, Object.keys(ROBES).filter((b) => ROBE_PALETTES[ROBES[b].palette].floor <= rarity && (!opts.slot || ROBES[b].slot === opts.slot)));
   const { palette, slot } = ROBES[base];
   const q = between(rng, RARITIES[rarity].quality[0], RARITIES[rarity].quality[1]);
-  return { type: 'robe', base, rarity, armor: Math.round(ROBE_SLOTS[slot].ward * ROBE_PALETTES[palette].ward * q), affixes: rollAffixes(rng, rarity, ROBE_AFFIXES) };
+  const item = { type: 'robe', base, rarity, armor: Math.round(ROBE_SLOTS[slot].ward * (set ? SET_WARD[rarity] : ROBE_PALETTES[palette].ward) * q), affixes: rollAffixes(rng, rarity, ROBE_AFFIXES) };
+  if (set) item.set = set;
+  return item;
 }
 
 // A piece of armour of whatever rarity comes up, from the suits that come that rare. opts: base, rarity, minRarity, as for a sword.
@@ -430,7 +486,8 @@ export function nameOf(item) {
     return [pre?.name, GEAR[item.base].name, suf?.name].filter(Boolean).join(' ');
   }
   const pre = item.affixes.find((a) => a.pos === 'pre'), suf = item.affixes.find((a) => a.pos === 'suf');
-  const named = item.type === 'skull' ? (SKINS[item.skin] ? `${SKINS[item.skin].name} Skull` : SKULLS[item.base].name) : (item.type === 'robe' ? ROBES[item.base] : BASES[item.base]).name;
+  const named = item.type === 'skull' ? (SKINS[item.skin] ? `${SKINS[item.skin].name} Skull` : SKULLS[item.base].name)
+    : item.type === 'robe' ? (ROBE_SETS[item.set] ? `${ROBE_SETS[item.set].name} ${ROBE_SHAPES[ROBES[item.base].shape].name}` : ROBES[item.base].name) : BASES[item.base].name;
   return [pre?.name, named, suf?.name].filter(Boolean).join(' ');
 }
 
@@ -454,8 +511,9 @@ export function statsOf(item) {
   return { min: item.dmg?.[0] ?? 0, max: item.dmg?.[1] ?? 0 };
 }
 
-// The lines of a tooltip, in order: { text, kind } with kind one of title, sub, stat, gem, open.
-export function linesOf(item) {
+// The lines of a tooltip, in order: { text, kind } with kind one of title, sub, stat, gem, open. slots: what's worn, for
+// how much of a piece's set is on.
+export function linesOf(item, slots) {
   if (item.type === 'gem') {
     return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: GEM_LOOK[item.kind], kind: 'sub' }, { text: 'Goes in an open socket on a staff, a skull or a shield, and stays there.', kind: 'sub' }];
   }
@@ -476,6 +534,12 @@ export function linesOf(item) {
   if (item.type === 'robe') {
     const out = [{ text: nameOf(item), kind: 'title' }, { text: `${RARITIES[item.rarity].name} ${ROBE_SHAPES[ROBES[item.base].shape].name.toLowerCase()}`, kind: 'sub' }, { text: `Ward ${item.armor}`, kind: 'stat' }];
     for (const a of item.affixes) out.push({ text: STAT_TEXT[a.stat](a.value), kind: 'stat' });
+    const set = ROBE_SETS[item.set];
+    if (set) {
+      const on = setsWorn(slots)[item.set] || 0;
+      out.push({ text: `${set.name}: ${on} of ${SET_PARTS.length} worn`, kind: 'gem', color: '#e8c15a' });
+      for (const b of setBonuses(item.set)) out.push({ text: `${b.need} pieces: ${STAT_TEXT[b.stat](b.value)}`, kind: on >= b.need ? 'gem' : 'open', ...(on >= b.need ? { color: '#e8c15a' } : {}) });
+    }
     return out;
   }
   const s = statsOf(item);
@@ -502,6 +566,8 @@ export function gearTotals(slots) {
     for (const a of it.affixes || []) if (a.stat in add) add[a.stat] += a.value;
     for (const g of it.gems || []) if (GEMS[g.kind].stat in add) add[GEMS[g.kind].stat] += GEMS[g.kind].values[g.grade];
   }
+  // And what the sets give, for as many of their pieces as are on.
+  for (const [id, n] of Object.entries(setsWorn(slots))) for (const b of setBonuses(id)) if (n >= b.need) add[b.stat] += b.value;
   return add;
 }
 

@@ -53,10 +53,8 @@ export const CRAFTS = {
 export const MAX_EMBERS = 3;
 
 function sewn(rng, rarity, slot) {
-  const bases = Object.keys(ROBES).filter((b) => ROBES[b].slot === slot);
-  const r = Math.min(grade(rng, rarity), RARITIES.length - 2);
-  const fit = bases.filter((b) => ({ ash: 0, moss: 0, night: 1, crimson: 2, amethyst: 3 })[ROBES[b].palette] <= r);
-  return rollRobe(rng, { base: fit[Math.floor(rng() * fit.length)], rarity: r });
+  // (A piece of one of the sets that come that fine: src/items/items.js rollRobe.)
+  return rollRobe(rng, { slot, rarity: Math.min(grade(rng, rarity), RARITIES.length - 2) });
 }
 
 // Each trade: goods it always has; stock, rolled each morning; what it buys back, and at what share of its worth; what it

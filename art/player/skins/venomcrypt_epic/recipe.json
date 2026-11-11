@@ -1,0 +1,138 @@
+{
+ "id": "venomcrypt_epic",
+ "name": "Venomcrypt Hierophant",
+ "blurb": "Epic-tier appearance. Poison-green scales, pale jade skulls and serpentine brocade.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/emerald.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95
+  },
+  "trim": {
+   "color": "#bcd3b6",
+   "bright": 1.05
+  },
+  "leather": {
+   "swatch": "swatches/belt.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/emerald.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_serpent2.png",
+    "color": "#8fc48a",
+    "scale": 0.17,
+    "strength": 0.25,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/vial.png",
+     "anchor": "hat",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/bottle_scales.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 0.62,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/vial.png",
+     "anchor": "shoulder_left",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/vial.png",
+     "anchor": "shoulder_right",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_serpent2.png",
+    "color": "#9ad08e",
+    "scale": 0.17,
+    "strength": 0.42,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/vial.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/vial.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/bottle_scales.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 0.58,
+    "shading": 0.9
+   },
+   "leather": {
+    "swatch": "swatches/dark_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  }
+ }
+}

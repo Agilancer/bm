@@ -1,0 +1,160 @@
+{
+ "id": "phoenix_carmine_epic",
+ "name": "Phoenix Carmine",
+ "blurb": "Epic-tier appearance. Carmine feather brocade, burnished amber guards and rich gold flames.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx2_carmine.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 0.7
+  },
+  "trim": {
+   "swatch": "swatches/phoenix_carmine_epic_metal.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/darkleather.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.95,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "pattern": {
+    "image": "swatches/pat_feather.png",
+    "color": "#c99a46",
+    "scale": 0.12,
+    "strength": 0.2,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/phoenix.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/phoenix.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "cloth": {
+    "swatch": "swatches/fx2_hat.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.65
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx2_amber.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.7,
+    "shading": 0.95,
+    "keep": 0.15
+   },
+   "keep_trim": true,
+   "decals": []
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_feather.png",
+    "color": "#d4a84e",
+    "scale": 0.15,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/phoenix.png",
+     "anchor": "back",
+     "size": 0.3,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/phoenix.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx2_amber.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.66,
+    "shading": 0.95,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/darkleather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.95,
+    "keep": 0.1
+   },
+   "decals": []
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/darkleather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.95,
+    "keep": 0.1
+   },
+   "cloth": {
+    "swatch": "swatches/darkleather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.95
+   },
+   "trim": {
+    "swatch": "swatches/phoenix_carmine_epic_metal.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   }
+  }
+ }
+}

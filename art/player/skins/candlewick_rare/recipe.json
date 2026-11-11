@@ -1,0 +1,172 @@
+{
+ "id": "candlewick_rare",
+ "name": "Candlewick",
+ "blurb": "Rare gear. Amber weave, dark wine mantle, aged brass and restrained droplet stitching. Original candle crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/c2_amber.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.8,
+   "shading": 0.9,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/candlewick_rare_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.12,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/candlewick_rare_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.18,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/c2_wine.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.72,
+    "shading": 0.95,
+    "keep": 0.0
+   },
+   "decals": [
+    {
+     "image": "decals/candle.png",
+     "anchor": "hat",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/c2_wine.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.76,
+    "shading": 0.95,
+    "keep": 0.0
+   },
+   "pattern": {
+    "image": "swatches/c2_drops.png",
+    "color": "#c9a050",
+    "scale": 0.16,
+    "strength": 0.28,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/candle.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/candle.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/c2_drops.png",
+    "color": "#6e2a14",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/candle_roundel.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    },
+    {
+     "image": "decals/candle_roundel.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/c2_winelea.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/candlewick_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.86,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/candlewick_rare_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.7,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/c2_amber.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.66,
+    "shading": 0.9,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/candlewick_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.14,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

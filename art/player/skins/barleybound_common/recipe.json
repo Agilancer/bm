@@ -1,0 +1,122 @@
+{
+ "id": "barleybound_common",
+ "name": "Barleybound Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original barley sheaf stitch badge. Alternating harvest stripes, plain dark mantle and wrapped ochre shins. Intended as a common item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/oat.png",
+   "scale": 0.045,
+   "tile": "repeat",
+   "bright": 0.84,
+   "shading": 0.6
+  },
+  "trim": {
+   "color": "#7a6142",
+   "bright": 0.9
+  },
+  "leather": {
+   "swatch": "swatches/leather3.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.2
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat3.png",
+    "scale": 0.05,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "trim": {
+    "color": "#8a7350"
+   },
+   "decals": [
+    {
+     "image": "decals/sheaf_small.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle3.png",
+    "scale": 0.05,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "trim": {
+    "color": "#75603f"
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_harvest.png",
+    "color": "#6e4a34",
+    "scale": 0.11,
+    "strength": 0.55,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/sheaf.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/umber.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/leather3.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "trim": {
+    "color": "#8a7350"
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/leather3.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.7,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "trim": {
+    "color": "#57442c"
+   }
+  }
+ }
+}

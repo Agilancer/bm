@@ -12,8 +12,8 @@ import { folkTakes } from './folk.mjs';
 
 // The kind of delivery, from the line's own marks (opening-script.js), or named here.
 const TYPE = {
-  'Not that way, dear. Back down the tunnel with you.': 'order',
-  'I said out. Back down that tunnel before I lose my temper.': 'raised',
+  'Not that way. You’ve only just come through it. The way out is down the tunnel.': 'order',
+  'I said out. That door doesn’t open for the asking. Down the tunnel with you.': 'raised',
 };
 const typeOf = (l, text) => TYPE[text] || (l.big ? 'shout' : l.off ? 'off' : l.vo ? 'vo' : l.mutter ? 'quiet' : l.call ? 'call' : 'calm');
 

@@ -1,0 +1,115 @@
+{
+ "id": "spindlepath_common",
+ "name": "Spindlepath",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched thread spool crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_tunic.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "color": "#806a4c",
+   "bright": 0.9
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/fx_spool.png",
+     "anchor": "hat",
+     "size": 0.08,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_mantle.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/fx_spool.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_spool.png",
+     "anchor": "tabard",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_guard.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.9,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.14
+   }
+  }
+ }
+}

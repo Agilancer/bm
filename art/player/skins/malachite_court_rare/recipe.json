@@ -1,0 +1,144 @@
+{
+ "id": "malachite_court_rare",
+ "name": "Malachite Court",
+ "blurb": "Rare-tier appearance. Olive geometric brocade, champagne guards and gilded leaf insignia.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/mc_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.88,
+   "shading": 0.95,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/mc_gold.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.8,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/mc_leather.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "hat_back",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mc_guards.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.8,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/leaf_green.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/leaf_green.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/mc_ogee.png",
+    "color": "#8c9a52",
+    "scale": 0.15,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/leaf_crest.png",
+     "anchor": "back",
+     "size": 0.215,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/leaf_gold.png",
+     "anchor": "tabard",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/mc_guards.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 0.82,
+    "shading": 0.8,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/mc_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/mc_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.15,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  }
+ }
+}

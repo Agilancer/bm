@@ -1,0 +1,158 @@
+{
+ "id": "riverwhisk_uncommon",
+ "name": "Riverwhisk",
+ "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered otter crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/riverwhisk_uncommon_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.06,
+   "shading": 0.88,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/riverwhisk_uncommon_trim.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.96,
+   "shading": 0.67,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/riverwhisk_uncommon_leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.88,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/riverwhisk_uncommon_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.04,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/riverwhisk_uncommon.png",
+     "anchor": "hat",
+     "size": 0.092,
+     "mode": "gilt",
+     "color": "#d4d0b7",
+     "under_trim": false
+    }
+   ],
+   "pattern": {
+    "image": "swatches/riverwhisk_uncommon_pattern.png",
+    "color": "#acae91",
+    "scale": 0.225,
+    "strength": 0.07,
+    "tile": "repeat"
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/riverwhisk_uncommon_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.03,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/riverwhisk_uncommon_pattern.png",
+    "color": "#acae91",
+    "scale": 0.225,
+    "strength": 0.12,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/riverwhisk_uncommon.png",
+     "anchor": "shoulder_left",
+     "size": 0.078,
+     "mode": "gilt",
+     "color": "#d4d0b7",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/riverwhisk_uncommon_pattern.png",
+    "color": "#acae91",
+    "scale": 0.225,
+    "strength": 0.18,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/riverwhisk_uncommon.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#d4d0b7",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/riverwhisk_uncommon.png",
+     "anchor": "tabard",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#d4d0b7",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/riverwhisk_uncommon_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/riverwhisk_uncommon_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.88,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/riverwhisk_uncommon_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/riverwhisk_uncommon_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.13,
+    "shading": 0.88,
+    "keep": 0.14
+   }
+  }
+ }
+}

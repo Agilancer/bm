@@ -1,0 +1,93 @@
+{
+ "id": "mudsole_common",
+ "name": "Mudsole",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched work boot crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/mudsole_common_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.06,
+   "shading": 0.88,
+   "keep": 0
+  },
+  "trim": {
+   "color": "#75694a",
+   "bright": 0.88
+  },
+  "leather": {
+   "swatch": "swatches/leather2.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.95,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat2.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/guard2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/boot.png",
+     "anchor": "back",
+     "size": 0.19,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/guard2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/leather2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/leather2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.95,
+    "keep": 0.12
+   }
+  }
+ }
+}

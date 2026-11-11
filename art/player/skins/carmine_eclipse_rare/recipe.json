@@ -1,0 +1,163 @@
+{
+ "id": "carmine_eclipse_rare",
+ "name": "Carmine Eclipse",
+ "blurb": "Rare-tier appearance. Deep carmine star silk, charcoal guards and cold silver crests.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/carmine_eclipse_rare_cloth.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/carmine_eclipse_rare_metal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/carmine_eclipse_rare_leather.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "pattern": {
+    "image": "swatches/carmine_eclipse_rare_brocade.png",
+    "color": "#bcb9bf",
+    "scale": 0.26,
+    "strength": 0.2,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/eclipse_small.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/eclipse_small.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/carmine_eclipse_rare_guards.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   },
+   "trim": {
+    "swatch": "swatches/carmine_eclipse_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.1
+   },
+   "decals": [
+    {
+     "image": "decals/eclipse_small.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/eclipse_small.png",
+     "anchor": "shoulder_right",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/carmine_eclipse_rare_brocade.png",
+    "color": "#bcb9bf",
+    "scale": 0.28,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/eclipse.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.075,
+      0
+     ]
+    },
+    {
+     "image": "decals/eclipse_small.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "color": "#3f3d49",
+    "shading": 1
+   },
+   "leather": {
+    "swatch": "swatches/carmine_eclipse_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.9,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/carmine_eclipse_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.2,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/carmine_eclipse_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   }
+  }
+ }
+}

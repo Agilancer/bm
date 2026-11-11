@@ -40,7 +40,7 @@ function play(speed, surf = () => false, limit = 240, side = () => 0) {
     t += dt;
     if (op.cue && op.cueT < lastCueT) said.push({ t, id: CUE_IDS[op.cue - 1] });
     lastCueT = op.cueT;
-    if (op.stage === OPENING.ESCORT) log.push({ t, you: Math.max(0, s), far: Math.hypot(player.x - sim.villagers[1].x, player.z - sim.villagers[1].z), her: op.prog, riding: op.riding, lift: sim.villagers[1].y, clip: sim.villagers[1].b?.clip });
+    if (op.stage === OPENING.ESCORT) log.push({ t, you: Math.max(0, s), far: Math.hypot(player.x - sim.villagers[1].x, player.z - sim.villagers[1].z), her: op.prog, riding: op.riding, lift: sim.villagers[1].y, clip: sim.villagers[1].b?.clip, face: sim.villagers[1].b?.face, moving: !!sim.villagers[1].b?.to, x: sim.villagers[1].x, z: sim.villagers[1].z, px: player.x, pz: player.z });
   }
   return { op, said, log, t };
 }
@@ -58,12 +58,38 @@ test('at a sprint she still keeps in front', () => {
   for (const e of log.filter((e) => e.t > 3 && e.her < ROUTE.len - 1)) assert.ok(e.her > e.you + 2, `behind you at ${e.t.toFixed(1)} s`);
 });
 
-test('stand still and she goes on a little, waits, and calls you on', () => {
-  const { said, log } = play((t) => (t < 30 ? 0 : 5.6));
-  const stood = log.filter((e) => e.t > 20 && e.t < 30);
-  for (const e of stood) assert.ok(e.her - e.you > 6.5 && e.her - e.you < 9.5, `${(e.her - e.you).toFixed(1)} m off while you stand`);
-  assert.ok(Math.max(...stood.map((e) => e.her)) - Math.min(...stood.map((e) => e.her)) < 0.5, 'she waits rather than wandering off');
-  assert.ok(said.some((l) => l.id.startsWith('keep') && l.t < 30), 'she calls you on');
+test('stop and she stops a few steps on, turns round to you, and waits; and calls you on if you dawdle', () => {
+  const { said, log } = play((t) => (t < 8 ? 5.6 : t < 34 ? 0 : 5.6));
+  const stood = log.filter((e) => e.t > 11 && e.t < 34);
+  for (const e of stood) assert.ok(e.her - e.you > 4 && e.her - e.you < 7.5, `${(e.her - e.you).toFixed(1)} m off while you stand`);
+  assert.ok(Math.max(...stood.map((e) => e.her)) - Math.min(...stood.map((e) => e.her)) < 0.3, 'she waits rather than wandering off');
+  // Stood, not walking, and turned to face you.
+  for (const e of stood) {
+    assert.ok(!e.moving && (e.clip === 'idle' || e.clip === 'wait'), `${e.clip} at ${e.t.toFixed(1)} s`);
+    const toYou = Math.atan2(e.px - e.x, e.pz - e.z);
+    assert.ok(Math.abs(Math.atan2(Math.sin(e.face - toYou), Math.cos(e.face - toYou))) < 0.05, 'turned to you');
+  }
+  assert.ok(said.some((l) => l.id.startsWith('keep') && l.t < 34), 'she calls you on');
+});
+
+test('come up to her and she turns back to the way and goes on', () => {
+  // Walk, stop for ten seconds, then stroll up to her.
+  const { log, op } = play((t) => (t < 8 ? 5.6 : t < 18 ? 0 : t < 24 ? 1.2 : 5.6));
+  const held = log.filter((e) => e.t > 11 && e.t < 18);
+  const at = held[0].her;
+  const near = log.find((e) => e.t >= 18 && e.far < 3.4);
+  assert.ok(near, 'you reached her');
+  // She holds while you're still more than a few steps off,
+  for (const e of log.filter((e) => e.t >= 18 && e.t < near.t)) assert.ok(Math.abs(e.her - at) < 0.3, `set off with you ${e.far.toFixed(1)} m away`);
+  // and is on her way within a second or so of your reaching her.
+  assert.ok(log.some((e) => e.t > near.t && e.t < near.t + 1.6 && e.her > at + 0.5), 'she went on');
+  assert.equal(op.stage, OPENING.ARRIVED);
+});
+
+test('walk past her while she waits and she comes after you and takes the lead again', () => {
+  const { log } = play((t) => (t < 8 ? 5.6 : t < 14 ? 0 : 5.6));
+  const after = log.filter((e) => e.t > 22 && e.her < ROUTE.len - 1);
+  for (const e of after) assert.ok(e.her > e.you + 2.5, `${(e.her - e.you).toFixed(1)} m ahead at ${e.t.toFixed(1)} s`);
 });
 
 test('go off the road and she stops where she is and waits for you', () => {
