@@ -73,34 +73,35 @@
     "scale": 0.12,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.45,
+    "shading": 0.3,
     "keep": 0
    },
    "leather": {
     "color": "#b4a484"
    },
-   "pattern": {
-    "image": "swatches/pat_ogee.png",
-    "color": "#d98e70",
-    "scale": 0.16,
-    "strength": 0.34,
-    "tile": "repeat"
+   "trim": {
+    "swatch": "swatches/fx_trim.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 1.2,
+    "shading": 0.3,
+    "keep": 0
    },
    "decals": [
     {
-     "image": "decals/fx_lyre_wine.png",
+     "image": "decals/fx_lyre.png",
      "anchor": "shoulder_left",
-     "size": 0.1,
+     "size": 0.095,
      "mode": "paint",
-     "under_trim": false,
+     "under_trim": true,
      "opacity": 1.0
     },
     {
-     "image": "decals/fx_lyre_wine.png",
+     "image": "decals/fx_lyre.png",
      "anchor": "shoulder_right",
-     "size": 0.1,
+     "size": 0.095,
      "mode": "paint",
-     "under_trim": false,
+     "under_trim": true,
      "opacity": 1.0
     }
    ]
@@ -154,13 +155,21 @@
     "shading": 0.45,
     "keep": 0
    },
+   "trim": {
+    "swatch": "swatches/fx_trim.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 1.15,
+    "shading": 0.4,
+    "keep": 0
+   },
    "leather": {
-    "swatch": "swatches/fx_leather.png",
+    "swatch": "swatches/fx_tan.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.95,
+    "bright": 1.0,
     "shading": 0.9,
-    "keep": 0.05
+    "keep": 0
    },
    "decals": [
     {
