@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_copper.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.05,
+   "bright": 1.0,
    "shading": 0.95,
    "keep": 0
   },
@@ -43,9 +43,9 @@
    },
    "pattern": {
     "image": "swatches/pat_fret.png",
-    "color": "#e2b450",
-    "scale": 0.15,
-    "strength": 0.4,
+    "color": "#d8a848",
+    "scale": 0.16,
+    "strength": 0.36,
     "tile": "repeat"
    },
    "decals": [
@@ -64,15 +64,18 @@
     "swatch": "swatches/fx_petrol.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 1.0,
     "shading": 0.95,
     "keep": 0
    },
+   "leather": {
+    "color": "#0d2830"
+   },
    "pattern": {
     "image": "swatches/pat_fret.png",
-    "color": "#e2b450",
-    "scale": 0.13,
-    "strength": 0.32,
+    "color": "#d8a848",
+    "scale": 0.14,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
@@ -97,9 +100,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_fret.png",
-    "color": "#e2b450",
-    "scale": 0.17,
-    "strength": 0.46,
+    "color": "#d8a848",
+    "scale": 0.18,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [

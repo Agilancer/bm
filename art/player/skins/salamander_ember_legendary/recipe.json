@@ -7,174 +7,178 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/salamander_ember_legendary_cloth.png",
+   "swatch": "swatches/ember2.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.9,
-   "keep": 0
+   "bright": 1.0,
+   "shading": 1.0
   },
   "trim": {
-   "swatch": "swatches/salamander_ember_legendary_metal.png",
+   "swatch": "swatches/steel2.png",
    "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.08,
-   "shading": 0.7,
-   "keep": 0
+   "bright": 1.12,
+   "shading": 0.8
   },
   "leather": {
-   "swatch": "swatches/salamander_ember_legendary_leather.png",
+   "swatch": "swatches/leather2.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.86,
+   "bright": 1.1,
+   "shading": 0.9,
    "keep": 0.07
   }
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/salamander_ember_legendary_cloth.png",
+    "swatch": "swatches/hat2.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 1.0,
+    "shading": 1.0
    },
    "pattern": {
-    "image": "swatches/salamander_ember_legendary_pattern.png",
-    "color": "#c0c9d0",
-    "scale": 0.22,
-    "strength": 0.612,
+    "image": "swatches/flamescale2.png",
+    "color": "#f0a03a",
+    "scale": 0.2,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/salamander_ember_legendary_dbccb4.png",
+     "image": "decals/salamander.png",
      "anchor": "hat",
-     "size": 0.092,
+     "size": 0.09,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
+    },
+    {
+     "image": "decals/flame.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
     }
    ]
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/salamander_ember_legendary_mantle.png",
+    "swatch": "swatches/mantle2.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 1.0,
+    "shading": 1.0
    },
    "pattern": {
-    "image": "swatches/salamander_ember_legendary_pattern.png",
-    "color": "#c0c9d0",
-    "scale": 0.23,
-    "strength": 0.62,
+    "image": "swatches/flamescale2.png",
+    "color": "#8fa3c2",
+    "scale": 0.2,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/salamander_ember_legendary_dbccb4.png",
+     "image": "decals/salamander.png",
      "anchor": "shoulder_left",
-     "size": 0.09,
+     "size": 0.1,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     },
     {
-     "image": "decals/salamander_ember_legendary_dbccb4.png",
+     "image": "decals/salamander.png",
      "anchor": "shoulder_right",
-     "size": 0.09,
+     "size": 0.1,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
   "chest": {
    "pattern": {
-    "image": "swatches/salamander_ember_legendary_pattern.png",
-    "color": "#c0c9d0",
-    "scale": 0.3,
-    "strength": 0.62,
+    "image": "swatches/flamescale2.png",
+    "color": "#f0a03a",
+    "scale": 0.24,
+    "strength": 0.52,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/salamander_ember_legendary_dbccb4.png",
+     "image": "decals/salamander.png",
      "anchor": "back",
-     "size": 0.22,
+     "size": 0.225,
      "mode": "paint",
      "under_trim": false,
      "offset": [
       0,
-      -0.045,
+      -0.058,
       0
-     ],
-     "opacity": 1.0
+     ]
     },
     {
-     "image": "decals/salamander_ember_legendary_dbccb4.png",
+     "image": "decals/salamander.png",
      "anchor": "tabard",
-     "size": 0.1,
+     "size": 0.125,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
+    },
+    {
+     "image": "decals/flame.png",
+     "anchor": "tabard_back",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/salamander_ember_legendary_mantle.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 0.93,
-    "shading": 0.9,
-    "keep": 0
-   },
-   "leather": {
-    "swatch": "swatches/salamander_ember_legendary_leather.png",
-    "scale": 0.1,
-    "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.84,
-    "keep": 0.07
-   },
-   "trim": {
-    "swatch": "swatches/salamander_ember_legendary_metal.png",
-    "scale": 0.075,
-    "tile": "repeat",
-    "bright": 1.02,
-    "shading": 0.7,
-    "keep": 0
-   },
-   "pattern": {
-    "image": "swatches/salamander_ember_legendary_pattern.png",
-    "color": "#c0c9d0",
-    "scale": 0.3,
-    "strength": 0.578,
-    "tile": "repeat"
-   }
-  },
-  "feet": {
-   "cloth": {
-    "swatch": "swatches/salamander_ember_legendary_cloth.png",
+    "swatch": "swatches/mantle2.png",
     "scale": 0.12,
     "tile": "repeat",
     "bright": 0.95,
-    "shading": 0.9,
-    "keep": 0
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/flamescale2.png",
+    "color": "#8fa3c2",
+    "scale": 0.2,
+    "strength": 0.45,
+    "tile": "repeat"
    },
    "leather": {
-    "swatch": "swatches/salamander_ember_legendary_leather.png",
+    "swatch": "swatches/leather2.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.16,
-    "shading": 0.85,
-    "keep": 0.08
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.07
+   },
+   "decals": [
+    {
+     "image": "decals/flame.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/flame.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/leather2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0.07
    }
   }
  }

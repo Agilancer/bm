@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_plum.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.08,
+   "bright": 1.0,
    "shading": 0.95,
    "keep": 0
   },
@@ -44,9 +44,9 @@
    },
    "pattern": {
     "image": "swatches/pat_swirl.png",
-    "color": "#b8a6dc",
+    "color": "#a692cc",
     "scale": 0.17,
-    "strength": 0.34,
+    "strength": 0.36,
     "tile": "repeat"
    },
    "decals": [
@@ -68,6 +68,9 @@
     "bright": 0.95,
     "shading": 0.9,
     "keep": 0
+   },
+   "leather": {
+    "color": "#3a4452"
    },
    "decals": [
     {
@@ -91,7 +94,7 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_swirl.png",
-    "color": "#b8a6dc",
+    "color": "#a692cc",
     "scale": 0.2,
     "strength": 0.42,
     "tile": "repeat"
@@ -100,13 +103,13 @@
     {
      "image": "decals/fx_cyclone.png",
      "anchor": "back",
-     "size": 0.23,
+     "size": 0.2,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.07,
       0
      ]
     },

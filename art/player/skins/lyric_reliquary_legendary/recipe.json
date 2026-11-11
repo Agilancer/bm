@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_blue.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.08,
+   "bright": 1.0,
    "shading": 0.95,
    "keep": 0
   },
@@ -43,9 +43,9 @@
    },
    "pattern": {
     "image": "swatches/pat_ogee.png",
-    "color": "#f0bfa6",
+    "color": "#eba888",
     "scale": 0.2,
-    "strength": 0.5,
+    "strength": 0.52,
     "tile": "repeat"
    },
    "decals": [
@@ -76,6 +76,9 @@
     "shading": 0.85,
     "keep": 0
    },
+   "leather": {
+    "color": "#b4a484"
+   },
    "pattern": {
     "image": "swatches/pat_ogee.png",
     "color": "#d98e70",
@@ -105,9 +108,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_ogee.png",
-    "color": "#f0bfa6",
+    "color": "#eba888",
     "scale": 0.24,
-    "strength": 0.55,
+    "strength": 0.56,
     "tile": "repeat"
    },
    "decals": [

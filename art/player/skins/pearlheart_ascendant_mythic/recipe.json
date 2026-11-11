@@ -17,8 +17,8 @@
    "swatch": "swatches/metal.png",
    "scale": 0.08,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.85
+   "bright": 1.0,
+   "shading": 0.9
   },
   "leather": {
    "swatch": "swatches/belt.png",
@@ -110,8 +110,8 @@
    "pattern": {
     "image": "swatches/pat_scallop.png",
     "color": "#c49a48",
-    "scale": 0.22,
-    "strength": 0.55,
+    "scale": 0.2,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [
@@ -145,13 +145,6 @@
     "tile": "repeat",
     "bright": 0.95,
     "shading": 1.0
-   },
-   "pattern": {
-    "image": "swatches/pat_scallop.png",
-    "color": "#f1dc9c",
-    "scale": 0.14,
-    "strength": 0.5,
-    "tile": "repeat"
    },
    "leather": {
     "swatch": "swatches/trouser.png",

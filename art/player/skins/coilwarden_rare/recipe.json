@@ -44,7 +44,7 @@
    },
    "pattern": {
     "image": "swatches/pat_scales.png",
-    "color": "#0e3a27",
+    "color": "#0b2e1f",
     "scale": 0.1,
     "strength": 0.4,
     "tile": "repeat"
@@ -65,9 +65,12 @@
     "swatch": "swatches/fx_brass.png",
     "scale": 0.09,
     "tile": "repeat",
-    "bright": 0.95,
+    "bright": 0.9,
     "shading": 0.9,
     "keep": 0
+   },
+   "leather": {
+    "color": "#40351c"
    },
    "decals": [
     {
@@ -91,7 +94,7 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_scales.png",
-    "color": "#0e3a27",
+    "color": "#0b2e1f",
     "scale": 0.11,
     "strength": 0.5,
     "tile": "repeat"

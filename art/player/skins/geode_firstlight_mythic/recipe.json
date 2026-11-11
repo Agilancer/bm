@@ -7,52 +7,51 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/geode_firstlight_mythic_cloth.png",
+   "swatch": "swatches/amethyst.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.9,
-   "keep": 0
+   "bright": 0.78,
+   "shading": 0.95
   },
   "trim": {
-   "swatch": "swatches/geode_firstlight_mythic_metal.png",
+   "swatch": "swatches/champagne.png",
    "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.08,
-   "shading": 0.7,
-   "keep": 0
+   "bright": 1.05,
+   "shading": 0.7
   },
   "leather": {
-   "swatch": "swatches/geode_firstlight_mythic_leather.png",
+   "swatch": "swatches/leather.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
+   "bright": 0.95,
    "shading": 0.86,
    "keep": 0.07
-  }
+  },
+  "keep_trim": true
  },
  "parts": {
   "head": {
-   "cloth": {
-    "swatch": "swatches/geode_firstlight_mythic_mantle.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.9,
-    "keep": 0
-   },
    "pattern": {
-    "image": "swatches/geode_firstlight_mythic_pattern.png",
-    "color": "#e1d3b6",
-    "scale": 0.22,
-    "strength": 0.62,
+    "image": "swatches/pat_facets.png",
+    "color": "#f0cc74",
+    "scale": 0.18,
+    "strength": 0.58,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/geode_firstlight_mythic_dbccb4.png",
+     "image": "decals/geode.png",
      "anchor": "hat",
-     "size": 0.092,
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/geode.png",
+     "anchor": "hat_back",
+     "size": 0.1,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -61,33 +60,32 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/geode_firstlight_mythic_mantle.png",
+    "swatch": "swatches/emerald.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 0.9,
+    "shading": 0.95
    },
    "pattern": {
-    "image": "swatches/geode_firstlight_mythic_pattern.png",
-    "color": "#e1d3b6",
-    "scale": 0.23,
-    "strength": 0.62,
+    "image": "swatches/pat_facets.png",
+    "color": "#f0cc74",
+    "scale": 0.18,
+    "strength": 0.55,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/geode_firstlight_mythic_dbccb4.png",
+     "image": "decals/geode_small.png",
      "anchor": "shoulder_left",
-     "size": 0.09,
+     "size": 0.11,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     },
     {
-     "image": "decals/geode_firstlight_mythic_dbccb4.png",
+     "image": "decals/geode_small.png",
      "anchor": "shoulder_right",
-     "size": 0.09,
+     "size": 0.11,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -96,30 +94,43 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/geode_firstlight_mythic_pattern.png",
-    "color": "#e1d3b6",
-    "scale": 0.3,
-    "strength": 0.62,
+    "image": "swatches/pat_facets.png",
+    "color": "#f0cc74",
+    "scale": 0.2,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/geode_firstlight_mythic_dbccb4.png",
+     "image": "decals/geode.png",
      "anchor": "back",
-     "size": 0.22,
+     "size": 0.27,
      "mode": "paint",
      "under_trim": false,
+     "opacity": 1.0,
      "offset": [
       0,
-      -0.045,
+      -0.055,
       0
-     ],
-     "opacity": 1.0
+     ]
     },
     {
-     "image": "decals/geode_firstlight_mythic_dbccb4.png",
+     "image": "decals/geode_small.png",
      "anchor": "tabard",
      "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/geode_small.png",
+     "anchor": "tabard_back",
+     "size": 0.11,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -128,71 +139,53 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/geode_firstlight_mythic_mantle.png",
+    "swatch": "swatches/emerald.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.93,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 0.82,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_facets.png",
+    "color": "#f0cc74",
+    "scale": 0.18,
+    "strength": 0.55,
+    "tile": "repeat"
    },
    "leather": {
-    "swatch": "swatches/geode_firstlight_mythic_leather.png",
+    "swatch": "swatches/leather.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.84,
+    "bright": 0.85,
+    "shading": 0.86,
     "keep": 0.07
-   },
-   "trim": {
-    "swatch": "swatches/geode_firstlight_mythic_metal.png",
-    "scale": 0.075,
-    "tile": "repeat",
-    "bright": 1.02,
-    "shading": 0.7,
-    "keep": 0
    },
    "decals": [
     {
-     "image": "decals/geode_firstlight_mythic_dbccb4.png",
+     "image": "decals/geode_small.png",
      "anchor": "knee_left",
-     "size": 0.055,
+     "size": 0.075,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     },
     {
-     "image": "decals/geode_firstlight_mythic_dbccb4.png",
+     "image": "decals/geode_small.png",
      "anchor": "knee_right",
-     "size": 0.055,
+     "size": 0.075,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     }
-   ],
-   "pattern": {
-    "image": "swatches/geode_firstlight_mythic_pattern.png",
-    "color": "#e1d3b6",
-    "scale": 0.3,
-    "strength": 0.62,
-    "tile": "repeat"
-   }
+   ]
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/geode_firstlight_mythic_cloth.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 0.95,
-    "shading": 0.9,
-    "keep": 0
-   },
-   "leather": {
-    "swatch": "swatches/geode_firstlight_mythic_leather.png",
+    "swatch": "swatches/leather.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.16,
-    "shading": 0.85,
-    "keep": 0.08
+    "bright": 0.95,
+    "shading": 0.9
    }
   }
  }

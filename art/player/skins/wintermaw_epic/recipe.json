@@ -41,9 +41,9 @@
    },
    "pattern": {
     "image": "swatches/frost2.png",
-    "color": "#bfe2f2",
+    "color": "#a6d4ec",
     "scale": 0.2,
-    "strength": 0.35,
+    "strength": 0.28,
     "tile": "repeat"
    },
    "decals": [
@@ -84,9 +84,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/frost2.png",
-    "color": "#bfe2f2",
+    "color": "#a6d4ec",
     "scale": 0.2,
-    "strength": 0.45,
+    "strength": 0.36,
     "tile": "repeat"
    },
    "decals": [

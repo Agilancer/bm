@@ -73,9 +73,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_leaves.png",
-    "color": "#b9854a",
-    "scale": 0.2,
-    "strength": 0.42,
+    "color": "#a87a45",
+    "scale": 0.13,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [

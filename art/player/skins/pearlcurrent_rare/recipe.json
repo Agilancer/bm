@@ -65,9 +65,12 @@
     "swatch": "swatches/fx_pearl.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.95,
     "shading": 0.95,
     "keep": 0
+   },
+   "leather": {
+    "color": "#6a647c"
    },
    "decals": [
     {

@@ -84,10 +84,10 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/fx_stitch.png",
-    "color": "#143944",
-    "scale": 0.16,
-    "strength": 0.5,
+    "image": "swatches/pat_diamonds.png",
+    "color": "#6fa3b0",
+    "scale": 0.09,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [

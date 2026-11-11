@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_gold.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.05,
+   "bright": 0.97,
    "shading": 0.95,
    "keep": 0
   },
@@ -37,9 +37,16 @@
     "swatch": "swatches/fx_winehat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
+    "bright": 1.05,
     "shading": 0.95,
     "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pat_suns.png",
+    "color": "#b8862a",
+    "scale": 0.18,
+    "strength": 0.4,
+    "tile": "repeat"
    },
    "decals": [
     {
@@ -57,15 +64,18 @@
     "swatch": "swatches/fx_wine.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
+    "bright": 1.05,
     "shading": 0.95,
     "keep": 0
+   },
+   "leather": {
+    "color": "#34091a"
    },
    "pattern": {
     "image": "swatches/pat_suns.png",
     "color": "#b8862a",
-    "scale": 0.12,
-    "strength": 0.35,
+    "scale": 0.16,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [
@@ -90,9 +100,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_suns.png",
-    "color": "#8a5a14",
-    "scale": 0.15,
-    "strength": 0.42,
+    "color": "#5e3a0c",
+    "scale": 0.2,
+    "strength": 0.5,
     "tile": "repeat"
    },
    "decals": [
