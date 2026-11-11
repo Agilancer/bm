@@ -270,10 +270,20 @@ export class Renderer {
     // A model: fetched when a place ahead is free, built when a builder is, and the place given up once it's built, so no
     // more than a few files are held at once. Asked for in the order they're wanted below; make(glb) is what's kept.
     // (A failure is the caller's to hear, where it awaits the model.)
+    // (A file wanted by two models, the dead's small bodies and their own: fetched and read once, and kept till the second has it.)
+    const twice = new Map(), wanted = new Map();
+    for (const path of models) wanted.set(path, (wanted.get(path) || 0) + 1);
+    const read = (path) => {
+      if (wanted.get(path) < 2) return getFile(base + path).then(parseGLB);
+      const glb = twice.get(path) || twice.set(path, getFile(base + path).then(parseGLB)).get(path);
+      wanted.set(path, wanted.get(path) - 1);
+      if (wanted.get(path) < 1) twice.delete(path);
+      return glb;
+    };
     const model = (path, make) => {
       steps.add();
       const made = ahead(async () => {
-        const glb = parseGLB(await getFile(base + path));
+        const glb = await read(path);
         tick();
         return building(() => make(glb));
       });

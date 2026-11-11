@@ -1,0 +1,102 @@
+{
+ "id": "hearthash_common",
+ "name": "Hearthash Common Gear",
+ "blurb": "Common-tier travelling gear. Undyed oatmeal wool, charcoal mantle and worn brown leather. Plain bindings; no added insignia or precious decoration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/tunic.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.8,
+   "shading": 0.85
+  },
+  "trim": {
+   "color": "#4a3a2c",
+   "bright": 0.62
+  },
+  "leather": {
+   "swatch": "swatches/darkleather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.8,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.85
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.85
+   },
+   "trim": {
+    "color": "#6a5038",
+    "bright": 0.7
+   }
+  },
+  "chest": {
+   "leather": {
+    "swatch": "swatches/brownleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.8,
+    "keep": 0.15
+   }
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/brownleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.78,
+    "shading": 0.85
+   },
+   "trim": {
+    "color": "#3d2a1b",
+    "bright": 0.6
+   },
+   "leather": {
+    "swatch": "swatches/darkleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/darkleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.8
+   },
+   "leather": {
+    "swatch": "swatches/darkleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.8,
+    "keep": 0.15
+   }
+  }
+ }
+}

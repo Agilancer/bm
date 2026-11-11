@@ -73,7 +73,7 @@ const BEFORE_FIGHT = new Set([...HILL, 'lead', 'door', 'shelf', 'steps', 'speech
 // left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out of the trees on
 // each side of the road, who raise what's fallen. All of them easy (src/sim/undead.js openingRaise). She fights it with
 // you, with what fire she has left: a weak bolt every couple of seconds.
-const WAVE = { first: 20, more: 20, children: 10, group: 5, every: 2.4, second: 8, third: 10, limit: 300 };
+const WAVE = { first: 20, more: 20, children: 10, group: 5, every: 2.4, second: 8, third: 10, limit: 300, reach: 70 };
 const HER_FIRE = { every: 1.9, range: 20, speed: 17, dmg: 5, at: 0.34 };
 
 export class Opening {
@@ -509,7 +509,7 @@ export class Opening {
     this.stepBolts(dt);
     // The dead, in the pines: she stands with you and fights it out.
     if (!this.ambushDone && this.prog >= MARKS.ambush) {
-      const b = this.fight(dt, w, you, eye, far);
+      const b = this.fight(dt, w, you, eye, far, mine);
       if (b) return b;
     }
     // On a shield when you get on yours; off it once you're off yours and she's slowed, or at the way's end.
@@ -597,7 +597,7 @@ export class Opening {
 
   // ---- the dead on the road -------------------------------------------------------------------------------------------------
   // (WAVE, above.) What she does through it is hers: she keeps by you, a few steps off, and throws what fire she has.
-  fight(dt, w, you, eye, far) {
+  fight(dt, w, you, eye, far, mine) {
     const sim = this.sim, { player } = sim;
     if (!this.fightS) {
       this.fightS = { t: 0, phase: 1, due: [], raiseT: 0, bodies: new Set(), casters: [], tricks: false };
@@ -605,15 +605,21 @@ export class Opening {
     }
     const f = this.fightS;
     f.t += dt; f.raiseT -= dt;
-    const up = [...f.bodies].filter((k) => !k.dead), casters = f.casters.filter((k) => !k.dead);
+    // (One you've left far behind is no longer the fight's: it goes back to being one of the woods' own.)
+    for (const k of f.bodies) {
+      if (k.dead || Math.hypot(k.x - player.x, k.z - player.z) < WAVE.reach) { k.lostT = 0; continue; }
+      k.lostT = (k.lostT || 0) + dt;
+      if (k.lostT > 6) { f.bodies.delete(k); k.aggro = false; k.hostile = false; }
+    }
+    const up = [...f.bodies].filter((k) => !k.dead), casters = f.casters.filter((k) => !k.dead && Math.hypot(k.x - player.x, k.z - player.z) < WAVE.reach * 1.5);
     // More of them up out of the ground, a group at a time, in the trees either side of you and on the road ahead.
     if (f.due.length && f.raiseT <= 0) {
       f.raiseT = WAVE.every;
-      const [rx, rz] = routeDir(this.prog);
+      // (Round you, wherever you've got to: run from them and they come up ahead of you.)
+      const [rx, rz] = routeDir(mine);
       for (let n = 0; n < WAVE.group && f.due.length; n++) {
         const side = Math.random() < 0.5 ? -1 : 1, fore = -4 + Math.random() * 20, out = 5 + Math.random() * 9;
-        const [cx, cz] = [(player.x + w.x) / 2, (player.z + w.z) / 2];
-        const x = cx + rx * fore - rz * out * side, z = cz + rz * fore + rx * out * side;
+        const x = player.x + rx * fore - rz * out * side, z = player.z + rz * fore + rx * out * side;
         if (sim.world.inside?.(x, z, 0.7)) continue;
         const k = openingRaise(sim, x, z, f.due[0], f.bodies);
         if (!k) { f.raiseT = 1; break; }
@@ -646,8 +652,11 @@ export class Opening {
     if (f.t > 14 && !f.tricks) { f.tricks = true; this.queue('tricks', true); }
     // Over: every one of them down (what the necromancers raised too), or it's gone on far too long.
     const theirs = sim.knights.filter((k) => !k.dead && k.owner && f.casters.includes(k.owner));
-    if ((f.phase === 3 && !f.due.length && !up.length && !casters.length && !theirs.length) || f.t > WAVE.limit) {
+    // (Or you've run for the town with them behind you: they don't follow you in, and she won't stand out here alone.)
+    if ((f.phase === 3 && !f.due.length && !up.length && !casters.length && !theirs.length) || f.t > WAVE.limit || routeNear(player.x, player.z) > ROUTE.len - 25) {
       this.ambushDone = true;
+      // (On from wherever the fight has left her.)
+      this.prog = Math.max(this.prog, routeNear(w.x, w.z, this.prog, 400));
       this.queued = this.queued.filter((id) => !['risen', 'fight', 'tricks', 'wave2', 'necro'].includes(id));
       this.queue('after', true);
       this.queueStory();
@@ -674,9 +683,10 @@ export class Opening {
     const face = foe ? yawTo([w.x, w.z], [foe.x, foe.z]) : yawTo([w.x, w.z], you);
     const look = foe ? [foe.x, foe.y + 1.1, foe.z] : eye;
     // (Too far from you, she comes to your side; crowded by you, she gives ground.)
+    // (Left behind, she runs to catch you up: she won't be parted from you with the dead about.)
     if (far > 6) {
-      const [rx, rz] = routeDir(this.prog), to = [player.x - rz * 2.6, player.z + rx * 2.6];
-      return { to, speed: Math.min(4.2, far), look, gaits: GAITS };
+      const [rx, rz] = routeDir(mine), to = [player.x - rz * 2.6, player.z + rx * 2.6];
+      return { to, speed: far > 14 ? FOOT_MAX : Math.min(4.2, far), look, gaits: GAITS };
     }
     return { clip: 'Spell_Simple_Idle_Loop', face, turn: 5, look, blend: 4 };
   }

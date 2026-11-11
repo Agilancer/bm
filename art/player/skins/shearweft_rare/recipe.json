@@ -1,0 +1,173 @@
+{
+ "id": "shearweft_rare",
+ "name": "Shearweft",
+ "blurb": "Rare gear. Dusty periwinkle twill, taupe mantle, steel trim and paired running stitches. Original scissors crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/shearweft_rare_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/shearweft_rare_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/shearweft_rare_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.18,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/shearweft_rare_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/shears_closed.png",
+     "anchor": "hat",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/shearweft_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pat_stitch.png",
+    "color": "#d8d6d0",
+    "scale": 0.12,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/shears_closed.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/shears_closed.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "turn": 76
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_stitch.png",
+    "color": "#d9d9e6",
+    "scale": 0.13,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/shears_closed.png",
+     "anchor": "back",
+     "size": 0.24,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/shears_closed.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/shearweft_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/shearweft_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.86,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/shearweft_rare_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.7,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/shearweft_rare_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/shearweft_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.14,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

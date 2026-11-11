@@ -1,0 +1,184 @@
+{
+ "id": "rosethorn_duelist_epic",
+ "name": "Rosethorn Duelist",
+ "blurb": "Epic gear. Garnet velvet, deep jade shoulders, rose-gold edging and rosette damask. Original rose crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/rd_garnet.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.95,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/rd_rosegold.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.8,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/rd_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.88,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/rd_jade.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.88,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/rd_rosette.png",
+    "color": "#5f9a7c",
+    "scale": 0.18,
+    "strength": 0.14,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/rose_small.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/rd_jade.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.88,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/rd_rosette.png",
+    "color": "#6aa587",
+    "scale": 0.18,
+    "strength": 0.2,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/rose_small.png",
+     "anchor": "shoulder_left",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/rose_small.png",
+     "anchor": "shoulder_right",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/rd_rosette.png",
+    "color": "#c98c7a",
+    "scale": 0.19,
+    "strength": 0.36,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/rose.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/rose_small.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/rd_plate.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.88,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/rd_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.88,
+    "keep": 0.12
+   },
+   "decals": [
+    {
+     "image": "decals/rose_small.png",
+     "anchor": "knee_left",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/rose_small.png",
+     "anchor": "knee_right",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/rd_garnet.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/rd_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.12,
+    "shading": 0.88,
+    "keep": 0.12
+   }
+  }
+ }
+}

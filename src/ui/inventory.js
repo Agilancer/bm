@@ -135,7 +135,7 @@ export class Inventory {
     if (!item) { this.tipEl.style.display = 'none'; return; }
     if (this.tipFor !== item || this.tipEl.style.display === 'none') {
       this.tipFor = item;
-      this.tipEl.innerHTML = linesOf(item).map((l) => `<div class="l-${l.kind}"${l.kind === 'title' ? ` style="color:${colorOf(item)}"` : l.color ? ` style="color:${l.color}"` : ''}>${l.text}</div>`).join('');
+      this.tipEl.innerHTML = linesOf(item, this.pack?.slots).map((l) => `<div class="l-${l.kind}"${l.kind === 'title' ? ` style="color:${colorOf(item)}"` : l.color ? ` style="color:${l.color}"` : ''}>${l.text}</div>`).join('');
       this.tipEl.style.display = 'block';
     }
     if (this.touch) { this.tipEl.style.left = '8px'; this.tipEl.style.top = '8px'; return; }

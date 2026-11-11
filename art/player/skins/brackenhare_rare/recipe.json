@@ -1,0 +1,143 @@
+{
+ "id": "brackenhare_rare",
+ "name": "Brackenhare",
+ "blurb": "Rare gear. Olive twill, hazel mantle, old pewter and small sprig embroidery. Original hare crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/bh_tunic.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.92,
+   "shading": 0.85,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/bh_pewter.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.7,
+   "keep": 0.0
+  },
+  "leather": {
+   "swatch": "swatches/bh_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.85,
+   "keep": 0.08
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/bh_hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.85,
+    "keep": 0.0
+   },
+   "pattern": {
+    "image": "swatches/bh_sprigs.png",
+    "color": "#d9c98c",
+    "scale": 0.2,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/hare.png",
+     "anchor": "hat",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/bh_hazel.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.85,
+    "keep": 0.0
+   },
+   "decals": [
+    {
+     "image": "decals/hare.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/hare.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/bh_sprigs.png",
+    "color": "#d9c98c",
+    "scale": 0.22,
+    "strength": 0.42,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/hare.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/bh_hazel.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.72,
+    "shading": 0.85,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/bh_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.08
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/bh_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.25,
+    "shading": 0.85,
+    "keep": 0.1
+   }
+  }
+ }
+}

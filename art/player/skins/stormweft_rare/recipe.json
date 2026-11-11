@@ -1,0 +1,143 @@
+{
+ "id": "stormweft_rare",
+ "name": "Stormweft Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original thundercloud stitch badge. Storm-blue cloth, violet diagonal panels, angular silver stitching and banded leather guards. Intended as a rare item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/storm_twill.png",
+   "scale": 0.11,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/silver.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/strap.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_twill.png",
+    "scale": 0.11,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/stormcloud_simple.png",
+     "anchor": "hat",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ],
+   "leather": {
+    "swatch": "swatches/sw_plum_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pat_steps.png",
+    "color": "#0e1c2c",
+    "scale": 0.2,
+    "strength": 0.35,
+    "tile": "repeat"
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/sw_plum.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.72,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/sw_plum_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.9,
+    "shading": 0.8,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/stormcloud_simple.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/stormcloud_simple.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_steps.png",
+    "color": "#0e1c2c",
+    "scale": 0.24,
+    "strength": 0.6,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/stormcloud.png",
+     "anchor": "back",
+     "size": 0.225,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/sw_plum_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.85,
+    "shading": 0.95,
+    "keep": 0.1
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "feet": {}
+ }
+}

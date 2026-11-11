@@ -1,0 +1,158 @@
+{
+ "id": "ruby_covenant_legendary",
+ "name": "Ruby Covenant",
+ "blurb": "Legendary gear. Ruby velvet, indigo mantle, polished silver and interlocking gemstone brocade. Original gemstone ring crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/rc_ruby.png",
+   "tile": "repeat",
+   "scale": 0.12,
+   "bright": 0.78,
+   "shading": 0.95,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/rc_silver.png",
+   "tile": "repeat",
+   "scale": 0.075,
+   "bright": 1.2,
+   "shading": 0.75,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/rc_leather.png",
+   "tile": "repeat",
+   "scale": 0.1,
+   "bright": 1.05,
+   "shading": 0.88,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "pattern": {
+    "image": "swatches/rc_gems.png",
+    "color": "#d6aeb8",
+    "scale": 0.2,
+    "strength": 0.26,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/gemring_disc.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      0.01,
+      0
+     ]
+    },
+    {
+     "image": "decals/gemring_disc.png",
+     "anchor": "hat_back",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/rc_indigo.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.62,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/gemring_simple.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/gemring_simple.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/rc_gems.png",
+    "color": "#d6aeb8",
+    "scale": 0.2,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/gemring_full.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/gemring_disc.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/rc_indigo_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.72,
+    "shading": 0.9,
+    "keep": 0.1
+   },
+   "decals": [
+    {
+     "image": "decals/gemring_simple.png",
+     "anchor": "knee_left",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/gemring_simple.png",
+     "anchor": "knee_right",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/rc_ruby.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.7,
+    "shading": 0.9,
+    "keep": 0
+   }
+  }
+ }
+}

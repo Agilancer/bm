@@ -1,0 +1,145 @@
+{
+ "id": "herbal_crucible_rare",
+ "name": "Herbal Crucible",
+ "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered mortar and pestle crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/hc_cloth.png",
+   "tile": "repeat",
+   "scale": 0.14,
+   "bright": 0.95,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/hc_trim.png",
+   "tile": "repeat",
+   "scale": 0.09,
+   "bright": 1.05,
+   "shading": 0.8,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/hc_leather.png",
+   "tile": "repeat",
+   "scale": 0.1,
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hc_hat.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/hc_leaves.png",
+    "color": "#d0b060",
+    "scale": 0.2,
+    "strength": 0.16,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/mortar_simple.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/hc_mantle.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 0.82,
+    "shading": 0.85,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/hc_leaves.png",
+    "color": "#7a5a22",
+    "scale": 0.2,
+    "strength": 0.22,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/mortar_simple.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/mortar_simple.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/hc_leaves.png",
+    "color": "#d0b060",
+    "scale": 0.2,
+    "strength": 0.34,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/mortar.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    },
+    {
+     "image": "decals/mortar_simple.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/hc_greave.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/hc_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  }
+ }
+}

@@ -1,0 +1,176 @@
+{
+ "id": "gildmane_regent_legendary",
+ "name": "Gildmane Regent",
+ "blurb": "Legendary gear. Ivory silk, deep blue mantle, sovereign gold and circular mane-like damask. Original lion mane crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/gm_ivory.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.75
+  },
+  "trim": {
+   "swatch": "swatches/gm_gold.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.75
+  },
+  "leather": {
+   "swatch": "swatches/gm_navy.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.88,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/gm_blue.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_mane.png",
+    "color": "#101c44",
+    "scale": 0.15,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lion_small.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/lion_small.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/gm_blue.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_mane.png",
+    "color": "#101c44",
+    "scale": 0.15,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lion_small.png",
+     "anchor": "shoulder_left",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/lion_small.png",
+     "anchor": "shoulder_right",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_mane.png",
+    "color": "#a47c2c",
+    "scale": 0.2,
+    "strength": 0.6,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lion_big.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.08,
+      0
+     ]
+    },
+    {
+     "image": "decals/lion_small.png",
+     "anchor": "tabard",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/gm_blueleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.15
+   },
+   "decals": [
+    {
+     "image": "decals/lion_small.png",
+     "anchor": "knee_left",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/lion_small.png",
+     "anchor": "knee_right",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/gm_blueleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.95
+   }
+  }
+ }
+}

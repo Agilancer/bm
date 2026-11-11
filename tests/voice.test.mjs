@@ -25,10 +25,11 @@ test('every line she says aloud is recorded, and its file is there', () => {
 
 test('the glamour breaks in her voice too: young before the flash and from the dust on, old between', () => {
   const at = (stage, text) => voiceOf(stage, SCRIPT[stage].find((l) => l.text === text));
-  assert.equal(at(OPENING.WAKE, 'Shh. Everyone’s frightened at first.'), VOICE.pretty);
-  assert.equal(at(OPENING.WAKE, '…Oh.'), VOICE.witch);
+  assert.equal(at(OPENING.WAKE, 'Shh. There you are, little star. Don’t be afraid.'), VOICE.pretty);
+  assert.equal(at(OPENING.WAKE, '…You’re looking straight at me.'), VOICE.witch);
   assert.equal(at(OPENING.COLLAPSE, 'No. No, no, no.'), VOICE.witch);
-  assert.equal(at(OPENING.WAKE, 'Tessariel.'), VOICE.witch);
+  assert.equal(at(OPENING.WAKE, 'You are Tessariel. You said you’d come back, and you have.'), VOICE.witch);
+  assert.equal(at(OPENING.COLLAPSE, 'Well. I seem to have lost my home.'), VOICE.pretty);
   assert.equal(at(OPENING.COLLAPSE, 'WHAT HAVE YOU DONE?!'), VOICE.pretty);
   assert.equal(voiceOf(OPENING.LEAVE, CUES.tunnel), VOICE.witch);
   assert.equal(voiceOf(OPENING.ESCORT, CUES.woods), VOICE.pretty);

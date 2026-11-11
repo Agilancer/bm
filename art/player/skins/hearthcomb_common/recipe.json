@@ -1,0 +1,103 @@
+{
+ "id": "hearthcomb_common",
+ "name": "Hearthcomb",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched comb crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/tunic.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.7
+  },
+  "trim": {
+   "color": "#8a6a4e",
+   "bright": 0.85,
+   "shading": 0.6
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.88,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.7
+   },
+   "decals": [
+    {
+     "image": "decals/comb_cream.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.6
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/comb_cream.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/comb_cream.png",
+     "anchor": "tabard",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.85
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.85
+   }
+  }
+ }
+}

@@ -1,0 +1,157 @@
+{
+ "id": "saltharbor_rare",
+ "name": "Saltharbor",
+ "blurb": "Rare gear. Faded marine-blue twill, salt-grey shoulders, pewter and braided-rope embroidery. Original anchor crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/marine_twill.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.85
+  },
+  "trim": {
+   "swatch": "swatches/saltharbor_rare_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/saltharbor_rare_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.18,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/marine_twill.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.85
+   },
+   "pattern": {
+    "image": "swatches/pat_rope.png",
+    "color": "#a9c0cc",
+    "scale": 0.15,
+    "strength": 0.16,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/anchor_small.png",
+     "anchor": "hat",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/salt_grey.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.85
+   },
+   "decals": [
+    {
+     "image": "decals/anchor_small.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/anchor_small.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_rope.png",
+    "color": "#b3c7d0",
+    "scale": 0.15,
+    "strength": 0.38,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/anchor.png",
+     "anchor": "back",
+     "size": 0.23,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    },
+    {
+     "image": "decals/anchor_small.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/salt_grey.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 0.88,
+    "shading": 0.85
+   },
+   "leather": {
+    "swatch": "swatches/saltharbor_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.86,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/saltharbor_rare_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.7,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/marine_twill.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.85
+   },
+   "leather": {
+    "swatch": "swatches/saltharbor_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.14,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

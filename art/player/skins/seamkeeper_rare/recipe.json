@@ -1,0 +1,135 @@
+{
+ "id": "seamkeeper_rare",
+ "name": "Seamkeeper",
+ "blurb": "Rare gear. Petrol-blue weave, flax-grey shoulders, pale pewter and looping thread embroidery. Original needle and thread crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_petrol.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.78,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/fx_pewter.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.86,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "hat",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.01,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_flax.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.82,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest_d.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest_d.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#6fa3b0",
+    "scale": 0.09,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "back",
+     "size": 0.23,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.065,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_flaxleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.86
+   }
+  },
+  "feet": {}
+ }
+}

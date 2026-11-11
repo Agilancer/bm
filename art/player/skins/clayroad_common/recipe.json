@@ -1,0 +1,85 @@
+{
+ "id": "clayroad_common",
+ "name": "Clayroad Common Gear",
+ "blurb": "Common-tier travelling gear. Dusty brick-red wool, dark russet mantle and chestnut leather. Plain bindings; no added insignia or precious decoration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_tunic.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.85,
+   "shading": 0.85
+  },
+  "trim": {
+   "swatch": "swatches/fx_bind.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.6
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.8
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.85
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_russet.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.85
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_russet.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.85
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.8
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.8
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.8
+   }
+  }
+ }
+}
