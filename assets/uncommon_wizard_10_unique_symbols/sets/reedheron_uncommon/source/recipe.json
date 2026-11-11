@@ -1,0 +1,121 @@
+{
+ "id": "reedheron_uncommon",
+ "name": "Reedheron Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original heron stitch badge. Reed-green cloth, ivory shoulder panels, double flowing hem bands and brass clasps. Intended as an uncommon item alternative for the moss palette.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#326c62",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#a6ad92",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#3c4536",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/reedheron_uncommon_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/reedheron_uncommon.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#d0c9a2",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#326c62",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/reedheron_uncommon_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/reedheron_uncommon.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#d0c9a2",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#a6ad92",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/reedheron_uncommon_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/reedheron_uncommon.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#d0c9a2",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/reedheron_uncommon.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#d0c9a2",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/reedheron_uncommon.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#d0c9a2",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#326c62",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/reedheron_uncommon_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#3c4536",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/reedheron_uncommon_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#3c4536",
+    "shading": 0.18
+   }
+  }
+ }
+}

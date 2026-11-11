@@ -1,0 +1,133 @@
+{
+ "id": "lapis_conclave_rare",
+ "name": "Lapis Conclave",
+ "blurb": "Rare-tier appearance. Royal lapis brocade, bronze guards and rich gold latticework.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/lapis_conclave_rare_cloth.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/lapis_conclave_rare_metal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/lapis_conclave_rare_leather.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "pattern": {
+    "image": "swatches/lapis_conclave_rare_brocade.png",
+    "color": "#cfb16c",
+    "scale": 0.26,
+    "strength": 0.28,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/sun.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#cfb16c"
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/lapis_conclave_rare_guards.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   },
+   "trim": {
+    "swatch": "swatches/lapis_conclave_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.1
+   },
+   "decals": [
+    {
+     "image": "decals/sun.png",
+     "anchor": "shoulder_left",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#cfb16c"
+    },
+    {
+     "image": "decals/sun.png",
+     "anchor": "shoulder_right",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#cfb16c"
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/lapis_conclave_rare_brocade.png",
+    "color": "#cfb16c",
+    "scale": 0.28,
+    "strength": 0.44,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/sun.png",
+     "anchor": "back",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#cfb16c"
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "color": "#715d45",
+    "shading": 1
+   },
+   "leather": {
+    "swatch": "swatches/lapis_conclave_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.9,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/lapis_conclave_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.2,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/lapis_conclave_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   }
+  }
+ }
+}

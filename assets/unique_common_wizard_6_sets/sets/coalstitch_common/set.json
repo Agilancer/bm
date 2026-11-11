@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "coalstitch_common",
+ "name": "Coalstitch Common Gear",
+ "blurb": "Common-tier gear. Charcoal cloth with rough rectangular repairs, ash-grey hat, dark mantle and soot-brown leather. No added heraldry or precious trim.",
+ "wears": {
+  "palette": "night"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

@@ -1,0 +1,121 @@
+{
+ "id": "moonthread_uncommon",
+ "name": "Moonthread Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original crescent moon stitch badge. Midnight cloth with a pale curved front panel, small hem dots and double pewter piping. Intended as an uncommon item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#374b69",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#929ba4",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#32333e",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/moonthread_uncommon_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/moonthread_uncommon.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#263951",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#374b69",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/moonthread_uncommon_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/moonthread_uncommon.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#263951",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#929ba4",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/moonthread_uncommon_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/moonthread_uncommon.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#263951",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/moonthread_uncommon.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#263951",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/moonthread_uncommon.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#263951",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#374b69",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/moonthread_uncommon_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#32333e",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/moonthread_uncommon_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#32333e",
+    "shading": 0.18
+   }
+  }
+ }
+}

@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "peatmender_common",
+ "name": "Peatmender Common Gear",
+ "blurb": "Common-tier gear. Olive cloth with broad alternating repair panels, rust cap, tawny leather shoulders and dark boots. No added heraldry or precious trim.",
+ "wears": {
+  "palette": "moss"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

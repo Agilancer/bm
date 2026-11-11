@@ -1,0 +1,85 @@
+{
+ "id": "peatmender_common",
+ "name": "Peatmender Common Gear",
+ "blurb": "Common-tier gear. Olive cloth with broad alternating repair panels, rust cap, tawny leather shoulders and dark boots. No added heraldry or precious trim.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/peatmender_common_cloth.png",
+   "tile": "repeat",
+   "scale": 0.56,
+   "bright": 1,
+   "shading": 0.7
+  },
+  "trim": {
+   "swatch": "swatches/peatmender_common_binding.png",
+   "tile": "repeat",
+   "scale": 0.1,
+   "bright": 0.85,
+   "shading": 0.35
+  },
+  "leather": {
+   "swatch": "swatches/peatmender_common_leather.png",
+   "tile": "repeat",
+   "scale": 0.12,
+   "bright": 1.1,
+   "shading": 0.75
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/peatmender_common_hat.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1,
+    "shading": 0.7
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/peatmender_common_mantle.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 1,
+    "shading": 0.7
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/peatmender_common_mantle.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 0.85,
+    "shading": 0.7
+   },
+   "leather": {
+    "swatch": "swatches/peatmender_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.96,
+    "shading": 0.7
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/peatmender_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1,
+    "shading": 0.7
+   },
+   "leather": {
+    "swatch": "swatches/peatmender_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1.08,
+    "shading": 0.7
+   }
+  }
+ }
+}

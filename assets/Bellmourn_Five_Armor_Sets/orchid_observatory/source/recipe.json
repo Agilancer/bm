@@ -1,0 +1,94 @@
+{
+ "id": "orchid_observatory",
+ "name": "Orchid Observatory",
+ "blurb": "Orchid velvet, silver starfield, indigo mantle and a radiant celestial crest.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/orchid_observatory_cloth.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05
+  },
+  "trim": {
+   "color": "#abbccc"
+  },
+  "leather": {
+   "swatch": "swatches/orchid_observatory_leather.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/sun.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#abbccc"
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/orchid_observatory_mantle.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.05
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/orchid_observatory_pattern.png",
+    "color": "#abbccc",
+    "scale": 0.3,
+    "strength": 0.34,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/sun.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#abbccc"
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "color": "#373e66"
+   },
+   "leather": {
+    "swatch": "swatches/orchid_observatory_leather.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.85,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/orchid_observatory_leather.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.18,
+    "keep": 0.15
+   },
+   "trim": {
+    "color": "#abbccc"
+   }
+  }
+ }
+}

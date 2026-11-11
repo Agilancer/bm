@@ -1,0 +1,121 @@
+{
+ "id": "pearlcurrent_rare",
+ "name": "Pearlcurrent Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original seahorse stitch badge. Peacock-blue cloth, pearl-lilac panels, interlaced wave bands and silver-thread dots. Intended as a rare item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#28717c",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#938caa",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#303b46",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/pearlcurrent_rare_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/pearlcurrent_rare.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#d6d5c4",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#28717c",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/pearlcurrent_rare_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/pearlcurrent_rare.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#d6d5c4",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#938caa",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/pearlcurrent_rare_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/pearlcurrent_rare.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#d6d5c4",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/pearlcurrent_rare.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#d6d5c4",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/pearlcurrent_rare.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#d6d5c4",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#28717c",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/pearlcurrent_rare_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#303b46",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/pearlcurrent_rare_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#303b46",
+    "shading": 0.18
+   }
+  }
+ }
+}

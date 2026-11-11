@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "eclipseforge_epic",
+ "name": "Eclipseforge Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original eclipsed sun stitch badge. Midnight and antique gold, broad engraved shoulder plates, radiating hem brocade and amber enamel studs. Intended as an epic item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}
