@@ -27,7 +27,7 @@ export const BODIES = [
   { model: 'evil_wizard', count: 2, scale: 1 },
   // Kept for the road down from Lisandra's cave (src/sim/opening.js, openingRaise below): more of the dead for its waves,
   // their children (the same bodies, small), and the two necromancers who come out of the trees at the end of it.
-  ...[1, 3, 5].map((n) => ({ model: `zombie_${n}`, count: 2, scale: 1, reserve: true })),
+  ...[1, 3, 5].map((n) => ({ model: `zombie_${n}`, count: 3, scale: 1, reserve: true })),
   ...[2, 4].map((n) => ({ model: `zombie_${n}`, count: 5, scale: 0.6, reserve: true, child: true })),
   { model: 'necromancer', count: 2, scale: 1, reserve: true },
 ];
