@@ -38,8 +38,8 @@ export const PLACES = [
   // Work outdoors.
   { id: 'fields', kind: 'work', at: [10, 52], r: 7, cap: 4, clips: ['harvest', 'plant', 'water', 'dig', 'shovel'] },
   { id: 'woodpile', kind: 'work', at: [-46.5, 23.5], yaw: Math.PI, cap: 1, clips: ['chop_wood'] },
-  { id: 'coffin_yard', kind: 'work', at: [12.5, -31], yaw: 0, cap: 1, clips: ['push', 'interact', 'lift'] },
-  { id: 'barn', kind: 'work', at: [38, -28], yaw: Math.PI, cap: 2, clips: ['lift', 'push', 'shovel'] },
+  { id: 'coffin_yard', kind: 'work', at: [12.5, -31], yaw: 0, cap: 1, clips: ['interact', 'lift'] },
+  { id: 'barn', kind: 'work', at: [38, -28], yaw: Math.PI, cap: 2, clips: ['lift', 'shovel'] },
   { id: 'herb_garden', kind: 'work', at: [81.6, 18.4], yaw: 0, cap: 2, clips: ['harvest', 'plant', 'water'] },
   // The watch's posts: the road in from the south-west, and the west road where it comes into town. (None at the east end: the
   // watch are Halloways, in Tessariel's colours, and that end runs on to Velscour's church. T_CLEAR.)
