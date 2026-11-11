@@ -9,7 +9,7 @@ The game is now ranged spell combat. Everything below about swords and armour de
 - **Out of play:** one and two-handed swords (`BASES` rows with grade `retired`, never rolled) and the armour suits and gauntlets (`GEAR`, `rollArmor`, `assets/fp/gauntlets_*`). Hands are bare. An old save's swords and armour are removed on load.
 - **Right hand:** staffs. Left click fires the staff's bolt. All twenty spells are on `1`-`6` and the book.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
-- **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats.
+- **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
 - **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Seen as drops and icons; there's no visible body to wear them on.
 - **Gems:** socket into staffs, skulls and shields. Each kind has its own stat, particles, motion and light (`src/gfx/gemfx.js`), and a Flawless stone adds a flourish. A shield's show when you ride it.
 - **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, and fills you up. It's kept in the save.
@@ -292,32 +292,75 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. The countries
   are reached by the roads and across country, through the seals it has woken (it steps onto each one it passes near).
   It works its way round walls, the catacombs' light wells and stands of pines by short paths a stretch at a time.
+  (The nav thread used to read the world's list of pines and boulders three numbers at a time where there are four to
+  each, so across the northern half of the land every wood read as solid: no path through it, no way to back off in a
+  fight there. It reads them right now.)
 - **The shield.** Before a long downhill stretch it takes a run, jumps and holds Space to ride the shield, and carves with the
   move keys along the way it's going. It steps off where the ground levels out and it's slowing, near where it's going, or
   when there's a fight.
 - **Fighting, as a person would.**
   - It takes a moment to settle on a new target and only lets fly once its aim is on. The aim leads a moving target, and is a
-    little off, more so on something quick.
+    little off, more so on something quick. Its eyes follow that point from where it stands each frame, so a sidestep or a
+    ride on the shield doesn't drag its aim off.
+  - **It never shoots through a wall or round a corner.** Before anything leaves its hands it has a clean line to its mark:
+    clear of walls, corners, pines and the rise of the ground, by a hand's width either side (`sight` in
+    `src/sim/sight.js`, asked of the nav thread a few times a second for everything it might shoot). With no line it steps
+    out for the shot: a step or two to the side when that opens it (round the corner, out from behind the pine), else round
+    by the way it would walk there. It picks a mark it has a line to before one it hasn't, one nearly down before a fresh
+    one, and it stays on the one it's on.
   - It backs off from what's close while it shoots, steps side to side, and closes on what's far. When something gets on it,
     it walks backwards toward open ground, still facing it and shooting as it goes (backwards is a walk, as it is for you, a
     little slower while it shoots). Only when it can't back away (something quicker than that at its heels, something right
-    on it, a crowd all round, a wall behind) does it turn and run a few strides, then turn back. Hurt, it backs away from
-    something slow the same way, and runs from anything quicker.
-  - It dodges a knight's blade flash, or takes it on its shield. With a shield in hand and no skull, it raises the shield with
-    a shove when something's on it, holds it a moment, and backs off to shoot again. It steps aside from a tumbler rolling at
-    it, which can't turn quickly.
-  - **The staff is what it fights with.** A spell comes every few seconds at most, and only when the moment suits one: a crowd,
-    something big or quick, or once in a while anyway. In trouble it casts at once: a Mend when it's low, a Frost Nova when
-    it's surrounded.
-  - **It sets its own spell bar**, as you do in the book (B), and casts from it as the 1 to 6 keys do. It keeps four spells
-    always: Firebolt, Mend, Frost Nova, Meteor. The other two slots change every four minutes, so in time every spell it knows
-    has been in its hands and in the log.
+    on it, a crowd all round, a wall behind) does it get clear another way: on its shield (below), or it turns and runs a
+    few strides, then turns back. Hurt, it backs away from something slow the same way, and runs from anything quicker.
+  - **The shield in a fight.** It dodges a knight's blade flash, or takes it on its shield. With a shield on its arm and no
+    skull in that hand, it turns square on to what's on it and raises the shield with a shove, holds it a moment, and
+    backs off to shoot again. The shove throws back everything in front of it seven metres deep, so the shield comes up
+    for what's closing on it a few strides off, as well as for what's at its elbow. The guard takes each blow out of its
+    breath and breaks when the breath is gone, so it raises it only with half its breath or more and its hands free of a
+    spell, lowers it before the breath runs out, and lets it go at once if it didn't come up. (It used to raise it on
+    almost none, and the guard broke on the first blow, every time.) It steps aside from a tumbler rolling at it, which can't turn
+    quickly.
+  - **It rides the shield in a fight, now and then** (`riding` in `src/ui/autobrain.js`). A few strides' run, a jump with
+    Space held, and it slides off faster than it can back away, looking where it likes: its staff and its spells stay on
+    them all the way, and it carves with the move keys round its mark.
+    - To get clear, when something's on it and the ground allows (most times, not every time).
+    - Across them, once or twice a minute in a long fight, down the side the ground falls away on.
+    - Through them, when a fight meets it already riding down a hill: it rides on past, shooting, rather than stepping off
+      among them.
+    - Only under the sky, with breath for the run and the jump, never uphill, and only where the nav thread says the way
+      is open for a dozen metres. It steps off as it slows, at anything in its way, or after five seconds.
+  - **The staff between spells, and all six spells on its bar.** The staff is what it fights with while a spell cools. A
+    spell comes as often as its mana allows: every second or two with its mana full, every several with it low, and at
+    once when it's in trouble (a Mend when it's low, a Frost Nova when it's surrounded). It keeps mana back for a Mend
+    when it's been hurt, doesn't spend a Meteor on something nearly dead, and takes up sooner a spell that hasn't been in
+    its hands for a while, so all six get used.
+  - **It presses the keys as a player does.** A Firebolt is held while it gathers and a channel while it pours (never
+    past the mana it has for it). Everything else is a tap, and only with its hands free of the last spell and the last
+    staff shot. A key held on casts again the moment the first cast is done, and a hitch in the frames while it was down
+    used to cast the spell over and over till the mana was gone. It keeps count of mana it has spent that the game
+    hasn't taken yet, so a staff shot and a spell don't spend the same mana twice and fizzle.
+  - **It sets its own spell bar**, as you do in the book (B), and casts from it as the 1 to 6 keys do, so the six between
+    them cover a fight (`bar`):
+    - Four it always keeps: Firebolt (the opener, and from range), Meteor (a crowd, or something big), Frost Nova (when
+      they're on it), Mend.
+    - One for a crowd or a line of them: Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance, Plague Flask,
+      Wall of Fire or Earthsplitter.
+    - One to pour on a single mark or get it out of trouble: Arcane Blast, Life Drain, Frost Shards, Magic Missiles, Fire
+      Beam, Spirit Blades or Blink.
+    - Those last two change every four minutes, so in time every spell it knows has been in its hands and in the log.
+    - With a healer hired, Mend's slot goes to a second crowd spell: the healer mends it, and the tank holds them in a knot.
   - It picks the spell that suits the moment from what's on its bar (`USE` in `src/ui/autobrain.js`):
+    - The first Firebolt of a fight is gathered a second and a half, as you'd hold it on something that hasn't seen you.
     - Arcane Blast when they're close.
     - Bone Lance or Earthsplitter down a line of them.
     - Gravity Well, Blizzard or a Meteor into a crowd.
+    - **One after another, as a player strings them:** a Meteor, an Arcane Blast or an Earthsplitter straight onto what a
+      Frost Nova has frozen (frozen things take half again from every blow); a Meteor or a Blizzard onto what a Gravity
+      Well has drawn together.
     - Life Drain when it's hurt.
     - Frost Shards on something quick.
+    - Blink out from among them when it turns to run, if Blink is on its bar.
   - It runs from what it can't beat yet: the knights of Velscour, the Gravehart, the Hydra, the dragons and anything else too
     strong for its level.
 - **The camera** turns like a hand on a mouse: it eases into and out of every turn, at no more than about 3 rad/s walking,
@@ -348,6 +391,10 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   - When something's on it, it backs off toward the tank, so he can take it, rather than off into open ground.
   - With a tank and another standing near, it stands up to what it could take two levels on. Velscour's knights and the
     Gravehart it still judges at its own level.
+  - It lets its tank get up with it before it starts on something that hasn't seen them (a few seconds at most), so what
+    comes, comes onto him.
+  - What the tank's holding stands still with the rest about it: that's where its Meteor, Blizzard, Gravity Well and
+    Plague Flask go. Nothing it casts hurts its own party.
   - One of them down, it stays by them till they're up again, a few seconds after the fight (ten seconds at most).
   - Down the Warrens it goes on to the next room only with the party up and with it (up to twenty seconds' wait), and
     in a boss fight it takes the rank and file off the healer after the adds.
@@ -396,8 +443,8 @@ While it's on, the mouse is left free: no pointer lock, so the button and the me
 Pressing a move key (or the stick) takes the controls back for as long as you hold it.
 
 **Keeping it up with the game.** It has to be taught what's added to the game. Quests, steps, places, foes, lairs, spells
-and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`, and the Test Dungeon's
-counters in `HALL_COUNTERS`); the Warrens' rooms, packs
+and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`, a spell's use in `USE`
+and its slot on the bar in `SLOT_A` or `SLOT_B`, and the Test Dungeon's counters in `HALL_COUNTERS`); the Warrens' rooms, packs
 and bosses in `src/ui/autowarrens.js` (`WAY`, `KNOWN`, `tactics`). `coverage()` there lists
 whatever the game has that it doesn't know, in the console when auto-play starts, and from `node tools/autoplay/check.mjs`,
 which fails until the list is empty. Until it's taught, it makes do:
@@ -413,10 +460,11 @@ doesn't read yet.
 
 - `src/ui/autoplay.js`: the button, the status line and the menu.
 - `src/ui/autobrain.js`: the head.
+- `src/sim/sight.js`: a clean line for a shot, for auto-play and the other Tessariels alike (`tests/sight.test.mjs`).
 - `src/ui/autowarrens.js`: hiring a party, and the Hollowfang Warrens.
 - `src/ui/autolog.js`: the balance log.
 - `tools/autoplay/check.mjs`: does it know the whole game?
-- `src/sim/nav.worker.js`: its paths. This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
+- `src/sim/nav.worker.js`: its paths, and its lines of sight (`tests/nav-ground.test.mjs`). This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
   as paths need it. The sim's grid is a metre, made wide for a knight, and is too coarse for the Sexton's passage. Out in the
   countries it lays a fresh half-metre grid round each short stretch, at the land's own height.
 - `Input.auto` and `Input.free` in `src/input.js`.
@@ -434,6 +482,12 @@ doesn't read yet.
   Grubnash and the twins first time, wiped once on Venomaw's flight (since fixed: see the Warrens), killed her on the next
   go and left by the far portal. On the Fall it boarded at the top, carved down at up to 19 m/s and hopped the rises.
   Nobody has watched it with their own eyes.
+- Its fighting (clean lines, the shield, rides in a fight, the bar and the strings of spells) was watched the same way,
+  from level 1 with the start kit, in the woods round Bellmourn alone and with a hired party of four, and against goblins
+  five at a time in the Test Dungeon. Over those runs: no staff shot left without a clean line known; the shield came up
+  and held with no guard broken; it rode the shield across a fight three times in two and a half minutes and shot from
+  it; and neither "Not enough mana" nor a broken guard came up once. It has not been watched down the Warrens or at the
+  black knight since, nor by a person at all: watch a fight or two with it.
 
 ### The Free Company: a party of your own
 
@@ -460,6 +514,20 @@ screen is a frame for each, with their life.
   and the fighting never put them out: four of them, or the nearest two on a phone.
 - What they kill is yours: its loot and its experience.
 - A word with one of them (E) lets them go back to the Company.
+
+**How they fight** (all the other Tessariels, hired or out on their own: `src/sim/hero.js`):
+
+- **Nothing through a wall or round a corner.** An archer, a bard, a boomerang knight, and anyone with something to
+  throw, charge with or leap with, looks first for a clear line to their foe (`lineTo`, the same `cleanLine` auto-play
+  asks of `src/sim/sight.js`: clear of walls, corners, pines and the rise of the ground by a hand's width either side).
+  With none, they walk on toward it round whatever's between till there is one. They used to loose at anything in range.
+- **What's shot stops at a wall.** An arrow, a throwing star or a bard's note that meets a wall, a corner or a pine ends
+  there with a puff; a paladin's hammer turns for home there (`stepShots`). They used to fly through.
+- **Knives go in the back.** A rogue or a ninja whose foe is on someone else works round to its back between blows, a
+  step at a time round its flank, where a blow counts nearly double (`FLANKERS`, `backstab`).
+- **The hurt fall back to the tank.** One of your damage-dealers below a third of their life, with something on them,
+  goes back behind the tank from it, where his taunt takes it off them and the healer can reach them, and fights on from
+  there (`fallBack`).
 
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
 both). The quartermasters are two more bodies after them.

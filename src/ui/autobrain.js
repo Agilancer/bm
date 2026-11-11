@@ -5,8 +5,10 @@
 //
 // What it does, most pressing first:
 //   the opening   waits out the cave, answers to a name, walks out, and follows Lisandra down the Long Road to Bellmourn
-//   a fight       anything that means it harm, or what it's hunting: Firebolt and the staff from range, Chain Lightning and
-//                 a Meteor into a crowd, Frost Nova when they're on it, Mend when it's hurt; it backs off and keeps its distance
+//   a fight       anything that means it harm, or what it's hunting: the staff and all six spells on its bar, each for what
+//                 it's good at, and only down a clean line (never through a wall or round a corner: it steps out for the
+//                 shot); it backs off and keeps its distance, takes a blow on its shield when it has breath to, and now and
+//                 then rides the shield away from them or across them, shooting as it goes
 //   running       from what it can't yet beat (the knights of Velscour, the Gravehart, the Hydra, a dragon), and home when it's low
 //   loot          gold, orbs and stuff underfoot, gear with E, chests it passes; the best gear on, gems in their sockets
 //   the town      every quest taken, steps talked through and handed in; sells what it won't wear, buys a mending, sleeps at the
@@ -153,35 +155,46 @@ function gearScore(slots) {
   return s;
 }
 
-// What each spell's for, as a score for the fight as it stands (c: d to its mark, dn to the nearest, close within 5.5 m,
-// around its mark, hpf, fast, still, big, inLine, coming): 0 when it's no use. SELF: cast on itself, no aim. GROUND: aimed
-// at the feet. BOLTS: what a raised shield stops. CORE: always on its bar. A spell added to the game is taught here too.
+// What each spell's for, as a score for the fight as it stands: 0 when it's no use. c: d to its mark, dn to the nearest, n
+// of them in the fight, close within 5.5 m, near within 9 (a Nova's reach), around its mark, hpf, fast, still, big, inLine, coming, and how the fight
+// stands: fresh (just begun, the first throw), frozen (a Nova's ice still on them), pulled (a Gravity Well drawing them
+// in), held (its tank has the mark, so it stands still with the rest about it), party. SELF: cast on itself, no aim.
+// GROUND: aimed at the feet. BOLTS: what a raised shield stops. CORE: always on its bar. A spell added to the game is
+// taught here too.
 const USE = {
-  firebolt: (c) => c.d < 42 && 3,
-  frost: (c) => c.d < 32 && 2.2 + (c.fast ? 2 : 0),
-  lightning: (c) => c.d > 6 && c.d < 30 && (c.around >= 2 ? 4 : 1.6),
-  missiles: (c) => c.d < 30 && 2.6,
-  arcaneblast: (c) => c.d < 8.5 && (c.close >= 2 ? 5.5 : 2.4),
-  firebeam: (c) => c.d < 16 && (c.around >= 2 ? 3.4 : 2.6),
-  chain: (c) => c.d < 24 && (c.around >= 2 ? 4.6 : 2.2),
-  nova: (c) => c.close >= 3 && 8,
-  meteor: (c) => c.d > 11 && c.d < 55 && (c.around >= 3 ? 6 : c.still && c.big ? 4.5 : 0),
-  blizzard: (c) => c.d > 8 && c.d < 36 && (c.around >= 3 ? 5 : c.still && c.big ? 3 : 0),
+  firebolt: (c) => c.d < 42 && (c.d > 12 ? 3.4 : 2.6) + (c.fresh ? 1.4 : 0),
+  frost: (c) => c.d < 32 && 2.2 + (c.fast ? 2.2 : 0),
+  lightning: (c) => c.d > 6 && c.d < 30 && (c.around >= 2 ? 4.2 : 1.6),
+  missiles: (c) => c.d < 30 && 2.6 + (c.fast ? 0.8 : 0),
+  arcaneblast: (c) => c.d < 8.5 && (c.close >= 2 ? 5.6 : c.dn < 6 ? 4.4 : 2.6) + (c.frozen ? 1.5 : 0),
+  firebeam: (c) => c.d < 16 && (c.around >= 2 ? 3.6 : 2.7),
+  chain: (c) => c.d < 24 && (c.around >= 2 ? 4.6 : c.n >= 2 ? 3.2 : 2.2),
+  nova: (c) => (c.close >= 3 ? 8 : c.close >= 2 ? (c.hpf < 0.6 ? 7.6 : 5.2) : c.near >= 3 ? 6 : c.near >= 2 && c.big ? 4.2 : 0),
+  meteor: (c) => c.d > 9 && c.d < 55 && (c.around >= 3 ? 6.2 : c.around >= 2 && (c.held || c.frozen || c.pulled) ? 5.6 : (c.still || c.held || c.frozen) && c.big ? 4.8 : 0),
+  blizzard: (c) => c.d > 8 && c.d < 36 && (c.around >= 3 ? 5.2 : c.around >= 2 && (c.held || c.pulled) ? 4.6 : (c.still || c.held) && c.big ? 3.2 : 0),
   drain: (c) => c.d < 16 && c.hpf < 0.8 && 3.5 + (1 - c.hpf) * 4,
   lance: (c) => c.d < 40 && (c.inLine >= 2 ? 5 : 2.6),
-  well: (c) => c.d > 8 && c.d < 28 && c.around >= 3 && 5.5,
-  plague: (c) => c.d > 6 && c.d < 22 && (c.around >= 2 ? 4 : 1.5),
-  blades: (c) => c.close >= 2 && !c.bladesUp && 5,
-  spikes: (c) => c.d < 14 && (c.inLine >= 2 ? 4.5 : 2.4),
-  wallfire: (c) => c.d > 6 && c.d < 20 && c.around >= 2 && c.coming && 4,
-  mend: (c) => c.hpf < 0.4 && c.dn > 6 && 9,
+  well: (c) => c.d > 8 && c.d < 28 && (c.around >= 3 ? 5.6 : c.n >= 3 && !c.pulled ? 4.2 : 0),
+  plague: (c) => c.d > 6 && c.d < 22 && (c.around >= 2 ? 4 : c.held && c.big ? 3.2 : 1.5),
+  blades: (c) => !c.bladesUp && (c.close >= 2 ? 5 : c.n >= 3 && c.dn < 12 ? 3.8 : 0),
+  spikes: (c) => c.d < 14 && (c.inLine >= 2 ? 4.6 : 2.4) + (c.frozen ? 1 : 0),
+  wallfire: (c) => c.d > 6 && c.d < 20 && c.coming && (c.around >= 2 ? 4.2 : c.n >= 2 ? 3 : 0),
+  // (A healer at its back mends it too: its own Mend waits a little longer then.)
+  mend: (c) => c.hpf < (c.healer ? 0.3 : 0.4) && c.dn > 6 && 9,
   wisp: () => 0,
+  // (Blink is a way out, not a blow: cast from the kite, facing away. See combat().)
   blink: () => 0,
 };
 const SELF = new Set(['nova', 'mend', 'blades', 'wisp']);
 const GROUND = new Set(['meteor', 'blizzard', 'wallfire']);
 const BOLTS = new Set(['firebolt', 'frost', 'lightning', 'missiles', 'lance', 'chain', 'firebeam', 'spikes', 'arcaneblast']);
 const CORE = ['firebolt', 'mend', 'nova', 'meteor'];
+// What the two slots past the four are for, so the six between them cover a fight: one for a crowd or a line of them, one to
+// pour on a single mark or to get it out of trouble. Each slot's spells take their turn in it (bar()).
+const SLOT_A = ['chain', 'well', 'lightning', 'blizzard', 'lance', 'plague', 'wallfire', 'spikes'];
+const SLOT_B = ['arcaneblast', 'drain', 'frost', 'missiles', 'firebeam', 'blades', 'blink'];
+// What's never on its bar: cast when it's wanted, by the book (a light underfoot down among the dead).
+const OFF_BAR = new Set(['wisp']);
 
 // ---------------------------------------------------------------- what it knows, against what the game has
 
@@ -218,6 +231,8 @@ export function coverage(foeNames = null) {
   for (const k of Object.keys(LAYOUT)) if (k.endsWith('_START') && !BLOCKS.has(k)) out.push(`snapshot block ${k}: something new in the world it can't see (foes())`);
   for (const k of CASTS) if (!(k in SP)) out.push(`spell ${k}: it casts this, and it's gone from SPELLS`);
   for (const sp of SPELLS) if (!(sp.key in USE)) out.push(`spell ${sp.key}: no use for it in USE, so it never casts it`);
+  for (const sp of SPELLS) if (!CORE.includes(sp.key) && !SLOT_A.includes(sp.key) && !SLOT_B.includes(sp.key) && !OFF_BAR.has(sp.key)) out.push(`spell ${sp.key}: in neither of its bar's turning slots (SLOT_A for a crowd, SLOT_B for one mark), so it's only ever a stopgap on its bar`);
+  for (const k of [...CORE, ...SLOT_A, ...SLOT_B]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
   out.push(...warrensCoverage());
   for (const st of STATIONS) if (!(st.key in HALL_COUNTERS)) out.push(`Test Dungeon counter ${st.key}: nothing in HALL_COUNTERS says what auto-play does with it`);
@@ -315,7 +330,10 @@ export class Brain {
     this.track = new Map();
     this.engage = new Map();   // what it's been fighting, and since when it last hurt it
     this.kite = null; this.kiteCool = 0; this.dodgeCool = 0; this.dodgeSide = 1; this.reactT = 0; this.backedUp = 0; this.esc = null;
-    this.guardT = 0; this.guardCool = 0; this.spellAt = 0;
+    this.guardT = 0; this.guardFor = 0; this.guardCool = 0; this.tapAt = -9; this.staffAt = -9; this.owed = null; this.spellAt = 0; this.comboAt = 0; this.frozenT = -99; this.pulledT = -99; this.fightSince = -99;
+    this.sightMap = new Map(); this.sightBusy = false; this.sightT = 0; this.round = null;   // what it has a clean line to
+    this.ride = null; this.rideHold = false; this.rideCool = 8;                              // on the shield in a fight
+    this.used = {}; this.pullWait = 0;
     this.wobble = 0; this.wobbleT = 0; this.yawV = 0; this.pitchV = 0; this.surfCool = 0; this.surfAt = -9;
     this.skip = new Map();     // things it's given up on for a while: key -> until
     this.patrol = null; this.wispT = 0; this.gearT = 0; this.strafe = 1; this.strafeT = 0;
@@ -327,7 +345,8 @@ export class Brain {
   stop() {
     this.o.input.auto = null;
     this.letGo();
-    this.auto.block = false;
+    this.auto.block = false; this.auto.jumpHeld = false;
+    this.ride = null; this.rideHold = false;
     if (this.o.townUI.open) this.o.townUI.close(false);
     if (this.o.lands.isOpen) this.o.lands.close();
   }
@@ -499,18 +518,21 @@ export class Brain {
     if (this.o.lands.isOpen) { this.halt(); if (this.sealTo || this.t - (this.sealT ?? -99) < 4) this.travelling(); return; }
     if (this.o.inventory.open || this.o.townUI.book) { this.halt(); return; }
     this.castT -= dt; this.castCool -= dt; this.staffCool -= dt;
-    if (this.castT <= 0) this.letGo();
+    // (A key held past its time, or a channel run dry, is let go: held on, it would only fizzle.)
+    if (this.castT <= 0 || ((this.slotHeld || this.auto.cast) && snap[H.MANA] < 4)) this.letGo();
     this.thinkT -= dt;
     if (this.thinkT <= 0) { this.thinkT = 0.12; this.think(snap, m); }
     this.boardFrame = false;
     this.walk(dt, m);
-    // (Space is only held while it's on the shield, or getting on it.)
-    if (!this.boardFrame) this.auto.jumpHeld = false;
+    // (Space is only held while it's on the shield, or getting on it: on its way somewhere, or riding it through a fight.)
+    if (this.rideHold && !this.fighting) { this.rideHold = false; this.ride = null; }
+    if (this.rideHold) this.auto.jumpHeld = true;
+    else if (!this.boardFrame) this.auto.jumpHeld = false;
     if (!this.fighting && this.auto.block) { this.auto.block = false; this.guardT = 0; }
     this.motor(dt, m);
     if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); this.bar(); }
     // A light underfoot down among the dead, for whoever's watching.
-    if (m.below && !this.fighting && (this.wispT -= dt) <= 0 && m.mana > 40) { this.wispT = 85; this.cast(SP.wisp, 0.3); }
+    if (m.below && !this.fighting && (this.wispT -= dt) <= 0 && m.mana > 40) { this.wispT = this.cast(SP.wisp, 0.3) ? 85 : 2; }
     void g;
   }
 
@@ -523,6 +545,7 @@ export class Brain {
     const g = this.o.game;
     this.fighting = false;
     this.useGoal = false;
+    this.aim = null;
     // The opening has its own way to go.
     if (m.opening > 0 && m.opening < OPENING.ARRIVED) { this.opening(snap, m); return; }
     const foes = this.foes(snap, m);
@@ -534,7 +557,7 @@ export class Brain {
     if (!m.town && this.combat(snap, m, foes)) { this.fighting = true; return; }
     // Hurt and out of it: mend, or rest a little.
     // (Low and out of the fight: a Mend, now and then. Otherwise its life comes back on its own, given a few quiet seconds.)
-    if (m.hpf < 0.45 && m.mana >= 30 && this.known(SP.mend) && this.t >= (this.mendAt || 0) && !m.town) { this.face = null; this.halt(); this.cast(SP.mend, 0.35); this.mendAt = this.t + 4; this.say('Mending.'); return; }
+    if (m.hpf < 0.45 && m.mana >= 30 && this.known(SP.mend) && this.t >= (this.mendAt || 0) && !m.town) { this.face = null; this.halt(); if (this.cast(SP.mend, 0.35)) this.mendAt = this.t + 4; this.say('Mending.'); return; }
     // One of its party down: they get up a few seconds after the fight's over (src/sim/hero.js stepCompany), so it stays by
     // them till they do rather than leave them behind. (Ten seconds at most.)
     const fallen = m.town ? null : this.party(snap).find((h) => h.dead && dist(h.x, h.z, m.x, m.z) < 40);
@@ -556,7 +579,7 @@ export class Brain {
     const st = this.o.game.hallUI?.hall?.state || 'shut';
     const left = foes.filter((f) => inArena(f.x, f.z)).sort((a, b) => a.d - b.d)[0];
     if (st === 'open' && left) { this.goTo(left.x, left.z, 7, true); this.say('Into the arena after them.'); return; }
-    if (m.hpf < 0.7 && m.mana >= 30 && this.known(SP.mend) && this.t >= (this.mendAt || 0)) { this.face = null; this.halt(); this.cast(SP.mend, 0.35); this.mendAt = this.t + 4; this.say('Mending.'); return; }
+    if (m.hpf < 0.7 && m.mana >= 30 && this.known(SP.mend) && this.t >= (this.mendAt || 0)) { this.face = null; this.halt(); if (this.cast(SP.mend, 0.35)) this.mendAt = this.t + 4; this.say('Mending.'); return; }
     const [x, z] = hallAt(0, 18);
     this.goTo(x, z, 3, false);
     this.say(st === 'shut' ? 'In the Test Dungeon, waiting for a summoning.' : 'Back through the door.');
@@ -566,29 +589,64 @@ export class Brain {
 
   // ---- spells and the staff
 
-  // Its bar, set in the book as a player sets theirs: the four it leans on (Firebolt, Mend, Frost Nova, Meteor), and two more
-  // that come round in turn every four minutes, so that in time every spell it knows has been in its hands (and in the log).
+  // Its bar, set in the book as a player sets theirs, so the six between them cover a fight: the four it leans on (Firebolt
+  // to open and from range, Meteor for a crowd or something big, Frost Nova when they're on it, Mend), one more for a crowd
+  // or a line of them (SLOT_A) and one to pour on a single mark or get it out of trouble (SLOT_B). Those two change every
+  // four minutes among what it knows, so that in time every spell has been in its hands (and in the log). With a healer at
+  // its back, Mend's place goes to another of them, and with a tank holding them still, to something for the crowd.
   bar() {
     const sb = this.o.spellbar, known = [...sb.known].sort((a, b) => a - b);
-    const core = CORE.map((k) => SP[k]).filter((i) => i !== undefined && sb.known.has(i));
-    const rest = known.filter((i) => !core.includes(i) && !SPELLS[i].noBar && USE[SPELLS[i].key]);
-    const turn = Math.floor((this.o.log?.d.t ?? this.t) / 240), want = core.slice(0, 6);
-    for (let k = 0; want.length < 6 && k < rest.length; k++) { const i = rest[(turn * 2 + k) % rest.length]; if (!want.includes(i)) want.push(i); }
-    want.forEach((i, k) => { if (sb.loadout[k] !== i) sb.assign(k, i); });
+    const party = this.snap ? this.party(this.snap).filter((h) => !h.dead) : [];
+    const healer = party.some((h) => h.role === 'heal'), tank = party.some((h) => h.role === 'tank');
+    const usable = (i) => i !== undefined && sb.known.has(i) && !SPELLS[i].noBar && USE[SPELLS[i].key];
+    const want = CORE.filter((k) => !(k === 'mend' && healer)).map((k) => SP[k]).filter(usable);
+    const turn = Math.floor((this.o.log?.d.t ?? this.t) / 240);
+    const take = (list, n) => {
+      const have = list.map((k) => SP[k]).filter((i) => usable(i) && !want.includes(i));
+      for (let k = 0; k < have.length && n > 0; k++) { const i = have[(turn + k) % have.length]; if (!want.includes(i)) { want.push(i); n--; } }
+    };
+    // (A tank holding them in a knot: two for the crowd. Otherwise one of each kind.)
+    take(SLOT_A, tank && healer ? 2 : 1);
+    take(SLOT_B, 1);
+    take(SLOT_A, 6 - want.length);
+    take(SLOT_B, 6 - want.length);
+    // (Anything else it knows, to fill what's left.)
+    for (const i of known) if (want.length < 6 && usable(i) && !want.includes(i)) want.push(i);
+    want.slice(0, 6).forEach((i, k) => { if (sb.loadout[k] !== i) sb.assign(k, i); });
   }
 
-  // A cast: from its slot on the bar if it's there (the slot's key, as 1 to 6 do), else chosen in the book and cast with F. Held
-  // for `hold` seconds: a Firebolt gathering, a channel pouring.
+  // A cast: from its slot on the bar if it's there (the slot's key, as 1 to 6 do), else chosen in the book and cast with F.
+  // What's held is held for `hold` seconds: a Firebolt gathering, a channel pouring. Anything else is a tap, the key down
+  // and up again, as a player hits it: held, a key casts again the moment the first is done, and a hitch in the frames
+  // while it's down casts the spell over and over till the mana's gone. True if it went.
   cast(i, hold) {
     if (!this.known(i) || this.auto.cast || this.slotHeld) return false;
     const sp = SPELLS[i], m = this.o.game.currentSnap(), sb = this.o.spellbar;
-    if (m && m[H.MANA] < sp.mana) return false;
+    if (m && this.purse(m[H.MANA]) < sp.mana) return false;
+    // (Its hands still on the last one, or a shot still leaving the staff: a press now would wait on it and might be lost.
+    // The next thought, then.)
+    if (m && m[H.SPELL_RIG] > 0) return false;
+    const tap = !(sp.channel || sp.gather);
+    if (tap && this.t - (this.staffAt ?? -9) < 0.45) return false;
+    if (m) this.owed = { t: this.t, cost: sp.mana, from: m[H.MANA] };
     const k = sb.loadout.indexOf(i);
-    if (k >= 0) { sb.press(k, 'auto'); this.slotHeld = true; } else { sb.pick(i); this.o.input.fire(INPUT.CAST_N); this.auto.cast = true; }
-    this.castT = hold;
+    if (k >= 0) { sb.press(k, 'auto'); if (tap) sb.release('auto'); else this.slotHeld = true; }
+    else { sb.pick(i); this.o.input.fire(INPUT.CAST_N); if (!tap) this.auto.cast = true; }
+    this.castT = tap ? 0 : hold;
+    this.tapAt = tap ? this.t : -9;
     this.lastSpell = sp.key;
+    this.used[sp.key] = this.t;
     this.o.log?.cast(sp.key);
     return true;
+  }
+
+  // Its mana, less what it has already spent that the snapshot hasn't caught up with: a staff shot on its way out of the
+  // staff's head, a spell asked for and not yet begun. (Spent twice, the second fizzles in its hands: "Not enough mana.")
+  purse(mana) {
+    if (this.t - (this.staffAt ?? -9) < 0.9) mana -= 13;
+    const o = this.owed;
+    if (o && this.t - o.t < 0.9 && mana > o.from - o.cost * 0.5) mana -= o.cost;
+    return mana;
   }
 
   letGo() {
@@ -596,43 +654,111 @@ export class Brain {
     if (this.slotHeld) { this.o.spellbar.release('auto'); this.slotHeld = false; }
   }
 
-  // What to throw now: the spell on its bar that suits the moment best (a little at random, and not the same one every time),
-  // or a shot of the staff between spells, as a player clicks while a spell's cooling. c: the fight as it stands.
+  // What to throw now: the spell on its bar that suits the moment best (a little at random, not the same one every time, and
+  // sooner one that hasn't been in its hands for a while), or a shot of the staff between spells, as a player clicks while a
+  // spell's cooling. c: the fight as it stands (USE). Nothing leaves its hands without a clean line to its mark (c.aimed).
   shoot(snap, m, c) {
     if (this.auto.cast || this.slotHeld || snap[H.CAST_HELD] > 0.5 || snap[H.SWINGING] > 0.5) return;
-    const mana = m.mana;
+    const mana = this.purse(m.mana), bar = this.o.spellbar.loadout;
+    const has = (k) => SP[k] !== undefined && bar.includes(SP[k]);
+    // What's kept back for trouble: a Mend when it's been hurt, a Nova when it's alone among several.
+    const reserve = (has('mend') && m.hpf < 0.8 ? 25 : 0) + (has('nova') && c.n >= 3 && !c.party ? 12 : 0);
     const staff = () => {
-      if (!c.aimed || this.staffCool > 0 || mana < 5 || c.d > 40) return;
+      // (A shot costs up to 13 by the staff: with less, the click's wasted on a fizzle.)
+      if (!c.aimed || this.staffCool > 0 || mana < 14 || c.d > 40) return;
+      // (The last of its mana is for a Mend, when it's low.)
+      if (m.hpf < 0.45 && has('mend') && mana < 31) return;
+      // (A spell just asked for and not yet begun: a click now would get in ahead of it, and the spell would be lost.)
+      if (this.t - this.tapAt < 0.4 && snap[H.SPELL_RIG] < 0.5) return;
       this.o.shared.input[INPUT.ATTACK] += 1;
-      this.staffCool = 0.65 + Math.random() * 0.4;
+      this.staffCool = 0.6 + Math.random() * 0.4;
+      this.staffAt = this.t;
       this.o.log?.cast('staff');
     };
     if (this.castCool > 0) { staff(); return; }
     let best = null, bs = 0;
-    for (const i of this.o.spellbar.loadout) {
+    for (const i of bar) {
       const sp = SPELLS[i], U = sp && USE[sp.key];
-      if (!U || mana < sp.mana + (sp.channel ? 10 : 0)) continue;
+      // (A channel drinks as it pours: only with enough for a second of it at least, past what it costs to start.)
+      if (!U || mana < sp.mana + (sp.channel ? (sp.drain || 10) * 1.1 : 0)) continue;
       if (!SELF.has(sp.key) && !c.aimed) continue;
       let s = U(c) || 0;
+      if (!s) continue;
       if (c.shield && BOLTS.has(sp.key)) s *= 0.25;
-      s *= (0.8 + Math.random() * 0.4) * (this.lastSpell === sp.key ? 0.7 : 1);
+      // (Not a Meteor's worth of mana on something nearly dead and alone: the staff finishes it.)
+      if (sp.mana >= 28 && !SELF.has(sp.key) && c.around < 2 && c.left < (sp.dmg || 40) * 0.4) s *= 0.35;
+      const idle = this.t - (this.used[sp.key] ?? -90);
+      s *= (0.85 + Math.random() * 0.3) * (this.lastSpell === sp.key ? 0.7 : 1) * (1 + Math.min(0.3, idle / 150));
+      // (What it keeps back, it keeps: only trouble spends it.)
+      if (s < 7.5 && mana - sp.mana < reserve) continue;
       if (s > bs) { bs = s; best = sp; }
     }
-    // The staff is what it fights with. A spell is for now and then: at once when it's in trouble (a Mend, a Nova), otherwise
-    // only every few seconds, and only when the moment suits one (a crowd, something big or quick) or, once in a while, anyway.
+    // The staff is what it fights with between spells, and a spell comes as often as its mana allows: at once when it's in
+    // trouble (a Mend, a Nova) or when they're frozen or drawn together (what follows a Nova or a Gravity Well), otherwise
+    // every second or two with its mana full and every several with it low, and only when the moment suits one (a crowd,
+    // something big or quick) or, once in a while, anyway.
     const urgent = best && bs >= 7.5 && this.t >= (this.urgentAt || 0);
-    const suits = best && this.t >= this.spellAt && (bs >= 3.6 || (bs >= 2 && Math.random() < 0.25));
-    if (!urgent && !suits) { staff(); return; }
-    this.spellAt = this.t + 3 + Math.random() * 4;
-    if (urgent) this.urgentAt = this.t + 3;
+    const combo = best && (c.frozen || c.pulled) && bs >= 3.4 && this.t >= this.comboAt;
+    const suits = best && this.t >= this.spellAt && (bs >= 3.4 || (bs >= 2 && Math.random() < 0.3));
+    if (!urgent && !combo && !suits) { staff(); return; }
+    const mf = mana / m.maxMana;
     const key = best.key;
     if (GROUND.has(key)) this.pitch = Math.atan2(c.T.y - (m.y + 1.62), Math.max(1, c.d));
-    if (key === 'plague') this.pitch += 0.5 * Math.asin(Math.min(1, 12 * c.d / (17 * 17)));
-    const hold = key === 'firebolt' ? (c.d > 14 ? 0.95 : 0.5) : best.channel ? 1.4 + Math.random() * 0.6 : 0.3;
+    // (The first Firebolt of a fight is gathered long, as you'd hold it on something that hasn't seen you: it bursts harder.)
+    // (A channel is held a second or two, and never past the mana it has for it.)
+    const hold = key === 'firebolt' ? (c.fresh && c.d > 12 ? 1.5 : c.d > 14 ? 0.95 : 0.5)
+      : best.channel ? Math.max(0.45, Math.min(1.4 + Math.random() * 0.6, (mana - best.mana - Math.min(reserve, 20)) / (best.drain || 10) - 0.15)) : 0.16;
     if (this.cast(SPELLS.indexOf(best), hold)) {
+      // (How soon the next: by how full its mana is.)
+      this.spellAt = this.t + (mf > 0.7 ? 1.3 + Math.random() * 1.5 : mf > 0.4 ? 2.4 + Math.random() * 2.2 : 4 + Math.random() * 3);
+      this.comboAt = this.t + 1.1;
+      if (urgent) this.urgentAt = this.t + 3;
       this.castCool = best.channel ? 0.4 : 0.35 + Math.random() * 0.35 + (key === 'meteor' || key === 'blizzard' || key === 'well' ? 0.8 : 0);
       if (key === 'blades') this.bladesT = this.t;
+      if (key === 'nova') this.frozenT = this.t;
+      if (key === 'well') this.pulledT = this.t;
+      // (A flask is lobbed: its eyes go up by the arc it needs, and stay up till it's left the hand. motor().)
+      if (key === 'plague') { this.lift = 0.5 * Math.asin(Math.min(1, 12 * c.d / (17 * 17))); this.liftT = this.t + 0.7; this.pitch += this.lift; }
     }
+  }
+
+  // ---- what it can hit from here
+
+  // A clean line to each of what it might shoot (the nav thread's `sight`: clear of walls, corners, pines and the rise of the
+  // ground), asked a few times a second for the nearest of them. Until the answer's in, it holds its fire.
+  watch(m, list) {
+    if (this.sightBusy || !this.nav.ready || this.t - this.sightT < 0.1 || !list.length) return;
+    const marks = list.length > 10 ? list.slice().sort((a, b) => a.d - b.d).slice(0, 10) : list;
+    this.sightBusy = true; this.sightT = this.t;
+    const ids = marks.map((f) => f.id), at = this.t;
+    this.nav.ask('sight', { from: [m.x, m.y + 1.62, m.z], marks: marks.map((f) => [f.x, f.y + (f.h || 1), f.z]), hallOpen: this.o.game.hallUI?.hall?.state === 'open' }).then((r) => {
+      this.sightBusy = false;
+      if (r) r.forEach(([clear, step], i) => this.sightMap.set(ids[i], { clear: clear > 0, step, t: at }));
+      if (this.sightMap.size > 80) for (const [k, v] of this.sightMap) if (this.t - v.t > 5) this.sightMap.delete(k);
+    });
+  }
+
+  // What it last learned of its line to f: { clear, step } (step: how far to its right, or left if less than nothing, a clean
+  // line opens), or null if it doesn't know yet.
+  sees(f) { const v = this.sightMap.get(f.id); return v && this.t - v.t < 0.7 ? v : null; }
+  // A clean shot at f, as far as it knows. (Before the nav thread's up, it shoots as it always did.)
+  clean(f) { const v = this.sees(f); return v ? v.clear : !this.nav.ready; }
+
+  // The way to walk to (x, z) round whatever's between, a step at a time: by the nav thread's paths, the Warrens' and the
+  // Test Dungeon's own fields. For getting a line on something behind a wall.
+  wayTo(m, x, z) {
+    if (inHall(m.x, m.z) && inHall(x, z)) { const o = (this.hallNav ||= new HallNav()).flow([0, 0], m.x, m.z, x, z, this.t); return [o[0], o[1]]; }
+    if (inDungeon(m.x, m.z) && inDungeon(x, z)) { const o = caveStep(this, m, { x, z }); return [o[0], o[1]]; }
+    const R = this.round;
+    if (!R || (!R.pending && (this.t - R.t > 0.9 || dist(R.to[0], R.to[1], x, z) > 3))) {
+      const ask = this.round = { t: this.t, to: [x, z], pts: R?.pts || null, pending: true };
+      const grid = this.nav.inGrid(m.x, m.z, m.below) && this.nav.inGrid(x, z, m.below);
+      this.nav.ask(grid ? 'path' : 'local', { from: [m.x, m.z], to: [x, z] }).then((pts) => { ask.pending = false; ask.pts = pts; ask.t = this.t; });
+    }
+    const pts = this.round?.pts;
+    while (pts && pts.length > 1 && dist(m.x, m.z, pts[0][0], pts[0][1]) < 0.9) pts.shift();
+    const [tx, tz] = pts?.length ? pts[0] : [x, z], L = dist(m.x, m.z, tx, tz) || 1;
+    return [(tx - m.x) / L, (tz - m.z) / L];
   }
 
   // ---- the opening
@@ -710,9 +836,14 @@ export class Brain {
       const yaw = Math.atan2(T.x - m.x, T.z - m.z);
       this.face = yaw;
       this.pitch = Math.atan2(T.y + T.h - (m.y + 1.62), Math.max(1, T.d));
-      const aimed = Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.05, Math.atan2(0.9, T.d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.15;
+      this.aim = { x: T.x, z: T.z, y: T.y + T.h, w: 0 };
+      // (Only down a clean line: the rock and the pillars stop what it throws as they stop the dragon's breath.)
+      const live = foes.filter((f) => f.hostile && f.d < 34 && !f.slime && !f.tumbler);
+      this.watch(m, live.includes(T) ? live : [T, ...live]);
+      const aimed = this.clean(T) && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.05, Math.atan2(0.9, T.d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.15;
       if (d > 0.6) this.steer(t.to[0] - m.x, t.to[1] - m.z, t.run && d > 3, true); else this.halt();
-      this.shoot(snap, m, { T, d: T.d, dn: T.d, close: 0, around: 1, aimed, hpf: m.hpf, fast: false, still: true, big: T.maxHp > 150, inLine: 1, coming: false, bladesUp: true, shield: false });
+      const near = live.reduce((a, b) => (a.d < b.d ? a : b), T);
+      this.shoot(snap, m, { ...this.scene(m, live.length ? live : [T], T, near, live.filter((f) => f.d < 5.5).length, aimed, this.party(snap).filter((h) => !h.dead)), fresh: false, bladesUp: true });
     } else {
       this.face = null;
       if (d > 0.5) this.steer(t.to[0] - m.x, t.to[1] - m.z, t.run && d > 2); else this.halt();
@@ -727,7 +858,8 @@ export class Brain {
     const lvl = m.lvl + (this.partyStrong(m) ? 2 : 0);
     // (Down the Warrens with a party: everything there is for fighting. src/ui/autowarrens.js.)
     const fightable = inDungeon(m.x, m.z) ? () => true : (k, l, hp, sl) => fightableAt(k, k === 0 || k === 3 ? m.lvl : l, hp, sl);
-    this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12;
+    this.kiteCool -= 0.12; this.dodgeCool -= 0.12; this.reactT -= 0.12; this.rideCool -= 0.12;
+    const noRide = () => { this.ride = null; this.rideHold = false; };
     // What it can't beat yet, coming for it: away over open ground, toward the town.
     const boss = this.job?.kind === 'boss';
     if (boss && this.blackKnight(snap) && dist(m.x, m.z, BLACK_POST[0], BLACK_POST[1]) < 60 && !foes.some((f) => f.id !== 0 && f.d < 8 && fightable(f.kind, lvl, f.maxHp, f.slime))) return false;
@@ -735,6 +867,7 @@ export class Brain {
     if (scary.length) {
       const f = scary.reduce((a, b) => (a.d < b.d ? a : b));
       const [ex, ez] = this.escape(m, scary, true);
+      noRide();
       this.face = null;
       this.steer(ex, ez, true);
       this.say(`Running from ${[0, 3, 4, 9, 10].includes(f.kind) ? this.foeName(f) : 'something too strong'}.`);
@@ -745,16 +878,26 @@ export class Brain {
     // (Down the Warrens, the whole room's fight is its fight: a boss across the cave is still its mark.)
     const reach = hunting || this.target || inDungeon(m.x, m.z) ? 30 : 14;
     // (And what's on one of its party, near by: their fight is its fight.)
-    const ours = new Set(this.party(snap).filter((h) => !h.dead).map((h) => h.idx));
+    const company = this.party(snap).filter((h) => !h.dead);
+    const ours = new Set(company.map((h) => h.idx));
     const live = foes.filter((f) => fightable(f.kind, lvl, f.maxHp, f.slime) && !this.skipping(`foe:${f.id}`) && (f.hostile ? f.d < reach || (ours.has(f.after) && f.d < 30) : hunting && f.d < MAX_SIGHT && !inTown(f.x, f.z, 4) && !this.kept(m, f.x, f.z)));
-    if (!live.length) { this.target = null; this.kite = null; return false; }
+    if (!live.length) { this.target = null; this.kite = null; noRide(); return false; }
+    // (A fight begun: the first throw of it is its opener.)
+    if (this.t - (this.foughtT ?? -99) > 3) this.fightSince = this.t;
+    this.foughtT = this.t;
+    // What it has a clean line to, of all of them (the answer's a moment behind: sees(), clean()).
+    this.watch(m, live);
     const near = live.reduce((a, b) => (a.d < b.d ? a : b)), dn = near.d;
     const close = live.filter((f) => f.d < 5.5).length;
+    // On the shield: a ride it began (below), or a fight met while it was riding down a hill, which it rides on through
+    // with its staff on them rather than stepping off among them.
+    if (!this.ride && m.surf && Math.hypot(m.vx, m.vz) > 5 && this.t - (this.rodeT ?? -9) > 3) { this.ride = { x: m.vx, z: m.vz, t: 0, phase: 'ride', clear: true, why: 'past' }; this.rideHold = true; this.o.log?.cast?.('surf'); }
+    if (this.ride && this.riding(snap, m, live, near, close)) return true;
     // Low, and still in it: off toward the town, a Mend when there's room for one. From something slow a few strides off it
     // backs away with its staff still on it, shooting as it goes; anything quicker or closer, it turns and runs from.
     let retreat = null;
     if (m.hpf < 0.28 && dn < 10) {
-      if (m.mana >= 25 && this.known(SP.mend) && dn > 7 && this.castCool <= 0) { this.cast(SP.mend, 0.35); this.castCool = 1.2; }
+      if (m.mana >= 25 && this.known(SP.mend) && dn > 7 && this.castCool <= 0 && this.cast(SP.mend, 0.35)) this.castCool = 1.2;
       const [ex, ez] = this.escape(m, live, true);
       if (Math.hypot(near.vx || 0, near.vz || 0) < 3.5 && dn > 3.5 && close < 2) retreat = [ex, ez];
       else {
@@ -765,13 +908,17 @@ export class Brain {
         return true;
       }
     }
-    // A blade flashing before it falls: the shield up, if it has one in hand (no skull), or a sidestep; after a person's moment.
+    // A blade flashing before it falls, or something right on it: the shield, if there's one on its arm and no skull in that
+    // hand; else a sidestep. The guard takes each blow out of its breath and breaks when that's gone (src/sim/player.js
+    // blockBlow), so it's raised only with breath for the shove and a blow or two, and comes down before the breath does.
     const flash = live.find((f) => f.glint > 0.08 && f.glint < 0.6 && f.d < 4.5);
-    const board = !!this.o.pack.slots.off && !this.o.pack.slots.skull && m.stam > 15;
+    const board = !!this.o.pack.slots.off && !this.o.pack.slots.skull;
     if (this.guardT > 0) {
       // Behind the shield: facing what's on it, giving ground a little, till it comes down again.
-      this.guardT -= 0.12;
-      if (this.guardT <= 0) { this.auto.block = false; this.guardCool = 1.6 + Math.random(); }
+      this.guardT -= 0.12; this.guardFor += 0.12;
+      // (Down again when its time's up, before its breath is, or at once if it never came up: something else had its hands.)
+      const failed = this.guardFor > 0.3 && snap[H.SHIELD_UP] < 0.3;
+      if (this.guardT <= 0 || m.stam < 18 || !board || failed) { this.guardT = 0; this.auto.block = false; this.guardCool = failed ? 0.7 : 3.5 + Math.random() * 2.5; this.kiteCool = 0; }
       const t = flash || near;
       this.face = Math.atan2(t.x - m.x, t.z - m.z);
       this.steer(m.x - t.x, m.z - t.z, false, true);
@@ -779,12 +926,25 @@ export class Brain {
       return true;
     }
     this.guardCool -= 0.12;
-    if (board && this.guardCool <= 0 && !this.auto.cast && !this.slotHeld && ((flash && Math.random() < 0.65) || (dn < 2.4 && !near.slime && !near.tumbler))) {
-      // Up with a shove (the right button), held a moment.
-      this.o.shared.input[INPUT.WIDE] += 1;
-      this.auto.block = true;
-      this.guardT = 0.5 + Math.random() * 0.6;
-      this.o.log?.cast('shield');
+    // (The shove on the way up throws back and sets reeling everything in front of it, seven metres deep: so it comes up
+    // for what's closing on it, a few strides off, as well as for what's already at its elbow.)
+    const body = near.hostile && !near.slime && !near.tumbler;
+    const pressed = body && (dn < 4.2 || (close >= 2 && dn < 5.5));
+    // (And only with its hands free: the shield won't come up through a spell that's still leaving them.)
+    if (board && this.guardCool <= 0 && m.stam >= 50 && !this.auto.cast && !this.slotHeld && snap[H.CAST_HELD] < 0.5 && snap[H.SPELL_RIG] < 0.5 && ((flash && Math.random() < 0.75) || pressed)) {
+      // Square on to it first (the shove goes where it's looking, and the board covers only its front), then up with a shove.
+      const t = flash || near, to = Math.atan2(t.x - m.x, t.z - m.z);
+      this.face = to;
+      this.steer(m.x - t.x, m.z - t.z, false, true);
+      if (Math.abs(wrap(to - this.o.input.yaw)) < 0.45) {
+        // (The right button: held before the press is seen, as the mouse has it, or the shield would drop the moment it rose.)
+        this.auto.block = true;
+        this.o.shared.input[INPUT.BLOCK] = 1;
+        this.o.shared.input[INPUT.WIDE] += 1;
+        this.guardT = 0.4 + Math.random() * 0.35; this.guardFor = 0;
+        this.o.log?.cast('shield');
+        this.say(`Behind the shield: ${this.foeName(t)}.`);
+      } else this.say(`Turning to meet ${this.foeName(t)} with the shield.`);
       return true;
     }
     if (flash && this.dodgeCool <= 0 && Math.random() < 0.7) { this.dodgeCool = 1.4; this.dodgeSide = Math.random() < 0.5 ? -1 : 1; this.dodgeDir = null; this.o.shared.input[INPUT.DODGE] += 1; }
@@ -797,7 +957,8 @@ export class Brain {
     }
     // Kiting: something's on it, so it gives ground toward open country. Mostly it backs away facing them, its staff still on
     // them and shooting as it goes (backwards is a walk, as it is for you). With something quick on its heels, a crowd at its
-    // elbows, or its back to a wall, it turns and runs a few strides instead, then turns back to face them.
+    // elbows, or its back to a wall, it gets clear instead: on its shield when the ground allows (a few strides' run, a jump,
+    // and it slides off with its staff still on them: riding()), else it turns and runs a few strides, then turns back.
     let K = this.kite;
     if (K) {
       K.t -= 0.12;
@@ -808,49 +969,82 @@ export class Brain {
       else {
         this.face = Math.atan2(K.x, K.z);
         this.steer(K.x, K.z, true);
+        // (A Blink, if it's on its bar: gone from among them, fourteen paces on the way it's running.)
+        if (!K.blinked && SP.blink !== undefined && this.o.spellbar.loadout.includes(SP.blink) && (close >= 2 || dn < 3) && Math.abs(wrap(this.face - this.o.input.yaw)) < 0.35 && this.cast(SP.blink, 0.3)) K.blinked = true;
         this.say(`Kiting ${live.length > 1 ? `${live.length} foes` : this.foeName(near)}.`);
         return true;
       }
     }
     if (!K && !retreat && (dn < 3 || (close >= 2 && dn < 4.5) || this.backedUp > 0.8) && this.kiteCool <= 0) {
       // Frozen first, if it's a crowd.
-      if (close >= 3 && m.mana >= 32 && !this.auto.cast && this.cast(SP.nova, 0.3)) this.castCool = 0.5;
+      if (close >= 3 && m.mana >= 32 && !this.auto.cast && this.cast(SP.nova, 0.3)) { this.castCool = 0.5; this.frozenT = this.t; }
       const [ex, ez] = this.escape(m, live);
       // (It backs off at a walk, a little slower while it shoots: what's quicker than that and already at its heels, it can't
       // back away from. Nor from what's right on it, a crowd all round, or a wall behind.)
       const quick = Math.hypot(near.vx || 0, near.vz || 0) > 4.6;
       const turn = (quick && dn < 2.5) || dn < 1.4 || close >= 4 || this.backedUp > 0.8;
+      // (Clear of them on the shield, when there's the ground and the breath for it: most times, not every time.)
+      if ((turn || close >= 2) && this.canRide(m) && this.rideWay(m, ex, ez) && Math.random() < 0.7) { this.startRide(m, ex, ez, 'away'); this.backedUp = 0; return true; }
       K = this.kite = { x: ex, z: ez, t: turn ? 1.1 + Math.random() * 0.7 : 1.3 + Math.random() * 0.9, back: !turn };
       this.kiteCool = turn ? 2.6 : 1.6; this.backedUp = 0;
       if (turn) return true;
     }
     if (K?.back && !retreat) retreat = [K.x, K.z];
     // Its mark: with a party, what's on the healer or the others, then what the tank's holding (helpPick); else what's
-    // coming for it first, then the nearest. A new one takes a moment to settle on.
+    // coming for it first, then the nearest, and sooner one it has a clean line to, one nearly down, and the one it's
+    // already on (it doesn't flit between them). A new one takes a moment to settle on.
     const help = this.helpPick(live, m);
-    const pick = help?.T || live.reduce((a, b) => ((a.d - (a.hostile ? 6 : 0)) <= (b.d - (b.hostile ? 6 : 0)) ? a : b));
+    const want = (f) => { const v = this.sees(f); return f.d - (f.hostile ? 6 : 0) + (v && !v.clear ? 9 : 0) - (f.id === this.target?.id ? 2.5 : 0) - (f.hostile && f.maxHp > 1 && f.hp < f.maxHp * 0.3 ? 3 : 0); };
+    const pick = help?.T || live.reduce((a, b) => (want(a) <= want(b) ? a : b));
     if (this.target?.id !== pick.id) { this.target = pick; this.reactT = 0.2 + Math.random() * 0.25; } else Object.assign(this.target, pick);
     const T = this.target, d = T.d;
+    // With a tank of its own: it lets him get up with it before it starts on something that hasn't seen them, so what
+    // comes, comes onto him. (A few seconds at most.)
+    const tank = company.find((h) => h.role === 'tank' && h.hpf > 0.3);
+    if (!T.hostile && tank && dist(tank.x, tank.z, m.x, m.z) > 9 && d > 10 && (this.pullWait += 0.12) < 4) {
+      this.face = Math.atan2(T.x - m.x, T.z - m.z);
+      this.halt();
+      this.say('Waiting for the tank before starting on them.');
+      return true;
+    }
+    if (T.hostile) this.pullWait = 0;
     // Nothing it throws is landing (behind a wall, across a gap): leave that one be for a while.
     const tk = this.engage.get(T.id) || { since: this.t, best: T.hp };
     if (T.hp < tk.best - 0.5) { tk.best = T.hp; tk.since = this.t; }
     this.engage.set(T.id, tk);
     if (this.t - tk.since > (T.slime || T.tumbler ? 20 : 12)) { this.giveUp(`foe:${T.id}`, 45); this.engage.delete(T.id); this.target = null; }
-    const around = live.filter((f) => dist(f.x, f.z, T.x, T.z) < 5.5).length;
-    // Where it'll be when the bolt gets there, and a hand that isn't perfect: a little off, more so on something quick.
+    // Where it'll be when the bolt gets there, and a hand that isn't perfect: a little off, more so on something quick. (The
+    // look follows that point from where it stands each frame, not from where it stood when it last thought: motor().)
     const tt = d / 34, ax = T.x + (T.vx || 0) * tt, az = T.z + (T.vz || 0) * tt;
     if ((this.wobbleT -= 0.12) <= 0) { this.wobbleT = 0.5 + Math.random() * 0.5; this.wobble = (Math.random() - 0.5) * (0.02 + Math.hypot(T.vx || 0, T.vz || 0) * 0.006); }
     const yaw = Math.atan2(ax - m.x, az - m.z) + this.wobble;
     this.face = yaw;
     this.pitch = Math.atan2(T.y + T.h - (m.y + 1.62), Math.max(1, d));
-    const aimed = this.reactT <= 0 && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.035, Math.atan2(0.8, d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.12;
+    this.aim = { x: ax, z: az, y: T.y + T.h, w: this.wobble };
+    // A clean line to it, or none (a wall, a corner, a pine, a rise in the ground between): it never throws through one.
+    const sight = this.sees(T), blocked = !!sight && !sight.clear;
+    const aimed = this.reactT <= 0 && this.clean(T) && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.035, Math.atan2(0.8, d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.12;
     // Footwork: back off what's close while it shoots, close in on what's far, step side to side between.
     let mx = 0, mz = 0;
     const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1), bx = (m.x - near.x) / (dn || 1), bz = (m.z - near.z) / (dn || 1);
     if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.2 + Math.random() * 2.2; this.strafe = Math.random() < 0.75 ? -this.strafe : this.strafe; }
     // Giving ground (kiting, or hurt): straight back along the way it's chosen, its eyes and its staff on its mark.
     if (retreat) { [mx, mz] = retreat; mx += -fz * this.strafe * 0.15; mz += fx * this.strafe * 0.15; }
-    else {
+    else if (blocked) {
+      // No clean line: out to where there is one. A step or two to the side if that opens it (round the corner, out from
+      // behind the pine), else the way it would walk to it; still backing off anything that's close.
+      if (this.slotHeld || this.auto.cast) this.letGo();
+      if (sight.step) { const sg = Math.sign(sight.step); mx = -fz * sg; mz = fx * sg; }
+      else [mx, mz] = this.wayTo(m, T.x, T.z);
+      if (dn < 5) { mx += bx * 0.8; mz += bz * 0.8; }
+    } else {
+      // (Across them on the shield, now and then: the side the ground falls away on.)
+      if (!K && dn > 8 && d > 9 && d < 30 && m.hpf > 0.5 && this.t - this.fightSince > 3 && T.hostile && this.canRide(m) && Math.random() < 0.05) {
+        const h0 = terrainHeight(m.x, m.z), drop = (sg) => h0 - terrainHeight(m.x - fz * sg * 10, m.z + fx * sg * 10);
+        const sg = drop(1) >= drop(-1) ? 1 : -1, wx = -fz * sg * 0.95 - fx * 0.3, wz = fx * sg * 0.95 - fz * 0.3, L = Math.hypot(wx, wz);
+        if (this.rideWay(m, wx / L, wz / L)) { this.startRide(m, wx / L, wz / L, 'across'); return true; }
+        this.rideCool = 3;
+      }
       if (dn < 7.5) { mx = bx; mz = bz; } else if (d > 20) { mx = fx; mz = fz; }
       mx += -fz * this.strafe * 0.6; mz += fx * this.strafe * 0.6;
     }
@@ -858,13 +1052,114 @@ export class Brain {
     this.steer(mx, mz, false, true);
     // (Backing into something: noted, and the next close call turns into a run instead.)
     this.backedUp = dn < 7.5 && Math.hypot(m.vx, m.vz) < 1 ? (this.backedUp || 0) + 0.12 : 0;
-    // What's lined up behind its mark (for what goes through), how it's moving, how big it is.
-    const ux = fx, uz = fz;
-    const inLine = live.filter((f) => { const a = (f.x - m.x) * ux + (f.z - m.z) * uz; return a > 0 && a < 40 && Math.abs((f.x - m.x) * uz - (f.z - m.z) * ux) < 1.5; }).length;
-    const sp = Math.hypot(T.vx || 0, T.vz || 0), coming = ((T.vx || 0) * -fx + (T.vz || 0) * -fz) > 1;
-    this.shoot(snap, m, { T, d, dn, close, around, aimed, hpf: m.hpf, fast: sp > 4, still: sp < 1.5, big: T.maxHp > 150, inLine, coming, bladesUp: this.t - (this.bladesT ?? -99) < 20, shield: false });
+    this.shoot(snap, m, this.scene(m, live, T, near, close, aimed, company));
     const who = live.length > 1 ? `${live.length} foes` : this.foeName(T);
-    this.say(retreat ? `Backing away from ${who}, shooting${this.tankNear(m) ? ', to the tank' : ''}.` : help && T.id === help.T.id ? help.why : `Fighting ${who}.`);
+    this.say(retreat ? `Backing away from ${who}, shooting${this.tankNear(m) ? ', to the tank' : ''}.` : blocked ? `No clean line to ${this.foeName(T)}: stepping out for the shot.` : help && T.id === help.T.id ? help.why : `Fighting ${who}.`);
+    return true;
+  }
+
+  // The fight as it stands, for shoot() and USE: its mark and the nearest, how many and how they stand, what it has going
+  // (ice on them, a well drawing them in), and who's with it.
+  scene(m, live, T, near, close, aimed, company = []) {
+    const d = T.d, fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1);
+    const around = live.filter((f) => dist(f.x, f.z, T.x, T.z) < 5.5).length;
+    // (What's lined up behind its mark, for what goes through.)
+    const inLine = live.filter((f) => { const a = (f.x - m.x) * fx + (f.z - m.z) * fz; return a > 0 && a < 40 && Math.abs((f.x - m.x) * fz - (f.z - m.z) * fx) < 1.5; }).length;
+    const sp = Math.hypot(T.vx || 0, T.vz || 0), coming = ((T.vx || 0) * -fx + (T.vz || 0) * -fz) > 1;
+    // (What its tank is holding stands still for it, the rest of them about him.)
+    const tank = company.find((h) => h.role === 'tank'), held = !!tank && tank.foe === T.id && dist(tank.x, tank.z, T.x, T.z) < 5;
+    const pull = this.t - this.pulledT;
+    return { T, d, dn: near.d, n: live.length, close, near: live.filter((f) => f.d < 9).length, around, aimed, hpf: m.hpf, left: T.hp, fast: sp > 4 && !held, still: sp < 1.5 || held, big: T.maxHp > 150, inLine, coming,
+      bladesUp: this.t - (this.bladesT ?? -99) < 20, shield: false, fresh: this.t - this.fightSince < 2.5,
+      frozen: this.t - this.frozenT < 4.2 && d < 13, pulled: pull > 1 && pull < 4.2, held, party: company.length > 0, healer: company.some((h) => h.role === 'heal') };
+  }
+
+  // ---- the shield under its feet, in a fight
+
+  // Whether a ride's on: a shield to stand on (on its arm or not: it comes off for this), open ground under the sky, breath
+  // for the run and the jump, and not too soon after the last.
+  canRide(m) {
+    // (Not on the walk down with Lisandra: it keeps by her there.)
+    return this.rideCool <= 0 && !!this.o.pack.slots.off && !m.below && !m.town && m.ground && !m.surf && m.stam >= 46 && !(m.opening > 0 && m.opening < OPENING.ARRIVED)
+      && !inDungeon(m.x, m.z) && !inHall(m.x, m.z) && !inChurch(m.x, m.y + 1, m.z) && floorAt(m.x, m.z) === null;
+  }
+
+  // A way to ride: not uphill (the shield only carries what it's given, and what the slope adds), not into ground it keeps
+  // clear of, not into the town.
+  rideWay(m, dx, dz) {
+    const h0 = terrainHeight(m.x, m.z);
+    if (terrainHeight(m.x + dx * 8, m.z + dz * 8) - h0 > 0.5 || terrainHeight(m.x + dx * 16, m.z + dz * 16) - h0 > 1) return false;
+    return !this.kept(m, m.x + dx * 16, m.z + dz * 16) && !inTown(m.x + dx * 16, m.z + dz * 16, 6);
+  }
+
+  startRide(m, dx, dz, why) {
+    const R = this.ride = { x: dx, z: dz, t: 0, phase: 'run', clear: null, why };
+    this.kite = null;
+    // (Only if the way's open: the nav thread's word on it comes during the run-up.)
+    this.nav.ask('probe', { x: m.x, z: m.z, y: m.y + 0.2, hx: dx, hz: dz, look: 8 }).then((r) => {
+      if (this.ride !== R) return;
+      // (Eight metres clear, the way it wanted or near enough to it: room for the run and the jump. It carves round what
+      // comes after: riding().)
+      if (r && r[2] >= 7.6 && r[0] * dx + r[1] * dz > 0.45 && this.rideWay(m, r[0], r[1])) { R.x = r[0]; R.z = r[1]; R.clear = true; } else R.clear = false;
+    });
+  }
+
+  // A ride on the shield in the middle of a fight, as a player does it: a few strides' run, a jump with Space held, and it
+  // slides clear of them (or across them) faster than it can back away, looking where it likes: so its staff and its spells
+  // stay on them all the way, and it carves with the move keys round its mark. Off again as it slows, at something in the
+  // way, or after a few seconds. True while it's at it. R: { x, z: the way, t, phase: 'run' | 'air' | 'ride', why }.
+  riding(snap, m, live, near, close) {
+    const R = this.ride, sp = Math.hypot(m.vx, m.vz);
+    R.t += 0.12;
+    const end = (cool) => { this.ride = null; this.rideHold = false; this.rodeT = this.t; this.rideCool = cool ?? 16 + Math.random() * 16; this.kiteCool = Math.max(this.kiteCool, 0.8); this.reactT = 0.15; return false; };
+    if (R.phase === 'run') {
+      // The run-up: straight along the way, at a run; the jump once it's quick enough and the way's known to be clear.
+      if (R.t > 1.4 || R.clear === false || m.stam < 12) return end(5);
+      this.face = Math.atan2(R.x, R.z);
+      this.steer(R.x, R.z, true);
+      this.say(R.why === 'away' ? 'Getting clear of them: a run for the shield.' : 'A run for the shield, to ride across them.');
+      if (R.clear && R.t >= 0.36 && sp > 6 && m.ground && Math.abs(wrap(this.face - this.o.input.yaw)) < 0.45) {
+        this.o.shared.input[INPUT.JUMP] += 1;
+        this.rideHold = true; this.auto.jumpHeld = true;
+        R.phase = 'air'; R.t = 0;
+        this.o.log?.cast?.('surf');
+      }
+      return true;
+    }
+    if (R.phase === 'air') { if (m.surf) R.phase = 'ride'; else if (R.t > 0.8) return end(6); }
+    else if (!m.surf || sp < 3.4 || R.t > 5 || R.wall) return end();
+    // Its mark: the one it was on, if it's still there; and its eyes on it, wherever the shield is taking it.
+    const T = (this.target && live.find((f) => f.id === this.target.id)) || near;
+    this.target = T;
+    const d = T.d, tt = d / 34, ax = T.x + (T.vx || 0) * tt, az = T.z + (T.vz || 0) * tt;
+    const yaw = Math.atan2(ax - m.x, az - m.z);
+    this.face = yaw;
+    this.pitch = Math.atan2(T.y + T.h - (m.y + 1.62), Math.max(1, d));
+    this.aim = { x: ax, z: az, y: T.y + T.h, w: 0 };
+    const aimed = this.clean(T) && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.05, Math.atan2(0.9, d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.14;
+    // Carving: along the way it's going (never against it: that's the heel down), bending round its mark, in toward it when
+    // it's getting far and out when it's close; and round whatever stands ahead, or off the shield if that can't be done.
+    const vx = sp > 1 ? m.vx / sp : R.x, vz = sp > 1 ? m.vz / sp : R.z;
+    if ((R.probeT = (R.probeT || 0) - 0.12) <= 0) {
+      R.probeT = 0.24;
+      this.nav.ask('probe', { x: m.x, z: m.z, y: m.y + 0.2, hx: vx, hz: vz, look: 5.5 }).then((r) => {
+        if (this.ride !== R || !r) return;
+        // (The nearest way to its own that's clear for a few metres: carved toward. None within a quarter turn: off.)
+        const along = r[0] * vx + r[1] * vz;
+        R.bend = along < 0.995 ? [r[0], r[1]] : null;
+        if (r[2] < 3 || along < 0.3) R.wall = true;
+      });
+    }
+    let wx = vx, wz = vz;
+    if (R.bend) [wx, wz] = R.bend;
+    else {
+      const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1), side = vx * -fz + vz * fx >= 0 ? 1 : -1, k = d < 7 ? -0.5 : d > 16 ? 0.35 : 0;
+      wx = vx - fz * side * 0.35 + fx * k; wz = vz + fx * side * 0.35 + fz * k;
+    }
+    this.steer(wx, wz, false, true);
+    this.shoot(snap, m, this.scene(m, live, T, near, close, aimed, this.party(snap).filter((h) => !h.dead)));
+    const who = live.length > 1 ? `${live.length} foes` : this.foeName(T);
+    this.say(`Riding the shield ${R.why === 'away' ? 'clear of' : R.why === 'across' ? 'across' : 'past'} ${who}, shooting (${sp.toFixed(0)} m/s).`);
     return true;
   }
 
@@ -1715,13 +2010,19 @@ export class Brain {
     const yaw = Math.atan2(ax - m.x, az - m.z) + this.wobble;
     this.face = yaw;
     this.pitch = Math.atan2(K.y + 1.3 - (m.y + 1.62), Math.max(1, dk));
+    this.aim = { x: ax, z: az, y: K.y + 1.3, w: this.wobble };
     const facing = Math.cos(wrap(Math.atan2(m.x - K.x, m.z - K.z) - K.yaw)) > 0.35;   // his front (and his shield) toward it
-    const aimed = Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.03, Math.atan2(0.7, dk));
+    // (A clean line to him: the cathedral's piers and the corners of its steps stop a bolt as surely as his board does.)
+    const mark = { id: 0, x: K.x, y: K.y, z: K.z, h: 1.3, d: dk };
+    this.watch(m, [mark]);
+    const sight = this.sees(mark);
+    const aimed = this.clean(mark) && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.03, Math.atan2(0.7, dk));
     // Footwork: never inside his reach; back off what's coming; along the ring otherwise, a step at a time.
     let mx = 0, mz = 0;
     const ox = (m.x - P[0]) / (fromPost || 1), oz = (m.z - P[1]) / (fromPost || 1);
     if (dk < 13 || fromPost < BLACK_LEASH + 2) { mx = (m.x - K.x) / (dk || 1) + ox * 0.6; mz = (m.z - K.z) / (dk || 1) + oz * 0.6; }
     else if (fromPost > SIEGE_RING + 6) { mx = -ox; mz = -oz; }
+    else if (sight && !sight.clear && sight.step) { const sg = Math.sign(sight.step), fx = (K.x - m.x) / (dk || 1), fz = (K.z - m.z) / (dk || 1); mx = -fz * sg; mz = fx * sg; }
     else { if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.5 + Math.random() * 2; this.strafe = -this.strafe; } mx = -oz * this.strafe * 0.4; mz = ox * this.strafe * 0.4; }
     // Right on it: turn and run for it (he's slower than its sprint), then turn back.
     if (dk < 6 && this.kiteCool <= 0) {
@@ -1744,7 +2045,8 @@ export class Brain {
     if (this.reactT > 0) return;
     // His shield stops what comes at his front: the sky (a Meteor, a Blizzard) doesn't care which way he faces.
     const still = Math.hypot(vx, vz) < 2.5;
-    this.shoot(snap, m, { T: { ...K, maxHp: K.maxHp }, d: dk, dn: dk, close: dk < 5.5 ? 1 : 0, around: 1, aimed, hpf: m.hpf, fast: !still, still, big: true, inLine: 1, coming: dk < 20, bladesUp: this.t - (this.bladesT ?? -99) < 20, shield: facing && kOut < 6 && atRing });
+    this.shoot(snap, m, { T: { ...K, maxHp: K.maxHp }, d: dk, dn: dk, n: 1, close: dk < 5.5 ? 1 : 0, near: dk < 9 ? 1 : 0, around: 1, aimed, hpf: m.hpf, left: K.hp, fast: !still, still, big: true, inLine: 1, coming: dk < 20, bladesUp: this.t - (this.bladesT ?? -99) < 20, shield: facing && kOut < 6 && atRing,
+      fresh: false, frozen: false, pulled: false, held: false, party: false, healer: false });
   }
 
   // ---- the hands and feet
@@ -1772,6 +2074,10 @@ export class Brain {
     // going, its eyes a few strides on along its path (round the bend before its feet), but never so far off its next step
     // that it would have to stop and turn.
     let yaw = this.face;
+    // (In a fight its eyes are on a point in the world, where its mark will be: followed from where it stands this frame, so a
+    // sidestep or a ride on the shield doesn't drag its aim off between one thought and the next.)
+    const aim = fight && this.aim && yaw !== null && yaw !== undefined ? this.aim : null;
+    if (aim) { yaw = Math.atan2(aim.x - m.x, aim.z - m.z) + aim.w; this.pitch = Math.atan2(aim.y - (m.y + 1.62), Math.max(1, dist(m.x, m.z, aim.x, aim.z))) + (this.t < (this.liftT ?? 0) ? this.lift : 0); }
     if (yaw === null || yaw === undefined) {
       yaw = w ? Math.atan2(w.x, w.z) : inp.yaw;
       if (w && this.look && !fight && !w.strafe) yaw += clamp(wrap(Math.atan2(this.look[0] - m.x, this.look[1] - m.z) - yaw), -0.5, 0.5);
@@ -1804,7 +2110,8 @@ export class Brain {
     a.mx = mx / L; a.mz = mz / L;
     // (Shift held for the run while there's breath for it: let go when it's short, taken up again once it's back, so it
     // runs in long stretches and doesn't flicker between a run and a walk.)
-    this.running = w.run && a.mz > 0.6 && m.stam > (this.running ? 10 : 38);
+    // (The run-up to a ride on the shield is a few strides: it takes it on whatever breath it has.)
+    this.running = w.run && a.mz > 0.6 && m.stam > (this.running ? 10 : this.ride ? 12 : 38);
     a.run = this.running;
     this.unstick(dt, m, !surf);
     if (this.stuck.act > 0) {

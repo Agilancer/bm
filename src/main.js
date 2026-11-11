@@ -1571,7 +1571,9 @@ class GameView {
       case EV.SPELL_FIZZLE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.fizzle();
-        this.hud.tip('Not enough mana.', 1.2);
+        // (Yours comes with no place. One with a place is a caster of the dead's working, broken by a blow
+        // (src/sim/undead.js interrupt): heard, but it's not your mana that ran out.)
+        if (!a && !b && !c) this.hud.tip('Not enough mana.', 1.2);
         break;
       case EV.WHOOSH:
         au.play('attack', d === 1 ? null : a, b, c, d === 1 ? 0.8 : 0.9, d === 1 ? 0.92 : 1.05);
@@ -1745,7 +1747,10 @@ class GameView {
       case EV.SHIELD_BREAK:
         au.play('blocked', a, b, c, 1.4, 0.55);
         r.emit(2, 60, a, b, c, 0, 0.2, 0, 1.5, 1, 5, 0.0022, 0.005, 0.2, 0.6);
-        this.hud.tip('The guard is broken.', 2);
+        // (Yours, out of breath; or a knight's, opened up by a blow or a spell on his board.)
+        // (Only one near enough to be your doing, or your party's beside you.)
+        if (d > 0.5) this.hud.tip('Your guard is broken: out of breath.', 2);
+        else { const sn = this.currentSnap(); if (sn && Math.hypot(a - sn[H.PX], c - sn[H.PZ]) < 16) this.hud.tip('His guard is broken!', 2); }
         break;
       default: break;
     }

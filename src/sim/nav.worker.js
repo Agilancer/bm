@@ -7,11 +7,16 @@
 //          the office door, which the sim's own walkers only get through by walking straight at them.)
 //   probe  out past the grid, where only the pines and the places' walls stand in the way: which way to step, nearest the way
 //          wanted, that's clear for a few metres.
+//   sight  from its eye to each of a list of marks: is there a clean line for a shot, clear of walls, corners, pines and the
+//          rise of the ground by a hand's width either side; and if not, which way to step (and how far) to open one
+//          (src/sim/sight.js).
 //
 // Started only once someone has spoken the skull's word for auto-play: it costs a few seconds of a thread to build.
 import { NAV_CELL, NAV_H, NAV_W, NAV_X0, NAV_Z0, World } from './world.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { setOpeningTerrain, terrainHeight } from '../core/terrain.js';
+import { setHallDoor } from '../core/testhall.js';
+import { sight } from './sight.js';
 
 let world = null;
 const CELL = 0.5, BODY = 0.42, EDGE = 250;
@@ -196,7 +201,8 @@ function solidAt(x, z, r, y) {
     for (let j = cj - 1; j <= cj + 1; j++) {
       for (let i = ci - 1; i <= ci + 1; i++) {
         const list = world.trunkCell(i, j);
-        if (list) for (let k = 0; k < list.length; k += 3) if (Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return true;
+        // ([x, z, radius, top] each: World.trunkCell. A boulder lower than the feet isn't in their way.)
+        if (list) for (let k = 0; k < list.length; k += 4) if (y <= list[k + 3] && Math.hypot(x - list[k], z - list[k + 1]) < list[k + 2] + r) return true;
       }
     }
   }
@@ -276,7 +282,11 @@ function local(from, to) {
   return out;
 }
 
-self.onmessage = async (e) => {
+// For tests (tests/nav-ground.test.mjs): the same questions asked of a World built there, with no thread.
+export function navFor(w) { world = w; boxIndex = null; return { solidAt, clearFor, probe, local }; }
+
+// (A worker's own scope: not there when a test imports this file.)
+if (typeof self !== 'undefined') self.onmessage = async (e) => {
   const m = e.data;
   try {
     if (m.type === 'boot') {
@@ -292,6 +302,10 @@ self.onmessage = async (e) => {
       self.postMessage({ type: 'local', id: m.id, result: local(m.from, m.to) });
     } else if (m.type === 'probe') {
       self.postMessage({ type: 'probe', id: m.id, result: probe(m.x, m.z, m.y ?? 0, m.hx, m.hz, m.look || 5) });
+    } else if (m.type === 'sight') {
+      // (The Test Dungeon's door, as the page last saw it: shut, nothing's shot through it.)
+      setHallDoor(!!m.hallOpen);
+      self.postMessage({ type: 'sight', id: m.id, result: sight(world, m.from, m.marks) });
     }
   } catch (err) {
     self.postMessage({ type: m.type, id: m.id, result: null, error: String(err?.message || err) });
