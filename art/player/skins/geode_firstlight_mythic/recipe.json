@@ -8,7 +8,7 @@
  "defaults": {
   "cloth": {
    "swatch": "swatches/amethyst_facets.png",
-   "scale": 0.22,
+   "scale": 0.2,
    "tile": "repeat",
    "bright": 0.9,
    "shading": 0.95
@@ -32,7 +32,7 @@
    "pattern": {
     "image": "swatches/pat_crystals.png",
     "color": "#e3c98c",
-    "scale": 0.17,
+    "scale": 0.2,
     "strength": 0.3,
     "tile": "repeat"
    },
@@ -53,7 +53,14 @@
      "under_trim": false,
      "opacity": 1.0
     }
-   ]
+   ],
+   "cloth": {
+    "swatch": "swatches/amethyst_facets.png",
+    "scale": 0.2,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.95
+   }
   },
   "shoulders": {
    "cloth": {
@@ -86,8 +93,8 @@
    "pattern": {
     "image": "swatches/pat_crystals.png",
     "color": "#e3c98c",
-    "scale": 0.21,
-    "strength": 0.5,
+    "scale": 0.2,
+    "strength": 0.55,
     "tile": "repeat"
    },
    "decals": [

@@ -35,7 +35,7 @@
   "head": {
    "pattern": {
     "image": "swatches/rc_gems.png",
-    "color": "#e0c8cf",
+    "color": "#d6aeb8",
     "scale": 0.2,
     "strength": 0.26,
     "tile": "repeat"
@@ -91,9 +91,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/rc_gems.png",
-    "color": "#e0c8cf",
+    "color": "#d6aeb8",
     "scale": 0.2,
-    "strength": 0.45,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [
