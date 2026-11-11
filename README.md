@@ -1125,6 +1125,9 @@ To check it yourself:
   under the title, before anyone's looking, so the first fight starts at a resolution it can hold. A strong phone climbs to as
   much as 1.7 million pixels; a slow one drops multisampling, then grass and bloom, to as few as 0.23 million, which is the
   one step that gives up a good deal of the look: the field goes to a flat lawn.
+  A phone also holds less sound: only what a fight and a walk on dirt need is decoded ahead, the rest the first time it's
+  asked for (it plays a moment late, that once), and the title's song and bells are let go once the game begins and decoded
+  again for the menu. About 70 MB less decoded sound, measured in Chromium as a phone; not measured on one.
 - **Far bodies** (PCs). Past the distance where a 4.5 cm cell is under a pixel, a body is drawn with a welded mesh of
   a fifth of the triangles, and the far shadow cascade always uses it. Past 40 m a body's pose is made at most 65 times a
   second, past 90 m 33 (phones too), and it holds its pose between. Swords, shields, doors and stalls are left out of the view and

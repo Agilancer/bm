@@ -116,6 +116,9 @@ export class Audio {
     // (Beds, so the lands can bring them down indoors and under the ground: src/ui/lands.js sounds.)
     this.bed('birds', 0.16);
     this.bed('wind_calm', 0.34);
+    // A phone decodes each of the rest the first time it's asked for (it plays a moment late, that once): decoded, the lot
+    // is about 100 MB, most of it for grounds and spells a session never comes to.
+    if (PHONE) return;
     // The rest of the effects, a few at a time, out of the way of everything else loading.
     const rest = [...new Set(Object.values(BANKS).flat())].filter((k) => !CORE.has(k));
     const next = () => { const k = rest.shift(); if (k) this.fetchBuffer(k).catch(() => {}).then(() => setTimeout(next, 30)); };
