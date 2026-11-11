@@ -1,0 +1,121 @@
+{
+ "id": "hivehand_common",
+ "name": "Hivehand Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original bee stitch badge. Ochre body with dark yoke, honeycomb stitching along hems and guards. Intended as a common item alternative for the crimson palette.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#9a743a",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#474940",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#43372c",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/hivehand_common_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/hivehand_common.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#dfcb94",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#9a743a",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/hivehand_common_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/hivehand_common.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#dfcb94",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#474940",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/hivehand_common_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/hivehand_common.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#dfcb94",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/hivehand_common.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#dfcb94",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/hivehand_common.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#dfcb94",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#9a743a",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/hivehand_common_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#43372c",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/hivehand_common_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#43372c",
+    "shading": 0.18
+   }
+  }
+ }
+}

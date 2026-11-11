@@ -1,0 +1,85 @@
+{
+ "id": "flaxbinder_common",
+ "name": "Flaxbinder Common Gear",
+ "blurb": "Common-tier gear. Coarse flax window-check tunic, moss-green mantle, undyed cap and saddle leather. No added heraldry or precious trim.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/flaxbinder_common_cloth.png",
+   "tile": "repeat",
+   "scale": 0.3,
+   "bright": 1,
+   "shading": 0.7
+  },
+  "trim": {
+   "swatch": "swatches/flaxbinder_common_binding.png",
+   "tile": "repeat",
+   "scale": 0.1,
+   "bright": 0.85,
+   "shading": 0.35
+  },
+  "leather": {
+   "swatch": "swatches/flaxbinder_common_leather.png",
+   "tile": "repeat",
+   "scale": 0.12,
+   "bright": 1.1,
+   "shading": 0.75
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/flaxbinder_common_hat.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1,
+    "shading": 0.7
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/flaxbinder_common_mantle.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 1,
+    "shading": 0.7
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/flaxbinder_common_mantle.png",
+    "tile": "repeat",
+    "scale": 0.14,
+    "bright": 0.85,
+    "shading": 0.7
+   },
+   "leather": {
+    "swatch": "swatches/flaxbinder_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.96,
+    "shading": 0.7
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/flaxbinder_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1,
+    "shading": 0.7
+   },
+   "leather": {
+    "swatch": "swatches/flaxbinder_common_leather.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 1.08,
+    "shading": 0.7
+   }
+  }
+ }
+}

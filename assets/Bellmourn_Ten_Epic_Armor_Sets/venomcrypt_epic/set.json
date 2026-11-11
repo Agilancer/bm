@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "venomcrypt_epic",
+ "name": "Venomcrypt Hierophant",
+ "blurb": "Epic-tier appearance. Poison-green scales, pale jade skulls and serpentine brocade.",
+ "wears": {
+  "palette": "moss"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

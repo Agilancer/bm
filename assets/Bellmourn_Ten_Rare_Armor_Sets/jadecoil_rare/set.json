@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "jadecoil_rare",
+ "name": "Jadecoil Custodian",
+ "blurb": "Rare-tier appearance. Jade scale silk, antique gold, dark verdigris guards and leaf crests.",
+ "wears": {
+  "palette": "moss"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "astralkey_epic",
+ "name": "Astralkey Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original ornate key stitch badge. Pearl ivory and sapphire panels, interlocked maze brocade, gilded shoulder plates and blue enamel clasps. Intended as an epic item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

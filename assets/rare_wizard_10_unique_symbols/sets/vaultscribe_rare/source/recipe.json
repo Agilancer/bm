@@ -1,0 +1,121 @@
+{
+ "id": "vaultscribe_rare",
+ "name": "Vaultscribe Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original open book stitch badge. Warm bronze cloth, ink-blue scholar panels, rectangular fretwork and gold-bound cuffs. Intended as a rare item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#876d40",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#3b4c5c",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#3b322a",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/vaultscribe_rare_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/vaultscribe_rare.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#d9c598",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#876d40",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/vaultscribe_rare_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/vaultscribe_rare.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#d9c598",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#3b4c5c",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/vaultscribe_rare_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/vaultscribe_rare.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#d9c598",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/vaultscribe_rare.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#d9c598",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/vaultscribe_rare.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#d9c598",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#876d40",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/vaultscribe_rare_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#3b322a",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/vaultscribe_rare_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#3b322a",
+    "shading": 0.18
+   }
+  }
+ }
+}

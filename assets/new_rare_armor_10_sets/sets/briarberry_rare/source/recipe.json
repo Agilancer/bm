@@ -1,0 +1,167 @@
+{
+ "id": "briarberry_rare",
+ "name": "Briarberry",
+ "blurb": "Rare gear. Mulberry twill, sage shoulders, tarnished silver and berry-cluster embroidery. Original berry branch crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/briarberry_rare_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/briarberry_rare_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/briarberry_rare_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.18,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/briarberry_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/briarberry_rare.png",
+     "anchor": "hat",
+     "size": 0.083,
+     "mode": "gilt",
+     "color": "#e0d6d4",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/briarberry_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/briarberry_rare_pattern.png",
+    "color": "#b9adba",
+    "scale": 0.23,
+    "strength": 0.13,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/briarberry_rare.png",
+     "anchor": "shoulder_left",
+     "size": 0.08,
+     "mode": "gilt",
+     "color": "#e0d6d4",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/briarberry_rare_pattern.png",
+    "color": "#a4819b",
+    "scale": 0.24,
+    "strength": 0.22,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/briarberry_rare.png",
+     "anchor": "chest",
+     "size": 0.18,
+     "mode": "gilt",
+     "color": "#e0d6d4",
+     "under_trim": false
+    },
+    {
+     "image": "decals/briarberry_rare.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "gilt",
+     "color": "#e0d6d4",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/briarberry_rare.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "gilt",
+     "color": "#e0d6d4",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/briarberry_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/briarberry_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.86,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/briarberry_rare_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.7,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/briarberry_rare_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/briarberry_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.14,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

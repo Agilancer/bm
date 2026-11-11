@@ -1,0 +1,97 @@
+{
+ "id": "copperleaf_rover",
+ "name": "Copperleaf Rover",
+ "blurb": "Autumn bronze twill, pale flax edging, pine mantle, chestnut leather and leaf embroidery.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/copperleaf_rover_cloth.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05
+  },
+  "trim": {
+   "color": "#cec39a"
+  },
+  "leather": {
+   "swatch": "swatches/copperleaf_rover_leather.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.05,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/leaf.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#c18b57"
+    }
+   ],
+   "cloth": {
+    "color": "#465a35"
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/copperleaf_rover_mantle.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.05
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/copperleaf_rover_pattern.png",
+    "color": "#c18b57",
+    "scale": 0.3,
+    "strength": 0.34,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/leaf.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#c18b57"
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "color": "#384e35"
+   },
+   "leather": {
+    "swatch": "swatches/copperleaf_rover_leather.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.85,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/copperleaf_rover_leather.png",
+    "scale": 0.13,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.18,
+    "keep": 0.15
+   },
+   "trim": {
+    "color": "#c18b57"
+   }
+  }
+ }
+}

@@ -1,0 +1,175 @@
+{
+ "id": "scrollbound_epic",
+ "name": "Scrollbound Magistrate",
+ "blurb": "Epic gear. Parchment-colored twill, ink-grey mantle and intricate brass scrollwork. Original unfurled scroll crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/scrollbound_epic_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/scrollbound_epic_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.07,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/scrollbound_epic_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.18,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/scrollbound_epic_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/scrollbound_epic.png",
+     "anchor": "hat",
+     "size": 0.083,
+     "mode": "gilt",
+     "color": "#294451",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/scrollbound_epic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/scrollbound_epic_pattern.png",
+    "color": "#c5b68c",
+    "scale": 0.23,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/scrollbound_epic.png",
+     "anchor": "shoulder_left",
+     "size": 0.08,
+     "mode": "gilt",
+     "color": "#e5decf",
+     "under_trim": false
+    },
+    {
+     "image": "decals/scrollbound_epic.png",
+     "anchor": "shoulder_right",
+     "size": 0.08,
+     "mode": "gilt",
+     "color": "#e5decf",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/scrollbound_epic_pattern.png",
+    "color": "#aaa48c",
+    "scale": 0.27,
+    "strength": 0.38,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/scrollbound_epic.png",
+     "anchor": "chest",
+     "size": 0.18,
+     "mode": "gilt",
+     "color": "#294451",
+     "under_trim": false
+    },
+    {
+     "image": "decals/scrollbound_epic.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "gilt",
+     "color": "#294451",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/scrollbound_epic.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "gilt",
+     "color": "#294451",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/scrollbound_epic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/scrollbound_epic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.86,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/scrollbound_epic_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.7,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/scrollbound_epic_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/scrollbound_epic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.14,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

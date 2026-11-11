@@ -1,0 +1,18 @@
+{
+ "format": "bm-wizard-skin/1",
+ "id": "garnet_court",
+ "name": "Garnet Court",
+ "blurb": "Garnet velvet brocade, champagne gold, plum mantle and a flame crest.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "pieces": [
+  "head",
+  "shoulders",
+  "chest",
+  "legs",
+  "feet"
+ ],
+ "size": 2048,
+ "made": "2026-11-10"
+}

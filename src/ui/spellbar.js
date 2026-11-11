@@ -1,51 +1,27 @@
-// Six numbered spell slots along the bottom of the screen, the mana beside the life, and the menu that fills them from all twenty.
+// Six numbered spell slots along the bottom of the screen, the mana beside the life, what's on you and what's cooling, and the
+// book that fills the slots from the spells you've learned in the six trees (src/ui/skilltree.js draws the trees in it).
 import { H, INPUT } from '../core/layout.js';
 import { SPELLS } from '../sim/spells.js';
-
-// A test build: every spell known from the start. Turn this off and they're found as scrolls again.
-export const ALL_SPELLS = true;
+import { SCROLLS, STARTERS } from '../sim/skills.js';
+import { BUFFS } from '../sim/treespells.js';
+import { SkillBook } from '../items/skillbook.js';
+import { COLOURS, glyph } from './spellglyphs.js';
+import { SkillTree } from './skilltree.js';
 
 const $ = (id) => document.getElementById(id);
-const COLOURS = ['#ff9a3c', '#8fd4ff', '#d27bff', '#a79bff', '#a4ec7a', '#ffd98a', '#ff5563', '#d6eab6', '#a071ff', '#a7ee4a', '#7bebff', '#d8b184'];
-
-// Glyphs on a 24 box. `s` is drawn as lines, the rest filled.
-const GLYPHS = {
-  firebolt: 'M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-4 3-7 1 2 2 3 3 3 0-3-1-5 0-8z',
-  frost: 'M12 2l2 8-2 3-2-3zM4 8l7 5-1 3-4-2zM20 8l-7 5 1 3 4-2zM12 14l2 4-2 4-2-4z',
-  lightning: 'M13 2l-5 10h4l-2 10 7-13h-4l2-7zM5 7a9 9 0 0 0-1 10l1.500-1a7 7 0 0 1 1-8zM19 7a9 9 0 0 1 1 10l-1.500-1a7 7 0 0 0-1-8z',
-  mend: 'M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z',
-  wisp: 'M12 2l2 7 7 3-7 3-2 7-2-7-7-3 7-3z',
-  wallfire: 'M5 22c-3-3-1-6 0-8 1 1 2 2 2 3 1-1 1-3 1-5 2 3 3 7 1 10zM12 22c-3-3-1-7 0-10 1 1 2 2 2 4 1-2 1-5 0-8 3 4 4 10 1 14zM19 22c-3-3-1-6 0-8 1 1 2 2 2 3 1 2 1 4-1 5z',
-  missiles: 'M2 5l8 2-4 4zM9 12l8 2-4 4zM15 3l7 2-3 3z',
-  arcaneblast: 'M2 12l19-9-5 9 5 9z',
-  firebeam: 'M2 12l6-3 14-2v10L8 15zM3 6l3 1-1 1zM3 18l3-1-1-1z',
-  chain: 'M4 2l6 7-3 2 6 5-2 2 8 4-4-7 2-1-6-6 2-2z',
-  nova: 's:M12 2v20M3 7l18 10M21 7L3 17M12 6l-2-2M12 6l2-2M12 18l-2 2M12 18l2 2',
-  meteor: 'M11 10a6 6 0 1 0 .01 0zM8 10L20 2l-5 7 7-3-8 7z',
-  blizzard: 's:M6 11a4 4 0 0 1 1-8 5 5 0 0 1 10 1 4 4 0 0 1 0 7zM7 14l-1 4M12 14l-1 7M17 14l-1 4',
-  drain: 'M12 2c4 6 7 9 7 13a7 7 0 0 1-14 0c0-4 3-7 7-13z',
-  blink: 's:M2 12h3M7 12h3M12 12h3M17 6l5 6-5 6',
-  lance: 'M22 2l-6 2L2 19l3 3L20 8z',
-  well: 's:M12 12a1 1 0 0 1 2 1 3 3 0 0 1-5 1 5 5 0 0 1 6-7 7 7 0 0 1 3 10 9 9 0 0 1-13 1',
-  plague: 'M9 2h6v2l-1 1v5l6 9a2 2 0 0 1-2 3H6a2 2 0 0 1-2-3l6-9V5L9 4z',
-  blades: 'M5 2l14 16-2 2L3 4zM19 2L5 18l2 2L21 4z',
-  spikes: 'M2 22l4-13 3 13zM8 22l5-20 4 20zM16 22l3-11 3 11z',
-};
-
-const glyph = (def) => {
-  const g = GLYPHS[def.key], line = g.startsWith('s:');
-  const attrs = line ? 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"' : 'fill="currentColor"';
-  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path ${attrs} d="${line ? g.slice(2) : g}"/></svg>`;
-};
+// The spell that puts each of BUFFS on you, for its picture over the bar.
+const BUFF_SPELL = { haste: 'fleet', stone: 'stoneskin', aegis: 'aegis', renew: 'renew', might: 'empower', inferno: 'inferno', static: 'staticfield', still: 'stillness', guard: 'nova' };
 
 const SLOTS = 6;
 
 export class SpellBar {
-  // openBook and closeBook stop and start the game around the equip menu, as the pack does.
-  constructor(shared, input, { openBook, closeBook, tip }) {
+  // openBook and closeBook stop and start the game around the book, as the pack does. level: () => your level; gold: { have(),
+  // pay(n) }, for unlearning; sound(name).
+  constructor(shared, input, { openBook, closeBook, tip, level, gold, sound }) {
     this.shared = shared; this.input = input; this.tip = tip;
-    this.loadout = ALL_SPELLS ? [0, 1, 2, 3, 4, 5] : [-1, -1, -1, -1, -1, -1];   // what's in each slot: a spell, or -1
-    this.known = new Set(ALL_SPELLS ? SPELLS.map((_, i) => i) : []);              // the spells found so far
+    // What you've learned (src/items/skillbook.js). A new game knows the first spell of each school, and has them on the bar.
+    this.skills = new SkillBook(level);
+    this.loadout = STARTERS.slice(0, SLOTS);   // what's in each slot: a spell, or -1
     this.now = 0;                        // the slot F and the middle button cast
     this.i = 0;                          // and the spell in it
     this.armed = -1;                     // in the menu: the spell picked up, waiting for a slot
@@ -55,6 +31,10 @@ export class SpellBar {
     // (The touch layer lies over the HUD, so on a touch screen the slots have to live on it.)
     if (input.touch) $('touch').appendChild(this.el);
     this.manaEl = $('mana').firstElementChild;
+    this.buffEl = document.createElement('div');
+    this.buffEl.id = 'buffs';
+    this.el.appendChild(this.buffEl);
+    this.buffShown = '';
     this.slots = [];
     const lift = () => this.release('pointer');
     window.addEventListener('mouseup', lift);
@@ -86,19 +66,13 @@ export class SpellBar {
     this.nameEl.id = 'spellName';
     this.el.appendChild(this.nameEl);
 
-    // The equip menu: the six slots across the top and all twenty below. Pick one up and put it in a slot, or drag it there, or press 1 to 6 over it.
+    // The book: the six slots across the top, and under them the six trees (src/ui/skilltree.js). Pick a spell you know and
+    // put it in a slot, or drag it there, or press 1 to 6 over it.
     this.loadEl = $('spellSlots');
     this.loadEl.innerHTML = this.slots.map((_, k) => `<button class="lslot" data-k="${k}"></button>`).join('');
     this.hintEl = $('spellHint');
-    this.cards = $('spellGrid');
-    this.cards.innerHTML = SPELLS.map((d, i) => `<button class="card" data-i="${i}" style="--c:${COLOURS[d.elem]}"><span class="ic">${glyph(d)}</span><span class="tx"><b>${d.name}</b><i>${d.hands === 2 ? 'two hands' : 'one hand'} &middot; ${d.mana}${d.channel ? ` +${d.drain}/s` : ''} mana</i><span>${d.desc}</span></span><kbd></kbd></button>`).join('');
-    this.cards.addEventListener('click', (e) => {
-      const c = e.target.closest('.card');
-      if (!c || this.dragged) return;
-      this.armed = this.armed === +c.dataset.i ? -1 : +c.dataset.i;
-      this.drawMenu();
-    });
-    this.cards.addEventListener('mouseover', (e) => { const c = e.target.closest('.card'); this.hover = c ? +c.dataset.i : -1; });
+    this.tree = new SkillTree(this, { tip, gold, sound });
+    this.skills.onChange = () => this.refresh();
     this.loadEl.addEventListener('click', (e) => {
       const b = e.target.closest('.lslot');
       if (!b || this.dragged) return;
@@ -142,6 +116,22 @@ export class SpellBar {
 
   // ---- the bar ----
 
+  /** The spells you can cast, by their place in SPELLS (as a Set: the shops and auto-play read it). */
+  get known() { return (this.knownNow ||= this.skills.knownSet()); }
+  /** Spell i's numbers as you cast it. */
+  def(i) { return this.skills.spells()[i]; }
+
+  // Something's been learned, raised or unlearned: the sim hears of it (onSkills: src/main.js), a spell no longer known
+  // comes off the bar, and everything's drawn again.
+  refresh() {
+    this.knownNow = null;
+    this.loadout = this.loadout.map((i) => (i >= 0 && this.skills.known(i) ? i : -1));
+    if (this.loadout[this.now] < 0) this.now = Math.max(0, this.loadout.findIndex((v) => v >= 0));
+    this.onSkills?.(this.skills.ranks);
+    this.setSpell(this.loadout[this.now] ?? -1);
+    this.drawMenu();
+  }
+
   // The slot's button or key: its spell, cast at once, and for as long as it's held.
   press(k, by) {
     if (!this.input.enabled || this.input.menu) return;
@@ -171,7 +161,7 @@ export class SpellBar {
     }
   }
 
-  // bm.spell() reaches any of the twenty, slotted or not.
+  // bm.spell() reaches any spell, slotted or not.
   pick(i) {
     const k = this.loadout.indexOf(i);
     if (k >= 0) this.now = k;
@@ -187,23 +177,40 @@ export class SpellBar {
   draw() {
     this.slots.forEach((s, k) => {
       const d = SPELLS[this.loadout[k]];
-      s.innerHTML = `<b>${k + 1}</b>${d ? glyph(d) : ''}`;
+      s.innerHTML = `<b>${k + 1}</b>${d ? glyph(d) : ''}<i class="cd"></i>`;
       s.classList.toggle('now', k === this.now && !!d);
       s.classList.toggle('empty', !d);
       if (d) s.style.setProperty('--c', COLOURS[d.elem]);
     });
-    const d = SPELLS[this.i];
-    this.nameEl.textContent = this.loadout[this.now] >= 0 ? `${d.name} · ${d.mana}${d.channel ? ` +${d.drain}/s` : ''}` : '';
+    const d = this.def(this.i);
+    this.nameEl.textContent = d && this.loadout[this.now] >= 0 ? `${d.name} · ${d.mana}${d.channel ? ` +${Math.round(d.drain)}/s` : ''}` : '';
     this.drawnShort = [];
+    this.drawnCool = [];
     this.drawnUp = -1;
+    // (Points waiting to be spent show on the book's button.)
+    const open = $('spellOpen'), pts = this.skills.points;
+    if (open) { open.classList.toggle('pts', pts > 0); open.dataset.n = pts > 0 ? `+${pts}` : ''; }
   }
 
   update(snap) {
     const m = snap[H.MANA];
     this.manaEl.style.transform = `scaleX(${Math.max(0, Math.min(1, m / (snap[H.MAX_MANA] || 1)))})`;
     for (let k = 0; k < SLOTS; k++) {
-      const d = SPELLS[this.loadout[k]], short = !!d && m < d.mana;
+      const i = this.loadout[k], d = i >= 0 ? this.def(i) : null, short = !!d && m < d.mana;
       if (short !== this.drawnShort[k]) { this.drawnShort[k] = short; this.slots[k].classList.toggle('short', short); }
+      // How long till it's ready again, counted down over its picture.
+      const cool = d ? Math.ceil(snap[H.COOL + i] - 0.05) : 0;
+      if (cool !== this.drawnCool[k]) { this.drawnCool[k] = cool; this.slots[k].classList.toggle('cool', cool > 0); this.slots[k].lastElementChild.textContent = cool > 0 ? cool : ''; }
+    }
+    // What's on you, over the bar: its spell's picture and the seconds left of it.
+    let on = '';
+    for (let b = 0; b < BUFFS.length; b++) { const left = snap[H.BUFFS + b]; if (left > 0) on += `${b}:${Math.ceil(left)} `; }
+    if (on !== this.buffShown) {
+      this.buffShown = on;
+      this.buffEl.innerHTML = on.trim().split(' ').filter(Boolean).map((p) => {
+        const [b, left] = p.split(':'), d = SPELLS.find((q) => q.key === BUFF_SPELL[BUFFS[+b]]);
+        return `<span style="--c:${COLOURS[d.elem]}" title="${d.name}">${glyph(d)}<i>${left}</i></span>`;
+      }).join('');
     }
     const up = snap[H.SPELL_RIG] > 0 ? this.now : -1;
     if (up !== this.drawnUp) {
@@ -234,16 +241,10 @@ export class SpellBar {
       b.classList.toggle('empty', !d);
       if (d) b.style.setProperty('--c', COLOURS[d.elem]);
     });
-    [...this.cards.children].forEach((c, i) => {
-      const k = this.loadout.indexOf(i);
-      c.querySelector('kbd').textContent = k >= 0 ? k + 1 : '';
-      c.classList.toggle('on', i === this.armed);
-      c.classList.toggle('slotted', k >= 0);
-      c.style.display = this.known.has(i) ? '' : 'none';
-    });
     this.hintEl.textContent = this.armed >= 0
       ? `${SPELLS[this.armed].name}: now choose its slot.`
-      : (this.input.touch ? 'Tap a spell, then a slot. Tap a slot on its own to empty it.' : 'Click a spell, then a slot, or drag it there, or press 1 to 6 over it. Click a slot on its own to empty it.');
+      : (this.input.touch ? 'Tap a spell you know, then a slot. Tap a slot on its own to empty it.' : 'Click a spell you know, then a slot, or drag it there, or press 1 to 6 over it. Click a slot on its own to empty it.');
+    this.tree?.draw();
   }
 
   // A spell dragged with the mouse, from the list or from another slot. (On a touch screen a finger's drag scrolls the list.)
@@ -252,9 +253,9 @@ export class SpellBar {
     let from = -1, sx = 0, sy = 0, going = false;
     book.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'mouse' || e.button !== 0) return;
-      const card = e.target.closest('.card'), slot = e.target.closest('.lslot');
+      const node = e.target.closest('.tnode.known[data-spell]'), slot = e.target.closest('.lslot');
       this.dragged = false;
-      from = card ? +card.dataset.i : slot ? this.loadout[+slot.dataset.k] : -1;
+      from = node ? +node.dataset.spell : slot ? this.loadout[+slot.dataset.k] : -1;
       sx = e.clientX; sy = e.clientY; going = false;
     });
     window.addEventListener('pointermove', (e) => {
@@ -284,27 +285,27 @@ export class SpellBar {
 
   // ---- the save ----
 
-  save() { return { loadout: this.loadout.slice(), now: this.now, known: [...this.known] }; }
+  save() { return { loadout: this.loadout.slice(), now: this.now, skills: this.skills.save() }; }
 
+  // (A save from before the trees has no `skills`: it starts with the six first spells, and every point its level has
+  // earned waiting to be spent. What was on its bar and isn't known any more comes off it.)
   load(d) {
     const ok = Array.isArray(d?.loadout) && d.loadout.length === SLOTS && d.loadout.every((v) => Number.isInteger(v) && v >= -1 && v < SPELLS.length);
-    const empty = ALL_SPELLS && (!ok || d.loadout.every((v) => v < 0));
-    this.loadout = empty ? [0, 1, 2, 3, 4, 5] : ok ? d.loadout.slice() : [-1, -1, -1, -1, -1, -1];
-    // (A save from before spells were found knows them all.)
-    this.known = new Set(ALL_SPELLS ? SPELLS.map((_, i) => i) : Array.isArray(d?.known) ? d.known : ok ? SPELLS.map((_, i) => i) : []);
-    this.now = ok && this.loadout[d.now] >= 0 ? d.now : Math.max(0, this.loadout.findIndex((v) => v >= 0));
-    this.setSpell(this.loadout[this.now] ?? -1);
-    this.drawMenu();
+    this.loadout = ok ? d.loadout.slice() : STARTERS.slice(0, SLOTS);
+    this.now = ok && Number.isInteger(d.now) && d.now >= 0 && d.now < SLOTS ? d.now : 0;
+    this.skills.load(d?.skills ?? null);       // (refresh() comes of it: the bar's drawn and the sim's told)
+    if (this.loadout.every((v) => v < 0)) { this.loadout = STARTERS.slice(0, SLOTS); this.now = 0; this.refresh(); }
   }
 
-  // Read a scroll. Into the first empty slot, if there is one. False if you knew it already.
+  // Read a scroll: the spell's first rank, for nothing, and into the first empty slot if there is one. False if you knew it
+  // already, or aren't yet of a level to make sense of it (canRead).
   learn(i) {
-    if (this.known.has(i)) return false;
-    this.known.add(i);
+    if (!this.skills.teach(i)) return false;
     const k = this.loadout.indexOf(-1);
-    if (k >= 0) { this.loadout[k] = i; if (this.loadout[this.now] < 0) this.now = k; }
-    this.setSpell(this.loadout[this.now] ?? -1);
-    this.drawMenu();
+    if (k >= 0) { this.loadout[k] = i; if (this.loadout[this.now] < 0) this.now = k; this.setSpell(this.loadout[this.now]); this.drawMenu(); }
     return true;
   }
+  canRead(i) { return this.skills.canRead(i); }
+  /** The spells no scroll is any use for now: known already, never written down, or past your level to read. For the shops. */
+  noScroll() { const out = new Set(); SPELLS.forEach((_, i) => { if (!SCROLLS.includes(i) || this.skills.known(i) || !this.skills.canRead(i)) out.add(i); }); return out; }
 }

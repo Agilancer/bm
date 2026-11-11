@@ -1,0 +1,121 @@
+{
+ "id": "shellpath_common",
+ "name": "Shellpath Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original spiral shell stitch badge. Grey-green body, slate shoulders, scalloped borders and cuff bands. Intended as a common item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "color": "#777f7a",
+   "shading": 0.18
+  },
+  "trim": {
+   "color": "#485d63",
+   "shading": 0.18
+  },
+  "leather": {
+   "color": "#534437",
+   "shading": 0.18
+  },
+  "keep_trim": false
+ },
+ "parts": {
+  "head": {
+   "skin": "skins/shellpath_common_head.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/shellpath_common.png",
+     "anchor": "hat",
+     "size": 0.075,
+     "mode": "gilt",
+     "color": "#d4c9a6",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#777f7a",
+    "shading": 0.18
+   }
+  },
+  "shoulders": {
+   "skin": "skins/shellpath_common_shoulders.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/shellpath_common.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "gilt",
+     "color": "#d4c9a6",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#485d63",
+    "shading": 0.18
+   }
+  },
+  "chest": {
+   "skin": "skins/shellpath_common_chest.png",
+   "skin_detail": 0.05,
+   "decals": [
+    {
+     "image": "decals/shellpath_common.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#d4c9a6",
+     "under_trim": false,
+     "opacity": 0.95
+    },
+    {
+     "image": "decals/shellpath_common.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "gilt",
+     "color": "#d4c9a6",
+     "under_trim": false,
+     "opacity": 0.95,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/shellpath_common.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "gilt",
+     "color": "#d4c9a6",
+     "under_trim": false,
+     "opacity": 0.95
+    }
+   ],
+   "cloth": {
+    "color": "#777f7a",
+    "shading": 0.18
+   }
+  },
+  "legs": {
+   "skin": "skins/shellpath_common_legs.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#534437",
+    "shading": 0.18
+   }
+  },
+  "feet": {
+   "skin": "skins/shellpath_common_feet.png",
+   "skin_detail": 0.05,
+   "cloth": {
+    "color": "#534437",
+    "shading": 0.18
+   }
+  }
+ }
+}

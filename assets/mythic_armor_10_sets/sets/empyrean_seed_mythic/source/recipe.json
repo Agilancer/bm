@@ -1,0 +1,207 @@
+{
+ "id": "empyrean_seed_mythic",
+ "name": "Empyrean Seed",
+ "blurb": "Mythic gear. Royal-blue and solar-amber silk, platinum seed-filament weave and matching enamel crests. Original dandelion seedhead crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/empyrean_seed_mythic_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.06,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/empyrean_seed_mythic_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/empyrean_seed_mythic_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.86,
+   "keep": 0.07
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/empyrean_seed_mythic_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/empyrean_seed_mythic_pattern.png",
+    "color": "#d9dcd4",
+    "scale": 0.22,
+    "strength": 0.52,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/empyrean_seed_mythic.png",
+     "anchor": "hat",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#f2eee3",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/empyrean_seed_mythic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/empyrean_seed_mythic_pattern.png",
+    "color": "#d9dcd4",
+    "scale": 0.23,
+    "strength": 0.82,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/empyrean_seed_mythic.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#f2eee3",
+     "under_trim": false
+    },
+    {
+     "image": "decals/empyrean_seed_mythic.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "gilt",
+     "color": "#f2eee3",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/empyrean_seed_mythic_pattern.png",
+    "color": "#d9dcd4",
+    "scale": 0.3,
+    "strength": 0.82,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/empyrean_seed_mythic.png",
+     "anchor": "chest",
+     "size": 0.19,
+     "mode": "gilt",
+     "color": "#f2eee3",
+     "under_trim": false
+    },
+    {
+     "image": "decals/empyrean_seed_mythic.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "gilt",
+     "color": "#f2eee3",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/empyrean_seed_mythic.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "gilt",
+     "color": "#f2eee3",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/empyrean_seed_mythic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.93,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/empyrean_seed_mythic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.84,
+    "keep": 0.07
+   },
+   "trim": {
+    "swatch": "swatches/empyrean_seed_mythic_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.7,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/empyrean_seed_mythic.png",
+     "anchor": "knee_left",
+     "size": 0.055,
+     "mode": "gilt",
+     "color": "#f2eee3",
+     "under_trim": false
+    },
+    {
+     "image": "decals/empyrean_seed_mythic.png",
+     "anchor": "knee_right",
+     "size": 0.055,
+     "mode": "gilt",
+     "color": "#f2eee3",
+     "under_trim": false
+    }
+   ],
+   "pattern": {
+    "image": "swatches/empyrean_seed_mythic_pattern.png",
+    "color": "#d9dcd4",
+    "scale": 0.3,
+    "strength": 0.68,
+    "tile": "repeat"
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/empyrean_seed_mythic_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/empyrean_seed_mythic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.16,
+    "shading": 0.85,
+    "keep": 0.08
+   }
+  }
+ }
+}
