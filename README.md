@@ -227,7 +227,31 @@ After the cave falls in, she leads you down to Bellmourn (`escort` in `src/sim/o
 
 In the pines the dead come up out of the ground (`fight` in `src/sim/opening.js`, `openingRaise` in `src/sim/undead.js`): twenty, five at a time; when eight or fewer are left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out of the trees on each side of the road, who raise what's fallen. All of them are easy, and on the way down you can't die. Lisandra stands with you and throws a weak fire bolt every couple of seconds. Bodies are kept for it (`reserve` in `BODIES`: nine more of the dead, ten children, two necromancers), and the woods' own packs hold off until she has you in town. Then she tells you why the dead walk, and you go on to the town's edge and her quest.
 
-A gold dotted line on the ground leads to whatever the quest you follow wants of you now (`src/ui/trail.js`, drawn in `src/gfx/trail.js`). In the journal (J), tap a quest to follow it, or the same one again to hide the trail; a new quest is followed as you take it, unless you're on Lisandra's round of the town, which stays followed (it leads to whoever you've still to see, nearest first). Before any work, it leads to Lisandra where the road comes into town, or to Bram at the inn. In the opening it runs down the road after Lisandra. In town it goes round the houses by the townsfolk's own walking grid (a route asked of `src/folk/folk.worker.js`), out past the town along the roads and paths where they're shorter, and into the cathedral by its own way down to the Bell Crypt (by the Sexton's Door once you have his key).
+A gold dotted line on the ground leads to whatever the quest you follow wants of you now (`src/ui/trail.js`, drawn in `src/gfx/trail.js`). In the quest log (J), **Follow trail** on a quest follows it, and **Hide trail** puts it away; a new quest is followed as you take it, unless you're on Lisandra's round of the town, which stays followed (it leads to whoever you've still to see, nearest first). Before any work, it leads to Lisandra where the road comes into town, or to Bram at the inn. In the opening it runs down the road after Lisandra. In town it goes round the houses by the townsfolk's own walking grid (a route asked of `src/folk/folk.worker.js`), out past the town along the roads and paths where they're shorter, and into the cathedral by its own way down to the Bell Crypt (by the Sexton's Door once you have his key).
+
+### The quest log
+
+**J**, or the scroll beside the spellbook's **B** on the spell bar (the only way to it on a phone), opens the quest log
+(`drawBook` in `src/ui/folk.js`; its workings, testable without a page, in `src/ui/questlog.js`, checked by
+`tests/quest-log.test.mjs`). J, Esc or its × shuts it.
+
+- **Each quest you've taken on** has a card: its name, who gave it and what it pays (and the level auto-play takes it at,
+  as a suggestion, when that's above yours), what it's about (`about` on each quest in `src/folk/lines/`), its steps so far
+  (the ones done ticked off, the one you're on with its count), and where it takes place now.
+- **Map** shuts the log and opens the big map framed on that place, with a gold pin and its name on each spot (`showPlace`
+  in `src/ui/map.js`): the person to see (followed as they walk about), the Sexton's Door, the catacombs, a site out in the
+  land with a ring round it where anywhere near counts, or every seal still to wake. It shows the place whether you've been
+  there or not, the land instead of a chart when you're under a roof and it isn't, and an arrow at the rim for a spot that's
+  off the edge. The pins go when the map's shut.
+- **Follow trail** lays the gold trail to it (see above); the quest followed is marked.
+- **Auto-play.** Along the top: what it's working on, or that it's off. The quest it's on has a blue mark and its own line
+  of what it's doing (`doing` in `src/ui/autobrain.js`, which tags every job with the quest it's for; `current` in
+  `src/ui/autoplay.js`). The log is drawn again when that changes.
+- **Hint**, below, while you've nothing taken on: what you should be doing (`hintOf`). In the cave, hear Lisandra out; on
+  the road, follow her down; in town, see her where the road comes in, or Bram at the inn; after that, everyone with work to
+  give you, the work that suits your level first, each with a Map (and the woods, for a level or two, when it's all beyond
+  you yet); and once every quest is done, the Warrens and the knight on the cathedral steps.
+- Then the quests done, the papers kept, and the satchel.
 
 ### The cathedral and the catacombs
 
@@ -288,7 +312,7 @@ game starts; the rest come in the background once it has.
   The portcullis is the Test Dungeon's door. Not used anywhere yet: the sea's three beds, the beach's plain and stormy ones, the rain and storm beds
   for a house, the cave in the rain, the river stream, the chest closing, the sword sheathed, the bow's shot and its block.
 - **400 Sounds Pack** (`tools/audio/build_extra_sfx.py`; the zip carries no licence): coins, gems and orbs picked up and landing, a
-  scroll, robe, skull or staff taken, the spellbook and the journal, the big map, bone snapping and gore on the undead.
+  scroll, robe, skull or staff taken, the spellbook and the quest log, the big map, bone snapping and gore on the undead.
 - **MenuSFX** by Kevin Fowler (CC BY): the clicks of the game's own panels (`ui_*`). The title and the pause menu keep their own.
 
 ### The title, saves and settings
@@ -324,7 +348,7 @@ To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) 
 
 `src/ui/map.js`. A round map in the corner turns with you; **M** (MAP on a phone) opens the big one, and M or its × shuts it. Only what you've walked near is drawn, and what you've seen is kept in a save.
 
-The big map is looked about freely. The **wheel** (or a **pinch**, or its + and − buttons, or the + and − keys) brings it nearer and further, from 60 m across to the whole land. A **drag** moves it: with the mouse held by the game, hold the left button and move the mouse (the sword stays still while the map's up, `mapUp` in `src/input.js`). It follows you until you move it; a double click, a double tap, **Home** or the ring button brings it back to you, and when you're off its edge a small arrow on the rim points your way. It has a title (the country, or the place), a scale bar and north.
+The big map is looked about freely. The **wheel** (or a **pinch**, or its + and − buttons, or the + and − keys) brings it nearer and further, from 60 m across to the whole land. A **drag** moves it: with the mouse held by the game, hold the left button and move the mouse (the sword stays still while the map's up, `mapUp` in `src/input.js`). It follows you until you move it; a double click, a double tap, **Home** or the ring button brings it back to you, and when you're off its edge a small arrow on the rim points your way. Opened from the quest log's **Map**, it's framed on where that quest takes place, with gold pins (see "The quest log"). It has a title (the country, or the place), a scale bar and north.
 
 Under a roof both maps show the place's own chart instead, as Bellmourn's map does below ground: the passages and rooms come out of the dark as you walk them (`src/ui/undermap.js`). There's one chart each for the cathedral and its catacombs, the Hollowfang Warrens and the Test Dungeon, half a metre to a cell, made from the place's own shape: the church's floors and colliders in `interior.json`, the warrens' and the hall's fields. The filling-in runs along the floor from where you stand, 16 m at most, so it stops at walls and you never see into a room you haven't found the way to. Stone is warm near the surface and cold deep down, stairs are banded, a drop is red, doors are gold ticks, and rooms are named once you've stood in them. A new place under a roof wants a `Chart` there and a line in `chartAt`.
 
@@ -341,7 +365,8 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   leads, coming up to her when she stops for it. It walks her steps; once on the road it rides its shield down the
   steep stretches, so she rides hers; and it fights the road's waves of the dead as it fights the woods'. In town it
   takes her round of the townsfolk first.
-- **Quests.** It takes every quest the town has, talks each step through, and hands in. It does them in an order that suits
+- **Quests.** It takes every quest the town has, talks each step through, and hands in. The quest log (J) marks the one
+  it's working on, and says what it's doing about it. It does them in an order that suits
   its level (`PLAN` in `src/ui/autobrain.js`), and does night work by night. When something waits on the morning, it sleeps
   at the Tolling Bell.
   - **Face to face, never through a wall.** The game's own E only measures how far off someone is, so from the street

@@ -119,6 +119,8 @@ const LEVEL_OF = Object.fromEntries(PLAN);
 // A quest added since the plan was written goes on the end of it, at a level guessed from what it pays (coverage() names it).
 const guessLevel = (id) => Math.max(1, Math.min(20, Math.round((RULES[id].xp || 200) / 110)));
 const PLAN_ALL = PLAN.filter(([id]) => RULES[id]).concat(Object.keys(RULES).filter((id) => !(id in LEVEL_OF)).map((id) => [id, guessLevel(id)]));
+// The level it wants for a quest: the quest log (src/ui/questlog.js) suggests the same to a player.
+export const questLevel = (id) => LEVEL_OF[id] ?? guessLevel(id);
 
 // Where each place in a quest's steps is, for walking to: a point, and how near counts.
 const area = (k) => {
@@ -1489,7 +1491,14 @@ export class Brain {
     const job = this.choose(m);
     const key = job ? `${job.kind}:${job.why}:${job.who ?? ''}:${job.x ?? ''}` : '';
     if (key !== prev || !this.job) { this.job = job; this.jobKey = key; this.patrol = null; this.jobT = this.t; }
-    else if (job && this.job) Object.assign(this.job, job);
+    else if (job && this.job) { delete this.job.quest; delete this.job.offer; Object.assign(this.job, job); }
+  }
+
+  // What it's working on, for the quest log (src/ui/folk.js): the quest its job is for (quest: one taken on; offer: one it's
+  // off to take on), and what it says of it.
+  doing() {
+    const j = this.job;
+    return { quest: j?.quest || null, offer: j?.offer || null, say: (j?.quest || j?.offer ? j.say : this.said) || this.said || '' };
   }
 
   choose(m) {
@@ -1571,7 +1580,14 @@ export class Brain {
   // The giver of a quest, or whoever a step's to be said to: their place in the town's list.
   personIndex(id) { return this.o.townUI.people.findIndex((p) => p.id === id); }
 
+  // A quest's next piece of work, marked with the quest it's for (the quest log shows which one it's on).
   questJob(id, m, lvl) {
+    const job = this.questStep(id, m, lvl);
+    if (job) job.quest = id;
+    return job;
+  }
+
+  questStep(id, m, lvl) {
     const Q = this.o.townUI.quests, s = Q.state(id), st = Q.step(id), q = QUESTS[id], title = q.title;
     const giver = this.personIndex(q.giver);
     if (s.stage === 'making') {
@@ -1656,7 +1672,7 @@ export class Brain {
       const d = dist(m.x, m.z, w.x, w.z);
       // (Someone out past the town, like the Bellwright: only on the way.)
       if (giver >= PEOPLE.length && d > 300) continue;
-      if (d < bd) { bd = d; best = this.talkJob(giver, 'offer', `To ${townUI.people[giver].name}: there's work.`); }
+      if (d < bd) { bd = d; best = this.talkJob(giver, 'offer', `To ${townUI.people[giver].name}: there's work.`); if (best) best.offer = id; }
     }
     return best;
   }
@@ -1671,7 +1687,7 @@ export class Brain {
       if (!s || s.stage === 'done') continue;
       const q = QUESTS[id], giver = this.personIndex(q.giver);
       const talkTo = st?.talk ? this.personIndex(st.talk) : (st?.back || (st?.bring && (pack.mats[st.bring] || 0) >= st.n) || (s.stage === 'making' && this.o.town.day >= s.ready)) ? giver : -1;
-      if (talkTo >= 0 && talkTo < PEOPLE.length && !this.skipping(`p:${talkTo}`) && this.reachable(talkTo)) return this.talkJob(talkTo, 'quest', `${q.title}: to ${townUI.people[talkTo].name}.`);
+      if (talkTo >= 0 && talkTo < PEOPLE.length && !this.skipping(`p:${talkTo}`) && this.reachable(talkTo)) return { ...this.talkJob(talkTo, 'quest', `${q.title}: to ${townUI.people[talkTo].name}.`), quest: id };
     }
     const offer = this.offerJob(m);
     if (offer && dist(m.x, m.z, 0, 0) < 140) return offer;

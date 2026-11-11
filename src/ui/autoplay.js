@@ -207,6 +207,12 @@ export class AutoPlay {
 
   closeMenu() { this.menu.classList.remove('on'); this.menuT = 0; }
 
+  // What it's working on, for the quest log (src/ui/folk.js): { on, quest, offer, say } (src/ui/autobrain.js doing).
+  current() {
+    if (!this.on || !this.brain) return { on: false };
+    return { on: true, ...this.brain.doing() };
+  }
+
   // A kill of the player's, by what it was (src/main.js EV.LOOT): for the log, while it's playing.
   kill(name) { if (this.on) this.log.kill(name); }
 

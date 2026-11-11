@@ -73,6 +73,7 @@ export const QUESTS = {
   long_way_round: {
     title: 'The Long Way Round',
     giver: 'corran',
+    about: "Corran Thrale has tracked the dead east over the downs, where they go wide round a knoll with a tower on it. A man in white plate keeps bells there that he doesn't ring: the Bellwright. Find him, and ask him why the dead won't walk his hill.",
     offer: [
       "Everyone in this town thinks the world stops at my pines. It doesn't. I've tracked the dead east, out where the downs open, a long day's walk. They go round a knoll with a tower on it. Wide round.",
       "There's a man up there in white plate who keeps bells he doesn't ring. Folk on the downs call him the Bellwright. Go and see him. Ask him why the dead won't walk his hill. I'd like to know before I'm dead.",
@@ -111,6 +112,7 @@ export const QUESTS = {
   millhaven_jelly: {
     title: 'Jelly in the Millpond',
     giver: 'hob',
+    about: "Hob Fenwick's cousin Abel farms at Millhaven, far east on the downs. Something green came up out of his millpond and ate a ewe, slowly. Put down eight of the jellies round Millhaven, then tell Hob the pond's clear.",
     offer: [
       "My cousin Abel farms out at Millhaven, on the downs. Sent word by the carter. Something's come up out of his millpond. Green, he says, and it moves on its own, and it ate a ewe.",
       "Ate it slow. He watched. I'd go, but the barley won't cut itself and the tithe's at month's end. You've that staff. Would you?",
@@ -142,6 +144,7 @@ export const QUESTS = {
   four_watches: {
     title: 'The Four Watches',
     giver: 'bellwright',
+    about: "Three houses kept the watches with the Bellwright's tower: the Abbey of Saint Ossery, the Drowned Chapel and the Frozen Shrine. Their seals went dark when the ringing stopped. Stand in all three; if their seals wake for you, he has something for you. It rings.",
     offer: [
       "Three houses kept the watches with this tower: the abbey of Saint Ossery in the rust wood, the chapel on the fen, the shrine up under the snow. Their seals went dark when the ringing stopped. Mine woke for you.",
       "Walk to all three. Stand in each. If their seals wake for you too, I'll know the order isn't only me. I've something for you if they do. It isn't much. It rings.",
@@ -174,6 +177,7 @@ export const QUESTS = {
   sallowmere: {
     title: 'What the Fen Keeps',
     giver: 'sabine',
+    about: "Sabine Moss, the herbalist, gathers bog myrtle on Sallowmere's east shore for the winter fevers, and this spring the shore moved: it was jelly. Put down ten of them on the fen so she can reach it again.",
     offer: [
       "Bog myrtle grows thick on Sallowmere's east shore and nowhere else I can reach. I've gone every spring for twelve years. This spring the shore moved. It was jelly. Lots of it.",
       "They're slow until they aren't. My knife did nothing. Your fire might. Clear the east shore and I'll have myrtle for the winter fevers, which this year will be bad.",
@@ -204,6 +208,7 @@ export const QUESTS = {
   black_road: {
     title: 'The Black Road',
     giver: 'aldric',
+    about: "The carters won't take the west fork into the ash country any more: braziers burn along the road day and night, all the way to a keep of black stone nobody remembers building. Ser Aldric Halloway wants to know what sits there. Go and look. Only look; don't knock.",
     offer: [
       "The carters won't take the west fork into the ash country anymore. Braziers along the road, they say, lit day and night, all the way to a keep nobody remembers building. Black stone. Red cloth.",
       "I'm not sending the watch. We're two watchmen and my brother. But I'd know what's sitting at the end of that road. Go and look. Only look. Don't knock.",
@@ -235,6 +240,7 @@ export const QUESTS = {
   crown_of_teeth: {
     title: 'The Crown of Teeth',
     giver: 'orrin',
+    about: "Orrin Vey's books put a lake that never thaws at the top of the Sorrowhorn, the mountain north-west of Bellmourn, with a spire of black glass in it and a ring of teeth round it. Nobody living has been up. Climb by the Broken Stair and bring him back one true account.",
     needs: 'toll_of_bell',
     offer: [
       "Walk partway up the hill road on a clear day, no further, and look north-west. The mountain. The Sorrowhorn. My books put a lake at the top of it that never thaws, and in the lake a spire of black glass, and round it a ring of teeth.",
@@ -268,6 +274,7 @@ export const QUESTS = {
     title: 'Lights on the Barrow Moor',
     dayHint: "Nothing moves on the moor by day. Jory's lights keep night hours: come back after dark.",
     giver: 'jory',
+    about: "Jory Pell, the night watchman, has seen white lights moving low on the Barrow Moor, far south-west: like somebody walking with a lamp held down by his knee, only there's nobody. Go there after dark and put out whatever carries them.",
     offer: [
       "Lights. Out on the barrow moor, south-west, past where the road goes. White ones. Moving low, like somebody walking with a lamp held down by his knee. Only there's no somebody.",
       "I've seen them three nights from the tower top. Captain says it's marsh gas. Marsh gas doesn't come up a hill. Go and look, at night. Put out whatever it is.",
