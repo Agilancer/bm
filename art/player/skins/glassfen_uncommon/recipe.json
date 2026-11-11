@@ -10,7 +10,7 @@
    "swatch": "swatches/gf_tunic.png",
    "scale": 0.09,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.92,
    "shading": 0.85,
    "keep": 0.0
   },
@@ -82,10 +82,10 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/pat_stripes.png",
-    "color": "#8f9cc0",
-    "scale": 0.2,
-    "strength": 0.2,
+    "image": "swatches/gf_dashes.png",
+    "color": "#aab6d4",
+    "scale": 0.16,
+    "strength": 0.32,
     "tile": "repeat"
    },
    "decals": [

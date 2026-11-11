@@ -14,8 +14,8 @@
    "shading": 1.0
   },
   "trim": {
-   "color": "#a58a57",
-   "bright": 0.95
+   "color": "#94805c",
+   "bright": 0.85
   },
   "leather": {
    "swatch": "swatches/belt.png",
@@ -51,8 +51,8 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.06,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 1.0
+    "bright": 0.95,
+    "shading": 0.75
    }
   },
   "chest": {

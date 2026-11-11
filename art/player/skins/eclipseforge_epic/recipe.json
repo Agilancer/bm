@@ -10,7 +10,7 @@
    "swatch": "swatches/midnight.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.1,
+   "bright": 1.0,
    "shading": 1.1
   },
   "trim": {
@@ -36,14 +36,14 @@
     "swatch": "swatches/hat_midnight.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
+    "bright": 1.0,
     "shading": 1.1
    },
    "pattern": {
     "image": "swatches/pat_sunburst.png",
-    "color": "#c9a04a",
-    "scale": 0.18,
-    "strength": 0.4,
+    "color": "#d0a850",
+    "scale": 0.3,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [
@@ -62,7 +62,7 @@
     "swatch": "swatches/plate.png",
     "scale": 0.09,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 1.0,
     "shading": 1.1
    },
    "trim": {
@@ -89,14 +89,21 @@
      "under_trim": false,
      "opacity": 1.0
     }
-   ]
+   ],
+   "leather": {
+    "swatch": "swatches/plate.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.1
+   }
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_sunburst.png",
-    "color": "#c9a04a",
-    "scale": 0.22,
-    "strength": 0.5,
+    "color": "#d0a850",
+    "scale": 0.3,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [
@@ -128,7 +135,7 @@
     "swatch": "swatches/greave_plate.png",
     "scale": 0.09,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 1.0,
     "shading": 1.1
    },
    "trim": {

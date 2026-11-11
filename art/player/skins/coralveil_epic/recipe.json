@@ -10,7 +10,7 @@
    "swatch": "swatches/teal.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.08,
+   "bright": 0.9,
    "shading": 0.95
   },
   "trim": {
@@ -36,7 +36,7 @@
     "swatch": "swatches/plumhat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.08,
+    "bright": 0.9,
     "shading": 0.95
    },
    "pattern": {
@@ -62,7 +62,7 @@
     "swatch": "swatches/amethyst.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 0.9,
     "shading": 0.95
    },
    "pattern": {
@@ -103,13 +103,13 @@
     {
      "image": "decals/jelly_opal.png",
      "anchor": "back",
-     "size": 0.25,
+     "size": 0.24,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.07,
       0
      ]
     },
@@ -128,7 +128,7 @@
     "swatch": "swatches/amethyst.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.95,
+    "bright": 0.82,
     "shading": 0.95
    },
    "pattern": {
@@ -144,7 +144,7 @@
     "swatch": "swatches/amethyst.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.85,
+    "bright": 0.75,
     "shading": 0.95
    }
   }

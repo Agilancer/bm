@@ -10,7 +10,7 @@
    "swatch": "swatches/obsidian_plum.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.1,
+   "bright": 1.0,
    "shading": 1.1
   },
   "trim": {
@@ -36,7 +36,7 @@
     "swatch": "swatches/hat_plum.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
+    "bright": 1.0,
     "shading": 1.1
    },
    "decals": [
@@ -55,7 +55,7 @@
     "swatch": "swatches/amethyst.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.08,
+    "bright": 1.0,
     "shading": 1.1
    },
    "decals": [
@@ -75,13 +75,20 @@
      "under_trim": false,
      "opacity": 1.0
     }
-   ]
+   ],
+   "leather": {
+    "swatch": "swatches/amethyst.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.1
+   }
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_maze.png",
     "color": "#dcb858",
-    "scale": 0.2,
+    "scale": 0.26,
     "strength": 0.55,
     "tile": "repeat"
    },
@@ -114,7 +121,7 @@
     "swatch": "swatches/amethyst_leather.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.1,
+    "bright": 1.0,
     "shading": 1.0
    },
    "leather": {

@@ -43,7 +43,7 @@
    },
    "pattern": {
     "image": "swatches/cv_gears.png",
-    "color": "#cfd5dc",
+    "color": "#dfe4ea",
     "scale": 0.2,
     "strength": 0.45,
     "tile": "repeat"
@@ -88,7 +88,7 @@
     "image": "swatches/cv_gears.png",
     "color": "#d9b866",
     "scale": 0.18,
-    "strength": 0.45,
+    "strength": 0.42,
     "tile": "repeat"
    },
    "decals": [
@@ -113,9 +113,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/cv_gears.png",
-    "color": "#cfd5dc",
+    "color": "#dfe4ea",
     "scale": 0.24,
-    "strength": 0.5,
+    "strength": 0.55,
     "tile": "repeat"
    },
    "decals": [
@@ -145,10 +145,10 @@
   "legs": {
    "cloth": {
     "swatch": "swatches/cv_plate.png",
-    "scale": 0.09,
+    "scale": 0.05,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.9,
+    "bright": 0.95,
+    "shading": 0.55,
     "keep": 0.0
    },
    "trim": {
@@ -161,9 +161,9 @@
    },
    "pattern": {
     "image": "swatches/cv_gears.png",
-    "color": "#59606c",
-    "scale": 0.14,
-    "strength": 0.5,
+    "color": "#4a5260",
+    "scale": 0.17,
+    "strength": 0.38,
     "tile": "repeat"
    },
    "leather": {

@@ -14,7 +14,7 @@
    "shading": 1.0
   },
   "trim": {
-   "color": "#b3a888",
+   "color": "#8f8670",
    "bright": 1.0
   },
   "leather": {
@@ -49,6 +49,13 @@
   },
   "shoulders": {
    "cloth": {
+    "swatch": "swatches/slate_weave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   },
+   "leather": {
     "swatch": "swatches/slate_weave.png",
     "scale": 0.1,
     "tile": "repeat",

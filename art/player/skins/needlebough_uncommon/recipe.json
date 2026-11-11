@@ -10,7 +10,7 @@
    "swatch": "swatches/tunic.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.05,
+   "bright": 0.92,
    "shading": 0.9
   },
   "trim": {
@@ -33,7 +33,7 @@
     "swatch": "swatches/hat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 0.92,
     "shading": 0.9
    },
    "decals": [
@@ -52,7 +52,7 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.92,
     "shading": 0.9
    }
   },
@@ -67,7 +67,7 @@
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.065,
       0
      ]
     },
@@ -86,7 +86,7 @@
     "swatch": "swatches/greave.png",
     "scale": 0.09,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.95,
     "shading": 0.9
    }
   },

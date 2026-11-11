@@ -35,7 +35,7 @@
     "image": "swatches/pat_feather.png",
     "color": "#e0b25e",
     "scale": 0.1,
-    "strength": 0.4,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
@@ -62,14 +62,31 @@
     "swatch": "swatches/gold.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.78,
     "shading": 1.0
    },
    "keep_trim": true,
-   "decals": [],
+   "decals": [
+    {
+     "image": "decals/wing.png",
+     "anchor": "shoulder_left",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/wing_mirror.png",
+     "anchor": "shoulder_right",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
    "trim": {
-    "color": "#7a1a1c",
-    "bright": 0.9
+    "color": "#8a2420",
+    "bright": 0.8
    }
   },
   "chest": {
@@ -77,7 +94,7 @@
     "image": "swatches/pat_feather.png",
     "color": "#e0b25e",
     "scale": 0.12,
-    "strength": 0.5,
+    "strength": 0.36,
     "tile": "repeat"
    },
    "decals": [
@@ -114,12 +131,12 @@
     "swatch": "swatches/gold.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.95,
+    "bright": 0.74,
     "shading": 1.0
    },
    "trim": {
-    "color": "#7a1a1c",
-    "bright": 0.9
+    "color": "#8a2420",
+    "bright": 0.8
    },
    "leather": {
     "swatch": "swatches/darkleather.png",

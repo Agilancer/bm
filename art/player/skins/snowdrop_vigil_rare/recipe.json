@@ -10,7 +10,7 @@
    "swatch": "swatches/snowdrop_vigil_rare_cloth.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.06,
+   "bright": 1.16,
    "shading": 0.88,
    "keep": 0
   },
@@ -19,7 +19,7 @@
    "scale": 0.08,
    "tile": "repeat",
    "bright": 1.05,
-   "shading": 0.7
+   "shading": 0.35
   },
   "leather": {
    "swatch": "swatches/slate.png",
@@ -35,16 +35,23 @@
     "swatch": "swatches/snowdrop_vigil_rare_cloth.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.04,
+    "bright": 1.1,
     "shading": 0.88,
     "keep": 0
    },
    "pattern": {
     "image": "swatches/pat_drops.png",
-    "color": "#7f97a3",
-    "scale": 0.2,
-    "strength": 0.3,
+    "color": "#4f7480",
+    "scale": 0.24,
+    "strength": 0.4,
     "tile": "repeat"
+   },
+   "leather": {
+    "swatch": "swatches/slate.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.2,
+    "shading": 0.4
    },
    "decals": [
     {
@@ -95,22 +102,22 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_drops.png",
-    "color": "#7f97a3",
-    "scale": 0.2,
-    "strength": 0.42,
+    "color": "#4f7480",
+    "scale": 0.24,
+    "strength": 0.5,
     "tile": "repeat"
    },
    "decals": [
     {
      "image": "decals/snowdrop_roundel.png",
      "anchor": "back",
-     "size": 0.26,
+     "size": 0.25,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.07,
       0
      ]
     },

@@ -10,7 +10,7 @@
    "swatch": "swatches/violet.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.08,
+   "bright": 1.0,
    "shading": 1.1
   },
   "trim": {
@@ -36,14 +36,14 @@
     "swatch": "swatches/hat_violet.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.08,
+    "bright": 1.0,
     "shading": 1.1
    },
    "pattern": {
     "image": "swatches/pat_feathers.png",
-    "color": "#cfa850",
+    "color": "#d8b055",
     "scale": 0.2,
-    "strength": 0.45,
+    "strength": 0.5,
     "tile": "repeat"
    },
    "decals": [
@@ -62,7 +62,7 @@
     "swatch": "swatches/sapphire.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
+    "bright": 1.0,
     "shading": 1.1
    },
    "pattern": {
@@ -89,14 +89,21 @@
      "under_trim": false,
      "opacity": 1.0
     }
-   ]
+   ],
+   "leather": {
+    "swatch": "swatches/sapphire.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.1
+   }
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_feathers.png",
-    "color": "#cfa850",
-    "scale": 0.24,
-    "strength": 0.55,
+    "color": "#d8b055",
+    "scale": 0.26,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [
@@ -128,7 +135,7 @@
     "swatch": "swatches/sapphire_scales.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.15,
+    "bright": 1.05,
     "shading": 1.0
    },
    "leather": {

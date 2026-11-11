@@ -57,15 +57,8 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.07,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.95
-   },
-   "leather": {
-    "swatch": "swatches/mantle.png",
-    "scale": 0.07,
-    "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.95
+    "bright": 0.85,
+    "shading": 0.8
    },
    "decals": [
     {

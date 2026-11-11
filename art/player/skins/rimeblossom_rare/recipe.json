@@ -64,16 +64,12 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.08,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.5
-   },
-   "leather": {
-    "color": "#b4c6d8",
-    "shading": 0.5
+    "bright": 0.9,
+    "shading": 0.6
    },
    "pattern": {
     "image": "swatches/pat_diamonds.png",
-    "color": "#8aa4c8",
+    "color": "#e4eef8",
     "scale": 0.11,
     "strength": 0.4,
     "tile": "repeat"

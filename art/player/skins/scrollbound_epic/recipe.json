@@ -89,14 +89,21 @@
      "under_trim": false,
      "opacity": 1.0
     }
-   ]
+   ],
+   "leather": {
+    "swatch": "swatches/ink.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.1
+   }
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_scrolls.png",
-    "color": "#8f6a22",
-    "scale": 0.22,
-    "strength": 0.55,
+    "color": "#5e4212",
+    "scale": 0.24,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [

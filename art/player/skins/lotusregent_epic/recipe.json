@@ -72,16 +72,12 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.08,
     "tile": "repeat",
-    "bright": 0.95,
-    "shading": 0.6
-   },
-   "leather": {
-    "color": "#a89064",
+    "bright": 0.9,
     "shading": 0.6
    },
    "pattern": {
     "image": "swatches/pat_petals.png",
-    "color": "#a8843c",
+    "color": "#7c5a28",
     "scale": 0.13,
     "strength": 0.3,
     "tile": "repeat"

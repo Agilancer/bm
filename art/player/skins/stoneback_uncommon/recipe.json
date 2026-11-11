@@ -90,8 +90,8 @@
    "pattern": {
     "image": "swatches/pat_plates.png",
     "color": "#3c4a3a",
-    "scale": 0.2,
-    "strength": 0.42,
+    "scale": 0.18,
+    "strength": 0.28,
     "tile": "repeat"
    },
    "decals": [

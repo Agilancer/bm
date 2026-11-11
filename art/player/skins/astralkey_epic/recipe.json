@@ -10,8 +10,8 @@
    "swatch": "swatches/ak_sapphire.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.0,
-   "shading": 0.95,
+   "bright": 0.92,
+   "shading": 0.9,
    "keep": 0.0
   },
   "trim": {
@@ -62,14 +62,14 @@
   "shoulders": {
    "cloth": {
     "swatch": "swatches/ak_gilt.png",
-    "scale": 0.09,
+    "scale": 0.06,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.9,
+    "shading": 0.6,
     "keep": 0.0
    },
    "trim": {
-    "color": "#2a4fa8",
+    "color": "#f0e4c4",
     "bright": 1.0
    },
    "decals": [
@@ -94,7 +94,7 @@
   "chest": {
    "pattern": {
     "image": "swatches/ak_fret.png",
-    "color": "#d2b064",
+    "color": "#d0a440",
     "scale": 0.2,
     "strength": 0.42,
     "tile": "repeat"
@@ -126,14 +126,14 @@
   "legs": {
    "cloth": {
     "swatch": "swatches/ak_gilt.png",
-    "scale": 0.09,
+    "scale": 0.06,
     "tile": "repeat",
     "bright": 0.95,
-    "shading": 0.9,
+    "shading": 0.6,
     "keep": 0.0
    },
    "trim": {
-    "color": "#2a4fa8",
+    "color": "#f0e4c4",
     "bright": 1.0
    },
    "leather": {

@@ -60,9 +60,9 @@
    },
    "pattern": {
     "image": "swatches/pat_petals.png",
-    "color": "#3d8a74",
-    "scale": 0.14,
-    "strength": 0.35,
+    "color": "#3f8f78",
+    "scale": 0.16,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [
@@ -82,14 +82,21 @@
      "under_trim": false,
      "opacity": 1.0
     }
-   ]
+   ],
+   "leather": {
+    "swatch": "swatches/jade.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.1
+   }
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_petals.png",
-    "color": "#5c3364",
-    "scale": 0.18,
-    "strength": 0.4,
+    "color": "#3c1c44",
+    "scale": 0.2,
+    "strength": 0.5,
     "tile": "repeat"
    },
    "decals": [

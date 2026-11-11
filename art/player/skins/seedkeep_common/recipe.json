@@ -10,7 +10,7 @@
    "swatch": "swatches/tunic.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.9,
    "shading": 0.8
   },
   "trim": {
@@ -34,7 +34,7 @@
     "swatch": "swatches/hatw.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.9,
     "shading": 0.8
    },
    "decals": [
@@ -53,8 +53,8 @@
     "swatch": "swatches/linen.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.8
+    "bright": 0.9,
+    "shading": 0.6
    }
   },
   "chest": {
@@ -68,7 +68,7 @@
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.065,
       0
      ]
     },
@@ -89,25 +89,7 @@
     "tile": "repeat",
     "bright": 1.0,
     "shading": 0.9
-   },
-   "decals": [
-    {
-     "image": "decals/acorn_patch.png",
-     "anchor": "knee_left",
-     "size": 0.06,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    },
-    {
-     "image": "decals/acorn_patch.png",
-     "anchor": "knee_right",
-     "size": 0.06,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    }
-   ]
+   }
   },
   "feet": {
    "cloth": {

@@ -10,14 +10,14 @@
    "swatch": "swatches/tunic.png",
    "scale": 0.14,
    "tile": "repeat",
-   "bright": 1.05,
+   "bright": 0.85,
    "shading": 0.9
   },
   "trim": {
    "swatch": "swatches/gold.png",
    "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.92,
    "shading": 0.7
   },
   "leather": {
@@ -35,7 +35,7 @@
     "swatch": "swatches/hat.png",
     "scale": 0.14,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 0.85,
     "shading": 0.9
    },
    "decals": [
@@ -54,7 +54,7 @@
     "swatch": "swatches/fern.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
+    "bright": 0.95,
     "shading": 0.9
    },
    "pattern": {
@@ -95,13 +95,13 @@
     {
      "image": "decals/hopper_gold.png",
      "anchor": "back",
-     "size": 0.26,
+     "size": 0.25,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.07,
       0
      ]
     },
@@ -120,7 +120,7 @@
     "swatch": "swatches/fern.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.9,
     "shading": 0.9
    }
   },
@@ -129,7 +129,7 @@
     "swatch": "swatches/fern.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.9,
+    "bright": 0.8,
     "shading": 0.9
    }
   }

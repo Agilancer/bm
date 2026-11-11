@@ -14,7 +14,7 @@
    "shading": 1.0
   },
   "trim": {
-   "color": "#b39050",
+   "color": "#a8884c",
    "bright": 1.0
   },
   "leather": {
@@ -57,6 +57,13 @@
    },
    "trim": {
     "color": "#d0b070"
+   },
+   "leather": {
+    "swatch": "swatches/ochre_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
    }
   },
   "chest": {

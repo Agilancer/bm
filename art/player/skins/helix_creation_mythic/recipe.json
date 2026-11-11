@@ -10,7 +10,7 @@
    "swatch": "swatches/jade.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.1,
+   "bright": 0.9,
    "shading": 0.95
   },
   "trim": {
@@ -35,14 +35,14 @@
     "swatch": "swatches/amber.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
-    "shading": 0.95
+    "bright": 0.95,
+    "shading": 0.9
    },
    "pattern": {
     "image": "swatches/pat_cord.png",
-    "color": "#f6e6a6",
-    "scale": 0.2,
-    "strength": 0.45,
+    "color": "#f8ecb4",
+    "scale": 0.22,
+    "strength": 0.5,
     "tile": "repeat"
    },
    "decals": [
@@ -61,14 +61,14 @@
     "swatch": "swatches/amber.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.1,
-    "shading": 0.95
+    "bright": 0.95,
+    "shading": 0.85
    },
    "pattern": {
     "image": "swatches/pat_diamonds.png",
-    "color": "#f6e6a6",
+    "color": "#f8ecb4",
     "scale": 0.12,
-    "strength": 0.5,
+    "strength": 0.55,
     "tile": "repeat"
    },
    "decals": [
@@ -94,7 +94,7 @@
    "pattern": {
     "image": "swatches/pat_cord.png",
     "color": "#e9e2ae",
-    "scale": 0.24,
+    "scale": 0.26,
     "strength": 0.55,
     "tile": "repeat"
    },
@@ -108,7 +108,7 @@
      "opacity": 1.0,
      "offset": [
       0,
-      -0.045,
+      -0.075,
       0
      ]
     },
@@ -127,12 +127,12 @@
     "swatch": "swatches/amber.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.95
+    "bright": 0.9,
+    "shading": 0.7
    },
    "pattern": {
     "image": "swatches/pat_diamonds.png",
-    "color": "#f6e6a6",
+    "color": "#f8ecb4",
     "scale": 0.085,
     "strength": 0.6,
     "tile": "repeat"
@@ -161,8 +161,8 @@
     "swatch": "swatches/amber.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.95
+    "bright": 0.8,
+    "shading": 0.7
    }
   }
  }

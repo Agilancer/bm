@@ -14,8 +14,8 @@
    "shading": 1.0
   },
   "trim": {
-   "color": "#2c1c12",
-   "bright": 1.0
+   "color": "#1c110a",
+   "bright": 0.9
   },
   "leather": {
    "swatch": "swatches/saddle.png",
@@ -46,7 +46,15 @@
     "shading": 1.0
    },
    "trim": {
-    "color": "#1e130c"
+    "color": "#140c07",
+    "bright": 0.9
+   },
+   "leather": {
+    "swatch": "swatches/umber_wool.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
    }
   },
   "chest": {
@@ -83,7 +91,8 @@
     "shading": 0.9
    },
    "trim": {
-    "color": "#1e130c"
+    "color": "#140c07",
+    "bright": 0.9
    }
   },
   "feet": {

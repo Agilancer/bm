@@ -10,13 +10,13 @@
    "swatch": "swatches/fx_tunic.png",
    "scale": 0.08,
    "tile": "repeat",
-   "bright": 1.05,
+   "bright": 0.95,
    "shading": 0.9,
    "keep": 0
   },
   "trim": {
-   "color": "#8a7354",
-   "bright": 0.95
+   "color": "#806a4c",
+   "bright": 0.9
   },
   "leather": {
    "swatch": "swatches/fx_leather.png",

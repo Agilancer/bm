@@ -10,7 +10,7 @@
    "swatch": "swatches/qr_tunic.png",
    "scale": 0.07,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.92,
    "shading": 0.7,
    "keep": 0.0
   },
@@ -31,16 +31,16 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/qr_hat.png",
+    "swatch": "swatches/qr_hatlinen.png",
     "scale": 0.07,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.95,
     "shading": 0.75,
     "keep": 0.0
    },
    "decals": [
     {
-     "image": "decals/quill_linen.png",
+     "image": "decals/quill_russet.png",
      "anchor": "hat",
      "size": 0.125,
      "mode": "paint",
@@ -54,7 +54,7 @@
     "swatch": "swatches/qr_linen.png",
     "scale": 0.07,
     "tile": "repeat",
-    "bright": 0.95,
+    "bright": 0.9,
     "shading": 0.75,
     "keep": 0.0
    },

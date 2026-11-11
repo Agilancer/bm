@@ -103,9 +103,17 @@
    ]
   },
   "chest": {
+   "cloth": {
+    "swatch": "swatches/or_charcoal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.12,
+    "shading": 0.95,
+    "keep": 0.0
+   },
    "pattern": {
     "image": "swatches/or_damask.png",
-    "color": "#bdaf8e",
+    "color": "#c4b592",
     "scale": 0.24,
     "strength": 0.42,
     "tile": "repeat"

@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_tunic.png",
    "scale": 0.08,
    "tile": "repeat",
-   "bright": 1.05,
+   "bright": 0.97,
    "shading": 0.95,
    "keep": 0
   },
@@ -38,7 +38,7 @@
     "swatch": "swatches/fx_hat.png",
     "scale": 0.08,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 0.97,
     "shading": 0.95,
     "keep": 0
    },
@@ -58,37 +58,40 @@
     "swatch": "swatches/fx_linen.png",
     "scale": 0.07,
     "tile": "repeat",
-    "bright": 0.98,
+    "bright": 0.95,
     "shading": 0.95,
     "keep": 0
+   },
+   "leather": {
+    "color": "#8a7c58"
    }
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_stripes.png",
-    "color": "#3d5630",
+    "color": "#33452a",
     "scale": 0.2,
-    "strength": 0.2,
+    "strength": 0.22,
     "tile": "repeat"
    },
    "decals": [
     {
      "image": "decals/fx_heron.png",
      "anchor": "back",
-     "size": 0.21,
+     "size": 0.25,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.05,
       0
      ]
     },
     {
      "image": "decals/fx_heron.png",
      "anchor": "tabard",
-     "size": 0.11,
+     "size": 0.125,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0

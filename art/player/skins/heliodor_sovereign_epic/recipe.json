@@ -17,7 +17,7 @@
    "swatch": "swatches/metal.png",
    "scale": 0.09,
    "tile": "repeat",
-   "bright": 1.1,
+   "bright": 1.0,
    "shading": 0.9
   },
   "leather": {
@@ -69,8 +69,8 @@
     "swatch": "swatches/guards.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 1.0
+    "bright": 0.95,
+    "shading": 0.85
    },
    "decals": [
     {
@@ -128,8 +128,8 @@
     "swatch": "swatches/guards.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 1.0
+    "bright": 0.9,
+    "shading": 0.85
    },
    "leather": {
     "swatch": "swatches/trouser.png",
