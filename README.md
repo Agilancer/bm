@@ -1146,6 +1146,10 @@ To check it yourself:
   A phone also holds less sound: only what a fight and a walk on dirt need is decoded ahead, the rest the first time it's
   asked for (it plays a moment late, that once), and the title's song and bells are let go once the game begins and decoded
   again for the menu. About 70 MB less decoded sound, measured in Chromium as a phone; not measured on one.
+  A phone is asked to stay sideways (the manifest, and a lock when the game begins), but an iPhone grants a page neither
+  and can still be turned. Upright, the world holds still, nothing is drawn and the picture keeps its sideways shape, so a
+  turn makes no render target again; any other change of size is taken once it has held for 0.3 s (`turned` in
+  `src/main.js`, `resize` in `src/gfx/renderer.js`). Run as an emulated phone turned twelve times over: no target remade.
 - **Far bodies** (PCs). Past the distance where a 4.5 cm cell is under a pixel, a body is drawn with a welded mesh of
   a fifth of the triangles, and the far shadow cascade always uses it. Past 40 m a body's pose is made at most 65 times a
   second, past 90 m 33 (phones too), and it holds its pose between. Swords, shields, doors and stalls are left out of the view and
