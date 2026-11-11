@@ -6,7 +6,7 @@
 import { H } from '../core/layout.js';
 import { smoothstep } from '../core/math.js';
 import {
-  BURST_CANDLE, CANDLES, CANDLES_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CLIMB, DAZZLE, DUST_AT, OPENING, PORTAL, REVEAL_AT, SNAP_AT, SOFT_CANDLE, SPARK_AT,
+  BURST_CANDLE, CANDLES, CANDLES_AT, CAVE, CAVE_LINE, CAVE_MOUTH, DAZZLE, HERD, DUST_AT, OPENING, PORTAL, REVEAL_AT, SNAP_AT, SPARK_AT,
   SWAP_AT,
 } from '../core/opening.js';
 import { CUES, SCRIPT, VOICE, spoken, voiceOf } from '../core/opening-script.js';
@@ -395,9 +395,9 @@ export class OpeningSound {
     const lit = stage > OPENING.WAKE || t > CANDLES_AT;
     this.loop('cave', 0.22 * cave);
     this.loop('cave_drips', 0.18 * cave);
-    this.loop('fire_medium', lit ? 0.1 * cave : 0);
-    const climb = stage === OPENING.WAKE && t > CLIMB[0] && t < CLIMB[1] ? smoothstep(CLIMB[0], CLIMB[1] - 1, t) : 0;
-    this.loop('wind_calm', 0.2 * climb);
+    // (And her hearth, lit with them: louder the nearer the story has brought you to it, as she stands at it.)
+    const atFire = stage === OPENING.WAKE ? 0.1 * smoothstep(CAVE.toHearth + 2, CAVE.toHearth + 6, t) * (1 - smoothstep(CAVE.ledger, CAVE.toYou, t)) : 0;
+    this.loop('fire_medium', lit ? (0.12 + atFire) * cave : 0);
     const book = [her[0], her[1] + 1.1, her[2]];
     switch (stage) {
       case OPENING.WAKE:
@@ -408,8 +408,6 @@ export class OpeningSound {
         if (crossed(SWAP_AT)) this.flashBurst(her[0], her[1] + 1.3, her[2]);
         if (crossed(SWAP_AT + 0.25)) this.hush();      // the glamour's gone, and her young voice with it
         if (crossed(SWAP_AT + 2.0)) { this.crackThud(); this.fx('rock_meteor_throw_2', PORTAL[0], PORTAL[1], PORTAL[2], 0.3, 0.7); }
-        // Her sleeve as her palm passes across your eyes.
-        if (crossed(CAVE.palm + 0.3)) this.fx('clothing_1', her[0], her[1] + 1.0, her[2], 0.4, 1.1);
         if (crossed(SNAP_AT)) { this.cutDrone(); this.snap(her[0], her[1] + 1.4, her[2]); }
         // The candles: a whoosh as the wave of them catches, and again as it reaches the ledge's.
         if (crossed(CANDLES_AT)) this.fx('light_torch_1', her[0], her[1] + 2, her[2], 0.5);
@@ -417,12 +415,6 @@ export class OpeningSound {
         for (const k of CANDLES) if (crossed(k.at)) this.pop(k.x, k.y, k.z);
         // Her name for you: the door breathes once more behind her, and the flames lean in.
         if (crossed(REVEAL_AT + 0.15)) { this.breath(); this.whine(); this.crackThud(0.4); }
-        // Her soft snap on the crate, and the candle nearest flaring.
-        if (crossed(CAVE.softSnap + 0.6)) {
-          const c = CANDLES[SOFT_CANDLE];
-          this.snap(her[0], her[1] + 1.0, her[2]);
-          this.fx('light_torch_2', c.x, c.y, c.z, 0.28, 1.1);
-        }
         // Embers on your knuckles; the spark; the candle bursting.
         if (crossed(CAVE.hands + 0.3)) this.fx('firebuff_2', snap[H.PX], snap[H.PY] + 1.1, snap[H.PZ], 0.22, 0.9);
         if (crossed(SPARK_AT)) this.fx('firespray_1', snap[H.PX], snap[H.PY] + 1.2, snap[H.PZ], 0.45, 1.3);
@@ -430,13 +422,9 @@ export class OpeningSound {
           const c = CANDLES[BURST_CANDLE];
           this.fx('torch_impact_1', c.x, c.y, c.z, 0.6); this.fx('fireball_1', c.x, c.y, c.z, 0.35, 1.2);
         }
-        // As her voice climbs: the candles gutter in a draught that wasn't there, and grit sifts from the roof; at her
-        // shout the rock groans; when she stops, it all stops.
-        if (t > CLIMB[0] && t < CLIMB[1] && Math.floor(t / 2.7) !== Math.floor(prev / 2.7)) this.fx('rock_meteor_throw_1', snap[H.PX], snap[H.PY] + 3, snap[H.PZ], 0.1, 0.55);
-        if (crossed(CAVE.shout)) this.rumble(1.6, 0.32);
         break;
       case OPENING.HERD:
-        if (crossed(6.4)) this.whine();
+        if (crossed(HERD.go)) this.whine();
         break;
       case OPENING.LEAVE:
         // The door slipping as you go, and grit coming down from the roof.

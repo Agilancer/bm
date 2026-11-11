@@ -2403,7 +2403,7 @@ export class HeroWorld {
         const n = m.n || 1;
         const z = m.rise ? [] : sim.knights.filter((k) => k instanceof Zombie && fightable(k) && !k.crawling).sort((u, v) => Math.hypot(u.x - p.x, u.z - p.z) - Math.hypot(v.x - p.x, v.z - p.z)).slice(0, n);
         z.forEach((k, i) => { k.x = m.x + (i % 3) * 1.6; k.z = m.z + Math.floor(i / 3) * 1.6; k.y = sim.world.height(k.x, k.z); });
-        sim.knights.filter((k) => k instanceof Zombie && k.dormant && !k.opts.role && k.opts.model !== 'zombie_ogre').slice(0, n - z.length)
+        sim.knights.filter((k) => k instanceof Zombie && k.dormant && !k.opts.role && !k.opts.reserve && k.opts.model !== 'zombie_ogre').slice(0, n - z.length)
           .forEach((k, j) => { const i = z.length + j; k.raiseAt(sim, m.x + (i % 3) * 1.6, m.z + Math.floor(i / 3) * 1.6, null, !!m.calm); });
         break;
       }

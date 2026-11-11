@@ -6,8 +6,8 @@ import { getFile } from '../core/files.js';
 import { C, C_PROPS, C_SIZE, CHARS_START, H } from '../core/layout.js';
 import { damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatYaw, smoothstep, wrapAngle } from '../core/math.js';
 import {
-  BURST_CANDLE, CANDLES, CANDLES_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_LEN, CHAMBER_YAW, CIRCLE, CLIMB, CLUTTER, DUST_AT, OPENING,
-  PORTAL, PORTAL_YAW, REVEAL_AT, SNAP_AT, SOFT_CANDLE, SPARK_AT, SWAP_AT, caveNearest, chamberPoint, chamberShape,
+  BURST_CANDLE, CANDLES, CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_LEN, CHAMBER_YAW, CIRCLE, CIRCLE_Y, CLUTTER, DUST_AT, HEARTH, LANTERN, OPENING,
+  PORTAL, PORTAL_YAW, REVEAL_AT, SNAP_AT, SPARK_AT, SWAP_AT, WAY, WAY_SEGS, STAIR_FLAT, caveNearest, chamberPoint, chamberShape, wayY,
 } from '../core/opening.js';
 
 const bump = (t, a, b, c, d) => smoothstep(a, b, t) * (1 - smoothstep(c, d, t));
@@ -20,7 +20,8 @@ import { makeBuffer } from './gpu.js';
 const BOOK_ASSET = 'assets/game/lisandra/spellbook.glb';
 const BOOK_SCALE = 0.95;
 const SPINE = [-0.182, 0.24, -0.167];
-const TEX = 'assets/game/interior/';
+const TEX = 'assets/game/interior/', LAND_TEX = 'assets/game/tex/';
+const ROCK_UV = 3.2;    // metres of rock to one repeat of its picture, everywhere: wall, roof, face and boulder alike
 const MAX_GLOW = 420;   // quads of light a frame: candle flames, the swirl, the circle
 const PARKED = [1e5, -1e4, 1e5];
 
@@ -86,8 +87,13 @@ function box(g, F, x0, y0, z0, x1, y1, z1, tile = 0.6, uv = null) {
   ];
   for (const [n, q] of faces) {
     const wn = F.R(...n);
-    const ids = q.map((p, k) => {
+    const ids = q.map((p) => {
       const a = n[0] ? p[2] : p[0], b = n[1] ? p[2] : p[1];
+      // (uv of four: each face takes that part of the picture, edge to edge, so a cloth's woven border never shows.)
+      if (uv && uv.length === 4) {
+        const a0 = n[0] ? z0 : x0, a1 = n[0] ? z1 : x1, b0 = n[1] ? z0 : y0, b1 = n[1] ? z1 : y1;
+        return g.v(F.P(...p), wn, uv[0] + (uv[2] - uv[0]) * (a - a0) / (a1 - a0 || 1), uv[1] + (uv[3] - uv[1]) * (b - b0) / (b1 - b0 || 1));
+      }
       return g.v(F.P(...p), wn, uv ? uv[0] : a / tile, uv ? uv[1] : b / tile);
     });
     g.quad(...ids);
@@ -166,7 +172,7 @@ const ICO = (() => {
   for (const [a, b, c] of base) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); f.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); }
   return { v, f };
 })();
-function boulder(g, px, py, pz, size, uvK = 0.9, flat = 1) {
+function boulder(g, px, py, pz, size, uvK = 1 / ROCK_UV, flat = 1) {
   const sq = [size * rnd(0.8, 1.3), size * rnd(0.55, 0.9) * flat, size * rnd(0.8, 1.2)], yaw = rnd(0, 6.3);
   const F = frame(px, py, pz, yaw, rnd(-0.4, 0.4));
   const jit = ICO.v.map(() => rnd(0.84, 1.12));
@@ -203,18 +209,20 @@ function caveRock() {
       if (last) round += Math.hypot(p[0] - last[0], p[1] - last[1], p[2] - last[2]);
       if (prev) along[k] += Math.hypot(p[0] - prev[k][0], p[1] - prev[k][1], p[2] - prev[k][2]);
       last = p;
-      return [p[0], p[1], p[2], round / 2.2, along[k] / 2.2, st[0] - p[0], st[5] + st[7] * 0.45 - p[1], st[1] - p[2]];
+      return [p[0], p[1], p[2], round / ROCK_UV, along[k] / ROCK_UV, st[0] - p[0], st[5] + st[7] * 0.45 - p[1], st[1] - p[2]];
     });
     prev = row;
     return row;
   });
   g.grid(rows);
-  // The chamber's end: closed off just past the last ring.
+  // The chamber's end: the last ring is small (the cave narrows to a nook behind the door), and is closed with rock
+  // that takes its picture flat on, at the walls' own scale, so no seam shows where it meets them.
   const last = STATIONS.at(-1), apex = [last[0] + last[2] * 0.7, last[5] + last[7] * 0.45, last[1] + last[3] * 0.7];
   const inward = [-last[2], 0, -last[3]];
-  const top = g.v(apex, inward, 0, 0);
-  const ring = Array.from({ length: ARCH + 1 }, (_, k) => { const p = archPoint(last, k); return g.v(p, inward, k / ARCH * 3, 1); });
-  const foot = g.v([last[0], last[5] - 0.2, last[1]], inward, 1.5, 1.4);
+  const flat = (p) => [((p[0] - last[0]) * last[3] - (p[2] - last[1]) * last[2]) / ROCK_UV, p[1] / ROCK_UV];
+  const top = g.v(apex, inward, ...flat(apex));
+  const ring = Array.from({ length: ARCH + 1 }, (_, k) => { const p = archPoint(last, k); return g.v(p, inward, ...flat(p)); });
+  const footP = [last[0], last[5] - 0.2, last[1]], foot = g.v(footP, inward, ...flat(footP));
   for (let k = 0; k < ARCH; k++) g.tri(top, ring[k], ring[k + 1]);
   g.tri(foot, ring[ARCH], ring[0]);
   // The face round the mouth: from the first ring out over the hillside, lying on it, and down into it at the edge.
@@ -224,7 +232,7 @@ function caveRock() {
     const t = r / R, row = [];
     for (let k = 0; k <= ARCH; k++) {
       const [px, y, pz, cx, cz] = facePoint(k, t);
-      row.push([px, y, pz, k / ARCH * 4.2, t * 2.4, px - cx - inX * 0.8, y - (m[5] + 1.0), pz - cz - inZ * 0.8]);
+      row.push([px, y, pz, k / ARCH * 13 / ROCK_UV, t * 8 / ROCK_UV, px - cx - inX * 0.8, y - (m[5] + 1.0), pz - cz - inZ * 0.8]);
     }
     face.push(row);
   }
@@ -236,12 +244,12 @@ function caveRock() {
     const k = (i / 13) * ARCH, foot = Math.min(i, 13 - i) < 2;
     const size = foot ? rnd(0.7, 1.05) : rnd(0.35, 0.7);
     const [px, y, pz] = facePoint(k, foot ? rnd(0.2, 0.3) : rnd(0.16, 0.3));
-    boulder(g, px, foot ? Math.max(y, terrainHeight(px, pz)) - size * 0.25 : y + size * 0.15, pz, size, 1.3);
+    boulder(g, px, foot ? Math.max(y, terrainHeight(px, pz)) - size * 0.25 : y + size * 0.15, pz, size);
   }
   for (let i = 0; i < 12; i++) {
     const t = rnd(0.35, 0.8), k = rnd(1, ARCH - 1);
     const [px, y, pz] = facePoint(k, t);
-    boulder(g, px, y, pz, rnd(0.3, 0.7), 1.3);
+    boulder(g, px, y, pz, rnd(0.3, 0.7));
   }
   // In the chamber: masses of rock standing out of the walls, slabs fallen at their feet, and the roof hanging lower in
   // places, so it's a hollow in the hill and not a smooth barrel. Each sits mostly in the rock, bulging a little way in.
@@ -252,11 +260,29 @@ function caveRock() {
     const [, , , , X, Y] = archPoint(st, k);
     const l = Math.hypot(X, Y + 0.2) || 1, ox = X / l, oy = (Y + 0.2) / l;
     const sx = st[3], sz = -st[2], d = size * push;
-    boulder(g, st[0] + sx * (X + ox * d), st[5] + Y + oy * d, st[1] + sz * (X + ox * d), size, 1.1, flat);
+    boulder(g, st[0] + sx * (X + ox * d), st[5] + Y + oy * d, st[1] + sz * (X + ox * d), size, 1 / ROCK_UV, flat);
   };
-  for (let i = 0; i < 26; i++) mass(rnd() < 0.5 ? rnd(1.2, 6) : ARCH - rnd(1.2, 6), rnd(0.6, 1.3), 0.62);
-  for (let i = 0; i < 10; i++) mass(rnd(8.5, 17.5), rnd(0.9, 1.8), 0.5);
-  for (let i = 0; i < 8; i++) mass(rnd() < 0.5 ? rnd(0.15, 0.6) : ARCH - rnd(0.15, 0.6), rnd(0.6, 1.0), 0.45, 0.4);
+  for (let i = 0; i < 40; i++) mass(rnd() < 0.5 ? rnd(1.2, 6) : ARCH - rnd(1.2, 6), rnd(0.6, 1.3), 0.62);
+  for (let i = 0; i < 16; i++) mass(rnd(8.5, 17.5), rnd(0.9, 1.8), 0.5);
+  // Along the foot of the walls, slabs and stones half sunk in the floor, so wall and floor meet in a broken line of
+  // rock and never in a seam.
+  for (let i = 0; i < 46; i++) mass(rnd() < 0.5 ? rnd(0.05, 0.5) : ARCH - rnd(0.05, 0.5), rnd(0.45, 1.0), 0.3, rnd(0.4, 0.8));
+  // And the roof hung with stone teeth, long where it's high, with a stub of one under a few of them on the floor by the walls.
+  for (let i = 0; i < 44; i++) {
+    const st = room[Math.floor(rnd(0, room.length))];
+    if (st[7] < 5.2) continue;
+    const k = rnd(7.5, ARCH - 7.5), [x, y, z] = archPoint(st, k), len = rnd(0.5, 0.26 * st[7]), r = rnd(0.12, 0.34);
+    const F = frame(x, y + 0.2, z, rnd(0, 6.3), Math.PI + rnd(-0.05, 0.05));
+    const n = 7, prof = Array.from({ length: n + 1 }, (_, j) => { const u = j / n; return [r * (1 - u) ** 1.5 + 0.012, (len + 0.2) * u]; });
+    lathe(g, F, prof, 9, ROCK_UV, (a, yy) => 0.22 * (noise2(a * 1.7 + x, yy * 2.3) - 0.5));
+  }
+  for (let i = 0; i < 14; i++) {
+    const st = room[Math.floor(rnd(0, room.length))], sd = rnd() < 0.5 ? -1 : 1, q = sd * (st[6] - rnd(0.5, 1.3));
+    const x = st[0] + st[3] * q, z = st[1] - st[2] * q, len = rnd(0.35, 1.1), r = rnd(0.16, 0.36);
+    const F = frame(x, st[5] - 0.1, z, rnd(0, 6.3), rnd(-0.06, 0.06));
+    const n = 6, prof = Array.from({ length: n + 1 }, (_, j) => { const u = j / n; return [r * (1 - u) ** 1.3 + 0.02, (len + 0.1) * u]; });
+    lathe(g, F, prof, 9, ROCK_UV, (a, yy) => 0.25 * (noise2(a * 1.7 + x, yy * 2.3) - 0.5));
+  }
   return g.done();
 }
 
@@ -269,7 +295,7 @@ function caveFloor() {
     const q = (j / W * 2 - 1) * (st[6] + 0.12), x = st[0] + st[3] * q, z = st[1] - st[2] * q;
     let y = st[5] + 0.006 * (noise2(x * 3, z * 3) - 0.5);
     if (st[4] < -0.3) y = lerp(y, terrainHeight(x, z) - 0.1, smoothstep(-0.45, -1.3, st[4]));
-    return [x, y, z, x / 2, z / 2, 0, 1, 0];
+    return [x, y, z, x / 2.6, z / 2.6, 0, 1, 0];
   }));
   g.grid(rows);
   return g.done();
@@ -297,14 +323,27 @@ function caveRubble() {
   return g.done();
 }
 
-// ---- her clutter ------------------------------------------------------------------------------------------------------
+// ---- her things --------------------------------------------------------------------------------------------------------
 const BOOK_COLOURS = [[94, 30, 26], [38, 52, 40], [60, 40, 24], [34, 30, 52], [112, 84, 42], [70, 22, 44], [40, 36, 32], [86, 58, 34]];
 function bookUV(i) { return [(0.5 + 0.5 * ((i % 8) + 0.5) / 8), 0.94]; }
+// Plain colours for small things (the same picture's bottom strip, its left half): glazed brown, clay, green glass, grey
+// glass, dried green herb, dried flower, bread, ash.
+const POT_COLOURS = [[92, 54, 30], [150, 96, 62], [46, 74, 52], [96, 108, 112], [74, 86, 44], [128, 92, 110], [176, 132, 78], [30, 27, 25]];
+const POT = { glaze: 0, clay: 1, green: 2, glass: 3, herb: 4, flower: 5, bread: 6, ash: 7 };
+function potUV(i) { return [0.5 * ((i % 8) + 0.5) / 8, 0.94]; }
+// The middle of a cloth's picture, clear of its woven edge.
+const INNER = [0.08, 0.08, 0.92, 0.92];
 
 function clutter() {
-  const wood = new Geo(), iron = new Geo(), cloth = new Geo(), burlap = new Geo(), paper = new Geo(), wax = new Geo();
+  const B = {};
+  for (const k of ['wood', 'dark', 'iron', 'linen', 'wool', 'wool2', 'hide', 'ragrug', 'burlap', 'paper', 'wax', 'stone']) B[k] = new Geo();
+  const { wood, dark, iron, linen, wool, wool2, hide, ragrug, burlap, paper, wax, stone } = B;
   seed = 41;
   const floorAt = (s) => chamberShape(s)[2];
+  // A frame inside a frame: at (x, y, z) of F, turned by `turn`.
+  const sub = (F, x, y, z, turn = 0, pitch = 0) => { const G = frame(...F.P(x, y, z), F.yaw + turn, pitch, F.k); G.yaw = F.yaw + turn; G.k = F.k; return G; };
+  // A lathe's axis laid along the frame's x.
+  const lying = (G) => ({ R: (a, b, c) => G.R(b, a, c), P: (a, b, c) => G.P(b, a, c) });
   const books = (F, n, y0 = 0) => {
     let y = y0;
     for (let i = 0; i < n; i++) {
@@ -314,10 +353,21 @@ function clutter() {
       y += hy * 2;
     }
   };
+  const jar = (G, r, h, c) => lathe(paper, G, [[0, 0], [r * 0.8, 0], [r, h * 0.25], [r, h * 0.68], [r * 0.56, h * 0.88], [r * 0.64, h], [r * 0.5, h * 0.99], [0, h * 0.97]], 9, 0.3, null, potUV(c));
+  const bottle = (G, r, h, c) => lathe(paper, G, [[0, 0], [r, 0], [r, h * 0.55], [r * 0.3, h * 0.75], [r * 0.3, h], [0, h]], 8, 0.3, null, potUV(c));
+  const bowl = (G, r, g = iron) => lathe(g, G, [[0, 0], [r * 0.5, 0.005], [r, r * 0.55], [r * 0.94, r * 0.56], [r * 0.5, 0.03], [0, 0.03]], 10, 0.2, null, g === paper ? potUV(POT.clay) : null);
+  const candle = (G, h = 0.14) => { lathe(iron, G, [[0, 0], [0.05, 0.004], [0.05, 0.012], [0.015, 0.02], [0, 0.02]], 8, 0.2); lathe(wax, sub(G, 0, 0.02, 0), [[0, 0], [0.016, 0], [0.016, h], [0, h + 0.004]], 7, 0.2); };
+  const legs = (g, F, hx, hz, y1, t = 0.04) => { for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) box(g, F, a * hx - t, 0, b * hz - t, a * hx + t, y1, b * hz + t, 0.4); };
+  // A set of shelves: sides, back, boards, and a way to put things on each.
+  const shelves = (F, w, d, hgt, n, fill) => {
+    box(dark, F, -w - 0.03, 0, -d, -w, hgt, d, 0.5); box(dark, F, w, 0, -d, w + 0.03, hgt, d, 0.5);
+    box(dark, F, -w, 0.02, -d, w, hgt, -d + 0.02, 0.6);
+    for (let i = 0; i <= n; i++) { const y = 0.06 + (hgt - 0.1) * i / n; box(dark, F, -w, y, -d + 0.02, w, y + 0.035, d, 0.5); if (i < n) fill(y + 0.035, (hgt - 0.1) / n - 0.05, i); }
+  };
   for (const [kind, s, q, turn, k, on] of CLUTTER) {
     const [x, z] = chamberPoint(s, q), yaw = turn + CHAMBER_YAW, y = floorAt(s) + (on ?? 0);
     const F = frame(x, y, z, yaw, 0, k);
-    F.yaw = yaw;
+    F.yaw = yaw; F.k = k;
     if (kind === 'crate') {
       box(wood, F, -0.3, 0, -0.3, 0.3, 0.62, 0.3, 0.5);
       // Its frame: the edges standing a little proud.
@@ -327,17 +377,14 @@ function clutter() {
         box(wood, F, -o, yy, a * o - e, o, yy + 0.04, a * o + e, 0.25);
         box(wood, F, a * o - e, yy, -o, a * o + e, yy + 0.04, o, 0.25);
       }
-    } else if (kind === 'barrel') {
-      const r = (yy) => 0.26 + 0.045 * Math.sin(Math.PI * yy / 0.85);
-      lathe(wood, F, [0, 0.1, 0.2, 0.32, 0.45, 0.58, 0.7, 0.8, 0.85].map((yy) => [r(yy), yy]).concat([[0.2, 0.84], [0, 0.83]]), 14, 0.5);
-      for (const yy of [0.1, 0.42, 0.74]) lathe(iron, F, [[r(yy) + 0.008, yy - 0.025], [r(yy) + 0.012, yy], [r(yy) + 0.008, yy + 0.025]], 14, 0.3);
-    } else if (kind === 'table') {
-      box(wood, F, -0.75, 0.76, -0.42, 0.75, 0.82, 0.42, 0.7);
-      for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) box(wood, F, a * 0.66 - 0.04, 0, b * 0.33 - 0.04, a * 0.66 + 0.04, 0.76, b * 0.33 + 0.04, 0.4);
-      box(cloth, F, -0.2, 0.82, -0.43, 0.2, 0.826, 0.43, 0.5);
-      books(frame(...F.P(-0.45, 0.82, 0.1), yaw), 4);
-      books(frame(...F.P(0.42, 0.82, -0.12), yaw + 1.2), 2);
-      lathe(iron, frame(...F.P(0.1, 0.826, 0.18), yaw), [[0, 0], [0.07, 0.005], [0.09, 0.05], [0.085, 0.07], [0.07, 0.03]], 10, 0.2);
+    } else if (kind === 'barrel' || kind === 'tub' || kind === 'bucket') {
+      const [w0, hgt, belly] = kind === 'barrel' ? [0.26, 0.85, 0.045] : kind === 'tub' ? [0.4, 0.42, 0.02] : [0.15, 0.3, 0.012];
+      const r = (yy) => w0 + belly * Math.sin(Math.PI * yy / hgt);
+      const ys = [0, 0.12, 0.24, 0.38, 0.53, 0.68, 0.82, 0.94, 1].map((u) => u * hgt);
+      // (A barrel's shut; a tub and a bucket are open, with an inside.)
+      lathe(wood, F, ys.map((yy) => [r(yy), yy]).concat(kind === 'barrel' ? [[w0 * 0.77, hgt - 0.01], [0, hgt - 0.02]] : [[w0 - 0.03, hgt], [w0 - 0.04, 0.06], [0, 0.05]]), 14, 0.5);
+      for (const u of kind === 'barrel' ? [0.12, 0.5, 0.87] : [0.2, 0.8]) lathe(iron, F, [[r(u * hgt) + 0.008, u * hgt - 0.025], [r(u * hgt) + 0.012, u * hgt], [r(u * hgt) + 0.008, u * hgt + 0.025]], 14, 0.3);
+      if (kind === 'bucket') for (const a of [-1, 1]) box(iron, F, a * 0.15 - 0.006, 0.28, -0.006, a * 0.15 + 0.006, 0.42, 0.006, 0.2);
     } else if (kind === 'chest') {
       box(wood, F, -0.42, 0, -0.28, 0.42, 0.36, 0.28, 0.5);
       // The vaulted lid.
@@ -358,14 +405,6 @@ function clutter() {
     } else if (kind === 'books') {
       books(F, 5);
       books(frame(...F.P(0.32, 0, 0.12), yaw + 0.9), 3);
-    } else if (kind === 'bedroll') {
-      box(cloth, F, -0.45, 0, -0.75, 0.45, 0.05, 0.85, 0.6);
-      const G = frame(...F.P(-0.47, 0.16, -0.86), yaw);
-      const roll = { R: (a, b, c) => G.R(b, a, c), P: (a, b, c) => G.P(b, a, c) };
-      lathe(cloth, roll, [[0, 0], [0.15, 0.01], [0.16, 0.06], [0.16, 0.88], [0.15, 0.93], [0, 0.94]], 12, 0.5);
-    } else if (kind === 'cauldron') {
-      lathe(iron, frame(x, y + 0.08, z, yaw, 0, k), [[0, 0], [0.26, 0.03], [0.38, 0.16], [0.42, 0.32], [0.37, 0.48], [0.4, 0.5], [0.4, 0.53], [0.35, 0.52], [0.32, 0.4], [0.3, 0.43]], 16, 0.4);
-      for (let i = 0; i < 3; i++) { const a = i * 2.09; box(iron, frame(...F.P(Math.cos(a) * 0.24, 0, Math.sin(a) * 0.24), yaw + a), -0.03, 0, -0.03, 0.03, 0.14, 0.03, 0.2); }
     } else if (kind === 'lectern') {
       box(wood, F, -0.24, 0, -0.2, 0.24, 0.05, 0.2, 0.5);
       box(wood, F, -0.05, 0.05, -0.05, 0.05, 0.98, 0.05, 0.5);
@@ -383,7 +422,148 @@ function clutter() {
     } else if (kind === 'sack') {
       lathe(burlap, F, [[0, 0], [0.2, 0.01], [0.26, 0.12], [0.25, 0.3], [0.17, 0.43], [0.07, 0.5], [0.09, 0.55], [0.05, 0.58], [0, 0.58]], 12, 0.4,
         (a, yy) => 0.12 * (noise2(a * 1.3 + x, yy * 6) - 0.5));
+    } else if (kind === 'basket') {
+      lathe(burlap, F, [[0, 0], [0.17, 0.01], [0.23, 0.14], [0.24, 0.28], [0.25, 0.3], [0.22, 0.3], [0.2, 0.06], [0, 0.05]], 12, 0.25);
+      for (let i = 0; i < 5; i++) lathe(paper, sub(F, rnd(-0.1, 0.1), 0.07 + i * 0.012, rnd(-0.1, 0.1)), [[0, 0], [0.05, 0.02], [0.055, 0.05], [0.03, 0.09], [0, 0.095]], 7, 0.2, null, potUV(i % 2 ? POT.bread : POT.clay));
+    } else if (kind === 'broom') {
+      const G = sub(F, 0, 0, 0, 0, 0.16);
+      box(wood, G, -0.014, 0.3, -0.014, 0.014, 1.5, 0.014, 0.5);
+      lathe(burlap, G, [[0, 0], [0.11, 0.01], [0.09, 0.2], [0.03, 0.33], [0.035, 0.36], [0, 0.36]], 9, 0.2, (a) => 0.2 * (noise2(a * 4, 1) - 0.5));
+    } else if (kind === 'hearth') {
+      // A ring of stones on the floor, ash and split logs in it, three iron legs over it, and her pot hung from them.
+      for (let i = 0; i < 11; i++) { const a = i / 11 * 6.283 + rnd(-0.1, 0.1), p = F.P(Math.cos(a) * 0.68, 0.06, Math.sin(a) * 0.68); boulder(stone, p[0], p[1], p[2], rnd(0.15, 0.21), 1.4); }
+      lathe(paper, F, [[0, 0.02], [0.56, 0.03], [0.4, 0.07], [0, 0.09]], 12, 0.4, null, potUV(POT.ash));
+      for (let i = 0; i < 5; i++) { const G = sub(F, rnd(-0.1, 0.1), 0.1 + i * 0.03, rnd(-0.1, 0.1), i * 1.26 + rnd(-0.2, 0.2), 0.12); lathe(dark, lying(G), [[0, -0.32], [0.055, -0.32], [0.06, 0.3], [0, 0.3]], 7, 0.3); }
+      for (let i = 0; i < 3; i++) { const a = i * 2.094 + 0.5; const G = sub(F, Math.cos(a) * 0.74, 0, Math.sin(a) * 0.74, Math.PI / 2 - a, -0.44); box(iron, G, -0.016, 0, -0.016, 0.016, 1.78, 0.016, 0.3); }
+      box(iron, F, -0.012, 0.98, -0.012, 0.012, 1.6, 0.012, 0.3);
+      lathe(iron, sub(F, 0, 0.5, 0), [[0, 0], [0.2, 0.03], [0.3, 0.14], [0.33, 0.28], [0.29, 0.42], [0.32, 0.44], [0.32, 0.47], [0.27, 0.46], [0.25, 0.3], [0, 0.26]], 14, 0.4);
+      lathe(iron, sub(F, 0, 0.96, 0, 0, Math.PI / 2), [[0.27, -0.008], [0.285, 0], [0.27, 0.008]], 14, 0.3);
+    } else if (kind === 'woodpile') {
+      for (let row = 0; row < 3; row++) for (let i = 0; i < 5 - row; i++) {
+        const G = sub(F, rnd(-0.03, 0.03), 0.075 + row * 0.13, -0.26 + (i + row * 0.5) * 0.13, rnd(-0.06, 0.06));
+        lathe(wood, lying(G), [[0, -0.5], [0.062, -0.5], [0.066, 0.48 + rnd(-0.05, 0.05)], [0, 0.5]], 7, 0.3);
+      }
+      box(iron, sub(F, 0.62, 0, 0.1, 0.3, -0.2), -0.012, 0, -0.03, 0.012, 0.66, 0.03, 0.3);
+    } else if (kind === 'worktable' || kind === 'desk') {
+      const hx = kind === 'desk' ? 0.8 : 0.85, top = kind === 'desk' ? 0.76 : 0.8;
+      box(wood, F, -hx, top, -0.42, hx, top + 0.05, 0.42, 0.7);
+      legs(wood, F, hx - 0.08, 0.34, top);
+      box(wood, F, -hx + 0.1, top - 0.1, -0.36, hx - 0.1, top, -0.33, 0.5); box(wood, F, -hx + 0.1, top - 0.1, 0.33, hx - 0.1, top, 0.36, 0.5);
+      const T = sub(F, 0, top + 0.05, 0);
+      if (kind === 'desk') {
+        // An open book, more shut ones, a candle, ink, and a rolled chart.
+        for (const side of [-1, 1]) box(paper, sub(T, side * 0.11 + 0.1, 0, 0.08, 0, 0), -0.105, 0, -0.15, 0.105, 0.022, 0.15, 1, [side < 0 ? 0.02 : 0.27, 0.05, side < 0 ? 0.23 : 0.48, 0.8]);
+        books(sub(T, -0.52, 0, -0.14, 0.3), 4); books(sub(T, 0.6, 0, -0.2, -0.5), 2);
+        candle(sub(T, -0.3, 0, -0.26), 0.17); candle(sub(T, 0.42, 0, 0.24), 0.09);
+        lathe(iron, sub(T, 0.46, 0, -0.02), [[0, 0], [0.035, 0], [0.04, 0.03], [0.02, 0.05], [0.022, 0.06], [0, 0.06]], 8, 0.2);
+        lathe(paper, lying(sub(T, -0.38, 0.032, 0.26, 0.2)), [[0, -0.2], [0.03, -0.2], [0.03, 0.2], [0, 0.2]], 8, 0.3, null, [0.1, 0.9]);
+        box(wood, F, -0.3, top - 0.2, 0.3, 0.3, top - 0.02, 0.36, 0.5); box(iron, F, -0.03, top - 0.12, 0.36, 0.03, top - 0.1, 0.375, 0.2);
+      } else {
+        // A board and a loaf, bowls, jars and bottles, a pestle; a cloth; and over it a rail hung with herbs and pans.
+        box(wood, sub(T, -0.05, 0, 0.12, 0.15), -0.2, 0, -0.13, 0.2, 0.02, 0.13, 0.4);
+        lathe(paper, lying(sub(T, -0.05, 0.075, 0.12, 0.15)), [[0, -0.13], [0.05, -0.11], [0.062, 0], [0.05, 0.11], [0, 0.13]], 8, 0.3, null, potUV(POT.bread));
+        bowl(sub(T, 0.42, 0, 0.16), 0.11, paper); bowl(sub(T, 0.46, 0, -0.16), 0.08); bowl(sub(T, 0.62, 0, 0.02), 0.07, paper);
+        lathe(wood, sub(T, 0.44, 0.02, -0.14, 0, 0.5), [[0, 0], [0.012, 0], [0.016, 0.14], [0, 0.15]], 6, 0.2);
+        jar(sub(T, -0.62, 0, -0.24), 0.07, 0.2, POT.glaze); jar(sub(T, -0.46, 0, -0.27), 0.055, 0.15, POT.clay); bottle(sub(T, -0.7, 0, 0.0), 0.04, 0.24, POT.green);
+        bottle(sub(T, 0.2, 0, -0.28), 0.035, 0.2, POT.glass); jar(sub(T, 0.02, 0, -0.26), 0.06, 0.13, POT.glaze);
+        box(linen, sub(T, -0.36, 0, 0.2, 0.3), -0.13, 0, -0.1, 0.13, 0.012, 0.1, 1, INNER);
+        box(dark, F, -0.95, 1.92, -0.47, 0.95, 1.96, -0.43, 0.5);
+        for (const a of [-0.9, 0.9]) box(iron, F, a - 0.012, 1.7, -0.5, a + 0.012, 1.96, -0.47, 0.3);
+        for (let i = 0; i < 7; i++) {
+          const hx2 = -0.78 + i * 0.21 + rnd(-0.03, 0.03), len = rnd(0.24, 0.4), G = sub(F, hx2, 1.92, -0.45, rnd(0, 3), Math.PI);
+          if (i === 2 || i === 5) { lathe(iron, sub(F, hx2, 1.92 - 0.3, -0.45, 0, Math.PI / 2 + 0.1), [[0, 0], [0.1 + 0.03 * (i === 5), 0.005], [0.12 + 0.03 * (i === 5), 0.045], [0.11, 0.05], [0, 0.02]], 10, 0.2); box(iron, F, hx2 - 0.006, 1.74, -0.456, hx2 + 0.006, 1.92, -0.444, 0.2); }
+          else lathe(paper, G, [[0, 0], [0.012, 0.01], [0.02, 0.08], [0.06, len * 0.6], [0.075, len * 0.85], [0.03, len], [0, len]], 7, 0.3, (a2, yy) => 0.3 * (noise2(a2 * 3 + i, yy * 9) - 0.5), potUV(i % 3 === 1 ? POT.flower : POT.herb));
+        }
+      }
+    } else if (kind === 'stool') {
+      lathe(wood, sub(F, 0, 0.42, 0), [[0, 0], [0.19, 0], [0.2, 0.02], [0.19, 0.04], [0, 0.045]], 12, 0.4);
+      for (let i = 0; i < 3; i++) { const a = i * 2.094; box(wood, sub(F, Math.cos(a) * 0.15, 0, Math.sin(a) * 0.15, Math.PI / 2 - a, 0.12), -0.02, 0, -0.02, 0.02, 0.43, 0.02, 0.3); }
+    } else if (kind === 'chair') {
+      box(wood, F, -0.22, 0.44, -0.21, 0.22, 0.48, 0.21, 0.5);
+      legs(wood, F, 0.19, 0.18, 0.44, 0.022);
+      for (const a of [-1, 1]) box(wood, F, a * 0.19 - 0.022, 0.48, -0.202, a * 0.19 + 0.022, 0.98, -0.158, 0.4);
+      for (const yy of [0.62, 0.8, 0.94]) box(wood, F, -0.19, yy, -0.195, 0.19, yy + 0.06, -0.165, 0.4);
+      box(wool2, F, -0.2, 0.48, -0.19, 0.2, 0.5, 0.19, 1, INNER);
+    } else if (kind === 'pantry') {
+      shelves(F, 0.78, 0.2, 1.9, 4, (yy, room, row) => {
+        let px = -0.68;
+        while (px < 0.68) {
+          const pick = rnd();
+          const G = sub(F, px + 0.06, yy, rnd(-0.06, 0.08));
+          if (pick < 0.4) { const r = rnd(0.045, 0.075); jar(G, r, Math.min(room, rnd(0.12, 0.24)), [POT.glaze, POT.clay, POT.clay, POT.green][Math.floor(rnd(0, 4))]); px += r * 2 + 0.03; }
+          else if (pick < 0.65) { bottle(G, 0.035, Math.min(room, rnd(0.18, 0.3)), rnd() < 0.5 ? POT.green : POT.glass); px += 0.1; }
+          else if (pick < 0.8 && row < 2) { lathe(burlap, G, [[0, 0], [0.07, 0.01], [0.09, 0.08], [0.06, 0.16], [0.03, 0.19], [0, 0.19]], 8, 0.3); px += 0.2; }
+          else if (pick < 0.9) { bowl(G, 0.08, paper); px += 0.2; }
+          else px += 0.12;
+        }
+      });
+    } else if (kind === 'bookcase') {
+      shelves(F, 0.68, 0.18, 1.95, 5, (yy, room, row) => {
+        let px = -0.66;
+        while (px < 0.6) {
+          const t = rnd(0.025, 0.06), hgt = Math.min(room - 0.02, rnd(0.19, 0.3)), d = rnd(0.11, 0.15);
+          if (rnd() < 0.1) { px += rnd(0.05, 0.14); continue; }
+          // (Now and then a few lean, or lie flat in a pile.)
+          if (rnd() < 0.07 && px < 0.35) { books(sub(F, px + 0.13, yy, 0.02, 1.57), 3 + Math.floor(rnd(0, 3))); px += 0.3; continue; }
+          box(paper, sub(F, px + t / 2, yy, 0.02, 0, 0), -t / 2, 0, -d, t / 2, hgt, d * 0.9, 1, bookUV(Math.floor(rnd(0, 8))));
+          px += t + 0.004;
+        }
+        if (row === 4) { candle(sub(F, 0.5, yy + room + 0.05, 0), 0.12); lathe(paper, sub(F, -0.4, yy + room + 0.05, 0), [[0, 0], [0.08, 0.01], [0.1, 0.1], [0.07, 0.17], [0, 0.18]], 9, 0.3, null, potUV(POT.ash)); }
+      });
+    } else if (kind === 'bed') {
+      // Posts, rails and boards; a mattress of ticking; a pillow; a red wool blanket turned down, and a green one folded at the foot.
+      for (const [a, b, hgt] of [[-1, 1, 1.1], [1, 1, 1.1], [-1, -1, 0.7], [1, -1, 0.7]]) box(dark, F, a * 0.6 - 0.045, 0, b * 1.04 - 0.045, a * 0.6 + 0.045, hgt, b * 1.04 + 0.045, 0.4);
+      for (const a of [-1, 1]) box(dark, F, a * 0.6 - 0.025, 0.24, -1.04, a * 0.6 + 0.025, 0.4, 1.04, 0.5);
+      box(dark, F, -0.6, 0.4, 1.02, 0.6, 1.0, 1.06, 0.5); box(dark, F, -0.6, 0.24, -1.06, 0.6, 0.6, -1.02, 0.5);
+      box(linen, F, -0.57, 0.3, -1.0, 0.57, 0.5, 1.0, 1, INNER);
+      const base = linen.count, N = 8, M = 6;
+      for (let j = 0; j <= M; j++) for (let i = 0; i <= N; i++) {
+        const u = i / N * 2 - 1, v = j / M * 2 - 1, hgt = 0.11 * Math.sqrt(Math.max(0, 1 - u * u * 0.9)) * Math.sqrt(Math.max(0, 1 - v * v * 0.9));
+        linen.v(F.P(u * 0.36, 0.5 + hgt, 0.72 + v * 0.2), F.R(u * 0.4, 1, v * 0.4), 0.2 + 0.6 * i / N, 0.2 + 0.6 * j / M);
+      }
+      for (let j = 0; j < M; j++) for (let i = 0; i < N; i++) { const a = base + j * (N + 1) + i; linen.quad(a, a + 1, a + N + 2, a + N + 1); }
+      box(wool, F, -0.61, 0.26, -1.0, 0.61, 0.535, 0.32, 1, INNER);
+      box(wool, F, -0.6, 0.535, 0.2, 0.6, 0.56, 0.34, 1, [0.1, 0.1, 0.9, 0.3]);
+      box(wool2, F, -0.5, 0.535, -0.96, 0.5, 0.62, -0.6, 1, INNER);
+    } else if (kind === 'nightstand') {
+      box(dark, F, -0.24, 0.5, -0.22, 0.24, 0.54, 0.22, 0.5); legs(dark, F, 0.2, 0.18, 0.5, 0.02);
+      box(dark, F, -0.2, 0.2, -0.18, 0.2, 0.23, 0.18, 0.5);
+      candle(sub(F, 0.1, 0.54, 0.06), 0.16); books(sub(F, -0.07, 0.54, -0.02, 0.4), 2);
+      jar(sub(F, 0.02, 0.23, 0), 0.06, 0.14, POT.clay);
+    } else if (kind === 'mirror') {
+      // A tall glass in a frame, leant on its foot, with a cloth thrown over it.
+      const G = sub(F, 0, 0, 0, 0, -0.1);
+      for (const a of [-1, 1]) box(dark, G, a * 0.33 - 0.03, 0, -0.03, a * 0.33 + 0.03, 1.6, 0.03, 0.4);
+      box(dark, G, -0.36, 1.56, -0.03, 0.36, 1.62, 0.03, 0.4); box(dark, F, -0.36, 0, -0.2, 0.36, 0.05, 0.22, 0.4);
+      box(iron, G, -0.3, 0.12, -0.012, 0.3, 1.56, 0.0, 0.3);
+      box(linen, G, -0.4, 0.5, -0.05, 0.4, 1.66, 0.055, 1, INNER);
+      box(linen, G, -0.38, 0.32, 0.03, 0.2, 0.52, 0.06, 1, [0.1, 0.6, 0.6, 0.9]);
+    } else if (kind === 'hide' || kind === 'ragrug' || kind === 'rug') {
+      // Flat on the floor: a hide with a ragged edge; a rag rug by her bed; a long one down the middle of the room.
+      const g = kind === 'hide' ? hide : ragrug, [hx, hz] = kind === 'hide' ? [1.25, 0.85] : kind === 'ragrug' ? [0.55, 0.9] : [0.95, 2.3];
+      const lift = kind === 'rug' ? 0.014 : 0.02, n = F.R(0, 1, 0);
+      if (kind === 'hide') {
+        const c = g.v(F.P(0, lift, 0), n, 0.5, 0.5), N = 22;
+        const ring = Array.from({ length: N + 1 }, (_, i) => { const a = i / N * 6.2832, rr = 1 + 0.16 * Math.sin(a * 4 + 0.6) + 0.1 * (noise2(Math.cos(a) * 2 + 3, Math.sin(a) * 2) - 0.5); return g.v(F.P(Math.cos(a) * hx * rr, lift, Math.sin(a) * hz * rr), n, 0.5 + 0.42 * Math.cos(a), 0.5 + 0.42 * Math.sin(a)); });
+        for (let i = 0; i < N; i++) g.tri(c, ring[i], ring[i + 1]);
+      } else {
+        // (Its stripes run across it: the picture's own way. Tiled along its length, whole rows at a time.)
+        const reps = Math.round(hz / 0.8) || 1;
+        const base = g.count;
+        g.v(F.P(-hx, lift, -hz), n, 0.04, 0); g.v(F.P(hx, lift, -hz), n, 0.96, 0); g.v(F.P(hx, lift, hz), n, 0.96, reps); g.v(F.P(-hx, lift, hz), n, 0.04, reps);
+        g.quad(base, base + 1, base + 2, base + 3);
+      }
     }
+  }
+  // The old lantern on her worktable: iron top and foot, four thin posts, and horn panes gone the colour of old wax.
+  {
+    const F = frame(LANTERN[0], LANTERN[1], LANTERN[2], CHAMBER_YAW + 0.5);
+    F.yaw = CHAMBER_YAW + 0.5; F.k = 1;
+    box(iron, F, -0.075, 0, -0.075, 0.075, 0.025, 0.075, 0.2);
+    for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) box(iron, F, a * 0.062 - 0.008, 0.025, b * 0.062 - 0.008, a * 0.062 + 0.008, 0.235, b * 0.062 + 0.008, 0.2);
+    box(wax, F, -0.056, 0.03, -0.056, 0.056, 0.23, 0.056, 0.3);
+    lathe(iron, sub(F, 0, 0.235, 0), [[0.095, 0], [0.09, 0.012], [0.03, 0.07], [0.012, 0.085], [0.018, 0.1], [0, 0.1]], 4, 0.2);
+    lathe(iron, sub(F, 0, 0.375, 0, 0, Math.PI / 2), [[0.036, -0.004], [0.042, 0], [0.036, 0.004]], 10, 0.2);
   }
   // The candles' wax: each where it floats, and the three on the tunnel's ledges.
   for (const c of CANDLES) {
@@ -392,7 +572,55 @@ function clutter() {
     lathe(wax, F, [[0, 0], [r, 0], [r * 1.04, c.tall * 0.4], [r, c.tall], [r * 0.7, c.tall + 0.008], [0, c.tall + 0.004]], 8, 0.2,
       (a, yy) => (yy < c.tall * 0.9 ? 0.15 * Math.max(0, Math.sin(a * 3 + c.phase)) * (1 - yy / c.tall) : 0));
   }
-  return { wood: wood.done(), iron: iron.done(), cloth: cloth.done(), burlap: burlap.done(), paper: paper.done(), wax: wax.done() };
+  const out = {};
+  for (const [k, g] of Object.entries(B)) out[k] = g.done();
+  return out;
+}
+
+// ---- the way down: her steps ----------------------------------------------------------------------------------------------
+// Four flights of split stone, one slab to a step, laid on the slope the land's cut to (src/core/opening.js WAY: you walk
+// the slope, and the slabs sit across it); stones set along both edges of each flight; and stones along the lip of the
+// shelf and the ledge, where the ground falls away.
+function waySteps() {
+  const g = new Geo();
+  seed = 97;
+  for (const sg of WAY_SEGS) {
+    const ux = sg.dx / sg.len, uz = sg.dz / sg.len, yaw = Math.atan2(ux, uz);
+    if (sg.stairs) {
+      const run = sg.len - 2 * STAIR_FLAT, n = Math.max(1, Math.round((sg.ay - sg.by) / 0.165)), d = run / n;
+      for (let i = 0; i < n; i++) {
+        const t = (STAIR_FLAT + (i + 0.5) * d) / sg.len, top = wayY(sg, t) + 0.02;
+        const F = frame(sg.ax + sg.dx * t, top, sg.az + sg.dz * t, yaw + rnd(-0.03, 0.03));
+        const hw = 1.22 + rnd(-0.08, 0.1);
+        box(g, F, -hw, -0.5, -d / 2 - 0.05, hw, rnd(-0.008, 0.008), d / 2 + 0.03, 1.3);
+      }
+      // A flagged landing at each turn, flush with the ground.
+      for (const [t, yy] of [[STAIR_FLAT * 0.45 / sg.len, sg.ay], [1 - STAIR_FLAT * 0.45 / sg.len, sg.by]]) {
+        const F = frame(sg.ax + sg.dx * t, yy + 0.015, sg.az + sg.dz * t, yaw + rnd(-0.2, 0.2));
+        box(g, F, -1.15, -0.3, -0.52, 1.15, 0, 0.52, 1.3);
+      }
+    }
+    // Stones along the edges: both, down a flight; the low side only, along the shelf and the path (the way's lip).
+    for (let at = 0.6; at < sg.len - 0.3; at += sg.stairs ? rnd(0.7, 1.2) : rnd(1.3, 2.6)) {
+      const t = at / sg.len, cx = sg.ax + sg.dx * t, cz = sg.az + sg.dz * t;
+      for (const side of [-1, 1]) {
+        const off = (sg.stairs ? 1.42 : 1.55) + rnd(0, 0.25), x = cx - uz * off * side, z = cz + ux * off * side, y = terrainHeight(x, z);
+        if (!sg.stairs && y > wayY(sg, t) - 0.25) continue;
+        boulder(g, x, y + 0.02, z, sg.stairs ? rnd(0.22, 0.4) : rnd(0.25, 0.5), 0.6);
+      }
+    }
+  }
+  // Round the ledge's lip.
+  const m = STATIONS[0];
+  for (let i = 0; i < 16; i++) {
+    const a = -1.5 + i / 15 * 3.0 + rnd(-0.05, 0.05), r = 6.4 + rnd(-0.4, 0.5);
+    const cx = CAVE_MOUTH[0] + CAVE_OUT[0] * 3.6, cz = CAVE_MOUTH[1] + CAVE_OUT[1] * 3.6;
+    const dx = CAVE_OUT[0] * Math.cos(a) - CAVE_OUT[1] * Math.sin(a), dz = CAVE_OUT[1] * Math.cos(a) + CAVE_OUT[0] * Math.sin(a);
+    const x = cx + dx * r, z = cz + dz * r, y = terrainHeight(x, z);
+    if (Math.hypot(x - WAY[1][0], z - WAY[1][1]) < 3.2 || y > m[5] - 0.3) continue;
+    boulder(g, x, y + 0.05, z, rnd(0.35, 0.75), 0.6);
+  }
+  return g.done();
 }
 
 // The paper: the ledger's two leaves above (a column of names, all but the last struck through), book cloth below.
@@ -434,7 +662,12 @@ async function paperTexture() {
       }
     }
   }
-  // Book cloth: eight colours along the bottom strip's right half.
+  // Plain colours for small things along the bottom strip's left half, and book cloth along its right.
+  for (let i = 0; i < 8; i++) {
+    const [r, gg, b] = POT_COLOURS[i];
+    g.fillStyle = `rgb(${r},${gg},${b})`;
+    g.fillRect(i * W / 16, Hh * 0.88, W / 16, Hh * 0.12);
+  }
   for (let i = 0; i < 8; i++) {
     const [r, gg, b] = BOOK_COLOURS[i];
     g.fillStyle = `rgb(${r},${gg},${b})`;
@@ -501,27 +734,42 @@ export async function loadOpeningStage(renderer, base) {
   const rough = (r, m = 0) => renderer.pixel('rgba8unorm', [255, r, m, 255]);
   const book = loadBook(renderer, base);
   book.catch(() => {});
-  const [rockC, rockD, earthC, earthD, rubbleC, rubbleD, woodC, woodD, clothC, clothD, paperC] = await Promise.all([
-    tex('wall_rough_c', true), tex('wall_rough_d'), tex('cata_earth_c', true), tex('cata_earth_d'), tex('cata_rubble_c', true), tex('cata_rubble_d'),
-    tex('wood_b1_c', true), tex('wood_b1_d'), tex('cloth_red_c', true), tex('cloth_red_d'),
+  const land = async (name, srgb) => renderer.bitmapTexture(await getFile(base + LAND_TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale);
+  const pair = (name, from = tex) => Promise.all([from(name + '_c', true), from(name + '_d')]);
+  // The rock is the hill's own granite, inside and out; the floor trodden earth; her steps split limestone. Her things are
+  // of the houses' woods and cloths (assets/game/interior), each cloth cut from the middle of its picture.
+  const [rock, earth, lime, woodT, darkT, linenT, woolT, wool2T, hideT, rugT, paperC] = await Promise.all([
+    pair('granite_1', land), pair('dirt_1', land), pair('limestone_1', land), pair('wood_b1'), pair('beam'), pair('linen'), pair('wool_red'), pair('wool_green'),
+    pair('hide'), pair('rag_rug'),
     paperTexture().then((b) => renderer.bitmapTexture(b, 'rgba8unorm-srgb', 1)),
   ]);
   const pages = await book;
   const props = clutter();
   const model = (prim, alb, nrm, mr, glow = [0, 0, 0, 0]) => renderer.lyingModel(prim, alb, nrm, mr, glow);
   return () => new OpeningStage(renderer, {
-    rock: item(model(caveRock(), rockC, rockD, rough(238)), false),
-    floor: item(model(caveFloor(), earthC, earthD, rough(245))),
-    rubble: item(model(caveRubble(), rubbleC, rubbleD, rough(240)), false),
-    wood: item(model(props.wood, woodC, woodD, rough(200))),
+    rock: item(model(caveRock(), rock[0], rock[1], rough(236)), false),
+    floor: item(model(caveFloor(), earth[0], earth[1], rough(245))),
+    rubble: item(model(caveRubble(), rock[0], rock[1], rough(240)), false),
+    steps: item(model(waySteps(), lime[0], lime[1], rough(232)), false),
+    stone: item(model(props.stone, rock[0], rock[1], rough(236))),
+    wood: item(model(props.wood, woodT[0], woodT[1], rough(200))),
+    dark: item(model(props.dark, darkT[0], darkT[1], rough(190))),
     iron: item(model(props.iron, renderer.pixel('rgba8unorm-srgb', [46, 42, 40, 255]), flat, rough(125, 190))),
-    cloth: item(model(props.cloth, clothC, clothD, rough(240))),
-    burlap: item(model(props.burlap, renderer.pixel('rgba8unorm-srgb', [124, 98, 66, 255]), clothD, rough(250))),
-    paper: item(model(props.paper, paperC, flat, rough(215))),
+    linen: item(model(props.linen, linenT[0], linenT[1], rough(245))),
+    wool: item(model(props.wool, woolT[0], woolT[1], rough(248))),
+    wool2: item(model(props.wool2, wool2T[0], wool2T[1], rough(248))),
+    hide: item(model(props.hide, hideT[0], hideT[1], rough(240))),
+    ragrug: item(model(props.ragrug, rugT[0], rugT[1], rough(248))),
+    burlap: item(model(props.burlap, renderer.pixel('rgba8unorm-srgb', [124, 98, 66, 255]), linenT[1], rough(250))),
+    paper: item(model(props.paper, paperC, flat, rough(205))),
     wax: item(model(props.wax, renderer.pixel('rgba8unorm-srgb', [226, 210, 178, 255]), flat, rough(150), [0.05, 0.03, 0.01, 0.5])),
-    portal: item(model(PORTAL_MESH, rockC, flat, rough(200), [0, 0, 0, -1])),
+    portal: item(model(PORTAL_MESH, rock[0], flat, rough(200), [0, 0, 0, -1])),
   }, pages);
 }
+
+// Her things, drawn while you're in the cave; and what's always there once the game has an opening at all.
+const INSIDE = ['stone', 'wood', 'dark', 'iron', 'linen', 'wool', 'wool2', 'hide', 'ragrug', 'burlap', 'paper', 'wax'];
+const STILL = ['rock', 'floor', 'rubble', 'steps', ...INSIDE];
 
 // ---- each frame -------------------------------------------------------------------------------------------------------
 // The floating candles, gathered into a few lights between them (one light each would be far too many).
@@ -541,7 +789,7 @@ class OpeningStage {
     this.r = r;
     Object.assign(this, items);
     this.book = book;
-    for (const k of ['rock', 'floor', 'rubble', 'wood', 'iron', 'cloth', 'burlap', 'paper', 'wax']) mat4FromQT(this[k].mat, [0, 0, 0, 1], 0, [0, 0, 0], 0);
+    for (const k of STILL) mat4FromQT(this[k].mat, [0, 0, 0, 1], 0, [0, 0, 0], 0);
     this.position = new Float32Array(3); this.heading = new Float32Array(4); this.tilt = new Float32Array(4);
     this.hinge = new Float32Array(4); this.rotation = new Float32Array(4); this.q = new Float32Array(4);
     this.yaw = 0; this.last = null;
@@ -554,7 +802,10 @@ class OpeningStage {
       portal: L([0.5, 0.13, 1], 8, 0, 0.65), book: L([0.55, 0.22, 1], 3.2, 0, 0.4),
       key: L([1, 0.78, 0.46], 4.5, 0, 0.1), rim: L([1, 0.86, 0.62], 4, 0, 0.1),
       fill: L([0.6, 0.45, 1], 5.5, 0, 0.2),
+      // Her hearth: embers till her snap, and a fire from then on, the warmest light in the room.
+      hearth: L([1, 0.5, 0.18], 10, 0, 0.7),
     };
+    this.hearthAt = [HEARTH[0], chamberShape(7.8)[2], HEARTH[1]];
     this.groups = candleGroups().map((list) => {
       const n = list.length, c = [0, 0, 0];
       for (const k of list) { c[0] += k.x / n; c[1] += k.y / n; c[2] += k.z / n; }
@@ -580,13 +831,10 @@ class OpeningStage {
       m.flash = Math.max(0, 1 - Math.abs(t - SWAP_AT) / 0.25);
       m.candles = t;
       m.circle = 1;
-      // On her name for you the door swells behind her and every flame leans toward you; her soft snap on the crate flares
-      // the candle nearest her; your spark bursts another; and as her voice climbs in beat 9, they gutter.
+      // On her name for you the door swells behind her and every flame leans toward you; and your spark bursts a candle.
       m.portal = 1 + 0.22 * bump(t, REVEAL_AT + 0.1, REVEAL_AT + 0.5, REVEAL_AT + 1.3, REVEAL_AT + 2.4);
       m.lean = bump(t, REVEAL_AT + 0.1, REVEAL_AT + 0.5, REVEAL_AT + 1.4, REVEAL_AT + 2.6);
-      m.soft = t - CAVE.softSnap - 0.6;
       m.burst = t < SPARK_AT + 0.25 ? 0 : Math.max(0, 1 - (t - SPARK_AT - 0.25) / 1.8);
-      m.gutter = t > CLIMB[0] && t < CLIMB[1] ? smoothstep(CLIMB[0], CLIMB[1] - 1, t) : 0;
     } else if (stage <= OPENING.LEAVE) {
       m.candles = 99; m.circle = 0.75;
       // It hitches as you go: the door she's holding open slipping.
@@ -626,13 +874,13 @@ class OpeningStage {
     if (!stage) { this.park(); r.caveAmb = null; return; }
     const t = snap[H.OPENING_TIME], time = snap[H.TIME];
     const m = this.moment(stage, t);
-    items.push(this.rock, this.floor);
+    items.push(this.rock, this.floor, this.steps);
     if (m.rubble) {
       const k = m.drop || 0;
       mat4FromQT(this.rubble.mat, [0, 0, 0, 1], 0, [-CAVE_OUT[0] * 1.8 * k, 0.6 * k, -CAVE_OUT[1] * 1.8 * k], 0);
       items.push(this.rubble);
     }
-    if (m.inside) items.push(this.wood, this.iron, this.cloth, this.burlap, this.paper, this.wax);
+    if (m.inside) for (const k of INSIDE) items.push(this[k]);
     if (cam) {
       const n = caveNearest(cam.x, cam.z);
       r.inCave = n.s > 0.3 && Math.abs(n.d) < n.w + 1 && cam.y < n.floor + n.h + 1;
@@ -674,6 +922,11 @@ class OpeningStage {
     const burst = CANDLES[BURST_CANDLE];
     if (m.burst > 0.01) this.light(this.lights.fill, burst.x, burst.y + 0.25, burst.z, 34 * m.burst * m.burst);
     else this.light(this.lights.fill, wx + Math.sin(toYou) * 1.8, wy + 1.7, wz + Math.cos(toYou) * 1.8, fill);
+    // Her hearth: a bed of embers in the dark, and it catches with the candles.
+    const fire = stage === OPENING.WAKE ? smoothstep(CANDLES_AT + 0.5, CANDLES_AT + 2.2, t) : stage === OPENING.COLLAPSE ? 1 - smoothstep(3.0, 4.2, t) : 1;
+    const hf = 0.8 + 0.2 * Math.sin(time * 9.7) * Math.sin(time * 4.3) + 0.08 * Math.sin(time * 23);
+    this.light(this.lights.hearth, this.hearthAt[0], this.hearthAt[1] + 0.75, this.hearthAt[2], (1.6 + 26 * fire) * hf);
+    this.fire = fire;
     // The candles.
     for (const g of this.groups) {
       let k = 0;
@@ -692,7 +945,6 @@ class OpeningStage {
       if (k <= 0) return;
       const age = m.candles - c.at;
       let flare = 1 + 2.2 * Math.max(0, 1 - age / 0.3);
-      if (i === SOFT_CANDLE && m.soft > 0) flare += 2.4 * Math.max(0, 1 - m.soft / 0.7);
       if (i === BURST_CANDLE && m.burst > 0) flare += 7 * m.burst * m.burst;
       let fl = 0.85 + 0.15 * Math.sin(time * 13 + c.phase * 7) + 0.08 * Math.sin(time * 29 + c.phase);
       if (m.gutter) fl *= 1 - m.gutter * (0.3 + 0.3 * Math.sin(time * 23 + c.phase * 5));
@@ -702,6 +954,17 @@ class OpeningStage {
       this.blob(top, R, U, 0.028 * fl * flare, 0.05 * fl * flare * (1 + 0.5 * lean), [1.5 * k, 0.95 * k, 0.42 * k], 0.02);
       this.blob(top, R, U, 0.3 * flare, 0.3 * flare, [0.16 * k, 0.075 * k, 0.025 * k]);
     });
+    // The fire in her hearth: embers' glow on the ash, and tongues of flame over the logs once it's caught.
+    {
+      const [hx, hy, hz] = this.hearthAt, f = this.fire || 0;
+      this.blob([hx, hy + 0.16, hz], R, U, 0.42, 0.16, [0.5 + 0.5 * f, 0.14 + 0.2 * f, 0.03]);
+      for (let i = 0; i < 5 && f > 0.02; i++) {
+        const ph = i * 1.9, lick = 0.5 + 0.5 * Math.sin(time * (6 + i * 1.3) + ph), ox = Math.sin(ph * 2.1) * 0.2, oz = Math.cos(ph * 1.7) * 0.2;
+        const hgt = (0.22 + 0.2 * lick) * f;
+        this.blob([hx + ox, hy + 0.2 + hgt * 0.8, hz + oz], R, U, 0.09 + 0.05 * lick, hgt, [1.5 * f, 0.72 * f, 0.2 * f], 0);
+      }
+      if (f > 0.02) this.blob([hx, hy + 0.5, hz], R, U, 1.1, 0.9, [0.2 * f, 0.085 * f, 0.02 * f]);
+    }
     if (m.swirl > 0.01) {
       const ox = this.position[0], oy = wy, oz = this.position[2];
       for (const mo of this.motes) {
@@ -716,7 +979,7 @@ class OpeningStage {
     if (m.glamour > 0.01) this.blob([wx, wy + 1.4, wz], R, U, 1.5, 1.8, [0.1 * m.glamour, 0.07 * m.glamour, 0.03 * m.glamour]);
     // The circle you woke in, on the floor.
     if (m.circle > 0.01) {
-      const [cx, cz] = CIRCLE, cy = chamberShape(11.8)[2] + 0.02, pulse = 0.75 + 0.25 * Math.sin(time * 2.1);
+      const [cx, cz] = CIRCLE, cy = CIRCLE_Y + 0.02, pulse = 0.75 + 0.25 * Math.sin(time * 2.1);
       for (const [rad, wid, b] of [[1.25, 0.07, 1], [1.05, 0.035, 0.6], [0.45, 0.03, 0.45]]) this.ring(cx, cy, cz, rad, wid, [0.32, 0.08, 0.75].map((v) => v * b * m.circle * pulse));
     }
     // Down the tunnel behind her as she runs, the mouth burns white: the day outside, and the dust in it. The glare is a

@@ -210,7 +210,7 @@ export class TestHall {
       return n;
     }
     if (kind === 'undead') {
-      const free = (k) => k instanceof Zombie && !inHall(k.x, k.z) && (k.dormant || k.dead || !k.aggro);
+      const free = (k) => k instanceof Zombie && !k.opts.reserve && !inHall(k.x, k.z) && (k.dormant || k.dead || !k.aggro);
       const fits = {
         ogre: (k) => !(k instanceof Caster) && k.opts.model === 'zombie_ogre',
         necromancer: (k) => k.opts.role === 'necromancer', plaguebearer: (k) => k.opts.role === 'plaguebearer', wizard: (k) => k.opts.role === 'wizard',

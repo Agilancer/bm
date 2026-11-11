@@ -25,6 +25,11 @@ export const BODIES = [
   { model: 'necromancer', count: 1, scale: 1 },
   { model: 'zombie_necromancer', count: 1, scale: 1 },
   { model: 'evil_wizard', count: 2, scale: 1 },
+  // Kept for the road down from Lisandra's cave (src/sim/opening.js, openingRaise below): more of the dead for its waves,
+  // their children (the same bodies, small), and the two necromancers who come out of the trees at the end of it.
+  ...[1, 3, 5].map((n) => ({ model: `zombie_${n}`, count: 2, scale: 1, reserve: true })),
+  ...[2, 4].map((n) => ({ model: `zombie_${n}`, count: 5, scale: 0.6, reserve: true, child: true })),
+  { model: 'necromancer', count: 2, scale: 1, reserve: true },
 ];
 
 const STATE = { MOVE: 0, ATTACK: 3, STAGGER: 7, RISE: 8, PLAYDEAD: 9, DEAD: 10, CAST: 11 };
@@ -1189,12 +1194,23 @@ export class Caster extends Zombie {
 
 export function raiseZombie(sim, x, z, owner, calm = false) {
   let body = null, oldest = 8;
+  // (The road down from Lisandra's cave: its necromancers call up what's fallen round them, the freshest first, or else
+  // one of the bodies kept for the road; and nobody else has those.)
+  const road = !!owner?.opts.reserve;
   for (const k of sim.knights) {
     if (!(k instanceof Zombie) || k instanceof Caster || k.scale > 1.2 || !k.dead) continue;
+    if (road) {
+      if (k.dormant) { if (k.opts.reserve && !body) body = k; } else if (k.deadT > 1.5 && Math.hypot(k.x - x, k.z - z) < 30 && (!body || body.dormant || k.deadT < body.deadT)) body = k;
+      continue;
+    }
+    if (k.opts.reserve) continue;
     if (k.dormant) { body = k; break; }
     if (k.deadT > oldest) { oldest = k.deadT; body = k; }
   }
-  if (body) body.raiseAt(sim, x, z, owner, calm);
+  if (body) {
+    body.raiseAt(sim, x, z, owner, calm);
+    if (road) { const easy = EASY[body.opts.child ? 'child' : 'adult']; body.hp = body.maxHp = body.seenHp = easy.hp; body.dmgScale = easy.dmg; }
+  }
   return body;
 }
 
@@ -1244,7 +1260,7 @@ export function stepCatacombs(sim) {
   if (along(p) < 125 || sim.time < nextLook) return;   // (Past the office, at the head of the stair down.)
   nextLook = sim.time + 0.5;
   const spawns = sim.world.spawns;
-  const idle = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
+  const idle = (k) => k instanceof Zombie && !k.opts.role && !k.opts.reserve && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
   LORDS.forEach((l, n) => {
     if (lordsDone.has(n) || !l.when(p)) return;
     const body = sim.knights.find((k) => k.opts && k.opts.model === l.model && !k.below && !k.aggro && !k.dead);
@@ -1354,6 +1370,8 @@ export function stepWoods(sim) {
   }
   if (p.dead || sim.time < sim.packAt) return;
   sim.packAt = sim.time + 1;
+  // (On the way down from Lisandra's cave the woods are hers to stage: src/sim/opening.js.)
+  if (sim.opening?.onRoad) return;
   const out = Math.hypot(p.x, p.z);
   if (inTown(p.x, p.z, -12) || out > 125) sim.reachedTown = true;   // In the town, or gone out past it: until then the woods hold their packs back.
   if (!sim.reachedTown || inTown(p.x, p.z, 26) || churchSite(p.x, p.z) < 6 || floorAt(p.x, p.z) !== null || Math.abs(p.x) > 235 || Math.abs(p.z) > 235) return;
@@ -1367,7 +1385,7 @@ export function stepWoods(sim) {
     found = !inTown(cx, cz, 6) && churchSite(cx, cz) > 0 && floorAt(cx, cz) === null && !sim.world.inside(cx, cz, 1);
   }
   if (!found) return;
-  const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 60));
+  const free = (k) => k instanceof Zombie && !k.opts.role && !k.opts.reserve && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 60));
   const bodies = list.filter(free).sort(graveLast).slice(0, Math.min(12, 6 + Math.floor(out / 60)));
   if (bodies.length < 3) return;
   const first = Math.ceil(bodies.length / 2);
@@ -1391,7 +1409,7 @@ export function stepWoods(sim) {
 // The opening's ambush on the road down (src/sim/opening.js): n of the dead, slow ones, stood up around (cx, cz) and set on
 // you. Returns them, so the story knows when they're down.
 export function ambush(sim, cx, cz, n) {
-  const free = (k) => k instanceof Zombie && !k.opts.role && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || k.dead || !k.aggro);
+  const free = (k) => k instanceof Zombie && !k.opts.role && !k.opts.reserve && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || k.dead || !k.aggro);
   const bodies = sim.knights.filter(free).sort(graveLast).slice(0, n);
   bodies.forEach((b, i) => {
     const a = i * 2.4 + rnd(-0.4, 0.4), r = rnd(1.5, 4);
@@ -1401,6 +1419,39 @@ export function ambush(sim, cx, cz, n) {
   });
   sim.event(EV.ROAR, cx, sim.world.height(cx, cz) + 1, cz, 1);
   return bodies;
+}
+
+// ---- the road down from Lisandra's cave ----------------------------------------------------------------------
+// Its dead are easy: this is your first fight. (src/sim/opening.js stages it: how many, where and when.)
+const EASY = { adult: { hp: 16, dmg: 0.45 }, child: { hp: 8, dmg: 0.3 } };
+// One more of them up out of the ground at (x, z) and after you: a body kept for the road, or one of the woods' that's
+// in the ground with nothing to do; failing those, one of the fight's own (mine) that's been down a few seconds, which
+// goes back into the earth and comes up again here. Null if there's no body to be had just now.
+export function openingRaise(sim, x, z, child, mine) {
+  const ok = (k) => k instanceof Zombie && !(k instanceof Caster) && !k.opts.role && k.opts.model !== 'zombie_ogre' && !!k.opts.child === child && !heroBusy(k, sim);
+  let body = null;
+  for (const k of sim.knights) {
+    if (!ok(k) || !k.dormant || (!k.opts.reserve && k.opts.grave)) continue;
+    if (!body || (k.opts.reserve && !body.opts.reserve)) body = k;
+  }
+  if (!body) for (const k of sim.knights) if (ok(k) && k.dead && !k.dormant && k.deadT > 2.5 && (k.opts.reserve || mine.has(k)) && (!body || k.deadT > body.deadT)) body = k;
+  if (!body) return null;
+  const easy = EASY[child ? 'child' : 'adult'], p = sim.player;
+  huntFrom(sim, body, x, z, child || Math.random() < 0.25 ? 'runner' : 'shambler');
+  body.hp = body.maxHp = body.seenHp = easy.hp; body.dmgScale = easy.dmg;
+  body.lastX = p.x; body.lastZ = p.z;
+  return body;
+}
+
+// One of the road's two necromancers, stood at (x, z) in the trees and set on you. Null if both are up already.
+export function openingCaster(sim, x, z) {
+  const k = sim.knights.find((c) => c instanceof Caster && c.opts.reserve && c.dead && (c.dormant || c.deadT > 4));
+  if (!k) return null;
+  const p = sim.player;
+  k.reset({ ...k.opts, sleeper: false, spawn: [x, z], yaw: Math.atan2(p.x - x, p.z - z), hp: 70 });
+  k.y = sim.world.height(x, z);
+  k.aggro = true; k.hostile = true; k.goal = GOAL.HUNT; k.lastX = p.x; k.lastZ = p.z; k.lastSense = sim.time; k.revealed = true;
+  return k;
 }
 
 export async function addUndead(sim, base) {
@@ -1422,7 +1473,11 @@ export async function addUndead(sim, base) {
     }
     for (let i = 0; i < b.count; i++) {
       // (An ogre and the plaguebearer keep the woods north of the church, and went out east with it, off the town's new ground.)
-      if (b.model === 'zombie_ogre') {
+      if (b.reserve && caster) {
+        sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [0, 0], yaw: i, hp: 90, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7, sleeper: true, reserve: true }));
+      } else if (b.reserve) {
+        sim.knights.push(new Zombie(id++, 5, rig, { model: b.model, scale: b.scale, spawn: [0, 0], yaw: i * 1.3, hp: b.child ? 12 : 34, dmg: b.child ? 0.5 : 1, type: b.child ? 'runner' : 'shambler', sleeper: true, reserve: true, child: !!b.child }));
+      } else if (b.model === 'zombie_ogre') {
         sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-72, -78] : churchAt(28, -64), yaw: i * 2, hp: 130, limbs: 2.4, dmg: 2.2, type: 'runner' }));
       } else if (b.model === 'necromancer') {
         sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [-150, -75], yaw: 1.4, hp: 90, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7 }));

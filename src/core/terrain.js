@@ -1,7 +1,7 @@
 // The land. One deterministic height function shared by every thread: the sim walks on it, the GPU
 // draws it. Flat where the village stands, rolling meadow beyond, big hills at the horizon.
 
-import { CAVE_MOUTH, CAVE_OUT, LEDGE, LEDGE_Y } from './opening.js';
+import { CAVE_MOUTH, CAVE_OUT, LEDGE, LEDGE_Y, WAY, wayLevel } from './opening.js';
 import { fbm, hash2, sstep } from './terrain-noise.js';
 import { WORLD_EDGE, landHeight, setLandBase } from './lands.js';
 import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
@@ -129,6 +129,8 @@ export function terrainHeight(x, z) {
   // Lisandra's ledge, a shelf of level ground in front of her cave's mouth on the Long Road. (The cave itself is a mesh of
   // its own under the hill: src/gfx/opening.js. The hillside is left open where it runs in, by the terrain's builder.)
   if (!openingTerrain) return level;
+  // And her way down from it: the shelf, the flights of steps and the path, cut and banked into the hill.
+  level = wayLevel(x, z, level);
   const lx = x - LEDGE[0], lz = z - LEDGE[1];
   if (lx * lx + lz * lz > 196) return level;
   const inward = (x - CAVE_MOUTH[0]) * -CAVE_OUT[0] + (z - CAVE_MOUTH[1]) * -CAVE_OUT[1];
@@ -140,8 +142,8 @@ export function terrainHeight(x, z) {
 export const LAND_EDGE = WORLD_EDGE;
 
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.
-// (The worn way off Lisandra's ledge, down onto the road.)
-export const CAVE_PATH = { pts: [LEDGE, [LEDGE[0] - 1.6, LEDGE[1] - 2.2], [-358.4, 249.4]], w: 1.3 };
+// (The worn way off Lisandra's ledge: the shelf, the steps and the path down onto the road. src/core/opening.js WAY.)
+export const CAVE_PATH = { pts: [LEDGE, ...WAY.map((p) => [p[0], p[1]])], w: 1.3 };
 export const PATHS = [
   CAVE_PATH,
   { pts: [[-1, -14.5], [-1.2, -8], [-1.5, -2], [-1.5, 1]], w: 2.0 },

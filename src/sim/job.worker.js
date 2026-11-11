@@ -5,7 +5,7 @@ import { CTRL, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, mapShared } from '../core/la
 import { TREE_FLOATS, forestAmount, forestTrees } from '../core/forest.js';
 import { openingTerrain, setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
-import { CAVE_MOUTH, caveCuts } from '../core/opening.js';
+import { WAY_BOX, caveCuts, wayDip } from '../core/opening.js';
 import { roadEdge, rocksAround } from '../core/rocks.js';
 import { COUNTRIES, COUNTRY_KEYS, MOUNT, SITES, SITE_KEYS, countryWeights, groundCover, routeDist } from '../core/lands.js';
 
@@ -27,12 +27,14 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   // tunnel runs in.
   const hillP = patches[0], he = hillP.cell;
   const cave = openingTerrain ? (() => {
-    const i0 = Math.floor((CAVE_MOUTH[0] - 11 - hillP.x0) / he), j0 = Math.floor((CAVE_MOUTH[1] - 11 - hillP.z0) / he);
-    const cells = Math.ceil(22 / he);
-    return { i0, j0, i1: i0 + cells, j1: j0 + cells, x0: hillP.x0 + i0 * he, z0: hillP.z0 + j0 * he, size: cells * he, cell: 0.5, k: Math.round(he / 0.5) };
+    // (All of her way down too: the shelf, the steps and the path to the road are narrower than a cell of the hill's.)
+    const i0 = Math.floor((WAY_BOX.x0 - hillP.x0) / he), j0 = Math.floor((WAY_BOX.z0 - hillP.z0) / he);
+    const i1 = Math.ceil((WAY_BOX.x1 - hillP.x0) / he), j1 = Math.ceil((WAY_BOX.z1 - hillP.z0) / he);
+    const cell = he > 2 ? 1 : 0.5;
+    return { i0, j0, i1, j1, x0: hillP.x0 + i0 * he, z0: hillP.z0 + j0 * he, cell, k: Math.round(he / cell), nx: (i1 - i0) * Math.round(he / cell), nz: (j1 - j0) * Math.round(he / cell) };
   })() : null;
-  const fn = cave ? cave.size / cave.cell : 0;
-  const verts = new Float32Array(((n + 1) * (n + 1) + fineVerts + (cave ? (fn + 1) * (fn + 1) : 0)) * 6);
+  const fnx = cave ? cave.nx : 0, fnz = cave ? cave.nz : 0;
+  const verts = new Float32Array(((n + 1) * (n + 1) + fineVerts + (cave ? (fnx + 1) * (fnz + 1) : 0)) * 6);
   // About 0.8 m a cell at the centre, stretching out to the horizon.
   const c = 0.4 * n;
   const warp = (t) => Math.sign(t) * (c * Math.abs(t) + (extent - c) * Math.abs(t) ** 4);
@@ -54,7 +56,7 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   }
   // (A cell's left out only well inside it: the two overlap at the edge, and the ground's colour goes by where it is, so nothing shows.)
   const under = (x, z) => patches.some((p) => x > p.x0 + 12 && x < p.x1 - 12 && z > p.z0 + 12 && z < p.z1 - 12);
-  const idx = new Uint32Array((n * n + fineCells + fn * fn) * 6);
+  const idx = new Uint32Array((n * n + fineCells + fnx * fnz) * 6);
   let o = 0;
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
@@ -94,22 +96,23 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   });
   if (cave) {
     // Its rim takes the hill grid's own straight edges, so the two meet without a crack.
-    const second = first, m = fn + 1, k = cave.k;
+    const second = first, m = fnx + 1, k = cave.k;
     const hill = (i, j) => terrainHeight(hillP.x0 + i * he, hillP.z0 + j * he);
-    for (let j = 0; j <= fn; j++) {
-      for (let i = 0; i <= fn; i++) {
+    for (let j = 0; j <= fnz; j++) {
+      for (let i = 0; i <= fnx; i++) {
         const x = cave.x0 + i * cave.cell, z = cave.z0 + j * cave.cell;
-        let y = terrainHeight(x, z);
-        if (i === 0 || i === fn || j === 0 || j === fn) {
+        // (Sunk a little under her stone steps, which lie over it: src/core/opening.js wayDip.)
+        let y = terrainHeight(x, z) - wayDip(x, z);
+        if (i === 0 || i === fnx || j === 0 || j === fnz) {
           const ci = cave.i0 + Math.floor(i / k), cj = cave.j0 + Math.floor(j / k), fi = (i % k) / k, fj = (j % k) / k;
-          y = i === 0 || i === fn ? hill(ci, cj) + (hill(ci, cj + 1) - hill(ci, cj)) * fj : hill(ci, cj) + (hill(ci + 1, cj) - hill(ci, cj)) * fi;
+          y = i === 0 || i === fnx ? hill(ci, cj) + (hill(ci, cj + 1) - hill(ci, cj)) * fj : hill(ci, cj) + (hill(ci + 1, cj) - hill(ci, cj)) * fi;
         }
         vertex((second + j * m + i) * 6, x, z, y, cave.cell);
       }
     }
     const cut = (i, j) => caveCuts(cave.x0 + i * cave.cell, cave.z0 + j * cave.cell, verts[(second + j * m + i) * 6 + 1]);
-    for (let j = 0; j < fn; j++) {
-      for (let i = 0; i < fn; i++) {
+    for (let j = 0; j < fnz; j++) {
+      for (let i = 0; i < fnx; i++) {
         if (cut(i, j) || cut(i + 1, j) || cut(i, j + 1) || cut(i + 1, j + 1)) continue;
         const a = second + j * m + i, b = a + 1, c = a + m, d = c + 1;
         idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
