@@ -37,6 +37,7 @@ import { Slimes } from './slimes.js';
 import { Tumblers } from './tumblers.js';
 import { TripoEmpty, TripoWorld } from './tripo.js';
 import { Warrens } from './dungeon.js';
+import { Perils } from './perils.js';
 import { foeOf } from './foes.js';
 import { PORTAL, inDungeon } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
@@ -104,6 +105,8 @@ class Sim {
     this.rollouts = 0;
     this.pendingEvents = [];
     this.foeWorks = []; this.foeBigAt = 0;
+    // What monsters throw and mark on the ground (src/sim/perils.js): anything may use it.
+    this.perils = new Perils(this);
     this.raise = (x, z, owner, calm) => raiseZombie(this, x, z, owner, calm);
     this.corpses = (k, r) => corpsesNear(this, k, r);
   }
@@ -246,6 +249,7 @@ class Sim {
     if (this.heroWorld) this.heroWorld.killed = [];
     this.opening?.reset();
     this.foeWorks = []; this.foeBigAt = 0;
+    this.perils.clear();
     this.gameState = 0; this.gameT = 0; this.time = 0; this.stopT = 0; this.timeScale = 1;
     this.wardenWanted = false; this.groanAt = -9;
     resetCatacombs();
@@ -334,6 +338,7 @@ class Sim {
     else for (const v of this.villagers) v.update(this.frozen ? 0 : tdt, this.world);
     if (this.heroWorld && !this.frozen && tdt > 0) this.heroWorld.step(tdt);
     if (!this.frozen && tdt > 0) this.warrens?.step(tdt);
+    if (!this.frozen && tdt > 0) this.perils.step(tdt);
     // (In real seconds: its door and its count after a fall don't slow with a slow-motion death.)
     this.testHall?.step(dt);
     this.separate();
@@ -341,7 +346,7 @@ class Sim {
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     // (After the spells' update, which clears the frame's shapes.)
     this.heroWorld?.drawFx();
-    this.warrens?.drawFx();
+    this.perils.draw(this.frozen ? 0 : tdt);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.tumblers.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);
@@ -704,6 +709,9 @@ async function boot(msg) {
     }
   });
   self.postMessage({ type: 'ready', bytes: TOTAL_BYTES });
+  // (Booted with no page and no clock, for the checks that play it out in Node, tools/dungeon/fight.mjs: whoever booted it
+  // steps it.)
+  if (msg.stepped) { msg.stepped(sim); return; }
 
   // A tick, timed for the Frame rate readout (CTRL.STEP_US and the rest: GameView.simStats in src/main.js).
   // A bug in one tick is logged once and the world carries on, rather than the game freezing.

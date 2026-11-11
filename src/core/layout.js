@@ -93,7 +93,7 @@ export const VM_PALETTE = H.SIZE;
 export const SPELL_PALETTE = VM_PALETTE + VM_JOINTS * 8;
 export const FX_START = SPELL_PALETTE + VM_JOINTS * 8;
 export const FX_FLOATS = 16;
-export const MAX_FX = 256;
+export const MAX_FX = 384;
 export const CHARS_START = FX_START + MAX_FX * FX_FLOATS;
 // The slimes out in the wet places (src/sim/slimes.js write).
 export const MAX_SLIMES = 40;

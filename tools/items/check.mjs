@@ -16,7 +16,7 @@ for (let i = 0; i < 4000; i++) {
   const w = rollWeapon(rng);
   assert.equal(hands(w.base), 3, `${w.base} is a staff`);
   assert.ok(w.sockets <= MAX_SOCKETS);
-  for (const k of [0, 1, 2, 3, 4, 5, 6, 7, 8]) for (const it of rollLoot(rng, k)) {
+  for (const k of [0, 1, 2, 3, 4, 5, 6, 7, 8, 20, 21]) for (const it of rollLoot(rng, k)) {
     seen.add(it.type);
     assert.notEqual(it.type, 'armor');
     if (it.type === 'weapon') assert.equal(hands(it.base), 3);
@@ -27,6 +27,19 @@ for (let i = 0; i < 4000; i++) {
   for (const t of [0, 1, 2]) for (const it of rollChest(rng, t)) assert.notEqual(it.type, 'armor');
 }
 for (const t of ['weapon', 'skull', 'robe', 'gem', 'shield', 'spell', 'gold']) assert.ok(seen.has(t), `${t} drops`);
+
+// A boss's hoard is always worth the fight (src/sim/dungeon.js): a rare staff or better and two more pieces as good from
+// any boss of the Warrens; from their dragon an epic staff, skull and shield, and one thing legendary.
+for (let i = 0; i < 500; i++) {
+  const h = rollLoot(rng, 20), gear = h.filter((it) => ['weapon', 'skull', 'shield', 'robe'].includes(it.type));
+  assert.ok(gear.length >= 3 && gear.every((it) => it.rarity >= 2), 'a boss leaves three rare things or better');
+  assert.ok(h.some((it) => it.type === 'weapon') && h.some((it) => it.type === 'gem') && h.some((it) => it.type === 'spell'));
+  assert.ok(h.find((it) => it.type === 'gold').amount >= 150);
+  const d = rollLoot(rng, 21), best = d.filter((it) => ['weapon', 'skull', 'shield', 'robe'].includes(it.type));
+  assert.ok(best.length >= 5 && best.filter((it) => it.rarity >= 3).length >= 4, 'the dragon leaves four epic things or better');
+  assert.ok(best.some((it) => it.rarity >= 4), 'and one of them legendary');
+  assert.ok(d.find((it) => it.type === 'gold').amount >= 400 && d.filter((it) => it.type === 'spell').length === 2);
+}
 
 // Every shield anyone may carry turns up, kites and towers, at all five rarities, from every chest and the fallen of every
 // kind that drops things, with its model and its icon on file. V's and T's never do. A tower wards more than a kite.

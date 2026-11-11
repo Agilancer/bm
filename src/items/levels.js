@@ -4,7 +4,8 @@
 export const MAX_LEVEL = 50;
 
 // By the kind the sim reports for a kill: 0 the black knight, 1 the silver knight, 2 a crab, 3 the Gravehart, 4 the Hydra, 5 a zombie, 6 the ogre, 7 a caster, 8 a champion.
-export const XP_OF = { 0: 600, 1: 180, 2: 80, 3: 900, 4: 1200, 5: 14, 6: 70, 7: 45, 8: 110, 9: 16 };
+// (20 and 21: the hoard of one of the Warrens' bosses, and of their dragon: src/sim/dungeon.js.)
+export const XP_OF = { 0: 600, 1: 180, 2: 80, 3: 900, 4: 1200, 5: 14, 6: 70, 7: 45, 8: 110, 9: 16, 20: 300, 21: 800 };
 
 // The experience the start of a level takes, in all. A level is about half as long again as the one before it, early on.
 export const xpFor = (level) => (level <= 1 ? 0 : Math.round(90 * (level - 1) ** 1.75));

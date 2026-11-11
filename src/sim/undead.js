@@ -636,7 +636,8 @@ export class Zombie extends Beast {
     const a = this.attack, c = this.rig.clips[this.clip];
     this.t += dt;
     const f = this.t * 30, first = a.windows[0][0];
-    if (f < first) this.yaw = turn(this.yaw, toPlayer, 3 * dt);
+    // (Square on to its mark by the time the blow falls: it used to turn too slowly to finish, and swung beside them.)
+    if (f < first) this.yaw = turn(this.yaw, toPlayer, 7 * dt);
     // Its clip's own travel, and whatever else it takes to bring the blow home. It never comes closer than the blow reaches from.
     let v = 0;
     const root = this.attackMeta.root;
