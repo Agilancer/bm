@@ -8,6 +8,7 @@ import { FolkPose } from './rig.js';
 import { PEOPLE, isChild } from './people.js';
 import { PLACES, ROUND, T_CLEAR, wearsT } from './town.js';
 import { DAYS, WORK, WORK_OF, LEISURE } from './days.js';
+import { FORGE, SMITH_CLIPS } from './smithy.js';
 
 const TAU = Math.PI * 2;
 export const wrapAngle = (a) => a - TAU * Math.floor((a + Math.PI) / TAU);
@@ -53,6 +54,7 @@ export class Folk {
     this.rng = mulberry((hash(p.id) * 4294967296) >>> 0);
     this.dt = 0;
     this.hold = 0;            // > 0 while someone's talking to them: they stop and stand where they are
+    this.tool = false;        // the smith: his hammer's in his hand (forge, below)
     this.look = null;         // [x, y, z] they're looking at, or null
     this.face = null;         // a yaw the talk wants them to turn to, standing
     this.alarm = false;       // running from something
@@ -301,7 +303,7 @@ export class Life {
     for (const me of this.folk) {
       for (const s of [...this.town.claims.keys()]) this.town.release(s, me.id);
       me.task = null; me.taskDone = true;
-      me.posture = 'stand'; me.alarm = false; me.hold = 0; me.carrying = false;
+      me.posture = 'stand'; me.alarm = false; me.hold = 0; me.carrying = false; me.tool = false;
       if (me.pose) me.pose.restTo = me.pose.rest = 0;
       const b = this.blockAt(me, this.hour, this.day);
       me.cur = b; me.key = b.key;
@@ -1050,6 +1052,7 @@ function* work(me, key, w, helping = false) {
   me.act = ACT.WORK;
   if (w.place) { yield* outdoorWork(me, key, life.town.places[w.place], w); return; }
   const h = town.house(w.house);
+  if (w.forge) { yield* forge(me, key); return; }
   // Sitting work: the reeve's ledgers, Orrin's books.
   if (w.seat) {
     const tables = h.tables.filter((t) => t.level === 0);
@@ -1125,6 +1128,51 @@ function* work(me, key, w, helping = false) {
   me.look = null;
   if (spot.claim) town.release(spot.claim, me.id);
   void helping;
+}
+
+// Where the smith stands at his anvil: on the side of it the house was built for him to (the anvil's `dir`, tools/folk/spots.py),
+// as near as the blows were worked out for (FORGE in src/folk/smithy.js), facing it. { x, y, z, yaw, anvil }, or null.
+export function forgeSpot(town) {
+  const anvil = town.house('smith').furniture.find((f) => f.kind === 'anvil' && (f.dir[0] || f.dir[1]));
+  if (!anvil) return null;
+  const [dx, dz] = anvil.dir;
+  return { x: anvil.x + dx * FORGE.off, y: anvil.y, z: anvil.z + dz * FORGE.off, yaw: Math.atan2(-dx, -dz), anvil };
+}
+
+// The smith's day at the anvil. He takes his hammer up off it, works a heat (a run of blows, each one down on the anvil's
+// face: tools/folk/smith_clips.mjs), stands back with it at his side to look the work over, and now and then lays it down to
+// fold his arms over what he's made. me.tool: the hammer's in his hand (src/folk/folk.worker.js puts it there, or on the
+// anvil). It's laid down again before he goes anywhere.
+function* forge(me, key) {
+  const life = me.life, town = life.town, spot = forgeSpot(town), C = SMITH_CLIPS, blow = life.clips.clips[C.blow];
+  if (!spot || !town.claim(spot.anvil, me.id)) { yield* atHome(me, key); return; }
+  // His hand to the handle and up with it; or down with it and away.
+  const hammer = function* (up, k) {
+    const dur = life.clips.clips[C.take].dur, at = up ? C.takeAt : dur - C.takeAt;
+    me.play(C.take, { fade: 0.3, restart: true, speed: up ? 1 : -1 });
+    for (let u = 0; u < dur - 0.05; u += me.dt) {
+      if (k && !me.alive(k)) return;
+      if (u >= at) me.tool = up;
+      yield;
+    }
+    me.tool = up;
+  };
+  try {
+    if (!(yield* goTo(me, spot.x, spot.z, spot.yaw, { key, level: 0 }))) { yield* idle(me, 10, key); return; }
+    while (me.alive(key)) {
+      yield;
+      if (me.hold > 0) { yield* idle(me, 2, key, [me.tool ? C.hold : 'idle_ual']); continue; }
+      if (!me.tool) { yield* hammer(true, key); continue; }
+      // A heat: whole blows, so it never stops with the hammer in the air.
+      yield* doClip(me, C.blow, key, blow.dur * (5 + Math.floor(me.rng() * 6)) - 0.05, { fade: 0.2 });
+      if (!me.alive(key)) break;
+      if (me.rng() < 0.7) { yield* idle(me, 3 + me.rng() * 4, key, [C.hold]); continue; }
+      yield* hammer(false, key);
+      if (me.alive(key)) yield* idle(me, 5 + me.rng() * 6, key, ['fold_arms_ual', 'look_around', 'idle_ual']);
+    }
+    // (His hour's up: the hammer's put down before he walks off. Not if he's running for his life.)
+    if (me.tool && !me.alarm) yield* hammer(false, null);
+  } finally { me.tool = false; town.release(spot.anvil, me.id); }
 }
 
 // Out to a table in the inn with a jug, and back.

@@ -223,6 +223,19 @@ All twelve houses can be entered: furnished, with a stair and an upper floor, bu
 
 Chests (`src/items/chests.js`, placed by `chest(...)` in the builder) open on `E`, the lid swings up on its hinge and gold, gems and gear spill out. Which are open is saved. Gold is counted in the pack.
 
+### The smith at his anvil
+
+Homunculus works at a proper anvil: horn, step, face and waist on a banded block of oak (`Home.anvil` in `tools/interior/build_interior.py`). He takes his hammer up off it, works a heat of five to ten blows, each one down on the anvil's face with the ring of it timed to the moment it lands, stands back with the hammer at his side, and now and then lays it down to fold his arms over the work. He lays it down before he goes to his dinner, and it stays on the anvil when he's not there.
+
+- The three clips he works by (`hammer`, `hammer_hold`, `hammer_take`) are made, not taken from Lisandra's: `node tools/folk/smith_clips.mjs` works out where the hammer has to be at each moment on his own body, bends his arm and back to put it there, and writes the result into `assets/game/folk/clips.*` as turns of her bones like every other clip. Run it after `tools/folk/pack_clips.py`. `--check` only reports how near the hammer comes.
+- `src/folk/smithy.js` holds what the pieces share: how far he stands from the anvil and how high its face is (`FORGE`), the hammer's shape and how his hand holds it, and where it's left. The town's thread writes the hammer's place as one more joint after his own (`src/folk/folk.worker.js`), and `src/gfx/folktools.js` draws it.
+- The anvil's height and distance are in `build_interior.py` too (`ANVIL_FACE`, `ANVIL_OFF`), and `tests/smithy.test.mjs` fails if the two disagree, or if a blow lands anywhere but the face.
+- `python tools/interior/patch_anvil.py` puts the anvil into the built interior without Blender or the skulls' sheet, for when only the anvil has changed. A whole build gives the same one.
+- To look at him: `tools/folk/viewer.html?ids=smith&clip=hammer&forge` (served by `tools/serve.py`) shows the hammer in his hand and a block where the anvil's face is.
+- Not yet watched in the game's own view: the machine this was made on loses its software GPU before the town is drawn. It was watched in the folk viewer, on the same clips, body and hammer, and the town's thread was run through a morning of it in `tests/smithy.test.mjs`.
+
+The `push` clip is gone from the town: nobody's work asks for it, and it's out of the packed clips (so is `cleave`, the smith's old swing, a left-handed chop that stopped at chest height).
+
 ### Sound
 
 Everything is MP3 in `assets/game/audio/`, named in `BANKS` in `src/audio.js`. The fight's and the dirt steps' sounds load before the
@@ -230,7 +243,7 @@ game starts; the rest come in the background once it has.
 
 - **TomMusic's Free Fantasy SFX Pack** (all 204 files, `tools/audio/build_fantasy_sfx.py`): footsteps on dirt, stone, boards and water
   (`src/ui/places.js` says which is underfoot; knights in plate get the chain ones), doors and the cathedral's great doors, the
-  Sexton's lock, chests, the woodpile's axe and the smith's hammer (`blows` in `src/folk/folk.worker.js`), a lamp lit as someone
+  Sexton's lock, chests, the woodpile's axe and the smith's hammer on the anvil (`blows` in `src/folk/folk.worker.js`), a lamp lit as someone
   comes home, the nearest fire's crackle, and a layer over each spell's own made sound (`src/spellsound.js`). Its 60 s beds play by
   where you are (`sounds` in `src/ui/lands.js`): the woods by day and by night, rain on the Weeping Fen and on Sallowmere's shore, a
   storm over Velscour's keep, a house's quiet, the cathedral with the storm on its roof, the catacombs, the Rift, the falls.

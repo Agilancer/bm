@@ -15,14 +15,17 @@ import os
 import random
 import re
 
-import bpy
+try:
+    import bpy
+except ImportError:      # (tools/interior/patch_anvil.py reads the furniture out of this file with no Blender to hand)
+    bpy = None
 
 ROOT = globals().get('ROOT_OVERRIDE') or os.environ.get('BM_ROOT') or r"C:\Users\agila\.codex\.chatgpt-projects\g-p-6acb04ed5a908191836d71a249b8135a\work\bm-cathedral"
 OUT = os.path.join(ROOT, 'assets', 'game', 'interior')
 MAN = json.load(open(os.path.join(OUT, 'manifest.json')))
 TILE_M = {l['name']: l['metres'] for l in MAN['layers']}
 # (From tools/skulls/separate.py, run in Blender.)
-SKULLS = json.load(open(os.path.join(ROOT, 'tools', 'build', 'skulls.json')))
+SKULLS = json.load(open(os.path.join(ROOT, 'tools', 'build', 'skulls.json'))) if os.path.exists(os.path.join(ROOT, 'tools', 'build', 'skulls.json')) else {}
 SKULL_PICK = random.Random(11)
 PIECE = MAN['pieces']
 R = random.Random(11)
@@ -2408,6 +2411,10 @@ def gulf(y):
 
 HOME_FLOOR = 0.16    # above the highest the land gets under any of them
 RAIL_Y = 2.2         # feet above this are upstairs
+# The smith's anvil, in his house's plan: where it stands, and the side of it he stands (Home.anvil). Its face's height, and
+# how far from its middle he stands: FORGE in src/folk/smithy.js.
+ANVIL, ANVIL_SIDE = (0.9, 0.6), (-1.0, 0.0)
+ANVIL_FACE, ANVIL_OFF = 0.88, 0.56
 
 
 class Home:
@@ -2648,11 +2655,64 @@ class Home:
         x, z = self.p(lx, lz)
         chest(x, HOME_FLOOR, z, self.yaw + math.atan2(nx, nz), 0)
 
-    def anvil(self, lx, lz, y):
-        self.box('wood_c1', lx, y + 0.3, lz, 0.24, 0.3, 0.24)
-        self.box('iron', lx, y + 0.66, lz, 0.13, 0.06, 0.13)
-        self.box('iron', lx, y + 0.78, lz, 0.14, 0.06, 0.42)
-        self.solid(lx - 0.25, lz - 0.42, lx + 0.25, lz + 0.42, y, 0.85)
+    def anvil(self, lx, lz, y, nx=-1.0, nz=0.0):
+        """The smith's anvil on its block of oak. (nx, nz): the side the smith stands, facing it; the horn's to his left.
+        Its face is ANVIL_FACE up and he stands ANVIL_OFF from its middle: FORGE in src/folk/smithy.js, which the hammer's blows
+        are worked out from (tools/folk/smith_clips.mjs). Sizes here are true metres, whatever the house's plan is drawn at."""
+        ox, oz = self.p(lx, lz)
+        # (His left as he faces it, and towards him, in the world.)
+        turn = lambda vx, vz: (vx * self.c + vz * self.s, -vx * self.s + vz * self.c)
+        U, N = turn(-nz, nx), turn(nx, nz)
+        P = lambda u, w, h: (ox + U[0] * u + N[0] * w, y + h, oz + U[1] * u + N[1] * w)
+        offs = [R.random(), R.random(), R.random()]
+
+        def loft(mat, rings, o, caps=(True, True), tile=0.9):
+            """Rings of points, each the same number round, joined into a skin; the ends closed if caps says so."""
+            mid = [sum(p[i] for r in rings for p in r) / sum(len(r) for r in rings) for i in range(3)]
+
+            def face(a, b, c, d, uvs):
+                # (Wound to face out from the middle of the piece.)
+                if dot(cross(sub(b, a), sub(c, a)), sub(a, mid)) < 0:
+                    a, b, c, d, uvs = d, c, b, a, uvs[::-1]
+                W.quad(mat, a, b, c, d, uvs)
+            v = 0.0
+            for r0, r1 in zip(rings, rings[1:]):
+                seg = math.dist(r0[0], r1[0])
+                t = 0.0
+                for k in range(len(r0)):
+                    a, b = r0[k], r0[(k + 1) % len(r0)]
+                    w = math.dist(a, b)
+                    face(a, b, r1[(k + 1) % len(r0)], r1[k], ((o + t / tile, v / tile), (o + (t + w) / tile, v / tile), (o + (t + w) / tile, (v + seg) / tile), (o + t / tile, (v + seg) / tile)))
+                    t += w
+                v += seg
+            for r, on in ((rings[0], caps[0]), (rings[-1], caps[1])):
+                if not on:
+                    continue
+                c = [sum(p[i] for p in r) / len(r) for i in range(3)]
+                for k in range(len(r)):
+                    a, b = r[k], r[(k + 1) % len(r)]
+                    uv = lambda q: (o + (q[0] - c[0]) / tile, (q[2] - c[2]) / tile)
+                    if dot(cross(sub(a, c), sub(b, c)), sub(c, mid)) < 0:
+                        a, b = b, a
+                    W.tri(mat, (tuple(c), a, b), (uv(c), uv(a), uv(b)))
+
+        rect = lambda u0, u1, hw, h: [P(u0, -hw, h), P(u1, -hw, h), P(u1, hw, h), P(u0, hw, h)]
+        # The block: a length of oak trunk, banded with iron top and bottom so it doesn't split under the blows.
+        lathe('wood_c1', ox, oz, [(0.21, y), (0.2, y + 0.5), (0.0, y + 0.5)], 10, tile=1.2, phase=0.3)
+        for h in (0.07, 0.4):
+            lathe('iron', ox, oz, [(0.214, y + h), (0.214, y + h + 0.045)], 10, phase=0.3)
+        # The anvil: feet, a waist drawn in, and the body spread again under the face.
+        loft('iron', [rect(-0.15, 0.15, 0.11, 0.5), rect(-0.15, 0.15, 0.11, 0.548), rect(-0.1, 0.1, 0.07, 0.6), rect(-0.085, 0.085, 0.052, 0.68),
+                      rect(-0.12, 0.11, 0.058, 0.735), rect(-0.22, 0.14, 0.065, 0.77), rect(-0.22, 0.14, 0.065, ANVIL_FACE)], offs[0])
+        # The step down from the face to the horn, where he cuts.
+        loft('iron', [rect(0.14, 0.19, 0.06, 0.775), rect(0.14, 0.19, 0.06, ANVIL_FACE - 0.022)], offs[1])
+        # The horn: round, its top near level with the step, drawn out to a blunt point.
+        ring = lambda u, cy, r: [P(u, math.cos(a) * r, cy + math.sin(a) * r) for a in (k / 8 * math.tau for k in range(8))]
+        loft('iron', [ring(0.19, 0.8, 0.057), ring(0.29, 0.813, 0.043), ring(0.38, 0.829, 0.026), ring(0.45, 0.842, 0.008)], offs[2])
+        # (What the feet run into: the block and the body. The horn overhangs it.)
+        k = self.k
+        cs = [(lx + (-nz * u + nx * w) / k, lz + (nx * u + nz * w) / k) for u in (-0.22, 0.24) for w in (-0.21, 0.21)]
+        self.solid(min(c[0] for c in cs), min(c[1] for c in cs), max(c[0] for c in cs), max(c[1] for c in cs), y, ANVIL_FACE + 0.02)
 
     def sack(self, lx, lz, y, r=0.3):
         x, z = self.p(lx, lz)
@@ -3080,7 +3140,7 @@ def homes():
     h.partition((-2.0, -iz), (-2.0, -1.2))
     h.sacks(-3.9, -2.7, F, 2, 1)
     h.barrel(-2.5, -2.0, F)
-    h.anvil(0.9, 0.6, F)
+    h.anvil(*ANVIL, F, *ANVIL_SIDE)
     h.table(2.9, 1.5, F, 1.0, 0.45)
     h.barrel(3.9, -0.8, F, 0.34, 0.8)
     h.box('wood_c1', 4.2, F + 1.55, 0.6, 0.04, 0.5, 1.1)

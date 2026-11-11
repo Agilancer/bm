@@ -6,6 +6,7 @@ import { F, F_PALETTE, FIN, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/lay
 import { SKIRT_JOINTS } from '../folk/rig.js';
 import { PEOPLE } from '../folk/people.js';
 import { Blankets } from './blankets.js';
+import { FolkTools } from './folktools.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
 
 const UBO_BYTES = 24 * 64 + 256 + 16;
@@ -18,6 +19,7 @@ export class FolkBodies {
     this.scratch = new Float32Array(80 * 8);
     this.info = new Float32Array([0, 1, 0, 1]);    // no heartbeat, its own paint, not steel, flesh
     this.blankets = new Blankets(renderer, PEOPLE.length);
+    this.tools = new FolkTools(renderer);
   }
 
   setBeds(beds) { this.blankets.setBeds(beds); }
@@ -80,6 +82,7 @@ export class FolkBodies {
   cull(cam, planes) {
     const s = this.slot = readFolk(this.map);
     this.blankets.update(s, cam);
+    this.tools.cull(s, this.bodies[this.tools.owner]?.jointCount, cam, planes);
     for (let i = 0; i < this.bodies.length; i++) {
       const b = this.bodies[i];
       if (!b) continue;
@@ -119,6 +122,7 @@ export class FolkBodies {
   upload(q, time, params, paramsU) {
     const s = this.slot;
     if (!s) return;
+    this.tools.upload(q);
     for (let i = 0; i < this.bodies.length; i++) {
       const b = this.bodies[i];
       if (!b || !b.skin) continue;
@@ -140,6 +144,7 @@ export class FolkBodies {
 
   compute(cp) {
     this.blankets.compute(cp);
+    this.tools.compute(cp);
     for (const b of this.bodies) {
       if (!b || !b.skin || b.posed < 0) continue;
       cp.setBindGroup(0, b.bg);
@@ -151,6 +156,7 @@ export class FolkBodies {
   // coarse: with the coarse mesh (every shadow on a phone, the far cascade's on a PC).
   shadow(sp, m, o, coarse = true) {
     this.blankets.shadow(sp);
+    this.tools.shadow(sp);
     for (const b of this.bodies) {
       if (!b || !b.casts || b.posed < 0) continue;
       if (m && !inCascade(m, o, b.bx, b.by, b.bz, b.br)) continue;
@@ -161,6 +167,7 @@ export class FolkBodies {
 
   draw(mp, lean) {
     this.blankets.draw(mp);
+    this.tools.draw(mp);
     for (const b of this.bodies) {
       if (!b || !b.seen || b.posed < 0) continue;
       mp.setBindGroup(1, b.matBG);
