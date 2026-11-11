@@ -22,9 +22,9 @@ function standIn(proto, opts) {
 function world() {
   const knights = [];
   for (const b of BODIES) for (let i = 0; i < b.count; i++) {
-    const caster = !b.model.startsWith('zombie_') || b.model === 'zombie_necromancer';
-    if (b.model === 'zombie_ogre' || (caster && !b.reserve)) continue;
-    knights.push(standIn(caster ? Caster.prototype : Zombie.prototype, { model: b.model, scale: b.scale, reserve: !!b.reserve, child: !!b.child, grave: !b.reserve && i < 2 ? [0, 0] : null, role: caster ? 'necromancer' : undefined }));
+    const caster = !b.model.startsWith('zombie_') || b.model === 'zombie_necromancer', reserve = i >= b.count - (b.kept || 0);
+    if (b.model === 'zombie_ogre' || (caster && !reserve)) continue;
+    knights.push(standIn(caster ? Caster.prototype : Zombie.prototype, { model: b.model, scale: b.scale, reserve, child: !!b.child, grave: !reserve && i < 2 ? [0, 0] : null, role: caster ? 'necromancer' : undefined }));
   }
   return knights;
 }
@@ -99,9 +99,11 @@ test('with fewer bodies than the waves want, the fallen go back into the ground 
   assert.equal(sim.knights.filter((k) => !(k instanceof Caster)).reduce((n, k) => n + k.ups, 0), 50);
 });
 
-test('the bodies kept for the road are enough for its children and its necromancers', () => {
-  const kept = BODIES.filter((b) => b.reserve);
-  assert.equal(kept.filter((b) => b.child).reduce((n, b) => n + b.count, 0), 10);
-  assert.equal(kept.filter((b) => b.model === 'necromancer').reduce((n, b) => n + b.count, 0), 2);
+test('the bodies kept for the road are enough for its children and its necromancers, and no model is listed twice but the children\'s', () => {
+  assert.equal(BODIES.filter((b) => b.child).reduce((n, b) => n + b.kept, 0), 10);
+  assert.equal(BODIES.filter((b) => b.model === 'necromancer').reduce((n, b) => n + (b.kept || 0), 0), 2);
+  const seen = new Map();
+  for (const b of BODIES) seen.set(b.model, (seen.get(b.model) || 0) + 1);
+  assert.deepEqual([...seen].filter(([, n]) => n > 1).map(([m]) => m), [BODIES.find((b) => b.child).model]);
   assert.ok(ROUTE.len > 400);
 });

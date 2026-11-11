@@ -19,17 +19,19 @@ const P = PART;
 export const OGRE_SCALE = 1.55;
 // What the renderer and the sim both build, in this order.
 export const BODIES = [
-  // (The last gives up a body in the ground so a second wizard fits in the thirty-six.)
-  ...[1, 2, 3, 4, 5, 6].map((n) => ({ model: `zombie_${n}`, count: n === 6 ? 3 : 4, scale: 1 })),
+  // (The last gives up a body in the ground so a second wizard fits.)
+  // kept: how many of a model's bodies, the last of them, are kept for the road down from Lisandra's cave
+  // (src/sim/opening.js, openingRaise below): nine more of the dead for its waves, and the two necromancers who come
+  // out of the trees at the end of it. They're more bodies of a model that's here already, so nothing is fetched or
+  // built twice for them.
+  ...[1, 2, 3, 4, 5, 6].map((n) => ({ model: `zombie_${n}`, count: (n === 6 ? 3 : 4) + (n % 2 ? 3 : 0), kept: n % 2 ? 3 : 0, scale: 1 })),
   { model: 'zombie_ogre', count: 2, scale: OGRE_SCALE },
-  { model: 'necromancer', count: 1, scale: 1 },
+  { model: 'necromancer', count: 3, kept: 2, scale: 1 },
   { model: 'zombie_necromancer', count: 1, scale: 1 },
   { model: 'evil_wizard', count: 2, scale: 1 },
-  // Kept for the road down from Lisandra's cave (src/sim/opening.js, openingRaise below): more of the dead for its waves,
-  // their children (the same bodies, small), and the two necromancers who come out of the trees at the end of it.
-  ...[1, 3, 5].map((n) => ({ model: `zombie_${n}`, count: 3, scale: 1, reserve: true })),
-  ...[2, 4].map((n) => ({ model: `zombie_${n}`, count: 5, scale: 0.6, reserve: true, child: true })),
-  { model: 'necromancer', count: 2, scale: 1, reserve: true },
+  // And the road's ten children: one of the dead's own bodies, small. (Its file is read once for both: addUndead, and
+  // the renderer's load.)
+  { model: 'zombie_2', count: 10, kept: 10, scale: 0.6, child: true },
 ];
 
 const STATE = { MOVE: 0, ATTACK: 3, STAGGER: 7, RISE: 8, PLAYDEAD: 9, DEAD: 10, CAST: 11 };
@@ -1459,7 +1461,8 @@ export async function addUndead(sim, base) {
   const [zMeta, cMeta, buffers] = await Promise.all([
     getFile(`${base}assets/monsters/zombie/clips.json`, 'json'),
     getFile(`${base}assets/monsters/zombie/caster_clips.json`, 'json'),
-    Promise.all(BODIES.map((b) => fetchBuf(b.model))),
+    // (A model with two entries, the children's, is fetched the once.)
+    (() => { const got = new Map(); return Promise.all(BODIES.map((b) => got.get(b.model) || got.set(b.model, fetchBuf(b.model)).get(b.model))); })(),
   ]);
   let id = sim.knights.length, spot = 0;
   BODIES.forEach((b, n) => {
@@ -1473,9 +1476,11 @@ export async function addUndead(sim, base) {
     }
     for (let i = 0; i < b.count; i++) {
       // (An ogre and the plaguebearer keep the woods north of the church, and went out east with it, off the town's new ground.)
-      if (b.reserve && caster) {
+      // (The road's own: in the ground, wherever, till it calls them up.)
+      const reserve = i >= b.count - (b.kept || 0);
+      if (reserve && caster) {
         sim.knights.push(new Caster(id++, 5, rig, { model: b.model, scale: 1, spawn: [0, 0], yaw: i, hp: 90, limbs: 1.8, role: 'necromancer', boltElem: ELEM.DRAIN, lootKind: 7, sleeper: true, reserve: true }));
-      } else if (b.reserve) {
+      } else if (reserve) {
         sim.knights.push(new Zombie(id++, 5, rig, { model: b.model, scale: b.scale, spawn: [0, 0], yaw: i * 1.3, hp: b.child ? 12 : 34, dmg: b.child ? 0.5 : 1, type: b.child ? 'runner' : 'shambler', sleeper: true, reserve: true, child: !!b.child }));
       } else if (b.model === 'zombie_ogre') {
         sim.knights.push(new Zombie(id++, 6, rig, { model: b.model, scale: b.scale, spawn: i ? [-72, -78] : churchAt(28, -64), yaw: i * 2, hp: 130, limbs: 2.4, dmg: 2.2, type: 'runner' }));
