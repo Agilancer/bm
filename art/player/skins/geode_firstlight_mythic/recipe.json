@@ -94,7 +94,7 @@
     "image": "swatches/pat_crystals.png",
     "color": "#e3c98c",
     "scale": 0.2,
-    "strength": 0.55,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [

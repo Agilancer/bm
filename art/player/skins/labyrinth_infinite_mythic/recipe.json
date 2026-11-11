@@ -90,9 +90,9 @@
    },
    "pattern": {
     "image": "swatches/pat_maze.png",
-    "color": "#cfc48e",
+    "color": "#c9b874",
     "scale": 0.2,
-    "strength": 0.32,
+    "strength": 0.22,
     "tile": "repeat"
    },
    "decals": [
@@ -185,9 +185,9 @@
    },
    "pattern": {
     "image": "swatches/pat_maze.png",
-    "color": "#cfc48e",
-    "scale": 0.16,
-    "strength": 0.28,
+    "color": "#c9b874",
+    "scale": 0.18,
+    "strength": 0.2,
     "tile": "repeat"
    }
   },
