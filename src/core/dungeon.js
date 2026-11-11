@@ -22,7 +22,10 @@ export const DUNGEON = { name: 'The Hollowfang Warrens', x: 5760, z: -40, y: -50
 // The cave mouth near the kobolds' den where its portal stands, and where the quartermaster waits.
 export const PORTAL = { x: 128, z: -212, yaw: 2.6, r: 2.2 };
 // (And the Test Dungeon's keeper, at the summoning counter in its hall: src/core/testhall.js.)
-export const BROKER_SPOTS = { portal: [PORTAL.x + 4.2, PORTAL.z + 2.4], town: [5, -2], hall: (() => { const q = STATIONS.find((t) => t.who === 'hall'); return [...hallAt(q.x, q.z), q.yaw]; })() };
+// (The portal's quartermaster: on the ground at the foot of its platform's left-hand steps, a little down the hill. See
+// src/core/sites.js portalArch.)
+const BROKER_AT_PORTAL = (() => { const c = Math.cos(PORTAL.yaw), s = Math.sin(PORTAL.yaw), u = -6.2, w = -2.6; return [PORTAL.x + u * c + w * s, PORTAL.z - u * s + w * c]; })();
+export const BROKER_SPOTS = { portal: BROKER_AT_PORTAL, town: [5, -2], hall: (() => { const q = STATIONS.find((t) => t.who === 'hall'); return [...hallAt(q.x, q.z), q.yaw]; })() };
 
 // Rooms: id, middle (local: x east, z south of the entrance), radius, floor height over DUNGEON.y, how high the roof can rise.
 export const ROOMS = [

@@ -45,6 +45,8 @@ const boxKey = (i, j) => (i + 4096) * 8192 + j + 4096;
 
 export class World {
   constructor(data, interior) {
+    // The portals' platforms: level stone to stand on, over the land or the Warrens' floor (src/core/sites.js portalArch).
+    this.platforms = buildSites().floors;
     // The pines' trunks, by the cell they're in. As far as you can go, and no further.
     // (Worked out a cell at a time, the first time anyone comes near it: the land's 11 km across.)
     this.trunks = new Map();
@@ -73,6 +75,18 @@ export class World {
       for (let i = 0; i < NAV_W; i++) {
         const x = (i + 0.5) * NAV_CELL + NAV_X0, z = (j + 0.5) * NAV_CELL + NAV_Z0;
         this.grid[j * NAV_W + i] = ((Math.abs(x) > NAV_EDGE || Math.abs(z) > NAV_EDGE) && (floorAt(x, z) === null || inPit(x, z))) || this.inside(x, z, NAV_RADIUS) ? 1 : 0;
+      }
+    }
+    // The portals' platforms: nobody walks where the ground drops more than a step in a cell, so the way on is up their steps or
+    // off the hill on their high side, and not through their walls.
+    for (const p of this.platforms) {
+      const i0 = Math.max(0, Math.floor((p.x - p.r - 1 - NAV_X0) / NAV_CELL)), i1 = Math.min(NAV_W - 1, Math.floor((p.x + p.r + 1 - NAV_X0) / NAV_CELL));
+      const j0 = Math.max(0, Math.floor((p.z - p.r - 1 - NAV_Z0) / NAV_CELL)), j1 = Math.min(NAV_H - 1, Math.floor((p.z + p.r + 1 - NAV_Z0) / NAV_CELL));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const x = (i + 0.5) * NAV_CELL + NAV_X0, z = (j + 0.5) * NAV_CELL + NAV_Z0, h = this.height(x, z);
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          if (Math.abs(this.height(x + dx * NAV_CELL, z + dz * NAV_CELL) - h) > 0.6) { this.grid[j * NAV_W + i] = 1; break; }
+        }
       }
     }
     // The doors: each leaf a box in its doorway when it's shut and a box against the wall when it's open, one of them out of the way. (Not in the grid above: they come and go.)
@@ -220,6 +234,17 @@ export class World {
   }
 
   height(x, z) {
+    // (On a portal's platform, its floor or the step you're on.)
+    for (let i = 0; i < this.platforms.length; i++) {
+      const p = this.platforms[i];
+      if (Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
+      let best = null;
+      for (const f of p.rects) {
+        const dx = x - f.x, dz = z - f.z;
+        if (Math.abs(dx * f.c - dz * f.s) <= f.hu && Math.abs(dx * f.s + dz * f.c) <= f.hw && (best === null || f.y > best)) best = f.y;
+      }
+      if (best !== null) return best;
+    }
     // (The Hollowfang Warrens lie out past the edge of the world, under it: src/core/dungeon.js.)
     if (inDungeon(x, z)) return caveFloorY(x, z);
     // (And the Test Dungeon, out past the other edge: src/core/testhall.js.)

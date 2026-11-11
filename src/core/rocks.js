@@ -10,6 +10,7 @@ import { forestAmount } from './forest.js';
 import { inCaveBox } from './opening.js';
 import { CLIFF, COUNTRY_KEYS, MOUNT, WATERS, countryWeights, groundCover, routeDist, siteAt } from './lands.js';
 import { churchSite } from './church.js';
+import { PORTAL } from './dungeon.js';
 
 export const STONE_CELL = 4, BOULDER_CELL = 12;
 // (x, y, z, size, cos, sin, how tall for its size, tone) and which of the meshes: src/gfx/rocks.js ROCK_VARIANTS.
@@ -61,6 +62,8 @@ function barred(x, z) {
   for (const p of PLOTS) if (Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]) < 5) return true;
   if (openingTerrain && inCaveBox(x, z, 9)) return true;
   if (siteAt(x, z, 6)) return true;
+  // (The Warrens' portal and its platform, on the hillside: src/core/sites.js portalArch.)
+  if ((x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < 12 ** 2) return true;
   for (const wt of WATERS) if ((x - wt.x) ** 2 + (z - wt.z) ** 2 < (wt.r + 4) ** 2) return true;
   if (Math.abs(x - CLIFF.x) < 16 && z > CLIFF.z0 && z < CLIFF.z1) return true;
   return false;
