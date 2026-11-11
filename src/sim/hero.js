@@ -70,7 +70,7 @@ const BLOWS = {
   boomerang: [{ clip: 'Punch_Jab', rate: 1.15, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 6, reach: 1.6, knock: 5 }],
   blade: [{ clip: 'Sword_Regular_A', rate: 0.85, hit: [0.55], dmg: 9, reach: 2.0 }, { clip: 'Sword_Regular_B', rate: 0.85, hit: [0.48], dmg: 9, reach: 1.9 }, { clip: 'L_Slash', rate: 1.1, hit: [0.65], dmg: 10, reach: 2.0 }],
   bow: [{ clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 5, reach: 1.6, knock: 6 }],
-  ninja: [{ clip: 'L_SnapKick', rate: 1.15, hit: [0.6], dmg: 8, reach: 1.7, knock: 4 }, { clip: 'Punch_Jab', rate: 1.25, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'Punch_Cross', rate: 1.25, hit: [0.42], dmg: 7, reach: 1.4 }, { clip: 'LP_front_kick_01', rate: 1.1, hit: [0.45], dmg: 8, reach: 1.7 }],
+  ninja: [{ clip: 'L_SnapKick', rate: 1.15, hit: [0.6], dmg: 8, reach: 1.7, knock: 4 }, { clip: 'Sword_Regular_A', rate: 1.6, hit: [0.55], dmg: 6, reach: 1.5, end: 0.8 }, { clip: 'Sword_Regular_B', rate: 1.6, hit: [0.48], dmg: 7, reach: 1.5, end: 0.8 }, { clip: 'LP_front_kick_01', rate: 1.1, hit: [0.45], dmg: 8, reach: 1.7 }],
 };
 
 // What a class's ordinary blows are called, for the words (class_skill).
@@ -94,7 +94,7 @@ export const SKILLS = {
 };
 // Leaps and dashes: how a class flies at its foe (see Hero.leap). T: seconds in the air. apex: metres up. r: the landing's reach.
 const LEAPS = {
-  jump: { T: 0.72, apex: 2.6, r: 2, dmg: 14, elem: ELEM.SPIRIT, lance: true, snap: true, air: 'NinjaJump_Idle_Loop', draw: diveDraw(ELEM.SPIRIT) },
+  jump: { T: 0.66, apex: 1.9, r: 2, dmg: 14, elem: ELEM.SPIRIT, lance: true, snap: true, air: 'NinjaJump_Idle_Loop', draw: diveDraw(ELEM.SPIRIT) },
   leaping_kick: { T: 0.6, apex: 2.2, r: 2.7, dmg: 12, elem: ELEM.SPIRIT, air: 'LP_front_kick_02', airRate: 1.6 },
 };
 const BLEED = 3;                 // seconds a bleeding cut runs, at 30% of the blow each second (Velscour's)
@@ -547,17 +547,17 @@ export class Hero extends Knight {
   }
 
   // The lance's flash down the thrust, and everything on that line takes it.
-  thrust(sim, reach, dmg, knock, big = 1) {
+  thrust(sim, reach, dmg, knock, big = 0.55) {
     const lancer = this.person.cls === 'lancer', elem = lancer ? ELEM.STORM : ELEM.SPIRIT;
-    const ax = Math.sin(this.yaw), az = Math.cos(this.yaw), len = 1.4 * big;
+    const ax = Math.sin(this.yaw), az = Math.cos(this.yaw), len = 0.9 * big;
     if (this.fxOk()) {
       // (Off the weapon's own point, a stride and a half on: not from the fist.)
-      const g = this.handPos('r'), tip = (this.mainP?.reach ?? 1.4) * 0.9, h = [g[0] + ax * tip, g[1] - 0.05 * tip, g[2] + az * tip], wd = ((lancer ? 0.06 : 0.04) + 0.005 * Math.min(20, this.person.level)) * big;
+      const g = this.handPos('r'), tip = (this.mainP?.reach ?? 1.4) * 0.9, h = [g[0] + ax * tip, g[1] - 0.05 * tip, g[2] + az * tip], wd = ((lancer ? 0.06 : 0.04) + 0.005 * Math.min(20, this.person.level)) * Math.min(1.3, 0.5 + big * 0.5);
       sim.casting.burst(FX.BEAM, elem, h[0], h[1], h[2], wd * 2.6, wd, 0.2, { ax, ay: 0, az, len, alpha: 0.35, extra: wd * 0.5 });
       sim.casting.burst(FX.BEAM, elem, h[0], h[1], h[2], wd, wd * 0.5, 0.2, { ax, ay: 0, az, len: len + 0.3, light: 6, lightR: 3, extra: wd * 0.3 });
       sim.casting.burst(FX.FLARE, lancer ? ELEM.LIGHT : elem, h[0] + ax * (len + 0.3), h[1], h[2] + az * (len + 0.3), 0.35, 0.08, 0.16);
     }
-    const hit = sim.heroWorld.line(this, this.x, this.z, this.yaw, reach + 0.3, 0.45, dmg, { kind: 'puncture', poise: big > 1.2 ? 90 : 30, knock });
+    const hit = sim.heroWorld.line(this, this.x, this.z, this.yaw, reach + 0.3, 0.45, dmg, { kind: 'puncture', poise: big > 2 ? 90 : big > 1 ? 55 : 30, knock });
     if (hit.length) sim.event(EV.WHOOSH, this.x, this.y + 1.2, this.z);
   }
 
@@ -616,7 +616,7 @@ export class Hero extends Knight {
           this.hit(sim, k, (c.dmg ?? 16) * this.power(), c.kind || 'puncture', 60, 0, c.o || { stun: 0.6 });
           c.onHit?.(k);
           const side = Math.sign((k.x - this.x) * rx + (k.z - this.z) * rz) || 1;
-          if (radiusOf(k) <= 1 && !c.noShove) sim.casting.shove(k, Math.sin(c.dir) * 8 + rx * side * 11, Math.cos(c.dir) * 8 + rz * side * 11);
+          if (radiusOf(k) <= 1 && !c.noShove) { const fw = c.aside ? -3 : 8; sim.casting.shove(k, Math.sin(c.dir) * fw + rx * side * 11, Math.cos(c.dir) * fw + rz * side * 11); }
         }
         c.each?.(dt);
         if (((sim.tick + this.slot) & 3) === 0) sim.event(EV.STEP, this.x, this.y, this.z, 1, 1, this.id);
@@ -679,8 +679,8 @@ export class Hero extends Knight {
       if (this.fxOk()) {
         const big = Math.min(1, poise / 100), e = o.elem ?? this.hitElem, dx = this.x - m.x, dz = this.z - m.z, L = Math.hypot(dx, dz) || 1, R0 = Math.min(radiusOf(m), 0.6);
         const sx = m.x + dx / L * R0 * 0.6, sy = m.y + 1.15, sz = m.z + dz / L * R0 * 0.6;
-        sim.casting.burst(FX.FLARE, e, sx, sy, sz, 0.1 + big * 0.15, 0.35 + big * 0.55, 0.11);
-        sim.casting.burst(FX.GLYPH, e, sx, sy, sz, 0.12, 0.3 + big * 0.5, 0.12, { ay: 0, len: Math.random() * 6.28, extra: 11, alpha: 0.8 });
+        sim.casting.burst(FX.FLARE, e, sx, sy, sz, 0.08 + big * 0.1, 0.22 + big * 0.33, 0.1);
+        sim.casting.burst(FX.GLYPH, e, sx, sy, sz, 0.1, 0.25 + big * 0.4, 0.12, { ay: 0, len: Math.random() * 6.28, extra: 11, alpha: 0.8 });
       }
       if (poise >= 50 && !o.stun && m instanceof Zombie && !m.crawling && sim.time - (m.heroReelT ?? -9) > 0.8) { m.heroReelT = sim.time; m.reel?.(sim, 0.28, this); }
       if (poise >= 90 && this.near < 22 && sim.time - (w.heldAt ?? -9) > 1.5) { w.heldAt = sim.time; sim.hitStop?.(0.055); }
@@ -1724,7 +1724,7 @@ export class HeroWorld {
           const y = z.y + 0.3 + ((z.t * 0.3 + i * 0.13) % 1) * 1.7;
           c.fx(FX.PUFF, ELEM.VOID, z.x + Math.sin(a) * rr, z.y + (y - z.y) * (0.5 + 0.5 * big), z.z + Math.cos(a) * rr, (0.8 + Math.min(z.t, 2) * 0.3) * (0.45 + 0.55 * big), 0, 1, 0, 0, 0.7 * k, 0, 0, z.t / z.life, i * 0.1);
         }
-        c.fx(FX.RING, ELEM.ARCANE, z.x, z.y + 0.06, z.z, z.r, 0, 1, 0, 0, 0.5 * k);
+        if (z.t < 0.4) c.fx(FX.RING, ELEM.ARCANE, z.x, z.y + 0.06, z.z, z.r, 0, 1, 0, 0, 0.5 * (1 - z.t / 0.4));
       } else if (z.kind === 'barrage') {
         // Eleven spears down round it on a spiral, staggered, near upright, held a moment in the ground.
         for (let i = 0; i < 11; i++) {
@@ -1736,7 +1736,7 @@ export class HeroWorld {
           const k = Math.min(1, at / 0.22), mid = 4 - (4 - 0.75) * k * k;
           const ex = z.x + Math.sin(th) * rho, ez = z.z + Math.cos(th) * rho, ey = z.y + mid;
           // (Spears, with a spear's head: point down, a third of each in the ground, gone again half a second after.)
-          const sink = at > 0.6 ? (at - 0.6) / 0.57 * len : 0;
+          const sink = at > 0.45 ? (at - 0.45) / 0.35 * len : 0;
           pike3(c, ex - dx / dl * len / 2, ey + len / 2 - sink, ez - dz / dl * len / 2, dx / dl, -1 / dl, dz / dl, len, ELEM.SPIRIT, 1.2, 1.5);
           if (k < 1) c.fx(FX.TRAIL, ELEM.SPIRIT, ex, ey + len / 2, ez, 0.07, 0, 1, 0, 1.6, 0.6);
         }

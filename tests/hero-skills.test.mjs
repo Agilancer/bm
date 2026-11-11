@@ -119,7 +119,8 @@ test('a dragoon dives with the spear in his fist: it points down the dive, stand
     if (hero.jump?.phase === 1 && hero.jump.u > 0.75 && m[5] < -0.3 && m[4] * Math.sin(hero.jump.head) + m[6] * Math.cos(hero.jump.head) > 0.3) aimedDown = true;
     if (hero.free[0]) { planted = true; assert.ok(hero.free[0][5] < -0.5, 'the planted spear points into the ground'); const tip = hero.free[0][13] + hero.free[0][5] * hero.mainP.reach; assert.ok(tip < 0, `its point is under the ground (${tip.toFixed(2)})`); }
   });
-  assert.ok(top > 2, `he leaves the ground (${top.toFixed(1)} m)`);
+  // (Not so high that whoever's watching loses him off the top of the picture.)
+  assert.ok(top > 1.5 && top < 2.6, `he leaves the ground, and not far (${top.toFixed(1)} m)`);
   assert.ok(aimedDown, 'the spear in his fist points down the dive');
   assert.ok(planted, 'and stands in the ground where he lands');
   assert.ok(!hero.free[0] && !hero.aim, 'and is back in his hand after');
