@@ -59,12 +59,14 @@ export class Input {
         this.softMove?.(this.softX, this.softY);
         return;
       }
+      if (this.mapUp && (e.buttons & 1)) return;      // (the big map's being moved: src/ui/map.js)
       this.look(e.movementX * SENS * this.sens, e.movementY * SENS * this.sens);
     });
     this.canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled || this.menu || this.free) return;
       if (document.pointerLockElement !== this.canvas && !this.touch) { this.lock(); return; }
       if (this.soft) { if (e.button === 0) this.softPress?.(this.softX, this.softY); return; }
+      if (e.button === 0 && this.mapUp) return;      // (the left button moves the big map while it's up)
       if (e.button === 0) this.fire(INPUT.ATTACK);
       if (e.button === 2) { this.guardMouse = true; this.s[INPUT.BLOCK] = 1; this.fire(INPUT.WIDE); }     // (held before the press is seen: the shield drops when it isn't)
       if (e.button === 1) { e.preventDefault(); this.castMouse = true; this.fire(INPUT.CAST_N); }
