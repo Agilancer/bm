@@ -4,6 +4,7 @@ import { churchSite } from './church.js';
 import { oldChurchGround } from './town.js';
 import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, inCaveBox } from './opening.js';
 import { landTrees, routeDist, treeCode } from './lands.js';
+import { huntEdge, huntPathEdge, huntTrimmed } from './hunts.js';
 
 // From the ledge outside Lisandra's cave you can see the town far below: along that line nothing grows that would stand up
 // into the sight of it. The gap widens with distance and its edges are soft, and where the ground falls away far enough
@@ -26,7 +27,10 @@ function viewLane(x, z) {
 }
 
 // The long paths' stretches, each with the box past which a tree is clear of it (src/core/terrain.js pathStretches).
-const LONG_PATHS = pathStretches(PATHS.filter((p) => p.pts.length >= 5), (w) => w + 5.001);
+// (The hunting paths, short and long, are kept clear below, by src/core/hunts.js.)
+const LONG_PATHS = pathStretches(PATHS.filter((p) => p.pts.length >= 5 && !p.hunt), (w) => w + 5.001);
+// How far from a hunting path's edge nothing grows.
+const HUNT_LANE = 3.6;
 
 // How thick the forest would stand here, 0 to 1: nothing in the town's clearing, on the church's ground or the roads, or on top of the hill.
 export function forestAmount(x, z) {
@@ -64,6 +68,15 @@ export function forestAmount(x, z) {
     const top = Math.hypot(x - SUMMIT.x, z - SUMMIT.z);
     a *= sstep(SUMMIT.r + 8, SUMMIT.r + 34, top);
   }
+  // The hunting grounds (src/core/hunts.js): a glade where the monsters stand, its edge ragged, the wood half as thick about
+  // it and thickening again away from it; and nothing on the paths in.
+  const glade = huntEdge(x, z);
+  if (glade < 36) {
+    const wob = (fbm(x * 0.11 + 9, z * 0.11 - 5, 2) - 0.5) * 7;
+    a *= sstep(-1, 8, glade + wob) * (0.5 + 0.5 * sstep(8, 36, glade));
+    if (a <= 0) return 0;
+  }
+  if (huntPathEdge(x, z) < HUNT_LANE) return 0;
   // Out past the near woods it comes in stands, with the hillsides' grass between them.
   if (r > 240) a *= sstep(0.36, 0.5, fbm(x * 0.0072 + 20, z * 0.0072 - 8, 3)) * (1 - 0.35 * sstep(240, 420, r));
   // Nothing grows on the roads out to the countries, nor right up to their edges.
@@ -81,8 +94,9 @@ export const FOREST_REACH = 1040;
 export const CELL = 10;
 
 // (x, z, height, how wide, cos, sin, tint), a tree to each seven numbers. Out to reach, a square that far either way round (cx, cz).
-// The tint is lands.js treeCode: 0 green, 1 rust, 2 snow-dusted, 3 dead.
-export const TREE_FLOATS = 7;
+// The tint is lands.js treeCode: 0 green, 1 rust, 2 snow-dusted, 3 dead; and TRIMMED more for a pine with its low boughs off
+// (src/core/hunts.js huntTrimmed).
+export const TREE_FLOATS = 7, TRIMMED = 8;
 export function forestTrees(reach = FOREST_REACH, cx = 0, cz = 0) {
   const i0 = Math.floor((cx - reach) / CELL), i1 = Math.ceil((cx + reach) / CELL);
   const j0 = Math.floor((cz - reach) / CELL), j1 = Math.ceil((cz + reach) / CELL);
@@ -99,9 +113,11 @@ export function treesInCells(i0, i1, j0, j1) {
       if (pick > forestAmount(x, z)) continue;
       const h = 21 + 15 * hash2(i - 11, j + 29) ** 1.3, a = hash2(i + 71, j + 11) * 6.2832;
       const code = Math.abs(x) > 1150 || Math.abs(z) > 1150 ? treeCode(x, z) : 0;
+      // (About the hunting grounds, the low boughs are off: eight more on its tint.)
+      const trim = huntTrimmed(x, z, hash2(i + 17, j - 43)) ? TRIMMED : 0;
       // (Dead wood stands lower and thinner; snow pines lower.)
       const hk = code === 3 ? 0.62 : code === 2 ? 0.8 : 1;
-      out.push(x, z, h * hk, (0.86 + 0.32 * hash2(i + 5, j + 131)) * (code === 3 ? 0.7 : 1), Math.cos(a), Math.sin(a), code);
+      out.push(x, z, h * hk, (0.86 + 0.32 * hash2(i + 5, j + 131)) * (code === 3 ? 0.7 : 1), Math.cos(a), Math.sin(a), code + trim);
     }
   }
   return new Float32Array(out);
