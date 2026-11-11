@@ -1019,6 +1019,64 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   return o;
 }
 @fragment fn fs(in: V, @builtin(front_facing) front: bool) -> Out {
+  if (I.glow.a < -1.5) {
+    // The town portal's doorway (src/gfx/renderer.js portalModel). uv is the model's own x and y: the doorway is 0.194 either
+    // side of x = 0, straight up to y = 0.55 and round over from there. A whirl that winds down into a deep blue well: wide
+    // arms of blue and a finer counter-turning weave of violet-white over them, rings of light falling away inward, sparks
+    // carried round and in, a white heart that breathes, now and then a crackle of lightning across it, and round the edge
+    // a band of runes that walks the arch and a hot rim that flickers like a held flame.
+    let t = F.camPos.w;
+    let q = in.uv;
+    let edge = select(abs(q.x) - 0.194, length(q - vec2f(0.0, 0.55)) - 0.194, q.y > 0.55);
+    var d = (q - vec2f(0.0, 0.4)) / 0.2;
+    d.y *= 0.7;
+    let r = length(d);
+    let a = atan2(d.y, d.x);
+    let lr = log(r + 0.02);
+    let w1 = a + lr * 2.6 - t * 1.5;
+    let n1 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(w1), sin(w1)) * 0.23 + vec2f(lr * 0.35 - t * 0.11, t * 0.03), 0.0);
+    let arms = pow(0.5 + 0.5 * sin(w1 * 4.0 + (n1.r - 0.5) * 5.0), 3.0) * smoothstep(0.02, 0.35, r);
+    let w2 = a - lr * 4.1 + t * 2.2;
+    let n2 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(w2), sin(w2)) * 0.31 + vec2f(t * 0.07, lr * 0.5), 0.0);
+    let weave = pow(0.5 + 0.5 * sin(w2 * 7.0 + (n2.g - 0.5) * 7.0), 12.0) * smoothstep(0.1, 0.5, r);
+    let fall = 1.0 / (r + 0.25);
+    let rings = pow(0.5 + 0.5 * sin(fall * 9.0 + t * 3.4 + (n1.g - 0.5) * 3.0), 6.0) * smoothstep(0.08, 0.6, r);
+    let n3 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(w1), sin(w1)) * 0.9 + vec2f(lr * 1.7 - t * 0.45, 0.13), 0.0);
+    let spark = smoothstep(0.83, 0.96, n3.b) * (0.6 + 0.4 * sin(t * 9.0 + n3.r * 40.0));
+    let breath = 0.82 + 0.18 * sin(t * 2.3) + 0.06 * sin(t * 7.1);
+    let heart = exp(-r * 6.5) * breath;
+    // The lightning: the noise's half-way line, thin, at a new place every few frames, and only some of the time.
+    let beat = floor(t * 7.0);
+    let n4 = textureSampleLevel(noiseTex, repeatSmp, vec2f(cos(a), sin(a)) * 0.12 + vec2f(r * 0.33, fract(beat * 0.137)), 0.0);
+    let on = step(0.55, fract(sin(beat * 12.9898) * 43758.5453));
+    let bolt = (1.0 - smoothstep(0.0, 0.03, abs(n4.r - 0.5))) * on * smoothstep(0.25, 0.7, r);
+    var c = vec3f(0.004, 0.012, 0.06) + vec3f(0.01, 0.04, 0.2) * smoothstep(1.6, 0.2, r);
+    c += arms * vec3f(0.06, 0.26, 1.1) * (0.35 + n1.b) * smoothstep(1.8, 0.4, r);
+    c += weave * vec3f(0.75, 0.42, 2.2);
+    c += rings * vec3f(0.04, 0.14, 0.6);
+    c += spark * vec3f(2.8, 3.2, 4.0);
+    c += heart * vec3f(1.8, 2.6, 4.2);
+    c += bolt * vec3f(1.4, 2.4, 5.0);
+    // Round the edge: a band of runes walking round the arch, and the rim.
+    let ins = -edge;
+    let walk = a * 48.0 / 6.2832 + t * 0.6;
+    let cell = floor(walk) - 48.0 * floor(floor(walk) / 48.0);
+    let u = fract(walk);
+    let v = (ins - 0.012) / 0.022;
+    let bit = fract(sin((cell * 9.0 + floor(u * 3.0) + floor(v * 3.0) * 3.0) * 78.233) * 43758.5453);
+    let lit = step(0.3, fract(sin(cell * 3.17) * 917.3)) * step(0.45, bit) * step(0.12, u) * step(u, 0.88) * step(0.1, v) * step(v, 0.9);
+    c += lit * vec3f(0.6, 1.7, 3.6) * (0.7 + 0.3 * sin(t * 3.0 + cell));
+    let flick = 0.75 + 0.25 * sin(a * 11.0 - t * 5.0) * sin(a * 23.0 + t * 7.3);
+    c += exp(-abs(edge) * 95.0) * vec3f(1.5, 3.0, 6.0) * flick;
+    c += exp(-max(ins, 0.0) * 22.0) * vec3f(0.1, 0.3, 1.0) * 0.6;
+    let toCam = F.camPos.xyz - in.p;
+    let dist = length(toCam);
+    c = applyFog(c, in.p, -toCam / dist, dist);
+    var out: Out;
+    out.color = vec4f(c, 1.0);
+    out.depth = in.viewZ;
+    return out;
+  }
   if (I.glow.a < 0.0) {
     let p = in.uv * 2.0 - 1.0;
     let r = length(p);

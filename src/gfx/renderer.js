@@ -9,8 +9,7 @@ import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/li
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
 import { buildSites } from '../core/sites.js';
-import { terrainHeight } from '../core/terrain.js';
-import { EXIT_IN, EXIT_OUT, PORTAL, braziers, caveFloorY, inDungeon, toWorld, torches } from '../core/dungeon.js';
+import { braziers, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
@@ -100,6 +99,11 @@ const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3 };
 const MAX_GROUND = 160;
+// The town portals (portalModel): which spots stand one, how big the model's drawn (it's 0.97 tall in its file: about 4.9 m),
+// and its doorway in the model's own units (tools/portal/pack.py; the swirl's shader in src/gfx/materials.js ITEM keeps the same).
+const PORTAL_SPOTS = ['hf_portal', 'hf_in', 'hf_out'];
+const PORTAL_SCALE = 5;
+const PORTAL_DOOR = { hw: 0.194, spring: 0.55, foot: 0.03 };
 // A PC's far bodies (addLod, bodyDetail): the coarse mesh's cell in metres, and how much of a pixel a cell must have shrunk
 // to before that mesh is drawn. At 4.5 cm it keeps 95% or more of a body's outline (a fifth of the triangles); a coarser
 // one was tried for the farthest and thinned them (11 cm kept 70 to 80%: arms weld away), so there's the one.
@@ -246,6 +250,7 @@ export class Renderer {
     this.gauntletSets = new Map();
     this.chests = [];
     this.doorItems = [];
+    this.portalItems = null;              // the town portals, the arch and the swirl in its doorway (portalModel), made the first time they're drawn
     this.stallItems = null;               // the market's wares and their tarps (src/gfx/wares.js), made the first time they're drawn
     this.stallsOpen = new Set();          // which stalls have their wares out (src/folk/brain.js, stall)
     this.board = { sword: null, mat: new Float32Array(16), slot: -1, model: null };   // the shield being ridden
@@ -489,8 +494,9 @@ export class Renderer {
     // (And its braziers, bigger fires that light the floor where the fighting is.)
     const warrens = torches().map(([x, y, z, nx, nz]) => ({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: [1, 0.56, 0.24], r: 12, i: 3.8, flicker: 0.8 }));
     for (const [x, y, z] of braziers()) warrens.push({ p: [x, y + 1.9, z], c: [1, 0.6, 0.28], r: 15, i: 5.2, flicker: 0.9 });
-    warrens.push({ p: [PORTAL.x, terrainHeight(PORTAL.x, PORTAL.z) + 2, PORTAL.z], c: [0.45, 0.65, 1], r: 9, i: 2.2, flicker: 0.2 });
-    for (const q of [EXIT_IN, EXIT_OUT]) { const [x, z] = toWorld(q.x, q.z); warrens.push({ p: [x, caveFloorY(x, z) + 2, z], c: [0.45, 0.65, 1], r: 9, i: 2.6, flicker: 0.2 }); }
+    // (The town portals' swirl, a cold blue that breathes, over each one's platform: portalModel.)
+    const portalSpots = buildSites().spots;
+    for (const key of PORTAL_SPOTS) { const [x, y, z] = portalSpots[key]; warrens.push({ p: [x, y + 2.1, z], c: [0.4, 0.62, 1], r: 12, i: key === 'hf_portal' ? 3.4 : 3.6, flicker: 0.3 }); }
     // (And the Test Dungeon's panels of light, white, steady and wide: src/core/testhall.js.)
     const hall = hallLights().map(([x, y, z]) => ({ p: [x, y - 0.5, z], c: [1, 0.98, 0.95], r: 15, i: 2.4, flicker: 0 }));
     this.lights = village.lights.concat(this.interior.data.lights, warrens, hall);
@@ -1440,6 +1446,55 @@ export class Renderer {
       for (const p of prims) models[p.name] = this.lyingModel(p, alb, nrm, mr, [0, 0, 0, 0]);
       this.doorModels = models;
     })().catch((e) => console.error('doors', e));
+  }
+
+  // The town portal, the first time one comes near: the owner's model (tools/portal/pack.py), and the swirl that fills its doorway,
+  // a face each way, drawn by ITEM (src/gfx/materials.js) when its glow's a is -2. The face's uv is the model's own x and y, so the
+  // shader knows the doorway's edge; the back face's x is turned round, so the swirl turns the same way from either side.
+  portalModel() {
+    this.portalModels = {};
+    (async () => {
+      const buf = await fetch(`${this.base}assets/game/items/portal.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+      const glb = parseGLB(buf);
+      const pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
+      const arch = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+      const mat = glb.json.materials[pr.material], scale = this.tier.texScale;
+      const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
+      const [alb, nrm, mr] = await Promise.all([
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
+        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+      ]);
+      // The doorway's outline, a little wider than the stone's own so its edge tucks in behind it: straight up from the rubble,
+      // then a half circle over. (PORTAL_DOOR, measured in tools/portal/pack.py.)
+      const { hw, spring, foot } = PORTAL_DOOR, w = hw + 0.012, ring = [];
+      ring.push([-w, foot], [w, foot]);
+      for (let i = 0; i <= 24; i++) { const t = i / 24 * Math.PI; ring.push([Math.cos(t) * w, spring + Math.sin(t) * w]); }
+      const pos = [], fn = [], uv = [], idx = [];
+      for (const side of [1, -1]) {
+        const base = pos.length / 3, mid = [0, (foot + spring + w) / 2];
+        for (const [x, y] of [mid, ...ring]) { pos.push(x, y, 0.03 * side); fn.push(0, 0, side); uv.push(x * side, y); }
+        for (let i = 1; i < ring.length; i++) side > 0 ? idx.push(base, base + i, base + i + 1) : idx.push(base, base + i + 1, base + i);
+        side > 0 ? idx.push(base, base + ring.length, base + 1) : idx.push(base, base + 1, base + ring.length);
+      }
+      const flat = this.flatNormal || (this.flatNormal = this.pixel('rgba8unorm', [128, 128, 255, 255]));
+      const face = this.lyingModel({ pos: new Float32Array(pos), nrm: new Float32Array(fn), uv: new Float32Array(uv), idx }, this.pixel('rgba8unorm-srgb', [20, 40, 120, 255]), flat, this.pixel('rgba8unorm', [255, 200, 0, 255]), [0, 0, 0, -2]);
+      this.portalModels = { arch: this.lyingModel(arch, alb, nrm, mr, [0, 0, 0, 0]), face };
+    })().catch((e) => console.error('portal', e));
+  }
+
+  // Where the town portals stand: every portal spot the sites set down (src/core/sites.js portalArch), the model stood on it at
+  // PORTAL_SCALE, looking the spot's way. Two items each, the arch and its swirl, on the one matrix.
+  makePortals() {
+    const { spots } = buildSites(), S = PORTAL_SCALE, out = [];
+    for (const key of PORTAL_SPOTS) {
+      const at = spots[key];
+      if (!at) continue;
+      const [x, y, z, yaw] = at, c = Math.cos(yaw), s = Math.sin(yaw);
+      const mat = new Float32Array([S * c, 0, -S * s, 0, 0, S, 0, 0, S * s, 0, S * c, 0, x, y - 0.06, z, 1]);
+      out.push({ portal: 'arch', mat }, { portal: 'face', mat });
+    }
+    return out;
   }
 
   async buildProp(glb) {
@@ -2622,6 +2677,9 @@ export class Renderer {
     for (const g of this.chests) drawn.push(g);
     if (this.doorItems.length && !this.doorModels) this.doorModel();
     for (const g of this.doorItems) drawn.push(g);
+    this.portalItems ||= this.makePortals();
+    if (this.portalItems.length && !this.portalModels) this.portalModel();
+    for (const g of this.portalItems) drawn.push(g);
     // The Test Dungeon's door, sliding up into its wall and down again (src/core/testhall.js), from wherever in the hall you are.
     if (inHall(cam.x, cam.z)) drawn.push(this.hallDoorItem(dt));
     this.stallItems ||= this.makeStalls();
@@ -2643,7 +2701,7 @@ export class Renderer {
       }
     }
     for (const g of drawn) {
-      let model = g.openingModel ?? g.mesh ?? (g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
+      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.portal] : g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
