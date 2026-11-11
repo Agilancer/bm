@@ -368,7 +368,7 @@ export class Player {
     sim.casting.ghostShield(BASH_REACH, BASH_HALF);
     let met = false;
     for (const k of sim.knights) {
-      if (k.dead || k.dormant || k.iframes) continue;
+      if (k.dead || k.dormant || k.iframes || k.keeper) continue;
       const dx = k.x - this.x, dz = k.z - this.z, d = Math.hypot(dx, dz) || 1;
       const ahead = dx * fx + dz * fz, across = Math.abs(dx * fz - dz * fx), R = (k.bodyRadius || 0.5) * 0.5;
       if (ahead < -R || ahead > BASH_REACH + R || across > BASH_HALF + R || Math.abs(k.y - this.y) > 2.2) continue;
@@ -724,7 +724,8 @@ export class Player {
     let wallT = sim.world.rayBoxes(x, ey, z, dx, dy, dz, reach);
     for (let i = 0; i < sim.knights.length; i++) {
       const k = sim.knights[i];
-      if (k.dead) continue;
+      // (Tessariel's town guard: your blade passes him by. src/sim/town-watch.js.)
+      if (k.dead || k.keeper) continue;
       if (k.iframes) { if (Math.hypot(k.x - x, k.z - z) < reach + 1) this.whiffed = true; continue; }
       if (Math.hypot(k.x - x, k.z - z) > 4.6) continue;
       if (wallT > 0 && wallT < Math.hypot(k.x - x, k.z - z) - 0.5) continue;
