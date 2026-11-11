@@ -441,7 +441,7 @@ export class Player {
     this.knockX = dx / L * push; this.knockZ = dz / L * push;
     if (this.stamina > 0) { this.hp = Math.max(1, this.hp - amount * GUARD_LEAK); this.regenT = 0; return false; }
     // Out of breath: the guard breaks, and half of it lands.
-    sim.event(EV.SHIELD_BREAK, hx, hy, hz);
+    sim.event(EV.SHIELD_BREAK, hx, hy, hz, 1);     // (1: yours. A knight's own guard breaking is the same event without it.)
     this.dropGuard();
     this.applyHurt(sim, amount * 0.5, fromX, fromZ, knock);
     return true;
