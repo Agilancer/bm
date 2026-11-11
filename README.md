@@ -289,9 +289,27 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **Quests.** It takes every quest the town has, talks each step through, and hands in. It does them in an order that suits
   its level (`PLAN` in `src/ui/autobrain.js`), and does night work by night. When something waits on the morning, it sleeps
   at the Tolling Bell.
+  - **Face to face, never through a wall.** The game's own E only measures how far off someone is, so from the street
+    it could take a quest, or hand one in, through the side of a house. It doesn't: before a word with anyone it asks
+    the nav thread whether there's a wall or a shut door between them (`within` in `src/ui/autobrain.js`), and if there
+    is it goes in at the door and round to them. A stall's keeper it still talks to over the counter. The same goes for
+    a chest, anything it picks up, and the Free Company's quartermasters.
 - **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. The countries
   are reached by the roads and across country, through the seals it has woken (it steps onto each one it passes near).
   It works its way round walls, the catacombs' light wells and stands of pines by short paths a stretch at a time.
+  - **It doesn't walk into walls.** In the town, the woods round it and the catacombs it goes by a path and nothing
+    else (`path` in `src/sim/nav.worker.js`). It used to walk straight at where it was going until its path came, and
+    whenever there was no path at all; now it waits a moment for one, and with no way there it leaves that errand for
+    later. A path keeps to the middle of a street or a room where there is one, never draws a line nearer a wall than
+    a body's width and a little, and ends where a body can stand (not at someone behind a counter, or a chest in a
+    corner, to be walked at).
+  - **It takes corners at the corner.** It turns for the next stretch once it's at the corner, not a stride short of it,
+    and it walks rather than runs by a wall, through a door, and coming up to a sharp turn (a run takes a corner wide,
+    into the far wall). Down a long straight street it still runs.
+  - **Through a door, square on, from outside and from in.** A path that goes through a doorway is taken to a place a
+    pace before its middle and then to one a pace beyond (`DOORWAYS`), so it comes up to the door facing it, opens it,
+    and walks through down the middle, and leaves a house the same way. It opens only the doors its path goes through,
+    not every one it passes. A door it can't open yet (the Sexton's, before his quest) its paths keep clear of.
   (The nav thread used to read the world's list of pines and boulders three numbers at a time where there are four to
   each, so across the northern half of the land every wood read as solid: no path through it, no way to back off in a
   fight there. It reads them right now.)
@@ -410,7 +428,10 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   leaves by the way in and comes back two levels stronger. Once Venomaw's dead it goes out by the far portal.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
-- **Loot and gear.** It picks up what falls and opens the chests it passes. It wears the best of what it carries, sets gems
+- **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, down in the catacombs, and in
+  the town's houses (in at the door, a hand to the chest with nothing between, and what spills out picked up). It used to
+  leave the houses' fifteen chests alone, and anything lying in the town. A chest upstairs it leaves: it doesn't take
+  stairs. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
 - **Grinding.** It grinds for levels when no quest suits it yet.
 - **The Test Dungeon.** It fights whatever's been summoned, going in after it once the door's up, and otherwise waits in the
@@ -464,7 +485,7 @@ doesn't read yet.
 - `src/ui/autowarrens.js`: hiring a party, and the Hollowfang Warrens.
 - `src/ui/autolog.js`: the balance log.
 - `tools/autoplay/check.mjs`: does it know the whole game?
-- `src/sim/nav.worker.js`: its paths, and its lines of sight (`tests/nav-ground.test.mjs`). This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
+- `src/sim/nav.worker.js`: its paths (through the doors, off the walls), and its lines of sight (`tests/nav-ground.test.mjs`). This is the sim's own `World` on a thread of its own, with a half-metre grid worked out
   as paths need it. The sim's grid is a metre, made wide for a knight, and is too coarse for the Sexton's passage. Out in the
   countries it lays a fresh half-metre grid round each short stretch, at the land's own height.
 - `Input.auto` and `Input.free` in `src/input.js`.
@@ -488,6 +509,12 @@ doesn't read yet.
   and held with no guard broken; it rode the shield across a fight three times in two and a half minutes and shot from
   it; and neither "Not enough mana" nor a broken guard came up once. It has not been watched down the Warrens or at the
   black knight since, nor by a person at all: watch a fight or two with it.
+- Its walking in the town (doors, walls, the houses' chests, a word only face to face) was watched the same way, against
+  a second copy of the world kept on the page to judge it by. In 230 seconds it went through house doors fifteen times,
+  never more than 0.18 m off a doorway's middle and square on each time (before: up to 0.44 m off, which rubs the jamb),
+  and opened seven of the houses' chests, each from within two metres with nothing between. It then got stuck behind
+  one of the townsfolk standing just inside a door; it now goes on past a place it can't get nearer to, and that last
+  change, and its talking after it, have not been watched through. Watch it take a quest or two in the town.
 
 ### The Free Company: a party of your own
 

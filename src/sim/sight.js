@@ -24,11 +24,13 @@ export function cleanLine(world, ax, ay, az, bx, by, bz, fat = FAT) {
 // For each mark [x, y, z] from an eye [x, y, z]: [clean (1 or 0), step]. step: how far to its right (+) or its left (-) the
 // shooter would have to stand for a clean line (the nearest such place it can walk straight to), or 0 if a few steps to the
 // side wouldn't do it and it has to go round. (Right, facing the mark: (-dz, dx) of the way to it, as the move keys have it.)
+// fat: how wide a line to ask for. A shot's (FAT), or next to nothing for a hand put out or a word had: is there a wall
+// between, not would a bolt clear the corner.
 const PEEKS = [1.2, 2.4, 3.6, 5];
-export function sight(world, from, marks, eye = 1.62) {
+export function sight(world, from, marks, eye = 1.62, fat = FAT) {
   const [ax, ay, az] = from, out = [];
   for (const [bx, by, bz] of marks) {
-    if (cleanLine(world, ax, ay, az, bx, by, bz)) { out.push([1, 0]); continue; }
+    if (cleanLine(world, ax, ay, az, bx, by, bz, fat)) { out.push([1, 0]); continue; }
     const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1, rx = -dz / L, rz = dx / L;
     let step = 0;
     for (const k of PEEKS) {
@@ -37,7 +39,7 @@ export function sight(world, from, marks, eye = 1.62) {
         // (Somewhere it can stand, and walk straight to, on the same footing.)
         if (world.inside(px, pz, 0.45) || world.clearance(ax, az, rx * side, rz * side, k, 0.42) < k - 0.05) continue;
         if (Math.abs(world.height(px, pz) - (ay - eye)) > 1.5) continue;
-        if (cleanLine(world, px, ay, pz, bx, by, bz)) { step = side * k; break; }
+        if (cleanLine(world, px, ay, pz, bx, by, bz, fat)) { step = side * k; break; }
       }
       if (step) break;
     }
