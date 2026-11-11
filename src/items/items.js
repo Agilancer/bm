@@ -562,6 +562,40 @@ export function linesOf(item, slots) {
   return SOCKET_LINES(item, out);
 }
 
+// The slot on the body an item is worn in, or null.
+export const wornSlot = (item) => (item.type === 'weapon' ? 'main' : item.type === 'shield' ? 'off' : item.type === 'skull' ? 'skull' : item.type === 'robe' ? ROBES[item.base]?.slot || null : null);
+
+// What putting this on would change, against what's worn now: lines for the bottom of its tooltip, green for better and red for
+// worse. All of what's worn is counted (gearTotals), so sets coming together or falling apart, and a shield that stops counting
+// once a skull is in hand, show as they would be. Empty for something that isn't worn, or is worn already.
+const CMP = [
+  ['armor', (v) => `${v} ward`], ['life', (v) => `${v} life`], ['mana', (v) => `${v} mana`], ['power', (v) => `${pct(v)} spell damage`],
+  ['regen', (v) => `${pct(v)} mana regeneration`], ['leech', (v) => `${v} life on each hit`], ['thrift', (v) => `${pct(v)} less mana cost`],
+];
+const UP = '#7fd67f', DOWN = '#e0705a';
+export function compareLines(item, slots) {
+  const slot = wornSlot(item);
+  if (!slot || !slots || Object.values(slots).includes(item)) return [];
+  const worn = slots[slot], out = [{ text: worn ? `Against ${nameOf(worn)}:` : 'Nothing worn there now:', kind: 'cmp' }];
+  const sign = (d, f) => ({ text: `${d > 0 ? '+' : '-'}${f(Math.abs(d))}`, kind: 'stat', color: d > 0 ? UP : DOWN });
+  if (slot === 'main') {
+    const a = worn ? statsOf(worn) : { min: 0, max: 0 }, b = statsOf(item);
+    const dMin = Math.round(b.min * STAFF_SHOWN) - Math.round(a.min * STAFF_SHOWN), dMax = Math.round(b.max * STAFF_SHOWN) - Math.round(a.max * STAFF_SHOWN);
+    if (dMin || dMax) {
+      const f = (d) => `${d >= 0 ? '+' : '-'}${Math.abs(d)}`;
+      out.push({ text: `${dMin === dMax ? f(dMin) : `${f(dMin)} to ${f(dMax)}`} bolt damage`, kind: 'stat', color: dMin + dMax > 0 ? UP : dMin + dMax < 0 ? DOWN : undefined });
+    }
+  }
+  const before = gearTotals(slots), after = gearTotals({ ...slots, [slot]: item });
+  for (const [k, f] of CMP) {
+    const d = Math.round((after[k] - before[k]) * 1000) / 1000;
+    if (d) out.push(sign(d, f));
+  }
+  if (after.shPower !== before.shPower || after.shValue !== before.shValue) out.push({ text: after.shPower ? 'A different shield ability' : 'Loses the shield ability', kind: 'stat', color: after.shPower ? undefined : DOWN });
+  if (out.length === 1) out.push({ text: 'No change to what you have.', kind: 'open' });
+  return out;
+}
+
 // What each gem looks like on what it's set in, for its tooltip. src/gfx/gemfx.js does it.
 const GEM_LOOK = {
   ruby: 'Sheds rising embers and a warm, flickering light.', topaz: 'Crackles with sparks, and strobes like a storm far off.', emerald: 'Breathes out a slow green mist.',

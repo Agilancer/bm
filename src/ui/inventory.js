@@ -3,7 +3,7 @@
 // right-click, a double click or a double tap equips or stows. A gem set down on a staff goes in its next open socket, for good.
 import { CHARM_SLOTS, charmIcon, charmTip } from './lands.js';
 import { skinFilter } from '../items/skins.js';
-import { ROBES, GEMS, colorOf, hands, linesOf, nameOf, statsOf } from '../items/items.js';
+import { GEMS, colorOf, compareLines, linesOf, nameOf, statsOf, wornSlot } from '../items/items.js';
 import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
 
 const $ = (id) => document.getElementById(id);
@@ -20,8 +20,7 @@ const GEM_SVG = [
 
 const SOCKETED = new Set(['weapon', 'skull', 'shield']);
 
-// The slot on the body an item is worn in, or null.
-const slotOf = (item) => (item.type === 'weapon' ? 'main' : item.type === 'shield' ? 'off' : item.type === 'skull' ? 'skull' : item.type === 'robe' ? ROBES[item.base]?.slot || null : null);
+const slotOf = wornSlot;
 const hasOpenSocket = (it) => SOCKETED.has(it?.type) && (it.gems?.length || 0) < (it.sockets || 0);
 
 export class Inventory {
@@ -36,6 +35,10 @@ export class Inventory {
     this.grid = $('packGrid');
     this.hover = $('packHover');
     this.tipEl = $('invTip');
+    // The card for what's worn now, beside the tooltip of something that would go in its place.
+    this.tip2El = $('invTip2') || Object.assign(document.createElement('div'), { id: 'invTip2' });
+    if (!this.tip2El.isConnected) this.tipEl.after(this.tip2El);
+    $('invSort').addEventListener('click', () => this.sort());
     this.carryEl = $('invCarry');
     this.note = $('invNote');
     this.grid.style.setProperty('--pw', PACK_W);
@@ -68,6 +71,7 @@ export class Inventory {
     this.press = null;
     this.root.style.display = 'none';
     this.tipEl.style.display = 'none';
+    this.tip2El.style.display = 'none';
     this.carryEl.style.display = 'none';
     this.hover.style.display = 'none';
     for (const s of SLOTS) this.slotEls[s].classList.remove('ok', 'bad');
@@ -137,17 +141,47 @@ export class Inventory {
     this.noteT = setTimeout(() => { this.note.textContent = ''; }, 2200);
   }
 
+  linesHtml(item, lines) {
+    return lines.map((l) => `<div class="l-${l.kind}"${l.kind === 'title' ? ` style="color:${colorOf(item)}"` : l.color ? ` style="color:${l.color}"` : ''}>${l.text}</div>`).join('');
+  }
+
+  // The item's card, with what it would change against what's worn; and beside it, the card of what's worn there now.
   showTip(item, e) {
-    if (!item) { this.tipEl.style.display = 'none'; return; }
+    if (!item) { this.tipEl.style.display = 'none'; this.tip2El.style.display = 'none'; return; }
+    const slots = this.pack?.slots;
+    const worn = compareLines(item, slots).length ? slots[slotOf(item)] : null;
     if (this.tipFor !== item || this.tipEl.style.display === 'none') {
       this.tipFor = item;
-      this.tipEl.innerHTML = linesOf(item, this.pack?.slots).map((l) => `<div class="l-${l.kind}"${l.kind === 'title' ? ` style="color:${colorOf(item)}"` : l.color ? ` style="color:${l.color}"` : ''}>${l.text}</div>`).join('');
+      this.tipEl.innerHTML = this.linesHtml(item, [...linesOf(item, slots), ...compareLines(item, slots)]);
       this.tipEl.style.display = 'block';
+      if (worn) {
+        this.tip2El.innerHTML = `<div class="l-worn">Equipped</div>${this.linesHtml(worn, linesOf(worn, slots))}`;
+        this.tip2El.style.display = 'block';
+      } else this.tip2El.style.display = 'none';
     }
-    if (this.touch) { this.tipEl.style.left = '8px'; this.tipEl.style.top = '8px'; return; }
-    const r = this.tipEl.getBoundingClientRect();
-    this.tipEl.style.left = `${Math.max(8, Math.min(innerWidth - r.width - 8, e.clientX + 18))}px`;
-    this.tipEl.style.top = `${Math.max(8, Math.min(innerHeight - r.height - 8, e.clientY + 14))}px`;
+    const r = this.tipEl.getBoundingClientRect(), r2 = worn ? this.tip2El.getBoundingClientRect() : { width: 0, height: 0 };
+    let x, y;
+    if (this.touch) { x = 8; y = 8; } else {
+      x = Math.max(8, Math.min(innerWidth - r.width - 8, e.clientX + 18));
+      y = Math.max(8, Math.min(innerHeight - r.height - 8, e.clientY + 14));
+    }
+    this.tipEl.style.left = `${x}px`;
+    this.tipEl.style.top = `${y}px`;
+    if (!worn) return;
+    // To the right if there's room, else to the left; on a narrow screen, under it.
+    let x2 = x + r.width + 8, y2 = y;
+    if (x2 + r2.width > innerWidth - 8) x2 = x - r2.width - 8;
+    if (x2 < 8) { x2 = x; y2 = y + r.height + 8; }
+    this.tip2El.style.left = `${x2}px`;
+    this.tip2El.style.top = `${Math.max(8, Math.min(innerHeight - r2.height - 8, y2))}px`;
+  }
+
+  sort() {
+    this.putBack();
+    this.flash(this.pack.sort() ? 'Sorted.' : 'It won\'t all fit any tidier.');
+    this.on.sound?.('equip');
+    this.tipFor = null;
+    this.render();
   }
 
   // ---- what's under the pointer ---------------------------------------------------------------
@@ -176,7 +210,7 @@ export class Inventory {
   // ---- hands on -------------------------------------------------------------------------------
 
   onDown(e) {
-    if (e.target.closest('#invClose, #invX')) return;
+    if (e.target.closest('#invClose, #invX, #invSort')) return;
     if (e.button === 2) { this.quick(this.targetAt(e)); return; }
     if (e.button !== 0) return;
     const t = this.targetAt(e);
