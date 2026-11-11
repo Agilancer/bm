@@ -13,7 +13,8 @@ import { braziers, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
-import { CHURCH_FOOTPRINT, CHURCH_PATCH, CHURCH_WING, LAND_HOLE } from '../core/church.js';
+import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
+import { groundPatches } from '../core/ground-patches.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
@@ -298,10 +299,9 @@ export class Renderer {
     const land = (type, args) => { steps.add(); return pool.run(type, args).then((r) => { tick(); return r; }); };
     const groundJobs = [], farJobs = [];
     const groundColliders = village.colliders.concat(village.footprints || [], [CHURCH_FOOTPRINT, CHURCH_WING]);
-    // Finer patches of the land where the coarse grid won't do: the hill and its roads, and round the church, with a hole left under
-    // the wing over its stair (src/core/church.js).
-    const cell = tier.lean ? 4 : 2;
-    const patches = [{ x0: -614, x1: -90, z0: -44, z1: 344, cell }, { ...CHURCH_PATCH, cell, hole: LAND_HOLE }];
+    // Finer patches of the land where the coarse grid won't do: the hill and its roads, round the church, the woods round the
+    // town and the Warrens' portal's hillside (src/core/ground-patches.js).
+    const patches = groundPatches(tier.lean ? 4 : 2);
     this.terrainArgs = { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patches };
     this.landAt = [0, 0]; this.landBusy = false;
     const terrainJob = land('terrain', this.terrainArgs), forestJob = land('forest', { opening: this.openingEnabled, reach: FOREST_REACH });
