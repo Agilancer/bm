@@ -25,7 +25,7 @@
 // opens a chest or takes anything up with a wall between (within()).
 import * as LAYOUT from '../core/layout.js';
 import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
-import { CAVE_MOUTH, CAVE_OUT, OPENING, RUN_OUT } from '../core/opening.js';
+import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY } from '../core/opening.js';
 import { ROUTE, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { ROADS, terrainHeight } from '../core/terrain.js';
 import { ROUTES, SITES } from '../core/lands.js';
@@ -924,7 +924,7 @@ export class Brain {
       }
       return;
     }
-    if (st === OPENING.HERD && t < 10) { this.say('Lisandra says your name.'); return; }
+    if (st === OPENING.HERD && t < HERD_CONTROL) { this.say('Lisandra says your name.'); return; }
     if (st === OPENING.HERD || st === OPENING.LEAVE) {
       // Out of the cave the way she points, by the marks down its middle (never back in: she won't have it).
       this.say('Out of the cave.');
@@ -937,23 +937,27 @@ export class Brain {
     }
     if (st === OPENING.ESCORT) {
       const foes = this.foes(snap, m).filter((f) => f.hostile && f.d < 30);
+      // (The road's fight: the dead in waves, their children, and at the end two necromancers out of the trees. It fights
+      // them as it fights the woods' own: src/sim/opening.js fight has what comes and when.)
       if (foes.length && this.combat(snap, m, foes)) { this.fighting = true; this.say(`Fighting the dead on the road (${foes.length}).`); return; }
-      // She leads the way down (src/sim/opening.js): it follows a few strides behind her on the road, at her pace. Too close
-      // and it lets her get on; she waits if it falls back.
+      // She leads the way down (src/sim/opening.js): along her shelf, down her steps and the path, and then the road. It
+      // follows a few strides behind her, at her pace. Stood still she stops and turns to it, and goes on when it's come
+      // up to her: so it keeps coming until it's close.
       const her = this.lisandra(snap);
       if (!her) { this.say('Following Lisandra down to Bellmourn.'); return; }
       const hers = routeNear(her.x, her.z), mine = routeNear(m.x, m.z, hers, 60), d = dist(m.x, m.z, her.x, her.z);
       const end = ROUTE.pts.at(-1);
       if (dist(m.x, m.z, end[0], end[1]) < 6 || (hers >= ROUTE.len - 0.5 && d < 6)) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Bellmourn. Lisandra has her say.'); return; }
-      const [ax, az] = routeAt(Math.min(ROUTE.len, Math.max(mine + 3, hers - 3.5)));
-      if (d < 3 && hers > mine) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
+      const [ax, az] = routeAt(Math.min(ROUTE.len, Math.max(mine + 3, hers - 2.6)));
+      if (d < 2.4 && hers > mine) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
       this.face = null;
       this.steer(ax - m.x, az - m.z, d > 9);
       // (Its eyes on the road ahead: her, and the way she's going.)
       this.look = routeAt(Math.min(ROUTE.len, mine + 6));
-      // Down the long slope on its shield, and she gets on hers.
+      // Down the long slope on its shield, and she gets on hers: once it's on the road. (Her shelf and her steps are
+      // narrow and double back; it walks those.)
       const [rx, rz] = routeDir(mine);
-      this.board(0.12, m, rx, rz, ROUTE.len - mine);
+      if (mine > routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 4) this.board(0.12, m, rx, rz, ROUTE.len - mine);
       if (!m.surf) this.say('Following Lisandra down to Bellmourn.');
     }
   }

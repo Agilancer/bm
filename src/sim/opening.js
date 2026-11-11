@@ -1,44 +1,50 @@
 // The opening, as the sim plays it: where Lisandra stands and what she does, when you can move, the cave falling in, and
 // the walk down to town. The camera, the words and the sound follow the same clock (src/ui/opening.js).
 import { CUES, CUE_IDS } from '../core/opening-script.js';
-import { CAVE_LINES } from '../core/opening-cave.js';
 import {
-  CANDLES, CAST_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CHAMBER_AXIS, CLIMB, COLLAPSE_END, DOOR_SPOT, DUST_AT, FOLD_SPOT, KNEEL_UP, LEAN_SPOT, LECTERN,
-  OFFER_SPOT, PACE, PALM_SPOT, ROUND_R, SEEN_SPOT, SIT_SPOT, SNAP_AT, SNAP_SPOT, SOFT_CANDLE, SPARK_AT, STEPS_TO, WRITE_SPOT, collapseEye, wakeEyeBack, wakeEyeH,
-  HERD_CONTROL, HERD_END, NAME_AT, OPENING, OPENING_SPAWN, OPENING_YAW, SWAP_AT, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP,
+  CAST_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CHAMBER_AXIS, COLLAPSE_END, DOOR_SPOT, DUST_AT, FALL, FALL_FROM, FOLD_SPOT, HEARTH, HEARTH_SPOT, HERD, KNEEL_UP,
+  LANTERN, LEAN_SPOT, LECTERN, OFFER_SPOT, PORTAL, ROUND_R, SEEN_SPOT, SNAP_AT, SNAP_SPOT, SPARK_AT, WAY, WRITE_SPOT, collapseEye, wakeEyeBack, wakeEyeH,
+  HERD_END, NAME_AT, OPENING, OPENING_SPAWN, OPENING_YAW, SWAP_AT, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP,
   caveNearest, chamberPoint, storyHolds,
 } from '../core/opening.js';
 import { DIVE_TO, ROUTE, STORM_TO, VIEW_SPOT, routeAt, routeDir, routeNear } from '../core/escort.js';
-import { INPUT } from '../core/layout.js';
+import { EV, INPUT } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
-import { ambush } from './undead.js';
+import { ELEM, FX } from './spells.js';
+import { openingCaster, openingRaise } from './undead.js';
 
 const WEAVE_FROM = 9.4;             // into WAKE: she sets off across the cave to you
-// The climb in beat 9: when each of its lines starts (she paces a length a line).
-const CLIMB_LINES = CAVE_LINES.filter((l) => l.at >= CLIMB[0] && l.at < CAVE.shout).map((l) => l.at);
 const LEAVE_PACE = 2.4;             // how fast you can go in the cave, until you're out
 const KNEEL_TURN = 0.35;     // how far round from facing you she comes down
 const AWAY_TURN = 0.8;       // turned to the rubble, how far round toward you she stays (three-quarters from behind)
 // Hands put somewhere, in her body's space (x to her left, y up, z ahead): src/sim/village-walker.js act's b.reach.
 const GUARD = [['L', [0.16, 1.0, 0.3], null], ['R', [-0.16, 1.02, 0.3], null]];
 const PALMS_UP = [['L', [0.12, 1.06, 0.32], 'up'], ['R', [-0.12, 1.06, 0.32], 'up']];
-// Her eyes' height over the floor, stooped, for her palm across your view of her.
-const PALM_FACE = 1.45;
+const HEART = [['R', [0.04, 1.25, 0.17], null]];
+const CHEEK = [['R', [-0.08, 1.46, 0.13], null]];
+// Both hands held out to her fire, palms down.
+const WARM = [['L', [0.17, 0.98, 0.42], 'down'], ['R', [-0.17, 0.98, 0.42], 'down']];
 // (Her right palm braced on her raised knee: the kneel's too upright for a hand to reach the ground without folding her up.)
 const KNEE_HAND = [['R', 'LeftLeg', 'down']];
 const yawTo = (a, b) => Math.atan2(b[0] - a[0], b[1] - a[1]);
+const off = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 // Where she starts her run, out of sight down the tunnel, when the portal dies.
 const RUN_FROM = (() => { const p = CAVE_LINE.find((q) => q[4] >= 15); return [p[0], p[1]]; })();
+// Where she stands by her table, a hand on the old lantern.
+const LANTERN_SPOT = (() => { const d = [HEARTH_SPOT[0] - HEARTH[0], HEARTH_SPOT[1] - HEARTH[1]], l = Math.hypot(...d); return [LANTERN[0] + d[0] / l * 0.75, LANTERN[2] + d[1] / l * 0.75]; })();
 
-// Where on the road down (src/core/escort.js) things happen, as distances along it.
-const MARKS = { bend: 46, ambush: routeNear(-214, 180), sight: routeNear(-84, 63) };
+// Where on the way down (src/core/escort.js) things happen, as distances along it: the shelf, the head of the steps, a
+// landing partway down them, the road, the pines, the dead, and the town in sight.
+const MARKS = { shelf: 9, steps: routeNear(WAY[4][0], WAY[4][1]) - 4, speech: routeNear(WAY[6][0], WAY[6][1]), foot: routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) - 8,
+  stepsEnd: routeNear(WAY[8][0], WAY[8][1]), ambush: routeNear(-214, 180), sight: routeNear(-84, 63) };
 MARKS.woods = MARKS.ambush - 34;
 MARKS.star = MARKS.sight - 45;
 
 // How she leads you down: this far ahead of you on foot, and further on a shield, where it's fast. Come up on her back and
-// she hurries. Stand still and she goes on a step or two, to STOP ahead, and waits there for you, turned to you; fall back
-// past FAR along the road, or go off more than WANDER from her, and she stops where she is and waits.
-const LEAD = 5.5, LEAD_RIDE = 9, STOP = 8, FAR = 10, WANDER = 16, STROLL = 1.2;
+// she hurries. Stop, and once she's a few steps on (HALT) she stops too, turns round and looks at you; she turns back and
+// goes on when you've come up to within NEAR of her, or gone past. Fall back past FAR along the way, or go off more than
+// WANDER from her, and she stops and waits the same.
+const LEAD = 5.0, LEAD_RIDE = 9, HALT = 4.3, NEAR = 3.4, FAR = 9.5, WANDER = 16;
 const FOOT_MAX = 9.6;        // flat out on foot: a little over your sprint, so she can always get back in front
 const RIDE_MAX = 30;         // on the shield: over what yours can do
 const OFF_AT = 5.5;          // you're off yours, and she's slowed to this: she steps off hers
@@ -47,20 +53,28 @@ const HOP = 0.32;            // s: the little jump on and off it
 // Where her walk turns to a run, by pace (a touch later than in the cave). Her run is the one clip from there up, flat out
 // included, quickened to her speed.
 const GAITS = [2.2];
-// What she says on the road (CUES in src/core/opening-script.js): one line at a time, TALK_GAP s between, each waiting till
-// you're within HEAR of her (calls don't). Between the lines a place on the road brings, these, in turn: the hill's while
-// she's still above the pines, the low road's once the dead in them are down.
+// What she says on the way (CUES in src/core/opening-script.js): one line at a time, TALK_GAP s between, each waiting till
+// you're within HEAR of her (calls don't). Between the lines a place brings, these, in turn, while she's above the pines.
 const TALK_GAP = 1.1, HEAR = 17;
 const HILL = ['hill1', 'hill2', 'hill3', 'hill4', 'hill5'];
-const LOW = ['low3', 'low4', 'low5', 'low6'];
+const LOW = ['low1', 'low2', 'low3', 'low4', 'low5'];
 const KEEP = ['keep1', 'keep2', 'keep3'];
-// The story she tells on the way (docs/OPENING-SCRIPT.md): on the hill, before the pines; and after the fight, who Velscour
-// was. For that one you keep to her pace, HEAL_PACE.
-const HILL_STORY = ['door', 'bend', 'bend2', 'jokes', 'jokes2'];
-const HEAL = ['heal1', 'heal2', 'heal3', 'heal4', 'heal5', 'wed'];
-const HEAL_PACE = 3.0;
-const THEN = { bend: 'bend2', jokes: 'jokes2' };
-const ROAD_TALK = new Set([...HILL, ...LOW, ...HILL_STORY, ...HEAL, 'lead', 'woods', 'star']);
+// After the fight, who Velscour was (for that you keep to her pace, HEAL_PACE), and what he was to her.
+const HEAL = ['heal0', 'heal1', 'heal2', 'heal3', 'heal4', 'heal5', 'heal6'];
+const WED = ['wed', 'wed2', 'wed3', 'wed4'];
+const HEAL_PACE = 3.4;
+// On her shelf and down her steps you keep to a walk behind her: it's narrow, and she has things to say on it.
+const STEPS_PACE = 3.3;
+const THEN = { staff: 'staff2' };
+// What's dropped unsaid at the town's edge, and what's dropped when the dead come up.
+const ROAD_TALK = new Set([...HILL, ...LOW, 'lead', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
+const BEFORE_FIGHT = new Set([...HILL, 'lead', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
+// The fight on the road, in the pines: twenty of the dead up out of the ground, five at a time; when eight or fewer are
+// left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out of the trees on
+// each side of the road, who raise what's fallen. All of them easy (src/sim/undead.js openingRaise). She fights it with
+// you, with what fire she has left: a weak bolt every couple of seconds.
+const WAVE = { first: 20, more: 20, children: 10, group: 5, every: 2.4, second: 8, third: 10, limit: 300 };
+const HER_FIRE = { every: 1.9, range: 20, speed: 17, dmg: 5, at: 0.34 };
 
 export class Opening {
   constructor(sim) {
@@ -101,6 +115,10 @@ export class Opening {
     // On the road: what she's yet to say, how long till she can say the next, and how long she's stood waiting for you.
     this.queued = []; this.talkLeft = 0; this.waitT = 0; this.keepAt = -99; this.keepN = 0;
     this.then = null; this.arrived = false; this.marked = new Set(); this.healQueued = false;
+    // Whether she's stopped for you, how long, how long you've stood still, and how long she's been turning back to the way.
+    this.halted = false; this.haltT = 0; this.stillT = 0; this.turnT = 0;
+    // The fight: its bodies, what's still to come up, her bolts in the air, and when she last cast.
+    this.fightS = null; this.bolts = []; this.castT = 0; this.aim = null;
     // On a shield: whether, for how long, since when (the hop on or off), and which foot leads.
     this.riding = false; this.rideT = 0; this.hopT = 9; this.rode = false;
     this.sim.paceCap = stage === OPENING.HERD || stage === OPENING.LEAVE ? LEAVE_PACE : undefined;
@@ -128,6 +146,9 @@ export class Opening {
     if (this.fired.has(id) || this.queued.includes(id)) return;
     if (first) this.queued.unshift(id); else this.queued.push(id);
   }
+
+  // On the way down, where the woods' own packs leave you be: the road's fight is staged here (src/sim/undead.js stepWoods).
+  get onRoad() { return this.stage > OPENING.OFF && this.stage < OPENING.ARRIVED; }
 
   // You can't move while the story has the camera.
   frozen() {
@@ -197,9 +218,9 @@ export class Opening {
       case OPENING.HERD: {
         // She takes the name where she stands, points you out, and goes on ahead of you to her ledger.
         const tunnel = chamberPoint(0, 0);
-        if (t < 4.3) b = { clip: t > 0.3 && t < 2.4 ? 'agree' : 'idle', face: yawTo([w.x, w.z], you), look: eye };
-        else if (t < 6.4) b = { clip: 'Pointing into the distance', face: yawTo([w.x, w.z], tunnel), look: [tunnel[0], 58.5, tunnel[1]] };
-        else b = this.toLedger(w, t < 8.2 ? eye : null);
+        if (t < HERD.point) b = { clip: t > 0.3 && t < 2.4 ? 'agree' : 'Idle_Talking_Loop', rate: 0.7, face: yawTo([w.x, w.z], you), look: eye, blend: 3 };
+        else if (t < HERD.go) b = { clip: 'Pointing into the distance', face: yawTo([w.x, w.z], tunnel), turn: 4, look: [tunnel[0], w.y + 1.3, tunnel[1]] };
+        else b = this.toLedger(w, t < HERD.go + 1.8 ? eye : null);
         if (t >= HERD_END) this.setStage(OPENING.LEAVE);
         break;
       }
@@ -229,7 +250,7 @@ export class Opening {
   }
 
   // ---- Act I, to the name ------------------------------------------------------------------------------------------------
-  // The long story (docs/OPENING-SCRIPT.md), beat by beat, keyed off its moments (CAVE, src/core/opening-cave.js).
+  // The long story (docs/OPENING-SCRIPT.md), keyed off its moments (CAVE, src/core/opening-cave.js).
   wake(t, dt, w, you) {
     const C = CAVE, here = [w.x, w.z], face = yawTo(here, you);
     const floor = w.y;
@@ -237,7 +258,7 @@ export class Opening {
     // (face is from her to you, so "back" is further along it.)
     const back = wakeEyeBack(t), eye = [you[0] + Math.sin(face) * back, this.sim.player.y + wakeEyeH(t), you[1] + Math.cos(face) * back];
     const at = (p, y) => [p[0], floor + y, p[1]];
-    // 1 · The glamour. Reading the summons from her book; her hand held out to you as your eyes come open; then across
+    // The glamour. Reading the summons from her book; her hand held out to you as your eyes come open; then across
     // the cave to you through her clutter, soft and easy; and her hand out again for her last words as the glamour breaks.
     if (t < 9.4) {
       const f0 = yawTo(WITCH_MARK, you);
@@ -249,102 +270,87 @@ export class Opening {
     if (t < SWAP_AT - 2.4) return this.weave(w, you, eye);
     // The witch is caught in it too, square on, her hand still held out to you, for a long breath after the flash.
     if (t < SWAP_AT + 0.85) return { clip: 'Interact', hold: 1.05, rate: 0.8, face, look: eye, blend: 3, tremble: t > SWAP_AT + 0.4 };
-    // 2 · Seen. Two quick steps back, her hands up, as startled as you.
+    // Seen. Two quick steps back, her hands up, as startled as you; and she holds there, staring.
     if (t < SWAP_AT + 1.25) {
       const back = [WITCH_STOP[0] - Math.sin(face) * 0.7, WITCH_STOP[1] - Math.cos(face) * 0.7];
       return { to: back, speed: 1.8, keepFace: true, face, clip: 'frightened', from: 0.25, hold: 0.6, look: eye, tremble: true, blend: 12, reach: GUARD };
     }
-    if (t < C.stepIn) return { clip: 'frightened', hold: 0.6, face, look: eye, tremble: true, reach: GUARD };
-    // She steps in again, slowly, stoops, and passes her palm a hand's breadth across your eyes, right to left.
-    if (t < C.palm) return { to: PALM_SPOT, speed: this.paceTo(PALM_SPOT, C.palm - t), look: eye, face };
-    if (t < C.palm + 1.7) {
-      // (In her body's space: on the line from your eyes up to her face, as far out as her arm goes, so the palm crosses
-      // your view of her. Your eyes are too far below and in front of her for the hand to reach them.)
-      const k = clamp((t - C.palm - 0.2) / 1.2, 0, 1), D = Math.hypot(eye[0] - w.x, eye[2] - w.z);
-      // (No further out than 0.5 m: a straight arm flips the elbow.)
-      const z = Math.min(0.5, D - 0.3), y = clamp(PALM_FACE + (eye[1] - floor - PALM_FACE) * z / D, 0.6, 1.4);
-      return { clip: 'idle', face, look: eye, lean: 0.5, reach: [['R', [-0.26 + 0.46 * k, y, z], null]], blend: 3 };
-    }
-    // "You can see me. Not the pretty one. Me." A step back, watching your eyes.
-    if (t < C.drop) return { to: SEEN_SPOT, speed: 0.8, keepFace: true, face, clip: 'walk', rate: -0.75, look: eye };
-    // "Oh, no.": her hands come up open before her, palms up, and she looks down into them; then they drop.
-    const hands = [w.x + Math.sin(face) * 0.36, w.y + 1.0, w.z + Math.cos(face) * 0.36];
+    if (t < C.drop) return { clip: 'frightened', hold: 0.6, face, look: eye, tremble: true, reach: GUARD };
+    // "Not at the girl. At me.": her hands come down, one of them by way of her own cheek; a slow step back, watching you.
     if (t < C.backOff) {
       const d = t - C.drop;
-      return { clip: 'complain_01', from: 1.7, rate: 0.45, hold: 2.3, face, look: d < 1.3 ? hands : eye, blend: 4, reach: d < 1.9 ? PALMS_UP : null };
+      if (d < 2.3) return { clip: 'idle', face, look: eye, reach: d > 0.25 && d < 1.9 ? CHEEK : null, blend: 3 };
+      return { to: SEEN_SPOT, speed: 0.7, keepFace: true, face, clip: 'walk', rate: -0.75, look: eye };
     }
-    // 3 · The snap. She backs away into her clutter, working her cold fingers; raises the right hand at you; and snaps.
+    // The snap. She backs away among her things, working her cold fingers; raises the right hand at you; and snaps.
     if (t < C.aim) return { to: SNAP_SPOT, speed: this.paceTo(SNAP_SPOT, C.aim - 0.2 - t), keepFace: true, face, clip: 'walk', rate: -0.85, look: eye, fists: Math.sin(t * 5.5) > 0 };
     if (t < SNAP_AT - 0.3) return { clip: 'idle', face, look: eye, reach: [['R', [-0.14, 1.32, 0.5], 'down']], blend: 4, fists: t < C.aim + 0.6 && Math.sin(t * 5.5) > 0 };
     if (t < SNAP_AT + 0.9) return { clip: 'Spell_Simple_Shoot', face, look: eye, snap: t - SNAP_AT + 0.3, rate: 0.55, blend: 10 };
     // The candles catch in a wave from her hand: she watches them go, up and round the cave.
     if (t < C.comeBack) return { clip: 'idle', face, look: [w.x + Math.sin(face) * 3, w.y + 3.5, w.z + Math.cos(face) * 3] };
-    // She comes back through her clutter, watching your eyes the whole way; stops close, and leans in.
+    // She comes back through her things, watching your eyes the whole way; stops close, and leans in to tell you what it was.
     if (t < C.lean) return { to: LEAN_SPOT, speed: this.paceTo(LEAN_SPOT, C.lean - 0.5 - t), look: eye, face };
-    // Her head turns to the ledger by the tunnel, and back to you.
-    if (t < C.ledger) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, lean: 0.16, blend: 3 };
-    const ledger = at(LECTERN, 1.25);
-    if (t < C.leanIn) return { clip: 'idle', face: face + wrapAngle(yawTo(here, LECTERN) - face) * 0.6, turn: 2, look: ledger };
-    // 4 · Why she's afraid. A step back, arms folded tight.
-    if (t < C.fold) return { clip: 'idle', face, look: eye, lean: 0.24, blend: 3 };
-    if (t < C.hand) return { to: FOLD_SPOT, speed: 0.7, keepFace: true, face, clip: 'Idle_FoldArms_Loop', look: eye, blend: 2.5 };
-    // One hand out of the fold, turned over and looked at; then up at you.
-    const palm = [w.x + Math.sin(face) * 0.3, w.y + 1.08, w.z + Math.cos(face) * 0.3];
-    if (t < C.lookUp) return { clip: 'Idle_FoldArms_Loop', face, look: palm, reach: [['R', [-0.1, 1.08, 0.3], 'up']], blend: 2.5 };
-    if (t < C.circle) return { clip: 'Idle_FoldArms_Loop', face, look: eye, blend: 2.5 };
-    // Down at the candle ring round your feet; and the tremble, gripping her own arms.
-    if (t < C.tremble) return { clip: 'Idle_FoldArms_Loop', face, look: t < C.circle + 3.2 ? [you[0], floor + 0.05, you[1]] : eye };
-    if (t < C.round) return { clip: 'Idle_FoldArms_Loop', face, look: eye, tremble: true };
-    // 5 · Who you are. A slow half circle round you, to stand between you and the door you came through.
-    if (t < C.door) return this.halfCircle(t, w, you, eye);
-    if (t < C.bow) return { to: DOOR_SPOT, speed: 0.6, face, look: eye, turn: 3 };
-    // 6 · Who she is. Her hand to her heart, and a slow, stiff bow.
-    const heart = [['R', [0.04, 1.25, 0.17], null]];
-    if (t < C.bow + 0.9) return { clip: 'idle', face, look: eye, reach: heart, blend: 3 };
-    if (t < C.named + 1.2) return { clip: 'bow', from: 0.4, rate: 0.62, hold: 3.4, face, look: eye, reach: heart, blend: 3 };
-    if (t < C.cheek) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2 };
-    // Her hand to her cheek.
-    if (t < C.toCrate) return { clip: 'idle', face, look: eye, reach: [['R', [-0.08, 1.46, 0.13], null]], blend: 3 };
-    // Across to the crate by the wall, talking as she goes, and turned to you at it.
-    if (t < C.flick) return { to: SIT_SPOT, speed: this.paceTo(SIT_SPOT, C.flick - 0.6 - t), look: eye, face };
-    // A dry flick of her fingers back at the empty air where the girl stood.
-    if (t < C.sit) return { clip: 'idle', face, look: eye, point: t < C.flick + 1.4 && t > C.flick + 0.5 ? at(WITCH_STOP, 1.3) : null };
-    // 7 · Velscour. She lowers herself onto the crate.
-    const seat = { face, look: eye, turn: 3 };
-    if (t < C.sit + 1.3 / 0.8) return { ...seat, clip: 'Sitting_Enter', rate: 0.8, blend: 4 };
-    if (t < C.softSnap) return { ...seat, clip: 'Sitting_Idle_Loop', rate: 0.6, look: t < C.softSnap - 1.2 ? [you[0], floor + 1.3, you[1]] : eye };
-    // Up at the floating candles, a hand lifted, and a soft snap: the nearest flares.
-    if (t < C.softSnap + 1.9) {
-      const c = CANDLES[SOFT_CANDLE];
-      return { ...seat, clip: 'Sitting_Idle_Loop', rate: 0.6, look: [c.x, c.y, c.z], reach: [['L', [0.18, 1.05, 0.3], 'down']], snap: t - C.softSnap - 0.3 };
+    if (t < C.fold - 0.6) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, lean: 0.16, blend: 3 };
+    // She straightens, a step back, arms folded: the truth, then.
+    if (t < C.fold) return { clip: 'idle', face, look: eye, blend: 3 };
+    if (t < C.bow) return { to: FOLD_SPOT, speed: 0.7, keepFace: true, face, clip: 'Idle_FoldArms_Loop', look: eye, blend: 2.5 };
+    // Who she is. Her hand to her heart, and a slow, stiff bow; then she talks.
+    if (t < C.bow + 0.9) return { clip: 'idle', face, look: eye, reach: HEART, blend: 3 };
+    if (t < C.named + 1.3) return { clip: 'bow', from: 0.4, rate: 0.62, hold: 3.4, face, look: eye, reach: HEART, blend: 3 };
+    if (t < C.doorPoint) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2 };
+    // Her hand goes out past you, at the door you came through.
+    const door = [PORTAL[0], PORTAL[1], PORTAL[2]];
+    if (t < C.toHearth - 2.2) return { clip: 'Pointing into the distance', face: yawTo(here, [PORTAL[0], PORTAL[2]]), turn: 3, look: t < C.doorPoint + 2.4 ? door : eye, blend: 4 };
+    if (t < C.toHearth) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
+    // The old story, at her hearth: across to it, her hands held to the fire, telling it into the flames; then round to you.
+    const fire = at(HEARTH, 0.45);
+    if (t < C.turn) {
+      if (off(here, HEARTH_SPOT) > 0.06) return { to: HEARTH_SPOT, speed: this.paceTo(HEARTH_SPOT, C.toHearth + 6.0 - t), look: t < C.toHearth + 1.4 ? eye : fire };
+      return { clip: 'idle', face: yawTo(here, HEARTH), turn: 3, look: fire, reach: WARM, blend: 3 };
     }
-    // One of her hands held in the other.
-    if (t < C.holdHand) return { ...seat, clip: 'Sitting_Idle_Loop', rate: 0.6 };
-    if (t < C.stand) return { ...seat, clip: 'Sitting_Idle_Loop', rate: 0.6, look: [you[0], floor + 0.9, you[1]], reach: [['L', [0.02, 0.62, 0.34], 'up'], ['R', [-0.01, 0.66, 0.33], 'down']] };
-    if (t < C.stand + 1.03 / 0.75) return { ...seat, clip: 'Sitting_Exit', rate: 0.75, blend: 4 };
-    // 8 · The magic. Two steps toward you from the crate, staring at your hands.
+    if (t < C.lantern) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, turn: 2.6, look: eye, blend: 2.5 };
+    // The old lantern on her table: a step to it, and a hand laid on it.
+    if (t < C.rose) {
+      if (off(here, LANTERN_SPOT) > 0.06) return { to: LANTERN_SPOT, speed: 0.95, look: LANTERN };
+      return { clip: 'idle', face: yawTo(here, [LANTERN[0], LANTERN[2]]), turn: 3, look: LANTERN, reach: [['R', [-0.1, 0.97, 0.47], 'down']], blend: 3 };
+    }
+    // "He rose.": round to you again, arms folded.
+    if (t < C.ledger) return { clip: 'Idle_FoldArms_Loop', face, turn: 2.6, look: eye, blend: 2.5 };
+    // The forty-three: a hand out down the room at the ledger on its stand; then her eyes on the floor.
+    const ledger = at(LECTERN, 1.25);
+    if (t < C.ledger + 3.2) return { clip: 'Pointing into the distance', face: yawTo(here, LECTERN), turn: 2.6, look: ledger, blend: 4 };
+    if (t < C.shame) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, turn: 2.6, look: t < C.ledger + 5 ? ledger : eye, blend: 2.5 };
+    if (t < C.toYou) return { clip: 'depressed', rate: 0.8, face, turn: 2, look: [w.x + Math.sin(face) * 1.2, floor + 0.3, w.z + Math.cos(face) * 1.2], blend: 3 };
+    // The three proofs. Back across the cave to you; down at the circle at your feet; a hand to her own face; your hand.
+    if (t < C.one) {
+      if (off(here, FOLD_SPOT) > 0.06) return { to: FOLD_SPOT, speed: this.paceTo(FOLD_SPOT, C.one - 0.5 - t), look: eye };
+      return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
+    }
+    const ring = [you[0], floor + 0.05, you[1]];
+    if (t < C.two) return { clip: 'idle', face, look: t > C.one + 2.6 && t < C.one + 5.6 ? ring : eye, point: t > C.one + 3.4 && t < C.one + 5.4 ? ring : null, blend: 3 };
+    if (t < C.steps) return { clip: 'idle', face, look: eye, reach: t < C.two + 2.6 ? CHEEK : null, blend: 3 };
     const yours = [you[0] + (w.x - you[0]) * 0.12, this.sim.player.y + 1.0, you[1] + (w.z - you[1]) * 0.12];
-    if (t < C.steps) return { clip: 'idle', face, look: eye };
-    if (t < SPARK_AT + 0.25) return { to: STEPS_TO, speed: 0.75, face, look: yours, lean: t > C.hands ? 0.1 : 0 };
+    if (t < SPARK_AT + 0.25) return { clip: 'idle', face, look: t < C.steps + 1.0 ? eye : yours, lean: t > C.hands ? 0.1 : 0, point: t > C.steps + 1.2 && t < C.hands ? yours : null, blend: 3 };
     // Your spark bursts the candle, and she flinches.
     if (t < SPARK_AT + 1.6) return { clip: 'frightened', from: 0.25, hold: 0.6, face, look: eye, tremble: true, blend: 12, reach: GUARD };
-    // Her own snapping hand looked at, and then yours.
-    const mine = [w.x + Math.sin(face) * 0.3, w.y + 1.1, w.z + Math.cos(face) * 0.3];
-    if (t < C.own) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
-    if (t < C.yours) return { clip: 'idle', face, look: mine, reach: [['L', [0.12, 1.1, 0.3], 'up']], blend: 3 };
-    if (t < C.yours + 2.6) return { clip: 'idle', face, look: yours };
-    if (t < C.grim) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
-    // 9 · How bad it gets. Still, looking down the tunnel toward the world.
+    if (t < C.yours) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
+    if (t < C.round) return { clip: 'idle', face, look: t < C.yours + 2.4 ? yours : eye, blend: 3 };
+    // Who you are. A slow half circle round you, to stand between you and the door; and she says it.
+    if (t < C.reveal - 0.3) return this.arc(clamp((t - C.round) / (C.reveal - 1.1 - C.round), 0, 1), FOLD_SPOT, DOOR_SPOT, w, you, eye);
+    if (t < C.plan) {
+      if (off(here, DOOR_SPOT) > 0.06) return { to: DOOR_SPOT, speed: 0.6, face, look: eye, turn: 3 };
+      return { clip: t < C.after ? 'idle' : 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
+    }
+    // What to do: her hand out down the cave, past you, to the tunnel and the world.
     const tunnel = chamberPoint(0, 0), out = at(tunnel, 1.5);
-    if (t < CLIMB[0]) return { clip: 'idle', face: yawTo(here, tunnel), turn: 2, look: out };
-    // Then pacing, and it runs away with her, faster and shorter each line, pointing down the tunnel, at you.
-    if (t < CAVE.shout) return this.pacing(t, w, you, eye, tunnel, out);
-    if (t < CAVE.stop) return { clip: 'Pointing at an enemy', face, look: eye, point: eye, lean: 0.16, blend: 8 };
-    // She stops dead.
-    if (t < CAVE.straight) return { clip: 'depressed', rate: 0.8, face, look: [you[0], floor + 0.4, you[1]], blend: 3 };
-    // 10 · The name. She straightens up, comes to you, and holds out her old hand for your name.
-    if (t < CAVE.toOffer) return { clip: 'idle', face, look: eye, blend: 3 };
-    if (t < CAVE.offer) return { to: OFFER_SPOT, speed: this.paceTo(OFFER_SPOT, CAVE.offer - 1.0 - t), face, look: eye };
+    if (t < C.pointOut) return { clip: 'idle', face, look: eye, blend: 3 };
+    if (t < C.pointOut + 3.6) return { clip: 'Pointing into the distance', face: yawTo(here, tunnel), turn: 3, look: out, blend: 4 };
+    if (t < C.cant) return { clip: 'Idle_Talking_Loop', rate: 0.6, face, look: eye, blend: 2.5 };
+    // "I can't come.": a look over her shoulder at the door behind her.
+    if (t < C.toOffer) return { clip: 'Idle_FoldArms_Loop', face, look: t > C.cant + 0.8 && t < C.cant + 3.4 ? door : eye, blend: 2.5 };
+    // The name. Round in front of you again; and only now does she hold out her hand: the old one.
+    if (t < C.offer) return this.arc(clamp((t - C.toOffer) / (C.offer - 0.6 - C.toOffer), 0, 1), DOOR_SPOT, OFFER_SPOT, w, you, eye);
+    if (off(here, OFFER_SPOT) > 0.06) return { to: OFFER_SPOT, speed: 0.8, face, look: eye };
     return { clip: 'Interact', hold: 1.05, rate: 0.8, face, look: eye, blend: 3 };
   }
 
@@ -365,28 +371,17 @@ export class Opening {
     return { to, speed: this.weavePace, look: eye, face: yawTo([w.x, w.z], you) };
   }
 
-  // Beat 5: round you on your left, at ROUND_R, from in front of you to between you and the door.
-  halfCircle(t, w, you, eye) {
-    const a0 = Math.atan2(FOLD_SPOT[0] - you[0], FOLD_SPOT[1] - you[1]), a1 = Math.atan2(DOOR_SPOT[0] - you[0], DOOR_SPOT[1] - you[1]);
+  // Round you on your left, at ROUND_R, from one mark to another (k: how far round, 0 to 1), her eyes on you.
+  arc(k, from, to, w, you, eye) {
+    const a0 = Math.atan2(from[0] - you[0], from[1] - you[1]), a1 = Math.atan2(to[0] - you[0], to[1] - you[1]);
     let da = wrapAngle(a1 - a0);
-    // (On the side away from the clutter: her left as she faces you.)
-    const side = Math.sin(a0) * CHAMBER_AXIS[1] - Math.cos(a0) * CHAMBER_AXIS[0] < 0 ? 1 : -1;
-    if (Math.sign(da) !== side) da -= side * Math.PI * 2;
-    const k = clamp((t - CAVE.round) / (CAVE.door - 0.8 - CAVE.round), 0, 1), a = a0 + da * Math.min(1, k + 0.06);
-    const to = [you[0] + Math.sin(a) * ROUND_R, you[1] + Math.cos(a) * ROUND_R];
-    if (k >= 1 && Math.hypot(to[0] - w.x, to[1] - w.z) < 0.08) return { clip: 'idle', face: yawTo([w.x, w.z], you), look: eye };
-    return { to, speed: Math.abs(da) * ROUND_R / (CAVE.door - 0.8 - CAVE.round) * 1.25, look: eye };
-  }
-
-  // Beat 9: back and forth between her two marks, a line a length, quicker each time; at each end, a gesture: down the
-  // tunnel, then at you.
-  pacing(t, w, you, eye, tunnel, out) {
-    const i = CLIMB_LINES.findLastIndex((a) => t >= a);
-    const end = PACE[(i + 1) % 2], d = Math.hypot(end[0] - w.x, end[1] - w.z);
-    if (d > 0.06) return { to: end, speed: 1.2 + 0.25 * i, look: i % 2 ? eye : out };
-    return i % 2
-      ? { clip: 'Talking to someone angrily', face: yawTo([w.x, w.z], you), look: eye, blend: 6 }
-      : { clip: 'Pointing into the distance', face: yawTo([w.x, w.z], tunnel), look: out, blend: 6 };
+    // (Always by the same side of you, the one away from her kitchen: there and back by one way.)
+    const side = Math.sign(wrapAngle(Math.atan2(CHAMBER_AXIS[1], -CHAMBER_AXIS[0]) - a0)) || 1;
+    if (Math.sign(da) !== side && Math.abs(da) > 0.05) da += side * Math.PI * 2;
+    const a = a0 + da * Math.min(1, k + 0.06);
+    const at = [you[0] + Math.sin(a) * ROUND_R, you[1] + Math.cos(a) * ROUND_R];
+    if (k >= 1 && off(at, [w.x, w.z]) < 0.08) return { clip: 'idle', face: yawTo([w.x, w.z], you), look: eye };
+    return { to: at, speed: clamp(off(at, [w.x, w.z]) / 0.35, 0.5, 1.5), look: eye };
   }
 
   // ---- walking out ------------------------------------------------------------------------------------------------------
@@ -464,120 +459,118 @@ export class Opening {
     if (t < 12.45) return { to: STORM_TO, speed: 1.7, face, look: low, fists: true };
     if (t < 13.45) return { clip: 'angry_02', from: 0.25, rate: 0.25, hold: 0.4, face, look: low, point: low, fists: true, lean: 0.22, blend: 8 };
     if (t < 14.6) return { clip: 'angry_02', rate: 0.9, hold: 1.3, face, look: low, fists: true, lean: 0.16, blend: 6 };
-    if (t < 15.2) return { clip: 'idle', face, look: eye };
-    const rubble = yawTo([w.x, w.z], CAVE_MOUTH);
-    const side = Math.sin(face - rubble) >= 0 ? 1 : -1, away = rubble + side * AWAY_TURN, off = rubble + side * AWAY_TURN * 1.6;
-    const past = [w.x + Math.sin(off) * 3, w.y + 1.0, w.z + Math.cos(off) * 3];
-    // "Two hundred years I held that door open…" and "It was only ever waiting for you.": turned to the rubble.
-    if (t < 24.6) return { clip: t < 19 ? 'idle' : 'depressed', face: away, turn: 3, look: past };
+    if (t < FALL_FROM) return { clip: 'idle', face, look: eye };
+    const rubble = yawTo([w.x, w.z], CAVE_MOUTH), F = FALL;
+    const side = Math.sin(face - rubble) >= 0 ? 1 : -1, away = rubble + side * AWAY_TURN, to = rubble + side * AWAY_TURN * 1.6;
+    const past = [w.x + Math.sin(to) * 3, w.y + 1.0, w.z + Math.cos(to) * 3];
+    // "Two hundred years I kept that door open…" and "It was only ever waiting for you.": turned to the rubble.
+    if (t < F.catch - 0.5) return { clip: t < F.rubble + 4.2 ? 'idle' : 'depressed', face: away, turn: 3, look: past };
     // Back to you, and she catches you looking.
-    if (t < 29.0) return { clip: t < 26.0 ? 'Idle_FoldArms_Loop' : 'wait', face, look: eye, turn: 4 };
-    // "…Oh. The sun's up.": down at her own hands in the sun, turned over, as in the cave.
+    if (t < F.sun) return { clip: t < F.catch + 1.4 ? 'Idle_FoldArms_Loop' : 'wait', face, look: eye, turn: 4 };
+    // "Oh. The sun.": down at her own hands in the sun, turned over; then she tells you what you're seeing.
     const hands = [w.x + Math.sin(face) * 0.36, w.y + 1.0, w.z + Math.cos(face) * 0.36];
-    if (t < 31.5) return { clip: 'idle', face, look: t < 30.6 ? hands : eye, reach: t < 30.9 ? PALMS_UP : null, blend: 4 };
-    // "No. Don't answer that."
-    if (t < 32.6) return { clip: 'cry', face, rate: 1.4, hold: 1.4 };
-    if (t < 34.1) return { clip: 'hug', face, hold: 0.95, look: eye };
+    if (t < F.sun + 3.4) return { clip: 'idle', face, look: t < F.sun + 2.4 ? hands : eye, reach: t < F.sun + 2.9 ? PALMS_UP : null, blend: 4 };
+    if (t < F.only) return { clip: 'Idle_Talking_Loop', rate: 0.7, face, look: eye, blend: 3 };
+    // "You are the only one who sees either.": she holds her own arms.
+    if (t < F.home) return { clip: 'hug', face, hold: 0.95, look: eye, blend: 3 };
     // "I seem to have lost my home."
-    if (t < 37.0) return { clip: 'depressed', face: away, turn: 3, look: past };
-    const down = routeAt(40);
-    if (t < 40.6) return { clip: 'Pointing into the distance', face: yawTo([w.x, w.z], down), look: [down[0], 40, down[1]] };
-    return { clip: 'Idle_Talking_Loop', face, look: eye };
+    if (t < F.coming) return { clip: 'depressed', face: away, turn: 3, look: past };
+    // Coming with you: her hand out along the shelf, the way down.
+    const down = routeAt(24);
+    if (t < F.coming + 3.6) return { clip: 'Pointing into the distance', face: yawTo([w.x, w.z], down), turn: 4, look: [down[0], w.y + 0.8, down[1]] };
+    return { clip: 'Idle_Talking_Loop', rate: 0.7, face, look: eye, blend: 3 };
   }
 
   // ---- Act III: the walk down ---------------------------------------------------------------------------------------------
-  // She leads you down to Bellmourn: out ahead of you on the road, at your pace, talking the whole way. Fall back and she
-  // waits for you; come up on her back and she hurries on; ride your shield and she rides one too, so you never get past.
+  // She leads you down to Bellmourn: out ahead of you on the way, at your pace, talking the whole way. Stop and she stops,
+  // turns and looks at you, and goes on when you've come up to her; come up on her back and she hurries on; ride your
+  // shield and she rides one too, so you never get past.
   escort(dt, w, you, eye) {
     const { player } = this.sim;
-    // Where you are along the road (looked for near her), how fast you're coming down it, and how far ahead she is.
-    const mine = routeNear(player.x, player.z, this.prog);
+    // Where you are along the way (looked for near her), how fast you're coming down it, and how far ahead she is.
+    const mine = routeNear(player.x, player.z, this.prog, 60);
     const [rx, rz] = routeDir(mine);
     const along = player.vx * rx + player.vz * rz;
     const gap = this.prog - mine;
     const far = Math.hypot(player.x - w.x, player.z - w.z);
     this.hopT += dt;
     if (this.time > 0.4) this.mark('lead');
+    const fighting = !!this.fightS && !this.ambushDone;
     // Run on past her and she calls after you.
-    this.aheadT = -gap > 28 && !(this.ambushed && !this.ambushDone) ? this.aheadT + dt : 0;
+    this.aheadT = -gap > 28 && !fighting ? this.aheadT + dt : 0;
     if (this.aheadT > 1.2) {
       if (!this.fired.has('slow')) { this.queue('slow', true); this.slowAt = this.time; } else if (this.time - this.slowAt > 16) this.queue('wait', true);
     }
     this.talk(dt, far < HEAR);
     // While she tells who Velscour was, you keep to her pace.
     const said = CUE_IDS[this.cue - 1];
-    const healing = HEAL.some((id) => this.queued.includes(id)) || (HEAL.includes(said) && this.cueT < CUES[said].dur);
-    this.sim.paceCap = healing ? HEAL_PACE : undefined;
-    // The ambush, in the pines at the woods' edge: on foot she gets down and leaves it to you; on a shield she rides on
-    // through, out ahead of you still.
+    const healing = !this.arrived && (HEAL.some((id) => this.queued.includes(id)) || (HEAL.includes(said) && this.cueT < CUES[said].dur));
+    this.sim.paceCap = healing ? HEAL_PACE : mine < MARKS.stepsEnd && !player.surfing ? STEPS_PACE : undefined;
+    this.stepBolts(dt);
+    // The dead, in the pines: she stands with you and fights it out.
     if (!this.ambushDone && this.prog >= MARKS.ambush) {
-      if (!this.ambushed) {
-        const [ax, az] = routeAt(this.prog + 16), [hx, hz] = routeAt(this.prog + 17);
-        const dx = hx - ax, dz = hz - az, l = Math.hypot(dx, dz) || 1, side = Math.random() < 0.5 ? 1 : -1;
-        this.ambushed = ambush(this.sim, ax - dz / l * 9 * side, az + dx / l * 9 * side, 3);
-        this.ambushT = this.time;
-        if (!this.ambushed.length) this.ambushDone = true;
-        else this.queue('risen', true);
-      }
-      const left = this.ambushed.filter((k) => !k.dead).length;
-      if (left && this.time - this.ambushT > 7) this.queue('fight', true);
-      if (!this.ambushDone && (!left || this.time - this.ambushT > 80)) { this.ambushDone = true; this.queue('after', true); }
-      // Then, the dead down (or never up), who Velscour was.
-      if (this.ambushDone && !this.healQueued) { this.healQueued = true; for (const id of HEAL) this.queue(id); }
-      if (!this.ambushDone && !this.riding) {
-        this.pace = 0;
-        return { clip: 'Crouch_Idle_Loop', face: yawTo([w.x, w.z], you), look: eye, lift: this.hopLift() };
-      }
+      const b = this.fight(dt, w, you, eye, far);
+      if (b) return b;
     }
-    // On a shield when you get on yours; off it once you're off yours and she's slowed, or at the road's end.
+    // On a shield when you get on yours; off it once you're off yours and she's slowed, or at the way's end.
     if (player.surfing && !this.riding && this.prog < ROUTE.len - 20) this.getOn();
     else if (this.riding && ((!player.surfing && this.pace < OFF_AT) || this.prog >= ROUTE.len - 1)) this.getOff();
     if (this.riding) {
       this.rideT += dt;
       this.fastT = this.pace > 15 ? (this.fastT || 0) + dt : 0;
       if (this.fastT > 1) this.queue('fast', true);
+      this.halted = false;
     }
-    // Her lead kept on you at your own pace; with you stood still, a stroll on that eases to a stop STOP ahead; with you
-    // fallen back, or gone off the road beside or behind her, she stops and waits. (Gone on ahead of her, she comes after
-    // you: waiting there, she'd never reach the town.)
+    // Whether she's stopped for you. You've stood still a moment and she's a few steps on; or you've fallen well back, or
+    // gone off the way. And on again: you've come up to her, or gone by. (At the way's end she stands regardless.)
+    const end = this.prog >= ROUTE.len - 0.3;
+    this.stillT = Math.hypot(player.vx, player.vz) < 0.6 ? this.stillT + dt : 0;
+    if (!this.riding && !end) {
+      if (!this.halted) {
+        if ((this.stillT > 0.7 && gap > HALT) || gap > FAR || (far > WANDER && gap > -4 && this.time > 0.6)) { this.halted = true; this.haltT = 0; }
+      } else {
+        this.haltT += dt;
+        if (this.haltT > 0.5 && (far < NEAR || gap < 0.6) && far < WANDER) { this.halted = false; this.turnT = 0.45; }
+      }
+    }
+    // Her lead kept on you at your own pace; stopped, she slows to a stand in a couple of steps.
     let want = along + ((this.riding ? LEAD_RIDE : LEAD) - gap) * (this.riding ? 1.2 : 1.4);
-    const behind = gap > -4;
     if (!this.riding) {
-      if (gap < STOP) want = Math.max(want, Math.min(STROLL, (STOP - gap) * 1.5));
-      if (gap > FAR || (far > WANDER && behind)) want = 0;
+      // (You dawdling close behind her: she keeps to a stroll rather than standing on your toes.)
+      if (gap < HALT && !this.halted) want = Math.max(want, Math.min(1.2, (HALT + 0.4 - gap) * 1.5));
+      if (this.halted || this.turnT > 0) want = 0;
     }
-    if (far > 30 && behind) want = 0;
     want = clamp(want, 0, this.riding ? RIDE_MAX : FOOT_MAX);
-    this.pace += (want - this.pace) * Math.min(1, dt * (this.riding ? 2.5 : 3));
-    if (this.prog >= ROUTE.len - 0.3) this.pace = 0;
+    this.pace += (want - this.pace) * Math.min(1, dt * (this.riding ? 2.5 : this.halted ? 6 : 3));
+    if (end) this.pace = 0;
     this.prog = Math.min(ROUTE.len, this.prog + this.pace * dt);
     const to = routeAt(this.prog);
-    // Stood waiting for you: after a moment, she calls you on (again now and then, if you're still dawdling).
-    const waiting = this.pace < 0.3 && !this.riding && (gap > STOP - 0.5 || (far > WANDER && behind));
-    this.waitT = waiting && along < 1 ? this.waitT + dt : 0;
-    if (this.waitT > 2.5 && this.time - this.keepAt > 10) {
+    // Stood waiting for you: after a while, she calls you on (again now and then, if you're still dawdling).
+    this.waitT = this.halted && along < 1 ? this.waitT + dt : 0;
+    if (this.waitT > 6 && this.time - this.keepAt > 12) {
       const id = KEEP[this.keepN++ % KEEP.length];
       this.fired.delete(id);
       this.queue(id, true);
       this.keepAt = this.time;
     }
-    // Lines that wait for a place on the road.
+    // Lines that wait for a place on the way.
     if (this.fired.has('lead')) this.place('door');
-    if (this.prog > MARKS.bend) this.mark('bend');
-    if (this.fired.has('bend2')) this.place('jokes');
-    if (this.prog > MARKS.woods && !this.ambushed) this.mark('woods');
+    // (In the order of the way, each after what's still waiting; the pines' warning ahead of them all.)
+    for (const id of ['shelf', 'steps', 'speech', 'foot']) if (this.prog > MARKS[id] && !this.fightS) this.place(id);
+    if (this.fired.has('foot')) this.place('staff');
+    if (this.prog > MARKS.woods && !this.fightS) this.mark('woods');
     // (The star, and the town in sight, wait for the rest of what she's saying.)
     if (this.prog > MARKS.star && this.healQueued) this.place('star');
     if (this.prog > MARKS.sight) this.place('sight');
     // At the town's edge, with you there too (or on into town past her): once she's done talking, the scream.
-    if (this.prog >= ROUTE.len - 0.3 && (far < 10 || mine > ROUTE.len - 2) && !this.arrived) {
+    if (end && (far < 10 || mine > ROUTE.len - 2) && !this.arrived) {
       this.arrived = true;
       this.queued = this.queued.filter((id) => !ROAD_TALK.has(id));
     }
     if (this.arrived && this.endT < 0 && this.talkLeft <= 0 && !this.queued.length && !this.then) { this.speak('scream'); this.endT = this.time; }
     if (this.endT >= 0) {
       if (this.time - this.endT > 1.9) this.say('walk');
-      if (this.time - this.endT > 3.8) this.setStage(OPENING.ARRIVED);
+      if (this.fired.has('walk') && this.cueT > CUES.walk.dur + 0.4) this.setStage(OPENING.ARRIVED);
     }
     // Talking, she looks back at you over her shoulder.
     const talking = this.cue && this.cueT < CUES[CUE_IDS[this.cue - 1]].dur;
@@ -588,11 +581,131 @@ export class Opening {
       return { to, speed: Math.max(this.pace, Math.hypot(to[0] - w.x, to[1] - w.z) / Math.max(dt, 1e-3)), pace: this.pace, keepFace: true,
         face: Math.atan2(tx, tz) - Math.PI / 2, turn: 12, clip: 'Crouch_Idle_Loop', lift: RIDE_LIFT + this.hopLift(), look: talking ? eye : null };
     }
-    if (this.pace < 0.25 && Math.hypot(to[0] - w.x, to[1] - w.z) < 0.3) {
-      return { clip: this.waitT > 3 ? 'wait' : 'idle', face: yawTo([w.x, w.z], you), look: eye, lift: this.hopLift() };
+    // Turning back to the way, before she sets off down it again.
+    if (this.turnT > 0 && !this.halted) {
+      this.turnT -= dt;
+      const [tx, tz] = routeDir(this.prog);
+      return { clip: 'idle', face: Math.atan2(tx, tz), turn: 5, look: null, lift: this.hopLift() };
     }
-    // (Put on the road outright: she follows it, the trees stand clear of it, and nothing turns her aside.)
+    // Stopped for you (or stood at the way's end): turned round to you, unhurried, her eyes on you; her foot tapping in time.
+    if (this.pace < 0.25 && Math.hypot(to[0] - w.x, to[1] - w.z) < 0.3) {
+      return { clip: this.halted && this.haltT > 5 ? 'wait' : 'idle', face: yawTo([w.x, w.z], you), turn: 3.2, look: eye, lift: this.hopLift() };
+    }
+    // (Put on the way outright: she follows it, the trees stand clear of it, and nothing turns her aside.)
     return { to, speed: Math.max(this.pace, Math.hypot(to[0] - w.x, to[1] - w.z) / Math.max(dt, 1e-3)), pace: this.pace, look, gaits: GAITS, lift: this.hopLift() };
+  }
+
+  // ---- the dead on the road -------------------------------------------------------------------------------------------------
+  // (WAVE, above.) What she does through it is hers: she keeps by you, a few steps off, and throws what fire she has.
+  fight(dt, w, you, eye, far) {
+    const sim = this.sim, { player } = sim;
+    if (!this.fightS) {
+      this.fightS = { t: 0, phase: 1, due: [], raiseT: 0, bodies: new Set(), casters: [], tricks: false };
+      for (let i = 0; i < WAVE.first; i++) this.fightS.due.push(false);
+    }
+    const f = this.fightS;
+    f.t += dt; f.raiseT -= dt;
+    const up = [...f.bodies].filter((k) => !k.dead), casters = f.casters.filter((k) => !k.dead);
+    // More of them up out of the ground, a group at a time, in the trees either side of you and on the road ahead.
+    if (f.due.length && f.raiseT <= 0) {
+      f.raiseT = WAVE.every;
+      const [rx, rz] = routeDir(this.prog);
+      for (let n = 0; n < WAVE.group && f.due.length; n++) {
+        const side = Math.random() < 0.5 ? -1 : 1, fore = -4 + Math.random() * 20, out = 5 + Math.random() * 9;
+        const [cx, cz] = [(player.x + w.x) / 2, (player.z + w.z) / 2];
+        const x = cx + rx * fore - rz * out * side, z = cz + rz * fore + rx * out * side;
+        if (sim.world.inside?.(x, z, 0.7)) continue;
+        const k = openingRaise(sim, x, z, f.due[0], f.bodies);
+        if (!k) { f.raiseT = 1; break; }
+        f.due.shift(); f.bodies.add(k);
+      }
+    }
+    // (Nothing in the ground to come up: no fight, and on she goes.)
+    if (f.phase === 1 && !f.bodies.size) { this.ambushDone = true; this.queueStory(); return null; }
+    if (!f.begun) {
+      f.begun = true;
+      this.queued = this.queued.filter((id) => !BEFORE_FIGHT.has(id));
+      this.queue('risen', true);
+      sim.event?.(EV.ROAR, w.x, w.y + 1, w.z, 1);
+    }
+    // Twenty down to eight: twenty more, and ten of their children among them. Those down to ten: the necromancers.
+    if (f.phase === 1 && !f.due.length && up.length <= WAVE.second) {
+      f.phase = 2;
+      for (let i = 0; i < WAVE.more + WAVE.children; i++) f.due.push(i % 3 === 2 && i < WAVE.children * 3);
+      this.queue('wave2', true);
+    } else if (f.phase === 2 && !f.due.length && up.length <= WAVE.third) {
+      f.phase = 3;
+      const [rx, rz] = routeDir(this.prog);
+      for (const side of [-1, 1]) {
+        const k = openingCaster(sim, player.x + rx * 6 - rz * 19 * side, player.z + rz * 6 + rx * 19 * side);
+        if (k) f.casters.push(k);
+      }
+      this.queue('necro', true);
+    }
+    if (f.t > 7) this.queue('fight', true);
+    if (f.t > 14 && !f.tricks) { f.tricks = true; this.queue('tricks', true); }
+    // Over: every one of them down (what the necromancers raised too), or it's gone on far too long.
+    const theirs = sim.knights.filter((k) => !k.dead && k.owner && f.casters.includes(k.owner));
+    if ((f.phase === 3 && !f.due.length && !up.length && !casters.length && !theirs.length) || f.t > WAVE.limit) {
+      this.ambushDone = true;
+      this.queued = this.queued.filter((id) => !['risen', 'fight', 'tricks', 'wave2', 'necro'].includes(id));
+      this.queue('after', true);
+      this.queueStory();
+      this.halted = false; this.pace = 0;
+      return null;
+    }
+    // On a shield she rides on through, out ahead of you still.
+    if (this.riding) return null;
+    this.pace = 0;
+    // Her fire: the nearest of them to her that's up, every couple of seconds. The bolt leaves her hand partway through
+    // the cast; between casts she keeps a few steps from you, off the road's middle, facing what's coming.
+    this.castT += dt;
+    const foes = [...up, ...casters, ...theirs].filter((k) => k.state !== 8 || k.stateT > 0.8);
+    let foe = null, fd = HER_FIRE.range;
+    for (const k of foes) { const d = Math.hypot(k.x - w.x, k.z - w.z); if (d < fd) { fd = d; foe = k; } }
+    if (this.aim) {
+      const a = this.aim;
+      a.t += dt;
+      if (!a.shot && a.t >= HER_FIRE.at) { a.shot = true; if (!a.k.dead) this.bolts.push({ x: w.x + Math.sin(w.yaw) * 0.4, y: w.y + 1.35, z: w.z + Math.cos(w.yaw) * 0.4, k: a.k }); }
+      if (a.t > 0.95) this.aim = null;
+      return { clip: 'Spell_Simple_Shoot', rate: 1.15, face: yawTo([w.x, w.z], [a.k.x, a.k.z]), turn: 9, look: [a.k.x, a.k.y + 1.1 * (a.k.scale || 1), a.k.z], blend: 9 };
+    }
+    if (foe && this.castT > HER_FIRE.every) { this.castT = Math.random() * 0.4; this.aim = { k: foe, t: 0, shot: false }; }
+    const face = foe ? yawTo([w.x, w.z], [foe.x, foe.z]) : yawTo([w.x, w.z], you);
+    const look = foe ? [foe.x, foe.y + 1.1, foe.z] : eye;
+    // (Too far from you, she comes to your side; crowded by you, she gives ground.)
+    if (far > 6) {
+      const [rx, rz] = routeDir(this.prog), to = [player.x - rz * 2.6, player.z + rx * 2.6];
+      return { to, speed: Math.min(4.2, far), look, gaits: GAITS };
+    }
+    return { clip: 'Spell_Simple_Idle_Loop', face, turn: 5, look, blend: 4 };
+  }
+
+  // The dead down (or never up): who Velscour was, and what he was to her.
+  queueStory() {
+    if (this.healQueued) return;
+    this.healQueued = true;
+    for (const id of [...HEAL, ...WED]) this.queue(id);
+  }
+
+  // Her bolts: small, quick, and never much. Each flies to the body it was thrown at, and bites when it gets there.
+  stepBolts(dt) {
+    if (!this.bolts.length) return;
+    const sim = this.sim, fx = sim.casting;
+    this.bolts = this.bolts.filter((b) => {
+      const ty = b.k.y + 1.05 * (b.k.scale || 1), dx = b.k.x - b.x, dy = ty - b.y, dz = b.k.z - b.z, d = Math.hypot(dx, dy, dz), step = HER_FIRE.speed * dt;
+      if (d <= step + 0.3 || b.k.dead) {
+        if (!b.k.dead) {
+          if (fx?.hurt) fx.hurt(sim, b.k, HER_FIRE.dmg, ELEM.FIRE, b.k.x, ty, b.k.z, b.x, b.z, 4);
+          else { b.k.hp -= HER_FIRE.dmg; b.k.onHit?.(sim, 'gash', b.x, b.z, 4); }
+        }
+        fx?.burst(FX.FLARE, ELEM.FIRE, b.k.x, ty, b.k.z, 0.3, 0.07, 0.22, { light: 5, lightR: 3 });
+        return false;
+      }
+      b.x += dx / d * step; b.y += dy / d * step; b.z += dz / d * step;
+      fx?.burst(FX.ORB, ELEM.FIRE, b.x, b.y, b.z, 0.13, 0.04, 0.12, { ax: dx / d, ay: dy / d, az: dz / d, light: 3, lightR: 2.5 });
+      return true;
+    });
   }
 
   // A line a place on the road brings on: next up, once.
@@ -627,12 +740,10 @@ export class Opening {
   // you). Between the lines a place brings on, the stretch's own talk, in turn.
   talk(dt, near) {
     this.talkLeft -= dt;
-    // (Overtaken by the road: the hill's talk, and the warning, once the dead are up; the fight's once it's over.)
-    if (this.ambushed) this.queued = this.queued.filter((id) => !HILL.includes(id) && !HILL_STORY.includes(id) && id !== 'lead' && id !== 'woods');
-    if (this.ambushDone) this.queued = this.queued.filter((id) => id !== 'risen' && id !== 'fight');
     if (this.talkLeft > 0) return;
-    if (!this.queued.length && near && !this.arrived && this.fired.has('lead')) {
-      const run = this.ambushDone ? LOW : !this.ambushed ? HILL : null;
+    // (With nothing else to say on the hill, above the pines: its small talk, in turn. And the town's, after the story.)
+    if (!this.queued.length && near && !this.arrived && this.fired.has('lead') && !(this.fightS && !this.ambushDone)) {
+      const run = this.ambushDone ? (this.fired.has('wed4') ? LOW : null) : this.fired.has('door') ? HILL : null;
       const next = run?.find((id) => !this.fired.has(id));
       if (next) this.queued.push(next);
     }
@@ -676,12 +787,12 @@ export class Opening {
       this.ambushDone = this.prog > MARKS.ambush - 10;
       // (What she'd have said by there isn't said again.)
       if (this.prog > 0) for (const id of ['lead', 'door']) { this.fired.add(id); this.marked.add(id); }
-      for (const id of ['bend', 'woods', 'star', 'sight']) if (this.prog > MARKS[id]) { this.fired.add(id); this.marked.add(id); }
-      if (this.fired.has('bend')) for (const id of ['bend2', 'jokes', 'jokes2']) { this.fired.add(id); this.marked.add(id); }
-      if (this.ambushDone) for (const id of [...HILL, 'woods', 'risen', 'fight', 'after']) this.fired.add(id);
+      for (const id of ['shelf', 'steps', 'speech', 'foot', 'woods', 'star', 'sight']) if (this.prog > MARKS[id]) { this.fired.add(id); this.marked.add(id); }
+      if (this.fired.has('foot')) for (const id of ['staff', 'staff2']) { this.fired.add(id); this.marked.add(id); }
+      if (this.ambushDone) for (const id of [...HILL, 'woods', 'risen', 'fight', 'tricks', 'wave2', 'necro', 'after']) this.fired.add(id);
       // (Who Velscour was: told, if you're well on past the pines.)
-      if (this.ambushDone && this.prog > MARKS.ambush + 60) { this.healQueued = true; for (const id of HEAL) this.fired.add(id); }
-      // (The low road's talk, about as far through as she'd be.)
+      if (this.ambushDone && this.prog > MARKS.ambush + 60) { this.healQueued = true; for (const id of [...HEAL, ...WED]) this.fired.add(id); }
+      // (The town's talk, about as far through as she'd be.)
       if (this.ambushDone) for (const id of LOW.slice(0, Math.floor(LOW.length * clamp((this.prog - MARKS.ambush) / (ROUTE.len - MARKS.ambush), 0, 1)))) this.fired.add(id);
     }
     for (const v of villagers) { v.x = w.x; v.z = w.z; v.y = world.height(w.x, w.z); v.yaw = yawTo([w.x, w.z], [player.x, player.z]); v.cloth?.reset(); }

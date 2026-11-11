@@ -4,8 +4,8 @@ import { CUES, CUE_IDS, emoteAt, lineAt, partAt, spoken, voiceOf } from '../core
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from '../core/math.js';
 import {
-  BURST_CANDLE, CANDLES, CANDLES_AT, CAST_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CLIMB, COLLAPSE_END, DAZZLE, DUST_AT, ESCORT_TO, GLAMOUR_AT,
-  HERD_CONTROL, OPENING, OPENING_REVISION, REVEAL_AT, SNAP_AT, SOFT_CANDLE, SPARK_AT, SWAP_AT, caveNearest, chamberPoint, chamberShape, collapseEye,
+  BURST_CANDLE, CANDLES, CANDLES_AT, CAST_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, COLLAPSE_END, DAZZLE, DUST_AT, ESCORT_TO, FALL, GLAMOUR_AT, HEARTH,
+  HERD, HERD_CONTROL, OPENING, OPENING_REVISION, REVEAL_AT, SNAP_AT, SPARK_AT, SWAP_AT, caveNearest, chamberPoint, chamberShape, collapseEye,
   prettyShown, storyHolds, wakeEyeBack, wakeEyeH,
 } from '../core/opening.js';
 import { OpeningSound } from './opening-sound.js';
@@ -28,9 +28,7 @@ const valley = () => [ESCORT_TO[0], terrainHeight(ESCORT_TO[0], ESCORT_TO[1]) + 
 // How far your eyes are open in the first moments: three tries; a little wider as she talks you round; and the flash,
 // which makes you screw them up for a moment before they fly open.
 function lidsAt(t) {
-  // (And a blink as her palm passes across your eyes.)
-  const blink = 0.9 * bump(t, CAVE.palm + 0.62, CAVE.palm + 0.72, CAVE.palm + 0.8, CAVE.palm + 0.98);
-  if (t >= SWAP_AT) return lerp(0.78, 1, clamp((t - SWAP_AT) / 0.12, 0, 1)) - 0.42 * bump(t, SWAP_AT + 0.05, SWAP_AT + 0.18, SWAP_AT + 0.35, SWAP_AT + 0.9) - blink;
+  if (t >= SWAP_AT) return lerp(0.78, 1, clamp((t - SWAP_AT) / 0.12, 0, 1)) - 0.42 * bump(t, SWAP_AT + 0.05, SWAP_AT + 0.18, SWAP_AT + 0.35, SWAP_AT + 0.9);
   const flutter = (k) => 1 + 0.06 * Math.sin(t * 9.0 + k) * Math.sin(t * 3.1);
   return 0.15 * bump(t, 3.0, 3.5, 3.9, 4.4) + 0.4 * bump(t, 4.7, 5.3, 6.0, 6.5) * flutter(1)
     + (0.7 + 0.08 * smoothstep(GLAMOUR_AT, SWAP_AT - 3, t)) * smoothstep(6.9, GLAMOUR_AT, t) * flutter(2);
@@ -139,7 +137,7 @@ export class OpeningHUD {
     this.eyes.style.setProperty('--lid', `${((1 - lids) * 51).toFixed(2)}vh`);
     this.eyes.style.setProperty('--haze', `${haze.toFixed(2)}px`);
     this.eyes.style.setProperty('--vig', vignette.toFixed(3));
-    this.eyes.hidden = stage !== OPENING.WAKE || t > CAVE.palm + 1.4;
+    this.eyes.hidden = stage !== OPENING.WAKE || t > CAVE.drop + 1.4;
     // The flash when the glamour breaks; and the dark, if you're knocked flat on the road.
     const fell = snap[H.OPENING_FELL];
     // (And a white glare left on your eyes, fading with the blur.)
@@ -151,7 +149,7 @@ export class OpeningHUD {
     this.namePanel.hidden = stage !== OPENING.NAME || !!this.name;
     if (!this.namePanel.hidden && document.activeElement !== this.field && !this.touched) this.field.focus({ preventScroll: true });
     // The title card, once you've said it.
-    const card = stage === OPENING.HERD ? bump(t, 0.8, 1.4, 4.0, 4.8) : 0;
+    const card = stage === OPENING.HERD ? bump(t, 0.8, 1.4, HERD.point - 0.6, HERD.point + 0.2) : 0;
     this.title.style.opacity = card.toFixed(3);
     if (card > 0) this.titleName.textContent = (this.name || 'Tessariel').toUpperCase();
     // Hers, as she bows and gives it.
@@ -260,9 +258,7 @@ export class OpeningHUD {
     const top = [CAVE_MOUTH[0] - CAVE_OUT[0] * 0.3, CAVE_LINE[0][5] + CAVE_LINE[0][7] - 0.2, CAVE_MOUTH[1] - CAVE_OUT[1] * 0.3];
     const every = (gap) => Math.floor(t / gap) !== Math.floor(this.lastT / gap) && this.lastStage === stage;
     if (stage === OPENING.WAKE) {
-      // Her soft snap on the crate: the candle nearest her flares.
-      const soft = CANDLES[SOFT_CANDLE], burst = CANDLES[BURST_CANDLE];
-      if (crossed(CAVE.softSnap + 0.6)) r.emit(7, 10, soft.x, soft.y + soft.tall + 0.05, soft.z, 0, 1, 0, 0.3, 0.3, 1.0, 0.02, 0.05, 0.25, 0.5);
+      const burst = CANDLES[BURST_CANDLE];
       // Embers crawling over your knuckles while she stares at your hand; then the spark leaps to the candle, and it bursts.
       const hand = this.hand();
       if (hand && t > CAVE.hands && t < SPARK_AT && every(0.09)) r.emit(6, 2, hand[0], hand[1], hand[2], 0, 0.6, 0, 0.6, 0.1, 0.4, 0.004, 0.009, 0.4, 0.9);
@@ -277,12 +273,9 @@ export class OpeningHUD {
         r.emit(6, 30, burst.x, y, burst.z, 0, 1, 0, 1.4, 1, 3, 0.005, 0.012, 0.6, 1.4);
         r.emit(4, 6, burst.x, y + 0.3, burst.z, 0, 1, 0, 0.5, 0.2, 0.6, 0.15, 0.4, 1.2, 2.2);
       }
-      // As her voice climbs in beat 9, dust sifts from the roof; when she stops, it settles.
-      if (t > CLIMB[0] + 2 && t < CLIMB[1] && every(0.35 - 0.25 * smoothstep(CLIMB[0], CLIMB[1], t))) {
-        const s = 6 + Math.random() * 8, q = (Math.random() * 2 - 1) * 4, [x, z] = chamberPoint(s, q), [, h, f] = chamberShape(s);
-        r.emit(3, 3, x, f + h - 0.4, z, 0, -1, 0, 0.3, 0.2, 0.5, 0.05, 0.14, 2.5, 4);
-      }
-    }
+      // Her hearth, once it's lit: a spark now and then, and a thread of smoke.
+      if (t > CANDLES_AT + 0.6 && every(0.5)) this.hearth(r);
+    } else if (stage <= OPENING.LEAVE && every(0.5)) this.hearth(r);
     if (stage === OPENING.LEAVE && every(1.7)) {
       // Grit trickling from the roof as the door slips.
       const n = caveNearest(snap[H.PX], snap[H.PZ]);
@@ -312,6 +305,13 @@ export class OpeningHUD {
     }
   }
 
+  // The fire in her hearth: sparks up off it, and a little smoke.
+  hearth(r) {
+    const y = chamberShape(7.8)[2] + 0.35;
+    r.emit(6, 2, HEARTH[0] + (Math.random() - 0.5) * 0.3, y, HEARTH[1] + (Math.random() - 0.5) * 0.3, 0, 1, 0, 0.5, 0.4, 1.2, 0.004, 0.01, 0.5, 1.2);
+    if (Math.random() < 0.5) r.emit(4, 1, HEARTH[0], y + 0.5, HEARTH[1], 0, 1, 0, 0.2, 0.2, 0.5, 0.12, 0.3, 1.6, 2.6);
+  }
+
   // Her feelings over her head (src/ui/emotes.js), placed by the camera the frame was drawn with.
   feel(snap, cam) {
     const stage = snap[H.OPENING], t = snap[H.OPENING_TIME], cue = snap[H.OPENING_CUE];
@@ -333,7 +333,7 @@ export class OpeningHUD {
     const P = [snap[H.PX], snap[H.PY], snap[H.PZ]];
     const h = this.her(snap);
     const shot = stage === OPENING.WAKE ? this.wakeShot(t, P, h)
-      : stage === OPENING.NAME ? { eye: [P[0], P[1] + 1.62, P[2]], look: [h[0], h[1] + 1.12, h[2]], fov: framing(Math.hypot(h[0] - P[0], h[2] - P[2]), 1.35), free: 0.35, rate: 3 }
+      : stage === OPENING.NAME ? { eye: [P[0], P[1] + 1.62, P[2]], look: [h[0], h[1] + 1.12, h[2]], fov: framing(Math.hypot(h[0] - P[0], h[2] - P[2]), 1.35), free: 0, rate: 3 }
       : stage === OPENING.HERD && t < HERD_CONTROL ? this.herdShot(t, P, h)
       : stage === OPENING.COLLAPSE ? this.collapseShot(t, P, h) : null;
     if (!shot) {
@@ -385,8 +385,7 @@ export class OpeningHUD {
   }
 
   // Act I. Lying in the circle, three tries at opening your eyes, and her coming to you; the flash, a scramble back;
-  // sitting up as she comes to you again; then on your feet from the snap, on her wherever she goes, with a look of your own
-  // round her cave from beat 4 (easing back to her for the lines that are hers to say to your face).
+  // sitting up as she comes to herself; then on your feet from the snap, on her wherever she goes in her cave.
   wakeShot(t, P, h) {
     const C = CAVE;
     const toHer = yawTo(P, h);
@@ -405,44 +404,42 @@ export class OpeningHUD {
       return { eye, look: mix3(floor, aim, lift), fov, fovRate: k === 2 ? 2.5 : 30, rate: 7, sway: true, inside: true };
     }
     const knees = [h[0], h[1] + 1.12, h[2]], face = [h[0], h[4] - 0.1, h[2]], up = [h[0], h[1] + 3.0, h[2]];
-    // How much of her: close in, waist up; further off, more of her, all of her at the crate.
-    const her = (span) => framing(D, span ?? clamp(0.33 * D + 0.72, 1.05, 2.3), 18, 62);
-    const lineNow = lineAt(OPENING.WAKE, t);
-    let look, fov, rate = 3.5, free = 0.22;
-    if (t < C.stepIn) {
+    // How much of her: close in, waist up; further off, more of her, and at her hearth, her and the room round her.
+    const her = (span) => framing(D, span ?? clamp(0.33 * D + 0.72, 1.05, 4.4), 18, 62);
+    let look, fov, rate = 3.5;
+    if (t < C.drop) {
       // A long lens holds her knees up, through the scramble and her fright.
       look = knees; fov = framing(D, 1.65); rate = t < SWAP_AT + 0.6 ? 12 : 3.5;
-    } else if (t < C.drop) {
-      // She comes in close and stoops over you, her palm across your eyes; then a step back.
-      look = mix3(knees, face, smoothstep(C.stepIn, C.palm, t)); fov = her(1.0); rate = 4;
+    } else if (t < C.backOff) {
+      // "Not at the girl. At me.": in on her face.
+      look = mix3(knees, face, smoothstep(C.drop, C.drop + 1.2, t)); fov = her(1.15); rate = 4;
     } else if (t < SNAP_AT) {
-      look = mix3(face, knees, smoothstep(C.backOff, C.aim, t)); fov = her(lerp(1.05, 1.6, smoothstep(C.backOff, C.aim, t)));
+      look = mix3(face, knees, smoothstep(C.backOff, C.aim, t)); fov = her(lerp(1.15, 1.6, smoothstep(C.backOff, C.aim, t)));
     } else if (t < C.comeBack + 1.6) {
       // The candles open it out and lift it to them.
       look = mix3(knees, up, 0.75 * bump(t, CANDLES_AT - 0.2, CANDLES_AT + 0.8, C.comeBack, C.comeBack + 1.6));
-      fov = lerp(framing(D, 1.65), 46, smoothstep(SNAP_AT, CANDLES_AT + 0.6, t) * (1 - smoothstep(C.comeBack, C.comeBack + 1.6, t) * 0.4));
+      fov = lerp(framing(D, 1.65), 50, smoothstep(SNAP_AT, CANDLES_AT + 0.6, t) * (1 - smoothstep(C.comeBack, C.comeBack + 1.6, t) * 0.4));
     } else if (t > C.hands && t < SPARK_AT + 0.35) {
-      // Beat 8: down at your hand, the staff in it; and back up to her as the spark goes.
+      // Down at your hand, the staff in it; and back up to her as the spark goes.
       const dn = [eye[0] + Math.sin(toHer) * 0.55, eye[1] - 1.05, eye[2] + Math.cos(toHer) * 0.55];
-      look = dn; fov = 58; rate = 3; free = 0.12;
+      look = dn; fov = 58; rate = 3;
     } else {
       look = face; fov = her(); rate = t < SPARK_AT + 1.2 ? 6 : 3.5;
-      // From beat 4 a look of your own, widening, and easing back for the lines she says to your face.
-      free = t < C.fold ? 0.25 : t < C.straight ? lerp(0.3, 0.8, smoothstep(C.fold, C.fold + 5, t)) : 0.3;
-      if (lineNow?.eye) free = 0.3;
-      // On her name for you, the lens leans in.
+      // At her hearth the lens eases wider still, to the fire and the room it lights; on her name for you, it leans in.
+      fov *= 1 + 0.18 * bump(t, C.toHearth + 2, C.toHearth + 6, C.rose - 1, C.ledger);
       fov *= 1 - 0.14 * bump(t, REVEAL_AT - 0.4, REVEAL_AT + 0.3, REVEAL_AT + 2.2, REVEAL_AT + 3.4);
     }
-    const shake = t < SWAP_AT + 0.35 ? 0.012 * (1 - scramble) : t > CLIMB[1] - 7 && t < CLIMB[1] ? 0.003 * smoothstep(CLIMB[1] - 7, CLIMB[1] - 0.5, t) : 0;
-    return { eye, look, fov, fovRate: t < SWAP_AT + 0.6 ? 14 : 3, rate, free, home: !!lineNow?.eye, inside: true, shake };
+    const shake = t < SWAP_AT + 0.35 ? 0.012 * (1 - scramble) : 0;
+    // (The view is hers until she sends you out: no look of your own.)
+    return { eye, look, fov, fovRate: t < SWAP_AT + 0.6 ? 14 : 3, rate, free: 0, inside: true, shake, sway: t > C.comeBack };
   }
 
   herdShot(t, P, h) {
     const eye = [P[0], P[1] + 1.62, P[2]];
     let look = [h[0], h[4] - 0.1, h[2]];
     const tunnel = chamberPoint(0, 0);
-    look = mix3(look, [tunnel[0], P[1] + 1.3, tunnel[1]], 0.4 * bump(t, 4.4, 5.2, 6.0, 6.7));
-    return { eye, look, fov: t > 9.2 ? 64 : framing(Math.hypot(h[0] - P[0], h[2] - P[2]), 1.25, 30, 58), fovRate: 3, rate: 3.5, free: 0.44, inside: true };
+    look = mix3(look, [tunnel[0], P[1] + 1.3, tunnel[1]], 0.4 * bump(t, HERD.point + 0.2, HERD.point + 1.0, HERD.go - 0.6, HERD.go + 0.2));
+    return { eye, look, fov: t > HERD_CONTROL - 1.4 ? 64 : framing(Math.hypot(h[0] - P[0], h[2] - P[2]), 1.25, 30, 58), fovRate: 3, rate: 3.5, free: 0, inside: true };
   }
 
   // Act II, out on the ledge.
@@ -480,13 +477,13 @@ export class OpeningHUD {
     } else if (t < 14.8) {
       // The shout: wide enough for her arms flung up.
       look = face; fov = framing(D, 1.45, 28, 60); rate = 4;
-    } else if (t < 24.6) {
+    } else if (t < FALL.catch - 0.5) {
       look = face; fov = close; rate = 4;
-    } else if (t < 26.0) {
+    } else if (t < FALL.catch + 0.9) {
       // The double take: her, the rubble, her.
-      look = t < 25.0 || t > 25.6 ? face : mouth; rate = 9; fov = close;
-    } else if (t > 37.5 && t < 39.3) {
-      // "Bellmourn, then." Down the road she's pointing along.
+      look = t < FALL.catch - 0.1 || t > FALL.catch + 0.5 ? face : mouth; rate = 9; fov = close;
+    } else if (t > FALL.coming + 0.8 && t < FALL.coming + 3.0) {
+      // "So I'm coming to Bellmourn with you." Out over the valley, to the town.
       look = valley(P); rate = 2.2; fov = 26;
     } else {
       look = face; fov = t > COLLAPSE_END - 0.8 ? 64 : close; rate = 3;

@@ -707,6 +707,8 @@ async function boot(plan, poolSize) {
         shared.input[INPUT.MOUTH] = openingHUD.mouth();
         // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
         if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
+        // (A camera set for a review picture, bm.setCam, holds through the story's.)
+        if (game.reviewCam) game.overrideCam = game.reviewCam;
         renderer.hideVM = openingHUD.cinematic(snap) && !openingHUD.handsUp(snap);
         if (active && snap[H.OPENING] === OPENING.NAME && !naming && !openingHUD.name) {
           naming = true;
@@ -1813,7 +1815,7 @@ class GameView {
         return { level: view.pack.level, points: S.points, spent: S.spent, ranks: { ...S.ranks } };
       },
       jump: () => { shared.input[INPUT.JUMP] += 1; },
-      setCam: (c) => { view.overrideCam = c; },
+      setCam: (c) => { view.overrideCam = c; view.reviewCam = c; },
       // The third-person body dressed whole in one set of gear (src/gfx/bodyskin.js), to look at it: wear() for what's really worn.
       wear: (id) => view.wearSkin(id),
       setTime: (h) => view.renderer.setHour(h),
