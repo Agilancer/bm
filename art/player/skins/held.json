@@ -1,0 +1,876 @@
+{
+ "sets": [
+  {
+   "id": "amber_apiary_uncommon",
+   "name": "Amber Apiary",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered beehive crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": []
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back beehive is cream on ochre-gold cloth: weak colour separation, reads as a pale stack of bars rather than a hive at play distance",
+      "Hat and tabard hives are tiny pale blobs",
+      "Back crest is small for the panel"
+     ],
+     "fixes": [
+      "Recolour the hive dark honey-brown (or put it on a dark brown or teal roundel matching the mantle) so it separates from the gold cloth",
+      "Enlarge the back hive about 30% and add a clear dark entrance hole",
+      "Enlarge hat and tabard hives about 40% in the same dark colour"
+     ]
+    }
+   }
+  },
+  {
+   "id": "damwright_uncommon",
+   "name": "Damwright",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered beaver crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": [
+      "Optional: the beaver crest is a dark brown mass on tan; add a lighter outline or belly tone so it reads at distance."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back beaver is a small dark brown lump; the silhouette does not say beaver at play distance (could be a bear or a stone)",
+      "Hat and tabard beavers are brown on teal/tan with no light edge and read as smudges"
+     ],
+     "fixes": [
+      "Redraw the beaver in clear side profile with a big flat paddle tail and visible teeth, and enlarge the back emblem by about 40 percent",
+      "Give it a pale cream outline or switch the fill to cream with brown detail so it separates on both the tan tunic and the teal hat"
+     ]
+    }
+   }
+  },
+  {
+   "id": "needlebough_uncommon",
+   "name": "Needlebough",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered pine bough crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": []
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back crest is off-centre and runs diagonally up under the right shoulder strap, so its tip is cut off.",
+      "Shape does not read as a pine bough at play distance: looks like a comb or feather with a separate orange lozenge hanging off it.",
+      "Orange crest matches the orange shoulders and merges with them at the strap."
+     ],
+     "fixes": [
+      "Centre the crest in the back panel and shrink or rotate it so nothing touches the straps.",
+      "Redraw as one compact shape: a short upright sprig with needles fanning both sides and the cone attached at its base.",
+      "Colour the crest pale gold or cream so it separates from both the teal cloth and the orange leather."
+     ]
+    }
+   }
+  },
+  {
+   "id": "riverwhisk_uncommon",
+   "name": "Riverwhisk",
+   "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered otter crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 1,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": [
+      "Optional: give the otter crest a thin dark outline; its pale silhouette is soft at play size."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back crest does not read as an otter: the pale silhouette with a thin curled tail and four stubby legs reads as a lizard, rat or chameleon",
+      "Hat and tabard versions are too small and are just pale smudges",
+      "Flat single-colour silhouette with no inner stitching looks cheaper than the common badges in the same batch"
+     ],
+     "fixes": [
+      "Redraw the otter with a clear otter outline: long thick tapering tail, rounded head with small ears, arched swimming or standing pose, plus a few darker inner stitch lines (eye, whiskers, belly)",
+      "Enlarge the hat and tabard emblems by about a third",
+      "Give the crest a darker outline or a second thread colour so it reads as embroidery"
+     ]
+    }
+   }
+  },
+  {
+   "id": "briarberry_rare",
+   "name": "Briarberry",
+   "blurb": "Rare gear. Mulberry twill, sage shoulders, tarnished silver and berry-cluster embroidery. Original berry branch crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": [
+      "Optional: the pale pink berries are low in contrast on mulberry and the hat crest is muddled; lighten the cluster or give it a silver outline."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back berry-branch crest is small, thin-lined and sits off-centre; the pale pink berries barely separate from the mulberry cloth",
+      "Hat and tabard versions collapse into a pale squiggle at play distance"
+     ],
+     "fixes": [
+      "Redraw as a compact, centred cluster of large berries with one or two bold leaves, about 50 percent bigger on the back",
+      "Fill the berries in bright silver or cream with a dark outline, and thicken the stem, so the crest reads against mulberry on back, hat and tabard"
+     ]
+    }
+   }
+  },
+  {
+   "id": "crabguard_rare",
+   "name": "Crabguard",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered crab crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Saturated sky-blue shoulders and greaves against raspberry red read toy-like, not rare velvet",
+      "Crab crest is pale pink on crimson and washes out on the back",
+      "No visible cloth pattern on tunic or hat, so the set reads uncommon"
+     ],
+     "fixes": [
+      "Darken and desaturate the blue toward deep steel-teal or navy",
+      "Recolour the crab crest ivory or pale gold with a dark outline",
+      "Add a visible second-colour woven pattern (darker crimson, medium scale) to the tunic and hat"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "PASS",
+     "faults": [
+      "Crab is pale pink on red, lower contrast than it should be, and the claws sit close to the mantle flap"
+     ],
+     "fixes": [
+      "Optional: make the crab ivory or bright pewter and lower it slightly"
+     ]
+    }
+   }
+  },
+  {
+   "id": "elixirward_rare",
+   "name": "Elixirward",
+   "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered potion vial crest. All five pieces; assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Saturated orchid-pink mantle and greaves against bright teal is garish and out of key with a dark-fantasy palette",
+      "Pink greaves read as glossy plastic, not leather or metal",
+      "Tunic shows almost no woven pattern, so it reads uncommon rather than rare"
+     ],
+     "fixes": [
+      "Pull the mantle and greave colour down to a deep, greyed plum or wine (much lower saturation, darker value)",
+      "Give the greaves a leather or pewter tiling texture with less sheen",
+      "Darken the teal a step and raise the cloth pattern strength so the brocade is visible at play size"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "PASS",
+     "faults": [
+      "Polish: vial silhouette is a flat pale stencil with odd cut-outs; tabard vial tiny"
+     ],
+     "fixes": [
+      "Optional: simplify the cut-outs to one liquid line, tint the liquid pink to tie in the mantle, enlarge the tabard vial"
+     ]
+    }
+   }
+  },
+  {
+   "id": "porcelain_watch",
+   "name": "Porcelain Watch",
+   "blurb": "Pearl woven cloth, blue-steel edging, slate mantle and moon embroidery.",
+   "wears": {
+    "palette": "ash"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 2,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [
+      "Fine grid weave on the pearl cloth is close to shimmering at play size"
+     ],
+     "fixes": [
+      "Optional: enlarge the weave scale slightly or lower its strength"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back crescent is a thin line drawing whose upper horn runs under the mantle back flap, so it is clipped",
+      "Crest is too slight for a rare and repeats Moonthread's crescent with less presence",
+      "Hat crescent on the back of the crown is tiny and off-centre"
+     ],
+     "fixes": [
+      "Move the back emblem down about a quarter of its height so it clears the mantle flap",
+      "Thicken the crescent to a solid bold shape and set it in a slate-blue roundel or ring with a few stars to give the set its own mark",
+      "Enlarge the hat emblem and centre it on the crown front"
+     ]
+    }
+   }
+  },
+  {
+   "id": "astralkey_epic",
+   "name": "Astralkey Epic Gear",
+   "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original ornate key stitch badge. Pearl ivory and sapphire panels, interlocked maze brocade, gilded shoulder plates and blue enamel clasps. Intended as an epic item alternative for the night palette.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Trousers are a muddy ochre-brown with dark blue blotches bleeding through at the hips and thighs; looks dirty, not designed",
+      "Greaves are a flat, saturated yellow that reads as painted plastic, not gilded plate",
+      "Ivory shoulders show blue chips at the hems and edges",
+      "Five parts do not hold together: ivory hat, blue tunic, brown legs, yellow greaves, navy boots"
+     ],
+     "fixes": [
+      "Make the trouser cloth a clean deep sapphire or navy matching the tunic, with no second colour bleeding in",
+      "Take the greave gold darker and warmer (aged gold with a darker base value) and use the metal texture, with sapphire enamel accents",
+      "Clean the ivory shoulder cloth to a single ivory with gold trim only",
+      "Echo ivory once lower down (for example ivory knee guards) so the hat and shoulders are not the only ivory"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": [
+      "Optional: the mustard-brown trousers are the weak part; take them to deep navy to match the tunic."
+     ]
+    }
+   }
+  },
+  {
+   "id": "briar_opal_epic",
+   "name": "Briar Opal",
+   "blurb": "Epic-tier appearance. Sage floral damask, pale opal guards and intricate champagne trim.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Floral damask on trousers and hat reads as dark camouflage blotches or mildew stains, not flowers",
+      "Tunic floral is soft and blobby, so the cloth reads muddy rather than epic damask"
+     ],
+     "fixes": [
+      "Drop the pattern strength on the trousers (or give them plain dark sage) and on the hat",
+      "Use a crisper, smaller-scale floral motif on the tunic in a lighter champagne-sage, not a darker blotch colour"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": []
+    }
+   }
+  },
+  {
+   "id": "pendulight_epic",
+   "name": "Pendulight Regalia",
+   "blurb": "Epic gear. Deep lilac velvet, pearl-grey mantle, pale silver and hanging-oval brocade. Original pendulum crest. All five pieces; rarity is assigned to items during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": [
+      "Optional: the flat grey mantle cloth is plain for epic; add a faint silver brocade to it."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back crest reads as an arched tablet or headstone, not a pendulum; the rod and bob inside are small, off to one side and lost.",
+      "Hat and tabard marks are tiny ovals with no recognisable shape.",
+      "For epic the set is plain: purple cloth with grey metal and one unclear crest."
+     ],
+     "fixes": [
+      "Drop the arch frame. Draw the pendulum itself large and centred: a pivot at top, a straight rod, a big round bob, with two swing arcs either side, inside a silver ring.",
+      "Use the same simplified pendulum on hat and tabard at a size where rod and bob are both visible.",
+      "Add the crest to the shoulders and brighten the silver trim so the set reads epic."
+     ]
+    }
+   }
+  },
+  {
+   "id": "venomcrypt_epic",
+   "name": "Venomcrypt Hierophant",
+   "blurb": "Epic-tier appearance. Poison-green scales, pale jade skulls and serpentine brocade.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 3,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Reads rare at best, not epic: plain dark green mantle, legs and greaves with thin silver lines and no rich metal or enamel anywhere",
+      "Neon lime flask crest is a flat, over-saturated badge that clashes with the deep green cloth",
+      "Mantle, legs and greaves are near-black green and merge into one dark mass"
+     ],
+     "fixes": [
+      "Give the mantle and greaves a distinct richer material, e.g. pale jade or antique silver-green scale texture, lighter than the tunic",
+      "Recolour the crest to pale jade and silver in keeping with the trim, and drop the neon lime",
+      "Strengthen the serpentine brocade and add shoulder and knee emblems so the set carries epic-level ornament"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Reads as rare, not epic: dull pewter trim, near-black mantle and legs, faint brocade; poorer than the rare sets beside it",
+      "Crest is a bright lime potion flask in a roundel, a flat sticker-like badge that duplicates Elixirward and gives no venom/crypt identity (no skull or serpent anywhere)",
+      "Mantle and greaves are so dark they carry no ornament"
+     ],
+     "fixes": [
+      "Replace the flask with a pale jade plain skull (or skull with a coiled serpent, no horns) on back, hat and tabard",
+      "Recolour trim to bright jade-silver or pale gold and strengthen the serpentine brocade so it shows on the tunic and mantle",
+      "Lighten mantle and greaves a step and add the crest to shoulders and knees"
+     ]
+    }
+   }
+  },
+  {
+   "id": "astral_surveyor_legendary",
+   "name": "Astral Surveyor",
+   "blurb": "Legendary gear. Lapis velvet, smoked-brass mantle, platinum edging and astronomical arc brocade. Original telescope crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Reads rare, not legendary: the mid-blue is washed and chalky, nowhere near lapis velvet, and sits level with Lapis Conclave (rare).",
+      "The 'smoked brass' mantle and greaves read as flat beige cloth, not metal; the dullest material in the batch on its second-highest tier.",
+      "Pale arc brocade is high-contrast against the light blue and makes the tunic look printed rather than woven."
+     ],
+     "fixes": [
+      "Darken and saturate the tunic and hat cloth to a deep lapis so the platinum trim has something to shine against.",
+      "Recolour mantle and greaves to a darker, warmer smoked brass with a metal tiling texture and stronger value range.",
+      "Drop the arc brocade strength by about a third, or tint it towards platinum-blue instead of near-white."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": [
+      "Optional: reads nearer epic than legendary; a brighter platinum trim and stronger brocade would lift it."
+     ]
+    }
+   }
+  },
+  {
+   "id": "ruby_covenant_legendary",
+   "name": "Ruby Covenant",
+   "blurb": "Legendary gear. Ruby velvet, indigo mantle, polished silver and interlocking gemstone brocade. Original gemstone ring crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Crest is a flat navy disc with a hard white ring and red block: it reads as a modern logo sticker, not polished silver and gemstone, on back, hat, tabard and knees.",
+      "Mantle and greaves are flat plain navy with no weave or pattern, so the set reads rare/epic rather than legendary.",
+      "The ruby brocade is very saturated and uniform; hat and tunic merge into one red mass with little value structure."
+     ],
+     "fixes": [
+      "Repaint the crest as a silver ring with shaded metal tones and a faceted ruby, on a darker, less contrasting field (deep indigo, thin silver rim) rather than a white-on-navy disc.",
+      "Give the indigo mantle and greaves a second-colour woven pattern (the gemstone interlock in a slightly lighter indigo or silver thread) at moderate strength.",
+      "Deepen the tunic ruby a step and raise the brocade pattern contrast a little so the cloth reads as velvet brocade; consider a darker hat cloth for value separation."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "The gemstone on top of the ring crest is a shapeless red blob with white specks; on the back the crest reads as a padlock, not a jewelled ring",
+      "On the hat, tabard and knees the same crest shrinks to a red smear on a navy dot",
+      "The crest is too plain a device to carry a legendary set"
+     ],
+     "fixes": [
+      "Redraw the gem as one clean faceted shape (a pointed-oval or diamond-cut stone) about twice its present size, in a bright ruby with a single highlight and no speckle",
+      "Thicken the silver ring band and add a simple claw setting so it reads as a ring at a glance",
+      "Use a simplified gem-only version for the small hat, tabard and knee copies"
+     ]
+    }
+   }
+  },
+  {
+   "id": "salamander_ember_legendary",
+   "name": "Salamander Ember",
+   "blurb": "Legendary gear. Ember velvet, blue-black mantle, bright steel and looping flame-scale damask. Original salamander crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 4,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Reads rare, not legendary: flat orange cloth with a faint tone-on-tone pattern and thin silver lines",
+      "Small yellow blobs on the knees and on the back of the hat look like stray smears, not emblems",
+      "Orange tunic and hat are one flat saturated hue with little value structure"
+     ],
+     "fixes": [
+      "Raise the flame-scale damask strength and give it a second colour (deep ember red or gold) so it reads as rich brocade",
+      "Enlarge and centre the knee and hat-back emblems so they read as flames or salamanders, or remove them",
+      "Add gold to the trim or crest ring and deepen the tunic toward ember red so the set carries legendary richness"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "PASS",
+     "faults": [
+      "Polish: steel trim and plain navy greaves read a touch under legendary"
+     ],
+     "fixes": [
+      "Optional: warm the trim to bright gold and carry the flame-scale pattern onto mantle and greaves"
+     ]
+    }
+   }
+  },
+  {
+   "id": "aurora_imperatrix_mythic",
+   "name": "Aurora Imperatrix",
+   "blurb": "Mythic gear. Aurora teal and orchid silk, iridescent-color weave, platinum edging and curtain crests. Original aurora curtain crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "No iridescence: the tunic is a single teal with thin pale wavy lines, which reads as a rare-tier striped cloth.",
+      "Legs, greaves and boots are a dull dark navy that carries none of the aurora colours and drags the lower half down.",
+      "Trim is thin and greyish rather than bright platinum; the set is far from the most striking in the game."
+     ],
+     "fixes": [
+      "Make the woven pattern broad aurora curtains in orchid and bright green-cyan at much higher strength, so the two colours visibly shift across the teal.",
+      "Recolour greaves and knee guards to a lighter teal or orchid metal-leather with platinum trim so the lower half joins the scheme.",
+      "Brighten the trim to clean platinum and enlarge and brighten the curtain crest on the back and shoulders."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "The aurora curtain crest does not read: a row of pale spikes in a dark disc looks like grass, icicles or teeth, on back, hat, tabard and knees alike",
+      "Reads as rare at best, not mythic: flat teal cloth with thin wavy lines and plain purple sleeves is less rich than the epics in this batch (Obsidianwatch, Phoenix Carmine)",
+      "No visible iridescence; teal and orchid sit as two flat blocks rather than a shifting aurora"
+     ],
+     "fixes": [
+      "Redraw the crest as two or three broad hanging ribbon bands that sweep in an S-curve across the disc, graded green to teal to orchid, with a few stars above, so it reads as a curtain of light",
+      "Make the cloth weave bold vertical aurora bands graded teal to green to orchid at high strength, and carry the orchid into the tunic so the two colours mix",
+      "Brighten the platinum trim and add the crest at readable size on the shoulders"
+     ]
+    }
+   }
+  },
+  {
+   "id": "chronovault_eternal_mythic",
+   "name": "Chronovault Eternal",
+   "blurb": "Mythic gear. Night-blue and oxblood silk with platinum clockwork lattice and engraved greaves. Original clockwork dial crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Gear weave is large, soft-edged and blotchy; at play size it reads as blue camouflage, not a platinum clockwork lattice.",
+      "Greaves are flat near-white with no engraving tone, so they read as unpainted rather than platinum.",
+      "Bright red sleeves against royal blue give a primary-colour, toy-like look; overall reads epic at best, not mythic."
+     ],
+     "fixes": [
+      "Shrink the gear pattern scale and redraw it as crisp fine line-work in platinum, lower fill and higher edge contrast.",
+      "Darken the greave metal to a cool platinum with a darker tiling texture so the sculpted trim shows, and tint recesses night-blue.",
+      "Deepen the sleeves to a true dark oxblood and carry a little of the crest's amber into the trim so there is a third, precious accent."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "PASS",
+     "faults": [
+      "Polish: the pale gear weave on navy is blotchy and reads as stains from a distance; the orange mark in the dial centre is a ring with a diagonal stroke and must not drift toward a glyph"
+     ],
+     "fixes": [
+      "Draw the weave gears as thin crisp platinum outlines rather than filled pale shapes; make the dial centre two plain clock hands from a hub with no ring around them"
+     ]
+    }
+   }
+  },
+  {
+   "id": "empyrean_seed_mythic",
+   "name": "Empyrean Seed",
+   "blurb": "Mythic gear. Royal-blue and solar-amber silk, platinum seed-filament weave and matching enamel crests. Original dandelion seedhead crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "night"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Saturated primary yellow shoulders and greaves against primary blue read as plastic, not solar-amber silk or gold",
+      "Plain brown trousers and boots look common-tier on a mythic set",
+      "Seed-filament pattern is sparse pale flecks that read as scratches or noise"
+     ],
+     "fixes": [
+      "Shift the yellow to a deeper burnished amber-gold with lower saturation and more value variation",
+      "Recolour trousers to deep midnight blue and boots to dark leather with platinum trim",
+      "Make the seed motif denser and crisper at a slightly larger scale, in platinum, so it reads as a deliberate weave"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "PASS",
+     "faults": [
+      "Seedhead is thin linework; reads as a generic starburst and is the least striking part of a mythic"
+     ],
+     "fixes": [
+      "Optional: thicken the filaments, add a bright solid core and a few drifting seeds breaking the ring"
+     ]
+    }
+   }
+  },
+  {
+   "id": "geode_firstlight_mythic",
+   "name": "Geode of First Light",
+   "blurb": "Mythic gear. Amethyst and emerald brocade with champagne metalwork and faceted geode crests. Original crystal geode crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Reads rare/epic, not mythic: mantle and greaves are plain flat emerald with no brocade, and the champagne metalwork is thin and pale.",
+      "The crystal-cluster pattern on the purple cloth is faint and blotchy, looking like pale smudges at play size rather than brocade.",
+      "The geode crest is small and low-contrast for the top tier; its pale centre washes out on the back and hat."
+     ],
+     "fixes": [
+      "Add the brocade (second-colour pattern in a lighter emerald or champagne thread) to the mantle and greaves cloth so all five parts carry richness.",
+      "Tighten the crystal pattern: smaller scale, crisper picture, champagne or light-amethyst colour at higher strength so it reads as woven facets.",
+      "Enlarge the back and shoulder geode crests and repaint with stronger value contrast (dark rim, bright faceted amethyst and emerald core, champagne setting); warm and brighten the trim metal toward a richer champagne gold."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "The geode crest reads as a round rosette or biscuit: a cream scalloped ring around speckled purple and green, with no crystal shape to recognise",
+      "The small copies on tabard, hat and knees are pale speckled blobs",
+      "The set does not read as mythic: it is less striking than the legendary Kestrel Accord, and the pale crystal weave in the cloth is soft and blotchy"
+     ],
+     "fixes": [
+      "Redraw the crest as a cracked-open geode with a few large, sharp crystal points radiating inward to a bright white core, in three flat tones, and enlarge it on the back",
+      "Use a single bold crystal cluster for the small hat, tabard and knee copies",
+      "Sharpen the cloth pattern into crisp champagne-gold crystal outlines at higher strength, and brighten the champagne trim so the set outshines the legendaries"
+     ]
+    }
+   }
+  },
+  {
+   "id": "helix_creation_mythic",
+   "name": "Helix of Creation",
+   "blurb": "Mythic gear. Deep jade and amber silk with pale electrum helices and densely patterned leg guards. Original double helix crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "moss"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5,
+   "notes": {
+    "materials and colour": {
+     "verdict": "FAIL",
+     "faults": [
+      "Reads rare-to-epic, not mythic: the amber hat, mantle, sleeves, trousers and greaves are a plain tan-brown leather that covers more than half the figure, the same look as the uncommon copper-leather sets",
+      "Amber parts have almost no pattern or precious trim, so only the jade tunic carries any richness",
+      "Less striking than the two legendaries in this batch"
+     ],
+     "fixes": [
+      "Turn the amber parts into rich amber-gold silk with a clearly visible electrum helix brocade on hat, mantle and legs, not plain leather",
+      "Brighten the trim to pale electrum throughout and add jade enamel accents on shoulders, knees and greaves",
+      "Deepen the jade and raise saturation of the amber so the two are jewel tones; add the helix crest to shoulders and knees"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back crest is a narrow oval of fine helix lines in the same pale colour as the helix brocade around it, so it disappears into the pattern; at play distance it is a squiggle.",
+      "Helix brocade on every surface at high strength makes the whole set noisy and leaves the crest no quiet ground.",
+      "Does not read as mythic: jade and tan leather look rare-to-epic and are less striking than the legendaries in this batch."
+     ],
+     "fixes": [
+      "Enlarge the crest to fill the back panel and set it on a solid dark jade field with a bright ring; draw the double helix as two bold ribbons with a few thick rungs, not fine lines.",
+      "Cut the brocade strength by half on the tunic, and remove it from the hat or mantle so there are plain areas.",
+      "Lift the rarity: brighter electrum trim, a luminous accent colour (pale gold-white) reserved for the crest, and repeat the crest on shoulders and knees."
+     ]
+    }
+   }
+  },
+  {
+   "id": "lastdusk_scorpion_mythic",
+   "name": "Scorpion of Last Dusk",
+   "blurb": "Mythic gear. Black-opal and oxblood with rich gold scale-brocade, scorpion crests and plated greaves. Original scorpion crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "crimson"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [
+      "Scorpion crest is dull bone and modest in size, weaker than the gold veining around it; tabard scorpion nearly vanishes (polish only)"
+     ],
+     "fixes": [
+      "Optionally recolour the scorpion crests to bright gold and enlarge the back crest"
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back scorpion is a thin, dull bone-beige line figure, small for the panel and competing with the gold crackle lines around it; weakest crest of the batch on a mythic",
+      "Tabard scorpion is an unreadable pale smudge; hat scorpion small and thin",
+      "Gold crackle lines read as cracks or cobweb rather than scale-brocade, and the crest does not stand out from them"
+     ],
+     "fixes": [
+      "Redraw the scorpion as a bold solid silhouette (thick claws, clear curled tail) in bright gold, about 35% larger",
+      "Set it on a solid oxblood roundel or shield with a gold rim so the crackle pattern does not run behind it",
+      "Enlarge hat and tabard scorpions about 50% in the same gold, and add them to shoulders and knees",
+      "Reduce pattern strength a little or swap the crackle for a true scale motif"
+     ]
+    }
+   }
+  },
+  {
+   "id": "orbital_apotheosis_mythic",
+   "name": "Orbital Apotheosis",
+   "blurb": "Mythic gear. Cosmic violet and star-gold with dense orbital brocade and matching planet crests. Original ringed planet crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+   "wears": {
+    "palette": "amethyst"
+   },
+   "pieces": [
+    "head",
+    "shoulders",
+    "chest",
+    "legs",
+    "feet"
+   ],
+   "rarity": 5,
+   "notes": {
+    "materials and colour": {
+     "verdict": "PASS",
+     "faults": [],
+     "fixes": [
+      "Optional: the gold mantle is a flat pale yellow and the ring brocade a faint grey; deepen the gold and tint the rings star-gold so the set clearly outranks the epics.",
+      "Optional: enlarge the planet inside its dark back roundel; it is small for a mythic crest."
+     ]
+    },
+    "design and symbols": {
+     "verdict": "FAIL",
+     "faults": [
+      "Back crest is mostly an empty dark disc; the ringed planet inside it is tiny and thin-lined",
+      "Hat, tabard and knee planets are small gold smudges that do not read as a ringed planet",
+      "Reads no richer than the rare sets in this batch; not the most striking tier"
+     ],
+     "fixes": [
+      "Scale the planet up to fill about 80 percent of the roundel, with a thick bright ring tilted across it and a solid gold globe",
+      "Enlarge the hat and tabard planets and give them the same bold ring with a dark outline so they separate from violet",
+      "Strengthen the gold orbital brocade (higher strength, slightly larger scale) and add shoulder crests to lift it to mythic"
+     ]
+    }
+   }
+  }
+ ]
+}

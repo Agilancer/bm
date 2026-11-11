@@ -1,0 +1,118 @@
+{
+ "id": "rillkeep_common",
+ "name": "Rillkeep Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original fish stitch badge. Pale side panels and cuffs, blue-green torso, paired tide bands. Intended as a common item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.72,
+   "shading": 0.9
+  },
+  "trim": {
+   "color": "#8c7c5c",
+   "bright": 0.75
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.85,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/fish_thread.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9
+   },
+   "trim": {
+    "color": "#5f5644",
+    "bright": 0.7
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/fish_thread.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/fish_thread.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.78,
+    "shading": 0.9
+   },
+   "trim": {
+    "color": "#5f5644",
+    "bright": 0.7
+   },
+   "pattern": {
+    "image": "swatches/pat_tide.png",
+    "color": "#2f6f74",
+    "scale": 0.2,
+    "strength": 0.8,
+    "tile": "repeat"
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.15
+   }
+  },
+  "feet": {}
+ }
+}

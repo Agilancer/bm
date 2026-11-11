@@ -1,0 +1,160 @@
+{
+ "id": "axleweave_epic",
+ "name": "Axleweave Artificer",
+ "blurb": "Epic gear. Verdigris velvet, dark bronze mantle and warm brass with linked-cog brocade. Original gear crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_verdigris.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.75,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/fx_brass.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.86,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/fx_cogs.png",
+    "color": "#c9a04a",
+    "scale": 0.2,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "hat",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.01,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_bronze.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/fx_cogs.png",
+    "color": "#c9a04a",
+    "scale": 0.22,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "back",
+     "size": 0.235,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_bronzeleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.86
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "knee_left",
+     "size": 0.065,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "knee_right",
+     "size": 0.065,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {}
+ }
+}

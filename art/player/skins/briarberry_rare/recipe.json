@@ -1,0 +1,116 @@
+{
+ "id": "briarberry_rare",
+ "name": "Briarberry",
+ "blurb": "Rare gear. Mulberry twill, sage shoulders, tarnished silver and berry-cluster embroidery. Original berry branch crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_mulberry.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.72,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/fx_silver.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.86,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx2_hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/briar_s.png",
+     "anchor": "hat",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx2_sage.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.8
+   },
+   "decals": []
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/fx_sprig.png",
+    "color": "#3d1230",
+    "scale": 0.15,
+    "strength": 0.32,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/briar.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/briar_s.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx2_sageleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.85,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.86
+   }
+  },
+  "feet": {}
+ }
+}

@@ -1,0 +1,93 @@
+{
+ "id": "rimecrofter_common",
+ "name": "Rimecrofter Common Gear",
+ "blurb": "Common-tier gear. Bone-grey herringbone wool, muted blue-green hat and mantle, tan work boots and plain bindings. No added heraldry or precious trim.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/rimecrofter_common_cloth.png",
+   "tile": "repeat",
+   "scale": 0.18,
+   "bright": 1,
+   "shading": 0.7
+  },
+  "trim": {
+   "swatch": "swatches/rimecrofter_common_binding.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.62,
+   "shading": 0.3,
+   "keep": 0.0
+  },
+  "leather": {
+   "swatch": "swatches/rimecrofter_common_leather.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.75,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/rimecrofter_common_hat.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.6,
+    "keep": 0.0
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/rimecrofter_common_mantle.png",
+    "scale": 0.16,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.5,
+    "keep": 0.0
+   }
+  },
+  "chest": {},
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/rimecrofter_common_mantle.png",
+    "scale": 0.16,
+    "tile": "repeat",
+    "bright": 0.78,
+    "shading": 0.5,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/rimecrofter_common_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.7,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/rimecrofter_common_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.7,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/rimecrofter_common_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.7,
+    "keep": 0.1
+   }
+  }
+ }
+}

@@ -1,0 +1,149 @@
+{
+ "id": "amberwake_rare",
+ "name": "Amberwake Arcanist",
+ "blurb": "Rare-tier appearance. Burnished amber damask, oxblood guards and pale gold sun crests.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/amberwake_rare_cloth.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/amberwake_rare_metal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0,
+   "keep": 0.0
+  },
+  "leather": {
+   "swatch": "swatches/amberwake_rare_leather.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/sun_roundel.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/sun_roundel.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint"
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/amberwake_rare_guards.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.15
+   },
+   "trim": {
+    "swatch": "swatches/amberwake_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.0,
+    "keep": 0.0
+   },
+   "decals": [
+    {
+     "image": "decals/sun_gold.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint"
+    },
+    {
+     "image": "decals/sun_gold.png",
+     "anchor": "shoulder_right",
+     "size": 0.085,
+     "mode": "paint"
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/amberwake_rare_brocade.png",
+    "color": "#c08f45",
+    "scale": 0.15,
+    "strength": 0.34,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/sun_roundel.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "offset": [
+      0,
+      -0.055,
+      0
+     ],
+     "under_trim": false
+    },
+    {
+     "image": "decals/sun_roundel.png",
+     "anchor": "tabard",
+     "size": 0.09,
+     "mode": "paint"
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/amberwake_rare_guards.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.72,
+    "shading": 0.9,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/amberwake_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.9,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/amberwake_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.2,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/amberwake_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   }
+  }
+ }
+}

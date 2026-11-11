@@ -1,0 +1,161 @@
+{
+ "id": "rosequartz_rare",
+ "name": "Rosequartz Savant",
+ "blurb": "Rare-tier appearance. Dusty rose floral velvet, plum guards and polished silver.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/rose.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "bright": 0.92,
+   "shading": 1
+  },
+  "trim": {
+   "swatch": "swatches/rosequartz_rare_metal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/rosequartz_rare_leather.png",
+   "scale": 0.14,
+   "tile": "repeat",
+   "shading": 1,
+   "bright": 1.0,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "pattern": {
+    "image": "swatches/rosequartz_rare_brocade.png",
+    "color": "#e3cbd6",
+    "scale": 0.26,
+    "strength": 0.28,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/crystal.png",
+     "anchor": "hat",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/crystal.png",
+     "anchor": "hat_back",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/plum.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1
+   },
+   "trim": {
+    "swatch": "swatches/rosequartz_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.1
+   },
+   "decals": [
+    {
+     "image": "decals/crystal.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/crystal.png",
+     "anchor": "shoulder_right",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/rosequartz_rare_brocade.png",
+    "color": "#e3cbd6",
+    "scale": 0.28,
+    "strength": 0.44,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/crystal.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/crystal.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/plum.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 1
+   },
+   "leather": {
+    "swatch": "swatches/rosequartz_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.9,
+    "keep": 0.12
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/rosequartz_rare_leather.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.2,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/rosequartz_rare_metal.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 1.0
+   }
+  }
+ }
+}

@@ -1,0 +1,167 @@
+{
+ "id": "snowdrop_vigil_rare",
+ "name": "Snowdrop Vigil",
+ "blurb": "Rare gear. Fine velvet, patterned cloth, bright metal edging and an embroidered snowdrop flower crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/snowdrop_vigil_rare_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.12,
+   "shading": 0.88,
+   "keep": 0
+  },
+  "trim": {
+   "color": "#e6ebf0",
+   "shading": 0.12,
+   "bright": 0.98
+  },
+  "leather": {
+   "swatch": "swatches/slate.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.88
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/snowdrop_vigil_rare_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#5f8792",
+    "scale": 0.17,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "leather": {
+    "swatch": "swatches/slate.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.2,
+    "shading": 0.4
+   },
+   "decals": [
+    {
+     "image": "decals/snowdrop_roundel.png",
+     "anchor": "hat",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/snowdrop_vigil_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.03,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#bfe0da",
+    "scale": 0.16,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/snowdrop_roundel.png",
+     "anchor": "shoulder_left",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/snowdrop_roundel.png",
+     "anchor": "shoulder_right",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#5f8792",
+    "scale": 0.17,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/snowdrop_roundel.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.07,
+      0
+     ]
+    },
+    {
+     "image": "decals/snowdrop_roundel.png",
+     "anchor": "tabard",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/snowdrop_vigil_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/slate.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.88
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/snowdrop_vigil_rare_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.88,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/slate.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.88
+   }
+  }
+ }
+}

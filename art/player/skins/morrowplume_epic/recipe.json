@@ -1,0 +1,185 @@
+{
+ "id": "morrowplume_epic",
+ "name": "Morrowplume",
+ "blurb": "Epic gear. Ivory velvet, deep lagoon shoulders, champagne trim and featherlike interlaced arcs. Original swan crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/morrowplume_epic_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/morrowplume_epic_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.07,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/morrowplume_epic_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.18,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/morrowplume_epic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/swan_light.png",
+     "anchor": "hat",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ],
+   "pattern": {
+    "image": "swatches/feathers2.png",
+    "color": "#9fd0d8",
+    "scale": 0.2,
+    "strength": 0.3,
+    "tile": "repeat"
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/morrowplume_epic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/feathers2.png",
+    "color": "#9fd0d8",
+    "scale": 0.2,
+    "strength": 0.35,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/swan_light.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/swan_light.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/feathers2.png",
+    "color": "#9a7a40",
+    "scale": 0.2,
+    "strength": 0.7,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/swan.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
+    },
+    {
+     "image": "decals/swan.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/morrowplume_epic_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/morrowplume_epic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.86,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/morrowplume_epic_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.7,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/swan_light.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/swan_light.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/morrowplume_epic_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/morrowplume_epic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.14,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

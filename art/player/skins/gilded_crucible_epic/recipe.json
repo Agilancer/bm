@@ -1,0 +1,170 @@
+{
+ "id": "gilded_crucible_epic",
+ "name": "Gilded Crucible",
+ "blurb": "Epic gear. Copper-brown velvet, petroleum-blue mantle and engraved gold fretwork. Original anvil crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_copper.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 0.92,
+   "shading": 0.95,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/fx_trim.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.08
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pat_fret.png",
+    "color": "#d8a848",
+    "scale": 0.16,
+    "strength": 0.36,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_anvil.png",
+     "anchor": "hat",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_petrol.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "leather": {
+    "color": "#0d2830"
+   },
+   "pattern": {
+    "image": "swatches/pat_fret.png",
+    "color": "#d8a848",
+    "scale": 0.14,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_anvil_copper.png",
+     "anchor": "shoulder_left",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_anvil_copper.png",
+     "anchor": "shoulder_right",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_fret.png",
+    "color": "#d8a848",
+    "scale": 0.18,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_anvil.png",
+     "anchor": "back",
+     "size": 0.24,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_anvil.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_petrol.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.95,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0.08
+   },
+   "decals": [
+    {
+     "image": "decals/fx_anvil_copper.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_anvil_copper.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {}
+ }
+}

@@ -9,16 +9,21 @@ import { mipCountFor } from './gpu.js';
 export const SKIN_PARTS = ['head', 'shoulders', 'chest', 'legs', 'feet'];   // by their number in parts.png, from 1
 const BASE = 'assets/game/player/';
 
-// Which set dresses each part, for what's in the pack's slots. A set says what it's worn for (wears): robes of a palette,
+// Which set dresses each part, for what's in the pack's slots. A piece of a set of gear (item.set) wears that set. For a
+// plain robe, a set says what it's worn for (wears): robes of a palette,
 // and of only some shapes if it says so, or named items. The closer the fit the better, and of two alike the later made.
 export function pickSets(sets, slots) {
   const out = {};
   for (const part of SKIN_PARTS) {
     const item = slots[part], robe = item && ROBES[item.base];
     if (!robe) continue;
+    // A piece of a set wears its own set's look. A plain robe wears what was made for its palette or for itself (a set with
+    // a rarity is gear of its own, and dresses only its own pieces).
+    const own = item.set && sets.find((s) => s.id === item.set && s.pieces.includes(part));
+    if (own) { out[part] = own.id; continue; }
     let best = null, fit = 0;
     for (const s of sets) {
-      if (!s.pieces.includes(part)) continue;
+      if (!s.pieces.includes(part) || s.rarity != null) continue;
       const w = s.wears || {}, shapes = w.shapes?.[part];
       const f = w.items?.includes(item.base) ? 3 : w.palette === robe.palette ? (shapes ? (shapes.includes(robe.shape) ? 2 : 0) : 1) : 0;
       if (f && f >= fit) { best = s; fit = f; }

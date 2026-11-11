@@ -1,0 +1,133 @@
+{
+ "id": "copperleaf_rover",
+ "name": "Copperleaf Rover",
+ "blurb": "Autumn bronze twill, pale flax edging, pine mantle, chestnut leather and leaf embroidery.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.8
+  },
+  "trim": {
+   "color": "#dccb9c",
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/belt.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/leaf_copper.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/leaf_copper.png",
+     "anchor": "hat_back",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_leaves.png",
+    "color": "#5f8a4f",
+    "scale": 0.14,
+    "strength": 0.3,
+    "tile": "repeat"
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_leaves.png",
+    "color": "#a87a45",
+    "scale": 0.13,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/leaf_pine.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/leaf_pine.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/trouser.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  }
+ }
+}

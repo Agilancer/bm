@@ -1,0 +1,116 @@
+{
+ "id": "abyssal_current",
+ "name": "Abyssal Current",
+ "blurb": "Petrol-blue scale cloth, silver edging, deep teal mantle and pale moon crest.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/petrol.png",
+   "scale": 0.11,
+   "tile": "repeat",
+   "bright": 0.85,
+   "shading": 0.9
+  },
+  "trim": {
+   "color": "#b4c9cc"
+  },
+  "leather": {
+   "swatch": "swatches/abyssal_current_leather.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 1,
+   "keep": 0.15
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/moon_adc5c9.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/moon_adc5c9.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/teal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/abyssal_current_pattern.png",
+    "color": "#adc5c9",
+    "scale": 0.12,
+    "strength": 0.1,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/moon_adc5c9.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      -0.012,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/moon_adc5c9.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/teal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 1
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/teal.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 1
+   }
+  }
+ }
+}
