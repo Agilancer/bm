@@ -1837,7 +1837,9 @@ export class Brain {
       if (!inDungeon(m.x, m.z) && !P?.fit()) return null;
       return { kind: 'warrens', why: 'run:warrens', say: `Dungeon runs, ${lap}: ${inDungeon(m.x, m.z) ? 'down the Hollowfang Warrens' : 'to the Hollowfang Warrens, with the party'}.` };
     }
-    if (d.key === 'catacombs' && !this.o.townUI.quests.state('dead_cant_wait')) return null;
+    // (Both are below the cathedral, in by the Sexton's door, which opens with his quest. A dungeon it couldn't reach a single
+    // spot of last time is left a while.)
+    if (!this.o.townUI.quests.state('dead_cant_wait') || this.skipping(`run:${d.key}`)) return null;
     const spots = d.key === 'bellcrypt' ? HUNTS.bellcrypt : this.catacombSpots(m);
     if (!spots.length) return null;
     return { kind: 'hunt', why: `run:${d.key}`, run: d.key, spots, below: true, say: `Dungeon runs, ${lap}: ${lower(d.name)}` };
@@ -1848,27 +1850,32 @@ export class Brain {
   sweep(m, j) {
     let R = this.runState;
     // (Its clocks run only while it's at the run itself, not while it fights, loots or goes to town.)
-    if (!R || R.key !== j.run) R = this.runState = { key: j.run, left: new Set(j.spots.map(([x, z]) => `${x},${z}`)), n: j.spots.length, t: 0, at: null, atT: 0 };
+    if (!R || R.key !== j.run) R = this.runState = { key: j.run, left: new Set(j.spots.map(([x, z]) => `${x},${z}`)), n: j.spots.length, t: 0, at: null, atT: 0, seen: 0 };
     R.t += 0.12;
     const left = j.spots.filter(([x, z]) => R.left.has(`${x},${z}`));
-    if (!left.length || R.t > RUN_TIME) { this.ranDungeon(j.run); return; }
+    if (!left.length || R.t > RUN_TIME) {
+      // (Not one spot reached: no way in just now. Grinding meanwhile, and another go in ten minutes.)
+      if (!R.seen) this.giveUp(`run:${j.run}`, 600);
+      this.ranDungeon(j.run, false, !R.seen);
+      return;
+    }
     this.say(`${j.say} (${R.n - left.length} of ${R.n}).`);
     const p = left.reduce((a, b) => (dist(m.x, m.z, a[0], a[1]) <= dist(m.x, m.z, b[0], b[1]) ? a : b));
     const k = `${p[0]},${p[1]}`;
-    if (R.at !== k) { R.at = k; R.atT = R.t; R.look = 0; }
-    // (A spot it can't get to, or can't get to in time: left.)
-    if (this.noWay || R.t - R.atT > SPOT_TIME) { this.noWay = null; R.left.delete(k); R.at = null; return; }
+    if (R.at !== k) { R.at = k; R.atT = R.t; R.since = this.t; R.look = 0; }
+    // (A spot it can't get to, or can't get to in time: left. Only a "no way" that came for this spot counts.)
+    if ((this.noWay && this.noWay.t >= R.since) || R.t - R.atT > SPOT_TIME) { this.noWay = null; R.left.delete(k); R.at = null; return; }
     if (dist(m.x, m.z, p[0], p[1]) < 4) {
       this.halt();
       this.face = this.o.input.yaw + 0.9;
-      if ((R.look += 0.12) > 2.5) { R.left.delete(k); R.at = null; }
+      if ((R.look += 0.12) > 2.5) { R.left.delete(k); R.at = null; R.seen++; }
       return;
     }
     this.goTo(p[0], p[1], 2.5, true, false, true);
   }
 
   // Through one (or beaten back by it): on to the next dungeon, and once round them all, another lap.
-  ranDungeon(key, beaten = false) {
+  ranDungeon(key, beaten = false, noWay = false) {
     if (this.mode !== 'dungeons') return;
     const list = finishedDungeons(this.o.townUI, this.o.game);
     const d = DUNGEONS.find((x) => x.key === key);
@@ -1877,7 +1884,7 @@ export class Brain {
     if (at < 0 || at + 1 >= list.length) this.laps++;
     this.runKey = next?.key || null;
     this.runState = null; this.job = null; this.patrol = null;
-    this.o.note?.(`Auto-play: ${beaten ? 'beaten back by' : 'through'} ${lower(d?.name || key)}.${next ? ` On to ${lower(next.name)}.` : ''}`);
+    this.o.note?.(`Auto-play: ${beaten ? 'beaten back by' : noWay ? 'no way into' : 'through'} ${lower(d?.name || key)}.${next && next.key !== key ? ` On to ${lower(next.name)}.` : ''}`);
   }
 
   // The Warrens, with three wipes on the same go counting as beaten back: out by the way in, and two levels more first.
