@@ -77,6 +77,16 @@ export const SITES = {
   // The Sorrowhorn
   stair: { x: -1650, z: -1900, r: 40, name: 'The Broken Stair', pad: 16, portal: true },
   crown: { x: MOUNT.x, z: MOUNT.z, r: MOUNT.crown, name: 'The Crown of Teeth', portal: true },
+  // The small towns: Thornwick on the Gallows Road, where the downs run out; Cinderford on the Vigil Road, the last free
+  // hearths before the Ashen Waste (nobody's letter on either: they're plain folk's).
+  thornwick: { x: 2400, z: 1800, r: 80, name: 'Thornwick', pad: 48, portal: true },
+  cinderford: { x: -2100, z: -200, r: 80, name: 'Cinderford', pad: 46, portal: true },
+  // And places to find on the way to somewhere else.
+  deepsmouth: { x: 880, z: 3990, r: 45, name: 'The Howling Mouth', pad: 16 },
+  cairnfield: { x: 1250, z: -420, r: 50, name: 'The Cairnfield' },
+  causeway: { x: -420, z: -2700, r: 60, name: 'The Sunken Mile' },
+  tor: { x: 1500, z: 4600, r: 50, name: "Ravens' Tor" },
+  charmill: { x: -3150, z: -1000, r: 40, name: 'The Charred Mill', pad: 12 },
 };
 export const SITE_KEYS = Object.keys(SITES);
 
@@ -100,6 +110,8 @@ export const ROUTES = [
   { name: 'the Barrow Track', w: 1.8, pts: [[80, 800], [-700, 1500], [-1700, 2400], [-2600, 3200], [-2850, 3330]] },
   // North-east: the Abbey Road, off the Hill Road, up through the Rustwood.
   { name: 'the Abbey Road', w: 2.2, pts: [[1500, 130], [2000, -700], [2900, -1700], [3600, -2400], [3900, -2800]] },
+  // Out of Frostwatch's gate and round the fell to the Howling Mouth.
+  { name: 'the Deeps Path', w: 1.6, pts: [[700, 3930], [760, 3962], [820, 3982], [866, 3990]] },
 ];
 for (const r of ROUTES) {
   r.x0 = Math.min(...r.pts.map((p) => p[0])) - r.w - 40; r.x1 = Math.max(...r.pts.map((p) => p[0])) + r.w + 40;
