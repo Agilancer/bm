@@ -105,7 +105,7 @@ export function doWarrens(b, m, foes) {
   const P = b.o.game.party, W = P?.warrens;
   if (!inDungeon(m.x, m.z)) {
     // (Out again with it done: no more till it's had a rest from it.)
-    if (b.warrensDone) { b.warrensDone = false; b.giveUp('warrens', 2400); b.job = null; return; }
+    if (b.warrensDone) { b.warrensDone = false; b.giveUp('warrens', 2400); b.job = null; b.ranDungeon('warrens'); return; }
     b.say('To the Hollowfang Warrens, with the party.');
     b.room = 0;
     b.goTo(PORTAL.x, PORTAL.z, 0.6, true);

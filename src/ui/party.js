@@ -29,6 +29,7 @@ export class PartyUI {
     this.offers = null; this.offersFor = -1;
     this.boss = null;          // { key, ids, name }
     this.warrens = null;       // the sim's last word on the fight (auto-play reads it too)
+    this.clears = 0;           // how often the Warrens have been cleared in this game (auto-play's dungeon runs read it)
     this.names = null;
     fetch(`${this.base}assets/game/heroes/names.json`).then((r) => r.json()).then((n) => { this.names = n; }).catch(() => {});
     this.buildDom();
@@ -299,7 +300,7 @@ export class PartyUI {
       }
       case DELVE.ENTER: this.warn(a ? 'The Hollowfang Warrens. Your dead foes are as you left them.' : 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', 6); break;
       case DELVE.LEAVE: this.hideBoss(); break;
-      case DELVE.CLEAR: this.hideBoss(); this.warn('The Hollowfang Warrens are cleared. Venomaw is dead!', 7); this.cleared?.(); break;
+      case DELVE.CLEAR: this.hideBoss(); this.warn('The Hollowfang Warrens are cleared. Venomaw is dead!', 7); this.clears++; this.cleared?.(); break;
       case DELVE.WARN: this.warn(WARNINGS[a | 0] || '', 5); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
@@ -316,9 +317,10 @@ export class PartyUI {
 
   // ---- kept in the save ----------------------------------------------------------------------------------------------
 
-  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })) }; }
+  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })), clears: this.clears }; }
 
   load(d) {
+    this.clears = d?.clears || 0;
     for (const m of this.members.slice()) this.dismiss(m.slot);
     this.offers = null;
     for (const s of d?.members || []) {
