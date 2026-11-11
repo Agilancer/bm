@@ -165,10 +165,10 @@ rare; one legendary roll in eight is mythical, as with skulls). The five `_regal
 plain robes of older saves, by palette.
 
 **Held back.** Every set was put before two critics of textures, three rounds, and reworked between them
-( is each one as it stands). The 22 that still failed one of them are out of the game
-until they're better:  lists them with what each critic said was wrong and how to mend it,
-and  shows them. Their recipes are kept.  takes a set out
-like that, and  followed by  puts one back.
+(`art/player/skins/<id>/recipe.json` is each one as it stands). The 22 that still failed one of them are out of the game
+until they're better: `art/player/skins/held.json` lists them with what each critic said was wrong and how to mend it,
+and `held.jpg` beside it shows them. Their recipes are kept. `python tools/player/skins/import_set.py --hold <ids>`
+takes a set out like that, and `--release <ids>` followed by `rebake.py <ids>` puts one back.
 
 **Set bonuses.** Wearing two, three and all five pieces of one set each add a stat (`setBonuses`): ward, life, spell
 damage, mana regeneration, mana or mana cost, three different ones for each set, picked by its id, and bigger the rarer
