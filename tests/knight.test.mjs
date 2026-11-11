@@ -169,3 +169,27 @@ test('caster defense waits for visible projectiles, ignores misses and respects 
   k.rollCd = 0; b.z = 4; k.state = S.APPROACH;
   assert.equal(k.reactToSpell(0.01, sim, sim.player), false);
 });
+test('a knight writes where his head is, as posed, so a mark over it follows him through his idle and his walk', async () => {
+  const { C, C_SIZE } = await import('../src/core/layout.js');
+  const k = knight(1), sim = simulation(), snap = new Float32Array(C_SIZE);
+  sim.snapU = new Uint32Array(snap.buffer);
+  k.play('Idle_Loop' in bank.clips ? 'Idle_Loop' : Object.keys(bank.clips)[0]);
+  const heads = [];
+  for (let f = 0; f < 120; f++) {
+    sim.time += 1 / 60; sim.tick++;
+    k.animate(1 / 60, sim);
+    k.write(snap, 0, sim);
+    const h = [snap[C.HEAD_X], snap[C.HEAD_Y], snap[C.HEAD_Z]], j = k.J.head * 3;
+    // Right where the head joint is, and a head's height over his feet.
+    assert.ok(Math.hypot(h[0] - k.pose.wt[j], h[1] - k.pose.wt[j + 1], h[2] - k.pose.wt[j + 2]) < 1e-4, `frame ${f}`);
+    assert.ok(h[1] > k.y + 1.2 && h[1] < k.y + 2.3 && Math.hypot(h[0] - k.x, h[2] - k.z) < 0.6, `frame ${f}: ${h}`);
+    heads.push(h);
+  }
+  // The idle sways it.
+  assert.ok(heads.some((h) => Math.hypot(h[0] - heads[0][0], h[1] - heads[0][1], h[2] - heads[0][2]) > 0.002));
+  // Moved bodily since the pose was made (as far off, posed only now and then), it's carried with him.
+  k.x += 3; k.z -= 2;
+  k.write(snap, 0, sim);
+  const j = k.J.head * 3;
+  assert.ok(Math.abs(snap[C.HEAD_X] - (k.pose.wt[j] + 3)) < 1e-3 && Math.abs(snap[C.HEAD_Z] - (k.pose.wt[j + 2] - 2)) < 1e-3);
+});

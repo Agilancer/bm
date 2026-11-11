@@ -73,7 +73,9 @@ export const C = {
   MODEL: 21, PAL: 22,
   // Who it's after, by its place in the snapshot: -1 the player, -2 no one. A monster's mark, or one of the other
   // Tessariels' foe (written in src/sim/sim.worker.js; read by auto-play to help its party, src/ui/autobrain.js).
-  AFTER: 23, SIZE_HEAD: 24,
+  AFTER: 23,
+  // Where its head is, in the world, as posed (a knight's: src/sim/knight.js write). For a mark over it that follows it.
+  HEAD_X: 24, HEAD_Y: 25, HEAD_Z: 26, SIZE_HEAD: 27,
 };
 export const C_PALETTE = C.SIZE_HEAD;
 export const C_PROPS = C_PALETTE + MAX_JOINTS * 8;
