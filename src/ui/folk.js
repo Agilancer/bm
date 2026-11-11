@@ -30,7 +30,7 @@ const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLIS };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
 const BEYOND_AT = Object.fromEntries(BEYOND.map((b) => {
   const k = TOWN_KNIGHTS.find((t) => t[b.id]), r = k.route;
-  return [b.id, { x: r.reduce((s, p) => s + p[0], 0) / r.length, z: r.reduce((s, p) => s + p[1], 0) / r.length }];
+  return [b.id, { x: r.reduce((s, p) => s + p[0], 0) / r.length, z: r.reduce((s, p) => s + p[1], 0) / r.length, k: TOWN_KNIGHTS.indexOf(k) }];
 }));
 const ACT = { SLEEP: 2, WORK: 4, SHOP: 5, FLEE: 12, HIDE: 13 };
 const REACH = 2.3;
@@ -114,7 +114,7 @@ body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
 .fn.gone { opacity: 0; transform: translateY(-6px); }
 #folkMarks { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
 body:not(.playing) #folkMarks, body.cinematic #folkMarks { display: none; }
-.qm { position: absolute; transform: translate(-50%, -100%); font: 900 var(--s, 34px)/1 Georgia, "Times New Roman", serif; color: #ffd21f;
+.qm { position: absolute; transform: translate(-50%, -100%); font: 900 var(--s, 44px)/1 Georgia, "Times New Roman", serif; color: #ffd21f;
   -webkit-text-stroke: .09em #2a1700; paint-order: stroke fill; text-shadow: 0 0 .18em #000c, 0 .06em .1em #000; }
 .qm span { display: block; animation: qmBob 1.6s ease-in-out infinite; }
 .qm.busy { color: #b9b6ae; -webkit-text-stroke-color: #1a1a1a; }
@@ -192,13 +192,26 @@ export class TownUI {
     if (i === this.lisI) return this.lisandra();
     const at = BEYOND_AT[this.people[i]?.id];
     if (!at) return null;
-    // Their body in the sim, walking its beat, if it's there; else the middle of the beat.
-    const k = this.snap && this.bodyNear(at.x, at.z, 6);
-    return k ? { x: k.x, y: k.y, z: k.z, hx: k.x, hy: k.y + 1.85, hz: k.z, busy: 0, sleep: false, house: -1, beyond: true }
+    // Their body in the sim, walking its beat, if it's there (their own, by their place among the town's knights); else the
+    // middle of the beat. Their head as posed, so a mark over it sways and turns with them.
+    const k = this.snap && (this.bodyAt((this.renderer.firstTown ?? -1) + at.k, at.x, at.z, 15) || this.bodyNear(at.x, at.z, 6));
+    return k ? { x: k.x, y: k.y, z: k.z, hx: k.hx, hy: k.hy, hz: k.hz, busy: 0, sleep: false, house: -1, beyond: true }
       : { ...at, busy: 0, sleep: false, house: -1, beyond: true };
   }
 
-  // The nearest body in the sim to (x, z), within r metres: { x, y, z }, or null.
+  // Body i in the sim, if it's up and within r metres of (x, z): { x, y, z, hx, hy, hz }, or null.
+  bodyAt(i, x, z, r) {
+    const s = this.snap;
+    if (!(i >= 0 && i < s[H.NCHARS])) return null;
+    const o = CHARS_START + i * C_SIZE;
+    if (s[o + C.ACTIVE] < 0.5 || Math.hypot(s[o + C.X] - x, s[o + C.Z] - z) > r) return null;
+    const y = s[o + C.Y], hy = s[o + C.HEAD_Y];
+    // (A head where a head can be, or else over where it stands.)
+    return hy > y + 0.3 && hy < y + 3 ? { x: s[o + C.X], y, z: s[o + C.Z], hx: s[o + C.HEAD_X], hy, hz: s[o + C.HEAD_Z] }
+      : { x: s[o + C.X], y, z: s[o + C.Z], hx: s[o + C.X], hy: y + 1.7, hz: s[o + C.Z] };
+  }
+
+  // The nearest body in the sim to (x, z), within r metres, as bodyAt has it; or null.
   bodyNear(x, z, r) {
     const s = this.snap, n = s[H.NCHARS];
     let best = null, bd = r;
@@ -206,9 +219,9 @@ export class TownUI {
       const o = CHARS_START + i * C_SIZE;
       if (s[o + C.ACTIVE] < 0.5) continue;
       const d = Math.hypot(s[o + C.X] - x, s[o + C.Z] - z);
-      if (d < bd) { bd = d; best = { x: s[o + C.X], y: s[o + C.Y], z: s[o + C.Z] }; }
+      if (d < bd) { bd = d; best = i; }
     }
-    return best;
+    return best === null ? null : this.bodyAt(best, x, z, r);
   }
 
   // Lisandra, once she's walked you down to the town (src/sim/opening.js keeps her where the road comes in): whichever of
@@ -220,8 +233,9 @@ export class TownUI {
     for (let i = n - 1; i >= n - LISANDRA_FORMS.length && i >= 0; i--) {
       const o = CHARS_START + i * C_SIZE;
       if (s[o + C.ACTIVE] < 0.5) continue;
-      const y = s[o + C.Y], head = s[o + C_PROPS + 1] - 0.19;
-      return { x: s[o + C.X], y, z: s[o + C.Z], hx: s[o + C.X], hy: head > y + 0.3 && head < y + 3 ? head : y + 1.6, hz: s[o + C.Z], busy: 0, sleep: false, house: -1, beyond: true };
+      // (Her head as posed: src/sim/village-walker.js writes it where a prop would go, a little above it.)
+      const y = s[o + C.Y], head = s[o + C_PROPS + 1] - 0.19, ok = head > y + 0.3 && head < y + 3;
+      return { x: s[o + C.X], y, z: s[o + C.Z], hx: ok ? s[o + C_PROPS] : s[o + C.X], hy: ok ? head : y + 1.6, hz: ok ? s[o + C_PROPS + 2] : s[o + C.Z], busy: 0, sleep: false, house: -1, beyond: true };
     }
     return null;
   }
@@ -338,9 +352,9 @@ export class TownUI {
         m.el.className = `qm${kind === 'busy' ? ' busy' : ''}`;
         m.el.firstChild.textContent = kind === 'offer' ? '!' : '?';
       }
-      // About half a metre tall in the world, but never too small to see nor so big it hides them.
-      const tall = 0.5 * innerHeight / (2 * Math.tan(FOV * Math.PI / 360)) / s[2];
-      m.el.style.setProperty('--s', `${Math.max(20, Math.min(56, tall)).toFixed(0)}px`);
+      // About two thirds of a metre tall in the world, but never too small to see nor so big it hides them.
+      const tall = 0.65 * innerHeight / (2 * Math.tan(FOV * Math.PI / 360)) / s[2];
+      m.el.style.setProperty('--s', `${Math.max(26, Math.min(72, tall)).toFixed(0)}px`);
       m.el.style.left = `${s[0].toFixed(0)}px`;
       m.el.style.top = `${s[1].toFixed(0)}px`;
       seen.add(i);

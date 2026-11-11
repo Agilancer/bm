@@ -1,6 +1,6 @@
 // A knight on the UAL skeleton: layered animation, plate hits and wounds, and the brain.
 import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, C_PROPS, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH, PROPS_PER_CHAR, TACTICS } from '../core/layout.js';
-import { carryFrame, carryMat4, carryPalette } from '../core/carry.js';
+import { carryFrame, carryMat4, carryPalette, carryPoint } from '../core/carry.js';
 import { clamp, damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, smoothstep, wrapAngle } from '../core/math.js';
 import { inTown } from '../core/town.js';
 import { Pose, solveFK, writePalette } from './anim.js';
@@ -1636,14 +1636,20 @@ export class Knight {
     // glides rather than standing and jumping (src/core/carry.js).
     const n = this.rig.count, fresh = !this.palKept || this.keptVer !== this.poseVer;
     const pal = this.palKept || (this.palKept = new Float32Array(n * 8)), props = this.propsKept || (this.propsKept = new Float32Array(PROPS_PER_CHAR * 16));
-    if (fresh) { this.keptVer = this.poseVer; writePalette(this.pose, pal, 0); this.writeProps(props, 0); }
+    const head = this.headKept || (this.headKept = new Float32Array(3));
+    if (fresh) {
+      this.keptVer = this.poseVer; writePalette(this.pose, pal, 0); this.writeProps(props, 0);
+      if (this.J.head !== undefined) for (let a = 0; a < 3; a++) head[a] = this.pose.wt[this.J.head * 3 + a];
+      else { head[0] = this.x; head[1] = this.y + 1.7; head[2] = this.z; }
+    }
     const c = this.posedYaw !== undefined && carryFrame(bodyCarry, this.posedYaw, this.posedX, this.posedY, this.posedZ, this.yaw, this.x, this.y, this.z) ? bodyCarry : null;
     if (c) {
       carryPalette(pal, 0, snap, cOff + C_PALETTE, n, c);
       for (let o = 0; o < PROPS_PER_CHAR * 16; o += 16) {
         if (props[o + 15] !== 0) carryMat4(props, o, snap, cOff + C_PROPS + o, c); else snap.set(props.subarray(o, o + 16), cOff + C_PROPS + o);
       }
-    } else { snap.set(pal, cOff + C_PALETTE); snap.set(props, cOff + C_PROPS); }
+      carryPoint(head, 0, snap, cOff + C.HEAD_X, c);
+    } else { snap.set(pal, cOff + C_PALETTE); snap.set(props, cOff + C_PROPS); snap.set(head, cOff + C.HEAD_X); }
     // The plates' frames, for where a blow lands and where the blood runs from: kept up whenever a blow could come (near the player,
     // in a fight) or he's bleeding. Otherwise worked out when something asks (plateTransforms, from the snapshot).
     if (fresh || c && (this.bleeds.length || this.combat > 0.05 || this.foe || !sim.poseGap || !sim.poseGap(this, this.lodSlot))) this.plateTransforms(snap, cOff, sim.tick);
