@@ -147,7 +147,7 @@ screen is still what you hit. Which view you left it in is kept with the setting
 
 #### Gear on the body
 
-The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle, tunic, legs
+The robes you wear show on him. A **set** of gear is one picture: his whole colour map with the hat, mantle (the shoulder guards, the sleeves under them and the collar), tunic, legs
 and boots painted new. `assets/game/player/parts.png` says which of those five every texel of the map is, so the pieces
 mix: wear the Crimson hat and the Ashen boots and he has one set's hat and another's boots (`src/gfx/bodyskin.js`: the
 map is mixed on a canvas when what you wear changes, and the body's colour swapped for it). Which set a piece wears is

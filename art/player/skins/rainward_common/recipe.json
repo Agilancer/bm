@@ -7,11 +7,11 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/rainward_common_cloth.png",
+   "swatch": "swatches/rw_tunic.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1,
-   "shading": 0.8
+   "bright": 1.0,
+   "shading": 0.85
   },
   "trim": {
    "swatch": "swatches/rainward_common_binding.png",
@@ -21,56 +21,69 @@
    "shading": 0.4
   },
   "leather": {
-   "swatch": "swatches/rainward_common_leather.png",
+   "swatch": "swatches/rw_soot.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.12,
-   "shading": 0.75
+   "bright": 1.0,
+   "shading": 0.85,
+   "keep": 0.2
   },
   "keep_trim": true
  },
  "parts": {
-  "head": {},
-  "shoulders": {
+  "head": {
    "cloth": {
-    "swatch": "swatches/rainward_common_accent.png",
+    "swatch": "swatches/rw_hat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.03,
-    "shading": 0.8
+    "bright": 1.0,
+    "shading": 0.85
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/rw_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
    }
   },
   "chest": {},
   "legs": {
    "cloth": {
-    "swatch": "swatches/rainward_common_accent.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.8
-   },
-   "leather": {
-    "swatch": "swatches/rainward_common_leather.png",
+    "swatch": "swatches/rw_soot.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.96,
-    "shading": 0.8
+    "bright": 1.25,
+    "shading": 0.95,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/rw_soot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.2
    }
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/rainward_common_leather.png",
+    "swatch": "swatches/rw_soot.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.8
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
    },
    "leather": {
-    "swatch": "swatches/rainward_common_leather.png",
+    "swatch": "swatches/rw_soot.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.1,
-    "shading": 0.75
+    "bright": 1.05,
+    "shading": 0.85,
+    "keep": 0.2
    }
   }
  }
