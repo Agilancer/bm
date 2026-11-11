@@ -76,7 +76,7 @@ export class Casting {
   // How far the sword arm alone has gone down, for a shield that stays up.
   get armDown() { return smooth(this.armLower); }
   // What a spell does to how fast its target runs: frozen stops, chilled drags.
-  rate(k) { const a = this.aff.get(k); return !a ? 1 : a.freeze > 0 ? 0 : a.slow > 0 ? 0.5 : 1; }
+  rate(k) { const a = this.aff.get(k); return !a || k.keeper ? 1 : a.freeze > 0 ? 0 : a.slow > 0 ? 0.5 : 1; }
   // And to how fast you walk with your hands up.
   get drag() { return this.state === 'hold' || this.state === 'gather' ? 0.68 : this.state === 'idle' ? 1 : 0.85; }
 
@@ -468,7 +468,8 @@ export class Casting {
   // ---- what they do to whoever's there ----
 
   hurt(sim, k, dmg, elem, x, y, z, fromX, fromZ, poise = dmg * 0.7, kind = 'gash') {
-    if (k.dead) return;
+    // (Nothing of yours harms Tessariel's town guard: src/sim/town-watch.js.)
+    if (k.dead || k.keeper) return;
     // A knight's raised shield takes most of a spell from the front.
     if (k.spellGuard) { const through = k.spellGuard(sim, fromX, fromZ, dmg); dmg *= through; poise *= through; }
     // (A jelly's own make-up: amber shrugs off fire, pitch burns: src/sim/slimes.js SPECIES resist.)
@@ -485,6 +486,7 @@ export class Casting {
   }
 
   shove(k, vx, vz, up = 0) {
+    if (k.keeper) return;
     const a = this.affOf(k);
     a.vx += vx; a.vz += vz;
     if (up > 0) a.vh = Math.max(a.vh, up);
@@ -557,6 +559,7 @@ export class Casting {
   // Frozen for so long, less each time within a few seconds of the last thaw, and less again for the great ones: a fight
   // can be slowed by ice, not held still by it.
   freezeFor(sim, f, secs) {
+    if (f.keeper) return;
     const a = this.affOf(f), again = (a.thawAt ?? -1e9) > sim.time - 6;
     const s = secs * (again ? 0.35 : 1) * (f.maxHp >= 400 ? 0.4 : 1);
     if (s > a.freeze) { a.freeze = s; a.thawAt = sim.time + s; }
