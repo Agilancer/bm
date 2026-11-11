@@ -1847,15 +1847,17 @@ export class Brain {
   // does anywhere), and then on to the next dungeon.
   sweep(m, j) {
     let R = this.runState;
-    if (!R || R.key !== j.run) R = this.runState = { key: j.run, left: new Set(j.spots.map(([x, z]) => `${x},${z}`)), n: j.spots.length, t0: this.t, at: null, atT: 0 };
+    // (Its clocks run only while it's at the run itself, not while it fights, loots or goes to town.)
+    if (!R || R.key !== j.run) R = this.runState = { key: j.run, left: new Set(j.spots.map(([x, z]) => `${x},${z}`)), n: j.spots.length, t: 0, at: null, atT: 0 };
+    R.t += 0.12;
     const left = j.spots.filter(([x, z]) => R.left.has(`${x},${z}`));
-    if (!left.length || this.t - R.t0 > RUN_TIME) { this.ranDungeon(j.run); return; }
+    if (!left.length || R.t > RUN_TIME) { this.ranDungeon(j.run); return; }
     this.say(`${j.say} (${R.n - left.length} of ${R.n}).`);
     const p = left.reduce((a, b) => (dist(m.x, m.z, a[0], a[1]) <= dist(m.x, m.z, b[0], b[1]) ? a : b));
     const k = `${p[0]},${p[1]}`;
-    if (R.at !== k) { R.at = k; R.atT = this.t; R.look = 0; }
+    if (R.at !== k) { R.at = k; R.atT = R.t; R.look = 0; }
     // (A spot it can't get to, or can't get to in time: left.)
-    if (this.noWay || this.t - R.atT > SPOT_TIME) { this.noWay = null; R.left.delete(k); R.at = null; return; }
+    if (this.noWay || R.t - R.atT > SPOT_TIME) { this.noWay = null; R.left.delete(k); R.at = null; return; }
     if (dist(m.x, m.z, p[0], p[1]) < 4) {
       this.halt();
       this.face = this.o.input.yaw + 0.9;
