@@ -28,6 +28,8 @@ class Builder:
         self.mats = {}
 
     def tri(self, mat, ps, uvs, normals=None):
+        if mat == "timber":
+            mat, uvs = TIMBER[0], timber_uv(ps)
         m = self.mats.setdefault(mat, {"p": [], "uv": [], "n": []})
         if normals is None:
             a, b, c = ps
@@ -40,6 +42,8 @@ class Builder:
     def quad(self, mat, a, b, c, d, uva=(0, 1), uvb=(1, 1), uvc=(1, 0), uvd=(0, 0), normal=None):
         """Counter-clockwise from the outside: a bottom-left, b bottom-right, c top-right, d top-left."""
         ns = None if normal is None else (normal, normal, normal)
+        if mat == "timber":
+            mat, (uva, uvb, uvc, uvd) = TIMBER[0], timber_uv((a, b, c, d))
         self.tri(mat, (a, b, c), (uva, uvb, uvc), ns)
         self.tri(mat, (a, c, d), (uva, uvc, uvd), ns)
 
@@ -63,6 +67,31 @@ def cross(a, b):
 def norm(a):
     ln = math.sqrt(a[0] ** 2 + a[1] ** 2 + a[2] ** 2) or 1
     return (a[0] / ln, a[1] / ln, a[2] / ln)
+
+
+# A house's own timber (its corner posts, the girt its upper floor rests on, its barge boards, its door's frame) is cut from the
+# same oak as the timber painted on its walls: a beam that runs the whole width of one of the wall paintings (wall_07, rows 440
+# to 502 of 1024), laid along each piece's length. "timber" as a material means that. (The plank in "wood" is a redder, newer
+# wood: right for a stall or a cart, wrong against the walls.)
+TIMBER = ("wall_07", 440 / 1024, 502 / 1024, 4.6)     # the painting, the beam's top and bottom in it, and metres to its width
+
+
+def timber_uv(ps):
+    """Where each corner of a flat piece of timber falls in the painted beam: the grain along its longest edge, the beam's width across it."""
+    _, v0, v1, wide = TIMBER
+    n = len(ps)
+    e = max((sub(ps[(i + 1) % n], ps[i]) for i in range(n)), key=lambda d: d[0] ** 2 + d[1] ** 2 + d[2] ** 2)
+    e = norm(e)
+    nrm = (0.0, 0.0, 0.0)
+    for i in range(1, n - 1):
+        nrm = add(nrm, cross(sub(ps[i], ps[0]), sub(ps[i + 1], ps[0])))
+    across = norm(cross(norm(nrm), e))
+    dot = lambda a, b: a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    ss, ts = [dot(p, e) for p in ps], [dot(p, across) for p in ps]
+    t0, span = min(ts), max(max(ts) - min(ts), 1e-6)
+    # (Each piece starts somewhere of its own along the beam, so no two are the same stretch of it.)
+    off = (math.sin(ps[0][0] * 12.9898 + ps[0][1] * 4.1414 + ps[0][2] * 78.233) * 43758.5453) % 1.0
+    return [(off + (s - ss[0]) / wide, v0 + (t - t0) / span * (v1 - v0)) for s, t in zip(ss, ts)]
 
 
 SUMMIT = (-512.0, 166.0, 146.0)       # (x, z, height): the top of the hill, in src/core/terrain.js.
@@ -263,6 +292,8 @@ def face(b, f, mat, pts, uvs, normal):
     """A flat convex face in frame f, wound so it faces along normal (local), as a fan."""
     n = f.d(*normal)
     ps = [f.p(*p) for p in pts]
+    if mat == "timber":
+        mat, uvs = TIMBER[0], timber_uv(ps)
     for i in range(1, len(ps) - 1):
         a, c, d = ps[0], ps[i], ps[i + 1]
         ua, uc, ud = uvs[0], uvs[i], uvs[i + 1]
@@ -314,7 +345,7 @@ def beam(b, f, mat, p0, p1, w, h, uv=0.4):
 ROOF_TH = 0.15       # how far the shingles stand above the rafters, straight up: so every plane's top meets its neighbour's on the same line as its rafters do
 
 
-def plane(S, f, mat, pts, tile, sag=0.0, under="wood", rows=5, cols=8):
+def plane(S, f, mat, pts, tile, sag=0.0, under="timber", rows=5, cols=8):
     """One plane of a roof, through a convex polygon whose first two points are its eave. A sag only ever dips the middle: every edge stays on the line it shares with what it meets."""
     b = S.b
     a = pts[0]
@@ -380,7 +411,7 @@ def cap(S, f, mat, p0, p1, tile, fall, wide=0.23, end=None):
     for at_, nrm in ((p0, scale(d, -1)), (p1, d)):
         rim_l = add(at_, (side[0] * wide, -wide * fall + 0.035, side[2] * wide))
         rim_r = add(at_, (-side[0] * wide, -wide * fall + 0.035, -side[2] * wide))
-        face(b, f, "wood", [rim_l, rim_r, add(at_, scale(up, 0.08))], [(0, 0), (0.2, 0), (0.1, 0.1)], nrm)
+        face(b, f, "timber", [rim_l, rim_r, add(at_, scale(up, 0.08))], [(0, 0), (0.2, 0), (0.1, 0.1)], nrm)
 
 
 class Roof:
@@ -404,7 +435,7 @@ class Roof:
     def fascia(self, x0, x1, z, y=None):
         """A board along the rafters' ends, under the shingles' edge."""
         b, y = self.S.b, self.ey if y is None else y
-        beam(b, self.R, "wood", (x0, y + ROOF_TH / 2 - 0.05, z), (x1, y + ROOF_TH / 2 - 0.05, z), 0.04, ROOF_TH / 2 + 0.05)
+        beam(b, self.R, "timber", (x0, y + ROOF_TH / 2 - 0.05, z), (x1, y + ROOF_TH / 2 - 0.05, z), 0.04, ROOF_TH / 2 + 0.05)
 
     def verge(self, x, sx, z_to=0.0):
         """Barge boards up one end, a pair that meets at the ridge (or stops under a half hip)."""
@@ -413,7 +444,7 @@ class Roof:
         for sz in (1, -1):
             e, top = self.ez + 0.02, z_to
             profile = [(sz * e, self.y_at(e) - 0.14), (sz * e, self.y_at(e) + ROOF_TH + 0.05), (sz * top, self.y_at(top) + ROOF_TH + 0.05), (sz * top, self.y_at(top) - 0.14)]
-            prism(b, R, "wood", x, x + sx * tk, profile)
+            prism(b, R, "timber", x, x + sx * tk, profile)
 
     def gable_wall(self, sx, z_top=0.0, x=None, y_top=None):
         """The end wall above the wall plate, closed right up under the rafters. To a point, or level under a half hip."""
@@ -426,8 +457,8 @@ class Roof:
         uvs = [((p[2] + hz) / self.gtile + 0.2, 1 - (p[1] - ye) / ax) for p in pts]
         face(b, R, self.gable_mat, pts, uvs, (sx, 0, 0))
         # The tie at its foot and a king post, standing proud.
-        box(b, R, "wood", x + sx * 0.04, ye + 0.03, 0, 0.08, 0.1, hz, uv_scale=(0.9, 0.2))
-        box(b, R, "wood", x + sx * 0.04, (ye + yt) / 2, 0, 0.07, (yt - ye) / 2, 0.08, uv_scale=(0.9, 0.3))
+        box(b, R, "timber", x + sx * 0.04, ye + 0.03, 0, 0.08, 0.1, hz, uv_scale=(0.9, 0.2))
+        box(b, R, "timber", x + sx * 0.04, (ye + yt) / 2, 0, 0.07, (yt - ye) / 2, 0.08, uv_scale=(0.9, 0.3))
 
     def slopes(self, x0=None, x1=None, cut=()):
         """The two long planes, end to end. cut: cross gables on the front (+z), whose valleys it stops at."""
@@ -469,7 +500,7 @@ class Roof:
             self.fascia(-ex, ex, sz * ez)
         for sx in (1, -1):
             plane(S, R, self.mat, [(sx * ex, ey, sx * ez), (sx * ex, ey, -sx * ez), (sx * rx, yr, 0)], self.tile, self.sag * 0.5, rows=4, cols=5)
-            beam(S.b, R, "wood", (sx * ex, ey + ROOF_TH / 2 - 0.05, -ez), (sx * ex, ey + ROOF_TH / 2 - 0.05, ez), 0.04, ROOF_TH / 2 + 0.05)
+            beam(S.b, R, "timber", (sx * ex, ey + ROOF_TH / 2 - 0.05, -ez), (sx * ex, ey + ROOF_TH / 2 - 0.05, ez), 0.04, ROOF_TH / 2 + 0.05)
             for sz in (1, -1):
                 cap(S, R, self.mat, (sx * ex, ey + ROOF_TH, sz * ez), (sx * rx, yr + ROOF_TH, 0), self.tile, t * 0.72, wide=0.18)
         if rx > 0:
@@ -489,7 +520,7 @@ class Roof:
             self.fascia(-ex, ex, sz * ez)
         for sx in (1, -1):
             plane(S, R, self.mat, [(sx * ex, yh, sx * zh), (sx * ex, yh, -sx * zh), (sx * xr, yr, 0)], self.tile, 0.0, rows=3, cols=3)
-            beam(S.b, R, "wood", (sx * ex, yh + ROOF_TH / 2 - 0.05, -zh), (sx * ex, yh + ROOF_TH / 2 - 0.05, zh), 0.04, ROOF_TH / 2 + 0.05)
+            beam(S.b, R, "timber", (sx * ex, yh + ROOF_TH / 2 - 0.05, -zh), (sx * ex, yh + ROOF_TH / 2 - 0.05, zh), 0.04, ROOF_TH / 2 + 0.05)
             for sz in (1, -1):
                 cap(S, R, self.mat, (sx * ex, yh + ROOF_TH, sz * zh), (sx * xr, yr + ROOF_TH, 0), self.tile, t * 0.72, wide=0.16)
             self.gable_wall(sx, z_top=zh - (ex - self.hx))
@@ -509,7 +540,7 @@ class Roof:
             plane(S, R, self.mat, [(xc + s * A, ey, ez), (xc, yc, zr), (xc, yc, ez)], self.tile, 0.0, rows=3, cols=3)
             # A board up each side of its front, meeting at its point.
             profile = [(s * A, ey - 0.14), (s * A, ey + ROOF_TH + 0.05), (0, yc + ROOF_TH + 0.05), (0, yc - 0.14)]
-            prism(S.b, R, "wood", ez, ez + 0.07, [(xc + q[0], q[1]) for q in profile], axis="z")
+            prism(S.b, R, "timber", ez, ez + 0.07, [(xc + q[0], q[1]) for q in profile], axis="z")
             # Its valley, lapped with a line of shingle.
             cap(S, R, self.mat, (xc + s * A, ey + ROOF_TH, ez), (xc, yc + ROOF_TH, zr), self.tile, -0.05, wide=0.13)
         cap(S, R, self.mat, (xc, yc + ROOF_TH, zr), (xc, yc + ROOF_TH, ez + 0.07), self.tile, t)
@@ -517,7 +548,7 @@ class Roof:
         ax = self.gtile * 1024 / 1792
         pts = [(xc - a, ye, hz), (xc + a, ye, hz), (xc, yc, hz)]
         face(S.b, R, self.gable_mat, pts, [((p[0] + a) / self.gtile, 1 - (p[1] - ye) / ax) for p in pts], (0, 0, 1))
-        box(S.b, R, "wood", xc, (ye + yc) / 2, hz + 0.04, 0.07, (yc - ye) / 2, 0.06, uv_scale=(0.9, 0.3))
+        box(S.b, R, "timber", xc, (ye + yc) / 2, hz + 0.04, 0.07, (yc - ye) / 2, 0.06, uv_scale=(0.9, 0.3))
         return (xc, A, zr, yc)
 
     def dormer(self, xd, z_sill, a=0.72, high=1.15, pane=True):
@@ -542,17 +573,17 @@ class Roof:
             # The cheek, down to the shingles.
             x = xd + s * a
             ch = [(x, ys - 0.1, z_sill), (x, yt + 0.02, z_sill), (x, yt + 0.02, z_at(yt))]
-            face(b, R, "wood", ch, [(0, 0), (0, 0.5), (0.6, 0.5)], (s, 0, 0))
-            prism(b, R, "wood", zf, zf + 0.05, [(xd + s * A, ey - 0.1), (xd + s * A, ey + ROOF_TH + 0.04), (xd, yc + ROOF_TH + 0.04), (xd, yc - 0.1)], axis="z")
+            face(b, R, "timber", ch, [(0, 0), (0, 0.5), (0.6, 0.5)], (s, 0, 0))
+            prism(b, R, "timber", zf, zf + 0.05, [(xd + s * A, ey - 0.1), (xd + s * A, ey + ROOF_TH + 0.04), (xd, yc + ROOF_TH + 0.04), (xd, yc - 0.1)], axis="z")
         cap(S, R, self.mat, (xd, yc + ROOF_TH, zr), (xd, yc + ROOF_TH, zf + 0.05), self.tile, td, wide=0.12)
         # Its front, and what stops it being hollow behind the board.
         ax = self.gtile * 1024 / 1792
         pts = [(xd - a, ys - 0.1, z_sill), (xd + a, ys - 0.1, z_sill), (xd + a, yt, z_sill), (xd, yc, z_sill), (xd - a, yt, z_sill)]
         face(b, R, self.gable_mat, pts, [((p[0] + a) / self.gtile, 1 - (p[1] - ys) / ax) for p in pts], (0, 0, 1))
         window(S, R, xd, ys + 0.1 + (high - 0.1) / 2, z_sill + 0.02, 1, w=a * 1.15, h=(high - 0.2) * 0.9)
-        box(b, R, "wood", xd - a, (ys + yt) / 2, z_sill + 0.02, 0.06, (yt - ys) / 2 + 0.05, 0.05, uv_scale=(0.9, 0.3))
-        box(b, R, "wood", xd + a, (ys + yt) / 2, z_sill + 0.02, 0.06, (yt - ys) / 2 + 0.05, 0.05, uv_scale=(0.9, 0.3))
-        box(b, R, "wood", xd, ys + 0.02, z_sill + 0.03, a + 0.08, 0.05, 0.06, uv_scale=(0.9, 0.2), grain="x")
+        box(b, R, "timber", xd - a, (ys + yt) / 2, z_sill + 0.02, 0.06, (yt - ys) / 2 + 0.05, 0.05, uv_scale=(0.9, 0.3))
+        box(b, R, "timber", xd + a, (ys + yt) / 2, z_sill + 0.02, 0.06, (yt - ys) / 2 + 0.05, 0.05, uv_scale=(0.9, 0.3))
+        box(b, R, "timber", xd, ys + 0.02, z_sill + 0.03, a + 0.08, 0.05, 0.06, uv_scale=(0.9, 0.2), grain="x")
 
 
 def window(S, f, x, y, z, facing=1, w=0.62, h=0.56, along_x=True):
@@ -686,17 +717,17 @@ def shed(S, f, x0, z0, x1, z1, yh, yl, down, mat="roof_1", tile=3.0, posts=True,
         run = abs(x1 - x0)
         drop = (yh - yl) / run
         pts = [(lo + dx * o, yl - o * drop, z0 - o), (lo + dx * o, yl - o * drop, z1 + o), (hi, yh, z1 + o), (hi, yh, z0 - o)]
-        beam(b, f, "wood", (lo + dx * o, yl - o * drop + ROOF_TH / 2 - 0.05, z0 - o), (lo + dx * o, yl - o * drop + ROOF_TH / 2 - 0.05, z1 + o), 0.04, ROOF_TH / 2 + 0.05)
+        beam(b, f, "timber", (lo + dx * o, yl - o * drop + ROOF_TH / 2 - 0.05, z0 - o), (lo + dx * o, yl - o * drop + ROOF_TH / 2 - 0.05, z1 + o), 0.04, ROOF_TH / 2 + 0.05)
         for z in (z0 - o, z1 + o):
-            beam(b, f, "wood", (lo + dx * o, yl - o * drop + ROOF_TH / 2 - 0.05, z), (hi, yh + ROOF_TH / 2 - 0.05, z), 0.04, ROOF_TH / 2 + 0.05)
+            beam(b, f, "timber", (lo + dx * o, yl - o * drop + ROOF_TH / 2 - 0.05, z), (hi, yh + ROOF_TH / 2 - 0.05, z), 0.04, ROOF_TH / 2 + 0.05)
     else:
         hi, lo = (z0, z1) if dz > 0 else (z1, z0)
         run = abs(z1 - z0)
         drop = (yh - yl) / run
         pts = [(x0 - o, yl - o * drop, lo + dz * o), (x1 + o, yl - o * drop, lo + dz * o), (x1 + o, yh, hi), (x0 - o, yh, hi)]
-        beam(b, f, "wood", (x0 - o, yl - o * drop + ROOF_TH / 2 - 0.05, lo + dz * o), (x1 + o, yl - o * drop + ROOF_TH / 2 - 0.05, lo + dz * o), 0.04, ROOF_TH / 2 + 0.05)
+        beam(b, f, "timber", (x0 - o, yl - o * drop + ROOF_TH / 2 - 0.05, lo + dz * o), (x1 + o, yl - o * drop + ROOF_TH / 2 - 0.05, lo + dz * o), 0.04, ROOF_TH / 2 + 0.05)
         for x in (x0 - o, x1 + o):
-            beam(b, f, "wood", (x, yl - o * drop + ROOF_TH / 2 - 0.05, lo + dz * o), (x, yh + ROOF_TH / 2 - 0.05, hi), 0.04, ROOF_TH / 2 + 0.05)
+            beam(b, f, "timber", (x, yl - o * drop + ROOF_TH / 2 - 0.05, lo + dz * o), (x, yh + ROOF_TH / 2 - 0.05, hi), 0.04, ROOF_TH / 2 + 0.05)
     plane(S, f, mat, pts, tile, 0.04, rows=3, cols=4)
     if posts:
         for px, pz in posts if isinstance(posts, (list, tuple)) else ((lo, z0), (lo, z1)) if dx else ((x0, lo), (x1, lo)):
@@ -704,7 +735,7 @@ def shed(S, f, x0, z0, x1, z1, yh, yl, down, mat="roof_1", tile=3.0, posts=True,
                 top = yl + abs(px - lo) * drop
             else:
                 top = yl + abs(pz - lo) * drop
-            box(b, f, "wood", px, top / 2 - 0.05, pz, 0.1, top / 2 + 0.05, 0.1, uv_scale=(0.9, 0.3))
+            box(b, f, "timber", px, top / 2 - 0.05, pz, 0.1, top / 2 + 0.05, 0.1, uv_scale=(0.9, 0.3))
     if walls:
         mat_w, tile_w = walls
         mx, mz = (x0 + x1) / 2, (z0 + z1) / 2
@@ -769,26 +800,29 @@ def house(S, cx, cz, yaw, w, d, sp):
         # Corner posts, and the girt the upper floor rests on.
         for sx in (-1, 1):
             for sz in (-1, 1):
-                box(b, f, "wood", sx * (hw + 0.03), h1 / 2 - 0.1, sz * (hd + 0.03), 0.17, h1 / 2 + 0.1, 0.17, uv_scale=(0.9, 0.3))
-        box(b, f, "wood", 0, h1 + 0.02, hd + 0.08, hw + 0.2, 0.13, 0.13, uv_scale=(0.9, 0.2), grain="x")
-        box(b, f, "wood", 0, h1 + 0.02, -hd - 0.08, hw + 0.2, 0.13, 0.13, uv_scale=(0.9, 0.2), grain="x")
-        box(b, f, "wood", hw + 0.08, h1 + 0.02, 0, 0.13, 0.13, hd, uv_scale=(0.9, 0.2))
-        box(b, f, "wood", -hw - 0.08, h1 + 0.02, 0, 0.13, 0.13, hd, uv_scale=(0.9, 0.2))
+                box(b, f, "timber", sx * (hw + 0.03), h1 / 2 - 0.1, sz * (hd + 0.03), 0.17, h1 / 2 + 0.1, 0.17, uv_scale=(0.9, 0.3))
+        # (Deep enough to close the wall from the ground floor's top to the upper floor's foot, 0.28 above it: a thinner one left a
+        # slit you could see daylight through all round every house whose upper floor doesn't overhang.)
+        gy, gh = h1 + 0.1, 0.21
+        box(b, f, "timber", 0, gy, hd + 0.08, hw + 0.2, gh, 0.13, uv_scale=(0.9, 0.2), grain="x")
+        box(b, f, "timber", 0, gy, -hd - 0.08, hw + 0.2, gh, 0.13, uv_scale=(0.9, 0.2), grain="x")
+        box(b, f, "timber", hw + 0.08, gy, 0, 0.13, gh, hd, uv_scale=(0.9, 0.2))
+        box(b, f, "timber", -hw - 0.08, gy, 0, 0.13, gh, hd, uv_scale=(0.9, 0.2))
     if jet > 0:
         # Joist ends under the overhang, front and back, and its underside closed.
         n_j = int(w / 0.85)
         for i in range(n_j + 1):
             x = -hw + i * w / n_j
             for sz in (-1, 1):
-                box(b, f, "wood", x, h1 + 0.2, sz * (hd + jet * 0.5), 0.08, 0.08, jet * 0.5 + 0.1, uv_scale=(0.5, 0.25))
+                box(b, f, "timber", x, h1 + 0.2, sz * (hd + jet * 0.5), 0.08, 0.08, jet * 0.5 + 0.1, uv_scale=(0.5, 0.25))
         for sz in (-1, 1):
             n = f.d(0, -1, 0)
             z_a, z_b = sz * hd, sz * (hd + jet)
             pa, pb, pc, pd = f.p(-hw, h1 + 0.28, z_a), f.p(hw, h1 + 0.28, z_a), f.p(hw, h1 + 0.28, z_b), f.p(-hw, h1 + 0.28, z_b)
             if sz > 0:
-                b.quad("wood", pa, pd, pc, pb, (0, 0), (0, 0.3), (2, 0.3), (2, 0), n)
+                b.quad("timber", pa, pd, pc, pb, (0, 0), (0, 0.3), (2, 0.3), (2, 0), n)
             else:
-                b.quad("wood", pa, pb, pc, pd, (0, 0), (2, 0), (2, 0.3), (0, 0.3), n)
+                b.quad("timber", pa, pb, pc, pd, (0, 0), (2, 0), (2, 0.3), (0, 0.3), n)
     # Upper floor.
     y0, y1 = h1 + 0.28, h1 + 0.28 + h2
     uz = hd + jet
@@ -806,7 +840,7 @@ def house(S, cx, cz, yaw, w, d, sp):
     if timber:
         for sx in (-1, 1):
             for sz in (-1, 1):
-                box(b, f, "wood", sx * (hw + 0.02), (y0 + y1) / 2, sz * (uz + 0.02), 0.13, h2 / 2 + 0.02, 0.13, uv_scale=(0.9, 0.3))
+                box(b, f, "timber", sx * (hw + 0.02), (y0 + y1) / 2, sz * (uz + 0.02), 0.13, h2 / 2 + 0.02, 0.13, uv_scale=(0.9, 0.3))
     else:
         # Dressed quoins up each corner, and a string course where the floor is.
         for sx in (-1, 1):
@@ -820,10 +854,11 @@ def house(S, cx, cz, yaw, w, d, sp):
                     box(b, f, "stone", sx * (hw + 0.04), yq + 0.2, sz * (uz + 0.1 - (0.54 - run)), 0.06, 0.2, 0.54 - run, uv_scale=(0.42, 0.42))
                     yq += 0.42
                     k += 1
-        box(b, f, "stone", 0, y0 - 0.1, hd + 0.05, hw + 0.08, 0.09, 0.08, uv_scale=(0.42, 0.42), grain="x")
-        box(b, f, "stone", 0, y0 - 0.1, -hd - 0.05, hw + 0.08, 0.09, 0.08, uv_scale=(0.42, 0.42), grain="x")
-        box(b, f, "stone", hw + 0.05, y0 - 0.1, 0, 0.08, 0.09, hd, uv_scale=(0.42, 0.42))
-        box(b, f, "stone", -hw - 0.05, y0 - 0.1, 0, 0.08, 0.09, hd, uv_scale=(0.42, 0.42))
+        # (The course is as deep as the gap between the two floors' walls, and closes it.)
+        box(b, f, "stone", 0, y0 - 0.13, hd + 0.05, hw + 0.08, 0.17, 0.08, uv_scale=(0.42, 0.42), grain="x")
+        box(b, f, "stone", 0, y0 - 0.13, -hd - 0.05, hw + 0.08, 0.17, 0.08, uv_scale=(0.42, 0.42), grain="x")
+        box(b, f, "stone", hw + 0.05, y0 - 0.13, 0, 0.08, 0.17, hd, uv_scale=(0.42, 0.42))
+        box(b, f, "stone", -hw - 0.05, y0 - 0.13, 0, 0.08, 0.17, hd, uv_scale=(0.42, 0.42))
     win = dressed_window if sp.get("dressed") else window
     for wx, wy in sp.get("windows_front", []):
         win(S, f, wx, wy, uz + 0.015, 1)
@@ -841,7 +876,13 @@ def house(S, cx, cz, yaw, w, d, sp):
     # The roof, on a frame of its own whose x is the ridge.
     ye = y1 - 0.05
     along_z = sp.get("ridge") == "z"
-    R = Frame(cx, cz, yaw + math.pi / 2) if along_z else f
+    # (A ridge that runs front to back turns the frame a quarter. It's drawn as much bigger as the walls are, about the middle of
+    # the house as it stands: at its first size, about where it first stood, the roof sat small on the walls with their corners out past it.)
+    R = f
+    if along_z:
+        mid_ = f.p(0, 0, 0)
+        R = Frame(mid_[0], mid_[2], yaw + math.pi / 2)
+        R.k = f.k
     rf = Roof(S, R, sp, *((uz, hw) if along_z else (hw, uz)), ye)
     kind = sp.get("kind", "gable")
     if kind == "gable":
@@ -868,11 +909,11 @@ def house(S, cx, cz, yaw, w, d, sp):
     for dd in sp.get("doors", []):
         dx = dd["x"]
         dh = dd.get("h", 3.0)
-        fm = "stone" if stone_body else "wood"
+        fm = "stone" if stone_body else "timber"
         for sx in (-1, 1):
             box(b, f, fm, dx + sx * (DOOR_W / 2 + 0.05) / f.k, DOOR_H / 2, hd - 0.05, 0.08, DOOR_H / 2 + 0.05, 0.13, uv_scale=(0.42, 0.42) if stone_body else (0.9, 0.3))
         box(b, f, fm, dx, DOOR_H + 0.05, hd - 0.05, DOOR_W / 2 + 0.13, 0.08, 0.13, uv_scale=(0.42, 0.42) if stone_body else (0.9, 0.2), grain="x")
-        box(b, f, "wood", dx, 0.1, hd - 0.05, DOOR_W / 2, 0.06, 0.13, uv_scale=(0.9, 0.2), grain="x")
+        box(b, f, "timber", dx, 0.1, hd - 0.05, DOOR_W / 2, 0.06, 0.13, uv_scale=(0.9, 0.2), grain="x")
         box(b, f, "stone", dx, 0.03, hd + 0.34, 0.95, 0.09, 0.32, uv_scale=(0.3, 0.3))
         box(b, f, "stone", dx, -0.03, hd + 0.72, 1.15, 0.07, 0.3, uv_scale=(0.3, 0.3))
         S.doors.append({"p": [round(v, 3) for v in f.p(dx, 0, hd + 1.2)]})
@@ -903,8 +944,8 @@ def porch(S, f, x, z, hw, depth, y_top):
     """Posts and a little roof over a door."""
     b = S.b
     for s in (-1, 1):
-        box(b, f, "wood", x + s * hw, (y_top - 0.5) / 2, z + depth, 0.09, (y_top - 0.5) / 2 + 0.05, 0.09, uv_scale=(0.9, 0.3))
-        beam(b, f, "wood", (x + s * hw, y_top - 0.95, z + depth), (x + s * hw, y_top - 0.05, z + 0.03), 0.05, 0.05)
+        box(b, f, "timber", x + s * hw, (y_top - 0.5) / 2, z + depth, 0.09, (y_top - 0.5) / 2 + 0.05, 0.09, uv_scale=(0.9, 0.3))
+        beam(b, f, "timber", (x + s * hw, y_top - 0.95, z + depth), (x + s * hw, y_top - 0.05, z + 0.03), 0.05, 0.05)
     shed(S, f, x - hw, z, x + hw, z + depth, y_top, y_top - 0.55, (0, 1), mat="roof_2", tile=2.4, posts=False)
 
 

@@ -5,6 +5,7 @@
 // Where: a scatter everywhere, thicker in outcrops. Lining every road and path, kerb stones and broken bits along its edges
 // and a little gravel on it. In the woods, mossy boulders between the trunks. On the steeps and the far map's bare rock,
 // slabs and scree. In open snow, crags and slabs jutting out of it. Never in the town, on a place, in water, or on a road.
+import { oldChurchGround } from './town.js';
 import { CAVE_PATH, PATHS, PLOTS, ROADS, fbm, hash2, nearest, openingTerrain, segDist2, sstep, terrainHeight } from './terrain.js';
 import { forestAmount } from './forest.js';
 import { inCaveBox } from './opening.js';
@@ -58,6 +59,9 @@ export function roadEdge(x, z) {
 // Nowhere a stone may lie: the town, the church's ground, the houses' plots, the cave, the places, the water, the cliff's face.
 function barred(x, z) {
   if (Math.hypot(x, z) < TOWN) return true;
+  // (And the town's east end, built since on the ground the church stood on: the manor, the bakehouse and the herbalist's. A boulder
+  // lay against the herbalist's wall, and stones in the manor's forecourt.)
+  if (oldChurchGround(x, z) < 6) return true;
   if (churchSite(x, z) < 10) return true;
   for (const p of PLOTS) if (Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]) < 5) return true;
   if (openingTerrain && inCaveBox(x, z, 9)) return true;
