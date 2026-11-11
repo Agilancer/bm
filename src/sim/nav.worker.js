@@ -392,7 +392,12 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
     } else if (m.type === 'sight') {
       // (The Test Dungeon's door, as the page last saw it: shut, nothing's shot through it.)
       setHallDoor(!!m.hallOpen);
-      self.postMessage({ type: 'sight', id: m.id, result: sight(world, m.from, m.marks) });
+      // (And the world's doors as they stand, for this look only: a shut one stops a bolt, and a word. For walking they're
+      // all open here, since a door on its way it opens.)
+      if (m.doors !== undefined) world.setDoors(m.doors);
+      const result = sight(world, m.from, m.marks, 1.62, m.fat);
+      world.setDoors(-1);
+      self.postMessage({ type: 'sight', id: m.id, result });
     }
   } catch (err) {
     self.postMessage({ type: m.type, id: m.id, result: null, error: String(err?.message || err) });

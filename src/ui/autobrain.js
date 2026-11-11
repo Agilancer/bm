@@ -19,6 +19,9 @@
 //
 // Where it walks: in the town, the woods round it and the catacombs, by paths from src/sim/nav.worker.js; out in the countries,
 // by the roads (src/core/lands.js ROUTES) and across country, the pines stepped round by the same worker, and the woken seals.
+// On the nav ground it never walks at where it's going without a path: it waits for one, and with no way there it leaves it.
+// Through a door it goes square on, by a place a pace before its middle and one a pace beyond; and it never talks to anyone,
+// opens a chest or takes anything up with a wall between (within()).
 import * as LAYOUT from '../core/layout.js';
 import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
 import { CAVE_MOUTH, CAVE_OUT, OPENING, RUN_OUT } from '../core/opening.js';
@@ -260,7 +263,9 @@ class Nav {
     return new Promise((resolve) => {
       if (!this.ready) { resolve(null); return; }
       const id = ++this.id;
-      this.calls.set(id, resolve);
+      // (An answer that never comes, the thread fallen over, is no answer: nothing waits on it for ever.)
+      const late = setTimeout(() => { if (this.calls.delete(id)) resolve(null); }, 4000);
+      this.calls.set(id, (r) => { clearTimeout(late); resolve(r); });
       this.w.postMessage({ type, id, ...o });
     });
   }
@@ -332,6 +337,8 @@ export class Brain {
     this.kite = null; this.kiteCool = 0; this.dodgeCool = 0; this.dodgeSide = 1; this.reactT = 0; this.backedUp = 0; this.esc = null;
     this.guardT = 0; this.guardFor = 0; this.guardCool = 0; this.tapAt = -9; this.staffAt = -9; this.owed = null; this.spellAt = 0; this.comboAt = 0; this.frozenT = -99; this.pulledT = -99; this.fightSince = -99;
     this.sightMap = new Map(); this.sightBusy = false; this.sightT = 0; this.round = null;   // what it has a clean line to
+    this.reachMap = new Map(); this.reachBusy = false;                                       // what it could put a hand to
+    this.subAsk = false; this.noWay = null; this.wayPoint = null;                            // a path asked for; nowhere to go
     this.ride = null; this.rideHold = false; this.rideCool = 8;                              // on the shield in a fight
     this.used = {}; this.pullWait = 0;
     this.wobble = 0; this.wobbleT = 0; this.yawV = 0; this.pitchV = 0; this.surfCool = 0; this.surfAt = -9;
@@ -563,8 +570,8 @@ export class Brain {
     const fallen = m.town ? null : this.party(snap).find((h) => h.dead && dist(h.x, h.z, m.x, m.z) < 40);
     if (fallen && (this.fallenWait = (this.fallenWait || 0) + 0.12) < 10) { this.halt(); this.face = Math.atan2(fallen.x - m.x, fallen.z - m.z); this.say('Waiting for the party to get up.'); return; }
     if (!fallen) this.fallenWait = 0;
-    // What's underfoot, and the chests it passes.
-    if (!m.town && this.loot(m, foes)) return;
+    // What's underfoot, and the chests near by: out in the land, and in the town's houses.
+    if (this.loot(m, foes)) return;
     // The job in hand, or a new one.
     if ((this.planT -= 0.12) <= 0 || !this.job) { this.planT = 1.2; this.plan(m); }
     this.doJob(snap, m, foes);
@@ -731,7 +738,7 @@ export class Brain {
     const marks = list.length > 10 ? list.slice().sort((a, b) => a.d - b.d).slice(0, 10) : list;
     this.sightBusy = true; this.sightT = this.t;
     const ids = marks.map((f) => f.id), at = this.t;
-    this.nav.ask('sight', { from: [m.x, m.y + 1.62, m.z], marks: marks.map((f) => [f.x, f.y + (f.h || 1), f.z]), hallOpen: this.o.game.hallUI?.hall?.state === 'open' }).then((r) => {
+    this.nav.ask('sight', { from: [m.x, m.y + 1.62, m.z], marks: marks.map((f) => [f.x, f.y + (f.h || 1), f.z]), hallOpen: this.o.game.hallUI?.hall?.state === 'open', doors: this.o.shared.input[INPUT.DOORS] }).then((r) => {
       this.sightBusy = false;
       if (r) r.forEach(([clear, step], i) => this.sightMap.set(ids[i], { clear: clear > 0, step, t: at }));
       if (this.sightMap.size > 80) for (const [k, v] of this.sightMap) if (this.t - v.t > 5) this.sightMap.delete(k);
@@ -743,6 +750,24 @@ export class Brain {
   sees(f) { const v = this.sightMap.get(f.id); return v && this.t - v.t < 0.7 ? v : null; }
   // A clean shot at f, as far as it knows. (Before the nav thread's up, it shoots as it always did.)
   clean(f) { const v = this.sees(f); return v ? v.clear : !this.nav.ready; }
+
+  // Nothing between it and something it means to have a word with or put a hand to (someone in the town, a chest, a thing on
+  // the ground): no wall and no shut door, as the nav thread sees it from where it stands. The game's own E only measures
+  // how far, so through a house's wall it would take a quest from the street. True, false, or null while it doesn't know.
+  within(m, key, x, y, z) {
+    const v = this.reachMap.get(key);
+    if (!this.reachBusy && this.nav.ready && (!v || this.t - v.t > 0.2)) {
+      this.reachBusy = true;
+      const at = this.t;
+      this.nav.ask('sight', { from: [m.x, m.y + 1.5, m.z], marks: [[x, y, z]], fat: 0.05, hallOpen: this.o.game.hallUI?.hall?.state === 'open', doors: this.o.shared.input[INPUT.DOORS] }).then((r) => {
+        this.reachBusy = false;
+        if (r) this.reachMap.set(key, { clear: r[0][0] > 0, t: at });
+        if (this.reachMap.size > 40) for (const [k, q] of this.reachMap) if (this.t - q.t > 5) this.reachMap.delete(k);
+      });
+    }
+    // (Before the nav thread's up there's no one to ask: as it always was.)
+    return v && this.t - v.t < 0.8 ? v.clear : this.nav.ready ? null : true;
+  }
 
   // The way to walk to (x, z) round whatever's between, a step at a time: by the nav thread's paths, the Warrens' and the
   // Test Dungeon's own fields. For getting a line on something behind a wall.
@@ -1206,7 +1231,7 @@ export class Brain {
     const hunting = this.job?.kind === 'hunt';
     let best = null, bd = hunting ? 22 : 10;
     for (const d of g.drops.list) {
-      if (Math.abs(d.y - m.y) > 3 || this.skipping(d) || inTown(d.x, d.z, 2) || this.kept(m, d.x, d.z)) continue;
+      if (Math.abs(d.y - m.y) > 3 || this.skipping(d) || this.kept(m, d.x, d.z)) continue;
       if (!d.auto && !d.coins && !this.roomFor(d.item)) continue;
       const k = dist(m.x, m.z, d.x, d.z);
       if (k < bd) { bd = k; best = d; }
@@ -1215,7 +1240,10 @@ export class Brain {
       if (!this.lootT || this.lootFor !== best) { this.lootFor = best; this.lootT = this.t; }
       if (this.t - this.lootT > 9) { this.giveUp(best, 120); return false; }
       this.say(best.auto || best.coins ? 'Picking up what fell.' : 'Taking up something worth having.');
-      if (!best.auto && !best.coins && bd < 1.7) {
+      // (Never through a wall: round to it first.)
+      const reach = !best.auto && !best.coins && bd < 1.7 ? this.within(m, best, best.x, best.y + 0.3, best.z) : false;
+      if (reach === null) { this.halt(); return true; }
+      if (reach) {
         // E, as you'd press it; or, a step off from it, the same thing E does: a scroll read, the rest into the pack.
         if (g.nearDrop === best) g.takeNearest();
         else if (best.item.type === 'spell') {
@@ -1225,29 +1253,36 @@ export class Brain {
         return true;
       }
       // (Coin, orbs and stuff come to hand within two metres; gear wants E within that.)
-      this.goTo(best.x, best.z, best.auto || best.coins ? 1.1 : 1.2, false, false, m.below);
+      this.goTo(best.x, best.z, best.auto || best.coins ? 1.1 : bd < 1.7 ? 0.5 : 1.2, false, false, m.below);
+      if (this.noWay) { this.giveUp(best, 240); this.noWay = null; }
       return true;
     }
-    // A chest it's near and hasn't opened.
-    let ch = null, cd = hunting ? 40 : 14;
+    // A chest near by that it hasn't opened: every one, out in the land and in the town's houses (in at the door, and what's
+    // in it picked up as it spills). On its own floor only: it doesn't take stairs.
+    let ch = null, cd = hunting ? 40 : m.town ? 26 : 14;
     for (const c of g.chests.list) {
-      // (Not the houses' chests in the town: those are the townsfolk's.)
-      if (c.open || Math.abs(c.y - m.y) > 2.5 || this.skipping(c) || inTown(c.x, c.z, 4) || this.kept(m, c.x, c.z)) continue;
+      if (c.open || Math.abs(c.y - m.y) > 2.5 || this.skipping(c) || this.kept(m, c.x, c.z)) continue;
       const k = dist(m.x, m.z, c.x, c.z);
       if (k < cd) { cd = k; ch = c; }
     }
     if (ch) {
       if (!this.chestT || this.chestFor !== ch) { this.chestFor = ch; this.chestT = this.t; }
-      if (this.t - this.chestT > 25) { this.giveUp(ch, 600); return false; }
+      // (Somewhere it can't get to, or can't get a hand to: left, for a good while.)
+      if (this.t - this.chestT > (m.town ? 45 : 25)) { this.giveUp(ch, 600); return false; }
       this.say('Opening a chest.');
       if (cd < 2) {
-        this.face = Math.atan2(ch.x - m.x, ch.z - m.z);
-        this.halt();
-        if (g.nearChest === ch) g.takeNearest();
-        else if (cd < 1.6 && Math.abs(wrap(this.face - this.o.input.yaw)) < 0.3) { g.chests.open(ch); }
-        return true;
+        // (Never through a wall: a chest against the far side of one is walked round to, by the door.)
+        const reach = this.within(m, ch, ch.x, ch.y + 0.5, ch.z);
+        if (reach !== false) {
+          this.face = Math.atan2(ch.x - m.x, ch.z - m.z);
+          this.halt();
+          if (reach && g.nearChest === ch) g.takeNearest();
+          else if (reach && cd < 1.6 && Math.abs(wrap(this.face - this.o.input.yaw)) < 0.3) { g.chests.open(ch); }
+          return true;
+        }
       }
-      this.goTo(ch.x, ch.z, 1.2, false, false, m.below);
+      this.goTo(ch.x, ch.z, cd < 2 ? 0.5 : 1.2, false, false, m.below);
+      if (this.noWay) { this.giveUp(ch, 600); this.noWay = null; }
       return true;
     }
     return false;
@@ -1662,11 +1697,16 @@ export class Brain {
     if (!j.since) j.since = this.t;
     // (Upstairs, or somewhere it can't get to: later.)
     if (this.t - j.since > 75) { this.giveUp(`p:${j.who}`, 240); this.job = null; return; }
-    if (d < 2.1 && (dy < 1.3 || w.beyond)) {
+    // Face to face, and nothing between them: no wall, no shut door. (A quest isn't taken or handed in from the street
+    // through the side of a house: it goes in at the door.)
+    // (Near enough: a couple of strides, or as far as the game itself would take a word from: over a stall's counter.)
+    const near = (d < 2.1 || game.nearFolk?.i === j.who) && (dy < 1.3 || w.beyond);
+    const reach = near ? this.within(m, `p:${j.who}`, w.x, (w.beyond ? m.y : w.y ?? m.y) + 1.2, w.z) : false;
+    if (near && reach !== false) {
       this.halt();
       this.face = Math.atan2(w.x - m.x, w.z - m.z);
       if (w.busy === 12 || w.busy === 13) { this.giveUp(`p:${j.who}`, 30); this.job = null; return; }
-      if (Math.abs(wrap(this.face - this.o.input.yaw)) < 0.35 && (this.talkWait = (this.talkWait || 0) + 0.12) > 0.5) {
+      if (reach && Math.abs(wrap(this.face - this.o.input.yaw)) < 0.35 && (this.talkWait = (this.talkWait || 0) + 0.12) > 0.5) {
         this.talkWait = 0;
         if (game.nearFolk?.i === j.who) game.takeNearest(); else townUI.talk(j.who);
         if (townUI.open) this.talk = { who: j.who, why: j.why, n: 0, t: 0, shopped: false, sold: 0 };
@@ -1674,7 +1714,10 @@ export class Brain {
       return;
     }
     this.face = null;
-    this.goTo(w.x, w.z, 1.4, d > 12, true);
+    // (Close, with a wall between: on round to them, as near as a body can stand.)
+    this.goTo(w.x, w.z, near ? 0.5 : 1.4, d > 12, true);
+    // (No way to them at all: upstairs, shut in. Later.)
+    if (this.noWay) { this.noWay = null; this.giveUp(`p:${j.who}`, 240); this.job = null; }
   }
 
   // The talk panel: through the quest's lines, its offers taken, then the counter if that's what it came for.
@@ -1765,7 +1808,7 @@ export class Brain {
     const g = this.goal;
     if (!g || dist(g.x, g.z, x, z) > (person ? 2.5 : 3) || !!g.below !== below) {
       this.goal = { x, z, near, run, t: this.t, below };
-      this.macro = null; this.sub = null; this.subFor = null;
+      this.macro = null; this.sub = null; this.subFor = null; this.noWay = null;
     } else { g.near = near; g.run = run; if (person) { g.x = x; g.z = z; } }
   }
 
@@ -1813,20 +1856,66 @@ export class Brain {
     }
     const leg = edge || W;
     if (this.nav.inGrid(m.x, m.z, m.below) && this.nav.inGrid(leg.x, leg.z, edge ? m.below : !!W.below)) {
-      // (A fresh path when the leg changes, when what it's walking to has moved, and now and then anyway.)
-      if (this.subFor !== leg || (this.sub && this.t - this.subT > 12) || (this.subTo && dist(this.subTo[0], this.subTo[1], leg.x, leg.z) > 2.5)) {
-        this.subFor = leg; this.sub = null; this.subT = this.t; this.subTo = [leg.x, leg.z];
-        const want = leg, avoid = this.avoid(this.me(this.o.game.currentSnap()));
-        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid }).then((pts) => { if (this.subFor === want) { this.sub = pts || [[want.x, want.z]]; this.subT = this.t; } });
+      // A fresh path when the leg changes, when what it's walking to has moved, and now and then anyway. The one it has is
+      // kept till the new one's in, and with none yet it stands and waits for it (a moment): it never walks straight at
+      // where it's going, which is how it used to end up against a wall.
+      const fresh = this.subFor !== leg;
+      if (fresh) { this.sub = null; this.noWay = null; }
+      if (!this.subAsk && this.nav.ready && (fresh || this.t - this.subT > 12 || (this.subTo && dist(this.subTo[0], this.subTo[1], leg.x, leg.z) > 2.5))) {
+        this.subFor = leg; this.subT = this.t; this.subTo = [leg.x, leg.z]; this.subAsk = true;
+        const want = leg, avoid = this.avoid(this.me(this.o.game.currentSnap())).concat(this.lockedDoors());
+        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid }).then((pts) => {
+          this.subAsk = false;
+          if (this.subFor !== want) return;
+          this.subT = this.t;
+          // (No way there: said so, for whoever sent it to leave it be. walk() below, and loot() and approach().)
+          if (pts?.length) { this.sub = pts; this.noWay = null; } else { this.sub = null; this.noWay = { t: this.t }; }
+        });
       }
-      tx = leg.x; tz = leg.z;
-      if (this.sub) {
-        while (this.sub.length > 1 && dist(m.x, m.z, this.sub[0][0], this.sub[0][1]) < 0.9) this.sub.shift();
-        [tx, tz] = this.sub[0];
+      if (this.noWay) {
+        this.halt();
+        if (this.t - this.noWay.t > 0.6) { this.noWay = null; this.lost(); }
+        return;
       }
-      if (this.door(dt, m, tx - m.x, tz - m.z)) return;
-      this.steer(tx - m.x, tz - m.z, g.run && d > 8);
-      if (this.sub) this.lookOn(m, this.sub, g.run && d > 8);
+      const P = this.sub;
+      if (!P) {
+        // (No path yet. If the nav thread never comes up at all, straight on as it used to go.)
+        if (!this.nav.ready && this.t > 12) { if (!this.door(dt, m, leg.x - m.x, leg.z - m.z)) this.steer(leg.x - m.x, leg.z - m.z, false); } else this.halt();
+        return;
+      }
+      // On to the next point once it's at this one, or has gone by it: not from a stride short of it, since the way on from
+      // a corner is only clear from the corner. The two places either side of a doorway it stands on, each in turn.
+      while (P.length > 1) {
+        const [qx, qz, , door] = P[0], k = dist(m.x, m.z, qx, qz);
+        const gone = (m.x - qx) * (P[1][0] - qx) + (m.z - qz) * (P[1][1] - qz) > 0;
+        if (k < (door >= 0 ? 0.3 : 0.4) || (gone && k < 0.8 && !(door >= 0))) P.shift(); else break;
+      }
+      [tx, tz] = P[0];
+      const k = dist(m.x, m.z, tx, tz);
+      // Someone standing on the very place it's making for (one of the townsfolk just inside their door: they're stepped
+      // round, not walked through): pushing at it and getting no nearer, it goes on past, as you'd go round them.
+      const on = this.wayPoint;
+      if (!on || on.q !== P[0]) this.wayPoint = { q: P[0], best: k, stall: 0 };
+      else if (k < on.best - 0.04) { on.best = k; on.stall = 0; }
+      else if ((this.auto.mx || this.auto.mz) && k < 1.3 && (on.stall += dt) > 0.45) {
+        this.wayPoint = null;
+        if (P.length > 1) { P.shift(); [tx, tz] = P[0]; } else { this.halt(); return; }
+      }
+      // At the end of it, and no nearer to be got (whoever it came for is over a counter; that's as near as the wall allows): it stands.
+      if (P.length === 1 && k < 0.3) { this.halt(); return; }
+      // The doors on its way (the next few points say which): opened as it comes to them, and no others it passes.
+      const doors = new Set();
+      for (let q = 0; q < Math.min(3, P.length); q++) if (P[q][3] >= 0) doors.add(P[q][3]);
+      if (this.door(dt, m, tx - m.x, tz - m.z, doors)) return;
+      // A run where the way's long and straight; a walk by a wall, through a door, and coming up to a corner (a run takes a
+      // corner wide, into the far wall).
+      let run = g.run && d > 8;
+      if (run && k < 5) {
+        if (P[0][2]) run = false;
+        else if (P.length > 1 && Math.abs(wrap(Math.atan2(P[1][0] - tx, P[1][1] - tz) - Math.atan2(tx - m.x, tz - m.z))) > 0.6) run = false;
+      }
+      this.steer(tx - m.x, tz - m.z, run);
+      this.lookOn(m, P, run);
       if (!m.town) { const L = dist(m.x, m.z, W.x, W.z) || 1; this.board(dt, m, (W.x - m.x) / L, (W.z - m.z) / L, d); }
     } else {
       // Across country: a stretch at a time, by a short path round whatever stands in the way (a wall, a light well, a stand of
@@ -1861,13 +1950,14 @@ export class Brain {
 
   // A shut door on its way (a house's, the Sexton's): it stops, turns to face it, opens it as E does, and gives it a moment to
   // swing before it goes on. True while it's busy with one. (A locked one it leaves: its path shouldn't need it.)
-  door(dt, m, hx, hz) {
+  // ids: the doorways its path goes through (the nav thread's points say), so it doesn't open every door it walks past.
+  door(dt, m, hx, hz, ids = null) {
     const g = this.o.game;
     if (this.doorWait > 0) { this.doorWait -= dt; this.want = null; return true; }
     const L = Math.hypot(hx, hz) || 1;
     let best = null, bd = 2.8;
     for (const d of g.doors.doors) {
-      if (d.open || Math.abs(d.y - m.y) > 2.2 || g.locked(d)) continue;
+      if (d.open || Math.abs(d.y - m.y) > 2.2 || g.locked(d) || (ids && !ids.has(d.id))) continue;
       const dx = d.cx - m.x, dz = d.cz - m.z, k = Math.hypot(dx, dz);
       if (k > bd || k > d.reach + 0.8) continue;
       // (Ahead of it on its way, or right at it.)
@@ -2113,7 +2203,8 @@ export class Brain {
     // (The run-up to a ride on the shield is a few strides: it takes it on whatever breath it has.)
     this.running = w.run && a.mz > 0.6 && m.stam > (this.running ? 10 : this.ride ? 12 : 38);
     a.run = this.running;
-    this.unstick(dt, m, !surf);
+    // (Turning on the spot before a step isn't being stuck: only wanting to go and not going is.)
+    this.unstick(dt, m, !surf && (a.mx !== 0 || a.mz !== 0));
     if (this.stuck.act > 0) {
       this.stuck.actT -= dt;
       const sd = this.stuck.side;
@@ -2185,15 +2276,23 @@ export class Brain {
     if (S.n === 1 || S.n === 4) { this.o.shared.input[INPUT.JUMP] += 1; return; }
     if (S.n === 2 || S.n === 5) { S.act = 2; S.actT = 0.8; S.side = Math.random() < 0.5 ? -1 : 1; return; }
     if (S.n === 3 || S.n === 6) { S.act = 3; S.actT = 0.6; this.sub = null; this.subFor = null; this.loc = null; return; }
-    if (S.n >= 8) {
-      S.n = 0;
-      // Give it up for a while: whatever it was going for.
-      const j = this.job;
-      if (j?.kind === 'talk') this.giveUp(`p:${j.who}`, 120);
-      else if (j?.kind === 'hunt' && this.patrol) this.giveUp(`s:${this.patrol[0]},${this.patrol[1]}`, 240);
-      else if (j) this.giveUp(j.why, 90);
-      this.job = null; this.goal = null; this.macro = null; this.sub = null; this.patrol = null;
-    }
+    if (S.n >= 8) { S.n = 0; this.lost(); }
+  }
+
+  // Whatever it was going for can't be got to (no way there, or it's got nowhere for too long): left for a while, and
+  // something else found to do.
+  lost() {
+    const j = this.job;
+    if (j?.kind === 'talk') this.giveUp(`p:${j.who}`, 120);
+    else if (j?.kind === 'hunt' && this.patrol) this.giveUp(`s:${this.patrol[0]},${this.patrol[1]}`, 240);
+    else if (j) this.giveUp(j.why, 90);
+    this.job = null; this.goal = null; this.macro = null; this.sub = null; this.subFor = null; this.patrol = null;
+  }
+
+  // The doors it can't open yet (the Sexton's, before his quest), as circles for its paths to keep out of.
+  lockedDoors() {
+    const g = this.o.game;
+    return g.doors.doors.filter((d) => !d.open && g.locked(d)).map((d) => [d.cx, d.cz, 1.1]);
   }
 
   // ---- what the menu's for
