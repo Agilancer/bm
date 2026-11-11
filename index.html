@@ -198,16 +198,6 @@
   #spellbook { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; padding: calc(22px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(5,4,3,.82); backdrop-filter: blur(5px); z-index: 30; pointer-events: auto; overflow: auto; box-sizing: border-box; }
   #spellbook.open { display: flex; }
   #spellbook h2 { margin: 0 0 12px; font-size: 18px; font-weight: 400; letter-spacing: .3em; color: var(--gold); }
-  #spellGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 7px; width: min(1220px, 100%); flex: none; }
-  #spellGrid .card { --c: #ccc; position: relative; display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 8px 10px; font: inherit; color: #d7cdb8; background: rgba(20,15,10,.8); border: 1px solid rgba(201,163,92,.2); cursor: pointer; }
-  #spellGrid .card:hover { border-color: var(--c); background: rgba(34,26,18,.9); }
-  #spellGrid .card.on { border-color: var(--c); box-shadow: inset 0 0 22px -12px var(--c); }
-  #spellGrid .ic { flex: none; width: 34px; height: 34px; color: var(--c); }
-  #spellGrid .ic svg { display: block; width: 100%; height: 100%; }
-  #spellGrid .tx { display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 1.32; min-width: 0; }
-  #spellGrid .tx b { font-size: 14px; font-weight: 400; letter-spacing: .05em; color: #f0e5cd; }
-  #spellGrid .tx i { font-style: normal; font-size: 11px; color: var(--c); }
-  #spellGrid kbd { position: absolute; top: 6px; right: 8px; font: inherit; font-size: 10px; color: #8d8370; }
   #spellClose { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(18px + env(safe-area-inset-right)); padding: 6px 12px; font: inherit; color: var(--gold); background: none; border: 1px solid rgba(201,163,92,.45); cursor: pointer; }
   #bCast { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); }
   /* On a touch screen the slots sit left of the thumb buttons and do the casting themselves. */
@@ -225,9 +215,120 @@
   #spellSlots .ic { width: 34px; height: 34px; color: var(--c); }
   #spellSlots .ic svg { display: block; width: 100%; height: 100%; }
   #spellSlots .nm { font-size: 11px; letter-spacing: .03em; text-align: center; line-height: 1.15; }
-  #spellGrid .card.slotted { background: rgba(38,29,18,.9); }
-  #spellGrid .card kbd { font-size: 13px; color: var(--gold); }
-  #spellGrid .card kbd:empty { display: none; }
+  /* The six trees in the book (src/ui/skilltree.js): a tab a school, its picture, and what's picked out beside it. */
+  #treeTabs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: min(1240px, 100%); margin-bottom: 8px; flex: none; }
+  #treeTabs button { --c: #ccc; display: flex; align-items: baseline; gap: 7px; padding: 6px 14px; font: inherit; font-size: 14px; letter-spacing: .12em; color: #cfc3a8; background: rgba(20,15,10,.8); border: 1px solid rgba(201,163,92,.25); border-bottom: 2px solid transparent; cursor: pointer; }
+  #treeTabs button i { font-style: normal; font-size: 11px; color: #8d8370; }
+  #treeTabs button:hover { color: #f0e5cd; border-color: var(--c); }
+  #treeTabs button.on { color: var(--c); border-color: var(--c); border-bottom-color: var(--c); background: rgba(38,29,18,.95); }
+  #treePoints { margin-left: auto; padding: 5px 12px; font-size: 13px; letter-spacing: .06em; color: #8d8370; border: 1px solid rgba(201,163,92,.2); }
+  #treePoints.have { color: #1a140c; background: var(--gold); border-color: var(--gold); }
+  #treeWrap { display: flex; gap: 12px; width: min(1240px, 100%); flex: 1 1 auto; min-height: 0; align-items: stretch; }
+  #treeView { --c: #ccc; flex: 1 1 auto; min-width: 0; overflow: auto; background: rgba(12,9,6,.72); border: 1px solid rgba(201,163,92,.2); }
+  .tcanvas { position: relative; margin: 6px auto; }
+  .tcanvas > svg { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .tcanvas > svg path { fill: none; stroke: rgba(201,163,92,.22); stroke-width: 2; }
+  .tcanvas > svg path.on { stroke: var(--c); stroke-opacity: .8; }
+  .thead { position: absolute; top: 4px; text-align: center; font-size: 11px; letter-spacing: .1em; color: #8d8370; }
+  .tblurb { position: absolute; font-size: 11px; line-height: 1.35; color: #a89d86; }
+  .tnode { position: absolute; display: block; padding: 0; font: inherit; color: #6f675a; background: rgba(8,6,4,.85); border: 1px solid rgba(201,163,92,.25); cursor: pointer; transition: box-shadow .12s, border-color .12s, color .12s; }
+  .tnode.spell, .tnode.mastery { width: 56px; height: 56px; padding: 9px; box-sizing: border-box; }
+  .tnode.mastery { border-radius: 50%; }
+  .tnode.twig { width: 30px; height: 30px; padding: 6px; box-sizing: border-box; border-radius: 50%; }
+  .tnode svg { display: block; width: 100%; height: 100%; }
+  .tnode b { position: absolute; right: -4px; bottom: -6px; padding: 0 3px; font-size: 10px; font-weight: 400; color: #cfc3a8; background: #14100a; border: 1px solid rgba(201,163,92,.3); }
+  .tnode kbd { position: absolute; left: -4px; top: -6px; padding: 0 4px; font: inherit; font-size: 10px; color: #14100a; background: var(--gold); }
+  .tnode.known { color: var(--c); border-color: var(--c); box-shadow: inset 0 0 14px -8px var(--c); }
+  .tnode.full b { color: #14100a; background: var(--c); border-color: var(--c); }
+  .tnode.can { border-color: var(--gold); animation: tcan 1.6s ease-in-out infinite; }
+  .tnode.can:not(.known) { color: #cfc3a8; }
+  .tnode:hover { border-color: #f0e5cd; }
+  .tnode.sel { box-shadow: 0 0 0 2px #f0e5cd, 0 0 16px -2px var(--c); }
+  @keyframes tcan { 50% { box-shadow: 0 0 12px -1px var(--gold); } }
+  .tnode.sel.can { animation: none; }
+  .tname, .twname { position: absolute; text-align: center; pointer-events: none; color: #7d7566; }
+  .tname { font-size: 12px; letter-spacing: .03em; }
+  .twname { width: 86px; font-size: 10px; line-height: 1.15; }
+  .tname.known, .twname.known { color: #e7dcc4; }
+  #treeInfo { flex: 0 0 330px; overflow: auto; padding: 12px 14px; font-size: 13px; line-height: 1.4; color: #d7cdb8; background: rgba(20,15,10,.88); border: 1px solid rgba(201,163,92,.25); box-sizing: border-box; }
+  #treeInfo h3 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 18px; font-weight: 400; letter-spacing: .05em; }
+  #treeInfo h3 svg { width: 30px; height: 30px; flex: none; }
+  #treeInfo .tsub { margin: 3px 0 8px; font-size: 11px; letter-spacing: .05em; color: #a89d86; }
+  #treeInfo p { margin: 0 0 9px; }
+  #treeInfo table { width: 100%; margin-bottom: 10px; border-collapse: collapse; font-size: 12px; }
+  #treeInfo td { padding: 1px 0; color: #cfc3a8; }
+  #treeInfo td:nth-child(2) { padding-left: 8px; text-align: right; color: #f0e5cd; white-space: nowrap; }
+  #treeInfo td:nth-child(3) { width: 34%; padding-left: 8px; color: #9fe08a; white-space: nowrap; }
+  #treeInfo h4 { margin: 12px 0 5px; font-size: 11px; font-weight: 400; letter-spacing: .14em; text-transform: uppercase; color: #a89d86; }
+  #treeInfo button { font: inherit; cursor: pointer; }
+  .tspend { display: block; width: 100%; padding: 8px; font-size: 14px; letter-spacing: .06em; color: #14100a; background: var(--gold); border: 1px solid var(--gold); }
+  .tspend:hover { filter: brightness(1.15); }
+  .twhy { padding: 7px 9px; font-size: 12px; color: #c9b48a; border: 1px dashed rgba(201,163,92,.35); }
+  .tslots { display: flex; align-items: center; gap: 5px; margin-top: 9px; font-size: 12px; color: #a89d86; }
+  .tslots button { width: 30px; height: 28px; color: #e7dcc4; background: rgba(8,6,4,.8); border: 1px solid rgba(201,163,92,.4); }
+  .tslots button.on { color: #14100a; background: var(--gold); }
+  .tbranch { display: block; width: 100%; margin-bottom: 5px; padding: 6px 8px; text-align: left; color: #cfc3a8; background: rgba(8,6,4,.7); border: 1px solid rgba(201,163,92,.2); }
+  .tbranch:hover { border-color: var(--gold); }
+  .tbranch.on { border-color: #9fe08a; }
+  .tbranch b { font-weight: 400; color: #f0e5cd; }
+  .tbranch i { float: right; font-style: normal; font-size: 11px; color: #a89d86; }
+  .tbranch span { display: block; font-size: 12px; }
+  .tback { margin-top: 4px; padding: 4px 8px; color: var(--gold); background: none; border: 1px solid rgba(201,163,92,.3); }
+  .tfoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-top: 14px; padding-top: 9px; font-size: 12px; color: #a89d86; border-top: 1px solid rgba(201,163,92,.2); }
+  .tfoot button { padding: 4px 8px; font-size: 12px; color: #d9a08a; background: none; border: 1px solid rgba(217,160,138,.4); }
+  /* A narrow, tall screen: the tree, and under it what's picked out. */
+  @media (max-width: 860px) and (min-height: 521px) {
+    #treeWrap { flex-direction: column; flex: none; }
+    #treeView { flex: none; }
+    #treeInfo { flex: none; }
+    #spellSlots .lslot { min-height: 54px; }
+  }
+  /* A phone on its side: little height, so the slots are one thin row, the tree and what's picked out stand side by side and
+     each scrolls on its own, and the button that spends a point is at the top of its panel, in reach without scrolling. */
+  @media (max-height: 520px) {
+    #spellbook { padding: calc(6px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left)); overflow: hidden; align-items: stretch; }
+    #spellbook h2, #spellHint { display: none; }
+    #spellClose { top: calc(6px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); height: 40px; padding: 0 10px; font-size: 12px; }
+    #spellSlots { width: auto; margin: 0 76px 5px 0; gap: 4px; }
+    #spellSlots .lslot { flex-direction: row; justify-content: center; gap: 5px; min-height: 0; height: 40px; padding: 2px 4px 2px 15px; }
+    #spellSlots .lslot b { left: 4px; top: 1px; font-size: 11px; }
+    #spellSlots .ic { flex: none; width: 24px; height: 24px; }
+    #spellSlots .nm { font-size: 10px; line-height: 1.1; text-align: left; overflow: hidden; }
+    #treeTabs { width: auto; flex-wrap: nowrap; gap: 4px; margin-bottom: 5px; overflow-x: auto; }
+    #treeTabs button { flex: none; padding: 5px 9px; font-size: 12px; letter-spacing: .05em; }
+    #treeTabs button i { font-size: 10px; }
+    #treePoints { flex: none; padding: 4px 8px; font-size: 12px; }
+    #treeWrap { width: auto; gap: 6px; }
+    #treeInfo { display: flex; flex-direction: column; flex: 0 0 min(300px, 38%); padding: 8px 10px; font-size: 12px; }
+    #treeInfo > * { flex: none; }
+    #treeInfo h3 { order: -4; font-size: 15px; }
+    #treeInfo h3 svg { width: 22px; height: 22px; }
+    #treeInfo .tsub { order: -3; margin: 2px 0 6px; }
+    #treeInfo .tspend, #treeInfo .twhy { order: -2; margin-bottom: 6px; }
+    #treeInfo .tslots { order: -1; margin: 0 0 8px; flex-wrap: wrap; }
+    #treeInfo .tslots button { width: 32px; height: 32px; }
+    .tcanvas { margin: 2px; }
+    /* (Velscour's skull floats over the right of the screen: out of the way of what's being read, while the book is open.) */
+    #spellbook.open ~ #vskull, #spellbook.open ~ #vskullTag { display: none; }
+  }
+  /* And a small phone on its side: the slots are their pictures alone, and the tabs lose their counts, so the points still show. */
+  @media (max-height: 520px) and (max-width: 700px) {
+    #spellSlots .nm { display: none; }
+    #spellSlots .lslot { padding-left: 4px; }
+    #treeTabs button i { display: none; }
+    #treeTabs button { padding: 5px 7px; }
+  }
+  /* On the bar: a spell cooling, the points waiting, and what's on you. */
+  #spells .spell .cd { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 18px; color: #fff; text-shadow: 0 1px 3px #000; pointer-events: none; }
+  #spells .spell.cool { filter: saturate(.25) brightness(.6); }
+  #spells .spell.cool .cd { background: rgba(0,0,0,.45); }
+  #spellOpen { position: relative; }
+  #spellOpen.pts { color: #14100a; background: var(--gold); box-shadow: 0 0 12px -2px var(--gold); }
+  #spellOpen.pts::after { content: attr(data-n); position: absolute; right: -8px; top: -9px; padding: 0 4px; font-size: 10px; color: #14100a; background: #f0e5cd; border-radius: 7px; }
+  #buffs { position: absolute; left: 0; bottom: 100%; margin-bottom: 26px; display: flex; gap: 4px; pointer-events: none; }
+  #buffs span { --c: #ccc; position: relative; width: 26px; height: 26px; padding: 4px; box-sizing: border-box; color: var(--c); background: rgba(8,6,4,.7); border: 1px solid var(--c); border-radius: 50%; }
+  #buffs svg { display: block; width: 100%; height: 100%; }
+  #buffs i { position: absolute; right: -5px; bottom: -6px; padding: 0 2px; font-style: normal; font-size: 10px; color: #f0e5cd; background: #14100a; }
   #spellGhost { --c: #ccc; position: fixed; left: 0; top: 0; width: 38px; height: 38px; margin: -19px 0 0 -19px; display: none; z-index: 45; color: var(--c); pointer-events: none; filter: drop-shadow(0 2px 5px #000); }
   #spellGhost svg { display: block; width: 100%; height: 100%; }
 /* The opening (src/ui/opening.js): bars, eyes, flash, her words, the cards, hold to skip. */
@@ -300,7 +401,7 @@ body.op-handoff #cross{opacity:0;transition:none}
 <body>
 <canvas id="view"></canvas>
 
-<div id="spellbook"><h2>EQUIP SPELLS</h2><button id="spellClose">CLOSE</button><p id="spellHint"></p><div id="spellSlots"></div><div id="spellGrid"></div></div>
+<div id="spellbook"><h2>SPELLBOOK</h2><button id="spellClose">CLOSE</button><div id="spellSlots"></div><p id="spellHint"></p><div id="treeTabs"></div><div id="treeWrap"><div id="treeView"></div><div id="treeInfo"></div></div></div>
 <div id="spellGhost"></div>
 <div id="softCursor"></div>
 <div id="hud">

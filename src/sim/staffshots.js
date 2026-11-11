@@ -119,11 +119,13 @@ export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, cl
   };
   P.zone_stasis = function (z, dt, sim) {
     const def = z.def, e = def.elem, R = def.zoneR, open = smooth(z.t / 0.25), k = open * smooth((z.life - z.t) / 0.2);
-    for (const f of foes(sim)) {
+    // (Held by the one rule every hold goes by, Casting.holdFor: once, as it's caught, for what's left of the sphere's time;
+    // less for the great ones and for what was held a moment ago. Hung in time, not frozen: no half again from the blows.)
+    if (!z.echoed) for (const f of foes(sim)) {
       if (Math.hypot(f.x - z.x, chestOf(f) - z.y, f.z - z.z) > R + radiusOf(f) * 0.5) continue;
+      if (!z.held.has(f)) { z.held.add(f); this.holdFor(sim, f, z.life - z.t, false, true); }
       const a = this.affOf(f);
-      a.freeze = Math.max(a.freeze, 0.15); a.vx = 0; a.vz = 0;
-      z.held.add(f);
+      if (a.stun > 0) { a.vx = 0; a.vz = 0; }
     }
     this.fx(FX.ORB, e, z.x, z.y, z.z, R * k, 0, 1, 0, 0, 0.13 * k, 10 * k, R * 2.5, 0, z.seed);
     this.fx(FX.RUNE, e, z.x, z.g + 0.05, z.z, R * 1.05, 0, 1, 0, 0, 0.8 * k, 0, 0, z.t / z.life, z.seed);
@@ -141,6 +143,8 @@ export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, cl
     }
     sim.event(EV.SPELL_BOOM, e, z.x, z.y, z.z, 2);
     this.burst(FX.SHOCK, e, z.x, z.y, z.z, R, 0.3, 0.3, { alpha: 0.8, light: 20, lightR: 10 });
+    // (The spell's Temporal Echo: a second after time comes back, it comes back again.)
+    if (def.echo && !z.echoed) { this.zones.push({ ...z, def: { ...def, dmg: def.dmg * def.echo, zoneR: 0.01, hold: 1 }, t: 0, life: 1, echoed: true }); }
     return false;
   };
 
@@ -193,7 +197,7 @@ export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, cl
       let hit = this.foeOn(sim, ox, y, oz, ax, 0, az, reach, 0.25, seen);
       while (hit) {
         seen.add(hit.k);
-        if (hit.k.hostile) this.hurt(sim, hit.k, def.beamDmg, elem, ox + ax * hit.t, y, oz + az * hit.t, ox, oz, 12, 'puncture');
+        if (hit.k.hostile) { this.hurt(sim, hit.k, def.beamDmg, elem, ox + ax * hit.t, y, oz + az * hit.t, ox, oz, 12, 'puncture'); if (def.beamChill) this.affOf(hit.k).slow = Math.max(this.affOf(hit.k).slow, def.beamChill); }
         hit = this.foeOn(sim, ox, y, oz, ax, 0, az, reach, 0.25, seen);
       }
       this.burst(FX.BEAM, elem, ox, y, oz, 0.09, 0.02, 0.6, { ax, ay: 0, az, len: reach, extra: 0.06, light: 5, lightR: 4 });
@@ -371,6 +375,7 @@ export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, cl
       this.hurt(sim, foe, def.dmg, elem, x, y, z, x - b.vx * 0.01, z - b.vz * 0.01, 8, 'puncture');
       const a = this.affOf(foe);
       a.rot = Math.max(a.rot, def.bleed);
+      if (def.snare) a.slow = Math.max(a.slow, def.snare);   // (the spell's Briar branch)
     }
     this.burst(FX.FLARE, elem, x, y, z, 0.12, 0.45, 0.14);
   };
@@ -408,8 +413,12 @@ export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, cl
     this.fx(FX.RUNE, e, z.x, z.y + 0.05, z.z, def.spread + def.radius * 0.5, 0, 1, 0, 0, 0.8 * k, 4 * k, 4, z.t / z.life, z.seed);
     while (z.made < def.count && z.t > def.delay + z.made * 0.12) {
       const a = hash(z.seed + z.made) * TAU, r = Math.sqrt(hash(z.seed * 3 + z.made)) * def.spread;
-      const tx = z.x + Math.cos(a) * r, tz = z.z + Math.sin(a) * r, h = 22;
-      this.bolts.push({ def: { ...def, key: 'star' }, elem: e, x: tx + 4, y: z.y + h, z: tz + 2, vx: -4 * 2.4, vy: -h * 2.4, vz: -2 * 2.4, age: 0, size: 0.3, power: 1, grav: 0, through: null, seed: Math.random(), lashT: 0, maxAge: 2 });
+      let tx = z.x + Math.cos(a) * r, tz = z.z + Math.sin(a) * r;
+      const h = 22;
+      // (The spell's branches. Guided Stars: onto whoever is in the mark. The Great Star: the last is three times the blow, twice as wide.)
+      if (def.guided) { const marked = foes(sim).filter((f) => Math.hypot(f.x - z.x, f.z - z.z) < def.spread + def.radius); const f = marked[z.made % (marked.length || 1)]; if (f) { tx = f.x; tz = f.z; } }
+      const great = def.nova && z.made === def.count - 1;
+      this.bolts.push({ def: { ...def, key: 'star', ...(great ? { dmg: def.dmg * def.nova, radius: def.radius * 2 } : {}) }, elem: e, x: tx + 4, y: z.y + h, z: tz + 2, vx: -4 * 2.4, vy: -h * 2.4, vz: -2 * 2.4, age: 0, size: great ? 0.7 : 0.3, power: 1, grav: 0, through: null, seed: Math.random(), lashT: 0, maxAge: 2 });
       z.made++;
     }
   };
