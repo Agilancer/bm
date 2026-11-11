@@ -108,6 +108,7 @@ test('a dragoon dives with the spear in his fist: it points down the dive, stand
   const { sim, hero, foes, step } = stage('dragoon');
   for (const f of foes) f.x += 2;
   hero.foe = foes[0]; hero.gcd = 1e9; for (const q of hero.skills) q.t = 1e9;
+  hero.shotCd = 1e9;                                    // (no ordinary thrusts after it: those point the spear too)
   step(0.2);
   hero.skill(sim, 'jump', foes[0]);
   let aimedDown = false, planted = false, top = 0;
@@ -180,4 +181,34 @@ test('in a fight a hero of level 20 uses many of its moves, not one over and ove
     step(60, () => { if (!hero.foe) hero.foe = foes[0]; hero.hp = hero.maxHp; });
     assert.ok(used.size >= 6, `${cls} used ${used.size} moves in a minute: ${[...used].join(', ')}`);
   }
+});
+
+test('hired, each class fights at your side for a minute: it uses its moves, the healer from its place, and nothing breaks', () => {
+  for (const cls of CLASS_NAMES) {
+    const { sim, w, hero, foes, step } = stage(cls, 20, 5);
+    assert.ok(w.hire(0, { level: 20, stay: true, name: 'Bren' }), `${cls} is hired`);
+    assert.equal(hero.person.level, 20);
+    const used = new Set(), real = hero.skill.bind(hero);
+    hero.skill = (s, key, m) => { used.add(key); return real(s, key, m); };
+    hero.hold = 0;
+    for (const f of foes) { f.aggro = true; f.x -= 2; }
+    step(60, () => { hero.hp = hero.maxHp; for (const f of foes) f.aggro = true; });
+    assert.ok(used.size >= (cls === 'paladin' ? 2 : 4), `hired ${cls} used ${used.size} moves in a minute: ${[...used].join(', ')}`);
+    assert.ok(foes.some((f) => f.hits > 0), `hired ${cls} struck something`);
+    // A level from you: more moves to choose from, and more life.
+    const hp = hero.maxHp;
+    w.setLevel(hero, 30);
+    assert.ok(hero.maxHp > hp, `${cls} has more life at 30 than at 20`);
+  }
+});
+
+test('the world keeps pace with you: the other Tessariels are never far below your level, and never below where they began', () => {
+  const { w, hero } = stage('rogue', 6, 0);
+  const began = hero.person.level;
+  w.keepPace(2);
+  assert.equal(hero.person.level, began, 'a low level of yours takes nothing from them');
+  w.keepPace(30);
+  assert.ok(hero.person.level >= 27 && hero.person.level <= 33, `at your 30 they are ${hero.person.level}`);
+  w.keepPace(12);
+  assert.ok(hero.person.level >= began, 'and back down no further than where they began');
 });

@@ -1548,9 +1548,10 @@ class GameView {
     switch (code) {
       case 1: {
         // Blood thrown from a cut, the way (a, c) with how much (b): a gout along it, and a spatter every way. It falls and soaks in.
-        const n = Math.ceil(120 + 260 * b);
-        r.emit(0, n, x, y, z, a * 1.4, 0.75, c * 1.4, 0.55, 2.2, 6.5 + 3 * b, 0.0016, 0.009, 0.6, 1.5);
-        r.emit(0, Math.ceil(n * 0.5), x, y, z, 0, 1, 0, 1.5, 1, 4.5, 0.0014, 0.007, 0.5, 1.3);
+        // (Jets of it, in drops big enough to be seen across a field.)
+        const n = Math.ceil(160 + 340 * b);
+        r.emit(0, n, x, y, z, a * 1.5, 0.8, c * 1.5, 0.45, 2.6, 7.5 + 3.5 * b, 0.004, 0.02, 0.6, 1.5);
+        r.emit(0, Math.ceil(n * 0.4), x, y, z, 0, 1, 0, 1.4, 1, 5, 0.003, 0.014, 0.5, 1.3);
         au.play('splat', x, y, z, 0.3 + b * 0.35);
         break;
       }

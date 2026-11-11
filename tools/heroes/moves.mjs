@@ -21,6 +21,8 @@ const { chromium } = require('playwright');
 const args = process.argv.slice(2);
 const port = args.includes('--port') ? args[args.indexOf('--port') + 1] : (/^\d+$/.test(args[1] || '') ? args[1] : '8475');
 const plan = args[0] === 'all' ? await planAll(args.slice(1).filter((a, i, l) => !a.startsWith('--') && l[i - 1] !== '--port')) : JSON.parse(fs.readFileSync(args[0], 'utf8'));
+// (--plan: say what would be drawn, and stop.)
+if (args.includes('--plan')) { console.log(JSON.stringify(plan, null, 1)); process.exit(0); }
 
 // Every move, with how far off its foes stand, how long it is worth watching, and how far back to stand to see it.
 async function planAll(only) {
@@ -111,7 +113,8 @@ await ev(async ([x, z]) => { bm.cmd(19, 0, x, z - 46); await MV.wait(250); }, [b
 await ev(() => MV.step(2));
 console.log('you:', JSON.stringify(await ev(() => { const q = bm.snap(); return [q[2].toFixed(0), q[4].toFixed(0)]; })));
 // Everyone not wanted, well away.
-await ev(([x, z]) => { bm.heroes('at', { x: x + 400, z: z + 400 }); }, [bx, bz]);
+// (And held there: they'd walk back to their own business otherwise, through the picture.)
+await ev(([x, z]) => { bm.heroes('at', { x: x + 400, z: z + 400 }); bm.heroes('freeze', { seconds: 1e9 }); }, [bx, bz]);
 await ev(() => MV.step(4));
 
 if (plan.look) {
@@ -156,11 +159,14 @@ for (const s of plan.strips || []) {
   const files = [];
   for (let i = 0; i < n; i++) {
     const name = `mv_${s.name}_${String(i).padStart(2, '0')}`;
+    // (A clip looked through: held at each of n places between two fractions of it, "span": [from, to].)
+    if (s.clip) await ev(({ slot, clip, at }) => { bm.heroes('pose', { slot, clip, at }); }, { slot: who.slot, clip: s.clip, at: (s.span?.[0] ?? 0) + ((s.span?.[1] ?? 1) - (s.span?.[0] ?? 0)) * i / Math.max(1, n - 1) });
     await ev(async ({ every, name, first }) => { if (!first) await MV.step(every); await MV.frame(every / 90); await MV.shot(name); }, { every, name, first: i === 0 });
     files.push(path.join(root, name + '.png'));
+    if (s.log) { const h = await ev((slot) => MV.hero(slot), who.slot); console.log(`  ${i}: at ${h.x}, ${h.z} going ${h.spd} m/s, goal ${h.goal}, doing ${h.action}, foe ${h.foeAt}, hold ${h.hold}`); }
   }
   // (Out of the way again, and the fight let go.)
-  await ev(async ({ slot, bx, bz }) => { await MV.step(240); bm.heroes("at", { slot, x: bx + 400 + slot * 3, z: bz + 400 }); bm.heroes("task", { slot }); await MV.step(6); }, { slot: who.slot, bx, bz });
+  await ev(async ({ slot, bx, bz, s2 }) => { await MV.step(s2); bm.heroes("at", { slot, x: bx + 400 + slot * 3, z: bz + 400 }); bm.heroes("task", { slot }); bm.heroes("freeze", { slot, seconds: 1e9 }); bm.heroes("sweep"); bm.heroes("clear"); await MV.step(6); bm.cmd(8); await MV.wait(150); }, { slot: who.slot, bx, bz, s2: s.tail ?? 60 });
   sheets.push({ name: s.name, files, note: s.note || '' });
   console.log(`${s.name}: ${n} frames in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   } catch (e) { console.log(`${s.name}: FAILED: ${String(e).slice(0, 200)}`); break; }

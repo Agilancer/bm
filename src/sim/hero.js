@@ -62,9 +62,10 @@ const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreatu
 const BLOWS = {
   two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.24], dmg: 16, reach: 2.4 }, { clip: 'L_Chop', rate: 1.0, hit: [0.6], dmg: 15, reach: 2.3 }, { clip: 'Sword_Regular_C', rate: 0.9, hit: [0.33], dmg: 14, reach: 2.5 }],
   sword_board: [{ clip: 'Sword_Regular_A', rate: 0.8, hit: [0.55], dmg: 10, reach: 2.1 }, { clip: 'Sword_Regular_B', rate: 0.8, hit: [0.48], dmg: 10, reach: 2.0 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
-  lance: [{ clip: 'Sword_Regular_C', rate: 0.85, hit: [0.33], dmg: 14, reach: 3.1 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 7, reach: 1.6, knock: 5 }, { clip: 'Sword_Regular_A', rate: 0.8, hit: [0.55], dmg: 11, reach: 2.9 }],
+  // (A lance or a spear goes in point first: a straight arm down the line, the body behind it. THRUST below.)
+  lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 7, reach: 1.6, knock: 5 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
   daggers: [{ clip: 'Punch_Jab', rate: 1.2, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 7, reach: 1.4 }, { clip: 'Melee_Hook', rate: 0.9, hit: [0.5], dmg: 8, reach: 1.4 }, { clip: 'L_Slash', rate: 1.15, hit: [0.65], dmg: 9, reach: 1.6 }],
-  spear: [{ clip: 'Sword_Regular_C', rate: 0.9, hit: [0.33], dmg: 13, reach: 2.9 }, { clip: 'L_Chop', rate: 1.0, hit: [0.6], dmg: 12, reach: 2.4 }, { clip: 'Sword_Regular_Combo', rate: 0.85, hit: [0.08, 0.24, 0.51], dmg: 7, reach: 2.6 }],
+  spear: [{ clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 13, reach: 2.9, thrust: true }, { clip: 'L_Chop', rate: 1.0, hit: [0.6], dmg: 12, reach: 2.4 }, { clip: 'Punch_Cross', rate: 1.5, hit: [0.42], dmg: 9, reach: 2.6, thrust: true }],
   boomerang: [{ clip: 'Punch_Jab', rate: 1.15, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 6, reach: 1.6, knock: 5 }],
   blade: [{ clip: 'Sword_Regular_A', rate: 0.85, hit: [0.55], dmg: 9, reach: 2.0 }, { clip: 'Sword_Regular_B', rate: 0.85, hit: [0.48], dmg: 9, reach: 1.9 }, { clip: 'L_Slash', rate: 1.1, hit: [0.65], dmg: 10, reach: 2.0 }],
   bow: [{ clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 5, reach: 1.6, knock: 6 }],
@@ -117,6 +118,8 @@ export class Hero extends Knight {
     this.blows = this.style === 'daggers' && person.cls === 'ninja' ? BLOWS.ninja : BLOWS[this.style] || BLOWS.blade;
     this.skills = [...(SKILLS[person.cls] || []), ...(MORE_SKILLS[person.cls] || [])].map((s) => ({ ...s, t: rand(1, s.cd) }));
     this.lean = PERSONAS[person.persona] || PERSONAS.earnest;
+    // The colour of the class: what its blows spark where they land.
+    this.hitElem = { paladin: ELEM.LIGHT, lancer: ELEM.STORM, archer: this.stringElem, rogue: ELEM.DRAIN, ninja: ELEM.SPIRIT, bard: ELEM.ARCANE }[person.cls] ?? tintOf({ person });
     this.r = rng(person.seed);
     // The left hand's grip, as the right's is for the sword: an item held in the left fist (a dagger, a boomerang).
     const grip = bank.grip.l;
@@ -242,6 +245,7 @@ export class Hero extends Knight {
   die(sim) {
     if (this.dead) return;
     this.dead = true; this.hp = 0; this.swing = null; this.surf = null; this.air = 0; this.jump = null; this.sitting = false;
+    this.aim = null; this.bodyFlip = 0; this.bodyRoll = 0; this.charge = null; this.tune = null; this.skirm = null;
     this.play('Death01', 1, 'full', 0.15);
     this.deadT = 0; this.combatTarget = 0; this.shieldTarget = 0;
     this.setState(S.DEAD);
@@ -261,6 +265,10 @@ export class Hero extends Knight {
     this.iframesT -= dt; this.guardT -= dt; this.kiteT -= dt; this.dodgeT -= dt; this.tauntCd -= dt; this.healCd -= dt; this.bigHealCd -= dt;
     if (this.buffT <= 0) this.buff = null;
     this.gcd -= dt; this.tumbleCd -= dt; this.wardT -= dt;
+    // (A weapon is pointed only while the move that pointed it lasts, however that move ends.)
+    if (this.aim && !this.swing?.aimed && !this.jump && !this.charge) this.aim = null;
+    // (A lancer in a fight carries the lance point up and forward between blows, not level through whatever stands before him.)
+    if (this.style === 'lance' && this.foe && !this.swing && !this.jump && !this.charge && !this.dead) this.aim = [Math.sin(this.yaw) * 0.55, 0.83, Math.cos(this.yaw) * 0.55];
     if (this.wardT <= 0) this.ward = 0;
     if (this.tune) { this.tune.t += dt; if (this.tune.t >= this.tune.dur || this.dead) this.tune = null; else if (this.visible) strumFx(this, sim, dt); }
     this.luteW = damp(this.luteW, this.tune && !this.dead ? 1 : 0, this.tune ? 12 : 7, dt);
@@ -507,23 +515,24 @@ export class Hero extends Knight {
     const speed = 1 + (this.buff?.dmg ? 0.1 : 0);
     const move = BLOW_MOVE[this.person.cls];
     if (move && this.r() < 0.06) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf(move));
-    const thrust = (this.style === 'lance' || this.style === 'spear') && b.clip !== 'L_ShieldJab' && b.clip !== 'L_Chop';
+    const thrust = !!b.thrust;
     this.combo++;
     this.startSwing(b.clip, b.rate * speed, b.hit, (i) => {
       let dmg = b.dmg * this.power();
       if (this.person.cls === 'rogue') dmg *= this.backstab(sim, m);
       if (thrust) this.thrust(sim, b.reach, dmg, b.knock || 0);
       else this.strikeAround(sim, b.reach, 1.0, dmg, b.knock || 0, 1);
-    }, { lunge: 2.2 });
+    }, { lunge: 2.2, aimed: thrust });
     this.shotCd = rand(0.25, 0.7);
   }
 
   // The lance's flash down the thrust, and everything on that line takes it.
   thrust(sim, reach, dmg, knock) {
     const lancer = this.person.cls === 'lancer', elem = lancer ? ELEM.STORM : ELEM.SPIRIT;
-    const ax = Math.sin(this.yaw), az = Math.cos(this.yaw), len = reach + 0.7;
+    const ax = Math.sin(this.yaw), az = Math.cos(this.yaw), len = 1.7;
     if (this.fxOk()) {
-      const h = this.handPos('r'), wd = (lancer ? 0.06 : 0.04) + 0.005 * Math.min(20, this.person.level);
+      // (Off the weapon's own point, a stride and a half on: not from the fist.)
+      const g = this.handPos('r'), tip = (this.mainP?.reach ?? 1.4) * 0.9, h = [g[0] + ax * tip, g[1] - 0.05 * tip, g[2] + az * tip], wd = (lancer ? 0.06 : 0.04) + 0.005 * Math.min(20, this.person.level);
       sim.casting.burst(FX.BEAM, elem, h[0], h[1], h[2], wd * 2.6, wd, 0.2, { ax, ay: 0, az, len, alpha: 0.35, extra: wd * 0.5 });
       sim.casting.burst(FX.BEAM, elem, h[0], h[1], h[2], wd, wd * 0.5, 0.2, { ax, ay: 0, az, len: len + 0.3, light: 6, lightR: 3, extra: wd * 0.3 });
       sim.casting.burst(FX.FLARE, lancer ? ELEM.LIGHT : elem, h[0] + ax * (len + 0.3), h[1], h[2] + az * (len + 0.3), 0.35, 0.08, 0.16);
@@ -536,7 +545,7 @@ export class Hero extends Knight {
   // From behind (within 60 degrees of its back), a blow counts nearly double.
   backstab(sim, m) {
     if (!m || Math.abs(wrapAngle(Math.atan2(this.x - m.x, this.z - m.z) - (m.yaw ?? 0))) < 2.1) return 1;
-    if (this.fxOk()) sim.casting.burst(FX.FLARE, ELEM.DRAIN, m.x, m.y + 1.2, m.z, 0.45, 0.1, 0.25, { light: 8, lightR: 4 });
+    if (this.fxOk()) sim.casting.burst(FX.FLARE, ELEM.DRAIN, m.x, m.y + 1.2, m.z, 0.3, 0.08, 0.14);
     if (this.r() < 0.12 && sim.time - this.lastSay > 6) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf('backstab'));
     return 1.8;
   }
@@ -550,7 +559,7 @@ export class Hero extends Knight {
   startSwing(clip, rate, hits, fn, o = {}) {
     if (!this.bank.clips[clip]) clip = 'Sword_Regular_A';
     this.play(clip, rate, o.mask || 'full', 0.1);
-    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut };
+    this.swing = { clip: this.bank.clips[clip], hits, fn, done: 0, end: o.end ?? 0.92, lunge: o.lunge || 0, still: o.still, root: o.root, after: o.after, tick: o.tick, cut: o.cut, aimed: o.aimed };
   }
 
   runSwing(dt, sim) {
@@ -558,6 +567,9 @@ export class Hero extends Knight {
     if (!s) return;
     if (this.action !== s.clip) { this.swing = null; this.charge = null; s.cut?.(); return; }
     s.tick?.(dt, this.actT / s.clip.dur);
+    // A lance or a spear levelled at what it's for, whatever the clip's fist is doing with it: a thrust goes in point first
+    // (aimed: true), a sweep carries the point round (aimed: a turn for each moment of the clip).
+    if (s.aimed) { const a = typeof s.aimed === 'function' ? s.aimed(this.actT / s.clip.dur) : 0; this.aim = Array.isArray(a) ? a : [Math.sin(this.yaw + a), -0.05, Math.cos(this.yaw + a)]; }
     const f = this.actT / s.clip.dur;
     while (s.done < s.hits.length && f >= s.hits[s.done]) { s.fn(s.done, sim); s.done++; }
     if (s.lunge && s.done < s.hits.length && f > s.hits[s.done] - 0.25) {
@@ -631,6 +643,18 @@ export class Hero extends Knight {
       sim.casting.shove(m, dx / L * o.shove, dz / L * o.shove, o.up || 0);
     }
     if (o.bleed) w.bleed(this, m, dmg * 0.3);
+    // Where it lands: a spark of the class's own colour at the point of the blow, on the tick of it. A heavy blow takes one
+    // of the dead off its stride, and the heaviest, near you, holds the world a beat (as your own heavy blows do).
+    if (!o.dot && !o.quiet) {
+      if (this.fxOk()) {
+        const big = Math.min(1, poise / 100), e = o.elem ?? this.hitElem, dx = this.x - m.x, dz = this.z - m.z, L = Math.hypot(dx, dz) || 1, R0 = Math.min(radiusOf(m), 0.6);
+        const sx = m.x + dx / L * R0 * 0.6, sy = m.y + 1.15, sz = m.z + dz / L * R0 * 0.6;
+        sim.casting.burst(FX.FLARE, e, sx, sy, sz, 0.1 + big * 0.15, 0.35 + big * 0.55, 0.11);
+        sim.casting.burst(FX.GLYPH, e, sx, sy, sz, 0.12, 0.3 + big * 0.5, 0.12, { ay: 0, len: Math.random() * 6.28, extra: 11, alpha: 0.8 });
+      }
+      if (poise >= 50 && !o.stun && m instanceof Zombie && !m.crawling && sim.time - (m.heroReelT ?? -9) > 0.8) { m.heroReelT = sim.time; m.reel?.(sim, 0.28, this); }
+      if (poise >= 90 && this.near < 22 && sim.time - (w.heldAt ?? -9) > 1.5) { w.heldAt = sim.time; sim.hitStop?.(0.055); }
+    }
     // The blow heard and seen where it lands (main.js, EV.BITE): steel on bone, or on a shell.
     if (!o.dot && !o.quiet && Math.hypot(sim.player.x - m.x, sim.player.z - m.z) < 60) sim.event(EV.BITE, m.x, m.y + 1.1, m.z, Math.min(1, dmg / 20), m instanceof Crab ? 0 : 1);
     if (was > 0 && m.hp <= 0) w.onKill(this, m);
@@ -691,19 +715,31 @@ export class Hero extends Knight {
         const len = Math.min(8.5, Math.hypot(m.x - this.x, m.z - this.z) + 1.4), T = len / 15;
         this.startSwing('Shield_Dash', 1.1 / (T + 0.3), [], () => {}, { root: true });
         this.charge = { dir: to, left: len, v: 15, hitSet: new Set() };
+        this.aim = [Math.sin(to), -0.03, Math.cos(to)];      // (the lance couched, level, the way he runs)
         this.iframesT = T + 0.05;
         break;
       }
       case 'shield_wall':
         // Behind the board for a few seconds, and little gets through it from any side.
         this.shieldTarget = 1;
-        this.startSwing('Idle_Shield_Loop', 1, [0.5], () => { this.guardT = 4; }, { still: true, end: 0.6, mask: 'upper' });
+        this.startSwing('Shield_OneShot', 1.3, [0.4], () => {
+          this.guardT = 4;
+          // Boards of light stood in a row before him for as long as it holds, a line on the ground, and everything near called onto him.
+          const yaw = this.yaw;
+          w.zones.push({ kind: 'fx', owner: this, t: 0, life: 4, draw: (c, z) => {
+            const k = Math.min(1, z.t * 5, (4 - z.t) * 3), fx = Math.sin(yaw), fz = Math.cos(yaw);
+            for (let i = -2; i <= 2; i++) { const a = yaw + i * 0.42, r = 1.25; c.fx(FX.KITE, i % 2 ? ELEM.FROST : ELEM.STORM, this.x + Math.sin(a) * r, this.y + 1.0, this.z + Math.cos(a) * r, 0.62 * Math.min(1, z.t * 6 - Math.abs(i) * 0.3 + 0.6), Math.sin(a), 0, Math.cos(a), 0, 0.85 * k, i === 0 ? 6 * k : 0, 5, 0.3, i); }
+            c.fx(FX.RING, ELEM.STORM, this.x + fx * 0.3, this.y + 0.06, this.z + fz * 0.3, 1.5, 0, 1, 0, 0, 0.6 * k);
+          } });
+          for (const k of w.targets) if (fightable(k) && Math.hypot(k.x - this.x, k.z - this.z) < 8) { k.tauntBy = this; k.tauntT = sim.time + 4; k.heroFoe = this; k.heroFoeT = sim.time; }
+          if (this.fxOk()) { sim.casting.burst(FX.RING, ELEM.STORM, this.x, this.y + 0.06, this.z, 1, 8, 0.5, { alpha: 0.7 }); sim.event(EV.HERO_FX, 3, this.x + Math.sin(yaw), this.y + 1.1, this.z + Math.cos(yaw), 30); }
+        }, { still: true, end: 0.9 });
         break;
       case 'shield_bash':
-        this.startSwing('L_ShieldJab', 1.2, [0.55], () => {
+        this.startSwing('L_ShieldJab', 1.7, [0.55], () => {
           this.strikeAround(sim, 1.8, 0.6, 8 * this.power(), 0, 3, { kind: 'bash', poise: 70, stun: 1.1, shove: 6 });
-          if (this.fxOk()) { const f = this.ahead(0.8); sim.casting.burst(FX.RING, ELEM.STORM, f[0], f[1], f[2], 0.3, 0.9, 0.25, { ax: Math.sin(this.yaw), ay: 0, az: Math.cos(this.yaw) }); }
-        });
+          if (this.fxOk()) { const f = this.ahead(1.0); sim.casting.burst(FX.KITE, ELEM.STORM, f[0], f[1], f[2], 0.5, 1.1, 0.2, { ax: Math.sin(this.yaw), ay: 0, az: Math.cos(this.yaw), extra: 0.3 }); sim.casting.burst(FX.FLARE, ELEM.STORM, f[0], f[1], f[2], 0.3, 0.9, 0.14); sim.event(EV.HERO_FX, 3, f[0], f[1], f[2], 24); }
+        }, { lunge: 2 });
         break;
       case 'volley':
         // Five arrows in a wide fan.
@@ -2823,6 +2859,8 @@ export class HeroWorld {
       case 'face': hs.forEach((h) => { h.yaw = h.faceYaw = m.yaw ?? 0; }); break;
       // (Whatever's still in the air or on the ground from the last thing looked at, gone.)
       case 'clear': for (const z of this.zones) z.end?.(z); this.zones = []; for (const q of this.shots) q.end?.(q); this.shots = []; this.dots = []; this.timers = []; sim.casting.bursts = []; break;
+      // (And the dead that were stood up for it, put well away and after no one, so none wanders off to find you.)
+      case 'sweep': for (const k of sim.knights) if (k instanceof Zombie && !k.dormant && Math.hypot(k.x - p.x, k.z - p.z) < 140) { k.x += 600; k.z += 600; k.y = sim.world.height(k.x, k.z); k.aggro = false; k.heroFoe = null; k.tauntBy = null; } break;
       // (Set on whatever's nearest, to fight it as it would.)
       case 'attack': hs.forEach((h) => { const f = this.targets.filter(fightable).sort((a, b) => Math.hypot(a.x - h.x, a.z - h.z) - Math.hypot(b.x - h.x, b.z - h.z))[0]; if (f) { h.foe = f; h.hold = 0; h.shotCd = 0; } }); break;
       // (Something to hit, for looking at a move: n of the plain dead up out of the ground at a point, standing, after no one.)
