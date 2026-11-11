@@ -429,6 +429,7 @@ async function boot(plan, poolSize) {
   pack.load(null);
   const worldMap = new WorldMap(BASE, input.touch, renderer.landPool);
   worldMap.load(null);
+  worldMap.input = input;
   game.worldMap = worldMap;
   // What of the land you've seen.
   addPart('map', { save: () => worldMap.save(), load: (d) => worldMap.load(d) });
@@ -916,6 +917,7 @@ async function boot(plan, poolSize) {
     const now = worldMap.open;
     if (now !== was) audio.play(now ? 'mapOpen' : 'mapClose', null, 0, 0, 0.6, 1, false);
   };
+  worldMap.onClose = toggleMap;
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat || naming) return;
