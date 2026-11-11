@@ -87,7 +87,14 @@ export const MOBS = {
   hydra: { name: 'the Bone Hydra', danger: 8, sight: 'sight_bone_hydra' },
   black_knight: { name: 'the black knight', danger: 9, sight: 'sight_black_knight' },
   sentry: { name: 'the black sentry', danger: 9, sight: 'sight_dark_sentry' },
+  // The land's monsters that keep nearest the town (src/core/tripo-monsters.js LAIRS): the writers have no pool for them
+  // yet, so the heroes call them out with mob_sighted. (Added last: the script's events carry a mob by its place here.)
+  goblin: { name: 'goblins', danger: 1, sight: 'mob_sighted' },
+  kobold: { name: 'kobolds', danger: 1, sight: 'mob_sighted' },
+  spider: { name: 'the great spiders', danger: 2, sight: 'mob_sighted' },
 };
+// Which of those a Tripo monster is, by its group (src/sim/hero.js mobKind); the rest are only "monsters" to the heroes.
+export const TRIPO_MOB = { Goblins: 'goblin', Kobolds: 'kobold', 'Giant Spiders': 'spider' };
 export const MOB_KEYS = Object.keys(MOBS);
 
 // Where heroes go. kind: town (errands and talk), hunt (a ground with monsters), delve (an interior, walked abstractly),
@@ -117,6 +124,12 @@ export const PLACES = [
   // (Out east of the town, a field away: src/core/church.js. They gather below the steps and go in at the great door.)
   { id: 'cathedral', name: 'the Cathedral', kind: 'delve', spot: churchAt(52, 6), r: 4, door: CHURCH_DOOR },
   { id: 'summit', name: 'the Summit', kind: 'summit', spot: [SUMMIT.x, SUMMIT.z], r: SUMMIT.r - 4 },
+  // Further out, beside the roads the land's quests take you down: the nearest of the lairs past the town's own woods
+  // (src/core/tripo-monsters.js hill_kobolds, fenway_goblins, dark_spiders_ne: move one and move it here). A long walk, so
+  // the other Tessariels are met on the road now, not only in the square. (Added last, so every place before keeps its number.)
+  { id: 'hill_road_den', name: 'the kobolds\' den off the hill road', kind: 'hunt', spot: [741, 86], r: 20, mobs: ['kobold'] },
+  { id: 'fen_way_camp', name: 'the goblins\' camp on the Fen Way', kind: 'hunt', spot: [70, -480], r: 20, mobs: ['goblin'] },
+  { id: 'spider_wood', name: 'the spiders\' wood', kind: 'hunt', spot: [472, -509], r: 22, mobs: ['spider'] },
 ];
 export const PLACE_IDS = PLACES.map((p) => p.id);
 export const placeOf = (id) => PLACES.find((p) => p.id === id);

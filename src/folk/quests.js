@@ -9,14 +9,24 @@
 //   back   go back to the giver
 //   bring  bring the giver n of a material (items.js MATS); handed over at the giver
 //   start  take on a quest from each of a list of people, in any order (Lisandra's: src/folk/lines/lisandra.js)
+//   visit  get to every one of a list of places, in any order
+//   boss   put down one of the party dungeons' bosses, by its key (src/core/dungeon.js BOSSES); one already dead counts
+// A place (enter, kill, visit) is an area named below (AREAS), any of the land's places by its key (src/core/lands.js SITES),
+// a party dungeon by its key ('warrens', 'blackvigil', 'deeps': down inside it), or 'lair:<key>', the ground round one of the
+// monsters' lairs (src/core/tripo-monsters.js LAIRS). kill takes of: the one kind that counts (9 a jelly), or foe: the
+// monsters' groups that count (GROUPS' keys); at a lair only its own sort of monster counts.
+// bring takes at: where what's wanted is found, for the trail (a place as above).
 // wait: what's handed over is made overnight, and collected the next day.
 // item: a skull, staff or robe it pays, rare (src/ui/folk.js reward); rarity: exactly how fine, for a skull.
 import { churchAt, inChurch } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { QUESTS } from './lines/quests.js';
-import { SITES } from '../core/lands.js';
+import { SITES, countryAt } from '../core/lands.js';
 import { BY_ID, first } from './people.js';
 import { GIVERS } from './lines/lisandra.js';
+import * as DELVE from '../core/dungeon.js';
+import { LAIRS } from '../core/tripo-monsters.js';
+import { LAND_RULES } from './land-quests.js';
 
 export const RULES = {
   // Lisandra's, at the edge of town once she's walked you down: go round everyone with work and start each of their quests.
@@ -38,6 +48,8 @@ export const RULES = {
   black_road: { steps: [{ enter: 'keep' }, { back: true, say: 'I saw the keep at the end of the west road.' }], gold: 200, xp: 900 },
   crown_of_teeth: { needs: 'toll_of_bell', steps: [{ enter: 'crown' }, { back: true, say: "I've been to the top of the Sorrowhorn." }], item: 'scroll', gold: 150, xp: 1200 },
   barrow_lights: { steps: [{ enter: 'barrows', night: true }, { kill: 'barrows', n: 6, of: 9 }, { back: true, say: 'The lights were jellies. Full of bones.' }], gold: 140, xp: 700 },
+  // The small towns, the land's monsters and the party dungeons (src/folk/land-quests.js; words in src/folk/lines/land.js).
+  ...LAND_RULES,
 };
 
 // The Bell Crypt: the octagon where the stair down lets out (tools/interior/build_interior.py, Stage I), in the world.
@@ -55,6 +67,32 @@ const near = (k, s = 1) => (x, y, z) => Math.hypot(x - SITES[k].x, z - SITES[k].
 for (const k of ['belltower', 'abbey', 'chapel', 'shrine', 'keep', 'crown', 'barrows']) AREAS[k] = near(k, k === 'keep' ? 1.6 : 1.2);
 AREAS.millhaven = (x, y, z) => ['farm', 'mill', 'hamlet'].some((k) => near(k, 3)(x, y, z));
 AREAS.fen = (x, y, z) => Math.hypot(x - SITES.sallow.x, z - SITES.sallow.z) < 1500;
+// The Ashen Waste, all of it: the grey country the Vigil Road runs through.
+AREAS.waste = (x, y, z) => Math.hypot(x, z) > 1700 && y > -20 && countryAt(x, z) === 'ashen';
+// Any other of the land's places, by its key; down in a party dungeon, by its; and the ground round a lair.
+for (const k of Object.keys(SITES)) AREAS[k] ??= near(k, 1.2);
+for (const d of DELVE.DELVES || []) AREAS[d.key] = (x, y, z) => DELVE.delveAt?.(x, z) === d.key;
+export const LAIR_REACH = 70;
+for (const l of LAIRS) AREAS[`lair:${l.key}`] = (x, y, z) => Math.hypot(x - l.x, z - l.z) < l.r + LAIR_REACH;
+export const areaAt = (k, x, y, z) => !!AREAS[k]?.(x, y, z);
+export const hasArea = (k) => !!AREAS[k];
+
+// Where a party dungeon's portal stands, out in the land (for the trail and the map): { x, z }.
+export function delvePortal(key) {
+  const d = (DELVE.DELVES || []).find((q) => q.key === key);
+  if (d?.portal) return Array.isArray(d.portal) ? { x: d.portal[0], z: d.portal[1] } : d.portal;
+  if (key === 'warrens') return DELVE.PORTAL;
+  if (key === 'blackvigil') return { x: -4792, z: 128 };   // before the keep's gate, where the Vigil Road ends
+  if (key === 'deeps') return { x: SITES.deepsmouth.x, z: SITES.deepsmouth.z };
+  return null;
+}
+// Where a step's place is, to be led to: { x, z, near }, or null (the town's own, which src/ui/trail.js knows its ways to).
+export function placeSpot(k) {
+  if (k.startsWith('lair:')) { const l = LAIRS.find((q) => q.key === k.slice(5)); return l ? { x: l.x, z: l.z, near: l.r + 12 } : null; }
+  const p = delvePortal(k);
+  if (p) return { x: p.x, z: p.z, near: 3, delve: k };
+  return SITES[k] ? { x: SITES[k].x, z: SITES[k].z, near: SITES[k].r * 0.8 } : null;
+}
 
 // What of a list of lines can be said now. A line is a string (said any time), or a line kept for before or after something:
 //   { before: 'toll_of_bell', say }   until that quest is done (the bell still ringing)
@@ -203,18 +241,29 @@ export class QuestBook {
 
   // ---- what the world reports ----
 
-  // Something died at (x, y, z). kind as in drops.js: 8 a champion.
-  kill(x, y, z, kind) {
+  // Something died at (x, y, z). kind as in drops.js: 8 a champion. group: which of the land's monsters it was (a key of
+  // GROUPS in src/core/tripo-monsters.js), or null for anything else.
+  kill(x, y, z, kind, group = null) {
     for (const id of this.active()) {
       const st = this.step(id);
       if (!st) continue;
       if (st.warden && kind === 8 && AREAS.catacombs(x, y, z)) { this.on.toast('The warden is down. Somewhere above, a rope goes slack.', 'step'); this.advance(id); continue; }
       if (!st.kill || !AREAS[st.kill](x, y, z) || kind === 2 || (st.of != null && kind !== st.of)) continue;
+      if (st.foe ? !st.foe.includes(group) : st.kill.startsWith('lair:') && !group) continue;
       const s = this.q[id];
       s.n++;
       if (s.n >= st.n) this.advance(id);
       else { this.on.toast(`${QUESTS[id].title}: ${s.n} of ${st.n}`, 'count'); this.on.change(); }
     }
+  }
+
+  // One of the party dungeons' bosses is dead (EV.DELVE BOSS_DOWN, through src/main.js): remembered, so a quest taken after
+  // the kill is as good as done, and told to any quest waiting on it.
+  boss(key) {
+    if (!key) return;
+    this.flags.add(`boss:${key}`);
+    for (const id of this.active()) if (this.step(id)?.boss === key) this.advance(id);
+    this.on.change();
   }
 
   // Where the player is, every so often.
@@ -227,6 +276,8 @@ export class QuestBook {
     }
     for (const id of this.active()) {
       const st = this.step(id);
+      // (A boss that was dead before this was asked.)
+      if (st?.boss && this.flags.has(`boss:${st.boss}`)) { this.advance(id); continue; }
       // visit: every one of a list of places, in any order.
       if (st?.visit) {
         const s = this.q[id], k = st.visit.find((v) => !(s.seen || []).includes(v) && AREAS[v](x, y, z));

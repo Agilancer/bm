@@ -4,7 +4,7 @@
 import { accessor, parseGLB } from '../core/glb.js';
 import { F, F_PALETTE, FIN, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/layout.js';
 import { SKIRT_JOINTS } from '../folk/rig.js';
-import { PEOPLE } from '../folk/people.js';
+import { FOLK as PEOPLE } from '../folk/people.js';   // (the town's people and those posted out in the land)
 import { Blankets } from './blankets.js';
 import { FolkTools } from './folktools.js';
 import { bodyRadius, inCascade } from './shadowcull.js';

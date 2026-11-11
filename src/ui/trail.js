@@ -13,7 +13,8 @@ import { clamp, smoothstep } from '../core/math.js';
 import { OPENING } from '../core/opening.js';
 import { PATHS, ROADS } from '../core/terrain.js';
 import { inTown } from '../core/town.js';
-import { RULES } from '../folk/quests.js';
+import { RULES, areaAt, placeSpot } from '../folk/quests.js';
+import { BOSSES } from '../core/dungeon.js';
 import { CAMPS } from '../sim/slimes.js';
 import { QUESTS } from '../folk/lines/quests.js';
 
@@ -201,7 +202,7 @@ export class QuestTrail {
     };
     // (Something to bring: back to the giver once you have it all, else down among the dead where it's found.)
     if (st.back || (st.bring && (T.pack?.mats?.[st.bring] || 0) >= (st.n || 1))) return person(q.giver);
-    if (st.bring) return py < -6 && inChurch(px, py + 1, pz) ? null : below(CRYPT);
+    if (st.bring && !st.at) return py < -6 && inChurch(px, py + 1, pz) ? null : below(CRYPT);
     const site = (k) => ({ x: SITES[k].x, z: SITES[k].z, near: SITES[k].r * 0.8 });
     const place = (k, kill) => {
       if (k === 'catacombs') return kill && py < -6 && inChurch(px, py + 1, pz) ? null : below(CRYPT);
@@ -210,8 +211,13 @@ export class QuestTrail {
       // (The jellies keep the millpond, and wake only near it: not by the mill or the hamlet.)
       if (k === 'millhaven') { const c = CAMPS.find((q) => q.key === 'millpond'); return c ? { x: c.x, z: c.z, near: 20 } : site('farm'); }
       if (k === 'fen') return site('sallow');
-      return SITES[k] ? site(k) : null;
+      // A party dungeon: to its portal out in the land (down inside it, nothing leads you: the chart does, src/ui/undermap.js).
+      // A lair: to its glade. Any other of the land's places: to it.
+      const at = placeSpot(k);
+      return at?.delve && areaAt(k, px, py, pz) ? null : at;
     };
+    if (st.bring) return place(st.at, true);
+    if (st.boss) { const b = BOSSES.find((q) => q.key === st.boss); return b ? place(b.delve || 'warrens', true) : null; }
     if (st.warden) return below(CRYPT);
     if (st.enter) return place(st.enter, false);
     if (st.kill) {

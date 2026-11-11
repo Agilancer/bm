@@ -417,6 +417,10 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       let lick = 0.5 + 0.5 * sin(p.y * 31.0 - F.camPos.w * 9.0 + (p.x + p.z) * 17.0);
       let heat = smoothstep(0.12, 0.9, face) * (0.82 + 0.18 * lick);
       emissive = select(mix(vec3f(2.2, 0.28, 0.02), vec3f(14.0, 7.0, 2.4), heat), mix(vec3f(1.2, 0.36, 0.04), vec3f(2.2, 1.2, 0.3), heat), F.blood.w < 0.5) * f;
+      // (A flame in another light, as a painting has one: Velscour's fire in Blackvigil Keep burns redder ('dark:flame'), the
+      // Howling Deeps' cold lights burn blue-white ('frost:flame'). src/core/delve-build.js)
+      if (tintK == 1u) { emissive *= vec3f(1.0, 0.5, 0.32); }
+      if (tintK == 3u) { emissive = emissive.bgr * vec3f(0.7, 0.9, 1.0); }
       albedo = vec3f(0.0);
     }
   } else {
@@ -840,6 +844,10 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // Bright torn lips stay findable at fighting range, and flash for an instant as the blade goes by.
   c += vec3f(0.17, 0.165, 0.155) * wound.lip * (0.45 + 0.55 * max(dot(n, F.sunDir.xyz), 0.0));
   c += vec3f(5.0, 2.6, 0.9) * wound.hot;
+  // What the body's maps mark as lit of itself: the metal/rough map's alpha, which every body's is whole but the possessed
+  // knights' eyes (tools/monsters/possessed_knights.py). It's this red and not the paint's, so no palette washes it out,
+  // and it's bright enough to bloom: the eyes show across a dark hall.
+  c += vec3f(11.0, 0.55, 0.16) * (1.0 - mr.a) * (0.85 + 0.15 * sin(F.camPos.w * 5.0));
   // A cool edge of sky around the silhouette separates dark plate from anything behind it.
   let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
   // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)

@@ -87,6 +87,11 @@ export const SITES = {
   causeway: { x: -420, z: -2700, r: 60, name: 'The Sunken Mile' },
   tor: { x: 1500, z: 4600, r: 50, name: "Ravens' Tor" },
   charmill: { x: -3150, z: -1000, r: 40, name: 'The Charred Mill', pad: 12 },
+  // Three more beside the roads, plain folk's: a drovers' wayhouse on the Barrow Track, a burnt tollhouse on the Gallows Road,
+  // and the quarry on the Abbey Road that the abbey's stone was cut from.
+  wayhouse: { x: -1720, z: 2378, r: 35, name: 'The Moor Wayhouse', pad: 14 },
+  oldtoll: { x: 3314, z: 2581, r: 35, name: 'The Old Toll', pad: 12 },
+  quarry: { x: 2924, z: -1676, r: 45, name: 'Ossery Quarry', pad: 16 },
 };
 export const SITE_KEYS = Object.keys(SITES);
 
@@ -102,8 +107,8 @@ export const ROUTES = [
   { name: "the Pilgrims' Road", w: 2.6, pts: [[-800, -120], [-1050, -600], [-1300, -1100], [-1500, -1600], [-1650, -1880]] },
   // North: the Fen Way, off the town's north road, to Sallowmere.
   { name: 'the Fen Way', w: 2.2, pts: [[0, -60], [40, -700], [-60, -1500], [-100, -2300], [-200, -3000], [-250, -3280]] },
-  // South: the Frost Road, on from the south road past the start, to Frostwatch.
-  { name: 'the Frost Road', w: 2.4, pts: [[-20, 190], [80, 800], [200, 1600], [380, 2500], [560, 3300], [700, 3820]] },
+  // South: the Frost Road, on from the south road past the start, to Frostwatch's north gate.
+  { name: 'the Frost Road', w: 2.4, pts: [[-20, 190], [80, 800], [200, 1600], [380, 2500], [560, 3300], [700, 3820], [712, 3872]] },
   // South-east: the Gallows Road, off the Hill Road, to Hangman's Cross.
   { name: 'the Gallows Road', w: 2.2, pts: [[900, 30], [1500, 900], [2400, 1800], [3300, 2600], [4040, 3150]] },
   // South-west: the Barrow Track, off the Frost Road, over the moor.

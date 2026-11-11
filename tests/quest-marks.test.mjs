@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { QuestBook, RULES } from '../src/folk/quests.js';
 import { QUESTS } from '../src/folk/lines/quests.js';
 import { GIVERS } from '../src/folk/lines/lisandra.js';
+import { BEYOND } from '../src/folk/lines/beyond.js';
+import { POSTED } from '../src/folk/people.js';
 
 const book = () => new QuestBook({ change() {}, toast() {}, done() {} });
 
@@ -11,7 +13,9 @@ test('every quest has its words, and Lisandra sends you to everyone in town who 
   for (const id of Object.keys(RULES)) assert.ok(QUESTS[id]?.title, id);
   const givers = new Set(Object.keys(RULES).map((id) => QUESTS[id].giver));
   for (const g of GIVERS) assert.ok(givers.has(g), g);
-  for (const g of givers) assert.ok(GIVERS.includes(g) || g === 'lisandra' || g === 'bellwright', g);
+  // (Everyone else who gives work is out in the land: posted in the small towns, or at the Bell Tower.)
+  const far = new Set([...POSTED, ...BEYOND].map((p) => p.id));
+  for (const g of givers) assert.ok(GIVERS.includes(g) || g === 'lisandra' || far.has(g), g);
 });
 
 test('a giver shows !, then a grey ? while the work is under way, then a yellow ? to hand it in', () => {

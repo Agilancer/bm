@@ -12,8 +12,10 @@
 import { portalFloor, terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, SITES, WATERS, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
-import { DUNGEON, DUNGEON_CELL, ENTRY, EXIT_IN, EXIT_OUT, PORTAL, PORTAL_PAD, caveFloorY, caveRoofY, caveRoom, braziers, grid, toWorld, torches } from './dungeon.js';
+import { DELVES, PORTAL_PAD, caveFloorY } from './dungeon.js';
+import { buildDelves } from './delve-build.js';
 import { buildHall } from './testhall.js';
+import { PIECES, cinderford, lesser, thornwick } from './places.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -94,15 +96,22 @@ class Kit {
     this.tri(wall, P(hx, 0, hz), P(hx, 0, -hz), P(hx, rise * (hz / ez), 0));
   }
 
-  // A house: walls of wall to height h, a gabled roof, a door on its front (+z before the turn).
+  // A house: walls of wall to height h, a gabled roof, a door on its front (+z before the turn). Its floor is the land's at
+  // its middle; where the land falls away under it, it stands on a footing of rubble, with a step at the door.
   house(x, z, hx, hz, h, yaw, wall, roof, o = {}) {
     const y = (o.y ?? terrainHeight(x, z)) - 0.3;
+    const c = Math.cos(yaw), s = Math.sin(yaw), dx = o.doorAt ?? 0;
+    let lo = y;
+    for (const [lx, lz] of [[-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz]]) lo = Math.min(lo, terrainHeight(x + lx * c + lz * s, z - lx * s + lz * c) - 0.3);
+    if (lo < y - 0.2) this.box(o.foot || 'rubble', x, lo - 0.3, z, hx + 0.12, y - lo + 0.5, hz + 0.12, yaw, { collide: false });
     this.box(wall, x, y, z, hx, h + 0.3, hz, yaw, { top: false });
     this.gable(roof, wall, x, y + h + 0.3, z, hx, hz, o.rise ?? Math.min(hx, hz) * 0.85, yaw);
-    const c = Math.cos(yaw), s = Math.sin(yaw), dx = o.doorAt ?? 0;
     const d = [x + dx * c + (hz + 0.03) * s, z - dx * s + (hz + 0.03) * c];
     this.quad(o.door || 'door_1', [d[0] - 0.8 * c, y + 0.3, d[1] + 0.8 * s], [d[0] + 0.8 * c, y + 0.3, d[1] - 0.8 * s], [d[0] + 0.8 * c, y + 2.6, d[1] - 0.8 * s], [d[0] - 0.8 * c, y + 2.6, d[1] + 0.8 * s], [s, 0, c], [[0, 1], [1, 1], [1, 0], [0, 0]]);
+    const gd = terrainHeight(d[0] + 0.6 * s, d[1] + 0.6 * c);
+    if (gd < y) this.box('stone', d[0] + 0.5 * s, gd - 0.4, d[1] + 0.5 * c, 1.0, y + 0.3 - gd + 0.4 - 0.12, 0.5, yaw, { collide: false });
     if (o.chimney) this.box('stone', x + o.chimney * c, y + h, z - o.chimney * s, 0.6, Math.min(hx, hz) + 1.4, 0.6, yaw, { collide: false });
+    if (o.lamp) this.wallLamp(d[0] + (o.lamp * 1.25) * c, y + 2.6, d[1] - (o.lamp * 1.25) * s, [s, c]);
   }
 
   // A round thing of sides faces: a drum from y to y + h, radius r (r2 at its top), with a lid unless open.
@@ -254,86 +263,12 @@ class Kit {
     this.spots[`seal_${key}`] = [x, hi, z, look];
   }
 }
+Object.assign(Kit.prototype, PIECES);   // (The dressing: src/core/places.js.)
 
 
-// ---------------------------------------------------------------- the Hollowfang Warrens (src/core/dungeon.js)
-
-// Its walls, floor and roof, from the dungeon's field: the walls where the field crosses zero, stood from under the floor to
-// over the roof and pushed back into the rock by a lumpy amount so they read as cut stone and not as a drawn line; the floor
-// and the roof on a two-metre grid that runs a little under the walls. No colliders: World walks the field itself.
-function cave(K) {
-  const g = grid(), C = DUNGEON_CELL, S = 2;           // (walls on every second cell of the field: a metre)
-  const f = (i, j) => g.sdf[Math.min(g.H - 1, j) * g.W + Math.min(g.W - 1, i)];
-  const wx = (i) => g.x0 + i * C, wz = (j) => g.z0 + j * C;
-  // Back into the rock, by height and place: the same for every wall piece that shares an edge, so nothing cracks.
-  const lump = (x, y, z) => 0.15 + 0.55 * vnoise(x * 0.45 + y * 0.3, z * 0.45 - y * 0.2) + 0.25 * vnoise(x * 1.3, z * 1.3 + y);
-  const grad = (x, z) => { const e = 0.3, gx = caveRoom(x + e, z) - caveRoom(x - e, z), gz = caveRoom(x, z + e) - caveRoom(x, z - e), L = Math.hypot(gx, gz) || 1; return [gx / L, gz / L]; };
-  const BANDS = 4;
-  const wall = (ax, az, bx, bz) => {
-    const ga = grad(ax, az), gb = grad(bx, bz);
-    const fa = caveFloorY(ax, az) - 0.5, fb = caveFloorY(bx, bz) - 0.5, ra = caveRoofY(ax, az) + 0.6, rb = caveRoofY(bx, bz) + 0.6;
-    const P = (x, z, gg, y0, y1, k) => { const y = y0 + (y1 - y0) * k, o = lump(x, y, z) * (k > 0.05 && k < 0.95 ? 1 : 0.4); return [x - gg[0] * o, y, z - gg[1] * o]; };
-    for (let b = 0; b < BANDS; b++) {
-      const k0 = b / BANDS, k1 = (b + 1) / BANDS;
-      // (Wound so the face looks out of the rock, into the cave: the field rises that way.)
-      const A0 = P(ax, az, ga, fa, ra, k0), B0 = P(bx, bz, gb, fb, rb, k0), B1 = P(bx, bz, gb, fb, rb, k1), A1 = P(ax, az, ga, fa, ra, k1);
-      const ux = B0[0] - A0[0], uz = B0[2] - A0[2], nx = -uz, nz = ux;
-      if (nx * (ga[0] + gb[0]) + nz * (ga[1] + gb[1]) < 0) K.quad('rubble', A0, B0, B1, A1); else K.quad('rubble', B0, A0, A1, B1);
-    }
-  };
-  // Marching squares on the field, a metre at a time.
-  const lerp = (a, b) => a / (a - b);
-  for (let j = 0; j + S < g.H; j += S) {
-    for (let i = 0; i + S < g.W; i += S) {
-      const v0 = f(i, j), v1 = f(i + S, j), v2 = f(i + S, j + S), v3 = f(i, j + S);
-      const code = (v0 > 0 ? 1 : 0) | (v1 > 0 ? 2 : 0) | (v2 > 0 ? 4 : 0) | (v3 > 0 ? 8 : 0);
-      if (code === 0 || code === 15) continue;
-      const x0 = wx(i), z0 = wz(j), d = S * C;
-      const e = [
-        () => [x0 + d * lerp(v0, v1), z0], () => [x0 + d, z0 + d * lerp(v1, v2)],
-        () => [x0 + d * (1 - lerp(v2, v3)), z0 + d], () => [x0, z0 + d * (1 - lerp(v3, v0))],
-      ];
-      const segs = { 1: [[3, 0]], 2: [[0, 1]], 3: [[3, 1]], 4: [[1, 2]], 5: [[3, 0], [1, 2]], 6: [[0, 2]], 7: [[3, 2]], 8: [[2, 3]], 9: [[0, 2]], 10: [[0, 1], [2, 3]], 11: [[1, 2]], 12: [[1, 3]], 13: [[0, 1]], 14: [[3, 0]] }[code];
-      for (const [p, q] of segs) { const a = e[p](), b = e[q](); wall(a[0], a[1], b[0], b[1]); }
-    }
-  }
-  // The floor and the roof, two metres a cell, wherever a corner is in the open or near it.
-  const F = 4;
-  for (let j = 0; j + F < g.H; j += F) {
-    for (let i = 0; i + F < g.W; i += F) {
-      if (Math.max(f(i, j), f(i + F, j), f(i + F, j + F), f(i, j + F)) < -0.6) continue;
-      const pts = [[i, j], [i + F, j], [i + F, j + F], [i, j + F]].map(([a, b]) => [wx(a), wz(b)]);
-      const fl = pts.map(([x, z]) => [x, caveFloorY(x, z), z]), rf = pts.map(([x, z]) => [x, caveRoofY(x, z), z]);
-      K.quad('rubble', fl[0], fl[3], fl[2], fl[1]);
-      K.quad('dark:rubble', rf[0], rf[1], rf[2], rf[3]);
-    }
-  }
-  // Stalagmites here and there, off the ways, and rubble heaps against the walls.
-  for (let j = 0; j < g.H; j += 9) for (let i = 0; i < g.W; i += 9) {
-    const x = wx(i) + hash2(i, j) * 3, z = wz(j) + hash2(j, i) * 3, d = caveRoom(x, z);
-    if (d < 0.9 || d > 2.4 || hash2(i * 3, j * 7) > 0.45) continue;
-    const y = caveFloorY(x, z), h = 0.7 + hash2(i, j * 3) * 1.8;
-    K.spike('dark:rubble', x, y - 0.1, z, 0.3 + h * 0.12, h, 5, hash2(i, j) * 3);
-  }
-  // The torches: a bracket of iron, the flame on it.
-  for (const [x, y, z, nx, nz] of torches()) {
-    K.box('iron', x - nx * 0.25, y - 0.55, z - nz * 0.25, 0.05, 0.5, 0.05, 0, { collide: false });
-    K.drum('iron', x, y - 0.05, z, 0.1, 0.12, 6, { r2: 0.16, collide: false, open: true });
-    K.cone('flame', x, y + 0.05, z, 0.14, 0.42, 5);
-  }
-  // The braziers round the bigger rooms: a post of stone, an iron bowl, the fire in it.
-  for (const [x, y, z] of braziers()) {
-    K.drum('dark:stone', x, y - 0.2, z, 0.22, 1.35, 6);
-    K.drum('iron', x, y + 1.15, z, 0.22, 0.32, 8, { r2: 0.42, collide: false, open: true });
-    K.cone('flame', x, y + 1.3, z, 0.3, 0.85, 6);
-  }
-  // The portals inside: the way back out by the way in, and the way out past Venomaw. Each with its back to the rock at the
-  // edge of its room, facing into it.
-  for (const [q, key] of [[EXIT_IN, 'hf_in'], [EXIT_OUT, 'hf_out']]) {
-    const [x, z] = toWorld(q.x, q.z);
-    portalWall(K, x, z, key === 'hf_in' ? Math.PI : 0, key, caveFloorY);
-  }
-}
+// ---------------------------------------------------------------- the party dungeons (src/core/dungeon.js)
+// (Their walls, floors, roofs, fires and everything in their rooms: src/core/delve-build.js, called from buildSites below.
+// Their portals are built here.)
 
 // The portals' models (drawn by the renderer: src/gfx/renderer.js portalModels, packed by tools/portal/pack.py): how big
 // they're drawn, and how far each is let down into what it stands on.
@@ -412,14 +347,15 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
     const [px, pz] = P(u, w);
     K.colliders.push({ x: px, z: pz, hx: fu, hz: fw, yaw, h: y - terrainHeight(px, pz), t: y - 0.45 });
   };
-  // The ground under it, high and low. Its floor: on the land, the cut's (which is the hill a little in front of the wall);
-  // in the Warrens, a little over the highest.
+  // The ground under it, high and low. Its floor: at the Warrens' mouth, the cut's (which is the hill a little in front of
+  // the wall); anywhere else on the land, and down in a dungeon, a little over the highest ground under it, so it stands
+  // on whatever's there with nothing dug.
   let hi = -Infinity, lo = Infinity;
   for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) {
     const g = G((i / 4 - 1) * (hu + edge), (j / 4 - 1) * (hw + edge));
     hi = Math.max(hi, g); lo = Math.min(lo, g);
   }
-  const top = land ? portalFloor() : hi + lift, foot = Math.min(lo, top) - 0.7;
+  const top = land && key === 'hf_portal' ? portalFloor() : hi + lift, foot = Math.min(lo, top) - 0.7;
   // The body, its plinth, and the coping round its top with the paving set in it.
   block('dark:stone', 0, 0, hu, hw, foot, top - 0.2, { top: false });
   block('dark:stone', 0, 0, hu + 0.2, hw + 0.2, foot, Math.min(lo, top - 0.5) + 0.3);
@@ -566,9 +502,10 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
   K.spots[key] = [x, top, z, yaw];
 }
 
-// The way in, out in the woods near the kobolds' den: the portal in its wall on the hillside.
+// The ways in, out on the land: the Warrens' in its wall on the hillside near the kobolds' den, the keep's before its gate
+// on the Vigil Road, the Deeps' at the Howling Mouth. (Their spots: hf_portal, bv_portal, hd_portal.)
 function warrensMouth(K) {
-  portalWall(K, PORTAL.x, PORTAL.z, PORTAL.yaw, 'hf_portal');
+  for (const d of DELVES) portalWall(K, d.portal.x, d.portal.z, d.portal.yaw, `${d.tag}_portal`);
 }
 
 // ---------------------------------------------------------------- the places
@@ -913,7 +850,7 @@ export function buildSites() {
   if (built) return built;
   const K = new Kit();
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
-  cave(K); warrensMouth(K);
+  buildDelves(K, portalWall); warrensMouth(K);
   // (The Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js.)
   buildHall(K);
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));

@@ -39,7 +39,7 @@ import { TripoEmpty, TripoWorld } from './tripo.js';
 import { Warrens } from './dungeon.js';
 import { Perils } from './perils.js';
 import { foeOf } from './foes.js';
-import { PORTAL, inDungeon } from '../core/dungeon.js';
+import { delveAt, delveOf, inDungeon } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 import { TestHall } from './testhall.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
@@ -236,7 +236,7 @@ class Sim {
 
   restart() {
     // (Fallen in the Hollowfang Warrens: back at its way in, not out on the road. src/sim/dungeon.js afterRestart.)
-    const inWarrens = !!this.player && inDungeon(this.player.x, this.player.z) && this.tick > 0;
+    const inWarrens = !!this.player && this.tick > 0 ? delveAt(this.player.x, this.player.z) : null;
     // (In the Test Dungeon, what it brought into its arena goes home first: src/sim/testhall.js.)
     this.testHall?.beforeRestart();
     this.wantRestart = false;
@@ -556,7 +556,8 @@ Sim.prototype.place = function (d) {
   this.restart();
   if (!d || (this.opening && d.openingRevision !== OPENING_REVISION)) return;
   // (A game kept down in the Warrens loads at their portal, out in the woods: the Warrens start again from nothing.)
-  if (inDungeon(d.x, d.z)) d = { ...d, x: PORTAL.x + Math.sin(PORTAL.yaw) * 4, z: PORTAL.z + Math.cos(PORTAL.yaw) * 4, y: -1e9, yaw: PORTAL.yaw };
+  // (And so with the keep and the Deeps: each at its own portal.)
+  if (inDungeon(d.x, d.z)) { const o = delveOf(d.x, d.z).portal; d = { ...d, x: o.x + Math.sin(o.yaw) * 4, z: o.z + Math.cos(o.yaw) * 4, y: -1e9, yaw: o.yaw }; }
   // (Nobody's kept in the Test Dungeon's hall but while it's on: src/sim/testhall.js. Anywhere else, the road into town.)
   if (inHall(d.x, d.z) && !this.testHall?.on) d = { ...d, x: 7.5, z: 72, y: -1e9, yaw: Math.PI };
   const p = this.player;

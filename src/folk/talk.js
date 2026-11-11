@@ -228,7 +228,7 @@ export class Talk {
     const life = this.life;
     if (!this.small.length || this.running.length >= 3) return;
     const still = new Set([ACT.GATHER, ACT.INN, ACT.EAT, ACT.SHOP, ACT.IDLE, ACT.WORK, ACT.SIT]);
-    const cand = life.folk.filter((o) => this.free(o) && !o.child && still.has(o.act) && Math.hypot(o.x - px, o.z - pz) < 18);
+    const cand = life.folk.filter((o) => this.free(o) && !o.child && !o.posted && still.has(o.act) && Math.hypot(o.x - px, o.z - pz) < 18);
     for (let a = 0; a < cand.length; a++) {
       for (let b = a + 1; b < cand.length; b++) {
         const A = cand[a], B = cand[b];

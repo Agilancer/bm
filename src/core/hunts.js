@@ -56,13 +56,28 @@ const box = (list, m) => list.reduce((b, g) => [Math.min(b[0], g.x - g.r - m), M
 // How far past a glade's edge anyone asks after it: the wood's thinned and trimmed out to here and no further.
 export const HUNT_REACH = 64;
 const NEAR_BOX = box(HUNT_GROUNDS, HUNT_REACH), FAR_FROM = Math.min(...FAR_GROUNDS.map((g) => Math.hypot(g.x, g.z))) - 120;
+// The far grounds, sorted into squares (there are a hundred of them over the land, and every pine asks): each square holds
+// the grounds whose reach touches it.
+const FAR_CELL = 256, FAR_GRID = new Map();
+const farKey = (i, j) => (i + 512) * 1024 + (j + 512);
+for (const g of FAR_GROUNDS) {
+  const m = g.r + HUNT_REACH;
+  for (let i = Math.floor((g.x - m) / FAR_CELL); i <= Math.floor((g.x + m) / FAR_CELL); i++) {
+    for (let j = Math.floor((g.z - m) / FAR_CELL); j <= Math.floor((g.z + m) / FAR_CELL); j++) {
+      const k = farKey(i, j);
+      if (!FAR_GRID.has(k)) FAR_GRID.set(k, []);
+      FAR_GRID.get(k).push(g);
+    }
+  }
+}
 
 // How far (x, z) is outside the nearest ground's open middle, in metres (under 0: in it). Past HUNT_REACH, 1e9.
 export function huntEdge(x, z) {
   let list;
   if (x > NEAR_BOX[0] && x < NEAR_BOX[1] && z > NEAR_BOX[2] && z < NEAR_BOX[3]) list = HUNT_GROUNDS;
-  else if (x * x + z * z > FAR_FROM * FAR_FROM) list = FAR_GROUNDS;
+  else if (x * x + z * z > FAR_FROM * FAR_FROM) list = FAR_GRID.get(farKey(Math.floor(x / FAR_CELL), Math.floor(z / FAR_CELL)));
   else return 1e9;
+  if (!list) return 1e9;
   let best = 1e9;
   for (let i = 0; i < list.length; i++) {
     const g = list[i], dx = x - g.x, dz = z - g.z, m = g.r + HUNT_REACH;

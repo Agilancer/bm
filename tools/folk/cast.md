@@ -228,7 +228,7 @@ toward the church.
 - **Bryony Moss**, 8, her daughter (`bryony`, swap of girl_1). Collects bones, beetles and dead things; very serious about it.
 
 Forty-one people. Plus Old Lis, who just arrived (not part of this cast; she's the intro's). Out past the town there's one
-more to talk to: the Bellwright (see Beyond Bellmourn).
+more to talk to: the Bellwright and Ser Hale (see Beyond Bellmourn), and the seven posted in the small towns.
 
 ## Merchants and trades
 
@@ -349,6 +349,94 @@ gift: a bell the size of a thumb; ring it in the air and the air holds you one s
 13. **The Black Road** (Aldric). Go and look at what's at the end of the west road. Only look. (Blackvigil.)
 14. **The Crown of Teeth** (Orrin, after the Toll). Climb the Sorrowhorn and tell him what's at the top. Reward: a scroll and a true page.
 15. **Lights on the Barrow Moor** (Jory). Go at night; put down 6 of whatever carries the lights. (Jellies full of bones.)
+
+## The small towns (`src/folk/people.js` POSTED, lines in `src/folk/lines/land.js`)
+
+Seven people are posted out in the land, in the townsfolk's own bodies (recoloured: `tools/folk/posted_swaps.py`). They
+stand at one spot day and night (job `posted`), so nothing they say should need them to be anywhere else. Thornwick and
+Cinderford are **of neither letter**: nobody there names Velscour or Tessariel, nobody at Cinderford speaks of the Bell
+Tower, and nobody at Thornwick of the keep. (`tests/quests-beyond.test.mjs` reads every line for it.)
+
+**Thornwick** (south-east, two days by cart, where the downs run out on the Gallows Road). Sheep, mutton, and the hedge:
+eight foot of laid blackthorn, "the only wall plain folk were ever let build, because it's only a hedge". The road south-east
+of it, to Hangman's Cross, is shut: plague stragglers come up it from the Gallowswood, and goat men come down off the downs
+to lean on the hedge.
+- **Dorcas Pym**, 57, keeper of the Hare and Harrow (before its door). A widow; six rooms and no carters. Feeds first,
+  asks after. Her subject is the road: who came up it and who didn't. Keeps a lamp in the south window "for whoever's still
+  coming". The toll-keeper Wat Arden ate there every Thursday for thirty years. Hers: "Sit. You'll eat before you tell me."
+- **Osric Thorne**, 44, hedge-reeve (inside the north-west gate). Three generations of hedgers; he's "mostly mended". Dry,
+  tired, measures everything by the hedge. A billhook, not a desk. Hers and his never overlap: Dorcas talks of the road,
+  Osric of the thorn.
+- **Wymond Ebb**, 63, hedge-priest (by the market cross). Was a clerk in "a house with a roof and a name, and then one year
+  there was neither"; he never says which. Blesses lambs, wells, weddings, the newly dead, "what's put in front of me".
+  Says at night the names of everyone he's buried, in order of the letters. Gentle, wry, a little pleased with himself.
+  He has met an old woman with a stick who blessed the same ewe straight after him.
+
+**Cinderford** (west, two days along the Vigil Road, on a ford: the last free hearths before the Ashen Waste). A stockade,
+a watchtower, charcoal kilns, a refugees' camp over the ford. Its captain rode west to parley and didn't come back; four of
+its own came back possessed and knew the gate-word.
+- **Brenna Hasket**, 39, sergeant of the watch (foot of the watchtower). Eleven on the wall where there were thirty. Speaks
+  in reports: place, number, what she can't see. Calls the keep's men "red over black" and says they "don't shout, don't
+  loot, and don't hurry". She wrote to Bellmourn for men; Aldric wrote back, very civil, with none.
+- **Colm Burrage**, 52, charcoal burner (before the kilns). Slow; everything is a burn to him: white smoke is the wet coming
+  off, blue is the wood giving up, and the trade is "saying no to a fire for five days". Sold to every forge from here to
+  Khel, and to a smith in Bellmourn who sends a note about how he suffers and never the money on time. Says "Mm."
+- **Ysolt Marrow**, 27, out of Khel (the camp by the ford). Kept the weighing table at the Caravanserai of Khel; was in the
+  cellar after salt when the riders came and asked, very civil, for water. Looks at boots. Keeps half of everything. Her
+  husband **Edmer**, who kept Khel's stables, stands possessed at the door of the Charred Mill in the blue jerkin she mended.
+  Flat, careful, exact; never raises her voice.
+
+**Frostwatch** (far south, up the Frost Road, in the snow).
+- **Hew Garrick**, 48, warden (the yard). A tower, two long houses and him. Took six men down the Howling Mouth eleven
+  winters back, roped, and came up with two and no rope. Says "Hm." Advice in pairs: "If you're cold, move. If you're tired,
+  don't sit." Bram Kettle has owed him for three carts of venison since the winter the well froze.
+
+**Ser Hale Orrowick, Paladin of the Fifth Watch** (`hale`; a `BEYOND` entry, his body the knight flagged `hale` in
+`src/core/knights.js`; at the Bell Tower beside the Bellwright). 36. An Orrowick of the low field at Millhaven: he left
+his plough stood in the furrow two springs back and went up the knoll, four miles. His harness is pieced together from what
+the fallen claimants left on the downs (he buried four of them himself): none of it matches, the left pauldron swings, and
+it's packed with fleece where it's big. **The fifth watch** is his own: the hour after the Bellwright's four, before the sun
+is properly up, "when everyone's sure it's over and stops looking. That's when the fox comes." He swore it at the
+Bellwright's door; the Bellwright said it wasn't a real oath and lent him his whetstone. They get on: he's "the ploughman",
+the Bellwright is "Ser"; he holds the ladder; the Bellwright leaves the second cup out. Earnest, practical, a farmer's
+figures of speech (furrows, hedges, bulls, foxes), never grand. Abel Fenwick cuts his barley and "burns too green".
+He's **Tessariel's** (a T), and he gives the quests against Blackvigil, so the writing is careful: years ago he drove a cart
+west to Khel for salt and saw what rides out of the keep past it (big men on black horses in twos, and one on foot behind,
+"bigger than a man ought to be, with no helm. A face. Eyes like a banked forge"). He never names Velscour or Blackvigil; he
+says "the keep at the end of the west road". No line of his, and no line of his quests, names anything of the order's (the
+tower, the bells, the watches, the seals, the Bellwright) together with the keep or anyone in it; the journal of his
+Blackvigil quests sends you "back to Ser Hale Orrowick" and doesn't say where.
+
+**The dungeons, as people know them.** The Hollowfang Warrens: Corran knows the tracks go in; Hob has lost nine sacks and a
+wheelbarrow to them. Blackvigil Keep: a knight with a shield like a door at the gate (Maldrec), a robed one with a black
+book (Sorvane), two that fight as one (the Brothers), and the Castellan at the top; the lords are great knights with a
+villager's face where a helm should be. The Howling Deeps: a hall somebody cut, with seven doors, where Hrymgar is (horned
+like the goat men and three times the size, ice grown on him); below, something that breeds (eight legs apiece, on
+threads); under that, a lake of ice with a thing asleep in it, whose breathing is the howl.
+
+## Quests of the land (`src/folk/land-quests.js`, words in `src/folk/lines/land.js`)
+
+Out of Bellmourn:
+16. **Word to Thornwick** (Aldric). The yearly letter got no answer. Ask Osric Thorne if the Gallows Road still runs.
+17. **Tracks Going West** (Corran, after the Pines). The dead in the pines came down the Vigil Road. Ask Sergeant Hasket.
+18. **Owed to Frostwatch** (Bram, after the Bed). The one mark on his slate that's the wrong way round: pay Hew Garrick.
+19. **The Millhaven Man** (Hob, after the Millpond). Abel wants to know if Hale Orrowick is coming home for the barley.
+20. **Stones on the Cairnfield** (Silas, after the Dead). Someone is opening the cairns where the Cranes lie.
+21. **The Sunken Mile** (Sabine, after the Fen). Five of the drowned stand on the causeway.
+22. **The Wayhouse on the Moor** (Jory, after the Lights). A lamp in a window that's been shut since he was a lad.
+The catacombs: 23. **Further Down** (Silas): twenty more. 24. **Waxed Thread** (Tamsin): six Grave Wax, to proof a winter's stock.
+The Hollowfang Warrens: 25. **Something Dug This** (Corran): go through. 26. **Barley Thieves** (Hob): twelve goblins or kobolds.
+27. **The Tunnel-King** (Corran): Grubnash. 28. **Mother of the Warren** (Aldric): Skrit and Skrat, then Venomaw.
+Thornwick: 29. **Hedge-Breakers** and 30. **The Black Ram** (Osric; the Ram pays the Goatfoot). 31. **Up from the Hanging
+Wood** and 32. **Thursdays** (Dorcas; the Old Toll, and Wat Arden's pie). 33. **Salt for the Hanged** (Wymond; Hangman's
+Cross and the Twisted Grove).
+Cinderford: 34. **They Know the Gate-Word**, 35. **Two on the Ridge**, 36. **The Vigil Road** (Hasket). 37. **Nobody at the
+Weighing Table** (Colm; Khel). 38. **The Charred Mill** (Ysolt; Edmer; she pays with the cloak she carried out).
+Frostwatch: 39. **What Sits on Your Chest** (the Glimmerstone), 40. **Ravens' Tor**, 41. **The First Hall** (Hrymgar),
+42. **What Breeds Below** (Garrick).
+Ser Hale: 43. **The Howling** and 44. **The Sleeper** (the Deeps); 45. **The Gate at the End of the West Road**,
+46. **Twenty of the Garrison**, 47. **The First of the Lords**, 48. **Sorvane and the Brothers**, 49. **The Castellan**
+(he pays with a skull he had Silas carve, for everything Abel ever sent him).
 
 ## Where people go (for the life sim)
 

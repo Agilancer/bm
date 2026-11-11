@@ -6,6 +6,10 @@
 // Who's out there to talk to (src/ui/folk.js adds them after the town's people).
 export const BEYOND = [
   { id: 'bellwright', name: 'Ser Anselm Toller', title: 'the Bellwright, at the Tower of the Four Watches', age: 64 },
+  // Ser Hale Orrowick, a Millhaven ploughman who swore himself a fifth watch at the Bellwright's door, in harness pieced
+  // together from what the fallen claimants left on the downs. His body is the knight in TOWN_KNIGHTS flagged `hale`
+  // (src/core/knights.js); at: where he stands till that knight's there. His lines and his quests: src/folk/lines/land.js.
+  { id: 'hale', name: 'Ser Hale Orrowick', title: 'Paladin of the Fifth Watch', age: 36, at: [2436, -530.4] },
 ];
 
 export const LINES = {

@@ -14,17 +14,23 @@ import { carryMat4 } from '../core/carry.js';
 import { clamp, mat4FromQT, quatMul, quatRotate, quatYaw, wrapAngle } from '../core/math.js';
 import { OPENING } from '../core/opening.js';
 import { inTown } from '../core/town.js';
-import { ARMS, BREATH_ELEM, GROUPS, LAIRS, MODEL_STATS, TRIPO_BASE, armIds, kindOfGroup } from '../core/tripo-monsters.js';
-import { BOSSES, PACKS, PACK_TOUGH, roomSpot } from '../core/dungeon.js';
+import { ARMS, BREATH_ELEM, GROUPS, LAIRS, MODEL_STATS, TRIPO_BASE, armIds, kindOfGroup, lairFor } from '../core/tripo-monsters.js';
+import { ALL_PACKS, BOSSES, delveByKey, roomSpot } from '../core/dungeon.js';
 
-// The Warrens' packs and bosses, as lairs (src/core/dungeon.js). A pack wakes as you come into its room; a boss only when
-// the Warrens stand it (src/sim/dungeon.js), which is why its wake is nothing. The packs are a party's work, not one
-// wizard's: each of them has many times the life of its cousins in the woods and hits harder (PACK_TOUGH), and has its
-// kind's tricks (src/sim/moves.js).
-function dungeonLairs() {
-  const out = [];
-  for (const p of PACKS) { const [x, , z] = roomSpot(p.room); out.push({ key: p.key, x, z, r: 6, pick: p.pick, n: p.n, pal: p.pal, wake: 34, dungeon: true, state: 'asleep', at: -1e9, tough: PACK_TOUGH, tricks: true }); }
-  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, state: 'asleep', at: -1e9, bossLair: true }); }
+// The party dungeons' packs and bosses, as lairs (src/core/dungeon.js). A pack wakes as you come into its room; a boss only
+// when its delve stands it (src/sim/dungeon.js), which is why its wake is nothing. The packs are a party's work, not one
+// wizard's: each of them has many times the life of its cousins in the woods and hits harder (its delve's `tough`), and
+// has its kind's tricks (src/sim/moves.js). Of a pack's models, the ones the roster has: the keep's knights are listed
+// generously, for look-alikes that are still being made.
+function dungeonLairs(roster) {
+  const out = [], have = (ids) => (ids || []).filter((id) => roster[id]);
+  for (const p of ALL_PACKS) {
+    const d = delveByKey(p.delve), [x, , z] = roomSpot(p.room, p.at?.[0] || 0, p.at?.[1] || 0), elite = have(p.elite);
+    const at = (q) => [d.x + q[0], d.z + q[1]];
+    out.push({ key: p.key, x, z, r: p.r ?? 6, pick: have(p.pick), boss: elite.length ? elite : undefined, n: p.n - (elite.length ? 1 : 0), pal: p.pal, wake: p.wake || 34, dungeon: true, delve: p.delve,
+      state: 'asleep', at: -1e9, tough: d.tough, tricks: true, spots: p.spots?.map(at), walk: p.walk?.map(at), more: p.more });
+  }
+  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
   return out;
 }
 
@@ -479,8 +485,8 @@ export class TripoWorld {
     this.arms = armIds(roster);
     this.palNames = Object.keys(palettes);
     this.first = first; this.count = count;
-    this.lairs = LAIRS.map((l) => ({ ...l, wake: l.wake || 110, state: 'asleep', at: -1e9, left: null }));
-    this.lairs.push(...dungeonLairs());
+    this.lairs = LAIRS.map((l) => ({ ...lairFor(l, roster), wake: l.wake || 110, state: 'asleep', at: -1e9, left: null }));
+    this.lairs.push(...dungeonLairs(roster));
     this.nextLook = 0;
     this.loading = new Set();
   }
@@ -593,6 +599,9 @@ export class TripoWorld {
         x = lair.x + Math.sin(a) * r; z = lair.z + Math.cos(a) * r;
         if (!sim.world.inside(x, z, 0.9) && !inTown(x, z, 4)) break;
       }
+      // (A pack with places of its own: each stood on its own, facing the middle. src/core/dungeon.js packs' spots.)
+      const spot = lair.spots?.[n];
+      if (spot) [x, z] = spot;
       rigFor(id, this.roster[id], this.base).then((rig) => {
         this.claimed.delete(slot);
         if (lair.state !== 'awake') return;
@@ -601,6 +610,7 @@ export class TripoWorld {
         const m = new TripoMonster(slot, rig, this.optsFor(id, lair, x, z, boss));
         m.lair = lair; m.boss = boss;
         if (lair.face !== undefined) { m.yaw = lair.face; m.idleT = 1e9; }
+        if (spot) { m.yaw = Math.atan2(lair.x - x, lair.z - z); m.idleT = 1e9; }
         lair.spawned++;
         m.y = sim.world.height(x, z);
         sim.knights[slot] = m;

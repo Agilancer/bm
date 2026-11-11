@@ -1,6 +1,7 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
 import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
+import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE } from './core/dungeon.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { QuestTrail } from './ui/trail.js';
@@ -1549,7 +1550,8 @@ class GameView {
     switch (type) {
       case EV.SWING: break;
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
-      case EV.DELVE: this.party?.onDelve(a, b, c, d); break;
+      // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
+      case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);
@@ -1729,7 +1731,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
