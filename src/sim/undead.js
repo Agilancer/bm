@@ -1425,7 +1425,7 @@ export function ambush(sim, cx, cz, n) {
 
 // ---- the road down from Lisandra's cave ----------------------------------------------------------------------
 // Its dead are easy: this is your first fight. (src/sim/opening.js stages it: how many, where and when.)
-const EASY = { adult: { hp: 16, dmg: 0.45 }, child: { hp: 8, dmg: 0.3 } };
+const EASY = { adult: { hp: 16, dmg: 0.35 }, child: { hp: 8, dmg: 0.25 } };
 // One more of them up out of the ground at (x, z) and after you: a body kept for the road, or one of the woods' that's
 // in the ground with nothing to do; failing those, one of the fight's own (mine) that's been down a few seconds, which
 // goes back into the earth and comes up again here. Null if there's no body to be had just now.

@@ -73,7 +73,7 @@ const BEFORE_FIGHT = new Set([...HILL, 'lead', 'door', 'shelf', 'steps', 'speech
 // left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out of the trees on
 // each side of the road, who raise what's fallen. All of them easy (src/sim/undead.js openingRaise). She fights it with
 // you, with what fire she has left: a weak bolt every couple of seconds.
-const WAVE = { first: 20, more: 20, children: 10, group: 5, every: 2.4, second: 8, third: 10, limit: 300 };
+const WAVE = { first: 20, more: 20, children: 10, group: 5, every: 2.4, second: 8, third: 10, limit: 300, reach: 70 };
 const HER_FIRE = { every: 1.9, range: 20, speed: 17, dmg: 5, at: 0.34 };
 
 export class Opening {
@@ -605,7 +605,13 @@ export class Opening {
     }
     const f = this.fightS;
     f.t += dt; f.raiseT -= dt;
-    const up = [...f.bodies].filter((k) => !k.dead), casters = f.casters.filter((k) => !k.dead);
+    // (One you've left far behind is no longer the fight's: it goes back to being one of the woods' own.)
+    for (const k of f.bodies) {
+      if (k.dead || Math.hypot(k.x - player.x, k.z - player.z) < WAVE.reach) { k.lostT = 0; continue; }
+      k.lostT = (k.lostT || 0) + dt;
+      if (k.lostT > 6) { f.bodies.delete(k); k.aggro = false; k.hostile = false; }
+    }
+    const up = [...f.bodies].filter((k) => !k.dead), casters = f.casters.filter((k) => !k.dead && Math.hypot(k.x - player.x, k.z - player.z) < WAVE.reach * 1.5);
     // More of them up out of the ground, a group at a time, in the trees either side of you and on the road ahead.
     if (f.due.length && f.raiseT <= 0) {
       f.raiseT = WAVE.every;
@@ -647,7 +653,7 @@ export class Opening {
     // Over: every one of them down (what the necromancers raised too), or it's gone on far too long.
     const theirs = sim.knights.filter((k) => !k.dead && k.owner && f.casters.includes(k.owner));
     // (Or you've run for the town with them behind you: they don't follow you in, and she won't stand out here alone.)
-    if ((f.phase === 3 && !f.due.length && !up.length && !casters.length && !theirs.length) || f.t > WAVE.limit || mine > ROUTE.len - 25) {
+    if ((f.phase === 3 && !f.due.length && !up.length && !casters.length && !theirs.length) || f.t > WAVE.limit || routeNear(player.x, player.z) > ROUTE.len - 25) {
       this.ambushDone = true;
       // (On from wherever the fight has left her.)
       this.prog = Math.max(this.prog, routeNear(w.x, w.z, this.prog, 400));
