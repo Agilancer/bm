@@ -63,7 +63,37 @@ export class Pack {
     return false;
   }
 
+  // Into the first room there is reading across, top row first: what sort() lays out by.
+  addRowwise(item) {
+    for (let y = 0; y < PACK_H; y++) {
+      for (let x = 0; x < PACK_W; x++) {
+        const hit = this.under(item, x, y);
+        if (hit && !hit.length) { this.entries.push({ item, x, y }); return true; }
+      }
+    }
+    return false;
+  }
+
   remove(entry) { this.entries.splice(this.entries.indexOf(entry), 1); }
+
+  // Tidies the pack: staffs, then skulls, shields, what's worn head to foot, and gems last, the rarest of each first. If it
+  // won't all fit that way, biggest first; if not even that, it stays as it was. False then.
+  sort() {
+    const was = this.entries, items = was.map((e) => e.item);
+    const KIND = { weapon: 0, skull: 1, shield: 2, robe: 3, gem: 5 };
+    const ROBE_ORDER = ['head', 'shoulders', 'chest', 'legs', 'feet'];
+    const rank = (it) => (KIND[it.type] ?? 4) * 10 + (it.type === 'robe' ? ROBE_ORDER.indexOf(ROBES[it.base]?.slot) : 0);
+    const name = (it) => `${it.base || ''}${it.kind || ''}`;
+    const byKind = (a, b) => rank(a) - rank(b) || (b.rarity ?? b.grade ?? 0) - (a.rarity ?? a.grade ?? 0) || name(a).localeCompare(name(b));
+    const area = (it) => { const { w, h } = sizeOf(it); return w * h * 10 + h; };
+    const bySize = (a, b) => area(b) - area(a) || byKind(a, b);
+    for (const order of [byKind, bySize]) {
+      this.entries = [];
+      if ([...items].sort(order).every((it) => this.addRowwise(it))) return true;
+    }
+    this.entries = was;
+    return false;
+  }
 
   // Coin: gold, and the copper the town counts in. Ten copper to the gold; a purse breaks a gold piece when it has to.
   purse() { return this.gold * 10 + this.copper; }
