@@ -87,9 +87,10 @@ export class Rig {
     this.bank = bank;
     const prim = glb.json.meshes.find((m) => m.primitives[0].attributes.WEIGHTS_0)?.primitives[0];
     if (prim) {
-      this.bindPos = accessor(glb, prim.attributes.POSITION);
-      this.bindNormal = accessor(glb, prim.attributes.NORMAL);
-      this.tris = accessor(glb, prim.indices);
+      // (Copies: a view would keep the whole file in memory, its pictures too, for as long as the rig's about.)
+      this.bindPos = accessor(glb, prim.attributes.POSITION).slice();
+      this.bindNormal = accessor(glb, prim.attributes.NORMAL).slice();
+      this.tris = accessor(glb, prim.indices).slice();
     }
     for (let i = 0; i < this.count; i++) if (this.parent[i] >= i) throw new Error('joints must be parents first');
   }
