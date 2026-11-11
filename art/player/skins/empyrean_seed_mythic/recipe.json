@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_royal.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.85,
    "shading": 0.9
   },
   "trim": {
@@ -36,7 +36,7 @@
     "swatch": "swatches/fx_hat.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.85,
     "shading": 0.9
    },
    "pattern": {
@@ -82,7 +82,7 @@
     "image": "swatches/fx_seeds.png",
     "color": "#8a4c08",
     "scale": 0.2,
-    "strength": 0.4,
+    "strength": 0.28,
     "tile": "repeat"
    },
    "decals": [
@@ -116,13 +116,13 @@
     {
      "image": "decals/fx_crest.png",
      "anchor": "back",
-     "size": 0.27,
+     "size": 0.22,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.045,
+      -0.055,
       0
      ]
     },
@@ -156,7 +156,7 @@
     "image": "swatches/fx_seeds.png",
     "color": "#8a4c08",
     "scale": 0.2,
-    "strength": 0.4,
+    "strength": 0.28,
     "tile": "repeat"
    },
    "leather": {
