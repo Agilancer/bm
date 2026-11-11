@@ -45,7 +45,7 @@ async function planAll(only) {
   for (const [cls, list] of Object.entries(MORE_SKILLS)) {
     if (only.length && !only.includes(cls)) continue;
     // Its ordinary blows first (a foe in reach and nothing asked of it), then the first moves, then the new.
-    strips.push({ name: `${cls}__blows`, cls, key: null, dist: far(cls) ? 5 : 1.9, foes: 2, frames: 10, every: 9, still: false, cam: eye(far(cls) ? 8.5 : 5.5), note: 'ordinary blows' });
+    strips.push({ name: `${cls}__blows`, cls, key: null, dist: far(cls) ? 5 : 1.9, foes: 2, frames: 12, every: 15, still: false, cam: eye(far(cls) ? 8.5 : 5.5), note: 'ordinary blows' });
     for (const q of [...(SKILLS[cls] || []), ...list]) {
       if (q.song || q.heal) continue;
       // (Its foes as near as the move allows, so everyone's as large in the picture as can be.)

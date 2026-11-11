@@ -718,6 +718,36 @@ now carries four things, not three (`PROPS_PER_CHAR`).
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
 both). The quartermasters are two more bodies after them.
 
+### Looking at their moves, and who looked
+
+`node tools/heroes/moves.mjs all [classes]` plays every move of every class in the real game on a headless browser (a
+hero put on the lawn south of a house, practice dead raised before them, the world stepped a fixed number of ticks
+between frames through a long lens) and saves the frames; `python tools/heroes/sheet.py` lays each move's frames side by
+side, numbered. A plan file names particular strips instead (`node tools/heroes/moves.mjs plan.json`); `--plan` prints
+the plan it would run. The bards' lutes are also taken close, from before and to one side, once with what they throw off
+and once the hands alone. `node --test tests/hero-skills.test.mjs` plays every move with no page, on the real bodies and
+clips, and fails on anything drawn or heard at a place that isn't a number.
+
+The sheets went twice to two reviewers briefed as animators of twenty years (one for the body: anticipation, timing,
+weight, contact; one for what's seen at a distance: staging, the scale of effects against the body, colour, cause and
+effect), each given what can and can't be changed and asked for a verdict and a fix for every move.
+
+- **The first round** said, of nearly everything: the caster stands idle while the effect plays; foes don't react;
+  upright hoops read as portals; leaps are too high and float; thrown things can't be seen or leave the hand late; the
+  lance is handled like a sword; hammers are glowing cubes. And of particular moves: the golden boomerang whites out the
+  screen, the lancer's shield wall shows nothing, the archer never draws, the lute's hands can't be seen. What was done
+  about it is the section above ("A move is performed", "Where a blow lands", and the rest).
+- **The second round** found most moves better, a handful the same and almost none worse. What it asked for and got: no
+  blow ends folded face down, heavy blows shove what they land on, thrusts draw back between stabs, flashes never show
+  their corners, leaps a third lower again, arrows and knives that find their marks, slashes for those with knives and
+  not a fist held out, star throws with the arm over the shoulder, boomerangs gold and seen to turn, a hero who stands
+  to what he's thrown till it's home, the wheeling strum out to the side.
+- **Still open after it** (asked for, and not done or not checked): the dead don't slump for the lullaby or burn in the
+  dragon's breath (they have no such poses); a boomerang knight has no catch pose of his own, only a brace; the practice
+  dead sometimes show black against the brightest bursts; blood already on the ground is the game's own and stays as
+  long as it always has; and nothing of this has been seen on a real GPU or heard, only on a software one, with no
+  sound: the timings are from the sim's clock, the look from frames a fifth of a second apart.
+
 ### The heroes' armour: what's between the plates
 
 A hero's plates are rigid, so where two part as a joint bends, something has to show. `tools/heroes/mail.py` makes it for
@@ -1007,6 +1037,9 @@ To check it yourself:
 | `tools/swords/` | Separates the sheets into swords (in Blender), and renders their icons |
 | `tools/items/check.mjs` | Tests the item rules and rarity odds |
 | `tools/gear/` | Tears the suits into pieces and renders their icons (in Blender), and fits gauntlets over the first-person arms |
+| `tools/heroes/lutes.py` | Cuts the six lutes from the owner's sheet, finds which way each soundboard faces, thins them and gives each its own colour map |
+| `tools/heroes/moves.mjs`, `tools/heroes/sheet.py` | Plays every move of the other Tessariels in the real game on a headless browser and saves the frames; lays them side by side for looking at |
+| `tests/hero-skills.test.mjs`, `tests/hero-stage.mjs` | Every move of every class played with no page, on the real bodies and clips |
 | `assets/fp/gauntlets_*.glb` | A suit's gauntlets and upper arms, fitted to every first-person rig |
 
 ## First-person arms with a sword and shield

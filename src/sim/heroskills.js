@@ -298,7 +298,7 @@ const xcut = (c, x, y, z, yaw, len, e1, e2 = e1, light = 0) => { slash(c, x, y, 
 const CUT = { rogue: [DRAIN, ARCANE], ninja: [ARCANE, ARCANE] };
 export function cutArc(h, sim, i, size = 1) {
   const e = CUT[h.person.cls];
-  if (e && h.fxOk()) crescent(sim.casting, h, 1.5 * size, e[i % 2], { up: i % 2 ? -0.4 : 0.4, y: 1.05, life: 0.1, alpha: 0.8 });
+  if (e && h.fxOk()) crescent(sim.casting, h, 1.5 * size, e[i % 2], { up: i % 2 ? -0.4 : 0.4, y: 1.05, life: 0.12, alpha: 0.8 });
 }
 // Light drawn in to his feet while he readies something: a ring closing on him for as long as the gather lasts.
 function gather(c, h, elem, r, secs) { if (h.fxOk()) c.burst(FX.RING, elem, h.x, h.y + 0.06, h.z, r, 0.5, secs, { alpha: 0.7, ease: 1 }); }
@@ -1293,7 +1293,7 @@ CAST.guided_arrow = (h, sim, m, { w, c, P }) => {
   h.bowLoftT = 0.5;
   bowShot(h, sim, 0.85, () => {
     const side = pick([-0.7, 0.7]);
-    arrow(h, sim, m, { v: 20, grav: 0, spread: side, loft: 0.3, homing: 7, foe: m, only: true, dmg: 16 * P, life: 2.4, fat: 1.7, elem: SPIRIT, vy: 9,
+    arrow(h, sim, m, { v: 16, grav: 0, spread: side, loft: 0.25, homing: 12, foe: m, only: true, dmg: 16 * P, life: 2.4, fat: 1.7, elem: SPIRIT, vy: 6,
       more: (cc, s, vv) => { cc.fx(FX.TRAIL, SPIRIT, s.x, s.y, s.z, 0.08, -s.vx / vv, -s.vy / vv, -s.vz / vv, 3.4, 0.5); for (const k of [0, Math.PI]) { const a = s.t * 16 + k; cc.fx(FX.ORB, SPIRIT, s.x + Math.cos(a) * 0.16, s.y + Math.sin(a) * 0.16, s.z, 0.06, 0, 1, 0, 0, 0.9); } },
       onHit: (k) => { if (h.fxOk()) c.burst(FX.FLARE, SPIRIT, k.x, k.y + 1.1, k.z, 0.3, 0.9, 0.2, { light: 6, lightR: 4 }); },
       end: () => { z0.done = true; } });
@@ -1676,7 +1676,7 @@ CAST.rising_dragon = (h, sim, m, { w, c, P }) => {
     },
     draw: (cc, hh, j) => {
       // (Two threads of it wound up round him as he turns.)
-      for (const k of [0, Math.PI]) { const a = j.u * 16 + k; cc.fx(FX.TRAIL, k ? LIGHT : ARCANE, h.x + Math.sin(a) * 0.55, h.y + 0.5 + Math.sin(a * 0.5) * 0.3, h.z + Math.cos(a) * 0.55, 0.07, -Math.cos(a) * 0.6, -0.8, Math.sin(a) * 0.6, 1.3, 0.8); }
+      for (const k of [0, Math.PI]) { const a = j.u * 16 + k; cc.fx(FX.TRAIL, ARCANE, h.x + Math.sin(a) * 0.55, h.y + 0.5 + Math.sin(a * 0.5) * 0.3, h.z + Math.cos(a) * 0.55, k ? 0.04 : 0.07, -Math.cos(a) * 0.6, -0.8, Math.sin(a) * 0.6, 1.3, 0.8); }
     },
     land: () => {
       w.blast(h, h.x + Math.sin(h.yaw) * 0.8, h.z + Math.cos(h.yaw) * 0.8, h.y, 2, 12 * h.power(), { kind: 'gash', poise: 70, stun: 0.5 });
