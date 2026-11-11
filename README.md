@@ -312,6 +312,16 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     pace before its middle and then to one a pace beyond (`DOORWAYS`), so it comes up to the door facing it, opens it,
     and walks through down the middle, and leaves a house the same way. It opens only the doors its path goes through,
     not every one it passes. A door it can't open yet (the Sexton's, before his quest) its paths keep clear of.
+  - **Where a path ends.** At the nearest place to where it's going that a body can stand and get to: not a gap shut in
+    behind a bed, which is often the nearest free floor to a chest in a corner. Going to something it means to put a
+    hand to or have a word with (a chest, a thing on the ground, someone), the path ends where nothing stands between
+    it and that, so it isn't sent to the far side of a wall from it. One house chest stands behind a screen with a way
+    in too narrow for its half-metre grid: that one it leaves at once.
+  - **One errand at a time.** Sent somewhere new, it goes there, even when that's a stride or two from where it was
+    going: it used to carry on to whoever stood outside a door when it meant the chest just inside it.
+  - **Its eyes are on the way it's going.** With an errand to talk to someone in hand and a chest to fetch first, its
+    look used to stay on the door it had just opened, and it stood there unable to turn and walk through, till it gave
+    the chest up. A turn on the spot that goes on past two seconds now lets its look go, and counts as being stuck.
   (The nav thread used to read the world's list of pines and boulders three numbers at a time where there are four to
   each, so across the northern half of the land every wood read as solid: no path through it, no way to back off in a
   fight there. It reads them right now.)
@@ -528,11 +538,14 @@ bought as written (it's played through from level 1 to 50), and a new block of m
   it; and neither "Not enough mana" nor a broken guard came up once. It has not been watched down the Warrens or at the
   black knight since, nor by a person at all: watch a fight or two with it.
 - Its walking in the town (doors, walls, the houses' chests, a word only face to face) was watched the same way, against
-  a second copy of the world kept on the page to judge it by. In 230 seconds it went through house doors fifteen times,
-  never more than 0.18 m off a doorway's middle and square on each time (before: up to 0.44 m off, which rubs the jamb),
-  and opened seven of the houses' chests, each from within two metres with nothing between. It then got stuck behind
-  one of the townsfolk standing just inside a door; it now goes on past a place it can't get nearer to, and that last
-  change, and its talking after it, have not been watched through. Watch it take a quest or two in the town.
+  a second copy of the world kept on the page to judge it by. In the last run, four minutes from a new game: thirteen
+  goings through house doors, none more than 0.17 m off a doorway's middle and all square on (before: up to 0.44 m off,
+  which rubs the jamb); five house chests opened, each from within a metre and a half with nothing between; three quests
+  taken, none through a wall; nothing got it stuck; and it was against a wall for 1.1% of the time it was walking (5.2%
+  before). Two faults showed in the runs before that one and are mended: it stood at a door unable to turn from it
+  when it had someone to talk to next, and it walked to whoever stood outside a door when it meant the chest inside.
+  Not watched: a quest handed in indoors, the shops, and the catacombs' doors since. Nobody has watched it with their
+  own eyes.
 
 ### The Free Company: a party of your own
 
