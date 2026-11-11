@@ -356,7 +356,8 @@ function boxesNear(x, z) {
 function solidAt(x, z, r, y) {
   for (const c of boxesNear(x, z)) if (boxHit(c, x, z, r, y)) return true;
   for (const c of world.sitesNear(x, z) || []) if ((c.top ??= c.h + world.height(c.x, c.z)) >= y && boxHit(c, x, z, r, y)) return true;
-  if ((Math.abs(x) > 50 || Math.abs(z) > 50) && y > -2) {
+  // (Trunks stand on the land, not down in the catacombs under it. The hollows west of the town lie lower than -2 themselves.)
+  if ((Math.abs(x) > 50 || Math.abs(z) > 50) && (y > -2 || y > terrainHeight(x, z) - 2)) {
     const ci = Math.floor(x / 16), cj = Math.floor(z / 16);
     for (let j = cj - 1; j <= cj + 1; j++) {
       for (let i = ci - 1; i <= ci + 1; i++) {

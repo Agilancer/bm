@@ -6,6 +6,10 @@ import { SHADOW, STATIC, cutMaskWGSL } from './materials.js';
 const CHUNK = 32, FLOATS = 8;
 const NEAR = 84, MID = 232;       // Metres to a chunk's middle: the full tree, then the whorls of big cards, then the painted tree.
 const SKIRT_FROM = 0.2;           // The bare trunk, up to the lowest boughs.
+// About the hunting grounds (src/core/hunts.js) a pine's boughs below this are off, so you can see under it: the lowest left
+// hang to about a third of its height, seven metres up the shortest. Those boughs are marked by LOW more on their u (the
+// paintings repeat, and the shaders take it off again), and a trimmed tree folds them away to nothing.
+const TRIM_BELOW = 0.42, LOW = 4;
 
 const reach = (y) => 0.2 * Math.pow(Math.max(0, 1 - (y - SKIRT_FROM) / (1 - SKIRT_FROM)), 0.9) + 0.03;
 // (The same random run every time, so all the forest's one tree, turned and stretched.)
@@ -40,13 +44,13 @@ class Mesh {
   }
 
   // One bough: a long card from the trunk out, the stem down its middle, bending as it goes. It's lit as if it faced up and outward.
-  bough(y, ang, len, wide, droop, segs, layer) {
+  bough(y, ang, len, wide, droop, segs, layer, low = 0) {
     const cx = Math.cos(ang), cz = Math.sin(ang), sx = -cz, sz = cx;
     const nx = cx * 0.55, ny = 0.85, nz = cz * 0.55;
     const base = this.n;
     for (let k = 0; k <= segs; k++) {
       const t = k / segs, r = len * t, h = y + droop * (t * t * 1.15 - 0.15 * t);
-      for (const s of [-1, 1]) this.vert(cx * r + sx * s * wide, h, cz * r + sz * s * wide, nx, ny, nz, t, s * 0.5 + 0.5, layer);
+      for (const s of [-1, 1]) this.vert(cx * r + sx * s * wide, h, cz * r + sz * s * wide, nx, ny, nz, t + low, s * 0.5 + 0.5, layer);
     }
     for (let k = 0; k < segs; k++) {
       const a = base + k * 2;
@@ -55,11 +59,11 @@ class Mesh {
   }
 
   // And the same bough stood on edge, for what the flat one doesn't show from beside it.
-  blade(y, ang, len, wide, droop, layer) {
+  blade(y, ang, len, wide, droop, layer, low = 0) {
     const cx = Math.cos(ang), cz = Math.sin(ang);
     const nx = cx * 0.55, ny = 0.85, nz = cz * 0.55;
-    const a = this.vert(0, y + wide, 0, nx, ny, nz, 0, 0, layer), b = this.vert(0, y - wide, 0, nx, ny, nz, 0, 1, layer);
-    const c = this.vert(cx * len, y + droop - wide, cz * len, nx, ny, nz, 1, 1, layer), d = this.vert(cx * len, y + droop + wide, cz * len, nx, ny, nz, 1, 0, layer);
+    const a = this.vert(0, y + wide, 0, nx, ny, nz, low, 0, layer), b = this.vert(0, y - wide, 0, nx, ny, nz, low, 1, layer);
+    const c = this.vert(cx * len, y + droop - wide, cz * len, nx, ny, nz, 1 + low, 1, layer), d = this.vert(cx * len, y + droop + wide, cz * len, nx, ny, nz, 1 + low, 0, layer);
     this.quad(a, b, c, d);
   }
 
@@ -89,14 +93,14 @@ function pineMeshes(pine, far, bark) {
     for (let w = 0; w < whorls; w++) {
       const t = w / (whorls - 1), y = SKIRT_FROM + (0.985 - SKIRT_FROM) * t;
       const n = Math.round(6 - 2 * t);
-      const turn = R() * 6.28;
+      const turn = R() * 6.28, low = y < TRIM_BELOW ? LOW : 0;
       for (let b = 0; b < n; b++) {
         const ang = turn + (b + (R() - 0.5) * 0.5) / n * Math.PI * 2;
         const len = reach(y + (R() - 0.5) * 0.03) * (0.82 + 0.3 * R());
         const wide = Math.max(0.012, len * 0.4);
         const droop = -len * (0.62 - 0.5 * t + (R() - 0.5) * 0.18);
-        m.bough(y, ang, len, wide, droop, 2, pine);
-        m.blade(y + droop * 0.32, ang, len, wide * 0.72, droop * 0.65, pine);
+        m.bough(y, ang, len, wide, droop, 2, pine, low);
+        m.blade(y + droop * 0.32, ang, len, wide * 0.72, droop * 0.65, pine, low);
       }
     }
   }
@@ -114,7 +118,7 @@ function pineMeshes(pine, far, bark) {
       for (let b = 0; b < n; b++) {
         const ang = turn + b / n * Math.PI * 2;
         const len = reach(y) * 1.12;
-        m.bough(y, ang, len, len * 0.72, -len * 0.82, 1, pine);
+        m.bough(y, ang, len, len * 0.72, -len * 0.82, 1, pine, y < TRIM_BELOW ? LOW : 0);
       }
     }
   }
@@ -140,12 +144,18 @@ export const PINE = STATIC
   var o: V;
   let w = pIn.xz * spin.z * at.w;
   var p = vec3f(w.x * spin.x - w.y * spin.y, pIn.y * at.w, w.x * spin.y + w.y * spin.x) + at.xyz;
+  // (spin.w: how dark, plus ten times the country's tint, plus a hundred for a tree with its low boughs off. Those boughs
+  // carry LOW more on their u: on a trimmed tree every corner of one goes to the tree's foot, and it's nothing.)
+  let trim = floor(spin.w / 100.0);
+  let tw = spin.w - trim * 100.0;
+  let low = uv.x > ${LOW - 0.5};
+  if (low && trim > 0.0) { p = at.xyz; }
   let nw = vec3f(n.x * spin.x - n.z * spin.y, n.y, n.x * spin.y + n.z * spin.x);
-  // (spin.w: how dark, plus ten times the country's tint, src/core/lands.js treeCode. Handed on as a hundred times the tint plus the tone.)
-  let tcode = floor(spin.w / 10.0);
-  o.tone = tcode * 100.0 + (spin.w - tcode * 10.0) * 1.8 * mix(0.5, 1.05, clamp(pIn.y * 1.5, 0.0, 1.0)) * mix(0.62, 1.1, clamp(length(pIn.xz) / max(0.012, 0.22 * (1.0 - pIn.y)), 0.0, 1.0));`)
+  // (The tint is src/core/lands.js treeCode. Handed on as a hundred times the tint plus the tone.)
+  let tcode = floor(tw / 10.0);
+  o.tone = tcode * 100.0 + (tw - tcode * 10.0) * 1.8 * mix(0.5, 1.05, clamp(pIn.y * 1.5, 0.0, 1.0)) * mix(0.62, 1.1, clamp(length(pIn.xz) / max(0.012, 0.22 * (1.0 - pIn.y)), 0.0, 1.0));`)
   // Each tree its own bark and needles, of the five, from where it stands.
-  .replace('o.p = p; o.n = n; o.uv = uv; o.layer = layer;', `o.p = p; o.n = nw; o.uv = uv; o.layer = layer;
+  .replace('o.p = p; o.n = n; o.uv = uv; o.layer = layer;', `o.p = p; o.n = nw; o.uv = vec2f(uv.x - select(0.0, ${LOW}.0, low), uv.y); o.layer = layer;
   let which = u32(fract(sin(dot(at.xz, vec2f(12.9898, 78.233))) * 43758.5453) * 5.0);
   if (which > 0u && layer == PINE_LAYERu) { o.layer = PINE_2u + which - 1u; }
   if (which > 0u && layer == BARK_LAYERu) { o.layer = BARK_2u + which - 1u; }`)
@@ -192,8 +202,11 @@ const SHADOW_PINE = SHADOW + /* wgsl */ `
 @vertex fn vsPine(@location(0) pIn: vec3f, @location(2) uv: vec2f, @location(3) layer: u32, @location(5) at: vec4f, @location(6) spin: vec4f) -> VC {
   var o: VC;
   let w = pIn.xz * spin.z * at.w;
-  o.pos = U_.m * vec4f(vec3f(w.x * spin.x - w.y * spin.y, pIn.y * at.w, w.x * spin.y + w.y * spin.x) + at.xyz, 1.0);
-  o.uv = uv; o.layer = layer;
+  // (A trimmed tree's low boughs, folded away as in PINE.)
+  let low = uv.x > ${LOW - 0.5};
+  let gone = low && spin.w >= 100.0;
+  o.pos = U_.m * vec4f(select(vec3f(w.x * spin.x - w.y * spin.y, pIn.y * at.w, w.x * spin.y + w.y * spin.x), vec3f(0.0), gone) + at.xyz, 1.0);
+  o.uv = vec2f(uv.x - select(0.0, ${LOW}.0, low), uv.y); o.layer = layer;
   return o;
 }
 `;

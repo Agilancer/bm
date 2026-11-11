@@ -2,7 +2,7 @@
 // thread spends a small slice of every 40 ms playing out the duel to come, so the knight's next tactic is
 // informed by however many cores the machine can spare.
 import { CTRL, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, mapShared } from '../core/layout.js';
-import { TREE_FLOATS, forestAmount, forestTrees } from '../core/forest.js';
+import { TREE_FLOATS, TRIMMED, forestAmount, forestTrees } from '../core/forest.js';
 import { openingTerrain, setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
 import { WAY_BOX, caveCuts, wayDip } from '../core/opening.js';
@@ -123,7 +123,8 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
 }
 
 // The pines: (x, y, z, height), (cos, sin, how wide, how dark), all the way out.
-// (How dark goes in the last float's fraction; the tint, lands.js treeCode, times ten on top: src/gfx/pines.js reads both.)
+// (How dark goes in the last float's fraction; the tint, lands.js treeCode, times ten on top; and a hundred more for a pine
+// with its low boughs off: src/gfx/pines.js reads all three.)
 function buildForest({ reach, cx = 0, cz = 0 }) {
   const t = forestTrees(reach, cx, cz), F = TREE_FLOATS, n = t.length / F;
   const trees = new Float32Array(n * 8);
@@ -131,7 +132,8 @@ function buildForest({ reach, cx = 0, cz = 0 }) {
     const x = t[i * F], z = t[i * F + 1], k = i * 8;
     trees[k] = x; trees[k + 1] = terrainHeight(x, z); trees[k + 2] = z; trees[k + 3] = t[i * F + 2];
     trees[k + 4] = t[i * F + 4]; trees[k + 5] = t[i * F + 5]; trees[k + 6] = t[i * F + 3];
-    trees[k + 7] = 0.72 + 0.42 * hash2(Math.round(x * 7), Math.round(z * 7)) + 10 * t[i * F + 6];
+    const code = t[i * F + 6], trim = code >= TRIMMED;
+    trees[k + 7] = 0.72 + 0.42 * hash2(Math.round(x * 7), Math.round(z * 7)) + 10 * (trim ? code - TRIMMED : code) + (trim ? 100 : 0);
   }
   return { trees, cx, cz };
 }

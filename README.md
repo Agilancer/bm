@@ -641,7 +641,10 @@ ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is
 
 The first party dungeon (`src/core/dungeon.js`, `src/sim/dungeon.js`): a cave system the kobolds dug and the goblins took,
 with Venomaw, the green dragon, asleep on her hoard at the bottom. Its portal stands in a heap of rock in the woods
-north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. It lets in only a full party: four
+north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. Its terrace is dug into the hillside, and
+you can walk onto it from every side but the wall's: a wide flight of sixteen steps comes down its front to meet the hill
+(a path through the woods ends at its foot), and its two ends are level with the ground or open to it (`portalWall` in
+`src/core/sites.js`). It lets in only a full party: four
 with you, a lancer and a paladin among them. Inside, a portal by the way in takes you back out at any time, and one behind
 the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 gold, and it all stands again after.
 
@@ -777,6 +780,8 @@ hand. There's no punch: with empty hands, a click tells you to open the pack.
 ### The forest, the hill and the hours of the day
 
 The town stands in a clearing in a forest of pines, about 16,000 of them out to 1 km, with six big oaks inside the clearing. `src/core/forest.js` says where each pine stands, the same on every thread, so what's drawn is what you walk into. `src/gfx/pines.js` draws one tree in three meshes: full boughs under about 84 m, big cards to 232 m, three crossed paintings past that. Only the two nearer rings throw shadows. Paint the bough and the far tree with `python tools/village/build_pines.py`, which needs nothing but numpy and Pillow.
+
+**The hunting grounds** (`src/core/hunts.js`). Where the woods' monsters stand, round Bellmourn (the six lairs, the four burial grounds, the casters' posts, the ogre's, the Gravehart's and the Abyssal Mouth's) and at every lair out in the countries, the pines open into a glade, the wood stands about half as thick for some thirty metres round it, and the pines left within about fifty metres have their boughs off below two fifths of their height (`TRIM_BELOW` in `src/gfx/pines.js`: the same mesh, its low boughs folded away on a trimmed tree), so you can see what you're fighting under them. No boulder lies in a glade's middle, and the opened floor has stumps, rough grass and ferns over it, none of it over the knee (`debrisInCell` in `src/core/rocks.js`). Eighteen paths (`HUNT_PATHS`, part of `PATHS`) lead in to the grounds from the south and north-east tracks, the foot of the Long Road and of the Fall, and the sexton's way, and one goes on up the hill to the foot of the Warrens' steps: nothing grows on them, the trail follows them and the map draws them. The two roads up the hill run on steep-sided ridges, so the ways west go up the hollows either side of the Fall. Move a monster's place and move its ground in `HUNT_GROUNDS`; `node --test tests/hunts.test.mjs` checks the lairs and field creatures have theirs, every ground has a path that joins the old ones, and nothing grows on a path.
 
 The land now goes on for 600 m either way (`LAND_EDGE`), and the hill to the west, at (-512, 166) and 146 m up, has two roads from the town, in `ROADS` in `src/core/terrain.js`. Both have a signpost where they leave the town, and a cairn with a fire on it where they end.
 
