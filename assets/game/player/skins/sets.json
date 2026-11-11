@@ -1134,7 +1134,7 @@
   {
    "id": "duskfield_common",
    "name": "Duskfield Common Gear",
-   "blurb": "Common-tier travelling gear. Faded heather cloth, dark plum shoulders and plain brown leather. Plain bindings; no added insignia or precious decoration.",
+   "blurb": "Common-tier travelling gear. Faded heather cloth, dark plum shoulders and plain brown leather. Plain bindings and a stitched half-sun over a field; no precious decoration.",
    "wears": {
     "palette": "amethyst"
    },

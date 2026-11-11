@@ -7,78 +7,110 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/copperfield_common_cloth.png",
+   "swatch": "swatches/cf_tunic.png",
    "tile": "repeat",
-   "scale": 0.19,
-   "bright": 1,
-   "shading": 0.7
+   "scale": 0.2,
+   "bright": 1.0,
+   "shading": 0.75,
+   "keep": 0
   },
   "trim": {
-   "swatch": "swatches/copperfield_common_binding.png",
+   "swatch": "swatches/cf_binding.png",
    "tile": "repeat",
    "scale": 0.1,
-   "bright": 0.85,
-   "shading": 0.35
+   "bright": 0.95,
+   "shading": 0.5,
+   "keep": 0
   },
   "leather": {
-   "swatch": "swatches/copperfield_common_leather.png",
+   "swatch": "swatches/cf_leather.png",
    "tile": "repeat",
    "scale": 0.12,
-   "bright": 1.1,
-   "shading": 0.75
+   "bright": 1.0,
+   "shading": 0.85,
+   "keep": 0.15
   },
   "keep_trim": true
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/copperfield_common_hat.png",
+    "swatch": "swatches/cf_hat.png",
     "tile": "repeat",
-    "scale": 0.12,
-    "bright": 1,
-    "shading": 0.7
+    "scale": 0.14,
+    "bright": 0.95,
+    "shading": 0.75,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/cf_binding.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 1.0,
+    "shading": 0.8,
+    "keep": 0
    }
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/copperfield_common_mantle.png",
+    "swatch": "swatches/cf_mantle.png",
     "tile": "repeat",
     "scale": 0.14,
-    "bright": 1,
-    "shading": 0.7
+    "bright": 1.0,
+    "shading": 0.8,
+    "keep": 0
    }
   },
-  "chest": {},
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/pot.png",
+     "anchor": "back",
+     "size": 0.15,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
   "legs": {
    "cloth": {
-    "swatch": "swatches/copperfield_common_mantle.png",
-    "tile": "repeat",
-    "scale": 0.14,
-    "bright": 0.85,
-    "shading": 0.7
-   },
-   "leather": {
-    "swatch": "swatches/copperfield_common_leather.png",
+    "swatch": "swatches/cf_leather.png",
     "tile": "repeat",
     "scale": 0.12,
-    "bright": 0.96,
-    "shading": 0.7
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/cf_trousers.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.95,
+    "shading": 0.85,
+    "keep": 0
    }
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/copperfield_common_leather.png",
+    "swatch": "swatches/cf_leather.png",
     "tile": "repeat",
     "scale": 0.12,
-    "bright": 1,
-    "shading": 0.7
+    "bright": 1.05,
+    "shading": 0.85,
+    "keep": 0.15
    },
    "leather": {
-    "swatch": "swatches/copperfield_common_leather.png",
+    "swatch": "swatches/cf_leather.png",
     "tile": "repeat",
     "scale": 0.12,
-    "bright": 1.08,
-    "shading": 0.7
+    "bright": 1.1,
+    "shading": 0.85,
+    "keep": 0.2
    }
   }
  }
