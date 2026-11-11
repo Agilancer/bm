@@ -1,0 +1,108 @@
+{
+ "id": "hedgeway_common",
+ "name": "Hedgeway Common Gear",
+ "blurb": "Common brown travelling gear: coarse russet wool, darker mantle and trousers, a weathered grey-green hat, worn saddle leather and plain bindings. A plain stitched hedge-leaf badge on the back; no precious trim. Intended as common-tier Ashen gear.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/russet_wool.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.92,
+   "shading": 1.0
+  },
+  "trim": {
+   "color": "#2c1c12",
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/saddle.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_wool.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/umber_wool.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   },
+   "trim": {
+    "color": "#1e130c"
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/hedge_leaf.png",
+     "anchor": "back",
+     "size": 0.15,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/umber_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "trim": {
+    "color": "#1e130c"
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.15
+   },
+   "leather": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  }
+ }
+}

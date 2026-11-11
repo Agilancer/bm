@@ -1,0 +1,144 @@
+{
+ "id": "burrwarden_rare",
+ "name": "Burrwarden",
+ "blurb": "Rare gear. Walnut weave, moss-grey shoulders, brushed brass and rounded seed-burr motifs. Original hedgehog crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/walnut.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/brass.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.86,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/moss.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/hedgehog.png",
+     "anchor": "hat",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/moss.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/hedgehog.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/hedgehog.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_burr.png",
+    "color": "#c09a52",
+    "scale": 0.14,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/hedgehog.png",
+     "anchor": "back",
+     "size": 0.23,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/hedgehog.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/moss.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.72,
+    "shading": 0.9
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.86,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/walnut.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.9
+   }
+  }
+ }
+}

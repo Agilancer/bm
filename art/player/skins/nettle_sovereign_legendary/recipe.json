@@ -1,0 +1,186 @@
+{
+ "id": "nettle_sovereign_legendary",
+ "name": "Nettle Sovereign",
+ "blurb": "Legendary gear. Wine silk, forest-green mantle, rose gold and serrated-leaf embroidery. Original nettle sprig crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/metal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.85
+  },
+  "leather": {
+   "swatch": "swatches/belt.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_leaves.png",
+    "color": "#eeb08e",
+    "scale": 0.17,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/nettle.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/nettle.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_leaves.png",
+    "color": "#eeb08e",
+    "scale": 0.17,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/nettle.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/nettle.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_leaves.png",
+    "color": "#eeb08e",
+    "scale": 0.24,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/nettle.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/nettle.png",
+     "anchor": "tabard",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_leaves.png",
+    "color": "#eeb08e",
+    "scale": 0.17,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "leather": {
+    "swatch": "swatches/trouser.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   },
+   "decals": [
+    {
+     "image": "decals/nettle.png",
+     "anchor": "knee_left",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/nettle.png",
+     "anchor": "knee_right",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  }
+ }
+}

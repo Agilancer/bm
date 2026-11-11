@@ -1,0 +1,111 @@
+{
+ "id": "bristleway_common",
+ "name": "Bristleway",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched broom crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/bw_tunic.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/bw_leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.25,
+   "shading": 0.6,
+   "keep": 0.0
+  },
+  "leather": {
+   "swatch": "swatches/bw_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 0.85,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/bw_hat.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.75,
+    "keep": 0.0
+   },
+   "decals": [
+    {
+     "image": "decals/broom.png",
+     "anchor": "hat",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/bw_mantle.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.75,
+    "keep": 0.0
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/broom.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/bw_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.2,
+    "shading": 0.8,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/bw_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.85,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/bw_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.25,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

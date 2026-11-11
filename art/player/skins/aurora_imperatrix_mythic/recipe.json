@@ -1,0 +1,202 @@
+{
+ "id": "aurora_imperatrix_mythic",
+ "name": "Aurora Imperatrix",
+ "blurb": "Mythic gear. Aurora teal and orchid silk, iridescent-color weave, platinum edging and curtain crests. Original aurora curtain crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/silk_teal.png",
+   "scale": 0.3,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/aurora_imperatrix_mythic_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.3,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/aurora_imperatrix_mythic_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.86,
+   "keep": 0.07
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/silk_teal.png",
+    "scale": 0.26,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/starfall.png",
+    "color": "#e6e0ee",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/curtain.png",
+     "anchor": "hat",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/curtain.png",
+     "anchor": "hat_back",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/silk_orchid.png",
+    "scale": 0.26,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/starfall.png",
+    "color": "#e6e0ee",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/curtain.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/curtain.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/starfall.png",
+    "color": "#e6e0ee",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/curtain.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    },
+    {
+     "image": "decals/curtain.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/silk_orchid.png",
+    "scale": 0.26,
+    "tile": "repeat",
+    "bright": 0.92,
+    "shading": 0.9
+   },
+   "leather": {
+    "swatch": "swatches/aurora_imperatrix_mythic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.84,
+    "keep": 0.07
+   },
+   "trim": {
+    "swatch": "swatches/aurora_imperatrix_mythic_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 1.25,
+    "shading": 0.7,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/curtain.png",
+     "anchor": "knee_left",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/curtain.png",
+     "anchor": "knee_right",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "pattern": {
+    "image": "swatches/starfall.png",
+    "color": "#e6e0ee",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/silk_orchid.png",
+    "scale": 0.26,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9
+   },
+   "leather": {
+    "swatch": "swatches/aurora_imperatrix_mythic_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.16,
+    "shading": 0.85,
+    "keep": 0.08
+   }
+  }
+ }
+}

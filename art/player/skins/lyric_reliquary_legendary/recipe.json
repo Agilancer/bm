@@ -1,0 +1,181 @@
+{
+ "id": "lyric_reliquary_legendary",
+ "name": "Lyric Reliquary",
+ "blurb": "Legendary gear. Steel-blue silk, warm ivory mantle, pale rose gold and lyrical loop brocade. Original lyre crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/lyric_reliquary_legendary_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.06,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/lyric_reliquary_legendary_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/lyric_reliquary_legendary_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.86,
+   "keep": 0.07
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/lyric_reliquary_legendary_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/lyric_reliquary_legendary_pattern.png",
+    "color": "#cfb8a1",
+    "scale": 0.22,
+    "strength": 0.612,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lyric_reliquary_legendary_eee2d1.png",
+     "anchor": "hat",
+     "size": 0.092,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/lyric_reliquary_legendary_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/lyric_reliquary_legendary_pattern.png",
+    "color": "#cfb8a1",
+    "scale": 0.23,
+    "strength": 0.62,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lyric_reliquary_legendary_243d50.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/lyric_reliquary_legendary_243d50.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/lyric_reliquary_legendary_pattern.png",
+    "color": "#cfb8a1",
+    "scale": 0.3,
+    "strength": 0.62,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lyric_reliquary_legendary_eee2d1.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ],
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/lyric_reliquary_legendary_eee2d1.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/lyric_reliquary_legendary_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.93,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/lyric_reliquary_legendary_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.84,
+    "keep": 0.07
+   },
+   "trim": {
+    "swatch": "swatches/lyric_reliquary_legendary_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.7,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/lyric_reliquary_legendary_pattern.png",
+    "color": "#cfb8a1",
+    "scale": 0.3,
+    "strength": 0.578,
+    "tile": "repeat"
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/lyric_reliquary_legendary_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/lyric_reliquary_legendary_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.16,
+    "shading": 0.85,
+    "keep": 0.08
+   }
+  }
+ }
+}

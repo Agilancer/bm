@@ -1,0 +1,120 @@
+{
+ "id": "reedheron_uncommon",
+ "name": "Reedheron Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original heron stitch badge. Reed-green cloth, ivory shoulder panels, double flowing hem bands and brass clasps. Intended as an uncommon item alternative for the moss palette.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.95
+  },
+  "trim": {
+   "color": "#8f959e",
+   "bright": 1.05
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.9,
+   "keep": 0.2
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/reedheron_uncommon_d0c9a2.png",
+     "anchor": "hat",
+     "size": 0.092,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.95
+   }
+  },
+  "shoulders": {
+   "decals": [
+    {
+     "image": "decals/reedheron_uncommon_d0c9a2.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/reedheron_uncommon_d0c9a2.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/reedheron_uncommon_d0c9a2.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "pattern": {
+    "image": "swatches/pat_stripes.png",
+    "color": "#234c45",
+    "scale": 0.2,
+    "strength": 0.22,
+    "tile": "repeat"
+   }
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.9,
+    "keep": 0.2
+   }
+  },
+  "feet": {}
+ }
+}

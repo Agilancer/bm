@@ -1,0 +1,115 @@
+{
+ "id": "rainstitch_common",
+ "name": "Rainstitch Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original raindrop stitch badge. Split blue and fog-grey cloth, dotted sleeve borders and high dark boots. Intended as a common item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_blue.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/fx_trim.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.6
+  },
+  "leather": {
+   "swatch": "swatches/fx_dark.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "decals": [
+    {
+     "image": "decals/rainstitch_common_d4d4b9.png",
+     "anchor": "hat",
+     "size": 0.092,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.9
+   }
+  },
+  "shoulders": {
+   "decals": [
+    {
+     "image": "decals/rainstitch_common_d4d4b9.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ],
+   "cloth": {
+    "swatch": "swatches/fx_grey.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.78,
+    "shading": 0.9
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/rainstitch_common_d4d4b9.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/rainstitch_common_d4d4b9.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_greyleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9
+   },
+   "leather": {
+    "swatch": "swatches/fx_dark.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9
+   }
+  },
+  "feet": {}
+ }
+}

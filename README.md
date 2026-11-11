@@ -10,7 +10,7 @@ The game is now ranged spell combat. Everything below about swords and armour de
 - **Right hand:** staffs. Left click fires the staff's bolt. All twenty spells are on `1`-`6` and the book.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
-- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Seen as drops and icons; there's no visible body to wear them on.
+- **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Every robe found is a piece of one of the 147 **sets of gear**, each with its own look on the third-person body and bonuses for wearing two, three and all five of it: see "Gear on the body".
 - **Gems:** socket into staffs, skulls and shields. Each kind has its own stat, particles, motion and light (`src/gfx/gemfx.js`), and a Flawless stone adds a flourish. A shield's show when you ride it.
 - **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, and fills you up. It's kept in the save.
 
@@ -155,6 +155,21 @@ map is mixed on a canvas when what you wear changes, and the body's colour swapp
 A slot with no robe in it, or a robe nothing was made for, is as the sculpt came. Skin, hair and eyes never change. The
 shapes don't either: a hood wears the hat's paint.
 
+**Sets of gear.** A set with a rarity (`rarity` in `sets.json`: its `set.json` says it, or the end of its id does, as in
+`hedgeway_common`) is gear of its own: 147 of them, common to mythical, listed for the dice in `src/items/robesets.js`
+(written by the importer, not by hand). Each of its five pieces is an item to find, buy, sew or be paid with: a robe of
+the set's palette that names its set (`{ type: 'robe', base, set }`), called for it ("Vesperglass Pointed Hat"), always
+of the set's rarity, and dressed in that set's look whatever else is worn (`pickSets` looks at `item.set` first). Every
+robe rolled is a piece of some set (`rollRobe` in `src/items/items.js`: the rarity comes up, then a set that comes that
+rare; one legendary roll in eight is mythical, as with skulls). The five `_regalia` sets have no rarity: they dress the
+plain robes of older saves, by palette.
+
+**Set bonuses.** Wearing two, three and all five pieces of one set each add a stat (`setBonuses`): ward, life, spell
+damage, mana regeneration, mana or mana cost, three different ones for each set, picked by its id, and bigger the rarer
+the set (`SET_UNIT`; the five-piece bonus is three measures). `gearTotals` counts them, so the sim, the tooltip (which
+lists them, lit when they're on) and auto-play's choice of what to wear all see them. In the Test Dungeon, the Hall
+Stores' **Gear sets** tab hands over all five pieces of any set.
+
 - The game ships a set for each of the five palettes (`assets/game/player/skins/`, listed in `sets.json`). Their recipes
   are `tools/player/skins/kit/recipes/`.
 - **The skin kit** (`tools/player/skins/`) is how sets are made, by the owner with ChatGPT or by anyone:
@@ -174,6 +189,11 @@ shapes don't either: a hood wears the hat's paint.
     `python tools/player/skins/import_set.py that.zip [more.zip]` checks it, writes `skins/<id>.webp`, lists it in
     `sets.json` (the same id replaces), and keeps its recipe and pictures in `art/player/skins/<id>/`. `--list` and
     `--remove <id>` do what they say.
+  - A folder works as well as a zip: a set unzipped, or a folder of them however deep. `--rarity rare <ids>` says how
+    rare sets come that don't say so themselves.
+  - `python tools/player/skins/rebake.py <ids>` (or `--all`) bakes sets again from `art/player/skins/<id>/recipe.json`
+    after a recipe or one of its pictures has been changed, and writes a four-sided `preview.jpg` beside it. It needs
+    the kit built in `tools/build/` (the two commands above).
   - `bm.wear('crimson_regalia')` in the console dresses him whole in one set, whatever's in the pack; `bm.wear()` goes back.
 - `node --test tests/body-skin.test.mjs` checks the picking and that the shipped sets are whole.
 

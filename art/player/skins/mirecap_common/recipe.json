@@ -1,0 +1,152 @@
+{
+ "id": "mirecap_common",
+ "name": "Mirecap Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original mushroom stitch badge. Uneven clay repair patches, moss cloth, stitched pocket panels. Intended as a common item alternative for the moss palette.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95
+  },
+  "trim": {
+   "color": "#85745a",
+   "bright": 0.9
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "decals": [
+    {
+     "image": "decals/mushroom.png",
+     "anchor": "hat",
+     "size": 0.13,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.03,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "decals": [
+    {
+     "image": "decals/mushroom.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/patch_moss.png",
+     "anchor": "shoulder_right",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "turn": 8
+    }
+   ]
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/mushroom.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/mushroom.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/patch_clay.png",
+     "anchor": "tabard_back",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0.035,
+      -0.1,
+      0
+     ],
+     "turn": -7
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.15
+   },
+   "decals": [
+    {
+     "image": "decals/patch_clay.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "turn": 10
+    }
+   ]
+  },
+  "feet": {}
+ }
+}

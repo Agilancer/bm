@@ -1,0 +1,147 @@
+{
+ "id": "rimeblossom_rare",
+ "name": "Rimeblossom Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original snowflake stitch badge. Sapphire cloth, pale ice panels, crystalline lattice stitching and layered silver borders. Intended as a rare item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.95
+  },
+  "trim": {
+   "color": "#e0e6ee",
+   "bright": 1.1
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#7f9fd4",
+    "scale": 0.15,
+    "strength": 0.25,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/snow_white.png",
+     "anchor": "hat",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.03,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.6
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#8aa4c8",
+    "scale": 0.11,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/snow_blue.png",
+     "anchor": "shoulder_left",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/snow_blue.png",
+     "anchor": "shoulder_right",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#a9c6ee",
+    "scale": 0.15,
+    "strength": 0.36,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/snow_white.png",
+     "anchor": "back",
+     "size": 0.24,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/snow_white.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.6
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  },
+  "feet": {}
+ }
+}

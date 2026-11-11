@@ -1,0 +1,130 @@
+{
+ "id": "cinderweave_rare",
+ "name": "Cinderweave Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original triple flame stitch badge. Burgundy cloth, charcoal diamond panels, copper-gold flame hems and studded shoulder bands. Intended as a rare item alternative for the crimson palette.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/burgundy_weave.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/copper_gold.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/strap.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_weave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/flames.png",
+     "anchor": "hat",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/charcoal_weave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#5a5b63",
+    "scale": 0.2,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/flames.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/flames.png",
+     "anchor": "shoulder_right",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#3c0810",
+    "scale": 0.24,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/flames.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/charcoal_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.0,
+    "keep": 0.08
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "feet": {}
+ }
+}

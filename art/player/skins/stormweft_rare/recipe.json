@@ -1,0 +1,130 @@
+{
+ "id": "stormweft_rare",
+ "name": "Stormweft Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original thundercloud stitch badge. Storm-blue cloth, violet diagonal panels, angular silver stitching and banded leather guards. Intended as a rare item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/storm_twill.png",
+   "scale": 0.11,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/silver.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/strap.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_twill.png",
+    "scale": 0.11,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/thundercloud.png",
+     "anchor": "hat",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/violet.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.1
+   },
+   "pattern": {
+    "image": "swatches/pat_steps.png",
+    "color": "#7a5cb4",
+    "scale": 0.16,
+    "strength": 0.35,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/thundercloud.png",
+     "anchor": "shoulder_left",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/thundercloud.png",
+     "anchor": "shoulder_right",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_steps.png",
+    "color": "#152a40",
+    "scale": 0.22,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/thundercloud.png",
+     "anchor": "back",
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/violet_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 1.0,
+    "keep": 0.08
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "feet": {}
+ }
+}

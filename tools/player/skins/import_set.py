@@ -1,6 +1,8 @@
 """Brings sets of gear made with the skin kit into the game.
 
     python tools/player/skins/import_set.py path/to/emberwake.zip [more.zip ...]
+    python tools/player/skins/import_set.py path/to/folder             (a set unzipped, or a folder of them, however deep)
+    python tools/player/skins/import_set.py --rarity rare garnet_court [more ids]
     python tools/player/skins/import_set.py --list
     python tools/player/skins/import_set.py --remove emberwake
 
@@ -27,6 +29,7 @@ FORMAT = "bm-wizard-skin/1"
 PARTS = ["head", "shoulders", "chest", "legs", "feet"]
 PALETTES = ["ash", "moss", "night", "crimson", "amethyst"]
 SHAPES = {"head": ["pointed", "wide", "hood"], "chest": ["long", "jacket", "coat"], "shoulders": ["mantle", "cowl"], "legs": ["pants", "wraps"], "feet": ["boots", "curled"]}
+RARITIES = ["common", "uncommon", "rare", "epic", "legendary", "mythic"]
 SIZE = 2048
 
 
@@ -39,6 +42,33 @@ def save(data):
     os.makedirs(SKINS, exist_ok=True)
     json.dump(data, open(os.path.join(SKINS, "sets.json"), "w"), indent=1)
     open(os.path.join(SKINS, "sets.json"), "a").write("\n")
+    write_items(data)
+
+
+def rarity_of(sid, said=None):
+    """How rare a set's pieces come: what it says, else the end of its id (hedgeway_common), else not said."""
+    if said in RARITIES:
+        return RARITIES.index(said)
+    if isinstance(said, int) and 0 <= said < len(RARITIES):
+        return said
+    end = sid.rsplit("_", 1)[-1]
+    return RARITIES.index(end) if end in RARITIES else None
+
+
+def write_items(data):
+    """src/items/robesets.js: the sets whose pieces are things to find and wear (those with a rarity), for the game's
+    dice and tooltips. A piece is named for its set: 'Vesperglass Pointed Hat'."""
+    import re
+    lines = []
+    for s in data["sets"]:
+        if s.get("rarity") is None or not s.get("wears", {}).get("palette") or sorted(s["pieces"]) != sorted(PARTS):
+            continue
+        name = re.sub(r"\s+(?:(?:Common|Uncommon|Rare|Epic|Legendary|Mythic)\s+)?(?:Gear|Regalia|Armor|Armour|Set)$", "", s["name"]).strip()
+        lines.append(f"  {s['id']}: {{ name: {json.dumps(name)}, palette: '{s['wears']['palette']}', rarity: {s['rarity']} }},")
+    out = ("// The sets of gear whose pieces are found and worn, each with its look on the body (assets/game/player/skins) and its\n"
+           "// rarity. Written by tools/player/skins/import_set.py from sets.json: don't edit it by hand.\n"
+           "export const ROBE_SETS = {\n" + "\n".join(lines) + "\n};\n")
+    open(os.path.join(ROOT, "src", "items", "robesets.js"), "w").write(out)
 
 
 def bring(path):
@@ -100,6 +130,12 @@ def bring(path):
             open(os.path.join(keep, "preview.jpg"), "wb").write(z.read(top + "preview.jpg"))
     entry = {"id": sid, "name": m.get("name", sid), "blurb": m.get("blurb", ""), "wears": w, "pieces": pieces}
     data = listing()
+    # Its rarity: its own word for it, the end of its id, or what it was before. A set with none dresses plain robes of its palette.
+    was = next((s.get("rarity") for s in data["sets"] if s["id"] == sid), None)
+    rarity = rarity_of(sid, m.get("rarity"))
+    rarity = was if rarity is None else rarity
+    if rarity is not None:
+        entry["rarity"] = rarity
     data["sets"] = [s for s in data["sets"] if s["id"] != sid] + [entry]
     save(data)
     for_what = f"robes of the {w['palette']} palette" + (f" ({', '.join(f'{k}: {v}' for k, v in w['shapes'].items())})" if w.get("shapes") else "") if w.get("palette") else \
@@ -114,6 +150,13 @@ def main():
     args = sys.argv[1:]
     if not args:
         print(__doc__)
+    elif args[0] == "--rarity":
+        # --rarity rare id [id ...]: says how rare sets come that don't say so themselves.
+        data = listing()
+        for s in data["sets"]:
+            if s["id"] in args[2:]:
+                s["rarity"] = RARITIES.index(args[1])
+        save(data)
     elif args[0] == "--list":
         for s in listing()["sets"]:
             print(f"{s['id']:24} {s['name']:28} {json.dumps(s['wears'])}  {', '.join(s['pieces'])}")
@@ -127,8 +170,23 @@ def main():
             shutil.rmtree(os.path.join(ART, sid), ignore_errors=True)
         save(data)
     else:
+        import tempfile
         for path in args:
-            bring(path)
+            if not os.path.isdir(path):
+                bring(path)
+                continue
+            # A set already unzipped, or a folder of them: each is zipped as the kit would have, and brought in.
+            found = sorted(base for base, _, files in os.walk(path) if "set.json" in files and os.path.basename(base) != "source")
+            if not found:
+                raise SystemExit(f"{path}: no set.json anywhere in it")
+            for folder in found:
+                with tempfile.TemporaryDirectory() as tmp:
+                    z = os.path.join(tmp, os.path.basename(folder) + ".zip")
+                    with zipfile.ZipFile(z, "w", zipfile.ZIP_STORED) as out:
+                        for base, _, files in os.walk(folder):
+                            for f in files:
+                                out.write(os.path.join(base, f), os.path.relpath(os.path.join(base, f), folder))
+                    bring(z)
 
 
 if __name__ == "__main__":

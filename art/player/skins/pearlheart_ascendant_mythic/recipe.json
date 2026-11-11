@@ -1,0 +1,194 @@
+{
+ "id": "pearlheart_ascendant_mythic",
+ "name": "Pearlheart Ascendant",
+ "blurb": "Mythic gear. Pearl-ivory and opal-teal ceremonial cloth, ornate pale gold and pearl-shell crests. Original pearl clam crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 1.0
+  },
+  "trim": {
+   "swatch": "swatches/metal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.85
+  },
+  "leather": {
+   "swatch": "swatches/belt.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.05
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.0
+   },
+   "pattern": {
+    "image": "swatches/pat_scallop.png",
+    "color": "#2a9a9c",
+    "scale": 0.16,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/clam.png",
+     "anchor": "hat",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/clam.png",
+     "anchor": "hat_back",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_scallop.png",
+    "color": "#f1dc9c",
+    "scale": 0.14,
+    "strength": 0.55,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/clam.png",
+     "anchor": "shoulder_left",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/clam.png",
+     "anchor": "shoulder_right",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_scallop.png",
+    "color": "#c49a48",
+    "scale": 0.22,
+    "strength": 0.55,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/clam.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.05,
+      0
+     ]
+    },
+    {
+     "image": "decals/clam.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_scallop.png",
+    "color": "#f1dc9c",
+    "scale": 0.14,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "leather": {
+    "swatch": "swatches/trouser.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.05
+   },
+   "decals": [
+    {
+     "image": "decals/clam.png",
+     "anchor": "knee_left",
+     "size": 0.072,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/clam.png",
+     "anchor": "knee_right",
+     "size": 0.072,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.05
+   }
+  }
+ }
+}

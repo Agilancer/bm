@@ -1,0 +1,106 @@
+{
+ "id": "barleybound_common",
+ "name": "Barleybound Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original barley sheaf stitch badge. Alternating harvest stripes, plain dark mantle and wrapped ochre shins. Intended as a common item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body2.png",
+   "scale": 0.06,
+   "tile": "repeat",
+   "bright": 0.92,
+   "shading": 1.0
+  },
+  "trim": {
+   "color": "#6b5334",
+   "bright": 0.95
+  },
+  "leather": {
+   "swatch": "swatches/leather2.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat2.png",
+    "scale": 0.06,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle2.png",
+    "scale": 0.06,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "trim": {
+    "color": "#7a623e"
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_stripes.png",
+    "color": "#6f5a34",
+    "scale": 0.16,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/sheaf.png",
+     "anchor": "back",
+     "size": 0.19,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/wraps2.png",
+    "scale": 0.06,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/leather2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.95,
+    "keep": 0.15
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/leather2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.95,
+    "keep": 0.15
+   },
+   "trim": {
+    "color": "#57442c"
+   }
+  }
+ }
+}

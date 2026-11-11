@@ -1,0 +1,125 @@
+{
+ "id": "venomcrypt_epic",
+ "name": "Venomcrypt Hierophant",
+ "blurb": "Epic-tier appearance. Poison-green scales, pale jade skulls and serpentine brocade.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.13,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "color": "#d2e4c6",
+   "bright": 1.08
+  },
+  "leather": {
+   "swatch": "swatches/belt.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_serpent.png",
+    "color": "#a9cf8e",
+    "scale": 0.14,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/vial.png",
+     "anchor": "hat",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/guards.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_serpent.png",
+    "color": "#b5e08e",
+    "scale": 0.2,
+    "strength": 0.35,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/vial.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/vial.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/guards.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/trouser.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  }
+ }
+}

@@ -1,0 +1,190 @@
+{
+ "id": "coffer_ages_legendary",
+ "name": "Coffer of Ages",
+ "blurb": "Legendary gear. Emerald silk, warm bronze mantle, heavy gold and linked-box ceremonial fretwork. Original relic coffer crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_emerald.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/fx_gold.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.86,
+   "keep": 0.07
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/fx_fret.png",
+    "color": "#e2b545",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "hat",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.01,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_bronze.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/fx_fret.png",
+    "color": "#e2b545",
+    "scale": 0.2,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "shoulder_left",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "shoulder_right",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/fx_fret.png",
+    "color": "#e2b545",
+    "scale": 0.22,
+    "strength": 0.55,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "back",
+     "size": 0.26,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "tabard_back",
+     "size": 0.13,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_bronzeleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/fx_fret.png",
+    "color": "#e2b545",
+    "scale": 0.2,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.86
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "knee_left",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "knee_right",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {}
+ }
+}

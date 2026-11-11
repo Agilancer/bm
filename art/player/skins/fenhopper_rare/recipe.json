@@ -1,0 +1,159 @@
+{
+ "id": "fenhopper_rare",
+ "name": "Fenhopper",
+ "blurb": "Rare gear. Fen-green twill, reed shoulders, muted silver and looping water ripples. Original frog crest. All five pieces; rarity is assigned to items during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fenhopper_rare_cloth.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0
+  },
+  "trim": {
+   "swatch": "swatches/fenhopper_rare_metal.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7,
+   "keep": 0
+  },
+  "leather": {
+   "swatch": "swatches/fenhopper_rare_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.18,
+   "shading": 0.86,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fenhopper_rare_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/fenhopper_rare.png",
+     "anchor": "hat",
+     "size": 0.092,
+     "mode": "gilt",
+     "color": "#dddbc6",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fenhopper_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/fenhopper_rare_pattern.png",
+    "color": "#b3b99b",
+    "scale": 0.23,
+    "strength": 0.13,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fenhopper_rare.png",
+     "anchor": "shoulder_left",
+     "size": 0.08,
+     "mode": "gilt",
+     "color": "#dddbc6",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/fenhopper_rare_pattern.png",
+    "color": "#89aa91",
+    "scale": 0.24,
+    "strength": 0.22,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fenhopper_rare.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "gilt",
+     "color": "#dddbc6",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/fenhopper_rare.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "gilt",
+     "color": "#dddbc6",
+     "under_trim": false
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fenhopper_rare_mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/fenhopper_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.02,
+    "shading": 0.86,
+    "keep": 0.12
+   },
+   "trim": {
+    "swatch": "swatches/fenhopper_rare_metal.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 0.96,
+    "shading": 0.7,
+    "keep": 0
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/fenhopper_rare_cloth.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/fenhopper_rare_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.14,
+    "shading": 0.85,
+    "keep": 0.12
+   }
+  }
+ }
+}

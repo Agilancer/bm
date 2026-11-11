@@ -1,0 +1,152 @@
+{
+ "id": "coralveil_epic",
+ "name": "Coralveil Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original jellyfish stitch badge. Amethyst and iridescent teal panels, beaded scallops, flowing tentacle embroidery and opal-colored trim. Intended as an epic item alternative for the amethyst palette.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/teal.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.95
+  },
+  "trim": {
+   "swatch": "swatches/opal.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/plumleather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/plumhat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#b79fe0",
+    "scale": 0.15,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/jelly_opal.png",
+     "anchor": "hat",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/amethyst.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#e9b3c8",
+    "scale": 0.13,
+    "strength": 0.35,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/jelly_opal.png",
+     "anchor": "shoulder_left",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/jelly_opal.png",
+     "anchor": "shoulder_right",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_waves.png",
+    "color": "#bfe9e2",
+    "scale": 0.22,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/jelly_opal.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/jelly_opal.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/amethyst.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#e9b3c8",
+    "scale": 0.1,
+    "strength": 0.35,
+    "tile": "repeat"
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/amethyst.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.95
+   }
+  }
+ }
+}

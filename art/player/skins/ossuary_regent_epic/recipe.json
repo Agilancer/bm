@@ -1,0 +1,166 @@
+{
+ "id": "ossuary_regent_epic",
+ "name": "Ossuary Regent",
+ "blurb": "Epic-tier appearance. Charcoal funerary brocade, aged bone skulls and ivory edging.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/or_charcoal.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.0
+  },
+  "trim": {
+   "swatch": "swatches/or_bone.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7,
+   "keep": 0.0
+  },
+  "leather": {
+   "swatch": "swatches/or_lea.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.85,
+   "keep": 0.08
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/or_hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.0
+   },
+   "pattern": {
+    "image": "swatches/or_damask.png",
+    "color": "#b3a584",
+    "scale": 0.2,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/skull_laurel.png",
+     "anchor": "hat",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/skull_laurel.png",
+     "anchor": "hat_back",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/or_black.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.0
+   },
+   "pattern": {
+    "image": "swatches/or_damask.png",
+    "color": "#b3a584",
+    "scale": 0.18,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/skull_laurel.png",
+     "anchor": "shoulder_left",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/skull_laurel.png",
+     "anchor": "shoulder_right",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/or_damask.png",
+    "color": "#bdaf8e",
+    "scale": 0.24,
+    "strength": 0.42,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/skull_laurel.png",
+     "anchor": "back",
+     "size": 0.27,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.055,
+      0
+     ]
+    },
+    {
+     "image": "decals/skull_laurel.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/or_iron.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/or_lea.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.85,
+    "keep": 0.08
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/or_lea.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.35,
+    "shading": 0.85,
+    "keep": 0.1
+   }
+  }
+ }
+}

@@ -1,0 +1,101 @@
+{
+ "id": "pinewarden_uncommon",
+ "name": "Pinewarden Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original pinecone stitch badge. Forest-green twill, amber collar panels, layered scale-shaped hem stitches and muted brass fittings. Intended as an uncommon item alternative for the moss palette.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/pine_twill.png",
+   "scale": 0.11,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "color": "#b39050",
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/strap.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_twill.png",
+    "scale": 0.11,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/pinecone.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/ochre_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "trim": {
+    "color": "#d0b070"
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/pinecone.png",
+     "anchor": "back",
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0,
+    "keep": 0.1
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "trim": {
+    "color": "#c09a50"
+   }
+  },
+  "feet": {}
+ }
+}

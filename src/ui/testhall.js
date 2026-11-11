@@ -11,11 +11,11 @@
 import { DOOR, HALL, STATIONS, STATION_REACH, hallAt, setHallDoor } from '../core/testhall.js';
 import { FAMILIES, hallFoes } from '../core/testhall-foes.js';
 import { TRIPO_BASE, withVariants } from '../core/tripo-monsters.js';
-import { BASES, GEMS, GEM_GRADES, RARITIES, ROBES, ROBE_PALETTES, SHIELDS, SKULLS, makeRng, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon } from '../items/items.js';
+import { BASES, GEMS, GEM_GRADES, RARITIES, ROBES, ROBE_PALETTES, ROBE_SETS, SET_PARTS, SHIELDS, SKULLS, makeRng, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon } from '../items/items.js';
 import { CLOSE_X } from './menu-x.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const TABS = [['staff', 'Staffs'], ['skull', 'Skulls'], ['shield', 'Shields'], ['robe', 'Robes'], ['gem', 'Gems'], ['you', 'Yourself']];
+const TABS = [['staff', 'Staffs'], ['skull', 'Skulls'], ['shield', 'Shields'], ['robe', 'Robes'], ['set', 'Gear sets'], ['gem', 'Gems'], ['you', 'Yourself']];
 const LEVELS = [1, 5, 10, 15, 20, 30, 40, 50];
 // (No V's and no T's in the stores: those shields are the knights' own, and never anyone else's. See CLAUDE.md.)
 const STAFFS = Object.keys(BASES).filter((b) => BASES[b].grade === 'common' || BASES[b].grade === 'staff').sort((a, b) => (BASES[a].tier ?? 0) - (BASES[b].tier ?? 0) || BASES[a].name.localeCompare(BASES[b].name));
@@ -204,7 +204,7 @@ export class HallUI {
     html += `<div class="line">Take whatever you like: there's no charge in here. It goes in your pack, or at your feet if the pack is full.</div>`;
     html += `<div class="row">${TABS.map(([k, n]) => `<button class="hb ${this.tab === k ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
     if (this.tab !== 'you' && this.tab !== 'shield' && this.tab !== 'gem') {
-      const top = this.tab === 'skull' ? 5 : 4;
+      const top = this.tab === 'skull' || this.tab === 'set' || this.tab === 'robe' ? 5 : 4;
       html += `<div class="row"><span class="dim">Rarity:</span>${RARITIES.slice(0, top + 1).map((r, i) => `<button class="hb ${this.rarity === i ? 'on' : ''}" data-r="${i}" style="color:${r.color}">${r.name}</button>`).join('')}</div>`;
     }
     const color = (i) => RARITIES[Math.min(i, RARITIES.length - 1)].color;
@@ -213,6 +213,8 @@ export class HallUI {
     if (this.tab === 'skull') html += `<div class="grid">${Object.keys(SKULLS).map((b) => item(b, SKULLS[b].name, this.rarity)).join('')}</div>`;
     if (this.tab === 'shield') html += `<div class="line dim">A shield comes as rare as its own make.</div><div class="grid">${PLAIN_SHIELDS.map((b) => item(b, SHIELDS[b].name, SHIELDS[b].rarity)).join('')}</div>`;
     if (this.tab === 'robe') html += `<div class="grid">${Object.keys(ROBES).map((b) => item(b, ROBES[b].name, Math.max(this.rarity, ROBE_PALETTES[ROBES[b].palette].floor))).join('')}</div>`;
+    if (this.tab === 'robe') html = html.replace('<div class="grid">', '<div class="line dim">One piece, of a set of its colour that comes this rare.</div><div class="grid">');
+    if (this.tab === 'set') html += `<div class="line dim">All five pieces of a set.</div><div class="grid">${Object.keys(ROBE_SETS).filter((id) => ROBE_SETS[id].rarity === this.rarity).map((id) => item(id, ROBE_SETS[id].name, this.rarity)).join('')}</div>`;
     if (this.tab === 'gem') html += `<div class="grid">${Object.keys(GEMS).flatMap((k) => GEM_GRADES.map((g, i) => `<button class="hb" data-item="${k}:${i}" style="color:${GEMS[k].color}">${esc(`${g.name} ${GEMS[k].name}`)}</button>`)).join('')}</div>`;
     if (this.tab === 'you') {
       html += `<h4>Your level: ${P.level}</h4><div class="row">${LEVELS.map((l) => `<button class="hb ${P.level === l ? 'on' : ''}" data-lv="${l}">${l}</button>`).join('')}<button class="hb" data-lvd="-1">−1</button><button class="hb" data-lvd="1">+1</button></div>`;
@@ -241,7 +243,12 @@ export class HallUI {
     if (this.tab === 'staff') it = rollWeapon(r, { base: id, rarity: Math.min(4, rarity) });
     else if (this.tab === 'skull') it = rollSkull(r, { base: id, rarity });
     else if (this.tab === 'shield') it = rollShield(r, { base: id });
-    else if (this.tab === 'robe') it = rollRobe(r, { base: id, rarity: Math.min(4, rarity) });
+    else if (this.tab === 'robe') it = rollRobe(r, { base: id, rarity });
+    else if (this.tab === 'set') {
+      for (const slot of SET_PARTS) this.give?.(rollRobe(r, { set: id, slot }));
+      this.tip?.(`${ROBE_SETS[id].name}: all five pieces.`, 1.6);
+      return;
+    }
     else if (this.tab === 'gem') { const [kind, grade] = id.split(':'); it = rollGem(r, { kind, grade: +grade }); }
     if (!it) return;
     this.give?.(it);

@@ -1,0 +1,169 @@
+{
+ "id": "helix_creation_mythic",
+ "name": "Helix of Creation",
+ "blurb": "Mythic gear. Deep jade and amber silk with pale electrum helices and densely patterned leg guards. Original double helix crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/jade.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.95
+  },
+  "trim": {
+   "swatch": "swatches/electrum.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/jadeleather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.86,
+   "keep": 0.07
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/amber.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_cord.png",
+    "color": "#f6e6a6",
+    "scale": 0.2,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/helix_oval.png",
+     "anchor": "hat",
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/amber.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#f6e6a6",
+    "scale": 0.12,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/helix_oval.png",
+     "anchor": "shoulder_left",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/helix_oval.png",
+     "anchor": "shoulder_right",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_cord.png",
+    "color": "#e9e2ae",
+    "scale": 0.24,
+    "strength": 0.55,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/helix_oval.png",
+     "anchor": "back",
+     "size": 0.3,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/helix_oval.png",
+     "anchor": "tabard",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/amber.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_diamonds.png",
+    "color": "#f6e6a6",
+    "scale": 0.085,
+    "strength": 0.6,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/helix_oval.png",
+     "anchor": "knee_left",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/helix_oval.png",
+     "anchor": "knee_right",
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/amber.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.95
+   }
+  }
+ }
+}

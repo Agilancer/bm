@@ -1,0 +1,148 @@
+{
+ "id": "labyrinth_infinite_mythic",
+ "name": "Labyrinth Infinite",
+ "blurb": "Mythic gear. Obsidian-plum and amethyst with gilded labyrinth weave and dense metallic borders. Original labyrinth crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/obsidian_plum.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 1.1
+  },
+  "trim": {
+   "swatch": "swatches/gold.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.12,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/strap.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.08
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_plum.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 1.1
+   },
+   "decals": [
+    {
+     "image": "decals/labyrinth.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/amethyst.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 1.1
+   },
+   "decals": [
+    {
+     "image": "decals/rings.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/rings.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_maze.png",
+    "color": "#dcb858",
+    "scale": 0.2,
+    "strength": 0.55,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/labyrinth.png",
+     "anchor": "back",
+     "size": 0.27,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/rings.png",
+     "anchor": "tabard",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/amethyst_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/rings.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/rings.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {}
+ }
+}

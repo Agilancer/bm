@@ -1,0 +1,111 @@
+{
+ "id": "starwake_uncommon",
+ "name": "Starwake Uncommon Gear",
+ "blurb": "Uncommon rarity: fine cloth and reinforced leather gear bearing an original comet stitch badge. Cobalt and mulberry stepped panels, offset sleeve bands and small silver-tone stud rows. Intended as an uncommon item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "color": "#c6ccd6",
+   "bright": 1.05
+  },
+  "leather": {
+   "swatch": "swatches/belt.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/comet.png",
+     "anchor": "hat",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/comet.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/comet.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/trouser.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  }
+ }
+}

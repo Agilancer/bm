@@ -1,0 +1,152 @@
+{
+ "id": "sapphirecarapace_epic",
+ "name": "Sapphirecarapace Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original scarab stitch badge. Lapis and gilded ochre, segmented metal panels, repeating scale brocade and blue enamel details. Intended as an epic item alternative for the night palette.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/lapis.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.95
+  },
+  "trim": {
+   "swatch": "swatches/palegold.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/darkleather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.9,
+   "keep": 0.1
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/lapishat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_scales.png",
+    "color": "#5c84de",
+    "scale": 0.16,
+    "strength": 0.35,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/scarab_gold.png",
+     "anchor": "hat",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/oldgold.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.15
+   },
+   "pattern": {
+    "image": "swatches/pat_scales.png",
+    "color": "#5e3d0c",
+    "scale": 0.14,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/scarab_disk.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/scarab_disk.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_scales.png",
+    "color": "#6c93ea",
+    "scale": 0.17,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/scarab_gold.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/scarab_gold.png",
+     "anchor": "tabard",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/oldgold.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.15
+   },
+   "pattern": {
+    "image": "swatches/pat_scales.png",
+    "color": "#5e3d0c",
+    "scale": 0.11,
+    "strength": 0.5,
+    "tile": "repeat"
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/oldgold.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 1.1
+   }
+  }
+ }
+}

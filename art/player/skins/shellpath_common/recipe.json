@@ -1,0 +1,95 @@
+{
+ "id": "shellpath_common",
+ "name": "Shellpath Common Gear",
+ "blurb": "Common cloth and leather gear bearing an original spiral shell stitch badge. Grey-green body, slate shoulders, scalloped borders and cuff bands. Intended as a common item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body_weave.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.95,
+   "shading": 1.0
+  },
+  "trim": {
+   "color": "#b3a888",
+   "bright": 1.0
+  },
+  "leather": {
+   "swatch": "swatches/strap.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_weave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/whelk.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/slate_weave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 1.0
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/whelk.png",
+     "anchor": "back",
+     "size": 0.21,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/slate_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "feet": {}
+ }
+}

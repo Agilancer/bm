@@ -1,0 +1,103 @@
+{
+ "id": "needlebough_uncommon",
+ "name": "Needlebough",
+ "blurb": "Uncommon gear. Dyed twill, restrained metal edging and an embroidered pine bough crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/tunic.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.9
+  },
+  "trim": {
+   "color": "#b98a5a",
+   "bright": 0.95,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.09,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.88,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/bough_copper.png",
+     "anchor": "hat",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/bough_copper.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/bough_copper.png",
+     "anchor": "tabard",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.9
+   }
+  }
+ }
+}

@@ -1,0 +1,155 @@
+{
+ "id": "lotusregent_epic",
+ "name": "Lotusregent Epic Gear",
+ "blurb": "Epic gear: jewel-toned brocade, engraved plate accents, ornate borders and enamel-trimmed leather gear bearing an original lotus stitch badge. Wine silk, champagne layered panels, petal brocade and pale gold ornamental borders. Intended as an epic item alternative for the crimson palette.",
+ "wears": {
+  "palette": "crimson"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 0.95
+  },
+  "trim": {
+   "color": "#eecb6c",
+   "bright": 1.12
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_petals.png",
+    "color": "#e2c070",
+    "scale": 0.17,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lotus_gold.png",
+     "anchor": "hat",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.03,
+      0
+     ]
+    },
+    {
+     "image": "decals/lotus_gold.png",
+     "anchor": "hat_back",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.6
+   },
+   "pattern": {
+    "image": "swatches/pat_petals.png",
+    "color": "#a8843c",
+    "scale": 0.13,
+    "strength": 0.3,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lotus_wine.png",
+     "anchor": "shoulder_left",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/lotus_wine.png",
+     "anchor": "shoulder_right",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_petals.png",
+    "color": "#e8c878",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/lotus_gold.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/lotus_gold.png",
+     "anchor": "tabard",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.55
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  },
+  "feet": {}
+ }
+}

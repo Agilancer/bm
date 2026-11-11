@@ -1,0 +1,125 @@
+{
+ "id": "vaultscribe_rare",
+ "name": "Vaultscribe Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original open book stitch badge. Warm bronze cloth, ink-blue scholar panels, rectangular fretwork and gold-bound cuffs. Intended as a rare item alternative for the ash palette.",
+ "wears": {
+  "palette": "ash"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 1.0
+  },
+  "trim": {
+   "color": "#dbb458",
+   "bright": 1.08
+  },
+  "leather": {
+   "swatch": "swatches/belt.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.95,
+   "keep": 0.1
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/book.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/pat_fret.png",
+    "color": "#d0aa55",
+    "scale": 0.11,
+    "strength": 0.4,
+    "tile": "repeat"
+   }
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_fret.png",
+    "color": "#c9a362",
+    "scale": 0.15,
+    "strength": 0.32,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/book.png",
+     "anchor": "back",
+     "size": 0.23,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/book.png",
+     "anchor": "tabard",
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/trouser.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  },
+  "feet": {
+   "leather": {
+    "swatch": "swatches/boot.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  }
+ }
+}

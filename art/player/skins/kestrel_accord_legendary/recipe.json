@@ -1,0 +1,162 @@
+{
+ "id": "kestrel_accord_legendary",
+ "name": "Kestrel Accord",
+ "blurb": "Legendary gear. Violet velvet, sapphire mantle, antique gold and feathered lattice brocade. Original kestrel crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "amethyst"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/violet.png",
+   "scale": 0.12,
+   "tile": "repeat",
+   "bright": 1.08,
+   "shading": 1.1
+  },
+  "trim": {
+   "swatch": "swatches/gold.png",
+   "scale": 0.07,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/strap.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.08
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_violet.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.08,
+    "shading": 1.1
+   },
+   "pattern": {
+    "image": "swatches/pat_feathers.png",
+    "color": "#cfa850",
+    "scale": 0.2,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/kestrel.png",
+     "anchor": "hat",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/sapphire.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 1.1
+   },
+   "pattern": {
+    "image": "swatches/pat_feathers.png",
+    "color": "#d8b45a",
+    "scale": 0.16,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/wing_left.png",
+     "anchor": "shoulder_left",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/wing_right.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_feathers.png",
+    "color": "#cfa850",
+    "scale": 0.24,
+    "strength": 0.55,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/kestrel.png",
+     "anchor": "back",
+     "size": 0.25,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/feather.png",
+     "anchor": "tabard",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/sapphire_scales.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.15,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/trousers.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/feather.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/feather.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {}
+ }
+}

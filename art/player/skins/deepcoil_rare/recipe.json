@@ -1,0 +1,140 @@
+{
+ "id": "deepcoil_rare",
+ "name": "Deepcoil Rare Gear",
+ "blurb": "Rare rarity: richly woven cloth, embroidered borders and engraved metal-trimmed leather gear bearing an original octopus stitch badge. Deep teal cloth, plum marine panels, scalloped cuff embroidery and repeating silver-ring hems. Intended as a rare item alternative for the moss palette.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/body.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.05,
+   "shading": 0.95
+  },
+  "trim": {
+   "color": "#dce1e8",
+   "bright": 1.1
+  },
+  "leather": {
+   "swatch": "swatches/leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "pattern": {
+    "image": "swatches/pat_scallops.png",
+    "color": "#63b3b8",
+    "scale": 0.14,
+    "strength": 0.22,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/octopus.png",
+     "anchor": "hat",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.03,
+      0
+     ]
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95
+   },
+   "decals": [
+    {
+     "image": "decals/octopus.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/octopus.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/pat_scallops.png",
+    "color": "#7fd0d2",
+    "scale": 0.15,
+    "strength": 0.32,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/octopus.png",
+     "anchor": "back",
+     "size": 0.23,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.04,
+      0
+     ]
+    },
+    {
+     "image": "decals/octopus.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/greave.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
+   },
+   "leather": {
+    "swatch": "swatches/leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.8,
+    "shading": 0.9,
+    "keep": 0.15
+   }
+  },
+  "feet": {}
+ }
+}

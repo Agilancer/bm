@@ -1,0 +1,190 @@
+{
+ "id": "empyrean_seed_mythic",
+ "name": "Empyrean Seed",
+ "blurb": "Mythic gear. Royal-blue and solar-amber silk, platinum seed-filament weave and matching enamel crests. Original dandelion seedhead crest. All five pieces, retaining the source folds and relief. Assign item rarity during integration.",
+ "wears": {
+  "palette": "night"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/fx_royal.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.9
+  },
+  "trim": {
+   "swatch": "swatches/fx_platinum.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.15,
+   "shading": 0.7
+  },
+  "leather": {
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.86,
+   "keep": 0.07
+  },
+  "keep_trim": true
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/fx_seeds.png",
+    "color": "#dfe4ec",
+    "scale": 0.2,
+    "strength": 0.5,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "hat",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.01,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "hat_back",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx_amber.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/fx_seeds.png",
+    "color": "#8a4c08",
+    "scale": 0.2,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "shoulder_left",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "shoulder_right",
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/fx_seeds.png",
+    "color": "#dfe4ec",
+    "scale": 0.22,
+    "strength": 0.55,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "back",
+     "size": 0.27,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "tabard",
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "tabard_back",
+     "size": 0.13,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/fx_amberleather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/fx_seeds.png",
+    "color": "#8a4c08",
+    "scale": 0.2,
+    "strength": 0.4,
+    "tile": "repeat"
+   },
+   "leather": {
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.86
+   },
+   "decals": [
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "knee_left",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_crest.png",
+     "anchor": "knee_right",
+     "size": 0.07,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {}
+ }
+}

@@ -1,0 +1,95 @@
+{
+ "id": "bellfield_common",
+ "name": "Bellfield",
+ "blurb": "Common gear. Coarse cloth, plain leather binding and a small stitched handbell crest. All five pieces; assign item rarity during integration.",
+ "wears": {
+  "palette": "moss"
+ },
+ "defaults": {
+  "cloth": {
+   "swatch": "swatches/tunic.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 0.9,
+   "shading": 0.6
+  },
+  "trim": {
+   "color": "#8f7a52",
+   "bright": 0.9,
+   "shading": 0.5
+  },
+  "leather": {
+   "swatch": "swatches/dark.png",
+   "scale": 0.1,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.85,
+   "keep": 0.12
+  }
+ },
+ "parts": {
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.7
+   },
+   "decals": [
+    {
+     "image": "decals/bellfield_common_bfb59c.png",
+     "anchor": "hat",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/tan.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
+   }
+  },
+  "chest": {
+   "decals": [
+    {
+     "image": "decals/bellfield_common_bfb59c.png",
+     "anchor": "back",
+     "size": 0.19,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.045,
+      0
+     ]
+    }
+   ]
+  },
+  "legs": {
+   "cloth": {
+    "swatch": "swatches/bark.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.8
+   }
+  },
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/bark.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.8
+   }
+  }
+ }
+}
