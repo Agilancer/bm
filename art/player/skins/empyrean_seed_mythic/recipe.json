@@ -21,12 +21,12 @@
    "shading": 0.75
   },
   "leather": {
-   "swatch": "swatches/es_navy.png",
+   "swatch": "swatches/es_bronze.png",
    "scale": 0.1,
    "tile": "repeat",
    "bright": 1.05,
-   "shading": 0.88,
-   "keep": 0.08
+   "shading": 0.9,
+   "keep": 0.12
   },
   "keep_trim": true
  },
@@ -111,7 +111,7 @@
     "image": "swatches/pat_drift.png",
     "color": "#e2d6ae",
     "scale": 0.27,
-    "strength": 0.5,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [
@@ -190,6 +190,15 @@
     }
    ]
   },
-  "feet": {}
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/es_bronze.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.25,
+    "shading": 0.95,
+    "keep": 0.12
+   }
+  }
  }
 }

@@ -10,7 +10,7 @@
    "swatch": "swatches/rc_ruby.png",
    "tile": "repeat",
    "scale": 0.12,
-   "bright": 0.85,
+   "bright": 0.78,
    "shading": 0.95,
    "keep": 0
   },
@@ -42,7 +42,7 @@
    },
    "decals": [
     {
-     "image": "decals/gemring_simple.png",
+     "image": "decals/gemring_disc.png",
      "anchor": "hat",
      "size": 0.1,
      "mode": "paint",
@@ -54,7 +54,7 @@
      ]
     },
     {
-     "image": "decals/gemring_simple.png",
+     "image": "decals/gemring_disc.png",
      "anchor": "hat_back",
      "size": 0.095,
      "mode": "paint",
@@ -67,7 +67,7 @@
     "swatch": "swatches/rc_indigo.png",
     "tile": "repeat",
     "scale": 0.12,
-    "bright": 0.9,
+    "bright": 0.62,
     "shading": 0.95,
     "keep": 0
    },
@@ -110,7 +110,7 @@
      ]
     },
     {
-     "image": "decals/gemring_simple.png",
+     "image": "decals/gemring_disc.png",
      "anchor": "tabard",
      "size": 0.11,
      "mode": "paint",
@@ -123,7 +123,7 @@
     "swatch": "swatches/rc_indigo_leather.png",
     "tile": "repeat",
     "scale": 0.1,
-    "bright": 1.0,
+    "bright": 0.72,
     "shading": 0.9,
     "keep": 0.1
    },

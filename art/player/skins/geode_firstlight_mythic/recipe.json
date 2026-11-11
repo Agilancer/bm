@@ -7,18 +7,15 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/amethyst.png",
-   "scale": 0.12,
+   "swatch": "swatches/amethyst_facets.png",
+   "scale": 0.22,
    "tile": "repeat",
-   "bright": 0.78,
+   "bright": 0.9,
    "shading": 0.95
   },
   "trim": {
-   "swatch": "swatches/champagne.png",
-   "scale": 0.075,
-   "tile": "repeat",
-   "bright": 1.05,
-   "shading": 0.7
+   "color": "#e6d4a4",
+   "bright": 1.08
   },
   "leather": {
    "swatch": "swatches/leather.png",
@@ -33,10 +30,10 @@
  "parts": {
   "head": {
    "pattern": {
-    "image": "swatches/pat_facets.png",
-    "color": "#f0cc74",
-    "scale": 0.18,
-    "strength": 0.58,
+    "image": "swatches/pat_crystals.png",
+    "color": "#e3c98c",
+    "scale": 0.17,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
@@ -60,18 +57,11 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/emerald.png",
+    "swatch": "swatches/emerald_deep.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.9,
+    "bright": 0.8,
     "shading": 0.95
-   },
-   "pattern": {
-    "image": "swatches/pat_facets.png",
-    "color": "#f0cc74",
-    "scale": 0.18,
-    "strength": 0.55,
-    "tile": "repeat"
    },
    "decals": [
     {
@@ -94,17 +84,17 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/pat_facets.png",
-    "color": "#f0cc74",
-    "scale": 0.2,
-    "strength": 0.6,
+    "image": "swatches/pat_crystals.png",
+    "color": "#e3c98c",
+    "scale": 0.21,
+    "strength": 0.5,
     "tile": "repeat"
    },
    "decals": [
     {
      "image": "decals/geode.png",
      "anchor": "back",
-     "size": 0.27,
+     "size": 0.23,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
@@ -139,18 +129,11 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/emerald.png",
+    "swatch": "swatches/emerald_deep.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.82,
+    "bright": 0.72,
     "shading": 0.95
-   },
-   "pattern": {
-    "image": "swatches/pat_facets.png",
-    "color": "#f0cc74",
-    "scale": 0.18,
-    "strength": 0.55,
-    "tile": "repeat"
    },
    "leather": {
     "swatch": "swatches/leather.png",
