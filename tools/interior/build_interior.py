@@ -3103,7 +3103,9 @@ def homes():
     h.partition((-0.5, -iz), (-0.5, iz), upstairs=True, gap=(1.5, 1.15))
     h.bed(-3.9, 2.0, U, 1, 0)
     h.bed(-3.9, -2.0, U, 1, 0)
-    h.bed(4.2, 2.0, U, -1, 0)
+    # (4.1, not 4.2: at 4.2 its headboard's back was in the plane of the wall's outside face, and showed through it from the square.
+    # tools/interior/patch_bed.py moves it in a built interior.)
+    h.bed(4.1, 2.0, U, -1, 0)
     h.bed(-1.6, -2.6, U, 1, 0)
     h.shelf(0.5, iz - 0.28, U, 0.9, 0.26)
     h.rug(-2.6, 0.2, U, 1.1, 1.2)

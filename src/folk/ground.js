@@ -3,11 +3,16 @@
 // floor) and upstairs, joined at each house's stair. A* finds the way; then the way is pulled straight wherever it can see.
 // The doors count as open: the folk open them as they go (src/folk/brain.js asks the main thread).
 import { homeFloor, setFloors } from '../core/interior.js';
-import { terrainHeight } from '../core/terrain.js';
+import { PATHS, CAVE_PATH, terrainHeight } from '../core/terrain.js';
 
 export const CELL = 0.5;
 const HASH = 4;
 const UP = 2.2;               // feet above this are upstairs (RAIL_Y in tools/interior/build_interior.py)
+// What a step costs, for the way people choose (a step on a road or a lane, clear of everything, costs 1):
+const GRASS = 0.8;            // this much more over grass: they'll go most of twice as far round to keep to a worn way
+const BESIDE = [1.2, 0.5, 0.15];   // and this much more one, two and three cells from a wall, a fence or a table: nobody walks along rubbing one
+const SQUARE = [-1.5, 1, 8];  // the square round the well, worn bare: x, z, radius (pathAmount in src/core/terrain.js)
+const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 export class Ground {
   // bounds: [x0, z0, x1, z1] of the land the town's walking is worked out for.
@@ -40,6 +45,7 @@ export class Ground {
     this.land = new Float32Array(this.hw * this.hh);
     for (let j = 0; j < this.hh; j++) for (let i = 0; i < this.hw; i++) this.land[j * this.hw + i] = terrainHeight(this.x0 + i, this.z0 + j);
     this.levels = [this.build(0), this.build(1)];
+    this.costs = [this.price(0), this.price(1)];
     // Which stretch of ground each free cell is part of: one walk can reach another only within the same one.
     this.parts = this.levels.map((g) => this.label(g));
     this.g = new Float32Array(this.W * this.H);
@@ -133,6 +139,79 @@ export class Ground {
       }
     }
     return g;
+  }
+
+  // How worn the ground is at a point, 0 grass to 1 the middle of a road, a lane or the square: the same ways the land is painted
+  // with (PATHS in src/core/terrain.js), without the ragged edge the paint has.
+  worn(x, z) {
+    if (!this.ways) {
+      this.ways = [];
+      for (const p of PATHS) {
+        if (p === CAVE_PATH) continue;
+        for (let i = 0; i + 1 < p.pts.length; i++) {
+          const [ax, az] = p.pts[i], [bx, bz] = p.pts[i + 1], m = p.w * 1.1;
+          if (Math.max(ax, bx) + m < this.x0 || Math.min(ax, bx) - m > this.x1 || Math.max(az, bz) + m < this.z0 || Math.min(az, bz) - m > this.z1) continue;
+          this.ways.push([ax, az, bx - ax, bz - az, (bx - ax) ** 2 + (bz - az) ** 2 || 1, p.w]);
+        }
+      }
+    }
+    let best = 1 - sstep(SQUARE[2] - 2, SQUARE[2] + 1.5, Math.hypot(x - SQUARE[0], z - SQUARE[1]));
+    for (const [ax, az, dx, dz, L2, w] of this.ways) {
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2));
+      const d = Math.hypot(ax + dx * t - x, az + dz * t - z);
+      if (d < w * 1.1) best = Math.max(best, 1 - sstep(w * 0.5, w * 1.1, d));
+    }
+    return best;
+  }
+
+  // What a step onto each cell costs (see GRASS and BESIDE): 1 at the least, so the straight-line guess A* goes by never
+  // overshoots.
+  price(level) {
+    const W = this.W, H = this.H, g = this.levels[level], cost = new Float32Array(W * H).fill(1);
+    // How many cells each free cell is from a blocked one, as far as BESIDE counts: a flood out from the walls.
+    const far = new Uint8Array(W * H).fill(255);
+    let edge = [];
+    for (let c = 0; c < W * H; c++) if (g[c]) { far[c] = 0; edge.push(c); }
+    for (let d = 1; d <= BESIDE.length; d++) {
+      const next = [];
+      for (const c of edge) {
+        const ci = c % W, cj = (c / W) | 0;
+        for (let k = 0; k < 8; k++) {
+          const i = ci + [1, -1, 0, 0, 1, 1, -1, -1][k], j = cj + [0, 0, 1, -1, 1, -1, 1, -1][k];
+          if (i < 0 || j < 0 || i >= W || j >= H) continue;
+          const n = j * W + i;
+          if (far[n] > d) { far[n] = d; next.push(n); }
+        }
+      }
+      edge = next;
+    }
+    for (let j = 0; j < H; j++) {
+      for (let i = 0; i < W; i++) {
+        const c = j * W + i;
+        if (g[c]) continue;
+        const x = this.x0 + (i + 0.5) * CELL, z = this.z0 + (j + 0.5) * CELL;
+        // (Indoors and upstairs every step is the same price, the shortest way through a room: rooms are too close for
+        // anyone to keep off the furniture, and all of them on the one line down the middle of the floor only get in each
+        // other's way.)
+        if (level !== 0 || this.houseAt(x, z) > 0) continue;
+        const v = 1 + (far[c] <= BESIDE.length ? BESIDE[far[c] - 1] : 0) + GRASS * (1 - this.worn(x, z));
+        cost[c] = v;
+      }
+    }
+    return cost;
+  }
+
+  // What walking straight from a to b costs, in the same coin as A*'s steps; Infinity if it leaves the free cells.
+  toll(level, ax, az, bx, bz) {
+    const g = this.levels[level], cost = this.costs[level];
+    const L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / (CELL * 0.5)));
+    let sum = 0;
+    for (let k = 0; k <= n; k++) {
+      const t = k / n, c = this.cell(ax + (bx - ax) * t, az + (bz - az) * t);
+      if (c < 0 || g[c]) { if (k === 0 || k === n) continue; return Infinity; }
+      sum += cost[c] * (k === 0 || k === n ? 0.5 : 1);
+    }
+    return sum * L / n / CELL;
   }
 
   // Flood the free cells into parts (by the same steps A* takes). Part 0 is blocked; the biggest on the ground is the town.
@@ -258,9 +337,11 @@ export class Ground {
     return true;
   }
 
-  // A* on one level, from a to b. A list of [x, z] points (pulled straight), or null if there's no way.
-  find(level, ax, az, bx, bz, maxNodes = 120000) {
-    const g = this.levels[level];
+  // A* on one level, from a to b. A list of [x, z] points (pulled straight), or null if there's no way. The way it finds is
+  // the cheapest by what each step costs (`price`): along the roads and lanes where they serve, and clear of walls. plain:
+  // the shortest way and nothing else, every step the same price (for the main thread's asks: auto-play's walking).
+  find(level, ax, az, bx, bz, maxNodes = 120000, plain = false) {
+    const g = this.levels[level], price = plain ? null : this.costs[level];
     let s = this.cell(ax, az), t = this.cell(bx, bz);
     if (s < 0 || t < 0) return null;
     // The stretch of ground the walk is on: the goal's if it's on free ground, else the start's, else the biggest. A start
@@ -316,7 +397,7 @@ export class Ground {
         if (g[d] || shut[d] === stamp) continue;
         // No cutting a corner between two walls.
         if (k >= 4 && (g[cj * W + i] || g[j * W + ci])) continue;
-        const cost = G[c] + (k >= 4 ? Math.SQRT2 : 1);
+        const cost = G[c] + (k >= 4 ? Math.SQRT2 : 1) * (price ? (price[c] + price[d]) * 0.5 : 1);
         if (seen[d] === stamp && cost >= G[d]) continue;
         seen[d] = stamp; G[d] = cost; from[d] = c;
         push(d, cost + hOf(d));
@@ -329,15 +410,48 @@ export class Ground {
     const pts = cells.map((c) => [this.x0 + (c % W + 0.5) * CELL, this.z0 + (((c / W) | 0) + 0.5) * CELL]);
     pts[0] = [ax, az];
     pts[pts.length - 1] = [bx, bz];
-    // Pull it straight: from each kept point, the furthest one it can see.
-    const out = [pts[0]];
+    // Pull it straight: from each kept point, the furthest one it can see, and can walk straight to for no more than the way
+    // round costs (so a way that keeps to a road isn't pulled off it across the grass).
+    const ok = (i, k) => (plain ? this.sees(level, pts[i][0], pts[i][1], pts[k][0], pts[k][1])
+      : this.toll(level, pts[i][0], pts[i][1], pts[k][0], pts[k][1]) <= (G[cells[k]] - G[cells[i]]) * 1.02 + 0.5);
+    let out = [pts[0]];
     let i = 0;
     while (i < pts.length - 1) {
       let k = pts.length - 1;
-      while (k > i + 1 && !this.sees(level, pts[i][0], pts[i][1], pts[k][0], pts[k][1])) k--;
+      if (plain) { while (k > i + 1 && !ok(i, k)) k--; }
+      else {
+        // (By halves, not one at a time: a long way has hundreds of cells, and each look along it is a walk of its own.)
+        k = Math.min(k, i + 96);
+        while (k > i + 1 && !ok(i, k)) k = i + Math.max(1, (k - i) >> 1);
+      }
       out.push(pts[k]);
       i = k;
     }
+    if (plain) return out;
+    // (And the points that left in a straight run for no reason.)
+    for (let n = 1; n + 1 < out.length;) {
+      const a = out[n - 1], b = out[n], c = out[n + 1];
+      const round = this.toll(level, a[0], a[1], b[0], b[1]) + this.toll(level, b[0], b[1], c[0], c[1]);
+      if (round < Infinity && this.toll(level, a[0], a[1], c[0], c[1]) <= round * 1.01 + 0.2) out.splice(n, 1); else n++;
+    }
+    // Then its corners rounded: nobody walks to a point, turns on it and walks on. Each corner is cut back up to a metre
+    // either side and the turn made over the stretch between, where that stays on free ground.
+    const smooth = [out[0]];
+    for (let n = 1; n + 1 < out.length; n++) {
+      const a = smooth[smooth.length - 1], b = out[n], c = out[n + 1];
+      const la = Math.hypot(b[0] - a[0], b[1] - a[1]), lc = Math.hypot(c[0] - b[0], c[1] - b[1]);
+      const turn = la > 1e-3 && lc > 1e-3 ? Math.acos(Math.max(-1, Math.min(1, ((b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1])) / (la * lc)))) : 0;
+      const cut = Math.min(1.0, la * 0.45, lc * 0.45);
+      if (turn < 0.3 || cut < 0.2 || level !== 0 || this.houseAt(b[0], b[1]) > 0) { smooth.push(b); continue; }
+      const p0 = [b[0] + (a[0] - b[0]) * cut / la, b[1] + (a[1] - b[1]) * cut / la], p2 = [b[0] + (c[0] - b[0]) * cut / lc, b[1] + (c[1] - b[1]) * cut / lc];
+      const arc = [];
+      for (const t of [0, 0.25, 0.5, 0.75, 1]) arc.push([(1 - t) * (1 - t) * p0[0] + 2 * t * (1 - t) * b[0] + t * t * p2[0], (1 - t) * (1 - t) * p0[1] + 2 * t * (1 - t) * b[1] + t * t * p2[1]]);
+      let free = this.sees(level, a[0], a[1], arc[0][0], arc[0][1]) && this.sees(level, arc[4][0], arc[4][1], c[0], c[1]);
+      for (let q = 0; q < 5 && free; q++) free = this.free(level, arc[q][0], arc[q][1]) && (q === 0 || this.sees(level, arc[q - 1][0], arc[q - 1][1], arc[q][0], arc[q][1]));
+      if (free) smooth.push(...arc); else smooth.push(b);
+    }
+    smooth.push(out[out.length - 1]);
+    out = smooth;
     return out;
   }
 }
