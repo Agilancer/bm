@@ -281,7 +281,7 @@ function crescent(c, h, reach, elem, o = {}) {
   const yaw = (o.yaw ?? h.yaw) + (o.turn || 0), y = h.y + (o.y ?? 1.15), life = o.life || 0.13, alpha = o.alpha ?? 0.6;
   if (o.up === undefined) c.burst(FX.GLYPH, elem, h.x, y, h.z, reach * 1.05, reach * 1.25, life, { ax: 0, ay: 1, az: 0, len: yaw, extra: GLYPHS.CRESCENT, alpha, light: o.light ?? 0, lightR: 3 });
   else {
-    const r = Math.min(reach * 0.62, 1.25), f = 0.5 + r * 0.2;
+    const r = Math.min(reach * 0.62, 1.25), f = 0.2 + r * 0.1;
     c.burst(FX.GLYPH, elem, h.x + Math.sin(yaw) * f, y, h.z + Math.cos(yaw) * f, r * 1.05, r * 1.3, life, { ax: -Math.cos(yaw), ay: 0, az: Math.sin(yaw), len: o.up, extra: GLYPHS.CRESCENT, alpha, light: o.light ?? 0, lightR: 3 });
   }
 }
@@ -551,7 +551,7 @@ export function classRoutine(h, sim, w, m, d, R, line, dt) {
   if (k?.mode === 'strafe') {
     k.t -= dt; k.next -= dt;
     if (k.t <= 0 || !E.fightable(m)) { h.skirm = null; return false; }
-    if (k.to) h.goal = { x: k.to[0], z: k.to[1], speed: 5.4, stop: 0.2, face: dirTo(h, m) };
+    if (k.to) h.goal = { x: k.to[0], z: k.to[1], speed: 4.2, stop: 0.2, face: dirTo(h, m) };
     h.bowUntil = sim.time + 0.3; h.draw = Math.max(h.draw, 0.7); h.pull = Math.max(h.pull, 0.6);
     if (k.next <= 0 && k.n < 8) { k.next = 0.1; k.n++; h.loose(sim, m, rand(-0.3, 0.3), k.dmg, k.n % 2 === 0); h.pull = 0.3; }
     return true;
@@ -1212,7 +1212,7 @@ function arrow(h, sim, m, o) {
 function bowShot(h, sim, rate, fn) { h.aimT = 0; h.draw = 1; h.startSwing('Spell_Simple_Shoot', rate * 0.9, [0.6], fn, { still: true, mask: 'upper' }); }
 
 // A backward somersault out of reach, low and quick, something thrown from the top of it (a rogue's).
-const BACKFLIP = { T: 0.55, apex: 1.5, flip: -1, back: true, snap: true, r: 0, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.2, land: (h, sim) => { sim.event(EV.LAND, h.x, h.y, h.z, 0.5); if (h.fxOk()) sim.casting.burst(FX.RING, SPIRIT, h.x, h.y + 0.05, h.z, 0.2, 1, 0.3); } };
+const BACKFLIP = { T: 0.5, apex: 1.0, flip: -1, back: true, snap: true, r: 0, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.2, land: (h, sim) => { sim.event(EV.LAND, h.x, h.y, h.z, 0.5); if (h.fxOk()) sim.casting.burst(FX.RING, ARCANE, h.x, h.y + 0.05, h.z, 0.2, 1, 0.3); } };
 // A long low spring backward, feet first and facing it still (an archer's): no turning over, the bow never off the mark.
 const SPRING = { T: 0.42, apex: 0.8, back: true, snap: true, r: 0, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.16, crouch: 0.05, landClip: 'Jump_Land', landRate: 2.4, land: (h, sim) => { sim.event(EV.LAND, h.x, h.y, h.z, 0.4); if (h.fxOk()) sim.casting.burst(FX.PUFF, SPIRIT, h.x, h.y + 0.2, h.z, 0.3, 1, 0.4, { alpha: 0.4 }); } };
 function leapAway(h, sim, m, far, L, mid) {
@@ -1229,8 +1229,11 @@ function leapAway(h, sim, m, far, L, mid) {
 CAST.disengage = (h, sim, m, { P }) => {
   if (!leapAway(h, sim, m, 6.5, SPRING, () => { for (let i = -1; i <= 1; i++) if (E.fightable(m)) h.loose(sim, m, i * 0.12, 7 * P, i !== 0); })) h.gcd = 0.1;
 };
-// Five arrows in a wide flat fan, off one draw.
-CAST.volley = (h, sim, m, { P }) => bowShot(h, sim, 0.75, () => { for (let i = -2; i <= 2; i++) arrow(h, sim, m, { spread: i * 0.17, dmg: 9 * P, v: 34, fat: 1.3 }); });
+// Five arrows off one draw, each to a mark of its own where there are five to be had.
+CAST.volley = (h, sim, m, { w, P }) => bowShot(h, sim, 0.75, () => {
+  const marks = [m, ...foesIn(w, m.x, m.z, 6).filter((k) => k !== m)];
+  for (let i = 0; i < 5; i++) { const k = marks[i % marks.length]; if (E.fightable(k)) arrow(h, sim, k, { spread: i < marks.length ? 0 : (i - 2) * 0.1, dmg: 9 * P, v: 34, fat: 1.4 }); }
+});
 // Eight arrows as fast as the string will go, loosed on the run: across its front at a sprint, the bow on it all the way.
 CAST.strafe = (h, sim, m, { P }) => {
   const side = (h.slot + Math.floor(sim.time)) % 2 ? 1 : -1, a = dirTo(h, m) + side * Math.PI / 2;
@@ -1239,49 +1242,58 @@ CAST.strafe = (h, sim, m, { P }) => {
 };
 // The bow to the sky: a sheaf of three sent up, and again, and then they come down on a slant all over where the foe
 // stands, and stand in the ground where they land.
-function arrowRain(h, sim, m, r, n, secs, ups) {
+function arrowRain(h, sim, m, r, n, secs) {
+  const ups = Math.max(2, Math.round((secs + 0.3) / 0.28));
   const w = sim.heroWorld, c = sim.casting, cx = m.x, cz = m.z, cy = sim.world.height(cx, cz), e = h.stringElem;
-  h.bowLoftT = 0.5 + ups * 0.22; h.aimT = 0; h.draw = 1;
+  h.bowLoftT = 0.6 + ups * 0.28; h.aimT = 0; h.draw = 1;
   h.startSwing('Spell_Simple_Shoot', 0.8, [0.55], () => {
-    for (let k = 0; k < ups; k++) w.later(k * 0.22, () => {
+    for (let k = 0; k < ups; k++) w.later(k * 0.28, () => {
       if (h.dead) return;
       const hp = h.handPos('l'), s = Math.sin(h.yaw), co = Math.cos(h.yaw);
-      h.bowUntil = sim.time + 0.3; h.pull = 0.9;
+      h.bowUntil = sim.time + 0.4; h.pull = 0.9; h.hold = Math.max(h.hold, 0.35);
       for (let i = -1; i <= 1; i++) w.shots.push({ kind: 'arrow', owner: h, x: hp[0], y: hp[1], z: hp[2], vx: s * 12 + co * i * 1.5, vy: 30, vz: co * 12 - s * i * 1.5, t: 0, dmg: 0, elem: e, up: true });
       sim.event(EV.WHOOSH, hp[0], hp[1], hp[2]);
     });
-    if (h.fxOk()) { c.burst(FX.RING, e, cx, cy + 0.05, cz, 0.5, r, secs + 0.6); if (r > 4) c.burst(FX.RUNE, e, cx, cy + 0.06, cz, r, r, secs + 0.6, { alpha: 0.6 }); }
+    if (h.fxOk()) { c.burst(FX.RING, e, cx, cy + 0.05, cz, r, r, secs + 0.6, { alpha: 0.35 }); if (r > 4) c.burst(FX.RUNE, e, cx, cy + 0.06, cz, r, r, secs + 0.6, { alpha: 0.3 }); }
     w.zones.push({ kind: 'rain', owner: h, x: cx, z: cz, y: cy, r, t: -0.55, life: secs, n, dropped: 0, elem: e, from: h.yaw });
-  }, { still: true, mask: 'upper', hold: [0.9, ups * 0.22] });
+  }, { still: true, mask: 'upper', hold: [0.9, ups * 0.28] });
 }
-CAST.rain_of_arrows = (h, sim, m) => arrowRain(h, sim, m, 3.5, 30, 1.3, 2);
+CAST.rain_of_arrows = (h, sim, m) => arrowRain(h, sim, m, 3.5, 55, 1.3);
 CAST.piercing_arrow = (h, sim, m, { c, P, rk }) => bowShot(h, sim, 0.8, () => {
-  arrow(h, sim, m, { v: 64, grav: 1, dmg: 13 * P, pierce: 3 + rk, fat: 2, life: 0.6, more: (cc, s, vv) => { cc.fx(FX.BEAM, h.stringElem, s.x, s.y, s.z, 0.05, -s.vx / vv, -s.vy / vv, -s.vz / vv, 4, 0.7, 4, 3, 0, 0, 0.01); }, });
+  arrow(h, sim, m, { v: 64, grav: 1, dmg: 13 * P, pierce: 3 + rk, fat: 2, life: 0.6, more: (cc, s, vv) => { cc.fx(FX.BEAM, h.stringElem, s.x, s.y, s.z, 0.1, -s.vx / vv, -s.vy / vv, -s.vz / vv, 7, 0.7, 4, 3, 0, 0, 0.01); },
+    onHit: (k) => { if (h.fxOk()) c.burst(FX.FLARE, h.stringElem, k.x, k.y + 1.1, k.z, 0.2, 0.7, 0.14); } });
 });
 // One arrow that parts in the air, in a burst of light, into three or four: each bends away to a mark of its own.
 CAST.split_shot = (h, sim, m, { w, c, P, rk }) => bowShot(h, sim, 0.85, () => {
   arrow(h, sim, m, { dmg: 6 * P, life: clamp(dist(h, m) * 0.55 / 46, 0.08, 0.3), fat: 1.8, more: (cc, s) => cc.fx(FX.ORB, h.stringElem, s.x, s.y, s.z, 0.12, 0, 1, 0, 0, 1, 4, 3), onEnd: (s, hitM) => {
     if (hitM) return;
     const n = 3 + Math.floor(rk / 2), marks = [m, ...foesIn(w, m.x, m.z, 6).filter((k) => k !== m)];
-    if (h.fxOk()) { c.burst(FX.FLARE, h.stringElem, s.x, s.y, s.z, 0.3, 1.2, 0.2, { light: 8, lightR: 5 }); c.burst(FX.GLYPH, h.stringElem, s.x, s.y, s.z, 0.3, 1.1, 0.2, { ay: 0, extra: GLYPHS.SPARK }); }
+    if (h.fxOk()) c.burst(FX.FLARE, h.stringElem, s.x, s.y, s.z, 0.2, 0.6, 0.1, { light: 8, lightR: 5 });
     for (let i = 0; i < n; i++) {
-      const k = marks[i % marks.length], a = Math.atan2(s.vx, s.vz) + (i - (n - 1) / 2) * 0.42, v = 30;
-      shot(w, h, { x: s.x, y: s.y, z: s.z, vx: Math.sin(a) * v, vy: s.vy * 0.5 + 2.5, vz: Math.cos(a) * v, homing: 7, foe: k, dmg: 8 * P, hk: 'puncture', life: 1.1, r: 0.4, elem: h.stringElem,
-        draw: (cc, q) => arrow3(cc, q.x, q.y, q.z, q.vx, q.vy, q.vz, h.stringElem, 1.1) });
+      // (Slow enough to turn inside the ground it has: each fork bends round onto its own mark and stops in it.)
+      const k = marks[i % marks.length], a = Math.atan2(s.vx, s.vz) + (i - (n - 1) / 2) * 0.5, v = 17;
+      shot(w, h, { x: s.x, y: s.y, z: s.z, vx: Math.sin(a) * v, vy: 2.5, vz: Math.cos(a) * v, homing: 13, foe: k, only: true, dmg: 8 * P, hk: 'puncture', life: 1.1, r: 0.4, elem: h.stringElem,
+        draw: (cc, q) => { arrow3(cc, q.x, q.y, q.z, q.vx, q.vy, q.vz, h.stringElem, 1.2); const vv = Math.hypot(q.vx, q.vy, q.vz) || 1; cc.fx(FX.TRAIL, h.stringElem, q.x, q.y, q.z, 0.07, -q.vx / vv, -q.vy / vv, -q.vz / vv, 2.6, 0.5); } });
     }
   } });
 });
-// An arrow that bends after its mark, winding as it goes: the mark is lit, at its feet and over its head, till it lands.
-CAST.guided_arrow = (h, sim, m, { c, P }) => bowShot(h, sim, 0.85, () => {
-  arrow(h, sim, m, { v: 24, grav: 0, spread: pick([-0.6, 0.6]), homing: 6, foe: m, dmg: 16 * P, life: 2.2, pierce: 1, fat: 1.6, elem: SPIRIT,
-    more: (cc, s) => {
-      for (const k of [0, Math.PI]) { const a = s.t * 16 + k; cc.fx(FX.ORB, SPIRIT, s.x + Math.cos(a) * 0.16, s.y + Math.sin(a) * 0.16, s.z, 0.06, 0, 1, 0, 0, 0.9); }
-      if (!E.fightable(m)) return;
-      cc.fx(FX.RING, SPIRIT, m.x, m.y + 0.06, m.z, 0.75 + 0.1 * Math.sin(s.t * 14), 0, 1, 0, 0, 0.8);
-      cc.fx(FX.GLYPH, SPIRIT, m.x, m.y + 2.35, m.z, 0.2, 0, 0, 0, s.t * 4, 0.9, 0, 0, 0, 0, GLYPHS.STAR4);
-    },
-    onHit: (k) => { if (h.fxOk()) c.burst(FX.FLARE, SPIRIT, k.x, k.y + 1.1, k.z, 0.3, 0.9, 0.2, { light: 6, lightR: 4 }); } });
-});
+// The mark lit first, at its feet and over its head, while she draws; then an arrow sent up and wide of it that bends
+// round in the air and comes down on it.
+CAST.guided_arrow = (h, sim, m, { w, c, P }) => {
+  const z0 = zone(w, h, 2.6, (cc, q) => {
+    if (!E.fightable(m)) return;
+    cc.fx(FX.RING, SPIRIT, m.x, m.y + 0.06, m.z, 1.3 - 0.55 * Math.min(1, q.t / 0.5) + 0.06 * Math.sin(q.t * 14), 0, 1, 0, 0, 0.8);
+    cc.fx(FX.GLYPH, SPIRIT, m.x, m.y + 2.25, m.z, 0.2, 0, 0, 0, q.t * 4, 0.9, 0, 0, 0, 0, GLYPHS.STAR4);
+  });
+  h.bowLoftT = 0.5;
+  bowShot(h, sim, 0.85, () => {
+    const side = pick([-0.7, 0.7]);
+    arrow(h, sim, m, { v: 20, grav: 0, spread: side, loft: 0.3, homing: 7, foe: m, only: true, dmg: 16 * P, life: 2.4, fat: 1.7, elem: SPIRIT, vy: 9,
+      more: (cc, s, vv) => { cc.fx(FX.TRAIL, SPIRIT, s.x, s.y, s.z, 0.08, -s.vx / vv, -s.vy / vv, -s.vz / vv, 3.4, 0.5); for (const k of [0, Math.PI]) { const a = s.t * 16 + k; cc.fx(FX.ORB, SPIRIT, s.x + Math.cos(a) * 0.16, s.y + Math.sin(a) * 0.16, s.z, 0.06, 0, 1, 0, 0, 0.9); } },
+      onHit: (k) => { if (h.fxOk()) c.burst(FX.FLARE, SPIRIT, k.x, k.y + 1.1, k.z, 0.3, 0.9, 0.2, { light: 6, lightR: 4 }); },
+      end: () => { z0.done = true; } });
+  });
+};
 // Fire where it lands, and fire left on the ground.
 function firePatch(h, sim, x, z, r, life, dps) {
   const w = sim.heroWorld, y = sim.world.height(x, z);
@@ -1307,6 +1319,7 @@ CAST.explosive_arrow = (h, sim, m, { w, c, P, rk }) => bowShot(h, sim, 0.8, () =
 // Ice where it lands: what's near is held in it, and slowed after.
 CAST.frost_arrow = (h, sim, m, { w, c, P, rk }) => bowShot(h, sim, 0.8, () => {
   arrow(h, sim, m, { dmg: 5 * P, elem: FROST, fat: 1.8, more: (cc, s) => cc.fx(FX.GLYPH, FROST, s.x, s.y, s.z, 0.22, 0, 0, 0, s.t * 9, 0.9, 3, 3, 0, 0, GLYPHS.STAR6), onEnd: (s) => {
+    const vv = Math.hypot(s.vx, s.vz) || 1; s.x += s.vx / vv * 0.9; s.z += s.vz / vv * 0.9;
     const y = sim.world.height(s.x, s.z), r = 2.5 + 0.15 * rk;
     for (const k of w.blast(h, s.x, s.z, y, r, 9 * P, { kind: 'gash', poise: 40 })) { daze(sim, w, k, 1.5); slow(sim, k, 3.5); }
     if (h.fxOk()) {
@@ -1342,18 +1355,18 @@ CAST.sniper_shot = (h, sim, m, { w, c, P }) => {
 };
 // An arrow that leaps from one to the next, a line of light drawn between each: a constellation of them.
 CAST.chain_shot = (h, sim, m, { w, c, P, rk }) => bowShot(h, sim, 0.85, () => {
-  const s0 = arrow(h, sim, m, { dmg: 10 * P, bounce: 3 + rk, hop: 8, fat: 1.5, elem: SPIRIT, grav: 0, v: 40, more: (cc, s) => cc.fx(FX.GLYPH, SPIRIT, s.x, s.y, s.z, 0.25, 0, 0, 0, s.t * 9, 1, 3, 3, 0, 0, GLYPHS.STAR4),
+  const s0 = arrow(h, sim, m, { dmg: 10 * P, bounce: 3 + rk, hop: 8, hopV: 16, hopPause: 0.05, fat: 1.5, elem: SPIRIT, grav: 0, v: 40, more: (cc, s) => cc.fx(FX.GLYPH, SPIRIT, s.x, s.y, s.z, 0.25, 0, 0, 0, s.t * 9, 1, 3, 3, 0, 0, GLYPHS.STAR4),
     onHit: (k, s) => {
       if (h.fxOk()) {
-        if (s.last) { const dx = k.x - s.last[0], dy = k.y + 1.1 - s.last[1], dz = k.z - s.last[2], L = Math.hypot(dx, dy, dz) || 1; c.burst(FX.BEAM, SPIRIT, s.last[0], s.last[1], s.last[2], 0.03, 0.03, 0.9, { ax: dx / L, ay: dy / L, az: dz / L, len: L, extra: 0.03 }); }
-        c.burst(FX.GLYPH, SPIRIT, k.x, k.y + 1.3, k.z, 0.35, 0.6, 0.9, { ay: 0, extra: GLYPHS.STAR4, light: 6, lightR: 4 });
+        if (s.last) { const dx = k.x - s.last[0], dy = k.y + 1.1 - s.last[1], dz = k.z - s.last[2], L = Math.hypot(dx, dy, dz) || 1; c.burst(FX.BEAM, SPIRIT, s.last[0], s.last[1], s.last[2], 0.05, 0.02, 0.6, { ax: dx / L, ay: dy / L, az: dz / L, len: L, extra: 0.03 }); }
+        c.burst(FX.GLYPH, LIGHT, k.x, k.y + 1.1, k.z, 0.35, 0.15, 0.3, { ay: 0, extra: GLYPHS.STAR4, light: 6, lightR: 4 });
       }
       s.last = [k.x, k.y + 1.1, k.z];
     } });
   s0.last = null;
 });
 // The sky full of them: sheaf after sheaf sent up, and seventy and more come down over a wide ring, for three seconds.
-CAST.arrow_storm = (h, sim, m, { rk }) => arrowRain(h, sim, m, 4.2, 70 + 8 * rk, 2.6, 4);
+CAST.arrow_storm = (h, sim, m, { rk }) => arrowRain(h, sim, m, 4.2, 120 + 12 * rk, 2.6);
 // It opens where it lands: a hole in the world that draws them in, and then lets go all at once.
 CAST.black_hole_arrow = (h, sim, m, { w, c, P, rk }) => bowShot(h, sim, 0.75, () => {
   arrow(h, sim, m, { dmg: 4 * P, elem: VOID, fat: 2, more: (cc, s) => cc.fx(FX.VORTEX, VOID, s.x, s.y, s.z, 0.25, 0, 1, 0, 0, 1, 4, 4), onEnd: (s) => {
@@ -1401,41 +1414,43 @@ CAST.backflip = (h, sim, m, { P }) => {
 // A knife thrown: it bites, and what it bites bleeds.
 function knife(h, sim, a, dmg, i = 0, v = 22) {
   const w = sim.heroWorld, hp = h.handPos(i % 2 ? 'l' : 'r'), e = i % 2 ? ARCANE : DRAIN;
-  shot(w, h, { x: hp[0], y: hp[1], z: hp[2], vx: Math.sin(a) * v, vy: 0.6, vz: Math.cos(a) * v, grav: 2, dmg, o: { bleed: true }, life: 0.5, r: 0.4, elem: e,
+  // (At the height of a chest four strides off, from wherever the hand is.)
+  shot(w, h, { x: hp[0], y: hp[1], z: hp[2], vx: Math.sin(a) * v, vy: (h.y - h.air + 1.0 - hp[1]) * v / 4 + 0.5, vz: Math.cos(a) * v, grav: 2, dmg, o: { bleed: true }, life: 0.5, r: 0.45, elem: e,
     onHit: (k) => blood(sim, k, Math.sin(a), Math.cos(a), 0.35),
-    draw: (c, s) => { c.fx(FX.BLADE, e, s.x - Math.sin(a) * 0.2, s.y, s.z - Math.cos(a) * 0.2, 0.05, Math.sin(a), 0.05, Math.cos(a), 0.45, 1, 0, 0, 0, i); c.fx(FX.TRAIL, e, s.x, s.y, s.z, 0.04, -Math.sin(a), 0, -Math.cos(a), 0.9, 0.7); } });
+    draw: (c, s) => { c.fx(FX.BLADE, e, s.x - Math.sin(a) * 0.25, s.y, s.z - Math.cos(a) * 0.25, 0.07, Math.sin(a), 0.05, Math.cos(a), 0.55, 1, 0, 0, 0, i); c.fx(FX.TRAIL, e, s.x, s.y, s.z, 0.05, -Math.sin(a), 0, -Math.cos(a), 1.1, 0.7); } });
 }
 // A forward somersault onto it, both knives coming down as he lands.
 CAST.flip_strike = (h, sim, m, { w, c }) => {
-  h.leap(sim, m, { T: 0.5, apex: 2, flip: 1, snap: true, r: 1.8, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.2, short: 1.1,
+  h.leap(sim, m, { T: 0.46, apex: 1.3, flip: 1, snap: true, r: 1.8, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.2, short: 1.1,
     draw: (cc, hh, j) => { mark(cc, h, j, DRAIN, 1.6); flipTrails(cc, h, sim.time); },
     land: (hh, s2, j) => {
       const k = j.aimAt, P = h.power();
-      if (E.fightable(k) && dist(h, k) < 2.6 + E.radiusOf(k)) { h.hit(sim, k, 15 * P * h.backstab(sim, k), 'gash', 90, 0, { bleed: true, stun: 0.4 }); gore(sim, h, k, 0.8); if (h.fxOk()) xcut(c, k.x, k.y + 1.2, k.z, h.yaw, 2, DRAIN, ARCANE); }
+      if (E.fightable(k) && dist(h, k) < 2.6 + E.radiusOf(k)) { h.hit(sim, k, 15 * P * h.backstab(sim, k), 'gash', 90, 0, { bleed: true, stun: 0.4 }); gore(sim, h, k, 0.8); if (h.fxOk()) { xcut(c, k.x, k.y + 1.2, k.z, h.yaw, 2, DRAIN, ARCANE); crescent(c, h, 2, DRAIN, { up: -0.3, life: 0.14, alpha: 0.75 }); } }
       w.blast(h, h.x, h.z, h.y, 1.8, 5 * P, { kind: 'gash', poise: 30, skip: k, bleed: true });
       if (h.fxOk()) c.burst(FX.RING, DRAIN, h.x, h.y + 0.05, h.z, 0.2, 1.6, 0.3);
       sim.event(EV.LAND, h.x, h.y, h.z, 0.7);
       h.combo = 1;
     } });
 };
-// Six cuts, left and right as fast as the hands will go and stepping in on it, every one left bleeding: and the last opens it.
+// Six cuts, a knife in each hand, high and low and across, stepping in on every one and every one left bleeding: and the
+// last, a hook from the off hand, opens it.
 CAST.flurry = (h, sim, m, { c, P }) => {
-  const J = ['Punch_Jab', 2.3, 0.4, 0.6], X = ['Punch_Cross', 2.3, 0.42, 0.6];
-  chain(h, sim, [J, X, J, X, J, ['Melee_Hook', 1.3, 0.5, 0.9]], (i) => {
-    const last = i === 5, hit = h.strikeAround(sim, 1.7, 1.0, (last ? 8 : 4.5) * P * h.backstab(sim, m), 0, 2, { bleed: true, poise: last ? 60 : 15 });
+  const A = ['Sword_Regular_A', 2.1, 0.55, 0.78], B = ['Sword_Regular_B', 2.1, 0.48, 0.76], K = ['Melee_Hook', 1.9, 0.5, 0.8];
+  chain(h, sim, [A, B, K, A, B, ['Melee_Hook', 1.3, 0.5, 0.9]], (i) => {
+    const last = i === 5, hit = h.strikeAround(sim, 1.7, 1.0, (last ? 8 : 4.5) * P * h.backstab(sim, m), 0, 2, { bleed: true, poise: last ? 90 : 15 });
     cutArc(h, sim, i, last ? 1.3 : 1);
-    if (hit[0]) { if (h.fxOk()) slash(c, hit[0].x, hit[0].y + 1.05 + (i % 3) * 0.15, hit[0].z, h.yaw, i % 2 ? 0.7 : -0.7, last ? 1.6 : 1.1, i % 2 ? ARCANE : DRAIN, 0.12); if (last || i === 2) gore(sim, h, hit[0], last ? 0.8 : 0.4); }
-  }, { lunge: 1.9 });
+    if (hit[0]) { if (h.fxOk()) slash(c, hit[0].x, hit[0].y + 0.85 + (i % 3) * 0.25, hit[0].z, h.yaw, i % 2 ? 0.6 : -0.6, last ? 1.6 : 1.1, i % 2 ? ARCANE : DRAIN, 0.12); if (last || i === 2) gore(sim, h, hit[0], last ? 0.8 : 0.4); }
+  }, { lunge: 2.2 });
 };
 // Smoke thrown down at his own feet, thick enough to lose him in; and then he's behind it, and the knife goes in to the
 // hilt. The smoke hangs where he stood.
 CAST.vanish = (h, sim, m, { w, c, P }) => {
-  const smoke = (x, y, z) => { if (!h.fxOk()) return; for (let i = 0; i < 6; i++) { const a = i * 1.05; c.burst(FX.PUFF, VOID, x + Math.sin(a) * 0.4, y + 0.5 + (i % 3) * 0.5, z + Math.cos(a) * 0.4, 0.5, 1.5, 0.7, { alpha: 0.8 }); } c.burst(FX.RING, ARCANE, x, y + 0.05, z, 0.3, 2.2, 0.4); };
+  const smoke = (x, y, z) => { if (!h.fxOk()) return; for (let i = 0; i < 6; i++) { const a = i * 1.05; c.burst(FX.PUFF, VOID, x + Math.sin(a) * 0.3, y + 0.4 + (i % 3) * 0.4, z + Math.cos(a) * 0.3, 0.4, 1.0, 0.5, { alpha: 0.6 }); } c.burst(FX.RING, ARCANE, x, y + 0.05, z, 0.3, 1.4, 0.3); };
   smoke(h.x, h.y, h.z);
   sim.event(EV.BLINK, h.x, h.y + 1, h.z);
-  w.zones.push({ kind: 'smoke', owner: h, x: h.x, z: h.z, y: h.y, t: 0, life: 3, r: 2.2, seed: rand(0, TAU) });
-  h.vanishT = 0.8; h.hidden = true;
-  w.later(0.8, () => {
+  w.zones.push({ kind: 'smoke', owner: h, x: h.x, z: h.z, y: h.y, t: 0, life: 1.3, r: 1.3, seed: rand(0, TAU) });
+  h.vanishT = 0.7; h.hidden = true;
+  w.later(0.7, () => {
     h.hidden = false;
     if (h.dead || !E.fightable(m)) return;
     [h.x, h.z] = h.clearSpot(sim, ...behind(m, 0.9));
@@ -1451,27 +1466,30 @@ CAST.vanish = (h, sim, m, { w, c, P }) => {
     }, { end: 0.6 });
   });
 };
-// Round on his heel, a knife off his hand at every point of the turn.
+// Round on his heel through half a turn, a knife off his hand at every point of it: a fan of them across everything before him.
 CAST.fan_of_knives = (h, sim, m, { c, P, rk }) => {
-  const n = 8 + 2 * rk, y0 = h.yaw;
+  const n = 10 + 2 * rk, y0 = h.yaw, a0 = dirTo(h, m) - 1.45;
   let thrown = 0;
-  h.startSwing('Sword_Attack', 1.5, [0.9], () => {}, { end: 0.62, tick: (dt, f) => {
-    const u = clamp(f / 0.6, 0, 1), want = Math.floor(u * n);
-    h.yaw = h.faceYaw = wrapAngle(y0 + u * TAU);
-    while (thrown < want) { knife(h, sim, y0 + thrown * TAU / n, 5 * P, thrown, 18); thrown++; }
-  }, cut: () => { h.yaw = h.faceYaw = y0; } });
-  if (h.fxOk()) c.burst(FX.RING, SPIRIT, h.x, h.y + 0.05, h.z, 0.3, 3, 0.5);
+  h.spreadT = 0.5;
+  h.startSwing('Sword_Regular_B', 1.1, [0.99], () => {}, { end: 0.9, tick: (dt, f) => {
+    const u = clamp((f - 0.1) / 0.6, 0, 1), want = Math.floor(u * n);
+    h.yaw = h.faceYaw = wrapAngle(a0 + u * 2.9);
+    while (thrown < want) { knife(h, sim, a0 + thrown * 2.9 / (n - 1), 5 * P, thrown, 18); thrown++; }
+  }, cut: () => { h.yaw = h.faceYaw = y0; }, after: () => { if (E.fightable(m)) h.yaw = h.faceYaw = dirTo(h, m); } });
+  if (h.fxOk()) c.burst(FX.RING, ARCANE, h.x, h.y + 0.05, h.z, 0.3, 3, 0.5);
   sim.event(EV.WHOOSH, h.x, h.y + 1.2, h.z);
 };
-// Opened from hip to shoulder: it runs, and goes on running, and throws its blood about for as long as it does.
+// A stab to fix it, and then it's opened from hip to shoulder: it runs, and goes on running, and throws its blood about
+// for as long as it does.
 CAST.rupture = (h, sim, m, { w, c, P, rk }) => {
-  h.startSwing('L_Slash', 1.2, [0.65], () => {
+  chain(h, sim, [['Sword_Regular_A', 1.8, 0.55, 0.75], ['L_Slash', 1.7, 0.65, 0.88, 0.3]], (i) => {
     if (!E.fightable(m) || dist(h, m) > 2.6 + E.radiusOf(m)) return;
-    const dmg = 16 * P * h.backstab(sim, m);
-    h.hit(sim, m, dmg, 'gash', 60, 0, {});
-    w.bleed(h, m, dmg * (0.4 + 0.05 * rk));
+    if (i === 0) { h.hit(sim, m, 5 * P * h.backstab(sim, m), 'puncture', 55, 0, {}); cutArc(h, sim, 1); return; }
+    const dmg = 13 * P * h.backstab(sim, m);
+    h.hit(sim, m, dmg, 'gash', 90, 0, {});
+    w.bleed(h, m, dmg * (0.5 + 0.06 * rk));
     gore(sim, h, m, 1, 3);
-    if (h.fxOk()) { crescent(c, h, 1.9, DRAIN, { up: 0.8, life: 0.16 }); slash(c, m.x, m.y + 1.1, m.z, h.yaw, 1.0, 2.2, DRAIN, 0.2); }
+    if (h.fxOk()) { crescent(c, h, 1.9, DRAIN, { up: 0.8, life: 0.16 }); slash(c, m.x, m.y + 1.05, m.z, h.yaw, 0.6, 1.4, DRAIN, 0.2); }
     let next = 0.35;
     zone(w, h, 3, (cc, q) => { if (E.fightable(m)) cc.fx(FX.DISC, DRAIN, m.x, m.y + 0.04, m.z, 0.5 + q.t * 0.35, 0, 1, 0, 0, 0.5 * Math.min(1, (3 - q.t) * 2)); },
       (q) => { if (q.t < next || !E.fightable(m)) return; next += 0.45; const a = rand(0, TAU); blood(sim, m, Math.sin(a), Math.cos(a), 0.55); });
@@ -1482,7 +1500,7 @@ CAST.whirling_blades = (h, sim, m, { w, c, P }) => {
   let cuts = 0;
   const to = spotAt(h, sim, h.x, h.z, dirTo(h, m), Math.min(6, dist(h, m) + E.radiusOf(m) + 1.6)) || [h.x, h.z];
   h.spreadT = 0.75;
-  h.leap(sim, m, { T: 0.55, apex: 0.7, roll: 1, r: 0, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.16, crouch: 0.06,
+  h.leap(sim, m, { T: 0.55, apex: 0.35, roll: 1, r: 0, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.16, crouch: 0.06,
     draw: (cc) => { flipTrails(cc, h, sim.time); cc.fx(FX.GLYPH, DRAIN, h.x, h.y + 0.9, h.z, 1.5, 0, 1, 0, sim.time * 20, 0.6, 0, 0, 0, 0, GLYPHS.CRESCENT); cc.fx(FX.GLYPH, ARCANE, h.x, h.y + 1.0, h.z, 1.4, 0, 1, 0, sim.time * 20 + Math.PI, 0.6, 0, 0, 0, 0, GLYPHS.CRESCENT); },
     tick: (hh, s2, j) => {
       if (j.u < (cuts + 1) / 4) return;
@@ -1495,17 +1513,17 @@ CAST.whirling_blades = (h, sim, m, { w, c, P }) => {
 // A flask of it lobbed in among them: it breaks in smoke where it lands, what's in it can't see to strike, and he's away.
 CAST.smoke_bomb = (h, sim, m, { w, c }) => {
   const tx = m.x, tz = m.z, ty = sim.world.height(tx, tz);
-  throwIt(h, 1.3, () => {
-    const hp = h.handPos('r'), T = 0.45;
-    shot(w, h, { x: hp[0], y: hp[1], z: hp[2], vx: (tx - hp[0]) / T, vy: (ty + 0.2 - hp[1]) / T + 7 * T, vz: (tz - hp[2]) / T, grav: 14, lob: true, dmg: 0, life: T + 0.3, elem: VOID,
+  throwIt(h, 1.6, () => {
+    const hp = h.handPos('r'), T = 0.32;
+    shot(w, h, { x: hp[0], y: hp[1], z: hp[2], vx: (tx - hp[0]) / T, vy: (ty + 0.2 - hp[1]) / T + 4 * T, vz: (tz - hp[2]) / T, grav: 8, lob: true, dmg: 0, life: T + 0.3, elem: VOID,
       draw: (cc, s) => { const v = Math.hypot(s.vx, s.vy, s.vz) || 1; cc.fx(FX.FLASK, VOID, s.x, s.y, s.z, 0.1, Math.sin(s.t * 13), Math.cos(s.t * 13), 0.2, 0.36, 1, 3, 3, 0, 1); cc.fx(FX.TRAIL, ARCANE, s.x, s.y, s.z, 0.05, -s.vx / v, -s.vy / v, -s.vz / v, 0.8, 0.6); },
       onEnd: (s) => {
         const y = sim.world.height(s.x, s.z);
         w.zones.push({ kind: 'smoke', owner: h, x: s.x, z: s.z, y, t: 0, life: 4.5, r: 3.6, seed: rand(0, TAU) });
         for (const k of foesIn(w, s.x, s.z, 3.6)) { daze(sim, w, k, 1.4); slow(sim, k, 3); }
         if (h.fxOk()) {
-          for (let i = 0; i < 8; i++) { const a = i * 0.785; c.burst(FX.PUFF, VOID, s.x + Math.sin(a) * 0.8, y + 0.5 + (i % 3) * 0.4, s.z + Math.cos(a) * 0.8, 0.5, 2.2, 0.9, { alpha: 0.85 }); }
-          c.burst(FX.RING, ARCANE, s.x, y + 0.05, s.z, 0.4, 3.6, 0.45); c.burst(FX.RING, VOID, s.x, y + 0.05, s.z, 0.3, 2.4, 0.6);
+          for (let i = 0; i < 8; i++) { const a = i * 0.785; c.burst(FX.PUFF, VOID, s.x + Math.sin(a) * 0.8, y + 0.5 + (i % 3) * 0.4, s.z + Math.cos(a) * 0.8, 1.3, 2.4, 0.9, { alpha: 0.85 }); }
+          c.burst(FX.RING, ARCANE, s.x, y + 0.05, s.z, 0.4, 3.6, 0.45);
           c.burst(FX.FLARE, ARCANE, s.x, y + 0.4, s.z, 0.4, 1.2, 0.15);
           hfx(sim, HFX.SPARKS, s.x, y + 0.3, s.z, 10);
         }
@@ -1526,11 +1544,12 @@ CAST.shadow_dance = (h, sim, m, { w, c, P, rk }) => {
     blink(h, sim, ...behind(k, 0.9), VOID);
     h.yaw = h.faceYaw = dirTo(h, k);
     h.play(i % 2 ? 'Punch_Cross' : 'Punch_Jab', 2.2, 'full', 0.03);
-    h.hit(sim, k, 11 * P * 1.8, 'gash', 50, 0, { bleed: true });
+    h.hit(sim, k, 11 * P * 1.8, 'gash', i === marks.length - 1 ? 95 : 50, 0, { bleed: true });
     gore(sim, h, k, 0.6);
     if (h.fxOk()) {
       const dx = h.x - from[0], dz = h.z - from[2], L = Math.hypot(dx, dz) || 1;
-      c.burst(FX.BEAM, e, from[0], from[1], from[2], 0.12, 0.01, 0.3, { ax: dx / L, ay: 0, az: dz / L, len: L, extra: 0.02 });
+      c.burst(FX.BEAM, e, from[0], from[1], from[2], 0.3, 0.03, 0.25, { ax: dx / L, ay: 0, az: dz / L, len: L, alpha: 0.6, extra: 0.05 });
+      crescent(c, h, 1.6, i === marks.length - 1 ? DRAIN : ARCANE, { up: [0.7, -0.4, 0.2, 1.1, -0.2][i % 5], life: 0.14, alpha: 0.8 });
       xcut(c, k.x, k.y + 1.15, k.z, h.yaw, 1.9, e, i % 2 ? DRAIN : ARCANE);
     }
   }));
@@ -1538,7 +1557,7 @@ CAST.shadow_dance = (h, sim, m, { w, c, P, rk }) => {
 };
 // As high as an eave, twice over himself, and down on it point first.
 CAST.death_from_above = (h, sim, m, { w, c }) => {
-  h.leap(sim, m, { T: 0.85, apex: 4, flip: 2, snap: true, r: 2.4, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.3, short: 0.9, landClip: 'Jump_Land', landRate: 1.8,
+  h.leap(sim, m, { T: 0.72, apex: 2.6, flip: 2, snap: true, r: 2.4, dmg: 0, air: 'NinjaJump_Idle_Loop', rest: 0.3, short: 0.9, landClip: 'Jump_Land', landRate: 1.8,
     draw: (cc, hh, j) => { mark(cc, h, j, DRAIN, 2.4); flipTrails(cc, h, sim.time, 1.2); cc.fx(FX.TRAIL, DRAIN, h.x, h.y + 1, h.z, 0.24, 0, j.u < 0.6 ? -1 : 1, 0, 2, 0.6); },
     land: (hh, s2, j) => {
       const k = j.aimAt, P = h.power();
@@ -1556,7 +1575,7 @@ CAST.eviscerate = (h, sim, m, { w, c, P }) => {
     const bleeding = w.dots.some((d) => d.m === m);
     h.hit(sim, m, 26 * P * (bleeding ? 1.6 : 1) * h.backstab(sim, m), 'gash', 100, 0, { bleed: true });
     gore(sim, h, m, 1, 10);
-    if (h.fxOk()) { c.burst(FX.DISC, DRAIN, m.x, m.y + 0.04, m.z, 0.6, 2.2, 2.5, { alpha: 0.7 }); xcut(c, m.x, m.y + 1.1, m.z, h.yaw, 2.8, DRAIN, ARCANE); crescent(c, h, 2.1, DRAIN, { up: 0.4, life: 0.16 }); }
+    if (h.fxOk()) { c.burst(FX.DISC, DRAIN, m.x, m.y + 0.04, m.z, 0.6, 2.2, 2.5, { alpha: 0.7 }); xcut(c, m.x, m.y + 1.1, m.z, h.yaw, 2, DRAIN, ARCANE); crescent(c, h, 2.1, DRAIN, { up: 0.4, life: 0.16 }); }
   }, { lunge: 2.2 });
 };
 

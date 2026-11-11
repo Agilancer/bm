@@ -64,7 +64,8 @@ const BLOWS = {
   sword_board: [{ clip: 'Sword_Regular_A', rate: 0.8, hit: [0.55], dmg: 10, reach: 2.1 }, { clip: 'Sword_Regular_B', rate: 0.8, hit: [0.48], dmg: 10, reach: 2.0 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
   // (A lance or a spear goes in point first: a straight arm down the line, the body behind it. THRUST below.)
   lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 7, reach: 1.6, knock: 5 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
-  daggers: [{ clip: 'Punch_Jab', rate: 1.2, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 7, reach: 1.4 }, { clip: 'Melee_Hook', rate: 0.9, hit: [0.5], dmg: 8, reach: 1.4 }, { clip: 'L_Slash', rate: 1.15, hit: [0.65], dmg: 9, reach: 1.6 }],
+  // (Knives cut: slashes, a hook from the off hand, an overhand rip. Not a fist held out over its head.)
+  daggers: [{ clip: 'Sword_Regular_A', rate: 1.5, hit: [0.55], dmg: 6, reach: 1.5, end: 0.8 }, { clip: 'Sword_Regular_B', rate: 1.5, hit: [0.48], dmg: 7, reach: 1.5, end: 0.8 }, { clip: 'Melee_Hook', rate: 1.1, hit: [0.5], dmg: 8, reach: 1.4 }, { clip: 'L_Slash', rate: 1.6, from: 0.3, hit: [0.65], dmg: 9, reach: 1.6 }],
   spear: [{ clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 13, reach: 2.9, thrust: true }, { clip: 'L_Chop', rate: 1.4, from: 0.25, hit: [0.6], dmg: 12, reach: 2.4 }, { clip: 'Punch_Cross', rate: 1.5, hit: [0.42], dmg: 9, reach: 2.6, thrust: true }],
   boomerang: [{ clip: 'Punch_Jab', rate: 1.15, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 6, reach: 1.6, knock: 5 }],
   blade: [{ clip: 'Sword_Regular_A', rate: 0.85, hit: [0.55], dmg: 9, reach: 2.0 }, { clip: 'Sword_Regular_B', rate: 0.85, hit: [0.48], dmg: 9, reach: 1.9 }, { clip: 'L_Slash', rate: 1.1, hit: [0.65], dmg: 10, reach: 2.0 }],
@@ -539,7 +540,7 @@ export class Hero extends Knight {
       else {
         this.strikeAround(sim, b.reach, 1.0, dmg, b.knock || 0, 1);
         // (A blade in each hand: the arc each one cuts, in the class's colour. A kick leaves none.)
-        if (b.clip.startsWith('Punch') || b.clip === 'Melee_Hook' || b.clip === 'L_Slash') cutArc(this, sim, this.combo);
+        if (!/kick/i.test(b.clip)) cutArc(this, sim, this.combo);
       }
     }, { lunge: 2.2, aimed: thrust, stab: thrust, from: b.from, end: b.end });
     this.shotCd = rand(0.25, 0.7);
@@ -1643,7 +1644,7 @@ export class HeroWorld {
       if (s.owner.near > 100) continue;
       if (s.draw) { if (!(s.wait > 0)) s.draw(c, s); continue; }
       if (s.kind === 'arrow') {
-        arrow3(c, s.x, s.y, s.z, s.vx, s.vy, s.vz, s.elem, s.rain ? 0.8 : 1);
+        arrow3(c, s.x, s.y, s.z, s.vx, s.vy, s.vz, s.elem, s.rain ? 1.5 : 1);
       } else if (s.kind === 'hammer') {
         // The paladin's hammer: a hammer, gold-headed, tumbling end over end the way it flies, in its own light.
         const o = s.owner, big = 1.5 + 0.08 * rank(o), home = s.out ? [s.tx, s.ty, s.tz] : [o.x, o.y + 1.2, o.z], yaw = Math.atan2(home[0] - s.x, home[2] - s.z);
@@ -1717,11 +1718,11 @@ export class HeroWorld {
       } else if (z.kind === 'smoke') {
         // The rogue's smoke where they vanished: puffs rising and spreading, then thinning out.
         // (Thick enough to lose someone in: a bank of it as high as a head, a ring of violet where it lies.)
-        const k = Math.min(1, z.t * 5, (z.life - z.t) * 0.8);
+        const k = Math.min(1, z.t * 12 + 0.3, (z.life - z.t) * 1.2), big = z.r / 3.6;
         for (let i = 0; i < 14; i++) {
           const a = z.seed + i * 0.63, rr = z.r * (((i * 0.37 + z.seed) % 1) * 0.85);
           const y = z.y + 0.3 + ((z.t * 0.3 + i * 0.13) % 1) * 1.7;
-          c.fx(FX.PUFF, ELEM.VOID, z.x + Math.sin(a) * rr, y, z.z + Math.cos(a) * rr, 0.8 + Math.min(z.t, 2) * 0.3, 0, 1, 0, 0, 0.75 * k, 0, 0, z.t / z.life, i * 0.1);
+          c.fx(FX.PUFF, ELEM.VOID, z.x + Math.sin(a) * rr, z.y + (y - z.y) * (0.5 + 0.5 * big), z.z + Math.cos(a) * rr, (0.8 + Math.min(z.t, 2) * 0.3) * (0.45 + 0.55 * big), 0, 1, 0, 0, 0.7 * k, 0, 0, z.t / z.life, i * 0.1);
         }
         c.fx(FX.RING, ELEM.ARCANE, z.x, z.y + 0.06, z.z, z.r, 0, 1, 0, 0, 0.5 * k);
       } else if (z.kind === 'barrage') {
@@ -1844,7 +1845,7 @@ export class HeroWorld {
     // (It stands in the ground where it came down, a moment.)
     const c = this.sim.casting, v = Math.hypot(s.vx, s.vy, s.vz) || 1, ux = s.vx / v, uy = s.vy / v, uz = s.vz / v;
     c.burst(FX.RING, s.elem, s.x, ground + 0.05, s.z, 0.1, 0.7, 0.25);
-    c.burst(FX.LANCE, s.elem, s.x - ux * 0.6, ground - uy * 0.6, s.z - uz * 0.6, 0.014, 0.014, 0.8, { ax: ux, ay: uy, az: uz, len: 0.75 });
+    c.burst(FX.LANCE, s.elem, s.x - ux * 0.7, ground - uy * 0.7, s.z - uz * 0.7, 0.03, 0.03, 1.2, { ax: ux, ay: uy, az: uz, len: 0.85 });
     if (Math.random() < 0.35) c.burst(FX.PUFF, ELEM.SPIRIT, s.x, ground + 0.15, s.z, 0.15, 0.5, 0.35, { alpha: 0.35 });
   }
 
@@ -1879,8 +1880,11 @@ export class HeroWorld {
         const due = z.t < 0 ? 0 : Math.min(z.n, Math.floor(z.t / z.life * z.n) + 1);
         const sx = Math.sin(z.from ?? 0.5) * 7, sz = Math.cos(z.from ?? 0.5) * 7;
         for (; z.dropped < due; z.dropped++) {
+          // (Half of them on something that's standing there, the rest anywhere in the ring.)
           const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * z.r, up = 7 + Math.random() * 2, T = up / 19;
-          this.shots.push({ kind: 'arrow', owner: z.owner, x: z.x + Math.sin(a) * r - sx * T, y: z.y + up, z: z.z + Math.cos(a) * r - sz * T, vx: sx, vy: -19, vz: sz, t: 0, dmg: 4 * z.owner.power(), elem: z.elem, rain: true });
+          let tx = z.x + Math.sin(a) * r, tz = z.z + Math.cos(a) * r;
+          if (z.dropped % 2) { const on = this.targets.filter((m) => fightable(m) && Math.hypot(m.x - z.x, m.z - z.z) < z.r); if (on.length) { const m = on[Math.floor(Math.random() * on.length)]; tx = m.x + (Math.random() - 0.5) * 0.5; tz = m.z + (Math.random() - 0.5) * 0.5; } }
+          this.shots.push({ kind: 'arrow', owner: z.owner, x: tx - sx * T, y: z.y + up, z: tz - sz * T, vx: sx, vy: -19, vz: sz, t: 0, dmg: 4 * z.owner.power(), elem: z.elem, rain: true });
         }
       } else if (z.kind === 'planted') {
         // The lance shatters out of the ground.
