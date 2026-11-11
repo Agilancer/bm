@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import { World } from '../src/sim/world.js';
 import { navFor } from '../src/sim/nav.worker.js';
 import { terrainHeight } from '../src/core/terrain.js';
+import { lineClear } from '../src/sim/sight.js';
 
 const read = (p) => JSON.parse(fs.readFileSync(new URL(`../${p}`, import.meta.url)));
 const interior = read('assets/game/interior/interior.json');
@@ -150,4 +151,22 @@ test('no way is no path: nothing to walk at', () => {
     else shut++;
   }
   assert.ok(shut >= 8, `only ${shut} houses shut by barring their door`);
+});
+
+test('to every house chest: a place a hand reaches it from, or no way at all', () => {
+  // A chest sits in a corner, and the nearest free floor to it is often a gap shut in behind the bed, or the street
+  // outside the wall. Asked for something to put a hand to, a path ends where a body can get to and nothing's between.
+  const chests = interior.things.filter((t) => t.type === 'chest' && Math.abs(t.y - 0.2) < 0.5);
+  assert.equal(chests.length, 15);
+  let got = 0;
+  for (const c of chests) {
+    const p = nav.path(SQUARE, [c.x, c.z], null, c.y + 0.5);
+    if (!p) continue;   // (one stands behind a screen with a way in too narrow for the grid: left, and known)
+    const e = p.at(-1), d = Math.hypot(e[0] - c.x, e[1] - c.z);
+    assert.ok(d < 2, `the chest at ${c.x}, ${c.z}: its path ends ${d.toFixed(2)} m off, out of reach`);
+    assert.ok(lineClear(world, e[0], world.height(e[0], e[1]) + 1.5, e[1], c.x, c.y + 0.5, c.z), `the chest at ${c.x}, ${c.z}: a wall between it and where its path ends`);
+    assert.equal(world.inside(e[0], e[1], 0.40), false);
+    got++;
+  }
+  assert.ok(got >= 14, `only ${got} of the houses' 15 chests can be got to`);
 });

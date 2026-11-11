@@ -12,7 +12,7 @@ export const GIVERS = ['bram', 'silas', 'homunculus', 'tamsin', 'corran', 'orrin
 export const LINES = {
   lisandra: {
     first: [
-      "Still here? Good. The last one was halfway up the hill road by now, shouting at the knight. Come here. I've a word for you before you go in.",
+      "Stop there a moment. I've a word for you before you go in.",
     ],
     greet: {
       morning: [
@@ -65,12 +65,12 @@ export const QUESTS = {
     giver: 'lisandra',
     giverName: 'Lisandra',
     offer: [
-      "There it is. Bellmourn. Forty roofs, one well, and a cathedral the Dark Lord sits on. Don't make that face. It's lovely in spring.",
-      "Nobody follows a prophecy, {name}. They follow whoever mended their roof. So: be useful. Everyone in that town with a trouble worth the name, find them and take it off their hands.",
-      "Bram Kettle at the inn first: he counts strangers, so let him count you. Then the rest. You'll know them. They're the ones looking at you like you might be the answer to something.",
+      "There it is. Forty roofs, one well, and the Dark Lord's cathedral looking down on all of it. You're not ready for that hill. You're not ready for his knight. You're ready for Bellmourn.",
+      "Nobody follows a prophecy, {name}. They follow whoever mended their roof. So be useful. Everyone in that town with a trouble worth the name: find them, and take it off their hands. That's how you'll learn what your own can do.",
+      "Start with Bram Kettle at the inn. He counts strangers, so let him count you. Then the rest. You'll know them. They're the ones looking at you as if you might be the answer to something.",
     ],
     accept: "I'll find them.",
-    acceptLine: "Good. I'll be here, being looked at. Come back when every one of them has given you something to do.",
+    acceptLine: "Good. I'll be here, being stared at. Come back when every one of them has given you something to do.",
     decline: 'Not yet.',
     declineLine: "The other twelve said 'not yet' too. Ask Bram where they are now.",
     journal: [

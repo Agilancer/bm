@@ -4,6 +4,7 @@
 import { SKINS, rollPattern, rollSkin } from './skins.js';
 import { INPUT, WEAPONS } from '../core/layout.js';
 import { SPELLS } from '../sim/spells.js';
+import { SCROLLS } from '../sim/skills.js';
 import { STAFFS2 } from './staffs2.js';
 import { SHIELDS2 } from './shields2.js';
 import { ROBE_SETS } from './robesets.js';
@@ -430,13 +431,14 @@ export function rollLoot(rng, kind) {
     return out;
   }
   // A champion always leaves something worth stopping for.
-  if (kind === 8) { const m = { minRarity: rng() < 0.35 ? 2 : 1 }, r = rng(); return [gold(25, 70), r < 0.25 ? rollWeapon(rng, m) : r < 0.5 ? rollSkull(rng, m) : r < 0.75 ? rollShield(rng, m) : rollRobe(rng, m), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.15)]; }
-  if (kind === 7) return [gold(15, 45), ...(rng() < 0.35 ? [rollWeapon(rng, { minRarity: 1 })] : rng() < 0.5 ? [rollSkull(rng, { minRarity: 1 })] : rng() < 0.4 ? [rollShield(rng)] : [rollGem(rng)]), ...robe(0.2, { minRarity: 1 }), ...scroll(0.3)];
+  if (kind === 8) { const m = { minRarity: rng() < 0.35 ? 2 : 1 }, r = rng(); return [gold(25, 70), r < 0.25 ? rollWeapon(rng, m) : r < 0.5 ? rollSkull(rng, m) : r < 0.75 ? rollShield(rng, m) : rollRobe(rng, m), ...(rng() < 0.4 ? [rollGem(rng)] : []), ...scroll(0.1)]; }
+  if (kind === 7) return [gold(15, 45), ...(rng() < 0.35 ? [rollWeapon(rng, { minRarity: 1 })] : rng() < 0.5 ? [rollSkull(rng, { minRarity: 1 })] : rng() < 0.4 ? [rollShield(rng)] : [rollGem(rng)]), ...robe(0.2, { minRarity: 1 }), ...scroll(0.1)];
   return [gold(8, 30), ...(rng() < 0.3 ? [rollWeapon(rng)] : rng() < 0.4 ? [rollSkull(rng)] : [rng() < 0.3 ? rollShield(rng) : rollGem(rng)]), ...robe(0.15)];
 }
 
 // A spell, for good, once it's read. Spells are found, not known.
-export function rollSpell(rng) { return { type: 'spell', spell: Math.floor(rng() * SPELLS.length), rarity: 2 }; }
+// (Of the trees' second and third tiers only: SCROLLS in src/sim/skills.js. Reading one gives the spell's first rank for nothing.)
+export function rollSpell(rng) { return { type: 'spell', spell: SCROLLS[Math.floor(rng() * SCROLLS.length)], rarity: 2 }; }
 
 const CHEST_ROBE = [0.25, 0.5, 0.7];
 

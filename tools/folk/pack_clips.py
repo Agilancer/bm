@@ -12,6 +12,7 @@ game retargets these at run time (src/sim/folk/rig.js), from her rest pose, whic
   drift taken out, so it loops or hands over without a jump.
 
 Writes assets/game/folk/clips.json and clips.bin.   python tools/folk/pack_clips.py [SRC_GLB]
+Then run `node tools/folk/smith_clips.mjs`, which adds the smith's own clips at his anvil: they're made, not hers.
 """
 import json
 import os
@@ -111,8 +112,6 @@ CLIPS = {
     "pick_up": ("PickUp_Table", {}),
     "open_chest": ("Chest_Open", {}),
     "eat": ("Consume", {}),
-    "push": ("Push_Loop", {"loop": True}),
-    "cleave": ("Overhand cleaver downward chop motion with cleaver with left ha", {}),
     # Sitting and lying.
     "sit": ("sit", {"keep": True}),
     "sit_down": ("Sitting_Enter", {"keep": True}),

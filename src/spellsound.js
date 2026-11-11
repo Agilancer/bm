@@ -20,6 +20,11 @@ const VOICE = [
 const LOOSE = {
   firebolt: ['fireball', 0.6, 1], frost: ['iceThrow', 0.6, 1.05], firebeam: ['firespray', 0.55, 1], nova: ['iceWall', 1, 1],
   wisp: ['kindle', 0.55, 1.15], spikes: ['rockThrow', 0.8, 0.8], meteor: ['torchStrike', 0.9, 0.6], arcaneblast: ['wave', 0.4, 1.35],
+  // The six trees' own (src/sim/treespells.js), from the same packs.
+  comet: ['fireball', 0.65, 1.15], wyrm: ['firespray', 0.6, 0.85], firenova: ['fireCatch', 1, 1.1], bomb: ['kindle', 0.7, 0.8], phoenix: ['fireball', 0.8, 0.8], inferno: ['fireCatch', 1.2, 0.8],
+  coldcone: ['iceWall', 0.7, 1.3], rime: ['iceThrow', 0.7, 0.85], prism: ['iceThrow', 0.6, 1.3], orb: ['iceBarrage', 0.8, 0.9], shatter: ['iceFreeze', 1, 0.8], zero: ['iceWall', 1.2, 0.7],
+  stone: ['rockThrow', 0.6, 1.2], boulder: ['rockThrow', 0.9, 0.7], monolith: ['rockWall', 1.1, 0.8], quake: ['rockSwarm', 1.1, 0.7], stoneskin: ['rockWall', 0.6, 1.3],
+  fork: ['spellImpact', 0.5, 1.5], thunderclap: ['wave', 0.7, 0.8], thunder: ['wave', 0.6, 0.6], crescent: ['wave', 0.35, 1.6], turn: ['kindle', 0.8, 1.3],
 };
 // Where an element strikes something, by ELEM (the rest: spellImpact).
 const HIT = { 0: ['torchImpact', 0.5, 1], 1: ['iceFreeze', 0.35, 1.3], 7: ['thunk', 0.8, 0.9], 11: ['rockThrow', 0.5, 1.2] };
@@ -110,7 +115,9 @@ export class SpellSound {
   zone(key, x, y, z, dur) {
     if (!this.live) return;
     const A = this.audio;
-    if (key === 'wallfire') A.play('fireCatch', x, y, z, 1.3, 0.9);
+    if (key === 'wallfire' || key === 'firenova') A.play('fireCatch', x, y, z, 1.3, 0.9);
+    else if (key === 'quake') for (let t = 0; t < dur - 0.5; t += 1.5) setTimeout(() => A.play('rockSwarm', x, y, z, 1, 0.75 + Math.random() * 0.1), t * 1000);
+    else if (key === 'zero') setTimeout(() => A.play('iceBarrage', x, y, z, 1.3, 0.7), dur * 1000 - 1000);
     else if (key === 'blizzard') for (let t = 0; t < dur - 1; t += 2.3) setTimeout(() => A.play('iceBarrage', x, y, z, 1.1, 0.9 + Math.random() * 0.15), t * 1000);
   }
   fizzle() { this.voice(11, null, 0, 0, 0.14, 0.5, 2.4); }

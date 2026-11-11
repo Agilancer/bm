@@ -1,11 +1,12 @@
 // The land. One deterministic height function shared by every thread: the sim walks on it, the GPU
 // draws it. Flat where the village stands, rolling meadow beyond, big hills at the horizon.
 
-import { CAVE_MOUTH, CAVE_OUT, LEDGE, LEDGE_Y } from './opening.js';
+import { CAVE_MOUTH, CAVE_OUT, LEDGE, LEDGE_Y, WAY, wayLevel } from './opening.js';
 import { fbm, hash2, sstep } from './terrain-noise.js';
 import { WORLD_EDGE, landHeight, setLandBase } from './lands.js';
 import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
 import { OLD_CHURCH_GROUND, oldChurchGround } from './town.js';
+import { PORTAL, PORTAL_PAD } from './dungeon.js';
 
 export let openingTerrain = false;
 export function setOpeningTerrain(enabled) { openingTerrain = !!enabled; }
@@ -126,9 +127,13 @@ export function terrainHeight(x, z) {
     const d = Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]);
     if (d < 6) level += (PLOT_Y - level) * (1 - sstep(0, 6, d));
   }
+  // The Warrens' portal, dug into its hillside.
+  level = portalCut(x, z, level);
   // Lisandra's ledge, a shelf of level ground in front of her cave's mouth on the Long Road. (The cave itself is a mesh of
   // its own under the hill: src/gfx/opening.js. The hillside is left open where it runs in, by the terrain's builder.)
   if (!openingTerrain) return level;
+  // And her way down from it: the shelf, the flights of steps and the path, cut and banked into the hill.
+  level = wayLevel(x, z, level);
   const lx = x - LEDGE[0], lz = z - LEDGE[1];
   if (lx * lx + lz * lz > 196) return level;
   const inward = (x - CAVE_MOUTH[0]) * -CAVE_OUT[0] + (z - CAVE_MOUTH[1]) * -CAVE_OUT[1];
@@ -136,12 +141,37 @@ export function terrainHeight(x, z) {
   return level + (LEDGE_Y - level) * shelf;
 }
 
+// The hill cut back for the Warrens' portal's terrace (src/core/sites.js portalWall): down to a little under its floor over the
+// whole of it and a little round, and from there a bank going up at 40 degrees to meet the hill. Never raised: where the land's
+// lower than the floor, at the front, the terrace stands on its own walls. The floor is the hill's own height PORTAL_PAD.level
+// in front of the wall, worked out once (the terrain's own height, without the cut).
+let CUT = null;
+const BANK = Math.tan(40 * Math.PI / 180);
+export function portalFloor() {
+  if (!CUT) {
+    CUT = 'busy';
+    const { hu, hw, at, level } = PORTAL_PAD, c = Math.cos(PORTAL.yaw), s = Math.sin(PORTAL.yaw);
+    const ox = PORTAL.x - at * s, oz = PORTAL.z - at * c, w = at + level;
+    const y = terrainHeight(ox + w * s, oz + w * c);
+    CUT = { ox, oz, c, s, hu, hw, y };
+  }
+  return CUT === 'busy' ? null : CUT.y;
+}
+function portalCut(x, z, level) {
+  const dx = x - PORTAL.x, dz = z - PORTAL.z;
+  if (dx * dx + dz * dz > 50 * 50 || portalFloor() === null) return level;
+  const { ox, oz, c, s, hu, hw, y } = CUT, px = x - ox, pz = z - oz;
+  const u = px * c - pz * s, w = px * s + pz * c;
+  const d = Math.max(0, Math.abs(u) - hu - 0.8, Math.abs(w) - hw - 0.8);
+  return Math.min(level, y - 0.15 + d * BANK);
+}
+
 // How far you can go, either way along x and z. An unseen wall stands here. (Only so much of it is worked out for the things that hunt you: NAV_EDGE, in src/sim/world.js.)
 export const LAND_EDGE = WORLD_EDGE;
 
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.
-// (The worn way off Lisandra's ledge, down onto the road.)
-export const CAVE_PATH = { pts: [LEDGE, [LEDGE[0] - 1.6, LEDGE[1] - 2.2], [-358.4, 249.4]], w: 1.3 };
+// (The worn way off Lisandra's ledge: the shelf, the steps and the path down onto the road. src/core/opening.js WAY.)
+export const CAVE_PATH = { pts: [LEDGE, ...WAY.map((p) => [p[0], p[1]])], w: 1.3 };
 export const PATHS = [
   CAVE_PATH,
   { pts: [[-1, -14.5], [-1.2, -8], [-1.5, -2], [-1.5, 1]], w: 2.0 },

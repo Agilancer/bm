@@ -2,7 +2,39 @@
 import { COMMON } from './shaders.js';
 import { RAMP } from './spellfx.js';
 
-export const PARTICLE_SIM = /* wgsl */ `
+
+// A portal's motes (src/gfx/renderer.js portalFx): not thrown, but carried round it, so where one is is worked out from how old
+// it is. Its vel holds the middle it goes round. 8: up out of a seal's swirl, round and in and up, opening out over it (pad: the
+// radius it starts at). 10: low round over the Warrens' portal's dais (pad likewise). 9: round the Warrens' portal's doorway,
+// in from out in front of it and back down its funnel into the wall (pad: the way the portal faces; the doorway 1.86 m round
+// its middle, the funnel a metre deep, the dais 1.45 under).
+const ORBIT = /* wgsl */ `
+fn portalOrbit(c: vec3f, kind: u32, seed: f32, pad: f32, age: f32, maxLife: f32) -> vec3f {
+  let k = clamp(age / maxLife, 0.0, 1.0);
+  let s1 = fract(seed * 7.31); let s2 = fract(seed * 13.7); let s3 = fract(seed * 29.3);
+  let a0 = seed * 6.2832;
+  if (kind == 9u) {
+    let R = 1.86;
+    let r = R * (0.75 + 0.35 * s1) * (1.0 - 0.92 * pow(k, 0.85));
+    let th = a0 - age * (1.6 + 4.2 * k * k);
+    let x = cos(th) * r;
+    let y = max(sin(th) * r, -1.42 + 0.06 * s2);
+    let w = max(0.9 * pow(1.0 - k, 1.6) * (0.3 + 0.7 * s3) - 1.1 * k * k, -(1.0 - min(r / R, 1.0)) * 0.95 + 0.06);
+    let eu = vec3f(cos(pad), 0.0, -sin(pad));
+    let ew = vec3f(sin(pad), 0.0, cos(pad));
+    return c + eu * x + vec3f(0.0, y, 0.0) + ew * w;
+  }
+  let tall = select(0.5, 3.6, kind == 8u) * (0.75 + 0.5 * s1);
+  let r0 = pad * (0.6 + 0.4 * s2);
+  var r = r0 * mix(1.0, 0.22, smoothstep(0.0, 0.55, k));
+  if (kind == 8u) { r += r0 * 1.1 * smoothstep(0.55, 1.0, k) * s3; }
+  let h = pad * tall * pow(k, 1.25);
+  let th = a0 + age * (1.6 + 2.6 * smoothstep(0.0, 0.5, k));
+  return c + vec3f(cos(th) * r, h, sin(th) * r);
+}
+`;
+
+export const PARTICLE_SIM = ORBIT + /* wgsl */ `
 struct P { pos: vec3f, life: f32, vel: vec3f, maxLife: f32, size: f32, kind: u32, seed: f32, pad: f32 };
 struct Sim { dt: f32, time: f32, count: u32, pad: f32, wind: vec4f, map: vec4f };
 struct Args { vertexCount: u32, instanceCount: atomic<u32>, firstVertex: u32, firstInstance: u32 };
@@ -24,7 +56,15 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   p.life -= S.dt;
   if (p.life <= 0.0) { particles[i].life = 0.0; return; }
   let dt = S.dt;
-  // 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame
+  // A portal's motes go where their age puts them.
+  if (p.kind >= 8u && p.kind <= 10u) {
+    p.pos = portalOrbit(p.vel, p.kind, p.seed, p.pad, p.maxLife - p.life, p.maxLife);
+    particles[i] = p;
+    let at = atomicAdd(&drawArgs.instanceCount, 1u);
+    if (at < arrayLength(&alive)) { alive[at] = i; } else { atomicSub(&drawArgs.instanceCount, 1u); }
+    return;
+  }
+  // 0 droplet, 1 mist, 2 spark, 3 dust, 4 smoke, 5 mote, 6 ember, 7 flame, 8-10 a portal's motes
   switch p.kind {
     case 0u: {
       p.vel.y -= 9.8 * dt;
@@ -98,7 +138,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
 }
 `;
 
-export const PARTICLE_DRAW = COMMON + RAMP + /* wgsl */ `
+export const PARTICLE_DRAW = COMMON + RAMP + ORBIT + /* wgsl */ `
 struct P { pos: vec3f, life: f32, vel: vec3f, maxLife: f32, size: f32, kind: u32, seed: f32, pad: f32 };
 @group(1) @binding(0) var<storage, read> particles: array<P>;
 @group(1) @binding(1) var<storage, read> alive: array<u32>;
@@ -166,6 +206,24 @@ struct V {
       let tw = sin(F.camPos.w * 2.0 + pt.seed * 60.0) * 0.5 + 0.5;
       col = vec4f(vec3f(1.0, 0.86, 0.6) * (sun * 0.45 + amb * 0.2) * (0.5 + tw), 0.0);
       col *= smoothstep(0.0, 0.2, a) * (1.0 - smoothstep(0.85, 1.0, a));
+    }
+    case 8u, 9u, 10u: {
+      // A portal's motes: drawn out along the way they're going round, the small ones bright and the big ones a soft blue haze.
+      let back = portalOrbit(pt.vel, pt.kind, pt.seed, pt.pad, max(pt.maxLife - pt.life - 0.05, 0.0), pt.maxLife);
+      let vv = (F.view * vec4f(pt.pos - back, 0.0)).xy;
+      let sp = length(vv);
+      // (Thin streaks; the haze isn't drawn out.)
+      let haze = smoothstep(0.12, 0.25, pt.size);
+      if (sp > 0.001) {
+        let dir = vv / sp;
+        let perp = vec2f(-dir.y, dir.x);
+        let stretch = 1.0 + min(sp * 0.7 / max(pt.size, 0.001), 6.0) * (1.0 - haze);
+        off = (dir * q.y * pt.size * stretch + perp * q.x * pt.size * mix(0.45, 1.0, haze)) * lens;
+      }
+      let k = 1.0 - a;
+      let show = smoothstep(0.0, 0.12, k) * (1.0 - smoothstep(0.7, 1.0, k));
+      let hot = mix(vec3f(0.08, 0.3, 1.8), vec3f(0.6, 1.3, 3.0), fract(pt.seed * 3.7) * 0.6 + 0.4 * (1.0 - k));
+      col = vec4f(hot * show * min(1.0, 0.03 / max(pt.size, 0.01)) * mix(1.0, 0.5, haze), 0.0);
     }
     case 7u: {
       // White at the mouth, through yellow and orange to a dull red that's gone before it reads as a ball.

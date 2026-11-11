@@ -7,12 +7,13 @@ Bellmourn v2.
 The game is now ranged spell combat. Everything below about swords and armour describes files and code kept on the repo but out of play.
 
 - **Out of play:** one and two-handed swords (`BASES` rows with grade `retired`, never rolled) and the armour suits and gauntlets (`GEAR`, `rollArmor`, `assets/fp/gauntlets_*`). Hands are bare. An old save's swords and armour are removed on load.
-- **Right hand:** staffs. Left click fires the staff's bolt. All twenty spells are on `1`-`6` and the book.
+- **Right hand:** staffs. Left click fires the staff's bolt. Spells are on `1`-`6`, six at a time, chosen in the spellbook from the ones you've learned.
+- **Six schools:** Fire, Ice, Earth, Arcane, Lightning and Utility, ten spells each (sixty in all), in skill trees in the spellbook (`B`). You start with the first spell of each, and every level brings a point to spend. See "Spells" below.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
 - **Robes:** hats, hoods, robes, jackets, coats, mantles, capes, pants, wraps and boots in five palettes (`ROBES`, `tools/wizard/build_items.py`). Every robe found is a piece of one of the 125 **sets of gear**, each with its own look on the third-person body and bonuses for wearing two, three and all five of it: see "Gear on the body".
 - **Gems:** socket into staffs, skulls and shields. Each kind has its own stat, particles, motion and light (`src/gfx/gemfx.js`), and a Flawless stone adds a flourish. A shield's show when you ride it.
-- **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, and fills you up. It's kept in the save.
+- **Levels:** kills pay XP (`src/items/levels.js`). Each level adds 7% spell damage, 8 life, 6 mana and 4% mana regeneration, fills you up, and brings a skill point (two at every fifth level). It's kept in the save.
 
 ## Play: Velscour's Throne
 
@@ -51,6 +52,7 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | Combo: two cuts, then a slam | Left click | `CUT` |
 | Raise the shield and bash, hold to block, let go and it drops at once. With no shield, a wide swing | Right click | `WIDE` |
 | Cast the spell in a slot | `1` to `6`, or click its button | Tap its button |
+| Spellbook: the six trees, your points, and what's on the bar | `B` | `B` by the spell bar |
 | Pack: staffs, skulls, robes and gems | `I` | `PACK` |
 | Take up what's on the ground, or open a chest | `E` | `TAKE` / `OPEN` |
 | First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | `3RD` / `1ST` |
@@ -98,7 +100,7 @@ They don't go together. Anything with a V on it is never found anywhere near any
 
 ### How it plays
 
-You start on the road south of town with a common staff of a random kind (a different one most games: `rollStarterStaff` in `src/items/items.js`) and a plain kite shield, and no skull or gems; your first skull is Bram Kettle's reward for A Bed and a Bell. The town is safe ground: nothing out of it follows you in (`inTown` in `src/core/town.js`, the box from x = -62 to 95 and z = -58 to 62). Velscour's knight stands at the foot of the cathedral steps, out east of the town, and lets you go 20 m from it, or once you're back in town. Four of Tessariel's knights walk the village streets, one in each of the other suits, and a man-at-arms in plain plate with Velscour's shield keeps the west road (`TOWN_KNIGHTS` in `src/core/knights.js`). Out in the woods, packs climb out of the ground ahead of you (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Every zombie outside the catacombs comes up out of the earth (`Zombie.rise`); four burial grounds in the woods break open as you come near (`stepGraves`, `GRAVEYARDS`). Spells are found as scrolls, except that this test build knows them all (`ALL_SPELLS` in `src/ui/spellbar.js`). Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
+You start on the road south of town with a common staff of a random kind (a different one most games: `rollStarterStaff` in `src/items/items.js`) and a plain kite shield, and no skull or gems; your first skull is Bram Kettle's reward for A Bed and a Bell. The town is safe ground: nothing out of it follows you in (`inTown` in `src/core/town.js`, the box from x = -62 to 95 and z = -58 to 62). Velscour's knight stands at the foot of the cathedral steps, out east of the town, and lets you go 20 m from it, or once you're back in town. Four of Tessariel's knights walk the village streets, one in each of the other suits, and a man-at-arms in plain plate with Velscour's shield keeps the west road (`TOWN_KNIGHTS` in `src/core/knights.js`). Out in the woods, packs climb out of the ground ahead of you (`stepWoods` in `src/sim/undead.js`): 6 to 12 undead in two waves, a champion with every other pack. Every zombie outside the catacombs comes up out of the earth (`Zombie.rise`); four burial grounds in the woods break open as you come near (`stepGraves`, `GRAVEYARDS`). You know the first spell of each of the six schools, and learn the rest with the points your levels bring (see "Spells"). A scroll teaches one spell of a school's second or third tier for no point, once you're of a level to read it; one you can't read yet stays where it lies, and one you know already sells for 40 gold. Gold and orbs collect as you walk over them, and better loot comes from further out and deeper down (`setFind`).
 
 ### Third person
 
@@ -247,6 +249,19 @@ All twelve houses can be entered: furnished, with a stair and an upper floor, bu
 
 Chests (`src/items/chests.js`, placed by `chest(...)` in the builder) open on `E`, the lid swings up on its hinge and gold, gems and gear spill out. Which are open is saved. Gold is counted in the pack.
 
+### The smith at his anvil
+
+Homunculus works at a proper anvil: horn, step, face and waist on a banded block of oak (`Home.anvil` in `tools/interior/build_interior.py`). He takes his hammer up off it, works a heat of five to ten blows, each one down on the anvil's face with the ring of it timed to the moment it lands, stands back with the hammer at his side, and now and then lays it down to fold his arms over the work. He lays it down before he goes to his dinner, and it stays on the anvil when he's not there.
+
+- The three clips he works by (`hammer`, `hammer_hold`, `hammer_take`) are made, not taken from Lisandra's: `node tools/folk/smith_clips.mjs` works out where the hammer has to be at each moment on his own body, bends his arm and back to put it there, and writes the result into `assets/game/folk/clips.*` as turns of her bones like every other clip. Run it after `tools/folk/pack_clips.py`. `--check` only reports how near the hammer comes.
+- `src/folk/smithy.js` holds what the pieces share: how far he stands from the anvil and how high its face is (`FORGE`), the hammer's shape and how his hand holds it, and where it's left. The town's thread writes the hammer's place as one more joint after his own (`src/folk/folk.worker.js`), and `src/gfx/folktools.js` draws it.
+- The anvil's height and distance are in `build_interior.py` too (`ANVIL_FACE`, `ANVIL_OFF`), and `tests/smithy.test.mjs` fails if the two disagree, or if a blow lands anywhere but the face.
+- `python tools/interior/patch_anvil.py` puts the anvil into the built interior without Blender or the skulls' sheet, for when only the anvil has changed. A whole build gives the same one.
+- To look at him: `tools/folk/viewer.html?ids=smith&clip=hammer&forge` (served by `tools/serve.py`) shows the hammer in his hand and a block where the anvil's face is.
+- Not yet watched in the game's own view: the machine this was made on loses its software GPU before the town is drawn. It was watched in the folk viewer, on the same clips, body and hammer, and the town's thread was run through a morning of it in `tests/smithy.test.mjs`.
+
+The `push` clip is gone from the town: nobody's work asks for it, and it's out of the packed clips (so is `cleave`, the smith's old swing, a left-handed chop that stopped at chest height).
+
 ### Sound
 
 Everything is MP3 in `assets/game/audio/`, named in `BANKS` in `src/audio.js`. The fight's and the dirt steps' sounds load before the
@@ -254,7 +269,7 @@ game starts; the rest come in the background once it has.
 
 - **TomMusic's Free Fantasy SFX Pack** (all 204 files, `tools/audio/build_fantasy_sfx.py`): footsteps on dirt, stone, boards and water
   (`src/ui/places.js` says which is underfoot; knights in plate get the chain ones), doors and the cathedral's great doors, the
-  Sexton's lock, chests, the woodpile's axe and the smith's hammer (`blows` in `src/folk/folk.worker.js`), a lamp lit as someone
+  Sexton's lock, chests, the woodpile's axe and the smith's hammer on the anvil (`blows` in `src/folk/folk.worker.js`), a lamp lit as someone
   comes home, the nearest fire's crackle, and a layer over each spell's own made sound (`src/spellsound.js`). Its 60 s beds play by
   where you are (`sounds` in `src/ui/lands.js`): the woods by day and by night, rain on the Weeping Fen and on Sallowmere's shore, a
   storm over Velscour's keep, a house's quiet, the cathedral with the storm on its roof, the catacombs, the Rift, the falls.
@@ -336,6 +351,16 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     pace before its middle and then to one a pace beyond (`DOORWAYS`), so it comes up to the door facing it, opens it,
     and walks through down the middle, and leaves a house the same way. It opens only the doors its path goes through,
     not every one it passes. A door it can't open yet (the Sexton's, before his quest) its paths keep clear of.
+  - **Where a path ends.** At the nearest place to where it's going that a body can stand and get to: not a gap shut in
+    behind a bed, which is often the nearest free floor to a chest in a corner. Going to something it means to put a
+    hand to or have a word with (a chest, a thing on the ground, someone), the path ends where nothing stands between
+    it and that, so it isn't sent to the far side of a wall from it. One house chest stands behind a screen with a way
+    in too narrow for its half-metre grid: that one it leaves at once.
+  - **One errand at a time.** Sent somewhere new, it goes there, even when that's a stride or two from where it was
+    going: it used to carry on to whoever stood outside a door when it meant the chest just inside it.
+  - **Its eyes are on the way it's going.** With an errand to talk to someone in hand and a chest to fetch first, its
+    look used to stay on the door it had just opened, and it stood there unable to turn and walk through, till it gave
+    the chest up. A turn on the spot that goes on past two seconds now lets its look go, and counts as being stuck.
   (The nav thread used to read the world's list of pines and boulders three numbers at a time where there are four to
   each, so across the northern half of the land every wood read as solid: no path through it, no way to back off in a
   fight there. It reads them right now.)
@@ -376,7 +401,8 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
       is open for a dozen metres. It steps off as it slows, at anything in its way, or after five seconds.
   - **The staff between spells, and all six spells on its bar.** The staff is what it fights with while a spell cools. A
     spell comes as often as its mana allows: every second or two with its mana full, every several with it low, and at
-    once when it's in trouble (a Mend when it's low, a Frost Nova when it's surrounded). It keeps mana back for a Mend
+    once when it's in trouble (a Mend when it's low; a Frost Nova, a Thunderclap or Turn the Dead, whichever it knows and
+    has ready, when it's surrounded). It won't cast a spell that isn't ready again yet. It keeps mana back for a Mend
     when it's been hurt, doesn't spend a Meteor on something nearly dead, and takes up sooner a spell that hasn't been in
     its hands for a while, so all six get used.
   - **It presses the keys as a player does.** A Firebolt is held while it gathers and a channel while it pours (never
@@ -384,26 +410,40 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     staff shot. A key held on casts again the moment the first cast is done, and a hitch in the frames while it was down
     used to cast the spell over and over till the mana was gone. It keeps count of mana it has spent that the game
     hasn't taken yet, so a staff shot and a spell don't spend the same mana twice and fizzle.
-  - **It sets its own spell bar**, as you do in the book (B), and casts from it as the 1 to 6 keys do, so the six between
+  - **It spends its skill points**, as you do in the book (B), by a build written down for it (`BUILD` in
+    `src/ui/autobrain.js`), each thing as soon as it can be bought: a Mend first; Lightning to a Thunderclap by level 6,
+    for when they're on it; Turn the Dead for the packs; a Thunderbolt at 11, which is what it takes to the black knight's
+    shield; then Fire, to a Meteor at 18; then masteries, more ranks, and Ice to a Frost Nova. Past the end of the build a
+    point goes into the known spell with the fewest ranks. Every point it spends is in the balance log.
+  - **It sets its own spell bar** from what it has learned, and casts from it as the 1 to 6 keys do, so the six between
     them cover a fight (`bar`):
-    - Four it always keeps: Firebolt (the opener, and from range), Meteor (a crowd, or something big), Frost Nova (when
-      they're on it), Mend.
-    - One for a crowd or a line of them: Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance, Plague Flask,
-      Wall of Fire or Earthsplitter.
-    - One to pour on a single mark or get it out of trouble: Arcane Blast, Life Drain, Frost Shards, Magic Missiles, Fire
-      Beam, Spirit Blades or Blink.
+    - What it always keeps, once it knows them: Firebolt (the opener, and from range); Mend; the first it has of a Frost
+      Nova, a Thunderclap or Turn the Dead (when they're on it); and the first it has of a Meteor or a Thunderbolt (a
+      crowd, something big, or a raised shield).
+    - One for a crowd or a line of them (`SLOT_A`): Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance,
+      Plague Flask, Wall of Fire, Earthsplitter, and of the new ones Cinderburst, Ring of Fire, Phoenix, Cone of Cold,
+      Frozen Orb, Deadwinter, Rolling Boulder, Grasping Vines, Earthquake, Starfall, Forked Lightning, Thunderstorm and
+      the rest of their kind.
+    - One to pour on a single mark or get it out of trouble (`SLOT_B`): Arcane Blast, Life Drain, Frost Shards, Magic
+      Missiles, Fire Beam, Spirit Blades, Blink, and of the new ones Flame Wyrm, Cinder Brand, Rime Lance, Stone Shard,
+      Monolith, Spark, Stoneskin, Renew, Aegis, Empower and the rest of their kind.
     - Those last two change every four minutes, so in time every spell it knows has been in its hands and in the log.
+    - Stormstep it never slots: it would carry it in among them, and it fights from a distance.
     - With a healer hired, Mend's slot goes to a second crowd spell: the healer mends it, and the tank holds them in a knot.
-  - It picks the spell that suits the moment from what's on its bar (`USE` in `src/ui/autobrain.js`):
+  - It picks the spell that suits the moment from what's on its bar (`USE` in `src/ui/autobrain.js`, a rule for each of
+    the sixty). Some of them:
     - The first Firebolt of a fight is gathered a second and a half, as you'd hold it on something that hasn't seen you.
-    - Arcane Blast when they're close.
-    - Bone Lance or Earthsplitter down a line of them.
-    - Gravity Well, Blizzard or a Meteor into a crowd.
+    - Arcane Blast, Cone of Cold, Thunderclap or Turn the Dead when they're close; Stoneskin or an Aegis when it's hurt
+      and they're on it.
+    - Bone Lance, Earthsplitter, a Phoenix or Disintegrate down a line of them.
+    - Gravity Well, Blizzard, an Earthquake, a Thunderstorm, Starfall or a Meteor into a crowd.
+    - A Monolith, a Thunderbolt or a Cinder Brand on something big.
     - **One after another, as a player strings them:** a Meteor, an Arcane Blast or an Earthsplitter straight onto what a
       Frost Nova has frozen (frozen things take half again from every blow); a Meteor or a Blizzard onto what a Gravity
       Well has drawn together.
-    - Life Drain when it's hurt.
-    - Frost Shards on something quick.
+    - Life Drain, Renew or a Sanctuary when it's hurt; Shatter only on what a Frost Nova has frozen or its own cold has
+      just slowed.
+    - Frost Shards, a Rime Lance or a Spark on something quick.
     - Blink out from among them when it turns to run, if Blink is on its bar.
   - It runs from what it can't beat yet: the knights of Velscour, the Gravehart, the Hydra, the dragons and anything else too
     strong for its level.
@@ -415,15 +455,16 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     down a hill with the slope.
   - It looks elsewhere only for a reason: at what it's fighting, at a door it's opening (it stops, turns to the door and
     opens it), at whoever it's talking to, at a chest, and at Lisandra when she stops on the road.
-- **The black knight.** From level 8 it goes after Velscour's knight on the cathedral steps:
+- **The black knight.** From level 11, when its build has a Thunderbolt, it goes after Velscour's knight on the cathedral
+  steps (it was level 8 when every spell was known from the start, and it had a Meteor):
   - It stands on his flank, just past the 20 m he keeps from his door.
-  - It works on him with the staff and Meteors, which fall from the sky where his shield can't stop them. Bolts wait till
-    he's turned from it.
+  - It works on him with the staff and with Thunderbolts, and later Meteors, which fall from the sky where his shield can't
+    stop them and reach the thirty paces it stands off at. Bolts wait till he's turned from it.
   - If he comes out after it, it backs off, shooting all the way, and runs a few strides when he gets close.
   - If he beats it back to the town, it tries again two levels stronger.
 
-  In tests at level 8 he went down in 36 seconds once and in about a minute and a half the next time, without the bot falling
-  below 80% of its life. The balance log keeps every attempt.
+  Before the six trees, at level 8 with a Meteor, he went down in 36 seconds once and in about a minute and a half the next
+  time, without the bot falling below 80% of its life. With the trees it was run once, headless, set to level 12 in the gear a new game starts with: it brought thirteen Thunderbolts down on him over about three minutes, between packs of the risen, was never beaten back, and went on to hire a party (his end is read from its status line, which went from "90 of 520 left" to its next job and a new level). An earlier build with only a Wall of Fire couldn't reach him from where it stands, which is why Thunderbolt is in the build and the level is 11. The balance log keeps every attempt.
 - **Its party.** From level 6, once it can pay, it walks to the nearer quartermaster of the Free Company, opens his books
   with E, and hires a lancer first, then a paladin, then the best two others it can afford (`hiring` in
   `src/ui/autowarrens.js`). With them at its back it plays as a group does (`helpPick`, `tankNear`, `partyStrong` in
@@ -491,7 +532,7 @@ Pressing a move key (or the stick) takes the controls back for as long as you ho
 
 **Keeping it up with the game.** It has to be taught what's added to the game. Quests, steps, places, foes, lairs, spells
 and shops are listed in `src/ui/autobrain.js` (`PLAN`, `area`, `HUNTS`, `fightable`, `LAIR_LEVEL`, a spell's use in `USE`
-and its slot on the bar in `SLOT_A` or `SLOT_B`, and the Test Dungeon's counters in `HALL_COUNTERS`); the Warrens' rooms, packs
+and its slot on the bar in `SLOT_A` or `SLOT_B`, `BUILD` for its points, and the Test Dungeon's counters in `HALL_COUNTERS`); the Warrens' rooms, packs
 and bosses in `src/ui/autowarrens.js` (`WAY`, `KNOWN`, `tactics`). `coverage()` there lists
 whatever the game has that it doesn't know, in the console when auto-play starts, and from `node tools/autoplay/check.mjs`,
 which fails until the list is empty. Until it's taught, it makes do:
@@ -500,8 +541,8 @@ which fails until the list is empty. Until it's taught, it makes do:
 - a new foe is judged by its life against its own level
 - a new place is found from `SITES`
 
-The check also names a new kind of quest step, a spell it has no use for, and a new block of monsters in the snapshot it
-doesn't read yet.
+The check also names a new kind of quest step, a spell it has no use for or that stands in no tree, a build that can't be
+bought as written (it's played through from level 1 to 50), and a new block of monsters in the snapshot it doesn't read yet.
 
 **Files.**
 
@@ -536,11 +577,14 @@ doesn't read yet.
   it; and neither "Not enough mana" nor a broken guard came up once. It has not been watched down the Warrens or at the
   black knight since, nor by a person at all: watch a fight or two with it.
 - Its walking in the town (doors, walls, the houses' chests, a word only face to face) was watched the same way, against
-  a second copy of the world kept on the page to judge it by. In 230 seconds it went through house doors fifteen times,
-  never more than 0.18 m off a doorway's middle and square on each time (before: up to 0.44 m off, which rubs the jamb),
-  and opened seven of the houses' chests, each from within two metres with nothing between. It then got stuck behind
-  one of the townsfolk standing just inside a door; it now goes on past a place it can't get nearer to, and that last
-  change, and its talking after it, have not been watched through. Watch it take a quest or two in the town.
+  a second copy of the world kept on the page to judge it by. In the last run, four minutes from a new game: thirteen
+  goings through house doors, none more than 0.17 m off a doorway's middle and all square on (before: up to 0.44 m off,
+  which rubs the jamb); five house chests opened, each from within a metre and a half with nothing between; three quests
+  taken, none through a wall; nothing got it stuck; and it was against a wall for 1.1% of the time it was walking (5.2%
+  before). Two faults showed in the runs before that one and are mended: it stood at a door unable to turn from it
+  when it had someone to talk to next, and it walked to whoever stood outside a door when it meant the chest inside.
+  Not watched: a quest handed in indoors, the shops, and the catacombs' doors since. Nobody has watched it with their
+  own eyes.
 
 ### The Free Company: a party of your own
 
@@ -675,7 +719,8 @@ end. Three people stand behind counters, and E at a counter talks to them:
 
 - **Captain Merrow Vale, the Hall Stores.** Any staff, skull, shield, robe or gem in the game, at any rarity, for nothing:
   pick a rarity, then what you want, and it goes in your pack (at your feet if the pack's full). Under **Yourself**: your
-  level, set to anything from 1 to 50; your life and mana filled; the pack emptied; gold. No V or T shields: those are the
+  level, set to anything from 1 to 50; skill points for nothing (5 or 20 more), every spell learned in full with a branch
+  of each, or everything unlearned; your life and mana filled; the pack emptied; gold. No V or T shields: those are the
   knights' own.
 - **Aldous Fenn, the Free Company.** The quartermaster's own books (src/ui/party.js), and in here nobody's paid. With the
   other Tessariels off in Settings there's nobody on them.
@@ -863,6 +908,8 @@ To check it yourself:
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |
+| `src/sim/skills.js`, `src/sim/treespells.js`, `src/items/skillbook.js`, `src/ui/skilltree.js` | The six skill trees: their rules, the spells they added, what you've learned, and their screen in the spellbook |
+| `tools/skills/`, `docs/SKILLS.md` | The trees as a sheet, every spell cast and measured without a page, and how the design was reviewed |
 | `src/sim/playerbody.js`, `src/core/third.js`, `src/ui/view.js` | The third-person view: your body's poses, where the camera stands, and the switch |
 | `tools/player/` | Makes the player's body from the owner's FBX (`build.mjs`), and shows it (`view.html`) |
 | `src/gfx/bodyskin.js`, `tools/player/skins/` | The gear you wear, on that body: mixing the sets in the game; the kit that makes sets, and the importer |
@@ -1095,16 +1142,64 @@ from Bellmourn2, and the two-hander's original swing keys from Bellmourn (kept f
 
 ## Spells
 
-Twenty spells, all of Bellmourn's, on hands of their own. **F** or the **middle mouse button** casts; hold it to charge Firebolt or keep up a channel. The **number keys** or the **wheel** pick from the bar, **B** opens the book. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
+Sixty spells in six schools, on hands of their own. **F** or the **middle mouse button** casts; hold it to gather a Firebolt or keep up a held spell. The **number keys** or the **wheel** pick from the bar, **B** opens the spellbook. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
 
-The bar has six numbered slots, and the book (**B**) is where you put spells in them. With a shield up your right hand does the casting: the sword goes away, the hand comes out and casts, and the sword comes back.
+The bar has six numbered slots. The spellbook (**B**) is where you learn spells and put them on the bar. With a shield up your right hand does the casting: the sword goes away, the hand comes out and casts, and the sword comes back.
 
-| Hands | Spells |
-| --- | --- |
-| Attack: thrown, the palms to the target | Firebolt, Frost Shards, Ball Lightning, Magic Missiles, Arcane Blast, Fire Beam, Chain Lightning, Life Drain, Blink, Bone Lance, Gravity Well, Plague Flask, Earthsplitter |
-| Raise: lifted, the palms up | Mend, Wisp Light, Wall of Fire, Frost Nova, Meteor, Blizzard, Spirit Blades |
+### The six schools
 
-`src/sim/spells.js` is the table of them, `src/sim/casting.js` runs them on the sim thread and drives the hands, `src/gfx/spellfx.js` draws them, `src/spellsound.js` and `src/ui/spellbar.js` are their sound and their bar and book.
+You start with the first spell of each school, on the bar. Bellmourn's twenty are sorted into the schools; the forty in *italics* are new.
+
+| School | From the start | Level 2 | Level 6 | Level 11 | Level 17 |
+| --- | --- | --- | --- | --- | --- |
+| **Fire** | Firebolt | Fire Beam, *Cinderburst* | Wall of Fire, *Ring of Fire*, *Flame Wyrm* | *Phoenix*, *Cinder Brand* | *Inferno*, Meteor |
+| **Ice** | Frost Shards | *Cone of Cold*, *Rime Lance* | Frost Nova, *Ray of Frost*, *Prismatic Shard* | Blizzard, *Shatter*, *Frozen Orb* | *Deadwinter* |
+| **Earth** | *Stone Shard* | Bone Lance, *Thorn Volley* | Earthsplitter, *Rolling Boulder*, Plague Flask | *Stoneskin*, *Grasping Vines* | *Earthquake*, *Monolith* |
+| **Arcane** | Magic Missiles | Arcane Blast, Blink | Spirit Blades, *Rune of Force*, *Moonblade* | Gravity Well, *Stasis* | *Disintegrate*, *Starfall* |
+| **Lightning** | *Spark* | Chain Lightning, *Forked Lightning*, *Storm Seed* | Ball Lightning, *Thunderclap*, *Stormstep* | *Thunderbolt*, *Static Field* | *Thunderstorm* |
+| **Utility** | Wisp Light | Mend, *Fleetfoot*, *Turn the Dead* | *Renew*, Life Drain, *Aegis* | *Sanctuary*, *Empower* | *Stillness* |
+
+What each school is for:
+
+- **Fire:** burst and burning. It hits hardest in the moment and leaves the ground and the foe alight.
+- **Ice:** control. It slows and freezes, and what's frozen takes half again from every blow; Shatter breaks what's frozen.
+- **Earth:** stone, bone, root and rot. It knocks things down, runs them through and holds them, and Stoneskin makes you hard to kill.
+- **Arcane:** force, space and time. Missiles that find their own targets, a Blink, a rune that waits, a sphere where time stops.
+- **Lightning:** speed and spread. It lands the instant it's cast, leaps from one to the next, and stuns.
+- **Utility:** light, mending and the edge. Little of it kills anything; it keeps you standing, moving and stronger.
+
+### Points, ranks and branches
+
+- **Points.** One for every level past the first, and one more at every fifth level: 11 by level 10, 23 by level 20, 59 at the cap of 50. A whole school costs about 60, so nobody takes everything.
+- **A spell has five ranks.** The first learns it. Each rank past it is 15% more of what the spell does, plus what's its own: Magic Missiles gathers one more missile and gathers them faster with every rank, and looses two at a time from rank 3 and three from rank 5; Frost Shards throws a fourth and a fifth shard; Chain Lightning leaps further.
+- **Every spell has two branches, and you take one or the other.** A branch changes how the spell works or looks: Fire Beam either whitens and climbs on one foe or opens into a fan; Meteor either brings smaller stones down beside it or leaves a molten crater; Magic Missiles either arc on to a second foe or wait in the air and fly all at once. A branch's rank can be no more than its spell's rank less one, so a spell is raised before it's shaped.
+- **Each school has a mastery:** five ranks, each 4% more from that school's spells and 3% less mana, once 8 points are in the school.
+- **What a spell needs before it can be learned:** your level (the columns above), a spell it grows from (the lines in the book), and points already spent in its school: 3 for the third tier, 6 for the fourth, 10 for the fifth.
+- **Scrolls** teach a second or third tier spell's first rank for no point, at the tier's level. That rank doesn't count as a point spent.
+- **Unlearning** gives every point back for gold (20 and 12 a level). What a scroll taught stays known.
+- **Cooldowns.** Most spells are limited only by mana. The spells that stay on you (Stoneskin, Aegis, Fleetfoot and the rest), the great ones and a few others can't be cast again for some seconds; a spell that lasts counts from when it ends. The slot shows the seconds, and what's on you shows over the bar.
+
+In the book, a tab is a school. Its spells stand left to right by tier with their branches under them. A gold edge marks what a point can go into now. Click a node to read it, with its numbers now and at the next rank; the button, or a double click, spends the point. A spell you know goes on the bar by clicking a slot, dragging it there, or pressing 1 to 6 over it.
+
+### How spells meet each other
+
+- **One rule for every freeze and stun** (`holdFor` in `src/sim/casting.js`), so a fight can be slowed and not held still. A passing stop (a shard, a hailstone, most stuns) doesn't land on something already held for longer, and within three seconds of the last one only what it has over that one's length lands. A real hold (Frost Nova, Deadwinter, a Ray of Frost held on, Grasping Vines, Thunderclap, Stasis, a Binding Rune) is 35% as long within six seconds of the last hold's end. Either is 40% as long on anything with 400 life or more.
+- **Between schools:** what's frozen takes half again from everything; what's rotting burns twice as fast; what a Spark has left charged takes a tenth more from every spell; lightning that strikes the bearer of a Storm Seed leaps on to everyone near it.
+- **What turns harm from you** (Stoneskin, Rime Guard, a Sanctuary's Refuge) multiplies together and never turns more than three quarters; an Aegis then takes what's left until it breaks.
+- **Empower** strengthens your next three spells, not everything for a time, and a held spell spends one of them every second and a half.
+- **A staff's own shot** is still the left click. Several new spells are grander kin of a staff's shot (Phoenix, Flame Wyrm, Cinderburst, Rime Lance, Prismatic Shard, Stasis, Starfall, Moonblade, Thorn Volley, Rolling Boulder); a staff's is worth about half as much, and never gains ranks or branches. Grasping Vines and Storm Seed work differently from the staffs' (the spell's vines hold, the staff's drag; the spell's seed conducts, the staff's lashes).
+
+### Files and checks
+
+`src/sim/spells.js` is the table of spells and `src/sim/skills.js` the trees, their rules and what each rank and branch changes (`effective()` makes a spell's numbers from both, for the sim and the book alike). `src/sim/casting.js` runs the spells on the sim thread and drives the hands; `src/sim/treespells.js` holds the forty new ones and the spells that stay on you. `src/gfx/spellfx.js` draws them: the new spells are made of the shapes it already drew, with no new models or shaders. `src/items/skillbook.js` is what you've learned, kept in the save; `src/ui/skilltree.js` draws the trees in the book; `src/spellsound.js`, `src/ui/spellbar.js` and `src/ui/spellglyphs.js` are the sounds, the bar and the pictures.
+
+- `node tools/skills/bench.mjs --check` casts every spell at every rank, and every branch at its full rank, through the sim's own `Casting` with no page and no GPU: 600 casts, at packs that stand and packs that die. It fails on an error, a shape with a bad number in it, or a spell that does nothing.
+- `node tools/skills/bench.mjs` prints what each spell takes off one foe and off a pack of eight, its mana and its time, at ranks 1 and 5. `--spell meteor meteor=5 meteor:crater=1` measures one spell with the ranks and branches named.
+- `node tools/skills/sheet.mjs` prints the six trees as a sheet to read.
+- `node --test tests/skills.test.mjs` checks the rules: points, tiers, either/or, scrolls, unlearning, the save.
+- `bm.skills()` in the console is what's learned; `bm.skills('spend', id)`, `('give', n)`, `('all')`, `('unlearn')` and `('level', n)` are for tests.
+
+`docs/SKILLS.md` has how the design was reviewed and what the reviewers want watched.
 
 ### The hands
 
@@ -1128,7 +1223,14 @@ That recolours the textures and only the textures, to the fist's skin, so the sw
 
 ### Known limits
 
-All twenty were checked in stepped frames against the knight, for their look, their damage and their mana, not by hand at full speed. Real touch and a real phone haven't been tried. The two hand files are 5.1 and 3.8 MB. Spells hurt the Bone Hydra's body at half, as a sword does, and can't aim at a neck to take a head off.
+- **Nobody has seen the forty new spells drawn.** The machine this was built on has no graphics card, so the game's 3D view couldn't be rendered there. What was run: every spell through the sim with no page (above), all sixty cast through the real game's sim thread in a headless browser with no error, and the spellbook's screen, which is ordinary page and was looked at. The new spells are composed from shapes the renderer already drew, but their look, their brightness and how much of a first-person view they fill haven't been judged by an eye. The first thing to do is cast each one in the Test Dungeon.
+- **On a phone** the book has a layout of its own (a screen under 520 px high): the slots in one thin row, the tree and what's picked out side by side, each scrolling on its own, and the button that spends a point at the top of its panel. A double tap doesn't spend a point there, only the button. It was run in headless Chromium as a Pixel 7 and as a first iPhone SE on their sides, through the real touch handlers: the page's own way in (the hardware question, keeping the game's files, loading) to the game ready in touch mode with the six first spells on the bar; then the book opened from the bar's **B**, a school chosen, a spell learned and put in a slot, the book shut, and a slot tapped, all by taps and with no error. No real phone, and no world drawn (no GPU, as above).
+- **The numbers come from dummies that stand still** and don't hit back. That measures the spells against each other and flatters anything that lies on the ground (a Meteor's crater, a Wall of Fire, Inferno, Plague Flask). No fight has been played with the trees by a person.
+- **Auto-play with the trees** was run headless, as it was before them (see "Auto-play"), in three short runs: a new game to level 5, and from levels 10 and 12 set by hand. See `docs/SKILLS.md` for what it did and didn't show.
+- Renew, Aegis and the other spells that stay on you are yours only: they can't be put on one of your party. Mend's Shared Light is the one that reaches them.
+- Stillness slows the whole world but you and what you cast: your party slows with it.
+- There are no summoned creatures and no passive skills beyond the six masteries.
+- Bellmourn's twenty were checked in stepped frames against the knight, for their look, their damage and their mana, not by hand at full speed. Real touch and a real phone haven't been tried. The two hand files are 5.1 and 3.8 MB. Spells hurt the Bone Hydra's body at half, as a sword does, and can't aim at a neck to take a head off.
 
 ## Crab monster
 

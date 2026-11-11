@@ -1,4 +1,4 @@
-// The way down from Lisandra's ledge to Bellmourn: off the ledge onto the Long Road, and along it to the town's edge. Shared
+// The way down from Lisandra's ledge to Bellmourn: along the shelf, down the steps and the path onto the Long Road, and along it to the town's edge. Shared
 // by the sim (she leads you down it: src/sim/opening.js) and the screen (the trail on the ground: src/ui/trail.js).
 import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO } from './opening.js';
 import { CAVE_PATH, ROADS } from './terrain.js';
@@ -15,7 +15,8 @@ export const ROUTE = (() => {
   const end = CAVE_PATH.pts.at(-1);
   let k = 0, best = 1e9;
   road.forEach((p, i) => { const d = Math.hypot(p[0] - end[0], p[1] - end[1]); if (d < best) { best = d; k = i; } });
-  const pts = [STORM_TO, ...CAVE_PATH.pts.slice(1)];
+  // (From where she has it out with you, along the shelf, down the steps and the path: src/core/opening.js WAY.)
+  const pts = [STORM_TO, ...CAVE_PATH.pts.slice(3)];
   for (let i = k - 1; i >= 0; i--) pts.push([road[i][0], road[i][1]]);
   pts.push(ESCORT_TO);
   const line = [pts[0]], s = [0];

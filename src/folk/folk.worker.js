@@ -21,6 +21,9 @@ import { LINES as LC } from './lines/town_c.js';
 import { SCENES, SMALLTALK } from './lines/scenes.js';
 import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
 import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
+import { quatMul, quatRotate } from '../core/math.js';
+import { forgeSpot } from './brain.js';
+import { SMITH_CLIPS, gripOf, hammerAtRest, writeDQ } from './smithy.js';
 
 const HZ = 60;
 // Seconds between full poses: for someone drawn (body or shadow) within near metres of the eye (every frame), within mid, and past
@@ -68,6 +71,14 @@ async function boot({ buffer, base, lean }) {
     me.posedAt = -1;
   }));
   glbs.clear();
+  // The smith's hammer: one more joint after his own in the slot, for the renderer to hang it on (src/gfx/folktools.js).
+  // In his hand as his rig holds one, or where it's left on the anvil.
+  const smith = life.byId.homunculus, at = forgeSpot(town);
+  if (smith && at && smith.joints === smith.rig.count) {
+    const rest = hammerAtRest(at.x, at.y, at.z, at.yaw), laid = new Float32Array(8);
+    writeDQ(laid, 0, rest.q, 0, rest.t, 0);
+    hammer = { me: smith, grip: gripOf(smith.rig), laid, held: new Float32Array(8), q: [0, 0, 0, 1], t: [0, 0, 0] };
+  }
   // Every bed in town and every bedroll laid on a floor, for the renderer to put a blanket over whoever's in one.
   for (const h of town.houses) {
     for (const b of h.beds) {
@@ -163,8 +174,9 @@ function frame(dt) {
 }
 
 // The work you can hear: the axe at the woodpile and the smith's hammer, the moment each lands (seconds into its clip, read off
-// the right hand stopping dead), told to the main thread to sound (src/main.js townEvent). Only within earshot.
-const BLOWS = { chop_wood: { at: 0.21, kind: 'chop' }, cleave: { at: 0.78, kind: 'anvil' } };
+// the right hand stopping dead; the smith's is where his clip was made to land it, tools/folk/smith_clips.mjs), told to the main thread to sound (src/main.js townEvent). Only within earshot.
+const BLOWS = { chop_wood: { at: 0.21, kind: 'chop' }, [SMITH_CLIPS.blow]: { at: SMITH_CLIPS.blowAt, kind: 'anvil' } };
+let hammer = null;
 function blows(player) {
   for (const me of life.folk) {
     const c = me.pose.clip, b = c && BLOWS[c.name];
@@ -236,6 +248,18 @@ function write(cx, cy, cz) {
         for (let i = 0; i < 6; i++) carryPoint(me.pal, s + i * 4, slot, p + s + i * 4, carry);
         slot[p + s + 24] = me.yaw;
       }
+    }
+    if (hammer && hammer.me === me) {
+      const h = me.rig.hands[1], at = o + F_PALETTE + me.rig.count * 8;
+      if (posed) {
+        quatMul(hammer.q, 0, me.pose.wq, h * 4, hammer.grip.q, 0);
+        quatRotate(hammer.t, 0, me.pose.wq, h * 4, hammer.grip.t, 0);
+        for (let k = 0; k < 3; k++) hammer.t[k] += me.pose.wt[h * 3 + k];
+        writeDQ(hammer.held, 0, hammer.q, 0, hammer.t, 0);
+      }
+      if (!me.tool) slot.set(hammer.laid, at);
+      else if (moved) carryPalette(hammer.held, 0, slot, at, 1, carry);
+      else slot.set(hammer.held, at);
     }
     // For the player to bump into: not when they're lying down, or sat (the furniture's in the way already).
     const b = me.i * 4;

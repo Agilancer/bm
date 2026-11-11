@@ -125,7 +125,9 @@ const p = { xp: 0, level: 1 };
 assert.ok(stepXp(p, XP_OF[0] * 3) && p.level > 1);
 assert.ok(levelPerks(5).power > levelPerks(4).power && levelPerks(5).life > 0 && levelPerks(5).mana > 0);
 
-assert.equal(SPELLS.length, 20, 'all twenty spells');
+assert.equal(SPELLS.length, 60, 'all sixty spells');
+assert.deepEqual(SPELLS.slice(0, 20).map((s) => s.key), ['firebolt', 'frost', 'lightning', 'mend', 'wisp', 'wallfire', 'missiles', 'arcaneblast', 'firebeam', 'chain', 'nova', 'meteor', 'blizzard', 'drain', 'blink', 'lance', 'well', 'plague', 'blades', 'spikes'],
+  "Bellmourn's twenty keep their places: a save's bar and a scroll name a spell by its place");
 assert.ok(BASES.frost_sword, 'the swords are still on file');
 assert.ok(SHIELDS.kite_cross);
 console.log('items check passed. xp to level 5:', xpFor(5), ', 10:', xpFor(10), ', 20:', xpFor(20));

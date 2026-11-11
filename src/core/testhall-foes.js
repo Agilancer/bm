@@ -12,8 +12,8 @@ import { SIZES, SPECIES } from '../sim/slimes.js';
 import { TUMBLER_KINDS, TUMBLER_SIZES } from '../sim/tumblers.js';
 import { MAX_SLIMES, MAX_TUMBLERS } from './layout.js';
 
-const count = (model) => BODIES.filter((b) => b.model === model).reduce((n, b) => n + b.count, 0);
-const RISEN = BODIES.filter((b) => /^zombie_\d$/.test(b.model)).reduce((n, b) => n + b.count, 0);
+const count = (model) => BODIES.filter((b) => b.model === model && !b.reserve).reduce((n, b) => n + b.count, 0);
+const RISEN = BODIES.filter((b) => /^zombie_\d$/.test(b.model) && !b.reserve).reduce((n, b) => n + b.count, 0);
 const title = (s) => s.toLowerCase().replace(/(^|[\s-])\S/g, (c) => c.toUpperCase()).replace(/(?!^)\b(Of|The|And)\b/g, (w) => w.toLowerCase());
 
 // The families, in the order the keeper's book has them.

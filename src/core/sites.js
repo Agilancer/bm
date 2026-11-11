@@ -9,10 +9,10 @@
 // The two letters: the keep, the obelisks and the bone field are Velscour's and carry his red; the bell tower, the abbey, the
 // chapel and the frozen shrine are Tessariel's and carry his T. tools/lands/check.mjs keeps them 1.5 km apart.
 
-import { terrainHeight } from './terrain.js';
+import { portalFloor, terrainHeight } from './terrain.js';
 import { BARROWS, CLIFF, MOUNT, POOL, SITES, WATERS, waterLevel } from './lands.js';
 import { hash2, vnoise } from './terrain-noise.js';
-import { DUNGEON, DUNGEON_CELL, ENTRY, EXIT_IN, EXIT_OUT, PORTAL, caveFloorY, caveRoofY, caveRoom, braziers, grid, toWorld, torches } from './dungeon.js';
+import { DUNGEON, DUNGEON_CELL, ENTRY, EXIT_IN, EXIT_OUT, PORTAL, PORTAL_PAD, caveFloorY, caveRoofY, caveRoom, braziers, grid, toWorld, torches } from './dungeon.js';
 import { buildHall } from './testhall.js';
 
 const TAU = Math.PI * 2;
@@ -24,7 +24,7 @@ const tileOf = (layer) => {
 };
 
 class Kit {
-  constructor() { this.parts = new Map(); this.colliders = []; this.spots = {}; }
+  constructor() { this.parts = new Map(); this.colliders = []; this.spots = {}; this.floors = []; }
 
   part(layer) {
     let p = this.parts.get(layer);
@@ -233,17 +233,25 @@ class Kit {
     this.cone('flame', x, y + h + 0.15, z, 0.32, 0.9, 6);
   }
 
-  // A seal: the ring of stones and the blue face you stand on to travel (src/ui/portals.js).
+  // A seal: the portal you stand on to travel (src/ui/lands.js), the owner's round dais (drawn by the renderer: PORTAL_MODELS
+  // ground), its swirl in the middle. It's let down into the ground a little at its highest, and stands on a plinth of dark
+  // stone where the ground falls away under it. You walk on its step, its ring and its swirl (K.floors).
   seal(key, x, z, look = 0) {
-    const y = terrainHeight(x, z);
-    this.drum('stone', x, y - 0.6, z, 3.2, 0.85, 20, { collide: false });
-    this.drum('pale:stone', x, y + 0.25, z, 3.4, 0.08, 20, { r2: 3.3, open: true, collide: false });
-    this.disc('seal', x, y + 0.27, z, 2.6, 28);
-    for (let i = 0; i < 6; i++) {
-      const a = look + i / 6 * TAU + Math.PI / 6;
-      this.menhir('pale:stone', x + Math.cos(a) * 3.9, z + Math.sin(a) * 3.9, 0.32, 2.2 + 0.4 * (i % 2), -a, 0);
+    const { scale: S, sink } = PORTAL_MODELS.ground, R = 0.5 * S;
+    let hi = -Infinity, lo = Infinity;
+    for (let i = 0; i < 24; i++) for (const r of [0, R * 0.5, R]) {
+      const a = i / 24 * TAU, g = terrainHeight(x + Math.cos(a) * r, z + Math.sin(a) * r);
+      hi = Math.max(hi, g); lo = Math.min(lo, g);
     }
-    this.spots[`seal_${key}`] = [x, y + 0.27, z, look];
+    const y = hi - sink;
+    if (y - lo > 0.05) this.drum('dark:stone', x, lo - 0.5, z, R * 0.97, y - lo + 0.55, 24, { collide: false });
+    const plat = { x, z, r: 0, rects: [] };
+    this.floors.push(plat);
+    // (Measured in tools/portal/pack.py: its swirl to 0.267 at 0.086, its ring to 0.45 at 0.107, its step to 0.5 at 0.065.)
+    discFloor(plat, x, z, 0.267 * S, y + 0.086 * S);
+    ringFloor(plat, x, z, 0.267 * S, 0.45 * S, y + 0.107 * S);
+    ringFloor(plat, x, z, 0.45 * S, 0.5 * S, y + 0.065 * S, 24);
+    this.spots[`seal_${key}`] = [x, hi, z, look];
   }
 }
 
@@ -319,50 +327,244 @@ function cave(K) {
     K.drum('iron', x, y + 1.15, z, 0.22, 0.32, 8, { r2: 0.42, collide: false, open: true });
     K.cone('flame', x, y + 1.3, z, 0.3, 0.85, 6);
   }
-  // The portals inside: the way back out by the way in, and the way out past Venomaw.
+  // The portals inside: the way back out by the way in, and the way out past Venomaw. Each with its back to the rock at the
+  // edge of its room, facing into it.
   for (const [q, key] of [[EXIT_IN, 'hf_in'], [EXIT_OUT, 'hf_out']]) {
     const [x, z] = toWorld(q.x, q.z);
-    portalArch(K, x, caveFloorY(x, z), z, key === 'hf_in' ? 0 : Math.PI, key);
+    portalWall(K, x, z, key === 'hf_in' ? Math.PI : 0, key, caveFloorY);
   }
 }
 
-// A portal: a ring of dark stones standing on its edge, the blue of a seal filling it. key names its spot (K.spots).
-function portalArch(K, x, y, z, yaw, key) {
-  const c = Math.cos(yaw), s = Math.sin(yaw), R = 1.7, cy = y + R + 0.15;
-  const P = (u, v, w = 0) => [x + u * c + w * s, cy + v, z - u * s + w * c];
-  const n = 14;
-  for (let i = 0; i < n; i++) {
-    const a = i / n * TAU, b = (i + 1) / n * TAU;
-    const o = (t, r, w) => P(Math.cos(t) * r, Math.sin(t) * r, w);
-    // The ring's stones: an outer and an inner face, and their two sides.
-    K.quad('dark:stone', o(a, R + 0.45, -0.35), o(b, R + 0.45, -0.35), o(b, R + 0.45, 0.35), o(a, R + 0.45, 0.35));
-    K.quad('dark:stone', o(a, R, 0.35), o(b, R, 0.35), o(b, R, -0.35), o(a, R, -0.35));
-    K.quad('dark:stone', o(a, R, -0.35), o(b, R, -0.35), o(b, R + 0.45, -0.35), o(a, R + 0.45, -0.35));
-    K.quad('dark:stone', o(b, R, 0.35), o(a, R, 0.35), o(a, R + 0.45, 0.35), o(b, R + 0.45, 0.35));
-    // The face, both ways.
-    K.tri('seal', P(0, 0, 0.02), o(a, R, 0.02), o(b, R, 0.02));
-    K.tri('seal', P(0, 0, -0.02), o(b, R, -0.02), o(a, R, -0.02));
+// The portals' models (drawn by the renderer: src/gfx/renderer.js portalModels, packed by tools/portal/pack.py): how big
+// they're drawn, and how far each is let down into what it stands on.
+export const PORTAL_MODELS = {
+  // The seals' portal, a round dais 0.5 across in its file: 3.5 m round, its rune ring 0.75 m up.
+  ground: { file: 'portal-ground', scale: 7, sink: 0.3 },
+  // The Warrens' portal, an arch on a dais, 1 x 0.83 in its file: 6 m across, the arch 5 m high. Its dais is let down into
+  // the terrace to a third of a metre: a party walks onto it, and nobody finds their way up more than 0.6 (src/sim/world.js).
+  dungeon: { file: 'portal-dungeon', scale: 6, sink: 0.3 },
+};
+
+// A level floor on a platform that's round (rects turned four ways: a sixteen-sided floor a hair over r).
+function discFloor(plat, x, z, r, y) {
+  for (let k = 0; k < 4; k++) {
+    const a = k * Math.PI / 8;
+    plat.rects.push({ x, z, c: Math.cos(a), s: Math.sin(a), hu: r * 0.99, hw: r * 0.99, y });
   }
-  K.box('dark:stone', x, y - 0.2, z, 1.4, 0.32, 0.6, yaw, { collide: false });
-  K.spots[key] = [x, y, z, yaw];
+  plat.r = Math.max(plat.r, Math.hypot(x - plat.x, z - plat.z) + r * 1.5 + 0.5);
+}
+// And a ring of it, r0 out to r1 (n flat pieces round it, each a tangent; their inner edges never reach in past r0).
+function ringFloor(plat, x, z, r0, r1, y, n = 16) {
+  const rm = (r0 + r1) / 2, half = rm * Math.tan(Math.PI / n) + 0.05;
+  for (let k = 0; k < n; k++) {
+    const a = k / n * TAU, c = Math.cos(a), s = Math.sin(a);
+    // (Its across along the tangent, its through outward: World tests |dx c - dz s| <= hu and |dx s + dz c| <= hw.)
+    plat.rects.push({ x: x + s * rm, z: z + c * rm, c, s, hu: half, hw: (r1 - r0) / 2, y });
+  }
+  plat.r = Math.max(plat.r, Math.hypot(x - plat.x, z - plat.z) + r1 * 1.5 + 0.5);
 }
 
-// The way in, out in the woods near the kobolds' den: a heap of rock with the portal in its mouth.
-function warrensMouth(K) {
-  const { x, z, yaw } = PORTAL, y = terrainHeight(x, z);
-  portalArch(K, x, y, z, yaw, 'hf_portal');
+// The Warrens' portal: the owner's dungeon portal model, set into a wall. Its whirl is a funnel that runs back out of the arch,
+// so the wall has a niche cut in it for that: the arch stands against the wall's face, the niche's mouth just inside the arch's
+// frame (a round-headed hole, the frame covering its edge), going back 2.5 m. The model's own dais stands out in front, on a
+// level stone terrace that's built for it where it stands, the way you'd build one on a hillside, with the wall across its back.
+// Out on the land it faces down the hill and the hill's cut back under it (src/core/terrain.js portalCut), so its floor is
+// flush with the cut and the wall holds the hill; where the land falls away at the front it stands up on a wall, a plinth at its
+// foot and a pale coping round its top. Steps come down the front where a short flight reaches the ground, and otherwise down
+// its two ends along the hill, in front of the wall. Anywhere else it stands well over the ground, a parapet. A brazier at each
+// front corner.
+// x, z, yaw: where the portal stands and the way it faces (the model's own middle, on its dais). You walk on its floor, its
+// steps and the dais (K.floors, src/sim/world.js height), and its walls stop you where they stand more than a step over your
+// feet (K.colliders, t: their top less a step). ground is the land's height there (the land's, or the Warrens' floor, where
+// only the rock stops anyone). key names its spot (K.spots): the model's middle, on the terrace's floor.
+const PLAT = { lift: 0.3, edge: 0.14, rise: 0.19, tread: 0.42, stair: 1.3, ends: 1.15, cheek: 0.32, most: 12, drop: 0.9, rail: 0.75 };
+// The arch, in the model's units (tools/portal/pack.py): the wall's face behind its frame, the niche's half width (and the
+// radius of its head) and how high its head's middle is, how far back the niche goes, the dais's height, how far round it's
+// level and the step at its front, and the frame's posts (across and through). The wall's height over the floor, in metres.
+const ARCH = { face: 0.11, hole: 0.345, mid: 0.36, back: 0.42, deck: 0.107, deckR: 0.45, step: 0.044, frame: [0.28, 0.46], frameZ: [-0.16, 0.02], high: 7.2 };
+
+function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
+  const { lift, edge, rise, tread, stair, ends, cheek, most, drop, rail } = PLAT;
+  const { hu, hw, at } = PORTAL_PAD;
+  const { scale: S, sink } = PORTAL_MODELS.dungeon;
+  const land = ground === terrainHeight;
   const c = Math.cos(yaw), s = Math.sin(yaw);
-  // The rock it's set in: boulders piled behind and either side, leaving the front open.
-  for (let i = 0; i < 9; i++) {
-    const a = -1.9 + i / 8 * 3.8, r = 3.2 + (i % 2) * 0.7;
-    const bx = x + Math.sin(a) * -r * s + Math.cos(a) * r * c * 0, bz = z;
-    const u = Math.sin(a) * r, w = -Math.cos(a) * r * 0.8 - 0.6;
-    const px = x + u * c + w * s, pz = z - u * s + w * c;
-    K.drum('dark:rubble', px, terrainHeight(px, pz) - 0.4, pz, 1.1 + 0.3 * (i % 3), 2.4 + 1.6 * Math.sin(i * 1.3) ** 2, 7, { r2: 0.5, turn: i });
-    void bx; void bz;
+  // The terrace's middle, behind the portal by at; P is a point across it (u) and through it (w, + out the front).
+  const ox = x - at * s, oz = z - at * c;
+  const P = (u, w) => [ox + u * c + w * s, oz - u * s + w * c];
+  const G = (u, w) => { const [px, pz] = P(u, w); return ground(px, pz); };
+  const plat = { x: ox, z: oz, r: 0, rects: [] };
+  K.floors.push(plat);
+  // A box in the terrace's own frame: its middle, its half sizes, from y0 to y1.
+  const block = (layer, u, w, fu, fw, y0, y1, o = {}) => { const [px, pz] = P(u, w); K.box(layer, px, y0, pz, fu, y1 - y0, fw, yaw, { collide: false, ...o }); };
+  const floor = (u, w, fu, fw, y) => {
+    const [px, pz] = P(u, w);
+    plat.rects.push({ x: px, z: pz, c, s, hu: fu, hw: fw, y });
+    plat.r = Math.max(plat.r, Math.abs(u) + fu + 0.5, Math.abs(w) + fw + 0.5);
+  };
+  // A wall that stops you unless you're within a step of its top. (Not down in the Warrens: there only the rock stops anyone.)
+  const wall = (u, w, fu, fw, y) => {
+    if (!land) return;
+    const [px, pz] = P(u, w);
+    K.colliders.push({ x: px, z: pz, hx: fu, hz: fw, yaw, h: y - terrainHeight(px, pz), t: y - 0.45 });
+  };
+  // The ground under it, high and low. Its floor: on the land, the cut's (which is the hill a little in front of the wall);
+  // in the Warrens, a little over the highest.
+  let hi = -Infinity, lo = Infinity;
+  for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) {
+    const g = G((i / 4 - 1) * (hu + edge), (j / 4 - 1) * (hw + edge));
+    hi = Math.max(hi, g); lo = Math.min(lo, g);
   }
-  // Torches either side, on posts.
-  for (const side of [-1, 1]) { const u = side * 2.6, w = 0.8; K.brazier(x + u * c + w * s, z - u * s + w * c, 1.4); }
+  const top = land ? portalFloor() : hi + lift, foot = Math.min(lo, top) - 0.7;
+  // The body, its plinth, and the coping round its top with the paving set in it.
+  block('dark:stone', 0, 0, hu, hw, foot, top - 0.2, { top: false });
+  block('dark:stone', 0, 0, hu + 0.2, hw + 0.2, foot, Math.min(lo, top - 0.5) + 0.3);
+  block('pale:stone', 0, 0, hu + edge, hw + edge, top - 0.22, top);
+  const pv = (u, w) => { const [px, pz] = P(u, w); return [px, top + 0.006, pz]; };
+  K.quad('stone', pv(-hu + 0.5, -hw + 0.5), pv(-hu + 0.5, hw - 0.5), pv(hu - 0.5, hw - 0.5), pv(hu - 0.5, -hw + 0.5), [0, 1, 0]);
+  floor(0, 0, hu + edge, hw + edge, top);
+  wall(0, 0, hu + edge, hw + edge, top);
+
+  // ---- the wall across the back, and the niche in it
+  // Its back, the face of the niche's mouth and the niche's back (w); how far across it goes; its top. The niche: its half
+  // width a, the middle of its round head (the model's own height, from where it's set down).
+  const base = top - sink, wb = -hw - edge, wf = at - ARCH.face * S, wn = at - ARCH.back * S, U = hu + edge, Y = top + ARCH.high;
+  const a = ARCH.hole * S, yc = base + ARCH.mid * S;
+  block('dark:stone', 0, (wb + wn) / 2, U, (wn - wb) / 2, foot, Y);
+  block('dark:stone', -(U + a) / 2, (wn + wf) / 2, (U - a) / 2, (wf - wn) / 2, foot, Y);
+  block('dark:stone', (U + a) / 2, (wn + wf) / 2, (U - a) / 2, (wf - wn) / 2, foot, Y);
+  block('dark:stone', 0, (wn + wf) / 2, a, (wf - wn) / 2, yc + a, Y);
+  // The niche's head: the face of the wall either side of its round top, and the vault over it back to the niche's back.
+  const W = (u, y, w) => { const [px, pz] = P(u, w); return [px, y, pz]; };
+  const N = 16, front = [s, 0, c];
+  for (let i = 0; i < N; i++) {
+    const t0 = i / N * Math.PI, t1 = (i + 1) / N * Math.PI;
+    const u0 = Math.cos(t0) * a, y0 = yc + Math.sin(t0) * a, u1 = Math.cos(t1) * a, y1 = yc + Math.sin(t1) * a;
+    K.quad('dark:stone', W(u1, y1, wf), W(u0, y0, wf), W(u0, yc + a, wf), W(u1, yc + a, wf), front);
+    const tm = (t0 + t1) / 2, n = [-Math.cos(tm) * c, -Math.sin(tm), Math.cos(tm) * s];
+    K.quad('dark:stone', W(u0, y0, wf), W(u1, y1, wf), W(u1, y1, wn), W(u0, y0, wn), n);
+  }
+  // A pale coping along its top, a band across its face over the arch, and pilasters up its face.
+  block('pale:stone', 0, (wb + wf) / 2, U + 0.12, (wf - wb) / 2 + 0.12, Y, Y + 0.3);
+  block('pale:stone', 0, wf + 0.08, U, 0.1, top + 5.5, top + 5.75);
+  for (const pu of [-(U - 0.35), -(a + 2.1), a + 2.1, U - 0.35]) {
+    block('dark:stone', pu, wf + 0.14, 0.32, 0.16, top - 0.05, Y - 0.05);
+    block('pale:stone', pu, wf + 0.18, 0.38, 0.2, top - 0.05, top + 0.3);
+    block('pale:stone', pu, wf + 0.18, 0.38, 0.2, top + 5.4, top + 5.85);
+  }
+  // It stops you: all of it but the arch, whose frame stands out in front of it, and that stops you too.
+  const wc = at - 0.95;
+  wall(0, (wb + wc) / 2, U, (wc - wb) / 2, Y);
+  for (const side of [-1, 1]) {
+    const f0 = ARCH.frame[0] * S, f1 = ARCH.frame[1] * S, z0 = at + ARCH.frameZ[0] * S, z1 = at + ARCH.frameZ[1] * S;
+    wall(side * (f0 + f1) / 2, (z0 + z1) / 2, (f1 - f0) / 2, (z1 - z0) / 2, base + 0.83 * S);
+  }
+  // The dais: its top, and its steps at the front.
+  discFloor(plat, x, z, ARCH.deckR * S, base + ARCH.deck * S);
+  floor(0, at + (ARCH.deckR + 0.03) * S, 1.3, 0.03 * S, base + ARCH.step * S);
+
+  // ---- the terrace's other three edges: n the way out, half its length, how far out from the middle. on() is a point a along
+  // an edge, b out from it. The ends' steps come down in front of the wall, mid along them.
+  const sides = [
+    { n: [0, 1], half: hu, out: hw, way: true, mid: 0 },
+    { n: [1, 0], half: hw, out: hu, way: false, mid: (wf + hw) / 2 }, { n: [-1, 0], half: hw, out: hu, way: false, mid: -(wf + hw) / 2 },
+  ];
+  const on = (sd, q, b) => [sd.n[0] * (sd.out + b) - sd.n[1] * q, sd.n[1] * (sd.out + b) + sd.n[0] * q];
+  const along = (layer, sd, q, b, fa, fb, y0, y1) => { const [u, w] = on(sd, q, b); if (sd.n[0]) block(layer, u, w, fb, fa, y0, y1); else block(layer, u, w, fa, fb, y0, y1); };
+  const flat = (sd, q, b, fa, fb, y) => { const [u, w] = on(sd, q, b); if (sd.n[0]) floor(u, w, fb, fa, y); else floor(u, w, fa, fb, y); };
+  const stop = (sd, q, b, fa, fb, y) => { const [u, w] = on(sd, q, b); if (sd.n[0]) wall(u, w, fb, fa, y); else wall(u, w, fa, fb, y); };
+  // Where along an edge is clear of the wall (along an end, the wall's where w < wf).
+  const clear = (sd) => (sd.n[0] > 0 ? [wf, sd.half + edge] : sd.n[0] < 0 ? [-sd.half - edge, -wf] : [-sd.half - edge, sd.half + edge]);
+  // A flight down from an edge, hs wide either side of m: its steps, or null if a short flight never reaches the ground.
+  const flight = (sd, m, hs) => {
+    const steps = [];
+    for (let k = 0; k < most; k++) {
+      const b = edge + k * tread + tread / 2, y = top - (k + 1) * rise;
+      const under = [-hs - cheek, 0, hs + cheek].map((q) => G(...on(sd, m + q, b)));
+      // (Done where its middle meets the ground: across a slope its high side runs into the hill.)
+      if (y < under[1] + 0.05) return steps;
+      steps.push({ b, y, base: Math.min(...under) - 0.5 });
+    }
+    return null;
+  };
+  // A wall along an edge whose top slopes (a stair's cheek): q0..q1 along the edge, b0..b1 out from it, from y0 up to yt0 at b0
+  // and yt1 at b1; its sides in layer, its top in cap. (Faced the way Kit.box faces its sides.)
+  const ramp = (layer, cap, sd, q0, q1, b0, b1, y0, yt0, yt1) => {
+    const pts = [[q0, b0], [q1, b0], [q1, b1], [q0, b1]].map(([q, b]) => { const [u, w] = on(sd, q, b); return { u, w, t: b === b0 ? yt0 : yt1 }; });
+    const mu = pts.reduce((m, p) => m + p.u, 0) / 4, mw = pts.reduce((m, p) => m + p.w, 0) / 4;
+    pts.sort((p, q) => Math.atan2(p.w - mw, p.u - mu) - Math.atan2(q.w - mw, q.u - mu));
+    const V = (p, y) => { const [px, pz] = P(p.u, p.w); return [px, y, pz]; };
+    for (let i = 0; i < 4; i++) { const p = pts[i], q = pts[(i + 1) % 4]; K.quad(layer, V(p, y0), V(q, y0), V(q, q.t), V(p, p.t)); }
+    const A = V(pts[0], pts[0].t), B = V(pts[1], pts[1].t), D = V(pts[3], pts[3].t);
+    const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = D[0] - A[0], vy = D[1] - A[1], vz = D[2] - A[2];
+    let n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+    const l = Math.hypot(...n) * Math.sign(n[1] || 1);
+    n = n.map((v) => v / l);
+    K.quad(cap, A, D, V(pts[2], pts[2].t), B, n);
+  };
+  // (Out on the land, a front a short flight can't reach the ground from sends the steps round to the ends.)
+  const ahead = flight(sides[0], 0, stair);
+  const endsToo = land && ahead === null;
+  for (const sd of sides) {
+    const hs = sd.way ? stair : ends, m = sd.mid;
+    const steps = sd.way ? ahead : endsToo ? flight(sd, m, hs) : null;
+    const n = steps ? steps.length : 0;
+    for (const { b, y, base: under } of steps || []) {
+      along('pale:stone', sd, m, b, hs, tread / 2 + 0.01, under, y);
+      flat(sd, m, b, hs, tread / 2 + 0.01, y);
+    }
+    // Its cheeks, a wall either side whose coping runs down with the steps' noses (none for a step or two on the level).
+    if (n > 1) {
+      const nose = (b) => top - rise + 0.45 - (b - edge) * rise / tread, b1 = edge + n * tread;
+      const under = Math.min(...steps.map((q) => q.base));
+      for (const sg of [-1, 1]) {
+        const q0 = m + sg * hs, q1 = m + sg * (hs + cheek);
+        ramp('dark:stone', 'pale:stone', sd, Math.min(q0, q1), Math.max(q0, q1), 0, b1, under, nose(0), nose(b1));
+        for (const { b } of steps) {
+          flat(sd, m + sg * (hs + cheek / 2), b, cheek / 2, tread / 2 + 0.01, nose(b));
+          stop(sd, m + sg * (hs + cheek / 2), b, cheek / 2, tread / 2 + 0.01, nose(b));
+        }
+      }
+    }
+    // A parapet where it stands well over the ground, but for the way down and where the wall is.
+    const [c0, c1] = clear(sd);
+    const gap = n ? hs + cheek : 0;
+    const segs = (gap ? [[c0, m - gap], [m + gap, c1]] : [[c0, c1]]).filter(([q0, q1]) => q1 - q0 > 0.3);
+    for (const [q0, q1] of segs) {
+      let under = Infinity;
+      for (let k = 0; k <= 6; k++) under = Math.min(under, G(...on(sd, q0 + (q1 - q0) * k / 6, edge + 0.4)));
+      if (top - under < drop) continue;
+      const qm = (q0 + q1) / 2, fa = (q1 - q0) / 2;
+      along('dark:stone', sd, qm, edge - 0.17, fa - 0.02, 0.15, top, top + rail - 0.13);
+      along('pale:stone', sd, qm, edge - 0.17, fa, 0.2, top + rail - 0.13, top + rail);
+      stop(sd, qm, edge - 0.17, fa, 0.2, top + rail);
+    }
+    // Pilasters up a tall wall, to break it: near its corners and, on a long one with no steps, in its middle.
+    let low = Infinity;
+    for (let k = 0; k <= 8; k++) low = Math.min(low, G(...on(sd, c0 + (c1 - c0) * k / 8, 0.4)));
+    if (top - low > 1.3) {
+      const spots = [c0 + 0.35, c1 - 0.35].concat(!n && c1 - c0 > 6 ? [(c0 + c1) / 2] : []);
+      for (const q of spots) {
+        if (n && Math.abs(q - m) < hs + cheek + 0.35) continue;
+        along('dark:stone', sd, q, 0.08, 0.26, 0.2, foot, top - 0.36);
+        along('pale:stone', sd, q, 0.1, 0.3, 0.23, top - 0.36, top - 0.22);
+      }
+    }
+  }
+  // A brazier at each front corner: a post of stone, an iron bowl, the fire in it.
+  for (const u of [-1, 1]) {
+    const [bx, bz] = P(u * (hu - 0.6), hw - 0.6);
+    K.drum('dark:stone', bx, top - 0.05, bz, 0.24, 1.05, 6, { r2: 0.19, collide: false });
+    K.drum('iron', bx, top + 0.95, bz, 0.2, 0.3, 8, { r2: 0.4, collide: false, open: true });
+    K.cone('flame', bx, top + 1.08, bz, 0.28, 0.8, 6);
+    if (land) K.colliders.push({ x: bx, z: bz, hx: 0.25, hz: 0.25, yaw: 0, h: top + 1.3 - terrainHeight(bx, bz), t: top + 1.2 });
+  }
+  K.spots[key] = [x, top, z, yaw];
+}
+
+// The way in, out in the woods near the kobolds' den: the portal in its wall on the hillside.
+function warrensMouth(K) {
+  portalWall(K, PORTAL.x, PORTAL.z, PORTAL.yaw, 'hf_portal');
 }
 
 // ---------------------------------------------------------------- the places
@@ -680,8 +882,26 @@ export const SEALS = [{ key: 'bellmourn', x: 7.6, z: 86, name: 'Bellmourn' }].co
     const s = SITES[k];
     // (Off to one side of each place, on its own ground: where a seal stood in the first game, at the edge of things.)
     const off = { farm: [-30, -26], hamlet: [6, 14], falls: [-48, -10], belltower: [-6, 26], sallow: [118, 24], abbey: [36, 22], khel: [10, 46], keep: [112, 18], stones: [0, 30], frostwatch: [0, 40], crossroads: [-14, 16], stair: [-20, 14], crown: [MOUNT.lake + 40, 0] }[k] || [0, s.r * 0.7];
-    return { key: k, x: s.x + off[0], z: s.z + off[1], name: s.name };
+    return { key: k, ...flattest(s.x + off[0], s.z + off[1]), name: s.name };
   }));
+
+// The flattest ground for a seal's dais within 16 m of where it was meant to go: how far the land under it rises and falls,
+// and a little for going further.
+function flattest(x0, z0) {
+  const R = 0.5 * PORTAL_MODELS.ground.scale;
+  let best = null;
+  for (const r of [0, 4, 8, 12, 16]) for (let k = 0; k < (r ? 12 : 1); k++) {
+    const x = x0 + Math.cos(k / 12 * TAU) * r, z = z0 + Math.sin(k / 12 * TAU) * r;
+    let hi = -Infinity, lo = Infinity;
+    for (let i = 0; i < 16; i++) for (const q of [0, R * 0.5, R]) {
+      const g = terrainHeight(x + Math.cos(i / 16 * TAU) * q, z + Math.sin(i / 16 * TAU) * q);
+      hi = Math.max(hi, g); lo = Math.min(lo, g);
+    }
+    const score = hi - lo + r * 0.02;
+    if (!best || score < best.score) best = { x, z, score };
+  }
+  return { x: Math.round(best.x * 10) / 10, z: Math.round(best.z * 10) / 10 };
+}
 
 let built = null;
 // Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots }.
@@ -693,6 +913,6 @@ export function buildSites() {
   // (The Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js.)
   buildHall(K);
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
-  built = { parts: K.parts, colliders: K.colliders, spots: K.spots };
+  built = { parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors };
   return built;
 }

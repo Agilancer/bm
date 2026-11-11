@@ -9,6 +9,7 @@
 //                 it's good at, and only down a clean line (never through a wall or round a corner: it steps out for the
 //                 shot); it backs off and keeps its distance, takes a blow on its shield when it has breath to, and now and
 //                 then rides the shield away from them or across them, shooting as it goes
+//   its spells    every level's point spent in the six trees by its build (BUILD), and its bar set from what it knows
 //   running       from what it can't yet beat (the knights of Velscour, the Gravehart, the Hydra, a dragon), and home when it's low
 //   loot          gold, orbs and stuff underfoot, gear with E, chests it passes; the best gear on, gems in their sockets
 //   the town      every quest taken, steps talked through and handed in; sells what it won't wear, buys a mending, sleeps at the
@@ -24,7 +25,7 @@
 // opens a chest or takes anything up with a wall between (within()).
 import * as LAYOUT from '../core/layout.js';
 import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
-import { CAVE_MOUTH, CAVE_OUT, OPENING, RUN_OUT } from '../core/opening.js';
+import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY } from '../core/opening.js';
 import { ROUTE, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { ROADS, terrainHeight } from '../core/terrain.js';
 import { ROUTES, SITES } from '../core/lands.js';
@@ -35,6 +36,7 @@ import { floorAt } from '../core/interior.js';
 import { GROUP_KEYS, GROUPS, LAIRS, TRIPO_KIND } from '../core/tripo-monsters.js';
 import { CAMPS } from '../sim/slimes.js';
 import { SPELLS } from '../sim/spells.js';
+import { NODES, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
 import { RULES, isNight } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { PEOPLE } from '../folk/people.js';
@@ -75,7 +77,7 @@ const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
 const CATHEDRAL_GUARD = { x: CHURCH_GUARD[0], z: CHURCH_GUARD[1] };
 // The black knight: his post, his leash (BLACK.leash in src/sim/sim.worker.js), where it stands to work on him, and the level it
 // goes for him at (raised two each time he sends it back to the town).
-const BLACK_POST = CHURCH_GUARD, BLACK_LEASH = 20, SIEGE_RING = 29, BOSS_LEVEL = 8;
+const BLACK_POST = CHURCH_GUARD, BLACK_LEASH = 20, SIEGE_RING = 29, BOSS_LEVEL = 11;   // (11 since the six trees: the level its build has a Thunderbolt at)
 const HYDRA_AT = churchAt(208, -128);
 const POSTS = [
   [-78, -3, 30, 18], [CATHEDRAL_GUARD.x, CATHEDRAL_GUARD.z, 28, 99], [-40, -150, 44, 14], [150, 110, 26, 8],
@@ -161,9 +163,10 @@ function gearScore(slots) {
 // What each spell's for, as a score for the fight as it stands: 0 when it's no use. c: d to its mark, dn to the nearest, n
 // of them in the fight, close within 5.5 m, near within 9 (a Nova's reach), around its mark, hpf, fast, still, big, inLine, coming, and how the fight
 // stands: fresh (just begun, the first throw), frozen (a Nova's ice still on them), pulled (a Gravity Well drawing them
-// in), held (its tank has the mark, so it stands still with the rest about it), party. SELF: cast on itself, no aim.
-// GROUND: aimed at the feet. BOLTS: what a raised shield stops. CORE: always on its bar. A spell added to the game is
-// taught here too.
+// in), held (its tank has the mark, so it stands still with the rest about it), party; T is the mark itself, and b the brain.
+// SELF: cast on itself, no aim. GROUND: aimed at the feet. BOLTS: what a raised shield stops. A spell added to the game is
+// taught here too. (Bellmourn's twenty first, then the forty the six trees added: src/sim/skills.js.)
+const risen = (c) => !!c.T && (c.T.kind === 5 || c.T.kind === 6);
 const USE = {
   firebolt: (c) => c.d < 42 && (c.d > 12 ? 3.4 : 2.6) + (c.fresh ? 1.4 : 0),
   frost: (c) => c.d < 32 && 2.2 + (c.fast ? 2.2 : 0),
@@ -187,17 +190,105 @@ const USE = {
   wisp: () => 0,
   // (Blink is a way out, not a blow: cast from the kite, facing away. See combat().)
   blink: () => 0,
+  // ---- Fire
+  comet: (c) => c.d > 6 && c.d < 34 && (c.around >= 2 ? 4.2 : 2.4),
+  firenova: (c) => (c.close >= 2 ? 6 : c.near >= 3 ? 4.4 : 0),
+  wyrm: (c) => c.d < 28 && 2.8 + (c.fast ? 1.5 : 0),
+  phoenix: (c) => c.d < 22 && (c.inLine >= 2 ? 5.2 : c.hpf < 0.6 ? 3.6 : 2.2),
+  bomb: (c) => c.d < 40 && (c.big ? 4.6 : c.around >= 2 ? 3.6 : 2),
+  inferno: (c) => c.close >= 3 && 7.2,
+  // ---- Ice
+  coldcone: (c) => c.d < 7.5 && (c.close >= 2 ? 5.2 : 2.6),
+  rime: (c) => c.d < 34 && 2.9 + (c.fast ? 1.5 : 0),
+  frostray: (c) => c.d < 18 && (c.fast || c.big ? 3.6 : 2.4),
+  prism: (c) => c.d < 36 && (c.inLine >= 2 ? 4.8 : 2.2),
+  orb: (c) => c.d > 5 && c.d < 24 && (c.around >= 3 ? 5 : c.around >= 2 && (c.held || c.pulled) ? 4.2 : 0),
+  // (Worth it only on what a Nova has frozen, or its own cold has just slowed: ICED below.)
+  shatter: (c, b) => (c.frozen || b.t - (b.iceT ?? -99) < 4) && c.dn < 15 && 6.5,
+  zero: (c) => c.d > 8 && c.d < 38 && (c.around >= 3 ? 6.2 : (c.still || c.held) && c.big ? 4 : 0),
+  // ---- Earth
+  stone: (c) => c.d < 34 && 2.5 + (c.dn < 6 ? 0.8 : 0),
+  thorns: (c) => c.d < 22 && (c.around >= 2 ? 3.4 : 2.2),
+  boulder: (c) => c.d > 5 && c.d < 30 && (c.around >= 2 ? 4.4 : 2.2),
+  stoneskin: (c) => (c.close >= 2 || c.hpf < 0.6) && c.dn < 9 && 7,
+  vine: (c) => c.d > 5 && c.d < 26 && (c.around >= 3 ? 5.4 : c.n >= 3 && c.coming ? 4 : 0),
+  quake: (c) => c.d > 6 && c.d < 28 && (c.around >= 3 ? 6 : (c.still || c.held || c.frozen) && c.big ? 3.6 : 0),
+  monolith: (c) => c.d < 28 && (c.big ? 5.6 : 2.6),
+  // ---- Arcane
+  rune: (c) => c.coming && c.d > 7 && c.d < 22 && 3.4,
+  crescent: (c) => c.d < 17 && (c.inLine >= 2 ? 4.4 : 2.5),
+  stasis: (c) => c.d > 6 && c.d < 26 && (c.around >= 3 ? 5.2 : c.big ? 3.4 : 0),
+  disintegrate: (c) => c.d < 24 && (c.inLine >= 2 ? 5 : c.big ? 4.2 : 2.4),
+  starfall: (c) => c.d > 10 && c.d < 50 && (c.around >= 3 ? 6 : c.around >= 2 && (c.held || c.frozen || c.pulled) ? 5.4 : (c.still || c.held || c.frozen) && c.big ? 4.2 : 0),
+  // ---- Lightning
+  spark: (c) => c.d < 30 && 2.7 + (c.fast ? 1.2 : 0),
+  fork: (c) => c.d < 20 && (c.around >= 2 ? 4.2 : 2.2),
+  // (A seed only pays if there's lightning on the bar to send on from it.)
+  seed: (c, b) => c.d < 26 && c.around >= 2 && b.stormOnBar && 3.6,
+  thunderclap: (c) => (c.close >= 3 ? 7.6 : c.close >= 2 && c.hpf < 0.6 ? 7.5 : 0),
+  // (Both step it through the fight, and it fights from a distance. Blink it keeps as a way out; Stormstep it never slots.)
+  stormstep: () => 0,
+  // (Out of the sky, where a raised shield can't turn it, and from further off than the black knight's reach.)
+  thunder: (c) => c.d > 6 && c.d < 55 && (c.big ? 5 : 3),
+  staticfield: (c) => c.close >= 2 && 5.4,
+  tempest: (c) => c.d > 8 && c.d < 38 && (c.around >= 3 ? 6.2 : (c.still || c.held) && c.big ? 4.4 : 0),
+  // ---- Utility
+  fleet: (c) => c.hpf < 0.5 && c.dn < 8 && 5,
+  turn: (c) => (risen(c) ? (c.close >= 2 ? 7.8 : c.near >= 3 ? 5 : 0) : c.close >= 3 && 4),
+  renew: (c) => c.hpf < (c.healer ? 0.5 : 0.7) && 5.6,
+  aegis: (c) => c.hpf < 0.75 && c.dn < 10 && 6.4,
+  sanctuary: (c) => c.hpf < 0.6 && c.close >= 2 && 6.6,
+  empower: (c) => c.big && c.d < 40 && 4.4,
+  stillness: (c) => c.hpf < 0.35 && c.close >= 3 && 8.5,
 };
-const SELF = new Set(['nova', 'mend', 'blades', 'wisp']);
-const GROUND = new Set(['meteor', 'blizzard', 'wallfire']);
-const BOLTS = new Set(['firebolt', 'frost', 'lightning', 'missiles', 'lance', 'chain', 'firebeam', 'spikes', 'arcaneblast']);
-const CORE = ['firebolt', 'mend', 'nova', 'meteor'];
-// What the two slots past the four are for, so the six between them cover a fight: one for a crowd or a line of them, one to
+const SELF = new Set(['nova', 'mend', 'blades', 'wisp', 'firenova', 'inferno', 'shatter', 'stoneskin', 'thunderclap', 'staticfield', 'renew', 'fleet', 'turn', 'aegis', 'sanctuary', 'empower', 'stillness']);
+const GROUND = new Set(['meteor', 'blizzard', 'wallfire', 'zero', 'quake', 'monolith', 'rune', 'starfall', 'thunder', 'tempest']);
+const BOLTS = new Set(['firebolt', 'frost', 'lightning', 'missiles', 'lance', 'chain', 'firebeam', 'spikes', 'arcaneblast', 'comet', 'wyrm', 'phoenix', 'bomb', 'coldcone', 'rime',
+  'frostray', 'prism', 'stone', 'thorns', 'boulder', 'vine', 'crescent', 'stasis', 'disintegrate', 'spark', 'fork', 'seed']);
+// Always on its bar, once it knows them: Firebolt and Mend, and the first it has of each of these two lists. PANIC: what it
+// casts at once with three of them on it. SKY: what comes down on a raised shield from where the board can't turn it, and
+// reaches the thirty paces it stands off the black knight at (a Wall of Fire doesn't: 24).
+const PANIC = ['nova', 'thunderclap', 'turn'], SKY = ['meteor', 'thunder'];
+const CORE = ['firebolt', 'mend'], CORE_ALL = [...CORE, ...PANIC, ...SKY];
+const coreOf = (known) => [...CORE, PANIC.find(known), SKY.find(known)].filter(Boolean);
+// What the two slots past those are for, so the six between them cover a fight: one for a crowd or a line of them, one to
 // pour on a single mark or to get it out of trouble. Each slot's spells take their turn in it (bar()).
-const SLOT_A = ['chain', 'well', 'lightning', 'blizzard', 'lance', 'plague', 'wallfire', 'spikes'];
-const SLOT_B = ['arcaneblast', 'drain', 'frost', 'missiles', 'firebeam', 'blades', 'blink'];
-// What's never on its bar: cast when it's wanted, by the book (a light underfoot down among the dead).
-const OFF_BAR = new Set(['wisp']);
+const SLOT_A = ['chain', 'well', 'lightning', 'blizzard', 'lance', 'plague', 'wallfire', 'spikes',
+  'comet', 'firenova', 'phoenix', 'inferno', 'coldcone', 'prism', 'orb', 'shatter', 'zero', 'thorns', 'boulder', 'vine', 'quake', 'rune', 'crescent', 'stasis', 'starfall',
+  'disintegrate', 'fork', 'seed', 'thunderclap', 'staticfield', 'tempest', 'turn', 'sanctuary'];
+const SLOT_B = ['arcaneblast', 'drain', 'frost', 'missiles', 'firebeam', 'blades', 'blink',
+  'wyrm', 'bomb', 'rime', 'frostray', 'stone', 'stoneskin', 'monolith', 'spark', 'thunder', 'fleet', 'renew', 'aegis', 'empower', 'stillness'];
+// What's never on its bar: cast when it's wanted, by the book (a light underfoot down among the dead), or never.
+const OFF_BAR = new Set(['wisp', 'stormstep']);
+// Its own cold, after which a Shatter pays; the big slow casts it waits a moment after; its lightning.
+const ICED = new Set(['nova', 'coldcone', 'blizzard', 'zero', 'frostray', 'rime', 'orb']);
+const HEAVY = new Set(['meteor', 'blizzard', 'well', 'zero', 'quake', 'starfall', 'tempest', 'monolith', 'thunder']);
+const STORM = ['spark', 'chain', 'fork', 'lightning', 'thunder'];
+
+// The six trees (src/sim/skills.js): what it puts its points in, in this order, each as soon as it can be bought (a level, a
+// spell it grows from, points already in the school). It's a build that gives its head what it leans on, when it needs it:
+// a Mend first; Lightning to a Thunderclap by level 6, for when they're on it; Turn the Dead for the packs; a Thunderbolt at
+// 11, which is what it takes to the black knight's shield (BOSS_LEVEL); then Fire, to a Meteor at 18; then masteries, more
+// ranks, and Ice to a Frost Nova. Past the end of the list, a point goes into whatever known spell has the fewest ranks.
+const BUILD = [
+  'mend', 'chain', 'spark', 'spark', 'turn', 'thunderclap', 'spark', 'chain', 'firebeam', 'firebolt', 'firebolt', 'thunder',
+  'wallfire', 'comet', 'firenova', 'bomb', 'firebolt:searing', 'firebolt', 'wallfire', 'meteor', 'mend', 'renew', 'thunder', '@lightning', '@fire', '@fire',
+  'meteor', 'meteor:crater', 'coldcone', 'frost', 'frost', 'nova', '@fire', '@fire', '@fire', 'aegis', 'thunder', 'thunder:twice', 'fork', 'meteor', 'meteor',
+  '@lightning', '@lightning', 'stone', 'lance', 'frost', 'nova', 'blizzard',
+];
+// Whether the build can be bought as written: it's played through from level 1 to 50, and what's still unbought at the end
+// (a spell that's gone, a branch whose other was taken, a tier it never has the points for) is named.
+function buildGaps() {
+  const out = [], ranks = startRanks(), free = startFree();
+  for (const id of BUILD) if (!NODES[id]) out.push(`its build wants "${id}", which isn't a node in the six trees`);
+  const want = BUILD.filter((id) => NODES[id]);
+  let at = 0;
+  for (let lvl = 1; lvl <= 50; lvl++) {
+    while (at < want.length && pointsAt(lvl) - spent(ranks, free) > 0 && !blocked(ranks, free, lvl, want[at])) { ranks[want[at]] = (ranks[want[at]] || 0) + 1; at++; }
+  }
+  if (at < want.length) out.push(`its build stops at "${want[at]}" (${blocked(ranks, free, 50, want[at]) || 'out of points'}), with ${want.length - at} left unbought`);
+  return out;
+}
 
 // ---------------------------------------------------------------- what it knows, against what the game has
 
@@ -212,7 +303,7 @@ const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night'
 const HALL_COUNTERS = { gear: 'left to the tester: it fights in what it was given', party: 'left to the tester: it fights beside whoever was hired', foes: 'left to the tester: it fights what was summoned' };
 // The blocks of the snapshot it reads (foes() and the rest); a new one is something in the world it can't see yet.
 const BLOCKS = new Set(['FX_START', 'CHARS_START', 'SLIMES_START', 'TUMBLERS_START']);
-const CASTS = ['firebolt', 'chain', 'nova', 'meteor', 'mend', 'wisp'];
+const CASTS = ['firebolt', 'mend', 'wisp', 'blink', ...PANIC, ...SKY];
 const FARMS = new Set(['bone', 'iron', 'silk']);
 const STOCKS = new Set(['staffs', 'robes', 'skulls', 'curios', 'scrolls']);
 export function coverage(foeNames = null) {
@@ -234,8 +325,11 @@ export function coverage(foeNames = null) {
   for (const k of Object.keys(LAYOUT)) if (k.endsWith('_START') && !BLOCKS.has(k)) out.push(`snapshot block ${k}: something new in the world it can't see (foes())`);
   for (const k of CASTS) if (!(k in SP)) out.push(`spell ${k}: it casts this, and it's gone from SPELLS`);
   for (const sp of SPELLS) if (!(sp.key in USE)) out.push(`spell ${sp.key}: no use for it in USE, so it never casts it`);
-  for (const sp of SPELLS) if (!CORE.includes(sp.key) && !SLOT_A.includes(sp.key) && !SLOT_B.includes(sp.key) && !OFF_BAR.has(sp.key)) out.push(`spell ${sp.key}: in neither of its bar's turning slots (SLOT_A for a crowd, SLOT_B for one mark), so it's only ever a stopgap on its bar`);
-  for (const k of [...CORE, ...SLOT_A, ...SLOT_B]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
+  for (const k of Object.keys(USE)) if (!(k in SP)) out.push(`spell ${k}: a use for it in USE, and it's gone from SPELLS`);
+  for (const sp of SPELLS) if (!NODES[sp.key]) out.push(`spell ${sp.key}: in no tree, so it can never be learned`);
+  out.push(...buildGaps());
+  for (const sp of SPELLS) if (!CORE_ALL.includes(sp.key) && !SLOT_A.includes(sp.key) && !SLOT_B.includes(sp.key) && !OFF_BAR.has(sp.key)) out.push(`spell ${sp.key}: in neither of its bar's turning slots (SLOT_A for a crowd, SLOT_B for one mark), so it's only ever a stopgap on its bar`);
+  for (const k of [...CORE_ALL, ...SLOT_A, ...SLOT_B]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
   out.push(...warrensCoverage());
   for (const st of STATIONS) if (!(st.key in HALL_COUNTERS)) out.push(`Test Dungeon counter ${st.key}: nothing in HALL_COUNTERS says what auto-play does with it`);
@@ -537,7 +631,7 @@ export class Brain {
     else if (!this.boardFrame) this.auto.jumpHeld = false;
     if (!this.fighting && this.auto.block) { this.auto.block = false; this.guardT = 0; }
     this.motor(dt, m);
-    if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); this.bar(); }
+    if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); this.learn(); this.bar(); }
     // A light underfoot down among the dead, for whoever's watching.
     if (m.below && !this.fighting && (this.wispT -= dt) <= 0 && m.mana > 40) { this.wispT = this.cast(SP.wisp, 0.3) ? 85 : 2; }
     void g;
@@ -596,17 +690,40 @@ export class Brain {
 
   // ---- spells and the staff
 
-  // Its bar, set in the book as a player sets theirs, so the six between them cover a fight: the four it leans on (Firebolt
-  // to open and from range, Meteor for a crowd or something big, Frost Nova when they're on it, Mend), one more for a crowd
-  // or a line of them (SLOT_A) and one to pour on a single mark or get it out of trouble (SLOT_B). Those two change every
-  // four minutes among what it knows, so that in time every spell has been in its hands (and in the log). With a healer at
-  // its back, Mend's place goes to another of them, and with a tank holding them still, to something for the crowd.
+  // Its points, spent in the book as a player spends theirs: the next thing in its build that can be bought, one a look.
+  learn() {
+    const S = this.o.spellbar.skills;
+    if (!S || S.points <= 0) return;
+    const seen = {};
+    let id = null, saving = false;
+    for (const q of BUILD) {
+      if (!NODES[q]) continue;
+      seen[q] = (seen[q] || 0) + 1;
+      if (S.rank(q) >= seen[q] + (S.free.has(q) ? 1 : 0)) continue;     // (bought already)
+      if (!S.why(q)) { id = q; break; }
+      saving = true;                                                     // (not yet: a level, or points in its school)
+    }
+    // (Nothing left to save for, or three points lying idle: into the known spell with the fewest ranks.)
+    if (!id && (!saving || S.points >= 3)) id = Object.values(NODES).filter((n) => n.kind === 'spell' && S.rank(n.id) > 0 && !S.why(n.id)).sort((x, y) => S.rank(x.id) - S.rank(y.id))[0]?.id;
+    if (!id) return;
+    const first = NODES[id].kind === 'spell' && S.rank(id) === 0;
+    if (S.spend(id)) { this.o.log?.learned?.(id, S.rank(id), this.o.pack.level); this.say(first ? `Learning ${SPELLS[NODES[id].spell].name}.` : 'A point spent in the book.'); }
+  }
+
+  // Its bar, set in the book as a player sets theirs from what it's learned, so the six between them cover a fight: what it
+  // leans on (Firebolt to open and from range; Mend; the first it knows of a Frost Nova, a Thunderclap or Turn the Dead,
+  // for when they're on it; the first it knows of a Meteor or a Thunderbolt, for a crowd, something big or a raised
+  // shield), one more for a crowd or a line of them (SLOT_A) and one to pour on a single mark or get it out of trouble
+  // (SLOT_B). Those two change every four minutes among what it knows, so that in time every spell has been in its hands
+  // (and in the log). With a healer at its back, Mend's place goes to another of them, and with a tank holding them still,
+  // to something for the crowd.
   bar() {
     const sb = this.o.spellbar, known = [...sb.known].sort((a, b) => a - b);
     const party = this.snap ? this.party(this.snap).filter((h) => !h.dead) : [];
     const healer = party.some((h) => h.role === 'heal'), tank = party.some((h) => h.role === 'tank');
     const usable = (i) => i !== undefined && sb.known.has(i) && !SPELLS[i].noBar && USE[SPELLS[i].key];
-    const want = CORE.filter((k) => !(k === 'mend' && healer)).map((k) => SP[k]).filter(usable);
+    const want = coreOf((k) => sb.known.has(SP[k])).filter((k) => !(k === 'mend' && healer)).map((k) => SP[k]).filter(usable);
+    this.stormOnBar = STORM.some((k) => sb.loadout.includes(SP[k]));
     const turn = Math.floor((this.o.log?.d.t ?? this.t) / 240);
     const take = (list, n) => {
       const have = list.map((k) => SP[k]).filter((i) => usable(i) && !want.includes(i));
@@ -628,8 +745,10 @@ export class Brain {
   // while it's down casts the spell over and over till the mana's gone. True if it went.
   cast(i, hold) {
     if (!this.known(i) || this.auto.cast || this.slotHeld) return false;
-    const sp = SPELLS[i], m = this.o.game.currentSnap(), sb = this.o.spellbar;
-    if (m && this.purse(m[H.MANA]) < sp.mana) return false;
+    // (Its numbers as it casts it now, with the ranks it has: src/ui/spellbar.js def.)
+    const m = this.o.game.currentSnap(), sb = this.o.spellbar, sp = sb.def?.(i) || SPELLS[i];
+    // (Not the mana for it, or it isn't ready again yet.)
+    if (m && (this.purse(m[H.MANA]) < sp.mana || m[H.COOL + i] > 0)) return false;
     // (Its hands still on the last one, or a shot still leaving the staff: a press now would wait on it and might be lost.
     // The next thought, then.)
     if (m && m[H.SPELL_RIG] > 0) return false;
@@ -643,6 +762,7 @@ export class Brain {
     this.tapAt = tap ? this.t : -9;
     this.lastSpell = sp.key;
     this.used[sp.key] = this.t;
+    if (ICED.has(sp.key)) this.iceT = this.t;
     this.o.log?.cast(sp.key);
     return true;
   }
@@ -669,7 +789,7 @@ export class Brain {
     const mana = this.purse(m.mana), bar = this.o.spellbar.loadout;
     const has = (k) => SP[k] !== undefined && bar.includes(SP[k]);
     // What's kept back for trouble: a Mend when it's been hurt, a Nova when it's alone among several.
-    const reserve = (has('mend') && m.hpf < 0.8 ? 25 : 0) + (has('nova') && c.n >= 3 && !c.party ? 12 : 0);
+    const reserve = (has('mend') && m.hpf < 0.8 ? 25 : 0) + (PANIC.some(has) && c.n >= 3 && !c.party ? 12 : 0);
     const staff = () => {
       // (A shot costs up to 13 by the staff: with less, the click's wasted on a fizzle.)
       if (!c.aimed || this.staffCool > 0 || mana < 14 || c.d > 40) return;
@@ -685,11 +805,12 @@ export class Brain {
     if (this.castCool > 0) { staff(); return; }
     let best = null, bs = 0;
     for (const i of bar) {
-      const sp = SPELLS[i], U = sp && USE[sp.key];
-      // (A channel drinks as it pours: only with enough for a second of it at least, past what it costs to start.)
-      if (!U || mana < sp.mana + (sp.channel ? (sp.drain || 10) * 1.1 : 0)) continue;
+      const sp = i >= 0 ? this.o.spellbar.def?.(i) || SPELLS[i] : null, U = sp && USE[sp.key];
+      // (A channel drinks as it pours: only with enough for a second of it at least, past what it costs to start. And nothing
+      // that isn't ready again yet.)
+      if (!U || mana < sp.mana + (sp.channel ? (sp.drain || 10) * 1.1 : 0) || snap[H.COOL + i] > 0) continue;
       if (!SELF.has(sp.key) && !c.aimed) continue;
-      let s = U(c) || 0;
+      let s = U(c, this) || 0;
       if (!s) continue;
       if (c.shield && BOLTS.has(sp.key)) s *= 0.25;
       // (Not a Meteor's worth of mana on something nearly dead and alone: the staff finishes it.)
@@ -715,14 +836,14 @@ export class Brain {
     // (A channel is held a second or two, and never past the mana it has for it.)
     const hold = key === 'firebolt' ? (c.fresh && c.d > 12 ? 1.5 : c.d > 14 ? 0.95 : 0.5)
       : best.channel ? Math.max(0.45, Math.min(1.4 + Math.random() * 0.6, (mana - best.mana - Math.min(reserve, 20)) / (best.drain || 10) - 0.15)) : 0.16;
-    if (this.cast(SPELLS.indexOf(best), hold)) {
+    if (this.cast(SP[key], hold)) {
       // (How soon the next: by how full its mana is.)
       this.spellAt = this.t + (mf > 0.7 ? 1.3 + Math.random() * 1.5 : mf > 0.4 ? 2.4 + Math.random() * 2.2 : 4 + Math.random() * 3);
       this.comboAt = this.t + 1.1;
       if (urgent) this.urgentAt = this.t + 3;
-      this.castCool = best.channel ? 0.4 : 0.35 + Math.random() * 0.35 + (key === 'meteor' || key === 'blizzard' || key === 'well' ? 0.8 : 0);
+      this.castCool = best.channel ? 0.4 : 0.35 + Math.random() * 0.35 + (HEAVY.has(key) ? 0.8 : 0);
       if (key === 'blades') this.bladesT = this.t;
-      if (key === 'nova') this.frozenT = this.t;
+      if (key === 'nova' || key === 'zero') this.frozenT = this.t;
       if (key === 'well') this.pulledT = this.t;
       // (A flask is lobbed: its eyes go up by the arc it needs, and stay up till it's left the hand. motor().)
       if (key === 'plague') { this.lift = 0.5 * Math.asin(Math.min(1, 12 * c.d / (17 * 17))); this.liftT = this.t + 0.7; this.pitch += this.lift; }
@@ -803,7 +924,7 @@ export class Brain {
       }
       return;
     }
-    if (st === OPENING.HERD && t < 10) { this.say('Lisandra says your name.'); return; }
+    if (st === OPENING.HERD && t < HERD_CONTROL) { this.say('Lisandra says your name.'); return; }
     if (st === OPENING.HERD || st === OPENING.LEAVE) {
       // Out of the cave the way she points, by the marks down its middle (never back in: she won't have it).
       this.say('Out of the cave.');
@@ -816,23 +937,27 @@ export class Brain {
     }
     if (st === OPENING.ESCORT) {
       const foes = this.foes(snap, m).filter((f) => f.hostile && f.d < 30);
+      // (The road's fight: the dead in waves, their children, and at the end two necromancers out of the trees. It fights
+      // them as it fights the woods' own: src/sim/opening.js fight has what comes and when.)
       if (foes.length && this.combat(snap, m, foes)) { this.fighting = true; this.say(`Fighting the dead on the road (${foes.length}).`); return; }
-      // She leads the way down (src/sim/opening.js): it follows a few strides behind her on the road, at her pace. Too close
-      // and it lets her get on; she waits if it falls back.
+      // She leads the way down (src/sim/opening.js): along her shelf, down her steps and the path, and then the road. It
+      // follows a few strides behind her, at her pace. Stood still she stops and turns to it, and goes on when it's come
+      // up to her: so it keeps coming until it's close.
       const her = this.lisandra(snap);
       if (!her) { this.say('Following Lisandra down to Bellmourn.'); return; }
       const hers = routeNear(her.x, her.z), mine = routeNear(m.x, m.z, hers, 60), d = dist(m.x, m.z, her.x, her.z);
       const end = ROUTE.pts.at(-1);
       if (dist(m.x, m.z, end[0], end[1]) < 6 || (hers >= ROUTE.len - 0.5 && d < 6)) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Bellmourn. Lisandra has her say.'); return; }
-      const [ax, az] = routeAt(Math.min(ROUTE.len, Math.max(mine + 3, hers - 3.5)));
-      if (d < 3 && hers > mine) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
+      const [ax, az] = routeAt(Math.min(ROUTE.len, Math.max(mine + 3, hers - 2.6)));
+      if (d < 2.4 && hers > mine) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
       this.face = null;
       this.steer(ax - m.x, az - m.z, d > 9);
       // (Its eyes on the road ahead: her, and the way she's going.)
       this.look = routeAt(Math.min(ROUTE.len, mine + 6));
-      // Down the long slope on its shield, and she gets on hers.
+      // Down the long slope on its shield, and she gets on hers: once it's on the road. (Her shelf and her steps are
+      // narrow and double back; it walks those.)
       const [rx, rz] = routeDir(mine);
-      this.board(0.12, m, rx, rz, ROUTE.len - mine);
+      if (mine > routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 4) this.board(0.12, m, rx, rz, ROUTE.len - mine);
       if (!m.surf) this.say('Following Lisandra down to Bellmourn.');
     }
   }
@@ -1002,7 +1127,9 @@ export class Brain {
     }
     if (!K && !retreat && (dn < 3 || (close >= 2 && dn < 4.5) || this.backedUp > 0.8) && this.kiteCool <= 0) {
       // Frozen first, if it's a crowd.
-      if (close >= 3 && m.mana >= 32 && !this.auto.cast && this.cast(SP.nova, 0.3)) { this.castCool = 0.5; this.frozenT = this.t; }
+      // (The first it knows and has ready of a Frost Nova, a Thunderclap, Turn the Dead.)
+      const panic = close >= 3 && !this.auto.cast ? PANIC.map((k) => SP[k]).find((i) => this.known(i) && !(snap[H.COOL + i] > 0)) : undefined;
+      if (panic !== undefined && this.cast(panic, 0.3)) { this.castCool = 0.5; if (panic === SP.nova) this.frozenT = this.t; }
       const [ex, ez] = this.escape(m, live);
       // (It backs off at a walk, a little slower while it shoots: what's quicker than that and already at its heels, it can't
       // back away from. Nor from what's right on it, a crowd all round, or a wall behind.)
@@ -1253,7 +1380,7 @@ export class Brain {
         return true;
       }
       // (Coin, orbs and stuff come to hand within two metres; gear wants E within that.)
-      this.goTo(best.x, best.z, best.auto || best.coins ? 1.1 : bd < 1.7 ? 0.5 : 1.2, false, false, m.below);
+      this.goTo(best.x, best.z, best.auto || best.coins ? 1.1 : bd < 1.7 ? 0.5 : 1.2, false, false, m.below, best.auto || best.coins ? null : best.y + 0.3);
       if (this.noWay) { this.giveUp(best, 240); this.noWay = null; }
       return true;
     }
@@ -1281,7 +1408,7 @@ export class Brain {
           return true;
         }
       }
-      this.goTo(ch.x, ch.z, cd < 2 ? 0.5 : 1.2, false, false, m.below);
+      this.goTo(ch.x, ch.z, cd < 2 ? 0.5 : 1.2, false, false, m.below, ch.y + 0.5);
       if (this.noWay) { this.giveUp(ch, 600); this.noWay = null; }
       return true;
     }
@@ -1715,7 +1842,7 @@ export class Brain {
     }
     this.face = null;
     // (Close, with a wall between: on round to them, as near as a body can stand.)
-    this.goTo(w.x, w.z, near ? 0.5 : 1.4, d > 12, true);
+    this.goTo(w.x, w.z, near ? 0.5 : 1.4, d > 12, true, false, (w.beyond ? m.y : w.y ?? m.y) + 1.2);
     // (No way to them at all: upstairs, shut in. Later.)
     if (this.noWay) { this.noWay = null; this.giveUp(`p:${j.who}`, 240); this.job = null; }
   }
@@ -1803,13 +1930,17 @@ export class Brain {
   // ---- getting about
 
   // Walks to (x, z): by the nav worker's paths on its ground, by the roads and the seals beyond it.
-  goTo(x, z, near = 1, run = true, person = false, below = false) {
+  // touch: the height of something there it means to put a hand to or have a word with (a chest, someone): its path then
+  // ends where there's nothing between it and that, or there's no way.
+  goTo(x, z, near = 1, run = true, person = false, below = false, touch = null) {
     this.useGoal = true;
     const g = this.goal;
-    if (!g || dist(g.x, g.z, x, z) > (person ? 2.5 : 3) || !!g.below !== below) {
-      this.goal = { x, z, near, run, t: this.t, below };
+    // (The same errand only if it's the same place, or someone who's moved a little. Anything else within a few strides is
+    // somewhere else: it used to keep walking to whoever stood outside a door when it meant the chest just inside it.)
+    if (!g || dist(g.x, g.z, x, z) > (person ? 2.5 : 0.75) || !!g.person !== person || !!g.below !== below || (g.touch === null) !== (touch === null)) {
+      this.goal = { x, z, near, run, t: this.t, below, touch, person };
       this.macro = null; this.sub = null; this.subFor = null; this.noWay = null;
-    } else { g.near = near; g.run = run; if (person) { g.x = x; g.z = z; } }
+    } else { g.near = near; g.run = run; g.touch = touch; g.x = x; g.z = z; }
   }
 
   walk(dt, m) {
@@ -1864,7 +1995,7 @@ export class Brain {
       if (!this.subAsk && this.nav.ready && (fresh || this.t - this.subT > 12 || (this.subTo && dist(this.subTo[0], this.subTo[1], leg.x, leg.z) > 2.5))) {
         this.subFor = leg; this.subT = this.t; this.subTo = [leg.x, leg.z]; this.subAsk = true;
         const want = leg, avoid = this.avoid(this.me(this.o.game.currentSnap())).concat(this.lockedDoors());
-        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid }).then((pts) => {
+        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid, touch: leg === g ? g.touch : null }).then((pts) => {
           this.subAsk = false;
           if (this.subFor !== want) return;
           this.subT = this.t;
@@ -1914,6 +2045,10 @@ export class Brain {
         if (P[0][2]) run = false;
         else if (P.length > 1 && Math.abs(wrap(Math.atan2(P[1][0] - tx, P[1][1] - tz) - Math.atan2(tx - m.x, tz - m.z))) > 0.6) run = false;
       }
+      // (Its eyes on the way it's going: not left on the door it just opened, or on whoever it's to talk to next. With an
+      // errand to talk to someone in hand the motor keeps where it's looking, and it stood at a door for ever, unable to
+      // turn from it to walk through.)
+      this.face = null;
       this.steer(tx - m.x, tz - m.z, run);
       this.lookOn(m, P, run);
       if (!m.town) { const L = dist(m.x, m.z, W.x, W.z) || 1; this.board(dt, m, (W.x - m.x) / L, (W.z - m.z) / L, d); }
@@ -1942,6 +2077,7 @@ export class Brain {
         if (this.probeDir && this.probeDir[2] > 0.5) { hx = this.probeDir[0]; hz = this.probeDir[1]; }
       }
       if (this.door(dt, m, hx, hz)) return;
+      this.face = null;
       this.steer(hx, hz, g.run && d > 8);
       if (pts?.length) this.lookOn(m, pts, g.run && d > 8);
       this.board(dt, m, sx, sz, d);
@@ -2195,7 +2331,10 @@ export class Brain {
     if (!w.strafe && !fight && !surf) {
       const off = Math.abs(wrap(Math.atan2(w.x, w.z) - inp.yaw));
       if (off > 1.0) { mx = 0; mz = 0; } else if (off > 0.6) { mx *= 0.5; mz *= 0.5; }
-    }
+      // (A turn on the spot takes a second at most. One that goes on is its look held somewhere else: let go.)
+      this.turnT = off > 1.0 ? (this.turnT || 0) + dt : 0;
+      if (this.turnT > 2) { this.face = null; this.look = null; }
+    } else this.turnT = 0;
     const L = Math.max(1, Math.hypot(mx, mz));
     a.mx = mx / L; a.mz = mz / L;
     // (Shift held for the run while there's breath for it: let go when it's short, taken up again once it's back, so it
@@ -2204,7 +2343,7 @@ export class Brain {
     this.running = w.run && a.mz > 0.6 && m.stam > (this.running ? 10 : this.ride ? 12 : 38);
     a.run = this.running;
     // (Turning on the spot before a step isn't being stuck: only wanting to go and not going is.)
-    this.unstick(dt, m, !surf && (a.mx !== 0 || a.mz !== 0));
+    this.unstick(dt, m, !surf && (a.mx !== 0 || a.mz !== 0 || this.turnT > 2.5));
     if (this.stuck.act > 0) {
       this.stuck.actT -= dt;
       const sd = this.stuck.side;

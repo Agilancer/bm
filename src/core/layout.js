@@ -4,7 +4,7 @@
 import { STAFFS2 } from '../items/staffs2.js';
 
 // (Room for the other Tessariels, src/sim/hero.js: HERO_SLOTS in src/core/heroes.js; and the Tripo monsters' slots, TRIPO_SLOTS.)
-export const MAX_CHARS = 80;
+export const MAX_CHARS = 100;   // (94 are up on a desktop: Lisandra's two forms, 16 Tessariels and their two quartermasters, and the rest, the road's own dead among them)
 export const MAX_JOINTS = 104;
 export const VM_JOINTS = 56;
 export const MAX_GASH = 24;
@@ -59,7 +59,10 @@ export const H = {
   MANA: 42, MAX_MANA: 43, SPELL: 44, SPELL_RIG: 45, VM_LOWER: 46, CAST_HELD: 47, FX_N: 48, SURF: 49, SURF_ARM: 50, SURF_TILT: 51, SHIELD_UP: 52, CARRY_T: 53, CARRY_K: 54, SKULL_LOWER: 55, OPENING: 56, OPENING_TIME: 57, OPENING_NEXT: 58, OPENING_CUE: 59, OPENING_CUE_T: 60, OPENING_FELL: 61, OPENING_RIDE: 62,
   // The third-person view, as the sim has it (src/sim/sim.worker.js stepBody): on, how far back the camera can stand before
   // something's in the way, how much of its step to the side there's room for, and how far the eye is down (on the shield).
-  TP: 63, TP_DIST: 64, TP_SIDE: 65, TP_DROP: 66, SIZE: 67,
+  TP: 63, TP_DIST: 64, TP_SIDE: 65, TP_DROP: 66,
+  // What's on you (BUFFS in src/sim/treespells.js): the seconds left of each. And for each spell by its place in SPELLS, the
+  // seconds until it's ready again. (Room for sixteen of the one and ninety-six of the other.)
+  BUFFS: 67, COOL: 83, SIZE: 179,
 };
 
 // Per-character block
