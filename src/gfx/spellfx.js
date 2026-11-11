@@ -216,7 +216,7 @@ fn disc(uv: vec2f, size: f32, age: f32, e: u32, seed: f32, T: f32) -> vec4f {
 }
 
 fn line(v: f32, at: f32, w: f32) -> f32 { let d = (v - at) / w; return exp(-d * d); }
-fn rune(uv: vec2f, seed: f32, T: f32) -> vec4f {
+fn rune(uv: vec2f, seed: f32, T: f32, holy: f32) -> vec4f {
   let r = length(uv);
   if (r > 1.2) { return vec4f(0.0); }
   let a = atan2(uv.y, uv.x);
@@ -231,7 +231,14 @@ fn rune(uv: vec2f, seed: f32, T: f32) -> vec4f {
   let sec3 = tau / 3.0;
   let f3 = (fract((a + T * 0.42 + seed) / sec3) - 0.5) * sec3;
   let tri = r * cos(f3);
-  c += line(hept, 0.84, 0.006) * step(r, 0.9) + line(tri, 0.25, 0.006) * step(r, 0.52) * 1.2;
+  if (holy > 0.5) {
+    // Hallowed ground: rays going out from a cross at its heart (a paladin's; the rune's own figures are a wizard's).
+    let rays = pow(abs(cos(a * 8.0 + T * 0.15)), 60.0) * step(0.56, r) * step(r, 0.88);
+    let bar = max(step(abs(uv.x), 0.035) * step(abs(uv.y + 0.03), 0.34), step(abs(uv.y - 0.1), 0.035) * step(abs(uv.x), 0.2));
+    c += rays * 0.9 + bar * 1.1;
+  } else {
+    c += line(hept, 0.84, 0.006) * step(r, 0.9) + line(tri, 0.25, 0.006) * step(r, 0.52) * 1.2;
+  }
   let sweep = 0.55 + 0.45 * sin(a * 2.0 - T * 2.6);
   return vec4f(ramp(0.85) * (c * HOT * 1.1 * (0.5 + sweep * 0.5) + ticks * HOT * 0.3) + ramp(0.35) * smoothstep(1.0, 0.1, r) * 0.1, 0.0);
 }
@@ -388,9 +395,9 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
     }
     case 5u: {   // the crescent a blade leaves
       let a = atan2(uv.y, uv.x);
-      let w = 0.2 * pow(max(cos(a * 0.82), 0.0), 1.6);
+      let w = 0.2 * pow(max(cos(a * 1.15), 0.0), 1.6);      // (a little under half a circle: what a blade sweeps before a body, not round behind it)
       m = smoothstep(w, w * 0.3, abs(r - 0.78 + 0.1 * cos(a))) * step(0.001, w);
-      hot = 0.9; halo = 0.1;
+      hot = 0.68; halo = 0.0;
     }
     case 6u: {   // a drop
       let q = vec2f(uv.x, uv.y + 0.3);
@@ -421,14 +428,14 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
       m = clamp(m + smoothstep(0.2, 0.0, r), 0.0, 1.0);
       hot = 1.0;
     }
-    case 12u: {  // a wing: feathers fanned from a shoulder at the card's foot
-      let q = vec2f(uv.x, uv.y + 0.9);
+    case 12u: {  // a pair of wings: feathers fanned out and up from two shoulders at the card's middle
+      let q = vec2f(abs(uv.x) - 0.08, uv.y + 0.35);
       let a = atan2(q.x, q.y);
       let rr = length(q);
-      let feather = pow(abs(cos(a * 7.0)), 3.0);
-      let span = 1.75 - 0.5 * abs(a);
-      m = smoothstep(0.95, 0.5, abs(a)) * smoothstep(span, span * 0.6, rr) * smoothstep(0.05, 0.3, rr) * (0.35 + 0.65 * feather);
-      hot = 0.8; halo = 0.0;
+      let feather = pow(abs(cos(a * 9.0)), 2.5);
+      let span = 1.25 - 0.32 * abs(a - 0.75);
+      m = smoothstep(0.1, 0.3, a) * smoothstep(1.75, 1.35, a) * smoothstep(span, span * 0.62, rr) * smoothstep(0.04, 0.22, rr) * (0.3 + 0.7 * feather) * step(0.0, q.x);
+      hot = 0.78; halo = 0.0;
     }
     default: {   // a shield: a kite, rimmed
       let x = abs(uv.x);
@@ -440,7 +447,8 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
   }
   let shimmer = 0.85 + 0.15 * sin(T * 9.0 + seed * 40.0);
   let glow = exp(-r * 2.6) * halo;
-  return vec4f(ramp(hot) * m * HOT * 0.75 * shimmer + ramp(0.55) * (glow + m * 0.5), 0.0);
+  // (Bright enough to bloom a little, not so bright the colour burns out to white.)
+  return vec4f(ramp(hot) * m * HOT * 0.4 * shimmer + ramp(0.5) * (glow + m * 0.7), 0.0);
 }
 
 @fragment fn fs(in: V) -> @location(0) vec4f {
@@ -491,7 +499,7 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
     case 6u: { c = puff(uv, seed, T); }
     case 7u: { c = flare(uv, seed); }
     case 8u: { c = trail(uv, I.a.w, seed, T); }
-    case 9u: { c = rune(uv, seed, T); }
+    case 9u: { c = rune(uv, seed, T, I.x.w); }
     case 10u: { c = column(uv, seed, T); }
     case 11u: { c = vortex(uv, seed, T); }
     case 12u: { c = shock(uv, age, seed, T); }
@@ -635,8 +643,9 @@ fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
       else if (mat == 2u) { albedo = mix(vec3f(0.2, 0.11, 0.05), vec3f(0.34, 0.2, 0.1), noise.g); rough = 0.75; }
       else if (mat == 3u) { albedo = vec3f(0.02); rough = 0.3; }
       else { albedo = vec3f(0.62, 0.66, 0.72); rough = 0.24; metal = 1.0; }
-      glow = rampColor(e, 0.62) * lit * (fres * 2.4 + select(0.12, 2.6, mat == 3u)) * (0.85 + 0.15 * sin(T * 13.0 + seed * 7.0));
-      if (mat == 3u) { glow += rampColor(e, 0.95) * lit * pow(ndv, 3.0) * 2.2; }
+      // (Light itself is its element's colour all through, not white at its heart: a star of fire is seen to be of fire.)
+      glow = rampColor(e, 0.62) * lit * (fres * 2.4 + select(0.12, 1.7, mat == 3u)) * (0.85 + 0.15 * sin(T * 13.0 + seed * 7.0));
+      if (mat == 3u) { glow += rampColor(e, 0.76) * lit * pow(ndv, 3.0) * 1.2; }
     }
     default: {   // the flask: thick green glass, with something moving in it
       albedo = vec3f(0.04, 0.16, 0.04); rough = 0.08;

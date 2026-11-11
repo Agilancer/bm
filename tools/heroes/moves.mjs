@@ -53,7 +53,8 @@ async function planAll(only) {
       const dist = Math.max(1.7, Math.min(hi - 0.3, lo + (hi - lo > 4 ? 1.6 : (hi - lo) * 0.5)) + 0.5), secs = LONG[q.key] || 1.25, frames = secs > 2.4 ? 10 : 8;
       strips.push({ name: `${cls}_${q.key}`, cls, key: q.key, dist, foes: q.aoe || q.crowd ? 5 : 3, frames, every: Math.max(4, Math.round(secs * 90 / (frames - 1))), cam: eye(WIDE[q.key] || dist + 4.5), note: `${q.name || q.key}${q.lvl ? `, level ${q.lvl}` : ''}` });
     }
-    if (cls === 'bard') for (const v of [0, 1, 2]) strips.push({ name: `bard__lute${v}`, cls, tune: v, dist: 3, foes: 0, frames: 12, every: v === 1 ? 3 : v === 2 ? 9 : 5, cam: [-0.5, 7.5, 2.9], mid: 0, lookY: 1.15, fov: 15, lead: 60, note: ['strumming', 'picking', 'the great wheeling strum'][v] });
+    // (The lute, from before him and to one side, close: once with what it throws off, once the hands alone.)
+    if (cls === 'bard') for (const bare of [false, true]) for (const v of [0, 1, 2]) strips.push({ name: `bard__lute${v}${bare ? 'b' : ''}`, cls, tune: v, bare, dist: 3, foes: 0, frames: v === 2 ? 20 : 12, every: v === 1 ? 3 : v === 2 ? 6 : 5, cam: [-5.5, 4.5, 3.2], mid: 0, lookY: 1.2, fov: 17, lead: 60, close: true, note: ['strumming', 'picking', 'the great wheeling strum'][v] + (bare ? ', the hands alone' : '') });
   }
   return { name: only.join('_') || 'all', size: [960, 540], hour: 13, at: [80, -28], fov: FOV, strips };
 }
@@ -149,7 +150,7 @@ for (const s of plan.strips || []) {
     const [side, back, up] = s.cam, mid = bx - (s.mid ?? dist * 0.5), y = (await MV.hero(slot)).y;
     MV.cam(mid + side, y + up, bz - back, mid, y + (s.lookY ?? 1.0), bz, s.fov || fov);
     bm.heroes('freeze', { slot, seconds: 0 });
-    if (s.tune !== undefined) bm.heroes('tune', { slot, v: s.tune, seconds: 30, rainbow: !!s.rainbow });
+    if (s.tune !== undefined) bm.heroes('tune', { slot, v: s.tune, seconds: 30, rainbow: !!s.rainbow, bare: !!s.bare });
     else if (s.clip) bm.heroes('pose', { slot, clip: s.clip, at: 0 });
     else if (s.key) { bm.heroes('skill', { slot, key: s.key }); for (const k of s.also || []) bm.heroes('skill', { slot, key: k }); }
     else { bm.heroes('mute', { slot }); bm.heroes('attack', { slot }); }
