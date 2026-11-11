@@ -907,9 +907,23 @@ async function boot(plan, poolSize) {
   document.addEventListener('visibilitychange', () => {
     const hidden = document.hidden;
     if (hidden) input.releaseControls();
-    shared.input[INPUT.PAUSE] = hidden || state.paused ? 1 : 0;
+    shared.input[INPUT.PAUSE] = hidden || state.paused || game.upright ? 1 : 0;
     if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
   });
+  // A phone stood upright. The manifest asks for landscape and the lock's asked for too (above, and src/title.js), but an
+  // iPhone grants a page neither, so it can still be turned. Upright, the world holds still and nothing's drawn (index.html
+  // #rotate covers it); the picture keeps its sideways shape (Renderer.resize), so turning it back makes nothing again.
+  const turned = () => {
+    const up = input.touch && window.innerHeight > window.innerWidth;
+    if (up === !!game.upright) return;
+    game.upright = up;
+    if (!input.enabled) return;     // (under the title, the world's held still already)
+    if (up) input.releaseControls();
+    shared.input[INPUT.PAUSE] = up || document.hidden || state.paused ? 1 : 0;
+  };
+  window.addEventListener('resize', turned);
+  window.addEventListener('orientationchange', turned);
+  turned();
   // The game's own panels (the talk, the shops, the seals, the skull's menu, the book, the pack): a tick under the pointer and a
   // click as one's pressed (MenuSFX, by Kevin Fowler). The title and the pause menu have their own (src/title.js chime, tick).
   let uiHover = null;
@@ -1273,6 +1287,8 @@ class GameView {
       this.watchRefresh(now);
       this.input.update();
       if (!this.buffer) this.sim.postMessage({ input: this.shared.input.slice() });
+      // (A phone stood upright draws nothing: see turned.)
+      if (this.upright) { this.last = now; return; }
       // A phone on a 120 Hz screen takes every other refresh: a steady 60 is as smooth to the eye, and the battery and the
       // heat are what would slow it down later.
       if (this.gpu.mobile && this.vsyncMs < 10 && (this.rafSkip++ & 1)) return;

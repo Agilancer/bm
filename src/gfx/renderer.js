@@ -1930,7 +1930,17 @@ export class Renderer {
     const dpr = Math.min(window.devicePixelRatio || 1, gpu.mobile ? 3 : 2);
     let cw = Math.max(2, Math.floor(canvas.clientWidth * dpr)), ch = Math.max(2, Math.floor(canvas.clientHeight * dpr));
     const screen = `${cw}x${ch}`;
-    if (this.screen !== screen) { this.screen = screen; this.dropTargetSets(); }
+    if (this.screen !== screen) {
+      if (gpu.mobile && this.activeKey) {
+        // A phone turning goes through a run of sizes, and each would be every target thrown away and made again. Upright
+        // it keeps the sideways picture it has (nothing's drawn then: src/main.js turned); any other size is taken once
+        // it's held for a moment.
+        if (ch > cw) return;
+        if (this.wantScreen !== screen) { this.wantScreen = screen; this.wantAt = performance.now(); }
+        if (performance.now() - this.wantAt < 300) return;
+      }
+      this.screen = screen; this.wantScreen = null; this.dropTargetSets();
+    }
     let W, H_;
     if (tier.maxPixels) {
       // The canvas itself is only as big as the picture, and the browser stretches it to the screen for nothing. Scale
