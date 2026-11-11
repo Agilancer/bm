@@ -44,6 +44,7 @@ const MAT_ODDS = {
     6: [['bone', 1, 1, 2], ['iron', 0.4, 1, 1], ['ember', 0.08, 1, 1]],
     7: [['wax', 0.35, 1, 1], ['bone', 0.3, 1, 1], ['ember', 0.05, 1, 1]],
     8: [['bone', 0.8, 1, 2], ['iron', 0.4, 1, 1], ['ember', 0.25, 1, 1]],
+    20: [['iron', 1, 2, 4], ['bone', 1, 2, 3], ['ember', 1, 1, 2]], 21: [['iron', 1, 4, 6], ['silk', 1, 2, 3], ['ember', 1, 3, 4]],
     0: [['iron', 1, 2, 3], ['ember', 1, 1, 1]], 3: [['bone', 1, 3, 4], ['ember', 1, 2, 2]], 4: [['bone', 1, 3, 4], ['ember', 1, 1, 2]] },
 };
 export function matsOf(rng, kind, deep) {
@@ -95,7 +96,8 @@ export class Drops {
     if ((kind | 0) >= 2 && Math.random() < (this.low ? 0.45 : 0.2)) orbs.push({ type: 'orb', kind: 'life', rarity: 0 });
     if ((kind | 0) >= 2 && Math.random() < 0.1) orbs.push({ type: 'orb', kind: 'mana', rarity: 0 });
     for (const item of [...rollLoot(this.rng, kind | 0), ...orbs, ...matsOf(this.rng, kind | 0, y < -6 && inChurch(x, y + 1, z))]) {
-      const a = Math.random() * 6.28, r = 0.7 + Math.random() * 0.8;
+      // (A boss's hoard is a heap: it's thrown wider, so each thing in it can be seen and taken.)
+      const a = Math.random() * 6.28, r = (kind | 0) >= 20 ? 1 + Math.random() * 2.6 : 0.7 + Math.random() * 0.8;
       this.spawn(item, x + Math.cos(a) * r, z + Math.sin(a) * r, [x, y + 1.1, z]);
     }
   }

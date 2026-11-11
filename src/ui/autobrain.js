@@ -47,7 +47,7 @@ import { TRADES, offerFor, worth } from '../folk/shops.js';
 import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
 import { inDungeon } from '../core/dungeon.js';
 import { EXIT_IN, toWorld as caveWorld } from '../core/dungeon.js';
-import { caveStep, doHire, doWarrens, hireJob, hiring, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
+import { caveStep, doHire, doWarrens, hireJob, hiring, perilsNear, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
 import { HallNav, STATIONS, hallAt, inArena, inHall } from '../core/testhall.js';
 
 const TAU = Math.PI * 2;
@@ -651,7 +651,8 @@ export class Brain {
     if (m.opening > 0 && m.opening < OPENING.ARRIVED) { this.opening(snap, m); return; }
     const foes = this.foes(snap, m);
     // Down the Warrens, a boss's calls come first: out of the circles, at the dragon's side, behind a pillar.
-    if (inDungeon(m.x, m.z) && this.delve(snap, m, foes)) { this.fighting = true; return; }
+    // (And anywhere, out of what a monster has marked on the ground or thrown: src/ui/autowarrens.js perilStep.)
+    if ((inDungeon(m.x, m.z) || perilsNear(this)) && this.delve(snap, m, foes)) { this.fighting = true; return; }
     // In the Test Dungeon: what's been summoned, and nothing else (hallRun).
     if (inHall(m.x, m.z)) { this.hallRun(snap, m, foes); return; }
     // A fight, or getting away from one.

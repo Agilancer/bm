@@ -6,6 +6,7 @@ import { ArmsRig } from './anim.js';
 import { FieldCreature } from './field-creature.js';
 import { foeOf } from './foes.js';
 import { FOE } from './foespells.js';
+import { TRICKS, tryTrick } from './moves.js';
 import { ELEM, FX } from './spells.js';
 import { parseGLB } from '../core/glb.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
@@ -14,20 +15,22 @@ import { clamp, mat4FromQT, quatMul, quatRotate, quatYaw, wrapAngle } from '../c
 import { OPENING } from '../core/opening.js';
 import { inTown } from '../core/town.js';
 import { ARMS, BREATH_ELEM, GROUPS, LAIRS, MODEL_STATS, TRIPO_BASE, armIds, kindOfGroup } from '../core/tripo-monsters.js';
-import { BOSSES, PACKS, roomSpot } from '../core/dungeon.js';
+import { BOSSES, PACKS, PACK_TOUGH, roomSpot } from '../core/dungeon.js';
 
 // The Warrens' packs and bosses, as lairs (src/core/dungeon.js). A pack wakes as you come into its room; a boss only when
-// the Warrens stand it (src/sim/dungeon.js), which is why its wake is nothing.
+// the Warrens stand it (src/sim/dungeon.js), which is why its wake is nothing. The packs are a party's work, not one
+// wizard's: each of them has many times the life of its cousins in the woods and hits harder (PACK_TOUGH), and has its
+// kind's tricks (src/sim/moves.js).
 function dungeonLairs() {
   const out = [];
-  for (const p of PACKS) { const [x, , z] = roomSpot(p.room); out.push({ key: p.key, x, z, r: 6, pick: p.pick, n: p.n, pal: p.pal, wake: 34, dungeon: true, state: 'asleep', at: -1e9 }); }
+  for (const p of PACKS) { const [x, , z] = roomSpot(p.room); out.push({ key: p.key, x, z, r: 6, pick: p.pick, n: p.n, pal: p.pal, wake: 34, dungeon: true, state: 'asleep', at: -1e9, tough: PACK_TOUGH, tricks: true }); }
   for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, state: 'asleep', at: -1e9, bossLair: true }); }
   return out;
 }
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const STATE = { MOVE: 0, ATTACK: 3, BREATH: 4, ROAR: 5, CAST: 6, DEAD: 10 };
+const STATE = { MOVE: 0, ATTACK: 3, BREATH: 4, ROAR: 5, CAST: 6, TRICK: 7, DEAD: 10 };
 // Attacks longer than this are left out: a six-second combo is a dance, not a blow.
 const LONGEST_BLOW = 3.6;
 const HUMAN_SPHERES = [['Hips', 0.13], ['Spine2', 0.14], ['Head', 0.09], ['LeftUpLeg', 0.08], ['RightUpLeg', 0.08], ['LeftLeg', 0.07], ['RightLeg', 0.07],
@@ -159,6 +162,8 @@ export class TripoMonster extends FieldCreature {
     this.idleT = rnd(1, 4);
     this.breathCd = rnd(1, 3);
     this.castCd = rnd(1, 2.5);
+    this.trickCd = rnd(2.5, 7);
+    this.act = null;
     this.burn = 0;
     this.blobs = [];
     this.setClip(this.idleClip);
@@ -178,7 +183,7 @@ export class TripoMonster extends FieldCreature {
     if (dt <= 0) { if (this.hp <= 0 && !this.dead) this.die(sim); return; }
     const p = foeOf(this, sim), o = this.opts, rig = this.rig, ai = o.ai;
     this.cooldown = Math.max(0, this.cooldown - dt);
-    this.breathCd -= dt; this.castCd -= dt;
+    this.breathCd -= dt; this.castCd -= dt; this.trickCd -= dt;
     this.flinch = Math.max(0, this.flinch - dt);
     this.flinchCd = (this.flinchCd || 0) - dt;
     this.fade = Math.min(1, this.fade + dt * 5);
@@ -212,7 +217,9 @@ export class TripoMonster extends FieldCreature {
     } else if (this.state === STATE.ATTACK) {
       this.t += dt * (this.flinch > 0 ? 0.35 : 1) * this.rate;
       const f = frac();
-      if (f < 0.3) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 3, dt * 3);
+      // Square on to whoever the blow's for, all through the wind-up, and still following a little as it falls: it never
+      // swings at the air beside them.
+      this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * (f < 0.34 ? 9 : f < 0.66 ? 2.5 : 0), dt * (f < 0.34 ? 9 : f < 0.66 ? 2.5 : 0));
       if (f >= 0.32 && f <= 0.66 && !this.used && canHunt) {
         const reach = o.reach + (p.bodyRadius || 0.4);
         if (distance < reach && Math.abs(p.y - this.y - this.hover) < 1.6 + this.meta.height * 0.3
@@ -224,17 +231,27 @@ export class TripoMonster extends FieldCreature {
       if (f >= 1) { this.state = STATE.MOVE; this.cooldown = rnd(0.6, 1.4) * o.pause; this.setClip(this.idleClip); }
     } else if (this.state === STATE.BREATH) {
       this.t += dt;
-      this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 1.2, dt * 1.2);
+      // (A boss's breath is aimed before it starts and holds its line, so you can get out of it: src/sim/dungeon.js.)
+      if (!this.breathHeld) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 1.2, dt * 1.2);
       const f = frac(), w = this.meta.breathWin || [0.25, 0.8];
       if (f > w[0] && f < w[1]) this.breathe(dt, sim, p);
       if (f >= 1) { this.state = STATE.MOVE; this.breathCd = rnd(5, 9); this.cooldown = 0.6; this.setClip(this.idleClip); }
+    } else if (this.state === STATE.TRICK) {
+      // One of its tricks, or a boss's move (perform): turned to whoever it's for, the move let go part way through.
+      const a = this.act, clip = clipOf(this.clip);
+      a.t += dt;
+      if (!a.done && a.face && !a.face.dead) this.yaw += clamp(wrapAngle(Math.atan2(a.face.x - this.x, a.face.z - this.z) - this.yaw), -dt * 7, dt * 7);
+      this.t = clip.loop ? this.t + dt : Math.min(clip.dur, this.t + dt * a.rate);
+      if (!a.done && a.t >= a.at) { a.done = true; a.fn?.(this, sim); }
+      if (a.t >= a.secs && this.state === STATE.TRICK) { this.state = STATE.MOVE; this.act = null; this.cooldown = Math.max(this.cooldown, 0.35); this.setClip(this.idleClip); }
     } else if (this.state === STATE.CAST) {
       this.t += dt;
-      this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 4, dt * 4);
+      this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 6, dt * 6);
       if (!this.used && frac() >= 0.45) { this.used = true; this.loose(sim, p, distance); }
       if (frac() >= Math.min(1, 1.6 / clipOf(this.clip).dur)) { this.state = STATE.MOVE; this.castCd = rnd(2.2, 3.4); this.setClip(this.idleClip); }
     } else {
       let tx, tz, walk = false, want = null;
+      this.fleeing = false;
       if (this.aggro) {
         tx = p.x; tz = p.z;
         const reachNow = o.reach * 0.9 + (p.bodyRadius || 0.4);
@@ -243,16 +260,17 @@ export class TripoMonster extends FieldCreature {
         const canBreathe = ai === 'breather' && rig.clips.breath && this.breathCd <= 0 && (distance > o.reach || !reachable) && distance < o.breathRange
           && sim.world.sees(this.x, this.y + this.meta.height * 0.6, this.z, p.x, p.y + 1, p.z);
         const canCast = ai === 'caster' && this.castCd <= 0 && distance > 3.5 && distance < 22 && sim.world.sees(this.x, this.y + 1.5, this.z, p.x, p.y + 1, p.z);
-        if (canBreathe) { this.state = STATE.BREATH; this.setClip(rig.clips.breath2 && Math.random() < 0.4 ? 'breath2' : 'breath'); }
+        if (o.tricks && this.trickCd <= 0 && canHunt && tryTrick(this, sim, p)) { /* (it's acting one out: perform) */ }
+        else if (canBreathe) { this.state = STATE.BREATH; this.setClip(rig.clips.breath2 && Math.random() < 0.4 ? 'breath2' : 'breath'); }
         else if (canCast) { this.state = STATE.CAST; this.used = false; this.setClip(pick(rig.attacks)); sim.event(EV.CHANT, this.x, this.y + 1.5, this.z); }
-        else if (distance < reachNow && reachable && this.cooldown <= 0 && rig.attacks.length) {
+        else if (distance < reachNow && reachable && this.cooldown <= 0 && rig.attacks.length && Math.abs(wrapAngle(yaw - this.yaw)) < 0.9) {
           this.state = STATE.ATTACK; this.used = false;
           this.setClip(pick(rig.attacks));
           this.rate = clamp(clipOf(this.clip).dur / 1.6, 1, 1.8);
           sim.event(EV.GRUNT, this.x, this.y + 1.1, this.z, 2);
         } else if (ai === 'caster' && distance < 8) {
           // Back off to a spell's distance.
-          tx = this.x - (p.x - this.x); tz = this.z - (p.z - this.z);
+          tx = this.x - (p.x - this.x); tz = this.z - (p.z - this.z); this.fleeing = true;
         } else if (distance < reachNow * 0.8) { tx = this.x; tz = this.z; }
         if (this.state === STATE.MOVE) {
           const flying = (ai === 'flyer' || this.meta.kind === 'dragon') && rig.clips.fly && distance > (this.meta.kind === 'dragon' ? 22 : o.reach * 2.5);
@@ -280,10 +298,14 @@ export class TripoMonster extends FieldCreature {
           const flow = this.flow;
           sim.world.flow(flow, this.x, this.z, tx, tz, `t${this.id}`);
           this.vx = flow[0] * speed; this.vz = flow[1] * speed;
-          if (Math.hypot(flow[0], flow[1]) > 0.1) this.yaw += clamp(wrapAngle(Math.atan2(flow[0], flow[1]) - this.yaw), -dt * 3.5, dt * 3.5);
+          // Walking, it looks where it's going; but come up on its mark (within a few strides, and in plain sight), it looks at
+          // them, however the way round the others bends its path.
+          const closing = this.aggro && distance < o.reach * 2.2 + 1 && !this.fleeing;
+          if (closing) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 6, dt * 6);
+          else if (Math.hypot(flow[0], flow[1]) > 0.1) this.yaw += clamp(wrapAngle(Math.atan2(flow[0], flow[1]) - this.yaw), -dt * 3.5, dt * 3.5);
         } else {
           this.vx = this.vz = 0;
-          if (this.aggro) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 3, dt * 3);
+          if (this.aggro) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 6, dt * 6);
         }
         this.setClip(want);
         const clip = clipOf(this.clip);
@@ -311,6 +333,20 @@ export class TripoMonster extends FieldCreature {
     this.stepBlobs(dt, sim);
     quatYaw(this.rig.rootQ, 0, this.yaw);
     this.rig.rootT[0] = this.x; this.rig.rootT[1] = this.y + this.rig.lift + this.hover; this.rig.rootT[2] = this.z;
+  }
+
+  // A move acted out with the whole body: stood still, turned to `face`, playing `clip` (a roar, or a blow, if it hasn't
+  // that), with fn called `at` seconds in and the body its own again after `secs`. False if it's busy with something else.
+  perform(a) {
+    if (this.dead || this.script || this.state !== STATE.MOVE || this.buried) return false;
+    const rig = this.rig, clip = a.clip && rig.clips[a.clip] ? a.clip : rig.clips.roar ? 'roar' : pick(rig.attacks) || this.idleClip;
+    this.state = STATE.TRICK;
+    this.vx = this.vz = 0;
+    this.setClip(clip);
+    this.t = 0;
+    const secs = a.secs ?? 1.4;
+    this.act = { face: null, at: 0.45, fn: null, ...a, secs, t: 0, done: false, rate: clamp(rig.clips[clip].dur / secs, 0.7, 2.2) };
+    return true;
   }
 
   notice(sim) {
@@ -409,6 +445,7 @@ export class TripoMonster extends FieldCreature {
   die() {
     this.dead = true; this.hp = 0; this.state = STATE.DEAD; this.deadT = 0;
     this.vx = this.vz = 0; this.blobs.length = 0;
+    this.script = null; this.act = null; this.rig.poseModifier = null;
     if (this.lair) this.lair.killed++;
     this.setClip(pick(this.rig.deaths) || 'death');
   }
@@ -477,7 +514,9 @@ export class TripoWorld {
     const breath = meta.breath;
     return {
       name: s.name, model: id, kind: kindOfGroup(meta.group), scale: 1, spawn: [x, z], yaw: Math.random() * Math.PI * 2,
-      hp: s.hp * (boss ? 1.25 : 1), speed: s.speed, damage: s.damage, reach: s.reach, ai: breath && s.ai !== 'caster' ? 'breather' : s.ai,
+      hp: s.hp * (boss ? 1.25 : 1) * (lair.tough?.hp || 1), speed: s.speed, damage: s.damage * (lair.tough?.damage || 1), reach: s.reach,
+      // Its kind's tricks, where the lair has them on (src/sim/moves.js).
+      tricks: lair.tricks ? TRICKS[meta.group] || null : null, ai: breath && s.ai !== 'caster' ? 'breather' : s.ai,
       radius: clamp(H * (meta.kind === 'dragon' ? 0.22 : meta.kind === 'spider' ? 0.38 : 0.2), 0.35, 1.8), height: H,
       lootKind: s.loot, knock: H > 3 ? 4 : H > 2 ? 2.5 : 1.5, pause: s.ai === 'melee' && H < 1.5 ? 0.7 : 1,
       sight: meta.kind === 'dragon' ? 48 : s.ai === 'stalker' ? 34 : 24, leash: meta.kind === 'dragon' ? 120 : 70, roam: lair.r * 0.6 + 2,

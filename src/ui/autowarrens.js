@@ -4,6 +4,8 @@
 // the adds first, the twins kept even. src/ui/autobrain.js calls in here; this keeps the Warrens' rules in one place.
 import { BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, ENTRY, EXIT_OUT, PACKS, PARTY, PERCH, PILLARS, PORTAL, ROOMS, caveClear, caveFloorY, caveRoom, inDungeon, roleOf, roomOf, toWorld } from '../core/dungeon.js';
 import { hirePrice } from './party.js';
+import { edge, wayOut } from '../core/perils.js';
+import { INPUT } from '../core/layout.js';
 
 // The level it goes down at, the first time (raised two each time the Warrens beat it three times over), and the level it
 // hires a party at (a little before, so it has them for the woods too).
@@ -160,18 +162,11 @@ export function caveStep(b, m, g) {
 export function tactics(b, m, foes) {
   const P = b.o.game.party, W = P?.warrens;
   const fresh = W && performance.now() - W.at < 1500;
-  const hz = fresh ? W.hazards : [];
-  const f = fresh ? W.fight : null;
+  const f = fresh && inDungeon(m.x, m.z) ? W.fight : null;
   const live = foes.filter((q) => q.hostile && q.d < 34 && !q.slime && !q.tumbler);
-  // Out of whatever's falling or burning, first.
-  for (const h of hz) {
-    const d = dist(m.x, m.z, h.x, h.z);
-    if (d > h.r + 0.9) continue;
-    const ux = d > 0.05 ? (m.x - h.x) / d : 1, uz = d > 0.05 ? (m.z - h.z) / d : 0;
-    let tx = h.x + ux * (h.r + 2.2), tz = h.z + uz * (h.r + 2.2);
-    if (caveRoom(tx, tz) < 0.8) { tx = m.x - uz * 4; tz = m.z + ux * 4; }
-    return { to: [tx, tz], run: true, target: pickTarget(live, f, b, m), why: 'Out of the circle!' };
-  }
+  // Out of whatever's marked, falling, burning or flying at it, first.
+  const out = perilStep(b, m);
+  if (out) return { to: out, run: true, target: pickTarget(live, f, b, m), why: 'Out of the circle!' };
   if (!f) return { to: null, target: pickTarget(live, null, b, m), why: null };
   const bodies = f.bodies || [];
   const boss = bodies[0];
@@ -186,15 +181,17 @@ export function tactics(b, m, foes) {
     return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 3, target: T, why: tank ? 'It turns on me: back behind the tank.' : 'It turns on me: out of its reach.' };
   }
   if (f.boss === 'venomaw' && boss) {
-    // Up over the hoard: behind the nearest pillar from her, shooting what's down here.
+    // In the air, swooping or diving: nothing to stand by. Out of her strips and her circle (above), and at her whelps.
+    if (boss.flying && !boss.perch) return { to: null, target: pickTarget(live.filter((q) => q.id !== boss.id), f, b, m) || pickTarget(live, f, b, m), why: null };
+    // On her way to her perch, or on it: behind the nearest pillar from it, shooting what's down here.
     if (boss.flying) {
       const hide = hideSpot(m, boss);
       const t = pickTarget(live.filter((q) => q.id !== boss.id), f, b, m);
       return { to: hide, run: true, target: t && caveClear(m.x, m.z, t.x, t.z) ? t : null, why: 'Behind a pillar: Venomaw is in the air.', hide: true };
     }
-    // On the ground: at her side, well off, never before her face or at her tail.
+    // On the ground: off her shoulder, well out, never before her face, and forward of her flank: her tail takes all behind.
     const rx = Math.cos(boss.yaw), rz = -Math.sin(boss.yaw), side = (m.x - boss.x) * rx + (m.z - boss.z) * rz >= 0 ? 1 : -1;
-    let tx = boss.x + rx * side * 13 - Math.sin(boss.yaw) * 2, tz = boss.z + rz * side * 13 - Math.cos(boss.yaw) * 2;
+    let tx = boss.x + rx * side * 13 + Math.sin(boss.yaw) * 4, tz = boss.z + rz * side * 13 + Math.cos(boss.yaw) * 4;
     if (caveRoom(tx, tz) < 1) { tx = boss.x - rx * side * 13; tz = boss.z - rz * side * 13; }
     return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 5, target: pickTarget(live, f, b, m), why: 'At Venomaw\'s side.' };
   }
@@ -206,6 +203,41 @@ export function tactics(b, m, foes) {
     }
   }
   return { to: null, target: pickTarget(live, f, b, m), why: null };
+}
+
+// Whether there's anything marked or flying near it that the sim has told of lately (src/sim/perils.js post).
+export function perilsNear(b) {
+  const G = b.o.game.perils;
+  return !!G && performance.now() - G.at < 700 && G.marks.length + G.shots.length > 0;
+}
+
+// Out of what monsters mark on the ground and throw, anywhere in the game: where to step to, or null if it's clear where it
+// stands. The marks by the same shapes the sim hurts by (src/core/perils.js); a shot about to pass through it, by a step
+// across its way; a ring running along the ground, by a jump as it comes.
+export function perilStep(b, m) {
+  if (!perilsNear(b)) return null;
+  const G = b.o.game.perils;
+  const open = inDungeon(m.x, m.z) ? (x, z) => caveRoom(x, z) > 0.8 : null;
+  const wave = G.marks.find((h) => h.jump && h.live && Math.abs(edge(h, m.x, m.z)) < 1.9);
+  if (wave && b.t - (b.waveJump ?? -9) > 0.7) { b.waveJump = b.t; b.o.shared.input[INPUT.JUMP] += 1; }
+  const to = wayOut(G.marks.filter((h) => !h.jump), m.x, m.z, 1, open);
+  if (to) return to;
+  // (Where each shot is now: they've flown on since they were told of.)
+  const late = (performance.now() - G.at) / 1000;
+  let sx = 0, sz = 0;
+  for (const q of G.shots) {
+    const qx = q.x + q.vx * late, qz = q.z + q.vz * late, rx = m.x - qx, rz = m.z - qz, v2 = q.vx * q.vx + q.vz * q.vz || 1, t = (rx * q.vx + rz * q.vz) / v2;
+    if (t < 0 || t > 0.8) continue;
+    const ox = rx - q.vx * t, oz = rz - q.vz * t, miss = Math.hypot(ox, oz);
+    if (miss > 1.2 + q.r) continue;
+    const v = Math.sqrt(v2);
+    sx += miss > 0.05 ? ox / miss : -q.vz / v; sz += miss > 0.05 ? oz / miss : q.vx / v;
+  }
+  if (!sx && !sz) return null;
+  const L = Math.hypot(sx, sz) || 1;
+  let tx = m.x + sx / L * 2.4, tz = m.z + sz / L * 2.4;
+  if (open && !open(tx, tz)) { tx = m.x - sx / L * 2.4; tz = m.z - sz / L * 2.4; }
+  return [tx, tz];
 }
 
 // The add first (a digger, a whelp); then anything of the rank and file on the healer or the others (helpPick in

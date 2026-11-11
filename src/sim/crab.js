@@ -162,7 +162,7 @@ export class Crab extends Beast {
     const go = dist > 1.6 ? 1 : 0;
     this.vx = Math.sin(this.yaw) * v * go; this.vz = Math.cos(this.yaw) * v * go;
     this.speed = 0;
-    if (f < l0) this.yaw = turn(this.yaw, toPlayer, 2.8 * dt);
+    if (f < l0) this.yaw = turn(this.yaw, toPlayer, 6 * dt);
     const w = a.windows.findIndex((x) => f >= x[0] && f <= x[1]);
     if (w >= 0) {
       if (this.activeOn !== w) { this.activeOn = w; this.used = false; }

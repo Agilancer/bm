@@ -57,7 +57,8 @@ export class FieldCreature extends Beast {
     } else if (this.state === 3) {
       this.t += dt * (this.flinch > 0 ? 0.35 : 1);
       const fraction = this.t / this.rig.clips.attack.dur;
-      if (fraction < 0.28) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 3, dt * 3);
+      // (Square on to its mark all through the wind-up.)
+      if (fraction < 0.36) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 8, dt * 8);
       if (fraction >= 0.36 && fraction <= 0.62 && !this.used && canHunt) {
         if (distance < o.reach && Math.abs(p.y - this.y) < 1.4
           && Math.abs(wrapAngle(yaw - this.yaw)) < 1.2
