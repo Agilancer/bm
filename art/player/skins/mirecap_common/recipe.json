@@ -10,7 +10,7 @@
    "swatch": "swatches/body.png",
    "scale": 0.07,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.9,
    "shading": 0.95
   },
   "trim": {
@@ -60,6 +60,13 @@
     "bright": 1.0,
     "shading": 0.95
    },
+   "leather": {
+    "swatch": "swatches/mantle.png",
+    "scale": 0.07,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.95
+   },
    "decals": [
     {
      "image": "decals/mushroom.png",
@@ -68,15 +75,6 @@
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
-    },
-    {
-     "image": "decals/patch_moss.png",
-     "anchor": "shoulder_right",
-     "size": 0.085,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0,
-     "turn": 8
     }
    ]
   },
@@ -102,20 +100,6 @@
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
-    },
-    {
-     "image": "decals/patch_clay.png",
-     "anchor": "tabard_back",
-     "size": 0.085,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0,
-     "offset": [
-      0.035,
-      -0.1,
-      0
-     ],
-     "turn": -7
     }
    ]
   },
@@ -134,18 +118,7 @@
     "bright": 0.8,
     "shading": 0.9,
     "keep": 0.15
-   },
-   "decals": [
-    {
-     "image": "decals/patch_clay.png",
-     "anchor": "knee_left",
-     "size": 0.06,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0,
-     "turn": 10
-    }
-   ]
+   }
   },
   "feet": {}
  }

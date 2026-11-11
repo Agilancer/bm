@@ -1166,7 +1166,7 @@
   {
    "id": "hedgeway_common",
    "name": "Hedgeway Common Gear",
-   "blurb": "Common brown travelling gear: coarse russet wool, darker mantle and trousers, worn saddle leather and plain bindings. No added insignia or precious trim. Intended as common-tier Ashen gear.",
+   "blurb": "Common brown travelling gear: coarse russet wool, darker mantle and trousers, a weathered grey-green hat, worn saddle leather and plain bindings. A plain stitched hedge-leaf badge on the back; no precious trim. Intended as common-tier Ashen gear.",
    "wears": {
     "palette": "ash"
    },

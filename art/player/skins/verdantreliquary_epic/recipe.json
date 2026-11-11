@@ -10,7 +10,7 @@
    "swatch": "swatches/body.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.08,
+   "bright": 0.8,
    "shading": 0.95
   },
   "trim": {
@@ -33,7 +33,7 @@
     "swatch": "swatches/hat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 0.8,
     "shading": 0.95
    },
    "pattern": {
@@ -72,7 +72,11 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.08,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.9,
+    "shading": 0.6
+   },
+   "leather": {
+    "color": "#7a6028",
     "shading": 0.6
    },
    "decals": [
@@ -131,7 +135,7 @@
     "swatch": "swatches/greave.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.05,
+    "bright": 0.9,
     "shading": 0.8
    },
    "pattern": {

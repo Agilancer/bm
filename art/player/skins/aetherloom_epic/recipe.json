@@ -7,121 +7,152 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/body.png",
+   "swatch": "swatches/body2.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.08,
-   "shading": 0.95
+   "bright": 1.0,
+   "shading": 1.0
   },
   "trim": {
-   "color": "#d3dae6",
-   "bright": 1.05
+   "swatch": "swatches/platinum2.png",
+   "scale": 0.08,
+   "tile": "repeat",
+   "bright": 1.1,
+   "shading": 0.8
   },
   "leather": {
-   "swatch": "swatches/leather.png",
+   "swatch": "swatches/leather2.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.9,
-   "keep": 0.2
+   "bright": 1.1,
+   "shading": 0.95,
+   "keep": 0.1
   },
   "keep_trim": true
  },
  "parts": {
   "head": {
-   "decals": [
-    {
-     "image": "decals/aetherloom_epic_edf4ff.png",
-     "anchor": "hat",
-     "size": 0.092,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    }
-   ],
    "cloth": {
-    "swatch": "swatches/hat.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.95
-   },
-   "pattern": {
-    "image": "swatches/pat_vines.png",
-    "color": "#d3dae6",
-    "scale": 0.17,
-    "strength": 0.3,
-    "tile": "repeat"
-   }
-  },
-  "shoulders": {
-   "decals": [
-    {
-     "image": "decals/aetherloom_epic_edf4ff.png",
-     "anchor": "shoulder_left",
-     "size": 0.085,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    }
-   ],
-   "cloth": {
-    "swatch": "swatches/mantle.png",
+    "swatch": "swatches/hat2.png",
     "scale": 0.12,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.95
-   }
-  },
-  "chest": {
+    "shading": 1.0
+   },
+   "pattern": {
+    "image": "swatches/orbits.png",
+    "color": "#7fdccf",
+    "scale": 0.15,
+    "strength": 0.35,
+    "tile": "repeat"
+   },
    "decals": [
     {
-     "image": "decals/aetherloom_epic_edf4ff.png",
+     "image": "decals/armillary.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/plate2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0
+   },
+   "decals": [
+    {
+     "image": "decals/armillary.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/armillary.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
+  },
+  "chest": {
+   "pattern": {
+    "image": "swatches/orbits.png",
+    "color": "#7fdccf",
+    "scale": 0.15,
+    "strength": 0.45,
+    "tile": "repeat"
+   },
+   "decals": [
+    {
+     "image": "decals/armillary.png",
      "anchor": "back",
-     "size": 0.2,
+     "size": 0.21,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.055,
       0
      ]
     },
     {
-     "image": "decals/aetherloom_epic_edf4ff.png",
+     "image": "decals/armillary.png",
      "anchor": "tabard",
-     "size": 0.11,
+     "size": 0.115,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
-   ],
-   "pattern": {
-    "image": "swatches/pat_vines.png",
-    "color": "#d3dae6",
-    "scale": 0.17,
-    "strength": 0.42,
-    "tile": "repeat"
-   }
+   ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/mantle.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.95
-   },
-   "leather": {
-    "swatch": "swatches/leather.png",
+    "swatch": "swatches/plate2.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.85,
-    "shading": 0.9,
-    "keep": 0.2
-   }
+    "bright": 0.95,
+    "shading": 1.0
+   },
+   "leather": {
+    "swatch": "swatches/leather2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.95,
+    "keep": 0.1
+   },
+   "decals": [
+    {
+     "image": "decals/armillary.png",
+     "anchor": "knee_left",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/armillary.png",
+     "anchor": "knee_right",
+     "size": 0.06,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
   },
-  "feet": {}
+  "feet": {
+   "leather": {
+    "swatch": "swatches/leather2.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.95,
+    "keep": 0.1
+   }
+  }
  }
 }

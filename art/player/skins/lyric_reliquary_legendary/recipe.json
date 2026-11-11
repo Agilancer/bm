@@ -7,52 +7,60 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/lyric_reliquary_legendary_cloth.png",
+   "swatch": "swatches/fx_blue.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.9,
+   "bright": 1.08,
+   "shading": 0.95,
    "keep": 0
   },
   "trim": {
-   "swatch": "swatches/lyric_reliquary_legendary_metal.png",
+   "swatch": "swatches/fx_trim.png",
    "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.08,
+   "bright": 1.12,
    "shading": 0.7,
    "keep": 0
   },
   "leather": {
-   "swatch": "swatches/lyric_reliquary_legendary_leather.png",
+   "swatch": "swatches/fx_leather.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.86,
-   "keep": 0.07
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.05
   }
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/lyric_reliquary_legendary_cloth.png",
+    "swatch": "swatches/fx_hat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.9,
+    "bright": 1.1,
+    "shading": 0.95,
     "keep": 0
    },
    "pattern": {
-    "image": "swatches/lyric_reliquary_legendary_pattern.png",
-    "color": "#cfb8a1",
-    "scale": 0.22,
-    "strength": 0.612,
+    "image": "swatches/pat_ogee.png",
+    "color": "#f0bfa6",
+    "scale": 0.2,
+    "strength": 0.5,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/lyric_reliquary_legendary_eee2d1.png",
+     "image": "decals/fx_lyre.png",
      "anchor": "hat",
-     "size": 0.092,
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_lyre.png",
+     "anchor": "hat_back",
+     "size": 0.085,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -61,33 +69,33 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/lyric_reliquary_legendary_mantle.png",
+    "swatch": "swatches/fx_ivory.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.9,
+    "bright": 1.0,
+    "shading": 0.85,
     "keep": 0
    },
    "pattern": {
-    "image": "swatches/lyric_reliquary_legendary_pattern.png",
-    "color": "#cfb8a1",
-    "scale": 0.23,
-    "strength": 0.62,
+    "image": "swatches/pat_ogee.png",
+    "color": "#d98e70",
+    "scale": 0.16,
+    "strength": 0.34,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/lyric_reliquary_legendary_243d50.png",
+     "image": "decals/fx_lyre_wine.png",
      "anchor": "shoulder_left",
-     "size": 0.09,
+     "size": 0.1,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     },
     {
-     "image": "decals/lyric_reliquary_legendary_243d50.png",
+     "image": "decals/fx_lyre_wine.png",
      "anchor": "shoulder_right",
-     "size": 0.09,
+     "size": 0.1,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -96,30 +104,38 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/lyric_reliquary_legendary_pattern.png",
-    "color": "#cfb8a1",
-    "scale": 0.3,
-    "strength": 0.62,
+    "image": "swatches/pat_ogee.png",
+    "color": "#f0bfa6",
+    "scale": 0.24,
+    "strength": 0.55,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/lyric_reliquary_legendary_eee2d1.png",
+     "image": "decals/fx_lyre.png",
      "anchor": "back",
-     "size": 0.22,
+     "size": 0.25,
      "mode": "paint",
      "under_trim": false,
+     "opacity": 1.0,
      "offset": [
       0,
-      -0.045,
+      -0.04,
       0
-     ],
+     ]
+    },
+    {
+     "image": "decals/fx_lyre.png",
+     "anchor": "tabard",
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
      "opacity": 1.0
     },
     {
-     "image": "decals/lyric_reliquary_legendary_eee2d1.png",
-     "anchor": "tabard",
-     "size": 0.1,
+     "image": "decals/fx_lyre_wine.png",
+     "anchor": "tabard_back",
+     "size": 0.13,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -128,54 +144,40 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/lyric_reliquary_legendary_mantle.png",
-    "scale": 0.12,
+    "swatch": "swatches/fx_ivoryguard.png",
+    "scale": 0.09,
     "tile": "repeat",
-    "bright": 0.93,
-    "shading": 0.9,
+    "bright": 1.0,
+    "shading": 0.85,
     "keep": 0
    },
    "leather": {
-    "swatch": "swatches/lyric_reliquary_legendary_leather.png",
+    "swatch": "swatches/fx_leather.png",
     "scale": 0.1,
-    "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.84,
-    "keep": 0.07
-   },
-   "trim": {
-    "swatch": "swatches/lyric_reliquary_legendary_metal.png",
-    "scale": 0.075,
-    "tile": "repeat",
-    "bright": 1.02,
-    "shading": 0.7,
-    "keep": 0
-   },
-   "pattern": {
-    "image": "swatches/lyric_reliquary_legendary_pattern.png",
-    "color": "#cfb8a1",
-    "scale": 0.3,
-    "strength": 0.578,
-    "tile": "repeat"
-   }
-  },
-  "feet": {
-   "cloth": {
-    "swatch": "swatches/lyric_reliquary_legendary_cloth.png",
-    "scale": 0.12,
     "tile": "repeat",
     "bright": 0.95,
     "shading": 0.9,
-    "keep": 0
+    "keep": 0.05
    },
-   "leather": {
-    "swatch": "swatches/lyric_reliquary_legendary_leather.png",
-    "scale": 0.1,
-    "tile": "repeat",
-    "bright": 1.16,
-    "shading": 0.85,
-    "keep": 0.08
-   }
-  }
+   "decals": [
+    {
+     "image": "decals/fx_lyre_wine.png",
+     "anchor": "knee_left",
+     "size": 0.065,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/fx_lyre_wine.png",
+     "anchor": "knee_right",
+     "size": 0.065,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    }
+   ]
+  },
+  "feet": {}
  }
 }

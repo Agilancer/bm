@@ -10,7 +10,7 @@
    "swatch": "swatches/body.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.05,
+   "bright": 0.9,
    "shading": 0.95
   },
   "trim": {
@@ -33,7 +33,7 @@
     "swatch": "swatches/hat.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.9,
     "shading": 0.95
    },
    "pattern": {
@@ -65,7 +65,11 @@
     "scale": 0.08,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.6
+    "shading": 0.5
+   },
+   "leather": {
+    "color": "#b4c6d8",
+    "shading": 0.5
    },
    "pattern": {
     "image": "swatches/pat_diamonds.png",
@@ -131,13 +135,13 @@
     "scale": 0.08,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.6
+    "shading": 0.7
    },
    "leather": {
     "swatch": "swatches/leather.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.8,
+    "bright": 1.0,
     "shading": 0.9,
     "keep": 0.15
    }

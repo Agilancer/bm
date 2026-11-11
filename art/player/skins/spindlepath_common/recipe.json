@@ -7,45 +7,41 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/spindlepath_common_cloth.png",
-   "scale": 0.12,
+   "swatch": "swatches/fx_tunic.png",
+   "scale": 0.08,
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.88,
+   "bright": 1.05,
+   "shading": 0.9,
    "keep": 0
   },
   "trim": {
-   "swatch": "swatches/spindlepath_common_trim.png",
-   "scale": 0.09,
-   "tile": "repeat",
-   "bright": 0.83,
-   "shading": 0.45,
-   "keep": 0
+   "color": "#8a7354",
+   "bright": 0.95
   },
   "leather": {
-   "swatch": "swatches/spindlepath_common_leather.png",
-   "scale": 0.09,
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.88,
+   "bright": 1.05,
+   "shading": 0.9,
    "keep": 0.12
   }
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/spindlepath_common_cloth.png",
-    "scale": 0.12,
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.08,
     "tile": "repeat",
-    "bright": 1.04,
-    "shading": 0.88,
+    "bright": 1.0,
+    "shading": 0.9,
     "keep": 0
    },
    "decals": [
     {
-     "image": "decals/spindlepath_common_bdb29c.png",
+     "image": "decals/fx_spool.png",
      "anchor": "hat",
-     "size": 0.092,
+     "size": 0.08,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -54,40 +50,33 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/spindlepath_common_mantle.png",
-    "scale": 0.12,
+    "swatch": "swatches/fx_mantle.png",
+    "scale": 0.08,
     "tile": "repeat",
-    "bright": 1.03,
-    "shading": 0.88,
+    "bright": 1.0,
+    "shading": 0.9,
     "keep": 0
    }
   },
   "chest": {
-   "pattern": {
-    "image": "swatches/spindlepath_common_pattern.png",
-    "color": "#796d55",
-    "scale": 0.2,
-    "strength": 0.07,
-    "tile": "repeat"
-   },
    "decals": [
     {
-     "image": "decals/spindlepath_common_bdb29c.png",
+     "image": "decals/fx_spool.png",
      "anchor": "back",
-     "size": 0.18,
+     "size": 0.2,
      "mode": "paint",
      "under_trim": false,
+     "opacity": 1.0,
      "offset": [
       0,
       -0.04,
       0
-     ],
-     "opacity": 1.0
+     ]
     },
     {
-     "image": "decals/spindlepath_common_bdb29c.png",
+     "image": "decals/fx_spool.png",
      "anchor": "tabard",
-     "size": 0.075,
+     "size": 0.095,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -96,37 +85,29 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/spindlepath_common_mantle.png",
-    "scale": 0.12,
+    "swatch": "swatches/fx_guard.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.88,
+    "bright": 0.95,
+    "shading": 0.9,
     "keep": 0
    },
    "leather": {
-    "swatch": "swatches/spindlepath_common_leather.png",
-    "scale": 0.09,
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.88,
+    "bright": 0.75,
+    "shading": 0.9,
     "keep": 0.12
    }
   },
   "feet": {
-   "cloth": {
-    "swatch": "swatches/spindlepath_common_cloth.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 0.92,
-    "shading": 0.88,
-    "keep": 0
-   },
    "leather": {
-    "swatch": "swatches/spindlepath_common_leather.png",
-    "scale": 0.09,
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.13,
-    "shading": 0.88,
+    "bright": 1.0,
+    "shading": 0.9,
     "keep": 0.14
    }
   }

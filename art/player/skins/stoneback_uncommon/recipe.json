@@ -10,7 +10,7 @@
    "swatch": "swatches/body.png",
    "scale": 0.08,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.9,
    "shading": 0.95
   },
   "trim": {
@@ -89,9 +89,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_plates.png",
-    "color": "#52644c",
+    "color": "#3c4a3a",
     "scale": 0.2,
-    "strength": 0.3,
+    "strength": 0.42,
     "tile": "repeat"
    },
    "decals": [

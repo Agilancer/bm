@@ -7,87 +7,80 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/suncaliber_rare_cloth.png",
+   "swatch": "swatches/fx_gold.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.88,
+   "bright": 1.05,
+   "shading": 0.95,
    "keep": 0
   },
   "trim": {
-   "swatch": "swatches/suncaliber_rare_trim.png",
-   "scale": 0.09,
+   "swatch": "swatches/fx_trim.png",
+   "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.02,
+   "bright": 1.05,
    "shading": 0.7,
    "keep": 0
   },
   "leather": {
-   "swatch": "swatches/suncaliber_rare_leather.png",
-   "scale": 0.09,
+   "swatch": "swatches/fx_leather.png",
+   "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.88,
-   "keep": 0.12
+   "bright": 1.1,
+   "shading": 0.9,
+   "keep": 0.1
   }
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/suncaliber_rare_mantle.png",
+    "swatch": "swatches/fx_winehat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.04,
-    "shading": 0.88,
+    "bright": 1.1,
+    "shading": 0.95,
     "keep": 0
    },
    "decals": [
     {
-     "image": "decals/suncaliber_rare_e2d3ae.png",
+     "image": "decals/fx_dial_gold.png",
      "anchor": "hat",
-     "size": 0.092,
+     "size": 0.09,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     }
-   ],
-   "pattern": {
-    "image": "swatches/suncaliber_rare_pattern.png",
-    "color": "#cdb67e",
-    "scale": 0.25,
-    "strength": 0.14,
-    "tile": "repeat"
-   }
+   ]
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/suncaliber_rare_mantle.png",
+    "swatch": "swatches/fx_wine.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.03,
-    "shading": 0.88,
+    "bright": 1.1,
+    "shading": 0.95,
     "keep": 0
    },
    "pattern": {
-    "image": "swatches/suncaliber_rare_pattern.png",
-    "color": "#cdb67e",
-    "scale": 0.25,
-    "strength": 0.25,
+    "image": "swatches/pat_suns.png",
+    "color": "#b8862a",
+    "scale": 0.12,
+    "strength": 0.35,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/suncaliber_rare_e2d3ae.png",
+     "image": "decals/fx_dial_gold.png",
      "anchor": "shoulder_left",
-     "size": 0.078,
+     "size": 0.085,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     },
     {
-     "image": "decals/suncaliber_rare_e2d3ae.png",
+     "image": "decals/fx_dial_gold.png",
      "anchor": "shoulder_right",
-     "size": 0.078,
+     "size": 0.085,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -96,30 +89,30 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/suncaliber_rare_pattern.png",
-    "color": "#cdb67e",
-    "scale": 0.25,
-    "strength": 0.33,
+    "image": "swatches/pat_suns.png",
+    "color": "#8a5a14",
+    "scale": 0.15,
+    "strength": 0.42,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/suncaliber_rare_e2d3ae.png",
+     "image": "decals/fx_dial.png",
      "anchor": "back",
-     "size": 0.21,
+     "size": 0.22,
      "mode": "paint",
      "under_trim": false,
+     "opacity": 1.0,
      "offset": [
       0,
       -0.04,
       0
-     ],
-     "opacity": 1.0
+     ]
     },
     {
-     "image": "decals/suncaliber_rare_e2d3ae.png",
+     "image": "decals/fx_dial.png",
      "anchor": "tabard",
-     "size": 0.1,
+     "size": 0.11,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -128,39 +121,22 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/suncaliber_rare_mantle.png",
+    "swatch": "swatches/fx_wine.png",
     "scale": 0.12,
-    "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.88,
-    "keep": 0
-   },
-   "leather": {
-    "swatch": "swatches/suncaliber_rare_leather.png",
-    "scale": 0.09,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.88,
-    "keep": 0.12
-   }
-  },
-  "feet": {
-   "cloth": {
-    "swatch": "swatches/suncaliber_rare_cloth.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 0.92,
-    "shading": 0.88,
+    "shading": 0.95,
     "keep": 0
    },
    "leather": {
-    "swatch": "swatches/suncaliber_rare_leather.png",
-    "scale": 0.09,
+    "swatch": "swatches/fx_leather.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.13,
-    "shading": 0.88,
-    "keep": 0.14
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0.1
    }
-  }
+  },
+  "feet": {}
  }
 }

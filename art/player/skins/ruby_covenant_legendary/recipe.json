@@ -112,7 +112,7 @@
     "image": "swatches/pat_gems.png",
     "color": "#e0dce4",
     "scale": 0.26,
-    "strength": 0.5,
+    "strength": 0.46,
     "tile": "repeat"
    },
    "decals": [

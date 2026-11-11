@@ -10,7 +10,7 @@
    "swatch": "swatches/body.png",
    "scale": 0.08,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.88,
    "shading": 0.95
   },
   "trim": {

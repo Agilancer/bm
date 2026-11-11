@@ -10,7 +10,7 @@
    "swatch": "swatches/body.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.05,
+   "bright": 0.85,
    "shading": 0.95
   },
   "trim": {
@@ -33,7 +33,7 @@
     "swatch": "swatches/hat.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.85,
     "shading": 0.95
    },
    "pattern": {
@@ -64,7 +64,7 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.9,
     "shading": 0.95
    },
    "decals": [
@@ -89,7 +89,7 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_scallops.png",
-    "color": "#7fd0d2",
+    "color": "#6fc0c4",
     "scale": 0.15,
     "strength": 0.32,
     "tile": "repeat"

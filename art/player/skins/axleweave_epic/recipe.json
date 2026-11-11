@@ -10,7 +10,7 @@
    "swatch": "swatches/fx_verdigris.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.75,
    "shading": 0.9
   },
   "trim": {
@@ -36,7 +36,7 @@
     "swatch": "swatches/fx_hat.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.75,
     "shading": 0.9
    },
    "pattern": {
@@ -67,15 +67,8 @@
     "swatch": "swatches/fx_bronze.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.9,
     "shading": 0.9
-   },
-   "pattern": {
-    "image": "swatches/fx_cogs.png",
-    "color": "#d8aa45",
-    "scale": 0.2,
-    "strength": 0.35,
-    "tile": "repeat"
    },
    "decals": [
     {
@@ -108,13 +101,13 @@
     {
      "image": "decals/fx_crest.png",
      "anchor": "back",
-     "size": 0.26,
+     "size": 0.235,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.06,
       0
      ]
     },

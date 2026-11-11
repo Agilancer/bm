@@ -7,71 +7,75 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/body.png",
-   "scale": 0.07,
+   "swatch": "swatches/fx_tunic.png",
+   "scale": 0.08,
    "tile": "repeat",
-   "bright": 1.08,
-   "shading": 0.95
+   "bright": 1.05,
+   "shading": 0.95,
+   "keep": 0
   },
   "trim": {
-   "color": "#8f959e",
-   "bright": 1.05
+   "swatch": "swatches/fx_brass.png",
+   "scale": 0.075,
+   "tile": "repeat",
+   "bright": 1.0,
+   "shading": 0.7,
+   "keep": 0
   },
   "leather": {
-   "swatch": "swatches/leather.png",
+   "swatch": "swatches/fx_leather.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
+   "bright": 1.1,
    "shading": 0.9,
-   "keep": 0.2
+   "keep": 0.15
   },
   "keep_trim": true
  },
  "parts": {
   "head": {
+   "cloth": {
+    "swatch": "swatches/fx_hat.png",
+    "scale": 0.08,
+    "tile": "repeat",
+    "bright": 1.05,
+    "shading": 0.95,
+    "keep": 0
+   },
    "decals": [
     {
-     "image": "decals/reedheron_uncommon_d0c9a2.png",
+     "image": "decals/fx_heron.png",
      "anchor": "hat",
-     "size": 0.092,
+     "size": 0.09,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     }
-   ],
-   "cloth": {
-    "swatch": "swatches/hat.png",
-    "scale": 0.07,
-    "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.95
-   }
+   ]
   },
   "shoulders": {
-   "decals": [
-    {
-     "image": "decals/reedheron_uncommon_d0c9a2.png",
-     "anchor": "shoulder_left",
-     "size": 0.085,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    }
-   ],
    "cloth": {
-    "swatch": "swatches/mantle.png",
+    "swatch": "swatches/fx_linen.png",
     "scale": 0.07,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.95
+    "bright": 0.98,
+    "shading": 0.95,
+    "keep": 0
    }
   },
   "chest": {
+   "pattern": {
+    "image": "swatches/pat_stripes.png",
+    "color": "#3d5630",
+    "scale": 0.2,
+    "strength": 0.2,
+    "tile": "repeat"
+   },
    "decals": [
     {
-     "image": "decals/reedheron_uncommon_d0c9a2.png",
+     "image": "decals/fx_heron.png",
      "anchor": "back",
-     "size": 0.2,
+     "size": 0.21,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
@@ -82,37 +86,31 @@
      ]
     },
     {
-     "image": "decals/reedheron_uncommon_d0c9a2.png",
+     "image": "decals/fx_heron.png",
      "anchor": "tabard",
      "size": 0.11,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     }
-   ],
-   "pattern": {
-    "image": "swatches/pat_stripes.png",
-    "color": "#234c45",
-    "scale": 0.2,
-    "strength": 0.22,
-    "tile": "repeat"
-   }
+   ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/mantle.png",
-    "scale": 0.07,
+    "swatch": "swatches/fx_guard.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.95
+    "bright": 1.05,
+    "shading": 0.9,
+    "keep": 0
    },
    "leather": {
-    "swatch": "swatches/leather.png",
+    "swatch": "swatches/fx_leather.png",
     "scale": 0.1,
     "tile": "repeat",
     "bright": 0.85,
     "shading": 0.9,
-    "keep": 0.2
+    "keep": 0.15
    }
   },
   "feet": {}
