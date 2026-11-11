@@ -912,6 +912,7 @@ export class Brain {
   opening(snap, m) {
     const st = m.opening, t = m.openT;
     this.halt();
+    if (st !== OPENING.ESCORT) this.wayS = this.herS = undefined;
     if (st === OPENING.WAKE) { this.say("Waking in Lisandra's cave."); return; }
     if (st === OPENING.COLLAPSE) { this.say('The cave comes down.'); return; }
     if (st === OPENING.NAME) {
@@ -939,16 +940,32 @@ export class Brain {
       const foes = this.foes(snap, m).filter((f) => f.hostile && f.d < 30);
       // (The road's fight: the dead in waves, their children, and at the end two necromancers out of the trees. It fights
       // them as it fights the woods' own: src/sim/opening.js fight has what comes and when.)
+      const by = this.lisandra(snap);
+      // (It stands its ground by her: backing off from fifty of them would take it clear to the town, and on this road it
+      // can't die. Drawn off more than a few strides, it comes back to her before it fights on.)
+      if (foes.length && by && dist(m.x, m.z, by.x, by.z) > 15) {
+        this.face = null; this.steer(by.x - m.x, by.z - m.z, true); this.look = [by.x, by.z];
+        this.say('Back to Lisandra: the fight is where she is.');
+        return;
+      }
       if (foes.length && this.combat(snap, m, foes)) { this.fighting = true; this.say(`Fighting the dead on the road (${foes.length}).`); return; }
       // She leads the way down (src/sim/opening.js): along her shelf, down her steps and the path, and then the road. It
       // follows a few strides behind her, at her pace. Stood still she stops and turns to it, and goes on when it's come
       // up to her: so it keeps coming until it's close.
       const her = this.lisandra(snap);
       if (!her) { this.say('Following Lisandra down to Bellmourn.'); return; }
-      const hers = routeNear(her.x, her.z), mine = routeNear(m.x, m.z, hers, 60), d = dist(m.x, m.z, her.x, her.z);
+      // (Where it is on the way: looked for near where it last was, so at the steps' turns it's never taken for being on
+      // the flight below; found again from her if it's been knocked or carried well off it.)
+      const hers = routeNear(her.x, her.z, this.herS ?? null, 80);
+      this.herS = hers;
+      let mine = routeNear(m.x, m.z, this.wayS ?? 0, 14);
+      { const [px, pz] = routeAt(mine); if (dist(m.x, m.z, px, pz) > 12) mine = routeNear(m.x, m.z, hers, 80); }
+      this.wayS = mine;
+      const d = dist(m.x, m.z, her.x, her.z);
       const end = ROUTE.pts.at(-1);
       if (dist(m.x, m.z, end[0], end[1]) < 6 || (hers >= ROUTE.len - 0.5 && d < 6)) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Bellmourn. Lisandra has her say.'); return; }
-      const [ax, az] = routeAt(Math.min(ROUTE.len, Math.max(mine + 3, hers - 2.6)));
+      // (Never aiming more than a few strides down the way, so it goes round each bend of it and not across the hill.)
+      const [ax, az] = routeAt(Math.min(ROUTE.len, Math.max(mine + 3, Math.min(hers - 2.6, mine + 5))));
       if (d < 2.4 && hers > mine) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
       this.face = null;
       this.steer(ax - m.x, az - m.z, d > 9);
