@@ -424,7 +424,7 @@ fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4
     }
     case 11u: {  // a spark: eight thin rays
       let a = atan2(uv.y, uv.x);
-      m = pow(abs(cos(a * 4.0)), 26.0) * smoothstep(1.0, 0.05, r) + pow(abs(cos(a * 2.0)), 40.0) * smoothstep(1.3, 0.1, r);
+      m = pow(abs(cos(a * 4.0)), 26.0) * smoothstep(0.8, 0.05, r) + pow(abs(cos(a * 2.0)), 40.0) * smoothstep(1.0, 0.1, r);   // (its rays end inside its card: longer, they showed the card's edge)
       m = clamp(m + smoothstep(0.2, 0.0, r), 0.0, 1.0);
       hot = 1.0;
     }

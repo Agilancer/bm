@@ -240,16 +240,18 @@ export function star3(c, x, y, z, spin, size, elem, mat = MAT.STEEL, n = 2, glow
     else c.fx(FX.SHARD, elem, x, y, z, size * 0.3, Math.sin(yaw) * Math.cos(a), Math.sin(a), Math.cos(yaw) * Math.cos(a), size * 2, glow, 0, 0, mat, Math.PI / 2);
   }
 }
-// A boomerang: two arms from an elbow, lying nearly level, turning about its middle. Gold, its element's light along its
-// edges, and the blur of its own turning under it (so it's seen to turn, and never read as a letter standing still).
+// A boomerang: two arms from an elbow, lying nearly level, turning about its middle. Gold, each arm in three lengths that
+// narrow to its tip, its element's light along its edges; and behind it, the way it turns, the ghost of where it was a
+// moment ago and the blur of its turning under it: it's seen to turn, and never read as a letter standing still.
 export function rang3(c, x, y, z, spin, size, elem, mat = MAT.GOLD, glow = 0.8, tilt = 0.12) {
   for (const k of [-1, 1]) {
-    const a = spin + k * 0.95, dx = Math.sin(a), dz = Math.cos(a), dy = tilt * k;
-    // (Each arm in two lengths, the outer the thinner: it narrows to its tip.)
-    c.fx(FX.BOX, elem, x + dx * size * 0.12, y + dy * size * 0.12, z + dz * size * 0.12, size * 0.08, dx, dy, dz, size * 0.32, glow, 0, 0, mat, 0, size * 0.02);
-    c.fx(FX.BOX, elem, x + dx * size * 0.4, y + dy * size * 0.4, z + dz * size * 0.4, size * 0.052, dx, dy, dz, size * 0.3, glow, 0, 0, mat, 0, size * 0.014);
+    const a = spin + k * 0.81, dx = Math.sin(a), dz = Math.cos(a), dy = tilt * k;
+    c.fx(FX.BOX, elem, x + dx * size * 0.1, y + dy * size * 0.1, z + dz * size * 0.1, size * 0.1, dx, dy, dz, size * 0.28, glow, 0, 0, mat, 0, size * 0.022);
+    c.fx(FX.BOX, elem, x + dx * size * 0.32, y + dy * size * 0.32, z + dz * size * 0.32, size * 0.07, dx, dy, dz, size * 0.22, glow, 0, 0, mat, 0, size * 0.016);
+    c.fx(FX.BOX, elem, x + dx * size * 0.48, y + dy * size * 0.48, z + dz * size * 0.48, size * 0.04, dx, dy, dz, size * 0.14, glow, 0, 0, mat, 0, size * 0.011);
   }
-  c.fx(FX.DISC, elem, x, y - 0.01, z, size * 0.52, 0, 1, 0, 0, 0.14 * Math.min(1, glow));
+  for (const [da, al] of [[-0.4, 0.3], [-0.8, 0.16]]) { const a = spin + da, gs = size * 0.5; c.fx(FX.GLYPH, elem, x + Math.sin(a) * 0.42 * gs, y - 0.005, z + Math.cos(a) * 0.42 * gs, gs, 0, 1, 0, a + Math.PI / 2, al * Math.min(1, glow * 1.4), 0, 0, 0, 0, GLYPHS.RANG); }
+  c.fx(FX.DISC, elem, x, y - 0.01, z, size * 0.56, 0, 1, 0, 0, 0.22 * Math.min(1, glow * 1.4));
 }
 // A spear of steel and light: a shaft, a broad head, and its element down its edges. (x, y, z): its butt.
 export function pike3(c, x, y, z, ax, ay, az, len, elem, glow = 1, thick = 1) {
@@ -676,13 +678,13 @@ export function strumFx(h, sim) {
   const big = t.v === 2, fine = t.v === 1, down = big || beat % 2 === 0;
   const side = (beat % 2 ? 1 : -1) * rand(0.3, 0.8), n = big ? 3 : 1;
   for (let i = 0; i < n; i++) {
-    const g = fine ? GLYPHS.NOTE : pick([GLYPHS.NOTE, GLYPHS.CROTCHET, GLYPHS.NOTE, GLYPHS.NOTES]);
+    const g = fine ? GLYPHS.NOTE : pick([GLYPHS.NOTE, GLYPHS.CROTCHET]);
     const out = rand(1.1, 1.8) * (big ? 1.5 : 1), sd = side * (1 + i * 0.6);
-    drift(w, h, lx, ly, lz, s * out + co * sd, rand(0.35, 0.7) + (big ? 0.5 : 0), co * out - s * sd, g, t.rainbow ? pick(RAINBOW) : elem, big ? 0.24 : fine ? 0.12 : 0.17, fine ? 0.7 : rand(0.8, 1.2), rand(-1, 1));
+    drift(w, h, lx, ly, lz, s * out + co * sd, rand(0.35, 0.7) + (big ? 0.5 : 0), co * out - s * sd, g, t.rainbow ? pick(RAINBOW) : elem, big ? 0.2 : fine ? 0.1 : 0.13, fine ? 0.7 : rand(0.8, 1.2), rand(-1, 1));
   }
   if (!fine && down) {
-    waves(c, h.x + s * 0.5, h.y + 0.08, h.z + co * 0.5, h.yaw, big ? 4.2 : 2.2, elem);
-    c.burst(FX.GLYPH, elem, lx + s * 0.15, ly, lz + co * 0.15, 0.25, big ? 1.4 : 0.8, 0.3, { ax: -co, ay: 0, az: s, len: 0, extra: GLYPHS.WAVES, alpha: 0.7, ease: 1.3 });
+    waves(c, h.x + s * 0.5, h.y + 0.08, h.z + co * 0.5, h.yaw, big ? 4.2 : 2.2, ARCANE);
+    c.burst(FX.GLYPH, ARCANE, lx + s * 0.15, ly, lz + co * 0.15, 0.25, big ? 1.4 : 0.8, 0.3, { ax: -co, ay: 0, az: s, len: 0, extra: GLYPHS.WAVES, alpha: 0.45, ease: 1.3 });
   }
   if (big) c.burst(FX.RING, elem, h.x, h.y + 0.05, h.z, 0.4, 2.4, 0.4, { light: 5, lightR: 4 });
   // The string: a walk up and down a five-note scale, each bard starting from their own place in it.
@@ -2073,34 +2075,44 @@ function energyRang(h, sim, m, o) {
     // (Where it goes through something: a cut of gold along the way it went.)
     onHit: (k, s) => { if (h.fxOk()) { slash(c, k.x, k.y + 1.1, k.z, Math.atan2(s.vx, s.vz) + Math.PI / 2, 0.15, 1.2 + 0.4 * s.size, e, 0.14); o.hit?.(k, s); } },
     caught: (s) => { if (h.fxOk()) c.burst(FX.FLARE, e, s.x, s.y, s.z, 0.1, 0.5, 0.2, { light: 5, lightR: 3 }); if (!h.swing && !h.jump && !h.tossing) h.play('Sword_Block', 2.4, 'upper', 0.06); },
-    ...o, hit: undefined });
+    ...o, hit: undefined, ...(o.y !== undefined ? { y: o.y } : {}) });
 }
 // Both at once, out to either side: they cross on the foe, a cross of gold cut there as they do, and come home each on the
 // other's side.
 CAST.cross_cut = (h, sim, m, { c, P }) => {
   const out = dist(h, m) + 0.4;
+  stand(h, m, 1.75);
   h.throwBoomerang(sim, m, 0, 1, { cross: true, out, dmg: 10 });
   h.throwBoomerang(sim, m, 1, 1, { cross: true, out, dmg: 10 });
   w0(h).later(0.99, () => {
     if (h.dead || !E.fightable(m) || !h.flight) return;
     h.hit(sim, m, 8 * P, 'gash', 95, 0, { elem: LIGHT });
-    if (h.fxOk()) { xcut(c, m.x, m.y + 1.15, m.z, dirTo(h, m), 2.4, LIGHT, LIGHT, 8); c.burst(FX.RING, LIGHT, m.x, m.y + 0.05, m.z, 0.3, 1.3, 0.2); }
+    // (A cross of gold on it, seen from before it and from its side.)
+    if (h.fxOk()) { const a = dirTo(h, m); xcut(c, m.x, m.y + 1.15, m.z, a, 2.4, LIGHT, LIGHT, 8); xcut(c, m.x, m.y + 1.15, m.z, a + Math.PI / 2, 2.4, LIGHT, LIGHT); c.burst(FX.RING, LIGHT, m.x, m.y + 0.05, m.z, 0.3, 1.3, 0.2); }
   });
   h.shotCd = 1.6;
 };
 // One from each hand, a breath apart, each out round its own wide side of the foe and home to the hand that threw it.
 CAST.double_throw = (h, sim, m) => {
+  stand(h, m, 1.8);
   h.throwBoomerang(sim, m, 0, 1.8);
   sim.heroWorld.later(0.12, () => { if (!h.dead && E.fightable(m)) h.throwBoomerang(sim, m, 1, 1.8); });
   h.shotCd = 1.7;
 };
-CAST.energy_rang = (h, sim, m, { P, rk }) => throwIt(h, 1.25, () => { if (E.fightable(m)) energyRang(h, sim, m, { dmg: 13 * P, size: 2.3 + 0.12 * rk, r: 0.4, v: 13, life: 1.9, light: 6, poise: 50 }); }, { mask: 'full' });
+// A boomerang of gold light as wide as he is tall: out through them, hung turning eight strides off, and back through them
+// to his hand. He stands to it till it's home.
+CAST.energy_rang = (h, sim, m, { P, rk }) => {
+  stand(h, m, 2.3);
+  throwIt(h, 1.25, () => { if (E.fightable(m)) energyRang(h, sim, m, { dmg: 13 * P, size: 2.3 + 0.12 * rk, r: 0.4, v: 13, life: 1.7, light: 6, poise: 55 }); }, { mask: 'full' });
+};
+// He stands where he is, facing it, till what he's thrown is home: so long, and no blow of his own meanwhile.
+function stand(h, m, secs) { h.yaw = h.faceYaw = dirTo(h, m); h.hold = Math.max(h.hold, secs); h.holdFace = h.yaw; h.shotCd = Math.max(h.shotCd, secs); h.sideGoal = null; }
 // A cut across the air before him, and the cut goes on without him: a crescent of gold, widening, through everything it meets.
 CAST.wind_slash = (h, sim, m, { w, c, P, yaw }) => {
   h.yaw = h.faceYaw = yaw;
   h.startSwing('Sword_Regular_B', 1.1, [0.48], () => {
     const v = 18, s = Math.sin(yaw), co = Math.cos(yaw);
-    shot(w, h, { x: h.x + s * 0.9, y: h.y + 1.1, z: h.z + co * 0.9, vx: s * v, vy: 0, vz: co * v, dmg: 12 * P, pierce: true, r: 1.0, life: 0.5, elem: LIGHT, skim: true, size: 1, grow: 1, sizeMax: 1.6, growDmg: 0, poise: 50, o: { elem: LIGHT },
+    shot(w, h, { x: h.x + s * 0.9, y: h.y + 1.1, z: h.z + co * 0.9, vx: s * v, vy: 0, vz: co * v, dmg: 12 * P, pierce: true, r: 1.0, life: 0.5, elem: LIGHT, skim: true, size: 0.9, grow: 2.4, sizeMax: 2.1, growDmg: 0, poise: 55, o: { elem: LIGHT },
       draw: (cc, q) => { for (let i = 0; i < 2; i++) cc.fx(FX.GLYPH, LIGHT, q.x - s * (0.6 + i * 0.35) * q.size, q.y, q.z - co * (0.6 + i * 0.35) * q.size, (1.15 - i * 0.25) * q.size, 0, 1, 0, yaw, 0.75 - i * 0.35, i ? 0 : 5, 4, 0, i, GLYPHS.CRESCENT); },
       tick: (q) => { if (h.fxOk() && Math.random() < 0.25) c.burst(FX.PUFF, STONE, q.x + rand(-0.8, 0.8), sim.world.height(q.x, q.z) + 0.15, q.z + rand(-0.8, 0.8), 0.15, 0.5, 0.35, { alpha: 0.3 }); } });
     sim.event(EV.WHOOSH, h.x, h.y + 1.2, h.z);
@@ -2108,34 +2120,34 @@ CAST.wind_slash = (h, sim, m, { w, c, P, yaw }) => {
 };
 // A ring of blades, as wide as a forearm: it bites one, hangs there grinding, and goes for the next, and the next, before
 // it comes home.
-CAST.chakram = (h, sim, m, { P, rk }) => throwIt(h, 1.25, () => {
+CAST.chakram = (h, sim, m, { P, rk }) => { stand(h, m, 1.6); throwIt(h, 1.25, () => {
   if (!E.fightable(m)) return;
   energyRang(h, sim, m, { dmg: 9 * P, v: 13, life: 3.5, bounce: 4 + rk, hop: 8, hopV: 12, hopPause: 0.1, pierce: false, hang: false, o: { bleed: true, elem: LIGHT }, r: 0.6,
     draw: (cc, s) => {
       const vv = Math.hypot(s.vx, s.vz) || 1;
-      star3(cc, s.x, s.y, s.z, s.t * 22, 0.34, LIGHT, MAT.GOLD, 2, 1);
-      cc.fx(FX.RING, LIGHT, s.x, s.y, s.z, 0.44, 0, 1, 0, 0, 1, 5, 4);
-      cc.fx(FX.DISC, LIGHT, s.x, s.y - 0.01, s.z, 0.4, 0, 1, 0, 0, 0.2);
+      star3(cc, s.x, s.y, s.z, s.t * 22, 0.46, LIGHT, MAT.GOLD, 2, 0.8);
+      cc.fx(FX.RING, LIGHT, s.x, s.y, s.z, 0.46, 0, 1, 0, 0, 1, 5, 4);
+      cc.fx(FX.DISC, LIGHT, s.x, s.y - 0.01, s.z, 0.44, 0, 1, 0, 0, 0.4);
       if (s.pause > 0) cc.fx(FX.GLYPH, LIGHT, s.x, s.y, s.z, 0.45, 0, 0, 0, s.t * 30, 0.8, 0, 0, 0, 0, GLYPHS.SPARK);
       else cc.fx(FX.TRAIL, LIGHT, s.x, s.y, s.z, 0.1, -s.vx / vv, 0, -s.vz / vv, 1.2, 0.6);
     },
     hit: (k) => hfx(sim, HFX.SPARKS, k.x, k.y + 1.1, k.z, 14) });
-}, { mask: 'full' });
+}, { mask: 'full' }); };
 // Boomerangs of gold turning round him, level, at the height of a chest: he takes them in among the foe, and they cut
 // whatever they pass.
 CAST.orbiting_rangs = (h, sim, m, { w, c, P, rk }) => {
   h.spreadT = 0.5;
   h.startSwing('Sword_Block', 1.6, [0.12], () => {
-    if (h.fxOk()) { c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.4, 2.2, 0.35); c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.3, 1.4, 0.45); }
+    if (h.fxOk()) c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.4, 2.2, 0.35);
     orbit(w, h, { n: 2 + rk, r: 2, speed: 5, life: 7, y: 1.05, dmg: 4 * P, reach: 0.75, o: { elem: LIGHT },
-      draw: (cc, x, y, z, a, i, q, k) => { rang3(cc, x, y, z, q.t * 17 + i, 0.55 * k, LIGHT, MAT.GOLD, 0.9, 0.06); cc.fx(FX.TRAIL, LIGHT, x, y, z, 0.07, -Math.cos(a), 0, Math.sin(a), 1.1, 0.45 * k); if (i === 0) cc.fx(FX.RING, LIGHT, h.x, h.y + 0.06, h.z, 2, 0, 1, 0, 0, 0.35 * k); } });
+      draw: (cc, x, y, z, a, i, q, k) => { rang3(cc, x, y, z, q.t * 17 + i, 0.7 * k, LIGHT, MAT.GOLD, 0.9, 0.06); cc.fx(FX.TRAIL, LIGHT, x, y, z, 0.06, -Math.cos(a), 0, Math.sin(a), 0.5, 0.4 * k); if (i === 0) cc.fx(FX.RING, LIGHT, h.x, h.y + 0.06, h.z, 2, 0, 1, 0, 0, 0.35 * k); } });
   }, { still: true, end: 0.45 });
 };
 // Fifteen small ones, off one hand and then the other as fast as he can let them go: up and back over his shoulders in a
 // fan, hung there a breath, and then every one of them turns on the one mark.
 CAST.homing_salvo = (h, sim, m, { w, c, P, rk }) => {
   const N = 15, goAt = sim.time + 0.62, back = dirTo(h, m) + Math.PI;
-  h.hold = Math.max(h.hold, 1.2); h.holdFace = dirTo(h, m); h.shotCd = 1.7;
+  stand(h, m, 1.7);
   gather(c, h, LIGHT, 2, 0.3);
   const loose = (hand, i0, n) => { for (let j = 0; j < n; j++) w.later(j * 0.03, () => {
     if (h.dead || !E.fightable(m)) return;
@@ -2147,7 +2159,7 @@ CAST.homing_salvo = (h, sim, m, { w, c, P, rk }) => {
         s.go = true; s.grav = 0; s.homing = 9 + rk;
         if (E.fightable(m)) Object.assign(s, toward(s.x, s.y, s.z, m, 19));
       },
-      draw: (cc, s) => { const vv = Math.hypot(s.vx, s.vy, s.vz) || 1; rang3(cc, s.x, s.y, s.z, s.t * 24 + i, 0.42, LIGHT, MAT.GOLD, 1, 0.1); if (s.go) cc.fx(FX.TRAIL, LIGHT, s.x, s.y, s.z, 0.06, -s.vx / vv, -s.vy / vv, -s.vz / vv, 1.3, 0.7, i % 5 === 0 ? 3 : 0, 3); },
+      draw: (cc, s) => { const vv = Math.hypot(s.vx, s.vy, s.vz) || 1; rang3(cc, s.x, s.y, s.z, s.t * 24 + i, 0.58, LIGHT, MAT.GOLD, 1, 0.1); if (s.go) cc.fx(FX.TRAIL, LIGHT, s.x, s.y, s.z, 0.05, -s.vx / vv, -s.vy / vv, -s.vz / vv, 0.6, 0.5, i % 5 === 0 ? 3 : 0, 3); },
       onHit: (k) => { if (h.fxOk()) c.burst(FX.GLYPH, LIGHT, k.x + rand(-0.3, 0.3), k.y + rand(0.7, 1.5), k.z + rand(-0.3, 0.3), 0.15, i >= N - 3 ? 0.9 : 0.5, 0.16, { ay: 0, len: rand(0, TAU), extra: GLYPHS.SPARK }); } });
     if (j % 2 === 0) sim.event(EV.WHOOSH, hp[0], hp[1], hp[2]);
   }); };
@@ -2170,7 +2182,7 @@ CAST.tempest_dash = (h, sim, m, { w, c, P, yaw }) => {
       draw: (cc) => { const s = Math.sin(yaw), co = Math.cos(yaw); for (let i = 0; i < 3; i++) cc.fx(FX.TRAIL, LIGHT, h.x - co * (i - 1) * 0.4, h.y + 0.6 + i * 0.4, h.z + s * (i - 1) * 0.4, 0.16, -s, 0, -co, 3.2, 0.7); for (const sd of ['l', 'r']) { const p = h.handPos(sd); cc.fx(FX.ORB, LIGHT, p[0], p[1], p[2], 0.12, 0, 1, 0, 0, 1); } },
       done: () => {
         w.blast(h, h.x, h.z, h.y, 2.2, 8 * P, { kind: 'bash', poise: 40, shove: 5, quiet: true });
-        if (h.fxOk()) { const dx = h.x - x0, dz = h.z - z0, L = Math.hypot(dx, dz) || 1; c.burst(FX.BEAM, LIGHT, x0, y0, z0, 0.3, 0.02, 0.28, { ax: dx / L, ay: 0, az: dz / L, len: L, alpha: 0.7, extra: 0.05, light: 10, lightR: 6 }); }
+        if (h.fxOk()) { const dx = h.x - x0, dz = h.z - z0, L = Math.hypot(dx, dz) || 1; c.burst(FX.BEAM, LIGHT, x0, y0, z0, 0.02, 0.01, 0.2, { ax: dx / L, ay: 0, az: dz / L, len: L, alpha: 0.5, extra: 0.3, light: 10, lightR: 6 }); }
       } });
     h.spreadT = 0.4;
   });
@@ -2181,12 +2193,12 @@ CAST.blade_ring = (h, sim, m, { c, P, rk }) => {
   const n = 8 + (rk > 3 ? 4 : 0), y0 = h.yaw;
   let out = 0, t = 0;
   h.spreadT = 0.7;
-  if (h.fxOk()) c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.4, 5, 0.6);
+  if (h.fxOk()) c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.4, 2.6, 0.45, { alpha: 0.5 });
   h.startSwing('Sword_Block', 1.4, [0.99], () => {}, { still: true, hold: [0.3, 0.5], end: 0.55, tick: (dt) => {
     t += dt;
     const u = clamp((t - 0.14) / 0.36, 0, 1);
     h.yaw = h.faceYaw = wrapAngle(y0 - 0.5 * Math.min(1, t / 0.14) + u * (TAU + 0.5));
-    while (out < n && u * n > out) { energyRang(h, sim, m, { dir: h.yaw, dmg: 7 * P, v: 12, life: 1.3, size: 0.95, hand: out % 2, light: out % 4 ? 0 : 4 }); out++; }
+    while (out < n && u * n > out) { energyRang(h, sim, m, { dir: h.yaw, dmg: 7 * P, v: 10, life: 1.3, size: 0.95, hand: out % 2, light: out % 4 ? 0 : 4, y: h.y + 1.1 }); out++; }
   }, cut: () => { h.yaw = h.faceYaw = y0; } });
   h.shotCd = 1.3;
 };
@@ -2215,7 +2227,8 @@ CAST.bladestorm = (h, sim, m, { w, c, P, rk }) => {
     h.yaw = wrapAngle(h.yaw + sp * dt); h.faceYaw = h.yaw;
     h.bodyRoll = 0.2;
     const k = E.fightable(m) ? m : nearest(w, h.x, h.z, 8);
-    h.goal = k ? { x: k.x, z: k.z, speed: 4.4, stop: 0.6, face: h.yaw } : null;
+    // (At the edge of them, not in among them: where he can be seen.)
+    h.goal = k ? { x: k.x, z: k.z, speed: 4.4, stop: 1.7 + E.radiusOf(k), face: h.yaw } : null;
     if ((tick -= dt) > 0) return;
     tick += sp > 15 ? 0.1 : 0.14; cuts++;
     for (const f of w.blast(h, h.x, h.z, h.y, 2.4, 3.2 * P, { kind: 'gash', poise: 15, bleed: true, quiet: cuts % 3 !== 0, elem: LIGHT })) if (cuts % 4 === 0) blood(sim, f, Math.cos(h.yaw), -Math.sin(h.yaw), 0.3);
@@ -2225,7 +2238,7 @@ CAST.bladestorm = (h, sim, m, { w, c, P, rk }) => {
     if (h.dead) return;
     h.yaw = h.faceYaw = E.fightable(m) ? dirTo(h, m) : h.yaw;
     // (The last of it: all of them flung out, a ring of gold on the ground half as wide again, and whatever's near thrown back.)
-    for (let i = 0; i < 8; i++) energyRang(h, sim, m, { dir: i * TAU / 8, dmg: 6 * P, v: 13, life: 1.1, size: 0.9, hand: i % 2, light: i % 4 ? 0 : 4 });
+    for (let i = 0; i < 8; i++) energyRang(h, sim, m, { dir: i * TAU / 8, dmg: 6 * P, v: 11, life: 1.1, size: 0.9, hand: i % 2, light: i % 4 ? 0 : 4, y: h.y + 1.1 });
     w.blast(h, h.x, h.z, h.y, 3, 8 * P, { kind: 'gash', poise: 95, shove: 5, elem: LIGHT });
     if (h.fxOk()) { c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.5, 3.4, 0.4); boom(c, LIGHT, h.x, h.y + 1, h.z, 1.6, 10); hfx(sim, HFX.THUD, h.x, h.y, h.z, 0.4); }
     if (!h.swing && !h.jump) h.play('Sword_Block', 1.8, 'full', 0.08);
@@ -2236,8 +2249,7 @@ CAST.bladestorm = (h, sim, m, { w, c, P, rk }) => {
 // next, and when it's home in his hand the threads pull tight and cut whatever stands across them.
 CAST.golden_boomerang = (h, sim, m, { w, c, P, rk }) => {
   const T0 = 0.73, big = 5.5 + 0.2 * rk, dir0 = dirTo(h, m);
-  h.yaw = h.faceYaw = dir0;
-  h.shotCd = 2.2;
+  stand(h, m, 3.9);
   gather(c, h, LIGHT, 3.2, T0);
   if (h.fxOk()) { c.burst(FX.RING, LIGHT, h.x, h.y + 0.06, h.z, 1.4, 1.5, T0, { alpha: 0.7 }); hfx(sim, HFX.CHIME, h.x, h.y + 1.4, h.z, 0, 0.8); }
   const stop = inHand(h, 'r', T0, (cc, p, k) => { rang3(cc, p[0], p[1] + 0.3 + 0.5 * k, p[2], sim.time * (6 + 8 * k), 0.62 * big * (0.15 + 0.85 * k * k), LIGHT, MAT.GOLD, 0.45, 0.1); cc.fx(FX.ORB, LIGHT, p[0], p[1] + 0.3 + 0.5 * k, p[2], 0.2 + 0.5 * k, 0, 1, 0, 0, 0.35, 8 * k, 6); });
@@ -2246,7 +2258,7 @@ CAST.golden_boomerang = (h, sim, m, { w, c, P, rk }) => {
     if (!E.fightable(m)) return;
     const threads = [];
     let last = null, pulse = 0;
-    energyRang(h, sim, m, { dmg: 34 * P, size: big, r: 0.33, v: 9.5, life: 2.7, spin: 0.75, glow: 0.45, halo: 0, trail: 0.3, light: 8, hk: 'bash', poise: 95, o: { stun: 0.6, shove: 6, elem: LIGHT },
+    energyRang(h, sim, m, { dmg: 34 * P, size: big, r: 0.33, v: 9.5, life: 2.6, spin: 1, glow: 0.5, halo: 0, trail: 0.3, light: 8, hk: 'bash', poise: 95, o: { stun: 0.6, shove: 6, elem: LIGHT },
       hit: (k) => { const p = [k.x, k.y + 1.1, k.z]; if (last) threads.push([last, p]); last = p; c.burst(FX.FLARE, LIGHT, k.x, k.y + 1.1, k.z, 0.4, 1.1, 0.2, { light: 8, lightR: 5 }); hfx(sim, HFX.CHIME, k.x, k.y + 1.1, k.z, threads.length * 2, 0.5); hfx(sim, HFX.THUD, k.x, k.y, k.z, 0.5); },
       more: (cc, s, sz) => {
         cc.fx(FX.DISC, LIGHT, s.x, sim.world.height(s.x, s.z) + 0.04, s.z, 0.3 * sz, 0, 1, 0, 0, 0.35);
@@ -2256,6 +2268,7 @@ CAST.golden_boomerang = (h, sim, m, { w, c, P, rk }) => {
       onTurn: (s) => { if (h.fxOk()) { boom(c, LIGHT, s.x, s.y, s.z, 1.8, 8); hfx(sim, HFX.THUD, s.x, s.y - 1, s.z, 0.3); } },
       caught: (s) => {
         // (It takes catching: braced, and the ground rung under him.)
+        h.hold = 0.5;
         if (!h.swing && !h.jump) h.play('Sword_Block', 1.5, 'full', 0.06);
         if (h.fxOk()) { c.burst(FX.FLARE, LIGHT, s.x, s.y, s.z, 0.3, 1.1, 0.25, { light: 10, lightR: 6 }); c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.4, 2.4, 0.35); hfx(sim, HFX.CHIME, s.x, s.y, s.z, 12, 0.7); hfx(sim, HFX.THUD, h.x, h.y, h.z, 0.5); }
         // The web pulled tight.
@@ -2275,15 +2288,15 @@ CAST.golden_boomerang = (h, sim, m, { w, c, P, rk }) => {
 CAST.razor_tornado = (h, sim, m, { w, c, P, rk }) => {
   const life = 4 + 0.2 * rk, at = { x: m.x, z: m.z };
   let tick = 0.35;
-  h.hold = Math.max(h.hold, 1.3); h.holdFace = dirTo(h, m);
-  h.pointAt([Math.sin(dirTo(h, m)), 0.25, Math.cos(dirTo(h, m))], 1.4, { aim: false });
+  stand(h, m, life * 0.6);
+  h.pointAt([Math.sin(dirTo(h, m)), 0.25, Math.cos(dirTo(h, m))], life * 0.6 + 0.2, { aim: false });
   zone(w, h, life, (cc, q) => {
     const grow = Math.min(1, q.t / 0.35), k = Math.min(1, (life - q.t) * 3), y = sim.world.height(at.x, at.z);
     // (Thin slices of wind, wider the higher they are, up as far as it has grown; and six blades going up it round and round.)
-    for (let i = 0; i < 10; i++) { const f = i / 9; if (f > grow) break; const r = 0.4 + f * 1.6; cc.fx(FX.GLYPH, i % 3 ? SPIRIT : LIGHT, at.x + Math.sin(q.t * 3 + i) * 0.1 * i, y + 0.2 + f * 2.8, at.z + Math.cos(q.t * 3 + i) * 0.1 * i, r, 0, 1, 0, q.t * (13 - i * 0.5) + i * 1.3, 0.4 * k, i === 4 ? 5 * k : 0, 5, 0, i, GLYPHS.CRESCENT); }
-    for (let i = 0; i < 6; i++) { const f = ((q.t * 0.5 + i / 6) % 1) * grow, a = q.t * 8 + i * 1.047, r = 0.5 + f * 1.4; rang3(cc, at.x + Math.sin(a) * r, y + 0.3 + f * 2.7, at.z + Math.cos(a) * r, q.t * 20 + i, 0.38, LIGHT, MAT.GOLD, 1, 0.3); }
+    for (let i = 0; i < 10; i++) { const f = i / 9; if (f > grow) break; const r = 0.4 + f * 1.6; cc.fx(FX.GLYPH, LIGHT, at.x + Math.sin(q.t * 3 + i) * 0.1 * i, y + 0.2 + f * 2.8, at.z + Math.cos(q.t * 3 + i) * 0.1 * i, r, 0, 1, 0, q.t * (13 - i * 0.5) + i * 1.3, (i % 2 ? 0.25 : 0.4) * k, i === 4 ? 5 * k : 0, 5, 0, i, GLYPHS.CRESCENT); }
+    for (let i = 0; i < 6; i++) { const f = ((q.t * 0.5 + i / 6) % 1) * grow, a = q.t * 8 + i * 1.047, r = 0.5 + f * 1.4; rang3(cc, at.x + Math.sin(a) * r, y + 0.3 + f * 2.7, at.z + Math.cos(a) * r, q.t * 20 + i, 0.55, LIGHT, MAT.GOLD, 1, 0.3); }
     cc.fx(FX.RING, LIGHT, at.x, y + 0.06, at.z, 2.4 * grow, 0, 1, 0, 0, 0.5 * k);
-    cc.fx(FX.PUFF, SPIRIT, at.x, y + 0.5, at.z, 1.5 * grow, 0, 1, 0, 0, 0.22 * k, 0, 0, q.t / life, 1);
+    cc.fx(FX.PUFF, STONE, at.x, y + 0.5, at.z, 1.5 * grow, 0, 1, 0, 0, 0.18 * k, 0, 0, q.t / life, 1);
   }, (q, dt) => {
     const k = nearest(w, at.x, at.z, 9);
     if (k) { const d = Math.hypot(k.x - at.x, k.z - at.z) || 1, sp = Math.min(2.6, d * 2); at.x += (k.x - at.x) / d * sp * dt; at.z += (k.z - at.z) / d * sp * dt; }
@@ -2316,9 +2329,9 @@ function note(h, sim, m, o = {}) {
   const w = sim.heroWorld, c = sim.casting, s = Math.sin(h.yaw), co = Math.cos(h.yaw);
   const x = h.luteT ? h.luteT[0] + s * 0.3 : h.x + s * 0.5, y = h.luteT ? h.luteT[1] : h.y + 1.1, z = h.luteT ? h.luteT[2] + co * 0.3 : h.z + co * 0.5;
   const a = dirTo({ x, z }, m) + (o.spread || 0), v = o.v || 12, elem = o.elem ?? h.tune?.elem ?? ARCANE;
-  return shot(w, h, { x, y, z, vx: Math.sin(a) * v, vy: 0.5, vz: Math.cos(a) * v, homing: o.homing ?? 3, foe: m, dmg: 7 * h.power(), hk: 'bash', life: 2, r: 0.45, elem, seed: rand(0, 6), o: { elem },
+  return shot(w, h, { x, y, z, vx: Math.sin(a) * v, vy: 0.5, vz: Math.cos(a) * v, homing: o.homing ?? 5, foe: m, dmg: 7 * h.power(), hk: 'bash', life: 1.2, r: 0.45, elem, seed: rand(0, 6), o: { elem },
     draw: noteDraw(o.glyph ?? pick([GLYPHS.NOTE, GLYPHS.CROTCHET]), o.big || 0.2, o.stave),
-    onHit: (k) => { if (h.fxOk()) c.burst(FX.GLYPH, elem, k.x, k.y + 1.5, k.z, 0.14, 0.32, 0.3, { ay: 0, extra: GLYPHS.NOTE }); },
+    onHit: (k) => { if (h.fxOk()) c.burst(FX.GLYPH, elem, k.x, k.y + 1.5, k.z, 0.14, 0.32, 0.2, { ay: 0, extra: GLYPHS.NOTE }); },
     ...o });
 }
 // What a bard does for an ordinary blow: a few bars on the lute, a note off it at the foe (Hero.pluck).
@@ -2349,11 +2362,13 @@ CAST.power_chord = (h, sim, m, { c, P, yaw }) => {
 CAST.fan_of_notes = (h, sim, m, { c, P, rk, yaw }) => {
   h.yaw = h.faceYaw = yaw;
   riff(h, sim, 1.0, 0, ARCANE, 0.4, () => {
-    const n = 6 + rk, dir = E.fightable(m) ? dirTo(h, m) : h.yaw, v = 15;
+    // (Across the middle of them, not past one of them: and what finds nothing is gone in five strides.)
+    const pack = E.fightable(m) ? foesIn(sim.heroWorld, m.x, m.z, 4.5) : [], mid = pack.length ? { x: pack.reduce((q, k) => q + k.x, 0) / pack.length, z: pack.reduce((q, k) => q + k.z, 0) / pack.length } : null;
+    const n = 6 + rk, dir = mid ? dirTo(h, mid) : h.yaw, v = 13;
     for (let i = 0; i < n; i++) {
-      const a = dir + (i / (n - 1) - 0.5) * 1.4, e = RAINBOW[i % RAINBOW.length];
-      shot(sim.heroWorld, h, { x: h.x + Math.sin(a) * 0.6, y: h.y + 1.15, z: h.z + Math.cos(a) * 0.6, vx: Math.sin(a) * v, vy: 0, vz: Math.cos(a) * v, dmg: 6 * P, o: { bleed: true, elem: e }, pierce: 2, life: 0.55, r: 0.45, elem: e, seed: i, size: 1,
-        draw: noteDraw(GLYPHS.NOTE, 0.22),
+      const a = dir + (i / (n - 1) - 0.5) * 1.1, e = RAINBOW[i % RAINBOW.length];
+      shot(sim.heroWorld, h, { x: h.x + Math.sin(a) * 0.6, y: h.y + 1.15, z: h.z + Math.cos(a) * 0.6, vx: Math.sin(a) * v, vy: 0, vz: Math.cos(a) * v, dmg: 6 * P, o: { bleed: true, elem: e }, pierce: 2, life: 0.4, r: 0.5, elem: e, seed: i, size: 1,
+        draw: noteDraw(GLYPHS.NOTE, 0.24),
         onHit: (k) => blood(sim, k, Math.sin(a), Math.cos(a), 0.3) });
     }
     if (h.fxOk()) waves(c, h.x, h.y + 0.08, h.z, dir, 4, ARCANE);
@@ -2381,11 +2396,12 @@ CAST.shockwave_riff = (h, sim, m, { w, c, P, rk, yaw }) => {
 };
 // A note that leaps from one to the next; and, a beat behind it, its echo doing the same, smaller and fainter; and the
 // echo's echo after that.
-CAST.echo = (h, sim, m, { w, P, rk, yaw }) => {
+CAST.echo = (h, sim, m, { w, c, P, rk, yaw }) => {
   h.yaw = h.faceYaw = yaw;
   riff(h, sim, 1.3, 1, SPIRIT, 0.3, () => {
     [[0, 1, 8, 0.26], [0.3, 0.6, 5, 0.18], [0.6, 0.35, 3, 0.13]].forEach(([d, dim, dmg, big]) => w.later(d, () => {
-      if (!h.dead && E.fightable(m)) note(h, sim, m, { dmg: dmg * P, bounce: 3 + Math.floor(rk / 2), hop: 8, hopV: 12, v: 14, elem: d ? FROST : SPIRIT, glyph: GLYPHS.NOTE, big, dim, life: 2.5, quiet: !!d, o: { elem: d ? FROST : SPIRIT, quiet: !!d } });
+      if (!h.dead && E.fightable(m)) note(h, sim, m, { dmg: dmg * P, bounce: 3 + Math.floor(rk / 2), hop: 8, hopV: 12, v: 14, elem: d ? FROST : SPIRIT, glyph: GLYPHS.NOTE, big, dim, life: 2.5, quiet: !!d, o: { elem: d ? FROST : SPIRIT, quiet: !!d },
+        onHit: (k) => { if (h.fxOk()) c.burst(FX.RING, d ? FROST : SPIRIT, k.x, k.y + 0.05, k.z, 0.2, 0.8 + d * 1.2, 0.3, { alpha: dim }); } });
     }));
   }, 0.7);
 };
@@ -2399,38 +2415,36 @@ CAST.dancing_notes = (h, sim, m, { w, c, P, rk }) => {
   for (let i = 0; i < n; i++) w.later(0.2 + i * 0.22, () => {
     if (h.dead || !E.fightable(m)) return;
     const e = i % 2 ? LIGHT : HEAL;
-    note(h, sim, m, { dmg: 5 * P, v: 10, bounce: 5 + rk, hop: 8, hopV: 9, hopPause: 0.12, elem: e, glyph: i % 2 ? GLYPHS.CROTCHET : GLYPHS.NOTE, big: 0.26, life: 4, homing: 5, bob: true, o: { elem: e, quiet: true },
+    note(h, sim, m, { dmg: 5 * P, v: 10, bounce: 5 + rk, hop: 8, hopV: 9, hopPause: 0.12, elem: e, glyph: i % 2 ? GLYPHS.CROTCHET : GLYPHS.NOTE, big: 0.42, life: 4, homing: 5, bob: true, poise: 55, o: { elem: e },
       onHit: (k, s) => { if (h.fxOk()) { c.burst(FX.RING, e, k.x, k.y + 0.05, k.z, 0.2, 0.9, 0.25); hfx(sim, HFX.PLUCK, k.x, k.y + 1.5, k.z, SCALE[(i * 2 + s.hitSet.size) % SCALE.length], 0.35); } } });
   });
 };
-// One note, the lowest there is, as tall as a man: it falls on them out of the sky, faster as it comes, and the ground
-// jumps where it lands.
+// One note, the lowest there is, as tall as a man: it hangs over them a moment, growing, and then it falls, faster as it
+// comes, and the ground jumps where it lands.
 CAST.bass_drop = (h, sim, m, { w, c, P, rk }) => {
   const x = m.x, z = m.z, y = sim.world.height(x, z), r = 2.5 + 0.2 * rk;
-  if (h.fxOk()) c.burst(FX.RING, ARCANE, x, y + 0.05, z, r, r * 0.4, 0.95, { alpha: 0.8, ease: 1 });
   riff(h, sim, 1.4, 2, ARCANE, 0.6, () => {
     let hit = false;
-    const T = 0.35;
+    const T0 = 0.3, T = 0.5;
+    if (h.fxOk()) c.burst(FX.RING, ARCANE, x, y + 0.05, z, r, r * 0.4, T, { alpha: 0.8, ease: 1 });
     zone(w, h, T + 0.1, (cc, q) => {
-      const u = Math.min(1, q.t / T), up = (1 - u * u) * 9;
+      const hang = Math.min(1, q.t / T0), u = clamp((q.t - T0) / (T - T0), 0, 1), up = (1 - u * u) * 3.2;
       if (u >= 1) return;
-      cc.fx(FX.GLYPH, ARCANE, x, y + 1 + up, z, 1.0, 0, 0, 0, 0, 1, 10, 6, 0, 0, GLYPHS.NOTE);
-      cc.fx(FX.COLUMN, ARCANE, x, y, z, 1.2 + up, 0, 1, 0, 0.5, 0.3 * u);
-      cc.fx(FX.TRAIL, ARCANE, x, y + 1.6 + up, z, 0.4, 0, 1, 0, 3.5, 0.7);
+      cc.fx(FX.GLYPH, ARCANE, x, y + 1 + up, z, 0.4 + 0.6 * hang, 0, 0, 0, 0.15 * Math.sin(q.t * 20) * (1 - u), hang, 10 * hang, 6, 0, 0, GLYPHS.NOTE);
+      if (u > 0) { cc.fx(FX.COLUMN, ARCANE, x, y, z, 1.2 + up, 0, 1, 0, 0.5, 0.3 * u); cc.fx(FX.TRAIL, ARCANE, x, y + 1.6 + up, z, 0.4, 0, 1, 0, 3, 0.7); }
     }, (q) => {
       if (hit || q.t < T) return;
       hit = true;
-      w.blast(h, x, z, y, r, 20 * P, { kind: 'bash', poise: 100, stun: 1.2, shove: 5, elem: ARCANE });
+      w.blast(h, x, z, y, r, 20 * P, { kind: 'bash', poise: 100, stun: 1.2, shove: 5, elem: ARCANE, fromX: x, fromZ: z });
       if (h.fxOk()) {
         c.burst(FX.DISC, ARCANE, x, y + 0.04, z, r, r * 1.1, 0.35, { alpha: 0.8, light: 16, lightR: 8 });
-        for (let i = 0; i < 3; i++) c.burst(FX.RING, ARCANE, x, y + 0.05, z, 0.3, r * (0.7 + i * 0.4), 0.35 + i * 0.12);
+        for (let i = 0; i < 2; i++) c.burst(FX.RING, ARCANE, x, y + 0.05, z, 0.3, r * (0.8 + i * 0.35), 0.35 + i * 0.12);
         c.burst(FX.FLARE, ARCANE, x, y + 0.5, z, 0.5, 1.6, 0.18);
         for (let i = 0; i < 6; i++) { const a = i * 1.047; drift(w, h, x, y + 0.6, z, Math.sin(a) * 3, 2.2, Math.cos(a) * 3, GLYPHS.NOTE, ARCANE, 0.25, 0.7, rand(-3, 3)); c.burst(FX.PUFF, STONE, x + Math.sin(a) * r * 0.7, y + 0.2, z + Math.cos(a) * r * 0.7, 0.3, 1, 0.45, { alpha: 0.35 }); }
         hfx(sim, HFX.THUD, x, y, z, 1); hfx(sim, HFX.PLUCK, x, y + 1, z, -12, 0.9);
       }
-      sim.event(EV.GROUND, x, y, z);
     });
-  }, 0.5);
+  }, 0.6);
 };
 // The sword out and the lute left to hang: three runs, one foe to the next, a cut and a note for each; and a chord
 // struck at the end of it.
@@ -2449,7 +2463,7 @@ CAST.swashbuckle = (h, sim, m, { w, c }) => {
       done: () => {
         const nx = left > 0 && (nearest(w, h.x, h.z, 7, seen) || (E.fightable(k) ? k : null));
         if (nx) w.later(0.1, () => go(nx, left - 1));
-        else { arrive(h, sim, ARCANE); h.playLute(0.7, 2, { elem: ARCANE, rate: 1.6 }); h.hold = 0.6; h.holdFace = h.yaw; }
+        else w.later(0.12, () => { if (h.dead) return; const sting = () => { h.playLute(0.7, 2, { elem: ARCANE, rate: 1.6 }); h.hold = 0.6; h.holdFace = h.yaw; }; if (!E.fightable(k) || !leapAway(h, sim, k, 4, { ...BACKFLIP, draw: (cc) => { const s = Math.sin(h.yaw), co = Math.cos(h.yaw); cc.fx(FX.TRAIL, ARCANE, h.x, h.y + 1, h.z, 0.16, s, 0.2, co, 1.4, 0.5); }, land: () => { sim.event(EV.LAND, h.x, h.y, h.z, 0.5); sting(); } })) sting(); });
       } });
   };
   go(m, 2);
@@ -2461,12 +2475,13 @@ CAST.resonance_beam = (h, sim, m, { w, c, P, yaw }) => {
   let tick = 0, dir = yaw;
   const T = 1.4, len = 11;
   riff(h, sim, 1.9, 1, SPIRIT, 0.3, () => {
+    if (h.tune) h.tune.lean = 0.12;
     zone(w, h, T, (cc, q) => {
       const s = Math.sin(dir), co = Math.cos(dir), k = Math.min(1, (T - q.t) * 6), reach = len * Math.min(1, q.t / 0.15, (T - q.t) / 0.12 + 0.05), x = h.x + s * 0.6, y = h.y + 1.15, z = h.z + co * 0.6;
       const beat = 1 + 0.5 * Math.max(0, Math.sin(q.t * 5.6 * TAU / 2));
-      cc.fx(FX.BEAM, SPIRIT, x, y, z, 0.3, s, 0, co, reach, 0.22 * k, 0, 0, 0, 0, 0.3);
-      for (let i = 0; i < 5; i++) cc.fx(FX.BEAM, SPIRIT, x, y + (i - 2) * 0.11, z, 0.035 * beat, s, 0, co, reach, 0.9 * k, i === 2 ? 8 * k : 0, 6, 0, i * 0.3, 0.035 * beat);
-      for (let i = 0; i < 6; i++) { const f = ((q.t * 1.6 + i / 6) % 1) * len; if (f < reach) cc.fx(FX.GLYPH, i % 2 ? LIGHT : SPIRIT, x + s * f, y + ((i * 7) % 5 - 2) * 0.11, z + co * f, 0.36, 0, 0, 0, 0, k, 0, 0, 0, i, i % 2 ? GLYPHS.CROTCHET : GLYPHS.NOTE); }
+      cc.fx(FX.BEAM, SPIRIT, x, y, z, 0.3, s, 0, co, reach, 0.1 * k, 0, 0, 0, 0, 0.3);
+      for (let i = 0; i < 5; i++) cc.fx(FX.BEAM, SPIRIT, x, y + (i - 2) * 0.12 + 0.015 * Math.sin(q.t * 40 + i * 1.7), z, 0.018 * beat, s, 0, co, reach, 0.9 * k, i === 2 ? 8 * k : 0, 6, 0, i * 0.3, 0.018 * beat);
+      for (let i = 0; i < 6; i++) { const f = ((q.t * 1.6 + i / 6) % 1) * len; if (f < reach) cc.fx(FX.GLYPH, i % 2 ? LIGHT : SPIRIT, x + s * f, y + ((i * 7) % 5 - 2) * 0.12, z + co * f, 0.4, 0, 0, 0, 0, k, 0, 0, 0, i, i % 2 ? GLYPHS.CROTCHET : GLYPHS.NOTE); }
     }, (q, dt) => {
       if (E.fightable(m)) dir += clamp(wrapAngle(dirTo(h, m) - dir), -1.4 * dt, 1.4 * dt);
       h.yaw = h.faceYaw = dir; h.hold = Math.max(h.hold, 0.1); h.holdFace = dir;
@@ -2480,11 +2495,13 @@ CAST.resonance_beam = (h, sim, m, { w, c, P, yaw }) => {
 // A slow air, picked, and he sways to it where he stands: it goes out over them soft and wide, and they nod where they
 // stand, a moon and a star or two over each.
 CAST.lullaby = (h, sim, m, { w, c, rk }) => {
+  gather(c, h, FROST, 2.2, 0.5);
+  if (h.fxOk()) c.burst(FX.RING, FROST, m.x, m.y + 0.05, m.z, 3.6, 3.4, 0.5, { alpha: 0.25 });
   riff(h, sim, 2.4, 1, FROST, 0.5, () => {
     const marks = foesIn(w, m.x, m.z, 6), secs = 2.2 + 0.2 * rk;
     for (const k of marks) { daze(sim, w, k, secs); slow(sim, k, 5); }
     if (!h.fxOk()) return;
-    for (const d of [0, 0.6]) w.later(d, () => { if (!h.dead) c.burst(FX.RING, FROST, m.x, m.y + 0.05, m.z, 0.5, 6, 1.2, { alpha: 0.3 }); });
+    for (const d of [0, 0.6]) w.later(d, () => { if (!h.dead) c.burst(FX.RING, FROST, m.x, m.y + 0.05, m.z, 0.5, 3.6, 1.2, { alpha: 0.3 }); });
     for (const k of marks.slice(0, 8)) {
       zone(w, h, secs, (cc, q) => {
         if (!E.fightable(k)) return;
@@ -2499,17 +2516,16 @@ CAST.lullaby = (h, sim, m, { w, c, rk }) => {
 // The air drawn in to him, the arm up; and down through every string: the air itself goes out from him in two walls.
 CAST.sonic_boom = (h, sim, m, { w, c, P, rk }) => {
   const r = 5.2 + 0.25 * rk;
-  if (h.fxOk()) c.burst(FX.RING, LIGHT, h.x, h.y + 0.06, h.z, r, 0.6, 0.6, { alpha: 0.6, ease: 1 });
+  if (h.fxOk()) c.burst(FX.RING, LIGHT, h.x, h.y + 0.06, h.z, r * 0.7, 0.6, 0.6, { alpha: 0.6, ease: 1 });
   riff(h, sim, 1.4, 2, LIGHT, 0.62, () => {
     for (const d of [0, 0.3]) w.later(d, () => {
       if (h.dead) return;
       w.blast(h, h.x, h.z, h.y, r, 10 * P, { kind: 'bash', poise: 90, shove: 8, stun: 0.5, elem: LIGHT });
       if (h.fxOk()) {
-        c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.5, r, 0.45, { light: d ? 0 : 14, lightR: 8 }); c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.3, r * 0.8, 0.45);
-        for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + d; waves(c, h.x + Math.sin(a) * 0.6, h.y + 0.08, h.z + Math.cos(a) * 0.6, a, r, LIGHT, 0.45); }
+        c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.5, r * 0.7, 0.45, { light: d ? 0 : 14, lightR: 8 }); c.burst(FX.RING, LIGHT, h.x, h.y + 0.05, h.z, 0.3, r * 0.5, 0.45);
+        for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + d; waves(c, h.x + Math.sin(a) * 0.6, h.y + 0.08, h.z + Math.cos(a) * 0.6, a, r * 0.7, LIGHT, 0.45); }
         hfx(sim, HFX.THUD, h.x, h.y, h.z, 0.6);
       }
-      sim.event(EV.GROUND, h.x, h.y, h.z);
     });
   }, 0.5);
 };
@@ -2543,12 +2559,12 @@ CAST.grand_finale = (h, sim, m, { w, c, P, rk }) => {
     const a = i * 2.4 + rand(-0.3, 0.3), r = 1 + (i % 3) * 1.1, x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r, y = sim.world.height(x, z) + 2.4 + (i % 3) * 0.8, e = RAINBOW[(i * 3) % RAINBOW.length];
     const x0 = h.luteT ? h.luteT[0] : h.x, y0 = h.luteT ? h.luteT[1] : h.y + 1.1, z0 = h.luteT ? h.luteT[2] : h.z, T = 0.22;
     // (Up off the strings in a streak, and it bursts where it gets to.)
-    zone(w, h, T, (cc, q) => { const u = q.t / T, px = x0 + (x - x0) * u, py = y0 + (y - y0) * u + Math.sin(u * Math.PI) * 1.2, pz = z0 + (z - z0) * u; cc.fx(FX.ORB, e, px, py, pz, 0.12, 0, 1, 0, 0, 1, 5, 4); cc.fx(FX.TRAIL, e, px, py, pz, 0.08, x0 - x, y0 - y, z0 - z, 1.4, 0.7); }, null, () => {
+    zone(w, h, T, (cc, q) => { const u = q.t / T, px = x0 + (x - x0) * u, py = y0 + (y - y0) * u + Math.sin(u * Math.PI) * 1.2, pz = z0 + (z - z0) * u; cc.fx(FX.ORB, e, px, py, pz, 0.12, 0, 1, 0, 0, 1, 5, 4); const L = Math.hypot(x - x0, y - y0, z - z0) || 1; cc.fx(FX.TRAIL, e, px, py, pz, 0.08, (x0 - x) / L, (y0 - y) / L, (z0 - z) / L, 1.2, 0.7); }, null, () => {
       if (h.dead) return;
       w.blast(h, x, z, y - 2.4, 1.8, 8 * P, { kind: 'burn', poise: 30, quiet: true, elem: e });
       if (!h.fxOk()) return;
-      c.burst(FX.FLARE, e, x, y, z, 0.4, 1.4, 0.25, { light: 12, lightR: 8 });
-      c.burst(FX.GLYPH, e, x, y, z, 0.4, 2, 0.35, { ay: 0, len: rand(0, TAU), extra: GLYPHS.SPARK });
+      c.burst(FX.FLARE, e, x, y, z, 0.3, 0.9, 0.2, { light: 12, lightR: 8 });
+      c.burst(FX.GLYPH, e, x, y, z, 0.3, 1.2, 0.3, { ay: 0, len: rand(0, TAU), extra: GLYPHS.SPARK });
       for (let k = 0; k < 12; k++) { const q = k * 0.524, up = rand(-0.2, 0.7); drift(w, h, x, y, z, Math.sin(q) * 3.4, up * 3 - 1, Math.cos(q) * 3.4, k % 3 === 0 ? GLYPHS.NOTE : k % 3 === 1 ? GLYPHS.STAR4 : GLYPHS.CROTCHET, RAINBOW[(i + k) % RAINBOW.length], 0.17, 0.75, rand(-4, 4)); }
       hfx(sim, HFX.PLUCK, x, y, z, SCALE[(i * 2) % SCALE.length] + 12, 0.6);
     });
@@ -2560,11 +2576,10 @@ CAST.grand_finale = (h, sim, m, { w, c, P, rk }) => {
     if (h.fxOk()) {
       c.burst(FX.FLARE, LIGHT, cx, y + 1, cz, 0.6, 2.4, 0.25, { light: 22, lightR: 10 });
       c.burst(FX.COLUMN, LIGHT, cx, y, cz, 5, 8, 0.6, { len: 2.4 });
-      [LIGHT, ARCANE, FIRE].forEach((e, i) => c.burst(FX.RING, e, cx, y + 0.05, cz, 0.5, r + 0.6 - i * 1.1, 0.5 + i * 0.1));
+      [LIGHT, ARCANE, FIRE].forEach((e, i) => c.burst(FX.RING, e, cx, y + 0.05, cz, 0.5, r * 0.8 - i * 0.9, 0.5 + i * 0.1));
       for (let k = 0; k < 16; k++) { const q = k * 0.393; drift(w, h, cx + Math.sin(q) * r * 0.5, y + rand(3, 5), cz + Math.cos(q) * r * 0.5, Math.sin(q) * 1.2, -rand(1.5, 3), Math.cos(q) * 1.2, k % 3 ? GLYPHS.NOTE : GLYPHS.STAR6, RAINBOW[k % RAINBOW.length], 0.28, 1.1, rand(-3, 3)); }
       hfx(sim, HFX.THUD, cx, y, cz, 1); for (const n of [0, 4, 7, 12]) hfx(sim, HFX.PLUCK, cx, y + 1, cz, n, 0.7);
     }
-    sim.event(EV.GROUND, cx, y, cz);
   });
   // (And a bow of sorts: both arms up, as the last of it comes down.)
   w.later(2.55, () => { if (!h.dead && !h.swing && !h.jump) { h.tune = null; h.startSwing('LP_cheer', 1.0, [], () => {}, { still: true, from: 0.09, end: 0.15, hold: [0.13, 0.4] }); } });

@@ -836,7 +836,7 @@ export class Hero extends Knight {
       const h = this.handPos(hand ? 'l' : 'r');
       const out = o.out ?? Math.min(9, Math.hypot(m.x - this.x, m.z - this.z) + 2.5);
       const dir = Math.atan2(m.x - this.x, m.z - this.z);
-      (this.flight ||= []).push({ hand, t: 0, dur: 1.5, x0: h[0], y0: h[1], z0: h[2], dir, out, side: (hand ? -1 : 1) * wide, cross: o.cross, hitSet: new Set(), dmg: (o.dmg ?? 9) * this.power(), x: h[0], y: h[1], z: h[2], glow: tintOf(this) });
+      (this.flight ||= []).push({ hand, t: 0, dur: 1.5, x0: h[0], y0: h[1], z0: h[2], dir, out, side: (hand ? -1 : 1) * wide, cross: o.cross, hitSet: new Set(), dmg: (o.dmg ?? 9) * this.power(), x: h[0], y: h[1], z: h[2], glow: ELEM.LIGHT });
       sim.event(EV.WHOOSH, h[0], h[1], h[2]);
     };
     // (The clip lets go a quarter of the way in, as the hand comes past the shoulder; the rest of it is the arm coming down.)
@@ -1355,28 +1355,30 @@ export class Hero extends Knight {
     let across = 0, lift = 0.04, slide = 0, lean = 0, sway = 0, raise = 0, alongY = 0;
     let twist = 0, nod = 0, wheel = 0, wheelOut = 0;
     if (v === 1) {
-      // (Bent right over it, head down, the hand barely moving and quick: the body's the picture, bobbing with the run of notes.)
+      // (Bent right over it, head down over the neck, the wrist quick and small: the body's the picture, bobbing with the run.)
       const ph = t * 5.6 * bpm * 6.2832;
-      across = 0.04 * Math.sin(ph); lift = 0.03 + 0.015 * Math.cos(ph * 2);
+      across = 0.06 * Math.sin(ph * 1.5); lift = 0.03 + 0.02 * Math.cos(ph * 3);
       slide = 0.1 * Math.sin(t * 1.7 * bpm) + 0.04 * Math.sin(t * 4.3 * bpm);
-      lean = 0.34 + 0.05 * Math.sin(ph * 0.5); sway = 0.04 * Math.sin(t * 2.8 * bpm); nod = 0.3 + 0.08 * Math.sin(ph * 0.5);
+      lean = 0.46 + 0.05 * Math.sin(ph * 0.5); sway = 0.04 * Math.sin(t * 2.8 * bpm); nod = 0.34 + 0.08 * Math.sin(ph * 0.5);
     } else if (v === 2) {
-      // (One wheel a beat: up and over, held a moment at the top with the back arched; down through the strings in a
-      // twelfth of a second; past them to the hip, the body dipping after it; and round again.)
+      // (One wheel a beat: the hand at the strings; then out to his side and up over his shoulder, elbow first; a moment
+      // there with his back arched; down outside himself and through the strings in a twelfth of a second; past them to
+      // the hip, the body dipping after it.)
       const beat = (t * 0.95 * bpm) % 1;
-      const th = (beat < 0.5 ? 0.5 * ease(beat / 0.5) : beat < 0.62 ? 0.5 : beat < 0.74 ? 0.5 + 0.5 * ((beat - 0.62) / 0.12) ** 1.5 : 1) * 6.2832;
-      const past = beat >= 0.74 ? Math.sin((beat - 0.74) / 0.26 * Math.PI) : 0;
-      across = 0.16 * past; alongY = -0.08 * past; lift = 0.05; wheel = (1 - Math.cos(th)) * 0.5; wheelOut = Math.sin(th);
-      raise = 0.3 + 0.1 * Math.sin(th); lean = -0.22 * (1 - Math.cos(th)) * 0.5 + 0.16 * past; sway = 0.05 * Math.sin(th); twist = -0.18 * Math.sin(th) * 0.5 - 0.12 * past; nod = 0.14 * past;
+      const th = (beat < 0.28 ? 0 : beat < 0.55 ? 0.5 * ((beat - 0.28) / 0.27) ** 1.4 : beat < 0.65 ? 0.5 : beat < 0.75 ? 0.5 + 0.5 * ((beat - 0.65) / 0.1) ** 1.5 : 1) * 6.2832;
+      const past = beat >= 0.75 ? Math.sin((beat - 0.75) / 0.25 * Math.PI) : 0;
+      across = 0.26 * past; alongY = -0.1 * past; lift = 0.05; wheel = (1 - Math.cos(th)) * 0.5; wheelOut = Math.abs(Math.sin(th));
+      raise = 0.3 + 0.1 * Math.sin(th); lean = -0.22 * wheel + 0.18 * past; sway = 0.05 * Math.sin(th); twist = -0.16 * wheel - 0.12 * past; nod = 0.14 * past;
       slide = 0.04 * Math.sin(t * 1.3);
     } else {
-      // (Down on the beat a little harder than up, the hand well past the strings each way so the elbow's seen to work; the
-      // shoulders turn against it and the head comes down on the downstroke.)
+      // (Down on the beat harder than up, the hand a hand's breadth past the strings each way so the elbow's seen to work;
+      // the shoulders turn against it, the head comes down on the downstroke, and the left hand shifts on the neck.)
       const ph = t * 2.7 * bpm * 6.2832;
-      across = 0.15 * Math.sin(ph) + 0.03 * Math.sin(ph * 2); lift = 0.04 + 0.03 * Math.cos(ph);
-      slide = 0.03 * Math.round(Math.sin(t * 0.9 * bpm) * 1.4);
-      lean = 0.06 + 0.04 * Math.sin(ph); sway = 0.06 * Math.sin(ph * 0.5); twist = 0.09 * Math.sin(ph); nod = 0.1 * Math.max(0, Math.sin(ph));
+      across = 0.24 * Math.sin(ph) + 0.04 * Math.sin(ph * 2); lift = 0.04 + 0.04 * Math.cos(ph);
+      slide = 0.07 * Math.round(Math.sin(t * 1.35 * bpm * 6.2832 * 0.5) * 1.2);
+      lean = 0.07 + 0.06 * Math.sin(ph); sway = 0.06 * Math.sin(ph * 0.5); twist = 0.12 * Math.sin(ph); nod = 0.14 * Math.max(0, Math.sin(ph));
     }
+    lean += tn?.lean || 0;
     // The body with the tune, from the waist.
     if (lean || sway) {
       const sj = this.upperBody[0] * 3;
@@ -1407,8 +1409,8 @@ export class Hero extends Knight {
     let pr = at(across, L.strum + alongY, lift);
     // (The wheel: from the strings out and up to above his own right shoulder, the arm thrown high, and down before him onto them again.)
     if (wheel) {
-      const U = this.arms.r.u * 3, rx = -c, rz = s, top = [wt[U] + (rx * 0.26 + s * 0.1) * u, wt[U + 1] + 0.52 * u, wt[U + 2] + (rz * 0.26 + c * 0.1) * u];
-      pr = [pr[0] + (top[0] - pr[0]) * wheel + rx * wheelOut * 0.16, pr[1] + (top[1] - pr[1]) * wheel, pr[2] + (top[2] - pr[2]) * wheel + rz * wheelOut * 0.16];
+      const U = this.arms.r.u * 3, rx = -c, rz = s, top = [wt[U] + (rx * 0.3 + s * 0.05) * u, wt[U + 1] + 0.5 * u, wt[U + 2] + (rz * 0.3 + c * 0.05) * u];
+      pr = [pr[0] + (top[0] - pr[0]) * wheel + rx * wheelOut * 0.42 * u, pr[1] + (top[1] - pr[1]) * wheel, pr[2] + (top[2] - pr[2]) * wheel + rz * wheelOut * 0.42 * u];
     }
     put('r', pr, [-c * 0.9 - s * 0.5, -0.45, s * 0.9 - c * 0.5]);
     this.luteLive = true;

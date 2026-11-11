@@ -85,8 +85,9 @@ test('a bard takes up the lute to play: both hands come to it, the sword goes to
     let n0 = fx.events.length;
     step(2.5, () => { const m = hero.propMatrices; seen.push([m[60], m[61], m[62]]); });
     const lute = hero.propMatrices.slice(48, 64);
-    // (Bent over it to pick, his chest comes forward over the lute: still before him, by less.)
-    assert.ok(behind(lute) > 0.05, `played, the lute is before him (way ${v}: ${behind(lute).toFixed(2)})`);
+    // (Before his hips: bent over it to pick, his chest comes forward over the lute, so it's the hips it's measured from.)
+    const hips = hero.J.pelvis * 3, before = (lute[12] - hero.pose.wt[hips]) * Math.sin(hero.yaw) + (lute[14] - hero.pose.wt[hips + 2]) * Math.cos(hero.yaw);
+    assert.ok(before > 0.15, `played, the lute is before him (way ${v}: ${before.toFixed(2)})`);
     // Both hands within a hand's breadth of where they belong on it.
     const L = hero.luteP, at = (x, y, z) => [lute[12] + lute[0] * x + lute[4] * y + lute[8] * z, lute[13] + lute[1] * x + lute[5] * y + lute[9] * z, lute[14] + lute[2] * x + lute[6] * y + lute[10] * z];
     const hand = (side) => hero.handPos(side), gap = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
