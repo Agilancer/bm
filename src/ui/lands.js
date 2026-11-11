@@ -2,7 +2,7 @@
 // debug menu, behind the word 6669). All three came over from the first Bellmourn (Agilancer/Bellmourn src/fps: portals.js,
 // charms.js, debug.js); here they're one small window manager over the game's own pieces, which main.js hands in.
 //
-// The seals: a ring of pale stones with a blue face (src/core/sites.js SEALS), one by Bellmourn's south road and one at each
+// The seals: a round dais of runes with a swirl in it (src/core/sites.js SEALS), one by Bellmourn's south road and one at each
 // great place. Walk onto one and it wakes; E on a woken one lists every other woken one, and takes you there.
 //
 // The skull: beside the corner map (with the mouse free: Esc first), or the ` key. The right word opens the menu; the cheats

@@ -45,7 +45,7 @@ const boxKey = (i, j) => (i + 4096) * 8192 + j + 4096;
 
 export class World {
   constructor(data, interior) {
-    // The portals' platforms: level stone to stand on, over the land or the Warrens' floor (src/core/sites.js portalArch).
+    // The portals' platforms: level stone to stand on, over the land or the Warrens' floor (src/core/sites.js portalWall, seal).
     this.platforms = buildSites().floors;
     // The pines' trunks, by the cell they're in. As far as you can go, and no further.
     // (Worked out a cell at a time, the first time anyone comes near it: the land's 11 km across.)
