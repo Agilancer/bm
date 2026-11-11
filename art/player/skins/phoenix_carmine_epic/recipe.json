@@ -7,11 +7,11 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/phoenix_carmine_epic_cloth.png",
+   "swatch": "swatches/fx2_carmine.png",
    "scale": 0.14,
    "tile": "repeat",
    "shading": 1,
-   "bright": 1.0
+   "bright": 0.7
   },
   "trim": {
    "swatch": "swatches/phoenix_carmine_epic_metal.png",
@@ -33,9 +33,9 @@
   "head": {
    "pattern": {
     "image": "swatches/pat_feather.png",
-    "color": "#e0b25e",
-    "scale": 0.1,
-    "strength": 0.3,
+    "color": "#c99a46",
+    "scale": 0.12,
+    "strength": 0.2,
     "tile": "repeat"
    },
    "decals": [
@@ -55,46 +55,33 @@
      "under_trim": false,
      "opacity": 1.0
     }
-   ]
+   ],
+   "cloth": {
+    "swatch": "swatches/fx2_hat.png",
+    "scale": 0.14,
+    "tile": "repeat",
+    "shading": 1,
+    "bright": 0.65
+   }
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/gold.png",
+    "swatch": "swatches/fx2_amber.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.78,
-    "shading": 1.0
+    "bright": 0.7,
+    "shading": 0.95,
+    "keep": 0.15
    },
    "keep_trim": true,
-   "decals": [
-    {
-     "image": "decals/wing.png",
-     "anchor": "shoulder_left",
-     "size": 0.12,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    },
-    {
-     "image": "decals/wing_mirror.png",
-     "anchor": "shoulder_right",
-     "size": 0.12,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    }
-   ],
-   "trim": {
-    "color": "#8a2420",
-    "bright": 0.8
-   }
+   "decals": []
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_feather.png",
-    "color": "#e0b25e",
-    "scale": 0.12,
-    "strength": 0.36,
+    "color": "#d4a84e",
+    "scale": 0.15,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [
@@ -128,15 +115,12 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/gold.png",
+    "swatch": "swatches/fx2_amber.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.74,
-    "shading": 1.0
-   },
-   "trim": {
-    "color": "#8a2420",
-    "bright": 0.8
+    "bright": 0.66,
+    "shading": 0.95,
+    "keep": 0.15
    },
    "leather": {
     "swatch": "swatches/darkleather.png",

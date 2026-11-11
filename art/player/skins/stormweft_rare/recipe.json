@@ -41,55 +41,62 @@
    },
    "decals": [
     {
-     "image": "decals/thundercloud.png",
+     "image": "decals/stormcloud_simple.png",
      "anchor": "hat",
-     "size": 0.105,
+     "size": 0.11,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    }
-   ]
-  },
-  "shoulders": {
-   "cloth": {
-    "swatch": "swatches/violet.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 1.05,
-    "shading": 1.1
-   },
-   "pattern": {
-    "image": "swatches/pat_steps.png",
-    "color": "#8468b8",
-    "scale": 0.18,
-    "strength": 0.4,
-    "tile": "repeat"
-   },
-   "decals": [
-    {
-     "image": "decals/thundercloud.png",
-     "anchor": "shoulder_left",
-     "size": 0.085,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    },
-    {
-     "image": "decals/thundercloud.png",
-     "anchor": "shoulder_right",
-     "size": 0.085,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ],
    "leather": {
-    "swatch": "swatches/violet.png",
-    "scale": 0.12,
+    "swatch": "swatches/sw_plum_leather.png",
     "tile": "repeat",
-    "bright": 0.756,
-    "shading": 0.45
+    "scale": 0.1,
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "pattern": {
+    "image": "swatches/pat_steps.png",
+    "color": "#0e1c2c",
+    "scale": 0.2,
+    "strength": 0.35,
+    "tile": "repeat"
    }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/sw_plum.png",
+    "tile": "repeat",
+    "scale": 0.12,
+    "bright": 0.72,
+    "shading": 0.9,
+    "keep": 0
+   },
+   "leather": {
+    "swatch": "swatches/sw_plum_leather.png",
+    "tile": "repeat",
+    "scale": 0.1,
+    "bright": 0.9,
+    "shading": 0.8,
+    "keep": 0
+   },
+   "decals": [
+    {
+     "image": "decals/stormcloud_simple.png",
+     "anchor": "shoulder_left",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/stormcloud_simple.png",
+     "anchor": "shoulder_right",
+     "size": 0.09,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
   },
   "chest": {
    "pattern": {
@@ -101,15 +108,14 @@
    },
    "decals": [
     {
-     "image": "decals/thundercloud.png",
+     "image": "decals/stormcloud.png",
      "anchor": "back",
-     "size": 0.22,
+     "size": 0.225,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.06,
       0
      ]
     }
@@ -117,12 +123,12 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/violet_leather.png",
-    "scale": 0.1,
+    "swatch": "swatches/sw_plum_leather.png",
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 1.0,
-    "keep": 0.08
+    "scale": 0.1,
+    "bright": 0.85,
+    "shading": 0.95,
+    "keep": 0.1
    },
    "leather": {
     "swatch": "swatches/trousers.png",

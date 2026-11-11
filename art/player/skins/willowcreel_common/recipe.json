@@ -10,9 +10,10 @@
    "swatch": "swatches/willowcreel_common_cloth.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.06,
+   "bright": 0.93,
    "shading": 0.88,
-   "keep": 0
+   "keep": 0,
+   "color": "#dfe2cc"
   },
   "trim": {
    "swatch": "swatches/willowcreel_common_trim.png",
@@ -37,18 +38,23 @@
     "swatch": "swatches/willowcreel_common_cloth.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.04,
+    "bright": 0.84,
     "shading": 0.88,
-    "keep": 0
+    "keep": 0,
+    "color": "#dfe2cc"
    },
    "decals": [
     {
-     "image": "decals/willowcreel_common.png",
+     "image": "decals/creel.png",
      "anchor": "hat",
-     "size": 0.092,
-     "mode": "gilt",
-     "color": "#c1b69c",
-     "under_trim": false
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
     }
    ]
   },
@@ -72,25 +78,16 @@
    },
    "decals": [
     {
-     "image": "decals/willowcreel_common.png",
+     "image": "decals/creel.png",
      "anchor": "back",
-     "size": 0.18,
-     "mode": "gilt",
-     "color": "#c1b69c",
+     "size": 0.2,
+     "mode": "paint",
      "under_trim": false,
      "offset": [
       0,
-      -0.04,
+      -0.05,
       0
      ]
-    },
-    {
-     "image": "decals/willowcreel_common.png",
-     "anchor": "tabard",
-     "size": 0.075,
-     "mode": "gilt",
-     "color": "#c1b69c",
-     "under_trim": false
     }
    ]
   },
@@ -119,7 +116,8 @@
     "tile": "repeat",
     "bright": 0.92,
     "shading": 0.88,
-    "keep": 0
+    "keep": 0,
+    "color": "#dfe2cc"
    },
    "leather": {
     "swatch": "swatches/willowcreel_common_leather.png",

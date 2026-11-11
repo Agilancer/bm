@@ -7,10 +7,10 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/ember2.png",
+   "swatch": "swatches/fx2_ember.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 0.82,
+   "bright": 0.8,
    "shading": 1.0
   },
   "trim": {
@@ -32,26 +32,31 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/hat2.png",
+    "swatch": "swatches/fx2_hat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.85,
+    "bright": 0.75,
     "shading": 1.0
    },
    "pattern": {
     "image": "swatches/flamescale2.png",
-    "color": "#ea8f2e",
-    "scale": 0.2,
-    "strength": 0.45,
+    "color": "#5a1008",
+    "scale": 0.16,
+    "strength": 0.22,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/salamander.png",
+     "image": "decals/sal_s.png",
      "anchor": "hat",
-     "size": 0.09,
+     "size": 0.115,
      "mode": "paint",
-     "under_trim": false
+     "under_trim": false,
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
     },
     {
      "image": "decals/flame.png",
@@ -64,61 +69,46 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/mantle2.png",
+    "swatch": "swatches/fx2_mantle.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.8,
+    "bright": 0.55,
     "shading": 1.0
    },
    "pattern": {
     "image": "swatches/flamescale2.png",
-    "color": "#5d7090",
-    "scale": 0.2,
-    "strength": 0.45,
+    "color": "#3a4a6a",
+    "scale": 0.16,
+    "strength": 0.14,
     "tile": "repeat"
    },
-   "decals": [
-    {
-     "image": "decals/salamander.png",
-     "anchor": "shoulder_left",
-     "size": 0.1,
-     "mode": "paint",
-     "under_trim": false
-    },
-    {
-     "image": "decals/salamander.png",
-     "anchor": "shoulder_right",
-     "size": 0.1,
-     "mode": "paint",
-     "under_trim": false
-    }
-   ]
+   "decals": []
   },
   "chest": {
    "pattern": {
     "image": "swatches/flamescale2.png",
-    "color": "#ea8f2e",
-    "scale": 0.24,
-    "strength": 0.52,
+    "color": "#6e1208",
+    "scale": 0.18,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/salamander.png",
+     "image": "decals/sal.png",
      "anchor": "back",
-     "size": 0.225,
+     "size": 0.25,
      "mode": "paint",
      "under_trim": false,
      "offset": [
       0,
-      -0.058,
+      -0.062,
       0
      ]
     },
     {
-     "image": "decals/salamander.png",
+     "image": "decals/sal_s.png",
      "anchor": "tabard",
-     "size": 0.125,
+     "size": 0.135,
      "mode": "paint",
      "under_trim": false
     }
@@ -126,17 +116,17 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/mantle2.png",
+    "swatch": "swatches/fx2_mantle.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.78,
+    "bright": 0.52,
     "shading": 1.0
    },
    "pattern": {
     "image": "swatches/flamescale2.png",
-    "color": "#5d7090",
-    "scale": 0.2,
-    "strength": 0.45,
+    "color": "#3a4a6a",
+    "scale": 0.16,
+    "strength": 0.14,
     "tile": "repeat"
    },
    "leather": {

@@ -7,159 +7,123 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/beaconwake_rare_cloth.png",
-   "scale": 0.12,
+   "swatch": "swatches/bw_cloth.png",
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.88,
+   "scale": 0.14,
+   "bright": 0.9,
+   "shading": 0.9,
    "keep": 0
   },
   "trim": {
-   "swatch": "swatches/beaconwake_rare_trim.png",
-   "scale": 0.09,
+   "swatch": "swatches/bw_trim.png",
    "tile": "repeat",
-   "bright": 1.02,
-   "shading": 0.7,
+   "scale": 0.09,
+   "bright": 1.1,
+   "shading": 0.8,
    "keep": 0
   },
   "leather": {
-   "swatch": "swatches/beaconwake_rare_leather.png",
-   "scale": 0.09,
+   "swatch": "swatches/bw_leather.png",
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.88,
-   "keep": 0.12
+   "scale": 0.1,
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.15
   }
  },
  "parts": {
   "head": {
-   "cloth": {
-    "swatch": "swatches/beaconwake_rare_cloth.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 1.04,
-    "shading": 0.88,
-    "keep": 0
+   "pattern": {
+    "image": "swatches/bw_waves.png",
+    "color": "#a9c4de",
+    "scale": 0.16,
+    "strength": 0.22,
+    "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/beaconwake_rare.png",
+     "image": "decals/lighthouse_simple.png",
      "anchor": "hat",
-     "size": 0.092,
-     "mode": "gilt",
-     "color": "#e1d8be",
+     "size": 0.1,
+     "mode": "paint",
      "under_trim": false
     }
-   ],
-   "pattern": {
-    "image": "swatches/beaconwake_rare_pattern.png",
-    "color": "#c9c0a0",
-    "scale": 0.25,
-    "strength": 0.14,
-    "tile": "repeat"
-   }
+   ]
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/beaconwake_rare_mantle.png",
-    "scale": 0.12,
+    "swatch": "swatches/bw_mantle.png",
     "tile": "repeat",
-    "bright": 1.03,
-    "shading": 0.88,
+    "scale": 0.14,
+    "bright": 0.9,
+    "shading": 0.7,
     "keep": 0
-   },
-   "pattern": {
-    "image": "swatches/beaconwake_rare_pattern.png",
-    "color": "#c9c0a0",
-    "scale": 0.25,
-    "strength": 0.25,
-    "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/beaconwake_rare.png",
+     "image": "decals/lighthouse_simple.png",
      "anchor": "shoulder_left",
-     "size": 0.078,
-     "mode": "gilt",
-     "color": "#e1d8be",
+     "size": 0.09,
+     "mode": "paint",
      "under_trim": false
     },
     {
-     "image": "decals/beaconwake_rare.png",
+     "image": "decals/lighthouse_simple.png",
      "anchor": "shoulder_right",
-     "size": 0.078,
-     "mode": "gilt",
-     "color": "#e1d8be",
+     "size": 0.09,
+     "mode": "paint",
      "under_trim": false
     }
    ]
   },
   "chest": {
    "pattern": {
-    "image": "swatches/beaconwake_rare_pattern.png",
-    "color": "#c9c0a0",
-    "scale": 0.25,
-    "strength": 0.33,
+    "image": "swatches/bw_waves.png",
+    "color": "#a9c4de",
+    "scale": 0.16,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/beaconwake_rare.png",
+     "image": "decals/lighthouse.png",
      "anchor": "back",
-     "size": 0.21,
-     "mode": "gilt",
-     "color": "#e1d8be",
+     "size": 0.235,
+     "mode": "paint",
      "under_trim": false,
      "offset": [
       0,
-      -0.04,
+      -0.055,
       0
      ]
     },
     {
-     "image": "decals/beaconwake_rare.png",
+     "image": "decals/lighthouse_simple.png",
      "anchor": "tabard",
      "size": 0.1,
-     "mode": "gilt",
-     "color": "#e1d8be",
+     "mode": "paint",
      "under_trim": false
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/beaconwake_rare_mantle.png",
+    "swatch": "swatches/bw_greave.png",
+    "tile": "repeat",
     "scale": 0.12,
-    "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.88,
+    "bright": 0.92,
+    "shading": 0.6,
     "keep": 0
-   },
-   "leather": {
-    "swatch": "swatches/beaconwake_rare_leather.png",
-    "scale": 0.09,
-    "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.88,
-    "keep": 0.12
    }
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/beaconwake_rare_cloth.png",
-    "scale": 0.12,
+    "swatch": "swatches/bw_leather.png",
     "tile": "repeat",
-    "bright": 0.92,
-    "shading": 0.88,
-    "keep": 0
-   },
-   "leather": {
-    "swatch": "swatches/beaconwake_rare_leather.png",
-    "scale": 0.09,
-    "tile": "repeat",
-    "bright": 1.13,
-    "shading": 0.88,
-    "keep": 0.14
+    "scale": 0.1,
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.15
    }
   }
  }

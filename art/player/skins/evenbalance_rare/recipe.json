@@ -7,159 +7,161 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/evenbalance_rare_cloth.png",
+   "swatch": "swatches/blue_velvet.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.88,
-   "keep": 0
+   "bright": 1.0,
+   "shading": 0.9
   },
   "trim": {
-   "swatch": "swatches/evenbalance_rare_trim.png",
-   "scale": 0.09,
-   "tile": "repeat",
-   "bright": 1.02,
-   "shading": 0.7,
-   "keep": 0
+   "color": "#cda653",
+   "bright": 1.0
   },
   "leather": {
-   "swatch": "swatches/evenbalance_rare_leather.png",
-   "scale": 0.09,
+   "swatch": "swatches/navy_leather.png",
+   "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.88,
-   "keep": 0.12
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.15
   }
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/evenbalance_rare_cloth.png",
+    "swatch": "swatches/blue_velvet.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.04,
-    "shading": 0.88,
-    "keep": 0
+    "bright": 0.95,
+    "shading": 0.9
+   },
+   "pattern": {
+    "image": "swatches/pat_ogee.png",
+    "color": "#7f9bd0",
+    "scale": 0.17,
+    "strength": 0.2,
+    "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/scales.png",
+     "image": "decals/scales_small.png",
      "anchor": "hat",
-     "size": 0.12,
+     "size": 0.1,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
-   ],
-   "pattern": {
-    "image": "swatches/evenbalance_rare_pattern.png",
-    "color": "#c6c9c4",
-    "scale": 0.25,
-    "strength": 0.14,
-    "tile": "repeat"
-   }
+   ]
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/evenbalance_rare_mantle.png",
+    "swatch": "swatches/ivory_damask.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.03,
-    "shading": 0.88,
-    "keep": 0
+    "bright": 0.92,
+    "shading": 0.9
    },
    "pattern": {
-    "image": "swatches/evenbalance_rare_pattern.png",
-    "color": "#c6c9c4",
-    "scale": 0.25,
-    "strength": 0.25,
+    "image": "swatches/pat_leaves.png",
+    "color": "#8a7446",
+    "scale": 0.15,
+    "strength": 0.42,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/scales.png",
+     "image": "decals/scales_small.png",
      "anchor": "shoulder_left",
      "size": 0.085,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     },
     {
-     "image": "decals/scales.png",
+     "image": "decals/scales_small.png",
      "anchor": "shoulder_right",
      "size": 0.085,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
   "chest": {
    "pattern": {
-    "image": "swatches/evenbalance_rare_pattern.png",
-    "color": "#c6c9c4",
-    "scale": 0.25,
-    "strength": 0.33,
+    "image": "swatches/pat_ogee.png",
+    "color": "#86a2d6",
+    "scale": 0.17,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [
     {
      "image": "decals/scales.png",
      "anchor": "back",
-     "size": 0.21,
+     "size": 0.22,
      "mode": "paint",
      "under_trim": false,
      "offset": [
       0,
-      -0.065,
+      -0.06,
       0
-     ],
-     "opacity": 1.0
+     ]
     },
     {
-     "image": "decals/scales.png",
+     "image": "decals/scales_small.png",
      "anchor": "tabard",
      "size": 0.11,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/evenbalance_rare_mantle.png",
-    "scale": 0.12,
+    "swatch": "swatches/oldgold.png",
+    "scale": 0.08,
     "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.88,
-    "keep": 0
+    "bright": 0.92,
+    "shading": 0.9
    },
    "leather": {
-    "swatch": "swatches/evenbalance_rare_leather.png",
-    "scale": 0.09,
+    "swatch": "swatches/tan_leather.png",
+    "scale": 0.1,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.88,
-    "keep": 0.12
-   }
+    "shading": 0.9,
+    "keep": 0.15
+   },
+   "decals": [
+    {
+     "image": "decals/scales_small.png",
+     "anchor": "knee_left",
+     "size": 0.065,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/scales_small.png",
+     "anchor": "knee_right",
+     "size": 0.065,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/evenbalance_rare_cloth.png",
+    "swatch": "swatches/blue_velvet.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.92,
-    "shading": 0.88,
-    "keep": 0
+    "bright": 0.85,
+    "shading": 0.9
    },
    "leather": {
-    "swatch": "swatches/evenbalance_rare_leather.png",
-    "scale": 0.09,
+    "swatch": "swatches/navy_leather.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.13,
-    "shading": 0.88,
-    "keep": 0.14
+    "bright": 1.1,
+    "shading": 0.9,
+    "keep": 0.15
    }
   }
  }

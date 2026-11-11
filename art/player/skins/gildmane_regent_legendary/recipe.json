@@ -7,49 +7,57 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/ivory.png",
-   "scale": 0.12,
+   "swatch": "swatches/gm_ivory.png",
+   "scale": 0.14,
    "tile": "repeat",
-   "bright": 1.12,
-   "shading": 0.95
+   "bright": 1.0,
+   "shading": 0.75
   },
   "trim": {
-   "swatch": "swatches/gold.png",
+   "swatch": "swatches/gm_gold.png",
    "scale": 0.075,
    "tile": "repeat",
    "bright": 1.15,
-   "shading": 0.7
+   "shading": 0.75
   },
   "leather": {
-   "swatch": "swatches/navyleather.png",
+   "swatch": "swatches/gm_navy.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.86,
-   "keep": 0.07
+   "bright": 1.05,
+   "shading": 0.88,
+   "keep": 0.1
   }
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/blue.png",
-    "scale": 0.12,
+    "swatch": "swatches/gm_blue.png",
+    "scale": 0.14,
     "tile": "repeat",
-    "bright": 1.1,
-    "shading": 0.9
+    "bright": 1.0,
+    "shading": 0.95
    },
    "pattern": {
-    "image": "swatches/pat_rosettes.png",
-    "color": "#e2b94e",
-    "scale": 0.2,
-    "strength": 0.55,
+    "image": "swatches/pat_mane.png",
+    "color": "#101c44",
+    "scale": 0.15,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/lion_roundel.png",
+     "image": "decals/lion_small.png",
      "anchor": "hat",
      "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/lion_small.png",
+     "anchor": "hat_back",
+     "size": 0.09,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -58,22 +66,22 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/blue.png",
-    "scale": 0.12,
+    "swatch": "swatches/gm_blue.png",
+    "scale": 0.14,
     "tile": "repeat",
-    "bright": 1.1,
-    "shading": 0.9
+    "bright": 1.0,
+    "shading": 0.95
    },
    "pattern": {
-    "image": "swatches/pat_rosettes.png",
-    "color": "#e2b94e",
-    "scale": 0.2,
-    "strength": 0.55,
+    "image": "swatches/pat_mane.png",
+    "color": "#101c44",
+    "scale": 0.15,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/lion_roundel.png",
+     "image": "decals/lion_small.png",
      "anchor": "shoulder_left",
      "size": 0.105,
      "mode": "paint",
@@ -81,7 +89,7 @@
      "opacity": 1.0
     },
     {
-     "image": "decals/lion_roundel.png",
+     "image": "decals/lion_small.png",
      "anchor": "shoulder_right",
      "size": 0.105,
      "mode": "paint",
@@ -92,64 +100,63 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/pat_rosettes.png",
-    "color": "#b8862a",
-    "scale": 0.27,
-    "strength": 0.5,
+    "image": "swatches/pat_mane.png",
+    "color": "#a47c2c",
+    "scale": 0.2,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/lion_roundel.png",
+     "image": "decals/lion_big.png",
      "anchor": "back",
-     "size": 0.26,
+     "size": 0.2,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.07,
+      -0.08,
       0
      ]
     },
     {
-     "image": "decals/lion_roundel.png",
+     "image": "decals/lion_small.png",
      "anchor": "tabard",
      "size": 0.115,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/blue.png",
-    "scale": 0.12,
+    "swatch": "swatches/gm_blueleather.png",
+    "scale": 0.1,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.9
-   },
-   "pattern": {
-    "image": "swatches/pat_rosettes.png",
-    "color": "#e2b94e",
-    "scale": 0.15,
-    "strength": 0.55,
-    "tile": "repeat"
+    "shading": 0.95,
+    "keep": 0.15
    },
    "decals": [
     {
-     "image": "decals/lion_roundel.png",
+     "image": "decals/lion_small.png",
      "anchor": "knee_left",
-     "size": 0.065,
+     "size": 0.07,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     },
     {
-     "image": "decals/lion_roundel.png",
+     "image": "decals/lion_small.png",
      "anchor": "knee_right",
-     "size": 0.065,
+     "size": 0.07,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -158,11 +165,11 @@
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/blue.png",
-    "scale": 0.12,
+    "swatch": "swatches/gm_blueleather.png",
+    "scale": 0.1,
     "tile": "repeat",
     "bright": 0.9,
-    "shading": 0.9
+    "shading": 0.95
    }
   }
  }

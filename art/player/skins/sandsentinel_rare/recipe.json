@@ -10,8 +10,8 @@
    "swatch": "swatches/ss_sand.png",
    "scale": 0.08,
    "tile": "repeat",
-   "bright": 1.0,
-   "shading": 0.75,
+   "bright": 0.93,
+   "shading": 0.65,
    "keep": 0.0
   },
   "trim": {
@@ -45,7 +45,7 @@
     {
      "image": "decals/hourglass_brass.png",
      "anchor": "hat",
-     "size": 0.115,
+     "size": 0.125,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -92,7 +92,7 @@
     {
      "image": "decals/hourglass_wine.png",
      "anchor": "back",
-     "size": 0.24,
+     "size": 0.21,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,

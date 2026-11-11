@@ -7,18 +7,15 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/body.png",
-   "scale": 0.1,
+   "swatch": "swatches/champagne.png",
+   "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.05,
-   "shading": 1.0
+   "bright": 0.88,
+   "shading": 0.8
   },
   "trim": {
-   "swatch": "swatches/metal.png",
-   "scale": 0.09,
-   "tile": "repeat",
-   "bright": 1.0,
-   "shading": 0.9
+   "color": "#c69c45",
+   "bright": 1.0
   },
   "leather": {
    "swatch": "swatches/belt.png",
@@ -32,17 +29,17 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/hat.png",
-    "scale": 0.1,
+    "swatch": "swatches/champagne_hat.png",
+    "scale": 0.12,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 1.0
+    "shading": 0.9
    },
    "pattern": {
     "image": "swatches/pat_suns.png",
-    "color": "#b88a30",
+    "color": "#96691f",
     "scale": 0.16,
-    "strength": 0.5,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [
@@ -66,10 +63,10 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/guards.png",
-    "scale": 0.1,
+    "swatch": "swatches/antique_gold.png",
+    "scale": 0.08,
     "tile": "repeat",
-    "bright": 0.95,
+    "bright": 0.82,
     "shading": 0.85
    },
    "decals": [
@@ -94,9 +91,9 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_suns.png",
-    "color": "#b88a30",
-    "scale": 0.2,
-    "strength": 0.55,
+    "color": "#96691f",
+    "scale": 0.19,
+    "strength": 0.68,
     "tile": "repeat"
    },
    "decals": [
@@ -125,18 +122,18 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/guards.png",
-    "scale": 0.1,
+    "swatch": "swatches/antique_gold.png",
+    "scale": 0.08,
     "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.85
+    "bright": 0.8,
+    "shading": 0.9
    },
    "leather": {
-    "swatch": "swatches/trouser.png",
+    "swatch": "swatches/bronze_leather.png",
     "scale": 0.1,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.95,
+    "shading": 0.9,
     "keep": 0.1
    },
    "decals": [

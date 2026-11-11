@@ -7,18 +7,18 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/candlewick_rare_cloth.png",
+   "swatch": "swatches/c2_amber.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.1,
+   "bright": 0.8,
    "shading": 0.9,
-   "keep": 0
+   "keep": 0.0
   },
   "trim": {
    "swatch": "swatches/candlewick_rare_metal.png",
    "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 1.12,
    "shading": 0.7,
    "keep": 0
   },
@@ -34,91 +34,104 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/candlewick_rare_mantle.png",
+    "swatch": "swatches/c2_wine.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 0.72,
+    "shading": 0.95,
+    "keep": 0.0
    },
    "decals": [
     {
-     "image": "decals/candlewick_rare.png",
+     "image": "decals/candle.png",
      "anchor": "hat",
-     "size": 0.092,
-     "mode": "gilt",
-     "color": "#e1d3b7",
-     "under_trim": false
+     "size": 0.115,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
     }
    ]
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/candlewick_rare_mantle.png",
+    "swatch": "swatches/c2_wine.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 0.76,
+    "shading": 0.95,
+    "keep": 0.0
    },
    "pattern": {
-    "image": "swatches/candlewick_rare_pattern.png",
-    "color": "#bca77a",
-    "scale": 0.23,
-    "strength": 0.13,
+    "image": "swatches/c2_drops.png",
+    "color": "#c9a050",
+    "scale": 0.16,
+    "strength": 0.28,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/candlewick_rare.png",
+     "image": "decals/candle.png",
      "anchor": "shoulder_left",
-     "size": 0.08,
-     "mode": "gilt",
-     "color": "#e1d3b7",
-     "under_trim": false
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/candle.png",
+     "anchor": "shoulder_right",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
   "chest": {
    "pattern": {
-    "image": "swatches/candlewick_rare_pattern.png",
-    "color": "#b49b6e",
-    "scale": 0.24,
-    "strength": 0.22,
+    "image": "swatches/c2_drops.png",
+    "color": "#6e2a14",
+    "scale": 0.2,
+    "strength": 0.5,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/candlewick_rare.png",
+     "image": "decals/candle_roundel.png",
      "anchor": "back",
-     "size": 0.21,
-     "mode": "gilt",
-     "color": "#e1d3b7",
+     "size": 0.22,
+     "mode": "paint",
      "under_trim": false,
+     "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.055,
       0
      ]
     },
     {
-     "image": "decals/candlewick_rare.png",
+     "image": "decals/candle_roundel.png",
      "anchor": "tabard",
-     "size": 0.1,
-     "mode": "gilt",
-     "color": "#e1d3b7",
-     "under_trim": false
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/candlewick_rare_mantle.png",
-    "scale": 0.12,
+    "swatch": "swatches/c2_winelea.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.9,
+    "bright": 0.8,
     "shading": 0.9,
-    "keep": 0
+    "keep": 0.15
    },
    "leather": {
     "swatch": "swatches/candlewick_rare_leather.png",
@@ -132,19 +145,19 @@
     "swatch": "swatches/candlewick_rare_metal.png",
     "scale": 0.075,
     "tile": "repeat",
-    "bright": 0.96,
+    "bright": 1.08,
     "shading": 0.7,
     "keep": 0
    }
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/candlewick_rare_cloth.png",
+    "swatch": "swatches/c2_amber.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.9,
+    "bright": 0.66,
     "shading": 0.9,
-    "keep": 0
+    "keep": 0.0
    },
    "leather": {
     "swatch": "swatches/candlewick_rare_leather.png",

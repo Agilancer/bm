@@ -7,87 +7,76 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/fx_emerald.png",
+   "swatch": "swatches/co2_emerald.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 0.75,
-   "shading": 0.9
+   "bright": 0.72,
+   "shading": 0.95,
+   "keep": 0.0
   },
   "trim": {
-   "swatch": "swatches/fx_gold.png",
+   "swatch": "swatches/co2_gold.png",
    "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.7
+   "bright": 1.12,
+   "shading": 0.7,
+   "keep": 0.0
   },
   "leather": {
-   "swatch": "swatches/fx_leather.png",
+   "swatch": "swatches/co2_brown.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.1,
+   "bright": 1.0,
    "shading": 0.86,
-   "keep": 0.07
+   "keep": 0.08
   },
   "keep_trim": true
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/fx_hat.png",
+    "swatch": "swatches/co2_hat.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.75,
-    "shading": 0.9
-   },
-   "pattern": {
-    "image": "swatches/fx_fret.png",
-    "color": "#e2b545",
-    "scale": 0.2,
-    "strength": 0.5,
-    "tile": "repeat"
+    "bright": 0.72,
+    "shading": 0.95,
+    "keep": 0.0
    },
    "decals": [
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/coffer2_s.png",
      "anchor": "hat",
-     "size": 0.11,
+     "size": 0.125,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      0.01,
+      0.012,
       0
      ]
-    },
-    {
-     "image": "decals/fx_crest.png",
-     "anchor": "hat_back",
-     "size": 0.1,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
     }
    ]
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/fx_bronze.png",
+    "swatch": "swatches/co2_bronze.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.9
+    "bright": 0.72,
+    "shading": 0.95,
+    "keep": 0.0
    },
    "pattern": {
-    "image": "swatches/fx_fret.png",
-    "color": "#e2b545",
-    "scale": 0.2,
+    "image": "swatches/co2_links.png",
+    "color": "#c9a045",
+    "scale": 0.16,
     "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/coffer2_s.png",
      "anchor": "shoulder_left",
      "size": 0.11,
      "mode": "paint",
@@ -95,7 +84,7 @@
      "opacity": 1.0
     },
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/coffer2_s.png",
      "anchor": "shoulder_right",
      "size": 0.11,
      "mode": "paint",
@@ -106,38 +95,30 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/fx_fret.png",
-    "color": "#e2b545",
-    "scale": 0.22,
-    "strength": 0.55,
+    "image": "swatches/co2_links.png",
+    "color": "#c9a045",
+    "scale": 0.2,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/coffer2.png",
      "anchor": "back",
-     "size": 0.215,
+     "size": 0.22,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.055,
+      -0.06,
       0
      ]
     },
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/coffer2_s.png",
      "anchor": "tabard",
      "size": 0.12,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    },
-    {
-     "image": "decals/fx_crest.png",
-     "anchor": "tabard_back",
-     "size": 0.13,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -146,29 +127,24 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/fx_bronzeleather.png",
-    "scale": 0.1,
-    "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.9
-   },
-   "pattern": {
-    "image": "swatches/fx_fret.png",
-    "color": "#e2b545",
-    "scale": 0.2,
-    "strength": 0.3,
-    "tile": "repeat"
-   },
-   "leather": {
-    "swatch": "swatches/fx_leather.png",
+    "swatch": "swatches/co2_bronzemetal.png",
     "scale": 0.1,
     "tile": "repeat",
     "bright": 0.95,
-    "shading": 0.86
+    "shading": 0.85,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/co2_brown.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.86,
+    "keep": 0.0
    },
    "decals": [
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/coffer2_s.png",
      "anchor": "knee_left",
      "size": 0.07,
      "mode": "paint",
@@ -176,7 +152,7 @@
      "opacity": 1.0
     },
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/coffer2_s.png",
      "anchor": "knee_right",
      "size": 0.07,
      "mode": "paint",
@@ -185,6 +161,23 @@
     }
    ]
   },
-  "feet": {}
+  "feet": {
+   "cloth": {
+    "swatch": "swatches/co2_brown.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.1,
+    "shading": 0.86,
+    "keep": 0.0
+   },
+   "leather": {
+    "swatch": "swatches/co2_brown.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 0.86,
+    "keep": 0.1
+   }
+  }
  }
 }

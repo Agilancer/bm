@@ -8,17 +8,18 @@
  "defaults": {
   "cloth": {
    "swatch": "swatches/peacock_astromancer_epic_cloth.png",
-   "scale": 0.14,
+   "scale": 0.2,
    "tile": "repeat",
-   "shading": 1,
-   "bright": 1.0
+   "bright": 1.0,
+   "shading": 1.0,
+   "keep": 0.0
   },
   "trim": {
    "swatch": "swatches/peacock_astromancer_epic_metal.png",
    "scale": 0.09,
    "tile": "repeat",
    "shading": 1,
-   "bright": 1.0
+   "bright": 1.05
   },
   "leather": {
    "swatch": "swatches/peacock_astromancer_epic_leather.png",
@@ -31,106 +32,110 @@
  },
  "parts": {
   "head": {
-   "pattern": {
-    "image": "swatches/peacock_astromancer_epic_brocade.png",
-    "color": "#cfb87b",
-    "strength": 0.3,
-    "scale": 0.22,
-    "tile": "repeat"
-   },
    "decals": [
     {
-     "image": "decals/moon.png",
+     "image": "decals/peacock_eye.png",
      "anchor": "hat",
-     "size": 0.092,
-     "mode": "gilt",
-     "color": "#cfb87b",
+     "size": 0.085,
+     "mode": "paint",
      "under_trim": false
     },
     {
-     "image": "decals/moon.png",
+     "image": "decals/peacock_eye.png",
      "anchor": "hat_back",
-     "size": 0.09,
-     "mode": "gilt",
-     "color": "#cfb87b",
+     "size": 0.085,
+     "mode": "paint",
      "under_trim": false
     }
-   ]
+   ],
+   "cloth": {
+    "swatch": "swatches/peacock_astromancer_epic_hat.png",
+    "scale": 0.2,
+    "tile": "repeat",
+    "bright": 1.0,
+    "shading": 1.0,
+    "keep": 0.0
+   }
   },
   "shoulders": {
    "cloth": {
     "swatch": "swatches/peacock_astromancer_epic_guards.png",
     "scale": 0.12,
     "tile": "repeat",
-    "shading": 1,
-    "bright": 1.0
+    "bright": 0.82,
+    "shading": 0.95,
+    "keep": 0.15
    },
    "keep_trim": true,
    "decals": [
     {
-     "image": "decals/moon.png",
+     "image": "decals/peacock_eye.png",
      "anchor": "shoulder_left",
-     "size": 0.1,
-     "mode": "gilt",
-     "color": "#cfb87b",
+     "size": 0.085,
+     "mode": "paint",
      "under_trim": false
     },
     {
-     "image": "decals/moon.png",
+     "image": "decals/peacock_eye.png",
      "anchor": "shoulder_right",
-     "size": 0.1,
-     "mode": "gilt",
-     "color": "#cfb87b",
+     "size": 0.085,
+     "mode": "paint",
      "under_trim": false
     }
-   ]
-  },
-  "chest": {
+   ],
    "pattern": {
     "image": "swatches/peacock_astromancer_epic_brocade.png",
-    "color": "#cfb87b",
-    "strength": 0.6,
-    "scale": 0.24,
+    "color": "#b9a86c",
+    "scale": 0.2,
+    "strength": 0.22,
     "tile": "repeat"
-   },
+   }
+  },
+  "chest": {
    "decals": [
     {
-     "image": "decals/moon.png",
+     "image": "decals/peacock_fan.png",
      "anchor": "back",
-     "size": 0.23,
-     "mode": "gilt",
-     "color": "#cfb87b",
-     "under_trim": false
+     "size": 0.22,
+     "mode": "paint",
+     "under_trim": false,
+     "offset": [
+      0,
+      -0.06,
+      0
+     ]
     },
     {
-     "image": "decals/moon.png",
+     "image": "decals/peacock_eye.png",
      "anchor": "tabard",
-     "size": 0.105,
-     "mode": "gilt",
-     "color": "#cfb87b",
+     "size": 0.085,
+     "mode": "paint",
      "under_trim": false
     }
    ]
   },
   "legs": {
    "cloth": {
-    "color": "#45416d"
+    "swatch": "swatches/peacock_astromancer_epic_guards.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "bright": 0.7,
+    "shading": 0.95,
+    "keep": 0.2
    },
    "decals": [
     {
-     "image": "decals/moon.png",
+     "image": "decals/peacock_eye.png",
      "anchor": "knee_left",
-     "size": 0.075,
-     "mode": "gilt",
-     "color": "#cfb87b",
+     "size": 0.06,
+     "mode": "paint",
      "under_trim": false
     },
     {
-     "image": "decals/moon.png",
+     "image": "decals/peacock_eye.png",
      "anchor": "knee_right",
-     "size": 0.075,
-     "mode": "gilt",
-     "color": "#cfb87b",
+     "size": 0.06,
+     "mode": "paint",
      "under_trim": false
     }
    ],

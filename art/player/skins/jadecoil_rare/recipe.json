@@ -22,23 +22,16 @@
    "bright": 1.0
   },
   "leather": {
-   "swatch": "swatches/jadecoil_rare_leather.png",
-   "scale": 0.14,
+   "swatch": "swatches/fx2_leather.png",
+   "scale": 0.12,
    "tile": "repeat",
-   "shading": 1,
-   "bright": 1.0,
-   "keep": 0.12
+   "shading": 0.95,
+   "bright": 0.9,
+   "keep": 0.15
   }
  },
  "parts": {
   "head": {
-   "pattern": {
-    "image": "swatches/pat_scale.png",
-    "color": "#c1ad69",
-    "scale": 0.09,
-    "strength": 0.2,
-    "tile": "repeat"
-   },
    "decals": [
     {
      "image": "decals/leaf_gold.png",
@@ -56,15 +49,23 @@
      "under_trim": false,
      "opacity": 1.0
     }
-   ]
-  },
-  "shoulders": {
+   ],
    "cloth": {
-    "swatch": "swatches/jadecoil_rare_guards.png",
+    "swatch": "swatches/fx2_hat.png",
     "scale": 0.12,
     "tile": "repeat",
     "shading": 1,
-    "bright": 1.0
+    "bright": 0.75
+   }
+  },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/fx2_guard.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "shading": 0.95,
+    "bright": 0.7,
+    "keep": 0.15
    },
    "trim": {
     "swatch": "swatches/jadecoil_rare_metal.png",
@@ -131,16 +132,20 @@
   },
   "legs": {
    "cloth": {
-    "color": "#28494a",
-    "shading": 1
+    "swatch": "swatches/fx2_guard.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "shading": 0.95,
+    "bright": 0.7,
+    "keep": 0.2
    },
    "leather": {
-    "swatch": "swatches/jadecoil_rare_leather.png",
-    "scale": 0.14,
+    "swatch": "swatches/fx2_leather.png",
+    "scale": 0.12,
     "tile": "repeat",
-    "shading": 1,
-    "bright": 0.9,
-    "keep": 0.12
+    "shading": 0.95,
+    "bright": 0.6,
+    "keep": 0.15
    },
    "decals": [
     {
@@ -163,12 +168,12 @@
   },
   "feet": {
    "leather": {
-    "swatch": "swatches/jadecoil_rare_leather.png",
-    "scale": 0.14,
+    "swatch": "swatches/fx2_leather.png",
+    "scale": 0.12,
     "tile": "repeat",
-    "shading": 1,
-    "bright": 1.2,
-    "keep": 0.12
+    "shading": 0.95,
+    "bright": 0.95,
+    "keep": 0.15
    },
    "trim": {
     "swatch": "swatches/jadecoil_rare_metal.png",
@@ -176,6 +181,14 @@
     "tile": "repeat",
     "shading": 1,
     "bright": 1.0
+   },
+   "cloth": {
+    "swatch": "swatches/fx2_leather.png",
+    "scale": 0.12,
+    "tile": "repeat",
+    "shading": 0.95,
+    "bright": 0.95,
+    "keep": 0.15
    }
   }
  }

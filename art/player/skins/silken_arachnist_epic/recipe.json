@@ -7,12 +7,11 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/silken_arachnist_epic_cloth.png",
+   "swatch": "swatches/sa_plum.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 1.1,
-   "shading": 0.9,
-   "keep": 0
+   "bright": 1.0,
+   "shading": 0.95
   },
   "trim": {
    "swatch": "swatches/silken_arachnist_epic_metal.png",
@@ -34,99 +33,109 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/silken_arachnist_epic_cloth.png",
+    "swatch": "swatches/sa_hat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 1.05,
+    "shading": 0.95
    },
    "decals": [
     {
-     "image": "decals/silken_arachnist_epic.png",
+     "image": "decals/web_small.png",
      "anchor": "hat",
-     "size": 0.092,
-     "mode": "gilt",
-     "color": "#e5dddc",
-     "under_trim": false
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
-   ]
+   ],
+   "pattern": {
+    "image": "swatches/pat_webfans.png",
+    "color": "#b8a9c4",
+    "scale": 0.16,
+    "strength": 0.22,
+    "tile": "repeat"
+   }
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/silken_arachnist_epic_mantle.png",
+    "swatch": "swatches/sa_mantle.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 1.05,
+    "shading": 0.95
    },
    "pattern": {
-    "image": "swatches/silken_arachnist_epic_pattern.png",
-    "color": "#c6bdcc",
-    "scale": 0.23,
+    "image": "swatches/pat_webfans.png",
+    "color": "#35606a",
+    "scale": 0.16,
     "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/silken_arachnist_epic.png",
+     "image": "decals/web_small.png",
      "anchor": "shoulder_left",
-     "size": 0.08,
-     "mode": "gilt",
-     "color": "#e5dddc",
-     "under_trim": false
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     },
     {
-     "image": "decals/silken_arachnist_epic.png",
+     "image": "decals/web_small.png",
      "anchor": "shoulder_right",
-     "size": 0.08,
-     "mode": "gilt",
-     "color": "#e5dddc",
-     "under_trim": false
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
   "chest": {
    "pattern": {
-    "image": "swatches/silken_arachnist_epic_pattern.png",
-    "color": "#a99db2",
-    "scale": 0.27,
-    "strength": 0.38,
+    "image": "swatches/pat_webfans.png",
+    "color": "#c9bcd6",
+    "scale": 0.17,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/silken_arachnist_epic.png",
+     "image": "decals/web_big.png",
      "anchor": "back",
-     "size": 0.21,
-     "mode": "gilt",
-     "color": "#e5dddc",
+     "size": 0.2,
+     "mode": "paint",
      "under_trim": false,
+     "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.078,
       0
      ]
     },
     {
-     "image": "decals/silken_arachnist_epic.png",
+     "image": "decals/web_small.png",
      "anchor": "tabard",
-     "size": 0.1,
-     "mode": "gilt",
-     "color": "#e5dddc",
-     "under_trim": false
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/silken_arachnist_epic_mantle.png",
-    "scale": 0.12,
+    "swatch": "swatches/sa_greave.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 1.05,
+    "shading": 0.95,
+    "keep": 0.15
    },
    "leather": {
     "swatch": "swatches/silken_arachnist_epic_leather.png",
@@ -147,12 +156,11 @@
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/silken_arachnist_epic_cloth.png",
+    "swatch": "swatches/sa_plum.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.9,
-    "keep": 0
+    "bright": 0.85,
+    "shading": 0.95
    },
    "leather": {
     "swatch": "swatches/silken_arachnist_epic_leather.png",

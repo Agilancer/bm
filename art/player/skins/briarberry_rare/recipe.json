@@ -33,23 +33,22 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/fx_hat.png",
+    "swatch": "swatches/fx2_hat.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.85,
+    "bright": 0.75,
     "shading": 0.9
    },
    "decals": [
     {
-     "image": "decals/fx_crest_s.png",
+     "image": "decals/briar_s.png",
      "anchor": "hat",
      "size": 0.115,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0,
      "offset": [
       0,
-      0.01,
+      0.012,
       0
      ]
     }
@@ -57,30 +56,13 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/fx_sage.png",
+    "swatch": "swatches/fx2_sage.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.85,
-    "shading": 0.9
+    "bright": 0.8,
+    "shading": 0.8
    },
-   "decals": [
-    {
-     "image": "decals/fx_crest_s.png",
-     "anchor": "shoulder_left",
-     "size": 0.1,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    },
-    {
-     "image": "decals/fx_crest_s.png",
-     "anchor": "shoulder_right",
-     "size": 0.1,
-     "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
-    }
-   ]
+   "decals": []
   },
   "chest": {
    "pattern": {
@@ -92,35 +74,34 @@
    },
    "decals": [
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/briar.png",
      "anchor": "back",
-     "size": 0.225,
+     "size": 0.22,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0,
      "offset": [
       0,
-      -0.07,
+      -0.06,
       0
      ]
     },
     {
-     "image": "decals/fx_crest.png",
+     "image": "decals/briar_s.png",
      "anchor": "tabard",
-     "size": 0.12,
+     "size": 0.11,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/fx_sageleather.png",
+    "swatch": "swatches/fx2_sageleather.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.95,
-    "shading": 0.9
+    "bright": 0.85,
+    "shading": 0.85,
+    "keep": 0.0
    },
    "leather": {
     "swatch": "swatches/fx_leather.png",

@@ -35,19 +35,12 @@
     "swatch": "swatches/hat.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.85,
     "shading": 1.0
-   },
-   "pattern": {
-    "image": "swatches/pat_leaves.png",
-    "color": "#eeb08e",
-    "scale": 0.17,
-    "strength": 0.5,
-    "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/nettle.png",
+     "image": "decals/nettle_small.png",
      "anchor": "hat",
      "size": 0.1,
      "mode": "paint",
@@ -55,7 +48,7 @@
      "opacity": 1.0
     },
     {
-     "image": "decals/nettle.png",
+     "image": "decals/nettle_small.png",
      "anchor": "hat_back",
      "size": 0.1,
      "mode": "paint",
@@ -69,19 +62,19 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.82,
     "shading": 1.0
    },
    "pattern": {
     "image": "swatches/pat_leaves.png",
-    "color": "#eeb08e",
-    "scale": 0.17,
-    "strength": 0.5,
+    "color": "#d9a07e",
+    "scale": 0.15,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/nettle.png",
+     "image": "decals/nettle_small.png",
      "anchor": "shoulder_left",
      "size": 0.1,
      "mode": "paint",
@@ -89,7 +82,7 @@
      "opacity": 1.0
     },
     {
-     "image": "decals/nettle.png",
+     "image": "decals/nettle_small.png",
      "anchor": "shoulder_right",
      "size": 0.1,
      "mode": "paint",
@@ -101,27 +94,27 @@
   "chest": {
    "pattern": {
     "image": "swatches/pat_leaves.png",
-    "color": "#eeb08e",
-    "scale": 0.24,
-    "strength": 0.5,
+    "color": "#e3ad8c",
+    "scale": 0.155,
+    "strength": 0.6,
     "tile": "repeat"
    },
    "decals": [
     {
      "image": "decals/nettle.png",
      "anchor": "back",
-     "size": 0.25,
+     "size": 0.22,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.05,
+      -0.06,
       0
      ]
     },
     {
-     "image": "decals/nettle.png",
+     "image": "decals/nettle_small.png",
      "anchor": "tabard",
      "size": 0.115,
      "mode": "paint",
@@ -135,15 +128,8 @@
     "swatch": "swatches/mantle.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.95,
+    "bright": 0.75,
     "shading": 1.0
-   },
-   "pattern": {
-    "image": "swatches/pat_leaves.png",
-    "color": "#eeb08e",
-    "scale": 0.17,
-    "strength": 0.45,
-    "tile": "repeat"
    },
    "leather": {
     "swatch": "swatches/trouser.png",
@@ -155,7 +141,7 @@
    },
    "decals": [
     {
-     "image": "decals/nettle.png",
+     "image": "decals/nettle_small.png",
      "anchor": "knee_left",
      "size": 0.07,
      "mode": "paint",
@@ -163,7 +149,7 @@
      "opacity": 1.0
     },
     {
-     "image": "decals/nettle.png",
+     "image": "decals/nettle_small.png",
      "anchor": "knee_right",
      "size": 0.07,
      "mode": "paint",

@@ -7,151 +7,120 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/damwright_uncommon_cloth.png",
-   "scale": 0.12,
+   "swatch": "swatches/dw_tunic.png",
+   "scale": 0.085,
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.88,
+   "bright": 0.92,
+   "shading": 0.9,
    "keep": 0
   },
   "trim": {
-   "swatch": "swatches/damwright_uncommon_trim.png",
+   "swatch": "swatches/dw_brass.png",
    "scale": 0.09,
    "tile": "repeat",
-   "bright": 0.96,
-   "shading": 0.67,
+   "bright": 0.95,
+   "shading": 0.7,
    "keep": 0
   },
   "leather": {
-   "swatch": "swatches/damwright_uncommon_leather.png",
+   "swatch": "swatches/dw_leather.png",
    "scale": 0.09,
    "tile": "repeat",
-   "bright": 1.15,
-   "shading": 0.88,
-   "keep": 0.12
+   "bright": 1.05,
+   "shading": 0.9,
+   "keep": 0.15
   }
  },
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/damwright_uncommon_mantle.png",
-    "scale": 0.12,
+    "swatch": "swatches/dw_teal.png",
+    "scale": 0.085,
     "tile": "repeat",
-    "bright": 1.04,
-    "shading": 0.88,
+    "bright": 0.88,
+    "shading": 0.85,
     "keep": 0
    },
    "decals": [
     {
-     "image": "decals/damwright_uncommon.png",
+     "image": "decals/beaver_small.png",
      "anchor": "hat",
-     "size": 0.092,
-     "mode": "gilt",
-     "color": "#d6cbb1",
-     "under_trim": false
-    }
-   ],
-   "pattern": {
-    "image": "swatches/damwright_uncommon_pattern.png",
-    "color": "#b1a383",
-    "scale": 0.225,
-    "strength": 0.07,
-    "tile": "repeat"
-   }
-  },
-  "shoulders": {
-   "cloth": {
-    "swatch": "swatches/damwright_uncommon_mantle.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 1.03,
-    "shading": 0.88,
-    "keep": 0
-   },
-   "pattern": {
-    "image": "swatches/damwright_uncommon_pattern.png",
-    "color": "#b1a383",
-    "scale": 0.225,
-    "strength": 0.12,
-    "tile": "repeat"
-   },
-   "decals": [
-    {
-     "image": "decals/damwright_uncommon.png",
-     "anchor": "shoulder_left",
-     "size": 0.078,
-     "mode": "gilt",
-     "color": "#d6cbb1",
-     "under_trim": false
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
+  "shoulders": {
+   "cloth": {
+    "swatch": "swatches/dw_teal.png",
+    "scale": 0.085,
+    "tile": "repeat",
+    "bright": 0.85,
+    "shading": 0.85,
+    "keep": 0
+   }
+  },
   "chest": {
-   "pattern": {
-    "image": "swatches/damwright_uncommon_pattern.png",
-    "color": "#b1a383",
-    "scale": 0.225,
-    "strength": 0.18,
-    "tile": "repeat"
-   },
    "decals": [
     {
-     "image": "decals/damwright_uncommon.png",
+     "image": "decals/beaver.png",
      "anchor": "back",
-     "size": 0.2,
-     "mode": "gilt",
-     "color": "#d6cbb1",
+     "size": 0.225,
+     "mode": "paint",
      "under_trim": false,
+     "opacity": 1.0,
      "offset": [
-      0,
-      -0.04,
+      0.008,
+      -0.05,
       0
      ]
     },
     {
-     "image": "decals/damwright_uncommon.png",
+     "image": "decals/beaver_small.png",
      "anchor": "tabard",
-     "size": 0.085,
-     "mode": "gilt",
-     "color": "#d6cbb1",
-     "under_trim": false
+     "size": 0.125,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/damwright_uncommon_mantle.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.88,
-    "keep": 0
-   },
-   "leather": {
-    "swatch": "swatches/damwright_uncommon_leather.png",
-    "scale": 0.09,
+    "swatch": "swatches/dw_guard.png",
+    "scale": 0.1,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.88,
-    "keep": 0.12
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/dw_leather.png",
+    "scale": 0.09,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0.15
    }
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/damwright_uncommon_cloth.png",
-    "scale": 0.12,
+    "swatch": "swatches/dw_teal.png",
+    "scale": 0.085,
     "tile": "repeat",
-    "bright": 0.92,
-    "shading": 0.88,
+    "bright": 0.85,
+    "shading": 0.85,
     "keep": 0
    },
    "leather": {
-    "swatch": "swatches/damwright_uncommon_leather.png",
+    "swatch": "swatches/dw_leather.png",
     "scale": 0.09,
     "tile": "repeat",
-    "bright": 1.13,
-    "shading": 0.88,
-    "keep": 0.14
+    "bright": 1.1,
+    "shading": 0.9,
+    "keep": 0.15
    }
   }
  }

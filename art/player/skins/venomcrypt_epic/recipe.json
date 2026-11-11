@@ -7,15 +7,15 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/body.png",
-   "scale": 0.13,
+   "swatch": "swatches/emerald.png",
+   "scale": 0.12,
    "tile": "repeat",
    "bright": 1.0,
-   "shading": 1.0
+   "shading": 0.95
   },
   "trim": {
-   "color": "#d2e4c6",
-   "bright": 1.08
+   "color": "#bcd3b6",
+   "bright": 1.05
   },
   "leather": {
    "swatch": "swatches/belt.png",
@@ -29,17 +29,17 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/hat.png",
-    "scale": 0.1,
+    "swatch": "swatches/emerald.png",
+    "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 1.0
+    "bright": 0.9,
+    "shading": 0.95
    },
    "pattern": {
-    "image": "swatches/pat_serpent.png",
-    "color": "#a9cf8e",
-    "scale": 0.14,
-    "strength": 0.45,
+    "image": "swatches/pat_serpent2.png",
+    "color": "#8fc48a",
+    "scale": 0.17,
+    "strength": 0.25,
     "tile": "repeat"
    },
    "decals": [
@@ -48,26 +48,41 @@
      "anchor": "hat",
      "size": 0.095,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/guards.png",
-    "scale": 0.1,
+    "swatch": "swatches/bottle_scales.png",
+    "scale": 0.07,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 1.0
-   }
+    "bright": 0.62,
+    "shading": 0.9
+   },
+   "decals": [
+    {
+     "image": "decals/vial.png",
+     "anchor": "shoulder_left",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false
+    },
+    {
+     "image": "decals/vial.png",
+     "anchor": "shoulder_right",
+     "size": 0.095,
+     "mode": "paint",
+     "under_trim": false
+    }
+   ]
   },
   "chest": {
    "pattern": {
-    "image": "swatches/pat_serpent.png",
-    "color": "#b5e08e",
-    "scale": 0.2,
-    "strength": 0.35,
+    "image": "swatches/pat_serpent2.png",
+    "color": "#9ad08e",
+    "scale": 0.17,
+    "strength": 0.42,
     "tile": "repeat"
    },
    "decals": [
@@ -77,7 +92,6 @@
      "size": 0.21,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0,
      "offset": [
       0,
       -0.045,
@@ -89,21 +103,20 @@
      "anchor": "tabard",
      "size": 0.11,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/guards.png",
-    "scale": 0.1,
+    "swatch": "swatches/bottle_scales.png",
+    "scale": 0.07,
     "tile": "repeat",
-    "bright": 0.95,
-    "shading": 1.0
+    "bright": 0.58,
+    "shading": 0.9
    },
    "leather": {
-    "swatch": "swatches/trouser.png",
+    "swatch": "swatches/dark_leather.png",
     "scale": 0.1,
     "tile": "repeat",
     "bright": 1.0,

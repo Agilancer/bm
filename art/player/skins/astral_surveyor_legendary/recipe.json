@@ -45,25 +45,33 @@
     "image": "swatches/orbits.png",
     "color": "#d6dad8",
     "scale": 0.2,
-    "strength": 0.52,
+    "strength": 0.36,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/telescope.png",
+     "image": "decals/scope_s.png",
      "anchor": "hat",
-     "size": 0.12,
+     "size": 0.105,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
     },
     {
-     "image": "decals/telescope.png",
+     "image": "decals/scope_s.png",
      "anchor": "hat_back",
-     "size": 0.12,
+     "size": 0.105,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
     }
    ]
   },
@@ -78,27 +86,25 @@
    },
    "pattern": {
     "image": "swatches/orbits.png",
-    "color": "#d6dad8",
+    "color": "#e2d2a4",
     "scale": 0.2,
-    "strength": 0.52,
+    "strength": 0.34,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/telescope.png",
+     "image": "decals/scope_s.png",
      "anchor": "shoulder_left",
-     "size": 0.105,
+     "size": 0.09,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     },
     {
-     "image": "decals/telescope.png",
+     "image": "decals/scope_s.png",
      "anchor": "shoulder_right",
-     "size": 0.105,
+     "size": 0.09,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
@@ -112,25 +118,23 @@
    },
    "decals": [
     {
-     "image": "decals/telescope.png",
+     "image": "decals/scope.png",
      "anchor": "back",
-     "size": 0.26,
+     "size": 0.24,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0,
      "offset": [
       0,
-      -0.055,
+      -0.065,
       0
      ]
     },
     {
-     "image": "decals/telescope.png",
+     "image": "decals/scope_s.png",
      "anchor": "tabard",
      "size": 0.12,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
@@ -161,27 +165,25 @@
    },
    "pattern": {
     "image": "swatches/orbits.png",
-    "color": "#d6dad8",
+    "color": "#e2d2a4",
     "scale": 0.26,
-    "strength": 0.52,
+    "strength": 0.34,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/telescope.png",
+     "image": "decals/scope_s.png",
      "anchor": "knee_left",
      "size": 0.075,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     },
     {
-     "image": "decals/telescope.png",
+     "image": "decals/scope_s.png",
      "anchor": "knee_right",
      "size": 0.075,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },

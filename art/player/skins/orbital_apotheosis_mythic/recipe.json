@@ -42,20 +42,20 @@
     "keep": 0
    },
    "pattern": {
-    "image": "swatches/orbital_apotheosis_mythic_pattern.png",
+    "image": "swatches/oa_orbits.png",
     "color": "#e1c57e",
-    "scale": 0.22,
-    "strength": 0.52,
+    "scale": 0.24,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/orbital_apotheosis_mythic.png",
+     "image": "decals/planet_small.png",
      "anchor": "hat",
-     "size": 0.092,
-     "mode": "gilt",
-     "color": "#f4e6c5",
-     "under_trim": false
+     "size": 0.11,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
@@ -69,60 +69,60 @@
     "keep": 0
    },
    "pattern": {
-    "image": "swatches/orbital_apotheosis_mythic_pattern.png",
-    "color": "#e1c57e",
-    "scale": 0.23,
-    "strength": 0.82,
+    "image": "swatches/oa_orbits.png",
+    "color": "#4a2c7a",
+    "scale": 0.24,
+    "strength": 0.25,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/orbital_apotheosis_mythic.png",
+     "image": "decals/planet.png",
      "anchor": "shoulder_left",
-     "size": 0.09,
-     "mode": "gilt",
-     "color": "#f4e6c5",
-     "under_trim": false
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     },
     {
-     "image": "decals/orbital_apotheosis_mythic.png",
+     "image": "decals/planet.png",
      "anchor": "shoulder_right",
-     "size": 0.09,
-     "mode": "gilt",
-     "color": "#f4e6c5",
-     "under_trim": false
+     "size": 0.105,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
   "chest": {
    "pattern": {
-    "image": "swatches/orbital_apotheosis_mythic_pattern.png",
+    "image": "swatches/oa_orbits.png",
     "color": "#e1c57e",
     "scale": 0.3,
-    "strength": 0.82,
+    "strength": 0.55,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/orbital_apotheosis_mythic.png",
+     "image": "decals/planet.png",
      "anchor": "back",
-     "size": 0.22,
-     "mode": "gilt",
-     "color": "#f4e6c5",
+     "size": 0.24,
+     "mode": "paint",
      "under_trim": false,
+     "opacity": 1.0,
      "offset": [
       0,
-      -0.045,
+      -0.06,
       0
      ]
     },
     {
-     "image": "decals/orbital_apotheosis_mythic.png",
+     "image": "decals/planet_small.png",
      "anchor": "tabard",
-     "size": 0.1,
-     "mode": "gilt",
-     "color": "#f4e6c5",
-     "under_trim": false
+     "size": 0.12,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
@@ -153,29 +153,22 @@
    },
    "decals": [
     {
-     "image": "decals/orbital_apotheosis_mythic.png",
+     "image": "decals/planet.png",
      "anchor": "knee_left",
-     "size": 0.055,
-     "mode": "gilt",
-     "color": "#f4e6c5",
-     "under_trim": false
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     },
     {
-     "image": "decals/orbital_apotheosis_mythic.png",
+     "image": "decals/planet.png",
      "anchor": "knee_right",
-     "size": 0.055,
-     "mode": "gilt",
-     "color": "#f4e6c5",
-     "under_trim": false
+     "size": 0.075,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
-   ],
-   "pattern": {
-    "image": "swatches/orbital_apotheosis_mythic_pattern.png",
-    "color": "#e1c57e",
-    "scale": 0.3,
-    "strength": 0.68,
-    "tile": "repeat"
-   }
+   ]
   },
   "feet": {
    "cloth": {

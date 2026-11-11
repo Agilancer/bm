@@ -7,20 +7,18 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/fx_gold.png",
+   "swatch": "swatches/fx2_ochre.png",
    "scale": 0.12,
    "tile": "repeat",
-   "bright": 0.97,
-   "shading": 0.95,
-   "keep": 0
+   "bright": 0.72,
+   "shading": 0.95
   },
   "trim": {
-   "swatch": "swatches/fx_trim.png",
+   "swatch": "swatches/fx2_goldtrim.png",
    "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.05,
-   "shading": 0.7,
-   "keep": 0
+   "bright": 0.95,
+   "shading": 0.75
   },
   "leather": {
    "swatch": "swatches/fx_leather.png",
@@ -34,95 +32,99 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/fx_winehat.png",
+    "swatch": "swatches/fx2_winehat.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.95,
-    "keep": 0
+    "bright": 0.62,
+    "shading": 0.95
    },
    "decals": [
     {
-     "image": "decals/fx_dial_gold.png",
+     "image": "decals/dial_s.png",
      "anchor": "hat",
-     "size": 0.09,
+     "size": 0.1,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0
+     "offset": [
+      0,
+      0.012,
+      0
+     ]
     }
    ]
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/fx_wine.png",
+    "swatch": "swatches/fx2_wine.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.95,
-    "keep": 0
+    "bright": 0.62,
+    "shading": 0.95
    },
    "leather": {
     "color": "#34091a"
    },
    "decals": [
     {
-     "image": "decals/fx_dial_gold.png",
+     "image": "decals/dial_s.png",
      "anchor": "shoulder_left",
-     "size": 0.085,
+     "size": 0.09,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     },
     {
-     "image": "decals/fx_dial_gold.png",
+     "image": "decals/dial_s.png",
      "anchor": "shoulder_right",
-     "size": 0.085,
+     "size": 0.09,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
    ]
   },
   "chest": {
    "pattern": {
     "image": "swatches/pat_suns.png",
-    "color": "#f6e2a2",
+    "color": "#c9a858",
     "scale": 0.2,
-    "strength": 0.42,
+    "strength": 0.32,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/fx_dial.png",
+     "image": "decals/dial.png",
      "anchor": "back",
      "size": 0.22,
      "mode": "paint",
      "under_trim": false,
-     "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.045,
       0
      ]
     },
     {
-     "image": "decals/fx_dial.png",
+     "image": "decals/dial_s.png",
      "anchor": "tabard",
      "size": 0.11,
      "mode": "paint",
-     "under_trim": false,
-     "opacity": 1.0
+     "under_trim": false
     }
-   ]
+   ],
+   "trim": {
+    "swatch": "swatches/fx2_bronze.png",
+    "scale": 0.075,
+    "tile": "repeat",
+    "bright": 0.75,
+    "shading": 0.75
+   }
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/fx_wine.png",
+    "swatch": "swatches/fx2_wine.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
-    "shading": 0.95,
-    "keep": 0
+    "bright": 0.58,
+    "shading": 0.95
    },
    "leather": {
     "swatch": "swatches/fx_leather.png",

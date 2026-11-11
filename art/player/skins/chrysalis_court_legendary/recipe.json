@@ -7,10 +7,10 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/cc_turq.png",
-   "scale": 0.12,
+   "swatch": "swatches/cc_turq2.png",
+   "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.0,
+   "bright": 0.92,
    "shading": 0.95,
    "keep": 0.0
   },
@@ -34,18 +34,18 @@
  "parts": {
   "head": {
    "cloth": {
-    "swatch": "swatches/cc_hat.png",
-    "scale": 0.12,
+    "swatch": "swatches/cc_hat2.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.92,
     "shading": 0.95,
     "keep": 0.0
    },
    "pattern": {
-    "image": "swatches/cc_wingcells.png",
-    "color": "#ecc462",
+    "image": "swatches/cc_cells.png",
+    "color": "#d9b866",
     "scale": 0.2,
-    "strength": 0.55,
+    "strength": 0.15,
     "tile": "repeat"
    },
    "decals": [
@@ -69,18 +69,18 @@
   },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/cc_garnet.png",
+    "swatch": "swatches/cc_garnet2.png",
     "scale": 0.12,
     "tile": "repeat",
-    "bright": 1.0,
+    "bright": 0.95,
     "shading": 0.95,
     "keep": 0.0
    },
    "pattern": {
-    "image": "swatches/cc_wingcells.png",
-    "color": "#ecc462",
-    "scale": 0.18,
-    "strength": 0.45,
+    "image": "swatches/cc_cells.png",
+    "color": "#d9b866",
+    "scale": 0.2,
+    "strength": 0.16,
     "tile": "repeat"
    },
    "decals": [
@@ -104,17 +104,17 @@
   },
   "chest": {
    "pattern": {
-    "image": "swatches/cc_wingcells.png",
-    "color": "#ecc462",
-    "scale": 0.24,
-    "strength": 0.6,
+    "image": "swatches/cc_cells.png",
+    "color": "#e2c06a",
+    "scale": 0.2,
+    "strength": 0.45,
     "tile": "repeat"
    },
    "decals": [
     {
      "image": "decals/butterfly.png",
      "anchor": "back",
-     "size": 0.28,
+     "size": 0.25,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
@@ -136,19 +136,12 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/cc_garnet.png",
-    "scale": 0.12,
+    "swatch": "swatches/cc_plate.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.82,
-    "shading": 0.95,
-    "keep": 0.0
-   },
-   "pattern": {
-    "image": "swatches/cc_wingcells.png",
-    "color": "#ecc462",
-    "scale": 0.16,
-    "strength": 0.4,
-    "tile": "repeat"
+    "bright": 0.85,
+    "shading": 0.9,
+    "keep": 0.18
    },
    "leather": {
     "swatch": "swatches/cc_lea.png",

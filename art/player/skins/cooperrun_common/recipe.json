@@ -8,10 +8,10 @@
  "defaults": {
   "cloth": {
    "swatch": "swatches/cooperrun_common_cloth.png",
-   "scale": 0.12,
+   "scale": 0.2,
    "tile": "repeat",
-   "bright": 1.06,
-   "shading": 0.88,
+   "bright": 1.0,
+   "shading": 0.8,
    "keep": 0
   },
   "trim": {
@@ -43,11 +43,10 @@
    },
    "decals": [
     {
-     "image": "decals/cooperrun_common.png",
+     "image": "decals/barrel_small.png",
      "anchor": "hat",
      "size": 0.092,
-     "mode": "gilt",
-     "color": "#bdae97",
+     "mode": "paint",
      "under_trim": false
     }
    ]
@@ -63,33 +62,24 @@
    }
   },
   "chest": {
-   "pattern": {
-    "image": "swatches/cooperrun_common_pattern.png",
-    "color": "#7a644b",
-    "scale": 0.2,
-    "strength": 0.07,
-    "tile": "repeat"
-   },
    "decals": [
     {
-     "image": "decals/cooperrun_common.png",
+     "image": "decals/barrel.png",
      "anchor": "back",
-     "size": 0.18,
-     "mode": "gilt",
-     "color": "#bdae97",
+     "size": 0.2,
+     "mode": "paint",
      "under_trim": false,
      "offset": [
       0,
-      -0.04,
+      -0.05,
       0
      ]
     },
     {
-     "image": "decals/cooperrun_common.png",
+     "image": "decals/barrel_small.png",
      "anchor": "tabard",
      "size": 0.075,
-     "mode": "gilt",
-     "color": "#bdae97",
+     "mode": "paint",
      "under_trim": false
     }
    ]
@@ -115,7 +105,7 @@
   "feet": {
    "cloth": {
     "swatch": "swatches/cooperrun_common_cloth.png",
-    "scale": 0.12,
+    "scale": 0.2,
     "tile": "repeat",
     "bright": 0.92,
     "shading": 0.88,

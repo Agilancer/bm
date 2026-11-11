@@ -18,9 +18,9 @@
    "swatch": "swatches/vesperglass_gold.png",
    "scale": 0.075,
    "tile": "repeat",
-   "bright": 1.03,
-   "shading": 0.7,
-   "keep": 0
+   "bright": 1.1,
+   "shading": 0.75,
+   "keep": 0.0
   },
   "leather": {
    "swatch": "swatches/vesperglass_leather.png",
@@ -43,13 +43,20 @@
    },
    "decals": [
     {
-     "image": "decals/vesperglass_crystal.png",
+     "image": "decals/vesperglass_crystal_small.png",
      "anchor": "hat",
-     "size": 0.092,
+     "size": 0.075,
      "mode": "paint",
      "under_trim": false
     }
-   ]
+   ],
+   "pattern": {
+    "image": "swatches/vesperglass_ogee.png",
+    "color": "#cdb67f",
+    "scale": 0.17,
+    "strength": 0.13,
+    "tile": "repeat"
+   }
   },
   "shoulders": {
    "cloth": {
@@ -62,23 +69,23 @@
    },
    "pattern": {
     "image": "swatches/vesperglass_ogee.png",
-    "color": "#c0ac78",
-    "scale": 0.21,
-    "strength": 0.27,
+    "color": "#cdb67f",
+    "scale": 0.17,
+    "strength": 0.22,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/vesperglass_crystal.png",
+     "image": "decals/vesperglass_crystal_small.png",
      "anchor": "shoulder_left",
-     "size": 0.082,
+     "size": 0.07,
      "mode": "paint",
      "under_trim": false
     },
     {
-     "image": "decals/vesperglass_crystal.png",
+     "image": "decals/vesperglass_crystal_small.png",
      "anchor": "shoulder_right",
-     "size": 0.082,
+     "size": 0.07,
      "mode": "paint",
      "under_trim": false
     }
@@ -87,28 +94,28 @@
   "chest": {
    "pattern": {
     "image": "swatches/vesperglass_ogee.png",
-    "color": "#91ada1",
-    "scale": 0.25,
-    "strength": 0.34,
+    "color": "#cdb67f",
+    "scale": 0.17,
+    "strength": 0.4,
     "tile": "repeat"
    },
    "decals": [
     {
      "image": "decals/vesperglass_crystal.png",
      "anchor": "back",
-     "size": 0.21,
+     "size": 0.22,
      "mode": "paint",
      "under_trim": false,
      "offset": [
       0,
-      -0.04,
+      -0.06,
       0
      ]
     },
     {
-     "image": "decals/vesperglass_crystal.png",
+     "image": "decals/vesperglass_crystal_small.png",
      "anchor": "tabard",
-     "size": 0.11,
+     "size": 0.075,
      "mode": "paint",
      "under_trim": false
     }
@@ -135,9 +142,9 @@
     "swatch": "swatches/vesperglass_gold.png",
     "scale": 0.075,
     "tile": "repeat",
-    "bright": 0.93,
-    "shading": 0.7,
-    "keep": 0
+    "bright": 1.0,
+    "shading": 0.75,
+    "keep": 0.0
    }
   },
   "feet": {

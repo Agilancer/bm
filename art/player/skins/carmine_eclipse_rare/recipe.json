@@ -35,16 +35,25 @@
     "image": "swatches/carmine_eclipse_rare_brocade.png",
     "color": "#bcb9bf",
     "scale": 0.26,
-    "strength": 0.28,
+    "strength": 0.2,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/moon.png",
+     "image": "decals/eclipse_small.png",
+     "anchor": "hat",
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
+    },
+    {
+     "image": "decals/eclipse_small.png",
      "anchor": "hat_back",
      "size": 0.09,
-     "mode": "gilt",
-     "color": "#bcb9bf"
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
@@ -65,18 +74,20 @@
    },
    "decals": [
     {
-     "image": "decals/moon.png",
+     "image": "decals/eclipse_small.png",
      "anchor": "shoulder_left",
-     "size": 0.075,
-     "mode": "gilt",
-     "color": "#bcb9bf"
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     },
     {
-     "image": "decals/moon.png",
+     "image": "decals/eclipse_small.png",
      "anchor": "shoulder_right",
-     "size": 0.075,
-     "mode": "gilt",
-     "color": "#bcb9bf"
+     "size": 0.085,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0
     }
    ]
   },
@@ -85,16 +96,35 @@
     "image": "swatches/carmine_eclipse_rare_brocade.png",
     "color": "#bcb9bf",
     "scale": 0.28,
-    "strength": 0.44,
+    "strength": 0.3,
     "tile": "repeat"
    },
    "decals": [
     {
-     "image": "decals/moon.png",
+     "image": "decals/eclipse.png",
      "anchor": "back",
-     "size": 0.19,
-     "mode": "gilt",
-     "color": "#bcb9bf"
+     "size": 0.2,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.075,
+      0
+     ]
+    },
+    {
+     "image": "decals/eclipse_small.png",
+     "anchor": "tabard",
+     "size": 0.1,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
+      0
+     ]
     }
    ]
   },

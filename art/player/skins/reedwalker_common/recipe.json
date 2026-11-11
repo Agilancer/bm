@@ -7,70 +7,86 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/reedwalker_common_cloth.png",
-   "scale": 0.12,
-   "tile": "repeat",
-   "bright": 1,
-   "shading": 0.8
-  },
-  "trim": {
-   "swatch": "swatches/reedwalker_common_binding.png",
-   "scale": 0.08,
+   "swatch": "swatches/olive_twill.png",
+   "scale": 0.06,
    "tile": "repeat",
    "bright": 0.9,
-   "shading": 0.4
+   "shading": 0.65
+  },
+  "trim": {
+   "color": "#5e5145",
+   "bright": 0.8
   },
   "leather": {
-   "swatch": "swatches/reedwalker_common_leather.png",
+   "swatch": "swatches/saddle.png",
    "scale": 0.1,
    "tile": "repeat",
-   "bright": 1.12,
-   "shading": 0.75
+   "bright": 1.0,
+   "shading": 0.9,
+   "keep": 0.2
   },
   "keep_trim": true
  },
  "parts": {
-  "head": {},
+  "head": {
+   "cloth": {
+    "swatch": "swatches/hat_twill.png",
+    "scale": 0.06,
+    "tile": "repeat",
+    "bright": 0.95,
+    "shading": 0.65
+   }
+  },
   "shoulders": {
    "cloth": {
-    "swatch": "swatches/reedwalker_common_accent.png",
-    "scale": 0.12,
+    "swatch": "swatches/moss_twill.png",
+    "scale": 0.06,
     "tile": "repeat",
-    "bright": 1.03,
+    "bright": 1.0,
     "shading": 0.8
+   },
+   "trim": {
+    "color": "#544a3e"
    }
   },
   "chest": {},
   "legs": {
    "cloth": {
-    "swatch": "swatches/reedwalker_common_accent.png",
-    "scale": 0.12,
-    "tile": "repeat",
-    "bright": 1.05,
-    "shading": 0.8
-   },
-   "leather": {
-    "swatch": "swatches/reedwalker_common_leather.png",
+    "swatch": "swatches/saddle.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.96,
-    "shading": 0.8
+    "bright": 0.95,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "leather": {
+    "swatch": "swatches/saddle_dark.png",
+    "scale": 0.1,
+    "tile": "repeat",
+    "bright": 0.9,
+    "shading": 0.9,
+    "keep": 0.2
    }
   },
   "feet": {
    "cloth": {
-    "swatch": "swatches/reedwalker_common_leather.png",
+    "swatch": "swatches/saddle_dark.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.08,
-    "shading": 0.8
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
    },
    "leather": {
-    "swatch": "swatches/reedwalker_common_leather.png",
+    "swatch": "swatches/saddle_dark.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 1.1,
-    "shading": 0.75
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
+   },
+   "trim": {
+    "color": "#5a452e"
    }
   }
  }

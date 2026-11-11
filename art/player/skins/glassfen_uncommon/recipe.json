@@ -10,9 +10,8 @@
    "swatch": "swatches/gf_tunic.png",
    "scale": 0.09,
    "tile": "repeat",
-   "bright": 0.92,
-   "shading": 0.85,
-   "keep": 0.0
+   "bright": 1.0,
+   "shading": 0.9
   },
   "trim": {
    "swatch": "swatches/gf_pewter.png",
@@ -38,14 +37,13 @@
     "scale": 0.09,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.85,
-    "keep": 0.0
+    "shading": 0.9
    },
    "decals": [
     {
-     "image": "decals/dragonfly.png",
+     "image": "decals/dragonfly_small.png",
      "anchor": "hat",
-     "size": 0.125,
+     "size": 0.12,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -58,22 +56,21 @@
     "scale": 0.09,
     "tile": "repeat",
     "bright": 1.0,
-    "shading": 0.85,
-    "keep": 0.0
+    "shading": 0.9
    },
    "decals": [
     {
-     "image": "decals/dragonfly.png",
+     "image": "decals/dragonfly_small.png",
      "anchor": "shoulder_left",
-     "size": 0.1,
+     "size": 0.09,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
     },
     {
-     "image": "decals/dragonfly.png",
+     "image": "decals/dragonfly_small.png",
      "anchor": "shoulder_right",
-     "size": 0.1,
+     "size": 0.09,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0
@@ -90,15 +87,28 @@
    },
    "decals": [
     {
-     "image": "decals/dragonfly.png",
+     "image": "decals/dragonfly_big.png",
      "anchor": "back",
-     "size": 0.26,
+     "size": 0.25,
      "mode": "paint",
      "under_trim": false,
      "opacity": 1.0,
      "offset": [
       0,
-      -0.05,
+      -0.07,
+      0
+     ]
+    },
+    {
+     "image": "decals/dragonfly_small.png",
+     "anchor": "tabard",
+     "size": 0.13,
+     "mode": "paint",
+     "under_trim": false,
+     "opacity": 1.0,
+     "offset": [
+      0,
+      -0.02,
       0
      ]
     }
@@ -106,12 +116,12 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/gf_moss.png",
-    "scale": 0.09,
+    "swatch": "swatches/gf_mossl.png",
+    "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.78,
-    "shading": 0.85,
-    "keep": 0.0
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.15
    },
    "leather": {
     "swatch": "swatches/gf_leather.png",

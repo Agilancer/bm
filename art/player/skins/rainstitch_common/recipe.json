@@ -7,21 +7,23 @@
  },
  "defaults": {
   "cloth": {
-   "swatch": "swatches/fx_blue.png",
+   "swatch": "swatches/r2_blue.png",
    "scale": 0.09,
    "tile": "repeat",
-   "bright": 0.9,
-   "shading": 0.9
+   "bright": 0.95,
+   "shading": 0.9,
+   "keep": 0.0
   },
   "trim": {
-   "swatch": "swatches/fx_trim.png",
+   "swatch": "swatches/r2_tan.png",
    "scale": 0.08,
    "tile": "repeat",
    "bright": 1.0,
-   "shading": 0.6
+   "shading": 0.6,
+   "keep": 0.0
   },
   "leather": {
-   "swatch": "swatches/fx_dark.png",
+   "swatch": "swatches/r2_dark.png",
    "scale": 0.1,
    "tile": "repeat",
    "bright": 1.0,
@@ -43,11 +45,12 @@
     }
    ],
    "cloth": {
-    "swatch": "swatches/fx_hat.png",
+    "swatch": "swatches/r2_hat.png",
     "scale": 0.09,
     "tile": "repeat",
-    "bright": 0.95,
-    "shading": 0.9
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.0
    }
   },
   "shoulders": {
@@ -62,17 +65,18 @@
     }
    ],
    "cloth": {
-    "swatch": "swatches/fx_grey.png",
+    "swatch": "swatches/r2_fog.png",
     "scale": 0.09,
     "tile": "repeat",
-    "bright": 0.78,
-    "shading": 0.9
+    "bright": 0.82,
+    "shading": 0.85,
+    "keep": 0.0
    }
   },
   "chest": {
    "decals": [
     {
-     "image": "decals/rainstitch_common_d4d4b9.png",
+     "image": "decals/drops3.png",
      "anchor": "back",
      "size": 0.2,
      "mode": "paint",
@@ -80,7 +84,7 @@
      "opacity": 1.0,
      "offset": [
       0,
-      -0.04,
+      -0.045,
       0
      ]
     },
@@ -96,18 +100,20 @@
   },
   "legs": {
    "cloth": {
-    "swatch": "swatches/fx_greyleather.png",
+    "swatch": "swatches/r2_greave.png",
     "scale": 0.1,
     "tile": "repeat",
-    "bright": 0.9,
-    "shading": 0.9
+    "bright": 1.0,
+    "shading": 0.9,
+    "keep": 0.2
    },
    "leather": {
-    "swatch": "swatches/fx_dark.png",
+    "swatch": "swatches/r2_dark.png",
     "scale": 0.1,
     "tile": "repeat",
     "bright": 0.9,
-    "shading": 0.9
+    "shading": 0.9,
+    "keep": 0.1
    }
   },
   "feet": {}
