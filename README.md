@@ -328,10 +328,10 @@ The big map is looked about freely. The **wheel** (or a **pinch**, or its + and 
 
 Under a roof both maps show the place's own chart instead, as Bellmourn's map does below ground: the passages and rooms come out of the dark as you walk them (`src/ui/undermap.js`). There's one chart each for the cathedral and its catacombs, the Hollowfang Warrens and the Test Dungeon, half a metre to a cell, made from the place's own shape: the church's floors and colliders in `interior.json`, the warrens' and the hall's fields. The filling-in runs along the floor from where you stand, 16 m at most, so it stops at walls and you never see into a room you haven't found the way to. Stone is warm near the surface and cold deep down, stairs are banded, a drop is red, doors are gold ticks, and rooms are named once you've stood in them. A new place under a roof wants a `Chart` there and a line in `chartAt`.
 
-Velscour's Skull (beside the corner map with the mouse free, or the `` ` `` key) takes a second word: **Jamie**, in any case.
-It wakes the **Auto** button under the skull, taken from Velscour (`assets/ui/btn_auto.webp`, and its blue glow from
-Velscour's `css/style.css`). The button, or **P**, turns auto-play on and off. Like the cheats, it lasts until the page is
-reloaded.
+The **Auto** button sits under Velscour's Skull whenever you're playing, taken from Velscour (`assets/ui/btn_auto.webp`,
+and its blue glow from Velscour's `css/style.css`). The button, or **P**, turns auto-play on and off; it needs no word. With
+the mouse held by the game, press P, or free the mouse (Esc or Alt) and click it. Its nav thread takes a few seconds to come
+up, so it isn't started until auto-play is first wanted (the pointer over the button is enough to start it).
 
 While it's on, the game plays itself as a player would. It works the same controls as you: the move keys, the look, the staff,
 the casts, jump, dodge and E. Nothing is moved or handed to it.
