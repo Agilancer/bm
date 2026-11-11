@@ -809,7 +809,7 @@ class OpeningStage {
     this.groups = candleGroups().map((list) => {
       const n = list.length, c = [0, 0, 0];
       for (const k of list) { c[0] += k.x / n; c[1] += k.y / n; c[2] += k.z / n; }
-      return { list, c, light: L([1, 0.6, 0.28], list[0].ledge ? 3.6 : 8, 0, 0.45) };
+      return { list, c, light: L([1, 0.62, 0.3], list[0].ledge ? 3.6 : 10.5, 0, 0.45) };
     });
     r.lights.push(...Object.values(this.lights), ...this.groups.map((g) => g.light));
     // Light quads, written each frame and drawn added over the world (src/gfx/interior.js's glow pipeline).
@@ -898,7 +898,7 @@ class OpeningStage {
     const lit = stage === OPENING.WAKE ? smoothstep(CANDLES_AT, CANDLES_AT + 1.4, t) : 1;
     const dark = stage === OPENING.COLLAPSE ? smoothstep(3.0, 4.4, t) : stage > OPENING.COLLAPSE ? 1 : 0;
     const boost = r.tier.lean ? 1.7 : 1;
-    const amb = [lerp(0.011, 0.13, lit), lerp(0.006, 0.084, lit), lerp(0.02, 0.046, lit)].map((v) => lerp(v, 0.008, dark) * boost);
+    const amb = [lerp(0.011, 0.18, lit), lerp(0.006, 0.118, lit), lerp(0.02, 0.066, lit)].map((v) => lerp(v, 0.008, dark) * boost);
     r.caveAmb = [...amb, 1];
     if (!m.inside) { this.park(); return; }
     // The portal, behind where you woke.
@@ -932,8 +932,7 @@ class OpeningStage {
       let k = 0;
       for (const c of g.list) k += this.candleLit(c, m);
       k /= g.list.length;
-      const gut = m.gutter ? 1 - m.gutter * (0.25 + 0.2 * Math.sin(time * 17 + g.c[0]) * Math.sin(time * 6.1 + g.c[2])) : 1;
-      this.light(g.light, g.c[0], g.c[1], g.c[2], (g.list[0].ledge ? 2.6 : 15) * k * gut);
+      this.light(g.light, g.c[0], g.c[1], g.c[2], (g.list[0].ledge ? 2.6 : 21) * k);
     }
     if (!cam) return;
     // ---- the light quads ----
@@ -947,7 +946,6 @@ class OpeningStage {
       let flare = 1 + 2.2 * Math.max(0, 1 - age / 0.3);
       if (i === BURST_CANDLE && m.burst > 0) flare += 7 * m.burst * m.burst;
       let fl = 0.85 + 0.15 * Math.sin(time * 13 + c.phase * 7) + 0.08 * Math.sin(time * 29 + c.phase);
-      if (m.gutter) fl *= 1 - m.gutter * (0.3 + 0.3 * Math.sin(time * 23 + c.phase * 5));
       // (Leaning toward you: the flame's tip pulled your way, and drawn out.)
       const lean = m.lean || 0, dx = px - c.x, dz = pz - c.z, dl = Math.hypot(dx, dz) || 1;
       const top = [c.x + dx / dl * 0.04 * lean, c.y + c.tall + 0.035 - 0.01 * lean, c.z + dz / dl * 0.04 * lean];
