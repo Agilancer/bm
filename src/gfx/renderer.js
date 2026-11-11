@@ -370,10 +370,10 @@ export class Renderer {
     const viewModel = (i) => model(models[i], (glb) => this.buildViewModel(glb));
     const vms = [viewModel(9), viewModel(3), viewModel(14)], spellVMs = [viewModel(12), viewModel(13)];
     const knightProps = [4, 5, 6, 7].map((i) => model(models[i], (glb) => this.buildProp(glb)));
-    // Each hero's three: main hand, off hand, the board on the back (assets/game/heroes/kit, tools/heroes/kit.py). One model per
+    // Each hero's four: main hand, off hand, the board on the back, a bard's lute (assets/game/heroes/kit, tools/heroes/kit.py). One model per
     // item, shared.
     const kitModels = new Map();
-    const kitOf = (k) => [k.main, k.off || (k.style === 'daggers' || k.style === 'boomerang' ? k.main : null), k.back];   // (Two daggers or two boomerangs: the same item in both hands.)
+    const kitOf = (k) => [k.main, k.off || (k.style === 'daggers' || k.style === 'boomerang' ? k.main : null), k.back, k.lute || null];   // (Two daggers or two boomerangs: the same item in both hands. A bard's lute is the fourth.)
     for (const p of cast) for (const id of kitOf(p.kit || {})) if (id && !kitModels.has(id)) kitModels.set(id, model(`assets/game/heroes/kit/${id}.glb`, (glb) => this.buildProp(glb)));
     // The opening's cave and her book (src/gfx/opening.js): their pictures now, the stage itself once the arms are built.
     // (It waits its turn as a model does: its book's three pictures are as big as any.)
@@ -492,7 +492,7 @@ export class Renderer {
     // The heroes' own: owner, drawn only while its hero is (an empty hand draws nothing).
     for (let i = 0; i < cast.length; i++) {
       const c = this.chars[this.firstHero + i];
-      c.propBase = this.props.length; c.propCount = 3;
+      c.propBase = this.props.length; c.propCount = 4;
       for (const id of kitOf(cast[i].kit || {})) this.props.push(id ? { ...(await kitModels.get(id)), owner: this.firstHero + i } : { empty: true });
     }
     this.tripo.reserveProps();

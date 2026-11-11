@@ -25,7 +25,8 @@ import { CHURCH_DOOR, churchAt } from './church.js';
 
 // How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU. (And the
 // Free Company's two quartermasters and the Test Dungeon's keeper besides, BROKERS below.)
-export const HERO_SLOTS = { desktop: 16, lean: 6 };
+// (Eight on a phone: one of every class, so any of them can be hired there too.)
+export const HERO_SLOTS = { desktop: 16, lean: 8 };
 
 // The Free Company's quartermasters, who hire out a party (src/ui/party.js): one in town by the square, one at the
 // Hollowfang Warrens' portal (src/core/dungeon.js BROKER_SPOTS). Bodies of the heroes' own, people of their own. While the
@@ -241,7 +242,8 @@ export function withBrokers(cast, roster, kit) {
   for (const b of BROKERS) {
     const h = roster.find((x) => x.id === b.body) || roster.find((x) => x.cls === 'bard');
     if (!h) continue;
-    const k = kit.heroes[h.id] || {};
+    // (They wear bards' bodies, but they keep the Company's books, not a lute.)
+    const k = { ...(kit.heroes[h.id] || {}), lute: null };
     out.push({ slot: out.length, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name: b.name, full: b.name, guild: b.guild || 'The Free Company', persona: 'kind', level: 30,
       gold: 0, kit: k, string: k.string ? kit.strings[k.string] : null, seed: 7 + out.length, broker: b.broker, title: b.title });
   }

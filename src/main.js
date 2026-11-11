@@ -377,7 +377,7 @@ async function boot(plan, poolSize) {
   // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
   // How many: by the tier, the setting, or ?heroes=N for tests.
   const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
-    : Math.min(settings.heroes === 'few' ? 6 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
+    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
   let cast = [];
   if (heroCount > 0) {
     try {
@@ -1544,11 +1544,36 @@ class GameView {
     }
   }
 
+  // What one of the other Tessariels' moves does that only this thread can (HFX in src/sim/heroskills.js): at (x, y, z).
+  heroFx(code, x, y, z, a, b, c) {
+    const r = this.renderer, au = this.audio;
+    switch (code) {
+      case 1: {
+        // Blood thrown from a cut, the way (a, c) with how much (b): a gout along it, and a spatter every way. It falls and soaks in.
+        // (Jets of it, in drops big enough to be seen across a field.)
+        const n = Math.ceil(160 + 340 * b);
+        r.emit(0, n, x, y, z, a * 1.5, 0.8, c * 1.5, 0.45, 2.6, 7.5 + 3.5 * b, 0.004, 0.02, 0.6, 1.5);
+        r.emit(0, Math.ceil(n * 0.4), x, y, z, 0, 1, 0, 1.4, 1, 5, 0.003, 0.014, 0.5, 1.3);
+        au.play('splat', x, y, z, 0.3 + b * 0.35);
+        break;
+      }
+      // A lute's string (a: semitones from its lowest, b: how loud), and a bell-like one for the paladin's light.
+      case 2: au.pluck(x, y, z, a, b || 0.5); break;
+      case 4: au.pluck(x, y, z, a, b || 0.5, true); break;
+      // Sparks off steel (a: how many).
+      case 3: r.emit(2, Math.ceil(a || 30), x, y, z, 0, 0.4, 0, 1.4, 1.5, 6, 0.002, 0.005, 0.15, 0.5); break;
+      // Something heavy coming down.
+      case 5: au.play('land', x, y, z, 0.8 + (a || 0) * 0.6, 0.7); r.emit(3, 30, x, y + 0.03, z, 0, 1, 0, 1.4, 0.6, 2.6, 0.06, 0.16, 0.5, 1.3); break;
+      default: break;
+    }
+  }
+
   onEvent(type, a, b, c, d, e, f, g) {
     const r = this.renderer, au = this.audio;
     switch (type) {
       case EV.SWING: break;
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
+      case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       case EV.DELVE: this.party?.onDelve(a, b, c, d); break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
