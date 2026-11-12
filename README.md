@@ -394,6 +394,21 @@ Hidden with the rest). A chest or a word auto-play opens itself still shows over
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
 
+### Life bars
+
+Every enemy carries its life over its head, in the world (`src/ui/foebars.js`): each body in the snapshot that isn't one of
+yours, each jelly, and each tumbler that's awake. Red once it means you harm, dull gold while it hasn't seen you. What
+means you harm or has been hurt shows from 34 metres, what hasn't seen you from 18, the nearest 28 at once. Tessariel's
+knights have none unless one turns on you. The bar sits over the head the sim wrote (`C.HEAD_Y`: a knight's own head, the
+top of a monster, `src/sim/beast.js`), or by its kind (`TALL`); a jelly's and a tumbler's life is the last float of its
+block. They're drawn over the picture, so one shows through a wall; and they stay when auto-play puts the interface away.
+
+The only life bar on the interface is a boss's: the frame at the top (`#foe`) is for Velscour's knights, the Gravehart,
+the Bone Hydra, the werewolf, the Abyssal Mouth and any monster with 400 life or more (`isBoss`), from 34 metres; it used
+to be for whatever was nearest. A dungeon's boss keeps its own frame (`src/ui/party.js`), and the other gives way to it.
+Your own bars and your party's frames are as they were. `node --test tests/foe-bars.test.mjs`. Seen headless on a phone's
+screen in a fight in the woods; not looked at closely over each kind of body, so check the height on the big ones.
+
 ### Auto-play
 
 ### The interface, and a phone's screen

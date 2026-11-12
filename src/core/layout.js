@@ -106,11 +106,11 @@ export const MAX_FX = 512;
 export const CHARS_START = FX_START + MAX_FX * FX_FLOATS;
 // The slimes out in the wet places (src/sim/slimes.js write).
 export const MAX_SLIMES = 40;
-export const SLIME_FLOATS = 12;
+export const SLIME_FLOATS = 13;   // (the last: how much of its life it has, 0 to 1, for the bar over it. src/ui/foebars.js)
 export const SLIMES_START = CHARS_START + MAX_CHARS * C_SIZE;
 // The tumblers, the living stones out in the countries (src/sim/tumblers.js write).
 export const MAX_TUMBLERS = 48;
-export const TUMBLER_FLOATS = 18;
+export const TUMBLER_FLOATS = 19;   // (the last: how much of its life it has, 0 to 1)
 export const TUMBLERS_START = SLIMES_START + MAX_SLIMES * SLIME_FLOATS;
 export const SNAP_FLOATS = TUMBLERS_START + MAX_TUMBLERS * TUMBLER_FLOATS;
 

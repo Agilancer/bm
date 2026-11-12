@@ -207,7 +207,7 @@ export class Slimes {
     return s;
   }
 
-  // Into the snapshot: [here, x, y, z, radius, kind, stretch, lean x, lean z, flash, yaw, height for radius] each.
+  // Into the snapshot: [here, x, y, z, radius, kind, stretch, lean x, lean z, flash, yaw, height for radius, life] each.
   write(snap) {
     for (let i = 0; i < MAX_SLIMES; i++) {
       const o = SLIMES_START + i * SLIME_FLOATS, s = this.list[i];
@@ -215,6 +215,7 @@ export class Slimes {
       snap[o] = 1; snap[o + 1] = s.x; snap[o + 2] = s.y; snap[o + 3] = s.z; snap[o + 4] = s.R; snap[o + 5] = s.species;
       snap[o + 6] = s.s; snap[o + 7] = Math.max(-0.4, Math.min(0.4, s.vx * 0.06)); snap[o + 8] = Math.max(-0.4, Math.min(0.4, s.vz * 0.06));
       snap[o + 9] = s.flash; snap[o + 10] = s.yaw; snap[o + 11] = s.sp.h;
+      snap[o + 12] = s.dead ? 0 : Math.max(0.001, Math.min(1, s.hp / (s.S.hp || 1)));
     }
   }
 }
