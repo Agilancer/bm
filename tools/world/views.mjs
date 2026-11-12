@@ -35,6 +35,7 @@ for (const a of process.argv.slice(2)) {
     await page.evaluate(`bm.cmd(19, 0, ${+px}, ${+pz}); bm.setTime(${hour || 11}); bm.setCam(${JSON.stringify(c)});`);
     await page.waitForTimeout(+(process.env.SETTLE || 6000));
     // AIMID=<roster id>: the eye is put before that monster's face (its own yaw), AIMD metres off (default 2.4), at its head.
+    // With AIMSELF=1 the eye is the player's own, looking at its head.
     if (process.env.AIMID) {
       const r = await page.evaluate(`(async () => { const L = await import('/src/core/layout.js'); const t = bm.renderer.tripo, r = bm.renderer, s = bm.snap();
         for (let i = 0; i < t.count; i++) { const c = r.chars[t.first + i]; if (!t.want[i] || c.pending) continue; if (t.ids[(+t.want[i].split(':')[0]) - 1] !== ${JSON.stringify(process.env.AIMID)}) continue;
@@ -42,7 +43,9 @@ for (const a of process.argv.slice(2)) {
         return null; })()`);
       if (r) {
         const D = +(process.env.AIMD || 2.4), hy = r.y + r.h * 0.9;
-        const c2 = cam(r.x + Math.sin(r.yaw) * D, hy + 0.1, r.z + Math.cos(r.yaw) * D, r.x, hy, r.z);
+        // (AIMSELF: from the player's own eyes instead: what it's fighting faces it.)
+        const me = process.env.AIMSELF ? await page.evaluate(`(async () => { const L = await import('/src/core/layout.js'); const s = bm.snap(); return [s[L.H.PX], s[L.H.PY], s[L.H.PZ]]; })()`) : null;
+        const c2 = me ? cam(me[0], me[1] + 1.7, me[2], r.x, hy, r.z) : cam(r.x + Math.sin(r.yaw) * D, hy + 0.1, r.z + Math.cos(r.yaw) * D, r.x, hy, r.z);
         await page.evaluate(`bm.setCam(${JSON.stringify(c2)})`);
         await page.waitForTimeout(1200);
         console.log('face of', process.env.AIMID, JSON.stringify(r));

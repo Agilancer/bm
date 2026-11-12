@@ -846,8 +846,9 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   c += vec3f(5.0, 2.6, 0.9) * wound.hot;
   // What the body's maps mark as lit of itself: the metal/rough map's alpha, which every body's is whole but the possessed
   // knights' eyes (tools/monsters/possessed_knights.py). It's this red and not the paint's, so no palette washes it out,
-  // and it's bright enough to bloom: the eyes show across a dark hall.
-  c += vec3f(11.0, 0.55, 0.16) * (1.0 - mr.a) * (0.85 + 0.15 * sin(F.camPos.w * 5.0));
+  // and it's bright enough to bloom: the eyes show across a dark hall. (Much brighter and the tone curve washes it to white:
+  // seen in the game at 11, a pale streak.)
+  c += vec3f(5.2, 0.13, 0.035) * (1.0 - mr.a) * (0.85 + 0.15 * sin(F.camPos.w * 5.0));
   // A cool edge of sky around the silhouette separates dark plate from anything behind it.
   let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
   // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)
@@ -935,7 +936,7 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
   // (In the keep's lit halls, 2.25, plate takes a warm sheen off the fires: Velscour's knights are blackened steel, which
   // takes no other light, and against dark stone they were shapes cut out of the room.)
-  if (indoor > 0.5) { reflected *= select(select(vec3f(0.22), select(vec3f(0.05), vec3f(0.42, 0.27, 0.18), indoor > 2.2), indoor > 1.5), vec3f(0.5), indoor > 2.5); }
+  if (indoor > 0.5) { reflected *= select(select(vec3f(0.22), select(vec3f(0.05), vec3f(0.17, 0.11, 0.075), indoor > 2.2), indoor > 1.5), vec3f(0.5), indoor > 2.5); }
   reflected *= mix(1.0, 0.06, cave);
   let dfg = envDFG(rough, nv);
   let fss = f0 * dfg.x + dfg.y;
