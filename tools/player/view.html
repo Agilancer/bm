@@ -83,6 +83,10 @@ const DO = {
   ride: (t) => ({ vz: 9, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: Math.sin(t) * 0.5, air: false } }),
   rideslope: () => ({ vz: 9, surf: { hx: 0, hz: 1, nx: 0, ny: 0.94, nz: 0.34, tilt: 0, air: false } }),
   death: (t) => ({ dead: true, deadT: t }),
+  // Weapons put away (out of a fight): stood, on the move, on the board, and partway there.
+  away: () => ({ stow: 1 }), away_walk: () => ({ vz: 1.3, stow: 1 }), away_run: () => ({ vz: 5.6, stow: 1 }), away_sprint: () => ({ vz: 8.6, sprinting: true, stow: 1 }),
+  away_ride: () => ({ vz: 9, stow: 1, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: 0, air: false } }),
+  putaway: (t) => ({ stow: Math.min(1, t) }),
 };
 for (const [k, f] of Object.entries(CAST)) {
   DO[k] = (t) => ({ cast: f(t) });
@@ -90,7 +94,7 @@ for (const [k, f] of Object.entries(CAST)) {
 }
 let doing = q.get('do') || 'idle', time = 0;
 const stateOf = (name, t) => {
-  const base = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, vx: 0, vz: 0, onGround: true, sprinting: false, dodge: 0, dead: false, deadT: 0, guard: 0, surf: null, cast: null, staff: has.staff, skull: has.skull, shield: has.shield };
+  const base = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, vx: 0, vz: 0, onGround: true, sprinting: false, dodge: 0, dead: false, deadT: 0, guard: 0, surf: null, cast: null, stow: 0, staff: has.staff, skull: has.skull, shield: has.shield };
   return Object.assign(base, (DO[name] || DO.idle)(t));
 };
 
@@ -107,7 +111,7 @@ function pose(name, t, dt) {
   show(held.staff, 0);
   // (The left hand's is the skull if he has one; the back's is the shield then, or the board under him.)
   show(s.skull ? held.skull : held.shield, 16);
-  if (s.skull || s.surf) show(held.shield, 32);
+  if (s.skull || s.surf || s.stow) show(held.shield, 32);
   return s;
 }
 // Settle into a pose: a second or so of ticks, so the eases have run.

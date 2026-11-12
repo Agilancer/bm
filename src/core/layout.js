@@ -62,7 +62,11 @@ export const H = {
   TP: 63, TP_DIST: 64, TP_SIDE: 65, TP_DROP: 66,
   // What's on you (BUFFS in src/sim/treespells.js): the seconds left of each. And for each spell by its place in SPELLS, the
   // seconds until it's ready again. (Room for sixteen of the one and ninety-six of the other.)
-  BUFFS: 67, COOL: 83, SIZE: 179,
+  BUFFS: 67, COOL: 83,
+  // The road's fight in the opening: how many of its dead are still to be put down (0: no fight on). src/sim/opening.js.
+  OPENING_FIGHT: 179,
+  // Your staff, skull and shield put away, out of a fight: 0 (in hand) to 1 (on your back and hip). Sim.stepStow.
+  STOW: 180, SIZE: 181,
 };
 
 // Per-character block

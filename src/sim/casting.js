@@ -522,8 +522,9 @@ export class Casting {
     // Frozen, it takes half again; the first blow on something a Brittle nova froze does double.
     const iced = a.freeze > 0 ? (a.brittle ? 2 : 1.5) : 1;
     if (a.freeze > 0 && a.brittle && dmg > 1) a.brittle = false;
-    // (ward: a share the body shrugs off, as a twin does while his brother's hurt worse: src/sim/dungeon.js.)
-    k.hp -= dmg * iced * SPELL_BITE * this.power * (1 + (this.buffs.still?.def.sight || 0)) * (k.ward ?? 1);
+    // (shrug: the share of it the body takes, less than all as a twin does while his brother's hurt worse: src/sim/dungeon.js.
+    // Not `ward`: that's a wizard's or a necromancer's pane of light, a count of the blows it has left, and nought with none up.)
+    k.hp -= dmg * iced * SPELL_BITE * this.power * (1 + (this.buffs.still?.def.sight || 0)) * (k.shrug ?? 1);
     k.playerHitT = sim.time;     // (The player had a hand in it: src/sim/sim.worker.js, whose kill it is.)
     // Leech: a drink for each hit, but a held spell's ticks don't add up to a fountain.
     if (sim.time > this.leechT) { this.leechT = sim.time + 0.25; sim.player.drink(); }

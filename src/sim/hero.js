@@ -11,7 +11,8 @@ import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate,
 import { floorAt, inPit } from '../core/interior.js';
 import { ELEM, FX, FX_CARRIED } from './spells.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
-import { Knight, S, matToQuat, norm, orth, cross, turn } from './knight.js';
+import { Knight, S, matToQuat, norm, orth, cross, restHold, turn } from './knight.js';
+import { stepStow } from '../core/stow.js';
 import { Caster, Zombie } from './undead.js';
 import { townDist } from '../core/town.js';
 
@@ -101,6 +102,10 @@ const BLEED = 3;                 // seconds a bleeding cut runs, at 30% of the b
 // Who goes round behind what someone else is holding (a knife in the back counts nearly double: backstab).
 const FLANKERS = new Set(['rogue', 'ninja']);
 // What needs a clear line to its foe, past its own reach: anything shot, thrown, charged or leapt. (The rest is done where it stands.)
+// How big the heroes' shields and boards are drawn: a little over the models' own size.
+const HERO_SHIELD = 1.15;
+// What's too long for the hip, and goes on the back when it's put away (src/core/stow.js).
+const LONG_ARMS = new Set(['spear', 'lance', 'pike', 'maul', 'bow', 'staff', 'halberd', 'greatsword', 'great_mace']);
 const LINE_SKILLS = new Set(['hammer_throw', 'charge', 'volley', 'strafe', 'rain_of_arrows', 'throwing_stars', 'shadow_step', 'leaping_kick', 'jump', 'double_throw', 'vanish']);
 
 // ---- the body -------------------------------------------------------------------------------------------------------
@@ -108,7 +113,7 @@ const LINE_SKILLS = new Set(['hammer_throw', 'charge', 'volley', 'strafe', 'rain
 export class Hero extends Knight {
   constructor(slot, rig, bank, person, props) {
     const cls = CLASSES[person.cls];
-    super(100 + slot, 1, rig, bank, { spawn: [-1.5 + Math.sin(slot) * 6, 4 + Math.cos(slot) * 6], yaw: slot, hp: cls.hp, style: 'silver', swordScale: 1, shieldScale: 1, bladeLen: 1, walk: 1.4, hero: true });
+    super(100 + slot, 1, rig, bank, { spawn: [-1.5 + Math.sin(slot) * 6, 4 + Math.cos(slot) * 6], yaw: slot, hp: cls.hp, style: 'silver', swordScale: 1, shieldScale: HERO_SHIELD, bladeLen: 1, walk: 1.4, hero: true });
     this.slot = slot; this.person = person; this.cls = cls; this.style = person.kit.style;
     this.bodyRadius = 0.42;
     this.propMatrices = new Float32Array(64);
@@ -172,6 +177,23 @@ export class Hero extends Knight {
       [this.luteBackQ, this.luteBackT] = hold(j, [-0.5, 0.86, -0.08], [0, 0.12, 1], [0.1 * u, sy - 0.2 * u, -0.34 * u]);
       const pj = this.J.pelvis;
       [this.sheathQ, this.sheathT] = hold(pj, [0.12, -0.86, -0.5], [1, 0.1, 0], [0.2 * u, pose.wt[pj * 3 + 1] + 0.02 * u, 0.03 * u]);
+    }
+    // Where what's in the hands is kept out of a fight (src/core/stow.js). A long arm (a spear, a lance, a maul, a bow) on
+    // the back, nearly upright, its head over the right shoulder, under the board; a short one (a sword, a mace, a knife,
+    // a boomerang) at the hip, the main hand's at the left and the other's at the right, point down and back; and a
+    // shield-bearer's board on the back. this.stowPush: how far the board on the back stands off for what's under it.
+    {
+      const hold = restHold(rig, bank), u = rig.height / 1.8, pj = this.J.pelvis, sj = this.J.spine3, hipY = hold.y(pj) + 0.02 * u;
+      const M = this.mainP, long = M && (LONG_ARMS.has(M.kind) || M.length > 1.3);
+      if (long) {
+        // (Its middle at the middle of the back; a lance, twice his height, as low as keeps its butt off the ground.)
+        const y = norm([-0.26, 0.96, -0.06]), up = M.kind === 'bow' ? 0 : (M.reach - M.butt) / 2;
+        const gy = Math.max(hold.y(sj) - 0.1 * u - y[1] * up, 0.3 + (M.butt || 0) * y[1]), over = (gy - (hold.y(sj) - 0.1 * u)) / y[1];
+        this.stowMain = hold(sj, y, [0, 0.1, 1], [0.03 * u + y[0] * (over - up), gy, -0.17 * u]);
+        this.stowPush = 0.07 * u;
+      } else if (M) this.stowMain = hold(pj, [0.12, -0.86, -0.5], [1, 0.1, 0], [0.2 * u, hipY, 0.03 * u]);
+      if (this.shieldStyle) this.stowOff = hold(sj, [0.12, 1, 0.05], [0, 0.1, 1], [0.05 * u, hold.y(sj) - 0.2 * u, -0.2 * u - (long ? 0.07 * u : 0)]);
+      else if (this.offP) this.stowOff = hold(pj, [-0.12, -0.86, -0.5], [-1, 0.1, 0], [-0.2 * u, hipY, 0.03 * u]);
     }
     // (A quartermaster of the Free Company: stands at a post and hires out the party: HeroWorld.atPost.)
     this.broker = person.broker || null;
@@ -304,6 +326,8 @@ export class Hero extends Knight {
     }
     this.combat = damp(this.combat, this.foe ? 1 : 0, 4, dt);
     this.shieldUp = damp(this.shieldUp, this.shieldTarget, 8, dt);
+    // (Arms in hand for a fight and a while after; put away for the road and the town: src/core/stow.js.)
+    stepStow(this, dt, !!(this.foe || this.swing || this.jump || this.charge || this.tossing || this.point || this.flight || this.aim || this.bowW > 0.01 || this.shieldTarget > 0), this.x, this.z);
     // Anything that moves the body moves the feet: turning on the spot, or being shouldered aside, is walked, never slid.
     const turned = Math.abs(wrapAngle(this.yaw - (this.prevYaw ?? this.yaw))) / Math.max(dt, 1e-4);
     this.prevYaw = this.yaw;
@@ -651,7 +675,7 @@ export class Hero extends Knight {
     m.heroFoe = this; m.heroFoeT = sim.time;
     // (Your tank holds what he hits; a twin's ward takes its share of anyone's blow.)
     if (this.hired && this.role === 'tank') { m.tauntBy = this; m.tauntT = sim.time + 5; }
-    dmg *= m.ward ?? 1;
+    dmg *= m.shrug ?? 1;
     if (m instanceof Knight) {
       // Velscour's guards hold: a party can hold one off and slip by, not cut it down for the player to find gone.
       m.hp = Math.max(m.maxHp * 0.4, m.hp - dmg * 0.5);
@@ -1139,9 +1163,10 @@ export class Hero extends Knight {
       propT[0] = this.x; propT[1] = this.y - 0.1; propT[2] = this.z;
       mat4FromQT(propM, propQ, 0, propT, 0);
       // A shield-bearer rides their own board.
+      for (let i = 0; i < 12; i++) propM[i] *= HERO_SHIELD;
       out.set(propM, this.shieldStyle ? off + 16 : bo);
       if (this.shieldStyle) zero(bo);
-    } else if (this.backP && !(this.dead && this.deadT > 1.5)) fromHand(bo, J.spine3, this.backQ, this.backT);
+    } else if (this.backP && !(this.dead && this.deadT > 1.5)) { fromHand(bo, J.spine3, this.backQ, this.backT); for (let i = 0; i < 12; i++) out[bo + i] *= HERO_SHIELD; }
     else zero(bo);
     // The main hand's weapon pointed where a move wants it (a dragoon's spear down his dive), still in the fist.
     if (this.aim && out[off + 15] !== 0) {
@@ -1181,6 +1206,15 @@ export class Hero extends Knight {
         for (let i = 0; i < 3; i++) propT[i] = out[off + 12 + i] + (propT[i] - out[off + 12 + i]) * e;
         mat4FromQT(propM, propQ, 0, propT, 0);
         out.set(propM, off);
+      }
+    }
+    // Put away, out of a fight: each to its place on him, and the board on his back stood off for what's under it.
+    if (this.stow > 0.001 && !this.surf && !(this.dead && this.deadT > 1.5)) {
+      if (this.stowMain && !(this.luteW > 0.01)) this.putAway(out, off, this.stowMain, 1);
+      if (this.stowOff) this.putAway(out, off + 16, this.stowOff, this.shieldStyle ? this.opts.shieldScale : 1);
+      if (this.stowPush && out[bo + 15] !== 0) {
+        const j = J.spine3 * 3, dx = out[bo + 12] - wt[j], dz = out[bo + 14] - wt[j + 2], l = Math.hypot(dx, dz) || 1, k = this.stowPush * this.stow;
+        out[bo + 12] += dx / l * k; out[bo + 14] += dz / l * k;
       }
     }
     // Out of its hand altogether: a board thrown, a spear standing in the ground.
@@ -2946,7 +2980,7 @@ export class HeroWorld {
           .forEach((k, j) => { const i = z.length + j; k.raiseAt(sim, m.x + (i % 3) * 1.6, m.z + Math.floor(i / 3) * 1.6, null, !!m.calm); });
         break;
       }
-      case 'undead': self.postMessage({ type: 'heroState', id: m.id, heroes: [], undead: sim.knights.filter((k) => k instanceof Zombie).map((k) => ({ id: k.id, model: k.opts.model, role: k.opts.role || null, x: +k.x.toFixed(1), z: +k.z.toFixed(1), sink: +k.sink.toFixed(2), state: k.state, dead: k.dead, dormant: k.dormant, grave: k.opts.grave || null, up: k.graveUp, aggro: k.aggro, clip: k.clip })), others: sim.knights.filter((k) => !(k instanceof Zombie)).map((k) => ({ id: k.id, kind: k.kind, name: k.opts?.name || k.constructor.name, x: +k.x.toFixed(0), z: +k.z.toFixed(0) })) }); break;
+      case 'undead': self.postMessage({ type: 'heroState', id: m.id, heroes: [], undead: sim.knights.filter((k) => k instanceof Zombie).map((k) => ({ id: k.id, model: k.opts.model, role: k.opts.role || null, x: +k.x.toFixed(1), z: +k.z.toFixed(1), sink: +k.sink.toFixed(2), state: k.state, dead: k.dead, dormant: k.dormant, grave: k.opts.grave || null, up: k.graveUp, aggro: k.aggro, clip: k.clip, hostile: k.hostile, hp: Math.round(k.hp), owned: !!k.owner, y: +k.y.toFixed(1) })), others: sim.knights.filter((k) => !(k instanceof Zombie)).map((k) => ({ id: k.id, kind: k.kind, name: k.opts?.name || k.constructor.name, x: +k.x.toFixed(0), z: +k.z.toFixed(0) })) }); break;
       case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), follow: h.party?.leader && h.party.leader !== h ? h.party.leader.slot : null, hired: !!h.hired, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting, leaps: h.leaps, guard: h.guardT > 0, iframes: h.iframesT > 0, charge: !!h.charge, jump: !!h.jump, flight: h.flight?.length || 0 })), zones: this.zones.map((z) => z.kind), shots: this.shots.map((q) => q.kind + (q.rain ? ':rain' : q.up ? ':up' : '')), dots: this.dots.length }); break;
       default: break;
     }
