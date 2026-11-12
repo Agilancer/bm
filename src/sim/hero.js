@@ -778,7 +778,10 @@ export class Hero extends Knight {
     dmg *= m.shrug ?? 1;
     if (m instanceof Knight) {
       // Velscour's guards hold: a party can hold one off and slip by, not cut it down for the player to find gone.
-      m.hp = Math.max(m.maxHp * 0.4, m.hp - dmg * 0.5);
+      // (Never back up to that: the floor used to be put on whatever he had left, so with you at him below two fifths every
+      // blow from anyone else gave him all of it back, and with a party at your side he couldn't be killed at all. Your
+      // own party's blows count all the way down, as they do on anything else.)
+      m.hp = this.hired ? m.hp - dmg * 0.5 : Math.min(m.hp, Math.max(m.maxHp * 0.4, m.hp - dmg * 0.5));
       if (!o.dot) m.onHit(sim, kind, this.x, this.z, poise, null);
       return true;
     }
