@@ -2657,6 +2657,18 @@ export class Brain {
     inp.look(-this.yawV * dt, -this.pitchV * dt);
     if (!fight && !this.talk) this.pitch = -0.06;
     if (!fight && this.job?.kind !== 'talk' && !(this.doorWait > 0)) this.face = null;
+    // Wedged (lost() below): out by the way the nav thread found for it, a point at a time, whatever else it wants.
+    if (this.escapePts) {
+      const E = this.escapePts;
+      while (E.length && dist(m.x, m.z, E[0][0], E[0][1]) < 0.12) E.shift();
+      if (!E.length || this.t > this.escapeUntil) this.escapePts = null;
+      else {
+        const dx = E[0][0] - m.x, dz = E[0][1] - m.z, k = Math.hypot(dx, dz) || 1, c = Math.cos(inp.yaw), s = Math.sin(inp.yaw);
+        a.mx = (-c * dx + s * dz) / k; a.mz = (s * dx + c * dz) / k; a.run = false;
+        this.say('Wedged in a corner: working its way out.');
+        return;
+      }
+    }
     if (!w) { a.mx = 0; a.mz = 0; a.run = false; this.unstick(dt, m, false); return; }
     // Into the keys' frame: strafe and forward, from where it's looking now (so it can walk one way while it turns).
     const c = Math.cos(inp.yaw), s = Math.sin(inp.yaw);
@@ -2762,6 +2774,13 @@ export class Brain {
   // something else found to do.
   lost() {
     const j = this.job;
+    // (Twice in the same place inside two minutes: it isn't the errand, it's where it stands. The nav thread finds the way
+    // out of the corner on a finer grid of its own, and the motor takes it.)
+    const S = this.stuck, was = this.lostAt;
+    if (was && this.t - was.t < 120 && dist(was.x, was.z, S.x, S.z) < 1.5 && !this.escapePts) {
+      this.nav.ask('escape', { x: S.x, z: S.z }).then((pts) => { if (pts?.length) { this.escapePts = pts; this.escapeUntil = this.t + 12; } });
+    }
+    this.lostAt = { x: S.x, z: S.z, t: this.t };
     if (j?.kind === 'talk') this.giveUp(`p:${j.who}`, 120);
     else if (j?.kind === 'hunt' && this.patrol) this.giveUp(`s:${this.patrol[0]},${this.patrol[1]}`, 240);
     else if (j) this.giveUp(j.why, 90);

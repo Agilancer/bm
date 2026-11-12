@@ -600,7 +600,10 @@ export class TripoWorld {
   }
 
   // A slot for one more: an empty one, or one whose body is long dead or far from you and doing nothing.
-  freeSlot() {
+  // must: for a dungeon's boss, which has to stand up whole or its dungeon can't be finished: any of the dead will do, and
+  // failing that whatever's alive, not in a fight and furthest off (not another boss). The twelve places were all held in
+  // Blackvigil by the halls either side of the Hollow Court, alive and not yet roused, and the Brothers never stood up.
+  freeSlot(must = false) {
     const sim = this.sim, p = sim.player;
     for (let i = this.first; i < this.first + this.count; i++) if (sim.knights[i] instanceof TripoEmpty && !this.claimed?.has(i)) return i;
     let best = -1, bd = 0;
@@ -608,13 +611,14 @@ export class TripoWorld {
       const k = sim.knights[i];
       if (this.claimed?.has(i) || k.aggro) continue;
       const d = Math.hypot(k.x - p.x, k.z - p.z);
-      const spare = k.dead ? (k.deadT > 45 || d > 60 ? 1e6 + d : -1) : d > 150 ? d : -1;
+      let spare = k.dead ? (k.deadT > 45 || d > 60 ? 1e6 + d : -1) : d > 150 ? d : -1;
+      if (must && spare < 0 && !k.boss) spare = k.dead ? 1e5 + d : d > 12 ? d : -1;
       if (spare > bd) { bd = spare; best = i; }
     }
     return best;
   }
 
-  wake(lair) {
+  wake(lair, must = false) {
     const sim = this.sim;
     lair.state = 'awake';
     lair.spawned = 0; lair.killed = 0;
@@ -625,7 +629,7 @@ export class TripoWorld {
     this.loading.add(lair);
     let pending = 0;
     who.forEach(([id, boss], n) => {
-      const slot = this.freeSlot();
+      const slot = this.freeSlot(must);
       if (slot < 0) return;
       this.claimed.add(slot);
       pending++;
@@ -643,7 +647,7 @@ export class TripoWorld {
         this.claimed.delete(slot);
         if (lair.state !== 'awake') return;
         const old = sim.knights[slot];
-        if (old instanceof TripoMonster && (old.aggro || (!old.dead && Math.hypot(old.x - sim.player.x, old.z - sim.player.z) < 150))) return;
+        if (!must && old instanceof TripoMonster && (old.aggro || (!old.dead && Math.hypot(old.x - sim.player.x, old.z - sim.player.z) < 150))) return;
         const m = new TripoMonster(slot, rig, this.optsFor(id, lair, x, z, boss));
         m.lair = lair; m.boss = boss;
         if (lair.face !== undefined) { m.yaw = lair.face; m.idleT = 1e9; }

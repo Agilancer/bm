@@ -218,8 +218,11 @@ export class Warrens {
       const [rx, , rz] = roomSpot(b.room), R = roomOf(b.room).r;
       const dRoom = Math.hypot(p.x - rx, p.z - rz);
       // Stood up as you come down the way to its room.
-      if (lair.state === 'asleep' && dRoom < R + 30) t.wake(lair);
+      if (lair.state === 'asleep' && dRoom < R + 30) t.wake(lair, true);
       const bodies = this.bossBodies(b.key);
+      // (Stood up short, some of its places taken when it woke: laid down again, to stand up whole the next time round.
+      // Without them all it's never counted down, and the dungeon can't be finished.)
+      if (lair.state === 'awake' && bodies.length && lair.spawned < b.models.length && !t.loading.has(lair) && !this.fight && bodies.every((m) => !m.aggro && !m.dead)) { t.sleep(lair); continue; }
       for (const m of bodies) if (!m.setUp) this.setUp(m, b);
       if (lair.state === 'cleared' || (bodies.length && bodies.every((m) => m.dead) && lair.spawned >= b.models.length)) {
         this.down.add(b.key); lair.state = 'cleared'; lair.clearedOnce = true;

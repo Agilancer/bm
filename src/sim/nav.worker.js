@@ -126,13 +126,19 @@ function markAvoid(avoid, a, b) {
 const blocked = (k) => avoidMark[k] === stamp || solidCell(k);
 
 // The nearest free cell to a point, a few metres round at most.
+// (From somewhere the grid calls solid, a snug corner a body can still stand in: the nearest free place it can walk to in a
+// straight line, a body's width clear all the way, before the nearest of all. The nearest of all can be the other side of
+// a wall: wedged in the nook between Silas Crane's hearth and his partition, its way out began through the partition,
+// and it pushed at that till it was stopped.)
+const bodyLine = (ax, az, bx, bz) => { const d = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(d / 0.15)); for (let q = 1; q <= n; q++) if (world.inside(ax + (bx - ax) * q / n, az + (bz - az) * q / n, 0.3)) return false; return true; };
 function freeNear(x, z) {
   const k0 = cellOf(x, z);
   if (k0 < 0) return -1;
   if (!blocked(k0)) return k0;
   const i0 = k0 % W, j0 = (k0 / W) | 0;
+  let any = -1;
   for (let r = 1; r <= 8; r++) {
-    let best = -1, bd = Infinity;
+    let best = -1, bd = Infinity, near = -1, nd = Infinity;
     for (let dj = -r; dj <= r; dj++) {
       for (let di = -r; di <= r; di++) {
         if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
@@ -141,12 +147,14 @@ function freeNear(x, z) {
         const k = j * W + i;
         if (blocked(k)) continue;
         const d = Math.hypot(cx(k) - x, cz(k) - z);
-        if (d < bd) { bd = d; best = k; }
+        if (d < nd) { nd = d; near = k; }
+        if (d < bd && bodyLine(x, z, cx(k), cz(k))) { bd = d; best = k; }
       }
     }
     if (best >= 0) return best;
+    if (any < 0 && near >= 0) any = near;
   }
-  return -1;
+  return any;
 }
 
 // Can you walk straight from a to b: over free cells, and by a wall never closer to it than SNUG? (By a wall the line
@@ -454,11 +462,39 @@ function local(from, to) {
   return out;
 }
 
+// Out of somewhere snug the grid has no way from (a nook a body fits with a finger's room, between a hearth and a
+// partition): by a finer grid of its own, a tenth of a metre, over wherever a body can be, to the nearest place the walking
+// grid calls free. The points of the way, or null. Auto-play asks when it's been stopped twice in the same place.
+function escape(x, z) {
+  const C = 0.1, N = 81, half = (N - 1) / 2, R = 0.345;
+  const at = (i, j) => [x + (i - half) * C, z + (j - half) * C];
+  const seen = new Int32Array(N * N).fill(-2), q = [half * N + half];
+  seen[q[0]] = -1;
+  for (let h = 0; h < q.length; h++) {
+    const k = q[h], i = k % N, j = (k / N) | 0, [px, pz] = at(i, j), cell = cellOf(px, pz);
+    if (h > 0 && cell >= 0 && !blocked(cell) && Math.hypot(px - x, pz - z) > 0.5 && bodyLine(px, pz, cx(cell), cz(cell))) {
+      const out = [[cx(cell), cz(cell)]];
+      for (let c = k; c >= 0; c = seen[c]) out.push(at(c % N, (c / N) | 0));
+      out.reverse();
+      // (Every third point, and the last: near enough to follow, few enough to send.)
+      return out.filter((_, n) => n % 3 === 0 || n >= out.length - 2);
+    }
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= N || nj >= N || seen[nj * N + ni] !== -2) continue;
+      const [qx, qz] = at(ni, nj);
+      if (world.inside(qx, qz, R)) { seen[nj * N + ni] = -3; continue; }
+      seen[nj * N + ni] = k; q.push(nj * N + ni);
+    }
+  }
+  return null;
+}
+
 // For tests (tests/nav-ground.test.mjs): the same questions asked of a World built there, with no thread.
 export function navFor(w, interior = null) {
   world = w; boxIndex = null; ground.fill(0); room.fill(0); pocket.clear();
   setDoorways(interior?.things);
-  return { solidAt, clearFor, probe, local, path, straight, doorways: () => DOORWAYS, SNUG };
+  return { solidAt, clearFor, probe, local, path, straight, escape, doorways: () => DOORWAYS, SNUG };
 }
 
 // (A worker's own scope: not there when a test imports this file.)
@@ -475,6 +511,8 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
       self.postMessage({ type: m.type, id: m.id, result: null });
     } else if (m.type === 'path') {
       self.postMessage({ type: 'path', id: m.id, result: path(m.from, m.to, m.avoid, m.touch ?? null) });
+    } else if (m.type === 'escape') {
+      self.postMessage({ type: 'escape', id: m.id, result: escape(m.x, m.z) });
     } else if (m.type === 'local') {
       self.postMessage({ type: 'local', id: m.id, result: local(m.from, m.to) });
     } else if (m.type === 'probe') {
