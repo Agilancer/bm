@@ -444,6 +444,8 @@ export class Hero extends Knight {
     if (d < stop) { this.steer(dt, 0, 0, 8, g.face); this.stuckT = 0; return; }
     let sp = g.speed * (this.cls.walk) * (this.buff?.speed || 1) * (this.hurt > 0.5 ? 0.7 : 1);
     sp = Math.min(sp, Math.max(0.6, d * 1.5));
+    // (Stepping round something it was stuck on: see below.)
+    if (this.roundT > 0) { this.roundT -= dt; this.steer(dt, this.roundX * sp, this.roundZ * sp, 7, Math.atan2(this.roundX, this.roundZ)); return; }
     // Straight there while the way is open; round the houses on a distance field of the hero's own when it isn't. The field is
     // made once per goal (a goal that moves less than two metres keeps it), so a party in town doesn't redo it every tick.
     if ((this.losT -= dt) <= 0) {
@@ -464,11 +466,20 @@ export class Hero extends Knight {
     this.stuckT = moved < sp * dt * 0.25 ? this.stuckT + dt : Math.max(0, this.stuckT - dt * 0.5);
     // Getting nowhere for a good while, field and all (where they're going is in a house, behind a wall, in a trunk): that's
     // let go. A leg of a road is passed over for the next; anything else is dropped, and whatever they're about picks again.
+    // (First a few strides round whatever it is, to one side and a little back: a trunk the field doesn't know, a body in a
+    // gap. The third time running, the goal itself goes.)
+    if (this.stuckT === 0) this.gaveUp = 0;
     if (this.stuckT > 8) {
-      this.stuckT = 0; this.fieldAt = null; this.gaveUp = (this.gaveUp || 0) + 1;
-      const t = this.task;
-      if (t?.path && (t.leg ?? 0) < t.path.length - 1) t.leg = (t.leg ?? 0) + 1;
-      this.goal = null;
+      this.stuckT = 0.01; this.fieldAt = null; this.gaveUp = (this.gaveUp || 0) + 1;
+      if (this.gaveUp < 3) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const L = d || 1;
+        this.roundX = (dz / L) * side * 0.9 - (dx / L) * 0.35; this.roundZ = -(dx / L) * side * 0.9 - (dz / L) * 0.35; this.roundT = 1.8;
+      } else {
+        const t = this.task;
+        if (t?.path && (t.leg ?? 0) < t.path.length - 1) t.leg = (t.leg ?? 0) + 1;
+        this.goal = null; this.gaveUp = 0;
+      }
     }
   }
 
