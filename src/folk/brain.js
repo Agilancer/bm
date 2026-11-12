@@ -45,6 +45,7 @@ export class Folk {
   constructor(p, i, life) {
     this.p = p; this.i = i; this.id = p.id; this.life = life;
     this.child = isChild(p);
+    this.posted = p.post || null;   // [x, z, y?]: stood out in the land, not one of the town's (people.js POSTED)
     this.rig = null; this.pose = null;
     this.x = 0; this.y = 0; this.z = 0; this.yaw = 0; this.level = 0;
     this.posture = 'stand';
@@ -117,7 +118,7 @@ export class Life {
     this.games = new Map();      // play place -> the game under way
     this.inn = town.house('inn');
     this.stage = this.findStage(this.inn);
-    for (const me of this.folk) me.home = town.house(me.p.home);
+    for (const me of this.folk) me.home = me.posted ? null : town.house(me.p.home);
     this.markReach();
     this.assignBeds();
   }
@@ -233,6 +234,7 @@ export class Life {
       const b = this.blockAt(me, this.hour, this.day);
       if (!me.cur || b.key !== me.key) { me.cur = b; me.key = b.key; me.keyAt = this.clock; }
       this.fright(me);
+      if (me.posted) this.attend(me);
       // (A script that won't wind down when its hour's up is stopped.)
       if (!me.task || me.taskKey !== me.key && (me.taskDone || this.clock - me.keyAt > 45)) this.start(me);
       const r = me.task.next();
@@ -308,8 +310,8 @@ export class Life {
       const b = this.blockAt(me, this.hour, this.day);
       me.cur = b; me.key = b.key;
       // Start where they live, then let the script put them where it would have got them to.
-      const h = me.home;
-      [me.x, me.z] = h.inside; me.level = 0; me.y = this.ground.heightFor(me.x, me.z, 0.5);
+      // (Or, posted out in the land, at their post.)
+      [me.x, me.z] = me.posted || me.home.inside; me.level = 0; me.y = this.ground.heightFor(me.x, me.z, 0.5);
       me.snap = true;
       this.start(me);
       for (let k = 0; k < 4 && me.snap; k++) me.task.next();
@@ -319,6 +321,7 @@ export class Life {
 
   // Anything hunting in reach of town sends them running indoors.
   fright(me) {
+    if (me.posted) return;
     let near = false;
     for (const [dx, dz] of this.dangers) if (Math.hypot(dx - me.x, dz - me.z) < 22) { near = true; break; }
     if (near && !me.alarm && me.house < 0) { me.alarm = true; me.calm = 0; me.task?.return(); me.taskDone = true; me.task = null; this.start(me); }
@@ -326,6 +329,15 @@ export class Life {
       me.calm = (me.calm || 0) + me.dt;
       if (me.calm > 25) { me.alarm = false; me.task?.return(); me.task = null; me.taskDone = true; this.start(me); }
     }
+  }
+
+  // Someone at a post out in the land: eyes on the player once they're near, the body round to them when they're close, and
+  // back to the way they were looking when they've gone. (The talk has its own say while a word's being had: talk.js.)
+  attend(me) {
+    if (me.talking || me.lookUntil) return;
+    const [px, py, pz] = this.player, d = Math.hypot(px - me.x, pz - me.z);
+    me.look = d < 10 && Math.abs(py - me.y) < 4 ? [px, py + 1.55, pz] : null;
+    me.face = d < 4.5 ? Math.atan2(px - me.x, pz - me.z) : me.p.face ?? null;
   }
 
   // The pose, the head, which house they're in.
@@ -443,6 +455,7 @@ export class Life {
   assignBeds() {
     const byHouse = new Map();
     for (const me of this.folk) {
+      if (me.posted) continue;
       if (!byHouse.has(me.home)) byHouse.set(me.home, []);
       byHouse.get(me.home).push(me);
     }
@@ -884,6 +897,7 @@ function* live(me, b) {
       case 'tryst': yield* tryst(me, key); break;
       case 'hunt': yield* hunt(me, key); break;
       case 'tithe': yield* tithe(me, key); break;
+      case 'posted': yield* posted(me, key); break;
       default: yield* atHome(me, key);
     }
   } finally {
@@ -891,6 +905,15 @@ function* live(me, b) {
     for (const s of [...life.town.claims.keys()]) life.town.release(s, me.id);
     for (const id of life.groups.keys()) life.leave(id, me);
   }
+}
+
+// Posted out in the land (src/folk/people.js POSTED): stood at their post, on the land as it lies there, day and night,
+// with the things they do standing about. Whoever comes up, they look at, and turn to when they're close (Life.attend).
+function* posted(me, key) {
+  const [x, z, y] = me.posted;
+  me.x = x; me.z = z; me.level = 0; me.y = y ?? me.life.ground.landHeight(x, z);
+  me.yaw = me.p.face ?? 0; me.posture = 'stand'; me.act = ACT.IDLE; me.snap = false;
+  while (me.alive(key)) yield* idle(me, 30, key);
 }
 
 // Between a script's end and the next block: stand, or sit on.

@@ -8,7 +8,8 @@ for k in ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'NUMEXPR
     os.environ[k] = str(THREADS)
 if sys.platform == 'win32':
     IDLE = 0x40
-    ctypes.windll.kernel32.SetPriorityClass(ctypes.windll.kernel32.GetCurrentProcess(), IDLE)
+    # -1 is this process; it must go as a 64-bit handle (a plain int is cut to 32 bits and the call fails quietly)
+    ctypes.windll.kernel32.SetPriorityClass(ctypes.c_void_p(-1), IDLE)
 else:
     os.nice(19)
 

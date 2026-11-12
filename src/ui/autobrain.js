@@ -38,16 +38,15 @@ import { CAMPS } from '../sim/slimes.js';
 import { SPELLS } from '../sim/spells.js';
 import { AMBUSH_AT } from '../sim/opening.js';
 import { NODES, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
-import { RULES, isNight } from '../folk/quests.js';
+import { RULES, isNight, placeSpot } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
-import { PEOPLE } from '../folk/people.js';
+import { PEOPLE, POSTED } from '../folk/people.js';
 import { BEYOND } from '../folk/lines/beyond.js';
 import { LISANDRA } from '../folk/lines/lisandra.js';
 import { TUMBLER_SIZES } from '../sim/tumblers.js';
 import { TRADES, offerFor, worth } from '../folk/shops.js';
 import { GEMS, ROBES, gearTotals, matName } from '../items/items.js';
-import { inDungeon } from '../core/dungeon.js';
-import { EXIT_IN, toWorld as caveWorld } from '../core/dungeon.js';
+import { BOSSES, DELVES, delveByKey, delveOf, inDungeon, toWorld as caveWorld } from '../core/dungeon.js';
 import { caveStep, doHire, doWarrens, hireJob, hiring, perilsNear, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
 import { HallNav, STATIONS, hallAt, inArena, inHall } from '../core/testhall.js';
 
@@ -90,6 +89,16 @@ const LAIR_LEVEL = {
   fen_worm: 16, fen_harpies: 8, fen_dragon: 24, cutter_raiders: 6, fungal_brood: 7, abbey_road_goats: 7, vigil_guard: 16, obelisk_guard: 16,
   bone_field: 18, ash_dragon: 24, ash_worm: 16, crown_dragon: 24, stair_demons: 12, hollow_dolls: 8, barrow_lords: 10, barrow_wyrm: 20,
   maiden_coven: 9, fell_harpies: 9, gallows_plague: 14, grawl_bats: 10, grove_demons: 12,
+  // (The roadsides, the small towns' troubles and the far countries: each by what stands there.)
+  dark_goblins_nw: 5, dark_spiders_ne: 4, dark_goats_e: 6, dark_children_s: 4, dark_wolf_w: 7, hill_kobolds: 3, hill_goblins: 4, frost_kobolds: 3,
+  frost_spiders: 5, frost_wolf: 8, fenway_goblins: 3, fenway_spiders: 5, vigil_kobolds: 3, vigil_goats: 6, vigil_children: 7, track_children: 5,
+  cairn_keepers: 6, downs_raiders: 5, abbey_rd_goblins: 5, gallows_rd_goblins: 4, cliff_harpies: 7, downs_goats: 7, thorn_goats: 8, thorn_ram: 10,
+  thorn_stragglers: 9, fenway_children: 6, fenway_drowned: 8, mile_drowned: 9, fen_east_harpies: 10, fen_children: 9, abbey_rd_raiders: 8,
+  quarry_kobolds: 9, rust_bat: 11, abbey_webs: 11, rust_spiders: 13, rust_kobolds: 10, rust_warband: 12, pilgrim_dolls: 6, pilgrim_spiders: 7,
+  deep_spiders: 9, deep_worm: 14, horn_whelps: 12, horn_demons: 14, cinder_refugees: 9, cinder_scouts: 11, charmill_possessed: 12, khel_ghouls: 12,
+  vigil_patrol_1: 13, vigil_patrol_2: 14, vigil_patrol_3: 15, keep_necros: 16, waste_lancers: 15, waste_plague: 13, waste_golem: 16, waste_necros: 15,
+  track_possessed: 7, wayhouse_dead: 9, moor_golem: 12, moor_whelps: 13, moor_knight: 14, rime_goats: 10, fells_goats: 11, fells_wolves: 12,
+  mouth_demons: 13, tor_roost: 13, tor_demons: 14, toll_ambush: 11, gallows_bat: 10, gallows_demons: 13, gibbet_possessed: 12, gallows_giant: 14,
 };
 // What it'll stand and fight, by kind (FOE_NAMES in src/main.js) and its level. A kind added since it was taught (KNOWN_KINDS), it
 // judges by its life against its own level; coverage() below names it, so it can be taught properly.
@@ -115,7 +124,17 @@ const PLAN = [
   ['lisandra_work', 1], ['bed_and_bell', 1], ['letter', 1], ['pines', 1], ['iron_from_dead', 2], ['dead_cant_wait', 3], ['shroud_and_thread', 3], ['bones_for_carver', 3],
   ['long_way_round', 4], ['toll_of_bell', 5], ['millhaven_jelly', 5], ['barrow_lights', 8], ['sallowmere', 8], ['four_watches', 9],
   ['crown_of_teeth', 11], ['black_road', 13],
+  // The land's (src/folk/land-quests.js): out to the small towns, what besets them, and down the party dungeons.
+  ['deeper_dead', 4], ['waxed_thread', 4], ['word_to_thornwick', 6], ['millhaven_man', 6], ['hare_and_harrow', 6], ['man_at_the_cross', 6],
+  ['cairnfield', 6], ['tracks_west', 7], ['ask_the_burner', 7], ['girl_from_khel', 7], ['warrens_mouth', 7], ['barley_thieves', 7], ['tunnel_king', 8],
+  ['hedge_breakers', 8], ['owed_to_frostwatch', 9], ['sunken_mile', 9], ['moor_wayhouse', 9], ['ossery_quarry', 9], ['mother_of_the_warren', 9],
+  ['up_from_the_gallowswood', 9], ['ash_on_the_wind', 9], ['black_ram', 10], ['old_toll', 11], ['red_scouts', 11], ['salt_for_the_hanged', 12],
+  ['charcoal_for_khel', 12], ['charred_mill', 12], ['mouth_guard', 13], ['ravens_tor', 13], ['vigil_patrols', 14], ['arch_before_the_gate', 14],
+  ['into_the_deeps', 14], ['the_howling', 14], ['gate_of_blackvigil', 14], ['broodmother', 15], ['red_cloth', 15], ['first_lord', 15], ['the_sleeper',
+  16], ['lords_of_the_keep', 17], ['the_castellan', 18],
 ];
+// (Taken on in the order of the levels they want.)
+PLAN.sort((a, b) => a[1] - b[1]);
 const LEVEL_OF = Object.fromEntries(PLAN);
 // A quest added since the plan was written goes on the end of it, at a level guessed from what it pays (coverage() names it).
 const guessLevel = (id) => Math.max(1, Math.min(20, Math.round((RULES[id].xp || 200) / 110)));
@@ -130,8 +149,15 @@ const area = (k) => {
   if (k === 'millhaven') { const c = CAMPS.find((q) => q.key === 'millpond'); return { x: c.x, z: c.z, r: 20 }; }
   if (k === 'fen') { const c = CAMPS.find((q) => q.key === 'sallow'); return { x: c.x, z: c.z, r: 30 }; }
   const s = SITES[k];
-  return s ? { x: s.x, z: s.z, r: s.r * (k === 'keep' ? 1.4 : 0.9) } : null;
+  if (s) return { x: s.x, z: s.z, r: s.r * (k === 'keep' ? 1.4 : 0.9) };
+  // The Waste, where Velscour's knights ride: the first of their patrols on the Vigil Road.
+  if (k === 'waste') return { x: -3200, z: -430, r: 40 };
+  // A lair's glade, or a party dungeon's portal out in the land (src/folk/quests.js placeSpot). (Down a dungeon is the
+  // delve's own work: warrensJob, by delveWants.)
+  const p = placeSpot(k);
+  return p ? { x: p.x, z: p.z, r: Math.max(6, p.near) } : null;
 };
+const DELVE_KEYS = DELVES.map((d) => d.key);
 // Where to hunt for what a kill step wants.
 const HUNTS = {
   woods: [[-45, 150], [20, -125], [-160, 60], [-62, 160], [100, -128], [-170, 70], [60, 120], [-110, 110], [170, 40], [-120, -60]],
@@ -139,7 +165,11 @@ const HUNTS = {
   fen: CAMPS.filter((c) => ['sallow', 'fen1', 'fen2'].includes(c.key)).map((c) => [c.x, c.z]),
   barrows: CAMPS.filter((c) => c.key === 'barrows').map((c) => [c.x, c.z]),
   bellcrypt: [churchAt(186, 0), churchAt(190, 6), churchAt(182, -6)],
+  // Velscour's knights on the Vigil Road and round it, east to west (src/core/tripo-monsters.js LAIRS).
+  waste: ['vigil_patrol_1', 'vigil_patrol_2', 'vigil_patrol_3', 'vigil_guard', 'waste_lancers', 'obelisk_guard'].map((k) => LAIRS.find((l) => l.key === k)).filter(Boolean).map((l) => [l.x, l.z]),
 };
+// Where to hunt for a kill step: its own grounds; a lair's glade; nowhere for a dungeon's (it goes down it instead).
+const huntsFor = (k) => HUNTS[k] || (k.startsWith('lair:') && area(k) ? [[area(k).x, area(k).z]] : DELVE_KEYS.includes(k) ? [] : null);
 
 // The menu's grinding grounds (src/ui/autoplay.js GRINDS).
 export const GRINDS = {
@@ -164,7 +194,7 @@ export const MODES = {
 export const DUNGEONS = [
   { key: 'catacombs', name: 'The catacombs', quest: 'dead_cant_wait' },
   { key: 'bellcrypt', name: 'The Bell Crypt', quest: 'toll_of_bell' },
-  { key: 'warrens', name: 'The Hollowfang Warrens', cleared: (game) => (game.party?.clears || 0) > 0 },
+  ...DELVES.map((d) => ({ key: d.key, name: d.name, delve: true, cleared: (game) => (game.party?.clearsBy?.[d.key] || 0) > 0 })),
 ];
 export const finishedDungeons = (townUI, game) => DUNGEONS.filter((d) => (d.quest ? townUI.quests.done(d.quest) : d.cleared(game)));
 const lower = (s) => s[0].toLowerCase() + s.slice(1);
@@ -319,7 +349,7 @@ function buildGaps() {
 // can't do, somewhere it can't find, a foe or a lair it has no measure of, a spell it casts that's gone, a shop it doesn't use.
 // Warned in the console when it starts, and the failing list of tools/autoplay/check.mjs. When something's added to the game,
 // it's taught here (and the check run), so auto-play keeps playing the whole of it. foeNames: FOE_NAMES from src/main.js.
-const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start']);
+const STEP_KEYS = new Set(['talk', 'say', 'back', 'bring', 'n', 'enter', 'night', 'visit', 'kill', 'of', 'warden', 'start', 'foe', 'boss', 'end', 'at']);
 // The Test Dungeon's counters (src/core/testhall.js STATIONS), and what auto-play does with each: nothing. In there it fights
 // whatever's been summoned, and what that is, what it's wearing and who's with it are for whoever's testing to choose
 // (hallRun below). A new counter is named here, with what it's for, or coverage() says so.
@@ -327,10 +357,10 @@ const HALL_COUNTERS = { gear: 'left to the tester: it fights in what it was give
 // The blocks of the snapshot it reads (foes() and the rest); a new one is something in the world it can't see yet.
 const BLOCKS = new Set(['FX_START', 'CHARS_START', 'SLIMES_START', 'TUMBLERS_START']);
 const CASTS = ['firebolt', 'mend', 'wisp', 'blink', ...PANIC, ...SKY];
-const FARMS = new Set(['bone', 'iron', 'silk']);
+const FARMS = new Set(['bone', 'iron', 'silk', 'wax']);
 const STOCKS = new Set(['staffs', 'robes', 'skulls', 'curios', 'scrolls']);
 export function coverage(foeNames = null) {
-  const out = [], people = new Set([...PEOPLE, ...BEYOND, LISANDRA].map((p) => p.id));
+  const out = [], people = new Set([...PEOPLE, ...POSTED, ...BEYOND, LISANDRA].map((p) => p.id));
   for (const id of Object.keys(RULES)) {
     const R = RULES[id];
     if (!(id in LEVEL_OF)) out.push(`quest ${id}: not in PLAN, so it's taken on last, at a guessed level (${guessLevel(id)})`);
@@ -338,7 +368,8 @@ export function coverage(foeNames = null) {
     for (const st of R.steps) {
       for (const k of Object.keys(st)) if (!STEP_KEYS.has(k)) out.push(`quest ${id}: a step with "${k}", which it doesn't know how to do`);
       for (const a of [st.enter, st.kill, ...(st.visit || [])].filter((q) => typeof q === 'string')) if (!area(a)) out.push(`quest ${id}: nowhere to walk to for "${a}" (area())`);
-      if (st.kill && st.kill !== 'catacombs' && !HUNTS[st.kill]) out.push(`quest ${id}: no hunting grounds for "${st.kill}" (HUNTS): it hunts round its middle`);
+      if (st.boss && !BOSSES.some((b) => b.key === st.boss)) out.push(`quest ${id}: a boss, "${st.boss}", that no dungeon has`);
+      if (st.kill && st.kill !== 'catacombs' && !huntsFor(st.kill)) out.push(`quest ${id}: no hunting grounds for "${st.kill}" (HUNTS): it hunts round its middle`);
       if (st.bring && !FARMS.has(st.bring)) out.push(`quest ${id}: wants ${st.bring}, which it doesn't know where to farm`);
       if (st.talk && !people.has(st.talk)) out.push(`quest ${id}: a word with "${st.talk}", who isn't anyone it can find`);
     }
@@ -1584,7 +1615,7 @@ export class Brain {
     if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : warrensJob(this, m);
     const hire = hireJob(this, m);
     if (hire) return hire;
-    const delve = questing && warrensJob(this, m);
+    const delve = questing && warrensJob(this, m, this.delveWants(m));
     if (delve && !wantsTown) return delve;
     // In the town, its errands: the quest talk first (only when it's on the quests), then the shops.
     const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60, questing);
@@ -1603,25 +1634,45 @@ export class Brain {
       }
     }
     // What's ready to hand in, or a word that moves a quest on: before more work.
+    // (The nearest of them first: out in a small town, the word with the innkeeper across the green before the long way
+    // home to hand something in.)
+    let near1 = null, nd1 = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
       const ready = st?.talk || st?.back || (st?.bring && (pack.mats[st.bring] || 0) >= st.n) || (s.stage === 'making' && this.o.town.day >= s.ready);
       if (!ready) continue;
       const job = this.questJob(id, m, lvl);
-      if (job) return job;
+      if (!job) continue;
+      const d = this.jobDist(job, m);
+      if (d < nd1) { nd1 = d; near1 = job; }
+    }
+    if (near1 && nd1 < 500) return near1;
+    // (A hand-in a country away waits while there's a quest's work close by: the hunt over the hedge before the road home.)
+    if (near1) {
+      for (const [id, lvl] of PLAN_ALL) {
+        const s = Q.state(id);
+        if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
+        const job = this.questJob(id, m, lvl);
+        if (job && job !== near1 && job.quest !== near1.quest && this.jobDist(job, m) < 500) return job;
+      }
+      return near1;
     }
     // The black knight on the cathedral's steps, once it's strong enough for him.
     if (this.blackKnight(this.snap) && m.lvl >= BOSS_LEVEL + (this.bump['boss:black'] || 0) && !this.skipping('boss:black') && !(isNight(m.hour) && m.lvl < BOSS_LEVEL + 4)) {
       return { kind: 'boss', why: 'boss:black', say: 'To the cathedral steps: the black knight.' };
     }
-    // The quests, in order.
+    // The quests, in order; but one whose work is close by (within half a kilometre) before one that's a country away.
+    let first = null;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
       const job = this.questJob(id, m, lvl);
-      if (job) return job;
+      if (!job) continue;
+      if (this.jobDist(job, m) < 500) return job;
+      first ||= job;
     }
+    if (first) return first;
     // Quests not yet taken: to their givers.
     const offer = this.offerJob(m);
     if (offer) return offer;
@@ -1644,6 +1695,25 @@ export class Brain {
 
   // The giver of a quest, or whoever a step's to be said to: their place in the town's list.
   personIndex(id) { return this.o.townUI.people.findIndex((p) => p.id === id); }
+
+  // The party dungeons the quests it has in hand send it down, and is of a level for: to go in, to kill there, or for a boss.
+  delveWants(m) {
+    const Q = this.o.townUI.quests, out = [];
+    for (const [id, lvl] of PLAN_ALL) {
+      const st = Q.step(id);
+      if (!st || m.lvl < lvl + (this.bump[`q:${id}`] || 0)) continue;
+      const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : null;
+      if (k && !out.includes(k)) out.push(k);
+    }
+    return out;
+  }
+
+  // How far off a job's work is: whoever it's a word with, the place it goes to, the nearest of its hunting spots.
+  jobDist(job, m) {
+    if (job.kind === 'talk') { const w = this.o.townUI.whereOf(job.who); return w ? dist(m.x, m.z, w.x, w.z) : 1e9; }
+    if (job.spots?.length) return Math.min(...job.spots.map(([x, z]) => dist(m.x, m.z, x, z)));
+    return Number.isFinite(job.x) ? dist(m.x, m.z, job.x, job.z) : 0;
+  }
 
   // A quest's next piece of work, marked with the quest it's for (the quest log shows which one it's on).
   questJob(id, m, lvl) {
@@ -1685,6 +1755,8 @@ export class Brain {
       return null;
     }
     if (m.lvl < lvl + (this.bump[`q:${id}`] || 0)) return null;
+    // Down a party dungeon (to go in, to kill there, a boss of it): the delve's own work, with a party (delveWants).
+    if (st.boss || DELVE_KEYS.includes(st.enter) || DELVE_KEYS.includes(st.kill)) return null;
     if (st.enter) {
       if (st.night && !isNight(m.hour) && !(m.hour >= 19.5)) return null;
       const a = area(st.enter);
@@ -1701,7 +1773,7 @@ export class Brain {
     if (st.kill) {
       if (st.kill === 'catacombs') return this.grindJob(m, 'catacombs', `q:${id}`, `${title}: the dead below (${s.n} of ${st.n}).`);
       const a = area(st.kill);
-      return { kind: 'hunt', why: `q:${id}`, spots: HUNTS[st.kill] || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
+      return { kind: 'hunt', why: `q:${id}`, spots: huntsFor(st.kill) || (a ? [[a.x, a.z]] : HUNTS.woods), below: !!a?.below, say: `${title}: ${st.n - s.n} more to put down.` };
     }
     if (st.warden) {
       if (!isNight(m.hour)) return null;
@@ -1719,7 +1791,8 @@ export class Brain {
   reachable(i) {
     const w = this.o.townUI.whereOf(i);
     if (!w) return false;
-    if (w.beyond) return true;
+    // (Someone out past the town, a knight at his post or a villager at theirs: on the ground, in the open.)
+    if (w.beyond || i >= PEOPLE.length) return true;
     return !(w.busy === 12 || w.busy === 13) && (w.level | 0) <= 0 && w.y < 2.2;
   }
 
@@ -1736,7 +1809,8 @@ export class Brain {
       if (!w) continue;
       const d = dist(m.x, m.z, w.x, w.z);
       // (Someone out past the town, like the Bellwright: only on the way.)
-      if (giver >= PEOPLE.length && d > 300) continue;
+      // (Or once it's of a level for their work: then it goes out to them, however far.)
+      if (giver >= PEOPLE.length && d > 300 && m.lvl < lvl) continue;
       if (d < bd) { bd = d; best = this.talkJob(giver, 'offer', `To ${townUI.people[giver].name}: there's work.`); if (best) best.offer = id; }
     }
     return best;
@@ -1883,11 +1957,11 @@ export class Brain {
 
   runJob(m, d) {
     const lap = `lap ${this.laps + 1}`;
-    if (d.key === 'warrens') {
+    if (d.delve) {
       // (With a party fit to go down: hireJob, before this, sees to one if it can pay.)
       const P = this.o.game.party;
       if (!inDungeon(m.x, m.z) && !P?.fit()) return null;
-      return { kind: 'warrens', why: 'run:warrens', say: `Dungeon runs, ${lap}: ${inDungeon(m.x, m.z) ? 'down the Hollowfang Warrens' : 'to the Hollowfang Warrens, with the party'}.` };
+      return { kind: 'warrens', why: `run:${d.key}`, delve: d.key, say: `Dungeon runs, ${lap}: ${inDungeon(m.x, m.z) ? `down ${lower(d.name)}` : `to ${lower(d.name)}, with the party`}.` };
     }
     // (Both are below the cathedral, in by the Sexton's door, which opens with his quest. A dungeon it couldn't reach a single
     // spot of last time is left a while.)
@@ -1945,17 +2019,20 @@ export class Brain {
     const wipes = P?.wipes || 0;
     if (this.wipeSeen === undefined) this.wipeSeen = wipes;
     if (wipes > this.wipeSeen) { this.wipeSeen = wipes; this.warrensWipes = (this.warrensWipes || 0) + 1; }
-    if (this.warrensWipes >= 3 && inDungeon(m.x, m.z)) {
-      this.say('Beaten back by the Warrens: out, and stronger first.');
-      const [x, z] = caveWorld(EXIT_IN.x, EXIT_IN.z);
+    const here = delveOf(m.x, m.z);
+    if (here) this.delveIn = here.key;
+    if (this.warrensWipes >= 3 && here) {
+      this.say(`Beaten back by ${here.name}: out, and stronger first.`);
+      const [x, z] = caveWorld(here.exitIn.x, here.exitIn.z, here);
       this.goTo(x, z, 0.5, true);
       return;
     }
     if (this.warrensWipes >= 3) {
-      this.warrensWipes = 0; this.bump.warrens = (this.bump.warrens || 0) + 2; this.giveUp('warrens', 900);
-      this.o.log?.fell?.(m, m.lvl, 'The Hollowfang Warrens', null);
+      const key = this.delveIn || 'warrens', why = key === 'warrens' ? 'warrens' : `delve:${key}`;
+      this.warrensWipes = 0; this.bump[why] = (this.bump[why] || 0) + 2; this.giveUp(why, 900);
+      this.o.log?.fell?.(m, m.lvl, delveByKey(key)?.name || 'A dungeon', null);
       this.job = null;
-      this.ranDungeon('warrens', true);
+      this.ranDungeon(key, true);
       return;
     }
     doWarrens(this, m, foes);

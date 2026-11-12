@@ -89,7 +89,8 @@ test('the hint: only while nothing is taken on, and it follows the game along', 
   for (const g of who) assert.ok(Q.offers(g).length, g);
   assert.ok(who.includes('silas') && who.includes('cedric'));
   assert.ok(who.indexOf('cedric') < who.indexOf('aldric'), 'what suits level 1 comes first');
-  assert.match(h.items.find((i) => i.spot.who === 'aldric').text, /level 13/);
+  // (Ser Aldric's nearest work is word to Thornwick, which wants 6; the west road wants 13.)
+  assert.match(h.items.find((i) => i.spot.who === 'aldric').text, /level 6/);
   assert.ok(who.indexOf('silas') < who.indexOf('aldric'), 'work beyond you, the nearest to your level first');
   // Someone with work who can't be found (Lisandra, before she's walked you down) isn't sent to.
   const away = hintOf({ Q, person: (id) => (id === 'lisandra' ? null : person(id)), level: 1 });

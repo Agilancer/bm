@@ -2,7 +2,7 @@
 // src/sim/dungeon.js): hiring a party at a quartermaster's post, walking the caves room by room with the party gathered, and
 // fighting the bosses by their calls: out of the circles and the fire, at the dragon's side, behind a pillar when she flies,
 // the adds first, the twins kept even. src/ui/autobrain.js calls in here; this keeps the Warrens' rules in one place.
-import { BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, ENTRY, EXIT_OUT, PACKS, PARTY, PERCH, PILLARS, PORTAL, ROOMS, caveClear, caveFloorY, caveRoom, inDungeon, roleOf, roomOf, toWorld } from '../core/dungeon.js';
+import { ALL_PACKS, BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, DELVES, PARTY, PERCH, PILLARS, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, inDungeon, roleOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
 import { hirePrice } from './party.js';
 import { edge, wayOut } from '../core/perils.js';
 import { INPUT } from '../core/layout.js';
@@ -10,27 +10,52 @@ import { INPUT } from '../core/layout.js';
 // The level it goes down at, the first time (raised two each time the Warrens beat it three times over), and the level it
 // hires a party at (a little before, so it has them for the woods too).
 export const WARRENS_LEVEL = 7, HIRE_LEVEL = 6;
-// The way through, room by room. (Each pack and boss is in one of these: coverage() below checks every one is.)
-export const WAY = ['mouth', 'diggings', 'tallow', 'dig', 'warren', 'feast', 'throne', 'descent', 'lair'];
-// What it knows of the Warrens, for coverage(): every pack's and boss's key.
-export const KNOWN = new Set(['hf_diggings', 'hf_tallow', 'hf_warren', 'hf_feast', 'hf_descent', 'grubnash', 'twins', 'venomaw']);
+// The way through each party dungeon (src/core/dungeon.js DELVES), room by room, in the order they're walked from the way
+// in. (Each pack and boss is in one of these: coverage() below checks every one is.) Blackvigil's barracks, armoury and
+// gallery open off its inner ward; it looks into each on its way up.
+export const WAYS = {
+  warrens: ['mouth', 'diggings', 'tallow', 'dig', 'warren', 'feast', 'throne', 'descent', 'lair'],
+  blackvigil: ['bv_gate', 'bv_guard', 'bv_ward', 'bv_innergate', 'bv_barracks', 'bv_armoury', 'bv_gallery', 'bv_library', 'bv_sanctum', 'bv_chapel', 'bv_stair', 'bv_hall', 'bv_court', 'bv_walk', 'bv_ante', 'bv_throne'],
+  deeps: ['hd_mouth', 'hd_galleries', 'hd_herd', 'hd_ramshall', 'hd_webs', 'hd_falls', 'hd_brood', 'hd_dark', 'hd_lake'],
+};
+export const WAY = WAYS.warrens;
+// The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
+// Blackvigil 14), raised two each time that dungeon beats it three times over.
+export const delveLevel = (key) => delveByKey(key)?.level ?? 99;
+// What it knows of them, for coverage(): every pack's and boss's key. A pack it fights as it fights any pack down there
+// (the tank's mark, the healer kept clear, out of what's marked). A boss by tactics() below: its calls are all marks on the
+// ground, shots, rings to jump and adds, which it answers the same way in every fight, and a turn on it, which it takes
+// behind the tank; the Warrens' three have rules of their own besides.
+export const KNOWN = new Set([
+  'hf_diggings', 'hf_tallow', 'hf_warren', 'hf_feast', 'hf_descent', 'grubnash', 'twins', 'venomaw',
+  'bv_guard', 'bv_ward_south', 'bv_ward_north', 'bv_barracks', 'bv_armoury', 'bv_gauntlet', 'bv_gallery_watch', 'bv_library', 'bv_chapel', 'bv_stair',
+  'bv_hall_low', 'bv_hall_high', 'bv_walk', 'bv_ante', 'maldrec', 'sorvane', 'brothers', 'castellan',
+  'hd_galleries', 'hd_herd', 'hd_webs', 'hd_falls', 'hd_dark', 'hrymgar', 'broodmother', 'sleeper',
+]);
 export function warrensCoverage() {
   const out = [];
-  for (const p of PACKS) {
-    if (!KNOWN.has(p.key)) out.push(`Warrens pack ${p.key}: not in KNOWN (src/ui/autowarrens.js)`);
-    if (!WAY.includes(p.room)) out.push(`Warrens pack ${p.key}: its room ${p.room} isn't on the WAY through`);
+  for (const d of DELVES) {
+    const way = WAYS[d.key];
+    if (!way) { out.push(`dungeon ${d.key}: no way through it in WAYS (src/ui/autowarrens.js), so it never goes down it`); continue; }
+    for (const p of ALL_PACKS.filter((q) => d.packs.includes(q))) {
+      if (!KNOWN.has(p.key)) out.push(`${d.name}, pack ${p.key}: not in KNOWN (src/ui/autowarrens.js)`);
+      if (!way.includes(p.room)) out.push(`${d.name}, pack ${p.key}: its room ${p.room} isn't on the way through`);
+    }
+    for (const b of BOSSES.filter((q) => q.delve === d.key)) {
+      if (!KNOWN.has(b.key)) out.push(`${d.name}, boss ${b.key}: no fight taught for it (src/ui/autowarrens.js tactics)`);
+      if (!way.includes(b.room)) out.push(`${d.name}, boss ${b.key}: its room ${b.room} isn't on the way through`);
+    }
+    for (const r of d.rooms) if (!way.includes(r.id)) out.push(`${d.name}, room ${r.id}: not on the way through, so it never goes there`);
+    for (const id of way) if (!d.rooms.some((r) => r.id === id)) out.push(`${d.name}: its way through names a room, ${id}, that isn't there`);
+    if (!BOSSES.some((b) => b.key === d.last && b.delve === d.key)) out.push(`${d.name}: no last boss, so it never knows it's done`);
   }
-  for (const b of BOSSES) {
-    if (!KNOWN.has(b.key)) out.push(`Warrens boss ${b.key}: no fight taught for it (src/ui/autowarrens.js fightBoss)`);
-    if (!WAY.includes(b.room)) out.push(`Warrens boss ${b.key}: its room ${b.room} isn't on the WAY through`);
-  }
-  for (const r of ROOMS) if (!WAY.includes(r.id)) out.push(`Warrens room ${r.id}: not on the WAY through, so it never goes there`);
   return out;
 }
 
 const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
-let nav = null;
-const caveNav = () => nav || (nav = new CaveNav());
+// (A flow field for each dungeon, made when it first walks there.)
+const navs = new Map();
+const caveNav = (x, z) => { const d = delveOf(x, z) || DELVES[0]; let n = navs.get(d.key); if (!n) navs.set(d.key, n = new CaveNav(d)); return n; };
 
 // ---- hiring ----------------------------------------------------------------------------------------------------------------
 
@@ -91,45 +116,58 @@ export function hiring(b) {
 
 // ---- down the Warrens -----------------------------------------------------------------------------------------------------
 
-export function warrensJob(b, m) {
+// A dungeon to go down, with a party and the level for it: the one it's in; else one a quest it has in hand wants (want:
+// their keys, from src/ui/autobrain.js delveWants), the nearest to its level first; else, the first it's fit for that it
+// hasn't just been through. The Warrens keeps its old name among its reasons ('warrens'); the others are 'delve:<key>'.
+const whyOf = (key) => (key === 'warrens' ? 'warrens' : `delve:${key}`);
+export function warrensJob(b, m, want = null) {
   const P = b.o.game.party;
   if (!P) return null;
-  const inside = inDungeon(m.x, m.z);
-  if (!inside && (!P.fit() || m.lvl < WARRENS_LEVEL + (b.bump['warrens'] || 0) || b.skipping('warrens'))) return null;
-  return { kind: 'warrens', why: 'warrens', say: inside ? 'Down the Hollowfang Warrens.' : 'To the Hollowfang Warrens, with the party.' };
+  const here = delveOf(m.x, m.z);
+  if (here) return { kind: 'warrens', why: whyOf(here.key), delve: here.key, say: `Down ${here.name}.` };
+  if (!P.fit()) return null;
+  const fit = (d) => WAYS[d.key] && m.lvl >= d.level + (b.bump[whyOf(d.key)] || 0) && !b.skipping(whyOf(d.key));
+  const byLevel = DELVES.filter(fit).sort((a, c) => a.level - c.level);
+  const d = byLevel.find((q) => want?.includes(q.key)) || (want?.length ? null : byLevel[0]);
+  return d ? { kind: 'warrens', why: whyOf(d.key), delve: d.key, say: `To ${d.name}, with the party.` } : null;
 }
 
 // Room by room: the next one along the way it hasn't been through, waiting for the party before a boss's door, and out by the
 // far portal once Venomaw's dead.
 export function doWarrens(b, m, foes) {
   const P = b.o.game.party, W = P?.warrens;
-  if (!inDungeon(m.x, m.z)) {
+  const here = delveOf(m.x, m.z);
+  if (!here) {
+    const d = delveByKey(b.job?.delve) || DELVES[0];
     // (Out again with it done: no more till it's had a rest from it.)
-    if (b.warrensDone) { b.warrensDone = false; b.giveUp('warrens', 2400); b.job = null; b.ranDungeon('warrens'); return; }
-    b.say('To the Hollowfang Warrens, with the party.');
+    if (b.warrensDone) { const key = b.warrensDone; b.warrensDone = false; b.giveUp(whyOf(key), 2400); b.job = null; b.ranDungeon(key); return; }
+    b.say(`To ${d.name}, with the party.`);
     b.room = 0;
-    b.goTo(PORTAL.x, PORTAL.z, 0.6, true);
+    b.goTo(d.portal.x, d.portal.z, 0.6, true);
     return;
   }
+  const D = here, way = WAYS[D.key] || [];
   const down = new Set(W?.down || []);
   b.room ??= 0;
-  if (down.has('venomaw')) {
-    const [x, z] = toWorld(EXIT_OUT.x, EXIT_OUT.z);
-    b.say('Venomaw is dead: out by the far portal.');
-    b.warrensDone = true;
+  if (down.has(D.last) || !way.length) {
+    const [x, z] = toWorld(D.exitOut.x, D.exitOut.z, D);
+    b.say(`${D.name} is done: out by the far portal.`);
+    b.warrensDone = D.key;
     b.goTo(x, z, 0.5, true);
     return;
   }
   // (After a wipe it's at the way in again: on from where it got to, past what's cleared.)
-  if (dist(m.x, m.z, ...toWorld(ENTRY.x, ENTRY.z)) < 6 && b.room > 1 && b.t - (b.roomT || 0) > 20) b.room = 1;
-  const id = WAY[Math.min(b.room, WAY.length - 1)], r = roomOf(id), [rx, rz] = toWorld(r.x, r.z);
+  if (dist(m.x, m.z, ...toWorld(D.entry.x, D.entry.z, D)) < 6 && b.room > 1 && b.t - (b.roomT || 0) > 20) b.room = 1;
+  const id = way[Math.min(b.room, way.length - 1)], r = roomOf(id), [rx, , rz] = roomSpot(id);
+  // (A room that's long and not round: by its half length.)
+  const R = r.r || Math.max(r.hx || 0, r.hz || 0, r.w || 0, r.h || 0) || 10;
   const boss = BOSSES.find((q) => q.room === id);
   const hostile = foes.some((f) => f.hostile && f.d < 28);
   const d = dist(m.x, m.z, rx, rz);
   // Through it: on to the next once it's quiet there.
-  if (d < r.r * 0.55 && !hostile && (!boss || down.has(boss.key))) { b.room++; b.roomT = b.t; return; }
+  if (d < R * 0.55 && !hostile && (!boss || down.has(boss.key))) { b.room++; b.roomT = b.t; return; }
   // A boss's room: the party gathered and up before it goes in.
-  if (boss && !down.has(boss.key) && d < r.r + 22 && d > r.r + 2 && !W?.fight) {
+  if (boss && !down.has(boss.key) && d < R + 22 && d > R + 2 && !W?.fight) {
     const party = b.o.game.heroTalk?.heroes.filter((h) => P.member(h.p.slot)) || [];
     const ready = party.every((h) => !h.dead && dist(h.x, h.z, m.x, m.z) < 14 && h.hp > 0.85);
     if (!ready || m.hpf < 0.9 || m.mana < m.maxMana * 0.8) {
@@ -141,18 +179,18 @@ export function doWarrens(b, m, foes) {
   // On to the next room only with the party up and with it: the fallen get up once it's quiet, the tank back on his feet.
   // (Not for ever: twenty seconds, then on.)
   const party = b.party(b.snap);
-  const lagging = !hostile && d > r.r * 0.7 && party.some((h) => h.dead || dist(h.x, h.z, m.x, m.z) > 16 || (h.role === 'tank' && h.hpf < 0.5));
+  const lagging = !hostile && d > R * 0.7 && party.some((h) => h.dead || dist(h.x, h.z, m.x, m.z) > 16 || (h.role === 'tank' && h.hpf < 0.5));
   if (lagging && (b.partyWait = (b.partyWait || 0) + 0.12) < 20) { b.halt(); b.face = null; b.say('Waiting for the party.'); return; }
   if (!lagging) b.partyWait = 0;
   b.say(boss && !down.has(boss.key) ? `In to ${boss.name}.` : `Through ${r.name}.`);
-  b.goTo(rx, rz, boss ? r.r * 0.35 : r.r * 0.4, !hostile);
+  b.goTo(rx, rz, boss ? R * 0.35 : R * 0.4, !hostile);
 }
 
 // The way to go, inside: straight where it's open, else down the caves' own field (the nav thread's grid stops at the edge
 // of the world). For walk() in src/ui/autobrain.js.
 export function caveStep(b, m, g) {
   const out = b.caveDir || (b.caveDir = new Float32Array(2));
-  caveNav().flow(out, m.x, m.z, g.x, g.z, b.t);
+  caveNav(m.x, m.z).flow(out, m.x, m.z, g.x, g.z, b.t);
   return out;
 }
 
@@ -194,6 +232,12 @@ export function tactics(b, m, foes) {
     let tx = boss.x + rx * side * 13 + Math.sin(boss.yaw) * 4, tz = boss.z + rz * side * 13 + Math.cos(boss.yaw) * 4;
     if (caveRoom(tx, tz) < 1) { tx = boss.x - rx * side * 13; tz = boss.z - rz * side * 13; }
     return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 5, target: pickTarget(live, f, b, m), why: 'At Venomaw\'s side.' };
+  }
+  // Maldrec sets his shield: nothing gets through it from the front, so round behind him, a spell's reach off, till it's down.
+  if (f.boss === 'maldrec' && boss && (boss.ward ?? 1) < 1) {
+    let tx = boss.x - Math.sin(boss.yaw) * 11, tz = boss.z - Math.cos(boss.yaw) * 11;
+    if (caveRoom(tx, tz) < 1) { tx = boss.x - Math.sin(boss.yaw) * 5; tz = boss.z - Math.cos(boss.yaw) * 5; }
+    if (caveRoom(tx, tz) >= 1) return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 4, target: pickTarget(live, f, b, m), why: 'Behind Maldrec\'s shield.' };
   }
   if (f.boss === 'twins') {
     const spinner = bodies.find((q) => q.spin);
@@ -251,7 +295,9 @@ function pickTarget(live, f, b, m) {
     if (add) return add;
     const bosses = new Set((f.bodies || []).map((q) => q.id));
     if (help && !bosses.has(help.T.id)) return help.T;
-    const ids = (f.bodies || []).filter((q) => !q.flying).sort((a, c) => c.hp - a.hp).map((q) => q.id);
+    // (Of two bosses, the one that takes its blows whole before the one that's covered or warded: the Brothers' cover, the
+    // twins' shared pain; then the healthier.)
+    const ids = (f.bodies || []).filter((q) => !q.flying).sort((a, c) => (c.ward ?? 1) - (a.ward ?? 1) || c.hp - a.hp).map((q) => q.id);
     for (const id of ids) { const q = live.find((x) => x.id === id); if (q) return q; }
   }
   if (help) return help.T;
@@ -261,7 +307,7 @@ function pickTarget(live, f, b, m) {
 // Behind a pillar from her perch (where she breathes from), not the one beside it.
 function hideSpot(m, boss) {
   let best = null, bd = Infinity;
-  const [sx, sz] = toWorld(PERCH.x, PERCH.z);
+  const [sx, sz] = toWorld(PERCH.x, PERCH.z);   // (the Warrens' own: Venomaw's)
   void boss;
   for (const [lx, lz, r] of PILLARS) {
     const [qx, qz] = toWorld(lx, lz);

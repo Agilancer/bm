@@ -14,10 +14,11 @@ import { Ground } from './ground.js';
 import { Town } from './town.js';
 import { Life, ACT } from './brain.js';
 import { Talk } from './talk.js';
-import { PEOPLE } from './people.js';
+import { FOLK } from './people.js';
 import { LINES as LA } from './lines/town_a.js';
 import { LINES as LB } from './lines/town_b.js';
 import { LINES as LC } from './lines/town_c.js';
+import { LINES as LLAND } from './lines/land.js';
 import { SCENES, SMALLTALK } from './lines/scenes.js';
 import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
 import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
@@ -54,8 +55,8 @@ async function boot({ buffer, base, lean }) {
   const clips = new FolkClips(meta, bin);
   const ground = new Ground(village, interior, BOUNDS);
   const town = new Town(village, interior, spots);
-  life = new Life({ ground, town, clips, emit });
-  talk = new Talk(life, { lines: { ...LA, ...LB, ...LC }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
+  life = new Life({ ground, town, clips, emit, people: FOLK });
+  talk = new Talk(life, { lines: { ...LA, ...LB, ...LC, ...LLAND }, scenes: SCENES, smalltalk: SMALLTALK }, emit);
   // Each body's skeleton out of its model (the mesh is the renderer's), one fetch a model.
   const glbs = new Map();
   const glbOf = (m) => {

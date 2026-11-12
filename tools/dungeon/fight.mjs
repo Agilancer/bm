@@ -1,14 +1,17 @@
-// The Hollowfang Warrens' fights, played out by the sim itself with no page and no GPU: a level 8 party hired, a player
-// who shoots what the party's on and walks out of whatever's marked on the ground, and each pack and boss fought in turn.
-//   node tools/dungeon/fight.mjs                 every boss, and a pack
-//   node tools/dungeon/fight.mjs venomaw 3       one fight (grubnash, twins, venomaw, pack), so many times over
+// The party dungeons' fights, played out by the sim itself with no page and no GPU: a party hired at the delve's level (a
+// level over it for the player and them: the Warrens at 8, the Deeps at 11, the keep at 15), a player who shoots what the
+// party's on and walks out of whatever's marked on the ground, and each pack and boss of the delve fought in turn.
+//   node tools/dungeon/fight.mjs                 every pack and boss of every delve (a process for each delve)
+//   node tools/dungeon/fight.mjs deeps           one delve's (warrens, blackvigil, deeps)
+//   node tools/dungeon/fight.mjs venomaw 3       one fight (a boss's key, or a pack's), so many times over
 //   node tools/dungeon/fight.mjs --still twins   the player stands where they are and never steps out of anything
 //   node tools/dungeon/fight.mjs --slow          the player sees each mark and shot half a second late, as a person does
 // It says how long each took, who fell, how much of the player's life went, and what was thrown at them. It fails on an
 // error in a tick, or a shape with a bad number in it.
 import fs from 'node:fs';
 import { FX_FLOATS, INPUT } from '../../src/core/layout.js';
-import { BOSSES, PACKS, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
+import { ALL_PACKS, BOSSES, DELVES, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
+import { spawnSync } from 'node:child_process';
 import { makeCast } from '../../src/core/heroes.js';
 import { wayOut } from '../../src/core/perils.js';
 import { SPELLS } from '../../src/sim/spells.js';
@@ -18,7 +21,17 @@ const args = process.argv.slice(2);
 const still = args.includes('--still'), quiet = args.includes('--quiet'), react = args.includes('--slow') ? 0.5 : 0.12;
 const which = args.find((a) => !a.startsWith('--') && !/^\d+$/.test(a)) || 'all';
 const times = +(args.find((a) => /^\d+$/.test(a)) || 1);
-const LEVEL = 8, DT = 1 / 120;
+const DT = 1 / 120;
+// Which delve: the one named, or the one the named fight is in; with nothing named, each in a process of its own.
+const delve = DELVES.find((d) => d.key === which) || DELVES.find((d) => d.key === (BOSSES.find((b) => b.key === which)?.delve || ALL_PACKS.find((q) => q.key === which)?.delve)) || (which === 'pack' ? DELVES[0] : null);
+if (!delve) {
+  if (which !== 'all') { console.log(`no delve, boss or pack called ${which}`); process.exit(1); }
+  let code = 0;
+  for (const d of DELVES) { console.log(`\n==== ${d.name} ====`); code |= spawnSync(process.execPath, [process.argv[1], d.key, ...args.filter((a) => a !== 'all')], { stdio: 'inherit' }).status; }
+  process.exit(code);
+}
+const LEVEL = delve.level + 1;
+const PACKS = delve.packs, MINE = BOSSES.filter((b) => b.delve === delve.key);
 
 // ---- the sim, booted as its worker boots it --------------------------------------------------------------------------------
 const listeners = [], posted = [];
@@ -94,6 +107,9 @@ function play(target) {
 }
 
 function pickTarget(key) {
+  // (Whoever the fight says to strike, where it says: the Hollow Brothers' cover.)
+  const told = W.focus();
+  if (told && !W.adds().length) return told;
   const adds = W.adds().sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
   if (adds[0]) return adds[0];
   const live = sim.tripo.slots().filter((k) => !k.dead && !k.dormant && k.aggro && k.lair?.dungeon && (!key || k.lair.key === key));
@@ -112,10 +128,23 @@ async function fight(key) {
   P.tally = { hits: 0, dmg: 0, by: {} }; jumps = 0;
   // (What's on the way to a boss is dead by the time you're at its door.)
   if (boss) for (const l of sim.tripo.lairs) if (l.dungeon && !l.bossLair) { sim.tripo.sleep(l); l.state = 'cleared'; }
-  if (boss) send({ type: 'warrensDebug', cmd: 'boss', n: BOSSES.indexOf(boss) });
-  else { send({ type: 'warrensDebug', cmd: 'enter' }); const [x, , z] = roomSpot(pack.room), r = roomOf(pack.room).r; W.carry(x, z + r * 0.75, Math.PI); for (const l of sim.tripo.lairs) if (l.dungeon && l !== sim.tripo.lairs.find((q) => q.key === pack.key) && !l.bossLair) l.state = 'cleared'; }
-  const room = roomOf(boss ? boss.room : pack.room), [rx, , rz] = roomSpot(room.id);
-  home = [rx, rz, room.r];
+  const room = roomOf(boss ? boss.room : pack.room), [rx, , rz] = boss ? roomSpot(room.id) : roomSpot(room.id, pack.at?.[0] || 0, pack.at?.[1] || 0);
+  if (boss) send({ type: 'warrensDebug', cmd: 'boss', boss: boss.key });
+  else {
+    send({ type: 'warrensDebug', cmd: 'enter', delve: delve.key });
+    for (const l of sim.tripo.lairs) if (l.dungeon && l.key !== pack.key && !l.bossLair) l.state = 'cleared';
+    // (Stood a little off the pack, on the side that's the shortest walk from the way in.)
+    const [ex, ez] = toWorld(delve.entry.x, delve.entry.z, delve), nav = sim.world.caveNav(rx, rz);
+    let best = [rx, rz], bd = Infinity;
+    for (let a = 0; a < 6.28; a += 0.2) for (const far of [16, 12, 8]) {
+      const qx = rx + Math.sin(a) * far, qz = rz + Math.cos(a) * far;
+      if (caveRoom(qx, qz) < 1.5) continue;
+      const dd = nav.walkDist(qx, qz, ex, ez, sim.time) - far * 2;
+      if (dd < bd) { bd = dd; best = [qx, qz]; }
+    }
+    W.carry(best[0], best[1], Math.atan2(rx - best[0], rz - best[1]));
+  }
+  home = [rx, rz, room.hx !== undefined ? Math.max(room.hx, room.hz) : room.r];
   let t = 0, began = -1, maxFx = 0, low = { player: 1, tank: 1 }, fell = new Set(), end = '';
   const lairKey = boss ? boss.key : pack.key, lair = () => sim.tripo.lairs.find((l) => l.key === lairKey);
   const tank = party.find((h) => h.role === 'tank');
@@ -124,7 +153,7 @@ async function fight(key) {
     // In through the door until something's noticed; then the fight.
     if (!target && began < 0) {
       const dx = rx - p.x, dz = rz - p.z;
-      inp[INPUT.YAW] = Math.atan2(dx, dz); inp[INPUT.MOVE_Z] = Math.hypot(dx, dz) > room.r * 0.45 ? 1 : 0; inp[INPUT.MOVE_X] = 0; inp[INPUT.CAST] = 0;
+      inp[INPUT.YAW] = Math.atan2(dx, dz); inp[INPUT.MOVE_Z] = Math.hypot(dx, dz) > (boss ? room.r * 0.45 : 5) ? 1 : 0; inp[INPUT.MOVE_X] = 0; inp[INPUT.CAST] = 0;
     } else { if (began < 0) began = t; play(target); }
     tick(); t += DT;
     if ((sim.tick & 7) === 0) await breathe();
@@ -135,7 +164,8 @@ async function fight(key) {
     for (const h of party) if (h.dead) fell.add(h.person.cls);
     if (process.env.TRACE && (sim.tick % 600) === 0) { const f = W.fight, b = boss && W.bossBodies(boss.key)[0]; console.log(`  t ${t.toFixed(0)} phase ${f?.phase} stage ${f?.air?.stage || ''} boss ${b ? `${(b.hp / b.maxHp * 100).toFixed(0)}% st ${b.state} ${b.clip} lift ${(b.hover || 0).toFixed(1)} at ${(b.x - rx).toFixed(0)},${(b.z - rz).toFixed(0)}` : ''} p ${(p.hp / p.maxHp * 100).toFixed(0)}% at ${(p.x - rx).toFixed(0)},${(p.z - rz).toFixed(0)} marks ${P.marks.length} shots ${P.shots.length} party ${party.map((h) => (h.dead ? 'x' : (h.hp / h.maxHp * 100).toFixed(0))).join(' ')}`); }
     if (p.dead) { end = 'the player fell'; break; }
-    if (boss ? W.down.has(boss.key) : began >= 0 && lair()?.state === 'cleared') { end = 'won'; break; }
+    if (boss ? W.down.has(boss.key) : began >= 0 && lair()?.state === 'cleared' && !W.adds().length) { end = 'won'; break; }
+    if (!boss && began < 0 && t > 40) { end = 'nothing came'; break; }
     if (began >= 0 && t - began > 20 && boss && !W.fight) { end = 'the fight was let go'; if (process.env.TRACE) console.log(`  let go: inside ${W.inside} player ${Math.hypot(p.x - rx, p.z - rz).toFixed(0)} m from the middle of a room of ${room.r}, party ${party.map((h) => `${h.dead ? 'x' : ''}${Math.hypot(h.x - rx, h.z - rz).toFixed(0)}`).join(' ')}, bosses ${W.bossBodies(boss.key).map((m) => `${m.aggro ? 'on' : 'off'} ${Math.hypot(m.x - rx, m.z - rz).toFixed(0)}`).join(' ')}`); break; }
   }
   inp[INPUT.CAST] = 0; inp[INPUT.MOVE_X] = 0; inp[INPUT.MOVE_Z] = 0;
@@ -148,7 +178,9 @@ async function fight(key) {
   return end;
 }
 
-console.log(`booted: ${sim.knights.length} bodies, a party of ${party.map((h) => h.person.cls).join(', ')}; the player ${still ? 'stands still' : react > 0.3 ? 'keeps out of what it can, half a second late' : 'keeps out of what it can'}`);
-const list = which === 'all' ? ['pack', 'grubnash', 'twins', 'venomaw'] : [which];
-for (let n = 0; n < times; n++) for (const k of list) await fight(k === 'pack' ? PACKS[0].key : k);
+console.log(`${delve.name}, at level ${LEVEL}: ${sim.knights.length} bodies, a party of ${party.map((h) => h.person.cls).join(', ')}; the player ${still ? 'stands still' : react > 0.3 ? 'keeps out of what it can, half a second late' : 'keeps out of what it can'}`);
+const list = which === delve.key ? [...PACKS.map((q) => q.key), ...MINE.map((b) => b.key)] : [which === 'pack' ? PACKS[0].key : which];
+let lost = 0;
+for (let n = 0; n < times; n++) for (const k of list) if ((await fight(k)) !== 'won') lost++;
+console.log(lost ? `${lost} of ${list.length * times} not won` : `all ${list.length * times} won`);
 process.exit(process.exitCode || 0);

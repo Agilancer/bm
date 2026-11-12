@@ -5,7 +5,7 @@
 // They are not in sim.knights, so nothing of the player's (spells, blows, loot) ever touches them. Monsters they strike
 // turn on them (src/sim/foes.js). What they say is chosen on the render thread (src/ui/heroes.js) from the triggers they
 // raise here as EV.HERO events: (slot, trigger, other slot, place, mob, extra).
-import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS, PERSONAS, PLACES, PLACE_IDS, THE_FALL, ACTIVITIES, TRIG, WALK_ENDS, hourBand, placeOf, rng } from '../core/heroes.js';
+import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS, PERSONAS, PLACES, PLACE_IDS, THE_FALL, ACTIVITIES, TRIG, TRIPO_MOB, WALK_ENDS, hourBand, placeOf, rng } from '../core/heroes.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
 import { floorAt, inPit } from '../core/interior.js';
@@ -21,7 +21,7 @@ import { Gravehart } from './gravehart.js';
 import { Hydra } from './hydra.js';
 import { FieldCreature } from './field-creature.js';
 import { Pose, solveFK } from './anim.js';
-import { BROKER_SPOTS, PORTAL, inDungeon, roleOf } from '../core/dungeon.js';
+import { BROKER_SPOTS, PORTAL, delveAt, delveOf, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
 import { cleanLine } from './sight.js';
 import { MORE_SKILLS, arrive, arrow3, castSkill, chooseSkill, classRoutine, cutArc, diveDraw, hammer3, install, pike3, pluckNote, shield3, rank, stepShotX, strumFx, tintOf } from './heroskills.js';
@@ -41,7 +41,7 @@ export function mobKind(m) {
   if (m instanceof Gravehart) return 'gravehart';
   if (m instanceof Crab) return 'crab';
   // (A Tripo monster, src/sim/tripo.js, has its meta: the heroes know the werewolf by name, the rest as monsters.)
-  if (m instanceof FieldCreature) return m.opts.name === 'WEREWOLF' ? 'werewolf' : m.meta ? null : 'mouth';
+  if (m instanceof FieldCreature) return m.opts.name === 'WEREWOLF' ? 'werewolf' : m.meta ? TRIPO_MOB[m.meta.group] || null : 'mouth';
   if (m instanceof Caster) return m.opts.role === 'wizard' ? 'wizard' : m.opts.role;
   if (m instanceof Zombie) return m.opts.model === 'zombie_ogre' ? 'ogre' : m.champion ? 'champion' : 'zombie';
   if (m instanceof Knight) return m.opts.suit === 'knight' ? 'sentry' : 'black_knight';
@@ -2655,7 +2655,7 @@ export class HeroWorld {
     if (h.surf?.free) { h.surf = null; h.stopAction(0.2); h.y = this.sim.world.height(h.x, h.z); }
     h.say(this.sim, 'player_party_end');
     // (Back to the town from wherever you left them; from the Warrens, out by the portal first.)
-    if (inDungeon(h.x, h.z)) this.place(h, PORTAL.x + 3, PORTAL.z + 3);
+    if (inDungeon(h.x, h.z)) { const o = delveOf(h.x, h.z).portal; this.place(h, o.x + 3, o.z + 3); }
     this.goHome(h);
   }
 
@@ -2746,7 +2746,7 @@ export class HeroWorld {
       else { h.goal = null; h.hold = Math.max(h.hold, 0.3); h.holdFace = Math.atan2(p.x - h.x, p.z - h.z); return; }
     }
     // Lost: through a portal without them, or left far behind out of a fight.
-    if (!p.dead && !fight.length && !h.swing && (d > 60 || inDungeon(p.x, p.z) !== inDungeon(h.x, h.z))) { this.bringTo(h); return; }
+    if (!p.dead && !fight.length && !h.swing && (d > 60 || delveAt(p.x, p.z) !== delveAt(h.x, h.z))) { this.bringTo(h); return; }
     if (h.surf) return;
     // On the board when you are.
     if (p.surfing && !fight.length && Math.hypot(p.vx || 0, p.vz || 0) > 2.5 && !h.swing && !h.jump) { this.freeSurf(h); return; }
@@ -2812,6 +2812,9 @@ export class HeroWorld {
     }
     const adds = fight.filter((m) => m.lair?.add);
     if (adds.length) return by(adds, h);
+    // (Where a fight says whom to strike, the Hollow Brothers' say: that one. src/sim/dungeon.js focus.)
+    const want = sim.warrens?.focus();
+    if (want && fight.includes(want)) return want;
     const tank = [...this.company.members].find((o) => o.role === 'tank' && !o.dead);
     if (tank?.foe && fight.includes(tank.foe) && !tank.foe.flying) return tank.foe;
     const mine = fight.filter((m) => sim.time - (m.playerHitT ?? -1e9) < 4);
@@ -2825,6 +2828,9 @@ export class HeroWorld {
     const p = this.sim.player;
     const away = (from, r) => { const dx = h.x - from.x, dz = h.z - from.z, L = Math.hypot(dx, dz) || 1; return [from.x + dx / L * r, from.z + dz / L * r]; };
     if (m.spin > 0 && Math.hypot(h.x - m.x, h.z - m.z) < 7.5) { h.post = away(m, 7.5); return; }
+    // (Where a fight says where to stand, behind the Warden's shield say: there. src/sim/dungeon.js stanceFor.)
+    const told = this.sim.warrens?.stanceFor(h, m);
+    if (told) { h.post = told; return; }
     if (m.bossKey === 'venomaw' && !m.flying && h.role !== 'tank') {
       // At her side: the side of her nearer to them, past her girth, farther off for those who shoot.
       const rx = Math.cos(m.yaw), rz = -Math.sin(m.yaw), side = (h.x - m.x) * rx + (h.z - m.z) * rz >= 0 ? 1 : -1;
