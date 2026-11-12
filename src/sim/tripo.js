@@ -30,7 +30,7 @@ function dungeonLairs(roster) {
     out.push({ key: p.key, x, z, r: p.r ?? 6, pick: have(p.pick), boss: elite.length ? elite : undefined, n: p.n - (elite.length ? 1 : 0), pal: p.pal, wake: p.wake || 34, dungeon: true, delve: p.delve,
       state: 'asleep', at: -1e9, tough: d.tough, tricks: true, spots: p.spots?.map(at), walk: p.walk?.map(at), more: p.more });
   }
-  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
+  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, isBoss: true, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
   return out;
 }
 
@@ -610,9 +610,12 @@ export class TripoWorld {
     for (let i = this.first; i < this.first + this.count; i++) {
       const k = sim.knights[i];
       if (this.claimed?.has(i) || k.aggro) continue;
+      // (A dungeon's boss on its feet keeps its place however far off you are: the Hollow Brothers stand up as you pass
+      // under their court, and while you were 200 m off in the Sanctum the next packs to wake took their two places.)
+      if (!k.dead && k.lair?.isBoss) continue;
       const d = Math.hypot(k.x - p.x, k.z - p.z);
       let spare = k.dead ? (k.deadT > 45 || d > 60 ? 1e6 + d : -1) : d > 150 ? d : -1;
-      if (must && spare < 0 && !k.boss) spare = k.dead ? 1e5 + d : d > 12 ? d : -1;
+      if (must && spare < 0 && !k.lair?.isBoss) spare = k.dead ? 1e5 + d : d > 12 ? d : -1;
       if (spare > bd) { bd = spare; best = i; }
     }
     return best;
