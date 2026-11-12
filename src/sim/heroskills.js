@@ -361,6 +361,8 @@ function toward(x, y, z, m, v, up = 1.1) {
 export function stepShotX(w, s, dt) {
   const sim = w.sim, o = s.owner;
   const v0 = Math.hypot(s.vx, s.vy, s.vz) || 1;
+  // (The speed it left the hand at: what it comes home by, so the way back never feeds on itself.)
+  s.thrownV ??= v0;
   const stop = (hit) => { if (!s.done) { s.done = true; s.onEnd?.(s, hit); s.end?.(s); } };
   if (o.dead) return stop();
   if (s.wait > 0) { s.wait -= dt; s.t -= dt; s.tick?.(s, dt); return; }
@@ -370,8 +372,11 @@ export function stepShotX(w, s, dt) {
   if (s.back) {
     // Home to the hand that threw it.
     const hp = o.handPos(s.hand ? 'l' : 'r'), dx = hp[0] - s.x, dy = hp[1] - s.y, dz = hp[2] - s.z, L = Math.hypot(dx, dy, dz);
-    if (L < 0.8 || s.t > s.life + 3) { s.caught?.(s); return stop(); }
-    const v = Math.max(v0, s.v || v0) * (s.t > s.life ? 1.6 : s.backV ?? 1.1);
+    // Home by its own pace, half as fast again once it's overdue. (It took its pace from how fast it was already going,
+    // so overdue it gained half again every tick, never came within reach of the hand, and in two seconds was ten to the
+    // thirty-eighth metres off.) Caught once this tick's step would take it there.
+    const v = (s.v || s.thrownV) * (s.t > s.life ? 1.6 : s.backV ?? 1.1);
+    if (L < 0.8 || L <= v * dt || s.t > s.life + 3) { s.caught?.(s); return stop(); }
     s.vx = dx / L * v; s.vy = dy / L * v; s.vz = dz / L * v;
   } else if (s.homing) {
     let m = s.foe;
