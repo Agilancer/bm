@@ -270,6 +270,8 @@ export class Beast {
     snap[cOff + C.KIND] = this.kind;
     snap[cOff + C.X] = this.x; snap[cOff + C.Y] = this.y; snap[cOff + C.Z] = this.z; snap[cOff + C.YAW] = this.yaw;
     snap[cOff + C.HP] = this.hp; snap[cOff + C.MAX_HP] = this.maxHp;
+    // (The top of it, where it's known, for the life bar over it: src/ui/foebars.js. Its feet otherwise, which says there's none.)
+    snap[cOff + C.HEAD_X] = this.x; snap[cOff + C.HEAD_Y] = this.y + (this.meta?.height ? this.meta.height + (this.hover || 0) : 0); snap[cOff + C.HEAD_Z] = this.z;
     snap[cOff + C.BLEED] = this.bleeds.length;
     snap[cOff + C.STATE] = this.state;
     snap[cOff + C.GASH_VERSION] = this.gashVersion;

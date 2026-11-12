@@ -11,6 +11,7 @@ export class ViewSwitch {
     this.o = o;
     this.on = o.settings.view === 'third';
     this.allowed = false;
+    this.forced = false;   // auto-play wants the view behind him while it plays (src/ui/autocam.js): nothing's saved
     this.btn = document.createElement('div');
     this.btn.id = 'viewBtn';
     this.btn.title = 'First or third person (V)';
@@ -40,7 +41,7 @@ export class ViewSwitch {
   }
 
   draw() {
-    const shown = this.allowed ? '' : 'none', third = this.on && this.allowed;
+    const shown = this.allowed ? '' : 'none', third = (this.on || this.forced) && this.allowed;
     this.btn.style.display = shown;
     this.btn.classList.toggle('on', third);
     // (The button shows the view it would give you.)
@@ -51,7 +52,7 @@ export class ViewSwitch {
   // Each frame: whether it can be on yet, and what the sim's told.
   frame(snap) {
     const allowed = thirdAllowed(snap[H.OPENING]);
-    if (allowed !== this.allowed) { this.allowed = allowed; this.draw(); }
-    this.o.shared.input[INPUT.THIRD] = this.on && allowed ? 1 : 0;
+    if (allowed !== this.allowed || this.forced !== this.wasForced) { this.allowed = allowed; this.wasForced = this.forced; this.draw(); }
+    this.o.shared.input[INPUT.THIRD] = (this.on || this.forced) && allowed ? 1 : 0;
   }
 }

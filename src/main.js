@@ -48,6 +48,7 @@ import { TownUI } from './ui/folk.js';
 import { hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
+import { FoeBars, isBoss } from './ui/foebars.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
@@ -905,6 +906,9 @@ async function boot(plan, poolSize) {
   game.closeBook = closeBook;
   townUI.spellbar = game.spellbar;
   // First person or third: V, the eye by the spell bar, VIEW on a phone.
+  // A life bar over every enemy's head (the interface's own is a boss's only: Hud.update).
+  game.foeBars = new FoeBars({ renderer, heroCount: () => renderer.heroCast?.length || 0 });
+  hud.dungeonBoss = () => !!game.party?.boss;
   game.viewSwitch = new ViewSwitch({ input, shared, settings, save: saveSettings, tip: (t, s) => hud.tip(t, s), busy: () => state.paused || naming });
   // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
@@ -1088,16 +1092,19 @@ class Hud {
     this.setBar(this.hpEl, clamp(snap[H.HP] / snap[H.MAX_HP], 0, 1));
     const hp = Math.max(0, Math.ceil(snap[H.HP]));
     if (hp !== this.hpShown) { this.hpShown = hp; this.hpNum.textContent = hp; }
-    // The bar is for whatever's closest and means you harm.
-    let co = CHARS_START, near = 9;
+    // The bar on the interface is a boss's, and only a boss's: the nearest that means you harm (isBoss in src/ui/foebars.js;
+    // a dungeon's boss has its own frame, src/ui/party.js, and this gives way to it). Everything else that can be fought
+    // carries its life over its head (FoeBars).
+    const BOSS_FAR = 34;
+    let co = CHARS_START, near = BOSS_FAR;
     for (let i = 0; i < snap[H.NCHARS]; i++) {
       const o = CHARS_START + i * C_SIZE;
-      if (snap[o + C.ACTIVE] < 0.5 || !snap[o + C.HOSTILE] || snap[o + C.STATE] === 10) continue;
+      if (snap[o + C.ACTIVE] < 0.5 || !snap[o + C.HOSTILE] || snap[o + C.STATE] === 10 || !isBoss(snap[o + C.KIND] | 0, snap[o + C.MAX_HP])) continue;
       const d = Math.hypot(snap[o + C.X] - snap[H.PX], snap[o + C.Z] - snap[H.PZ]);
       if (d < near) { near = d; co = o; }
     }
     const hpf = clamp(snap[co + C.HP] / snap[co + C.MAX_HP], 0, 1);
-    $('foe').style.opacity = near < 9 ? 1 : 0;
+    $('foe').style.opacity = near < BOSS_FAR && !this.dungeonBoss?.() ? 1 : 0;
     const foeName = FOE_NAMES[snap[co + C.KIND]] || '';
     if (foeName !== this.foeNameShown) { this.foeNameShown = foeName; $('foeName').textContent = foeName; }
     this.setBar(this.foeHp, hpf);
@@ -1383,6 +1390,7 @@ class GameView {
       hs.gpuMs = r.stats.gpuMs; hs.busyMs = r.stats.busyMs; hs.W = r.W; hs.H = r.H; hs.scale = r.scale; hs.msaa = r.msaa; hs.demoted = r.demoted || 0; hs.vsync = this.vsyncMs;
       hs.sim = this.simStats;
       this.hud.update(dt, snap, hs);
+      this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
       this.clock.set(r.hour);
       this.chatLog?.update(dt, !this.idle && (!this.input.menu || !!this.heroTalk?.open));
       if (this.heroTalk) {

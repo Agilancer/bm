@@ -400,11 +400,27 @@ readout. **Interface in auto-play**: Always shown, or Hidden until you tap: whil
 four seconds, everything over the picture is put away (`body.ui-bare`), and a tap, a click, a key or the mouse moved brings
 it all back at once (that touch does nothing else). **Map in auto-play** and **Chat in auto-play** keep the corner map, and
 the chat log with the speech bubbles and names over heads, on the screen while the rest is away (both kept unless set to
-Hidden with the rest). A chest or a word auto-play opens itself still shows over the bare picture. `src/ui/autoplay.js`
+Hidden with the rest). A chest or a word auto-play opens itself still shows over the bare picture, and so do its banners.
+**Camera**, **Talk**, **Long walks** and **Banners in auto-play**: see "Made to be watched" under Auto-play. `src/ui/autoplay.js`
 (`setBare`, `bareStep`), the rules at the end of the phone part of `src/ui/hud.css`.
 
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
+
+### Life bars
+
+Every enemy carries its life over its head, in the world (`src/ui/foebars.js`): each body in the snapshot that isn't one of
+yours, each jelly, and each tumbler that's awake. Red once it means you harm, dull gold while it hasn't seen you. What
+means you harm or has been hurt shows from 34 metres, what hasn't seen you from 18, the nearest 28 at once. Tessariel's
+knights have none unless one turns on you. The bar sits over the head the sim wrote (`C.HEAD_Y`: a knight's own head, the
+top of a monster, `src/sim/beast.js`), or by its kind (`TALL`); a jelly's and a tumbler's life is the last float of its
+block. They're drawn over the picture, so one shows through a wall; and they stay when auto-play puts the interface away.
+
+The only life bar on the interface is a boss's: the frame at the top (`#foe`) is for Velscour's knights, the Gravehart,
+the Bone Hydra, the werewolf, the Abyssal Mouth and any monster with 400 life or more (`isBoss`), from 34 metres; it used
+to be for whatever was nearest. A dungeon's boss keeps its own frame (`src/ui/party.js`), and the other gives way to it.
+Your own bars and your party's frames are as they were. `node --test tests/foe-bars.test.mjs`. Seen headless on a phone's
+screen in a fight in the woods; not looked at closely over each kind of body, so check the height on the big ones.
 
 ### Auto-play
 
@@ -749,9 +765,11 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
 - **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, down in the catacombs, and in
-  the town's houses (in at the door, a hand to the chest with nothing between, and what spills out picked up). It used to
-  leave the houses' fifteen chests alone, and anything lying in the town. A chest upstairs it leaves: it doesn't take
-  stairs. It wears the best of what it carries, sets gems
+  the town's houses (in at the door, a hand to the chest with nothing between, and what spills out picked up). In the
+  town it opens only a chest it's passing (within `TOWN_CHEST` metres), one at a time and no sooner than `TOWN_CHEST_GAP`
+  seconds after the last: it used to go round every house for all fifteen before it took a quest, three minutes of a
+  new game. Once it's going for a chest it keeps to that one till it's open or given up. A chest upstairs it leaves: it
+  doesn't take stairs. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
 - **Grinding.** It grinds for levels when no quest suits it yet.
 - **The Test Dungeon.** It fights whatever's been summoned, going in after it once the door's up, and otherwise waits in the
@@ -767,6 +785,46 @@ and there's nothing left but grinding, a menu asks where (the same grounds Grind
 - roaming the land
 
 That menu keeps the last choice after 12 seconds.
+
+**Made to be watched.** Each of these is a line in Settings and is on to begin with.
+
+- **The camera** (`src/ui/autocam.js`; Camera in auto-play: Directed, Behind him, or As you left it). While it plays the
+  view stands behind him, as third person does (`ViewSwitch.forced`: lent, nothing saved, and yours again when it stops).
+  Directed, it's taken off his shoulder now and then for a shot: over his shoulder at whoever he's talking to; low
+  behind the shield when he rides it somewhere; once round him when something big goes down or a level comes; up and
+  back over the road as he comes into a new country; alongside him, then out ahead of him, on a long walk. Only the
+  picture moves: his aim is his own look and the sim's own camera, which a shot never touches, and no shot is taken in a
+  fight. A shot is only taken with a clean line from his head to where the camera would stand (the nav thread's `sight`),
+  is looked at again a few times a second, and is let go when something's between; out of doors it's kept off the
+  ground. In third person the X is the camera's, a step to his right, so the head turns its look that much
+  (`thirdLead`) to put the X on its mark.
+- **The narrator** (`src/ui/autoshow.js`; Banners in auto-play). Under its line, what that amounts to: how many are on
+  him and how much life he has left, how far there is to go, that the road's being hurried. Below that, the last few
+  things worth telling (not on a phone). The same things come large over the picture for a few seconds: a level, a
+  quest done, a spell learned, something big put down, a new country, a fall. The banners stay when the interface is
+  put away.
+- **Talk** (Talk in auto-play). A line said to him is left up as long as it takes to read (`readTime`, by its length)
+  before he answers it; at a counter, a moment. It used to answer every line inside a second.
+- **Long walks** (Long walks in auto-play). Out in the open with more than `HURRY_FAR` metres to go and nothing alive
+  within `HURRY_CLEAR`, the world's clock runs at twice its pace (`CTRL.HASTE`: the sim steps through twice the time in
+  ticks no longer than ever, `src/sim/sim.worker.js`), and at its own again the moment anything's near, he's in the
+  town, or you touch the controls. Everything on the sim's clock goes with it; the townsfolk and the hour of the day
+  keep their own.
+- **The recap.** A card of what a stretch came to: the time, the levels, the quests done, what was put down, the closest
+  call, the best thing put on, the gold. It comes when auto-play is stopped after a minute or more, when you touch
+  anything after leaving it be for three minutes (While you were away), and from **Recap** in the menu.
+- **His temperament**, in the menu under what he should do, and kept: **Careful**, as he always was, or **Bold**. Bold,
+  he takes on what he'd have left two levels more (`BOLD_LEVELS`: foes, lairs, posts and quests alike; the black knight
+  still waits for his Thunderbolt), stays in a fight down to a fifth of his life, a tenth with his mark nearly down, and
+  is beaten back one level instead of two. The log keeps his own level either way.
+- **In a fight**, careful or bold: he rides the shield across them and clear of them more often and sooner again, opens
+  on a crowd or something big with the heaviest spell he has, and ends something big with it.
+
+`node --test tests/auto-show.test.mjs` checks the shots (he's in every one), the turn of the look, the reading time, the
+recap, the settings and the clock. Run headless, drawing stubbed (as below): the view behind him, a talk framed, the
+ride, the walk's and the arrival's shots, the road hurried and let go, the banners, the tally, and a chest in the town
+no longer holding him. Seen on a phone's screen: the banner, the narrator's line, the recap card and the menu. Nobody
+has watched the shots themselves drawn, or the desk's layout of the feed: look at those first.
 
 **For balancing.** Auto-play keeps a log, for reading a whole run afterwards. Open it with **log** under its status line, or
 **Balance log** in the menu. It lists:
@@ -800,6 +858,7 @@ bought as written (it's played through from level 1 to 50), and a new block of m
 **Files.**
 
 - `src/ui/autoplay.js`: the button, the status line and the menu.
+- `src/ui/autocam.js`: the director's camera. `src/ui/autoshow.js`: the narrator, the banners and the recap.
 - `src/ui/autobrain.js`: the head.
 - `src/sim/sight.js`: a clean line for a shot, for auto-play and the other Tessariels alike (`tests/sight.test.mjs`).
 - `src/ui/autowarrens.js`: hiring a party, and the Hollowfang Warrens.
