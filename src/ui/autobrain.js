@@ -2141,8 +2141,10 @@ export class Brain {
     this.say(j.say);
     if (!w || !this.reachable(j.who)) { this.giveUp(`p:${j.who}`, 60); this.job = null; return; }
     const d = dist(m.x, m.z, w.x, w.z), dy = Math.abs((w.y ?? m.y) - m.y);
-    if (!j.since) j.since = this.t;
-    // (Upstairs, or somewhere it can't get to: later.)
+    // (Upstairs, or somewhere it can't get to: later. The 75 s run from when it last got nearer, not from when it set
+    // out: counted from the start, nobody more than a minute's walk off was ever reached. Ser Hale is 2.4 km from the
+    // square; it gave him up 600 m down the road, turned back to grind, and set out again, for as long as it was watched.)
+    if (!j.since || d < (j.best ?? Infinity) - 2) { j.since = this.t; j.best = d; }
     if (this.t - j.since > 75) { this.giveUp(`p:${j.who}`, 240); this.job = null; return; }
     // Face to face, and nothing between them: no wall, no shut door. (A quest isn't taken or handed in from the street
     // through the side of a house: it goes in at the door.)
