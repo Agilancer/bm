@@ -8,16 +8,24 @@
 // clicked; Esc pauses and resumes. On the quests with every quest done, a menu asks where to grind (GRINDS), and keeps the last
 // choice if nobody answers.
 //
+// It's made to be watched (Settings' Auto-play): the camera stands behind him and is directed (src/ui/autocam.js), what he's at
+// is narrated, with banners for what's worth one and a recap of what he got done (src/ui/autoshow.js), a line said to him is
+// left up to be read, and a long walk with nothing about is hurried (the world's clock at HASTE: CTRL.HASTE, src/sim/sim.worker.js).
+// The menu also sets his temperament, Careful or Bold (Brain.bold in src/ui/autobrain.js).
+//
 // Settings' Interface in auto-play, Hidden until you tap: while it plays and nobody's touched anything for a few seconds, the
 // interface is put away (body.ui-bare, src/ui/hud.css), all but the map and the chat if those are kept (Map in auto-play, Chat
 // in auto-play: body.bare-map, body.bare-chat). A tap, a click, a key or the mouse moved brings it all back at once.
-import { INPUT } from '../core/layout.js';
+import { CTRL, INPUT } from '../core/layout.js';
 import { RULES } from '../folk/quests.js';
 import { Brain, DUNGEONS, GRINDS, MODES, finishedDungeons } from './autobrain.js';
 import { AutoLog } from './autolog.js';
+import { AutoShow } from './autoshow.js';
+import { AutoCam } from './autocam.js';
 
 const BTN = 'assets/ui/btn_auto.webp';
 const MENU_WAIT = 12;   // seconds the menu waits for a choice before it keeps the last one
+const HASTE = 2;        // how fast the world runs while a long walk is hurried (Settings' Long walks in auto-play)
 const BARE_AFTER = 4;   // seconds left be before the interface is put away, with Settings' Interface in auto-play: Hidden until you tap
 
 const CSS = `
@@ -58,6 +66,8 @@ body.playing #autoStatus.shown { display: block; }
 #autoMenu .card:hover { border-color: #4fd0ff; background: #12242e; }
 #autoMenu .card.sel { border-color: #8fe0ff; box-shadow: inset 0 0 12px rgba(79,208,255,.25); }
 #autoMenu .card:disabled { opacity: .45; cursor: default; border-color: #23485a; background: #0e1a22; }
+#autoMenu p.sub { margin: 12px 0 8px; }
+#autoMenu .cards.two { grid-template-columns: 1fr 1fr; }
 #autoMenu .card i { display: block; margin-top: 5px; font-size: 11px; color: #8fe0ff; font-style: normal; }
 #autoMenu .foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; }
 #autoMenu .wait { font-size: 12px; color: #7f9aa6; }
@@ -77,6 +87,8 @@ export class AutoPlay {
     this.yieldT = 0; this.calm = true;
     this.mode = 'quests';   // what it was last set to (MODES): the menu starts on it
     try { const k = localStorage.getItem('bm-auto-mode'); if (MODES[k]) this.mode = k; } catch { /* no storage: quests */ }
+    this.bold = false;      // his temperament (the menu): careful, or bold
+    try { this.bold = localStorage.getItem('bm-auto-bold') === '1'; } catch { /* no storage: careful */ }
     this.asking = false;    // the menu is up before it's on: the game's hands off, the mouse free to choose
     const style = el('style'); style.textContent = CSS; document.head.append(style);
     this.btn = el('button', 'autoBtn', null, `<img src="${BTN}" alt="Auto" draggable="false">`);
@@ -87,6 +99,8 @@ export class AutoPlay {
     this.logEl = el('div', 'autoLog');
     this.log = new AutoLog();
     document.body.append(this.btn, this.statusEl, this.menu, this.logEl);
+    this.show = new AutoShow({ statusEl: this.statusEl, pack: o.pack, townUI: o.townUI, settings: o.settings, isOn: () => this.on });
+    this.cam = new AutoCam({ game: o.game, shared: o.shared, settings: o.settings, townUI: o.townUI });
     const press = (e) => { e.preventDefault(); e.stopPropagation(); this.btn.blur(); this.press(); };
     this.btn.addEventListener('click', press);
     this.btn.addEventListener('touchend', press, { passive: false });
@@ -105,7 +119,7 @@ export class AutoPlay {
     // The interface put away while it plays comes back the instant anything's touched (and the touch does nothing else: what
     // was under it wasn't on the screen).
     this.bare = false; this.since = 0;   // (since: when the interface was last wanted, by the clock: a slow frame isn't a longer one)
-    const back = (e) => { if (!e.isTrusted) return; this.since = 0; this.setBare(false); };
+    const back = (e) => { if (!e.isTrusted) return; this.since = 0; this.setBare(false); this.show.touched(); };
     for (const t of ['pointerdown', 'touchstart', 'keydown', 'wheel']) addEventListener(t, back, { capture: true, passive: true });
     let mx = -1, my = -1;
     addEventListener('mousemove', (e) => {
@@ -128,7 +142,7 @@ export class AutoPlay {
   // chest or a word it opens itself is up over the bare picture, as it would be over the interface.)
   bareStep() {
     const want = this.on && this.o.settings?.autohide === 'on' && !this.asking && !this.o.paused()
-      && !this.menu.classList.contains('on') && !this.logEl.classList.contains('on') && !document.body.classList.contains('arranging');
+      && !this.menu.classList.contains('on') && !this.logEl.classList.contains('on') && !this.show.card.classList.contains('on') && !document.body.classList.contains('arranging');
     if (!want) { this.since = 0; if (this.bare) this.setBare(false); return; }
     const now = performance.now();
     if (!this.since) this.since = now;
@@ -144,7 +158,9 @@ export class AutoPlay {
       get spellbar() { return o.spellbar(); }, renderer: o.renderer, town: o.town, base: o.base, opening: o.opening,
       heroCount: () => o.renderer.heroCast?.length || 0, foeNames: o.foeNames,
       say: (t) => this.status(t), note: (t) => o.townUI.note(t, 'hint'), allDone: () => this.askGrind(), log: this.log,
+      settings: o.settings, event: (k, d) => this.show.event(k, d),
     });
+    this.brain.bold = this.bold;
   }
 
   key(e) {
@@ -158,6 +174,7 @@ export class AutoPlay {
     if (e.code === 'Escape' && this.on && input.enabled && this.calm) {
       if (this.menu.classList.contains('on')) { this.closeMenu(); return; }
       if (this.logEl.classList.contains('on')) { this.logEl.classList.remove('on'); return; }
+      if (this.show.shut()) return;
       this.o.pause(!this.o.paused());
     }
   }
@@ -196,13 +213,18 @@ export class AutoPlay {
       input.free = true;
       if (document.pointerLockElement) document.exitPointerLock();
       this.brain.start();
+      this.brain.bold = this.bold;
+      this.show.start();
       if (this.o.paused()) this.o.pause(false);
       this.brain.mode = this.mode;
       hud.tip(`${MODES[this.mode].name}. ${input.touch ? 'Use the stick to take over for a moment; Auto to stop.' : 'Move to take over for a moment; P or the Auto button stops it. Esc pauses.'}`, 5);
       if (this.mode === 'quests' && this.brain.allQuestsDone()) this.askGrind();
     } else {
       this.brain?.stop();
+      this.haste(false);
+      if (this.o.game.viewSwitch) this.o.game.viewSwitch.forced = false;
       this.since = 0; this.setBare(false);
+      this.show.stop();
       this.log.endFight(); this.log.save();
       input.free = false;
       input.releaseControls();
@@ -234,18 +256,31 @@ export class AutoPlay {
     }
     if (this.asking && !input.enabled) this.cancel();
     this.bareStep();
+    // The view behind him while it plays, and the director's shots over that (src/ui/autocam.js): eased out when it stops.
+    const vs = this.o.game.viewSwitch;
+    if (vs) vs.forced = this.on && this.cam.third;
+    if (snap) this.cam.frame(dt, snap, this);
     if (!this.on || !snap) return;
     if (!input.enabled) { this.toggle(false); return; }
-    if (this.o.shared.input[INPUT.PAUSE]) { this.brain.halt(); return; }
+    if (this.o.shared.input[INPUT.PAUSE]) { this.haste(false); this.brain.halt(); return; }
     // Hands on the keys: theirs, for a moment.
     if (input.handsOn) {
       if (this.yieldT <= 0) this.status('You have the controls.');
       this.yieldT = 1.5;
       input.auto = null;
+      this.haste(false);
       return;
     }
     if (this.yieldT > 0) { this.yieldT -= dt; if (this.yieldT > 0) return; input.auto = this.brain.auto; this.brain.goal = null; this.brain.sub = null; }
     try { this.brain.step(dt, snap); } catch (err) { console.error('auto-play', err); this.brain.halt(); }
+    this.haste(this.brain.hurry && this.o.settings?.autohaste !== 'off');
+    this.show.frame(dt, snap, this.brain, this.brain.me(snap));
+  }
+
+  // The world's clock hurried, or as ever (CTRL.HASTE, in hundredths: src/sim/sim.worker.js).
+  haste(on) {
+    const c = this.o.shared?.ctrl, v = on ? HASTE * 100 : 100;
+    if (c && this.hasted !== v) { this.hasted = v; Atomics.store(c, CTRL.HASTE, v); }
   }
 
   // ---- the menu: what it should do
@@ -286,13 +321,24 @@ export class AutoPlay {
       const off = k === 'dungeons' && !done.length;
       return `<button type="button" class="card${k === this.mode ? ' sel' : ''}" data-m="${k}"${off ? ' disabled' : ''}><b>${v.name}</b><span>${v.line}</span>${k === 'dungeons' ? `<i>${runs}</i>` : ''}</button>`;
     }).join('');
+    const temper = [['', 'Careful', 'Runs from what he can\'t yet beat, falls back when he\'s hurt, and comes back two levels stronger.'], ['1', 'Bold', 'Takes fights two levels early and stays in to finish a kill. More close calls, and more falls.']]
+      .map(([k, name, line]) => `<button type="button" class="card${(k === '1') === this.bold ? ' sel' : ''}" data-t="${k}"><b>${name}</b><span>${line}</span></button>`).join('');
     this.menu.innerHTML = `<h2>Auto-play</h2><p>What should he do?</p><div class="cards">${cards}</div>
-      <div class="foot"><span class="wait"></span><span>${this.on ? '<button type="button" data-a="log">Balance log</button> <button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Carry on</button>' : '<button type="button" data-a="cancel">Cancel</button>'}</span></div>`;
+      <p class="sub">And how?</p><div class="cards two">${temper}</div>
+      <div class="foot"><span class="wait"></span><span>${this.on ? '<button type="button" data-a="recap">Recap</button> <button type="button" data-a="log">Balance log</button> <button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Carry on</button>' : '<button type="button" data-a="cancel">Cancel</button>'}</span></div>`;
     for (const b of this.menu.querySelectorAll('[data-m]')) b.onclick = () => { if (!b.disabled) this.pickMode(b.dataset.m); };
+    for (const b of this.menu.querySelectorAll('[data-t]')) b.onclick = () => { this.setBold(b.dataset.t === '1'); for (const q of this.menu.querySelectorAll('[data-t]')) q.classList.toggle('sel', q === b); };
     this.wire();
     this.menu.classList.add('on');
     this.menuT = 0;
     this.o.audio.play?.('uiOpen', null, 0, 0, 0.4, 1, false);
+  }
+
+  // His temperament, kept for next time.
+  setBold(on) {
+    this.bold = !!on;
+    try { localStorage.setItem('bm-auto-bold', on ? '1' : ''); } catch { /* not kept: fine */ }
+    if (this.brain) { this.brain.bold = this.bold; this.brain.job = null; this.brain.jobKey = ''; }
   }
 
   pickMode(k) {
@@ -309,6 +355,7 @@ export class AutoPlay {
     on('keep', () => (this.menuT > 0 ? this.pickGrind(this.brain.grind) : this.closeMenu()));
     on('back', () => this.askMode());
     on('log', () => { this.closeMenu(); this.showLog(); });
+    on('recap', () => { this.closeMenu(); this.show.recapNow(); });
   }
 
   // Where to grind: chosen from the menu (chosen), or asked once every quest is done (it keeps the last after a while).
@@ -346,7 +393,7 @@ export class AutoPlay {
   }
 
   // A kill of the player's, by what it was (src/main.js EV.LOOT): for the log, while it's playing.
-  kill(name) { if (this.on) this.log.kill(name); }
+  kill(name) { if (this.on) { this.log.kill(name); this.show.kill(name, this.brain); } }
 
   // The balance log: what the run has come to so far, and a way to keep it.
   showLog() {
