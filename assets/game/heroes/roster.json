@@ -165,10 +165,10 @@
   "sex": "m",
   "body": "MALE - BARD 2",
   "groups": {
-   "helm": "MALE - BARD 1",
+   "helm": "MALE - BARD 2",
    "chest": "MALE - BARD 2",
-   "shoulders": "MALE - BARD 1",
-   "arms": "MALE - BARD 1",
+   "shoulders": "MALE - BARD 2",
+   "arms": "MALE - BARD 2",
    "legs": "MALE - BARD 1",
    "boots": "MALE - BARD 1"
   },
@@ -213,14 +213,14 @@
   "sex": "f",
   "body": "FEMALE - BOOMERANG KNIGHT 3",
   "groups": {
-   "helm": "FEMALE - BOOMERANG KNIGHT 4",
+   "helm": "FEMALE - BOOMERANG KNIGHT 3",
    "chest": "FEMALE - BOOMERANG KNIGHT 3",
    "shoulders": "FEMALE - BOOMERANG KNIGHT 1",
    "arms": "FEMALE - BOOMERANG KNIGHT 1",
-   "legs": "FEMALE - BOOMERANG KNIGHT 4",
-   "boots": "FEMALE - BOOMERANG KNIGHT 4"
+   "legs": "FEMALE - BOOMERANG KNIGHT 3",
+   "boots": "FEMALE - BOOMERANG KNIGHT 3"
   },
-  "palette": "frost",
+  "palette": "royal",
   "height": 1.76
  },
  {
@@ -229,12 +229,12 @@
   "sex": "f",
   "body": "FEMALE - BOOMERANG KNIGHT 4",
   "groups": {
-   "helm": "FEMALE - BOOMERANG KNIGHT 2",
+   "helm": "FEMALE - BOOMERANG KNIGHT 4",
    "chest": "FEMALE - BOOMERANG KNIGHT 4",
    "shoulders": "FEMALE - BOOMERANG KNIGHT 4",
-   "arms": "FEMALE - BOOMERANG KNIGHT 1",
-   "legs": "FEMALE - BOOMERANG KNIGHT 1",
-   "boots": "FEMALE - BOOMERANG KNIGHT 1"
+   "arms": "FEMALE - BOOMERANG KNIGHT 4",
+   "legs": "FEMALE - BOOMERANG KNIGHT 4",
+   "boots": "FEMALE - BOOMERANG KNIGHT 4"
   },
   "palette": "frost",
   "height": 1.76
@@ -284,7 +284,7 @@
    "legs": "MALE - BOOMERANG KNIGHT 3",
    "boots": "MALE - BOOMERANG KNIGHT 3"
   },
-  "palette": "crimson",
+  "palette": "garnet",
   "height": 1.88
  },
  {
@@ -339,14 +339,14 @@
   "id": "dragoon_f4",
   "cls": "dragoon",
   "sex": "f",
-  "body": "FEMALE - DRAGOON 3",
+  "body": "FEMALE - DRAGOON 5",
   "groups": {
-   "helm": "FEMALE - DRAGOON 4",
-   "chest": "FEMALE - DRAGOON 3",
+   "helm": "FEMALE - DRAGOON 2",
+   "chest": "FEMALE - DRAGOON 5",
    "shoulders": "FEMALE - DRAGOON 2",
    "arms": "FEMALE - DRAGOON 5",
-   "legs": "FEMALE - DRAGOON 1 - PINK AND PURPLE",
-   "boots": "FEMALE - DRAGOON 1 - PINK AND PURPLE"
+   "legs": "FEMALE - DRAGOON 5",
+   "boots": "FEMALE - DRAGOON 5"
   },
   "palette": "crimson",
   "height": 1.76
@@ -409,8 +409,8 @@
    "chest": "MALE - DRAGOON 2",
    "shoulders": "MALE - DRAGOON 4",
    "arms": "MALE - DRAGOON 4",
-   "legs": "MALE - DRAGOON 5",
-   "boots": "MALE - DRAGOON 5"
+   "legs": "MALE - DRAGOON 4",
+   "boots": "MALE - DRAGOON 4"
   },
   "palette": "verdant",
   "height": 1.88
@@ -460,7 +460,7 @@
    "legs": "FEMALE - LANCER 1",
    "boots": "FEMALE - LANCER 1"
   },
-  "palette": "violet",
+  "palette": "verdant",
   "height": 1.901
  },
  {
@@ -636,7 +636,7 @@
    "legs": "MALE - ROGUE - 2",
    "boots": "MALE - ROGUE - 2"
   },
-  "palette": "ash",
+  "palette": "moss",
   "height": 1.842
  },
  {
@@ -700,7 +700,7 @@
    "legs": "MALE - NINJA 1",
    "boots": "MALE - NINJA 1"
   },
-  "palette": "frost",
+  "palette": "plum",
   "height": 1.842
  }
 ]

@@ -188,6 +188,7 @@ body.touch.map-open #hud > :not(#mapMini) { visibility: hidden; }
 
 /* Auto-play with the interface put away (Settings, Interface in auto-play: src/ui/autoplay.js setBare): only the picture, and
    the map and the chat if they're kept. Anything touched brings it all back. */
+body.auto-shot #cross { opacity: 0; }
 body.ui-bare :is(#hud, #touch, #autoBtn, #autoStatus, #vskull, #vskullTag, #partyFrames, #bossFrame, #raidWarn, #folkNotes, #folkMarks, #heroLayer, #heroChat, #hallStatus, #softCursor) { visibility: hidden !important; }
 body.ui-bare.bare-map :is(#mapMini, #mapRing, #bMap) { visibility: visible !important; }
 body.ui-bare.bare-chat :is(#heroChat, #heroLayer) { visibility: visible !important; }

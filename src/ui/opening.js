@@ -1,6 +1,7 @@
-// The opening on screen: the camera while the story has it, your eyes opening, the bars, her words, your name, the cards,
-// holding to skip, and its sound (src/ui/opening-sound.js). The sim keeps the clock and where everyone is (src/sim/opening.js).
-import { CUES, CUE_IDS, emoteAt, lineAt, partAt, spoken, voiceOf } from '../core/opening-script.js';
+// The opening on screen: the camera while the story has it, your eyes opening, the bars, her words (in a bubble over her
+// head, src/ui/speech.js, and in the chat log), your name, the cards, holding to skip, and its sound
+// (src/ui/opening-sound.js). The sim keeps the clock and where everyone is (src/sim/opening.js).
+import { CUES, CUE_IDS, emoteAt, lineAt, partAt } from '../core/opening-script.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from '../core/math.js';
 import {
@@ -9,10 +10,12 @@ import {
   prettyShown, storyHolds, wakeEyeBack, wakeEyeH,
 } from '../core/opening.js';
 import { OpeningSound } from './opening-sound.js';
+import { SpeechBubble } from './speech.js';
 import { Emotes } from './emotes.js';
 import { terrainHeight } from '../core/terrain.js';
 
 const SKIP_HOLD = 1.0;
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const DEG = Math.PI / 180;
 const yawTo = (a, b) => Math.atan2(b[0] - a[0], b[2] - a[2]);
 const pitchTo = (a, b) => Math.atan2(b[1] - a[1], Math.hypot(b[0] - a[0], b[2] - a[2]));
@@ -42,6 +45,7 @@ export class OpeningHUD {
     this.onSkip = opts.onSkip;
     this.fx = opts.renderer;
     this.sound = opts.audio ? new OpeningSound(opts.audio) : null;
+    this.log = opts.log || null;      // the chat log (src/ui/chatlog.js): each of her lines goes into it as she says it
     const el = (tag, id, html = '') => { const e = document.createElement(tag); if (id) e.id = id; e.innerHTML = html; return e; };
     this.root = el('div', 'opening');
     this.root.setAttribute('aria-live', 'polite');
@@ -59,6 +63,8 @@ export class OpeningHUD {
     document.body.append(this.root);
     // Her feelings over her head: in the world, so under your lids and the bars.
     this.emotes = new Emotes(this.root, this.root.firstElementChild);
+    // Her words: over everything, your lids and the bars too, so a line's read even with your eyes shut.
+    this.bubble = new SpeechBubble(this.root);
     const q = (s) => this.root.querySelector(s);
     this.eyes = q('.op-eyes'); this.flash = q('.op-flash'); this.sub = q('.op-sub'); this.who = q('.op-sub b'); this.line = q('.op-sub p');
     this.title = q('.op-title'); this.titleName = q('.op-title h1'); this.herCard = q('.op-her'); this.castHint = q('.op-cast'); this.quest = q('.op-quest'); this.track = q('.op-track'); this.skipHint = q('.op-skip');
@@ -97,6 +103,7 @@ export class OpeningHUD {
     this.lastStage = -1; this.lastT = 0; this.lastCue = 0;
     this.dir = null; this.holdT = 0; this.skipped = -1;
     this.sound?.stopAll();
+    this.bubble?.hide(); this.said = null; this.speech = null;
   }
 
   // Whether the story has the screen: bars up, no hands, no HUD.
@@ -168,13 +175,13 @@ export class OpeningHUD {
     }
     this.track.textContent = stage === OPENING.ESCORT && t > 5 ? 'Go to Bellmourn with Lisandra' : '';
     // Her words.
-    this.words(snap, stage, t, her);
+    this.words(snap, stage, t);
     // Holding to skip.
     const canSkip = stage === OPENING.WAKE || stage === OPENING.COLLAPSE || stage === OPENING.LEAVE || (stage === OPENING.HERD && t < HERD_CONTROL);
     const touchOK = stage !== OPENING.LEAVE;
     const held = canSkip && this.skipped !== stage && (this.holding.key || (touchOK && this.holding.touch > 0));
     this.holdT = held ? this.holdT + dt : 0;
-    if (this.holdT >= SKIP_HOLD) { this.holdT = 0; this.skipped = stage; this.sound?.hush(); this.onSkip?.(); }
+    if (this.holdT >= SKIP_HOLD) { this.holdT = 0; this.skipped = stage; this.onSkip?.(); }
     // (On a phone, a thumb held while you walk out is walking: only Space skips that, so the hint isn't offered.)
     this.skipHint.hidden = !canSkip || this.skipped === stage || (stage === OPENING.WAKE && t < 2) || (this.touched && !touchOK);
     this.skipHint.querySelector('span').textContent = this.touched ? 'Hold to skip' : 'Hold Space to skip';
@@ -198,45 +205,46 @@ export class OpeningHUD {
     this.lastStage = stage; this.lastT = t;
   }
 
-  words(snap, stage, t, her) {
+  // Her words, up now: in a bubble over her head (placed in feel, once the frame's camera is known), and into the chat log
+  // as each is said in full. A caption ([a scream]) isn't hers, and stays a subtitle. (Her recordings, in assets/voice,
+  // aren't played.)
+  words(snap, stage, t) {
     let l = lineAt(stage, t), cueLine = false;
     const cue = snap[H.OPENING_CUE], cueT = snap[H.OPENING_CUE_T];
     if (!l && cue) {
       const c = CUES[CUE_IDS[cue - 1]];
       if (c && cueT < c.dur) { l = c; cueLine = true; }
     }
-    if (!l) { this.sub.hidden = true; this.shown = null; return; }
-    // Said aloud, in the voice of whichever of her you're seeing: from her mouth, the summons in your head (your eyes
-    // aren't open yet), and from out of sight with the tunnel's echo.
-    if (this.sound) {
-      const id = cueLine ? `c${cue}` : `${stage}:${l.at}`, age = cueLine ? cueT : t - l.at;
-      const wet = l.vo || l.off ? 0.6 : stage <= OPENING.LEAVE ? 0.3 : 0.12;
-      if (l.vo) this.sound.say(id, voiceOf(stage, l), spoken(l), age, null, 0, 0, wet);
-      else this.sound.say(id, voiceOf(stage, l), spoken(l), age, her[0], her[4] - 0.1, her[2], wet);
-    }
+    if (!l) { this.sub.hidden = true; this.shown = null; this.bubble.hide(); this.speech = null; return; }
     const named = stage > OPENING.WAKE || l.named;
-    const who = l.caption ? '' : named ? 'LISANDRA' : 'THE WITCH';
     const age = cueLine ? cueT : t - l.at;
     const text = partAt(l, age).replace('{name}', this.name || 'Tessariel');
     let html;
     if (l.words) {
       const w = text.split(' ');
       const n = t < l.from ? 0 : t >= l.land ? w.length : 1 + Math.floor((t - l.from) / (l.land - l.from) * (w.length - 1));
-      html = w.map((x, i) => (i < n ? x : `<span class="op-ghost">${x}</span>`)).join(' ');
-    } else html = text;
-    const key = who + html;
-    if (key !== this.shown) {
-      this.shown = key;
-      this.sub.hidden = false;
-      this.who.textContent = who + (l.vo ? ' (v.o.)' : l.off ? ' (off)' : '');
-      this.line.innerHTML = html;
-      this.sub.className = `op-sub${l.big ? ' big' : ''}${l.mutter || l.vo || l.off ? ' soft' : ''}${l.caption ? ' caption' : ''}`;
+      html = w.map((x, i) => (i < n ? esc(x) : `<span class="op-ghost">${esc(x)}</span>`)).join(' ');
+    } else html = esc(text);
+    if (l.caption) {
+      this.bubble.hide(); this.speech = null;
+      if (html !== this.shown) { this.shown = html; this.sub.hidden = false; this.who.textContent = ''; this.line.innerHTML = html; this.sub.className = 'op-sub caption'; }
+      return;
     }
-  }
-
-  // How open the witch's mouth is, by what she's saying aloud (src/ui/opening-sound.js mouth): the sim turns her jaw by it.
-  mouth() {
-    return this.sound?.mouth() ?? 0;
+    this.sub.hidden = true; this.shown = null;
+    const who = named ? 'Lisandra' : 'The Witch', soft = !!(l.mutter || l.vo || l.off);
+    const id = cueLine ? `c${cue}` : `${stage}:${l.at}`;
+    // From her mouth; or (vo) in your head before your eyes are open, or (off) from out of sight: no tail to her for those.
+    this.bubble.set(id, html, who, { big: !!l.big, soft, inside: !!l.vo });
+    this.speech = { off: !!(l.vo || l.off) };
+    // Into the chat log, each part once, as soon as it's all there (a line revealed a word at a time, when the last lands).
+    // (The same call again, later, is a new line: its clock starts over.)
+    const said = this.said;
+    if (!said || said.id !== id || said.text !== text || age + 0.25 < said.age) this.said = { id, text, age, logged: false };
+    this.said.age = age;
+    if (!this.said.logged && (!l.words || t >= l.land)) {
+      this.said.logged = true;
+      this.log?.line('her', who, text, { story: true, soft });
+    }
   }
 
   // Beat 8: your hand in view, with the staff in it (src/main.js shows it under the bars).
@@ -312,17 +320,19 @@ export class OpeningHUD {
     if (Math.random() < 0.5) r.emit(4, 1, HEARTH[0], y + 0.5, HEARTH[1], 0, 1, 0, 0.2, 0.2, 0.5, 0.12, 0.3, 1.6, 2.6);
   }
 
-  // Her feelings over her head (src/ui/emotes.js), placed by the camera the frame was drawn with.
+  // Her words and her feelings over her head (src/ui/speech.js, src/ui/emotes.js), placed by the camera the frame was drawn with.
   feel(snap, cam) {
     const stage = snap[H.OPENING], t = snap[H.OPENING_TIME], cue = snap[H.OPENING_CUE];
-    const e = !this.root.hidden && cam ? emoteAt(stage, t, cue ? CUE_IDS[cue - 1] : null, snap[H.OPENING_CUE_T]) : null;
-    if (!e) { this.emotes.hide(); return; }
     // The one of her you're looking at (the pretty one is the second to last), the middle of her head: 0.19 m over the head
     // joint is her speech mark, the middle of the skull about 0.1.
     const pretty = prettyShown(stage, t);
     const co = CHARS_START + (snap[H.NCHARS] - (pretty ? 2 : 1)) * C_SIZE;
     const head = [snap[co + C_PROPS], snap[co + C_PROPS + 1] - 0.09, snap[co + C_PROPS + 2]];
-    this.emotes.draw(cam, head, e.kind, e.age, e.dur, pretty ? 'pretty' : 'witch', this.root.classList.contains('bars') ? innerHeight * 0.105 : 0, snap[co + C.YAW]);
+    const bar = this.root.classList.contains('bars') ? innerHeight * 0.105 : 0;
+    if (this.speech && !this.root.hidden) { const log = this.log?.box(); this.bubble.place(cam, this.speech.off ? null : head, bar, log ? [log] : []); }
+    const e = !this.root.hidden && cam ? emoteAt(stage, t, cue ? CUE_IDS[cue - 1] : null, snap[H.OPENING_CUE_T]) : null;
+    if (!e) { this.emotes.hide(); return; }
+    this.emotes.draw(cam, head, e.kind, e.age, e.dur, pretty ? 'pretty' : 'witch', bar, snap[co + C.YAW]);
   }
 
   // ---- the camera -------------------------------------------------------------------------------------------------------

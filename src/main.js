@@ -4,6 +4,7 @@ import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
 import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE } from './core/dungeon.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
+import { ChatLog } from './ui/chatlog.js';
 import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
@@ -47,6 +48,7 @@ import { TownUI } from './ui/folk.js';
 import { hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
+import { FoeBars, isBoss } from './ui/foebars.js';
 import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
@@ -391,7 +393,7 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed), roster, kit);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
@@ -506,9 +508,11 @@ async function boot(plan, poolSize) {
     sound: (k) => audio.play({ open: 'packOpen', close: 'packClose', socket: 'gemLand' }[k] || k, null, 0, 0, 0.55, 1, false),
   });
   Object.assign(game, { pack, inventory });
+  // The chat log (src/ui/chatlog.js): the other Tessariels' words, and Lisandra's.
+  const chatLog = game.chatLog = new ChatLog({ settings, touch: input.touch });
   // What the other Tessariels say, and their names over their heads.
   if (cast.length) {
-    game.heroTalk = new HeroTalk({ base: BASE, cast, renderer, sim: simWorker, settings, touch: input.touch,
+    game.heroTalk = new HeroTalk({ base: BASE, cast, renderer, sim: simWorker, settings, touch: input.touch, chatLog,
       playerName: () => { try { return openingHUD?.name || 'Tessariel'; } catch { return 'Tessariel'; } }, playerSkull: () => !!pack.slots.skull,
       // A word with a hero (E): the same menu hold as the townsfolk's panel.
       ui: {
@@ -543,9 +547,8 @@ async function boot(plan, poolSize) {
     town, renderer, pack, input, hud, inventory, spellbar: null,
     act: {
       sound: (k) => audio.play(k, null, 0, 0, 0.7, 1, false),
-      // Lisandra's recorded lines (src/ui/folk.js speak).
-      voice: (id) => audio.voice(id, 1.1),
-      hushVoice: () => audio.hushVoice(),
+      // What Lisandra says to you, into the chat log (src/ui/folk.js speak).
+      log: (who, text) => chatLog.line('her', who, text),
       heal: (n) => { shared.input[INPUT.HEAL] += n; },
       hp: () => { const s = game.currentSnap(); return s ? s[H.HP] / (s[H.MAX_HP] || 1) : 1; },
       // A night's sleep: dawn, mended, and the game kept.
@@ -653,7 +656,7 @@ async function boot(plan, poolSize) {
     input.menu = false;
     simWorker.postMessage({ type: 'openingName' });
     if (!input.touch && !AUTO) input.lock();
-  }, { audio, renderer, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
+  }, { audio, renderer, log: chatLog, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
   const enter = async (fresh = true) => {
     title.hide();
     game.idle = false;
@@ -715,7 +718,6 @@ async function boot(plan, poolSize) {
       if (snap) {
         const active = input.enabled && !state.paused;
         openingHUD.draw(snap, active, dt);
-        shared.input[INPUT.MOUTH] = openingHUD.mouth();
         // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
         if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
         // (A camera set for a review picture, bm.setCam, holds through the story's.)
@@ -825,6 +827,8 @@ async function boot(plan, poolSize) {
     simWorker.postMessage({ type: 'hall', cmd: 'leave' });
     game.hallUI.setOn(false); hud.testHall = false; game.questTrail.off = false;
   }
+  // (For tests and review pictures: bm.testDungeon() goes in as the title's Test Dungeon does.)
+  if (window.bm) window.bm.testDungeon = enterTest;
   for (const b of $('pause').querySelectorAll('[data-p]')) {
     b.onclick = () => {
       title.chime();
@@ -902,6 +906,9 @@ async function boot(plan, poolSize) {
   game.closeBook = closeBook;
   townUI.spellbar = game.spellbar;
   // First person or third: V, the eye by the spell bar, VIEW on a phone.
+  // A life bar over every enemy's head (the interface's own is a boss's only: Hud.update).
+  game.foeBars = new FoeBars({ renderer, heroCount: () => renderer.heroCast?.length || 0 });
+  hud.dungeonBoss = () => !!game.party?.boss;
   game.viewSwitch = new ViewSwitch({ input, shared, settings, save: saveSettings, tip: (t, s) => hud.tip(t, s), busy: () => state.paused || naming });
   // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
@@ -1085,16 +1092,19 @@ class Hud {
     this.setBar(this.hpEl, clamp(snap[H.HP] / snap[H.MAX_HP], 0, 1));
     const hp = Math.max(0, Math.ceil(snap[H.HP]));
     if (hp !== this.hpShown) { this.hpShown = hp; this.hpNum.textContent = hp; }
-    // The bar is for whatever's closest and means you harm.
-    let co = CHARS_START, near = 9;
+    // The bar on the interface is a boss's, and only a boss's: the nearest that means you harm (isBoss in src/ui/foebars.js;
+    // a dungeon's boss has its own frame, src/ui/party.js, and this gives way to it). Everything else that can be fought
+    // carries its life over its head (FoeBars).
+    const BOSS_FAR = 34;
+    let co = CHARS_START, near = BOSS_FAR;
     for (let i = 0; i < snap[H.NCHARS]; i++) {
       const o = CHARS_START + i * C_SIZE;
-      if (snap[o + C.ACTIVE] < 0.5 || !snap[o + C.HOSTILE] || snap[o + C.STATE] === 10) continue;
+      if (snap[o + C.ACTIVE] < 0.5 || !snap[o + C.HOSTILE] || snap[o + C.STATE] === 10 || !isBoss(snap[o + C.KIND] | 0, snap[o + C.MAX_HP])) continue;
       const d = Math.hypot(snap[o + C.X] - snap[H.PX], snap[o + C.Z] - snap[H.PZ]);
       if (d < near) { near = d; co = o; }
     }
     const hpf = clamp(snap[co + C.HP] / snap[co + C.MAX_HP], 0, 1);
-    $('foe').style.opacity = near < 9 ? 1 : 0;
+    $('foe').style.opacity = near < BOSS_FAR && !this.dungeonBoss?.() ? 1 : 0;
     const foeName = FOE_NAMES[snap[co + C.KIND]] || '';
     if (foeName !== this.foeNameShown) { this.foeNameShown = foeName; $('foeName').textContent = foeName; }
     this.setBar(this.foeHp, hpf);
@@ -1380,7 +1390,9 @@ class GameView {
       hs.gpuMs = r.stats.gpuMs; hs.busyMs = r.stats.busyMs; hs.W = r.W; hs.H = r.H; hs.scale = r.scale; hs.msaa = r.msaa; hs.demoted = r.demoted || 0; hs.vsync = this.vsyncMs;
       hs.sim = this.simStats;
       this.hud.update(dt, snap, hs);
+      this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
       this.clock.set(r.hour);
+      this.chatLog?.update(dt, !this.idle && (!this.input.menu || !!this.heroTalk?.open));
       if (this.heroTalk) {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
         this.heroTalk.update(dt, snap, r.hour, !this.idle && (!this.input.menu || !!this.heroTalk.open));
@@ -1604,8 +1616,9 @@ class GameView {
       case 1: {
         // Blood thrown from a cut, the way (a, c) with how much (b): a gout along it, and a spatter every way. It falls and soaks in.
         // (Jets of it, in drops big enough to be seen across a field.)
-        const n = Math.ceil(160 + 340 * b);
-        r.emit(0, n, x, y, z, a * 1.5, 0.8, c * 1.5, 0.45, 2.6, 7.5 + 3.5 * b, 0.004, 0.02, 0.6, 1.5);
+        // (A third of what it was, and not thrown so far: a fight of knives was a red fan with nobody to be seen in it.)
+        const n = Math.ceil(50 + 110 * b);
+        r.emit(0, n, x, y, z, a * 1.5, 0.8, c * 1.5, 0.45, 1.8, 4.5 + 2 * b, 0.004, 0.02, 0.6, 1.5);
         r.emit(0, Math.ceil(n * 0.4), x, y, z, 0, 1, 0, 1.4, 1, 5, 0.003, 0.014, 0.5, 1.3);
         au.play('splat', x, y, z, 0.3 + b * 0.35);
         break;

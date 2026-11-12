@@ -609,13 +609,14 @@ export class Tumblers {
       snap[o + 6] = s.glow; snap[o + 7] = s.flash;
       for (let k = 0; k < 9; k++) snap[o + 8 + k] = s.m[k];
       snap[o + 17] = s.variant;
+      snap[o + 18] = s.dead ? 0 : Math.max(0.001, Math.min(1, s.hp / (s.hpMax || 1)));
     }
     for (const g of this.globs) {
       if (i >= MAX_TUMBLERS) break;
       const o = TUMBLERS_START + i * TUMBLER_FLOATS, a = g.age * 9, c = Math.cos(a), s = Math.sin(a);
       // (The renderer lifts each by 0.72 of its radius, to stand it on the ground: taken off again.)
       snap[o] = 1; snap[o + 1] = g.x; snap[o + 2] = g.y - MIRE.glob * 0.72; snap[o + 3] = g.z; snap[o + 4] = MIRE.glob; snap[o + 5] = KIND.mire;
-      snap[o + 6] = 0.04; snap[o + 7] = 0;
+      snap[o + 6] = 0.04; snap[o + 7] = 0; snap[o + 18] = 0;
       snap[o + 8] = c; snap[o + 9] = -s; snap[o + 10] = 0; snap[o + 11] = s; snap[o + 12] = c; snap[o + 13] = 0; snap[o + 14] = 0; snap[o + 15] = 0; snap[o + 16] = 1;
       snap[o + 17] = 0;
       i++;

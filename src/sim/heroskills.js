@@ -14,7 +14,7 @@
 import { MOVE_KEYS } from '../core/heroes.js';
 import { EV } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
-import { ELEM, FX, GLYPHS, MAT } from './spells.js';
+import { ELEM, FX, GLYPHS, MAT, SHIELDS } from './spells.js';
 
 const { FIRE, FROST, ARCANE, STORM, HEAL, LIGHT, DRAIN, VOID, SPIRIT, POISON, STONE } = ELEM;
 const TAU = Math.PI * 2;
@@ -232,6 +232,13 @@ export function hammer3(c, x, y, z, yaw, spin, size, elem = LIGHT, glow = 1, lig
   c.fx(FX.BOX, elem, tx, ty, tz, 0.108 * size, px, py, pz, 0.08 * size, 1.3 * glow, 0, 0, MAT.LIGHT, 0, 0.108 * size);
   if (glow > 0.3) c.fx(FX.ORB, elem, tx, ty, tz, 0.16 * size, 0, 1, 0, 0, 0.3 * glow);
 }
+// One of the lancers' golden shields (SHIELDS: round, diamond, kite, tower), standing, its face the way (fx, fz) looks:
+// a real board, seen from the front and from behind. size: half its height. glow: its element's light on its edge.
+// Each of the four stands its own height, so a ring of them reads as four shields, not one.
+const SHIELD_ORDER = [SHIELDS.TOWER, SHIELDS.ROUND, SHIELDS.KITE, SHIELDS.DIAMOND], SHIELD_TALL = [0.8, 0.95, 1, 1.05];
+export function shield3(c, kind, elem, x, y, z, size, fx, fz, glow = 0.6, light = 0, turn = 0) {
+  c.fx(FX.SHIELD, elem, x, y, z, size * SHIELD_TALL[kind], fx, 0, fz, turn, glow, light, light ? 5 : 0, kind);
+}
 // A throwing star: `n` shards crossed, turning in a plane. flat: lying level; else upright, in the plane through `yaw`.
 export function star3(c, x, y, z, spin, size, elem, mat = MAT.STEEL, n = 2, glow = 1, yaw = 0, flat = true) {
   for (let i = 0; i < n; i++) {
@@ -325,8 +332,11 @@ function throwIt(h, rate, fn, o = {}) { h.startSwing('OverhandThrow', rate, [THR
 // Where a run ends: turned to whatever's nearest, braced, the ground rung under him.
 export function arrive(h, sim, elem) {
   const k = nearest(sim.heroWorld, h.x, h.z, 6);
-  if (k) h.yaw = h.faceYaw = dirTo(h, k);
-  if (!h.swing && !h.jump && h.bank.clips.Sword_Block) h.play('Sword_Block', 2, 'full', 0.08);
+  // (A lancer comes round to them on his feet, a three-metre lance with him, as his fight turns him: he isn't spun on the
+  // spot in a tick, nor his chest wrung round to them.)
+  if (k && h.style !== 'lance') h.yaw = h.faceYaw = dirTo(h, k);
+  // (His own hold is the brace: the board's already up.)
+  if (!h.swing && !h.jump && h.style !== 'lance' && h.bank.clips.Sword_Block) h.play('Sword_Block', 2, 'full', 0.08);
   if (h.fxOk()) { const c = sim.casting; c.burst(FX.RING, elem, h.x, h.y + 0.05, h.z, 0.4, 2.2, 0.35); c.burst(FX.PUFF, STONE, h.x, h.y + 0.3, h.z, 0.4, 1.2, 0.4, { alpha: 0.4 }); hfx(sim, HFX.THUD, h.x, h.y, h.z, 0.3); }
 }
 // A sign that drifts: a note rising off the lute, a sleeper's breath. Drawn till it's gone.
@@ -469,11 +479,15 @@ function zone(w, h, life, draw, step, end) { const z = { kind: 'fx', owner: h, t
 function dash(h, sim, dir, len, o = {}) {
   const v = o.v || 16;
   len = Math.max(0.5, Math.min(len, sim.world.clearance(h.x, h.z, Math.sin(dir), Math.cos(dir), len, 0.45) - 0.2));
-  const clip = h.bank.clips[o.clip || 'Sword_Dash'] ? o.clip || 'Sword_Dash' : 'Sword_Regular_A', T = len / v;
+  // (A lancer runs: the board up and the lance couched, src/sim/hero.js poseLance. Anyone else slides in behind a clip.)
+  // (And so does anyone in armour or on a knight's legs: a paladin behind his board, a dragoon, a boomerang knight. They
+  // used to slide in a crouch. A rogue's and a ninja's are their own; a roll is a roll.)
+  const lance = h.style === 'lance' || (o.clip !== 'Roll' && !['rogue', 'ninja'].includes(h.person.cls));
+  const clip = lance ? 'Sprint_Loop' : h.bank.clips[o.clip || 'Sword_Dash'] ? o.clip || 'Sword_Dash' : 'Sword_Regular_A', T = len / v;
   h.yaw = h.faceYaw = dir;
-  h.startSwing(clip, h.bank.clips[clip].dur / (T + 0.3) * (o.hold || 0.5), [], () => {}, { root: true, cut: () => { h.aim = null; } });
+  h.startSwing(clip, lance ? 1.7 : h.bank.clips[clip].dur / (T + 0.3) * (o.hold || 0.5), [], () => {}, { root: true, loop: lance, cut: () => { h.aim = null; } });
   h.charge = { dir, left: len, v, hitSet: new Set(), quick: true, dmg: o.dmg ?? 12, kind: o.kind, o: o.o, onHit: o.onHit, each: o.each, noShove: o.noShove, draw: o.draw, aside: o.aside, done: () => { h.aim = null; o.done?.(); if (o.skid !== undefined) arrive(h, sim, o.skid); } };
-  if (o.aim) h.aim = [Math.sin(dir), 0.02, Math.cos(dir)];
+  if (o.aim && h.style !== 'lance' && h.style !== 'spear') h.aim = [Math.sin(dir), 0.02, Math.cos(dir)];
   h.iframesT = T + 0.08;
   sim.event(EV.WHOOSH, h.x, h.y + 1, h.z);
 }
@@ -760,7 +774,7 @@ function throwBoard(h, sim, m, X, o) {
       tick: (s) => { if (real) h.free[1] = boardFlight(s, o.upright, 1.5); },
       draw: (cc, s) => {
         const vv = Math.hypot(s.vx, s.vy, s.vz) || 1;
-        if (!real) cc.fx(FX.KITE, o.elem, s.x, s.y, s.z, 0.6, Math.sin(s.t * 16), 0, Math.cos(s.t * 16), 0, 1, 0, 0, 0.3, 0);
+        if (!real) shield3(cc, SHIELDS.ROUND, o.elem, s.x, s.y, s.z, 0.5, Math.sin(s.t * 16), Math.cos(s.t * 16), 1);
         cc.fx(FX.ORB, o.elem, s.x, s.y, s.z, 0.55, 0, 1, 0, 0, real ? 0.3 : 0.5, 7, 5);
         if (!(s.pause > 0)) cc.fx(FX.TRAIL, o.elem, s.x, s.y, s.z, 0.26, -s.vx / vv, -s.vy / vv, -s.vz / vv, 1.6, 0.6);
         cc.fx(FX.DISC, o.elem, s.x, s.y - 0.02, s.z, 0.7, 0, 1, 0, 0, 0.18);
@@ -1025,7 +1039,8 @@ CAST.hammer_storm = (h, sim, m, { w, c, P, rk }) => {
 // ---- lancer: the lance's light, the boards that turn round him, and the run ---------------------------------------------
 
 // A sweep: the point carried from his right round to his left through the blow (the turn, for each moment of the clip).
-const SWEEP = (f) => 1.5 - 3 * Math.min(1, Math.max(0, (f - 0.08) / 0.3));
+// (From his right, the lance's own side, across before him and up to the board at his left: not begun beyond the board.)
+const SWEEP = (f) => -1.3 + 2.0 * Math.min(1, Math.max(0, (f - 0.08) / 0.3));
 
 // (A thrust, off the right arm: the cross from where the fist starts forward to where it's out, and back for the next.)
 const STAB = ['Punch_Cross', 2.2, 0.42, 0.62, 0.15], STAB_LAST = ['Punch_Cross', 1.3, 0.42, 0.78];
@@ -1037,7 +1052,7 @@ CAST.lance_barrage = (h, sim, m, { P }) => chain(h, sim, [STAB, STAB, STAB, STAB
   h.yaw += last ? 0 : (i % 2 ? 0.1 : -0.1);
   h.thrust(sim, 3.2, (last ? 11 : 7) * P, last ? 4 : 0, last ? LAST_LIGHT : JAB_LIGHT);
 }, { lunge: 1.2, aimed: true, stab: true });
-// The board raised, and boards of light come up round him and turn: low, wide, as tall as his own. They cut what they
+// The board raised, and boards of gold come up round him and turn: low, wide, as tall as his own. They cut what they
 // touch, and everything they touch, and everything near, is his.
 CAST.tower_shields = (h, sim, m, { w, c, P, rk }) => {
   const n = Math.min(8, 2 + rk), elem = STORM;
@@ -1055,7 +1070,7 @@ CAST.tower_shields = (h, sim, m, { w, c, P, rk }) => {
         if (h.fxOk()) c.burst(FX.RING, elem, h.x, h.y + 0.06, h.z, 2.1, 7, 0.55, { alpha: 0.6 });
       },
       draw: (cc, x, y, z, a, i, q, k) => {
-        cc.fx(FX.KITE, i % 2 ? FROST : elem, x, y, z, 0.62, Math.sin(a), 0, Math.cos(a), 0, 0.95 * k, i === 0 ? 7 * k : 0, 5, 0.3, i);
+        shield3(cc, SHIELD_ORDER[i % 4], i % 2 ? FROST : elem, x, y + 0.08 * Math.sin(q.t * 2.6 + i * 1.7), z, 0.58 * (0.25 + 0.75 * k), Math.sin(a), Math.cos(a), 0.7 * k, i === 0 ? 7 * k : 0);
         cc.fx(FX.TRAIL, elem, x, y, z, 0.1, -Math.cos(a), 0, Math.sin(a), 1.3, 0.5 * k);
         if (i === 0) cc.fx(FX.RING, elem, h.x, h.y + 0.06, h.z, 2.1, 0, 1, 0, 0, 0.5 * k);
       } });
@@ -1066,7 +1081,7 @@ CAST.sweeping_cleave = (h, sim, m, { c, P }) => {
   h.startSwing('Sword_Attack', 1.0, [0.24], () => {
     h.strikeAround(sim, 3.3, 1.75, 13 * P, 0, 8, { kind: 'bash', poise: 70, shove: 7 });
     if (h.fxOk()) crescent(c, h, 2.6, STORM, { life: 0.18, light: 8 });
-  }, { lunge: 1.5, aimed: SWEEP, end: 0.5 });
+  }, { lunge: 1.5, aimed: SWEEP, end: 0.5, soft: 0.5 });
 };
 CAST.shield_throw = (h, sim, m, X) => throwBoard(h, sim, m, X, { dmg: 13, through: true, elem: STORM, upright: true, onHit: (k) => taunt(sim, h, k, 4) });
 // The light gathered on the lance's own point; and a spear of that light thrown off it: through everything on its line,
@@ -1082,7 +1097,7 @@ CAST.sunspear = (h, sim, m, { w, c, P }) => {
     sim.event(EV.WHOOSH, hp[0], hp[1], hp[2]);
   }, { mask: 'full', end: 0.42, cut: () => { z0.done = true; } });
 };
-// The board into the ground: a ring of force, and boards of light flung out every way. What it throws back is his.
+// The board into the ground: a ring of force, and boards of gold flung out every way. What it throws back is his.
 CAST.bulwark_nova = (h, sim, m, { w, c, P, rk }) => {
   h.shieldTarget = 1;
   gather(c, h, STORM, 3, 0.3);
@@ -1094,7 +1109,7 @@ CAST.bulwark_nova = (h, sim, m, { w, c, P, rk }) => {
       boom(c, STORM, h.x, h.y + 0.5, h.z, r * 0.9, 16);
       c.burst(FX.RING, STORM, h.x, h.y + 0.05, h.z, 0.5, r, 0.5);
       c.burst(FX.RING, FROST, h.x, h.y + 0.05, h.z, 0.3, r * 0.7, 0.6);
-      zone(w, h, 0.45, (cc, q) => { const k = q.t / 0.45; for (let i = 0; i < 8; i++) { const a = i * TAU / 8; cc.fx(FX.KITE, i % 2 ? FROST : STORM, h.x + Math.sin(a) * (0.8 + k * r), h.y + 1, h.z + Math.cos(a) * (0.8 + k * r), 0.5 + k * 0.4, Math.sin(a), 0, Math.cos(a), 0, 1 - k, 0, 0, 0.3, i); } });
+      zone(w, h, 0.45, (cc, q) => { const k = q.t / 0.45; for (let i = 0; i < 8; i++) { const a = i * TAU / 8; shield3(cc, SHIELD_ORDER[i % 4], i % 2 ? FROST : STORM, h.x + Math.sin(a) * (0.8 + k * r), h.y + 1, h.z + Math.cos(a) * (0.8 + k * r), (0.5 + k * 0.25) * Math.min(1, (1 - k) * 4), Math.sin(a), Math.cos(a), 1 - k); } });
       hfx(sim, HFX.THUD, h.x, h.y, h.z, 0.8); hfx(sim, HFX.SPARKS, h.x, h.y + 0.6, h.z, 50);
     }
     sim.event(EV.GROUND, h.x, h.y, h.z);
@@ -1138,18 +1153,10 @@ CAST.phalanx_rush = (h, sim, m, { w, c }) => {
   const go = (k, left) => {
     if (h.dead || !E.fightable(k)) return;
     seen.add(k);
-    h.shieldTarget = 1;
-    const x0 = h.x, y0 = h.y + 1, z0 = h.z;
-    const nx = () => left > 0 && nearest(w, h.x, h.z, 8, seen);
-    dash(h, sim, dirTo(h, k), Math.min(8, dist(h, k) + 2.2), { v: 18, clip: 'Shield_Dash', dmg: 12, o: { stun: 0.5 }, aim: true,
-      onHit: (f) => { if (h.fxOk()) slash(c, f.x, f.y + 1.1, f.z, h.yaw + Math.PI / 2, 0, 2, STORM, 0.2); },
-      draw: (cc) => { const p = h.handPos('r'), s = Math.sin(h.yaw), co = Math.cos(h.yaw); cc.fx(FX.BEAM, STORM, p[0], p[1], p[2], 0.09, s, 0, co, 3, 1, 6, 4, 0, 0, 0.03); cc.fx(FX.TRAIL, STORM, h.x, h.y + 1, h.z, 0.3, -s, 0, -co, 3, 0.7); cc.fx(FX.KITE, STORM, h.x + s * 1.0, h.y + 1, h.z + co * 1.0, 0.65, s, 0, co, 0, 0.6, 0, 0, 0.3, 0); },
-      done: () => {
-        if (h.fxOk()) { const dx = h.x - x0, dz = h.z - z0, L = Math.hypot(dx, dz) || 1; c.burst(FX.BEAM, STORM, x0, y0, z0, 0.16, 0.02, 0.6, { ax: dx / L, ay: 0, az: dz / L, len: L, alpha: 0.6, extra: 0.05 }); }
-        const f = nx();
-        if (f) w.later(0.1, () => go(f, left - 1));
-        else arrive(h, sim, STORM);
-      } });
+    // (Each is the lancer's own run, src/sim/hero.js lanceRush: stopped at his point's reach, planted, and the point driven in.)
+    h.lanceRush(sim, k, { v: 14, dmg: 12, wait: left === 2 ? undefined : 0.05, max: 8, end: 0.6, o: { stun: 0.5 },
+      draw: (cc) => { const s = Math.sin(h.yaw), co = Math.cos(h.yaw), t = weaponTip(h); cc.fx(FX.FLARE, LIGHT, t[0], t[1], t[2], 0.13, 0, 1, 0, 0, 0.9); for (let i = 0; i < 3; i++) cc.fx(FX.TRAIL, STORM, h.x - s * 0.5 - co * (i - 1) * 0.34, h.y + 0.5 + i * 0.4, h.z - co * 0.5 + s * (i - 1) * 0.34, 0.09, -s, 0, -co, 2.2, 0.38); },
+      done: () => { const f = left > 0 && nearest(w, h.x, h.z, 9, seen); if (f) w.later(0.05, () => go(f, left - 1)); } });
   };
   go(m, 2);
 };
@@ -1186,7 +1193,7 @@ CAST.charge_of_the_order = (h, sim, m, { w, c, P, yaw }) => {
       const k = Math.min(1, q.t * 5, (1.15 - q.t) * 4);
       for (const r of riders) {
         const y = sim.world.height(r.x, r.z);
-        cc.fx(FX.KITE, FROST, r.x, y + 1.5, r.z, 0.75, s, 0, co, 0, 0.8 * k, 0, 0, 0.3, 0);
+        shield3(cc, SHIELDS.KITE, FROST, r.x + s * 0.5, y + 1.5, r.z + co * 0.5, 0.6 * k, s, co, 0.8 * k);
         cc.fx(FX.BEAM, STORM, r.x, y + 1.3, r.z, 0.1, s, -0.05, co, 3.4, k, 6 * k, 4, 0, 0, 0.03);
         cc.fx(FX.FLARE, LIGHT, r.x + s * 3.4, y + 1.15, r.z + co * 3.4, 0.3, 0, 1, 0, 0, k);
         cc.fx(FX.TRAIL, STORM, r.x, y + 0.9, r.z, 0.4, -s, 0, -co, 3.5, 0.5 * k);
@@ -1938,7 +1945,7 @@ CAST.sweeping_lance = (h, sim, m, { c, P }) => {
   h.startSwing('Sword_Attack', 1.0, [0.24], () => {
     h.strikeAround(sim, 3.2, 1.75, 12 * P, 0, 8, { kind: 'gash', poise: 90, shove: 6 });
     if (h.fxOk()) crescent(c, h, 2.5, e, { life: 0.18, light: 6 });
-  }, { lunge: 1.5, aimed: SWEEP });
+  }, { lunge: 1.5, aimed: SWEEP, soft: 0.5 });
 };
 // The spear's butt struck down, and six spears of steel and light stand up out of the ground round him, leaning out, and
 // turn: what comes near is run through.

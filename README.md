@@ -253,6 +253,19 @@ Known limits:
 
 Lisandra's cave is high on a shoulder of the hill over the Long Road, its mouth looking out over the valley to the town (`src/core/opening.js`). It's where she lives: a hearth with her pot over it and a fire that catches with the candles, a worktable under a rail of herbs and pans, a pantry of jars, a desk and two bookcases, a bed, rugs, a chest, and a glass she keeps a cloth over (`CLUTTER`, drawn in `src/gfx/opening.js`). The rock is the hill's own granite at one scale on every surface, with stones along the foot of the walls and stone teeth hung from the roof; each cloth is cut from the middle of its picture, so no woven edge or texture seam shows. Until she sends you out, the view is hers: you can't look about. The script is in `docs/OPENING-SCRIPT.md`.
 
+**Her words are read, not heard.** What she says is in a speech bubble over her head (`src/ui/speech.js`, placed each frame
+by `feel` in `src/ui/opening.js` with the camera the frame was drawn with), and each line goes into the chat log as she
+says it (`src/ui/chatlog.js`; the log stays up through the story's bars, showing only her lines then). The bubble sits over
+her head when there's room under the top bar, and beside her face, narrowed to fit, when the story has her close; it's
+never under the bars or off the screen, and it keeps clear of the chat log. A line from out of sight (`off`), or from her
+when she isn't in the shot, is a bubble with no tail low in the middle with her name on it; the summons in your head before
+your eyes open (`vo`) is a dark one. Shouted lines are big, muttered ones dashed. The scream is still a caption. Her lines in
+Bellmourn go into the chat log too (`speak` in `src/ui/folk.js`), and her goodbye is a balloon over her head as anyone
+else's is. **Her recordings aren't played** (nor fetched or decoded: they took about 200 MB of a phone's memory once
+decoded). They're still in `assets/voice`, with `docs/VOICES.md` and `tests/voice.test.mjs`, which still holds every line
+to having one; the scene is still timed by how long each takes to say (`speechSecs` in `src/core/opening-cave.js`). Her jaw
+no longer moves as she talks: it followed her voice.
+
 After the cave falls in, she leads you down to Bellmourn (`escort` in `src/sim/opening.js`, the way itself in `src/core/escort.js`): along a shelf cut across the hillside, down four flights of stone steps that double back on each other, along a path at the foot of the hill, and then the Long Road, about 440 m in all (`WAY` in `src/core/opening.js`; the land is cut and banked to it in `src/core/terrain.js`, and the steps are laid on the slope you walk). She keeps about 5 m ahead of you at your own pace. Stop, and once she's a few steps on she stops too, turns round and looks at you; she turns back and goes on when you've come up to within a few steps of her, or gone past, and hurries to get in front again. Fall well back or wander off and she waits the same, and calls you on after a while. You keep to a walk on the shelf and the steps. Ride your shield and she jumps on one of her own (the Old Tree kite shield, green with a silver tree: no V, no T) and rides about 9 m ahead, so you never get past her. She talks the whole way: her lines (`CUES` in `src/core/opening-script.js`) wait their turn and never overlap, and a place on the way (the shelf, the head of the steps, the road, the pines, the town in sight) brings its own.
 
 A little below the pines, where the hillside is open on both sides of the road, the dead come up out of the ground (`fight` in `src/sim/opening.js`, `openingRaise` in `src/sim/undead.js`): twenty, five at a time, turn about on one side of the road and the other; when eight or fewer are left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out from behind the nearest trees past the open ground on each side (`necroSpot`), who raise what's fallen. All of them are easy, and on the way down you can't die. The road's two necromancers are easy too (`easy` in `src/sim/undead.js`): they don't mend themselves and raise the fallen only a few times. Lisandra stands with you and throws a weak fire bolt every couple of seconds, and she doesn't go on until every one of them is down (`H.OPENING_FIGHT` is how many are left: auto-play stays for them all, and goes after any that hang back). Bodies are kept for it (`reserve` in `BODIES`: nine more of the dead, ten children, two necromancers), and the woods' own packs hold off until she has you in town. Then she tells you why the dead walk, and you go on to the town's edge and her quest.
@@ -320,7 +333,7 @@ What stands at each place in `SITES` (`src/core/lands.js`) is plain geometry mad
 
 **Quests.** Forty more (`src/folk/land-quests.js`, every word in `src/folk/lines/land.js`): four that send you out of Bellmourn to the new people (every hub is led to by a quest: a `talk` step to its giver, with the trail and the mark across the land), four that pass you on from one person of a hub to the next and end with them (`end: true` on a `talk` step: paid where it's said), four troubles out in the land given in Bellmourn, the troubles round each small town and the fort (their own lairs, by key), two more in the catacombs, four in the Hollowfang Warrens, four in the Howling Deeps, and six in Blackvigil Keep (Sergeant Hasket's to its portal, then Ser Hale's five, ending with the Castellan). New kinds of step (`src/folk/quests.js`): `enter`, `kill` and `visit` take any of the land's places by its key, a party dungeon by its (`warrens`, `blackvigil`, `deeps`: down inside it) or `lair:<key>`, the ground round a lair; `kill` takes `foe`, the monsters' groups that count; `boss` is done when that dungeon boss dies (the sim's `DELVE.BOSS_DOWN`, handed on in `src/main.js`; one that fell before the quest was taken counts, and is kept in the save as a flag); `bring` takes `at`. The trail leads to a lair's glade, a place, or a dungeon's portal out in the land (`placeSpot`); down in a dungeon it leads nowhere, and the chart does.
 
-Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the forty with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, runs the posted through a day and a night on the town's own brain, and checks that every posted person, hub and dungeon is where some quest that can be come by from Bellmourn sends you. In the headless game the posted people's places and marks are right, but their bodies were not drawn when looked at (not yet known why: see `docs/handoff/people-quests.md`). Not done: Ser Hale's knight body; auto-play knows none of this yet (`node tools/autoplay/check.mjs` lists it); nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
+Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the forty with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, runs the posted through a day and a night on the town's own brain, and checks that every posted person, hub and dungeon is where some quest that can be come by from Bellmourn sends you. In the headless game the posted people stand at their posts with their marks over them (one seen, at Thornwick's inn; the townsfolk's bodies load nearest you first, so a small town's are there when you arrive). Auto-play knows all of it (see "Auto-play"). Nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
 
 ### The cathedral and the catacombs
 
@@ -410,11 +423,27 @@ readout. **Interface in auto-play**: Always shown, or Hidden until you tap: whil
 four seconds, everything over the picture is put away (`body.ui-bare`), and a tap, a click, a key or the mouse moved brings
 it all back at once (that touch does nothing else). **Map in auto-play** and **Chat in auto-play** keep the corner map, and
 the chat log with the speech bubbles and names over heads, on the screen while the rest is away (both kept unless set to
-Hidden with the rest). A chest or a word auto-play opens itself still shows over the bare picture. `src/ui/autoplay.js`
+Hidden with the rest). A chest or a word auto-play opens itself still shows over the bare picture, and so do its banners.
+**Camera**, **Talk**, **Long walks** and **Banners in auto-play**: see "Made to be watched" under Auto-play. `src/ui/autoplay.js`
 (`setBare`, `bareStep`), the rules at the end of the phone part of `src/ui/hud.css`.
 
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
+
+### Life bars
+
+Every enemy carries its life over its head, in the world (`src/ui/foebars.js`): each body in the snapshot that isn't one of
+yours, each jelly, and each tumbler that's awake. Red once it means you harm, dull gold while it hasn't seen you. What
+means you harm or has been hurt shows from 34 metres, what hasn't seen you from 18, the nearest 28 at once. Tessariel's
+knights have none unless one turns on you. The bar sits over the head the sim wrote (`C.HEAD_Y`: a knight's own head, the
+top of a monster, `src/sim/beast.js`), or by its kind (`TALL`); a jelly's and a tumbler's life is the last float of its
+block. They're drawn over the picture, so one shows through a wall; and they stay when auto-play puts the interface away.
+
+The only life bar on the interface is a boss's: the frame at the top (`#foe`) is for Velscour's knights, the Gravehart,
+the Bone Hydra, the werewolf, the Abyssal Mouth and any monster with 400 life or more (`isBoss`), from 34 metres; it used
+to be for whatever was nearest. A dungeon's boss keeps its own frame (`src/ui/party.js`), and the other gives way to it.
+Your own bars and your party's frames are as they were. `node --test tests/foe-bars.test.mjs`. Seen headless on a phone's
+screen in a fight in the woods; not looked at closely over each kind of body, so check the height on the big ones.
 
 ### Auto-play
 
@@ -745,8 +774,9 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   Castellan's dark or the Deeps' three. Watched headless (drawing stubbed, nothing able to hurt it, so this says it finds
   its way and does the work, not that it lives): at level 16 over the bridge and in by the keep's arch, the packs, round
   behind Maldrec, Maldrec and Sorvane down and on up the Great Stair in six minutes; at level 14 the whole of the Deeps,
-  its three bosses, out by the far portal and off to Frostwatch to hand in. Not watched: the Brothers, the Castellan, or
-  any of it with the bot able to die.
+  its three bosses, out by the far portal and off to Frostwatch to hand in. Not watched: the Brothers or the Castellan.
+  Able to be hurt, it was watched once: at level 13 with a hired party it cleared the Warrens whole, the twins and
+  Venomaw with them, and set off for the Deeps. `tools/autoplay/watch.mjs` is how (its head says what to give it).
 - **The land's quests.** The forty quests of the small towns, the lairs and the dungeons are in its plan at the levels
   they want. It walks out to a villager posted in Thornwick, Cinderford or Frostwatch, or to Ser Hale, once it's of a
   level for their work; hunts a lair's glade for a quest that names one, and Velscour's patrols along the Vigil Road for
@@ -758,9 +788,11 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
 - **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, down in the catacombs, and in
-  the town's houses (in at the door, a hand to the chest with nothing between, and what spills out picked up). It used to
-  leave the houses' fifteen chests alone, and anything lying in the town. A chest upstairs it leaves: it doesn't take
-  stairs. It wears the best of what it carries, sets gems
+  the town's houses (in at the door, a hand to the chest with nothing between, and what spills out picked up). In the
+  town it opens only a chest it's passing (within `TOWN_CHEST` metres), one at a time and no sooner than `TOWN_CHEST_GAP`
+  seconds after the last: it used to go round every house for all fifteen before it took a quest, three minutes of a
+  new game. Once it's going for a chest it keeps to that one till it's open or given up. A chest upstairs it leaves: it
+  doesn't take stairs. It wears the best of what it carries, sets gems
   in open sockets, sells what it won't wear, and buys upgrades, scrolls it lacks and a mending in the town's shops.
 - **Grinding.** It grinds for levels when no quest suits it yet.
 - **The Test Dungeon.** It fights whatever's been summoned, going in after it once the door's up, and otherwise waits in the
@@ -776,6 +808,46 @@ and there's nothing left but grinding, a menu asks where (the same grounds Grind
 - roaming the land
 
 That menu keeps the last choice after 12 seconds.
+
+**Made to be watched.** Each of these is a line in Settings and is on to begin with.
+
+- **The camera** (`src/ui/autocam.js`; Camera in auto-play: Directed, Behind him, or As you left it). While it plays the
+  view stands behind him, as third person does (`ViewSwitch.forced`: lent, nothing saved, and yours again when it stops).
+  Directed, it's taken off his shoulder now and then for a shot: over his shoulder at whoever he's talking to; low
+  behind the shield when he rides it somewhere; once round him when something big goes down or a level comes; up and
+  back over the road as he comes into a new country; alongside him, then out ahead of him, on a long walk. Only the
+  picture moves: his aim is his own look and the sim's own camera, which a shot never touches, and no shot is taken in a
+  fight. A shot is only taken with a clean line from his head to where the camera would stand (the nav thread's `sight`),
+  is looked at again a few times a second, and is let go when something's between; out of doors it's kept off the
+  ground. In third person the X is the camera's, a step to his right, so the head turns its look that much
+  (`thirdLead`) to put the X on its mark.
+- **The narrator** (`src/ui/autoshow.js`; Banners in auto-play). Under its line, what that amounts to: how many are on
+  him and how much life he has left, how far there is to go, that the road's being hurried. Below that, the last few
+  things worth telling (not on a phone). The same things come large over the picture for a few seconds: a level, a
+  quest done, a spell learned, something big put down, a new country, a fall. The banners stay when the interface is
+  put away.
+- **Talk** (Talk in auto-play). A line said to him is left up as long as it takes to read (`readTime`, by its length)
+  before he answers it; at a counter, a moment. It used to answer every line inside a second.
+- **Long walks** (Long walks in auto-play). Out in the open with more than `HURRY_FAR` metres to go and nothing alive
+  within `HURRY_CLEAR`, the world's clock runs at twice its pace (`CTRL.HASTE`: the sim steps through twice the time in
+  ticks no longer than ever, `src/sim/sim.worker.js`), and at its own again the moment anything's near, he's in the
+  town, or you touch the controls. Everything on the sim's clock goes with it; the townsfolk and the hour of the day
+  keep their own.
+- **The recap.** A card of what a stretch came to: the time, the levels, the quests done, what was put down, the closest
+  call, the best thing put on, the gold. It comes when auto-play is stopped after a minute or more, when you touch
+  anything after leaving it be for three minutes (While you were away), and from **Recap** in the menu.
+- **His temperament**, in the menu under what he should do, and kept: **Careful**, as he always was, or **Bold**. Bold,
+  he takes on what he'd have left two levels more (`BOLD_LEVELS`: foes, lairs, posts and quests alike; the black knight
+  still waits for his Thunderbolt), stays in a fight down to a fifth of his life, a tenth with his mark nearly down, and
+  is beaten back one level instead of two. The log keeps his own level either way.
+- **In a fight**, careful or bold: he rides the shield across them and clear of them more often and sooner again, opens
+  on a crowd or something big with the heaviest spell he has, and ends something big with it.
+
+`node --test tests/auto-show.test.mjs` checks the shots (he's in every one), the turn of the look, the reading time, the
+recap, the settings and the clock. Run headless, drawing stubbed (as below): the view behind him, a talk framed, the
+ride, the walk's and the arrival's shots, the road hurried and let go, the banners, the tally, and a chest in the town
+no longer holding him. Seen on a phone's screen: the banner, the narrator's line, the recap card and the menu. Nobody
+has watched the shots themselves drawn, or the desk's layout of the feed: look at those first.
 
 **For balancing.** Auto-play keeps a log, for reading a whole run afterwards. Open it with **log** under its status line, or
 **Balance log** in the menu. It lists:
@@ -809,6 +881,7 @@ bought as written (it's played through from level 1 to 50), and a new block of m
 **Files.**
 
 - `src/ui/autoplay.js`: the button, the status line and the menu.
+- `src/ui/autocam.js`: the director's camera. `src/ui/autoshow.js`: the narrator, the banners and the recap.
 - `src/ui/autobrain.js`: the head.
 - `src/sim/sight.js`: a clean line for a shot, for auto-play and the other Tessariels alike (`tests/sight.test.mjs`).
 - `src/ui/autowarrens.js`: hiring a party, and the Hollowfang Warrens.
@@ -1006,6 +1079,59 @@ now carries four things, not three (`PROPS_PER_CHAR`).
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
 both). The quartermasters are two more bodies after them.
 
+### The lancer's hold, the dragoon's and the maul's
+
+A lancer used to thrust his lance like a punch at head height, over what he was fighting, with his shield arm waving
+behind him, and his charge was a low sliding squat inside a beam of light. No clip in the bank holds a lance, a spear in
+two hands or a maul, so the arms are now placed after the pose is made (`lanceHold` and `poseLance` in `src/sim/hero.js`),
+on top of whatever the legs are doing:
+
+- **The lancer on guard.** The tower shield up before him on the left arm: the elbow down at his side, the forearm level
+  across behind the board, the fist near his middle, the board hung from the forearm so its top is at his chin and he
+  sees over it, his left shoulder behind it. The lance gripped behind its vamplate at his right side, high enough that
+  its butt lies back under the forearm, level at what he faces. Hands are shut on what they hold (`shutHand`: the clips'
+  hands are all one half-open hand).
+- **The thrust** is the arm's (`jab`): drawn back with the shoulders turned away and his eyes kept on them over the
+  board, then driven out to full reach with the right shoulder and his weight behind it, held a moment, and home. The
+  lance doesn't slide through his fist. Measured (`node tools/heroes/lance_measure.mjs`): the fist travels 0.9 m and the
+  point 1.0 m, and nothing jumps between ticks.
+- **Something inside his point** gets the board, not the lance through it: the lance is raised over its head and the
+  ordinary blow becomes a bash. The bash is the board punched out upright with the shoulder behind it (`punch`), not laid
+  flat on a head, begun at once, and what it strikes is shoved back out to where the point can find it: the next blow is
+  a thrust. The lance passes outside the board's right edge, not through it (the board sits a hand to his left of the
+  forearm's middle with that edge turned back).
+- **Hands shut on what they hold** (`shutHand`). The armour tool had bound every hand whole to its wrist, so a hand was
+  always the open hand it was modelled as: a knife lay along a flat palm, four straight fingers stood past a shield's
+  rim. `python tools/heroes/fingers.py` (after `build.py`, `rebind.py` and `mail.py`; a second run changes nothing) binds
+  each finger's vertices to that finger's own joints, moving nothing, and the game turns the joints in on a grip: a
+  sword's, a knife in each fist, a bow's, a board's, a shaft's. A hand that has thrown what it held is open till it's
+  back; at ease the hands are as modelled.
+- **What hangs at the hips stays there** (`hipFrame`). A sword, a knife or a boomerang put away at the hip was kept by the
+  pelvis bone, and some of the gesture clips turn that bone right round: a bard's sword swung to the other hip, point
+  first, while he waved. It's kept now by where the hips stand (the joints either side and the spine above).
+- **The charge** (`lanceRush`) is a run: sprint legs, bent in behind the board, the lance couched and level, his fist at
+  one height so the point doesn't nod with his stride. It ends: he stops with his point's reach a little into them,
+  plants, drives the point out, and what it's driven into is thrown back down the lance. He used to run on through them.
+  The Phalanx Rush is three of these. The light on it is a spark on the point and the air torn behind him: the lance is
+  seen.
+- **At ease** he carries the lance upright in his right fist at his side, the board on his back: there's nowhere on a
+  man to put a three-metre lance away, and it used to be jammed under the board. It goes to his back, beside the board,
+  only for what needs both hands or the whole body (sitting, a dance, the ride down the Fall).
+- **A dragoon** holds his spear in both hands, the rear one at his hip and the other a forearm's length up the shaft,
+  thrusts with both, and sweeps its head across before him. **A paladin with a maul** carries it head up before him, both
+  hands on the haft, and the left hand stays on it through his blows wherever a left hand could be.
+- **Dashes are runs.** A paladin's charge, a dragoon's step and a boomerang knight's dash used to slide in a crouch;
+  they run now (`dash` in `src/sim/heroskills.js`). Lunges that ended all but lying down are played part-way
+  (`SOFT_CLIPS`). The chest no longer snaps round in one tick when a whole-body clip ends (`chestOff` in
+  `src/sim/knight.js`, for every knight).
+- Also: boomerangs hang flat at the thighs, not crossed over the belly; a bard's lute rests on the board's face, not in
+  the air behind it; a bow's string is drawn where the bow is, in the hand or on the back; an archer's string hand snaps
+  back past the cheek as she looses; blood thrown by the heroes' cuts is a third of what it was; a hero's painted plate
+  takes a share of the sky's light on its shaded side (`heroLook` in `src/gfx/materials.js`).
+
+`tests/hero-skills.test.mjs` has a test of the lancer's hold: level lance, board before him and facing them through
+guard, thrust and run; the thrust drawn back and driven out; the run stopping short and ending in a thrust.
+
 ### Looking at their moves, and who looked
 
 `node tools/heroes/moves.mjs all [classes]` plays every move of every class in the real game on a headless browser (a
@@ -1069,6 +1195,42 @@ ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is
   taken headless. Left undone from their lists: the lower back in a deep crouch (easing the liner onto the cuirass
   sooner was tried and showed more cover, not less), and the lances' black and yellow stripes (the owner's item art).
 - The frames were of ten bodies on a software GPU at one sample a pixel; nobody has looked at the result on a real GPU.
+
+**What hangs on them, and their paint** (2026-11-11, after two critics went over all 44 bodies in game pictures:
+`tools/heroes/review.py`). The order to make a body is `build.py roster`, `rebind.py`, `mail.py`; `rebind.py` and
+`mail.py` can be run again on the built bodies at any time.
+
+- **Quivers stay on the back** (`hangers` in `rebind.py`). The archers' quivers (five bodies) were bound to the right
+  upper arm and collar, as the source's weights had them. Arms down, a quiver swung with the arm to lie flat across the
+  shoulders, its foot out through the far side of the chest (archer_f5). They're bound to the trunk now, as a cuirass
+  is, and so stay as they were made: steep, the foot at the far kidney.
+- **Streamers hang from the shoulder** (`hangers`). dragoon_f1's sleeve tails, two thirds of a metre of cloth tied
+  round each upper arm, were rigid on the arm (they swung in across her back as the arm came down) and one piece of the
+  left one was on the thigh (a scrap in the air by her hip). Each is moved whole in along the arm to the shoulder and
+  made cloth that rides the trunk by its height.
+- **A cloak hangs from the body, not the arms** (`cloaks` in `rebind.py`, a dozen bodies and more). Cloth keeps its weight on an arm
+  only where it's the arm's own (within a few centimetres of the bone and not behind it); a collar bone carries at most
+  45% of a cloak's top; the rest rides the trunk by its height. Before, a raised arm dragged paladin_m2's cloak up into
+  one flat sheet, and with the arms down it lay across his back.
+- **Skin and hair are never dyed** (`Source.bare`, `BARE` in `build.py`). A palette turned any strong colour outside
+  the band of leather and gold, and a cheek's blush and a fingertip are redder than that band: rogue_m4's fingertips
+  and cheeks were blue. Three sources show skin (the bare-headed rogue, the two ninjas' eyes and fingers); on those, a
+  head's flesh-coloured and dark-haired UV islands and a hand's flesh-coloured texels are left out of every palette.
+- **A turned colour keeps its depth** (`recolour` in `build.py`). It holds to most of the brightness it had and not
+  its HSV value (navy turned to orange at the same value is three times as bright: the lancers' back plates were one
+  loud flat block); saturation eases toward full and never clips; a texel that's a near thing goes with its neighbours
+  (a red cloak's orange-brown shadows were left as rust in a cloak turned teal, a brown glove's redder texels were
+  speckled blue); gilding in shadow turns with the bright gilding where a palette turns gold. The `ash` palette brings
+  whites down to an off-white and draws their shading out (`white`), and three new palettes lacquer or dye the bare
+  steel and grey cloth as well (`enamel`: `moss`, `plum`, `garnet`).
+- **The roster, where the dice were unkind** (`ROSTER_FIX` in `build.py`). dragoon_f4 was parts of five suits in five
+  colours; she's the black suit now with the red one's helm and pauldrons. dragoon_m4's legs come with his arms (no
+  white tassets), bard_m2 wears the black suit's whole top, boomerang_f2 is the dark suit with blue-enamelled arms and
+  boomerang_f3 the pale suit whole, turned to ice. Four near twins have a colour of their own: rogue_m3 moss green,
+  ninja_m3 plum, lancer_f3 green, boomerang_m3 garnet.
+- `python tools/heroes/look.py ID --pose cheer --yaw 20,180 --out PIC.png` draws a body in a pose, in its own paint,
+  from any side, with no game and no GPU (`--dir A --dir2 B` puts two builds side by side). The before and after
+  pictures of all of this are from it; none of it has been seen in the game yet.
 
 ### The Hollowfang Warrens
 
@@ -1189,6 +1351,22 @@ dragon. The bosses' lives are `BOSSES` in `src/core/dungeon.js`, the fights and 
 player aims perfectly and never tires, and its Firebolt is not a person's whole bar, so read the times against each other
 more than as what a person will get. **Nobody has played these fights by hand, and none of it has been seen drawn in
 the game**: see "Monsters' attacks" below.
+
+### The lancers' spinning shields
+
+The boards a lancer calls up round himself (Tower Shields, Bulwark Nova, Charge of the Order, and a hired
+lancer's Shield Wall) are real golden shields, not kites of light: the four from VELSCOUR's Lancer (a round one, a
+diamond, a kite and a tower), each with a worked face and a rear of dark hide and gold grips, so a ring of them shows
+fronts on the near side and backs on the far side as it turns. The sim draws one with `shield3` (`src/sim/heroskills.js`),
+which is the shape `FX.SHIELD` (`src/sim/spells.js`: its age is which of the four, `SHIELDS`); the renderer builds the
+four meshes from their outlines and draws them lit, with their element's light on the rim (`src/gfx/spellfx.js`).
+
+VELSCOUR's shields are 44x56 pixel turntables (kept in `art/lancer_shields/`), far too small to enlarge as pictures, so
+`python tools/shields/lancer_spin.py` (pillow, numpy, scipy; `--sheet` writes `tools/build/lancer_shields.png` to look
+at) takes each one's proportions and wear from its sheet, draws its outline clean and works its face in relief. It writes
+`assets/game/fx/lancer_shields.webp` and `src/gfx/shieldshapes.js`: don't edit either by hand. Nothing on them reads as
+a letter (the V and T rule). Test: `node --test tests/lancer-shields.test.mjs`. To look at them in the game:
+`node tools/heroes/moves.mjs all lancer`. The paladin's Divine Shield and Crusader's Charge are still boards of light.
 
 ### Party dungeons: one engine
 
@@ -1321,6 +1499,15 @@ braziers. 548 m end to end. Clearing it pays 2,600 experience and 420 gold.
 | Sorvane | 99 s, down to 62% | 95 s, down to 28% | dead in 38 s; once alive on 4% |
 | The Hollow Brothers | 113 s, down to 56% | 106 s, down to 39% | dead in 42 and 89 s |
 | The Castellan | 151 and 171 s, down to 42% | 141 and 173 s, down to 36%; fell once in three | dead in 71 to 97 s |
+
+**That table is from before the other Tessariels had their skills** (merged from main after it was made): with them a
+party kills these bosses in 60 to 125 s, and a player who never moved outlived five of the seven. So what the new bosses
+mark and throw now lands harder (`BITE` in `src/sim/delve-fights.js`: 1.45 times, the Brood Mother 1.25, Sorvane and the
+Sleeper as they were). Played again after that, three fights of each seeing at once and three half a second late: all
+won but one of Sorvane's (seeing at once, before his bite was put back to 1) and one of the Brood Mother's (late, at
+1.45); with the bites as they are now Sorvane, the Brood Mother and the Sleeper were played three and three again and
+all won. Standing still, two fights of each: dead every time to Maldrec, Sorvane, the Castellan, Hrymgar and the Sleeper;
+once in two to the Brood Mother; the Hollow Brothers leave him alive on about 30%. The packs were not played again.
 
 The Sleeper and the Castellan were turned down after their first runs (a late player died to each) and the keep's
 bosses' marks turned up (a still player lived through Maldrec and the Castellan); the barracks was cut from six and
@@ -1533,6 +1720,25 @@ Measured on the one machine in the table below, at 1024x768: the forest adds abo
 
 A day is 24 minutes (`src/gfx/daylight.js`: an hour is `SECONDS_PER_HOUR`, the colours are the keys at the top). It starts at 15:00, runs only while the world does, and is kept in a save. The sun gets as far as 6 degrees above the horizon and no lower, so shadows stay within the maps; between sun and moon, the light swaps while there's none of it to see. The sky is painted again every 10 s of play (30 s on a phone). The clock in the corner is `src/clock.js`. In the console: `bm.setTime(21)`.
 
+### The world build-out: what has and hasn't been seen
+
+Blackvigil Keep, the Howling Deeps, the Warrens' dressing, the rebuilt places and the two small towns, the villagers
+posted in them, Ser Hale, the possessed knights and the new knight bodies, the seventy-one new lairs and the forty quests
+of the land were made on a machine with no GPU and looked at in headless Chromium on a software one (`tools/world/views.mjs`
+for pictures: it can stand the player apart from the eye and aim at a monster once its model is in, which takes two or
+three minutes there; `tools/autoplay/watch.mjs` for auto-play).
+
+- **Seen in the game:** Ser Hale by the tower's door; the keep's halls and the Deeps' caves; Velscour's knights in several
+  of the new bodies fighting in Maldrec's hall with Maldrec bare-headed among them; a villager at her post in Thornwick;
+  the Warrens' thrones and hoard; most of the places from the road.
+- **Not seen:** a possessed knight's face square on, so the colour of its eyes' glow (it was a pale streak at its first
+  strength and was made a deeper red after, unseen; and the keep's sheen on plate was eased after it showed blown out up
+  close, unseen since); any of the new lairs; the yard of Frostwatch, the barrows' doors and a few more places; anything
+  at all on a real GPU or a phone. The places' geometry is about five times what it was, and what that costs a frame is
+  not measured. The white ground in some headless pictures is the far land's map still baking after a teleport, there
+  before any of this.
+- **Nobody has played any of it by hand.** No new line has a recorded voice.
+
 ### What has and hasn't been tested
 
 The owner's first session on a phone found the frame rate too low, which led to the phone tier below. **That rework hasn't
@@ -1634,6 +1840,7 @@ To check it yourself:
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
 | `src/ui/hud.css`, `src/ui/thumbs.js`, `src/ui/icons.js` | The interface's sheet, where everything sits on a phone, and the drawn icons |
 | `src/ui/arrange.js` | Move Buttons: the player's own layout of the interface, kept and put back each time |
+| `src/ui/chatlog.js`, `src/ui/speech.js` | The chat log (the heroes' words and Lisandra's), and her speech bubble in the opening |
 | `src/ui/skin.js`, `assets/ui/kit/` | Painted pieces of the interface, and what puts them over the drawn ones |
 | `tools/ui/`, `art/ui/bellmourn_ui_kit.zip` | The art kit for the interface: its sheets, the builder, the importer, and the kit itself |
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |

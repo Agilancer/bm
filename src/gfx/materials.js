@@ -855,6 +855,10 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   let rimIn = indoorAt(p);
   // (Outdoors it's a faint edge on cloth and skin, which is what keeps them from looking wet; more on plate.)
   c += select(select(F.skyAmb.rgb * 0.24 * (0.15 + 0.85 * metal), vec3f(0.5, 0.31, 0.17), rimIn > 1.5), vec3f(0.3, 0.31, 0.33), rimIn > 2.5) * rimT * C.info.y * rimK;
+  // (A hero's painted plate is all metal to the light, so its shaded side had only what it mirrored, which in a wood is
+  // dark: a black shape with no plates in it. A share of the sky's and the ground's light on its paint, as a worn, rough
+  // surface scatters it.)
+  if (heroLook) { c += albedo * mix(F.groundAmb.rgb, F.skyAmb.rgb, 0.5 + 0.5 * n.y) * (0.42 * metal) * ao; }
   c = applyFog(c, p, -v, dist);
   var o: Out;
   o.color = vec4f(c, 1.0);

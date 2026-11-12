@@ -1570,7 +1570,7 @@ export class Renderer {
     }
     const indices = new Uint32Array(idx);
     const mat = glb.json.materials[pr.material];
-    const tex = await this.imageTexture(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source, 'rgba8unorm-srgb');
+    const tex = await this.imageTexture(glb, glb.json.textures[mat.pbrMetallicRoughness.baseColorTexture.index].source, 'rgba8unorm-srgb', this.tier.texScale);   // (shrunk on a phone, as every other model's are)
     const ubo = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const bg = device.createBindGroup({ layout: this.bglProp, entries: [{ binding: 0, resource: tex.createView() }, { binding: 1, resource: { buffer: ubo } }] });
     return { VB: makeBuffer(device, v, GPUBufferUsage.VERTEX), IB: makeBuffer(device, indices, GPUBufferUsage.INDEX), count: indices.length, bg, ubo, radius: reachOf(pos) };

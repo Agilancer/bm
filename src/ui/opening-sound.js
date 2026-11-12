@@ -1,64 +1,14 @@
 // The opening's sound: made on the spot (the summons' drone and the portal's roar, the zap when the glamour breaks, her
 // snap, the candles popping, the scream at the edge of town), with the game's sound packs over it (assets/game/audio: the
 // cave's air and drips, her book, the flash's burst, the candles catching and burning, the portal dying and the cave
-// coming down). Played off the story's clock, so a moment is heard once, as it's crossed. And her voice, which is recorded
-// (below).
+// coming down). Played off the story's clock, so a moment is heard once, as it's crossed. Her words aren't heard: they're
+// in a bubble over her head and in the chat log (src/ui/opening.js words). Her recordings are still in assets/voice.
 import { H } from '../core/layout.js';
 import { smoothstep } from '../core/math.js';
 import {
   BURST_CANDLE, CANDLES, CANDLES_AT, CAVE, CAVE_LINE, CAVE_MOUTH, DAZZLE, HERD, DUST_AT, OPENING, PORTAL, REVEAL_AT, SNAP_AT, SPARK_AT,
   SWAP_AT,
 } from '../core/opening.js';
-import { CUES, SCRIPT, VOICE, spoken, voiceOf } from '../core/opening-script.js';
-import { VOICED } from '../core/voiced.js';
-import { voiceKey } from '../core/voicekey.js';
-
-// Her voice (docs/VOICES.md): every line recorded ahead of time in the voice of whichever of her you see, one MP3 a line
-// under assets/voice/<voice>/<key>.mp3, the opening's all fetched and decoded as soon as there's a context. A line with no
-// recording is only shown.
-const VOICE_LEVEL = 1.1;
-const VOICE_LATE = 0.6;      // s: a line whose recording wasn't ready as it came up is still said this far in
-const VOICE_WAIT = 0.7;      // s: a line waits this long at most for the one before to finish; longer, and that one's cut
-// Her mouth, from the loudness of what she says (mouth): measured this many times a second, over a window this long,
-// opening evenly in dB from this far under the line's loudest (shut) up to this far under it (wide), so most syllables
-// open it part way; opening this fast and shutting this fast (s); and a little ahead of the sound, as a jaw moves before
-// the voice it makes.
-const MOUTH_RATE = 100, MOUTH_WINDOW = 0.03, MOUTH_FLOOR = 30, MOUTH_FULL = 2;
-const MOUTH_OPEN = 0.03, MOUTH_SHUT = 0.07, MOUTH_LEAD = 0.04;
-const mouths = new WeakMap();
-
-// How open her mouth is through a recording, MOUTH_RATE times a second, 0 to 1.
-function mouthOf(buf) {
-  let env = mouths.get(buf);
-  if (env) return env;
-  const rate = buf.sampleRate, hop = rate / MOUTH_RATE, half = Math.round(rate * MOUTH_WINDOW / 2);
-  const chans = Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c));
-  const n = Math.ceil(buf.length / hop), db = new Float32Array(n);
-  let peak = -Infinity;
-  for (let i = 0; i < n; i++) {
-    const mid = Math.round(i * hop), a = Math.max(0, mid - half), b = Math.min(buf.length, mid + half);
-    let sum = 0;
-    for (const ch of chans) for (let s = a; s < b; s++) sum += ch[s] * ch[s];
-    db[i] = 10 * Math.log10(sum / Math.max(1, (b - a) * chans.length) + 1e-10);
-    peak = Math.max(peak, db[i]);
-  }
-  env = new Float32Array(n);
-  const up = 1 - Math.exp(-1 / (MOUTH_RATE * MOUTH_OPEN)), down = 1 - Math.exp(-1 / (MOUTH_RATE * MOUTH_SHUT));
-  let m = 0;
-  for (let i = 0; i < n; i++) {
-    const want = Math.min(Math.max((db[i] - peak + MOUTH_FLOOR) / (MOUTH_FLOOR - MOUTH_FULL), 0), 1);
-    m += (want - m) * (want > m ? up : down);
-    env[i] = m;
-  }
-  mouths.set(buf, env);
-  return env;
-}
-const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
-// Just the opening's lines, of all her recordings (her lines in the town are fetched as they're said: src/ui/folk.js).
-const OPENING_LINES = new Set([
-  ...Object.entries(SCRIPT).flatMap(([stage, ls]) => ls.map((l) => [Number(stage), l])),
-  ...Object.values(CUES).map((l) => [OPENING.ESCORT, l]),
-].filter(([, l]) => spoken(l)).map(([stage, l]) => `${voiceOf(stage, l)}/${voiceKey(spoken(l))}`));
 
 // The pack sounds it uses, fetched as soon as there's sound, so none comes late.
 const PACK = ['cave', 'cave_drips', 'fire_medium', 'page_turn', 'book_close', 'spell_impact_2', 'firebuff_1', 'light_torch_1', 'light_torch_2',
@@ -71,8 +21,6 @@ export class OpeningSound {
     this.stage = -1; this.t = 0;
     this.drone = null; this.roar = null; this.room = null;
     this.ambK = 1;
-    this.voices = null; this.saidId = null; this.speaking = null;
-    this.loadVoices();
   }
 
   get ok() { const a = this.a; return !!(a && a.ready && a.ctx && a.ctx.state === 'running'); }
@@ -160,7 +108,6 @@ export class OpeningSound {
   }
 
   stopAll() {
-    this.hush(); this.saidId = null;
     this.cutDrone();
     for (const k of ['roar', 'room']) if (this[k]) { this[k].src.stop(); this[k] = null; }
     for (const l of Object.values(this.loops || {})) { l.g.gain.setTargetAtTime(0, this.a.ctx.currentTime, 0.1); setTimeout(() => l.src?.stop(), 600); }
@@ -203,70 +150,6 @@ export class OpeningSound {
     this.ambK = k;
     const a = this.a;
     if (a.amb) a.amb.gain.setTargetAtTime(a.ambienceLevel * k, a.ctx.currentTime, 0.25);
-  }
-
-  // ---- her voice ----
-  loadVoices() {
-    const a = this.a;
-    if (this.voices || !a?.ctx) return;
-    this.voices = new Map();
-    for (const [v, keys] of HAVE) {
-      for (const k of keys) {
-        const id = `${v}/${k}`;
-        if (!OPENING_LINES.has(id)) continue;
-        fetch(`${a.base}assets/voice/${id}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(r.status)))
-          .then((b) => a.ctx.decodeAudioData(b)).then((buf) => this.voices.set(id, buf)).catch(() => {});
-      }
-    }
-  }
-
-  // Say a line once (id: which line; age: seconds since it came up), from (x, y, z), or in your head with no x. Called
-  // every frame it's up, so a recording that's still decoding is said when it's ready, if that's soon enough.
-  say(id, voice, text, age, x, y, z, wet = 0.25) {
-    if (!this.ok || id === this.saidId) return;
-    this.loadVoices();
-    const key = text && voiceKey(text);
-    if (!key || !HAVE.get(voice)?.has(key)) { this.saidId = id; return; }
-    const buf = this.voices.get(`${voice}/${key}`);
-    if (!buf) { if (age > VOICE_LATE) this.saidId = id; return; }
-    this.saidId = id;
-    // The line before nearly done: this one waits for it, rather than cutting her off mid-word.
-    const now = this.a.ctx.currentTime, left = this.speaking ? this.speaking.ends - now : 0;
-    const at = left > 0 && left <= VOICE_WAIT ? now + left : now;
-    if (at === now) this.hush();
-    const src = this.a.ctx.createBufferSource(), g = this.out(x, y, z, wet);
-    src.buffer = buf; g.gain.value = VOICE_LEVEL;
-    src.connect(g); src.start(at);
-    // (The line before, if it's finishing, still moves her mouth till it's done.)
-    this.tail = at > now ? this.speaking : null;
-    // Said from her mouth (not in your head) in the witch's voice: her jaw follows it (mouth).
-    const env = x !== null && voice === VOICE.witch ? mouthOf(buf) : null;
-    this.speaking = { src, g, at, env, ends: at + buf.duration };
-    src.onended = () => { if (this.speaking?.src === src) this.speaking = null; if (this.tail?.src === src) this.tail = null; };
-  }
-
-  // How open the witch's mouth is now, 0 to 1, by what she's saying aloud.
-  mouth() {
-    if (!this.ok) return 0;
-    const now = this.a.ctx.currentTime + MOUTH_LEAD;
-    let m = 0;
-    for (const s of [this.speaking, this.tail]) {
-      if (!s?.env) continue;
-      const f = (now - s.at) * MOUTH_RATE, i = Math.floor(f);
-      if (i < 0 || i >= s.env.length) continue;
-      m = Math.max(m, s.env[i] + ((s.env[i + 1] ?? 0) - s.env[i]) * (f - i));
-    }
-    return m;
-  }
-
-  // Cut her off: a new line, or the scene skipped.
-  hush() {
-    const s = this.speaking;
-    if (!s) return;
-    const now = this.a.ctx.currentTime;
-    s.g.gain.setTargetAtTime(0, now, 0.04); s.src.stop(now + 0.25);
-    this.speaking = null;
-    this.tail?.src.stop(now); this.tail = null;
   }
 
   // ---- the moments ----
@@ -406,7 +289,6 @@ export class OpeningSound {
         if (crossed(2.3) || crossed(5.0)) this.fx('page_turn', book[0], book[1], book[2], 0.35);
         if (crossed(6.85)) this.fx('book_close', book[0], book[1], book[2], 0.45);
         if (crossed(SWAP_AT)) this.flashBurst(her[0], her[1] + 1.3, her[2]);
-        if (crossed(SWAP_AT + 0.25)) this.hush();      // the glamour's gone, and her young voice with it
         if (crossed(SWAP_AT + 2.0)) { this.crackThud(); this.fx('rock_meteor_throw_2', PORTAL[0], PORTAL[1], PORTAL[2], 0.3, 0.7); }
         if (crossed(SNAP_AT)) { this.cutDrone(); this.snap(her[0], her[1] + 1.4, her[2]); }
         // The candles: a whoosh as the wave of them catches, and again as it reaches the ledge's.

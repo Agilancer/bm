@@ -48,7 +48,7 @@ const store = {
 
 const SETTINGS_KEY = 'velscour.settings';
 // keep: whether the game's files are kept on this device (coi-sw.js), asked once before the title ('ask' until then).
-export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on' };
+export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autohaste: 'on', autotell: 'on' };
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
 export const saveSettings = () => store.set(SETTINGS_KEY, JSON.stringify(settings));
 
@@ -72,6 +72,10 @@ const SETTINGS = `
     <label><span>Names over heads</span><select data-k="tags"><option value="full">Names and guilds</option><option value="names">Names only</option><option value="off">Off</option></select></label>
     <label><span>Speech bubbles</span><select data-k="bubbles"><option value="on">On</option><option value="off">Off</option></select></label>
     <label><span>Chat log</span><select data-k="chatlog"><option value="on">On</option><option value="off">Off</option></select></label>
+    <label><span>Camera in auto-play</span><select data-k="autocam"><option value="director">Directed: behind him, with shots</option><option value="third">Behind him</option><option value="off">As you left it</option></select></label>
+    <label><span>Talk in auto-play</span><select data-k="autoread"><option value="on">Left up to be read</option><option value="off">Clicked through</option></select></label>
+    <label><span>Long walks in auto-play</span><select data-k="autohaste"><option value="on">Hurried</option><option value="off">At his own pace</option></select></label>
+    <label><span>Banners in auto-play</span><select data-k="autotell"><option value="on">Shown</option><option value="off">Only the feed</option></select></label>
     <label><span>Interface in auto-play</span><select data-k="autohide"><option value="off">Always shown</option><option value="on">Hidden until you tap</option></select></label>
     <label><span>Map in auto-play</span><select data-k="autohideMap"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>
     <label><span>Chat in auto-play</span><select data-k="autohideChat"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>

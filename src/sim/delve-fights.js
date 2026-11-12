@@ -18,7 +18,12 @@ import { ELEM, FX } from './spells.js';
 const { FIRE, FROST, ARCANE, DRAIN, BONE, VOID, POISON, SPIRIT } = ELEM;
 const TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a);
-const K = (m, x) => m.opts.damage * x;
+// (BITE: what's marked and thrown lands this much harder than the boss's own blow would have it. At 1 a player who never
+// stepped out of anything outlived five of the seven; the Warrens kills one who stands still.)
+// (Not the same for all: Sorvane and the Sleeper killed him as they were, and at 1.45 the Sleeper killed a player who
+// dodged everything two times in three; the Brood Mother's venom comes too thick for that much.)
+const BITE = { sorvane: 1, sleeper: 1, broodmother: 1.25 };
+const K = (m, x) => m.opts.damage * x * (BITE[m.bossKey] ?? 1.45);
 const yawTo = (m, t) => Math.atan2(t.x - m.x, t.z - m.z);
 const gap = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const KNIGHTS = ['velscour_knight_1', 'velscour_knight_2', 'velscour_lancer', 'velscour_knight_3', 'velscour_knight_4', 'velscour_knight_5', 'velscour_knight_6', 'velscour_lancer_2', 'velscour_lancer_3'];

@@ -61,7 +61,8 @@ for (const cls of CLASS_NAMES) {
       step(9);
       assert.ok(!hero.jump && !hero.charge, `${cls}: ${s.key} left the hero in the air or on the run`);
       assert.ok(Math.abs(hero.bodyFlip) < 1e-6 && Math.abs(hero.bodyRoll) < 1e-6, `${cls}: ${s.key} left the hero turned over`);
-      assert.ok(hero.free.every((m) => !m) && !hero.aim, `${cls}: ${s.key} left something out of the hero's hands`);
+      // (Pointed by nothing but its own hold: a lancer's lance, carried upright at ease, is his hold's.)
+      assert.ok(hero.free.every((m) => !m) && (!hero.aim || hero.aim === hero.heldAim), `${cls}: ${s.key} left something out of the hero's hands (free ${hero.free.map((m) => !!m)}, aim ${hero.aim})`);
       assert.ok(!hero.orbiting, `${cls}: ${s.key} left something turning round the hero`);
       assert.equal(w.shots.filter((q) => q.kind === 'x').length, 0, `${cls}: ${s.key} left something in the air`);
       assert.ok(Math.abs(hero.y) < 0.6, `${cls}: ${s.key} left the hero off the ground (${hero.y.toFixed(2)})`);
@@ -124,8 +125,61 @@ test('a dragoon dives with the spear in his fist: it points down the dive, stand
   assert.ok(top > 1.5 && top < 2.6, `he leaves the ground, and not far (${top.toFixed(1)} m)`);
   assert.ok(aimedDown, 'the spear in his fist points down the dive');
   assert.ok(planted, 'and stands in the ground where he lands');
-  assert.ok(!hero.free[0] && !hero.aim, 'and is back in his hand after');
+  // (Pointed by nothing but his own hold again: both hands on it, level at what he's fighting.)
+  assert.ok(!hero.free[0] && (!hero.aim || hero.aim === hero.heldAim), 'and is back in his hand after');
   assert.ok(foes[0].hits > 0, 'and the landing strikes');
+});
+
+test('a lancer fights with the lance: couched and level behind a raised board, driven out in a thrust, and carried so through a run', () => {
+  const { sim, hero, foes, step } = stage('lancer');
+  for (const f of foes) f.x += 1;                       // (the first of them seven metres off: outside the lance's point)
+  hero.foe = foes[0]; hero.gcd = 1e9; for (const q of hero.skills) q.t = 1e9;
+  hero.shotCd = 1e9; hero.hold = 1e9;                   // (stood to them, and nothing struck till it's asked)
+  const m = hero.propMatrices, reach = hero.mainP.reach;
+  const fx = () => Math.sin(hero.yaw), fz = () => Math.cos(hero.yaw);
+  // How far along his facing the lance points, where its point is before him, and where the board is and which way its back is turned.
+  const along = () => m[4] * fx() + m[6] * fz();
+  const tip = () => (m[12] + m[4] * reach - hero.x) * fx() + (m[14] + m[6] * reach - hero.z) * fz();
+  const board = () => (m[28] - hero.x) * fx() + (m[30] - hero.z) * fz();
+  const boardBack = () => m[24] * fx() + m[26] * fz();
+  const held = (what) => {
+    assert.ok(along() > 0.93 && Math.abs(m[5]) < 0.25, `${what}: the lance is level and points the way he faces (${along().toFixed(2)}, ${m[5].toFixed(2)} up)`);
+    assert.ok(board() > 0.25, `${what}: the board is before him (${board().toFixed(2)} m)`);
+    assert.ok(boardBack() < -0.8, `${what}: its face is to them, its back to him (${boardBack().toFixed(2)})`);
+    assert.ok(m[29] - hero.y > 0.8 && m[29] - hero.y < 1.6, `${what}: and up, its middle between his belt and his chin (${(m[29] - hero.y).toFixed(2)} m)`);
+  };
+  step(0.8);
+  held('on guard');
+  const rest = tip();
+  // A thrust: back, then out past where it rested, and it lands.
+  for (const f of foes) f.x -= 3.5;
+  hero.hold = 0; hero.goal = null;                     // (they've been moved to him: he isn't still walking to where they were)
+  hero.blow(sim, foes[0], hero.blows[0]);
+  hero.shotCd = 1e9;
+  let lo = rest, hi = rest;
+  step(0.75, () => { if (hero.swing) { lo = Math.min(lo, tip()); hi = Math.max(hi, tip()); held('in a thrust'); } });
+  assert.ok(rest - lo > 0.15, `the lance is drawn back first (${(rest - lo).toFixed(2)} m)`);
+  assert.ok(hi - lo > 0.7, `and its point is driven out (${(hi - lo).toFixed(2)} m from back to out)`);
+  assert.ok(foes[0].hits > 0, 'and the thrust lands');
+  // A charge: a run, the lance level down the way he goes and the board up before him the whole of it. It ends: he stops
+  // short of them with his point's reach in hand, plants, and drives the point in; he doesn't run on through them.
+  step(0.6);
+  for (const f of foes) f.x += 5;
+  hero.goal = null;
+  const x0 = hero.x, hits0 = foes[0].hits;
+  hero.skill(sim, 'charge', foes[0]);
+  let ran = 0, drove = 0, nearest = 1e9;
+  step(1.9, () => {
+    nearest = Math.min(nearest, foes[0].x - hero.x);
+    if (hero.charge && hero.charge.wait <= 0 && hero.rushW > 0.9) { ran++; held('in the run'); assert.ok(hero.action?.name === 'Sprint_Loop', 'he runs it'); }
+    else if (!hero.charge && hero.swing?.stab) { drove = Math.max(drove, tip()); held('in the thrust that ends it'); assert.ok(Math.hypot(hero.vx, hero.vz) < 0.5, 'planted: he is not still running'); }
+  });
+  assert.ok(ran > 20, `the run lasts (${ran} ticks of it)`);
+  assert.ok(hero.x - x0 > 3, `and covers ground (${(hero.x - x0).toFixed(1)} m)`);
+  assert.ok(nearest > 2, `he stops short of them: he doesn't run through them (${nearest.toFixed(2)} m off at the nearest)`);
+  assert.ok(drove > rest + 0.4, `and the point's driven out at the end of it (${drove.toFixed(2)} m before him, ${rest.toFixed(2)} on guard)`);
+  assert.ok(foes[0].hits > hits0, 'and it lands');
+  assert.ok(!hero.charge && !hero.swing, 'and is over');
 });
 
 test('a paladin with a board throws it: it leaves his arm, strikes more than one, and is back on his arm', () => {
