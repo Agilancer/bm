@@ -1019,6 +1019,16 @@ third at a rate that couldn't finish, and swing beside them), won't start a blow
 at its mark rather than along its path once it's within a few strides. The undead, the crabs and the field creatures
 turn faster into their blows too.
 
+That was the sim's facing, and it was right; the bodies weren't. 47 of the 69 models (every goblin, four of the five kobolds,
+the dead children, the possessed, the harpies, the necromancers, the plague and Velscour's knights, two of the mannequins,
+the dragonlings, the Bone Knight) hang their skeleton and mesh under a node of their own, `node_0`, a quarter turn about the
+up axis, with the skin bound without it. The rig reads only the joints, so the turn was lost and they ran, and swung, side
+on to where they were going. `prepareRig` in `src/sim/tripo.js` (`underParents`) now puts whatever stands above a top joint
+onto it, at rest and in every clip, as a glTF viewer does; the goatmen, the werewolf, Grubnash's kobold and the rest, which
+carry their turn on the hips, are as they were. And a monster turned away from where it's going comes round (at 6 rad/s,
+was 3.5) before it gets up to speed, rather than sliding off sideways. `node --test tests/tripo-facing.test.mjs` plays
+every model's walk and run with arms through the game's rig and fails if its shoulders aren't square to its yaw.
+
 `node --test tests/perils.test.mjs` checks the shapes, the way out of each, and that every kind of monster's tricks are
 moves there are. Known limits: the mark's shader was compiled by Chromium's own compiler for both tiers and its five shapes
 drawn to a picture with it, but **the game itself couldn't be drawn on the machine this was made on** (its software GPU
