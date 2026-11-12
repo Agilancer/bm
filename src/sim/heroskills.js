@@ -370,8 +370,11 @@ export function stepShotX(w, s, dt) {
   if (s.back) {
     // Home to the hand that threw it.
     const hp = o.handPos(s.hand ? 'l' : 'r'), dx = hp[0] - s.x, dy = hp[1] - s.y, dz = hp[2] - s.z, L = Math.hypot(dx, dy, dz);
-    if (L < 0.8 || s.t > s.life + 3) { s.caught?.(s); return stop(); }
-    const v = Math.max(v0, s.v || v0) * (s.t > s.life ? 1.6 : s.backV ?? 1.1);
+    // (Its speed home is reckoned from the speed it turned at, once: reckoned from the speed it has, every tick, a throw
+    // late home went half as fast again each tick, past the hand and on out of the world. And a step that would carry it
+    // through the hand is a catch.)
+    const v = (s.homeV ??= Math.max(v0, s.v || v0)) * (s.t > s.life ? 1.6 : s.backV ?? 1.1);
+    if (L < 0.8 || v * dt >= L || s.t > s.life + 3) { s.caught?.(s); return stop(); }
     s.vx = dx / L * v; s.vy = dy / L * v; s.vz = dz / L * v;
   } else if (s.homing) {
     let m = s.foe;
