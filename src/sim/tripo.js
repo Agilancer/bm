@@ -369,7 +369,7 @@ export class TripoMonster extends FieldCreature {
       this.x = pos[0]; this.z = pos[2];
     }
     this.speed = Math.hypot(this.vx, this.vz);
-    this.y = sim.world.height(this.x, this.z);
+    this.y = sim.world.groundFor(this.x, this.z, this.y);
     // Wings: up off the ground as the move says (roster.json hover, as a share of the height).
     const lift = this.dead ? 0 : (this.meta.hover?.[this.clip] || 0) * this.meta.height + (this.liftExtra || 0);
     this.hover += (lift - this.hover) * Math.min(1, dt * 2.5);
