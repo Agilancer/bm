@@ -1,5 +1,9 @@
 # Voices: how the game's dialogue is voiced, and how to add more
 
+**Not played at present.** At the owner's word (November 2026), Lisandra's lines are shown in speech bubbles and the chat
+log instead (see "The walk down" in README.md), and none of her recordings is fetched or played. They're kept here, and
+everything below still describes them, for when they come back.
+
 Every word said aloud is a **recording**, made ahead of time with
 [Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS) (Apache-2.0). Nothing is synthesised in the player's browser. A line with
 no recording is shown and not said.

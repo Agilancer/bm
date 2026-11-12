@@ -4,6 +4,7 @@ import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
 import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE } from './core/dungeon.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
+import { ChatLog } from './ui/chatlog.js';
 import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
@@ -506,9 +507,11 @@ async function boot(plan, poolSize) {
     sound: (k) => audio.play({ open: 'packOpen', close: 'packClose', socket: 'gemLand' }[k] || k, null, 0, 0, 0.55, 1, false),
   });
   Object.assign(game, { pack, inventory });
+  // The chat log (src/ui/chatlog.js): the other Tessariels' words, and Lisandra's.
+  const chatLog = game.chatLog = new ChatLog({ settings, touch: input.touch });
   // What the other Tessariels say, and their names over their heads.
   if (cast.length) {
-    game.heroTalk = new HeroTalk({ base: BASE, cast, renderer, sim: simWorker, settings, touch: input.touch,
+    game.heroTalk = new HeroTalk({ base: BASE, cast, renderer, sim: simWorker, settings, touch: input.touch, chatLog,
       playerName: () => { try { return openingHUD?.name || 'Tessariel'; } catch { return 'Tessariel'; } }, playerSkull: () => !!pack.slots.skull,
       // A word with a hero (E): the same menu hold as the townsfolk's panel.
       ui: {
@@ -543,9 +546,8 @@ async function boot(plan, poolSize) {
     town, renderer, pack, input, hud, inventory, spellbar: null,
     act: {
       sound: (k) => audio.play(k, null, 0, 0, 0.7, 1, false),
-      // Lisandra's recorded lines (src/ui/folk.js speak).
-      voice: (id) => audio.voice(id, 1.1),
-      hushVoice: () => audio.hushVoice(),
+      // What Lisandra says to you, into the chat log (src/ui/folk.js speak).
+      log: (who, text) => chatLog.line('her', who, text),
       heal: (n) => { shared.input[INPUT.HEAL] += n; },
       hp: () => { const s = game.currentSnap(); return s ? s[H.HP] / (s[H.MAX_HP] || 1) : 1; },
       // A night's sleep: dawn, mended, and the game kept.
@@ -653,7 +655,7 @@ async function boot(plan, poolSize) {
     input.menu = false;
     simWorker.postMessage({ type: 'openingName' });
     if (!input.touch && !AUTO) input.lock();
-  }, { audio, renderer, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
+  }, { audio, renderer, log: chatLog, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
   const enter = async (fresh = true) => {
     title.hide();
     game.idle = false;
@@ -715,7 +717,6 @@ async function boot(plan, poolSize) {
       if (snap) {
         const active = input.enabled && !state.paused;
         openingHUD.draw(snap, active, dt);
-        shared.input[INPUT.MOUTH] = openingHUD.mouth();
         // While the story has the camera: its view, no hands, no HUD. (Paused, it holds the last view.)
         if (active) game.overrideCam = openingHUD.direct(snap, dt, input);
         // (A camera set for a review picture, bm.setCam, holds through the story's.)
@@ -1383,6 +1384,7 @@ class GameView {
       hs.sim = this.simStats;
       this.hud.update(dt, snap, hs);
       this.clock.set(r.hour);
+      this.chatLog?.update(dt, !this.idle && (!this.input.menu || !!this.heroTalk?.open));
       if (this.heroTalk) {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
         this.heroTalk.update(dt, snap, r.hour, !this.idle && (!this.input.menu || !!this.heroTalk.open));

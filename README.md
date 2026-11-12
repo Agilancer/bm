@@ -230,6 +230,19 @@ Known limits:
 
 Lisandra's cave is high on a shoulder of the hill over the Long Road, its mouth looking out over the valley to the town (`src/core/opening.js`). It's where she lives: a hearth with her pot over it and a fire that catches with the candles, a worktable under a rail of herbs and pans, a pantry of jars, a desk and two bookcases, a bed, rugs, a chest, and a glass she keeps a cloth over (`CLUTTER`, drawn in `src/gfx/opening.js`). The rock is the hill's own granite at one scale on every surface, with stones along the foot of the walls and stone teeth hung from the roof; each cloth is cut from the middle of its picture, so no woven edge or texture seam shows. Until she sends you out, the view is hers: you can't look about. The script is in `docs/OPENING-SCRIPT.md`.
 
+**Her words are read, not heard.** What she says is in a speech bubble over her head (`src/ui/speech.js`, placed each frame
+by `feel` in `src/ui/opening.js` with the camera the frame was drawn with), and each line goes into the chat log as she
+says it (`src/ui/chatlog.js`; the log stays up through the story's bars, showing only her lines then). The bubble sits over
+her head when there's room under the top bar, and beside her face, narrowed to fit, when the story has her close; it's
+never under the bars or off the screen, and it keeps clear of the chat log. A line from out of sight (`off`), or from her
+when she isn't in the shot, is a bubble with no tail low in the middle with her name on it; the summons in your head before
+your eyes open (`vo`) is a dark one. Shouted lines are big, muttered ones dashed. The scream is still a caption. Her lines in
+Bellmourn go into the chat log too (`speak` in `src/ui/folk.js`), and her goodbye is a balloon over her head as anyone
+else's is. **Her recordings aren't played** (nor fetched or decoded: they took about 200 MB of a phone's memory once
+decoded). They're still in `assets/voice`, with `docs/VOICES.md` and `tests/voice.test.mjs`, which still holds every line
+to having one; the scene is still timed by how long each takes to say (`speechSecs` in `src/core/opening-cave.js`). Her jaw
+no longer moves as she talks: it followed her voice.
+
 After the cave falls in, she leads you down to Bellmourn (`escort` in `src/sim/opening.js`, the way itself in `src/core/escort.js`): along a shelf cut across the hillside, down four flights of stone steps that double back on each other, along a path at the foot of the hill, and then the Long Road, about 440 m in all (`WAY` in `src/core/opening.js`; the land is cut and banked to it in `src/core/terrain.js`, and the steps are laid on the slope you walk). She keeps about 5 m ahead of you at your own pace. Stop, and once she's a few steps on she stops too, turns round and looks at you; she turns back and goes on when you've come up to within a few steps of her, or gone past, and hurries to get in front again. Fall well back or wander off and she waits the same, and calls you on after a while. You keep to a walk on the shelf and the steps. Ride your shield and she jumps on one of her own (the Old Tree kite shield, green with a silver tree: no V, no T) and rides about 9 m ahead, so you never get past her. She talks the whole way: her lines (`CUES` in `src/core/opening-script.js`) wait their turn and never overlap, and a place on the way (the shelf, the head of the steps, the road, the pines, the town in sight) brings its own.
 
 A little below the pines, where the hillside is open on both sides of the road, the dead come up out of the ground (`fight` in `src/sim/opening.js`, `openingRaise` in `src/sim/undead.js`): twenty, five at a time, turn about on one side of the road and the other; when eight or fewer are left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out from behind the nearest trees past the open ground on each side (`necroSpot`), who raise what's fallen. All of them are easy, and on the way down you can't die. The road's two necromancers are easy too (`easy` in `src/sim/undead.js`): they don't mend themselves and raise the fallen only a few times. Lisandra stands with you and throws a weak fire bolt every couple of seconds, and she doesn't go on until every one of them is down (`H.OPENING_FIGHT` is how many are left: auto-play stays for them all, and goes after any that hang back). Bodies are kept for it (`reserve` in `BODIES`: nine more of the dead, ten children, two necromancers), and the woods' own packs hold off until she has you in town. Then she tells you why the dead walk, and you go on to the town's edge and her quest.
@@ -1745,6 +1758,7 @@ To check it yourself:
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
 | `src/ui/hud.css`, `src/ui/thumbs.js`, `src/ui/icons.js` | The interface's sheet, where everything sits on a phone, and the drawn icons |
 | `src/ui/arrange.js` | Move Buttons: the player's own layout of the interface, kept and put back each time |
+| `src/ui/chatlog.js`, `src/ui/speech.js` | The chat log (the heroes' words and Lisandra's), and her speech bubble in the opening |
 | `src/ui/skin.js`, `assets/ui/kit/` | Painted pieces of the interface, and what puts them over the drawn ones |
 | `tools/ui/`, `art/ui/bellmourn_ui_kit.zip` | The art kit for the interface: its sheets, the builder, the importer, and the kit itself |
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |
