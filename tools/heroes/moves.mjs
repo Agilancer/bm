@@ -15,12 +15,18 @@ import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { execSync } from 'node:child_process';
+import os from 'node:os';
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+let chromium;
+try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require(path.join(execSync('npm root -g').toString().trim(), 'playwright'))); }
 // (Or: node tools/heroes/moves.mjs all [class ...] [--port N]: every move of every class, or of those, laid out by what it is.)
 const args = process.argv.slice(2);
 const port = args.includes('--port') ? args[args.indexOf('--port') + 1] : (/^\d+$/.test(args[1] || '') ? args[1] : '8475');
 const plan = args[0] === 'all' ? await planAll(args.slice(1).filter((a, i, l) => !a.startsWith('--') && l[i - 1] !== '--port')) : JSON.parse(fs.readFileSync(args[0], 'utf8'));
+// (--real: the real Chrome on the real GPU, its window parked off screen, at the plan's own "gfx" (high, if it names none):
+// what the game looks like, for judging armour and paint. Without it, headless on a software GPU.)
+const real = args.includes('--real');
 // (--plan: say what would be drawn, and stop.)
 if (args.includes('--plan')) { console.log(JSON.stringify(plan, null, 1)); process.exit(0); }
 
@@ -58,17 +64,20 @@ async function planAll(only) {
   }
   return { name: only.join('_') || 'all', size: [960, 540], hour: 13, at: [80, -28], fov: FOV, strips };
 }
-const root = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'build', 'shots');
+const root = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..', 'build', 'shots');
 fs.mkdirSync(root, { recursive: true });
 const [W, H] = plan.size || [800, 450];
 
-const b = await chromium.launch({ headless: true, args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--disable-gpu-watchdog'] });
-const page = await b.newPage({ viewport: { width: W, height: H } });
-await page.addInitScript((gfx) => { localStorage.setItem('velscour.settings', JSON.stringify({ gfx, keep: 'no', heroes: 'auto', volume: 0 })); }, plan.gfx || 'mobile');
+const b = real
+  ? await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), 'bm-moves-')), { channel: 'chrome', headless: false, viewport: { width: W, height: H }, args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--window-position=-3000,0', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling'] })
+  : await chromium.launch({ headless: true, args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--disable-gpu-watchdog'] });
+const page = real ? (b.pages()[0] || await b.newPage()) : await b.newPage({ viewport: { width: W, height: H } });
+await page.addInitScript((gfx) => { localStorage.setItem('velscour.settings', JSON.stringify({ gfx, keep: 'no', heroes: 'auto', volume: 0 })); }, plan.gfx || (real ? 'high' : 'mobile'));
 let errs = 0;
 page.on('pageerror', (e) => { if (errs++ < 12) console.log('PAGE ERROR', String(e).slice(0, 500)); });
 page.on('console', (m) => { if (m.type() === 'error' && errs++ < 12) console.log('console error', m.text().slice(0, 500)); });
-await page.goto(`http://localhost:${port}/?auto&noopening&timer&heroes=${plan.heroes || 8}`, { waitUntil: 'load' });
+// ("bodies": the heroes in the world are these bodies and no others, in this order; a strip then names its "body".)
+await page.goto(`http://localhost:${port}/?auto&noopening&timer&heroes=${plan.bodies ? plan.bodies.length : plan.heroes || 8}${plan.bodies ? `&bodies=${plan.bodies.join(',')}` : ''}`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.bm && bm.snap && bm.snap(), null, { timeout: 300000, polling: 1000 });
 await page.evaluate(async (hour) => {
   const L = await import('/src/core/layout.js');
@@ -128,8 +137,8 @@ if (plan.look) {
 const sheets = [];
 for (const s of plan.strips || []) {
   try {
-  const who = cast.filter((h) => h.cls === s.cls && h.slot < (plan.heroes || 8))[s.which || 0];
-  if (!who) { console.log('nobody is a', s.cls); continue; }
+  const who = s.body ? cast[plan.bodies.indexOf(s.body)] : cast.filter((h) => h.cls === s.cls && h.slot < (plan.bodies ? plan.bodies.length : plan.heroes || 8))[s.which || 0];
+  if (!who) { console.log('nobody is a', s.cls || s.body); continue; }
   const dist = s.dist ?? 4, n = s.frames || 8, every = s.every || 8, t0 = Date.now();
   process.stdout.write(`${s.name}... `);
   // The hero on the left of the picture, the foes to the right, the eye to the south of them looking north through a long lens
@@ -138,6 +147,8 @@ for (const s of plan.strips || []) {
   await ev(async ({ slot, bx, bz, dist, foes, level, s, fov }) => {
     const face = -Math.PI / 2;
     bm.heroes('clear');
+    // (Whatever it was about, sitting or waving, let go of.)
+    bm.heroes('task', { slot }); bm.heroes('pose', { slot, clip: null });
     bm.heroes('at', { slot, x: bx, z: bz });
     bm.heroes('level', { slot, level });
     bm.heroes('mute', { slot, still: s.still !== false });
@@ -150,9 +161,15 @@ for (const s of plan.strips || []) {
     const [side, back, up] = s.cam, mid = bx - (s.mid ?? dist * 0.5), y = (await MV.hero(slot)).y;
     MV.cam(mid + side, y + up, bz - back, mid, y + (s.lookY ?? 1.0), bz, s.fov || fov);
     // (Someone only playing is held where he stands: let go, he'd be off to whatever he was about.)
-    bm.heroes('freeze', { slot, seconds: s.tune !== undefined ? 1e9 : 0, face });
+    bm.heroes('freeze', { slot, seconds: s.tune !== undefined || (s.turn && !s.stance) ? 1e9 : 0, face });
     if (s.tune !== undefined) bm.heroes('tune', { slot, v: s.tune, seconds: 30, rainbow: !!s.rainbow, bare: !!s.bare });
-    else if (s.clip) bm.heroes('pose', { slot, clip: s.clip, at: 0 });
+    else if (s.clip) bm.heroes('pose', { slot, clip: s.clip, at: s.at ?? 0 });
+    // ("stance": stood to a foe, arms in hand, and no blow struck: how it holds itself in a fight.)
+    else if (s.stance) { bm.heroes('mute', { slot, still: true }); bm.heroes('attack', { slot, still: true }); }
+    else if (s.turn) { /* standing as it would */ }
+    // (A blow, or with "warm" a move, from how it stands in a fight: stood to its foe a moment first, its arms in hand.)
+    else if (s.blow !== undefined) { bm.heroes('mute', { slot, still: true }); bm.heroes('attack', { slot, still: true }); await MV.step(s.warm ?? 110); bm.heroes('blow', { slot, i: s.blow }); }
+    else if (s.key && s.warm) { bm.heroes('mute', { slot, still: true }); bm.heroes('attack', { slot, still: true }); await MV.step(s.warm); bm.heroes('skill', { slot, key: s.key }); }
     else if (s.key) { bm.heroes('skill', { slot, key: s.key }); for (const k of s.also || []) bm.heroes('skill', { slot, key: k }); }
     else { bm.heroes('mute', { slot }); bm.heroes('attack', { slot }); }
     await MV.step(s.lead ?? 2);
@@ -162,7 +179,11 @@ for (const s of plan.strips || []) {
   for (let i = 0; i < n; i++) {
     const name = `mv_${s.name}_${String(i).padStart(2, '0')}`;
     // (A clip looked through: held at each of n places between two fractions of it, "span": [from, to].)
-    if (s.clip) await ev(({ slot, clip, at }) => { bm.heroes('pose', { slot, clip, at }); }, { slot: who.slot, clip: s.clip, at: (s.span?.[0] ?? 0) + ((s.span?.[1] ?? 1) - (s.span?.[0] ?? 0)) * i / Math.max(1, n - 1) });
+    if (s.clip && !s.turn) await ev(({ slot, clip, at }) => { bm.heroes('pose', { slot, clip, at }); }, { slot: who.slot, clip: s.clip, at: (s.span?.[0] ?? 0) + ((s.span?.[1] ?? 1) - (s.span?.[0] ?? 0)) * i / Math.max(1, n - 1) });
+    // (A body looked round: "turn": [degrees, ...], the eye at each of those bearings about it (0: before it), "r" metres off;
+    // "clip" and "at" hold a pose for it, or it stands as it would.)
+    if (s.turn) await ev(async ({ slot, deg, r, up, lookY, fov }) => { const h = await MV.hero(slot), a = h.yaw + deg * Math.PI / 180; MV.cam(h.x + Math.sin(a) * r, h.y + up, h.z + Math.cos(a) * r, h.x, h.y + lookY, h.z, fov); },
+      { slot: who.slot, deg: s.turn[i % s.turn.length], r: s.r ?? 5.2, up: s.up ?? 1.25, lookY: s.lookY ?? 1.02, fov: s.fov ?? 26 });
     await ev(async ({ every, name, first }) => { if (!first) await MV.step(every); await MV.frame(every / 90); await MV.shot(name); }, { every, name, first: i === 0 });
     files.push(path.join(root, name + '.png'));
     if (s.log) { const h = await ev((slot) => MV.hero(slot), who.slot); console.log(`  ${i}: at ${h.x}, ${h.z} going ${h.spd} m/s, goal ${h.goal}, doing ${h.action}, foe ${h.foeAt}, hold ${h.hold}`); }
