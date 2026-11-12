@@ -147,6 +147,9 @@ the `*-status.txt` files, `scratch/` (the streams' throwaway scripts) and `pictu
 - A player who never moves (`fight.mjs --still`) survives five of the seven new bosses (only Sorvane and sometimes the
   Sleeper kill him): the fights are softer than the Warrens', where standing still dies. NOT rebalanced.
 
+- The Warrens' rooms were too dark to see their new props: a delve whose `look.lit` is a number (the Warrens: 0.5) gets a
+  dim ambient (`indoorAt` 2.12). Seen: the Twin Thrones and Venomaw's hoard read (`pictures/game_warrens_*`).
+
 **Checks:** `node --test tests/*.test.mjs` 197 pass, 2 fail (the old Lisandra voice-file tests); dungeon, testhall,
 check-vt, items and autoplay checks pass.
 
