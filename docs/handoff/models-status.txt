@@ -1,0 +1,3 @@
+possessed_knight ids ready (possessed_knight_1 on velscour_knight_1/sword, possessed_knight_2 on velscour_knight_2/sword, possessed_knight_3 on velscour_lancer/lance; group "Velscour's Knights", roster height 2.05 like the knights; eyes' glow in the shader still to come)
+velscour knight variants ready: velscour_knight_3, velscour_knight_4 (on knight_1), velscour_knight_5, velscour_knight_6 (on knight_2), velscour_lancer_2, velscour_lancer_3 (lance); all in roster.json, group "Velscour's Knights"
+paladin_fifthwatch.glb built and in TOWN_KNIGHTS (hale: true, route [[2434.6,-530.4],[2437.4,-530.4]]); in-game look still to come

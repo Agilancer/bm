@@ -4,7 +4,7 @@
 import { accessor, parseGLB } from '../core/glb.js';
 import { F, F_PALETTE, FIN, FOLK_STRIDE, SLOT_HEAD, readFolk } from '../folk/layout.js';
 import { SKIRT_JOINTS } from '../folk/rig.js';
-import { PEOPLE } from '../folk/people.js';
+import { FOLK as PEOPLE } from '../folk/people.js';   // (the town's people and those posted out in the land)
 import { Blankets } from './blankets.js';
 import { FolkTools } from './folktools.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
@@ -24,7 +24,7 @@ export class FolkBodies {
 
   setBeds(beds) { this.blankets.setBeds(beds); }
 
-  // Everyone's body, nearest the start first so the square fills before the edges of town.
+  // Everyone's body, the nearest to you first, so the square fills before the edges of town.
   async load(base) {
     const r = this.r;
     const folk = await (await fetch(`${base}assets/game/folk/folk.json`)).json();
@@ -38,7 +38,18 @@ export class FolkBodies {
       if (!geo.has(m)) geo.set(m, file(folk.models[m].glb).then((res) => res.arrayBuffer()).then((buf) => this.mesh(parseGLB(buf), folk.models[m])));
       return geo.get(m);
     };
-    for (let i = 0; i < PEOPLE.length; i++) {
+    // (Whoever's nearest you next, each time: the town's, when you start in it; a small town's own people when you've come
+    // to it by a seal before the last of Bellmourn's are in. Someone the town's thread hasn't placed yet waits their turn.)
+    const left = new Set(PEOPLE.map((_, k) => k));
+    const next = () => {
+      const px = this.map.inbox[FIN.PX], pz = this.map.inbox[FIN.PZ];
+      let best = -1, bd = Infinity;
+      for (const k of left) { const w = this.where(k), d = w ? Math.hypot(w.x - px, w.z - pz) : 1e9 + k; if (d < bd) { bd = d; best = k; } }
+      left.delete(best);
+      return best;
+    };
+    while (left.size) {
+      const i = next();
       try {
         const p = PEOPLE[i], swap = folk.models[p.body] ? null : folk.swaps?.[p.body];
         const mk = swap ? swap.base : folk.models[p.body] ? p.body : 'worker';

@@ -64,6 +64,28 @@ export const PEOPLE = [
   { id: 'bryony', name: 'Bryony Moss', title: '', body: 'bryony', sex: 'f', age: 8, home: 'herbalist', bed: 1, job: 'child', walk: 'walk', idles: ['crouch', 'idle', 'look_around'] },
 ];
 
-export const BY_ID = Object.fromEntries(PEOPLE.map((p) => [p.id, p]));
-export const first = (p) => (p.id === 'homunculus' ? 'Homunculus' : p.id === 'aldric' ? 'Ser Aldric' : p.id === 'dusty' ? 'Dusty' : p.name.split(' ')[0]);
+// Posted out in the land: villagers of the small towns and the forts (src/core/lands.js SITES), in the townsfolk's own bodies
+// and on the town's own thread, but with no house, bed or day: each stands at their post, at the land's own height, day and
+// night, and turns to whoever comes up (job 'posted': src/folk/brain.js). post: [x, z] (and y, if they stand on something
+// built); face: which way they look when nobody's by. They come after the town's people in the folk buffer, so there's room
+// for FOLK_MAX - PEOPLE.length of them (src/folk/layout.js). Who they are: tools/folk/cast.md, "The small towns".
+// What they say and the work they give: src/folk/lines/land.js.
+const posted = (p) => ({ job: 'posted', walk: 'walk', ...p });
+export const POSTED = [
+  // Thornwick, on the Gallows Road where the downs run out.
+  posted({ id: 'dorcas', name: 'Dorcas Pym', title: 'Keeper of the Hare and Harrow, Thornwick', body: 'dorcas', sex: 'f', age: 57, post: [2393.7, 1806.3], face: 2.356, idles: ['fold_arms_ual', 'idle_ual', 'wait'] }),
+  posted({ id: 'osric', name: 'Osric Thorne', title: 'Hedge-reeve of Thornwick', body: 'osric', sex: 'm', age: 44, post: [2369.6, 1776.6], face: 0.785, idles: ['look_around', 'fold_arms', 'idle'] }),
+  posted({ id: 'wymond', name: 'Wymond Ebb', title: 'Hedge-priest', body: 'wymond', sex: 'm', age: 63, post: [2408, 1791], face: -0.785, speed: 0.8, idles: ['idle_ual', 'scratch', 'look_around'] }),
+  // Cinderford, on the Vigil Road: the last free hearths before the Ashen Waste.
+  posted({ id: 'hasket', name: 'Brenna Hasket', title: 'Sergeant of the Cinderford Watch', body: 'hasket', sex: 'f', age: 39, post: [-2129, -201.5], face: 1.571, idles: ['fold_arms', 'look_around', 'wait'] }),
+  posted({ id: 'colm', name: 'Colm Burrage', title: 'Charcoal Burner', body: 'colm', sex: 'm', age: 52, post: [-2098, -229], face: 0, idles: ['idle_ual', 'scratch', 'fold_arms_ual'] }),
+  posted({ id: 'ysolt', name: 'Ysolt Marrow', title: 'Out of Khel', body: 'ysolt', sex: 'f', age: 27, post: [-2067, -180], face: 3.142, idles: ['idle', 'look_around', 'wait'] }),
+  // Frostwatch, the old watch-fort in the Rimeholt Fells.
+  posted({ id: 'garrick', name: 'Hew Garrick', title: 'Warden of Frostwatch', body: 'garrick', sex: 'm', age: 48, post: [690, 3899], face: 1.571, idles: ['fold_arms_ual', 'look_around', 'idle_ual'] }),
+];
+// Everyone with a body on the town's thread: the town's people, then the posted (the folk buffer's order).
+export const FOLK = PEOPLE.concat(POSTED);
+
+export const BY_ID = Object.fromEntries(FOLK.map((p) => [p.id, p]));
+export const first = (p) => (p.id === 'homunculus' ? 'Homunculus' : p.id === 'aldric' ? 'Ser Aldric' : p.id === 'dusty' ? 'Dusty' : p.name.split(' ').slice(0, p.name.startsWith('Ser ') ? 2 : 1).join(' '));
 export const isChild = (p) => p.age < 15;

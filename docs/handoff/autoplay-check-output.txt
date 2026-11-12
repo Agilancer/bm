@@ -1,0 +1,218 @@
+Auto-play doesn't know 216 things in the game. Teach it in src/ui/autobrain.js:
+
+  quest word_to_thornwick: not in PLAN, so it's taken on last, at a guessed level (5)
+  quest word_to_thornwick: a word with "osric", who isn't anyone it can find
+  quest tracks_west: not in PLAN, so it's taken on last, at a guessed level (5)
+  quest tracks_west: a word with "hasket", who isn't anyone it can find
+  quest owed_to_frostwatch: not in PLAN, so it's taken on last, at a guessed level (5)
+  quest owed_to_frostwatch: a word with "garrick", who isn't anyone it can find
+  quest millhaven_man: not in PLAN, so it's taken on last, at a guessed level (5)
+  quest hare_and_harrow: not in PLAN, so it's taken on last, at a guessed level (2)
+  quest hare_and_harrow: its giver isn't anyone it can find
+  quest hare_and_harrow: a step with "end", which it doesn't know how to do
+  quest hare_and_harrow: a word with "dorcas", who isn't anyone it can find
+  quest man_at_the_cross: not in PLAN, so it's taken on last, at a guessed level (2)
+  quest man_at_the_cross: its giver isn't anyone it can find
+  quest man_at_the_cross: a step with "end", which it doesn't know how to do
+  quest man_at_the_cross: a word with "wymond", who isn't anyone it can find
+  quest ask_the_burner: not in PLAN, so it's taken on last, at a guessed level (2)
+  quest ask_the_burner: its giver isn't anyone it can find
+  quest ask_the_burner: a step with "end", which it doesn't know how to do
+  quest ask_the_burner: a word with "colm", who isn't anyone it can find
+  quest girl_from_khel: not in PLAN, so it's taken on last, at a guessed level (2)
+  quest girl_from_khel: its giver isn't anyone it can find
+  quest girl_from_khel: a step with "end", which it doesn't know how to do
+  quest girl_from_khel: a word with "ysolt", who isn't anyone it can find
+  quest cairnfield: not in PLAN, so it's taken on last, at a guessed level (5)
+  quest cairnfield: nowhere to walk to for "lair:cairn_keepers" (area())
+  quest cairnfield: no hunting grounds for "lair:cairn_keepers" (HUNTS): it hunts round its middle
+  quest sunken_mile: not in PLAN, so it's taken on last, at a guessed level (7)
+  quest sunken_mile: nowhere to walk to for "lair:mile_drowned" (area())
+  quest sunken_mile: no hunting grounds for "lair:mile_drowned" (HUNTS): it hunts round its middle
+  quest moor_wayhouse: not in PLAN, so it's taken on last, at a guessed level (8)
+  quest moor_wayhouse: nowhere to walk to for "lair:wayhouse_dead" (area())
+  quest moor_wayhouse: no hunting grounds for "lair:wayhouse_dead" (HUNTS): it hunts round its middle
+  quest ossery_quarry: not in PLAN, so it's taken on last, at a guessed level (9)
+  quest ossery_quarry: a step with "foe", which it doesn't know how to do
+  quest ossery_quarry: nowhere to walk to for "lair:quarry_kobolds" (area())
+  quest ossery_quarry: no hunting grounds for "lair:quarry_kobolds" (HUNTS): it hunts round its middle
+  quest deeper_dead: not in PLAN, so it's taken on last, at a guessed level (5)
+  quest waxed_thread: not in PLAN, so it's taken on last, at a guessed level (3)
+  quest waxed_thread: wants wax, which it doesn't know where to farm
+  quest warrens_mouth: not in PLAN, so it's taken on last, at a guessed level (5)
+  quest warrens_mouth: nowhere to walk to for "warrens" (area())
+  quest barley_thieves: not in PLAN, so it's taken on last, at a guessed level (8)
+  quest barley_thieves: a step with "foe", which it doesn't know how to do
+  quest barley_thieves: nowhere to walk to for "warrens" (area())
+  quest barley_thieves: no hunting grounds for "warrens" (HUNTS): it hunts round its middle
+  quest tunnel_king: not in PLAN, so it's taken on last, at a guessed level (11)
+  quest tunnel_king: a step with "boss", which it doesn't know how to do
+  quest mother_of_the_warren: not in PLAN, so it's taken on last, at a guessed level (20)
+  quest mother_of_the_warren: a step with "boss", which it doesn't know how to do
+  quest mother_of_the_warren: a step with "boss", which it doesn't know how to do
+  quest hedge_breakers: not in PLAN, so it's taken on last, at a guessed level (7)
+  quest hedge_breakers: its giver isn't anyone it can find
+  quest hedge_breakers: a step with "foe", which it doesn't know how to do
+  quest hedge_breakers: nowhere to walk to for "lair:thorn_goats" (area())
+  quest hedge_breakers: no hunting grounds for "lair:thorn_goats" (HUNTS): it hunts round its middle
+  quest black_ram: not in PLAN, so it's taken on last, at a guessed level (10)
+  quest black_ram: its giver isn't anyone it can find
+  quest black_ram: a step with "foe", which it doesn't know how to do
+  quest black_ram: nowhere to walk to for "lair:thorn_ram" (area())
+  quest black_ram: no hunting grounds for "lair:thorn_ram" (HUNTS): it hunts round its middle
+  quest up_from_the_gallowswood: not in PLAN, so it's taken on last, at a guessed level (8)
+  quest up_from_the_gallowswood: its giver isn't anyone it can find
+  quest up_from_the_gallowswood: nowhere to walk to for "lair:thorn_stragglers" (area())
+  quest up_from_the_gallowswood: no hunting grounds for "lair:thorn_stragglers" (HUNTS): it hunts round its middle
+  quest old_toll: not in PLAN, so it's taken on last, at a guessed level (11)
+  quest old_toll: its giver isn't anyone it can find
+  quest old_toll: nowhere to walk to for "lair:toll_ambush" (area())
+  quest old_toll: no hunting grounds for "lair:toll_ambush" (HUNTS): it hunts round its middle
+  quest salt_for_the_hanged: not in PLAN, so it's taken on last, at a guessed level (13)
+  quest salt_for_the_hanged: its giver isn't anyone it can find
+  quest ash_on_the_wind: not in PLAN, so it's taken on last, at a guessed level (8)
+  quest ash_on_the_wind: its giver isn't anyone it can find
+  quest ash_on_the_wind: a step with "foe", which it doesn't know how to do
+  quest ash_on_the_wind: nowhere to walk to for "lair:cinder_refugees" (area())
+  quest ash_on_the_wind: no hunting grounds for "lair:cinder_refugees" (HUNTS): it hunts round its middle
+  quest red_scouts: not in PLAN, so it's taken on last, at a guessed level (12)
+  quest red_scouts: its giver isn't anyone it can find
+  quest red_scouts: a step with "foe", which it doesn't know how to do
+  quest red_scouts: nowhere to walk to for "lair:cinder_scouts" (area())
+  quest red_scouts: no hunting grounds for "lair:cinder_scouts" (HUNTS): it hunts round its middle
+  quest vigil_patrols: not in PLAN, so it's taken on last, at a guessed level (18)
+  quest vigil_patrols: its giver isn't anyone it can find
+  quest vigil_patrols: a step with "foe", which it doesn't know how to do
+  quest vigil_patrols: nowhere to walk to for "waste" (area())
+  quest vigil_patrols: no hunting grounds for "waste" (HUNTS): it hunts round its middle
+  quest arch_before_the_gate: not in PLAN, so it's taken on last, at a guessed level (14)
+  quest arch_before_the_gate: its giver isn't anyone it can find
+  quest arch_before_the_gate: nowhere to walk to for "blackvigil" (area())
+  quest charcoal_for_khel: not in PLAN, so it's taken on last, at a guessed level (12)
+  quest charcoal_for_khel: its giver isn't anyone it can find
+  quest charcoal_for_khel: nowhere to walk to for "lair:khel_ghouls" (area())
+  quest charcoal_for_khel: no hunting grounds for "lair:khel_ghouls" (HUNTS): it hunts round its middle
+  quest charred_mill: not in PLAN, so it's taken on last, at a guessed level (14)
+  quest charred_mill: its giver isn't anyone it can find
+  quest charred_mill: nowhere to walk to for "lair:charmill_possessed" (area())
+  quest charred_mill: no hunting grounds for "lair:charmill_possessed" (HUNTS): it hunts round its middle
+  quest mouth_guard: not in PLAN, so it's taken on last, at a guessed level (14)
+  quest mouth_guard: its giver isn't anyone it can find
+  quest mouth_guard: a step with "foe", which it doesn't know how to do
+  quest mouth_guard: nowhere to walk to for "lair:mouth_demons" (area())
+  quest mouth_guard: no hunting grounds for "lair:mouth_demons" (HUNTS): it hunts round its middle
+  quest ravens_tor: not in PLAN, so it's taken on last, at a guessed level (15)
+  quest ravens_tor: its giver isn't anyone it can find
+  quest ravens_tor: a step with "foe", which it doesn't know how to do
+  quest ravens_tor: nowhere to walk to for "lair:tor_roost" (area())
+  quest ravens_tor: no hunting grounds for "lair:tor_roost" (HUNTS): it hunts round its middle
+  quest into_the_deeps: not in PLAN, so it's taken on last, at a guessed level (18)
+  quest into_the_deeps: its giver isn't anyone it can find
+  quest into_the_deeps: nowhere to walk to for "deeps" (area())
+  quest into_the_deeps: a step with "boss", which it doesn't know how to do
+  quest broodmother: not in PLAN, so it's taken on last, at a guessed level (20)
+  quest broodmother: its giver isn't anyone it can find
+  quest broodmother: a step with "boss", which it doesn't know how to do
+  quest the_howling: not in PLAN, so it's taken on last, at a guessed level (14)
+  quest the_howling: a word with "garrick", who isn't anyone it can find
+  quest the_howling: nowhere to walk to for "deeps" (area())
+  quest the_sleeper: not in PLAN, so it's taken on last, at a guessed level (20)
+  quest the_sleeper: a step with "boss", which it doesn't know how to do
+  quest gate_of_blackvigil: not in PLAN, so it's taken on last, at a guessed level (11)
+  quest gate_of_blackvigil: nowhere to walk to for "blackvigil" (area())
+  quest red_cloth: not in PLAN, so it's taken on last, at a guessed level (20)
+  quest red_cloth: a step with "foe", which it doesn't know how to do
+  quest red_cloth: nowhere to walk to for "blackvigil" (area())
+  quest red_cloth: no hunting grounds for "blackvigil" (HUNTS): it hunts round its middle
+  quest first_lord: not in PLAN, so it's taken on last, at a guessed level (18)
+  quest first_lord: a step with "boss", which it doesn't know how to do
+  quest lords_of_the_keep: not in PLAN, so it's taken on last, at a guessed level (20)
+  quest lords_of_the_keep: a step with "boss", which it doesn't know how to do
+  quest lords_of_the_keep: a step with "boss", which it doesn't know how to do
+  quest the_castellan: not in PLAN, so it's taken on last, at a guessed level (20)
+  quest the_castellan: a step with "boss", which it doesn't know how to do
+  lair dark_goblins_nw: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair dark_spiders_ne: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair dark_goats_e: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair dark_children_s: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair dark_wolf_w: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair hill_kobolds: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair hill_goblins: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair frost_kobolds: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair frost_spiders: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair frost_wolf: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair fenway_goblins: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair fenway_spiders: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair vigil_kobolds: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair vigil_goats: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair vigil_children: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair track_children: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair cairn_keepers: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair downs_raiders: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair abbey_rd_goblins: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair gallows_rd_goblins: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair cliff_harpies: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair downs_goats: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair thorn_goats: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair thorn_ram: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair thorn_stragglers: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair fenway_children: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair fenway_drowned: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair mile_drowned: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair fen_east_harpies: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair fen_children: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair abbey_rd_raiders: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair quarry_kobolds: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair rust_bat: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair abbey_webs: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair rust_spiders: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair rust_kobolds: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair rust_warband: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair pilgrim_dolls: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair pilgrim_spiders: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair deep_spiders: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair deep_worm: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair horn_whelps: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair horn_demons: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair cinder_refugees: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair cinder_scouts: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair charmill_possessed: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair khel_ghouls: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair vigil_patrol_1: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair vigil_patrol_2: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair vigil_patrol_3: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair keep_necros: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair waste_lancers: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair waste_plague: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair waste_golem: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair waste_necros: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair track_possessed: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair wayhouse_dead: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair moor_golem: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair moor_whelps: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair moor_knight: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair rime_goats: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair fells_goats: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair fells_wolves: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair mouth_demons: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair tor_roost: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair tor_demons: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair toll_ambush: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair gallows_bat: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair gallows_demons: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair gibbet_possessed: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  lair gallows_giant: no level in LAIR_LEVEL, so it keeps clear of it till level 10
+  Warrens boss maldrec: no fight taught for it (src/ui/autowarrens.js fightBoss)
+  Warrens boss maldrec: its room bv_innergate isn't on the WAY through
+  Warrens boss sorvane: no fight taught for it (src/ui/autowarrens.js fightBoss)
+  Warrens boss sorvane: its room bv_sanctum isn't on the WAY through
+  Warrens boss brothers: no fight taught for it (src/ui/autowarrens.js fightBoss)
+  Warrens boss brothers: its room bv_court isn't on the WAY through
+  Warrens boss castellan: no fight taught for it (src/ui/autowarrens.js fightBoss)
+  Warrens boss castellan: its room bv_throne isn't on the WAY through
+  Warrens boss hrymgar: no fight taught for it (src/ui/autowarrens.js fightBoss)
+  Warrens boss hrymgar: its room hd_ramshall isn't on the WAY through
+  Warrens boss broodmother: no fight taught for it (src/ui/autowarrens.js fightBoss)
+  Warrens boss broodmother: its room hd_brood isn't on the WAY through
+  Warrens boss sleeper: no fight taught for it (src/ui/autowarrens.js fightBoss)
+  Warrens boss sleeper: its room hd_lake isn't on the WAY through

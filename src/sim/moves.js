@@ -71,6 +71,15 @@ export const MOVES = {
   bladeNova(P, m, t, k, o = {}) {
     P.nova({ ...from(m, 0.6, 0), speed: o.speed || 11, dmg: k * 1.2, look: 'blade', elem: o.elem ?? SPIRIT, size: 0.2, life: 2.2, tag: 'bladeNova' }, o.n || 10, o.turn ?? Math.random() * TAU);
   },
+  /** A blade swept across in front of it: an arc, out to a little past its reach. */
+  sweep(P, m, t, k, o = {}) {
+    P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t), r: o.r || tall(m) * 2.3, half: o.half || 0.95, fuse: o.fuse || 0.95, dmg: k * 1.6, knock: 3, elem: o.elem ?? SPIRIT, from: m, aim: t, lock: 0.45, tag: 'sweep' });
+  },
+  /** A shield set and shoved forward: a short wide strip before it, that throws you back. */
+  shieldWall(P, m, t, k, o = {}) {
+    const yaw = yawTo(m, t);
+    P.mark({ shape: 'line', x: m.x, z: m.z, yaw, r: o.r || 5.5, w: o.w || 2.6, fuse: 1, dmg: k * 1.3, knock: 7, elem: o.elem ?? STONE, from: m, tag: 'shieldWall' });
+  },
   /** A lance of blood down a line. */
   bloodLance(P, m, t, k) {
     P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t), r: 15, w: 0.8, fuse: 0.9, dmg: k * 2, knock: 2, elem: DRAIN, from: m, aim: t, lock: 0.55, tag: 'bloodLance',
@@ -283,7 +292,9 @@ export const TRICKS = {
   Harpies: [{ move: 'bladeNova', cd: [7, 11], near: 0, far: 12 }, { move: 'knifeFan', cd: [8, 12], near: 4, far: 18 }],
   Dragonlings: [{ move: 'spitFan', cd: [6, 10], near: 3, far: 16 }, { move: 'tailWhip', cd: [10, 15], near: 0, far: 5 }],
   'Plague Knights': [{ move: 'plagueCross', cd: [9, 13], near: 0, far: 9, clip: 'bash' }, { move: 'spitRain', cd: [11, 16], near: 4, far: 18 }],
-  "Velscour's Knights": [{ move: 'bloodLance', cd: [8, 12], near: 3, far: 15, clip: 'atk1' }, { move: 'boltWall', cd: [12, 17], near: 5, far: 16, clip: 'bash', o: { elem: DRAIN, width: 10, n: 7 } }],
+  // (Sword, shield and lance as well as his sorcery: a sweep of the blade, the shield shoved forward, the lance lowered and run home.)
+  "Velscour's Knights": [{ move: 'bloodLance', cd: [8, 12], near: 3, far: 15, clip: 'atk1' }, { move: 'boltWall', cd: [12, 17], near: 5, far: 16, clip: 'bash', o: { elem: DRAIN, width: 10, n: 7 } },
+    { move: 'sweep', cd: [9, 13], near: 0, far: 4.5, clip: 'atk2' }, { move: 'shieldWall', cd: [11, 16], near: 0, far: 5, clip: 'bash' }, { move: 'ram', cd: [12, 17], near: 6, far: 14, o: { elem: DRAIN, w: 1.1 } }],
   'Night Paralysis Demons': [{ move: 'seekers', cd: [9, 13], near: 3, far: 20 }, { move: 'threads', cd: [10, 15], near: 0, far: 10 }],
   Necromancers: [{ move: 'boneMarch', cd: [7, 11], near: 4, far: 18, clip: 'atk1' }, { move: 'frostRings', cd: [10, 14], near: 4, far: 20, clip: 'atk2' }, { move: 'seekers', cd: [13, 18], near: 5, far: 20, o: { n: 2, elem: DRAIN } }],
   'Plague Giants': [{ move: 'stompRings', cd: [8, 12], near: 0, far: 12, clip: 'jump', o: { elem: POISON } }, { move: 'boulder', cd: [10, 15], near: 6, far: 24, clip: 'atk1' }],
