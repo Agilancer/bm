@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PlayerBody } from '../src/sim/playerbody.js';
 import { C_PALETTE, C_PROPS, MAX_CHARS, MAX_JOINTS } from '../src/core/layout.js';
+import { quatRotate } from '../src/core/math.js';
 import { OPENING } from '../src/core/opening.js';
 import { thirdAllowed } from '../src/core/third.js';
 
@@ -77,6 +78,85 @@ test('the shield: on the back with a skull in hand, on the arm without, under th
     assert.ok(Math.hypot(f[0] - s.x, f[2] - s.z) < 0.45, `${foot} over it`);
   }
   assert.ok(at(riding, 'Head')[1] - s.y < 1.5, 'knees bent');
+});
+
+// An arm as it lies: the elbow's bend (0 straight), the hand off its forearm's own line, and the hand turned about that
+// line from how the forearm has it (all of which is in the wrist's skin: the forearm's can't turn along its length). Rad.
+function arm(body, side) {
+  const A = body.arms[side], { wq, wt } = body.rig, bq = body.bq;
+  const p = (j) => [wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]], q = (a, j) => [a[j * 4], a[j * 4 + 1], a[j * 4 + 2], a[j * 4 + 3]];
+  const unit = (a, b) => { const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], l = Math.hypot(...d); return d.map((v) => v / l); };
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const mul = (a, b) => [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1], a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0], a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3], a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+  const inv = (a) => [-a[0], -a[1], -a[2], a[3]];
+  const u = unit(p(A.up), p(A.lo)), l = unit(p(A.lo), p(A.hand)), f = [0, 0, 0];
+  quatRotate(f, 0, wq, A.hand * 4, A.fL, 0);
+  // (The hand's turn from the bind, in the forearm's: its part about the forearm's own line.)
+  const rel = mul(inv(mul(q(wq, A.lo), inv(q(bq, A.lo)))), mul(q(wq, A.hand), inv(q(bq, A.hand))));
+  let wring = 2 * Math.atan2(dot(rel, A.dirL), rel[3]);
+  if (wring > Math.PI) wring -= 2 * Math.PI; else if (wring < -Math.PI) wring += 2 * Math.PI;
+  return { elbow: Math.acos(Math.min(1, dot(u, l))), bend: Math.acos(Math.max(-1, Math.min(1, dot(l, f)))), wring: Math.abs(wring), wrist: p(A.hand), elbowAt: p(A.lo) };
+}
+const DEG = 180 / Math.PI;
+
+test('on the board: the arms out for balance, neither locked nor folded, each hand in its forearm\'s line', () => {
+  const head = 0.7, h = [Math.sin(head), 0, Math.cos(head)], heel = [h[2], 0, -h[0]];
+  const along = (p, s, d) => (p[0] - s.x) * d[0] + (p[2] - s.z) * d[2];
+  const board = (o) => ({ hx: h[0], hz: h[2], nx: 0, ny: 1, nz: 0, tilt: 0, air: false, ...o });
+  const ways = { level: {}, 'onto his toes': { tilt: 1 }, 'onto his heels': { tilt: -1 }, 'in the air': { air: true } };
+  // With nothing in his hands (put away, as they are on a ride out of a fight).
+  const seen = {};
+  for (const [name, o] of Object.entries(ways)) {
+    const body = make(), s = state({ vx: h[0] * 9, vz: h[2] * 9, stow: 1, onGround: !o.air, surf: board(o) });
+    settle(body, s);
+    const L = arm(body, 'L'), R = arm(body, 'R');
+    for (const [side, a] of [['leading', L], ['trailing', R]]) {
+      assert.ok(a.elbow * DEG > 25 && a.elbow * DEG < 100, `${name}: the ${side} elbow is bent ${(a.elbow * DEG).toFixed(0)} degrees`);
+      assert.ok(a.bend * DEG < 12, `${name}: the ${side} hand is ${(a.bend * DEG).toFixed(0)} degrees off its forearm`);
+      assert.ok(a.wring * DEG < 35, `${name}: the ${side} wrist is wrung ${(a.wring * DEG).toFixed(0)} degrees`);
+      assert.ok(a.wrist[1] - s.y > 0.6, `${name}: the ${side} hand is up off his knees (${(a.wrist[1] - s.y).toFixed(2)})`);
+    }
+    assert.ok(along(L.wrist, s, h) > 0.3, `${name}: the leading hand is out over the nose`);
+    assert.ok(along(R.wrist, s, h) < -0.3, `${name}: the trailing hand is out over the tail`);
+    seen[name] = { L, R, s };
+  }
+  // They don't match: the leading hand's lower, to his toes; the trailing one's up behind, to his heels.
+  const { L, R, s } = seen.level;
+  assert.ok(R.wrist[1] - L.wrist[1] > 0.08, 'the trailing hand is carried higher than the leading one');
+  assert.ok(Math.abs(R.elbow - L.elbow) * DEG > 8, 'and the two elbows aren\'t bent alike');
+  assert.ok(along(L.wrist, s, heel) < along(R.wrist, s, heel) - 0.1, 'the leading hand to his toes of the trailing one');
+  // A lean moves them: onto his toes the leading hand goes down and the trailing one up; onto his heels the other way.
+  assert.ok(seen['onto his toes'].L.wrist[1] < L.wrist[1] - 0.08 && seen['onto his toes'].R.wrist[1] > R.wrist[1] + 0.08, 'onto his toes: leading hand down, trailing up');
+  assert.ok(seen['onto his heels'].R.wrist[1] < R.wrist[1] - 0.08 && seen['onto his heels'].L.wrist[1] > L.wrist[1] + 0.04, 'onto his heels: trailing hand down, leading up');
+  assert.ok(seen['in the air'].R.wrist[1] > R.wrist[1] + 0.08, 'in the air the trailing hand goes up');
+});
+
+test('on the board with the staff and the skull: a level grip, the staff\'s foot clear of the hill, the skull held out ahead', () => {
+  const head = 0.7, h = [Math.sin(head), 0, Math.cos(head)], toes = [-h[2], 0, h[0]];
+  // The ground as it lies: level, and 20 degrees down ahead, up ahead, and up to either side.
+  const lie = (x, z) => { const l = Math.hypot(x, 1, z); return [x / l, 1 / l, z / l]; }, t = Math.tan(20 / DEG);
+  const grounds = { level: [0, 1, 0], downhill: lie(h[0] * t, h[2] * t), uphill: lie(-h[0] * t, -h[2] * t), 'up to his toes': lie(-toes[0] * t, -toes[2] * t), 'up to his heels': lie(toes[0] * t, toes[2] * t) };
+  for (const [name, n] of Object.entries(grounds)) {
+    for (const tilt of [0, 1, -1]) {
+      const body = make(), s = state({ vx: h[0] * 9, vz: h[2] * 9, surf: { hx: h[0], hz: h[2], nx: n[0], ny: n[1], nz: n[2], tilt, air: false } });
+      const snap = settle(body, s), staff = prop(snap, 0), R = arm(body, 'R'), Lh = arm(body, 'L');
+      const up = [staff[4], staff[5], staff[6]].map((v) => v / Math.hypot(staff[4], staff[5], staff[6]));
+      // Its foot (1.14 m under the fist) over the ground's own plane.
+      const foot = [staff[12] - up[0] * 1.14 - s.x, staff[13] - up[1] * 1.14 - s.y, staff[14] - up[2] * 1.14 - s.z];
+      const over = foot[0] * n[0] + foot[1] * n[1] + foot[2] * n[2];
+      assert.ok(over > 0.08, `${name}, lean ${tilt}: the staff's foot is ${over.toFixed(2)} m over the ground`);
+      assert.ok(up[0] * h[0] + up[2] * h[2] > 0.5, `${name}, lean ${tilt}: its head is the way he's going`);
+      assert.ok(dist(staff.slice(12, 15), at(body, 'R_Hand')) < 0.14, 'the staff is in the right fist');
+      assert.ok(R.bend * DEG < 32 && R.wring * DEG < 30, `${name}, lean ${tilt}: the staff's wrist is bent ${(R.bend * DEG).toFixed(0)} and wrung ${(R.wring * DEG).toFixed(0)} degrees`);
+      assert.ok(R.elbow * DEG > 40 && R.elbow * DEG < 100, `${name}, lean ${tilt}: the staff's elbow is bent ${(R.elbow * DEG).toFixed(0)} degrees`);
+      assert.ok(Lh.bend * DEG < 20 && Lh.wring * DEG < 35, `${name}, lean ${tilt}: the skull's wrist is bent ${(Lh.bend * DEG).toFixed(0)} and wrung ${(Lh.wring * DEG).toFixed(0)} degrees`);
+      if (name === 'level' && !tilt) {
+        const skull = prop(snap, 1), knee = at(body, 'L_Calf');
+        assert.ok(skull[13] > knee[1] + 0.25, `the skull is held up off his knee (${(skull[13] - knee[1]).toFixed(2)} m over it)`);
+        assert.ok((skull[8] * h[0] + skull[10] * h[2]) / Math.hypot(skull[8], skull[9], skull[10]) > 0.8, 'and looks the way the board is going');
+      }
+    }
+  }
 });
 
 test('walking and running keep the feet under him and the staff off the ground', () => {
