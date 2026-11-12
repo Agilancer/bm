@@ -9,8 +9,8 @@
 import { churchAt } from '../core/church.js';
 import { SITES } from '../core/lands.js';
 import { OPENING } from '../core/opening.js';
-import { PORTAL } from '../core/dungeon.js';
-import { RULES } from '../folk/quests.js';
+import { BOSSES, DELVES, PORTAL } from '../core/dungeon.js';
+import { RULES, placeSpot } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { PEOPLE } from '../folk/people.js';
 import { BEYOND } from '../folk/lines/beyond.js';
@@ -55,7 +55,22 @@ export function areaSpot(k) {
   if (k === 'millhaven') { const c = camp('millpond'); return c ? { x: c.x, z: c.z, r: c.r, name: "Abel's millpond, Millhaven" } : areaSpot('farm'); }
   if (k === 'fen') { const c = camp('sallow'); return c ? { x: c.x, z: c.z, r: c.r, name: "Sallowmere's east shore" } : areaSpot('sallow'); }
   const s = SITES[k];
-  return s ? { x: s.x, z: s.z, r: s.r, name: s.name } : null;
+  if (s) return { x: s.x, z: s.z, r: s.r, name: s.name };
+  // A party dungeon: its portal, out in the land. The Waste, where Velscour's knights ride: the Vigil Road through it.
+  const d = DELVES.find((q) => q.key === k);
+  if (d) return { x: d.portal.x, z: d.portal.z, name: `${d.name}: its portal` };
+  if (k === 'waste') return { x: -4250, z: -200, r: 700, name: 'The Ashen Waste, along the Vigil Road' };
+  // A lair (src/core/tripo-monsters.js LAIRS): its glade, named by the nearest place.
+  const at = placeSpot(k);
+  if (!at) return null;
+  let near = null, nd = 700;
+  for (const q of Object.values(SITES)) { const dd = Math.hypot(q.x - at.x, q.z - at.z); if (dd < nd) { nd = dd; near = q; } }
+  return { x: at.x, z: at.z, r: at.near, name: near ? (nd < near.r * 1.3 ? near.name : `Near ${near.name}`) : 'Out in the wilds' };
+}
+// A boss of a party dungeon (src/core/dungeon.js BOSSES): down its dungeon, so its portal.
+function bossSpot(key) {
+  const b = BOSSES.find((q) => q.key === key), d = b && DELVES.find((q) => q.key === b.delve);
+  return d ? { x: d.portal.x, z: d.portal.z, name: `${b.name}, in ${d.name}` } : null;
 }
 
 // Someone, where they are now (person(id): { x, z } or null when they can't be found).
@@ -85,6 +100,7 @@ export function placeOf(id, ctx) {
   // Something to bring: from the catacombs, then to the giver once you've all of it.
   if (st.bring) return (mats[st.bring] || 0) >= (st.n || 1) ? giver() : one(areaSpot('catacombs'));
   if (st.warden) return one(areaSpot('bellcrypt'));
+  if (st.boss) return one(bossSpot(st.boss));
   // (The way down to the dead, the first time: the Sexton's Door, which Silas's key opens.)
   if (st.enter === 'catacombs') return one({ x: SEXTON_DOOR[0], z: SEXTON_DOOR[1], name: "The Sexton's Door, the way down" });
   if (st.enter) return one(areaSpot(st.enter));

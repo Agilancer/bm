@@ -317,3 +317,6 @@ Object.assign(QUESTS, BEYOND_QUESTS);
 Object.assign(QUESTS, LISANDRA_QUESTS);
 // And the land's: the small towns, the lairs, the party dungeons (src/folk/lines/land.js).
 Object.assign(QUESTS, LAND_QUESTS);
+// (A quest that doesn't say what it's about is told by its steps, one after another: the land's are written so each step's
+// line stands alone.)
+for (const q of Object.values(QUESTS)) if (!q.about) q.about = q.journal.join(' ');

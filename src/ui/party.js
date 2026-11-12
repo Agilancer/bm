@@ -30,6 +30,7 @@ export class PartyUI {
     this.boss = null;          // { key, ids, name }
     this.warrens = null;       // the sim's last word on the fight (auto-play reads it too)
     this.clears = 0;           // how often the Warrens have been cleared in this game (auto-play's dungeon runs read it)
+    this.clearsBy = {};        // and each party dungeon, by its key (src/core/dungeon.js DELVES)
     this.names = null;
     fetch(`${this.base}assets/game/heroes/names.json`).then((r) => r.json()).then((n) => { this.names = n; }).catch(() => {});
     this.buildDom();
@@ -302,7 +303,7 @@ export class PartyUI {
       }
       case DELVE.ENTER: this.warn(a ? `${d.name}. Your dead foes are as you left them.` : d.words.enter, 6); break;
       case DELVE.LEAVE: this.hideBoss(); break;
-      case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clears++; this.cleared?.(d); break;
+      case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clearsBy[d.key] = (this.clearsBy[d.key] || 0) + 1; if (d.key === 'warrens') this.clears++; this.cleared?.(d); break;
       case DELVE.WARN: this.warn(WARNINGS[a | 0] || '', 5); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
@@ -319,10 +320,12 @@ export class PartyUI {
 
   // ---- kept in the save ----------------------------------------------------------------------------------------------
 
-  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })), clears: this.clears }; }
+  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })), clears: this.clears, clearsBy: { ...this.clearsBy } }; }
 
   load(d) {
     this.clears = d?.clears || 0;
+    // (A save from before the other dungeons: the Warrens' count is all there was.)
+    this.clearsBy = { ...(d?.clearsBy || (this.clears ? { warrens: this.clears } : {})) };
     for (const m of this.members.slice()) this.dismiss(m.slot);
     this.offers = null;
     for (const s of d?.members || []) {
