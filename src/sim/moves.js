@@ -93,12 +93,12 @@ export const MOVES = {
   // ---- fire ----
   /** A pot of fire, thrown: it burns where it breaks. */
   firepot(P, m, t, k, o = {}) {
-    P.lob(hand(m), { x: o.x ?? t.x, z: o.z ?? t.z, r: o.r || 2.5, dmg: k * 1.2, life: o.life || 6, dps: k * 1.3, elem: FIRE, follow: o.x === undefined ? t : null, lock: 0.4, from: m, tag: 'firepot' }, { time: 1.2, look: 'flask', size: 0.3 });
+    P.lob(hand(m), { x: o.x ?? t.x, z: o.z ?? t.z, r: o.r || 2.5, dmg: k * 1.2, life: o.life || 6, dps: o.dps ?? k * 1.3, elem: FIRE, follow: o.x === undefined ? t : null, lock: 0.4, from: m, tag: 'firepot' }, { time: 1.2, look: 'flask', size: 0.3 });
   },
   /** Three pots, in a row across where you stand. */
-  firepots(P, m, t, k) {
+  firepots(P, m, t, k, o = {}) {
     const a = yawTo(m, t) + Math.PI / 2;
-    for (let i = -1; i <= 1; i++) P.later(0.12 * (i + 1), () => { if (!m.dead) MOVES.firepot(P, m, t, k, { x: t.x + Math.sin(a) * i * 4.6, z: t.z + Math.cos(a) * i * 4.6 }); });
+    for (let i = -1; i <= 1; i++) P.later(0.12 * (i + 1), () => { if (!m.dead) MOVES.firepot(P, m, t, k, { ...o, x: t.x + Math.sin(a) * i * 4.6, z: t.z + Math.cos(a) * i * 4.6 }); });
   },
   /** Bolts of fire, fanned. */
   fireFan(P, m, t, k, o = {}) {

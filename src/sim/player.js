@@ -613,7 +613,8 @@ export class Player {
     // Screen direction of the blow, for the wound marker.
     this.hitDir = wrapAngle(this.yaw - Math.atan2(-dx, -dz));
     this.hitDirT = 0;
-    this.knockX = dx / L * (2.2 + knock); this.knockZ = dz / L * (2.2 + knock);
+    // Each blow puts you back a step from where it came; knock null (the ground burning under you) doesn't.
+    if (knock !== null) { this.knockX = dx / L * (2.2 + knock); this.knockZ = dz / L * (2.2 + knock); }
     // (On the road down in the opening you're knocked flat instead: src/sim/opening.js catchFall.)
     if (this.hp <= 0 && !this.dead && sim.opening?.catchFall(this)) return;
     if (this.hp <= 0 && !this.dead) {

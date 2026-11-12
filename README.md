@@ -1012,7 +1012,9 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   calls his diggers out of three holes round his dig; they run to him, and each one that reaches him is eaten and makes
   him hit harder. Kill them.
 - **Skrit and Skrat**, goblin twins. They share their pain: whichever has less life left takes half of what lands on it,
-  so keep them even. Skrit is fire: three pots in a row across where you stand, two fans of bolts (the second through the
+  so keep them even. Skrit is fire: three pots in a row across whoever's stood longest in one place (two seconds or more,
+  the tank aside; else across one of you), each leaving a pool that burns 40 a second for eight seconds, more than the
+  healer can mend (`POTS` in `src/sim/dungeon.js`); two fans of bolts (the second through the
   gaps of the first), a wheel of four bars of fire that turns about where he lit it for six seconds, and a row of bolts
   coming on abreast with one way through. Skrat is blades: a whirlwind that cuts all within reach and throws blades off
   as it turns, a line marked to one of you that he then comes down, and blades flung out all round, twice. When one dies
@@ -1056,7 +1058,7 @@ portals clear of the rock, the roofs high enough and under the line the shaders 
 it, a level 8 party hired (lancer, paladin, archer, rogue), and a player who shoots Firebolt at what the party's on, walks
 out of whatever's marked, steps across the way of shots and jumps the rings. `--slow` has that player see each mark and
 shot half a second late, as a person does; `--still` never moves. It fails on an error in a tick or a shape with a bad
-number in it. What it gave, over two to twenty-one fights of each:
+number in it. What it gave when the Warrens were tuned, over two to twenty-one fights of each:
 
 | | Seeing it at once | Half a second late | Standing still |
 | --- | --- | --- | --- |
@@ -1064,6 +1066,17 @@ number in it. What it gave, over two to twenty-one fights of each:
 | Grubnash | 85 to 97 s, player down to 70% | 63 to 94 s, down to 37% | dead, or alive on a sliver |
 | Skrit and Skrat | 68 to 78 s, down to 32% | 61 to 85 s, down to 5%; fell once in 21 fights | dead in 30 to 60 s |
 | Venomaw | 145 to 148 s, down to 16% | 132 to 165 s, down to 16% | dead in 33 to 83 s, once alive at the end with nothing left |
+
+Since then the party's new moves have made it about a quarter stronger: by the time of the facing fix the twins fell in 54
+to 63 s, Grubnash in about 75 and Venomaw in about 90, and standing still lived through the twins four fights in five. Two
+things were wrong besides. A paladin's or lancer's board coming home overdue to a thrower on the move gained half again
+every tick until it stood 10^38 m off, which this tool found, one Venomaw fight in five, as a shape with a bad number
+(`stepShotX` in `src/sim/heroskills.js`: it comes home at the pace it left the hand now). And a pool pushed whoever stood
+in it out across its edge (see "Monsters' attacks"), so nobody burned in one. With those fixed, the twins at 3,600 life
+each (were 2,900) and Skrit's pots as the twins are told above, it gives: the twins in 64 to 71 s seeing it at once, the
+player down to two thirds; 64 s half a second late, untouched; standing still, dead in 22 to 47 s (five fights of five). Grubnash and Venomaw are as
+the party left them: about 72 s and 90 to 100 s; standing still Venomaw kills you in some 46 s, and Grubnash leaves you on
+a quarter.
 
 Before this pass the same player took 136 s over Grubnash, 124 s over the twins and 166 s over a Venomaw of 9,000 life
 (she had 16,000, and took nearly five minutes by the notes then), and standing still lived through the twins and the
@@ -1085,7 +1098,9 @@ MOVES.fissure(sim.perils, monster, target, monster.opts.damage);   // a named at
 
 - **A mark** is a warning drawn on the ground in one of five shapes (`src/core/perils.js`): a circle, a ring with a safe
   middle, a cone, a strip, or crossed strips. It fills from where it starts to its far edge as its fuse runs out, then
-  lands on everyone in it. After that it can stay and burn (`dps`), turn (`spin`), travel (`vx`, `vz`), spread (`grow`),
+  lands on everyone in it. After that it can stay and burn (`dps`: a bite every half second, from the mark itself and with
+  no knock, so it holds whoever stands in it; it used to bite from whoever threw it, and every blow puts you back a step,
+  so a pool pushed its victim out across its edge in four seconds), turn (`spin`), travel (`vx`, `vz`), spread (`grow`),
   or bite what touches it (`touch`); it can ride a body and point where that points (`ride`), follow someone until part
   of its fuse has run (`follow`), or keep pointing at them (`aim`). One marked `jump` is cleared by a leap.
 - **A shot** flies: it hurts the first of you it meets, a raised shield turns it, and it may home, fall, skip off the
