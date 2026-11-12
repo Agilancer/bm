@@ -355,7 +355,10 @@ export class TownUI {
       if (m.kind !== kind) {
         m.kind = kind;
         m.el.className = `qm${kind === 'busy' ? ' busy' : ''}`;
-        m.el.firstChild.textContent = kind === 'offer' ? '!' : '?';
+        // (A painted mark from the art kit, where there is one: src/ui/skin.js.)
+        const pic = art('icons', kind === 'offer' ? 'quest_offer' : kind === 'busy' ? 'quest_busy' : 'quest_ready');
+        if (pic) m.el.firstChild.innerHTML = `<img src="${pic}" alt="" style="display:block;width:1em;height:1em">`;
+        else m.el.firstChild.textContent = kind === 'offer' ? '!' : '?';
       }
       // About two thirds of a metre tall in the world, but never too small to see nor so big it hides them.
       const tall = 0.65 * innerHeight / (2 * Math.tan(FOV * Math.PI / 360)) / s[2];

@@ -47,9 +47,12 @@ function sketch(name) {
     btn_main: round(10.8, round(9.2) + round(7.4)), btn_main_on: round(10.8, round(9.2) + '<circle cx="12" cy="12" r="6" fill="currentColor" opacity=".3"/>'),
     slot_spell: round(10.5, round(9.3)), slot_spell_on: round(10.5, round(9.3) + '<circle cx="12" cy="12" r="9.300" fill="currentColor" opacity=".18"/>'),
     slot_item: '<rect x="1.500" y="1.500" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1"/><rect x="3.500" y="3.500" width="17" height="17" fill="none" stroke="currentColor" stroke-width=".6"/>',
-    medallion: round(10.5, round(7.5)), ring_map: round(10.8, round(9.4)), stick_base: round(10.5, '<circle cx="12" cy="12" r="3" fill="currentColor" opacity=".25"/>'), stick_nub: round(8, '<circle cx="12" cy="12" r="8" fill="currentColor" opacity=".25"/>'),
+    medallion: round(10.5, round(7.5)), frame_map: '<rect x="1" y="1" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1"/><rect x="2.800" y="2.800" width="18.400" height="18.400" fill="none" stroke="currentColor" stroke-width=".6"/>', stick_base: round(10.5, '<circle cx="12" cy="12" r="3" fill="currentColor" opacity=".25"/>'), stick_nub: round(8, '<circle cx="12" cy="12" r="8" fill="currentColor" opacity=".25"/>'),
   };
   if (SHAPES[name]) return SHAPES[name];
+  if (name?.startsWith('gem_')) return name.endsWith('_0') ? '<path d="M12 3l7 4 1.500 8-6.500 6-8-2-3-9z" fill="currentColor" opacity=".7"/>' : name.endsWith('_1') ? '<path d="M12 2.500l8.500 5v9L12 21.500 3.500 16.500v-9z" fill="currentColor" opacity=".8"/><path d="M12 7l4.500 2.700v5.600L12 18l-4.500-2.700V9.700z" fill="#fff" opacity=".3"/>' : '<path d="M7 3h10l5 6-10 13L2 9z" fill="currentColor"/><path d="M7 3h10l-2 6H9z" fill="#fff" opacity=".45"/>';
+  if (name?.startsWith('quest_')) return `<text x="12" y="20" text-anchor="middle" font-family="Georgia, serif" font-weight="900" font-size="22" fill="currentColor">${name === 'quest_offer' ? '!' : '?'}</text>`;
+  if (name?.startsWith('role_')) return ICONS[{ role_tank: 'guard', role_heal: 'take', role_dps: 'staff' }[name]];
   if (name?.startsWith('slot_')) return ICONS[{ slot_main: 'staff', slot_off: 'guard' }[name]] || '<rect x="5" y="4" width="14" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>';
   if (name?.startsWith('school_')) return glyphSvg(GLYPHS[{ school_fire: 'firebolt', school_ice: 'frost', school_earth: 'stone', school_arcane: 'crescent', school_lightning: 'spark', school_utility: 'wisp' }[name]] || GLYPHS.wisp);
   return '<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2"/>';
@@ -71,10 +74,11 @@ function template(s) {
     s.cells.forEach((c, k) => {
       const x = (k % s.cols) * cw, y = Math.floor(k / s.cols) * ch;
       const inset = s.fill ? 0.04 : 0.1;
-      const guide = `<div class="safe" style="left:${(cw - m * (1 - 2 * inset)) / 2}px;top:${(ch - m * (1 - 2 * inset)) / 2}px;width:${m * (1 - 2 * inset)}px;height:${m * (1 - 2 * inset)}px;${s.fill && c.name !== 'slot_item' ? 'border-radius:50%' : 'border-radius:6%'}"></div>`;
-      const inner = c.name === 'ring_map' ? `<div class="safe" style="left:${cw / 2 - m * 0.36}px;top:${ch / 2 - m * 0.36}px;width:${m * 0.72}px;height:${m * 0.72}px;border-radius:50%"></div>` : '';
+      const guide = `<div class="safe" style="left:${(cw - m * (1 - 2 * inset)) / 2}px;top:${(ch - m * (1 - 2 * inset)) / 2}px;width:${m * (1 - 2 * inset)}px;height:${m * (1 - 2 * inset)}px;${s.fill && c.name !== 'slot_item' && c.name !== 'frame_map' ? 'border-radius:50%' : 'border-radius:6%'}"></div>`;
+      // (the map's frame: its band is 8% of its width on each side, which is what src/ui/hud.css draws the map in by)
+      const inner = c.name === 'frame_map' ? `<div class="safe" style="left:${cw / 2 - m * 0.92 * 0.42}px;top:${ch / 2 - m * 0.92 * 0.42}px;width:${m * 0.92 * 0.84}px;height:${m * 0.92 * 0.84}px"></div>` : '';
       const sz = m * (s.fill ? 0.92 : 0.5);
-      body += `<div class="c g" style="left:${x}px;top:${y}px;width:${cw}px;height:${ch}px">${c.name ? guide + inner + svg(sketch(c.name), `left:${(cw - sz) / 2}px;top:${(ch - sz) / 2}px;width:${sz}px;height:${sz}px;color:${c.colour || '#ffffff'};opacity:.3`) : ''}
+      body += `<div class="c g" style="left:${x}px;top:${y}px;width:${cw}px;height:${ch}px">${c.name ? guide + inner + svg(sketch(c.name), `left:${(cw - sz) / 2}px;top:${(ch - sz) / 2}px;width:${sz}px;height:${sz}px;color:${c.colour || (c.name.startsWith('gem_') ? GEM_TINT[c.name.split('_')[1]] : '#ffffff')};opacity:.3`) : ''}
         <div class="lab n">${k + 1}</div><div class="lab nm">${c.name ? esc(c.name) : 'leave empty'}</div></div>`;
     });
   } else if (s.kind === 'boxes') {
@@ -94,6 +98,7 @@ function template(s) {
   return PAGE(W, H, body, '#26282b');
 }
 
+const GEM_TINT = { ruby: '#d8362c', topaz: '#e2a63a', emerald: '#3fb56a', sapphire: '#3f7fe0', amethyst: '#a45ad6', diamond: '#cfe6ee' };
 // Stand-in art for a sheet, in plain lines: the right shapes in the right places, on nothing.
 function mock(s) {
   const [W, H] = s.size;
@@ -101,7 +106,7 @@ function mock(s) {
   let body = '';
   const disc = (name, x, y, d) => {
     const on = name.endsWith('_on');
-    if (name === 'ring_map') return `<div class="c" style="left:${x}px;top:${y}px;width:${d}px;height:${d}px;border-radius:50%;border:${d * 0.07}px solid #4f6f8a;box-shadow:inset 0 0 0 ${d * 0.012}px #cfe6f4, 0 0 0 ${d * 0.012}px #0a1016"></div>`;
+    if (name === 'frame_map') return `<div class="c" style="left:${x}px;top:${y}px;width:${d}px;height:${d}px;border:${d * 0.08}px solid #4f6f8a;box-shadow:inset 0 0 0 ${d * 0.012}px #cfe6f4"></div>`;
     if (name === 'slot_item') return `<div class="c" style="left:${x}px;top:${y}px;width:${d}px;height:${d}px;background:#101820;border:${d * 0.04}px solid #4f6f8a;box-shadow:inset 0 0 ${d * 0.1}px #000"></div>`;
     if (name === 'stick_nub') return `<div class="c" style="left:${x + d * 0.1}px;top:${y + d * 0.1}px;width:${d * 0.8}px;height:${d * 0.8}px;border-radius:50%;background:radial-gradient(circle at 40% 32%,#e8f4fb,#7fa3bd 70%);border:${d * 0.03}px solid #20303c"></div>`;
     if (name === 'stick_base') return `<div class="c" style="left:${x}px;top:${y}px;width:${d}px;height:${d}px;border-radius:50%;background:rgba(10,16,22,.35);border:${d * 0.02}px solid #6f93ad"></div>`;
@@ -115,7 +120,7 @@ function mock(s) {
       const x = (k % s.cols) * cw, y = Math.floor(k / s.cols) * ch;
       if (s.fill) { const d = m * 0.9; body += disc(c.name, x + (cw - d) / 2, y + (ch - d) / 2, d); return; }
       const sz = m * 0.74;
-      body += svg(sketch(c.name), `left:${x + (cw - sz) / 2}px;top:${y + (ch - sz) / 2}px;width:${sz}px;height:${sz}px;color:${c.colour || (c.group === 'goods' ? '#e8c08a' : '#bfe4ff')};${gold}`);
+      body += svg(sketch(c.name), `left:${x + (cw - sz) / 2}px;top:${y + (ch - sz) / 2}px;width:${sz}px;height:${sz}px;color:${c.colour || (c.name.startsWith('gem_') ? GEM_TINT[c.name.split('_')[1]] : c.group === 'goods' ? '#e8c08a' : '#bfe4ff')};${gold}`);
     });
   } else if (s.kind === 'boxes') {
     for (const b of s.boxes) {
@@ -160,7 +165,7 @@ const ORDER = { A: 0, B: 1, C: 2 };
 const sorted = [...SHEETS].sort((a, b) => ORDER[a.priority] - ORDER[b.priority]);
 const PROMPTS = `# The sheets, one by one
 
-Eighteen sheets. Do the **A** sheets first (they change the look of the whole game by themselves), then **B**, then **C**.
+${SHEETS.length} sheets. Do the **A** sheets first (they change the look of the whole game by themselves), then **B**, then **C**.
 Any that come back are used; the game draws the rest itself as it does now.
 
 | Sheet | Priority | Size | What |
@@ -168,7 +173,7 @@ Any that come back are used; the game draws the rest itself as it does now.
 ${sorted.map((s) => `| \`${s.id}\` | ${s.priority} | ${s.size[0]} x ${s.size[1]} | ${s.title} |`).join('\n')}
 
 Every prompt below starts with the same style lock (\`STYLE.md\`). Don't shorten it or reword it between sheets: it is what
-makes eighteen pictures look like one set.
+makes ${SHEETS.length} pictures look like one set.
 
 ${sorted.map(sheetWords).join('\n')}`;
 
@@ -208,7 +213,7 @@ await shot(PAGE(1200, 700, `
 const lay = SPEC.hud, K = 2;
 await shot(PAGE(PHONE[0] * K, PHONE[1] * K, `
   <div class="c" style="left:0;top:0;width:100%;height:100%;background:linear-gradient(180deg,#58708c 0%,#96a098 34%,#343e2c 36%,#28321e 52%,#423e30 54%,#544c38 100%)"></div>
-  ${lay.boxes.map((b) => `<div class="c" style="left:${(b.x - b.r) * K}px;top:${(b.y - b.r) * K}px;width:${b.r * 2 * K}px;height:${b.r * 2 * K}px;border-radius:50%;background:rgba(16,12,9,.72);border:2px solid #c9a35c"></div>
+  ${lay.boxes.map((b) => `<div class="c" style="left:${(b.x - b.r) * K}px;top:${(b.y - b.r) * K}px;width:${b.r * 2 * K}px;height:${b.r * 2 * K}px;border-radius:${b.square ? '6px' : '50%'};background:rgba(16,12,9,.72);border:2px solid #c9a35c"></div>
     ${b.icon ? svg(sketch(b.icon), `left:${(b.x - b.r * 0.55) * K}px;top:${(b.y - b.r * 0.55) * K}px;width:${b.r * 1.1 * K}px;height:${b.r * 1.1 * K}px;color:#efe4c8`) : ''}
     <div class="c" style="left:${(b.x - 60) * K}px;top:${(b.y + b.r + 1) * K}px;width:${120 * K}px;text-align:center;font-size:${8.5 * K}px;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000">${b.r < 22 && b.icon && !b.id.startsWith('slot') ? b.icon : `${b.base}${b.icon ? ` + ${b.icon}` : ''}`}</div>`).join('')}
   <div class="c" style="left:${lay.bars.x * K}px;top:${lay.bars.y * K}px;width:${lay.bars.w * K}px;height:${13 * K}px;background:#b82a1d;border:1px solid #c9a35c"></div>

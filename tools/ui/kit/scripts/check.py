@@ -36,7 +36,7 @@ def hud(spec, pics):
     d = ImageDraw.Draw(im)
 
     def put(pic, x, y, r, scale=1.0):
-        side = max(2, int(2 * r * S * scale))
+        side = max(2, int(round(2 * r * S * scale)))
         p = pic.resize((side, side), Image.LANCZOS).convert("RGBA")
         im.alpha_composite(p, (int(x * S - side / 2), int(y * S - side / 2)))
 
@@ -45,7 +45,14 @@ def hud(spec, pics):
 
     for b in lay["boxes"]:
         base = pics.get(b.get("base") or "")
-        if base is not None:
+        if b.get("square"):
+            # The corner map: what it shows, and its frame round it (the map sits inside the frame's band).
+            x, y, r = b["x"] * S, b["y"] * S, b["r"] * S
+            q = r * (b.get("inset", 1.0) if base is not None else 1.0)
+            d.rectangle([x - q, y - q, x + q, y + q], fill=(22, 26, 18, 255), outline=None if base is not None else (201, 163, 92, 255), width=3)
+            if base is not None:
+                put(base, b["x"], b["y"], b["r"])
+        elif base is not None:
             put(base, b["x"], b["y"], b["r"])
         elif b.get("base"):
             ring(b["x"], b["y"], b["r"])

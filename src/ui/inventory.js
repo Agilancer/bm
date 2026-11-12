@@ -3,6 +3,7 @@
 // right-click, a double click or a double tap equips or stows. A gem set down on a staff goes in its next open socket, for good.
 import { CHARM_SLOTS, charmIcon, charmTip } from './lands.js';
 import { skinFilter } from '../items/skins.js';
+import { art } from './skin.js';
 import { GEMS, colorOf, compareLines, linesOf, nameOf, statsOf, wornSlot } from '../items/items.js';
 import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
 
@@ -85,6 +86,9 @@ export class Inventory {
   // ---- drawing --------------------------------------------------------------------------------
 
   gemSvg(gem) {
+    // (A painted one from the art kit, where there is one: src/ui/skin.js.)
+    const painted = art('goods', `gem_${gem.kind}_${gem.grade}`);
+    if (painted) return `<img class="gem" src="${painted}" alt="" draggable="false">`;
     return `<svg class="gem" viewBox="0 0 24 24">${GEM_SVG[gem.grade].replace('C', GEMS[gem.kind].color)}</svg>`;
   }
 

@@ -89,7 +89,7 @@ const HOWTO = `
     <p>The big button fires your <b>staff</b>. Round it: <b>dodge</b>, <b>jump</b> (hold it to ride your shield), and <b>guard</b> when a shield is on your arm.</p>
     <p>Your six <b>spells</b> stand in a ring round those. Tap one to cast it; hold it to keep casting.</p>
     <p>When something is in reach a gold button comes up beside them: <b>take</b>, <b>talk</b> or <b>open</b>.</p>
-    <p>Along the top: the <b>menu</b> (save, load, settings), your <b>pack</b>, your <b>spellbook</b>, your <b>journal</b>, and the view from behind. Tap the <b>round map</b> for the big one.</p>
+    <p>Along the top: the <b>menu</b> (save, load, settings), your <b>pack</b>, your <b>spellbook</b>, your <b>journal</b>, and the view from behind. Tap the <b>map in the corner</b> for the big one.</p>
     <p>In the pack: tap to lift and set down, double tap to equip or stow, tap outside to drop.</p>
   </div>
   <h3>Along the way</h3>

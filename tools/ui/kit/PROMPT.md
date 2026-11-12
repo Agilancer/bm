@@ -8,11 +8,10 @@ Paste everything below the line into ChatGPT (or another assistant that can make
 I've attached `bellmourn_ui_kit.zip`. It's a kit for painting the interface of my game, Bellmourn: buttons, icons,
 window frames, bars and spell icons, as a set of sheets. Please make these sheets for me:
 
-[Say which. For example:
- "All the A sheets."
- "Everything, in the order PROMPTS.md gives."
- "Just buttons, icons_actions and icons_menus, then stop and show me."
- "spells_fire and spells_ice: I didn't like the last ones, make the icons bolder."]
+[All of them, in the order PROMPTS.md gives: every sheet in the kit.]
+
+(Or say which, if you only want some. For example: "Just buttons, icons_actions and icons_menus, then stop and show
+me." Or: "spells_fire and spells_ice again: I didn't like the last ones, make the icons bolder.")
 
 How to work:
 

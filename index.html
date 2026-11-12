@@ -73,7 +73,7 @@
   #debug { position: absolute; right: 12px; top: 200px; font: 12px/1.45 ui-monospace, Consolas, monospace; text-align: right; color: #e6e0d0; text-shadow: 0 1px 2px #000; white-space: pre; display: none; }
   #take { position: absolute; left: 50%; top: 70%; transform: translateX(-50%); max-width: 70vw; text-align: center; font-size: 15px; letter-spacing: .03em; background: rgba(8,6,4,.62); padding: 6px 14px; display: none; }
   /* The map */
-  #mapMini { position: absolute; right: calc(20px + env(safe-area-inset-right)); top: calc(18px + env(safe-area-inset-top)); width: 168px; height: 168px; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,.7); opacity: .92; display: none; }
+  #mapMini { position: absolute; right: calc(20px + env(safe-area-inset-right)); top: calc(18px + env(safe-area-inset-top)); width: 168px; height: 168px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,.7); opacity: .92; display: none; }
   #mapBig { position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 6px; background: rgba(4,3,2,.55); pointer-events: none; }
   #mapBig.open { display: flex; }
   #mapBigCanvas { width: min(94vw, 150vh); height: min(82vh, calc(100vh - 86px)); border: 1px solid var(--gold-dim); opacity: .93; pointer-events: auto; touch-action: none; cursor: grab; }

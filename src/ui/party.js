@@ -4,6 +4,7 @@
 // Who can be hired is whoever of the other Tessariels isn't hired already (src/core/heroes.js makeCast): the quartermaster
 // gives each a name of the Company's and a level near yours, and the sim takes the body into your party (HeroWorld.hire).
 // Lancers take the blows, paladins heal, everyone else does the damage (roleOf in src/core/dungeon.js).
+import { art } from './skin.js';
 import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
 import { movesOf } from '../sim/heroskills.js';
 import { BOSSES, DELVE, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
@@ -11,6 +12,8 @@ import { C, CHARS_START, C_HERO, C_SIZE } from '../core/layout.js';
 import { priceText } from '../folk/shops.js';
 import { CLOSE_X } from './menu-x.js';
 
+// (A role's mark: the painted one from the art kit where there is one, src/ui/skin.js, else its sign.)
+const roleMark = (r) => { const pic = art('icons', `role_${r}`); return pic ? `<img src="${pic}" alt="" style="width:1.25em;height:1.25em;vertical-align:-.25em">` : ROLE[r][2]; };
 const ROLE = { tank: ['Tank', '#7fb6ff', '⛨'], heal: ['Healer', '#8fe0a0', '✚'], dps: ['Damage', '#ff9a7a', '⚔'] };
 const OFFERS = 6;
 // How many moves a class has at a level, past the ones it starts with: shown on the books, and told when one's come by.
@@ -193,7 +196,7 @@ export class PartyUI {
     const li = (o) => { this.opts.push(o); return o; };
     let html = `<div class="tk-head"><span class="tk-name">${esc(h.p.name)}</span><span class="tk-title">${esc(h.p.title || 'Quartermaster')}</span><span class="tk-purse">${this.pack.purse() ? priceText(this.pack.purse()) : 'No coin'}</span>${CLOSE_X}</div>
       <div class="line">${esc(say)}</div>`;
-    const row = (o, k) => `<li class="${o.dim ? 'dim' : ''}" data-k="${k}"${o.title ? ` title="${esc(o.title).replace(/"/g, '&quot;')}"` : ''}><kbd>${k < 9 ? k + 1 : k === 9 ? 0 : ''}</kbd><span class="rl" style="color:${ROLE[o.role][1]}">${ROLE[o.role][2]}</span><span>${esc(o.label)}</span>${o.note ? `<span class="mv">${esc(o.note)}</span>` : ''}${o.price ? `<span class="pr">${gratis ? 'Free' : priceText(o.price)}</span>` : ''}</li>`;
+    const row = (o, k) => `<li class="${o.dim ? 'dim' : ''}" data-k="${k}"${o.title ? ` title="${esc(o.title).replace(/"/g, '&quot;')}"` : ''}><kbd>${k < 9 ? k + 1 : k === 9 ? 0 : ''}</kbd><span class="rl" style="color:${ROLE[o.role][1]}">${roleMark(o.role)}</span><span>${esc(o.label)}</span>${o.note ? `<span class="mv">${esc(o.note)}</span>` : ''}${o.price ? `<span class="pr">${gratis ? 'Free' : priceText(o.price)}</span>` : ''}</li>`;
     if (this.members.length) {
       html += `<h4>Your party (${this.members.length} of ${PARTY.size})</h4><ol>`;
       for (const m of this.members) {

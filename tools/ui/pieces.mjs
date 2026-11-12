@@ -93,6 +93,18 @@ const GOODS = goods([
   ['glimmerstone', 'A shard of pale blue crystal bound in silver wire, faintly glowing. A charm.'],
 ]);
 
+const GEM_KINDS = [['ruby', 'deep red'], ['topaz', 'warm amber gold'], ['emerald', 'green'], ['sapphire', 'blue'], ['amethyst', 'violet'], ['diamond', 'clear, pale ice white']];
+const GEM_GRADE = [['rough', 'uncut and cloudy'], ['cut', 'cleanly faceted'], ['flawless', 'brilliant, many-faceted, lit from within']];
+const GEM_CELLS = GEM_GRADE.flatMap(([, how], g) => GEM_KINDS.map(([kind, colour]) => ({ name: `gem_${kind}_${g}`, group: 'goods', what: `A ${kind}, ${colour}: ${how}.` })));
+const MARK_CELLS = icons([
+  ['quest_offer', 'A bold exclamation mark of bright gold with a dark brown outline. Someone has work to offer.'],
+  ['quest_ready', 'A bold question mark of bright gold with a dark brown outline. A task is ready to hand in.'],
+  ['quest_busy', 'The same bold question mark in dull grey stone with a dark outline. A task taken and not yet done.'],
+  ['role_tank', 'A tall tower shield, plain steel, front on, with a raised rim and no device. The one who takes the blows.'],
+  ['role_heal', 'An open palm with a sprig of green healing herb glowing softly above it. The one who heals.'],
+  ['role_dps', 'A single dagger pointing up and to the right, a bright spark at its tip. The ones who do the damage.'],
+]);
+
 // The spells, a school to a sheet: its ten spells, then its emblem.
 const EMBLEM = {
   fire: 'A single tall flame.', ice: 'A six-armed ice crystal.', earth: 'A rough standing stone with a crack.', arcane: 'A crescent moon with one star.',
@@ -129,10 +141,10 @@ export const SHEETS = [
       { name: 'slot_item', group: 'pieces', what: 'A square cell of the paper doll that a piece of gear sits in: a recessed dark square with a thin bronze bevel and tiny corner rivets, the centre empty. Square, filling the guide square.' },
       { name: 'medallion', group: 'pieces', what: 'The round medal that carries the player\'s level number: a thick bronze-gold ring with a plain channel round it (the game fills the channel to show progress) and a dark domed centre for the number. No number, no emblem.' },
     ] },
-  { id: 'rings', title: 'The map\'s rim and the stick', priority: 'B', size: [1024, 1024], kind: 'grid', cols: 2, rows: 2, out: 320, fill: true,
-    brief: 'Round pieces for the corner map and the left thumb\'s stick. Each fills its cell to the guide circle.',
+  { id: 'rings', title: 'The map\'s frame and the stick', priority: 'B', size: [1024, 1024], kind: 'grid', cols: 2, rows: 2, out: 320, fill: true,
+    brief: 'The frame of the square map in the corner of the screen, and the round pieces of the left thumb\'s stick. Each fills its cell to the guide.',
     cells: [
-      { name: 'ring_map', group: 'pieces', what: 'The rim of the round corner map: a ring only, its whole centre empty and transparent (the map shows through). Blackened iron with a bronze-gold inner bead and four small pointed finials at the compass points, the top one a little larger. The ring is thin: its inner edge is at the inner guide circle.' },
+      { name: 'frame_map', group: 'pieces', what: 'The frame of the square corner map: a square frame only, seen straight on, its whole centre empty and transparent (the map shows through). Blackened iron with a bronze-gold inner bead, and a small boss with a garnet stud at each of its four corners. The frame is thin, the same width on all four sides: its outer edge is at the outer guide square and its inner edge at the inner guide square. No compass letters, no pointer.' },
       { name: 'stick_base', group: 'pieces', what: 'The base the thumbstick moves in: a wide, shallow, mostly see-through dark dish with a thin bronze rim and four faint tick marks at the compass points. Understated: it sits over the game\'s picture.' },
       { name: 'stick_nub', group: 'pieces', what: 'The thumbstick\'s knob: a domed disc of pale polished bone with a bronze collar, lit from the top left.' },
       empty,
@@ -161,6 +173,10 @@ export const SHEETS = [
     brief: 'Ten faint silhouettes that show what goes in an empty gear slot, and two small marks for the spellbook. The silhouettes are dim, single-colour engravings (dull bronze, low contrast), not full paintings: they must not look like an item is there. Leave the last four cells empty.' },
   { id: 'icons_goods', title: 'Icons: goods, materials and charms', priority: 'C', size: [1024, 1024], kind: 'grid', cols: 4, rows: 4, out: ICON, cells: GOODS,
     brief: 'Sixteen small things bought, gathered and carried, painted in full colour as items: one object each, no frame, no background.' },
+  { id: 'gems', title: 'Icons: the gems', priority: 'C', size: [1536, 1024], kind: 'grid', cols: 6, rows: 3, out: 160, cells: GEM_CELLS,
+    brief: 'The eighteen gems that are set into staffs, skulls and shields: six kinds across, three grades down. Each column is one kind, in its own colour; each row is one grade. Top row, rough: an uncut, lumpy, cloudy stone. Middle row, cut: a clean six-sided faceted stone. Bottom row, flawless: a brilliant many-faceted stone with a bright inner light and a small glint. The three in a column are plainly the same stone getting finer; the six in a row are plainly the same cut in different colours. Loose stones only: no settings, no rings, no frames.' },
+  { id: 'icons_marks', title: 'Icons: quest marks and party roles', priority: 'C', size: [1536, 1024], kind: 'grid', cols: 3, rows: 2, out: ICON, cells: MARK_CELLS,
+    brief: 'Six marks. The top three float over the heads of people in the world who have work for you, so they must read from far off: big, simple, glowing, with a dark outline. They are punctuation marks, the one place in the whole set where a written mark is wanted: paint only the mark asked for, nothing else written. The bottom three say what a hired companion is for, beside their name in a list.' },
   { id: 'app_icon', title: 'The app\'s icon', priority: 'C', size: [1024, 1024], kind: 'full', out: 512, name: 'app_icon', group: 'pieces', opaque: true,
     brief: 'The icon on a phone\'s home screen. A full square picture with no transparency and no rounded corners (the phone rounds them): a great bronze church bell hanging in darkness, lit from below by a faint ember glow, on a near-black background with a subtle vignette. Keep the bell inside the middle 70% of the square (phones crop the edges). No letters, no title, no frame.' },
 ];
@@ -184,12 +200,12 @@ export const PHONE = [844, 390];
 export function hudLayout() {
   const first = STARTERS.slice(0, 6).map((i) => SPELLS[i].key);
   const ICON_OF = { bAttack: ['btn_main', 'staff', 0.5], bDodge: ['btn_round', 'dodge'], bWide: ['btn_round', 'guard'], bJump: ['btn_round', 'jump'], bTake: ['btn_round_on', 'take'],
-    bSprint: ['btn_round', 'sprint'], bPause: ['btn_round', 'menu'], bPack: ['btn_round', 'pack'], bBook: ['btn_round', 'book'], bJournal: ['btn_round', 'journal'], bView: ['btn_round', 'view3'], mapMini: ['ring_map', null] };
+    bSprint: ['btn_round', 'sprint'], bPause: ['btn_round', 'menu'], bPack: ['btn_round', 'pack'], bBook: ['btn_round', 'book'], bJournal: ['btn_round', 'journal'], bView: ['btn_round', 'view3'], mapMini: ['frame_map', null] };
   const out = [];
   for (const b of boxes(...PHONE)) {
     const slot = /^slot(\d)$/.exec(b.id);
     const [base, icon, scale] = slot ? ['slot_spell', first[+slot[1] - 1], 0.72] : ICON_OF[b.id] || [];
-    if (base) out.push({ id: b.id, x: +b.x.toFixed(1), y: +b.y.toFixed(1), r: +b.r.toFixed(1), base, icon, ...(scale ? { scale } : {}) });
+    if (base) out.push({ id: b.id, x: +b.x.toFixed(1), y: +b.y.toFixed(1), r: +b.r.toFixed(1), base, icon, ...(scale ? { scale } : {}), ...(b.square ? { square: true, inset: 0.84 } : {}) });
   }
   out.push({ id: 'levelBox', x: TOP.side + TOP.medal / 2, y: TOP.pad + TOP.medal / 2, r: TOP.medal / 2, base: 'medallion', icon: null });
   return { size: PHONE, boxes: out, bars: { x: TOP.side + TOP.medal + 7, y: TOP.pad + 5, w: TOP.bars } };

@@ -11,6 +11,7 @@ import { ICONS } from '../src/ui/icons.js';
 import { GLYPHS } from '../src/ui/spellglyphs.js';
 import { rulesFor } from '../src/ui/skin.js';
 import { SPELLS } from '../src/sim/spells.js';
+import { GEMS, GEM_GRADES } from '../src/items/items.js';
 import { SHEETS, pieces, specText } from '../tools/ui/pieces.mjs';
 
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
@@ -24,7 +25,9 @@ test('nothing under a thumb overlaps anything else, on any phone', () => {
     for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
       const a = all[i], b = all[j];
       if ((a.id === 'bAttack' && b.id === 'bCast') || (a.id === 'bCast' && b.id === 'bAttack')) continue;   // (one or the other: the cave's cast stands where the staff's will)
-      const gap = Math.hypot(a.x - b.x, a.y - b.y) - a.r - b.r;
+      // (the corner map is a square: how far the other's edge is from its nearest side or corner)
+      const sq = a.square ? a : b.square ? b : null, o = sq === a ? b : a;
+      const gap = sq ? Math.hypot(Math.max(0, Math.abs(o.x - sq.x) - sq.r), Math.max(0, Math.abs(o.y - sq.y) - sq.r)) - o.r : Math.hypot(a.x - b.x, a.y - b.y) - a.r - b.r;
       assert.ok(gap >= 2, `${w}x${h}: ${a.id} and ${b.id} are ${gap.toFixed(1)} px apart`);
     }
     for (const b of all) assert.ok(b.x - b.r >= 0 && b.x + b.r <= w && b.y - b.r >= 0 && b.y + b.r <= h, `${w}x${h}: ${b.id} is off the screen`);
@@ -86,12 +89,20 @@ test('painted pieces are found by the names the kit gives them', () => {
   for (const p of all.filter((q) => q.group === 'pieces' && q.name !== 'app_icon')) assert.ok(read1.has(p.name), `nothing in hud.css uses the piece ${p.name}`);
   for (const k of read1) assert.ok(names.has(k) || k === 'spells' || k === 'icons', `hud.css reads html.art-${k}, which no sheet makes`);
   // Icons: by the name on the button; the paper doll's and the schools' their own way (src/ui/skin.js).
-  for (const p of all.filter((q) => q.group === 'icons')) assert.ok(ICONS[p.name] || /^(slot|school)_/.test(p.name), `the kit paints an icon ${p.name} the game has no place for`);
+  for (const p of all.filter((q) => q.group === 'icons')) assert.ok(ICONS[p.name] || /^(slot|school|quest|role)_/.test(p.name), `the kit paints an icon ${p.name} the game has no place for`);
   for (const name of Object.keys(ICONS)) assert.ok(names.has(name), `${name} is drawn in icons.js and missing from the kit`);
   // Spells: all sixty, by their keys.
   const spells = new Set(all.filter((q) => q.group === 'spells').map((q) => q.name));
   for (const d of SPELLS) { assert.ok(spells.has(d.key), `no cell in the kit for the spell ${d.key}`); assert.ok(GLYPHS[d.key], `no glyph drawn for ${d.key}`); }
   for (const k of spells) assert.ok(SPELLS.some((d) => d.key === k) || k.startsWith('mark_'), `the kit paints ${k}, which isn't a spell`);
+});
+
+test('the corner map is a square, and the kit paints every gem, quest mark and role', () => {
+  assert.ok(boxes(844, 390).find((b) => b.id === 'mapMini').square);
+  assert.ok(!/arc\(R, R/.test(read('../src/ui/map.js').split('drawMini(snap, yaw) {')[1].split('drawBig(')[0]), 'the corner map is still cut round');
+  const names = new Set(pieces().map((p) => p.name));
+  for (const kind of Object.keys(GEMS)) for (let g = 0; g < GEM_GRADES.length; g++) assert.ok(names.has(`gem_${kind}_${g}`), `no gem_${kind}_${g} in the kit`);
+  for (const k of ['quest_offer', 'quest_ready', 'quest_busy', 'role_tank', 'role_heal', 'role_dps', 'frame_map']) assert.ok(names.has(k), k);
 });
 
 test('a sheet is a size ChatGPT makes, and its cells are all accounted for', () => {

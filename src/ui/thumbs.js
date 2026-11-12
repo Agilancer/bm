@@ -30,7 +30,8 @@ export const TOP = { pad: 8, side: 10, medal: 44, bars: 150, mini: 92, dock: 38,
 // The left thumb: the run button, and where the stick's ring waits.
 export const LEFT = { sprint: { left: 18, bottom: 152, s: 50 }, stick: { left: 34, bottom: 26, s: 112 } };
 
-/** Each button's box on a screen w by h (CSS pixels, no safe area): { id, x, y, r } with x, y its middle. For the test. */
+/** Each button's box on a screen w by h (CSS pixels, no safe area): { id, x, y, r } with x, y its middle (square: a square of
+ * side 2r, not a round). For the test. */
 export function boxes(w, h) {
   const u = unitOf(h), out = [];
   const cx = w - HOME.right * u, cy = h - HOME.bottom * u;
@@ -39,7 +40,7 @@ export function boxes(w, h) {
   const s = LEFT.sprint;
   out.push({ id: 'bSprint', x: (s.left + s.s / 2) * u, y: h - (s.bottom + s.s / 2) * u, r: (s.s / 2) * u });
   const m = TOP;
-  out.push({ id: 'mapMini', x: w - (m.side + m.mini / 2) * u, y: (m.pad + m.mini / 2) * u, r: (m.mini / 2) * u });
+  out.push({ id: 'mapMini', x: w - (m.side + m.mini / 2) * u, y: (m.pad + m.mini / 2) * u, r: (m.mini / 2) * u, square: true });     // (the corner map is a square: r is half its side)
   // The dock, right to left from the map: Auto, then the menu, the pack, the book, the journal, the view.
   ['autoBtn', 'bPause', 'bPack', 'bBook', 'bJournal', 'bView'].forEach((id, k) => {
     out.push({ id, x: w - (m.side + m.mini + m.pad + m.dock / 2 + k * (m.dock + m.gap)) * u, y: (m.pad + m.dock / 2) * u, r: (m.dock / 2) * u });

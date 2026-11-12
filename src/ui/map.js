@@ -472,8 +472,11 @@ export class WorldMap {
     const W = c.width, R = W / 2;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, W, W);
+    // A square in the corner, its corners a little rounded: what's on it turns with you, so it's drawn out to the corners.
+    const corner = 5 * dpr;
+    const square = (inset) => { g.beginPath(); if (g.roundRect) g.roundRect(inset, inset, W - 2 * inset, W - 2 * inset, Math.max(0, corner - inset)); else g.rect(inset, inset, W - 2 * inset, W - 2 * inset); };
     g.save();
-    g.beginPath(); g.arc(R, R, R - 1, 0, 6.2832); g.clip();
+    square(1); g.clip();
     g.fillStyle = '#060504'; g.fillRect(0, 0, W, W);
     const px = snap[H.PX], pz = snap[H.PZ];
     const place = this.place && this.place.kind ? this.place : null;
@@ -492,18 +495,20 @@ export class WorldMap {
     g.restore();
     // The others, on the same turn.
     g.save();
-    g.beginPath(); g.arc(R, R, R - 1, 0, 6.2832); g.clip();
+    square(1); g.clip();
     const s = Math.sin(yaw), co = Math.cos(yaw);
     this.marks(g, snap, (x, z) => {
       const dx = -(x - px), dz = -(z - pz);          // on the paper, before the turn
       return [R + (dx * co - dz * s) * k, R + (dx * s + dz * co) * k];
-    }, reach * 1.05, px, pz, dpr);
+    }, reach * 1.45, px, pz, dpr);      // (as far as the corners reach)
     g.restore();
     this.arrow(g, R, R, 0, 7 * dpr);
     // The rim, and north on it.
     g.strokeStyle = 'rgba(201, 163, 92, 0.85)'; g.lineWidth = 2 * dpr;
-    g.beginPath(); g.arc(R, R, R - dpr, 0, 6.2832); g.stroke();
-    const nx = R + Math.sin(yaw) * (R - 9 * dpr), ny = R - Math.cos(yaw) * (R - 9 * dpr);
+    square(dpr); g.stroke();
+    // (North slides along the square's edge: the way it lies from the middle, out to the rim.)
+    const ndx = Math.sin(yaw), ndy = -Math.cos(yaw), out = (R - 9 * dpr) / Math.max(Math.abs(ndx), Math.abs(ndy), 1e-6);
+    const nx = R + ndx * out, ny = R + ndy * out;
     g.fillStyle = '#c9a35c'; g.font = `700 ${10 * dpr}px Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText('N', nx, ny);
   }

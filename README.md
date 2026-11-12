@@ -56,7 +56,7 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | Pack: staffs, skulls, robes and gems | `I` | The pack, in the top row |
 | Take up what's on the ground, open a chest or a door, or talk | `E` | The gold button that comes up beside the ring |
 | Journal | `J` | The page, in the top row |
-| The big map | `M` | Tap the round one |
+| The big map | `M` | Tap the small one in the corner |
 | Pause: save, load, settings | `Esc` | The bars, in the top row |
 | First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | The figure (or the eye), at the end of the top row |
 
@@ -345,8 +345,8 @@ the screen's height, so a small phone and a tablet get the same picture:
 - **Bottom left, the left thumb.** The stick comes up wherever the thumb lands; a faint ring shows where it waits. The
   chevrons above it keep you running.
 - **Top left:** the medal and the three bars; what's on you under them; your party under those.
-- **Top right:** the round map, which opens the big one at a tap, with the clock on its rim and Velscour's skull at its
-  foot. Beside it, a row: Auto, the menu (pause, save, load, settings), the pack, the spellbook (gold, with a count,
+- **Top right:** the corner map, a square, which opens the big one at a tap, with the clock on one of its lower corners
+  and Velscour's skull on the other. Beside it, a row: Auto, the menu (pause, save, load, settings), the pack, the spellbook (gold, with a count,
   when there are points to spend), the journal (which a phone had no way to open before) and the view.
 - **Top middle, one under the other:** the bar of whoever means you harm, a great foe's own bar, what's just happened
   ("Quest begun"), and what the game has to tell you.
@@ -366,7 +366,7 @@ picture since replaced would never be heard lifting, and the cast would stay hel
 
 ### The art kit: painted pieces from ChatGPT
 
-`art/ui/bellmourn_ui_kit.zip` is the kit that goes to ChatGPT (or anyone) to paint the interface: eighteen sheets, each
+`art/ui/bellmourn_ui_kit.zip` is the kit that goes to ChatGPT (or anyone) to paint the interface: twenty sheets, each
 with its size template, what's in every cell, and the exact words for the image tool, all under one art style lock.
 Inside it: `PROMPT.md` (the message to paste, with the zip attached), `STYLE.md` (the lock, and why each part of it is
 there), `PROMPTS.md` (every sheet), `templates/` (one for each sheet, at its exact size, with the game's own drawing of
@@ -378,8 +378,8 @@ what's been made, and zips the sheets to hand back.
 | Sheets | What | Priority |
 | --- | --- | --- |
 | `buttons`, `icons_actions`, `icons_menus`, `panel` | The round buttons, the 32 icons on them and in the menus, the window frame | A: these change the whole look |
-| `spells_fire` ... `spells_utility` (six), `sockets`, `rings`, `plates`, `bars` | An icon for each of the sixty spells, a school to a sheet; the spells' sockets, the level's medal, the map's rim, the stick; button plates, tabs, the rule; the bars | B |
-| `paper`, `icons_slots`, `icons_goods`, `app_icon` | Parchment; what goes in an empty gear slot; goods, materials and charms; the home screen's icon | C |
+| `spells_fire` ... `spells_utility` (six), `sockets`, `rings`, `plates`, `bars` | An icon for each of the sixty spells, a school to a sheet; the spells' sockets, the level's medal, the corner map's frame, the stick; button plates, tabs, the rule; the bars | B |
+| `paper`, `icons_slots`, `icons_goods`, `gems`, `icons_marks`, `app_icon` | Parchment; what goes in an empty gear slot; goods, materials and charms; the eighteen gems (six kinds, three grades); the marks over the heads of those with work, and what a hired companion is for; the home screen's icon | C |
 
 Any part of it can come back, in any order. To bring it in:
 
@@ -406,7 +406,7 @@ places, so they carry neither's marks, and no lettering at all.
 
 ### The map
 
-`src/ui/map.js`. A round map in the corner turns with you; **M** (or a tap on it, on a phone) opens the big one, and M or its × shuts it. Only what you've walked near is drawn, and what you've seen is kept in a save.
+`src/ui/map.js`. A square map in the corner turns with you (north slides round its edge); **M** (or a tap on it, on a phone) opens the big one, and M or its × shuts it. Only what you've walked near is drawn, and what you've seen is kept in a save.
 
 The big map is looked about freely. The **wheel** (or a **pinch**, or its + and − buttons, or the + and − keys) brings it nearer and further, from 60 m across to the whole land. A **drag** moves it: with the mouse held by the game, hold the left button and move the mouse (the sword stays still while the map's up, `mapUp` in `src/input.js`). It follows you until you move it; a double click, a double tap, **Home** or the ring button brings it back to you, and when you're off its edge a small arrow on the rim points your way. It has a title (the country, or the place), a scale bar and north.
 
