@@ -835,6 +835,17 @@ ride, the walk's and the arrival's shots, the road hurried and let go, the banne
 no longer holding him. Seen on a phone's screen: the banner, the narrator's line, the recap card and the menu. Nobody
 has watched the shots themselves drawn, or the desk's layout of the feed: look at those first.
 
+**What a watched run found.** Auto-play was run headless from a new game, and again from level 18 with only the keep's last two quests left, with its stuck, lost and given-up moments printed (and each other Tessariel's `stuck` seconds). What stopped it, and is mended:
+
+- It gave up on anyone it was walking to after 75 s from setting out, so nobody more than a minute's walk off was ever reached (Ser Hale is 2.4 km from the square): the 75 s run from when it last got nearer (`approach`).
+- Within 140 m of the square any quest-giver counted as an errand in the town, even one in Cinderford; past 140 m the work in hand took over again. It turned back and forth on that line for ten minutes. Only a giver who's near counts (`errand`).
+- It kept its record of a foe by id for ever, so the next body with a dead one's id was "not being hurt" at first sight and left alone for 45 s (`engage` in `combat`).
+- Across country its short paths could not end on a dungeon portal's terrace and its probe turned it aside at the step, so it paced before Blackvigil's portal and the Howling Mouth's (`solidAt`, `local` and `clearFor` in `src/sim/nav.worker.js`; `tests/portal-approach.test.mjs`).
+- Wedged in the nook behind Silas Crane's hearth, its way out began through the partition. From a snug corner a path starts toward ground it can walk to in a straight line (`freeNear`), and stopped twice in one place it asks the nav thread for a way out on a finer grid (`escape`; `lost` and `motor` in the brain).
+- It went down a dungeon ahead of the quests that send it there (see Complete Quests above).
+
+And in the game itself, which a person would have met too: the hill over the Bell Crypt (see "The cathedral and the catacombs"); Velscour's knight given his life back by anyone else's blow (`hit` in `src/sim/hero.js`: with a party at your side he couldn't be killed); a dungeon's boss left without a place to stand when the halls round it held all twelve (`freeSlot` and `wake` in `src/sim/tripo.js`, `stepBosses` in `src/sim/dungeon.js`: the Hollow Brothers never stood up, so the keep couldn't be finished); and the other Tessariels' way out of town (see "The Free Company").
+
 **For balancing.** Auto-play keeps a log, for reading a whole run afterwards. Open it with **log** under its status line, or
 **Balance log** in the menu. It lists:
 
