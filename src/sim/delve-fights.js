@@ -223,7 +223,7 @@ export const FIGHTS = {
         // Up to his throne, and stood there.
         const [tx, tz] = toWorld(room.x, room.z - room.hz + 9, d);
         m.script = (k, dt2, s2) => { if (walkTo(k, tx, tz, dt2, s2, 4.2)) k.yaw += clamp(wrapAngle(Math.PI * 0 - k.yaw), -dt2 * 4, dt2 * 4); return true; };
-        W.callAdds(f, m, { warn: 'cas_possessed', n: 4, pick: POSSESSED, from: 'doors', hp: 420, damage: 22, name: 'THE POSSESSED', pal: ['Base', 'Bloodsoaked'], tricks: true });
+        W.callAdds(f, m, { warn: 'cas_possessed', n: 4, pick: POSSESSED, from: 'doors', hp: 380, damage: 16, name: 'THE POSSESSED', pal: ['Base', 'Bloodsoaked'], tricks: true });
       }
       if (f.phase !== 1) return;
       f.hallT += dt;
@@ -237,7 +237,7 @@ export const FIGHTS = {
         }
         f.row++;
       }
-      if (f.hallT > 9 && !f.wave2) { f.wave2 = true; W.callAdds(f, m, { warn: 'cas_possessed', n: 4, pick: POSSESSED, from: 'doors', hp: 420, damage: 22, name: 'THE POSSESSED', pal: ['Base', 'Bloodsoaked'], tricks: true }); }
+      if (f.hallT > 9 && !f.wave2) { f.wave2 = true; W.callAdds(f, m, { warn: 'cas_possessed', n: 4, pick: POSSESSED, from: 'doors', hp: 380, damage: 16, name: 'THE POSSESSED', pal: ['Base', 'Bloodsoaked'], tricks: true }); }
       if (f.hallT > 21) {
         f.phase = 2; f.hold = false; m.ward = 1; m.noTurn = false; m.script = null; m.state = 0;
         m.opts.damage *= 1.2;

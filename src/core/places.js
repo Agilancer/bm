@@ -389,9 +389,11 @@ export const PIECES = {
   rock(layer, x, z, r, h, o = {}) {
     const y = o.y ?? Y(x, z) - h * 0.25, n = 6, k = (i, j) => 0.75 + 0.5 * hash2(Math.round(x * 7) + i * 13, Math.round(z * 7) + j * 5);
     const ring = (rr, yy, j) => { const out = []; for (let i = 0; i < n; i++) { const a = (o.turn || 0) + i / n * TAU; out.push([x + Math.cos(a) * rr * k(i, j) * (o.sx ?? 1), y + yy, z + Math.sin(a) * rr * k(i, j)]); } return out; };
-    const A = ring(r, 0, 0), B = ring(r * 0.92, h * 0.62, 1), C = ring(r * 0.5, h * 1.25, 2);
-    for (let i = 0; i < n; i++) { const j = (i + 1) % n; this.quad(layer, A[j], A[i], B[i], B[j]); this.quad(layer, B[j], B[i], C[i], C[j]); }
-    for (let i = 1; i + 1 < n; i++) this.tri(layer, C[0], C[i + 1], C[i]);
+    // (A belly wider than its foot, shoulders at uneven heights, a crown off its middle: not a cut block.)
+    const lift = (pts, j, amt) => pts.map((q, i) => [q[0], q[1] + (k(i, j + 3) - 1) * amt, q[2]]);
+    const A = ring(r * 0.9, 0, 0), B = lift(ring(r * 1.05, h * 0.42, 1), 1, h * 0.5), C = lift(ring(r * 0.62, h * 0.95, 2), 2, h * 0.7);
+    const T = [x + (k(1, 9) - 1) * r * 0.5, y + h * 1.3, z + (k(2, 9) - 1) * r * 0.5];
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; this.quad(layer, A[j], A[i], B[i], B[j]); this.quad(layer, B[j], B[i], C[i], C[j]); this.tri(layer, C[j], C[i], T); }
     if (r > 0.55 && o.collide !== false) this.collide(x, z, r * 0.75, r * 0.75, 0, y + h * 1.1);
   },
   // A cairn of piled stones. open: robbed, a ring of what's left round a dark hole, its capstone thrown aside.

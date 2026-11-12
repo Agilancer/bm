@@ -27,7 +27,7 @@ const rooms = [
   R('bv_sanctum', "the Magister's Sanctum", 0, -274, 20, 20, 0, 18),
   R('bv_chapel', 'the Chapel of Velscour', -48, -262, 14, 24, 0, 16),
   // (The stair climbs twelve metres going south: its floor is a slope, the steps are laid on it.)
-  R('bv_stair', 'the Great Stair', -48, -200, 7, 24, 6, 12, { tz: 0.25, fires: 0 }),
+  R('bv_stair', 'the Great Stair', -48, -200, 7, 24, 6, 12, { tz: 0.25, fires: 12 }),
   R('bv_hall', 'the Great Hall', -48, -136, 16, 30, 12, 15),
   R('bv_court', 'the Hollow Court', -48, -74, 20, 20, 12, 16),
   R('bv_walk', 'the Banner Walk', -92, -108, 8, 42, 12, 12),
@@ -164,7 +164,7 @@ const packs = [
   { key: 'bv_guard', room: 'bv_guard', pick: KNIGHTS, n: 5, pal: RED, at: [2, 0] },
   { key: 'bv_ward_south', room: 'bv_ward', pick: KNIGHTS, n: 5, pal: RED, at: [0, 17], r: 5 },
   { key: 'bv_ward_north', room: 'bv_ward', pick: KNIGHTS.concat(PLAGUE), n: 5, pal: RED, at: [0, -17], r: 5 },
-  { key: 'bv_barracks', room: 'bv_barracks', pick: KNIGHTS, n: 6, pal: RED, at: [0, -4], r: 4, more: { n: 3, pick: KNIGHTS, from: [64, -140], when: 0.5 } },
+  { key: 'bv_barracks', room: 'bv_barracks', pick: KNIGHTS, n: 5, pal: RED, at: [0, -4], r: 4, more: { n: 2, pick: KNIGHTS, from: [64, -140], when: 0.6 } },
   { key: 'bv_armoury', room: 'bv_armoury', pick: PLAGUE.concat(KNIGHTS.slice(0, 2)), n: 4, pal: ['Base', 'Ashen'] },
   { key: 'bv_gauntlet', room: 'bv_gallery', pick: NECROS, n: 5, pal: ['Base', 'Infernal'], spots: ALCOVES.map(([x, z]) => [x, z]), wake: 44 },
   { key: 'bv_gallery_watch', room: 'bv_gallery', pick: KNIGHTS, n: 3, pal: RED, at: [0, 20], r: 2, walk: [[48, -186], [48, -238]] },
@@ -243,6 +243,6 @@ export const BLACKVIGIL = {
   // Before the keep's gate on the Vigil Road, facing east down it (SITES.keep is at -5000, 200; its gate 70 m east of that).
   portal: { x: -4914, z: 200, yaw: Math.PI / 2, r: 2.2 },
   last: 'castellan', tough: { hp: 5, damage: 1.35 }, pay: { xp: 4200, gold: 700 },
-  look: { wall: 'dark:stone', floor: 'stone', roof: 'dark:rubble', flame: 'dark:flame', light: [1, 0.36, 0.14], fire: [1, 0.4, 0.16], every: 10, high: 3 },
+  look: { wall: 'stone', foot: 'dark:stone', floor: 'stone', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.5, 0.2], fire: [1, 0.54, 0.22], every: 9, high: 3, glow: 1.7 },
   words: { enter: 'Blackvigil Keep. His knights hold every hall of it, and his sorcerers the galleries.', clear: 'Blackvigil Keep is cleared. The Castellan is dead!', wipe: 'Your party falls... and wakes inside the gate.' },
 };

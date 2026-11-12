@@ -474,7 +474,7 @@ function roomEdge(r, step, inset) {
     for (let i = 0; i < n; i++) { const a = (i + 0.5) / n * 6.28; out.push([r.x + Math.cos(a) * r.r * inset, r.z + Math.sin(a) * r.r * inset]); }
     return out;
   }
-  const hx = r.hx - 1.5, hz = r.hz - 1.5;
+  const hx = r.hx - (inset > 1 ? inset : 1.5), hz = r.hz - (inset > 1 ? inset : 1.5);
   for (const [ax, az, bx, bz] of [[-hx, -hz, hx, -hz], [hx, -hz, hx, hz], [hx, hz, -hx, hz], [-hx, hz, -hx, -hz]]) {
     const L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(L / step));
     for (let i = 0; i < n; i++) { const u = (i + 0.5) / n; out.push([r.x + ax + (bx - ax) * u, r.z + az + (bz - az) * u]); }
@@ -531,7 +531,18 @@ export function braziers(d = WARRENS) {
   // (A brazier as any other; the rest build their own fires, and say how high over the floor their light is.)
   for (const p of d.props) if (p.kind in LIT) BRAZIERS.push(p.kind === 'brazier' ? [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z] : [d.x + p.x, caveFloorY(d.x + p.x, d.z + p.z), d.z + p.z, LIT[p.kind] ?? p.up]);
   for (const r of d.rooms) {
-    if (r.r < 9 || r.fires === 0) continue;
+    if (r.fires === 0) continue;
+    if (r.hx !== undefined) {
+      // A room with straight walls: one every ten metres or so along them, two strides in, and none before a door.
+      for (const [lx, lz] of roomEdge(r, r.fires || 10, 2.2)) {
+        const x = d.x + lx, z = d.z + lz, ox = Math.abs(lx - r.x) > r.hx - 2.3 ? Math.sign(lx - r.x) : 0, oz = ox ? 0 : Math.sign(lz - r.z);
+        if (caveRoom(x + ox * 5, z + oz * 5) > -0.5 || caveRoom(x, z) < 1.6) continue;
+        if (keep.some(([kx, kz]) => Math.hypot(kx - x, kz - z) < 6) || BRAZIERS.some((b) => Math.hypot(b[0] - x, b[2] - z) < 5)) continue;
+        BRAZIERS.push([x, caveFloorY(x, z), z]);
+      }
+      continue;
+    }
+    if (r.r < 9) continue;
     const n = r.r >= 25 ? 6 : r.r >= 14 ? 4 : 3;
     for (let i = 0; i < n; i++) {
       const a = (i + 0.25) / n * 6.28;

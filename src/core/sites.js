@@ -736,7 +736,7 @@ function belltower(K) {
   K.sunburst('fruit2', x, by + 8.5, z + 4.64, [0, 1], 1.6);
   // (Pass two's small things. Pale cloth with his sunburst down the two buttresses by the door; the stair's slits lit on the
   // sides you come from; a dial for the four watches; the old bellwrights' slabs in the yard's corner; a rail down the steps.)
-  for (const s of [-1, 1]) { K.hanging('cloth_oat', x + s * 3.95, by + 9.6, z + 6.1, [0, 1], 0.9, 3.6, 2); K.sunburst('fruit2', x + s * 3.95, by + 8.3, z + 6.2, [0, 1], 0.36); }
+  for (const s of [-1, 1]) { K.hanging('white', x + s * 3.95, by + 9.6, z + 6.1, [0, 1], 0.9, 3.6, 2); K.sunburst('fruit2', x + s * 3.95, by + 8.3, z + 6.2, [0, 1], 0.36); }
   for (const [fx, fz, yy] of [[0, 1, 13.0], [-1, 0, 5.6], [1, 0, 13.0]]) K.quad('flame', [x + fx * 4.64 - fz * 0.12, by + yy + 0.3, z + fz * 4.64 + fx * 0.12], [x + fx * 4.64 + fz * 0.12, by + yy + 0.3, z + fz * 4.64 - fx * 0.12], [x + fx * 4.64 + fz * 0.12, by + yy + 1.5, z + fz * 4.64 - fx * 0.12], [x + fx * 4.64 - fz * 0.12, by + yy + 1.5, z + fz * 4.64 + fx * 0.12], [fx, 0, fz]);
   K.drum(S, x - 6.5, by - 0.3, z + 12.5, 0.55, 1.4, 8, { r2: 0.42 }); K.drum(S, x - 6.5, by + 1.1, z + 12.5, 0.62, 0.1, 8, { collide: false }); K.tri('fruit2', [x - 6.5, by + 1.2, z + 12.2], [x - 6.5, by + 1.2, z + 12.8], [x - 6.5, by + 1.65, z + 12.2]);
   K.graves(x - 13, z - 11.6, 0, 2.6, 0.9, S, 1.7);
