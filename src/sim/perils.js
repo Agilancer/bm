@@ -125,7 +125,10 @@ export class Perils {
         m.tick -= dt;
         if (m.tick <= 0) {
           m.tick = 0.5;
-          for (const v of vs) if (covers(m, v.x, v.z) && !m.spare?.(v)) this.hurt(v, m.dps * 0.5, fx, fz, 0, false, m.tag);
+          // (The ground burning under you: from where it burns, and no shove. Every blow on you knocks you back a step, from
+          // whoever struck it; a bite from a pool used to, too, from whoever threw it, so a pool pushed whoever stood in it
+          // out across its edge in four seconds, and nobody ever burned in one.)
+          for (const v of vs) if (covers(m, v.x, v.z) && !m.spare?.(v)) this.hurt(v, m.dps * 0.5, m.x, m.z, null, false, m.tag);
         }
       }
       if (m.touch > 0) {
