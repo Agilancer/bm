@@ -334,6 +334,8 @@ Below, what makes it a catacomb is built, not painted: tiers of burial niches (l
 
 The Mourning Rift is a side branch off the north gate of the Founders' Hall, 30 m across and 20 m down, its terraces stepping down to a narrow floor and a burning stream. The rope bridge sags 2.3 m and is missing 3 m of planks a third of the way over: a run and a jump clears it, and a jump from a walk only does from the very lip. A fall leaves you on your last legs, never dead (`FALL_SAFE` in `src/sim/player.js`), and a scaffold stair along the rift, with a brazier at its foot, brings you back up. The room across has a chest and six undead, and there's another chest on the rift floor. The design follows the Mourning Gulf in the Bellmourn repo, built here with this game's textures and his red in place of its blue. The bridge is static, it doesn't sway. The dead walk the bridge and shelves up to the gap and won't step off (a floor marked `pit`, read by `inPit` in `src/core/interior.js`). Only the player can be under the bridge, so the floors in the rift are an entry in `homes`, chosen by how high you are (`homeFloor`).
 
+**The hill over the crypt.** The land east of the cathedral rises over the Bell Crypt and the passages beyond it, thirty metres down, and the Hill Road begins just past it. A floor down there used to be everyone's floor at any height (`floorAt` in `src/core/interior.js` has one height for each x and z), so walking over the hill dropped you through the ground into the crypt, and a step off a floor's edge in the catacombs stood you on the hill. Now whoever has their feet on the land stays on the land (`heightFor` for the player, `groundFor` for the party, the dead and the land's monsters, `groundBy` for what comes up out of the ground beside you: `src/sim/world.js`), and down below the player is put back on the last floor instead (`keepUnder` in `src/sim/player.js`). `node --test tests/over-the-crypt.test.mjs`. Found by auto-play on its way to the Bell Tower: it fell in, came up, and went round between the two for as long as it was watched.
+
 ### The village's houses and chests
 
 All fifteen houses can be entered: furnished, with a stair and an upper floor, built in `class Home` in `tools/interior/build_interior.py`. Colliders with a `b` only stop feet above that height, which is how an upstairs has its own walls. Every door is a model (`tools/doors/model.py`, in Blender, from the pictures by way of `tools/doors/trace.py`), shut until you press E at it, and E shuts it again. `src/items/doors.js` swings them; a shut one stops you, spells and sight.  The dead and the surface creatures don't come in.
@@ -964,6 +966,8 @@ screen is a frame for each, with their life.
 - **Your party use their moves from where they're put.** One of yours fighting from a place it was given (the healer's
   distance, a dragon's flank) used only its ordinary blows there. It now uses any move that doesn't take it off that
   place; the healer too, between mendings.
+
+**Leaving town, and getting nowhere.** A party's way out of town went by a point 52 m from the square in the direction it was bound (`route` in `src/sim/hero.js`); toward the north-east that point is inside a house, and two parties stood against its walls for five minutes and more. The point is moved to the nearest open ground (`openAt`), and any of them pressing at something for eight seconds without getting nearer lets that goal go: a road's leg is passed over for the next, anything else is picked again. `bm.heroes('dump')` gives each one's `stuck` seconds.
 
 ### Their moves
 
