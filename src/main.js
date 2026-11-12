@@ -825,6 +825,8 @@ async function boot(plan, poolSize) {
     simWorker.postMessage({ type: 'hall', cmd: 'leave' });
     game.hallUI.setOn(false); hud.testHall = false; game.questTrail.off = false;
   }
+  // (For tests and review pictures: bm.testDungeon() goes in as the title's Test Dungeon does.)
+  if (window.bm) window.bm.testDungeon = enterTest;
   for (const b of $('pause').querySelectorAll('[data-p]')) {
     b.onclick = () => {
       title.chime();

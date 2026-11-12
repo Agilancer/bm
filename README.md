@@ -1299,6 +1299,15 @@ braziers. 548 m end to end. Clearing it pays 2,600 experience and 420 gold.
 | The Hollow Brothers | 113 s, down to 56% | 106 s, down to 39% | dead in 42 and 89 s |
 | The Castellan | 151 and 171 s, down to 42% | 141 and 173 s, down to 36%; fell once in three | dead in 71 to 97 s |
 
+**That table is from before the other Tessariels had their skills** (merged from main after it was made): with them a
+party kills these bosses in 60 to 125 s, and a player who never moved outlived five of the seven. So what the new bosses
+mark and throw now lands harder (`BITE` in `src/sim/delve-fights.js`: 1.45 times, the Brood Mother 1.25, Sorvane and the
+Sleeper as they were). Played again after that, three fights of each seeing at once and three half a second late: all
+won but one of Sorvane's (seeing at once, before his bite was put back to 1) and one of the Brood Mother's (late, at
+1.45); with the bites as they are now Sorvane, the Brood Mother and the Sleeper were played three and three again and
+all won. Standing still, two fights of each: dead every time to Maldrec, Sorvane, the Castellan, Hrymgar and the Sleeper;
+once in two to the Brood Mother; the Hollow Brothers leave him alive on about 30%. The packs were not played again.
+
 The Sleeper and the Castellan were turned down after their first runs (a late player died to each) and the keep's
 bosses' marks turned up (a still player lived through Maldrec and the Castellan); the barracks was cut from six and
 three to five and two after the last of these, and the possessed made lighter, and **those two changes and the knights'
