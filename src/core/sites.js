@@ -23,7 +23,7 @@ const TAU = Math.PI * 2;
 // (The four from the catacombs, tools/village/more_stone.py, hold three of their painting across and two up: a third number is
 // how far one repeat goes on a floor's other way, where a floor would otherwise stretch it.)
 const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7], wood: [2.4, 1.4], door: [1.8, 2.6], cloth: [2, 2],
-  block: [6.3, 3.2, 4.2], course: [6.3, 3.2, 4.2], ashlar: [6.9, 3.4, 4.6], flags: [8.1, 4.2, 5.4] };
+  block: [8.1, 4.1, 5.4], course: [8.1, 4.1, 5.4], ashlar: [8.4, 4.2, 5.6], flags: [8.1, 4.2, 5.4] };
 export const tileOf = (layer) => {
   const n = layer.replace(/^(dark|pale|frost):/, '');
   return n.startsWith('wall') || n === 'door_wall' ? TILE.wall : n.startsWith('roof') ? TILE.roof : n.startsWith('door') ? TILE.door : TILE[n] || TILE.cloth;
