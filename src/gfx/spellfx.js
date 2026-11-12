@@ -3,6 +3,8 @@
 import { FX_FLOATS, FX_START, H, MAX_FX } from '../core/layout.js';
 import { ELEM, ELEM_LIGHT, FX, FX_CARRIED } from '../sim/spells.js';
 import { COMMON, MAX_LIT } from './shaders.js';
+import { mipCountFor } from './gpu.js';
+import { SHIELD_CELL, SHIELD_NAMES, SHIELD_OUTLINE } from './shieldshapes.js';
 
 // Each element's colours in linear light, white-hot first, down to the deep shade its edges fall off through.
 export const RAMP = /* wgsl */ `
@@ -710,6 +712,112 @@ fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
 }
 `;
 
+// The lancers' spinning shields (FX.SHIELD): a real board of gold each, one of four (src/gfx/shieldshapes.js, from VELSCOUR's
+// Lancer: tools/shields/lancer_spin.py), bowed, with a rim's thickness, its face worked in relief and its rear dark hide and
+// gold grips. Its axis is the way its face looks, its length how far it's turned in its own plane, its age which of the four.
+const SHIELD_SHADER = /* wgsl */ `
+struct Inst { p: vec4f, a: vec4f, m: vec4f, x: vec4f };
+@group(1) @binding(0) var<storage, read> fx: array<Inst>;
+@group(1) @binding(1) var shieldTex: texture_2d<f32>;
+struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) uvk: vec3f, @location(3) @interpolate(flat) id: u32, @location(4) viewZ: f32,
+  @location(5) @interpolate(flat) side: vec3f, @location(6) @interpolate(flat) up: vec3f };
+
+@vertex fn vs(@location(0) pos: vec3f, @location(1) nrm: vec3f, @location(2) uvk: vec3f, @builtin(instance_index) ii: u32) -> V {
+  let I = fx[ii];
+  let axis = normalize(I.a.xyz);
+  // (Its own right, as you face it; and its own up. Lying flat, its up is away to the north.)
+  let other = select(vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, -1.0), abs(axis.y) > 0.92);
+  var side = normalize(cross(other, axis));
+  var up = cross(axis, side);
+  let c = cos(I.a.w); let s = sin(I.a.w);
+  let s2 = side * c + up * s;
+  up = up * c - side * s;
+  side = s2;
+  var o: V;
+  let w = I.p.xyz + (side * pos.x + up * pos.y + axis * pos.z) * I.p.w;
+  o.p = w; o.id = ii; o.uvk = uvk; o.side = side; o.up = up;
+  o.n = side * nrm.x + up * nrm.y + axis * nrm.z;
+  o.pos = F.viewProj * vec4f(w, 1.0);
+  o.viewZ = -(F.view * vec4f(w, 1.0)).z;
+  return o;
+}
+
+@fragment fn fs(in: V) -> Out {
+  let I = fx[in.id];
+  let e = u32(I.m.y);
+  let t = textureSample(shieldTex, clampSmp, in.uvk.xy);
+  let toCam = F.camPos.xyz - in.p;
+  let dist = length(toCam);
+  let v = toCam / dist;
+  let kind = in.uvk.z;                 // 0 its face, 1 its edge, 2 its rear
+  var n = normalize(in.n);
+  var tone = 0.8;
+  var hide = 0.0;
+  if (kind < 0.5 || kind > 1.5) {
+    let lean = t.gb * 2.0 - 1.0;
+    let tx = select(in.side, -in.side, kind > 1.5);
+    n = normalize(tx * lean.x + in.up * lean.y + n * sqrt(max(1.0 - dot(lean, lean), 0.05)));
+    tone = t.r;
+    hide = clamp((1.0 - t.a) / 0.75, 0.0, 1.0);
+  }
+  let ndv = max(dot(n, v), 0.0);
+  let fres = pow(1.0 - ndv, 3.0);
+  // (Gold deep enough to stay gold under a noon sky, darker in its hollows; the hide takes no shine.)
+  let albedo = mix(vec3f(1.0, 0.6, 0.14) * mix(0.26, 1.15, tone), vec3f(0.1, 0.055, 0.03) * (0.5 + tone), hide);
+  let rough = mix(mix(0.5, 0.28, tone), 0.85, hide);
+  // (Not all metal: gold that shows nothing but the sky is brown wherever the sky is dark.)
+  let metal = 0.72 * (1.0 - hide);
+  // Its element's light along its edge and off its rim, as much as its alpha says.
+  let lit = abs(I.x.x);
+  // And a little of its own: these are called up, not carried, and gold of light is never dull in a shadow.
+  let glow = (rampColor(e, 0.62) * lit * (fres * 2.0 + select(0.03, 0.22, kind > 0.5 && kind < 1.5)) * (0.85 + 0.15 * sin(F.camPos.w * 9.0 + f32(in.id)))
+    + albedo * 0.1 * min(lit * 2.0, 1.0)) * (1.0 - hide);
+  let shadow = shadowAt(in.p, n, in.viewZ, ign(in.pos.xy));
+  var c = shadePBR(in.p, n, v, albedo, rough, metal, mix(0.55, 1.0, tone), shadow) + glow;
+  c = applyFog(c, in.p, -v, dist);
+  var o: Out;
+  o.color = vec4f(c, 1.0);
+  o.depth = in.viewZ;
+  return o;
+}
+`;
+
+// The four shields' meshes, from their outlines: a face and a rear in rings from the middle out, bowed, and an edge between.
+// Returns { vertices (x, y, z, normal, u, v, kind: nine floats each), indices, parts: [first index, count] for each }.
+const SHIELD_THICK = 0.075, SHIELD_BOW = 0.11, SHIELD_RINGS = [0.3, 0.6, 0.85, 1];
+export function shieldMeshes() {
+  const V = [], X = [], parts = [], cols = SHIELD_NAMES.length;
+  SHIELD_NAMES.forEach((name, col) => {
+    const R = SHIELD_OUTLINE[name], n = R.length, first = X.length;
+    const at = (i) => { const a = (i % n) * 2 * Math.PI / n; return [Math.cos(a) * R[i % n], Math.sin(a) * R[i % n]]; };
+    for (const rear of [0, 1]) {
+      const base = V.length / 9, s = rear ? -1 : 1;
+      const put = (x, y, f, r, dx, dy) => {
+        const lean = 2 * SHIELD_BOW * f / Math.max(r, 0.2), L = Math.hypot(lean, 1);
+        V.push(x, y, SHIELD_THICK / 2 * s + SHIELD_BOW * (1 - f * f), s * dx * lean / L, s * dy * lean / L, s / L,
+          (col + 0.5 + s * x * SHIELD_CELL) / cols, (rear + 0.5 - y * SHIELD_CELL) / 2, rear * 2);
+      };
+      put(0, 0, 0, 1, 0, 0);
+      for (const f of SHIELD_RINGS) for (let i = 0; i < n; i++) { const [x, y] = at(i), r = Math.hypot(x, y); put(x * f, y * f, f, r, x / r, y / r); }
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        X.push(base, base + 1 + i, base + 1 + j);
+        for (let k = 0; k + 1 < SHIELD_RINGS.length; k++) { const a = base + 1 + k * n, b = a + n; X.push(a + i, b + i, b + j, a + i, b + j, a + j); }
+      }
+    }
+    // (The edge: each point twice, with the outline's own normal there.)
+    const base = V.length / 9;
+    for (let i = 0; i < n; i++) {
+      const [x, y] = at(i), [px, py] = at(i + n - 1), [qx, qy] = at(i + 1);
+      let nx = qy - py, ny = px - qx; const L = Math.hypot(nx, ny) || 1; nx /= L; ny /= L;
+      for (const s of [1, -1]) V.push(x, y, SHIELD_THICK / 2 * s, nx, ny, s * 0.25, 0, 0, 1);
+    }
+    for (let i = 0; i < n; i++) { const a = base + i * 2, b = base + ((i + 1) % n) * 2; X.push(a, b, b + 1, a, b + 1, a + 1); }
+    parts.push([first, X.length - first]);
+  });
+  return { vertices: new Float32Array(V), indices: new Uint16Array(X), parts };
+}
+
 const GROUND = new Set([FX.RING, FX.DISC, FX.RUNE, FX.MARK]);
 const MAX_LIGHTS = 4;
 const STRIDE = FX_FLOATS * 4;
@@ -724,6 +832,10 @@ export class SpellFX {
     this.glowData = new Float32Array(MAX_FX * FX_FLOATS);
     this.solidData = new Float32Array(MAX_FX * FX_FLOATS);
     this.nGlow = 0; this.nSolid = 0; this.nFirst = 0;
+    // The shields: their own instances, sorted by which of the four each is, and one mesh that holds all four.
+    this.shieldBuf = device.createBuffer({ size: MAX_FX * STRIDE, usage });
+    this.shieldData = new Float32Array(MAX_FX * FX_FLOATS);
+    this.shieldN = SHIELD_NAMES.map(() => 0);
     this.last = performance.now();
     this.spare = [];
     this.bglGlow = device.createBindGroupLayout({ entries: [
@@ -734,6 +846,40 @@ export class SpellFX {
       { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
     ] });
     this.solidBG = device.createBindGroup({ layout: this.bglSolid, entries: [{ binding: 0, resource: { buffer: this.solidBuf } }] });
+    this.bglShield = device.createBindGroupLayout({ entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+    ] });
+    const mesh = this.shieldMesh = shieldMeshes();
+    this.shieldVB = device.createBuffer({ size: mesh.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+    this.shieldIB = device.createBuffer({ size: Math.ceil(mesh.indices.byteLength / 4) * 4, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST });
+    device.queue.writeBuffer(this.shieldVB, 0, mesh.vertices);
+    device.queue.writeBuffer(this.shieldIB, 0, mesh.indices.buffer, 0, mesh.indices.byteLength);
+    // (Plain gold until their paint is down: it's asked for as the pipelines are built, and waits for nothing.)
+    const plain = device.createTexture({ size: [1, 1], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    device.queue.writeTexture({ texture: plain }, new Uint8Array([150, 128, 128, 255]), {}, [1, 1]);
+    this.shieldPaint(plain);
+  }
+
+  shieldPaint(tex) {
+    this.shieldBG = this.r.device.createBindGroup({ layout: this.bglShield, entries: [{ binding: 0, resource: { buffer: this.shieldBuf } }, { binding: 1, resource: tex.createView() }] });
+  }
+
+  async loadShields() {
+    const { r } = this, { device } = r;
+    try {
+      const blob = await fetch(`${r.base || ''}assets/game/fx/lancer_shields.webp`).then((q) => { if (!q.ok) throw new Error(q.status); return q.blob(); });
+      const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      const w = bmp.width, h = bmp.height, mips = mipCountFor(w, h);
+      const tex = device.createTexture({ size: [w, h], format: 'rgba8unorm', mipLevelCount: mips,
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+      device.queue.copyExternalImageToTexture({ source: bmp }, { texture: tex, premultipliedAlpha: false }, [w, h]);
+      bmp.close();
+      const enc = device.createCommandEncoder();
+      r.mip.generate(tex, 'rgba8unorm', 1, mips, enc);
+      device.queue.submit([enc.finish()]);
+      this.shieldPaint(tex);
+    } catch (e) { console.warn('lancer shields', e); }
   }
 
   buildSolid(layout, targets, depth, ms) {
@@ -742,6 +888,16 @@ export class SpellFX {
       layout: layout(this.bglSolid),
       vertex: { module: mod, entryPoint: 'vs' },
       fragment: { module: mod, entryPoint: 'fs', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: depth, multisample: ms,
+    });
+    if (!this.shieldsAsked) { this.shieldsAsked = true; this.loadShields(); }
+    const smod = this.r.shader(COMMON + RAMP + SHIELD_SHADER);
+    this.pShield = this.r.device.createRenderPipeline({
+      layout: layout(this.bglShield),
+      vertex: { module: smod, entryPoint: 'vs', buffers: [{ arrayStride: 36, attributes: [
+        { shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }, { shaderLocation: 2, offset: 24, format: 'float32x3' }] }] },
+      fragment: { module: smod, entryPoint: 'fs', targets },
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: depth, multisample: ms,
     });
@@ -778,6 +934,7 @@ export class SpellFX {
       for (let i = 0; i < n; i++) {
         const o = FX_START + i * FX_FLOATS, shape = snap[o + 8];
         if (shape >= FX.LIGHT) continue;
+        if (shape === FX.SHIELD) continue;
         if (shape >= FX.ICE) {
           if (pass === 0) { s.set(snap.subarray(o, o + FX_FLOATS), nS * FX_FLOATS); nS++; }
           continue;
@@ -793,6 +950,19 @@ export class SpellFX {
     const q = r.device.queue;
     if (nG) q.writeBuffer(this.glowBuf, 0, g, 0, nG * FX_FLOATS);
     if (nS) q.writeBuffer(this.solidBuf, 0, s, 0, nS * FX_FLOATS);
+    // The shields, each kind's together.
+    let nSh = 0;
+    for (let kind = 0; kind < this.shieldN.length; kind++) {
+      const from = nSh;
+      for (let i = 0; i < n; i++) {
+        const o = FX_START + i * FX_FLOATS;
+        if (snap[o + 8] !== FX.SHIELD || Math.min(this.shieldN.length - 1, Math.max(0, Math.round(snap[o + 11]))) !== kind) continue;
+        this.shieldData.set(snap.subarray(o, o + FX_FLOATS), nSh * FX_FLOATS);
+        nSh++;
+      }
+      this.shieldN[kind] = nSh - from;
+    }
+    if (nSh) q.writeBuffer(this.shieldBuf, 0, this.shieldData, 0, nSh * FX_FLOATS);
     // The lights your party carries first (FX_CARRIED: the renderer left them room, carried() below), steady; then the
     // brightest few of the rest light the world, however many the tier otherwise affords.
     const lit = this.spare, held = this.held || (this.held = []);
@@ -874,10 +1044,19 @@ export class SpellFX {
   }
 
   drawSolid(pass) {
-    if (!this.nSolid) return;
-    pass.setPipeline(this.pSolid);
-    pass.setBindGroup(1, this.solidBG);
-    pass.draw(36, this.nSolid);
+    if (this.nSolid) {
+      pass.setPipeline(this.pSolid);
+      pass.setBindGroup(1, this.solidBG);
+      pass.draw(36, this.nSolid);
+    }
+    let first = 0, set = false;
+    this.shieldN.forEach((count, kind) => {
+      if (!count) return;
+      if (!set) { set = true; pass.setPipeline(this.pShield); pass.setBindGroup(1, this.shieldBG); pass.setVertexBuffer(0, this.shieldVB); pass.setIndexBuffer(this.shieldIB, 'uint16'); }
+      const [at, len] = this.shieldMesh.parts[kind];
+      pass.drawIndexed(len, count, at, 0, first);
+      first += count;
+    });
   }
 
   draw(pass) {
