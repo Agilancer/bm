@@ -247,6 +247,26 @@
    "name": "pine_5",
    "kind": "other",
    "cutout": true
+  },
+  {
+   "name": "block",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "flags",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "ashlar",
+   "kind": "stone",
+   "cutout": false
+  },
+  {
+   "name": "course",
+   "kind": "stone",
+   "cutout": false
   }
  ],
  "ground": [

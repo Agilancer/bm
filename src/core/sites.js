@@ -16,11 +16,15 @@ import { DELVES, PORTAL_PAD, caveFloorY } from './dungeon.js';
 import { buildDelves } from './delve-build.js';
 import { buildHall } from './testhall.js';
 import { PIECES, cinderford, lesser, street, thornwick, way } from './places.js';
+import { dressLairs } from './lair-dress.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
-const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7], wood: [2.4, 1.4], door: [1.8, 2.6], cloth: [2, 2] };
-const tileOf = (layer) => {
+// (The four from the catacombs, tools/village/more_stone.py, hold three of their painting across and two up: a third number is
+// how far one repeat goes on a floor's other way, where a floor would otherwise stretch it.)
+const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7], wood: [2.4, 1.4], door: [1.8, 2.6], cloth: [2, 2],
+  block: [6.3, 3.2, 4.2], course: [6.3, 3.2, 4.2], ashlar: [6.9, 3.4, 4.6], flags: [8.1, 4.2, 5.4] };
+export const tileOf = (layer) => {
   const n = layer.replace(/^(dark|pale|frost):/, '');
   return n.startsWith('wall') || n === 'door_wall' ? TILE.wall : n.startsWith('roof') ? TILE.roof : n.startsWith('door') ? TILE.door : TILE[n] || TILE.cloth;
 };
@@ -46,7 +50,7 @@ export class Kit {
       const [tw, th] = tileOf(layer);
       const w = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), h = Math.hypot(d[0] - a[0], d[1] - a[1], d[2] - a[2]);
       // (Horizontal faces take world x and z, so floors and tops run on across their joins.)
-      if (Math.abs(nrm[1]) > 0.9) uvs = [a, b, c, d].map((q) => [q[0] / tw, q[2] / tw]);
+      if (Math.abs(nrm[1]) > 0.9) { const td = tileOf(layer)[2] || tw; uvs = [a, b, c, d].map((q) => [q[0] / tw, q[2] / td]); }
       else { const u0 = (a[0] + a[2]) / tw * 0.37; uvs = [[u0, a[1] / -th], [u0 + w / tw, b[1] / -th], [u0 + w / tw, (b[1] + h) / -th], [u0, (a[1] + h) / -th]]; }
     }
     for (const q of [a, b, c, d]) p.pos.push(q[0], q[1], q[2]);
@@ -357,8 +361,8 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
   }
   const top = land && key === 'hf_portal' ? portalFloor() : hi + lift, foot = Math.min(lo, top) - 0.7;
   // The body, its plinth, and the coping round its top with the paving set in it.
-  block('dark:stone', 0, 0, hu, hw, foot, top - 0.2, { top: false });
-  block('dark:stone', 0, 0, hu + 0.2, hw + 0.2, foot, Math.min(lo, top - 0.5) + 0.3);
+  block('dark:block', 0, 0, hu, hw, foot, top - 0.2, { top: false });
+  block('dark:course', 0, 0, hu + 0.2, hw + 0.2, foot, Math.min(lo, top - 0.5) + 0.3);
   block('pale:stone', 0, 0, hu + edge, hw + edge, top - 0.22, top);
   const pv = (u, w) => { const [px, pz] = P(u, w); return [px, top + 0.006, pz]; };
   K.quad('stone', pv(-hu + 0.5, -hw + 0.5), pv(-hu + 0.5, hw - 0.5), pv(hu - 0.5, hw - 0.5), pv(hu - 0.5, -hw + 0.5), [0, 1, 0]);
@@ -370,7 +374,7 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
   // width a, the middle of its round head (the model's own height, from where it's set down).
   const base = top - sink, wb = -hw - edge, wf = at - ARCH.face * S, wn = at - ARCH.back * S, U = hu + edge, Y = top + ARCH.high;
   const a = ARCH.hole * S, yc = base + ARCH.mid * S;
-  block('dark:stone', 0, (wb + wn) / 2, U, (wn - wb) / 2, foot, Y);
+  block('dark:ashlar', 0, (wb + wn) / 2, U, (wn - wb) / 2, foot, Y);
   block('dark:stone', -(U + a) / 2, (wn + wf) / 2, (U - a) / 2, (wf - wn) / 2, foot, Y);
   block('dark:stone', (U + a) / 2, (wn + wf) / 2, (U - a) / 2, (wf - wn) / 2, foot, Y);
   block('dark:stone', 0, (wn + wf) / 2, a, (wf - wn) / 2, yc + a, Y);
@@ -654,7 +658,7 @@ function downs(K) {
 function belltower(K) {
   const b = at('belltower'), x = b.x, z = b.z, by = Y(x, z), S = 'pale:stone', G = 'pale:rubble', SP = 'frost:roof_2', Q = Math.PI / 4, R2 = Math.SQRT2;
   K.drum(G, x, by - 1, z, 6.0 * R2, 4, 4, { r2: 5.0 * R2, turn: Q, collide: false, lid: S });
-  K.box(S, x, by + 3, z, 4.6, 24.5, 4.6, 0, { top: 'wood', collide: false });
+  K.box('pale:ashlar', x, by + 3, z, 4.6, 24.5, 4.6, 0, { top: 'wood', collide: false });
   K.collide(x, z, 5.6, 5.6, 0, by + 27);
   for (const [yy, hw, hh] of [[10.6, 4.9, 0.4], [18.6, 4.9, 0.4], [26.9, 4.85, 0.3], [27.2, 5.1, 0.5]]) K.box(S, x, by + yy, z, hw, hh, hw, 0, { collide: false });
   // Each face: its way out, and a point u along it, d out from the tower's middle, v up.
@@ -751,7 +755,7 @@ function belltower(K) {
     K.box(S, gx, gy - 0.5, z + So, 0.45, 3.2, 0.45, 0); K.cone(S, gx, gy + 2.7, z + So, 0.7, 0.8, 4, Q); K.drum('fruit2', gx, gy + 3.45, z + So, 0.16, 0.3, 5, { collide: false });
     K.lantern(x + s * 4.4, z + So + 1.2, 2.7, s > 0 ? Math.PI : 0);
   }
-  K.paving('stone', x, z + 13.3, 8.5, 4.6);
+  K.paving('flags', x, z + 13.3, 8.5, 4.6);
   // The Bellwright's house against the east wall, his wood and his chopping block; the oil store under a lean-to on the
   // north wall; the well; a bench in the sun; the ladder up the west face; and the old first bell, cracked, on its baulks.
   K.house(x + 12.6, z + 4, 3.4, 2.6, 2.9, -Math.PI / 2, 'wall_12', 'roof_2', { chimney: -2.2, lamp: 1 });
@@ -814,7 +818,7 @@ function fen(K) {
   const c = at('chapel'), cy = Y(c.x, c.z), lanc = (us, y0 = 2.2, y1 = 5) => us.map((u) => ({ u, w: 0.6, y0, y1, round: true }));
   K.pierced('rubble', c.x, c.z - 6, 0, 12, 7.4, 1, lanc([-8, -4, 0, 4, 8]), { ruin: true, y: cy });
   K.pierced('rubble', c.x, c.z + 6, 0, 12, 7.4, 1, lanc([-8, -4, 0, 4, 8]), { ruin: true, y: cy });
-  K.pierced('rubble', c.x + 12, c.z, Math.PI / 2, 6.5, 9, 1, lanc([-2.2, 0, 2.2], 3, 6.2), { y: cy });
+  K.pierced('course', c.x + 12, c.z, Math.PI / 2, 6.5, 9, 1, lanc([-2.2, 0, 2.2], 3, 6.2), { y: cy });
   K.tri('rubble', [c.x + 12.5, cy + 9, c.z - 6.5], [c.x + 12.5, cy + 9, c.z + 6.5], [c.x + 12.5, cy + 13.2, c.z]); K.tri('rubble', [c.x + 11.5, cy + 9, c.z - 6.5], [c.x + 11.5, cy + 9, c.z + 6.5], [c.x + 11.5, cy + 13.2, c.z]);
   K.pierced('rubble', c.x - 12, c.z, Math.PI / 2, 6.5, 5, 1, [{ u: 0, w: 1.3, y0: 0, y1: 2.6, round: true }], { ruin: true, y: cy });
   for (const u of [-10, -6, -2, 2, 6, 10]) for (const sd of [-1, 1]) K.box('rubble', c.x + u, cy - 0.5, c.z + sd * 6.9, 0.45, 3.6 + hash2(u, sd) * 2.4, 0.5, 0, { collide: false });
@@ -854,9 +858,9 @@ function rustwood(K) {
   // arcade round its garth on the north, the brothers' graves on the south, and what's left of the precinct wall and gate.
   const a = at('abbey'), ay = Y(a.x, a.z);
   const L = 22, Wd = 8, win = (us, y0, y1, w = 0.9) => us.map((u) => ({ u, w, y0, y1, round: true }));
-  K.pierced('stone', a.x, a.z - Wd, 0, L, 11, 1.4, win([-16, -8, 0, 8, 16], 3, 7.2), { ruin: true, y: ay });
-  K.pierced('stone', a.x, a.z + Wd, 0, L, 11, 1.4, win([-16, -8, 0, 8, 16], 3, 7.2), { y: ay });
-  K.pierced('stone', a.x + L, a.z, Math.PI / 2, Wd + 0.7, 13, 1.4, win([-3.2, 0, 3.2], 3.4, 8.6, 0.8), { y: ay });
+  K.pierced('ashlar', a.x, a.z - Wd, 0, L, 11, 1.4, win([-16, -8, 0, 8, 16], 3, 7.2), { ruin: true, y: ay });
+  K.pierced('ashlar', a.x, a.z + Wd, 0, L, 11, 1.4, win([-16, -8, 0, 8, 16], 3, 7.2), { y: ay });
+  K.pierced('block', a.x + L, a.z, Math.PI / 2, Wd + 0.7, 13, 1.4, win([-3.2, 0, 3.2], 3.4, 8.6, 0.8), { y: ay });
   K.tri('stone', [a.x + L + 0.7, ay + 13, a.z - Wd - 0.7], [a.x + L + 0.7, ay + 13, a.z + Wd + 0.7], [a.x + L + 0.7, ay + 19, a.z]); K.tri('stone', [a.x + L - 0.7, ay + 13, a.z - Wd - 0.7], [a.x + L - 0.7, ay + 13, a.z + Wd + 0.7], [a.x + L - 0.7, ay + 19, a.z]);
   K.pierced('stone', a.x - L, a.z, Math.PI / 2, Wd + 0.7, 14, 1.4, [{ u: 0, w: 1.9, y0: 0, y1: 3.6, round: true }], { y: ay });
   for (const u of [-20, -12, -4, 4, 12, 20]) for (const sd of [-1, 1]) {
@@ -882,7 +886,7 @@ function rustwood(K) {
   for (let i = 0; i < 2; i++) K.arch('stone', a.x - 22, cz + 3.4 + i * 5.2, Math.PI / 2, { a: 1.9, pw: 0.7, hs: 2.5, t: 0.7, ring: 0.45, y: ay, n: 6 });
   K.wall('stone', a.x + 16, cz, a.x + 16, a.z - Wd, 0.9, 4.5, { ruin: true });
   K.well(a.x - 5, cz + 7, 0, { roof: false });
-  K.paving('stone', a.x - 3, cz + 2.4, 17, 1.3);
+  K.paving('flags', a.x - 3, cz + 2.4, 17, 1.3);
   // The graves, the precinct's wall and its gate to the road, the lay brothers' shed with what they left.
   K.graves(a.x + 2, a.z + Wd + 13, 0, 12, 3.2, 'pale:stone', 2.5);
   K.wall('rubble', a.x - 46, a.z + 30, a.x - 14, a.z + 34, 0.9, 2.6, { ruin: true }); K.wall('rubble', a.x - 46, a.z + 30, a.x - 48, a.z - 6, 0.9, 2.6, { ruin: true });
@@ -931,14 +935,14 @@ function ashen(K) {
   // an arch, an arcade round the inside shaded with awnings, the well, the traders' stalls and carts, and the late comers'
   // tents outside the walls. (Plain folk's: nobody's colours on it.)
   const k = at('khel'), H = 30, ky = Y(k.x, k.z);
-  K.wall('rubble', k.x - H, k.z - H, k.x + H, k.z - H, 1.6, 7, { crenel: true });
+  K.wall('course', k.x - H, k.z - H, k.x + H, k.z - H, 1.6, 7, { crenel: true });
   K.wall('rubble', k.x + H, k.z - H, k.x + H, k.z + H, 1.6, 7, { crenel: true });
-  K.wall('rubble', k.x + H, k.z + H, k.x + 5.4, k.z + H, 1.6, 7, { crenel: true }); K.wall('rubble', k.x - 5.4, k.z + H, k.x - H, k.z + H, 1.6, 7, { crenel: true });
+  K.wall('course', k.x + H, k.z + H, k.x + 5.4, k.z + H, 1.6, 7, { crenel: true }); K.wall('course', k.x - 5.4, k.z + H, k.x - H, k.z + H, 1.6, 7, { crenel: true });
   K.wall('rubble', k.x - H, k.z + H, k.x - H, k.z - H, 1.6, 7, { crenel: true });
   for (const sx of [-1, 1]) K.tower('rubble', k.x + sx * 8.6, k.z + H, 3, 11, null);
   K.arch('rubble', k.x, k.z + H, 0, { a: 3, pw: 2.4, hs: 3.6, top: 8.6, t: 2.2, y: ky, n: 8 });
   for (let i = -2; i <= 2; i++) K.box('rubble', k.x + i * 1.5, ky + 8.6, k.z + H + 0.7, 0.45, 1, 0.4, 0, { collide: false });
-  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.tower('rubble', k.x + sx * H, k.z + sz * H, 3.4, 9, null);
+  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.tower('block', k.x + sx * H, k.z + sz * H, 3.4, 9, null);
   for (let i = 0; i < 10; i++) {
     const t = -H + 6 + i * (2 * H - 12) / 9;
     for (const [x, z] of [[k.x + t, k.z - H + 6], [k.x - H + 6, k.z + t], [k.x + H - 6, k.z + t]]) K.drum('stone', x, Y(x, z) - 0.2, z, 0.5, 4.2, 8);
@@ -987,11 +991,11 @@ function ashen(K) {
   // The Black Obelisks: seven needles of his black stone, one fallen, on a ring of black paving round the stepped slab; his
   // red down two of them, iron from their heads to the slab, braziers that never go out, glass teeth come up outside the ring.
   const o = at('obelisks'), oy = Y(o.x, o.z);
-  K.ringPaving('dark:stone', o.x, o.z, 4.6, 24.5, 20);
+  K.ringPaving('dark:flags', o.x, o.z, 4.6, 24.5, 20);
   for (let i = 0; i < 7; i++) {
     const t = i / 7 * TAU, x = o.x + Math.cos(t) * 20, z = o.z + Math.sin(t) * 20, hh = 16 + hash2(i, 2) * 6;
     if (i === 4) { K.box('dark:stone', x, Y(x, z) - 0.4, z, 9, 1.6, 1.4, t); continue; }
-    K.box('dark:stone', x, Y(x, z) - 0.4, z, 2.1, 1.3, 2.1, -t);
+    K.box('dark:block', x, Y(x, z) - 0.4, z, 2.1, 1.3, 2.1, -t);
     K.menhir('dark:stone', x, z, 1.5, hh, -t, 0);
     K.cone('dark:stone', x, Y(x, z) + hh - 0.6, z, 1.1, 2.5, 4, t);
     if (i % 3 === 0) K.hanging('cloth_red', x - Math.cos(t) * 1.25, Y(x, z) + hh * 0.72, z - Math.sin(t) * 1.25, [-Math.cos(t), -Math.sin(t)], 1.3, hh * 0.4, 3);
@@ -1037,27 +1041,28 @@ function ashen(K) {
 // keep's dungeon stands there. The land can't be dug from here, so the ditch is a walled bed of stakes, not a hollow.)
 function keep(K) {
   const k = at('keep'), y0 = Y(k.x, k.z), HX = 70, HZ = 58, wallH = 16;
-  const G = 'dark:stone', R = 'dark:rubble';
-  K.wall(G, k.x - HX, k.z - HZ, k.x + HX, k.z - HZ, 3, wallH, { crenel: true, y: y0 });
-  K.wall(G, k.x - HX, k.z + HZ, k.x + HX, k.z + HZ, 3, wallH, { crenel: true, y: y0 });
-  K.wall(G, k.x - HX, k.z - HZ, k.x - HX, k.z + HZ, 3, wallH, { crenel: true, y: y0 });
-  K.wall(G, k.x + HX, k.z - HZ, k.x + HX, k.z + HZ, 3, wallH, { crenel: true, y: y0, gap: 4 });
+  // (His black stone, in four layings of it: the curtain in blocks, the towers coursed or dressed, the keep itself dressed.)
+  const G = 'dark:stone', R = 'dark:rubble', B = 'dark:block', A = 'dark:ashlar', C = 'dark:course';
+  K.wall(B, k.x - HX, k.z - HZ, k.x + HX, k.z - HZ, 3, wallH, { crenel: true, y: y0 });
+  K.wall(B, k.x - HX, k.z + HZ, k.x + HX, k.z + HZ, 3, wallH, { crenel: true, y: y0 });
+  K.wall(B, k.x - HX, k.z - HZ, k.x - HX, k.z + HZ, 3, wallH, { crenel: true, y: y0 });
+  K.wall(B, k.x + HX, k.z - HZ, k.x + HX, k.z + HZ, 3, wallH, { crenel: true, y: y0, gap: 4 });
   // A slit in a round tower's wall, looking out at ang; and one in a flat wall at (x, z) facing [nx, nz].
   const slit = (cx, cz, r, ang, yy, hh = 2.2, layer = 'iron') => { const c = Math.cos(ang), s = Math.sin(ang), px = cx + c * (r + 0.04), pz = cz + s * (r + 0.04); K.quad(layer, [px + s * 0.16, yy, pz - c * 0.16], [px - s * 0.16, yy, pz + c * 0.16], [px - s * 0.16, yy + hh, pz + c * 0.16], [px + s * 0.16, yy + hh, pz - c * 0.16], [c, 0, s]); };
   for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
     const cx = k.x + sx * HX, cz = k.z + sz * HZ;
-    K.tower(G, cx, cz, 7, wallH + 8, 'dark:roof_2', { y: y0, sides: 16 });
+    K.tower(C, cx, cz, 7, wallH + 8, 'dark:roof_2', { y: y0, sides: 16 });
     // (The gallery round its head, on corbels, to drop things from.)
     K.drum(G, cx, y0 + wallH + 3.6, cz, 7, 1.0, 16, { r2: 8.1, open: true, collide: false }); K.drum(G, cx, y0 + wallH + 4.6, cz, 8.1, 2.4, 16, { open: true, collide: false });
     for (let i = 0; i < 5; i++) { const a = Math.atan2(sz, sx) - 1.2 + i * 0.6; slit(cx, cz, 7, a, y0 + 6 + (i % 2) * 5); slit(cx, cz, 8.1, a + 0.3, y0 + wallH + 5); }
   }
   for (const [dx, dz] of [[-24, -HZ], [24, -HZ], [-24, HZ], [24, HZ], [-HX, 0], [HX, -33], [HX, 33]]) {
-    K.tower(G, k.x + dx, k.z + dz, 5, wallH + 4, null, { y: y0 });
+    K.tower(A, k.x + dx, k.z + dz, 5, wallH + 4, null, { y: y0 });
     const out = Math.atan2(Math.abs(dz) === HZ ? dz : 0, Math.abs(dx) === HX ? dx : 0);
     for (const da of [-0.7, 0, 0.7]) slit(k.x + dx, k.z + dz, 5, out + da, y0 + 7 + Math.abs(da) * 5);
   }
   // The gatehouse: two towers flanking the gate, a passage roofed over, the gallery across between them, the portcullis.
-  for (const sz of [-1, 1]) { K.tower(G, k.x + HX + 2, k.z + sz * 9, 5.5, wallH + 6, null, { y: y0 }); for (const da of [-0.5, 0.25]) slit(k.x + HX + 2, k.z + sz * 9, 5.5, da * sz, y0 + 8 + (da > 0 ? 6 : 0), 2.4); }
+  for (const sz of [-1, 1]) { K.tower(A, k.x + HX + 2, k.z + sz * 9, 5.5, wallH + 6, null, { y: y0 }); for (const da of [-0.5, 0.25]) slit(k.x + HX + 2, k.z + sz * 9, 5.5, da * sz, y0 + 8 + (da > 0 ? 6 : 0), 2.4); }
   K.box(G, k.x + HX, y0 + 7.5, k.z, 3, wallH - 7.5, 4.5, 0, { collide: false });
   K.box(G, k.x + HX + 3.3, y0 + wallH - 1.6, k.z, 1.2, 3.4, 4.4, 0, { collide: false });
   for (let i = -3; i <= 3; i++) { if (i % 2) K.box(G, k.x + HX + 4.3, y0 + wallH + 1.8, k.z + i * 1.25, 0.2, 1.1, 0.5, 0, { collide: false }); K.box(G, k.x + HX + 3.5, y0 + wallH - 2.5, k.z + i * 1.3, 0.9, 0.9, 0.22, 0, { collide: false }); }
@@ -1074,7 +1079,7 @@ function keep(K) {
   // fourth the tower taller than everything, his red down its face and his fires in its head.
   const bx = k.x - 12;
   K.box(R, bx, y0 - 1, k.z, 30, 3, 26, 0);
-  K.box(G, bx, y0 + 2, k.z, 26, 44, 22, 0, { top: R });
+  K.box(A, bx, y0 + 2, k.z, 26, 44, 22, 0, { top: R });
   for (let i = 0; i < 16; i++) {
     const u = (i + 0.5) / 16 * 2 - 1;
     K.box(G, bx + u * 26, y0 + 46, k.z - 22, 1, 1.8, 0.8, 0, { collide: false });
@@ -1084,8 +1089,8 @@ function keep(K) {
   }
   for (const dz of [-18, -6, 6, 18]) for (const sx of [-1, 1]) { K.box(G, bx + sx * 26.6, y0 + 2, k.z + dz, 0.7, 36, 1.1, 0, { collide: false }); K.box(G, bx + sx * 26.3, y0 + 38, k.z + dz, 0.4, 5, 0.9, 0, { collide: false }); }
   for (const dx of [-18, -6, 6, 18]) for (const sz of [-1, 1]) { K.box(G, bx + dx, y0 + 2, k.z + sz * 22.6, 1.1, 36, 0.7, 0, { collide: false }); K.box(G, bx + dx, y0 + 38, k.z + sz * 22.3, 0.9, 5, 0.4, 0, { collide: false }); }
-  for (const [sx, sz] of [[1, -1], [1, 1], [-1, 1]]) { const cx = bx + sx * 26, cz = k.z + sz * 22; K.drum(G, cx, y0 + 37, cz, 2.2, 3, 10, { r2: 3.4, open: true, collide: false }); K.drum(G, cx, y0 + 40, cz, 3.4, 10, 10, { collide: false }); K.cone('dark:roof_2', cx, y0 + 50, cz, 4.1, 7, 10); slit(cx, cz, 3.4, Math.atan2(sz, sx), y0 + 43, 2.4, 'flame'); }
-  K.tower(G, k.x - 34, k.z - 18, 9, 78, 'dark:roof_2', { y: y0, steep: 2.4, sides: 16 });
+  for (const [sx, sz] of [[1, -1], [1, 1], [-1, 1]]) { const cx = bx + sx * 26, cz = k.z + sz * 22; K.drum(G, cx, y0 + 37, cz, 2.2, 3, 10, { r2: 3.4, open: true, collide: false }); K.drum(C, cx, y0 + 40, cz, 3.4, 10, 10, { collide: false }); K.cone('dark:roof_2', cx, y0 + 50, cz, 4.1, 7, 10); slit(cx, cz, 3.4, Math.atan2(sz, sx), y0 + 43, 2.4, 'flame'); }
+  K.tower(B, k.x - 34, k.z - 18, 9, 78, 'dark:roof_2', { y: y0, steep: 2.4, sides: 16 });
   K.drum(G, k.x - 34, y0 + 70, k.z - 18, 9, 1.4, 16, { r2: 10.4, open: true, collide: false }); K.drum(G, k.x - 34, y0 + 71.4, k.z - 18, 10.4, 5.6, 16, { open: true, collide: false });
   for (let i = 0; i < 8; i++) slit(k.x - 34, k.z - 18, 10.4, i / 8 * TAU + 0.2, y0 + 72.6, 2.6, 'flame');
   for (let i = 0; i < 6; i++) slit(k.x - 34, k.z - 18, 9, -0.9 + i * 0.36, y0 + 30 + i * 6, 3);
@@ -1114,8 +1119,8 @@ function keep(K) {
   // The barbican past the ditch: two towers and the arch between them, wings of wall either side, his red on their heads.
   const xb = x1 + 7;
   for (const s of [-1, 1]) {
-    K.tower(G, xb, k.z + s * 8, 3.7, 12, null, { y: y0 }); slit(xb, k.z + s * 8, 3.7, s * 0.5, y0 + 6); slit(xb, k.z + s * 8, 3.7, s * 0.5 + Math.PI - s, y0 + 6);
-    K.wall(G, xb, k.z + s * 11.5, xb, k.z + s * 27, 2, 6, { crenel: true, y: y0 });
+    K.tower(C, xb, k.z + s * 8, 3.7, 12, null, { y: y0 }); slit(xb, k.z + s * 8, 3.7, s * 0.5, y0 + 6); slit(xb, k.z + s * 8, 3.7, s * 0.5 + Math.PI - s, y0 + 6);
+    K.wall(B, xb, k.z + s * 11.5, xb, k.z + s * 27, 2, 6, { crenel: true, y: y0 });
     K.banner(xb, k.z + s * 8, 6, s > 0 ? 0 : Math.PI, 'cloth_red', { y: y0 + 12, pole: 'iron', w: 1.3, len: 4, collide: false });
     K.brazier(xb + 5, k.z + s * 6, 1.6);
   }
@@ -1189,7 +1194,7 @@ function rimeholt(K) {
   K.drum('iron', f.x, fy + 20, f.z - 10, 0.7, 0.9, 8, { r2: 1.2, open: true, collide: false }); K.cone('flame', f.x, fy + 20.4, f.z - 10, 0.9, 2.2, 6);
   for (const [a, yy] of [[0.3, 6], [1.9, 10], [3.5, 14], [5.1, 8]]) K.quad('water', [f.x + Math.cos(a) * 5.04 + Math.sin(a) * 0.2, fy + yy, f.z - 10 + Math.sin(a) * 5.04 - Math.cos(a) * 0.2], [f.x + Math.cos(a) * 5.04 - Math.sin(a) * 0.2, fy + yy, f.z - 10 + Math.sin(a) * 5.04 + Math.cos(a) * 0.2], [f.x + Math.cos(a) * 5.04 - Math.sin(a) * 0.2, fy + yy + 2, f.z - 10 + Math.sin(a) * 5.04 + Math.cos(a) * 0.2], [f.x + Math.cos(a) * 5.04 + Math.sin(a) * 0.2, fy + yy + 2, f.z - 10 + Math.sin(a) * 5.04 - Math.cos(a) * 0.2], [Math.cos(a), 0, Math.sin(a)]);
   K.quad('door_2', [f.x - 0.9, fy, f.z - 4.93], [f.x + 0.9, fy, f.z - 4.93], [f.x + 0.9, fy + 2.5, f.z - 4.93], [f.x - 0.9, fy + 2.5, f.z - 4.93], [0, 0, 1], [[0, 1], [1, 1], [1, 0], [0, 0]]);
-  const X = 26, Z = 22, wl = (ax, az, bx, bz) => K.wall(FR, f.x + ax, f.z + az, f.x + bx, f.z + bz, 1.2, 3.6, { crenel: true });
+  const X = 26, Z = 22, wl = (ax, az, bx, bz) => K.wall('frost:course', f.x + ax, f.z + az, f.x + bx, f.z + bz, 1.2, 3.6, { crenel: true });
   wl(-X, -Z, 9.6, -Z); wl(14.4, -Z, X, -Z); wl(X, -Z, X, Z); wl(X, Z, 2.4, Z); wl(-2.4, Z, -X, Z); wl(-X, Z, -X, -Z);
   for (const [gx, gz] of [[9.2, -Z], [14.8, -Z], [-2.8, Z], [2.8, Z]]) K.box(FS, f.x + gx, Y(f.x + gx, f.z + gz) - 0.5, f.z + gz, 0.7, 5.6, 0.9, 0);
   for (const [bx, bz] of [[7.2, -Z - 2.6], [16.8, -Z - 2.6], [-4.8, Z + 2.4], [4.8, Z + 2.4]]) K.brazier(f.x + bx, f.z + bz, 1.5);
@@ -1321,7 +1326,7 @@ function sorrowhorn(K) {
   // Greywatch, high on the shoulder: a ruined tower, its head broken, a beacon iron on it gone cold; what's left of its
   // yard wall and the stair up to its door; somebody's frozen camp in its lee.
   const gx = MOUNT.x + 820, gz = MOUNT.z + 760, gy = Y(gx, gz);
-  K.tower('pale:rubble', gx, gz, 6, 18, null);
+  K.tower('pale:course', gx, gz, 6, 18, null);
   for (let i = 0; i < 5; i++) { const a = 0.6 + i * 0.5; K.box('pale:rubble', gx + Math.cos(a) * 5.4, gy + 18, gz + Math.sin(a) * 5.4, 0.7, 1.5 + hash2(i, 2) * 3.5, 0.55, -a, { collide: false }); }
   K.drum('iron', gx, gy + 18, gz, 0.6, 0.8, 8, { r2: 1.0, open: true, collide: false });
   for (const [a, yy] of [[0.4, 5], [2.2, 9], [4.3, 12], [5.6, 6.5]]) K.quad('water', [gx + Math.cos(a) * 6.05 + Math.sin(a) * 0.22, gy + yy, gz + Math.sin(a) * 6.05 - Math.cos(a) * 0.22], [gx + Math.cos(a) * 6.05 - Math.sin(a) * 0.22, gy + yy, gz + Math.sin(a) * 6.05 + Math.cos(a) * 0.22], [gx + Math.cos(a) * 6.05 - Math.sin(a) * 0.22, gy + yy + 2.2, gz + Math.sin(a) * 6.05 + Math.cos(a) * 0.22], [gx + Math.cos(a) * 6.05 + Math.sin(a) * 0.22, gy + yy + 2.2, gz + Math.sin(a) * 6.05 - Math.cos(a) * 0.22], [Math.cos(a), 0, Math.sin(a)]);
@@ -1398,6 +1403,8 @@ export function buildSites() {
   // (The Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js.)
   buildHall(K);
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
+  // (What lies about the lairs, last, so it keeps clear of everything above: src/core/lair-dress.js.)
+  dressLairs(K, SEALS);
   built = { parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors };
   return built;
 }
