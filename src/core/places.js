@@ -553,7 +553,7 @@ export function thornwick(K) {
   { const a = st(-12, 21.5), b = st(-12, 27.5); K.washing(a.x, a.z, b.x, b.z); const a2 = st(14, -20), b2 = st(22, -21.5); K.washing(a2.x, a2.z, b2.x, b2.z); }
   // The market square, north-east of the road: flagged, the pillar on its steps with the lantern at its head, the well, stalls.
   { const m = st(5, 16), my = cy;
-    K.paving('stone', m.x, m.z, 11, 7.2, m.yaw);
+    K.paving('flags', m.x, m.z, 11, 7.2, m.yaw);
     K.drum('stone', m.x, my - 0.4, m.z, 2.1, 0.75, 8); K.drum('stone', m.x, my + 0.35, m.z, 1.4, 0.32, 8, { collide: false });
     K.drum('stone', m.x, my + 0.67, m.z, 0.34, 3.3, 8, { r2: 0.24, collide: false }); K.drum('stone', m.x, my + 3.97, m.z, 0.5, 0.25, 8, { r2: 0.5, collide: false });
     K.drum('iron', m.x, my + 4.22, m.z, 0.2, 0.5, 4, { open: true, collide: false, r2: 0.26 }); K.cone('flame', m.x, my + 4.26, m.z, 0.12, 0.38, 4); K.cone('iron', m.x, my + 4.72, m.z, 0.34, 0.3, 4);

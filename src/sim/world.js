@@ -233,8 +233,8 @@ export class World {
     }
   }
 
-  height(x, z) {
-    // (On a portal's platform, its floor or the step you're on.)
+  // On a portal's platform, its floor or the step you're on; null off them all.
+  platformAt(x, z) {
     for (let i = 0; i < this.platforms.length; i++) {
       const p = this.platforms[i];
       if (Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
@@ -245,6 +245,12 @@ export class World {
       }
       if (best !== null) return best;
     }
+    return null;
+  }
+
+  height(x, z) {
+    const plat = this.platformAt(x, z);
+    if (plat !== null) return plat;
     // (The Hollowfang Warrens lie out past the edge of the world, under it: src/core/dungeon.js.)
     if (inDungeon(x, z)) return caveFloorY(x, z);
     // (And the Test Dungeon, out past the other edge: src/core/testhall.js.)
@@ -252,6 +258,22 @@ export class World {
     const f = floorAt(x, z);
     if (f !== null) return f;
     if (openingTerrain && !this.caveSealed) { const c = caveFloor(x, z); if (c !== null) return c; }
+    return this.landAt(x, z);
+  }
+
+  // The ground for a body that was at height y: the land, when it's up on the land over the catacombs (heightFor's rule,
+  // for everyone who isn't the player: the party at your back, a pack come up out of the hill). Else as height().
+  groundFor(x, z, y) {
+    const h = this.height(x, z);
+    if (x > 140 && y > h + 5) { const land = this.landAt(x, z); if (land - h > 5 && y > land - 2.5) return land; }
+    return h;
+  }
+
+  // The ground at x, z for something that comes up beside p (the player): on the land if that's where p is.
+  groundBy(x, z, p) { return this.groundFor(x, z, p.y > this.landAt(p.x, p.z) - 2.5 ? Infinity : -Infinity); }
+
+  // The land itself there, whatever lies under it or stands on it.
+  landAt(x, z) {
     const u = x + 128, v = z + 128;
     if (u < 0 || v < 0 || u >= 256 || v >= 256) return terrainHeight(x, z);
     const i = u | 0, j = v | 0, a = u - i, b = v - j, h = this.heights;
@@ -260,8 +282,14 @@ export class World {
   }
 
   // Where the player comes down, at height y: in a house that depends how high they've got. Everyone else stays on the ground floor.
+  // (And over the catacombs, the land: the hill east of the cathedral has the Bell Crypt and the passages 30 m under it, and
+  // a floor there used to be everyone's floor whatever height they were at, so walking over the hill on the way to the Hill
+  // Road dropped you through the ground into the crypt. With your feet on the land, or over it, you stay on the land.)
   heightFor(x, z, y) {
-    return homeFloor(x, z, y) ?? this.height(x, z);
+    const home = homeFloor(x, z, y), h = home ?? this.height(x, z);
+    // (The rift's bridge and landings are kept as a house's floors are, so they come by either way.)
+    if (x > 140 && (home !== null || floorAt(x, z) === h)) { const land = this.landAt(x, z); if (land - h > 5 && y > land - 2.5) return land; }
+    return h;
   }
 
   inside(x, z, r) {

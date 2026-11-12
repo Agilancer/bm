@@ -3,6 +3,7 @@
 // and cast from the eye into the world, so a cut lands exactly under what the player sees.
 import { ARMOR_K } from '../items/items.js';
 import { floorAt } from '../core/interior.js';
+import { CHURCH_BOUNDS } from '../core/church.js';
 import { LAND_EDGE } from '../core/terrain.js';
 import { ABIL, EV, H, INPUT, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { clamp, damp, wrapAngle } from '../core/math.js';
@@ -102,6 +103,16 @@ export class Player {
     if ((Math.abs(this.x) > LAND_EDGE || Math.abs(this.z) > LAND_EDGE) && floorAt(this.x, this.z) === null && !inDungeon(this.x, this.z) && !inHall(this.x, this.z)) {
       this.x = clamp(this.x, -LAND_EDGE, LAND_EDGE); this.z = clamp(this.z, -LAND_EDGE, LAND_EDGE);
     }
+  }
+
+  // Down in the catacombs, off the edge of every floor (through a wall by a dodge, a blow or a blink): there the ground was
+  // the land's, thirty metres up, and you were stood on the hill over the crypt in one step. Back to the last floor instead.
+  keepUnder(sim, flying) {
+    const B = CHURCH_BOUNDS;
+    if (this.x < B.x0 || this.x > B.x1 || this.z < B.z0 || this.z > B.z1 || flying) { this.underAt = null; return; }
+    const deep = this.y < sim.world.landAt(this.x, this.z) - 6;
+    if (floorAt(this.x, this.z) !== null) { this.underAt = deep ? [this.x, this.z] : null; return; }
+    if (deep && this.underAt) { this.x = this.underAt[0]; this.z = this.underAt[1]; this.vx = 0; this.vz = 0; }
   }
 
   // What's in the hand changed: the other rig, if it takes the other number of hands, and nothing left over from the last sword.
@@ -278,6 +289,7 @@ export class Player {
     sim.world.resolve(tmp, 0.36, this.y + 0.2);
     this.x = tmp[0]; this.z = tmp[2];
     this.keepToLand();
+    this.keepUnder(sim, (abil & ABIL.FLY) !== 0);
     const g = sim.world.heightFor(this.x, this.z, this.y);
     if (this.y <= g) {
       if (!this.onGround && this.vy < -2) {

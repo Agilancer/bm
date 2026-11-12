@@ -741,7 +741,7 @@ export class Knight {
       this.vx = (this.x - ox) / dt; this.vz = (this.z - oz) / dt;
       if (!this.action) this.speed = Math.hypot(this.vx, this.vz);
     }
-    this.y = sim.world.height(this.x, this.z);
+    this.y = sim.world.groundFor(this.x, this.z, this.y);
   }
 
   // A guard on a post doesn't chase you across the land: past his leash from it, he lets you go.

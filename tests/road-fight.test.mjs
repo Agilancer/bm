@@ -31,7 +31,7 @@ function world() {
 
 // Walks to the pines and stands there; `kill(up, t)` says how many of those up to put down each second.
 function play(kill) {
-  const height = { height: () => 0, setCaveSealed() {}, inside: () => false };
+  const height = { height: () => 0, groundFor: () => 0, groundBy: () => 0, setCaveSealed() {}, inside: () => false };
   const body = () => ({ x: 0, z: 0, y: 0, yaw: 0, act(dt, w, b) { this.b = b; if (b.to && b.speed > 0) { const dx = b.to[0] - this.x, dz = b.to[1] - this.z, d = Math.hypot(dx, dz); if (d > 0.02) { const s = Math.min(d, b.speed * dt); this.x += dx / d * s; this.z += dz / d * s; } } } });
   const player = { x: 0, z: 0, y: 0, vx: 0, vz: 0, surfing: false, maxHp: 100, hp: 100 };
   const sim = { player, world: height, villagers: [body(), body()], knights: world(), time: 0, event() {} };

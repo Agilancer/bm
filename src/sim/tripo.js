@@ -30,7 +30,7 @@ function dungeonLairs(roster) {
     out.push({ key: p.key, x, z, r: p.r ?? 6, pick: have(p.pick), boss: elite.length ? elite : undefined, n: p.n - (elite.length ? 1 : 0), pal: p.pal, wake: p.wake || 34, dungeon: true, delve: p.delve,
       state: 'asleep', at: -1e9, tough: d.tough, tricks: true, spots: p.spots?.map(at), walk: p.walk?.map(at), more: p.more });
   }
-  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
+  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, isBoss: true, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
   return out;
 }
 
@@ -369,7 +369,7 @@ export class TripoMonster extends FieldCreature {
       this.x = pos[0]; this.z = pos[2];
     }
     this.speed = Math.hypot(this.vx, this.vz);
-    this.y = sim.world.height(this.x, this.z);
+    this.y = sim.world.groundFor(this.x, this.z, this.y);
     // Wings: up off the ground as the move says (roster.json hover, as a share of the height).
     const lift = this.dead ? 0 : (this.meta.hover?.[this.clip] || 0) * this.meta.height + (this.liftExtra || 0);
     this.hover += (lift - this.hover) * Math.min(1, dt * 2.5);
@@ -600,21 +600,28 @@ export class TripoWorld {
   }
 
   // A slot for one more: an empty one, or one whose body is long dead or far from you and doing nothing.
-  freeSlot() {
+  // must: for a dungeon's boss, which has to stand up whole or its dungeon can't be finished: any of the dead will do, and
+  // failing that whatever's alive, not in a fight and furthest off (not another boss). The twelve places were all held in
+  // Blackvigil by the halls either side of the Hollow Court, alive and not yet roused, and the Brothers never stood up.
+  freeSlot(must = false) {
     const sim = this.sim, p = sim.player;
     for (let i = this.first; i < this.first + this.count; i++) if (sim.knights[i] instanceof TripoEmpty && !this.claimed?.has(i)) return i;
     let best = -1, bd = 0;
     for (let i = this.first; i < this.first + this.count; i++) {
       const k = sim.knights[i];
       if (this.claimed?.has(i) || k.aggro) continue;
+      // (A dungeon's boss on its feet keeps its place however far off you are: the Hollow Brothers stand up as you pass
+      // under their court, and while you were 200 m off in the Sanctum the next packs to wake took their two places.)
+      if (!k.dead && k.lair?.isBoss) continue;
       const d = Math.hypot(k.x - p.x, k.z - p.z);
-      const spare = k.dead ? (k.deadT > 45 || d > 60 ? 1e6 + d : -1) : d > 150 ? d : -1;
+      let spare = k.dead ? (k.deadT > 45 || d > 60 ? 1e6 + d : -1) : d > 150 ? d : -1;
+      if (must && spare < 0 && !k.lair?.isBoss) spare = k.dead ? 1e5 + d : d > 12 ? d : -1;
       if (spare > bd) { bd = spare; best = i; }
     }
     return best;
   }
 
-  wake(lair) {
+  wake(lair, must = false) {
     const sim = this.sim;
     lair.state = 'awake';
     lair.spawned = 0; lair.killed = 0;
@@ -625,7 +632,7 @@ export class TripoWorld {
     this.loading.add(lair);
     let pending = 0;
     who.forEach(([id, boss], n) => {
-      const slot = this.freeSlot();
+      const slot = this.freeSlot(must);
       if (slot < 0) return;
       this.claimed.add(slot);
       pending++;
@@ -643,7 +650,7 @@ export class TripoWorld {
         this.claimed.delete(slot);
         if (lair.state !== 'awake') return;
         const old = sim.knights[slot];
-        if (old instanceof TripoMonster && (old.aggro || (!old.dead && Math.hypot(old.x - sim.player.x, old.z - sim.player.z) < 150))) return;
+        if (!must && old instanceof TripoMonster && (old.aggro || (!old.dead && Math.hypot(old.x - sim.player.x, old.z - sim.player.z) < 150))) return;
         const m = new TripoMonster(slot, rig, this.optsFor(id, lair, x, z, boss));
         m.lair = lair; m.boss = boss;
         if (lair.face !== undefined) { m.yaw = lair.face; m.idleT = 1e9; }

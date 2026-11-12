@@ -325,6 +325,10 @@ What stands at each place in `SITES` (`src/core/lands.js`) is plain geometry mad
 
 `node tools/lands/check-sites.mjs` fails if a collider stands on a road, a seal, a spot or the ground kept for a dungeon's portal (before Blackvigil's gate, the Howling Mouth's middle), and prints the triangle count. The places out in the land are about 75,000 triangles (15,000 before this pass), drawn in the village's one call. Looked at in headless pictures on a software GPU (`tools/world/views.mjs`); not walked by a person, and not measured for frame time.
 
+**More than two kinds of stone.** The places and the party dungeons were built from two paintings of masonry, `stone` and `rubble`, and their tinted copies: Blackvigil's outside was 84% one of them, the abbey 83%, the keep's halls 57%. Four more are in the static array now, taken from the catacombs' own paintings (none with a mark on it) by `python tools/village/more_stone.py`, which lays each three across and two up in the array's shape and adds it to the end of `assets/game/tex/manifest.json`: `block` (coursed blocks), `course` (rough coursed wall), `ashlar` (big dressed stone) and `flags` (a flagged floor). They take the tints like any other (`dark:block`, `pale:ashlar`, `frost:course`), and `TILE` in `src/core/sites.js` says how far one repeat goes (a third number for a floor's other way). Where they went: Blackvigil's curtain in black blocks, its towers coursed or dressed and the great block of the keep dressed; the dungeons' portal terraces; the abbey's long walls dressed and its west front in blocks; Khel's wall and towers; Frostwatch's wall; the bell tower's shaft; the obelisks' ring flagged; and inside the dungeons each room can have its own (`rock`, `seam`, `foot`, `ground` on a room: the keep's wards and halls in grey block and ashlar on flags, black where his sorcerers, his chapel and his throne are; the Warrens' feasting hall and thrones flagged; the Deeps' Goat-King's hall rimed coursework). `node --test tests/lair-dress.test.mjs` checks that every painting asked for exists and that no one painting is most of a dungeon. The four cost about 12 MB of texture each on a PC (a quarter of that on a phone). Seen in headless pictures on a software GPU only.
+
+**What lies about the lairs.** The 101 lairs stood on bare ground. `src/core/lair-dress.js` (`dressLairs`, called last by `buildSites`) gives each what its kind would leave, by who lives there (`lairKind`): a goblins' or kobolds' camp its fire, logs, midden, bones and a ring of stakes; spiders their dead poles with strands strung between and what they've wrapped; the dead children, the possessed and the necromancers a plot of leaning stones and turned earth; goat men and demons a ring of black stones round a slab; a dragon or a worm a banked, scorched bed with ribs standing in it; harpies and bats their perches and a nest; a wolf its den under boulders; Velscour's knights and the plague's a picket of stakes and a cold fire. It's for the eye only: nothing in it has a collider, so no fight and no path changes; it's kept low or out at the rim; nothing is laid on a road, in water, on a seal, on a spot where somebody stands or inside anything built; and it has no cloth and no mark of either side. About 33,000 triangles in all (the places are 261,000 with it: `node tools/lands/check-sites.mjs`).
+
 ### The land: who lives in it, what besets it, and the quests that take you out
 
 **Monsters by country.** `LAIRS` in `src/core/tripo-monsters.js` holds 101 lairs now (30 before): something at or near every place that isn't a safe town, and beside every road every few hundred metres to a kilometre, 45 to 110 m off to one side so a traveller sees it and isn't on top of it. Each country has its own (goblins, kobolds, spiders, wolves and goat men in the Darkwood and on the Downs; the drowned on the fen and the Sunken Mile; red goblins, kobolds in Ossery Quarry and a warband of seven in the Rustwood; Velscour's patrols thickening along the Vigil Road, with his lancers, casters, plague knights and bone giants out on the Waste; the dead and their keepers on the Barrow Moor; white goat men, wolves, the things at the Howling Mouth and the queen on Ravens' Tor in the fells; plague, demons and the possessed in the Gallowswood). They're few and weak near Bellmourn and many and hard far out, and all 68 models stand somewhere. A lair's lists are thinned to what the roster holds when it's stood up (`lairFor`), so a body that isn't made yet can be named. `node tools/monsters/place-lairs.mjs` finds a sound spot for a wanted lair: off the roads, the places, the water, steep ground and the tumblers' and jellies' camps, Velscour's knights half a kilometre from any seal, and no spot's neighbours within 235 m more than the twelve body slots can stand up. Every far lair has its glade (`src/core/hunts.js`, now looked up through a grid: every pine asks). The jellies have a camp at the Sunken Mile; the other Tessariels hunt at three of the nearer lairs (`PLACES` in `src/core/heroes.js`), though a lair only stands while you're within its `wake`, so they find one empty unless you're there.
@@ -352,6 +356,8 @@ Below, what makes it a catacomb is built, not painted: tiers of burial niches (l
 - `indoorAt` in the shaders treats anything below y = -6 as underground, so a catacomb ceiling must stay under that or the sun lights it.
 
 The Mourning Rift is a side branch off the north gate of the Founders' Hall, 30 m across and 20 m down, its terraces stepping down to a narrow floor and a burning stream. The rope bridge sags 2.3 m and is missing 3 m of planks a third of the way over: a run and a jump clears it, and a jump from a walk only does from the very lip. A fall leaves you on your last legs, never dead (`FALL_SAFE` in `src/sim/player.js`), and a scaffold stair along the rift, with a brazier at its foot, brings you back up. The room across has a chest and six undead, and there's another chest on the rift floor. The design follows the Mourning Gulf in the Bellmourn repo, built here with this game's textures and his red in place of its blue. The bridge is static, it doesn't sway. The dead walk the bridge and shelves up to the gap and won't step off (a floor marked `pit`, read by `inPit` in `src/core/interior.js`). Only the player can be under the bridge, so the floors in the rift are an entry in `homes`, chosen by how high you are (`homeFloor`).
+
+**The hill over the crypt.** The land east of the cathedral rises over the Bell Crypt and the passages beyond it, thirty metres down, and the Hill Road begins just past it. A floor down there used to be everyone's floor at any height (`floorAt` in `src/core/interior.js` has one height for each x and z), so walking over the hill dropped you through the ground into the crypt, and a step off a floor's edge in the catacombs stood you on the hill. Now whoever has their feet on the land stays on the land (`heightFor` for the player, `groundFor` for the party, the dead and the land's monsters, `groundBy` for what comes up out of the ground beside you: `src/sim/world.js`), and down below the player is put back on the last floor instead (`keepUnder` in `src/sim/player.js`). `node --test tests/over-the-crypt.test.mjs`. Found by auto-play on its way to the Bell Tower: it fell in, came up, and went round between the two for as long as it was watched.
 
 ### The village's houses and chests
 
@@ -444,8 +450,6 @@ the Bone Hydra, the werewolf, the Abyssal Mouth and any monster with 400 life or
 to be for whatever was nearest. A dungeon's boss keeps its own frame (`src/ui/party.js`), and the other gives way to it.
 Your own bars and your party's frames are as they were. `node --test tests/foe-bars.test.mjs`. Seen headless on a phone's
 screen in a fight in the woods; not looked at closely over each kind of body, so check the height on the big ones.
-
-### Auto-play
 
 ### The interface, and a phone's screen
 
@@ -565,6 +569,8 @@ The big map is looked about freely. The **wheel** (or a **pinch**, or its + and 
 
 Under a roof both maps show the place's own chart instead, as Bellmourn's map does below ground: the passages and rooms come out of the dark as you walk them (`src/ui/undermap.js`). There's one chart each for the cathedral and its catacombs, each party dungeon (the Hollowfang Warrens, Blackvigil Keep, the Howling Deeps: one for every delve in `DELVES`) and the Test Dungeon, half a metre to a cell, made from the place's own shape: the church's floors and colliders in `interior.json`, the delves' and the hall's fields. The filling-in runs along the floor from where you stand, 16 m at most, so it stops at walls and you never see into a room you haven't found the way to. Stone is warm near the surface and cold deep down, stairs are banded, a drop is red, doors are gold ticks, and rooms are named once you've stood in them. A new place under a roof wants a `Chart` there and a line in `chartAt`.
 
+### Auto-play
+
 The **Auto** button sits under Velscour's Skull whenever you're playing, taken from Velscour (`assets/ui/btn_auto.webp`,
 and its blue glow from Velscour's `css/style.css`). The button, or **P**, brings up a menu asking what it should do, and
 stops it once it's on; it needs no word. With the mouse held by the game, press P, or free the mouse (Esc or Alt) and click
@@ -573,7 +579,10 @@ button is enough to start it).
 
 The menu (`MODES` in `src/ui/autobrain.js`) has three choices, and starts on the one picked last time:
 
-- **Complete Quests.** The whole game, as below: the quests in order, the black knight, the party and the Warrens.
+- **Complete Quests.** The whole game, as below: the quests in order, the black knight, the party and the Warrens. A party
+  dungeon waits for the quest that sends it down (`delveOwed` in `src/ui/autobrain.js`): it used to go down the first it
+  was fit for, the Warrens at level 7 with none of its quests in hand, and came out four levels up with the quests of
+  levels 4 to 12 not begun and every dungeon to do again for each quest.
 - **Grind monsters for XP.** It asks where (the grinding grounds below), and does only that: no quests taken, talked
   through or handed in. It still sells, buys, mends and hires a party, and fights what comes at it.
 - **Dungeon Runs.** Round every dungeon you've finished, one after another, and round again, until it's stopped
@@ -849,6 +858,17 @@ ride, the walk's and the arrival's shots, the road hurried and let go, the banne
 no longer holding him. Seen on a phone's screen: the banner, the narrator's line, the recap card and the menu. Nobody
 has watched the shots themselves drawn, or the desk's layout of the feed: look at those first.
 
+**What a watched run found.** Auto-play was run headless from a new game, and again from level 18 with only the keep's last two quests left, with its stuck, lost and given-up moments printed (and each other Tessariel's `stuck` seconds). What stopped it, and is mended:
+
+- It gave up on anyone it was walking to after 75 s from setting out, so nobody more than a minute's walk off was ever reached (Ser Hale is 2.4 km from the square): the 75 s run from when it last got nearer (`approach`).
+- Within 140 m of the square any quest-giver counted as an errand in the town, even one in Cinderford; past 140 m the work in hand took over again. It turned back and forth on that line for ten minutes. Only a giver who's near counts (`errand`).
+- It kept its record of a foe by id for ever, so the next body with a dead one's id was "not being hurt" at first sight and left alone for 45 s (`engage` in `combat`).
+- Across country its short paths could not end on a dungeon portal's terrace and its probe turned it aside at the step, so it paced before Blackvigil's portal and the Howling Mouth's (`solidAt`, `local` and `clearFor` in `src/sim/nav.worker.js`; `tests/portal-approach.test.mjs`).
+- Wedged in the nook behind Silas Crane's hearth, its way out began through the partition. From a snug corner a path starts toward ground it can walk to in a straight line (`freeNear`), and stopped twice in one place it asks the nav thread for a way out on a finer grid (`escape`; `lost` and `motor` in the brain).
+- It went down a dungeon ahead of the quests that send it there (see Complete Quests above).
+
+And in the game itself, which a person would have met too: the hill over the Bell Crypt (see "The cathedral and the catacombs"); Velscour's knight given his life back by anyone else's blow (`hit` in `src/sim/hero.js`: with a party at your side he couldn't be killed); a dungeon's boss left without a place to stand when the halls round it held all twelve (`freeSlot` and `wake` in `src/sim/tripo.js`, `stepBosses` in `src/sim/dungeon.js`: the Hollow Brothers never stood up, so the keep couldn't be finished); and the other Tessariels' way out of town (see "The Free Company").
+
 **For balancing.** Auto-play keeps a log, for reading a whole run afterwards. Open it with **log** under its status line, or
 **Balance log** in the menu. It lists:
 
@@ -980,6 +1000,8 @@ screen is a frame for each, with their life.
 - **Your party use their moves from where they're put.** One of yours fighting from a place it was given (the healer's
   distance, a dragon's flank) used only its ordinary blows there. It now uses any move that doesn't take it off that
   place; the healer too, between mendings.
+
+**Leaving town, and getting nowhere.** A party's way out of town went by a point 52 m from the square in the direction it was bound (`route` in `src/sim/hero.js`); toward the north-east that point is inside a house, and two parties stood against its walls for five minutes and more. The point is moved to the nearest open ground (`openAt`), and any of them pressing at something for eight seconds without getting nearer lets that goal go: a road's leg is passed over for the next, anything else is picked again. `bm.heroes('dump')` gives each one's `stuck` seconds.
 
 ### Their moves
 
