@@ -31,6 +31,8 @@ export function stage(cls, level = 30, nFoes = 6) {
   const person = { ...cast.find((p) => p.cls === cls), slot: 0, level };
   const props = kit.props;
   const hero = new Hero(0, rigOf(person.body), bank, person, props);
+  // (Its arms in hand, as in a fight and a while after: src/core/stow.js puts them away otherwise.)
+  hero.stow = 0; hero.calmT = -1e9;
   const foes = [];
   for (let i = 0; i < nFoes; i++) {
     const a = i / nFoes * Math.PI * 2, r = i === 0 ? 0 : 2.2;

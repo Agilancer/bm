@@ -37,7 +37,7 @@ function play(kill) {
   const sim = { player, world: height, villagers: [body(), body()], knights: world(), time: 0, event() {} };
   const op = new Opening(sim);
   op.setStage(OPENING.COLLAPSE); op.time = COLLAPSE_END - 0.01; op.update(1 / 60);
-  const dt = 1 / 30, at = routeNear(-214, 180);
+  const dt = 1 / 30, at = routeNear(-161.5, 134.3);
   let s = 0, t = 0, began = -1, sec = -1;
   const log = [], said = [];
   let last = 0;
@@ -106,4 +106,17 @@ test('the bodies kept for the road are enough for its children and its necromanc
   for (const b of BODIES) seen.set(b.model, (seen.get(b.model) || 0) + 1);
   assert.deepEqual([...seen].filter(([, n]) => n > 1).map(([m]) => m), [BODIES.find((b) => b.child).model]);
   assert.ok(ROUTE.len > 400);
+});
+
+test('a wizard or a necromancer with no pane of light up still takes a spell: its ward is a count of blows, not a share', async () => {
+  // (Spells once took `k.ward ?? 1` as the share of a blow that lands, which is the Warrens' twins' (now `shrug`): on a
+  // caster `ward` is how much its pane of light has left, nought with none up, so nothing of yours ever hurt one.)
+  const fs = await import('node:fs');
+  for (const f of ['../src/sim/casting.js', '../src/sim/hero.js']) {
+    const src = fs.readFileSync(new URL(f, import.meta.url), 'utf8');
+    assert.ok(!/\*=?\s*\(?\w+\.ward \?\? 1/.test(src), `${f} scales a blow by ward`);
+  }
+  const k = Object.assign(Object.create(Caster.prototype), { ward: 0, hp: 60, seenHp: 60, maxHp: 60, rayPiece: -1, easy: true, alive: [], limb: [], hitPart: [] });
+  k.hp -= 10; k.takeBlow({ casting: { burst() {} } }, 10);
+  assert.ok(k.hp < 60, `it took the blow (${k.hp})`);
 });

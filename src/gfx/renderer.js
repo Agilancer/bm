@@ -2606,7 +2606,8 @@ export class Renderer {
     const vmData = this.vmData || (this.vmData = new Float32Array(20));
     vmData.set(vmSway, 0);
     // A spell that wants the hands takes the sword down out of the way.
-    const lowered = snap[H.VM_LOWER];
+    // (And out of a fight they're put away: down out of the view the same way. H.STOW, src/sim/sim.worker.js stepStow.)
+    const stowed = snap[H.STOW] || 0, lowered = Math.max(snap[H.VM_LOWER], stowed);
     vmData[13] -= lowered * 0.85; vmData[14] += lowered * 0.2;
     // (The old hands' own left arm would be a second one, so those stand aside for it. A staff's rig has none, and stays.)
     this.vmDown = lowered > 0.995 || (this.shieldParts.length > 0 && this.vm === this.vms[1]);
@@ -2659,7 +2660,7 @@ export class Renderer {
     breath[4] += this.carryX; breath[5] += this.carryY;
     breath[5] -= surfArm * 0.35;      // (the skull's arm going down; half, as this is a dual quaternion)
     // A one-handed spell lowers the staff and leaves the skull where it is.
-    const skullLow = snap[H.SKULL_LOWER];
+    const skullLow = Math.max(snap[H.SKULL_LOWER], stowed);
     this.skullDown = skullLow > 0.995;
     const vmY = vmData[13], vmZ = vmData[14], skullY = vmSway[13] - skullLow * 0.85, skullZ = vmSway[14] + skullLow * 0.2;
     for (const h of this.skullParts) {
