@@ -186,8 +186,9 @@ fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32, jx: f32, jz: f32, y1: f32,
 
 fn indoorAt(p: vec3f) -> f32 {
   // The party dungeons, out past the world's edge and deep under it (src/core/dungeon.js DELVES): the Hollowfang Warrens,
-  // Blackvigil Keep, the Howling Deeps.
-${DELVES.map((d) => `  if (p.x > ${f32(d.box.x0)} && p.x < ${f32(d.box.x1)} && p.z > ${f32(d.box.z0)} && p.z < ${f32(d.box.z1)} && p.y < -20.0) { return 2.0; }`).join('\n')}
+  // Blackvigil Keep, the Howling Deeps. (A delve whose look is lit, the keep's great halls, has a warmer and brighter
+  // ambient than a cave's: 2.25, read where the ambient's chosen.)
+${DELVES.map((d) => `  if (p.x > ${f32(d.box.x0)} && p.x < ${f32(d.box.x1)} && p.z > ${f32(d.box.z0)} && p.z < ${f32(d.box.z1)} && p.y < -20.0) { return ${d.look.lit ? '2.25' : '2.0'}; }`).join('\n')}
   // The Test Dungeon, out past the other edge and as deep (src/core/testhall.js).
   if (p.x > ${f32(HALL_BOX.x0)} && p.x < ${f32(HALL_BOX.x1)} && p.z > ${f32(HALL_BOX.z0)} && p.z < ${f32(HALL_BOX.z1)} && p.y < ${f32(HALL_BOX.y1)}) { return 3.0; }
   if (p.x < ${f32(CHURCH_X + 65.9)}) {
@@ -256,7 +257,7 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   // (The Test Dungeon is lit white from its ceilings: bright from above, the floor's light thrown back up.)
   if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
-  else if (indoor > 1.5) { ambient = vec3f(0.044, 0.044, 0.048); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  else if (indoor > 1.5) { ambient = select(vec3f(0.044, 0.044, 0.048), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   // (A house's rooms have only their windows: at night, about a fifth of the day's. F.sunColor.a is the day behind a window.)
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);

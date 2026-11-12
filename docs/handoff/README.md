@@ -90,25 +90,49 @@ one headless game fits on four cores: run them one at a time.
 V (Velscour) and T (Tessariel) never together, on anything; no letters or monograms on what you make. Monsters' attacks go
 through `sim.perils` and the named `MOVES`. Auto-play must be kept up with the game.
 
-## State when handed over (measured, 2026-11-12)
+## State now (kept up as the work goes on; last written 2026-11-12, second session)
 
-The four streams were cut off by a usage limit before three of them could write their notes: only `places.md` exists. For
-the models, the dungeons and the people-and-quests go by the code, the `*-status.txt` files, `scratch/` (the streams' own
-throwaway scripts: model surgery and render helpers, fight logs' helpers, shot lists; not maintained) and `pictures/`.
+A draft pull request is open: #137. The owner's standing word: if the account's weekly usage nears its limit, commit
+everything, bring these notes up to date and push, so another account can take over from the pull request.
 
-- `node --test tests/*.test.mjs`: 168 pass, 2 fail (the two old Lisandra voice-file tests).
-- `node tools/dungeon/check.mjs`: passes ("The delves hold together"): three delves, ten bosses
-  (`grubnash twins venomaw | maldrec sorvane brothers castellan | hrymgar broodmother sleeper`). Boss bodies are
-  `VARIANTS` `bv_maldrec bv_sorvane bv_garrow bv_gault bv_castellan hd_hrymgar hd_broodmother hd_spiderling hd_sleeper`.
-- `node tools/testhall/check.mjs` and `node tools/lands/check-vt.mjs`: pass.
-- `node tools/autoplay/check.mjs`: FAILS, 218 lines, as expected: auto-play has been taught none of this. Its output is in
-  `autoplay-check-output.txt`: that is the to-do list for step 4.
-- In the tables now: 34 sites, 101 lairs (there were 30), 56 quests (there were 16). The forty new quests include
-  breadcrumbs (`word_to_thornwick`, `tracks_west`, `owed_to_frostwatch`, `millhaven_man`, `moor_wayhouse`, `old_toll`,
-  `ossery_quarry`...) and dungeon quests (`warrens_mouth`, `tunnel_king`, `mother_of_the_warren`, `into_the_deeps`,
-  `broodmother`, `the_sleeper`, `gate_of_blackvigil`, `first_lord`, `lords_of_the_keep`, `the_castellan`...); whether a
-  test asserts that every hub and portal is led to has not been confirmed by the lead.
-- NOT verified by anyone: the eyes' glow in the game (the picture `models_pk_hall_a` shows an empty hall: the summon
-  didn't show), Ser Hale in the game, the new knights in the game, the fights of the two new dungeons beyond the stream's
-  own headless runs, any room of the Howling Deeps drawn, the Warrens' visual pass (may not exist), the posted villagers
-  standing in their towns, any new quest played in the game. Blackvigil's gate hall is nearly black (`dungeon_bv_gate`).
+Stream notes: `places.md` and `people-quests.md` exist. The models and dungeons streams never wrote theirs: go by the code,
+the `*-status.txt` files, `scratch/` (the streams' throwaway scripts) and `pictures/`.
+
+**Done since the first handover**
+
+- `origin/main` merged in (three conflicts: `src/main.js`, `src/ui/folk.js`, `src/ui/party.js`).
+- The quest log (`src/ui/questlog.js`, new on main): a place on the map for the new kinds of step (a lair, a dungeon's
+  portal, a boss, the Waste); a quest with no `about` is told by its journal lines.
+- Auto-play taught everything (`node tools/autoplay/check.mjs` passes): the 40 quests in `PLAN` with levels, the 71 lairs
+  in `LAIR_LEVEL`, the posted people, the step kinds `foe`, `boss`, `end`, `at`, `area()` and hunting grounds for lairs
+  and the Waste; in `src/ui/autowarrens.js` the way through each dungeon (`WAYS`), a dungeon chosen by what the quests in
+  hand want (`delveWants`), each dungeon's own portal, last boss, way out and level; dungeon runs for all three
+  (`clearsBy` in `src/ui/party.js`). Its boss tactics for the seven new bosses are the general ones only (out of marks,
+  across shots, jump rings, adds first, behind the tank when turned on): nothing particular to each fight.
+- Blackvigil's halls were nearly black: a delve whose `look.lit` is set gets a warmer, brighter ambient (`indoorAt`
+  returns 2.25; `src/gfx/shaders.js`, `materials.js`), and its fires glow wider. Seen in the game: the gate, guardroom,
+  ward, inner gate, barracks, court, hall, throne read well now. The Howling Deeps' herd cave and lake were looked at
+  and read well.
+- Ser Hale seen in the game beside the tower's door, with the Bellwright: stands on the yard's paving, reads well.
+- `tools/world/views.mjs`: a fifth field puts the player apart from the camera; `LOG` and `WARN` env.
+
+**Checks:** `node --test tests/*.test.mjs` 197 pass, 2 fail (the old Lisandra voice-file tests); dungeon, testhall,
+check-vt, items and autoplay checks pass.
+
+**Found out**
+
+- The "white broken ground" at the Bell Tower is not the tower's: the far land is drawn pale until its map is baked, on
+  the headless software GPU (it's in the very first picture, before any of this work).
+- Bodies load slowly headless. Townsfolk load one after another (9 of 48 after three minutes), so the posted villagers,
+  who are last, were never seen: probably not a fault, but NOT YET CONFIRMED by waiting long enough. Tripo monsters'
+  models take over a minute to come in after a teleport, and a second teleport starts them again: every picture of a
+  dungeon so far shows its rooms EMPTY for that reason, though the sim has the packs standing there (a guardroom of five
+  knights, the new variants among them) and the renderer's slots do fill.
+
+**Still not seen by anyone:** any monster drawn in a dungeon; the boss knights and their eyes' glow in the game; the new
+knight bodies in the game; the posted villagers; a quest played; auto-play playing any of the new parts; the Warrens
+after its visual pass (if it had one: look at `src/core/delve-warrens.js` props).
+
+**Still to do:** the list under "What is left" from step 2 on, less what's above. The README's own sections for the
+dungeons and models need checking against the code (the streams wrote some; not reviewed). Frame cost of the places'
+five-fold geometry is unmeasured.

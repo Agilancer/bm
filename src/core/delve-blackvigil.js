@@ -243,6 +243,6 @@ export const BLACKVIGIL = {
   // Before the keep's gate on the Vigil Road, facing east down it (SITES.keep is at -5000, 200; its gate 70 m east of that).
   portal: { x: -4914, z: 200, yaw: Math.PI / 2, r: 2.2 },
   last: 'castellan', tough: { hp: 5, damage: 1.35 }, pay: { xp: 4200, gold: 700 },
-  look: { wall: 'stone', foot: 'dark:stone', floor: 'stone', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.5, 0.2], fire: [1, 0.54, 0.22], every: 9, high: 3, glow: 1.7 },
+  look: { wall: 'stone', foot: 'dark:stone', floor: 'stone', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.5, 0.2], fire: [1, 0.54, 0.22], every: 9, high: 3, glow: 2.1, lit: true },
   words: { enter: 'Blackvigil Keep. His knights hold every hall of it, and his sorcerers the galleries.', clear: 'Blackvigil Keep is cleared. The Castellan is dead!', wipe: 'Your party falls... and wakes inside the gate.' },
 };
