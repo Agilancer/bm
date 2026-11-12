@@ -14,7 +14,7 @@
 import { MOVE_KEYS } from '../core/heroes.js';
 import { EV } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
-import { ELEM, FX, GLYPHS, MAT } from './spells.js';
+import { ELEM, FX, GLYPHS, MAT, SHIELDS } from './spells.js';
 
 const { FIRE, FROST, ARCANE, STORM, HEAL, LIGHT, DRAIN, VOID, SPIRIT, POISON, STONE } = ELEM;
 const TAU = Math.PI * 2;
@@ -231,6 +231,13 @@ export function hammer3(c, x, y, z, yaw, spin, size, elem = LIGHT, glow = 1, lig
   for (const k of [-1, 1]) c.fx(FX.BOX, elem, tx + px * k * 0.235 * size, ty + py * k * 0.235 * size, tz + pz * k * 0.235 * size, 0.125 * size, px, py, pz, 0.07 * size, 0.6 * glow, 0, 0, MAT.GOLD, 0, 0.125 * size);
   c.fx(FX.BOX, elem, tx, ty, tz, 0.108 * size, px, py, pz, 0.08 * size, 1.3 * glow, 0, 0, MAT.LIGHT, 0, 0.108 * size);
   if (glow > 0.3) c.fx(FX.ORB, elem, tx, ty, tz, 0.16 * size, 0, 1, 0, 0, 0.3 * glow);
+}
+// One of the lancers' golden shields (SHIELDS: round, diamond, kite, tower), standing, its face the way (fx, fz) looks:
+// a real board, seen from the front and from behind. size: half its height. glow: its element's light on its edge.
+// Each of the four stands its own height, so a ring of them reads as four shields, not one.
+const SHIELD_ORDER = [SHIELDS.TOWER, SHIELDS.ROUND, SHIELDS.KITE, SHIELDS.DIAMOND], SHIELD_TALL = [0.8, 0.95, 1, 1.05];
+export function shield3(c, kind, elem, x, y, z, size, fx, fz, glow = 0.6, light = 0, turn = 0) {
+  c.fx(FX.SHIELD, elem, x, y, z, size * SHIELD_TALL[kind], fx, 0, fz, turn, glow, light, light ? 5 : 0, kind);
 }
 // A throwing star: `n` shards crossed, turning in a plane. flat: lying level; else upright, in the plane through `yaw`.
 export function star3(c, x, y, z, spin, size, elem, mat = MAT.STEEL, n = 2, glow = 1, yaw = 0, flat = true) {
@@ -760,7 +767,7 @@ function throwBoard(h, sim, m, X, o) {
       tick: (s) => { if (real) h.free[1] = boardFlight(s, o.upright, 1.5); },
       draw: (cc, s) => {
         const vv = Math.hypot(s.vx, s.vy, s.vz) || 1;
-        if (!real) cc.fx(FX.KITE, o.elem, s.x, s.y, s.z, 0.6, Math.sin(s.t * 16), 0, Math.cos(s.t * 16), 0, 1, 0, 0, 0.3, 0);
+        if (!real) shield3(cc, SHIELDS.ROUND, o.elem, s.x, s.y, s.z, 0.5, Math.sin(s.t * 16), Math.cos(s.t * 16), 1);
         cc.fx(FX.ORB, o.elem, s.x, s.y, s.z, 0.55, 0, 1, 0, 0, real ? 0.3 : 0.5, 7, 5);
         if (!(s.pause > 0)) cc.fx(FX.TRAIL, o.elem, s.x, s.y, s.z, 0.26, -s.vx / vv, -s.vy / vv, -s.vz / vv, 1.6, 0.6);
         cc.fx(FX.DISC, o.elem, s.x, s.y - 0.02, s.z, 0.7, 0, 1, 0, 0, 0.18);
@@ -1037,7 +1044,7 @@ CAST.lance_barrage = (h, sim, m, { P }) => chain(h, sim, [STAB, STAB, STAB, STAB
   h.yaw += last ? 0 : (i % 2 ? 0.1 : -0.1);
   h.thrust(sim, 3.2, (last ? 11 : 7) * P, last ? 4 : 0, last ? LAST_LIGHT : JAB_LIGHT);
 }, { lunge: 1.2, aimed: true, stab: true });
-// The board raised, and boards of light come up round him and turn: low, wide, as tall as his own. They cut what they
+// The board raised, and boards of gold come up round him and turn: low, wide, as tall as his own. They cut what they
 // touch, and everything they touch, and everything near, is his.
 CAST.tower_shields = (h, sim, m, { w, c, P, rk }) => {
   const n = Math.min(8, 2 + rk), elem = STORM;
@@ -1055,7 +1062,7 @@ CAST.tower_shields = (h, sim, m, { w, c, P, rk }) => {
         if (h.fxOk()) c.burst(FX.RING, elem, h.x, h.y + 0.06, h.z, 2.1, 7, 0.55, { alpha: 0.6 });
       },
       draw: (cc, x, y, z, a, i, q, k) => {
-        cc.fx(FX.KITE, i % 2 ? FROST : elem, x, y, z, 0.62, Math.sin(a), 0, Math.cos(a), 0, 0.95 * k, i === 0 ? 7 * k : 0, 5, 0.3, i);
+        shield3(cc, SHIELD_ORDER[i % 4], i % 2 ? FROST : elem, x, y + 0.08 * Math.sin(q.t * 2.6 + i * 1.7), z, 0.58 * (0.25 + 0.75 * k), Math.sin(a), Math.cos(a), 0.7 * k, i === 0 ? 7 * k : 0);
         cc.fx(FX.TRAIL, elem, x, y, z, 0.1, -Math.cos(a), 0, Math.sin(a), 1.3, 0.5 * k);
         if (i === 0) cc.fx(FX.RING, elem, h.x, h.y + 0.06, h.z, 2.1, 0, 1, 0, 0, 0.5 * k);
       } });
@@ -1082,7 +1089,7 @@ CAST.sunspear = (h, sim, m, { w, c, P }) => {
     sim.event(EV.WHOOSH, hp[0], hp[1], hp[2]);
   }, { mask: 'full', end: 0.42, cut: () => { z0.done = true; } });
 };
-// The board into the ground: a ring of force, and boards of light flung out every way. What it throws back is his.
+// The board into the ground: a ring of force, and boards of gold flung out every way. What it throws back is his.
 CAST.bulwark_nova = (h, sim, m, { w, c, P, rk }) => {
   h.shieldTarget = 1;
   gather(c, h, STORM, 3, 0.3);
@@ -1094,7 +1101,7 @@ CAST.bulwark_nova = (h, sim, m, { w, c, P, rk }) => {
       boom(c, STORM, h.x, h.y + 0.5, h.z, r * 0.9, 16);
       c.burst(FX.RING, STORM, h.x, h.y + 0.05, h.z, 0.5, r, 0.5);
       c.burst(FX.RING, FROST, h.x, h.y + 0.05, h.z, 0.3, r * 0.7, 0.6);
-      zone(w, h, 0.45, (cc, q) => { const k = q.t / 0.45; for (let i = 0; i < 8; i++) { const a = i * TAU / 8; cc.fx(FX.KITE, i % 2 ? FROST : STORM, h.x + Math.sin(a) * (0.8 + k * r), h.y + 1, h.z + Math.cos(a) * (0.8 + k * r), 0.5 + k * 0.4, Math.sin(a), 0, Math.cos(a), 0, 1 - k, 0, 0, 0.3, i); } });
+      zone(w, h, 0.45, (cc, q) => { const k = q.t / 0.45; for (let i = 0; i < 8; i++) { const a = i * TAU / 8; shield3(cc, SHIELD_ORDER[i % 4], i % 2 ? FROST : STORM, h.x + Math.sin(a) * (0.8 + k * r), h.y + 1, h.z + Math.cos(a) * (0.8 + k * r), (0.5 + k * 0.25) * Math.min(1, (1 - k) * 4), Math.sin(a), Math.cos(a), 1 - k); } });
       hfx(sim, HFX.THUD, h.x, h.y, h.z, 0.8); hfx(sim, HFX.SPARKS, h.x, h.y + 0.6, h.z, 50);
     }
     sim.event(EV.GROUND, h.x, h.y, h.z);
@@ -1143,7 +1150,7 @@ CAST.phalanx_rush = (h, sim, m, { w, c }) => {
     const nx = () => left > 0 && nearest(w, h.x, h.z, 8, seen);
     dash(h, sim, dirTo(h, k), Math.min(8, dist(h, k) + 2.2), { v: 18, clip: 'Shield_Dash', dmg: 12, o: { stun: 0.5 }, aim: true,
       onHit: (f) => { if (h.fxOk()) slash(c, f.x, f.y + 1.1, f.z, h.yaw + Math.PI / 2, 0, 2, STORM, 0.2); },
-      draw: (cc) => { const p = h.handPos('r'), s = Math.sin(h.yaw), co = Math.cos(h.yaw); cc.fx(FX.BEAM, STORM, p[0], p[1], p[2], 0.09, s, 0, co, 3, 1, 6, 4, 0, 0, 0.03); cc.fx(FX.TRAIL, STORM, h.x, h.y + 1, h.z, 0.3, -s, 0, -co, 3, 0.7); cc.fx(FX.KITE, STORM, h.x + s * 1.0, h.y + 1, h.z + co * 1.0, 0.65, s, 0, co, 0, 0.6, 0, 0, 0.3, 0); },
+      draw: (cc) => { const p = h.handPos('r'), s = Math.sin(h.yaw), co = Math.cos(h.yaw); cc.fx(FX.BEAM, STORM, p[0], p[1], p[2], 0.09, s, 0, co, 3, 1, 6, 4, 0, 0, 0.03); cc.fx(FX.TRAIL, STORM, h.x, h.y + 1, h.z, 0.3, -s, 0, -co, 3, 0.7); shield3(cc, SHIELDS.TOWER, STORM, h.x + s * 1.0, h.y + 1, h.z + co * 1.0, 0.7, s, co, 0.8); },
       done: () => {
         if (h.fxOk()) { const dx = h.x - x0, dz = h.z - z0, L = Math.hypot(dx, dz) || 1; c.burst(FX.BEAM, STORM, x0, y0, z0, 0.16, 0.02, 0.6, { ax: dx / L, ay: 0, az: dz / L, len: L, alpha: 0.6, extra: 0.05 }); }
         const f = nx();
@@ -1186,7 +1193,7 @@ CAST.charge_of_the_order = (h, sim, m, { w, c, P, yaw }) => {
       const k = Math.min(1, q.t * 5, (1.15 - q.t) * 4);
       for (const r of riders) {
         const y = sim.world.height(r.x, r.z);
-        cc.fx(FX.KITE, FROST, r.x, y + 1.5, r.z, 0.75, s, 0, co, 0, 0.8 * k, 0, 0, 0.3, 0);
+        shield3(cc, SHIELDS.KITE, FROST, r.x + s * 0.5, y + 1.5, r.z + co * 0.5, 0.6 * k, s, co, 0.8 * k);
         cc.fx(FX.BEAM, STORM, r.x, y + 1.3, r.z, 0.1, s, -0.05, co, 3.4, k, 6 * k, 4, 0, 0, 0.03);
         cc.fx(FX.FLARE, LIGHT, r.x + s * 3.4, y + 1.15, r.z + co * 3.4, 0.3, 0, 1, 0, 0, k);
         cc.fx(FX.TRAIL, STORM, r.x, y + 0.9, r.z, 0.4, -s, 0, -co, 3.5, 0.5 * k);

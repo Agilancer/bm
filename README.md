@@ -1110,6 +1110,22 @@ player aims perfectly and never tires, and its Firebolt is not a person's whole 
 more than as what a person will get. **Nobody has played these fights by hand, and none of it has been seen drawn in
 the game**: see "Monsters' attacks" below.
 
+### The lancers' spinning shields
+
+The boards a lancer calls up round himself (Tower Shields, Bulwark Nova, Phalanx Rush, Charge of the Order, and a hired
+lancer's Shield Wall) are real golden shields, not kites of light: the four from VELSCOUR's Lancer (a round one, a
+diamond, a kite and a tower), each with a worked face and a rear of dark hide and gold grips, so a ring of them shows
+fronts on the near side and backs on the far side as it turns. The sim draws one with `shield3` (`src/sim/heroskills.js`),
+which is the shape `FX.SHIELD` (`src/sim/spells.js`: its age is which of the four, `SHIELDS`); the renderer builds the
+four meshes from their outlines and draws them lit, with their element's light on the rim (`src/gfx/spellfx.js`).
+
+VELSCOUR's shields are 44x56 pixel turntables (kept in `art/lancer_shields/`), far too small to enlarge as pictures, so
+`python tools/shields/lancer_spin.py` (pillow, numpy, scipy; `--sheet` writes `tools/build/lancer_shields.png` to look
+at) takes each one's proportions and wear from its sheet, draws its outline clean and works its face in relief. It writes
+`assets/game/fx/lancer_shields.webp` and `src/gfx/shieldshapes.js`: don't edit either by hand. Nothing on them reads as
+a letter (the V and T rule). Test: `node --test tests/lancer-shields.test.mjs`. To look at them in the game:
+`node tools/heroes/moves.mjs all lancer`. The paladin's Divine Shield and Crusader's Charge are still boards of light.
+
 ### Monsters' attacks: marks on the ground, and what flies
 
 Everything a monster throws or marks on the ground is one system, `sim.perils` (`src/sim/perils.js`), which anything in

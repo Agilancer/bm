@@ -25,10 +25,15 @@ export const FX = {
   // BOX: a block (its length along the axis, size its half width, extra its half depth, seed its turn about the axis), and
   // SHARD: a flat diamond (two crossed make a throwing star). Both are of a MAT, in the age. The other Tessariels' hammers,
   // stars and boomerangs are built of them (src/sim/heroskills.js).
-  BOX: 22, SHARD: 23, LIGHT: 31,
+  // SHIELD: one of the lancers' four golden shields (SHIELDS below, in the age), a real board with a face and a rear: its
+  // axis is the way its face looks, its size half its height, its length how far it's turned in its own plane, and its alpha
+  // how much of its element's light is on its edge.
+  BOX: 22, SHARD: 23, SHIELD: 24, LIGHT: 31,
 };
 // What a GLYPH shows.
 export const GLYPHS = { NOTE: 0, NOTES: 1, CROTCHET: 2, WAVES: 3, STAR4: 4, CRESCENT: 5, DROP: 6, CROSS: 7, RANG: 8, HAMMER: 9, STAR6: 10, SPARK: 11, WING: 12, SHIELD: 13 };
+// Which of the lancers' spinning shields a SHIELD is (src/gfx/shieldshapes.js: the same order).
+export const SHIELDS = { ROUND: 0, DIAMOND: 1, KITE: 2, TOWER: 3 };
 // What a BOX or a SHARD is made of: steel, gold, wood, or nothing but its element's light.
 export const MAT = { STEEL: 0, GOLD: 1, WOOD: 2, LIGHT: 3 };
 // A LIGHT with this as its extra is one somebody carries (your party's: src/sim/hero.js partyLights). The renderer keeps

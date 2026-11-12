@@ -9,7 +9,7 @@ import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
 import { floorAt, inPit } from '../core/interior.js';
-import { ELEM, FX, FX_CARRIED } from './spells.js';
+import { ELEM, FX, FX_CARRIED, SHIELDS } from './spells.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { Knight, S, matToQuat, norm, orth, cross, restHold, turn } from './knight.js';
 import { stepStow } from '../core/stow.js';
@@ -24,7 +24,7 @@ import { Pose, solveFK } from './anim.js';
 import { BROKER_SPOTS, PORTAL, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
 import { cleanLine } from './sight.js';
-import { MORE_SKILLS, arrive, arrow3, castSkill, chooseSkill, classRoutine, cutArc, diveDraw, hammer3, install, pike3, pluckNote, rank, stepShotX, strumFx, tintOf } from './heroskills.js';
+import { MORE_SKILLS, arrive, arrow3, castSkill, chooseSkill, classRoutine, cutArc, diveDraw, hammer3, install, pike3, pluckNote, shield3, rank, stepShotX, strumFx, tintOf } from './heroskills.js';
 
 const STRING_ELEM = { gold: ELEM.LIGHT, azure: ELEM.FROST, emerald: ELEM.HEAL, violet: ELEM.ARCANE, crimson: ELEM.DRAIN, silver: ELEM.SPIRIT, ember: ELEM.FIRE, rose: ELEM.STORM };
 const GAP = 1.2;                 // hips to hips, hero to anything
@@ -749,11 +749,11 @@ export class Hero extends Knight {
         this.shieldTarget = 1;
         this.startSwing('Shield_OneShot', 1.3, [0.4], () => {
           this.guardT = 4;
-          // Boards of light stood in a row before him for as long as it holds, a line on the ground, and everything near called onto him.
+          // Boards of gold stood in a row before him for as long as it holds, a line on the ground, and everything near called onto him.
           const yaw = this.yaw;
           w.zones.push({ kind: 'fx', owner: this, t: 0, life: 4, draw: (c, z) => {
             const k = Math.min(1, z.t * 5, (4 - z.t) * 3), fx = Math.sin(yaw), fz = Math.cos(yaw);
-            for (let i = -2; i <= 2; i++) { const a = yaw + i * 0.56, r = 1.5; c.fx(FX.KITE, i % 2 ? ELEM.FROST : ELEM.STORM, this.x + Math.sin(a) * r, this.y + 1.0, this.z + Math.cos(a) * r, 0.7 * Math.min(1, z.t * 6 - Math.abs(i) * 0.3 + 0.6), Math.sin(a), 0, Math.cos(a), 0, 0.85 * k, i === 0 ? 6 * k : 0, 5, 0.3, i); }
+            for (let i = -2; i <= 2; i++) { const a = yaw + i * 0.56, r = 1.5; shield3(c, SHIELDS.TOWER, i % 2 ? ELEM.FROST : ELEM.STORM, this.x + Math.sin(a) * r, this.y + 1.0, this.z + Math.cos(a) * r, 0.72 * Math.min(1, z.t * 6 - Math.abs(i) * 0.3 + 0.6) * Math.min(1, k * 1.5), Math.sin(a), Math.cos(a), 0.7 * k, i === 0 ? 6 * k : 0); }
             c.fx(FX.RING, ELEM.STORM, this.x + fx * 0.3, this.y + 0.06, this.z + fz * 0.3, 1.5, 0, 1, 0, 0, 0.6 * k);
           } });
           for (const k of w.targets) if (fightable(k) && Math.hypot(k.x - this.x, k.z - this.z) < 8) { k.tauntBy = this; k.tauntT = sim.time + 4; k.heroFoe = this; k.heroFoeT = sim.time; }
