@@ -97,6 +97,19 @@ const FLAME_ROOM = 1.4;   // and a flame's than the flame
       vp = (F.view * vec4f(I.p.xyz + side * q.x * size + vec3f(0.0, q.y * size * 1.25, 0.0), 1.0)).xyz;
       o.uv = q;
     }
+    case 15u: {
+      // A sign: turned to the eye, or (given a face to lie along) a card in the world.
+      if (dot(I.a.xyz, I.a.xyz) > 0.25) {
+        let n = normalize(I.a.xyz);
+        let other = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(n.y) > 0.92);
+        let t1 = normalize(cross(other, n));
+        let t2 = cross(n, t1);
+        vp = (F.view * vec4f(I.p.xyz + (t1 * q.x + t2 * q.y) * size, 1.0)).xyz;
+      } else {
+        vp = (F.view * vec4f(I.p.xyz, 1.0)).xyz;
+        vp = vec3f(vp.xy + q * size * smoothstep(0.05, 0.5, -vp.z), vp.z);
+      }
+    }
     default: {
       vp = (F.view * vec4f(I.p.xyz, 1.0)).xyz;
       // Passing the lens, it shrinks away rather than fill the screen.
@@ -203,7 +216,7 @@ fn disc(uv: vec2f, size: f32, age: f32, e: u32, seed: f32, T: f32) -> vec4f {
 }
 
 fn line(v: f32, at: f32, w: f32) -> f32 { let d = (v - at) / w; return exp(-d * d); }
-fn rune(uv: vec2f, seed: f32, T: f32) -> vec4f {
+fn rune(uv: vec2f, seed: f32, T: f32, holy: f32) -> vec4f {
   let r = length(uv);
   if (r > 1.2) { return vec4f(0.0); }
   let a = atan2(uv.y, uv.x);
@@ -218,7 +231,14 @@ fn rune(uv: vec2f, seed: f32, T: f32) -> vec4f {
   let sec3 = tau / 3.0;
   let f3 = (fract((a + T * 0.42 + seed) / sec3) - 0.5) * sec3;
   let tri = r * cos(f3);
-  c += line(hept, 0.84, 0.006) * step(r, 0.9) + line(tri, 0.25, 0.006) * step(r, 0.52) * 1.2;
+  if (holy > 0.5) {
+    // Hallowed ground: rays going out from a cross at its heart (a paladin's; the rune's own figures are a wizard's).
+    let rays = pow(abs(cos(a * 8.0 + T * 0.15)), 60.0) * step(0.56, r) * step(r, 0.88);
+    let bar = max(step(abs(uv.x), 0.035) * step(abs(uv.y + 0.03), 0.34), step(abs(uv.y - 0.1), 0.035) * step(abs(uv.x), 0.2));
+    c += rays * 0.9 + bar * 1.1;
+  } else {
+    c += line(hept, 0.84, 0.006) * step(r, 0.9) + line(tri, 0.25, 0.006) * step(r, 0.52) * 1.2;
+  }
   let sweep = 0.55 + 0.45 * sin(a * 2.0 - T * 2.6);
   return vec4f(ramp(0.85) * (c * HOT * 1.1 * (0.5 + sweep * 0.5) + ticks * HOT * 0.3) + ramp(0.35) * smoothstep(1.0, 0.1, r) * 0.1, 0.0);
 }
@@ -320,6 +340,117 @@ fn shock(uv: vec2f, age: f32, seed: f32, T: f32) -> vec4f {
   return vec4f(ramp(band) * (band * band * HOT * 1.5 + band * 0.9) + ramp(0.5) * inner * n, 0.0);
 }
 
+// ---- signs drawn in light (GLYPHS in src/sim/spells.js): the bards' notes and their sound, the stars a ninja throws, the
+// crescents blades leave, a paladin's cross. Each is a mask in a card from -1 to 1, bright in its middle, with a soft glow.
+fn seg(p: vec2f, a: vec2f, b: vec2f) -> f32 { let pa = p - a; let ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)); }
+fn ink(d: f32, w: f32) -> f32 { return smoothstep(w, w * 0.45, d); }
+fn head(p: vec2f, c: vec2f) -> f32 {
+  let q = p - c;
+  let r = vec2f(q.x * 0.94 + q.y * 0.34, -q.x * 0.34 + q.y * 0.94);
+  return smoothstep(1.0, 0.72, length(r / vec2f(0.27, 0.19)));
+}
+fn starN(p: vec2f, n: f32, inner: f32) -> f32 {
+  let a = atan2(p.y, p.x);
+  let r = length(p);
+  let s = 3.14159 / n;
+  let f = abs(fract(a / (2.0 * s) + 0.5) - 0.5) * 2.0;     // 0 on a point, 1 between two
+  let edge = mix(0.95, inner, pow(f, 0.8));
+  return smoothstep(edge, edge * 0.8, r);
+}
+fn glyph(uv0: vec2f, which: u32, turn: f32, age: f32, seed: f32, T: f32) -> vec4f {
+  let cs = cos(turn); let sn = sin(turn);
+  let uv = vec2f(uv0.x * cs + uv0.y * sn, -uv0.x * sn + uv0.y * cs);
+  let r = length(uv);
+  if (r >= 1.42) { return vec4f(0.0); }
+  var m = 0.0;       // the sign itself
+  var hot = 0.75;    // how far up its element's colours
+  var halo = 0.35;
+  switch which {
+    case 0u: {   // a quaver
+      m = max(head(uv, vec2f(-0.16, -0.56)), ink(seg(uv, vec2f(0.08, -0.5), vec2f(0.08, 0.72)), 0.06));
+      m = max(m, ink(seg(uv, vec2f(0.08, 0.72), vec2f(0.46, 0.34)), 0.085 - 0.03 * smoothstep(0.1, 0.5, uv.x)));
+      m = max(m, ink(seg(uv, vec2f(0.46, 0.34), vec2f(0.4, 0.02)), 0.05));
+    }
+    case 1u: {   // two, beamed
+      m = max(head(uv, vec2f(-0.56, -0.58)), head(uv, vec2f(0.34, -0.46)));
+      m = max(m, max(ink(seg(uv, vec2f(-0.32, -0.52), vec2f(-0.32, 0.6)), 0.055), ink(seg(uv, vec2f(0.58, -0.4), vec2f(0.58, 0.72)), 0.055)));
+      m = max(m, ink(seg(uv, vec2f(-0.32, 0.6), vec2f(0.58, 0.72)), 0.1));
+      m = max(m, ink(seg(uv, vec2f(-0.32, 0.36), vec2f(0.58, 0.48)), 0.06));
+    }
+    case 2u: {   // a crotchet
+      m = max(head(uv, vec2f(-0.14, -0.56)), ink(seg(uv, vec2f(0.1, -0.5), vec2f(0.1, 0.74)), 0.06));
+    }
+    case 3u: {   // sound: arcs going out along +x, each fainter
+      let a = atan2(uv.y, uv.x);
+      let fan = smoothstep(1.05, 0.55, abs(a));
+      for (var i = 0; i < 3; i++) {
+        let rr = 0.3 + f32(i) * 0.3;
+        m = max(m, ink(abs(r - rr), 0.05) * fan * (1.0 - f32(i) * 0.22));
+      }
+      halo = 0.12;
+    }
+    case 4u: {   // a throwing star: four points, a hole at its heart
+      m = starN(uv, 4.0, 0.2) * smoothstep(0.07, 0.13, r);
+      hot = 0.95;
+    }
+    case 5u: {   // the crescent a blade leaves
+      let a = atan2(uv.y, uv.x);
+      let w = 0.2 * pow(max(cos(a * 1.15), 0.0), 1.6);      // (a little under half a circle: what a blade sweeps before a body, not round behind it)
+      m = smoothstep(w, w * 0.3, abs(r - 0.78 + 0.1 * cos(a))) * step(0.001, w);
+      hot = 0.68; halo = 0.0;
+    }
+    case 6u: {   // a drop
+      let q = vec2f(uv.x, uv.y + 0.3);
+      m = max(smoothstep(0.46, 0.34, length(q)), smoothstep(0.26 * (1.0 - smoothstep(-0.1, 1.0, uv.y)), 0.0, abs(uv.x)) * step(-0.1, uv.y) * step(uv.y, 0.92));
+      hot = 0.55; halo = 0.1;
+    }
+    case 7u: {   // a cross
+      m = max(ink(seg(uv, vec2f(0.0, -0.85), vec2f(0.0, 0.85)), 0.11), ink(seg(uv, vec2f(-0.5, 0.3), vec2f(0.5, 0.3)), 0.11));
+      hot = 0.72;
+    }
+    case 8u: {   // a boomerang: two arms from an elbow, thinning to their tips
+      let w = 0.2 - 0.11 * smoothstep(0.1, 0.9, abs(uv.x));
+      m = max(ink(seg(uv, vec2f(0.0, 0.42), vec2f(-0.82, -0.36)), w), ink(seg(uv, vec2f(0.0, 0.42), vec2f(0.82, -0.36)), w));
+      hot = 0.9;
+    }
+    case 9u: {   // a hammer
+      let hd = max(abs(uv.x) - 0.52, abs(uv.y - 0.52) - 0.27);
+      m = max(smoothstep(0.03, -0.03, hd), ink(seg(uv, vec2f(0.0, -0.88), vec2f(0.0, 0.3)), 0.09));
+      hot = 0.9;
+    }
+    case 10u: {  // a six-pointed star
+      m = starN(uv, 6.0, 0.42);
+      hot = 0.9;
+    }
+    case 11u: {  // a spark: eight thin rays
+      let a = atan2(uv.y, uv.x);
+      m = pow(abs(cos(a * 4.0)), 26.0) * smoothstep(0.8, 0.05, r) + pow(abs(cos(a * 2.0)), 40.0) * smoothstep(1.0, 0.1, r);   // (its rays end inside its card: longer, they showed the card's edge)
+      m = clamp(m + smoothstep(0.2, 0.0, r), 0.0, 1.0);
+      hot = 1.0;
+    }
+    case 12u: {  // a pair of wings: feathers fanned out and up from two shoulders at the card's middle
+      let q = vec2f(abs(uv.x) - 0.08, uv.y + 0.35);
+      let a = atan2(q.x, q.y);
+      let rr = length(q);
+      let feather = pow(abs(cos(a * 9.0)), 2.5);
+      let span = 1.25 - 0.32 * abs(a - 0.75);
+      m = smoothstep(0.1, 0.3, a) * smoothstep(1.75, 1.35, a) * smoothstep(span, span * 0.62, rr) * smoothstep(0.04, 0.22, rr) * (0.3 + 0.7 * feather) * step(0.0, q.x);
+      hot = 0.78; halo = 0.0;
+    }
+    default: {   // a shield: a kite, rimmed
+      let x = abs(uv.x);
+      let d = max(uv.y - (0.85 - x * x * 0.3), x - 0.7 * clamp((uv.y + 1.0) / 1.2, 0.0, 1.0));
+      m = smoothstep(0.0, -0.05, d) * (0.3 + 0.7 * smoothstep(-0.16, -0.02, d));
+      m = max(m, smoothstep(0.0, -0.05, d) * (ink(abs(uv.x), 0.05) + ink(abs(uv.y - 0.25), 0.05)) * 0.8);
+      hot = 0.85;
+    }
+  }
+  let shimmer = 0.85 + 0.15 * sin(T * 9.0 + seed * 40.0);
+  let glow = exp(-r * 2.6) * halo;
+  // (Bright enough to bloom a little, not so bright the colour burns out to white.)
+  return vec4f(ramp(hot) * m * HOT * 0.4 * shimmer + ramp(0.5) * (glow + m * 0.7), 0.0);
+}
+
 // A warning on the ground (src/core/perils.js, src/sim/perils.js): where something is about to land, in the shape it lands
 // in. Its edge is a bright line, the ground inside it darkened and lit, and it fills from where it starts to its far edge
 // as its time runs out; once it's biting (fill at 1 or over) the whole of it burns. kind: 0 a circle, 1 a ring (A its inner
@@ -415,12 +546,13 @@ fn mark(uv: vec2f, dir: vec2f, A: f32, B: f32, kindF: f32, fill: f32, size: f32,
     case 6u: { c = puff(uv, seed, T); }
     case 7u: { c = flare(uv, seed); }
     case 8u: { c = trail(uv, I.a.w, seed, T); }
-    case 9u: { c = rune(uv, seed, T); }
+    case 9u: { c = rune(uv, seed, T, I.x.w); }
     case 10u: { c = column(uv, seed, T); }
     case 11u: { c = vortex(uv, seed, T); }
     case 12u: { c = shock(uv, age, seed, T); }
     case 13u: { c = kite(uv); }
     case 14u: { c = mark(uv, I.a.xz, I.a.y, I.a.w, I.x.w, age, I.p.w, seed, T); }
+    case 15u: { c = glyph(uv, u32(I.x.w + 0.5), I.a.w, age, seed, T); }
     default: { discard; }
   }
   return c * alpha * keep;
@@ -434,11 +566,37 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) al
 
 fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
 
-// Six-sided, narrowing to a point at each end from its widest place. No vertices: it's all from the index.
+// Six-sided, narrowing to a point at each end from its widest place. No vertices: it's all from the index. A BOX is a block,
+// its twelve triangles from the same thirty-six indices.
 @vertex fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> V {
   let I = fx[ii];
   let shape = u32(I.m.x);
   let seed = I.m.z;
+  let axis = normalize(I.a.xyz);
+  let other = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(axis.y) > 0.92);
+  var side = normalize(cross(axis, other));
+  var up = cross(side, axis);
+  var o: V;
+  o.id = ii;
+  if (shape == 22u || shape == 23u) {
+    // (These two are turned about their own length by the seed, so a hammer can tumble and a star lie in any plane.)
+    let c = cos(seed); let s = sin(seed);
+    let s2 = side * c + up * s;
+    up = up * c - side * s;
+    side = s2;
+  }
+  if (shape == 22u) {
+    var CUBE = array<u32, 36>(0u, 1u, 3u, 0u, 3u, 2u, 4u, 6u, 7u, 4u, 7u, 5u, 0u, 4u, 5u, 0u, 5u, 1u, 2u, 3u, 7u, 2u, 7u, 6u, 0u, 2u, 6u, 0u, 6u, 4u, 1u, 5u, 7u, 1u, 7u, 3u);
+    let k = CUBE[vi];
+    let cx = f32(k & 1u) * 2.0 - 1.0;
+    let cy = f32((k >> 1u) & 1u);
+    let cz = f32((k >> 2u) & 1u) * 2.0 - 1.0;
+    let w = I.p.xyz + axis * (cy - 0.5) * I.a.w + side * cx * I.p.w + up * cz * I.x.w;
+    o.p = w; o.along = cy; o.ring = 1.0;
+    o.pos = F.viewProj * vec4f(w, 1.0);
+    o.viewZ = -(F.view * vec4f(w, 1.0)).z;
+    return o;
+  }
   let tri = vi / 3u;
   let corner = vi % 3u;
   let k = tri % 6u;
@@ -448,7 +606,7 @@ fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
     case 17u: { belly = 0.05; }   // a spike: all rise
     case 18u: { belly = 0.82; }   // a lance: long haft, a head at its end
     case 19u: { belly = 0.14; }   // a blade: a hilt's width low down
-    case 20u, 21u: { belly = 0.5; }
+    case 20u, 21u, 23u: { belly = 0.5; }
     default: {}
   }
   var along = belly;
@@ -462,20 +620,18 @@ fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
     let i = at % 6.0;
     rad = 0.72 + 0.56 * jitter(seed + i * 1.37);
     along = belly + (jitter(seed * 3.0 + i) - 0.5) * 0.1;
+    if (shape == 23u) { rad = 1.0; along = belly; }
   }
-  let axis = normalize(I.a.xyz);
-  let other = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(axis.y) > 0.92);
-  let side = normalize(cross(axis, other));
-  let up = cross(side, axis);
   let ang = at / 6.0 * 6.28318 + seed * 6.0;
   var flat_ = 1.0;
   if (shape == 19u) { flat_ = 0.16; }
+  if (shape == 23u) { flat_ = 0.13; }
   // A blade's width lies along its side, so it isn't turned by the seed.
-  let ca = select(cos(ang), cos(at / 6.0 * 6.28318), shape == 19u);
-  let sa = select(sin(ang), sin(at / 6.0 * 6.28318), shape == 19u);
-  let w = I.p.xyz + axis * along * I.a.w + (side * ca + up * sa * flat_) * rad * I.p.w;
-  var o: V;
-  o.id = ii; o.p = w; o.along = along; o.ring = ring;
+  let thin = shape == 19u || shape == 23u;
+  let ca = select(cos(ang), cos(at / 6.0 * 6.28318), thin);
+  let sa = select(sin(ang), sin(at / 6.0 * 6.28318), thin);
+  let w = I.p.xyz + axis * (along - select(0.0, 0.5, shape == 23u)) * I.a.w + (side * ca + up * sa * flat_) * rad * I.p.w;
+  o.p = w; o.along = along; o.ring = ring;
   o.pos = F.viewProj * vec4f(w, 1.0);
   o.viewZ = -(F.view * vec4f(w, 1.0)).z;
   return o;
@@ -527,6 +683,17 @@ fn jitter(v: f32) -> f32 { return fract(sin(v * 91.7) * 43758.5453); }
       let q = textureSampleLevel(noiseTex, repeatSmp, in.p.xz * 0.05 + vec2f(in.p.y * 0.05, T * 0.03), 0.0).r;
       let crack = pow(1.0 - abs(q * 2.0 - 1.0), 3.0);
       glow = rampColor(0u, 0.55 + crack * 0.45) * (crack * 14.0 + 0.7);
+    }
+    case 22u, 23u: {   // a block or a shard of something (MAT, in the age), lit along its edges by its element as much as its alpha says
+      let mat = u32(age + 0.5);
+      let lit = abs(I.x.x);
+      if (mat == 1u) { albedo = vec3f(0.9, 0.52, 0.1); rough = 0.4; metal = 1.0; }      // (gold deep enough to stay gold under a noon sky)
+      else if (mat == 2u) { albedo = mix(vec3f(0.2, 0.11, 0.05), vec3f(0.34, 0.2, 0.1), noise.g); rough = 0.75; }
+      else if (mat == 3u) { albedo = vec3f(0.02); rough = 0.3; }
+      else { albedo = vec3f(0.62, 0.66, 0.72); rough = 0.24; metal = 1.0; }
+      // (Light itself is its element's colour all through, not white at its heart: a star of fire is seen to be of fire.)
+      glow = rampColor(e, 0.62) * lit * (fres * 2.4 + select(0.12, 1.7, mat == 3u)) * (0.85 + 0.15 * sin(T * 13.0 + seed * 7.0));
+      if (mat == 3u) { glow += rampColor(e, 0.76) * lit * pow(ndv, 3.0) * 1.2; }
     }
     default: {   // the flask: thick green glass, with something moving in it
       albedo = vec3f(0.04, 0.16, 0.04); rough = 0.08;

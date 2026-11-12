@@ -17,7 +17,7 @@
 //          rise of the ground by a hand's width either side; and if not, which way to step (and how far) to open one
 //          (src/sim/sight.js).
 //
-// Started only once someone has spoken the skull's word for auto-play: it costs a few seconds of a thread to build.
+// Started only once auto-play is first wanted (the Auto button or P): it costs a few seconds of a thread to build.
 import { NAV_CELL, NAV_H, NAV_W, NAV_X0, NAV_Z0, World } from './world.js';
 import { floorAt, inPit } from '../core/interior.js';
 import { setOpeningTerrain, terrainHeight } from '../core/terrain.js';

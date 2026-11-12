@@ -1,13 +1,14 @@
 // The pack and what's on the body. An item is lifted with a click and follows the pointer until it's set down, or dragged and let
-// go; a right-click or a double tap equips or stows. A gem set down on a sword goes in its next open socket, for good.
+// go: a drag that lets go where it can't go puts it back where it came from, and what it swaps out goes to the spot it left. A
+// right-click, a double click or a double tap equips or stows. A gem set down on a staff goes in its next open socket, for good.
 import { CHARM_SLOTS, charmIcon, charmTip } from './lands.js';
 import { skinFilter } from '../items/skins.js';
-import { ROBES, GEMS, colorOf, hands, linesOf, nameOf, statsOf } from '../items/items.js';
+import { GEMS, colorOf, compareLines, linesOf, nameOf, statsOf, wornSlot } from '../items/items.js';
 import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
 
 const $ = (id) => document.getElementById(id);
 const SLOT_LABEL = { head: 'Head', neck: 'Neck', main: 'Staff', chest: 'Chest', off: 'Shield', shoulders: 'Shoulders', skull: 'Skull', ring1: 'Ring', legs: 'Legs', feet: 'Feet', ring2: 'Ring' };
-const DOUBLE_MS = 320;
+const DOUBLE_MS = 450;
 const DOUBLE_PX = 24;   // A quick second press elsewhere is setting it down: socketing can't be undone, so it mustn't be misread.
 
 // Three cuts of stone, rougher to finer, with facets laid over the colour.
@@ -18,6 +19,9 @@ const GEM_SVG = [
 ];
 
 const SOCKETED = new Set(['weapon', 'skull', 'shield']);
+
+const slotOf = wornSlot;
+const hasOpenSocket = (it) => SOCKETED.has(it?.type) && (it.gems?.length || 0) < (it.sockets || 0);
 
 export class Inventory {
   // manifest: assets/game/items/swords.json. on: { change() the equipped sword may be different, drop(item) let go of on the ground }.
@@ -31,6 +35,10 @@ export class Inventory {
     this.grid = $('packGrid');
     this.hover = $('packHover');
     this.tipEl = $('invTip');
+    // The card for what's worn now, beside the tooltip of something that would go in its place.
+    this.tip2El = $('invTip2') || Object.assign(document.createElement('div'), { id: 'invTip2' });
+    if (!this.tip2El.isConnected) this.tipEl.after(this.tip2El);
+    $('invSort').addEventListener('click', () => this.sort());
     this.carryEl = $('invCarry');
     this.note = $('invNote');
     this.grid.style.setProperty('--pw', PACK_W);
@@ -39,7 +47,7 @@ export class Inventory {
     for (const s of SLOTS) this.slotEls[s] = this.root.querySelector(`[data-slot="${s}"]`);
     $('invHelp').textContent = touch
       ? 'Tap to lift and set down. Double tap to equip or stow. Tap outside to drop.'
-      : 'Click to lift and set down. Right-click to equip or stow. Set a gem on a staff, skull or shield to socket it. Click outside to drop.';
+      : 'Click or drag to move. Double-click or right-click to equip or stow. Set a gem on a staff, skull or shield to socket it. Click outside to drop.';
     this.root.addEventListener('pointerdown', (e) => this.onDown(e));
     window.addEventListener('pointermove', (e) => { if (this.open) this.onMove(e); });
     window.addEventListener('pointerup', (e) => { if (this.open) this.onUp(e); });
@@ -63,8 +71,10 @@ export class Inventory {
     this.press = null;
     this.root.style.display = 'none';
     this.tipEl.style.display = 'none';
+    this.tip2El.style.display = 'none';
     this.carryEl.style.display = 'none';
     this.hover.style.display = 'none';
+    for (const s of SLOTS) this.slotEls[s].classList.remove('ok', 'bad');
   }
 
   // ---- drawing --------------------------------------------------------------------------------
@@ -131,17 +141,47 @@ export class Inventory {
     this.noteT = setTimeout(() => { this.note.textContent = ''; }, 2200);
   }
 
+  linesHtml(item, lines) {
+    return lines.map((l) => `<div class="l-${l.kind}"${l.kind === 'title' ? ` style="color:${colorOf(item)}"` : l.color ? ` style="color:${l.color}"` : ''}>${l.text}</div>`).join('');
+  }
+
+  // The item's card, with what it would change against what's worn; and beside it, the card of what's worn there now.
   showTip(item, e) {
-    if (!item) { this.tipEl.style.display = 'none'; return; }
+    if (!item) { this.tipEl.style.display = 'none'; this.tip2El.style.display = 'none'; return; }
+    const slots = this.pack?.slots;
+    const worn = compareLines(item, slots).length ? slots[slotOf(item)] : null;
     if (this.tipFor !== item || this.tipEl.style.display === 'none') {
       this.tipFor = item;
-      this.tipEl.innerHTML = linesOf(item, this.pack?.slots).map((l) => `<div class="l-${l.kind}"${l.kind === 'title' ? ` style="color:${colorOf(item)}"` : l.color ? ` style="color:${l.color}"` : ''}>${l.text}</div>`).join('');
+      this.tipEl.innerHTML = this.linesHtml(item, [...linesOf(item, slots), ...compareLines(item, slots)]);
       this.tipEl.style.display = 'block';
+      if (worn) {
+        this.tip2El.innerHTML = `<div class="l-worn">Equipped</div>${this.linesHtml(worn, linesOf(worn, slots))}`;
+        this.tip2El.style.display = 'block';
+      } else this.tip2El.style.display = 'none';
     }
-    if (this.touch) { this.tipEl.style.left = '8px'; this.tipEl.style.top = '8px'; return; }
-    const r = this.tipEl.getBoundingClientRect();
-    this.tipEl.style.left = `${Math.max(8, Math.min(innerWidth - r.width - 8, e.clientX + 18))}px`;
-    this.tipEl.style.top = `${Math.max(8, Math.min(innerHeight - r.height - 8, e.clientY + 14))}px`;
+    const r = this.tipEl.getBoundingClientRect(), r2 = worn ? this.tip2El.getBoundingClientRect() : { width: 0, height: 0 };
+    let x, y;
+    if (this.touch) { x = 8; y = 8; } else {
+      x = Math.max(8, Math.min(innerWidth - r.width - 8, e.clientX + 18));
+      y = Math.max(8, Math.min(innerHeight - r.height - 8, e.clientY + 14));
+    }
+    this.tipEl.style.left = `${x}px`;
+    this.tipEl.style.top = `${y}px`;
+    if (!worn) return;
+    // To the right if there's room, else to the left; on a narrow screen, under it.
+    let x2 = x + r.width + 8, y2 = y;
+    if (x2 + r2.width > innerWidth - 8) x2 = x - r2.width - 8;
+    if (x2 < 8) { x2 = x; y2 = y + r.height + 8; }
+    this.tip2El.style.left = `${x2}px`;
+    this.tip2El.style.top = `${Math.max(8, Math.min(innerHeight - r2.height - 8, y2))}px`;
+  }
+
+  sort() {
+    this.putBack();
+    this.flash(this.pack.sort() ? 'Sorted.' : 'It won\'t all fit any tidier.');
+    this.on.sound?.('equip');
+    this.tipFor = null;
+    this.render();
   }
 
   // ---- what's under the pointer ---------------------------------------------------------------
@@ -170,7 +210,7 @@ export class Inventory {
   // ---- hands on -------------------------------------------------------------------------------
 
   onDown(e) {
-    if (e.target.closest('#invClose, #invX')) return;
+    if (e.target.closest('#invClose, #invX, #invSort')) return;
     if (e.button === 2) { this.quick(this.targetAt(e)); return; }
     if (e.button !== 0) return;
     const t = this.targetAt(e);
@@ -201,7 +241,8 @@ export class Inventory {
       const { item, from } = this.carry;
       this.putBack();
       this.quick({ item, entry: this.pack.entries.find((x) => x.item === item), kind: from && from.slot ? 'slot' : 'pack', name: from && from.slot });
-    } else this.setDown(this.targetAt(e));
+    } else if (p.picked) this.dragDone(this.targetAt(e));
+    else this.setDown(this.targetAt(e));
     this.moveCarry(e);
     this.updateHover(e, this.targetAt(e));
   }
@@ -221,6 +262,13 @@ export class Inventory {
       this.hover.style.cssText = `display:block;--x:${x};--y:${y};--w:${w};--h:${h}`;
       this.hover.className = gemOnSword ? 'ok' : hit && hit.length <= 1 ? 'ok' : 'bad';
     } else this.hover.style.display = 'none';
+    // The slot under a carried item lights up for whether it would take it.
+    for (const s of SLOTS) {
+      const on = !!this.carry && t.kind === 'slot' && t.name === s;
+      const ok = on && (slotOf(this.carry.item) === s || (this.carry.item.type === 'gem' && hasOpenSocket(t.item)));
+      this.slotEls[s].classList.toggle('ok', on && ok);
+      this.slotEls[s].classList.toggle('bad', on && !ok);
+    }
     this.showTip(t.item || (this.touch && this.carry ? this.carry.item : null), e);
   }
 
@@ -255,8 +303,7 @@ export class Inventory {
       if (lifted === false) { this.flash('It won\'t go there.'); return; }
       this.carry = lifted ? { item: lifted, from: null } : null;
     } else if (t.kind === 'slot') {
-      const fits = (t.name === 'main' && item.type === 'weapon') || (t.name === 'off' && item.type === 'shield') || (t.name === 'skull' && item.type === 'skull') || (item.type === 'robe' && ROBES[item.base].slot === t.name);
-      if (!fits) { this.flash(t.name === 'main' ? 'Only a staff goes in the right hand.' : t.name === 'off' ? 'Only a shield goes on the arm.' : t.name === 'skull' ? 'Only a skull goes in the left hand.' : 'That doesn\'t go there.'); return; }
+      if (slotOf(item) !== t.name) { this.flash(t.name === 'main' ? 'Only a staff goes in the right hand.' : t.name === 'off' ? 'Only a shield goes on the arm.' : t.name === 'skull' ? 'Only a skull goes in the left hand.' : 'That doesn\'t go there.'); return; }
       const prev = this.pack.slots[t.name];
       this.pack.slots[t.name] = item;
       this.carry = prev ? { item: prev, from: null } : null;
@@ -269,6 +316,26 @@ export class Inventory {
     this.render();
   }
 
+  // A drag let go. Whatever it couldn't set down goes back where it came from, and whatever it lifted in a swap goes to the spot
+  // the dragged item left, so nothing is left in hand. Only with no room anywhere does it stay in hand.
+  dragDone(t) {
+    const { from } = this.carry;
+    this.setDown(t);
+    if (!this.carry) return;
+    const { item } = this.carry;
+    this.carry = null;
+    if (!this.stow(item, from)) { this.carry = { item, from: null }; this.flash('No room in the pack. Set it down somewhere.'); }
+    this.render();
+  }
+
+  // Into where it came from if that's free and it fits there, else the first room in the pack. False if neither.
+  stow(item, from) {
+    const { pack } = this;
+    if (from?.slot && !pack.slots[from.slot] && slotOf(item) === from.slot) { pack.slots[from.slot] = item; this.on.change(); return true; }
+    if (from && from.x !== undefined && pack.under(item, from.x, from.y)?.length === 0) { pack.entries.push({ item, x: from.x, y: from.y }); return true; }
+    return pack.add(item);
+  }
+
   // Equip it, stow it, or socket it, by whichever applies. t: what targetAt gives.
   quick(t) {
     const { pack } = this;
@@ -279,18 +346,23 @@ export class Inventory {
         pack.slots[t.name] = null;
         this.on.change();
       }
-    } else if (t.item.type === 'weapon' || t.item.type === 'shield' || t.item.type === 'skull' || t.item.type === 'robe') {
-      const slot = t.item.type === 'weapon' ? 'main' : t.item.type === 'shield' ? 'off' : t.item.type === 'skull' ? 'skull' : ROBES[t.item.base].slot, prev = pack.slots[slot], { x, y } = t.entry;
+    } else if (slotOf(t.item)) {
+      // What was worn there takes the spot it leaves, or the first room; with none, nothing changes.
+      const slot = slotOf(t.item), prev = pack.slots[slot], { x, y } = t.entry;
       pack.remove(t.entry);
+      if (prev && !this.stow(prev, { x, y })) { pack.entries.push(t.entry); this.flash('No room in the pack for what you have on.'); return; }
       pack.slots[slot] = t.item;
-      if (prev && !pack.add(prev)) this.on.drop(prev);
+      this.on.sound?.(t.item.type === 'weapon' ? 'equipStaff' : 'equip');
       this.on.change();
-    } else if (pack.slots.main && pack.socket(pack.slots.main, t.item)) {
-      pack.remove(t.entry);
-      this.on.change();
-      this.flash(`${nameOf(t.item)} set in ${nameOf(pack.slots.main)}.`);
-    } else {
-      this.flash(pack.slots.main ? 'No open socket on the staff in hand.' : 'No staff in hand to set it in.');
+    } else if (t.item.type === 'gem') {
+      // The staff first, then the skull, then the shield.
+      const into = ['main', 'skull', 'off'].map((s) => pack.slots[s]).find((it) => it && hasOpenSocket(it));
+      if (into && pack.socket(into, t.item)) {
+        pack.remove(t.entry);
+        this.on.sound?.('socket');
+        this.on.change();
+        this.flash(`${nameOf(t.item)} set in ${nameOf(into)}.`);
+      } else this.flash(pack.slots.main || pack.slots.skull || pack.slots.off ? 'Nothing in hand has an open socket.' : 'Nothing in hand to set it in.');
     }
     this.tipFor = null;
     this.render();
@@ -301,8 +373,7 @@ export class Inventory {
     if (!this.carry) return;
     const { item, from } = this.carry;
     this.carry = null;
-    if (from && from.slot && !this.pack.slots[from.slot]) { this.pack.slots[from.slot] = item; this.on.change(); } else if (from && from.x !== undefined && this.pack.under(item, from.x, from.y)?.length === 0) this.pack.entries.push({ item, x: from.x, y: from.y });
-    else if (!this.pack.add(item)) this.on.drop(item);
+    if (!this.stow(item, from)) this.on.drop(item);
     this.render();
   }
 }

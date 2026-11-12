@@ -716,6 +716,8 @@ const PLAGUEBEARER = [
 ];
 const BOOKS = { wizard: WIZARD, necromancer: NECROMANCER, plaguebearer: PLAGUEBEARER };
 // How far off each likes to work, and how long between one thing and the next.
+// What the road's necromancers (easy: openingCaster) never cast, and how many times each raises the fallen.
+const EASY_NOT = new Set(['reap', 'soulLeech', 'ward']), EASY_RITES = 3;
 const MANNER = {
   wizard: { near: 9, far: 16, breath: [0.5, 1.2], walk: 'stride', dodge: 0.7 },
   necromancer: { near: 12, far: 20, breath: [0.9, 1.7], walk: 'walk', dodge: 0.25 },
@@ -805,7 +807,7 @@ export class Caster extends Zombie {
       amount -= soak;
     }
     // (The dead are soft to spells, at twice what they do. Those who cast them aren't.)
-    super.takeBlow(sim, this.rayPiece < 0 ? amount * 0.5 : amount);
+    super.takeBlow(sim, this.rayPiece < 0 && !this.easy ? amount * 0.5 : amount);
   }
 
   // Burns and scratches don't check it, and nor does anything so soon after the last time.
@@ -917,6 +919,9 @@ export class Caster extends Zombie {
     for (const b of this.book) {
       if ((this.waits[b.spell] || 0) > 0) continue;
       if (FOE[b.spell].big && sim.time < sim.foeBigAt) continue;
+      // (The road's two, in the opening: nothing that mends them, and only so many of the fallen raised, so they can be
+      // put down by someone who's only just picked up a staff.)
+      if (this.easy && (EASY_NOT.has(b.spell) || (b.spell === 'graveRite' && this.rites >= EASY_RITES))) continue;
       const v = b.score(look);
       if (v <= 0) continue;
       const scored = v + Math.random() * 1.1;
@@ -931,6 +936,7 @@ export class Caster extends Zombie {
 
   begin(sim, entry, target) {
     this.waits[entry.spell] = rnd(entry.wait[0], entry.wait[1]) * (this.hp / this.maxHp < 0.45 ? 0.72 : 1);
+    if (entry.spell === 'graveRite') this.rites = (this.rites || 0) + 1;
     if (entry.then) this.queue = [entry.then[Math.floor(Math.random() * entry.then.length)]];
     this.startCast(sim, entry.spell, target);
   }
@@ -1451,7 +1457,8 @@ export function openingCaster(sim, x, z) {
   const k = sim.knights.find((c) => c instanceof Caster && c.opts.reserve && c.dead && (c.dormant || c.deadT > 4));
   if (!k) return null;
   const p = sim.player;
-  k.reset({ ...k.opts, sleeper: false, spawn: [x, z], yaw: Math.atan2(p.x - x, p.z - z), hp: 70 });
+  k.reset({ ...k.opts, sleeper: false, spawn: [x, z], yaw: Math.atan2(p.x - x, p.z - z), hp: 60 });
+  k.easy = true; k.rites = 0; k.ward = 0;
   k.y = sim.world.height(x, z);
   k.aggro = true; k.hostile = true; k.goal = GOAL.HUNT; k.lastX = p.x; k.lastZ = p.z; k.lastSense = sim.time; k.revealed = true;
   return k;

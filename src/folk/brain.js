@@ -646,11 +646,18 @@ function* walkTo(me, tx, tz, o = {}) {
           if (still && li === legs.length - 1 && Math.hypot(a.x - ex, a.z - ez) < 0.75 && Math.hypot(me.x - ex, me.z - ez) < 1.6) break;
           // Round them on whichever side there's floor, the right first.
           const side = G.free(me.level, me.x + uz * 0.6, me.z - ux * 0.6) ? 1 : G.free(me.level, me.x - uz * 0.6, me.z + ux * 0.6) ? -1 : 0;
-          if (close && (still || me.wait > 1.2)) {
+          // Which way they're going, against this one's own: along with them (down the same lane, to the same market) or toward them.
+          const with_ = !still && a.o ? Math.sin(a.o.yaw) * fx + Math.cos(a.o.yaw) * fz : 0;
+          if (with_ > 0.3) {
+            // Going the same way: fall in behind at their pace, and no stepping round. (Stopping dead for each other, a line of
+            // them down a lane stood more than it walked.)
+            if (close) v = Math.min(v, a.o.moving * 0.92);
+          } else if (close && (still || with_ < -0.3 || me.wait > 1.2)) {
+            // (Coming at each other: round to the right at once, as people do, not a stop face to face first.)
             if (side) { sx = uz * side; sz = -ux * side; v *= 0.5; } else v = 0;
           } else if (close) { v = 0; }
           if (v === 0 && me.wait > (a.player ? 4 : 1.6)) { me.ghost = 1.6; v = v0 * rate * 0.5; }
-          else if (side) { sx = uz * 0.6 * side; sz = -ux * 0.6 * side; v *= 0.8; }
+          else if (side && !(with_ > 0.3)) { sx = uz * 0.6 * side; sz = -ux * 0.6 * side; v *= 0.8; }
         }
         me.wait = v === 0 ? me.wait + dt : 0;
         const step = Math.min(v * dt, d);

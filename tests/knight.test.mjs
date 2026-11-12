@@ -7,9 +7,12 @@ import { Knight, ATTACKS, S } from '../src/sim/knight.js';
 import { NAV_H, NAV_W, NAV_X0, NAV_Z0, World } from '../src/sim/world.js';
 const bytes = path => { const b = fs.readFileSync(new URL(path, import.meta.url)); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
 const bank = new ClipBank(JSON.parse(fs.readFileSync(new URL('../assets/game/clips.json', import.meta.url))), bytes('../assets/game/clips.bin'));
-function knight(kind = 0) {
-  return new Knight(kind, kind, new Rig(parseGLB(bytes(`../assets/game/${kind ? 'silver' : 'velscour'}_knight.glb`)), bank), bank,
+function knight(kind = 0, away = false) {
+  const k = new Knight(kind, kind, new Rig(parseGLB(bytes(`../assets/game/${kind ? 'silver' : 'velscour'}_knight.glb`)), bank), bank,
     { spawn: [0, 0], hp: 500, hostile: !kind, swordScale: kind ? 0.96 : 1.085, shieldScale: kind ? 1.25 : 1.6, bladeLen: 1, route: [[0, 0]], walk: 1.5, style: kind ? 'silver' : 'black' });
+  // (His arms in hand, as they are in a fight and for a while after: put away is its own test, below.)
+  if (!away) { k.stow = 0; k.calmT = -1e9; }
+  return k;
 }
 function world() {
   // A bare world: no boxes, no pines, no land sites (World's own constructor builds the whole land).
@@ -168,4 +171,47 @@ test('caster defense waits for visible projectiles, ignores misses and respects 
   assert.equal(k.reactToSpell(0.01, sim, sim.player), false);
   k.rollCd = 0; b.z = 4; k.state = S.APPROACH;
   assert.equal(k.reactToSpell(0.01, sim, sim.player), false);
+});
+test('a knight writes where his head is, as posed, so a mark over it follows him through his idle and his walk', async () => {
+  const { C, C_SIZE } = await import('../src/core/layout.js');
+  const k = knight(1), sim = simulation(), snap = new Float32Array(C_SIZE);
+  sim.snapU = new Uint32Array(snap.buffer);
+  k.play('Idle_Loop' in bank.clips ? 'Idle_Loop' : Object.keys(bank.clips)[0]);
+  const heads = [];
+  for (let f = 0; f < 120; f++) {
+    sim.time += 1 / 60; sim.tick++;
+    k.animate(1 / 60, sim);
+    k.write(snap, 0, sim);
+    const h = [snap[C.HEAD_X], snap[C.HEAD_Y], snap[C.HEAD_Z]], j = k.J.head * 3;
+    // Right where the head joint is, and a head's height over his feet.
+    assert.ok(Math.hypot(h[0] - k.pose.wt[j], h[1] - k.pose.wt[j + 1], h[2] - k.pose.wt[j + 2]) < 1e-4, `frame ${f}`);
+    assert.ok(h[1] > k.y + 1.2 && h[1] < k.y + 2.3 && Math.hypot(h[0] - k.x, h[2] - k.z) < 0.6, `frame ${f}: ${h}`);
+    heads.push(h);
+  }
+  // The idle sways it.
+  assert.ok(heads.some((h) => Math.hypot(h[0] - heads[0][0], h[1] - heads[0][1], h[2] - heads[0][2]) > 0.002));
+  // Moved bodily since the pose was made (as far off, posed only now and then), it's carried with him.
+  k.x += 3; k.z -= 2;
+  k.write(snap, 0, sim);
+  const j = k.J.head * 3;
+  assert.ok(Math.abs(snap[C.HEAD_X] - (k.pose.wt[j] + 3)) < 1e-3 && Math.abs(snap[C.HEAD_Z] - (k.pose.wt[j + 2] - 2)) < 1e-3);
+});
+
+test('out of a fight a knight puts his arms away: the sword at his left hip, the board on his back; and has them out again for one', async () => {
+  const { STOW } = await import('../src/core/stow.js');
+  const k = knight(1, true), pose = k.pose, m = k.propMatrices;
+  k.animate(0, simulation()); k.writeProps(m, 0);
+  const hip = [pose.wt[k.J.pelvis * 3], pose.wt[k.J.pelvis * 3 + 1], pose.wt[k.J.pelvis * 3 + 2]], chest = [pose.wt[k.J.spine3 * 3], pose.wt[k.J.spine3 * 3 + 1], pose.wt[k.J.spine3 * 3 + 2]];
+  const hand = [pose.wt[k.J.handR * 3], pose.wt[k.J.handR * 3 + 1], pose.wt[k.J.handR * 3 + 2]];
+  const fwd = [Math.sin(k.yaw), Math.cos(k.yaw)], left = [Math.cos(k.yaw), -Math.sin(k.yaw)];
+  assert.equal(k.stow, 1, 'put away to begin with');
+  assert.ok(Math.hypot(m[12] - hand[0], m[13] - hand[1], m[14] - hand[2]) > 0.25, 'the sword is out of his hand');
+  assert.ok((m[12] - hip[0]) * left[0] + (m[14] - hip[2]) * left[1] > 0.1 && Math.abs(m[13] - hip[1]) < 0.25, 'and at his left hip');
+  assert.ok(m[5] < -0.5, 'its point down');
+  assert.ok((m[28] - chest[0]) * fwd[0] + (m[30] - chest[2]) * fwd[1] < -0.12, 'the board is on his back');
+  // A fight: out at once; and for STOW.after seconds after it, still out.
+  const step = (busy, secs) => { for (let t = 0; t < secs; t += 1 / 30) { const o = k; o.calmT = busy ? 0 : o.calmT + 1 / 30; o.stow = Math.max(0, Math.min(1, o.stow + (o.calmT >= STOW.after ? 1 / 30 / STOW.away : -1 / 30 / STOW.draw))); } };
+  step(true, 0.5); assert.equal(k.stow, 0, 'drawn');
+  step(false, STOW.after - 1); assert.equal(k.stow, 0, 'kept out a while after');
+  step(false, 3); assert.equal(k.stow, 1, 'and then put away');
 });

@@ -128,7 +128,7 @@ export class QuestBook {
   active() { return Object.keys(this.q).filter((id) => this.q[id].stage !== 'done'); }
   done(id) { return this.q[id]?.stage === 'done'; }
 
-  // The quest you're following: the one picked in the journal while it's under way, else the newest under way; before
+  // The quest you're following: the one picked in the quest log while it's under way, else the newest under way; before
   // anything's asked of you, 'start' (go and see Bram Kettle). Null when you've put the trail away.
   followed() {
     if (this.follow === 'off') return null;
@@ -142,7 +142,7 @@ export class QuestBook {
   // Whether you've taken up your first work in town: Bram's bed, or Lisandra's round of the town.
   started() { return !!(this.q.bed_and_bell || this.q.lisandra_work); }
 
-  // Picked in the journal: follow it, or (picked again) put the trail away.
+  // Picked in the quest log: follow it, or (picked again) put the trail away.
   pick(id) {
     this.follow = this.followed() === id ? 'off' : id;
     this.on.change();
@@ -222,7 +222,7 @@ export class QuestBook {
     this.on.change();
   }
 
-  // What the journal says to do now.
+  // What the quest log says to do now.
   journalLine(id) {
     const s = this.q[id], text = QUESTS[id];
     if (!s) return '';
@@ -270,8 +270,8 @@ export class QuestBook {
   where(x, y, z, hour) {
     if (!this.flags.has('arrived') && inTown(x, z, 0)) {
       this.flags.add('arrived');
-      if (!this.q.bed_and_bell && !this.q.lisandra_work && this.lisHere) this.on.toast('Bellmourn. Lisandra has a word for you before you go in. (J: your journal)', 'hint');
-      else if (!this.q.bed_and_bell) this.on.toast('Bellmourn. The inn, the Tolling Bell, is just north of the well. (J: your journal)', 'hint');
+      if (!this.q.bed_and_bell && !this.q.lisandra_work && this.lisHere) this.on.toast('Bellmourn. Lisandra has a word for you before you go in. (J: your quest log)', 'hint');
+      else if (!this.q.bed_and_bell) this.on.toast('Bellmourn. The inn, the Tolling Bell, is just north of the well. (J: your quest log)', 'hint');
       this.on.change();
     }
     for (const id of this.active()) {

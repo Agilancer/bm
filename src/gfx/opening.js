@@ -577,6 +577,23 @@ function clutter() {
   return out;
 }
 
+// How far a slab of the flight sg reaches from (x, z) on its middle toward (px, pz), a unit vector across it: its half
+// width, or less where another flight's middle is nearer than this one's.
+function stairReach(sg, x, z, px, pz, hw) {
+  let u = 0.2;
+  for (; u < hw; u += 0.04) {
+    const qx = x + px * u, qz = z + pz * u;
+    let near = false;
+    for (const o of WAY_SEGS) {
+      if (o === sg || !o.stairs) continue;
+      const t = Math.max(0, Math.min(1, ((qx - o.ax) * o.dx + (qz - o.az) * o.dz) / (o.len * o.len)));
+      if (Math.hypot(o.ax + o.dx * t - qx, o.az + o.dz * t - qz) < u) { near = true; break; }
+    }
+    if (near) break;
+  }
+  return Math.min(u, hw);
+}
+
 // ---- the way down: her steps ----------------------------------------------------------------------------------------------
 // Four flights of split stone, one slab to a step, laid on the slope the land's cut to (src/core/opening.js WAY: you walk
 // the slope, and the slabs sit across it); stones set along both edges of each flight; and stones along the lip of the
@@ -592,7 +609,11 @@ function waySteps() {
         const t = (STAIR_FLAT + (i + 0.5) * d) / sg.len, top = wayY(sg, t) + 0.02;
         const F = frame(sg.ax + sg.dx * t, top, sg.az + sg.dz * t, yaw + rnd(-0.03, 0.03));
         const hw = 1.22 + rnd(-0.08, 0.1);
-        box(g, F, -hw, -0.5, -d / 2 - 0.05, hw, rnd(-0.008, 0.008), d / 2 + 0.03, 1.3);
+        // (Near a turn the flight beside this one is close, and a good deal higher or lower: each slab stops where the
+        // other flight's ground begins, so neither flight's stone stands in the other's way. Cut short like that it goes
+        // deeper, a wall down to the lower flight.)
+        const cx = sg.ax + sg.dx * t, cz = sg.az + sg.dz * t, l = stairReach(sg, cx, cz, -uz, ux, hw), r = stairReach(sg, cx, cz, uz, -ux, hw);
+        box(g, F, -l, l < hw || r < hw ? -2.4 : -0.5, -d / 2 - 0.05, r, rnd(-0.008, 0.008), d / 2 + 0.03, 1.3);
       }
       // A flagged landing at each turn, flush with the ground.
       for (const [t, yy] of [[STAIR_FLAT * 0.45 / sg.len, sg.ay], [1 - STAIR_FLAT * 0.45 / sg.len, sg.by]]) {

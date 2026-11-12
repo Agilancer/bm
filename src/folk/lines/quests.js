@@ -1,6 +1,7 @@
 // The eight starter quests: every word of them. The mechanics (giver, steps, rewards) are fixed elsewhere.
 // A line is a string said by the giver, or [speaker, text] when someone else cuts in (Dusty translating Homunculus); or either,
 // kept for before or after something ({ before, say } / { after, say }: src/folk/quests.js sayable).
+// about: what the quest is, in a few lines, for the quest log (src/ui/folk.js): the whole of it, not just the step you're on.
 // hint: added to the journal's first step, for work that's down among the dead and can be given before Silas has handed over
 // the key to the Sexton's Door (the great door has the knight in it).
 // Bible: tools/folk/cast.md. Facts agree with town_a.js, town_b.js, town_c.js and scenes.js.
@@ -15,6 +16,7 @@ export const QUESTS = {
   bed_and_bell: {
     title: 'A Bed and a Bell',
     giver: 'bram',
+    about: "Bram Kettle keeps the Tolling Bell and chalks every stranger who comes through Bellmourn on his slate. He'll give you a bed tonight on credit, if you'll go and see Silas Crane, the coffin maker, who has a problem that wants somebody foolish.",
     offer: [
       "See the slate? Twelve strokes before yours: three on the hill, two in the pines, six gone strange, one who paid. The thirteenth gets a bed and a warning.",
       "Bed's four copper, and I don't give Tessariels credit. Tonight I will. And if you mean to do something, not shout at something, go and see Silas Crane at the coffin yard. He's a problem that wants somebody foolish.",
@@ -49,6 +51,7 @@ export const QUESTS = {
   dead_cant_wait: {
     title: "The Dead Can't Wait",
     giver: 'silas',
+    about: "Nobody can be buried while the knight holds the cathedral's door, and the dead already in its crypts won't lie still. Silas Crane has given you the key to the Sexton's Door, a way in the knight can't see. Go down into the catacombs and put eight of the dead to rest.",
     offer: [
       "Nine in the yard, stacked three high, and the Hollis girl in the shed out of the rain. Nobody goes in the ground while that knight stands at the church door. I asked him. Politely. From a long way off.",
       "Worse: what's already down there won't lie still. The crypts are emptying upward. Round the south side, low in the back wing where the stair goes down, there's a way in he can't see from where he stands. The Sexton's Door. I've the key. Go down and put them to rest. Eight would do for a start.",
@@ -83,6 +86,7 @@ export const QUESTS = {
   bones_for_carver: {
     title: 'Bones for the Bone-Carver',
     giver: 'silas',
+    about: "Silas Crane carves skulls: proper ones, with some of the old craft in them. Bring him ten Bone Shards from the catacombs and he'll carve you one overnight.",
     offer: [
       "You've been down. You'll have seen bone lying about, nobody's in particular. Bring me ten shards. Good ones, not splinters.",
       "I'll carve you a skull. A proper one, with some of the old craft in it. Not something off Magda's stall with a beetle living in the eye.",
@@ -119,6 +123,7 @@ export const QUESTS = {
   iron_from_dead: {
     title: 'Iron from the Dead',
     giver: 'homunculus',
+    about: "Homunculus the Proud, the smith, thinks little of your staff. Bring him eight Grave Iron off the dead in the catacombs (nails, coffin fittings, old blades) and he'll forge you a better one.",
     offer: [
       "Thirteen! Little candle! Your staff offends Verdict, and Verdict is slow to offence. Verdict has struck a thousand things and forgiven every one.",
       "Go down among the dead and bring me their iron. Eight pieces! I shall forge you a staff worthy of a lesser Tessariel, which is to say, worthy of nearly anybody.",
@@ -153,6 +158,7 @@ export const QUESTS = {
   shroud_and_thread: {
     title: 'Shroud and Thread',
     giver: 'tamsin',
+    about: "Tamsin Reed, the tailor, can hear your robe giving up. The dead went into the ground in her mother's silk, and now they walk about in it. Bring her eight Shroud Silk from the catacombs and she'll make you a new robe overnight.",
     offer: [
       "Look at you. No, stand still and look at you. That robe's been dragged out of a cave and down a road, and it's given up. I can hear it giving up.",
       "The dead go down in Reed silk. My mother's stitch, every shroud in that ground, and now they're walking about in it. Bring me eight lengths and I'll make you something you won't be buried in.",
@@ -191,6 +197,7 @@ export const QUESTS = {
   pines: {
     title: 'What Walks in the Pines',
     giver: 'corran',
+    about: "Corran Thrale, the hunter, has watched the dead walk the pines along the Long Road in packs of six and eight. Put down twelve of them in the woods outside the town and he'll pay you eighty gold: his winter's worth.",
     offer: [
       "You came in by my door, down the Long Road. You'll have seen the pines either side. You won't have seen what's in them. They let you by. They don't let everyone.",
       "Packs of six, eight, walking in step. The town lights another lamp and goes to bed. Put down twelve of them in the woods and I'll pay you eighty gold. That's my winter. It's worth it.",
@@ -224,6 +231,7 @@ export const QUESTS = {
   toll_of_bell: {
     title: 'The Toll of the Bell',
     giver: 'orrin',
+    about: "At midnight a bell rings three strokes, the old count for the dead, and no living hand has rung it in forty years. Orrin Vey, the scholar, thinks it's the warden laid in the Bell Crypt under the cathedral tower. Go down at night, when it wakes, and silence it. He pays in scrolls.",
     offer: [
       "Midnight, three strokes. You'll have heard it, or heard of it; Bellmourn talks of little else. Three is the old count for the dead, and no living hand has rung that bell in forty years. I have checked. I have checked every living hand in Bellmourn.",
       "My plan puts a chamber under the tower: the Bell Crypt. A warden was laid there, to keep the rope. If anything is ringing, it's that. Go down at night, when it wakes, and silence it. I'll pay in scrolls, and in history, which is worth more and sells for less.",
@@ -262,6 +270,7 @@ export const QUESTS = {
   letter: {
     title: 'A Letter Across the Square',
     giver: 'cedric',
+    about: "Cedric Ashby has a sealed letter for Elowen Halloway: into her hand and nobody else's, and not a word to anyone, least of all his mother. Bring him back whatever she answers.",
     offer: [
       "You. Thirteen. Over here, out of the light. Not that far out, I'm not a thief.",
       "There's a letter. It goes to Elowen Halloway, into her hand and nobody else's, and you say nothing to anyone. Not my sisters. Not my mother. Especially not my mother. Bring me back whatever she answers.",

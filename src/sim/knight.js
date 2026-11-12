@@ -1,8 +1,9 @@
 // A knight on the UAL skeleton: layered animation, plate hits and wounds, and the brain.
 import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, C_PROPS, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH, PROPS_PER_CHAR, TACTICS } from '../core/layout.js';
-import { carryFrame, carryMat4, carryPalette } from '../core/carry.js';
+import { carryFrame, carryMat4, carryPalette, carryPoint } from '../core/carry.js';
 import { clamp, damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, smoothstep, wrapAngle } from '../core/math.js';
 import { inTown } from '../core/town.js';
+import { stepStow } from '../core/stow.js';
 import { Pose, solveFK, writePalette } from './anim.js';
 import { PlateBVH } from './world.js';
 
@@ -207,6 +208,13 @@ export class Knight {
     bank.sample(bank.clips.Sword_Idle, 0, this.rA, null);
     this.fingerJoints.forEach((j) => { if (rig.names[j].endsWith('_r')) for (let k = 0; k < 4; k++) this.fist[j * 4 + k] = this.rA[j * 4 + k]; });
     this.propMatrices = new Float32Array(32);
+    // Where his arms are kept out of a fight (src/core/stow.js): the sword at his left hip, point down and back, and the
+    // board on his back. Found once on this body stood at rest, and kept by the hips and the chest. (A hero's: src/sim/hero.js.)
+    if (bank.clips.Idle_Loop) {
+      const hold = restHold(rig, bank), u = rig.height / 1.8, pj = this.J.pelvis, sj = this.J.spine3;
+      this.stowMain = hold(pj, [0.12, -0.86, -0.5], [1, 0.1, 0], [0.21 * u, hold.y(pj) + 0.04 * u, 0.03 * u]);
+      this.stowOff = hold(sj, [0.12, 1, 0.05], [0, 0.1, 1], [0.04 * u, hold.y(sj) - 0.16 * u, -0.24 * u]);
+    }
     this.clearanceJoints = ['pelvis', 'spine_03', 'Head', 'thigh_l', 'calf_l', 'foot_l', 'thigh_r', 'calf_r', 'foot_r'].map(n => rig.index.get(n));
     this.reset(opts);
   }
@@ -215,7 +223,7 @@ export class Knight {
     Object.assign(this, {
       x: opts.spawn[0], z: opts.spawn[1], y: 0, yaw: opts.yaw ?? 0, vx: 0, vz: 0, speed: 0,
       hostile: !!opts.hostile, hp: opts.hp, maxHp: opts.hp, stam: 60, state: S.PATROL, stateT: 0,
-      faceYaw: opts.yaw ?? 0, phase: Math.random(), combat: 0, combatTarget: 0, shieldUp: 0, shieldTarget: 0, fromW: 0,
+      faceYaw: opts.yaw ?? 0, phase: Math.random(), combat: 0, combatTarget: 0, shieldUp: 0, shieldTarget: 0, fromW: 0, calmT: 1e3, stow: 1,
       action: null, actT: 0, actRate: 1, actW: 0, actMask: 'full', actEnd: 0, gashVersion: this.gashVersion ? this.gashVersion + 1 : 1,
       gashes: [], masks: new Uint32Array(64), bleeds: [], heart: 0, routeI: 0, pauseT: Math.random() * 2, stepSide: 0,
       attack: null, attackUsed: false, attackT: 1.6, strafe: Math.random() < 0.5 ? -1 : 1, strafeT: 2, reactT: -1, reacted: false,
@@ -400,6 +408,8 @@ export class Knight {
     this.nod.fill(0);
     this.nod[J.head] = this.lookPitch;
     solveFK(pose, this.x, this.y, this.z, this.yaw, this.twist, this.nod);
+    // (What a body does that no clip has in it: a hero's flips, a bard's hands on the lute. src/sim/hero.js afterPose.)
+    if (this.afterPose) this.afterPose(dt, sim);
     // (Where the pose was made: write carries it on to wherever he's got to since. See src/core/carry.js.)
     this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw; this.poseVer = (this.poseVer || 0) + 1;
     {
@@ -487,6 +497,7 @@ export class Knight {
     const ss = this.opts.swordScale, si = this.opts.shieldScale;
     for (let i = 0; i < 12; i++) tmpM[i] *= ss;
     out.set(tmpM, off);
+    if (this.stow > 0.001 && this.stowMain && !this.opts.hero) this.putAway(out, off, this.stowMain, ss);
     // Blade segment for hit tests.
     const L = this.opts.bladeLen;
     this.bladeA = [t[0], t[1], t[2]];
@@ -512,6 +523,29 @@ export class Knight {
     this.shieldAxisZ = [tmpM[8], tmpM[9], tmpM[10]];
     for (let i = 0; i < 12; i++) tmpM[i] *= si;
     out.set(tmpM, off + 16);
+    if (this.stow > 0.001 && this.stowOff && !this.opts.hero) this.putAway(out, off + 16, this.stowOff, si);
+  }
+
+  // A thing in the hand (its matrix at out[o]) on its way to where it's kept on him (slot: { j, q, t }, from restHold),
+  // this.stow of the way there, swung out round him at the middle of it and not through him. k: its size.
+  putAway(out, o, slot, k) {
+    if (out[o + 15] === 0) return;
+    const { wq, wt } = this.pose, j = slot.j, e = smoothstep(0, 1, this.stow);
+    quatMul(stowQ, 0, wq, j * 4, slot.q, 0);
+    quatRotate(stowT, 0, wq, j * 4, slot.t, 0);
+    stowT[0] += wt[j * 3]; stowT[1] += wt[j * 3 + 1]; stowT[2] += wt[j * 3 + 2];
+    if (e < 0.999) {
+      const q0 = matToQuat([out[o] / k, out[o + 1] / k, out[o + 2] / k], [out[o + 4] / k, out[o + 5] / k, out[o + 6] / k], [out[o + 8] / k, out[o + 9] / k, out[o + 10] / k]);
+      quatNlerp(stowQ, 0, q0, 0, stowQ, 0, e);
+      // (Out from his middle, by whichever side it's passing.)
+      const mx = (out[o + 12] + stowT[0]) / 2 - this.x, mz = (out[o + 14] + stowT[2]) / 2 - this.z, ml = Math.hypot(mx, mz) || 1, b = Math.sin(e * Math.PI) * 0.3;
+      stowT[0] = out[o + 12] + (stowT[0] - out[o + 12]) * e + mx / ml * b;
+      stowT[1] = out[o + 13] + (stowT[1] - out[o + 13]) * e;
+      stowT[2] = out[o + 14] + (stowT[2] - out[o + 14]) * e + mz / ml * b;
+    }
+    mat4FromQT(stowM, stowQ, 0, stowT, 0);
+    for (let i = 0; i < 12; i++) stowM[i] *= k;
+    out.set(stowM, o);
   }
 
   // ---- plates -----------------------------------------------------------------------------------------
@@ -812,6 +846,8 @@ export class Knight {
     this.applyAction(dt, sim, p);
     this.combat = damp(this.combat, this.combatTarget, 5, dt);
     this.shieldUp = damp(this.shieldUp, this.shieldTarget, 8, dt);
+    // (Sword and board in hand for a fight and a while after, and put away for the round: src/core/stow.js.)
+    stepStow(this, dt, this.combatTarget > 0 || !!this.action || this.shieldTarget > 0, this.x, this.z);
     this.move(dt, sim);
     this.animateDue(dt, sim);
   }
@@ -1634,14 +1670,20 @@ export class Knight {
     // glides rather than standing and jumping (src/core/carry.js).
     const n = this.rig.count, fresh = !this.palKept || this.keptVer !== this.poseVer;
     const pal = this.palKept || (this.palKept = new Float32Array(n * 8)), props = this.propsKept || (this.propsKept = new Float32Array(PROPS_PER_CHAR * 16));
-    if (fresh) { this.keptVer = this.poseVer; writePalette(this.pose, pal, 0); this.writeProps(props, 0); }
+    const head = this.headKept || (this.headKept = new Float32Array(3));
+    if (fresh) {
+      this.keptVer = this.poseVer; writePalette(this.pose, pal, 0); this.writeProps(props, 0);
+      if (this.J.head !== undefined) for (let a = 0; a < 3; a++) head[a] = this.pose.wt[this.J.head * 3 + a];
+      else { head[0] = this.x; head[1] = this.y + 1.7; head[2] = this.z; }
+    }
     const c = this.posedYaw !== undefined && carryFrame(bodyCarry, this.posedYaw, this.posedX, this.posedY, this.posedZ, this.yaw, this.x, this.y, this.z) ? bodyCarry : null;
     if (c) {
       carryPalette(pal, 0, snap, cOff + C_PALETTE, n, c);
       for (let o = 0; o < PROPS_PER_CHAR * 16; o += 16) {
         if (props[o + 15] !== 0) carryMat4(props, o, snap, cOff + C_PROPS + o, c); else snap.set(props.subarray(o, o + 16), cOff + C_PROPS + o);
       }
-    } else { snap.set(pal, cOff + C_PALETTE); snap.set(props, cOff + C_PROPS); }
+      carryPoint(head, 0, snap, cOff + C.HEAD_X, c);
+    } else { snap.set(pal, cOff + C_PALETTE); snap.set(props, cOff + C_PROPS); snap.set(head, cOff + C.HEAD_X); }
     // The plates' frames, for where a blow lands and where the blood runs from: kept up whenever a blow could come (near the player,
     // in a fight) or he's bleeding. Otherwise worked out when something asks (plateTransforms, from the snapshot).
     if (fresh || c && (this.bleeds.length || this.combat > 0.05 || this.foe || !sim.poseGap || !sim.poseGap(this, this.lodSlot))) this.plateTransforms(snap, cOff, sim.tick);
@@ -1680,6 +1722,26 @@ function turn(a, b, step) {
   const d = wrapAngle(b - a);
   return wrapAngle(a + clamp(d, -step, step));
 }
+
+// Places on a body for things to be kept (a board on the back, a sword at the hip): found on it stood at rest, facing +Z
+// with its left +X, and kept by a joint from then on. hold(j, y, z, at): the thing's own +Y along y and its +Z toward z,
+// its grip at `at`, as { j, q, t } in that joint's frame. hold.y(j): how high the joint stands.
+export function restHold(rig, bank) {
+  const pose = new Pose(rig);
+  pose.rot.set(rig.restR); pose.pelvis.set(bank.pelvisRest);
+  bank.sample(bank.clips.Idle_Loop, 0, pose.rot, pose.pelvis);
+  solveFK(pose, 0, 0, 0, 0, null, null);
+  const hold = (j, y, z, at) => {
+    const sq = pose.wq.subarray(j * 4, j * 4 + 4), inv = [-sq[0], -sq[1], -sq[2], sq[3]];
+    const yy = norm(y), zz = norm(orth(z, yy)), q = new Float32Array(4), t = new Float32Array(3);
+    quatMul(q, 0, inv, 0, matToQuat(cross(yy, zz), yy, zz), 0);
+    quatRotate(t, 0, inv, 0, [at[0] - pose.wt[j * 3], at[1] - pose.wt[j * 3 + 1], at[2] - pose.wt[j * 3 + 2]], 0);
+    return { j, q, t };
+  };
+  hold.y = (j) => pose.wt[j * 3 + 1];
+  return hold;
+}
+const stowQ = new Float32Array(4), stowT = new Float32Array(3), stowM = new Float32Array(16);
 
 function norm(v) { const l = 1 / (Math.hypot(v[0], v[1], v[2]) || 1); return [v[0] * l, v[1] * l, v[2] * l]; }
 function cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }

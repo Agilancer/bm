@@ -40,7 +40,8 @@ export const TOWN_KNIGHTS = [
   const height = k.suit === 'knight' ? 1.9 : 1.94;
   // The black knight is 2.12 m and holds the crimson sword and V board; the silver one is 1.92 m with the gilded and T.
   const s = k.sword === 'crimson' ? 1.085 * height / 2.12 : 0.96 * height / 1.92;
-  const b = k.shield === 'v' ? 1.6 * height / 2.12 : 1.25 * height / 1.92;
+  // (The boards a tenth bigger than they were first cut: 1.76 and 1.38 for those heights.)
+  const b = k.shield === 'v' ? 1.76 * height / 2.12 : 1.38 * height / 1.92;
   return {
     ...k, asset: `assets/game/knights/${k.suit}.glb`, spawn: k.route[0], swordScale: s, shieldScale: b,
     shieldHit: k.shield === 'v' ? 1.3 : 1.2, bladeLen: 1, pauseClip: k.hostile ? null : 'Idle_Loop',

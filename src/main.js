@@ -378,7 +378,7 @@ async function boot(plan, poolSize) {
   // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
   // How many: by the tier, the setting, or ?heroes=N for tests.
   const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
-    : Math.min(settings.heroes === 'few' ? 6 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
+    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
   let cast = [];
   if (heroCount > 0) {
     try {
@@ -525,7 +525,7 @@ async function boot(plan, poolSize) {
     });
     addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
   }
-  // A word with the town (src/ui/folk.js): E to someone, J for the journal.
+  // A word with the town (src/ui/folk.js): E to someone, J for the quest log.
   const giveXp = (n) => {
     if (!stepXp(pack, n)) { showLevel(); return; }
     arm();
@@ -563,6 +563,9 @@ async function boot(plan, poolSize) {
       click: () => title.chime?.(),
       // A charm for a quest (src/ui/lands.js), into the pouch.
       charm: (k) => !!game.lands?.addCharm(k, true),
+      // The quest log: what auto-play is working on (src/ui/autoplay.js), and the big map framed on where a quest is.
+      auto: () => game.autoplay?.current(),
+      map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
     },
   });
   game.townUI = townUI;
@@ -603,8 +606,6 @@ async function boot(plan, poolSize) {
       inventory.render();
       return `${items.length} things of ${tiers.map((r) => RARITIES[r].name).join(', ')}, and ${kind === 'god' ? '25,000' : '2,500'} gold${dropped ? `; ${dropped} on the ground at your feet, the pack being full` : ''}.`;
     },
-    // The other word: auto-play's button (src/ui/autoplay.js).
-    autoplay: () => game.autoplay?.unlock(),
   });
   lands.load(null);
   game.lands = lands;
@@ -894,11 +895,20 @@ async function boot(plan, poolSize) {
   townUI.spellbar = game.spellbar;
   // First person or third: V, the eye by the spell bar, VIEW on a phone.
   game.viewSwitch = new ViewSwitch({ input, shared, settings, save: saveSettings, tip: (t, s) => hud.tip(t, s), busy: () => state.paused || naming });
-  // Auto-play, behind the skull's word Jamie: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
+  // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES,
   });
+  // The quest log (J): beside the spellbook's B on the spell bar, and on a phone QUESTS beside PACK (the only way to it there).
+  const questBtn = document.createElement('div');
+  questBtn.id = 'questOpen';
+  questBtn.title = 'Quest log (J)';
+  questBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8"/><path d="M6 4a2 2 0 0 0-2 2v1h4V6a2 2 0 0 0-2-2z"/><path d="M8 20a2 2 0 0 1-2-2V7"/><path d="M10 9h6M10 12.5h6M10 16h4"/></svg><kbd>J</kbd>';
+  const questLog = (e) => { e.preventDefault(); e.stopPropagation(); if (townUI.book) townUI.closeBook(); else if (townUI.act.canMenu()) townUI.openBook(); };
+  questBtn.addEventListener('mousedown', questLog);
+  questBtn.addEventListener('touchstart', questLog, { passive: false });
+  $('spellOpen').after(questBtn);
   const closePack = (viaEsc) => {
     inventory.hide();
     input.menu = false;
@@ -911,9 +921,23 @@ async function boot(plan, poolSize) {
   document.addEventListener('visibilitychange', () => {
     const hidden = document.hidden;
     if (hidden) input.releaseControls();
-    shared.input[INPUT.PAUSE] = hidden || state.paused ? 1 : 0;
+    shared.input[INPUT.PAUSE] = hidden || state.paused || game.upright ? 1 : 0;
     if (hidden && audio.ctx) audio.ctx.suspend(); else if (audio.ctx && (input.enabled || title.up)) audio.ctx.resume();
   });
+  // A phone stood upright. The manifest asks for landscape and the lock's asked for too (above, and src/title.js), but an
+  // iPhone grants a page neither, so it can still be turned. Upright, the world holds still and nothing's drawn (index.html
+  // #rotate covers it); the picture keeps its sideways shape (Renderer.resize), so turning it back makes nothing again.
+  const turned = () => {
+    const up = input.touch && window.innerHeight > window.innerWidth;
+    if (up === !!game.upright) return;
+    game.upright = up;
+    if (!input.enabled) return;     // (under the title, the world's held still already)
+    if (up) input.releaseControls();
+    shared.input[INPUT.PAUSE] = up || document.hidden || state.paused ? 1 : 0;
+  };
+  window.addEventListener('resize', turned);
+  window.addEventListener('orientationchange', turned);
+  turned();
   // The game's own panels (the talk, the shops, the seals, the skull's menu, the book, the pack): a tick under the pointer and a
   // click as one's pressed (MenuSFX, by Kevin Fowler). The title and the pause menu have their own (src/title.js chime, tick).
   let uiHover = null;
@@ -943,6 +967,7 @@ async function boot(plan, poolSize) {
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
   $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) openPack(); }, { passive: false });
+  $('bQuests').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) questLog(e); }, { passive: false });
   $('bMap').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) toggleMap(); }, { passive: false });
   $('bTake').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) game.takeNearest(); }, { passive: false });
   $('touch').addEventListener('touchstart', () => {
@@ -951,8 +976,8 @@ async function boot(plan, poolSize) {
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> opens your spellbook, where your points are spent and your bar is set. <b>PACK</b> holds your gear. <b>MAP</b> shows the land.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> journal';
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> opens your spellbook, where your points are spent and your bar is set. <b>PACK</b> holds your gear. <b>MAP</b> shows the land. <b>QUESTS</b>, by PACK, is your quest log: each quest, where it takes place, and what to do next. <b>Auto</b>, under the skull, lets the game play itself.'
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   watchFiles(null);
@@ -1277,6 +1302,8 @@ class GameView {
       this.watchRefresh(now);
       this.input.update();
       if (!this.buffer) this.sim.postMessage({ input: this.shared.input.slice() });
+      // (A phone stood upright draws nothing: see turned.)
+      if (this.upright) { this.last = now; return; }
       // A phone on a 120 Hz screen takes every other refresh: a steady 60 is as smooth to the eye, and the battery and the
       // heat are what would slow it down later.
       if (this.gpu.mobile && this.vsyncMs < 10 && (this.rafSkip++ & 1)) return;
@@ -1546,11 +1573,36 @@ class GameView {
     }
   }
 
+  // What one of the other Tessariels' moves does that only this thread can (HFX in src/sim/heroskills.js): at (x, y, z).
+  heroFx(code, x, y, z, a, b, c) {
+    const r = this.renderer, au = this.audio;
+    switch (code) {
+      case 1: {
+        // Blood thrown from a cut, the way (a, c) with how much (b): a gout along it, and a spatter every way. It falls and soaks in.
+        // (Jets of it, in drops big enough to be seen across a field.)
+        const n = Math.ceil(160 + 340 * b);
+        r.emit(0, n, x, y, z, a * 1.5, 0.8, c * 1.5, 0.45, 2.6, 7.5 + 3.5 * b, 0.004, 0.02, 0.6, 1.5);
+        r.emit(0, Math.ceil(n * 0.4), x, y, z, 0, 1, 0, 1.4, 1, 5, 0.003, 0.014, 0.5, 1.3);
+        au.play('splat', x, y, z, 0.3 + b * 0.35);
+        break;
+      }
+      // A lute's string (a: semitones from its lowest, b: how loud), and a bell-like one for the paladin's light.
+      case 2: au.pluck(x, y, z, a, b || 0.5); break;
+      case 4: au.pluck(x, y, z, a, b || 0.5, true); break;
+      // Sparks off steel (a: how many).
+      case 3: r.emit(2, Math.ceil(a || 30), x, y, z, 0, 0.4, 0, 1.4, 1.5, 6, 0.002, 0.005, 0.15, 0.5); break;
+      // Something heavy coming down.
+      case 5: au.play('land', x, y, z, 0.8 + (a || 0) * 0.6, 0.7); r.emit(3, 30, x, y + 0.03, z, 0, 1, 0, 1.4, 0.6, 2.6, 0.06, 0.16, 0.5, 1.3); break;
+      default: break;
+    }
+  }
+
   onEvent(type, a, b, c, d, e, f, g) {
     const r = this.renderer, au = this.audio;
     switch (type) {
       case EV.SWING: break;
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
+      case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
       case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;

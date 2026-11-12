@@ -6,7 +6,7 @@
 // great place. Walk onto one and it wakes; E on a woken one lists every other woken one, and takes you there.
 //
 // The skull: beside the corner map (with the mouse free: Esc first), or the ` key. The right word opens the menu; the cheats
-// last until the page is reloaded. Another word, Jamie, wakes the Auto button under it (src/ui/autoplay.js).
+// last until the page is reloaded. Under it is the Auto button (src/ui/autoplay.js), which needs no word.
 
 import { SEALS } from '../core/sites.js';
 import { CLIFF, POOL, SITES, WATERS, countryAt } from '../core/lands.js';
@@ -14,8 +14,6 @@ import { roomAt } from './places.js';
 import { ABIL, H, INPUT } from '../core/layout.js';
 
 const PASSWORD = '6669';
-// The word for auto-play: any case.
-const AUTO_WORD = 'jamie';
 // The countries thick with trees, where the woods' own sounds are heard.
 const WOODS = new Set(['darkwood', 'deepwood', 'rustwood', 'gallows']);
 const SKULL = 'assets/ui/velscour_skull.png';
@@ -116,7 +114,7 @@ const TAGS = { god: 'GOD', fly: 'NO-CLIP', noDamage: 'NO DMG', doubleJump: '2X J
 
 export class Lands {
   /** o: { shared, input, hud, audio, pack, worldMap, cmd(code, a, b, c), snap(), hour(), opened(), closed(), canMenu(), arm(),
-   * level(+1|-1), gear('god'|'peasant') -> line, bells(), autoplay() (the word Jamie: the Auto button) } */
+   * level(+1|-1), gear('god'|'peasant') -> line, bells() } */
   constructor(o) {
     this.o = o;
     this.cheats = { noDamage: false, fly: false, god: false, doubleJump: false };
@@ -179,11 +177,6 @@ export class Lands {
     const ok = word === PASSWORD;
     this.word.value = '';
     this.pass.classList.remove('on');
-    // (Not closed() here: that hands the mouse back to the game, and the Auto button wants clicking. Auto-play keeps it free.)
-    if (word.toLowerCase() === AUTO_WORD && this.o.autoplay) {
-      this.o.autoplay();
-      return;
-    }
     if (!ok) { this.o.closed(); this.o.hud.tip('The skull says nothing.', 2); return; }
     this.note = '';
     this.render();

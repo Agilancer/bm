@@ -11,6 +11,7 @@
 // sound is booked on the audio clock at that moment, so they keep time however hard the loading holds the thread.
 
 import { SLOT_COUNT, saves } from './saves.js';
+import { isMobileDevice } from './gfx/gpu.js';
 
 const LOGOS = {
   blastorama: 'assets/title/blastorama.webp',
@@ -467,6 +468,9 @@ export class Title {
     if (this.mode === 'splash') { this.skip(true); this.hush(); }
     this.stopBells(1.5);
     this.stopSong(2);
+    // A phone lets go of the song and the bells once they've faded (decoded, about 45 MB the game would hold for nothing);
+    // toMenu decodes the song again.
+    if (isMobileDevice()) { clearTimeout(this.dropT); this.dropT = setTimeout(() => { if (this.mode === 'hidden') this.songBuf = this.bellsBuf = null; }, 3000); }
     this.mode = 'hidden';
     clearTimeout(this.idleT); clearTimeout(this.inT); clearTimeout(this.splashT);
     this.gate.classList.remove('on'); this.skipEl.classList.remove('on');
@@ -488,7 +492,8 @@ export class Title {
     this.menuOn = false;
     this.logoIn = true;
     const c = this.audio();
-    if (c) this.bookSong(c.currentTime + 0.3, 2.5);
+    if (c && this.songBuf) this.bookSong(c.currentTime + 0.3, 2.5);
+    else if (c) this.decode(SONG_URL).then((b) => { this.songBuf = b; if (b && this.mode === 'main' && !this.song) this.bookSong(c.currentTime + 0.1, 2.5); });
     this.maybeMenu();
   }
 

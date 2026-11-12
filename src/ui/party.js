@@ -4,7 +4,8 @@
 // Who can be hired is whoever of the other Tessariels isn't hired already (src/core/heroes.js makeCast): the quartermaster
 // gives each a name of the Company's and a level near yours, and the sim takes the body into your party (HeroWorld.hire).
 // Lancers take the blows, paladins heal, everyone else does the damage (roleOf in src/core/dungeon.js).
-import { CLASSES } from '../core/heroes.js';
+import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
+import { movesOf } from '../sim/heroskills.js';
 import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
 import { C, CHARS_START, C_HERO, C_SIZE } from '../core/layout.js';
 import { priceText } from '../folk/shops.js';
@@ -12,6 +13,8 @@ import { CLOSE_X } from './menu-x.js';
 
 const ROLE = { tank: ['Tank', '#7fb6ff', '⛨'], heal: ['Healer', '#8fe0a0', '✚'], dps: ['Damage', '#ff9a7a', '⚔'] };
 const OFFERS = 6;
+// How many moves a class has at a level, past the ones it starts with: shown on the books, and told when one's come by.
+const movesAt = (cls, level) => movesOf(cls, level);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // What a sword-arm costs, in copper, for as long as you keep them: by their level.
 export const hirePrice = (level) => (6 + level * 2) * 10;
@@ -26,6 +29,7 @@ export class PartyUI {
     this.offers = null; this.offersFor = -1;
     this.boss = null;          // { key, ids, name }
     this.warrens = null;       // the sim's last word on the fight (auto-play reads it too)
+    this.clears = 0;           // how often the Warrens have been cleared in this game (auto-play's dungeon runs read it)
     this.names = null;
     fetch(`${this.base}assets/game/heroes/names.json`).then((r) => r.json()).then((n) => { this.names = n; }).catch(() => {});
     this.buildDom();
@@ -69,6 +73,8 @@ export class PartyUI {
       #hirePanel li kbd { flex: none; min-width: 1.5em; text-align: center; font: 12px Georgia, serif; color: var(--gold-dim, #8c7344); border: 1px solid rgba(140,115,68,.5); border-radius: 3px; padding: 0 3px; }
       #hirePanel li .rl { flex: none; width: 1.3em; text-align: center; }
       #hirePanel li .pr { margin-left: auto; color: #f1d68a; font-size: 13px; }
+      #hirePanel li .mv { margin-left: auto; font-size: 12px; opacity: .6; font-style: italic; }
+      #hirePanel li .mv + .pr { margin-left: 12px; }
     `;
     document.head.appendChild(css);
     this.frames = document.createElement('div'); this.frames.id = 'partyFrames';
@@ -102,7 +108,13 @@ export class PartyUI {
     const free = this.cast.filter((c) => !c.broker && !this.member(c.slot));
     const by = { tank: [], heal: [], dps: [] };
     for (const c of free.sort(() => Math.random() - 0.5)) by[roleOf(c.cls)].push(c);
-    const pickN = [...by.tank.slice(0, 2), ...by.heal.slice(0, 2), ...by.dps.slice(0, 4)].slice(0, OFFERS + 2);
+    // One of every class that's free, so a boomerang knight and a bard can always be had, as an archer or a rogue can; then
+    // a second of each of the two the Warrens need.
+    const seen = new Set(), one = [];
+    for (const cls of CLASS_NAMES) { const c = free.find((x) => x.cls === cls); if (c) { one.push(c); seen.add(c); } }
+    const more = [...by.tank, ...by.heal].filter((c) => !seen.has(c)).slice(0, 2);
+    const order = { tank: 0, heal: 1, dps: 2 };
+    const pickN = [...one, ...more].sort((a, b) => order[roleOf(a.cls)] - order[roleOf(b.cls)] || CLASS_NAMES.indexOf(a.cls) - CLASS_NAMES.indexOf(b.cls));
     this.offers = pickN.map((c) => {
       const off = Math.floor(Math.random() * 4) - 2;
       const level = Math.max(1, L + off);
@@ -138,10 +150,15 @@ export class PartyUI {
   levelled() {
     const L = this.level();
     for (const m of this.members) {
+      const was = m.level;
       m.level = Math.max(1, L + m.off);
       this.cast[m.slot].level = m.level;
       this.sim.postMessage({ type: 'hireLevel', slot: m.slot, level: m.level });
+      // (What they've come by with it: their moves are by level too. src/sim/heroskills.js.)
+      const got = movesAt(m.cls, m.level).filter((q) => q.lvl > was);
+      if (got.length && m.level > was) this.tip(`${m.name} is level ${m.level}, and has learned ${got.map((q) => q.name).join(' and ')}.`, 5);
     }
+    this.paceSent = -1;
   }
 
   changed() { this.buildFrames(); if (this.open) this.showPanel(); this.onChange?.(); }
@@ -178,11 +195,11 @@ export class PartyUI {
     const li = (o) => { this.opts.push(o); return o; };
     let html = `<div class="tk-head"><span class="tk-name">${esc(h.p.name)}</span><span class="tk-title">${esc(h.p.title || 'Quartermaster')}</span><span class="tk-purse">${this.pack.purse() ? priceText(this.pack.purse()) : 'No coin'}</span>${CLOSE_X}</div>
       <div class="line">${esc(say)}</div>`;
-    const row = (o, k) => `<li class="${o.dim ? 'dim' : ''}" data-k="${k}"><kbd>${k + 1}</kbd><span class="rl" style="color:${ROLE[o.role][1]}">${ROLE[o.role][2]}</span><span>${esc(o.label)}</span>${o.price ? `<span class="pr">${gratis ? 'Free' : priceText(o.price)}</span>` : ''}</li>`;
+    const row = (o, k) => `<li class="${o.dim ? 'dim' : ''}" data-k="${k}"${o.title ? ` title="${esc(o.title).replace(/"/g, '&quot;')}"` : ''}><kbd>${k < 9 ? k + 1 : k === 9 ? 0 : ''}</kbd><span class="rl" style="color:${ROLE[o.role][1]}">${ROLE[o.role][2]}</span><span>${esc(o.label)}</span>${o.note ? `<span class="mv">${esc(o.note)}</span>` : ''}${o.price ? `<span class="pr">${gratis ? 'Free' : priceText(o.price)}</span>` : ''}</li>`;
     if (this.members.length) {
       html += `<h4>Your party (${this.members.length} of ${PARTY.size})</h4><ol>`;
       for (const m of this.members) {
-        const o = li({ role: roleOf(m.cls), label: `Let ${m.name} go: level ${m.level} ${CLASSES[m.cls].title}`, run: () => { this.dismiss(m.slot); this.showPanel(`${m.name} salutes and goes back on the Company's books.`); } });
+        const o = li({ role: roleOf(m.cls), title: movesAt(m.cls, m.level).map((q) => q.name).join(', '), label: `Let ${m.name} go: level ${m.level} ${CLASSES[m.cls].title}`, run: () => { this.dismiss(m.slot); this.showPanel(`${m.name} salutes and goes back on the Company's books.`); } });
         html += row(o, this.opts.length - 1);
       }
       html += '</ol>';
@@ -190,7 +207,7 @@ export class PartyUI {
     html += `<h4>On the Company's books</h4><ol>`;
     for (const of of this.offers || []) {
       const role = roleOf(of.cls);
-      const o = li({ role, price: of.price, dim: this.full(), label: `${of.name}, level ${of.level} ${CLASSES[of.cls].title} (${ROLE[role][0].toLowerCase()})`,
+      const o = li({ role, price: of.price, dim: this.full(), label: `${of.name}, level ${of.level} ${CLASSES[of.cls].title} (${ROLE[role][0].toLowerCase()})`, note: `${movesAt(of.cls, of.level).length} moves`, title: movesAt(of.cls, of.level).map((q) => q.name).join(', '),
         run: () => { if (this.hire(of)) this.showPanel(`${of.name} it is. They'll keep at your back.`); } });
       html += row(o, this.opts.length - 1);
     }
@@ -206,7 +223,7 @@ export class PartyUI {
   key(e) {
     if (!this.open || e.repeat) return;
     const n = e.code.startsWith('Digit') ? +e.code.slice(5) : e.code.startsWith('Numpad') ? +e.code.slice(6) : NaN;
-    if (!Number.isNaN(n) && n > 0) { e.preventDefault(); e.stopPropagation(); this.choose(n - 1); return; }
+    if (!Number.isNaN(n) && n >= 0) { e.preventDefault(); e.stopPropagation(); this.choose(n === 0 ? 9 : n - 1); return; }
     if (e.code === 'Escape' || e.code === 'KeyE' || e.code === 'Tab') { e.preventDefault(); e.stopPropagation(); this.close(); }
   }
 
@@ -227,6 +244,8 @@ export class PartyUI {
   // Each frame: life bars, the boss's bar, the calls fading.
   update(dt, snap) {
     if (!snap) return;
+    // Your level, told to the world now and then: the other Tessariels out in it keep pace with you (HeroWorld.keepPace).
+    if ((this.paceT = (this.paceT || 0) - dt) <= 0) { this.paceT = 4; const L = this.level(); if (L !== this.paceSent) { this.paceSent = L; this.sim.postMessage({ type: 'playerLevel', level: L }); } }
     const first = this.firstHero();
     for (const f of this.frameEls) {
       const o = CHARS_START + (first + f.m.slot) * C_SIZE + C_HERO;
@@ -283,7 +302,7 @@ export class PartyUI {
       }
       case DELVE.ENTER: this.warn(a ? `${d.name}. Your dead foes are as you left them.` : d.words.enter, 6); break;
       case DELVE.LEAVE: this.hideBoss(); break;
-      case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.cleared?.(d); break;
+      case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clears++; this.cleared?.(d); break;
       case DELVE.WARN: this.warn(WARNINGS[a | 0] || '', 5); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
@@ -300,9 +319,10 @@ export class PartyUI {
 
   // ---- kept in the save ----------------------------------------------------------------------------------------------
 
-  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })) }; }
+  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })), clears: this.clears }; }
 
   load(d) {
+    this.clears = d?.clears || 0;
     for (const m of this.members.slice()) this.dismiss(m.slot);
     this.offers = null;
     for (const s of d?.members || []) {

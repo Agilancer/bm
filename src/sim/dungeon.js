@@ -540,11 +540,11 @@ export class Warrens {
     // Shared pain: the one with less life left takes half of what lands on it.
     if (skrit && skrat) {
       const a = skrit.hp / skrit.maxHp, b = skrat.hp / skrat.maxHp;
-      skrit.ward = a < b - 0.15 ? 0.5 : 1; skrat.ward = b < a - 0.15 ? 0.5 : 1;
+      skrit.shrug = a < b - 0.15 ? 0.5 : 1; skrat.shrug = b < a - 0.15 ? 0.5 : 1;
       if (Math.abs(a - b) > 0.15) this.warn(3, 14);
     } else {
       const last = skrit || skrat;
-      if (last && !f.wild) { f.wild = true; last.ward = 1; last.opts.damage *= 1.6; last.opts.pause = 0.5; this.warn(6); sim.event(EV.ROAR, last.x, last.y + 2, last.z, 1.3); }
+      if (last && !f.wild) { f.wild = true; last.shrug = 1; last.opts.damage *= 1.6; last.opts.pause = 0.5; this.warn(6); sim.event(EV.ROAR, last.x, last.y + 2, last.z, 1.3); }
     }
     if (skrit) this.deck(f, skrit, f.wild ? 3 : 5, ['sPots', 'sFan', 'sWheel', 'sWall']);
     if (skrat && !skrat.spin) this.deck(f, skrat, f.wild ? 3.2 : 5.6, ['kWhirl', 'kDash', 'kNova']);

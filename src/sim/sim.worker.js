@@ -8,6 +8,7 @@ import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW
 import { Opening } from './opening.js';
 import { PlayerBody } from './playerbody.js';
 import { THIRD, thirdAllowed } from '../core/third.js';
+import { STOW, armedGround } from '../core/stow.js';
 import { STAFF_CORES } from '../items/staffcores.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
@@ -48,14 +49,14 @@ import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
 // into the town (keep: Knight.letGo).
 const BLACK = {
-  spawn: [...CHURCH_GUARD], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.6, shieldHit: 1.3, bladeLen: 1,
+  spawn: [...CHURCH_GUARD], yaw: -Math.PI / 2, hostile: true, hp: 520, walk: 1.5, swordScale: 1.085, shieldScale: 1.76, shieldHit: 1.3, bladeLen: 1,
   route: [[...CHURCH_GUARD]], pauseClip: null, keep: true,   // On guard before the cathedral's great door, and no further.
   // He may follow you off his ground, but only so far: past leash metres from his door he lets you go and walks back to it,
   // and he lets you go at once when you're back in town (keep: Knight.letGo).
   style: 'black', leash: 20,
 };
 const SILVER = {
-  spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.25, shieldHit: 1.2, bladeLen: 1,
+  spawn: [-2, 13], yaw: 2.6, hostile: false, hp: 420, walk: 1.35, swordScale: 0.96, shieldScale: 1.38, shieldHit: 1.2, bladeLen: 1,
   route: [[-7, 13], [-7, 19], [0, 19], [0, 13]], pauseClip: 'Idle_FoldArms_Loop', style: 'silver',
   guard: true,   // One of the town's guard too (src/sim/town-watch.js): he keeps the gate until he's needed.
 };
@@ -119,6 +120,33 @@ class Sim {
 
   // Your own body, for the third-person view (src/sim/playerbody.js): posed from what you're doing, into the slot after
   // Lisandra's; and where that view's camera can stand (src/core/third.js). Before the spells' update, which draws from its hands.
+  // Whether your staff, skull and shield are in your hands or put away (the staff and the shield on your back, the skull at
+  // your hip): out for anything you do with them, for a blow taken, and while anything's at you; kept out for STOW.after
+  // seconds after the last of that, in case there's more; and always out under a roof of stone (the church and its
+  // catacombs, the Warrens, the Test Dungeon) and in Lisandra's cave. this.stow: 0 in hand, 1 put away, eased.
+  stepStow(dt) {
+    const p = this.player, c = this.casting, input = this.input, st = this.opening ? this.opening.stage : OPENING.OFF;
+    let out = (st > OPENING.OFF && st < OPENING.ESCORT) || armedGround(p.x, p.z)
+      || c.state !== 'idle' || p.swinging || p.queued === 'L' || p.staffSurfT !== null || input[INPUT.CAST] > 0.5
+      // (A ride on the shield isn't a fight: the board's under your feet, and the staff stays where it was.)
+      || (!p.surfing && (!!p.queued || p.clip !== p.stance.idle || p.shieldUp > 0.02 || input[INPUT.BLOCK] > 0.5))
+      || p.hp < (this.stowHp ?? p.hp) - 0.01 || p.dead;
+    this.stowHp = p.hp;
+    if (!out) {
+      for (const k of this.foes) {
+        if (k.dead || k.dormant || k.hostile === false) continue;
+        const d = Math.hypot(k.x - p.x, k.z - p.z);
+        if (d > STOW.near) continue;
+        // (Awake and at you: the dead and the beasts say so themselves, a knight by having his guard up, living stone by its glow.)
+        if (k.aggro === true || (k.aggro === undefined && (k.combatTarget > 0 || k.glow > 0.05 || (k.combatTarget === undefined && k.glow === undefined && d < STOW.close)))) { out = true; break; }
+      }
+    }
+    this.calmT = out ? 0 : (this.calmT ?? STOW.after) + dt;
+    const to = this.calmT < STOW.after ? 0 : 1;
+    this.stow = this.stow === undefined ? to : Math.max(0, Math.min(1, this.stow + (to ? dt / STOW.away : -dt / STOW.draw)));
+    this.scratch[H.STOW] = this.stow;
+  }
+
   stepBody(dt) {
     const body = this.body, snap = this.scratch, p = this.player, c = this.casting, input = this.input;
     this.third = !!body && input[INPUT.THIRD] > 0.5 && thirdAllowed(this.opening ? this.opening.stage : OPENING.OFF);
@@ -132,6 +160,7 @@ class Sim {
     const staff = WEAPONS[p.weapon]?.hands === 3 ? WEAPONS[p.weapon].id : null;
     s.staff = !!staff; s.staffHead = staff && STAFF_CORES[staff] ? STAFF_CORES[staff][1] : 0.5;
     s.skull = p.hasSkull; s.shield = p.hasShield; s.guard = p.hasSkull ? 0 : p.shieldUp || 0;
+    s.stow = this.stow;
     if (p.surfing) {
       // The board: the way it's going (the way it last went, when it's all but stopped) and the lie of the ground under it.
       const b = s.surfAt, hs = Math.hypot(p.vx, p.vz), w = this.world, e = 0.3;
@@ -342,6 +371,7 @@ class Sim {
     // (In real seconds: its door and its count after a fall don't slow with a slow-motion death.)
     this.testHall?.step(dt);
     this.separate();
+    this.stepStow(dt * (this.slow || 1));
     this.stepBody(dt * (this.slow || 1));
     this.casting.update(dt * (this.slow || 1), tdt, input, this);
     // (After the spells' update, which clears the frame's shapes.)
@@ -698,6 +728,8 @@ async function boot(msg) {
     if (m.type === 'hire') { const ok = sim.heroWorld?.hire(m.slot, m) || false; self.postMessage({ type: 'hired', slot: m.slot, ok, id: m.id }); }
     if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
     if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
+    // (Your own level: the other Tessariels out in the world keep pace with it.)
+    if (m.type === 'playerLevel') sim.heroWorld?.keepPace(m.level);
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
     if (m.type === 'hall') sim.testHall?.message(m);
     // What's been bought in the six trees (src/items/skillbook.js): the spells are cast with it from now on.

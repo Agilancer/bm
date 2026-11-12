@@ -62,7 +62,11 @@ export const H = {
   TP: 63, TP_DIST: 64, TP_SIDE: 65, TP_DROP: 66,
   // What's on you (BUFFS in src/sim/treespells.js): the seconds left of each. And for each spell by its place in SPELLS, the
   // seconds until it's ready again. (Room for sixteen of the one and ninety-six of the other.)
-  BUFFS: 67, COOL: 83, SIZE: 179,
+  BUFFS: 67, COOL: 83,
+  // The road's fight in the opening: how many of its dead are still to be put down (0: no fight on). src/sim/opening.js.
+  OPENING_FIGHT: 179,
+  // Your staff, skull and shield put away, out of a fight: 0 (in hand) to 1 (on your back and hip). Sim.stepStow.
+  STOW: 180, SIZE: 181,
 };
 
 // Per-character block
@@ -73,12 +77,15 @@ export const C = {
   MODEL: 21, PAL: 22,
   // Who it's after, by its place in the snapshot: -1 the player, -2 no one. A monster's mark, or one of the other
   // Tessariels' foe (written in src/sim/sim.worker.js; read by auto-play to help its party, src/ui/autobrain.js).
-  AFTER: 23, SIZE_HEAD: 24,
+  AFTER: 23,
+  // Where its head is, in the world, as posed (a knight's: src/sim/knight.js write). For a mark over it that follows it.
+  HEAD_X: 24, HEAD_Y: 25, HEAD_Z: 26, SIZE_HEAD: 27,
 };
 export const C_PALETTE = C.SIZE_HEAD;
 export const C_PROPS = C_PALETTE + MAX_JOINTS * 8;
-// Three things in a character's hands and on its back, a matrix each: main hand, off hand (a knight's shield), the back.
-export const PROPS_PER_CHAR = 3;
+// Four things a character carries, a matrix each: main hand, off hand (a knight's shield), the back, and one more of a
+// hero's own (a bard's lute: src/sim/hero.js).
+export const PROPS_PER_CHAR = 4;
 // What the render thread needs of one of the other Tessariels (src/sim/hero.js writeHero): shown, tag height, x, y, z,
 // hp fraction, level, party, activity, dead, below, fighting.
 export const C_HERO = C_PROPS + PROPS_PER_CHAR * 16;
@@ -93,7 +100,7 @@ export const VM_PALETTE = H.SIZE;
 export const SPELL_PALETTE = VM_PALETTE + VM_JOINTS * 8;
 export const FX_START = SPELL_PALETTE + VM_JOINTS * 8;
 export const FX_FLOATS = 16;
-export const MAX_FX = 384;
+export const MAX_FX = 512;
 export const CHARS_START = FX_START + MAX_FX * FX_FLOATS;
 // The slimes out in the wet places (src/sim/slimes.js write).
 export const MAX_SLIMES = 40;
@@ -139,6 +146,9 @@ export const EV = {
   SPELL_ZONE: 54,
   // The Hollowfang Warrens (src/sim/dungeon.js): code (DELVE in src/core/dungeon.js), and what goes with it.
   DELVE: 55,
+  // Something one of the other Tessariels' moves does that only the render thread can (src/sim/heroskills.js HFX): (code,
+  // x, y, z, a, b, c). Blood thrown from a cut, a lute's string, sparks off steel.
+  HERO_FX: 56,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.

@@ -7,10 +7,11 @@ import {
   HERD_END, NAME_AT, OPENING, OPENING_SPAWN, OPENING_YAW, SWAP_AT, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP,
   caveNearest, chamberPoint, storyHolds,
 } from '../core/opening.js';
-import { DIVE_TO, ROUTE, STORM_TO, VIEW_SPOT, routeAt, routeDir, routeNear } from '../core/escort.js';
+import { DIVE_TO, ROUTE, STORM_TO, VIEW_SPOT, cornerNear, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { EV, INPUT } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
 import { ELEM, FX } from './spells.js';
+import { CELL, TREE_FLOATS, treesInCells } from '../core/forest.js';
 import { openingCaster, openingRaise } from './undead.js';
 
 const WEAVE_FROM = 9.4;             // into WAKE: she sets off across the cave to you
@@ -36,8 +37,10 @@ const LANTERN_SPOT = (() => { const d = [HEARTH_SPOT[0] - HEARTH[0], HEARTH_SPOT
 // Where on the way down (src/core/escort.js) things happen, as distances along it: the shelf, the head of the steps, a
 // landing partway down them, the road, the pines, the dead, and the town in sight.
 const MARKS = { shelf: 9, steps: routeNear(WAY[4][0], WAY[4][1]) - 4, speech: routeNear(WAY[6][0], WAY[6][1]), foot: routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) - 8,
-  stepsEnd: routeNear(WAY[8][0], WAY[8][1]), ambush: routeNear(-214, 180), sight: routeNear(-84, 63) };
+  stepsEnd: routeNear(WAY[8][0], WAY[8][1]), ambush: routeNear(-161.5, 134.3), sight: routeNear(-84, 63) };
 MARKS.woods = MARKS.ambush - 34;
+// (How far down the way the dead come up: auto-play is off its shield and on its feet well before it. src/ui/autobrain.js.)
+export const AMBUSH_AT = MARKS.ambush;
 MARKS.star = MARKS.sight - 45;
 
 // How she leads you down: this far ahead of you on foot, and further on a shield, where it's fast. Come up on her back and
@@ -47,6 +50,7 @@ MARKS.star = MARKS.sight - 45;
 const LEAD = 5.0, LEAD_RIDE = 9, HALT = 4.3, NEAR = 3.4, FAR = 9.5, WANDER = 16;
 const FOOT_MAX = 9.6;        // flat out on foot: a little over your sprint, so she can always get back in front
 const RIDE_MAX = 30;         // on the shield: over what yours can do
+const OFF_AFTER = 1.2;        // s: or you've been off yours this long
 const OFF_AT = 5.5;          // you're off yours, and she's slowed to this: she steps off hers
 const RIDE_LIFT = 0.16;      // her soles over the ground, stood on the board (its face 0.09 up: src/items/drops.js boardPose)
 const HOP = 0.32;            // s: the little jump on and off it
@@ -64,16 +68,18 @@ const HEAL = ['heal0', 'heal1', 'heal2', 'heal3', 'heal4', 'heal5', 'heal6'];
 const WED = ['wed', 'wed2', 'wed3', 'wed4'];
 const HEAL_PACE = 3.4;
 // On her shelf and down her steps you keep to a walk behind her: it's narrow, and she has things to say on it.
-const STEPS_PACE = 3.3;
+const STEPS_PACE = 3.3, STEPS_STILL = 2.6;
+const CORNER = { near: 1.6, pace: 1.15, gain: 1.4, give: 1.3 };
 const THEN = { staff: 'staff2' };
 // What's dropped unsaid at the town's edge, and what's dropped when the dead come up.
 const ROAD_TALK = new Set([...HILL, ...LOW, 'lead', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
 const BEFORE_FIGHT = new Set([...HILL, 'lead', 'door', 'shelf', 'steps', 'speech', 'foot', 'staff', 'staff2', 'woods']);
-// The fight on the road, in the pines: twenty of the dead up out of the ground, five at a time; when eight or fewer are
-// left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out of the trees on
-// each side of the road, who raise what's fallen. All of them easy (src/sim/undead.js openingRaise). She fights it with
+// The fight on the road, a little below the pines, where the hillside is bare on both sides of it: twenty of the dead up
+// out of the open ground either side, five at a time; when eight or fewer are left, twenty more and ten of their children;
+// when ten or fewer of those are left, a necromancer out of the nearest trees past the bare ground on each side, who raise
+// what's fallen. Nobody goes on down the road until every one of them is dead. All of them easy (src/sim/undead.js openingRaise). She fights it with
 // you, with what fire she has left: a weak bolt every couple of seconds.
-const WAVE = { first: 20, more: 20, children: 10, group: 5, every: 2.4, second: 8, third: 10, limit: 300, reach: 70 };
+const WAVE = { first: 20, more: 20, children: 10, group: 5, every: 2.4, second: 8, third: 10, reach: 70, dry: 14, clear: 16, trees: 64 };
 const HER_FIRE = { every: 1.9, range: 20, speed: 17, dmg: 5, at: 0.34 };
 
 export class Opening {
@@ -513,8 +519,11 @@ export class Opening {
       if (b) return b;
     }
     // On a shield when you get on yours; off it once you're off yours and she's slowed, or at the way's end.
+    // (Off hers once you're off yours and she's slowed; or you've been off yours a moment, however fast you're coming on
+    // foot: she doesn't ride on ahead of someone who's walking.)
+    this.afootT = player.surfing ? 0 : (this.afootT || 0) + dt;
     if (player.surfing && !this.riding && this.prog < ROUTE.len - 20) this.getOn();
-    else if (this.riding && ((!player.surfing && this.pace < OFF_AT) || this.prog >= ROUTE.len - 1)) this.getOff();
+    else if (this.riding && ((!player.surfing && (this.pace < OFF_AT || this.afootT > OFF_AFTER)) || this.prog >= ROUTE.len - 1)) this.getOff();
     if (this.riding) {
       this.rideT += dt;
       this.fastT = this.pace > 15 ? (this.fastT || 0) + dt : 0;
@@ -527,7 +536,9 @@ export class Opening {
     this.stillT = Math.hypot(player.vx, player.vz) < 0.6 ? this.stillT + dt : 0;
     if (!this.riding && !end) {
       if (!this.halted) {
-        if ((this.stillT > 0.7 && gap > HALT) || gap > FAR || (far > WANDER && gap > -4 && this.time > 0.6)) { this.halted = true; this.haltT = 0; }
+        // (On her steps a pause is a turn on a landing, as likely as not: she gives you longer there before she takes it
+        // that you've stopped, or she'd be stopping and turning round at every flight.)
+        if ((this.stillT > (this.prog < MARKS.stepsEnd + 4 ? STEPS_STILL : 0.7) && gap > HALT) || gap > FAR || (far > WANDER && gap > -4 && this.time > 0.6)) { this.halted = true; this.haltT = 0; }
       } else {
         this.haltT += dt;
         if (this.haltT > 0.5 && (far < NEAR || gap < 0.6) && far < WANDER) { this.halted = false; this.turnT = 0.45; }
@@ -541,6 +552,9 @@ export class Opening {
       if (this.halted || this.turnT > 0) want = 0;
     }
     want = clamp(want, 0, this.riding ? RIDE_MAX : FOOT_MAX);
+    // (Round a turn of the steps she slows and walks the corner, so she turns with it and doesn't slide round sideways.)
+    // (Only as far as her lead on you allows: she gives up a step or so of it there, never more, so she's never run down.)
+    if (!this.riding) { const c = cornerNear(this.prog); if (c < CORNER.near) want = Math.min(want, Math.max(CORNER.pace + c * CORNER.gain, along + (LEAD - CORNER.give - gap) * 1.4)); }
     this.pace += (want - this.pace) * Math.min(1, dt * (this.riding ? 2.5 : this.halted ? 6 : 3));
     if (end) this.pace = 0;
     this.prog = Math.min(ROUTE.len, this.prog + this.pace * dt);
@@ -589,6 +603,8 @@ export class Opening {
     }
     // Stopped for you (or stood at the way's end): turned round to you, unhurried, her eyes on you; her foot tapping in time.
     if (this.pace < 0.25 && Math.hypot(to[0] - w.x, to[1] - w.z) < 0.3) {
+      // (Only slowed for you, not stopped: she keeps facing the way down, with a glance back, and goes on as you do.)
+      if (!this.halted && !end) { const [tx, tz] = routeDir(this.prog); return { clip: 'idle', face: Math.atan2(tx, tz), turn: 4, look: far > 3 ? eye : null, lift: this.hopLift() }; }
       return { clip: this.halted && this.haltT > 5 ? 'wait' : 'idle', face: yawTo([w.x, w.z], you), turn: 3.2, look: eye, lift: this.hopLift() };
     }
     // (Put on the way outright: she follows it, the trees stand clear of it, and nothing turns her aside.)
@@ -611,19 +627,21 @@ export class Opening {
       k.lostT = (k.lostT || 0) + dt;
       if (k.lostT > 6) { f.bodies.delete(k); k.aggro = false; k.hostile = false; }
     }
-    const up = [...f.bodies].filter((k) => !k.dead), casters = f.casters.filter((k) => !k.dead && Math.hypot(k.x - player.x, k.z - player.z) < WAVE.reach * 1.5);
+    const up = [...f.bodies].filter((k) => !k.dead && !k.dormant), casters = f.casters.filter((k) => !k.dead && Math.hypot(k.x - player.x, k.z - player.z) < WAVE.reach * 1.5);
     // More of them up out of the ground, a group at a time, in the trees either side of you and on the road ahead.
     if (f.due.length && f.raiseT <= 0) {
       f.raiseT = WAVE.every;
       // (Round you, wherever you've got to: run from them and they come up ahead of you.)
       const [rx, rz] = routeDir(mine);
       for (let n = 0; n < WAVE.group && f.due.length; n++) {
-        const side = Math.random() < 0.5 ? -1 : 1, fore = -4 + Math.random() * 20, out = 5 + Math.random() * 9;
+        // (Turn about, one side and then the other, in the bare ground either side of the road.)
+        const side = (f.sideN = (f.sideN || 0) + 1) % 2 ? -1 : 1, fore = -6 + Math.random() * 16, out = 5 + Math.random() * 9;
         const x = player.x + rx * fore - rz * out * side, z = player.z + rz * fore + rx * out * side;
         if (sim.world.inside?.(x, z, 0.7)) continue;
         const k = openingRaise(sim, x, z, f.due[0], f.bodies);
-        if (!k) { f.raiseT = 1; break; }
-        f.due.shift(); f.bodies.add(k);
+        // (No body left to come up, for a good while: what's still due is let go, so the fight can end.)
+        if (!k) { f.raiseT = 1; f.dry = (f.dry || 0) + 1; if (f.dry > WAVE.dry) f.due.length = 0; break; }
+        f.dry = 0; f.due.shift(); f.bodies.add(k);
       }
     }
     // (Nothing in the ground to come up: no fight, and on she goes.)
@@ -631,7 +649,8 @@ export class Opening {
     if (!f.begun) {
       f.begun = true;
       this.queued = this.queued.filter((id) => !BEFORE_FIGHT.has(id));
-      this.queue('risen', true);
+      // (Said as they come up, over whatever she was saying: it can't wait its turn behind the rest of the fight's lines.)
+      this.speak('risen');
       sim.event?.(EV.ROAR, w.x, w.y + 1, w.z, 1);
     }
     // Twenty down to eight: twenty more, and ten of their children among them. Those down to ten: the necromancers.
@@ -641,9 +660,8 @@ export class Opening {
       this.queue('wave2', true);
     } else if (f.phase === 2 && !f.due.length && up.length <= WAVE.third) {
       f.phase = 3;
-      const [rx, rz] = routeDir(this.prog);
       for (const side of [-1, 1]) {
-        const k = openingCaster(sim, player.x + rx * 6 - rz * 19 * side, player.z + rz * 6 + rx * 19 * side);
+        const k = openingCaster(sim, ...this.necroSpot(side, mine));
         if (k) f.casters.push(k);
       }
       this.queue('necro', true);
@@ -651,9 +669,11 @@ export class Opening {
     if (f.t > 7) this.queue('fight', true);
     if (f.t > 14 && !f.tricks) { f.tricks = true; this.queue('tricks', true); }
     // Over: every one of them down (what the necromancers raised too), or it's gone on far too long.
-    const theirs = sim.knights.filter((k) => !k.dead && k.owner && f.casters.includes(k.owner));
+    // (Only those still up and about, and near: one gone back into the ground, or left a long way behind, isn't the fight's.)
+    const theirs = sim.knights.filter((k) => !k.dead && !k.dormant && k.owner && f.casters.includes(k.owner) && Math.hypot(k.x - player.x, k.z - player.z) < WAVE.reach * 1.5);
     // (Or you've run for the town with them behind you: they don't follow you in, and she won't stand out here alone.)
-    if ((f.phase === 3 && !f.due.length && !up.length && !casters.length && !theirs.length) || f.t > WAVE.limit || routeNear(player.x, player.z) > ROUTE.len - 25) {
+    f.left = up.length + casters.length + theirs.length + f.due.length + (f.phase < 3 ? 1 : 0);
+    if ((f.phase === 3 && !f.due.length && !up.length && !casters.length && !theirs.length) || routeNear(player.x, player.z) > ROUTE.len - 25) {
       this.ambushDone = true;
       // (On from wherever the fight has left her.)
       this.prog = Math.max(this.prog, routeNear(w.x, w.z, this.prog, 400));
@@ -689,6 +709,24 @@ export class Opening {
       return { to, speed: far > 14 ? FOOT_MAX : Math.min(4.2, far), look, gaits: GAITS };
     }
     return { clip: 'Spell_Simple_Idle_Loop', face, turn: 5, look, blend: 4 };
+  }
+
+  // Where a necromancer comes out: from behind the nearest tree past the bare ground on that side of the road (side: -1 or 1),
+  // level with you or further down it. With no tree near, a good way off to that side.
+  necroSpot(side, mine) {
+    const { player, world } = this.sim, [rx, rz] = routeDir(mine), R = WAVE.trees;
+    const t = treesInCells(Math.floor((player.x - R) / CELL), Math.ceil((player.x + R) / CELL), Math.floor((player.z - R) / CELL), Math.ceil((player.z + R) / CELL));
+    let best = null, score = 1e9;
+    for (let k = 0; k < t.length; k += TREE_FLOATS) {
+      const px = t[k] - player.x, pz = t[k + 1] - player.z, d = Math.hypot(px, pz);
+      const along = px * rx + pz * rz, across = (pz * rx - px * rz) * side;
+      if (across < WAVE.clear || d > R || along < -10) continue;
+      // (The nearest, and sooner one down the road than one you've passed.)
+      const sc = d + (along < 0 ? -along * 2 : 0);
+      if (sc < score) { score = sc; best = [t[k] + px / d * 1.7, t[k + 1] + pz / d * 1.7]; }
+    }
+    if (!best || world.inside?.(best[0], best[1], 0.7)) best = [player.x + rx * 6 - rz * 24 * side, player.z + rz * 6 + rx * 24 * side];
+    return best;
   }
 
   // The dead down (or never up): who Velscour was, and what he was to her.
@@ -774,6 +812,8 @@ export class Opening {
     snap[H.OPENING_CUE_T] = this.cueT;
     snap[H.OPENING_FELL] = this.fellT !== undefined ? this.time - this.fellT : 99;
     snap[H.OPENING_RIDE] = this.riding ? 1 : 0;
+    // (How many of the road's dead are still to be put down, while its fight is on: auto-play stays for them all.)
+    snap[H.OPENING_FIGHT] = this.fightS && !this.ambushDone ? Math.max(1, this.fightS.left || 1) : 0;
   }
 
   // A saved game (src/ui/opening.js save: the stage, her place and how far down the road, your name), picked up where it can
