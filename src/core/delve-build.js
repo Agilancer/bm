@@ -648,6 +648,13 @@ const PROPS = {
     K.quad('pale:rubble', q(-hx, hz, -0.25), q(-hx, hz, -0.6), q(hx, hz, tip - 0.4), q(hx, hz, tip));
     K.quad('pale:rubble', q(-hx, -hz, -0.6), q(-hx, -hz, -0.25), q(hx, -hz, tip), q(hx, -hz, tip - 0.4));
   },
+  // A hole the Leviathan has left: a round of floor gone soft and dark, its lip heaved up. (What its eruptions leave in
+  // its own fight looks the same on the ground: met here first.)
+  sinkhole(K, d, p, x, y, z) {
+    K.disc('dark:rubble', x, y + 0.05, z, p.r, 14);
+    K.disc('lake', x, y + 0.07, z, p.r * 0.6, 12);
+    for (let k = 0; k < 9; k++) { const a = k * 0.698 + x; K.drum('mire:rubble', x + Math.cos(a) * p.r, y - 0.15, z + Math.sin(a) * p.r, 0.55, 0.4 + 0.2 * (k % 2), 5, { r2: 0.3, collide: false, turn: a }); }
+  },
   // Reeds standing out of the water: a clump of thin stems, a few with heads.
   reeds(K, d, p, x, y, z) {
     const n = Math.round(6 + p.r * 4);
@@ -693,7 +700,8 @@ const PROPS = {
   },
   // Rock standing out of the water: a flat-topped boss of it, dry.
   rock(K, d, p, x, y, z) {
-    K.drum(p.layer || 'pale:rubble', x, y - 1.1, z, p.r * 1.12, 1.0, 11, { r2: p.r, collide: false, turn: x });
+    K.drum(p.layer || 'pale:rubble', x, y - 1.3, z, p.r * 1.1, 1.3, 14, { r2: p.r, open: true, collide: false, turn: x });
+    K.disc(p.layer || 'pale:rubble', x, y + 0.02, z, p.r, 18);
     for (let k = 0; k < 5; k++) { const a = k * 1.26 + z; K.drum(p.layer || 'pale:rubble', x + Math.cos(a) * p.r * 1.05, y - 0.5, z + Math.sin(a) * p.r * 1.05, 0.7, 0.5, 5, { r2: 0.4, collide: false, turn: a }); }
   },
   // A sluice: two piers and a gate of timber between them, lifted; the other gate lying where it fell.
@@ -720,7 +728,11 @@ const PROPS = {
   greatcap(K, d, p, x, y, z) {
     const h = p.h, r = p.r, top = Math.min(y + h, caveRoofY(x, z) - 0.6), R = r * 3.4;
     K.drum('cloth_oat', x, y - 0.3, z, r * 1.25, top - y + 0.3, 9, { r2: r * 0.7, open: true, collide: false, turn: x });
-    K.drum(d.look.flame, x, top - 0.25, z, R * 0.92, 0.1, 12, { collide: false });
+    // (Its gills alight: a rim of it under the cap's edge and a collar round the stem, not the whole underside, which
+    // seen from below was a white ceiling.)
+    K.drum(d.look.flame, x, top - 0.32, z, R * 0.93, 0.16, 12, { open: true, collide: false });
+    K.drum(d.look.flame, x, top - 0.3, z, r * 1.5, 0.1, 9, { collide: false });
+    K.drum('cloth_oat', x, top - 0.18, z, R * 0.92, 0.04, 12, { collide: false });
     K.drum('fruit', x, top - 0.15, z, R, 0.5, 12, { r2: R * 0.8, collide: false });
     K.cone('fruit', x, top + 0.35, z, R * 0.8, 1.1 + h * 0.08, 12, x);
     for (let k = 0; k < 3; k++) { const a = k * 2.1 + z; K.drum('fruit', x + Math.cos(a) * r * 1.2, y + 1.2 + k * 0.9, z + Math.sin(a) * r * 1.2, 0.6, 0.12, 6, { r2: 0.4, collide: false, turn: a }); }
@@ -980,6 +992,17 @@ const PROPS = {
     K.box('pale:stone', x + s * 0.4, y, z + c * 0.4, 3.2, 1.9, 0.4, p.yaw, NO);
     for (let h = 0; h < 5; h++) for (let u = -3; u <= 3.01; u += 0.5) K.drum('pale:rubble', x + u * c + s * 0.82, y + 0.2 + h * 0.36, z - u * s + c * 0.82, 0.09, 0.03, 5, NO);
     for (let u = -2.8; u <= 2.81; u += 0.7) skull(K, x + u * c + s * 0.45, y + 1.9, z - u * s + c * 0.45, 0.15, u);
+  },
+  // One of the guard who was shut in standing: in his niche still, mail gone green, spear grounded, facing yaw out from the wall.
+  deadguard(K, d, p, x, y, z) {
+    const c = Math.cos(p.yaw), s = Math.sin(p.yaw);
+    K.box('rubble', x - s * 0.1, y, z - c * 0.1, 0.7, 2.5, 0.12, p.yaw, NO);
+    K.drum('mire:stone', x + s * 0.3, y, z + c * 0.3, 0.3, 0.95, 6, { r2: 0.24, collide: false });
+    K.drum('mire:stone', x + s * 0.3, y + 0.95, z + c * 0.3, 0.26, 0.6, 6, { r2: 0.3, collide: false });
+    skull(K, x + s * 0.3, y + 1.58, z + c * 0.3, 0.14, p.yaw);
+    K.cone('mire:stone', x + s * 0.3, y + 1.78, z + c * 0.3, 0.17, 0.2, 6);
+    rod(K, 'wood', x + s * 0.4 + c * 0.42, y, z + c * 0.4 - s * 0.42, x + s * 0.4 + c * 0.42, y + 2.5, z + c * 0.4 - s * 0.42, 0.025);
+    K.cone('iron', x + s * 0.4 + c * 0.42, y + 2.5, z + c * 0.4 - s * 0.42, 0.06, 0.34, 4);
   },
   // A pier of stacked bone standing out from a wall: long bones laid in courses, a row of skulls on top. Solid.
   bonepier(K, d, p, x, y, z) {

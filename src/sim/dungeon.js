@@ -341,8 +341,8 @@ export class Warrens {
   endFight(b, live) {
     const sim = this.sim, [rx, , rz] = roomSpot(b.room);
     for (const m of live) {
-      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx, rz];
-      m.x = rx + rnd(-2, 2); m.z = rz + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
+      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx + (b.at?.[0] || 0), rz + (b.at?.[1] || 0)];
+      m.x = rx + (b.at?.[0] || 0) + rnd(-2, 2); m.z = rz + (b.at?.[1] || 0) + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
       m.shrug = 1; m.noTurn = false; m.buried = false; m.lastStand = null;
       if (m.opts.base) { m.opts.damage = m.opts.base.damage; m.opts.pause = m.opts.base.pause; m.opts.speed = m.opts.base.speed; }
     }

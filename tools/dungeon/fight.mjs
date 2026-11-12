@@ -2,15 +2,17 @@
 // level over it for the player and them: the Warrens at 8, the Deeps at 11, the keep at 15), a player who shoots what the
 // party's on and walks out of whatever's marked on the ground, and each pack and boss of the delve fought in turn.
 //   node tools/dungeon/fight.mjs                 every pack and boss of every delve (a process for each delve)
-//   node tools/dungeon/fight.mjs deeps           one delve's (warrens, blackvigil, deeps)
+//   node tools/dungeon/fight.mjs deeps           one delve's (warrens, blackvigil, deeps, vaults, sporehold, playhouse, kingsbarrow)
 //   node tools/dungeon/fight.mjs venomaw 3       one fight (a boss's key, or a pack's), so many times over
 //   node tools/dungeon/fight.mjs --still twins   the player stands where they are and never steps out of anything
 //   node tools/dungeon/fight.mjs --slow          the player sees each mark and shot half a second late, as a person does
+// The player also does what a fight orders of it (src/sim/dungeon.js order: somewhere to be, or not a step), as the hired
+// party does: the later four delves' bosses each have such a rule. --still ignores those too.
 // It says how long each took, who fell, how much of the player's life went, and what was thrown at them. It fails on an
 // error in a tick, or a shape with a bad number in it.
 import fs from 'node:fs';
 import { FX_FLOATS, INPUT } from '../../src/core/layout.js';
-import { ALL_PACKS, BOSSES, DELVES, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
+import { ALL_PACKS, BOSSES, DELVES, caveClear, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
 import { spawnSync } from 'node:child_process';
 import { makeCast } from '../../src/core/heroes.js';
 import { wayOut } from '../../src/core/perils.js';
@@ -145,7 +147,8 @@ async function fight(key) {
     let best = [rx, rz], bd = Infinity;
     for (let a = 0; a < 6.28; a += 0.2) for (const far of [16, 12, 8]) {
       const qx = rx + Math.sin(a) * far, qz = rz + Math.cos(a) * far;
-      if (caveRoom(qx, qz) < 1.5) continue;
+      // (In sight of it: not the near side of a wall with the pack on the far one.)
+      if (caveRoom(qx, qz) < 1.5 || !caveClear(qx, qz, rx, rz, 0.3)) continue;
       const dd = nav.walkDist(qx, qz, ex, ez, sim.time) - far * 2;
       if (dd < bd) { bd = dd; best = [qx, qz]; }
     }

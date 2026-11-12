@@ -1,4 +1,5 @@
-// Walks every party dungeon (src/core/dungeon.js DELVES: the Hollowfang Warrens, Blackvigil Keep, the Howling Deeps): every
+// Walks every party dungeon (src/core/dungeon.js DELVES: the Hollowfang Warrens, Blackvigil Keep, the Howling Deeps, the
+// Drowned Vaults, the Sporehold, the Hollow Playhouse, the Kingsbarrow): every
 // room reachable from the way in, every pack's and boss's place open, the portals clear of the rock, floors in the ground
 // and roofs above heads and under the shaders' underground line, the fires on the walls, nothing of one delve inside
 // another's box, every prop a kind the builder knows, and how many triangles each costs.
@@ -76,7 +77,7 @@ for (const b of BOSSES) {
   keys.add(b.key);
   const r = roomOf(b.room);
   if (!r || r.delve.key !== b.delve) { fail(`${b.key}: no room ${b.room} in ${b.delve}`); continue; }
-  const [x, , z] = roomSpot(b.room);
+  const [x, , z] = roomSpot(b.room, b.at?.[0] || 0, b.at?.[1] || 0);
   if (caveRoom(x, z) < 4) fail(`${b.key}: stands ${caveRoom(x, z).toFixed(1)} m from the rock`);
   for (const m of b.models) if (!VARIANTS[m]) fail(`${b.key}: no variant ${m} (src/core/tripo-monsters.js)`);
   if (b.delve !== 'warrens') {
@@ -103,7 +104,7 @@ if (WARNINGS[32] !== 'Venomaw stamps! Step in behind each ring as it lands.') fa
       if (n > 260000) fail(`${d.key}: ${n} triangles is too many`);
       was += n;
     }
-    console.log(`all three: ${was.toLocaleString()} triangles`);
+    console.log(`all of them: ${was.toLocaleString()} triangles`);
   } else console.log('(triangles not counted: src/core/sites.js would not load)');
 }
 if (bad) { console.log(`\n${bad} problem(s)`); process.exit(1); }

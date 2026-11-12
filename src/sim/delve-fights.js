@@ -33,7 +33,9 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 // stepped out of anything outlived five of the seven; the Warrens kills one who stands still.)
 // (Not the same for all: Sorvane and the Sleeper killed him as they were, and at 1.45 the Sleeper killed a player who
 // dodged everything two times in three; the Brood Mother's venom comes too thick for that much.)
-const BITE = { sorvane: 1, sleeper: 1, broodmother: 1.25 };
+// (And of the later twelve, the three that strike hardest: at 1.45 one of their rows of marks took a player who was half
+// a second late from full to nothing in two.)
+const BITE = { sorvane: 1, sleeper: 1, broodmother: 1.25, gravewarden: 1.15, dollmaker: 1.2, wyrm: 1.2 };
 const K = (m, x) => m.opts.damage * x * (BITE[m.bossKey] ?? 1.45);
 const yawTo = (m, t) => Math.atan2(t.x - m.x, t.z - m.z);
 const gap = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -72,6 +74,10 @@ function walkTo(k, x, z, dt, sim, speed) {
 
 // Stood where it is, doing nothing, for as long as this is its script.
 const stand = (k, dt) => { k.vx = k.vz = 0; if (k.clip !== k.idleClip) k.setClip(k.idleClip); k.t = (k.t + dt) % k.rig.clips[k.clip].dur; return true; };
+// A clock that runs whatever the body's doing, and is answered when the body's free to: true the once, when it's due and
+// `free`. (W.every alone, asked only while a boss stands idle, runs only while it stands idle: a boss that's always at
+// something came to its own special a third as often as it was meant to.)
+const due = (W, f, name, secs, free) => { const d = (f.due ||= {}); if (W.every(f, name, secs)) d[name] = true; if (!d[name] || !free) return false; d[name] = false; return true; };
 // Whoever isn't holding the boss, you among them.
 const loose = (W) => W.bodies().filter((b) => b.role !== 'tank');
 // A point of a room, in the world: its middle and so far toward (x, z), no nearer its walls than `inset`.
@@ -116,7 +122,7 @@ function run(m, yawOf, far, wait, secs, done) {
 // then a dive onto one of you, a ring along the floor as it lands, and `land()`. (Venomaw's flight without her perch:
 // src/sim/dungeon.js fly.) o: passes, elem, k (how hard), warn (its call for a strip), dive (for the dive), land.
 function soar(W, f, m, o) {
-  const sim = W.sim, P = sim.perils, room = roomOf(f.boss.room);
+  const sim = W.sim, P = sim.perils;
   const a = { stage: 'rise', t: 0, n: 0, pitch: 0, roll: 0, yawWas: m.yaw, line: null, spot: null };
   m.flying = true; m.state = 0; m.noTurn = true;
   m.rig.poseModifier = (rot) => tipBody(m.rig, rot, a.pitch, a.roll);
@@ -174,7 +180,6 @@ function soar(W, f, m, o) {
         return true;
       }
     }
-    void room;
     const turned = wrapAngle(k.yaw - a.yawWas) / Math.max(dt, 1e-4);
     a.yawWas = k.yaw;
     a.pitch += (pitch - a.pitch) * Math.min(1, dt * 4);
@@ -488,24 +493,29 @@ export const FIGHTS = {
   // ---- The Bloat: he swells, and bursts: be behind rock when he does ---------------------------------------------------------
   bloat: {
     open: 'blo_open', pace: [4.6, 3.6, 0.35], turn: [20, 5], enrage: [210, 2, 'blo_enrage'],
-    deck: ['bile', 'retch', 'stamp', 'gobbet', 'slam'],
+    deck: ['bile', 'retch', 'stamp', 'gout', 'slam'],
     setUp(W, m) { m.opts.radius = 1.3; },
     moves: {
       bile: { clip: 'atk3', secs: 1.3, warn: 'blo_bile', go: (W, f, m, t, P) => MOVES.spitRain(P, m, t, K(m, 0.5), { n: 7, R: 8 }) },
       retch: { clip: 'roar', secs: 1.3, warn: 'blo_retch', go: (W, f, m, t, P) => MOVES.venomCone(P, m, t, K(m, 0.55), { r: 14, half: 0.55 }) },
       stamp: { who: 'none', clip: 'jump', secs: 1.6, warn: 'blo_stamp', go: (W, f, m, t, P) => MOVES.stompRings(P, m, null, K(m, 0.5), { r: 5, elem: POISON }) },
-      gobbet: { who: 'far', clip: 'atk1', at: 0.4, secs: 1.2, warn: 'blo_gobbet', go: (W, f, m, t, P) => MOVES.boulder(P, m, t, K(m, 0.4)) },
+      // A gout of it along the floor at one of you: pools one after another, that stay.
+      gout: { clip: 'atk1', secs: 1.3, warn: 'blo_gout', go: (W, f, m, t, P) => P.march(m.x, m.z, yawTo(m, t), 7, 2.7, 0.18, { r: 1.8, fuse: 1, dmg: K(m, 0.5), life: 5, dps: K(m, 0.45), elem: POISON, from: m, tag: 'gout' }) },
       slam: { clip: 'atk2', secs: 1.4, warn: 'blo_slam', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.1), { r: 9, elem: POISON }) },
     },
-    // He swells for five seconds, and bursts: it lands on everyone he can see (his tank, braced against him, takes a
-    // third of it). Then he's spent a while, and everything bites deeper.
+    // He swells as he's cut down (at about four fifths, three fifths, a third and a tenth of his life), for five seconds,
+    // and bursts: it lands on everyone he can see (his tank, braced against him, takes a third of it). Then he's spent a
+    // while, and everything bites deeper. What runs down the back of a rock that sheltered anyone fouls it for the rest
+    // of the fight, near enough: four rocks, four bursts.
     step(W, f, [m], dt) {
       if (!m) return;
       const sim = W.sim, P = sim.perils, u = f.swell;
       if (!u) {
-        if (m.state !== 0 || m.script || f.turn || !W.every(f, 'swell', 36)) return;
+        const n = [0.82, 0.58, 0.34, 0.12].findIndex((at, i) => m.hp < m.maxHp * at && !(f.swells & (1 << i)));
+        if (n < 0 || m.state !== 0 || m.script || f.turn) return;
         if (!m.perform({ clip: 'roar', secs: 5.2 })) return;
-        f.swell = { t: 0, ring: 0 }; f.hold = true; m.noTurn = true;
+        f.swells |= 1 << n;
+        f.swell = { t: 0, ring: 0, rock: null }; f.hold = true; m.noTurn = true;
         W.warn(WARN.blo_swell);
         sim.event(EV.ROAR, m.x, m.y + 3, m.z, 1.4);
         return;
@@ -523,7 +533,7 @@ export const FIGHTS = {
           if (q && Math.hypot(q[0] - b.x, q[1] - b.z) < 7 && !fouled.has(q[0])) {
             fouled.add(q[0]);
             const L = Math.hypot(q[0] - m.x, q[1] - m.z) || 1;
-            P.mark({ x: q[0] + (q[0] - m.x) / L * 3, z: q[1] + (q[1] - m.z) / L * 3, r: 4, fuse: 1.2, life: 30, dps: K(m, 0.7), elem: POISON, quiet: true, tag: 'foul' });
+            P.mark({ x: q[0] + (q[0] - m.x) / L * 3, z: q[1] + (q[1] - m.z) / L * 3, r: 4.4, fuse: 1.2, life: 90, dps: K(m, 0.7), elem: POISON, quiet: true, tag: 'foul' });
           }
           continue;
         }
@@ -539,11 +549,16 @@ export const FIGHTS = {
     },
     order(W, f, b, [m]) {
       if (!f.swell || !m || b.role === 'tank') return null;
-      if (!caveClear(m.x, m.z, b.x, b.z, 0.05) && W.sim.perils.safe(b.x, b.z)) return null;
-      // (Behind a rock that isn't fouled: the nearest whose far side is clear.)
-      const d = roomOf(f.boss.room).delve, P = W.sim.perils;
-      const clean = d.pillars.map(([x, z, r]) => [d.x + x, d.z + z, r]).filter(([x, z, r]) => { const L = Math.hypot(x - m.x, z - m.z) || 1; return P.safe(x + (x - m.x) / L * (r + 1.4), z + (z - m.z) / L * (r + 1.4)); });
-      const to = W.shelter(b, m.x, m.z, clean) || W.shelter(b, m.x, m.z);
+      // (All of them behind the one rock: a clean one. So one burst fouls one.)
+      const d = roomOf(f.boss.room).delve, P = W.sim.perils, u = f.swell;
+      if (u.rock === null) {
+        const far = (x, z, r) => { const L = Math.hypot(x - m.x, z - m.z) || 1; return [x + (x - m.x) / L * (r + 1.4), z + (z - m.z) / L * (r + 1.4)]; };
+        const rocks = d.pillars.map(([x, z, r]) => [d.x + x, d.z + z, r]).filter(([x, z]) => Math.hypot(x - m.x, z - m.z) < 30), clean = rocks.filter(([x, z, r]) => P.safe(...far(x, z, r), 0.3));
+        // (The clean one nearest you, so where you'd go yourself is where they go. With none clean there's nowhere.)
+        const p = W.sim.player;
+        u.rock = clean.sort((a, c) => Math.hypot(a[0] - p.x, a[1] - p.z) - Math.hypot(c[0] - p.x, c[1] - p.z))[0] || 0;
+      }
+      const to = u.rock && W.shelter(b, m.x, m.z, [u.rock], 60);
       return to ? { to, urgent: true } : null;
     },
   },
@@ -551,7 +566,7 @@ export const FIGHTS = {
   // ---- Mother Sallow, the Tidecaller: the tide comes in, and only the high rock is dry ---------------------------------------
   sallow: {
     open: 'sal_open', pace: [4.4, 3.4, 0.35], turn: [22, 4], enrage: [220, 2, 'sal_enrage'],
-    deck: ['grasp', 'undertow', 'wave', 'drip', 'wail'],
+    deck: ['grasp', 'undertow', 'wave', 'eddy', 'wail'],
     adds: [
       { at: 0.7, warn: 'sal_drowned', n: 3, pick: DROWNED, from: 'doors', hp: 480, damage: 18, name: 'THE DROWNED', pal: ['Drowned'], tricks: true },
       { at: 0.35, warn: 'sal_drowned', n: 4, pick: DROWNED, from: 'doors', hp: 480, damage: 18, name: 'THE DROWNED', pal: ['Drowned'], tricks: true },
@@ -560,16 +575,20 @@ export const FIGHTS = {
       grasp: { clip: 'atk1', secs: 1.3, warn: 'sal_grasp', go(W, f, m, t, P) { for (const b of new Set([t, W.farthest(m)])) P.mark({ x: b.x, z: b.z, r: 3, fuse: 1.5, dmg: K(m, 1.0), life: 8, dps: K(m, 0.9), elem: FROST, follow: b, lock: 0.5, from: m, tag: 'grasp' }); } },
       undertow: { clip: 'atk3', secs: 1.3, warn: 'sal_undertow', go: (W, f, m, t, P) => lances(P, m, t, K(m, 0.9), { elem: FROST, r: 20, tag: 'undertow' }) },
       wave: { clip: 'atk5', at: 0.45, secs: 1.3, warn: 'sal_wave', go: (W, f, m, t, P) => MOVES.boltWall(P, m, t, K(m, 0.42), { width: 18, n: 11, speed: 7.5, elem: FROST }) },
-      drip: { who: 'none', clip: 'roar', secs: 1.3, warn: 'sal_drip', go: (W, f, m, t, P) => fall(W, P, m, K(m, 0.8), FROST, 'drip') },
+      // Two eddies sent out across the floor at two of you: each walks on the way it was sent, and pulls nobody, but
+      // what it passes over it bites.
+      eddy: { clip: 'atk2', secs: 1.3, warn: 'sal_eddy', go(W, f, m, t, P) { for (const b of new Set([t, W.farthest(m)])) { const a = yawTo(m, b); P.mark({ x: m.x + Math.sin(a) * 3, z: m.z + Math.cos(a) * 3, r: 2.8, fuse: 1.2, dmg: K(m, 0.8), life: 7, dps: K(m, 1.0), vx: Math.sin(a) * 3.2, vz: Math.cos(a) * 3.2, elem: FROST, from: m, tag: 'eddy' }); } } },
       wail: { who: 'none', clip: 'roar', secs: 1.5, warn: 'sal_wail', go: (W, f, m, t, P) => P.mark({ shape: 'ring', x: m.x, z: m.z, r: 13, r0: 3.6, fuse: 1.5, dmg: K(m, 1.0), elem: SPIRIT, from: m, tag: 'wail' }) },
     },
-    // The tide: she goes to the north wall of her hall to call it, and everything but the high rock is under for seven
-    // seconds. From where she stands she cuts the rock in two, and then again to one side: one line at a time.
+    // The tide, three times, as her life goes (at three quarters of it, a half and a quarter): she goes to the north wall of her hall to
+    // call it, and everything but the high rock is under for seven seconds. From where she stands she cuts the rock in two, and then again to one side: one line at a time.
     step(W, f, [m], dt) {
       if (!m) return;
       const sim = W.sim, P = sim.perils, d = roomOf(f.boss.room).delve, rx = d.x + TIDE_ROCK.x, rz = d.z + TIDE_ROCK.z;
       if (!f.tide) {
-        if (m.state !== 0 || m.script || f.turn || !W.every(f, 'tide', 34)) return;
+        const n = [0.75, 0.5, 0.25].findIndex((at, i) => m.hp < m.maxHp * at && !(f.tides & (1 << i)));
+        if (n < 0 || m.state !== 0 || m.script || f.turn) return;
+        f.tides |= 1 << n;
         const [sx, sz] = toWorld(TIDE_STAND[0], TIDE_STAND[1], d);
         f.tide = { t: 0 }; f.hold = true; m.noTurn = true;
         m.script = (k, dt2, s2) => { if (walkTo(k, sx, sz, dt2, s2, 6)) k.yaw += clamp(wrapAngle(Math.atan2(rx - k.x, rz - k.z) - k.yaw), -dt2 * 5, dt2 * 5); return true; };
@@ -608,10 +627,12 @@ export const FIGHTS = {
     setUp(W, m) { m.opts.radius = 1.6; },
     moves: {
       spew: { clip: 'atk2', at: 0.45, secs: 1.4, warn: 'lev_spew', go: (W, f, m, t, P) => MOVES.spitRain(P, m, t, K(m, 0.5), { n: 8, R: 9 }) },
-      // It draws breath: everyone it isn't fighting is dragged toward it, into a cone that bites when the breath's drawn.
-      maw: { who: 'far', clip: 'roar', secs: 3, warn: 'lev_maw', go(W, f, m, t, P) {
+      // It draws breath: everyone it isn't fighting is dragged toward it, and everything round its head is bitten when the
+      // breath's drawn. The pull is slower than a run: run.
+      maw: { who: 'none', clip: 'roar', secs: 3, warn: 'lev_maw', go(W, f, m, t, P) {
+        const tank = W.tank(m);
         f.maw = { t: 0 };
-        P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t), r: 11, half: 0.62, fuse: 2.8, dmg: K(m, 1.5), knock: 3, elem: POISON, from: m, tag: 'maw' });
+        P.mark({ x: m.x, z: m.z, r: 8.5, fuse: 2.8, dmg: K(m, 1.5), knock: 3, elem: POISON, from: m, tag: 'maw', spare: (b) => b === tank });
       } },
       thrash: { who: 'none', clip: 'atk3', at: 0.5, secs: 1.4, warn: 'lev_thrash', go: (W, f, m, t, P) => MOVES.quakeWave(P, m, null, K(m, 0.42), { reach: 28, speed: 10, elem: POISON }) },
       bore: { clip: 'atk1', secs: 1.3, warn: 'lev_bore', go: (W, f, m, t, P) => { for (const turn of [-0.42, 0, 0.42]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t) + turn, r: 24, w: 1.2, fuse: 1.15, dmg: K(m, 0.9), knock: 3, elem: STONE, from: m, tag: 'bore' }); } },
@@ -623,11 +644,11 @@ export const FIGHTS = {
       if (f.maw) {
         f.maw.t += dt;
         if (f.maw.t > 2.7 || m.dead) f.maw = null;
-        else for (const b of loose(W)) { const L = gap(b, m); if (L < 26 && L > 3 && P.safe(b.x + (m.x - b.x) / L * 1.2, b.z + (m.z - b.z) / L * 1.2, 0.2)) W.drag(b, m.x, m.z, 3, dt); }
+        else for (const b of loose(W)) { const L = gap(b, m), nx = b.x + (m.x - b.x) / L * 1.2, nz = b.z + (m.z - b.z) / L * 1.2; if (L < 26 && L > 3 && !(f.holes || []).some((h) => !h.dead && Math.hypot(h.x - nx, h.z - nz) < h.r + 0.3)) W.drag(b, m.x, m.z, 3, dt); }
       }
       const u = f.dive;
       if (!u) {
-        if (m.state !== 0 || m.script || f.turn || f.maw || m.buried || !W.every(f, 'dive', 38)) return;
+        if (!due(W, f, 'dive', 40, m.state === 0 && !m.script && !f.turn && !f.maw && !m.buried)) return;
         // Under: gone from sight and reach, and up under one of you three times, four, five: more each time it goes.
         f.dives = (f.dives || 0) + 1;
         f.dive = { n: 0, of: Math.min(5, 2 + f.dives), t: 1.3, spot: null, landed: false };
@@ -640,14 +661,15 @@ export const FIGHTS = {
       u.t -= dt;
       if (!u.spot && u.t <= 0) {
         const t = W.mark() || sim.player;
-        u.spot = P.mark({ x: t.x, z: t.z, r: 5.5, fuse: 2.1, dmg: K(m, 1.1), knock: 6, elem: POISON, follow: t, lock: 0.55, from: m, tag: 'breach',
+        u.spot = P.mark({ x: t.x, z: t.z, r: 4.6, fuse: 2.3, dmg: K(m, 0.9), knock: 6, elem: POISON, follow: t, lock: 0.5, from: m, tag: 'breach',
           then: (q) => {
-            P.wave(q.x, q.z, { speed: 11, reach: 22, touch: K(m, 0.5), knock: 3, elem: POISON, r: 5.5, tag: 'breachWave' });
-            // (The hole it leaves: the mud runs back into it, slowly. Not the last, where it sticks: that one it fills. And six
-            // at the most: the oldest closes for the newest.)
+            P.wave(q.x, q.z, { speed: 11, reach: 22, touch: K(m, 0.4), knock: 3, elem: POISON, r: 4.6, tag: 'breachWave' });
+            // (The hole it leaves: the mud runs back into it, but not for a minute and a half, so they gather, and the floor
+            // there is to stand on goes. Not the last, where it sticks: that one it fills. And six at the most: the oldest
+            // closes for the newest.)
             if (u.n + 1 < u.of) {
               const holes = (f.holes ||= []);
-              holes.push(P.mark({ x: q.x, z: q.z, r: 3.8, fuse: 0, life: 40, dps: K(m, 0.85), elem: POISON, quiet: true, tag: 'sinkhole' }));
+              holes.push(P.mark({ x: q.x, z: q.z, r: 4.5, fuse: 0, life: 90, dps: K(m, 0.85), elem: POISON, quiet: true, tag: 'sinkhole' }));
               while (holes.length > 6) snuff(holes.shift());
             }
             u.landed = true;
@@ -674,23 +696,22 @@ export const FIGHTS = {
   // ---- Mouldfang: the pounces, the howl, and the bloom he puts on one of you -------------------------------------------------
   mouldfang: {
     open: 'mou_open', pace: [4.2, 3.2, 0.35], turn: [18, 5], enrage: [215, 2, 'mou_enrage'],
-    deck: ['pounce', 'rake', 'shake', 'snap'],
+    deck: ['pounce', 'rake', 'shake', 'snap', 'puffs'],
     moves: {
       pounce: { who: 'far', clip: null, warn: 'mou_pounce', go: (W, f, m, t, P) => MOVES.ram(P, m, t, K(m, 0.5), { r: 22, w: 1.6, elem: POISON }) },
       rake: { clip: 'atk2', secs: 1.4, warn: 'mou_rake', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.15), { elem: POISON }) },
-      shake: { who: 'none', clip: 'roar', at: 0.45, secs: 1.5, warn: 'mou_shake', go(W, f, m, t, P) {
-        const a = Math.random() * TAU;
-        MOVES.bladeNova(P, m, null, K(m, 0.32), { n: 12, speed: 9, turn: a, elem: POISON });
-        P.later(0.55, () => { if (!m.dead) MOVES.bladeNova(P, m, null, K(m, 0.32), { n: 12, speed: 9, turn: a + 0.26, elem: POISON }); });
-      } },
-      snap: { clip: 'atk1', secs: 1.3, warn: 'mou_snap', go: (W, f, m, t, P) => P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t), r: 12, half: 0.42, fuse: 1.1, dmg: K(m, 1.2), knock: 3, elem: POISON, from: m, aim: t, lock: 0.5, tag: 'snap' }) },
+      // His coat shaken out: a ring of spores that drifts outward slowly, to be stepped through.
+      shake: { who: 'none', clip: 'roar', at: 0.45, secs: 1.5, warn: 'mou_shake', go: (W, f, m, t, P) => P.nova({ x: m.x, y: m.y + 1.2, z: m.z, speed: 4.4, dmg: K(m, 0.5), elem: POISON, size: 0.3, life: 3.8, from: m, tag: 'spores' }, 18, Math.random() * TAU, 1.5) },
+      // Puffballs kicked out of the floor at whoever's standing furthest off: they burst where they land, and hang.
+      puffs: { who: 'far', clip: 'atk3', secs: 1.3, warn: 'mou_puffs', go: (W, f, m, t, P) => { P.mark({ x: t.x, z: t.z, r: 2.4, fuse: 1.4, dmg: K(m, 0.65), life: 7, dps: K(m, 0.6), elem: POISON, follow: t, lock: 0.5, from: m, tag: 'puffs' }); P.rain(t.x, t.z, 6, 4, 1, { r: 2.2, fuse: 1.3, dmg: K(m, 0.65), life: 7, dps: K(m, 0.6), elem: POISON, from: m, tag: 'puffs' }); } },
+      snap: { clip: 'atk1', secs: 1.3, warn: 'mou_snap', go: (W, f, m, t, P) => P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t), r: 12, half: 0.42, fuse: 1.1, dmg: K(m, 0.9), knock: 3, elem: POISON, from: m, aim: t, lock: 0.5, tag: 'snap' }) },
     },
     // He howls his pack down one of his two runs, by name, and puts the bloom on one of you: a circle that rides them five
-    // seconds, then bursts, and what it leaves spreads. Burst in the mouth of that run, the pack comes through it and half
-    // of them never get out. Burst anywhere else, it's only more of the floor gone, and the whole pack comes.
+    // seconds, then bursts, and what it leaves spreads. Burst in the mouth of that run, the pack comes through it and only
+    // one of them gets out. Burst anywhere else, it's only more of the floor gone, and the whole pack comes.
     step(W, f, [m]) {
       if (!m || f.bloom) return;
-      if (m.state !== 0 || m.script || f.turn || !W.every(f, 'bloom', 25)) return;
+      if (!due(W, f, 'bloom', 27, m.state === 0 && !m.script && !f.turn)) return;
       const t = W.mark();
       if (!t || t.dead || !m.perform({ clip: 'roar', face: t, secs: 1.4 })) return;
       const sim = W.sim, P = sim.perils, d = roomOf(f.boss.room).delve;
@@ -698,13 +719,14 @@ export const FIGHTS = {
       f.bloom = { on: t, mouth };
       W.warn(WARN[run.warn]);
       sim.event(EV.ROAR, m.x, m.y + 2.5, m.z, 1.4);
-      P.mark({ x: t.x, z: t.z, r: 4.6, fuse: 5.5, lock: 1, follow: t, dmg: K(m, 0.6), elem: POISON, tag: 'bloom', then: (q) => {
+      P.mark({ x: t.x, z: t.z, r: 4.6, fuse: 5.5, lock: 1, follow: t, dmg: K(m, 0.5), elem: POISON, tag: 'bloom', then: (q) => {
         f.bloom = null;
-        P.mark({ x: q.x, z: q.z, r: 3.4, fuse: 0, life: 18, grow: 0.24, dps: K(m, 0.9), elem: POISON, quiet: true, tag: 'bloomcloud' });
+        // (A breath before what it leaves begins to bite: whoever carried it there has that long to be out of it.)
+        P.mark({ x: q.x, z: q.z, r: 3.4, fuse: 0.9, life: 18, grow: 0.24, dps: K(m, 0.65), elem: POISON, quiet: true, tag: 'bloomcloud' });
         const choked = Math.hypot(q.x - mouth[0], q.z - mouth[1]) < 6;
         P.later(2.2, () => {
           if (m.dead || W.fight !== f) return;
-          const n = Math.min(choked ? 2 : 4, 6 - W.adds().length);
+          const n = Math.min(choked ? 1 : 4, 6 - W.adds().length);
           W.warn(choked ? WARN.mou_choked : WARN.mou_pack, 5);
           if (n > 0) W.spawnAdds(`mould_pack_${(f.packN = (f.packN || 0) + 1)}`, 'sh_hound', from, n, (k) => { k.hp = k.maxHp = 520; k.opts.damage = 19; k.opts.name = 'MOULD HOUND'; k.aggro = true; k.opts.leash = 200; k.opts.sight = 60; }, ['Sporebloom'], true);
           sim.event(EV.ROAR, from[0], sim.world.height(from[0], from[1]) + 1.5, from[1], 0.9);
@@ -735,18 +757,27 @@ export const FIGHTS = {
       if (!m) return;
       const sim = W.sim, P = sim.perils;
       if (f.pods && f.pods.every((q) => q.done)) { f.pods = null; f.hold = false; }
-      if (f.pods || m.state !== 0 || m.script || f.turn || !W.every(f, 'pods', 29)) return;
+      // (Whose pod is whose, worked out afresh each second: you have whichever's nearest you, wherever you've gone; then
+      // each of the party the nearest nobody has.)
+      if (f.pods && sim.time - (f.podT ?? -9) > 1) {
+        f.podT = sim.time;
+        const left = f.pods.filter((q) => !q.done), p = sim.player;
+        for (const q of left) q.by = null;
+        for (const b of loose(W).sort((a, c) => (c === p) - (a === p))) { let best = null, bd = Infinity; for (const q of left) if (!q.by) { const dd = Math.hypot(b.x - q.x, b.z - q.z); if (dd < bd) { bd = dd; best = q; } } if (best) best.by = b; }
+      }
+      if (f.pods || !due(W, f, 'pods', 30, m.state === 0 && !m.script && !f.turn)) return;
       if (!m.perform({ clip: 'roar', secs: 1.4 })) return;
-      const room = roomOf(f.boss.room), n = m.hp < m.maxHp * 0.5 ? 4 : 3, at = [[m.x, m.z]];
+      const p = sim.player, free = loose(W).sort((a, c) => (c === p) - (a === p));
+      const room = roomOf(f.boss.room), n = Math.min(m.hp < m.maxHp * 0.5 ? 4 : 3, free.length), at = [[m.x, m.z]];
       W.warn(WARN.mor_pods);
       f.podN = (f.podN || 0) + 1;
       f.pods = [];
       // (Nothing new thrown while they ripen: whoever's treading one is left to it.)
       f.hold = true;
-      // (You first: the pod nearest you is yours to tread. Then the party, one each.)
-      const p = sim.player, free = loose(W).sort((a, c) => (c === p) - (a === p));
       for (let i = 0; i < n; i++) {
-        const [x, z] = somewhere(room, 4, at, 7);
+        // (On clean floor: not in her rot, nor a cloud an earlier pod left.)
+        let [x, z] = somewhere(room, 4, at, 7);
+        for (let t = 0; t < 12 && !P.safe(x, z, 2.5); t++) [x, z] = somewhere(room, 4, at, 7);
         at.push([x, z]);
         const pod = { x, z, by: null, done: false };
         f.pods.push(pod);
@@ -760,11 +791,9 @@ export const FIGHTS = {
           if (W.adds().length < 6) W.spawnAdds(`morel_pod_${f.podN}_${i}`, 'sh_sporeling', [q.x, q.z], 2, (k) => { k.hp = k.maxHp = 220; k.opts.damage = 11; k.opts.name = 'SPORELING'; k.opts.speed = 5.6; k.aggro = true; k.opts.leash = 200; k.opts.sight = 60; }, ['Sporebloom']);
         } });
       }
-      // (Each of you, you first, the nearest pod nobody has: one each, while there are bodies to go round.)
-      for (const b of free) { let best = null, bd = Infinity; for (const q of f.pods) if (!q.by) { const dd = Math.hypot(b.x - q.x, b.z - q.z); if (dd < bd) { bd = dd; best = q; } } if (best) best.by = b; }
     },
     order(W, f, b) {
-      const pod = f.pods?.find((q) => !q.done && (q.by === b || (q.by?.dead && b.role !== 'tank')));
+      const pod = f.pods?.find((q) => !q.done && q.by === b);
       return pod ? { to: [pod.x, pod.z] } : null;
     },
   },
@@ -772,13 +801,12 @@ export const FIGHTS = {
   // ---- The Heart of the Ring: it stands where it grew, and can't be hurt while its rooted husks feed it ----------------------
   heart: {
     open: 'hrt_open', pace: [4.8, 3.8, 0.3], turn: [1e9, 0], enrage: [340, 3, 'hrt_enrage'],
-    deck: ['slam', 'spray', 'pod', 'creep'],
+    deck: ['slam', 'spray', 'creep'],
     setUp(W, m) { m.opts.speed = 0; m.opts.base.speed = 0; m.opts.radius = 1.7; m.noTurn = true; },
     begin(W, f, [m]) { f.husks = { n: 3, wave: 0, bare: 0, wait: 0, seen: 0 }; m.shrug = 0.1; },
     moves: {
-      slam: { who: 'none', clip: 'jump', secs: 1.6, warn: 'hrt_slam', go: (W, f, m, t, P) => MOVES.stompRings(P, m, null, K(m, 0.55), { r: 6, elem: POISON }) },
+      slam: { who: 'none', clip: 'jump', secs: 1.6, warn: 'hrt_slam', go: (W, f, m, t, P) => MOVES.stompRings(P, m, null, K(m, 0.4), { r: 6, elem: POISON }) },
       spray: { who: 'none', clip: 'roar', at: 0.5, secs: 3, warn: 'hrt_spray', go: (W, f, m, t, P) => MOVES.spiral(P, m, null, K(m, 0.26), { arms: 3, secs: 2.4, turn: Math.random() < 0.5 ? 1.3 : -1.3 }) },
-      pod: { who: 'far', clip: 'atk1', at: 0.4, secs: 1.2, warn: 'hrt_pod', go: (W, f, m, t, P) => MOVES.boulder(P, m, t, K(m, 0.4)) },
       creep: { who: 'far', clip: 'atk3', secs: 1.3, warn: 'hrt_creep', go: (W, f, m, t, P) => P.mark({ x: t.x, z: t.z, r: 2.6, fuse: 1.5, dmg: K(m, 0.8), life: 12, grow: 0.3, dps: K(m, 0.8), elem: POISON, follow: t, lock: 0.5, from: m, tag: 'creep' }) },
     },
     step(W, f, [m], dt) {
@@ -786,10 +814,10 @@ export const FIGHTS = {
       const sim = W.sim, P = sim.perils, d = roomOf(f.boss.room).delve, u = f.husks;
       m.noTurn = true;
       // Threads that sweep the room, now and then, all through.
-      if (m.state === 0 && !m.script && W.every(f, 'beams', 27) && m.perform({ clip: 'roar', secs: 1.3 })) {
+      if (due(W, f, 'beams', 28, m.state === 0 && !m.script) && m.perform({ clip: 'roar', secs: 1.3 })) {
         W.warn(WARN.hrt_beams, 20);
         // (Short of the husks' places: nobody's cut off from one by a thread.)
-        MOVES.fireWheel(P, m, null, K(m, 0.42), { arms: 3, r: 19, life: 9, spin: Math.random() < 0.5 ? 0.45 : -0.45, elem: ARCANE });
+        MOVES.fireWheel(P, m, null, K(m, 0.3), { arms: 3, r: 19, life: 9, spin: Math.random() < 0.5 ? 0.36 : -0.36, elem: ARCANE });
       }
       const husks = W.adds().filter((a) => a.husk);
       if (u.bare > 0) {
@@ -811,6 +839,12 @@ export const FIGHTS = {
       u.wait += dt; u.seen = Math.max(u.seen, husks.length);
       // (A thread from each to the Heart, so it's seen what feeds it.)
       if ((sim.tick & 15) === 0) for (const k of husks) sim.casting.burst(FX.RING, ARCANE, k.x, k.y + 0.2, k.z, 0.6, 1.8, 0.4, { alpha: 0.6 });
+      // And each husk that's standing lashes out with threads of its own, every seven seconds, at whoever's nearest it: so
+      // cutting one down is done on the move.
+      if (husks.length && W.every(f, 'lash', 7)) {
+        W.warn(WARN.hrt_husks, 18);
+        for (const k of husks) { const t = W.bodies().reduce((a, b) => (gap(b, k) < gap(a, k) ? b : a), sim.player); if (gap(t, k) < 24) P.mark({ shape: 'cross', x: k.x, z: k.z, yaw: yawTo(k, t), arms: 3, r: Math.max(10, gap(t, k) + 3), w: 0.5, fuse: 1.3, dmg: K(m, 0.38), elem: ARCANE, from: k, tag: 'lash' }); }
+      }
       if (husks.length || (u.wait < 6 && !u.seen) || u.wait < 1.5) return;
       u.bare = 16; m.shrug = 2;
       W.warn(WARN.hrt_bare);
@@ -825,14 +859,12 @@ export const FIGHTS = {
     open: 'sea_open', pace: [4.3, 3.3, 0.35], turn: [20, 5], enrage: [220, 2, 'sea_enrage'],
     deck: ['needles', 'stitch', 'shears', 'pins', 'hem'],
     adds: [
-      { at: 0.65, warn: 'sea_forms', n: 2, pick: COMPANY, from: 'edge', places: 2, hp: 680, damage: 24, name: 'DRESS FORM', pal: ['Porcelain'], setUp: melee },
-      { at: 0.3, warn: 'sea_forms', n: 3, pick: COMPANY, from: 'edge', places: 3, hp: 680, damage: 24, name: 'DRESS FORM', pal: ['Porcelain'], setUp: melee },
+      { at: 0.65, warn: 'sea_forms', n: 2, pick: COMPANY, from: 'edge', places: 2, hp: 680, damage: 24, name: 'FITTER', pal: ['Porcelain'], setUp: melee },
+      { at: 0.3, warn: 'sea_forms', n: 3, pick: COMPANY, from: 'edge', places: 3, hp: 680, damage: 24, name: 'FITTER', pal: ['Porcelain'], setUp: melee },
     ],
     moves: {
-      needles: { who: 'none', clip: 'roar', at: 0.45, secs: 1.5, warn: 'sea_needles', go(W, f, m, t, P) {
-        const a = Math.random() * TAU;
-        MOVES.bladeNova(P, m, null, K(m, 0.33), { n: 12, speed: 10, turn: a });
-        P.later(0.55, () => { if (!m.dead) MOVES.bladeNova(P, m, null, K(m, 0.33), { n: 12, speed: 10, turn: a + 0.26 }); });
+      needles: { clip: 'atk5', at: 0.4, secs: 1.6, warn: 'sea_needles', go(W, f, m, t, P) {
+        for (const wait of [0, 0.45, 0.9]) P.later(wait, () => { if (!m.dead && !t.dead) MOVES.knifeFan(P, m, t, K(m, 0.3), { n: wait === 0.45 ? 6 : 7 }); });
       } },
       stitch: { clip: 'atk3', secs: 1.4, warn: 'sea_stitch', go(W, f, m, t, P) {
         const o = { shape: 'cross', x: m.x, z: m.z, arms: 4, r: 16, w: 0.6, fuse: 1.15, dmg: K(m, 1.0), elem: ARCANE, from: m, tag: 'stitch' }, a = yawTo(m, t);
@@ -850,7 +882,7 @@ export const FIGHTS = {
       if (!m) return;
       const sim = W.sim, P = sim.perils, u = f.threads, room = roomOf(f.boss.room), d = room.delve;
       if (!u) {
-        if (m.state !== 0 || m.script || f.turn || !W.every(f, 'threads', 27)) return;
+        if (!due(W, f, 'threads', 30, m.state === 0 && !m.script && !f.turn)) return;
         const who = [...new Set([W.mark(), W.farthest(m)])].filter((b) => b && !b.dead && b.role !== 'tank');
         if (!who.length) return;
         const cx = d.x + room.x, cz = d.z + room.z;
@@ -903,7 +935,7 @@ export const FIGHTS = {
   // ---- The Leading Man: the house lights go down, and only the spotlight is safe ----------------------------------------------
   leadingman: {
     open: 'led_open', pace: [4.3, 3.3, 0.35], turn: [20, 5], enrage: [225, 2, 'led_enrage'],
-    deck: ['bow', 'speech', 'flourish', 'exit', 'roses'],
+    deck: ['bow', 'speech', 'curtain', 'exit', 'roses'],
     adds: [
       { at: 0.7, warn: 'led_under', n: 2, pick: ['ph_understudy'], from: 'doors', hp: 540, damage: 20, name: 'UNDERSTUDY', pal: ['Ashen'], setUp: melee },
       { at: 0.35, warn: 'led_under', n: 3, pick: ['ph_understudy'], from: 'doors', hp: 540, damage: 20, name: 'UNDERSTUDY', pal: ['Ashen'], setUp: melee },
@@ -911,10 +943,10 @@ export const FIGHTS = {
     moves: {
       bow: { clip: 'atk2', secs: 1.4, warn: 'led_bow', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.2), { r: 9, half: 1.2 }) },
       speech: { clip: 'atk1', at: 0.45, secs: 1.3, warn: 'led_speech', go: (W, f, m, t, P) => MOVES.seekers(P, m, t, K(m, 0.55), { n: 4, elem: ARCANE }) },
-      flourish: { who: 'none', clip: 'roar', at: 0.45, secs: 1.5, warn: 'led_flourish', go(W, f, m, t, P) {
-        const a = Math.random() * TAU;
-        MOVES.bladeNova(P, m, null, K(m, 0.33), { n: 10, speed: 9.5, turn: a });
-        P.later(0.55, () => { if (!m.dead) MOVES.bladeNova(P, m, null, K(m, 0.33), { n: 10, speed: 9.5, turn: a + 0.31 }); });
+      // The curtain: its hem comes down the stage from the back wall to the footlights, right across. Jumped, it's nothing.
+      curtain: { who: 'none', clip: 'roar', secs: 1.4, warn: 'led_curtain', go(W, f, m, t, P) {
+        const room = roomOf(f.boss.room), d = room.delve, x0 = d.x + room.x - room.hx, z0 = d.z + room.z - room.hz + 1;
+        P.mark({ shape: 'line', x: x0, z: z0, yaw: Math.PI / 2, r: room.hx * 2, w: 0.8, fuse: 1.1, life: (room.hz * 2 + 4) / 5.5, vz: 5.5, touch: K(m, 0.5), knock: 2, again: 99, jump: true, quiet: true, elem: ARCANE, tag: 'curtain' });
       } },
       exit: { who: 'far', clip: null, warn: 'led_exit', go: (W, f, m, t, P) => MOVES.ram(P, m, t, K(m, 0.5), { r: 22, w: 1.5, elem: SPIRIT }) },
       roses: { clip: 'atk3', secs: 1.3, warn: 'led_roses', go: (W, f, m, t, P) => P.rain(t.x, t.z, 10, 8, 2, { r: 2.2, fuse: 1.4, dmg: K(m, 0.8), life: 3, dps: K(m, 0.6), elem: FIRE, tag: 'roses' }) },
@@ -930,17 +962,17 @@ export const FIGHTS = {
         f.acts |= 1 << act;
         f.hold = true; m.noTurn = true;
         const marks = STAGE_MARKS.map(([x, z]) => toWorld(x, z, d));
-        let k = act % marks.length, wait = 3.2;
+        let k = act % marks.length, wait = 4.5;
         m.script = (b, dt2, s2) => { if ((wait -= dt2) > 0) return stand(b, dt2); if (walkTo(b, marks[k][0], marks[k][1], dt2, s2, 2.4)) k = (k + 1) % marks.length; return true; };
-        f.dark = { t: 0, rose: 4.5, mk: P.mark({ shape: 'ring', ride: m, r: 60, r0: 5.6, fuse: 3.2, dmg: K(m, 1.1), life: 12, dps: K(m, 1.4), elem: VOID, quiet: true, tag: 'dark' }) };
+        f.dark = { t: 0, rose: 6, mk: P.mark({ shape: 'ring', ride: m, r: 60, r0: 5.6, fuse: 4.5, dmg: K(m, 1.1), life: 12, dps: K(m, 1.4), elem: VOID, quiet: true, tag: 'dark' }) };
         W.warn(WARN.led_dark);
         sim.event(EV.ROAR, m.x, m.y + 2, m.z, 1.2);
         return;
       }
       u.t += dt;
-      if (u.t > 15.2 || m.dead || u.mk.dead) { snuff(u.mk); f.dark = null; f.hold = false; m.noTurn = false; m.script = null; m.state = 0; if (!m.dead) W.warn(WARN.led_lights, 10); return; }
+      if (u.t > 16.5 || m.dead || u.mk.dead) { snuff(u.mk); f.dark = null; f.hold = false; m.noTurn = false; m.script = null; m.state = 0; if (!m.dead) W.warn(WARN.led_lights, 10); return; }
       if ((sim.tick & 7) === 0) sim.casting.burst(FX.RING, LIGHT, m.x, m.y + 0.12, m.z, 5.2, 5.6, 0.3, { alpha: 0.8, light: 9, lightR: 9 });
-      if (u.t > 3.2 && (u.rose -= dt) <= 0) {
+      if (u.t > 4.5 && (u.rose -= dt) <= 0) {
         u.rose = 2.6;
         W.warn(WARN.led_roses, 12);
         for (let i = 0; i < 2; i++) { const a = Math.random() * TAU, r = 1.5 + Math.random() * 3; P.mark({ x: m.x + Math.sin(a) * r, z: m.z + Math.cos(a) * r, r: 1.7, fuse: 1.4, dmg: K(m, 0.7), elem: FIRE, tag: 'roses' }); }
@@ -959,14 +991,13 @@ export const FIGHTS = {
   // ---- The Dollmaker: when the music stops, nothing moves, or she takes it ----------------------------------------------------
   dollmaker: {
     open: 'dol_open', pace: [4.4, 3.3, 0.3], turn: [22, 4], enrage: [330, 3, 'dol_enrage'],
-    deck: ['strings', 'china', 'march', 'gaze', 'rings'],
+    deck: ['strings', 'march', 'gaze', 'rings'],
     adds: [0.75, 0.5, 0.25].map((at, i) => ({ at, warn: 'dol_dolls', n: 3 + i, pick: ['ph_doll'], from: 'doors', hp: 280, damage: 13, speed: 5.4, name: 'DOLL', pal: ['Porcelain'] })),
     moves: {
-      strings: { who: 'none', clip: 'roar', secs: 1.3, warn: 'dol_strings', go: (W, f, m, t, P) => MOVES.fireWheel(P, m, null, K(m, 0.4), { arms: 5, r: 15, life: 5, spin: Math.random() < 0.5 ? 0.6 : -0.6, elem: ARCANE }) },
-      china: { who: 'far', clip: 'atk1', at: 0.4, secs: 1.2, warn: 'dol_china', go: (W, f, m, t, P) => MOVES.boulder(P, m, t, K(m, 0.4)) },
-      march: { clip: 'atk3', secs: 1.3, warn: 'dol_march', go: (W, f, m, t, P) => { for (const turn of [-0.45, 0, 0.45]) P.march(m.x, m.z, yawTo(m, t) + turn, 10, 1.9, 0.14, { r: 1.25, fuse: 0.85, dmg: K(m, 1.2), knock: 2, elem: SPIRIT, from: m, tag: 'soldiers' }); } },
-      gaze: { clip: 'atk2', secs: 1.3, warn: 'dol_gaze', go: (W, f, m, t, P) => P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t), r: 15, half: 0.55, fuse: 1.2, dmg: K(m, 1.1), elem: VOID, from: m, aim: t, lock: 0.5, tag: 'gaze' }) },
-      rings: { clip: 'atk4', secs: 1.3, warn: 'dol_rings', go: (W, f, m, t, P) => { for (const b of new Set([t, W.farthest(m)])) P.rings(b.x, b.z, [3, 6], 0.7, { fuse: 1.1, dmg: K(m, 0.8), elem: ARCANE, from: m, tag: 'chimes' }); } },
+      strings: { who: 'none', clip: 'roar', secs: 1.3, warn: 'dol_strings', go: (W, f, m, t, P) => MOVES.fireWheel(P, m, null, K(m, 0.4), { arms: 5, r: 11, life: 5, spin: Math.random() < 0.5 ? 0.6 : -0.6, elem: ARCANE }) },
+      march: { clip: 'atk3', secs: 1.3, warn: 'dol_march', go: (W, f, m, t, P) => { for (const turn of [-0.45, 0, 0.45]) P.march(m.x, m.z, yawTo(m, t) + turn, 10, 1.9, 0.14, { r: 1.25, fuse: 0.85, dmg: K(m, 0.8), knock: 2, elem: SPIRIT, from: m, tag: 'soldiers' }); } },
+      gaze: { clip: 'atk2', secs: 1.3, warn: 'dol_gaze', go: (W, f, m, t, P) => P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t), r: 15, half: 0.55, fuse: 1.2, dmg: K(m, 1.15), elem: VOID, from: m, aim: t, lock: 0.5, tag: 'gaze' }) },
+      rings: { clip: 'atk4', secs: 1.3, warn: 'dol_rings', go: (W, f, m, t, P) => { for (const b of new Set([t, W.farthest(m)])) P.rings(b.x, b.z, [3, 6], 0.7, { fuse: 1.1, dmg: K(m, 1.0), elem: ARCANE, from: m, tag: 'chimes' }); } },
     },
     // The music box: it slows (three seconds to get clear of everything), and stops. While it's stopped the whole room is
     // still: she, her dolls, whatever was on the floor. Whoever takes a step is hurt for it, and again for the next.
@@ -975,11 +1006,14 @@ export const FIGHTS = {
       const sim = W.sim, P = sim.perils, u = f.still;
       const free = (k) => { if (k.script === stand) { k.script = null; k.state = 0; } };
       if (!u) {
-        if (m.state !== 0 || m.script || f.turn || !W.every(f, 'still', m.hp < m.maxHp * 0.4 ? 23 : 31)) return;
+        if (!due(W, f, 'still', m.hp < m.maxHp * 0.4 ? 26 : 32, m.state === 0 && !m.script && !f.turn)) return;
         if (!m.perform({ clip: 'roar', secs: 3 })) return;
         f.still = { stage: 'wind', t: 0, at: new Map(), tick: 0 };
         f.hold = true; m.noTurn = true;
         W.warn(WARN.dol_wind);
+        // (As it slows, a chime under each of you: out of that first, and then stop.)
+        // (The second lands just before the stop: out of it, and stopped, in the one breath.)
+        for (const b of loose(W)) P.rings(b.x, b.z, [3, 6], 0.7, { fuse: 2, dmg: K(m, 0.9), elem: ARCANE, from: m, tag: 'chimes' });
         return;
       }
       u.t += dt;
@@ -990,14 +1024,15 @@ export const FIGHTS = {
         if (m.hp < m.maxHp * 0.4 && !f.feinted && Math.random() < 0.45) {
           f.feinted = true; f.still = null; f.hold = false; m.noTurn = false;
           W.warn(WARN.dol_feint);
-          for (const b of loose(W)) P.rings(b.x, b.z, [3, 6], 0.7, { fuse: 1.3, dmg: K(m, 0.8), elem: ARCANE, from: m, tag: 'chimes' });
+          for (const b of loose(W)) P.mark({ x: b.x, z: b.z, r: 3.4, fuse: 1.5, dmg: K(m, 1.0), elem: ARCANE, from: m, tag: 'chimes' });
           return;
         }
         f.feinted = false;
         u.stage = 'stop'; u.t = 0;
         // Everything stops with it.
         P.clear();
-        m.state = 0; m.act = null; m.script = stand;
+        // (She most of all: while the box is stopped, little bites on her.)
+        m.state = 0; m.act = null; m.script = stand; m.shrug = 0.3;
         for (const a of W.adds()) if (!a.script) a.script = stand;
         W.warn(WARN.dol_still);
         sim.casting.burst(FX.RING, VOID, m.x, m.y + 0.2, m.z, 2, 30, 0.8, { light: 8, lightR: 16 });
@@ -1019,7 +1054,7 @@ export const FIGHTS = {
         }
       }
       if (u.t < 4.4) return;
-      m.script = null; m.state = 0; m.noTurn = false;
+      m.script = null; m.state = 0; m.noTurn = false; m.shrug = 1;
       for (const a of W.adds()) free(a);
       f.still = null; f.hold = false;
       W.warn(WARN.dol_play, 5);
@@ -1041,16 +1076,20 @@ export const FIGHTS = {
       // If a standing stone is in it, that's where he stops: stunned, and his plate cracked a step.
       charge: { who: 'mark', clip: null, warn: 'grv_charge', gap: 10, go(W, f, m, t, P) {
         const sim = W.sim, d = roomOf(f.boss.room).delve, far = 30, fuse = 3.2, lock = 0.78;
-        const mk = P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t), r: far, w: 1.6, fuse, lock, aim: t, dmg: K(m, 0.8), knock: 6, elem: BONE, from: m, tag: 'charge' });
+        const mk = P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t), r: far, w: 1.6, fuse, lock, aim: t, dmg: K(m, 1.3), knock: 6, elem: BONE, from: m, tag: 'charge' });
         f.charge = { on: t, mk };
         let crash = false, cut = false;
         // (Where the line ends: the first rock down it, read as it stops following.)
         const reach = () => {
           if (!cut) {
             cut = true;
-            const hit = caveRay(m.x, m.z, Math.sin(mk.yaw), Math.cos(mk.yaw), far);
-            const len = hit > 0 ? hit : far, ex = m.x + Math.sin(mk.yaw) * len, ez = m.z + Math.cos(mk.yaw) * len;
-            crash = hit > 0 && WARDEN_COLUMNS.some(([cx, cz]) => Math.hypot(d.x + cx - ex, d.z + cz - ez) < 2.6);
+            // (A stone anywhere in the strip counts, not only one dead on its middle: what looks like a hit is one.)
+            const sx = Math.sin(mk.yaw), sz = Math.cos(mk.yaw), hit = caveRay(m.x, m.z, sx, sz, far);
+            let len = hit > 0 ? hit : far;
+            for (const [cx, cz] of WARDEN_COLUMNS) {
+              const ax = d.x + cx - m.x, az = d.z + cz - m.z, k = ax * sx + az * sz;
+              if (k > 3 && k < len + 1.4 && Math.abs(ax * sz - az * sx) < 2.5) { len = Math.min(len, k - 1.2); crash = true; }
+            }
             mk.r = len;
           }
           return mk.r - 1.5;
@@ -1069,7 +1108,7 @@ export const FIGHTS = {
       cleave: { clip: 'atk2', secs: 1.4, warn: 'grv_cleave', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.2), { r: 10, half: 1.1, elem: BONE }) },
       bash: { clip: 'bash', secs: 1.3, warn: 'grv_bash', go: (W, f, m, t, P) => MOVES.shieldWall(P, m, t, K(m, 0.6), { r: 7, w: 3 }) },
       quake: { who: 'none', clip: 'jump', at: 0.5, secs: 1.4, warn: 'grv_quake', go: (W, f, m, t, P) => MOVES.quakeWave(P, m, null, K(m, 0.4), { reach: 26, speed: 10, elem: BONE }) },
-      bones: { clip: 'atk3', secs: 1.3, warn: 'grv_bones', go: (W, f, m, t, P) => { for (const turn of [-0.45, 0, 0.45]) P.march(m.x, m.z, yawTo(m, t) + turn, 10, 1.9, 0.14, { r: 1.25, fuse: 0.85, dmg: K(m, 1.2), knock: 2, elem: BONE, from: m, tag: 'bones' }); } },
+      bones: { clip: 'atk3', secs: 1.3, warn: 'grv_bones', go: (W, f, m, t, P) => { for (const turn of [-0.45, 0, 0.45]) P.march(m.x, m.z, yawTo(m, t) + turn, 10, 1.9, 0.14, { r: 1.25, fuse: 0.85, dmg: K(m, 0.8), knock: 2, elem: BONE, from: m, tag: 'bones' }); } },
     },
     // His plate: what it turns is what's left of it, but for the seconds he's stunned. It knits a step every forty
     // seconds he isn't made to strike a stone.
@@ -1091,7 +1130,7 @@ export const FIGHTS = {
   // ---- The Ossuary Golem: it falls apart instead of dying, twice, and its bones get up -----------------------------------------
   golem: {
     open: 'gol_open', pace: [4.6, 3.6, 0.35], turn: [20, 5], enrage: [330, 2.5, 'gol_enrage'],
-    deck: ['slam', 'skull', 'spikes', 'grind', 'rain'],
+    deck: ['slam', 'cage', 'spikes', 'grind'],
     begin(W, f, [m]) {
       f.lives = 2;
       // (Its end, twice refused: src/sim/tripo.js lastStand.)
@@ -1106,14 +1145,17 @@ export const FIGHTS = {
         W.warn(WARN.gol_fall);
         sim.event(EV.GROUND, k.x, k.y, k.z);
         sim.casting.burst(FX.SHOCK, BONE, k.x, k.y + 1.5, k.z, 1, 8, 0.6, { light: 9, lightR: 12 });
-        // Its bones, in the bays at the two ends of the hall, the farthest first: each walks back to where it fell, and
-        // fights nobody. One that gets there is part of it again.
-        const bays = OSSUARY_BAYS.map(([x, z]) => toWorld(x, z, d)).sort((a, c) => Math.hypot(c[0] - k.x, c[1] - k.z) - Math.hypot(a[0] - k.x, a[1] - k.z)).slice(0, n);
+        // Its bones, in the bays at the two ends of the hall, by turns: each walks back to where it fell, and fights nobody.
+        // One that gets there is part of it again. Wherever it fell, each takes twenty seconds over the walk.
+        // (Not from a bay it fell beside: twelve metres off at the least, or the walk is no walk.)
+        const all = OSSUARY_BAYS.map(([x, z]) => toWorld(x, z, d)), off = all.filter((q) => Math.hypot(q[0] - k.x, q[1] - k.z) >= 12);
+        const bays = (off.length >= n ? off : all).slice(0, n);
         bays.forEach((at, i) => W.spawnAdds(`golem_thrall_${f.lives}_${i}`, 'kb_thrall', at, 1, (q) => {
           q.thrall = true; q.hp = q.maxHp = 620; q.opts.damage = 0; q.opts.name = 'BONE THRALL'; q.aggro = true; q.opts.leash = 400; q.opts.sight = 80;
+          const pace = clamp((Math.hypot(at[0] - k.x, at[1] - k.z) - 2.4) / 20, 0.3, 2.4);
           q.script = (b, dt2, s2) => {
             if (!f.fallen || k.dead) { b.script = null; return false; }
-            if (walkTo(b, k.x, k.z, dt2, s2, b.flinch > 0 ? 0.4 : 1.25) || Math.hypot(b.x - k.x, b.z - k.z) < 2.4) { f.fallen.back++; b.hp = 0; b.script = null; W.warn(WARN.gol_back, 3); s2.casting.burst(FX.PUFF, BONE, b.x, b.y + 1, b.z, 0.6, 2.4, 0.5); s2.event(EV.ROAR, k.x, k.y + 2, k.z, 0.8); }
+            if (walkTo(b, k.x, k.z, dt2, s2, b.flinch > 0 ? 0.4 : pace) || Math.hypot(b.x - k.x, b.z - k.z) < 2.4) { f.fallen.back++; b.hp = 0; b.script = null; W.warn(WARN.gol_back, 3); s2.casting.burst(FX.PUFF, BONE, b.x, b.y + 1, b.z, 0.6, 2.4, 0.5); s2.event(EV.ROAR, k.x, k.y + 2, k.z, 0.8); }
             return true;
           };
         }, ['Bone-white']));
@@ -1122,10 +1164,10 @@ export const FIGHTS = {
     },
     moves: {
       slam: { who: 'none', clip: 'jump', secs: 1.6, warn: 'gol_slam', go: (W, f, m, t, P) => MOVES.stompRings(P, m, null, K(m, 0.6), { r: 5.5, elem: BONE }) },
-      skull: { who: 'far', clip: 'atk1', at: 0.4, secs: 1.2, warn: 'gol_skull', go: (W, f, m, t, P) => MOVES.boulder(P, m, t, K(m, 0.42)) },
-      spikes: { clip: 'atk3', secs: 1.3, warn: 'gol_spikes', go: (W, f, m, t, P) => { for (const turn of [-0.42, 0, 0.42]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t) + turn, r: 20, w: 1.2, fuse: 1.1, dmg: K(m, 1.0), knock: 3, elem: BONE, from: m, tag: 'spikes' }); } },
+      // A cage of ribs up round one of you: the middle of it is the one safe place, and then it isn't.
+      cage: { clip: 'atk1', secs: 1.3, warn: 'gol_cage', go: (W, f, m, t, P) => P.mark({ shape: 'ring', x: t.x, z: t.z, r: 6.5, r0: 3, fuse: 1.7, dmg: K(m, 1.2), knock: 2, elem: BONE, follow: t, lock: 0.35, from: m, tag: 'cage', then: (q) => P.mark({ x: q.x, z: q.z, r: 3.3, fuse: 1.5, dmg: K(m, 1.3), knock: 2, elem: BONE, from: m, tag: 'cage' }) }) },
+      spikes: { clip: 'atk3', secs: 1.3, warn: 'gol_spikes', go: (W, f, m, t, P) => { for (const turn of [-0.42, 0, 0.42]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t) + turn, r: 20, w: 1.2, fuse: 1.1, dmg: K(m, 1.25), knock: 3, elem: BONE, from: m, tag: 'spikes' }); } },
       grind: { who: 'none', clip: 'roar', secs: 1.3, warn: 'gol_grind', go: (W, f, m, t, P) => MOVES.fireWheel(P, m, null, K(m, 0.42), { r: 11, life: 6, spin: Math.random() < 0.5 ? 0.7 : -0.7, elem: BONE }) },
-      rain: { who: 'none', clip: 'roar', secs: 1.3, warn: 'gol_rain', go: (W, f, m, t, P) => fall(W, P, m, K(m, 0.8), BONE, 'bonefall') },
     },
     step(W, f, [m], dt) {
       const u = f.fallen;
@@ -1147,7 +1189,7 @@ export const FIGHTS = {
   // ---- Ossivar, the Barrow Wyrm: the breath, the grave shared out among you, and the flight over the vault --------------------
   wyrm: {
     open: 'wyr_open', pace: [4.6, 3.6, 0.3], turn: [22, 4], enrage: [350, 3, 'wyr_enrage'],
-    deck: ['breath', 'rake', 'fall'],
+    deck: ['breath', 'rake', 'fall', 'sweep'],
     setUp(W, m) { m.opts.breathRange = 14; m.opts.breathDps = 30; m.opts.radius = 2.2; },
     moves: {
       // Its breath: a cone before it, aimed as it draws it and held there. Only its tank stands in that.
@@ -1159,8 +1201,11 @@ export const FIGHTS = {
       } },
       rake: { clip: 'atk1', face: false, at: 0.9, secs: 1.5, warn: 'wyr_rake', go(W, f, m, t, P) { const yaw = yawTo(m, t); for (const a of [-0.4, 0, 0.4]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yaw + a, r: 16, w: 1, fuse: 1.1, dmg: K(m, 0.45), knock: 3, elem: BONE, from: m, tag: 'rake' }); } },
       fall: { who: 'none', clip: 'roar', secs: 1.3, warn: 'wyr_fall', go: (W, f, m, t, P) => fall(W, P, m, K(m, 0.36), BONE, 'vaultfall') },
+      // Its head swung right round, burning: a bar of grave-fire from where it stands, turning. Keep ahead of it, or let it
+      // pass and get in behind.
+      sweep: { who: 'mark', clip: 'atk4', secs: 1.6, warn: 'wyr_sweep', go: (W, f, m, t, P) => P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t) + 0.9, r: 20, half: 0.17, fuse: 1.5, dmg: K(m, 0.25), life: 3.4, spin: -0.7, touch: K(m, 0.28), again: 1.2, elem: DRAIN, from: m, tag: 'sweep' }) },
     },
-    // The grave: a circle on one of you, and what lands in it is shared out among whoever's stood in it: stand together.
+    // The grave: a circle on one of you; what lands lands on all of you, shared by however many stood in it: stand together.
     // The pyre: a fire on each of you that burns whoever's in it as it goes out: stand apart. Turn about; and once it's
     // been in the air, both at once: the grave for those with no fire on them.
     step(W, f, [m]) {
@@ -1168,7 +1213,7 @@ export const FIGHTS = {
       const sim = W.sim, P = sim.perils, u = f.rite;
       // (Its breath over: its head's its own again.)
       if (m.breathing && m.state !== 4) { m.breathing = false; m.breathHeld = false; m.breathCd = 1e9; }
-      if (u && (!u.grave || u.grave.dead || u.grave.landed) && u.pyres.every((q) => q.mk.dead || q.mk.landed)) f.rite = null;
+      if (u && (!u.grave || u.grave.dead || u.grave.landed) && u.pyres.every((q) => q.mk.dead || q.mk.landed)) { f.rite = null; if (f.phase !== 1) f.hold = false; m.noTurn = false; }
       // Into the air at fifty-five hundredths of its life: three passes, tomb drakes out of the walls, and a dive.
       if (f.phase === 0 && m.hp < m.maxHp * 0.55 && m.state === 0 && !m.script && !m.breathing && !f.turn && !f.rite) {
         f.phase = 1; f.hold = true;
@@ -1176,18 +1221,26 @@ export const FIGHTS = {
         soar(W, f, m, { passes: 3, elem: DRAIN, k: 0.6, warn: 'wyr_air', dive: 'wyr_dive', land: () => { f.phase = 2; f.hold = false; m.opts.damage *= 1.15; W.warn(WARN.wyr_land); } });
         return;
       }
-      if (f.phase === 1 || f.rite || m.state !== 0 || m.script || m.breathing || f.turn || !W.every(f, 'rite', f.phase === 2 ? 21 : 19)) return;
+      if (f.phase === 1 || f.rite || !due(W, f, 'rite', f.phase === 2 ? 25 : 23, m.state === 0 && !m.script && !m.breathing && !f.turn)) return;
       const who = loose(W).sort(() => Math.random() - 0.5), kind = f.phase === 2 ? 'both' : (f.rites = (f.rites || 0) + 1) % 2 ? 'grave' : 'pyre';
       if (!who.length || !m.perform({ clip: 'roar', secs: 1.4 })) return;
       const rite = f.rite = { grave: null, on: null, pyres: [] };
+      // (Nothing else of its own while a rite's on, and its head stays where it is.)
+      f.hold = true; m.noTurn = true;
       W.warn(WARN[kind === 'both' ? 'wyr_both' : kind === 'grave' ? 'wyr_grave' : 'wyr_pyre']);
       if (kind !== 'pyre') {
         const t = sim.player.dead || Math.random() < 0.5 ? who[0] : sim.player;
         rite.on = t;
-        rite.grave = P.mark({ x: t.x, z: t.z, r: 4.6, fuse: 5.2, follow: t, lock: 0.15, soak: true, share: true, dmg: K(m, 3.2), elem: LIGHT, from: m, tag: 'grave' });
+        // (It lands on every one of you, wherever you are: what each takes is the whole of it shared by however many stood
+        // in the circle. Nobody in it, and each takes it all. Leaving it saves nobody.)
+        rite.grave = P.mark({ x: t.x, z: t.z, r: 4.6, fuse: 5.2, follow: t, lock: 0.15, soak: true, elem: LIGHT, from: m, tag: 'grave', then: (q, P2, inside) => {
+          const share = K(m, 3.0) / Math.max(1, inside.length);
+          for (const b of W.bodies()) { P.hurt(b, share * (b.role === 'tank' ? 0.5 : 1), q.x, q.z, 0, false, 'grave'); sim.casting.burst(FX.SHOCK, LIGHT, b.x, b.y + 1, b.z, 0.5, 2, 0.4, { light: 5, lightR: 5 }); }
+        } });
       }
       if (kind !== 'grave') {
-        const burn = who.filter((b) => b !== rite.on).slice(0, kind === 'both' ? 2 : 4);
+        // (Both at once: one of you burns and keeps away, so there are still enough of you free to share the grave.)
+        const burn = who.filter((b) => b !== rite.on).slice(0, kind === 'both' ? 1 : 4);
         for (const b of burn) rite.pyres.push({ b, mk: P.mark({ x: b.x, z: b.z, r: 3.6, fuse: 5.2, follow: b, lock: 1, dmg: K(m, 0.5), elem: FIRE, tag: 'pyre' }) });
       }
     },

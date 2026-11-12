@@ -30,7 +30,7 @@ function dungeonLairs(roster) {
     out.push({ key: p.key, x, z, r: p.r ?? 6, pick: have(p.pick), boss: elite.length ? elite : undefined, n: p.n - (elite.length ? 1 : 0), pal: p.pal, wake: p.wake || 34, dungeon: true, delve: p.delve,
       state: 'asleep', at: -1e9, tough: p.tough || d.tough, ai: p.ai, tricks: true, spots: p.spots?.map(at), walk: p.walk?.map(at), more: p.more });
   }
-  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
+  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room, b.at?.[0] || 0, b.at?.[1] || 0); out.push({ key: b.key, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
   return out;
 }
 

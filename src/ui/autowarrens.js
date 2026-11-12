@@ -20,11 +20,11 @@ export const WAYS = {
   // The four made after them. The Vaults' coil, with a look into the Strongroom. The Sporehold's west leaf, back through the
   // hub, its east leaf, the hub again, and north. The Playhouse as it's used: front of house, the Wardrobe (the Seamstress
   // has to die before the stage is lit), round by the Store and the green room onto the Stage, and up. The Kingsbarrow's
-  // ring, east about, and back to the head of the stair.
+  // ring, east about to the two halls at its back, home by the west, and down the stair.
   vaults: ['dv_stair', 'dv_toll', 'dv_reeds', 'dv_wallow', 'dv_cistern', 'dv_strong', 'dv_cistern', 'dv_tide', 'dv_sluice', 'dv_sump'],
   sporehold: ['sh_sink', 'sh_stair', 'sh_ring', 'sh_kennel', 'sh_den', 'sh_ring', 'sh_garden', 'sh_bower', 'sh_ring', 'sh_veil', 'sh_heart'],
   playhouse: ['ph_foyer', 'ph_cloak', 'ph_gallery', 'ph_house', 'ph_wardrobe', 'ph_house', 'ph_props', 'ph_green', 'ph_stage', 'ph_green', 'ph_stair', 'ph_nursery', 'ph_attic'],
-  kingsbarrow: ['kb_door', 'kb_dromos', 'kb_south', 'kb_cups', 'kb_east', 'kb_warden', 'kb_east', 'kb_queens', 'kb_north', 'kb_hounds', 'kb_west', 'kb_ossuary', 'kb_west', 'kb_shields', 'kb_south', 'kb_stair', 'kb_vault'],
+  kingsbarrow: ['kb_door', 'kb_dromos', 'kb_south', 'kb_cups', 'kb_east', 'kb_queens', 'kb_warden', 'kb_queens', 'kb_north', 'kb_cross', 'kb_hounds', 'kb_ossuary', 'kb_hounds', 'kb_west', 'kb_shields', 'kb_south', 'kb_stair', 'kb_vault'],
 };
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
@@ -42,9 +42,9 @@ export const KNOWN = new Set([
   // (The later four's bosses each have something that isn't a mark to be out of: somewhere to be, or not a step. The fight
   // says which as it goes (its `order`, posted with it), and tactics() below does as it's told: the same rule for all twelve.)
   'dv_toll', 'dv_gallery', 'dv_reeds', 'dv_cistern', 'dv_strong', 'dv_sluice', 'bloat', 'sallow', 'leviathan',
-  'sh_stair', 'sh_ring_west', 'sh_ring_east', 'sh_kennel', 'sh_garden', 'sh_veil', 'mouldfang', 'morel', 'heart',
+  'sh_stair', 'sh_ring_west', 'sh_ring_east', 'sh_kennel', 'sh_garden', 'sh_veil', 'sh_den_run', 'sh_bower_run', 'mouldfang', 'morel', 'heart',
   'ph_cloak', 'ph_gallery', 'ph_house_back', 'ph_house_front', 'ph_props', 'ph_green', 'ph_stair', 'ph_nursery', 'seamstress', 'leadingman', 'dollmaker',
-  'kb_dromos', 'kb_cups', 'kb_queens', 'kb_north', 'kb_hounds', 'kb_shields', 'kb_stair', 'gravewarden', 'golem', 'wyrm',
+  'kb_dromos', 'kb_seal', 'kb_cups', 'kb_east', 'kb_queens', 'kb_cross', 'kb_hounds', 'kb_west', 'kb_shields', 'gravewarden', 'golem', 'wyrm',
 ]);
 export function warrensCoverage() {
   const out = [];

@@ -355,9 +355,11 @@ function build(d) {
   }
   // Floor raised a step or two: a dais, a gallery's alcove.
   for (const s of d.daises) {
-    const i0 = Math.max(0, Math.ceil((s.x - s.hx - x0) / CELL)), i1 = Math.min(W - 1, Math.floor((s.x + s.hx - x0) / CELL));
-    const j0 = Math.max(0, Math.ceil((s.z - s.hz - z0) / CELL)), j1 = Math.min(H - 1, Math.floor((s.z + s.hz - z0) / CELL));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) floor[j * W + i] += s.dy;
+    // (Round, where it says a radius: a rock standing out of water.)
+    const hx = s.r ?? s.hx, hz = s.r ?? s.hz;
+    const i0 = Math.max(0, Math.ceil((s.x - hx - x0) / CELL)), i1 = Math.min(W - 1, Math.floor((s.x + hx - x0) / CELL));
+    const j0 = Math.max(0, Math.ceil((s.z - hz - z0) / CELL)), j1 = Math.min(H - 1, Math.floor((s.z + hz - z0) / CELL));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (s.r === undefined || Math.hypot(x0 + i * CELL - s.x, z0 + j * CELL - s.z) <= s.r) floor[j * W + i] += s.dy;
   }
   // Smooth the floor a few times, so the slopes between levels are walked, not stepped.
   const tmp = new Float32Array(W * H);
@@ -513,7 +515,8 @@ export function torches(d = WARRENS) {
   // (A torch every seven metres or so round each room's wall, and every six down the tunnels.)
   for (const r of d.rooms) for (const [lx, lz] of roomEdge(r, every, 0.6)) place(d.x + lx, d.z + lz);
   for (const t of d.tunnels) {
-    if (t.dead || t.niche) continue;
+    // (Nor a way that's meant dark: a leaf's back door, in the Sporehold.)
+    if (t.dead || t.niche || t.dark) continue;
     for (let q = 1; q < t.pts.length; q++) {
       const a = t.pts[q - 1], b = t.pts[q], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
       const nx = -(b[1] - a[1]) / L, nz = (b[0] - a[0]) / L;

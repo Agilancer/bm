@@ -7,7 +7,8 @@
 // Its shape is a coil: the rooms wind once round the Sump, close in against it, down and inward, and the last way into it
 // is the sluice's own race, short and wide, so the water you've been circling is seen from the gate. One long gallery
 // (the mudlarks work the length of it) and the rest short. Three of the rooms on the way round have a crack cut toward
-// the Sump: blind, but its light comes up them.
+// the Sump: blind, but its light comes up them. And all the way round there are signs of what's in it before it's met:
+// its bores, round and smooth and falling away, and the holes it has left in the floors.
 // Three bosses, each with something of the water in it: the Bloat (he swells, and bursts: be behind rock), Mother Sallow
 // the Tidecaller (the tide comes in: be on the high rock), and the Leviathan of the Mile (it goes under the mud and comes
 // up beneath you, and where it has come up the floor is gone).
@@ -20,8 +21,8 @@
 import { C, at, link, niche } from './delve-lay.js';
 
 const rooms = [
-  C('dv_stair', 'the Sunken Stair', 0, 0, 9, 0, 7),
-  C('dv_toll', 'the Drowned Toll', -20, -40, 14, -2, 10),
+  C('dv_stair', 'the Sunken Stair', 2, 18, 9, 0, 7),
+  C('dv_toll', 'the Drowned Toll', -18, -22, 14, -2, 10),
   C('dv_reeds', 'the Reed Galleries', -34, -112, 13, -5, 9),
   C('dv_wallow', "the Bloat's Wallow", -36, -170, 21, -8, 15),
   C('dv_cistern', 'the Great Cistern', 14, -192, 16, -11, 13),
@@ -35,8 +36,9 @@ const nooks = [C('dv_sump_south', 'the Sump', 12, -106, 18, -22, 20, { flat: tru
 const tunnels = [
   // (Down off the stair the toll is the first thing there is: no walk before the first of them.)
   link(rooms, 'dv_stair', 'dv_toll', 2, 3.4),
-  // The long gallery: the one real walk in the place, and the mudlarks work the length of it.
-  link(rooms, 'dv_toll', 'dv_reeds', -9, 3.6),
+  // The long gallery: the one real walk in the place, bored round and smooth by something that wasn't a mason, and the
+  // mudlarks work the far half of it.
+  link(rooms, 'dv_toll', 'dv_reeds', -10, 4),
   link(rooms, 'dv_reeds', 'dv_wallow', 4, 3.2),
   link(rooms, 'dv_wallow', 'dv_cistern', -4, 3.2),
   link(rooms, 'dv_cistern', 'dv_strong', 0, 2.4),
@@ -50,10 +52,13 @@ const tunnels = [
   // The cracks: three of the rooms round the Sump have one cut toward it, as far as the rock would let the water go.
   // They're blind (the field has no opening too narrow to walk); what comes up them is its light and the sound of it.
   niche(rooms, 'dv_reeds', 1.57, 9, 1.7, { rise: -3 }),
-  niche(rooms, 'dv_wallow', 0.92, 10, 1.8, { rise: -3 }),
+  niche(rooms, 'dv_wallow', 2.22, 10, 1.8, { rise: -3 }),
   niche(rooms, 'dv_cistern', 3.14, 10, 1.8, { rise: -3 }),
+  // And its bores: round, wide and falling steeply away, where the thing in the Sump came up to look and went back.
+  { pts: [[-16.5, -62], [-6, -66], [2, -72]], w: 2.8, niche: true, rise: -5 },
+  niche(rooms, 'dv_toll', 1.2, 9, 3.4, { rise: -4 }),
   // Blind cuts and washed-out pockets off the rooms (nothing in them but the look of them).
-  niche(rooms, 'dv_toll', 5.2, 7, 1.6, { rise: 0.6 }),
+  niche(rooms, 'dv_toll', 5.0, 7, 1.6, { rise: 0.6 }),
   niche(rooms, 'dv_reeds', 4.6, 8, 1.5),
   niche(rooms, 'dv_wallow', 5.2, 8, 1.7, { rise: 0.8 }),
   niche(rooms, 'dv_tide', 2.4, 7, 1.6),
@@ -65,12 +70,10 @@ const pillars = [
   [-46, -163, 1.5], [-27, -161, 1.4], [-45, -180, 1.4], [-26, -179, 1.5],
   [22, -150, 1.8], [22, -138, 1.7], [6, -124, 1.9], [20, -112, 1.8], [6, -100, 1.7],
 ];
-// The high rock of the Tidehall, two steps of it, off to the south-west of the hall's middle: what's dry when the tide's in.
+// The high rock of the Tidehall, a step up out of the water, off to the south-west of the hall's middle: what's dry when
+// the tide's in.
 export const TIDE_ROCK = { x: 65, z: -159, r: 8 };
-const daises = [
-  { x: TIDE_ROCK.x, z: TIDE_ROCK.z, hx: 8, hz: 8, dy: 0.5 },
-  { x: TIDE_ROCK.x, z: TIDE_ROCK.z, hx: 5.5, hz: 5.5, dy: 0.5 },
-];
+const daises = [{ x: TIDE_ROCK.x, z: TIDE_ROCK.z, r: TIDE_ROCK.r, dy: 0.6 }];
 // Where Mother Sallow stands to call it: against the hall's north wall, between her two drains.
 export const TIDE_STAND = at(rooms, 'dv_tide', 0.72, 0);
 
@@ -79,27 +82,31 @@ const props = [];
 const add = (kind, x, z, o = {}) => props.push({ kind, x, z, ...o });
 const near = (id, far, a) => at(rooms, id, far, a);
 // The stair: the causeway's own slabs, tipped down into the dark; the first water.
-for (const [x, z, yaw, tip] of [[-4, -3, 0.3, 0.5], [4.5, 1, 1.2, 0.8], [1, -6, 2.2, 0.3]]) add('slab', x, z, { yaw, tip });
-add('pool', -5.5, 3, { r: 2.2 });
+for (const [x, z, yaw, tip] of [[-2, 15, 0.3, 0.5], [6.5, 19, 1.2, 0.8], [3, 12, 2.2, 0.3]]) add('slab', x, z, { yaw, tip });
+add('pool', -3.5, 21, { r: 2.2 });
 // The Drowned Toll: the toll's own gear where the water left it: the bar, the scales' table, strongboxes, a boat's ribs.
-add('tollbar', -20, -31, { yaw: 0.3, w: 5 });
-add('table', -28, -44, { hx: 2.6, hz: 1, solid: true, rough: true });
-add('crates', -12, -49); add('barrels', -29, -35);
-add('wreck', -14, -38, { yaw: 2.2, s: 1 });
-add('pool', -22, -46, { r: 5 }); add('reeds', -10, -32, { r: 2 }); add('reeds', -30, -49, { r: 1.6 });
-// The long gallery: reeds in the wet, the mudlarks' heaps along it.
-add('reeds', -21, -62, { r: 1.4 }); add('heap', -17.5, -76, { r: 1 }); add('reeds', -24.5, -90, { r: 1.3 });
+// (Its water lies to the north-east, the Sump's side, as every room's does; and the first of the holes: a ring of floor
+// gone soft and dark, as wide as a cart. There are more of them the further round you go.)
+add('tollbar', -18, -13, { yaw: 0.3, w: 5 });
+add('table', -26, -26, { hx: 2.6, hz: 1, solid: true, rough: true });
+add('crates', -22, -32); add('barrels', -27, -17);
+add('wreck', -12, -16, { yaw: 2.2, s: 1 });
+add('pool', -12, -27, { r: 5 }); add('reeds', -8, -14, { r: 2 }); add('reeds', -25, -29, { r: 1.5 });
+add('sinkhole', -21, -30, { r: 3 });
+// The long gallery: reeds in the wet, the mudlarks' heaps along it, another hole at the blind end of the bore.
+add('reeds', -19.5, -50, { r: 1.3 }); add('heap', -18.4, -74, { r: 1 }); add('reeds', -27.5, -91, { r: 1.2 });
+add('sinkhole', 0, -71, { r: 2.2 });
 // The Reed Galleries: reeds standing out of a hand of water all across it, what the mudlarks have picked.
-add('pool', -34, -112, { r: 9 });
+add('pool', -30, -113, { r: 8.5 }); add('sinkhole', -41, -106, { r: 3.2 });
 for (const [fa, a, r] of [[0.5, 0.6, 2.2], [0.45, 2.6, 2], [0.6, 4, 1.8], [0.7, 5.3, 1.6], [0.3, 3.3, 1.5]]) { const [x, z] = near('dv_reeds', fa, a); add('reeds', x, z, { r }); }
 add('heap', -27, -121, { r: 1.3 }); add('heap', -43, -105, { r: 1.1 }); add('bones', -30, -103, { r: 1.8 });
 // The Bloat's Wallow: his pool, skinned over; what he's eaten and hasn't finished.
-add('pool', -36, -170, { r: 7 });
+add('pool', -31, -167, { r: 7 });
 add('bones', -22, -170, { r: 2.6 }); add('bones', -49, -172, { r: 2.2 }); add('bones', -36, -186, { r: 2 });
 add('barrels', -50, -157); add('wreck', -23, -184, { yaw: 0.6, s: 1.3 });
 // The Great Cistern: the fen's water held in a bowl of rock, a walk of slabs round it, the toll's bell fallen in.
-add('pool', 14, -192, { r: 9 });
-add('bell', 9, -196, { s: 1.5 });
+add('pool', 14, -188, { r: 9 });
+add('bell', 9, -192, { s: 1.5 });
 for (let i = 0; i < 6; i++) { const [x, z] = near('dv_cistern', 0.74, 0.5 + i * 1.0); add('slab', x, z, { yaw: 0.5 + i, tip: (i % 3) * 0.2 }); }
 add('reeds', 23, -184, { r: 1.8 }); add('reeds', 5, -201, { r: 1.5 });
 // The Strongroom: what the toll took, a hundred years of it, and the door that kept the fen out till it didn't.
@@ -127,8 +134,8 @@ const WET = ['Drowned', 'Drowned', 'Blighted'];
 // A pack: tough: what it is to its cousins in the woods, where the delve's own doesn't suit (a pack of children against a
 // pack of drakes). ai: how it fights, if not as its kind does.
 const packs = [
-  { key: 'dv_toll', room: 'dv_toll', pick: DROWNED, n: 5, pal: WET },
-  { key: 'dv_gallery', room: 'dv_reeds', pick: MUDLARKS, n: 4, pal: ['Drowned', 'Abyssal'], tough: { hp: 15, damage: 2.4 }, r: 2, at: [15, 42], walk: [[-21, -60], [-19.5, -80]] },
+  { key: 'dv_toll', room: 'dv_toll', pick: DROWNED, n: 5, pal: WET, at: [0, 5], r: 5 },
+  { key: 'dv_gallery', room: 'dv_reeds', pick: MUDLARKS, n: 4, pal: ['Drowned', 'Abyssal'], tough: { hp: 15, damage: 2.4 }, r: 2, at: [17.8, 42.8], walk: [[-16.6, -66], [-24.9, -86.8]] },
   { key: 'dv_reeds', room: 'dv_reeds', pick: MUDLARKS, n: 4, elite: DRAKES, pal: ['Drowned', 'Abyssal'], tough: { hp: 13, damage: 2.4 }, at: [0, -3], r: 4 },
   { key: 'dv_cistern', room: 'dv_cistern', pick: CHILDREN.concat(DROWNED), n: 5, pal: WET, tough: { hp: 14, damage: 2.6 }, at: [6, 6], more: { n: 2, pick: DROWNED, from: [14, -192], when: 0.6 } },
   { key: 'dv_strong', room: 'dv_strong', pick: DROWNED, n: 4, elite: ['flesh_spider_demon'], pal: ['Drowned'] },
@@ -144,9 +151,9 @@ const warnings = {
   blo_bile: 'The Bloat heaves up bile! Off the pools.',
   blo_retch: 'The Bloat retches! Out from in front of him.',
   blo_stamp: 'The Bloat stamps! Step in behind each ring as it lands.',
-  blo_gobbet: 'The Bloat hurls a gobbet! Away from where it lands: it bursts.',
+  blo_gout: 'The Bloat heaves a gout along the floor! Out of its way: the pools stay.',
   blo_slam: 'The Bloat swings! Out of the arc.',
-  blo_swell: 'The Bloat SWELLS! Behind a pillar, all of you: he is going to burst! Not one he has fouled.',
+  blo_swell: 'The Bloat SWELLS! Behind a rock, all of you, the same one: he is going to burst! Not one he has fouled.',
   blo_burst: 'The Bloat bursts! He is spent: strike him now.',
   blo_turn: 'The Bloat turns on you! Get behind the tank, or out of his reach, till he lets go.',
   blo_enrage: 'The Bloat is enraged!',
@@ -154,7 +161,7 @@ const warnings = {
   sal_grasp: 'Hands come up out of the water! Out of the circle: it holds.',
   sal_undertow: 'The undertow! Out of the lines.',
   sal_wave: 'A wave comes on! Find the gap.',
-  sal_drip: 'The roof weeps! Out of the circles.',
+  sal_eddy: 'Eddies come across the floor! Out of their way: they keep going.',
   sal_wail: 'Mother Sallow wails! Close in against her, or get right away.',
   sal_tide: 'THE TIDE COMES IN! Up onto the high rock, all of you! She cuts it in two: watch the line.',
   sal_ebb: 'The tide goes out. Down off the rock: she is yours again.',
@@ -163,7 +170,7 @@ const warnings = {
   sal_enrage: 'Mother Sallow is enraged!',
   lev_open: 'The Leviathan of the Mile. When it goes under, keep moving: it comes up beneath you, and takes the floor with it.',
   lev_spew: 'The Leviathan spews! Off the pools.',
-  lev_maw: 'The Leviathan draws breath: it is pulling you in! Run across its pull, out of its jaws.',
+  lev_maw: 'The Leviathan draws breath: it is pulling you in! Run from it, clear of its head, before it bites.',
   lev_thrash: 'The Leviathan thrashes! Jump the ring as it reaches you.',
   lev_bore: 'The mud splits! Out of the lines.',
   lev_fall: 'The roof comes down! Out of the circles.',
@@ -178,7 +185,7 @@ export const VAULTS = {
   key: 'vaults', tag: 'dv', name: 'The Drowned Vaults', short: 'the Vaults', x: 600, z: -5760, y: -60, level: 9, style: 'cave',
   rooms, nooks, tunnels, pillars, daises, props, packs, bosses, warnings,
   turnWarn: { bloat: 'blo_turn', sallow: 'sal_turn', leviathan: 'lev_turn' },
-  entry: { x: 0, z: 3, yaw: Math.PI }, exitIn: { x: 0, z: 6.5 }, exitOut: { x: 14, z: -152, yaw: 0 },
+  entry: { x: 2, z: 21, yaw: Math.PI }, exitIn: { x: 2, z: 24.5 }, exitOut: { x: 14, z: -152, yaw: 0 },
   // By the Sunken Mile (SITES.causeway), facing the last of the causeway.
   portal: { x: -430, z: -2717, yaw: 0.53, r: 2.2 },
   last: 'leviathan', tough: { hp: 10, damage: 2.2 }, pay: { xp: 2300, gold: 380 },
