@@ -984,6 +984,59 @@ now carries four things, not three (`PROPS_PER_CHAR`).
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
 both). The quartermasters are two more bodies after them.
 
+### The lancer's hold, the dragoon's and the maul's
+
+A lancer used to thrust his lance like a punch at head height, over what he was fighting, with his shield arm waving
+behind him, and his charge was a low sliding squat inside a beam of light. No clip in the bank holds a lance, a spear in
+two hands or a maul, so the arms are now placed after the pose is made (`lanceHold` and `poseLance` in `src/sim/hero.js`),
+on top of whatever the legs are doing:
+
+- **The lancer on guard.** The tower shield up before him on the left arm: the elbow down at his side, the forearm level
+  across behind the board, the fist near his middle, the board hung from the forearm so its top is at his chin and he
+  sees over it, his left shoulder behind it. The lance gripped behind its vamplate at his right side, high enough that
+  its butt lies back under the forearm, level at what he faces. Hands are shut on what they hold (`shutHand`: the clips'
+  hands are all one half-open hand).
+- **The thrust** is the arm's (`jab`): drawn back with the shoulders turned away and his eyes kept on them over the
+  board, then driven out to full reach with the right shoulder and his weight behind it, held a moment, and home. The
+  lance doesn't slide through his fist. Measured (`node tools/heroes/lance_measure.mjs`): the fist travels 0.9 m and the
+  point 1.0 m, and nothing jumps between ticks.
+- **Something inside his point** gets the board, not the lance through it: the lance is raised over its head and the
+  ordinary blow becomes a bash. The bash is the board punched out upright with the shoulder behind it (`punch`), not laid
+  flat on a head, begun at once, and what it strikes is shoved back out to where the point can find it: the next blow is
+  a thrust. The lance passes outside the board's right edge, not through it (the board sits a hand to his left of the
+  forearm's middle with that edge turned back).
+- **Hands shut on what they hold** (`shutHand`). The armour tool had bound every hand whole to its wrist, so a hand was
+  always the open hand it was modelled as: a knife lay along a flat palm, four straight fingers stood past a shield's
+  rim. `python tools/heroes/fingers.py` (after `build.py`, `rebind.py` and `mail.py`; a second run changes nothing) binds
+  each finger's vertices to that finger's own joints, moving nothing, and the game turns the joints in on a grip: a
+  sword's, a knife in each fist, a bow's, a board's, a shaft's. A hand that has thrown what it held is open till it's
+  back; at ease the hands are as modelled.
+- **What hangs at the hips stays there** (`hipFrame`). A sword, a knife or a boomerang put away at the hip was kept by the
+  pelvis bone, and some of the gesture clips turn that bone right round: a bard's sword swung to the other hip, point
+  first, while he waved. It's kept now by where the hips stand (the joints either side and the spine above).
+- **The charge** (`lanceRush`) is a run: sprint legs, bent in behind the board, the lance couched and level, his fist at
+  one height so the point doesn't nod with his stride. It ends: he stops with his point's reach a little into them,
+  plants, drives the point out, and what it's driven into is thrown back down the lance. He used to run on through them.
+  The Phalanx Rush is three of these. The light on it is a spark on the point and the air torn behind him: the lance is
+  seen.
+- **At ease** he carries the lance upright in his right fist at his side, the board on his back: there's nowhere on a
+  man to put a three-metre lance away, and it used to be jammed under the board. It goes to his back, beside the board,
+  only for what needs both hands or the whole body (sitting, a dance, the ride down the Fall).
+- **A dragoon** holds his spear in both hands, the rear one at his hip and the other a forearm's length up the shaft,
+  thrusts with both, and sweeps its head across before him. **A paladin with a maul** carries it head up before him, both
+  hands on the haft, and the left hand stays on it through his blows wherever a left hand could be.
+- **Dashes are runs.** A paladin's charge, a dragoon's step and a boomerang knight's dash used to slide in a crouch;
+  they run now (`dash` in `src/sim/heroskills.js`). Lunges that ended all but lying down are played part-way
+  (`SOFT_CLIPS`). The chest no longer snaps round in one tick when a whole-body clip ends (`chestOff` in
+  `src/sim/knight.js`, for every knight).
+- Also: boomerangs hang flat at the thighs, not crossed over the belly; a bard's lute rests on the board's face, not in
+  the air behind it; a bow's string is drawn where the bow is, in the hand or on the back; an archer's string hand snaps
+  back past the cheek as she looses; blood thrown by the heroes' cuts is a third of what it was; a hero's painted plate
+  takes a share of the sky's light on its shaded side (`heroLook` in `src/gfx/materials.js`).
+
+`tests/hero-skills.test.mjs` has a test of the lancer's hold: level lance, board before him and facing them through
+guard, thrust and run; the thrust drawn back and driven out; the run stopping short and ending in a thrust.
+
 ### Looking at their moves, and who looked
 
 `node tools/heroes/moves.mjs all [classes]` plays every move of every class in the real game on a headless browser (a
@@ -1047,6 +1100,42 @@ ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is
   taken headless. Left undone from their lists: the lower back in a deep crouch (easing the liner onto the cuirass
   sooner was tried and showed more cover, not less), and the lances' black and yellow stripes (the owner's item art).
 - The frames were of ten bodies on a software GPU at one sample a pixel; nobody has looked at the result on a real GPU.
+
+**What hangs on them, and their paint** (2026-11-11, after two critics went over all 44 bodies in game pictures:
+`tools/heroes/review.py`). The order to make a body is `build.py roster`, `rebind.py`, `mail.py`; `rebind.py` and
+`mail.py` can be run again on the built bodies at any time.
+
+- **Quivers stay on the back** (`hangers` in `rebind.py`). The archers' quivers (five bodies) were bound to the right
+  upper arm and collar, as the source's weights had them. Arms down, a quiver swung with the arm to lie flat across the
+  shoulders, its foot out through the far side of the chest (archer_f5). They're bound to the trunk now, as a cuirass
+  is, and so stay as they were made: steep, the foot at the far kidney.
+- **Streamers hang from the shoulder** (`hangers`). dragoon_f1's sleeve tails, two thirds of a metre of cloth tied
+  round each upper arm, were rigid on the arm (they swung in across her back as the arm came down) and one piece of the
+  left one was on the thigh (a scrap in the air by her hip). Each is moved whole in along the arm to the shoulder and
+  made cloth that rides the trunk by its height.
+- **A cloak hangs from the body, not the arms** (`cloaks` in `rebind.py`, a dozen bodies and more). Cloth keeps its weight on an arm
+  only where it's the arm's own (within a few centimetres of the bone and not behind it); a collar bone carries at most
+  45% of a cloak's top; the rest rides the trunk by its height. Before, a raised arm dragged paladin_m2's cloak up into
+  one flat sheet, and with the arms down it lay across his back.
+- **Skin and hair are never dyed** (`Source.bare`, `BARE` in `build.py`). A palette turned any strong colour outside
+  the band of leather and gold, and a cheek's blush and a fingertip are redder than that band: rogue_m4's fingertips
+  and cheeks were blue. Three sources show skin (the bare-headed rogue, the two ninjas' eyes and fingers); on those, a
+  head's flesh-coloured and dark-haired UV islands and a hand's flesh-coloured texels are left out of every palette.
+- **A turned colour keeps its depth** (`recolour` in `build.py`). It holds to most of the brightness it had and not
+  its HSV value (navy turned to orange at the same value is three times as bright: the lancers' back plates were one
+  loud flat block); saturation eases toward full and never clips; a texel that's a near thing goes with its neighbours
+  (a red cloak's orange-brown shadows were left as rust in a cloak turned teal, a brown glove's redder texels were
+  speckled blue); gilding in shadow turns with the bright gilding where a palette turns gold. The `ash` palette brings
+  whites down to an off-white and draws their shading out (`white`), and three new palettes lacquer or dye the bare
+  steel and grey cloth as well (`enamel`: `moss`, `plum`, `garnet`).
+- **The roster, where the dice were unkind** (`ROSTER_FIX` in `build.py`). dragoon_f4 was parts of five suits in five
+  colours; she's the black suit now with the red one's helm and pauldrons. dragoon_m4's legs come with his arms (no
+  white tassets), bard_m2 wears the black suit's whole top, boomerang_f2 is the dark suit with blue-enamelled arms and
+  boomerang_f3 the pale suit whole, turned to ice. Four near twins have a colour of their own: rogue_m3 moss green,
+  ninja_m3 plum, lancer_f3 green, boomerang_m3 garnet.
+- `python tools/heroes/look.py ID --pose cheer --yaw 20,180 --out PIC.png` draws a body in a pose, in its own paint,
+  from any side, with no game and no GPU (`--dir A --dir2 B` puts two builds side by side). The before and after
+  pictures of all of this are from it; none of it has been seen in the game yet.
 
 ### The Hollowfang Warrens
 
@@ -1170,7 +1259,7 @@ the game**: see "Monsters' attacks" below.
 
 ### The lancers' spinning shields
 
-The boards a lancer calls up round himself (Tower Shields, Bulwark Nova, Phalanx Rush, Charge of the Order, and a hired
+The boards a lancer calls up round himself (Tower Shields, Bulwark Nova, Charge of the Order, and a hired
 lancer's Shield Wall) are real golden shields, not kites of light: the four from VELSCOUR's Lancer (a round one, a
 diamond, a kite and a tower), each with a worked face and a rear of dark hide and gold grips, so a ring of them shows
 fronts on the near side and backs on the far side as it turns. The sim draws one with `shield3` (`src/sim/heroskills.js`),

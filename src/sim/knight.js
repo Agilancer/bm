@@ -397,10 +397,15 @@ export class Knight {
       quatNlerp(rot, hl * 4, rot, hl * 4, rig.restR, hl * 4, 1);
     }
     // Hands stay shut on sword and shield.
-    if (!this.dead) for (const j of this.fingerJoints) { rot[j * 4] = this.fist[j * 4]; rot[j * 4 + 1] = this.fist[j * 4 + 1]; rot[j * 4 + 2] = this.fist[j * 4 + 2]; rot[j * 4 + 3] = this.fist[j * 4 + 3]; }
+    // (A hero's fingers are bound to their own joints and kept as modelled, dead or not: the clips' fingers aren't theirs.)
+    if (!this.dead || this.opts.hero) for (const j of this.fingerJoints) { rot[j * 4] = this.fist[j * 4]; rot[j * 4 + 1] = this.fist[j * 4 + 1]; rot[j * 4 + 2] = this.fist[j * 4 + 2]; rot[j * 4 + 3] = this.fist[j * 4 + 3]; }
     // Keep the chest on the target and the eyes on the player, without wringing a rigid cuirass over the waist.
     this.twist.fill(0);
-    const off = this.action && this.actMask === 'full' ? 0 : clamp(wrapAngle(this.faceYaw - this.yaw), -0.62, 0.62);
+    // (Eased: a whole-body clip that ends with the chest wanted well round would wring it there in a tick.)
+    // (And not at all for something right behind him: there the chest would be thrown from one side to the other as he comes round.)
+    const want = wrapAngle(this.faceYaw - this.yaw);
+    const offTo = this.action && this.actMask === 'full' ? 0 : clamp(want, -0.62, 0.62) * (1 - smoothstep(2.0, 2.9, Math.abs(want)));
+    const off = this.chestOff = damp(this.chestOff ?? offTo, offTo, 14, dt);
     const { J } = this;
     this.twist[J.pelvis] = this.bodyTurn;
     this.twist[J.spine1] = off * 0.28; this.twist[J.spine2] = off * 0.36; this.twist[J.spine3] = off * 0.36;
@@ -531,9 +536,17 @@ export class Knight {
   putAway(out, o, slot, k) {
     if (out[o + 15] === 0) return;
     const { wq, wt } = this.pose, j = slot.j, e = smoothstep(0, 1, this.stow);
-    quatMul(stowQ, 0, wq, j * 4, slot.q, 0);
-    quatRotate(stowT, 0, wq, j * 4, slot.t, 0);
-    stowT[0] += wt[j * 3]; stowT[1] += wt[j * 3 + 1]; stowT[2] += wt[j * 3 + 2];
+    // (slot.hip: kept by where a hero's hips stand, not by the pelvis bone: src/sim/hero.js hipNow.)
+    if (slot.hip) {
+      this.hipNow();
+      quatMul(stowQ, 0, this.hipQ, 0, slot.q, 0);
+      quatRotate(stowT, 0, this.hipQ, 0, slot.t, 0);
+      stowT[0] += this.hipT[0]; stowT[1] += this.hipT[1]; stowT[2] += this.hipT[2];
+    } else {
+      quatMul(stowQ, 0, wq, j * 4, slot.q, 0);
+      quatRotate(stowT, 0, wq, j * 4, slot.t, 0);
+      stowT[0] += wt[j * 3]; stowT[1] += wt[j * 3 + 1]; stowT[2] += wt[j * 3 + 2];
+    }
     if (e < 0.999) {
       const q0 = matToQuat([out[o] / k, out[o + 1] / k, out[o + 2] / k], [out[o + 4] / k, out[o + 5] / k, out[o + 6] / k], [out[o + 8] / k, out[o + 9] / k, out[o + 10] / k]);
       quatNlerp(stowQ, 0, q0, 0, stowQ, 0, e);

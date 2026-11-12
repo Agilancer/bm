@@ -391,7 +391,7 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed), roster, kit);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
@@ -1606,8 +1606,9 @@ class GameView {
       case 1: {
         // Blood thrown from a cut, the way (a, c) with how much (b): a gout along it, and a spatter every way. It falls and soaks in.
         // (Jets of it, in drops big enough to be seen across a field.)
-        const n = Math.ceil(160 + 340 * b);
-        r.emit(0, n, x, y, z, a * 1.5, 0.8, c * 1.5, 0.45, 2.6, 7.5 + 3.5 * b, 0.004, 0.02, 0.6, 1.5);
+        // (A third of what it was, and not thrown so far: a fight of knives was a red fan with nobody to be seen in it.)
+        const n = Math.ceil(50 + 110 * b);
+        r.emit(0, n, x, y, z, a * 1.5, 0.8, c * 1.5, 0.45, 1.8, 4.5 + 2 * b, 0.004, 0.02, 0.6, 1.5);
         r.emit(0, Math.ceil(n * 0.4), x, y, z, 0, 1, 0, 1.4, 1, 5, 0.003, 0.014, 0.5, 1.3);
         au.play('splat', x, y, z, 0.3 + b * 0.35);
         break;

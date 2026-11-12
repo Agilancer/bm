@@ -21,6 +21,10 @@ It also mirrors an arm's plate that's on one side only onto the other (mirror_ar
 every rigid piece on every body against the bone it sits on (misplaced: two boomerang knights had a chest strap on the
 upper arm), and binds knee and elbow cops half to each bone so they ride the bend (cops).
 
+And it takes what hangs on the body off the arms (2026-11-11): quivers bound to an upper arm go onto the trunk, streamers
+hung from the arms become cloth hung from the shoulder (hangers), and a cloak's or a coat's cloth rides an arm only where
+it's the arm's own (cloaks).
+
 Run tools/heroes/mail.py after it, which sizes the covers from
 where the plates ride. `--dry` only lists what it would change.
 """
@@ -287,6 +291,165 @@ def misplaced(body_id, dry=False):
     return done
 
 
+_ARM = ("upperarm", "lowerarm", "hand", "index", "middle", "ring", "pinky", "thumb")
+_TRUNK = ["pelvis", "spine_01", "spine_02", "spine_03"]
+
+
+def _seg(P, a, b):
+    """Each point's distance from the segment a-b, and the nearest point on it."""
+    ab = b - a
+    t = np.clip(((P - a) @ ab) / max(ab @ ab, 1e-9), 0, 1)
+    q = a + np.outer(t, ab)
+    return np.linalg.norm(P - q, axis=1), q
+
+
+def _trunk(y, T):
+    """The trunk's shares by height, pelvis to the top of the spine (as coat_weights has them)."""
+    ys = np.array([T[n][1] for n in _TRUNK])
+    out = np.zeros((len(y), len(_TRUNK)))
+    for i in range(len(_TRUNK)):
+        up = np.clip((y - ys[i - 1]) / max(ys[i] - ys[i - 1], 1e-6), 0, 1) if i else np.ones(len(y))
+        down = np.clip((ys[i + 1] - y) / max(ys[i + 1] - ys[i], 1e-6), 0, 1) if i + 1 < len(_TRUNK) else np.ones(len(y))
+        out[:, i] = np.minimum(up, down)
+    return out / out.sum(1, keepdims=True)
+
+
+def _full(A, sl, njoints):
+    """A slice's weights as one row a vertex over every joint."""
+    J = A["JOINTS_0"][sl].astype(np.int64); W = A["WEIGHTS_0"][sl].astype(np.float64)
+    full = np.zeros((len(J), njoints))
+    np.add.at(full, (np.repeat(np.arange(len(J)), J.shape[1]), J.ravel()), W.ravel())
+    return full
+
+
+def _store(A, sl, full):
+    order = np.argsort(-full, axis=1)[:, :4]
+    w4 = np.take_along_axis(full, order, 1)
+    w4 /= np.maximum(w4.sum(1, keepdims=True), 1e-9)
+    A["JOINTS_0"][sl] = order.astype(A["JOINTS_0"].dtype); A["WEIGHTS_0"][sl] = w4.astype(np.float32)
+
+
+CLAV = 0.45   # the most of a cloak's top a collar bone carries
+
+
+def cloaks(body_id, dry=False):
+    """A cloak or a coat hangs from the body, not from the arms. rig_armor.py leaves on an arm whatever cloth the source
+    hung there, and coat_weights gives the arm everything out past the shoulder joint: so a cloak hung behind a shoulder
+    had its top on the collar bone and the upper arm, and a raised arm dragged it up into one flat sheet (paladin_m2,
+    the bards, the rogues' cloak); arms down, it swung in across the back. Here every cloth vertex's weight on an arm is
+    kept only where the vertex is the arm's own (a sleeve, a shoulder cap: within a few centimetres of the bone and not
+    behind it), a collar bone carries at most CLAV of a cloak's top and nothing a hand's breadth below the shoulder, and
+    what's let go rides the trunk by its height. Shape, paint and bind pose are untouched."""
+    path, g, blob, A, idx, pieces, names, T = _open(body_id)
+    index = {n: i for i, n in enumerate(names)}
+    done = []
+    for p in pieces:
+        if p["kind"] != "cloth":
+            continue
+        sl = slice(p["vstart"], p["vstart"] + p["vcount"])
+        P = A["POSITION"][sl].astype(np.float64)
+        if P[:, 1].max() < T["spine_02"][1]:
+            continue    # a skirt: none of it up by the arms
+        full = _full(A, sl, len(names))
+        if np.abs(full - full[0]).max() < 1e-4:
+            continue    # bound as one piece (a streamer hung by hangers): it stays one
+        moved = np.zeros(len(P))
+        for s, sg in (("l", 1.0), ("r", -1.0)):
+            sh, el, ha = T[f"upperarm_{s}"], T[f"lowerarm_{s}"], T[f"hand_{s}"]
+            d1, q1 = _seg(P, sh, el); d2, q2 = _seg(P, el, ha)
+            d = np.minimum(d1, d2); q = np.where((d1 <= d2)[:, None], q1, q2)
+            let_go = np.maximum(smooth((d - 0.07) / 0.05), smooth((q[:, 2] - P[:, 2] - 0.05) / 0.04))
+            arm = [i for i, n in enumerate(names) if n.endswith("_" + s) and any(k in n for k in _ARM)]
+            # (The arm carries at most what's not let go: a ceiling, so a second run finds nothing more to move.)
+            had = full[:, arm].sum(1)
+            keep = np.minimum(had, 1 - let_go)
+            free = had - keep
+            full[:, arm] *= (keep / np.maximum(had, 1e-9))[:, None]
+            ci = index[f"clavicle_{s}"]
+            cap = CLAV * smooth((P[:, 1] - (sh[1] - 0.20)) / 0.15)
+            over = np.maximum(full[:, ci] - cap, 0)
+            full[:, ci] -= over
+            # What came off the upper arm at the top hangs from the collar instead, as far as the collar may carry it.
+            give = np.minimum(free, np.maximum(cap - full[:, ci], 0)) * (sg * P[:, 0] > 0)
+            full[:, ci] += give
+            moved += free - give + over
+        if moved.mean() < 0.004:
+            continue
+        tr = _trunk(P[:, 1], T)
+        for i, n in enumerate(_TRUNK):
+            full[:, index[n]] += tr[:, i] * moved
+        _store(A, sl, full)
+        done.append((p["name"], p["vcount"], round(float(moved.mean()), 3)))
+    if done and not dry:
+        write(path, g, blob, A, idx, pieces)
+    return done
+
+
+def hangers(body_id, dry=False):
+    """Things hung on the body that the armour tool bound to an upper arm, because the source's weights said so:
+
+      - a quiver across the back (the archers'): a long rigid thing behind the back that reaches in to the spine,
+        bound to the right upper arm and collar. Arms down, it swung with the arm to lie flat across the shoulders, its
+        foot out through the far side of the chest (archer_f5). It goes onto the trunk, as a cuirass is bound, and so
+        stays where it was made: steep, its foot at the far kidney.
+      - streamers hung from the upper arms (dragoon_f1's sleeves' tails, two thirds of a metre long): rigid on the arm,
+        they swung in across the body as the arm came down, and the one piece of them cut onto a thigh hung in the air
+        by the hip. A streamer is moved whole, unbent, in along the arm to the shoulder joint, and becomes cloth
+        that rides the trunk by its height, as a cloak does (a little of its top on the collar): it hangs from the
+        shoulder, behind the arm, whatever the arm does, and bends with the back and not out from it like a rod. (Tied where it was, part way down the upper arm, there is no bone that both follows the arm's end
+        and stays upright: left on the trunk out there it hung in the air beside a lowered arm.)"""
+    path, g, blob, A, idx, pieces, names, T = _open(body_id)
+    index = {n: i for i, n in enumerate(names)}
+    fam = {}
+    for k, p in enumerate(pieces):
+        if p["kind"] == "plate":
+            fam.setdefault(p["name"].split("#")[0], []).append(k)
+    done = []
+    for base, ks in fam.items():
+        side = {}
+        for k in ks:
+            for j, w in pieces[k].get("joints", []):
+                n = names[j]
+                if w >= 0.4 and ("upperarm" in n or "lowerarm" in n):
+                    side[n[-1]] = side.get(n[-1], 0) + pieces[k]["vcount"]
+        if not side:
+            continue
+        s = max(side, key=side.get); sg = 1.0 if s == "l" else -1.0
+        P = np.concatenate([A["POSITION"][pieces[k]["vstart"]:pieces[k]["vstart"] + pieces[k]["vcount"]] for k in ks]).astype(np.float64)
+        sh, el = T[f"upperarm_{s}"], T[f"lowerarm_{s}"]
+        tall = P[:, 1].max() - P[:, 1].min()
+        inboard = float((sg * P[:, 0] < sg * sh[0]).mean())
+        if len(ks) == 1 and tall > 0.5 and (sg * P[:, 0]).min() < 0.08 and np.median(P[:, 2]) < sh[2] - 0.07:
+            p = pieces[ks[0]]
+            was = [(names[j], round(w, 2)) for j, w in p.get("joints", [])]
+            _bind(A, p, [(index["spine_03"], 0.6), (index["spine_02"], 0.4)])
+            done.append((p["name"], p["vcount"], "quiver", was))
+            continue
+        wide = P[:, 0].max() - P[:, 0].min()
+        if sh[1] - P[:, 1].min() > 0.3 and wide < 0.25 and inboard < 0.2 and side[s] >= 0.5 * sum(pieces[k]["vcount"] for k in ks):
+            # In to the shoulder: its inner edge two centimetres out from the joint.
+            dx = sg * min((sg * sh[0] + 0.02) - (sg * P[:, 0]).min(), 0.0)
+            for k in ks:
+                p = pieces[k]
+                sl = slice(p["vstart"], p["vstart"] + p["vcount"])
+                A["POSITION"][sl, 0] += dx
+                was = [(names[j], round(w, 2)) for j, w in p.get("joints", [])]
+                Q = A["POSITION"][sl].astype(np.float64)
+                full = np.zeros((len(Q), len(names)))
+                clav = 0.2 * smooth((Q[:, 1] - (sh[1] - 0.15)) / 0.12)
+                tr = _trunk(Q[:, 1], T)
+                for i, n in enumerate(_TRUNK):
+                    full[:, index[n]] = tr[:, i] * (1 - clav)
+                full[:, index[f"clavicle_{s}"]] = clav
+                _store(A, sl, full)
+                p["kind"] = "cloth"; p["joints"] = [[index["spine_03"], 1.0]]
+                p["min"] = [p["min"][0] + dx, p["min"][1], p["min"][2]]; p["max"] = [p["max"][0] + dx, p["max"][1], p["max"][2]]
+                done.append((p["name"], p["vcount"], "streamer", was))
+    if done and not dry:
+        write(path, g, blob, A, idx, pieces)
+    return done
+
+
 def main():
     args = [a for a in sys.argv[1:] if a != "--dry"]
     dry = "--dry" in sys.argv
@@ -302,6 +465,12 @@ def main():
         for name, count, js, sits, frac, fixed in misplaced(b, dry):
             print(f"{b}: {name} ({count} vertices) is bound to {js} but {frac * 100:.0f}% of it sits on the {sits}: {'bound to the trunk' if fixed else 'LEFT AS IT IS'}{' (dry)' if dry else ''}")
             done = done or fixed
+        for name, count, what, was in hangers(b, dry):
+            print(f"{b}: {name} ({count} vertices), a {what}, was on {was}: {'onto the trunk' if what == 'quiver' else 'hung from the shoulder as cloth'}{' (dry)' if dry else ''}")
+            done = True
+        for name, count, share in cloaks(b, dry):
+            print(f"{b}: {name} ({count} vertices), cloth: {share * 100:.0f}% of its weight off the arms and collar, onto the trunk{' (dry)' if dry else ''}")
+            done = True
         c = cops(b, dry)
         if c:
             print(f"{b}: {len(c)} knee and elbow cops bound half to each bone{' (dry)' if dry else ''}")

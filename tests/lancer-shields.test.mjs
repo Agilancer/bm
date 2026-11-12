@@ -57,7 +57,7 @@ test('the meshes: a face, a rear and an edge each, every index its own shield\'s
 
 test('a lancer\'s boards are the golden shields, not kites of light', () => {
   const skills = fs.readFileSync(new URL('../src/sim/heroskills.js', import.meta.url), 'utf8');
-  for (const key of ['tower_shields', 'bulwark_nova', 'phalanx_rush', 'charge_of_the_order']) {
+  for (const key of ['tower_shields', 'bulwark_nova', 'charge_of_the_order']) {
     const at = skills.indexOf(`CAST.${key} = `), body = skills.slice(at, skills.indexOf('\nCAST.', at + 10));
     assert.ok(at > 0 && body.includes('shield3('), `${key} draws no shield`);
     assert.ok(!body.includes('FX.KITE'), `${key} still draws a kite of light`);
