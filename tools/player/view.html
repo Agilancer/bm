@@ -18,6 +18,7 @@
 // runs, drawn with three.js. Serve the repo (python tools/serve.py) and open /tools/player/view.html.
 //   ?do=run&staff=amethyst_staff&skull=skull_01&shield=kite_tree    what he's doing and holding
 //   ?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3  a sheet of stills, for review (window.ready when it's drawn)
+//   &views=behind,-1.2:1.4:1.6:0:1:0.3                              a view by name, or written out: the camera's place, then what it looks at
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -87,6 +88,10 @@ const DO = {
   away: () => ({ stow: 1 }), away_walk: () => ({ vz: 1.3, stow: 1 }), away_run: () => ({ vz: 5.6, stow: 1 }), away_sprint: () => ({ vz: 8.6, sprinting: true, stow: 1 }),
   away_ride: () => ({ vz: 9, stow: 1, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: 0, air: false } }),
   putaway: (t) => ({ stow: Math.min(1, t) }),
+  // The ride's arms: into a carve one way and the other (t: 1.57 and 4.71 are the full leans), and in the air off a crest.
+  away_carve: (t) => ({ vz: 9, stow: 1, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: Math.sin(t), air: false } }),
+  away_air: () => ({ vz: 9, stow: 1, onGround: false, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: 0, air: true } }),
+  ride_air: () => ({ vz: 9, onGround: false, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: 0, air: true } }),
 };
 for (const [k, f] of Object.entries(CAST)) {
   DO[k] = (t) => ({ cast: f(t) });
@@ -130,9 +135,13 @@ if (q.has('sheet')) {
   const zoom = +(q.get('zoom') || 1);
   cells.forEach(([n, t, v], i) => {
     settle(n, t);
-    const at = VIEWS[v] || VIEWS.front, lookY = v === 'hand' || v === 'lhand' ? 1.1 : +(q.get('y') || 0.95);
+    // (A view can be written out too: where the camera stands and what it looks at, x:y:z:x:y:z.)
+    const own = v.includes(':') ? v.split(':').map(Number) : null;
+    const at = own || VIEWS[v] || VIEWS.front, lookY = v === 'hand' || v === 'lhand' ? 1.1 : +(q.get('y') || 0.95);
     camera.aspect = cw / ch; camera.fov = 32 / zoom; camera.updateProjectionMatrix();
-    camera.position.set(at[0], at[1], at[2]); camera.lookAt(v === 'hand' ? -0.3 : v === 'lhand' ? 0.3 : 0, lookY, v === 'hand' || v === 'lhand' ? 0.25 : 0);
+    camera.position.set(at[0], at[1], at[2]);
+    if (own) camera.lookAt(own[3] || 0, own[4] ?? lookY, own[5] || 0);
+    else camera.lookAt(v === 'hand' ? -0.3 : v === 'lhand' ? 0.3 : 0, lookY, v === 'hand' || v === 'lhand' ? 0.25 : 0);
     const x = (i % cols) * cw, y = H - ch - Math.floor(i / cols) * ch;
     renderer.setViewport(x, y, cw, ch); renderer.setScissor(x, y, cw, ch); renderer.clear(); renderer.render(scene, camera);
   });

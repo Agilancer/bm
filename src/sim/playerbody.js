@@ -26,6 +26,7 @@ const PALM = [0.085, 0.034];      // the middle of the palm from the wrist: alon
 const SKULL_DROP = 0.105;         // the skull's middle under the palm
 const SKULL_SIZE = 1.12, SHIELD_SIZE = 1.28;
 const SHIELD_SEAT = 0.085;        // the shield's back off the palm's middle, out past the back of the hand: the arm lies behind the board
+const STAFF_FOOT = 1.14;           // the staff's foot under the fist (m)
 const STAFF_HEAD = 0.5;           // the staff's head above the fist, where a shot leaves it (m)
 // The shield slung on the back when the left hand has the skull: on the spine's top joint, this far behind it and above,
 // leaned over so its point is down toward the right hip.
@@ -42,6 +43,10 @@ const STOW = {
 };
 // The shield ride.
 const SURF = { side: -1.2, front: 0.2, back: 0.24, crouch: 0.2, lift: 0.105, ankle: 0.143 };
+// His arms on it, which keep him up. Into a carve the leading hand goes round with the turn and down a little, and the
+// trailing one back and up (swing, dip, rise: metres at a full lean); off a crest both go up (air). A hand with something
+// in it does a part of that (held).
+const RIDE_ARMS = { swing: 0.07, dip: 0.03, rise: 0.04, air: 0.08, held: 0.5, staffRise: 0.52, staffGive: 0.12 };
 
 const v3 = () => [0, 0, 0];
 const set = (o, x, y, z) => { o[0] = x; o[1] = y; o[2] = z; return o; };
@@ -78,10 +83,15 @@ const HOLD = {
   // The shield on the forearm: at ease by the side, face out; and on guard, across the chest, face ahead.
   shield: { at: [0.1, -0.37, 0.19], f: [0.05, -0.42, 1], t: [0.12, 1, 0.3], pole: [0.8, -0.3, -0.7], curl: 1.2, thumb: 0.5 },
   guard: { at: [-0.06, -0.14, 0.4], f: [-1, 0.05, 0.25], t: [0, 1, 0.12], pole: [0.6, -0.8, 0], curl: 1.2, thumb: 0.5 },
-  // On the board: the front arm out over its nose, the back arm behind.
-  rideFront: { at: [0.3, -0.2, 0.2], f: [0.8, -0.3, 0.5], t: [-0.2, 0.3, 1], pole: [0.2, -1, -0.4], curl: 0.35, thumb: 0.2 },
-  rideBack: { at: [0.3, -0.24, -0.08], f: [0.9, -0.4, -0.2], t: [0, 0.3, 1], pole: [0.2, -1, -0.5], curl: 0.35, thumb: 0.2 },
-  rideStaff: { at: [0.33, 0.0, 0.02], f: [0.1, -0.1, 1], t: [0.28, 0.9, 0.2], pole: [0.3, -1, -0.5], curl: 1.25, thumb: 0.55 },
+  // On the board: the front arm out over its nose and the back arm out over its tail, each nearly straight, the elbow
+  // let down behind it, the hand flat and in the forearm's own line. (The elbow behind, not under: a flat hand is then
+  // hardly turned on its forearm, and all of that turn is in the wrist's skin.) The staff's fist is out at arm's length,
+  // level with the shoulder, so its foot is off the ground: the forearm rises to it and the staff stands square to the
+  // forearm, its head leaned in a little. The skull's hand is out ahead of him, not down at the knee.
+  rideFront: { at: [0.42, -0.08, 0.19], f: [0.7, -0.04, 0.71], t: [-0.71, 0.1, 0.7], pole: [0, -0.5, -1], curl: 0.3, thumb: 0.2, spread: 0.12 },
+  rideBack: { at: [0.4, -0.15, -0.12], f: [0.97, -0.2, 0.22], t: [-0.22, 0.1, 0.97], pole: [0, -0.5, -1], curl: 0.35, thumb: 0.2, spread: 0.1 },
+  rideStaff: { at: [0.26, -0.24, 0.19], f: [0.36, 0, 0.93], t: [-0.8, 0.5, 0.31], pole: [0.9, -0.8, -0.35], curl: 1.25, thumb: 0.55 },
+  rideSkull: { at: [0.3, -0.22, 0.24], f: [0.26, -0.3, 0.9], t: [-0.96, 0, 0.28], pole: [0.8, -0.3, -0.6], curl: 0.62, thumb: 0.5, spread: 0.2 },
   air: { at: [0.26, -0.3, 0.12], f: [0.5, -0.8, 0.3], t: [0, 0.2, 1], pole: [0.6, -0.3, -0.8], curl: 0.4, thumb: 0.2 },
 };
 // The casts: for each arm, where the hand is drawn back to (wind) and where it is as the spell leaves (hit). `staff`
@@ -216,7 +226,7 @@ export class PlayerBody {
   }
 
   reset() {
-    Object.assign(this, { phase: 0, wMove: 0, wRun: 0, wAir: 0, wRide: 0, wDead: 0, twist: 0, backing: false, breath: Math.random() * 9, lean: 0, roll: 0, pitch: 0, guard: 0, time: 0, castW: 0, castA: 0, castB: 0, castKind: null, castHands: 1, airT: 0 });
+    Object.assign(this, { phase: 0, wMove: 0, wRun: 0, wAir: 0, wRide: 0, wFly: 0, wDead: 0, twist: 0, backing: false, breath: Math.random() * 9, lean: 0, roll: 0, pitch: 0, guard: 0, time: 0, castW: 0, castA: 0, castB: 0, castKind: null, castHands: 1, airT: 0 });
     this.s = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, vx: 0, vz: 0, onGround: true };
     this.yaw = 0; this.boardYaw = undefined; this.twistTo = 0; this.castShake = 0;
     for (const s of SIDES) { this.arms[s].now = null; this.arms[s].w = 0; }
@@ -329,6 +339,7 @@ export class PlayerBody {
     const grounded = this.airT < 0.12;
     const riding = !!s.surf, moving = !riding && !s.dead && grounded && speed > 0.3;
     this.wRide = damp(this.wRide, riding ? 1 : 0, 14, dt);
+    this.wFly = damp(this.wFly, riding && s.surf.air ? 1 : 0, 8, dt);
     this.wDead = damp(this.wDead, s.dead ? 1 : 0, 10, dt);
     this.wAir = damp(this.wAir, !grounded && !riding && !s.dead ? 1 : 0, grounded ? 16 : 9, dt);
     this.wMove = damp(this.wMove, moving || (!grounded && speed > 1) ? 1 : 0, 11, dt);
@@ -370,7 +381,7 @@ export class PlayerBody {
     // (Put away, the hands are empty: they swing as the clip has them, or go out for balance on the board.)
     const away = (s.stow || 0) > 0.5;
     if (right) hold = riding ? (s.staff && !away ? HOLD.rideStaff : HOLD.rideBack) : s.staff && !away ? HOLD.staff : null;
-    else hold = riding ? (s.skull && !away ? HOLD.skull : HOLD.rideFront) : away ? null : s.skull ? HOLD.skull : s.shield ? HOLD.shield : null;
+    else hold = riding ? (s.skull && !away ? HOLD.rideSkull : HOLD.rideFront) : away ? null : s.skull ? HOLD.skull : s.shield ? HOLD.shield : null;
     if (!hold && this.wAir > 0.5 && !riding) hold = HOLD.air;
     const to = T1;
     if (hold) {
@@ -382,6 +393,12 @@ export class PlayerBody {
         const bob = Math.sin((this.phase * 2 + 0.1) * TAU) * 0.018 * this.wMove;
         to.at[1] += bob; to.at[2] += Math.cos(this.phase * TAU) * 0.03 * this.wMove * this.wRun;
       }
+      if (riding && hold === HOLD.rideStaff) this.staffAlong(A, to);
+      if (riding) {
+        const k = hold === HOLD.rideFront || hold === HOLD.rideBack ? 1 : RIDE_ARMS.held, lean = clamp(s.surf.tilt || 0, -1, 1);
+        to.at[2] += lean * (right ? -1 : 1) * RIDE_ARMS.swing * k;
+        to.at[1] += (Math.abs(lean) * (right ? RIDE_ARMS.rise : -RIDE_ARMS.dip) + this.wFly * RIDE_ARMS.air) * k;
+      }
       if (!right && hold === HOLD.shield && this.guard > 0) this.blendHold(to, to, this.side(HOLD.guard, A.sign, T2), ease(this.guard));
     }
     // The hold eases in over the clip's own swing (an empty hand's weight is none).
@@ -390,6 +407,18 @@ export class PlayerBody {
       if (!A.now) { A.now = true; this.copyHold(A.pose, to); }
       else this.blendHold(A.pose, A.pose, to, 1 - Math.exp(-14 * dt));
     } else if (A.w < 0.02) A.now = null;
+  }
+
+  // The staff on the board: carried low, its head up the way the board's going and its foot trailed behind, on the board's
+  // own lie (so its foot is as far off a hillside as off the flat). The fist is lifted or let down by the ground under it.
+  staffAlong(A, to) {
+    const b = this.s.surf, gp = this.gp, sn = Math.sin(this.yaw), cs = Math.cos(this.yaw);
+    const n = set(P9, b.nx * cs - b.nz * sn, b.ny, b.nx * sn + b.nz * cs), h = set(P10, b.hx * cs - b.hz * sn, 0, b.hx * sn + b.hz * cs);
+    add(h, h, n, -dot(h, n)); norm(h);
+    const c = Math.cos(RIDE_ARMS.staffRise), r = Math.sin(RIDE_ARMS.staffRise);
+    set(to.t, h[0] * c + n[0] * r, h[1] * c + n[1] * r, h[2] * c + n[2] * r);
+    const x = gp[A.up * 3] + to.at[0], z = gp[A.up * 3 + 2] + to.at[2];
+    to.at[1] += clamp(-(n[0] * x + n[2] * z) / (n[1] || 1), -RIDE_ARMS.staffGive, RIDE_ARMS.staffGive);
   }
 
   copyHold(o, a) { set(o.at, ...a.at); set(o.f, ...a.f); set(o.t, ...a.t); set(o.pole, ...a.pole); o.curl = a.curl; o.thumb = a.thumb; o.spread = a.spread; return o; }
