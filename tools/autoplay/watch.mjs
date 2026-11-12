@@ -1,4 +1,13 @@
-// node watch.mjs <minutes> [level] : the game headless with auto-play on; its status line every 15 s, and any error.
+// Auto-play watched without a GPU: the game headless on a software GPU with auto-play on, its status line, where it is, its
+// life and its quests printed as they change, and any error. Needs the server (python tools/serve.py 8481).
+//
+//   NODE_PATH=$(npm root -g) node tools/autoplay/watch.mjs <minutes> [level]
+//
+// Env: PRE (page code run before auto-play starts: set a scene), SAFE=1 (nothing can hurt the player), EVERY (ms between
+// looks, default 15000), PORT, Q (more query string), ALL=1 (the page's whole console).
+// On a software GPU the page dies within seconds of auto-play starting unless drawing is stubbed, so start PRE with
+// `bm.renderer.frame = () => {}`. A scene, for example Ser Hale's first quest at Blackvigil's gate with a party:
+//   PRE='bm.renderer.frame = () => {}; bm.hire(4); bm.view.townUI.quests.begin("gate_of_blackvigil"); bm.cmd(19, 0, -4880, 200)'
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
