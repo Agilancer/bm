@@ -1634,25 +1634,45 @@ export class Brain {
       }
     }
     // What's ready to hand in, or a word that moves a quest on: before more work.
+    // (The nearest of them first: out in a small town, the word with the innkeeper across the green before the long way
+    // home to hand something in.)
+    let near1 = null, nd1 = Infinity;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id), st = Q.step(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
       const ready = st?.talk || st?.back || (st?.bring && (pack.mats[st.bring] || 0) >= st.n) || (s.stage === 'making' && this.o.town.day >= s.ready);
       if (!ready) continue;
       const job = this.questJob(id, m, lvl);
-      if (job) return job;
+      if (!job) continue;
+      const d = this.jobDist(job, m);
+      if (d < nd1) { nd1 = d; near1 = job; }
+    }
+    if (near1 && nd1 < 500) return near1;
+    // (A hand-in a country away waits while there's a quest's work close by: the hunt over the hedge before the road home.)
+    if (near1) {
+      for (const [id, lvl] of PLAN_ALL) {
+        const s = Q.state(id);
+        if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
+        const job = this.questJob(id, m, lvl);
+        if (job && job !== near1 && job.quest !== near1.quest && this.jobDist(job, m) < 500) return job;
+      }
+      return near1;
     }
     // The black knight on the cathedral's steps, once it's strong enough for him.
     if (this.blackKnight(this.snap) && m.lvl >= BOSS_LEVEL + (this.bump['boss:black'] || 0) && !this.skipping('boss:black') && !(isNight(m.hour) && m.lvl < BOSS_LEVEL + 4)) {
       return { kind: 'boss', why: 'boss:black', say: 'To the cathedral steps: the black knight.' };
     }
-    // The quests, in order.
+    // The quests, in order; but one whose work is close by (within half a kilometre) before one that's a country away.
+    let first = null;
     for (const [id, lvl] of PLAN_ALL) {
       const s = Q.state(id);
       if (!s || s.stage === 'done' || this.skipping(`q:${id}`)) continue;
       const job = this.questJob(id, m, lvl);
-      if (job) return job;
+      if (!job) continue;
+      if (this.jobDist(job, m) < 500) return job;
+      first ||= job;
     }
+    if (first) return first;
     // Quests not yet taken: to their givers.
     const offer = this.offerJob(m);
     if (offer) return offer;
@@ -1686,6 +1706,13 @@ export class Brain {
       if (k && !out.includes(k)) out.push(k);
     }
     return out;
+  }
+
+  // How far off a job's work is: whoever it's a word with, the place it goes to, the nearest of its hunting spots.
+  jobDist(job, m) {
+    if (job.kind === 'talk') { const w = this.o.townUI.whereOf(job.who); return w ? dist(m.x, m.z, w.x, w.z) : 1e9; }
+    if (job.spots?.length) return Math.min(...job.spots.map(([x, z]) => dist(m.x, m.z, x, z)));
+    return Number.isFinite(job.x) ? dist(m.x, m.z, job.x, job.z) : 0;
   }
 
   // A quest's next piece of work, marked with the quest it's for (the quest log shows which one it's on).
