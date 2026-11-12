@@ -66,7 +66,7 @@ const BLOWS = {
   two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.28], dmg: 16, reach: 2.4, end: 0.55 }, { clip: 'Sword_Regular_B', rate: 0.7, hit: [0.47], dmg: 15, reach: 2.3, soft: 0.6 }, { clip: 'Sword_Regular_A', rate: 0.8, hit: [0.52], dmg: 14, reach: 2.4 }],
   sword_board: [{ clip: 'Sword_Regular_A', rate: 0.8, hit: [0.55], dmg: 10, reach: 2.1 }, { clip: 'Sword_Regular_B', rate: 0.8, hit: [0.48], dmg: 10, reach: 2.0 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
   // (A lance or a spear goes in point first: a straight arm down the line, the body behind it. THRUST below.)
-  lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.75, from: 0.25, hit: [0.55], dmg: 7, reach: 1.9, knock: 5, shove: 3.2 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
+  lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.75, from: 0.25, hit: [0.55], dmg: 7, reach: 1.9, knock: 5, shove: 1.7 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
   // (Knives cut: slashes, a hook from the off hand, an overhand rip. Not a fist held out over its head.)
   daggers: [{ clip: 'Sword_Regular_A', rate: 1.5, hit: [0.55], dmg: 6, reach: 1.5, end: 0.8 }, { clip: 'Sword_Regular_B', rate: 1.5, hit: [0.48], dmg: 7, reach: 1.5, end: 0.8 }, { clip: 'Melee_Hook', rate: 1.1, hit: [0.5], dmg: 8, reach: 1.4 }],
   // (A spear's in both hands: thrusts, and its head swept across before him. sweep: the turn of its point through the clip.)
@@ -1279,7 +1279,7 @@ export class Hero extends Knight {
     // (poseLance), hung from it so its top's at his chin and he sees over it. Turned to his left, out of the way, as the
     // lance sweeps past.
     if (this.style === 'lance' && this.lanceW * this.boardW > 0.01 && out[off + 31] !== 0 && !this.free[1] && !this.surf) {
-      const w = ease(this.lanceW * this.boardW * (1 - this.stow)), u = this.rig.height / 1.8, a = this.yaw - 0.16 + 1.3 * (this.sweepW || 0), fs = Math.sin(a), fc = Math.cos(a), si = this.opts.shieldScale, lx = Math.cos(this.yaw) * 0.1 * u, lz = -Math.sin(this.yaw) * 0.1 * u;
+      const w = ease(this.lanceW * this.boardW * (1 - this.stow)), u = this.rig.height / 1.8, a = this.yaw - 0.16 + 1.3 * (this.sweepW || 0), fs = Math.sin(a), fc = Math.cos(a), si = this.opts.shieldScale, lx = Math.cos(this.yaw) * 0.075 * u, lz = -Math.sin(this.yaw) * 0.075 * u;
       // (Its top a little back toward him, more as he runs, forward as it's punched out.)
       const tip = 0.07 + 0.16 * this.rushW - 0.2 * Math.max(0, this.punch || 0), up = norm([-fs * tip, 1, -fc * tip]), back = norm(orth([-fs, 0, -fc], up)), q1 = matToQuat(cross(up, back), up, back);
       const h = J.handL * 3, e = J.foreL * 3, drop = (0.17 - 0.05 * this.rushW) * u;
@@ -1323,9 +1323,17 @@ export class Hero extends Knight {
       if (e > 0.001 && out[off + 15] !== 0 && !this.free[0]) {
         const pj = J.pelvis;
         const q0 = matToQuat([out[off], out[off + 1], out[off + 2]], [out[off + 4], out[off + 5], out[off + 6]], [out[off + 8], out[off + 9], out[off + 10]]);
-        quatMul(propQ, 0, wq, pj * 4, this.sheathQ, 0);
-        quatRotate(propT, 0, wq, pj * 4, this.sheathT, 0);
-        propT[0] += wt[pj * 3]; propT[1] += wt[pj * 3 + 1]; propT[2] += wt[pj * 3 + 2];
+        // (To the same place at his hip it's put away at, kept by where the hips stand: hipFrame.)
+        if (this.stowMain?.hip) {
+          this.hipNow();
+          quatMul(propQ, 0, this.hipQ, 0, this.stowMain.q, 0);
+          quatRotate(propT, 0, this.hipQ, 0, this.stowMain.t, 0);
+          propT[0] += this.hipT[0]; propT[1] += this.hipT[1]; propT[2] += this.hipT[2];
+        } else {
+          quatMul(propQ, 0, wq, pj * 4, this.sheathQ, 0);
+          quatRotate(propT, 0, wq, pj * 4, this.sheathT, 0);
+          propT[0] += wt[pj * 3]; propT[1] += wt[pj * 3 + 1]; propT[2] += wt[pj * 3 + 2];
+        }
         quatNlerp(propQ, 0, q0, 0, propQ, 0, e);
         for (let i = 0; i < 3; i++) propT[i] = out[off + 12 + i] + (propT[i] - out[off + 12 + i]) * e;
         mat4FromQT(propM, propQ, 0, propT, 0);
@@ -1335,7 +1343,9 @@ export class Hero extends Knight {
     // Put away, out of a fight: each to its place on him, and the board on his back stood off for what's under it.
     if (this.stow > 0.001 && !this.surf && !(this.dead && this.deadT > 1.5)) {
       // (A lancer's lance goes to his back only for what needs his hands, lanceHold: by its own measure, not the calm's.)
-      if (this.stowMain && !(this.luteW > 0.01) && this.style !== 'lance') this.putAway(out, off, this.stowMain, 1);
+      // (Whatever the lute's doing: a sword left part-way between the hand and the hip while the lute came off or went back
+      // hung in the air beside an open hand.)
+      if (this.stowMain && this.style !== 'lance') this.putAway(out, off, this.stowMain, 1);
       if (this.stowOff) this.putAway(out, off + 16, this.stowOff, this.shieldStyle ? this.opts.shieldScale : 1);
       if (this.stowPush && out[bo + 15] !== 0) {
         const j = J.spine3 * 3, dx = out[bo + 12] - wt[j], dz = out[bo + 14] - wt[j + 2], l = Math.hypot(dx, dz) || 1, k = this.stowPush * this.stow;
@@ -1479,21 +1489,29 @@ export class Hero extends Knight {
       const k = this.aim ? this.armW : 0, a = this.aim || ikV2, ax = ikV2[0] + (a[0] - ikV2[0]) * k, ay = ikV2[1] + (a[1] - ikV2[1]) * k, az = ikV2[2] + (a[2] - ikV2[2]) * k;
       if (b > 0.01) {
         quatRotate(ikV, 0, wq, hr * 4, this.swordT, 0);
-        // (A spear's lead hand slides back down the shaft as the thrust goes out past its reach: it doesn't let go.)
+        // (A spear's lead hand never lets go: it slides. Up the shaft as the rear fist draws back, so it stays before his
+        // chest where a hand can be; back down it as the thrust goes out past its reach.)
         let d = (maul ? 0.3 : 0.5) * u;
-        if (spear) { const SL = this.arms.l.u * 3, most = this.armLen('l') * 0.96; for (let n = 0; n < 9 && d > 0.16 * u && Math.hypot(wt[hr * 3] + ikV[0] + ax * d - wt[SL], wt[hr * 3 + 1] + ikV[1] + ay * d - wt[SL + 1], wt[hr * 3 + 2] + ikV[2] + az * d - wt[SL + 2]) > most; n++) d -= 0.04 * u; }
+        if (spear) {
+          const SL = this.arms.l.u * 3, sp0 = this.J.spine3 * 3, most = this.armLen('l') * 0.96;
+          const fore = (dd) => (wt[hr * 3] + ikV[0] + ax * dd - wt[sp0]) * s + (wt[hr * 3 + 2] + ikV[2] + az * dd - wt[sp0 + 2]) * c;
+          const far = (dd) => Math.hypot(wt[hr * 3] + ikV[0] + ax * dd - wt[SL], wt[hr * 3 + 1] + ikV[1] + ay * dd - wt[SL + 1], wt[hr * 3 + 2] + ikV[2] + az * dd - wt[SL + 2]);
+          for (let n = 0; n < 12 && d < 0.95 * u && fore(d) < 0.3 * u && far(d + 0.04 * u) <= most; n++) d += 0.04 * u;
+          for (let n = 0; n < 12 && d > 0.16 * u && far(d) > most; n++) d -= 0.04 * u;
+        }
         const gx = wt[hr * 3] + ikV[0] + ax * d, gy = wt[hr * 3 + 1] + ikV[1] + ay * d - (maul ? 0 : 0.045 * u), gz = wt[hr * 3 + 2] + ikV[2] + az * d;
         // (Only where a left hand could be: a maul wound up behind his head is in one hand till it comes over.)
         const sp = this.J.spine3 * 3, before = (gx - wt[sp]) * s + (gz - wt[sp + 2]) * c;
         // (The wrist a palm's length short of the shaft, the way the arm comes to it, so it's the palm that's on it.)
         const UL = this.arms.l.u * 3, lx = gx - wt[UL], ly = gy - wt[UL + 1], lz = gz - wt[UL + 2], ll = Math.hypot(lx, ly, lz) || 1, pk = 0.075 * u / ll;
-        this.reachTo('l', gx - lx * pk, gy - ly * pk, gz - lz * pk, [c * 0.5 - s * 0.3, -0.8, -s * 0.5 - c * 0.3], hold * ease(b) * ease((before - 0.02) / 0.2));
-        this.shutHand('l', hold * ease(b) * ease((before - 0.02) / 0.2));
+        const on = hold * ease(b) * (spear ? 1 : ease((before - 0.02) / 0.2));
+        this.reachTo('l', gx - lx * pk, gy - ly * pk, gz - lz * pk, [c * 0.5 - s * 0.3, -0.8, -s * 0.5 - c * 0.3], on);
+        this.shutHand('l', on);
       }
     } else if (b > 0.01) {
       // The board arm: the elbow down at his left side, the forearm level across behind the board, the fist near his middle a
       // hand's breadth off his chest. Out before him in a bash; drawn back to his left flank while the lance sweeps past.
-      const q0 = [0.24 + 0.04 * r + 0.42 * pu, 0.25 + 0.03 * r - 0.06 * pu, 0.31 - 0.06 * r - 0.04 * pu], q1 = [0.04, -0.1, 0.34];
+      const q0 = [0.24 + 0.04 * r + 0.42 * pu, 0.2 + 0.03 * r - 0.06 * pu, 0.31 - 0.06 * r - 0.04 * pu], q1 = [0.04, -0.1, 0.34];
       const q = q0.map((v, i) => (v + (q1[i] - v) * sweepW) * u), UL = this.arms.l.u * 3;
       this.reachTo('l', wt[UL] + s * q[0] - c * q[1], wt[UL + 1] - q[2], wt[UL + 2] + c * q[0] + s * q[1], [c * 0.5 - s * 0.35, -0.8, -s * 0.5 - c * 0.35], hold * ease(b));
       this.shutHand('l', hold * ease(b));
