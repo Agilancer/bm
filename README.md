@@ -601,11 +601,19 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   rules that hold in any fight (out of marks, across shots, over rings, the adds first, behind the tank when a boss
   turns on it), and two of their own: round behind Maldrec while his shield is set, and of the Brothers the one who
   isn't covered. Sorvane's Unmaking it answers only by striking him as it would anyway; nothing particular to the
-  Castellan's dark or the Deeps' three. **It has not been watched down either.**
+  Castellan's dark or the Deeps' three. Watched headless (drawing stubbed, nothing able to hurt it, so this says it finds
+  its way and does the work, not that it lives): at level 16 over the bridge and in by the keep's arch, the packs, round
+  behind Maldrec, Maldrec and Sorvane down and on up the Great Stair in six minutes; at level 14 the whole of the Deeps,
+  its three bosses, out by the far portal and off to Frostwatch to hand in. Not watched: the Brothers, the Castellan, or
+  any of it with the bot able to die.
 - **The land's quests.** The forty quests of the small towns, the lairs and the dungeons are in its plan at the levels
   they want. It walks out to a villager posted in Thornwick, Cinderford or Frostwatch, or to Ser Hale, once it's of a
   level for their work; hunts a lair's glade for a quest that names one, and Velscour's patrols along the Vigil Road for
-  one in the Waste; and every lair has a level in `LAIR_LEVEL`. **None of this has been watched either.**
+  one in the Waste; and every lair has a level in `LAIR_LEVEL`. Of two errands it takes the nearer, and a quest's work
+  close by before a hand-in a country away. Watched the same way at level 9: to Thornwick, a word with the reeve posted
+  at its gate, the innkeeper and the hedge-priest (two quests that end with them), the goat men's lair hunted for the
+  reeve, handed in, his next taken. From a new game it took the new quests Bellmourn's people offer along with the old.
+  Not watched: Cinderford, Frostwatch's and Ser Hale's own work, the Waste, a lair with its tricks on.
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
 - **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, down in the catacombs, and in

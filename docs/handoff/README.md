@@ -133,6 +133,20 @@ the `*-status.txt` files, `scratch/` (the streams' throwaway scripts) and `pictu
   monster's face. Models take two to three minutes to come in headless: use `SETTLE=165000` and one shot a run.
 - No undefined names in any changed source file (eslint `no-undef` over the diff from main).
 
+- The posted villagers ARE drawn (`pictures/game_thornwick_dorcas.png`): they were only last in a slow queue. The
+  townsfolk's loader now takes whoever is nearest the player next (`src/gfx/folk.js` `load`).
+- Auto-play watched headless with the new content. It can only be watched here with drawing stubbed (the page dies
+  within seconds of auto-play starting otherwise, on clean main too): `PRE='bm.renderer.frame = () => {}'`; the script is
+  `docs/handoff/scratch/watch.mjs` (minutes, level; `SAFE=1` makes the player unhurtable; `PRE` sets a scene, e.g.
+  `bm.hire(4); bm.view.townUI.quests.begin("gate_of_blackvigil"); bm.cmd(19, 0, -4880, 200)`). Seen: new quests taken in
+  Bellmourn; Thornwick's posted people talked to, a lair hunted for a quest and handed in; Blackvigil entered with a
+  party, Maldrec and Sorvane killed, quest steps counted; the whole of the Deeps cleared. It now takes the nearer
+  errand first.
+- The bridge before Blackvigil's gate stood as a wall to anyone path-finding (auto-play stuck 30 m from the portal):
+  its piers' collider now has a `t`, as the portal terraces' have.
+- A player who never moves (`fight.mjs --still`) survives five of the seven new bosses (only Sorvane and sometimes the
+  Sleeper kill him): the fights are softer than the Warrens', where standing still dies. NOT rebalanced.
+
 **Checks:** `node --test tests/*.test.mjs` 197 pass, 2 fail (the old Lisandra voice-file tests); dungeon, testhall,
 check-vt, items and autoplay checks pass.
 
@@ -146,8 +160,7 @@ check-vt, items and autoplay checks pass.
   dungeon so far shows its rooms EMPTY for that reason, though the sim has the packs standing there (a guardroom of five
   knights, the new variants among them) and the renderer's slots do fill.
 
-**Still not seen by anyone:** a boss knight's face and eyes in the game; the posted villagers (a 25-minute wait was
-running when this was written: see `git log`); a quest played; auto-play playing any of the new parts; the Warrens
+**Still not seen by anyone:** a boss knight's face and eyes in the game; a quest played; auto-play playing any of the new parts; the Warrens
 after its visual pass (if it had one: look at `src/core/delve-warrens.js` props).
 
 **Still to do:** the list under "What is left" from step 2 on, less what's above. The README's own sections for the
