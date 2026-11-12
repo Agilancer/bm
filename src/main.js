@@ -46,6 +46,7 @@ import { TownUI } from './ui/folk.js';
 import { hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
+import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
@@ -829,6 +830,7 @@ async function boot(plan, poolSize) {
       if (a === 'resume') resume();
       else if (a === 'save' || a === 'load') title.slots(a, slotOptions());
       else if (a === 'settings' || a === 'howto') title.panel(a, b);
+      else if (a === 'arrange') game.arrange.open();
       else if (a === 'menu') toTitle();
     };
   }
@@ -902,7 +904,14 @@ async function boot(plan, poolSize) {
   // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
-    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES,
+    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
+  });
+  // Move Buttons, on the pause screen: every button, bar and the map where the player wants them, kept for every game after
+  // (src/ui/arrange.js). The game stays paused under it; the pause screen comes back when it's done.
+  game.arrange = new Arrange({
+    touch: input.touch, input,
+    onOpen: () => { $('pause').style.display = 'none'; },
+    onClose: () => { if (state.paused) $('pause').style.display = 'flex'; },
   });
   // The quest log (J): beside the spellbook's B on the spell bar, and on a phone QUESTS beside PACK (the only way to it there).
   const questBtn = document.createElement('div');

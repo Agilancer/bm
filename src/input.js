@@ -24,6 +24,7 @@ export class Input {
     this.bindMouse();
     if (this.touch) this.bindTouch();
     this.stickId = null; this.lookId = null;
+    this.stickRight = false;
   }
 
   get menu() { return this._menu; }
@@ -112,7 +113,9 @@ export class Input {
     const start = (e) => {
       if (!this.enabled || this.menu) return;
       for (const t of e.changedTouches) {
-        if (t.clientX < innerWidth * 0.42 && this.stickId === null) {
+        // (The stick's side: the left, unless Move Buttons has put it on the right: src/ui/arrange.js stickRight.)
+        const stickSide = this.stickRight ? t.clientX > innerWidth * 0.58 : t.clientX < innerWidth * 0.42;
+        if (stickSide && this.stickId === null) {
           this.stickId = t.identifier;
           this.ox = t.clientX; this.oy = t.clientY;
           stick.style.display = 'block';
