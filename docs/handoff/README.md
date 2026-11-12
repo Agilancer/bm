@@ -116,6 +116,23 @@ the `*-status.txt` files, `scratch/` (the streams' throwaway scripts) and `pictu
 - Ser Hale seen in the game beside the tower's door, with the Bellwright: stands on the yard's paving, reads well.
 - `tools/world/views.mjs`: a fifth field puts the player apart from the camera; `LOG` and `WARN` env.
 
+- Monsters ARE drawn in the dungeons once their models are in: seen in Maldrec's hall (`pictures/game_blackvigil_*`):
+  lancers and swordsmen of several of the new bodies, plague knights, and `bv_maldrec` bare-headed among them, fighting,
+  marks on the floor. They were black shapes against the stone, so plate now takes a warm sheen off the fires in a lit
+  delve (`reflected` in `src/gfx/materials.js`): NOT yet looked at after that change (take a shot: a shader that fails
+  to compile shows as a page error).
+- The boss knights' eye glow: the marks are in their metal/rough maps' alpha (1024 texels each, PNG) and the shader term
+  is in `src/gfx/materials.js`; the model renders show it. His face was never caught in a game picture (he keeps
+  turning): still unseen in the game.
+- All seven new boss fights and every new pack play through headless (`node tools/dungeon/fight.mjs <key> 3`); they
+  were crashing on a hero's returning throw that sped up each tick and left the world (main's `src/sim/heroskills.js`
+  `stepShotX`): fixed.
+- Auto-play: round behind Maldrec's set shield; of the Brothers, the one not covered (the sim posts each boss body's
+  `ward`).
+- `tools/world/views.mjs`: `AIM=<metres>` stands the eye off the nearest drawn monster; `AIMID=<roster id>` before one
+  monster's face. Models take two to three minutes to come in headless: use `SETTLE=165000` and one shot a run.
+- No undefined names in any changed source file (eslint `no-undef` over the diff from main).
+
 **Checks:** `node --test tests/*.test.mjs` 197 pass, 2 fail (the old Lisandra voice-file tests); dungeon, testhall,
 check-vt, items and autoplay checks pass.
 
@@ -129,8 +146,8 @@ check-vt, items and autoplay checks pass.
   dungeon so far shows its rooms EMPTY for that reason, though the sim has the packs standing there (a guardroom of five
   knights, the new variants among them) and the renderer's slots do fill.
 
-**Still not seen by anyone:** any monster drawn in a dungeon; the boss knights and their eyes' glow in the game; the new
-knight bodies in the game; the posted villagers; a quest played; auto-play playing any of the new parts; the Warrens
+**Still not seen by anyone:** a boss knight's face and eyes in the game; the posted villagers (a 25-minute wait was
+running when this was written: see `git log`); a quest played; auto-play playing any of the new parts; the Warrens
 after its visual pass (if it had one: look at `src/core/delve-warrens.js` props).
 
 **Still to do:** the list under "What is left" from step 2 on, less what's above. The README's own sections for the
