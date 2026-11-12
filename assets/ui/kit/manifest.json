@@ -1,0 +1,267 @@
+{
+  "version": 1,
+  "pieces": {
+    "app_icon": "icon-512.png",
+    "bar_foe": "bar_foe.webp",
+    "bar_frame": "bar_frame.webp",
+    "bar_life": "bar_life.webp",
+    "bar_mana": "bar_mana.webp",
+    "bar_stamina": "bar_stamina.webp",
+    "btn_main": "btn_main.webp",
+    "btn_main_on": "btn_main_on.webp",
+    "btn_round": "btn_round.webp",
+    "btn_round_on": "btn_round_on.webp",
+    "button": "button.webp",
+    "button_on": "button_on.webp",
+    "frame_map": "frame_map.webp",
+    "medallion": "medallion.webp",
+    "panel": "panel.webp",
+    "paper": "paper.webp",
+    "rule": "rule.webp",
+    "slot_item": "slot_item.webp",
+    "slot_spell": "slot_spell.webp",
+    "slot_spell_on": "slot_spell_on.webp",
+    "stick_base": "stick_base.webp",
+    "stick_nub": "stick_nub.webp",
+    "tab": "tab.webp",
+    "tab_on": "tab_on.webp"
+  },
+  "icons": {
+    "book": "icons/book.webp",
+    "cast": "icons/cast.webp",
+    "centre": "icons/centre.webp",
+    "close": "icons/close.webp",
+    "dodge": "icons/dodge.webp",
+    "gold": "icons/gold.webp",
+    "guard": "icons/guard.webp",
+    "home": "icons/home.webp",
+    "howto": "icons/howto.webp",
+    "journal": "icons/journal.webp",
+    "jump": "icons/jump.webp",
+    "load": "icons/load.webp",
+    "locked": "icons/locked.webp",
+    "map": "icons/map.webp",
+    "menu": "icons/menu.webp",
+    "minus": "icons/minus.webp",
+    "open": "icons/open.webp",
+    "pack": "icons/pack.webp",
+    "plus": "icons/plus.webp",
+    "quest": "icons/quest.webp",
+    "quest_busy": "icons/quest_busy.webp",
+    "quest_offer": "icons/quest_offer.webp",
+    "quest_ready": "icons/quest_ready.webp",
+    "resume": "icons/resume.webp",
+    "role_dps": "icons/role_dps.webp",
+    "role_heal": "icons/role_heal.webp",
+    "role_tank": "icons/role_tank.webp",
+    "rotate": "icons/rotate.webp",
+    "save": "icons/save.webp",
+    "school_arcane": "icons/school_arcane.webp",
+    "school_earth": "icons/school_earth.webp",
+    "school_fire": "icons/school_fire.webp",
+    "school_ice": "icons/school_ice.webp",
+    "school_lightning": "icons/school_lightning.webp",
+    "school_utility": "icons/school_utility.webp",
+    "settings": "icons/settings.webp",
+    "shut": "icons/shut.webp",
+    "slot_chest": "icons/slot_chest.webp",
+    "slot_feet": "icons/slot_feet.webp",
+    "slot_head": "icons/slot_head.webp",
+    "slot_legs": "icons/slot_legs.webp",
+    "slot_main": "icons/slot_main.webp",
+    "slot_neck": "icons/slot_neck.webp",
+    "slot_off": "icons/slot_off.webp",
+    "slot_ring": "icons/slot_ring.webp",
+    "slot_shoulders": "icons/slot_shoulders.webp",
+    "slot_skull": "icons/slot_skull.webp",
+    "sort": "icons/sort.webp",
+    "sprint": "icons/sprint.webp",
+    "staff": "icons/staff.webp",
+    "take": "icons/take.webp",
+    "talk": "icons/talk.webp",
+    "view1": "icons/view1.webp",
+    "view3": "icons/view3.webp"
+  },
+  "spells": {
+    "aegis": "spells/aegis.webp",
+    "arcaneblast": "spells/arcaneblast.webp",
+    "blades": "spells/blades.webp",
+    "blink": "spells/blink.webp",
+    "blizzard": "spells/blizzard.webp",
+    "bomb": "spells/bomb.webp",
+    "boulder": "spells/boulder.webp",
+    "chain": "spells/chain.webp",
+    "coldcone": "spells/coldcone.webp",
+    "comet": "spells/comet.webp",
+    "crescent": "spells/crescent.webp",
+    "disintegrate": "spells/disintegrate.webp",
+    "drain": "spells/drain.webp",
+    "empower": "spells/empower.webp",
+    "firebeam": "spells/firebeam.webp",
+    "firebolt": "spells/firebolt.webp",
+    "firenova": "spells/firenova.webp",
+    "fleet": "spells/fleet.webp",
+    "fork": "spells/fork.webp",
+    "frost": "spells/frost.webp",
+    "frostray": "spells/frostray.webp",
+    "inferno": "spells/inferno.webp",
+    "lance": "spells/lance.webp",
+    "lightning": "spells/lightning.webp",
+    "mark_branch": "spells/mark_branch.webp",
+    "mark_mastery": "spells/mark_mastery.webp",
+    "mend": "spells/mend.webp",
+    "meteor": "spells/meteor.webp",
+    "missiles": "spells/missiles.webp",
+    "monolith": "spells/monolith.webp",
+    "nova": "spells/nova.webp",
+    "orb": "spells/orb.webp",
+    "phoenix": "spells/phoenix.webp",
+    "plague": "spells/plague.webp",
+    "prism": "spells/prism.webp",
+    "quake": "spells/quake.webp",
+    "renew": "spells/renew.webp",
+    "rime": "spells/rime.webp",
+    "rune": "spells/rune.webp",
+    "sanctuary": "spells/sanctuary.webp",
+    "seed": "spells/seed.webp",
+    "shatter": "spells/shatter.webp",
+    "spark": "spells/spark.webp",
+    "spikes": "spells/spikes.webp",
+    "starfall": "spells/starfall.webp",
+    "stasis": "spells/stasis.webp",
+    "staticfield": "spells/staticfield.webp",
+    "stillness": "spells/stillness.webp",
+    "stone": "spells/stone.webp",
+    "stoneskin": "spells/stoneskin.webp",
+    "stormstep": "spells/stormstep.webp",
+    "tempest": "spells/tempest.webp",
+    "thorns": "spells/thorns.webp",
+    "thunder": "spells/thunder.webp",
+    "thunderclap": "spells/thunderclap.webp",
+    "turn": "spells/turn.webp",
+    "vine": "spells/vine.webp",
+    "wallfire": "spells/wallfire.webp",
+    "well": "spells/well.webp",
+    "wisp": "spells/wisp.webp",
+    "wyrm": "spells/wyrm.webp",
+    "zero": "spells/zero.webp"
+  },
+  "goods": {
+    "ale": "goods/ale.webp",
+    "bed": "goods/bed.webp",
+    "bone": "goods/bone.webp",
+    "candle": "goods/candle.webp",
+    "dressing": "goods/dressing.webp",
+    "ember": "goods/ember.webp",
+    "gem_amethyst_0": "goods/gem_amethyst_0.webp",
+    "gem_amethyst_1": "goods/gem_amethyst_1.webp",
+    "gem_amethyst_2": "goods/gem_amethyst_2.webp",
+    "gem_diamond_0": "goods/gem_diamond_0.webp",
+    "gem_diamond_1": "goods/gem_diamond_1.webp",
+    "gem_diamond_2": "goods/gem_diamond_2.webp",
+    "gem_emerald_0": "goods/gem_emerald_0.webp",
+    "gem_emerald_1": "goods/gem_emerald_1.webp",
+    "gem_emerald_2": "goods/gem_emerald_2.webp",
+    "gem_ruby_0": "goods/gem_ruby_0.webp",
+    "gem_ruby_1": "goods/gem_ruby_1.webp",
+    "gem_ruby_2": "goods/gem_ruby_2.webp",
+    "gem_sapphire_0": "goods/gem_sapphire_0.webp",
+    "gem_sapphire_1": "goods/gem_sapphire_1.webp",
+    "gem_sapphire_2": "goods/gem_sapphire_2.webp",
+    "gem_topaz_0": "goods/gem_topaz_0.webp",
+    "gem_topaz_1": "goods/gem_topaz_1.webp",
+    "gem_topaz_2": "goods/gem_topaz_2.webp",
+    "glimmerstone": "goods/glimmerstone.webp",
+    "goatfoot": "goods/goatfoot.webp",
+    "grave_candle": "goods/grave_candle.webp",
+    "iron": "goods/iron.webp",
+    "loaf": "goods/loaf.webp",
+    "oil": "goods/oil.webp",
+    "roll": "goods/roll.webp",
+    "silk": "goods/silk.webp",
+    "wax": "goods/wax.webp",
+    "wingbell": "goods/wingbell.webp"
+  },
+  "sheets": {
+    "app_icon": {
+      "pictures": 1,
+      "missing": []
+    },
+    "bars": {
+      "pictures": 5,
+      "missing": []
+    },
+    "buttons": {
+      "pictures": 4,
+      "missing": []
+    },
+    "gems": {
+      "pictures": 18,
+      "missing": []
+    },
+    "icons_actions": {
+      "pictures": 16,
+      "missing": []
+    },
+    "icons_goods": {
+      "pictures": 16,
+      "missing": []
+    },
+    "icons_marks": {
+      "pictures": 6,
+      "missing": []
+    },
+    "icons_menus": {
+      "pictures": 16,
+      "missing": []
+    },
+    "icons_slots": {
+      "pictures": 12,
+      "missing": []
+    },
+    "panel": {
+      "pictures": 1,
+      "missing": []
+    },
+    "paper": {
+      "pictures": 1,
+      "missing": []
+    },
+    "plates": {
+      "pictures": 5,
+      "missing": []
+    },
+    "rings": {
+      "pictures": 3,
+      "missing": []
+    },
+    "sockets": {
+      "pictures": 4,
+      "missing": []
+    },
+    "spells_arcane": {
+      "pictures": 11,
+      "missing": []
+    },
+    "spells_earth": {
+      "pictures": 11,
+      "missing": []
+    },
+    "spells_fire": {
+      "pictures": 11,
+      "missing": []
+    },
+    "spells_ice": {
+      "pictures": 11,
+      "missing": []
+    },
+    "spells_lightning": {
+      "pictures": 11,
+      "missing": []
+    },
+    "spells_utility": {
+      "pictures": 11,
+      "missing": []
+    }
+  }
+}

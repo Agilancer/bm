@@ -13,7 +13,7 @@ export class Input {
     this.moveX = 0; this.moveZ = 0;
     this.sprintToggle = false;
     this.enabled = false;
-    this.menu = false;   // a menu is up: the hands and feet are off duty
+    this._menu = false;  // a menu is up: the hands and feet are off duty (and the page knows: body.menu-up, src/ui/hud.css)
     // Auto-play (src/ui/autoplay.js): free is the mouse left free to click (no pointer lock, as on a touch screen), and auto
     // is the bot's hands and feet, { mx, mz, run, jumpHeld, cast, block }, read here in place of the keys'.
     this.free = false;
@@ -26,6 +26,9 @@ export class Input {
     this.stickId = null; this.lookId = null;
   }
 
+  get menu() { return this._menu; }
+  set menu(on) { this._menu = !!on; document.body.classList.toggle('menu-up', this._menu); }
+
   releaseControls() {
     this.keys.clear();
     this.softOn(false);
@@ -33,6 +36,7 @@ export class Input {
     this.guardMouse = this.guardTouch = this.jumpTouch = false;
     this.lookId = null;
     this.resetStick?.();
+    for (const el of document.querySelectorAll('#touch .down')) el.classList.remove('down');
     this.update();
   }
 
@@ -112,6 +116,7 @@ export class Input {
           this.stickId = t.identifier;
           this.ox = t.clientX; this.oy = t.clientY;
           stick.style.display = 'block';
+          root.classList.add('sticking');
           stick.style.left = `${t.clientX - 65}px`; stick.style.top = `${t.clientY - 65}px`;
         } else if (this.lookId === null) {
           this.lookId = t.identifier;
@@ -140,6 +145,7 @@ export class Input {
     this.resetStick = () => {
       this.stickId = null; this.stickX = 0; this.stickY = 0; this.stickRun = false;
       stick.style.display = 'none'; nub.style.transform = '';
+      root.classList.remove('sticking');
     };
     const end = (e) => {
       for (const t of e.changedTouches) {
@@ -152,6 +158,12 @@ export class Input {
     root.addEventListener('touchmove', move, { passive: false });
     root.addEventListener('touchend', end);
     root.addEventListener('touchcancel', end);
+    // What's under a thumb shows it: pressed in as it lands, let out as it lifts (src/ui/hud.css .down).
+    const pressed = (e) => e.target.closest?.('.tbtn, .spell');
+    root.addEventListener('touchstart', (e) => { if (this.enabled && !this.menu) pressed(e)?.classList.add('down'); }, { capture: true, passive: true });
+    for (const t of ['touchend', 'touchcancel']) root.addEventListener(t, (e) => pressed(e)?.classList.remove('down'), { capture: true, passive: true });
+    // A spell's slot (src/ui/spellbar.js) steers as any button does: the thumb that cast it can go on looking.
+    this.steerFrom = (t) => { if (this.lookId === null) { this.lookId = t.identifier; this.lx = t.clientX; this.ly = t.clientY; } };
     const btn = (id, fn) => {
       const el = document.getElementById(id);
       // A thumb on a button can still steer: drag off it, or on it, and the view follows.

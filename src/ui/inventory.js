@@ -3,6 +3,7 @@
 // right-click, a double click or a double tap equips or stows. A gem set down on a staff goes in its next open socket, for good.
 import { CHARM_SLOTS, charmIcon, charmTip } from './lands.js';
 import { skinFilter } from '../items/skins.js';
+import { art } from './skin.js';
 import { GEMS, colorOf, compareLines, linesOf, nameOf, statsOf, wornSlot } from '../items/items.js';
 import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
 
@@ -45,9 +46,13 @@ export class Inventory {
     this.grid.style.setProperty('--ph', PACK_H);
     this.slotEls = {};
     for (const s of SLOTS) this.slotEls[s] = this.root.querySelector(`[data-slot="${s}"]`);
-    $('invHelp').textContent = touch
+    this.help = touch
       ? 'Tap to lift and set down. Double tap to equip or stow. Tap outside to drop.'
       : 'Click or drag to move. Double-click or right-click to equip or stow. Set a gem on a staff, skull or shield to socket it. Click outside to drop.';
+    $('invHelp').textContent = this.help;
+    // On a phone the height goes to the cells: what's in your hands is said in the bar underneath, where the help is on a desk
+    // (the help is shown there for a moment as the pack opens), and the charm pouch sits in the pack's heading (src/ui/hud.css).
+    if (touch) $('invBar').insertBefore($('invStats'), $('invHelp'));
     this.root.addEventListener('pointerdown', (e) => this.onDown(e));
     window.addEventListener('pointermove', (e) => { if (this.open) this.onMove(e); });
     window.addEventListener('pointerup', (e) => { if (this.open) this.onUp(e); });
@@ -62,6 +67,7 @@ export class Inventory {
     this.open = true;
     this.root.style.display = 'flex';
     this.render();
+    if (this.touch) this.flash(this.help, 6000);
   }
 
   hide() {
@@ -80,6 +86,9 @@ export class Inventory {
   // ---- drawing --------------------------------------------------------------------------------
 
   gemSvg(gem) {
+    // (A painted one from the art kit, where there is one: src/ui/skin.js.)
+    const painted = art('goods', `gem_${gem.kind}_${gem.grade}`);
+    if (painted) return `<img class="gem" src="${painted}" alt="" draggable="false">`;
     return `<svg class="gem" viewBox="0 0 24 24">${GEM_SVG[gem.grade].replace('C', GEMS[gem.kind].color)}</svg>`;
   }
 
@@ -125,7 +134,7 @@ export class Inventory {
       : '<b>Bare hands</b><br>Nothing to swing.';
     // The charm pouch: every charm carried works (src/ui/lands.js).
     let row = $('charmRow');
-    if (!row) { row = document.createElement('div'); row.id = 'charmRow'; $('invStats').after(row); }
+    if (!row) { row = document.createElement('div'); row.id = 'charmRow'; if (this.touch) this.root.querySelector('.inv-head-btns').before(row); else $('invStats').after(row); }
     row.innerHTML = (this.pack.charms || []).map((k) => `<div class="ch" title="${charmTip(k).replace(/"/g, '&quot;')}"><img src="${charmIcon(k)}" alt=""></div>`).join('')
       + Array.from({ length: Math.max(0, CHARM_SLOTS - (this.pack.charms || []).length) }, () => '<div class="ch"></div>').join('');
     if (this.carry) {
@@ -135,10 +144,10 @@ export class Inventory {
     } else this.carryEl.style.display = 'none';
   }
 
-  flash(text) {
+  flash(text, ms = 2200) {
     this.note.textContent = text;
     clearTimeout(this.noteT);
-    this.noteT = setTimeout(() => { this.note.textContent = ''; }, 2200);
+    this.noteT = setTimeout(() => { this.note.textContent = ''; }, ms);
   }
 
   linesHtml(item, lines) {

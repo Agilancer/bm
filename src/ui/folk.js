@@ -23,6 +23,7 @@ import { VOICED } from '../core/voiced.js';
 import { unnamed, voiceKey } from '../core/voicekey.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { CLOSE_X } from './menu-x.js';
+import { art } from './skin.js';
 import { giverOf, hintOf, placeOf, questLevel, rewardOf, stepsOf } from './questlog.js';
 
 const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
@@ -192,13 +193,17 @@ const GLYPH = {
   oil: '<svg viewBox="0 0 40 40"><path d="M14 15h12l3 18H11z" fill="#5f6b4a"/><rect x="16" y="9" width="8" height="6" fill="#4a3a26"/><rect x="13" y="22" width="14" height="7" fill="#d2a54e" opacity=".85"/></svg>',
   grave_candle: '<svg viewBox="0 0 40 40"><rect x="15" y="13" width="10" height="20" rx="1" fill="#efe8d4"/><path d="M15 18q3 3 5 0q3-3 5 0" stroke="#cbbfa0" fill="none"/><rect x="11" y="32" width="18" height="3" rx="1" fill="#3a332b"/><path d="M20 3c3 4 3 7 0 9c-3-2-3-5 0-9z" fill="#ffe7a8"/></svg>',
 };
-const matSvg = (k) => `<svg viewBox="0 0 40 40"><g fill="${MATS[k].color}" stroke="#1b130b" stroke-width="1.2">${{
+// (A painted picture from the art kit, where there is one: src/ui/skin.js.)
+const painted = (k) => { const u = art('goods', k); return u ? `<img src="${u}" alt="" style="width:44px;height:44px;object-fit:contain">` : null; };
+const goodPic = (k) => painted(k) || GLYPH[k];
+const matDrawn = (k) => `<svg viewBox="0 0 40 40"><g fill="${MATS[k].color}" stroke="#1b130b" stroke-width="1.2">${{
   bone: '<path d="M8 26l20-12 3 3-20 12z"/><path d="M12 31l17-5 1 3-17 5z"/><path d="M14 13l9 15-3 1-9-14z"/>',
   iron: '<rect x="8" y="22" width="24" height="5" rx="1"/><path d="M12 9h4v3h-1v13h-2V12h-1z"/><path d="M22 9h4v3h-1l3 10-2 1-3-11h-1z"/>',
   silk: '<path d="M7 22h26v5H7z"/><path d="M9 17h22v5H9z"/><path d="M11 12h18l3 5H11z"/>',
   wax: '<rect x="9" y="17" width="7" height="15" rx="1"/><rect x="18" y="21" width="6" height="11" rx="1"/><rect x="26" y="14" width="6" height="18" rx="1"/>',
   ember: '<path d="M20 5l9 12-9 17-9-17z" fill="#ff6a2a"/><path d="M20 5l4 12-4 17" fill="#ffb27a" stroke="none"/>',
 }[k]}</g></svg>`;
+const matSvg = (k) => painted(k) || matDrawn(k);
 
 const pick = (list, n) => (list && list.length ? list[((n % list.length) + list.length) % list.length] : null);
 
@@ -411,7 +416,10 @@ export class TownUI {
       if (m.kind !== kind) {
         m.kind = kind;
         m.el.className = `qm${kind === 'busy' ? ' busy' : ''}`;
-        m.el.firstChild.textContent = kind === 'offer' ? '!' : '?';
+        // (A painted mark from the art kit, where there is one: src/ui/skin.js.)
+        const pic = art('icons', kind === 'offer' ? 'quest_offer' : kind === 'busy' ? 'quest_busy' : 'quest_ready');
+        if (pic) m.el.firstChild.innerHTML = `<img src="${pic}" alt="" style="display:block;width:1em;height:1em">`;
+        else m.el.firstChild.textContent = kind === 'offer' ? '!' : '?';
       }
       // About two thirds of a metre tall in the world, but never too small to see nor so big it hides them.
       const tall = 0.65 * innerHeight / (2 * Math.tan(FOV * Math.PI / 360)) / s[2];
@@ -704,7 +712,7 @@ export class TownUI {
     };
     const purse = this.pack.purse();
     if (this.tab === 'buy') {
-      for (const g of t.goods || []) { const G = GOODS[g]; add(GLYPH[g], G.name, '#e9dfc9', `${priceText(G.price)}  ·  ${G.note}`, purse >= G.price, () => this.buyGood(g)); }
+      for (const g of t.goods || []) { const G = GOODS[g]; add(goodPic(g), G.name, '#e9dfc9', `${priceText(G.price)}  ·  ${G.note}`, purse >= G.price, () => this.buyGood(g)); }
       this.stockOf(p.trade).forEach((it, k) => {
         const price = (it.type === 'spell' ? 120 : worth(it)) * 10;
         add(it.type === 'spell' ? GLYPH.candle.replace('#ffb347', '#b78cf0') : this.inventory.iconOf(it), nameOf(it), colorOf(it), priceText(price), purse >= price, () => this.buyItem(k, price), it.type === 'spell' ? null : it);
@@ -730,7 +738,7 @@ export class TownUI {
       for (const c of t.crafts) {
         const C = CRAFTS[c], ok = Object.entries(C.mats).every(([k, n]) => this.pack.has(k, n)) && this.pack.gold >= C.gold;
         const tier = 1 + (C.make ? this.embers : 0);
-        add(C.make ? matSvg(Object.keys(C.mats)[0]) : GLYPH[c], C.name, C.make ? ['#a8a8a8', '#3fd14a', '#3f8cff', '#b04df0', '#ff8a1e'][tier] : '#e9dfc9', `${matsText(C.mats)}${C.gold ? `, ${C.gold} gold` : ''}${C.make ? `  ·  at least ${['common', 'uncommon', 'rare', 'epic', 'legendary'][tier]}` : `  ·  ${C.note}`}`, ok, () => this.make(c));
+        add(C.make ? matSvg(Object.keys(C.mats)[0]) : goodPic(c), C.name, C.make ? ['#a8a8a8', '#3fd14a', '#3f8cff', '#b04df0', '#ff8a1e'][tier] : '#e9dfc9', `${matsText(C.mats)}${C.gold ? `, ${C.gold} gold` : ''}${C.make ? `  ·  at least ${['common', 'uncommon', 'rare', 'epic', 'legendary'][tier]}` : `  ·  ${C.note}`}`, ok, () => this.make(c));
       }
     }
     const sat = Object.entries(this.pack.mats).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${matName(k, n)}`).join(', ');

@@ -7,6 +7,7 @@ import { BUFFS } from '../sim/treespells.js';
 import { SkillBook } from '../items/skillbook.js';
 import { COLOURS, glyph } from './spellglyphs.js';
 import { SkillTree } from './skilltree.js';
+import { placeSlot } from './thumbs.js';
 
 const $ = (id) => document.getElementById(id);
 // The spell that puts each of BUFFS on you, for its picture over the bar.
@@ -44,14 +45,16 @@ export class SpellBar {
       const press = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (input.touch || e.type === 'touchstart') {
-          if (input.enabled && !input.menu) this.select(k);
-        } else this.press(k, 'pointer');
+        // (Under a thumb the slot casts as a key does, kept up while it's held, and the thumb can go on to look about.)
+        this.press(k, 'pointer');
+        if (e.type === 'touchstart' && input.enabled && !input.menu) input.steerFrom?.(e.changedTouches[0]);
       };
       s.addEventListener('touchstart', press, { passive: false });
       s.addEventListener('mousedown', press);
       s.addEventListener('touchend', lift);
       s.addEventListener('touchcancel', lift);
+      if (input.touch) placeSlot(s, k);     // (its place in the ring round the staff: src/ui/thumbs.js)
+      s.classList.toggle('arc', !!input.touch);
       this.el.appendChild(s);
       this.slots.push(s);
     }
@@ -135,7 +138,7 @@ export class SpellBar {
   // The slot's button or key: its spell, cast at once, and for as long as it's held.
   press(k, by) {
     if (!this.input.enabled || this.input.menu) return;
-    if (this.loadout[k] < 0) { this.tip?.('Nothing in that slot. B to fill it.'); return; }
+    if (this.loadout[k] < 0) { this.tip?.(this.input.touch ? 'Nothing in that slot. Your spellbook, in the top row, fills it.' : 'Nothing in that slot. B to fill it.'); return; }
     this.select(k);
     this.heldBy = by;
     this.input.castSlot = true;
@@ -189,7 +192,7 @@ export class SpellBar {
     this.drawnUp = -1;
     // (Points waiting to be spent show on the book's button.)
     const open = $('spellOpen'), pts = this.skills.points;
-    if (open) { open.classList.toggle('pts', pts > 0); open.dataset.n = pts > 0 ? `+${pts}` : ''; }
+    for (const b of [open, $('bBook')]) if (b) { b.classList.toggle('pts', pts > 0); b.dataset.n = pts > 0 ? `+${pts}` : ''; }
   }
 
   update(snap) {

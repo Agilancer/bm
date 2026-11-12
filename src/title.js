@@ -85,8 +85,12 @@ const HOWTO = `
   <h2>How to Play</h2><div class="t-rule"></div>
   <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
   <div class="t-touchkeys">
-    <p><b>Left thumb</b> moves (push it right out to run); <b>right thumb</b> looks, on or off the buttons.</p>
-    <p><b>Staff</b> fires your staff. <b>DODGE</b> gets you out, <b>JUMP</b>, <b>RUN</b>, <b>PACK</b> holds your swords and gems, <b>TAKE</b> takes up what's on the ground, and <b>II</b> pauses.</p>
+    <p><b>Left thumb</b> moves: push it right out to run, or press the <b>run</b> button to keep running. <b>Right thumb</b> looks, on or off the buttons.</p>
+    <p>The big button fires your <b>staff</b>. Round it: <b>dodge</b>, <b>jump</b> (hold it to ride your shield), and <b>guard</b> when a shield is on your arm.</p>
+    <p>Your six <b>spells</b> stand in a ring round those. Tap one to cast it; hold it to keep casting.</p>
+    <p>When something is in reach a gold button comes up beside them: <b>take</b>, <b>talk</b> or <b>open</b>.</p>
+    <p>Along the top: the <b>menu</b> (save, load, settings), your <b>pack</b>, your <b>spellbook</b>, your <b>quest log</b>, and the view from behind. Tap the <b>map in the corner</b> for the big one.</p>
+    <p>In the pack: tap to lift and set down, double tap to equip or stow, tap outside to drop.</p>
   </div>
   <h3>Along the way</h3>
   <ul class="t-tips">
