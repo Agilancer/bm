@@ -30,8 +30,6 @@ const NUMBER = ['nothing', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'
 const words = (n) => NUMBER[n] ?? String(n);
 const ANIM = { fold_arms: 'fold', look_around: 'look', nod: 'yes' };
 const EMOTE = { startle: '!', question: '?', anger: '#', gloom: '///', love: '♥', music: '♪', sleep: 'z z', dots: '…' };
-// The channels, as the log shows them.
-const CHANNEL = { say: ['Say', '#efe6d2'], party: ['Party', '#9cc3ff'], guild: ['Guild', '#86dc95'], trade: ['Trade', '#efae66'], shout: ['Shout', '#ff8a6a'], system: ['', '#f1d68a'] };
 // What drops, as heroes name it (src/items/items.js has the real tables; these are what's talked about).
 const RARITY = ['Common', 'Rare', 'Epic', 'Legendary', 'Mythical'];
 const THINGS = ['kite shield', 'tower shield', 'skull focus', 'robe', 'staff', 'ruby', 'sapphire', 'emerald', 'topaz', 'amethyst', 'scroll of Mend', 'scroll of Blink'];
@@ -47,8 +45,9 @@ const freshMem = (m = {}) => ({ savedBy: {}, saved: {}, debts: {}, owed: {}, spe
 const BIG_KILL = { 0: 'black_knight', 3: 'gravehart', 4: 'hydra', 6: 'ogre', [kindOfGroup('Werewolf')]: 'werewolf', 10: 'mouth' };
 
 export class HeroTalk {
-  constructor({ base, cast, renderer, sim, settings, playerName, playerSkull, touch, ui = {} }) {
-    Object.assign(this, { base, cast, renderer, sim, settings, playerName, playerSkull, touch, ui });
+  // chatLog: the log their words go to (src/ui/chatlog.js).
+  constructor({ base, cast, renderer, sim, settings, playerName, playerSkull, touch, chatLog, ui = {} }) {
+    Object.assign(this, { base, cast, renderer, sim, settings, playerName, playerSkull, touch, chatLog, ui });
     this.open = null;     // the hero the player has stopped for a word (E), while the panel is up
     // (Listening before src/main.js does, so the E that opens the panel doesn't also close it.)
     window.addEventListener('keydown', (e) => this.key(e));
@@ -157,12 +156,7 @@ export class HeroTalk {
       #heroLayer .bub.party { background: rgba(214,228,252,.95); } #heroLayer .bub.party::after { border-top-color: rgba(214,228,252,.95); }
       #heroLayer .mark { position: absolute; left: 0; top: 0; font: bold 22px Georgia, serif; color: #ffe27a; text-shadow: 0 0 4px #000, 0 0 2px #000; will-change: transform; transition: opacity .3s; }
       #heroLayer .mark.anger { color: #ff4a3a; } #heroLayer .mark.love { color: #ff8fb0; } #heroLayer .mark.gloom { color: #9fb2d8; } #heroLayer .mark.music { color: #c8f0ff; }
-      #heroChat { position: fixed; left: 14px; bottom: 132px; width: min(440px, 58vw); pointer-events: none; z-index: 5; font: 13px/1.38 Georgia, serif;
-        padding: 6px 10px 6px 8px; border-radius: 6px; background: linear-gradient(90deg, rgba(8,6,4,.5), rgba(8,6,4,.32) 70%, rgba(8,6,4,0)); }
-      #heroChat:empty { display: none; }
-      #heroChat div { color: #efe6d2; text-shadow: 0 0 3px #000, 0 1px 2px #000; margin-top: 2px; transition: opacity 1.2s; }
-      #heroChat div span.n { color: #bfe0ff; } #heroChat div span.c { opacity: .85; }
-      body.cinematic #heroLayer, body.cinematic #heroChat { display: none; }
+      body.cinematic #heroLayer { display: none; }
       #heroTalk { position: fixed; z-index: 12; left: 50%; bottom: max(3vh, 14px); transform: translateX(-50%); width: min(680px, 94vw); padding: 13px 18px 10px; display: none; flex-direction: column;
         background: rgba(11,9,7,.95); border: 1px solid var(--gold-dim, #8c7344); box-shadow: 0 10px 34px #000b; color: var(--bone, #e9dfc8); font-family: Georgia, serif; }
       #heroTalk .tk-head { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid rgba(140,115,68,.42); padding-bottom: 6px; margin-bottom: 9px; }
@@ -180,9 +174,8 @@ export class HeroTalk {
     `;
     document.head.appendChild(css);
     this.layer = document.createElement('div'); this.layer.id = 'heroLayer';
-    this.chat = document.createElement('div'); this.chat.id = 'heroChat';
     this.panel = document.createElement('div'); this.panel.id = 'heroTalk';
-    document.body.append(this.layer, this.chat, this.panel);
+    document.body.append(this.layer, this.panel);
     for (const h of this.heroes) {
       h.tag = document.createElement('div'); h.tag.className = 'tag';
       h.tag.innerHTML = `<b></b><i></i><u></u>`;
@@ -205,7 +198,6 @@ export class HeroTalk {
     this.snap = snap;
     const show = active && this.settings.tags !== 'off';
     css(this.layer, 'display', active ? '' : 'none');
-    css(this.chat, 'display', active && this.settings.chatlog !== 'off' ? '' : 'none');
     const nk = snap[H.NCHARS] - this.heroes.length - LISANDRA_FORMS.length;
     this.firstHero = nk;
     const px = snap[H.PX], py = snap[H.PY], pz = snap[H.PZ];
@@ -273,10 +265,6 @@ export class HeroTalk {
       css(h.mark, 'opacity', marked ? Math.min(1, h.markT * 3, h.fade).toFixed(2) : 0);
       if (marked) css(h.mark, 'transform', `translate(${s[0].toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%) scale(${k.toFixed(3)})`);
     }
-    // The log fades line by line.
-    // (Gone lines leave the page, so the log's backing goes with the last of them.)
-    for (const e of this.log2 || []) { e.t -= dt; if (e.t < 0 && !e.gone) { e.gone = true; e.el.style.opacity = 0; } if (e.t < -1.4) e.el.remove(); }
-    if (this.log2?.length && this.log2[0].t < -1.4) this.log2 = this.log2.filter((e) => e.t >= -1.4);
     this.stepConvos(dt);
     if (this.open) this.stepTalk(dt);
     if ((this.scanT -= dt) <= 0) { this.scanT = 0.25; this.scan(snap); }
@@ -793,17 +781,8 @@ export class HeroTalk {
 
   system(text) { this.logLine('system', null, text); }
 
-  logLine(channel, who, text) {
-    const [label, colour] = CHANNEL[channel] || CHANNEL.say;
-    const el = document.createElement('div');
-    el.style.color = colour;
-    const tag = label ? `<span class="c">[${label}]</span> ` : '';
-    el.innerHTML = `${tag}${who ? `<span class="n">${esc(who)}:</span> ` : ''}${esc(text)}`;
-    this.chat.appendChild(el);
-    (this.log2 ||= []).push({ el, t: channel === 'system' ? 10 : 14 });
-    const most = this.touch ? 4 : 8;
-    while (this.log2.length > most) this.log2.shift().el.remove();
-  }
+  // Into the chat log (src/ui/chatlog.js).
+  logLine(channel, who, text) { this.chatLog?.line(channel, who, text); }
 
   // ---- conversations -------------------------------------------------------------------------------------------------
 

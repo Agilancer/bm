@@ -20,14 +20,9 @@ import { CRAFTS, GOODS, MAX_EMBERS, TRADES, matsText, offerFor, priceText, rollS
 import { DAYS, partOfDay } from '../folk/days.js';
 import { MATS, colorOf, makeRng, matName, nameOf, rollSkull } from '../items/items.js';
 import { SPELLS } from '../sim/spells.js';
-import { VOICED } from '../core/voiced.js';
-import { unnamed, voiceKey } from '../core/voicekey.js';
-import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { CLOSE_X } from './menu-x.js';
 import { art } from './skin.js';
 import { giverOf, hintOf, placeOf, questLevel, rewardOf, stepsOf } from './questlog.js';
-
-const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
 
 const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
@@ -339,6 +334,8 @@ export class TownUI {
       this.balloons.set(e.i, b);
     }
     const p = this.person(e.i);
+    // (Lisandra's go into the chat log as well, as everything she says to you does.)
+    if (e.i === this.lisI) this.act.log?.(p.name, e.text);
     b.el.className = `fb${e.kind === 'small' ? ' small' : ''}`;
     b.el.innerHTML = `<span class="who">${firstName(p)}</span>`;
     b.el.appendChild(document.createTextNode(e.text));
@@ -369,7 +366,8 @@ export class TownUI {
     const ph = this.houseOf(px, py, pz);
     this.drawMarks(cam, px, pz, ph);
     for (const [i, b] of this.balloons) {
-      const w = this.renderer.folk?.where(i);
+      // (Whoever it is: the townsfolk, those out past the town, and Lisandra.)
+      const w = this.whereOf(i);
       if (!w || now > b.until) { b.el.remove(); this.balloons.delete(i); continue; }
       const d = Math.hypot(w.x - px, w.z - pz);
       const there = d < 4 || w.house === ph || (w.house < 0 && ph < 0);
@@ -858,18 +856,15 @@ export class TownUI {
 
   // ---- closing ----
 
-  // Said aloud, if it's recorded: only Lisandra's lines are, in the voice of whichever of her you see (lovely by day, the
-  // crone by night: src/gfx/renderer.js), as the opening's are (src/core/opening-script.js voiceOf).
+  // What Lisandra says to you goes into the chat log too (src/ui/chatlog.js), as the opening's does. (Her recordings, in
+  // assets/voice, aren't played.)
   speak(line, who) {
-    this.act.hushVoice?.();
     if (who !== LISANDRA.id || typeof line !== 'string') return;
-    const h = this.act.hour(), voice = h >= DAWN_HOUR && h < DUSK_HOUR ? 'Lisandra' : 'LisandraWitch', key = voiceKey(unnamed(line));
-    if (HAVE.get(voice)?.has(key)) this.act.voice?.(`${voice}/${key}`);
+    this.act.log?.(LISANDRA.name || 'Lisandra', this.fill(line));
   }
 
   close(bye) {
     if (!this.open) return;
-    this.act.hushVoice?.();
     const i = this.with, L = this.lines(i);
     this.open = false; this.mode = 'talk';
     this.panel.style.display = 'none';
