@@ -417,6 +417,7 @@ export class WorldMap {
     if (!on) this.pin = null;
     if (this.input) this.input.mapUp = on;      // (the left button moves the map, not the sword: src/input.js)
     this.big.classList.toggle('open', on);
+    document.body.classList.toggle('map-open', on);   // (on a phone the skull and Auto step aside: index.html)
     if (on) { this.follow = true; this.drawBig(this.lastSnap, this.lastYaw); }
   }
 

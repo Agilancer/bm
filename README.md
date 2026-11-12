@@ -231,7 +231,7 @@ A gold dotted line on the ground leads to whatever the quest you follow wants of
 
 ### The quest log
 
-**J**, or the scroll beside the spellbook's **B** on the spell bar (the only way to it on a phone), opens the quest log
+**J**, or the scroll beside the spellbook's **B** on the spell bar (on a phone, **QUESTS** beside PACK), opens the quest log
 (`drawBook` in `src/ui/folk.js`; its workings, testable without a page, in `src/ui/questlog.js`, checked by
 `tests/quest-log.test.mjs`). J, Esc or its × shuts it.
 
@@ -252,6 +252,11 @@ A gold dotted line on the ground leads to whatever the quest you follow wants of
   give you, the work that suits your level first, each with a Map (and the woods, for a level or two, when it's all beyond
   you yet); and once every quest is done, the Warrens and the knight on the cathedral steps.
 - Then the quests done, the papers kept, and the satchel.
+- **On a phone** (held sideways, as the game wants) it takes nearly the whole screen inside the notch, a little tighter,
+  with buttons a thumb can hit; its head (and the ×) stays put while the rest scrolls under a finger. It's opaque, and the
+  skull and Auto, which sit over every panel, step out of its way, and off the big map's buttons while that's up. Checked at
+  667 × 375 (an SE), 740 × 360, 844 × 390, 932 × 430 and an iPad's 1024 × 768: it fits, scrolls, nothing covers it, and its
+  Map and the map's × work by touch. On a narrow phone the spell bar sits a little further left, clear of GUARD.
 
 ### The cathedral and the catacombs
 
