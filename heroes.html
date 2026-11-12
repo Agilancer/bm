@@ -197,13 +197,23 @@ const H = 'assets/game/heroes/';
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); for (const k of kids) if (k != null) e.append(k); return e; };
 const json = (p) => fetch(p).then((r) => { if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.json(); });
+// A binary file. (Where only web types can be served, as on the hosted copy of this page, it's there as <file>.txt in base64.)
+async function bytes(p) {
+  const r = await fetch(p);
+  if (r.ok) return r.arrayBuffer();
+  const t = await fetch(`${p}.txt`);
+  if (!t.ok) throw new Error(`${p}: ${r.status}`);
+  const s = atob((await t.text()).trim()), out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out.buffer;
+}
 const CLASS_ORDER = ['paladin', 'lancer', 'archer', 'rogue', 'ninja', 'dragoon', 'boomerang', 'bard'];
 const STYLE_NAME = { two_hand: 'Two-handed', sword_board: 'Mace and board', lance: 'Lance and tower shield', daggers: 'Two knives', spear: 'Spear', boomerang: 'Boomerangs', blade: 'Sword', bow: 'Bow' };
 const HERO_SHIELD = 1.15;
 
 const [roster, kit, names, meta, bin, data, filed] = await Promise.all([
   json(H + 'roster.json'), json(H + 'kit.json'), json(H + 'names.json'), json(H + 'clips.json'),
-  fetch(H + 'clips.bin').then((r) => r.arrayBuffer()), json('tools/heroes/viewer/data.json'),
+  bytes(H + 'clips.bin'), json('tools/heroes/viewer/data.json'),
   json(H + 'people.json').catch(() => ({ heroes: {} })),
 ]);
 const bank = new ClipBank(meta, bin);
@@ -312,7 +322,7 @@ new ResizeObserver(resize).observe(view); resize();
 
 const loader = new GLTFLoader();
 const glbCache = new Map();
-const loadGLB = (p) => { if (!glbCache.has(p)) glbCache.set(p, loader.loadAsync(p)); return glbCache.get(p); };
+const loadGLB = (p) => { if (!glbCache.has(p)) glbCache.set(p, bytes(p).then((b) => loader.parseAsync(b, ''))); return glbCache.get(p); };
 
 // One body on the stand: its skinned mesh, bones in the bank's order, its dye canvas, its props.
 let cur = null, loadToken = 0;
