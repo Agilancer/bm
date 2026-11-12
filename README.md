@@ -919,7 +919,9 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   calls his diggers out of three holes round his dig; they run to him, and each one that reaches him is eaten and makes
   him hit harder. Kill them.
 - **Skrit and Skrat**, goblin twins. They share their pain: whichever has less life left takes half of what lands on it,
-  so keep them even. Skrit is fire: three pots in a row across where you stand, two fans of bolts (the second through the
+  so keep them even. Skrit is fire: three pots in a row across whoever's stood longest in one place (two seconds or more,
+  the tank aside; else across one of you), each leaving a pool that burns 40 a second for eight seconds, more than the
+  healer can mend (`POTS` in `src/sim/dungeon.js`); two fans of bolts (the second through the
   gaps of the first), a wheel of four bars of fire that turns about where he lit it for six seconds, and a row of bolts
   coming on abreast with one way through. Skrat is blades: a whirlwind that cuts all within reach and throws blades off
   as it turns, a line marked to one of you that he then comes down, and blades flung out all round, twice. When one dies
@@ -992,7 +994,9 @@ MOVES.fissure(sim.perils, monster, target, monster.opts.damage);   // a named at
 
 - **A mark** is a warning drawn on the ground in one of five shapes (`src/core/perils.js`): a circle, a ring with a safe
   middle, a cone, a strip, or crossed strips. It fills from where it starts to its far edge as its fuse runs out, then
-  lands on everyone in it. After that it can stay and burn (`dps`), turn (`spin`), travel (`vx`, `vz`), spread (`grow`),
+  lands on everyone in it. After that it can stay and burn (`dps`: a bite every half second, from the mark itself and with
+  no knock, so it holds whoever stands in it; it used to bite from whoever threw it, and every blow puts you back a step,
+  so a pool pushed its victim out across its edge in four seconds), turn (`spin`), travel (`vx`, `vz`), spread (`grow`),
   or bite what touches it (`touch`); it can ride a body and point where that points (`ride`), follow someone until part
   of its fuse has run (`follow`), or keep pointing at them (`aim`). One marked `jump` is cleared by a leap.
 - **A shot** flies: it hurts the first of you it meets, a raised shield turns it, and it may home, fall, skip off the
