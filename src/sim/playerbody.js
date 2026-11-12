@@ -24,12 +24,22 @@ const HIP_TURN = 1.15;            // how far the hips turn from where you look, 
 const AIR_PHASE = 0.3;            // where in the run's loop a jump hangs
 const PALM = [0.085, 0.034];      // the middle of the palm from the wrist: along the fingers, and out of the palm (m)
 const SKULL_DROP = 0.105;         // the skull's middle under the palm
-const SKULL_SIZE = 1.12, SHIELD_SIZE = 1.12;
+const SKULL_SIZE = 1.12, SHIELD_SIZE = 1.28;
 const SHIELD_SEAT = 0.085;        // the shield's back off the palm's middle, out past the back of the hand: the arm lies behind the board
 const STAFF_HEAD = 0.5;           // the staff's head above the fist, where a shot leaves it (m)
 // The shield slung on the back when the left hand has the skull: on the spine's top joint, this far behind it and above,
 // leaned over so its point is down toward the right hip.
 const BACK_AT = [0.02, -0.1, -0.185], BACK_LEAN = 0.5, BACK_TIP = 0.1;
+// Put away, out of a fight (s.stow, 0 to 1: src/sim/sim.worker.js stepStow). The staff goes on his back, under the shield:
+// nearly upright, its head over the right shoulder (STOW.staff: where its grip sits from the spine's top joint, how far it
+// leans over, and how far its head tips in to the shoulders); the shield a little further out, over it (STOW.over); and the
+// skull hangs at his left hip (STOW.skull: from the hip joint, and the way it faces). On the way there each swings out
+// round him (STOW.arc), not through him.
+const STOW = {
+  staff: [0.03, 0.26, -0.14], lean: 0.17, rideLean: 0.95, tip: 0.04, over: 0.04,
+  skull: [0.185, -0.045, 0.06], face: [0.78, 0, 0.62], size: 0.9,
+  arc: { staff: [-0.3, 0.2, -0.12], shield: [0.34, 0.05, -0.1], skull: [0.16, 0, 0.1] },
+};
 // The shield ride.
 const SURF = { side: -1.2, front: 0.2, back: 0.24, crouch: 0.2, lift: 0.105, ankle: 0.143 };
 
@@ -357,8 +367,10 @@ export class PlayerBody {
   steer(A, dt) {
     const s = this.s, right = A.s === 'R', riding = !!s.surf;
     let hold = null;
-    if (right) hold = riding ? (s.staff ? HOLD.rideStaff : HOLD.rideBack) : s.staff ? HOLD.staff : null;
-    else hold = riding ? (s.skull ? HOLD.skull : HOLD.rideFront) : s.skull ? HOLD.skull : s.shield ? HOLD.shield : null;
+    // (Put away, the hands are empty: they swing as the clip has them, or go out for balance on the board.)
+    const away = (s.stow || 0) > 0.5;
+    if (right) hold = riding ? (s.staff && !away ? HOLD.rideStaff : HOLD.rideBack) : s.staff && !away ? HOLD.staff : null;
+    else hold = riding ? (s.skull && !away ? HOLD.skull : HOLD.rideFront) : away ? null : s.skull ? HOLD.skull : s.shield ? HOLD.shield : null;
     if (!hold && this.wAir > 0.5 && !riding) hold = HOLD.air;
     const to = T1;
     if (hold) {
@@ -565,15 +577,58 @@ export class PlayerBody {
     set(at, wt[h * 3] + f[0] * PALM[0] + n[0] * PALM[1], wt[h * 3 + 1] + f[1] * PALM[0] + n[1] * PALM[1], wt[h * 3 + 2] + f[2] * PALM[0] + n[2] * PALM[1]);
   }
 
+  // A place on him (off: in his own space, from the joint j, turned as q has that part of him turned from the bind).
+  slung(out, q, j, off) {
+    const wt = this.rig.wt;
+    quatRotate(out, 0, q, 0, off, 0);
+    out[0] += wt[j * 3]; out[1] += wt[j * 3 + 1]; out[2] += wt[j * 3 + 2];
+    return out;
+  }
+
+  // The shield's frame slung on his back (x, t, z, at): its face out behind, leaned over so the point is down toward one
+  // hip. With the staff put away under it (sw), a little further out.
+  onBack(x, t, z, at, sw) {
+    const c = Math.cos(BACK_LEAN), sn = Math.sin(BACK_LEAN), ct = Math.cos(BACK_TIP), st = Math.sin(BACK_TIP);
+    // (In his space: z out of its back is ahead, tipped so the top leans in to the shoulders; y leaned over.)
+    quatRotate(z, 0, Q2, 0, [0, st, ct], 0);
+    quatRotate(t, 0, Q2, 0, [sn, c * ct, -c * st], 0);
+    add(t, t, z, -dot(t, z)); norm(t); cross(x, t, z);
+    BACK_NOW[0] = BACK_AT[0]; BACK_NOW[1] = BACK_AT[1]; BACK_NOW[2] = BACK_AT[2] - (this.s.staff ? STOW.over * sw : 0);
+    this.slung(at, Q2, this.j.spine2, BACK_NOW);
+  }
+
+  // A thing in the hand (its frame x, y, z and its place at, changed here) on its way to where it's kept (y2 up it, z2
+  // its face, a2 its place): k of the way there, swung out round him by arc (in the space q turns) at the middle of it.
+  away(x, y, z, at, y2, z2, a2, q, arc, k) {
+    mix(y, y, y2, k); norm(y);
+    mix(z, z, z2, k); add(z, z, y, -dot(z, y)); norm(z);
+    cross(x, y, z);
+    mix(at, at, a2, k);
+    const b = Math.sin(Math.PI * k);
+    if (b > 1e-4) { quatRotate(P16, 0, q, 0, arc, 0); add(at, at, P16, b); }
+  }
+
   // What he holds, a matrix each (a zero one: nothing there): the staff, the left hand's (skull, or the shield on the arm), the back's.
   hold(snap, off) {
     const s = this.s, m = this.props, R = this.arms.R, L = this.arms.L, at = P1, f = P2, t = P3, nn = P4, x = P5, z = P6;
+    const sw = ease(s.stow || 0), { wq } = this.rig, sp = this.j.spine2, hp = this.j.hip;
     m.fill(0);
+    // (How the back and the hips are turned from the bind, for what's slung on them.)
+    conj(Q1, this.bq, sp * 4); quatMul(Q2, 0, wq, sp * 4, Q1, 0);
+    conj(Q1, this.bq, hp * 4); quatMul(Q6, 0, wq, hp * 4, Q1, 0);
     this.grip(R, at, f, t, nn);
     set(this.palmR, at[0], at[1], at[2]);
     if (s.staff) {
       // Up the staff is the thumb's side of the fist; its face is to where the knuckles point.
       cross(x, t, f); norm(x); cross(z, x, t);
+      if (sw > 0) {
+        // On his back: its head up over the right shoulder, leaned a little, its face out behind.
+        // (On the board he's down in a crouch: it lies further over then, across his back, so its foot keeps off the ground.)
+        const lean = lerp(STOW.lean, STOW.rideLean, ease(this.wRide)), cl = Math.cos(lean), sl = Math.sin(lean);
+        quatRotate(P9, 0, Q2, 0, [-sl, cl * Math.cos(STOW.tip), cl * Math.sin(STOW.tip)], 0);
+        quatRotate(P10, 0, Q2, 0, [0, 0, -1], 0);
+        this.away(x, t, z, at, P9, P10, this.slung(P11, Q2, sp, STOW.staff), Q2, STOW.arc.staff, sw);
+      }
       put(m, 0, x, t, z, at, 1);
       add(this.staffTip, at, t, s.staffHead ?? STAFF_HEAD);
     } else set(this.staffTip, at[0], at[1], at[2]);
@@ -586,25 +641,25 @@ export class PlayerBody {
       if (Math.hypot(z[0], z[1], z[2]) < 0.3) add(z, f, up, -dot(f, up));      // (the palm turned ahead: then by the fingers)
       norm(z); cross(x, up, z);
       add(at, at, nn, SKULL_DROP);
-      put(m, 16, x, up, z, at, SKULL_SIZE);
       set(this.palmL, at[0], at[1], at[2]);
+      if (sw > 0) {
+        // At his left hip, looking out and ahead.
+        quatRotate(P9, 0, Q6, 0, [0, 1, 0], 0);
+        quatRotate(P10, 0, Q6, 0, STOW.face, 0);
+        this.away(x, up, z, at, P9, P10, this.slung(P11, Q6, hp, STOW.skull), Q6, STOW.arc.skull, sw);
+      }
+      put(m, 16, x, up, z, at, SKULL_SIZE * (1 + (STOW.size - 1) * sw));
     } else if (s.shield && !s.surf) {
       // The shield on the forearm: its grip in the fist, its top to the thumb's side, its face out from the back of the hand.
       cross(x, t, nn); norm(x); cross(z, x, t);
       add(at, at, z, -SHIELD_SEAT);
-      put(m, 16, x, t, z, at, SHIELD_SIZE);
+      // (Put away it goes round onto his back: then it's the back's.)
+      if (sw > 0) { this.onBack(P12, P13, P14, P15, sw); this.away(x, t, z, at, P13, P14, P15, Q2, STOW.arc.shield, sw); put(m, 32, x, t, z, at, SHIELD_SIZE); }
+      else put(m, 16, x, t, z, at, SHIELD_SIZE);
     }
     if (s.shield && s.skull && !s.surf) {
       // Slung on the back: its face out behind, leaned over so the point is down toward one hip.
-      const { wq, wt } = this.rig, j = this.j.spine2;
-      conj(Q1, this.bq, j * 4); quatMul(Q2, 0, wq, j * 4, Q1, 0);
-      const c = Math.cos(BACK_LEAN), sn = Math.sin(BACK_LEAN), ct = Math.cos(BACK_TIP), st = Math.sin(BACK_TIP);
-      // (In his space: z out of its back is ahead, tipped so the top leans in to the shoulders; y leaned over.)
-      quatRotate(z, 0, Q2, 0, [0, st, ct], 0);
-      quatRotate(t, 0, Q2, 0, [sn, c * ct, -c * st], 0);
-      add(t, t, z, -dot(t, z)); norm(t); cross(x, t, z);
-      quatRotate(at, 0, Q2, 0, BACK_AT, 0);
-      at[0] += wt[j * 3]; at[1] += wt[j * 3 + 1]; at[2] += wt[j * 3 + 2];
+      this.onBack(x, t, z, at, sw);
       put(m, 32, x, t, z, at, SHIELD_SIZE);
     } else if (s.surf) {
       // The board under his feet, on the ground's lie, its point the way it's going.
@@ -612,7 +667,7 @@ export class PlayerBody {
       add(h, h, n, -dot(h, n)); norm(h);
       const y = [-h[0], -h[1], -h[2]];
       cross(x, y, n);
-      put(m, 32, x, y, n, [s.x, s.y + SURF.lift - 0.015, s.z], 1);
+      put(m, 32, x, y, n, [s.x, s.y + SURF.lift - 0.015, s.z], SHIELD_SIZE);
     }
     const head = this.j.head * 3;
     set(this.head, this.rig.wt[head], this.rig.wt[head + 1], this.rig.wt[head + 2]);
@@ -627,6 +682,7 @@ function put(m, o, x, y, z, at, k) {
   m[o + 12] = at[0]; m[o + 13] = at[1]; m[o + 14] = at[2]; m[o + 15] = 1;
 }
 
+const BACK_NOW = [0, 0, 0], Q6 = new Float32Array(4);
 const Q1 = new Float32Array(4), Q2 = new Float32Array(4), Q3 = new Float32Array(4), Q4 = new Float32Array(4), Q5 = new Float32Array(4), KEEP = new Float32Array(12);
 const P1 = v3(), P2 = v3(), P3 = v3(), P4 = v3(), P5 = v3(), P6 = v3(), P7 = v3(), P8 = v3(), P9 = v3(), P10 = v3(), P11 = v3(), P12 = v3(), P13 = v3(), P14 = v3(), P15 = v3(), P16 = v3(), P17 = v3();
 const hold0 = () => ({ at: v3(), f: v3(), t: v3(), pole: v3(), curl: 0, thumb: 0, spread: 0 });

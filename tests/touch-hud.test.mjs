@@ -54,7 +54,7 @@ test('every button on the page has its place and its picture', () => {
   for (const name of marked) assert.ok(ICONS[name], `no drawing for ${name} in src/ui/icons.js`);
   // What main.js and view.js put on a button as things change.
   for (const name of ['take', 'talk', 'open', 'shut', 'locked', 'view1', 'view3']) assert.ok(ICONS[name], name);
-  for (const id of ['bPause', 'bPack', 'bBook', 'bJournal', 'bMap', 'bTake', 'bView']) assert.ok(read('../src/main.js').includes(`$('${id}')`) || read('../src/ui/view.js').includes(`'${id}'`), `${id} is on the page with nothing listening`);
+  for (const id of ['bPause', 'bPack', 'bBook', 'bQuests', 'bMap', 'bTake', 'bView']) assert.ok(read('../src/main.js').includes(`$('${id}')`) || read('../src/ui/view.js').includes(`'${id}'`), `${id} is on the page with nothing listening`);
 });
 
 test('the stylesheet\'s numbers are the table\'s', () => {
@@ -70,10 +70,10 @@ test('the stylesheet\'s numbers are the table\'s', () => {
 });
 
 test('a menu, the pause or the big map puts the thumbs away, and each says so to the page', () => {
-  for (const cls of ['menu-up', 'paused', 'map-up']) assert.ok(new RegExp(`body\\.touch\\.${cls} #touch`).test(css), cls);
+  for (const cls of ['menu-up', 'paused', 'map-open']) assert.ok(new RegExp(`body\\.touch\\.${cls} #touch`).test(css), cls);
   assert.ok(read('../src/input.js').includes("classList.toggle('menu-up'"));
   assert.ok(read('../src/main.js').includes("classList.toggle('paused'"));
-  assert.ok(read('../src/ui/map.js').includes("classList.toggle('map-up'"));
+  assert.ok(read('../src/ui/map.js').includes("classList.toggle('map-open'"));
 });
 
 test('nothing inside a button or a slot takes a touch', () => {

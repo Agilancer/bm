@@ -77,6 +77,9 @@
   #mapMini { position: absolute; right: calc(20px + env(safe-area-inset-right)); top: calc(18px + env(safe-area-inset-top)); width: 168px; height: 168px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,.7); opacity: .92; display: none; }
   #mapBig { position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 6px; background: rgba(4,3,2,.55); pointer-events: none; }
   #mapBig.open { display: flex; }
+  /* On a phone the big map has the screen: darker behind it, and the skull and Auto (which sit over everything) off its buttons. */
+  body.touch #mapBig { background: rgba(4,3,2,.84); }
+  body.touch.map-open #vskull, body.touch.map-open #vskullTag, body.touch.map-open #autoBtn, body.touch.map-open #autoStatus { visibility: hidden; }
   #mapBigCanvas { width: min(94vw, 150vh); height: min(82vh, calc(100vh - 86px)); border: 1px solid var(--gold-dim); opacity: .93; pointer-events: auto; touch-action: none; cursor: grab; }
   #mapBigCanvas.held { cursor: grabbing; }
   .mapWrap { position: relative; line-height: 0; }
@@ -166,6 +169,10 @@
   #viewBtn.on { background: rgba(201,163,92,.38); color: #f4ecdc; }
   #viewBtn kbd { position: absolute; right: 2px; bottom: 0; font: inherit; font-size: 8px; color: #b9ad94; }
   #spellOpen { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; font-size: 13px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
+  #questOpen { position: relative; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
+  #questOpen:hover { background: rgba(201,163,92,.2); }
+  #questOpen kbd { position: absolute; right: 2px; bottom: 0; font: inherit; font-size: 8px; color: #b9ad94; }
+  body.touch #questOpen { display: none; }
   #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
   #softCursor { position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin: -2px 0 0 -2px; display: none; z-index: 40; pointer-events: none; }
   #softCursor::before { content: ''; display: block; width: 0; height: 0; border-left: 11px solid #e7cf9a; border-bottom: 16px solid transparent; filter: drop-shadow(0 1px 2px #000); }
@@ -407,7 +414,7 @@ body.op-handoff #cross{opacity:0;transition:none}
     <div class="tbtn" id="bPause" data-ic="menu" aria-label="Menu"></div>
     <div class="tbtn" id="bPack" data-ic="pack" aria-label="Pack"></div>
     <div class="tbtn" id="bBook" data-ic="book" aria-label="Spellbook"></div>
-    <div class="tbtn" id="bJournal" data-ic="journal" aria-label="Journal"></div>
+    <div class="tbtn" id="bQuests" data-ic="journal" aria-label="Quest log"></div>
     <div class="tbtn" id="bView" data-ic="view3" aria-label="First or third person"></div>
   </div>
   <div class="tbtn" id="bMap" aria-label="Map"></div>

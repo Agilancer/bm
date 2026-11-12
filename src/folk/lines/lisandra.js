@@ -64,6 +64,7 @@ export const QUESTS = {
     title: 'Known in Bellmourn',
     giver: 'lisandra',
     giverName: 'Lisandra',
+    about: "Nobody follows a prophecy, Lisandra says: they follow whoever mended their roof. Go round Bellmourn and take on some work from everyone with a trouble worth the name, then go back to her where the Long Road comes into town.",
     offer: [
       "There it is. Forty roofs, one well, and the Dark Lord's cathedral looking down on all of it. You're not ready for that hill. You're not ready for his knight. You're ready for Bellmourn.",
       "Nobody follows a prophecy, {name}. They follow whoever mended their roof. So be useful. Everyone in that town with a trouble worth the name: find them, and take it off their hands. That's how you'll learn what your own can do.",

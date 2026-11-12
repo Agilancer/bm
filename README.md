@@ -55,7 +55,7 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | Spellbook: the six trees, your points, and what's on the bar | `B` | The book, in the top row |
 | Pack: staffs, skulls, robes and gems | `I` | The pack, in the top row |
 | Take up what's on the ground, open a chest or a door, or talk | `E` | The gold button that comes up beside the ring |
-| Journal | `J` | The page, in the top row |
+| Quest log | `J` | The page, in the top row |
 | The big map | `M` | Tap the small one in the corner |
 | Pause: save, load, settings | `Esc` | The bars, in the top row |
 | First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | The figure (or the eye), at the end of the top row |
@@ -139,6 +139,10 @@ screen is still what you hit. Which view you left it in is kept with the setting
     both. A held spell keeps the pose, with a tremor.
   - *The shield ride*: side on to the way the board's going, left foot ahead, knees bent, feet on the board's own slope,
     head turned down the hill, the staff held up clear of the ground.
+- **Put away.** Out of a fight nothing's in his hands (`STOW` in `src/sim/playerbody.js`, `Sim.stepStow`): the staff is on
+  his back, nearly upright with its head over the right shoulder, under the shield; the shield on his back over it; the
+  skull at his left hip. Each swings out round him on its way there and back. On the board the staff lies further over,
+  across his back. See "Weapons put away" below.
 - **What he holds** are the items' own models (the ones that lie on the ground), drawn where the sim says his hands and
   back are (`PlayerBody.hold`, `selfItems` in `src/gfx/renderer.js`). The first-person arms aren't drawn.
 - **The camera** (`THIRD` in `src/core/third.js`, `GameView.updateCamera`) looks along the same line you do in first person,
@@ -228,9 +232,50 @@ Lisandra's cave is high on a shoulder of the hill over the Long Road, its mouth 
 
 After the cave falls in, she leads you down to Bellmourn (`escort` in `src/sim/opening.js`, the way itself in `src/core/escort.js`): along a shelf cut across the hillside, down four flights of stone steps that double back on each other, along a path at the foot of the hill, and then the Long Road, about 440 m in all (`WAY` in `src/core/opening.js`; the land is cut and banked to it in `src/core/terrain.js`, and the steps are laid on the slope you walk). She keeps about 5 m ahead of you at your own pace. Stop, and once she's a few steps on she stops too, turns round and looks at you; she turns back and goes on when you've come up to within a few steps of her, or gone past, and hurries to get in front again. Fall well back or wander off and she waits the same, and calls you on after a while. You keep to a walk on the shelf and the steps. Ride your shield and she jumps on one of her own (the Old Tree kite shield, green with a silver tree: no V, no T) and rides about 9 m ahead, so you never get past her. She talks the whole way: her lines (`CUES` in `src/core/opening-script.js`) wait their turn and never overlap, and a place on the way (the shelf, the head of the steps, the road, the pines, the town in sight) brings its own.
 
-In the pines the dead come up out of the ground (`fight` in `src/sim/opening.js`, `openingRaise` in `src/sim/undead.js`): twenty, five at a time; when eight or fewer are left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out of the trees on each side of the road, who raise what's fallen. All of them are easy, and on the way down you can't die. Lisandra stands with you and throws a weak fire bolt every couple of seconds. Bodies are kept for it (`reserve` in `BODIES`: nine more of the dead, ten children, two necromancers), and the woods' own packs hold off until she has you in town. Then she tells you why the dead walk, and you go on to the town's edge and her quest.
+A little below the pines, where the hillside is open on both sides of the road, the dead come up out of the ground (`fight` in `src/sim/opening.js`, `openingRaise` in `src/sim/undead.js`): twenty, five at a time, turn about on one side of the road and the other; when eight or fewer are left, twenty more and ten of their children; when ten or fewer of those are left, a necromancer out from behind the nearest trees past the open ground on each side (`necroSpot`), who raise what's fallen. All of them are easy, and on the way down you can't die. The road's two necromancers are easy too (`easy` in `src/sim/undead.js`): they don't mend themselves and raise the fallen only a few times. Lisandra stands with you and throws a weak fire bolt every couple of seconds, and she doesn't go on until every one of them is down (`H.OPENING_FIGHT` is how many are left: auto-play stays for them all, and goes after any that hang back). Bodies are kept for it (`reserve` in `BODIES`: nine more of the dead, ten children, two necromancers), and the woods' own packs hold off until she has you in town. Then she tells you why the dead walk, and you go on to the town's edge and her quest.
 
-A gold dotted line on the ground leads to whatever the quest you follow wants of you now (`src/ui/trail.js`, drawn in `src/gfx/trail.js`). In the journal (J), tap a quest to follow it, or the same one again to hide the trail; a new quest is followed as you take it, unless you're on Lisandra's round of the town, which stays followed (it leads to whoever you've still to see, nearest first). Before any work, it leads to Lisandra where the road comes into town, or to Bram at the inn. In the opening it runs down the road after Lisandra. In town it goes round the houses by the townsfolk's own walking grid (a route asked of `src/folk/folk.worker.js`), out past the town along the roads and paths where they're shorter, and into the cathedral by its own way down to the Bell Crypt (by the Sexton's Door once you have his key).
+Her steps double back on themselves, and each flight's ground is its own: at a turn the flight beside you is a good deal higher or lower, so the land takes its height from the stretch you're on (`WAY_OWN` in `wayLevel`), and each slab stops where the next flight's ground begins (`stairReach` in `src/gfx/opening.js`). The way itself goes round each turn in a short curve on the landing (`ROUTE.corners` in `src/core/escort.js`); she slows for it, and on the steps she gives you longer before she takes a pause for a stop. Auto-play walks to each landing, turns there and goes on; from the foot of the steps it rides its shield down the last hill and a little way into the flat at the bottom (`RIDE_FROM`, `RIDE_TO` in `src/ui/autobrain.js`), and is off it again before the dead come up.
+
+A gold dotted line on the ground leads to whatever the quest you follow wants of you now (`src/ui/trail.js`, drawn in `src/gfx/trail.js`). In the quest log (J), **Follow trail** on a quest follows it, and **Hide trail** puts it away; a new quest is followed as you take it, unless you're on Lisandra's round of the town, which stays followed (it leads to whoever you've still to see, nearest first). Before any work, it leads to Lisandra where the road comes into town, or to Bram at the inn. In the opening it runs down the road after Lisandra. In town it goes round the houses by the townsfolk's own walking grid (a route asked of `src/folk/folk.worker.js`), out past the town along the roads and paths where they're shorter, and into the cathedral by its own way down to the Bell Crypt (by the Sexton's Door once you have his key).
+
+### The quest log
+
+**J**, or the scroll beside the spellbook's **B** on the spell bar (on a phone, **QUESTS** beside PACK), opens the quest log
+(`drawBook` in `src/ui/folk.js`; its workings, testable without a page, in `src/ui/questlog.js`, checked by
+`tests/quest-log.test.mjs`). J, Esc or its × shuts it.
+
+- **Each quest you've taken on** has a card: its name, who gave it and what it pays (and the level auto-play takes it at,
+  as a suggestion, when that's above yours), what it's about (`about` on each quest in `src/folk/lines/`), its steps so far
+  (the ones done ticked off, the one you're on with its count), and where it takes place now.
+- **Map** shuts the log and opens the big map framed on that place, with a gold pin and its name on each spot (`showPlace`
+  in `src/ui/map.js`): the person to see (followed as they walk about), the Sexton's Door, the catacombs, a site out in the
+  land with a ring round it where anywhere near counts, or every seal still to wake. It shows the place whether you've been
+  there or not, the land instead of a chart when you're under a roof and it isn't, and an arrow at the rim for a spot that's
+  off the edge. The pins go when the map's shut.
+- **Follow trail** lays the gold trail to it (see above); the quest followed is marked.
+- **Auto-play.** Along the top: what it's working on (and, when that isn't a quest, what it's set to do: grinding or
+  dungeon runs), or that it's off. The quest it's on has a blue mark and its own line
+  of what it's doing (`doing` in `src/ui/autobrain.js`, which tags every job with the quest it's for; `current` in
+  `src/ui/autoplay.js`). The log is drawn again when that changes.
+- **Hint**, below, while you've nothing taken on: what you should be doing (`hintOf`). In the cave, hear Lisandra out; on
+  the road, follow her down; in town, see her where the road comes in, or Bram at the inn; after that, everyone with work to
+  give you, the work that suits your level first, each with a Map (and the woods, for a level or two, when it's all beyond
+  you yet); and once every quest is done, the Warrens and the knight on the cathedral steps.
+- Then the quests done, the papers kept, and the satchel.
+- **On a phone** (held sideways, as the game wants) it takes nearly the whole screen inside the notch, a little tighter,
+  with buttons a thumb can hit; its head (and the ×) stays put while the rest scrolls under a finger. It's opaque, and the
+  skull and Auto, which sit over every panel, step out of its way, and off the big map's buttons while that's up. Checked at
+  667 × 375 (an SE), 740 × 360, 844 × 390, 932 × 430 and an iPad's 1024 × 768: it fits, scrolls, nothing covers it, and its
+  Map and the map's × work by touch. On a narrow phone the spell bar sits a little further left, clear of GUARD.
+
+### Weapons put away
+
+Nobody walks about with a weapon in hand unless there's been a fight (`src/core/stow.js`). In a fight, and for 15 seconds after the last of it in case there's more, arms are out; then they're put away, and drawn again in a fifth of a second when they're wanted. Under a roof of stone (the church and its catacombs, the Hollowfang Warrens, the Test Dungeon: `armedGround`) and in Lisandra's cave they're never put away.
+
+- **You** (`Sim.stepStow` in `src/sim/sim.worker.js`): out for a shot, a spell, a guard, a blow taken, or anything awake and at you within 22 m. In first person the staff, the skull's arm and the shield's go down out of the view (`H.STOW`, with the staff's own lowering in `src/gfx/renderer.js`); in third person they're on your back and at your hip (above). A click still fires: the staff is in your hand by the time the shot leaves it.
+- **The other Tessariels** (`src/sim/hero.js`): a long arm (a spear, a lance, a maul, a bow) on the back, nearly upright, under the board; a sword, a mace, a knife or a boomerang at the hip, the main hand's at the left and the other's at the right; a shield-bearer's board on the back. A bard's lute was already there.
+- **The knights** (`src/sim/knight.js`): the sword at the left hip, point down and back, and the board on the back, on their rounds; in hand when the alarm's up or the black knight's about.
+- Shields are a little bigger than they were on everyone (`SHIELD_SIZE`, `HERO_SHIELD`, `shieldScale`).
 
 ### The cathedral and the catacombs
 
@@ -291,7 +336,7 @@ game starts; the rest come in the background once it has.
   The portcullis is the Test Dungeon's door. Not used anywhere yet: the sea's three beds, the beach's plain and stormy ones, the rain and storm beds
   for a house, the cave in the rain, the river stream, the chest closing, the sword sheathed, the bow's shot and its block.
 - **400 Sounds Pack** (`tools/audio/build_extra_sfx.py`; the zip carries no licence): coins, gems and orbs picked up and landing, a
-  scroll, robe, skull or staff taken, the spellbook and the journal, the big map, bone snapping and gore on the undead.
+  scroll, robe, skull or staff taken, the spellbook and the quest log, the big map, bone snapping and gore on the undead.
 - **MenuSFX** by Kevin Fowler (CC BY): the clicks of the game's own panels (`ui_*`). The title and the pause menu keep their own.
 
 ### The title, saves and settings
@@ -347,11 +392,11 @@ the screen's height, so a small phone and a tablet get the same picture:
 - **Top left:** the medal and the three bars; what's on you under them; your party under those.
 - **Top right:** the corner map, a square, which opens the big one at a tap, with the clock on one of its lower corners
   and Velscour's skull on the other. Beside it, a row: Auto, the menu (pause, save, load, settings), the pack, the spellbook (gold, with a count,
-  when there are points to spend), the journal (which a phone had no way to open before) and the view.
+  when there are points to spend), the quest log and the view.
 - **Top middle, one under the other:** the bar of whoever means you harm, a great foe's own bar, what's just happened
   ("Quest begun"), and what the game has to tell you.
 - **A menu, the pause or the big map** has the whole screen: the thumbs and the frame are put away while it's up
-  (`body.menu-up`, `body.paused`, `body.map-up`). A word with someone lays what you can say out as rows a thumb can't
+  (`body.menu-up`, `body.paused`, `body.map-open`). A word with someone lays what you can say out as rows a thumb can't
   miss, with no key names; the pack's cells are as big as the height allows, with the charm pouch in its heading and
   what's in your hands said in the bar beneath; the pause and the title's menu are two columns of plates.
 
@@ -417,7 +462,7 @@ places, so they carry neither's marks, and no lettering at all.
 
 `src/ui/map.js`. A square map in the corner turns with you (north slides round its edge); **M** (or a tap on it, on a phone) opens the big one, and M or its × shuts it. Only what you've walked near is drawn, and what you've seen is kept in a save.
 
-The big map is looked about freely. The **wheel** (or a **pinch**, or its + and − buttons, or the + and − keys) brings it nearer and further, from 60 m across to the whole land. A **drag** moves it: with the mouse held by the game, hold the left button and move the mouse (the sword stays still while the map's up, `mapUp` in `src/input.js`). It follows you until you move it; a double click, a double tap, **Home** or the ring button brings it back to you, and when you're off its edge a small arrow on the rim points your way. It has a title (the country, or the place), a scale bar and north.
+The big map is looked about freely. The **wheel** (or a **pinch**, or its + and − buttons, or the + and − keys) brings it nearer and further, from 60 m across to the whole land. A **drag** moves it: with the mouse held by the game, hold the left button and move the mouse (the sword stays still while the map's up, `mapUp` in `src/input.js`). It follows you until you move it; a double click, a double tap, **Home** or the ring button brings it back to you, and when you're off its edge a small arrow on the rim points your way. Opened from the quest log's **Map**, it's framed on where that quest takes place, with gold pins (see "The quest log"). It has a title (the country, or the place), a scale bar and north.
 
 Under a roof both maps show the place's own chart instead, as Bellmourn's map does below ground: the passages and rooms come out of the dark as you walk them (`src/ui/undermap.js`). There's one chart each for the cathedral and its catacombs, the Hollowfang Warrens and the Test Dungeon, half a metre to a cell, made from the place's own shape: the church's floors and colliders in `interior.json`, the warrens' and the hall's fields. The filling-in runs along the floor from where you stand, 16 m at most, so it stops at walls and you never see into a room you haven't found the way to. Stone is warm near the surface and cold deep down, stairs are banded, a drop is red, doors are gold ticks, and rooms are named once you've stood in them. A new place under a roof wants a `Chart` there and a line in `chartAt`.
 
@@ -452,7 +497,8 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   leads, coming up to her when she stops for it. It walks her steps; once on the road it rides its shield down the
   steep stretches, so she rides hers; and it fights the road's waves of the dead as it fights the woods'. In town it
   takes her round of the townsfolk first.
-- **Quests.** It takes every quest the town has, talks each step through, and hands in. It does them in an order that suits
+- **Quests.** It takes every quest the town has, talks each step through, and hands in. The quest log (J) marks the one
+  it's working on, and says what it's doing about it. It does them in an order that suits
   its level (`PLAN` in `src/ui/autobrain.js`), and does night work by night. When something waits on the morning, it sleeps
   at the Tolling Bell.
   - **Face to face, never through a wall.** The game's own E only measures how far off someone is, so from the street
@@ -1065,6 +1111,16 @@ MOVES.fissure(sim.perils, monster, target, monster.opts.damage);   // a named at
 third at a rate that couldn't finish, and swing beside them), won't start a blow until it's roughly square on, and looks
 at its mark rather than along its path once it's within a few strides. The undead, the crabs and the field creatures
 turn faster into their blows too.
+
+That was the sim's facing, and it was right; the bodies weren't. 47 of the 69 models (every goblin, four of the five kobolds,
+the dead children, the possessed, the harpies, the necromancers, the plague and Velscour's knights, two of the mannequins,
+the dragonlings, the Bone Knight) hang their skeleton and mesh under a node of their own, `node_0`, a quarter turn about the
+up axis, with the skin bound without it. The rig reads only the joints, so the turn was lost and they ran, and swung, side
+on to where they were going. `prepareRig` in `src/sim/tripo.js` (`underParents`) now puts whatever stands above a top joint
+onto it, at rest and in every clip, as a glTF viewer does; the goatmen, the werewolf, Grubnash's kobold and the rest, which
+carry their turn on the hips, are as they were. And a monster turned away from where it's going comes round (at 6 rad/s,
+was 3.5) before it gets up to speed, rather than sliding off sideways. `node --test tests/tripo-facing.test.mjs` plays
+every model's walk and run with arms through the game's rig and fails if its shoulders aren't square to its yaw.
 
 `node --test tests/perils.test.mjs` checks the shapes, the way out of each, and that every kind of monster's tricks are
 moves there are. Known limits: the mark's shader was compiled by Chromium's own compiler for both tiers and its five shapes

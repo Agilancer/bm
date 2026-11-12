@@ -200,7 +200,7 @@ export const PHONE = [844, 390];
 export function hudLayout() {
   const first = STARTERS.slice(0, 6).map((i) => SPELLS[i].key);
   const ICON_OF = { bAttack: ['btn_main', 'staff', 0.5], bDodge: ['btn_round', 'dodge'], bWide: ['btn_round', 'guard'], bJump: ['btn_round', 'jump'], bTake: ['btn_round_on', 'take'],
-    bSprint: ['btn_round', 'sprint'], bPause: ['btn_round', 'menu'], bPack: ['btn_round', 'pack'], bBook: ['btn_round', 'book'], bJournal: ['btn_round', 'journal'], bView: ['btn_round', 'view3'], mapMini: ['frame_map', null] };
+    bSprint: ['btn_round', 'sprint'], bPause: ['btn_round', 'menu'], bPack: ['btn_round', 'pack'], bBook: ['btn_round', 'book'], bQuests: ['btn_round', 'journal'], bView: ['btn_round', 'view3'], mapMini: ['frame_map', null] };
   const out = [];
   for (const b of boxes(...PHONE)) {
     const slot = /^slot(\d)$/.exec(b.id);

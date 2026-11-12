@@ -26,7 +26,7 @@
 import * as LAYOUT from '../core/layout.js';
 import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
 import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY } from '../core/opening.js';
-import { ROUTE, routeAt, routeDir, routeNear } from '../core/escort.js';
+import { ROUTE, cornerAhead, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { ROADS, terrainHeight } from '../core/terrain.js';
 import { ROUTES, SITES } from '../core/lands.js';
 import { SEALS } from '../core/sites.js';
@@ -36,6 +36,7 @@ import { floorAt } from '../core/interior.js';
 import { GROUP_KEYS, GROUPS, LAIRS, TRIPO_KIND } from '../core/tripo-monsters.js';
 import { CAMPS } from '../sim/slimes.js';
 import { SPELLS } from '../sim/spells.js';
+import { AMBUSH_AT } from '../sim/opening.js';
 import { NODES, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
 import { RULES, isNight } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
@@ -119,6 +120,8 @@ const LEVEL_OF = Object.fromEntries(PLAN);
 // A quest added since the plan was written goes on the end of it, at a level guessed from what it pays (coverage() names it).
 const guessLevel = (id) => Math.max(1, Math.min(20, Math.round((RULES[id].xp || 200) / 110)));
 const PLAN_ALL = PLAN.filter(([id]) => RULES[id]).concat(Object.keys(RULES).filter((id) => !(id in LEVEL_OF)).map((id) => [id, guessLevel(id)]));
+// The level it wants for a quest: the quest log (src/ui/questlog.js) suggests the same to a player.
+export const questLevel = (id) => LEVEL_OF[id] ?? guessLevel(id);
 
 // Where each place in a quest's steps is, for walking to: a point, and how near counts.
 const area = (k) => {
@@ -427,6 +430,10 @@ const segNear = (ax, az, bx, bz, cx, cz) => {
 
 // ---------------------------------------------------------------- the head
 
+// On the way down with Lisandra: where it gets on its shield (just past the foot of her steps) and where it's off it again
+// (in the flat at the foot of that last hill, a little way along), as distances along the way (src/core/escort.js).
+const RIDE_FROM = routeNear(WAY[8][0], WAY[8][1]) + 2.5, RIDE_TO = routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 16;
+
 export class Brain {
   // o: { game, shared, input, pack, inventory, townUI, lands, spellbar, renderer, town, heroCount, base, opening, say(text), menu(), done() }
   constructor(o) {
@@ -650,6 +657,8 @@ export class Brain {
     if (this.thinkT <= 0) { this.thinkT = 0.12; this.think(snap, m); }
     this.boardFrame = false;
     this.walk(dt, m);
+    // (The ride down behind Lisandra, asked for by the opening's thinking: src/ui/autobrain.js opening.)
+    if (this.wayRide) { const r = this.wayRide; this.board(dt, m, r.rx, r.rz, r.left, (k) => routeAt(Math.min(ROUTE.len, r.mine + k))); }
     // (Space is only held while it's on the shield, or getting on it: on its way somewhere, or riding it through a fight.)
     if (this.rideHold && !this.fighting) { this.rideHold = false; this.ride = null; }
     if (this.rideHold) this.auto.jumpHeld = true;
@@ -670,6 +679,7 @@ export class Brain {
   think(snap, m) {
     const g = this.o.game;
     this.fighting = false;
+    this.wayRide = null;
     this.useGoal = false;
     this.aim = null;
     // The opening has its own way to go.
@@ -934,11 +944,13 @@ export class Brain {
   }
 
   // ---- the opening
+  // (RIDE_FROM, RIDE_TO: where on the way down it rides its shield before the fight, below.)
 
   opening(snap, m) {
     const st = m.opening, t = m.openT;
     this.halt();
-    if (st !== OPENING.ESCORT) this.wayS = this.herS = undefined;
+    this.wayRide = null;
+    if (st !== OPENING.ESCORT) { this.wayS = this.herS = undefined; this.roadFought = false; }
     if (st === OPENING.WAKE) { this.say("Waking in Lisandra's cave."); return; }
     if (st === OPENING.COLLAPSE) { this.say('The cave comes down.'); return; }
     if (st === OPENING.NAME) {
@@ -963,7 +975,9 @@ export class Brain {
       return;
     }
     if (st === OPENING.ESCORT) {
-      const foes = this.foes(snap, m).filter((f) => f.hostile && f.d < 30);
+      const dead = this.foes(snap, m).filter((f) => f.hostile), foes = dead.filter((f) => f.d < 30);
+      // (How many of the road's dead are still to be put down: src/sim/opening.js fight. Until it's none, it doesn't go on.)
+      const fightOn = snap[H.OPENING_FIGHT] > 0;
       // (The road's fight: the dead in waves, their children, and at the end two necromancers out of the trees. It fights
       // them as it fights the woods' own: src/sim/opening.js fight has what comes and when.)
       const by = this.lisandra(snap);
@@ -975,6 +989,17 @@ export class Brain {
         return;
       }
       if (foes.length && this.combat(snap, m, foes)) { this.fighting = true; this.say(`Fighting the dead on the road (${foes.length}).`); return; }
+      // The fight's still on and nothing's near: after whatever is left of them (a necromancer back in the trees, one that's
+      // wandered), or by her until the next come up. Never on down the road with any of them still standing.
+      if (fightOn) {
+        const next = dead.reduce((a, f) => (!a || f.d < a.d ? f : a), null);
+        this.face = null;
+        if (next) { this.steer(next.x - m.x, next.z - m.z, next.d > 40); this.look = [next.x, next.z]; this.say('After the last of the dead on the road.'); return; }
+        if (by && dist(m.x, m.z, by.x, by.z) > 5) this.steer(by.x - m.x, by.z - m.z, false);
+        else if (by) this.face = Math.atan2(by.x - m.x, by.z - m.z);
+        this.say('By Lisandra until every one of the dead is down.');
+        return;
+      }
       // She leads the way down (src/sim/opening.js): along her shelf, down her steps and the path, and then the road. It
       // follows a few strides behind her, at her pace. Stood still she stops and turns to it, and goes on when it's come
       // up to her: so it keeps coming until it's close.
@@ -990,17 +1015,30 @@ export class Brain {
       const d = dist(m.x, m.z, her.x, her.z);
       const end = ROUTE.pts.at(-1);
       if (dist(m.x, m.z, end[0], end[1]) < 6 || (hers >= ROUTE.len - 0.5 && d < 6)) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Bellmourn. Lisandra has her say.'); return; }
-      // (Never aiming more than a few strides down the way, so it goes round each bend of it and not across the hill.)
-      const [ax, az] = routeAt(Math.min(ROUTE.len, Math.max(mine + 3, Math.min(hers - 2.6, mine + 5))));
-      if (d < 2.4 && hers > mine) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
+      // (Never aiming more than a few strides down the way, so it goes round each bend of it and not across the hill. And
+      // never past a turn of the steps until it's stood on that landing: it walks to the turn, turns there, and goes on down
+      // the next flight, instead of cutting across from one flight to the other.)
+      const turn = cornerAhead(mine), reach = turn > 0.45 ? turn + 0.15 : Infinity;
+      const [ax, az] = routeAt(Math.min(ROUTE.len, mine + reach, Math.max(mine + 3, Math.min(hers - 2.6, mine + 5))));
+      // (Close behind her: it waits for her to go on. By the way, not as the crow flies: at a turn of the steps she's a
+      // stride off across the corner and still a flight ahead, and stopping for that would leave them both stood there.)
+      if (d < 2.4 && hers > mine && hers - mine < 3.2) { this.face = Math.atan2(her.x - m.x, her.z - m.z); this.say('Following Lisandra down to Bellmourn.'); return; }
       this.face = null;
-      this.steer(ax - m.x, az - m.z, d > 9);
+      // Down the last hill on its shield, from the foot of her steps into the flat at the bottom and a little way along it,
+      // and she gets on hers. (Her shelf and her steps are narrow and double back; it walks those. And it's off the board
+      // again before the bare hillside, where the dead come up.) After the fight, down the long slope of the road the same.
+      // (The fight's behind it once it's been in it; or, picking the walk up from a save, once she's well past where it was.)
+      const fought = this.roadFought = this.roadFought || fightOn || (snap[H.OPENING_NEXT] > AMBUSH_AT + 30);
+      // (board keeps it on while there's more than 40 m of `left`: so that runs out where it's to step off. And it only
+      // runs for the board with a good stretch of the ride still ahead.)
+      const rideLeft = fought ? ROUTE.len - mine : RIDE_TO + 40 - mine;
+      const riding = mine > RIDE_FROM && rideLeft > 62;
+      this.steer(ax - m.x, az - m.z, d > 9 || (riding && !m.surf));
       // (Its eyes on the road ahead: her, and the way she's going.)
-      this.look = routeAt(Math.min(ROUTE.len, mine + 6));
-      // Down the long slope on its shield, and she gets on hers: once it's on the road. (Her shelf and her steps are
-      // narrow and double back; it walks those.)
+      this.look = routeAt(Math.min(ROUTE.len, mine + Math.min(6, reach + 1)));
       const [rx, rz] = routeDir(mine);
-      if (mine > routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 4) this.board(0.12, m, rx, rz, ROUTE.len - mine);
+      // (Ridden frame by frame, not thought by thought: Space has to stay down through the jump. See frame.)
+      if (riding || m.surf) this.wayRide = { rx, rz, left: rideLeft, mine };
       if (!m.surf) this.say('Following Lisandra down to Bellmourn.');
     }
   }
@@ -1514,7 +1552,14 @@ export class Brain {
     const job = this.choose(m);
     const key = job ? `${job.kind}:${job.why}:${job.who ?? ''}:${job.x ?? ''}` : '';
     if (key !== prev || !this.job) { this.job = job; this.jobKey = key; this.patrol = null; this.jobT = this.t; }
-    else if (job && this.job) Object.assign(this.job, job);
+    else if (job && this.job) { delete this.job.quest; delete this.job.offer; Object.assign(this.job, job); }
+  }
+
+  // What it's working on, for the quest log (src/ui/folk.js): the quest its job is for (quest: one taken on; offer: one it's
+  // off to take on), what it says of it, and what it's been set to do (MODES: quests, grinding, dungeon runs).
+  doing() {
+    const j = this.job;
+    return { quest: j?.quest || null, offer: j?.offer || null, say: (j?.quest || j?.offer ? j.say : this.said) || this.said || '', mode: MODES[this.mode]?.name || '' };
   }
 
   choose(m) {
@@ -1600,7 +1645,14 @@ export class Brain {
   // The giver of a quest, or whoever a step's to be said to: their place in the town's list.
   personIndex(id) { return this.o.townUI.people.findIndex((p) => p.id === id); }
 
+  // A quest's next piece of work, marked with the quest it's for (the quest log shows which one it's on).
   questJob(id, m, lvl) {
+    const job = this.questStep(id, m, lvl);
+    if (job) job.quest = id;
+    return job;
+  }
+
+  questStep(id, m, lvl) {
     const Q = this.o.townUI.quests, s = Q.state(id), st = Q.step(id), q = QUESTS[id], title = q.title;
     const giver = this.personIndex(q.giver);
     if (s.stage === 'making') {
@@ -1685,7 +1737,7 @@ export class Brain {
       const d = dist(m.x, m.z, w.x, w.z);
       // (Someone out past the town, like the Bellwright: only on the way.)
       if (giver >= PEOPLE.length && d > 300) continue;
-      if (d < bd) { bd = d; best = this.talkJob(giver, 'offer', `To ${townUI.people[giver].name}: there's work.`); }
+      if (d < bd) { bd = d; best = this.talkJob(giver, 'offer', `To ${townUI.people[giver].name}: there's work.`); if (best) best.offer = id; }
     }
     return best;
   }
@@ -1700,7 +1752,7 @@ export class Brain {
       if (!s || s.stage === 'done') continue;
       const q = QUESTS[id], giver = this.personIndex(q.giver);
       const talkTo = st?.talk ? this.personIndex(st.talk) : (st?.back || (st?.bring && (pack.mats[st.bring] || 0) >= st.n) || (s.stage === 'making' && this.o.town.day >= s.ready)) ? giver : -1;
-      if (talkTo >= 0 && talkTo < PEOPLE.length && !this.skipping(`p:${talkTo}`) && this.reachable(talkTo)) return this.talkJob(talkTo, 'quest', `${q.title}: to ${townUI.people[talkTo].name}.`);
+      if (talkTo >= 0 && talkTo < PEOPLE.length && !this.skipping(`p:${talkTo}`) && this.reachable(talkTo)) return { ...this.talkJob(talkTo, 'quest', `${q.title}: to ${townUI.people[talkTo].name}.`), quest: id };
     }
     const offer = quests && this.offerJob(m);
     if (offer && dist(m.x, m.z, 0, 0) < 140) return offer;
@@ -2488,10 +2540,12 @@ export class Brain {
 
   // The shield under its feet, down a long slope: a run, a jump, Space held, and it carves along the way it's going (the move
   // keys steer it as they do yours). Off again where the ground levels out and it's slowing, near where it's going, or in a fight.
-  board(dt, m, hx, hz, left) {
+  // (along(k): the point k metres on down a way it's following, when there is one: the fall is measured down that, since a
+  // path cut across a hillside falls along itself and not along a straight line from where it stands.)
+  board(dt, m, hx, hz, left, along = null) {
     this.boardFrame = true;
     const a = this.auto, can = !!this.o.pack.slots.off && !m.town && !m.below && !inChurch(m.x, m.y + 1, m.z) && !this.fighting && left > 40;
-    const h0 = terrainHeight(m.x, m.z), drop = (k) => (h0 - terrainHeight(m.x + hx * k, m.z + hz * k)) / k;
+    const h0 = terrainHeight(m.x, m.z), drop = (k) => { const [x, z] = along ? along(k) : [m.x + hx * k, m.z + hz * k]; return (h0 - terrainHeight(x, z)) / k; };
     const speed = Math.hypot(m.vx, m.vz);
     this.surfCool -= dt;
     if (m.surf) {
@@ -2514,7 +2568,8 @@ export class Brain {
       this.say(`Riding the shield down (${speed.toFixed(0)} m/s).`);
       return;
     }
-    if (this.surfCool > 0) { if (this.t - this.surfAt > 0.9) a.jumpHeld = false; return; }
+    // (Space kept down through the jump, said again each time: whoever called may have let its hands go since the last thought.)
+    if (this.surfCool > 0) { a.jumpHeld = this.t - this.surfAt <= 0.9; return; }
     if (can && drop(25) > 0.1 && drop(55) > 0.08 && m.ground && speed > 3.5) {
       this.o.shared.input[INPUT.JUMP] += 1;
       a.jumpHeld = true;

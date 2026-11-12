@@ -8,6 +8,10 @@
 // Under a roof (the cathedral and its catacombs, the Warrens, the Test Dungeon) both maps show the place's own chart, of
 // what you've walked of it: src/ui/undermap.js.
 //
+// The quest log's Map (src/ui/folk.js) opens the big one framed on where a quest takes place, with a gold pin on each spot
+// and its name (showPlace), whether you've been there or not; someone who walks about is followed. Under a roof it shows the
+// land instead when that's where the quest is. The pins go when the map's shut.
+//
 // Seen from above with the way you face pointing up the screen, +z is up and -x is to the right (the camera's right
 // is (-cos yaw, sin yaw)), so on the paper a point (x, z) goes to (-x, -z). The big map keeps +z up.
 
@@ -66,15 +70,18 @@ export class WorldMap {
     this.cx = 0; this.cz = 0; this.follow = true;
     this.spanOut = NEAR_SPAN; this.spanIn = IN_SPAN;
     this.place = null;                // the chart of where you are, under a roof
+    this.pin = null;                  // a quest's place, from the quest log: { title, spots, chart } (showPlace)
     this.title = this.big.querySelector('.mapTitle');
     this.bind();
     this.build();
     fetch(`${base}assets/game/interior/interior.json`).then((r) => r.json()).then(setInterior).catch(() => { /* no chart of the church */ });
   }
 
-  get span() { return this.place ? this.spanIn : this.spanOut; }
+  // The chart the big map shows: where you are, unless a quest's place is pinned somewhere else (the land, from under a roof).
+  get view() { return this.pin && this.open ? this.pin.chart : this.place; }
+  get span() { return this.view ? this.spanIn : this.spanOut; }
   set span(v) {
-    if (this.place) { const c = this.place; this.spanIn = Math.min(Math.max(c.x1 - c.x0, c.z1 - c.z0) * 1.15, Math.max(IN_MIN, v)); }
+    if (this.view) { const c = this.view; this.spanIn = Math.min(Math.max(c.x1 - c.x0, c.z1 - c.z0) * 1.15, Math.max(IN_MIN, v)); }
     else this.spanOut = Math.min(2 * WORLD * 1.04, Math.max(SPAN_MIN, v));
   }
 
@@ -108,7 +115,7 @@ export class WorldMap {
     if (this.lastSnap) { this.cx = this.lastSnap[H.PX]; this.cz = this.lastSnap[H.PZ]; }
   }
 
-  centre() { this.follow = true; this.redraw(); }
+  centre() { this.follow = true; if (this.pin) this.pin.chart = this.place; this.redraw(); }
   redraw() { if (this.open) this.drawBig(this.lastSnap, this.lastYaw); }
 
   // The hands on the big map: the wheel, a drag, a pinch, its buttons and keys.
@@ -407,9 +414,10 @@ export class WorldMap {
   // M: the map round you, and away again. It opens on you, as near as it was left.
   toggle(on = !this.open) {
     this.open = on;
+    if (!on) this.pin = null;
     if (this.input) this.input.mapUp = on;      // (the left button moves the map, not the sword: src/input.js)
     this.big.classList.toggle('open', on);
-    document.body.classList.toggle('map-up', on);      // (a phone gives it the whole screen: src/ui/hud.css)
+    document.body.classList.toggle('map-open', on);   // (on a phone the skull and Auto step aside: index.html)
     if (on) { this.follow = true; this.drawBig(this.lastSnap, this.lastYaw); }
   }
 
@@ -419,7 +427,7 @@ export class WorldMap {
     this.lastSnap = snap; this.lastYaw = yaw;
     const x = snap[H.PX], z = snap[H.PZ];
     const place = chartAt(x, snap[H.PY], z);
-    if (place !== this.place) { this.place = place; this.follow = true; }
+    if (place !== this.place) { this.place = place; if (!this.pin) this.follow = true; }
     if (place) place.see(x, z);
     else {
       const cell = Math.floor((WORLD - z) / FOG_M) * FOG + Math.floor((WORLD - x) / FOG_M);
@@ -434,8 +442,7 @@ export class WorldMap {
   }
 
   // The dots: whoever's about, near enough to matter.
-  marks(g, snap, toScreen, reach, px, pz, scale) {
-    const place = this.place;
+  marks(g, snap, toScreen, reach, px, pz, scale, place = this.place) {
     const n = snap[H.NCHARS];
     for (let i = 0; i < n; i++) {
       const o = CHARS_START + i * C_SIZE;
@@ -450,10 +457,10 @@ export class WorldMap {
     }
   }
 
-  arrow(g, sx, sy, angle, size) {
+  arrow(g, sx, sy, angle, size, colour = '#f1d68a') {
     g.save();
     g.translate(sx, sy); g.rotate(angle);
-    g.fillStyle = '#f1d68a'; g.strokeStyle = '#120c06'; g.lineWidth = 1.5;
+    g.fillStyle = colour; g.strokeStyle = '#120c06'; g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(0, -size); g.lineTo(size * 0.62, size * 0.7); g.lineTo(0, size * 0.32); g.lineTo(-size * 0.62, size * 0.7); g.closePath();
     g.fill(); g.stroke();
     g.restore();
@@ -464,6 +471,64 @@ export class WorldMap {
     const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     return dpr;
+  }
+
+  // The quest log's Map: the big map opened (by src/main.js) and framed on a quest's place. p: { title, spots: [{ x, z, name,
+  // r (anywhere round it counts), below (in the catacombs), at() (where someone is now) }] }. False if it's nowhere yet.
+  showPlace(p) {
+    const at = (sp) => sp.at?.() || sp, ok = (q) => Number.isFinite(q.x) && Number.isFinite(q.z);
+    const pts = p.spots.map((sp) => ({ ...sp, ...at(sp) })).filter(ok);
+    if (!pts.length) return false;
+    // On the chart you're on if it's all there (down in the catacombs with you); else on the land.
+    const here = this.place;
+    const chart = here && pts.every((q) => chartAt(q.x, q.below ? -12 : 2, q.z) === here) ? here : null;
+    this.pin = { title: p.title, spots: p.spots, chart, t0: performance.now() };
+    // Framed: all of it, with room round it; as near as 160 m across on the land, 40 m under a roof.
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const q of pts) { const r = q.r || 0; x0 = Math.min(x0, q.x - r); x1 = Math.max(x1, q.x + r); z0 = Math.min(z0, q.z - r); z1 = Math.max(z1, q.z + r); }
+    this.follow = false;
+    this.cx = (x0 + x1) / 2; this.cz = (z0 + z1) / 2;
+    // (The span is across the canvas's shorter side: a wide canvas shows a wide place in less of it.)
+    const c = this.bigCanvas, w = Math.max(c.clientWidth, 1), h = Math.max(c.clientHeight, 1), s = Math.min(w, h);
+    this.span = Math.max(chart ? 40 : 160, Math.max((x1 - x0) * s / w, (z1 - z0) * s / h) * 1.4);
+    this.redraw();
+    return true;
+  }
+
+  // The pinned place: a gold pin on each spot with its name (a ring round it when anywhere near counts), an arrow at the rim
+  // for one that's off the edge, and the quest's name across the top.
+  drawPin(g, toScreen, k, dpr, W, Hh, text) {
+    const P = this.pin, t = (performance.now() - P.t0) / 1000, m = 22 * dpr;
+    for (const sp of P.spots) {
+      const q = sp.at?.() || sp;
+      if (!Number.isFinite(q.x) || !Number.isFinite(q.z)) continue;
+      const [sx, sy] = toScreen(q.x, q.z);
+      if (sx < m || sy < m || sx > W - m || sy > Hh - m) {
+        // Off the edge: a pin at the rim, pointing out to it.
+        const ex = Math.min(W - m, Math.max(m, sx)), ey = Math.min(Hh - m, Math.max(m, sy));
+        this.arrow(g, ex, ey, Math.atan2(sx - ex, -(sy - ey)), 8 * dpr, '#ffd21f');
+        continue;
+      }
+      const rr = (sp.r || 0) * k;
+      if (rr > 14 * dpr) {
+        g.save();
+        g.fillStyle = 'rgba(255, 210, 31, 0.10)'; g.strokeStyle = 'rgba(255, 210, 31, 0.75)'; g.lineWidth = 1.5 * dpr; g.setLineDash([6 * dpr, 5 * dpr]);
+        g.beginPath(); g.arc(sx, sy, rr, 0, 6.2832); g.fill(); g.stroke();
+        g.restore();
+      }
+      // A ring going out from it, so it's found at a glance.
+      const f = (t % 1.6) / 1.6;
+      g.strokeStyle = `rgba(255, 210, 31, ${(0.85 * (1 - f)).toFixed(3)})`; g.lineWidth = 2 * dpr;
+      g.beginPath(); g.arc(sx, sy - 13 * dpr, (6 + 16 * f) * dpr, 0, 6.2832); g.stroke();
+      // The pin: a round head on a point, gold with a dark edge.
+      g.fillStyle = '#ffd21f'; g.strokeStyle = '#2a1700'; g.lineWidth = 1.6 * dpr;
+      // (Its sides run from the point to touch the head: acos(r / d) either side of straight down.)
+      const side = Math.acos(7.5 / 14);
+      g.beginPath(); g.moveTo(sx, sy); g.arc(sx, sy - 14 * dpr, 7.5 * dpr, Math.PI / 2 + side, Math.PI / 2 - side); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#2a1700'; g.beginPath(); g.arc(sx, sy - 14 * dpr, 2.6 * dpr, 0, 6.2832); g.fill();
+      if (sp.name) text(sp.name, sx, sy + 11 * dpr, 13, false, '#ffe07a');
+    }
+    if (P.title) text(`\u25C6 ${P.title}`, W / 2, 18 * dpr, 15, false, '#ffd21f');
   }
 
   drawMini(snap, yaw) {
@@ -519,7 +584,7 @@ export class WorldMap {
     const W = c.width, Hh = c.height;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = '#060504'; g.fillRect(0, 0, W, Hh);
-    const place = this.place && this.place.kind ? this.place : null;
+    const view = this.view, place = view && view.kind ? view : null;
     this.span = this.span;                 // (kept within what this place allows)
     const k = this.k, hw = W / 2 / k, hh = Hh / 2 / k;
     if (this.follow && snap) { this.cx = snap[H.PX]; this.cz = snap[H.PZ]; }
@@ -586,7 +651,8 @@ export class WorldMap {
     if (this.title && this.title.textContent !== title) this.title.textContent = title;
     if (!snap) return;
     const px = snap[H.PX], pz = snap[H.PZ];
-    this.marks(g, snap, toScreen, place ? 80 : Math.min(400, Math.max(120, this.span)), px, pz, dpr);
+    this.marks(g, snap, toScreen, place ? 80 : Math.min(400, Math.max(120, this.span)), px, pz, dpr, view);
+    if (this.pin) this.drawPin(g, toScreen, k, dpr, W, Hh, text);
     // You: the arrow, or at the map's rim a small one pointing the way back to you.
     // (Facing yaw goes along (sin, cos) in x and z, which is (-sin, -cos) on the paper.)
     const [sx, sy] = toScreen(px, pz), m = 14 * dpr;

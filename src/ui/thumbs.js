@@ -42,7 +42,7 @@ export function boxes(w, h) {
   const m = TOP;
   out.push({ id: 'mapMini', x: w - (m.side + m.mini / 2) * u, y: (m.pad + m.mini / 2) * u, r: (m.mini / 2) * u, square: true });     // (the corner map is a square: r is half its side)
   // The dock, right to left from the map: Auto, then the menu, the pack, the book, the journal, the view.
-  ['autoBtn', 'bPause', 'bPack', 'bBook', 'bJournal', 'bView'].forEach((id, k) => {
+  ['autoBtn', 'bPause', 'bPack', 'bBook', 'bQuests', 'bView'].forEach((id, k) => {
     out.push({ id, x: w - (m.side + m.mini + m.pad + m.dock / 2 + k * (m.dock + m.gap)) * u, y: (m.pad + m.dock / 2) * u, r: (m.dock / 2) * u });
   });
   return out;
