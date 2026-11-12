@@ -523,7 +523,7 @@ async function boot(plan, poolSize) {
     });
     addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
   }
-  // A word with the town (src/ui/folk.js): E to someone, J for the journal.
+  // A word with the town (src/ui/folk.js): E to someone, J for the quest log.
   const giveXp = (n) => {
     if (!stepXp(pack, n)) { showLevel(); return; }
     arm();
@@ -561,6 +561,9 @@ async function boot(plan, poolSize) {
       click: () => title.chime?.(),
       // A charm for a quest (src/ui/lands.js), into the pouch.
       charm: (k) => !!game.lands?.addCharm(k, true),
+      // The quest log: what auto-play is working on (src/ui/autoplay.js), and the big map framed on where a quest is.
+      auto: () => game.autoplay?.current(),
+      map: (p) => { if (!worldMap.open) toggleMap(); worldMap.showPlace(p); },
     },
   });
   game.townUI = townUI;
@@ -895,6 +898,15 @@ async function boot(plan, poolSize) {
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
     spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES,
   });
+  // The quest log (J): beside the spellbook's B on the spell bar, and on a phone QUESTS beside PACK (the only way to it there).
+  const questBtn = document.createElement('div');
+  questBtn.id = 'questOpen';
+  questBtn.title = 'Quest log (J)';
+  questBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8"/><path d="M6 4a2 2 0 0 0-2 2v1h4V6a2 2 0 0 0-2-2z"/><path d="M8 20a2 2 0 0 1-2-2V7"/><path d="M10 9h6M10 12.5h6M10 16h4"/></svg><kbd>J</kbd>';
+  const questLog = (e) => { e.preventDefault(); e.stopPropagation(); if (townUI.book) townUI.closeBook(); else if (townUI.act.canMenu()) townUI.openBook(); };
+  questBtn.addEventListener('mousedown', questLog);
+  questBtn.addEventListener('touchstart', questLog, { passive: false });
+  $('spellOpen').after(questBtn);
   const closePack = (viaEsc) => {
     inventory.hide();
     input.menu = false;
@@ -953,6 +965,7 @@ async function boot(plan, poolSize) {
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
   $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) openPack(); }, { passive: false });
+  $('bQuests').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) questLog(e); }, { passive: false });
   $('bMap').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) toggleMap(); }, { passive: false });
   $('bTake').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) game.takeNearest(); }, { passive: false });
   $('touch').addEventListener('touchstart', () => {
@@ -961,8 +974,8 @@ async function boot(plan, poolSize) {
   });
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> opens your spellbook, where your points are spent and your bar is set. <b>PACK</b> holds your gear. <b>MAP</b> shows the land. <b>Auto</b>, under the skull, lets the game play itself.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> journal &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> opens your spellbook, where your points are spent and your bar is set. <b>PACK</b> holds your gear. <b>MAP</b> shows the land. <b>QUESTS</b>, by PACK, is your quest log: each quest, where it takes place, and what to do next. <b>Auto</b>, under the skull, lets the game play itself.'
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   watchFiles(null);

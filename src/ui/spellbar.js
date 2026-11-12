@@ -101,10 +101,10 @@ export class SpellBar {
     // With the pointer locked there's no cursor to reach a slot with: Alt gives you one, and takes the mouse off the view while it's held.
     this.cursor = $('softCursor');
     input.softPress = (x, y) => {
-      const s = document.elementFromPoint(x, y)?.closest('.spell, #spellOpen, #viewBtn');
+      const s = document.elementFromPoint(x, y)?.closest('.spell, #spellOpen, #viewBtn, #questOpen');
       if (!s) return;
-      // (The eye beside the book: first person or third, src/ui/view.js.)
-      if (s.id === 'viewBtn') { s.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); return; }
+      // (The eye beside the book: first person or third, src/ui/view.js. The quest log's J: src/main.js.)
+      if (s.id === 'viewBtn' || s.id === 'questOpen') { s.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); return; }
       if (s.id === 'spellOpen') { if (input.enabled && !input.menu) openBook(); return; }
       this.press(this.slots.indexOf(s), 'pointer');
     };

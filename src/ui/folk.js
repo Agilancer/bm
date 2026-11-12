@@ -1,5 +1,5 @@
 // Talking with Bellmourn: what's said in the street, over the speaker's head; a word with someone (E), with what they've to
-// say, what they'll tell you, the work they've got, and their counter if they keep one; the journal (J); and the notes
+// say, what they'll tell you, the work they've got, and their counter if they keep one; the quest log (J); and the notes
 // that come up as things happen; and the ! and ? over the heads of those with work. Lisandra, once she's walked you down,
 // stands where the Long Road comes in and is talked to here too (src/folk/lines/lisandra.js). What's said is src/folk/lines/;
 // quests' workings src/folk/quests.js; trade src/folk/shops.js.
@@ -23,6 +23,7 @@ import { VOICED } from '../core/voiced.js';
 import { unnamed, voiceKey } from '../core/voicekey.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { CLOSE_X } from './menu-x.js';
+import { giverOf, hintOf, placeOf, questLevel, rewardOf, stepsOf } from './questlog.js';
 
 const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
 
@@ -44,10 +45,6 @@ const FOV = 64;                // the camera's, top to bottom (src/gfx/renderer.
 const TOPICS = { tessariels: 'The other Tessariels', knight: 'The knight at the cathedral', dead: 'The walking dead', lis: 'Lisandra', town: 'Bellmourn', silver: 'The silver knight by the green' };
 // What the player can say back, to a few, after they've told of the other Tessariels and the beautiful woman (lines: `old`).
 const OLD = "She wasn't beautiful. She was old.";
-// The journal's first page, till Bram's given you his errand.
-const START = 'You came down into Bellmourn with nothing: no coin, no bed. North of the well is the inn, the Tolling Bell. Bram Kettle keeps it, and counts every stranger through his door. Start with him.';
-// Or, before that, till Lisandra's said her piece.
-const LIS_START = 'You came down into Bellmourn with nothing: no coin, no bed. Lisandra is waiting where the Long Road comes into town, with something to say. She always has something to say.';
 
 const STYLE = `
 body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
@@ -94,19 +91,81 @@ body.folk-talking #cross, body.folk-talking #take { visibility: hidden; }
 .tk-ember { display: flex; gap: 8px; align-items: center; font-size: 13.5px; margin: 2px 0 6px; color: #e9b48a; }
 .tk-ember button { width: 24px; height: 22px; font: 14px Georgia; color: var(--bone); background: rgba(255,255,255,.06); border: 1px solid rgba(140,115,68,.5); cursor: pointer; }
 .tk-satchel { font-size: 12.5px; opacity: .8; margin-top: 6px; }
-#folkBook { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(640px, 92vw); max-height: 86vh; overflow: auto; padding: 16px 22px 14px; }
-#folkBook h3 { margin: 0 0 10px; font: 700 20px Cinzel, Georgia, serif; color: var(--gold); letter-spacing: .08em; }
-#folkBook h4 { margin: 14px 0 6px; font: 600 13px Georgia, serif; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-dim); }
-#folkBook .qt { font: 600 16px Georgia, serif; color: #f1d78f; margin-top: 8px; }
-#folkBook .qf { cursor: pointer; padding: 1px 8px 5px 22px; margin: 2px -8px 0 -22px; border-left: 2px solid transparent; position: relative; }
-#folkBook .qf:hover { background: rgba(201,163,92,.08); }
-#folkBook .qf.on { border-left-color: #e8c15a; background: rgba(232,193,90,.07); }
-#folkBook .qf.on .qt::before { content: "\\25C6"; position: absolute; left: 6px; color: #e8c15a; font-size: 11px; margin-top: 3px; }
-#folkBook .qhint { font-size: 12.5px; opacity: .6; margin-top: 8px; font-style: italic; }
+/* The quest log: its head held still, the rest scrolling under it, so the × is always in reach. Within a phone's notch, and
+   within the screen a phone's browser leaves when its bar is showing (dvh). */
+/* (Opaque, so nothing of the HUD shows through the words; and the skull and Auto, which sit over every panel, out of its way.) */
+body.quest-log #vskull, body.quest-log #vskullTag, body.quest-log #autoBtn, body.quest-log #autoStatus { visibility: hidden !important; }
+#folkBook { background: #0d0b08; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  max-height: 88vh; max-height: 88dvh; overflow: hidden; flex-direction: column; box-sizing: border-box; }
+#folkBook .ql-head { flex: none; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(140,115,68,.42); padding: 12px 22px 8px; }
+#folkBook .ql-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 10px 22px 14px; overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+#folkBook h3 { margin: 0; font: 700 20px Cinzel, Georgia, serif; color: var(--gold); letter-spacing: .08em; }
+#folkBook .ql-count { font-size: 13px; opacity: .6; font-style: italic; margin-left: auto; }
+#folkBook .ql-head .menu-x { margin: 0 -8px 0 4px; }
+#folkBook h4 { margin: 16px 0 6px; font: 600 13px Georgia, serif; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-dim); }
+#folkBook .qt { font: 600 16.5px Georgia, serif; color: #f1d78f; }
 #folkBook .qs { font-size: 14.5px; line-height: 1.45; opacity: .9; }
 #folkBook .qd { font-size: 14px; opacity: .55; }
-#folkBook button { font: 13px Georgia, serif; color: var(--bone); background: rgba(255,255,255,.05); border: 1px solid rgba(140,115,68,.5); padding: 3px 10px; margin: 4px 6px 0 0; cursor: pointer; }
+#folkBook .qhint { font-size: 12.5px; opacity: .6; margin-top: 8px; font-style: italic; }
+#folkBook button:not(.menu-x) { font: 13px Georgia, serif; color: var(--bone); background: rgba(255,255,255,.05); border: 1px solid rgba(140,115,68,.5); padding: 3px 10px; margin: 4px 6px 0 0; cursor: pointer; }
+#folkBook button:not(.menu-x):hover:not(:disabled) { background: rgba(201,163,92,.18); border-color: rgba(201,163,92,.8); color: #fff4da; }
+#folkBook button:disabled { opacity: .4; cursor: default; }
+#folkBook button.qb-map::before { content: "\\25C9  "; color: #e8c15a; }
+#folkBook button.qb-follow.on { color: #11100c; background: var(--gold); border-color: var(--gold); }
+/* Auto-play, in its own blue (src/ui/autoplay.js) */
+#folkBook .ql-auto { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 6px 10px; margin: 0 0 8px; border: 1px solid #2a6a8a; background: rgba(4,20,30,.6); font-size: 13.5px; color: #c4dde6; }
+#folkBook .ql-auto b, #folkBook .qc-auto { font: 700 11px Cinzel, Georgia, serif; letter-spacing: .12em; color: #8fe0ff; }
+#folkBook .ql-auto.off { border-color: rgba(42,106,138,.45); background: none; color: #7f9aa6; font-style: italic; }
+#folkBook .ql-auto.off b { color: #6f97a8; font-style: normal; }
+#folkBook .qc { position: relative; padding: 9px 12px 10px 14px; margin: 0 0 8px; border: 1px solid rgba(140,115,68,.32); border-left: 3px solid rgba(140,115,68,.5); background: rgba(255,255,255,.02); }
+#folkBook .qc.on { border-left-color: #e8c15a; background: rgba(232,193,90,.06); }
+#folkBook .qc.auto { box-shadow: inset 0 0 0 1px rgba(79,208,255,.55), 0 0 12px rgba(42,176,255,.15); }
+#folkBook .qc-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+#folkBook .qc-tag { font: 700 11px Cinzel, Georgia, serif; letter-spacing: .1em; padding: 1px 6px; border: 1px solid; }
+#folkBook .qc-tag.follow { color: #e8c15a; border-color: rgba(232,193,90,.6); }
+#folkBook .qc-tag.auto { color: #8fe0ff; border-color: #2a6a8a; background: rgba(4,20,30,.6); }
+#folkBook .qc-tag.wait { color: #cdbd98; border-color: rgba(140,115,68,.5); }
+#folkBook .qc-from { font-size: 12.5px; color: #b9a982; margin: 2px 0 6px; }
+#folkBook .qc-from .lvl { color: #e9a36a; }
+#folkBook .qc-about { font-size: 14px; line-height: 1.45; opacity: .85; font-style: italic; }
+#folkBook .qc-steps { list-style: none; margin: 7px 0 0; padding: 0; }
+#folkBook .qc-steps li { position: relative; padding-left: 20px; font-size: 14.5px; line-height: 1.42; margin-top: 3px; }
+#folkBook .qc-steps li::before { content: "\\25C7"; position: absolute; left: 2px; top: 0; color: #e8c15a; font-size: 12px; }
+#folkBook .qc-steps li.done { opacity: .5; font-size: 13px; text-decoration: line-through; text-decoration-color: rgba(233,223,201,.35); }
+#folkBook .qc-steps li.done::before { content: "\\2713"; color: #9fbf7a; }
+#folkBook .qc-where { font-size: 12.5px; color: #b9a982; margin-top: 6px; }
+#folkBook .qc-doing { font-size: 13px; color: #8fe0ff; margin-top: 5px; }
+#folkBook .qc-btns { margin-top: 4px; }
+#folkBook .ql-hint { padding: 9px 12px 10px 14px; border: 1px solid rgba(232,193,90,.45); border-left: 3px solid #e8c15a; background: rgba(232,193,90,.05); }
+#folkBook .ql-hint ul { list-style: none; margin: 8px 0 0; padding: 0; }
+#folkBook .ql-hint li { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 3px 0; border-top: 1px solid rgba(140,115,68,.18); font-size: 14px; }
+#folkBook .ql-hint li button { margin: 0; flex: none; }
 #folkBook .foot { margin-top: 12px; font-size: 12.5px; opacity: .55; }
+body.touch #folkBook .foot .keys { display: none; }
+/* Under a thumb: bigger buttons and a bigger ×. */
+body.touch #folkBook button:not(.menu-x) { min-height: 34px; padding: 5px 14px; font-size: 14px; }
+body.touch #folkBook .ql-head .menu-x { width: 34px; height: 34px; }
+/* A phone on its side (or any small screen): nearly all of it, and everything a little closer together. */
+@media (max-height: 520px), (max-width: 700px) {
+  #folkBook { width: min(720px, calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right))); max-height: calc(100vh - 12px); max-height: calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  #folkBook .ql-head { padding: 6px 12px 6px; gap: 8px; }
+  #folkBook h3 { font-size: 17px; }
+  #folkBook .ql-count { font-size: 12px; }
+  #folkBook .ql-body { padding: 8px 12px 10px; }
+  #folkBook h4 { margin: 10px 0 5px; font-size: 12px; }
+  #folkBook .ql-auto { font-size: 12.5px; padding: 4px 8px; margin-bottom: 6px; }
+  #folkBook .qc, #folkBook .ql-hint { padding: 7px 10px 8px 11px; margin-bottom: 6px; }
+  #folkBook .qt { font-size: 15px; }
+  #folkBook .qc-from, #folkBook .qc-where { font-size: 12px; }
+  #folkBook .qc-from { margin-bottom: 4px; }
+  #folkBook .qc-about { font-size: 12.5px; line-height: 1.38; }
+  #folkBook .qc-steps { margin-top: 5px; }
+  #folkBook .qc-steps li { font-size: 13.5px; line-height: 1.36; }
+  #folkBook .qc-steps li.done { font-size: 12px; }
+  #folkBook .qs, #folkBook .ql-hint li { font-size: 13.5px; line-height: 1.38; }
+  #folkBook .qd { font-size: 13px; }
+  #folkBook .foot { margin-top: 6px; }
+}
 #folkNotes { position: fixed; left: 50%; top: 13vh; transform: translateX(-50%); z-index: 7; display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
 .fn { padding: 5px 14px; background: rgba(8,6,4,.72); border: 1px solid rgba(140,115,68,.45); font: 15px Georgia, serif; letter-spacing: .02em; color: var(--bone); transition: opacity .6s, transform .6s; }
 .fn.quest, .fn.done { color: #f1d78f; border-color: rgba(232,193,90,.7); font-size: 16px; }
@@ -295,6 +354,8 @@ export class TownUI {
   // Every frame: the balloons follow their speakers; the light you carry burns down.
   frame(dt, cam, px, py, pz, yaw, paused, snap = null) {
     this.snap = snap;
+    // The quest log open: drawn again if auto-play has moved on to something else.
+    if (this.book && (this.bookT = (this.bookT || 0) - dt) <= 0) { this.bookT = 0.5; if (autoKey(this.autoNow()) !== this.autoSeen) this.drawBook(); }
     const now = performance.now();
     const ph = this.houseOf(px, py, pz);
     this.drawMarks(cam, px, pz, ph);
@@ -821,30 +882,90 @@ export class TownUI {
     if (e.code === 'KeyJ' && this.act.canMenu()) { e.preventDefault(); this.openBook(); }
   }
 
-  // ---- the journal ----
+  // ---- the quest log ----
+  // Every quest you've taken on: what it is, who gave it and what it pays, its steps so far, where it takes place now (Map: the
+  // big map, framed on it), the gold trail to it (Follow), and which one auto-play is working on. With nothing taken on, a hint:
+  // what you should be doing instead. Then what's done, the papers kept and the satchel. The workings: src/ui/questlog.js.
 
-  openBook() { this.book = true; this.act.sound?.('bookOpen'); this.act.opened(); this.drawBook(); this.bookEl.style.display = 'block'; }
-  closeBook() { this.book = false; this.act.sound?.('bookClose'); this.bookEl.style.display = 'none'; this.act.closed(); }
+  openBook() { this.book = true; document.body.classList.add('quest-log'); this.act.sound?.('bookOpen'); this.act.opened(); this.drawBook(); this.bookEl.style.display = 'flex'; this.bookEl.querySelector('.ql-body').scrollTop = 0; }
+  closeBook() { this.book = false; document.body.classList.remove('quest-log'); this.act.sound?.('bookClose'); this.bookEl.style.display = 'none'; this.act.closed(); }
 
-  drawBook(read = -1) {
-    const Q = this.quests;
-    const live = Object.keys(RULES).filter((id) => Q.state(id) && !Q.done(id));
+  // Where someone is now, by id: { x, z }, or null when they can't be found.
+  personAt(id) {
+    const i = this.people.findIndex((p) => p.id === id), w = i >= 0 ? this.whereOf(i) : null;
+    return w ? { x: w.x, z: w.z } : null;
+  }
+
+  // What auto-play is about (src/ui/autoplay.js current): { on, quest, offer, say }.
+  autoNow() { return this.act.auto?.() || { on: false }; }
+
+  drawBook(read = this.reading ?? -1) {
+    this.reading = read;
+    const Q = this.quests, snap = this.snap, person = (id) => this.personAt(id);
+    const live = Q.active();
     const done = Object.keys(RULES).filter((id) => Q.done(id));
     const sat = Object.entries(this.pack.mats).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${matName(k, n)}`).join(', ');
-    // Before anyone's asked anything of you: where to start (the opening leaves you outside the town with nothing).
-    // (The one you follow has the trail on the ground to it: src/ui/trail.js. Pick another, or the same again to put it away.)
-    const on = Q.followed();
-    const entry = (id, title, text) => `<div class="qf${on === id ? ' on' : ''}" data-q="${id}"><div class="qt">${title}</div><div class="qs">${esc(text)}</div></div>`;
-    const start = Q.started() ? '' : entry('start', 'Bellmourn', this.whereOf(this.lisI) ? LIS_START : START);
-    this.bookEl.innerHTML = `<h3>Journal</h3>${start}
-      ${live.length ? live.map((id) => entry(id, QUESTS[id].title, Q.journalLine(id))).join('') : start ? '' : '<div class="qs" style="opacity:.7">Nothing asked of you yet. The town has work, for anyone who\'ll talk to it.</div>'}
-      ${start || live.length ? `<div class="qhint">${on ? 'The gold trail on the ground leads to the marked one. Tap another to follow it, or the same to hide the trail.' : 'Tap one to follow it: a gold trail on the ground leads you there.'}</div>` : ''}
-      ${done.length ? `<h4>Done</h4>${done.map((id) => `<div class="qd">${QUESTS[id].title}</div>`).join('')}` : ''}
-      ${this.papers.length ? `<h4>Kept</h4>${this.papers.map((p, k) => `<button data-r="${k}">${esc(p.title)}</button>`).join('')}${read >= 0 ? `<div class="tk-paper">${esc(this.papers[read].text)}</div>` : ''}` : ''}
+    // (The one you follow has the trail on the ground to it: src/ui/trail.js. Follow another, or Hide the trail.)
+    const on = Q.followed(), lvl = this.pack.level || 1;
+    const auto = this.autoNow();
+    this.autoSeen = autoKey(auto);
+    const finite = (sp) => Number.isFinite(sp?.x) && Number.isFinite(sp?.z);
+    const places = {};
+    const mapBtn = (attr, ok) => `<button type="button" class="qb-map" ${attr}${ok ? '' : ' disabled title="Not to be found just now"'}>Map</button>`;
+    const followBtn = (id) => `<button type="button" class="qb-follow${on === id ? ' on' : ''}" data-q="${id}">${on === id ? 'Hide trail' : 'Follow trail'}</button>`;
+    // (What auto-play says it's doing, less the quest's own title in front of it.)
+    const doing = (id) => { const t = `${QUESTS[id].title}: `, say = auto.say || ''; return say.startsWith(t) ? say.slice(t.length) : say; };
+    const card = (id) => {
+      const s = Q.state(id), q = QUESTS[id], place = (places[id] = placeOf(id, { Q, mats: this.pack.mats, person }));
+      const want = questLevel(id), making = s.stage === 'making', isAuto = auto.on && auto.quest === id;
+      const tags = [isAuto && '<span class="qc-tag auto">AUTO-PLAY IS ON THIS</span>', on === id && '<span class="qc-tag follow">FOLLOWING</span>',
+        making && `<span class="qc-tag wait">${this.act.day() >= s.ready ? 'READY' : 'READY TOMORROW'}</span>`].filter(Boolean).join('');
+      return `<div class="qc${on === id ? ' on' : ''}${isAuto ? ' auto' : ''}">
+        <div class="qc-top"><span class="qt">${esc(q.title)}</span>${tags}</div>
+        <div class="qc-from">From ${esc(giverOf(id))} &middot; Pays ${esc(rewardOf(id))}${want > lvl ? ` &middot; <span class="lvl">Suggested level ${want}</span>` : ''}</div>
+        <div class="qc-about">${esc(q.about || '')}</div>
+        <ul class="qc-steps">${stepsOf(id, Q).map((t) => `<li class="${t.done ? 'done' : 'now'}">${esc(t.text)}</li>`).join('')}</ul>
+        ${place ? `<div class="qc-where">Where: ${esc(place.where)}</div>` : ''}
+        ${isAuto && doing(id) ? `<div class="qc-doing">Auto-play: ${esc(doing(id))}</div>` : ''}
+        <div class="qc-btns">${mapBtn(`data-map="${id}"`, place?.spots.some(finite))}${followBtn(id)}</div>
+      </div>`;
+    };
+    // Auto-play: what it's working on (the quest it's on is marked below), or that it's off.
+    const autoLine = !auto.on
+      ? '<div class="ql-auto off"><b>AUTO-PLAY</b><span>is off. Turn it on (P, or the Auto button under the skull) and the quest it works on is marked here.</span></div>'
+      : auto.quest && live.includes(auto.quest)
+        ? `<div class="ql-auto"><b>AUTO-PLAY</b><span>is working on <i>${esc(QUESTS[auto.quest].title)}</i>${doing(auto.quest) ? `: ${esc(doing(auto.quest))}` : '.'}</span></div>`
+        : `<div class="ql-auto"><b>AUTO-PLAY</b><span>${auto.mode && !auto.offer ? `${esc(auto.mode)}: ` : ''}${auto.offer ? 'is off to take on new work: ' : ''}${esc(auto.say || 'Looking for what to do.')}</span></div>`;
+    // Nothing taken on: what you should be doing instead.
+    const stage = snap ? snap[H.OPENING] : OPENING.ARRIVED;
+    const hint = live.length ? null : hintOf({ Q, stage, lisHere: !!this.whereOf(this.lisI), level: lvl, person, px: snap ? snap[H.PX] : 0, pz: snap ? snap[H.PZ] : 0 });
+    const arrived = !(stage > 0 && stage < OPENING.ARRIVED);
+    const hintBox = hint ? `<h4>Hint</h4><div class="ql-hint"><div class="qt">${esc(hint.title)}</div><div class="qs">${esc(hint.text)}</div>
+      ${hint.items.length ? `<ul>${hint.items.map((it, k) => `<li><span>${esc(it.text)}</span>${mapBtn(`data-hint="${k}"`, finite(it.spot) && (arrived || stage === OPENING.ESCORT))}</li>`).join('')}</ul>` : ''}
+      ${!Q.started() && arrived ? `<div class="qc-btns">${followBtn('start')}</div>` : ''}</div>` : '';
+    // (Drawn again as things change: kept where it was scrolled to.)
+    const was = this.bookEl.querySelector('.ql-body')?.scrollTop || 0;
+    this.bookEl.innerHTML = `<div class="ql-head"><h3>Quest Log</h3><span class="ql-count">${live.length} under way${done.length ? ` &middot; ${done.length} done` : ''}</span>${CLOSE_X}</div>
+      <div class="ql-body">${autoLine}
+      ${live.length ? `<h4>Under way</h4>${live.map(card).join('')}<div class="qhint">Map shows where a quest takes place now. Follow trail lays a gold trail on the ground to it.</div>` : ''}
+      ${hintBox}
+      ${done.length ? `<h4>Done</h4>${done.map((id) => `<div class="qd">${esc(QUESTS[id].title)}</div>`).join('')}` : ''}
+      ${this.papers.length ? `<h4>Kept</h4>${this.papers.map((p, k) => `<button data-r="${k}">${esc(p.title)}</button>`).join('')}${read >= 0 && this.papers[read] ? `<div class="tk-paper">${esc(this.papers[read].text)}</div>` : ''}` : ''}
       <h4>Satchel</h4><div class="qs">${sat || 'Empty.'}</div>
-      <div class="foot">J or Esc to close</div>`;
+      <div class="foot"><span class="keys">J or Esc to close</span></div></div>`;
+    this.bookEl.querySelector('.ql-body').scrollTop = was;
+    this.bookEl.querySelector('.menu-x').onclick = (e) => { e.stopPropagation(); this.closeBook(); };
     for (const b of this.bookEl.querySelectorAll('[data-r]')) b.onclick = () => this.drawBook(+b.dataset.r === read ? -1 : +b.dataset.r);
     for (const b of this.bookEl.querySelectorAll('[data-q]')) b.onclick = () => { this.act.sound?.('ui_confirm'); Q.pick(b.dataset.q); };
+    for (const b of this.bookEl.querySelectorAll('[data-map]')) b.onclick = () => { const id = b.dataset.map; this.showOnMap(QUESTS[id].title, places[id]?.spots || []); };
+    for (const b of this.bookEl.querySelectorAll('[data-hint]')) b.onclick = () => { const it = hint.items[+b.dataset.hint]; this.showOnMap(hint.title, [{ ...it.spot, name: it.spot.name || it.text }]); };
+  }
+
+  // The big map, framed on where something takes place (src/ui/map.js showPlace); someone who walks about is followed there.
+  showOnMap(title, spots) {
+    const live = spots.map((sp) => (sp.who ? { ...sp, at: () => this.personAt(sp.who) } : sp));
+    this.closeBook();
+    this.act.map?.({ title, spots: live });
   }
 
   // ---- notes as things happen ----
@@ -883,3 +1004,5 @@ export class TownUI {
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+// What the log shows of auto-play, as one string: it's drawn again when this changes.
+const autoKey = (a) => `${a.on ? 1 : 0}|${a.quest || ''}|${a.offer || ''}|${a.say || ''}|${a.mode || ''}`;

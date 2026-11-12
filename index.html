@@ -81,6 +81,9 @@
   #mapMini { position: absolute; right: calc(20px + env(safe-area-inset-right)); top: calc(18px + env(safe-area-inset-top)); width: 168px; height: 168px; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,.7); opacity: .92; display: none; }
   #mapBig { position: fixed; inset: 0; z-index: 8; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 6px; background: rgba(4,3,2,.55); pointer-events: none; }
   #mapBig.open { display: flex; }
+  /* On a phone the big map has the screen: darker behind it, and the skull and Auto (which sit over everything) off its buttons. */
+  body.touch #mapBig { background: rgba(4,3,2,.84); }
+  body.touch.map-open #vskull, body.touch.map-open #vskullTag, body.touch.map-open #autoBtn, body.touch.map-open #autoStatus { visibility: hidden; }
   #mapBigCanvas { width: min(94vw, 150vh); height: min(82vh, calc(100vh - 86px)); border: 1px solid var(--gold-dim); opacity: .93; pointer-events: auto; touch-action: none; cursor: grab; }
   #mapBigCanvas.held { cursor: grabbing; }
   .mapWrap { position: relative; line-height: 0; }
@@ -108,6 +111,8 @@
   #bPack { width: 56px; height: 56px; left: calc(30px + env(safe-area-inset-left)); bottom: calc(256px + env(safe-area-inset-bottom)); }
   /* First person or third (src/ui/view.js): not there until you're out of the cave. */
   #bView { width: 56px; height: 56px; left: calc(96px + env(safe-area-inset-left)); bottom: calc(256px + env(safe-area-inset-bottom)); display: none; }
+  /* The quest log, beside the pack (src/ui/folk.js): on a phone, in place of the J by the spell bar, which crowds GUARD there. */
+  #bQuests { width: 56px; height: 56px; left: calc(162px + env(safe-area-inset-left)); bottom: calc(256px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0; }
   #bMap { width: 40px; height: 40px; left: 50%; margin-left: 30px; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: .04em; }
   #bTake { width: 66px; height: 66px; right: calc(218px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); display: none; background: rgba(201,163,92,.32); }
   #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #0b0907; z-index: 30; font-size: 18px; text-align: center; padding: 30px; color: var(--gold); }
@@ -200,6 +205,10 @@
   #viewBtn kbd { position: absolute; right: 2px; bottom: 0; font: inherit; font-size: 8px; color: #b9ad94; }
   body.touch #viewBtn { display: none !important; }
   #spellOpen { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; font-size: 13px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
+  #questOpen { position: relative; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
+  #questOpen:hover { background: rgba(201,163,92,.2); }
+  #questOpen kbd { position: absolute; right: 2px; bottom: 0; font: inherit; font-size: 8px; color: #b9ad94; }
+  body.touch #questOpen { display: none; }
   #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
   #softCursor { position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin: -2px 0 0 -2px; display: none; z-index: 40; pointer-events: none; }
   #softCursor::before { content: ''; display: block; width: 0; height: 0; border-left: 11px solid #e7cf9a; border-bottom: 16px solid transparent; filter: drop-shadow(0 1px 2px #000); }
@@ -211,8 +220,12 @@
   /* On a touch screen the slots sit left of the thumb buttons and do the casting themselves. */
   body.touch #spells { left: 41%; bottom: calc(6px + env(safe-area-inset-bottom)); gap: 4px; }
   body.touch #spells .spell { width: 42px; height: 42px; padding: 7px; }
+  /* (A narrow phone, like an SE on its side: further left, or its B sits on GUARD.) */
+  @media (max-width: 700px) { body.touch #spells { left: 35%; } }
   body.touch #spellOpen { width: 36px; height: 36px; }
   body.touch #bPause { bottom: auto; top: calc(6px + env(safe-area-inset-top)); }
+  /* (And MAP up beside it, left of it: at the foot it sat under the spell bar's B and J.) */
+  body.touch #bMap { bottom: auto; top: calc(6px + env(safe-area-inset-top)); margin-left: -70px; }
   body.touch #bTake { bottom: calc(112px + env(safe-area-inset-bottom)); }
   #spellHint { margin: 0 0 8px; font-size: 13px; color: #cfc3a8; text-align: center; }
   #spellSlots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; width: min(860px, 100%); margin-bottom: 12px; flex: none; }
@@ -442,6 +455,7 @@ body.op-handoff #cross{opacity:0;transition:none}
   <div class="tbtn" id="bPause">II</div>
   <div class="tbtn" id="bPack">PACK</div>
   <div class="tbtn" id="bView">3RD</div>
+  <div class="tbtn" id="bQuests">QUESTS</div>
   <div class="tbtn" id="bTake">TAKE</div>
   <div class="tbtn" id="bMap">MAP</div>
   <div class="tbtn" id="bCast">CAST</div>
