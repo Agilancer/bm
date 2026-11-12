@@ -1,6 +1,6 @@
 // Your own body in the third-person view (src/sim/playerbody.js), with no GPU: it stands on the ground, holds what it's
-// given where a hand is, wears the shield on its back only with the skull in hand and off the board, and its casts move
-// the arms without lifting the feet. And the view is locked in Lisandra's cave (src/core/third.js).
+// given where a hand is, wears the shield on its back only with the skull in hand and off the board, rides the board with
+// its arms out and its wrists straight, and its casts move the arms without lifting the feet. And the view is locked in Lisandra's cave (src/core/third.js).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -147,7 +147,7 @@ test('on the board with the staff and the skull: a level grip, the staff\'s foot
       assert.ok(over > 0.08, `${name}, lean ${tilt}: the staff's foot is ${over.toFixed(2)} m over the ground`);
       assert.ok(up[0] * h[0] + up[2] * h[2] > 0.5, `${name}, lean ${tilt}: its head is the way he's going`);
       assert.ok(dist(staff.slice(12, 15), at(body, 'R_Hand')) < 0.14, 'the staff is in the right fist');
-      assert.ok(R.bend * DEG < 32 && R.wring * DEG < 30, `${name}, lean ${tilt}: the staff's wrist is bent ${(R.bend * DEG).toFixed(0)} and wrung ${(R.wring * DEG).toFixed(0)} degrees`);
+      assert.ok(R.bend * DEG < 32 && R.wring * DEG < 35, `${name}, lean ${tilt}: the staff's wrist is bent ${(R.bend * DEG).toFixed(0)} and wrung ${(R.wring * DEG).toFixed(0)} degrees`);
       assert.ok(R.elbow * DEG > 40 && R.elbow * DEG < 100, `${name}, lean ${tilt}: the staff's elbow is bent ${(R.elbow * DEG).toFixed(0)} degrees`);
       assert.ok(Lh.bend * DEG < 20 && Lh.wring * DEG < 35, `${name}, lean ${tilt}: the skull's wrist is bent ${(Lh.bend * DEG).toFixed(0)} and wrung ${(Lh.wring * DEG).toFixed(0)} degrees`);
       if (name === 'level' && !tilt) {

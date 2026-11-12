@@ -138,7 +138,26 @@ screen is still what you hit. Which view you left it in is kept with the setting
     pushed with both (staff and skull, or open hand, or shield, shoved out together); one raised with one hand or with
     both. A held spell keeps the pose, with a tremor.
   - *The shield ride*: side on to the way the board's going, left foot ahead, knees bent, feet on the board's own slope,
-    head turned down the hill, the staff held up clear of the ground.
+    head turned down the hill. His arms are a surfer's (`HOLD.rideFront`, `rideBack`; `RIDE_ARMS`): the leading hand out
+    over the nose and a little to his toes, at his belt; the trailing arm cocked out behind him to his heels, a little
+    higher. Neither elbow is locked or folded and the two don't match. A lean onto his toes takes the leading hand down
+    to the ground on that side and the trailing one up and out; onto his heels the trailing hand goes down behind him and
+    the leading one up; off a crest both go up. A raised hand is kept out from him, never up by his head (that's a wave).
+    - *The forearms.* The forearm's skin is all on the one joint (the rig's twist joints carry none of it), so it can't
+      turn along its length: a hand turned on its forearm is turned in the few centimetres of skin at the wrist, and a
+      hand off the forearm's line is a kink there. So on the board an open hand lies along its own forearm wherever the
+      arm has gone (`along` and `flat` on a hold), let fall a few degrees, and is half turned, palm down and in, which is
+      how the forearm has it with the elbow let down. The fingers are closed up and shut a little more each from the
+      first to the little one (`fall`), the thumb in beside the first (`tuck`).
+    - *The staff* is carried low, like a lance (`PlayerBody.staffAlong`): the fist at his hip, the forearm level and
+      square to it, its head up the way the board's going and turned out to his toes (so it isn't end on to the camera
+      behind him), its foot trailed behind. It lies on the board's own slope, and the fist is lifted where the foot would
+      come within 0.3 m of the ground. Held upright, as it used to be, the fist had to be at his shoulder to keep the foot
+      off the ground, which stood the forearm up steeply and bent the wrist 75 degrees.
+    - *The skull* is held out ahead of him over the board, off his knee, and looks down the hill as he does.
+    - `node --test tests/player-body.test.mjs` holds all of that: how far each elbow's bent, each hand off its forearm's
+      line and turned on it, where the hands go in a lean and in the air, and the staff's foot over the ground on the
+      level and on 20 degree slopes every way, leaning or not.
 - **Put away.** Out of a fight nothing's in his hands (`STOW` in `src/sim/playerbody.js`, `Sim.stepStow`): the staff is on
   his back, nearly upright with its head over the right shoulder, under the shield; the shield on his back over it; the
   skull at his left hip. Each swings out round him on its way there and back. On the board the staff lies further over,
@@ -151,8 +170,12 @@ screen is still what you hit. Which view you left it in is kept with the setting
   (`Casting.bodyPalm`) for whatever is under the X. The sim finds how far back there's room (walls, the ground, a low roof
   indoors) and the camera closes in at once and eases back out. Closer than a metre, the body isn't drawn.
 - `tools/player/view.html` shows the body alone with what it holds, every pose on a button, and makes sheets of stills:
-  `?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3`. `node --test tests/player-body.test.mjs` checks the poses with no
-  GPU: feet on the ground, things in the hands, the shield where it should be, the casts, and the cave's lock.
+  `?sheet=idle,run,throw2,raise2_run&views=front,side,back&t=0.3`. A view can be written out too, as where the camera
+  stands and what it looks at (`&views=-0.5:1.9:-3.2:0:1:0`, which is about where the game's own camera is on a ride). The
+  ride is `away_ride` (hands empty) and `ride` (staff and skull); `away_carve` and `ride_carve` lean with `t` (1.57 is
+  full onto his toes, 4.71 onto his heels), `away_air` and `ride_air` are off a crest, `rideslope` is downhill. It loads
+  three.js from a CDN. `node --test tests/player-body.test.mjs` checks the poses with no GPU: feet on the ground, things in
+  the hands, the shield where it should be, the ride's arms, the casts, and the cave's lock.
 
 #### Gear on the body
 

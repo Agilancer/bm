@@ -91,6 +91,7 @@ const DO = {
   // The ride's arms: into a carve one way and the other (t: 1.57 and 4.71 are the full leans), and in the air off a crest.
   away_carve: (t) => ({ vz: 9, stow: 1, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: Math.sin(t), air: false } }),
   away_air: () => ({ vz: 9, stow: 1, onGround: false, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: 0, air: true } }),
+  ride_carve: (t) => ({ vz: 9, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: Math.sin(t), air: false } }),
   ride_air: () => ({ vz: 9, onGround: false, surf: { hx: 0, hz: 1, nx: 0, ny: 1, nz: 0, tilt: 0, air: true } }),
 };
 for (const [k, f] of Object.entries(CAST)) {
