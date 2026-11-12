@@ -799,6 +799,148 @@ player aims perfectly and never tires, and its Firebolt is not a person's whole 
 more than as what a person will get. **Nobody has played these fights by hand, and none of it has been seen drawn in
 the game**: see "Monsters' attacks" below.
 
+### Party dungeons: one engine
+
+There are three party dungeons now, and one engine for them. A dungeon is a *delve* (`DELVES` in `src/core/dungeon.js`):
+a key (`warrens`, `blackvigil`, `deeps`), its own place out past the world's edge and under it, its own field, box,
+rooms, tunnels, pillars, props, packs, bosses, way in, two portals inside, portal out on the land, last boss, level,
+packs' toughness and pay. The Warrens' layout is in `dungeon.js` itself, as it was; the keep's is
+`src/core/delve-blackvigil.js` and the Deeps' `src/core/delve-deeps.js`, plain data. To add a fourth: a file like those,
+a line in `DELVES`, its bosses' bodies in `VARIANTS`, its fights in `src/sim/delve-fights.js`.
+
+- **By where you are.** Everything that takes a world point (`caveRoom`, `caveFloorY`, `caveRoofY`, `caveKeep`,
+  `caveClear`, `caveRay`, `roomAt`, `inDungeon`) finds the delve by its box, so the sim, the player, the heroes and the
+  renderer never ask which. `delveAt(x, z)` gives its key (or null), `delveOf` the delve. The names without a delve in
+  them (`ROOMS`, `PACKS`, `PILLARS`, `ENTRY`, `EXIT_IN`, `EXIT_OUT`, `PORTAL`, `PERCH`, `DUNGEON_BOX`, and `CaveNav`,
+  `grid`, `toWorld`, `torches`, `braziers` with no delve passed) are the Warrens' own, which is what auto-play reads.
+  `BOSSES` is one list across all three, the Warrens' first, so `EV.DELVE, DELVE.BOSS_DOWN, n` means what it did;
+  `WARNINGS` grew at its end (`WARN` finds the new ones by name) and the Warrens' numbers hold.
+- **A field each, built when first asked for,** half a metre a cell and kept as Int16 (4 mm a count): the three together
+  are 3.6 MB a thread, where one grid over all of them would have been the size of the world. A field is worked out a
+  four-metre block at a time from only what reaches the block: 200 to 400 ms each here. A walking field each too
+  (`World.caveNav`).
+- **Two kinds of shell** (`style`): a cave is round lumpy rooms and winding tunnels; a castle is rooms with four straight
+  walls (`hx`, `hz`), level floors, straight passages of one width, a roof that's level over each room, floor raised a
+  step (`daises`), alcoves (`nooks`), a room whose floor is a stair (`tz`). What stands in a room is a prop (`props`:
+  kind, place, and `solid: true` if it's rock to the field); `src/core/delve-build.js` builds both shells and every
+  kind of prop, out of `sites.js`. `portalWall` stands a terrace anywhere now: only the Warrens' is dug into its hill.
+- **The sim** (`src/sim/dungeon.js`: one `Warrens` for all of them, `sim.warrens`, with `delve` the one you're in): each
+  delve's portals, wipe (stood at that delve's way in) and reset (a quarter of an hour after you left it, or as you
+  leave it cleared) are its own. A save made in any of them loads at its portal outside. A pack may stand somewhere in
+  its room (`at`), each on a spot of its own (`spots`), be led by an elite (`elite`), walk a beat till it sees you
+  (`walk`), and be joined by more through a door part way through (`more`).
+- **A boss as data** (`src/sim/delve-fights.js`, run by `run` and `play`): its opening call, its deck of moves (each: whom
+  it's for, the clip the body plays, when in it the move goes off, its call, and a line or two of `MOVES` and
+  `sim.perils`), adds at so much of its life and where they come from, its enrage, how often it turns on you, and a
+  `step` of its own for what's particular. The Warrens' three are still the methods they were.
+- **The rest follows**: the shaders call each box underground (`indoorAt`), the renderer lights each delve's fires in its
+  own colour (`look`: the keep's burn redder and wider, the Deeps' are blue-white and don't flicker; a flame can be
+  tinted as a painting can, `dark:flame` and `frost:flame`), the map has a chart for each, the party's words at the door
+  are the delve's (`words`), and clearing one pays its own (`pay`).
+- **For looking**: `bm.warrens('enter', { delve: 'blackvigil' })`, `bm.warrens('boss', { boss: 'sorvane' })` (its door,
+  the bosses before it down), `bm.warrens('room', { room: 'bv_hall' })`, `bm.warrens('reset', { delve })`.
+
+### Blackvigil Keep
+
+The second party dungeon (key `blackvigil`; `src/core/delve-blackvigil.js`), for a party of level 14 and up: Velscour's
+castle at the end of the Vigil Road. Its gate stays shut; the way in is a portal on a terrace before it, facing down the
+road (`portal`, at -4914, 200). Inside it's a castle and not a cave: sixteen rooms with straight walls of coursed stone
+on a foot of his black stone, flagged floors, roofs up to 22 m, his red hung down the long walls of every high room, his
+fire redder than a torch's. 806 m from the way in to the way out (the Warrens are 494). Clearing it pays 4,200 experience
+and 700 gold.
+
+- **The rooms**, in the order you walk them: the Gate Passage (the portal, a portcullis drawn up over the way on), the
+  Guardroom, the Lower Ward (a pillared hall, cages hung from its roof), the Warden's Gate, the Barracks (and off it the
+  Armoury, a dead end worth its pack), the Sorcerers' Gallery (five alcoves a step up, east and west by turns), the
+  Black Library, the Magister's Sanctum, the Chapel of Velscour (pews, his altar under two teeth of black glass; his
+  things only), the Great Stair (twelve metres up in forty-eight steps), the Great Hall (six long tables, the high table
+  on its dais, two hearths, three wheels of fire hung from the beams), the Hollow Court, the Banner Walk, the Antechamber
+  and the Throne Room.
+- **Tons of his knights and sorcerers** means fourteen packs of four to six, at five times their cousins' life and a third
+  harder a blow (`tough`), two to a room in the Lower Ward and the Great Hall, three that walk a beat (the gallery, the
+  stair, the banner walk), two that are joined by more through a door once half of them are down (the barracks, the high
+  table), and the gauntlet: five necromancers stood one to an alcove down the gallery, with knights walking it between
+  them. Three are led by a necromancer lord. They're drawn from every knight the roster has (nine today: the three and
+  their six look-alikes), necromancers, plague knights. Only twelve Tripo bodies stand at once, so a pack that wakes when
+  the slots are full stands when there's room. The knights have a sweep of the blade, the shield shoved forward and the
+  lance run home as well as their blood lance and wall of bolts (`TRICKS` in `src/sim/moves.js`).
+- **Ser Maldrec the Hollow, Warden of the Gate.** He sets his shield and stands behind it five seconds: what's in front
+  of it burns, blows glance off him, and the party goes round behind him. Between: his lance lowered down a line at
+  whoever's furthest, a sweep, a stamp whose ring you jump, three lances of blood fanned. At seven tenths and a third of
+  his life the portcullis guard comes through the side doors, two knights and then three.
+- **Magister Sorvane**, a necromancer lord. Circles drawn under two of you that burn on for fourteen seconds, bone
+  marching up three lines, lights that follow you, cold rings, a wall of bolts with a gap. Every half minute he stands
+  and speaks the Unmaking for six seconds: take a twentieth of his life off him before the last word and it breaks and
+  he reels, taking half as much again for a while; else it lands on everyone. There's nothing on the floor to run from
+  then: the answer is to strike him. At three quarters and four tenths he raises knights out of the floor.
+- **The Hollow Brothers**, Ser Garrow with the sword and Ser Gault with the lance, at once. One covers the other, turn
+  about every eighteen seconds and called out: the covered one takes a seventh of what lands on him, so strike the one
+  who covers (the hired party does: `focus`). Twice they stand back to back in a wheel of fire. Which you kill first
+  matters, and differently from Skrit and Skrat: Garrow left alone takes up the lance, gets a quarter of his life back
+  and fights with both decks; Gault left alone goes berserk, hitting half as hard again and nearly twice as often.
+- **The Castellan of Blackvigil**, the last and largest (3.4 m). On foot: sweep, charge, three rings of a stamp, lances,
+  a wall of bolts. At six tenths he goes back up to his throne, where little hurts him, and the hall fights for him for
+  twenty seconds: the banners burn and fall, a strip of fire right across the floor from every other one and then from
+  the ones between, and the possessed come down from five doors, four and then four more. Then he comes down into the
+  dark: he hits harder, and red eyes open at the edge of the room in pairs and come after you, and embers rain.
+- **The bosses' bodies** are the possessed knights (a villager's head on a knight's body, eyes that glow:
+  `possessed_knight_1` to `_3`), grown to 2.7 to 3.4 m as `VARIANTS`, each falling back to the plain knight it's made
+  on in a roster without them. Each leaves a hoard (`rollLoot` 20; the Castellan 21).
+
+### The Howling Deeps
+
+The third (key `deeps`; `src/core/delve-deeps.js`), for a party of level 10 and up: a frozen cavern under the Rimeholt
+Fells. Its portal stands at the Howling Mouth (880, 3990), facing the path from Frostwatch. A cave as the Warrens are,
+in rime and ice: frosted rock, icicles for stalactites, pillars of ice from floor to roof, sheets of it on the floor,
+shards in the walls with a cold blue-white light in them where the Warrens have torches, crystals where they have
+braziers. 548 m end to end. Clearing it pays 2,600 experience and 420 gold.
+
+- **The rooms**, in order: the Howling Mouth, the Wind Galleries, the Frozen Herd (beasts caught in the ice where they
+  stood, horns and ribs standing out of it), the Goat-King's Hall, the Webbed Gallery, the Frozen Falls (a river caught
+  as it fell), the Brood Pit, the Lightless Stair (no fires at all), and the Sleeper's Lake, sixty metres of level ice
+  with dark shapes under it.
+- **The packs**, by what lives in the cold, at five and a half times their cousins' life: goat men, werewolves (two more
+  come out of a side gallery), six spiders and a flesh demon in the webs, goat men and a wolf at the falls, three night
+  demons on the stair (which stand still while you look at them, as they do anywhere). No harpies: a flyer under a
+  roof wasn't tried.
+- **Hrymgar the Goat-King** (3.1 m). Horns down along a line at whoever's furthest; three charges one after another at
+  three of you; a stamp of three rings; a ring to jump; ice from the roof on each of you; a block of it thrown, that
+  bursts. At two thirds and a third his herd comes down two galleries.
+- **The Brood Mother**, a spider 2.9 m high. Webs thrown under two of you that hold their ground thirteen seconds,
+  threads out from her five ways and again between, two fans of spit that leave puddles, a cone of venom, venom rained.
+  At eight tenths, just over half and three tenths a brood hatches at the room's edge: four, five, six spiderlings.
+- **The Sleeper Under the Ice**, a night demon 3.7 m high (it doesn't freeze when watched: a boss fights by its deck).
+  Cracks across the lake through one of you that stay open nine seconds and bite what crosses, the dark come after you,
+  cold rings, ice from the roof, a wail with a still place close in against it. At six tenths it goes under the ice,
+  out of sight and reach, and comes up three times beneath one of you (a circle that follows, then a ring to jump); the
+  third time it stays up, the lake cracks six ways, it hits harder and cracks the ice five ways at a time. At three
+  tenths two of its dreams walk.
+
+`node tools/dungeon/fight.mjs` on both, a party of lancer, paladin, archer and rogue a level over the delve's (11 and
+15), one to three fights of each:
+
+| | Seeing it at once | Half a second late | Standing still |
+| --- | --- | --- | --- |
+| The Deeps' five packs | 33 to 44 s, the player never under 48% | 33 to 40 s, never under 43% | (one tried) won at 33% |
+| Hrymgar | 121 s, down to 29% | 125 s, down to 26% | dead in 86 and 100 s |
+| The Brood Mother | 99 s, down to 47% | 92 s, down to 46% | dead in 28 s; once alive on 9% |
+| The Sleeper | 133 and 134 s, down to 37% | 127 to 131 s, down to 28% | dead in 45 and 56 s |
+| The keep's fourteen packs | 22 to 57 s (the gauntlet 120), never under 56% | 23 to 84 s; the barracks killed the player once in four | (one tried) won at 49% |
+| Maldrec | 131 s, down to 71% | 142 s, down to 41% | dead in 81 and 87 s; twice alive on 5 and 8% |
+| Sorvane | 99 s, down to 62% | 95 s, down to 28% | dead in 38 s; once alive on 4% |
+| The Hollow Brothers | 113 s, down to 56% | 106 s, down to 39% | dead in 42 and 89 s |
+| The Castellan | 151 and 171 s, down to 42% | 141 and 173 s, down to 36%; fell once in three | dead in 71 to 97 s |
+
+The Sleeper and the Castellan were turned down after their first runs (a late player died to each) and the keep's
+bosses' marks turned up (a still player lived through Maldrec and the Castellan); the barracks was cut from six and
+three to five and two after the last of these, and the possessed made lighter, and **those two changes and the knights'
+three new tricks have not been played since**. The first three bosses of the keep were measured at 78, 40 and 58 a blow
+and now have 88, 46 and 66. `tools/dungeon/check.mjs` passes for all three delves (the keep 57,000 triangles, the Deeps
+42,000, the Warrens 45,000 with their new dressing, where they were 36,000). **Nobody has played either dungeon by hand.**
+Not done: no quartermaster stands at either new portal (hire in town or at the Warrens' and walk your party there); the
+keep's braziers don't really go out in the Castellan's last phase (only the words say so); auto-play knows neither (see
+`node tools/autoplay/check.mjs`, which says so and fails until it does).
+
 ### Monsters' attacks: marks on the ground, and what flies
 
 Everything a monster throws or marks on the ground is one system, `sim.perils` (`src/sim/perils.js`), which anything in

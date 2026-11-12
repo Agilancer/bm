@@ -1,0 +1,1 @@
+delveAt ready (stub: DELVES keys warrens/blackvigil/deeps, delveAt returns 'warrens' or null; BOSSES entries have .delve; real ones to follow)

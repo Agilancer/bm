@@ -1166,13 +1166,13 @@ function barrow(K) {
   const m = at('stones');
   for (let i = 0; i < 9; i++) {
     const t = (i + 0.75) / 9 * TAU, x = m.x + Math.cos(t) * 16, z = m.z + Math.sin(t) * 16;
-    if (i === 6) { K.box('stone', x, Y(x, z) - 0.3, z, 2.6, 0.9, 0.8, t); continue; }
-    K.menhir('stone', x, z, 0.9 + hash2(i, 1) * 0.3, 3.4 + hash2(i, 4) * 1.6, -t, (hash2(i, 8) - 0.5) * 0.12);
+    if (i === 6) { K.box('rubble', x, Y(x, z) - 0.3, z, 2.6, 0.9, 0.8, t); continue; }
+    K.menhir('rubble', x, z, 0.9 + hash2(i, 1) * 0.3, 3.4 + hash2(i, 4) * 1.6, -t, (hash2(i, 8) - 0.5) * 0.12);
   }
-  K.menhir('stone', m.x - 25, m.z - 19, 1.2, 6.2, 0.7, 0.07);
-  for (const s of [-1, 1]) K.menhir('stone', m.x + s * 1.9, m.z - 21.5, 0.6, 3.1, 0, 0);
-  K.box('stone', m.x, Y(m.x, m.z - 21.5) + 2.45, m.z - 21.5, 2.9, 0.55, 0.6, 0, { collide: false });
-  K.box('stone', m.x - 1, Y(m.x - 1, m.z - 1) - 0.3, m.z - 1, 1.9, 0.85, 1.1, 0.5); K.campfire(m.x + 3.2, m.z + 1.5, false);
+  K.menhir('rubble', m.x - 25, m.z - 19, 1.2, 6.2, 0.7, 0.07);
+  for (const s of [-1, 1]) K.menhir('rubble', m.x + s * 1.9, m.z - 21.5, 0.6, 3.1, 0, 0);
+  K.box('rubble', m.x, Y(m.x, m.z - 21.5) + 2.45, m.z - 21.5, 2.9, 0.55, 0.6, 0, { collide: false });
+  K.box('rubble', m.x - 1, Y(m.x - 1, m.z - 1) - 0.3, m.z - 1, 1.9, 0.85, 1.1, 0.5); K.campfire(m.x + 3.2, m.z + 1.5, false);
   for (let i = 0; i < 5; i++) { const t = 0.7 + i * 1.3, x = m.x + Math.cos(t) * (8 + i), z = m.z + Math.sin(t) * (8 + i); K.cairn(x, z, 0.4, 0.55); }
   K.spots.stones_ring = [m.x + 4, Y(m.x + 4, m.z - 5), m.z - 5, 0.6];
 }
