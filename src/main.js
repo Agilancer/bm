@@ -386,7 +386,9 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed), roster, kit);
+      // (Who the owner has named, put in guilds and dyed: heroes.html writes it. None yet is no one.)
+      const people = await getFile(`${BASE}assets/game/heroes/people.json`, 'json').catch(() => null);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, people), roster, kit);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;

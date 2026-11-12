@@ -1,0 +1,4 @@
+{
+  "about": "Who each of the other Tessariels is, by body (roster.json id), as set in heroes.html: name, epithet, guild ('' for none) and armour colours (src/core/herodye.js). Anything not set here is chosen by the world's seed.",
+  "heroes": {}
+}

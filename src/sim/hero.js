@@ -5,7 +5,7 @@
 // They are not in sim.knights, so nothing of the player's (spells, blows, loot) ever touches them. Monsters they strike
 // turn on them (src/sim/foes.js). What they say is chosen on the render thread (src/ui/heroes.js) from the triggers they
 // raise here as EV.HERO events: (slot, trigger, other slot, place, mob, extra).
-import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS, PERSONAS, PLACES, PLACE_IDS, THE_FALL, ACTIVITIES, TRIG, WALK_ENDS, hourBand, placeOf, rng } from '../core/heroes.js';
+import { BLOWS, CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS, PERSONAS, PLACES, PLACE_IDS, THE_FALL, ACTIVITIES, TRIG, WALK_ENDS, hourBand, placeOf, rng } from '../core/heroes.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
 import { floorAt, inPit } from '../core/interior.js';
@@ -59,21 +59,7 @@ function fightable(m) {
 const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreature ? Math.max(0.6, m.meta ? m.opts.radius * 1.2 : 1) : m.scale > 1.2 ? 1 : m instanceof Crab ? 1.4 : 0.5);
 
 // ---- class moves ----------------------------------------------------------------------------------------------------
-// clip: from the heroes' bank. hit: when in the clip it lands (fractions). dmg: before level. reach: past the hips.
-const BLOWS = {
-  two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.24], dmg: 16, reach: 2.4, end: 0.55 }, { clip: 'L_Chop', rate: 1.4, from: 0.25, hit: [0.6], dmg: 15, reach: 2.3 }, { clip: 'Sword_Regular_C', rate: 0.9, hit: [0.33], dmg: 14, reach: 2.5 }],
-  sword_board: [{ clip: 'Sword_Regular_A', rate: 0.8, hit: [0.55], dmg: 10, reach: 2.1 }, { clip: 'Sword_Regular_B', rate: 0.8, hit: [0.48], dmg: 10, reach: 2.0 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
-  // (A lance or a spear goes in point first: a straight arm down the line, the body behind it. THRUST below.)
-  lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 7, reach: 1.6, knock: 5 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
-  // (Knives cut: slashes, a hook from the off hand, an overhand rip. Not a fist held out over its head.)
-  daggers: [{ clip: 'Sword_Regular_A', rate: 1.5, hit: [0.55], dmg: 6, reach: 1.5, end: 0.8 }, { clip: 'Sword_Regular_B', rate: 1.5, hit: [0.48], dmg: 7, reach: 1.5, end: 0.8 }, { clip: 'Melee_Hook', rate: 1.1, hit: [0.5], dmg: 8, reach: 1.4 }, { clip: 'L_Slash', rate: 1.6, from: 0.3, hit: [0.65], dmg: 9, reach: 1.6 }],
-  spear: [{ clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 13, reach: 2.9, thrust: true }, { clip: 'L_Chop', rate: 1.4, from: 0.25, hit: [0.6], dmg: 12, reach: 2.4 }, { clip: 'Punch_Cross', rate: 1.5, hit: [0.42], dmg: 9, reach: 2.6, thrust: true }],
-  boomerang: [{ clip: 'Punch_Jab', rate: 1.15, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 6, reach: 1.6, knock: 5 }],
-  blade: [{ clip: 'Sword_Regular_A', rate: 0.85, hit: [0.55], dmg: 9, reach: 2.0 }, { clip: 'Sword_Regular_B', rate: 0.85, hit: [0.48], dmg: 9, reach: 1.9 }, { clip: 'L_Slash', rate: 1.1, hit: [0.65], dmg: 10, reach: 2.0 }],
-  bow: [{ clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 5, reach: 1.6, knock: 6 }],
-  ninja: [{ clip: 'L_SnapKick', rate: 1.15, hit: [0.6], dmg: 8, reach: 1.7, knock: 4 }, { clip: 'Sword_Regular_A', rate: 1.6, hit: [0.55], dmg: 6, reach: 1.5, end: 0.8 }, { clip: 'Sword_Regular_B', rate: 1.6, hit: [0.48], dmg: 7, reach: 1.5, end: 0.8 }, { clip: 'LP_front_kick_01', rate: 1.1, hit: [0.45], dmg: 8, reach: 1.7 }],
-};
-
+// (The ordinary blows, BLOWS, are in src/core/heroes.js, where the hero viewer reads them too.)
 // What a class's ordinary blows are called, for the words (class_skill).
 const BLOW_MOVE = { lancer: 'lance_thrust', archer: 'aimed_shot', rogue: 'flurry', ninja: 'ninja_flurry', dragoon: 'spear_combo', boomerang: 'throw', paladin: null, bard: null };
 

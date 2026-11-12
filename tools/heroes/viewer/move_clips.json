@@ -1,0 +1,1391 @@
+{
+ "about": "Which clips each hero move plays, read from src/sim/hero.js and src/sim/heroskills.js (Hero.skill, CAST, leap, dash). 'dyn': a rate worked out from the dash's length. Edit when a move changes, then run node tools/heroes/viewer/data.mjs.",
+ "skills": {
+  "blessed_hammers": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 1.0
+    }
+   ],
+   "desc": "Upper-body cast; three or more hammers of light spiral round him for about 3 s, hitting whatever they touch. Light."
+  },
+  "hammer_throw": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.0
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2.2
+    }
+   ],
+   "desc": "A hammer of light made in the fist and thrown end over end, 18 damage; it comes back to the hand (the catch is Sword_Block). Light."
+  },
+  "smite": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "L_ShieldJab",
+     "rate": 1.2
+    },
+    {
+     "clip": "Sword_Attack",
+     "rate": 1.0
+    }
+   ],
+   "desc": "Shield jab with a board, overhead blow without: 9 bash, 1.1 s stun, a shove and a pillar of light on each foe hit. Light."
+  },
+  "consecration": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "Sword_Attack",
+     "rate": 1.0
+    }
+   ],
+   "desc": "Mace into the ground: hallowed ground r2.8 for 7 s burns foes (the dead twice over) and heals allies. Light."
+  },
+  "holy_light": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 1.1
+    }
+   ],
+   "desc": "Upper-body cast; heals the most hurt ally or the player within 14 m for 30\u201335% of their health. Light."
+  },
+  "zeal": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 1.5
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 1.5
+    },
+    {
+     "clip": "Sword_Regular_C",
+     "rate": 2.4
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 1.5
+    },
+    {
+     "clip": "Sword_Attack",
+     "rate": 1.25
+    }
+   ],
+   "desc": "Five fast blows, 6 damage each, the last 10 and a shove; crescents of light. Light."
+  },
+  "blessed_shield": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "Shield_OneShot",
+     "rate": 1.8
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 1.8
+    }
+   ],
+   "desc": "The board thrown (by hand, no clip): bounces between foes for 15 bash and a 0.5 s stun, then comes back to be caught. Light."
+  },
+  "holy_nova": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "LP_cheer",
+     "rate": 1.1
+    }
+   ],
+   "desc": "Arms up: a blast r4 for 12 bash, a shove and 0.8 s stun; heals allies 8%. Light."
+  },
+  "crusaders_charge": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "Shield_Dash",
+     "rate": "dyn"
+    },
+    {
+     "clip": "Sword_Dash",
+     "rate": "dyn"
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2
+    }
+   ],
+   "desc": "Shield_Dash with a board, Sword_Dash without: runs through the line at 15 m/s, 14 bash, 0.6 s stun, braced at the end. Light."
+  },
+  "fist_of_heavens": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "LP_cheer",
+     "rate": 1.0
+    }
+   ],
+   "desc": "Weapon to the sky, pose held: lightning on the foe and others, 14 burn, 0.5 s stun. Light."
+  },
+  "divine_shield": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "LP_cheer",
+     "rate": 1.0
+    }
+   ],
+   "desc": "A ward and a 12% heal on the most hurt ally, a shell for 6 s. Light."
+  },
+  "heavens_fury": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "LP_cheer",
+     "rate": 1.0
+    }
+   ],
+   "desc": "Pose held about 2 s: four or more pillars of light on and round foes, 11 burn each. Light."
+  },
+  "judgment_beam": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "Sword_Block",
+     "rate": 1.2
+    }
+   ],
+   "desc": "Arm pointed, pose held: an 11 m beam that tracks for 1.25 s, burning and pushing. Light."
+  },
+  "solar_hammer": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "Sword_Attack",
+     "rate": 0.84
+    }
+   ],
+   "desc": "A giant hammer falls on the foe: 34 bash r2.6, 1.5 s stun, lines of fire and hallowed ground. Light."
+  },
+  "hammer_storm": {
+   "cls": "paladin",
+   "clips": [
+    {
+     "clip": "LP_cheer",
+     "rate": 1.0
+    }
+   ],
+   "desc": "Pose held about 2.4 s: a dozen or more hammers rain round the foe, 9 bash each. Light."
+  },
+  "charge": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Shield_Dash",
+     "rate": "dyn"
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2
+    }
+   ],
+   "desc": "Lance couched, runs at 15 m/s up to 8.5 m through foes, untouchable on the way, braced at the end. Storm."
+  },
+  "shield_wall": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Shield_OneShot",
+     "rate": 1.3
+    }
+   ],
+   "desc": "Guard for 4 s behind boards of light; everything within 8 m comes for him. Storm, frost."
+  },
+  "shield_bash": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "L_ShieldJab",
+     "rate": 1.7
+    }
+   ],
+   "desc": "8 bash r1.8, 1.1 s stun, a shove. Storm."
+  },
+  "lance_barrage": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 1.3
+    }
+   ],
+   "desc": "Four thrusts down a line, 7 each, the last 11 and a knock-back. Storm."
+  },
+  "tower_shields": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Shield_OneShot",
+     "rate": 1.0
+    }
+   ],
+   "desc": "Boards of light orbit him for 10 s, 4 bash each, and draw foes to him. Storm, frost."
+  },
+  "sweeping_cleave": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Sword_Attack",
+     "rate": 1.0
+    }
+   ],
+   "desc": "A flat arc r3.3, 13 bash, shove. Storm."
+  },
+  "shield_throw": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Shield_OneShot",
+     "rate": 1.8
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 1.8
+    }
+   ],
+   "desc": "The board thrown upright through the whole line and back, 13 bash, 0.5 s stun. Storm."
+  },
+  "sunspear": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.0
+    }
+   ],
+   "desc": "A spear of light thrown, piercing, 18, 0.8 s stun. Light."
+  },
+  "bulwark_nova": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Shield_OneShot",
+     "rate": 1.0
+    }
+   ],
+   "desc": "The board slammed down: blast r4.2, 12 bash, 1.2 s stun, shove, draws foes. Storm, frost."
+  },
+  "lance_of_light": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Sword_Regular_C",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A beam of lance-light down an 11 m line, 22, knock-back. Storm, light."
+  },
+  "valiant_leap": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "Jump_Land",
+     "rate": 2
+    }
+   ],
+   "desc": "Leaps board-first onto the foe: 16 bash r3, 0.9 s stun, shove. Storm."
+  },
+  "phalanx_rush": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Shield_Dash",
+     "rate": "dyn"
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2
+    }
+   ],
+   "desc": "Three dashes in a row at 18 m/s through the nearest foes, 12 each, 0.5 s stun. Storm."
+  },
+  "spear_wall": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "Sword_Regular_C",
+     "rate": 1.3
+    }
+   ],
+   "desc": "A row of spears bursts from the ground, 14 r3, 1 s stun, lifts foes. Storm."
+  },
+  "charge_of_the_order": {
+   "cls": "lancer",
+   "clips": [
+    {
+     "clip": "LP_Pointing_at_an_enemy",
+     "rate": 1.5
+    }
+   ],
+   "desc": "Five ghostly lancers charge in a wedge, 20 each, 1 s stun; he guards 6 s. Storm, frost."
+  },
+  "rain_of_arrows": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.8
+    }
+   ],
+   "desc": "Bow lofted, pose held: about 55 arrows rain over r3.5 for 1.3 s. Her string's element."
+  },
+  "volley": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.675
+    }
+   ],
+   "desc": "Five arrows split over nearby foes, 9 each."
+  },
+  "strafe": {
+   "cls": "archer",
+   "clips": [],
+   "desc": "No clip: sprints sideways for about a second, loosing up to 8 arrows (6 each)."
+  },
+  "kite": {
+   "cls": "archer",
+   "clips": [],
+   "desc": "No clip: backs off to a clearer spot (walking and running)."
+  },
+  "disengage": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "Jump_Land",
+     "rate": 2.4
+    }
+   ],
+   "desc": "Springs 6.5 m back, three arrows (7 each) in the air."
+  },
+  "piercing_arrow": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.72
+    }
+   ],
+   "desc": "A fast arrow through three or more foes, 13."
+  },
+  "split_shot": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.765
+    }
+   ],
+   "desc": "The arrow splits in flight into three or more seeking arrows, 8 each."
+  },
+  "guided_arrow": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.765
+    }
+   ],
+   "desc": "A seeking arrow lofted wide, 16. Spirit."
+  },
+  "explosive_arrow": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.72
+    }
+   ],
+   "desc": "Bursts r2.4 for 15 burn, shove, fire on the ground 3 s. Fire."
+  },
+  "frost_arrow": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.72
+    }
+   ],
+   "desc": "An ice burst r2.5, 9, 1.5 s stun, slowed 3.5 s. Frost."
+  },
+  "sniper_shot": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.36
+    }
+   ],
+   "desc": "A long draw: 32 (half again past 12 m), 0.6 s stun, shove."
+  },
+  "chain_shot": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.765
+    }
+   ],
+   "desc": "The arrow bounces across three or more foes, 10 each. Spirit."
+  },
+  "arrow_storm": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.8
+    }
+   ],
+   "desc": "A bigger rain: r4.2, 120 or more arrows over 2.6 s."
+  },
+  "black_hole_arrow": {
+   "cls": "archer",
+   "clips": [
+    {
+     "clip": "Spell_Simple_Shoot",
+     "rate": 0.675
+    }
+   ],
+   "desc": "A vortex pulls foes in for 3 s, then bursts r4 for 24 bash, 0.8 s stun. Void."
+  },
+  "vanish": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "Sword_Regular_C",
+     "rate": 1.5
+    }
+   ],
+   "desc": "Smoke, hidden 0.7 s, reappears behind the foe and stabs for 26 (backstab), bleeding. Void, drain."
+  },
+  "flurry": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 2.1
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 2.1
+    },
+    {
+     "clip": "Melee_Hook",
+     "rate": 1.9
+    },
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 2.1
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 2.1
+    },
+    {
+     "clip": "Melee_Hook",
+     "rate": 1.3
+    }
+   ],
+   "desc": "Six bleeding cuts, 4.5 each, the last 8. Drain, arcane."
+  },
+  "backstab": {
+   "cls": "rogue",
+   "clips": [],
+   "desc": "No clip: any blow within about 60\u00b0 of a foe's back does 1.8 times the damage."
+  },
+  "backflip": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A bleeding cut if close, then a back somersault 5.5 m throwing three knives."
+  },
+  "flip_strike": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "Flips forward onto the foe: 15 (backstab), bleeding, 0.4 s stun."
+  },
+  "fan_of_knives": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 1.1
+    }
+   ],
+   "desc": "A half turn throwing ten or more knives in a fan, 5 each, bleeding."
+  },
+  "rupture": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 1.8
+    },
+    {
+     "clip": "L_Slash",
+     "rate": 1.7
+    }
+   ],
+   "desc": "A stab, then a slash for 13 that bleeds hard. Drain."
+  },
+  "whirling_blades": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A low cartwheel through foes, cutting 3\u20134 times, bleeding."
+  },
+  "smoke_bomb": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A lobbed flask: smoke r3.6 for 4.5 s, 1.4 s stun and slowed. Void."
+  },
+  "shadow_dance": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "Punch_Jab",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    }
+   ],
+   "desc": "Blinks behind three or more foes in turn, about 20 each, bleeding, then home. Void."
+  },
+  "death_from_above": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "Jump_Land",
+     "rate": 1.8
+    }
+   ],
+   "desc": "A high double flip down onto the foe: 30 (backstab), 1 s stun, bleeding."
+  },
+  "eviscerate": {
+   "cls": "rogue",
+   "clips": [
+    {
+     "clip": "Sword_Regular_C",
+     "rate": 1.1
+    }
+   ],
+   "desc": "A finisher, 26 (more on a bleeding foe), backstab."
+  },
+  "shadow_step": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2.5
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 1.3
+    }
+   ],
+   "desc": "Vanishes and blinks behind the foe, cuts for 16 (backstab). Void, arcane."
+  },
+  "leaping_kick": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "LP_front_kick_02",
+     "rate": 1.6
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A flying flip kick: about 14 bash, shove, 0.4 s stun. Arcane."
+  },
+  "throwing_stars": {
+   "cls": "ninja",
+   "clips": [],
+   "desc": "No clip (the arm is thrown by hand): three steel stars, 6 each, bleeding."
+  },
+  "ninja_flurry": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 2.2
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 2.2
+    },
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 2.2
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 2.2
+    },
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 2.2
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 2.2
+    },
+    {
+     "clip": "LP_front_kick_02",
+     "rate": 1.2
+    }
+   ],
+   "desc": "Six cuts, then a kick that leaves a seven-pointed gold star, 12 r2.8, 1.1 s stun. Arcane, light."
+  },
+  "twin_fangs": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 1.9
+    },
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 1.9
+    },
+    {
+     "clip": "Sword_Regular_A",
+     "rate": 1.3
+    }
+   ],
+   "desc": "Two cuts then a crossing cut for 12 and a knock-back. Arcane, light."
+  },
+  "fire_star": {
+   "cls": "ninja",
+   "clips": [],
+   "desc": "Thrown by hand: a fire star bursts r1.8 for 8 burn and leaves fire. Fire."
+  },
+  "spin_kick": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "LP_front_kick_02",
+     "rate": 1.5
+    }
+   ],
+   "desc": "A full spinning kick, 9 bash r2.3, shove. Arcane."
+  },
+  "star_storm": {
+   "cls": "ninja",
+   "clips": [],
+   "desc": "Thrown by hand: runs round the foe for 2.6 s throwing stars of every element."
+  },
+  "frost_star": {
+   "cls": "ninja",
+   "clips": [],
+   "desc": "Thrown by hand: three frost stars, 6 each, 1 s stun, slowed. Frost."
+  },
+  "whirlwind": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "Sword_Block",
+     "rate": 1.5
+    }
+   ],
+   "desc": "Pose held, spinning 2\u20133 turns, cutting every quarter turn. Arcane."
+  },
+  "storm_star": {
+   "cls": "ninja",
+   "clips": [],
+   "desc": "Thrown by hand: a storm star that jumps to two or more other foes. Storm."
+  },
+  "rising_dragon": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A rising spin that lifts the foe, 12, then a landing slash, 0.5 s stun. Arcane."
+  },
+  "spirit_star": {
+   "cls": "ninja",
+   "clips": [],
+   "desc": "Thrown by hand: two seeking spirit stars that pierce and come back. Spirit."
+  },
+  "kick_chain": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "LP_front_kick_02",
+     "rate": 1.6
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "Flying kicks from foe to foe (2\u20134), 12 each. Arcane."
+  },
+  "substitution": {
+   "cls": "ninja",
+   "clips": [],
+   "desc": "A log and smoke: blinks 4.5 m off, heals 12%, throws three stars."
+  },
+  "giant_shuriken": {
+   "cls": "ninja",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.0
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2.2
+    }
+   ],
+   "desc": "A giant four-bladed star thrown out and back, piercing, 16 and bleeding. Arcane."
+  },
+  "spear_barrage": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "Sword_Regular_C",
+     "rate": 1.6
+    }
+   ],
+   "desc": "After the leaps: a ring of spears falls on the foe, r2.9, 20. Spirit."
+  },
+  "jump": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "Leaps onto the foe and lands spear first, 14 r2, the spear planted in the ground. Spirit."
+  },
+  "lance_flurry": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 2.2
+    },
+    {
+     "clip": "Punch_Cross",
+     "rate": 1.3
+    }
+   ],
+   "desc": "Six thrusts, 5 each, the last 9 and a knock-back."
+  },
+  "dragon_dive": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A dive, 18 r2.4, fire on the ground 3 s. Fire."
+  },
+  "spearstep": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "Sword_Dash",
+     "rate": "dyn"
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2
+    }
+   ],
+   "desc": "Dashes through at 19 m/s, 20, 0.4 s stun."
+  },
+  "spiral_lance": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "Sword_Regular_C",
+     "rate": 1.7
+    }
+   ],
+   "desc": "A thrown spear of light, piercing, 16."
+  },
+  "sweeping_lance": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "Sword_Attack",
+     "rate": 1.0
+    }
+   ],
+   "desc": "A flat sweep r3.2, 12, shove."
+  },
+  "comet_dive": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A high fast dive, 24 r3, scorched ground. Light, fire."
+  },
+  "lance_barrier": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "Sword_Block",
+     "rate": 1.3
+    }
+   ],
+   "desc": "Six spears orbit him for 6 s, 5 each."
+  },
+  "storm_dive": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A dive, 22 r2.8, then lightning to three or more foes. Storm."
+  },
+  "spear_rain": {
+   "cls": "dragoon",
+   "clips": [],
+   "desc": "No clip (points to the sky): 15 or more spears rain over r3.2 for 1.6 s."
+  },
+  "dragon_breath": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "Sword_Block",
+     "rate": 1.2
+    }
+   ],
+   "desc": "Pose held 1.3 s: a sweeping cone of fire 4.4 m. Fire."
+  },
+  "dragonfall": {
+   "cls": "dragoon",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "A great dive, 44 r3.8, 1.2 s stun, wings of fire. Fire."
+  },
+  "heavens_rain": {
+   "cls": "dragoon",
+   "clips": [],
+   "desc": "No clip (points to the sky): golden spears rain, then one giant spear for 30; faster and harder for 6 s. Light."
+  },
+  "throw": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.25
+    }
+   ],
+   "desc": "The ordinary throw: the right-hand rang curves out and back, 9. Light."
+  },
+  "double_throw": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.25
+    }
+   ],
+   "desc": "Right hand, then the left a moment later: two wide-curving rangs, 9 each. Light."
+  },
+  "catch": {
+   "cls": "boomerang",
+   "clips": [],
+   "desc": "No clip: a returning rang caught with a flash at the hand."
+  },
+  "cross_cut": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.25
+    }
+   ],
+   "desc": "Both rangs cross on the foe, 10 each and an 8 gold cross-cut. Light."
+  },
+  "energy_rang": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.25
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2.4
+    }
+   ],
+   "desc": "A huge piercing gold rang that comes back, 13. Light."
+  },
+  "wind_slash": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "Sword_Regular_B",
+     "rate": 1.1
+    }
+   ],
+   "desc": "A growing crescent that pierces, 12. Light."
+  },
+  "chakram": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 1.25
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2.4
+    }
+   ],
+   "desc": "A bladed ring bouncing across four or more foes, 9 and bleeding. Light."
+  },
+  "orbiting_rangs": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "Sword_Block",
+     "rate": 1.6
+    }
+   ],
+   "desc": "Two or more rangs orbit him for 7 s, 4 each. Light."
+  },
+  "homing_salvo": {
+   "cls": "boomerang",
+   "clips": [],
+   "desc": "Thrown by hand: 15 small rangs fan out, hang, then all home on one foe. Light."
+  },
+  "tempest_dash": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "Sword_Dash",
+     "rate": "dyn"
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2
+    }
+   ],
+   "desc": "A crouch, then a 32 m/s dash through foes, 14 and bleeding, 8 r2.2 at the end. Light."
+  },
+  "blade_ring": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "Sword_Block",
+     "rate": 1.4
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2.4
+    }
+   ],
+   "desc": "One spin flinging 8 or more rangs every way, 7 each; they come back. Light."
+  },
+  "bladestorm": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "Sword_Block",
+     "rate": 1.8
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 2.4
+    }
+   ],
+   "desc": "Six rangs orbit as he spins about 2.4 s, then eight fly out. Light."
+  },
+  "golden_boomerang": {
+   "cls": "boomerang",
+   "clips": [
+    {
+     "clip": "OverhandThrow",
+     "rate": 0.42
+    },
+    {
+     "clip": "Sword_Block",
+     "rate": 1.5
+    }
+   ],
+   "desc": "A giant slow gold rang, 34 bash, 0.6 s stun; its threads cut on the way back. Light."
+  },
+  "razor_tornado": {
+   "cls": "boomerang",
+   "clips": [],
+   "desc": "No clip (points): a wandering tornado for about 4 s pulls foes in and cuts. Light."
+  },
+  "war_song": {
+   "cls": "bard",
+   "clips": [
+    {
+     "clip": "LP_sing_01",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_02",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_03",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_04",
+     "rate": 1
+    }
+   ],
+   "desc": "One of the singing clips (upper body), the lute played by hand: the party does 25% more damage for 20 s. Fire."
+  },
+  "marching_song": {
+   "cls": "bard",
+   "clips": [
+    {
+     "clip": "LP_sing_01",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_02",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_03",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_04",
+     "rate": 1
+    }
+   ],
+   "desc": "The singing clips and the lute: the party is 25% faster for 20 s; sung on the road too. Storm."
+  },
+  "mending_song": {
+   "cls": "bard",
+   "clips": [
+    {
+     "clip": "LP_sing_01",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_02",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_03",
+     "rate": 1
+    },
+    {
+     "clip": "LP_sing_04",
+     "rate": 1
+    }
+   ],
+   "desc": "The singing clips and the lute: a healing song for 6 s, when an ally is below 70%. Heal."
+  },
+  "power_chord": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): Three fire notes, 9 and a shove. Fire."
+  },
+  "fan_of_notes": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): Six or more rainbow notes in a fan, 6 and bleeding."
+  },
+  "shockwave_riff": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): Rings of shock march out to about 9 m, 8 bash, 0.3 s stun. Storm."
+  },
+  "echo": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): A bouncing note and two fainter echoes. Spirit, frost."
+  },
+  "dancing_notes": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): Notes bounce between foes, 5 each. Heal, light."
+  },
+  "bass_drop": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): A giant note falls on the foe, 20 r2.5, 1.2 s stun. Arcane."
+  },
+  "resonance_beam": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): An 11 m beam of staves for 1.4 s. Spirit."
+  },
+  "lullaby": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): Foes within 6 m fall asleep 2.2 s and are slowed. Frost."
+  },
+  "sonic_boom": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): Two blasts r5.2, 10, shove, 0.5 s stun. Light."
+  },
+  "crescendo": {
+   "cls": "bard",
+   "clips": [],
+   "desc": "No clip (the lute played by hand): Four growing notes, 5/9/13/17, the last pierces and stuns. Light."
+  },
+  "swashbuckle": {
+   "cls": "bard",
+   "clips": [
+    {
+     "clip": "Sword_Dash",
+     "rate": "dyn"
+    },
+    {
+     "clip": "NinjaJump_Start",
+     "rate": 2
+    },
+    {
+     "clip": "NinjaJump_Idle_Loop",
+     "rate": 1
+    },
+    {
+     "clip": "NinjaJump_Land",
+     "rate": 1.6
+    }
+   ],
+   "desc": "Three dashes, 10 each and bleeding, then a back-flip away and a sting on the lute. Arcane."
+  },
+  "grand_finale": {
+   "cls": "bard",
+   "clips": [
+    {
+     "clip": "LP_cheer",
+     "rate": 1.0
+    }
+   ],
+   "desc": "The lute for 2.5 s: six rainbow fireworks, then 26 r4.2 and a stun; ends with a bow. "
+  }
+ },
+ "locomotion": {
+  "Idle": "Idle_Loop",
+  "Idle in a fight": "Idle_Shield_Loop",
+  "Hurt, standing": "Zombie_Idle_Loop",
+  "Walk": "Walk_Formal_Loop",
+  "Walk in a fight": "Walk_Loop",
+  "Limp": "Zombie_Walk_Fwd_Loop",
+  "Jog": "Jog_Fwd_Loop",
+  "Run": "Sprint_Loop",
+  "Jump: start": "NinjaJump_Start",
+  "Jump: in the air": "NinjaJump_Idle_Loop",
+  "Jump: land": "NinjaJump_Land",
+  "Jump: heavy land": "Jump_Land",
+  "Dodge roll": "Roll",
+  "Hit": "L_HitBody",
+  "Hit (chest)": "Hit_Chest",
+  "Knocked back": "Hit_Knockback",
+  "Death": "Death01",
+  "Block / catch": "Sword_Block",
+  "Sit": "Sitting_Idle_Loop",
+  "Surfing the Fall": "Crouch_Idle_Loop",
+  "Crash on the Fall": "LP_fall"
+ }
+}

@@ -178,6 +178,23 @@ export const MOVES = {
 };
 export const MOVE_KEYS = Object.values(MOVES).flat();
 
+// The ordinary blows, by kit style (kit.json heroes[].style), as the sim swings them (src/sim/hero.js).
+// clip: from the heroes' bank. hit: when in the clip it lands (fractions). dmg: before level. reach: past the hips.
+export const BLOWS = {
+  two_hand: [{ clip: 'Sword_Attack', rate: 0.95, hit: [0.24], dmg: 16, reach: 2.4, end: 0.55 }, { clip: 'L_Chop', rate: 1.4, from: 0.25, hit: [0.6], dmg: 15, reach: 2.3 }, { clip: 'Sword_Regular_C', rate: 0.9, hit: [0.33], dmg: 14, reach: 2.5 }],
+  sword_board: [{ clip: 'Sword_Regular_A', rate: 0.8, hit: [0.55], dmg: 10, reach: 2.1 }, { clip: 'Sword_Regular_B', rate: 0.8, hit: [0.48], dmg: 10, reach: 2.0 }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 6, reach: 1.5, knock: 4 }],
+  // (A lance or a spear goes in point first: a straight arm down the line, the body behind it. THRUST below.)
+  lance: [{ clip: 'Punch_Cross', rate: 1.15, hit: [0.42], dmg: 14, reach: 3.1, thrust: true }, { clip: 'L_ShieldJab', rate: 1.1, hit: [0.55], dmg: 7, reach: 1.6, knock: 5 }, { clip: 'Punch_Cross', rate: 1.35, hit: [0.42], dmg: 11, reach: 2.9, thrust: true }],
+  // (Knives cut: slashes, a hook from the off hand, an overhand rip. Not a fist held out over its head.)
+  daggers: [{ clip: 'Sword_Regular_A', rate: 1.5, hit: [0.55], dmg: 6, reach: 1.5, end: 0.8 }, { clip: 'Sword_Regular_B', rate: 1.5, hit: [0.48], dmg: 7, reach: 1.5, end: 0.8 }, { clip: 'Melee_Hook', rate: 1.1, hit: [0.5], dmg: 8, reach: 1.4 }, { clip: 'L_Slash', rate: 1.6, from: 0.3, hit: [0.65], dmg: 9, reach: 1.6 }],
+  spear: [{ clip: 'Punch_Cross', rate: 1.2, hit: [0.42], dmg: 13, reach: 2.9, thrust: true }, { clip: 'L_Chop', rate: 1.4, from: 0.25, hit: [0.6], dmg: 12, reach: 2.4 }, { clip: 'Punch_Cross', rate: 1.5, hit: [0.42], dmg: 9, reach: 2.6, thrust: true }],
+  boomerang: [{ clip: 'Punch_Jab', rate: 1.15, hit: [0.4], dmg: 6, reach: 1.4 }, { clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 6, reach: 1.6, knock: 5 }],
+  blade: [{ clip: 'Sword_Regular_A', rate: 0.85, hit: [0.55], dmg: 9, reach: 2.0 }, { clip: 'Sword_Regular_B', rate: 0.85, hit: [0.48], dmg: 9, reach: 1.9 }, { clip: 'L_Slash', rate: 1.1, hit: [0.65], dmg: 10, reach: 2.0 }],
+  bow: [{ clip: 'L_SnapKick', rate: 1.1, hit: [0.6], dmg: 5, reach: 1.6, knock: 6 }],
+  ninja: [{ clip: 'L_SnapKick', rate: 1.15, hit: [0.6], dmg: 8, reach: 1.7, knock: 4 }, { clip: 'Sword_Regular_A', rate: 1.6, hit: [0.55], dmg: 6, reach: 1.5, end: 0.8 }, { clip: 'Sword_Regular_B', rate: 1.6, hit: [0.48], dmg: 7, reach: 1.5, end: 0.8 }, { clip: 'LP_front_kick_01', rate: 1.1, hit: [0.45], dmg: 8, reach: 1.7 }],
+};
+
+
 // Emotes and gestures the words can ask a hero's body for (render thread -> sim 'heroAct'), as clips in the heroes' bank.
 export const GESTURES = {
   wave: ['LP_wave_goodbye_01', 'LP_wave_goodbye_02', 'LP_greet_02'], greet: ['LP_greet_01', 'LP_greet_03', 'LP_greet_04'],
@@ -198,7 +215,11 @@ export function rng(seed) {
 
 // Who is in the world this session: n bodies from the roster, the classes spread evenly, then a person for each body (name,
 // epithet, guild, persona, level). names: assets/game/heroes/names.json. kit: assets/game/heroes/kit.json.
-export function makeCast(roster, kit, names, n, seed) {
+// people: assets/game/heroes/people.json, who each body is when the owner has said (heroes.html, the hero viewer): a
+// name, an epithet, a guild ('' for none) and armour colours (src/core/herodye.js), any of them. What isn't said is
+// chosen by the seed as before, and the seed is drawn on just the same, so the others don't change when one is named.
+export function makeCast(roster, kit, names, n, seed, people = null) {
+  const fixed = people?.heroes || {};
   const r = rng(seed);
   const pick = (a) => a[Math.floor(r() * a.length)];
   const byClass = {};
@@ -217,22 +238,28 @@ export function makeCast(roster, kit, names, n, seed) {
     }
   }
   const guilds = names.guilds.slice().sort(() => r() - 0.5).slice(0, Math.max(3, Math.ceil(n / 2.6)));
-  const usedNames = new Set();
+  // (A name the owner gave is nobody else's.)
+  const usedNames = new Set(Object.values(fixed).map((f) => f?.name?.trim()).filter(Boolean));
   return bodies.map((h, i) => {
+    const own = fixed[h.id] || {};
     let name;
     for (let t = 0; t < 20; t++) { name = pick(h.sex === 'f' ? names.female : names.male); if (!usedNames.has(name)) break; }
+    if (own.name?.trim()) name = own.name.trim();
     usedNames.add(name);
     const ep = r() < 0.45 ? pick(names.epithets) : null;
-    const epithet = ep ? (typeof ep === 'string' ? ep : ep.text) : '';
-    const form = ep && typeof ep === 'object' ? ep.form : 'the';
-    const full = !epithet ? name : form === 'surname' ? `${name} ${epithet}` : form === 'of' ? `${name} ${epithet}` : `${name} ${epithet.startsWith('the ') ? epithet : 'the ' + epithet}`;
+    let epithet = ep ? (typeof ep === 'string' ? ep : ep.text) : '';
+    let form = ep && typeof ep === 'object' ? ep.form : 'the';
+    // (A named hero has the epithet they were given, or none: a random one would follow a chosen name about.)
+    if (own.name?.trim()) { epithet = own.epithet?.trim() || ''; form = 'as'; }
+    const full = !epithet ? name : form === 'as' || form === 'surname' || form === 'of' ? `${name} ${epithet}` : `${name} ${epithet.startsWith('the ') ? epithet : 'the ' + epithet}`;
     // Some go guildless, as in any game.
-    const guild = r() < 0.82 ? pick(guilds) : '';
+    let guild = r() < 0.82 ? pick(guilds) : '';
+    if (typeof own.guild === 'string') guild = own.guild.trim();
     const persona = pick(PERSONA_NAMES);
     const level = 4 + Math.floor(r() * r() * 22);
     const k = kit.heroes[h.id] || {};
     return { slot: i, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name, full, guild, persona, level, gold: Math.floor(20 + r() * 400),
-      kit: k, string: k.string ? kit.strings[k.string] : null, seed: Math.floor(r() * 1e9) };
+      kit: k, string: k.string ? kit.strings[k.string] : null, seed: Math.floor(r() * 1e9), colours: own.colours || null };
   });
 }
 

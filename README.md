@@ -853,6 +853,34 @@ effect), each given what can and can't be changed and asked for a verdict and a 
   long as it always has; and nothing of this has been seen on a real GPU or heard, only on a software one, with no
   sound: the timings are from the sim's clock, the look from frames a fifth of a second apart.
 
+### Who they are: the muster roll
+
+`heroes.html` (run `heroes-player.bat`, or `python tools/heroes/viewer/serve.py`) shows all 44 hero bodies in
+`assets/game/heroes/roster.json`, by class: each body on a stand with its kit in hand, its class, health and kit, every
+move it fights with (its clips in order, at the speed the game plays them), and every other clip on the rig (walking,
+being hit, dying, the gestures their words ask for, and the whole bank of 187).
+
+Its point is to say who they are. A name (and an epithet), a guild (or none), and armour colours, piece by piece, are kept
+in `assets/game/heroes/people.json`, which Save writes through that server. `makeCast` (`src/core/heroes.js`) gives a body
+what's set there; what isn't set is still the seed's, and the seed is drawn on the same, so naming one hero doesn't change
+the others. A name given there is nobody else's. A hero's save memories are kept by body and name, so renaming one starts
+them afresh with you.
+
+The colours are dyes over the albedo each body was built with (`src/core/herodye.js`, the same code in the viewer and in
+the renderer as a hero is loaded). A body's pieces are named for their slot (helm, chest, shoulders, arms, legs, boots)
+and never share texels, so each slot's triangles drawn in UV space are its part of the picture. "Dyed cloth only" turns
+just what `tools/heroes/build.py` would (coloured cloth and enamel, not skin, leather or gilt) to the chosen hue;
+"Whole piece" turns all of it but the bare steel; and steel can take a tint of its own. A dyed hero costs a few tens of
+milliseconds more to load. The Free Company's quartermasters keep their own names and colours (`BROKERS`).
+
+The moves come from `tools/heroes/viewer/data.json`: `node tools/heroes/viewer/data.mjs` gathers it from `CLASSES`,
+`BLOWS` (now in `src/core/heroes.js`), `SKILLS` and `MORE_SKILLS`, and which clips each move plays from
+`tools/heroes/viewer/move_clips.json`, read from the code by hand. It fails while a move has no entry there or names a
+clip the bank lacks (`tests/hero-people.test.mjs` runs it): when a move is added or changes its clips, give it one.
+The viewer holds weapons the way the sim does (`swordFight` in the right fist, a knife or a rang in the left, boards on
+the back); a bow is aimed as the sim aims it while the arm is up, and stood along the arm when it hangs, where the game
+would have it on the back.
+
 ### The heroes' armour: what's between the plates
 
 A hero's plates are rigid, so where two part as a joint bends, something has to show. `tools/heroes/mail.py` makes it for
@@ -1244,6 +1272,7 @@ To check it yourself:
 | `tools/items/check.mjs` | Tests the item rules and rarity odds |
 | `tools/gear/` | Tears the suits into pieces and renders their icons (in Blender), and fits gauntlets over the first-person arms |
 | `tools/heroes/lutes.py` | Cuts the six lutes from the owner's sheet, finds which way each soundboard faces, thins them and gives each its own colour map |
+| `heroes.html`, `tools/heroes/viewer/`, `src/core/herodye.js` | The muster roll: every hero body and its moves, and their names, guilds and armour colours (`assets/game/heroes/people.json`) |
 | `tools/heroes/moves.mjs`, `tools/heroes/sheet.py` | Plays every move of the other Tessariels in the real game on a headless browser and saves the frames; lays them side by side for looking at |
 | `tests/hero-skills.test.mjs`, `tests/hero-stage.mjs` | Every move of every class played with no page, on the real bodies and clips |
 | `assets/fp/gauntlets_*.glb` | A suit's gauntlets and upper arms, fitted to every first-person rig |

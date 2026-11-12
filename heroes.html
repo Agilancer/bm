@@ -1,0 +1,762 @@
+<!doctype html>
+<title>Tessariel Muster Roll</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a muster roll. The roster of the other Tessariels runs down the left, the chosen one stands on the stage in the
+   middle with the clip transport under it, and their papers (who they are, their colours, their moves) lie on the right.
+   One dark look on purpose, like the repo's other viewers: the models read best on it. */
+:root{
+  color-scheme:dark;
+  --night:#141922; --panel:#1c2330; --raised:#252e3d; --line:#354154;
+  --vellum:#ece6d6; --dim:#9aa4b1; --gold:#d8b45c; --gold-dim:#8c7438; --ok:#7fc49a; --warn:#e0905a;
+  --display:"Alegreya Sans SC","Trebuchet MS",system-ui,sans-serif;
+  --text:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",Consolas,monospace;
+}
+html,body{height:100%}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--night);color:var(--vellum);font:15px/1.4 var(--text)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#app{display:grid;grid-template-columns:290px minmax(0,1fr) 400px;grid-template-rows:auto minmax(0,1fr);height:100%}
+header{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font:700 21px/1.1 var(--display);margin:0;letter-spacing:.02em}
+h1 small{display:block;font:400 12.5px/1.3 var(--text);color:var(--dim);letter-spacing:0}
+.grow{flex:1}
+#status{font:12.5px var(--mono);color:var(--dim)}
+#status.dirty{color:var(--warn)} #status.saved{color:var(--ok)}
+.btn{background:var(--raised);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--gold-dim)}
+.btn.primary{background:var(--gold);color:#1a1408;border-color:var(--gold);font-weight:700}
+.btn.primary:disabled{background:var(--raised);color:var(--dim);border-color:var(--line);cursor:default}
+.btn.small{padding:3px 8px;font-size:13px}
+
+/* Roster */
+#roster{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#roster .tools{display:flex;flex-direction:column;gap:8px;padding:12px max(12px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.field{background:var(--night);border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%}
+#list{overflow-y:auto;padding-block:6px 16px;flex:1}
+.cls{font:700 12px var(--display);letter-spacing:.12em;color:var(--gold);padding:12px 14px 4px;text-transform:uppercase;display:flex;justify-content:space-between}
+.cls span{color:var(--dim);font:12px var(--mono);letter-spacing:0}
+.hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:6px 12px 6px 11px;cursor:pointer}
+.hero:hover{background:var(--raised)}
+.hero[aria-current="true"]{background:var(--raised);border-left-color:var(--gold)}
+.hero .sw{grid-row:1/3;width:12px;height:30px;border-radius:3px;background:var(--line)}
+.hero b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero b.unset{color:var(--dim);font-style:italic;font-weight:400}
+.hero i{font-style:normal;font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero i em{font-style:normal;color:var(--gold)}
+
+/* Stage */
+#stage{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column}
+#view{flex:1;min-height:0;position:relative}
+#view canvas{display:block;width:100%;height:100%}
+#plate{position:absolute;left:16px;top:14px;pointer-events:none;max-width:calc(100% - 32px)}
+#plate .nm{font:700 26px/1.1 var(--display);text-shadow:0 1px 6px #000a;text-wrap:balance}
+#plate .gd{font:15px var(--text);color:var(--gold);text-shadow:0 1px 4px #000a}
+#plate .meta{font:12px var(--mono);color:var(--dim);margin-top:4px}
+#loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--dim);font:13px var(--mono);pointer-events:none}
+#transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line);background:var(--panel)}
+#clipname{font:13px var(--mono);min-width:0;flex:1 1 180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clipname small{color:var(--dim)}
+#scrub{flex:2 1 160px;accent-color:var(--gold)}
+#speed{width:90px;accent-color:var(--gold)}
+.lbl{font:12px var(--mono);color:var(--dim);font-variant-numeric:tabular-nums}
+label.chk{display:flex;gap:5px;align-items:center;font-size:13px;color:var(--dim);cursor:pointer;white-space:nowrap}
+
+/* Papers */
+#papers{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#tabs{display:flex;border-bottom:1px solid var(--line)}
+#tabs button{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:10px 4px;cursor:pointer;color:var(--dim);font:700 13px var(--display);letter-spacing:.08em}
+#tabs button[aria-selected="true"]{color:var(--vellum);border-bottom-color:var(--gold)}
+.pane{overflow-y:auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 24px 16px;display:flex;flex-direction:column;gap:16px;flex:1}
+.pane h2{font:700 14px var(--display);letter-spacing:.1em;color:var(--gold);margin:0;text-transform:uppercase}
+.pane h3{font:700 13px var(--display);letter-spacing:.06em;margin:0;color:var(--vellum)}
+.note{font-size:13px;color:var(--dim);margin:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.form{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px 10px;align-items:center}
+.form > label{font-size:13px;color:var(--dim)}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fact{background:var(--night);border:1px solid var(--line);border-radius:6px;padding:6px 9px}
+.fact span{display:block;font-size:11.5px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.fact b{font:500 14px var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.slot{display:grid;grid-template-columns:84px 38px minmax(0,1fr) auto;gap:6px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.slot:first-of-type{border-top:0}
+.slot .nm{font-weight:500}
+.slot .nm small{display:block;font-size:11.5px;color:var(--dim);font-weight:400}
+.slot input[type=color]{width:38px;height:30px;border:1px solid var(--line);border-radius:5px;background:none;padding:1px;cursor:pointer}
+.slot input[type=color].off{opacity:.35}
+.slot .sl{display:grid;grid-template-columns:52px minmax(0,1fr) 34px;gap:2px 6px;align-items:center;font-size:12px;color:var(--dim)}
+.slot .sl input{accent-color:var(--gold);width:100%}
+.slot .sl output{font:11.5px var(--mono);text-align:right}
+.slot .steel{grid-column:2/-1;display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--dim)}
+.slot .steel input[type=color]{width:30px;height:24px}
+.moves{display:flex;flex-direction:column;gap:6px}
+.move{background:var(--night);border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:pointer;text-align:left;width:100%;display:flex;flex-direction:column;gap:4px}
+.move:hover{border-color:var(--gold-dim)}
+.move.on{border-color:var(--gold)}
+.move .top{display:flex;gap:8px;align-items:baseline}
+.move .top b{font-weight:700;flex:1}
+.move .top span{font:11.5px var(--mono);color:var(--dim);white-space:nowrap}
+.move p{margin:0;font-size:13px;color:var(--dim)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:11.5px var(--mono);background:var(--raised);border:1px solid var(--line);border-radius:4px;padding:1px 6px;cursor:pointer}
+.chip:hover{border-color:var(--gold-dim)} .chip.on{border-color:var(--gold);color:var(--gold)}
+.chip.none{cursor:default;color:var(--dim);font-style:italic}
+.clipgrid{display:flex;flex-wrap:wrap;gap:5px}
+.guild{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.guild .members{grid-column:1/-1;font-size:13px;color:var(--dim)}
+.guild input{font-weight:500}
+textarea.field{min-height:160px;font:12px var(--mono);resize:vertical}
+
+@media (max-width:1100px){
+  #app{grid-template-columns:250px minmax(0,1fr);grid-template-rows:auto minmax(420px,62vh) auto}
+  #papers{grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}
+  #papers .pane{overflow:visible}
+  html,body{height:auto}
+}
+@media (max-width:700px){
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(380px,58vh) auto}
+  #roster{border-right:0;border-bottom:1px solid var(--line)}
+  #list{max-height:32vh}
+  #plate .nm{font-size:21px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="app">
+  <header>
+    <h1>Tessariel Muster Roll<small>The other Tessariels: who they are, the guilds they keep, the colours they wear and the moves on their rigs.</small></h1>
+    <div class="grow"></div>
+    <span id="status">Loading…</span>
+    <button class="btn" id="copyBtn" type="button">Copy people.json</button>
+    <button class="btn" id="importBtn" type="button">Import</button>
+    <button class="btn primary" id="saveBtn" type="button" disabled>Save</button>
+  </header>
+
+  <aside id="roster" aria-label="Roster">
+    <div class="tools">
+      <input class="field" id="search" type="search" placeholder="Search name, guild, body, class" aria-label="Search the roster">
+      <select class="field" id="guildFilter" aria-label="Show one guild"><option value="">Every guild</option></select>
+    </div>
+    <div id="list"></div>
+  </aside>
+
+  <main id="stage">
+    <div id="view">
+      <div id="loading">Loading the roster…</div>
+      <div id="plate"><div class="nm" id="plateName"></div><div class="gd" id="plateGuild"></div><div class="meta" id="plateMeta"></div></div>
+    </div>
+    <div id="transport">
+      <button class="btn small" id="playBtn" type="button" aria-label="Pause">Pause</button>
+      <div id="clipname">Idle_Loop</div>
+      <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Scrub the clip">
+      <span class="lbl" id="speedLbl">1.00×</span>
+      <input id="speed" type="range" min="0.1" max="2" step="0.05" value="1" aria-label="Playback speed">
+      <label class="chk"><input type="checkbox" id="gameRate" checked> Game speed</label>
+      <label class="chk"><input type="checkbox" id="showKit" checked> Weapons</label>
+      <label class="chk"><input type="checkbox" id="spin"> Turn</label>
+    </div>
+  </main>
+
+  <section id="papers" aria-label="Hero details">
+    <div id="tabs" role="tablist">
+      <button role="tab" id="tab-who" aria-selected="true" type="button">Who</button>
+      <button role="tab" id="tab-colours" aria-selected="false" type="button">Armour</button>
+      <button role="tab" id="tab-moves" aria-selected="false" type="button">Moves</button>
+      <button role="tab" id="tab-clips" aria-selected="false" type="button">Rig</button>
+      <button role="tab" id="tab-guilds" aria-selected="false" type="button">Guilds</button>
+    </div>
+    <div class="pane" id="pane-who"></div>
+    <div class="pane" id="pane-colours" hidden></div>
+    <div class="pane" id="pane-moves" hidden></div>
+    <div class="pane" id="pane-clips" hidden></div>
+    <div class="pane" id="pane-guilds" hidden></div>
+  </section>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { ClipBank } from './src/sim/anim.js';
+import { DYE_SLOTS, DYE_TITLES, applyDye, cleanColours, dyeActive, slotMask, slotOfPiece } from './src/core/herodye.js';
+
+// ---- what's read ---------------------------------------------------------------------------------------------------
+// The game's own files: the bodies (roster.json, one GLB each), what they carry (kit.json, kit/*.glb), the heroes' clip bank
+// (clips.json, clips.bin), the name lists (names.json), who the owner has made them (people.json), and the classes' moves
+// gathered from the sim (tools/heroes/viewer/data.json, made by tools/heroes/viewer/data.mjs).
+const H = 'assets/game/heroes/';
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); for (const k of kids) if (k != null) e.append(k); return e; };
+const json = (p) => fetch(p).then((r) => { if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.json(); });
+const CLASS_ORDER = ['paladin', 'lancer', 'archer', 'rogue', 'ninja', 'dragoon', 'boomerang', 'bard'];
+const STYLE_NAME = { two_hand: 'Two-handed', sword_board: 'Mace and board', lance: 'Lance and tower shield', daggers: 'Two knives', spear: 'Spear', boomerang: 'Boomerangs', blade: 'Sword', bow: 'Bow' };
+const HERO_SHIELD = 1.15;
+
+const [roster, kit, names, meta, bin, data, filed] = await Promise.all([
+  json(H + 'roster.json'), json(H + 'kit.json'), json(H + 'names.json'), json(H + 'clips.json'),
+  fetch(H + 'clips.bin').then((r) => r.arrayBuffer()), json('tools/heroes/viewer/data.json'),
+  json(H + 'people.json').catch(() => ({ heroes: {} })),
+]);
+const bank = new ClipBank(meta, bin);
+const clipNames = Object.keys(bank.clips).sort((a, b) => a.localeCompare(b));
+roster.sort((a, b) => CLASS_ORDER.indexOf(a.cls) - CLASS_ORDER.indexOf(b.cls) || a.id.localeCompare(b.id, undefined, { numeric: true }));
+
+// ---- who they are, and where that's kept ---------------------------------------------------------------------------
+// people: { about, heroes: { body: { name, epithet, guild, colours } } }. Kept in the game's people.json (the local server,
+// tools/heroes/viewer/serve.py) or, on the hosted copy of this page, in its shared store, for Claude to bring into the game.
+let people = { about: filed.about, heroes: structuredClone(filed.heroes || {}) };
+let dirty = false, store = 'none', db = null;
+const P = (id) => (people.heroes[id] ||= {});
+function tidy() {
+  for (const [id, p] of Object.entries(people.heroes)) {
+    if (!p.name?.trim()) { delete p.name; delete p.epithet; }
+    if (p.epithet !== undefined && !p.epithet.trim()) delete p.epithet;
+    const c = cleanColours(p.colours); if (c) p.colours = c; else delete p.colours;
+    if (!Object.keys(p).length) delete people.heroes[id];
+  }
+  return { about: people.about || 'Who each of the other Tessariels is, by body (roster.json id), as set in heroes.html.', heroes: Object.fromEntries(Object.entries(people.heroes).sort(([a], [b]) => a.localeCompare(b))) };
+}
+function setStatus(text, kind = '') { const s = $('status'); s.textContent = text; s.className = kind; }
+function touched() {
+  dirty = true;
+  $('saveBtn').disabled = store === 'none';
+  setStatus(store === 'none' ? 'Changed: copy people.json to keep it' : 'Unsaved changes', 'dirty');
+  renderList(); renderPlate();
+}
+async function save() {
+  const doc = tidy();
+  $('saveBtn').disabled = true; setStatus('Saving…');
+  try {
+    if (store === 'server') {
+      const r = await fetch('people', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
+      if (!r.ok) throw new Error(`the server said ${r.status}`);
+      setStatus('Saved to assets/game/heroes/people.json', 'saved');
+    } else if (store === 'db') {
+      await db.doc('people/current').set({ heroes: doc.heroes, savedAt: new Date().toISOString() });
+      setStatus('Saved. Ask Claude to bring it into the game', 'saved');
+    }
+    dirty = false;
+  } catch (e) {
+    $('saveBtn').disabled = false;
+    setStatus(`Not saved: ${e.message || e}. Try again, or copy people.json`, 'dirty');
+  }
+}
+$('saveBtn').onclick = save;
+addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); if (!$('saveBtn').disabled) save(); } });
+addEventListener('beforeunload', (e) => { if (dirty && store !== 'none') e.preventDefault(); });
+$('copyBtn').onclick = async () => {
+  const text = JSON.stringify(tidy(), null, 2);
+  try { await navigator.clipboard.writeText(text); setStatus('people.json copied', 'saved'); }
+  catch { showImport(text, 'Copy this into assets/game/heroes/people.json:'); }
+};
+$('importBtn').onclick = () => showImport('', 'Paste a people.json here, then press Use it:');
+
+// Where saves go: the local server if it answers (it alone takes POSTs), else the hosted page's store.
+(async () => {
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  if (local) {
+    try { const r = await fetch('people'); if (r.ok && (await r.json()).saves) store = 'server'; } catch { /* a plain static server */ }
+  }
+  if (store === 'none' && window.claude?.use) {
+    db = await window.claude.use('db').catch(() => null);
+    if (db) {
+      store = 'db';
+      try {
+        const snap = await Promise.race([db.doc('people/current').get(), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 10000))]);
+        const v = snap?.exists ? snap.data() : null;
+        if (v?.heroes && !dirty) { people.heroes = structuredClone(v.heroes); renderAll(); applyCurrentColours(); }
+      } catch { /* empty store: people.json as shipped */ }
+    }
+  }
+  setStatus(store === 'server' ? 'Saves go to people.json' : store === 'db' ? 'Saves are kept with this page' : 'Read-only here: use Copy people.json', '');
+  $('saveBtn').disabled = !dirty || store === 'none';
+})();
+
+// ---- the stage -----------------------------------------------------------------------------------------------------
+const view = $('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+view.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x141922);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.55;
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 100);
+camera.position.set(1.6, 1.4, 3.6);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.95, 0); controls.enableDamping = true; controls.minDistance = 0.8; controls.maxDistance = 9;
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.4); sun.position.set(2.5, 5, 3); sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -2, right: 2, top: 2.5, bottom: -0.5, near: 0.5, far: 12 });
+scene.add(sun, new THREE.HemisphereLight(0xb8c6e0, 0x2a2418, 0.7));
+const rim = new THREE.DirectionalLight(0x9db4ff, 1.1); rim.position.set(-3, 2.5, -3); scene.add(rim);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(2.2, 64), new THREE.MeshStandardMaterial({ color: 0x232b38, roughness: 0.95 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const ring = new THREE.Mesh(new THREE.RingGeometry(1.06, 1.09, 96), new THREE.MeshBasicMaterial({ color: 0x8c7438 }));
+ring.rotation.x = -Math.PI / 2; ring.position.y = 0.002; scene.add(ring);
+const stand = new THREE.Group(); scene.add(stand);
+function resize() { const r = view.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(view); resize();
+
+const loader = new GLTFLoader();
+const glbCache = new Map();
+const loadGLB = (p) => { if (!glbCache.has(p)) glbCache.set(p, loader.loadAsync(p)); return glbCache.get(p); };
+
+// One body on the stand: its skinned mesh, bones in the bank's order, its dye canvas, its props.
+let cur = null, loadToken = 0;
+async function show(id) {
+  const token = ++loadToken;
+  const h = roster.find((r) => r.id === id);
+  $('loading').hidden = false; $('loading').textContent = `Loading ${id}…`;
+  let gltf;
+  try { gltf = await loadGLB(`${H}${id}.glb`); } catch (e) { $('loading').textContent = `${id}.glb didn't load: ${e.message}`; return; }
+  if (token !== loadToken) return;
+  if (cur) { stand.remove(cur.root); }
+  const root = gltf.scene; // (One model per body: the cache hands back the same scene, kept as it was left.)
+  let mesh = null; root.traverse((o) => { if (o.isSkinnedMesh) mesh = o; });
+  const x = root.userData || {};
+  if (!root.userData.prepared) prepare(root, mesh, x);
+  stand.add(root);
+  const bones = mesh.skeleton.bones;
+  cur = root.userData.body ||= {
+    id, h, root, mesh, bones, extras: x,
+    restQ: bones.map((b) => b.quaternion.clone()), restP: bones.map((b) => b.position.clone()),
+    rot: new Float32Array(bank.count * 4), pel: new Float32Array(3), from: null, props: [],
+  };
+  cur.h = h;
+  for (let j = 0; j < bones.length; j++) { cur.restQ[j].toArray(cur.rot, j * 4); }
+  applyColours(cur);
+  await attachKit(cur, token);
+  if (token !== loadToken) return;
+  $('loading').hidden = true;
+  const ht = x.height || 1.8;
+  controls.target.set(0, ht * 0.55, 0);
+  renderPlate();
+}
+
+function prepare(root, mesh, x) {
+  root.userData.prepared = true;
+  mesh.castShadow = true; mesh.frustumCulled = false;
+  const g = mesh.geometry, base = mesh.material;
+  // The mail between the plates has no picture of its own (the game shades it: tools/heroes/mail.py); here it's steel.
+  const mail = new THREE.MeshStandardMaterial({ color: 0x6c7280, metalness: 0.85, roughness: 0.45, side: THREE.DoubleSide });
+  g.clearGroups();
+  const pieces = (x.pieces || []).slice().sort((a, b) => a.tstart - b.tstart);
+  for (const p of pieces) g.addGroup(p.tstart * 3, p.tcount * 3, slotOfPiece(p.name) || !/^mail/.test(p.name) ? 0 : 1);
+  if (!pieces.length) g.addGroup(0, g.index.count, 0);
+  // The albedo, onto a canvas the dyes are painted on.
+  const img = base.map.image, w = img.width, hgt = img.height;
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = hgt;
+  const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(img, 0, 0);
+  const orig = cx.getImageData(0, 0, w, hgt);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.flipY = false; tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = base.map.wrapS; tex.wrapT = base.map.wrapT; tex.anisotropy = 4;
+  const mat = base.clone(); mat.map = tex;
+  mesh.material = [mat, mail];
+  const uv = g.attributes.uv.array, idx = g.index.array;
+  root.userData.dye = { cv, cx, orig, tex, w, h: hgt, mask: null, uv, idx, pieces: x.pieces || [] };
+}
+
+let dyeQueued = null;
+function applyColours(body) {
+  const d = body.root.userData.dye;
+  if (!d) return;
+  const colours = people.heroes[body.id]?.colours;
+  const any = colours && DYE_SLOTS.some((s) => dyeActive(colours[s]));
+  if (!any && !d.dyed) return;
+  d.mask ||= slotMask(d.pieces, d.uv, d.idx, d.w, d.h);
+  const img = new ImageData(new Uint8ClampedArray(d.orig.data), d.w, d.h);
+  if (any) applyDye(img.data, d.mask, colours);
+  d.cx.putImageData(img, 0, 0); d.tex.needsUpdate = true; d.dyed = any;
+}
+function applyCurrentColours() { if (dyeQueued) return; dyeQueued = requestAnimationFrame(() => { dyeQueued = null; if (cur) applyColours(cur); }); }
+
+// ---- what they carry, held the way the sim holds it (src/sim/knight.js and hero.js) ---------------------------------
+const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+const frameQ = (y, z) => { const yy = v3(y).normalize(), zz = v3(z); zz.addScaledVector(yy, -zz.dot(yy)).normalize(); const xx = new THREE.Vector3().crossVectors(yy, zz); return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xx, yy, zz)); };
+const mix = (a, ka, b, kb) => [a[0] * ka + b[0] * kb, a[1] * ka + b[1] * kb, a[2] * ka + b[2] * kb];
+async function attachKit(body, token) {
+  for (const p of body.props) p.removeFromParent();
+  body.props = []; body.bow = null;
+  const k = kit.heroes[body.id] || {};
+  const bone = (n) => body.bones[meta.skeleton.findIndex((s) => s.name === n)];
+  const lenOf = (s) => bone(`middle_01_${s}`).position.length();
+  const prop = async (id) => { if (!id) return null; const g = await loadGLB(`${H}kit/${id}.glb`); const o = g.scene.clone(); o.traverse((m) => { if (m.isMesh) m.castShadow = true; }); return o; };
+  const [main, off, back] = await Promise.all([prop(k.main), prop(k.off), prop(k.back)]);
+  if (token !== loadToken) return;
+  const hold = (o, b, q, t, s = 1) => { o.quaternion.copy(q); o.position.copy(t); o.scale.setScalar(s); b.add(o); body.props.push(o); };
+  // (Found on the body at rest, then carried by the joint: restHold in src/sim/knight.js. The stand faced forward for it.)
+  const turned = stand.rotation.y; stand.rotation.y = 0;
+  posePlay(body, bank.clips.Idle_Loop, 0); stand.updateMatrixWorld(true);
+  const restHold = (b, y, z, at) => {
+    const bq = b.getWorldQuaternion(new THREE.Quaternion()), bp = b.getWorldPosition(new THREE.Vector3()), inv = bq.clone().invert();
+    return [inv.clone().multiply(frameQ(y, z)), v3(at).sub(bp).applyQuaternion(inv)];
+  };
+  const { r: gr, l: gl } = bank.grip;
+  if (main) {
+    if (k.style === 'bow') {
+      // (Aimed every frame, as the sim does it: aimBow below.)
+      const L = lenOf('l');
+      hold(main, bone('hand_l'), new THREE.Quaternion(), v3(gl.fingers.map((v) => v * L * 0.62)));
+      body.bow = { o: main, hand: bone('hand_l'), fore: bone('lowerarm_l') };
+    } else {
+      const L = lenOf('r');
+      hold(main, bone('hand_r'), frameQ(mix(gr.knuckles, Math.cos(0.32), gr.fingers, Math.sin(0.32)), gr.fingers), v3(mix(gr.fingers, L * 0.66, gr.palm, L * 0.3)));
+    }
+  }
+  const u = (body.extras.height || 1.8) / 1.8;
+  if (off) {
+    if (k.style === 'daggers' || k.style === 'boomerang') {
+      const L = lenOf('l');
+      hold(off, bone('hand_l'), frameQ(mix(gl.knuckles, 0.95, gl.fingers, 0.31), gl.fingers), v3(mix(gl.fingers, L * 0.66, gl.palm, L * 0.3)));
+    } else {
+      // (A board: on the back here, as it's stowed. In a fight it rides the left forearm.)
+      const sj = bone('spine_03'), y = sj.getWorldPosition(new THREE.Vector3()).y;
+      const [q, t] = restHold(sj, [0.12, 1, 0.05], [0, 0.1, 1], [0.04 * u, y - 0.16 * u, -0.24 * u]);
+      hold(off, sj, q, t, HERO_SHIELD);
+    }
+  }
+  if (back) {
+    const sj = bone('spine_03'), y = sj.getWorldPosition(new THREE.Vector3()).y;
+    const [q, t] = restHold(sj, [0.12, 1, 0.05], [0, 0.1, 1], [0.08, y - 0.22 * u, -0.2 - (kit.props[k.back]?.kind === 'tower' ? 0.04 : 0)]);
+    hold(back, sj, q, t, HERO_SHIELD);
+  }
+  stand.rotation.y = turned;
+  for (const p of body.props) p.visible = $('showKit').checked;
+}
+$('showKit').onchange = () => { for (const p of cur?.props || []) p.visible = $('showKit').checked; };
+
+// ---- clips ---------------------------------------------------------------------------------------------------------
+// Played the way the sim does: the bank's rotations straight onto the joints, the pelvis moved by the body's own scale.
+// A move is a queue of clips at the rates the sim plays them; 'dyn' (a dash, timed to its length) plays at 1.
+let queue = [{ clip: 'Idle_Loop', rate: 1 }], qi = 0, t = 0, playing = true, label = 'Idle', blend = 0;
+const fromQ = []; let fromPel = null;
+function posePlay(body, clip, time) {
+  const { rot, pel, bones, restQ, restP, extras } = body;
+  for (let j = 0; j < bones.length; j++) restQ[j].toArray(rot, j * 4);
+  pel.set(bank.pelvisRest);
+  bank.sample(clip, time, rot, pel);
+  for (let j = 0; j < bones.length; j++) bones[j].quaternion.fromArray(rot, j * 4);
+  const pi = 1, b = extras.pelvisBase, r = extras.pelvisRest || bank.pelvisRest, s = extras.motionScale || 1;
+  if (b) bones[pi].position.set(b[0] + (pel[0] - r[0]) * s, b[1] + (pel[1] - r[1]) * s, b[2] + (pel[2] - r[2]) * s);
+  else bones[pi].position.copy(restP[pi]);
+}
+function play(list, name) {
+  if (!list.length) return;
+  if (cur) { fromQ.length = 0; for (const b of cur.bones) fromQ.push(b.quaternion.clone()); fromPel = cur.bones[1].position.clone(); blend = 0.15; }
+  queue = list.filter((c) => bank.clips[c.clip]); qi = 0; t = 0; label = name; playing = true; $('playBtn').textContent = 'Pause';
+  markOn();
+}
+const rateOf = (c) => ($('gameRate').checked && typeof c.rate === 'number' ? c.rate : 1) * +$('speed').value;
+function step(dt) {
+  if (!cur || !queue.length) return;
+  const c = queue[qi], clip = bank.clips[c.clip];
+  if (playing) {
+    t += dt * rateOf(c);
+    if (t >= clip.dur && !(clip.loop && queue.length === 1)) {
+      if (qi + 1 < queue.length) { qi++; t = 0; } else { qi = 0; t = queue.length > 1 || !clip.loop ? -0.6 : 0; }
+    }
+  }
+  const cc = bank.clips[queue[qi].clip];
+  posePlay(cur, cc, Math.max(0, t));
+  if (blend > 0 && fromQ.length === cur.bones.length) {
+    const k = 1 - blend / 0.15;
+    for (let j = 0; j < cur.bones.length; j++) cur.bones[j].quaternion.slerpQuaternions(fromQ[j], cur.bones[j].quaternion.clone(), k);
+    cur.bones[1].position.lerpVectors(fromPel, cur.bones[1].position.clone(), k);
+    blend -= dt;
+  }
+  if (!scrubbing) $('scrub').value = Math.round(Math.max(0, Math.min(1, t / cc.dur)) * 1000);
+  const r = queue[qi].rate;
+  $('clipname').innerHTML = '';
+  $('clipname').append(el('span', { textContent: `${label} · ` }), el('b', { textContent: queue[qi].clip }), el('small', { textContent: `  ${queue.length > 1 ? `${qi + 1}/${queue.length} · ` : ''}${cc.dur.toFixed(2)} s · game rate ${typeof r === 'number' ? r + '×' : 'by distance'}` }));
+}
+let scrubbing = false;
+$('scrub').addEventListener('pointerdown', () => { scrubbing = true; playing = false; $('playBtn').textContent = 'Play'; });
+$('scrub').addEventListener('input', () => { const cc = bank.clips[queue[qi].clip]; t = $('scrub').value / 1000 * cc.dur; });
+addEventListener('pointerup', () => { scrubbing = false; });
+$('playBtn').onclick = () => { playing = !playing; $('playBtn').textContent = playing ? 'Pause' : 'Play'; $('playBtn').setAttribute('aria-label', playing ? 'Pause' : 'Play'); };
+$('speed').oninput = () => { $('speedLbl').textContent = `${(+$('speed').value).toFixed(2)}×`; };
+
+// The bow rides in the left fist, limbs up, string toward the archer: up is the knuckles, square to the forearm (hero.js writeProps).
+const _h = new THREE.Vector3(), _e = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
+function aimBow(body) {
+  const b = body?.bow;
+  if (!b) return;
+  stand.updateMatrixWorld(true);
+  b.hand.getWorldPosition(_h); b.fore.getWorldPosition(_e); b.hand.getWorldQuaternion(_q);
+  const d = _h.clone().sub(_e).normalize();
+  const k = v3(bank.grip.l.knuckles).applyQuaternion(_q);
+  let y, z;
+  if (Math.abs(d.y) > 0.6) {
+    // (An arm hanging or raised straight: the game has the bow on the back then. Here it stands along the arm, string in.)
+    y = d.y < 0 ? d.clone().negate() : d.clone(); z = k.addScaledVector(y, -k.dot(y)).normalize().negate();
+  } else {
+    y = k.addScaledVector(d, -k.dot(d)).normalize(); z = d.clone().negate(); z.addScaledVector(y, -z.dot(y)).normalize();
+  }
+  const x = new THREE.Vector3().crossVectors(y, z);
+  const world = new THREE.Quaternion().setFromRotationMatrix(_m.makeBasis(x, y, z));
+  b.o.quaternion.copy(_q.invert().multiply(world));
+}
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  step(dt);
+  aimBow(cur);
+  if ($('spin').checked) stand.rotation.y += dt * 0.5;
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+// ---- the roster ----------------------------------------------------------------------------------------------------
+let sel = roster[0].id;
+const nameOf = (id) => people.heroes[id]?.name?.trim() || '';
+const fullOf = (id) => { const p = people.heroes[id] || {}; const n = p.name?.trim(); return n ? (p.epithet?.trim() ? `${n} ${p.epithet.trim()}` : n) : ''; };
+const guildOf = (id) => people.heroes[id]?.guild;
+const guildText = (g) => (g === undefined ? 'guild chosen by the world' : g === '' ? 'no guild' : g);
+const swatch = (id) => {
+  const c = people.heroes[id]?.colours?.chest;
+  return c?.hue != null ? `hsl(${c.hue} ${Math.min(90, 55 * (c.sat ?? 1))}% ${Math.min(70, 42 * (c.val ?? 1))}%)` : '';
+};
+function renderList() {
+  const q = $('search').value.trim().toLowerCase(), gf = $('guildFilter').value;
+  const list = $('list'); list.innerHTML = '';
+  for (const cls of CLASS_ORDER) {
+    const rows = roster.filter((h) => h.cls === cls).filter((h) => {
+      const g = guildOf(h.id);
+      if (gf === '\u0000none' ? g !== '' : gf === '\u0000world' ? g !== undefined : gf && g !== gf) return false;
+      return !q || [h.id, h.cls, fullOf(h.id), g || '', data.classes[cls].title].join(' ').toLowerCase().includes(q);
+    });
+    if (!rows.length) continue;
+    list.append(el('div', { className: 'cls' }, data.classes[cls].title, el('span', { textContent: rows.length })));
+    for (const h of rows) {
+      const n = fullOf(h.id), g = guildOf(h.id);
+      const b = el('button', { className: 'hero', type: 'button' },
+        el('div', { className: 'sw' }),
+        el('b', { className: n ? '' : 'unset', textContent: n || 'Unnamed: a new name each world' }),
+        el('i', {}, `${h.id} · `, g ? el('em', { textContent: g }) : guildText(g)));
+      b.querySelector('.sw').style.background = swatch(h.id) || '';
+      b.setAttribute('aria-current', h.id === sel ? 'true' : 'false');
+      b.onclick = () => select(h.id);
+      list.append(b);
+    }
+  }
+  if (!list.children.length) list.append(el('p', { className: 'note', style: 'padding:14px', textContent: 'Nobody matches that.' }));
+  const guilds = [...new Set(Object.values(people.heroes).map((p) => p.guild).filter(Boolean))].sort();
+  const f = $('guildFilter'), keep = f.value;
+  f.innerHTML = '';
+  f.append(el('option', { value: '', textContent: 'Every guild' }), el('option', { value: '\u0000world', textContent: 'Guild chosen by the world' }), el('option', { value: '\u0000none', textContent: 'No guild' }));
+  for (const g of guilds) f.append(el('option', { value: g, textContent: g }));
+  f.value = [...f.options].some((o) => o.value === keep) ? keep : '';
+}
+$('search').oninput = renderList; $('guildFilter').onchange = renderList;
+
+function renderPlate() {
+  const h = roster.find((r) => r.id === sel), k = kit.heroes[sel] || {};
+  $('plateName').textContent = fullOf(sel) || 'Unnamed';
+  $('plateGuild').textContent = guildOf(sel) ? `<${guildOf(sel)}>` : guildOf(sel) === '' ? 'no guild' : 'guild chosen by the world';
+  $('plateMeta').textContent = `${data.classes[h.cls].title} · ${h.sex === 'f' ? 'female' : 'male'} · ${h.id} · ${STYLE_NAME[k.style] || k.style}`;
+}
+
+function select(id) {
+  sel = id;
+  renderList(); renderAll();
+  show(id).then(() => play([{ clip: 'Idle_Loop', rate: 1 }], 'Idle'));
+}
+
+// ---- the papers ----------------------------------------------------------------------------------------------------
+const TABS = ['who', 'colours', 'moves', 'clips', 'guilds'];
+for (const tab of TABS) $(`tab-${tab}`).onclick = () => {
+  for (const o of TABS) { $(`tab-${o}`).setAttribute('aria-selected', String(o === tab)); $(`pane-${o}`).hidden = o !== tab; }
+};
+function renderAll() { renderWho(); renderColours(); renderMoves(); renderClips(); renderGuilds(); renderPlate(); }
+
+const allGuilds = () => [...new Set([...Object.values(people.heroes).map((p) => p.guild).filter(Boolean), ...names.guilds])];
+function renderWho() {
+  const h = roster.find((r) => r.id === sel), k = kit.heroes[sel] || {}, p = people.heroes[sel] || {}, c = data.classes[h.cls];
+  const pane = $('pane-who'); pane.innerHTML = '';
+  const name = el('input', { className: 'field', id: 'f-name', value: p.name || '', placeholder: 'A new name each world', maxLength: 40 });
+  const epithet = el('input', { className: 'field', id: 'f-epithet', value: p.epithet || '', placeholder: 'e.g. the Unbowed, Ashford, of the Vale', maxLength: 40, disabled: !p.name });
+  const mode = el('select', { className: 'field', id: 'f-gmode' },
+    el('option', { value: 'world', textContent: 'Chosen by the world' }), el('option', { value: 'none', textContent: 'No guild' }), el('option', { value: 'named', textContent: 'This guild:' }));
+  mode.value = p.guild === undefined ? 'world' : p.guild === '' ? 'none' : 'named';
+  const guild = el('input', { className: 'field', id: 'f-guild', value: p.guild || '', placeholder: 'Type a guild, or pick one', maxLength: 50, hidden: mode.value !== 'named' });
+  guild.setAttribute('list', 'guildlist');
+  const dl = el('datalist', { id: 'guildlist' }); for (const g of allGuilds()) dl.append(el('option', { value: g }));
+  const suggest = el('button', { className: 'btn small', type: 'button', textContent: 'Suggest a name' });
+  const taken = () => new Set(Object.entries(people.heroes).filter(([id]) => id !== sel).map(([, x]) => x.name?.trim()).filter(Boolean));
+  const warn = el('p', { className: 'note', id: 'nameWarn' });
+  const checkName = () => { const n = name.value.trim(); warn.textContent = n && taken().has(n) ? `Another hero is already called ${n}. Two of the same name would share memories in a save.` : ''; };
+  name.oninput = () => { P(sel).name = name.value; epithet.disabled = !name.value.trim(); checkName(); touched(); };
+  epithet.oninput = () => { P(sel).epithet = epithet.value; touched(); };
+  suggest.onclick = () => {
+    const pool = (h.sex === 'f' ? names.female : names.male).filter((n) => !taken().has(n));
+    name.value = pool[Math.floor(Math.random() * pool.length)]; name.oninput();
+  };
+  mode.onchange = () => {
+    guild.hidden = mode.value !== 'named';
+    if (mode.value === 'world') delete P(sel).guild; else if (mode.value === 'none') P(sel).guild = ''; else { P(sel).guild = guild.value.trim(); guild.focus(); }
+    touched();
+  };
+  guild.oninput = () => { P(sel).guild = guild.value.trim(); touched(); };
+  checkName();
+  const fact = (k2, v) => el('div', { className: 'fact' }, el('span', { textContent: k2 }), el('b', { textContent: v, title: v }));
+  pane.append(
+    el('h2', { textContent: 'Who they are' }),
+    el('div', { className: 'form' },
+      el('label', { htmlFor: 'f-name', textContent: 'Name' }), el('div', { className: 'row' }, name, suggest),
+      el('label', { htmlFor: 'f-epithet', textContent: 'Epithet' }), epithet,
+      el('label', { htmlFor: 'f-gmode', textContent: 'Guild' }), mode,
+      el('span'), guild), dl, warn,
+    el('p', { className: 'note', textContent: 'Left empty, the world picks a name, an epithet and a guild for them each time it is made. A name set here sticks. Renaming someone starts their memories of you afresh.' }),
+    el('h2', { textContent: 'Body and kit' }),
+    el('div', { className: 'facts' }, fact('Class', c.title), fact('Health', String(c.hp)), fact('Fights at', c.ranged ? `${c.range} m` : 'close'),
+      fact('Body', h.id), fact('Height', `${h.height} m`), fact('Palette', h.palette),
+      fact('Main hand', k.main || '—'), fact('Off hand', k.off || '—'), fact('On the back', k.back || '—'),
+      fact('Style', STYLE_NAME[k.style] || k.style), fact('Bowstring', k.string || '—'), fact('Lute', k.lute || '—')),
+    el('p', { className: 'note', textContent: `Armour pieces from: ${[...new Set(Object.values(h.groups))].join(', ')}.` }),
+  );
+}
+
+// (The swatch shows the hue at a plain strength; only its hue is used.)
+const toHex = (hue) => { const f = (n) => { const k = (n + hue / 60) % 6; return Math.round(255 * (0.78 - 0.78 * 0.7 * Math.max(0, Math.min(k, 4 - k, 1)))).toString(16).padStart(2, '0'); }; return `#${f(5)}${f(3)}${f(1)}`; };
+const hueOf = (hex) => { const n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn || 1e-5; let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; return Math.round(h < 0 ? h + 360 : h); };
+function renderColours() {
+  const pane = $('pane-colours'); pane.innerHTML = '';
+  const colours = () => (P(sel).colours ||= {});
+  const changed = () => { applyCurrentColours(); touched(); };
+  pane.append(el('h2', { textContent: 'Armour colours' }),
+    el('p', { className: 'note', textContent: 'Pick a colour for a piece. "Whole piece" turns everything on it but the bare steel to that colour; "Dyed cloth only" turns just its dyed cloth and enamel, the way the game builds its palettes, and keeps leather and gilt. Steel can take a tint of its own. The game shows the same colours.' }));
+  const box = el('div');
+  for (const slot of DYE_SLOTS) {
+    const d = people.heroes[sel]?.colours?.[slot] || {};
+    const pick = el('input', { type: 'color', id: `c-${slot}`, value: d.hue != null ? toHex(d.hue) : '#7f7f7f', title: 'Dye colour', className: d.hue != null ? '' : 'off' });
+    pick.setAttribute('aria-label', `${DYE_TITLES[slot]} dye colour`);
+    const slider = (key, lo, hi, txt) => {
+      const i = el('input', { type: 'range', min: lo, max: hi, step: 0.05, value: d[key] ?? 1, id: `c-${slot}-${key}` });
+      const o = el('output', { textContent: (d[key] ?? 1).toFixed(2) });
+      i.oninput = () => { colours()[slot] ||= {}; colours()[slot][key] = +i.value; o.textContent = (+i.value).toFixed(2); changed(); };
+      return [el('label', { htmlFor: i.id, textContent: txt }), i, o];
+    };
+    const steelOn = el('input', { type: 'checkbox', id: `c-${slot}-steelon`, checked: !!d.steel });
+    const steel = el('input', { type: 'color', id: `c-${slot}-steel`, value: d.steel || '#c9d4ff', disabled: !d.steel });
+    steel.setAttribute('aria-label', `${DYE_TITLES[slot]} steel tint`);
+    const cover = el('select', { className: 'field', id: `c-${slot}-cover`, style: 'padding:3px 6px;width:auto' },
+      el('option', { value: 'all', textContent: 'Whole piece' }), el('option', { value: 'cloth', textContent: 'Dyed cloth only' }));
+    cover.setAttribute('aria-label', `${DYE_TITLES[slot]}: what the dye covers`);
+    cover.value = d.hue != null && d.cover !== 'all' ? 'cloth' : 'all';
+    cover.onchange = () => { colours()[slot] ||= {}; if (cover.value === 'all') colours()[slot].cover = 'all'; else delete colours()[slot].cover; changed(); };
+    const said = el('small', { textContent: d.hue != null ? `hue ${d.hue}°` : 'as built' });
+    pick.oninput = () => { const c = (colours()[slot] ||= {}); if (c.hue == null && cover.value === 'all') c.cover = 'all'; c.hue = hueOf(pick.value); pick.className = ''; said.textContent = `hue ${c.hue}°`; changed(); };
+    steelOn.onchange = () => { colours()[slot] ||= {}; steel.disabled = !steelOn.checked; if (steelOn.checked) colours()[slot].steel = steel.value; else delete colours()[slot].steel; changed(); };
+    steel.oninput = () => { colours()[slot] ||= {}; colours()[slot].steel = steel.value; changed(); };
+    const reset = el('button', { className: 'btn small', type: 'button', textContent: 'Reset' });
+    reset.onclick = () => { if (people.heroes[sel]?.colours) delete people.heroes[sel].colours[slot]; changed(); renderColours(); };
+    box.append(el('div', { className: 'slot' },
+      el('div', { className: 'nm', textContent: DYE_TITLES[slot] }, said),
+      pick, el('div', { className: 'sl' }, ...slider('sat', 0, 2, 'Strength'), ...slider('val', 0.3, 1.6, 'Light')), reset,
+      el('div', { className: 'steel' }, cover, el('label', { htmlFor: steelOn.id, className: 'chk' }, steelOn, 'Tint the steel'), steel)));
+  }
+  const all = el('button', { className: 'btn small', type: 'button', textContent: 'Chest colours to every piece' });
+  all.onclick = () => { const c = people.heroes[sel]?.colours?.chest; if (!c) return; for (const s of DYE_SLOTS) colours()[s] = { ...c }; changed(); renderColours(); };
+  const none = el('button', { className: 'btn small', type: 'button', textContent: 'Back to as built' });
+  none.onclick = () => { if (people.heroes[sel]) delete people.heroes[sel].colours; changed(); renderColours(); };
+  pane.append(box, el('div', { className: 'row' }, all, none));
+}
+
+let onKey = '';
+function markOn() { for (const b of document.querySelectorAll('[data-play]')) b.classList.toggle('on', b.dataset.play === onKey); }
+function playBtn(node, key, list, name) { node.dataset.play = key; node.onclick = (e) => { e.stopPropagation(); onKey = key; play(list, name); }; return node; }
+const chipsOf = (clips, key, name) => el('div', { className: 'chips' }, ...(clips.length ? clips.map((c, i) => playBtn(el('button', { type: 'button', className: 'chip', textContent: `${c.clip}${typeof c.rate === 'number' ? ' ×' + c.rate : ''}` }), `${key}#${i}`, [c], `${name}: ${c.clip}`)) : [el('span', { className: 'chip none', textContent: 'no clip: the arms are moved in code' })]));
+function renderMoves() {
+  const h = roster.find((r) => r.id === sel), k = kit.heroes[sel] || {}, c = data.classes[h.cls];
+  const pane = $('pane-moves'); pane.innerHTML = '';
+  const blows = k.style === 'daggers' && h.cls === 'ninja' ? data.blows.ninja : data.blows[k.style] || data.blows.blade;
+  const bl = blows.map((b) => ({ clip: b.clip, rate: b.rate }));
+  pane.append(el('h2', { textContent: `${c.title} attacks` }), el('p', { className: 'note', textContent: 'Press a move to play its clips in order at the speed the game plays them; press a clip to play just that one.' }));
+  const box = el('div', { className: 'moves' });
+  const ord = el('div', { className: 'move' },
+    el('div', { className: 'top' }, el('b', { textContent: `Ordinary blows (${STYLE_NAME[k.style] || k.style})` }), el('span', { textContent: 'any time' })),
+    el('p', { textContent: blows.map((b) => `${b.dmg} dmg, reach ${b.reach} m${b.thrust ? ', a thrust' : ''}${b.knock ? ', knocks back' : ''}`).join(' · ') }),
+    chipsOf(bl, 'blows', 'Ordinary blows'));
+  box.append(playBtn(ord, 'blows', bl, 'Ordinary blows'));
+  for (const s of c.skills) {
+    const card = el('div', { className: 'move' },
+      el('div', { className: 'top' }, el('b', { textContent: s.name }), el('span', { textContent: s.passive ? 'part of the class' : `level ${s.lvl} · every ${s.cd} s` })),
+      el('p', { textContent: s.desc }), chipsOf(s.clips, s.key, s.name));
+    box.append(s.clips.length ? playBtn(card, s.key, s.clips, s.name) : card);
+  }
+  pane.append(box);
+  markOn();
+}
+
+function renderClips() {
+  const pane = $('pane-clips'); pane.innerHTML = '';
+  const sec = (title, items) => { const g = el('div', { className: 'clipgrid' }); for (const [txt, clip] of items) g.append(playBtn(el('button', { type: 'button', className: 'chip', textContent: txt, title: clip }), `clip:${txt}:${clip}`, [{ clip, rate: 1 }], txt)); pane.append(el('h3', { textContent: title }), g); };
+  pane.append(el('h2', { textContent: 'Everything on the rig' }), el('p', { className: 'note', textContent: `Every hero shares one skeleton and one bank of ${clipNames.length} clips. These are the ones the game plays on them outside a fight, then the whole bank.` }));
+  sec('Moving and being hit', Object.entries(data.locomotion));
+  sec('Gestures (asked for by their words)', Object.entries(data.gestures).flatMap(([g, list]) => list.map((c, i) => [list.length > 1 ? `${g} ${i + 1}` : g, c])));
+  const q = el('input', { className: 'field', type: 'search', placeholder: `Filter the ${clipNames.length} clips`, id: 'clipFilter' });
+  q.setAttribute('aria-label', 'Filter the clips');
+  const g = el('div', { className: 'clipgrid' });
+  const fill = () => { g.innerHTML = ''; for (const n of clipNames.filter((n) => n.toLowerCase().includes(q.value.toLowerCase()))) g.append(playBtn(el('button', { type: 'button', className: 'chip', textContent: n, title: `${bank.clips[n].dur.toFixed(2)} s${bank.clips[n].loop ? ', loops' : ''}` }), `all:${n}`, [{ clip: n, rate: 1 }], n)); markOn(); };
+  q.oninput = fill; fill();
+  pane.append(el('h3', { textContent: 'The whole bank' }), q, g);
+}
+
+function renderGuilds() {
+  const pane = $('pane-guilds'); pane.innerHTML = '';
+  const by = new Map();
+  for (const h of roster) { const g = guildOf(h.id); if (g) (by.get(g) || by.set(g, []).get(g)).push(h.id); }
+  const world = roster.filter((h) => guildOf(h.id) === undefined).length, none = roster.filter((h) => guildOf(h.id) === '').length;
+  pane.append(el('h2', { textContent: 'Guilds' }),
+    el('p', { className: 'note', textContent: `${by.size} guild${by.size === 1 ? '' : 's'} set by you · ${none} with no guild · ${world} left to the world, which picks from ${names.guilds.length} guild names each time.` }));
+  const add = el('div', { className: 'row' });
+  const nn = el('input', { className: 'field', id: 'newGuild', placeholder: 'A new guild for the selected hero', style: 'flex:1' });
+  const go = el('button', { className: 'btn small', type: 'button', textContent: 'Put them in it' });
+  go.onclick = () => { const v = nn.value.trim(); if (!v) return; P(sel).guild = v; touched(); renderAll(); };
+  add.append(nn, go); pane.append(add);
+  for (const [g, ids] of [...by.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))) {
+    const inp = el('input', { className: 'field', value: g, 'aria-label': `Rename ${g}` });
+    inp.setAttribute('aria-label', `Rename ${g}`);
+    inp.onchange = () => { const v = inp.value.trim(); if (!v) { inp.value = g; return; } for (const id of ids) P(id).guild = v; touched(); renderAll(); };
+    const join = el('button', { className: 'btn small', type: 'button', textContent: ids.includes(sel) ? 'Selected is in it' : 'Add selected', disabled: ids.includes(sel) });
+    join.onclick = () => { P(sel).guild = g; touched(); renderAll(); };
+    const members = el('div', { className: 'members' });
+    ids.forEach((id, i) => { const a = el('button', { type: 'button', className: 'chip', textContent: fullOf(id) || id }); a.onclick = () => select(id); members.append(a, i < ids.length - 1 ? ' ' : ''); });
+    pane.append(el('div', { className: 'guild' }, inp, join, members));
+  }
+}
+
+function showImport(text, msg) {
+  for (const t of TABS) { $(`tab-${t}`).setAttribute('aria-selected', 'false'); $(`pane-${t}`).hidden = true; }
+  const pane = $('pane-guilds'); pane.hidden = false; pane.innerHTML = '';
+  const ta = el('textarea', { className: 'field', id: 'importText', value: text });
+  ta.setAttribute('aria-label', 'people.json');
+  const use = el('button', { className: 'btn primary', type: 'button', textContent: 'Use it' });
+  const back = el('button', { className: 'btn', type: 'button', textContent: 'Back' });
+  const err = el('p', { className: 'note' });
+  use.onclick = () => {
+    try { const d = JSON.parse(ta.value); if (!d || typeof d.heroes !== 'object') throw new Error('it has no "heroes"'); people.heroes = d.heroes; touched(); renderAll(); applyCurrentColours(); $('tab-who').click(); }
+    catch (e) { err.textContent = `That isn't a people.json: ${e.message}.`; }
+  };
+  back.onclick = () => { renderGuilds(); $('tab-who').click(); };
+  pane.append(el('h2', { textContent: text ? 'people.json' : 'Import' }), el('p', { className: 'note', textContent: msg }), ta, err, el('div', { className: 'row' }, text ? null : use, back));
+  if (text) { ta.focus(); ta.select(); }
+}
+
+renderList();
+select(sel);
+</script>

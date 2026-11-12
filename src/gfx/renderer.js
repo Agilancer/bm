@@ -20,6 +20,7 @@ import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
 import { Rocks } from './rocks.js';
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
+import { anyDye, applyDye, slotMask } from '../core/herodye.js';
 import { getFile, lanes, watched } from '../core/files.js';
 import { C, C_BLEEDS, C_MASKS, C_GASH, C_PALETTE, C_PROPS, C_SIZE, CHARS_START, H, MAX_CHARS, SLIMES_START, SPELL_PALETTE, VM_PALETTE, WEAPONS } from '../core/layout.js';
 import { addStumps } from './stumps.js';
@@ -345,7 +346,8 @@ export class Renderer {
     const undead = BODIES.map((b, i) => crabs(15 + i, b.count, b.scale, addStumps));
     const creatures = FIELD_CREATURES.map((c, i) => crabs(15 + BODIES.length + LISANDRA_FORMS.length + i, 1, c.scale));
     const townKnights = TOWN_KNIGHTS.map((k, i) => character(15 + BODIES.length + LISANDRA_FORMS.length + FIELD_CREATURES.length + i));
-    const heroes = cast.map((p) => model(`assets/game/heroes/${p.body}.glb`, (glb) => this.buildCharacter(glb)));
+    // (Their armour in the colours the owner chose for them, if any: src/core/herodye.js.)
+    const heroes = cast.map((p) => model(`assets/game/heroes/${p.body}.glb`, (glb) => this.buildCharacter(glb, p.colours)));
     const forms = LISANDRA_FORMS.map(({ skirtCenter }, i) => model(models[15 + BODIES.length + i], async (glb) => {
       const [form] = await this.buildCrabs(glb, 1, LISANDRA_SCALE, (prim, glb, scale) => {
         // A form with no skirt (Pretty in her leathers) has no _SKIRT mask: nothing of her sways as a dress.
@@ -736,6 +738,24 @@ export class Renderer {
     return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale);
   }
 
+  // A hero's albedo with their armour dyed, slot by slot (src/core/herodye.js), before it goes up. (If anything fails, the
+  // colours they were built in.)
+  async dyedTexture(glb, prim, colours, scale) {
+    try {
+      const bmp = await decodeScaledBitmap(imageBytes(glb, 0), scale);
+      const { width: w, height: h } = bmp;
+      const cv = new OffscreenCanvas(w, h), cx = cv.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(bmp, 0, 0); bmp.close();
+      const img = cx.getImageData(0, 0, w, h);
+      applyDye(img.data, slotMask(glb.json.scenes[0].extras?.pieces || [], prim.uv, prim.idx, w, h), colours);
+      cx.putImageData(img, 0, 0);
+      return await this.bitmapTexture(cv, 'rgba8unorm-srgb', 1);
+    } catch (e) {
+      console.warn('hero colours', e);
+      return this.imageTexture(glb, 0, 'rgba8unorm-srgb', scale);
+    }
+  }
+
   async bitmapTexture(blob, format, scale) {
     const bmp = await decodeScaledBitmap(blob, scale);
     const mips = mipCountFor(bmp.width, bmp.height);
@@ -873,7 +893,7 @@ export class Renderer {
     return out;
   }
 
-  async buildCharacter(glb) {
+  async buildCharacter(glb, colours = null) {
     const pr = glb.json.meshes[0].primitives[0];
     const a = pr.attributes;
     const prim = {
@@ -885,7 +905,8 @@ export class Renderer {
     this.addLod(sk, prim, 0.055);
     const scale = this.tier.texScale;
     const [alb, nrm, mr] = await Promise.all([
-      this.imageTexture(glb, 0, 'rgba8unorm-srgb', scale), this.imageTexture(glb, 1, 'rgba8unorm', scale), this.imageTexture(glb, 2, 'rgba8unorm', scale),
+      anyDye(colours) ? this.dyedTexture(glb, prim, colours, scale) : this.imageTexture(glb, 0, 'rgba8unorm-srgb', scale),
+      this.imageTexture(glb, 1, 'rgba8unorm', scale), this.imageTexture(glb, 2, 'rgba8unorm', scale),
     ]);
     const ubo = this.device.createBuffer({ size: CHAR_UBO, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
