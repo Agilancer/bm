@@ -297,7 +297,7 @@ What stands at each place in `SITES` (`src/core/lands.js`) is plain geometry mad
 
 **Quests.** Forty more (`src/folk/land-quests.js`, every word in `src/folk/lines/land.js`): four that send you out of Bellmourn to the new people (every hub is led to by a quest: a `talk` step to its giver, with the trail and the mark across the land), four that pass you on from one person of a hub to the next and end with them (`end: true` on a `talk` step: paid where it's said), four troubles out in the land given in Bellmourn, the troubles round each small town and the fort (their own lairs, by key), two more in the catacombs, four in the Hollowfang Warrens, four in the Howling Deeps, and six in Blackvigil Keep (Sergeant Hasket's to its portal, then Ser Hale's five, ending with the Castellan). New kinds of step (`src/folk/quests.js`): `enter`, `kill` and `visit` take any of the land's places by its key, a party dungeon by its (`warrens`, `blackvigil`, `deeps`: down inside it) or `lair:<key>`, the ground round a lair; `kill` takes `foe`, the monsters' groups that count; `boss` is done when that dungeon boss dies (the sim's `DELVE.BOSS_DOWN`, handed on in `src/main.js`; one that fell before the quest was taken counts, and is kept in the save as a flag); `bring` takes `at`. The trail leads to a lair's glade, a place, or a dungeon's portal out in the land (`placeSpot`); down in a dungeon it leads nowhere, and the chart does.
 
-Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the forty with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, runs the posted through a day and a night on the town's own brain, and checks that every posted person, hub and dungeon is where some quest that can be come by from Bellmourn sends you. In the headless game the posted people's places and marks are right, but their bodies were not drawn when looked at (not yet known why: see `docs/handoff/people-quests.md`). Not done: Ser Hale's knight body; auto-play knows none of this yet (`node tools/autoplay/check.mjs` lists it); nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
+Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the forty with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, runs the posted through a day and a night on the town's own brain, and checks that every posted person, hub and dungeon is where some quest that can be come by from Bellmourn sends you. In the headless game the posted people stand at their posts with their marks over them (one seen, at Thornwick's inn; the townsfolk's bodies load nearest you first, so a small town's are there when you arrive). Auto-play knows all of it (see "Auto-play"). Nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
 
 ### The cathedral and the catacombs
 
@@ -722,8 +722,9 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   Castellan's dark or the Deeps' three. Watched headless (drawing stubbed, nothing able to hurt it, so this says it finds
   its way and does the work, not that it lives): at level 16 over the bridge and in by the keep's arch, the packs, round
   behind Maldrec, Maldrec and Sorvane down and on up the Great Stair in six minutes; at level 14 the whole of the Deeps,
-  its three bosses, out by the far portal and off to Frostwatch to hand in. Not watched: the Brothers, the Castellan, or
-  any of it with the bot able to die.
+  its three bosses, out by the far portal and off to Frostwatch to hand in. Not watched: the Brothers or the Castellan.
+  Able to be hurt, it was watched once: at level 13 with a hired party it cleared the Warrens whole, the twins and
+  Venomaw with them, and set off for the Deeps. `tools/autoplay/watch.mjs` is how (its head says what to give it).
 - **The land's quests.** The forty quests of the small towns, the lairs and the dungeons are in its plan at the levels
   they want. It walks out to a villager posted in Thornwick, Cinderford or Frostwatch, or to Ser Hale, once it's of a
   level for their work; hunts a lair's glade for a quest that names one, and Velscour's patrols along the Vigil Road for
@@ -1299,6 +1300,15 @@ braziers. 548 m end to end. Clearing it pays 2,600 experience and 420 gold.
 | The Hollow Brothers | 113 s, down to 56% | 106 s, down to 39% | dead in 42 and 89 s |
 | The Castellan | 151 and 171 s, down to 42% | 141 and 173 s, down to 36%; fell once in three | dead in 71 to 97 s |
 
+**That table is from before the other Tessariels had their skills** (merged from main after it was made): with them a
+party kills these bosses in 60 to 125 s, and a player who never moved outlived five of the seven. So what the new bosses
+mark and throw now lands harder (`BITE` in `src/sim/delve-fights.js`: 1.45 times, the Brood Mother 1.25, Sorvane and the
+Sleeper as they were). Played again after that, three fights of each seeing at once and three half a second late: all
+won but one of Sorvane's (seeing at once, before his bite was put back to 1) and one of the Brood Mother's (late, at
+1.45); with the bites as they are now Sorvane, the Brood Mother and the Sleeper were played three and three again and
+all won. Standing still, two fights of each: dead every time to Maldrec, Sorvane, the Castellan, Hrymgar and the Sleeper;
+once in two to the Brood Mother; the Hollow Brothers leave him alive on about 30%. The packs were not played again.
+
 The Sleeper and the Castellan were turned down after their first runs (a late player died to each) and the keep's
 bosses' marks turned up (a still player lived through Maldrec and the Castellan); the barracks was cut from six and
 three to five and two after the last of these, and the possessed made lighter, and **those two changes and the knights'
@@ -1509,6 +1519,25 @@ The roads have a 2 m grid of their own in the terrain mesh (`src/core/ground-pat
 Measured on the one machine in the table below, at 1024x768: the forest adds about 3 ms of GPU time a frame in the town and 7 ms among the trees. It has not been measured at a higher resolution or on a phone.
 
 A day is 24 minutes (`src/gfx/daylight.js`: an hour is `SECONDS_PER_HOUR`, the colours are the keys at the top). It starts at 15:00, runs only while the world does, and is kept in a save. The sun gets as far as 6 degrees above the horizon and no lower, so shadows stay within the maps; between sun and moon, the light swaps while there's none of it to see. The sky is painted again every 10 s of play (30 s on a phone). The clock in the corner is `src/clock.js`. In the console: `bm.setTime(21)`.
+
+### The world build-out: what has and hasn't been seen
+
+Blackvigil Keep, the Howling Deeps, the Warrens' dressing, the rebuilt places and the two small towns, the villagers
+posted in them, Ser Hale, the possessed knights and the new knight bodies, the seventy-one new lairs and the forty quests
+of the land were made on a machine with no GPU and looked at in headless Chromium on a software one (`tools/world/views.mjs`
+for pictures: it can stand the player apart from the eye and aim at a monster once its model is in, which takes two or
+three minutes there; `tools/autoplay/watch.mjs` for auto-play).
+
+- **Seen in the game:** Ser Hale by the tower's door; the keep's halls and the Deeps' caves; Velscour's knights in several
+  of the new bodies fighting in Maldrec's hall with Maldrec bare-headed among them; a villager at her post in Thornwick;
+  the Warrens' thrones and hoard; most of the places from the road.
+- **Not seen:** a possessed knight's face square on, so the colour of its eyes' glow (it was a pale streak at its first
+  strength and was made a deeper red after, unseen; and the keep's sheen on plate was eased after it showed blown out up
+  close, unseen since); any of the new lairs; the yard of Frostwatch, the barrows' doors and a few more places; anything
+  at all on a real GPU or a phone. The places' geometry is about five times what it was, and what that costs a frame is
+  not measured. The white ground in some headless pictures is the far land's map still baking after a teleport, there
+  before any of this.
+- **Nobody has played any of it by hand.** No new line has a recorded voice.
 
 ### What has and hasn't been tested
 
