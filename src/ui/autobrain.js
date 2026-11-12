@@ -1303,7 +1303,12 @@ export class Brain {
     }
     if (T.hostile) this.pullWait = 0;
     // Nothing it throws is landing (behind a wall, across a gap): leave that one be for a while.
-    const tk = this.engage.get(T.id) || { since: this.t, best: T.hp };
+    // (Counted afresh for one it hasn't been at for a moment, and for another body in the same place in the snapshot: a
+    // record was kept by id for ever, so the next thing to stand up with a dead one's id, at full life, was "not being
+    // hurt" from the moment it was looked at, and was left alone for 45 s while it came on.)
+    let tk = this.engage.get(T.id);
+    if (!tk || this.t - tk.last > 2 || T.hp > tk.best + 1) tk = { since: this.t, best: T.hp, last: this.t };
+    tk.last = this.t;
     if (T.hp < tk.best - 0.5) { tk.best = T.hp; tk.since = this.t; }
     this.engage.set(T.id, tk);
     if (this.t - tk.since > (T.slime || T.tumbler ? 20 : 12)) { this.giveUp(`foe:${T.id}`, 45); this.engage.delete(T.id); this.target = null; }
@@ -1659,6 +1664,7 @@ export class Brain {
     if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : warrensJob(this, m);
     const hire = hireJob(this, m);
     if (hire) return hire;
+    // (With a quest still to do, only the dungeon a quest in hand wants: delveOwed. Round them for their own sake after.)
     const delve = questing && warrensJob(this, m, this.delveWants(m), this.delveOwed());
     if (delve && !wantsTown) return delve;
     // In the town, its errands: the quest talk first (only when it's on the quests), then the shops.
@@ -1758,6 +1764,9 @@ export class Brain {
   // every dungeon to do again for each quest.
   delveOwed() {
     const Q = this.o.townUI.quests, out = new Set();
+    // (And while any quest at all is still to do, none for its own sake: with only the keep's last two left it went round
+    // the Warrens again first.)
+    if (!this.allQuestsDone()) return new Set(DELVE_KEYS);
     for (const [id, r] of Object.entries(RULES)) {
       if (Q.done(id)) continue;
       for (const st of r.steps || []) {

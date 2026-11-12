@@ -8,7 +8,7 @@
 import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS, PERSONAS, PLACES, PLACE_IDS, THE_FALL, ACTIVITIES, TRIG, TRIPO_MOB, WALK_ENDS, hourBand, placeOf, rng } from '../core/heroes.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
-import { floorAt, inPit } from '../core/interior.js';
+import { floorAt, homeFloor, inPit } from '../core/interior.js';
 import { ELEM, FX, FX_CARRIED, SHIELDS } from './spells.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { Knight, S, matToQuat, norm, orth, cross, restHold, turn } from './knight.js';
@@ -462,6 +462,14 @@ export class Hero extends Knight {
     const moved = Math.hypot(this.x - this.lastX, this.z - this.lastZ);
     this.lastX = this.x; this.lastZ = this.z;
     this.stuckT = moved < sp * dt * 0.25 ? this.stuckT + dt : Math.max(0, this.stuckT - dt * 0.5);
+    // Getting nowhere for a good while, field and all (where they're going is in a house, behind a wall, in a trunk): that's
+    // let go. A leg of a road is passed over for the next; anything else is dropped, and whatever they're about picks again.
+    if (this.stuckT > 8) {
+      this.stuckT = 0; this.fieldAt = null; this.gaveUp = (this.gaveUp || 0) + 1;
+      const t = this.task;
+      if (t?.path && (t.leg ?? 0) < t.path.length - 1) t.leg = (t.leg ?? 0) + 1;
+      this.goal = null;
+    }
   }
 
   move(dt, sim) {
@@ -2586,7 +2594,20 @@ export class HeroWorld {
     // Leave the town by the nearest gap in its ring, then across.
     const a = Math.atan2(place.spot[0], place.spot[1]);
     // (Out of town: first to a point well inside its edge on the way, so they leave by the streets, not through the houses.)
-    return townDist(place.spot[0], place.spot[1]) > 0 ? [[Math.sin(a) * 52, Math.cos(a) * 52], place.spot] : [place.spot];
+    // (And that point on open ground: 52 m out toward the north-east is inside a house, and the parties bound that way
+    // stood against its wall for as long as anyone watched. The nearest clear one round the ring, or a little in or out.)
+    if (townDist(place.spot[0], place.spot[1]) <= 0) return [place.spot];
+    for (const [da, r] of [[0, 52], [0.12, 52], [-0.12, 52], [0.24, 52], [-0.24, 52], [0, 46], [0, 58], [0.4, 52], [-0.4, 52], [0.6, 52], [-0.6, 52]]) {
+      const x = Math.sin(a + da) * r, z = Math.cos(a + da) * r;
+      if (this.openAt(x, z)) return [[x, z], place.spot];
+    }
+    return [place.spot];
+  }
+
+  // Somewhere a body can stand out of doors: not in a wall, a trunk or a house.
+  openAt(x, z) {
+    const w = this.sim.world;
+    return !w.inside(x, z, 1.2) && homeFloor(x, z, w.height(x, z) + 0.5) === null;
   }
 
   travel(h, t, dt, speed) {
