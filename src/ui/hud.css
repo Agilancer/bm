@@ -112,9 +112,10 @@ body.touch #buffs { position: absolute; left: calc(var(--sl) + (var(--t-side, 10
 body.touch #buffs span { width: calc(22 * var(--u)); height: calc(22 * var(--u)); padding: calc(3 * var(--u)); }
 body.cinematic #touch #spells { visibility: hidden; }
 
-/* The left thumb: where the stick's ring waits, the stick itself where the thumb lands, and the run. */
+/* The left thumb: the stick itself where the thumb lands, and the run. Where the stick's ring waits isn't drawn: nothing
+   of the stick is on the screen until a thumb is on it (its place is shown only while Move Buttons is up: src/ui/arrange.js). */
 #stickHome { position: absolute; left: calc(var(--sl) + var(--t-stick-l, 34) * var(--u)); bottom: calc(var(--sb) + var(--t-stick-b, 26) * var(--u)); width: calc(var(--t-stick-s, 112) * var(--u)); height: calc(var(--t-stick-s, 112) * var(--u));
-  border-radius: 50%; pointer-events: none; opacity: .5; transition: opacity .2s;
+  border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .2s;
   background: radial-gradient(circle, rgba(233, 223, 201, .16) 0 21%, transparent 22%), radial-gradient(circle, transparent 0 62%, rgba(10, 8, 6, .22) 63%);
   box-shadow: inset 0 0 0 1.5px rgba(233, 223, 201, .26); }
 #touch.sticking #stickHome { opacity: 0; }
@@ -184,6 +185,12 @@ body.touch.menu-up #vskull, body.touch.menu-up #vskullTag, body.touch.paused #vs
 body.touch.menu-up #autoBtn:not(.on), body.touch.paused #autoBtn, body.touch.map-open #autoBtn:not(.on),
 body.touch.menu-up #autoStatus, body.touch.paused #autoStatus { visibility: hidden; }
 body.touch.map-open #hud > :not(#mapMini) { visibility: hidden; }
+
+/* Auto-play with the interface put away (Settings, Interface in auto-play: src/ui/autoplay.js setBare): only the picture, and
+   the map and the chat if they're kept. Anything touched brings it all back. */
+body.ui-bare :is(#hud, #touch, #autoBtn, #autoStatus, #vskull, #vskullTag, #partyFrames, #bossFrame, #raidWarn, #folkNotes, #folkMarks, #heroLayer, #heroChat, #hallStatus, #softCursor) { visibility: hidden !important; }
+body.ui-bare.bare-map :is(#mapMini, #mapRing, #bMap) { visibility: visible !important; }
+body.ui-bare.bare-chat :is(#heroChat, #heroLayer) { visibility: visible !important; }
 
 /* Upright: the game's on its side, so the phone is asked to be. */
 #rotate { flex-direction: column; gap: 14px; font: 600 17px/1.4 Cinzel, Georgia, serif; letter-spacing: .08em; }

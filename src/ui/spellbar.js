@@ -42,6 +42,7 @@ export class SpellBar {
     for (let k = 0; k < SLOTS; k++) {
       const s = document.createElement('div');
       s.className = 'spell';
+      s.dataset.k = k;     // (which slot, for Move Buttons: src/ui/arrange.js)
       const press = (e) => {
         e.preventDefault();
         e.stopPropagation();

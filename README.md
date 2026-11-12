@@ -348,7 +348,7 @@ Bellmourn's music). A click, a tap or a key skips a card. The game loads behind 
 until you start: the title stays on black.
 
 **New Game**, **Continue**, **Load**, **Test Dungeon** (below), **Settings**, **How to Play**. Esc (or the bars in a phone's top row) pauses: **Resume**, **Save Game**,
-**Load Game**, **Settings**, **How to Play**, **Main Menu**. There are ten save slots, and the game keeps itself every 20 s
+**Load Game**, **Settings**, **Move Buttons** (below, under the interface), **How to Play**, **Main Menu**. There are ten save slots, and the game keeps itself every 20 s
 of play, whenever you pause, and when you close the pack or take something up; Continue picks up the newest of those. A save
 holds where you stand and which way you face, the time played, and your pack and what's on you: loading starts the world
 fresh and puts you there, so whatever was lying on the ground is gone. Saves live in `localStorage` under
@@ -361,7 +361,12 @@ raise `SAVE_VERSION` and add a step to `MIGRATIONS`, so older saves are brought 
 
 Settings: volume, music, ambience, look speed, resolution (Auto lets the frame-rate governor choose), graphics (Auto
 picks from your GPU; changing it restarts the game, back to the menu with your game kept for Continue) and the frame rate
-readout.
+readout. **Interface in auto-play**: Always shown, or Hidden until you tap: while auto-play plays and you've left it be for
+four seconds, everything over the picture is put away (`body.ui-bare`), and a tap, a click, a key or the mouse moved brings
+it all back at once (that touch does nothing else). **Map in auto-play** and **Chat in auto-play** keep the corner map, and
+the chat log with the speech bubbles and names over heads, on the screen while the rest is away (both kept unless set to
+Hidden with the rest). A chest or a word auto-play opens itself still shows over the bare picture. `src/ui/autoplay.js`
+(`setBare`, `bareStep`), the rules at the end of the phone part of `src/ui/hud.css`.
 
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
@@ -387,8 +392,8 @@ the screen's height, so a small phone and a tablet get the same picture:
   of you in the cave). Every button steers too: a thumb that lands on one can go on to look about.
 - **Beside the ring**, only when there's something in reach: a gold button that takes, talks, opens, shuts or tries the
   door, with a picture and a word for which, and what it is said just above it.
-- **Bottom left, the left thumb.** The stick comes up wherever the thumb lands; a faint ring shows where it waits. The
-  chevrons above it keep you running.
+- **Bottom left, the left thumb.** The stick comes up wherever the thumb lands, and nothing of it is drawn until a thumb is
+  on it. The chevrons above it keep you running.
 - **Top left:** the medal and the three bars; what's on you under them; your party under those.
 - **Top right:** the corner map, a square, which opens the big one at a tap, with the clock on one of its lower corners
   and Velscour's skull on the other. Beside it, a row: Auto, the menu (pause, save, load, settings), the pack, the spellbook (gold, with a count,
@@ -405,6 +410,26 @@ row, the stick. `place()` hands them to the stylesheet, and `node --test tests/t
 nothing overlaps anything else on phones from 568 x 320 up to a tablet, that the right thumb's buttons keep out of the
 stick's side of the screen, that every button has a picture and something listening, and that the stylesheet's own
 fall-back numbers are the table's. To move something, change the table.
+
+**Move Buttons** (on the pause screen, a desk's or a phone's) lets the player put any of it where they like: every button
+of both thumbs, each of the six spells, the stick, the top row one by one, the map, the skull, Auto and its line, the medal
+and its bars, what's on you, the party, the chat and the foe's bar on a phone; on a desk the spell bar, the medal and bars,
+the map, the clock, the skull, Auto, the party, the chat and the foe's bar. Drag a piece's dashed box to move it; tap one and
+Bigger or Smaller grows it about its middle (60% to 180%); Reset this, Reset all, Cancel, Save. The box of buttons can be
+dragged by its top out of the way. The game stays paused under it, with whatever isn't up just now (the take button, the
+shield, the party, Auto's line) shown so it can be placed. Save keeps it in `localStorage` (`velscour.layout`, one layout
+for a touch screen and one for a desk), and it's put up every time the game starts. Put the stick on the right half of the
+screen and a thumb on the right takes up the stick instead (`input.stickRight`); a button wherever it's put still answers
+its own thumb.
+
+How it moves things (`src/ui/arrange.js`): each piece keeps its place from the table and the stylesheet, and is shifted from
+there by CSS's own `translate` and `scale` properties, written to one sheet (`#arrangeCss`), so the transforms the game's rules
+already use (a pressed button, a centred bar) are left alone. Nothing else in the game may use those two properties (the test
+says so). The shift is in units, so a layout keeps its shape from phone to phone, and anything a smaller screen would push off
+its edge is brought back on as it's put up, without changing what's kept. What's read back is made safe first (`clean`): only
+pieces there are, in bounds. `node --test tests/arrange.test.mjs` checks that every piece is on the page, the stylesheet it
+writes, the reading back, the stick and auto-play's hiding. A new button on the HUD wants a line in `PIECES` there (the test
+fails for a `.tbtn` that can't be moved).
 
 (A slot's picture is drawn again as it's pressed, so nothing inside a button takes a touch: a thumb that landed on a
 picture since replaced would never be heard lifting, and the cast would stay held.)
@@ -1351,6 +1376,7 @@ To check it yourself:
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
 | `src/ui/hud.css`, `src/ui/thumbs.js`, `src/ui/icons.js` | The interface's sheet, where everything sits on a phone, and the drawn icons |
+| `src/ui/arrange.js` | Move Buttons: the player's own layout of the interface, kept and put back each time |
 | `src/ui/skin.js`, `assets/ui/kit/` | Painted pieces of the interface, and what puts them over the drawn ones |
 | `tools/ui/`, `art/ui/bellmourn_ui_kit.zip` | The art kit for the interface: its sheets, the builder, the importer, and the kit itself |
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |
