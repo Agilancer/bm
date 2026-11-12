@@ -1,0 +1,1404 @@
+{
+ "format": "bm-ui-kit/1",
+ "sheets": [
+  {
+   "id": "buttons",
+   "title": "The round buttons",
+   "priority": "A",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 2,
+   "rows": 2,
+   "out": 256,
+   "fill": true,
+   "brief": "The bases of the buttons a thumb presses on a phone: a round boss, seen straight on, perfectly circular, filling its cell to the guide circle. The game draws an icon in the middle, so the middle is an empty, dark, slightly domed field. No icon, no gem in the centre.",
+   "cells": [
+    {
+     "name": "btn_round",
+     "group": "pieces",
+     "what": "The ordinary button, at rest: a blackened iron disc with a bronze-gold rim worked in fine filigree, four tiny garnet studs at the compass points of the rim, the centre a dark, slightly domed field."
+    },
+    {
+     "name": "btn_round_on",
+     "group": "pieces",
+     "what": "The same button, pressed or switched on: identical shape and rim, the rim brighter gold and the centre lit with a warm inner glow, the garnets alight."
+    },
+    {
+     "name": "btn_main",
+     "group": "pieces",
+     "what": "The big main-attack button, at rest: the same make but grander, a heavier double rim with eight garnet studs and small pointed finials at the four compass points (kept inside the guide circle), the centre a dark domed field."
+    },
+    {
+     "name": "btn_main_on",
+     "group": "pieces",
+     "what": "The same big button, pressed: identical shape, rim blazing gold, centre lit from within."
+    }
+   ]
+  },
+  {
+   "id": "icons_actions",
+   "title": "Icons: what the thumbs do",
+   "priority": "A",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 4,
+   "out": 192,
+   "cells": [
+    {
+     "name": "staff",
+     "group": "icons",
+     "what": "A wizard's staff held at a slant, its head a glowing orb throwing off three small sparks. The main attack."
+    },
+    {
+     "name": "guard",
+     "group": "icons",
+     "what": "A kite shield, front on, plain steel face with a raised rim and a single boss. No device on it."
+    },
+    {
+     "name": "jump",
+     "group": "icons",
+     "what": "A pair of worn leather boots leaving the ground, a small puff of dust under them, an upward sweep above."
+    },
+    {
+     "name": "dodge",
+     "group": "icons",
+     "what": "A cloaked figure in a low sideways lunge with speed streaks trailing behind. A quick sidestep."
+    },
+    {
+     "name": "sprint",
+     "group": "icons",
+     "what": "A single leather boot in mid stride, leaning forward, three speed streaks trailing behind it. Running."
+    },
+    {
+     "name": "cast",
+     "group": "icons",
+     "what": "An open hand, palm up, with a four-pointed star of light bursting above it. Cast a spell."
+    },
+    {
+     "name": "take",
+     "group": "icons",
+     "what": "A gloved hand reaching down to grasp, fingers spread. Pick something up."
+    },
+    {
+     "name": "talk",
+     "group": "icons",
+     "what": "Two overlapping speech scrolls (curled parchment ribbons), blank. Talk to someone."
+    },
+    {
+     "name": "open",
+     "group": "icons",
+     "what": "A heavy wooden door with iron bands, standing ajar, warm light spilling through the gap."
+    },
+    {
+     "name": "shut",
+     "group": "icons",
+     "what": "The same heavy wooden door with iron bands, closed, a ring handle on it."
+    },
+    {
+     "name": "locked",
+     "group": "icons",
+     "what": "An old iron padlock, closed, with a keyhole. A locked door."
+    },
+    {
+     "name": "pack",
+     "group": "icons",
+     "what": "A traveller's leather backpack with a buckled flap and a bedroll strapped on top. The inventory."
+    },
+    {
+     "name": "book",
+     "group": "icons",
+     "what": "A thick closed spellbook with metal corners and a clasp, a four-pointed star gem set in its cover."
+    },
+    {
+     "name": "journal",
+     "group": "icons",
+     "what": "A rolled parchment scroll partly unrolled, with a quill pen lying across it. The quest journal."
+    },
+    {
+     "name": "map",
+     "group": "icons",
+     "what": "A folded parchment map with a dotted path ending at a small red diamond, one corner curling."
+    },
+    {
+     "name": "menu",
+     "group": "icons",
+     "what": "Three short horizontal iron bars stacked, each with a small rivet at both ends. The menu."
+    }
+   ],
+   "brief": "Sixteen icons that sit on the round buttons. Pale bone-and-gold objects that read at a glance on a dark button at the size of a fingernail: one object each, bold silhouette, no frame, no background."
+  },
+  {
+   "id": "icons_menus",
+   "title": "Icons: the menus",
+   "priority": "A",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 4,
+   "out": 192,
+   "cells": [
+    {
+     "name": "view1",
+     "group": "icons",
+     "what": "A single open eye, heavy lidded, iris catching light. First-person view."
+    },
+    {
+     "name": "view3",
+     "group": "icons",
+     "what": "A small robed wizard figure seen from behind and above, pointed hat, staff in hand. Third-person view."
+    },
+    {
+     "name": "close",
+     "group": "icons",
+     "what": "Two short iron bars crossed on the diagonal, riveted where they meet (the one place in the set a crossed shape is wanted). Close."
+    },
+    {
+     "name": "sort",
+     "group": "icons",
+     "what": "Three small stacked chests, biggest at the bottom, smallest on top. Sort the pack."
+    },
+    {
+     "name": "plus",
+     "group": "icons",
+     "what": "A brass magnifying lens with a wooden handle, a bright four-pointed glint in its glass. Look closer."
+    },
+    {
+     "name": "minus",
+     "group": "icons",
+     "what": "The same brass magnifying lens, held further off and smaller in its cell, its glass dark and plain. Look from further away."
+    },
+    {
+     "name": "centre",
+     "group": "icons",
+     "what": "A brass compass rose with a needle, four points. Centre the map on yourself."
+    },
+    {
+     "name": "resume",
+     "group": "icons",
+     "what": "A right-pointing arrowhead of polished gold. Resume."
+    },
+    {
+     "name": "save",
+     "group": "icons",
+     "what": "A quill writing in an open book. Save the game."
+    },
+    {
+     "name": "load",
+     "group": "icons",
+     "what": "An open book with a ribbon bookmark and a page turning back. Load a game."
+    },
+    {
+     "name": "settings",
+     "group": "icons",
+     "what": "Two interlocking iron cogwheels. Settings."
+    },
+    {
+     "name": "howto",
+     "group": "icons",
+     "what": "A lit candle beside an open book. How to play."
+    },
+    {
+     "name": "home",
+     "group": "icons",
+     "what": "A small stone gatehouse with an arched doorway and a pointed roof. Main menu."
+    },
+    {
+     "name": "gold",
+     "group": "icons",
+     "what": "A small heap of plain gold coins, blank faces. Gold."
+    },
+    {
+     "name": "quest",
+     "group": "icons",
+     "what": "A gold four-pointed star with a small diamond at its centre. A quest marker."
+    },
+    {
+     "name": "rotate",
+     "group": "icons",
+     "what": "A hand-held slate tablet shown twice: upright and faint, then lying on its side and solid, a curved arrow between them. Turn the screen sideways."
+    }
+   ],
+   "brief": "Sixteen more icons of the same family as the first sheet, for the top bar and the menus. Same make, same weight, same palette."
+  },
+  {
+   "id": "panel",
+   "title": "The window frame",
+   "priority": "A",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "nine",
+   "slice": 192,
+   "out": 512,
+   "name": "panel",
+   "group": "pieces",
+   "brief": "The frame of every window in the game (the pack, the spellbook, a conversation, the settings). One square frame filling the sheet edge to edge, seen straight on: a border of blackened iron with a bronze-gold inner bead, ornate corners with a small garnet stud in each, and a plain dark centre (near-black warm brown, very faint leather grain, no picture). The game cuts it in nine and stretches it: the four corners are kept as they are, so every ornament must stay inside the corner squares the template marks; the four sides between the corners must be plain, straight and the same all along their length; the centre must be even."
+  },
+  {
+   "id": "spells_fire",
+   "title": "Spells: Fire",
+   "priority": "B",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 3,
+   "out": 224,
+   "cells": [
+    {
+     "name": "firebolt",
+     "group": "spells",
+     "what": "Firebolt. Hold to gather it in the hand, up to two seconds, then it roars away and bursts where it lands. The longer it gathers, the harder it bursts.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "firebeam",
+     "group": "spells",
+     "what": "Fire Beam. Hold: a roaring jet of flame pours from your palms, searing and setting alight whatever it plays across.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "comet",
+     "group": "spells",
+     "what": "Cinderburst. A knot of cinders that bursts where it lands and scatters embers all round, each one a small fire of its own.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "wallfire",
+     "group": "spells",
+     "what": "Wall of Fire. Raises a wall of fire nine paces long where you look, for eight seconds. What crosses it goes up in flames.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "firenova",
+     "group": "spells",
+     "what": "Ring of Fire. A ring of flame rolls out from where you stand, scorching all it passes, and stands there six seconds as a moat: what crosses it burns.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "wyrm",
+     "group": "spells",
+     "what": "Flame Wyrm. A serpent of fire that weaves its own way to the nearest foe, and leaves the ground alight where it strikes.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "phoenix",
+     "group": "spells",
+     "what": "Phoenix. A firebird flies through everything in its way, dies in a ring of flame among them, and its ashes mend you.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "bomb",
+     "group": "spells",
+     "what": "Cinder Brand. Brands a foe with a coal that burns down and bursts. If the foe dies to it, the brand leaps to the two nearest.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "inferno",
+     "group": "spells",
+     "what": "Inferno. For twelve seconds you are wreathed in fire: all within reach burn, and the ground burns where you have walked.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "meteor",
+     "group": "spells",
+     "what": "Meteor. Calls a burning stone out of the sky onto where you look, and leaves the ground on fire.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": "school_fire",
+     "group": "icons",
+     "what": "The emblem of the school of Fire: A single tall flame. Simple and bold, to sit on a tab.",
+     "colour": "#ff9a3c"
+    },
+    {
+     "name": null
+    }
+   ],
+   "colour": "#ff9a3c",
+   "brief": "The ten spells of the school of Fire, and its emblem. Every icon on this sheet is lit by and coloured with the school's own colour, #ff9a3c, on the dark neutral ground of the style lock: one glowing magical effect in each cell, no hands, no figures, no frame or border round it (the game puts each in a round socket)."
+  },
+  {
+   "id": "spells_ice",
+   "title": "Spells: Ice",
+   "priority": "B",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 3,
+   "out": 224,
+   "cells": [
+    {
+     "name": "frost",
+     "group": "spells",
+     "what": "Frost Shards. Three splinters of ice that shatter into frost and slow what they strike.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "coldcone",
+     "group": "spells",
+     "what": "Cone of Cold. A breath of winter from both hands: everything in a cone before you is cut by it and slowed.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "rime",
+     "group": "spells",
+     "what": "Rime Lance. A lance of ice that freezes what it strikes for a moment and bursts into shards all round.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "nova",
+     "group": "spells",
+     "what": "Frost Nova. Ice bursts out from where you stand: all within ten paces are frozen solid for five seconds, and take half again from every blow.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "frostray",
+     "group": "spells",
+     "what": "Ray of Frost. Hold: a ray of bitter cold that slows what it plays on, and freezes solid what it is held on long enough.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "prism",
+     "group": "spells",
+     "what": "Prismatic Shard. A crystal that splits on what it strikes into three beams of cold light, running on through everything behind and slowing it.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "blizzard",
+     "group": "spells",
+     "what": "Blizzard. Ice rains on the ground you mark for seven seconds, cutting and slowing all beneath.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "shatter",
+     "group": "spells",
+     "what": "Shatter. Every slowed foe within sixteen paces cracks. Every frozen one breaks out of its ice for twice as much, and the shards cut those beside it.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "orb",
+     "group": "spells",
+     "what": "Frozen Orb. A slow globe of ice that rolls through the fight throwing shards in every direction, then bursts.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "zero",
+     "group": "spells",
+     "what": "Deadwinter. Marks the ground you look at. A breath later all warmth leaves it: everything inside is frozen solid for six seconds.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": "school_ice",
+     "group": "icons",
+     "what": "The emblem of the school of Ice: A six-armed ice crystal. Simple and bold, to sit on a tab.",
+     "colour": "#8fd4ff"
+    },
+    {
+     "name": null
+    }
+   ],
+   "colour": "#8fd4ff",
+   "brief": "The ten spells of the school of Ice, and its emblem. Every icon on this sheet is lit by and coloured with the school's own colour, #8fd4ff, on the dark neutral ground of the style lock: one glowing magical effect in each cell, no hands, no figures, no frame or border round it (the game puts each in a round socket)."
+  },
+  {
+   "id": "spells_earth",
+   "title": "Spells: Earth",
+   "priority": "B",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 3,
+   "out": 224,
+   "cells": [
+    {
+     "name": "stone",
+     "group": "spells",
+     "what": "Stone Shard. A fist of rock, thrown hard: it staggers what it strikes and knocks it back a step.",
+     "colour": "#d8b184"
+    },
+    {
+     "name": "lance",
+     "group": "spells",
+     "what": "Bone Lance. A spear of sharpened bone that runs through every body in its line and sticks quivering in the wall.",
+     "colour": "#d6eab6"
+    },
+    {
+     "name": "thorns",
+     "group": "spells",
+     "what": "Thorn Volley. A fan of five thorns. What they strike is left rotting for four seconds.",
+     "colour": "#a7ee4a"
+    },
+    {
+     "name": "spikes",
+     "group": "spells",
+     "what": "Earthsplitter. Spikes of stone burst from the ground in a line before you, impaling what stands there and flinging it into the air.",
+     "colour": "#d8b184"
+    },
+    {
+     "name": "boulder",
+     "group": "spells",
+     "what": "Rolling Boulder. A boulder that bounds on from where it lands, three times, bursting among whatever is there each time. It hurts no one twice.",
+     "colour": "#d8b184"
+    },
+    {
+     "name": "plague",
+     "group": "spells",
+     "what": "Plague Flask. A lobbed flask that bursts in a choking green cloud: for nine seconds everything inside it rots and slows.",
+     "colour": "#a7ee4a"
+    },
+    {
+     "name": "stoneskin",
+     "group": "spells",
+     "what": "Stoneskin. Your skin turns to stone for twenty seconds: every blow that lands does a third less.",
+     "colour": "#d8b184"
+    },
+    {
+     "name": "vine",
+     "group": "spells",
+     "what": "Grasping Vines. Where it lands, vines come up under the five nearest, tear at them and hold them fast where they stand.",
+     "colour": "#a7ee4a"
+    },
+    {
+     "name": "quake",
+     "group": "spells",
+     "what": "Earthquake. The ground you mark heaves for six seconds: all on it are slowed, and every jolt, one each second and a half, batters them and throws them off their feet.",
+     "colour": "#d8b184"
+    },
+    {
+     "name": "monolith",
+     "group": "spells",
+     "what": "Monolith. A slab of stone bursts up under whatever you look at: one great blow that throws it into the air and leaves it stunned.",
+     "colour": "#d8b184"
+    },
+    {
+     "name": "school_earth",
+     "group": "icons",
+     "what": "The emblem of the school of Earth: A rough standing stone with a crack. Simple and bold, to sit on a tab.",
+     "colour": "#d8b184"
+    },
+    {
+     "name": null
+    }
+   ],
+   "colour": "#d8b184",
+   "brief": "The ten spells of the school of Earth, and its emblem. Every icon on this sheet is lit by and coloured with the school's own colour, #d8b184, on the dark neutral ground of the style lock: one glowing magical effect in each cell, no hands, no figures, no frame or border round it (the game puts each in a round socket)."
+  },
+  {
+   "id": "spells_arcane",
+   "title": "Spells: Arcane",
+   "priority": "B",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 3,
+   "out": 224,
+   "cells": [
+    {
+     "name": "missiles",
+     "group": "spells",
+     "what": "Magic Missiles. Hold: spinning missiles fan out and hang in the air, more the longer you hold, and dart off one hard after another to seek a foe.",
+     "colour": "#d27bff"
+    },
+    {
+     "name": "arcaneblast",
+     "group": "spells",
+     "what": "Arcane Blast. A clap of raw force from both hands: everything in a cone before you is torn at and hurled back.",
+     "colour": "#d27bff"
+    },
+    {
+     "name": "blink",
+     "group": "spells",
+     "what": "Blink. Vanish and step out up to fourteen paces ahead, tearing through anything in the way.",
+     "colour": "#d27bff"
+    },
+    {
+     "name": "blades",
+     "group": "spells",
+     "what": "Spirit Blades. Four ghostly swords wheel round you for twenty seconds, hacking at anything that comes near.",
+     "colour": "#7bebff"
+    },
+    {
+     "name": "rune",
+     "group": "spells",
+     "what": "Rune of Force. Writes a rune on the ground where you look. The first foe to step on it is blown off its feet with everything near. Three may lie at once.",
+     "colour": "#d27bff"
+    },
+    {
+     "name": "crescent",
+     "group": "spells",
+     "what": "Moonblade. A spinning crescent that cuts its way out eighteen paces and comes back to your hand, cutting again.",
+     "colour": "#7bebff"
+    },
+    {
+     "name": "well",
+     "group": "spells",
+     "what": "Gravity Well. A mote of darkness that hangs where it lands, dragging all within ten paces into it, then bursts.",
+     "colour": "#a071ff"
+    },
+    {
+     "name": "stasis",
+     "group": "spells",
+     "what": "Stasis. A sphere where time stops. What is inside hangs there for three seconds, then pays for all of it at once.",
+     "colour": "#d27bff"
+    },
+    {
+     "name": "disintegrate",
+     "group": "spells",
+     "what": "Disintegrate. Hold: a lance of raw force through everything in its line, biting harder the longer it is held.",
+     "colour": "#d27bff"
+    },
+    {
+     "name": "starfall",
+     "group": "spells",
+     "what": "Starfall. Marks the ground you look at, and a moment later ten stars come down on it one after another.",
+     "colour": "#d27bff"
+    },
+    {
+     "name": "school_arcane",
+     "group": "icons",
+     "what": "The emblem of the school of Arcane: A crescent moon with one star. Simple and bold, to sit on a tab.",
+     "colour": "#d27bff"
+    },
+    {
+     "name": null
+    }
+   ],
+   "colour": "#d27bff",
+   "brief": "The ten spells of the school of Arcane, and its emblem. Every icon on this sheet is lit by and coloured with the school's own colour, #d27bff, on the dark neutral ground of the style lock: one glowing magical effect in each cell, no hands, no figures, no frame or border round it (the game puts each in a round socket)."
+  },
+  {
+   "id": "spells_lightning",
+   "title": "Spells: Lightning",
+   "priority": "B",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 3,
+   "out": 224,
+   "cells": [
+    {
+     "name": "spark",
+     "group": "spells",
+     "what": "Spark. A crack of lightning straight to what you look at. Nothing outruns it.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "chain",
+     "group": "spells",
+     "what": "Chain Lightning. Hold: lightning streams from your palm, and from whatever it strikes it leaps to the nearest other, up to five times.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "fork",
+     "group": "spells",
+     "what": "Forked Lightning. Lightning that splits as it leaves the hand: three forks, each to a foe of its own before you.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "seed",
+     "group": "spells",
+     "what": "Storm Seed. A spark that sticks to what it strikes, or where it lands, for six seconds. Any lightning that strikes there leaps on to everyone within seven paces. Two may be set at once.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "lightning",
+     "group": "spells",
+     "what": "Ball Lightning. A slow sphere of storm that lashes everything around it, then detonates.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "thunderclap",
+     "group": "spells",
+     "what": "Thunderclap. A clap of thunder from where you stand: all within six paces are thrown back and left stunned.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "stormstep",
+     "group": "spells",
+     "what": "Stormstep. You go as lightning to the foe you look at, through everything between, and arrive on it in a crack of thunder that leaves it stunned.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "thunder",
+     "group": "spells",
+     "what": "Thunderbolt. Calls a bolt out of the sky onto where you look. What it strikes is stunned, if it lives.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "staticfield",
+     "group": "spells",
+     "what": "Static Field. For fifteen seconds lightning leaps from you to the three nearest foes within six paces, once a second.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "tempest",
+     "group": "spells",
+     "what": "Thunderstorm. A storm gathers over the ground you mark: for eight seconds bolt after bolt comes down on whoever is under it.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": "school_lightning",
+     "group": "icons",
+     "what": "The emblem of the school of Lightning: A forked lightning bolt. Simple and bold, to sit on a tab.",
+     "colour": "#a79bff"
+    },
+    {
+     "name": null
+    }
+   ],
+   "colour": "#a79bff",
+   "brief": "The ten spells of the school of Lightning, and its emblem. Every icon on this sheet is lit by and coloured with the school's own colour, #a79bff, on the dark neutral ground of the style lock: one glowing magical effect in each cell, no hands, no figures, no frame or border round it (the game puts each in a round socket)."
+  },
+  {
+   "id": "spells_utility",
+   "title": "Spells: Utility",
+   "priority": "B",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 3,
+   "out": 224,
+   "cells": [
+    {
+     "name": "wisp",
+     "group": "spells",
+     "what": "Wisp Light. A spirit-light that follows you for ninety seconds and lights the dark.",
+     "colour": "#ffd98a"
+    },
+    {
+     "name": "mend",
+     "group": "spells",
+     "what": "Mend. A circle of light closes your wounds, restoring 35 life.",
+     "colour": "#a4ec7a"
+    },
+    {
+     "name": "fleet",
+     "group": "spells",
+     "what": "Fleetfoot. The wind at your back: for twelve seconds you walk and run a third faster.",
+     "colour": "#7bebff"
+    },
+    {
+     "name": "turn",
+     "group": "spells",
+     "what": "Turn the Dead. Light breaks from your hand. The risen dead within nine paces are driven back, burning, and stand helpless a moment; anything else is dazed.",
+     "colour": "#ffd98a"
+    },
+    {
+     "name": "renew",
+     "group": "spells",
+     "what": "Renew. Your wounds knit as you fight: sixty life, a little at a time, over ten seconds.",
+     "colour": "#a4ec7a"
+    },
+    {
+     "name": "drain",
+     "group": "spells",
+     "what": "Life Drain. Hold: a red thread fastens on the nearest foe before you and pulls its stolen life into yours.",
+     "colour": "#ff5563"
+    },
+    {
+     "name": "aegis",
+     "group": "spells",
+     "what": "Aegis. A shell of light that takes the next sixty points of harm for you, for twenty seconds or until it breaks.",
+     "colour": "#ffd98a"
+    },
+    {
+     "name": "sanctuary",
+     "group": "spells",
+     "what": "Sanctuary. Hallows the ground where you stand for ten seconds. Inside it you mend and your mana comes back half again as fast; what means you harm is slowed and seared by it.",
+     "colour": "#a4ec7a"
+    },
+    {
+     "name": "empower",
+     "group": "spells",
+     "what": "Empower. Your next three spells bite two-fifths harder. Unspent, it fades in twenty seconds.",
+     "colour": "#ffd98a"
+    },
+    {
+     "name": "stillness",
+     "group": "spells",
+     "what": "Stillness. The world slows to a crawl round you for four seconds, your company with it. You do not, and nor does what you cast.",
+     "colour": "#ffd98a"
+    },
+    {
+     "name": "school_utility",
+     "group": "icons",
+     "what": "The emblem of the school of Utility: A radiant sun disc with short rays. Simple and bold, to sit on a tab.",
+     "colour": "#ffd98a"
+    },
+    {
+     "name": null
+    }
+   ],
+   "colour": "#ffd98a",
+   "brief": "The ten spells of the school of Utility, and its emblem. Every icon on this sheet is lit by and coloured with the school's own colour, #ffd98a, on the dark neutral ground of the style lock: one glowing magical effect in each cell, no hands, no figures, no frame or border round it (the game puts each in a round socket)."
+  },
+  {
+   "id": "sockets",
+   "title": "Sockets and the medal",
+   "priority": "B",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 2,
+   "rows": 2,
+   "out": 256,
+   "fill": true,
+   "brief": "Four round or square settings that things sit in, each filling its cell to the guide. Their centres are empty: the game draws what goes in them.",
+   "cells": [
+    {
+     "name": "slot_spell",
+     "group": "pieces",
+     "what": "A round socket a spell's icon sits in: a thin dark iron ring with a narrow bronze-gold inner bead, the centre a dark recessed well. Plainer and thinner-rimmed than the buttons."
+    },
+    {
+     "name": "slot_spell_on",
+     "group": "pieces",
+     "what": "The same socket, chosen: identical shape, its rim glowing pale gold-white."
+    },
+    {
+     "name": "slot_item",
+     "group": "pieces",
+     "what": "A square cell of the paper doll that a piece of gear sits in: a recessed dark square with a thin bronze bevel and tiny corner rivets, the centre empty. Square, filling the guide square."
+    },
+    {
+     "name": "medallion",
+     "group": "pieces",
+     "what": "The round medal that carries the player's level number: a thick bronze-gold ring with a plain channel round it (the game fills the channel to show progress) and a dark domed centre for the number. No number, no emblem."
+    }
+   ]
+  },
+  {
+   "id": "rings",
+   "title": "The map's rim and the stick",
+   "priority": "B",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 2,
+   "rows": 2,
+   "out": 320,
+   "fill": true,
+   "brief": "Round pieces for the corner map and the left thumb's stick. Each fills its cell to the guide circle.",
+   "cells": [
+    {
+     "name": "ring_map",
+     "group": "pieces",
+     "what": "The rim of the round corner map: a ring only, its whole centre empty and transparent (the map shows through). Blackened iron with a bronze-gold inner bead and four small pointed finials at the compass points, the top one a little larger. The ring is thin: its inner edge is at the inner guide circle."
+    },
+    {
+     "name": "stick_base",
+     "group": "pieces",
+     "what": "The base the thumbstick moves in: a wide, shallow, mostly see-through dark dish with a thin bronze rim and four faint tick marks at the compass points. Understated: it sits over the game's picture."
+    },
+    {
+     "name": "stick_nub",
+     "group": "pieces",
+     "what": "The thumbstick's knob: a domed disc of pale polished bone with a bronze collar, lit from the top left."
+    },
+    {
+     "name": null
+    }
+   ]
+  },
+  {
+   "id": "plates",
+   "title": "Buttons, tabs and the rule",
+   "priority": "B",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "boxes",
+   "brief": "The flat rectangular pieces. Each is drawn straight on, filling its box. The game cuts each plate in nine and stretches it to any width, so the ends carry the ornament and the long middle is plain and even. No words on any of them.",
+   "boxes": [
+    {
+     "name": "button",
+     "group": "pieces",
+     "rect": [
+      48,
+      48,
+      696,
+      232
+     ],
+     "out": [
+      384,
+      128
+     ],
+     "what": "A wide button plate, at rest: dark iron with a bronze-gold border, a small ornament at each end, plain dark middle."
+    },
+    {
+     "name": "button_on",
+     "group": "pieces",
+     "rect": [
+      792,
+      48,
+      696,
+      232
+     ],
+     "out": [
+      384,
+      128
+     ],
+     "what": "The same plate, pressed or under the pointer: same shape, border bright gold, middle faintly lit."
+    },
+    {
+     "name": "tab",
+     "group": "pieces",
+     "rect": [
+      48,
+      344,
+      696,
+      232
+     ],
+     "out": [
+      384,
+      128
+     ],
+     "what": "A tab, not chosen: like the button plate but flatter and dimmer, its top corners rounded."
+    },
+    {
+     "name": "tab_on",
+     "group": "pieces",
+     "rect": [
+      792,
+      344,
+      696,
+      232
+     ],
+     "out": [
+      384,
+      128
+     ],
+     "what": "The same tab, chosen: brighter border, warm lit middle, a thin gold line along its bottom edge."
+    },
+    {
+     "name": "rule",
+     "group": "pieces",
+     "rect": [
+      48,
+      664,
+      1440,
+      120
+     ],
+     "out": [
+      720,
+      60
+     ],
+     "keep": true,
+     "what": "A dividing rule that sits under a window's title: a thin gold line fading to nothing at both ends, with one small diamond-shaped garnet at its middle."
+    }
+   ]
+  },
+  {
+   "id": "bars",
+   "title": "The bars",
+   "priority": "B",
+   "size": [
+    1536,
+    1024
+   ],
+   "kind": "boxes",
+   "brief": "The player's life, mana and breath, and a foe's life. First the trough they sit in, then four fills. Each fill is a long strip of one glowing substance, even from end to end (the game crops it to show how much is left), lit along its top edge. No end caps on the fills, no numbers.",
+   "boxes": [
+    {
+     "name": "bar_frame",
+     "group": "pieces",
+     "rect": [
+      48,
+      40,
+      1440,
+      216
+     ],
+     "out": [
+      720,
+      108
+     ],
+     "what": "The trough: a long dark iron channel with a bronze-gold border and a small ornate cap at each end, its middle plain and even (it is stretched). Empty inside."
+    },
+    {
+     "name": "bar_life",
+     "group": "pieces",
+     "rect": [
+      48,
+      296,
+      1440,
+      136
+     ],
+     "out": [
+      360,
+      34
+     ],
+     "keep": true,
+     "what": "Life: deep blood red, glassy, a brighter band along the top."
+    },
+    {
+     "name": "bar_mana",
+     "group": "pieces",
+     "rect": [
+      48,
+      472,
+      1440,
+      136
+     ],
+     "out": [
+      360,
+      34
+     ],
+     "keep": true,
+     "what": "Mana: luminous sapphire blue, like lit water."
+    },
+    {
+     "name": "bar_stamina",
+     "group": "pieces",
+     "rect": [
+      48,
+      648,
+      1440,
+      136
+     ],
+     "out": [
+      360,
+      34
+     ],
+     "keep": true,
+     "what": "Breath: pale straw gold."
+    },
+    {
+     "name": "bar_foe",
+     "group": "pieces",
+     "rect": [
+      48,
+      824,
+      1440,
+      136
+     ],
+     "out": [
+      360,
+      34
+     ],
+     "keep": true,
+     "what": "A foe's life: dark crimson with an ember glow, harsher than the player's red."
+    }
+   ]
+  },
+  {
+   "id": "paper",
+   "title": "Parchment",
+   "priority": "C",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "nine",
+   "slice": 192,
+   "out": 512,
+   "name": "paper",
+   "group": "pieces",
+   "brief": "A sheet of old parchment for letters and pages the player reads: one square sheet filling the picture, seen straight on, warm cream-tan, darker and a little worn toward its edges, slightly ragged outline, even and blank across the middle. Cut in nine like the window frame: keep any tears, stains or curled corners inside the corner squares, and keep the sides and the middle plain."
+  },
+  {
+   "id": "icons_slots",
+   "title": "Icons: empty gear slots, and two marks",
+   "priority": "C",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 4,
+   "out": 192,
+   "cells": [
+    {
+     "name": "slot_head",
+     "group": "icons",
+     "what": "A wizard's pointed hat, as a faint engraved silhouette. An empty head slot."
+    },
+    {
+     "name": "slot_shoulders",
+     "group": "icons",
+     "what": "A pair of shoulder guards on a short mantle, as a faint engraved silhouette."
+    },
+    {
+     "name": "slot_neck",
+     "group": "icons",
+     "what": "A pendant on a chain, as a faint engraved silhouette."
+    },
+    {
+     "name": "slot_chest",
+     "group": "icons",
+     "what": "A long tunic, sleeveless, as a faint engraved silhouette."
+    },
+    {
+     "name": "slot_legs",
+     "group": "icons",
+     "what": "A pair of trousers, as a faint engraved silhouette."
+    },
+    {
+     "name": "slot_feet",
+     "group": "icons",
+     "what": "A pair of boots, as a faint engraved silhouette."
+    },
+    {
+     "name": "slot_ring",
+     "group": "icons",
+     "what": "A plain finger ring with one small stone, as a faint engraved silhouette."
+    },
+    {
+     "name": "slot_main",
+     "group": "icons",
+     "what": "A tall staff standing upright, as a faint engraved silhouette. Fill the cell's height."
+    },
+    {
+     "name": "slot_off",
+     "group": "icons",
+     "what": "A kite shield, blank, as a faint engraved silhouette."
+    },
+    {
+     "name": "slot_skull",
+     "group": "icons",
+     "what": "A small plain human skull in profile, as a faint engraved silhouette. A spell focus the wizard carries."
+    },
+    {
+     "name": "mark_branch",
+     "group": "spells",
+     "what": "A small faceted diamond-shaped crystal, point up. Marks a branch of a spell."
+    },
+    {
+     "name": "mark_mastery",
+     "group": "spells",
+     "what": "A five-pointed star medal with a small gem at its centre. Marks a school's mastery."
+    },
+    {
+     "name": null
+    },
+    {
+     "name": null
+    },
+    {
+     "name": null
+    },
+    {
+     "name": null
+    }
+   ],
+   "brief": "Ten faint silhouettes that show what goes in an empty gear slot, and two small marks for the spellbook. The silhouettes are dim, single-colour engravings (dull bronze, low contrast), not full paintings: they must not look like an item is there. Leave the last four cells empty."
+  },
+  {
+   "id": "icons_goods",
+   "title": "Icons: goods, materials and charms",
+   "priority": "C",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "grid",
+   "cols": 4,
+   "rows": 4,
+   "out": 192,
+   "cells": [
+    {
+     "name": "bed",
+     "group": "goods",
+     "what": "A simple wooden bed with a red blanket and a pale pillow. A night at the inn."
+    },
+    {
+     "name": "ale",
+     "group": "goods",
+     "what": "A wooden tankard banded with iron, foam on top."
+    },
+    {
+     "name": "roll",
+     "group": "goods",
+     "what": "A round bread roll with a scored top."
+    },
+    {
+     "name": "loaf",
+     "group": "goods",
+     "what": "A crusty loaf of bread on a board."
+    },
+    {
+     "name": "dressing",
+     "group": "goods",
+     "what": "A roll of linen bandage with a sprig of green herbs."
+    },
+    {
+     "name": "candle",
+     "group": "goods",
+     "what": "A lit tallow candle in a small holder."
+    },
+    {
+     "name": "oil",
+     "group": "goods",
+     "what": "A small stoppered flask of lamp oil, amber through green glass."
+    },
+    {
+     "name": "grave_candle",
+     "group": "goods",
+     "what": "A tall pale grave candle with wax runs, a soft pale flame."
+    },
+    {
+     "name": "bone",
+     "group": "goods",
+     "what": "A few old bones crossed in a small pile. A crafting material."
+    },
+    {
+     "name": "iron",
+     "group": "goods",
+     "what": "A stack of rough iron ingots with two nails. A crafting material."
+    },
+    {
+     "name": "silk",
+     "group": "goods",
+     "what": "Folded bolts of pale spider silk. A crafting material."
+    },
+    {
+     "name": "wax",
+     "group": "goods",
+     "what": "Three blocks of yellow beeswax. A crafting material."
+    },
+    {
+     "name": "ember",
+     "group": "goods",
+     "what": "A glowing orange ember crystal, hot at its heart. A crafting material."
+    },
+    {
+     "name": "wingbell",
+     "group": "goods",
+     "what": "A tiny silver bell with a swift's wing cast on its shoulder, hung on a violet thread. A charm."
+    },
+    {
+     "name": "goatfoot",
+     "group": "goods",
+     "what": "A small cloven hoof shod in iron, hung on a leather thong. A charm."
+    },
+    {
+     "name": "glimmerstone",
+     "group": "goods",
+     "what": "A shard of pale blue crystal bound in silver wire, faintly glowing. A charm."
+    }
+   ],
+   "brief": "Sixteen small things bought, gathered and carried, painted in full colour as items: one object each, no frame, no background."
+  },
+  {
+   "id": "app_icon",
+   "title": "The app's icon",
+   "priority": "C",
+   "size": [
+    1024,
+    1024
+   ],
+   "kind": "full",
+   "out": 512,
+   "name": "app_icon",
+   "group": "pieces",
+   "opaque": true,
+   "brief": "The icon on a phone's home screen. A full square picture with no transparency and no rounded corners (the phone rounds them): a great bronze church bell hanging in darkness, lit from below by a faint ember glow, on a near-black background with a subtle vignette. Keep the bell inside the middle 70% of the square (phones crop the edges). No letters, no title, no frame."
+  }
+ ],
+ "hud": {
+  "size": [
+   844,
+   390
+  ],
+  "boxes": [
+   {
+    "id": "bAttack",
+    "x": 778,
+    "y": 328,
+    "r": 42,
+    "base": "btn_main",
+    "icon": "staff",
+    "scale": 0.5
+   },
+   {
+    "id": "bDodge",
+    "x": 684,
+    "y": 328,
+    "r": 28,
+    "base": "btn_round",
+    "icon": "dodge"
+   },
+   {
+    "id": "bWide",
+    "x": 711.5,
+    "y": 261.5,
+    "r": 28,
+    "base": "btn_round",
+    "icon": "guard"
+   },
+   {
+    "id": "bJump",
+    "x": 778,
+    "y": 234,
+    "r": 28,
+    "base": "btn_round",
+    "icon": "jump"
+   },
+   {
+    "id": "bTake",
+    "x": 550,
+    "y": 282,
+    "r": 29,
+    "base": "btn_round_on",
+    "icon": "take"
+   },
+   {
+    "id": "slot1",
+    "x": 612,
+    "y": 328,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": "firebolt",
+    "scale": 0.72
+   },
+   {
+    "id": "slot2",
+    "x": 620.1,
+    "y": 276.7,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": "frost",
+    "scale": 0.72
+   },
+   {
+    "id": "slot3",
+    "x": 643.7,
+    "y": 230.4,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": "stone",
+    "scale": 0.72
+   },
+   {
+    "id": "slot4",
+    "x": 680.4,
+    "y": 193.7,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": "missiles",
+    "scale": 0.72
+   },
+   {
+    "id": "slot5",
+    "x": 726.7,
+    "y": 170.1,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": "spark",
+    "scale": 0.72
+   },
+   {
+    "id": "slot6",
+    "x": 778,
+    "y": 162,
+    "r": 23,
+    "base": "slot_spell",
+    "icon": "wisp",
+    "scale": 0.72
+   },
+   {
+    "id": "bSprint",
+    "x": 43,
+    "y": 213,
+    "r": 25,
+    "base": "btn_round",
+    "icon": "sprint"
+   },
+   {
+    "id": "mapMini",
+    "x": 788,
+    "y": 54,
+    "r": 46,
+    "base": "ring_map",
+    "icon": null
+   },
+   {
+    "id": "bPause",
+    "x": 672,
+    "y": 27,
+    "r": 19,
+    "base": "btn_round",
+    "icon": "menu"
+   },
+   {
+    "id": "bPack",
+    "x": 629,
+    "y": 27,
+    "r": 19,
+    "base": "btn_round",
+    "icon": "pack"
+   },
+   {
+    "id": "bBook",
+    "x": 586,
+    "y": 27,
+    "r": 19,
+    "base": "btn_round",
+    "icon": "book"
+   },
+   {
+    "id": "bJournal",
+    "x": 543,
+    "y": 27,
+    "r": 19,
+    "base": "btn_round",
+    "icon": "journal"
+   },
+   {
+    "id": "bView",
+    "x": 500,
+    "y": 27,
+    "r": 19,
+    "base": "btn_round",
+    "icon": "view3"
+   },
+   {
+    "id": "levelBox",
+    "x": 32,
+    "y": 30,
+    "r": 22,
+    "base": "medallion",
+    "icon": null
+   }
+  ],
+  "bars": {
+   "x": 61,
+   "y": 13,
+   "w": 150
+  }
+ }
+}

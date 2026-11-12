@@ -41,9 +41,6 @@ body.playing #autoStatus.shown { display: block; }
 #autoLog .foot button { font: inherit; color: #d8e8ee; background: #142028; border: 1px solid #2a4a5a; padding: 7px 12px; cursor: pointer; }
 #autoLog .foot button:hover { border-color: #8fe0ff; }
 #autoStatus.live { pointer-events: auto; cursor: pointer; }
-body.touch #autoBtn { width: 38px; height: 41px; top: 250px; right: 12px; }
-body.touch #autoStatus { top: 296px; }
-body.touch #autoStatus b { font-size: 10px; }
 #autoMenu { position: fixed; z-index: 47; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 94vw); max-height: 88vh; overflow: auto; display: none;
   background: rgba(8, 12, 16, .96); border: 1px solid #2a6a8a; box-shadow: 0 10px 40px #000c, 0 0 18px rgba(42,176,255,.18); color: #e2eef4; font: 14px Georgia, serif; padding: 18px 20px; box-sizing: border-box; }
 #autoMenu.on { display: block; }

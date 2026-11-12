@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { HERD_CONTROL, HERD_END, OPENING, storyHolds } from '../src/core/opening.js';
 
-const css = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+// (The page's own rules, and the interface's sheet that comes after them: src/ui/hud.css.)
+const css = (fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8') + fs.readFileSync(new URL('../src/ui/hud.css', import.meta.url), 'utf8')).replace(/\/\*[\s\S]*?\*\//g, '');
 // Every selector list that hides something, split into its selectors.
 const hiding = [...css.matchAll(/([^{}]+)\{[^}]*visibility:\s*hidden[^}]*\}/g)].flatMap((m) => m[1].split(',').map((s) => s.trim()));
 

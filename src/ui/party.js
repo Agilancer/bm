@@ -47,7 +47,6 @@ export class PartyUI {
       #partyFrames .pf .bar i { display: block; height: 100%; background: linear-gradient(#5fc46a, #2f8a3a); transition: width .15s; }
       #partyFrames .pf.low .bar i { background: linear-gradient(#e4a33a, #b4661c); }
       #partyFrames .pf.dead { opacity: .5; } #partyFrames .pf.dead .bar i { width: 0 !important; }
-      body.touch #partyFrames { top: 24%; transform: scale(.82); transform-origin: 0 0; }
       #bossFrame { position: fixed; left: 50%; top: 52px; transform: translateX(-50%); z-index: 6; width: min(560px, 82vw); display: none; pointer-events: none; font-family: Cinzel, Georgia, serif; text-align: center; }
       #bossFrame .bn { font-size: 17px; color: #f1d68a; letter-spacing: .08em; text-shadow: 0 0 4px #000, 0 1px 2px #000; }
       #bossFrame .bb { height: 12px; margin-top: 4px; background: rgba(0,0,0,.7); border: 1px solid rgba(140,115,68,.7); border-radius: 2px; overflow: hidden; }
@@ -56,7 +55,6 @@ export class PartyUI {
         font: 700 22px/1.3 Georgia, serif; color: #ffcf6a; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 14px rgba(120,30,0,.8); }
       #raidWarn div { animation: rwIn .25s ease-out; transition: opacity .6s; margin-bottom: 6px; }
       @keyframes rwIn { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }
-      body.touch #raidWarn { font-size: 16px; top: 16%; }
       #hirePanel { position: fixed; z-index: 12; left: 50%; bottom: max(3vh, 14px); transform: translateX(-50%); width: min(720px, 95vw); max-height: 78vh; overflow-y: auto; padding: 13px 18px 12px; display: none; flex-direction: column;
         background: rgba(11,9,7,.96); border: 1px solid var(--gold-dim, #8c7344); box-shadow: 0 10px 34px #000b; color: var(--bone, #e9dfc8); font-family: Georgia, serif; }
       #hirePanel .tk-head { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid rgba(140,115,68,.42); padding-bottom: 6px; margin-bottom: 8px; }

@@ -87,7 +87,7 @@ export class SkillTree {
     const S = this.skills;
     this.tabsEl.innerHTML = TREES.map((t, i) => {
       const n = t.spells.filter((q) => S.rank(q.id) > 0).length;
-      return `<button data-tab="${i}" class="${i === this.tab ? 'on' : ''}" style="--c:${COLOURS[t.elem]}">${esc(t.name)}<i>${n}/${t.spells.length}</i></button>`;
+      return `<button data-tab="${i}" class="${i === this.tab ? 'on' : ''}" style="--c:${COLOURS[t.elem]}"><span class="sch" data-ic="school_${t.key}"></span>${esc(t.name)}<i>${n}/${t.spells.length}</i></button>`;
     }).join('') + `<span id="treePoints" class="${S.points ? 'have' : ''}">${S.points} point${S.points === 1 ? '' : 's'} to spend</span>`;
     this.drawTree();
     this.drawInfo();
@@ -108,12 +108,12 @@ export class SkillTree {
       n.augs.forEach((a, i) => {
         const ax = x + (i ? OUT : -OUT), ay = y + 92, ar = S.rank(a.id);
         lines += `<path class="${ar > 0 ? 'on' : ''}" d="M${x} ${y + NODE + 18}L${ax} ${ay}"/>`;
-        html += `<button class="tnode twig ${state(a.id)}" data-id="${a.id}" style="left:${ax - TWIG / 2}px;top:${ay}px">${svg(MARKS.branch)}${a.max > 1 || ar ? `<b>${ar}/${a.max}</b>` : ''}</button>`;
+        html += `<button class="tnode twig ${state(a.id)}" data-id="${a.id}" style="left:${ax - TWIG / 2}px;top:${ay}px">${svg(MARKS.branch, 'mark_branch')}${a.max > 1 || ar ? `<b>${ar}/${a.max}</b>` : ''}</button>`;
         html += `<div class="twname ${ar > 0 ? 'known' : ''}" style="left:${ax - 43}px;top:${ay + TWIG + 2}px">${esc(a.name)}</div>`;
       });
     }
     const m = NODES[`@${t.key}`], mx = CW / 2, my = TOP + 2 * RH + 6;
-    html += `<button class="tnode mastery ${state(m.id)}" data-id="${m.id}" style="left:${mx - NODE / 2}px;top:${my}px">${svg(MARKS.mastery)}<b>${S.rank(m.id)}/${m.max}</b></button>`;
+    html += `<button class="tnode mastery ${state(m.id)}" data-id="${m.id}" style="left:${mx - NODE / 2}px;top:${my}px">${svg(MARKS.mastery, 'mark_mastery')}<b>${S.rank(m.id)}/${m.max}</b></button>`;
     html += `<div class="tname ${S.rank(m.id) > 0 ? 'known' : ''}" style="left:0;top:${my + NODE + 3}px;width:${CW}px">${esc(m.name)}</div>`;
     this.viewEl.style.setProperty('--c', c);
     this.viewEl.innerHTML = `<div class="tcanvas" style="width:${W}px;height:${HGT}px"><svg width="${W}" height="${HGT}" viewBox="0 0 ${W} ${HGT}">${lines}</svg>${html}</div>`;

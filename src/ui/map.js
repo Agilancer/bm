@@ -409,6 +409,7 @@ export class WorldMap {
     this.open = on;
     if (this.input) this.input.mapUp = on;      // (the left button moves the map, not the sword: src/input.js)
     this.big.classList.toggle('open', on);
+    document.body.classList.toggle('map-up', on);      // (a phone gives it the whole screen: src/ui/hud.css)
     if (on) { this.follow = true; this.drawBig(this.lastSnap, this.lastYaw); }
   }
 
@@ -424,7 +425,7 @@ export class WorldMap {
       const cell = Math.floor((WORLD - z) / FOG_M) * FOG + Math.floor((WORLD - x) / FOG_M);
       if (cell !== this.lastCell) { this.lastCell = cell; this.see(x, z); }
     }
-    this.mini.style.display = shown && !this.open ? 'block' : 'none';      // (the big map has its own north, where the corner one sits)
+    this.mini.style.display = (this.ring ||= document.getElementById('mapRing') || this.mini).style.display = shown && !this.open ? 'block' : 'none';      // (the big map has its own north, where the corner one sits)
     if (!shown) { if (this.open) this.toggle(false); return; }
     // The corner map at 30 a second is smooth enough, and a phone has better things to do.
     this.miniT += dt;

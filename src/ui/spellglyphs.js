@@ -2,7 +2,7 @@
 export const COLOURS = ['#ff9a3c', '#8fd4ff', '#d27bff', '#a79bff', '#a4ec7a', '#ffd98a', '#ff5563', '#d6eab6', '#a071ff', '#a7ee4a', '#7bebff', '#d8b184'];
 
 // Glyphs on a 24 box. `s` is drawn as lines, the rest filled.
-const GLYPHS = {
+export const GLYPHS = {
   firebolt: 'M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-4 3-7 1 2 2 3 3 3 0-3-1-5 0-8z',
   frost: 'M12 2l2 8-2 3-2-3zM4 8l7 5-1 3-4-2zM20 8l-7 5 1 3 4-2zM12 14l2 4-2 4-2-4z',
   lightning: 'M13 2l-5 10h4l-2 10 7-13h-4l2-7zM5 7a9 9 0 0 0-1 10l1.500-1a7 7 0 0 1 1-8zM19 7a9 9 0 0 1 1 10l-1.500-1a7 7 0 0 0-1-8z',
@@ -66,11 +66,12 @@ const GLYPHS = {
   stillness: 's:M12 3a9 9 0 1 0 .01 0M12 7v5l4 2',
 };
 
-export const glyph = (def) => svg(GLYPHS[def.key] || GLYPHS.wisp);
+// (data-sp: a painted picture from the art kit goes over the glyph, by its spell's key: src/ui/skin.js.)
+export const glyph = (def) => svg(GLYPHS[def.key] || GLYPHS.wisp, def.key);
 // The small marks in the book: a branch of a spell, a school's mastery.
 export const MARKS = { branch: 'M12 3l9 9-9 9-9-9z', mastery: 'M12 2l3 6.500 7 .8-5 4.700 1.500 7-6.500-3.500L5.500 21 7 14 2 9.300l7-.8z' };
-export const svg = (g) => {
+export const svg = (g, key = '') => {
   const line = g.startsWith('s:');
   const attrs = line ? 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"' : 'fill="currentColor"';
-  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path ${attrs} d="${line ? g.slice(2) : g}"/></svg>`;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"${key ? ` data-sp="${key}"` : ''}><path ${attrs} d="${line ? g.slice(2) : g}"/></svg>`;
 };

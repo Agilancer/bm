@@ -51,15 +51,12 @@
   #cross.wound::before, #cross.wound::after { background: var(--blood-hi); box-shadow: 0 0 6px var(--blood-hi); }
   #cross.hit { transform: translate(-50%, -50%) scale(1.5); }
   #cross.hit::before, #cross.hit::after { background: var(--blood-hi); }
-  #vitals { position: absolute; left: calc(26px + env(safe-area-inset-left)); bottom: calc(26px + env(safe-area-inset-bottom)); width: min(290px, 44vw); }
   .label { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; opacity: .78; margin-bottom: 4px; text-shadow: 0 1px 3px #000; }
   /* The × in a menu's top right corner (the pack, a word with someone): shuts it at once. A thumb gets a wider mark than it sees. */
   .menu-x { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; color: var(--bone); background: rgba(8,6,4,.6); border: 1px solid var(--gold-dim); cursor: pointer; }
   .menu-x svg { width: 12px; height: 12px; pointer-events: none; }
   .menu-x:hover { background: rgba(201,163,92,.2); color: #fff4da; }
   body.touch .menu-x::after { content: ''; position: absolute; inset: -9px; }
-  .meter { height: 8px; background: rgba(0,0,0,.6); border: 1px solid rgba(201,163,92,.55); overflow: hidden; }
-  .meter > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #b82a1d, #6d120b); transform-origin: 0 50%; will-change: transform; transition: transform .12s; }
   #clock { position: absolute; left: calc(20px + env(safe-area-inset-left)); top: calc(18px + env(safe-area-inset-top)); width: 76px; text-align: center; filter: drop-shadow(0 2px 5px rgba(0,0,0,.7)); }
   #clock svg { display: block; width: 100%; height: auto; }
   #clock text { font: 700 6.6px Georgia, 'Times New Roman', serif; fill: #18120c; text-anchor: middle; }
@@ -73,8 +70,6 @@
   #msg { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-size: clamp(30px, 6vw, 62px); letter-spacing: .1em; color: var(--gold); text-shadow: 0 2px 22px #000; opacity: 0; transition: opacity .8s; }
   #msg small { display: block; margin-top: 12px; font-size: 16px; letter-spacing: .2em; color: var(--bone); }
   #tip { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); max-width: min(620px, 64vw); text-align: center; font-size: 15px; line-height: 1.4; letter-spacing: .03em; color: var(--bone); background: rgba(8,6,4,.62); padding: 7px 14px; opacity: 0; transition: opacity .5s; }
-  #stam { height: 4px; margin-top: 3px; background: rgba(0,0,0,.6); overflow: hidden; }
-  #stam > i { display: block; height: 100%; width: 100%; background: #c9b478; transform-origin: 0 50%; will-change: transform; transition: transform .08s; }
   #debug { position: absolute; right: 12px; top: 200px; font: 12px/1.45 ui-monospace, Consolas, monospace; text-align: right; color: #e6e0d0; text-shadow: 0 1px 2px #000; white-space: pre; display: none; }
   #take { position: absolute; left: 50%; top: 70%; transform: translateX(-50%); max-width: 70vw; text-align: center; font-size: 15px; letter-spacing: .03em; background: rgba(8,6,4,.62); padding: 6px 14px; display: none; }
   /* The map */
@@ -95,30 +90,9 @@
   .mapKey b { color: var(--gold); }
   #pause { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.55); z-index: 15; }
 
-  /* Touch controls */
-  #touch { position: fixed; inset: 0; z-index: 6; display: none; }
-  .tbtn { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid rgba(233,223,201,.55); background: rgba(10,8,6,.42); color: var(--bone); font-size: 12px; letter-spacing: .08em; }
-  .tbtn.on, .tbtn:active { background: rgba(201,163,92,.45); }
-  #bAttack { width: 92px; height: 92px; right: calc(26px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom)); font-size: 13px; }
-  #bWide { width: 66px; height: 66px; right: calc(204px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); display: none; }
-  #bJump { width: 66px; height: 66px; right: calc(38px + env(safe-area-inset-right)); bottom: calc(132px + env(safe-area-inset-bottom)); }
-  #bSprint { width: 56px; height: 56px; left: calc(30px + env(safe-area-inset-left)); bottom: calc(190px + env(safe-area-inset-bottom)); }
-  #bDodge { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(112px + env(safe-area-inset-bottom)); }
-  #bPause { width: 40px; height: 40px; left: 50%; margin-left: -20px; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 15px; letter-spacing: 0; }
-  #bPack { width: 56px; height: 56px; left: calc(30px + env(safe-area-inset-left)); bottom: calc(256px + env(safe-area-inset-bottom)); }
-  /* First person or third (src/ui/view.js): not there until you're out of the cave. */
-  #bView { width: 56px; height: 56px; left: calc(96px + env(safe-area-inset-left)); bottom: calc(256px + env(safe-area-inset-bottom)); display: none; }
-  #bMap { width: 40px; height: 40px; left: 50%; margin-left: 30px; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: .04em; }
-  #bTake { width: 66px; height: 66px; right: calc(218px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); display: none; background: rgba(201,163,92,.32); }
+  /* Touch controls: src/ui/hud.css, with the numbers of src/ui/thumbs.js. */
   #rotate { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #0b0907; z-index: 30; font-size: 18px; text-align: center; padding: 30px; color: var(--gold); }
   @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
-  #stick { position: absolute; width: 130px; height: 130px; border-radius: 50%; border: 1.5px solid rgba(233,223,201,.4); background: rgba(10,8,6,.2); display: none; }
-  #nub { position: absolute; left: 41px; top: 41px; width: 48px; height: 48px; border-radius: 50%; background: rgba(233,223,201,.45); }
-  body.touch #vitals { bottom: auto; top: calc(14px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); width: 28vw; }
-  body.touch #clock { left: auto; right: calc(14px + env(safe-area-inset-right)); top: calc(76px + env(safe-area-inset-top)); width: 46px; }
-  body.touch #mapMini { right: calc(70px + env(safe-area-inset-right)); top: calc(66px + env(safe-area-inset-top)); width: 96px; height: 96px; }
-  body.touch #clock .phase { font-size: 9px; }
-  body.touch #foe { top: calc(10px + env(safe-area-inset-top)); left: auto; right: calc(14px + env(safe-area-inset-right)); transform: none; width: 44vw; }
 
   /* The pack */
   #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; }
@@ -133,9 +107,6 @@
   #inv .label { color: var(--gold); margin-bottom: 7px; opacity: 1; }
   #eqGrid { display: grid; grid-template-columns: repeat(3, calc(var(--cell) * 1.4)); grid-auto-rows: calc(var(--cell) * 1.36); gap: 3px;
     grid-template-areas: "shoulders head neck" "main chest off" "main skull ring1" "main legs ring2" "main feet ."; }
-  #levelBox { position: absolute; left: 16px; bottom: 62px; width: 230px; text-align: left; color: #e8d9b0; font-size: 12px; letter-spacing: .08em; pointer-events: none; text-shadow: 0 1px 2px #000; }
-  #xpBar { height: 5px; margin-top: 2px; background: rgba(0,0,0,.55); border: 1px solid rgba(140,115,68,.6); }
-  #xpBar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #8a5cf0, #d6b4ff); }
   .slot { position: relative; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(140,115,68,.42); background: rgba(255,255,255,.025); min-width: 0; min-height: 0; overflow: hidden; }
   .slot span { font-size: 10.5px; letter-spacing: .1em; opacity: .42; text-transform: uppercase; }
   .slot.full { border-color: var(--rc); background: linear-gradient(0deg, rgba(0,0,0,.25), rgba(255,255,255,.05)); }
@@ -181,12 +152,7 @@
     #eqGrid { justify-content: center; } }
   @media (max-height: 460px) { #invBar { font-size: 10.5px; gap: 10px; } #invNote { min-width: 0; } #inv { gap: 3px; padding: 3px; } #inv .panel { padding: 4px 6px 6px; } #inv .label { margin-bottom: 3px; font-size: 10px; } #invStats { font-size: 11.5px; margin-top: 5px; }
     #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vh - 200px) / 6.8), calc((100vw - 300px) / 12), 52px); } }
-  body.touch #foe { background: rgba(8,6,4,.68); }
-  body.touch #bleed { font-size: 14px; color: #ff6a4a; }
-  body.touch #debug { top: calc(56px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); right: auto; text-align: left; font-size: 10px; }
   /* The six spell slots; the menu that fills them from all twenty. */
-  #mana { height: 5px; margin-top: 3px; background: rgba(0,0,0,.6); overflow: hidden; border: 1px solid rgba(110,150,230,.4); }
-  #mana > i { display: block; height: 100%; width: 100%; background: linear-gradient(180deg, #5aa4ff, #2346b8); transform-origin: 0 50%; will-change: transform; transition: transform .08s; }
   #spells { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 5px; pointer-events: auto; }
   #spells .spell { --c: #ccc; position: relative; width: 48px; height: 48px; padding: 9px; box-sizing: border-box; color: var(--c); background: rgba(8,6,4,.66); border: 1px solid rgba(201,163,92,.34); cursor: pointer; transition: box-shadow .12s, transform .12s, opacity .12s; }
   #spells .spell svg { display: block; width: 100%; height: 100%; }
@@ -198,7 +164,6 @@
   #viewBtn { position: relative; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
   #viewBtn.on { background: rgba(201,163,92,.38); color: #f4ecdc; }
   #viewBtn kbd { position: absolute; right: 2px; bottom: 0; font: inherit; font-size: 8px; color: #b9ad94; }
-  body.touch #viewBtn { display: none !important; }
   #spellOpen { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px; font-size: 13px; color: var(--gold); background: rgba(8,6,4,.6); border: 1px solid rgba(201,163,92,.4); cursor: pointer; }
   #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
   #softCursor { position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin: -2px 0 0 -2px; display: none; z-index: 40; pointer-events: none; }
@@ -207,13 +172,6 @@
   #spellbook.open { display: flex; }
   #spellbook h2 { margin: 0 0 12px; font-size: 18px; font-weight: 400; letter-spacing: .3em; color: var(--gold); }
   #spellClose { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: calc(18px + env(safe-area-inset-right)); padding: 6px 12px; font: inherit; color: var(--gold); background: none; border: 1px solid rgba(201,163,92,.45); cursor: pointer; }
-  #bCast { width: 66px; height: 66px; right: calc(128px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); }
-  /* On a touch screen the slots sit left of the thumb buttons and do the casting themselves. */
-  body.touch #spells { left: 41%; bottom: calc(6px + env(safe-area-inset-bottom)); gap: 4px; }
-  body.touch #spells .spell { width: 42px; height: 42px; padding: 7px; }
-  body.touch #spellOpen { width: 36px; height: 36px; }
-  body.touch #bPause { bottom: auto; top: calc(6px + env(safe-area-inset-top)); }
-  body.touch #bTake { bottom: calc(112px + env(safe-area-inset-bottom)); }
   #spellHint { margin: 0 0 8px; font-size: 13px; color: #cfc3a8; text-align: center; }
   #spellSlots { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; width: min(860px, 100%); margin-bottom: 12px; flex: none; }
   #spellSlots .lslot { --c: #ccc; position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 78px; padding: 8px 4px 6px; font: inherit; color: #e7dcc4; background: rgba(20,15,10,.85); border: 1px solid rgba(201,163,92,.5); cursor: pointer; }
@@ -384,7 +342,6 @@
 #opening .op-her p{margin:7px 0 0;font:500 clamp(12px,1.25vw,15px)/1.2 Cinzel,serif;letter-spacing:.18em;color:var(--gold)}
 #opening .op-cast{position:absolute;left:50%;top:60vh;transform:translateX(-50%);opacity:0;transition:opacity .4s;font:600 clamp(15px,1.6vw,20px) "Alegreya Sans",serif;color:#f4ecdc;text-shadow:0 2px 3px #000,0 0 12px #000a}
 #opening .op-cast kbd{display:inline-block;min-width:1.4em;margin:0 4px;padding:1px 8px;border:1px solid var(--gold);border-radius:4px;background:#0b0907c0;font:700 .95em Cinzel,serif;color:var(--gold)}
-body.op-cast #bCast{visibility:visible!important}
 #opening .op-quest{position:absolute;left:50%;top:15vh;transform:translateX(-50%);padding:12px 34px;opacity:0;text-align:center;background:linear-gradient(90deg,transparent,#0b0907d0 18%,#0b0907d0 82%,transparent);border-top:1px solid var(--gold-dim);border-bottom:1px solid var(--gold-dim)}
 #opening .op-quest small{display:block;font:700 12px Cinzel,serif;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
 #opening .op-quest span{display:block;margin-top:4px;font:600 clamp(18px,2vw,24px) "Alegreya Sans",serif;color:#f4ecdc}
@@ -405,6 +362,7 @@ body.op-handoff #cross{opacity:0;transition:none}
 #opening-eyes.reveal{backdrop-filter:none;background:radial-gradient(ellipse,#e5baff 0%,#9a56ef 43%,#3d1b63 100%);opacity:var(--flash,0)}
 #opening-eyes.reveal span{display:none}
 </style>
+<link rel="stylesheet" href="src/ui/hud.css">
 </head>
 <body>
 <canvas id="view"></canvas>
@@ -415,8 +373,8 @@ body.op-handoff #cross{opacity:0;transition:none}
 <div id="hud">
   <div id="cross"></div>
   <div id="clock"></div>
-  <div id="levelBox"><span id="levelNum">Level 1</span><div id="xpBar"><i></i></div></div>
-  <div id="vitals"><div class="label">Life</div><div class="meter" id="hp"><i></i></div><div id="stam"><i></i></div><div id="mana"><i></i></div></div>
+  <div id="levelBox" title="Your level, ringed by how far it is to the next"><span id="levelNum"><em>Level </em>1</span><div id="xpBar"><i></i></div></div>
+  <div id="vitals"><div class="meter" id="hp"><i></i><b id="hpNum"></b></div><div id="mana"><i></i></div><div id="stam"><i></i></div></div>
   <div id="spells"></div>
   <div id="foe">
     <div class="name" id="foeName">KNIGHT OF VELSCOUR</div>
@@ -424,27 +382,34 @@ body.op-handoff #cross{opacity:0;transition:none}
     <div id="foeArmor"><i></i></div>
     <div id="bleed"></div>
   </div>
+  <div id="topStack"></div>
   <div id="tip"></div>
   <div id="take"></div>
   <div id="msg"></div>
   <div id="debug"></div>
   <canvas id="mapMini"></canvas>
+  <div id="mapRing"></div>
 </div>
 <div id="mapBig"><div class="mapTitle"></div><div class="mapWrap"><canvas id="mapBigCanvas"></canvas><div class="mapBtns"><button data-map="in" aria-label="Nearer">+</button><button data-map="out" aria-label="Further">&minus;</button><button data-map="me" aria-label="Back to you">&#9678;</button><button data-map="shut" aria-label="Close">&times;</button></div></div><div class="mapKey"><span class="me"></span> you &nbsp; <span class="foe"></span> foe &nbsp; <span class="kin"></span> townsfolk &nbsp;&nbsp; <span class="onMouse"><b>Wheel</b> nearer and further &nbsp; <b>hold the left button</b> and move to look about &nbsp; <b>Home</b> back to you &nbsp; <b>M</b> to close</span><span class="onTouch"><b>Pinch</b> nearer and further &nbsp; <b>drag</b> to look about &nbsp; <b>tap twice</b> back to you</span></div></div>
 
 <div id="touch">
+  <div id="stickHome"></div>
   <div id="stick"><div id="nub"></div></div>
-  <div class="tbtn" id="bSprint">RUN</div>
-  <div class="tbtn" id="bWide">GUARD</div>
-  <div class="tbtn" id="bJump">JUMP</div>
-  <div class="tbtn" id="bDodge">DODGE</div>
-  <div class="tbtn" id="bAttack">Staff</div>
-  <div class="tbtn" id="bPause">II</div>
-  <div class="tbtn" id="bPack">PACK</div>
-  <div class="tbtn" id="bView">3RD</div>
-  <div class="tbtn" id="bTake">TAKE</div>
-  <div class="tbtn" id="bMap">MAP</div>
-  <div class="tbtn" id="bCast">CAST</div>
+  <div class="tbtn" id="bSprint" data-ic="sprint" aria-label="Run"></div>
+  <div class="tbtn arc" id="bWide" data-ic="guard" aria-label="Guard"></div>
+  <div class="tbtn arc" id="bJump" data-ic="jump" aria-label="Jump"></div>
+  <div class="tbtn arc" id="bDodge" data-ic="dodge" aria-label="Dodge"></div>
+  <div class="tbtn arc" id="bAttack" data-ic="staff" aria-label="Staff"></div>
+  <div class="tbtn arc" id="bTake" data-ic="take" data-lb="Take" aria-label="Take"></div>
+  <div class="tbtn arc" id="bCast" data-ic="cast" data-lb="Cast" aria-label="Cast"></div>
+  <div id="dock">
+    <div class="tbtn" id="bPause" data-ic="menu" aria-label="Menu"></div>
+    <div class="tbtn" id="bPack" data-ic="pack" aria-label="Pack"></div>
+    <div class="tbtn" id="bBook" data-ic="book" aria-label="Spellbook"></div>
+    <div class="tbtn" id="bJournal" data-ic="journal" aria-label="Journal"></div>
+    <div class="tbtn" id="bView" data-ic="view3" aria-label="First or third person"></div>
+  </div>
+  <div class="tbtn" id="bMap" aria-label="Map"></div>
 </div>
 
 <div id="inv">
@@ -477,7 +442,7 @@ body.op-handoff #cross{opacity:0;transition:none}
 <div id="invTip"></div>
 <div id="invTip2"></div>
 
-<div id="rotate">Turn your phone sideways to play.</div>
+<div id="rotate" data-ic="rotate" data-lb="Turn your phone sideways to play"></div>
 <div id="pause"><div class="p-title">Paused</div><nav class="t-menu">
   <button class="t-btn" data-p="resume"><span>Resume</span></button>
   <button class="t-btn" data-p="save"><span>Save Game</span></button>

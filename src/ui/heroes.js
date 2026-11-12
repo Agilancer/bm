@@ -162,7 +162,6 @@ export class HeroTalk {
       #heroChat:empty { display: none; }
       #heroChat div { color: #efe6d2; text-shadow: 0 0 3px #000, 0 1px 2px #000; margin-top: 2px; transition: opacity 1.2s; }
       #heroChat div span.n { color: #bfe0ff; } #heroChat div span.c { opacity: .85; }
-      body.touch #heroChat { bottom: 46%; width: 46vw; font-size: 11.5px; }
       body.cinematic #heroLayer, body.cinematic #heroChat { display: none; }
       #heroTalk { position: fixed; z-index: 12; left: 50%; bottom: max(3vh, 14px); transform: translateX(-50%); width: min(680px, 94vw); padding: 13px 18px 10px; display: none; flex-direction: column;
         background: rgba(11,9,7,.95); border: 1px solid var(--gold-dim, #8c7344); box-shadow: 0 10px 34px #000b; color: var(--bone, #e9dfc8); font-family: Georgia, serif; }

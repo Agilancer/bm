@@ -85,10 +85,6 @@ export class HallUI {
       #hallPanel .wave li { display: flex; gap: 8px; align-items: baseline; padding: 2px 4px; font-size: 14.5px; }
       #hallPanel .wave li button { margin-left: auto; padding: 0 7px; }
       #hallPanel .dim { opacity: .55; }
-      body.touch #hallStatus { top: calc(8px + env(safe-area-inset-top)); left: 34%; max-width: 46vw; font-size: 12px; }
-      body.touch #hallPanel { width: 98vw; max-height: 94vh; padding: 9px 10px; }
-      body.touch #hallPanel .cols { grid-template-columns: 1fr; }
-      body.touch #hallPanel .book { max-height: 34vh; border-right: 0; }
     `;
     document.head.appendChild(css);
     this.status = document.createElement('div'); this.status.id = 'hallStatus';
