@@ -233,8 +233,8 @@ export class World {
     }
   }
 
-  height(x, z) {
-    // (On a portal's platform, its floor or the step you're on.)
+  // On a portal's platform, its floor or the step you're on; null off them all.
+  platformAt(x, z) {
     for (let i = 0; i < this.platforms.length; i++) {
       const p = this.platforms[i];
       if (Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
@@ -245,6 +245,12 @@ export class World {
       }
       if (best !== null) return best;
     }
+    return null;
+  }
+
+  height(x, z) {
+    const plat = this.platformAt(x, z);
+    if (plat !== null) return plat;
     // (The Hollowfang Warrens lie out past the edge of the world, under it: src/core/dungeon.js.)
     if (inDungeon(x, z)) return caveFloorY(x, z);
     // (And the Test Dungeon, out past the other edge: src/core/testhall.js.)

@@ -355,7 +355,8 @@ function boxesNear(x, z) {
 }
 function solidAt(x, z, r, y) {
   for (const c of boxesNear(x, z)) if (boxHit(c, x, z, r, y)) return true;
-  for (const c of world.sitesNear(x, z) || []) if ((c.top ??= c.h + world.height(c.x, c.z)) >= y && boxHit(c, x, z, r, y)) return true;
+  // (By topOf, which knows a terrace's base is stood on, not walked into: its own sum here made every portal's terrace solid.)
+  for (const c of world.sitesNear(x, z) || []) if (topOf(c) >= y && boxHit(c, x, z, r, y)) return true;
   // (Trunks stand on the land, not down in the catacombs under it. The hollows west of the town lie lower than -2 themselves.)
   if ((Math.abs(x) > 50 || Math.abs(z) > 50) && (y > -2 || y > terrainHeight(x, z) - 2)) {
     const ci = Math.floor(x / 16), cj = Math.floor(z / 16);
@@ -369,8 +370,14 @@ function solidAt(x, z, r, y) {
   }
   return false;
 }
+// (Up a portal's steps as the feet go: each step's own height, so a terrace it can walk up isn't a wall to it. A rise of more
+// than a step is one. Out in the land a dungeon's portal stands on a terrace, and it paced to and fro before the steps for ever.)
 function clearFor(x, z, y, dx, dz, look) {
-  for (let s = 0.4; s <= look; s += 0.4) if (solidAt(x + dx * s, z + dz * s, 0.45, y)) return s - 0.4;
+  for (let s = 0.4; s <= look; s += 0.4) {
+    const px = x + dx * s, pz = z + dz * s, plat = world.platformAt ? world.platformAt(px, pz) : null;
+    if (plat !== null) { if (plat + 0.2 - y > 0.6) return s - 0.4; y = plat + 0.2; }
+    if (solidAt(px, pz, 0.45, y)) return s - 0.4;
+  }
   return look;
 }
 const TURNS = [0, 0.25, -0.25, 0.5, -0.5, 0.8, -0.8, 1.1, -1.1, 1.45, -1.45, 1.9, -1.9, 2.5, -2.5, Math.PI];
@@ -388,6 +395,8 @@ function probe(x, z, y, hx, hz, look) {
 
 // Out in the land, a short way: A* on a half-metre grid laid round both ends just for this, each cell solid or not at the land's
 // own height there (so the catacombs' walls under it don't count, and their light wells, which stand up through it, do).
+// (On a portal's terrace, at the terrace's height, and no step between two cells of more than a stride's rise: up by its stairs.)
+const lY = new Float32Array(280 * 280);
 const LW = 280, LN = LW * LW, lSolid = new Uint8Array(LN), lG = new Float32Array(LN), lPar = new Int32Array(LN), lSeen = new Uint16Array(LN), lShut = new Uint16Array(LN);
 let lStamp = 1;
 function local(from, to) {
@@ -397,7 +406,9 @@ function local(from, to) {
   if (Math.max(from[0], to[0]) + 25 - cx0 > LW * C || Math.max(from[1], to[1]) + 25 - cz0 > LW * C) return null;
   const cell = (x, z) => { const i = Math.floor((x - cx0) / C), j = Math.floor((z - cz0) / C); return i < 0 || j < 0 || i >= LW || j >= LW ? -1 : j * LW + i; };
   const px = (k) => ((k % LW) + 0.5) * C + cx0, pz = (k) => (((k / LW) | 0) + 0.5) * C + cz0;
-  const solid = (k) => { let v = lSolid[k]; if (!v) { const x = px(k), z = pz(k); v = lSolid[k] = solidAt(x, z, 0.42, terrainHeight(x, z) + 0.25) ? 2 : 1; } return v === 2; };
+  const solid = (k) => { let v = lSolid[k]; if (!v) { const x = px(k), z = pz(k), plat = world.platformAt ? world.platformAt(x, z) : null, y = lY[k] = plat ?? terrainHeight(x, z); v = lSolid[k] = solidAt(x, z, 0.42, y + 0.25) ? 2 : plat !== null ? 3 : 1; } return v === 2; };
+  // (A step up or down too high to take, where either cell is on a terrace.)
+  const cliff = (a, b) => (lSolid[a] === 3 || lSolid[b] === 3) && Math.abs(lY[a] - lY[b]) > 0.6;
   let s = cell(from[0], from[1]), t = cell(to[0], to[1]);
   if (s < 0 || t < 0) return null;
   // (Starting or ending against something: the nearest clear cell instead.)
@@ -418,7 +429,7 @@ function local(from, to) {
       const ni = i + di, nj = j + dj;
       if (ni < 0 || nj < 0 || ni >= LW || nj >= LW) continue;
       const nk = nj * LW + ni;
-      if (lShut[nk] === lStamp || solid(nk)) continue;
+      if (lShut[nk] === lStamp || solid(nk) || cliff(k, nk)) continue;
       if (di && dj && (solid(j * LW + ni) || solid(nj * LW + i))) continue;
       const ng = lG[k] + (di && dj ? 1.414 : 1) * C;
       if (lSeen[nk] === lStamp && ng >= lG[nk]) continue;
@@ -431,7 +442,7 @@ function local(from, to) {
   for (let k = t; k >= 0; k = lPar[k]) cells.push(k);
   cells.reverse();
   const pts = [[from[0], from[1]]].concat(cells.map((k) => [px(k), pz(k)]));
-  const see = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25); for (let q = 1; q <= n; q++) { const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n); if (k < 0 || solid(k)) return false; } return true; };
+  const see = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25); let was = cell(a[0], a[1]); if (was >= 0) solid(was); for (let q = 1; q <= n; q++) { const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n); if (k < 0 || solid(k) || (was >= 0 && cliff(was, k))) return false; was = k; } return true; };
   const out = [];
   let a = 0;
   while (a < pts.length - 1) {
