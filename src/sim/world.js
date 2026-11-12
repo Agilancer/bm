@@ -7,7 +7,7 @@ import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { caveFloor, caveKeep } from '../core/opening.js';
 import { CHURCH_BOUNDS } from '../core/church.js';
 import { buildSites } from '../core/sites.js';
-import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, inDungeon } from '../core/dungeon.js';
+import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, delveOf, inDungeon } from '../core/dungeon.js';
 import { HallNav, hallFloorY, hallKeep, hallRay, hallRoom, inHall } from '../core/testhall.js';
 
 // The places out in the countries (src/core/sites.js): their boxes kept by 64 m cell, so a body only looks at the ones near it.
@@ -442,8 +442,16 @@ export class World {
   // own kind's ('k' and a knight's id, 'h' a hero's, 't' a Tripo monster's, 'f' a field creature's...), so two never share one.
   // (Two going to different places in one slot made it again for each, every tick, turn about, and one could follow the other's.)
   // Those after someone else, a hero say, use that one as the key: all of them after the same one share it.
+  // The party dungeon's own walking fields, one for each delve, made the first time it's asked about (src/core/dungeon.js).
+  caveNav(x, z) {
+    const d = delveOf(x, z), navs = this.caves || (this.caves = new Map());
+    let n = navs.get(d);
+    if (!n) navs.set(d, n = new CaveNav(d));
+    return n;
+  }
+
   updateField(x, z, now, slot = 0) {
-    if (inDungeon(x, z)) { (this.cave ||= new CaveNav()).field(x, z, now); return; }
+    if (inDungeon(x, z)) { this.caveNav(x, z).field(x, z, now); return; }
     if (inHall(x, z)) { (this.hallNav ||= new HallNav()).field(x, z, now); return; }
     let f = this.slots.get(slot);
     if (!f) { f = this.freeField(now); this.slots.set(slot, f); }
@@ -502,7 +510,7 @@ export class World {
 
   // Unit direction along the flow field toward the target, or straight there if off the grid.
   flow(out, x, z, tx, tz, slot = 0) {
-    if (inDungeon(x, z) && inDungeon(tx, tz)) return (this.cave ||= new CaveNav()).flow(out, x, z, tx, tz, this.now ?? 0);
+    if (inDungeon(x, z) && delveOf(x, z) === delveOf(tx, tz)) return this.caveNav(x, z).flow(out, x, z, tx, tz, this.now ?? 0);
     if (inHall(x, z) && inHall(tx, tz)) return (this.hallNav ||= new HallNav()).flow(out, x, z, tx, tz, this.now ?? 0);
     const i = ((x - NAV_X0) / NAV_CELL) | 0, j = ((z - NAV_Z0) / NAV_CELL) | 0;
     let bx = tx - x, bz = tz - z;

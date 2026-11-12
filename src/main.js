@@ -1,6 +1,7 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
 import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
+import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE } from './core/dungeon.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { QuestTrail } from './ui/trail.js';
@@ -525,7 +526,8 @@ async function boot(plan, poolSize) {
       opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
       closed: () => { input.menu = false; resume(); },
       click: () => title.chime?.(),
-      cleared: () => { giveXp?.(1500); pack.gold += 250; hud.tip('The Free Company pays out 250 gold for the Warrens, and the tale is worth more.', 5); autosave(); },
+      // (Each delve pays its own: src/core/dungeon.js DELVES' pay. The Warrens 1,500 xp and 250 gold, the Deeps and the keep more.)
+      cleared: (d) => { const pay = d?.pay || { xp: 1500, gold: 250 }; giveXp?.(pay.xp); pack.gold += pay.gold; hud.tip(`The Free Company pays out ${pay.gold} gold for ${d?.short || 'the Warrens'}, and the tale is worth more.`, 5); autosave(); },
     });
     addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
   }
@@ -823,6 +825,8 @@ async function boot(plan, poolSize) {
     simWorker.postMessage({ type: 'hall', cmd: 'leave' });
     game.hallUI.setOn(false); hud.testHall = false; game.questTrail.off = false;
   }
+  // (For tests and review pictures: bm.testDungeon() goes in as the title's Test Dungeon does.)
+  if (window.bm) window.bm.testDungeon = enterTest;
   for (const b of $('pause').querySelectorAll('[data-p]')) {
     b.onclick = () => {
       title.chime();
@@ -1626,7 +1630,8 @@ class GameView {
       case EV.SWING: break;
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
       case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
-      case EV.DELVE: this.party?.onDelve(a, b, c, d); break;
+      // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
+      case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);
@@ -1806,7 +1811,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
+      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'Open your pack' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
@@ -1912,6 +1917,8 @@ class GameView {
       },
       // Your party and the Hollowfang Warrens, for tests: hire(n) takes the first n offered (a tank and a healer first);
       // warrens('enter' | 'boss', { n }) goes straight in, or to the nth boss's door; warrens('hurt', { n, frac }).
+      // (Any delve: warrens('enter', { delve: 'blackvigil' | 'deeps' }), warrens('boss', { boss: 'maldrec' }),
+      // warrens('room', { room: 'bv_hall' }) to a room's middle. src/sim/dungeon.js debug)
       hire: (n = 4) => { const P = view.party; if (!P) return []; P.makeOffers(); const by = (r) => P.offers.filter((o) => (o.cls === 'lancer') === (r === 'tank') && (o.cls === 'paladin') === (r === 'heal'));
         for (const o of [...by('tank').slice(0, 1), ...by('heal').slice(0, 1), ...by('dps')].slice(0, n)) P.hire(o, true); return P.members; },
       warrens: (cmd = 'enter', o = {}) => sim.postMessage({ type: 'warrensDebug', cmd, ...o }),

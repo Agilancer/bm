@@ -3,12 +3,13 @@
 // that come up as things happen; and the ! and ? over the heads of those with work. Lisandra, once she's walked you down,
 // stands where the Long Road comes in and is talked to here too (src/folk/lines/lisandra.js). What's said is src/folk/lines/;
 // quests' workings src/folk/quests.js; trade src/folk/shops.js.
-import { PEOPLE, first as firstName } from '../folk/people.js';
+import { FOLK, PEOPLE, POSTED, first as firstName } from '../folk/people.js';
 import { LINES as LA } from '../folk/lines/town_a.js';
 import { LINES as LB } from '../folk/lines/town_b.js';
 import { LINES as LC } from '../folk/lines/town_c.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { BEYOND, LINES as LBEY } from '../folk/lines/beyond.js';
+import { LINES as LLAND } from '../folk/lines/land.js';
 import { LISANDRA, LINES as LLIS } from '../folk/lines/lisandra.js';
 import { C, CHARS_START, C_PROPS, C_SIZE, H } from '../core/layout.js';
 import { LISANDRA_FORMS } from '../core/lisandra.js';
@@ -28,11 +29,12 @@ import { giverOf, hintOf, placeOf, questLevel, rewardOf, stepsOf } from './quest
 
 const HAVE = new Map(Object.entries(VOICED).map(([v, s]) => [v, new Set(s.split(' '))]));
 
-const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLIS };
+const LINES = { ...LA, ...LB, ...LC, ...LBEY, ...LLAND, ...LLIS };
 // Where the people out past the town keep (src/folk/lines/beyond.js): the middle of the beat they walk (core/knights.js).
+// (Or, with no knight flagged as theirs, where their entry says they stand: `at`.)
 const BEYOND_AT = Object.fromEntries(BEYOND.map((b) => {
-  const k = TOWN_KNIGHTS.find((t) => t[b.id]), r = k.route;
-  return [b.id, { x: r.reduce((s, p) => s + p[0], 0) / r.length, z: r.reduce((s, p) => s + p[1], 0) / r.length, k: TOWN_KNIGHTS.indexOf(k) }];
+  const k = TOWN_KNIGHTS.find((t) => t[b.id]), r = k?.route || [b.at];
+  return [b.id, { x: r.reduce((s, p) => s + p[0], 0) / r.length, z: r.reduce((s, p) => s + p[1], 0) / r.length, k: k ? TOWN_KNIGHTS.indexOf(k) : -1 }];
 }));
 const ACT = { SLEEP: 2, WORK: 4, SHOP: 5, FLEE: 12, HIDE: 13 };
 const REACH = 2.3;
@@ -212,7 +214,9 @@ export class TownUI {
   //      opened(), closed(), player(), saved() } }
   constructor(o) {
     Object.assign(this, o);
-    this.people = PEOPLE.concat(BEYOND, [LISANDRA]);   // the town's, then those out past it (no body in the town's worker), then her
+    // The town's, then those posted out in the land (theirs is the town's thread too: people.js POSTED), then those out past it
+    // with no body in the town's worker, then her.
+    this.people = PEOPLE.concat(POSTED, BEYOND, [LISANDRA]);
     this.lisI = this.people.length - 1;
     this.marks = new Map();         // person -> { el, kind }: the ! and ? over the heads of those with work
     this.balloons = new Map();
@@ -252,13 +256,13 @@ export class TownUI {
   person(i) { return this.people[i]; }
   // Where someone stands: the town's worker's word, or (out past the town) the beat they keep.
   whereOf(i) {
-    if (i < PEOPLE.length) return this.renderer.folk?.where(i);
+    if (i < FOLK.length) return this.renderer.folk?.where(i);
     if (i === this.lisI) return this.lisandra();
     const at = BEYOND_AT[this.people[i]?.id];
     if (!at) return null;
     // Their body in the sim, walking its beat, if it's there (their own, by their place among the town's knights); else the
     // middle of the beat. Their head as posed, so a mark over it sways and turns with them.
-    const k = this.snap && (this.bodyAt((this.renderer.firstTown ?? -1) + at.k, at.x, at.z, 15) || this.bodyNear(at.x, at.z, 6));
+    const k = this.snap && ((at.k >= 0 && this.bodyAt((this.renderer.firstTown ?? -1) + at.k, at.x, at.z, 15)) || this.bodyNear(at.x, at.z, 6));
     return k ? { x: k.x, y: k.y, z: k.z, hx: k.hx, hy: k.hy, hz: k.hz, busy: 0, sleep: false, house: -1, beyond: true }
       : { ...at, busy: 0, sleep: false, house: -1, beyond: true };
   }
@@ -593,7 +597,8 @@ export class TownUI {
     let paper = null;
     if (qid === 'letter' && k === 1) { paper = QUESTS.letter.letters.cedric; this.keep("Cedric Ashby's letter", paper); }
     if (qid === 'letter' && last) { paper = QUESTS.letter.letters.elowen; this.keep("Elowen Halloway's answer", paper); }
-    if (last) this.quests.advance(qid);
+    // (Said to the one a word was carried to: on to the next step; or, where the errand ends with them, done and paid here.)
+    if (last) { if (this.quests.step(qid)?.end) this.reward(qid); else this.quests.advance(qid); }
     this.show(said[k], id, last ? this.root() : [{ label: 'Go on.', run: () => this.stepTalk(qid, k + 1) }], paper);
   }
 
@@ -989,7 +994,7 @@ export class TownUI {
   }
 
   // Something put down, somewhere: for the quests' counts.
-  kill(x, y, z, kind) { this.quests.kill(x, y, z, kind); }
+  kill(x, y, z, kind, group = null) { this.quests.kill(x, y, z, kind, group); }
 
   // ---- saving ----
 

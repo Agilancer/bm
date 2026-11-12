@@ -44,6 +44,13 @@
     "jory": {"base": "worker_2", "c": "jory_c.webp", "note": "the old night watchman: dark woad shirt, a charcoal-woad kerchief, grey hair and beard; the same leather apron"},
     "magda": {"base": "crone", "c": "magda_c.webp", "note": "Elspeth's twin sister: same face and hair, a wine skirt over a plum-black underskirt, a near-black leather bodice", "skirt": {"center": [0.027, -0.005], "legRadii": [0.092, 0.066, 0.056]}},
     "bram": {"base": "elder", "c": "bram_c.webp", "note": "the innkeeper at fifty: the same clothes, his dark hair and beard gone salt-and-pepper"},
-    "silas": {"base": "old_man", "c": "silas_c.webp", "note": "the undertaker at sixty-eight: the same blacks, his hair and beard gone grey-white"}
+    "silas": {"base": "old_man", "c": "silas_c.webp", "note": "the undertaker at sixty-eight: the same blacks, his hair and beard gone grey-white"},
+    "dorcas": {"base": "wife_jolly", "c": "dorcas_c.webp", "note": "Thornwick's innkeeper: the cook's body in slate blue, her hair gone grey (tools/folk/posted_swaps.py)", "skirt": {"center": [0.0, -0.006], "legRadii": [0.095, 0.068, 0.058]}},
+    "osric": {"base": "worker", "c": "osric_c.webp", "note": "Thornwick's hedge-reeve: the hunter's body in hedge green (tools/folk/posted_swaps.py)"},
+    "wymond": {"base": "old_man", "c": "wymond_c.webp", "note": "the hedge-priest: the undertaker's body, his blacks washed out to undyed wool (tools/folk/posted_swaps.py)"},
+    "hasket": {"base": "worker_f", "c": "hasket_c.webp", "note": "Cinderford's watch-sergeant: the baker's body in dark drab (tools/folk/posted_swaps.py)"},
+    "colm": {"base": "elder", "c": "colm_c.webp", "note": "the charcoal burner: the innkeeper's body, sooted dark (tools/folk/posted_swaps.py)"},
+    "ysolt": {"base": "young_4", "c": "ysolt_c.webp", "note": "out of Khel: the dyer's body with the dye gone out of it, ash-grey (tools/folk/posted_swaps.py)", "skirt": {"center": [-0.019, -0.0], "legRadii": [0.085, 0.061, 0.052]}},
+    "garrick": {"base": "wes", "c": "garrick_c.webp", "note": "Frostwatch's warden: the tanner's body in cold blue-grey (tools/folk/posted_swaps.py)"}
   }
 }

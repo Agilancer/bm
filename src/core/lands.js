@@ -77,6 +77,21 @@ export const SITES = {
   // The Sorrowhorn
   stair: { x: -1650, z: -1900, r: 40, name: 'The Broken Stair', pad: 16, portal: true },
   crown: { x: MOUNT.x, z: MOUNT.z, r: MOUNT.crown, name: 'The Crown of Teeth', portal: true },
+  // The small towns: Thornwick on the Gallows Road, where the downs run out; Cinderford on the Vigil Road, the last free
+  // hearths before the Ashen Waste (nobody's letter on either: they're plain folk's).
+  thornwick: { x: 2400, z: 1800, r: 80, name: 'Thornwick', pad: 48, portal: true },
+  cinderford: { x: -2100, z: -200, r: 80, name: 'Cinderford', pad: 46, portal: true },
+  // And places to find on the way to somewhere else.
+  deepsmouth: { x: 880, z: 3990, r: 45, name: 'The Howling Mouth', pad: 16 },
+  cairnfield: { x: 1250, z: -420, r: 50, name: 'The Cairnfield' },
+  causeway: { x: -420, z: -2700, r: 60, name: 'The Sunken Mile' },
+  tor: { x: 1500, z: 4600, r: 50, name: "Ravens' Tor" },
+  charmill: { x: -3150, z: -1000, r: 40, name: 'The Charred Mill', pad: 12 },
+  // Three more beside the roads, plain folk's: a drovers' wayhouse on the Barrow Track, a burnt tollhouse on the Gallows Road,
+  // and the quarry on the Abbey Road that the abbey's stone was cut from.
+  wayhouse: { x: -1720, z: 2378, r: 35, name: 'The Moor Wayhouse', pad: 14 },
+  oldtoll: { x: 3314, z: 2581, r: 35, name: 'The Old Toll', pad: 12 },
+  quarry: { x: 2924, z: -1676, r: 45, name: 'Ossery Quarry', pad: 16 },
 };
 export const SITE_KEYS = Object.keys(SITES);
 
@@ -84,7 +99,7 @@ export const SITE_KEYS = Object.keys(SITES);
 export const ROUTES = [
   // East: on past the church and over the open land to the Downs, the farm, the hamlet and the falls; a spur up Bell Knoll.
   { name: 'the Hill Road', w: 3, pts: [[300, 10], [560, 40], [900, 30], [1250, 90], [1500, 130], [1720, 150], [1900, 60], [2040, 0], [2300, -60], [2480, -110]] },
-  { name: 'the Knoll Path', w: 1.8, pts: [[2300, -60], [2360, -240], [2420, -420], [2440, -490]] },
+  { name: 'the Knoll Path', w: 1.8, pts: [[2300, -60], [2360, -240], [2420, -420], [2440, -490], [2440, -521]] },
   { name: 'the Mill Lane', w: 1.6, pts: [[1720, 150], [1780, 260], [1840, 340]] },
   // West: the Vigil Road, out of the west gate, south of the hill, through the Ashen Waste to Velscour's keep.
   { name: 'the Vigil Road', w: 3.4, pts: [[-70, -2], [-300, -40], [-800, -120], [-1400, -60], [-2100, -200], [-2900, -420], [-3700, -650], [-4300, -300], [-4780, 120]] },
@@ -92,14 +107,22 @@ export const ROUTES = [
   { name: "the Pilgrims' Road", w: 2.6, pts: [[-800, -120], [-1050, -600], [-1300, -1100], [-1500, -1600], [-1650, -1880]] },
   // North: the Fen Way, off the town's north road, to Sallowmere.
   { name: 'the Fen Way', w: 2.2, pts: [[0, -60], [40, -700], [-60, -1500], [-100, -2300], [-200, -3000], [-250, -3280]] },
-  // South: the Frost Road, on from the south road past the start, to Frostwatch.
-  { name: 'the Frost Road', w: 2.4, pts: [[-20, 190], [80, 800], [200, 1600], [380, 2500], [560, 3300], [700, 3820]] },
+  // South: the Frost Road, on from the south road past the start, to Frostwatch's north gate.
+  { name: 'the Frost Road', w: 2.4, pts: [[-20, 190], [80, 800], [200, 1600], [380, 2500], [560, 3300], [700, 3820], [712, 3872]] },
   // South-east: the Gallows Road, off the Hill Road, to Hangman's Cross.
   { name: 'the Gallows Road', w: 2.2, pts: [[900, 30], [1500, 900], [2400, 1800], [3300, 2600], [4040, 3150]] },
   // South-west: the Barrow Track, off the Frost Road, over the moor.
   { name: 'the Barrow Track', w: 1.8, pts: [[80, 800], [-700, 1500], [-1700, 2400], [-2600, 3200], [-2850, 3330]] },
   // North-east: the Abbey Road, off the Hill Road, up through the Rustwood.
   { name: 'the Abbey Road', w: 2.2, pts: [[1500, 130], [2000, -700], [2900, -1700], [3600, -2400], [3900, -2800]] },
+  // Out of Frostwatch's gate and round the fell to the Howling Mouth.
+  { name: 'the Deeps Path', w: 1.6, pts: [[700, 3930], [760, 3962], [820, 3982], [866, 3990]] },
+  // And on from it over the fell to Ravens' Tor.
+  { name: 'the Tor Path', w: 1.4, pts: [[820, 3982], [1000, 4150], [1250, 4420], [1470, 4585]] },
+  // Off the Fen Way along what's left of the old causeway; off the Hill Road up to the Cairnfield; off the Vigil Road to the mill.
+  { name: 'the Sunken Mile', w: 1.6, pts: [[-150, -2640], [-260, -2690], [-378, -2700]] },
+  { name: 'the Cairn Path', w: 1.4, pts: [[1250, 90], [1210, -150], [1240, -372]] },
+  { name: 'the Mill Track', w: 1.6, pts: [[-3020, -453], [-3100, -700], [-3135, -962]] },
 ];
 for (const r of ROUTES) {
   r.x0 = Math.min(...r.pts.map((p) => p[0])) - r.w - 40; r.x1 = Math.max(...r.pts.map((p) => p[0])) + r.w + 40;

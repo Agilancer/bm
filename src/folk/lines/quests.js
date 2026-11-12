@@ -10,6 +10,7 @@ const WAY_IN = notYetIn("The cathedral's great door has a knight in it. Silas Cr
 
 import { QUESTS as BEYOND_QUESTS } from './beyond.js';
 import { QUESTS as LISANDRA_QUESTS } from './lisandra.js';
+import { QUESTS as LAND_QUESTS } from './land.js';
 
 export const QUESTS = {
   bed_and_bell: {
@@ -314,3 +315,8 @@ export const QUESTS = {
 Object.assign(QUESTS, BEYOND_QUESTS);
 // And Lisandra's, which sends you round to all the rest (src/folk/lines/lisandra.js).
 Object.assign(QUESTS, LISANDRA_QUESTS);
+// And the land's: the small towns, the lairs, the party dungeons (src/folk/lines/land.js).
+Object.assign(QUESTS, LAND_QUESTS);
+// (A quest that doesn't say what it's about is told by its steps, one after another: the land's are written so each step's
+// line stands alone.)
+for (const q of Object.values(QUESTS)) if (!q.about) q.about = q.journal.join(' ');

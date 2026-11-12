@@ -7,7 +7,7 @@
 import { art } from './skin.js';
 import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
 import { movesOf } from '../sim/heroskills.js';
-import { BOSSES, DELVE, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
+import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
 import { C, CHARS_START, C_HERO, C_SIZE } from '../core/layout.js';
 import { priceText } from '../folk/shops.js';
 import { CLOSE_X } from './menu-x.js';
@@ -33,6 +33,7 @@ export class PartyUI {
     this.boss = null;          // { key, ids, name }
     this.warrens = null;       // the sim's last word on the fight (auto-play reads it too)
     this.clears = 0;           // how often the Warrens have been cleared in this game (auto-play's dungeon runs read it)
+    this.clearsBy = {};        // and each party dungeon, by its key (src/core/dungeon.js DELVES)
     this.names = null;
     fetch(`${this.base}assets/game/heroes/names.json`).then((r) => r.json()).then((n) => { this.names = n; }).catch(() => {});
     this.buildDom();
@@ -290,6 +291,8 @@ export class PartyUI {
 
   // EV.DELVE from the sim.
   onDelve(code, a, b, c) {
+    // (Which delve, for its coming in, going out, clearing and wipe: the sim says. src/sim/dungeon.js)
+    const d = DELVES[b | 0] || DELVES[0];
     switch (code | 0) {
       case DELVE.NEED: {
         const lack = [];
@@ -299,13 +302,13 @@ export class PartyUI {
         this.tip(`The portal won't open for so few. You need ${lack.join(', ')}. Captain Merrow Vale, beside it, hires them out.`, 6);
         break;
       }
-      case DELVE.ENTER: this.warn(a ? 'The Hollowfang Warrens. Your dead foes are as you left them.' : 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', 6); break;
+      case DELVE.ENTER: this.warn(a ? `${d.name}. Your dead foes are as you left them.` : d.words.enter, 6); break;
       case DELVE.LEAVE: this.hideBoss(); break;
-      case DELVE.CLEAR: this.hideBoss(); this.warn('The Hollowfang Warrens are cleared. Venomaw is dead!', 7); this.clears++; this.cleared?.(); break;
+      case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clearsBy[d.key] = (this.clearsBy[d.key] || 0) + 1; if (d.key === 'warrens') this.clears++; this.cleared?.(d); break;
       case DELVE.WARN: this.warn(WARNINGS[a | 0] || '', 5); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
-      case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.warn('Your party falls... and wakes at the Warrens\' mouth.', 5); break;
+      case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.warn(d.words.wipe, 5); break;
       default: break;
     }
   }
@@ -318,10 +321,12 @@ export class PartyUI {
 
   // ---- kept in the save ----------------------------------------------------------------------------------------------
 
-  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })), clears: this.clears }; }
+  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })), clears: this.clears, clearsBy: { ...this.clearsBy } }; }
 
   load(d) {
     this.clears = d?.clears || 0;
+    // (A save from before the other dungeons: the Warrens' count is all there was.)
+    this.clearsBy = { ...(d?.clearsBy || (this.clears ? { warrens: this.clears } : {})) };
     for (const m of this.members.slice()) this.dismiss(m.slot);
     this.offers = null;
     for (const s of d?.members || []) {

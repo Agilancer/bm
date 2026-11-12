@@ -51,6 +51,8 @@ export const CAMPS = [
   { key: 'fungus', x: SITES.fungus.x, z: SITES.fungus.z, r: 30, n: 6, kinds: ['toxic', 'violet'], sizes: [1, 2, 3, 2, 1] },
   { key: 'barrows', x: SITES.barrows.x, z: SITES.barrows.z, r: 60, n: 6, kinds: ['ossuary'], sizes: [0, 2, 3, 2, 1] },
   { key: 'khel', x: SITES.khel.x, z: SITES.khel.z + 60, r: 30, n: 4, kinds: ['amber'], sizes: [1, 2, 3, 1, 0] },
+  // (The Sunken Mile, the old causeway in the fen: the jellies keep the water either side of its stones.)
+  { key: 'mile', x: SITES.causeway.x + 20, z: SITES.causeway.z - 150, r: 40, n: 5, kinds: ['bog', 'mire'], sizes: [1, 2, 3, 2, 1] },
   { key: 'crown', x: SITES.crown.x + 110, z: SITES.crown.z, r: 40, n: 5, kinds: ['azure', 'violet'], sizes: [0, 1, 2, 3, 2] },
 ];
 const NEAR = 260, FAR = 380, REFILL = 600;   // (metres: a camp wakes, sleeps; seconds before a wiped camp fills again)

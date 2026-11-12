@@ -1,5 +1,11 @@
-// The Hollowfang Warrens on the sim thread (src/core/dungeon.js says where everything is): the portals in and out, the packs'
-// rooms, the three boss fights and what each does, a wipe, and the way it all comes back after one.
+// The party dungeons on the sim thread (src/core/dungeon.js says where everything is, in each of them): the portals in and
+// out, the packs' rooms, their patrols and the reinforcements that come through a door, the boss fights and what each
+// does, a wipe, and the way it all comes back after one. One Warrens runs all of them (sim.warrens: the Hollowfang
+// Warrens were the first, and the name stayed): you're in one delve at a time, and it's this.delve.
+//
+// The Warrens' own three bosses are written out below, a method each. The others' (Blackvigil Keep's four, the Howling
+// Deeps' three) are data in src/sim/delve-fights.js, run by run() and play() here: a deck of moves, adds at so much of
+// its life, an enrage, and a step of its own for whatever's particular to it.
 //
 // The fights are scripted the way an MMO's dungeon is: each boss has things it does on a clock or at so much of its life,
 // called out as it does them (EV.DELVE WARN: the words are WARNINGS in src/core/dungeon.js), and something the party has to
@@ -7,7 +13,8 @@
 // goes off, a patch that burns while you stand in it, a ring to jump, shots to step between; most of it by the named moves
 // of src/sim/moves.js. The hired party (src/sim/hero.js companion) reads the same marks and the same calls: out of the
 // shapes, at the dragon's sides, behind a pillar.
-import { ADDS, BOSSES, DELVE, ENTRY, EXIT_IN, EXIT_OUT, HOLES, PARTY, PERCH, PILLARS, PORTAL, TURN_WARN, caveClear, caveFloorY, caveRoom, inDungeon, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
+import { ADDS, BOSSES, DELVE, DELVES, HOLES, PARTY, PERCH, PILLARS, TURN_WARN, WARN, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
+import { FIGHTS } from './delve-fights.js';
 import { markOut } from '../core/perils.js';
 import { MOVES, tipBody } from './moves.js';
 import { EV, INPUT } from '../core/layout.js';
@@ -30,10 +37,11 @@ export class Warrens {
   constructor(sim) {
     this.sim = sim;
     this.inside = false;
+    this.delve = null;             // the delve you're in (src/core/dungeon.js DELVES), or the last you were
     this.down = new Set();         // bosses dead
     this.fight = null;             // the boss fight on, if there is one
     this.portalCd = 0;
-    this.leftAt = -1e9;
+    this.leftAt = {};              // when you last left each delve, by its key
     this.postT = 0;
     this.warnT = new Map();
   }
@@ -95,11 +103,12 @@ export class Warrens {
   step(dt) {
     const sim = this.sim, p = sim.player;
     this.portalCd -= dt;
-    const was = this.inside;
-    this.inside = inDungeon(p.x, p.z);
-    if (was && !this.inside) this.leftAt = sim.time;
+    const was = this.inside, here = delveOf(p.x, p.z);
+    this.inside = !!here;
+    if (here) this.delve = here;
+    if (was && !this.inside) this.leftAt[this.delve.key] = sim.time;
     // A long while away and its dead are back, and its bosses with them.
-    if (!this.inside && sim.time - this.leftAt > RESET_AFTER && (this.down.size || this.anyCleared())) this.resetAll();
+    if ((sim.tick & 63) === 0) for (const d of DELVES) if (d !== here && sim.time - (this.leftAt[d.key] ?? -1e9) > RESET_AFTER && this.anyCleared(d)) this.resetAll(d);
     if (!p.dead && sim.gameState === 0) this.portals();
     // (A pack once cleared is kept so, through a death: afterRestart.)
     const t = sim.tripo;
@@ -111,56 +120,70 @@ export class Warrens {
     this.post(dt);
   }
 
-  anyCleared() { return this.sim.tripo?.lairs.some((l) => l.dungeon && l.state === 'cleared'); }
+  anyCleared(d) { return BOSSES.some((b) => b.delve === d.key && this.down.has(b.key)) || this.sim.tripo?.lairs.some((l) => l.delve === d.key && l.state === 'cleared'); }
 
-  // In by the portal at the cave mouth (a full party only), out by the two inside.
+  // In by a delve's portal out on the land (a full party only), out by the two inside it.
   portals() {
     const sim = this.sim, p = sim.player;
     if (this.portalCd > 0) return;
     const near = (x, z, r) => Math.hypot(p.x - x, p.z - z) < r && Math.abs(p.y - sim.world.height(x, z)) < 3;
-    if (!this.inside && near(PORTAL.x, PORTAL.z, PORTAL.r)) {
+    if (!this.inside) {
+      const d = DELVES.find((q) => near(q.portal.x, q.portal.z, q.portal.r));
+      if (!d) return;
       const r = this.ready();
       this.portalCd = 3;
       if (!r.ok) { sim.event(EV.DELVE, DELVE.NEED, r.n, r.tanks, r.heals); return; }
-      const [x, z] = toWorld(ENTRY.x, ENTRY.z);
-      this.carry(x, z, ENTRY.yaw);
-      this.inside = true;
-      sim.event(EV.DELVE, DELVE.ENTER, this.down.size);
+      this.enter(d);
       return;
     }
-    if (!this.inside) return;
-    const [ix, iz] = toWorld(EXIT_IN.x, EXIT_IN.z), [ox, oz] = toWorld(EXIT_OUT.x, EXIT_OUT.z);
-    const out = near(ix, iz, 1.6) || (this.down.has('venomaw') && near(ox, oz, 1.8));
+    const d = this.delve, [ix, iz] = toWorld(d.exitIn.x, d.exitIn.z, d), [ox, oz] = toWorld(d.exitOut.x, d.exitOut.z, d);
+    const cleared = this.down.has(d.last);
+    const out = near(ix, iz, 1.6) || (cleared && near(ox, oz, 1.8));
     if (out && !this.fight) {
       this.portalCd = 3;
-      const cleared = this.down.has('venomaw');
-      // Out in front of the portal at the cave mouth, facing away from it.
-      this.carry(PORTAL.x + Math.sin(PORTAL.yaw) * 4, PORTAL.z + Math.cos(PORTAL.yaw) * 4, PORTAL.yaw);
-      this.inside = false; this.leftAt = sim.time;
-      sim.event(EV.DELVE, cleared ? DELVE.CLEAR : DELVE.LEAVE, this.down.size);
-      if (cleared) this.resetAll();
+      // Out in front of its portal on the land, facing away from it.
+      const o = d.portal;
+      this.carry(o.x + Math.sin(o.yaw) * 4, o.z + Math.cos(o.yaw) * 4, o.yaw);
+      this.inside = false; this.leftAt[d.key] = sim.time;
+      sim.event(EV.DELVE, cleared ? DELVE.CLEAR : DELVE.LEAVE, this.downIn(d), DELVES.indexOf(d));
+      if (cleared) this.resetAll(d);
     }
   }
 
-  // Everything back as it was: every pack and boss stands again.
-  resetAll() {
+  // Stood at a delve's way in, with your party.
+  enter(d) {
+    const [x, z] = toWorld(d.entry.x, d.entry.z, d);
+    this.carry(x, z, d.entry.yaw);
+    this.inside = true; this.delve = d;
+    this.sim.event(EV.DELVE, DELVE.ENTER, this.downIn(d), DELVES.indexOf(d));
+  }
+
+  // How many of a delve's bosses are down.
+  downIn(d) { return BOSSES.filter((b) => b.delve === d.key && this.down.has(b.key)).length; }
+
+  // Everything back as it was: every pack and boss of a delve stands again (of every delve, if none is named).
+  resetAll(d = null) {
     const t = this.sim.tripo;
-    this.down.clear(); this.fight = null; this.clearGround();
-    if (t) for (const l of t.lairs) if (l.dungeon) { if (l.state === 'awake') t.sleep(l); l.state = 'asleep'; l.clearedOnce = false; l.spawned = 0; l.killed = 0; }
-    this.sim.event(EV.DELVE, DELVE.RESET);
+    for (const b of BOSSES) if (!d || b.delve === d.key) this.down.delete(b.key);
+    if (!d || d === this.delve) { this.fight = null; this.clearGround(); }
+    if (t) for (const l of t.lairs) if (l.dungeon && (!d || l.delve === d.key)) { if (l.state === 'awake') t.sleep(l); l.state = 'asleep'; l.clearedOnce = false; l.spawned = 0; l.killed = 0; l.moreDone = false; }
+    if (d) delete this.leftAt[d.key];
+    this.sim.event(EV.DELVE, DELVE.RESET, d ? DELVES.indexOf(d) : -1);
   }
 
   // After the world is started over (a death, a load): the packs you'd killed stay dead and the bosses down stay down. If
-  // you fell in here, you're stood at the way in with your party, the boss you fell to back at its full life.
-  afterRestart(wasInside) {
-    const sim = this.sim, t = sim.tripo;
+  // you fell in a delve (was: its key), you're stood at its way in with your party, the boss you fell to back at its full life.
+  afterRestart(was) {
+    const sim = this.sim, t = sim.tripo, d = was === true ? this.delve || DELVES[0] : was ? delveByKey(was) : null;
     this.fight = null; this.clearGround();
+    // (The clock starts again with the world: a delve left a while ago was left just now.)
+    for (const k of Object.keys(this.leftAt)) this.leftAt[k] = 0;
     if (t) for (const l of t.lairs) if (l.dungeon && (l.clearedOnce || this.down.has(l.key))) l.state = 'cleared';
-    if (wasInside) {
-      const [x, z] = toWorld(ENTRY.x, ENTRY.z);
-      this.carry(x, z, ENTRY.yaw);
-      this.inside = true;
-      sim.event(EV.DELVE, DELVE.WIPE, this.down.size);
+    if (d) {
+      const [x, z] = toWorld(d.entry.x, d.entry.z, d);
+      this.carry(x, z, d.entry.yaw);
+      this.inside = true; this.delve = d;
+      sim.event(EV.DELVE, DELVE.WIPE, this.downIn(d), DELVES.indexOf(d));
     } else {
       // (Fallen out in the world, the party comes to you.)
       const p = sim.player;
@@ -189,7 +212,7 @@ export class Warrens {
     const sim = this.sim, p = sim.player, t = sim.tripo;
     if (!t) return;
     for (const b of BOSSES) {
-      if (this.down.has(b.key)) continue;
+      if (b.delve !== this.delve.key || this.down.has(b.key)) continue;
       const lair = t.lairs.find((l) => l.key === b.key);
       if (!lair) continue;
       const [rx, , rz] = roomSpot(b.room), R = roomOf(b.room).r;
@@ -206,7 +229,7 @@ export class Warrens {
         const m = bodies[0];
         // (On top of what its body leaves: rollLoot's 20 and 21 in src/items/items.js. Nothing the Warrens' rank and file
         // drop comes near it.)
-        if (m) sim.event(EV.LOOT, m.x, sim.world.height(m.x, m.z), m.z, b.key === 'venomaw' ? 21 : 20, 0);
+        if (m) sim.event(EV.LOOT, m.x, sim.world.height(m.x, m.z), m.z, b.key === this.delve.last ? 21 : 20, 0);
         continue;
       }
       const live = bodies.filter((m) => !m.dead);
@@ -218,7 +241,7 @@ export class Warrens {
         if (!party.length || p.dead) { this.endFight(b, live); continue; }
         this.fight.t += dt;
         for (const m of live) { m.aggro = true; if (Math.hypot(m.x - rx, m.z - rz) > R + 6 && !m.flying) { m.vx = (rx - m.x) * 0.3; } }
-        this[b.key](dt, this.fight, live);
+        if (this.fight.spec) this.run(this.fight.spec, dt, this.fight, live); else this[b.key](dt, this.fight, live);
         this.turnOn(this.fight, live);
       } else if (!this.fight && dRoom < R - BOSS_ROOM_PAD && live.some((m) => !m.aggro)) for (const m of live) m.notice(sim);
     }
@@ -235,10 +258,11 @@ export class Warrens {
       return;
     }
     if (p.dead || !this.party().some((h) => !h.dead)) return;
-    const able = live.filter((m) => !m.flying && !m.spin && !m.breathing && !m.script && m.state !== 7);
-    if (!able.length || !this.every(f, 'turn', f.boss.key === 'venomaw' ? 22 : 17)) return;
+    const able = live.filter((m) => !m.flying && !m.spin && !m.breathing && !m.script && m.state !== 7 && !m.noTurn);
+    const [secs, hold] = f.spec?.turn || (f.boss.key === 'venomaw' ? [22, 4] : [17, 5]);
+    if (!able.length || f.hold || !this.every(f, 'turn', secs)) return;
     const m = pick(able), wait = 1.3;
-    f.turn = { m, at: now + wait, until: now + wait + (f.boss.key === 'venomaw' ? 4 : 5), on: false };
+    f.turn = { m, at: now + wait, until: now + wait + hold, on: false };
     this.warn(TURN_WARN[f.boss.key]);
   }
 
@@ -247,7 +271,25 @@ export class Warrens {
   // tank goes after whatever's loose (src/sim/hero.js pickFoe), and takes it back when it lets go.
   stepPacks(dt) {
     const sim = this.sim, p = sim.player, t = sim.tripo, now = sim.time;
-    if (!t || p.dead || !this.party().some((h) => !h.dead)) return;
+    if (!t) return;
+    for (const l of t.lairs) {
+      if (!l.dungeon || l.add || l.bossLair || l.state !== 'awake' || l.delve !== this.delve.key) continue;
+      // A patrol: its beat, there and back at a walk, each keeping its place in the file; till one of them sees you.
+      if (l.walk) {
+        const [a, b] = l.walk, L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, s = (now * 0.9) % (2 * L), u = (s < L ? s : 2 * L - s) / L;
+        let n = 0;
+        for (const k of t.slots()) if (k.lair === l && !k.dead && !k.aggro) { const o = (n++ - 1.5) * 1.6; k.home[0] = a[0] + (b[0] - a[0]) * u + (b[0] - a[0]) / L * o; k.home[1] = a[1] + (b[1] - a[1]) * u + (b[1] - a[1]) / L * o; k.opts.roam = 0.5; }
+      }
+      // More of them through a door, once so many of the pack are down.
+      const more = l.more;
+      if (more && !l.moreDone && l.spawned && l.killed >= Math.max(1, Math.round(l.spawned * more.when))) {
+        l.moreDone = true;
+        const d = this.delve;
+        this.spawnAdds(`${l.key}_more`, more.pick, toWorld(more.from[0], more.from[1], d), more.n, (m) => { m.aggro = true; m.opts.leash = 200; m.opts.sight = 40; }, l.pal, true, d.tough);
+        sim.event(EV.ROAR, d.x + more.from[0], sim.world.height(d.x + more.from[0], d.z + more.from[1]) + 1.5, d.z + more.from[1], 0.9);
+      }
+    }
+    if (p.dead || !this.party().some((h) => !h.dead)) return;
     const list = t.slots().filter((k) => k instanceof TripoMonster && k.lair?.dungeon && !k.boss && !k.dead && k.aggro && !k.script);
     let on = list.filter((k) => k.fixOn === p && now < k.fixT).length;
     for (const k of list) {
@@ -266,20 +308,28 @@ export class Warrens {
     const n = b.models.indexOf(m.opts.model);
     m.hp = m.maxHp = b.hp;
     Object.assign(m.opts, { damage: b.damage, reach: b.reach, sight: 30, leash: 200, lootKind: b.loot, name: (b.names || [])[n] || b.name, pause: 0.9 });
+    m.opts.base = { damage: b.damage, pause: 0.9, speed: m.opts.speed };
     m.opts.hp = b.hp;
     if (b.key === 'venomaw') { m.breathCd = 1e9; m.opts.breathRange = 14; m.opts.breathDps = 26; m.opts.radius = 2.2; }
+    // (A boss fights as itself, by its own deck: never a breath of its own accord, never stood stock-still because it's
+    // looked at, never the bolt its kind throws between blows.)
+    const spec = FIGHTS[b.key];
+    if (spec) { m.breathCd = 1e9; m.castCd = 1e9; if (m.opts.ai !== 'melee') m.opts.ai = spec.ai || 'melee'; spec.setUp?.(this, m, n); }
     m.yaw = Math.atan2(this.sim.player.x - m.x, this.sim.player.z - m.z);
   }
 
   begin(b, live) {
     const sim = this.sim;
-    this.fight = { boss: b, t: 0, clock: {}, phase: 0, stacks: 0 };
+    this.fight = { boss: b, spec: FIGHTS[b.key] || null, t: 0, clock: {}, phase: 0, stacks: 0 };
     this.clearGround();
     for (const m of live) { m.notice(sim); m.hp = m.maxHp; }
     const [c0, c1] = live.map((m) => m.id);
     sim.event(EV.DELVE, DELVE.BOSS, BOSSES.indexOf(b), c0 ?? -1, c1 ?? -1);
     if (b.key === 'twins') this.warn(3);
     if (b.key === 'venomaw') this.warn(7);
+    const spec = this.fight.spec;
+    if (spec?.open) this.warn(WARN[spec.open]);
+    spec?.begin?.(this, this.fight, live);
   }
 
   // Nobody left in the room, or you fell: it goes back to where it stood, its life back, and waits.
@@ -288,6 +338,8 @@ export class Warrens {
     for (const m of live) {
       m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx, rz];
       m.x = rx + rnd(-2, 2); m.z = rz + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
+      m.ward = 1; m.noTurn = false; m.buried = false;
+      if (m.opts.base) { m.opts.damage = m.opts.base.damage; m.opts.pause = m.opts.base.pause; m.opts.speed = m.opts.base.speed; }
     }
     // (Its adds go with it.)
     for (const a of this.adds()) a.hp = 0;
@@ -298,10 +350,13 @@ export class Warrens {
   adds() { const t = this.sim.tripo; return t ? t.slots().filter((k) => k instanceof TripoMonster && k.lair?.add && !k.dead) : []; }
 
   // A few at once, at a place, as a lair of their own; each given its part when it stands (o.setUp).
-  spawnAdds(key, id, at, n, setUp, pal = ['Base'], tricks = false) {
+  // (id: one model, or a list to pick each from; whichever of them the roster has. tough: as a pack's.)
+  spawnAdds(key, id, at, n, setUp, pal = ['Base'], tricks = false, tough = null) {
     const t = this.sim.tripo;
     if (!t) return;
-    const lair = { key, x: at[0], z: at[1], r: 1.2, pick: [id], n, pal, wake: -1, dungeon: true, add: true, temp: true, tricks, state: 'asleep', at: -1e9, onSpawn: setUp };
+    const picks = (Array.isArray(id) ? id : [id]).filter((q) => t.roster[q]);
+    if (!picks.length) return;
+    const lair = { key, x: at[0], z: at[1], r: 1.2, pick: picks, n, pal, wake: -1, dungeon: true, delve: this.delve?.key, add: true, temp: true, tricks, tough, state: 'asleep', at: -1e9, onSpawn: setUp };
     t.lairs.push(lair);
     t.wake(lair);
   }
@@ -331,10 +386,74 @@ export class Warrens {
     d.t -= this.dt;
     if (d.t > 0 || m.script || m.breathing || m.state !== 0 || f.turn?.m === m) return;
     if (!d.bag.length) { d.bag = list.filter((n) => n !== d.last).sort(() => Math.random() - 0.5); }
-    const name = d.bag.pop();
-    if (this[name](f, m) === false) return;
+    const name = d.bag.pop(), mv = f.spec?.moves[name];
+    if ((mv ? this.play(f, m, mv) : this[name](f, m)) === false) return;
     d.last = name; d.t = secs * rnd(0.85, 1.15);
   }
+
+  // ---- a fight that's data (src/sim/delve-fights.js) ---------------------------------------------------------------------
+  // spec: open (a call as it begins), pace ([seconds between moves, the same once it's hurt, below what share of its life]),
+  // deck (the moves' names; or decks, by model, where there are two bodies; either may be a function of the fight),
+  // moves (name -> a move, below), adds (more of them at so much of its life), enrage ([seconds, times the damage, a call]),
+  // turn ([how often it turns on you, for how long]), and begin/step/setUp for whatever's its own.
+
+  run(spec, dt, f, live) {
+    spec.step?.(this, f, live, dt);
+    const hp = live.reduce((a, m) => a + m.hp, 0), max = live.reduce((a, m) => a + m.maxHp, 0), frac = hp / max;
+    if (!f.hold) {
+      const pace = spec.pace || [4.4, 3.4, 0.35];
+      for (const m of live) {
+        let list = spec.decks ? spec.decks[m.opts.model] : spec.deck;
+        if (typeof list === 'function') list = list(f, m);
+        if (list?.length) this.deck(f, m, (m.hp / m.maxHp < pace[2] || f.fast ? pace[1] : pace[0]) * (f.wild ? 0.8 : 1), list);
+      }
+    }
+    (spec.adds || []).forEach((a, i) => { if (frac < a.at && !f[`adds${i}`]) { f[`adds${i}`] = true; this.callAdds(f, live[0], a); } });
+    const e = spec.enrage;
+    if (e && f.t > e[0] && !f.enraged) { f.enraged = true; for (const m of live) m.opts.damage *= e[1]; if (e[2]) this.warn(WARN[e[2]]); }
+  }
+
+  // One move of a deck. who: whom it's for ('mark': one of you, you half the time; 'far': whoever's furthest off; 'none').
+  // clip: what the body plays (null: the move moves the body itself). at: when in that it goes off (else at once, the clip
+  // played over its warning). warn: its call. go(W, f, m, target, perils): the move.
+  play(f, m, mv) {
+    const t = mv.who === 'none' ? null : mv.who === 'far' ? this.farthest(m) : this.mark();
+    if (mv.who !== 'none' && (!t || t.dead)) return false;
+    if (mv.when && !mv.when(this, f, m)) return false;
+    const go = () => mv.go(this, f, m, t, this.sim.perils);
+    if (mv.clip !== null && !m.perform({ clip: mv.clip, face: mv.face === false ? null : t, at: mv.at ?? 0.45, secs: mv.secs ?? 1.3, fn: mv.at !== undefined ? () => { if (!m.dead) go(); } : null })) return false;
+    if (mv.at === undefined) go();
+    if (mv.warn) this.warn(WARN[mv.warn], mv.gap ?? 25);
+    return true;
+  }
+
+  farthest(m) { return this.others().reduce((a, b) => (Math.hypot(b.x - m.x, b.z - m.z) > Math.hypot(a.x - m.x, a.z - m.z) ? b : a), this.sim.player); }
+  tank(m) { const t = foeOf(m, this.sim); return t?.role === 'tank' ? t : null; }
+
+  // More of them, part way through: n of pick, from the doors of the boss's room (the delve's dead-end passages), from
+  // round the room's edge, or from where the boss stands. Each given hp, damage and a name, and set on you.
+  callAdds(f, m, a) {
+    const d = this.delve, room = roomOf(f.boss.room), [rx, , rz] = roomSpot(room.id);
+    let from = [];
+    if (a.from === 'doors') from = d.tunnels.filter((t) => t.dead && (!t.door || t.door === room.id) && Math.hypot(t.pts[0][0] - room.x, t.pts[0][1] - room.z) < room.r * 1.5 + 12).map((t) => toWorld(t.pts[t.pts.length - 1][0], t.pts[t.pts.length - 1][1], d));
+    if (a.from === 'edge' || !from.length) for (let i = 0; i < (a.places || 3); i++) { const ang = Math.random() * 6.28; from.push([rx + Math.sin(ang) * room.r * 0.7, rz + Math.cos(ang) * room.r * 0.7]); }
+    if (a.from === 'boss') from = [[m.x, m.z]];
+    if (a.warn) this.warn(WARN[a.warn]);
+    const each = Math.ceil(a.n / from.length);
+    let left = a.n;
+    f.addN = (f.addN || 0) + 1;
+    from.forEach((at, i) => {
+      const n = Math.min(each, left);
+      left -= n;
+      if (n > 0) this.spawnAdds(`${f.boss.key}_adds_${f.addN}_${i}`, a.pick, at, n, (k) => { k.hp = k.maxHp = a.hp; k.opts.damage = a.damage; if (a.name) k.opts.name = a.name; if (a.speed) k.opts.speed = a.speed; k.aggro = true; k.opts.leash = 200; k.opts.sight = 60; a.setUp?.(this, k, m); }, a.pal || ['Base'], a.tricks ?? false);
+      this.sim.event(EV.ROAR, at[0], this.sim.world.height(at[0], at[1]) + 1.5, at[1], 0.8);
+    });
+  }
+
+  // The one the party should be striking, where it matters (the Hollow Brothers: the one who covers). Else null.
+  focus() { const f = this.fight; return f?.spec?.focus ? f.spec.focus(this, f) : null; }
+  // Where one of yours should stand against m, where the fight says (hero.js stance). Else null.
+  stanceFor(h, m) { const f = this.fight; return f?.spec?.stance ? f.spec.stance(this, f, h, m) : null; }
 
   // ---- Grubnash: the cave-in, the split floor, the boulder, the stamp, his diggers ----------------------------------------
 
@@ -478,9 +597,10 @@ export class Warrens {
   }
 
   // Skrat: the whirlwind. He spins after whoever he's on, cutting all within reach, and blades fly off him as he turns.
-  kWhirl(f, m) {
+  // (Anyone with a blade can: call names its warning, hit and nova how hard it cuts and how hard its blades fly.)
+  kWhirl(f, m, call = 5, hit = 22, nova = 16) {
     const P = this.sim.perils;
-    this.warn(5, 20);
+    this.warn(call, 20);
     m.spin = 3.6;
     const clip = pick(m.rig.attacks);
     let n = 0;
@@ -495,9 +615,9 @@ export class Warrens {
       k.spinTick = (k.spinTick || 0) - dt2;
       if (k.spinTick <= 0) {
         k.spinTick = 0.5;
-        for (const b of this.bodies()) if (Math.hypot(b.x - k.x, b.z - k.z) < 4.5) P.hurt(b, 22, k.x, k.z, 1.5, false, 'whirl');
+        for (const b of this.bodies()) if (Math.hypot(b.x - k.x, b.z - k.z) < 4.5) P.hurt(b, hit, k.x, k.z, 1.5, false, 'whirl');
         s2.event(EV.WHOOSH, k.x, k.y + 1.2, k.z);
-        if (n++ % 2 === 1) MOVES.bladeNova(P, k, null, 16, { n: 8, speed: 9.5, turn: n * 0.39 });
+        if (n++ % 2 === 1) MOVES.bladeNova(P, k, null, nova, { n: 8, speed: 9.5, turn: n * 0.39 });
       }
       if ((s2.tick & 3) === 0) s2.casting.burst(FX.RING, ELEM.SPIRIT, k.x, k.y + 1, k.z, 1.5, 4.5, 0.3, { alpha: 0.5 });
       return true;
@@ -759,31 +879,36 @@ export class Warrens {
 
   whelp(w) { w.hp = w.maxHp = 300; w.opts.damage = 9; w.opts.name = 'WHELP'; w.aggro = true; w.opts.leash = 200; }
 
-  // For tests and reviews (bm.warrens in src/main.js): in at the way in, or straight to a boss's door; a boss nearly dead.
+  // For tests and reviews (bm.warrens in src/main.js): in at a delve's way in (delve: its key; the Warrens unless it says),
+  // straight to a boss's door (boss: its key, or n: its place among that delve's), or to a room's middle (room: its id);
+  // a boss nearly dead; everything stood up again.
   debug(m) {
     const sim = this.sim;
-    if (m.cmd === 'enter' || m.cmd === 'boss') {
-      let [x, z] = toWorld(ENTRY.x, ENTRY.z), yaw = ENTRY.yaw;
-      if (m.cmd === 'boss') {
-        const b = BOSSES[m.n | 0], r = roomOf(b.room), [rx, rz] = toWorld(r.x, r.z);
-        // (At the room's edge, on the side of the way in: a few strides down the last tunnel.)
-        const nav = sim.world.cave || null;
+    const boss = m.boss ? BOSSES.find((b) => b.key === m.boss) : null;
+    const d = delveByKey(boss?.delve || (m.room && roomOf(m.room)?.delve.key) || m.delve || 'warrens') || DELVES[0];
+    const mine = BOSSES.filter((b) => b.delve === d.key), b = boss || mine[m.n | 0];
+    if (m.cmd === 'enter' || m.cmd === 'boss' || m.cmd === 'room') {
+      let [x, z] = toWorld(d.entry.x, d.entry.z, d), yaw = d.entry.yaw;
+      if (m.cmd === 'room' && roomOf(m.room)) { const [rx, , rz] = roomSpot(m.room, m.dx || 0, m.dz || 0); yaw = Math.atan2(rx - x, rz - z); x = rx; z = rz; }
+      if (m.cmd === 'boss' && b) {
+        const r = roomOf(b.room), [rx, rz] = toWorld(r.x, r.z, d);
+        // (At the room's edge, on the side of the way in: a few strides down the passage that's the shortest walk from it.)
+        const nav = sim.world.caveNav(x, z);
         let best = null, bd = Infinity;
-        for (let a = 0; a < 6.28; a += 0.2) {
+        for (let a = 0; a < 6.28; a += 0.1) {
           const qx = rx + Math.sin(a) * (r.r + 4), qz = rz + Math.cos(a) * (r.r + 4);
           if (caveRoom(qx, qz) < 1.2) continue;
-          const d = Math.hypot(qx - x, qz - z);
-          if (d < bd) { bd = d; best = [qx, qz]; }
+          const dd = nav.walkDist(qx, qz, x, z, sim.time);
+          if (dd < bd) { bd = dd; best = [qx, qz]; }
         }
-        void nav;
         if (best) { [x, z] = best; yaw = Math.atan2(rx - x, rz - z); }
-        for (const p of BOSSES.slice(0, m.n | 0)) this.down.add(p.key);
+        for (const q of mine.slice(0, mine.indexOf(b))) this.down.add(q.key);
       }
       this.carry(x, z, yaw);
-      this.inside = true;
+      this.inside = true; this.delve = d;
     }
-    if (m.cmd === 'hurt') for (const k of this.bossBodies(BOSSES[m.n | 0].key)) if (!k.dead) k.hp = k.maxHp * (m.frac ?? 0.05);
-    if (m.cmd === 'reset') this.resetAll();
+    if (m.cmd === 'hurt' && b) for (const k of this.bossBodies(b.key)) if (!k.dead) k.hp = k.maxHp * (m.frac ?? 0.05);
+    if (m.cmd === 'reset') this.resetAll(m.delve ? d : null);
   }
 
   // The fight as the page needs it, a few times a second (auto-play reads it, and the boss's frame).
@@ -792,8 +917,8 @@ export class Warrens {
     this.postT = 0.2;
     const f = this.fight;
     self.postMessage({
-      type: 'warrens', inside: true, down: [...this.down],
-      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, perch: !!m.flying && !!f.perch, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
+      type: 'warrens', inside: true, delve: this.delve.key, down: [...this.down],
+      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, perch: !!m.flying && !!f.perch, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m, ward: m.ward ?? 1 })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
       hazards: this.sim.perils.marks.map(markOut),
     });
   }

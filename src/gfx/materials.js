@@ -417,6 +417,10 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       let lick = 0.5 + 0.5 * sin(p.y * 31.0 - F.camPos.w * 9.0 + (p.x + p.z) * 17.0);
       let heat = smoothstep(0.12, 0.9, face) * (0.82 + 0.18 * lick);
       emissive = select(mix(vec3f(2.2, 0.28, 0.02), vec3f(14.0, 7.0, 2.4), heat), mix(vec3f(1.2, 0.36, 0.04), vec3f(2.2, 1.2, 0.3), heat), F.blood.w < 0.5) * f;
+      // (A flame in another light, as a painting has one: Velscour's fire in Blackvigil Keep burns redder ('dark:flame'), the
+      // Howling Deeps' cold lights burn blue-white ('frost:flame'). src/core/delve-build.js)
+      if (tintK == 1u) { emissive *= vec3f(1.0, 0.5, 0.32); }
+      if (tintK == 3u) { emissive = emissive.bgr * vec3f(0.7, 0.9, 1.0); }
       albedo = vec3f(0.0);
     }
   } else {
@@ -840,6 +844,11 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // Bright torn lips stay findable at fighting range, and flash for an instant as the blade goes by.
   c += vec3f(0.17, 0.165, 0.155) * wound.lip * (0.45 + 0.55 * max(dot(n, F.sunDir.xyz), 0.0));
   c += vec3f(5.0, 2.6, 0.9) * wound.hot;
+  // What the body's maps mark as lit of itself: the metal/rough map's alpha, which every body's is whole but the possessed
+  // knights' eyes (tools/monsters/possessed_knights.py). It's this red and not the paint's, so no palette washes it out,
+  // and it's bright enough to bloom: the eyes show across a dark hall. (Much brighter and the tone curve washes it to white:
+  // seen in the game at 11, a pale streak.)
+  c += vec3f(5.2, 0.13, 0.035) * (1.0 - mr.a) * (0.85 + 0.15 * sin(F.camPos.w * 5.0));
   // A cool edge of sky around the silhouette separates dark plate from anything behind it.
   let rimT = pow(1.0 - max(dot(n0, v), 0.0), 4.0) * select(1.0, smoothstep(0.0, 0.14, dot(n0, v)), LEAN);
   // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)
@@ -918,7 +927,7 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
-  else if (indoor > 1.5) { ambient = vec3f(0.044, 0.044, 0.048); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
+  else if (indoor > 1.5) { ambient = select(select(vec3f(0.044, 0.044, 0.048), vec3f(0.095, 0.078, 0.064), indoor > 2.1), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);
   let nv = max(dot(n, v), 1e-3);
@@ -929,7 +938,9 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   if (!LEAN || metal > 0.02) { env = envDir(refl, rough * 7.0); }
   let horizon = smoothstep(-0.25, 0.12, refl.y);
   var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
-  if (indoor > 0.5) { reflected *= select(select(0.22, 0.05, indoor > 1.5), 0.5, indoor > 2.5); }
+  // (In the keep's lit halls, 2.25, plate takes a warm sheen off the fires: Velscour's knights are blackened steel, which
+  // takes no other light, and against dark stone they were shapes cut out of the room.)
+  if (indoor > 0.5) { reflected *= select(select(vec3f(0.22), select(vec3f(0.05), vec3f(0.17, 0.11, 0.075), indoor > 2.2), indoor > 1.5), vec3f(0.5), indoor > 2.5); }
   reflected *= mix(1.0, 0.06, cave);
   let dfg = envDFG(rough, nv);
   let fss = f0 * dfg.x + dfg.y;

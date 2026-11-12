@@ -7,7 +7,7 @@
 // A chart lies the way the land's paper does (src/ui/map.js): +z up, -x to the right.
 
 import { churchAt, inChurch } from '../core/church.js';
-import { DUNGEON, DUNGEON_BOX, ROOMS, caveFloorY, caveRoom, inDungeon, toWorld as caveAt } from '../core/dungeon.js';
+import { DELVES, caveFloorY, caveRoom, delveOf, toWorld as caveAt } from '../core/dungeon.js';
 import { ARENA, HALL, HALL_BOX, LOBBY, hallAt, hallRoom, inDoorway, inHall } from '../core/testhall.js';
 
 export const CELL = 0.5;              // metres to a cell, and to a pixel of the chart
@@ -250,16 +250,17 @@ const CHURCH = new Chart('church', 'The Cathedral', (c) => {
 // (Under the land it's the catacombs.)
 CHURCH.title = (y) => (y < -6 ? 'The Catacombs' : 'The Cathedral');
 
-const WARRENS = new Chart('warrens', DUNGEON.name, (c) => {
-  const B = DUNGEON_BOX;
+// One for each party dungeon (src/core/dungeon.js DELVES): the Warrens, Blackvigil Keep, the Howling Deeps.
+const DELVE_CHARTS = new Map(DELVES.map((d) => [d, new Chart(d.key, d.name, (c) => {
+  const B = d.box;
   c.lay(B.x0, B.z0, B.x1, B.z1);
   for (let k = 0; k < c.kind.length; k++) {
     const x = c.cellX(k % c.cols), z = c.cellZ((k / c.cols) | 0);
     if (caveRoom(x, z) > 0.25) { c.kind[k] = FLOOR; c.hgt[k] = caveFloorY(x, z); }
   }
-  for (const r of ROOMS) { const [x, z] = caveAt(r.x, r.z); c.labels.push({ x, z, text: r.name[0].toUpperCase() + r.name.slice(1) }); }
+  for (const r of d.rooms) { const [x, z] = caveAt(r.x, r.z, d); c.labels.push({ x, z, text: r.name[0].toUpperCase() + r.name.slice(1) }); }
   return true;
-});
+})]));
 
 const TESTHALL = new Chart('hall', HALL.name[0].toUpperCase() + HALL.name.slice(1), (c) => {
   const B = HALL_BOX;
@@ -273,12 +274,13 @@ const TESTHALL = new Chart('hall', HALL.name[0].toUpperCase() + HALL.name.slice(
   return true;
 });
 
-export const CHARTS = [CHURCH, WARRENS, TESTHALL];
+export const CHARTS = [CHURCH, ...DELVE_CHARTS.values(), TESTHALL];
 
 // Which place's chart a point is on, or null out under the sky.
 export function chartAt(x, y, z) {
   if (inHall(x, z)) return TESTHALL;
-  if (inDungeon(x, z)) return WARRENS;
+  const delve = delveOf(x, z);
+  if (delve) return DELVE_CHARTS.get(delve);
   if (inChurch(x, y, z)) return CHURCH;
   return null;
 }
