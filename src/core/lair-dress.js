@@ -58,7 +58,7 @@ export function dressLairs(K, seals = []) {
       K.spike('pale:stone', x + 0.2, y - 0.03, z - 0.15, 0.13, 0.2, 4, h(k) * 6);
     };
     // A stake driven in, leaning out from the lair; a skull on some.
-    const stake = (x, z, k, tall = 1.5, layer = 'dark:wood') => {
+    const stake = (x, z, k, tall = 1.5, layer = 'bark') => {
       if (!free(x, z, 0.3)) return;
       const a = Math.atan2(z - l.z, x - l.x), lean = 0.12 + h(k) * 0.2, hh = tall * (0.8 + h(k + 1) * 0.5), y = Y(x, z);
       K.spike(layer, x, y - 0.3, z, 0.09, hh + 0.3, 4, h(k) * 3, [Math.cos(a) * lean, Math.sin(a) * lean]);
@@ -133,7 +133,7 @@ export function dressLairs(K, seals = []) {
     } else {
       // A picket: stakes of iron-shod timber round the rim, a cold fire, dark stones to sit on, the dead they've left.
       const nS = 10 + Math.round(R);
-      for (let i = 0; i < nS; i++) if (i % 4 !== 3) stake(...at(i / nS + h(1) * 0.1, R + 2.4), 10 + i * 3, 1.7);
+      for (let i = 0; i < nS; i++) if (i % 4 !== 3) stake(...at(i / nS + h(1) * 0.1, R + 2.4), 10 + i * 3, 1.7, 'dark:wood');
       if (fire(...at(h(2), R * 0.3), false)) for (let i = 0; i < 2; i++) stone(...at(h(2) + 0.3 + i * 0.4, R * 0.3 + 1.6), 60 + i * 3, 'dark:rubble', 0.4, 0.4);
       for (let i = 0; i < 4; i++) bones(...at(h(70 + i), R * (0.5 + h(74 + i) * 0.7)), 80 + i * 12);
       for (let i = 0; i < 2; i++) { const [x, z] = at(h(130 + i), R + 3.4); mound(x, z, 132 + i, 'dark:rubble', 0.9, 0.35); }
