@@ -246,8 +246,9 @@ body.touch #invTip, body.touch #invTip2 { max-width: min(300px, 44vw); font-size
 /* The book. */
 body.touch #spellClose { min-width: 44px; height: 40px; }
 body.touch .tspend { min-height: 42px; }
-body.touch .tslots { gap: 4px; }
-body.touch .tslots button { width: 34px; height: 36px; }
+body.touch .tslots { gap: 4px; flex-wrap: nowrap; }
+body.touch .tslots span { flex: none; }
+body.touch .tslots button { flex: 1 1 0; min-width: 0; max-width: 38px; width: auto; height: 36px; padding: 0; }
 body.touch .tbranch { padding: 8px 10px; }
 body.touch #treeTabs button { min-height: 36px; }
 
@@ -287,39 +288,58 @@ html.art-slot_spell #spells .spell.empty { opacity: .6; }
 html.art-slot_spell_on #spells .spell.now { background-image: var(--art-slot_spell_on); box-shadow: 0 0 12px -3px var(--c); }
 html.art-spells #spells .spell svg { width: 74%; height: 74%; }
 html.art-spells body:not(.touch) #spells .spell { padding: 5px; }
-/* (the painted frame's band is 8% of its width on each side: the frame keeps the map's place, and the map is drawn in to
-   sit inside it, so nothing beside the map is crowded) */
-html.art-frame_map #mapRing { box-shadow: none; border-radius: 0; background: var(--art-frame_map) center / 100% 100% no-repeat; }
+/* (the painted frame's band is a ninth of its width on each side: the frame is let out a little past the map's place and
+   the map drawn in to sit inside it, so nothing beside the map is crowded) */
+html.art-frame_map #mapRing { box-shadow: none; border-radius: 0; background: var(--art-frame_map) center / 100% 100% no-repeat; transform: scale(1.08); }
 html.art-frame_map #mapMini { transform: scale(.85); border-radius: 2px; }
 html.art-medallion #levelBox { background: var(--art-medallion) center / 100% 100% no-repeat; border: 0; box-shadow: none; }
 html.art-medallion #levelBox::after { content: ''; position: absolute; inset: 12%; border-radius: 50%; z-index: -1; background: conic-gradient(from 180deg, var(--xp) calc(var(--xpf, 0) * 1%), transparent 0); -webkit-mask: radial-gradient(circle, transparent 0 62%, #000 63%); mask: radial-gradient(circle, transparent 0 62%, #000 63%); }
 html.art-stick_base #stick, html.art-stick_base #stickHome { background: var(--art-stick_base) center / 100% 100% no-repeat; box-shadow: none; }
 html.art-stick_nub #nub { background: var(--art-stick_nub) center / 100% 100% no-repeat; box-shadow: none; }
 html.art-bar_frame #vitals { isolation: isolate; }
-html.art-bar_frame #vitals::before { content: ''; position: absolute; inset: -7px -15px; z-index: -1; border-style: solid; border-width: 0 22px; border-image: var(--art-bar_frame) 0 86 fill / 0 22px stretch; }
+html.art-bar_frame #vitals::before { content: ''; position: absolute; inset: -9px -17px; z-index: -1; border-style: solid; border-width: 0 24px; border-image: var(--art-bar_frame) 0 56 fill / 0 24px stretch; }
 html.art-bar_frame #vitals .meter, html.art-bar_frame #vitals #mana, html.art-bar_frame #vitals #stam { box-shadow: none; background: rgba(0, 0, 0, .55); }
 html.art-bar_life #hp > i { background: var(--art-bar_life) 0 50% / auto 100% repeat-x; }
 html.art-bar_mana #mana > i { background: var(--art-bar_mana) 0 50% / auto 100% repeat-x; }
 html.art-bar_stamina #stam > i { background: var(--art-bar_stamina) 0 50% / auto 100% repeat-x; }
 html.art-bar_foe #foeHp > i, html.art-bar_foe #bossFrame .bb i { background: var(--art-bar_foe) 0 50% / auto 100% repeat-x; }
-html.art-slot_item .slot, html.art-slot_item #charmRow .ch { border: 0; background: var(--art-slot_item) center / 100% 100% no-repeat; }
+/* (a cell of the paper doll, cut in nine, so the tall one for the staff keeps its corners) */
+html.art-slot_item .slot, html.art-slot_item #charmRow .ch { border: 1px solid transparent; border-image: var(--art-slot_item) 40 fill / 8px stretch; background: none; }
+html.art-slot_item #charmRow .ch { border-image-width: 4px; }
 html.art-slot_item .slot.full { box-shadow: inset 0 0 0 1px var(--rc), inset 0 0 14px -6px var(--rc); }
 /* (the windows: a frame cut in nine, its corners kept and its sides drawn out) */
-html.art-panel { --pw: 22px; }
-html.art-panel body.touch { --pw: 14px; }
-html.art-panel :is(#inv .panel, #folkTalk, #folkBook, #heroTalk, #hirePanel, #hallPanel, .lands-panel, #title .t-frame, #treeInfo, #invTip, #invTip2) {
-  border: var(--pw) solid transparent; border-image: var(--art-panel) 96 fill / var(--pw) / calc(var(--pw) * .4) stretch; background: none; box-shadow: none; outline: 0; }
-html.art-panel #treeInfo { --pw: 12px; padding: 6px 8px; }
-html.art-panel body.touch #inv { --cell: min(calc((100vh - 124px) / 8), calc((100vw - var(--sl) - var(--sr) - 126px) / 16.2), 56px); }
+/* (The painted frame's band is 28 of its 512 across and its corner pieces about 60, so it's cut 72 from each edge. --pw is
+   how wide that cut is drawn: the band comes out two fifths of it. The frame stands a little outside the panel's own edge
+   (--po), and the panel keeps its words clear of the band with a border of its own (--pb). The sides are laid end to end,
+   not drawn out, so the beading keeps its shape.) */
+html.art-panel { --pw: 34px; --po: 6px; --pb: 13px; }
+html.art-panel body.touch { --pw: 26px; --po: 5px; --pb: 9px; }
+html.art-panel :is(#inv .panel, #folkTalk, #folkBook, #heroTalk, #hirePanel, #hallPanel, .lands-panel, #title .t-frame, #treeInfo, #invTip, #invTip2, #autoMenu, #autoLog) {
+  border: var(--pb) solid transparent; border-image: var(--art-panel) 72 fill / var(--pw) / var(--po) round; background: none; box-shadow: none; outline: 0; }
+html.art-panel #treeInfo { --pw: 22px; --po: 3px; --pb: 8px; padding: 6px 8px; }
+html.art-panel body.touch #inv { --cell: min(calc((100vh - 120px) / 8), calc((100vw - var(--sl) - var(--sr) - 112px) / 16.2), 56px); gap: 9px; }
+html.art-panel body.touch #invBody { gap: 14px; }
 html.art-panel #title .t-frame::before { display: none; }
-html.art-panel :is(#invTip, #invTip2) { --pw: 12px; padding: 4px 6px; }
+html.art-panel :is(#invTip, #invTip2) { --pw: 20px; --po: 4px; --pb: 6px; padding: 5px 8px; }
 html.art-panel #inv .panel { padding: 0 2px 2px; }
-html.art-paper .tk-paper { border: 18px solid transparent; border-image: var(--art-paper) 96 fill / 18px / 6px stretch; background: none; box-shadow: none; padding: 4px 8px; }
-html.art-button :is(#invSort, #invClose, #spellClose, .tspend, .lands-panel button, #folkBook button:not(.menu-x), #autoMenu .foot button, #autoLog .foot button, #hallPanel button.hb, .mapBtns button, body.touch #pause .t-btn, #title.is-touch .t-main .t-menu .t-btn) {
-  border: 9px solid transparent; border-image: var(--art-button) 40 fill / 9px / 2px stretch; background: none; box-shadow: none; color: #f3e6c4; }
-html.art-button_on :is(#invSort, #invClose, #spellClose, .tspend, .lands-panel button, #folkBook button:not(.menu-x), #hallPanel button.hb, .mapBtns button):is(:hover, :active, .on) { border-image-source: var(--art-button_on); }
-html.art-tab :is(#treeTabs button, .tk-tabs button) { border: 8px solid transparent; border-image: var(--art-tab) 36 fill / 8px / 1px stretch; background: none; }
+html.art-paper .tk-paper { border: 12px solid transparent; border-image: var(--art-paper) 56 fill / 22px / 6px stretch; background: none; box-shadow: none; padding: 6px 10px; }
+/* (A plate is 384 by 128, its garnet ends 44 in and its band 24 deep: cut there, and drawn at a plate's own height.) */
+html.art-button :is(#invSort, #invClose, #spellClose, .tspend, .lands-panel button, #folkBook button:not(.menu-x), #autoMenu .foot button, #autoLog .foot button, #hallPanel button.hb, body.touch #pause .t-btn, #title.is-touch .t-main .t-menu .t-btn) {
+  border: solid transparent; border-width: 7px 14px; border-image: var(--art-button) 24 44 fill / 8px 15px / 1px stretch; background: none; box-shadow: none; color: #f3e6c4; }
+html.art-button :is(body.touch #pause .t-btn, #title.is-touch .t-main .t-menu .t-btn) { border-width: 8px 18px; border-image-width: 11px 20px; }
+html.art-button .tspend { text-shadow: 0 1px 2px #000; }
+html.art-button_on :is(#invSort, #invClose, #spellClose, .tspend, .lands-panel button, #folkBook button:not(.menu-x), #hallPanel button.hb, #autoMenu .foot button, body.touch #pause .t-btn, #title.is-touch .t-main .t-menu .t-btn):is(:hover, :active, .on) { border-image-source: var(--art-button_on); }
+html.art-button_on .tspend { border-image-source: var(--art-button_on); }
+html.art-btn_round .mapBtns button { border: 0; border-radius: 50%; background: var(--art-btn_round) center / 100% 100% no-repeat; color: #f3e6c4; }
+html.art-tab :is(#treeTabs button, .tk-tabs button) { border: solid transparent; border-width: 5px 10px; border-image: var(--art-tab) 34 36 fill / 8px 10px / 1px stretch; background: none; }
+html.art-tab #treeTabs button { padding-left: 4px; padding-right: 4px; }
 html.art-tab_on :is(#treeTabs button, .tk-tabs button).on { border-image-source: var(--art-tab_on); color: #fff4d2; }
+/* The icons, on their buttons: a little bigger than the drawn ones, and lifted so the darker ones read on a dark boss. */
+html.art-icons .tbtn { --ic-size: 68%; }
+html.art-icons #dock .tbtn { --ic-size: 72%; }
+html.art-icons #bAttack, html.art-icons #bCast { --ic-size: 62%; }
+html.art-icons .tbtn[data-ic]::before { filter: brightness(1.28) saturate(1.08) drop-shadow(0 1px 1px rgba(0, 0, 0, .85)); }
+html.art-icons #bTake::before { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .9)); }
 html.art-rule .t-rule { height: 14px; width: 80%; background: var(--art-rule) center / 100% 100% no-repeat; }
 html.art-rule .t-rule::after { display: none; }
 

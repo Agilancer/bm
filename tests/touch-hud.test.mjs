@@ -123,7 +123,7 @@ test('the game\'s rules for a manifest: a picture over its drawing, by name, and
   const rules = rulesFor({ pieces: { btn_round: 'btn_round.webp' }, icons: { jump: 'icons/jump.webp', slot_ring: 'icons/slot_ring.webp', school_fire: 'icons/school_fire.webp', 'x"] { } body': 'bad.webp' }, spells: { firebolt: 'spells/firebolt.webp' } }, 'k/');
   assert.ok(rules.includes('--art-btn_round: url("k/btn_round.webp")'));
   assert.ok(rules.includes('[data-ic="jump"]::before') && rules.includes('[data-ic="jump"] > svg { visibility: hidden; }'));
-  assert.ok(rules.includes('.slot[data-slot^="ring"]:not(.full)'));
+  assert.ok(rules.includes('.slot[data-slot^="ring"]:not(.full)::before'));
   assert.ok(rules.includes('.sch[data-ic="school_fire"] { display: inline-block; }'));
   assert.ok(rules.includes('svg[data-sp="firebolt"]'));
   assert.ok(!rules.includes('bad.webp'));

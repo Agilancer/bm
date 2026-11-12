@@ -27,7 +27,8 @@ export function rulesFor(manifest, at = DIR) {
     // What goes in an empty slot of the paper doll (index.html .slot[data-slot]; the two rings share one), in place of its word.
     if (k.startsWith('slot_')) {
       const sel = `.slot[data-slot^="${k.slice(5)}"]:not(.full)`;
-      out.push(`${sel} { background: url("${at}${f}") center / 72% no-repeat; }`, `${sel} > span { visibility: hidden; }`);
+      // (Over the cell, not as its ground: the cell's own frame is its border.)
+      out.push(`${sel}::before { content: ""; position: absolute; inset: 14%; pointer-events: none; opacity: .8; background: url("${at}${f}") center / contain no-repeat; }`, `${sel} > span { visibility: hidden; }`);
       continue;
     }
     // A school's emblem on its tab in the spellbook (src/ui/skilltree.js .sch): only there once it's painted.

@@ -396,10 +396,19 @@ nothing. `--remove <sheet>` takes one back out. The app's icon also goes into `m
 
 The list of sheets is `tools/ui/pieces.mjs`; `node tools/ui/build_kit.mjs` makes the kit from it (the templates are
 drawn in a headless browser), and `tools/ui/spec.json`, which the Python reads. `--mock DIR` draws every sheet in plain
-lines as stand-in art, which is how the whole round was tried: kit, check, zip, import, and the game wearing it, on a
-phone and a desk. **No painted art has been made or brought in yet**, so how ChatGPT's pictures cut and sit is unproven:
-the cutter takes a true transparent background, or a flat green one, or a plain white or black one, finds each picture
-by its cell and trims it, and says which cells are empty or run into their neighbours.
+lines as stand-in art, which is how the whole round was first tried.
+
+**All twenty sheets have come back from ChatGPT and are in the game** (`assets/ui/kit/`, 174 pictures; the sheets as
+painted are in `art/ui/sheets/`). They came with true transparent backgrounds, at 1254 x 1254 where 1024 was asked for
+(the cutter fits a sheet to its template), and every picture was in its cell. What was fitted to the art once it was
+seen, all in the painted-pieces part of `src/ui/hud.css`: the window frame is cut 72 from each edge, its sides laid end
+to end so the beading isn't drawn out; a plate's garnet ends are kept whole; the paper doll's cells are cut in nine, so
+the tall one for the staff keeps its corners; the icons sit a little bigger on their buttons and are lifted, since the
+leather ones are dark on a dark boss; the corner map's frame is let out a little and the map drawn in to sit inside it.
+One thing in the cutter: a tab's box caught the foot of the plate above it, so a piece in a box is now the unbroken run
+of rows and columns round the box's middle (`run_bbox`), and a neighbour straying into the margin is left out. Seen
+with the art on an emulated phone (844 x 390) and a desk (1280 x 720): the HUD, the pack, the spellbook, a word with
+someone, a letter, the journal, the pause, the big map, the skull's panels and auto-play's. Not seen on a real phone.
 
 Check the pictures, not the file names, against the two sides (above): the frames and buttons sit over both sides'
 places, so they carry neither's marks, and no lettering at all.

@@ -100,6 +100,34 @@ def bbox(alpha, x0, y0, x1, y1, level=20):
     return x0 + int(xs[0]), y0 + int(ys[0]), x0 + int(xs[-1]) + 1, y0 + int(ys[-1]) + 1
 
 
+def run_bbox(alpha, x0, y0, x1, y1, level=20, least=0.02):
+    """The box of the piece that sits in the middle of a box of the sheet: the unbroken run of rows, then of columns, with
+    something in them that takes in the box's middle (or lies nearest it). A neighbour's edge or shadow straying into the
+    box's margin is a run of its own, and is left out. None if there's nothing."""
+    part = alpha[y0:y1, x0:x1] > level
+
+    def run(cover, mid):
+        on = np.where(cover >= least)[0]
+        if not len(on):
+            return None
+        runs, start = [], on[0]
+        for a, b in zip(on, on[1:]):
+            if b - a > 3:                 # (a gap of a few rows is a seam in the paint, not the end of the piece)
+                runs.append((start, a))
+                start = b
+        runs.append((start, on[-1]))
+        best = min(runs, key=lambda r: 0 if r[0] <= mid <= r[1] else min(abs(r[0] - mid), abs(r[1] - mid)))
+        return int(best[0]), int(best[1]) + 1
+
+    rows = run(part.mean(axis=1), (y1 - y0) / 2)
+    if not rows:
+        return None
+    cols = run(part[rows[0]:rows[1]].mean(axis=0), (x1 - x0) / 2)
+    if not cols:
+        return None
+    return x0 + cols[0], y0 + rows[0], x0 + cols[1], y0 + rows[1]
+
+
 def squared(im, box, out, margin=0.05):
     """What's in the box, middled on a clear square with a little room round it, at the size it's kept."""
     part = im.crop(box)
@@ -151,7 +179,7 @@ def process_sheet(sheet, im):
         for box in sheet["boxes"]:
             x, y, w, h = box["rect"]
             gx, gy = int(w * 0.03), int(h * 0.12)
-            b = bbox(alpha, max(0, x - gx), max(0, y - gy), min(W, x + w + gx), min(H, y + h + gy))
+            b = run_bbox(alpha, max(0, x - gx), max(0, y - gy), min(W, x + w + gx), min(H, y + h + gy))
             if not b or (b[2] - b[0]) < 0.3 * w:
                 notes.append(("error", f"{sheet['id']}: nothing in the box for {box['name']}"))
                 continue
