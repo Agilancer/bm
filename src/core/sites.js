@@ -1105,7 +1105,9 @@ function keep(K) {
   for (let i = 0; i < 46; i++) { const s = i % 2 ? 1 : -1, z = k.z + s * (5.5 + Math.floor(i / 2) * 2.45), x = x0 + 1.6 + hash2(i, 3) * 3.8; K.spike(i % 5 ? 'dark:wood' : 'obsidian', x, y0, z, 0.16, 1.7 + hash2(i, 5) * 0.9, 4, i, [(hash2(i, 7) - 0.3) * 0.5, 0]); }
   K.box('wood', xm, dy - 0.22, k.z, 4.4, 0.22, 3.2, 0, { collide: false });
   for (const dx of [-3.3, 0, 3.3]) K.box(G, xm + dx, y0 - 0.3, k.z, 0.6, 1.42, 3.3, 0, { collide: false });
-  K.collide(xm, k.z, 4.4, 3.3, 0, y0 + 1.15);
+  // (Its piers stop you from the ditch's side only: stood on the deck or its steps you're over them, and nobody finding a
+  // way to the gate takes the bridge for a wall. t: its top less a step, as the portals' terraces have it.)
+  K.colliders.push({ x: xm, z: k.z, hx: 4.4, hz: 3.3, yaw: 0, h: 1.15, t: dy - 0.45 });
   K.deck([[xm, k.z, 4.4, 3.0, 0, dy]]);
   K.steps(G, xm - 4.4, k.z, -Math.PI / 2, 3.0, 7, { rise: 0.19, tread: 0.42, y: y0 }); K.steps(G, xm + 4.4, k.z, Math.PI / 2, 3.0, 7, { rise: 0.19, tread: 0.42, y: y0 });
   for (const s of [-1, 1]) { K.box(G, xm, dy - 0.2, k.z + s * 3.2, 4.4, 1.1, 0.2, 0); for (const dx of [-4.4, 4.4]) { K.box(G, xm + dx, y0 - 0.3, k.z + s * 3.25, 0.4, 2.9, 0.4, 0); K.spike('iron', xm + dx, y0 + 2.6, k.z + s * 3.25, 0.2, 1.1, 4, 0.78); } }
