@@ -22,8 +22,9 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const BOSS_ROOM_PAD = 8;       // a boss notices you this far inside its room's edge
 const RESET_AFTER = 900;       // seconds out of the Warrens before its dead stand again
 // Skrit's fire pots' pools: what standing in one costs a second, and how long it burns (the moves' own are 29 and 6). The
-// healer mends some 22 a second, so a pool that burned any cooler, or went out sooner, let a player who stood in it live.
-const POTS = { dps: 50, life: 12 };
+// healer mends some 22 a second: at 29 for 6 a player who stood in one lived through every fight, at 40 for 8 they fell in
+// 22 to 47 s, and at 50 for 12 to the first pots, in 13.
+const POTS = { dps: 40, life: 8 };
 
 export class Warrens {
   constructor(sim) {
