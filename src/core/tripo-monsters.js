@@ -76,6 +76,33 @@ export const VARIANTS = {
   hd_broodmother: { src: 'spider_black', height: 2.9, name: 'THE BROOD MOTHER' },
   hd_spiderling: { src: 'spider_red', height: 0.7, name: 'SPIDERLING' },
   hd_sleeper: { src: 'night_demon_blue', height: 3.7, name: 'THE SLEEPER UNDER THE ICE' },
+  // The Drowned Vaults' (src/core/delve-vaults.js): the Bloat, Mother Sallow, the Leviathan and its spawn.
+  dv_bloat: { src: 'plague_giant_1', height: 4.4, name: 'THE BLOAT' },
+  dv_sallow: { src: 'possessed_woman_2', height: 2.8, name: 'MOTHER SALLOW' },
+  dv_leviathan: { src: 'worm_2', height: 6.4, name: 'THE LEVIATHAN OF THE MILE' },
+  dv_spawn: { src: 'worm_1', height: 1.7, name: 'MIRE-SPAWN' },
+  // The Sporehold's (src/core/delve-sporehold.js): Mouldfang and his hounds, Mother Morel and her sporelings, the Heart
+  // and the husks rooted round it.
+  sh_mouldfang: { src: 'werewolf_brown', height: 3.3, name: 'MOULDFANG' },
+  sh_hound: { src: 'werewolf_brown', height: 1.7, name: 'MOULD HOUND' },
+  sh_morel: { src: 'necromancer_f2', height: 2.5, name: 'MOTHER MOREL' },
+  sh_sporeling: { src: 'kobold_1', height: 0.85, name: 'SPORELING' },
+  sh_heart: { src: 'plague_giant_armored', height: 5, name: 'THE HEART OF THE RING' },
+  sh_husk: { src: 'mannequin_3', height: 2.3, name: 'ROOTED HUSK' },
+  // The Hollow Playhouse's (src/core/delve-playhouse.js): the Seamstress, the Leading Man and his understudies, the
+  // Dollmaker and her dolls.
+  ph_seamstress: { src: 'mannequin_2', height: 2.9, name: 'THE SEAMSTRESS' },
+  ph_lead: { src: 'mannequin_1', height: 3.1, name: 'THE LEADING MAN' },
+  ph_understudy: { src: 'mannequin_1', height: 1.9, name: 'UNDERSTUDY' },
+  ph_dollmaker: { src: 'necromancer_lord_2', height: 2.8, name: 'THE DOLLMAKER' },
+  ph_doll: { src: 'zombie_girl_1', height: 0.9, name: 'DOLL' },
+  // The Kingsbarrow's (src/core/delve-kingsbarrow.js): the Gravewarden, the Ossuary Golem and what it falls into, the
+  // king's hounds, and Ossivar.
+  kb_warden: { src: 'skeleton_knight_giant', height: 4.3, name: 'THE GRAVEWARDEN' },
+  kb_golem: { src: 'bone_golem', height: 4.7, name: 'THE OSSUARY GOLEM' },
+  kb_thrall: { src: 'bone_golem', height: 2, name: 'BONE THRALL' },
+  kb_hound: { src: 'werewolf_brown', height: 1.9, name: 'BARROW HOUND' },
+  kb_wyrm: { src: 'dragon_undead', height: 6.4, name: 'OSSIVAR' },
 };
 export function withVariants(roster) {
   for (const [id, v] of Object.entries(VARIANTS)) {

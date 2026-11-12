@@ -17,6 +17,14 @@ export const WAYS = {
   warrens: ['mouth', 'diggings', 'tallow', 'dig', 'warren', 'feast', 'throne', 'descent', 'lair'],
   blackvigil: ['bv_gate', 'bv_guard', 'bv_ward', 'bv_innergate', 'bv_barracks', 'bv_armoury', 'bv_gallery', 'bv_library', 'bv_sanctum', 'bv_chapel', 'bv_stair', 'bv_hall', 'bv_court', 'bv_walk', 'bv_ante', 'bv_throne'],
   deeps: ['hd_mouth', 'hd_galleries', 'hd_herd', 'hd_ramshall', 'hd_webs', 'hd_falls', 'hd_brood', 'hd_dark', 'hd_lake'],
+  // The four made after them. The Vaults' coil, with a look into the Strongroom. The Sporehold's west leaf, back through the
+  // hub, its east leaf, the hub again, and north. The Playhouse as it's used: front of house, the Wardrobe (the Seamstress
+  // has to die before the stage is lit), round by the Store and the green room onto the Stage, and up. The Kingsbarrow's
+  // ring, east about, and back to the head of the stair.
+  vaults: ['dv_stair', 'dv_toll', 'dv_reeds', 'dv_wallow', 'dv_cistern', 'dv_strong', 'dv_cistern', 'dv_tide', 'dv_sluice', 'dv_sump'],
+  sporehold: ['sh_sink', 'sh_stair', 'sh_ring', 'sh_kennel', 'sh_den', 'sh_ring', 'sh_garden', 'sh_bower', 'sh_ring', 'sh_veil', 'sh_heart'],
+  playhouse: ['ph_foyer', 'ph_cloak', 'ph_gallery', 'ph_house', 'ph_wardrobe', 'ph_house', 'ph_props', 'ph_green', 'ph_stage', 'ph_green', 'ph_stair', 'ph_nursery', 'ph_attic'],
+  kingsbarrow: ['kb_door', 'kb_dromos', 'kb_south', 'kb_cups', 'kb_east', 'kb_warden', 'kb_east', 'kb_queens', 'kb_north', 'kb_hounds', 'kb_west', 'kb_ossuary', 'kb_west', 'kb_shields', 'kb_south', 'kb_stair', 'kb_vault'],
 };
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
@@ -31,6 +39,12 @@ export const KNOWN = new Set([
   'bv_guard', 'bv_ward_south', 'bv_ward_north', 'bv_barracks', 'bv_armoury', 'bv_gauntlet', 'bv_gallery_watch', 'bv_library', 'bv_chapel', 'bv_stair',
   'bv_hall_low', 'bv_hall_high', 'bv_walk', 'bv_ante', 'maldrec', 'sorvane', 'brothers', 'castellan',
   'hd_galleries', 'hd_herd', 'hd_webs', 'hd_falls', 'hd_dark', 'hrymgar', 'broodmother', 'sleeper',
+  // (The later four's bosses each have something that isn't a mark to be out of: somewhere to be, or not a step. The fight
+  // says which as it goes (its `order`, posted with it), and tactics() below does as it's told: the same rule for all twelve.)
+  'dv_toll', 'dv_gallery', 'dv_reeds', 'dv_cistern', 'dv_strong', 'dv_sluice', 'bloat', 'sallow', 'leviathan',
+  'sh_stair', 'sh_ring_west', 'sh_ring_east', 'sh_kennel', 'sh_garden', 'sh_veil', 'mouldfang', 'morel', 'heart',
+  'ph_cloak', 'ph_gallery', 'ph_house_back', 'ph_house_front', 'ph_props', 'ph_green', 'ph_stair', 'ph_nursery', 'seamstress', 'leadingman', 'dollmaker',
+  'kb_dromos', 'kb_cups', 'kb_queens', 'kb_north', 'kb_hounds', 'kb_shields', 'kb_stair', 'gravewarden', 'golem', 'wyrm',
 ]);
 export function warrensCoverage() {
   const out = [];
@@ -202,9 +216,17 @@ export function tactics(b, m, foes) {
   const fresh = W && performance.now() - W.at < 1500;
   const f = fresh && inDungeon(m.x, m.z) ? W.fight : null;
   const live = foes.filter((q) => q.hostile && q.d < 34 && !q.slime && !q.tumbler);
+  // What the fight itself wants of it just now (src/sim/dungeon.js order): not a step taken (the Dollmaker's music has
+  // stopped; a pyre's on it and it's clear of everyone); or somewhere to be at once, whatever's under it (the high rock
+  // above the tide, the far side of a pillar, his spotlight, the grave's circle).
+  const told = f?.order || null;
+  if (told?.still) return { to: [m.x, m.z], still: true, target: pickTarget(live, f, b, m), why: 'Not a step.' };
+  if (told?.to && told.urgent && dist(m.x, m.z, told.to[0], told.to[1]) > 0.7) return { to: told.to, run: true, target: pickTarget(live, f, b, m), why: 'Where the fight wants me, now.' };
   // Out of whatever's marked, falling, burning or flying at it, first.
-  const out = perilStep(b, m);
+  const out = told?.to && told.urgent ? null : perilStep(b, m);
   if (out) return { to: out, run: true, target: pickTarget(live, f, b, m), why: 'Out of the circle!' };
+  // (And somewhere to be when it's clear: a pod to tread flat.)
+  if (told?.to) return { to: told.to, run: dist(m.x, m.z, told.to[0], told.to[1]) > 3, target: pickTarget(live, f, b, m), why: 'Where the fight wants me.' };
   if (!f) return { to: null, target: pickTarget(live, null, b, m), why: null };
   const bodies = f.bodies || [];
   const boss = bodies[0];
@@ -264,7 +286,8 @@ export function perilStep(b, m) {
   const open = inDungeon(m.x, m.z) ? (x, z) => caveRoom(x, z) > 0.8 : null;
   const wave = G.marks.find((h) => h.jump && h.live && Math.abs(edge(h, m.x, m.z)) < 1.9);
   if (wave && b.t - (b.waveJump ?? -9) > 0.7) { b.waveJump = b.t; b.o.shared.input[INPUT.JUMP] += 1; }
-  const to = wayOut(G.marks.filter((h) => !h.jump), m.x, m.z, 1, open);
+  // (Not out of one that's to be stood in: a pod, the grave's circle. soak, src/sim/perils.js.)
+  const to = wayOut(G.marks.filter((h) => !h.jump && !h.soak), m.x, m.z, 1, open);
   if (to) return to;
   // (Where each shot is now: they've flown on since they were told of.)
   const late = (performance.now() - G.at) / 1000;

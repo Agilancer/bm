@@ -3013,8 +3013,24 @@ export class HeroWorld {
     if (p.surfing && !fight.length && Math.hypot(p.vx || 0, p.vz || 0) > 2.5 && !h.swing && !h.jump) { this.freeSurf(h); return; }
     // Out of whatever's marked on the ground under them (src/sim/perils.js), wherever they are: the circles, the strips, the
     // cones, the burning.
-    const out = sim.perils.danger(h.x, h.z);
+    // What the fight itself wants of them (src/sim/dungeon.js order): not a step taken while the music's stopped; or
+    // somewhere to be, once they're out of whatever's marked (the high rock, a pod to tread flat, the far side of a pillar).
+    const told = W?.inside ? W.order(h) : null;
+    if (told?.still) { h.goal = null; h.hold = Math.max(h.hold, 0.25); h.dodgeT = 0; if (h.role === 'heal') this.mend(h, true); return; }
+    // (urgent: it matters more than what's under them: the rock above the tide is through the tide.)
+    const out = told?.to && told.urgent ? null : sim.perils.danger(h.x, h.z);
     if (out) { h.goal = { x: out[0], z: out[1], speed: 7.5, stop: 0.2 }; h.dodgeT = 0.35; if (h.role === 'heal') this.mend(h, true); return; }
+    if (told?.to) {
+      h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
+      const dt2 = Math.hypot(told.to[0] - h.x, told.to[1] - h.z);
+      if (dt2 > 0.7 || !h.foe) { h.goal = { x: told.to[0], z: told.to[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; if (h.role === 'heal') this.mend(h, true); return; }
+      // (There: fighting on from it, if what they're on can be reached from it.)
+      if (h.role === 'heal') { if (!this.mend(h, true)) { h.goal = null; h.hold = Math.max(h.hold, 0.2); } return; }
+      if (!(h.cls?.ranged) && Math.hypot(h.foe.x - h.x, h.foe.z - h.z) > 4) { h.goal = null; h.hold = Math.max(h.hold, 0.2); return; }
+      h.post = told.to;
+      this.fallBack(h, fight);
+      return;
+    }
     if (W?.inside) {
       // Behind a pillar while the dragon's on her perch, shooting what can be shot from there.
       const hide = W.hideFrom(h.x, h.z);

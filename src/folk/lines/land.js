@@ -1750,4 +1750,278 @@ export const QUESTS = {
       ysolt: ["Then the one who took his helm off to drink has nobody to ride home to. Good. ...Good."],
     },
   },
+
+  // ---- the Drowned Vaults, under the Sunken Mile ----
+  under_the_mile: {
+    title: 'Under the Mile',
+    giver: 'sabine',
+    needs: 'sunken_mile',
+    hint: DELVE_HINT,
+    offer: [
+      "I went back to the Mile for my mallow. The water by the broken arch is going down. Not drying. Going down, into a stair. There was always a stair. The old toll kept its strongroom under the causeway.",
+      "Something's wallowing at the foot of it. I heard it breathe, and then I heard it stop, the way you stop when you've noticed somebody. I'd like it dead before it comes up for air. Would you look?",
+    ],
+    accept: "I'll go down the stair.",
+    acceptLine: "By the broken arch, where the slabs tip. It's a doorway now, with a light in it. It won't take one alone, they say: bring a company. And if it swells up, get something between you and it.",
+    decline: 'Not under the fen.',
+    declineLine: "No. I only went as far as the first step, and I've washed three times since.",
+    journal: [
+      "A stair has opened by the Sunken Mile, in the fen north of Bellmourn: the old toll's vaults, drowned. Go down, with a company.",
+      "Kill the Bloat, which wallows in the Drowned Vaults.",
+      "Go back to Sabine Moss at the herbalist's.",
+    ],
+    progress: [
+      "The stair by the broken arch. Something big, in a pool, breathing. That's all I know, and it's more than I wanted.",
+    ],
+    done: [
+      "It burst? No, don't tell me. Tell me it's dead and tell me nothing else. ...Good. Sit. You smell of the fen and of something I haven't a name for.",
+      "This was my mother's. It's kept the damp off two of us. You'll need it more than my hook does, where you keep going.",
+    ],
+    after: [
+      "The mallow's coming back along the Mile. It likes what's under it gone. So do I.",
+    ],
+    others: {
+      bryony: ["Mam says there's a stair under the water now. Does it go all the way down? How do you know when it's all the way?"],
+    },
+  },
+
+  what_sank_the_mile: {
+    title: 'What Sank the Mile',
+    giver: 'sabine',
+    needs: 'under_the_mile',
+    hint: DELVE_HINT,
+    offer: [
+      "I asked Orrin why a causeway sinks. He said they don't, not stone on a hard bottom, not unless something takes the bottom away. He looked quite pleased. Then he looked at me and stopped.",
+      "So it's still there. Whatever dug the fen out from under a mile of stone is at the bottom of those vaults, where the water all goes. And there's a woman's voice down there calling the water in. End both.",
+    ],
+    accept: "I'll go to the bottom.",
+    acceptLine: "Past where the big one was, and round, and down. When the water comes up, find the high ground. When the mud moves, don't stand still. That's fen sense. It's all I've got to give you.",
+    decline: 'Not yet.',
+    declineLine: "No. Nor would I. But the Mile's sinking a hand a year, and I've counted my hands.",
+    journal: [
+      "Below the Bloat's wallow a voice is calling the fen in. Kill Mother Sallow, the Tidecaller, in the Drowned Vaults.",
+      "At the bottom of the Vaults is what sank the causeway. Kill the Leviathan of the Mile.",
+      "Go back to Sabine Moss at the herbalist's.",
+    ],
+    progress: [
+      "The bottom. Where the water goes. The voice first, I think; then the thing itself.",
+      "High ground when it floods. Keep moving when the mud does.",
+    ],
+    done: [
+      "A worm. The length of the square, and it ate the bottom out of a causeway. And you went down a hole after it. I'm going to make you something hot and you're going to drink all of it.",
+      "Here. It came up in the reeds the spring the Mile first cracked, and I never knew what to do with a staff. You do.",
+    ],
+    after: [
+      "I stood on the Mile and stamped. It stamped back, like ground. First time in my life.",
+    ],
+    others: {
+      orrin: ["A burrowing thing, under the Mile. I said 'something took the bottom away' to be clever. I should like, in future, to be wrong when I'm clever."],
+    },
+  },
+
+  // ---- the Sporehold, under the Fungal Ring ----
+  the_ring_below: {
+    title: 'The Ring Below',
+    giver: 'orrin',
+    needs: 'ossery_quarry',
+    hint: DELVE_HINT,
+    offer: [
+      "Past the quarry, deep in the red wood, there is a ring of caps the height of a man. Every herbal I own calls a ring the fruit of one growth, under the ground, as wide as the ring. That ring is forty paces across.",
+      "A man camped there to draw it and left his tent. I want to know what's under it. Not to own. To know. There's a way down beside it now, I'm told. Go and stand at the ring; then go under, and tell me what it is.",
+    ],
+    accept: "I'll go under the ring.",
+    acceptLine: "The Abbey Road, then north through the red trees till they thin. You'll smell it first. Touch nothing that glows. And something howls down there, the carter says. I'd deal with the howling first.",
+    decline: 'Not under a mushroom.',
+    declineLine: "Put like that, no. I'd not either. I'll go on reading about it, which is safer and worse.",
+    journal: [
+      "Orrin Vey wants to know what the Fungal Ring grows from. The ring is in the Rustwood, far north-east of Bellmourn, north of the Abbey Road's end. Go there.",
+      "There is a way down beside the ring, into the Sporehold. Go in, with a company.",
+      "Something howls under the ring. Kill Mouldfang, in his den down the west way.",
+      "Go back to Orrin Vey at the Tolling Bell.",
+    ],
+    progress: [
+      "The ring, north of the Abbey Road. And under it. I'll want every particular, and I'll want them in order.",
+    ],
+    done: [
+      "A hollow hill. One growth, wearing wolves. Wearing people. Stood rooted, you say, and turning their heads. ...Give me a moment. I asked to know, and now I do.",
+      "Take this. It was to be read by somebody with steadier hands than mine. You went under a hill for a question. That's steady enough.",
+    ],
+    after: [
+      "I've burned the page with the ring on it. Then I drew it again from memory. I'm not proud of either.",
+    ],
+    others: {
+      sabine: ["Under the ring? I pick round the edge of it, and only the small ones. I've never liked how they lean toward you."],
+    },
+  },
+
+  what_it_fruits_from: {
+    title: 'What It Fruits From',
+    giver: 'orrin',
+    needs: 'the_ring_below',
+    hint: DELVE_HINT,
+    offer: [
+      "I've been at the herbals all night. A thing like that has one heart. Everything else is its hands. The woman you saw tending pods is a hand. The wolf was a hand. Cut off hands and it grows more.",
+      "So it must be the heart. It will be at the middle, or past it, and it will keep itself shut while it has hands left. Kill the gardener; then the way will open; then kill what she gardens for.",
+    ],
+    accept: "I'll find its heart.",
+    acceptLine: "East from the great cavern for the gardener. Then north, where it was shut. If it has things rooted round it, feeding it, I'd cut those first. That's not learning. That's weeding.",
+    decline: 'Not again.',
+    declineLine: "No. Once was more than I'd a right to ask. But it's forty paces now, and the herbals say it grows.",
+    journal: [
+      "The growth under the Fungal Ring has a gardener. Kill Mother Morel, in her bower up the east way of the Sporehold.",
+      "With both its keepers dead the Heart of the Ring is open, north of the great cavern. Kill it.",
+      "Go back to Orrin Vey at the Tolling Bell.",
+    ],
+    progress: [
+      "The gardener, east. Then the heart, north. Weed first, if it's rooted.",
+    ],
+    done: [
+      "Dead. All of it? You're sure: the caps on the hill will tell us, by autumn. If they don't come up, you're sure.",
+      "I've nothing that's worth a hill. Have this: it's the best thing in the bag, and I only kept it because I couldn't lift it properly.",
+    ],
+    after: [
+      "No ring this autumn, the carter says. Bare ground, forty paces across. I've written it in the margin. It's the only note in that book in my own hand.",
+    ],
+    others: {
+      silas: ["Orrin says you killed a mushroom the size of the square. He was shaking. I gave him the good chair."],
+    },
+  },
+
+  // ---- the Hollow Playhouse, in the Twisted Grove ----
+  the_winter_company: {
+    title: 'The Winter Company',
+    giver: 'dorcas',
+    needs: 'hare_and_harrow',
+    hint: DELVE_HINT,
+    offer: [
+      "Three winters back a company of players took all six of my rooms for a week, and paid in songs, which I let them. They were going on into the Gallowswood to build a house and play there till spring.",
+      "They'd a woman with them who did the costumes, and never sat down. They owe me for eleven suppers. Nobody's seen them since, and people who went to see the play didn't come home. Go to the old grove and find my players.",
+    ],
+    accept: "I'll find your players.",
+    acceptLine: "South-east past the Cross, a long way, to the grove with the stone table. If there's a door there that wasn't, it's theirs. It'll want more than one of you. And mind the one with the needles.",
+    decline: 'Not the Gallowswood.',
+    declineLine: "No. Well. Eleven suppers. I've written off worse.",
+    journal: [
+      "A company of players went into the Gallowswood three winters ago and never came out. Go to the Twisted Grove, far south-east of Thornwick.",
+      "There is a door in the grove: the Hollow Playhouse. Go in, with a company.",
+      "The company's seamstress is in the Wardrobe, off the side of the House. Kill her.",
+      "Go back to Dorcas Pym at the Hare and Harrow, in Thornwick.",
+    ],
+    progress: [
+      "The grove with the table. Past the Cross and on. If you hear clapping, it isn't for you.",
+    ],
+    done: [
+      "Still in rehearsal. Three winters. And the audience sat there in rows... no. Stop. I fed those people. I'll hear the rest when I've a drink in my hand.",
+      "She left this on the bed when they went. I thought it was a kindness. I think now it was a measuring. Take it; I'll not have it in the house.",
+    ],
+    after: [
+      "I've taken the playbill down off the taproom wall. There's a clean square where it was. I look at that instead.",
+    ],
+    others: {
+      osric: ["Players. I remember them. One of them asked me how tall I was. I told him. He wrote it down."],
+    },
+  },
+
+  last_night_of_the_run: {
+    title: 'Last Night of the Run',
+    giver: 'dorcas',
+    needs: 'the_winter_company',
+    hint: DELVE_HINT,
+    offer: [
+      "I've been thinking who paid. It wasn't the tall one who did all the talking. He never had a coin. It was a woman at the back with a box under her arm, who made the dolls they sold at the door.",
+      "It'll be her house. He's only what she puts on the stage. Go back, see the play out to the end, and then go up to wherever she keeps herself and close it. For good. No more nights.",
+    ],
+    accept: "I'll close the house.",
+    acceptLine: "He'll be on, now the costumes are seen to. Stay where the light is; I never saw him out of it. And her box played a tune. When it stopped, the whole company stood like posts. I'd stand too.",
+    decline: 'Not yet.',
+    declineLine: "No. Sit, then. Mutton. On the house; I'm in the habit of not being paid.",
+    journal: [
+      "With his costume seen to, the Leading Man will take the stage of the Hollow Playhouse. Kill him.",
+      "The Dollmaker keeps the attic over the back of the house. Kill her, and the play is over.",
+      "Go back to Dorcas Pym at the Hare and Harrow, in Thornwick.",
+    ],
+    progress: [
+      "The stage first. Then up, to the one with the box.",
+      "Stay in his light. And when her tune stops, you stop.",
+    ],
+    done: [
+      "Over. Truly over? No curtain call? ...Then I'll say it for them, since nobody else will: it was a good week, that first one. They could sing.",
+      "This came out of one of their trunks the night they left; I found it under the stair. It's an ugly thing and it's worth more than the inn. It's yours. Call it eleven suppers and the change.",
+    ],
+    after: [
+      "A carter came through and asked was there anything to see hereabouts. I said no. First time in three winters that's been true.",
+    ],
+    others: {
+      wymond: ["The grove's quiet. I walked out and stood at the table. Nothing clapped. I said a few words over the door, and it's only a door."],
+    },
+  },
+
+  // ---- the Kingsbarrow, in the great mound of the Barrows ----
+  sung_open: {
+    title: 'Sung Open',
+    giver: 'jory',
+    needs: 'moor_wayhouse',
+    hint: DELVE_HINT,
+    offer: [
+      "That one with the lamp, at the wayhouse. I've been thinking what a body like that wants on a moor. Then last night the lights weren't drifting. They were all going one way. To the big mound.",
+      "And there was singing. Low, a lot of voices, no tune you'd whistle. My gran said the great mound was shut on a king with his guard stood round him alive. I think somebody's singing at the door. I think it's opened.",
+    ],
+    accept: "I'll go to the mound.",
+    acceptLine: "The Barrow Track to its end. The big one, with the ring of stones. If there's a way in at its foot, that's it. Gran said he had a warden who never sat down. He'll be the first thing through the door.",
+    decline: 'Not the barrows.',
+    declineLine: "No. I only watch it. I've watched it sixty years and it never once watched back, till now.",
+    journal: [
+      "The lights on the Barrow Moor are gathering at the great mound, and something is singing there. Go to the Barrows, far south-west of Bellmourn, at the end of the Barrow Track.",
+      "The great mound is open at its foot: the Kingsbarrow. Go in, with a company.",
+      "The king's warden keeps the hall off the east walk. Kill the Gravewarden.",
+      "Go back to Jory Pell and tell him what was singing.",
+    ],
+    progress: [
+      "The big mound. The one with the stones round it. I can hear it from the wall now, when the wind's south.",
+    ],
+    done: [
+      "Stood up in his plate, after all that while, and came at you. And you put him down by making him run into a rock. Ha! ...No. I shouldn't laugh. Gran would've, though.",
+      "Singers in robes, at the door of a grave. Here. It's not the night pay this time; this is out of my own box. A man ought to pay for his own bad dreams.",
+    ],
+    after: [
+      "No singing these three nights. The lights still go that way. Slower. Like they've forgotten what for.",
+    ],
+    others: {
+      aldric: ["A king under the moor. Jory's gran had that tale. I had it down as a tale. I've had a number of things down as tales."],
+    },
+  },
+
+  king_under_the_moor: {
+    title: 'The King Under the Moor',
+    giver: 'jory',
+    needs: 'sung_open',
+    hint: DELVE_HINT,
+    offer: [
+      "I've remembered the rest of Gran's tale. He didn't walk to his grave, the king. He rode. And what he rode was shut in with him, chained, and it wasn't a horse. She'd flap her arms when she told that part.",
+      "If the singing's woken his guard it'll wake that. There's a seal on the stair down, you said, and two things holding it. Break what holds it and go down. I'd as soon it never came up and looked at Bellmourn.",
+    ],
+    accept: "I'll go down to the king.",
+    acceptLine: "West walk for the other one that holds it, the heap of bones that gets up. Don't let its bits walk home. Then the stair. And if the thing marks you, stand close together. Gran said that. I never knew why.",
+    decline: 'Not yet.',
+    declineLine: "No. It's a long way down to go for a watchman's gran. I'll keep the lamp lit either way.",
+    journal: [
+      "The Ossuary Golem, in the hall off the west walk of the Kingsbarrow, is the other thing that holds the king's stair shut. Kill it.",
+      "The stair is open. In the vault below is what the king rode. Kill Ossivar, the Barrow Wyrm.",
+      "Go back to Jory Pell.",
+    ],
+    progress: [
+      "The bones in the west hall. Then down the stair.",
+      "Close together when it marks you. Apart when it burns. Gran's words, near enough.",
+    ],
+    done: [
+      "A wyrm. Bones and all, and flew. Under our moor, all my life, under the lights I've been counting. ...I'll sit down a minute. Don't mind me.",
+      "This was Gran's, and her gran's, and nobody ever said where it came from, only that it came off the moor. It should go back to somebody who's been in there. That's you. There's nobody else.",
+    ],
+    after: [
+      "The moor's dark. All of it. First night in sixty years. I stood my whole watch looking at nothing, and it was the best watch I ever had.",
+    ],
+    others: {
+      silas: ["Jory says the moor's gone dark. I've carved him a little light to hang in the watch-house. He says he won't light it. He'll light it."],
+    },
+  },
 };

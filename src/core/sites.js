@@ -21,7 +21,7 @@ const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
 const TILE = { wall: [7, 4.2], roof: [4, 2.3], stone: [3, 1.7], rubble: [3, 1.7], wood: [2.4, 1.4], door: [1.8, 2.6], cloth: [2, 2] };
 const tileOf = (layer) => {
-  const n = layer.replace(/^(dark|pale|frost):/, '');
+  const n = layer.replace(/^(dark|pale|frost|mire|spore):/, '');
   return n.startsWith('wall') || n === 'door_wall' ? TILE.wall : n.startsWith('roof') ? TILE.roof : n.startsWith('door') ? TILE.door : TILE[n] || TILE.cloth;
 };
 

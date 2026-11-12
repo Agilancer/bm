@@ -68,9 +68,16 @@ function play(target) {
   const s = Math.sin(p.yaw), c = Math.cos(p.yaw);
   let wx = 0, wz = 0, run = false;
   if (!still) {
+    // What the fight itself wants of it (src/sim/dungeon.js order): not a step; or somewhere to be, at once (urgent) or
+    // when it's clear of what's marked.
+    const told = W.order(p), go = told?.to && Math.hypot(told.to[0] - p.x, told.to[1] - p.z) > 0.6 ? told.to : null;
     // (What it's seen: a mark is a moment old before it's noticed.)
-    const out = wayOut(P.marks.filter((m) => !m.jump && m.t > react), p.x, p.z, 1, (x, z) => !sim.world.inside(x, z, 0.7));
-    if (out) { wx = out[0] - p.x; wz = out[1] - p.z; run = true; }
+    const out = told?.still || (go && told.urgent) ? null : wayOut(P.marks.filter((m) => !m.jump && !m.soak && m.t > react), p.x, p.z, 1, (x, z) => !sim.world.inside(x, z, 0.7));
+    if (told?.still) { /* stood where it is */ }
+    else if (go && told.urgent) { wx = go[0] - p.x; wz = go[1] - p.z; run = true; }
+    else if (out) { wx = out[0] - p.x; wz = out[1] - p.z; run = true; }
+    else if (go) { wx = go[0] - p.x; wz = go[1] - p.z; run = true; }
+    else if (told?.to) { /* there: stood on it */ }
     else {
       // A shot about to pass through where it stands: a step across its way.
       for (const q of P.shots) {

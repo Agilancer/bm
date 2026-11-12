@@ -9,5 +9,10 @@
  "Bloodsoaked": {"val": 0.8, "tint": [0.8, 0.12, 0.1], "tamt": 0.35},
  "Sable": {"sat": 0.7, "val": 0.72},
  "Oxblood": {"val": 0.9, "tint": [0.85, 0.16, 0.12], "tamt": 0.25},
- "Rust": {"val": 0.95, "tint": [0.8, 0.45, 0.22], "tamt": 0.3}
+ "Rust": {"val": 0.95, "tint": [0.8, 0.45, 0.22], "tamt": 0.3},
+ "Drowned": {"sat": 0.5, "val": 0.84, "tint": [0.24, 0.58, 0.52], "tamt": 0.46},
+ "Sporebloom": {"sat": 0.85, "val": 0.92, "tint": [0.62, 0.34, 0.86], "tamt": 0.44},
+ "Porcelain": {"sat": 0.22, "val": 1.22, "tint": [1.0, 0.93, 0.86], "tamt": 0.3},
+ "Verdigris": {"sat": 0.45, "val": 0.9, "tint": [0.34, 0.62, 0.5], "tamt": 0.38},
+ "Gravegilt": {"sat": 0.4, "val": 1.05, "tint": [0.86, 0.72, 0.4], "tamt": 0.34}
 }

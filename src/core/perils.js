@@ -91,5 +91,5 @@ export function wayOut(marks, x, z, pad = 0.8, open = null) {
   return [tx, tz];
 }
 
-/** A mark as the page needs it (auto-play reads these): its shape and where, and whether it's biting yet. */
-export const markOut = (h) => ({ shape: h.shape, x: h.x, z: h.z, r: h.r, r0: h.r0 || 0, yaw: h.yaw || 0, half: h.half ?? 0.5, w: h.w ?? 1, arms: h.arms || 4, seed: h.seed || 0, live: h.t >= h.fuse, jump: !!h.jump });
+/** A mark as the page needs it (auto-play reads these): its shape and where, whether it's biting yet, and whether it's one to stand in (soak). */
+export const markOut = (h) => ({ shape: h.shape, x: h.x, z: h.z, r: h.r, r0: h.r0 || 0, yaw: h.yaw || 0, half: h.half ?? 0.5, w: h.w ?? 1, arms: h.arms || 4, seed: h.seed || 0, live: h.t >= h.fuse, jump: !!h.jump, soak: !!h.soak });
