@@ -11,6 +11,7 @@
 import { SEALS } from '../core/sites.js';
 import { CLIFF, POOL, SITES, WATERS, countryAt } from '../core/lands.js';
 import { roomAt } from './places.js';
+import { art } from './skin.js';
 import { ABIL, H, INPUT } from '../core/layout.js';
 
 const PASSWORD = '6669';
@@ -54,6 +55,8 @@ const PAL = { wingbell: { v: '#8a5cff', s: '#b8bcc8', l: '#f4f6ff', d: '#5a5e6e'
   glimmerstone: { w: '#c0c4cc', d: '#2a7ca0', c: '#6ad8f8', l: '#e8ffff' } };
 const iconCache = {};
 export function charmIcon(id) {
+  const painted = art('goods', id);      // (from the art kit, where it's been painted: src/ui/skin.js)
+  if (painted) return painted;
   if (iconCache[id]) return iconCache[id];
   const cv = document.createElement('canvas'); cv.width = cv.height = 16;
   const g = cv.getContext('2d');

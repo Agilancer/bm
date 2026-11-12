@@ -69,3 +69,24 @@ test('every kind of monster has tricks, and every trick is a move there is', () 
     for (const q of list) { assert.equal(typeof MOVES[q.move], 'function', `${g}: ${q.move}`); assert.ok(q.cd[0] > 0 && q.cd[1] >= q.cd[0] && q.far > q.near); }
   }
 });
+
+test('the ground burning under you hurts from where it burns, and doesn\'t push you out of it', async () => {
+  const { Perils } = await import('../src/sim/perils.js');
+  const { Player } = await import('../src/sim/player.js');
+  // A pool thrown from 20 m off, burning under someone standing in it.
+  const struck = [];
+  const v = { x: 0.3, z: 0, y: 0, hp: 100, dead: false, damage: (sim, dmg, x, z, knock) => { struck.push({ x, z, knock }); return true; } };
+  const sim = { tick: 0, time: 0, player: v, heroes: [], world: { height: () => 0 }, event() {}, casting: { burst() {} } };
+  const P = new Perils(sim);
+  P.mark({ x: 0, z: 0, r: 2.5, fuse: 0, life: 6, dps: 40, from: { x: 20, z: 0 }, quiet: true });
+  for (let i = 0; i < 240; i++) { sim.tick++; sim.time += 1 / 120; P.stepMarks(1 / 120); }
+  assert.ok(struck.length >= 3, `bitten ${struck.length} times in two seconds`);
+  for (const s of struck) assert.deepEqual([s.x, s.z, s.knock], [0, 0, null], 'each bite from the pool, with no knock');
+  // And the player, bitten so, isn't put back a step: blows are (2.2 m/s and more, from where they came).
+  const p = Object.assign(Object.create(Player.prototype), { x: 0.3, z: 0, y: 0, yaw: 0, hp: 100, maxHp: 100, armor: 0, flash: 0, trauma: 0, knockX: 0, knockZ: 0, dead: false, clip: 'idle', stance: { idle: 'idle' } });
+  const psim = { casting: { absorb: (a) => a }, event() {} };
+  p.applyHurt(psim, 10, 0, 0, null);
+  assert.deepEqual([p.knockX, p.knockZ, p.hp], [0, 0, 90]);
+  p.applyHurt(psim, 10, -5, 0, 0);
+  assert.ok(p.knockX > 2, 'a blow still puts you back');
+});

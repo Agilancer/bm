@@ -27,6 +27,9 @@ import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { saveSettings, settings, Title } from './title.js';
 import { ViewSwitch } from './ui/view.js';
+import { paintIcons, setIcon } from './ui/icons.js';
+import { place as placeThumbs } from './ui/thumbs.js';
+import { loadSkin } from './ui/skin.js';
 import { SKIN_PARTS, pickSets } from './gfx/bodyskin.js';
 import { THIRD } from './core/third.js';
 import { SPELLS } from './sim/spells.js';
@@ -44,6 +47,7 @@ import { TownUI } from './ui/folk.js';
 import { hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
+import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
@@ -473,9 +477,11 @@ async function boot(plan, poolSize) {
     if (game.spellbar) { game.spellbar.skills.fit(); game.spellbar.draw(); if ($('spellbook').classList.contains('open')) game.spellbar.drawMenu(); }
   };
   const showLevel = () => {
-    $('levelNum').textContent = `Level ${pack.level}`;
-    const lo = xpFor(pack.level), hi = xpFor(pack.level + 1);
-    $('xpBar').firstElementChild.style.width = `${Math.min(100, (pack.xp - lo) / (hi - lo) * 100)}%`;
+    // (The level in its medal, and round it how far to the next: src/ui/hud.css #levelBox.)
+    $('levelNum').innerHTML = `<em>Level </em>${pack.level}`;
+    const lo = xpFor(pack.level), hi = xpFor(pack.level + 1), far = Math.max(0, Math.min(100, (pack.xp - lo) / (hi - lo) * 100));
+    $('xpBar').firstElementChild.style.width = `${far}%`;
+    $('levelBox').style.setProperty('--xpf', far.toFixed(1));
   };
   // A kill's worth of experience, and whatever that buys. The sim only says something died.
   // (kind: what it leaves, drops.js; what: 1 + what it was. A Tripo monster's worth goes by its life too, so the tough ones
@@ -491,7 +497,7 @@ async function boot(plan, poolSize) {
     const snap = game.currentSnap();
     for (const e of [4, 5, 10]) renderer.emit(16 + e, 90, snap[H.PX], snap[H.PY] + 1, snap[H.PZ], 0, 1, 0, 1.6, 1, 5, 0.012, 0.03, 0.5, 1.4);
     audio.play('draw', null, 0, 0, 1, 0.6, false);
-    hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook (B).`, 5);
+    hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook${input.touch ? '' : ' (B)'}.`, 5);
   };
   arm();
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
@@ -531,7 +537,7 @@ async function boot(plan, poolSize) {
     arm();
     game.party?.levelled();
     shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999;
-    hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook (B).`, 5);
+    hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook${input.touch ? '' : ' (B)'}.`, 5);
   };
   const townUI = new TownUI({
     town, renderer, pack, input, hud, inventory, spellbar: null,
@@ -652,6 +658,7 @@ async function boot(plan, poolSize) {
     title.hide();
     game.idle = false;
     state.paused = false;
+    document.body.classList.remove('paused');
     $('pause').style.display = 'none';
     shared.input[INPUT.PAUSE] = 0;
     audio.setAmbience(settings.ambience);
@@ -666,7 +673,6 @@ async function boot(plan, poolSize) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    if (fresh && !openingHUD) { hud.intro(!!pack.slots.main); hud.tip('Spells are all you have. Hold Space as you jump to ride your shield. The town is safe ground: the woods are not.', 7); }
   };
 
   // ---- saving, loading and the menus ---------------------------------------------------------------------------------
@@ -758,7 +764,7 @@ async function boot(plan, poolSize) {
     shared.input[INPUT.PAUSE] = 1;
     if (document.pointerLockElement) document.exitPointerLock();
     $('pause').style.display = 'none'; $('hud').style.display = 'none'; $('touch').style.display = 'none';
-    document.body.classList.remove('playing');
+    document.body.classList.remove('playing', 'paused');
     game.idle = true;
     audio.setAmbience(0);
     audio.surf(0, false);
@@ -826,6 +832,7 @@ async function boot(plan, poolSize) {
       if (a === 'resume') resume();
       else if (a === 'save' || a === 'load') title.slots(a, slotOptions());
       else if (a === 'settings' || a === 'howto') title.panel(a, b);
+      else if (a === 'arrange') game.arrange.open();
       else if (a === 'menu') toTitle();
     };
   }
@@ -851,6 +858,7 @@ async function boot(plan, poolSize) {
     if (!input.enabled || inventory.open || naming || townUI.open || townUI.book || game.heroTalk?.open || game.party?.open || game.hallUI?.open) return;
     if (paused && !state.paused) { input.releaseControls(); autosave(); }
     state.paused = paused;
+    document.body.classList.toggle('paused', paused);
     $('pause').style.display = paused ? 'flex' : 'none';
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
   };
@@ -898,7 +906,14 @@ async function boot(plan, poolSize) {
   // Auto-play, the Auto button under the skull or P: the game plays itself (src/ui/autoplay.js, src/ui/autobrain.js).
   game.autoplay = new AutoPlay({
     base: BASE, opening: OPENING_ENABLED, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town,
-    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES,
+    spellbar: () => game.spellbar, paused: () => state.paused, pause: (on) => input.onPauseChange(on), foeNames: FOE_NAMES, settings,
+  });
+  // Move Buttons, on the pause screen: every button, bar and the map where the player wants them, kept for every game after
+  // (src/ui/arrange.js). The game stays paused under it; the pause screen comes back when it's done.
+  game.arrange = new Arrange({
+    touch: input.touch, input,
+    onOpen: () => { $('pause').style.display = 'none'; },
+    onClose: () => { if (state.paused) $('pause').style.display = 'flex'; },
   });
   // The quest log (J): beside the spellbook's B on the spell bar, and on a phone QUESTS beside PACK (the only way to it there).
   const questBtn = document.createElement('div');
@@ -967,16 +982,25 @@ async function boot(plan, poolSize) {
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
   $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) openPack(); }, { passive: false });
-  $('bQuests').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) questLog(e); }, { passive: false });
+  // The rest of a phone's top row: the spellbook and the quest log, which a keyboard has B and J for.
+  $('bBook').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !input.menu && !state.paused && !naming) openBook(); }, { passive: false });
+  $('bQuests').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !input.menu && !state.paused && !naming) questLog(e); }, { passive: false });
   $('bMap').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) toggleMap(); }, { passive: false });
   $('bTake').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) game.takeNearest(); }, { passive: false });
   $('touch').addEventListener('touchstart', () => {
     const snap = game.currentSnap();
     if (input.enabled && snap && snap[H.GAME] !== 0 && snap[H.GAME_T] > 1.5) shared.input[INPUT.RESTART] += 1;
   });
+  // A phone's screen (src/ui/hud.css, src/ui/thumbs.js): each button in its place with its picture, and what's said in the
+  // middle of the top (the foe's bar, a great foe's, the hall's word, the notes, the tips) gathered one under the other.
+  placeThumbs();
+  paintIcons();
+  if (input.touch) for (const id of ['foe', 'bossFrame', 'hallStatus', 'folkNotes', 'tip']) { const el = $(id); if (el) $('topStack').appendChild(el); }
+  // The painted pieces of the art kit, where they've come back (tools/ui/, assets/ui/kit/): never waited for.
+  loadSkin(BASE);
   game.run();
   $('controls').innerHTML = input.touch
-    ? 'Left thumb moves. Right thumb looks, on or off the buttons. <b>Staff</b> fires your staff, and with a shield on and no skull, <b>GUARD</b> brings it up with a shove. <b>DODGE</b> gets you out. Tap a numbered spell to select it. Press <b>CAST</b> to use it and hold <b>CAST</b> to keep casting. <b>B</b> opens your spellbook, where your points are spent and your bar is set. <b>PACK</b> holds your gear. <b>MAP</b> shows the land. <b>QUESTS</b>, by PACK, is your quest log: each quest, where it takes place, and what to do next. <b>Auto</b>, under the skull, lets the game play itself.'
+    ? 'Left thumb moves. Right thumb looks, on or off the buttons. The big button fires your <b>staff</b>; round it are <b>dodge</b>, <b>jump</b> and, with a shield on and no skull, <b>guard</b>. The six <b>spells</b> stand in a ring round those: tap one to cast it, hold to keep casting. Along the top: the <b>menu</b>, your <b>pack</b>, your <b>spellbook</b> and your <b>quest log</b>; tap the map in the corner to open the big one. <b>Auto</b>, beside the map, lets the game play itself.'
     : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
@@ -1001,6 +1025,7 @@ class Hud {
     this.tips = [];
     this.tipT = 0;
     this.hpEl = $('hp').firstElementChild;
+    this.hpNum = $('hpNum'); this.hpShown = -1;
     this.foeHp = $('foeHp').firstElementChild;
     this.foeArm = $('foeArmor').firstElementChild;
     this.stamEl = $('stam').firstElementChild;
@@ -1019,10 +1044,6 @@ class Hud {
     if (Math.abs(v - el.shown) < 0.004) return;
     el.shown = v;
     el.style.transform = `scaleX(${v.toFixed(3)})`;
-  }
-
-  intro(armed) {
-    this.tip(armed ? 'The dead are walking out in the fields. Burn them from afar.' : `Your hands are empty. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 7);
   }
 
   // Each lesson once, at the moment it means something.
@@ -1062,6 +1083,8 @@ class Hud {
     this.t = 0;
     this.setBar(this.stamEl, clamp(snap[H.STAMINA] / 100, 0, 1));
     this.setBar(this.hpEl, clamp(snap[H.HP] / snap[H.MAX_HP], 0, 1));
+    const hp = Math.max(0, Math.ceil(snap[H.HP]));
+    if (hp !== this.hpShown) { this.hpShown = hp; this.hpNum.textContent = hp; }
     // The bar is for whatever's closest and means you harm.
     let co = CHARS_START, near = 9;
     for (let i = 0; i < snap[H.NCHARS]; i++) {
@@ -1270,7 +1293,8 @@ class GameView {
     $('bTake').style.display = near && this.input.touch ? 'flex' : 'none';
     const shuts = !d && !this.nearChest && !station && !folk && !hero && this.nearDoor?.open;
     const locked = !d && !this.nearChest && !station && !folk && !hero && this.nearDoor && this.locked(this.nearDoor);
-    $('bTake').textContent = d || !near ? 'TAKE' : station || folk || hero ? 'TALK' : shuts ? 'SHUT' : locked ? 'TRY' : 'OPEN';
+    const [pic, word] = d || !near ? ['take', 'Take'] : station || folk || hero ? ['talk', 'Talk'] : shuts ? ['shut', 'Shut'] : locked ? ['locked', 'Try'] : ['open', 'Open'];
+    setIcon($('bTake'), pic, word);
     if (near) $('take').innerHTML = `${this.input.touch || folk?.busy || hero?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : station ? station.label : folk ? folk.label : hero ? hero.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
   }
 
@@ -1612,7 +1636,7 @@ class GameView {
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
         if (this.town) this.town.cast++;   // (The town's never seen real magic: src/folk/talk.js.)
-        this.hud.once('cast', this.input.touch ? 'Tap a spell slot to select it, then use CAST. B is your spellbook.' : '1 to 6 cast what is in each slot: hold to keep casting. B is your spellbook. Alt gives you a cursor to click them with.', 5);
+        this.hud.once('cast', this.input.touch ? 'Tap a spell to cast it, and hold to keep casting. Your spellbook is in the top row.' : '1 to 6 cast what is in each slot: hold to keep casting. B is your spellbook. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
@@ -1739,7 +1763,7 @@ class GameView {
         break;
       case EV.GLINT:
         r.emit(2, 3, a, b, c, 0, 1, 0, 2, 0.1, 0.5, 0.004, 0.008, 0.1, 0.2);
-        this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. DODGE, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
+        this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
         break;
       case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
@@ -1786,7 +1810,7 @@ class GameView {
         break;
       case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
-      case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'PACK' : 'Press I'} to take up a staff.`, 3); break;
+      case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'Open your pack' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
         // A throat with nothing behind it: a low drone under a wet rasp. d is how big the chest is.
         au.gore(a, b, c, 0.5 + 0.5 * d, 0.7 + 0.5 * d, (150 + Math.random() * 90) / (0.6 + 0.4 * d));

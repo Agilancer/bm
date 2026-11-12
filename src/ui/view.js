@@ -3,6 +3,7 @@
 // (H.TP: src/sim/sim.worker.js stepBody, src/core/third.js). Not in Lisandra's cave: the switch isn't there until you're out.
 import { H, INPUT } from '../core/layout.js';
 import { thirdAllowed } from '../core/third.js';
+import { setIcon } from './icons.js';
 
 export class ViewSwitch {
   // o: { input, shared, settings, save(), tip(text, secs), busy(): a panel or the pause is up }
@@ -42,7 +43,8 @@ export class ViewSwitch {
     const shown = this.allowed ? '' : 'none', third = this.on && this.allowed;
     this.btn.style.display = shown;
     this.btn.classList.toggle('on', third);
-    if (this.touchBtn) { this.touchBtn.style.display = this.allowed ? 'flex' : 'none'; this.touchBtn.classList.toggle('on', third); this.touchBtn.textContent = third ? '1ST' : '3RD'; }
+    // (The button shows the view it would give you.)
+    if (this.touchBtn) { this.touchBtn.style.display = this.allowed ? 'flex' : 'none'; setIcon(this.touchBtn, third ? 'view1' : 'view3'); }
     document.body.classList.toggle('third', third);
   }
 

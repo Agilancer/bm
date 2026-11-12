@@ -113,7 +113,7 @@ export const PACK_TOUGH = { hp: 16, damage: 2.5 };
 // see the hf_ entries there). The fights themselves are src/sim/dungeon.js.
 export const BOSSES = [
   { key: 'grubnash', room: 'dig', name: 'Grubnash the Tunnel-King', delve: 'warrens', models: ['hf_grubnash'], pal: ['Infernal'], hp: 4600, damage: 55, reach: 3.0, loot: 8 },
-  { key: 'twins', room: 'throne', name: 'Skrit and Skrat', delve: 'warrens', models: ['hf_skrit', 'hf_skrat'], pal: ['Base'], hp: 2900, damage: 36, reach: 2.6, loot: 8 },
+  { key: 'twins', room: 'throne', name: 'Skrit and Skrat', delve: 'warrens', models: ['hf_skrit', 'hf_skrat'], pal: ['Base'], hp: 3600, damage: 36, reach: 2.6, loot: 8 },
   { key: 'venomaw', room: 'lair', name: 'Venomaw, Mother of the Warren', delve: 'warrens', models: ['hf_venomaw'], pal: ['Base'], hp: 7200, damage: 70, reach: 5.2, loot: 0 },
 ];
 // (Every boss of every delve: the others' are added below, after the Warrens', so these numbers hold.)

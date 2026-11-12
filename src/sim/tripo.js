@@ -47,7 +47,7 @@ const HUMAN_SPHERES = [['Hips', 0.13], ['Spine2', 0.14], ['Head', 0.09], ['LeftU
 const rigs = new Map();   // id -> Promise of a rig, the clips made ready for the game; kept, newest last
 const RIGS_KEPT = 14;
 
-function prepare(id, meta, buffer) {
+export function prepareRig(id, meta, buffer) {
   const glb = parseGLB(buffer);
   const acc = glb.json.accessors[glb.json.meshes[0].primitives[0].attributes.POSITION];
   const top = meta.rigTop || (acc.max[1] - acc.min[1]);
@@ -55,6 +55,7 @@ function prepare(id, meta, buffer) {
   const rig = new ArmsRig(buffer, scale);
   rig.lift = -acc.min[1] * scale;
   rig.meta = meta;
+  underParents(glb, rig, scale);
   // Where it is at rest, joint by joint, for the spheres a blade tests against.
   const wq = new Float32Array(rig.count * 4), wt = new Float32Array(rig.count * 3);
   for (let j = 0; j < rig.count; j++) {
@@ -118,13 +119,44 @@ function prepare(id, meta, buffer) {
   return rig;
 }
 
+// Most of the models (the goblins, most of the kobolds, the dead children, the knights...) hang their skeleton and their mesh
+// under a node of their own, a quarter turn about the up axis, and their skin is bound without it: the turn is what stands
+// them facing forward. The rig reads only the joints, so the turn went missing and they ran, and swung, side on to where they
+// were going. It goes on each top joint here, at rest and in every clip, as a glTF viewer (the bestiary) puts it.
+function underParents(glb, rig, scale) {
+  const nodes = glb.json.nodes, joints = glb.json.skins[0].joints, up = new Map();
+  nodes.forEach((n, i) => { for (const c of n.children || []) up.set(c, i); });
+  const q = new Float32Array(4), t = new Float32Array(3);
+  for (let j = 0; j < rig.count; j++) {
+    if (rig.parent[j] >= 0) continue;
+    q.set([0, 0, 0, 1]); t.fill(0);
+    for (let p = up.get(joints[j]); p !== undefined; p = up.get(p)) {
+      // (Each one further up goes outside what's gathered so far: its turn, then its place.)
+      const n = nodes[p], pr = n.rotation || [0, 0, 0, 1], pt = n.translation || [0, 0, 0];
+      quatRotate(t, 0, pr, 0, t, 0);
+      t[0] += pt[0] * scale; t[1] += pt[1] * scale; t[2] += pt[2] * scale;
+      quatMul(q, 0, pr, 0, q, 0);
+    }
+    if (Math.abs(q[3]) > 0.99999 && Math.hypot(t[0], t[1], t[2]) < 1e-6) continue;
+    const onto = (rots, ri, trs, ti) => {
+      if (rots) quatMul(rots, ri, q, 0, rots, ri);
+      if (trs) { quatRotate(trs, ti, q, 0, trs, ti); trs[ti] += t[0]; trs[ti + 1] += t[1]; trs[ti + 2] += t[2]; }
+    };
+    onto(rig.restR, j * 4, rig.restT, j * 3);
+    for (const clip of Object.values(rig.clips)) {
+      const r = clip.rots[j], tr = clip.trs[j];
+      for (let f = 0; f < clip.frames; f++) onto(r, f * 4, tr, f * 3);
+    }
+  }
+}
+
 function rigFor(id, meta, base) {
   let r = rigs.get(id);
   if (r) { rigs.delete(id); rigs.set(id, r); return r; }
   r = fetch(`${base}${TRIPO_BASE}${meta?.src || id}.glb`).then((res) => {
     if (!res.ok) throw new Error(`${id}: ${res.status}`);
     return res.arrayBuffer();
-  }).then((b) => prepare(id, meta, b));
+  }).then((b) => prepareRig(id, meta, b));
   rigs.set(id, r);
   while (rigs.size > RIGS_KEPT) rigs.delete(rigs.keys().next().value);
   return r;
@@ -303,12 +335,17 @@ export class TripoMonster extends FieldCreature {
           sim.world.updateField(tx, tz, sim.time, `t${this.id}`);
           const flow = this.flow;
           sim.world.flow(flow, this.x, this.z, tx, tz, `t${this.id}`);
-          this.vx = flow[0] * speed; this.vz = flow[1] * speed;
           // Walking, it looks where it's going; but come up on its mark (within a few strides, and in plain sight), it looks at
           // them, however the way round the others bends its path.
           const closing = this.aggro && distance < o.reach * 2.2 + 1 && !this.fleeing;
           if (closing) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 6, dt * 6);
-          else if (Math.hypot(flow[0], flow[1]) > 0.1) this.yaw += clamp(wrapAngle(Math.atan2(flow[0], flow[1]) - this.yaw), -dt * 3.5, dt * 3.5);
+          else if (Math.hypot(flow[0], flow[1]) > 0.1) {
+            const way = wrapAngle(Math.atan2(flow[0], flow[1]) - this.yaw);
+            this.yaw += clamp(way, -dt * 6, dt * 6);
+            // (Turned away from where it's going, it comes round before it runs: no sliding off sideways, or backwards.)
+            speed *= clamp(0.5 + Math.cos(way) * 0.75, 0, 1);
+          }
+          this.vx = flow[0] * speed; this.vz = flow[1] * speed;
         } else {
           this.vx = this.vz = 0;
           if (this.aggro) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 6, dt * 6);

@@ -28,6 +28,10 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const BOSS_ROOM_PAD = 8;       // a boss notices you this far inside its room's edge
 const RESET_AFTER = 900;       // seconds out of the Warrens before its dead stand again
+// Skrit's fire pots' pools: what standing in one costs a second, and how long it burns (the moves' own are 29 and 6). The
+// healer mends some 22 a second: at 29 for 6 a player who stood in one lived through every fight, at 40 for 8 they fell in
+// 22 to 47 s, and at 50 for 12 to the first pots, in 13.
+const POTS = { dps: 40, life: 8 };
 
 export class Warrens {
   constructor(sim) {
@@ -546,15 +550,27 @@ export class Warrens {
       const last = skrit || skrat;
       if (last && !f.wild) { f.wild = true; last.shrug = 1; last.opts.damage *= 1.6; last.opts.pause = 0.5; this.warn(6); sim.event(EV.ROAR, last.x, last.y + 2, last.z, 1.3); }
     }
+    // How long each of you has stood in one place (within a stride of it), for Skrit's pots.
+    const still = f.still ||= new Map();
+    for (const b of this.bodies()) {
+      const w = still.get(b);
+      if (!w || Math.hypot(b.x - w.x, b.z - w.z) > 0.6) still.set(b, { x: b.x, z: b.z, t: 0 });
+      else w.t += dt;
+    }
     if (skrit) this.deck(f, skrit, f.wild ? 3 : 5, ['sPots', 'sFan', 'sWheel', 'sWall']);
     if (skrat && !skrat.spin) this.deck(f, skrat, f.wild ? 3.2 : 5.6, ['kWhirl', 'kDash', 'kNova']);
     if (f.t > 200 && !f.enraged) { f.enraged = true; for (const m of live) m.opts.damage *= 2; }
   }
 
-  // Skrit: three pots of fire in a row across one of you.
+  // Skrit: three pots of fire in a row across one of you. Each leaves a pool that burns a long while, and hotter than the
+  // healer can mend: one step out of it and it's a bite or two; stood in it, it's the end of you, healer or no.
+  // He throws them at whoever's stood longest in one place, if anyone has for two seconds (not the tank, who must), and
+  // otherwise at one of you as his other moves are.
   sPots(f, m) {
-    const t = this.mark();
-    if (!t || !m.perform({ clip: 'atk1', face: t, at: 0.4, secs: 1.2, fn: () => MOVES.firepots(this.sim.perils, m, t, 22) })) return false;
+    let t = null, longest = 2;
+    for (const b of this.others()) { const w = f.still?.get(b); if (w && w.t >= longest) { longest = w.t; t = b; } }
+    t ||= this.mark();
+    if (!t || !m.perform({ clip: 'atk1', face: t, at: 0.4, secs: 1.2, fn: () => MOVES.firepots(this.sim.perils, m, t, 22, POTS) })) return false;
     this.warn(4, 20);
   }
 

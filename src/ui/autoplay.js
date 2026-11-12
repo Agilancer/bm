@@ -7,6 +7,10 @@
 // back, to change what it's at. While it's on, the mouse is left free (no pointer lock), so the button and its menu can be
 // clicked; Esc pauses and resumes. On the quests with every quest done, a menu asks where to grind (GRINDS), and keeps the last
 // choice if nobody answers.
+//
+// Settings' Interface in auto-play, Hidden until you tap: while it plays and nobody's touched anything for a few seconds, the
+// interface is put away (body.ui-bare, src/ui/hud.css), all but the map and the chat if those are kept (Map in auto-play, Chat
+// in auto-play: body.bare-map, body.bare-chat). A tap, a click, a key or the mouse moved brings it all back at once.
 import { INPUT } from '../core/layout.js';
 import { RULES } from '../folk/quests.js';
 import { Brain, DUNGEONS, GRINDS, MODES, finishedDungeons } from './autobrain.js';
@@ -14,6 +18,7 @@ import { AutoLog } from './autolog.js';
 
 const BTN = 'assets/ui/btn_auto.webp';
 const MENU_WAIT = 12;   // seconds the menu waits for a choice before it keeps the last one
+const BARE_AFTER = 4;   // seconds left be before the interface is put away, with Settings' Interface in auto-play: Hidden until you tap
 
 const CSS = `
 #autoBtn { position: fixed; top: 268px; right: 22px; width: 52px; height: 56px; z-index: 45; border: 0; background: none; cursor: pointer; padding: 0; display: none; }
@@ -41,9 +46,6 @@ body.playing #autoStatus.shown { display: block; }
 #autoLog .foot button { font: inherit; color: #d8e8ee; background: #142028; border: 1px solid #2a4a5a; padding: 7px 12px; cursor: pointer; }
 #autoLog .foot button:hover { border-color: #8fe0ff; }
 #autoStatus.live { pointer-events: auto; cursor: pointer; }
-body.touch #autoBtn { width: 38px; height: 41px; top: 250px; right: 12px; }
-body.touch #autoStatus { top: 296px; }
-body.touch #autoStatus b { font-size: 10px; }
 #autoMenu { position: fixed; z-index: 47; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 94vw); max-height: 88vh; overflow: auto; display: none;
   background: rgba(8, 12, 16, .96); border: 1px solid #2a6a8a; box-shadow: 0 10px 40px #000c, 0 0 18px rgba(42,176,255,.18); color: #e2eef4; font: 14px Georgia, serif; padding: 18px 20px; box-sizing: border-box; }
 #autoMenu.on { display: block; }
@@ -67,7 +69,8 @@ const lower = (s) => s[0].toLowerCase() + s.slice(1);
 const el = (tag, id, cls, html) => { const e = document.createElement(tag); if (id) e.id = id; if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
 export class AutoPlay {
-  // o: { base, opening, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town, spellbar(), paused(), pause(on) }
+  // o: { base, opening, game, shared, input, hud, audio, pack, inventory, townUI, lands, renderer, town, spellbar(), paused(), pause(on),
+  //   settings (src/title.js: autohide, autohideMap, autohideChat) }
   constructor(o) {
     this.o = o;
     this.on = false; this.brain = null;
@@ -99,6 +102,37 @@ export class AutoPlay {
       else if (this.on) this.askMode();
     });
     addEventListener('keydown', (e) => this.key(e));
+    // The interface put away while it plays comes back the instant anything's touched (and the touch does nothing else: what
+    // was under it wasn't on the screen).
+    this.bare = false; this.since = 0;   // (since: when the interface was last wanted, by the clock: a slow frame isn't a longer one)
+    const back = (e) => { if (!e.isTrusted) return; this.since = 0; this.setBare(false); };
+    for (const t of ['pointerdown', 'touchstart', 'keydown', 'wheel']) addEventListener(t, back, { capture: true, passive: true });
+    let mx = -1, my = -1;
+    addEventListener('mousemove', (e) => {
+      if (Math.abs(e.clientX - mx) + Math.abs(e.clientY - my) > 6 && mx >= 0) back(e);
+      mx = e.clientX; my = e.clientY;
+    }, { capture: true, passive: true });
+  }
+
+  // Put away or brought back (body.ui-bare), keeping the map and the chat on the screen if the settings say so.
+  setBare(on) {
+    const s = this.o.settings || {}, c = document.body.classList;
+    c.toggle('bare-map', s.autohideMap !== 'off');
+    c.toggle('bare-chat', s.autohideChat !== 'off');
+    if (on === this.bare) return;
+    this.bare = on;
+    c.toggle('ui-bare', on);
+  }
+
+  // Every frame: whether the interface should be put away now. (Only the player's own hands count as being busy with it: a
+  // chest or a word it opens itself is up over the bare picture, as it would be over the interface.)
+  bareStep() {
+    const want = this.on && this.o.settings?.autohide === 'on' && !this.asking && !this.o.paused()
+      && !this.menu.classList.contains('on') && !this.logEl.classList.contains('on') && !document.body.classList.contains('arranging');
+    if (!want) { this.since = 0; if (this.bare) this.setBare(false); return; }
+    const now = performance.now();
+    if (!this.since) this.since = now;
+    if (now - this.since > BARE_AFTER * 1000) this.setBare(true);
   }
 
   // Its head, and the thread it finds its way with (a few seconds to build: started the first time it's wanted, not before, so a
@@ -168,6 +202,7 @@ export class AutoPlay {
       if (this.mode === 'quests' && this.brain.allQuestsDone()) this.askGrind();
     } else {
       this.brain?.stop();
+      this.since = 0; this.setBare(false);
       this.log.endFight(); this.log.save();
       input.free = false;
       input.releaseControls();
@@ -198,6 +233,7 @@ export class AutoPlay {
       if (this.menuT <= 0) this.pickGrind(this.brain.grind);
     }
     if (this.asking && !input.enabled) this.cancel();
+    this.bareStep();
     if (!this.on || !snap) return;
     if (!input.enabled) { this.toggle(false); return; }
     if (this.o.shared.input[INPUT.PAUSE]) { this.brain.halt(); return; }

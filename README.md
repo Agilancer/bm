@@ -46,16 +46,19 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | --- | --- | --- |
 | Move | `W` `A` `S` `D` | Left thumb |
 | Look | Mouse | Right thumb |
-| Jump | `Space` | `JUMP` |
-| Run | `Shift` | `RUN`, or push the stick past its edge |
-| Dodge | `Q` | `DODGE` |
-| Combo: two cuts, then a slam | Left click | `CUT` |
-| Raise the shield and bash, hold to block, let go and it drops at once. With no shield, a wide swing | Right click | `WIDE` |
-| Cast the spell in a slot | `1` to `6`, or click its button | Tap its button |
-| Spellbook: the six trees, your points, and what's on the bar | `B` | `B` by the spell bar |
-| Pack: staffs, skulls, robes and gems | `I` | `PACK` |
-| Take up what's on the ground, or open a chest | `E` | `TAKE` / `OPEN` |
-| First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | `3RD` / `1ST` |
+| Jump | `Space` | The arrow, above the staff's button |
+| Run | `Shift` | The chevrons on the left, or push the stick past its edge |
+| Dodge | `Q` | The dash, left of the staff's button |
+| Fire your staff | Left click | The big button, bottom right |
+| Raise the shield and bash, hold to block, let go and it drops at once. With no shield, a wide swing | Right click | The shield, between the dodge and the jump |
+| Cast the spell in a slot | `1` to `6`, or click its button | Tap it, in the ring round those; hold to keep casting |
+| Spellbook: the six trees, your points, and what's on the bar | `B` | The book, in the top row |
+| Pack: staffs, skulls, robes and gems | `I` | The pack, in the top row |
+| Take up what's on the ground, open a chest or a door, or talk | `E` | The gold button that comes up beside the ring |
+| Quest log | `J` | The page, in the top row |
+| The big map | `M` | Tap the small one in the corner |
+| Pause: save, load, settings | `Esc` | The bars, in the top row |
+| First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | The figure (or the eye), at the end of the top row |
 
 Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
 
@@ -104,7 +107,7 @@ You start on the road south of town with a common staff of a random kind (a diff
 
 ### Third person
 
-`V` (or the eye at the end of the spell bar, or `3RD` on a phone) stands the camera behind you, and the same again brings it
+`V` (or the eye at the end of the spell bar, or the figure at the end of a phone's top row) stands the camera behind you, and the same again brings it
 back. The controls don't change: you look, move, shoot, cast, guard and ride as before, and the X in the middle of the
 screen is still what you hit. Which view you left it in is kept with the settings.
 
@@ -366,8 +369,8 @@ church bells ("Orthodox Church Bells Ringing", Free Sounds Library, CC BY 4.0) a
 Bellmourn's music). A click, a tap or a key skips a card. The game loads behind the black, and the village isn't drawn
 until you start: the title stays on black.
 
-**New Game**, **Continue**, **Load**, **Test Dungeon** (below), **Settings**, **How to Play**. Esc (or `II`) pauses: **Resume**, **Save Game**,
-**Load Game**, **Settings**, **How to Play**, **Main Menu**. There are ten save slots, and the game keeps itself every 20 s
+**New Game**, **Continue**, **Load**, **Test Dungeon** (below), **Settings**, **How to Play**. Esc (or the bars in a phone's top row) pauses: **Resume**, **Save Game**,
+**Load Game**, **Settings**, **Move Buttons** (below, under the interface), **How to Play**, **Main Menu**. There are ten save slots, and the game keeps itself every 20 s
 of play, whenever you pause, and when you close the pack or take something up; Continue picks up the newest of those. A save
 holds where you stand and which way you face, the time played, and your pack and what's on you: loading starts the world
 fresh and puts you there, so whatever was lying on the ground is gone. Saves live in `localStorage` under
@@ -380,16 +383,131 @@ raise `SAVE_VERSION` and add a step to `MIGRATIONS`, so older saves are brought 
 
 Settings: volume, music, ambience, look speed, resolution (Auto lets the frame-rate governor choose), graphics (Auto
 picks from your GPU; changing it restarts the game, back to the menu with your game kept for Continue) and the frame rate
-readout.
+readout. **Interface in auto-play**: Always shown, or Hidden until you tap: while auto-play plays and you've left it be for
+four seconds, everything over the picture is put away (`body.ui-bare`), and a tap, a click, a key or the mouse moved brings
+it all back at once (that touch does nothing else). **Map in auto-play** and **Chat in auto-play** keep the corner map, and
+the chat log with the speech bubbles and names over heads, on the screen while the rest is away (both kept unless set to
+Hidden with the rest). A chest or a word auto-play opens itself still shows over the bare picture. `src/ui/autoplay.js`
+(`setBare`, `bareStep`), the rules at the end of the phone part of `src/ui/hud.css`.
 
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
 
 ### Auto-play
 
+### The interface, and a phone's screen
+
+Everything shown over the picture is laid out by `src/ui/hud.css`, after the page's own first rules in `index.html`. The
+game draws every piece of it itself, in lines (`src/ui/icons.js` for buttons and menus, `src/ui/spellglyphs.js` for the
+sixty spells), so it needs nothing downloaded; painted pieces go over the drawn ones when they've been made (below).
+
+**On a desk** the layout is as it was, with your level in a medal at the bottom left, ringed by how far it is to the
+next, and life (with its number), the well and breath beside it.
+
+**On a phone** (`body.touch`: `src/input.js` decides) the screen is laid out for two thumbs, and everything scales with
+the screen's height, so a small phone and a tablet get the same picture:
+
+- **Bottom right, the right thumb.** The staff's button is the big one in the corner. Round it, in reach without
+  stretching: dodge to its left, jump above it, and between them the shield, when there's one on your arm and no skull in
+  your hand. Round those, in a wider ring, the six spells, one to six from the bottom up: **a tap casts, a hold keeps
+  casting**, as a key does on a desk (there's no separate cast button any more, but for the one cast the opening asks
+  of you in the cave). Every button steers too: a thumb that lands on one can go on to look about.
+- **Beside the ring**, only when there's something in reach: a gold button that takes, talks, opens, shuts or tries the
+  door, with a picture and a word for which, and what it is said just above it.
+- **Bottom left, the left thumb.** The stick comes up wherever the thumb lands, and nothing of it is drawn until a thumb is
+  on it. The chevrons above it keep you running.
+- **Top left:** the medal and the three bars; what's on you under them; your party under those.
+- **Top right:** the corner map, a square, which opens the big one at a tap, with the clock on one of its lower corners
+  and Velscour's skull on the other. Beside it, a row: Auto, the menu (pause, save, load, settings), the pack, the spellbook (gold, with a count,
+  when there are points to spend), the quest log and the view.
+- **Top middle, one under the other:** the bar of whoever means you harm, a great foe's own bar, what's just happened
+  ("Quest begun"), and what the game has to tell you.
+- **A menu, the pause or the big map** has the whole screen: the thumbs and the frame are put away while it's up
+  (`body.menu-up`, `body.paused`, `body.map-open`). A word with someone lays what you can say out as rows a thumb can't
+  miss, with no key names; the pack's cells are as big as the height allows, with the charm pouch in its heading and
+  what's in your hands said in the bar beneath; the pause and the title's menu are two columns of plates.
+
+The numbers for all of it are one table, `src/ui/thumbs.js`: where each button is from the staff's, how big, the top
+row, the stick. `place()` hands them to the stylesheet, and `node --test tests/touch-hud.test.mjs` checks with them that
+nothing overlaps anything else on phones from 568 x 320 up to a tablet, that the right thumb's buttons keep out of the
+stick's side of the screen, that every button has a picture and something listening, and that the stylesheet's own
+fall-back numbers are the table's. To move something, change the table.
+
+**Move Buttons** (on the pause screen, a desk's or a phone's) lets the player put any of it where they like: every button
+of both thumbs, each of the six spells, the stick, the top row one by one, the map, the skull, Auto and its line, the medal
+and its bars, what's on you, the party, the chat and the foe's bar on a phone; on a desk the spell bar, the medal and bars,
+the map, the clock, the skull, Auto, the party, the chat and the foe's bar. Drag a piece's dashed box to move it; tap one and
+Bigger or Smaller grows it about its middle (60% to 180%); Reset this, Reset all, Cancel, Save. The box of buttons can be
+dragged by its top out of the way. The game stays paused under it, with whatever isn't up just now (the take button, the
+shield, the party, Auto's line) shown so it can be placed. Save keeps it in `localStorage` (`velscour.layout`, one layout
+for a touch screen and one for a desk), and it's put up every time the game starts. Put the stick on the right half of the
+screen and a thumb on the right takes up the stick instead (`input.stickRight`); a button wherever it's put still answers
+its own thumb.
+
+How it moves things (`src/ui/arrange.js`): each piece keeps its place from the table and the stylesheet, and is shifted from
+there by CSS's own `translate` and `scale` properties, written to one sheet (`#arrangeCss`), so the transforms the game's rules
+already use (a pressed button, a centred bar) are left alone. Nothing else in the game may use those two properties (the test
+says so). The shift is in units, so a layout keeps its shape from phone to phone, and anything a smaller screen would push off
+its edge is brought back on as it's put up, without changing what's kept. What's read back is made safe first (`clean`): only
+pieces there are, in bounds. `node --test tests/arrange.test.mjs` checks that every piece is on the page, the stylesheet it
+writes, the reading back, the stick and auto-play's hiding. A new button on the HUD wants a line in `PIECES` there (the test
+fails for a `.tbtn` that can't be moved).
+
+(A slot's picture is drawn again as it's pressed, so nothing inside a button takes a touch: a thumb that landed on a
+picture since replaced would never be heard lifting, and the cast would stay held.)
+
+### The art kit: painted pieces from ChatGPT
+
+`art/ui/bellmourn_ui_kit.zip` is the kit that goes to ChatGPT (or anyone) to paint the interface: twenty sheets, each
+with its size template, what's in every cell, and the exact words for the image tool, all under one art style lock.
+Inside it: `PROMPT.md` (the message to paste, with the zip attached), `STYLE.md` (the lock, and why each part of it is
+there), `PROMPTS.md` (every sheet), `templates/` (one for each sheet, at its exact size, with the game's own drawing of
+each picture faint in its cell), `reference/` (the painted pieces the game has already, which the set must match; a
+phone's screen with each place named for its piece), and `scripts/check.py`, which the painter runs: it cuts the sheets
+as the game will, shows each picture small on a button and each frame stretched, puts a phone's screen together from
+what's been made, and zips the sheets to hand back.
+
+| Sheets | What | Priority |
+| --- | --- | --- |
+| `buttons`, `icons_actions`, `icons_menus`, `panel` | The round buttons, the 32 icons on them and in the menus, the window frame | A: these change the whole look |
+| `spells_fire` ... `spells_utility` (six), `sockets`, `rings`, `plates`, `bars` | An icon for each of the sixty spells, a school to a sheet; the spells' sockets, the level's medal, the corner map's frame, the stick; button plates, tabs, the rule; the bars | B |
+| `paper`, `icons_slots`, `icons_goods`, `gems`, `icons_marks`, `app_icon` | Parchment; what goes in an empty gear slot; goods, materials and charms; the eighteen gems (six kinds, three grades); the marks over the heads of those with work, and what a hired companion is for; the home screen's icon | C |
+
+Any part of it can come back, in any order. To bring it in:
+
+    python tools/ui/import_kit.py path/to/bellmourn_ui_art.zip
+    python tools/ui/import_kit.py --list            what's in, sheet by sheet
+
+That cuts each sheet into its pictures (`tools/ui/kit/scripts/uikit.py`, the same code the kit's check runs: nothing
+from the zip is run), writes them to `assets/ui/kit/` as webp, lists them in `assets/ui/kit/manifest.json`, keeps the
+sheets in `art/ui/sheets/` so they can be cut again (`--recut`), and writes a contact sheet for each to
+`tools/build/ui_import/` to look at. The game reads the manifest as it starts (`src/ui/skin.js`) and puts each painted
+picture over its drawn one: a frame, bar or ring by `html.art-<piece>` and `--art-<piece>`, which `src/ui/hud.css`
+reads; an icon over anything marked `data-ic="<name>"`; a spell's over its glyph. An empty manifest, as now, changes
+nothing. `--remove <sheet>` takes one back out. The app's icon also goes into `manifest.webmanifest` and the page's head.
+
+The list of sheets is `tools/ui/pieces.mjs`; `node tools/ui/build_kit.mjs` makes the kit from it (the templates are
+drawn in a headless browser), and `tools/ui/spec.json`, which the Python reads. `--mock DIR` draws every sheet in plain
+lines as stand-in art, which is how the whole round was first tried.
+
+**All twenty sheets have come back from ChatGPT and are in the game** (`assets/ui/kit/`, 174 pictures; the sheets as
+painted are in `art/ui/sheets/`). They came with true transparent backgrounds, at 1254 x 1254 where 1024 was asked for
+(the cutter fits a sheet to its template), and every picture was in its cell. What was fitted to the art once it was
+seen, all in the painted-pieces part of `src/ui/hud.css`: the window frame is cut 72 from each edge, its sides laid end
+to end so the beading isn't drawn out; a plate's garnet ends are kept whole; the paper doll's cells are cut in nine, so
+the tall one for the staff keeps its corners; the icons sit a little bigger on their buttons and are lifted, since the
+leather ones are dark on a dark boss; the corner map's frame is let out a little and the map drawn in to sit inside it.
+One thing in the cutter: a tab's box caught the foot of the plate above it, so a piece in a box is now the unbroken run
+of rows and columns round the box's middle (`run_bbox`), and a neighbour straying into the margin is left out. Seen
+with the art on an emulated phone (844 x 390) and a desk (1280 x 720): the HUD, the pack, the spellbook, a word with
+someone, a letter, the journal, the pause, the big map, the skull's panels and auto-play's. Not seen on a real phone.
+
+Check the pictures, not the file names, against the two sides (above): the frames and buttons sit over both sides'
+places, so they carry neither's marks, and no lettering at all.
+
 ### The map
 
-`src/ui/map.js`. A round map in the corner turns with you; **M** (MAP on a phone) opens the big one, and M or its × shuts it. Only what you've walked near is drawn, and what you've seen is kept in a save.
+`src/ui/map.js`. A square map in the corner turns with you (north slides round its edge); **M** (or a tap on it, on a phone) opens the big one, and M or its × shuts it. Only what you've walked near is drawn, and what you've seen is kept in a save.
 
 The big map is looked about freely. The **wheel** (or a **pinch**, or its + and − buttons, or the + and − keys) brings it nearer and further, from 60 m across to the whole land. A **drag** moves it: with the mouse held by the game, hold the left button and move the mouse (the sword stays still while the map's up, `mapUp` in `src/input.js`). It follows you until you move it; a double click, a double tap, **Home** or the ring button brings it back to you, and when you're off its edge a small arrow on the rim points your way. Opened from the quest log's **Map**, it's framed on where that quest takes place, with gold pins (see "The quest log"). It has a title (the country, or the place), a scale bar and north.
 
@@ -973,7 +1091,9 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   calls his diggers out of three holes round his dig; they run to him, and each one that reaches him is eaten and makes
   him hit harder. Kill them.
 - **Skrit and Skrat**, goblin twins. They share their pain: whichever has less life left takes half of what lands on it,
-  so keep them even. Skrit is fire: three pots in a row across where you stand, two fans of bolts (the second through the
+  so keep them even. Skrit is fire: three pots in a row across whoever's stood longest in one place (two seconds or more,
+  the tank aside; else across one of you), each leaving a pool that burns 40 a second for eight seconds, more than the
+  healer can mend (`POTS` in `src/sim/dungeon.js`); two fans of bolts (the second through the
   gaps of the first), a wheel of four bars of fire that turns about where he lit it for six seconds, and a row of bolts
   coming on abreast with one way through. Skrat is blades: a whirlwind that cuts all within reach and throws blades off
   as it turns, a line marked to one of you that he then comes down, and blades flung out all round, twice. When one dies
@@ -1020,7 +1140,7 @@ named it plays all three delves, a process each; a boss's or a pack's key plays 
 it, a level 8 party hired (lancer, paladin, archer, rogue), and a player who shoots Firebolt at what the party's on, walks
 out of whatever's marked, steps across the way of shots and jumps the rings. `--slow` has that player see each mark and
 shot half a second late, as a person does; `--still` never moves. It fails on an error in a tick or a shape with a bad
-number in it. What it gave, over two to twenty-one fights of each:
+number in it. What it gave when the Warrens were tuned, over two to twenty-one fights of each:
 
 | | Seeing it at once | Half a second late | Standing still |
 | --- | --- | --- | --- |
@@ -1028,6 +1148,17 @@ number in it. What it gave, over two to twenty-one fights of each:
 | Grubnash | 85 to 97 s, player down to 70% | 63 to 94 s, down to 37% | dead, or alive on a sliver |
 | Skrit and Skrat | 68 to 78 s, down to 32% | 61 to 85 s, down to 5%; fell once in 21 fights | dead in 30 to 60 s |
 | Venomaw | 145 to 148 s, down to 16% | 132 to 165 s, down to 16% | dead in 33 to 83 s, once alive at the end with nothing left |
+
+Since then the party's new moves have made it about a quarter stronger: by the time of the facing fix the twins fell in 54
+to 63 s, Grubnash in about 75 and Venomaw in about 90, and standing still lived through the twins four fights in five. Two
+things were wrong besides. A paladin's or lancer's board coming home overdue to a thrower on the move gained half again
+every tick until it stood 10^38 m off, which this tool found, one Venomaw fight in five, as a shape with a bad number
+(`stepShotX` in `src/sim/heroskills.js`: it comes home at the pace it left the hand now). And a pool pushed whoever stood
+in it out across its edge (see "Monsters' attacks"), so nobody burned in one. With those fixed, the twins at 3,600 life
+each (were 2,900) and Skrit's pots as the twins are told above, it gives: the twins in 64 to 71 s seeing it at once, the
+player down to two thirds; 64 s half a second late, untouched; standing still, dead in 22 to 47 s (five fights of five). Grubnash and Venomaw are as
+the party left them: about 72 s and 90 to 100 s; standing still Venomaw kills you in some 46 s, and Grubnash leaves you on
+a quarter.
 
 Before this pass the same player took 136 s over Grubnash, 124 s over the twins and 166 s over a Venomaw of 9,000 life
 (she had 16,000, and took nearly five minutes by the notes then), and standing still lived through the twins and the
@@ -1191,7 +1322,9 @@ MOVES.fissure(sim.perils, monster, target, monster.opts.damage);   // a named at
 
 - **A mark** is a warning drawn on the ground in one of five shapes (`src/core/perils.js`): a circle, a ring with a safe
   middle, a cone, a strip, or crossed strips. It fills from where it starts to its far edge as its fuse runs out, then
-  lands on everyone in it. After that it can stay and burn (`dps`), turn (`spin`), travel (`vx`, `vz`), spread (`grow`),
+  lands on everyone in it. After that it can stay and burn (`dps`: a bite every half second, from the mark itself and with
+  no knock, so it holds whoever stands in it; it used to bite from whoever threw it, and every blow puts you back a step,
+  so a pool pushed its victim out across its edge in four seconds), turn (`spin`), travel (`vx`, `vz`), spread (`grow`),
   or bite what touches it (`touch`); it can ride a body and point where that points (`ride`), follow someone until part
   of its fuse has run (`follow`), or keep pointing at them (`aim`). One marked `jump` is cleared by a leap.
 - **A shot** flies: it hurts the first of you it meets, a raised shield turns it, and it may home, fall, skip off the
@@ -1218,6 +1351,16 @@ MOVES.fissure(sim.perils, monster, target, monster.opts.damage);   // a named at
 third at a rate that couldn't finish, and swing beside them), won't start a blow until it's roughly square on, and looks
 at its mark rather than along its path once it's within a few strides. The undead, the crabs and the field creatures
 turn faster into their blows too.
+
+That was the sim's facing, and it was right; the bodies weren't. 47 of the 69 models (every goblin, four of the five kobolds,
+the dead children, the possessed, the harpies, the necromancers, the plague and Velscour's knights, two of the mannequins,
+the dragonlings, the Bone Knight) hang their skeleton and mesh under a node of their own, `node_0`, a quarter turn about the
+up axis, with the skin bound without it. The rig reads only the joints, so the turn was lost and they ran, and swung, side
+on to where they were going. `prepareRig` in `src/sim/tripo.js` (`underParents`) now puts whatever stands above a top joint
+onto it, at rest and in every clip, as a glTF viewer does; the goatmen, the werewolf, Grubnash's kobold and the rest, which
+carry their turn on the hips, are as they were. And a monster turned away from where it's going comes round (at 6 rad/s,
+was 3.5) before it gets up to speed, rather than sliding off sideways. `node --test tests/tripo-facing.test.mjs` plays
+every model's walk and run with arms through the game's rig and fails if its shoulders aren't square to its yaw.
 
 `node --test tests/perils.test.mjs` checks the shapes, the way out of each, and that every kind of monster's tricks are
 moves there are. Known limits: the mark's shader was compiled by Chromium's own compiler for both tiers and its five shapes
@@ -1313,7 +1456,7 @@ is his) and nothing else: the Test Dungeon's book reads the roster.
 
 ### Swords, gems and the pack
 
-You start with a common staff in hand and a kite shield on the arm, and nothing in the pack (`startingKit` in `src/items/pack.js`). `I` (or `PACK`) opens it and holds the fight. Click or drag to
+You start with a common staff in hand and a kite shield on the arm, and nothing in the pack (`startingKit` in `src/items/pack.js`). `I` (or the pack in a phone's top row) opens it and holds the fight. Click or drag to
 move things, right-click or double tap to equip or stow, and click outside the panels to drop. A gem set on a sword goes in an
 open socket, for good. Only the Sword slot does anything yet; the others wait for items. The pack stays with you through a new
 fight, and only New Game starts it over.
@@ -1466,6 +1609,10 @@ To check it yourself:
 | `src/sim/` | The simulation thread: knights, AI, crabs, player, collisions |
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |
+| `src/ui/hud.css`, `src/ui/thumbs.js`, `src/ui/icons.js` | The interface's sheet, where everything sits on a phone, and the drawn icons |
+| `src/ui/arrange.js` | Move Buttons: the player's own layout of the interface, kept and put back each time |
+| `src/ui/skin.js`, `assets/ui/kit/` | Painted pieces of the interface, and what puts them over the drawn ones |
+| `tools/ui/`, `art/ui/bellmourn_ui_kit.zip` | The art kit for the interface: its sheets, the builder, the importer, and the kit itself |
 | `src/saves.js` | What a save holds, part by part, and where saves are kept |
 | `src/sim/skills.js`, `src/sim/treespells.js`, `src/items/skillbook.js`, `src/ui/skilltree.js` | The six skill trees: their rules, the spells they added, what you've learned, and their screen in the spellbook |
 | `tools/skills/`, `docs/SKILLS.md` | The trees as a sheet, every spell cast and measured without a page, and how the design was reviewed |
