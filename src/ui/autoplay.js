@@ -303,7 +303,7 @@ export class AutoPlay {
 
   closeMenu() { this.menu.classList.remove('on'); this.menuT = 0; }
 
-  // What it's working on, for the quest log (src/ui/folk.js): { on, quest, offer, say } (src/ui/autobrain.js doing).
+  // What it's working on, for the quest log (src/ui/folk.js): { on, quest, offer, say, mode } (src/ui/autobrain.js doing).
   current() {
     if (!this.on || !this.brain) return { on: false };
     return { on: true, ...this.brain.doing() };

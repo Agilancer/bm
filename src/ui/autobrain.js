@@ -1556,10 +1556,10 @@ export class Brain {
   }
 
   // What it's working on, for the quest log (src/ui/folk.js): the quest its job is for (quest: one taken on; offer: one it's
-  // off to take on), and what it says of it.
+  // off to take on), what it says of it, and what it's been set to do (MODES: quests, grinding, dungeon runs).
   doing() {
     const j = this.job;
-    return { quest: j?.quest || null, offer: j?.offer || null, say: (j?.quest || j?.offer ? j.say : this.said) || this.said || '' };
+    return { quest: j?.quest || null, offer: j?.offer || null, say: (j?.quest || j?.offer ? j.say : this.said) || this.said || '', mode: MODES[this.mode]?.name || '' };
   }
 
   choose(m) {

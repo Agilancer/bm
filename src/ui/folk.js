@@ -935,7 +935,7 @@ export class TownUI {
       ? '<div class="ql-auto off"><b>AUTO-PLAY</b><span>is off. Turn it on (P, or the Auto button under the skull) and the quest it works on is marked here.</span></div>'
       : auto.quest && live.includes(auto.quest)
         ? `<div class="ql-auto"><b>AUTO-PLAY</b><span>is working on <i>${esc(QUESTS[auto.quest].title)}</i>${doing(auto.quest) ? `: ${esc(doing(auto.quest))}` : '.'}</span></div>`
-        : `<div class="ql-auto"><b>AUTO-PLAY</b><span>${auto.offer ? 'is off to take on new work: ' : ''}${esc(auto.say || 'Looking for what to do.')}</span></div>`;
+        : `<div class="ql-auto"><b>AUTO-PLAY</b><span>${auto.mode && !auto.offer ? `${esc(auto.mode)}: ` : ''}${auto.offer ? 'is off to take on new work: ' : ''}${esc(auto.say || 'Looking for what to do.')}</span></div>`;
     // Nothing taken on: what you should be doing instead.
     const stage = snap ? snap[H.OPENING] : OPENING.ARRIVED;
     const hint = live.length ? null : hintOf({ Q, stage, lisHere: !!this.whereOf(this.lisI), level: lvl, person, px: snap ? snap[H.PX] : 0, pz: snap ? snap[H.PZ] : 0 });
@@ -1005,4 +1005,4 @@ export class TownUI {
 
 const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 // What the log shows of auto-play, as one string: it's drawn again when this changes.
-const autoKey = (a) => `${a.on ? 1 : 0}|${a.quest || ''}|${a.offer || ''}|${a.say || ''}`;
+const autoKey = (a) => `${a.on ? 1 : 0}|${a.quest || ''}|${a.offer || ''}|${a.say || ''}|${a.mode || ''}`;

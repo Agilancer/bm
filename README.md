@@ -250,7 +250,8 @@ A gold dotted line on the ground leads to whatever the quest you follow wants of
   there or not, the land instead of a chart when you're under a roof and it isn't, and an arrow at the rim for a spot that's
   off the edge. The pins go when the map's shut.
 - **Follow trail** lays the gold trail to it (see above); the quest followed is marked.
-- **Auto-play.** Along the top: what it's working on, or that it's off. The quest it's on has a blue mark and its own line
+- **Auto-play.** Along the top: what it's working on (and, when that isn't a quest, what it's set to do: grinding or
+  dungeon runs), or that it's off. The quest it's on has a blue mark and its own line
   of what it's doing (`doing` in `src/ui/autobrain.js`, which tags every job with the quest it's for; `current` in
   `src/ui/autoplay.js`). The log is drawn again when that changes.
 - **Hint**, below, while you've nothing taken on: what you should be doing (`hintOf`). In the cave, hear Lisandra out; on
