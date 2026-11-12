@@ -198,7 +198,8 @@ export function rng(seed) {
 
 // Who is in the world this session: n bodies from the roster, the classes spread evenly, then a person for each body (name,
 // epithet, guild, persona, level). names: assets/game/heroes/names.json. kit: assets/game/heroes/kit.json.
-export function makeCast(roster, kit, names, n, seed) {
+// (only: these bodies and no others, by id, in this order: for looking each of them over, ?bodies=lancer_m1,... in the address.)
+export function makeCast(roster, kit, names, n, seed, only = null) {
   const r = rng(seed);
   const pick = (a) => a[Math.floor(r() * a.length)];
   const byClass = {};
@@ -206,8 +207,8 @@ export function makeCast(roster, kit, names, n, seed) {
   for (const list of Object.values(byClass)) list.sort(() => r() - 0.5);
   // A lancer and a paladin come first, so even a small world has a tank and a healer for the Free Company to hire out.
   const order = ['lancer', 'paladin', 'archer', 'rogue', 'dragoon', 'ninja', 'boomerang', 'bard'];
-  const bodies = [];
-  for (let round = 0; bodies.length < n && round < 12; round++) {
+  const bodies = only ? only.map((id) => roster.find((h) => h.id === id)).filter(Boolean).slice(0, n) : [];
+  for (let round = 0; !only && bodies.length < n && round < 12; round++) {
     for (const c of order) {
       if (bodies.length >= n) break;
       // (Paladins are rare: past the first two, one in a few.)
