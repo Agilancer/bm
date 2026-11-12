@@ -1930,7 +1930,17 @@ export class Renderer {
     const dpr = Math.min(window.devicePixelRatio || 1, gpu.mobile ? 3 : 2);
     let cw = Math.max(2, Math.floor(canvas.clientWidth * dpr)), ch = Math.max(2, Math.floor(canvas.clientHeight * dpr));
     const screen = `${cw}x${ch}`;
-    if (this.screen !== screen) { this.screen = screen; this.dropTargetSets(); }
+    if (this.screen !== screen) {
+      if (gpu.mobile && this.activeKey) {
+        // A phone turning goes through a run of sizes, and each would be every target thrown away and made again. Upright
+        // it keeps the sideways picture it has (nothing's drawn then: src/main.js turned); any other size is taken once
+        // it's held for a moment.
+        if (ch > cw) return;
+        if (this.wantScreen !== screen) { this.wantScreen = screen; this.wantAt = performance.now(); }
+        if (performance.now() - this.wantAt < 300) return;
+      }
+      this.screen = screen; this.wantScreen = null; this.dropTargetSets();
+    }
     let W, H_;
     if (tier.maxPixels) {
       // The canvas itself is only as big as the picture, and the browser stretches it to the screen for nothing. Scale
@@ -2596,7 +2606,8 @@ export class Renderer {
     const vmData = this.vmData || (this.vmData = new Float32Array(20));
     vmData.set(vmSway, 0);
     // A spell that wants the hands takes the sword down out of the way.
-    const lowered = snap[H.VM_LOWER];
+    // (And out of a fight they're put away: down out of the view the same way. H.STOW, src/sim/sim.worker.js stepStow.)
+    const stowed = snap[H.STOW] || 0, lowered = Math.max(snap[H.VM_LOWER], stowed);
     vmData[13] -= lowered * 0.85; vmData[14] += lowered * 0.2;
     // (The old hands' own left arm would be a second one, so those stand aside for it. A staff's rig has none, and stays.)
     this.vmDown = lowered > 0.995 || (this.shieldParts.length > 0 && this.vm === this.vms[1]);
@@ -2649,7 +2660,7 @@ export class Renderer {
     breath[4] += this.carryX; breath[5] += this.carryY;
     breath[5] -= surfArm * 0.35;      // (the skull's arm going down; half, as this is a dual quaternion)
     // A one-handed spell lowers the staff and leaves the skull where it is.
-    const skullLow = snap[H.SKULL_LOWER];
+    const skullLow = Math.max(snap[H.SKULL_LOWER], stowed);
     this.skullDown = skullLow > 0.995;
     const vmY = vmData[13], vmZ = vmData[14], skullY = vmSway[13] - skullLow * 0.85, skullZ = vmSway[14] + skullLow * 0.2;
     for (const h of this.skullParts) {

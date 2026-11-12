@@ -120,3 +120,27 @@ test('no third person in Lisandra\'s cave: only once you are out', () => {
   for (const stage of [OPENING.WAKE, OPENING.NAME, OPENING.HERD, OPENING.LEAVE, OPENING.COLLAPSE]) assert.equal(thirdAllowed(stage), false, `stage ${stage}`);
   for (const stage of [OPENING.OFF, OPENING.ESCORT, OPENING.ARRIVED]) assert.equal(thirdAllowed(stage), true, `stage ${stage}`);
 });
+
+test('put away, out of a fight: the staff on the back under the shield, the skull at the left hip, both hands empty', () => {
+  const body = make(), s = state({ stow: 1 }), snap = settle(body, s);
+  const staff = prop(snap, 0), skull = prop(snap, 1), shield = prop(snap, 2), spine = at(body, 'Spine02'), hip = at(body, 'Hip');
+  const fwd = [Math.sin(s.yaw), 0, Math.cos(s.yaw)], left = [Math.cos(s.yaw), 0, -Math.sin(s.yaw)];
+  const rel = (m, o, d) => (m[12] - o[0]) * d[0] + (m[14] - o[2]) * d[2];
+  assert.equal(staff[15], 1); assert.equal(skull[15], 1); assert.equal(shield[15], 1);
+  // The staff: behind the spine, well off the right hand, standing nearly upright, and nearer his back than the shield is.
+  assert.ok(rel(staff, spine, fwd) < -0.08, 'the staff is behind him');
+  assert.ok(dist(staff.slice(12, 15), at(body, 'R_Hand')) > 0.3, 'and out of his hand');
+  assert.ok(staff[5] > 0.9, `nearly upright (${staff[5].toFixed(2)})`);
+  assert.ok(rel(shield, spine, fwd) < rel(staff, spine, fwd) - 0.02, 'the shield is over it');
+  // The skull: at the left hip, crown up, below the belt and off the hand.
+  assert.ok(rel(skull, hip, left) > 0.12 && rel(skull, hip, left) < 0.3, `at the left hip (${rel(skull, hip, left).toFixed(2)})`);
+  assert.ok(Math.abs(skull[13] - hip[1]) < 0.15 && skull[5] > 0.8, 'hung at the hip, crown up');
+  // With no skull the shield still goes to the back, and nothing's left on the arm.
+  const bare = settle(make(), state({ stow: 1, skull: false }));
+  assert.equal(prop(bare, 1)[15], 0, 'nothing on the arm');
+  assert.equal(prop(bare, 2)[15], 1, 'the shield on the back');
+  // And out again: in the hands as before.
+  const out = settle(body, state({ stow: 0 }));
+  assert.ok(dist(prop(out, 0).slice(12, 15), at(body, 'R_Hand')) < 0.14, 'the staff back in the right hand');
+  assert.ok(dist(prop(out, 1).slice(12, 15), at(body, 'L_Hand')) < 0.25, 'the skull back under the left');
+});

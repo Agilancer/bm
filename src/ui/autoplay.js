@@ -2,11 +2,14 @@
 // taken from Velscour (Agilancer/velscour assets/ui/btn_auto.webp, css/style.css .hbtn). The button or P turns it on and off;
 // moving yourself (the keys or the stick) takes the controls back for a moment. The head is src/ui/autobrain.js.
 //
-// While it's on, the mouse is left free (no pointer lock), so the button and its menu can be clicked; Esc pauses and resumes.
-// When every quest is done and it's only grinding, a menu asks where (GRINDS), and keeps the last choice if nobody answers.
+// The button (or P) brings up a menu first: Complete Quests, Grind monsters for XP (and where: GRINDS) or Dungeon Runs (round
+// every dungeon the player has finished, until it's stopped: DUNGEONS). Clicking the status line while it plays brings the menu
+// back, to change what it's at. While it's on, the mouse is left free (no pointer lock), so the button and its menu can be
+// clicked; Esc pauses and resumes. On the quests with every quest done, a menu asks where to grind (GRINDS), and keeps the last
+// choice if nobody answers.
 import { INPUT } from '../core/layout.js';
 import { RULES } from '../folk/quests.js';
-import { Brain, GRINDS } from './autobrain.js';
+import { Brain, DUNGEONS, GRINDS, MODES, finishedDungeons } from './autobrain.js';
 import { AutoLog } from './autolog.js';
 
 const BTN = 'assets/ui/btn_auto.webp';
@@ -37,7 +40,7 @@ body.playing #autoStatus.shown { display: block; }
 #autoLog .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; position: sticky; bottom: -16px; background: rgba(8,12,16,.97); padding: 8px 0; }
 #autoLog .foot button { font: inherit; color: #d8e8ee; background: #142028; border: 1px solid #2a4a5a; padding: 7px 12px; cursor: pointer; }
 #autoLog .foot button:hover { border-color: #8fe0ff; }
-#autoStatus.grinding { pointer-events: auto; cursor: pointer; }
+#autoStatus.live { pointer-events: auto; cursor: pointer; }
 body.touch #autoBtn { width: 38px; height: 41px; top: 250px; right: 12px; }
 body.touch #autoStatus { top: 296px; }
 body.touch #autoStatus b { font-size: 10px; }
@@ -52,6 +55,8 @@ body.touch #autoStatus b { font-size: 10px; }
 #autoMenu .card span { display: block; font-size: 12px; color: #93acb8; }
 #autoMenu .card:hover { border-color: #4fd0ff; background: #12242e; }
 #autoMenu .card.sel { border-color: #8fe0ff; box-shadow: inset 0 0 12px rgba(79,208,255,.25); }
+#autoMenu .card:disabled { opacity: .45; cursor: default; border-color: #23485a; background: #0e1a22; }
+#autoMenu .card i { display: block; margin-top: 5px; font-size: 11px; color: #8fe0ff; font-style: normal; }
 #autoMenu .foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; }
 #autoMenu .wait { font-size: 12px; color: #7f9aa6; }
 #autoMenu .foot button { font: inherit; color: #d8e8ee; background: #142028; border: 1px solid #2a4a5a; padding: 7px 12px; cursor: pointer; }
@@ -67,6 +72,9 @@ export class AutoPlay {
     this.o = o;
     this.on = false; this.brain = null;
     this.yieldT = 0; this.calm = true;
+    this.mode = 'quests';   // what it was last set to (MODES): the menu starts on it
+    try { const k = localStorage.getItem('bm-auto-mode'); if (MODES[k]) this.mode = k; } catch { /* no storage: quests */ }
+    this.asking = false;    // the menu is up before it's on: the game's hands off, the mouse free to choose
     const style = el('style'); style.textContent = CSS; document.head.append(style);
     this.btn = el('button', 'autoBtn', null, `<img src="${BTN}" alt="Auto" draggable="false">`);
     this.btn.type = 'button';
@@ -76,7 +84,7 @@ export class AutoPlay {
     this.logEl = el('div', 'autoLog');
     this.log = new AutoLog();
     document.body.append(this.btn, this.statusEl, this.menu, this.logEl);
-    const press = (e) => { e.preventDefault(); e.stopPropagation(); this.btn.blur(); this.toggle(); };
+    const press = (e) => { e.preventDefault(); e.stopPropagation(); this.btn.blur(); this.press(); };
     this.btn.addEventListener('click', press);
     this.btn.addEventListener('touchend', press, { passive: false });
     // (The pointer over it: a head start on the nav thread, which takes a few seconds to come up.)
@@ -88,7 +96,7 @@ export class AutoPlay {
     this.statusEl.addEventListener('click', (e) => {
       e.stopPropagation();
       if (e.target.tagName === 'U') this.showLog();
-      else if (this.on && this.brain?.allQuestsDone()) this.askGrind();
+      else if (this.on) this.askMode();
     });
     addEventListener('keydown', (e) => this.key(e));
   }
@@ -110,13 +118,36 @@ export class AutoPlay {
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     const { input } = this.o;
-    if (e.code === 'KeyP' && input.enabled && !input.menu) { e.preventDefault(); this.toggle(); return; }
+    if (this.asking && (e.code === 'KeyP' || e.code === 'Escape')) { e.preventDefault(); this.cancel(); return; }
+    if (e.code === 'KeyP' && input.enabled && !input.menu) { e.preventDefault(); this.press(); return; }
     // With the mouse left free, Esc is the pause (there's no pointer lock for the browser to take back).
     if (e.code === 'Escape' && this.on && input.enabled && this.calm) {
       if (this.menu.classList.contains('on')) { this.closeMenu(); return; }
       if (this.logEl.classList.contains('on')) { this.logEl.classList.remove('on'); return; }
       this.o.pause(!this.o.paused());
     }
+  }
+
+  // The button or P: off, the menu (what should it do?); on, it stops.
+  press() {
+    if (this.on) { this.toggle(false); return; }
+    if (this.asking) { this.cancel(); return; }
+    if (!this.o.input.enabled) return;
+    this.askMode();
+  }
+
+  // Started from the menu, at what was chosen.
+  begin(mode) {
+    this.mode = mode;
+    try { localStorage.setItem('bm-auto-mode', mode); } catch { /* not kept: fine */ }
+    this.wake();
+    const b = this.brain;
+    const was = b.mode;
+    b.mode = mode;
+    if (mode !== was || mode === 'dungeons') { b.job = null; b.jobKey = ''; b.runState = null; b.runKey = null; b.laps = 0; }
+    this.release();
+    if (this.on) { this.o.hud.tip(`Auto-play: ${lower(MODES[mode].name)}.`, 3); return; }
+    this.toggle(true);
   }
 
   toggle(v = !this.on) {
@@ -132,8 +163,9 @@ export class AutoPlay {
       if (document.pointerLockElement) document.exitPointerLock();
       this.brain.start();
       if (this.o.paused()) this.o.pause(false);
-      hud.tip(input.touch ? 'Auto-play on. Use the stick to take over for a moment; Auto to stop.' : 'Auto-play on. Move to take over for a moment; P or the Auto button stops it. Esc pauses.', 5);
-      if (this.brain.allQuestsDone()) this.askGrind();
+      this.brain.mode = this.mode;
+      hud.tip(`${MODES[this.mode].name}. ${input.touch ? 'Use the stick to take over for a moment; Auto to stop.' : 'Move to take over for a moment; P or the Auto button stops it. Esc pauses.'}`, 5);
+      if (this.mode === 'quests' && this.brain.allQuestsDone()) this.askGrind();
     } else {
       this.brain?.stop();
       this.log.endFight(); this.log.save();
@@ -149,10 +181,9 @@ export class AutoPlay {
   status(text) {
     this.statusEl.querySelector('b').textContent = text || '';
     const Q = this.o.townUI.quests, all = Object.keys(RULES), n = all.filter((id) => Q.done(id)).length;
-    const grinding = this.on && n === all.length;
-    this.statusEl.classList.toggle('grinding', grinding);
+    this.statusEl.classList.toggle('live', this.on);
     const small = this.statusEl.querySelector('small');
-    small.textContent = this.on ? `Level ${this.o.pack.level} · quests ${n} of ${all.length} done${grinding ? ' · click to choose where' : ''}` : '';
+    small.textContent = this.on ? `Level ${this.o.pack.level} · quests ${n} of ${all.length} done · click to change` : '';
     small.insertAdjacentHTML('beforeend', '<u>log</u>');
   }
 
@@ -166,6 +197,7 @@ export class AutoPlay {
       if (w) w.textContent = `Keeps to ${lower(GRINDS[this.brain.grind].name)} in ${Math.ceil(this.menuT)} s`;
       if (this.menuT <= 0) this.pickGrind(this.brain.grind);
     }
+    if (this.asking && !input.enabled) this.cancel();
     if (!this.on || !snap) return;
     if (!input.enabled) { this.toggle(false); return; }
     if (this.o.shared.input[INPUT.PAUSE]) { this.brain.halt(); return; }
@@ -180,28 +212,92 @@ export class AutoPlay {
     try { this.brain.step(dt, snap); } catch (err) { console.error('auto-play', err); this.brain.halt(); }
   }
 
-  // ---- the menu, once there's nothing left but grinding
+  // ---- the menu: what it should do
 
-  askGrind() {
-    if (!this.brain) return;
-    const g = this.brain.grind;
-    this.menu.innerHTML = `<h2>Every quest is done</h2><p>Nothing's asked of him now but to get stronger. Where should he grind?</p>
-      <div class="cards">${Object.entries(GRINDS).map(([k, v]) => `<button type="button" class="card${k === g ? ' sel' : ''}" data-g="${k}"><b>${v.name}</b><span>${v.line}</span></button>`).join('')}</div>
-      <div class="foot"><span class="wait"></span><span><button type="button" data-a="log">Balance log</button> <button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Keep grinding</button></span></div>`;
-    for (const b of this.menu.querySelectorAll('[data-g]')) b.onclick = () => this.pickGrind(b.dataset.g);
-    this.menu.querySelector('[data-a="stop"]').onclick = () => { this.closeMenu(); this.toggle(false); };
-    this.menu.querySelector('[data-a="keep"]').onclick = () => this.pickGrind(this.brain.grind);
-    this.menu.querySelector('[data-a="log"]').onclick = () => { this.closeMenu(); this.showLog(); };
+  // Before it's on, the game's hands are off and the mouse is free to choose (as with any of the game's panels).
+  hold() {
+    const { input } = this.o;
+    if (this.on || this.asking) return;
+    this.asking = true;
+    input.free = true;
+    input.menu = true;
+    input.releaseControls();
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+
+  release() {
+    if (!this.asking) return;
+    this.asking = false;
+    this.o.input.menu = false;
+    if (!this.on) this.o.input.free = false;
+  }
+
+  // Shut without a choice: back to the game as it was.
+  cancel() {
+    const was = this.asking;
+    this.closeMenu();
+    this.release();
+    if (was && !this.on && !this.o.paused()) this.o.input.lock();
+  }
+
+  askMode() {
+    this.wake();
+    this.hold();
+    const { townUI, game } = this.o;
+    const done = finishedDungeons(townUI, game);
+    const runs = done.length ? `Round and round: ${done.map((d) => lower(d.name)).join(', ')}.` : `Nothing finished yet: ${DUNGEONS.map((d) => lower(d.name)).join(', ')} count once they're done.`;
+    const cards = Object.entries(MODES).map(([k, v]) => {
+      const off = k === 'dungeons' && !done.length;
+      return `<button type="button" class="card${k === this.mode ? ' sel' : ''}" data-m="${k}"${off ? ' disabled' : ''}><b>${v.name}</b><span>${v.line}</span>${k === 'dungeons' ? `<i>${runs}</i>` : ''}</button>`;
+    }).join('');
+    this.menu.innerHTML = `<h2>Auto-play</h2><p>What should he do?</p><div class="cards">${cards}</div>
+      <div class="foot"><span class="wait"></span><span>${this.on ? '<button type="button" data-a="log">Balance log</button> <button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Carry on</button>' : '<button type="button" data-a="cancel">Cancel</button>'}</span></div>`;
+    for (const b of this.menu.querySelectorAll('[data-m]')) b.onclick = () => { if (!b.disabled) this.pickMode(b.dataset.m); };
+    this.wire();
     this.menu.classList.add('on');
-    this.menuT = MENU_WAIT;
+    this.menuT = 0;
     this.o.audio.play?.('uiOpen', null, 0, 0, 0.4, 1, false);
   }
 
-  pickGrind(k) {
+  pickMode(k) {
+    if (k === 'grind') { this.askGrind(true); return; }
+    this.closeMenu();
+    this.begin(k);
+  }
+
+  // The footer's buttons, whichever menu is up.
+  wire() {
+    const on = (a, f) => { const b = this.menu.querySelector(`[data-a="${a}"]`); if (b) b.onclick = f; };
+    on('stop', () => { this.closeMenu(); this.toggle(false); });
+    on('cancel', () => this.cancel());
+    on('keep', () => (this.menuT > 0 ? this.pickGrind(this.brain.grind) : this.closeMenu()));
+    on('back', () => this.askMode());
+    on('log', () => { this.closeMenu(); this.showLog(); });
+  }
+
+  // Where to grind: chosen from the menu (chosen), or asked once every quest is done (it keeps the last after a while).
+  askGrind(chosen = false) {
+    this.wake();
+    if (chosen) this.hold();
+    const g = this.brain.grind;
+    const head = chosen ? `<h2>${MODES.grind.name}</h2><p>Where should he grind?</p>` : `<h2>Every quest is done</h2><p>Nothing's asked of him now but to get stronger. Where should he grind?</p>`;
+    const foot = chosen ? `<button type="button" data-a="back">Back</button>${this.asking ? ' <button type="button" data-a="cancel">Cancel</button>' : ''}` : '<button type="button" data-a="log">Balance log</button> <button type="button" data-a="stop">Stop auto-play</button> <button type="button" data-a="keep">Keep grinding</button>';
+    this.menu.innerHTML = `${head}
+      <div class="cards">${Object.entries(GRINDS).map(([k, v]) => `<button type="button" class="card${k === g ? ' sel' : ''}" data-g="${k}"><b>${v.name}</b><span>${v.line}</span></button>`).join('')}</div>
+      <div class="foot"><span class="wait"></span><span>${foot}</span></div>`;
+    for (const b of this.menu.querySelectorAll('[data-g]')) b.onclick = () => this.pickGrind(b.dataset.g, chosen);
+    this.wire();
+    this.menu.classList.add('on');
+    this.menuT = chosen ? 0 : MENU_WAIT;
+    this.o.audio.play?.('uiOpen', null, 0, 0, 0.4, 1, false);
+  }
+
+  pickGrind(k, chosen = false) {
     if (!this.brain || !GRINDS[k]) return;
     this.brain.grind = k;
     this.brain.job = null; this.brain.jobKey = '';
     this.closeMenu();
+    if (chosen) this.begin('grind');
     this.o.hud.tip(`Grinding: ${lower(GRINDS[k].name)}.`, 3);
   }
 

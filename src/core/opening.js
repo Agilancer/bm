@@ -310,7 +310,7 @@ export const WAY = [
   [-311.5, 258.3, 72.3, 'stairs'], [-318, 247.2, 66.4, 'stairs'], [-305.5, 244.8, 60.5, 'stairs'], [-316, 236.7, 54.6, 'stairs'],
   [-304, 233.5, 50.8, 'path'], [-290, 229.5, 45.6, 'path'], [-276, 226, 41.9, 'path'], [-264, 219, 39.2, 'path'], [-256, 213.5, 37.8, 'path'],
 ];
-export const WAY_W = 1.35, WAY_BLEND = 2.6, STAIR_FLAT = 0.9;
+export const WAY_W = 1.35, WAY_BLEND = 2.6, STAIR_FLAT = 0.9, WAY_OWN = 7;
 // Its stretches: ends, length, and whether it's a flight (level for STAIR_FLAT at each end: the landings at the turns).
 export const WAY_SEGS = WAY.slice(1).map((b, i) => {
   const a = WAY[i], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
@@ -338,7 +338,9 @@ export function wayLevel(x, z, level) {
     const t = clamp(((x - g.ax) * g.dx + (z - g.az) * g.dz) / (g.len * g.len), 0, 1);
     const d = Math.hypot(g.ax + g.dx * t - x, g.az + g.dz * t - z);
     if (d >= WAY_W + WAY_BLEND) continue;
-    const k = 1 - smoothstep(WAY_W, WAY_W + WAY_BLEND, d), k2 = k * k * k * k;
+    // (The stretch you're on has nearly all the say: at a turn of the steps the flight beside this one is a good deal higher
+    // or lower, and a share of it under your feet would sink you into these slabs or stand you over them.)
+    const k = 1 - smoothstep(WAY_W, WAY_W + WAY_BLEND, d), k2 = k * k * k * k * Math.exp(-WAY_OWN * d);
     A += k2 * wayY(g, t); B += k2; if (k > M) M = k;
   }
   return B > 0 ? level + (A / B - level) * M : level;
