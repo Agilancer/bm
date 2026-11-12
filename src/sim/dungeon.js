@@ -435,7 +435,7 @@ export class Warrens {
   // Skrit: three pots of fire in a row across one of you.
   sPots(f, m) {
     const t = this.mark();
-    if (!t || !m.perform({ clip: 'atk1', face: t, at: 0.4, secs: 1.2, fn: () => MOVES.firepots(this.sim.perils, m, t, 22) })) return false;
+    if (!t || !m.perform({ clip: 'atk1', face: t, at: 0.4, secs: 1.2, fn: () => MOVES.firepots(this.sim.perils, m, t, 30) })) return false;
     this.warn(4, 20);
   }
 
