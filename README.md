@@ -554,7 +554,10 @@ button is enough to start it).
 
 The menu (`MODES` in `src/ui/autobrain.js`) has three choices, and starts on the one picked last time:
 
-- **Complete Quests.** The whole game, as below: the quests in order, the black knight, the party and the Warrens.
+- **Complete Quests.** The whole game, as below: the quests in order, the black knight, the party and the Warrens. A party
+  dungeon waits for the quest that sends it down (`delveOwed` in `src/ui/autobrain.js`): it used to go down the first it
+  was fit for, the Warrens at level 7 with none of its quests in hand, and came out four levels up with the quests of
+  levels 4 to 12 not begun and every dungeon to do again for each quest.
 - **Grind monsters for XP.** It asks where (the grinding grounds below), and does only that: no quests taken, talked
   through or handed in. It still sells, buys, mends and hires a party, and fights what comes at it.
 - **Dungeon Runs.** Round every dungeon you've finished, one after another, and round again, until it's stopped

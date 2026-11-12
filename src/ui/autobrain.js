@@ -1659,7 +1659,7 @@ export class Brain {
     if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : warrensJob(this, m);
     const hire = hireJob(this, m);
     if (hire) return hire;
-    const delve = questing && warrensJob(this, m, this.delveWants(m));
+    const delve = questing && warrensJob(this, m, this.delveWants(m), this.delveOwed());
     if (delve && !wantsTown) return delve;
     // In the town, its errands: the quest talk first (only when it's on the quests), then the shops.
     const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60, questing);
@@ -1748,6 +1748,22 @@ export class Brain {
       if (!st || m.lvl < lvl + (this.bump[`q:${id}`] || 0)) continue;
       const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : null;
       if (k && !out.includes(k)) out.push(k);
+    }
+    return out;
+  }
+
+  // The dungeons some quest not yet done still has work down (taken or not): left alone till that quest sends it there.
+  // It used to go down the first it was fit for, before the quests that lead to it: the Warrens at 7 with none of its four
+  // quests in hand, four levels from the clear, then off to the Deeps with the quests of levels 4 to 12 not begun, and
+  // every dungeon to do again for each quest.
+  delveOwed() {
+    const Q = this.o.townUI.quests, out = new Set();
+    for (const [id, r] of Object.entries(RULES)) {
+      if (Q.done(id)) continue;
+      for (const st of r.steps || []) {
+        const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : null;
+        if (k) out.add(k);
+      }
     }
     return out;
   }
