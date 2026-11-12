@@ -980,8 +980,8 @@ things were wrong besides. A paladin's or lancer's board coming home overdue to 
 every tick until it stood 10^38 m off, which this tool found, one Venomaw fight in five, as a shape with a bad number
 (`stepShotX` in `src/sim/heroskills.js`: it comes home at the pace it left the hand now). And a pool pushed whoever stood
 in it out across its edge (see "Monsters' attacks"), so nobody burned in one. With those fixed, the twins at 3,600 life
-each (were 2,900) and Skrit's pots as the twins are told above, it gives: the twins 64 to 84 s seeing it at once, the
-player down to two thirds; 64 to 81 s half a second late; standing still, dead in 22 to 47 s. Grubnash and Venomaw are as
+each (were 2,900) and Skrit's pots as the twins are told above, it gives: the twins in 64 to 71 s seeing it at once, the
+player down to two thirds; 64 s half a second late, untouched; standing still, dead in 22 to 47 s (five fights of five). Grubnash and Venomaw are as
 the party left them: about 72 s and 90 to 100 s; standing still Venomaw kills you in some 46 s, and Grubnash leaves you on
 a quarter.
 
