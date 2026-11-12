@@ -37,38 +37,44 @@ voices in the demo aren't consistent").
 - **A human listens at the end.** The critics can't hear; their numbers are not the owner's ear.
 
 The owner approved the method on four lines: "Hold still. It doesn't hurt. It never hurts.", the two tunnel orders, and
-"What have you done?!". Those four takes are kept as they are (`<key>.a.wav` in the takes folder).
+"What have you done?!". Those takes are kept as they are (`<key>.a.wav` in the takes folder). The dialogue rewrite
+(PR 119) gave the two tunnel orders new words, so only the other two still play.
 
-## Recording status (2026-11-10)
+## Recording status (2026-11-12)
 
-**The run is done.** Every line got all its takes (8, or 16 for orders, calls and shouts) with the notes in
-`anchors.json` as they are now. Each line's best take is in the game. `tools/voice/shipped.json` lists, for each line,
-its shipped take, its status, its passing takes, the rules the shipped take misses, its pitch, pace and likeness, and
-whether it's on the rewrite list.
+**Re-recorded for the rewritten opening (PR 119).** Her lines are now 165. The 103 with new words got all their takes
+(8, or 16 for orders, calls and shouts) with the same model, anchors, notes and rules as the first run. The 62 lines
+whose words didn't change kept their takes and picks. The 117 recordings of lines she no longer says were removed.
+Each line's best take is in the game. `tools/voice/shipped.json` lists, for each line, its shipped take, its status,
+its passing takes, the rules the shipped take misses, its pitch, pace and likeness, and whether it's on the rewrite list.
 
 | | Old voice | Young voice | All |
 |---|---|---|---|
-| Lines | 97 | 82 | 179 |
-| `approved`: the owner's own take | 3 | 1 | 4 |
-| `passed`: a take that passed every rule | 68 | 55 | 123 |
-| `unchecked`: no take passed; the one missing the fewest rules shipped | 26 | 26 | 52 |
-| On the rewrite list (under two passes) | 39 | 46 | 85 |
+| Lines | 75 | 90 | 165 |
+| `approved`: the owner's own take | 1 | 1 | 2 |
+| `passed`: a take that passed every rule | 64 | 66 | 130 |
+| `unchecked`: no take passed; the one missing the fewest rules shipped | 10 | 23 | 33 |
+| On the rewrite list (under two passes) | 24 | 42 | 66 |
 
 - **What a line ships with:** the owner's approved take, if there is one. If not, the passing take most like her
   sample. If nothing passed, the take that missed the fewest rules, then the one most like her.
-- **The rewrite list:** `docs/VOICE-REWRITES.md` lists the 85 lines in plain words. 52 have no passing take and 33 have
+- **The rewrite list:** `docs/VOICE-REWRITES.md` lists the 66 lines in plain words. 33 have no passing take and 33 have
   one. The critics' rule is new words for these, not looser rules, and new words are the owner's call. Until then
   each line plays its best take.
 - **What the misses are:**
-  - The young voice often has less chest than her sample, or comes out under her band (about 170-188 Hz).
-  - The witch often has more boom than hers.
-  - Short lines ("…Oh.", "Velscour's.", "No. No, no, no.") come out drawn out, and less like her.
-  - A few long town lines had a word misheard.
-- **How the run went:**
+  - The young voice most often has less chest than her sample, or comes out under her band (about 167-180 Hz).
+  - The witch has more boom than hers, or comes out slow.
+  - Short lines ("No. No, no, no.") come out drawn out, and less like her.
+- **How the runs went:**
   - The first run's notes made both voices slow and the young one low.
   - A note test fixed both, and the run was restarted from round 0 with the new notes.
   - The takes made with the old notes are kept in `C:\Users\agila\tts\anchor_all\old_note` (with `notes.json`). None
     of them ship, so no kind of line mixes two notes.
+  - The re-record (2026-11-11 to 12) ran on 4 CPU threads at the owner's ask. It was no faster than 2: about 12 s of
+    speech a minute either way, about an hour a round of 103 takes, 9 hours in all. The model waits on memory, not
+    on the CPU.
+  - It also showed `gentle.py`'s idle priority had never taken (the call failed quietly). Fixed; the runs before
+    went at normal priority.
 - **Her young pace (the owner's call, 2026-11-09):** "Yes, use my take". So her pace is judged against the owner's
   approved young shout (`refs.json` `pace`, about 3.0 syllables a second), not her sample, which the old model made
   about 30% faster than this one ever speaks.
@@ -76,7 +82,7 @@ whether it's on the rewrite list.
   - the takes: `<voice>/<key>.<round>.wav`, with the shipped form beside each as `.ship.mp3`;
   - `scores.json`: every take's numbers;
   - `report.json`: each line's passes, pick and the `rewrite` list;
-  - `lines.json`: the line list.
+  - `lines.json`: the line list (the 179-line list from before the rewrite is `lines_179.json`, with `report_179.json`).
 
   `pick.py` works out each take's rules afresh from its stored numbers, so a rule change needs no take judged again.
 - **Not done:** no human has listened to the new set. The critics can't hear; their numbers are not the owner's ear.
@@ -85,7 +91,7 @@ whether it's on the rewrite list.
 
 Lisandra: the whole opening (`src/core/opening-script.js` with the cave's long story in `src/core/opening-cave.js`), and
 what she says in Bellmourn once she's walked you down (`src/folk/lines/lisandra.js`, through `tools/voice/folk.mjs`),
-each town line in both voices. 179 lines.
+each town line in both voices. 165 lines.
 
 | Voice | Who | When |
 |---|---|---|
@@ -131,7 +137,7 @@ whole line.
 | `anchor.py` | one round of takes: one more take of every line that wants one (Qwen venv) |
 | `pick.py` | judges new takes by the rules, ships the best of each line, and lists lines to rewrite (Chatterbox venv) |
 | `record_all.py` | runs the rounds, `anchor.py` then `pick.py`, never both at once. Stop it any time; run it again to carry on |
-| `gentle.py` | 2 CPU threads at idle priority, so the PC stays usable |
+| `gentle.py` | 2 CPU threads (`VOICE_THREADS` to change) at idle priority, so the PC stays usable |
 | `manifest.mjs` | writes `src/core/voiced.js` and checks every line has its recording |
 
 Setup, once (already done on the owner's PC): a Qwen venv (`torch` for the CPU, `qwen-tts`, `soundfile`) at
@@ -147,8 +153,9 @@ node tools/voice/manifest.mjs assets/voice C:\Users\agila\tts\anchor_all\lines.j
 
 Takes are kept in the takes folder (`<voice>/<key>.<round>.wav`, with the shipped form beside each as `.ship.mp3`), with
 `scores.json` (every take's numbers) and `report.json` (each line's passes and pick, and the `rewrite` list). A take
-runs about 6.5 times as long as the speech it makes: all 179 lines, about 13 hours. Don't run it on the GPU or with
-more threads: on Bellmourn it crashed the PC. The voice model needs about 7 GB of memory, so keep the disk with the page
+runs about 5 to 6.5 times as long as the speech it makes: all 179 lines took about 13 hours, the 103 new lines of the
+rewrite about 9. Don't run it on the GPU: on Bellmourn it crashed the PC. More threads don't help either: 4 ran no
+faster than 2. The voice model needs about 7 GB of memory, so keep the disk with the page
 file from filling up.
 
 When a line's words change, run the three commands again: only the new line is recorded. Delete the old MP3, or
