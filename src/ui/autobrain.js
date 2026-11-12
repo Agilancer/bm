@@ -1898,7 +1898,11 @@ export class Brain {
       if (talkTo >= 0 && talkTo < PEOPLE.length && !this.skipping(`p:${talkTo}`) && this.reachable(talkTo)) return { ...this.talkJob(talkTo, 'quest', `${q.title}: to ${townUI.people[talkTo].name}.`), quest: id };
     }
     const offer = quests && this.offerJob(m);
-    if (offer && dist(m.x, m.z, 0, 0) < 140) return offer;
+    // (Work to be had here in the town, that is: from someone a country away it waits its turn in choose(), after the
+    // work in hand. Any giver at all used to count while it was within 140 m of the square, so on its way west to one
+    // in Cinderford it crossed that line, turned back east for the catacombs, crossed it again and turned west, and went
+    // on doing so, ten minutes and four levels of the dead that came up round it, for as long as it was watched.)
+    if (offer && dist(m.x, m.z, 0, 0) < 140 && this.jobDist(offer, m) < 320) return offer;
     // Selling: to whoever gives most for the most of it, while they're open.
     const junk = this.junk();
     if (junk.length >= 2 || (this.freeCells() < 16 && junk.length)) {
