@@ -43,16 +43,17 @@ const BROKER_AT_PORTAL = (() => { const c = Math.cos(PORTAL.yaw), s = Math.sin(P
 export const BROKER_SPOTS = { portal: BROKER_AT_PORTAL, town: [5, -2], hall: (() => { const q = STATIONS.find((t) => t.who === 'hall'); return [...hallAt(q.x, q.z), q.yaw]; })() };
 
 // Rooms: id, middle (local: x east, z south of the entrance), radius, floor height over DUNGEON.y, how high the roof can rise.
+// (rock, seam: a room's own wall, where it isn't the delve's, and a band of another colour through it.)
 export const ROOMS = [
   { id: 'mouth', x: 0, z: 0, r: 9, y: 0, roof: 7, name: 'the Mouth' },
   { id: 'diggings', x: 0, z: -46, r: 14, y: -2, roof: 9, name: 'the Diggings' },
-  { id: 'tallow', x: 52, z: -63, r: 13, y: -3, roof: 9, name: 'the Tallow Pit' },
+  { id: 'tallow', x: 52, z: -63, r: 13, y: -3, roof: 9, name: 'the Tallow Pit', rock: 'dark:rubble', seam: 'pale:rubble' },
   { id: 'dig', x: 52, z: -120, r: 20, y: -6, roof: 15, name: "Grubnash's Dig" },
-  { id: 'warren', x: -15, z: -147, r: 14, y: -6, roof: 9, name: 'the Warren' },
+  { id: 'warren', x: -15, z: -147, r: 14, y: -6, roof: 9, name: 'the Warren', seam: 'dark:rubble' },
   { id: 'feast', x: -62, z: -180, r: 15, y: -6, roof: 11, name: 'the Feasting Hall' },
-  { id: 'throne', x: -62, z: -232, r: 19, y: -7, roof: 14, name: 'the Twin Thrones' },
-  { id: 'descent', x: 0, z: -272, r: 12, y: -14, roof: 12, name: 'the Bone Stair' },
-  { id: 'lair', x: 0, z: -334, r: 30, y: -16, roof: 24, name: "Venomaw's Hoard" },
+  { id: 'throne', x: -62, z: -232, r: 19, y: -7, roof: 14, name: 'the Twin Thrones', rock: 'stone', seam: 'rubble' },
+  { id: 'descent', x: 0, z: -272, r: 12, y: -14, roof: 12, name: 'the Bone Stair', rock: 'pale:rubble', seam: 'rubble' },
+  { id: 'lair', x: 0, z: -334, r: 30, y: -16, roof: 24, name: "Venomaw's Hoard", rock: 'dark:rubble', seam: 'rubble' },
 ];
 // Tunnels: a line of points (local x, z) and how wide it is either side. Their floors run between the rooms' they join.
 export const TUNNELS = [

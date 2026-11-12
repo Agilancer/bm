@@ -229,15 +229,27 @@ In the pines the dead come up out of the ground (`fight` in `src/sim/opening.js`
 
 A gold dotted line on the ground leads to whatever the quest you follow wants of you now (`src/ui/trail.js`, drawn in `src/gfx/trail.js`). In the journal (J), tap a quest to follow it, or the same one again to hide the trail; a new quest is followed as you take it, unless you're on Lisandra's round of the town, which stays followed (it leads to whoever you've still to see, nearest first). Before any work, it leads to Lisandra where the road comes into town, or to Bram at the inn. In the opening it runs down the road after Lisandra. In town it goes round the houses by the townsfolk's own walking grid (a route asked of `src/folk/folk.worker.js`), out past the town along the roads and paths where they're shorter, and into the cathedral by its own way down to the Bell Crypt (by the Sexton's Door once you have his key).
 
+### The places in the land
+
+What stands at each place in `SITES` (`src/core/lands.js`) is plain geometry made in code: `src/core/sites.js` builds the old places (a function for each country) and `src/core/places.js` holds the pieces they're dressed with and the newer places. The pieces are methods mixed into the sites' `Kit` (`PIECES`): an arch (whole, broken, or in a wall), a wall with windows and doors cut in it (`pierced`), steps and decks you walk on (`steps`, `deck`: floors like the portals' terraces), tents, carts, stalls, gravestones, boats, barrels and crates, lanterns, banners, a roofed well, a palisade, a plank bridge, rocks, cairns, ricks, racks, ladders. No piece makes a cross or a T; a place's letter decides its stone and cloth (Velscour's black stone and red, Tessariel's pale stone and gilt sunburst, plain folk's neither).
+
+- **The Bell Tower of the Four Watches** is a battered plinth, a buttressed shaft with slits under string courses, a belfry of paired arches with the four bronze bells in their frame, a parapet with pinnacles and a copper spire; steps and a porch on the south, a walled yard with the Bellwright's house, well, wood and oil stores and his ladder, and a ring of watch-stones on the knoll. The two paladins' beats are before the steps (`K.spots.bellwright`, `K.spots.hale`, z = -530.4).
+- **Thornwick** (Gallows Road) and **Cinderford** (Vigil Road) are the two small towns: a palisade and gates, an inn, a market square, a watch platform, fields; a ford and bridge, a stockade and watchtower to the west, charcoal clamps, a refugees' camp. Each has a seal inside its wall.
+- **New lesser places**: the Howling Mouth, the Cairnfield, the Sunken Mile, Ravens' Tor (its stair can be climbed), the Charred Mill, and three beside roads: the Moor Wayhouse, the Old Toll, Ossery Quarry. Paths lead to the ones off a road (`ROUTES`).
+- **Blackvigil's outside** has towers along its curtain, galleries on corbels, slits, a portcullis, and out on the approach a spiked ditch-line with a bridge and a barbican. The ditch is a walled bed of stakes at grade: the land isn't dug.
+- Somebody can be stood at a place by its spot (`buildSites().spots`, `[x, y, z, yaw]`): `thornwick_inn`, `thornwick_cross`, `thornwick_gate`, `cinderford_watch`, `cinderford_kiln`, `cinderford_camp`, `frostwatch_yard`, and one at most other places (`node tools/lands/check-sites.mjs --spots` lists them).
+
+`node tools/lands/check-sites.mjs` fails if a collider stands on a road, a seal, a spot or the ground kept for a dungeon's portal (before Blackvigil's gate, the Howling Mouth's middle), and prints the triangle count. The places out in the land are about 75,000 triangles (15,000 before this pass), drawn in the village's one call. Looked at in headless pictures on a software GPU (`tools/world/views.mjs`); not walked by a person, and not measured for frame time.
+
 ### The land: who lives in it, what besets it, and the quests that take you out
 
 **Monsters by country.** `LAIRS` in `src/core/tripo-monsters.js` holds 101 lairs now (30 before): something at or near every place that isn't a safe town, and beside every road every few hundred metres to a kilometre, 45 to 110 m off to one side so a traveller sees it and isn't on top of it. Each country has its own (goblins, kobolds, spiders, wolves and goat men in the Darkwood and on the Downs; the drowned on the fen and the Sunken Mile; red goblins, kobolds in Ossery Quarry and a warband of seven in the Rustwood; Velscour's patrols thickening along the Vigil Road, with his lancers, casters, plague knights and bone giants out on the Waste; the dead and their keepers on the Barrow Moor; white goat men, wolves, the things at the Howling Mouth and the queen on Ravens' Tor in the fells; plague, demons and the possessed in the Gallowswood). They're few and weak near Bellmourn and many and hard far out, and all 68 models stand somewhere. A lair's lists are thinned to what the roster holds when it's stood up (`lairFor`), so a body that isn't made yet can be named. `node tools/monsters/place-lairs.mjs` finds a sound spot for a wanted lair: off the roads, the places, the water, steep ground and the tumblers' and jellies' camps, Velscour's knights half a kilometre from any seal, and no spot's neighbours within 235 m more than the twelve body slots can stand up. Every far lair has its glade (`src/core/hunts.js`, now looked up through a grid: every pine asks). The jellies have a camp at the Sunken Mile; the other Tessariels hunt at three of the nearer lairs (`PLACES` in `src/core/heroes.js`), though a lair only stands while you're within its `wake`, so they find one empty unless you're there.
 
 **People out in the land.** Seven villagers are posted in the small towns and the fort: Dorcas Pym, Osric Thorne and Wymond Ebb at Thornwick; Sergeant Hasket, Colm Burrage and Ysolt Marrow at Cinderford; Hew Garrick at Frostwatch (`POSTED` in `src/folk/people.js`; who they are: `tools/folk/cast.md`). They're townsfolk in every way that shows: the same bodies (recoloured copies: `tools/folk/posted_swaps.py`), the same thread and buffer, so the talk panel, the marks over their heads, balloons, shadows, bumping and the trail to them all work as in Bellmourn. What's different is one job, `posted` (`src/folk/brain.js`): no house, bed or day; they stand at their post on the land as it lies, day and night, look at you when you're near, turn to you when you're close, and never run. They take the last seven of the folk buffer's 48 places (`FOLK_MAX`), so an eighth needs it raised. Ser Hale Orrowick, Paladin of the Fifth Watch, stands beside the Bellwright and is talked to the same way he is (`BEYOND` in `src/folk/lines/beyond.js`; his body is the knight flagged `hale` in `src/core/knights.js`).
 
-**Quests.** Thirty-four more (`src/folk/land-quests.js`, every word in `src/folk/lines/land.js`): four that send you out of Bellmourn to the new people, three troubles out in the land given in Bellmourn, the troubles round each small town and the fort (their own lairs, by key), two more in the catacombs, four in the Hollowfang Warrens, four in the Howling Deeps, and Ser Hale's five in Blackvigil Keep, ending with the Castellan. New kinds of step (`src/folk/quests.js`): `enter`, `kill` and `visit` take any of the land's places by its key, a party dungeon by its (`warrens`, `blackvigil`, `deeps`: down inside it) or `lair:<key>`, the ground round a lair; `kill` takes `foe`, the monsters' groups that count; `boss` is done when that dungeon boss dies (the sim's `DELVE.BOSS_DOWN`, handed on in `src/main.js`; one that fell before the quest was taken counts, and is kept in the save as a flag); `bring` takes `at`. The trail leads to a lair's glade, a place, or a dungeon's portal out in the land (`placeSpot`); down in a dungeon it leads nowhere, and the chart does.
+**Quests.** Forty more (`src/folk/land-quests.js`, every word in `src/folk/lines/land.js`): four that send you out of Bellmourn to the new people (every hub is led to by a quest: a `talk` step to its giver, with the trail and the mark across the land), four that pass you on from one person of a hub to the next and end with them (`end: true` on a `talk` step: paid where it's said), four troubles out in the land given in Bellmourn, the troubles round each small town and the fort (their own lairs, by key), two more in the catacombs, four in the Hollowfang Warrens, four in the Howling Deeps, and six in Blackvigil Keep (Sergeant Hasket's to its portal, then Ser Hale's five, ending with the Castellan). New kinds of step (`src/folk/quests.js`): `enter`, `kill` and `visit` take any of the land's places by its key, a party dungeon by its (`warrens`, `blackvigil`, `deeps`: down inside it) or `lair:<key>`, the ground round a lair; `kill` takes `foe`, the monsters' groups that count; `boss` is done when that dungeon boss dies (the sim's `DELVE.BOSS_DOWN`, handed on in `src/main.js`; one that fell before the quest was taken counts, and is kept in the save as a flag); `bring` takes `at`. The trail leads to a lair's glade, a place, or a dungeon's portal out in the land (`placeSpot`); down in a dungeon it leads nowhere, and the chart does.
 
-Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the thirty-four with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, and runs the posted through a day and a night on the town's own brain. Seen in the game: the people at their posts with their marks. Not done: auto-play knows none of this yet (`node tools/autoplay/check.mjs` lists it); nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
+Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the forty with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, runs the posted through a day and a night on the town's own brain, and checks that every posted person, hub and dungeon is where some quest that can be come by from Bellmourn sends you. Seen in the game: the people at their posts with their marks. Not done: auto-play knows none of this yet (`node tools/autoplay/check.mjs` lists it); nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
 
 ### The cathedral and the catacombs
 
@@ -328,7 +340,7 @@ To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) 
 
 The big map is looked about freely. The **wheel** (or a **pinch**, or its + and − buttons, or the + and − keys) brings it nearer and further, from 60 m across to the whole land. A **drag** moves it: with the mouse held by the game, hold the left button and move the mouse (the sword stays still while the map's up, `mapUp` in `src/input.js`). It follows you until you move it; a double click, a double tap, **Home** or the ring button brings it back to you, and when you're off its edge a small arrow on the rim points your way. It has a title (the country, or the place), a scale bar and north.
 
-Under a roof both maps show the place's own chart instead, as Bellmourn's map does below ground: the passages and rooms come out of the dark as you walk them (`src/ui/undermap.js`). There's one chart each for the cathedral and its catacombs, the Hollowfang Warrens and the Test Dungeon, half a metre to a cell, made from the place's own shape: the church's floors and colliders in `interior.json`, the warrens' and the hall's fields. The filling-in runs along the floor from where you stand, 16 m at most, so it stops at walls and you never see into a room you haven't found the way to. Stone is warm near the surface and cold deep down, stairs are banded, a drop is red, doors are gold ticks, and rooms are named once you've stood in them. A new place under a roof wants a `Chart` there and a line in `chartAt`.
+Under a roof both maps show the place's own chart instead, as Bellmourn's map does below ground: the passages and rooms come out of the dark as you walk them (`src/ui/undermap.js`). There's one chart each for the cathedral and its catacombs, each party dungeon (the Hollowfang Warrens, Blackvigil Keep, the Howling Deeps: one for every delve in `DELVES`) and the Test Dungeon, half a metre to a cell, made from the place's own shape: the church's floors and colliders in `interior.json`, the delves' and the hall's fields. The filling-in runs along the floor from where you stand, 16 m at most, so it stops at walls and you never see into a room you haven't found the way to. Stone is warm near the surface and cold deep down, stairs are banded, a drop is red, doors are gold ticks, and rooms are named once you've stood in them. A new place under a roof wants a `Chart` there and a line in `chartAt`.
 
 Velscour's Skull (beside the corner map with the mouse free, or the `` ` `` key) takes a second word: **Jamie**, in any case.
 It wakes the **Auto** button under the skull, taken from Velscour (`assets/ui/btn_auto.webp`, and its blue glow from
@@ -682,7 +694,8 @@ ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is
 
 ### The Hollowfang Warrens
 
-The first party dungeon (`src/core/dungeon.js`, `src/sim/dungeon.js`): a cave system the kobolds dug and the goblins took,
+The first party dungeon of three (`src/core/dungeon.js`, `src/sim/dungeon.js`; the others are "Blackvigil Keep" and "The
+Howling Deeps", below, and "Party dungeons: one engine" says how the three share the code): a cave system the kobolds dug and the goblins took,
 with Venomaw, the green dragon, asleep on her hoard at the bottom. Its portal stands in a heap of rock in the woods
 north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. Its terrace is dug into the hillside, and
 you can walk onto it from every side but the wall's: a wide flight of sixteen steps comes down its front to meet the hill
@@ -695,11 +708,22 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   shape is nine rooms and the tunnels between them (`ROOMS`, `TUNNELS`, `PILLARS`), made into one field of how far each
   point is from the rock. The sim walks against that field (`src/sim/world.js`), monsters and the party find their way by
   a flow field of its own (`CaveNav`), and its walls, floor, roof, stalagmites and torches are built from it with the
-  world's places (`cave` in `src/core/sites.js`), lit by its fires: about a hundred wall torches (one every seven
+  world's places (`caveShell` in `src/core/delve-build.js`), lit by its fires: about a hundred wall torches (one every seven
   metres round a room, every six down a tunnel) and thirty-odd braziers on posts round the bigger rooms (`torches`,
   `braziers` in `src/core/dungeon.js`). Down there a frame lights the thirty nearest of them (two and a half times the
   tier's count; a phone keeps its two), and a frame's lamps went from 28 to 36 for it (`MAX_LIT` in
   `src/gfx/shaders.js`).
+- **What's in the rooms.** Each has what its name promises (`src/core/delve-warrens.js`, drawn by `PROPS` in
+  `src/core/delve-build.js`): the Diggings their shoring, carts on rails, picks and spoil heaps; the Tallow Pit three
+  vats, the pit itself with a skin on it, candles on every ledge; Grubnash's Dig props at his diggers' holes and what they
+  threw out; the Warren hide tents and a seep of water; the Feasting Hall tables, a carcass on a spit over a fire that
+  lights the room, barrels; the Twin Thrones two seats of piled stone with backs of bone, a different cloth on each; the
+  Bone Stair long bones laid as steps down the tunnel and heaps of them below; Venomaw's Hoard gold either side of her
+  perch and along the back wall, clutches of eggs, the bones of who came before. Stalactites hang from every roof, longer
+  where it's high; where roof and floor are near enough a column stands; eight blind niches are cut off the rooms; and
+  five rooms have a rock of their own, some with a seam of another through it (`rock`, `seam` in `ROOMS`). Only the vats,
+  the feast's two tables and the two thrones are solid, all at their rooms' edges: the floors the fights use and the ways
+  auto-play walks are as they were.
 - **The packs.** Five rooms of kobolds and goblins, which wake as you come into them and stay dead till the Warrens reset.
   They're a party's work, not one wizard's: each has sixteen times the life of its cousin in the woods and hits two and a
   half times as hard (`PACK_TOUGH` in `src/core/dungeon.js`), and between its blows it plays its kind's tricks: a kobold
@@ -749,10 +773,13 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
 - **The bosses** are bigger, recoloured copies of the rank and file (`VARIANTS` in `src/core/tripo-monsters.js`): the same
   models and clips, a height and a palette of their own.
 
-`node tools/dungeon/check.mjs` walks it: every room reachable from the way in, every pack's and boss's room in the open, the
-portals clear of the rock, the roofs high enough and under the line the shaders call underground.
+`node tools/dungeon/check.mjs` walks it, and the other two: every room reachable from the way in, every pack's and boss's
+place in the open, the portals clear of the rock, the roofs high enough and under the line the shaders call underground,
+no delve inside another's box or under the land, every prop a kind the builder knows, every move a deck names and every
+call a fight makes there to be made, and how many triangles each delve costs.
 
-`node tools/dungeon/fight.mjs` plays the fights out, with no page and no GPU: the sim booted in Node as its worker boots
+`node tools/dungeon/fight.mjs` plays the fights out, with no page and no GPU (`fight.mjs warrens` for these; with nothing
+named it plays all three delves, a process each; a boss's or a pack's key plays that one): the sim booted in Node as its worker boots
 it, a level 8 party hired (lancer, paladin, archer, rogue), and a player who shoots Firebolt at what the party's on, walks
 out of whatever's marked, steps across the way of shots and jumps the rings. `--slow` has that player see each mark and
 shot half a second late, as a person does; `--still` never moves. It fails on an error in a tick or a shape with a bad
@@ -870,6 +897,40 @@ Known limits: it has been driven through by a script in headless Chromium on a s
 coming back through the door; back to the title and a new game), not played by hand, and nobody has heard it. The monsters'
 models come in as they're summoned, so the first summoning of a kind waits a moment for them. The Keeper is one more of the
 Company's bodies, loaded with the rest whenever the other Tessariels are on.
+
+### Velscour's knights told apart, the possessed knights, and Ser Hale
+
+Models made from models, with no Blender: `tools/monsters/meshkit.py` reads a one-piece skinned glb into arrays, cuts it
+(by a plane, a bone's weights, any number per corner), joins pieces, poses it by one of its clips, draws it to a picture
+and writes it back over the same skeleton and clips.
+
+- **Nine knights where there were three** (`python tools/monsters/knight_variants.py`, `--look DIR` for pictures). On
+  the first knight: `velscour_knight_3` (hornless, the cloak cut to a ragged mantle, blued plate, a little rust, tall)
+  and `velscour_knight_4` (long horns, big shoulders, bloodied). On the second: `velscour_knight_5` (hornless but for
+  the helm's own spike, a charred black cloak, heavy rust, tall) and `velscour_knight_6` (stub horns, a short oxblood
+  mantle, dark plate, small shoulders). On the lancer: `velscour_lancer_2` (the crown cut off for a tail of red
+  horsehair, a short cloak, a warm temper) and `velscour_lancer_3` (a taller crown, a black cloak, rust and blood).
+  Rust and blood are laid by where on the body a bit of the sheet is, not where on the sheet, so they run across its
+  scraps. Three palettes for them besides: `Sable`, `Oxblood`, `Rust` (`palettes.json`).
+- **The possessed knights** (`python tools/monsters/possessed_knights.py`): `possessed_knight_1` and `_2` (the two
+  swordsmen with the possessed men's heads) and `possessed_knight_3` (the lancer with a possessed woman's). The helm is
+  cut off where the head bone takes over, which leaves its bevor and collar as a gorget; the villager's head is cut
+  through the neck, sized up an eighth and hung wholly off the knight's head bone; its colour map goes in the empty
+  corner of the knight's sheet with the purple of the possession turned red. Blackvigil's bosses are these, drawn
+  bigger (`VARIANTS`).
+- **Their eyes glow.** A small disc before each eye is marked in the alpha of the model's metal/rough map, and the body
+  shader (`ARMOR` in `src/gfx/materials.js`) adds a fixed red wherever that alpha isn't whole, bright enough to bloom.
+  Every other body's map has no alpha (all 676 were checked), so it costs them one multiply and lights nothing. The
+  red is the shader's, so a palette can't wash it out.
+- **Ser Hale Orrowick, Paladin of the Fifth Watch** (`python tools/knights/fifthwatch.py`,
+  `assets/game/knights/paladin_fifthwatch.glb`): a lancer's body whole (blue steel and gilt), a paladin's lion pauldrons
+  and white cloak moved from that body's bones onto this one's, no helm, and a villager's head (`old_man`) on the head
+  bone, the mail coif cut down to a collar. Three sheets on one, a quarter each; the head's quarter of the metal map
+  is no metal, or the skin would go black. He's a town knight flagged `hale` (`src/core/knights.js`), on the other
+  side of the tower's door from the Bellwright.
+
+A new id is a line in `roster.json` (the scripts write it, copied from the knight it's made on, so every clip and weapon
+is his) and nothing else: the Test Dungeon's book reads the roster.
 
 ### Swords, gems and the pack
 

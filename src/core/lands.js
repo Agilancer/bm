@@ -99,7 +99,7 @@ export const SITE_KEYS = Object.keys(SITES);
 export const ROUTES = [
   // East: on past the church and over the open land to the Downs, the farm, the hamlet and the falls; a spur up Bell Knoll.
   { name: 'the Hill Road', w: 3, pts: [[300, 10], [560, 40], [900, 30], [1250, 90], [1500, 130], [1720, 150], [1900, 60], [2040, 0], [2300, -60], [2480, -110]] },
-  { name: 'the Knoll Path', w: 1.8, pts: [[2300, -60], [2360, -240], [2420, -420], [2440, -490]] },
+  { name: 'the Knoll Path', w: 1.8, pts: [[2300, -60], [2360, -240], [2420, -420], [2440, -490], [2440, -521]] },
   { name: 'the Mill Lane', w: 1.6, pts: [[1720, 150], [1780, 260], [1840, 340]] },
   // West: the Vigil Road, out of the west gate, south of the hill, through the Ashen Waste to Velscour's keep.
   { name: 'the Vigil Road', w: 3.4, pts: [[-70, -2], [-300, -40], [-800, -120], [-1400, -60], [-2100, -200], [-2900, -420], [-3700, -650], [-4300, -300], [-4780, 120]] },
@@ -117,6 +117,12 @@ export const ROUTES = [
   { name: 'the Abbey Road', w: 2.2, pts: [[1500, 130], [2000, -700], [2900, -1700], [3600, -2400], [3900, -2800]] },
   // Out of Frostwatch's gate and round the fell to the Howling Mouth.
   { name: 'the Deeps Path', w: 1.6, pts: [[700, 3930], [760, 3962], [820, 3982], [866, 3990]] },
+  // And on from it over the fell to Ravens' Tor.
+  { name: 'the Tor Path', w: 1.4, pts: [[820, 3982], [1000, 4150], [1250, 4420], [1470, 4585]] },
+  // Off the Fen Way along what's left of the old causeway; off the Hill Road up to the Cairnfield; off the Vigil Road to the mill.
+  { name: 'the Sunken Mile', w: 1.6, pts: [[-150, -2640], [-260, -2690], [-378, -2700]] },
+  { name: 'the Cairn Path', w: 1.4, pts: [[1250, 90], [1210, -150], [1240, -372]] },
+  { name: 'the Mill Track', w: 1.6, pts: [[-3020, -453], [-3100, -700], [-3135, -962]] },
 ];
 for (const r of ROUTES) {
   r.x0 = Math.min(...r.pts.map((p) => p[0])) - r.w - 40; r.x1 = Math.max(...r.pts.map((p) => p[0])) + r.w + 40;

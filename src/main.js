@@ -520,7 +520,8 @@ async function boot(plan, poolSize) {
       opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
       closed: () => { input.menu = false; resume(); },
       click: () => title.chime?.(),
-      cleared: () => { giveXp?.(1500); pack.gold += 250; hud.tip('The Free Company pays out 250 gold for the Warrens, and the tale is worth more.', 5); autosave(); },
+      // (Each delve pays its own: src/core/dungeon.js DELVES' pay. The Warrens 1,500 xp and 250 gold, the Deeps and the keep more.)
+      cleared: (d) => { const pay = d?.pay || { xp: 1500, gold: 250 }; giveXp?.(pay.xp); pack.gold += pay.gold; hud.tip(`The Free Company pays out ${pay.gold} gold for ${d?.short || 'the Warrens'}, and the tale is worth more.`, 5); autosave(); },
     });
     addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
   }
@@ -1837,6 +1838,8 @@ class GameView {
       },
       // Your party and the Hollowfang Warrens, for tests: hire(n) takes the first n offered (a tank and a healer first);
       // warrens('enter' | 'boss', { n }) goes straight in, or to the nth boss's door; warrens('hurt', { n, frac }).
+      // (Any delve: warrens('enter', { delve: 'blackvigil' | 'deeps' }), warrens('boss', { boss: 'maldrec' }),
+      // warrens('room', { room: 'bv_hall' }) to a room's middle. src/sim/dungeon.js debug)
       hire: (n = 4) => { const P = view.party; if (!P) return []; P.makeOffers(); const by = (r) => P.offers.filter((o) => (o.cls === 'lancer') === (r === 'tank') && (o.cls === 'paladin') === (r === 'heal'));
         for (const o of [...by('tank').slice(0, 1), ...by('heal').slice(0, 1), ...by('dps')].slice(0, n)) P.hire(o, true); return P.members; },
       warrens: (cmd = 'enter', o = {}) => sim.postMessage({ type: 'warrensDebug', cmd, ...o }),

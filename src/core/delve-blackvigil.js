@@ -180,9 +180,9 @@ const packs = [
 // The bosses. models: src/core/tripo-monsters.js VARIANTS (the possessed knights' bodies as they're made, the plain knights'
 // till then). names: each body's own, where there are two.
 const bosses = [
-  { key: 'maldrec', room: 'bv_innergate', name: 'Ser Maldrec the Hollow, Warden of the Gate', models: ['bv_maldrec'], pal: ['Base'], hp: 7400, damage: 78, reach: 3.2, loot: 8 },
-  { key: 'sorvane', room: 'bv_sanctum', name: 'Magister Sorvane', models: ['bv_sorvane'], pal: ['Abyssal'], hp: 6400, damage: 40, reach: 2.4, loot: 8 },
-  { key: 'brothers', room: 'bv_court', name: 'The Hollow Brothers', names: ['Ser Garrow', 'Ser Gault'], models: ['bv_garrow', 'bv_gault'], pal: ['Base'], hp: 4700, damage: 58, reach: 3.0, loot: 8 },
+  { key: 'maldrec', room: 'bv_innergate', name: 'Ser Maldrec the Hollow, Warden of the Gate', models: ['bv_maldrec'], pal: ['Base'], hp: 7400, damage: 88, reach: 3.2, loot: 8 },
+  { key: 'sorvane', room: 'bv_sanctum', name: 'Magister Sorvane', models: ['bv_sorvane'], pal: ['Abyssal'], hp: 6400, damage: 46, reach: 2.4, loot: 8 },
+  { key: 'brothers', room: 'bv_court', name: 'The Hollow Brothers', names: ['Ser Garrow', 'Ser Gault'], models: ['bv_garrow', 'bv_gault'], pal: ['Base'], hp: 4700, damage: 66, reach: 3.0, loot: 8 },
   { key: 'castellan', room: 'bv_throne', name: 'The Castellan of Blackvigil', models: ['bv_castellan'], pal: ['Infernal'], hp: 12500, damage: 92, reach: 3.8, loot: 0 },
 ];
 
@@ -242,7 +242,7 @@ export const BLACKVIGIL = {
   entry: { x: 0, z: 2.5, yaw: Math.PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: -92, z: -257.4 },
   // Before the keep's gate on the Vigil Road, facing east down it (SITES.keep is at -5000, 200; its gate 70 m east of that).
   portal: { x: -4914, z: 200, yaw: Math.PI / 2, r: 2.2 },
-  last: 'castellan', tough: { hp: 5, damage: 1.5 }, pay: { xp: 4200, gold: 700 },
+  last: 'castellan', tough: { hp: 5, damage: 1.35 }, pay: { xp: 4200, gold: 700 },
   look: { wall: 'dark:stone', floor: 'stone', roof: 'dark:rubble', flame: 'dark:flame', light: [1, 0.36, 0.14], fire: [1, 0.4, 0.16], every: 10, high: 3 },
   words: { enter: 'Blackvigil Keep. His knights hold every hall of it, and his sorcerers the galleries.', clear: 'Blackvigil Keep is cleared. The Castellan is dead!', wipe: 'Your party falls... and wakes inside the gate.' },
 };

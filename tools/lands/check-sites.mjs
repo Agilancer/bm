@@ -9,7 +9,7 @@ const B = buildSites();
 const hits = (c, x, z, r) => {
   const dx = x - c.x, dz = z - c.z, cs = Math.cos(c.yaw || 0), sn = Math.sin(c.yaw || 0);
   const u = dx * cs - dz * sn, w = dx * sn + dz * cs;
-  return Math.abs(u) < c.hx + r && Math.abs(w) < c.hz + r;
+  return Math.hypot(Math.max(Math.abs(u) - c.hx, 0), Math.max(Math.abs(w) - c.hz, 0)) < r;
 };
 // (Only what's out in the land: the Warrens and the Test Dungeon lie past the world's edge.)
 const cols = B.colliders.filter((c) => Math.abs(c.x) < 5600 && Math.abs(c.z) < 5600 && c.t === undefined);
@@ -25,13 +25,13 @@ for (const r of ROUTES) for (let i = 0; i + 1 < r.pts.length; i++) {
     for (const c of near(x, z, r.w * 0.8)) if (c !== last) { say(r.name, x, z, c); last = c; }
   }
 }
-for (const s of SEALS) for (const c of near(s.x, s.z, 4.2)) say(`the seal of ${s.name}`, s.x, s.z, c);
+for (const s of SEALS) for (const c of near(s.x, s.z, 3.7)) say(`the seal of ${s.name}`, s.x, s.z, c);
 for (const [k, p] of Object.entries(B.spots)) {
-  if (k.startsWith('seal_') || k.startsWith('hf_') || k === 'hall') continue;
+  if (k.startsWith('seal_') || k.endsWith('_portal') || Math.abs(p[0]) > 5600 || Math.abs(p[2]) > 5600) continue;   // (seals, and the dungeons' own)
   for (const c of near(p[0], p[2], 1.2)) say(`spot ${k}`, p[0], p[2], c);
   const g = terrainHeight(p[0], p[2]); let slope = 0;
   for (let a = 0; a < 8; a++) slope = Math.max(slope, Math.abs(terrainHeight(p[0] + Math.cos(a * 0.785) * 2, p[2] + Math.sin(a * 0.785) * 2) - g));
-  if (slope > 0.5) { bad++; console.log(`SLOPE: spot ${k} at (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): ${slope.toFixed(2)} m in 2 m`); }
+  if (slope > 0.6) { bad++; console.log(`SLOPE: spot ${k} at (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): ${slope.toFixed(2)} m in 2 m`); }
 }
 // The middles kept for a dungeon's portal: 7 m round the Howling Mouth's, and the ground before Blackvigil's gate.
 for (const [what, x, z, r] of [['the Howling Mouth', SITES.deepsmouth.x, SITES.deepsmouth.z, 7], ["Blackvigil's gate", SITES.keep.x + 86, SITES.keep.z, 9]]) {

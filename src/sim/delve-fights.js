@@ -70,9 +70,9 @@ export const FIGHTS = {
         P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: m.yaw, r: 9, half: 1.05, fuse: 1.5, dmg: K(m, 0.9), knock: 5, life: 3.4, dps: K(m, 0.8), elem: DRAIN, from: m, tag: 'shield', spare: (b) => b === tank });
       } },
       charge: { who: 'far', clip: null, warn: 'mal_charge', go: (W, f, m, t, P) => MOVES.ram(P, m, t, K(m, 0.5), { r: 20, w: 1.5, elem: DRAIN }) },
-      cleave: { clip: 'atk2', secs: 1.4, warn: 'mal_cleave', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.1)) },
+      cleave: { clip: 'atk2', secs: 1.4, warn: 'mal_cleave', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.25)) },
       quake: { who: 'none', clip: 'jump', at: 0.5, secs: 1.4, warn: 'mal_quake', go: (W, f, m, t, P) => MOVES.quakeWave(P, m, null, K(m, 0.42), { reach: 24, speed: 10, elem: DRAIN }) },
-      lances: { clip: 'atk1', secs: 1.3, warn: 'mal_lances', go: (W, f, m, t, P) => lances(P, m, t, K(m, 0.85)) },
+      lances: { clip: 'atk1', secs: 1.3, warn: 'mal_lances', go: (W, f, m, t, P) => lances(P, m, t, K(m, 1.0)) },
     },
     // Behind him while the shield's set, for those who aren't holding him.
     stance(W, f, h, m) {
@@ -197,20 +197,20 @@ export const FIGHTS = {
     open: 'cas_open', pace: [4.4, 3.3, 0.3], turn: [22, 5], enrage: [330, 3, 'cas_enrage'],
     deck: (f) => (f.phase >= 2 ? ['cleave', 'charge', 'stamp', 'lances', 'eyes', 'rain', 'wall'] : ['cleave', 'charge', 'stamp', 'lances', 'wall']),
     moves: {
-      cleave: { clip: 'atk2', secs: 1.4, warn: 'cas_cleave', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.15), { r: 10, half: 1.1 }) },
+      cleave: { clip: 'atk2', secs: 1.4, warn: 'cas_cleave', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.4), { r: 10, half: 1.1 }) },
       charge: { who: 'far', clip: null, warn: 'cas_charge', go: (W, f, m, t, P) => MOVES.ram(P, m, t, K(m, 0.5), { r: 24, w: 1.8, elem: DRAIN }) },
-      stamp: { who: 'none', clip: 'jump', secs: 1.6, warn: 'cas_stamp', go: (W, f, m, t, P) => MOVES.stompRings(P, m, null, K(m, 0.6), { r: 5.5, elem: DRAIN }) },
-      lances: { clip: 'atk1', secs: 1.3, warn: 'cas_lances', go: (W, f, m, t, P) => lances(P, m, t, K(m, 0.85), { r: 22 }) },
+      stamp: { who: 'none', clip: 'jump', secs: 1.6, warn: 'cas_stamp', go: (W, f, m, t, P) => MOVES.stompRings(P, m, null, K(m, 0.75), { r: 5.5, elem: DRAIN }) },
+      lances: { clip: 'atk1', secs: 1.3, warn: 'cas_lances', go: (W, f, m, t, P) => lances(P, m, t, K(m, 1.1), { r: 22 }) },
       wall: { clip: 'bash', at: 0.45, secs: 1.3, warn: 'cas_wall', go: (W, f, m, t, P) => MOVES.boltWall(P, m, t, K(m, 0.38), { width: 20, n: 12, speed: 7.5, elem: DRAIN }) },
       eyes: { who: 'none', clip: 'roar', at: 0.5, secs: 1.5, warn: 'cas_dark', go(W, f, m, t, P) {
         // Red eyes out of the dark at the room's edge: pairs of slow lights that come after you.
         const room = roomOf(f.boss.room), [rx, , rz] = roomSpot(room.id);
         for (const b of W.others().slice(0, 3)) {
           const a = Math.random() * TAU, x = rx + Math.sin(a) * room.r * 0.85, z = rz + Math.cos(a) * room.r * 0.85, y = W.sim.world.height(x, z) + 2.2;
-          for (const o of [-0.25, 0.25]) P.shot({ x: x + Math.cos(a) * o, y, z: z - Math.sin(a) * o, at: b, speed: 5.2, dmg: K(m, 0.55), elem: DRAIN, size: 0.2, life: 7, home: 2.4, homeFor: 5.5, from: m, tag: 'eyes' });
+          for (const o of [-0.25, 0.25]) P.shot({ x: x + Math.cos(a) * o, y, z: z - Math.sin(a) * o, at: b, speed: 5.2, dmg: K(m, 0.7), elem: DRAIN, size: 0.2, life: 7, home: 2.4, homeFor: 5.5, from: m, tag: 'eyes' });
         }
       } },
-      rain: { clip: 'roar', secs: 1.4, warn: 'cas_rain', go: (W, f, m, t, P) => P.rain(t.x, t.z, 12, 11, 3, { r: 2.5, fuse: 1.4, dmg: K(m, 0.6), elem: FIRE, tag: 'embers' }) },
+      rain: { clip: 'roar', secs: 1.4, warn: 'cas_rain', go: (W, f, m, t, P) => P.rain(t.x, t.z, 12, 11, 3, { r: 2.5, fuse: 1.4, dmg: K(m, 0.85), elem: FIRE, tag: 'embers' }) },
     },
     step(W, f, [m], dt) {
       if (!m) return;
@@ -233,7 +233,7 @@ export const FIGHTS = {
         const n = 7, x0 = d.x + room.x - room.hx, x1 = d.x + room.x + room.hx;
         for (let i = f.row % 2; i < n; i += 2) {
           const z = d.z + room.z + ((i + 0.5) / n * 2 - 1) * (room.hz - 2.5), left = (i + f.row) % 4 < 2;
-          P.mark({ shape: 'line', x: left ? x0 : x1, z, yaw: left ? Math.PI / 2 : -Math.PI / 2, r: room.hx * 2, w: 1.5, fuse: 2, dmg: K(m, 0.95), life: 4.6, dps: K(m, 0.55), elem: FIRE, tag: 'banner' });
+          P.mark({ shape: 'line', x: left ? x0 : x1, z, yaw: left ? Math.PI / 2 : -Math.PI / 2, r: room.hx * 2, w: 1.5, fuse: 2, dmg: K(m, 1.3), life: 4.6, dps: K(m, 0.8), elem: FIRE, tag: 'banner' });
         }
         f.row++;
       }
@@ -302,13 +302,13 @@ export const FIGHTS = {
     setUp(W, m) { m.opts.radius = 1.2; },
     moves: {
       // A crack right across the lake, through one of you; it stays open and bites what crosses it.
-      crack: { clip: 'atk3', secs: 1.3, warn: 'slp_crack', go: (W, f, m, t, P) => P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t), r: 30, w: 1.2, fuse: 1.15, dmg: K(m, 1.1), knock: 3, life: 9, touch: K(m, 0.5), again: 1, elem: FROST, from: m, aim: t, lock: 0.5, tag: 'crack' }) },
+      crack: { clip: 'atk3', secs: 1.3, warn: 'slp_crack', go: (W, f, m, t, P) => P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t), r: 30, w: 1.2, fuse: 1.15, dmg: K(m, 0.95), knock: 3, life: 9, touch: K(m, 0.4), again: 1, elem: FROST, from: m, aim: t, lock: 0.5, tag: 'crack' }) },
       cracks: { who: 'none', clip: 'jump', secs: 1.5, warn: 'slp_crack', go(W, f, m, t, P) { const a = Math.random() * TAU; for (let i = 0; i < 5; i++) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: a + i * TAU / 5, r: 28, w: 1.1, fuse: 1.4, dmg: K(m, 1.0), knock: 3, life: 7, touch: K(m, 0.45), again: 1, elem: FROST, from: m, tag: 'crack' }); } },
       dark: { clip: 'atk2', at: 0.45, secs: 1.3, warn: 'slp_dark', go: (W, f, m, t, P) => MOVES.seekers(P, m, t, K(m, 0.45), { n: 4, elem: VOID }) },
       rings: { clip: 'atk4', secs: 1.3, warn: 'slp_rings', go: (W, f, m, t, P) => { for (const b of new Set([t, W.farthest(m)])) MOVES.frostRings(P, m, b, K(m, 0.6)); } },
-      fall: { who: 'none', clip: 'roar', secs: 1.3, warn: 'slp_fall', go: (W, f, m, t, P) => fall(W, P, m, K(m, 0.9), FROST, 'icefall') },
+      fall: { who: 'none', clip: 'roar', secs: 1.3, warn: 'slp_fall', go: (W, f, m, t, P) => fall(W, P, m, K(m, 0.8), FROST, 'icefall') },
       // A wail: a wide ring round it, with a still place close in against it.
-      wail: { who: 'none', clip: 'roar', secs: 1.5, warn: 'slp_wail', go: (W, f, m, t, P) => P.mark({ shape: 'ring', x: m.x, z: m.z, r: 13, r0: 3.6, fuse: 1.4, dmg: K(m, 1.3), elem: SPIRIT, from: m, tag: 'wail' }) },
+      wail: { who: 'none', clip: 'roar', secs: 1.5, warn: 'slp_wail', go: (W, f, m, t, P) => P.mark({ shape: 'ring', x: m.x, z: m.z, r: 13, r0: 3.6, fuse: 1.5, dmg: K(m, 1.1), elem: SPIRIT, from: m, tag: 'wail' }) },
     },
     step(W, f, [m], dt) {
       if (!m) return;
@@ -327,7 +327,7 @@ export const FIGHTS = {
       u.t -= dt;
       if (!u.spot && u.t <= 0) {
         const t = W.mark() || sim.player;
-        u.spot = P.mark({ x: t.x, z: t.z, r: 6.5, fuse: 2.2, dmg: K(m, 1.4), knock: 6, elem: FROST, follow: t, lock: 0.55, from: m, tag: 'breach',
+        u.spot = P.mark({ x: t.x, z: t.z, r: 6.5, fuse: 2.4, dmg: K(m, 1.2), knock: 6, elem: FROST, follow: t, lock: 0.5, from: m, tag: 'breach',
           then: (q) => { P.wave(q.x, q.z, { speed: 11, reach: 24, touch: K(m, 0.55), knock: 3, elem: FROST, r: 6.5, tag: 'breachWave' }); u.landed = true; } });
       }
       if (u.spot && u.landed) {

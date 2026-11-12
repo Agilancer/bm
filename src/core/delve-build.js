@@ -515,7 +515,7 @@ const PROPS = {
     if (d.look.cold) for (let k = 0; k < 6; k++) { const a = k * TAU / 6; rod(K, 'white', x, y + 0.6 * s, z, x + Math.cos(a) * 1.6 * s, y + 0.02, z + Math.sin(a) * 1.6 * s, 0.012); }
   },
   // Water lying where the floor's low.
-  pool(K, d, p, x, y, z) { K.disc('lake', x, y + (p.up ?? 0.03), z, p.r, 14); },
+  pool(K, d, p, x, y, z) { K.disc(p.layer || 'lake', x, y + (p.up ?? 0.05), z, p.r, 14); },
 
   // ---- the Deeps ----
   drift(K, d, p, x, y, z) {
@@ -597,8 +597,9 @@ export const PROP_KINDS = Object.keys(PROPS);
 
 // portalWall: src/core/sites.js's, for the two portals inside each (the way back out by the way in, and the way out past
 // its last boss), each with its back to the rock at the edge of its room, facing into it.
-export function buildDelves(K, portalWall) {
-  for (const d of DELVES) {
+// (only: just these delves, for tools/dungeon/check.mjs to count each one's triangles.)
+export function buildDelves(K, portalWall, only = DELVES) {
+  for (const d of only) {
     if (d.style === 'castle') castleShell(K, d); else caveShell(K, d);
     fires(K, d);
     for (const p of d.props) {

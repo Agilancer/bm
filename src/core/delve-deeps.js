@@ -96,7 +96,7 @@ const packs = [
 const bosses = [
   { key: 'hrymgar', room: 'hd_ramshall', name: 'Hrymgar the Goat-King', models: ['hd_hrymgar'], pal: ['Bone-white'], hp: 5400, damage: 62, reach: 3.2, loot: 8 },
   { key: 'broodmother', room: 'hd_brood', name: 'The Brood Mother', models: ['hd_broodmother'], pal: ['Bone-white'], hp: 6000, damage: 52, reach: 3.6, loot: 8 },
-  { key: 'sleeper', room: 'hd_lake', name: 'The Sleeper Under the Ice', models: ['hd_sleeper'], pal: ['Abyssal'], hp: 9000, damage: 76, reach: 4.2, loot: 0 },
+  { key: 'sleeper', room: 'hd_lake', name: 'The Sleeper Under the Ice', models: ['hd_sleeper'], pal: ['Abyssal'], hp: 9000, damage: 70, reach: 4.2, loot: 0 },
 ];
 const warnings = {
   hry_charge: 'Hrymgar lowers his horns: he is coming down the line!',

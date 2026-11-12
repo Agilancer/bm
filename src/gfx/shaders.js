@@ -1,6 +1,6 @@
 // WGSL shared by the world's pipelines: the frame block, lighting, shadows, fog.
 import { CHURCH_X, CHURCH_Z, SEXTON } from '../core/church.js';
-import { DUNGEON_BOX } from '../core/dungeon.js';
+import { DELVES } from '../core/dungeon.js';
 import { HALL_BOX } from '../core/testhall.js';
 
 const f32 = (v) => v.toFixed(2);   // (a number into WGSL, as a float)
@@ -185,8 +185,9 @@ fn inHome(p: vec3f, x: f32, z: f32, hx: f32, hz: f32, jx: f32, jz: f32, y1: f32,
 }
 
 fn indoorAt(p: vec3f) -> f32 {
-  // The Hollowfang Warrens, out past the world's edge and deep under it (src/core/dungeon.js).
-  if (p.x > ${f32(DUNGEON_BOX.x0)} && p.x < ${f32(DUNGEON_BOX.x1)} && p.z > ${f32(DUNGEON_BOX.z0)} && p.z < ${f32(DUNGEON_BOX.z1)} && p.y < -20.0) { return 2.0; }
+  // The party dungeons, out past the world's edge and deep under it (src/core/dungeon.js DELVES): the Hollowfang Warrens,
+  // Blackvigil Keep, the Howling Deeps.
+${DELVES.map((d) => `  if (p.x > ${f32(d.box.x0)} && p.x < ${f32(d.box.x1)} && p.z > ${f32(d.box.z0)} && p.z < ${f32(d.box.z1)} && p.y < -20.0) { return 2.0; }`).join('\n')}
   // The Test Dungeon, out past the other edge and as deep (src/core/testhall.js).
   if (p.x > ${f32(HALL_BOX.x0)} && p.x < ${f32(HALL_BOX.x1)} && p.z > ${f32(HALL_BOX.z0)} && p.z < ${f32(HALL_BOX.z1)} && p.y < ${f32(HALL_BOX.y1)}) { return 3.0; }
   if (p.x < ${f32(CHURCH_X + 65.9)}) {

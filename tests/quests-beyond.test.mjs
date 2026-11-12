@@ -59,7 +59,9 @@ test('everyone, every place, lair, monster and boss a quest names is there', () 
     if (PEOPLE.some((p) => p.id === q.giver)) assert.ok(GIVERS.includes(q.giver), `${id}: ${q.giver} gives no work in Bellmourn`);
     if (R.needs) assert.ok(RULES[R.needs], `${id} needs ${R.needs}`);
     for (const who of Object.keys(q.others || {})) assert.ok(WHO.has(who), `${id}: ${who} has a line and isn't anyone`);
-    assert.equal(R.steps.at(-1).back || R.steps.at(-1).bring ? true : false, true, `${id} doesn't end at its giver`);
+    const end = R.steps.at(-1);
+    assert.ok(end.back || end.bring || (end.talk && end.end), `${id} ends with nobody`);
+    for (const st of R.steps.slice(0, -1)) assert.ok(!st.end, `${id}: an end before the end`);
     for (const st of R.steps) {
       for (const k of [st.enter, st.kill, st.at, ...(st.visit || [])].filter(Boolean)) {
         assert.ok(hasArea(k), `${id}: no such place ${k}`);
@@ -143,7 +145,8 @@ test('each can be taken, walked through as the game reports it, and handed in', 
         Q.boss(st.boss);
       } else if (st.talk) {
         assert.equal(Q.mark(st.talk, {}, 0), 'ready', `${id}: no ? over ${st.talk}`);
-        Q.advance(id);   // (said, in the panel: src/ui/folk.js stepTalk)
+        if (st.end) { Q.finish(id); assert.ok(Q.done(id)); continue; }   // (said, and paid there: src/ui/folk.js stepTalk)
+        Q.advance(id);   // (said, in the panel)
       } else if (st.bring) {
         assert.equal(Q.mark(q.giver, { [st.bring]: st.n - 1 }, 0), 'busy', id);
         assert.equal(Q.mark(q.giver, { [st.bring]: st.n }, 0), 'ready', id);
@@ -152,6 +155,7 @@ test('each can be taken, walked through as the game reports it, and handed in', 
       }
       if (!st.back && !st.bring) assert.equal(Q.state(id).step, k + 1, `${id}: step ${k} (${Object.keys(st)[0]}) didn't finish`);
     }
+    if (R.steps.at(-1).end) continue;
     // Saved and loaded at the last step, it holds; then handed in.
     const S = book(); S.load(structuredClone(Q.save()));
     assert.deepEqual(S.state(id), Q.state(id), id);
@@ -285,4 +289,37 @@ test('a day and a night at their posts: they stand where they were put, turn to 
   for (let k = 0; k < 200; k++) life.update(dt, { hour: 10.1, day: 1, player: [0, 0, 0], dangers: [] });
   assert.ok(Math.abs(Math.atan2(Math.sin(who.yaw - who.p.face), Math.cos(who.yaw - who.p.face))) < 0.1, 'he has turned back');
   assert.equal(who.look, null);
+});
+
+test('every hub is led to: a quest from somewhere you already are sends you to each posted person, each hub and each dungeon', () => {
+  // What can be come by starting from Bellmourn's own givers: a quest is open when its giver is one of the town's or someone
+  // an open quest has already sent you to speak to, and whatever it needs is open too.
+  const town = new Set(PEOPLE.map((p) => p.id)), met = new Set(), open = new Set();
+  for (let round = 0; round < 12; round++) {
+    for (const id of Object.keys(RULES)) {
+      if (open.has(id) || !QUESTS[id]) continue;
+      const g = QUESTS[id].giver;
+      if (!(town.has(g) || g === 'lisandra' || met.has(g)) || (RULES[id].needs && !open.has(RULES[id].needs))) continue;
+      open.add(id);
+      for (const st of RULES[id].steps) if (st.talk) met.add(st.talk);
+    }
+  }
+  for (const id of IDS) assert.ok(open.has(id), `${id} can't be come by from Bellmourn`);
+  const steps = [...open].flatMap((id) => RULES[id].steps.map((st) => [id, st]));
+  // Each person out in the land is someone a quest sends you to speak to.
+  for (const p of [...POSTED, ...BEYOND]) assert.ok(steps.some(([, st]) => st.talk === p.id), `no quest leads to ${p.id}`);
+  // The first way to each hub is on offer early in Bellmourn: nothing in front of it but one of the starter quests.
+  const hubs = { thornwick: 'osric', cinderford: 'hasket', frostwatch: 'garrick', belltower: 'hale' };
+  for (const [site, who] of Object.entries(hubs)) {
+    const first = [...open].filter((id) => town.has(QUESTS[id].giver) && RULES[id].steps.some((st) => st.enter === site) && RULES[id].steps.some((st) => st.talk === who));
+    assert.ok(first.length, `nothing in Bellmourn sends you to ${site}`);
+    assert.ok(first.some((id) => !RULES[id].needs || !RULES[RULES[id].needs].needs), `${site}: a long chain before its first quest`);
+  }
+  // The lesser places with work at them, and each dungeon, are where some step sends you.
+  for (const k of ['wayhouse', 'oldtoll', 'quarry', 'cairnfield', 'causeway', 'charmill', 'khel', 'tor', 'warrens', 'blackvigil', 'deeps']) {
+    assert.ok(steps.some(([, st]) => st.enter === k), `no quest sends you to ${k}`);
+  }
+  // And each dungeon's portal is led to from the hub nearest it.
+  const from = { warrens: town, blackvigil: new Set(['hasket']), deeps: new Set(['garrick']) };
+  for (const [k, givers] of Object.entries(from)) assert.ok(steps.some(([id, st]) => st.enter === k && givers.has(QUESTS[id].giver)), `${k}: not led to from its nearest hub`);
 });

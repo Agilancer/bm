@@ -15,10 +15,16 @@ export const LAND_RULES = {
   tracks_west: { needs: 'pines', steps: [{ enter: 'cinderford' }, { talk: 'hasket', say: 'Corran Thrale tracked the dead to your wall.' }, { back: true, say: 'The sergeant at Cinderford counted them too.' }], gold: 90, xp: 550 },
   owed_to_frostwatch: { needs: 'bed_and_bell', steps: [{ enter: 'frostwatch' }, { talk: 'garrick', say: 'Bram Kettle pays what he owes.' }, { back: true, say: "The warden's taken it off your slate." }], gold: 100, xp: 600 },
   millhaven_man: { needs: 'millhaven_jelly', steps: [{ enter: 'belltower' }, { talk: 'hale', say: 'Abel Fenwick asks if you mean to come home for the barley.' }, { back: true, say: "Hale Orrowick isn't coming home." }], gold: 70, xp: 500 },
+  // ---- hub to hub: a word that sends you on to the next person with work, and ends with them (end: true) ----
+  hare_and_harrow: { steps: [{ talk: 'dorcas', say: 'Osric Thorne says you feed whoever keeps the road.', end: true }], gold: 20, xp: 200 },
+  man_at_the_cross: { steps: [{ talk: 'wymond', say: 'Dorcas Pym says you want something carried.', end: true }], gold: 20, xp: 200 },
+  ask_the_burner: { steps: [{ talk: 'colm', say: 'Sergeant Hasket says you have sacks nobody came for.', end: true }], gold: 20, xp: 200 },
+  girl_from_khel: { steps: [{ talk: 'ysolt', say: 'Colm Burrage says you kept the weighing table at Khel.', end: true }], gold: 20, xp: 200 },
   // ---- the land's own troubles, given in Bellmourn ----
   cairnfield: { needs: 'dead_cant_wait', steps: [{ enter: 'cairnfield' }, { kill: 'lair:cairn_keepers', n: 4 }, { back: true, say: 'The cairns are let alone.' }], gold: 90, xp: 550 },
   sunken_mile: { needs: 'sallowmere', steps: [{ enter: 'causeway' }, { kill: 'lair:mile_drowned', n: 5 }, { back: true, say: 'The Sunken Mile can be walked.' }], gold: 120, xp: 800 },
   moor_wayhouse: { needs: 'barrow_lights', steps: [{ enter: 'wayhouse' }, { kill: 'lair:wayhouse_dead', n: 4 }, { back: true, say: "The wayhouse is empty. It's a better empty." }], gold: 150, xp: 900 },
+  ossery_quarry: { steps: [{ enter: 'quarry' }, { kill: 'lair:quarry_kobolds', n: 5, foe: ['Kobolds'] }, { back: true, say: "The quarry's empty. I read the marks." }], gold: 150, xp: 1000 },
   // ---- the cathedral's catacombs ----
   deeper_dead: { needs: 'bones_for_carver', steps: [{ kill: 'catacombs', n: 20 }, { back: true, say: 'Twenty more are at rest.' }], gold: 120, xp: 500 },
   waxed_thread: { needs: 'shroud_and_thread', steps: [{ bring: 'wax', n: 6 }], gold: 100, xp: 300 },
@@ -37,6 +43,7 @@ export const LAND_RULES = {
   ash_on_the_wind: { steps: [{ kill: 'lair:cinder_refugees', n: 4, foe: ['The Possessed'] }, { back: true, say: 'The four above the ford are down.' }], gold: 130, xp: 900 },
   red_scouts: { needs: 'ash_on_the_wind', steps: [{ kill: 'lair:cinder_scouts', n: 2, foe: KNIGHTS }, { back: true, say: 'Your two watchers are dead.' }], gold: 180, xp: 1300 },
   vigil_patrols: { needs: 'red_scouts', steps: [{ kill: 'waste', n: 8, foe: KNIGHTS }, { back: true, say: 'Eight fewer on the Vigil Road.' }], gold: 260, xp: 2000 },
+  arch_before_the_gate: { steps: [{ enter: 'keep' }, { enter: 'blackvigil' }, { back: true, say: 'The arch before the gate is a way in.' }], gold: 200, xp: 1500 },
   charcoal_for_khel: { steps: [{ enter: 'khel' }, { kill: 'lair:khel_ghouls', n: 4 }, { back: true, say: "Nobody at Khel is buying. I'm sorry." }], gold: 160, xp: 1300 },
   charred_mill: { steps: [{ enter: 'charmill' }, { kill: 'lair:charmill_possessed', n: 5 }, { back: true, say: 'Edmer is at rest. I saw to it myself.' }], item: 'robe', xp: 1500 },
   // ---- Frostwatch and the Howling Deeps ----

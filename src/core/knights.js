@@ -30,7 +30,12 @@ export const TOWN_KNIGHTS = [
   { suit: 'paladin_bellwright', kind: 1, sword: 'gilded', shield: 't', style: 'silver', hostile: false, hp: 900, walk: 0.9,
     // Ser Anselm Toller, the Bellwright, a Tessariel's paladin: before his door at the Bell Tower of the Four Watches, on the
     // knoll far east (src/core/lands.js KNOLL; sites.js spots.bellwright). Talked to through src/folk/lines/beyond.js.
-    route: [[2440.6, -531.6], [2445.4, -531.8]], yaw: Math.PI, bellwright: true },
+    route: [[2440.6, -530.3], [2445.4, -530.5]], yaw: Math.PI, bellwright: true },
+  { suit: 'paladin_fifthwatch', kind: 1, sword: 'gilded', shield: 't', style: 'silver', hostile: false, hp: 900, walk: 0.9,
+    // Ser Hale Orrowick, Paladin of the Fifth Watch: a Millhaven man, bare-headed, in harness put together from what the
+    // fallen of the forty-three left on the downs (tools/knights/fifthwatch.py). He keeps the other side of the tower's
+    // door from the Bellwright. Talked to through src/folk/lines/beyond.js, as `hale`.
+    route: [[2434.6, -530.4], [2437.4, -530.4]], yaw: Math.PI, hale: true },
 ].map((k) => {
   const height = k.suit === 'knight' ? 1.9 : 1.94;
   // The black knight is 2.12 m and holds the crimson sword and V board; the silver one is 1.92 m with the gilded and T.

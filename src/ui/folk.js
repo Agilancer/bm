@@ -514,7 +514,8 @@ export class TownUI {
     let paper = null;
     if (qid === 'letter' && k === 1) { paper = QUESTS.letter.letters.cedric; this.keep("Cedric Ashby's letter", paper); }
     if (qid === 'letter' && last) { paper = QUESTS.letter.letters.elowen; this.keep("Elowen Halloway's answer", paper); }
-    if (last) this.quests.advance(qid);
+    // (Said to the one a word was carried to: on to the next step; or, where the errand ends with them, done and paid here.)
+    if (last) { if (this.quests.step(qid)?.end) this.reward(qid); else this.quests.advance(qid); }
     this.show(said[k], id, last ? this.root() : [{ label: 'Go on.', run: () => this.stepTalk(qid, k + 1) }], paper);
   }
 

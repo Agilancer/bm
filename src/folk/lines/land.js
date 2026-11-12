@@ -605,6 +605,135 @@ export const QUESTS = {
     },
   },
 
+  // ---- hub to hub ----
+  hare_and_harrow: {
+    title: 'A Plate at the Hare',
+    giver: 'osric',
+    offer: [
+      "You've walked two days and you're stood at a gate talking to a hedger. Go and eat. The Hare and Harrow, across the road, with the lamp in the south window.",
+      "And listen to Dorcas while you do. I keep the hedge. She keeps the road, or what's left of it, and the road's the worse off. Tell her I sent you; she'll charge you less, or more.",
+    ],
+    accept: "I'll go and eat.",
+    acceptLine: "In through the gate, down the road, on your right before the square. You'll smell mutton. Everyone does.",
+    decline: "I'm not hungry.",
+    declineLine: "You will be. It's Thornwick. There's nothing else to do but eat and mend.",
+    journal: [
+      "Osric Thorne says the keeper of Thornwick's inn, Dorcas Pym, has troubles of her own on the Gallows Road. Find her before the door of the Hare and Harrow.",
+    ],
+    progress: [
+      "The inn. Across the road. The one with a door.",
+    ],
+    done: [
+      "Osric sent you? Then he's noticed you're thin. He notices sheep the same way. Sit.",
+      "And since you're sat: yes, there's trouble on my road. Ask me when you've a plate in front of you.",
+    ],
+    after: [
+      "She fed you? Good. She feeds me, too, and tells me I'm bleeding on the settle.",
+    ],
+    others: {
+      dorcas: [
+        "Osric sent you? Then he's noticed you're thin. He notices sheep the same way. Sit. That's for the road; I pay anyone who walks it now.",
+        "And since you're sat: yes, there's trouble on my road. Two troubles. Ask me when you've a plate in front of you.",
+      ],
+    },
+  },
+
+  man_at_the_cross: {
+    title: 'The Man at the Cross',
+    giver: 'dorcas',
+    offer: [
+      "See the old fellow by the market cross, talking to nobody? That's Wymond. He's our priest, near enough. He's no roof, so he's mine to feed.",
+      "He's been wanting something carried, somewhere he can't make his legs go. He'll not ask a stranger. So I'm asking for him. Go and say I sent you, and let him get round to it.",
+    ],
+    accept: "I'll speak to him.",
+    acceptLine: "By the cross, on the square. Let him bless you first. It's quicker than arguing.",
+    decline: 'Not a priest.',
+    declineLine: "He's hardly one. That's the best of him.",
+    journal: [
+      "Dorcas Pym says Thornwick's hedge-priest, Wymond Ebb, wants something carried where he can't go. Find him by the market cross on the square.",
+    ],
+    progress: [
+      "The cross. On the square. He's the one talking to it.",
+    ],
+    done: [
+      "Dorcas sent you. She would. She's decided I'm to be helped.",
+      "Well. There is a thing. Ask me about the salt, when you've a moment and a strong stomach.",
+    ],
+    after: [
+      "He asked you? Good. He'll sleep. He's been saying names at my ceiling till all hours.",
+    ],
+    others: {
+      wymond: [
+        "Dorcas sent you. She would. She's decided I'm to be helped, and when Dorcas decides, you're helped. Here; a wool merchant's penny, for walking across a square.",
+        "Well. There is a thing. It wants carrying a long way south-east, and my legs turn me round at the toll. Ask me about the salt, when you've a moment and a strong stomach.",
+      ],
+    },
+  },
+
+  ask_the_burner: {
+    title: 'Sacks Nobody Came For',
+    giver: 'hasket',
+    offer: [
+      "You want to know the west? I know it from a wall. The charcoal burner sold into it every month for thirty years. Burrage. At the kilns, north side.",
+      "He's forty sacks stacked that nobody's come for, and he won't stop looking at them. Talk to him. He'll tell you more about what's past the ford than my scouts did, and he'll be slower about it.",
+    ],
+    accept: "I'll talk to him.",
+    acceptLine: "North side, by the kilns. Stand upwind. He'll tell you which wind.",
+    decline: 'Not now.',
+    declineLine: "As you like. He's not going anywhere. That's his trade.",
+    journal: [
+      "Sergeant Hasket says Cinderford's charcoal burner, Colm Burrage, sold west as far as Khel. Find him before the kilns on the north side of the village.",
+    ],
+    progress: [
+      "The kilns. North side. Follow the smoke.",
+    ],
+    done: [
+      "The sergeant sent you. Mm. She thinks I know things. I know one thing, forty times.",
+      "There's an order nobody came for. Ask me about Khel.",
+    ],
+    after: [
+      "Burrage talked? Then you've had more out of him than I have in a year.",
+    ],
+    others: {
+      colm: [
+        "The sergeant sent you. Mm. She thinks I know things. I know one thing, forty times: forty sacks, ordered, half paid, and nobody at the other end. Here. For hearing it.",
+        "If you're going west anyway, there's a thing I'd have checked. Ask me about Khel.",
+      ],
+    },
+  },
+
+  girl_from_khel: {
+    title: 'Out of Khel',
+    giver: 'colm',
+    offer: [
+      "There's a girl in the camp over the ford. Marrow. She kept the weighing table at Khel. Weighed every sack I ever sold there and never once shorted me.",
+      "She came in with a kettle and a blanket and she's not said twenty words. She'll not ask anyone for anything. Go and stand near her a while. If she asks you, it'll be the only thing she wants in the world.",
+    ],
+    accept: "I'll go to the camp.",
+    acceptLine: "Over the ford, south-east. The one sat facing the road. Don't hurry her. Mm. You can't hurry a burn either.",
+    decline: 'Not now.',
+    declineLine: "Mm. She'll be there. She's nowhere else to be.",
+    journal: [
+      "Colm Burrage says Ysolt Marrow, who kept the weighing table at Khel, wants one thing and won't ask for it. Find her in the refugees' camp over the ford, south-east of Cinderford.",
+    ],
+    progress: [
+      "The camp. Over the ford. Facing the road.",
+    ],
+    done: [
+      "Colm sent you. He shod... no. Edmer shod his mule. I get them muddled now, who did what for whom.",
+      "There is a thing. I'll say it once. Ask me about the mill.",
+    ],
+    after: [
+      "She asked you. Mm. Good. That's the first thing she's asked of anyone.",
+    ],
+    others: {
+      ysolt: [
+        "Colm sent you. Edmer shod his mule every spring. He'll have told you that. He tells everyone; it's how he says he's sorry. This was in the kettle. I've no use for coin. Take it.",
+        "There is a thing. I'll say it once, and then I'd like not to. Ask me about the mill.",
+      ],
+    },
+  },
+
   // ---- the land's own troubles, given in Bellmourn ----
   cairnfield: {
     title: 'Stones on the Cairnfield',
@@ -699,6 +828,37 @@ export const QUESTS = {
     ],
     others: {
       aldric: ["A lamp on the moor. Jory told me. I said drovers. There haven't been drovers in twenty years. ...Go and see."],
+    },
+  },
+
+  ossery_quarry: {
+    title: "The Masons' Marks",
+    giver: 'orrin',
+    offer: [
+      "Every stone of Saint Ossery's was cut at one quarry, on the Abbey Road, north-east, in the red wood. Each mason cut his own mark in the face before he lifted a block. A book of names, in rock, older than any I own.",
+      "A carter tells me there's digging in the workings again. Small things with snouts, tunnelling behind the face. If it falls, the marks go with it. Clear them out. And look at the marks for me. Only look.",
+    ],
+    accept: "I'll go to the quarry.",
+    acceptLine: "East on the downs road, then the Abbey Road north-east, into the red trees. A cut cliff on your left, with a crane. Mind the edge. Masons fell off it sober.",
+    decline: 'Not that road.',
+    declineLine: "No. It's far. The marks have lasted this long. I haven't, quite.",
+    journal: [
+      "Orrin Vey wants the masons' marks at Ossery Quarry kept from falling. The quarry is beside the Abbey Road, far north-east of Bellmourn, in the Rustwood. Go there.",
+      "Kobolds are tunnelling behind the quarry's face. Put down five of them.",
+      "Go back to Orrin Vey at the Tolling Bell and tell him the marks stand.",
+    ],
+    progress: [
+      "The Abbey Road. A cut cliff, a crane. Kobolds, the carter says. He called them 'dog-rats'.",
+    ],
+    done: [
+      "The face stands? And the marks? A fish, a key, three strokes and a ring... You looked. You actually looked. Say them again, slower.",
+      "Eleven masons, and now I've their signatures. Here. And don't tell Silas I paid for stones. He thinks they're his department.",
+    ],
+    after: [
+      "I've drawn the marks in the back of my oldest book. It's the only page in it I trust.",
+    ],
+    others: {
+      silas: ["Ossery stone? Good stone. Takes a chisel like cheese and then lasts. I've a slab of it. I'm not saying what for."],
     },
   },
 
@@ -1142,6 +1302,38 @@ export const QUESTS = {
     ],
     others: {
       ysolt: ["Eight of the red ones? ...Did any take his helm off? No. Don't tell me."],
+    },
+  },
+
+  arch_before_the_gate: {
+    title: 'The Arch Before the Gate',
+    giver: 'hasket',
+    hint: DELVE_HINT,
+    offer: [
+      "A carter came through raving. Last one I'll see. He said there's an arch stood in front of the keep's gate, with a light in it, and that the garrison walks round it and won't look at it.",
+      "If it's a way in that they don't hold, I want it on my slate. Go to the end of the road. Find the arch. If it opens, go through, and come back and tell me what's the other side of that wall.",
+    ],
+    accept: "To the end of the road.",
+    acceptLine: "West. Past the mill, past Khel, past every fire. The gate's shut and always was; it's the arch you want, before it. And don't go through alone. Nothing does.",
+    decline: "Not the keep.",
+    declineLine: "No. I'd not order it. I'm only asking.",
+    journal: [
+      "Sergeant Hasket has heard of an arch standing before the gate of Blackvigil Keep. Follow the Vigil Road west across the Ashen Waste to its end.",
+      "Go through the arch before the keep's gate, with a company.",
+      "Go back to Sergeant Hasket at the foot of Cinderford's watchtower.",
+    ],
+    progress: [
+      "The end of the west road. The arch before the gate.",
+    ],
+    done: [
+      "It opens. And inside's a whole garrison, yards and halls. Then the wall I've been afraid of is the least of it.",
+      "On the slate it goes. Here. That's scout's pay, and the scouts I had would've wanted more for less.",
+    ],
+    after: [
+      "I look at that line on the slate every muster. 'A way in.' Eleven of us, and a way in. It's a start.",
+    ],
+    others: {
+      colm: ["An arch with a light in it and no smoke? Mm. A fire that wants nothing. I don't trust it."],
     },
   },
 

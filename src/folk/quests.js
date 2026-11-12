@@ -2,7 +2,7 @@
 // src/folk/lines/quests.js; the talk that carries them is src/ui/folk.js. Kept on the render thread and saved with the game.
 //
 // A step is one of:
-//   talk   go and say something to someone (say: the player's words)
+//   talk   go and say something to someone (say: the player's words; end: the quest ends with them, and is paid there)
 //   enter  get to a place (night: only at night)
 //   kill   put down n of the dead in a place
 //   warden put down the Bell Crypt's warden

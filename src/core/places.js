@@ -557,7 +557,7 @@ export function thornwick(K) {
     K.drum('iron', m.x, my + 4.22, m.z, 0.2, 0.5, 4, { open: true, collide: false, r2: 0.26 }); K.cone('flame', m.x, my + 4.26, m.z, 0.12, 0.38, 4); K.cone('iron', m.x, my + 4.72, m.z, 0.34, 0.3, 4);
     const w = st(-7, 19); K.well(w.x, w.z, m.yaw);
     [[-3, 22.5, 'cloth_oat', 0], [13.5, 22, 'wall_13', 1], [15, 10.5, 'cloth_oat', 2], [5, 24, 'cloth_red', 3]].forEach(([t, off, cl, k], i) => { const p = st(t, off); K.stall(p.x, p.z, p.yaw + (i === 2 ? Math.PI : 0), cl, k); });
-    const g = st(11, 15); K.goods(g.x, g.z, 4, 1.2); const ct = st(-2, 10.5); K.cart(ct.x, ct.z, m.yaw + 0.3, { load: 'cloth_oat' });
+    const g = st(11, 15); K.goods(g.x, g.z, 4, 1.2); const ct = st(-9.5, 8.6); K.cart(ct.x, ct.z, m.yaw + 0.1, { load: 'cloth_oat' });
     const bn = st(8.5, 12.4); K.bench(bn.x, bn.z, m.yaw);
     K.spots.thornwick_cross = [2408, cy, 1791, -0.785]; }
   // The smith's lean-to against the last house by the east gate, his fire and his block; the shrine at the square's back: a
@@ -566,7 +566,8 @@ export function thornwick(K) {
     const a = st(33.6, 7.6); K.stump(a.x, a.z, 0.3, 0.6); K.box('iron', a.x, cy + 0.6, a.z, 0.3, 0.2, 0.12, p.yaw, { collide: false }); const tr = st(31.4, 6.6); K.trough(tr.x, tr.z, p.yaw, 0.6);
     const s = st(16, 31.5), F = K.frame(s.x, s.z, s.yaw);
     K.box('stone', s.x, cy - 0.3, s.z, 0.75, 1.9, 0.6, s.yaw); K.gable('roof_1', 'stone', s.x, cy + 1.6, s.z, 0.75, 0.6, 0.6, s.yaw, 0.2);
-    const n = F(0, 0.62); K.quad('water', [...F(-0.4, 0.62)].length ? [F(-0.4, 0.62)[0], cy + 0.75, F(-0.4, 0.62)[1]] : 0, [F(0.4, 0.62)[0], cy + 0.75, F(0.4, 0.62)[1]], [F(0.4, 0.62)[0], cy + 1.45, F(0.4, 0.62)[1]], [F(-0.4, 0.62)[0], cy + 1.45, F(-0.4, 0.62)[1]], [Math.sin(s.yaw), 0, Math.cos(s.yaw)]);
+    const n = F(0, 0.62), N = (u, v) => [F(u, 0.62)[0], cy + v, F(u, 0.62)[1]];
+    K.quad('water', N(-0.4, 0.75), N(0.4, 0.75), N(0.4, 1.45), N(-0.4, 1.45), [Math.sin(s.yaw), 0, Math.cos(s.yaw)]);
     K.cone('flame', n[0] + Math.sin(s.yaw) * 0.1, cy + 0.8, n[1] + Math.cos(s.yaw) * 0.1, 0.07, 0.24, 4);
     for (const u of [-0.6, 0, 0.55]) { const q = F(u, 1.1); K.drum('cloth_oat', q[0], cy - 0.02, q[1], 0.14, 0.14, 6, { collide: false }); } }
   // The watch platform inside the east gate, looking down the road into the Gallowswood: four legs, a floor with a rail, a
@@ -711,9 +712,9 @@ export function lesser(K) {
     const lt = F(13.5, -1.2); K.leanTo(lt[0], lt[1], yaw - Math.PI / 2, 2, 1.4, 2.2, 'roof_3'); const rk = F(7.6, 0.4); K.rack(rk[0], rk[1], yaw + 0.3, 1.2, null, 1.3);
     const ct = F(-2, 6); K.cart(ct[0], ct[1], yaw - Math.PI / 2 + 0.2, { load: S, len: 1.3 });
     for (const [u, w, r] of [[-15, 8, 2.6], [-12, 12.5, 1.9], [5, 14, 2.2]]) { const q = F(u, w); K.heap('pale:rubble', q[0], q[1], r, r * 0.6, 8); }
-    const cf = F(5, 4.5); K.campfire(cf[0], cf[1], false); const st1 = F(6.6, 5.4); K.stump(st1[0], st1[1], 0.3, 0.45);
+    const cf = F(5, 4.5); K.campfire(cf[0], cf[1], false); const st1 = F(3.6, 6.2); K.stump(st1[0], st1[1], 0.3, 0.45);
     K.paving('wood', ...F(0, -13.6), 1.1, 2.4, yaw, 0.1);
-    const sp = F(8.4, 6.5); K.spots.quarry_hut = [sp[0], Y(...sp), sp[1], yaw - Math.PI / 2 + 0.4]; }
+    const sp = F(6.8, 6.6); K.spots.quarry_hut = [sp[0], Y(...sp), sp[1], yaw - Math.PI / 2 + 0.4]; }
   // The Howling Mouth, up past Frostwatch: where the wind comes out of the hill. A horseshoe of rimed rock with an arch of
   // it standing across the back, ice hung from it; cairns down the path, a post with a warning on it, old bones frozen
   // where they fell, and a climbers' camp nobody came back to. (Its middle is left bare for the way down.)

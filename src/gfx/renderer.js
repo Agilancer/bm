@@ -9,7 +9,7 @@ import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/li
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
 import { PORTAL_MODELS, buildSites } from '../core/sites.js';
-import { braziers, inDungeon, torches } from '../core/dungeon.js';
+import { DELVES, PORTAL_SPOTS, braziers, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
@@ -105,7 +105,6 @@ const MAX_GROUND = 160;
 // ITEM), its middle and radius in the model's own units (tools/portal/pack.py) and which it is; and where its motes go round
 // (portalFx), in the same units: the doorway's middle and the funnel's rim (back from the dais's middle), the seal's swirl's
 // face and radius.
-const PORTAL_SPOTS = ['hf_portal', 'hf_in', 'hf_out'];
 const SWIRL = { dungeon: [0, 0.37, 0.3, -2], ground: [0, 0, 0.267, -3] };
 const MOTES = { dungeon: { mid: 0.37, rim: -0.17, deck: 0.107 }, ground: { face: 0.086, r: 0.267 } };
 // A PC's far bodies (addLod, bodyDetail): the coarse mesh's cell in metres, and how much of a pixel a cell must have shrunk
@@ -505,11 +504,18 @@ export class Renderer {
     this.buildGrass();
     // (And the Hollowfang Warrens' torches, and the fires either side of its portal: src/core/dungeon.js.)
     // (And its braziers, bigger fires that light the floor where the fighting is.)
-    const warrens = torches().map(([x, y, z, nx, nz]) => ({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: [1, 0.56, 0.24], r: 12, i: 3.8, flicker: 0.8 }));
-    for (const [x, y, z] of braziers()) warrens.push({ p: [x, y + 1.9, z], c: [1, 0.6, 0.28], r: 15, i: 5.2, flicker: 0.9 });
+    // (Each delve's in its own colour: the Warrens' torchlight, the keep's redder fire, the Deeps' cold blue-white, which
+    // doesn't flicker as a flame does. A fire that says how high it hangs, a chandelier, is lit from there.)
+    const warrens = [];
+    for (const d of DELVES) {
+      const L = d.look, cold = L.cold ? 0.25 : 1;
+      for (const [x, y, z, nx, nz] of torches(d)) warrens.push({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: L.light, r: 12, i: 3.8, flicker: 0.8 * cold });
+      for (const [x, y, z, lift] of braziers(d)) warrens.push({ p: [x, y + (lift ?? 1.9), z], c: L.fire, r: lift > 4 ? 22 : 15, i: lift > 4 ? 6.5 : 5.2, flicker: 0.9 * cold });
+    }
     // (The portals' swirl, a cold blue that breathes: in front of the Warrens' doorways, and over every seal: portalModel.)
     const portalSpots = buildSites().spots;
     for (const key of PORTAL_SPOTS) {
+      if (!portalSpots[key]) continue;
       const [x, y, z, yaw] = portalSpots[key];
       warrens.push({ p: [x - Math.sin(yaw) * 0.3, y + 2.2, z - Math.cos(yaw) * 0.3], c: [0.4, 0.62, 1], r: 14, i: 4.2, flicker: 0.3 });
     }

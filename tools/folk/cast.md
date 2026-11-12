@@ -290,21 +290,21 @@ in the details.
 two-letter rule holds out here too: no V place is near a T place, and nobody puts the two in one line.
 
 - **The Green Downs** (east, a long day). Sheep, barley, chalk. **Millhaven**, a hamlet with a farm and a windmill; Hob's
-  cousin **Abel** farms there (not Wat: Wat Cotter is Silas's dead man). **Brightwater Falls** down the cliff. On a knoll: **the Bell Tower of the Four Watches** (T).
+  cousin **Abel** farms there (not Wat: Wat Cotter is Silas's dead man). **Brightwater Falls** down the cliff, a fisher's hut on its pool. On a knoll: **the Bell Tower of the Four Watches** (T), in its walled yard, a ring of watch-stones round the knoll. West of the Abbey Road, **the Cairnfield**: dozens of cairns round a great one, some opened. Where the downs run out on the Gallows Road, **Thornwick** (below).
 - **The Weeping Fen** (north). Reed, black water, mist. **Sallowmere**, the big mere, with a jetty nobody uses now; Sabine's
-  bog myrtle grows on its east shore. Further in, **the Drowned Chapel** (T), half under the water.
+  bog myrtle grows on its east shore; the eel-fishers' huts stand on legs where the Fen Way meets the south shore. Further in, **the Drowned Chapel** (T), half under the water. Off the Fen Way, **the Sunken Mile**: the old pale causeway, its slabs tipped, its waymark down.
 - **The Rustwood** (far north-east). Red-leaved, always autumn. **The Abbey of Saint Ossery** (T), a ruin with its bell-cote
-  standing; **the Fungal Ring**; **the Woodcutters' Camp**.
-- **The Ashen Waste** (far west). Grey ground, no birds. **The Caravanserai of Khel**, where the carters used to rest; **the Bone
+  standing; **the Fungal Ring**; **the Woodcutters' Camp**; and on the Abbey Road **Ossery Quarry**, the pale face the abbey was cut from, its crane still up.
+- **The Ashen Waste** (far west). Grey ground, no birds. **The Caravanserai of Khel**, where the carters used to rest; **the Charred Mill**, a post mill burnt where it stood, north of the road; **the Bone
   Field** (V, well south-west of Khel); **the Black Obelisks** (V), with braziers. At the end of the west road, **Blackvigil Keep** (V): Velscour's keep,
   black stone, red cloth, a curtain wall and four towers and a great keep, gibbets and braziers lit day and night all along
   **the Vigil Road**. Its gate is shut, and it has no seal: the order never had a house there. Nobody in town knows who's inside; Corwin Ashby knows more than he says and says nothing.
-- **The Barrow Moor** (far south-west). Mounds. Lights at night (the jellies of bone, see below). **The Nine Maidens**, a ring of stones.
-- **The Rimeholt Fells** (far south). Snow, pines heavy with it. **Frostwatch**, an old watch-fort; **the Frozen Shrine** (T),
-  where Edric's grandmother was married when it wasn't frozen.
+- **The Barrow Moor** (far south-west). Mounds. Lights at night (the jellies of bone, see below). **The Nine Maidens**, a ring of stones, the Piper standing off from them. On the Barrow Track, **the Moor Wayhouse**: a drovers' house, half of it still roofed.
+- **The Rimeholt Fells** (far south). Snow, pines heavy with it. **Frostwatch**, an old watch-fort with a gate north to the road and south to the fells; **the Frozen Shrine** (T),
+  where Edric's grandmother was married when it wasn't frozen. Past Frostwatch, **the Howling Mouth**, where the wind comes out of the hill; further, **Ravens' Tor**, a stack of rock with a hermit's stair cut round it.
 - **The Gallowswood** (far south-east). **Hangman's Cross**, **Mother Grawl's Hut** (a witch; not Lis, and nothing like her),
-  **the Twisted Grove**.
-- **The Deepwood** (north-west, near). **The Hermit's Hollow**.
+  **the Twisted Grove**. On the Gallows Road before the Cross, **the Old Toll**: the tollhouse burnt, its bar broken.
+- **The Deepwood** (north-west, near). **The Hermit's Hollow**. On the Vigil Road at the wood's west edge, **Cinderford** (below).
 - **The Sorrowhorn** (north-west), the mountain seen from partway up the hill road on a clear day (the pines hide it from the town). **The Broken Stair** is the old way up.
   At the top, **the Crown of Teeth**: a lake frozen to the bottom, a spire of black glass standing out of it, twelve white
   pillars bearing nothing, and a rim of black stone teeth. Neither V nor T. Nobody knows whose. Orrin wants to.
@@ -424,6 +424,12 @@ Out of Bellmourn:
 20. **Stones on the Cairnfield** (Silas, after the Dead). Someone is opening the cairns where the Cranes lie.
 21. **The Sunken Mile** (Sabine, after the Fen). Five of the drowned stand on the causeway.
 22. **The Wayhouse on the Moor** (Jory, after the Lights). A lamp in a window that's been shut since he was a lad.
+Also out of Bellmourn: **The Masons' Marks** (Orrin): kobolds tunnelling behind the face of Ossery Quarry, where each of
+the abbey's masons cut his mark.
+From one person of a hub to the next (a word carried, paid where it's said; each ends with the person, whose own work is
+then on offer): **A Plate at the Hare** (Osric to Dorcas), **The Man at the Cross** (Dorcas to Wymond), **Sacks Nobody Came
+For** (Hasket to Colm), **Out of Khel** (Colm to Ysolt). And **The Arch Before the Gate** (Hasket): to the end of the Vigil
+Road and through the portal before Blackvigil's gate.
 The catacombs: 23. **Further Down** (Silas): twenty more. 24. **Waxed Thread** (Tamsin): six Grave Wax, to proof a winter's stock.
 The Hollowfang Warrens: 25. **Something Dug This** (Corran): go through. 26. **Barley Thieves** (Hob): twelve goblins or kobolds.
 27. **The Tunnel-King** (Corran): Grubnash. 28. **Mother of the Warren** (Aldric): Skrit and Skrat, then Venomaw.

@@ -45,6 +45,13 @@ export const MODEL_STATS = {
   necromancer_lord_2: { name: 'NECROMANCER LORD', hp: 170, damage: 13, loot: 8 },
   skeleton_knight_giant: { name: 'BONE KNIGHT', hp: 460 },
   velscour_lancer: { name: 'LANCER OF VELSCOUR', reach: 3.2 },
+  // (his look-alikes, tools/monsters/knight_variants.py, and the possessed knights, tools/monsters/possessed_knights.py:
+  // a villager's head on a knight's shoulders, a champion's life and loot even at a man's height)
+  velscour_lancer_2: { name: 'LANCER OF VELSCOUR', reach: 3.2 },
+  velscour_lancer_3: { name: 'LANCER OF VELSCOUR', reach: 3.2 },
+  possessed_knight_1: { name: 'POSSESSED KNIGHT', hp: 320, damage: 24, loot: 8 },
+  possessed_knight_2: { name: 'POSSESSED KNIGHT', hp: 320, damage: 24, loot: 8 },
+  possessed_knight_3: { name: 'POSSESSED LANCER', hp: 320, damage: 24, reach: 3.2, loot: 8 },
   werebat: { name: 'WEREBAT', hp: 130, damage: 15 },
 };
 // The Hollowfang Warrens' bosses (src/core/dungeon.js), and the dragon's whelps: bigger copies of the rank and file, each
