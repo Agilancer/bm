@@ -965,7 +965,7 @@ portals clear of the rock, the roofs high enough and under the line the shaders 
 it, a level 8 party hired (lancer, paladin, archer, rogue), and a player who shoots Firebolt at what the party's on, walks
 out of whatever's marked, steps across the way of shots and jumps the rings. `--slow` has that player see each mark and
 shot half a second late, as a person does; `--still` never moves. It fails on an error in a tick or a shape with a bad
-number in it. What it gave, over two to twenty-one fights of each:
+number in it. What it gave when the Warrens were tuned, over two to twenty-one fights of each:
 
 | | Seeing it at once | Half a second late | Standing still |
 | --- | --- | --- | --- |
@@ -973,6 +973,17 @@ number in it. What it gave, over two to twenty-one fights of each:
 | Grubnash | 85 to 97 s, player down to 70% | 63 to 94 s, down to 37% | dead, or alive on a sliver |
 | Skrit and Skrat | 68 to 78 s, down to 32% | 61 to 85 s, down to 5%; fell once in 21 fights | dead in 30 to 60 s |
 | Venomaw | 145 to 148 s, down to 16% | 132 to 165 s, down to 16% | dead in 33 to 83 s, once alive at the end with nothing left |
+
+Since then the party's new moves have made it about a quarter stronger: by the time of the facing fix the twins fell in 54
+to 63 s, Grubnash in about 75 and Venomaw in about 90, and standing still lived through the twins four fights in five. Two
+things were wrong besides. A paladin's or lancer's board coming home overdue to a thrower on the move gained half again
+every tick until it stood 10^38 m off, which this tool found, one Venomaw fight in five, as a shape with a bad number
+(`stepShotX` in `src/sim/heroskills.js`: it comes home at the pace it left the hand now). And a pool pushed whoever stood
+in it out across its edge (see "Monsters' attacks"), so nobody burned in one. With those fixed, the twins at 3,600 life
+each (were 2,900) and Skrit's pots as the twins are told above, it gives: the twins 64 to 84 s seeing it at once, the
+player down to two thirds; 64 to 81 s half a second late; standing still, dead in 22 to 47 s. Grubnash and Venomaw are as
+the party left them: about 72 s and 90 to 100 s; standing still Venomaw kills you in some 46 s, and Grubnash leaves you on
+a quarter.
 
 Before this pass the same player took 136 s over Grubnash, 124 s over the twins and 166 s over a Venomaw of 9,000 life
 (she had 16,000, and took nearly five minutes by the notes then), and standing still lived through the twins and the
