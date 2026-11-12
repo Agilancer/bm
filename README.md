@@ -594,6 +594,17 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   dives, behind the pillar away from her perch when she makes for it, away from Skrat's whirlwind, the adds first (diggers, whelps), and the healthier twin. When a boss turns on it, it gets
   behind the tank from it (or well out of its reach with no tank up) and shoots it as it comes. Three wipes count as beaten back: it
   leaves by the way in and comes back two levels stronger. Once Venomaw's dead it goes out by the far portal.
+- **Blackvigil Keep and the Howling Deeps.** It goes down these as it goes down the Warrens, with a full party, by each
+  one's own portal, way through (`WAYS` in `src/ui/autowarrens.js`), last boss and far portal, and at each one's own level
+  (the Deeps from 10, the keep from 14). It picks the dungeon a quest in hand wants (to go in, to kill there, or a boss
+  of it: `delveWants` in `src/ui/autobrain.js`), else the first it's of a level for. In their boss fights it has only the
+  rules that hold in any fight (out of marks, across shots, over rings, the adds first, behind the tank when a boss
+  turns on it): nothing particular to Maldrec's shield, Sorvane's Unmaking, the Brothers' order, the Castellan's dark,
+  or the Deeps' three. **It has not been watched down either.**
+- **The land's quests.** The forty quests of the small towns, the lairs and the dungeons are in its plan at the levels
+  they want. It walks out to a villager posted in Thornwick, Cinderford or Frostwatch, or to Ser Hale, once it's of a
+  level for their work; hunts a lair's glade for a quest that names one, and Velscour's patrols along the Vigil Road for
+  one in the Waste; and every lair has a level in `LAIR_LEVEL`. **None of this has been watched either.**
 - **The run.** Shift is held for the run whenever it's going somewhere more than a few strides off, in long stretches:
   it lets go when its breath is short and takes it up again once it's back, rather than flickering between the two.
 - **Loot and gear.** It picks up what falls and opens every chest near by: out in the land, down in the catacombs, and in
