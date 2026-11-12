@@ -902,7 +902,7 @@ export class Warrens {
     const f = this.fight;
     self.postMessage({
       type: 'warrens', inside: true, delve: this.delve.key, down: [...this.down],
-      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, perch: !!m.flying && !!f.perch, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
+      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, perch: !!m.flying && !!f.perch, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m, ward: m.ward ?? 1 })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
       hazards: this.sim.perils.marks.map(markOut),
     });
   }

@@ -933,7 +933,9 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   if (!LEAN || metal > 0.02) { env = envDir(refl, rough * 7.0); }
   let horizon = smoothstep(-0.25, 0.12, refl.y);
   var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
-  if (indoor > 0.5) { reflected *= select(select(0.22, 0.05, indoor > 1.5), 0.5, indoor > 2.5); }
+  // (In the keep's lit halls, 2.25, plate takes a warm sheen off the fires: Velscour's knights are blackened steel, which
+  // takes no other light, and against dark stone they were shapes cut out of the room.)
+  if (indoor > 0.5) { reflected *= select(select(vec3f(0.22), select(vec3f(0.05), vec3f(0.42, 0.27, 0.18), indoor > 2.2), indoor > 1.5), vec3f(0.5), indoor > 2.5); }
   reflected *= mix(1.0, 0.06, cave);
   let dfg = envDFG(rough, nv);
   let fss = f0 * dfg.x + dfg.y;

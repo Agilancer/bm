@@ -233,6 +233,12 @@ export function tactics(b, m, foes) {
     if (caveRoom(tx, tz) < 1) { tx = boss.x - rx * side * 13; tz = boss.z - rz * side * 13; }
     return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 5, target: pickTarget(live, f, b, m), why: 'At Venomaw\'s side.' };
   }
+  // Maldrec sets his shield: nothing gets through it from the front, so round behind him, a spell's reach off, till it's down.
+  if (f.boss === 'maldrec' && boss && (boss.ward ?? 1) < 1) {
+    let tx = boss.x - Math.sin(boss.yaw) * 11, tz = boss.z - Math.cos(boss.yaw) * 11;
+    if (caveRoom(tx, tz) < 1) { tx = boss.x - Math.sin(boss.yaw) * 5; tz = boss.z - Math.cos(boss.yaw) * 5; }
+    if (caveRoom(tx, tz) >= 1) return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 4, target: pickTarget(live, f, b, m), why: 'Behind Maldrec\'s shield.' };
+  }
   if (f.boss === 'twins') {
     const spinner = bodies.find((q) => q.spin);
     if (spinner && dist(m.x, m.z, spinner.x, spinner.z) < 9) {
@@ -289,7 +295,9 @@ function pickTarget(live, f, b, m) {
     if (add) return add;
     const bosses = new Set((f.bodies || []).map((q) => q.id));
     if (help && !bosses.has(help.T.id)) return help.T;
-    const ids = (f.bodies || []).filter((q) => !q.flying).sort((a, c) => c.hp - a.hp).map((q) => q.id);
+    // (Of two bosses, the one that takes its blows whole before the one that's covered or warded: the Brothers' cover, the
+    // twins' shared pain; then the healthier.)
+    const ids = (f.bodies || []).filter((q) => !q.flying).sort((a, c) => (c.ward ?? 1) - (a.ward ?? 1) || c.hp - a.hp).map((q) => q.id);
     for (const id of ids) { const q = live.find((x) => x.id === id); if (q) return q; }
   }
   if (help) return help.T;

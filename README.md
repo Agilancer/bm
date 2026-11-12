@@ -599,8 +599,9 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   (the Deeps from 10, the keep from 14). It picks the dungeon a quest in hand wants (to go in, to kill there, or a boss
   of it: `delveWants` in `src/ui/autobrain.js`), else the first it's of a level for. In their boss fights it has only the
   rules that hold in any fight (out of marks, across shots, over rings, the adds first, behind the tank when a boss
-  turns on it): nothing particular to Maldrec's shield, Sorvane's Unmaking, the Brothers' order, the Castellan's dark,
-  or the Deeps' three. **It has not been watched down either.**
+  turns on it), and two of their own: round behind Maldrec while his shield is set, and of the Brothers the one who
+  isn't covered. Sorvane's Unmaking it answers only by striking him as it would anyway; nothing particular to the
+  Castellan's dark or the Deeps' three. **It has not been watched down either.**
 - **The land's quests.** The forty quests of the small towns, the lairs and the dungeons are in its plan at the levels
   they want. It walks out to a villager posted in Thornwick, Cinderford or Frostwatch, or to Ser Hale, once it's of a
   level for their work; hunts a lair's glade for a quest that names one, and Velscour's patrols along the Vigil Road for
