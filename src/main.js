@@ -667,7 +667,6 @@ async function boot(plan, poolSize) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
     }
     try { game.wake = await navigator.wakeLock?.request('screen'); } catch { /* optional */ }
-    if (fresh && !openingHUD) { hud.intro(!!pack.slots.main); hud.tip('Spells are all you have. Hold Space as you jump to ride your shield. The town is safe ground: the woods are not.', 7); }
   };
 
   // ---- saving, loading and the menus ---------------------------------------------------------------------------------
@@ -1022,10 +1021,6 @@ class Hud {
     if (Math.abs(v - el.shown) < 0.004) return;
     el.shown = v;
     el.style.transform = `scaleX(${v.toFixed(3)})`;
-  }
-
-  intro(armed) {
-    this.tip(armed ? 'The dead are walking out in the fields. Burn them from afar.' : `Your hands are empty. ${this.input.touch ? 'Open your pack' : 'Press I'} to take up a staff.`, 7);
   }
 
   // Each lesson once, at the moment it means something.
