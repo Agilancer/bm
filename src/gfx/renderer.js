@@ -76,8 +76,11 @@ function surfHandPose(tilt, up, time) {
   return surfPal;
 }
 
-// The middle of the skull in the left hand, in the view's own space. Printed by tools/wizard/skull_arm.py.
-export const SKULL_AT = [-0.483, -0.159, -0.783];
+// How far the skull's arm is moved from where tools/wizard/skull_arm.py put it, in the view's own space: back toward you, and a little
+// to the left (the owner: it sat too far forward). The arm, its gems, its eyes and its aura all go with it.
+export const SKULL_SHIFT = [-0.03, 0, 0.12];
+// The middle of the skull in the left hand, in the view's own space. Printed by tools/wizard/skull_arm.py, then moved by SKULL_SHIFT.
+export const SKULL_AT = [-0.483 + SKULL_SHIFT[0], -0.159 + SKULL_SHIFT[1], -0.783 + SKULL_SHIFT[2]];
 
 const O = { VP: 0, VIEW: 16, PROJ: 32, IVP: 48, VMP: 64, VMW: 80, CASC: 96, CAM: 144, SUN: 148, SUNC: 152, SKY: 156, GND: 160, FOG: 164, FOGP: 168, SPLIT: 172, SCREEN: 176, WIND: 180, GROUND: 184, BLOOD: 188, CHARS: 192, LIGHTS: 216, COUNTS: 216 + MAX_LIT * 8, CAVE: 220 + MAX_LIT * 8, FEET: 224 + MAX_LIT * 8, FEET_BOX: 272 + MAX_LIT * 8, FEET_Y: 276 + MAX_LIT * 8 };
 // Four floats, or a light's eight, into the frame's uniforms at o: as d.set([...], o) did, without an array each time.
@@ -2813,14 +2816,15 @@ export class Renderer {
     // A one-handed spell lowers the staff and leaves the skull where it is.
     const skullLow = Math.max(snap[H.SKULL_LOWER], stowed);
     this.skullDown = skullLow > 0.995;
-    const vmY = vmData[13], vmZ = vmData[14], skullY = vmSway[13] - skullLow * 0.85, skullZ = vmSway[14] + skullLow * 0.2;
+    const vmX = vmData[12], vmY = vmData[13], vmZ = vmData[14];
+    const skullX = vmSway[12] + SKULL_SHIFT[0], skullY = vmSway[13] + SKULL_SHIFT[1] - skullLow * 0.85, skullZ = vmSway[14] + SKULL_SHIFT[2] + skullLow * 0.2;
     for (const h of this.skullParts) {
       q.writeBuffer(h.hand.palette, 0, h === this.surfHand ? surfHandPose(snap[H.SURF_TILT], surfArm, time) : breath);
       skinParamsU[0] = h.hand.count;
       q.writeBuffer(h.hand.params, 0, skinParams);
       // (Negative: the spell hands' warm fill from the eye, so this arm is the same skin as the one that casts, and the skull, on less of it, doesn't go black at night.)
       vmData[17] = 0; vmData[18] = 0; vmData[19] = h === this.surfHand ? -1 : -0.5;   // (Less on the skull's arm: so much pale bone lights up the night.)
-      vmData[13] = h === this.surfHand ? vmY : skullY; vmData[14] = h === this.surfHand ? vmZ : skullZ;
+      vmData[12] = h === this.surfHand ? vmX : skullX; vmData[13] = h === this.surfHand ? vmY : skullY; vmData[14] = h === this.surfHand ? vmZ : skullZ;
       q.writeBuffer(h.ubo, 0, vmData);
     }
     if (this.eyesOn) {
@@ -2834,10 +2838,10 @@ export class Renderer {
         q.writeBuffer(gems.ubo, 80, sd);
       }
       this.skullEyes.setSkin(skin, gems?.gemSpots || null);
-      vmData[13] = skullY; vmData[14] = skullZ;
+      vmData[12] = skullX; vmData[13] = skullY; vmData[14] = skullZ;
       this.skullEyes.update(dt, cam, snap, vmData, breath);
     }
-    vmData[13] = vmY; vmData[14] = vmZ;
+    vmData[12] = vmX; vmData[13] = vmY; vmData[14] = vmZ;
     if (this.shieldParts.length) {
       const pal = this.shieldPal || (this.shieldPal = new Float32Array(8));
       shieldPose(pal, shieldUp, this.W / this.H);
