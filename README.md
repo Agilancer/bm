@@ -1153,17 +1153,30 @@ on top of whatever the legs are doing:
   back; at ease the hands are as modelled.
 - **What hangs at the hips stays there** (`hipFrame`). A sword, a knife or a boomerang put away at the hip was kept by the
   pelvis bone, and some of the gesture clips turn that bone right round: a bard's sword swung to the other hip, point
-  first, while he waved. It's kept now by where the hips stand (the joints either side and the spine above).
+  first, while he waved. It's kept now by where the hips stand (the joints either side and the spine above). And a bard's
+  sword is put away at his hip whatever his lute is doing: while the lute was coming off his back or going back to it, the
+  sword was left part-way between his open hand and his hip.
 - **The charge** (`lanceRush`) is a run: sprint legs, bent in behind the board, the lance couched and level, his fist at
   one height so the point doesn't nod with his stride. It ends: he stops with his point's reach a little into them,
   plants, drives the point out, and what it's driven into is thrown back down the lance. He used to run on through them.
   The Phalanx Rush is three of these. The light on it is a spark on the point and the air torn behind him: the lance is
   seen.
-- **At ease** he carries the lance upright in his right fist at his side, the board on his back: there's nowhere on a
-  man to put a three-metre lance away, and it used to be jammed under the board. It goes to his back, beside the board,
-  only for what needs both hands or the whole body (sitting, a dance, the ride down the Fall).
+- **At ease** the lance is in his hand, the board on his back: there's nowhere on a man to put a three-metre lance away.
+  Standing, it's grounded: its butt by his right foot, his hand on the shaft at his chest, as a guard stands with a
+  spear. Walking, it's sloped on his right shoulder, his hand low on it before him and its point up behind
+  (`carryAim`, `CARRY`, and the at-ease part of `poseLance`; the lance slides through his fist between the two,
+  `carryBack`). It used to hang upright from a fist at his hip, held by nothing: the arm's at-ease pose was written
+  and never run. It goes to his back, beside the board, only for what needs both hands or the whole body (sitting, a
+  dance, the ride down the Fall).
+- **Between blows** (`poseReady`, `node --test tests/hero-poses.test.mjs`) the fight's one stance for everyone, its off arm
+  held straight out, is mended where it doesn't suit what's in the hands. An archer holds her bow upright before her on
+  a bent arm, not out at arm's length. A bard, a sword in one hand and nothing in the other, keeps the empty hand in by
+  his hip, not held out open. A paladin with a mace and a board keeps the board up before his chest in reach of a foe
+  (short of a block: it turns no blows), where it used to hang at his side.
 - **A dragoon** holds his spear in both hands, the rear one at his hip and the other a forearm's length up the shaft,
-  thrusts with both, and sweeps its head across before him. **A paladin with a maul** carries it head up before him, both
+  thrusts with both, and sweeps its head across before him. The lead hand never lets go: it slides up the shaft as the
+  rear fist draws back and back down it as the thrust goes out (it used to come off the spear, open, for the whole of the
+  draw). **A paladin with a maul** carries it head up before him, both
   hands on the haft, and the left hand stays on it through his blows wherever a left hand could be.
 - **Dashes are runs.** A paladin's charge, a dragoon's step and a boomerang knight's dash used to slide in a crouch;
   they run now (`dash` in `src/sim/heroskills.js`). Lunges that ended all but lying down are played part-way
@@ -1175,7 +1188,27 @@ on top of whatever the legs are doing:
   takes a share of the sky's light on its shaded side (`heroLook` in `src/gfx/materials.js`).
 
 `tests/hero-skills.test.mjs` has a test of the lancer's hold: level lance, board before him and facing them through
-guard, thrust and run; the thrust drawn back and driven out; the run stopping short and ending in a thrust.
+guard, thrust and run; the thrust drawn back and driven out; the run stopping short and ending in a thrust. Another that
+a dragoon's lead hand stays on the shaft through guard, draw and thrust, and another that a bard's sword put away is at
+his left hip through the gesture clips and with the lute part-way off his back.
+
+**Who looked at this** (2026-11-11 and 12): two critics over three rounds, from frames of all 44 bodies (twelve views
+each) and every move, filmed in the real game on the real GPU. One briefed as an armourer of thirty years, who read up on
+how a harness is built and worn before judging; one as a specialist in animation and textures.
+
+| Round | Armour | Animation | Textures |
+| --- | --- | --- | --- |
+| 1 | fail, 6 | fail, 5.5 | 6 |
+| 2 | fail, 7.5 | fail, 6.5 | 7 |
+| 3 | fail, 8.5 | fail, 7.5 | 7.5 |
+
+Neither passed it. Both said from the first round that the lancer fights with his lance, and by the third the animation
+critic would sign the lancer whole. The third round failed on one thing each: a bard's sword beside his open hand at ease
+(the lute, above) and the dragoon's lead hand leaving the spear in the draw (above). Both were mended after it and no
+critic has judged the mending. Left as they are, and theirs to say: the suits' own designs (separated cups, heels,
+pauldrons as big as the helm, no scabbards), several recolours the texture critic would change (lancer_m3 and lancer_m4's
+plain back plates, boomerang_f3, bard_m3, paladin_f2, dragoon_f1 and dragoon_f3, a few near-twins), skirts that go flat
+in a jog, leaps that hang in the air, thrown things with no throwing arm, and the paladin's long wind-ups.
 
 ### Looking at their moves, and who looked
 
