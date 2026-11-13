@@ -2009,6 +2009,23 @@ three minutes there; `tools/autoplay/watch.mjs` for auto-play).
   before any of this.
 - **Nobody has played any of it by hand.** No new line has a recorded voice.
 
+### When the GPU is lost
+
+A phone or tablet can take its GPU back from a page: its memory wanted elsewhere, a frame it gave up on, the browser put
+away. Safari calls every such loss `destroyed`, the reason a page's own `destroy()` gives, so the game takes any loss as
+real (it never destroys its own device). It keeps the game as it was a moment before (the simulation is untouched), says
+so on the screen, and reloads; back at the logo, a dialog offers **Continue**, which picks up from there (`device.lost`,
+`gpuLostOffer` in `src/main.js`). The tap on it is also what lets the sound back on in Safari. The dialog says what the GPU
+was doing as it went: its time a frame on average and at worst lately, and how many frames were waiting. A second loss
+within a minute (on the way back in, say) doesn't reload again: it says to reload by hand, the game kept for Continue.
+
+Seen on the owner's iPad (November 2026): the device lost in the road's fight as the necromancers came, with six frames
+waiting on the GPU. A phone keeps two in flight, but a frame was let through every second whatever the count, for a
+browser that might stop saying when the GPU's done; on a GPU that had stalled that piled frames on it. Now one is let
+through only once the GPU's said nothing for five seconds (`lastDone` in `src/gfx/renderer.js`). The render diagnostics
+show the GPU's time a frame, at worst lately, and when it last finished one. What stalled it isn't known: the road's
+bodies are all built while loading (`BODIES` in `src/sim/undead.js`), so the fight makes nothing new on the GPU.
+
 ### What has and hasn't been tested
 
 The owner's first session on a phone found the frame rate too low, which led to the phone tier below. **That rework hasn't
