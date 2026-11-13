@@ -387,7 +387,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
-      else if (m.type === 'warrens') game?.party?.onWarrens(m);
+      else if (m.type === 'warrens') { game?.party?.onWarrens(m); renderer?.setScenery?.(m.flipped); }
       // (What monsters have marked on the ground and thrown, near you: src/sim/perils.js. Auto-play steps out of it.)
       else if (m.type === 'perils') { if (game) game.perils = { marks: m.marks, shots: m.shots, at: performance.now() }; }
       else if (m.type === 'hall') game?.hallUI?.onHall(m);

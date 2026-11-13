@@ -22,9 +22,10 @@
 
 import { ROADS, SUMMIT } from './terrain.js';
 import { CHURCH_DOOR, churchAt } from './church.js';
+import { POSTS } from './dungeon.js';
 
 // How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU. (And the
-// Free Company's two quartermasters and the Test Dungeon's keeper besides, BROKERS below.)
+// Free Company's quartermasters and the Test Dungeon's keeper besides, BROKERS below.)
 // (Eight on a phone: one of every class, so any of them can be hired there too.)
 export const HERO_SLOTS = { desktop: 16, lean: 8 };
 
@@ -36,6 +37,9 @@ export const BROKERS = [
   { broker: 'portal', body: 'bard_m3', name: 'Captain Merrow Vale', title: 'Quartermaster of the Free Company' },
   // The Test Dungeon's keeper (src/core/testhall.js), who summons whatever you'd fight. Only ever in its hall.
   { broker: 'hall', body: 'bard_f1', name: 'Ysolde Marr', title: 'Keeper of the Test Dungeon', guild: 'The Test Dungeon' },
+  // One at each of the later delves' portals that has a post (src/core/dungeon.js POSTS: the Drowned Vaults, the Sporehold,
+  // the Hollow Playhouse, the Kingsbarrow). say: what they tell you of the place; delve: its name.
+  ...POSTS.map((q) => ({ broker: q.broker, body: q.body, name: q.name, title: 'Quartermaster of the Free Company', say: q.say, delve: q.delve })),
 ];
 
 // The classes, as the sim fights them. hp: how much they take. range: where they like to fight from. move: their pace
@@ -259,7 +263,7 @@ export function withBrokers(cast, roster, kit) {
     // (They wear bards' bodies, but they keep the Company's books, not a lute.)
     const k = { ...(kit.heroes[h.id] || {}), lute: null };
     out.push({ slot: out.length, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name: b.name, full: b.name, guild: b.guild || 'The Free Company', persona: 'kind', level: 30,
-      gold: 0, kit: k, string: k.string ? kit.strings[k.string] : null, seed: 7 + out.length, broker: b.broker, title: b.title });
+      gold: 0, kit: k, string: k.string ? kit.strings[k.string] : null, seed: 7 + out.length, broker: b.broker, title: b.title, say: b.say, delve: b.delve });
   }
   return out;
 }

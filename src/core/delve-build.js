@@ -275,6 +275,8 @@ function fires(K, d) {
 // ---- what stands in the rooms ------------------------------------------------------------------------------------------------
 // Each: (K, d, p, x, y, z) with the prop's own numbers in p, its place in the world on the floor at x, y, z.
 
+// A culvert's opening: half its width, how far its sill is over the floor it stands on, how high it is. (culvert, grate)
+const CULVERT = { hw: 1.2, sill: 0.35, high: 2.5 };
 const rod = (K, layer, ax, ay, az, bx, by, bz, t) => {
   // A thin bar between two points: a quad either way, so it shows from every side.
   const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz), px = L > 1e-3 ? -dz / L * t : t, pz = L > 1e-3 ? dx / L * t : 0;
@@ -715,6 +717,43 @@ const PROPS = {
     for (let k = 0; k < 5; k++) { const a = k * 1.26 + z; K.drum(p.layer || 'pale:rubble', x + Math.cos(a) * p.r * 1.05, y - 0.5, z + Math.sin(a) * p.r * 1.05, 0.7, 0.5, 5, { r2: 0.4, collide: false, turn: a }); }
   },
   // A sluice: two piers and a gate of timber between them, lifted; the other gate lying where it fell.
+  // Iron bars in a culvert's mouth (below): nine uprights and two rails in its opening. What's solid is the prop's own
+  // box, a little wider, so nothing slips by at the sides.
+  grate(K, d, p, x, y, z) {
+    const across = p.hz > p.hx, w = CULVERT.hw - 0.05, y0 = y + CULVERT.sill, n = 9;
+    for (let i = 0; i < n; i++) { const u = (i / (n - 1) * 2 - 1) * w; K.box('iron', across ? x : x + u, y0 - 0.1, across ? z + u : z, 0.045, CULVERT.high + 0.2, 0.045, 0, NO); }
+    for (const h of [0.5, 1.8]) K.box('iron', x, y0 + h, z, across ? 0.03 : w, 0.07, across ? w : 0.03, 0, NO);
+  },
+  // A drain built through the rock: a square culvert of coursed stone from its head (where the prop stands) down to its
+  // foot (to), with a headwall round its mouth at each end. It lines a tunnel cut for it (a delve's `drain`), which is
+  // too steep for the cave's own walls to close properly; the grates stand in its two mouths.
+  culvert(K, d, p, x, y, z) {
+    const { hw, sill, high } = CULVERT, fx = d.x + p.to[0], fz = d.z + p.to[1], fy = caveFloorY(fx, fz);
+    const L = Math.hypot(fx - x, fz - z) || 1, tx = (fx - x) / L, tz = (fz - z) / L, sx = -tz, sz = tx;
+    // (A face wound to look the way asked.)
+    const face = (layer, a, b, c, e, want) => {
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [e[0] - a[0], e[1] - a[1], e[2] - a[2]];
+      const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+      if (n[0] * want[0] + n[1] * want[1] + n[2] * want[2] >= 0) K.quad(layer, a, b, c, e); else K.quad(layer, e, c, b, a);
+    };
+    // (A little past each mouth, so the lining runs into its headwall.)
+    const at = (k, side, up) => { const px = x + (fx - x) * k, pz = z + (fz - z) * k, py = y + (fy - y) * k; return [px + sx * side * hw, py + sill + up * high, pz + sz * side * hw]; };
+    const k0 = -0.2 / L, k1 = 1 + 0.2 / L, lining = p.layer || d.look.wall;
+    face(lining, at(k0, -1, 0), at(k0, 1, 0), at(k1, 1, 0), at(k1, -1, 0), [0, 1, 0]);
+    face(lining, at(k0, -1, 1), at(k0, 1, 1), at(k1, 1, 1), at(k1, -1, 1), [0, -1, 0]);
+    face(lining, at(k0, -1, 0), at(k1, -1, 0), at(k1, -1, 1), at(k0, -1, 1), [sx, 0, sz]);
+    face(lining, at(k0, 1, 0), at(k1, 1, 0), at(k1, 1, 1), at(k0, 1, 1), [-sx, 0, -sz]);
+    // The headwalls: two piers, a sill and a lintel round the opening, wide and tall enough to close the cut's own mouth.
+    const along = Math.abs(tx) > Math.abs(tz), stone = p.head || lining, cap = p.cap || stone;
+    for (const [mx, my, mz] of [[x, y, z], [fx, fy, fz]]) {
+      const wide = 4.2, top = Math.max(caveRoofY(mx + 0.01, mz + 0.01) + 1.2, my + sill + high + 1);
+      const box = (layer, u, y0, y1, half) => K.box(layer, mx + sx * u, y0, mz + sz * u, along ? 0.28 : half, y1 - y0, along ? half : 0.28, 0, NO);
+      for (const side of [-1, 1]) box(stone, side * (hw + (wide - hw) / 2), my - 1.2, top, (wide - hw) / 2);
+      box(stone, 0, my - 1.2, my + sill, hw);
+      box(cap, 0, my + sill + high, my + sill + high + 0.45, hw + 0.25);
+      box(stone, 0, my + sill + high + 0.45, top, hw);
+    }
+  },
   sluicegate(K, d, p, x, y, z) {
     const c = Math.cos(p.yaw), s = Math.sin(p.yaw), w = p.w;
     for (const u of [-w, w]) K.box('pale:rubble', x + u * c, y - 0.4, z - u * s, 0.5, 4.2, 0.5, p.yaw, NO);
@@ -972,6 +1011,27 @@ const PROPS = {
   urn(K, d, p, x, y, z) {
     K.drum('pale:rubble', x, y, z, 0.2, 0.34, 8, { r2: 0.38, collide: false }); K.drum('pale:rubble', x, y + 0.34, z, 0.38, 0.4, 8, { r2: 0.22, collide: false });
     K.drum('pale:rubble', x, y + 0.74, z, 0.24, 0.07, 8, NO); K.drum('rubble', x + 0.5, y, z + 0.2, 0.16, 0.08, 6, NO);
+  },
+  // One of the Warden's standing stones: rough, as tall as three men. Its foot always stands; the rest of it is scenery that
+  // can go (<tag>_stone_<n>) and what it leaves when it's broken scenery that can come (<tag>_rubble_<n>): a snapped head
+  // on the stump and its pieces lying round. (src/core/sites.js Kit.group; what stops a body stays the whole stone's round.)
+  wardstone(K, d, p, x, y, z) {
+    const r = p.r, cut = 1.5, tall = 5.6, at = (h) => r * (1.1 - 0.3 * h / tall);
+    K.drum('rubble', x, y - 0.3, z, at(0), cut, 7, { r2: at(cut), collide: false, turn: x });
+    K.group(`${d.tag}_stone_${p.n}`, true, () => {
+      K.drum('rubble', x, y - 0.3 + cut, z, at(cut), tall - cut, 7, { r2: at(tall), collide: false, turn: x });
+      K.drum('pale:stone', x, y + 3.4, z, at(3.7) + 0.06, 0.22, 7, { open: true, collide: false, turn: x });
+    });
+    K.group(`${d.tag}_rubble_${p.n}`, false, () => {
+      // (The break: a slanted stub left on the stump, paler inside than out.)
+      K.drum('pale:stone', x + 0.15, y - 0.3 + cut, z - 0.1, at(cut) * 0.92, 0.75, 5, { r2: at(cut) * 0.3, collide: false, turn: x + 0.7 });
+      // (Its pieces: the big ones where it fell, toward the middle of the hall, and smaller ones thrown wider.)
+      for (let i = 0; i < 9; i++) {
+        const a = hash2(p.n * 7 + i, 3) * Math.PI * 2, far = r + 0.5 + hash2(p.n * 7 + i, 5) * 2.6, big = i < 3 ? 0.62 : 0.26 + hash2(i, p.n) * 0.2;
+        const px = x + Math.sin(a) * far, pz = z + Math.cos(a) * far;
+        K.rock(i % 3 ? 'rubble' : 'pale:stone', px, pz, big, big * (0.6 + hash2(i, 9) * 0.5), { y: caveFloorY(px, pz) - 0.08, collide: false, turn: a * 3 });
+      }
+    });
   },
   // A standing stone with a ring cut round it.
   ringstone(K, d, p, x, y, z) {

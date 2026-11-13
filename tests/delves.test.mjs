@@ -145,3 +145,53 @@ test('a shared blow is split among those in it, and then() is told who they were
   run(A, 1);
   assert.equal(A.p.hp, 20, 'alone in it, all of it');
 });
+
+test('each later delve has a quartermaster of its own, standing on open ground by its portal', async () => {
+  const { BROKER_SPOTS, POSTS } = await import('../src/core/dungeon.js');
+  const { BROKERS } = await import('../src/core/heroes.js');
+  const { MAX_CHARS } = await import('../src/core/layout.js');
+  assert.deepEqual(POSTS.map((q) => q.broker), DELVES.slice(3).map((d) => d.key));
+  const names = new Set();
+  for (const q of POSTS) {
+    const d = delveByKey(q.broker), [x, z, face] = BROKER_SPOTS[q.broker], b = BROKERS.find((k) => k.broker === q.broker);
+    assert.ok(b && b.name === q.name && b.say === q.say && b.delve === d.name, q.broker);
+    assert.ok(q.say.length > 40 && !names.has(q.name), q.name); names.add(q.name);
+    // (On its terrace: a few strides from the portal, and not on it.)
+    const far = Math.hypot(x - d.portal.x, z - d.portal.z);
+    assert.ok(far > d.portal.r + 1 && far < 7, `${q.broker}: ${far.toFixed(1)} m from its portal`);
+    assert.ok(Number.isFinite(face));
+  }
+  // (The town's, the Warrens', the Test Dungeon's keeper and these four; and room in the snapshot for them.)
+  assert.equal(BROKERS.length, 7);
+  assert.ok(MAX_CHARS >= 104);
+});
+
+test('the Warden\'s stones are scenery that goes, their rubble scenery that comes, and the fight spends them', async () => {
+  const { buildSites } = await import('../src/core/sites.js');
+  const { WARDEN_COLUMNS } = await import('../src/core/delve-kingsbarrow.js');
+  const groups = buildSites().groups;
+  WARDEN_COLUMNS.forEach((q, n) => {
+    const stone = groups.get(`kb_stone_${n}`), rubble = groups.get(`kb_rubble_${n}`);
+    assert.ok(stone?.on === true && stone.ranges.length, `kb_stone_${n}`);
+    assert.ok(rubble?.on === false && rubble.ranges.length, `kb_rubble_${n}`);
+    for (const r of [...stone.ranges, ...rubble.ranges]) assert.ok(r.v1 > r.v0 && buildSites().parts.get(r.layer).pos.length / 3 >= r.v1, r.layer);
+  });
+  const src = readFileSync(new URL('../src/sim/delve-fights.js', import.meta.url), 'utf8');
+  assert.match(src, /f\.spent\.add\(stone\); W\.flip\(`kb_stone_\$\{stone\}`\); W\.flip\(`kb_rubble_\$\{stone\}`\)/);
+  // (And the sim's own switch: on, off, and cleared when the delve stands again.)
+  const { Warrens } = await import('../src/sim/dungeon.js').catch(() => ({}));
+  if (Warrens) { const W = Object.create(Warrens.prototype); W.flipped = new Set(); W.flip('a'); W.flip('b'); W.flip('a', false); assert.deepEqual([...W.flipped], ['b']); }
+});
+
+test('the Vaults\' drains are barred at both ends: seen down, never walked', async () => {
+  const { CaveNav, toWorld } = await import('../src/core/dungeon.js');
+  const d = delveByKey('vaults'), drains = d.tunnels.filter((t) => t.drain), nav = new CaveNav(d), [ex, ez] = toWorld(d.entry.x, d.entry.z, d);
+  assert.equal(drains.length, 2);
+  for (const t of drains) {
+    const a = t.pts[0], b = t.pts[t.pts.length - 1], [mx, mz] = toWorld((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, d);
+    assert.ok(!Number.isFinite(nav.walkDist(ex, ez, mx, mz, 0)), 'a drain can be walked into');
+    assert.ok(t.dark && t.niche);
+  }
+  assert.equal(d.props.filter((p) => p.kind === 'grate' && p.solid).length, 4);
+  assert.equal(d.props.filter((p) => p.kind === 'culvert').length, 2);
+});

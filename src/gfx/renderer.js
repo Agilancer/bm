@@ -666,6 +666,21 @@ export class Renderer {
     }).catch((e) => console.warn('followLand', e)).finally(() => { this.landBusy = false; });
   }
 
+  // Which of the scenery that comes and goes is the other way from how it began (the keys: a standing stone broken, its
+  // rubble lying). Anything not named is put back as it was built. (src/sim/dungeon.js flip, by way of the party's post.)
+  setScenery(flipped) {
+    if (!this.scenery?.size || !this.staticVB) return;
+    const want = new Set(flipped || []);
+    let changed = false;
+    for (const [key, g] of this.scenery) {
+      const on = g.first !== want.has(key);
+      if (on === g.on) continue;
+      g.on = on; changed = true;
+      for (const r of g.runs) this.device.queue.writeBuffer(this.staticVB, r.at, on ? r.shown : r.gone);
+    }
+    if (changed) this.shadowEpoch = (this.shadowEpoch || 0) + 1;
+  }
+
   buildStatics(glb, layerNames, layers, oaks) {
     const { device } = this;
     // Merge every primitive into one buffer, opaque first so the cutouts are one range at the end.
@@ -686,7 +701,7 @@ export class Renderer {
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       const cutout = layer < 100 && layers[layer].cutout;
-      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });
+      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx, site: name });
     }
     prims.sort((a, b) => a.cutout - b.cutout);
     let nv = 0, ni = 0;
@@ -703,11 +718,14 @@ export class Renderer {
     };
     const verts = new ArrayBuffer(nv * 36);
     const f = new Float32Array(verts), u = new Uint32Array(verts);
+    // (Where each of the countries' paintings begins in the one buffer: for the scenery that comes and goes, below.)
+    const siteBase = new Map();
     const indices = new Uint32Array(ni);
     let vo = 0, io = 0, cutStart = -1;
     for (const p of prims) {
       if (p.cutout && cutStart < 0) cutStart = io;
       const base = vo;
+      if (p.site) siteBase.set(p.site, base);
       const n = p.pos.length / 3;
       for (let i = 0; i < n; i++) {
         const o = vo * 9;
@@ -718,6 +736,19 @@ export class Renderer {
         vo++;
       }
       for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
+    }
+    // Scenery that comes and goes (src/core/sites.js Kit.group): each group's corners as built, and the same folded to a
+    // point, which draws nothing. Those not there from the start go into the buffer folded.
+    this.scenery = new Map();
+    for (const [key, g] of buildSites().groups) {
+      const runs = g.ranges.map(({ layer, v0, v1 }) => {
+        const at = (siteBase.get(layer) + v0) * 36, n = (v1 - v0) * 9;
+        const shown = f.slice(at / 4, at / 4 + n), gone = shown.slice();
+        for (let i = 0; i < n; i += 9) { gone[i] = shown[0]; gone[i + 1] = shown[1]; gone[i + 2] = shown[2]; }
+        if (!g.on) f.set(gone, at / 4);
+        return { at, shown, gone };
+      });
+      this.scenery.set(key, { first: g.on, on: g.on, runs });
     }
     this.staticVB = makeBuffer(device, new Float32Array(verts), GPUBufferUsage.VERTEX);
     this.staticIB = makeBuffer(device, indices, GPUBufferUsage.INDEX);

@@ -752,7 +752,8 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 
   Before the six trees, at level 8 with a Meteor, he went down in 36 seconds once and in about a minute and a half the next
   time, without the bot falling below 80% of its life. With the trees it was run once, headless, set to level 12 in the gear a new game starts with: it brought thirteen Thunderbolts down on him over about three minutes, between packs of the risen, was never beaten back, and went on to hire a party (his end is read from its status line, which went from "90 of 520 left" to its next job and a new level). An earlier build with only a Wall of Fire couldn't reach him from where it stands, which is why Thunderbolt is in the build and the level is 11. The balance log keeps every attempt.
-- **Its party.** From level 6, once it can pay, it walks to the nearer quartermaster of the Free Company, opens his books
+- **Its party.** From level 6, once it can pay, it walks to the nearest quartermaster of the Free Company (the town's, the
+  Warrens', or one at a later delve's portal), opens his books
   with E, and hires a lancer first, then a paladin, then the best two others it can afford (`hiring` in
   `src/ui/autowarrens.js`). With them at its back it plays as a group does (`helpPick`, `tankNear`, `partyStrong` in
   `src/ui/autobrain.js`):
@@ -951,8 +952,12 @@ bought as written (it's played through from level 1 to 50), and a new block of m
 
 ### The Free Company: a party of your own
 
-Two quartermasters of the Free Company hire out the other Tessariels: Aldous Fenn by the square, and Captain Merrow Vale at
-the Hollowfang Warrens' portal (`BROKERS` in `src/core/heroes.js`, `BROKER_SPOTS` in `src/core/dungeon.js`). E opens his
+Six quartermasters of the Free Company hire out the other Tessariels: Aldous Fenn by the square, Captain Merrow Vale at
+the Hollowfang Warrens' portal, and one on the terrace of each of the four later delves' portals, with a word of their
+own about the place: Sergeant Hobb Marlow at the Drowned Vaults, Ensign Wren Aldery at the Sporehold, Sergeant Maud
+Halloway at the Hollow Playhouse and Corporal Edric Fenn, Aldous's brother, at the Kingsbarrow (`BROKERS` in
+`src/core/heroes.js`, `BROKER_SPOTS` and `POSTS` in `src/core/dungeon.js`; a delve gets one by having a `post`). The keep
+and the Deeps have none. E opens his
 books (`src/ui/party.js`): up to four at a time, each with a name of the Company's and a level near yours, paid once, in
 gold by their level (`hirePrice`). Their levels go up with yours. The party is kept in the save, and down the left of the
 screen is a frame for each, with their life.
@@ -1107,7 +1112,9 @@ now carries four things, not three (`PROPS_PER_CHAR`).
 - The quartermasters and the Test Dungeon's keeper wear bards' bodies, but carry no lute (`withBrokers`).
 
 The bodies are the other Tessariels' own (`makeCast` now puts a lancer and a paladin first, so even a small world has
-both). The quartermasters are two more bodies after them.
+both). The quartermasters are six more bodies after them, and the Test Dungeon's keeper one more: 103 bodies in all
+on a desktop with your own, in a snapshot that holds 104 (`MAX_CHARS` in `src/core/layout.js`; the sim refuses to start
+with more than it holds, where it used to write the extra over the slimes).
 
 ### The lancer's hold, the dragoon's and the maul's
 
@@ -1595,8 +1602,9 @@ it. Wet green-black rock, standing water in every room (set toward the Sump's si
   (round and smooth: something bored it), the Reed Galleries, the Bloat's Wallow, the Great Cistern (and off it the
   Strongroom, a dead end worth its pack), the Tidehall, the Sluice, and the Sump, which is two caverns run together
   with the causeway's piers standing in a line down it. All the way round there are signs of what's at the bottom
-  before it's met: its bores, falling steeply away, and the holes it has left in the floors, which look as the holes
-  in its own fight do.
+  before it's met: its bores, falling steeply away, the holes it has left in the floors, which look as the holes
+  in its own fight do, and two barred drains, in the Reed Galleries and the Great Cistern, down which the Sump's light
+  and water are seen from above.
 - **The packs**: the drowned (the possessed, in the fen's colours), drowned children, mudlarks (kobolds) who work the
   gallery on a beat, bog drakes, and the Vault-Keeper in the Strongroom.
 - **The Bloat** (a plague giant, 4.4 m). Bile in pools, a gout of it along the floor, a cone, a stamp. As he's cut down
@@ -1683,7 +1691,8 @@ Drystone bleached pale, lintels, stone lamps with a pale flame; no banners.
 - **The Gravewarden** (4.3 m). His plate turns three fifths of every blow. He lowers his head along a line that
   follows one of you for two and a half seconds and then comes down it: with a standing stone anywhere in the strip
   (six in a ring in his hall) he strikes it, is stunned five seconds, and his plate is cracked a step (four steps to
-  none). It knits a step every forty seconds he isn't made to. Between: a sweep, his shield shoved, a ring to jump,
+  none). The stone breaks, and is no use again: six cracks at most. It knits a step every forty seconds he isn't made
+  to. Between: a sweep, his shield shoved, a ring to jump,
   bone in rows. The barrow guard come through two doors at half his life.
 - **The Ossuary Golem** (4.7 m). It refuses to die twice. It falls apart, and three of its bones (then four) get up in
   the bays at the two ends of its hall, by turns, and walk back to where it fell, fighting nobody; each takes twenty
@@ -1704,19 +1713,19 @@ fight of each unless it says more:
 
 | | Seeing it at once | Half a second late | Standing still |
 | --- | --- | --- | --- |
-| The Bloat | 98 to 104 s, down to 61% | 96 to 101 s, down to 14% | dead in 46 s |
-| Mother Sallow | 117 s, down to 70% | 107 s, down to 60% | dead in 11 s |
-| The Leviathan | 113 and 132 s, down to 70% | 120 s, down to 78% | dead in 33 s |
-| Mouldfang | 91 and 124 s, down to 34%; the archer fell once | 109 s, down to 71% (fell once before his cloud was eased) | dead in 24 s |
-| Mother Morel | 80 s, untouched | 82 s, down to 26% | dead in 21 s |
-| The Heart of the Ring | 119 s, down to 40% | 120 s, down to 44% | dead in 7 s |
-| The Seamstress | 86 s, down to 53% | 84 s, untouched | dead in 70 s |
-| The Leading Man | 101 s, down to 44% | 101 s, down to 65% | dead in 35 s |
-| The Dollmaker | 132 s, down to 74% | 133 s, down to 48% | dead in 44 s |
-| The Gravewarden | 79 s, untouched | 90 s, down to 46% | dead in 8 s |
-| The Ossuary Golem | 109 s, untouched | 105 s, down to 65% | alive, on 27% |
-| Ossivar | 119 and 121 s, down to 36% | 127 s, down to 51% | dead in 69 s |
-| The thirty-one packs | 11 to 35 s (the Queens' Chamber 62 s), never under 41% | not played | not played |
+| The Bloat | 84 and 96 s, down to 20% | 103 s, down to 66% | dead in 43 s |
+| Mother Sallow | 107 and 121 s, down to 67% | 108 s, down to 82% | dead in 10 s |
+| The Leviathan | 114 and 126 s, down to 57% | 122 and 145 s, down to 64% | dead in 38 and 66 s |
+| Mouldfang | 91 s, down to 51% | 107 s, down to 39% | dead in 37 s |
+| Mother Morel | 91 s, down to 58% | 117 s, down to 54% | dead in 25 s |
+| The Heart of the Ring | 101 s, down to 75% | 124 s, down to 44% | dead in 9 s |
+| The Seamstress | 84 s, untouched | 78 s, down to 65% | dead in 27 s |
+| The Leading Man | 111 s, down to 48% | 108 s, down to 78% | dead in 30 s |
+| The Dollmaker | 118 to 144 s (three), down to 62% | 112 to 138 s (three), down to 33% | dead in 20 to 60 s (five of five) |
+| The Gravewarden | 87 and 99 s, down to 71% | 87 to 102 s (three), down to 30% | dead in 11 to 36 s (four of four) |
+| The Ossuary Golem | 94 to 102 s (three), down to 79%; the rogue fell once | 74 to 101 s (three), down to 61% | dead in 11 to 38 s (four of four) |
+| Ossivar | 114 and 116 s, down to 11% | 115 to 124 s (three), down to 41% | dead in 63 to 103 s (four of four) |
+| The thirty-one packs | 12 to 44 s, never under 47% | not played | not played |
 
 How it got there: the first numbers had the party killing each in 40 to 115 s (it does about 150 a second to a boss
 that stands still at these levels, twice what the Deeps' table assumed), so their lives went up by half to double. Then
@@ -1725,9 +1734,15 @@ ran while it stood idle, and Mouldfang bloomed once in 97 seconds. The later twe
 is doing and are answered when it's free (`due` in `src/sim/delve-fights.js`; the keep's and the Deeps' are as they
 were). With that right, the Leviathan killed a player who dodged everything (its eruptions were eased), and rows of
 marks from the Dollmaker and the Gravewarden took a late player from full to nothing in two (those three bite at 1.15
-to 1.2 where the rest bite at 1.45: `BITE`). **The table is from the runs after those changes, but not all of it from
-after the very last** (Mouldfang's cloud, the Bloat's gout and the quickest packs' toughness were changed and only
-those played again): play them again before trusting a number. The player in it aims perfectly, never tires, and is
+to 1.2 where the rest bite at 1.45: `BITE`). **The whole table was played again after the last change to any fight**, and after main's own changes to the
+heroes and the bosses were merged in. Those runs found four of the twelve could by then be stood through (the Dollmaker,
+the Gravewarden, the Golem and Ossivar: the healer kept a player who never moved on his feet), which a fight here
+mustn't allow, so what each of those does to someone who doesn't move was made to bite: the Gravewarden's charge, his
+quake and his bones; the middle of the Golem's cage when it closes; Ossivar's strafing and what falls from the vault;
+and the Dollmaker's chime, which now rings twice where you stood, the second stroke the heavy one, so that leaving it
+late costs nothing and never leaving it costs both. The numbers above are after that. One fight in it reads close:
+Ossivar took a player who did everything at once down to 11% in one of two.
+The player in it aims perfectly, never tires, and is
 told where to stand; a person isn't. **Nobody has played any of the four by hand.**
 
 Looked at, headless, on a software GPU (`tools/world/views.mjs`, which draws here: it didn't on the machine the first
@@ -1735,8 +1750,18 @@ three were made on): the Tidehall with its rock, the Sump from the sluice's race
 the stage, the Wardrobe, the head of the king's stair, and the vault. The corpse-lights, the violet light and the pale
 grave-lamps draw as meant, the two tints take, the plum cloth hangs. Two things were wrong and were put right from the
 pictures: the tide rock was a striped disc with a square of floor through it (round now, and cobbled), and the great
-caps' whole undersides were white (a lit rim and collar now). **Not looked at:** any of the bosses or their marks drawn,
-the Kennels, the bower, the Heart, the attic, the Warden's hall, the Ossuary, or anything on a phone.
+caps' whole undersides were white (a lit rim and collar now).
+
+The bosses' marks have been seen drawn since, with `node tools/dungeon/shots.mjs [boss ...]`: it loads the game for
+each boss asked for, puts you in its room with nothing able to hurt you (alone, or with a hired party if `PARTY=1`),
+and takes three pictures from under the roof, the boss put down to 60% and 30% of its life on the way. Seen so: the
+Bloat's bile pools and the ring of his swelling; the Leading Man's light riding him across the stage with a rose
+marked outside it; the Gravewarden's line down the hall; the Heart's husks' crosses and circles, a ring of spores going
+out and the far portal behind its trunk; Mother Sallow's tide as a bright edge round the dry rock, and her cone; Ossivar
+on the vault floor; the Dollmaker's attic; Mother Morel's bower and the Sump mid-fight. Every shape the fights use (circle, ring, line,
+cone, cross) draws, bright-edged and readable against all four floors. What the pictures also show: the Leading Man's
+"dark" doesn't darken the stage (the lamps are as lit as before; only the words and the ring say so), as with the
+keep's braziers. **Not looked at:** the Kennels, the bower, the attic, the Ossuary, or anything on a phone.
 
 **Auto-play** has the four in its ways through (`WAYS`, `KNOWN` in `src/ui/autowarrens.js`), their eight quests in its
 plan, and one rule for all twelve bosses: it does what the fight orders (`tactics`). Watched headless with drawing
@@ -1784,10 +1809,36 @@ fair, what's a copy of something the game already has). What changed because of 
   (a boulder at the farthest was in six of them) were cut down and each given one of its own.
 - **After the third**, what was left is in the list below.
 
-**Not done, and known:** a way to see the Sump before the sluice (the field has no opening too narrow to walk, so the
-cracks toward it are blind); a spent standing stone can't be shown, so any stone cracks the Gravewarden's plate any
-number of times; no quartermaster stands at any of the four portals (hire in town or at the Warrens' and walk your
-party there, as for the keep and the Deeps).
+**Done since, of what that list had left:**
+
+- **The Sump is seen before the sluice.** The Reed Galleries and the Great Cistern each have a drain cut through to it
+  (a tunnel with `drain`, written from the Sump up so its head comes out level with the room's floor), lined as a square
+  culvert of coursed stone with a headwall and iron bars at each end (`culvert` and `grate` in
+  `src/core/delve-build.js`), and a corpse-light standing in line with its foot. From the bars you look down it to that
+  light and the Sump's water. Nothing walks it: `tools/dungeon/check.mjs` fails if the middle of a drain can be reached
+  from the way in, and leaves a drain's floor out of its count of slopes too steep to walk. The walk to the Sump is the
+  417 m it was. The Wallow's crack is still blind. (The cave's own walls don't close on a floor that steep, which is
+  why the culvert is built inside it.)
+- **A standing stone breaks, and is seen to.** Scenery could not change once built: everything out in the countries is
+  one buffer. Now a piece of it can be a group (`Kit.group(key, on, fn)` in `src/core/sites.js`), which the renderer
+  folds away or brings back by writing those corners again (`setScenery` in `src/gfx/renderer.js`); the sim says which
+  are the other way from how they were built (`Warrens.flip`, sent with the party's post). The Warden's six stones are
+  the first to use it (`wardstone`): each breaks the first time he strikes it, leaving a stump with a slanted stub and
+  its pieces lying round, and is no use after, so there are six cracks to be had and no more. A lost fight stands them
+  up again; a won one leaves them lying till the barrow has had its rest. What stops a body is unchanged: a broken
+  stone's stump is still in the way. The keep's braziers and the Leading Man's lamps could go out the same way and
+  don't yet.
+- **A quartermaster at each of the four portals** (see "The Free Company"): Sergeant Hobb Marlow, Ensign Wren Aldery,
+  Sergeant Maud Halloway and Corporal Edric Fenn, each with a word about the place. Auto-play hires of whichever post
+  is nearest. Watched, headless as before: set down by the Vaults' portal at level 12 with gold, no party and Under the
+  Mile in hand, it said "To Sergeant Hobb Marlow at The Drowned Vaults, to hire a party", had its four within half a
+  minute, went in, and in the six minutes watched was through the Toll, the Reeds (past the first drain) and the Bloat
+  and into the Cistern. All four stand on their terraces in pictures (the land round them isn't drawn by this machine's
+  renderer, so that's all those show). The keep and the Deeps still have none.
+- **A fight in a long room no longer ends because everyone is in its far corner.** Who's still in a boss's fight was
+  measured from the room's middle by its short side; the Dollmaker's attic and the Ossuary are twice as long as they
+  are wide, and their corners fell outside it. It's by the room's diagonal now (`stepBosses` in `src/sim/dungeon.js`).
+  Found by the pictures: a player alone in the attic's corner had the Dollmaker walk off.
 
 ### Monsters' attacks: marks on the ground, and what flies
 

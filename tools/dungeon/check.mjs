@@ -50,11 +50,24 @@ for (const d of DELVES) {
     const onProp = d.props.some((q) => q.solid && (q.hx !== undefined ? Math.abs(p.x - q.x) <= q.hx + 0.5 && Math.abs(p.z - q.z) <= q.hz + 0.5 : Math.hypot(p.x - q.x, p.z - q.z) <= q.r + 0.5));
     if (!p.solid && !onProp && caveRoom(x, z) < -0.8 && !['portcullis', 'hearth', 'falls'].includes(p.kind)) fail(`${d.key}: a ${p.kind} at ${p.x}, ${p.z} is in the rock`);
   }
-  // Every walkable cell: floor never too steep for a walk (a castle's stairs and steps aside).
+  // Every walkable cell: floor never too steep for a walk (a castle's stairs and steps aside; and a drain, which is
+  // barred at both ends and only looked down: it must be shut to the walk from the way in).
+  const drains = d.tunnels.filter((t) => t.drain);
+  const inDrain = (lx, lz) => drains.some((t) => t.pts.some((p, n) => {
+    if (!n) return false;
+    const a = t.pts[n - 1], ux = p[0] - a[0], uz = p[1] - a[1], L2 = ux * ux + uz * uz || 1, k = Math.max(0, Math.min(1, ((lx - a[0]) * ux + (lz - a[1]) * uz) / L2));
+    return Math.hypot(lx - a[0] - ux * k, lz - a[1] - uz * k) < t.w / 2 + 1.5;
+  }));
+  for (const t of drains) {
+    const a = t.pts[0], b = t.pts[t.pts.length - 1], [mx, mz] = toWorld((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, d);
+    const far = nav.walkDist(...toWorld(d.entry.x, d.entry.z, d), mx, mz, 0);
+    if (Number.isFinite(far) && far < 1e5) fail(`${d.key}: the drain at ${a.map((v) => Math.round(v))} can be walked into (${Math.round(far)} m from the way in): bar both its ends`);
+  }
   let steep = 0;
   for (let j = 2; j < g.H - 2; j += 2) for (let i = 2; i < g.W - 2; i += 2) {
     const k = j * g.W + i;
     if (g.sdf[k] * GRID_UNIT < 0.5) continue;
+    if (drains.length && inDrain(g.x0 + i * 0.5 - d.x, g.z0 + j * 0.5 - d.z)) continue;
     const s = Math.hypot(g.floor[k + 1] - g.floor[k - 1], g.floor[k + g.W] - g.floor[k - g.W]) * GRID_UNIT / (2 * 0.5);
     if (s > 0.6) steep++;
   }
