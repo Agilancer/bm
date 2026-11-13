@@ -1,0 +1,61 @@
+Create ONE individual high-resolution square seamless repeating color texture for a realistic fantasy RPG desert oasis, cohesive with natural muted desert material scans. Aim for 2048x2048. Orthographic perpendicular surface scan, entire frame filled by material, sharp fine detail, even diffuse lighting. Opposite edges must match seamlessly on both axes, features wrap across edges. No perspective, horizon, text, labels, borders, collage, vignette, focal object, strong shadows, or large distinctive patterns. Subject: 
+
+01_date_palm_bark
+Date palm trunk bark, dense rough overlapping diamond-shaped old leaf scars, warm gray-brown fibrous bark. Flat straight-on bark wrap texture, no cylindrical trunk silhouette.
+
+02_fan_palm_bark
+Fan palm trunk bark, coarse interlocking woody scales and shaggy tan fibers, desaturated brown. Flat bark surface for wrapping a trunk, no trunk silhouette.
+
+03_palm_leaf_green
+Close-up palm leaf blade surface, deep living green with fine parallel lengthwise veins and subtle waxy grain. Continuous full-frame green leaf material for mapping onto palm frond geometry, no individual leaf outlines or background.
+
+04_palm_leaf_sunlit
+Close-up healthy young palm leaf blade surface, fresh yellow-green with strong delicate parallel veins running vertically, subtle natural variation. Continuous full-frame leaf material for palm geometry, no outlines or background.
+
+05_palm_leaf_dry
+Close-up dry palm leaf blade material, golden straw tan with fine parallel veins and fine longitudinal fiber splitting, continuous full-frame leaf surface without outlines or background.
+
+06_oasis_grass
+Lush short oasis grass ground, dense fine green blades with muted olive and fresh green variation, top-down terrain material, no flowers.
+
+07_grass_sand_blend
+Top-down oasis ground, irregular patches of short green grass with exposed fine pale sand between patches, naturally mixed throughout, no path or single focal patch.
+
+08_damp_shore_sand
+Top-down damp oasis shore sand, dark warm tan fine sand with delicate shallow water-drawn micro-ripples and a few minute grains, no actual water or shoreline edge.
+
+09_wet_river_pebbles
+Top-down oasis streambed of smooth small wet rounded cream, amber and gray pebbles, damp dark sandy gaps, diffuse lighting, no water highlights.
+
+10_fertile_oasis_soil
+Top-down rich dark brown oasis garden soil, moist fine crumbly earth with a little organic debris, no plants or stones larger than small grit.
+
+11_palm_litter_ground
+Top-down sandy oasis ground with scattered dry brown palm leaf fragments, slender fibers and tiny sticks, even restrained distribution.
+
+12_reed_litter_ground
+Top-down damp oasis ground with short broken pale reed stems and dark brown organic soil, naturally interwoven scattered litter, no standing plants.
+
+13_mossy_limestone
+Pale cream oasis limestone surface with small irregular soft green moss patches in shallow crevices, delicate porous mineral grain.
+
+14_algae_stained_stone
+Oasis water-channel stone surface, muted buff limestone with subtle dark olive algae staining and fine mineral streaks, no actual water.
+
+15_travertine_spring_stone
+Cream and pale honey travertine spring stone, fine irregular mineral bands and small natural pores, softly weathered, flat stone material.
+
+16_turquoise_clear_water
+Top-down seamless stylized-realistic clear turquoise oasis water surface material, fine delicate overlapping ripples and faint soft caustic patterns, consistent aqua tone, no shore, objects or sky reflections. Opaque color texture, no transparency.
+
+17_deep_teal_water
+Top-down deep teal oasis pool water surface material, gentle fine ripples with restrained diffuse pale green highlights, uniform overall tone, no shore or objects or sky reflections. Opaque color texture.
+
+18_shallow_sandy_streambed
+Top-down shallow clear oasis water over pale golden fine sand, gentle subtle caustic light traces and tiny sparse pebbles, consistent depth across image, no shoreline.
+
+19_oasis_courtyard_pavers
+Oasis courtyard floor, small worn pale cream limestone square pavers laid in staggered courses, thin sand and sparse subtle moss in joints, muted natural palette.
+
+20_irrigation_channel_bricks
+Old oasis irrigation channel masonry surface, small rectangular sandy beige bricks in running bond, subtle olive mineral staining in narrow joints, damp lower-toned stones evenly distributed, no channel shape or perspective.

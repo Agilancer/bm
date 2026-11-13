@@ -1,0 +1,29 @@
+DESERT ARCHITECTURE — 20 TEXTURES
+
+20 individual RGB PNG color textures, native 1254 x 1254 pixels.
+01–05 natural rock walls; 06–10 home walls; 11–15 roofs; 16–20 matching sandstone castle brick material in different patterns.
+Castle variations were generated using the running-bond image as material reference. Adjust UV scale per pattern to match apparent brick size in your scene.
+Designed for repeating U/V; visually inspected in 2x2 layouts. Use Repeat/Wrap addressing and sRGB for color.
+Color maps only; normal, roughness and displacement maps are not included.
+Created individually using built-in image generation.
+
+01_eroded_sandstone_wall — Natural vertical desert rock wall of eroded golden sandstone, rugged shallow recesses and fine grain, no ground visible.
+02_red_canyon_wall — Vertical red canyon rock wall with rust-red thin sedimentary bands, rugged natural fractures, no ground.
+03_pale_limestone_wall — Natural pale cream limestone desert cliff wall, weathered cracks and small cavities, no ground.
+04_dark_desert_rock_wall — Natural dark brown basalt desert cliff wall, angular fractured stone and pale windblown dust in crevices.
+05_layered_ochre_wall — Natural ochre and tan layered desert cliff wall, broad undulating strata and weather-eroded ridges.
+06_cream_limewash_home — Desert house wall covered in aged creamy ivory limewash over earthen plaster, delicate hairline cracks and fine sand grain, no exposed bricks.
+07_terracotta_stucco_home — Desert house wall of muted warm terracotta stucco, rough hand-troweled earthen plaster, subtly weathered.
+08_sandy_mudbrick_home — Desert house wall of handmade sandy tan adobe mud bricks, irregular rectangular blocks in staggered courses with narrow earthen mortar.
+09_rubble_stone_home — Desert house wall of small irregular buff limestone rubble stones set tightly in sandy pale mortar, traditional vernacular masonry.
+10_ochre_plaster_home — Desert house wall of golden ochre plaster with sparse small worn areas revealing earth-colored clay underneath, subtle wear evenly distributed.
+11_terracotta_barrel_roof — Flat orthographic material scan of desert terracotta barrel roof tiles in repeating overlapping vertical channels, dusty muted red clay, consistent tile size.
+12_flat_clay_roof — Flat orthographic texture of overlapping flat rectangular dusty ochre clay roof tiles in staggered rows, weathered fine grain.
+13_sandstone_slate_roof — Flat orthographic texture of overlapping thin pale sandstone roofing slabs, sandy beige and warm taupe, staggered horizontal courses.
+14_palm_thatch_roof — Flat orthographic texture of densely layered dried palm-leaf thatch roofing, straw tan and sun-bleached brown fibers, repeated overlapping bands, no poles.
+15_earthen_flat_roof — Top-down material scan of compacted earthen flat desert roof, sandy ochre clay plaster with small straw fibers, restrained fine drying cracks, flat surface.
+16_castle_running_bond — CASTLE SHARED MATERIAL. Same rectangular 2:1 pale honey-beige sandstone bricks throughout, slightly chipped hand-dressed edges, fine pitted grain, subtle tan variation, narrow warm gray lime mortar. Arrange bricks in classic running bond, each horizontal course offset by half a brick. No large blocks or decorative elements.
+17_castle_stack_bond — CASTLE SHARED MATERIAL. Same rectangular 2:1 pale honey-beige sandstone bricks throughout, slightly chipped hand-dressed edges, fine pitted grain, subtle tan variation, narrow warm gray lime mortar. Arrange bricks in STACK BOND: exact horizontal rows with all vertical joints aligned in straight columns, no stagger. No large blocks or decorative elements.
+18_castle_herringbone — CASTLE SHARED MATERIAL. Same rectangular 2:1 pale honey-beige sandstone bricks throughout, slightly chipped hand-dressed edges, fine pitted grain, subtle tan variation, narrow warm gray lime mortar. Arrange bricks in continuous 45-degree HERRINGBONE, bricks alternating perpendicular orientations creating interlocking zigzags. No borders.
+19_castle_basket_weave — CASTLE SHARED MATERIAL. Same rectangular 2:1 pale honey-beige sandstone bricks throughout, slightly chipped hand-dressed edges, fine pitted grain, subtle tan variation, narrow warm gray lime mortar. Arrange in BASKET WEAVE: squares each made of exactly two adjacent 2:1 rectangular bricks, alternating squares rotated 90 degrees. No borders.
+20_castle_vertical_running — CASTLE SHARED MATERIAL. Same rectangular 2:1 pale honey-beige sandstone bricks throughout, slightly chipped hand-dressed edges, fine pitted grain, subtle tan variation, narrow warm gray lime mortar. Arrange VERTICAL RUNNING BOND: all long brick axes point vertically, adjacent vertical columns offset by half a brick height. Same bricks as a running-bond wall rotated 90 degrees.
