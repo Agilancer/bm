@@ -88,7 +88,10 @@ if (which === 'all' || which === 'tear') {
   to(s[0] + 5, s[1]);
   await run(4, () => !!Wd.tear);
   check(!!Wd.tear, 'walking into it opens it');
-  for (let n = 0; n < 60 && Wd.tear; n++) { await run(4, () => alive((k) => k.lair === Wd.tear?.lair).length > 0); slay(alive((k) => k.lair === Wd.tear?.lair)); await run(2); }
+  const came = new Set(), most = [0, 0, 0, 0, 0];
+  for (let n = 0; n < 60 && Wd.tear; n++) { await run(8, () => !Wd.tear || (!T.loading.has(Wd.tear.lair) && alive((k) => k.lair === Wd.tear.lair).length > 0)); const here = alive((k) => k.lair === Wd.tear?.lair); for (const m of here) came.add(m.opts.name); if (Wd.tear) most[Wd.tear.stage] = Math.max(most[Wd.tear.stage], Wd.tear.lair.spawned); slay(here); await run(2); }
+  check(most[1] >= 4 && most[2] >= 4 && most[3] >= 5 && most[4] >= 2, `every wave stood whole (${most.slice(1).join(', ')})`);
+  check([...came].some((n) => /THROUGH THE TEAR/.test(n)), `its lord came: ${[...came].find((n) => /THROUGH THE TEAR/.test(n))}`);
   const stages = events.filter((e) => e[0] === WILD.TEAR_STAGE).map((e) => e[2]);
   check(stages.join() === '1,2,3,4', `its waves came in turn (${stages.join()})`);
   check(saw(WILD.TEAR_SEALED, (e) => e[6] === 1), 'it sealed, with the bonus won');
@@ -132,9 +135,25 @@ if (which === 'all' || which === 'outpost') {
   check(saw(WILD.CLEARED, (e) => e[1] === i), 'emptied, it is told and paid for');
 }
 
+if (which === 'all' || which === 'colossus') {
+  console.log('\n== the third tear sealed: a colossus ==');
+  await fresh();
+  // (Far out, where the land is hard enough for one; two already sealed.)
+  const far = TEAR_SPOTS.map((t, i) => [t, i]).filter(([t, i]) => Math.hypot(t[0], t[1]) > 2600 && Wd.isOpen(i))[0];
+  Wd.sealed = 2;
+  to(far[0][0] + 40, far[0][1]); await run(3);
+  to(far[0][0] + 5, far[0][1]); await run(4, () => !!Wd.tear);
+  check(Wd.tear?.colossus === true, 'it is marked for one');
+  let big = null;
+  for (let n = 0; n < 60 && Wd.tear; n++) { await run(4, () => alive((k) => k.lair === Wd.tear?.lair).length > 0); const b = alive((k) => k.lair === Wd.tear?.lair && k.boss && k.meta.height > 6)[0]; if (b) big = b; slay(alive((k) => k.lair === Wd.tear?.lair)); await run(2); }
+  check(!!big, big ? `${big.opts.name} came through, ${big.meta.height} m tall, ${Math.round(big.maxHp)} life` : 'nothing vast came through');
+  check(saw(WILD.TEAR_SEALED, (e) => e[7] === 1), 'and its tear sealed as a colossus');
+}
+
 if (which === 'all' || which === 'raid') {
   console.log('\n== a raid on Thornwick ==');
   await fresh();
+  to(2300, 1480);  // (near Thornwick, not yet by it, and away from whatever the last scene left)
   await run(30);   // (the Tessariels settle into their day)
   Wd.debug(6, 0);
   const R = Wd.raid;

@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { SITES, countryAt, routeDist, waterAt } from '../src/core/lands.js';
 import { GROUPS, LAIRS, VARIANTS, withVariants } from '../src/core/tripo-monsters.js';
-import { COUNTRY_FACTIONS, COUNTRY_TEARS, FACTIONS, MEETINGS, TEARS_KINDS, WILD, WILD_VARIANTS, atWar } from '../src/core/wilds.js';
+import { COUNTRY_FACTIONS, COUNTRY_TEARS, FACTIONS, MEETINGS, RAID_TOWNS, TEARS_KINDS, WILD, WILD_VARIANTS, atWar } from '../src/core/wilds.js';
+import { SEALS } from '../src/core/sites.js';
 import { BATTLES, FINDS, FIND_KINDS, OUTPOSTS, TEAR_SPOTS } from '../src/core/wilds-data.js';
 import { MOVES } from '../src/sim/moves.js';
 
@@ -86,4 +87,6 @@ test('tears and meetings name people who exist, and the page and the sim count t
   assert.equal(new Set(Object.values(WILD)).size, Object.keys(WILD).length);
   assert.ok(MEETINGS.length >= 7 && MEETINGS.every((m) => m.w > 0 && m.name));
   for (const g of Object.values(roster)) assert.ok(GROUPS[g.group], `${g.id}: no group`);
+  // Every town that's raided is a place, has a seal for the other Tessariels to come out of, and isn't either side's own.
+  for (const k of RAID_TOWNS) { assert.ok(SITES[k] && !SITES[k].keep && !SITES[k].light, k); assert.ok(SEALS.some((s) => s.key === k), `${k} has no seal`); }
 });

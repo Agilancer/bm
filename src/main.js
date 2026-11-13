@@ -544,7 +544,7 @@ async function boot(plan, poolSize) {
   };
   arm();
   // The living land: what's happening out there, told and paid for (src/ui/wilds.js; the sim's side is src/sim/wilds.js).
-  game.wilds = new WildsUI({ xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t),
+  game.wilds = new WildsUI({ touch: input.touch, xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t),
     pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; } });
   hud.wildName = (model) => renderer.tripo?.wildName(model);
   addPart('wilds', { save: () => game.wilds.save(), load: (d) => game.wilds.load(d) });

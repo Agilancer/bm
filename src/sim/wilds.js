@@ -96,8 +96,11 @@ export class Wilds {
     const boss = have(o.boss), pk = have(o.pick);
     const lair = { key: `wild_${o.tag}_${Math.floor(this.sim.time * 10)}_${Math.floor(Math.random() * 1e4)}`, x: o.x, z: o.z, r: o.r ?? 6, boss: boss.length ? boss : undefined, pick: pk, n: pk.length ? o.n : 0,
       pal: o.pal || ['Base'], wake: -1, temp: true, wild: true, side: o.side, tricks: !!o.tricks, tough: o.tough, spots: o.spots, state: 'asleep', at: -1e9, onSpawn: o.set, tries: 0, want: (boss.length ? 1 : 0) + (pk.length ? o.n : 0) };
+    // (What died hunting still says it is, and a slot that says so is never given up: src/sim/tripo.js freeSlot.)
+    for (const k of t.slots()) if (k instanceof TripoMonster && k.dead) k.aggro = false;
     t.lairs.push(lair);
-    t.wake(lair);
+    // (must: the fresh dead of the wave before give up their places, or a tear's third wave finds all twelve slots lying down.)
+    t.wake(lair, true);
     return lair;
   }
 
@@ -106,7 +109,9 @@ export class Wilds {
     const t = this.sim.tripo;
     if (t.loading.has(lair)) return false;
     if (lair.spawned > 0) return lair.killed >= lair.spawned;
-    if (lair.tries++ < 6) { if (!t.lairs.includes(lair)) t.lairs.push(lair); t.wake(lair); return false; }
+    if (this.sim.time < (lair.again || 0)) return false;
+    lair.again = this.sim.time + 1;
+    if (lair.tries++ < 6) { if (!t.lairs.includes(lair)) t.lairs.push(lair); t.wake(lair, true); return false; }
     return true;   // (no room for it at all: let it go)
   }
 

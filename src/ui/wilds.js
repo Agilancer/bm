@@ -28,7 +28,10 @@ export class WildsUI {
     const el = (id, cls) => { const d = document.createElement('div'); d.id = id; if (cls) d.className = cls; return d; };
     this.banner = el('wildBanner'); this.banner.innerHTML = '<b></b><i></i>';
     this.track = el('wildTrack'); this.track.innerHTML = '<b></b><i></i><u><s></s></u>';
-    (document.getElementById('hud') || document.body).append(this.banner, this.track);
+    // (On a phone they go in the stack under the top bar with the foe's bar and the tip, src/ui/hud.css #topStack, so they
+    // take their turn there and cover nothing; on a desk they hang under the foe's bar.)
+    const stack = o.touch ? document.getElementById('topStack') : null;
+    (stack || document.getElementById('hud') || document.body).append(this.track, this.banner);
     this.state = null;      // { title, sub, until (ms, or 0), of (seconds the bar is out of) }
     this.tearNear = null;
     setInterval(() => this.tick(), 250);
