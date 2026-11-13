@@ -10,13 +10,13 @@
 
 const rooms = [
   { id: 'hd_mouth', x: 0, z: 0, r: 9, y: 0, roof: 7, name: 'the Howling Mouth' },
-  { id: 'hd_galleries', x: -34, z: -42, r: 14, y: -2, roof: 10, name: 'the Wind Galleries' },
-  { id: 'hd_herd', x: -78, z: -92, r: 15, y: -5, roof: 10, name: 'the Frozen Herd' },
-  { id: 'hd_ramshall', x: -62, z: -152, r: 21, y: -7, roof: 16, name: "the Goat-King's Hall" },
-  { id: 'hd_webs', x: 4, z: -180, r: 16, y: -9, roof: 11, name: 'the Webbed Gallery' },
-  { id: 'hd_falls', x: 62, z: -160, r: 14, y: -11, roof: 16, name: 'the Frozen Falls' },
-  { id: 'hd_brood', x: 96, z: -218, r: 21, y: -13, roof: 15, name: 'the Brood Pit' },
-  { id: 'hd_dark', x: 52, z: -268, r: 13, y: -18, roof: 10, name: 'the Lightless Stair', fires: 0 },
+  { id: 'hd_galleries', x: -34, z: -42, r: 14, y: -2, roof: 10, name: 'the Wind Galleries', seam: 'frost:course' },
+  { id: 'hd_herd', x: -78, z: -92, r: 15, y: -5, roof: 10, name: 'the Frozen Herd', rock: 'frost:stone', seam: 'frost:rubble' },
+  { id: 'hd_ramshall', x: -62, z: -152, r: 21, y: -7, roof: 16, name: "the Goat-King's Hall", rock: 'frost:course', seam: 'frost:block', ground: 'frost:flags' },
+  { id: 'hd_webs', x: 4, z: -180, r: 16, y: -9, roof: 11, name: 'the Webbed Gallery', seam: 'pale:rubble' },
+  { id: 'hd_falls', x: 62, z: -160, r: 14, y: -11, roof: 16, name: 'the Frozen Falls', rock: 'frost:stone', ground: 'ice' },
+  { id: 'hd_brood', x: 96, z: -218, r: 21, y: -13, roof: 15, name: 'the Brood Pit', rock: 'dark:rubble', seam: 'frost:rubble', ground: 'frost:course' },
+  { id: 'hd_dark', x: 52, z: -268, r: 13, y: -18, roof: 10, name: 'the Lightless Stair', fires: 0, rock: 'dark:stone', seam: 'frost:stone' },
   { id: 'hd_lake', x: 40, z: -340, r: 31, y: -21, roof: 25, name: "the Sleeper's Lake", flat: true },
 ];
 const tunnels = [

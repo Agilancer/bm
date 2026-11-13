@@ -21,15 +21,15 @@
 import { C, at, link, niche } from './delve-lay.js';
 
 const rooms = [
-  C('dv_stair', 'the Sunken Stair', 2, 18, 9, 0, 7),
-  C('dv_toll', 'the Drowned Toll', -18, -22, 14, -2, 10),
-  C('dv_reeds', 'the Reed Galleries', -34, -112, 13, -5, 9),
-  C('dv_wallow', "the Bloat's Wallow", -36, -170, 21, -8, 15),
-  C('dv_cistern', 'the Great Cistern', 14, -192, 16, -11, 13),
-  C('dv_strong', 'the Strongroom', 14, -226, 10, -11, 8),
-  C('dv_tide', 'the Tidehall', 72, -166, 23, -14, 17, { flat: true }),
-  C('dv_sluice', 'the Sluice', 64, -108, 12, -18, 10),
-  C('dv_sump', 'the Sump', 14, -132, 25, -22, 24, { flat: true }),
+  C('dv_stair', 'the Sunken Stair', 2, 18, 9, 0, 7, { rock: 'mire:course', seam: 'mire:block', ground: 'mire:flags' }),
+  C('dv_toll', 'the Drowned Toll', -18, -22, 14, -2, 10, { rock: 'mire:course', seam: 'mire:rubble', ground: 'mire:flags' }),
+  C('dv_reeds', 'the Reed Galleries', -34, -112, 13, -5, 9, { seam: 'pale:rubble' }),
+  C('dv_wallow', "the Bloat's Wallow", -36, -170, 21, -8, 15, { rock: 'mire:stone', seam: 'mire:rubble' }),
+  C('dv_cistern', 'the Great Cistern', 14, -192, 16, -11, 13, { rock: 'mire:block', seam: 'mire:course', ground: 'mire:flags' }),
+  C('dv_strong', 'the Strongroom', 14, -226, 10, -11, 8, { rock: 'mire:ashlar', seam: 'mire:block', ground: 'mire:flags' }),
+  C('dv_tide', 'the Tidehall', 72, -166, 23, -14, 17, { flat: true, rock: 'mire:block', seam: 'mire:ashlar' }),
+  C('dv_sluice', 'the Sluice', 64, -108, 12, -18, 10, { rock: 'mire:course', seam: 'mire:block', ground: 'mire:course' }),
+  C('dv_sump', 'the Sump', 14, -132, 25, -22, 24, { flat: true, rock: 'mire:stone', seam: 'pale:rubble' }),
 ];
 // The Sump's other half: it lies along the line the causeway fell through, longer than it's wide.
 const nooks = [C('dv_sump_south', 'the Sump', 12, -106, 18, -22, 20, { flat: true })];

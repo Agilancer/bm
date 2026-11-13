@@ -20,15 +20,15 @@
 import { C, at, link, niche } from './delve-lay.js';
 
 const rooms = [
-  C('sh_sink', 'the Sinkhole', 0, 0, 9, 0, 8),
-  C('sh_stair', 'the Root Stair', -16, -50, 12, -4, 9),
+  C('sh_sink', 'the Sinkhole', 0, 0, 9, 0, 8, { rock: 'rubble', seam: 'spore:rubble', ground: 'rubble' }),
+  C('sh_stair', 'the Root Stair', -16, -50, 12, -4, 9, { rock: 'bark', seam: 'spore:rubble' }),
   C('sh_ring', 'the Ring Below', 0, -125, 25, -9, 20, { ground: 'spore:rubble' }),
-  C('sh_kennel', 'the Mould Kennels', -62, -104, 13, -11, 9),
-  C('sh_den', "Mouldfang's Den", -98, -164, 22, -15, 14),
-  C('sh_garden', 'the Pod Gardens', 52, -112, 13, -8, 10),
-  C('sh_bower', "Mother Morel's Bower", 80, -158, 17, -9, 15),
-  C('sh_veil', 'the Veil', -44, -190, 13, -13, 11),
-  C('sh_heart', 'the Heart of the Ring', -30, -254, 28, -17, 24, { flat: true }),
+  C('sh_kennel', 'the Mould Kennels', -62, -104, 13, -11, 9, { rock: 'pale:rubble', seam: 'spore:rubble', ground: 'spore:stone' }),
+  C('sh_den', "Mouldfang's Den", -98, -164, 22, -15, 14, { rock: 'spore:stone', seam: 'pale:rubble', ground: 'pale:rubble' }),
+  C('sh_garden', 'the Pod Gardens', 52, -112, 13, -8, 10, { rock: 'mire:rubble', seam: 'spore:rubble', ground: 'mire:stone' }),
+  C('sh_bower', "Mother Morel's Bower", 80, -158, 17, -9, 15, { rock: 'mire:stone', seam: 'pale:rubble', ground: 'mire:rubble' }),
+  C('sh_veil', 'the Veil', -44, -190, 13, -13, 11, { rock: 'pale:rubble', seam: 'spore:rubble' }),
+  C('sh_heart', 'the Heart of the Ring', -30, -254, 28, -17, 24, { flat: true, rock: 'bark', seam: 'spore:rubble', ground: 'spore:stone' }),
 ];
 const tunnels = [
   link(rooms, 'sh_sink', 'sh_stair', -3),

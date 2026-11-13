@@ -8,7 +8,7 @@
 import { CAUSES, CLASSES, MOVE_KEYS, DELVES, GESTURES, LONG_ROAD, MOBS, MOB_KEYS, PERSONAS, PLACES, PLACE_IDS, THE_FALL, ACTIVITIES, TRIG, TRIPO_MOB, WALK_ENDS, hourBand, placeOf, rng } from '../core/heroes.js';
 import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
-import { floorAt, inPit } from '../core/interior.js';
+import { floorAt, homeFloor, inPit } from '../core/interior.js';
 import { ELEM, FX, FX_CARRIED, SHIELDS } from './spells.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { Knight, S, matToQuat, norm, orth, cross, restHold, turn } from './knight.js';
@@ -444,6 +444,8 @@ export class Hero extends Knight {
     if (d < stop) { this.steer(dt, 0, 0, 8, g.face); this.stuckT = 0; return; }
     let sp = g.speed * (this.cls.walk) * (this.buff?.speed || 1) * (this.hurt > 0.5 ? 0.7 : 1);
     sp = Math.min(sp, Math.max(0.6, d * 1.5));
+    // (Stepping round something it was stuck on: see below.)
+    if (this.roundT > 0) { this.roundT -= dt; this.steer(dt, this.roundX * sp, this.roundZ * sp, 7, Math.atan2(this.roundX, this.roundZ)); return; }
     // Straight there while the way is open; round the houses on a distance field of the hero's own when it isn't. The field is
     // made once per goal (a goal that moves less than two metres keeps it), so a party in town doesn't redo it every tick.
     if ((this.losT -= dt) <= 0) {
@@ -462,6 +464,23 @@ export class Hero extends Knight {
     const moved = Math.hypot(this.x - this.lastX, this.z - this.lastZ);
     this.lastX = this.x; this.lastZ = this.z;
     this.stuckT = moved < sp * dt * 0.25 ? this.stuckT + dt : Math.max(0, this.stuckT - dt * 0.5);
+    // Getting nowhere for a good while, field and all (where they're going is in a house, behind a wall, in a trunk): that's
+    // let go. A leg of a road is passed over for the next; anything else is dropped, and whatever they're about picks again.
+    // (First a few strides round whatever it is, to one side and a little back: a trunk the field doesn't know, a body in a
+    // gap. The third time running, the goal itself goes.)
+    if (this.stuckT === 0) this.gaveUp = 0;
+    if (this.stuckT > 8) {
+      this.stuckT = 0.01; this.fieldAt = null; this.gaveUp = (this.gaveUp || 0) + 1;
+      if (this.gaveUp < 3) {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const L = d || 1;
+        this.roundX = (dz / L) * side * 0.9 - (dx / L) * 0.35; this.roundZ = -(dx / L) * side * 0.9 - (dz / L) * 0.35; this.roundT = 1.8;
+      } else {
+        const t = this.task;
+        if (t?.path && (t.leg ?? 0) < t.path.length - 1) t.leg = (t.leg ?? 0) + 1;
+        this.goal = null; this.gaveUp = 0;
+      }
+    }
   }
 
   move(dt, sim) {
@@ -770,7 +789,10 @@ export class Hero extends Knight {
     dmg *= m.shrug ?? 1;
     if (m instanceof Knight) {
       // Velscour's guards hold: a party can hold one off and slip by, not cut it down for the player to find gone.
-      m.hp = Math.max(m.maxHp * 0.4, m.hp - dmg * 0.5);
+      // (Never back up to that: the floor used to be put on whatever he had left, so with you at him below two fifths every
+      // blow from anyone else gave him all of it back, and with a party at your side he couldn't be killed at all. Your
+      // own party's blows count all the way down, as they do on anything else.)
+      m.hp = this.hired ? m.hp - dmg * 0.5 : Math.min(m.hp, Math.max(m.maxHp * 0.4, m.hp - dmg * 0.5));
       if (!o.dot) m.onHit(sim, kind, this.x, this.z, poise, null);
       return true;
     }
@@ -2586,7 +2608,20 @@ export class HeroWorld {
     // Leave the town by the nearest gap in its ring, then across.
     const a = Math.atan2(place.spot[0], place.spot[1]);
     // (Out of town: first to a point well inside its edge on the way, so they leave by the streets, not through the houses.)
-    return townDist(place.spot[0], place.spot[1]) > 0 ? [[Math.sin(a) * 52, Math.cos(a) * 52], place.spot] : [place.spot];
+    // (And that point on open ground: 52 m out toward the north-east is inside a house, and the parties bound that way
+    // stood against its wall for as long as anyone watched. The nearest clear one round the ring, or a little in or out.)
+    if (townDist(place.spot[0], place.spot[1]) <= 0) return [place.spot];
+    for (const [da, r] of [[0, 52], [0.12, 52], [-0.12, 52], [0.24, 52], [-0.24, 52], [0, 46], [0, 58], [0.4, 52], [-0.4, 52], [0.6, 52], [-0.6, 52]]) {
+      const x = Math.sin(a + da) * r, z = Math.cos(a + da) * r;
+      if (this.openAt(x, z)) return [[x, z], place.spot];
+    }
+    return [place.spot];
+  }
+
+  // Somewhere a body can stand out of doors: not in a wall, a trunk or a house.
+  openAt(x, z) {
+    const w = this.sim.world;
+    return !w.inside(x, z, 1.2) && homeFloor(x, z, w.height(x, z) + 0.5) === null;
   }
 
   travel(h, t, dt, speed) {
@@ -3266,7 +3301,7 @@ export class HeroWorld {
         break;
       }
       case 'undead': self.postMessage({ type: 'heroState', id: m.id, heroes: [], undead: sim.knights.filter((k) => k instanceof Zombie).map((k) => ({ id: k.id, model: k.opts.model, role: k.opts.role || null, x: +k.x.toFixed(1), z: +k.z.toFixed(1), sink: +k.sink.toFixed(2), state: k.state, dead: k.dead, dormant: k.dormant, grave: k.opts.grave || null, up: k.graveUp, aggro: k.aggro, clip: k.clip, hostile: k.hostile, hp: Math.round(k.hp), owned: !!k.owner, y: +k.y.toFixed(1) })), others: sim.knights.filter((k) => !(k instanceof Zombie)).map((k) => ({ id: k.id, kind: k.kind, name: k.opts?.name || k.constructor.name, x: +k.x.toFixed(0), z: +k.z.toFixed(0) })) }); break;
-      case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), follow: h.party?.leader && h.party.leader !== h ? h.party.leader.slot : null, hired: !!h.hired, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting, leaps: h.leaps, guard: h.guardT > 0, iframes: h.iframesT > 0, charge: !!h.charge, jump: !!h.jump, flight: h.flight?.length || 0, stow: +h.stow.toFixed(2), calm: Math.round(h.calmT), busy: [h.foe && 'foe', h.swing && 'swing', h.tossing && 'toss', h.point && 'point', h.flight && 'flight', h.aim && h.aim !== h.heldAim && 'aim', h.bowW > 0.01 && 'bow', h.shieldTarget > 0 && 'shield', h.tune && 'tune', h.luteW > 0.01 && 'lute', h.onArmed && 'armedGround'].filter(Boolean).join(',') })), zones: this.zones.map((z) => z.kind), shots: this.shots.map((q) => q.kind + (q.rain ? ':rain' : q.up ? ':up' : '')), dots: this.dots.length }); break;
+      case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), stuck: +(h.stuckT || 0).toFixed(1), follow: h.party?.leader && h.party.leader !== h ? h.party.leader.slot : null, hired: !!h.hired, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting, leaps: h.leaps, guard: h.guardT > 0, iframes: h.iframesT > 0, charge: !!h.charge, jump: !!h.jump, flight: h.flight?.length || 0, stow: +h.stow.toFixed(2), calm: Math.round(h.calmT), busy: [h.foe && 'foe', h.swing && 'swing', h.tossing && 'toss', h.point && 'point', h.flight && 'flight', h.aim && h.aim !== h.heldAim && 'aim', h.bowW > 0.01 && 'bow', h.shieldTarget > 0 && 'shield', h.tune && 'tune', h.luteW > 0.01 && 'lute', h.onArmed && 'armedGround'].filter(Boolean).join(',') })), zones: this.zones.map((z) => z.kind), shots: this.shots.map((q) => q.kind + (q.rain ? ':rain' : q.up ? ':up' : '')), dots: this.dots.length }); break;
       default: break;
     }
   }

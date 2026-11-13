@@ -13,26 +13,28 @@
 // Velscour's house: his black stone, his red, his fire. Nothing of Tessariel's is down here (README "The two sides").
 
 // A room with four walls: its middle, half its width (x) and length (z), its floor, how high its roof is over that.
+// (rock, foot, ground: a room's own masonry where it isn't the keep's: its walls, the course at their foot, its floor.
+// castleShell in src/core/delve-build.js. Black, 'dark:', where his sorcerers and his chapel are, and round his throne.)
 const R = (id, name, x, z, hx, hz, y, roof, o = {}) => ({ id, name, x, z, hx, hz, y, roof, ...o });
 
 const rooms = [
-  R('bv_gate', 'the Gate Passage', 0, -2, 8, 12, 0, 9),
-  R('bv_guard', 'the Guardroom', 0, -38, 12, 12, 0, 8),
-  R('bv_ward', 'the Lower Ward', 0, -88, 16, 28, 0, 14),
-  R('bv_innergate', "the Warden's Gate", 0, -148, 20, 20, 0, 16),
-  R('bv_barracks', 'the Barracks', 48, -148, 14, 20, 0, 8),
-  R('bv_armoury', 'the Armoury', 48, -106, 12, 12, 0, 7),
-  R('bv_gallery', "the Sorcerers' Gallery", 48, -212, 6, 32, 0, 11),
-  R('bv_library', 'the Black Library', 48, -274, 16, 18, 0, 12),
-  R('bv_sanctum', "the Magister's Sanctum", 0, -274, 20, 20, 0, 18),
-  R('bv_chapel', 'the Chapel of Velscour', -48, -262, 14, 24, 0, 16),
+  R('bv_gate', 'the Gate Passage', 0, -2, 8, 12, 0, 9, { rock: 'course' }),
+  R('bv_guard', 'the Guardroom', 0, -38, 12, 12, 0, 8, { rock: 'course', ground: 'stone' }),
+  R('bv_ward', 'the Lower Ward', 0, -88, 16, 28, 0, 14, { rock: 'block', ground: 'stone' }),
+  R('bv_innergate', "the Warden's Gate", 0, -148, 20, 20, 0, 16, { rock: 'ashlar', foot: 'dark:ashlar' }),
+  R('bv_barracks', 'the Barracks', 48, -148, 14, 20, 0, 8, { rock: 'course', foot: 'dark:course' }),
+  R('bv_armoury', 'the Armoury', 48, -106, 12, 12, 0, 7, { rock: 'block', foot: 'dark:block' }),
+  R('bv_gallery', "the Sorcerers' Gallery", 48, -212, 6, 32, 0, 11, { rock: 'dark:ashlar' }),
+  R('bv_library', 'the Black Library', 48, -274, 16, 18, 0, 12, { rock: 'dark:block', foot: 'dark:course' }),
+  R('bv_sanctum', "the Magister's Sanctum", 0, -274, 20, 20, 0, 18, { rock: 'dark:ashlar', ground: 'dark:flags' }),
+  R('bv_chapel', 'the Chapel of Velscour', -48, -262, 14, 24, 0, 16, { rock: 'dark:block', foot: 'dark:course', ground: 'dark:flags' }),
   // (The stair climbs twelve metres going south: its floor is a slope, the steps are laid on it.)
-  R('bv_stair', 'the Great Stair', -48, -200, 7, 24, 6, 12, { tz: 0.25, fires: 12 }),
-  R('bv_hall', 'the Great Hall', -48, -136, 16, 30, 12, 15),
-  R('bv_court', 'the Hollow Court', -48, -74, 20, 20, 12, 16),
-  R('bv_walk', 'the Banner Walk', -92, -108, 8, 42, 12, 12),
-  R('bv_ante', 'the Antechamber', -92, -176, 12, 14, 12, 10),
-  R('bv_throne', 'the Throne Room', -92, -232, 22, 30, 12, 22),
+  R('bv_stair', 'the Great Stair', -48, -200, 7, 24, 6, 12, { tz: 0.25, fires: 12, rock: 'course' }),
+  R('bv_hall', 'the Great Hall', -48, -136, 16, 30, 12, 15, { rock: 'ashlar' }),
+  R('bv_court', 'the Hollow Court', -48, -74, 20, 20, 12, 16, { rock: 'block', ground: 'stone' }),
+  R('bv_walk', 'the Banner Walk', -92, -108, 8, 42, 12, 12, { foot: 'dark:course' }),
+  R('bv_ante', 'the Antechamber', -92, -176, 12, 14, 12, 10, { rock: 'dark:block' }),
+  R('bv_throne', 'the Throne Room', -92, -232, 22, 30, 12, 22, { rock: 'dark:ashlar', foot: 'dark:block', ground: 'dark:flags' }),
 ];
 
 // Passages: w is half the width, h the height.
@@ -243,6 +245,6 @@ export const BLACKVIGIL = {
   // Before the keep's gate on the Vigil Road, facing east down it (SITES.keep is at -5000, 200; its gate 70 m east of that).
   portal: { x: -4914, z: 200, yaw: Math.PI / 2, r: 2.2 },
   last: 'castellan', tough: { hp: 5, damage: 1.35 }, pay: { xp: 4200, gold: 700 },
-  look: { wall: 'stone', foot: 'dark:stone', floor: 'stone', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.5, 0.2], fire: [1, 0.54, 0.22], every: 9, high: 3, glow: 2.1, lit: true },
+  look: { wall: 'stone', foot: 'dark:stone', floor: 'flags', roof: 'dark:stone', flame: 'dark:flame', light: [1, 0.5, 0.2], fire: [1, 0.54, 0.22], every: 9, high: 3, glow: 2.1, lit: true },
   words: { enter: 'Blackvigil Keep. His knights hold every hall of it, and his sorcerers the galleries.', clear: 'Blackvigil Keep is cleared. The Castellan is dead!', wipe: 'Your party falls... and wakes inside the gate.' },
 };

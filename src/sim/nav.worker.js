@@ -126,13 +126,19 @@ function markAvoid(avoid, a, b) {
 const blocked = (k) => avoidMark[k] === stamp || solidCell(k);
 
 // The nearest free cell to a point, a few metres round at most.
+// (From somewhere the grid calls solid, a snug corner a body can still stand in: the nearest free place it can walk to in a
+// straight line, a body's width clear all the way, before the nearest of all. The nearest of all can be the other side of
+// a wall: wedged in the nook between Silas Crane's hearth and his partition, its way out began through the partition,
+// and it pushed at that till it was stopped.)
+const bodyLine = (ax, az, bx, bz) => { const d = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(d / 0.15)); for (let q = 1; q <= n; q++) if (world.inside(ax + (bx - ax) * q / n, az + (bz - az) * q / n, 0.3)) return false; return true; };
 function freeNear(x, z) {
   const k0 = cellOf(x, z);
   if (k0 < 0) return -1;
   if (!blocked(k0)) return k0;
   const i0 = k0 % W, j0 = (k0 / W) | 0;
+  let any = -1;
   for (let r = 1; r <= 8; r++) {
-    let best = -1, bd = Infinity;
+    let best = -1, bd = Infinity, near = -1, nd = Infinity;
     for (let dj = -r; dj <= r; dj++) {
       for (let di = -r; di <= r; di++) {
         if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
@@ -141,12 +147,14 @@ function freeNear(x, z) {
         const k = j * W + i;
         if (blocked(k)) continue;
         const d = Math.hypot(cx(k) - x, cz(k) - z);
-        if (d < bd) { bd = d; best = k; }
+        if (d < nd) { nd = d; near = k; }
+        if (d < bd && bodyLine(x, z, cx(k), cz(k))) { bd = d; best = k; }
       }
     }
     if (best >= 0) return best;
+    if (any < 0 && near >= 0) any = near;
   }
-  return -1;
+  return any;
 }
 
 // Can you walk straight from a to b: over free cells, and by a wall never closer to it than SNUG? (By a wall the line
@@ -355,7 +363,8 @@ function boxesNear(x, z) {
 }
 function solidAt(x, z, r, y) {
   for (const c of boxesNear(x, z)) if (boxHit(c, x, z, r, y)) return true;
-  for (const c of world.sitesNear(x, z) || []) if ((c.top ??= c.h + world.height(c.x, c.z)) >= y && boxHit(c, x, z, r, y)) return true;
+  // (By topOf, which knows a terrace's base is stood on, not walked into: its own sum here made every portal's terrace solid.)
+  for (const c of world.sitesNear(x, z) || []) if (topOf(c) >= y && boxHit(c, x, z, r, y)) return true;
   // (Trunks stand on the land, not down in the catacombs under it. The hollows west of the town lie lower than -2 themselves.)
   if ((Math.abs(x) > 50 || Math.abs(z) > 50) && (y > -2 || y > terrainHeight(x, z) - 2)) {
     const ci = Math.floor(x / 16), cj = Math.floor(z / 16);
@@ -369,8 +378,14 @@ function solidAt(x, z, r, y) {
   }
   return false;
 }
+// (Up a portal's steps as the feet go: each step's own height, so a terrace it can walk up isn't a wall to it. A rise of more
+// than a step is one. Out in the land a dungeon's portal stands on a terrace, and it paced to and fro before the steps for ever.)
 function clearFor(x, z, y, dx, dz, look) {
-  for (let s = 0.4; s <= look; s += 0.4) if (solidAt(x + dx * s, z + dz * s, 0.45, y)) return s - 0.4;
+  for (let s = 0.4; s <= look; s += 0.4) {
+    const px = x + dx * s, pz = z + dz * s, plat = world.platformAt ? world.platformAt(px, pz) : null;
+    if (plat !== null) { if (plat + 0.2 - y > 0.6) return s - 0.4; y = plat + 0.2; }
+    if (solidAt(px, pz, 0.45, y)) return s - 0.4;
+  }
   return look;
 }
 const TURNS = [0, 0.25, -0.25, 0.5, -0.5, 0.8, -0.8, 1.1, -1.1, 1.45, -1.45, 1.9, -1.9, 2.5, -2.5, Math.PI];
@@ -388,6 +403,8 @@ function probe(x, z, y, hx, hz, look) {
 
 // Out in the land, a short way: A* on a half-metre grid laid round both ends just for this, each cell solid or not at the land's
 // own height there (so the catacombs' walls under it don't count, and their light wells, which stand up through it, do).
+// (On a portal's terrace, at the terrace's height, and no step between two cells of more than a stride's rise: up by its stairs.)
+const lY = new Float32Array(280 * 280);
 const LW = 280, LN = LW * LW, lSolid = new Uint8Array(LN), lG = new Float32Array(LN), lPar = new Int32Array(LN), lSeen = new Uint16Array(LN), lShut = new Uint16Array(LN);
 let lStamp = 1;
 function local(from, to) {
@@ -397,7 +414,9 @@ function local(from, to) {
   if (Math.max(from[0], to[0]) + 25 - cx0 > LW * C || Math.max(from[1], to[1]) + 25 - cz0 > LW * C) return null;
   const cell = (x, z) => { const i = Math.floor((x - cx0) / C), j = Math.floor((z - cz0) / C); return i < 0 || j < 0 || i >= LW || j >= LW ? -1 : j * LW + i; };
   const px = (k) => ((k % LW) + 0.5) * C + cx0, pz = (k) => (((k / LW) | 0) + 0.5) * C + cz0;
-  const solid = (k) => { let v = lSolid[k]; if (!v) { const x = px(k), z = pz(k); v = lSolid[k] = solidAt(x, z, 0.42, terrainHeight(x, z) + 0.25) ? 2 : 1; } return v === 2; };
+  const solid = (k) => { let v = lSolid[k]; if (!v) { const x = px(k), z = pz(k), plat = world.platformAt ? world.platformAt(x, z) : null, y = lY[k] = plat ?? terrainHeight(x, z); v = lSolid[k] = solidAt(x, z, 0.42, y + 0.25) ? 2 : plat !== null ? 3 : 1; } return v === 2; };
+  // (A step up or down too high to take, where either cell is on a terrace.)
+  const cliff = (a, b) => (lSolid[a] === 3 || lSolid[b] === 3) && Math.abs(lY[a] - lY[b]) > 0.6;
   let s = cell(from[0], from[1]), t = cell(to[0], to[1]);
   if (s < 0 || t < 0) return null;
   // (Starting or ending against something: the nearest clear cell instead.)
@@ -418,7 +437,7 @@ function local(from, to) {
       const ni = i + di, nj = j + dj;
       if (ni < 0 || nj < 0 || ni >= LW || nj >= LW) continue;
       const nk = nj * LW + ni;
-      if (lShut[nk] === lStamp || solid(nk)) continue;
+      if (lShut[nk] === lStamp || solid(nk) || cliff(k, nk)) continue;
       if (di && dj && (solid(j * LW + ni) || solid(nj * LW + i))) continue;
       const ng = lG[k] + (di && dj ? 1.414 : 1) * C;
       if (lSeen[nk] === lStamp && ng >= lG[nk]) continue;
@@ -431,7 +450,7 @@ function local(from, to) {
   for (let k = t; k >= 0; k = lPar[k]) cells.push(k);
   cells.reverse();
   const pts = [[from[0], from[1]]].concat(cells.map((k) => [px(k), pz(k)]));
-  const see = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25); for (let q = 1; q <= n; q++) { const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n); if (k < 0 || solid(k)) return false; } return true; };
+  const see = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25); let was = cell(a[0], a[1]); if (was >= 0) solid(was); for (let q = 1; q <= n; q++) { const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n); if (k < 0 || solid(k) || (was >= 0 && cliff(was, k))) return false; was = k; } return true; };
   const out = [];
   let a = 0;
   while (a < pts.length - 1) {
@@ -443,11 +462,39 @@ function local(from, to) {
   return out;
 }
 
+// Out of somewhere snug the grid has no way from (a nook a body fits with a finger's room, between a hearth and a
+// partition): by a finer grid of its own, a tenth of a metre, over wherever a body can be, to the nearest place the walking
+// grid calls free. The points of the way, or null. Auto-play asks when it's been stopped twice in the same place.
+function escape(x, z) {
+  const C = 0.1, N = 81, half = (N - 1) / 2, R = 0.345;
+  const at = (i, j) => [x + (i - half) * C, z + (j - half) * C];
+  const seen = new Int32Array(N * N).fill(-2), q = [half * N + half];
+  seen[q[0]] = -1;
+  for (let h = 0; h < q.length; h++) {
+    const k = q[h], i = k % N, j = (k / N) | 0, [px, pz] = at(i, j), cell = cellOf(px, pz);
+    if (h > 0 && cell >= 0 && !blocked(cell) && Math.hypot(px - x, pz - z) > 0.5 && bodyLine(px, pz, cx(cell), cz(cell))) {
+      const out = [[cx(cell), cz(cell)]];
+      for (let c = k; c >= 0; c = seen[c]) out.push(at(c % N, (c / N) | 0));
+      out.reverse();
+      // (Every third point, and the last: near enough to follow, few enough to send.)
+      return out.filter((_, n) => n % 3 === 0 || n >= out.length - 2);
+    }
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= N || nj >= N || seen[nj * N + ni] !== -2) continue;
+      const [qx, qz] = at(ni, nj);
+      if (world.inside(qx, qz, R)) { seen[nj * N + ni] = -3; continue; }
+      seen[nj * N + ni] = k; q.push(nj * N + ni);
+    }
+  }
+  return null;
+}
+
 // For tests (tests/nav-ground.test.mjs): the same questions asked of a World built there, with no thread.
 export function navFor(w, interior = null) {
   world = w; boxIndex = null; ground.fill(0); room.fill(0); pocket.clear();
   setDoorways(interior?.things);
-  return { solidAt, clearFor, probe, local, path, straight, doorways: () => DOORWAYS, SNUG };
+  return { solidAt, clearFor, probe, local, path, straight, escape, doorways: () => DOORWAYS, SNUG };
 }
 
 // (A worker's own scope: not there when a test imports this file.)
@@ -464,6 +511,8 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
       self.postMessage({ type: m.type, id: m.id, result: null });
     } else if (m.type === 'path') {
       self.postMessage({ type: 'path', id: m.id, result: path(m.from, m.to, m.avoid, m.touch ?? null) });
+    } else if (m.type === 'escape') {
+      self.postMessage({ type: 'escape', id: m.id, result: escape(m.x, m.z) });
     } else if (m.type === 'local') {
       self.postMessage({ type: 'local', id: m.id, result: local(m.from, m.to) });
     } else if (m.type === 'probe') {

@@ -23,22 +23,22 @@
 import { R } from './delve-lay.js';
 
 const rooms = [
-  R('kb_door', 'the Barrow Door', 0, -2, 8, 12, 0, 8),
-  R('kb_dromos', 'the Long Dromos', 0, -46, 5, 22, 0, 7, { fires: 12 }),
-  R('kb_south', 'the South Walk', 0, -82, 50, 6, 0, 8, { fires: 16 }),
-  R('kb_cups', "the Cup-Bearers' Rest", 44, -84, 10, 10, 0, 9),
-  R('kb_east', 'the East Walk', 44, -131, 6, 53, 0, 8, { fires: 16 }),
-  R('kb_queens', "the Queens' Chamber", 44, -176, 10, 10, 0, 9),
-  R('kb_north', 'the North Walk', 0, -178, 50, 6, 0, 8, { fires: 16 }),
-  R('kb_cross', 'the Crossing', 0, -178, 12, 10, 0, 10),
-  R('kb_warden', "the Warden's Hall", 40, -212, 16, 18, 0, 14),
-  R('kb_ossuary', 'the Ossuary', -40, -224, 14, 28, 0, 12),
-  R('kb_hounds', 'the Hound-Grave', -44, -176, 10, 10, 0, 9),
-  R('kb_west', 'the West Walk', -44, -131, 6, 53, 0, 8, { fires: 16 }),
-  R('kb_shields', 'the Shield-Hall', -44, -84, 10, 10, 0, 9),
+  R('kb_door', 'the Barrow Door', 0, -2, 8, 12, 0, 8, { rock: 'block', foot: 'course', ground: 'flags' }),
+  R('kb_dromos', 'the Long Dromos', 0, -46, 5, 22, 0, 7, { fires: 12, rock: 'course', foot: 'block', ground: 'flags' }),
+  R('kb_south', 'the South Walk', 0, -82, 50, 6, 0, 8, { fires: 16, foot: 'course' }),
+  R('kb_cups', "the Cup-Bearers' Rest", 44, -84, 10, 10, 0, 9, { rock: 'pale:course', foot: 'course', ground: 'pale:flags' }),
+  R('kb_east', 'the East Walk', 44, -131, 6, 53, 0, 8, { fires: 16, foot: 'course' }),
+  R('kb_queens', "the Queens' Chamber", 44, -176, 10, 10, 0, 9, { rock: 'pale:ashlar', foot: 'ashlar', ground: 'pale:flags' }),
+  R('kb_north', 'the North Walk', 0, -178, 50, 6, 0, 8, { fires: 16, foot: 'course' }),
+  R('kb_cross', 'the Crossing', 0, -178, 12, 10, 0, 10, { rock: 'pale:block', foot: 'block' }),
+  R('kb_warden', "the Warden's Hall", 40, -212, 16, 18, 0, 14, { rock: 'block', foot: 'course', ground: 'flags' }),
+  R('kb_ossuary', 'the Ossuary', -40, -224, 14, 28, 0, 12, { rock: 'pale:stone', foot: 'pale:block', ground: 'pale:rubble' }),
+  R('kb_hounds', 'the Hound-Grave', -44, -176, 10, 10, 0, 9, { rock: 'course', foot: 'block', ground: 'rubble' }),
+  R('kb_west', 'the West Walk', -44, -131, 6, 53, 0, 8, { fires: 16, foot: 'course' }),
+  R('kb_shields', 'the Shield-Hall', -44, -84, 10, 10, 0, 9, { rock: 'ashlar', foot: 'block', ground: 'flags' }),
   // (The king's stair goes down eight metres going north, from the South Walk into the vault. Nothing stands on it.)
-  R('kb_stair', "the King's Stair", 0, -98, 5, 12, -4, 9, { tz: 8 / 24, fires: 0 }),
-  R('kb_vault', "the King's Vault", 0, -136, 24, 28, -8, 20),
+  R('kb_stair', "the King's Stair", 0, -98, 5, 12, -4, 9, { tz: 8 / 24, fires: 0, rock: 'pale:course', foot: 'course' }),
+  R('kb_vault', "the King's Vault", 0, -136, 24, 28, -8, 20, { rock: 'pale:ashlar', foot: 'pale:block', ground: 'pale:flags' }),
 ];
 
 // Passages: w is half the width, h the height.

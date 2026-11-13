@@ -170,3 +170,19 @@ test('to every house chest: a place a hand reaches it from, or no way at all', (
   }
   assert.ok(got >= 14, `only ${got} of the houses' 15 chests can be got to`);
 });
+
+// A nook a body fits with a finger's room, which the walking grid calls solid: between Silas Crane's hearth and the
+// partition behind it. Auto-play got in, and its way out began through the partition. The nav thread finds the way out on a
+// finer grid (escape): every point of it somewhere a body can be, ending on the walking grid.
+test('out of a snug corner: a way a body can take, ending where the grid is free', () => {
+  const from = [12, -39.72];
+  assert.ok(!world.inside(from[0], from[1], 0.34), 'a body can stand there');
+  const pts = nav.escape(from[0], from[1]);
+  assert.ok(pts?.length > 3, 'a way out');
+  for (const [x, z] of pts.slice(0, -1)) assert.ok(!world.inside(x, z, 0.33), `through something at ${x.toFixed(2)}, ${z.toFixed(2)}`);
+  for (let i = 1; i < pts.length - 1; i++) assert.ok(Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) < 0.45, 'no stride longer than the grid it was found on');
+  const end = pts.at(-1), on = nav.path(end, SQUARE);
+  assert.ok(on?.length, 'and a path on from its end');
+  // (Never through the partition, which is the nearest free ground as the crow flies.)
+  assert.ok(pts.every(([, z]) => z < -39.4), 'not through the partition');
+});

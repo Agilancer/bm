@@ -132,9 +132,9 @@ export function hiring(b) {
 
 // A dungeon to go down, with a party and the level for it: the one it's in; else one a quest it has in hand wants (want:
 // their keys, from src/ui/autobrain.js delveWants), the nearest to its level first; else, the first it's fit for that it
-// hasn't just been through. The Warrens keeps its old name among its reasons ('warrens'); the others are 'delve:<key>'.
+// hasn't just been through and that no quest still to do has work down (owed). The Warrens keeps its old name among its reasons ('warrens'); the others are 'delve:<key>'.
 const whyOf = (key) => (key === 'warrens' ? 'warrens' : `delve:${key}`);
-export function warrensJob(b, m, want = null) {
+export function warrensJob(b, m, want = null, owed = null) {
   const P = b.o.game.party;
   if (!P) return null;
   const here = delveOf(m.x, m.z);
@@ -142,7 +142,8 @@ export function warrensJob(b, m, want = null) {
   if (!P.fit()) return null;
   const fit = (d) => WAYS[d.key] && m.lvl >= d.level + (b.bump[whyOf(d.key)] || 0) && !b.skipping(whyOf(d.key));
   const byLevel = DELVES.filter(fit).sort((a, c) => a.level - c.level);
-  const d = byLevel.find((q) => want?.includes(q.key)) || (want?.length ? null : byLevel[0]);
+  // (owed: the ones a quest not yet done has work down. Those wait for their quest: src/ui/autobrain.js delveOwed.)
+  const d = byLevel.find((q) => want?.includes(q.key)) || (want?.length ? null : byLevel.find((q) => !owed?.has(q.key)));
   return d ? { kind: 'warrens', why: whyOf(d.key), delve: d.key, say: `To ${d.name}, with the party.` } : null;
 }
 

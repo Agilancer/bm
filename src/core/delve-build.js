@@ -12,6 +12,7 @@
 // to PROPS below. Triangles matter: this is all drawn every frame you're down here. tools/dungeon/check.mjs counts them.
 
 import { hash2, vnoise } from './terrain-noise.js';
+import { tileOf } from './sites.js';
 import { DELVES, DUNGEON_CELL, GRID_UNIT, braziers, caveFloorY, caveRoofY, caveRoom, grid, torches } from './dungeon.js';
 
 const TAU = Math.PI * 2;
@@ -49,7 +50,12 @@ function outline(d, each) {
 // The room a point is nearest (for its own rock, where a room has one).
 function nearRoom(d, x, z) {
   let best = null, bd = Infinity;
-  for (const r of d.rooms) { const dd = Math.hypot(x - d.x - r.x, z - d.z - r.z) - r.r; if (dd < bd) { bd = dd; best = r; } }
+  for (const r of d.rooms) {
+    // (A room with four walls by its walls, a cave's by its round.)
+    const lx = x - d.x - r.x, lz = z - d.z - r.z;
+    const dd = r.hx !== undefined ? Math.max(Math.abs(lx) - r.hx, Math.abs(lz) - r.hz) : Math.hypot(lx, lz) - r.r;
+    if (dd < bd) { bd = dd; best = r; }
+  }
   return best;
 }
 
@@ -127,7 +133,7 @@ function castleShell(K, d) {
   const g = grid(d), C = DUNGEON_CELL, L = d.look;
   const f = (i, j) => g.sdf[Math.min(g.H - 1, j) * g.W + Math.min(g.W - 1, i)] * GRID_UNIT;
   const wx = (i) => g.x0 + i * C, wz = (j) => g.z0 + j * C;
-  const TW = 3, TH = 1.7, FOOT = 1.3;
+  const FOOT = 1.3;
   outline(d, (ax, az, bx, bz) => {
     const mx = (ax + bx) / 2, mz = (az + bz) / 2, gm = grad(mx, mz);
     // (The roof it stands to: the one over the floor it faces, half a metre out from it.)
@@ -136,11 +142,15 @@ function castleShell(K, d) {
     const ux = bx - ax, uz = bz - az, flip = -uz * gm[0] + ux * gm[1] < 0;
     const [px, pz, qx, qz] = flip ? [ax, az, bx, bz] : [bx, bz, ax, az];
     // (The painting runs on along the wall: across by where the piece is, up by its height.)
-    const u = (x, z) => (Math.abs(ux) > Math.abs(uz) ? x : z) / TW;
-    const band = (layer, a, b) => K.quad(layer, [px, a, pz], [qx, a, qz], [qx, b, qz], [px, b, pz], [gm[0], 0, gm[1]], [[u(px, pz), -a / TH], [u(qx, qz), -a / TH], [u(qx, qz), -b / TH], [u(px, pz), -b / TH]]);
-    const foot = caveFloorY(mx, mz) + FOOT;
-    band(L.foot || 'dark:rubble', y0, foot);
-    band(L.wall, foot, top);
+    // (Each by its own scale: tileOf, src/core/sites.js.)
+    const band = (layer, a, b) => {
+      const [TW, TH] = tileOf(layer), u = (x, z) => (Math.abs(ux) > Math.abs(uz) ? x : z) / TW;
+      K.quad(layer, [px, a, pz], [qx, a, qz], [qx, b, qz], [px, b, pz], [gm[0], 0, gm[1]], [[u(px, pz), -a / TH], [u(qx, qz), -a / TH], [u(qx, qz), -b / TH], [u(px, pz), -b / TH]]);
+    };
+    // (Each room's own masonry, where it has one: rock for its walls, foot for the course under them.)
+    const room = nearRoom(d, ix, iz), foot = caveFloorY(mx, mz) + FOOT;
+    band(room?.foot || L.foot || 'dark:rubble', y0, foot);
+    band(room?.rock || L.wall, foot, top);
   });
   // The floor, in two-metre flags; the roof over each, level; and a wall down from the higher roof where two differ.
   const F = 4, cols = Math.floor((g.W - 1) / F), rows = Math.floor((g.H - 1) / F);
@@ -150,7 +160,7 @@ function castleShell(K, d) {
     if (Math.max(f(a, b), f(a + F, b), f(a + F, b + F), f(a, b + F)) < 0.02) continue;
     const pts = [[a, b], [a + F, b], [a + F, b + F], [a, b + F]].map(([p, q]) => [wx(p), wz(q)]);
     const fl = pts.map(([x, z]) => [x, caveFloorY(x, z), z]);
-    K.quad(L.floor, fl[0], fl[3], fl[2], fl[1]);
+    K.quad(nearRoom(d, wx(a + F / 2), wz(b + F / 2))?.ground || L.floor, fl[0], fl[3], fl[2], fl[1]);
     const y = roof[j * cols + i] = caveRoofY(wx(a + F / 2), wz(b + F / 2));
     K.quad(L.roof, [pts[0][0], y, pts[0][1]], [pts[1][0], y, pts[1][1]], [pts[2][0], y, pts[2][1]], [pts[3][0], y, pts[3][1]], [0, -1, 0]);
   }

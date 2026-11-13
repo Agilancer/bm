@@ -1307,7 +1307,12 @@ export class Brain {
     }
     if (T.hostile) this.pullWait = 0;
     // Nothing it throws is landing (behind a wall, across a gap): leave that one be for a while.
-    const tk = this.engage.get(T.id) || { since: this.t, best: T.hp };
+    // (Counted afresh for one it hasn't been at for a moment, and for another body in the same place in the snapshot: a
+    // record was kept by id for ever, so the next thing to stand up with a dead one's id, at full life, was "not being
+    // hurt" from the moment it was looked at, and was left alone for 45 s while it came on.)
+    let tk = this.engage.get(T.id);
+    if (!tk || this.t - tk.last > 2 || T.hp > tk.best + 1) tk = { since: this.t, best: T.hp, last: this.t };
+    tk.last = this.t;
     if (T.hp < tk.best - 0.5) { tk.best = T.hp; tk.since = this.t; }
     this.engage.set(T.id, tk);
     if (this.t - tk.since > (T.slime || T.tumbler ? 20 : 12)) { this.giveUp(`foe:${T.id}`, 45); this.engage.delete(T.id); this.target = null; }
@@ -1663,7 +1668,8 @@ export class Brain {
     if (inDungeon(m.x, m.z)) return this.mode === 'dungeons' ? this.dungeonJob(m) || warrensJob(this, m) : warrensJob(this, m);
     const hire = hireJob(this, m);
     if (hire) return hire;
-    const delve = questing && warrensJob(this, m, this.delveWants(m));
+    // (With a quest still to do, only the dungeon a quest in hand wants: delveOwed. Round them for their own sake after.)
+    const delve = questing && warrensJob(this, m, this.delveWants(m), this.delveOwed());
     if (delve && !wantsTown) return delve;
     // In the town, its errands: the quest talk first (only when it's on the quests), then the shops.
     const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60, questing);
@@ -1752,6 +1758,25 @@ export class Brain {
       if (!st || m.lvl < lvl + (this.bump[`q:${id}`] || 0)) continue;
       const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : null;
       if (k && !out.includes(k)) out.push(k);
+    }
+    return out;
+  }
+
+  // The dungeons some quest not yet done still has work down (taken or not): left alone till that quest sends it there.
+  // It used to go down the first it was fit for, before the quests that lead to it: the Warrens at 7 with none of its four
+  // quests in hand, four levels from the clear, then off to the Deeps with the quests of levels 4 to 12 not begun, and
+  // every dungeon to do again for each quest.
+  delveOwed() {
+    const Q = this.o.townUI.quests, out = new Set();
+    // (And while any quest at all is still to do, none for its own sake: with only the keep's last two left it went round
+    // the Warrens again first.)
+    if (!this.allQuestsDone()) return new Set(DELVE_KEYS);
+    for (const [id, r] of Object.entries(RULES)) {
+      if (Q.done(id)) continue;
+      for (const st of r.steps || []) {
+        const k = st.boss ? BOSSES.find((b) => b.key === st.boss)?.delve : DELVE_KEYS.includes(st.enter) ? st.enter : DELVE_KEYS.includes(st.kill) ? st.kill : null;
+        if (k) out.add(k);
+      }
     }
     return out;
   }
@@ -1877,7 +1902,11 @@ export class Brain {
       if (talkTo >= 0 && talkTo < PEOPLE.length && !this.skipping(`p:${talkTo}`) && this.reachable(talkTo)) return { ...this.talkJob(talkTo, 'quest', `${q.title}: to ${townUI.people[talkTo].name}.`), quest: id };
     }
     const offer = quests && this.offerJob(m);
-    if (offer && dist(m.x, m.z, 0, 0) < 140) return offer;
+    // (Work to be had here in the town, that is: from someone a country away it waits its turn in choose(), after the
+    // work in hand. Any giver at all used to count while it was within 140 m of the square, so on its way west to one
+    // in Cinderford it crossed that line, turned back east for the catacombs, crossed it again and turned west, and went
+    // on doing so, ten minutes and four levels of the dead that came up round it, for as long as it was watched.)
+    if (offer && dist(m.x, m.z, 0, 0) < 140 && this.jobDist(offer, m) < 320) return offer;
     // Selling: to whoever gives most for the most of it, while they're open.
     const junk = this.junk();
     if (junk.length >= 2 || (this.freeCells() < 16 && junk.length)) {
@@ -2120,8 +2149,10 @@ export class Brain {
     this.say(j.say);
     if (!w || !this.reachable(j.who)) { this.giveUp(`p:${j.who}`, 60); this.job = null; return; }
     const d = dist(m.x, m.z, w.x, w.z), dy = Math.abs((w.y ?? m.y) - m.y);
-    if (!j.since) j.since = this.t;
-    // (Upstairs, or somewhere it can't get to: later.)
+    // (Upstairs, or somewhere it can't get to: later. The 75 s run from when it last got nearer, not from when it set
+    // out: counted from the start, nobody more than a minute's walk off was ever reached. Ser Hale is 2.4 km from the
+    // square; it gave him up 600 m down the road, turned back to grind, and set out again, for as long as it was watched.)
+    if (!j.since || d < (j.best ?? Infinity) - 2) { j.since = this.t; j.best = d; }
     if (this.t - j.since > 75) { this.giveUp(`p:${j.who}`, 240); this.job = null; return; }
     // Face to face, and nothing between them: no wall, no shut door. (A quest isn't taken or handed in from the street
     // through the side of a house: it goes in at the door.)
@@ -2630,6 +2661,18 @@ export class Brain {
     inp.look(-this.yawV * dt, -this.pitchV * dt);
     if (!fight && !this.talk) this.pitch = -0.06;
     if (!fight && this.job?.kind !== 'talk' && !(this.doorWait > 0)) this.face = null;
+    // Wedged (lost() below): out by the way the nav thread found for it, a point at a time, whatever else it wants.
+    if (this.escapePts) {
+      const E = this.escapePts;
+      while (E.length && dist(m.x, m.z, E[0][0], E[0][1]) < 0.12) E.shift();
+      if (!E.length || this.t > this.escapeUntil) this.escapePts = null;
+      else {
+        const dx = E[0][0] - m.x, dz = E[0][1] - m.z, k = Math.hypot(dx, dz) || 1, c = Math.cos(inp.yaw), s = Math.sin(inp.yaw);
+        a.mx = (-c * dx + s * dz) / k; a.mz = (s * dx + c * dz) / k; a.run = false;
+        this.say('Wedged in a corner: working its way out.');
+        return;
+      }
+    }
     if (!w) { a.mx = 0; a.mz = 0; a.run = false; this.unstick(dt, m, false); return; }
     // Into the keys' frame: strafe and forward, from where it's looking now (so it can walk one way while it turns).
     const c = Math.cos(inp.yaw), s = Math.sin(inp.yaw);
@@ -2735,6 +2778,13 @@ export class Brain {
   // something else found to do.
   lost() {
     const j = this.job;
+    // (Twice in the same place inside two minutes: it isn't the errand, it's where it stands. The nav thread finds the way
+    // out of the corner on a finer grid of its own, and the motor takes it.)
+    const S = this.stuck, was = this.lostAt;
+    if (was && this.t - was.t < 120 && dist(was.x, was.z, S.x, S.z) < 1.5 && !this.escapePts) {
+      this.nav.ask('escape', { x: S.x, z: S.z }).then((pts) => { if (pts?.length) { this.escapePts = pts; this.escapeUntil = this.t + 12; } });
+    }
+    this.lostAt = { x: S.x, z: S.z, t: this.t };
     if (j?.kind === 'talk') this.giveUp(`p:${j.who}`, 120);
     else if (j?.kind === 'hunt' && this.patrol) this.giveUp(`s:${this.patrol[0]},${this.patrol[1]}`, 240);
     else if (j) this.giveUp(j.why, 90);

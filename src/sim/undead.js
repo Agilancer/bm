@@ -128,7 +128,7 @@ export class Zombie extends Beast {
     const lying = this.dead && !this.dormant && Math.hypot(this.x - x, this.z - z) < 1;
     this.reset({ ...this.opts, sleeper: false, type, spawn: [x, z], yaw: Math.atan2(sim.player.x - x, sim.player.z - z) });
     this.owner = owner;
-    this.y = sim.world.height(x, z);
+    this.y = sim.world.groundBy(x, z, sim.player);
     this.rise(sim, lying);
     if (!calm) { this.aggro = true; this.goal = GOAL.CHASE; this.lastX = sim.player.x; this.lastZ = sim.player.z; this.lastSense = sim.time; }
   }
@@ -421,7 +421,7 @@ export class Zombie extends Beast {
     tv[0] = this.x; tv[2] = this.z;
     sim.world.resolve(tv, 0.32 * this.scale, this.y + 0.5);
     this.x = tv[0]; this.z = tv[2];
-    this.y = sim.world.height(this.x, this.z) + this.sink;
+    this.y = sim.world.groundFor(this.x, this.z, this.y - this.sink) + this.sink;
     this.stepChunks(dt, sim);
     quatYaw(this.rig.rootQ, 0, this.yaw);
     this.rig.rootT[0] = this.x; this.rig.rootT[1] = this.y; this.rig.rootT[2] = this.z;
@@ -1329,7 +1329,7 @@ function standPack(sim, b, cx, cz) {
 function huntFrom(sim, b, x, z, type) {
   const p = sim.player;
   b.reset({ ...b.opts, sleeper: false, type, spawn: [x, z], yaw: Math.atan2(p.x - x, p.z - z) });
-  b.y = sim.world.height(x, z);
+  b.y = sim.world.groundBy(x, z, p);
   b.aggro = true; b.hostile = true; b.goal = GOAL.HUNT; b.lastX = p.x; b.lastZ = p.z; b.lastSense = sim.time;
   b.rise(sim);
 }

@@ -221,8 +221,13 @@ export class Warrens {
       // wyrm under the king's seal. Its room stands empty, and says why.)
       if (b.needs && !b.needs.every((k) => this.down.has(k))) { if (b.shut && dRoom < R - 3 && !this.fight) this.warn(WARN[b.shut], 40); continue; }
       // Stood up as you come down the way to its room.
-      if (lair.state === 'asleep' && dRoom < R + 30) t.wake(lair);
+      if (lair.state === 'asleep' && dRoom < R + 30) t.wake(lair, true);
       const bodies = this.bossBodies(b.key);
+      // (Stood up short, some of its places taken when it woke: laid down again, to stand up whole the next time round.
+      // Without them all it's never counted down, and the dungeon can't be finished.)
+      if (lair.state === 'awake' && bodies.length && lair.spawned < b.models.length && !t.loading.has(lair) && !this.fight && bodies.every((m) => !m.aggro && !m.dead)) { t.sleep(lair); continue; }
+      // (Or stood up and since gone, its places taken for something else: asleep again, to stand up the next time round.)
+      if (lair.state === 'awake' && lair.spawned > 0 && bodies.length < lair.spawned && !t.loading.has(lair) && this.fight?.boss !== b && bodies.every((m) => !m.aggro && !m.dead)) { t.sleep(lair); continue; }
       for (const m of bodies) if (!m.setUp) this.setUp(m, b);
       if (lair.state === 'cleared' || (bodies.length && bodies.every((m) => m.dead) && lair.spawned >= b.models.length)) {
         this.down.add(b.key); lair.state = 'cleared'; lair.clearedOnce = true;

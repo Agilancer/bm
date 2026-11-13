@@ -23,18 +23,18 @@
 import { R } from './delve-lay.js';
 
 const rooms = [
-  R('ph_foyer', 'the Foyer', 0, -2, 8, 12, 0, 9),
-  R('ph_cloak', 'the Cloakroom', 24, -4, 10, 10, 0, 7),
-  R('ph_gallery', 'the Gallery of Faces', 0, -54, 6, 28, 0, 10),
+  R('ph_foyer', 'the Foyer', 0, -2, 8, 12, 0, 9, { rock: 'ashlar', foot: 'course', ground: 'flags' }),
+  R('ph_cloak', 'the Cloakroom', 24, -4, 10, 10, 0, 7, { ground: 'flags' }),
+  R('ph_gallery', 'the Gallery of Faces', 0, -54, 6, 28, 0, 10, { rock: 'wall_17', foot: 'dark:wood' }),
   R('ph_house', 'the House', 0, -120, 18, 28, 0, 15, { fires: 14 }),
-  R('ph_wardrobe', 'the Wardrobe', -50, -120, 18, 18, 0, 12),
-  R('ph_props', 'the Property Store', 44, -120, 14, 14, 0, 9),
-  R('ph_stage', 'the Stage', 0, -168, 20, 14, 1, 16, { fires: 0 }),
-  R('ph_green', 'the Green Room', 36, -168, 10, 10, 1, 8),
+  R('ph_wardrobe', 'the Wardrobe', -50, -120, 18, 18, 0, 12, { rock: 'cloth_oat', foot: 'dark:wood' }),
+  R('ph_props', 'the Property Store', 44, -120, 14, 14, 0, 9, { rock: 'course', foot: 'block', ground: 'stone' }),
+  R('ph_stage', 'the Stage', 0, -168, 20, 14, 1, 16, { fires: 0, rock: 'dark:wood', foot: 'dark:wood' }),
+  R('ph_green', 'the Green Room', 36, -168, 10, 10, 1, 8, { rock: 'mire:wall_13', foot: 'dark:wood' }),
   // (The fly stair climbs eight metres going north: its floor is a slope, the steps are laid on it.)
-  R('ph_stair', 'the Fly Stair', 36, -200, 6, 18, 5, 12, { tz: -8 / 36, fires: 12 }),
-  R('ph_nursery', 'the Nursery', 36, -240, 12, 14, 9, 9),
-  R('ph_attic', "the Dollmaker's Attic", -10, -240, 28, 14, 9, 8, { fires: 12 }),
+  R('ph_stair', 'the Fly Stair', 36, -200, 6, 18, 5, 12, { tz: -8 / 36, fires: 12, rock: 'course', foot: 'block', ground: 'stone' }),
+  R('ph_nursery', 'the Nursery', 36, -240, 12, 14, 9, 9, { rock: 'pale:wall_13', ground: 'pale:wood' }),
+  R('ph_attic', "the Dollmaker's Attic", -10, -240, 28, 14, 9, 8, { fires: 12, rock: 'wood', foot: 'dark:wood', ground: 'dark:wood' }),
 ];
 
 // Passages: w is half the width, h the height.
