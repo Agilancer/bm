@@ -68,7 +68,9 @@ export const H = {
   // The road's fight in the opening: how many of its dead are still to be put down (0: no fight on). src/sim/opening.js.
   OPENING_FIGHT: 179,
   // Your staff, skull and shield put away, out of a fight: 0 (in hand) to 1 (on your back and hip). Sim.stepStow.
-  STOW: 180, SIZE: 181,
+  STOW: 180,
+  // How many are awake and at you, near (STOW.near): for the music's fights (src/music.js). Sim.stepStow.
+  THREAT: 181, SIZE: 182,
 };
 
 // Per-character block

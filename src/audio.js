@@ -49,6 +49,9 @@ Object.assign(BANKS, {
   iceThrow: n('ice_throw', 2), iceFreeze: n('ice_freeze', 2), iceBarrage: n('ice_barrage', 2), iceWall: n('ice_wall', 2),
   rockThrow: n('rock_meteor_throw', 2), rockSwarm: n('rock_meteor_swarm', 2), rockWall: n('rock_wall', 2),
   spellImpact: n('spell_impact', 3), splash: n('waterspray', 2), wave: n('wave_attack', 2), thunk: n('bow_impact_hit', 3),
+  // From the first Bellmourn: a man's scream as he goes down (the Wilhelm scream, BigSoundBank.com 0477), and a crowd's
+  // gasp and panic ("Crowd Gasp", Free Sounds Library, CC BY 4.0, and a city crowd's scream), for the town seeing you fall.
+  wilhelm: ['wilhelm_scream'], crowdGasp: ['crowd_gasp'], crowdPanic: ['crowd_panic'],
 });
 // From two general packs (tools/audio/build_extra_sfx.py): what's picked up, the book and the map, bone and gore, the panels' clicks.
 Object.assign(BANKS, {
@@ -63,6 +66,10 @@ Object.assign(BANKS, {
 // The least time between two of a bank, so a volley or a line of spikes doesn't stack up into one roar.
 const GAP = { spellImpact: 0.07, torchImpact: 0.1, iceFreeze: 0.1, thunk: 0.08, rockWall: 0.3, splash: 0.2, rockThrow: 0.12, fireball: 0.08, anvil: 0.2, chop: 0.2,
   coin: 0.06, coinLand: 0.05, gem: 0.08, gemLand: 0.05, orb: 0.1, squelch: 0.1, splat: 0.08, crunch: 0.1, uiHover: 0.05 };
+
+// Beds played with their low end cut, in Hz. The calm wind is on wherever you're out of doors, all the time, and two
+// thirds of the recording is under 250 Hz: left in, the whole game had a low hum under it.
+const BED_CUT = { wind_calm: 500 };
 
 export class Audio {
   // ctx and dest: the title's context and its Volume, so the title and the game share one line out.
@@ -86,7 +93,11 @@ export class Audio {
     comp.connect(this.dest || ctx.destination);
     this.amb = ctx.createGain();
     this.amb.gain.value = this.ambienceLevel;
-    this.amb.connect(this.master);
+    // The beds' recordings carry a rumble under 70 Hz that nothing in them needs: with a loop always on, it's a hum.
+    const rumble = ctx.createBiquadFilter();
+    rumble.type = 'highpass'; rumble.frequency.value = 70; rumble.Q.value = 0.7;
+    this.amb.connect(rumble);
+    rumble.connect(this.master);
     // A short slap of space, so steel rings off the houses.
     const len = Math.floor(ctx.sampleRate * 0.7);
     const ir = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -143,7 +154,15 @@ export class Audio {
       this.fetchBuffer(name).then((buf) => {
         if (b.gone) return;
         const s = b.src = this.ctx.createBufferSource();
-        s.buffer = buf; s.loop = true; s.connect(b.g); s.start(this.ctx.currentTime, Math.random() * buf.duration);
+        s.buffer = buf; s.loop = true;
+        // (Only the bed's air, where most of it is low drone: two filters, so it falls away fast below the cut.)
+        let end = b.g;
+        for (let i = 0; i < (BED_CUT[name] ? 2 : 0); i++) {
+          const f = this.ctx.createBiquadFilter();
+          f.type = 'highpass'; f.frequency.value = BED_CUT[name]; f.Q.value = 0.7;
+          f.connect(end); end = f;
+        }
+        s.connect(end); s.start(this.ctx.currentTime, Math.random() * buf.duration);
       }).catch(() => {});
     }
     // (Every bed there's ever been used to play on in silence for good, each holding its 17 MB: the woods by day and by

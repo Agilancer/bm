@@ -226,7 +226,7 @@ export class TownUI {
     this.quests = new QuestBook({
       change: () => { this.marksStale = true; this.town.setFlags(this.quests.flags); if (this.book) this.drawBook(); },
       toast: (t, kind) => this.note(t, kind),
-      done: () => {},
+      done: (id) => this.act.triumph?.(id),
       // (Silas hands over the Sexton's Door's key with this one: src/main.js locked.)
       begun: (id) => { if (id === 'dead_cant_wait') this.act.sound?.('keys'); },
     });
