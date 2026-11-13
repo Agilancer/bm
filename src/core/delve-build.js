@@ -149,7 +149,12 @@ function castleShell(K, d) {
     const mx = (ax + bx) / 2, mz = (az + bz) / 2, gm = grad(mx, mz);
     // (The roof it stands to: the one over the floor it faces, half a metre out from it.)
     const ix = mx + gm[0] * 0.7, iz = mz + gm[1] * 0.7;
-    const y0 = Math.min(caveFloorY(ax, az), caveFloorY(bx, bz)) - 0.4, top = caveRoofY(ix, iz) + 0.05;
+    // (And by a doorway's corner, where half a metre out is under the passage's lower roof: the highest of three looks in,
+    // so no wall stops short of the roof it stands under and leaves a hole.)
+    const y0 = Math.min(caveFloorY(ax, az), caveFloorY(bx, bz)) - 0.4;
+    let top = caveRoofY(ix, iz);
+    for (const o of [1.8, 3]) if (caveRoom(mx + gm[0] * o, mz + gm[1] * o) > 0.3) top = Math.max(top, caveRoofY(mx + gm[0] * o, mz + gm[1] * o));
+    top += 0.05;
     const ux = bx - ax, uz = bz - az, flip = -uz * gm[0] + ux * gm[1] < 0;
     const [px, pz, qx, qz] = flip ? [ax, az, bx, bz] : [bx, bz, ax, az];
     // (The painting runs on along the wall: across by where the piece is, up by its height.)
