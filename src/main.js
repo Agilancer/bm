@@ -7,6 +7,8 @@ import { OpeningHUD } from './ui/opening.js';
 import { ChatLog } from './ui/chatlog.js';
 import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
+import { Music } from './music.js';
+import { inTown } from './core/town.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { FileWatch, getFile, watchFiles } from './core/files.js';
@@ -369,6 +371,8 @@ async function boot(plan, poolSize) {
   town.onReady = (m) => renderer.folk.setBeds(m.beds);
   if (town.buffer) simWorker.postMessage({ type: 'folk', buffer: town.buffer });
   const audio = new Audio(BASE, title.ctx, title.out, settings.ambience);
+  // The music of where you are, and a fight's (src/music.js), down the title's music line: the Music setting is its volume.
+  const music = new Music(BASE, title.ctx, title.musicBus, () => settings.music);
   let latestSnap = null;
   // Saves and loads are asked of the simulation thread, and answered by id.
   const calls = new Map();
@@ -569,6 +573,7 @@ async function boot(plan, poolSize) {
     town, renderer, pack, input, hud, inventory, spellbar: null,
     act: {
       sound: (k) => audio.play(k, null, 0, 0, 0.7, 1, false),
+      triumph: () => music.stinger('triumph'),
       // What Lisandra says to you, into the chat log (src/ui/folk.js speak).
       log: (who, text) => chatLog.line('her', who, text),
       heal: (n) => { shared.input[INPUT.HEAL] += n; },
@@ -600,12 +605,14 @@ async function boot(plan, poolSize) {
     },
   });
   game.townUI = townUI;
+  game.music = music;
   // The gold trail on the ground to the quest you follow (or, in the opening, down the road after Lisandra).
   game.questTrail = new QuestTrail({ renderer, townUI, town });
   addPart('folk', { save: () => townUI.save(), load: (d) => townUI.load(d) });
   // Out past the town: the seals, the charms, the countries' sounds, and Velscour's Skull (src/ui/lands.js).
   const lands = new Lands({
     shared, input, hud, audio, pack, worldMap,
+    found: () => music.stinger('found'),
     cmd: (code, a = 0, b = 0, c = 0) => { shared.input[INPUT.ASPECT] = code; shared.input[INPUT.CMD_A] = a; shared.input[INPUT.CMD_B] = b; shared.input[INPUT.CMD_C] = c; shared.input[INPUT.CMD] += 1; },
     snap: () => game.currentSnap(),
     hour: () => renderer.hour,
@@ -695,6 +702,7 @@ async function boot(plan, poolSize) {
     input.enabled = true;
     document.body.classList.add('playing');
     audio.start();
+    music.unlock(); music.play();
     if (!openingHUD || (!fresh && openingHUD.name)) input.lock();
     if (input.touch && document.documentElement.requestFullscreen) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
@@ -808,6 +816,7 @@ async function boot(plan, poolSize) {
     game.idle = true;
     audio.setAmbience(0);
     audio.surf(0, false);
+    music.stop();
     title.toMenu();
   };
   title.onMenu = async (a) => {
@@ -1054,7 +1063,7 @@ async function boot(plan, poolSize) {
   setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`, true);
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
   gpuLostOffer();
-  if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
+  if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); music.play(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
 }
 
 // ---- HUD --------------------------------------------------------------------------------------------------------------
@@ -1426,6 +1435,8 @@ class GameView {
       this.drawOpening?.(snap, c);
       this.townUI?.frame(dt, c, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw, !!this.shared.input[INPUT.PAUSE] || !!this.idle, snap);
       this.lands?.frame(snap);
+      // (Nothing of the music's begins in the opening, which has its own sound, till you're on the road with her.)
+      this.music?.frame(dt, snap, !!this.shared.input[INPUT.PAUSE] || !!this.idle, snap[H.OPENING] > 0 && snap[H.OPENING] < OPENING.ESCORT);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
       if (!this.idle) this.govern(dt);
       const r = this.renderer, hs = this.hudStats;
@@ -1685,7 +1696,7 @@ class GameView {
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
       case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
-      case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); break;
+      case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);
@@ -1813,6 +1824,8 @@ class GameView {
         r.emit(3, 50, a, b, c, 0, 0.6, 0, 1.6, 0.5, 2.4, 0.1, 0.25, 0.9, 2);
         break;
       case EV.DEATH:
+        // (Now and then a man goes down the way they do in the pictures.)
+        if (Math.random() < 0.04) au.play('wilhelm', a, b, c, 1.1);
         au.play('armorLand', a, b, c, 1.4, 0.75);
         au.play('impact', a, b, c, 1.3, 0.5);
         au.gore(a, b, c, 1, 0.9, 500);
@@ -1890,7 +1903,11 @@ class GameView {
         au.play('crunch', a, b, c, 1.1, 0.85);
         r.emit(3, 26, a, b, c, 0, 0.6, 0, 1.4, 0.4, 1.6, 0.08, 0.2, 0.7, 1.5);
         break;
-      case EV.LOSE: au.play('armorLand', null, 0, 0, 1, 0.7); break;
+      case EV.LOSE:
+        au.play('armorLand', null, 0, 0, 1, 0.7); this.music?.stinger('fell');
+        // (Cut down in Bellmourn's streets, with the town looking on.)
+        if (inTown(a, c, 10)) { au.play('crowdGasp', a, b, c, 1.6); au.play('crowdPanic', a, b, c, 1.2); }
+        break;
       case EV.LAND: au.play(`land_${this.underfoot}`, null, 0, 0, 0.25 + d * 0.4, 1, false); break;
       case EV.ALERT: au.play('unsheath', a, b, c, 1.2); break;
       case EV.SHIELD_BREAK:
