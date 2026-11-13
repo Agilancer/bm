@@ -1550,6 +1550,8 @@ class GameView {
       this.smokeT = 0;
       for (const s of r.village.smoke) r.emit(4, 1, s.p[0], s.p[1], s.p[2], 0.1, 1, 0.08, 0.22, 0.45, 0.8, 0.09, 0.17, 7, 12);
     }
+    this.sparkT = (this.sparkT || 0) + dt;
+    if (this.sparkT > 0.11) { this.sparkT = 0; r.fireSparks(this.cam); }
     this.moteT += dt;
     if (this.moteT > 0.06) {
       this.moteT = 0;

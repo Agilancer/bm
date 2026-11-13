@@ -194,7 +194,7 @@ const WARRENS = {
   key: 'warrens', tag: 'hf', name: DUNGEON.name, short: 'the Warrens', x: DUNGEON.x, z: DUNGEON.z, y: DUNGEON.y, level: 7, style: 'cave',
   rooms: ROOMS, tunnels: TUNNELS, pillars: PILLARS, packs: PACKS, props: WARRENS_PROPS,
   entry: ENTRY, exitIn: EXIT_IN, exitOut: EXIT_OUT, portal: PORTAL, last: 'venomaw', tough: PACK_TOUGH, pay: { xp: 1500, gold: 250 },
-  look: { wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5 },
+  look: { wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5, span: 'timber', litter: 'bones' },
   words: { enter: 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', clear: 'The Hollowfang Warrens are cleared. Venomaw is dead!', wipe: "Your party falls... and wakes at the Warrens' mouth." },
 };
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
@@ -567,6 +567,18 @@ export function braziers(d = WARRENS) {
       if (keep.some(([kx, kz]) => Math.hypot(kx - x, kz - z) < 6)) continue;
       if (BRAZIERS.some((b) => Math.hypot(b[0] - x, b[2] - z) < 5)) continue;
       BRAZIERS.push([x, caveFloorY(x, z), z]);
+    }
+    // (And over the middle of the great caverns, where no fire at the wall reaches: fires hung from the roof, 'hang'.
+    // [x, floor y, z, how high its light is, 'hang'])
+    if (r.r >= 18 && r.hang !== 0) {
+      const m = r.r >= 25 ? 4 : 3;
+      for (let i = 0; i < m; i++) {
+        const a = (i + 0.6) / m * 6.28 + r.x, x = d.x + r.x + Math.cos(a) * r.r * 0.3, z = d.z + r.z + Math.sin(a) * r.r * 0.3;
+        if (caveRoom(x, z) < 2.5 || solids(d).some((b) => blockOut(b, x - d.x, z - d.z) < 0.5)) continue;
+        const y = caveFloorY(x, z), lift = Math.min(8, caveRoofY(x, z) - y - 2.5);
+        if (lift < 4.6) continue;
+        BRAZIERS.push([x, y, z, lift, 'hang']);
+      }
     }
   }
   return BRAZIERS;

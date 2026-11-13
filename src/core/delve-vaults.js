@@ -191,6 +191,6 @@ export const VAULTS = {
   last: 'leviathan', tough: { hp: 10, damage: 2.2 }, pay: { xp: 2300, gold: 380 },
   // What its rank and file are called down here, by their kind (src/sim/tripo.js optsFor).
   names: { 'The Possessed': 'THE DROWNED', 'Dead Children': 'DROWNED CHILD', Kobolds: 'MUDLARK', Dragonlings: 'BOG DRAKE', 'Giant Spiders': 'VAULT-KEEPER' },
-  look: { wall: 'mire:rubble', floor: 'mire:rubble', roof: 'mire:stone', spike: 'mire:rubble', stone: 'mire:rubble', flame: 'mire:flame', lamp: 'wisp', still: true, light: [0.5, 1, 0.62], fire: [0.56, 1, 0.7], every: 8, lit: 0.5 },
+  look: { wall: 'mire:rubble', floor: 'mire:rubble', roof: 'mire:stone', spike: 'mire:rubble', stone: 'mire:rubble', flame: 'mire:flame', lamp: 'wisp', still: true, light: [0.5, 1, 0.62], fire: [0.56, 1, 0.7], every: 8, lit: 0.5, span: 'pier', litter: 'mire' },
   words: { enter: 'The Drowned Vaults. The fen came in after the causeway, and never went out again.', clear: 'The Drowned Vaults are cleared. The Leviathan of the Mile is dead!', wipe: 'Your party falls... and wakes on the Sunken Stair.' },
 };

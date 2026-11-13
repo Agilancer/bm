@@ -30,11 +30,14 @@ export const tileOf = (layer) => {
 };
 
 export class Kit {
-  constructor() { this.parts = new Map(); this.colliders = []; this.spots = {}; this.floors = []; }
+  // (under: what's built while deep is set, kept apart: the delves and the Test Dungeon, out past the world's edge and under
+  // it, which are never seen from the land nor the land from them. The renderer draws one or the other.)
+  constructor() { this.parts = new Map(); this.under = new Map(); this.deep = false; this.colliders = []; this.spots = {}; this.floors = []; this.fires = []; }
 
   part(layer) {
-    let p = this.parts.get(layer);
-    if (!p) { p = { pos: [], nrm: [], uv: [], idx: [] }; this.parts.set(layer, p); }
+    const parts = this.deep ? this.under : this.parts;
+    let p = parts.get(layer);
+    if (!p) { p = { pos: [], nrm: [], uv: [], idx: [] }; parts.set(layer, p); }
     return p;
   }
 
@@ -1393,18 +1396,22 @@ function flattest(x0, z0) {
 }
 
 let built = null;
-// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots }.
+// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), under: the same for the delves and the hall, colliders, spots }.
 export function buildSites() {
   if (built) return built;
   const K = new Kit();
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
-  buildDelves(K, portalWall); warrensMouth(K);
-  // (The Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js.)
+  warrensMouth(K);
+  // (The delves, and the Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js. Kept apart.)
+  K.deep = true;
+  buildDelves(K, portalWall);
   buildHall(K);
+  K.deep = false;
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   // (What lies about the lairs, last, so it keeps clear of everything above: src/core/lair-dress.js.)
   dressLairs(K, SEALS);
-  built = { parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors };
+  // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
+  built = { parts: K.parts, under: K.under, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires };
   return built;
 }

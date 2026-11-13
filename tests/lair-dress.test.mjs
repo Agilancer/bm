@@ -12,7 +12,7 @@ import { routeDist } from '../src/core/lands.js';
 const KINDS = ['camp', 'webs', 'plot', 'ring', 'bed', 'roost', 'den', 'picket'];
 const manifest = JSON.parse(fs.readFileSync(new URL('../assets/game/tex/manifest.json', import.meta.url)));
 // (The flat materials and the tints: FLAT and TINTS in src/gfx/renderer.js.)
-const FLAT = new Set(['iron', 'flame', 'water', 'fruit', 'fruit2', 'white', 'tile', 'glow', 'lake', 'falls', 'ice', 'seal', 'obsidian']);
+const FLAT = new Set(['iron', 'flame', 'water', 'fruit', 'fruit2', 'white', 'tile', 'glow', 'lake', 'falls', 'ice', 'seal', 'obsidian', 'gold']);
 
 test('every lair is dressed as one of the kinds, and every kind is used', () => {
   const seen = new Set(LAIRS.map(lairKind));
@@ -41,7 +41,7 @@ test('the dressing is for the eye: no collider, nothing on a road, no cloth', ()
 
 test('every painting a place or a dungeon asks for is in the game', () => {
   const have = new Set(manifest.layers.map((l) => l.name));
-  for (const layer of buildSites().parts.keys()) {
+  for (const layer of [...buildSites().parts.keys(), ...buildSites().under.keys()]) {
     const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(layer), base = m ? m[2] : layer;
     assert.ok(have.has(base) || FLAT.has(base), `no painting called ${base}`);
   }
@@ -55,7 +55,7 @@ test('every painting a place or a dungeon asks for is in the game', () => {
 
 test('no one painting is most of a dungeon any more', () => {
   const area = new Map();
-  for (const [layer, p] of buildSites().parts) {
+  for (const [layer, p] of [...buildSites().parts, ...buildSites().under]) {
     for (let i = 0; i < p.idx.length; i += 3) {
       const [a, b, c] = [0, 1, 2].map((k) => { const v = p.idx[i + k] * 3; return [p.pos[v], p.pos[v + 1], p.pos[v + 2]]; });
       if (Math.abs(a[0]) < 5600 && Math.abs(a[2]) < 5600) continue;

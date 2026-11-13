@@ -178,6 +178,6 @@ export const SPOREHOLD = {
   portal: { x: 2861, z: -4290, yaw: 1.82, r: 2.2 },
   last: 'heart', tough: { hp: 9, damage: 1.7 }, pay: { xp: 3000, gold: 480 },
   names: { Kobolds: 'SPORELING', 'Giant Spiders': 'CAP SPIDER', 'Haunted Mannequins': 'ROOTED HUSK', Werewolf: 'MOULD HOUND', 'Plague Giants': 'BLOAT-CAP' },
-  look: { wall: 'spore:rubble', floor: 'spore:rubble', roof: 'spore:stone', spike: 'spore:rubble', stone: 'spore:rubble', flame: 'spore:flame', lamp: 'cap', still: true, light: [0.74, 0.5, 1], fire: [0.6, 0.9, 1], every: 8, lit: 0.5 },
+  look: { wall: 'spore:rubble', floor: 'spore:rubble', roof: 'spore:stone', spike: 'spore:rubble', stone: 'spore:rubble', flame: 'spore:flame', lamp: 'cap', still: true, light: [0.74, 0.5, 1], fire: [0.6, 0.9, 1], every: 8, lit: 0.5, span: 'root', litter: 'spore' },
   words: { enter: 'The Sporehold. The ring on the hill is only the fruit: this is what it fruits from.', clear: 'The Sporehold is cleared. The Heart of the Ring is dead!', wipe: 'Your party falls... and wakes in the Sinkhole.' },
 };

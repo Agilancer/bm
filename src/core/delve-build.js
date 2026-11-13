@@ -13,6 +13,7 @@
 
 import { hash2, vnoise } from './terrain-noise.js';
 import { tileOf } from './sites.js';
+import { dress } from './delve-dress.js';
 import { DELVES, DUNGEON_CELL, GRID_UNIT, braziers, caveFloorY, caveRoofY, caveRoom, grid, torches } from './dungeon.js';
 
 const TAU = Math.PI * 2;
@@ -21,13 +22,13 @@ const NO = { collide: false };
 // ---- the shell ------------------------------------------------------------------------------------------------------------
 
 const SEGS = { 1: [[3, 0]], 2: [[0, 1]], 3: [[3, 1]], 4: [[1, 2]], 5: [[3, 0], [1, 2]], 6: [[0, 2]], 7: [[3, 2]], 8: [[2, 3]], 9: [[0, 2]], 10: [[0, 1], [2, 3]], 11: [[1, 2]], 12: [[1, 3]], 13: [[0, 1]], 14: [[3, 0]] };
-const grad = (x, z) => { const e = 0.3, gx = caveRoom(x + e, z) - caveRoom(x - e, z), gz = caveRoom(x, z + e) - caveRoom(x, z - e), L = Math.hypot(gx, gz) || 1; return [gx / L, gz / L]; };
+export const grad = (x, z) => { const e = 0.3, gx = caveRoom(x + e, z) - caveRoom(x - e, z), gz = caveRoom(x, z + e) - caveRoom(x, z - e), L = Math.hypot(gx, gz) || 1; return [gx / L, gz / L]; };
 // How far a thing standing in a room reaches (as the field has it): what the walls leave alone, since it's drawn as itself.
 const drawn = (d) => d.props.filter((p) => p.solid);
-const nearProp = (list, lx, lz, pad) => list.some((p) => (p.hx !== undefined ? Math.max(Math.abs(lx - p.x) - p.hx, Math.abs(lz - p.z) - p.hz) : Math.hypot(lx - p.x, lz - p.z) - p.r) < pad);
+export const nearProp = (list, lx, lz, pad) => list.some((p) => (p.hx !== undefined ? Math.max(Math.abs(lx - p.x) - p.hx, Math.abs(lz - p.z) - p.hz) : Math.hypot(lx - p.x, lz - p.z) - p.r) < pad);
 
 // The wall's line, a metre at a time: marching squares on the field. each(ax, az, bx, bz) for every piece of it.
-function outline(d, each) {
+export function outline(d, each) {
   const g = grid(d), C = DUNGEON_CELL, S = 2, own = drawn(d);
   const f = (i, j) => g.sdf[Math.min(g.H - 1, j) * g.W + Math.min(g.W - 1, i)];
   const lerp = (a, b) => a / (a - b);
@@ -57,6 +58,14 @@ function nearRoom(d, x, z) {
     if (dd < bd) { bd = dd; best = r; }
   }
   return best;
+}
+
+// A stalagmite (h below zero: a stalactite): a thick root narrowing by a shoulder to a point, a little off its own line,
+// where it was a plain pyramid.
+function tooth(K, layer, x, y, z, r, h, turn) {
+  const k = 0.38 + 0.14 * hash2(x * 3, z * 5), ox = (hash2(x, z * 7) - 0.5) * r * 0.5, oz = (hash2(z, x * 7) - 0.5) * r * 0.5;
+  K.drum(layer, x, y, z, r, h * k, 6, { r2: r * 0.5, open: true, collide: false, turn });
+  K.spike(layer, x + ox * 0.3, y + h * k, z + oz * 0.3, r * 0.52, h * (1 - k), 5, turn + 0.5, [ox / Math.abs(h), oz / Math.abs(h)]);
 }
 
 function caveShell(K, d) {
@@ -107,7 +116,9 @@ function caveShell(K, d) {
       K.drum(L.spike || L.roof, x, mid, z, r * 0.42, top - mid + 0.4, 6, { r2: r * 1.1, open: true, collide: false, turn: hash2(i, j) * 3 });
       continue;
     }
-    K.spike(L.stone || 'dark:rubble', x, y - 0.1, z, 0.3 + h * 0.12, h, 5, hash2(i, j) * 3);
+    tooth(K, L.stone || 'dark:rubble', x, y - 0.1, z, 0.34 + h * 0.13, h, hash2(i, j) * 3);
+    // (A smaller one beside it, as often as not.)
+    if (hash2(i * 9, j * 5) > 0.5) { const a = hash2(j, i * 3) * TAU; tooth(K, L.stone || 'dark:rubble', x + Math.cos(a) * (0.5 + h * 0.15), y - 0.1, z + Math.sin(a) * (0.5 + h * 0.15), 0.2 + h * 0.05, h * 0.45, a); }
   }
   for (let j = 4; j < g.H; j += 7) for (let i = 4; i < g.W; i += 7) {
     const x = wx(i) + hash2(i + 3, j) * 2.5, z = wz(j) + hash2(j + 5, i) * 2.5, dd = caveRoom(x, z);
@@ -118,7 +129,7 @@ function caveShell(K, d) {
     const h = Math.min(room - 3, (0.6 + hash2(i, j * 5) * 1.9) * (room > 9 ? 1.7 : 1));
     if (h < 0.4) continue;
     const r = 0.16 + h * 0.11;
-    K.spike(L.spike || L.roof, x, top + 0.35, z, r, -h - 0.35, 5, hash2(i, j) * 3, [(hash2(i, j + 2) - 0.5) * 0.12, (hash2(i + 2, j) - 0.5) * 0.12]);
+    tooth(K, L.spike || L.roof, x, top + 0.35, z, r * 1.15, -h - 0.35, hash2(i, j) * 3);
     // (A cluster: two shorter beside it.)
     if (hash2(i + 9, j) > 0.5) for (let k = 0; k < 2; k++) {
       const a = hash2(i + k, j + 7) * TAU, o = 0.35 + r;
@@ -149,8 +160,18 @@ function castleShell(K, d) {
     };
     // (Each room's own masonry, where it has one: rock for its walls, foot for the course under them.)
     const room = nearRoom(d, ix, iz), foot = caveFloorY(mx, mz) + FOOT;
-    band(room?.foot || L.foot || 'dark:rubble', y0, foot);
+    const footL = room?.foot || L.foot || 'dark:rubble';
+    band(footL, y0, foot);
     band(room?.rock || L.wall, foot, top);
+    // (A plinth standing a hand proud of the wall's foot, and a string course over the lights: the wall has a profile.)
+    const o = 0.11, ox = gm[0] * o, oz = gm[1] * o, fy = caveFloorY(mx, mz), pt = fy + 0.42, c0 = fy + (L.high || 2.3) + 1.15, c1 = c0 + 0.3;
+    K.quad(footL, [px + ox, y0, pz + oz], [qx + ox, y0, qz + oz], [qx + ox, pt, qz + oz], [px + ox, pt, pz + oz], [gm[0], 0, gm[1]]);
+    K.quad(footL, [px + ox, pt, pz + oz], [qx + ox, pt, qz + oz], [qx, pt + 0.1, qz], [px, pt + 0.1, pz], [gm[0] * 0.5, 0.86, gm[1] * 0.5]);
+    if (c1 < top - 0.4) {
+      K.quad(footL, [px + ox, c0, pz + oz], [qx + ox, c0, qz + oz], [qx + ox, c1, qz + oz], [px + ox, c1, pz + oz], [gm[0], 0, gm[1]]);
+      K.quad(footL, [px, c0 - 0.1, pz], [qx, c0 - 0.1, qz], [qx + ox, c0, qz + oz], [px + ox, c0, pz + oz], [gm[0] * 0.5, -0.86, gm[1] * 0.5]);
+      K.quad(footL, [px + ox, c1, pz + oz], [qx + ox, c1, qz + oz], [qx, c1 + 0.06, qz], [px, c1 + 0.06, pz], [gm[0] * 0.5, 0.86, gm[1] * 0.5]);
+    }
   });
   // The floor, in two-metre flags; the roof over each, level; and a wall down from the higher roof where two differ.
   const F = 4, cols = Math.floor((g.W - 1) / F), rows = Math.floor((g.H - 1) / F);
@@ -205,82 +226,217 @@ function banner(K, d, lx, lz, nx, nz, w, top, foot, r, cloth = 'cloth_red') {
 }
 
 // ---- its fires -------------------------------------------------------------------------------------------------------------
+// A flame isn't built: it's a card the renderer turns to face you and burns in the shader (src/gfx/interior.js GLOW,
+// src/gfx/renderer.js delveFires), in the delve's own colour. What's built is what it burns on. K.fires takes them:
+// kind 'flame' (x, y, z its root, w its half width, h its height), 'glow' (a soft round of light w across, about x, y, z),
+// 'wisp' (a flame with nothing under it, that bobs). ember: sparks go up from it when you're near (src/main.js).
+export function fire(K, d, x, y, z, w, h, o = {}) {
+  K.fires.push({ delve: d.key, hue: o.hue || d.look.flame, kind: o.kind || 'flame', x, y, z, w, h, ember: o.ember ? 1 : 0, seed: hash2(x * 3.1 + y, z * 2.7) });
+  if (o.glow) K.fires.push({ delve: d.key, hue: o.hue || d.look.flame, kind: 'glow', x, y: y + h * 0.45, z, w: o.glow, h: o.glow, ember: 0, seed: 0 });
+}
+const glow = (K, d, x, y, z, r, hue) => K.fires.push({ delve: d.key, hue: hue || d.look.flame, kind: 'glow', x, y, z, w: r, h: r, ember: 0, seed: 0 });
+// A bar of four sides between any two points, t thick (half): a torch's stave, a tripod's leg, a strut.
+export function bar(K, layer, a, b, t, t2 = t) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz) || 1;
+  // (Two ways across it: one level, one square to that.)
+  let ux = -dz, uz = dx; const ul = Math.hypot(ux, uz);
+  if (ul < 1e-4) { ux = 1; uz = 0; } else { ux /= ul; uz /= ul; }
+  const vx = (dy * uz) / L, vy = (dz * ux - dx * uz) / L, vz = (-dy * ux) / L;
+  const C = (q, s, k, tt) => [q[0] + (ux * s + vx * k) * tt, q[1] + vy * k * tt, q[2] + (uz * s + vz * k) * tt];
+  const ring = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  for (let i = 0; i < 4; i++) {
+    const [s0, k0] = ring[i], [s1, k1] = ring[(i + 1) % 4];
+    K.quad(layer, C(a, s0, k0, t), C(a, s1, k1, t), C(b, s1, k1, t2), C(b, s0, k0, t2));
+  }
+}
+// Coals: a bed of them alight, a few gone black on top.
+function coals(K, d, x, y, z, r, hue) {
+  K.drum(hue || d.look.flame, x, y - 0.05, z, r, 0.07, 7, { r2: r * 0.8, collide: false, turn: x });
+  for (let k = 0; k < 3; k++) { const a = k * 2.1 + z; K.spike('dark:rubble', x + Math.cos(a) * r * 0.45, y, z + Math.sin(a) * r * 0.45, r * 0.3, r * 0.3, 4, a); }
+}
+// A cage of iron bars for a fire to sit in: a hoop at the foot and the lip, bars between.
+function cage(K, x, y, z, r0, r1, h, n = 6) {
+  K.drum('iron', x, y, z, r0, 0.05, n, { r2: r0, collide: false });
+  K.drum('iron', x, y + h - 0.04, z, r1, 0.05, n, { r2: r1 * 1.04, open: true, collide: false });
+  for (let k = 0; k < n; k++) { const a = k * TAU / n; rod(K, 'iron', x + Math.cos(a) * r0, y, z + Math.sin(a) * r0, x + Math.cos(a) * r1, y + h, z + Math.sin(a) * r1, 0.012); }
+}
 
 function fires(K, d) {
-  const L = d.look;
+  const L = d.look, castle = d.style === 'castle';
   for (const [x, y, z, nx, nz] of torches(d)) {
+    const tx = -nz, tz = nx;
     if (L.lamp === 'cap') {
-      // A bracket of fungus out of the wall, its underside alight.
+      // A bracket of fungus out of the wall, its underside alight, smaller ones under it.
       K.drum('fruit', x - nx * 0.25, y - 0.12, z - nz * 0.25, 0.55, 0.14, 7, { r2: 0.38, collide: false, turn: x });
       K.drum(L.flame, x - nx * 0.25, y - 0.2, z - nz * 0.25, 0.4, 0.08, 7, { collide: false, turn: x });
-      K.drum('fruit', x - nx * 0.3, y - 0.75, z - nz * 0.3 + 0.3, 0.34, 0.1, 6, { r2: 0.22, collide: false, turn: z });
+      K.drum('fruit', x - nx * 0.3 + tx * 0.3, y - 0.75, z - nz * 0.3 + tz * 0.3, 0.34, 0.1, 6, { r2: 0.22, collide: false, turn: z });
+      K.drum(L.flame, x - nx * 0.3 + tx * 0.3, y - 0.8, z - nz * 0.3 + tz * 0.3, 0.25, 0.05, 6, { collide: false, turn: z });
+      K.drum('fruit', x - nx * 0.4 - tx * 0.35, y + 0.35, z - nz * 0.4 - tz * 0.35, 0.24, 0.08, 6, { r2: 0.15, collide: false, turn: z });
+      glow(K, d, x - nx * 0.1, y - 0.35, z - nz * 0.1, 0.8);
       continue;
     }
     if (L.lamp === 'wisp') {
       // A corpse-light: a flame with nothing under it, standing off the wall over the water.
-      K.cone(L.flame, x, y - 0.35, z, 0.12, 0.5, 5); K.cone(L.flame, x, y - 0.35, z, 0.12, -0.22, 5);
+      fire(K, d, x, y - 0.3, z, 0.16, 0.46, { kind: 'wisp', glow: 0.75 });
       continue;
     }
     if (L.lamp === 'bowl') {
       // A stone lamp on a corbel: a bowl of fat, a pale flame.
-      K.box(L.wall, x - nx * 0.3, y - 0.5, z - nz * 0.3, 0.2, 0.28, 0.2, 0, NO);
-      K.drum('rubble', x - nx * 0.1, y - 0.22, z - nz * 0.1, 0.12, 0.14, 6, { r2: 0.24, collide: false, open: true });
-      K.cone(L.flame, x - nx * 0.1, y - 0.1, z - nz * 0.1, 0.1, 0.34, 5);
+      K.box(L.wall, x - nx * 0.42, y - 0.62, z - nz * 0.42, 0.2, 0.3, 0.2, Math.atan2(nx, nz), NO);
+      K.box(L.wall, x - nx * 0.3, y - 0.34, z - nz * 0.3, 0.27, 0.1, 0.27, Math.atan2(nx, nz), NO);
+      K.drum('rubble', x - nx * 0.2, y - 0.24, z - nz * 0.2, 0.12, 0.14, 7, { r2: 0.24, collide: false, lid: L.flame });
+      fire(K, d, x - nx * 0.2, y - 0.12, z - nz * 0.2, 0.13, 0.4, { glow: 0.7 });
       continue;
     }
     if (L.cold) {
       // A shard of ice with a cold light in it, grown out of the wall.
       K.spike('ice', x - nx * 0.3, y - 0.5, z - nz * 0.3, 0.2, 0.95, 4, x, [nx * 0.25, nz * 0.25]);
       K.spike(L.flame, x - nx * 0.1, y - 0.2, z - nz * 0.1, 0.11, 0.6, 4, z, [nx * 0.3, nz * 0.3]);
+      K.spike('ice', x - nx * 0.35 + tx * 0.22, y - 0.45, z - nz * 0.35 + tz * 0.22, 0.12, 0.55, 4, z, [nx * 0.2 + tx * 0.2, nz * 0.2 + tz * 0.2]);
+      glow(K, d, x, y + 0.05, z, 0.85);
       continue;
     }
-    K.box('iron', x - nx * 0.25, y - 0.55, z - nz * 0.25, 0.05, 0.5, 0.05, 0, NO);
-    K.drum('iron', x, y - 0.05, z, 0.1, 0.12, 6, { r2: 0.16, collide: false, open: true });
-    K.cone(L.flame, x, y + 0.05, z, 0.14, 0.42, 5);
+    if (L.lamp === 'candle') {
+      // A sconce: a plate on the wall, an arm out from it, three candles in their cups.
+      K.box('iron', x - nx * 0.42, y - 0.45, z - nz * 0.42, 0.14, 0.55, 0.03, Math.atan2(nx, nz), NO);
+      bar(K, 'iron', [x - nx * 0.42, y - 0.3, z - nz * 0.42], [x - nx * 0.1, y - 0.18, z - nz * 0.1], 0.018);
+      bar(K, 'iron', [x - nx * 0.1 - tx * 0.24, y - 0.18, z - nz * 0.1 - tz * 0.24], [x - nx * 0.1 + tx * 0.24, y - 0.18, z - nz * 0.1 + tz * 0.24], 0.016);
+      for (const u of [-0.24, 0, 0.24]) {
+        const cx = x - nx * 0.1 + tx * u, cz = z - nz * 0.1 + tz * u, ch = u ? 0.14 : 0.2;
+        K.drum('iron', cx, y - 0.19, cz, 0.03, 0.04, 5, { r2: 0.05, collide: false });
+        K.drum('white', cx, y - 0.15, cz, 0.022, ch, 5, NO);
+        fire(K, d, cx, y - 0.15 + ch, cz, 0.05, 0.16, { glow: u ? 0 : 0.55 });
+      }
+      continue;
+    }
+    if (castle) {
+      // A cresset: a plate bolted to the wall, an arm, a cage of iron with the fire in it.
+      K.box('iron', x - nx * 0.43, y - 0.6, z - nz * 0.43, 0.1, 0.62, 0.025, Math.atan2(nx, nz), NO);
+      bar(K, 'iron', [x - nx * 0.43, y - 0.5, z - nz * 0.43], [x, y - 0.2, z], 0.022);
+      bar(K, 'iron', [x - nx * 0.43, y - 0.12, z - nz * 0.43], [x - nx * 0.05, y - 0.16, z - nz * 0.05], 0.016);
+      cage(K, x, y - 0.2, z, 0.08, 0.17, 0.3, 5);
+      coals(K, d, x, y - 0.12, z, 0.1);
+      fire(K, d, x, y - 0.1, z, 0.21, 0.62, { glow: 0.85 });
+      continue;
+    }
+    // A torch: a stave jammed in a crack of the rock, bound to an iron staple, its head wrapped and alight.
+    const fx = x - nx * 0.95, fz = z - nz * 0.95, hx = x - nx * 0.05, hz = z - nz * 0.05;
+    bar(K, 'wood', [fx, y - 0.95, fz], [hx, y - 0.08, hz], 0.032, 0.026);
+    bar(K, 'iron', [x - nx * 0.6 - tx * 0.07, y - 0.6, z - nz * 0.6 - tz * 0.07], [x - nx * 0.6 + tx * 0.07, y - 0.6, z - nz * 0.6 + tz * 0.07], 0.045);
+    K.drum('dark:cloth_oat', hx, y - 0.14, hz, 0.05, 0.2, 5, { r2: 0.075, collide: false, turn: x, lid: L.flame });
+    fire(K, d, hx, y + 0.02, hz, 0.19, 0.56, { glow: 0.8 });
   }
-  for (const [x, y, z, lift] of braziers(d)) {
+  let n = 0;
+  for (const [x, y, z, lift, how] of braziers(d)) {
+    if (how === 'hang') {
+      // Over the middle of a great cavern: a fire hung from the roof, whatever burns down here.
+      const top = caveRoofY(x, z) + 0.4, h = y + lift;
+      if (L.lamp === 'cap') {
+        // Caps grown down from the roof in a cluster, gills out.
+        for (let k = 0; k < 4; k++) { const a = k * 1.7 + x, o = k ? 0.7 : 0, px = x + Math.cos(a) * o, pz = z + Math.sin(a) * o, len = top - h - (k ? 0.8 : 0); K.drum('cloth_oat', px, top - len, pz, 0.09, len, 5, NO); K.cone('fruit', px, top - len - 0.3, pz, k ? 0.5 : 0.8, -0.35, 8); K.drum(L.flame, px, top - len - 0.36, pz, k ? 0.44 : 0.72, 0.06, 8, NO); }
+        glow(K, d, x, h - 0.2, z, 2.2);
+      } else if (L.lamp === 'wisp') {
+        for (let k = 0; k < 3; k++) { const a = k * 2.1 + z; fire(K, d, x + Math.cos(a) * 0.8, h - 0.5 + k * 0.4, z + Math.sin(a) * 0.8, 0.3, 0.9, { kind: 'wisp', glow: k ? 0 : 2.2 }); }
+      } else if (L.cold) {
+        // A great tooth of ice with the cold light in it, smaller ones round it.
+        tooth(K, 'ice', x, top, z, 0.75, h - top - 0.6, x);
+        K.spike(L.flame, x, top - 0.6, z, 0.34, h - top - 0.2, 5, z);
+        for (let k = 0; k < 4; k++) { const a = k * 1.6 + x; tooth(K, 'ice', x + Math.cos(a) * 0.9, top, z + Math.sin(a) * 0.9, 0.3, (h - top) * (0.35 + 0.12 * k), a); }
+        glow(K, d, x, h + 0.6, z, 2.4);
+      } else {
+        // A basket of iron bars on a chain, three more chains from its rim, coals in it.
+        rod(K, 'iron', x, top, z, x, h + 0.9, z, 0.025);
+        for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + x; rod(K, 'iron', x, h + 0.9, z, x + Math.cos(a) * 0.5, h + 0.12, z + Math.sin(a) * 0.5, 0.018); }
+        cage(K, x, h - 0.38, z, 0.26, 0.52, 0.5, 8);
+        coals(K, d, x, h - 0.26, z, 0.36);
+        fire(K, d, x, h - 0.24, z, 0.55, 1.3, { glow: 2.2, ember: true });
+      }
+      continue;
+    }
     // (A chandelier, a hearth, a spit build their own fires: PROPS. Theirs say how high their light is.)
     if (lift !== undefined) continue;
+    n++;
     if (L.lamp === 'cap') {
-      // A cap as tall as a man, its gills alight.
+      // A cap as tall as a man, its gills alight; two small ones at its foot.
       K.drum('cloth_oat', x, y - 0.2, z, 0.2, 1.7, 6, { r2: 0.13, collide: false });
       K.drum(L.flame, x, y + 1.42, z, 0.72, 0.08, 9, { collide: false });
       K.drum('fruit', x, y + 1.5, z, 0.85, 0.16, 9, { r2: 0.7, collide: false }); K.cone('fruit', x, y + 1.66, z, 0.7, 0.4, 9);
+      for (const s of [-1, 1]) { const a = x * 1.7 + s * 1.3, px = x + Math.cos(a) * 0.55, pz = z + Math.sin(a) * 0.55; K.drum('cloth_oat', px, y - 0.1, pz, 0.06, 0.45, 5, NO); K.drum(L.flame, px, y + 0.3, pz, 0.2, 0.04, 6, NO); K.cone('fruit', px, y + 0.34, pz, 0.24, 0.16, 6); }
+      glow(K, d, x, y + 1.25, z, 1.3);
       continue;
     }
     if (L.lamp === 'wisp') {
       // A corpse-light over a stump of the causeway's stone.
       K.drum('pale:stone', x, y - 0.3, z, 0.34, 0.9, 6, { r2: 0.26, collide: false, turn: x });
-      K.cone(L.flame, x, y + 1.15, z, 0.2, 0.75, 6); K.cone(L.flame, x, y + 1.15, z, 0.2, -0.3, 6);
+      K.drum('mire:rubble', x, y - 0.3, z, 0.5, 0.45, 6, { r2: 0.4, collide: false, turn: z });
+      fire(K, d, x, y + 1.1, z, 0.27, 0.8, { kind: 'wisp', glow: 1.2 });
       continue;
     }
     if (L.lamp === 'bowl') {
       // A grave-lamp: a standing stone with a bowl cut in its head.
       K.box('rubble', x, y - 0.3, z, 0.3, 1.5, 0.24, x, NO);
-      K.drum('pale:stone', x, y + 1.2, z, 0.2, 0.16, 7, { r2: 0.36, collide: false, open: true });
-      K.cone(L.flame, x, y + 1.3, z, 0.24, 0.7, 6);
+      K.box('pale:rubble', x, y - 0.3, z, 0.42, 0.42, 0.36, x, NO);
+      K.drum('pale:stone', x, y + 1.2, z, 0.2, 0.16, 7, { r2: 0.36, collide: false, lid: L.flame });
+      fire(K, d, x, y + 1.33, z, 0.3, 0.8, { glow: 1.2 });
       continue;
     }
     if (L.cold) {
       // A cold fire: crystals standing out of a boss of ice.
       K.drum('ice', x, y - 0.2, z, 0.5, 0.5, 6, { r2: 0.3, collide: false });
       for (let k = 0; k < 4; k++) { const a = k * 1.7 + x; K.spike(k ? L.flame : 'ice', x + Math.cos(a) * 0.16, y + 0.2, z + Math.sin(a) * 0.16, 0.16, 0.9 + (k % 2) * 0.5, 4, a, [Math.cos(a) * 0.22, Math.sin(a) * 0.22]); }
+      glow(K, d, x, y + 0.9, z, 1.4);
       continue;
     }
-    K.drum('dark:stone', x, y - 0.2, z, 0.22, 1.35, 6, NO);
-    K.drum('iron', x, y + 1.15, z, 0.22, 0.32, 8, { r2: 0.42, collide: false, open: true });
-    K.cone(L.flame, x, y + 1.3, z, 0.3, 0.85, 6);
+    if (L.lamp === 'candle') {
+      // A candle-stand: a foot, a stem, a ring of five candles at different heights.
+      K.drum('iron', x, y, z, 0.3, 0.05, 8, { r2: 0.24, collide: false });
+      K.drum('iron', x, y + 0.05, z, 0.035, 1.25, 5, NO);
+      K.drum('iron', x, y + 1.25, z, 0.3, 0.035, 8, NO);
+      for (let k = 0; k < 5; k++) {
+        const a = k * TAU / 5 + x, cx = x + Math.cos(a) * 0.26, cz = z + Math.sin(a) * 0.26, ch = 0.14 + 0.12 * hash2(k + x, z);
+        K.drum('white', cx, y + 1.28, cz, 0.028, ch, 5, NO);
+        fire(K, d, cx, y + 1.28 + ch, cz, 0.06, 0.19);
+      }
+      K.drum('white', x, y + 1.28, z, 0.035, 0.34, 5, NO);
+      fire(K, d, x, y + 1.62, z, 0.07, 0.22, { glow: 0.9 });
+      continue;
+    }
+    if (castle) {
+      // A standing cresset: a foot of three claws, a stem of iron, a basket of bars with the fire in it.
+      for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + x; bar(K, 'iron', [x + Math.cos(a) * 0.42, y, z + Math.sin(a) * 0.42], [x, y + 0.32, z], 0.035, 0.03); }
+      K.drum('iron', x, y + 0.28, z, 0.045, 1.05, 6, NO);
+      K.drum('iron', x, y + 0.8, z, 0.075, 0.07, 6, NO);
+      cage(K, x, y + 1.3, z, 0.16, 0.36, 0.42, 8);
+      coals(K, d, x, y + 1.42, z, 0.24);
+      fire(K, d, x, y + 1.44, z, 0.42, 1.15, { glow: 1.5, ember: true });
+      continue;
+    }
+    if (n % 3 === 0) {
+      // A fire on the floor: a ring of stones, sticks leaned together, coals under them.
+      for (let k = 0; k < 7; k++) { const a = k * TAU / 7 + x, rr = 0.62 + 0.08 * hash2(k, x); K.box(k % 2 ? 'rubble' : 'dark:rubble', x + Math.cos(a) * rr, y - 0.08, z + Math.sin(a) * rr, 0.17, 0.2 + 0.1 * hash2(x, k), 0.13, -a + 1.57, NO); }
+      coals(K, d, x, y + 0.06, z, 0.42);
+      for (let k = 0; k < 4; k++) { const a = k * TAU / 4 + z; bar(K, 'wood', [x + Math.cos(a) * 0.5, y, z + Math.sin(a) * 0.5], [x - Math.cos(a) * 0.08, y + 0.5, z - Math.sin(a) * 0.08], 0.05, 0.035); }
+      fire(K, d, x, y + 0.1, z, 0.5, 1.25, { glow: 1.6, ember: true });
+      continue;
+    }
+    // A brazier: three legs of iron lashed under a bowl, coals in it.
+    for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + x; bar(K, 'iron', [x + Math.cos(a) * 0.4, y - 0.05, z + Math.sin(a) * 0.4], [x - Math.cos(a) * 0.1, y + 1.12, z - Math.sin(a) * 0.1], 0.028); }
+    K.drum('iron', x, y + 0.55, z, 0.2, 0.03, 6, { collide: false, open: true });
+    K.drum('iron', x, y + 1.02, z, 0.16, 0.3, 8, { r2: 0.42, collide: false, open: true });
+    K.drum('iron', x, y + 1.3, z, 0.42, 0.04, 8, { r2: 0.44, collide: false, open: true });
+    coals(K, d, x, y + 1.24, z, 0.36);
+    fire(K, d, x, y + 1.26, z, 0.4, 1.05, { glow: 1.5, ember: true });
   }
 }
 // ---- what stands in the rooms ------------------------------------------------------------------------------------------------
 // Each: (K, d, p, x, y, z) with the prop's own numbers in p, its place in the world on the floor at x, y, z.
 
-const rod = (K, layer, ax, ay, az, bx, by, bz, t) => {
+export function rod(K, layer, ax, ay, az, bx, by, bz, t) {
   // A thin bar between two points: a quad either way, so it shows from every side.
   const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz), px = L > 1e-3 ? -dz / L * t : t, pz = L > 1e-3 ? dx / L * t : 0;
   K.quad(layer, [ax - px, ay, az - pz], [ax + px, ay, az + pz], [bx + px, by, bz + pz], [bx - px, by, bz - pz]);
   K.quad(layer, [ax, ay - t, az], [ax, ay + t, az], [bx, by + t, bz], [bx, by - t, bz]);
-};
+}
 const egg = (K, layer, x, y, z, r, h, turn = 0) => { K.drum(layer, x, y, z, r * 0.45, h * 0.45, 6, { r2: r, open: true, collide: false, turn }); K.cone(layer, x, y + h * 0.45, z, r, h * 0.55, 6, turn); };
 const skull = (K, x, y, z, r, turn = 0) => { K.drum('pale:stone', x, y, z, r * 0.8, r * 0.9, 6, { r2: r, collide: false, turn, open: true }); K.cone('pale:stone', x, y + r * 0.9, z, r, r * 0.7, 6, turn); };
 // Ribs: arcs of bone standing out of the floor in a row.
@@ -300,7 +456,7 @@ function ribs(K, x, y, z, s, yaw, n = 5) {
   K.box('pale:stone', x, y - 0.05, z, 0.07 * s, 0.14, n * 0.3 * s, yaw, NO);
 }
 
-const PROPS = {
+export const PROPS = {
   // ---- the keep ----
   column(K, d, p, x, y, z) {
     if (p.stone) {
@@ -407,7 +563,7 @@ const PROPS = {
     const y0 = y + (p.up || 0);
     for (const [ox, oz, h] of [[0, 0, 0.5], [0.22, 0.1, 0.34], [-0.1, 0.24, 0.42], [0.1, -0.2, 0.26]]) {
       K.drum('pale:stone', x + ox, y0, z + oz, 0.05, h, 5, NO);
-      K.cone(d.look.flame, x + ox, y0 + h, z + oz, 0.035, 0.13, 4);
+      fire(K, d, x + ox, y0 + h, z + oz, 0.05, 0.16, { glow: ox ? 0 : 0.5 });
     }
   },
   // A circle cut in the floor and filled with black glass: where a working is made.
@@ -424,7 +580,7 @@ const PROPS = {
     K.drum('dark:stone', x, y + 0.3, z, 0.2, 1.0, 6, { open: true, collide: false });
     K.box('wood', x, y + 1.3, z + 0.05, 0.5, 0.08, 0.35, 0, NO);
     K.box('dark:cloth_red', x, y + 1.38, z + 0.05, 0.36, 0.09, 0.26, 0, NO);
-    for (const s of [-1, 1]) { K.drum('iron', x + s * 0.9, y, z - 0.3, 0.06, 1.5, 5, NO); K.cone(d.look.flame, x + s * 0.9, y + 1.5, z - 0.3, 0.07, 0.24, 4); }
+    for (const s of [-1, 1]) { K.drum('iron', x + s * 0.9, y, z - 0.3, 0.06, 1.5, 5, NO); K.drum('white', x + s * 0.9, y + 1.5, z - 0.3, 0.035, 0.16, 5, NO); fire(K, d, x + s * 0.9, y + 1.66, z - 0.3, 0.07, 0.22, { glow: 0.5 }); }
   },
   pew(K, d, p, x, y, z) {
     K.box('wood', x, y, z, p.hx, 0.45, p.hz * 0.6, 0, NO);
@@ -437,7 +593,7 @@ const PROPS = {
     K.box('cloth_red', x, y + 1.25, z, p.hx + 0.08, 0.05, p.hz * 0.6, 0, NO);
     for (const s of [-1, 1]) {
       K.spike('obsidian', x + s * (p.hx + 1.5), y, z - p.hz - 0.8, 0.7, 6.5, 5, s);
-      K.drum('iron', x + s * (p.hx - 0.5), y + 1.3, z, 0.05, 0.5, 5, NO); K.cone(d.look.flame, x + s * (p.hx - 0.5), y + 1.8, z, 0.06, 0.2, 4);
+      K.drum('iron', x + s * (p.hx - 0.5), y + 1.3, z, 0.05, 0.5, 5, NO); K.drum('white', x + s * (p.hx - 0.5), y + 1.8, z, 0.03, 0.14, 5, NO); fire(K, d, x + s * (p.hx - 0.5), y + 1.94, z, 0.07, 0.22, { glow: 0.5 });
     }
     K.drum('iron', x, y + 1.3, z, 0.3, 0.22, 8, { r2: 0.42, open: true, collide: false });
   },
@@ -449,7 +605,8 @@ const PROPS = {
     K.drum('iron', x, h, z, 1.5, 0.14, 12, { open: true, collide: false });
     K.drum('iron', x, h, z, 1.38, 0.14, 12, { open: true, collide: false });
     for (let k = 0; k < 4; k++) { const a = k * TAU / 4; rod(K, 'iron', x, h + 0.9, z, x + Math.cos(a) * 1.45, h + 0.1, z + Math.sin(a) * 1.45, 0.02); }
-    for (let k = 0; k < 8; k++) { const a = k * TAU / 8; K.cone(d.look.flame, x + Math.cos(a) * 1.44, h + 0.14, z + Math.sin(a) * 1.44, 0.09, 0.32, 4); }
+    for (let k = 0; k < 8; k++) { const a = k * TAU / 8, cx = x + Math.cos(a) * 1.44, cz = z + Math.sin(a) * 1.44; K.drum('iron', cx, h + 0.12, cz, 0.05, 0.05, 5, { r2: 0.09, collide: false }); K.drum('white', cx, h + 0.17, cz, 0.04, 0.2, 5, NO); fire(K, d, cx, h + 0.37, cz, 0.1, 0.3); }
+    glow(K, d, x, h + 0.5, z, 2.4);
   },
   // A great hearth in a wall, facing yaw out from it.
   hearth(K, d, p, x, y, z) {
@@ -457,7 +614,8 @@ const PROPS = {
     for (const u of [-2, 2]) { const [px, pz] = P(u, 0.3); K.box('dark:rubble', px, y, pz, 0.45, 2.6, 0.5, p.yaw, NO); }
     { const [px, pz] = P(0, 0.3); K.box('dark:rubble', px, y + 2.6, pz, 2.5, 0.7, 0.6, p.yaw, NO); K.box('dark:stone', px, y + 3.3, pz, 2, 3, 0.4, p.yaw, NO); }
     { const [px, pz] = P(0, 0.25); K.box('obsidian', px, y, pz, 1.55, 2.6, 0.06, p.yaw, { collide: false, top: false }); }
-    for (const u of [-0.8, 0, 0.8]) { const [px, pz] = P(u, 0.5); K.cone(d.look.flame, px, y + 0.1, pz, 0.38, 1.1 + (u ? 0 : 0.4), 5); K.box('wood', px, y, pz, 0.5, 0.18, 0.12, p.yaw + u, NO); }
+    for (const u of [-0.8, 0, 0.8]) { const [px, pz] = P(u, 0.5); fire(K, d, px, y + 0.2, pz, 0.5, 1.2 + (u ? 0 : 0.5), { ember: !u, glow: u ? 0 : 2 }); K.box('wood', px, y, pz, 0.5, 0.18, 0.12, p.yaw + u, NO); }
+    { const [px, pz] = P(0, 0.5); K.box(d.look.flame, px, y + 0.02, pz, 1.2, 0.1, 0.3, p.yaw, NO); }
   },
   beam(K, d, p, x, y, z) {
     K.box('wood', x, y + p.up, z, p.hx, 0.5, 0.25, 0, NO);
@@ -517,7 +675,8 @@ const PROPS = {
   vat(K, d, p, x, y, z) {
     K.drum('iron', x, y + 0.25, z, p.r, 0.95, 10, { r2: p.r * 1.12, lid: 'pale:stone', collide: false });
     for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + x; K.box('dark:rubble', x + Math.cos(a) * p.r * 0.8, y - 0.1, z + Math.sin(a) * p.r * 0.8, 0.22, 0.4, 0.22, a, NO); }
-    K.cone('flame', x, y, z, p.r * 0.5, 0.3, 5);
+    coals(K, d, x, y + 0.05, z, p.r * 0.6, 'flame');
+    for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + x + 1; fire(K, d, x + Math.cos(a) * p.r * 0.7, y + 0.05, z + Math.sin(a) * p.r * 0.7, 0.2, 0.5, { hue: 'flame' }); }
     // (Drips down its side, gone hard.)
     for (let k = 0; k < 4; k++) { const a = k * 1.9 + z; K.cone('pale:stone', x + Math.cos(a) * p.r * 1.1, y + 1.2, z + Math.sin(a) * p.r * 1.1, 0.07, -0.5 - (k % 2) * 0.3, 4); }
   },
@@ -527,7 +686,9 @@ const PROPS = {
     rod(K, 'iron', x - 1.5, y + 1.15, z, x + 1.5, y + 1.15, z, 0.03);
     egg(K, 'cloth_oat', x, y + 0.85, z, 0.4, 0.75);
     for (let k = 0; k < 5; k++) { const a = k * TAU / 5; K.box('dark:rubble', x + Math.cos(a) * 0.8, y - 0.1, z + Math.sin(a) * 0.8, 0.2, 0.3, 0.16, a, NO); }
-    for (const [ox, oz, h] of [[0, 0, 0.7], [0.3, 0.15, 0.5], [-0.25, -0.1, 0.55]]) K.cone('flame', x + ox, y, z + oz, 0.22, h, 5);
+    coals(K, d, x, y + 0.05, z, 0.55, 'flame');
+    for (let k = 0; k < 3; k++) { const a = k * TAU / 3; bar(K, 'wood', [x + Math.cos(a) * 0.6, y, z + Math.sin(a) * 0.6], [x - Math.cos(a) * 0.15, y + 0.3, z - Math.sin(a) * 0.15], 0.06); }
+    for (const [ox, oz, h] of [[0, 0, 0.8], [0.3, 0.15, 0.55], [-0.25, -0.1, 0.6]]) fire(K, d, x + ox, y + 0.08, z + oz, 0.3, h, { hue: 'flame', ember: !ox, glow: ox ? 0 : 1.6 });
   },
   // A seat for a goblin who calls himself a king: piled stone, a back of bones.
   stonethrone(K, d, p, x, y, z) {
@@ -560,10 +721,14 @@ const PROPS = {
   },
   // A heap of gold: coin spilled down it, a cup or a crown on top.
   gold(K, d, p, x, y, z) {
-    K.drum('fruit2', x, y - 0.15, z, p.r, p.r * 0.5, 9, { r2: p.r * 0.3, collide: false, turn: x });
-    K.cone('fruit2', x + p.r * 0.1, y + p.r * 0.3, z, p.r * 0.42, p.r * 0.4, 7, z);
-    for (let k = 0; k < 4; k++) { const a = k * 1.6 + x; K.drum('fruit2', x + Math.cos(a) * p.r * 1.05, y - 0.05, z + Math.sin(a) * p.r * 1.05, p.r * 0.3, 0.14, 6, { r2: p.r * 0.12, collide: false }); }
-    K.drum('iron', x - p.r * 0.5, y + p.r * 0.18, z + p.r * 0.3, 0.2, 0.35, 6, { r2: 0.28, collide: false });
+    // A mound of coin in three slumped tiers, coin slid out round its foot, cups and a plate standing out of it.
+    const r = p.r;
+    K.drum('gold', x, y - 0.15, z, r, r * 0.3, 11, { r2: r * 0.66, collide: false, turn: x, open: true });
+    K.drum('gold', x + r * 0.06, y - 0.15 + r * 0.3, z, r * 0.66, r * 0.2, 9, { r2: r * 0.34, collide: false, turn: z, open: true });
+    K.drum('gold', x + r * 0.1, y - 0.15 + r * 0.5, z + r * 0.03, r * 0.34, r * 0.12, 7, { r2: r * 0.12, collide: false, turn: x, lid: 'gold' });
+    for (let k = 0; k < 7; k++) { const a = k * 0.93 + x, o = r * (0.95 + 0.35 * hash2(k, x)); K.drum('gold', x + Math.cos(a) * o, y - 0.02, z + Math.sin(a) * o, r * (0.1 + 0.12 * hash2(x, k)), 0.06, 6, { collide: false, turn: k, lid: 'gold' }); }
+    K.drum('iron', x - r * 0.5, y + r * 0.16, z + r * 0.3, 0.2, 0.35, 6, { r2: 0.28, collide: false });
+    K.drum('gold', x + r * 0.45, y + r * 0.2, z - r * 0.25, 0.1, 0.22, 6, { r2: 0.05, collide: false, open: true }); K.drum('gold', x + r * 0.45, y + r * 0.2 + 0.22, z - r * 0.25, 0.05, 0.2, 6, { r2: 0.17, collide: false, open: true });
   },
   // A clutch of eggs in a hollow.
   eggs(K, d, p, x, y, z) {
@@ -866,7 +1031,7 @@ const PROPS = {
   // A footlight at the lip of the stage: a shell of tin with a flame in it (the stage's own light: braziers()).
   footlight(K, d, p, x, y, z) {
     K.drum('iron', x, y, z, 0.2, 0.12, 6, NO); K.quad('iron', [x - 0.3, y, z + 0.25], [x + 0.3, y, z + 0.25], [x + 0.3, y + 0.5, z + 0.3], [x - 0.3, y + 0.5, z + 0.3], [0, 0, -1]);
-    K.cone('flame', x, y + 0.12, z, 0.1, 0.34, 5);
+    fire(K, d, x, y + 0.12, z, 0.1, 0.3, { hue: 'flame', glow: 0.6 });
   },
   // The backcloth: a painted wood, hung flat across the back of the stage.
   backdrop(K, d, p, x, y, z) {
@@ -1050,6 +1215,7 @@ export function buildDelves(K, portalWall, only = DELVES) {
       if (!make) throw new Error(`delve-build: no builder for a prop of kind ${p.kind} (${d.key})`);
       make(K, d, p, x, caveFloorY(x, z), z);
     }
+    dress(K, d);
     portalWall(K, d.x + d.exitIn.x, d.z + d.exitIn.z, d.exitIn.yaw ?? Math.PI, `${d.tag}_in`, caveFloorY);
     portalWall(K, d.x + d.exitOut.x, d.z + d.exitOut.z, d.exitOut.yaw ?? 0, `${d.tag}_out`, caveFloorY);
   }

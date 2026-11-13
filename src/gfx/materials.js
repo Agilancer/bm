@@ -278,6 +278,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   if (id == 112u) { return vec4f(0.52, 0.64, 0.74, 0.12); }    // ice
   if (id == 113u) { return vec4f(0.04, 0.06, 0.1, 0.25); }     // a seal's face
   if (id == 114u) { return vec4f(0.014, 0.012, 0.018, 0.07); }  // black glass (the Crown of Teeth)
+  if (id == 115u) { return vec4f(0.95, 0.6, 0.16, 0.3); }      // gold (a hoard's coin: src/core/delve-build.js)
   // rgb + roughness for the few materials with no painting.
   if (id == 100u) { return vec4f(0.035, 0.034, 0.036, 0.42); }  // iron
   if (id == 101u) { return vec4f(1.0, 0.6, 0.2, 1.0); }         // flame (emissive below)
@@ -400,7 +401,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       rough = 0.06;
       emissive = L.rgb * (L.w * 2.2 + 0.05) * (1.0 - 0.6 * heart) + SLIME_RIM[lay - 120u] * fres * 0.55 + vec3f(in.uv.y * 1.6);
     }
-    if (lay == 100u || lay == 105u) { metal = 0.9; }
+    if (lay == 100u || lay == 105u || lay == 115u) { metal = 0.9; }
     if (lay == 108u) { emissive = select(vec3f(6.0, 6.0, 5.6), vec3f(1.6, 1.6, 1.5), F.blood.w < 0.5); albedo = vec3f(0.0); }
     if (lay == 101u) {
       // (Its own light beside it, put out: src/gfx/homelights.js. A light the frame has no room for leaves the flame be.)
