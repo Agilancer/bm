@@ -256,7 +256,7 @@ const DRESS = { camp: 'camp', dig: 'camp', graveyard: 'plot', tomb: 'plot', fort
 export function outpostLair(o) {
   const f = FACTIONS[o.faction];
   const n = f.kind === 'fort' ? 5 : f.kind === 'tower' || f.kind === 'bed' || f.kind === 'den' ? 2 : f.kind === 'tomb' || f.kind === 'roost' ? 3 : 4;
-  return { key: o.key, x: o.x, z: o.z, r: o.r, boss: f.chief, pick: f.rank.concat(f.rank, f.elite), n, pal: f.pal, tricks: f.lvl >= 9, side: f.side, lvl: f.lvl, wild: true, respawn: 480, dress: DRESS[f.kind] };
+  return { key: o.key, x: o.x, z: o.z, r: o.r, boss: f.chief, pick: f.rank.concat(f.rank, f.elite), n, pal: f.pal, tricks: f.lvl >= 9, side: f.side, lvl: f.lvl, wild: true, respawn: 480, dress: DRESS[f.kind], thin: !['nest', 'roost', 'den', 'bed'].includes(f.kind) };
 }
 // A standing battle's two lairs.
 export function battleLairs(b) {

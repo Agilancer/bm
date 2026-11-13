@@ -386,7 +386,7 @@ A banner tells what's begun and ended and a tracker under it shows a tear's wave
 What you've found and opened is kept in the save. Checked: `node --test tests/wilds.test.mjs` and
 `node tools/wilds/play.mjs`, which plays all of it in the sim with no page. Seen in the browser: a fort, a stockade, a
 graveyard, a tear, a skirmish. **Nobody has played it by hand, most outpost kinds haven't been looked at, and the frame
-time with 463,000 triangles of places (261,000 before) isn't measured.**
+time with about 300,000 triangles of places on a PC (261,000 before; a phone's land leaves the outposts' fences, tents and stones out and is no bigger than it was) isn't measured.**
 
 ### The cathedral and the catacombs
 

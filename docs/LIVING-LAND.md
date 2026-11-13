@@ -62,8 +62,9 @@ serves this worktree; open `/?auto&noopening&timer`.
   with its tracker, the banner, the chat line, the new names on the life bar.
 - **Not seen by anyone:** most outpost kinds (diggings, tombs, towers, rings, covens, nests, ruins, fields, pest camps,
   roosts, dens, beds), the finds, the map's marks, a ritual's circle, a colossus, the rewards landing, anything at
-  night, a phone. **Nobody has played it by hand.** Frame time isn't measured: the places are 463,000 triangles now
-  (261,000 before), all in the village's one draw call. The pane read 48 frames a second at a graveyard, with nothing
+  night, a phone. **Nobody has played it by hand.** Frame time isn't measured: the places are 739,000 corners on
+  a PC (a phone's land, `buildSites(true, true)`, is 313,000: `tests/sites-lean.test.mjs` holds it under 600,000), all in
+  the village's one draw call. The pane read 48 frames a second at a graveyard, with nothing
   from before this work to set beside it.
 - **Two tests fail on a fresh Windows checkout and did before this:** `tests/auto-show.test.mjs` (the hurried clock)
   and `tests/touch-hud.test.mjs` (spec.json). Both match text across a line ending; they aren't this work's.
