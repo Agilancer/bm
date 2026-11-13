@@ -2263,7 +2263,8 @@ export class Renderer {
     const take = Math.min(lights.length, Math.round(this.tier.lights * under), MAX_LIT - this.spellfx.carried(snap));
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
-    for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
+    // (And one that reaches far counts as nearer by half its reach: a fire hung over a hall is kept before a candle.)
+    for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
     if (take < lit.length) lit.sort((a, b) => a.d - b.d);
     const nextD = take < lit.length ? lit[take].d : 1e9;
     for (let i = 0; i < take; i++) {
