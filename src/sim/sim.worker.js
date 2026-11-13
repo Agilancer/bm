@@ -40,7 +40,7 @@ import { TripoEmpty, TripoWorld } from './tripo.js';
 import { Warrens } from './dungeon.js';
 import { Perils } from './perils.js';
 import { foeOf } from './foes.js';
-import { delveAt, delveOf, inDungeon } from '../core/dungeon.js';
+import { delveAt, delveOf, inDungeon, setPartySize } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 import { TestHall } from './testhall.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
@@ -741,6 +741,8 @@ async function boot(msg) {
     // Your party, of the Free Company (src/ui/party.js): hired, let go, a level for each.
     if (m.type === 'hire') { const ok = sim.heroWorld?.hire(m.slot, m) || false; self.postMessage({ type: 'hired', slot: m.slot, ok, id: m.id }); }
     if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
+    // (How many a delve's portal asks for: Party size, in the settings.)
+    if (m.type === 'partySize') setPartySize(m.n);
     if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
     // (Your own level: the other Tessariels out in the world keep pace with it.)
     if (m.type === 'playerLevel') sim.heroWorld?.keepPace(m.level);

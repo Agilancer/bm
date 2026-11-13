@@ -171,8 +171,13 @@ export const ADDS = { digger: 'kobold_1', whelp: 'hf_whelp' };
 // The diggers' holes (the dead-end tunnels' far ends) and Venomaw's perch when she flies (local).
 export const HOLES = TUNNELS.filter((t) => t.dead).map((t) => t.pts[t.pts.length - 1]);
 export const PERCH = { x: 0, z: -348, up: 3 };
-// What the party needs to go in: four with you, one to take the blows, one to heal (src/sim/dungeon.js, src/ui/party.js).
-export const PARTY = { size: 4, tanks: ['lancer'], healers: ['paladin'] };
+// What the party needs to go in: as many with you as the Free Company sends, one to take the blows, one to heal
+// (src/sim/dungeon.js, src/ui/party.js). size: how many it sends, Party size in the settings (two to four: setPartySize,
+// called on both threads; the sim is told by a 'partySize' message). max: as many as are ever with you.
+export const PARTY = { size: 4, min: 2, max: 4, tanks: ['lancer'], healers: ['paladin'] };
+export const setPartySize = (n) => (PARTY.size = Math.max(PARTY.min, Math.min(PARTY.max, Math.round(Number(n)) || PARTY.max)));
+// The number as a word, for what the quartermasters say.
+export const partyWord = (n = PARTY.size) => ['none', 'one', 'two', 'three', 'four'][n] || String(n);
 export const roleOf = (cls) => (PARTY.tanks.includes(cls) ? 'tank' : PARTY.healers.includes(cls) ? 'heal' : 'dps');
 // The Delve's codes, sent from the sim as EV.DELVE (code, a, b, c).
 export const DELVE = { NEED: 0, ENTER: 1, LEAVE: 2, WARN: 3, BOSS: 4, BOSS_DOWN: 5, WIPE: 6, CLEAR: 7, RESET: 8 };

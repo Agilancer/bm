@@ -579,6 +579,8 @@ async function boot(plan, poolSize) {
       cleared: (d) => { const pay = d?.pay || { xp: 1500, gold: 250 }; giveXp?.(pay.xp); pack.gold += pay.gold; hud.tip(`The Free Company pays out ${pay.gold} gold for ${d?.short || 'the Warrens'}, and the tale is worth more.`, 5); autosave(); },
     });
     addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
+    // (How many the Free Company sends with you: Party size, in the settings.)
+    game.party.setSize(settings.party);
   }
   // A word with the town (src/ui/folk.js): E to someone, J for the quest log.
   const giveXp = (n) => {
@@ -937,6 +939,8 @@ async function boot(plan, poolSize) {
       if (game.fixedScale) renderer.scale = Number(v);
     } else if (k === 'keep') {
       useStore(v === 'yes');
+    } else if (k === 'party') {
+      game.party?.setSize(v);
     } else if (k === 'gfx') {
       title.confirm({ title: 'Restart?', text: 'The graphics setting takes hold when the game restarts. Where you are is kept for Continue.', yes: 'Restart Now', no: 'Later' })
         .then(async (yes) => { if (yes) { await autosave(); title.reload(); } });

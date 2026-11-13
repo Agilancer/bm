@@ -3,9 +3,9 @@
 // informed by however many cores the machine can spare.
 import { CTRL, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, mapShared } from '../core/layout.js';
 import { TREE_FLOATS, TRIMMED, forestAmount, forestTrees } from '../core/forest.js';
-import { openingTerrain, setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
+import { setOpeningTerrain, ROADS, SUMMIT, fbm, footprintDirt, hash2, nearest, pathAmount, sstep, terrainHeight } from '../core/terrain.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
-import { WAY_BOX, caveCuts, wayDip } from '../core/opening.js';
+import { buildNearOnly, buildTerrain } from '../core/ground-mesh.js';
 import { roadEdge, rocksAround } from '../core/rocks.js';
 import { COUNTRIES, COUNTRY_KEYS, MOUNT, SITES, SITE_KEYS, countryWeights, groundCover, routeDist } from '../core/lands.js';
 
@@ -15,117 +15,6 @@ async function decode(url, flags) {
   const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
   if (flags && flags.width) { opts.resizeWidth = flags.width; opts.resizeHeight = flags.height; opts.resizeQuality = 'high'; }
   return createImageBitmap(blob, opts);
-}
-
-// The terrain grid: dense under the village and stretching to the horizon with a warped spacing.
-function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
-  // The hill and its roads have a finer grid of their own: this one's cells are ten metres across out there, which a road can't be cut
-  // into. So has the ground round the church, which has a hole in it (src/core/church.js LAND_HOLE).
-  // And the woods round the town and the Warrens' portal's hillside (src/gfx/renderer.js, where the patches are named).
-  const dims = patches.map((p) => [Math.round((p.x1 - p.x0) / p.cell), Math.round((p.z1 - p.z0) / p.cell)]);
-  const fineVerts = dims.reduce((m, [px, pz]) => m + (px + 1) * (pz + 1), 0), fineCells = dims.reduce((m, [px, pz]) => m + px * pz, 0);
-  // And Lisandra's cave mouth one finer still, on whole cells of the hill's (the first patch), with the hillside left open where the
-  // tunnel runs in.
-  const hillP = patches[0], he = hillP.cell;
-  const cave = openingTerrain ? (() => {
-    // (All of her way down too: the shelf, the steps and the path to the road are narrower than a cell of the hill's.)
-    const i0 = Math.floor((WAY_BOX.x0 - hillP.x0) / he), j0 = Math.floor((WAY_BOX.z0 - hillP.z0) / he);
-    const i1 = Math.ceil((WAY_BOX.x1 - hillP.x0) / he), j1 = Math.ceil((WAY_BOX.z1 - hillP.z0) / he);
-    const cell = he > 2 ? 1 : 0.5;
-    return { i0, j0, i1, j1, x0: hillP.x0 + i0 * he, z0: hillP.z0 + j0 * he, cell, k: Math.round(he / cell), nx: (i1 - i0) * Math.round(he / cell), nz: (j1 - j0) * Math.round(he / cell) };
-  })() : null;
-  const fnx = cave ? cave.nx : 0, fnz = cave ? cave.nz : 0;
-  const verts = new Float32Array(((n + 1) * (n + 1) + fineVerts + (cave ? (fnx + 1) * (fnz + 1) : 0)) * 6);
-  // About 0.8 m a cell at the centre, stretching out to the horizon.
-  const c = 0.4 * n;
-  const warp = (t) => Math.sign(t) * (c * Math.abs(t) + (extent - c) * Math.abs(t) ** 4);
-  // (Centred on (cx, cz): out in the far countries the grid is moved under the player, src/gfx/renderer.js followLand.)
-  const xs = new Float32Array(n + 1), zs = new Float32Array(n + 1);
-  for (let i = 0; i <= n; i++) { xs[i] = cx + warp(i / n * 2 - 1); zs[i] = cz + warp(i / n * 2 - 1); }
-  const hs = new Float32Array((n + 1) * (n + 1));
-  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) hs[j * (n + 1) + i] = terrainHeight(xs[i], zs[j]);
-  for (let j = 0; j <= n; j++) {
-    for (let i = 0; i <= n; i++) {
-      const il = Math.max(i - 1, 0), ir = Math.min(i + 1, n), jl = Math.max(j - 1, 0), jr = Math.min(j + 1, n);
-      const dx = (hs[j * (n + 1) + ir] - hs[j * (n + 1) + il]) / (xs[ir] - xs[il]);
-      const dz = (hs[jr * (n + 1) + i] - hs[jl * (n + 1) + i]) / (zs[jr] - zs[jl]);
-      const l = 1 / Math.hypot(dx, 1, dz);
-      const k = (j * (n + 1) + i) * 6;
-      verts[k] = xs[i]; verts[k + 1] = hs[j * (n + 1) + i]; verts[k + 2] = zs[j];
-      verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
-    }
-  }
-  // (A cell's left out only well inside it: the two overlap at the edge, and the ground's colour goes by where it is, so nothing shows.)
-  // (Nor where a patch leaves the ground to this grid: its open skips, and twelve metres round them.)
-  const under = (x, z) => patches.some((p) => x > p.x0 + 12 && x < p.x1 - 12 && z > p.z0 + 12 && z < p.z1 - 12
-    && !(p.skip || []).some((r) => r.open && x > r.x0 - 12 && x < r.x1 + 12 && z > r.z0 - 12 && z < r.z1 + 12));
-  const idx = new Uint32Array((n * n + fineCells + fnx * fnz) * 6);
-  let o = 0;
-  for (let j = 0; j < n; j++) {
-    for (let i = 0; i < n; i++) {
-      if (under(xs[i], zs[j]) && under(xs[i + 1], zs[j]) && under(xs[i], zs[j + 1]) && under(xs[i + 1], zs[j + 1])) continue;
-      const a = j * (n + 1) + i, b = a + 1, c = a + n + 1, d = c + 1;
-      idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
-    }
-  }
-  const vertex = (k, x, z, y, g) => {
-    const dx = (terrainHeight(x + g, z) - terrainHeight(x - g, z)) / (2 * g);
-    const dz = (terrainHeight(x, z + g) - terrainHeight(x, z - g)) / (2 * g);
-    const l = 1 / Math.hypot(dx, 1, dz);
-    verts[k] = x; verts[k + 1] = y; verts[k + 2] = z;
-    verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
-  };
-  let first = (n + 1) * (n + 1);
-  patches.forEach((patch, q) => {
-    const [px, pz] = dims[q], e = patch.cell, hole = patch.hole, skip = patch.skip || [];
-    for (let j = 0; j <= pz; j++) {
-      for (let i = 0; i <= px; i++) {
-        const x = patch.x0 + i * e, z = patch.z0 + j * e;
-        vertex((first + j * (px + 1) + i) * 6, x, z, terrainHeight(x, z), e);
-      }
-    }
-    for (let j = 0; j < pz; j++) {
-      for (let i = 0; i < px; i++) {
-        if (q === 0 && cave && i >= cave.i0 && i < cave.i1 && j >= cave.j0 && j < cave.j1) continue;
-        if (hole) {
-          const cx = patch.x0 + (i + 0.5) * e, cz = patch.z0 + (j + 0.5) * e;
-          if (cx > hole.x0 && cx < hole.x1 && cz > hole.z0 && cz < hole.z1) continue;
-        }
-        // (A cell wholly inside what another grid draws is left to it: skip.)
-        const sx = patch.x0 + i * e, sz = patch.z0 + j * e;
-        if (skip.some((r) => sx >= r.x0 && sx + e <= r.x1 && sz >= r.z0 && sz + e <= r.z1)) continue;
-        const a = first + j * (px + 1) + i, b = a + 1, c = a + px + 1, d = c + 1;
-        idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
-      }
-    }
-    first += (px + 1) * (pz + 1);
-  });
-  if (cave) {
-    // Its rim takes the hill grid's own straight edges, so the two meet without a crack.
-    const second = first, m = fnx + 1, k = cave.k;
-    const hill = (i, j) => terrainHeight(hillP.x0 + i * he, hillP.z0 + j * he);
-    for (let j = 0; j <= fnz; j++) {
-      for (let i = 0; i <= fnx; i++) {
-        const x = cave.x0 + i * cave.cell, z = cave.z0 + j * cave.cell;
-        // (Sunk a little under her stone steps, which lie over it: src/core/opening.js wayDip.)
-        let y = terrainHeight(x, z) - wayDip(x, z);
-        if (i === 0 || i === fnx || j === 0 || j === fnz) {
-          const ci = cave.i0 + Math.floor(i / k), cj = cave.j0 + Math.floor(j / k), fi = (i % k) / k, fj = (j % k) / k;
-          y = i === 0 || i === fnx ? hill(ci, cj) + (hill(ci, cj + 1) - hill(ci, cj)) * fj : hill(ci, cj) + (hill(ci + 1, cj) - hill(ci, cj)) * fi;
-        }
-        vertex((second + j * m + i) * 6, x, z, y, cave.cell);
-      }
-    }
-    const cut = (i, j) => caveCuts(cave.x0 + i * cave.cell, cave.z0 + j * cave.cell, verts[(second + j * m + i) * 6 + 1]);
-    for (let j = 0; j < fnz; j++) {
-      for (let i = 0; i < fnx; i++) {
-        if (cut(i, j) || cut(i + 1, j) || cut(i, j + 1) || cut(i + 1, j + 1)) continue;
-        const a = second + j * m + i, b = a + 1, c = a + m, d = c + 1;
-        idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
-      }
-    }
-  }
-  return { verts, idx: idx.subarray(0, o) };
 }
 
 // The pines: (x, y, z, height), (cos, sin, how wide, how dark), all the way out.
@@ -363,8 +252,16 @@ self.addEventListener('message', async (e) => {
         transfer = [result];
         break;
       case 'terrain':
+        // The great grid, the patches and the cave (src/core/ground-mesh.js), and with args.near the near ground round you.
         result = buildTerrain(args);
         transfer = [result.verts.buffer, result.idx.buffer];
+        if (result.near) transfer.push(result.near.verts.buffer, result.near.idx.buffer);
+        break;
+      case 'near':
+        // The near ground laid again round you, and the great grid's triangles less what it takes.
+        result = buildNearOnly(args);
+        transfer = [result.idx.buffer];
+        if (result.near) transfer.push(result.near.verts.buffer, result.near.idx.buffer);
         break;
       case 'forest':
         result = buildForest(args);

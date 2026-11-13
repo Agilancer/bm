@@ -489,7 +489,9 @@ it all back at once (that touch does nothing else). **Map in auto-play** and **C
 the chat log with the speech bubbles and names over heads, on the screen while the rest is away (both kept unless set to
 Hidden with the rest). A chest or a word auto-play opens itself still shows over the bare picture, and so do its banners.
 **Camera**, **Talk**, **Long walks** and **Banners in auto-play**: see "Made to be watched" under Auto-play. `src/ui/autoplay.js`
-(`setBare`, `bareStep`), the rules at the end of the phone part of `src/ui/hud.css`.
+(`setBare`, `bareStep`), the rules at the end of the phone part of `src/ui/hud.css`. **Party size**: how many of the Free Company
+you can hire, four (a tank, a healer, two blades), three or two (a tank and a healer), and how many a delve's portal asks
+for: see "The Free Company" below.
 
 To change the difficulty, the numbers to reach for are `hp` and `delay` (crabs) at the top of `src/sim/sim.worker.js`, `hp` in
 `Player.reset`, and `dmg` in `ATTACKS` in `src/sim/knight.js`.
@@ -1010,9 +1012,18 @@ own about the place: Sergeant Hobb Marlow at the Drowned Vaults, Ensign Wren Ald
 Halloway at the Hollow Playhouse and Corporal Edric Fenn, Aldous's brother, at the Kingsbarrow (`BROKERS` in
 `src/core/heroes.js`, `BROKER_SPOTS` and `POSTS` in `src/core/dungeon.js`; a delve gets one by having a `post`). The keep
 and the Deeps have none. E opens his
-books (`src/ui/party.js`): up to four at a time, each with a name of the Company's and a level near yours, paid once, in
-gold by their level (`hirePrice`). Their levels go up with yours. The party is kept in the save, and down the left of the
-screen is a frame for each, with their life.
+books (`src/ui/party.js`): up to four at a time, or as many as **Party size** in the settings says (two, three or four;
+four unless it's set), each with a name of the Company's and a level near yours, paid once, in gold by their level
+(`hirePrice`). Their levels go up with yours. The party is kept in the save, and down the left of the screen is a frame
+for each, with their life.
+
+**Party size** (`PARTY.size` and `setPartySize` in `src/core/dungeon.js`). It's how many a quartermaster will send with you
+and how many a delve's portal asks for, always with a lancer and a paladin among them: two is just those two. It takes hold
+at once: the page keeps it (`PartyUI.setSize`) and tells the sim, whose portal checks it (`ready` in `src/sim/dungeon.js`, by a
+`partySize` message), and auto-play hires up to it. Made smaller, it sends nobody away, since they were paid for: you just
+can't hire again until you're under it, and a save with more in its party loads them all (never more than four, `PARTY.max`,
+which is also the sim's own limit). The delves' fights are made for four with you and aren't made easier for fewer: with
+two, a delve is a good deal harder. `node --test tests/party-size.test.mjs`.
 
 - **Lancers tank, paladins heal, everyone else does the damage** (`roleOf` in `src/core/dungeon.js`). The tank holds what
   he hits and every few seconds turns anything loose on the rest of you onto himself (`tauntBy` in `src/sim/foes.js`). The
@@ -2207,7 +2218,43 @@ The land now goes on for 600 m either way (`LAND_EDGE`), and the hill to the wes
 - **The Long Road** leaves by the hunter's house: 1,080 m, winding, never over about 9 degrees. On a shield it holds a walking pace or a little better, and you have to bring the speed yourself.
 - **The Fall** leaves by the weaver's, with a rag on its post: 525 m, nearly straight, each pitch steeper than the last, up to about 28 degrees, about 19 m/s on a shield at the fastest. A short rise stands at the foot of each pitch. The shield clings on over these rather than leaving the ground, so use Space to hop.
 
-The roads have a 2 m grid of their own in the terrain mesh (`src/core/ground-patches.js`, built by `buildTerrain` in `src/sim/job.worker.js`), and so have the woods round the town out to about 255 m, with a half-metre grid on the hillside round the Warrens' portal (4 m and 1 m on a phone). You walk on the land's own height and the stones lie on it, but the mesh is flat between its corners, and the one great grid's cells are 3 to 12 m across out in the woods: before these patches the drawn ground was as much as 1.5 m off where you stood at the portal on a PC (3.5 m on a phone) and half a metre off in the glades. `node --test tests/ground-mesh.test.mjs` builds the mesh and holds it to within 0.15 m at the portal and 0.25 m in the woods (0.35 and 0.6 on a phone). It costs about 75,000 more triangles of ground on High. And `farMap`, a coarse map of all the land, gives them and the forest floor their colour past the fine map of the village. Grass blades still stop at 128 m from the middle of the map. Nothing that hunts you goes past `NAV_EDGE`, 250 m out.
+The roads have a 2 m grid of their own in the terrain mesh (`src/core/ground-patches.js`, built by `buildTerrain` in `src/core/ground-mesh.js`), and so have the woods round the town out to about 255 m, with a half-metre grid on the hillside round the Warrens' portal (4 m and 1 m on a phone). You walk on the land's own height and the stones lie on it, but the mesh is flat between its corners, and the one great grid's cells are 3 to 12 m across out in the woods: before these patches the drawn ground was as much as 1.5 m off where you stood at the portal on a PC (3.5 m on a phone) and half a metre off in the glades. `node --test tests/ground-mesh.test.mjs` builds the mesh and holds it to within 0.15 m at the portal and 0.25 m in the woods (0.35 and 0.6 on a phone). It costs about 75,000 more triangles of ground on High. And `farMap`, a coarse map of all the land, gives them and the forest floor their colour past the fine map of the village. Grass blades still stop at 128 m from the middle of the map. Nothing that hunts you goes past `NAV_EDGE`, 250 m out.
+
+**The near ground: the ground where you are, wherever that is.** Past those patches only the great grid drew the land, and
+it's laid round the town, or out in the countries round where you were up to 420 m ago (`followLand`), with its cells 10 to
+60 m across where you stood on a phone (`terrainN` 128) and 5 to 15 on a PC: the drawn ground was as much as ten metres off
+where you walked on a phone, three or four on a PC, so the rocks and the trees, which stand on the land's own height,
+floated over it or were sunk in it, and so did you. Now rings of the land's own height go round you wherever you are
+(`buildNear` in `src/core/ground-mesh.js`, sized by `nearGround` in `src/core/ground-patches.js`): on a phone 2 m cells out
+to 96 m from their middle, then 4 m to 160, 8 m to 288 and 16 m to 544; on a PC 1.5 m to 120, 3 to 216, 6 to 408 and 12 to
+600. A ring's edge is on the next's cells, and its corners between two of the next ring's lie on that ring's straight edge,
+so there's no crack. Past the last ring a band runs out to the great grid's next line on every side and is joined to the
+great grid's own corners there, copied bit for bit, and the great grid leaves out every cell inside that line: so the two
+meet with no crack and nothing is drawn twice. Under the finest ring it takes the cells of a patch that's coarser (the woods
+and the hill on a phone, and on a PC, where it's 1.5 m to their 2), leaving one of the patch's cells over its edge;
+anywhere else a patch draws itself, and the church's (with its hole for the stair), the portal's, Lisandra's cave mouth in
+the opening and the town's are always left whole. The town has a patch of its own now (1 m on a PC, 2 on a phone), since
+the great grid's middle, which used to draw it, isn't there once the great grid's laid out in the countries. The near
+ground is laid again in the pool's threads once you're 32 m (36 on a PC) from its middle (`followNear` in
+`src/gfx/renderer.js`), with the great grid's triangles less what it takes, and both are put in in the same frame
+(`setLand`); 40 to 120 ms of a desktop's thread for a phone's, 180 to 390 ms for a PC's, and it costs a phone about 40,000
+triangles and a PC about 120,000, less the great grid's it takes. It's drawn wherever the land is, the shadows too
+(`drawLand`).
+
+Within 60 m of you the drawn ground is now within a few centimetres of where you walk in most places, at worst 0.3 m on a
+PC and 0.55 m on a phone, out to 120 m within half a metre or so; out past 250 m, a metre or more on a phone where the land
+is steep. `node --test tests/ground-mesh.test.mjs` builds it at fifteen places in the town, round it and in every country,
+with the great grid as far back as it's let get and the near ground a step off, and holds the ground within 60 m of you to
+0.3 m on a PC and 0.5 on a phone (allowing half a cell sideways, so a step counts for nothing at the step), with ground
+everywhere but the church's stair; and checks that every edge round the near ground is one of the great grid's, every
+corner between two rings is on the coarser ring's edge, and nothing out in the countries is drawn twice.
+
+**Where it can't match: steps in the land itself.** In a few places the land's own height (`terrainHeight`) jumps where
+it should rise, so no mesh can draw it where you walk: the winding road up the hill, where two of its legs pass within
+about 25 m of a point, takes the nearer leg's height and jumps where the nearer changes, by 0.5 to 6.4 m (between the legs
+round (-366, 226), (-325, 194), (-447, 280) and on the top at (-492, 176)); and by 1 to 3 m at a few places out in the
+countries (Brightwater's cliff at (2634, -100), round Sallowmere, (-605, -3900), (-200, -1132), (300, -2960)). Walking over
+one you're put up or down by it at once. Those want the land changed, not the mesh, and haven't been.
 
 Measured on the one machine in the table below, at 1024x768: the forest adds about 3 ms of GPU time a frame in the town and 7 ms among the trees. It has not been measured at a higher resolution or on a phone.
 
@@ -2413,6 +2460,7 @@ To check it yourself:
 | `tools/phone_memory.mjs` | How much memory the game holds at a phone's settings, thread by thread and on the GPU, and which code holds it |
 | `tools/load_time.mjs` | How long a start takes and where the time goes: two starts, nothing cached and then the cache full |
 | `src/core/files.js` | The start's files: fetched through here so the loading screen can name them, and how many are in hand at once |
+| `src/core/ground-mesh.js`, `src/core/ground-patches.js` | The land's mesh: the great grid, the finer patches, and the near ground round you, built in the pool's threads |
 | `src/sim/` | The simulation thread: knights, AI, crabs, player, collisions |
 | `src/gfx/` | The renderer and its shaders |
 | `src/title.js`, `src/title.css`, `assets/title/` | The title screen, the menus and settings |

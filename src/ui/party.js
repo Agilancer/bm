@@ -1,4 +1,5 @@
-// Your party, of the Free Company: the quartermasters' panel (hire up to four, let them go), the frames down the left with
+// Your party, of the Free Company: the quartermasters' panel (hire up to four, or as many as Party size in the settings
+// says, and let them go), the frames down the left with
 // each one's life, and the Hollowfang Warrens' calls, the boss's bar and the word at the portal (src/sim/dungeon.js).
 //
 // Who can be hired is whoever of the other Tessariels isn't hired already (src/core/heroes.js makeCast): the quartermaster
@@ -7,7 +8,7 @@
 import { art } from './skin.js';
 import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
 import { movesOf } from '../sim/heroskills.js';
-import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
+import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, partyWord, roleOf, setPartySize } from '../core/dungeon.js';
 import { C, CHARS_START, C_HERO, C_SIZE } from '../core/layout.js';
 import { priceText } from '../folk/shops.js';
 import { CLOSE_X } from './menu-x.js';
@@ -93,7 +94,7 @@ export class PartyUI {
   member(slot) { return this.members.find((m) => m.slot === slot) || null; }
   roles() { const r = { tank: 0, heal: 0, dps: 0 }; for (const m of this.members) r[roleOf(m.cls)]++; return r; }
   full() { return this.members.length >= PARTY.size; }
-  // Fit for the Warrens: four, with a tank and a healer among them.
+  // Fit for the Warrens: as many as the Company sends (Party size), with a tank and a healer among them.
   fit() { const r = this.roles(); return this.full() && r.tank >= 1 && r.heal >= 1; }
 
   // A name of the Company's for someone new: not one already about.
@@ -125,8 +126,17 @@ export class PartyUI {
     this.offersAt = performance.now();
   }
 
-  hire(o, free = false) {
-    if (this.full()) { this.tip('Your party is full: four is as many as the Company will send with you.', 3); return false; }
+  // Party size, from the settings: how many the Company sends with you, and how many a delve's portal asks for (the sim's
+  // own check, src/sim/dungeon.js ready, is told too). Nobody already with you is sent away when it's made smaller.
+  setSize(n) {
+    setPartySize(n);
+    this.sim.postMessage({ type: 'partySize', n: PARTY.size });
+    this.changed();
+  }
+
+  // kept: one of a saved party coming back with a game loaded, who's let in past Party size as they were before it.
+  hire(o, free = false, kept = false) {
+    if (kept ? this.members.length >= PARTY.max : this.full()) { this.tip(`Your party is full: ${partyWord()} is as many as the Company will send with you${PARTY.size < PARTY.max ? ' (Party size, in the settings)' : ''}.`, 3); return false; }
     if (this.member(o.slot)) return false;
     // (Nobody's paid in the Test Dungeon: src/ui/testhall.js.)
     if (!free && !this.freeHire?.() && !this.pack.pay(o.price)) { this.tip(`You can't pay ${priceText(o.price)}.`, 2.5); return false; }
@@ -186,14 +196,15 @@ export class PartyUI {
     const h = this.open;
     if (!h) return;
     const r = this.roles();
-    const want = [!r.tank && 'a lancer to take the blows', !r.heal && 'a paladin to keep you standing', 'blades to do the work'].filter(Boolean);
+    // (Two is a lancer and a paladin, with nobody over for the work: Party size, in the settings.)
+    const want = [!r.tank && 'a lancer to take the blows', !r.heal && 'a paladin to keep you standing', PARTY.size > 3 ? 'blades to do the work' : PARTY.size > 2 && 'a blade to do the work'].filter(Boolean);
     // (A post at one of the later delves speaks of its own: src/core/dungeon.js POSTS.)
     const where = h.p.delve || 'the Hollowfang Warrens', short = h.p.delve || 'the Warrens';
     const need = this.fit() ? `That is a party fit for ${where}.`
-      : `For ${short} you'll want four at your back: ${want.length > 1 ? `${want.slice(0, -1).join(', ')} and ${want.at(-1)}` : want[0]}.`;
+      : `For ${short} you'll want ${partyWord()} at your back: ${want.length > 1 ? `${want.slice(0, -1).join(', ')} and ${want.at(-1)}` : want[0]}.`;
     const gratis = !!this.freeHire?.();
     const say = line || (gratis ? `In this hall the Company sends whoever you ask for, and asks nothing for them. ${need}` : h.p.say ? `${h.p.say} ${need}` : h.p.broker === 'portal'
-      ? `The Warrens won't let one through alone, nor two. Four at your back, or the kobolds have you before the first bend. ${need}`
+      ? `The Warrens won't let one through alone${PARTY.size > 2 ? ', nor two' : ''}. ${partyWord()[0].toUpperCase()}${partyWord().slice(1)} at your back, or the kobolds have you before the first bend. ${need}`
       : `The Free Company, at your service. Swords for hire: paid once, up front, and they're yours till you let them go. ${need}`);
     this.opts = [];
     const li = (o) => { this.opts.push(o); return o; };
@@ -201,7 +212,7 @@ export class PartyUI {
       <div class="line">${esc(say)}</div>`;
     const row = (o, k) => `<li class="${o.dim ? 'dim' : ''}" data-k="${k}"${o.title ? ` title="${esc(o.title).replace(/"/g, '&quot;')}"` : ''}><kbd>${k < 9 ? k + 1 : k === 9 ? 0 : ''}</kbd><span class="rl" style="color:${ROLE[o.role][1]}">${roleMark(o.role)}</span><span>${esc(o.label)}</span>${o.note ? `<span class="mv">${esc(o.note)}</span>` : ''}${o.price ? `<span class="pr">${gratis ? 'Free' : priceText(o.price)}</span>` : ''}</li>`;
     if (this.members.length) {
-      html += `<h4>Your party (${this.members.length} of ${PARTY.size})</h4><ol>`;
+      html += `<h4>Your party (${this.members.length > PARTY.size ? `${this.members.length}: the Company sends ${PARTY.size} now` : `${this.members.length} of ${PARTY.size}`})</h4><ol>`;
       for (const m of this.members) {
         const o = li({ role: roleOf(m.cls), title: movesAt(m.cls, m.level).map((q) => q.name).join(', '), label: `Let ${m.name} go: level ${m.level} ${CLASSES[m.cls].title}`, run: () => { this.dismiss(m.slot); this.showPanel(`${m.name} salutes and goes back on the Company's books.`); } });
         html += row(o, this.opts.length - 1);
@@ -334,7 +345,7 @@ export class PartyUI {
     for (const s of d?.members || []) {
       // (The same body if it's about this time, else another of its class.)
       const c = this.cast.find((x) => !x.broker && x.body === s.body && !this.member(x.slot)) || this.cast.find((x) => !x.broker && x.cls === s.cls && !this.member(x.slot));
-      if (c) this.hire({ slot: c.slot, name: s.name, level: s.level, off: s.off ?? 0 }, true);
+      if (c) this.hire({ slot: c.slot, name: s.name, level: s.level, off: s.off ?? 0 }, true, true);
     }
   }
 }

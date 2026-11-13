@@ -21,7 +21,7 @@ import { Gravehart } from './gravehart.js';
 import { Hydra } from './hydra.js';
 import { FieldCreature } from './field-creature.js';
 import { Pose, solveFK } from './anim.js';
-import { BROKER_SPOTS, PORTAL, delveAt, delveOf, inDungeon, roleOf } from '../core/dungeon.js';
+import { BROKER_SPOTS, PARTY, PORTAL, delveAt, delveOf, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
 import { cleanLine } from './sight.js';
 import { MORE_SKILLS, arrive, arrow3, castSkill, chooseSkill, classRoutine, cutArc, diveDraw, hammer3, install, pike3, pluckNote, shield3, rank, stepShotX, strumFx, tintOf } from './heroskills.js';
@@ -1907,8 +1907,9 @@ export class HeroWorld {
     this.targets = [];
     this.firsts = new Set();       // big monsters someone has already had the first kill of
     this.duels = [];
-    // Your party, hired of the Free Company's quartermasters: up to four, who go where you go (companion, below).
-    this.company = { id: 900, leader: null, members: new Set(), kind: 'company', place: null, state: 'going', t: 0, want: 4, company: true };
+    // Your party, hired of the Free Company's quartermasters: up to four (how many they'll send is the page's to say, Party
+    // size in the settings: src/ui/party.js), who go where you go (companion, below).
+    this.company = { id: 900, leader: null, members: new Set(), kind: 'company', place: null, state: 'going', t: 0, want: PARTY.max, company: true };
     this.trail = [];
     this.head = [0, 1]; this.moveT = 0; this.stillT = 0; this.restYaw = 0;   // (the way you're going, and for how long: stepCompany)
     // Everyone starts about the town, at their own business.
@@ -2998,7 +2999,7 @@ export class HeroWorld {
   // Hired: out of the world's day, into yours. A new name and a level near yours, from the quartermaster (src/ui/party.js).
   hire(slot, o) {
     const sim = this.sim, h = this.heroes[slot];
-    if (!h || h.broker || h.hired || this.company.members.size >= 4) return false;
+    if (!h || h.broker || h.hired || this.company.members.size >= PARTY.max) return false;
     if (h.party && h.party !== this.company) this.disband(h.party);
     h.walkWith = null; h.talkUntil = 0; h.task = { kind: 'help', t: 0 }; h.foe = null; h.goal = null; h.surf = null; h.below = 0; h.hidden = false;
     if (o.name) { h.person.name = o.name; h.person.full = o.name; h.person.guild = 'The Free Company'; }

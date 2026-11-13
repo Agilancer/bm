@@ -14,7 +14,7 @@ import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
-import { groundPatches } from '../core/ground-patches.js';
+import { groundPatches, nearCentre, nearGround } from '../core/ground-patches.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
@@ -315,6 +315,9 @@ export class Renderer {
     const patches = groundPatches(tier.lean ? 4 : 2);
     this.terrainArgs = { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patches };
     this.landAt = [0, 0]; this.landBusy = false;
+    // And the near ground round you, wherever you are (src/core/ground-mesh.js buildNear): laid once the game knows where you
+    // are, and again as you go (followNear).
+    this.nearArgs = nearGround(!!tier.lean); this.nearAt = null; this.nearVB = null; this.nearIB = null; this.nearCount = 0;
     const terrainJob = land('terrain', this.terrainArgs), forestJob = land('forest', { opening: this.openingEnabled, reach: FOREST_REACH });
     for (let r = 0; r < GROUND_SIZE; r += BAND) groundJobs.push(land('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: groundColliders, rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + BAND) }));
     for (let r = 0; r < this.farSize; r += BAND) farJobs.push(land('farground', { opening: this.openingEnabled, size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + BAND) }));
@@ -657,7 +660,8 @@ export class Renderer {
   }
 
   // Out in the countries the land's grid and the pines are laid again round you, a few hundred metres at a time, in the pool's
-  // threads; the old ones are drawn till the new are ready. Near the town both stay as they were laid at the start.
+  // threads; the old ones are drawn till the new are ready. Near the town both stay as they were laid at the start. (The near
+  // ground is laid with it, on the new grid's lines: followNear.)
   followLand(cam) {
     const pool = this.landPool || this.pool;
     if (this.landBusy || !pool) return;
@@ -666,17 +670,57 @@ export class Renderer {
     if (cx === this.landAt[0] && cz === this.landAt[1]) return;
     if (!near && Math.hypot(cam.x - this.landAt[0], cam.z - this.landAt[1]) < FOLLOW_AT) return;
     this.landBusy = true;
-    Promise.all([pool.run('terrain', { ...this.terrainArgs, cx, cz }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH, cx, cz })]).then(([terrain, forest]) => {
-      const old = [this.terrainVB, this.terrainIB];
-      this.terrainVB = makeBuffer(this.device, terrain.verts, GPUBufferUsage.VERTEX);
-      this.terrainIB = makeBuffer(this.device, terrain.idx, GPUBufferUsage.INDEX);
-      this.terrainCount = terrain.idx.length;
+    const [nx, nz] = nearCentre(this.nearArgs, cam.x, cam.z);
+    Promise.all([pool.run('terrain', { ...this.terrainArgs, cx, cz, near: { x: nx, z: nz, ...this.nearArgs } }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH, cx, cz })]).then(([terrain, forest]) => {
+      this.setLand(terrain.verts, terrain.idx, terrain.near, [nx, nz]);
       this.pines.setTrees(forest.trees);
-      this.shadowEpoch = (this.shadowEpoch || 0) + 1;
       this.landAt = [cx, cz];
-      // (Gone once this frame's work that drew them is done: nothing new is recorded with them.)
-      setTimeout(() => { for (const b of old) b.destroy(); }, 500);
     }).catch((e) => console.warn('followLand', e)).finally(() => { this.landBusy = false; });
+  }
+
+  // The near ground (src/core/ground-mesh.js): the land's own height round you, so what you stand on, the rocks and the
+  // trees are on the ground that's drawn. Laid again round you once you've gone `step` from its middle, over the great grid as
+  // it is, in the pool's threads (a few tens of milliseconds); the great grid's triangles come with it, less what it takes, and
+  // both are put in together. Not out past the land's edge, where the delves and the Test Dungeon are.
+  followNear(cam) {
+    const pool = this.landPool || this.pool, N = this.nearArgs;
+    if (this.landBusy || !pool || !N) return;
+    if (Math.abs(cam.x) > WORLD_EDGE || Math.abs(cam.z) > WORLD_EDGE) return;
+    if (this.nearAt && Math.max(Math.abs(cam.x - this.nearAt[0]), Math.abs(cam.z - this.nearAt[1])) < N.step) return;
+    this.landBusy = true;
+    const [x, z] = nearCentre(N, cam.x, cam.z), [cx, cz] = this.landAt;
+    pool.run('near', { ...this.terrainArgs, cx, cz, near: { x, z, ...N } }).then((r) => {
+      // (Not if the great grid's been laid again since this was asked for: it's stitched to that grid's lines.)
+      if (cx === this.landAt[0] && cz === this.landAt[1]) this.setLand(null, r.idx, r.near, [x, z]);
+    }).catch((e) => console.warn('followNear', e)).finally(() => { this.landBusy = false; });
+  }
+
+  // The land's new buffers, all in the same frame (the great grid's hole and the near ground that fills it): verts null keeps
+  // the great grid's corners. at: where the near ground was asked for, laid or not.
+  setLand(verts, idx, near, at) {
+    const { device } = this, old = [this.terrainIB, this.nearVB, this.nearIB];
+    if (verts) { old.push(this.terrainVB); this.terrainVB = makeBuffer(device, verts, GPUBufferUsage.VERTEX); }
+    this.terrainIB = makeBuffer(device, idx, GPUBufferUsage.INDEX);
+    this.terrainCount = idx.length;
+    this.nearVB = near ? makeBuffer(device, near.verts, GPUBufferUsage.VERTEX) : null;
+    this.nearIB = near ? makeBuffer(device, near.idx, GPUBufferUsage.INDEX) : null;
+    this.nearCount = near ? near.idx.length : 0;
+    this.nearAt = at;
+    this.stats.ground = this.terrainCount / 3 + this.nearCount / 3;
+    this.shadowEpoch = (this.shadowEpoch || 0) + 1;
+    // (Gone once this frame's work that drew them is done: nothing new is recorded with them.)
+    setTimeout(() => { for (const b of old) b?.destroy(); }, 500);
+  }
+
+  // The ground: the great grid with the patches, and the near ground, with whatever pipeline's set.
+  drawLand(pass) {
+    pass.setVertexBuffer(0, this.terrainVB);
+    pass.setIndexBuffer(this.terrainIB, 'uint32');
+    pass.drawIndexed(this.terrainCount);
+    if (!this.nearCount) return;
+    pass.setVertexBuffer(0, this.nearVB);
+    pass.setIndexBuffer(this.nearIB, 'uint32');
+    pass.drawIndexed(this.nearCount);
   }
 
   // Which of the scenery that comes and goes is the other way from how it began (the keys: a standing stone broken, its
@@ -2301,6 +2345,7 @@ export class Renderer {
     const tan = Math.tan(fov / 2);
     const sun = this.sunDir;
     this.followLand(cam);
+    this.followNear(cam);
     this.slimeBodies?.update(snap, snap[H.TIME], cam);
     this.pines.update(cam, aspect, tan);
     this.rocks.update(cam, aspect, tan);
@@ -2553,11 +2598,7 @@ export class Renderer {
 
   drawStillShadows(sp, c, last) {
     sp.setPipeline(this.pShTerrain);
-    if (c === 2) {
-      sp.setVertexBuffer(0, this.terrainVB);
-      sp.setIndexBuffer(this.terrainIB, 'uint32');
-      sp.drawIndexed(this.terrainCount);
-    }
+    if (c === 2) this.drawLand(sp);
     sp.setPipeline(this.pShStatic);
     this.drawUnderShadow(sp);
     sp.setVertexBuffer(0, this.staticVB);
@@ -2581,9 +2622,7 @@ export class Renderer {
     const jobs = [(sp) => {
       if (c === 2) {
         sp.setPipeline(this.pShTerrain);
-        sp.setVertexBuffer(0, this.terrainVB);
-        sp.setIndexBuffer(this.terrainIB, 'uint32');
-        sp.drawIndexed(this.terrainCount);
+        this.drawLand(sp);
       }
       sp.setPipeline(this.pShStatic);
       this.drawUnderShadow(sp);
@@ -3243,9 +3282,7 @@ export class Renderer {
     }
     mp.setPipeline(this.pTerrain);
     mp.setBindGroup(1, this.terrainBG);
-    mp.setVertexBuffer(0, this.terrainVB);
-    mp.setIndexBuffer(this.terrainIB, 'uint32');
-    mp.drawIndexed(this.terrainCount);
+    this.drawLand(mp);
     }
     }
     if (!vis.warrens) { mp.setPipeline(this.pSky); mp.draw(3); }

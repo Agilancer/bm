@@ -48,7 +48,7 @@ const store = {
 
 const SETTINGS_KEY = 'velscour.settings';
 // keep: whether the game's files are kept on this device (coi-sw.js), asked once before the title ('ask' until then).
-export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autohaste: 'on', autotell: 'on' };
+export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', party: '4', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autohaste: 'on', autotell: 'on' };
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
 export const saveSettings = () => store.set(SETTINGS_KEY, JSON.stringify(settings));
 
@@ -79,11 +79,12 @@ const SETTINGS = `
     <label><span>Interface in auto-play</span><select data-k="autohide"><option value="off">Always shown</option><option value="on">Hidden until you tap</option></select></label>
     <label><span>Map in auto-play</span><select data-k="autohideMap"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>
     <label><span>Chat in auto-play</span><select data-k="autohideChat"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>
+    <label><span>Party size</span><select data-k="party"><option value="4">Four: a tank, a healer, two blades</option><option value="3">Three: a tank, a healer, a blade</option><option value="2">Two: a tank and a healer</option></select></label>
     <label><span>Other Tessariels</span><select data-k="heroes"><option value="auto">As many as the graphics allow</option><option value="few">A few</option><option value="off">None</option></select></label>
     <label><span>Frame rate readout</span><select data-k="perf"><option value="off">Off</option><option value="on">On</option></select></label>
     <label><span>Game files</span><select data-k="keep"><option value="yes">Kept on this device</option><option value="no">Downloaded each time</option><option value="ask" hidden>Not asked yet</option></select></label>
   </div>
-  <p class="t-note">With the interface hidden in auto-play, a tap, a click or a key brings it straight back; it goes again when you leave it be. To move the buttons about, Move Buttons on the pause screen. Graphics and Other Tessariels take hold when the game restarts. Kept game files are checked as the game starts, and only what changed is downloaded.</p>
+  <p class="t-note">With the interface hidden in auto-play, a tap, a click or a key brings it straight back; it goes again when you leave it be. To move the buttons about, Move Buttons on the pause screen. Party size is how many of the Free Company you can hire, and how many a delve's portal asks for: nobody already with you is sent away when it's lowered, and the delves' fights are made for four. Graphics and Other Tessariels take hold when the game restarts. Kept game files are checked as the game starts, and only what changed is downloaded.</p>
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 
 const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],
