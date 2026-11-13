@@ -14,5 +14,20 @@
  "Sporebloom": {"sat": 0.85, "val": 0.92, "tint": [0.62, 0.34, 0.86], "tamt": 0.44},
  "Porcelain": {"sat": 0.22, "val": 1.22, "tint": [1.0, 0.93, 0.86], "tamt": 0.3},
  "Verdigris": {"sat": 0.45, "val": 0.9, "tint": [0.34, 0.62, 0.5], "tamt": 0.38},
- "Gravegilt": {"sat": 0.4, "val": 1.05, "tint": [0.86, 0.72, 0.4], "tamt": 0.34}
+ "Gravegilt": {"sat": 0.4, "val": 1.05, "tint": [0.86, 0.72, 0.4], "tamt": 0.34},
+ "Rimefrost": {"sat": 0.45, "val": 1.08, "tint": [0.55, 0.78, 1.0], "tamt": 0.42},
+ "Emberhide": {"sat": 1.2, "val": 0.95, "tint": [1.0, 0.5, 0.14], "tamt": 0.36},
+ "Mossback": {"sat": 0.9, "val": 0.86, "tint": [0.36, 0.6, 0.22], "tamt": 0.42},
+ "Bogblack": {"sat": 0.55, "val": 0.6, "tint": [0.3, 0.42, 0.3], "tamt": 0.3},
+ "Dunehide": {"sat": 0.6, "val": 1.05, "tint": [0.9, 0.74, 0.46], "tamt": 0.4},
+ "Nightshade": {"val": 0.7, "tint": [0.5, 0.2, 0.75], "tamt": 0.46},
+ "Albino": {"sat": 0.18, "val": 1.35, "tint": [1.0, 0.86, 0.86], "tamt": 0.25},
+ "Jade": {"hue": 70, "sat": 0.9, "val": 0.95},
+ "Cobalt": {"hue": 200, "sat": 1.05, "val": 0.9},
+ "Sulphur": {"sat": 1.1, "val": 1.05, "tint": [0.95, 0.85, 0.2], "tamt": 0.4},
+ "Wraith": {"sat": 0.2, "val": 1.1, "tint": [0.5, 0.95, 0.85], "tamt": 0.5},
+ "Ironrust": {"sat": 0.7, "val": 0.8, "tint": [0.7, 0.36, 0.2], "tamt": 0.4},
+ "Amethyst": {"hue": 280, "sat": 1.1},
+ "Stormhide": {"sat": 0.5, "val": 0.85, "tint": [0.5, 0.56, 0.8], "tamt": 0.45},
+ "Gloam": {"sat": 0.35, "val": 0.55}
 }

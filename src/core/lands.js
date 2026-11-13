@@ -10,6 +10,7 @@
 // east and south. No site of one is within 1.5 km of a site of the other: tools/lands/check.mjs holds it.
 
 import { fbm, hash2, sstep } from './terrain-noise.js';
+import { OUTPOSTS } from './wilds-data.js';
 
 export const WORLD_EDGE = 5600;
 
@@ -124,6 +125,9 @@ export const ROUTES = [
   { name: 'the Cairn Path', w: 1.4, pts: [[1250, 90], [1210, -150], [1240, -372]] },
   { name: 'the Mill Track', w: 1.6, pts: [[-3020, -453], [-3100, -700], [-3135, -962]] },
 ];
+// And the trails off them to the outposts out in the land (src/core/wilds.js; laid by tools/wilds/place.mjs): narrow, worn
+// ways like any other, so nothing grows on them, the map draws them and the trail to a place follows them.
+for (const o of OUTPOSTS) if (o.trail) ROUTES.push({ name: `the trail to ${o.name}`, w: 1.2, pts: o.trail, trail: true });
 for (const r of ROUTES) {
   r.x0 = Math.min(...r.pts.map((p) => p[0])) - r.w - 40; r.x1 = Math.max(...r.pts.map((p) => p[0])) + r.w + 40;
   r.z0 = Math.min(...r.pts.map((p) => p[1])) - r.w - 40; r.z1 = Math.max(...r.pts.map((p) => p[1])) + r.w + 40;
@@ -146,15 +150,30 @@ function segD2(px, pz, ax, az, bx, bz) {
 }
 
 // How far (x, z) is from the nearest road's middle, and which (null when none is within 60 m).
-export function routeDist(x, z) {
-  let best = 1e18, which = null;
-  for (const r of ROUTES) {
-    if (x < r.x0 || x > r.x1 || z < r.z0 || z > r.z1) continue;
-    for (let i = 0; i + 1 < r.pts.length; i++) {
-      const d = segD2(x, z, r.pts[i][0], r.pts[i][1], r.pts[i + 1][0], r.pts[i + 1][1]);
-      if (d < best) { best = d; which = r; }
+// (There are a couple of hundred of them with the trails, and every pine and every corner of the ground asks: each stretch
+// is sorted into the 128 m squares it comes within 60 m of.)
+const RCELL = 128, RGRID = new Map();
+const rkey = (i, j) => (i + 512) * 1024 + (j + 512);
+for (const r of ROUTES) for (let i = 0; i + 1 < r.pts.length; i++) {
+  const [ax, az] = r.pts[i], [bx, bz] = r.pts[i + 1], m = r.w + 61;
+  for (let ci = Math.floor((Math.min(ax, bx) - m) / RCELL); ci <= Math.floor((Math.max(ax, bx) + m) / RCELL); ci++) {
+    for (let cj = Math.floor((Math.min(az, bz) - m) / RCELL); cj <= Math.floor((Math.max(az, bz) + m) / RCELL); cj++) {
+      const k = rkey(ci, cj);
+      if (!RGRID.has(k)) RGRID.set(k, []);
+      RGRID.get(k).push(r, ax, az, bx, bz);
     }
   }
+}
+const RD = { d: 0, road: null };
+export function routeDist(x, z) {
+  let best = 1e18, which = null;
+  const list = RGRID.get(rkey(Math.floor(x / RCELL), Math.floor(z / RCELL)));
+  if (list) for (let i = 0; i < list.length; i += 5) {
+    const d = segD2(x, z, list[i + 1], list[i + 2], list[i + 3], list[i + 4]);
+    if (d < best) { best = d; which = list[i]; }
+  }
+  // (Past 60 m nobody's asked which: as before, when a road's box was the test.)
+  if (best > 3721) which = null;
   return { d: Math.sqrt(best), road: which };
 }
 

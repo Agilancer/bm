@@ -66,6 +66,8 @@ export class TripoSlots {
   constructor(r, base, roster, palettes, first, count) {
     this.r = r; this.base = base; this.roster = roster;
     this.ids = Object.keys(roster);
+    // (What one of the land's new kinds is called, by C.MODEL: src/core/wilds.js. The life bar's name.)
+    this.wildName = (model) => { const m = model > 0 ? roster[this.ids[model - 1]] : null; return m?.wild ? m.name : ''; };
     this.palettes = Object.values(palettes);
     this.first = first; this.count = count;
     this.models = new Map();   // id -> Promise of { base, nrm, mr, glb, albSrc }, newest last
