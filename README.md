@@ -399,6 +399,15 @@ The `push` clip is gone from the town: nobody's work asks for it, and it's out o
 Everything is MP3 in `assets/game/audio/`, named in `BANKS` in `src/audio.js`. The fight's and the dirt steps' sounds load before the
 game starts; the rest come in the background once it has.
 
+Music (`src/music.js`, files in `assets/game/music/`: the first Bellmourn's 29 tracks, as they were there) streams
+through `<audio>` players into the Music setting's line: a set of tracks for where you are (`SETS`: the town, open
+country, woods, the grim lands, the fells, the Ashen Waste, under the ground), one at a time with a quiet between; the
+action tracks over it while two or more are at you (`H.THREAT`, counted in the sim's `stepStow`); and three stingers (a
+seal woken, your death, a quest done or a delve's lord felled). Nothing of it plays in the opening's cave. By day the
+land's voice changes every few minutes (`DAY_VOICES` in `src/ui/lands.js`: birds, cicadas in the heat, the woods' birds,
+or only the wind). The calm wind plays with everything under 500 Hz cut (`BED_CUT` in `src/audio.js`): it was a low hum
+under the whole game.
+
 - **TomMusic's Free Fantasy SFX Pack** (all 204 files, `tools/audio/build_fantasy_sfx.py`): footsteps on dirt, stone, boards and water
   (`src/ui/places.js` says which is underfoot; knights in plate get the chain ones), doors and the cathedral's great doors, the
   Sexton's lock, chests, the woodpile's axe and the smith's hammer on the anvil (`blows` in `src/folk/folk.worker.js`), a lamp lit as someone

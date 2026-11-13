@@ -132,15 +132,19 @@ class Sim {
       || (!p.surfing && (!!p.queued || p.clip !== p.stance.idle || p.shieldUp > 0.02 || input[INPUT.BLOCK] > 0.5))
       || p.hp < (this.stowHp ?? p.hp) - 0.01 || p.dead;
     this.stowHp = p.hp;
-    if (!out) {
-      for (const k of this.foes) {
-        if (k.dead || k.dormant || k.hostile === false) continue;
-        const d = Math.hypot(k.x - p.x, k.z - p.z);
-        if (d > STOW.near) continue;
-        // (Awake and at you: the dead and the beasts say so themselves, a knight by having his guard up, living stone by its glow.)
-        if (k.aggro === true || (k.aggro === undefined && (k.combatTarget > 0 || k.glow > 0.05 || (k.combatTarget === undefined && k.glow === undefined && d < STOW.close)))) { out = true; break; }
-      }
+    // (Counted whether or not yours are out already: the music's fights go by it, src/music.js. Up to four is all it asks.)
+    let threat = 0;
+    for (const k of this.foes) {
+      if (k.dead || k.dormant || k.hostile === false) continue;
+      const dx = k.x - p.x, dz = k.z - p.z;
+      if (dx > STOW.near || dx < -STOW.near || dz > STOW.near || dz < -STOW.near) continue;
+      const d = Math.hypot(dx, dz);
+      if (d > STOW.near) continue;
+      // (Awake and at you: the dead and the beasts say so themselves, a knight by having his guard up, living stone by its glow.)
+      if (k.aggro === true || (k.aggro === undefined && (k.combatTarget > 0 || k.glow > 0.05 || (k.combatTarget === undefined && k.glow === undefined && d < STOW.close)))) { if (++threat >= 4) break; }
     }
+    if (threat) out = true;
+    this.scratch[H.THREAT] = p.dead ? 0 : threat;
     this.calmT = out ? 0 : (this.calmT ?? STOW.after) + dt;
     const to = this.calmT < STOW.after ? 0 : 1;
     this.stow = this.stow === undefined ? to : Math.max(0, Math.min(1, this.stow + (to ? dt / STOW.away : -dt / STOW.draw)));
