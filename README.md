@@ -1716,6 +1716,24 @@ pictures: the tide rock was a striped disc with a square of floor through it (ro
 caps' whole undersides were white (a lit rim and collar now). **Not looked at:** any of the bosses or their marks drawn,
 the Kennels, the bower, the Heart, the attic, the Warden's hall, the Ossuary, or anything on a phone.
 
+**Auto-play** has the four in its ways through (`WAYS`, `KNOWN` in `src/ui/autowarrens.js`), their eight quests in its
+plan, and one rule for all twelve bosses: it does what the fight orders (`tactics`). Watched headless with drawing
+stubbed and nothing able to hurt it (`tools/autoplay/watch.mjs`, as the head of that file says): at level 12 with a
+hired party and Under the Mile in hand it went in at the Vaults' portal, through the Toll, the gallery and the Reeds,
+killed the Bloat (going where the fight sent it when he swelled), the Cistern's pack, Mother Sallow (onto the rock for
+her tide), the Sluice's pack and the Leviathan, and left by the far portal, in about eight and a half minutes.
+The other three the same way, each with its first quest in hand and set down at its portal (the Playhouse's and the
+Kingsbarrow's quests put on to the step that wants the dungeon, since they begin with a walk to the Grove and the
+Barrows): the Sporehold at level 13 (Mouldfang, Mother Morel, the Heart of the Ring; out by the far portal in under
+eleven minutes), the Hollow Playhouse at 15 (the Seamstress, the Leading Man, the Dollmaker, standing still when her
+music stopped; ten minutes) and the Kingsbarrow at 18 (the Gravewarden, the Ossuary Golem, Ossivar; a little over ten).
+In every one it took the rooms in the order `WAYS` gives, waited for the party at each boss's door and went where the
+fights sent it. What these runs don't show is whether it lives: nothing could hurt it. And one thing seen that isn't
+the delves': with a party hired and no quest in hand that wants a dungeon it goes down whichever it's fit for, the
+Warrens first, however far off (it left the Grove for them, five kilometres, with the Playhouse's portal beside it),
+and in that run, coming at the Warrens from the north-east at level 16, it stood five minutes at about (280, -165)
+changing its mind between dungeons before the run was stopped.
+
 #### Three passes at the design, with two critics
 
 The four were laid out three times over. After each pass two reviewers, briefed separately and working only from the
