@@ -1325,7 +1325,12 @@ class GameView {
     if (e.type === 'door') this.doors.byFolk(e.id, e.open);
     else if (e.type === 'stall') this.renderer.stallOpen(e.id, e.open);
     else if (e.type === 'dish') this.renderer.dish(e.id, e.on, e.kind, e.at, e.yaw);
-    else if (e.type === 'work') this.audio.play(e.kind, e.at[0], e.at[1], e.at[2], e.kind === 'chop' ? 1.1 : 0.8, e.kind === 'anvil' ? 1.25 : 1);
+    else if (e.type === 'work') {
+      // (The iron into the smith's slack tub: a hiss. A blow on his anvil: its ring, and sparks off the iron if it's hot.)
+      if (e.kind === 'quench') this.audio.play('splash', e.at[0], e.at[1], e.at[2], 0.45, 1.6);
+      else this.audio.play(e.kind, e.at[0], e.at[1], e.at[2], e.kind === 'chop' ? 1.1 : 0.8, e.kind === 'anvil' ? 1.25 : 1);
+      if (e.kind === 'anvil') this.renderer.folk?.tools.blow(e.hot);
+    }
     else if (this.onTownEvent) this.onTownEvent(e);
   }
 
@@ -2025,6 +2030,8 @@ class GameView {
       // The third-person body dressed whole in one set of gear (src/gfx/bodyskin.js), to look at it: wear() for what's really worn.
       wear: (id) => view.wearSkin(id),
       setTime: (h) => view.renderer.setHour(h),
+      // The town run on by so many seconds at once (src/folk/client.js runOn), to look at someone further into their work.
+      townRun: (s) => view.town?.runOn(s),
       hour: () => view.renderer.hour,
       fixScale: (s) => { view.fixedScale = true; view.renderer.scale = s; },
       // The other Tessariels, for review: heroes('dump') lists them; near, at, task, surf, gesture, skill, freeze stage scenes.

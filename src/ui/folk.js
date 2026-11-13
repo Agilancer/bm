@@ -325,6 +325,18 @@ export class TownUI {
   event(e) {
     if (e.type !== 'say') return;
     if (this.open && e.i === this.with) return;
+    // (Something that speaks and isn't anybody: `who` it is and `at` where. The axe on the smith's rack.)
+    if (e.at) {
+      const key = `at:${e.who}`;
+      this.balloons.get(key)?.el.remove();
+      const el = document.createElement('div');
+      el.className = 'fb small';
+      el.innerHTML = `<span class="who">${e.who}</span>`;
+      el.appendChild(document.createTextNode(e.text));
+      this.sayEl.appendChild(el);
+      this.balloons.set(key, { el, at: e.at, until: performance.now() + e.dur * 1000 });
+      return;
+    }
     let b = this.balloons.get(e.i);
     if (!b) {
       const el = document.createElement('div');
@@ -370,7 +382,7 @@ export class TownUI {
     this.drawMarks(cam, px, pz, ph);
     for (const [i, b] of this.balloons) {
       // (Whoever it is: the townsfolk, those out past the town, and Lisandra.)
-      const w = this.whereOf(i);
+      const w = b.at ? { x: b.at[0], z: b.at[2], hx: b.at[0], hy: b.at[1] - 0.36, hz: b.at[2], house: -1 } : this.whereOf(i);
       if (!w || now > b.until) { b.el.remove(); this.balloons.delete(i); continue; }
       const d = Math.hypot(w.x - px, w.z - pz);
       const there = d < 4 || w.house === ph || (w.house < 0 && ph < 0);

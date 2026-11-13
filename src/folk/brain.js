@@ -8,7 +8,8 @@ import { FolkPose } from './rig.js';
 import { PEOPLE, isChild } from './people.js';
 import { PLACES, ROUND, T_CLEAR, wearsT } from './town.js';
 import { DAYS, WORK, WORK_OF, LEISURE } from './days.js';
-import { FORGE, SMITH_CLIPS } from './smithy.js';
+import { RACK, SMITH_CLIPS, STATIONS, inYard, newKitState, pumpAt } from './smithy.js';
+import { AXE_SAID } from './lines/smithy.js';
 
 const TAU = Math.PI * 2;
 export const wrapAngle = (a) => a - TAU * Math.floor((a + Math.PI) / TAU);
@@ -55,7 +56,7 @@ export class Folk {
     this.rng = mulberry((hash(p.id) * 4294967296) >>> 0);
     this.dt = 0;
     this.hold = 0;            // > 0 while someone's talking to them: they stop and stand where they are
-    this.tool = false;        // the smith: his hammer's in his hand (forge, below)
+    this.kit = null;          // the smith: what's in his hands and what he's at (forge, below; newKitState in src/folk/smithy.js)
     this.look = null;         // [x, y, z] they're looking at, or null
     this.face = null;         // a yaw the talk wants them to turn to, standing
     this.alarm = false;       // running from something
@@ -305,7 +306,8 @@ export class Life {
     for (const me of this.folk) {
       for (const s of [...this.town.claims.keys()]) this.town.release(s, me.id);
       me.task = null; me.taskDone = true;
-      me.posture = 'stand'; me.alarm = false; me.hold = 0; me.carrying = false; me.tool = false;
+      me.posture = 'stand'; me.alarm = false; me.hold = 0; me.carrying = false;
+      if (me.kit) Object.assign(me.kit, newKitState());
       if (me.pose) me.pose.restTo = me.pose.rest = 0;
       const b = this.blockAt(me, this.hour, this.day);
       me.cur = b; me.key = b.key;
@@ -344,6 +346,7 @@ export class Life {
   tick(me, dt) {
     const pose = me.pose;
     if (me.layerUntil && this.clock > me.layerUntil) { pose.layer(null, { fade: 0.4 }); me.layerUntil = 0; }
+    if (me.kit) { smithHands(me); axeAnswers(me); }
     if (me.look) {
       const dx = me.look[0] - me.x, dz = me.look[2] - me.z, d = Math.hypot(dx, dz);
       const eye = me.y + me.rig.headTop * (me.posture === 'sit' ? 0.72 : 0.93);
@@ -1160,49 +1163,186 @@ function* work(me, key, w, helping = false) {
   void helping;
 }
 
-// Where the smith stands at his anvil: on the side of it the house was built for him to (the anvil's `dir`, tools/folk/spots.py),
-// as near as the blows were worked out for (FORGE in src/folk/smithy.js), facing it. { x, y, z, yaw, anvil }, or null.
-export function forgeSpot(town) {
-  const anvil = town.house('smith').furniture.find((f) => f.kind === 'anvil' && (f.dir[0] || f.dir[1]));
-  if (!anvil) return null;
-  const [dx, dz] = anvil.dir;
-  return { x: anvil.x + dx * FORGE.off, y: anvil.y, z: anvil.z + dz * FORGE.off, yaw: Math.atan2(-dx, -dz), anvil };
+// Where the smith stands at his anvil, out in his yard (STATIONS in src/folk/smithy.js): { x, y, z, yaw }.
+export function forgeSpot(town, ground) {
+  void town;
+  const s = STATIONS.anvil;
+  return { x: s.x, y: ground ? ground.heightFor(s.x, s.z, 0.5) : 0, z: s.z, yaw: s.yaw };
 }
 
-// The smith's day at the anvil. He takes his hammer up off it, works a heat (a run of blows, each one down on the anvil's
-// face: tools/folk/smith_clips.mjs), stands back with it at his side to look the work over, and now and then lays it down to
-// fold his arms over what he's made. me.tool: the hammer's in his hand (src/folk/folk.worker.js puts it there, or on the
-// anvil). It's laid down again before he goes anywhere.
+// The clips that put his hands where they have to be themselves. Under anything else (walking, standing about, a word with
+// someone), what he's holding is held as he carries it: the tongs out before him in his left hand, his right shut on
+// whatever's in it (SMITH_CLIPS.carry, laid over the arm or the hand alone).
+const SMITH_WORK = new Set(Object.values(SMITH_CLIPS).filter((v) => typeof v === 'string' && v !== SMITH_CLIPS.carry));
+function smithHands(me) {
+  const k = me.kit, c = me.pose.a.clip;
+  // (A gesture laid over him by the talk has the arms for as long as it lasts.)
+  if (me.layerUntil) { me.kitLayer = null; return; }
+  const want = (k.tongs || k.tool) && !(c && SMITH_WORK.has(c.name)) ? (k.tongs ? 'LeftShoulder,RightHand' : 'RightHand') : null;
+  if (want === me.kitLayer) return;
+  if (want) me.pose.layer(SMITH_CLIPS.carry, { from: want, weight: 1, fade: 0.22 });
+  else me.pose.layer(null, { fade: 0.22 });
+  me.kitLayer = want;
+}
+// What the axe says back to him, a breath after he's spoken to it: a balloon of its own, over the rack.
+function axeAnswers(me) {
+  const r = me.axeReply;
+  if (!r || me.life.clock < r.at) return;
+  me.axeReply = null;
+  me.life.emit({ type: 'say', i: -1, who: 'The axe', at: inYard(STATIONS.axe, [0, RACK.hook - 0.1, RACK.off]), text: r.text, dur: 3.4, kind: 'small' });
+}
+
+// The smith's day in his yard. A piece of iron's worked through two or three heats: the tongs taken up off the hearth, the
+// bellows pulled till the iron's the right colour, the iron drawn and carried to the anvil, the hammer taken up off it and
+// a run of blows laid on (each down on the iron: tools/folk/smith_clips.mjs), the hammer laid down, and back to the fire;
+// then into the slack tub, and the tongs back on the hearth. Between irons he files the blade on his bench, or carries it to
+// the grindstone, or stands back with his arms folded; and first thing every day, and now and then after, he takes the rag
+// from his belt to the great axe on its rack, and wishes it good morning. me.kit says what's in his hands and what he's at
+// (src/folk/folk.worker.js puts each thing there, or where it lies). Everything's put back where it lives before he goes
+// anywhere: the iron in the fire, the hammer on the anvil, the blade and the file on the bench, the rag in his belt.
 function* forge(me, key) {
-  const life = me.life, town = life.town, spot = forgeSpot(town), C = SMITH_CLIPS, blow = life.clips.clips[C.blow];
-  if (!spot || !town.claim(spot.anvil, me.id)) { yield* atHome(me, key); return; }
-  // His hand to the handle and up with it; or down with it and away.
-  const hammer = function* (up, k) {
-    const dur = life.clips.clips[C.take].dur, at = up ? C.takeAt : dur - C.takeAt;
-    me.play(C.take, { fade: 0.3, restart: true, speed: up ? 1 : -1 });
-    for (let u = 0; u < dur - 0.05; u += me.dt) {
-      if (k && !me.alive(k)) return;
-      if (u >= at) me.tool = up;
+  const life = me.life, town = life.town, C = SMITH_CLIPS, clip = (n) => life.clips.clips[n];
+  const K = me.kit || (me.kit = newKitState());
+  const yard = town.places.smithy;
+  if (!town.claim(yard, me.id)) { yield* atHome(me, key); return; }
+  const at = function* (name, k) { const s = STATIONS[name]; return yield* goTo(me, s.x, s.z, s.yaw, { key: k, level: 0 }); };
+  // A clip played through, forwards or backwards; then() at the moment `when` of it (as the clip counts, either way).
+  const run = function* (name, o = {}) {
+    const dur = clip(name).dur, back = !!o.back, when = o.when === undefined ? -1 : back ? dur - o.when : o.when;
+    me.play(name, { fade: o.fade ?? 0.25, restart: true, speed: back ? -1 : 1 });
+    let fired = when < 0;
+    for (let u = 0; u < dur - 0.04; u += me.dt) {
+      if (!fired && u >= when) { fired = true; o.then(); }
+      if (o.each) o.each(back ? dur - u : u);
       yield;
     }
-    me.tool = up;
+    if (!fired) o.then();
   };
-  try {
-    if (!(yield* goTo(me, spot.x, spot.z, spot.yaw, { key, level: 0 }))) { yield* idle(me, 10, key); return; }
-    while (me.alive(key)) {
-      yield;
-      if (me.hold > 0) { yield* idle(me, 2, key, [me.tool ? C.hold : 'idle_ual']); continue; }
-      if (!me.tool) { yield* hammer(true, key); continue; }
-      // A heat: whole blows, so it never stops with the hammer in the air.
-      yield* doClip(me, C.blow, key, blow.dur * (5 + Math.floor(me.rng() * 6)) - 0.05, { fade: 0.2 });
-      if (!me.alive(key)) break;
-      if (me.rng() < 0.7) { yield* idle(me, 3 + me.rng() * 4, key, [C.hold]); continue; }
-      yield* hammer(false, key);
-      if (me.alive(key)) yield* idle(me, 5 + me.rng() * 6, key, ['fold_arms_ual', 'look_around', 'idle_ual']);
+  // Someone's talking to him: he stands and hears them out, whatever's in his hands.
+  const heard = function* () { while (me.hold > 0 && me.alive(key)) yield* idle(me, 1.5, key, [K.tool === 'hammer' && K.tongs ? C.hold : 'idle_ual']); };
+  const ok = () => me.alive(key);
+  // Each thing taken up, and put back: his hand's on it (or off it) at the clip's moment.
+  const take = (name, what) => run(name, { when: C.takeAt, then: () => { K.tool = what; } });
+  const put = (name) => run(name, { back: true, when: C.takeAt, then: () => { K.tool = null; } });
+  const said = (kind) => {
+    const [px, , pz] = life.player;
+    if (Math.hypot(px - me.x, pz - me.z) > 11 || me.talking || me.inScene) return;
+    const list = AXE_SAID[kind], n = (me.axeSaid = (me.axeSaid || 0) + 1), [his, its] = list[(n + Math.floor(hash(`${life.day}`) * list.length)) % list.length];
+    life.emit({ type: 'say', i: me.i, text: his, dur: 3.6, kind: 'bark' });
+    if (its) me.axeReply = { at: life.clock + 3.2, text: its };
+  };
+
+  // The iron: heats at the fire and the anvil, and the quench.
+  const iron = function* () {
+    if (!(yield* at('fire', key))) return;
+    yield* run(C.tongs, { when: C.tongsAt, then: () => { K.tongs = true; K.inFire = true; } });
+    const heats = 2 + Math.floor(me.rng() * 2);
+    for (let h = 0; h < heats && ok(); h++) {
+      // The bellows: whole pulls, so the rope's never left half down.
+      K.inFire = true;
+      const pulls = 4 + Math.floor(me.rng() * 4);
+      me.play(C.pump, { fade: 0.3, restart: true });
+      for (let u = 0; u < pulls * C.pumpDur - 0.03; u += me.dt) { K.pump = pumpAt(me.pose.time); yield; }
+      K.pump = 0;
+      yield* run(C.draw, { fade: 0.15, when: 0.4, then: () => { K.inFire = false; } });
+      if (!(yield* at('anvil', null))) break;
+      yield* run(C.set);
+      yield* take(C.take, 'hammer');
+      // (Whole blows, so it never stops with the hammer in the air.)
+      const blow = clip(C.blow).dur;
+      yield* doClip(me, C.blow, null, blow * (6 + Math.floor(me.rng() * 5)) - 0.05, { fade: 0.2 });
+      if (ok() && me.rng() < 0.6) {
+        yield* heard();
+        yield* idle(me, 2.5 + me.rng() * 2.5, key, [C.hold]);
+        yield* doClip(me, C.blow, null, blow * (4 + Math.floor(me.rng() * 4)) - 0.05, { fade: 0.25 });
+      }
+      yield* put(C.take);
+      yield* run(C.set, { back: true });
+      if (h + 1 < heats && ok()) {
+        if (!(yield* at('fire', null))) break;
+        yield* run(C.draw, { back: true, when: 0.4, then: () => { K.inFire = true; } });
+      }
     }
-    // (His hour's up: the hammer's put down before he walks off. Not if he's running for his life.)
-    if (me.tool && !me.alarm) yield* hammer(false, null);
-  } finally { me.tool = false; town.release(spot.anvil, me.id); }
+    if (K.tongs && !K.inFire && ok()) {
+      // Into the tub with it.
+      if (yield* at('tub', null)) {
+        yield* run(C.quench, { each: (t) => {
+          const was = K.quench;
+          K.quench = t >= C.quenchAt && t < C.quenchAt + 1.3;
+          if (K.quench && !was) life.emit({ type: 'work', kind: 'quench', at: inYard(STATIONS.tub, [0, 0.6, 0.66]) });
+        } });
+        K.quench = false;
+      }
+    }
+  };
+  // The tongs back across the hearth, wherever he's got to with them.
+  const leaveTongs = function* () {
+    if (!K.tongs) return;
+    if (yield* at('fire', null)) {
+      if (!K.inFire) yield* run(C.draw, { back: true, when: 0.4, then: () => { K.inFire = true; } });
+      yield* run(C.tongs, { back: true, when: C.tongsAt, then: () => { K.tongs = false; } });
+    }
+    K.tongs = false; K.inFire = false; K.pump = 0;
+  };
+  // The blade: filed on the bench, and now and then taken to the stone.
+  const bench = function* () {
+    if (!(yield* at('bench', key))) return;
+    yield* take(C.fileTake, 'file');
+    yield* doClip(me, C.file, key, clip(C.file).dur * (5 + Math.floor(me.rng() * 5)) - 0.05, { fade: 0.3 });
+    yield* put(C.fileTake);
+    if (!ok() || me.rng() < 0.45) return;
+    yield* take(C.bladeTake, 'blade');
+    if (yield* at('wheel', null)) {
+      K.grind = true;
+      yield* doClip(me, C.grind, key, clip(C.grind).dur * (4 + Math.floor(me.rng() * 4)) - 0.05, { fade: 0.4 });
+      K.grind = false;
+      // (He looks along the edge he's put on it.)
+      if (ok()) yield* idle(me, 2 + me.rng() * 2, key, ['idle_ual']);
+    }
+    if (yield* at('bench', null)) yield* put(C.bladeTake);
+    K.tool = null;
+  };
+  // The axe: the rag out of his belt, round and round its blades, and a word with it.
+  const axe = function* (morning) {
+    if (!(yield* at('axe', key))) return;
+    me.look = inYard(STATIONS.axe, [0, RACK.hook - 0.55, RACK.off]);
+    said(morning ? 'morning' : 'day');
+    if (morning) yield* doClip(me, 'bow', key, 2.6, { fade: 0.4 });
+    yield* take(C.ragTake, 'rag');
+    K.polish = true;
+    yield* doClip(me, C.polish, key, clip(C.polish).dur * (2 + Math.floor(me.rng() * 2)) - 0.05, { fade: 0.4 });
+    K.polish = false;
+    yield* put(C.ragTake);
+    if (ok()) { said('after'); yield* idle(me, 3 + me.rng() * 3, key, ['fold_arms_ual', 'idle_ual']); }
+    me.look = null;
+  };
+
+  try {
+    while (ok()) {
+      yield;
+      yield* heard();
+      if (!ok()) break;
+      // First thing, every day: good morning to the axe.
+      if (me.axeDay !== life.day) { me.axeDay = life.day; yield* axe(true); continue; }
+      yield* iron();
+      yield* leaveTongs();
+      if (!ok()) break;
+      yield* heard();
+      const r = me.rng();
+      if (r < 0.42) yield* bench();
+      else if (r < 0.62) yield* axe(false);
+      else yield* idle(me, 5 + me.rng() * 6, key, ['fold_arms_ual', 'look_around', 'idle_ual']);
+    }
+    // (His hour's up: everything's put back before he walks off. Not if he's running for his life.)
+    if (!me.alarm) {
+      K.grind = K.polish = K.quench = false; K.pump = 0;
+      if (K.tool === 'hammer') { if (yield* at('anvil', null)) yield* put(C.take); if (K.tongs) yield* run(C.set, { back: true }); }
+      else if (K.tool === 'rag') yield* put(C.ragTake);
+      else if (K.tool) { if (yield* at('bench', null)) yield* put(K.tool === 'file' ? C.fileTake : C.bladeTake); }
+      K.tool = null;
+      yield* leaveTongs();
+    }
+  } finally { Object.assign(K, newKitState()); me.look = null; town.release(yard, me.id); }
 }
 
 // Out to a table in the inn with a jug, and back.
@@ -1242,8 +1382,11 @@ function* outdoorWork(me, key, pl, w) {
     yield;
     const a = me.rng() * TAU, r = (pl.r || 0.3) * Math.sqrt(me.rng());
     const p = G.nearestOn(0, me.life.townPart, pl.at[0] + Math.sin(a) * r, pl.at[1] + Math.cos(a) * r, 2) || pl.at;
-    const yaw = pl.yaw ?? me.rng() * TAU;
+    let yaw = pl.yaw ?? me.rng() * TAU;
     if (!(yield* walkTo(me, p[0], p[1], { key }))) { yield* idle(me, 5, key); continue; }
+    // (Watching someone at their work: turned to them, and their eyes on them.)
+    const seen = w.watch && me.life.byId[w.watch];
+    if (seen && seen.act === ACT.WORK && Math.hypot(seen.x - me.x, seen.z - me.z) < 9) { yaw = Math.atan2(seen.x - me.x, seen.z - me.z); me.look = [seen.x, seen.y + 1.3, seen.z]; } else if (w.watch) me.look = null;
     yield* turnTo(me, yaw);
     const clips = w.clips || pl.clips || ['idle'];
     for (let k = 0; k < 2 + me.rng() * 3 && me.alive(key); k++) {
@@ -1254,6 +1397,7 @@ function* outdoorWork(me, key, pl, w) {
     }
     yield* idle(me, 3 + me.rng() * 5, key, ['idle', 'look_around', 'scratch']);
   }
+  if (w.watch) me.look = null;
 }
 
 // Keeping their stall: the wares set out, the day's trade, packed up at dusk and carried home.
