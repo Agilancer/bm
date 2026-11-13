@@ -627,7 +627,7 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
   before the next floor's, and when a whole round of them finds nobody it leaves them for five minutes (`DRY_FOR`) and
   does other work till their dead have risen again (see "What a watched run found"). The countries
   are reached by the roads and across country, through the seals it has woken (it steps onto each one it passes near).
-  It works its way round walls, the catacombs' light wells and stands of pines by short paths a stretch at a time.
+  It works its way round walls and stands of pines by short paths a stretch at a time.
   - **It doesn't walk into walls.** In the town, the woods round it and the catacombs it goes by a path and nothing
     else (`path` in `src/sim/nav.worker.js`). It used to walk straight at where it was going until its path came, and
     whenever there was no path at all; now it waits a moment for one, and with no way there it leaves that errand for
@@ -879,14 +879,17 @@ has watched the shots themselves drawn, or the desk's layout of the feed: look a
 - Wedged in the nook behind Silas Crane's hearth, its way out began through the partition. From a snug corner a path starts toward ground it can walk to in a straight line (`freeNear`), and stopped twice in one place it asks the nav thread for a way out on a finer grid (`escape`; `lost` and `motor` in the brain).
 - It went down a dungeon ahead of the quests that send it there (see Complete Quests above).
 
-**Stuck in the catacombs.** Run headless again, set to grind the catacombs at level 14 with a hired party, and at level 6 alone with the Sexton's second quest and the tailor's in hand. It went round the Bell Crypt and the Reliquary, eighteen empty spots, for as long as it was watched. Three things made that, and a fourth showed beside them:
+**Stuck in the catacombs.** Run headless again, set to grind the catacombs at level 14 with a hired party, and at level 6 alone with the Sexton's second quest and the tailor's in hand (`tools/autoplay/watch.mjs`). It went round the Bell Crypt and the Reliquary, eighteen empty spots, for as long as it was watched. Three things made that, and a fourth showed beside them:
 
 - Each place down there is filled with one of the dead once, and it kept clear of everything within 60 m of the Hydra, measured straight through the rock: that left it the top floor's eighteen places, and the Sexton wants twenty-eight put down between his two quests, and the tailor silk off more than that. Once they were down there was nobody, and nothing told it so. It keeps clear of the rift itself now (the passage north out of the Founders' Hall, and the bridge), which is the only way to the Hydra, and walks the Founders' Hall, the Abbots' Gallery and the Tomb as it grows (`RIFT_AT`, `catacombSpots` in `src/ui/autobrain.js`).
 - Its paths kept 46 m off the Hydra the same way, which shut the passage to the Abbots' Gallery and the Tomb: "no way there", every time.
 - A round of every spot with no fight in it now means the catacombs are empty (`dries` on the job, `dryRun` in `hunt`): it says so, leaves that work for five minutes, and goes on with the next quest, or the woods if it's grinding.
+- The same at the millpond, a country away: five jellies there, the miller wants eight, and a wiped camp fills again in ten minutes. It stood on the bank for those ten minutes. Any quest's hunt that has looked round all its spots, for a quarter of a minute at least, without a fight is left for ten minutes (`HUNT_DRY_FOR`) and the next quest taken up.
 - It took a spot on the floor above before the next one along the hall, being nearer through the rock, and went up and down the second stair for it. A floor's height counts in how far off a spot is (`hunt`, `sweep`).
 
-And two in the game itself:
+And three in the game itself:
+
+- **The hill over the catacombs had their walls in it.** The catacombs' walls are built forty metres tall, which stood them up through the hill east of the cathedral, where nothing of them shows: walking over it, by hand or not, you ran into the Reliquary's walls. Auto-play, off east to the Bell Tower, paced to and fro there for six minutes, until it was stopped. Everything of the church out past the cathedral's own ground is marked as under the land (`under` in `src/sim/world.js`), and whoever has their feet on the land goes over it (`onLand`: the push out of walls, the lines of sight, and the nav thread's `solidAt`). Down below they're walls still. `node --test tests/over-the-crypt.test.mjs`. Auto-play also gives up a stretch across country it has got no nearer the end of in half a minute (`progress` in `walk`): it only knew it was stuck when it stood still.
 
 - **The catacombs' dead rise again** once you've been up out of them four minutes (`RISE_AGAIN`, `catacombsAway` in `src/sim/undead.js`; `node --test tests/catacombs-rise.test.mjs`). While you're down there what you've cleared stays clear, as it did. Before, each place was filled once in a game (till you died or loaded), so a second run of the catacombs, by hand or by Dungeon Runs, found nobody, and the wax, silk and iron three quests want could run out for good. The lords and the casters still come the once.
 - **Your party fights down there.** The other Tessariels leave alone whatever stands on a floor of the church or a house, and that rule took in your own hired party: they walked the catacombs at your heels and never lifted a hand. While you and they are in the church, what's on its floors is theirs to fight (`below` and `fightable` in `src/sim/hero.js`). The other Tessariels still keep out.

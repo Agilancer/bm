@@ -5,7 +5,7 @@ import { CELL, TREE_FLOATS, treesInCells, trunkRadius } from '../core/forest.js'
 import { BOULDER_CELL, ROCK_FLOATS, rockRadius, rocksInCells } from '../core/rocks.js';
 import { LAND_EDGE, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { caveFloor, caveKeep } from '../core/opening.js';
-import { CHURCH_BOUNDS } from '../core/church.js';
+import { CHURCH_BOUNDS, churchSite } from '../core/church.js';
 import { buildSites } from '../core/sites.js';
 import { CaveNav, caveFloorY, caveKeep as warrenKeep, caveRay, caveRoom, delveOf, inDungeon } from '../core/dungeon.js';
 import { HallNav, hallFloorY, hallKeep, hallRay, hallRoom, inHall } from '../core/testhall.js';
@@ -53,6 +53,11 @@ export class World {
     setFloors(interior.floors, interior.homes);
     this.spawns = interior.spawns;
     this.colliders = data.colliders.concat(interior.colliders).map((c) => ({ ...c, s: Math.sin(c.yaw), co: Math.cos(c.yaw) }));
+    // The catacombs' walls, and everything else of the church that lies out past the cathedral's own ground: under the
+    // land, all of it. They're built forty metres tall so nothing gets over them, which stood them up through the hill
+    // east of the cathedral, where nobody could see them: whoever walked over the hill ran into the Reliquary's walls.
+    // Marked, so whoever has their feet on the land goes over them (onLand below, heightFor's own rule).
+    for (const c of this.colliders.slice(data.colliders.length)) if (c.x > CHURCH_BOUNDS.x0 && churchSite(c.x, c.z) > 2) c.under = true;
     this.siteBoxes = new Map();
     for (const c0 of buildSites().colliders) {
       const c = { ...c0, s: Math.sin(c0.yaw), co: Math.cos(c0.yaw) }, R = Math.hypot(c.hx, c.hz);
@@ -281,6 +286,10 @@ export class World {
     return (h[k] * (1 - a) + h[k + 1] * a) * (1 - b) + (h[k + 257] * (1 - a) + h[k + 258] * a) * b;
   }
 
+  // Up on the land over the catacombs, at (x, z) with the feet at y: nothing buried under it is in the way (the boxes marked
+  // `under`). As heightFor has it: within two and a half metres of the land's top, or over it.
+  onLand(x, z, y) { return y > this.landAt(x, z) - 2.5; }
+
   // Where the player comes down, at height y: in a house that depends how high they've got. Everyone else stays on the ground floor.
   // (And over the catacombs, the land: the hill east of the cathedral has the Bell Crypt and the passages 30 m under it, and
   // a floor there used to be everyone's floor whatever height they were at, so walking over the hill on the way to the Hill
@@ -325,11 +334,12 @@ export class World {
     if (inDungeon(out[0], out[2])) return warrenKeep(out, r);
     if (inHall(out[0], out[2])) return hallKeep(out, r);
     let x = out[0], z = out[2];
-    let hit = false;
+    let hit = false, above;
     const push = (c) => {
       const dx = x - c.x, dz = z - c.z;
       if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) return;
       if (feet > (c.t ?? c.h + 0.02 + this.height(c.x, c.z)) || feet < c.b) return;
+      if (c.under && (above ??= this.onLand(x, z, feet))) return;
       const lx = dx * c.co - dz * c.s, lz = dx * c.s + dz * c.co;
       const qx = Math.abs(lx) - c.hx, qz = Math.abs(lz) - c.hz;
       if (qx > r || qz > r) return;
@@ -408,6 +418,7 @@ export class World {
       if (!slab(lox, ldx, c.hx) || !slab(loz, ldz, c.hz)) continue;
       // (Underground, a box's height counts from the floor it stands on.)
       let yAt = oy + dy * t0;
+      if (c.under && this.onLand(ox + dx * t0, oz + dz * t0, yAt)) continue;
       if (yAt < -2) yAt -= this.height(c.x, c.z);
       if (yAt < c.b || yAt > c.t) continue;
       if (yAt > c.h && c.h < 3.5) continue;

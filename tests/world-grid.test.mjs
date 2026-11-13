@@ -37,6 +37,7 @@ function resolveAll(w, out, r, feet) {
     const dx = x - c.x, dz = z - c.z;
     if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) return;
     if (feet > (c.t ?? c.h + 0.02 + w.height(c.x, c.z)) || feet < c.b) return;
+    if (c.under && w.onLand(x, z, feet)) return;   // (buried under the land, and the feet on it: World.onLand)
     const lx = dx * c.co - dz * c.s, lz = dx * c.s + dz * c.co;
     const qx = Math.abs(lx) - c.hx, qz = Math.abs(lz) - c.hz;
     if (qx > r || qz > r) return;
@@ -90,6 +91,7 @@ function rayAllBoxes(w, ox, oy, oz, dx, dy, dz, maxT) {
     };
     if (!slab(lox, ldx, c.hx) || !slab(loz, ldz, c.hz)) continue;
     let yAt = oy + dy * t0;
+    if (c.under && w.onLand(ox + dx * t0, oz + dz * t0, yAt)) continue;
     if (yAt < -2) yAt -= w.height(c.x, c.z);
     if (yAt < c.b || yAt > c.t) continue;
     if (yAt > c.h && c.h < 3.5) continue;

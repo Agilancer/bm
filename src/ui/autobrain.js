@@ -102,7 +102,7 @@ const POSTS = [
 ];
 // How long the catacombs are left once a round of them finds nobody (src/sim/undead.js RISE_AGAIN: their dead are up
 // again once it's been out of them four minutes).
-const DRY_FOR = 300;
+const DRY_FOR = 300, HUNT_DRY_FOR = 600;   // (the second: any other quest's hunt that finds its grounds empty)
 // The lairs out in the land (src/core/tripo-monsters.js), by the level it wants before it goes near one.
 const LAIR_LEVEL = {
   werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 5,
@@ -2152,17 +2152,20 @@ export class Brain {
         (this.lastSpots ||= []).push(`${px},${pz}`);
         if (this.lastSpots.length > Math.max(1, j.spots.length - 1)) this.lastSpots.shift();
         this.patrol = null;
-        // Down in the catacombs, where each place's dead come the once till it's been away a while: every spot looked
-        // round and not a fight since the round began means there's nobody left. Left for a while, and something else
-        // done. (It used to go round and round the Bell Crypt and the Reliquary for as long as it was watched, with
-        // twenty more to put down for the Sexton and nobody there to put down.)
-        if (j.dries) {
+        // Every spot looked round and not a fight since the round began: there's nobody left here for now. Down in the
+        // catacombs each place's dead come the once till it's been away a while (src/sim/undead.js), a jelly camp fills
+        // again ten minutes after it's wiped (src/sim/slimes.js), and a lair in its own time. It leaves that work for a
+        // while and does something else. (It used to go round and round the Bell Crypt and the Reliquary for as long
+        // as it was watched, with twenty more to put down for the Sexton and nobody there; and to stand at the
+        // millpond ten minutes, five jellies down of the miller's eight, till the pond filled.)
+        if (j.dries || j.why.startsWith('q:')) {
           const R = this.dryRun && this.dryRun.why === j.why && (this.foughtT ?? -99) < this.dryRun.t ? this.dryRun : (this.dryRun = { why: j.why, t: this.t, seen: new Set() });
           R.seen.add(`${px},${pz}`);
-          if (spots.every(([x, z]) => R.seen.has(`${x},${z}`))) {
+          // (And a quarter of a minute of looking at the least: a hunt with one spot has seen it all at the first look.)
+          if (this.t - R.t > 15 && spots.every(([x, z]) => R.seen.has(`${x},${z}`))) {
             this.dryRun = null; this.lastSpots = [];
-            this.giveUp('dry:catacombs', DRY_FOR);
-            this.o.note?.('Auto-play: nobody left in the catacombs. Other work, till they rise again.');
+            if (j.dries) { this.giveUp('dry:catacombs', DRY_FOR); this.o.note?.('Auto-play: nobody left in the catacombs. Other work, till they rise again.'); }
+            else { this.giveUp(j.why, HUNT_DRY_FOR); this.o.note?.('Auto-play: nothing left to hunt here for now. Other work meanwhile.'); }
             this.job = null; this.jobKey = '';
           }
         }
@@ -2428,6 +2431,13 @@ export class Brain {
       let hx = tx - m.x, hz = tz - m.z;
       const L = Math.hypot(hx, hz) || 1;
       hx /= L; hz /= L;
+      // Walking, and no nearer for half a minute: it's going to and fro before something (unstick() only knows standing
+      // still). Left, as anything it can't get to is. (On the hill over the catacombs it paced six minutes this way,
+      // turned back and forth by walls buried under it, till it was stopped: src/sim/world.js `under`.)
+      const pr = this.progress;
+      // (Half a minute of walking: a fight or a word on the way isn't counted.)
+      if (!pr || pr.leg !== W || L < pr.best - 6) this.progress = { leg: W, best: L, walked: 0 };
+      else if ((pr.walked += dt) > 30) { this.progress = null; this.lost(); return; }
       const sx = hx, sz = hz, far = Math.min(L, 45), aim = [m.x + hx * far, m.z + hz * far];
       const lp = this.loc;
       if (!lp || (!lp.pending && (lp.leg !== W || this.t - lp.t > 6 || dist(m.x, m.z, lp.to[0], lp.to[1]) < 5))) {
