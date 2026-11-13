@@ -24,4 +24,6 @@ for (const d of DELVES) {
   if (t) { const [x, y, z, nx, nz] = t; out.push(`${d.key}${tag}_torch:${f(x + nx * 2.2 - nz * 1.1)},${f(y - 0.3)},${f(z + nz * 2.2 + nx * 1.1)}:${f(x)},${f(y - 0.1)},${f(z)}`); }
   if (b) { const [x, y, z] = b; let a = 0; while (caveRoom(x + Math.cos(a) * 3, z + Math.sin(a) * 3) < 0.8 && a < 6) a += 0.5; out.push(`${d.key}${tag}_fire:${f(x + Math.cos(a) * 3)},${f(y + 1.9)},${f(z + Math.sin(a) * 3)}:${f(x)},${f(y + 1.2)},${f(z)}`); }
 }
-console.log(out.join(' '));
+// (The player is left at each delve's way in, so nothing wakes and walks into the picture.)
+const home = (name) => { const d = DELVES.find((q) => name.startsWith(q.key)); return `:11:${f(d.x + d.entry.x)},${f(d.z + d.entry.z)}`; };
+console.log(out.map((a) => a + home(a)).join(' '));

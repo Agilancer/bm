@@ -158,7 +158,10 @@ function castleShell(K, d) {
     // (And by a doorway's corner, where half a metre out is under the passage's lower roof: the highest of three looks in,
     // so no wall stops short of the roof it stands under and leaves a hole.)
     const y0 = Math.min(caveFloorY(ax, az), caveFloorY(bx, bz)) - 0.4;
-    let top = caveRoofY(ix, iz);
+    // (The roof is laid a two-metre flag at a time, each at the height over its own middle: the wall goes up to the flag
+    // it stands under, which by a passage's mouth is the room's and not the passage's.)
+    const flag = (x, z) => caveRoofY(g.x0 + (Math.floor((x - g.x0) / C / 4) * 4 + 2) * C, g.z0 + (Math.floor((z - g.z0) / C / 4) * 4 + 2) * C);
+    let top = Math.max(caveRoofY(ix, iz), flag(mx + gm[0] * 0.3, mz + gm[1] * 0.3), flag(ix, iz));
     for (const o of [1.8, 3]) if (caveRoom(mx + gm[0] * o, mz + gm[1] * o) > 0.3) top = Math.max(top, caveRoofY(mx + gm[0] * o, mz + gm[1] * o));
     top += 0.05;
     const ux = bx - ax, uz = bz - az, flip = -uz * gm[0] + ux * gm[1] < 0;
