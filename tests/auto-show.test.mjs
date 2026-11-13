@@ -10,7 +10,7 @@ import { readTime } from '../src/ui/autobrain.js';
 import { CTRL } from '../src/core/layout.js';
 import { THIRD } from '../src/core/third.js';
 
-const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
+const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8').replace(/\r\n/g, '\n');   // (a Windows checkout's line ends)
 const me = { x: 10, y: 2, z: -5, yaw: 0.7, vx: Math.sin(0.7), vz: Math.cos(0.7), t: 2, s: 1, a0: 0.7 + Math.PI, ox: 12, oz: -3 };
 
 test('no shot is taken in a fight, a talk comes before the rest, and the open sky is wanted for all but a talk', () => {
@@ -124,10 +124,45 @@ test('the world\'s clock is only hurried by auto-play, in ticks no longer than e
   for (const stop of ['INPUT.PAUSE]) { this.haste(false);', 'input.auto = null;\n      this.haste(false);']) assert.ok(auto.includes(stop), 'hands on, or the pause, leaves the world hurried');
 });
 
-test('the view behind him is only lent to auto-play: nothing is saved, and the switch is as it was after', () => {
+test('the view is only lent to auto-play: your own is as it was after, and V chooses first person or behind him while it plays', async () => {
   const view = read('../src/ui/view.js'), auto = read('../src/ui/autoplay.js');
-  assert.ok(view.includes('(this.on || this.forced) && allowed') && !/forced[^\n]*save\(/.test(view));
-  assert.ok(auto.includes('vs.forced = this.on && this.cam.third'));
+  assert.ok(view.includes('this.third && allowed') && auto.includes('vs.auto = this.on ? this.cam.view : null') && auto.includes('viewSwitch.auto = null'));
+  assert.ok(read('../src/title.js').includes('<option value="first">'), 'first person is a choice in Settings');
+  // The switch itself, with no page: a stub for the two elements it makes and finds.
+  const el = () => ({ style: {}, classList: { toggle() {} }, addEventListener() {}, appendChild() {} });
+  const was = { document: globalThis.document, window: globalThis.window };
+  globalThis.document = { createElement: el, getElementById: (id) => (id === 'spells' ? el() : null), body: el() };
+  globalThis.window = { addEventListener() {} };
+  try {
+    const { ViewSwitch } = await import('../src/ui/view.js');
+    const { AutoCam } = await import('../src/ui/autocam.js');
+    const { INPUT } = await import('../src/core/layout.js');
+    const settings = { view: 'first', autocam: 'director' }, shared = { input: new Float32Array(256) };
+    let saves = 0;
+    const vs = new ViewSwitch({ input: { enabled: true, menu: false }, shared, settings, save: () => saves++, tip() {}, busy: () => false });
+    const cam = new AutoCam({ settings }), snap = new Float32Array(4096);
+    const frame = (on) => { vs.auto = on ? cam.view : null; vs.frame(snap); return shared.input[INPUT.THIRD]; };
+    assert.equal(frame(false), 0, 'your own view: first person');
+    assert.equal(frame(true), 1, 'auto-play: behind him');
+    vs.toggle();
+    assert.equal(settings.autocam, 'first');
+    assert.equal(frame(true), 0, 'V while it plays: through his eyes');
+    assert.equal(settings.view, 'first', 'your own view is not touched');
+    vs.toggle();
+    assert.equal(settings.autocam, 'director', 'and back to the shots it had');
+    assert.equal(frame(true), 1);
+    // (Your own view third, auto-play's first: his eyes while it plays, behind him again when it stops.)
+    settings.view = 'third'; vs.on = true; settings.autocam = 'first';
+    assert.equal(frame(true), 0);
+    assert.equal(frame(false), 1);
+    // As you left it: V is your own switch, as ever.
+    settings.autocam = 'off';
+    assert.equal(frame(true), 1);
+    vs.toggle();
+    assert.equal(settings.view, 'first');
+    assert.equal(frame(true), 0);
+    assert.ok(saves >= 3);
+  } finally { globalThis.document = was.document; globalThis.window = was.window; }
 });
 
 test('bold is a choice in the menu, kept, and makes the head dare more', () => {

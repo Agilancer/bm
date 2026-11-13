@@ -870,8 +870,10 @@ That menu keeps the last choice after 12 seconds.
 
 **Made to be watched.** Each of these is a line in Settings and is on to begin with.
 
-- **The camera** (`src/ui/autocam.js`; Camera in auto-play: Directed, Behind him, or As you left it). While it plays the
-  view stands behind him, as third person does (`ViewSwitch.forced`: lent, nothing saved, and yours again when it stops).
+- **The camera** (`src/ui/autocam.js`; Camera in auto-play: Directed, Behind him, First person, or As you left it). While
+  it plays the view stands behind him, as third person does (`ViewSwitch.auto`: lent, your own view kept, and yours again
+  when it stops). **V**, or the eye by the spell bar, while it plays chooses between that and first person, through his
+  eyes: no shots are taken then, and the choice is kept.
   Directed, it's taken off his shoulder now and then for a shot: over his shoulder at whoever he's talking to; low
   behind the shield when he rides it somewhere; once round him when something big goes down or a level comes; up and
   back over the road as he comes into a new country; alongside him, then out ahead of him, on a long walk. Only the
@@ -1007,9 +1009,15 @@ screen is a frame for each, with their life.
   he hits and every few seconds turns anything loose on the rest of you onto himself (`tauntBy` in `src/sim/foes.js`). The
   healer keeps nine metres back and mends whoever needs it most, with a quick light or, for someone low, a great one. The
   rest take the fight's adds first, then what the tank's holding, then what you're shooting.
-- **They go where you go**, along your own path, so they come round corners after you, at your pace (they run when you
-  do), and stand round you when you stop (`heel` in `src/sim/hero.js`). Left far behind, or through a portal without
-  them, they catch you up.
+- **They go where you go, each their own way** (`heel` in `src/sim/hero.js`; `node --test tests/company-own.test.mjs`).
+  On the road most keep a few strides back along your own path, so they come round corners after you, at your pace (they
+  run when you do), and every so often one or two run on ahead of you for a while (out of doors only; the light-footed
+  most, plate and the healer least: `LEAD_EAGER`). They face the way they walk, never the way you look. When you stop
+  they stop about where they are, and each finds something to do (`idleBit`): keeps watch some way, turns to you or to
+  one of the others for a word, strolls a few steps, goes off to look at something and comes back, stretches or folds
+  their arms, sits down after a while, or, a bard, plays. Turning your head moves nobody. Anything that needs doing (a
+  fight, something marked on the ground, you setting off) ends it (`endBit`). Left far behind, or through a portal
+  without them, they catch you up.
 - **They ride the shield with you.** When you get on your board, they get on theirs, beside and behind you, and step off
   when you do (`updateFreeSurf`).
 - **They fall and get up.** One who falls lies there till the fight's over, then gets up with half their life.
@@ -1186,17 +1194,30 @@ on top of whatever the legs are doing:
   back; at ease the hands are as modelled.
 - **What hangs at the hips stays there** (`hipFrame`). A sword, a knife or a boomerang put away at the hip was kept by the
   pelvis bone, and some of the gesture clips turn that bone right round: a bard's sword swung to the other hip, point
-  first, while he waved. It's kept now by where the hips stand (the joints either side and the spine above).
+  first, while he waved. It's kept now by where the hips stand (the joints either side and the spine above). And a bard's
+  sword is put away at his hip whatever his lute is doing: while the lute was coming off his back or going back to it, the
+  sword was left part-way between his open hand and his hip.
 - **The charge** (`lanceRush`) is a run: sprint legs, bent in behind the board, the lance couched and level, his fist at
   one height so the point doesn't nod with his stride. It ends: he stops with his point's reach a little into them,
   plants, drives the point out, and what it's driven into is thrown back down the lance. He used to run on through them.
   The Phalanx Rush is three of these. The light on it is a spark on the point and the air torn behind him: the lance is
   seen.
-- **At ease** he carries the lance upright in his right fist at his side, the board on his back: there's nowhere on a
-  man to put a three-metre lance away, and it used to be jammed under the board. It goes to his back, beside the board,
-  only for what needs both hands or the whole body (sitting, a dance, the ride down the Fall).
+- **At ease** the lance is in his hand, the board on his back: there's nowhere on a man to put a three-metre lance away.
+  Standing, it's grounded: its butt by his right foot, his hand on the shaft at his chest, as a guard stands with a
+  spear. Walking, it's sloped on his right shoulder, his hand low on it before him and its point up behind
+  (`carryAim`, `CARRY`, and the at-ease part of `poseLance`; the lance slides through his fist between the two,
+  `carryBack`). It used to hang upright from a fist at his hip, held by nothing: the arm's at-ease pose was written
+  and never run. It goes to his back, beside the board, only for what needs both hands or the whole body (sitting, a
+  dance, the ride down the Fall).
+- **Between blows** (`poseReady`, `node --test tests/hero-poses.test.mjs`) the fight's one stance for everyone, its off arm
+  held straight out, is mended where it doesn't suit what's in the hands. An archer holds her bow upright before her on
+  a bent arm, not out at arm's length. A bard, a sword in one hand and nothing in the other, keeps the empty hand in by
+  his hip, not held out open. A paladin with a mace and a board keeps the board up before his chest in reach of a foe
+  (short of a block: it turns no blows), where it used to hang at his side.
 - **A dragoon** holds his spear in both hands, the rear one at his hip and the other a forearm's length up the shaft,
-  thrusts with both, and sweeps its head across before him. **A paladin with a maul** carries it head up before him, both
+  thrusts with both, and sweeps its head across before him. The lead hand never lets go: it slides up the shaft as the
+  rear fist draws back and back down it as the thrust goes out (it used to come off the spear, open, for the whole of the
+  draw). **A paladin with a maul** carries it head up before him, both
   hands on the haft, and the left hand stays on it through his blows wherever a left hand could be.
 - **Dashes are runs.** A paladin's charge, a dragoon's step and a boomerang knight's dash used to slide in a crouch;
   they run now (`dash` in `src/sim/heroskills.js`). Lunges that ended all but lying down are played part-way
@@ -1208,7 +1229,27 @@ on top of whatever the legs are doing:
   takes a share of the sky's light on its shaded side (`heroLook` in `src/gfx/materials.js`).
 
 `tests/hero-skills.test.mjs` has a test of the lancer's hold: level lance, board before him and facing them through
-guard, thrust and run; the thrust drawn back and driven out; the run stopping short and ending in a thrust.
+guard, thrust and run; the thrust drawn back and driven out; the run stopping short and ending in a thrust. Another that
+a dragoon's lead hand stays on the shaft through guard, draw and thrust, and another that a bard's sword put away is at
+his left hip through the gesture clips and with the lute part-way off his back.
+
+**Who looked at this** (2026-11-11 and 12): two critics over three rounds, from frames of all 44 bodies (twelve views
+each) and every move, filmed in the real game on the real GPU. One briefed as an armourer of thirty years, who read up on
+how a harness is built and worn before judging; one as a specialist in animation and textures.
+
+| Round | Armour | Animation | Textures |
+| --- | --- | --- | --- |
+| 1 | fail, 6 | fail, 5.5 | 6 |
+| 2 | fail, 7.5 | fail, 6.5 | 7 |
+| 3 | fail, 8.5 | fail, 7.5 | 7.5 |
+
+Neither passed it. Both said from the first round that the lancer fights with his lance, and by the third the animation
+critic would sign the lancer whole. The third round failed on one thing each: a bard's sword beside his open hand at ease
+(the lute, above) and the dragoon's lead hand leaving the spear in the draw (above). Both were mended after it and no
+critic has judged the mending. Left as they are, and theirs to say: the suits' own designs (separated cups, heels,
+pauldrons as big as the helm, no scabbards), several recolours the texture critic would change (lancer_m3 and lancer_m4's
+plain back plates, boomerang_f3, bard_m3, paladin_f2, dragoon_f1 and dragoon_f3, a few near-twins), skirts that go flat
+in a jog, leaps that hang in the air, thrown things with no throwing arm, and the paladin's long wind-ups.
 
 ### Looking at their moves, and who looked
 
@@ -2199,6 +2240,73 @@ through only once the GPU's said nothing for five seconds (`lastDone` in `src/gf
 show the GPU's time a frame, at worst lately, and when it last finished one. What stalled it isn't known: the road's
 bodies are all built while loading (`BODIES` in `src/sim/undead.js`), so the fight makes nothing new on the GPU.
 
+### When the browser closes the game
+
+A phone's browser gives a page only so much memory, and one that asks for more is killed with nothing said: the screen goes
+white and the page loads again from the start. Nothing in the page can catch it. That is what the owner's phone was doing
+(November 2026), and it's a different thing from a lost GPU, above, which the game sees and says.
+
+**What it was.** Measured in headless Chromium made to look like a phone (an iPhone's name and screen, so the Mobile tier;
+a software GPU, so the sizes are honest and the speeds aren't), every thread's memory read over the debugger and every
+texture and buffer the game asks the GPU for counted:
+
+| | Before | After |
+| --- | --- | --- |
+| Script memory as the load ends, all threads (it varies with when the browser collects its garbage) | 866 MB | 407 to 540 MB |
+| The same once garbage is collected | 582 MB | 301 MB |
+| The page's process as the load ends | 1,925 MB | 1,360 to 1,530 MB |
+| The page's process once garbage is collected | 1,405 MB | 1,057 MB |
+| Textures on the GPU, in the town | 306 MB | 232 MB |
+| Buffers on the GPU, in the town | 312 MB | 239 MB |
+
+`NODE_PATH=$(npm root -g) node tools/phone_memory.mjs` prints these (`TOP=20` for the GPU's biggest by the code that made
+them, `WHO=1` for each thread's heap and typed arrays by the code that allocated them, which is how each of these was
+found). Run it after anything that adds to what's loaded.
+
+- **The lands' and the delves' scenery** (`src/core/sites.js`) was built as plain lists of numbers, 1.75 million corners
+  of them since the delves' three passes, and kept for good by both threads that built it: 150 MB in the page, which only
+  wants them until they're on the GPU, and 150 MB in the simulation, which never draws anything. Now they're built in
+  typed arrays (`Grow`), the simulation builds none (`buildSites()`; `buildSites(true)` for the land's corners), and the
+  renderer lets its own go once they're uploaded (`dropSiteGeometry`). `node --test tests/sites-lean.test.mjs` holds the
+  two builds to the same colliders, floors, fires and spots.
+- **The delves a delve at a time.** All seven delves' corners and the Test Dungeon's were in the one vertex buffer with
+  the land's: 62 MB on the GPU for good, and drawn into every shadow map, for the one delve you might go down. Now the
+  land's are alone in it (16 MB), and the delve the eye is down is built and put up when it goes down (`buildUnder` in
+  `src/core/sites.js`, `useUnder` in `src/gfx/renderer.js`: 5 to 12 MB, 60 to 190 ms to build on a PC, so a moment's
+  pause in the portal on a phone). The last one's kept while you're up. The stones that break (`Kit.group`) are folded
+  in that buffer, and one built after they broke is built with them broken. The same test builds each delve alone and
+  all together and holds them to the same corners.
+- **The trees over the knights' plates** (`PlateBVH` in `src/sim/world.js`), an object for every node: 30 MB, now 8 in two
+  typed arrays (`tests/plate-tree.test.mjs`).
+- **Sound that was never let go** (`src/audio.js`). A loop is some 17 MB decoded, there are thirty of them (the woods by
+  day and by night, in rain and in storm, the houses, the caves, the sea), and each one ever heard played on in silence
+  for good: an hour's walking held 300 MB, which is a game that dies after a while rather than at the start. A bed or a
+  spot silent for ten seconds is stopped and its sound dropped; it comes back the moment it's wanted. And of the one-off
+  sounds it decodes as they're first heard, a phone keeps 24 MB, the longest unheard going first
+  (`tests/audio-kept.test.mjs`).
+- **Models' pictures on a phone** (`mapScale`, `texCap` on the Mobile tier in `src/gfx/gpu.js`; `bitmapTexture` in
+  `src/gfx/renderer.js`). None is over 512 a side (some bodies' colours came 4096 across, 1024 after the tier's shrink),
+  and a body's normals and its metal and roughness are half its colours' size again. The arms and what's held in them
+  keep theirs.
+- **A body built once for all who wear it** (`cloneCharacter`). The seven quartermasters each had a body of their own;
+  on a phone they wear two between them (`withBrokers` in `src/core/heroes.js`), and any two of the cast in the same body
+  share its mesh and pictures.
+
+**What's left**, biggest first: the skinned bodies' buffers (about 130 MB: 100 bytes a corner, every monster of the road
+and the woods loaded at the start, where the models themselves would have to be made coarser for a phone), the interiors
+(36 MB), the townsfolk (some 40 MB), and the simulation's rigs and walking fields (about 150 MB).
+
+**The note the game leaves** (`src/core/lastrun.js`). Since nothing can catch the kill, the game writes down what it's
+doing as it goes: loading, at the title, playing, for how long and where, every eight seconds of play. Leaving the page or
+putting it away marks the note; one found unmarked at the next start is a page the browser killed. The title then says so
+(when, and where you stood), offers **Continue** from the last autosave, and on a phone loads lighter: after one death
+four of the other heroes instead of eight and no model's picture over 256 a side, after two only two of them. The
+level is kept in this browser (`velscour.light`); `?light=0` puts it back, `?light=2` tries the lightest. If it still
+happens, what the title says is what to pass on: whether it died loading or playing, and after how long.
+
+**Not known:** which of these the owner's phone was dying of, or how much it allows. Nothing here has been run on a phone:
+the pictures looked at were the town and three delves in headless Chromium at a phone's settings.
+
 ### What has and hasn't been tested
 
 The owner's first session on a phone found the frame rate too low, which led to the phone tier below. **That rework hasn't
@@ -2293,6 +2401,7 @@ To check it yourself:
 | `tools/review.js`, `tools/sheet.py` | Stage scenes and screenshots, and run a scripted fight, for reviews |
 | `tools/test_governor.mjs` | The phone governor against simulated phones |
 | `tools/phone_bench.mjs` | The game at a phone's screen size on a software GPU: frame costs, and the governor under real load |
+| `tools/phone_memory.mjs` | How much memory the game holds at a phone's settings, thread by thread and on the GPU, and which code holds it |
 | `tools/load_time.mjs` | How long a start takes and where the time goes: two starts, nothing cached and then the cache full |
 | `src/core/files.js` | The start's files: fetched through here so the loading screen can name them, and how many are in hand at once |
 | `src/sim/` | The simulation thread: knights, AI, crabs, player, collisions |

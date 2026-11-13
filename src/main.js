@@ -10,7 +10,7 @@ import { Audio } from './audio.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { FileWatch, getFile, watchFiles } from './core/files.js';
-import { initGPU, isMobileDevice } from './gfx/gpu.js';
+import { initGPU, isMobileDevice, lighten } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
 import { STEPS as DESK_STEPS, deskStep } from './gfx/deskscale.js';
 import { RenderDiagnostics } from './gfx/render-diagnostics.js';
@@ -54,11 +54,14 @@ import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
+import { beginRun, deathWords, noteRun } from './core/lastrun.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
+// How the last run ended, and how light to load (src/core/lastrun.js). (Tests under ?auto are killed, not left: not judged.)
+const RUN = AUTO && !params.has('light') ? { died: null, light: 0 } : beginRun(params);
 const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
 // Every new game begins with the witch in the cave.
 const OPENING_ENABLED = !params.has('noopening');   // (?noopening starts in the town, for tests)
@@ -325,6 +328,9 @@ async function boot(plan, poolSize) {
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
   try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
+  // (A phone whose browser closed the game last time loads lighter: src/core/lastrun.js.)
+  if (gpu.mobile && RUN.light) gpu.tier = lighten(gpu.tier, RUN.light);
+  noteRun({ stage: 'loading' });
   // A lost GPU: a phone or tablet takes its graphics back (its memory, a GPU that hung, the app put away), and Safari calls
   // that 'destroyed' too, so it's any loss (the game never destroys its own). Where you are is kept, and the page comes back
   // to the menu with Continue offered (gpuLostOffer, below). Not if it went the same way within the last minute: then it
@@ -340,6 +346,7 @@ async function boot(plan, poolSize) {
       sessionStorage.setItem(GPU_LOST_AT, String(Date.now())); sessionStorage.setItem(GPU_LOST_OFFER, '1'); sessionStorage.setItem('velscour.skipSplash', '1');
       sessionStorage.setItem(GPU_LOST_NOTE, gpuNote?.() || '');
     } catch { /* no storage */ }
+    noteRun({ ended: 'gpu', gpu: gpuNote?.() || '' });
     failOnTitle('The graphics reset. Keeping your game, and starting again...');
     await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
     leaving = true;
@@ -407,7 +414,10 @@ async function boot(plan, poolSize) {
   // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
   // How many: by the tier, the setting, or ?heroes=N for tests.
   const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
-    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
+    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop'],
+      // (Each is a body, its pictures and its rig, some 10 MB: a phone that's been killed once has four, twice two. Not
+      // none: the quartermasters come with the cast, and they're how a party is hired.)
+      gpu.mobile && RUN.light ? (RUN.light > 1 ? 2 : 4) : 99);
   let cast = [];
   if (heroCount > 0) {
     try {
@@ -416,7 +426,7 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit, !!gpu.tier.lean);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
@@ -691,6 +701,7 @@ async function boot(plan, poolSize) {
     if (!input.touch && !AUTO) input.lock();
   }, { audio, renderer, log: chatLog, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
   const enter = async (fresh = true) => {
+    noteRun({ stage: 'playing' });
     title.hide();
     game.idle = false;
     state.paused = false;
@@ -715,7 +726,7 @@ async function boot(plan, poolSize) {
 
   // What a save holds, part by part (saves.js): where you stand and which way you face, the time played, and the pack and
   // what's on the body. Quests will be a part of their own. What's lying on the ground isn't kept: a load starts the world fresh.
-  let played = 0, playT = 0;
+  let played = 0, playT = 0, runT = 0, noteT = 0;   // (runT: played this run of the page; noteT: since the run's note was last written)
   addPart('player', {
     save: () => {
       const s = game.currentSnap();
@@ -775,8 +786,14 @@ async function boot(plan, poolSize) {
       if (townUI.quests.wantsWarden(renderer.hour) && townUI.wardenAsked !== night) { townUI.wardenAsked = night; simWorker.postMessage({ type: 'warden' }); }
     }
     if (!input.enabled || state.paused) return;
-    played += dt; playT += dt;
+    played += dt; playT += dt; runT += dt; noteT += dt;
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
+    // The run's note (src/core/lastrun.js): how long it's been played and where you stand, for the start after a death.
+    if (noteT > 8) {
+      noteT = 0;
+      const s = game.currentSnap();
+      noteRun({ stage: 'playing', mins: runT / 60, where: s ? `at (${Math.round(s[H.PX])}, ${Math.round(s[H.PZ])})` : '', gpu: gpuNote?.() || '' });
+    }
   };
   const loadInto = async (data) => {
     leaveTest();
@@ -790,6 +807,20 @@ async function boot(plan, poolSize) {
   const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
   // Back after the GPU was lost (above): Continue, offered once, with a word on why. (A tap, which also lets the sound back
   // on in a browser that wants one first.)
+  // Back after the browser closed the game (src/core/lastrun.js): said, with Continue if there's a game kept.
+  const diedOffer = async () => {
+    if (!RUN.died || AUTO) return;
+    console.warn('the last run was ended by the browser', RUN.died);
+    await new Promise((r) => setTimeout(r, 700));
+    const kept = !!saves.newest();
+    const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
+      + `${gpu.mobile && RUN.light ? ` This time the game is using less: ${RUN.light > 1 ? 'only two' : 'fewer'} of the other heroes are about, and bodies are painted smaller.` : ''}`
+      + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
+    if (await title.confirm({ title: 'The game was closed', text, yes: kept ? 'Continue' : 'Back', no: kept ? 'Main Menu' : false }) && kept) {
+      const d = saves.newest();
+      if (d) startFrom(d);
+    }
+  };
   const gpuLostOffer = async () => {
     let ask = false, note = '';
     try { ask = sessionStorage.getItem(GPU_LOST_OFFER) === '1'; note = sessionStorage.getItem(GPU_LOST_NOTE) || ''; sessionStorage.removeItem(GPU_LOST_OFFER); } catch { /* no storage */ }
@@ -817,6 +848,7 @@ async function boot(plan, poolSize) {
     game.idle = true;
     audio.setAmbience(0);
     audio.surf(0, false);
+    noteRun({ stage: 'title' });
     title.toMenu();
   };
   title.onMenu = async (a) => {
@@ -1062,7 +1094,9 @@ async function boot(plan, poolSize) {
   files.last = '';
   setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`, true);
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
+  noteRun({ stage: AUTO ? 'playing' : 'title' });
   gpuLostOffer();
+  diedOffer();
   if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
 }
 

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { Kit, buildSites, tileOf } from '../src/core/sites.js';
+import { Kit, buildSites, buildUnder, tileOf } from '../src/core/sites.js';
 import { dressLairs, lairKind } from '../src/core/lair-dress.js';
 import { LAIRS } from '../src/core/tripo-monsters.js';
 import { routeDist } from '../src/core/lands.js';
@@ -24,6 +24,7 @@ test('the dressing is for the eye: no collider, nothing on a road, no cloth', ()
   const K = new Kit();
   K.colliders.push({ x: 0, z: 0, hx: 1, hz: 1, yaw: 0, h: 1 });
   dressLairs(K, []);
+  K.finish();
   assert.equal(K.colliders.length, 1);
   let tris = 0, onRoad = 0;
   for (const [layer, p] of K.parts) {
@@ -41,7 +42,7 @@ test('the dressing is for the eye: no collider, nothing on a road, no cloth', ()
 
 test('every painting a place or a dungeon asks for is in the game', () => {
   const have = new Set(manifest.layers.map((l) => l.name));
-  for (const layer of [...buildSites().parts.keys(), ...buildSites().under.keys()]) {
+  for (const layer of [...buildSites(true).parts.keys(), ...buildUnder().parts.keys()]) {
     const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(layer), base = m ? m[2] : layer;
     assert.ok(have.has(base) || FLAT.has(base), `no painting called ${base}`);
   }
@@ -55,7 +56,7 @@ test('every painting a place or a dungeon asks for is in the game', () => {
 
 test('no one painting is most of a dungeon any more', () => {
   const area = new Map();
-  for (const [layer, p] of [...buildSites().parts, ...buildSites().under]) {
+  for (const [layer, p] of [...buildSites(true).parts, ...buildUnder().parts]) {
     for (let i = 0; i < p.idx.length; i += 3) {
       const [a, b, c] = [0, 1, 2].map((k) => { const v = p.idx[i + k] * 3; return [p.pos[v], p.pos[v + 1], p.pos[v + 2]]; });
       if (Math.abs(a[0]) < 5600 && Math.abs(a[2]) < 5600) continue;
