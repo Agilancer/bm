@@ -200,6 +200,8 @@ export const PLAYHOUSE = {
   entry: { x: 0, z: 2.5, yaw: Math.PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: -33.4, z: -240, yaw: Math.PI / 2 },
   // In the Twisted Grove (SITES.grove), facing its stone table.
   portal: { x: 3087, z: 4493, yaw: 1.08, r: 2.2 },
+  // (The Free Company's post on its terrace: src/core/dungeon.js POSTS.)
+  post: { body: 'bard_f3', name: 'Sergeant Maud Halloway', say: "A company of players wintered under this grove and never came up. There's music down there still, some nights. I wouldn't go to see that play alone: four at your back." },
   last: 'dollmaker', tough: { hp: 10.5, damage: 2 }, pay: { xp: 3800, gold: 620 },
   names: { 'Haunted Mannequins': 'THE COMPANY', 'The Possessed': 'PATRON', 'Dead Children': 'DOLL', 'Night Paralysis Demons': 'STAGEHAND', Necromancers: 'PROMPTER' },
   look: { wall: 'wall_13', foot: 'wood', floor: 'wood', roof: 'dark:wood', flame: 'flame', banner: 'spore:cloth_oat', light: [1, 0.72, 0.42], fire: [1, 0.76, 0.46], every: 9, high: 2.6, glow: 1.6, lit: true },

@@ -30,7 +30,18 @@ export const tileOf = (layer) => {
 };
 
 export class Kit {
-  constructor() { this.parts = new Map(); this.colliders = []; this.spots = {}; this.floors = []; }
+  constructor() { this.parts = new Map(); this.colliders = []; this.spots = {}; this.floors = []; this.groups = new Map(); }
+
+  // Scenery that can be taken away and put back while the game runs: whatever fn builds is one group under key, there from
+  // the start (on) or not. Everything else out here is built once and never changes; a group's corners are remembered
+  // (layer, from which to which) so the renderer can fold them away and bring them back (src/gfx/renderer.js setScenery).
+  // What stops a body isn't changed by it: the field and the colliders stay as they were built.
+  group(key, on, fn) {
+    const before = new Map([...this.parts].map(([l, q]) => [l, q.pos.length / 3]));
+    fn();
+    const g = this.groups.get(key) || this.groups.set(key, { on, ranges: [] }).get(key);
+    for (const [layer, q] of this.parts) { const v0 = before.get(layer) || 0, v1 = q.pos.length / 3; if (v1 > v0) g.ranges.push({ layer, v0, v1 }); }
+  }
 
   part(layer) {
     let p = this.parts.get(layer);
@@ -1393,7 +1404,7 @@ function flattest(x0, z0) {
 }
 
 let built = null;
-// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots }.
+// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots, floors, groups (Kit.group) }.
 export function buildSites() {
   if (built) return built;
   const K = new Kit();
@@ -1405,6 +1416,6 @@ export function buildSites() {
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   // (What lies about the lairs, last, so it keeps clear of everything above: src/core/lair-dress.js.)
   dressLairs(K, SEALS);
-  built = { parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors };
+  built = { parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, groups: K.groups };
   return built;
 }

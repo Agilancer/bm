@@ -188,6 +188,8 @@ export const VAULTS = {
   entry: { x: 2, z: 21, yaw: Math.PI }, exitIn: { x: 2, z: 24.5 }, exitOut: { x: 14, z: -152, yaw: 0 },
   // By the Sunken Mile (SITES.causeway), facing the last of the causeway.
   portal: { x: -430, z: -2717, yaw: 0.53, r: 2.2 },
+  // (The Free Company's post on its terrace: src/core/dungeon.js POSTS.)
+  post: { body: 'bard_m1', name: 'Sergeant Hobb Marlow', say: "The Mile went under in a night and took the toll-house with it. What's down there now won't be met alone: four at your back, or you'll not see the Reeds." },
   last: 'leviathan', tough: { hp: 10, damage: 2.2 }, pay: { xp: 2300, gold: 380 },
   // What its rank and file are called down here, by their kind (src/sim/tripo.js optsFor).
   names: { 'The Possessed': 'THE DROWNED', 'Dead Children': 'DROWNED CHILD', Kobolds: 'MUDLARK', Dragonlings: 'BOG DRAKE', 'Giant Spiders': 'VAULT-KEEPER' },

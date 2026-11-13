@@ -2,7 +2,7 @@
 // src/sim/dungeon.js): hiring a party at a quartermaster's post, walking the caves room by room with the party gathered, and
 // fighting the bosses by their calls: out of the circles and the fire, at the dragon's side, behind a pillar when she flies,
 // the adds first, the twins kept even. src/ui/autobrain.js calls in here; this keeps the Warrens' rules in one place.
-import { ALL_PACKS, BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, DELVES, PARTY, PERCH, PILLARS, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, inDungeon, roleOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
+import { ALL_PACKS, BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, DELVES, PARTY, PERCH, PILLARS, POSTS, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, inDungeon, roleOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
 import { hirePrice } from './party.js';
 import { edge, wayOut } from '../core/perils.js';
 import { INPUT } from '../core/layout.js';
@@ -81,10 +81,11 @@ export function hireJob(b, m) {
   const r = P.roles(), want = PARTY.size - P.members.length;
   const cost = hirePrice(m.lvl + 1) * want;
   if (b.o.pack.purse() < cost + 100) return null;
-  const which = dist(m.x, m.z, ...BROKER_SPOTS.portal) < dist(m.x, m.z, ...BROKER_SPOTS.town) ? 'portal' : 'town';
-  const [x, z] = BROKER_SPOTS[which];
+  // (Whichever post is nearest: the town's, the Warrens', one at a later delve's portal. Not the Test Dungeon's keeper.)
+  const which = Object.keys(BROKER_SPOTS).filter((k) => k !== 'hall').sort((p, q) => dist(m.x, m.z, BROKER_SPOTS[p][0], BROKER_SPOTS[p][1]) - dist(m.x, m.z, BROKER_SPOTS[q][0], BROKER_SPOTS[q][1]))[0];
+  const [x, z] = BROKER_SPOTS[which], post = POSTS.find((q) => q.broker === which);
   void r;
-  return { kind: 'hire', why: 'hire', which, x, z, say: `To ${which === 'town' ? 'Aldous Fenn by the square' : 'Captain Vale at the Warrens'}, to hire a party.` };
+  return { kind: 'hire', why: 'hire', which, x, z, say: `To ${which === 'town' ? 'Aldous Fenn by the square' : post ? `${post.name} at ${post.delve}` : 'Captain Vale at the Warrens'}, to hire a party.` };
 }
 
 export function doHire(b, m, j) {

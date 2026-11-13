@@ -176,6 +176,8 @@ export const SPOREHOLD = {
   entry: { x: 0, z: 3, yaw: Math.PI }, exitIn: { x: 0, z: 6.5 }, exitOut: { x: -30, z: -277 },
   // On the hill beside the Fungal Ring (SITES.fungus), facing the ring.
   portal: { x: 2861, z: -4290, yaw: 1.82, r: 2.2 },
+  // (The Free Company's post on its terrace: src/core/dungeon.js POSTS.)
+  post: { body: 'bard_f2', name: 'Ensign Wren Aldery', say: "Mind the ring on the hill, and don't breathe deep by it. Whatever it fruits from is under us, and it has had the last three who went down singly. Four at your back." },
   last: 'heart', tough: { hp: 9, damage: 1.7 }, pay: { xp: 3000, gold: 480 },
   names: { Kobolds: 'SPORELING', 'Giant Spiders': 'CAP SPIDER', 'Haunted Mannequins': 'ROOTED HUSK', Werewolf: 'MOULD HOUND', 'Plague Giants': 'BLOAT-CAP' },
   look: { wall: 'spore:rubble', floor: 'spore:rubble', roof: 'spore:stone', spike: 'spore:rubble', stone: 'spore:rubble', flame: 'spore:flame', lamp: 'cap', still: true, light: [0.74, 0.5, 1], fire: [0.6, 0.9, 1], every: 8, lit: 0.5 },

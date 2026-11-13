@@ -187,10 +187,12 @@ export class PartyUI {
     if (!h) return;
     const r = this.roles();
     const want = [!r.tank && 'a lancer to take the blows', !r.heal && 'a paladin to keep you standing', 'blades to do the work'].filter(Boolean);
-    const need = this.fit() ? 'That is a party fit for the Hollowfang Warrens.'
-      : `For the Warrens you'll want four at your back: ${want.length > 1 ? `${want.slice(0, -1).join(', ')} and ${want.at(-1)}` : want[0]}.`;
+    // (A post at one of the later delves speaks of its own: src/core/dungeon.js POSTS.)
+    const where = h.p.delve || 'the Hollowfang Warrens', short = h.p.delve || 'the Warrens';
+    const need = this.fit() ? `That is a party fit for ${where}.`
+      : `For ${short} you'll want four at your back: ${want.length > 1 ? `${want.slice(0, -1).join(', ')} and ${want.at(-1)}` : want[0]}.`;
     const gratis = !!this.freeHire?.();
-    const say = line || (gratis ? `In this hall the Company sends whoever you ask for, and asks nothing for them. ${need}` : h.p.broker === 'portal'
+    const say = line || (gratis ? `In this hall the Company sends whoever you ask for, and asks nothing for them. ${need}` : h.p.say ? `${h.p.say} ${need}` : h.p.broker === 'portal'
       ? `The Warrens won't let one through alone, nor two. Four at your back, or the kobolds have you before the first bend. ${need}`
       : `The Free Company, at your service. Swords for hire: paid once, up front, and they're yours till you let them go. ${need}`);
     this.opts = [];

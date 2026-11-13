@@ -1788,7 +1788,7 @@ export class Hero extends Knight {
     snap[o + 9] = this.dead ? 1 : 0;
     snap[o + 10] = this.below > 0 ? 1 : 0;
     snap[o + 11] = this.foe ? 1 : 0;
-    // Your party: hired, what they're for (1 tank, 2 healer, 3 damage); and a quartermaster's post (1 town, 2 the Warrens).
+    // Your party: hired, what they're for (1 tank, 2 healer, 3 damage); and a quartermaster's post (1 town, 2 a portal's).
     snap[o + 12] = this.hired ? 1 : 0;
     snap[o + 13] = this.hired ? { tank: 1, heal: 2, dps: 3 }[this.role] : 0;
     snap[o + 14] = this.broker ? (this.broker === 'town' ? 1 : 2) : 0;
@@ -2911,7 +2911,7 @@ export class HeroWorld {
   // its hall (src/sim/testhall.js). [x, z, yaw or undefined]
   postOf(h) { return this.sim.testHall?.postOf(h.broker) || BROKER_SPOTS[h.broker]; }
 
-  // A quartermaster keeps his post (in town, by the well; at the Warrens' portal) and turns to whoever comes to talk.
+  // A quartermaster keeps his post (in town, by the well; at a delve's portal) and turns to whoever comes to talk.
   atPost(h) {
     const sim = this.sim, p = sim.player, [x, z, face] = this.postOf(h);
     h.foe = null; h.task = { kind: 'town', place: null, t: 0, peace: true };

@@ -973,6 +973,27 @@ const PROPS = {
     K.drum('pale:rubble', x, y, z, 0.2, 0.34, 8, { r2: 0.38, collide: false }); K.drum('pale:rubble', x, y + 0.34, z, 0.38, 0.4, 8, { r2: 0.22, collide: false });
     K.drum('pale:rubble', x, y + 0.74, z, 0.24, 0.07, 8, NO); K.drum('rubble', x + 0.5, y, z + 0.2, 0.16, 0.08, 6, NO);
   },
+  // One of the Warden's standing stones: rough, as tall as three men. Its foot always stands; the rest of it is scenery that
+  // can go (<tag>_stone_<n>) and what it leaves when it's broken scenery that can come (<tag>_rubble_<n>): a snapped head
+  // on the stump and its pieces lying round. (src/core/sites.js Kit.group; what stops a body stays the whole stone's round.)
+  wardstone(K, d, p, x, y, z) {
+    const r = p.r, cut = 1.5, tall = 5.6, at = (h) => r * (1.1 - 0.3 * h / tall);
+    K.drum('rubble', x, y - 0.3, z, at(0), cut, 7, { r2: at(cut), collide: false, turn: x });
+    K.group(`${d.tag}_stone_${p.n}`, true, () => {
+      K.drum('rubble', x, y - 0.3 + cut, z, at(cut), tall - cut, 7, { r2: at(tall), collide: false, turn: x });
+      K.drum('pale:stone', x, y + 3.4, z, at(3.7) + 0.06, 0.22, 7, { open: true, collide: false, turn: x });
+    });
+    K.group(`${d.tag}_rubble_${p.n}`, false, () => {
+      // (The break: a slanted stub left on the stump, paler inside than out.)
+      K.drum('pale:stone', x + 0.15, y - 0.3 + cut, z - 0.1, at(cut) * 0.92, 0.75, 5, { r2: at(cut) * 0.3, collide: false, turn: x + 0.7 });
+      // (Its pieces: the big ones where it fell, toward the middle of the hall, and smaller ones thrown wider.)
+      for (let i = 0; i < 9; i++) {
+        const a = hash2(p.n * 7 + i, 3) * Math.PI * 2, far = r + 0.5 + hash2(p.n * 7 + i, 5) * 2.6, big = i < 3 ? 0.62 : 0.26 + hash2(i, p.n) * 0.2;
+        const px = x + Math.sin(a) * far, pz = z + Math.cos(a) * far;
+        K.rock(i % 3 ? 'rubble' : 'pale:stone', px, pz, big, big * (0.6 + hash2(i, 9) * 0.5), { y: caveFloorY(px, pz) - 0.08, collide: false, turn: a * 3 });
+      }
+    });
+  },
   // A standing stone with a ring cut round it.
   ringstone(K, d, p, x, y, z) {
     K.box('rubble', x, y - 0.3, z, p.r, 2.9, p.r * 0.7, x, NO);

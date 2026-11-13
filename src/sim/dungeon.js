@@ -39,6 +39,7 @@ export class Warrens {
     this.inside = false;
     this.delve = null;             // the delve you're in (src/core/dungeon.js DELVES), or the last you were
     this.down = new Set();         // bosses dead
+    this.flipped = new Set();      // scenery the other way from how it was built (flip, below)
     this.fight = null;             // the boss fight on, if there is one
     this.portalCd = 0;
     this.leftAt = {};              // when you last left each delve, by its key
@@ -158,6 +159,10 @@ export class Warrens {
     this.sim.event(EV.DELVE, DELVE.ENTER, this.downIn(d), DELVES.indexOf(d));
   }
 
+  // Scenery that comes and goes (src/core/sites.js Kit.group), turned the other way from how it was built, or back: a
+  // standing stone broken, its rubble lying. Sent with the party's post; put back when the fight's lost or the delve stands again.
+  flip(key, on = true) { if (on) this.flipped.add(key); else this.flipped.delete(key); }
+
   // How many of a delve's bosses are down.
   downIn(d) { return BOSSES.filter((b) => b.delve === d.key && this.down.has(b.key)).length; }
 
@@ -165,7 +170,7 @@ export class Warrens {
   resetAll(d = null) {
     const t = this.sim.tripo;
     for (const b of BOSSES) if (!d || b.delve === d.key) this.down.delete(b.key);
-    if (!d || d === this.delve) { this.fight = null; this.clearGround(); }
+    if (!d || d === this.delve) { this.fight = null; this.clearGround(); this.flipped.clear(); }
     if (t) for (const l of t.lairs) if (l.dungeon && (!d || l.delve === d.key)) { if (l.state === 'awake') t.sleep(l); l.state = 'asleep'; l.clearedOnce = false; l.spawned = 0; l.killed = 0; l.moreDone = false; }
     if (d) delete this.leftAt[d.key];
     this.sim.event(EV.DELVE, DELVE.RESET, d ? DELVES.indexOf(d) : -1);
@@ -961,7 +966,7 @@ export class Warrens {
     this.postT = 0.2;
     const f = this.fight;
     self.postMessage({
-      type: 'warrens', inside: true, delve: this.delve.key, down: [...this.down],
+      type: 'warrens', inside: true, delve: this.delve.key, down: [...this.down], flipped: [...this.flipped],
       fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead && !m.buried).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, perch: !!m.flying && !!f.perch, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m, ward: m.shrug ?? 1 })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })),
         // (What the fight wants of you just now: somewhere to be, or not a step. order(), above.)
         order: this.order(this.sim.player) } : null,

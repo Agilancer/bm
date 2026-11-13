@@ -45,7 +45,9 @@ export const PORTAL = { x: 128, z: -212, yaw: -0.71, r: 2.2 };
 export const PORTAL_PAD = { hu: 6.6, hw: 4.4, at: 0.2, level: 1.5 };
 // (And the Test Dungeon's keeper, at the summoning counter in its hall: src/core/testhall.js.)
 // (The portal's quartermaster: on its terrace, at the front to its left, clear of the dais. See src/core/sites.js portalWall.)
-const BROKER_AT_PORTAL = (() => { const c = Math.cos(PORTAL.yaw), s = Math.sin(PORTAL.yaw), u = -4.6, w = 2.2; return [PORTAL.x + u * c + w * s, PORTAL.z - u * s + w * c]; })();
+// (Any delve's: the same place on its own terrace, facing out from its wall.)
+const brokerAt = (p) => { const c = Math.cos(p.yaw), s = Math.sin(p.yaw), u = -4.6, w = 2.2; return [p.x + u * c + w * s, p.z - u * s + w * c]; };
+const BROKER_AT_PORTAL = brokerAt(PORTAL);
 export const BROKER_SPOTS = { portal: BROKER_AT_PORTAL, town: [5, -2], hall: (() => { const q = STATIONS.find((t) => t.who === 'hall'); return [...hallAt(q.x, q.z), q.yaw]; })() };
 
 // Rooms: id, middle (local: x east, z south of the entrance), radius, floor height over DUNGEON.y, how high the roof can rise.
@@ -199,6 +201,11 @@ const WARRENS = {
 };
 // (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
 export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW];
+// The Free Company's posts at the later delves' portals: a quartermaster of its own on each terrace that has one (a delve's
+// post: who, and what they say of the place), to hire a party from where it's wanted. (src/core/heroes.js BROKERS has them
+// after the town's and the Warrens'; their posts go by the delve's key.)
+export const POSTS = DELVES.filter((d) => d.post).map((d) => ({ broker: d.key, delve: d.name, ...d.post }));
+for (const d of DELVES) if (d.post) BROKER_SPOTS[d.key] = [...brokerAt(d.portal), d.portal.yaw + Math.PI];
 for (const d of DELVES) {
   d.nooks ||= []; d.daises ||= []; d.props ||= []; d.pillars ||= [];
   for (const r of d.rooms.concat(d.nooks)) { r.delve = d; if (r.hx !== undefined) r.r = Math.min(r.hx, r.hz); }

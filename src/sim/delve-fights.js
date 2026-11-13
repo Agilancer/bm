@@ -1070,15 +1070,16 @@ export const FIGHTS = {
     open: 'grv_open', pace: [4.2, 3.3, 0.35], turn: [21, 5], enrage: [290, 2.5, 'grv_enrage'],
     deck: ['charge', 'cleave', 'bash', 'charge', 'quake', 'bones'],
     adds: [{ at: 0.5, warn: 'grv_guard', n: 3, pick: GUARD, from: 'doors', hp: 880, damage: 28, name: 'BARROW GUARD', pal: ['Verdigris'], tricks: true }],
-    begin(W, f, [m]) { f.plate = 0.4; m.shrug = 0.4; },
+    begin(W, f, [m]) { f.plate = 0.4; m.shrug = 0.4; f.spent = new Set(); },
     moves: {
       // His head down along a line at one of you, the line following them two and a half seconds; then he comes down it.
-      // If a standing stone is in it, that's where he stops: stunned, and his plate cracked a step.
+      // If a standing stone is in it, that's where he stops: stunned, and his plate cracked a step. The stone breaks, and is
+      // no use again: six of them, so six cracks at most (the broken ones are shown so: W.flip, src/core/delve-build.js wardstone).
       charge: { who: 'mark', clip: null, warn: 'grv_charge', gap: 10, go(W, f, m, t, P) {
         const sim = W.sim, d = roomOf(f.boss.room).delve, far = 30, fuse = 3.2, lock = 0.78;
         const mk = P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t), r: far, w: 1.6, fuse, lock, aim: t, dmg: K(m, 1.3), knock: 6, elem: BONE, from: m, tag: 'charge' });
         f.charge = { on: t, mk };
-        let crash = false, cut = false;
+        let crash = false, cut = false, stone = -1;
         // (Where the line ends: the first rock down it, read as it stops following.)
         const reach = () => {
           if (!cut) {
@@ -1086,10 +1087,12 @@ export const FIGHTS = {
             // (A stone anywhere in the strip counts, not only one dead on its middle: what looks like a hit is one.)
             const sx = Math.sin(mk.yaw), sz = Math.cos(mk.yaw), hit = caveRay(m.x, m.z, sx, sz, far);
             let len = hit > 0 ? hit : far;
-            for (const [cx, cz] of WARDEN_COLUMNS) {
+            WARDEN_COLUMNS.forEach(([cx, cz], i) => {
               const ax = d.x + cx - m.x, az = d.z + cz - m.z, k = ax * sx + az * sz;
-              if (k > 3 && k < len + 1.4 && Math.abs(ax * sz - az * sx) < 2.5) { len = Math.min(len, k - 1.2); crash = true; }
-            }
+              if (f.spent.has(i) || !(k > 3 && k < len + 1.4 && Math.abs(ax * sz - az * sx) < 2.5)) return;
+              if (k - 1.2 <= len) { len = k - 1.2; stone = i; }
+              crash = true;
+            });
             mk.r = len;
           }
           return mk.r - 1.5;
@@ -1098,6 +1101,12 @@ export const FIGHTS = {
           f.charge = null;
           if (!crash || m.dead) return;
           f.plate = Math.min(1, f.plate + 0.15); f.knit = 0;
+          // (The stone he struck is broken: gone from what counts, and seen to be.)
+          if (stone >= 0) {
+            f.spent.add(stone); W.flip(`kb_stone_${stone}`); W.flip(`kb_rubble_${stone}`);
+            const [cx, cz] = WARDEN_COLUMNS[stone];
+            sim.casting.burst(FX.PUFF, STONE, d.x + cx, m.y + 2.6, d.z + cz, 2.2, 14, 0.9, {});
+          }
           W.warn(WARN.grv_crash, 4);
           sim.event(EV.GROUND, m.x, m.y, m.z); sim.event(EV.ROAR, m.x, m.y + 3, m.z, 1.2);
           sim.casting.burst(FX.SHOCK, STONE, m.x, m.y + 1.5, m.z, 1, 6, 0.5, { light: 9, lightR: 10 });
@@ -1122,9 +1131,13 @@ export const FIGHTS = {
     order(W, f, b, [m]) {
       const c = f.charge;
       if (!c || c.on !== b || !m || c.mk.t >= c.mk.fuse * c.mk.lock) return null;
-      const to = W.shelter(b, m.x, m.z);
+      // (Only a stone that still stands: with none left there's nothing to do but step out of his line.)
+      const d = roomOf(f.boss.room).delve, whole = WARDEN_COLUMNS.filter((q, i) => !f.spent.has(i)).map(([x, z]) => [d.x + x, d.z + z, 1.2]);
+      const to = whole.length ? W.shelter(b, m.x, m.z, whole) : null;
       return to ? { to, urgent: true } : null;
     },
+    // Lost, or left: the stones stand again for the next try. (Won, they lie broken till the barrow's had its rest.)
+    end(W, f) { for (const i of f.spent || []) { W.flip(`kb_stone_${i}`, false); W.flip(`kb_rubble_${i}`, false); } },
   },
 
   // ---- The Ossuary Golem: it falls apart instead of dying, twice, and its bones get up -----------------------------------------
