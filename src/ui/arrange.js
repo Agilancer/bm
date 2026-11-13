@@ -15,6 +15,10 @@ import { unitOf } from './thumbs.js';
 export const LAYOUT_KEY = 'velscour.layout';
 export const SCALE_MIN = 0.6, SCALE_MAX = 1.8, SCALE_STEP = 0.1;
 const FAR = 4000;   // (no shift is further than this, in units: anything more is junk)
+// Which of the phone's own places a touch layout was moved from (src/ui/thumbs.js). A layout is kept as shifts from those
+// places, so when the places themselves change, an older phone layout would be shifted twice over: it's let go, and the
+// new places are what's put up. (A desk's is kept.) Up this whenever the table moves anything.
+export const TOUCH_PLACES = 2;
 
 // What can be moved. touch / desk: the elements that make it on that screen (none: it isn't there).
 const slot = (k) => ({ key: `slot${k + 1}`, name: `Spell ${k + 1}`, touch: [`#spells .spell[data-k="${k}"]`] });
@@ -53,9 +57,10 @@ const r2 = (v) => Math.round(v * 100) / 100;
 /** What's kept, made safe: only pieces there are, shifts and sizes in bounds, nothing else. (A layout from an older or a
  * tampered save loses what doesn't fit and keeps the rest.) */
 export function clean(raw) {
-  const out = { v: 1, touch: {}, desk: {} };
+  const out = { v: 1, t: TOUCH_PLACES, touch: {}, desk: {} };
   if (!raw || typeof raw !== 'object') return out;
   for (const mode of ['touch', 'desk']) {
+    if (mode === 'touch' && raw.t !== TOUCH_PLACES) continue;
     const m = raw[mode];
     if (!m || typeof m !== 'object') continue;
     for (const [key, e] of Object.entries(m)) {

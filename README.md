@@ -538,15 +538,20 @@ the screen's height, so a small phone and a tablet get the same picture:
   stretching: dodge to its left, jump above it, and between them the shield, when there's one on your arm and no skull in
   your hand. Round those, in a wider ring, the six spells, one to six from the bottom up: **a tap casts, a hold keeps
   casting**, as a key does on a desk (there's no separate cast button any more, but for the one cast the opening asks
-  of you in the cave). Every button steers too: a thumb that lands on one can go on to look about.
+  of you in the cave). Each spell is as far from the next as every other, and both rings are even about the corner. Over
+  spell six, the run. Every button steers too: a thumb that lands on one can go on to look about.
 - **Beside the ring**, only when there's something in reach: a gold button that takes, talks, opens, shuts or tries the
   door, with a picture and a word for which, and what it is said just above it.
 - **Bottom left, the left thumb.** The stick comes up wherever the thumb lands, and nothing of it is drawn until a thumb is
-  on it. The chevrons above it keep you running.
+  on it. Under where it waits, by the bottom edge, what the other Tessariels say.
 - **Top left:** the medal and the three bars; what's on you under them; your party under those.
 - **Top right:** the corner map, a square, which opens the big one at a tap, with the clock on one of its lower corners
-  and Velscour's skull on the other. Beside it, a row: Auto, the menu (pause, save, load, settings), the pack, the spellbook (gold, with a count,
+  and Velscour's skull on the other, Auto beside the skull and auto-play's line under them. Beside the map, a row, each
+  the same gap from the next: the menu (pause, save, load, settings), the pack, the spellbook (gold, with a count,
   when there are points to spend), the quest log and the view.
+- **The screen's own edges.** All of it sits by the edges of the glass, not the safe area a phone keeps for its notch and
+  its home bar (`--hl`, `--hr`, `--hb` in `src/ui/hud.css`): the corners are clear of a notch, and that's where thumbs
+  are. Menus and panels keep the safe area.
 - **Top middle, one under the other:** the bar of whoever means you harm, a great foe's own bar, what's just happened
   ("Quest begun"), and what the game has to tell you.
 - **A menu, the pause or the big map** has the whole screen: the thumbs and the frame are put away while it's up
@@ -569,7 +574,8 @@ dragged by its top out of the way. The game stays paused under it, with whatever
 shield, the party, Auto's line) shown so it can be placed. Save keeps it in `localStorage` (`velscour.layout`, one layout
 for a touch screen and one for a desk), and it's put up every time the game starts. Put the stick on the right half of the
 screen and a thumb on the right takes up the stick instead (`input.stickRight`); a button wherever it's put still answers
-its own thumb.
+its own thumb. A layout is kept as shifts from the table's places, so when the table moves (`TOUCH_PLACES` in
+`src/ui/arrange.js`, put up by one each time), a phone's older layout is let go and the new places are put up.
 
 How it moves things (`src/ui/arrange.js`): each piece keeps its place from the table and the stylesheet, and is shifted from
 there by CSS's own `translate` and `scale` properties, written to one sheet (`#arrangeCss`), so the transforms the game's rules
