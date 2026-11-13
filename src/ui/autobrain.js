@@ -90,11 +90,19 @@ const CATHEDRAL_GUARD = { x: CHURCH_GUARD[0], z: CHURCH_GUARD[1] };
 // The black knight: his post, his leash (BLACK.leash in src/sim/sim.worker.js), where it stands to work on him, and the level it
 // goes for him at (raised two each time he sends it back to the town).
 const BLACK_POST = CHURCH_GUARD, BLACK_LEASH = 20, SIEGE_RING = 29, BOSS_LEVEL = 11;   // (11 since the six trees: the level its build has a Thunderbolt at)
-const HYDRA_AT = churchAt(208, -128);
+// The Mourning Rift, where the Hydra lives: the one way to it is the passage north out of the Founders' Hall, and the bridge
+// over it has a gap in it. Kept out of for good, as a circle on the passage and the bridge: nothing past the hall's north
+// wall. (It used to be 46 m round the Hydra itself, straight through the rock: the Hydra is twenty metres under the halls
+// and can't come up, and that circle shut the way to the Abbots' Gallery and the Tomb and took in most of the Founders'
+// Hall, so it never went below the Reliquary.)
+const RIFT_AT = churchAt(186, -128), RIFT_R = 23, RIFT_Z = churchAt(0, -104)[1];
 const POSTS = [
   [-78, -3, 30, 18], [CATHEDRAL_GUARD.x, CATHEDRAL_GUARD.z, 28, 99], [-40, -150, 44, 14], [150, 110, 26, 8],
-  [-72, -78, 22, 4], [118, -64, 22, 4], [HYDRA_AT[0], HYDRA_AT[1], 46, 99],
+  [-72, -78, 22, 4], [118, -64, 22, 4], [RIFT_AT[0], RIFT_AT[1], RIFT_R, 99],
 ];
+// How long the catacombs are left once a round of them finds nobody (src/sim/undead.js RISE_AGAIN: their dead are up
+// again once it's been out of them four minutes).
+const DRY_FOR = 300;
 // The lairs out in the land (src/core/tripo-monsters.js), by the level it wants before it goes near one.
 const LAIR_LEVEL = {
   werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 5,
@@ -1960,10 +1968,13 @@ export class Brain {
 
   grindJob(m, where, why, say) {
     if (where === 'catacombs') {
-      if (!this.o.townUI.quests.state('dead_cant_wait')) where = 'woods';
+      // (Nobody left down there: hunt()'s round found none. A quest's work there waits; grinding goes to the woods meanwhile.)
+      const dry = this.skipping('dry:catacombs');
+      if (dry && /^(q|farm):/.test(why)) return null;
+      if (!this.o.townUI.quests.state('dead_cant_wait') || dry) where = 'woods';
       else {
         const sp = this.catacombSpots(m);
-        if (sp.length) return { kind: 'hunt', why, spots: sp, below: true, say: say || 'Grinding in the catacombs.' };
+        if (sp.length) return { kind: 'hunt', why, spots: sp, below: true, dries: true, say: say || 'Grinding in the catacombs.' };
         where = 'woods';
       }
     }
@@ -1983,10 +1994,11 @@ export class Brain {
     return { kind: 'hunt', why, spots, say: say || 'Grinding in the woods round Bellmourn.' };
   }
 
-  // The catacombs' spawn points it'll walk, deeper as it grows: never near the rift's Hydra.
+  // The catacombs' spawn points it'll walk, deeper as it grows: the Bell Crypt and the Reliquary, then down the second stair
+  // to the Founders' Hall, the Abbots' Gallery and the Tomb. Never the rift, nor the room across it.
   catacombSpots(m) {
     const from = churchAt(172, 0), n = 6 + m.lvl * 2;
-    return this.nav.spawns.filter(([x, z]) => dist(x, z, HYDRA_AT[0], HYDRA_AT[1]) > 60).sort((a, b) => dist(a[0], a[1], from[0], from[1]) - dist(b[0], b[1], from[0], from[1])).slice(0, n);
+    return this.nav.spawns.filter(([, z]) => z > RIFT_Z).sort((a, b) => dist(a[0], a[1], from[0], from[1]) - dist(b[0], b[1], from[0], from[1])).slice(0, n);
   }
 
   // ---- doing it
@@ -2063,7 +2075,9 @@ export class Brain {
       return;
     }
     this.say(`${j.say} (${R.n - left.length} of ${R.n}).`);
-    const p = left.reduce((a, b) => (dist(m.x, m.z, a[0], a[1]) <= dist(m.x, m.z, b[0], b[1]) ? a : b));
+    // (The nearest by the stairs, as hunt() takes them: this floor's before the one above or below.)
+    const far = (q) => dist(m.x, m.z, q[0], q[1]) + Math.abs((floorAt(q[0], q[1]) ?? m.y) - m.y) * 8;
+    const p = left.reduce((a, b) => (far(a) <= far(b) ? a : b));
     const k = `${p[0]},${p[1]}`;
     if (R.at !== k) { R.at = k; R.atT = R.t; R.since = this.t; R.look = 0; }
     // (A spot it can't get to, or can't get to in time: left. Only a "no way" that came for this spot counts.)
@@ -2123,7 +2137,10 @@ export class Brain {
       // The nearest first, then round the rest.
       const fresh = spots.filter((p) => !(this.lastSpots || []).includes(`${p[0]},${p[1]}`));
       const from = fresh.length ? fresh : spots;
-      this.patrol = j.roam ? from[Math.floor(Math.random() * from.length)] : from.reduce((a, b) => (dist(m.x, m.z, a[0], a[1]) <= dist(m.x, m.z, b[0], b[1]) ? a : b));
+      // (Below, the nearest by the stairs: a spot on the floor above is a long walk, however near it lies through the rock.
+      // From the far end of the Tomb it used to go back up to the Reliquary for one spot and down again for the next.)
+      const far = (p) => dist(m.x, m.z, p[0], p[1]) + (j.below ? Math.abs((floorAt(p[0], p[1]) ?? m.y) - m.y) * 8 : 0);
+      this.patrol = j.roam ? from[Math.floor(Math.random() * from.length)] : from.reduce((a, b) => (far(a) <= far(b) ? a : b));
       this.patrolT = 0;
     }
     const [px, pz] = this.patrol;
@@ -2135,6 +2152,20 @@ export class Brain {
         (this.lastSpots ||= []).push(`${px},${pz}`);
         if (this.lastSpots.length > Math.max(1, j.spots.length - 1)) this.lastSpots.shift();
         this.patrol = null;
+        // Down in the catacombs, where each place's dead come the once till it's been away a while: every spot looked
+        // round and not a fight since the round began means there's nobody left. Left for a while, and something else
+        // done. (It used to go round and round the Bell Crypt and the Reliquary for as long as it was watched, with
+        // twenty more to put down for the Sexton and nobody there to put down.)
+        if (j.dries) {
+          const R = this.dryRun && this.dryRun.why === j.why && (this.foughtT ?? -99) < this.dryRun.t ? this.dryRun : (this.dryRun = { why: j.why, t: this.t, seen: new Set() });
+          R.seen.add(`${px},${pz}`);
+          if (spots.every(([x, z]) => R.seen.has(`${x},${z}`))) {
+            this.dryRun = null; this.lastSpots = [];
+            this.giveUp('dry:catacombs', DRY_FOR);
+            this.o.note?.('Auto-play: nobody left in the catacombs. Other work, till they rise again.');
+            this.job = null; this.jobKey = '';
+          }
+        }
       }
       return;
     }

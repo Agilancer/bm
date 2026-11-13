@@ -15,6 +15,7 @@ import { Knight, S, matToQuat, norm, orth, cross, restHold, turn } from './knigh
 import { stepStow } from '../core/stow.js';
 import { Caster, Zombie } from './undead.js';
 import { townDist } from '../core/town.js';
+import { inChurch } from '../core/church.js';
 
 import { Crab } from './crab.js';
 import { Gravehart } from './gravehart.js';
@@ -49,10 +50,15 @@ export function mobKind(m) {
 }
 
 // Standing, outdoors, and something a hero can reach.
+// (Indoors is Velscour's church and what lies under it, and the houses: the other Tessariels keep out of those. Your own
+// party goes down with you, though, and what's on a floor of the church is theirs to fight while you and they are in it:
+// `below`, set each tick by HeroWorld.stepCompany. They used to walk the catacombs at your heels and never lift a hand.)
+let below = false;
+const outdoors = (m) => floorAt(m.x, m.z) === null;
 function fightable(m) {
   if (!m || m.dead || m.dormant || m.hp <= 0 || m instanceof Hydra || m instanceof Hero) return false;
   if (m instanceof Knight) return m.kind === 0;
-  return floorAt(m.x, m.z) === null && !inPit(m.x, m.z);
+  return (outdoors(m) || (below && inChurch(m.x, m.y + 1, m.z))) && !inPit(m.x, m.z);
 }
 
 // (A Tripo monster has its own girth: a dragon's is far past a goblin's.)
@@ -2325,7 +2331,7 @@ export class HeroWorld {
     if (!h.foe && !h.surf && !h.task?.peace) {
       let best = null, bd = h.cls.ranged ? 20 : 14;
       for (const m of this.targets) {
-        if (!fightable(m)) continue;
+        if (!fightable(m) || !outdoors(m)) continue;
         const d = Math.hypot(m.x - h.x, m.z - h.z);
         const onUs = m.heroFoe && (m.heroFoe === h || (h.party && m.heroFoe.party === h.party)) && sim.time - m.heroFoeT < 6;
         const onPlayer = !p.dead && m.aggro && Math.hypot(m.x - p.x, m.z - p.z) < 10 && Math.hypot(p.x - h.x, p.z - h.z) < 26;
@@ -3226,6 +3232,7 @@ export class HeroWorld {
   // The player's way, kept for the party to follow round corners; and getting the fallen up once a fight's done.
   stepCompany(dt) {
     const sim = this.sim, p = sim.player, t = this.trail;
+    below = this.company.members.size > 0 && floorAt(p.x, p.z) !== null && inChurch(p.x, p.y + 1, p.z);
     const last = t[t.length - 1];
     if (!last || Math.hypot(p.x - last[0], p.z - last[1]) > 25) { t.length = 0; t.push([p.x, p.z]); }
     else if (Math.hypot(p.x - last[0], p.z - last[1]) > 0.8) { t.push([p.x, p.z]); if (t.length > 60) t.shift(); }

@@ -349,7 +349,7 @@ Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in ev
 
 ### The cathedral and the catacombs
 
-Out east of the village, along the church road and 60 m past the last of the town, through the great door at x = 156: the nave, the pulpit, the back office, a long stair, then the Bell Crypt, Reliquary, Gallery, Ossuary, Founders' Hall, Abbots' Gallery and Tomb. Undead are stood at the catacombs' spawn points as you go down (`stepCatacombs` in `src/sim/undead.js`), reusing bodies, because there are more places than bodies.
+Out east of the village, along the church road and 60 m past the last of the town, through the great door at x = 156: the nave, the pulpit, the back office, a long stair, then the Bell Crypt, Reliquary, Gallery, Ossuary, Founders' Hall, Abbots' Gallery and Tomb. Undead are stood at the catacombs' spawn points as you go down (`stepCatacombs` in `src/sim/undead.js`), reusing bodies, because there are more places than bodies. Each place is filled once while you're down there, and again once you've been up out of the catacombs four minutes (`RISE_AGAIN`). Your hired party fights there with you; the other Tessariels keep out of the church.
 
 Where it all stands is two numbers, `CHURCH_X` and `CHURCH_Z` in `src/core/church.js`. `build_interior.py` lays the church out where it was first drawn (the door at x = 66) and moves every piece of it by them; the game reads them wherever it cares where the church is: the ground it's levelled on, the knight, the Hydra's pit, the catacombs' lords, the shaders' `indoorAt`, the map, saves made inside it. To move it again, change them, rebuild the interior and run the checks below. Its first ground, x = 58 to 124, is left levelled and clear of pines for the town.
 
@@ -622,7 +622,10 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     the nav thread whether there's a wall or a shut door between them (`within` in `src/ui/autobrain.js`), and if there
     is it goes in at the door and round to them. A stall's keeper it still talks to over the counter. The same goes for
     a chest, anything it picks up, and the Free Company's quartermasters.
-- **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. The countries
+- **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. Down there
+  it walks every room but the Mourning Rift and the room across it (`RIFT_AT`, `catacombSpots`), this floor's spots
+  before the next floor's, and when a whole round of them finds nobody it leaves them for five minutes (`DRY_FOR`) and
+  does other work till their dead have risen again (see "What a watched run found"). The countries
   are reached by the roads and across country, through the seals it has woken (it steps onto each one it passes near).
   It works its way round walls, the catacombs' light wells and stands of pines by short paths a stretch at a time.
   - **It doesn't walk into walls.** In the town, the woods round it and the catacombs it goes by a path and nothing
@@ -875,6 +878,20 @@ has watched the shots themselves drawn, or the desk's layout of the feed: look a
 - Across country its short paths could not end on a dungeon portal's terrace and its probe turned it aside at the step, so it paced before Blackvigil's portal and the Howling Mouth's (`solidAt`, `local` and `clearFor` in `src/sim/nav.worker.js`; `tests/portal-approach.test.mjs`).
 - Wedged in the nook behind Silas Crane's hearth, its way out began through the partition. From a snug corner a path starts toward ground it can walk to in a straight line (`freeNear`), and stopped twice in one place it asks the nav thread for a way out on a finer grid (`escape`; `lost` and `motor` in the brain).
 - It went down a dungeon ahead of the quests that send it there (see Complete Quests above).
+
+**Stuck in the catacombs.** Run headless again, set to grind the catacombs at level 14 with a hired party, and at level 6 alone with the Sexton's second quest and the tailor's in hand. It went round the Bell Crypt and the Reliquary, eighteen empty spots, for as long as it was watched. Three things made that, and a fourth showed beside them:
+
+- Each place down there is filled with one of the dead once, and it kept clear of everything within 60 m of the Hydra, measured straight through the rock: that left it the top floor's eighteen places, and the Sexton wants twenty-eight put down between his two quests, and the tailor silk off more than that. Once they were down there was nobody, and nothing told it so. It keeps clear of the rift itself now (the passage north out of the Founders' Hall, and the bridge), which is the only way to the Hydra, and walks the Founders' Hall, the Abbots' Gallery and the Tomb as it grows (`RIFT_AT`, `catacombSpots` in `src/ui/autobrain.js`).
+- Its paths kept 46 m off the Hydra the same way, which shut the passage to the Abbots' Gallery and the Tomb: "no way there", every time.
+- A round of every spot with no fight in it now means the catacombs are empty (`dries` on the job, `dryRun` in `hunt`): it says so, leaves that work for five minutes, and goes on with the next quest, or the woods if it's grinding.
+- It took a spot on the floor above before the next one along the hall, being nearer through the rock, and went up and down the second stair for it. A floor's height counts in how far off a spot is (`hunt`, `sweep`).
+
+And two in the game itself:
+
+- **The catacombs' dead rise again** once you've been up out of them four minutes (`RISE_AGAIN`, `catacombsAway` in `src/sim/undead.js`; `node --test tests/catacombs-rise.test.mjs`). While you're down there what you've cleared stays clear, as it did. Before, each place was filled once in a game (till you died or loaded), so a second run of the catacombs, by hand or by Dungeon Runs, found nobody, and the wax, silk and iron three quests want could run out for good. The lords and the casters still come the once.
+- **Your party fights down there.** The other Tessariels leave alone whatever stands on a floor of the church or a house, and that rule took in your own hired party: they walked the catacombs at your heels and never lifted a hand. While you and they are in the church, what's on its floors is theirs to fight (`below` and `fightable` in `src/sim/hero.js`). The other Tessariels still keep out.
+
+Watched after: at level 14 with a party, down through both floors and along to the Tomb, the party's lancer holding the dead and the rest on them; a round with nobody left, out to the woods, and back down five minutes on to find them risen.
 
 And in the game itself, which a person would have met too: the hill over the Bell Crypt (see "The cathedral and the catacombs"); Velscour's knight given his life back by anyone else's blow (`hit` in `src/sim/hero.js`: with a party at your side he couldn't be killed); a dungeon's boss left without a place to stand when the halls round it held all twelve (`freeSlot` and `wake` in `src/sim/tripo.js`, `stepBosses` in `src/sim/dungeon.js`: the Hollow Brothers never stood up, so the keep couldn't be finished); and the other Tessariels' way out of town (see "The Free Company").
 
