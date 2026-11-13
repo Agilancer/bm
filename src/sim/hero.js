@@ -2725,7 +2725,7 @@ export class HeroWorld {
     }
     const lead = !h.party || h.party.leader === h;
     t.idle = !h.foe && t.live === 0 ? (t.idle || 0) + dt : 0;
-    if (lead && h.near > VIEW && !h.foe) {
+    if (lead && h.near > VIEW && !h.foe && !t.wild) {
       // Out of the player's sight the ground's monsters are asleep (the woods keep their bodies for where the player is),
       // so a hunt there is told, not fought: a kill now and then, a few knocks, the same words and the same bag.
       t.abT = (t.abT ?? rand(15, 35)) - dt;
@@ -2737,7 +2737,7 @@ export class HeroWorld {
         for (const x of team) x.hp = Math.max(x.maxHp * 0.2, x.hp - rand(0, 14) * danger / team.length);
         if (team.some((x) => x.hp < x.maxHp * 0.3)) { for (const x of team) this.goHome(x); return; }
       }
-    } else if (lead && t.idle > 45) {
+    } else if (lead && t.idle > 45 && !t.wild) {   // (the living land's call is over when it says so: sendBack)
       // Picked clean: on to another ground that suits them, or home if the bags are worth the walk.
       if (h.bag >= 4) { for (const x of h.party ? h.party.members : [h]) this.goHome(x); return; }
       const grounds = PLACES.filter((q) => q.kind === 'hunt' && q !== t.place && q.mobs.some((k) => (MOBS[k]?.danger || 1) <= 1 + h.person.level / 6));
@@ -2749,9 +2749,50 @@ export class HeroWorld {
       }
     }
     // Home with full bags, after a long hunt, or when night comes on.
-    if (lead && (h.bag >= 10 || t.t > 240 || (hourBand(this.hour) === 0 && h.lean.night < 1))) {
+    if (lead && !t.wild && (h.bag >= 10 || t.t > 240 || (hourBand(this.hour) === 0 && h.lean.night < 1))) {
       if (h.bag >= 10) h.say(sim, 'bags_full');
       for (const m of h.party ? h.party.members : [h]) this.goHome(m);
+    }
+  }
+
+  // The living land's call (src/sim/wilds.js): up to n of the Tessariels who've nothing on (in town, on errands, resting,
+  // on the way home, or out hunting somewhere you aren't; not hired, not in a party, not in the player's sight) are stood at `from` (a town's seal, which is
+  // how they travel; or out of sight beyond a tear) and go at whatever's at (x, z) as they would a hunting ground.
+  answer(x, z, n, from, name = 'the fight') {
+    const sim = this.sim;
+    const place = { id: 'wild', name, kind: 'hunt', spot: [x, z], r: 20, mobs: Object.assign(['goblin'], { includes: () => true }) };
+    const free = (h) => h.active && !h.dead && !h.hired && !h.broker && !h.surf && !h.below && !h.hidden && !h.foe && h.party !== this.company
+      && (['town', 'errands', 'rest', 'social', 'return', 'perform'].includes(h.task?.kind) || (h.task?.kind === 'hunt' && !h.task.wild)) && Math.hypot(h.x - sim.player.x, h.z - sim.player.z) > 70;
+    // (Alone, or a whole party of them together: nobody's taken out of the middle of one.)
+    const idle = [], seen = new Set();
+    for (const h of [...this.heroes].sort((a, b) => b.person.level - a.person.level)) {
+      if (idle.length >= n || seen.has(h)) continue;
+      const band = h.party ? [...h.party.members] : [h];
+      band.forEach((x) => seen.add(x));
+      if (band.every(free) && idle.length + band.length <= n + 1) idle.push(...band);
+    }
+    // (A party that answers is done with what it was about: each of them fights for the place on their own account.)
+    for (const h of idle) if (h.party) this.disband(h.party);
+    idle.forEach((h, i) => {
+      const a = i * 2.1 + x;
+      h.x = from[0] + Math.sin(a) * 2.2; h.z = from[1] + Math.cos(a) * 2.2; h.y = sim.world.height(h.x, h.z);
+      h.goal = null; h.sitting = false; h.walkWith = null; h.talkUntil = 0;
+      h.task = { kind: 'hunt', place, t: 0, there: true, wild: true };
+      h.hp = h.maxHp;
+    });
+    return idle;
+  }
+
+  // And home again when it's done: walking while you can see them, and by the seal (stood back at the well) once you can't.
+  sendBack(list) {
+    for (const h of list) if (h.task?.wild && !h.dead) { this.goHome(h); h.wildHome = true; }
+  }
+
+  stepWildHome() {
+    for (const h of this.heroes) {
+      if (!h.wildHome) continue;
+      if (h.dead || h.hired || h.task?.kind !== 'return') { h.wildHome = false; continue; }
+      if (h.near > 75 && !h.foe) { const w = placeOf('well'); h.x = w.spot[0] + 1.5; h.z = w.spot[1] + 1.5; h.y = this.sim.world.height(h.x, h.z); h.goal = null; h.wildHome = false; h.task = { kind: 'town', place: w, t: 0, stay: 30 }; }
     }
   }
 

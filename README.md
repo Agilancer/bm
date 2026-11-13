@@ -379,14 +379,27 @@ rifts and invasions are what it's after.
 - **The sides at war.** Monsters of different sides (`side` on a faction; `TRUCES` for who leaves whom alone) fight each
   other where they meet, and leave you be unless you hurt one or walk into it. Twelve battles stand beside the roads for
   good and come back five minutes after they're done. What they kill leaves you nothing.
+- **Raids on the small towns.** Stand in or by Thornwick, Cinderford, Frostwatch, Millhaven or its farm for a minute or
+  two and something comes down the road at it: a chief and four, then a second band from another side. Up to three of
+  the other Tessariels who've nothing on come out of the town's seal to hold it with you (`answer` in `src/sim/hero.js`:
+  whole idle parties or loners, never anyone hired or in your sight), fight the raiders as they would a hunting ground's,
+  and go home after. Holding it pays well; walking away is told too. Not again at that town for ten or fifteen minutes.
+- **Help at a tear.** Six times in ten, one or two of them come to a tear's second wave.
+- **A bounty.** Walk into Bellmourn or one of those towns with none in hand and its people name the chief of an outpost
+  some way off. The tracker shows how far and which way whenever nothing else is on; emptying that outpost pays three
+  times over and a hoard. Kept in the save.
 - **247 small things to find**: a broken cart, a lonely grave, a cairn, a cold camp, a hide, a well. Each glints, and
   pays the first time you walk up to it.
 
 A banner tells what's begun and ended and a tracker under it shows a tear's wave, count and clock (`src/ui/wilds.js`).
 What you've found and opened is kept in the save. Checked: `node --test tests/wilds.test.mjs` and
 `node tools/wilds/play.mjs`, which plays all of it in the sim with no page. Seen in the browser: a fort, a stockade, a
-graveyard, a tear, a skirmish. **Nobody has played it by hand, most outpost kinds haven't been looked at, and the frame
-time with about 300,000 triangles of places on a PC (261,000 before; a phone's land leaves the outposts' fences, tents and stones out and is no bigger than it was) isn't measured.**
+graveyard, diggings, a barrow, a watchtower, a ruin, a scarecrow field, a pest camp, a wrecked wagon, a tear by day and by
+night, a skirmish, a raid's banner and a bounty's, and the tracker in a phone's top stack. GPU time a frame at three spots
+(1024x768, this machine) was 9.4 to 12.3 ms, against 11.3 to 14.7 ms on a build from before any of this: no cost that
+shows. The places are 342,000 triangles on a PC (261,000 before); a phone's land leaves the outposts' fences, tents and
+stones out and is no bigger than it was (`tests/sites-lean.test.mjs`). **Nobody has played it by hand; a coven, a nest,
+a roost, a den and a drake's bed haven't been looked at; no real phone has run it.**
 
 ### The cathedral and the catacombs
 

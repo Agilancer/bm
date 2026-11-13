@@ -235,6 +235,12 @@ export const MEET = {
   ritual: 50,       // seconds a ritual takes
 };
 
+// The towns that are raided (keys of SITES in src/core/lands.js): plain folk's, each with a seal the other Tessariels
+// come out of to hold it. near: how close you are before one's rolled; every: seconds between raids on the same town;
+// out: how far off the raiders start, on a road where there is one; help: how many Tessariels answer.
+export const RAID_TOWNS = ['thornwick', 'cinderford', 'frostwatch', 'hamlet', 'farm'];
+export const RAID = { near: 230, first: [50, 140], every: [540, 900], out: 95, help: 3 };
+
 // What the sim tells the page (EV.WILD's first number), and what goes with it.
 export const WILD = {
   TEAR_NEAR: 1,     // (kind, x, z): an open tear is in sight
@@ -248,6 +254,10 @@ export const WILD = {
   MEET_DONE: 9,     // (meeting, x, y, z, level, won 0/1)
   CACHE: 10,        // (find's place in FINDS, x, y, z)
   TEAR_GONE: 11,    // out of sight of it again
+  RAID: 12,         // (town's place in RAID_TOWNS, faction, wave 1-2, how many, Tessariels come to hold it)
+  RAID_COUNT: 13,   // (killed, of)
+  RAID_DONE: 14,    // (town, x, y, z, level, 1 held with you, 2 held without you, 0 left)
+  HELP: 15,         // (how many of the other Tessariels have come to a tear)
 };
 
 // How each kind of outpost's own ground is dressed (src/core/lair-dress.js lairKind), under what's built there.
