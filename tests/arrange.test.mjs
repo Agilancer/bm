@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { PIECES, SCALE_MAX, SCALE_MIN, clean, cssFor } from '../src/ui/arrange.js';
+import { PIECES, SCALE_MAX, SCALE_MIN, TOUCH_PLACES, clean, cssFor } from '../src/ui/arrange.js';
 
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
 const html = read('../index.html'), css = read('../src/ui/hud.css'), main = read('../src/main.js');
@@ -29,9 +29,14 @@ test('every piece Move Buttons moves is on the page, or made by the game', () =>
 });
 
 test('what\'s kept is made safe as it\'s read back', () => {
-  assert.deepEqual(clean(null), { v: 1, touch: {}, desk: {} });
-  assert.deepEqual(clean('junk'), { v: 1, touch: {}, desk: {} });
+  assert.deepEqual(clean(null), { v: 1, t: TOUCH_PLACES, touch: {}, desk: {} });
+  assert.deepEqual(clean('junk'), { v: 1, t: TOUCH_PLACES, touch: {}, desk: {} });
+  // A phone's layout from before the table last moved is let go; a desk's is kept.
+  const old = clean({ v: 1, touch: { staff: { x: 5, y: 0 } }, desk: { map: { x: 5, y: 0 } } });
+  assert.deepEqual(old.touch, {});
+  assert.equal(old.desk.map.x, 5);
   const c = clean({
+    t: TOUCH_PLACES,
     touch: { staff: { x: -300, y: 12.345, s: 9 }, nothing: { x: 1 }, spellbar: { x: 5 }, dodge: { x: 0, y: 0, s: 1 }, jump: { x: 'a', y: Infinity, s: 0.1 },
       frame: { x: 3, y: 4, s: 1.2, k: [[1, 2], 'x', [5, 6]] } },
     desk: { spellbar: { x: 1e9, y: -20 }, staff: { x: 5 } },
