@@ -8,7 +8,8 @@
 // clicked; Esc pauses and resumes. On the quests with every quest done, a menu asks where to grind (GRINDS), and keeps the last
 // choice if nobody answers.
 //
-// It's made to be watched (Settings' Auto-play): the camera stands behind him and is directed (src/ui/autocam.js), what he's at
+// It's made to be watched (Settings' Auto-play): the camera stands behind him and is directed (src/ui/autocam.js; or it's first
+// person, through his eyes: V while it plays), what he's at
 // is narrated, with banners for what's worth one and a recap of what he got done (src/ui/autoshow.js), a line said to him is
 // left up to be read, and a long walk with nothing about is hurried (the world's clock at HASTE: CTRL.HASTE, src/sim/sim.worker.js).
 // The menu also sets his temperament, Careful or Bold (Brain.bold in src/ui/autobrain.js).
@@ -217,12 +218,12 @@ export class AutoPlay {
       this.show.start();
       if (this.o.paused()) this.o.pause(false);
       this.brain.mode = this.mode;
-      hud.tip(`${MODES[this.mode].name}. ${input.touch ? 'Use the stick to take over for a moment; Auto to stop.' : 'Move to take over for a moment; P or the Auto button stops it. Esc pauses.'}`, 5);
+      hud.tip(`${MODES[this.mode].name}. ${input.touch ? 'Use the stick to take over for a moment; Auto to stop.' : 'Move to take over for a moment; P or the Auto button stops it. Esc pauses. V: first person, or behind him.'}`, 5);
       if (this.mode === 'quests' && this.brain.allQuestsDone()) this.askGrind();
     } else {
       this.brain?.stop();
       this.haste(false);
-      if (this.o.game.viewSwitch) this.o.game.viewSwitch.forced = false;
+      if (this.o.game.viewSwitch) this.o.game.viewSwitch.auto = null;
       this.since = 0; this.setBare(false);
       this.show.stop();
       this.log.endFight(); this.log.save();
@@ -256,9 +257,10 @@ export class AutoPlay {
     }
     if (this.asking && !input.enabled) this.cancel();
     this.bareStep();
-    // The view behind him while it plays, and the director's shots over that (src/ui/autocam.js): eased out when it stops.
+    // The view behind him while it plays, and the director's shots over that (src/ui/autocam.js): eased out when it stops. Or
+    // through his eyes (Settings' Camera in auto-play: First person; V or the eye while it plays: src/ui/view.js).
     const vs = this.o.game.viewSwitch;
-    if (vs) vs.forced = this.on && this.cam.third;
+    if (vs) vs.auto = this.on ? this.cam.view : null;
     if (snap) this.cam.frame(dt, snap, this);
     if (!this.on || !snap) return;
     if (!input.enabled) { this.toggle(false); return; }

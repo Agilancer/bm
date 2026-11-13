@@ -829,8 +829,10 @@ That menu keeps the last choice after 12 seconds.
 
 **Made to be watched.** Each of these is a line in Settings and is on to begin with.
 
-- **The camera** (`src/ui/autocam.js`; Camera in auto-play: Directed, Behind him, or As you left it). While it plays the
-  view stands behind him, as third person does (`ViewSwitch.forced`: lent, nothing saved, and yours again when it stops).
+- **The camera** (`src/ui/autocam.js`; Camera in auto-play: Directed, Behind him, First person, or As you left it). While
+  it plays the view stands behind him, as third person does (`ViewSwitch.auto`: lent, your own view kept, and yours again
+  when it stops). **V**, or the eye by the spell bar, while it plays chooses between that and first person, through his
+  eyes: no shots are taken then, and the choice is kept.
   Directed, it's taken off his shoulder now and then for a shot: over his shoulder at whoever he's talking to; low
   behind the shield when he rides it somewhere; once round him when something big goes down or a level comes; up and
   back over the road as he comes into a new country; alongside him, then out ahead of him, on a long walk. Only the
@@ -966,9 +968,15 @@ screen is a frame for each, with their life.
   he hits and every few seconds turns anything loose on the rest of you onto himself (`tauntBy` in `src/sim/foes.js`). The
   healer keeps nine metres back and mends whoever needs it most, with a quick light or, for someone low, a great one. The
   rest take the fight's adds first, then what the tank's holding, then what you're shooting.
-- **They go where you go**, along your own path, so they come round corners after you, at your pace (they run when you
-  do), and stand round you when you stop (`heel` in `src/sim/hero.js`). Left far behind, or through a portal without
-  them, they catch you up.
+- **They go where you go, each their own way** (`heel` in `src/sim/hero.js`; `node --test tests/company-own.test.mjs`).
+  On the road most keep a few strides back along your own path, so they come round corners after you, at your pace (they
+  run when you do), and every so often one or two run on ahead of you for a while (out of doors only; the light-footed
+  most, plate and the healer least: `LEAD_EAGER`). They face the way they walk, never the way you look. When you stop
+  they stop about where they are, and each finds something to do (`idleBit`): keeps watch some way, turns to you or to
+  one of the others for a word, strolls a few steps, goes off to look at something and comes back, stretches or folds
+  their arms, sits down after a while, or, a bard, plays. Turning your head moves nobody. Anything that needs doing (a
+  fight, something marked on the ground, you setting off) ends it (`endBit`). Left far behind, or through a portal
+  without them, they catch you up.
 - **They ride the shield with you.** When you get on your board, they get on theirs, beside and behind you, and step off
   when you do (`updateFreeSurf`).
 - **They fall and get up.** One who falls lies there till the fight's over, then gets up with half their life.

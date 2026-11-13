@@ -121,6 +121,8 @@ const HOLD_STYLES = new Set(['lance', 'spear', 'two_hand']);
 const FIST = [0.75, 0.95, 0.6];
 // What a lancer puts his lance on his back for: what wants both hands, or the whole body.
 const AWAY_GESTURES = new Set(['dance', 'sit', 'kneel', 'bow', 'hug', 'defeat', 'cry', 'warm', 'sing', 'clap', 'cheer', 'fold', 'flex', 'scared', 'review']);
+// How ready each class is to run on ahead of you on the road (HeroWorld.heel): the light-footed most, plate and the healer least.
+const LEAD_EAGER = { rogue: 1.6, ninja: 1.6, archer: 1.4, boomerang: 1.3, dragoon: 1.2, lancer: 0.9, bard: 0.8, paladin: 0.6 };
 const LINE_SKILLS = new Set(['hammer_throw', 'charge', 'volley', 'strafe', 'rain_of_arrows', 'throwing_stars', 'shadow_step', 'leaping_kick', 'jump', 'double_throw', 'vanish']);
 
 // ---- the body -------------------------------------------------------------------------------------------------------
@@ -1838,6 +1840,7 @@ export class HeroWorld {
     // Your party, hired of the Free Company's quartermasters: up to four, who go where you go (companion, below).
     this.company = { id: 900, leader: null, members: new Set(), kind: 'company', place: null, state: 'going', t: 0, want: 4, company: true };
     this.trail = [];
+    this.head = [0, 1]; this.moveT = 0; this.stillT = 0; this.restYaw = 0;   // (the way you're going, and for how long: stepCompany)
     // Everyone starts about the town, at their own business.
     const town = PLACES.filter((p) => p.kind === 'town');
     for (const h of heroes) {
@@ -2873,7 +2876,7 @@ export class HeroWorld {
     const back = w.mode === 'edge' ? 7 : 3.2;
     const x = p.x + bx * back - bz * 1.6 * w.side, z = p.z + bz * back + bx * 1.6 * w.side;
     const far = Math.hypot(x - h.x, z - h.z);
-    h.goal = { x, z, speed: far > 8 ? 5.4 : far > 3 ? Math.max(1.5, pv * 1.1) : Math.max(1.2, pv), stop: 0.9, face: pv > 0.5 ? Math.atan2(p.vx, p.vz) : Math.atan2(p.x - h.x, p.z - h.z) };
+    h.goal = { x, z, speed: far > 8 ? 5.4 : far > 3 ? Math.max(1.5, pv * 1.1) : Math.max(1.2, pv), stop: 0.9, face: pv > 0.5 ? (far > 1.2 ? undefined : Math.atan2(p.vx, p.vz)) : Math.atan2(p.x - h.x, p.z - h.z) };
     if (h.sitting) { h.sitting = false; h.stopAction(0.4); }
     return true;
   }
@@ -2944,6 +2947,7 @@ export class HeroWorld {
     const h = this.heroes[slot];
     if (!h || !h.hired) return;
     if (h.dead) this.revive(h, 1);
+    this.endBit(h); h.own = null;
     h.hired = false; h.role = null; h.post = null;
     this.company.members.delete(h);
     h.baseLevel = Math.min(h.baseLevel ?? h.person.level, h.person.level);
@@ -3045,7 +3049,7 @@ export class HeroWorld {
     if (!p.dead && !fight.length && !h.swing && (d > 60 || delveAt(p.x, p.z) !== delveAt(h.x, h.z))) { this.bringTo(h); return; }
     if (h.surf) return;
     // On the board when you are.
-    if (p.surfing && !fight.length && Math.hypot(p.vx || 0, p.vz || 0) > 2.5 && !h.swing && !h.jump) { this.freeSurf(h); return; }
+    if (p.surfing && !fight.length && Math.hypot(p.vx || 0, p.vz || 0) > 2.5 && !h.swing && !h.jump) { this.endBit(h); this.freeSurf(h); return; }
     // Out of whatever's marked on the ground under them (src/sim/perils.js), wherever they are: the circles, the strips, the
     // cones, the burning.
     // What the fight itself wants of them (src/sim/dungeon.js order): not a step taken while the music's stopped; or
@@ -3054,6 +3058,7 @@ export class HeroWorld {
     if (told?.still) { h.goal = null; h.hold = Math.max(h.hold, 0.25); h.dodgeT = 0; if (h.role === 'heal') this.mend(h, true); return; }
     // (urgent: it matters more than what's under them: the rock above the tide is through the tide.)
     const out = told?.to && told.urgent ? null : sim.perils.danger(h.x, h.z);
+    if (out || told?.to) this.endBit(h);
     if (out) { h.goal = { x: out[0], z: out[1], speed: 7.5, stop: 0.2 }; h.dodgeT = 0.35; if (h.role === 'heal') this.mend(h, true); return; }
     if (told?.to) {
       h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
@@ -3070,6 +3075,7 @@ export class HeroWorld {
       // Behind a pillar while the dragon's on her perch, shooting what can be shot from there.
       const hide = W.hideFrom(h.x, h.z);
       if (hide) {
+        this.endBit(h);
         h.foe = this.pickFoe(h, fight.filter((m) => !m.flying));
         const dh = Math.hypot(hide[0] - h.x, hide[1] - h.z);
         if (dh > 0.6 || !h.foe) { h.goal = { x: hide[0], z: hide[1], speed: 8, stop: 0.3 }; h.dodgeT = 0.25; }
@@ -3078,10 +3084,10 @@ export class HeroWorld {
         return;
       }
     }
-    if (h.role === 'heal' && this.mend(h)) return;
+    if (h.role === 'heal' && this.mend(h)) { this.endBit(h); return; }
     h.foe = this.pickFoe(h, fight);
-    if (h.foe) { this.stance(h, h.foe, fight); this.fallBack(h, fight); return; }
-    this.heel(h);
+    if (h.foe) { this.endBit(h); this.stance(h, h.foe, fight); this.fallBack(h, fight); return; }
+    this.heel(h, dt);
   }
 
   // One of yours, badly hurt, with something on them and the tank up: back behind him from it, where his taunt takes it
@@ -3191,28 +3197,159 @@ export class HeroWorld {
     return true;
   }
 
-  // Out of a fight: at heel, along the way you came, a few strides back and a little to the side; round you when you stop.
-  heel(h) {
-    const sim = this.sim, p = sim.player, i = [...this.company.members].indexOf(h);
+  // Out of a fight: with you, but each their own. On the road most keep a few strides back along the way you came, and now
+  // and then one runs on ahead for a while; all of them face the way they're going, not the way you look. When you stop they
+  // stop about where they are, and each finds something to do: keeps watch some way, turns to you or to one of the others for
+  // a word, strolls a few steps, goes to look at something, stretches, sits down, plays (a bard). Turning your head moves nobody.
+  heel(h, dt = 0) {
+    const sim = this.sim, p = sim.player, mates = [...this.company.members], i = mates.indexOf(h);
     const pv = Math.hypot(p.vx || 0, p.vz || 0);
-    let x, z;
-    if (pv > 0.6 && this.trail.length > 2) {
-      // Back along the trail so far, then out to the side.
-      let want = 2.6 + i * 1.6, ax = p.x, az = p.z, k = this.trail.length - 1;
-      while (k >= 0) {
-        const bx = this.trail[k][0], bz = this.trail[k][1], L = Math.hypot(bx - ax, bz - az);
-        if (L >= want) { ax += (bx - ax) * want / L; az += (bz - az) * want / L; want = 0; break; }
-        want -= L; ax = bx; az = bz; k--;
+    const o = h.own || (h.own = { bit: null, t: 0, wait: rand(0.5, 3), rest: null, lead: null, leadCd: rand(3, 12), drift: Math.random() * 6.28 });
+    const open = !delveAt(p.x, p.z) && !sim.warrens?.inside;
+    if (pv > 0.6) {
+      if (o.bit) this.endBit(h);
+      o.rest = null; o.wait = rand(0.6, 3.5);
+      const ux = this.head[0], uz = this.head[1];
+      // Running on ahead: for a while, out in the open, two of you at most, and given up when you turn off another way.
+      o.leadCd -= dt;
+      if (o.lead && ((o.lead.t -= dt) <= 0 || !open || ux * o.lead.ux + uz * o.lead.uz < 0.4)) { o.lead = null; o.leadCd = rand(8, 26); }
+      else if (!o.lead && open && this.moveT > 2.5 && o.leadCd <= 0) {
+        o.leadCd = rand(2, 5);
+        const eager = (LEAD_EAGER[h.person.cls] ?? 1) * (h.lean.roam || 1) * (h.role === 'heal' ? 0.4 : 1);
+        if (mates.filter((m) => m.own?.lead).length < 2 && Math.random() < 0.3 * eager) o.lead = { t: rand(6, 16), ahead: rand(4.5, 9), side: (Math.random() < 0.5 ? -1 : 1) * rand(0.8, 3.2), ux, uz };
       }
-      const ux = p.vx / pv, uz = p.vz / pv, side = (i % 2 ? 1 : -1) * 0.9;
-      x = ax + uz * side; z = az - ux * side;
-    } else {
-      const a = p.yaw + Math.PI + (i - 1.5) * 0.55, r = 2.8 + (i % 2) * 0.6;
-      x = p.x + Math.sin(a) * r; z = p.z + Math.cos(a) * r;
+      if (o.lead) {
+        const L = o.lead;
+        L.ux = ux; L.uz = uz;
+        const sx = p.x + ux * L.ahead + uz * L.side, sz = p.z + uz * L.ahead - ux * L.side;
+        if (sim.world.inside(sx, sz, 0.5)) { o.lead = null; o.leadCd = rand(4, 10); }
+        else {
+          // (Toward a mark a little past the place, at your pace and a little over or under it by how far off the place is: no
+          // stopping and starting as it moves on with you.)
+          const along = (h.x - p.x) * ux + (h.z - p.z) * uz;
+          h.goal = { x: sx + ux * 3, z: sz + uz * 3, speed: Math.max(1.4, pv * clamp(1 + (L.ahead - along) * 0.22, 0.7, 1.7) + (along < L.ahead - 2 ? 1.5 : 0)), stop: 0.5 };
+          return;
+        }
+      }
+      // Back along the trail so far, then out to the side (which drifts a little: nobody marches on a rail).
+      o.drift += dt * (0.25 + 0.07 * i);
+      let x = p.x, z = p.z;
+      if (this.trail.length > 2) {
+        let want = 2.6 + i * 1.6 + 0.7 * Math.sin(o.drift * 0.7), k = this.trail.length - 1;
+        while (k >= 0) {
+          const bx = this.trail[k][0], bz = this.trail[k][1], L = Math.hypot(bx - x, bz - z);
+          if (L >= want) { x += (bx - x) * want / L; z += (bz - z) * want / L; want = 0; break; }
+          want -= L; x = bx; z = bz; k--;
+        }
+      }
+      const side = (i % 2 ? 1 : -1) * (0.9 + 0.5 * Math.sin(o.drift));
+      x += p.vz / pv * side; z -= p.vx / pv * side;
+      const far = Math.hypot(x - h.x, z - h.z);
+      h.goal = { x, z, speed: far > 9 ? Math.max(9.8, pv * 1.25) : far > 3 ? Math.max(2.2, pv * 1.15) : Math.max(1.3, pv), stop: 0.7 };
+      return;
     }
-    const far = Math.hypot(x - h.x, z - h.z);
-    h.goal = { x, z, speed: far > 9 ? Math.max(9.8, pv * 1.25) : far > 3 ? Math.max(2.2, pv * 1.15) : Math.max(1.3, pv), stop: 0.7, face: pv > 0.6 ? Math.atan2(p.vx, p.vz) : p.yaw };
+    // Stopped. Where each stands: about where they were, if that's near and nobody else's; else a place in the ring behind
+    // where you were going (not where you're looking).
+    o.lead = null;
+    const d = Math.hypot(h.x - p.x, h.z - p.z);
+    if (!o.rest) {
+      let a = Math.atan2(h.x - p.x, h.z - p.z), r = clamp(d, 2.3, 4.6);
+      const taken = (x, z) => mates.some((m) => m !== h && m.own?.rest && Math.hypot(m.own.rest[0] - x, m.own.rest[1] - z) < 1.4);
+      const fits = (x, z) => !sim.world.inside(x, z, 0.5) && !taken(x, z);
+      if (d > 7 || !fits(p.x + Math.sin(a) * r, p.z + Math.cos(a) * r)) {
+        for (let t = 0; t < 8; t++) {
+          a = this.restYaw + Math.PI + (i - 1.5) * 0.55 + rand(-0.2, 0.2) + t * 0.7; r = 2.8 + (i % 2) * 0.6 + rand(0, 0.5);
+          if (fits(p.x + Math.sin(a) * r, p.z + Math.cos(a) * r)) break;
+        }
+      }
+      o.rest = [p.x + Math.sin(a) * r, p.z + Math.cos(a) * r];
+      o.face = undefined; o.bit = null;
+    }
+    // (You've drifted off from it, a step at a time: it comes along.)
+    if (Math.hypot(o.rest[0] - p.x, o.rest[1] - p.z) > 8) { this.endBit(h); o.rest = null; return this.heel(h, dt); }
+    if (o.bit) {
+      o.t -= dt;
+      const b = o.bit;
+      if (b.to) {
+        // Somewhere to walk to first, and what's done on getting there.
+        const left = Math.hypot(b.to[0] - h.x, b.to[1] - h.z);
+        if (left > 0.8 && h.stuckT < 2) { h.goal = { x: b.to[0], z: b.to[1], speed: b.speed, stop: 0.6 }; if (o.t <= 0) this.endBit(h); return; }
+        b.to = null;
+        if (b.keep) o.rest = [h.x, h.z];
+        if (b.there) b.there();
+      }
+      if (b.who) { if (b.who.dead || b.who.foe) o.t = 0; else o.face = Math.atan2(b.who.x - h.x, b.who.z - h.z); }
+      if (b.you) o.face = Math.atan2(p.x - h.x, p.z - h.z);
+      if (o.t <= 0) { this.endBit(h); o.wait = rand(1.5, 6); }
+    } else if ((o.wait -= dt) <= 0) this.idleBit(h, mates, open);
+    if (h.sitting) { h.goal = null; return; }
+    const far = Math.hypot(o.rest[0] - h.x, o.rest[1] - h.z);
+    h.goal = { x: o.rest[0], z: o.rest[1], speed: far > 9 ? 9.8 : far > 3 ? 2.2 : 1.3, stop: 0.7, face: far > 1 ? undefined : o.face };
+  }
+
+  // Something of their own to do while you stand: chosen by who they are, never the same for all of you at once.
+  idleBit(h, mates, open) {
+    const sim = this.sim, p = sim.player, o = h.own, L = h.lean, still = this.stillT;
+    const others = mates.filter((m) => m !== h && !m.dead && !m.foe && Math.hypot(m.x - h.x, m.z - h.z) < 9);
+    const w = { watch: 3, you: 1.2, mate: others.length ? 2 * L.talk : 0, stroll: 2 * L.roam, scout: open && still > 6 ? L.roam : 0, emote: 2.2 * L.show + 0.6,
+      sit: still > 25 && !mates.some((m) => m.sitting) ? 0.7 : 0, tune: h.luteP && still > 8 && !mates.some((m) => m.tune) ? 1.6 : 0 };
+    let sum = 0;
+    for (const v of Object.values(w)) sum += v;
+    let r = Math.random() * sum, kind = 'watch';
+    for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) { kind = k; break; } }
+    const spot = (r0, r1) => {
+      for (let t = 0; t < 6; t++) {
+        const a = Math.random() * 6.28, q = rand(r0, r1), x = p.x + Math.sin(a) * q, z = p.z + Math.cos(a) * q;
+        const dx = x - h.x, dz = z - h.z, len = Math.hypot(dx, dz);
+        if (len < 1.5 || sim.world.inside(x, z, 0.5)) continue;
+        if (sim.world.clearance(h.x, h.z, dx / len, dz / len, len, 0.45) >= len - 0.05) return [x, z];
+      }
+      return null;
+    };
+    const b = o.bit = { kind };
+    o.t = rand(3, 8);
+    if (kind === 'watch') o.face = Math.random() < 0.6 ? Math.atan2(h.x - p.x, h.z - p.z) + rand(-0.9, 0.9) : Math.random() * 6.28;
+    else if (kind === 'you') b.you = true;
+    else if (kind === 'mate') {
+      b.who = pick(others);
+      o.t = rand(4, 9);
+      // (The other turns to them too, if only standing about; and one of them does the talking.)
+      const q = b.who.own;
+      if (b.who.hired && q && (!q.bit || q.bit.kind === 'watch')) { q.bit = { kind: 'mate', who: h }; q.t = o.t; }
+      if (Math.random() < 0.6) h.gesture_(pick(['talk', 'talk', 'laugh', 'yes', 'shrug']), rand(3, 5));
+    } else if (kind === 'stroll' || kind === 'scout') {
+      const far = kind === 'scout';
+      b.to = far ? spot(7, 12) : spot(2.4, 6.5);
+      if (!b.to) { o.bit = null; o.wait = 1; return; }
+      b.speed = far ? rand(1.9, 2.6) : rand(1.2, 1.7);
+      b.keep = !far;
+      o.t = far ? rand(12, 18) : rand(7, 12);
+      b.there = () => {
+        o.t = Math.min(o.t, far ? rand(4, 7) : rand(2, 5));
+        o.face = far ? Math.atan2(h.x - p.x, h.z - p.z) + rand(-0.5, 0.5) : Math.random() * 6.28;
+        if (far || Math.random() < 0.4) h.gesture_(pick(far ? ['look', 'look', 'point'] : ['look', 'fold', 'warm']), rand(3, 5));
+      };
+    } else if (kind === 'emote') {
+      o.t = rand(3.5, 6.5);
+      h.gesture_(pick(['look', 'look', 'fold', 'fold', 'warm', 'proud', 'flex', 'kneel', 'yes', 'shrug']), o.t);
+    } else if (kind === 'sit') {
+      h.sitting = true; h.goal = null; h.play('Sitting_Idle_Loop', 1, 'full', 0.4);
+      o.t = rand(14, 40);
+    } else if (kind === 'tune') {
+      o.t = rand(6, 10);
+      h.gesture_('sing', o.t);
+      h.playLute(o.t + 0.5, Math.floor(Math.random() * 3), { elem: [ELEM.ARCANE, ELEM.HEAL, ELEM.LIGHT, ELEM.FROST][h.slot % 4] });
+    }
+  }
+
+  // Whatever one of yours was at on their own is dropped: you've set off, or something needs doing.
+  endBit(h) {
+    const o = h.own;
+    if (!o?.bit) return;
+    o.bit = null; o.t = 0;
     if (h.sitting) { h.sitting = false; h.stopAction(0.3); }
+    if (h.gesture && WHOLE_BODY.has(h.gesture)) { h.gesture = null; h.stopAction(0.25); }
+    if (h.tune) h.tune.dur = Math.min(h.tune.dur, h.tune.t + 0.3);
   }
 
   freeSurf(h) {
@@ -3229,6 +3366,17 @@ export class HeroWorld {
     const last = t[t.length - 1];
     if (!last || Math.hypot(p.x - last[0], p.z - last[1]) > 25) { t.length = 0; t.push([p.x, p.z]); }
     else if (Math.hypot(p.x - last[0], p.z - last[1]) > 0.8) { t.push([p.x, p.z]); if (t.length > 60) t.shift(); }
+    // (The way you're going, eased, and how long you've been going or standing: what the party goes by, in heel.)
+    const pv = Math.hypot(p.vx || 0, p.vz || 0), hd = this.head;
+    if (pv > 0.6) {
+      const k = this.moveT > 0 ? 1 - Math.exp(-4 * dt) : 1;
+      hd[0] += (p.vx / pv - hd[0]) * k; hd[1] += (p.vz / pv - hd[1]) * k;
+      const L = Math.hypot(hd[0], hd[1]) || 1; hd[0] /= L; hd[1] /= L;
+      this.moveT += dt; this.stillT = 0;
+    } else {
+      if (!(this.stillT > 0)) this.restYaw = this.moveT > 0 ? Math.atan2(hd[0], hd[1]) : p.yaw;
+      this.stillT += dt; this.moveT = 0;
+    }
     if (!this.company.members.size) return;
     const fighting = this.companyFight().length > 0 || !!sim.warrens?.fight;
     for (const h of this.company.members) {
@@ -3301,7 +3449,7 @@ export class HeroWorld {
         break;
       }
       case 'undead': self.postMessage({ type: 'heroState', id: m.id, heroes: [], undead: sim.knights.filter((k) => k instanceof Zombie).map((k) => ({ id: k.id, model: k.opts.model, role: k.opts.role || null, x: +k.x.toFixed(1), z: +k.z.toFixed(1), sink: +k.sink.toFixed(2), state: k.state, dead: k.dead, dormant: k.dormant, grave: k.opts.grave || null, up: k.graveUp, aggro: k.aggro, clip: k.clip, hostile: k.hostile, hp: Math.round(k.hp), owned: !!k.owner, y: +k.y.toFixed(1) })), others: sim.knights.filter((k) => !(k instanceof Zombie)).map((k) => ({ id: k.id, kind: k.kind, name: k.opts?.name || k.constructor.name, x: +k.x.toFixed(0), z: +k.z.toFixed(0) })) }); break;
-      case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), stuck: +(h.stuckT || 0).toFixed(1), follow: h.party?.leader && h.party.leader !== h ? h.party.leader.slot : null, hired: !!h.hired, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting, leaps: h.leaps, guard: h.guardT > 0, iframes: h.iframesT > 0, charge: !!h.charge, jump: !!h.jump, flight: h.flight?.length || 0, stow: +h.stow.toFixed(2), calm: Math.round(h.calmT), busy: [h.foe && 'foe', h.swing && 'swing', h.tossing && 'toss', h.point && 'point', h.flight && 'flight', h.aim && h.aim !== h.heldAim && 'aim', h.bowW > 0.01 && 'bow', h.shieldTarget > 0 && 'shield', h.tune && 'tune', h.luteW > 0.01 && 'lute', h.onArmed && 'armedGround'].filter(Boolean).join(',') })), zones: this.zones.map((z) => z.kind), shots: this.shots.map((q) => q.kind + (q.rain ? ':rain' : q.up ? ':up' : '')), dots: this.dots.length }); break;
+      case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), stuck: +(h.stuckT || 0).toFixed(1), follow: h.party?.leader && h.party.leader !== h ? h.party.leader.slot : null, hired: !!h.hired, own: h.own?.lead ? 'lead' : h.own?.bit?.kind || null, gesture: h.gesture || null, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting, leaps: h.leaps, guard: h.guardT > 0, iframes: h.iframesT > 0, charge: !!h.charge, jump: !!h.jump, flight: h.flight?.length || 0, stow: +h.stow.toFixed(2), calm: Math.round(h.calmT), busy: [h.foe && 'foe', h.swing && 'swing', h.tossing && 'toss', h.point && 'point', h.flight && 'flight', h.aim && h.aim !== h.heldAim && 'aim', h.bowW > 0.01 && 'bow', h.shieldTarget > 0 && 'shield', h.tune && 'tune', h.luteW > 0.01 && 'lute', h.onArmed && 'armedGround'].filter(Boolean).join(',') })), zones: this.zones.map((z) => z.kind), shots: this.shots.map((q) => q.kind + (q.rain ? ':rain' : q.up ? ':up' : '')), dots: this.dots.length }); break;
       default: break;
     }
   }
