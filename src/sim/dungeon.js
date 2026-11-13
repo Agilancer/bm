@@ -252,7 +252,10 @@ export class Warrens {
       // The fight begins when one of them notices anyone, and ends when they're dead, or nobody's left in the room.
       if (!this.fight && live.some((m) => m.aggro)) this.begin(b, live);
       if (this.fight?.boss === b) {
-        const party = this.bodies().filter((x) => Math.hypot(x.x - rx, x.z - rz) < R + 14);
+        // (Who's still in it: anyone in the room or a few strides out of its door. A long room's corners are further
+        // from its middle than its short side says: the Dollmaker's attic, the Ossuary.)
+        const rm = roomOf(b.room), reach = Math.max(R + 14, rm.hx !== undefined ? Math.hypot(rm.hx, rm.hz) + 4 : 0);
+        const party = this.bodies().filter((x) => Math.hypot(x.x - rx, x.z - rz) < reach);
         if (!party.length || p.dead) { this.endFight(b, live); continue; }
         this.fight.t += dt;
         for (const m of live) { m.aggro = true; if (Math.hypot(m.x - rx, m.z - rz) > R + 6 && !m.flying) { m.vx = (rx - m.x) * 0.3; } }

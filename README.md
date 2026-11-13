@@ -1721,9 +1721,9 @@ fight of each unless it says more:
 | The Heart of the Ring | 101 s, down to 75% | 124 s, down to 44% | dead in 9 s |
 | The Seamstress | 84 s, untouched | 78 s, down to 65% | dead in 27 s |
 | The Leading Man | 111 s, down to 48% | 108 s, down to 78% | dead in 30 s |
-| The Dollmaker | 118 and 144 s, down to 62% | 112 to 138 s (three), down to 33% | dead in 20 to 60 s (five of five) |
+| The Dollmaker | 118 to 144 s (three), down to 62% | 112 to 138 s (three), down to 33% | dead in 20 to 60 s (five of five) |
 | The Gravewarden | 87 and 99 s, down to 71% | 87 to 102 s (three), down to 30% | dead in 11 to 36 s (four of four) |
-| The Ossuary Golem | 97 and 102 s, untouched; the rogue fell once | 74 to 101 s (three), down to 61% | dead in 11 to 38 s (four of four) |
+| The Ossuary Golem | 94 to 102 s (three), down to 79%; the rogue fell once | 74 to 101 s (three), down to 61% | dead in 11 to 38 s (four of four) |
 | Ossivar | 114 and 116 s, down to 11% | 115 to 124 s (three), down to 41% | dead in 63 to 103 s (four of four) |
 | The thirty-one packs | 12 to 44 s, never under 47% | not played | not played |
 
@@ -1757,7 +1757,8 @@ each boss asked for, puts you in its room with nothing able to hurt you (alone, 
 and takes three pictures from under the roof, the boss put down to 60% and 30% of its life on the way. Seen so: the
 Bloat's bile pools and the ring of his swelling; the Leading Man's light riding him across the stage with a rose
 marked outside it; the Gravewarden's line down the hall; the Heart's husks' crosses and circles, a ring of spores going
-out and the far portal behind its trunk; Ossivar on the vault floor. Every shape the fights use (circle, ring, line,
+out and the far portal behind its trunk; Mother Sallow's tide as a bright edge round the dry rock, and her cone; Ossivar
+on the vault floor; the Dollmaker's attic; Mother Morel's bower and the Sump mid-fight. Every shape the fights use (circle, ring, line,
 cone, cross) draws, bright-edged and readable against all four floors. What the pictures also show: the Leading Man's
 "dark" doesn't darken the stage (the lamps are as lit as before; only the words and the ring say so), as with the
 keep's braziers. **Not looked at:** the Kennels, the bower, the attic, the Ossuary, or anything on a phone.
@@ -1829,7 +1830,15 @@ fair, what's a copy of something the game already has). What changed because of 
   don't yet.
 - **A quartermaster at each of the four portals** (see "The Free Company"): Sergeant Hobb Marlow, Ensign Wren Aldery,
   Sergeant Maud Halloway and Corporal Edric Fenn, each with a word about the place. Auto-play hires of whichever post
-  is nearest. The keep and the Deeps still have none.
+  is nearest. Watched, headless as before: set down by the Vaults' portal at level 12 with gold, no party and Under the
+  Mile in hand, it said "To Sergeant Hobb Marlow at The Drowned Vaults, to hire a party", had its four within half a
+  minute, went in, and in the six minutes watched was through the Toll, the Reeds (past the first drain) and the Bloat
+  and into the Cistern. All four stand on their terraces in pictures (the land round them isn't drawn by this machine's
+  renderer, so that's all those show). The keep and the Deeps still have none.
+- **A fight in a long room no longer ends because everyone is in its far corner.** Who's still in a boss's fight was
+  measured from the room's middle by its short side; the Dollmaker's attic and the Ossuary are twice as long as they
+  are wide, and their corners fell outside it. It's by the room's diagonal now (`stepBosses` in `src/sim/dungeon.js`).
+  Found by the pictures: a player alone in the attic's corner had the Dollmaker walk off.
 
 ### Monsters' attacks: marks on the ground, and what flies
 

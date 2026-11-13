@@ -34,7 +34,7 @@ const rooms = [
   // (The fly stair climbs eight metres going north: its floor is a slope, the steps are laid on it.)
   R('ph_stair', 'the Fly Stair', 36, -200, 6, 18, 5, 12, { tz: -8 / 36, fires: 12, rock: 'course', foot: 'block', ground: 'stone' }),
   R('ph_nursery', 'the Nursery', 36, -240, 12, 14, 9, 9, { rock: 'pale:wall_13', ground: 'pale:wood' }),
-  R('ph_attic', "the Dollmaker's Attic", -10, -240, 28, 14, 9, 8, { fires: 12, rock: 'wood', foot: 'dark:wood', ground: 'dark:wood' }),
+  R('ph_attic', "the Dollmaker's Attic", -10, -240, 28, 14, 9, 8, { fires: 12, rock: 'wood', foot: 'dark:wood' }),
 ];
 
 // Passages: w is half the width, h the height.
