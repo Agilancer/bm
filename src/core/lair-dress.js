@@ -18,6 +18,8 @@ const Y = (x, z) => terrainHeight(x, z);
 
 // What a lair's dressed as, by who lives there (its bosses first: a dragon's bed is a dragon's whoever waits on it).
 export function lairKind(l) {
+  // (An outpost or a battle says its own: src/core/wilds.js.)
+  if (l.dress) return l.dress;
   const names = (l.boss || []).concat(l.pick || []).join(' ');
   for (const [re, kind] of [
     [/dragon|worm/, 'bed'], [/harpy|werebat/, 'roost'], [/werewolf/, 'den'], [/velscour|possessed_knight|plague|skeleton|golem/, 'picket'],

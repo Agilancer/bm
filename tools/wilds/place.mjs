@@ -83,7 +83,7 @@ function trailTo(x, z, r, outposts) {
   for (let i = 0; i + 1 < pts.length; i++) for (let t = 0; t <= 1; t += 0.1) {
     const px = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pz = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t;
     for (const wt of WATERS) if (Math.hypot(px - wt.x, pz - wt.z) < wt.r + 10) return null;
-    for (const k of Object.keys(SITES)) { const s = SITES[k]; if (Math.hypot(px - s.x, pz - s.z) < s.r + 6) return null; }
+    for (const k of Object.keys(SITES)) { const s = SITES[k]; if (Math.hypot(px - s.x, pz - s.z) < s.r + (k === 'keep' ? 130 : 6)) return null; }
     if (Math.abs(px - CLIFF.x) < 30 && pz > CLIFF.z0 - 40 && pz < CLIFF.z1 + 40) return null;
     for (const p of OLD) if (Math.hypot(px - p.x, pz - p.z) < p.r + 12) return null;
     for (const o of outposts) if (Math.hypot(px - o.x, pz - o.z) < o.r + 11) return null;

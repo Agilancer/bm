@@ -96,6 +96,8 @@ const POSTS = [
   [-72, -78, 22, 4], [118, -64, 22, 4], [HYDRA_AT[0], HYDRA_AT[1], 46, 99],
 ];
 // The lairs out in the land (src/core/tripo-monsters.js), by the level it wants before it goes near one.
+// (The land's outposts and standing battles carry their own, from their faction's: src/core/wilds.js.)
+const lairLevel = (l) => l.lvl ?? LAIR_LEVEL[l.key];
 const LAIR_LEVEL = {
   werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 5,
   fen_worm: 16, fen_harpies: 8, fen_dragon: 24, cutter_raiders: 6, fungal_brood: 7, abbey_road_goats: 7, vigil_guard: 16, obelisk_guard: 16,
@@ -388,7 +390,7 @@ export function coverage(foeNames = null) {
       if (st.talk && !people.has(st.talk)) out.push(`quest ${id}: a word with "${st.talk}", who isn't anyone it can find`);
     }
   }
-  for (const l of LAIRS) if (!(l.key in LAIR_LEVEL)) out.push(`lair ${l.key}: no level in LAIR_LEVEL, so it keeps clear of it till level 10`);
+  for (const l of LAIRS) if (!(lairLevel(l) > 0)) out.push(`lair ${l.key}: no level in LAIR_LEVEL, so it keeps clear of it till level 10`);
   for (const g of GROUP_KEYS) if (!(GROUPS[g].hp > 0)) out.push(`monster group ${g}: no hp to measure it by`);
   for (const k of Object.keys(LAYOUT)) if (k.endsWith('_START') && !BLOCKS.has(k)) out.push(`snapshot block ${k}: something new in the world it can't see (foes())`);
   for (const k of CASTS) if (!(k in SP)) out.push(`spell ${k}: it casts this, and it's gone from SPELLS`);
@@ -646,7 +648,7 @@ export class Brain {
       if (x === CATHEDRAL_GUARD.x && z === CATHEDRAL_GUARD.z && !this.blackKnight(this.snap)) continue;
       if (m.lvl < lvl) out.push([x, z, r]);
     }
-    for (const l of LAIRS) if (m.lvl < (LAIR_LEVEL[l.key] || 10)) out.push([l.x, l.z, (l.wake || 110) + 15]);
+    for (const l of LAIRS) if (m.lvl < (lairLevel(l) || 10)) out.push([l.x, l.z, (l.wake || 110) + 15]);
     return out;
   }
 
@@ -1968,7 +1970,7 @@ export class Brain {
       }
     }
     if (where === 'lairs') {
-      const ok = LAIRS.filter((l) => m.lvl >= (LAIR_LEVEL[l.key] || 10)).map((l) => [l.x, l.z]).sort((a, b) => dist(m.x, m.z, a[0], a[1]) - dist(m.x, m.z, b[0], b[1])).slice(0, 4);
+      const ok = LAIRS.filter((l) => m.lvl >= (lairLevel(l) || 10)).map((l) => [l.x, l.z]).sort((a, b) => dist(m.x, m.z, a[0], a[1]) - dist(m.x, m.z, b[0], b[1])).slice(0, 4);
       if (ok.length) return { kind: 'hunt', why, spots: ok, say: say || 'Grinding the monster lairs.' };
       where = 'woods';
     }

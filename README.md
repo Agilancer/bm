@@ -347,6 +347,47 @@ words before you go.
 
 Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the forty-eight with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, runs the posted through a day and a night on the town's own brain, and checks that every posted person, hub and dungeon is where some quest that can be come by from Bellmourn sends you. In the headless game the posted people stand at their posts with their marks over them (one seen, at Thornwick's inn; the townsfolk's bodies load nearest you first, so a small town's are there when you arrive). Auto-play knows all of it (see "Auto-play"). Nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
 
+### The living land: outposts, tears, meetings and the sides at war
+
+The land between the roads was empty: 101 lairs over 120 square kilometres. Now something stands, opens or walks up
+every few hundred metres of it (`src/core/wilds.js` says who and what, `src/core/wilds-data.js` where, written by
+`node tools/wilds/place.mjs`; `docs/LIVING-LAND.md` is the state of the work and what's left). Skyrim's land and RIFT's
+rifts and invasions are what it's after.
+
+- **A hundred new kinds of monster** (`WILD_VARIANTS`): each an old body in a new palette, at a new size, under a new
+  name, with numbers, tricks and a spell of its own. Mossback, mire, Emberfang and frost goblins; delver, snow, rust and
+  ash kobolds and a storm-shaman; grave waifs, barrow thralls, bone sentinels, the Barrow King; the drowned; wood, frost,
+  rust and ash spiders and spiderlings; hill, rime and cinder rams; wolfkin and white howlers; dusk bats; storm harpies;
+  cinder whelps, marsh, frost and ash drakes (the dragons' models at half size), sand, ice and bog worms; dream-eaters,
+  scarecrows, hollow effigies; the plague's own; cultists, pyromancers, rime witches, storm-callers, stone-seers, each
+  casting its own element; Velscour's sergeants, sorcerers and magisters; six tear lords and three colossi. Fifteen new
+  palettes are in `assets/monsters/tripo/palettes.json`. The life bar shows a new kind's own name. All 68 models live
+  somewhere.
+- **388 outposts** held by 35 factions, each country its own (`COUNTRY_FACTIONS`): goblin stockades, kobold diggings,
+  graveyards, barrows, stone rings, covens, spiders' hollows, roosts, dens, drakes' beds, haunted ruins, scarecrow
+  fields, pest camps, and in the Ashen Waste only, Velscour's black forts and watchtowers with his knights, lancers and
+  sorcerers. Each is a lair with a chief (so it has its glade, wakes, sleeps and comes back like any other, in eight
+  minutes), built by `src/core/wild-dress.js`. 171 have a trail from the nearest road, drawn on the map with a lozenge
+  for each outpost. Finding one pays a little; emptying one pays more and leaves a chest's worth.
+- **Tears.** 221 spots where the world can tear, two kinds a country out of six (ember, rime, the grave, rot, the brood,
+  storm), 42% open at any time and turning over every thirteen minutes. An open one is a column of light you see from
+  170 m. Walk into it: a first wave, a second under a leader, a bonus wave against a 45 second clock if the first two
+  took under 80, then its lord; every third sealed, a colossus. Sealing pays experience and a hoard. Leave and it waits.
+- **Meetings.** Walk for a while with nothing about and one of seven things is stood 70 to 95 m ahead: a pack on the
+  prowl, a skirmish between two sides, a warband marching the road at you, a named chief out with two of his own, a
+  ritual to stop inside 50 seconds (or fight what it raises), two sorcerers duelling, a drake.
+- **The sides at war.** Monsters of different sides (`side` on a faction; `TRUCES` for who leaves whom alone) fight each
+  other where they meet, and leave you be unless you hurt one or walk into it. Twelve battles stand beside the roads for
+  good and come back five minutes after they're done. What they kill leaves you nothing.
+- **247 small things to find**: a broken cart, a lonely grave, a cairn, a cold camp, a hide, a well. Each glints, and
+  pays the first time you walk up to it.
+
+A banner tells what's begun and ended and a tracker under it shows a tear's wave, count and clock (`src/ui/wilds.js`).
+What you've found and opened is kept in the save. Checked: `node --test tests/wilds.test.mjs` and
+`node tools/wilds/play.mjs`, which plays all of it in the sim with no page. Seen in the browser: a fort, a stockade, a
+graveyard, a tear, a skirmish. **Nobody has played it by hand, most outpost kinds haven't been looked at, and the frame
+time with 463,000 triangles of places (261,000 before) isn't measured.**
+
 ### The cathedral and the catacombs
 
 Out east of the village, along the church road and 60 m past the last of the town, through the great door at x = 156: the nave, the pulpit, the back office, a long stair, then the Bell Crypt, Reliquary, Gallery, Ossuary, Founders' Hall, Abbots' Gallery and Tomb. Undead are stood at the catacombs' spawn points as you go down (`stepCatacombs` in `src/sim/undead.js`), reusing bodies, because there are more places than bodies.

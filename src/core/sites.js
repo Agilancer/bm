@@ -17,6 +17,7 @@ import { buildDelves } from './delve-build.js';
 import { buildHall } from './testhall.js';
 import { PIECES, cinderford, lesser, street, thornwick, way } from './places.js';
 import { dressLairs } from './lair-dress.js';
+import { dressWilds } from './wild-dress.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -1430,6 +1431,8 @@ export function buildSites() {
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   // (What lies about the lairs, last, so it keeps clear of everything above: src/core/lair-dress.js.)
   dressLairs(K, SEALS);
+  // (And what's built at the land's outposts, its tear spots and the small things to find: src/core/wild-dress.js.)
+  dressWilds(K);
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
   built = { parts: K.parts, under: K.under, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups };
   return built;

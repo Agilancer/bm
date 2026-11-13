@@ -377,12 +377,12 @@ export class Wilds {
       const a = time * 1.6 + i;
       c.fx(FX.FLARE, ELEM.LIGHT, x + Math.cos(a) * 0.25, y + Math.sin(time * 2.3 + i) * 0.18, z + Math.sin(a) * 0.25, 0.09, 0, 1, 0, 0, 0.9, 1.5, 3, 0, i * 0.37);
     }
-    // A tear: a wound of light over a ring of signs, a column you can see from a long way off; wilder while it's fought.
+    // A tear: a wound of light over a ring of signs, a column (its size is its height, its length its width) you can see from a long way off; wilder while it's fought.
     const T = this.tear, i = T ? T.i : this.near;
     if (i >= 0) {
       const [x, z, kind] = TEAR_SPOTS[i], e = TEARS_KINDS[kind].elem, y = sim.world.height(x, z), hot = T ? 1 : 0;
       const beat = 0.5 + 0.5 * Math.sin(time * (2 + hot * 3));
-      c.fx(FX.COLUMN, e, x, y, z, 0.7 + hot * 0.5 + beat * 0.2, 0, 1, 0, 34, 0.55 + hot * 0.3, 10 + hot * 10, 22, (time * 0.25) % 1, i * 0.21);
+      c.fx(FX.COLUMN, e, x, y, z, 34, 0, 1, 0, 0.8 + hot * 0.5 + beat * 0.2, 0.55 + hot * 0.3, 10 + hot * 10, 22, (time * 0.25) % 1, i * 0.21);
       c.fx(FX.VORTEX, e, x, y + 2.4, z, 1.5 + hot * 0.9 + beat * 0.3, 0, 1, 0, 0, 1, 9, 10, 0, i * 0.13);
       c.fx(FX.RUNE, e, x, y + 0.08, z, 4.2 + hot * 2.2, 0, 1, 0, 0, 0.75, 4, 6, (time * 0.08) % 1, i * 0.4);
       c.fx(FX.RING, e, x, y + 0.05, z, 6.5 + hot * 2 + beat * 0.5, 0, 1, 0, 0, 0.5, 0, 0, 0.4, i * 0.3);
@@ -396,7 +396,7 @@ export class Wilds {
     if (M && M.key === 'ritual' && !M.risen) {
       const u = 1 - clamp(M.clock / MEET.ritual, 0, 1), y = sim.world.height(M.x, M.z), e = M.side === 'dead' ? ELEM.BONE : ELEM.DRAIN;
       c.fx(FX.RUNE, e, M.x, y + 0.08, M.z, 2 + u * 3.5, 0, 1, 0, 0, 0.5 + u * 0.5, 3 + u * 9, 7, (time * 0.1) % 1, 0.7);
-      c.fx(FX.COLUMN, e, M.x, y, M.z, 0.3 + u * 0.7, 0, 1, 0, 6 + u * 14, 0.3 + u * 0.5, 4 + u * 10, 10, (time * 0.3) % 1, 0.2);
+      c.fx(FX.COLUMN, e, M.x, y, M.z, 6 + u * 14, 0, 1, 0, 0.3 + u * 0.7, 0.3 + u * 0.5, 4 + u * 10, 10, (time * 0.3) % 1, 0.2);
     }
   }
 }

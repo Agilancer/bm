@@ -250,14 +250,16 @@ export const WILD = {
   TEAR_GONE: 11,    // out of sight of it again
 };
 
+// How each kind of outpost's own ground is dressed (src/core/lair-dress.js lairKind), under what's built there.
+const DRESS = { camp: 'camp', dig: 'camp', graveyard: 'plot', tomb: 'plot', fort: 'picket', tower: 'picket', ring: 'ring', coven: 'ring', nest: 'webs', roost: 'roost', den: 'den', bed: 'bed', ruin: 'ring', field: 'plot', pesthouse: 'picket' };
 // What an outpost stands up: its garrison (one lair, with its chief), by its faction. n: how many beside the chief.
 export function outpostLair(o) {
   const f = FACTIONS[o.faction];
   const n = f.kind === 'fort' ? 5 : f.kind === 'tower' || f.kind === 'bed' || f.kind === 'den' ? 2 : f.kind === 'tomb' || f.kind === 'roost' ? 3 : 4;
-  return { key: o.key, x: o.x, z: o.z, r: o.r, boss: f.chief, pick: f.rank.concat(f.rank, f.elite), n, pal: f.pal, tricks: f.lvl >= 9, side: f.side, lvl: f.lvl, wild: true, respawn: 480 };
+  return { key: o.key, x: o.x, z: o.z, r: o.r, boss: f.chief, pick: f.rank.concat(f.rank, f.elite), n, pal: f.pal, tricks: f.lvl >= 9, side: f.side, lvl: f.lvl, wild: true, respawn: 480, dress: DRESS[f.kind] };
 }
 // A standing battle's two lairs.
 export function battleLairs(b) {
-  const one = (fk, x, z, n, tag) => { const f = FACTIONS[fk]; return { key: `${b.key}_${tag}`, x, z, r: 5, pick: f.rank.concat(f.elite), n, pal: f.pal, tricks: f.lvl >= 12, side: f.side, lvl: Math.max(FACTIONS[b.a].lvl, FACTIONS[b.b].lvl), wild: true, battle: b.key, respawn: 300, rivalTake: 0.3 }; };
+  const one = (fk, x, z, n, tag) => { const f = FACTIONS[fk]; return { key: `${b.key}_${tag}`, x, z, r: 5, pick: f.rank.concat(f.elite), n, pal: f.pal, tricks: f.lvl >= 12, side: f.side, lvl: Math.max(FACTIONS[b.a].lvl, FACTIONS[b.b].lvl), wild: true, battle: b.key, respawn: 300, rivalTake: 0.3, dress: 'picket' }; };
   return [one(b.a, b.x, b.z, 4, 'a'), one(b.b, b.x2, b.z2, 4, 'b')];
 }
