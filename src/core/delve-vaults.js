@@ -49,11 +49,15 @@ const tunnels = [
   // The drains Mother Sallow's drowned climb out of (dead ends off her hall, either side of where she stands for the tide).
   { pts: [at(rooms, 'dv_tide', 0.9, 0.9), at(rooms, 'dv_tide', 1.4, 0.9)], w: 1.9, dead: true },
   { pts: [at(rooms, 'dv_tide', 0.9, 5.6), at(rooms, 'dv_tide', 1.4, 5.6)], w: 1.9, dead: true },
-  // The cracks: three of the rooms round the Sump have one cut toward it, as far as the rock would let the water go.
-  // They're blind (the field has no opening too narrow to walk); what comes up them is its light and the sound of it.
-  niche(rooms, 'dv_reeds', 1.57, 9, 1.7, { rise: -3 }),
+  // The drains: the Reed Galleries and the Great Cistern each have one cut right through to the Sump, falling steeply to
+  // its water, with the toll's old iron across its head and its foot (the grates, below): nothing goes down it or up it, but what's down there is
+  // seen from here, long before the sluice. Unlit, so the Sump's own light is what shows at the bottom.
+  // (Written from the Sump up, as blind cuts are, so each one's head comes out level with its room's floor and all of
+  // the fall is beyond the bars: rise is the room's floor over the Sump's.)
+  { pts: [[-4, -112], at(rooms, 'dv_reeds', 0.9, 1.57)], w: 2.1, niche: true, rise: 17, dark: true, drain: true },
+  { pts: [[14, -158], at(rooms, 'dv_cistern', 0.9, 3.14)], w: 2.1, niche: true, rise: 11, dark: true, drain: true },
+  // And the Wallow's crack toward it, which is blind: as far as the rock would let the water go.
   niche(rooms, 'dv_wallow', 2.22, 10, 1.8, { rise: -3 }),
-  niche(rooms, 'dv_cistern', 3.14, 10, 1.8, { rise: -3 }),
   // And its bores: round, wide and falling steeply away, where the thing in the Sump came up to look and went back.
   { pts: [[-16.5, -62], [-6, -66], [2, -72]], w: 2.8, niche: true, rise: -5 },
   niche(rooms, 'dv_toll', 1.2, 9, 3.4, { rise: -4 }),
@@ -112,6 +116,14 @@ add('reeds', 23, -184, { r: 1.8 }); add('reeds', 5, -201, { r: 1.5 });
 // The Strongroom: what the toll took, a hundred years of it, and the door that kept the fen out till it didn't.
 add('gold', 10, -231, { r: 1.5 }); add('gold', 19, -231, { r: 1.2 }); add('crates', 9, -222); add('crates', 20, -223);
 add('strongdoor', 14, -217.5, { yaw: 0, w: 2.2 });
+// The grates across the two drains' heads (solid: bodies, shots and sight along the floor stop at them; the eye doesn't).
+add('grate', -20.4, -112, { hx: 0.3, hz: 2.2, solid: true }); add('grate', 14, -175.2, { hx: 2.2, hz: 0.3, solid: true });
+// (And across their feet, where they come out over the Sump's water: nothing climbs them from below either.)
+add('grate', -8.6, -112, { hx: 0.3, hz: 2.2, solid: true }); add('grate', 14, -160.6, { hx: 2.2, hz: 0.3, solid: true });
+// (Each drain's own stone: a square culvert from one grate to the other, a headwall round each mouth.)
+add('culvert', -20.4, -112, { to: [-8.6, -112], layer: 'mire:course', head: 'mire:block', cap: 'mire:ashlar' }); add('culvert', 14, -175.2, { to: [14, -160.6], layer: 'mire:course', head: 'mire:block', cap: 'mire:ashlar' });
+// (A light at each foot, on the Sump's side of the bars and in line with the culvert: what's seen at the bottom from above.)
+add('brazier', -5.4, -112); add('brazier', 14, -157.4);
 // The Tidehall: the high rock, the wrack the last tide left, the water over everything else.
 add('rock', TIDE_ROCK.x, TIDE_ROCK.z, { r: TIDE_ROCK.r + 0.2 });
 add('pool', 72, -166, { r: 21, up: 0.02 });

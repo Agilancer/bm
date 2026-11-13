@@ -1011,9 +1011,12 @@ export const FIGHTS = {
         f.still = { stage: 'wind', t: 0, at: new Map(), tick: 0 };
         f.hold = true; m.noTurn = true;
         W.warn(WARN.dol_wind);
-        // (As it slows, a chime under each of you: out of that first, and then stop.)
-        // (The second lands just before the stop: out of it, and stopped, in the one breath.)
-        for (const b of loose(W)) P.rings(b.x, b.z, [3, 6], 0.7, { fuse: 2, dmg: K(m, 0.9), elem: ARCANE, from: m, tag: 'chimes' });
+        // (As it slows, a chime under each of you, that rings twice where you stood: out of that first, and then stop.
+        // The second stroke is the heavy one, and lands just before the stop: whoever never left the spot has both.)
+        for (const b of loose(W)) {
+          P.mark({ x: b.x, z: b.z, r: 3.2, fuse: 2, dmg: K(m, 0.9), elem: ARCANE, from: m, tag: 'chimes' });
+          P.mark({ x: b.x, z: b.z, r: 3.2, fuse: 2.8, dmg: K(m, 2.7), elem: ARCANE, from: m, tag: 'chimes' });
+        }
         return;
       }
       u.t += dt;
@@ -1077,7 +1080,7 @@ export const FIGHTS = {
       // no use again: six of them, so six cracks at most (the broken ones are shown so: W.flip, src/core/delve-build.js wardstone).
       charge: { who: 'mark', clip: null, warn: 'grv_charge', gap: 10, go(W, f, m, t, P) {
         const sim = W.sim, d = roomOf(f.boss.room).delve, far = 30, fuse = 3.2, lock = 0.78;
-        const mk = P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t), r: far, w: 1.6, fuse, lock, aim: t, dmg: K(m, 1.3), knock: 6, elem: BONE, from: m, tag: 'charge' });
+        const mk = P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t), r: far, w: 1.6, fuse, lock, aim: t, dmg: K(m, 2.4), knock: 6, elem: BONE, from: m, tag: 'charge' });
         f.charge = { on: t, mk };
         let crash = false, cut = false, stone = -1;
         // (Where the line ends: the first rock down it, read as it stops following.)
@@ -1116,8 +1119,8 @@ export const FIGHTS = {
       } },
       cleave: { clip: 'atk2', secs: 1.4, warn: 'grv_cleave', go: (W, f, m, t, P) => sweep(P, m, t, K(m, 1.2), { r: 10, half: 1.1, elem: BONE }) },
       bash: { clip: 'bash', secs: 1.3, warn: 'grv_bash', go: (W, f, m, t, P) => MOVES.shieldWall(P, m, t, K(m, 0.6), { r: 7, w: 3 }) },
-      quake: { who: 'none', clip: 'jump', at: 0.5, secs: 1.4, warn: 'grv_quake', go: (W, f, m, t, P) => MOVES.quakeWave(P, m, null, K(m, 0.4), { reach: 26, speed: 10, elem: BONE }) },
-      bones: { clip: 'atk3', secs: 1.3, warn: 'grv_bones', go: (W, f, m, t, P) => { for (const turn of [-0.45, 0, 0.45]) P.march(m.x, m.z, yawTo(m, t) + turn, 10, 1.9, 0.14, { r: 1.25, fuse: 0.85, dmg: K(m, 0.8), knock: 2, elem: BONE, from: m, tag: 'bones' }); } },
+      quake: { who: 'none', clip: 'jump', at: 0.5, secs: 1.4, warn: 'grv_quake', go: (W, f, m, t, P) => MOVES.quakeWave(P, m, null, K(m, 0.75), { reach: 26, speed: 10, elem: BONE }) },
+      bones: { clip: 'atk3', secs: 1.3, warn: 'grv_bones', go: (W, f, m, t, P) => { for (const turn of [-0.45, 0, 0.45]) P.march(m.x, m.z, yawTo(m, t) + turn, 10, 1.9, 0.14, { r: 1.25, fuse: 1.0, dmg: K(m, 1.0), knock: 2, elem: BONE, from: m, tag: 'bones' }); } },
     },
     // His plate: what it turns is what's left of it, but for the seconds he's stunned. It knits a step every forty
     // seconds he isn't made to strike a stone.
@@ -1178,8 +1181,8 @@ export const FIGHTS = {
     moves: {
       slam: { who: 'none', clip: 'jump', secs: 1.6, warn: 'gol_slam', go: (W, f, m, t, P) => MOVES.stompRings(P, m, null, K(m, 0.6), { r: 5.5, elem: BONE }) },
       // A cage of ribs up round one of you: the middle of it is the one safe place, and then it isn't.
-      cage: { clip: 'atk1', secs: 1.3, warn: 'gol_cage', go: (W, f, m, t, P) => P.mark({ shape: 'ring', x: t.x, z: t.z, r: 6.5, r0: 3, fuse: 1.7, dmg: K(m, 1.2), knock: 2, elem: BONE, follow: t, lock: 0.35, from: m, tag: 'cage', then: (q) => P.mark({ x: q.x, z: q.z, r: 3.3, fuse: 1.5, dmg: K(m, 1.3), knock: 2, elem: BONE, from: m, tag: 'cage' }) }) },
-      spikes: { clip: 'atk3', secs: 1.3, warn: 'gol_spikes', go: (W, f, m, t, P) => { for (const turn of [-0.42, 0, 0.42]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t) + turn, r: 20, w: 1.2, fuse: 1.1, dmg: K(m, 1.25), knock: 3, elem: BONE, from: m, tag: 'spikes' }); } },
+      cage: { clip: 'atk1', secs: 1.3, warn: 'gol_cage', go: (W, f, m, t, P) => P.mark({ shape: 'ring', x: t.x, z: t.z, r: 6.5, r0: 3, fuse: 1.7, dmg: K(m, 1.2), knock: 2, elem: BONE, follow: t, lock: 0.35, from: m, tag: 'cage', then: (q) => P.mark({ x: q.x, z: q.z, r: 3.3, fuse: 1.5, dmg: K(m, 3.0), knock: 2, elem: BONE, from: m, tag: 'cage' }) }) },
+      spikes: { clip: 'atk3', secs: 1.3, warn: 'gol_spikes', go: (W, f, m, t, P) => { for (const turn of [-0.42, 0, 0.42]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yawTo(m, t) + turn, r: 20, w: 1.2, fuse: 1.1, dmg: K(m, 1.5), knock: 3, elem: BONE, from: m, tag: 'spikes' }); } },
       grind: { who: 'none', clip: 'roar', secs: 1.3, warn: 'gol_grind', go: (W, f, m, t, P) => MOVES.fireWheel(P, m, null, K(m, 0.42), { r: 11, life: 6, spin: Math.random() < 0.5 ? 0.7 : -0.7, elem: BONE }) },
     },
     step(W, f, [m], dt) {
@@ -1213,7 +1216,7 @@ export const FIGHTS = {
         P.mark({ shape: 'cone', ride: m, r: 16, half: 0.6, fuse: w[0] * dur, life: (w[1] - w[0]) * dur, dps: K(m, 0.5), elem: DRAIN, from: m, tag: 'breath', spare: (b) => b === tank });
       } },
       rake: { clip: 'atk1', face: false, at: 0.9, secs: 1.5, warn: 'wyr_rake', go(W, f, m, t, P) { const yaw = yawTo(m, t); for (const a of [-0.4, 0, 0.4]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yaw + a, r: 16, w: 1, fuse: 1.1, dmg: K(m, 0.45), knock: 3, elem: BONE, from: m, tag: 'rake' }); } },
-      fall: { who: 'none', clip: 'roar', secs: 1.3, warn: 'wyr_fall', go: (W, f, m, t, P) => fall(W, P, m, K(m, 0.36), BONE, 'vaultfall') },
+      fall: { who: 'none', clip: 'roar', secs: 1.3, warn: 'wyr_fall', go: (W, f, m, t, P) => fall(W, P, m, K(m, 0.55), BONE, 'vaultfall') },
       // Its head swung right round, burning: a bar of grave-fire from where it stands, turning. Keep ahead of it, or let it
       // pass and get in behind.
       sweep: { who: 'mark', clip: 'atk4', secs: 1.6, warn: 'wyr_sweep', go: (W, f, m, t, P) => P.mark({ shape: 'cone', x: m.x, z: m.z, yaw: yawTo(m, t) + 0.9, r: 20, half: 0.17, fuse: 1.5, dmg: K(m, 0.25), life: 3.4, spin: -0.7, touch: K(m, 0.28), again: 1.2, elem: DRAIN, from: m, tag: 'sweep' }) },
@@ -1231,7 +1234,7 @@ export const FIGHTS = {
       if (f.phase === 0 && m.hp < m.maxHp * 0.55 && m.state === 0 && !m.script && !m.breathing && !f.turn && !f.rite) {
         f.phase = 1; f.hold = true;
         W.callAdds(f, m, { warn: 'wyr_whelps', n: 3, pick: ['dragonling_undead'], from: 'doors', hp: 600, damage: 20, name: 'TOMB DRAKE', pal: ['Bone-white'], tricks: true });
-        soar(W, f, m, { passes: 3, elem: DRAIN, k: 0.6, warn: 'wyr_air', dive: 'wyr_dive', land: () => { f.phase = 2; f.hold = false; m.opts.damage *= 1.15; W.warn(WARN.wyr_land); } });
+        soar(W, f, m, { passes: 3, elem: DRAIN, k: 1.0, warn: 'wyr_air', dive: 'wyr_dive', land: () => { f.phase = 2; f.hold = false; m.opts.damage *= 1.15; W.warn(WARN.wyr_land); } });
         return;
       }
       if (f.phase === 1 || f.rite || !due(W, f, 'rite', f.phase === 2 ? 25 : 23, m.state === 0 && !m.script && !m.breathing && !f.turn)) return;
