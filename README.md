@@ -1280,7 +1280,7 @@ the hoard opens once Venomaw is dead. Clearing it pays 1,500 experience and 250 
   a flow field of its own (`CaveNav`), and its walls, floor, roof, stalagmites and torches are built from it with the
   world's places (`caveShell` in `src/core/delve-build.js`), lit by its fires: about a hundred wall torches (one every seven
   metres round a room, every six down a tunnel) and thirty-odd braziers on posts round the bigger rooms (`torches`,
-  `braziers` in `src/core/dungeon.js`). Down there a frame lights the thirty nearest of them (two and a half times the
+  `braziers` in `src/core/dungeon.js`). What they burn on and how a flame is drawn: "The delves' lights and dressing". Down there a frame lights the thirty nearest of them (two and a half times the
   tier's count; a phone keeps its two), and a frame's lamps went from 28 to 36 for it (`MAX_LIT` in
   `src/gfx/shaders.js`).
 - **What's in the rooms.** Each has what its name promises (`src/core/delve-warrens.js`, drawn by `PROPS` in
@@ -1451,6 +1451,86 @@ packs' toughness and pay. The Warrens' layout is in `dungeon.js` itself, as it w
   come through (into `tools/build/delves/`; needs Playwright's Chromium).
 - **For looking**: `bm.warrens('enter', { delve: 'blackvigil' })`, `bm.warrens('boss', { boss: 'sorvane' })` (its door,
   the bosses before it down), `bm.warrens('room', { room: 'bv_hall' })`, `bm.warrens('reset', { delve })`.
+
+### The delves' lights and dressing
+
+Every fire down the seven delves was a cone in the flat flame colour: a pyramid. Now what burns is a flame and what it
+burns on is a thing (2026-11-13, three passes with two critics: below).
+
+- **Flames.** A flame isn't built. `fire()` in `src/core/delve-build.js` puts it in `K.fires` (root, half width, height,
+  kind, the delve's `look.flame`), `buildDelveFires` in `src/gfx/interior.js` makes one buffer of them with a run for each
+  delve, and the glow pipeline that draws the houses' hearths draws the run of the delve you're in, added over the
+  picture. Three kinds: a `flame` (a card that turns about its own upright to face you, noise climbing it, pinched to a
+  tip and torn at the top, deep in its colour at the root and edges with a paler heart, leaning with a draught), a `glow`
+  (a soft round that faces you whole: the lit air round a light) and a `wisp` (a rounder, slower flame that bobs). An open
+  fire is three cards (`blaze`), wide and low under two tongues. Each delve's colour is in `HUES`. Open fires near you
+  throw sparks (`fireSparks` in `src/gfx/renderer.js`, from `emitAmbient`).
+- **What they burn on** (`fires()`): in the Warrens a stave jammed in the rock with a wrapped head, braziers on three
+  lashed legs, and every third a fire on the floor in a ring of stones; in the keep cressets, a cage of bars on an arm or
+  a clawed stand, coals in them; in the Playhouse sconces of three candles and stands of six (`lamp: 'candle'`); the
+  Kingsbarrow's bowls on corbels and standing stones; the Deeps' six-sided crystals of ice on a boss of rime with the
+  cold light in the heart of the tall ones; the Vaults' wisps over a low wet stone; the Sporehold's brackets in tiers
+  sunk into the wall and its caps. A fixture is put at the wall it hangs on (`back`), not a set way before it.
+- **Fires hung over the great rooms** (`'hang'` in `braziers()`, `src/core/dungeon.js`): three or four over a cavern
+  eighteen metres and more across, a grid of them down a castle's room twelve and more wide, about five metres up: an
+  iron basket on chains, a wheel of candles, a stone bowl, a cluster of icicles, caps grown down from the roof, three
+  wisps. Their light is from under the fixture, reaches seventeen metres and is five times a brazier's, since it falls
+  off by the square of the way; and a frame with more lights than it can light keeps a far-reaching one before a small
+  one (`writeFrame`). The portals' own fires inside a delve burn as that delve's do.
+- **Dressing** (`src/core/delve-dress.js`, worked out from each delve's field, nothing placed by hand, none of it
+  solid, all of it at the edges but what lies flat). A castle: a frame to every doorway (jambs, imposts, lintel and
+  relieving stones; joinery in the Playhouse; a trilithon in the Kingsbarrow, `megalith`), piers along the walls between
+  the lights with beams across from pier to pier and lighter ones between (slabs on corbels where `look.beam` is stone,
+  timber with purlins in the Playhouse), a plinth and a string course on every straight wall (`castleShell`), and in the
+  bays the keep's chains and shackles, the Playhouse's leaning flats, sandbags and rope (`bays`), the Kingsbarrow's bones
+  on shelves (`loculi`). A cave: walls that lean back as they climb with their upper half in the roof's stone, a roof
+  lumpier than the field's (`roofLump`, seen only), ribs of rock every so far, fallen rock along the foot of every wall,
+  something across the tunnels (`span`: the kobolds' shoring, the Vaults' broken piers, roots, icicles), litter by the
+  walls (`litter`: bones, pots, crates and staked rags; drifts and frozen falls; pools, reeds, broken columns and mooring
+  posts; caps and threads) and flat on the open floor (planks, cart rails on sleepers, ice, pools with scum on them,
+  steps going down into the wet, rings of caps). Stalagmites and stalactites have a collar, two lengths with a kink and
+  a point (`tooth`); caps a foot, a skirt, gills and a cap in two rounds; a hoard is slumped tiers of coin in a gold of
+  its own (flat material 115); the wardrobe's costumes are skirts, bodices and sleeves.
+- **Drawn apart.** The delves and the Test Dungeon are a run of their own in the static mesh (`K.deep`, `under` in
+  `buildSites`, `staticRuns` in the renderer): down there only that run is drawn, on the land only the land's. The land
+  used to draw all 337,000 of the delves' triangles in every frame; it draws none of the 700,000 there are now. The sun's
+  shadow maps still take the delves' rock, or daylight shafts leak into them (seen: a grey haze in every hall).
+- **Counted and looked at.** `node tools/dungeon/check.mjs`: the Warrens 81,000 triangles (47,000 before), the keep
+  136,000 (63,000), the Deeps 107,000 (42,000), the Vaults 70,000 (42,000), the Sporehold 152,000 (58,000), the Playhouse
+  79,000 (36,000), the Kingsbarrow 75,000 (51,000). `node tools/dungeon/looks.mjs [delve ...]` prints the arguments
+  for `tools/world/views.mjs` that look across three rooms of each delve and close at a wall light and a standing one,
+  with the player left at the way in so nothing wakes. One browser a delve: a headless one loses its GPU after two.
+
+**Three passes, two critics.** After each pass two reviewers, briefed apart and shown only the pictures (35 a pass,
+headless, software GPU, 960 by 600), took it to pieces: one for the lights, one for detail and dressing. Out of ten,
+the original, then after each pass:
+
+| | Lights | Detail |
+| --- | --- | --- |
+| The Warrens | 4, 6.5, 6.5, 7.5 | 3, 4.5, 5, 5.5 |
+| Blackvigil Keep | 3, 5, 5.5, 7 | 3, 5, 5.5, 5.5 |
+| The Howling Deeps | 4, 5.5, 7.5, 7 | 3, 3.5, 6.5, 6.5 |
+| The Drowned Vaults | 4, 6.5, 6.5, 6.5 | 2.5, 4.5, 4.5, 5 |
+| The Sporehold | 3, 5.5, 5.5, 7 | 3.5, 4, 5.5, 6.5 |
+| The Hollow Playhouse | 4, 6, 4.5, 6 | 4, 5, 6, 6 |
+| The Kingsbarrow | 3, 6, 4.5, 7.5 | 3, 4.5, 5, 5.5 |
+
+(Each round's reviewer marked the rounds before it again, so a column isn't one hand's.) What they changed: after
+the first, the grey haze (found from their complaint of fog), fires that fill their bowls, the keep's red and the
+barrow's green, lights hung in the great rooms, crystals with faces, wisps with nothing under them, fixtures fixed to
+their walls, ribs, beams, shelves, scatter, the Playhouse's inside walls (it wore a house front), narrower boards.
+After the second: hung lights that reach the floor, each delve's own light colour, ambient cut in the Playhouse and
+gone from the Kingsbarrow, the cave's wall going up into its roof, bays, trilithons, drowned masonry, frozen falls,
+rails, costumes, the keep's pale panels. After the third only what was quick: the sconces' plates, the ribs' steps,
+the frozen falls made ribbons, the hung lights' point lower.
+
+**Not done, and said by them at the last:** the middle of every room is still an open floor with trim round it (it's
+where the fights are, and nothing here is solid, so only flat things lie there); a cave's lower wall still reads as a
+built band under rock; the Playhouse's plaster is lit by its ambient more than its candles and its floor takes little
+light; the Deeps' hung cores are a bluer blue than its crystals; the Vaults' new masonry wasn't in any picture;
+the castles' walls are flat above the string course; flat tops of boulders and stumps stretch their paintings. **The
+last quick changes were seen in two pictures only** (a crystal in the Deeps, a cresset in the keep), not put before the
+critics. Nothing was looked at on a phone or measured for frame time, and nobody has walked any of it by hand.
 
 ### Blackvigil Keep
 

@@ -169,17 +169,18 @@ function scree(K, d) {
       const g = grad(mx, mz), room = roomOf(d, mx - d.x, mz - d.z), rock = room?.rock || L.wall, R = 0.7 + hr * 6, x = mx - g[0] * 0.25, z = mz - g[1] * 0.25;
       const y = caveFloorY(mx, mz) - 0.4, top = caveRoofY(mx + g[0], mz + g[1]) + 0.8, lean = (hash2(mz, mx) - 0.5) * 1.2, mid = y + (top - y) * 0.45;
       // (Three lengths of it, each stepped a little off the last, thick at the foot and where it joins the roof.)
-      const H = top + roofLump(mx, mz) - y, sx = -g[1] * lean * 0.35, sz = g[0] * lean * 0.35;
+      const H = top + roofLump(mx, mz) - y, sx = -g[1] * lean * 0.12, sz = g[0] * lean * 0.12;
       K.drum(rock, x + g[0] * 0.2, y, z + g[1] * 0.2, R * 1.5, H * 0.16, 6, { r2: R * 0.95, open: true, collide: false, turn: mx });
-      K.drum(rock, x, y + H * 0.16, z, R * 0.95, H * 0.3, 6, { r2: R * 0.62, open: true, collide: false, turn: mx + 0.5 });
-      K.drum(rock, x + sx, y + H * 0.46, z + sz, R * 0.66, H * 0.3, 5, { r2: R * 0.7, open: true, collide: false, turn: mz });
-      K.drum(L.roof, x + sx * 2 - g[0] * 0.3, y + H * 0.76, z + sz * 2 - g[1] * 0.3, R * 0.7, H * 0.26, 6, { r2: R * 1.5, open: true, collide: false, turn: mx + 1 });
+      K.drum(rock, x, y + H * 0.14, z, R * 0.95, H * 0.34, 6, { r2: R * 0.62, open: true, collide: false, turn: mx + 0.5 });
+      K.drum(rock, x + sx, y + H * 0.44, z + sz, R * 0.7, H * 0.34, 6, { r2: R * 0.74, open: true, collide: false, turn: mz });
+      K.drum(L.roof, x + sx * 2 - g[0] * 0.3, y + H * 0.74, z + sz * 2 - g[1] * 0.3, R * 0.78, H * 0.28, 6, { r2: R * 1.25, open: true, collide: false, turn: mx + 1 });
     }
     // (In the cold: water frozen as it ran down the wall, every so far: a fall of ice from the wall's head to the floor.)
     if (L.litter === 'snow' && hr > 0.1 && hr < 0.14 && clear(d, mx, mz, 1.5)) {
       const g = grad(mx, mz), y = caveFloorY(mx, mz) - 0.2, top = caveRoofY(mx + g[0] * 0.5, mz + g[1] * 0.5) + 0.5, H = top - y;
-      for (let k = 0; k < 4; k++) K.drum('ice', mx - g[0] * (0.5 - k * 0.12) , y + H * (1 - (k + 1) / 4), mz - g[1] * (0.5 - k * 0.12), 1.3 - k * 0.2 + 0.25, H / 4 + 0.1, 7, { r2: 1.3 - k * 0.2 - 0.2 + (k === 3 ? 0.5 : 0), open: true, collide: false, turn: mx + k });
-      K.drum('white', mx + g[0] * 0.3, y, mz + g[1] * 0.3, 2.1, 0.22, 8, { r2: 1.2, collide: false, turn: mz, lid: 'ice' });
+      // (Ribbons of it side by side down the wall, long and thin, each ending at its own height over a mound of it.)
+      for (let k = 0; k < 6; k++) { const u = (k - 2.5) * 0.42, px = mx - g[1] * u + g[0] * 0.15, pz = mz + g[0] * u + g[1] * 0.15, len = H * (0.72 + 0.28 * hash2(k, mx)); K.spike('ice', px, top, pz, 0.3, -len, 4, k, [g[0] * 0.12, g[1] * 0.12]); }
+      K.drum('white', mx + g[0] * 0.3, y, mz + g[1] * 0.3, 1.7, 0.3, 8, { r2: 0.8, collide: false, turn: mz, lid: 'ice' });
     }
     // (In the cold: icicles along the head of the wall.)
     if (L.litter === 'snow' && h > 0.5) {

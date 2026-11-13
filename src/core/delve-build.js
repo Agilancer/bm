@@ -345,7 +345,7 @@ function fires(K, d) {
     }
     if (L.lamp === 'candle') {
       // A sconce: a plate on the wall, an arm out from it, three candles in their cups.
-      K.box('dark:wood', x - nx * back, y - 0.45, z - nz * back, 0.14, 0.55, 0.03, Math.atan2(nx, nz), NO);
+      K.box('iron', x - nx * back, y - 0.36, z - nz * back, 0.05, 0.16, 0.03, Math.atan2(nx, nz), NO);
       bar(K, 'iron', [x - nx * back, y - 0.3, z - nz * back], [x - nx * 0.1, y - 0.18, z - nz * 0.1], 0.018);
       bar(K, 'iron', [x - nx * 0.1 - tx * 0.24, y - 0.18, z - nz * 0.1 - tz * 0.24], [x - nx * 0.1 + tx * 0.24, y - 0.18, z - nz * 0.1 + tz * 0.24], 0.016);
       for (const u of [-0.24, 0, 0.24]) {
@@ -358,7 +358,7 @@ function fires(K, d) {
     }
     if (castle) {
       // A cresset: a plate bolted to the wall, an arm, a cage of iron with the fire in it.
-      K.box('dark:stone', x - nx * back, y - 0.6, z - nz * back, 0.1, 0.62, 0.025, Math.atan2(nx, nz), NO);
+      K.box('iron', x - nx * back, y - 0.56, z - nz * back, 0.045, 0.5, 0.03, Math.atan2(nx, nz), NO);
       bar(K, 'iron', [x - nx * back, y - 0.5, z - nz * back], [x, y - 0.2, z], 0.022);
       bar(K, 'iron', [x - nx * back, y - 0.12, z - nz * back], [x - nx * 0.05, y - 0.16, z - nz * 0.05], 0.016);
       cage(K, x, y - 0.2, z, 0.08, 0.17, 0.3, 5);

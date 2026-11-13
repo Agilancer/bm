@@ -515,7 +515,7 @@ export class Renderer {
       // (A fire hung over a hall: its light from under the basket, far-reaching and strong enough to pool on a floor five
       // metres down, which falls off by the square of the way.)
       for (const [x, y, z, lift, how] of braziers(d)) warrens.push(how === 'hang'
-        ? { p: [x, y + lift - 0.75, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 26 * g, flicker: 0.5 * cold }
+        ? { p: [x, y + lift - 1.6, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 30 * g, flicker: 0.5 * cold }
         : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
     }
     // (The portals' swirl, a cold blue that breathes: in front of the Warrens' doorways, and over every seal: portalModel.)
