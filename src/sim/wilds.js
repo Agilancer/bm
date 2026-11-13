@@ -18,7 +18,8 @@ import { EV } from '../core/layout.js';
 import { OPENING } from '../core/opening.js';
 import { townDist } from '../core/town.js';
 import { SITES, countryAt, routeDist, siteAt, waterAt } from '../core/lands.js';
-import { COUNTRY_FACTIONS, FACTIONS, FACTION_KEYS, MEET, MEETINGS, TEAR, TEARS_KINDS, WILD, atWar } from '../core/wilds.js';
+import { SEALS } from '../core/sites.js';
+import { COUNTRY_FACTIONS, FACTIONS, FACTION_KEYS, MEET, MEETINGS, RAID, RAID_TOWNS, TEAR, TEARS_KINDS, WILD, atWar } from '../core/wilds.js';
 import { FINDS, OUTPOSTS, TEAR_SPOTS } from '../core/wilds-data.js';
 import { ELEM, FX } from './spells.js';
 import { TripoEmpty, TripoMonster } from './tripo.js';
@@ -47,6 +48,7 @@ export class Wilds {
     this.tear = null;        // the one being fought
     this.tearRest = 0;
     this.meet = null; this.nextMeet = 50;
+    this.raid = null; this.raidAt = new Map(); this.raidSeen = new Map();
     this.glints = [];
     this.log = [];
   }
@@ -64,10 +66,11 @@ export class Wilds {
     this.draw();
     if (dt <= 0) return;
     if ((this.half -= dt) <= 0) { this.half = 0.5; this.rivals(); }
-    if ((this.clock -= dt) > 0) { if (this.tear) this.stepTear(dt); if (this.meet) this.stepMeet(dt); return; }
+    if ((this.clock -= dt) > 0) { if (this.tear) this.stepTear(dt); if (this.meet && !this.raid) this.stepMeet(dt); return; }
     this.clock = 1;
     this.lookOutposts(); this.lookFinds(); this.lookTears();
-    if (this.tear) this.stepTear(dt); else if (this.meet) this.stepMeet(dt); else this.lookMeet();
+    this.sim.heroWorld?.stepWildHome?.();
+    if (this.raid) this.stepRaid(1); else if (this.tear) this.stepTear(dt); else if (this.meet) this.stepMeet(dt); else if (!this.lookRaid()) this.lookMeet();
   }
 
   monsters() { return this.sim.tripo.slots().filter((k) => k instanceof TripoMonster && !k.dead); }
@@ -194,6 +197,12 @@ export class Wilds {
     else if (T.stage === 3) { T.lair = this.stand({ ...base, r: 9, pick: K.waves, n: 6 }); secs = TEAR.bonusFor; T.clock = secs; }
     else T.lair = this.stand({ ...base, boss: [T.colossus ? K.colossus : K.lord], pick: K.elite, n: T.colossus ? 0 : 2, tricks: true, tough: T.colossus ? { hp: 1, damage: 1 } : tough });
     T.shown = -1;
+    // Its second wave, and sometimes you aren't the only one who saw the light: one or two of the other Tessariels come in.
+    if (T.stage === 2 && Math.random() < 0.6) {
+      const p = sim.player, a = Math.atan2(T.x - p.x, T.z - p.z);
+      T.help = sim.heroWorld?.answer?.(T.x, T.z, T.lvl > 10 ? 2 : 1, [T.x + Math.sin(a) * 55, T.z + Math.cos(a) * 55], 'the tear') || [];
+      if (T.help.length) sim.event(EV.WILD, WILD.HELP, T.help.length);
+    }
     sim.event(EV.WILD, WILD.TEAR_STAGE, T.kind, T.stage, T.lair.want, secs, T.colossus ? 1 : 0);
     sim.event(EV.ROAR, T.x, sim.world.height(T.x, T.z) + 2, T.z, T.stage === 4 ? 1.6 : 1);
   }
@@ -203,7 +212,7 @@ export class Wilds {
     const d = Math.hypot(p.x - T.x, p.z - T.z);
     T.lostT = p.dead || d > TEAR.leave ? T.lostT + dt : 0;
     if (T.lostT > TEAR.lost || (p.dead && T.lostT > 2)) {
-      this.drop(L); this.tear = null; this.tearRest = 25;
+      this.drop(L); this.tear = null; this.tearRest = 25; sim.heroWorld?.sendBack?.(T.help || []);
       sim.event(EV.WILD, WILD.TEAR_LOST, T.kind);
       this.note(`tear ${T.i} lost`);
       return;
@@ -216,10 +225,82 @@ export class Wilds {
     if (!this.over(L)) return;
     if (T.stage === 3) T.bonus = true;
     if (T.stage < 4) { this.nextStage(); return; }
-    this.sealedAt.set(T.i, sim.time); this.sealed++;
+    this.sealedAt.set(T.i, sim.time); this.sealed++; sim.heroWorld?.sendBack?.(T.help || []);
     this.tear = null; this.near = -1; this.nextMeet = sim.time + rnd(...MEET.every);
     sim.event(EV.WILD, WILD.TEAR_SEALED, T.kind, T.x, sim.world.height(T.x, T.z), T.z, T.lvl, T.bonus ? 1 : 0, T.colossus ? 1 : 0);
     this.note(`tear ${T.i} sealed`);
+  }
+
+  // ---- raids on the towns ---------------------------------------------------------------------------------------------
+  // You're in or by one of the small towns, and something comes down the road at it: a chief and four, then a second band
+  // from another side. The other Tessariels come out of the town's seal to hold it with you. True if one began.
+  lookRaid(force = -1) {
+    const sim = this.sim, p = sim.player;
+    if (this.tear || this.meet || p.dead) return false;
+    for (const [n, key] of RAID_TOWNS.entries()) {
+      const s = SITES[key], d = Math.hypot(p.x - s.x, p.z - s.z);
+      if (force !== n && d > s.r + RAID.near) { this.raidSeen.delete(n); continue; }
+      // (Not the moment you arrive: a while after, and not again for a long while.)
+      if (!this.raidSeen.has(n)) this.raidSeen.set(n, sim.time + rnd(...RAID.first));
+      if (force !== n && (sim.time < this.raidSeen.get(n) || sim.time < (this.raidAt.get(n) ?? -1e9) || this.room() < 9)) continue;
+      const list = this.factionsAt(s.x, s.z).filter((k) => ['goblin', 'kobold', 'dead', 'plague', 'herd', 'pack', 'night'].includes(FACTIONS[k].side));
+      if (!list.length) continue;
+      const fa = pick(list), seal = SEALS.find((q) => q.key === key);
+      this.raid = { n, key, x: s.x, z: s.z, r: s.r, a: fa, wave: 0, lair: null, lvl: Math.max(wildLevel(s.x, s.z), FACTIONS[fa].lvl), from: -1, shown: -1, lostT: 0, hit: false,
+        help: sim.heroWorld?.answer?.(s.x, s.z, RAID.help, seal ? [seal.x, seal.z] : [s.x, s.z], SITES[key].name) || [] };
+      this.raidAt.set(n, sim.time + rnd(...RAID.every));
+      this.note(`raid on ${key} by ${fa}, ${this.raid.help.length} came to hold it`);
+      this.raidWave();
+      return true;
+    }
+    return false;
+  }
+
+  raidWave() {
+    const sim = this.sim, R = this.raid, F = FACTIONS[R.a], w = sim.world;
+    R.wave++;
+    // Where they come from: out on a road if one runs in on a side they haven't used, else anywhere sound.
+    let best = null, bs = -1e9;
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * 6.283, x = R.x + Math.sin(a) * (R.r + RAID.out), z = R.z + Math.cos(a) * (R.r + RAID.out);
+      if (waterAt(x, z) !== null || w.inside(x, z, 1.5) || Math.abs(w.height(x + 5, z) - w.height(x - 5, z)) > 3) continue;
+      const rd = routeDist(x, z), far = R.from < 0 ? 8 : Math.abs(((i - R.from + 24) % 16) - 8);
+      const score = (rd.road && !rd.road.trail ? 30 - rd.d : 0) - (8 - far) * 6 + Math.random() * 4;
+      if (score > bs) { bs = score; best = [x, z, i, a]; }
+    }
+    if (!best) best = [R.x + R.r + RAID.out, R.z, 4, 1.57];
+    R.from = best[2];
+    R.gate = [R.x + Math.sin(best[3]) * (R.r * 0.55), R.z + Math.cos(best[3]) * (R.r * 0.55)];
+    const tough = { hp: 0.8 + R.lvl * 0.03, damage: 0.8 + R.lvl * 0.02 };
+    const set = (m) => { m.opts.sight = 40; m.opts.leash = 600; m.opts.roam = 2; m.idleT = 0; };
+    R.lair = this.stand({ tag: 'raid', x: best[0], z: best[1], r: 5, boss: R.wave === 1 ? F.chief : F.elite, pick: F.rank.concat(F.elite), n: R.wave === 1 ? 4 : 3, pal: F.pal, side: F.side, tricks: true, tough, set });
+    R.shown = -1;
+    sim.event(EV.WILD, WILD.RAID, R.n, FACTION_KEYS.indexOf(R.a), R.wave, R.lair.want, R.help.length);
+    sim.event(EV.ROAR, best[0], w.height(best[0], best[1]) + 2, best[1], 1.4);
+  }
+
+  stepRaid(dt) {
+    const sim = this.sim, R = this.raid, p = sim.player, L = R.lair;
+    const mine = sim.tripo.slots().filter((m) => m instanceof TripoMonster && m.lair === L);
+    // They walk in on the town; the Tessariels who came keep after whoever's left.
+    for (const m of mine) {
+      if (m.dead) continue;
+      const dx = R.gate[0] - m.home[0], dz = R.gate[1] - m.home[1], d = Math.hypot(dx, dz);
+      if (d > 3) { m.home[0] += dx / d * 2.2 * dt; m.home[1] += dz / d * 2.2 * dt; }
+      // (In among the houses, they go for whoever's there: you, if you are.)
+      else if (!m.aggro && !p.dead && Math.hypot(p.x - m.x, p.z - m.z) < 75 && Math.hypot(m.x - m.home[0], m.z - m.home[1]) < 12) m.aggro = true;
+    }
+    if (mine.some((m) => sim.time - (m.playerHitT ?? -1e9) < 3)) R.hit = true;
+    if (L.spawned && L.killed !== R.shown) { R.shown = L.killed; sim.event(EV.WILD, WILD.RAID_COUNT, L.killed, Math.max(L.spawned, L.want)); }
+    R.lostT = p.dead || Math.hypot(p.x - R.x, p.z - R.z) > R.r + RAID.near + 120 ? R.lostT + dt : 0;
+    const done = this.over(L);
+    if (done && R.wave < 2) { this.raidWave(); return; }
+    if (!done && R.lostT < 20) return;
+    if (!done) this.drop(L);
+    this.raid = null; this.nextMeet = sim.time + rnd(...MEET.every);
+    sim.heroWorld?.sendBack?.(R.help);
+    sim.event(EV.WILD, WILD.RAID_DONE, R.n, R.x, sim.world.height(R.x, R.z), R.z, R.lvl, done && R.hit ? 1 : done ? 2 : 0);
+    this.note(`raid on ${R.key} over (${done ? (R.hit ? 'held, with you' : 'held without you') : 'left'})`);
   }
 
   // ---- meetings -----------------------------------------------------------------------------------------------------
@@ -244,6 +325,8 @@ export class Wilds {
     const sim = this.sim, p = sim.player;
     if (sim.time < this.nextMeet || p.dead || townDist(p.x, p.z) < 260 || siteAt(p.x, p.z, 70)) return;
     if (this.monsters().some((m) => Math.hypot(m.x - p.x, m.z - p.z) < MEET.quiet) || this.room() < 8) { this.nextMeet = sim.time + 6; return; }
+    // (Nor by a lair that's about to stand its own up, or has: an outpost is enough to be going on with.)
+    if (sim.tripo.lairs.some((l) => !l.temp && !l.dungeon && l.state !== 'cleared' && Math.hypot(l.x - p.x, l.z - p.z) < (l.wake || 110) + 30)) { this.nextMeet = sim.time + 5; return; }
     if (this.near >= 0 && Math.hypot(p.x - TEAR_SPOTS[this.near][0], p.z - TEAR_SPOTS[this.near][1]) < 90) return;
     const rd = routeDist(p.x, p.z), onRoad = !!rd.road && !rd.road.trail && rd.d < 14;
     const pool = MEETINGS.filter((m) => !m.road || onRoad);
@@ -352,7 +435,7 @@ export class Wilds {
   }
 
   // For looking at it (bm.wild in the console, src/main.js): 1, a meeting of kind b ahead of you now; 2, to the nearest open
-  // tear; 3, to outpost b; 4, to battle b's ground; 5, the next meeting as soon as there's room.
+  // tear; 3, to outpost b; 4, to battle b's ground; 5, the next meeting as soon as there's room; 6, to raid town b, with a raid on it now.
   debug(a, b) {
     const sim = this.sim, p = sim.player, to = (x, z) => { p.x = x; p.z = z; p.y = sim.world.height(x, z); };
     if ((a | 0) === 1) {
@@ -366,6 +449,7 @@ export class Wilds {
     } else if ((a | 0) === 3) { const o = OUTPOSTS[(b | 0) % OUTPOSTS.length]; to(o.x + Math.sin(o.yaw) * (o.r + 26), o.z + Math.cos(o.yaw) * (o.r + 26)); }
     else if ((a | 0) === 4) { const l = sim.tripo.lairs.filter((q) => q.battle)[(b | 0) * 2]; if (l) to(l.x + 30, l.z); }
     else if ((a | 0) === 5) this.nextMeet = 0;
+    else if ((a | 0) === 6) { const n = (b | 0) % RAID_TOWNS.length, s = SITES[RAID_TOWNS[n]]; to(s.x, s.z + s.r * 0.3); if (this.meet) { for (const l of this.meet.lairs) this.drop(l); this.meet = null; } this.lookRaid(n); }
   }
 
   // ---- what's drawn -------------------------------------------------------------------------------------------------

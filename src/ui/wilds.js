@@ -2,7 +2,8 @@
 // A banner across the top for what's begun or done, a small tracker under it while something's on (a tear's waves and
 // its clock, a meeting, a ritual's time), and the rewards: experience and what's left on the ground (src/items/drops.js).
 // What you've found and the caches you've opened are kept in the save, so neither pays twice.
-import { FACTIONS, FACTION_KEYS, MEETINGS, TEARS_KINDS, TEAR, WILD } from '../core/wilds.js';
+import { SITES } from '../core/lands.js';
+import { FACTIONS, FACTION_KEYS, MEETINGS, RAID_TOWNS, TEARS_KINDS, TEAR, WILD } from '../core/wilds.js';
 import { FIND_KINDS, FINDS, OUTPOSTS } from '../core/wilds-data.js';
 
 const SIDES = { goblin: 'goblins', kobold: 'kobolds', dead: 'the dead', brood: 'spiders', herd: 'goat men', pack: 'wolfkin', flock: 'harpies', wyrm: 'drakes',
@@ -10,6 +11,11 @@ const SIDES = { goblin: 'goblins', kobold: 'kobolds', dead: 'the dead', brood: '
 const FOUND = { cart: 'A BROKEN CART', grave: 'A LONELY GRAVE', cairn: 'A CAIRN', camp: 'A COLD CAMP', stone: 'A STANDING STONE', bones: 'OLD BONES', well: 'A WAYSIDE WELL', hide: "A HUNTER'S HIDE",
   shrine: 'A WAYSIDE STONE', pyre: 'A BURNT-OUT PYRE', totem: 'A TOTEM', wreck: 'A WRECKED WAGON' };
 const level = (x, z) => Math.max(4, Math.min(22, Math.round(3 + Math.hypot(x, z) / 270)));
+// Where bounties are posted: the small towns that are raided, and Bellmourn itself.
+const BOARDS = RAID_TOWNS.map((k) => ({ name: SITES[k].name, x: SITES[k].x, z: SITES[k].z, r: SITES[k].r })).concat([{ name: 'Bellmourn', x: 15, z: 0, r: 75 }]);
+const WAYS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+// (+x is east, +z is south: src/core/lands.js.)
+const wayTo = (dx, dz) => WAYS[Math.round(Math.atan2(dx, -dz) / (Math.PI / 4) + 8) % 8];
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 export class WildsUI {
@@ -17,7 +23,8 @@ export class WildsUI {
   constructor(o) {
     this.o = o;
     this.found = new Set(); this.taken = new Set();
-    this.counts = { tears: 0, cleared: 0, meetings: 0 };
+    this.counts = { tears: 0, cleared: 0, meetings: 0, raids: 0, bounties: 0 };
+    this.bounty = null; this.bountyNext = 0; this.lastBounty = '';
     const el = (id, cls) => { const d = document.createElement('div'); d.id = id; if (cls) d.className = cls; return d; };
     this.banner = el('wildBanner'); this.banner.innerHTML = '<b></b><i></i>';
     this.track = el('wildTrack'); this.track.innerHTML = '<b></b><i></i><u><s></s></u>';
@@ -27,8 +34,8 @@ export class WildsUI {
     setInterval(() => this.tick(), 250);
   }
 
-  save() { return { found: [...this.found], taken: [...this.taken], counts: this.counts }; }
-  load(d) { this.found = new Set(d?.found || []); this.taken = new Set(d?.taken || []); this.counts = { tears: 0, cleared: 0, meetings: 0, ...(d?.counts || {}) }; this.show(null); }
+  save() { return { found: [...this.found], taken: [...this.taken], counts: this.counts, bounty: this.bounty }; }
+  load(d) { this.found = new Set(d?.found || []); this.taken = new Set(d?.taken || []); this.counts = { tears: 0, cleared: 0, meetings: 0, raids: 0, bounties: 0, ...(d?.counts || {}) }; this.bounty = OUTPOSTS.some((o) => o.key === d?.bounty?.key) ? d.bounty : null; this.show(null); }
 
   say(title, sub = '', secs = 4.5) {
     const b = this.banner;
@@ -45,9 +52,36 @@ export class WildsUI {
     if (s) { this.track.children[0].textContent = s.title; this.tick(); }
   }
 
+  // A bounty: come into a town with none in hand and its people name a chief they want dead, at an outpost some way off.
+  // It's shown in the tracker whenever nothing else is, with how far and which way; emptying that outpost pays it.
+  bountyTick() {
+    const p = this.o.pos?.();
+    if (!p) return null;
+    if (!this.bounty) {
+      if (performance.now() < this.bountyNext) return null;
+      const B = BOARDS.find((b) => Math.hypot(p[0] - b.x, p[1] - b.z) < b.r + 15);
+      if (!B) return null;
+      const near = OUTPOSTS.filter((o) => o.key !== this.lastBounty).map((o) => [o, Math.hypot(o.x - B.x, o.z - B.z)]).filter(([, d]) => d > 250 && d < 2200).sort((a, b) => a[1] - b[1]).slice(0, 5);
+      if (!near.length) return null;
+      const [O, d] = near[Math.floor(Math.random() * near.length)];
+      this.bounty = { key: O.key, town: B.name };
+      this.say('A BOUNTY', `${B.name} will pay for whoever leads ${O.name.replace(/^an? /, 'the ')}: ${Math.round(d / 10) * 10} m to the ${wayTo(O.x - B.x, O.z - B.z)}.`, 6);
+    }
+    const O = OUTPOSTS.find((o) => o.key === this.bounty.key);
+    if (!O) { this.bounty = null; return null; }
+    const d = Math.hypot(O.x - p[0], O.z - p[1]);
+    return { title: `BOUNTY · ${O.name.replace(/^(an?|the) /, '').toUpperCase()}`, sub: d < O.r + 40 ? 'Here. Kill its chief and all its own' : `${Math.round(d / 10) * 10} m to the ${wayTo(O.x - p[0], O.z - p[1])}` };
+  }
+
   tick() {
-    const s = this.state;
-    if (!s) return;
+    let s = this.state;
+    if (!s) {
+      // (Nothing on: the bounty in hand, if there is one.)
+      s = this.bountyTick();
+      this.track.classList.toggle('on', !!s);
+      if (!s) return;
+      this.track.children[0].textContent = s.title;
+    }
     const left = s.until ? Math.max(0, (s.until - performance.now()) / 1000) : 0;
     this.track.children[1].textContent = s.until ? `${s.sub} · ${clock(left)}` : s.sub;
     const bar = this.track.children[2];
@@ -103,6 +137,14 @@ export class WildsUI {
         const lvl = FACTIONS[O.faction].lvl, xp = 80 + lvl * 18;
         o.xp(xp);
         o.drop(b, c, d, lvl >= 13 ? 20 : 8);
+        if (this.bounty?.key === O.key) {
+          const pay = xp * 3;
+          this.counts.bounties++; this.lastBounty = O.key;
+          o.xp(pay); o.drop(b, c, d, 20);
+          this.say('BOUNTY PAID', `${this.bounty.town} pays what it promised. ${xp + pay} experience in all.`, 6);
+          this.bounty = null; this.bountyNext = performance.now() + 45000;
+          break;
+        }
         this.say('CLEARED', `${O.name.replace(/^an? /, 'the ').replace(/^t/, 'T')} is yours, for a while. ${xp} experience.`, 5);
         break;
       }
@@ -141,6 +183,29 @@ export class WildsUI {
           this.say(won === 2 ? 'RITUAL BROKEN' : M?.key === 'bounty' ? 'A NAMED ONE IS DEAD' : 'DONE WITH', `${xp} experience.`, 3.5);
         }
         this.show(this.tearNear ? { title: this.tearNear.name, sub: 'Walk into it' } : null);
+        break;
+      }
+      case WILD.HELP: this.say('ANOTHER TESSARIEL', (a | 0) > 1 ? 'Two more saw the light, and have come to the tear.' : 'Somebody else saw the light, and has come to the tear.', 3.5); break;
+      case WILD.RAID: {
+        const T = SITES[RAID_TOWNS[a | 0]], A = FACTIONS[FACTION_KEYS[b | 0]], who = SIDES[A?.side] || 'Something', wave = c | 0;
+        const title = `${T.name.toUpperCase()} IS RAIDED`;
+        const sub = wave === 1 ? `${who.charAt(0).toUpperCase() + who.slice(1)} are coming down on it` : 'A second band, from another side';
+        if (wave === 1) this.say(title, `${sub}.${(e | 0) > 0 ? ` ${e | 0} of the other Tessariels have come out of its seal to hold it with you.` : ''}`, 6);
+        else this.say('A SECOND BAND', 'They are not done with it. From another side.', 3.5);
+        this.show({ title, sub, fight: true, done: 0, of: d | 0, base: sub });
+        break;
+      }
+      case WILD.RAID_COUNT: if (this.state?.fight) { this.state.done = a | 0; this.state.of = b | 0; this.state.sub = `${this.state.base} · ${a | 0} of ${b | 0}`; this.tick(); } break;
+      case WILD.RAID_DONE: {
+        const T = SITES[RAID_TOWNS[a | 0]], lvl = e | 0, won = f | 0;
+        if (won === 1) {
+          this.counts.raids++;
+          const xp = 200 + lvl * 35;
+          o.xp(xp); o.drop(b, c, d, lvl >= 12 ? 20 : 8);
+          this.say(`${T.name.toUpperCase()} STANDS`, `The raid is broken. ${xp} experience, and what its people could spare.`, 6);
+        } else if (won === 2) this.say(`${T.name.toUpperCase()} STANDS`, 'The other Tessariels held it without you.', 4);
+        else this.say(`${T.name.toUpperCase()} IS LEFT TO IT`, 'You walked away from the raid.', 4);
+        this.show(null);
         break;
       }
       default:

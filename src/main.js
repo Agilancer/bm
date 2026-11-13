@@ -544,7 +544,8 @@ async function boot(plan, poolSize) {
   };
   arm();
   // The living land: what's happening out there, told and paid for (src/ui/wilds.js; the sim's side is src/sim/wilds.js).
-  game.wilds = new WildsUI({ xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t) });
+  game.wilds = new WildsUI({ xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t),
+    pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; } });
   hud.wildName = (model) => renderer.tripo?.wildName(model);
   addPart('wilds', { save: () => game.wilds.save(), load: (d) => game.wilds.load(d) });
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
@@ -1994,7 +1995,7 @@ class GameView {
       snap: () => view.currentSnap(),
       cmd,
       // The living land's own (src/sim/wilds.js debug): bm.wild(1, n) a meeting of the nth kind ahead of you; bm.wild(2) to the
-      // nearest open tear; bm.wild(3, n) to the nth outpost; bm.wild(4, n) to the nth standing battle.
+      // nearest open tear; bm.wild(3, n) to the nth outpost; bm.wild(4, n) to the nth standing battle; bm.wild(6, n) a raid on the nth town.
       wild: (a, b = 0, c = 0) => cmd(50, a, b, c),
       look: (yaw, pitch) => { view.input.yaw = yaw; view.input.pitch = pitch; },
       attack: () => { shared.input[INPUT.ATTACK] += 1; },
