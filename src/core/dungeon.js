@@ -550,7 +550,7 @@ export function braziers(d = WARRENS) {
         for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
           const lx = r.x + ((i + 0.5) / nx * 2 - 1) * (r.hx - 4), lz = r.z + ((j + 0.5) / nz * 2 - 1) * (r.hz - 4), x = d.x + lx, z = d.z + lz;
           if (BRAZIERS.some((b) => Math.hypot(b[0] - x, b[2] - z) < 6.5) || solids(d).some((b) => blockOut(b, lx, lz) < 1.5)) continue;
-          BRAZIERS.push([x, caveFloorY(x, z), z, Math.min(5.4, r.roof - 2.4), 'hang']);
+          BRAZIERS.push([x, caveFloorY(x, z), z, Math.min(d.look.lamp === 'candle' ? 4.4 : 5.4, r.roof - 2.4), 'hang']);
         }
       }
       for (const [lx, lz] of roomEdge(r, r.fires || 10, 2.2)) {

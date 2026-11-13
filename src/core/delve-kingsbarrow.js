@@ -182,6 +182,6 @@ export const KINGSBARROW = {
   portal: { x: -2910, z: 3439, yaw: 0, r: 2.2 },
   last: 'wyrm', tough: { hp: 8, damage: 1.7 }, pay: { xp: 5200, gold: 860 },
   names: { 'Plague Knights': 'BARROW GUARD', Necromancers: 'GRAVE-SINGER', 'Dead Children': 'THE UNQUIET', Dragonlings: 'TOMB DRAKE', 'Bone Giants': 'BONE WARDEN', Werewolf: 'BARROW HOUND' },
-  look: { wall: 'pale:rubble', foot: 'rubble', floor: 'pale:stone', roof: 'rubble', flame: 'pale:flame', banner: false, lamp: 'bowl', still: true, light: [0.82, 0.95, 0.78], fire: [0.86, 1, 0.82], every: 9, high: 2.4, glow: 1.5, lit: 0.5, beam: 'pale:rubble', loculi: true },
+  look: { wall: 'pale:rubble', foot: 'rubble', floor: 'pale:stone', roof: 'rubble', flame: 'pale:flame', banner: false, lamp: 'bowl', still: true, light: [0.55, 1, 0.7], fire: [0.6, 1, 0.74], every: 9, high: 2.4, glow: 1.8, beam: 'pale:rubble', loculi: true, course: 'pale:stone', megalith: true },
   words: { enter: 'The Kingsbarrow. They shut the door on all of them alive, and it has been sung open.', clear: 'The Kingsbarrow is cleared. Ossivar is dead!', wipe: 'Your party falls... and wakes inside the Barrow Door.' },
 };

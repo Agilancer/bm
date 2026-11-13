@@ -78,7 +78,7 @@ struct GO { @location(0) color: vec4f, @location(1) depth: f32 };
     let core = smoothstep(0.1, 0.42, edge) * smoothstep(0.8, 0.05, v);
     let deep = in.tint * in.tint * vec3f(0.9, 0.6, 0.6);
     // (Deep in its colour at the foot and the edges; the white heart stands a little off the root.)
-    let col = mix(deep, in.tint, smoothstep(0.0, 0.28, edge)) * 1.5 * mix(0.55, 1.0, smoothstep(0.0, 0.3, v)) + mix(vec3f(1.0, 0.9, 0.7), in.tint, 0.55) * core * 2.0 * smoothstep(0.03, 0.22, v);
+    let col = mix(deep, in.tint, smoothstep(0.0, 0.28, edge)) * 1.5 * mix(0.55, 1.0, smoothstep(0.0, 0.3, v)) + mix(vec3f(1.0, 0.9, 0.7), in.tint, 0.7) * core * 1.5 * smoothstep(0.03, 0.22, v);
     c = col * body * (0.88 + 0.12 * sin(T * 13.0 + seed * 9.0));
   } else if (in.layer > 102.5) {
     // A tongue of fire on a card: noise climbing it, pinched in toward the tip and torn off at the top, white-gold at the root

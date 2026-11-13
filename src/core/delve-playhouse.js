@@ -202,6 +202,6 @@ export const PLAYHOUSE = {
   portal: { x: 3087, z: 4493, yaw: 1.08, r: 2.2 },
   last: 'dollmaker', tough: { hp: 10.5, damage: 2 }, pay: { xp: 3800, gold: 620 },
   names: { 'Haunted Mannequins': 'THE COMPANY', 'The Possessed': 'PATRON', 'Dead Children': 'DOLL', 'Night Paralysis Demons': 'STAGEHAND', Necromancers: 'PROMPTER' },
-  look: { wall: 'wall_09', foot: 'wood', floor: 'wood', roof: 'dark:wood', flame: 'flame', lamp: 'candle', banner: 'spore:cloth_oat', light: [1, 0.72, 0.42], fire: [1, 0.76, 0.46], every: 9, high: 2.6, glow: 1.6, lit: true },
+  look: { wall: 'wall_09', foot: 'wood', floor: 'wood', roof: 'dark:wood', flame: 'flame', lamp: 'candle', banner: 'spore:cloth_oat', light: [1, 0.72, 0.42], fire: [1, 0.76, 0.46], every: 9, high: 2.6, glow: 1.6, lit: 0.5, bays: 'props' },
   words: { enter: 'The Hollow Playhouse. One play, all winter, to whoever came. The company is still in rehearsal.', clear: 'The Hollow Playhouse is cleared. The Dollmaker is dead!', wipe: 'Your party falls... and wakes in the Foyer.' },
 };

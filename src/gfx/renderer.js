@@ -512,7 +512,11 @@ export class Renderer {
       // (glow: a delve's fires burning wider and brighter than the Warrens': the keep's halls are four times the size.)
       const g = L.glow || 1;
       for (const [x, y, z, nx, nz] of torches(d)) warrens.push({ p: [x + nx * 0.45, y + 0.3, z + nz * 0.45], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
-      for (const [x, y, z, lift] of braziers(d)) warrens.push({ p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
+      // (A fire hung over a hall: its light from under the basket, far-reaching and strong enough to pool on a floor five
+      // metres down, which falls off by the square of the way.)
+      for (const [x, y, z, lift, how] of braziers(d)) warrens.push(how === 'hang'
+        ? { p: [x, y + lift - 0.75, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 26 * g, flicker: 0.5 * cold }
+        : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
     }
     // (The portals' swirl, a cold blue that breathes: in front of the Warrens' doorways, and over every seal: portalModel.)
     const portalSpots = buildSites().spots;

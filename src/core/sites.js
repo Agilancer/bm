@@ -503,7 +503,13 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
     const [bx, bz] = P(u * (hu - 0.6), hw - 0.6);
     K.drum('dark:stone', bx, top - 0.05, bz, 0.24, 1.05, 6, { r2: 0.19, collide: false });
     K.drum('iron', bx, top + 0.95, bz, 0.2, 0.3, 8, { r2: 0.4, collide: false, open: true });
-    K.cone('flame', bx, top + 1.08, bz, 0.28, 0.8, 6);
+    // (Down a delve it burns as that delve's fires do: a flame that faces you, in its colour. src/core/delve-build.js fire().)
+    if (K.deep && K.delve) {
+      const hue = K.delve.look.flame, f = (w, h, ox) => K.fires.push({ delve: K.delve.key, hue, kind: 'flame', x: bx + ox, y: top + 1.2, z: bz, w, h, ember: 0, seed: (bx * 0.37 + ox) % 1 });
+      K.drum(hue, bx, top + 1.14, bz, 0.3, 0.06, 7, { r2: 0.24, collide: false });
+      f(0.4, 0.5, 0); f(0.22, 0.95, 0.08); f(0.2, 0.7, -0.1);
+      K.fires.push({ delve: K.delve.key, hue, kind: 'glow', x: bx, y: top + 1.6, z: bz, w: 1.4, h: 1.4, ember: 0, seed: 0 });
+    } else K.cone('flame', bx, top + 1.08, bz, 0.28, 0.8, 6);
     if (land) K.colliders.push({ x: bx, z: bz, hx: 0.25, hz: 0.25, yaw: 0, h: top + 1.3 - terrainHeight(bx, bz), t: top + 1.2 });
   }
   K.spots[key] = [x, top, z, yaw];
