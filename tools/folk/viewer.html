@@ -27,14 +27,12 @@
 // A test bench for src/folk/rig.js: the bodies built by tools/folk/build_folk.py, playing Lisandra's clips through the same
 // retargeting and the same dual-quaternion palette the game skins with (here skinned on the CPU and drawn with three.js).
 // Served by tools/serve.py: http://localhost:<port>/tools/folk/viewer.html?ids=young_3,boy_1&clip=walk
-// &forge: the smith as he is at his anvil, his hammer in his hand (src/folk/smithy.js) and a block where the anvil's face is.
+// (The smith at his work, with his tools and his yard about him, is tools/folk/smithy.html.)
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { accessor, parseGLB } from '../../src/core/glb.js';
 import { FolkClips, FolkRig, FolkPose, SKIRT_JOINTS } from '../../src/folk/rig.js';
-import { quatMul, quatRotate } from '../../src/core/math.js';
 import { PEOPLE } from '../../src/folk/people.js';
-import { FORGE, HAMMER_PAINT, SMITH_CLIPS, gripOf, hammerAtRest, hammerMesh } from '../../src/folk/smithy.js';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -74,8 +72,7 @@ async function addBody(id, x) {
   const glbId = folkJson?.swaps?.[id]?.base || id;
   const buf = await fetch(`${base}${glbId}.glb`).then((r) => { if (!r.ok) throw new Error(`${glbId}.glb ${r.status}`); return r.arrayBuffer(); });
   const glb = parseGLB(buf);
-  const forge = q.has('forge') && id === 'smith';
-  const rig = new FolkRig(glb, clips, { armOut: forge ? PEOPLE.find((p) => p.id === 'homunculus').armOut : model?.armOut || 0, skirt: model?.skirt || null });
+  const rig = new FolkRig(glb, clips, { armOut: id === 'smith' ? PEOPLE.find((p) => p.id === 'homunculus').armOut : model?.armOut || 0, skirt: model?.skirt || null });
   const pose = new FolkPose(rig);
   const pr = glb.json.meshes[0].primitives[0], a = pr.attributes;
   const pos = accessor(glb, a.POSITION), nrm = accessor(glb, a.NORMAL), uv = accessor(glb, a.TEXCOORD_0);
@@ -94,37 +91,7 @@ async function addBody(id, x) {
   scene.add(mesh);
   const pal = new Float32Array((rig.count + SKIRT_JOINTS) * 8);
   const label = document.createElement('div');
-  bodies.push({ id, rig, pose, pos, nrm, joints, weights, P, N, g, pal, x, z: 0, forge: forge ? atForge(rig, x) : null });
-}
-
-// The smith's hammer, and a block standing in for the anvil in front of him.
-function atForge(rig, x) {
-  const m = hammerMesh(), g = new THREE.BufferGeometry(), col = new Float32Array(m.pos.length);
-  for (let i = 0; i < m.pos.length / 3; i++) {
-    const c = HAMMER_PAINT[Math.floor(m.uv[i * 2] * HAMMER_PAINT.length)];
-    for (let k = 0; k < 3; k++) col[i * 3 + k] = (c[k] / 255) ** 2.2;
-  }
-  g.setAttribute('position', new THREE.BufferAttribute(m.pos, 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(m.nrm, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  g.setIndex(new THREE.BufferAttribute(m.idx, 1));
-  const hammer = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, metalness: 0.2 }));
-  const anvil = new THREE.Mesh(new THREE.BoxGeometry(0.46, FORGE.face, 0.13), new THREE.MeshStandardMaterial({ color: 0x2c2c30, roughness: 0.6 }));
-  anvil.position.set(x, FORGE.face / 2, FORGE.off);
-  scene.add(hammer, anvil);
-  return { hammer, anvil, grip: gripOf(rig), q: [0, 0, 0, 1], t: [0, 0, 0] };
-}
-
-// In his hand; or, before he's taken it up (the first part of the take), where it's left on the anvil.
-function placeHammer(b) {
-  const f = b.forge, h = b.rig.hands[1], c = b.pose.a.clip;
-  if (c.name === SMITH_CLIPS.take && b.pose.a.t < SMITH_CLIPS.takeAt) { const r = hammerAtRest(b.x, 0, b.z, 0); f.q = r.q; f.t = r.t; } else {
-    quatMul(f.q, 0, b.pose.wq, h * 4, f.grip.q, 0);
-    quatRotate(f.t, 0, b.pose.wq, h * 4, f.grip.t, 0);
-    for (let k = 0; k < 3; k++) f.t[k] += b.pose.wt[h * 3 + k];
-  }
-  f.hammer.quaternion.set(...f.q);
-  f.hammer.position.set(...f.t);
+  bodies.push({ id, rig, pose, pos, nrm, joints, weights, P, N, g, pal, x, z: 0 });
 }
 
 // Dual-quaternion skinning, as the SKIN compute shader does it.
@@ -163,7 +130,7 @@ function skin(b) {
 }
 
 async function load() {
-  for (const b of bodies) { scene.remove(scene.children.find((o) => o.geometry === b.g)); if (b.forge) scene.remove(b.forge.hammer, b.forge.anvil); }
+  for (const b of bodies) scene.remove(scene.children.find((o) => o.geometry === b.g));
   bodies.length = 0;
   const ids = $('ids').value.trim().split(/\s+/).filter(Boolean);
   await Promise.all(ids.map((id, i) => addBody(id, (i - (ids.length - 1) / 2) * 1.1)));
@@ -200,7 +167,6 @@ function frame(now) {
     if ($('walkon').checked && c.travel) b.z = (b.z + b.rig.stride(c) * dt * speed + 6) % 12 - 6; else b.z = 0;
     b.pose.solve(b.x, 0, b.z, 0, b.pal, 0);
     skin(b);
-    if (b.forge) placeHammer(b);
   }
   renderer.render(scene, camera);
 }
