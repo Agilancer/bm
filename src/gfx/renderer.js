@@ -205,6 +205,8 @@ export class Renderer {
     this.planes = new Float32Array(20);
     this.bloodUntil = 0;
     this.inFlight = 0;
+    this.lastDone = performance.now();   // when the GPU last said a frame was done (src/main.js paces by it)
+    this.worstMs = 0;                    // the longest the GPU's taken over a frame lately (the diagnostics)
     this.lastSent = 0;
     this.onBusy = null;
     this.stats = { gpuMs: 0, busyMs: 0, draws: 0 };
@@ -3227,7 +3229,9 @@ export class Renderer {
     const sent = this.lastSent = performance.now();
     q.onSubmittedWorkDone().then(() => {
       this.inFlight--;
-      const ms = performance.now() - sent;
+      this.lastDone = performance.now();
+      const ms = this.lastDone - sent;
+      this.worstMs = Math.max(ms, this.worstMs * 0.995);
       this.stats.busyMs = lerp(this.stats.busyMs, ms, 0.1);
       if (this.onBusy) this.onBusy(ms);
     });
