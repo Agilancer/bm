@@ -24,7 +24,13 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   const full = buildSites(true);
   let verts = 0;
   for (const p of full.parts.values()) { assert.ok(typed(p) && whole(p)); verts += p.pos.length / 3; }
-  assert.ok(verts > 150000 && verts < 600000, `${verts} corners: the land's, and none of the delves'`);
+  // (A PC's land has the outposts' fences, tents and stones as well, src/core/wild-dress.js; a phone's, below, hasn't.)
+  assert.ok(verts > 150000 && verts < 800000, `${verts} corners: the land's, and none of the delves'`);
+  const phone = buildSites(true, true);
+  let pv = 0;
+  for (const p of phone.parts.values()) { assert.ok(typed(p) && whole(p)); pv += p.pos.length / 3; }
+  assert.ok(pv > 150000 && pv < 600000, `${pv} corners on a phone`);
+  assert.equal(phone.colliders.length, full.colliders.length, 'a phone is stopped by what a PC is');
   dropSiteGeometry();
   assert.equal(buildSites().parts.size, 0);
   assert.ok(buildSites().colliders.length > 1000, 'the rest stays');

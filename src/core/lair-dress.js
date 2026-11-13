@@ -18,6 +18,8 @@ const Y = (x, z) => terrainHeight(x, z);
 
 // What a lair's dressed as, by who lives there (its bosses first: a dragon's bed is a dragon's whoever waits on it).
 export function lairKind(l) {
+  // (An outpost or a battle says its own: src/core/wilds.js.)
+  if (l.dress) return l.dress;
   const names = (l.boss || []).concat(l.pick || []).join(' ');
   for (const [re, kind] of [
     [/dragon|worm/, 'bed'], [/harpy|werebat/, 'roost'], [/werewolf/, 'den'], [/velscour|possessed_knight|plague|skeleton|golem/, 'picket'],
@@ -69,6 +71,10 @@ export function dressLairs(K, seals = []) {
     const mound = (x, z, k, layer, r = 0.8, tall = 0.4) => { if (free(x, z, r)) K.heap(layer, x, z, r * (0.8 + h(k) * 0.4), tall, 5, { collide: false }); };
 
     const kind = lairKind(l);
+    // (An outpost has what's built round it, src/core/wild-dress.js: its own ground gets a fire and a few bones, no more.
+    // There are hundreds of them, and every corner laid here is held on a phone's GPU.)
+    if (l.wild && K.lean) continue;
+    if (l.thin) { fire(...at(h(1), R * 0.3), kind === 'camp'); bones(...at(h(10), R * 0.6), 20); continue; }
     if (kind === 'camp') {
       // The fire off its middle, logs to sit on round it, the dinners' bones, a midden, stakes round the rim.
       const [fx, fz] = at(h(1), R * 0.35);

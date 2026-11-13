@@ -153,6 +153,8 @@ export const EV = {
   // Something one of the other Tessariels' moves does that only the render thread can (src/sim/heroskills.js HFX): (code,
   // x, y, z, a, b, c). Blood thrown from a cut, a lute's string, sparks off steel.
   HERO_FX: 56,
+  // The living land (src/sim/wilds.js): code (WILD in src/core/wilds.js), and what goes with it.
+  WILD: 57,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.

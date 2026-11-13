@@ -20,6 +20,8 @@ import { forestAmount, forestTrees } from '../core/forest.js';
 import { LAND_EDGE, PATHS, PLOTS, ROADS, SUMMIT, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { CHURCH_SITE, churchAt } from '../core/church.js';
 import { COUNTRIES, COUNTRY_KEYS, ROUTES, SITES, WATERS, countryWeights } from '../core/lands.js';
+import { FACTIONS } from '../core/wilds.js';
+import { OUTPOSTS } from '../core/wilds-data.js';
 import { CHARTS, chartAt, setInterior } from './undermap.js';
 
 // Two papers: the town's, fine, out to EDGE; and the whole land's, coarse, out to WORLD, under it.
@@ -324,10 +326,19 @@ export class WorldMap {
     g.fillStyle = 'rgba(70, 104, 128, 0.95)';
     for (const wt of WATERS) { const [px, py] = toWorld(wt.x, wt.z); g.beginPath(); g.arc(px, py, Math.max(2, wt.r / WMPP), 0, 6.2832); g.fill(); }
     for (const r of ROUTES) {
-      g.strokeStyle = 'rgba(214, 192, 142, 0.9)'; g.lineWidth = Math.max(1.5, (2 * r.w) / WMPP); g.lineJoin = g.lineCap = 'round';
+      g.strokeStyle = r.trail ? 'rgba(196, 170, 120, 0.75)' : 'rgba(214, 192, 142, 0.9)'; g.lineWidth = r.trail ? 1 : Math.max(1.5, (2 * r.w) / WMPP); g.lineJoin = g.lineCap = 'round';
+      // (A trail to an outpost, src/core/wilds.js: thin and broken, so the roads still read as roads.)
+      g.setLineDash(r.trail ? [3, 2.5] : []);
       g.beginPath();
       r.pts.forEach(([x, z], n) => { const [px, py] = toWorld(x, z); if (n) g.lineTo(px, py); else g.moveTo(px, py); });
       g.stroke();
+    }
+    g.setLineDash([]);
+    // The outposts out in the land (src/core/wilds.js): a small lozenge each, Velscour's forts and towers in his red.
+    for (const o of OUTPOSTS) {
+      const [px, py] = toWorld(o.x, o.z), v = FACTIONS[o.faction].v;
+      g.fillStyle = v ? 'rgba(120, 24, 20, 0.9)' : 'rgba(58, 46, 34, 0.85)';
+      g.beginPath(); g.moveTo(px, py - 2.4); g.lineTo(px + 2.4, py); g.lineTo(px, py + 2.4); g.lineTo(px - 2.4, py); g.closePath(); g.fill();
     }
     for (const k of Object.keys(SITES)) {
       const s = SITES[k], [px, py] = toWorld(s.x, s.z);

@@ -17,6 +17,7 @@ import { buildDelves } from './delve-build.js';
 import { buildHall } from './testhall.js';
 import { PIECES, cinderford, lesser, street, thornwick, way } from './places.js';
 import { dressLairs } from './lair-dress.js';
+import { dressWilds } from './wild-dress.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -1445,9 +1446,13 @@ let built = null;
 // GPU (dropSiteGeometry). Without it parts is empty and the rest is the same: tests/sites-lean.test.mjs.
 // The delves' and the Test Dungeon's parts aren't here either way: a million and a half corners, of which one delve's are
 // ever drawn at a time. They're built a delve at a time, when you go down it (buildUnder).
-export function buildSites(geometry = false) {
-  if (built && (built.geometry || !geometry)) return built;
+// lean: a phone's land (the renderer's tier). The outposts out in the land (src/core/wild-dress.js) keep only what's solid
+// there (towers, crags, boulders) and the small things to find; their fences, tents, stones and litter are half the land's
+// corners, and a phone holds every one on its GPU. What stops a body is the same either way.
+export function buildSites(geometry = false, lean = false) {
+  if (built && (!geometry || (built.geometry && built.lean === lean))) return built;
   const K = new Kit(geometry);
+  K.lean = lean;
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
   warrensMouth(K);
@@ -1460,9 +1465,11 @@ export function buildSites(geometry = false) {
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   // (What lies about the lairs, last, so it keeps clear of everything above: src/core/lair-dress.js.)
   dressLairs(K, SEALS);
+  // (And what's built at the land's outposts, its tear spots and the small things to find: src/core/wild-dress.js.)
+  dressWilds(K);
   K.finish();
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
-  built = { geometry, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups };
+  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups };
   return built;
 }
 

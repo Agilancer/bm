@@ -12,6 +12,10 @@ export function foeOf(m, sim) {
   const t = m.tauntBy;
   if (t && !t.dead && !t.hidden && !t.surf && sim.time < m.tauntT) return t;
   const p = sim.player, f = m.heroFoe;
+  // At one of another side (src/sim/wilds.js rivals): it keeps at them, unless you've just hurt it or you're on top of it.
+  const r = m.rival;
+  if (r && !r.dead && !r.dormant && sim.time - (m.playerHitT ?? -1e9) > 5 && (!f || sim.time - (m.heroFoeT ?? -1e9) > 5)
+    && (p.dead || Math.hypot(p.x - m.x, p.z - m.z) > 3.5)) return r;
   if (!f || f.dead || f.hidden || sim.time - (m.heroFoeT ?? -1e9) > FOE_MEMORY) return p;
   const dp = p.dead ? 1e9 : Math.hypot(p.x - m.x, p.z - m.z), df = Math.hypot(f.x - m.x, f.z - m.z);
   // (The player close by and the hero far off: the player's the nearer threat.)

@@ -40,6 +40,7 @@ import { TIER_LEVEL, TIER_OF } from './sim/skills.js';
 import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
+import { WildsUI } from './ui/wilds.js';
 import { SpellSound } from './spellsound.js';
 import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
@@ -527,7 +528,11 @@ async function boot(plan, poolSize) {
   game.gainXp = (kind, what = 0) => {
     renderer.skullEyes?.feel('glee', 3);
     const g = what - 1 >= TRIPO_KIND ? GROUPS[GROUP_KEYS[what - 1 - TRIPO_KIND]] : null;
-    if (!stepXp(pack, Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0))) { showLevel(); return; }
+    game.addXp(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0));
+  };
+  // So much experience, for whatever earned it (a kill above; a tear sealed, an outpost cleared: src/ui/wilds.js).
+  game.addXp = (amount) => {
+    if (!stepXp(pack, amount)) { showLevel(); return; }
     arm();
     game.party?.levelled();
     // A new level fills you up, as it should.
@@ -538,6 +543,10 @@ async function boot(plan, poolSize) {
     hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook${input.touch ? '' : ' (B)'}.`, 5);
   };
   arm();
+  // The living land: what's happening out there, told and paid for (src/ui/wilds.js; the sim's side is src/sim/wilds.js).
+  game.wilds = new WildsUI({ xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t) });
+  hud.wildName = (model) => renderer.tripo?.wildName(model);
+  addPart('wilds', { save: () => game.wilds.save(), load: (d) => game.wilds.load(d) });
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
     change: arm,
     drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); },
@@ -1187,7 +1196,8 @@ class Hud {
     }
     const hpf = clamp(snap[co + C.HP] / snap[co + C.MAX_HP], 0, 1);
     $('foe').style.opacity = near < BOSS_FAR && !this.dungeonBoss?.() ? 1 : 0;
-    const foeName = FOE_NAMES[snap[co + C.KIND]] || '';
+    // (One of the land's new kinds says its own name: src/core/wilds.js.)
+    const foeName = this.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || '';
     if (foeName !== this.foeNameShown) { this.foeNameShown = foeName; $('foeName').textContent = foeName; }
     this.setBar(this.foeHp, hpf);
     this.setBar(this.foeArm, clamp(snap[co + C.ARMOR], 0, 1));
@@ -1730,6 +1740,7 @@ class GameView {
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
       case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
+      case EV.WILD: this.wilds?.on(a, b, c, d, e, f, g); break;
       case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
@@ -1982,6 +1993,9 @@ class GameView {
       },
       snap: () => view.currentSnap(),
       cmd,
+      // The living land's own (src/sim/wilds.js debug): bm.wild(1, n) a meeting of the nth kind ahead of you; bm.wild(2) to the
+      // nearest open tear; bm.wild(3, n) to the nth outpost; bm.wild(4, n) to the nth standing battle.
+      wild: (a, b = 0, c = 0) => cmd(50, a, b, c),
       look: (yaw, pitch) => { view.input.yaw = yaw; view.input.pitch = pitch; },
       attack: () => { shared.input[INPUT.ATTACK] += 1; },
       // Starts the run over (with the opening on, from the first breath in the cave).

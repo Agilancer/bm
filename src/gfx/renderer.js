@@ -776,7 +776,7 @@ export class Renderer {
     // And everything out in the countries. (Not the delves or the Test Dungeon: a buffer of their own, one at a time, when
     // you're down one. useUnder.)
     this.staticLayers = { layerNames, layers };
-    for (const [name, part] of buildSites(true).parts) {
+    for (const [name, part] of buildSites(true, !!this.tier.lean).parts) {
       const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
