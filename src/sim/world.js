@@ -579,11 +579,14 @@ export class PlateBVH {
     this.tris = tris;
     this.order = new Uint32Array(tcount);
     for (let i = 0; i < tcount; i++) this.order[i] = tstart + i;
-    const cent = new Float32Array(tris.length);
     const c = (t, k) => (pos[tris[t * 3] * 3 + k] + pos[tris[t * 3 + 1] * 3 + k] + pos[tris[t * 3 + 2] * 3 + k]) / 3;
-    this.nodes = [];
+    // The nodes, in two typed arrays (they were an object apiece, with two lists in each: 30 MB for the knights about):
+    // box[n * 6] is its least corner then its greatest; link[n * 4] is lo, hi, left, right (-1: a leaf).
+    const most = Math.max(1, 2 * tcount);
+    let box = new Float32Array(most * 6), link = new Int32Array(most * 4), count = 0;
+    const mn = [0, 0, 0], mx = [0, 0, 0];
     const build = (lo, hi) => {
-      const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+      mn[0] = mn[1] = mn[2] = 1e9; mx[0] = mx[1] = mx[2] = -1e9;
       for (let i = lo; i < hi; i++) {
         const t = this.order[i];
         for (let v = 0; v < 3; v++) {
@@ -591,40 +594,41 @@ export class PlateBVH {
           for (let k = 0; k < 3; k++) { const p = pos[vi + k]; if (p < mn[k]) mn[k] = p; if (p > mx[k]) mx[k] = p; }
         }
       }
-      const id = this.nodes.length;
-      const node = { mn, mx, lo, hi, l: -1, r: -1 };
-      this.nodes.push(node);
+      const id = count++;
+      box.set(mn, id * 6); box.set(mx, id * 6 + 3);
+      link[id * 4] = lo; link[id * 4 + 1] = hi; link[id * 4 + 2] = -1; link[id * 4 + 3] = -1;
       if (hi - lo <= 6) return id;
       const ax = mx[0] - mn[0] > mx[1] - mn[1] ? (mx[0] - mn[0] > mx[2] - mn[2] ? 0 : 2) : (mx[1] - mn[1] > mx[2] - mn[2] ? 1 : 2);
       const sub = Array.from(this.order.subarray(lo, hi));
       sub.sort((a, b) => c(a, ax) - c(b, ax));
       this.order.set(sub, lo);
       const mid = (lo + hi) >> 1;
-      node.l = build(lo, mid);
-      node.r = build(mid, hi);
+      const l = build(lo, mid), r = build(mid, hi);
+      link[id * 4 + 2] = l; link[id * 4 + 3] = r;
       return id;
     };
     build(0, tcount);
+    this.box = box.slice(0, count * 6); this.link = link.slice(0, count * 4);
     this.stack = new Int32Array(64);
-    this.mn = this.nodes[0].mn; this.mx = this.nodes[0].mx;
+    this.mn = Array.from(this.box.subarray(0, 3)); this.mx = Array.from(this.box.subarray(3, 6));
   }
 
   // Möller-Trumbore through the tree. Returns t; hit normal in hitN. Both sides count: plates are shells.
   ray(ox, oy, oz, dx, dy, dz, maxT, hitN) {
-    const { nodes, stack, order, tris, pos } = this;
+    const { box, link, stack, order, tris, pos } = this;
     let best = maxT, found = false, sp = 0;
     stack[sp++] = 0;
     const idx = 1 / (dx || 1e-9), idy = 1 / (dy || 1e-9), idz = 1 / (dz || 1e-9);
     while (sp) {
-      const n = nodes[stack[--sp]];
-      const t1x = (n.mn[0] - ox) * idx, t2x = (n.mx[0] - ox) * idx;
-      const t1y = (n.mn[1] - oy) * idy, t2y = (n.mx[1] - oy) * idy;
-      const t1z = (n.mn[2] - oz) * idz, t2z = (n.mx[2] - oz) * idz;
+      const n = stack[--sp], q = n * 6, k = n * 4;
+      const t1x = (box[q] - ox) * idx, t2x = (box[q + 3] - ox) * idx;
+      const t1y = (box[q + 1] - oy) * idy, t2y = (box[q + 4] - oy) * idy;
+      const t1z = (box[q + 2] - oz) * idz, t2z = (box[q + 5] - oz) * idz;
       const tn = Math.max(Math.min(t1x, t2x), Math.min(t1y, t2y), Math.min(t1z, t2z));
       const tf = Math.min(Math.max(t1x, t2x), Math.max(t1y, t2y), Math.max(t1z, t2z));
       if (tf < 0 || tn > tf || tn > best) continue;
-      if (n.l >= 0) { stack[sp++] = n.l; stack[sp++] = n.r; continue; }
-      for (let i = n.lo; i < n.hi; i++) {
+      if (link[k + 2] >= 0) { stack[sp++] = link[k + 2]; stack[sp++] = link[k + 3]; continue; }
+      for (let i = link[k], hi = link[k + 1]; i < hi; i++) {
         const t = order[i];
         const a = tris[t * 3] * 3, b = tris[t * 3 + 1] * 3, c = tris[t * 3 + 2] * 3;
         const e1x = pos[b] - pos[a], e1y = pos[b + 1] - pos[a + 1], e1z = pos[b + 2] - pos[a + 2];

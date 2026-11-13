@@ -61,7 +61,7 @@ for (const cls of CLASS_NAMES) {
       step(9);
       assert.ok(!hero.jump && !hero.charge, `${cls}: ${s.key} left the hero in the air or on the run`);
       assert.ok(Math.abs(hero.bodyFlip) < 1e-6 && Math.abs(hero.bodyRoll) < 1e-6, `${cls}: ${s.key} left the hero turned over`);
-      // (Pointed by nothing but its own hold: a lancer's lance, carried upright at ease, is his hold's.)
+      // (Pointed by nothing but its own hold: a lancer's lance, in his hand at ease, is his hold's.)
       assert.ok(hero.free.every((m) => !m) && (!hero.aim || hero.aim === hero.heldAim), `${cls}: ${s.key} left something out of the hero's hands (free ${hero.free.map((m) => !!m)}, aim ${hero.aim})`);
       assert.ok(!hero.orbiting, `${cls}: ${s.key} left something turning round the hero`);
       assert.equal(w.shots.filter((q) => q.kind === 'x').length, 0, `${cls}: ${s.key} left something in the air`);
@@ -180,6 +180,48 @@ test('a lancer fights with the lance: couched and level behind a raised board, d
   assert.ok(drove > rest + 0.4, `and the point's driven out at the end of it (${drove.toFixed(2)} m before him, ${rest.toFixed(2)} on guard)`);
   assert.ok(foes[0].hits > hits0, 'and it lands');
   assert.ok(!hero.charge && !hero.swing, 'and is over');
+});
+
+test("a bard's sword put away is at his left hip, point down and back, whatever a clip does to his hips and wherever his lute is", () => {
+  const { sim, hero } = stage('bard', 30, 0);
+  hero.foe = null; hero.task = null; hero.hold = 1e9;
+  const J = (n) => hero.rig.index.get(n) * 3, wt = hero.pose.wt, m = hero.propMatrices;
+  const sub = (a, b) => [wt[a] - wt[b], wt[a + 1] - wt[b + 1], wt[a + 2] - wt[b + 2]], unit = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); }, dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  // (Some of the gesture clips turn the pelvis bone right round and the body back again above it; the lute coming off his back
+  // or going back to it used to leave the sword part-way between his hand and his hip.)
+  for (const clip of ['Idle_Loop', 'LP_idle', 'LP_look_around', 'LP_greet_01', 'LP_wave_goodbye_01', 'LP_laugh_01', 'Idle_Talking_Loop', 'LP_fold_arms']) {
+    if (!hero.bank.clips[clip]) continue;
+    for (const lute of [0, 0.05, 0.4]) {
+      hero.x = hero.z = 0; hero.yaw = hero.faceYaw = 0; hero.stow = 1; hero.calmT = 1e3; hero.luteW = lute; hero.tune = null; hero.gesture = 'talk'; hero.gestureT = 1e9;
+      hero.play(clip, 0, 'full', 0); hero.actT = 0.5 * hero.bank.clips[clip].dur; hero.fromW = 0;
+      hero.animate(1 / 120, sim);
+      // By his own body, whatever way the clip has turned it: his left from shoulder to shoulder, up his spine, before him.
+      const L = unit(sub(J('clavicle_l'), J('clavicle_r'))), U = unit(sub(J('spine_03'), J('pelvis'))), F = [L[1] * U[2] - L[2] * U[1], L[2] * U[0] - L[0] * U[2], L[0] * U[1] - L[1] * U[0]];
+      const g = [m[12] - wt[J('pelvis')], m[13] - wt[J('pelvis') + 1], m[14] - wt[J('pelvis') + 2]], blade = [m[4], m[5], m[6]];
+      assert.ok(dot(g, L) > 0.1, `${clip}, lute ${lute}: its grip is at his left hip (${dot(g, L).toFixed(2)} m to his left)`);
+      assert.ok(dot(blade, U) < -0.4 && dot(blade, F) < 0.3, `${clip}, lute ${lute}: its point is down and back (${dot(blade, U).toFixed(2)} up, ${dot(blade, F).toFixed(2)} forward)`);
+    }
+  }
+});
+
+test("a dragoon's lead hand stays on the spear's shaft through guard, draw and thrust: it slides, it never lets go", () => {
+  const { sim, hero, foes, step } = stage('dragoon');
+  for (const f of foes) f.x -= 3.2;                     // (the first of them at his thrust's reach)
+  hero.foe = foes[0]; hero.gcd = 1e9; for (const q of hero.skills) q.t = 1e9;
+  hero.shotCd = 1e9; hero.hold = 1e9;
+  const m = hero.propMatrices, wt = hero.pose.wt, hl = hero.arms.l.h * 3;
+  // How far the left wrist is from the spear's own line (a palm's length off it is a hand on it).
+  const off = () => { const d = [wt[hl] - m[12], wt[hl + 1] - m[13], wt[hl + 2] - m[14]], a = [m[4], m[5], m[6]], t = d[0] * a[0] + d[1] * a[1] + d[2] * a[2]; return Math.hypot(d[0] - a[0] * t, d[1] - a[1] * t, d[2] - a[2] * t); };
+  step(0.8);
+  assert.ok(off() < 0.16, `on guard his left hand is on the shaft (${off().toFixed(2)} m off it)`);
+  hero.hold = 0; hero.goal = null;
+  hero.blow(sim, foes[0], hero.blows[0]);
+  hero.shotCd = 1e9;
+  let worst = 0, drew = false;
+  step(0.8, () => { if (hero.swing) { worst = Math.max(worst, off()); if (hero.jab < -0.6) drew = true; } });
+  assert.ok(drew, 'the thrust has a draw');
+  assert.ok(worst < 0.16, `through the draw and the thrust it never leaves the shaft (${worst.toFixed(2)} m off it at the worst)`);
+  assert.ok(foes[0].hits > 0, 'and the thrust lands');
 });
 
 test('a paladin with a board throws it: it leaves his arm, strikes more than one, and is back on his arm', () => {
