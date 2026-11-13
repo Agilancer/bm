@@ -92,7 +92,9 @@ add('shields', -53.8, -84, { yaw: Math.PI / 2 }); add('shields', -44, -93.8, { y
 // The Crossing: where the North Walk widens, half way between the two halls; a ringstone at each corner of it.
 for (const [x, z] of [[-10, -186], [10, -186], [-10, -170], [10, -170]]) add('ringstone', x, z, { r: 0.7 });
 // The Warden's hall: six standing stones in a ring, his shield-wall of the dead along the east side.
-WARDEN_COLUMNS.forEach(([x, z]) => add('column', x, z, { r: 1.2, solid: true, pale: true, stone: true }));
+// (Each one breaks the first time he strikes it, and is no use after: its top is scenery that goes, kb_stone_<n>, and the
+// rubble it leaves scenery that comes, kb_rubble_<n>. src/sim/delve-fights.js gravewarden.)
+WARDEN_COLUMNS.forEach(([x, z], n) => add('wardstone', x, z, { r: 1.2, solid: true, n }));
 for (const x of [30, 40, 50]) add('shields', x, -229.8, { yaw: 0 });
 // The Ossuary: long, and in bays: piers of stacked bone down both walls, bones heaped in the end bays.
 for (const z of [-240, -229, -218, -207]) { add('bonepier', -52, z, { hx: 2, hz: 1.2, solid: true }); add('bonepier', -28, z, { hx: 2, hz: 1.2, solid: true }); }
@@ -134,9 +136,9 @@ const bosses = [
   { key: 'wyrm', room: 'kb_vault', name: 'Ossivar, the Barrow Wyrm', models: ['kb_wyrm'], pal: ['Bone-white'], hp: 19000, damage: 94, reach: 5.4, loot: 0, needs: ['gravewarden', 'golem'], shut: 'wyr_shut' },
 ];
 const warnings = {
-  grv_open: 'The Gravewarden. Blows glance off his plate, and it knits. When he lowers his head at you, get a standing stone in his way.',
+  grv_open: 'The Gravewarden. Blows glance off his plate, and it knits. When he lowers his head at you, get a standing stone in his way. Each stone breaks: there are six.',
   grv_charge: 'The Gravewarden lowers his head: he is coming down the line! Whoever it follows: put a standing stone in it.',
-  grv_crash: 'He strikes the stone! His plate is cracked: strike him now!',
+  grv_crash: 'He strikes the stone and breaks it! His plate is cracked: strike him now!',
   grv_knit: 'His plate knits. Crack it again.',
   grv_cleave: 'The Gravewarden sweeps his blade! Out of the arc.',
   grv_bash: 'He sets his shield and shoves! Out from in front of him.',
@@ -180,6 +182,8 @@ export const KINGSBARROW = {
   entry: { x: 0, z: 2.5, yaw: Math.PI }, exitIn: { x: 0, z: 5.4 }, exitOut: { x: 0, z: -159.4 },
   // At the foot of the great mound of the Barrows (SITES.barrows), on its south side, its back to the mound.
   portal: { x: -2910, z: 3439, yaw: 0, r: 2.2 },
+  // (The Free Company's post on its terrace: src/core/dungeon.js POSTS.)
+  post: { body: 'bard_m2', name: 'Corporal Edric Fenn', say: "My brother keeps the Company's books by the square in Bellmourn, in the warm. I keep them here, by a king's grave that's been sung open. Four at your back, or stay up on the moor." },
   last: 'wyrm', tough: { hp: 8, damage: 1.7 }, pay: { xp: 5200, gold: 860 },
   names: { 'Plague Knights': 'BARROW GUARD', Necromancers: 'GRAVE-SINGER', 'Dead Children': 'THE UNQUIET', Dragonlings: 'TOMB DRAKE', 'Bone Giants': 'BONE WARDEN', Werewolf: 'BARROW HOUND' },
   look: { wall: 'pale:rubble', foot: 'rubble', floor: 'pale:stone', roof: 'rubble', flame: 'pale:flame', banner: false, lamp: 'bowl', still: true, light: [0.55, 1, 0.7], fire: [0.6, 1, 0.74], every: 9, high: 2.4, glow: 1.8, beam: 'pale:rubble', loculi: true, course: 'pale:stone', megalith: true },

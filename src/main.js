@@ -286,6 +286,13 @@ function failOnTitle(message) {
   $('card').textContent = message;
 }
 
+// (A lost GPU, src/main.js boot: when it last happened, and that Continue's to be offered once the page is back.)
+const GPU_LOST_AT = 'velscour.gpuLostAt', GPU_LOST_OFFER = 'velscour.gpuLostOffer', GPU_LOST_NOTE = 'velscour.gpuLostNote';
+let keepForReset = null;          // saves the game for Continue, once there's a game to save
+let gpuNote = null;               // what the GPU was doing as it went: told when Continue's offered, for the next fix
+let leaving = false;              // the page going away: a GPU lost then is only the page shutting
+addEventListener('pagehide', () => { leaving = true; });
+
 async function boot(plan, poolSize) {
   $('card').style.display = 'none';
   $('buttons').innerHTML = '';
@@ -317,10 +324,25 @@ async function boot(plan, poolSize) {
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
   try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
-  gpu.device.lost.then((info) => {
-    console.error('device lost', info.message);
-    renderDiagnostics.fail(new Error(info.message), `device lost (${info.reason})`);
-    if (info.reason !== 'destroyed') failOnTitle('The GPU reset. Reload the page to continue.');
+  // A lost GPU: a phone or tablet takes its graphics back (its memory, a GPU that hung, the app put away), and Safari calls
+  // that 'destroyed' too, so it's any loss (the game never destroys its own). Where you are is kept, and the page comes back
+  // to the menu with Continue offered (gpuLostOffer, below). Not if it went the same way within the last minute: then it
+  // says so, rather than reload over and over.
+  gpu.device.lost.then(async (info) => {
+    if (leaving) return;
+    console.error('device lost', info.reason, info.message);
+    renderDiagnostics.fail(new Error(info.message || 'no message'), `device lost (${info.reason})`);
+    let last = 0;
+    try { last = +sessionStorage.getItem(GPU_LOST_AT) || 0; } catch { /* no storage */ }
+    if (Date.now() - last < 60000) { failOnTitle('The graphics reset again. Reload the page to carry on: your game is kept for Continue.'); return; }
+    try {
+      sessionStorage.setItem(GPU_LOST_AT, String(Date.now())); sessionStorage.setItem(GPU_LOST_OFFER, '1'); sessionStorage.setItem('velscour.skipSplash', '1');
+      sessionStorage.setItem(GPU_LOST_NOTE, gpuNote?.() || '');
+    } catch { /* no storage */ }
+    failOnTitle('The graphics reset. Keeping your game, and starting again...');
+    await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
+    leaving = true;
+    location.reload();
   });
   let gpuErrors = 0;
   gpu.device.addEventListener('uncapturederror', (e) => { window.__gpuErrors = ++gpuErrors; renderDiagnostics.fail(e.error, 'GPU validation'); if (gpuErrors < 6) console.error('GPU error:', e.error.message); });
@@ -365,7 +387,7 @@ async function boot(plan, poolSize) {
       else if (m.type === 'snap') { latestSnap = m.snap; if (m.events) pendingEvents.push(m.events); }
       else if (m.type === 'look') { input.yaw = m.yaw; input.pitch = m.pitch; }
       else if (m.type === 'heroState') { const c = calls.get(m.id); calls.delete(m.id); c?.resolve(m.heroes); }
-      else if (m.type === 'warrens') game?.party?.onWarrens(m);
+      else if (m.type === 'warrens') { game?.party?.onWarrens(m); renderer?.setScenery?.(m.flipped); }
       // (What monsters have marked on the ground and thrown, near you: src/sim/perils.js. Auto-play steps out of it.)
       else if (m.type === 'perils') { if (game) game.perils = { marks: m.marks, shots: m.shots, at: performance.now() }; }
       else if (m.type === 'hall') game?.hallUI?.onHall(m);
@@ -640,9 +662,11 @@ async function boot(plan, poolSize) {
   window.bm = game.api(shared, simWorker, buffer, pool);
   // How long the start took, part by part (tools/load_time.mjs).
   window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
+  gpuNote = () => `Before it went, the GPU took ${Math.round(renderer.stats.busyMs || 0)} ms a frame (${Math.round(renderer.worstMs)} ms at worst), with ${renderer.inFlight} frames waiting; the picture was ${renderer.W}x${renderer.H}.`;
   renderDiagnostics.attach(() => ({
     'Simulation tick': buffer ? Atomics.load(shared.ctrl, CTRL.TICK) : latestSnap?.[H.TICK],
-    'GPU queue': `${renderer.inFlight} pending; last submit ${Math.round(performance.now() - renderer.lastSent)} ms ago`,
+    'GPU queue': `${renderer.inFlight} pending; last submit ${Math.round(performance.now() - renderer.lastSent)} ms ago; last done ${Math.round(performance.now() - renderer.lastDone)} ms ago`,
+    'GPU frame': `${Math.round(renderer.stats.busyMs || 0)} ms on average, ${Math.round(renderer.worstMs)} ms at worst lately`,
     'Graphics': `${gpu.tierName} ${renderer.W}x${renderer.H}; MSAA ${renderer.msaa}; scale ${renderer.scale}`,
     'State': `idle=${!!game.idle}; paused=${!!shared.input[INPUT.PAUSE]}; shared=${!!buffer}`,
     'Render stage': renderer.stage || 'not started',
@@ -710,6 +734,7 @@ async function boot(plan, poolSize) {
   const snapshot = () => (canSave() ? capture().catch((e) => { console.warn('save', e); return null; }) : Promise.resolve(null));
   // The game keeps itself as it's played: that's Continue.
   const autosave = async () => { const data = await snapshot(); if (data) saves.writeAuto(data); };
+  keepForReset = autosave;
   game.onTaken = autosave;
   if (openingHUD) game.drawOpening = (snap, cam) => openingHUD.feel(snap, cam);
   game.onTick = (dt) => {
@@ -754,6 +779,19 @@ async function boot(plan, poolSize) {
     return true;
   };
   const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
+  // Back after the GPU was lost (above): Continue, offered once, with a word on why. (A tap, which also lets the sound back
+  // on in a browser that wants one first.)
+  const gpuLostOffer = async () => {
+    let ask = false, note = '';
+    try { ask = sessionStorage.getItem(GPU_LOST_OFFER) === '1'; note = sessionStorage.getItem(GPU_LOST_NOTE) || ''; sessionStorage.removeItem(GPU_LOST_OFFER); } catch { /* no storage */ }
+    if (!ask || AUTO || !saves.newest()) return;
+    await new Promise((r) => setTimeout(r, 700));
+    const text = `The game was kept as it was a moment before. Continue picks up from there.${note ? ` (${note})` : ''}`;
+    if (await title.confirm({ title: 'The graphics reset', text, yes: 'Continue', no: 'Main Menu' })) {
+      const d = saves.newest();
+      if (d) startFrom(d);
+    }
+  };
   const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
   const resume = () => { if (input.touch || AUTO || input.free) input.onPauseChange(false); else input.lock(); };
@@ -1015,6 +1053,7 @@ async function boot(plan, poolSize) {
   files.last = '';
   setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`, true);
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
+  gpuLostOffer();
   if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
 }
 
@@ -1348,9 +1387,12 @@ class GameView {
       if (paced) this.snapUs = Atomics.load(this.shared.ctrl, CTRL.SNAP_US + this.snapSlot);
       this.pace(now);
       this.pacedSnap = !!paced;
-      // Don't get ahead of the GPU: what's on its way to the screen is already out of date.
-      // (Unless a browser has stopped saying when the GPU's done, which mustn't freeze the game.)
-      if (this.renderer.inFlight >= (this.idle ? 1 : this.maxInFlight) && performance.now() - this.renderer.lastSent < 1000) return;
+      // Don't get ahead of the GPU: what's on its way to the screen is already out of date. (Unless a browser has stopped
+      // saying when the GPU's done, which mustn't freeze the game: after 5 s of it saying nothing, a frame a second. A GPU
+      // that's only slow still says so now and then, and isn't sent more than it can take: frames piled on one that had
+      // stalled went with an iPad's GPU being lost in the road's fight.)
+      { const r = this.renderer, t = performance.now();
+        if (r.inFlight >= (this.idle ? 1 : this.maxInFlight) && (t - r.lastDone < 5000 || t - r.lastSent < 1000)) return; }
       const dt = Math.min((now - this.last) / 1000, 0.1);
       this.last = now;
       this.watchSim(dt);

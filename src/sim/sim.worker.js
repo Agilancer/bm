@@ -14,7 +14,7 @@ import { LISANDRA_FORMS } from '../core/lisandra.js';
 import { VillageWalker } from './village-walker.js';
 import { parseGLB } from '../core/glb.js';
 import { getFile, watchFiles } from '../core/files.js';
-import { CHARS_START, CTRL, C, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, WEAPONS, mapShared } from '../core/layout.js';
+import { CHARS_START, CTRL, C, C_SIZE, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, PLAN_FLOATS, PLAN_OBS, PLAN_TACTICS, SNAP_FLOATS, TOTAL_BYTES, WEAPONS, mapShared } from '../core/layout.js';
 import { ArmsRig, ClipBank, Rig } from './anim.js';
 import { Casting } from './casting.js';
 import { CRAB_SCALE, Crab } from './crab.js';
@@ -703,6 +703,8 @@ async function boot(msg) {
   }
   // Your own body, for the third-person view: the slot after hers.
   sim.body = new PlayerBody(await fetchBuf(base + 'assets/game/player/wizard.glb'));
+  // (Every body has a slot in the snapshot, and yours the one after: past MAX_CHARS they'd be written over the slimes.)
+  { const n = sim.knights.length + sim.heroes.length + sim.villagers.length + 1; if (n > MAX_CHARS) throw new Error(`${n} bodies, and room in the snapshot for ${MAX_CHARS} (src/core/layout.js MAX_CHARS)`); }
   if (msg.opening) {
     sim.opening = new Opening(sim);
     sim.opening.reset();

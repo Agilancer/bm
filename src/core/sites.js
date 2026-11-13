@@ -32,7 +32,20 @@ export const tileOf = (layer) => {
 export class Kit {
   // (under: what's built while deep is set, kept apart: the delves and the Test Dungeon, out past the world's edge and under
   // it, which are never seen from the land nor the land from them. The renderer draws one or the other.)
-  constructor() { this.parts = new Map(); this.under = new Map(); this.deep = false; this.colliders = []; this.spots = {}; this.floors = []; this.fires = []; }
+  constructor() { this.parts = new Map(); this.under = new Map(); this.deep = false; this.colliders = []; this.spots = {}; this.floors = []; this.fires = []; this.groups = new Map(); }
+
+  // Scenery that can be taken away and put back while the game runs: whatever fn builds is one group under key, there from
+  // the start (on) or not. Everything else out here is built once and never changes; a group's corners are remembered
+  // (layer, from which to which) so the renderer can fold them away and bring them back (src/gfx/renderer.js setScenery).
+  // What stops a body isn't changed by it: the field and the colliders stay as they were built.
+  group(key, on, fn) {
+    // (Down a delve the corners are in the under run: the range says which.)
+    const parts = this.deep ? this.under : this.parts, under = this.deep;
+    const before = new Map([...parts].map(([l, q]) => [l, q.pos.length / 3]));
+    fn();
+    const g = this.groups.get(key) || this.groups.set(key, { on, ranges: [] }).get(key);
+    for (const [layer, q] of parts) { const v0 = before.get(layer) || 0, v1 = q.pos.length / 3; if (v1 > v0) g.ranges.push({ layer, v0, v1, under }); }
+  }
 
   part(layer) {
     const parts = this.deep ? this.under : this.parts;
@@ -1402,7 +1415,7 @@ function flattest(x0, z0) {
 }
 
 let built = null;
-// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), under: the same for the delves and the hall, colliders, spots }.
+// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), under: the same for the delves and the hall, colliders, spots, floors, fires, groups (Kit.group) }.
 export function buildSites() {
   if (built) return built;
   const K = new Kit();
@@ -1418,6 +1431,6 @@ export function buildSites() {
   // (What lies about the lairs, last, so it keeps clear of everything above: src/core/lair-dress.js.)
   dressLairs(K, SEALS);
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
-  built = { parts: K.parts, under: K.under, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires };
+  built = { parts: K.parts, under: K.under, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups };
   return built;
 }
