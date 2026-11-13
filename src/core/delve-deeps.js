@@ -138,6 +138,6 @@ export const DEEPS = {
   // The Howling Mouth (SITES.deepsmouth), facing west to the path from Frostwatch.
   portal: { x: 880, z: 3990, yaw: -Math.PI / 2, r: 2.2 },
   last: 'sleeper', tough: { hp: 5.5, damage: 1.3 }, pay: { xp: 2600, gold: 420 },
-  look: { wall: 'frost:rubble', floor: 'frost:rubble', roof: 'frost:stone', spike: 'ice', flame: 'frost:flame', cold: true, light: [0.5, 0.74, 1], fire: [0.56, 0.8, 1], every: 8 },
+  look: { wall: 'frost:rubble', floor: 'frost:rubble', roof: 'frost:stone', spike: 'ice', flame: 'frost:flame', cold: true, light: [0.5, 0.74, 1], fire: [0.56, 0.8, 1], every: 8, span: 'ice', litter: 'snow' },
   words: { enter: 'The Howling Deeps. The wind goes in and does not come out.', clear: 'The Howling Deeps are cleared. The Sleeper is dead!', wipe: 'Your party falls... and wakes at the Howling Mouth.' },
 };

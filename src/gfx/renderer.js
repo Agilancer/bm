@@ -9,7 +9,7 @@ import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/li
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
 import { PORTAL_MODELS, buildSites } from '../core/sites.js';
-import { DELVES, PORTAL_SPOTS, braziers, inDungeon, torches } from '../core/dungeon.js';
+import { DELVES, PORTAL_SPOTS, braziers, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
@@ -36,7 +36,7 @@ import { ARMOR, ARMOR_TRUE, GRASS, GRASS_CULL, ITEM, PROP, SHADOW, SKY, SKY_BAKE
 import { AO, BLOOM, COMPOSITE, PARTICLE_DRAW, PARTICLE_SIM, SHAFTS, STAIN, TRAIL } from './post.js';
 import { SpellFX } from './spellfx.js';
 import { bodyRadius, inCascade } from './shadowcull.js';
-import { buildGlowPipeline, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
+import { buildDelveFires, buildGlowPipeline, drawDelveFires, drawGlow, drawOpaque, loadInterior, visibility } from './interior.js';
 import { TrailFX } from './trail.js';
 import { HomeLights } from './homelights.js';
 import { CRAB_SCALE } from '../sim/crab.js';
@@ -96,7 +96,7 @@ const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
-const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114 };
+const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
 const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5 };
 const MAX_GROUND = 160;
@@ -513,8 +513,12 @@ export class Renderer {
       const L = d.look, cold = L.cold || L.still ? 0.25 : 1;
       // (glow: a delve's fires burning wider and brighter than the Warrens': the keep's halls are four times the size.)
       const g = L.glow || 1;
-      for (const [x, y, z, nx, nz] of torches(d)) warrens.push({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
-      for (const [x, y, z, lift] of braziers(d)) warrens.push({ p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
+      for (const [x, y, z, nx, nz] of torches(d)) warrens.push({ p: [x + nx * 0.45, y + 0.3, z + nz * 0.45], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
+      // (A fire hung over a hall: its light from under the basket, far-reaching and strong enough to pool on a floor five
+      // metres down, which falls off by the square of the way.)
+      for (const [x, y, z, lift, how] of braziers(d)) warrens.push(how === 'hang'
+        ? { p: [x, y + lift - 1.6, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 30 * g, flicker: 0.5 * cold }
+        : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
     }
     // (The portals' swirl, a cold blue that breathes: in front of the Warrens' doorways, and over every seal: portalModel.)
     const portalSpots = buildSites().spots;
@@ -696,14 +700,18 @@ export class Renderer {
       }
     }
     // And everything out in the countries.
-    for (const [name, part] of buildSites().parts) {
+    // (And the delves and the Test Dungeon, a run of their own: drawn instead of the land, never with it. under: 1.)
+    const sites = buildSites();
+    for (const [parts, under] of [[sites.parts, 0], [sites.under, 1]]) for (const [name, part] of parts) {
       const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       const cutout = layer < 100 && layers[layer].cutout;
-      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx, site: name });
+      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, under, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx, site: (under ? 'under|' : '') + name });
     }
-    prims.sort((a, b) => a.cutout - b.cutout);
+    // The land's opaque, the delves' opaque, the delves' cutouts, the land's cutouts.
+    const rank = (p) => (p.cutout ? 3 - (p.under || 0) : p.under || 0);
+    prims.sort((a, b) => rank(a) - rank(b));
     let nv = 0, ni = 0;
     for (const p of prims) { nv += p.pos.length / 3; ni += p.idx.length; }
     // Each oak its own bark and leaves, going by the tree a vertex stands under. (Anything else in bark nearby may take it too; it's only bark.)
@@ -721,9 +729,10 @@ export class Renderer {
     // (Where each of the countries' paintings begins in the one buffer: for the scenery that comes and goes, below.)
     const siteBase = new Map();
     const indices = new Uint32Array(ni);
-    let vo = 0, io = 0, cutStart = -1;
+    let vo = 0, io = 0;
+    const runs = [0, 0, 0, 0];
     for (const p of prims) {
-      if (p.cutout && cutStart < 0) cutStart = io;
+      runs[rank(p)] += p.idx.length;
       const base = vo;
       if (p.site) siteBase.set(p.site, base);
       const n = p.pos.length / 3;
@@ -741,8 +750,8 @@ export class Renderer {
     // point, which draws nothing. Those not there from the start go into the buffer folded.
     this.scenery = new Map();
     for (const [key, g] of buildSites().groups) {
-      const runs = g.ranges.map(({ layer, v0, v1 }) => {
-        const at = (siteBase.get(layer) + v0) * 36, n = (v1 - v0) * 9;
+      const runs = g.ranges.map(({ layer, v0, v1, under }) => {
+        const at = (siteBase.get((under ? 'under|' : '') + layer) + v0) * 36, n = (v1 - v0) * 9;
         const shown = f.slice(at / 4, at / 4 + n), gone = shown.slice();
         for (let i = 0; i < n; i += 9) { gone[i] = shown[0]; gone[i + 1] = shown[1]; gone[i + 2] = shown[2]; }
         if (!g.on) f.set(gone, at / 4);
@@ -752,8 +761,8 @@ export class Renderer {
     }
     this.staticVB = makeBuffer(device, new Float32Array(verts), GPUBufferUsage.VERTEX);
     this.staticIB = makeBuffer(device, indices, GPUBufferUsage.INDEX);
-    this.staticOpaque = cutStart < 0 ? ni : cutStart;
-    this.staticTotal = ni;
+    // [first, count] of each: land (what's seen from the land, and throws its shadows) and under, opaque and cut.
+    this.staticRuns = { land: [0, runs[0]], under: [runs[0], runs[1]], underCut: [runs[0] + runs[1], runs[2]], landCut: [runs[0] + runs[1] + runs[2], runs[3]] };
     this.shadowEpoch = (this.shadowEpoch || 0) + 1;
     // Per-layer parameters: cutout, parallax depth in uv, has windows, foliage.
     const params = new Float32Array(64 * 4);
@@ -2159,6 +2168,17 @@ export class Renderer {
     }
   }
 
+  // Sparks going up off the delves' open fires near the eye (the ones built with ember: src/core/delve-build.js fire()).
+  fireSparks(cam) {
+    if (!inDungeon(cam.x, cam.z)) return;
+    const list = this.emberFires ||= buildSites().fires.filter((f) => f.ember);
+    for (const f of list) {
+      const dx = f.x - cam.x, dz = f.z - cam.z;
+      if (dx * dx + dz * dz > 400 || Math.abs(f.y - cam.y) > 12 || Math.random() > 0.45) continue;
+      this.emit(6, 1, f.x + (Math.random() - 0.5) * f.w, f.y + f.h * 0.4, f.z + (Math.random() - 0.5) * f.w, 0, 1, 0, 0.4, 0.5, 1.5, 0.005, 0.011, 0.6, 1.6);
+    }
+  }
+
   flushEmits() {
     const n = this.emitN;
     if (!n) return;
@@ -2280,7 +2300,8 @@ export class Renderer {
     const take = Math.min(lights.length, Math.round(this.tier.lights * under), MAX_LIT - this.spellfx.carried(snap));
     const lit = this.litOrder || (this.litOrder = lights.map((L) => ({ L, d: 0 })));
     // (A lamp behind you counts as further off: its glow on a wall you can't see is wasted.)
-    for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
+    // (And one that reaches far counts as nearer by half its reach: a fire hung over a hall is kept before a candle.)
+    for (const e of lit) e.d = Math.hypot(e.L.p[0] - cam.x, e.L.p[2] - cam.z) - e.L.r * 0.5 + ((e.L.p[0] - cam.x) * cam.fx + (e.L.p[2] - cam.z) * cam.fz < 0 ? 12 : 0);
     if (take < lit.length) lit.sort((a, b) => a.d - b.d);
     const nextD = take < lit.length ? lit[take].d : 1e9;
     for (let i = 0; i < take; i++) {
@@ -2453,10 +2474,10 @@ export class Renderer {
     sp.setPipeline(this.pShStatic);
     sp.setVertexBuffer(0, this.staticVB);
     sp.setIndexBuffer(this.staticIB, 'uint32');
-    sp.drawIndexed(this.staticOpaque);
+    sp.drawIndexed(this.staticRuns.land[1] + this.staticRuns.under[1]);   // (the delves' rock too: it keeps the day out of them)
     sp.setPipeline(this.pShCut);
     sp.setBindGroup(1, this.shCutBG);
-    sp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
+    sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);
     if (this.camNow.y > -6) this.pines.drawShadow(sp, c, last, this.shCutBG);
     if (this.camNow.y > -6 && this.rocksOn !== false) this.rocks.drawShadow(sp, last);
     sp.setPipeline(this.pShStatic);
@@ -2479,10 +2500,10 @@ export class Renderer {
       sp.setPipeline(this.pShStatic);
       sp.setVertexBuffer(0, this.staticVB);
       sp.setIndexBuffer(this.staticIB, 'uint32');
-      sp.drawIndexed(this.staticOpaque);
+      sp.drawIndexed(this.staticRuns.land[1] + this.staticRuns.under[1]);   // (the delves' rock too: it keeps the day out of them)
       sp.setPipeline(this.pShCut);
       sp.setBindGroup(1, this.shCutBG);
-      sp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
+      sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);
       sp.setPipeline(this.pShStatic);
       sp.setVertexBuffer(0, this.interior.tiles.VB);
       sp.setIndexBuffer(this.interior.tiles.IB, 'uint32');
@@ -3108,10 +3129,12 @@ export class Renderer {
     mp.setBindGroup(1, this.staticBG);
     mp.setVertexBuffer(0, this.staticVB);
     mp.setIndexBuffer(this.staticIB, 'uint32');
-    mp.drawIndexed(this.staticOpaque);
-    if (this.staticTotal > this.staticOpaque) {
+    // (Down a delve or in the Test Dungeon, their own run of it and none of the land's; on the land, the land's.)
+    const [so, sc] = vis.warrens ? [this.staticRuns.under, this.staticRuns.underCut] : [this.staticRuns.land, this.staticRuns.landCut];
+    mp.drawIndexed(so[1], 1, so[0]);
+    if (sc[1]) {
       mp.setPipeline(this.pStaticCut);
-      mp.drawIndexed(this.staticTotal - this.staticOpaque, 1, this.staticOpaque);
+      mp.drawIndexed(sc[1], 1, sc[0]);
     }
     if (this.slimeBodies?.count) { mp.setPipeline(this.pStatic); this.slimeBodies.draw(mp); }
     // (Down the Warrens nothing of the land above can be seen: its rock is all there is.)
@@ -3137,6 +3160,8 @@ export class Renderer {
     }
     if (!vis.warrens) { mp.setPipeline(this.pSky); mp.draw(3); }
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
+    // (Down a delve, its fires: flames that face you. src/core/delve-build.js fire().)
+    if (vis.warrens && !vis.testHall) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), delveAt(cam.x, cam.z));
     this.openingStage?.drawGlow(mp);
     this.trail?.draw(mp);
     if (tier.lean) {

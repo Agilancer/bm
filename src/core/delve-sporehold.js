@@ -180,6 +180,6 @@ export const SPOREHOLD = {
   post: { body: 'bard_f2', name: 'Ensign Wren Aldery', say: "Mind the ring on the hill, and don't breathe deep by it. Whatever it fruits from is under us, and it has had the last three who went down singly. Four at your back." },
   last: 'heart', tough: { hp: 9, damage: 1.7 }, pay: { xp: 3000, gold: 480 },
   names: { Kobolds: 'SPORELING', 'Giant Spiders': 'CAP SPIDER', 'Haunted Mannequins': 'ROOTED HUSK', Werewolf: 'MOULD HOUND', 'Plague Giants': 'BLOAT-CAP' },
-  look: { wall: 'spore:rubble', floor: 'spore:rubble', roof: 'spore:stone', spike: 'spore:rubble', stone: 'spore:rubble', flame: 'spore:flame', lamp: 'cap', still: true, light: [0.74, 0.5, 1], fire: [0.6, 0.9, 1], every: 8, lit: 0.5 },
+  look: { wall: 'spore:rubble', floor: 'spore:rubble', roof: 'spore:stone', spike: 'spore:rubble', stone: 'spore:rubble', flame: 'spore:flame', lamp: 'cap', still: true, light: [0.64, 0.32, 1], fire: [0.66, 0.36, 1], glow: 1.4, every: 8, lit: 0.5, span: 'root', litter: 'spore' },
   words: { enter: 'The Sporehold. The ring on the hill is only the fruit: this is what it fruits from.', clear: 'The Sporehold is cleared. The Heart of the Ring is dead!', wipe: 'Your party falls... and wakes in the Sinkhole.' },
 };

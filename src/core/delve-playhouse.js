@@ -25,16 +25,16 @@ import { R } from './delve-lay.js';
 const rooms = [
   R('ph_foyer', 'the Foyer', 0, -2, 8, 12, 0, 9, { rock: 'ashlar', foot: 'course', ground: 'flags' }),
   R('ph_cloak', 'the Cloakroom', 24, -4, 10, 10, 0, 7, { ground: 'flags' }),
-  R('ph_gallery', 'the Gallery of Faces', 0, -54, 6, 28, 0, 10, { rock: 'wall_17', foot: 'dark:wood' }),
+  R('ph_gallery', 'the Gallery of Faces', 0, -54, 6, 28, 0, 10, { rock: 'wall_10', foot: 'dark:wood' }),
   R('ph_house', 'the House', 0, -120, 18, 28, 0, 15, { fires: 14 }),
   R('ph_wardrobe', 'the Wardrobe', -50, -120, 18, 18, 0, 12, { rock: 'cloth_oat', foot: 'dark:wood' }),
   R('ph_props', 'the Property Store', 44, -120, 14, 14, 0, 9, { rock: 'course', foot: 'block', ground: 'stone' }),
   R('ph_stage', 'the Stage', 0, -168, 20, 14, 1, 16, { fires: 0, rock: 'dark:wood', foot: 'dark:wood' }),
-  R('ph_green', 'the Green Room', 36, -168, 10, 10, 1, 8, { rock: 'mire:wall_13', foot: 'dark:wood' }),
+  R('ph_green', 'the Green Room', 36, -168, 10, 10, 1, 8, { rock: 'mire:wall_10', foot: 'dark:wood' }),
   // (The fly stair climbs eight metres going north: its floor is a slope, the steps are laid on it.)
   R('ph_stair', 'the Fly Stair', 36, -200, 6, 18, 5, 12, { tz: -8 / 36, fires: 12, rock: 'course', foot: 'block', ground: 'stone' }),
-  R('ph_nursery', 'the Nursery', 36, -240, 12, 14, 9, 9, { rock: 'pale:wall_13', ground: 'pale:wood' }),
-  R('ph_attic', "the Dollmaker's Attic", -10, -240, 28, 14, 9, 8, { fires: 12, rock: 'wood', foot: 'dark:wood' }),
+  R('ph_nursery', 'the Nursery', 36, -240, 12, 14, 9, 9, { rock: 'pale:wall_09', ground: 'pale:wood' }),
+  R('ph_attic', "the Dollmaker's Attic", -10, -240, 28, 14, 9, 8, { fires: 12, rock: 'wood', foot: 'dark:wood', ground: 'dark:wood' }),
 ];
 
 // Passages: w is half the width, h the height.
@@ -204,6 +204,6 @@ export const PLAYHOUSE = {
   post: { body: 'bard_f3', name: 'Sergeant Maud Halloway', say: "A company of players wintered under this grove and never came up. There's music down there still, some nights. I wouldn't go to see that play alone: four at your back." },
   last: 'dollmaker', tough: { hp: 10.5, damage: 2 }, pay: { xp: 3800, gold: 620 },
   names: { 'Haunted Mannequins': 'THE COMPANY', 'The Possessed': 'PATRON', 'Dead Children': 'DOLL', 'Night Paralysis Demons': 'STAGEHAND', Necromancers: 'PROMPTER' },
-  look: { wall: 'wall_13', foot: 'wood', floor: 'wood', roof: 'dark:wood', flame: 'flame', banner: 'spore:cloth_oat', light: [1, 0.72, 0.42], fire: [1, 0.76, 0.46], every: 9, high: 2.6, glow: 1.6, lit: true },
+  look: { wall: 'wall_09', foot: 'wood', floor: 'wood', roof: 'dark:wood', flame: 'flame', lamp: 'candle', banner: 'spore:cloth_oat', light: [1, 0.72, 0.42], fire: [1, 0.76, 0.46], every: 9, high: 2.6, glow: 1.6, lit: 0.5, bays: 'props' },
   words: { enter: 'The Hollow Playhouse. One play, all winter, to whoever came. The company is still in rehearsal.', clear: 'The Hollow Playhouse is cleared. The Dollmaker is dead!', wipe: 'Your party falls... and wakes in the Foyer.' },
 };

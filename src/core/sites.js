@@ -30,22 +30,27 @@ export const tileOf = (layer) => {
 };
 
 export class Kit {
-  constructor() { this.parts = new Map(); this.colliders = []; this.spots = {}; this.floors = []; this.groups = new Map(); }
+  // (under: what's built while deep is set, kept apart: the delves and the Test Dungeon, out past the world's edge and under
+  // it, which are never seen from the land nor the land from them. The renderer draws one or the other.)
+  constructor() { this.parts = new Map(); this.under = new Map(); this.deep = false; this.colliders = []; this.spots = {}; this.floors = []; this.fires = []; this.groups = new Map(); }
 
   // Scenery that can be taken away and put back while the game runs: whatever fn builds is one group under key, there from
   // the start (on) or not. Everything else out here is built once and never changes; a group's corners are remembered
   // (layer, from which to which) so the renderer can fold them away and bring them back (src/gfx/renderer.js setScenery).
   // What stops a body isn't changed by it: the field and the colliders stay as they were built.
   group(key, on, fn) {
-    const before = new Map([...this.parts].map(([l, q]) => [l, q.pos.length / 3]));
+    // (Down a delve the corners are in the under run: the range says which.)
+    const parts = this.deep ? this.under : this.parts, under = this.deep;
+    const before = new Map([...parts].map(([l, q]) => [l, q.pos.length / 3]));
     fn();
     const g = this.groups.get(key) || this.groups.set(key, { on, ranges: [] }).get(key);
-    for (const [layer, q] of this.parts) { const v0 = before.get(layer) || 0, v1 = q.pos.length / 3; if (v1 > v0) g.ranges.push({ layer, v0, v1 }); }
+    for (const [layer, q] of parts) { const v0 = before.get(layer) || 0, v1 = q.pos.length / 3; if (v1 > v0) g.ranges.push({ layer, v0, v1, under }); }
   }
 
   part(layer) {
-    let p = this.parts.get(layer);
-    if (!p) { p = { pos: [], nrm: [], uv: [], idx: [] }; this.parts.set(layer, p); }
+    const parts = this.deep ? this.under : this.parts;
+    let p = parts.get(layer);
+    if (!p) { p = { pos: [], nrm: [], uv: [], idx: [] }; parts.set(layer, p); }
     return p;
   }
 
@@ -511,7 +516,13 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
     const [bx, bz] = P(u * (hu - 0.6), hw - 0.6);
     K.drum('dark:stone', bx, top - 0.05, bz, 0.24, 1.05, 6, { r2: 0.19, collide: false });
     K.drum('iron', bx, top + 0.95, bz, 0.2, 0.3, 8, { r2: 0.4, collide: false, open: true });
-    K.cone('flame', bx, top + 1.08, bz, 0.28, 0.8, 6);
+    // (Down a delve it burns as that delve's fires do: a flame that faces you, in its colour. src/core/delve-build.js fire().)
+    if (K.deep && K.delve) {
+      const hue = K.delve.look.flame, f = (w, h, ox) => K.fires.push({ delve: K.delve.key, hue, kind: 'flame', x: bx + ox, y: top + 1.2, z: bz, w, h, ember: 0, seed: (bx * 0.37 + ox) % 1 });
+      K.drum(hue, bx, top + 1.14, bz, 0.3, 0.06, 7, { r2: 0.24, collide: false });
+      f(0.4, 0.5, 0); f(0.22, 0.95, 0.08); f(0.2, 0.7, -0.1);
+      K.fires.push({ delve: K.delve.key, hue, kind: 'glow', x: bx, y: top + 1.6, z: bz, w: 1.4, h: 1.4, ember: 0, seed: 0 });
+    } else K.cone('flame', bx, top + 1.08, bz, 0.28, 0.8, 6);
     if (land) K.colliders.push({ x: bx, z: bz, hx: 0.25, hz: 0.25, yaw: 0, h: top + 1.3 - terrainHeight(bx, bz), t: top + 1.2 });
   }
   K.spots[key] = [x, top, z, yaw];
@@ -1404,18 +1415,22 @@ function flattest(x0, z0) {
 }
 
 let built = null;
-// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots, floors, groups (Kit.group) }.
+// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), under: the same for the delves and the hall, colliders, spots, floors, fires, groups (Kit.group) }.
 export function buildSites() {
   if (built) return built;
   const K = new Kit();
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
-  buildDelves(K, portalWall); warrensMouth(K);
-  // (The Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js.)
+  warrensMouth(K);
+  // (The delves, and the Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js. Kept apart.)
+  K.deep = true;
+  buildDelves(K, portalWall);
   buildHall(K);
+  K.deep = false;
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   // (What lies about the lairs, last, so it keeps clear of everything above: src/core/lair-dress.js.)
   dressLairs(K, SEALS);
-  built = { parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, groups: K.groups };
+  // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
+  built = { parts: K.parts, under: K.under, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups };
   return built;
 }

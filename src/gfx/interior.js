@@ -16,8 +16,27 @@ const POM = { stone: 0.018, wood: 0.004 };
 const GLOW = COMMON + /* wgsl */ `
 @group(1) @binding(0) var colorArr: texture_2d_array<f32>;
 struct G { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) tint: vec3f, @location(2) @interpolate(flat) layer: f32, @location(3) viewZ: f32 };
-@vertex fn vs(@location(0) p: vec3f, @location(1) uv: vec2f, @location(2) tint: vec3f, @location(3) layer: f32) -> G {
+@vertex fn vs(@location(0) p0: vec3f, @location(1) uv0: vec2f, @location(2) tint: vec3f, @location(3) layer: f32) -> G {
   var o: G;
+  var p = p0; var uv = uv0;
+  if (layer > 103.5) {
+    // A delve's fires (src/core/delve-build.js fire(), src/gfx/renderer.js): all four corners at the one point, and uv says
+    // how far out each goes. A flame turns about its own upright to face you; a glow faces you whole. A wisp bobs.
+    let toC = F.camPos.xyz - p;
+    let right = normalize(vec3f(toC.z, 0.0, -toC.x) + vec3f(1e-5, 0.0, 0.0));
+    let seed = fract(layer) * 2.0;
+    if (layer > 105.5) { p.y += sin(F.camPos.w * 1.1 + seed * 40.0) * 0.09; p += right * sin(F.camPos.w * 0.7 + seed * 23.0) * 0.05; }
+    if (layer > 104.5 && layer < 105.5) {
+      let up = normalize(cross(right, toC));
+      p += right * uv.x + up * uv.y;
+      uv = vec2f(sign(uv.x), sign(uv.y)) * 0.5 + 0.5;
+    } else {
+      // (Leaning with the draught, more at the tip.)
+      let lean = (1.0 - uv.y) * abs(uv.x) * 0.5 * sin(F.camPos.w * 2.3 + seed * 31.0);
+      p += right * (uv.x + lean);
+      uv = vec2f(sign(uv.x) * 0.5 + 0.5, uv.y);
+    }
+  }
   o.pos = F.viewProj * vec4f(p, 1.0);
   o.uv = uv; o.tint = tint; o.layer = layer; o.viewZ = -(F.view * vec4f(p, 1.0)).z;
   return o;
@@ -25,12 +44,42 @@ struct G { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) t
 struct GO { @location(0) color: vec4f, @location(1) depth: f32 };
 @fragment fn fs(in: G) -> GO {
   var c: vec3f;
-  let t = textureSample(colorArr, repeatSmp, in.uv, i32(min(in.layer, 13.0)));
+  let t = textureSample(colorArr, repeatSmp, in.uv, i32(clamp(in.layer, 0.0, 13.0)));
   if (in.layer < 99.5) {
     c = t.rgb * t.rgb * t.a * in.tint * F.sunColor.a;   // (The day behind the window.)
   } else if (in.layer < 100.5) {
     let e = 1.0 - abs(in.uv.x * 2.0 - 1.0);
     c = in.tint * smoothstep(0.0, 0.4, e) * (0.25 + 0.75 * in.uv.y);
+  } else if (in.layer > 104.5 && in.layer < 105.5) {
+    // The air round a fire, lit: soft, round, gone by its edge.
+    let d = length(in.uv * 2.0 - 1.0);
+    let f = max(1.0 - d, 0.0);
+    let fl = 0.9 + 0.1 * sin(F.camPos.w * 9.0 + in.pos.x * 0.01);
+    c = in.tint * f * f * f * f * 0.34 * fl * smoothstep(0.4, 1.6, in.viewZ);
+  } else if (in.layer > 103.5) {
+    // A delve's flame, in its own colour (tint): the tongue of fire below, with a white heart, its edges the fire's colour
+    // gone deep. A wisp (over 105.5) is rounder, and slower.
+    let T = F.camPos.w;
+    let wisp = in.layer > 105.5;
+    let rate = select(1.0, 0.45, wisp);
+    let u = in.uv.x * 2.0 - 1.0;
+    let v = 1.0 - in.uv.y;
+    let seed = fract(in.layer) * 14.0;
+    let n1 = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.uv.x * 0.3 + seed, v * 0.4 - T * 0.55 * rate), 0.0).r;
+    let n2 = textureSampleLevel(noiseTex, repeatSmp, vec2f(in.uv.x * 0.85 - seed, v * 1.1 - T * 1.25 * rate), 0.0).r;
+    let n = n1 * 0.65 + n2 * 0.35;
+    let sway = (n1 - 0.5) * 0.6 * v * v;
+    // (Fat at the foot, drawn in to a tip; a wisp is widest a third of the way up.)
+    let shape = select((1.0 - v) * (1.0 - 0.3 * v) * (0.5 + 0.2 * smoothstep(0.0, 0.12, v)), sqrt(max(v * (1.0 - v), 0.0)) * (1.25 - 0.7 * v), wisp);
+    let width = shape * (0.62 + 0.7 * n);
+    let edge = width - abs(u - sway);
+    let tear = smoothstep(0.95, 0.5, v + (0.5 - n2) * 0.6);
+    let body = smoothstep(0.0, 0.2, edge) * tear;
+    let core = smoothstep(0.1, 0.42, edge) * smoothstep(0.8, 0.05, v);
+    let deep = in.tint * in.tint * vec3f(0.9, 0.6, 0.6);
+    // (Deep in its colour at the foot and the edges; the white heart stands a little off the root.)
+    let col = mix(deep, in.tint, smoothstep(0.0, 0.28, edge)) * 1.5 * mix(0.55, 1.0, smoothstep(0.0, 0.3, v)) + mix(vec3f(1.0, 0.9, 0.7), in.tint, 0.7) * core * 1.5 * smoothstep(0.03, 0.22, v);
+    c = col * body * (0.88 + 0.12 * sin(T * 13.0 + seed * 9.0));
   } else if (in.layer > 102.5) {
     // A tongue of fire on a card: noise climbing it, pinched in toward the tip and torn off at the top, white-gold at the root
     // and deep red at the edges. Three of them, crossed, make a fire (hearth() in tools/interior/build_interior.py). tint.b also
@@ -190,6 +239,39 @@ export function drawOpaque(r, mp, it, vis) {
   mp.setIndexBuffer(it.atlas.IB, 'uint32');
   if (vis.cath) mp.drawIndexed(it.atlas.cath);
   if (vis.below) mp.drawIndexed(it.atlas.deep, 1, it.atlas.cath);
+}
+
+// The delves' fires as glow quads (src/core/delve-build.js fire()): one buffer, each delve's a run of it. { VB, runs: { key: [first, count] } }.
+const HUES = { 'flame': [1, 0.5, 0.13], 'dark:flame': [1, 0.2, 0.045], 'frost:flame': [0.42, 0.72, 1], 'pale:flame': [0.5, 1, 0.6], 'mire:flame': [0.3, 1, 0.45], 'spore:flame': [0.72, 0.4, 1.25] };
+const KINDS = { flame: 104, glow: 105, wisp: 106 };
+export function buildDelveFires(r, fires) {
+  const by = new Map();
+  for (const f of fires) { if (!by.has(f.delve)) by.set(f.delve, []); by.get(f.delve).push(f); }
+  const out = new Float32Array(fires.length * 54), runs = {};
+  let o = 0;
+  for (const [key, list] of by) {
+    runs[key] = [o / 9, list.length * 6];
+    // (The glows first, so a flame is drawn over its own.)
+    list.sort((a, b) => (b.kind === 'glow') - (a.kind === 'glow'));
+    for (const f of list) {
+      const c = HUES[f.hue] || HUES.flame, layer = KINDS[f.kind] + 0.02 + f.seed * 0.45, g = f.kind === 'glow';
+      // (uv: how far out the corner goes, and for a flame 0 at its tip, 1 at its root.)
+      const corner = g ? [[-f.w, -f.h, 0], [f.w, -f.h, 0], [f.w, f.h, 0], [-f.w, f.h, 0]] : [[-f.w, 1, 0], [f.w, 1, 0], [f.w, 0, f.h], [-f.w, 0, f.h]];
+      for (const k of [0, 1, 2, 0, 2, 3]) {
+        const [u, v, up] = corner[k];
+        out[o++] = f.x; out[o++] = f.y + up; out[o++] = f.z; out[o++] = u; out[o++] = v; out[o++] = c[0]; out[o++] = c[1]; out[o++] = c[2]; out[o++] = layer;
+      }
+    }
+  }
+  return { VB: makeBuffer(r.device, out, GPUBufferUsage.VERTEX), runs };
+}
+export function drawDelveFires(r, mp, it, set, key) {
+  const run = set?.runs[key];
+  if (!run || !it) return;
+  mp.setPipeline(r.pGlow);
+  mp.setBindGroup(1, it.atlas.bg);
+  mp.setVertexBuffer(0, set.VB);
+  mp.draw(run[1], 1, run[0]);
 }
 
 // all: the church's too; or only the houses'.

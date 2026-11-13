@@ -174,7 +174,7 @@ test('the Warden\'s stones are scenery that goes, their rubble scenery that come
     const stone = groups.get(`kb_stone_${n}`), rubble = groups.get(`kb_rubble_${n}`);
     assert.ok(stone?.on === true && stone.ranges.length, `kb_stone_${n}`);
     assert.ok(rubble?.on === false && rubble.ranges.length, `kb_rubble_${n}`);
-    for (const r of [...stone.ranges, ...rubble.ranges]) assert.ok(r.v1 > r.v0 && buildSites().parts.get(r.layer).pos.length / 3 >= r.v1, r.layer);
+    for (const r of [...stone.ranges, ...rubble.ranges]) assert.ok(r.v1 > r.v0 && (r.under ? buildSites().under : buildSites().parts).get(r.layer).pos.length / 3 >= r.v1, r.layer);
   });
   const src = readFileSync(new URL('../src/sim/delve-fights.js', import.meta.url), 'utf8');
   assert.match(src, /f\.spent\.add\(stone\); W\.flip\(`kb_stone_\$\{stone\}`\); W\.flip\(`kb_rubble_\$\{stone\}`\)/);
