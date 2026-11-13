@@ -18,7 +18,9 @@ for (const d of DELVES) {
     const y = caveFloorY(ex, ez);
     out.push(`${d.key}${tag}_${i}:${f(ex)},${f(y + 1.75)},${f(ez)}:${f(cx - Math.cos(a) * R * 0.5)},${f(caveFloorY(cx, cz) + 1.6)},${f(cz - Math.sin(a) * R * 0.5)}`);
   });
-  const t = torches(d)[Math.floor(torches(d).length * 0.4)], b = braziers(d).filter((q) => q[3] === undefined)[3];
+  // (A wall light with room before it to stand in, from part way down the delve.)
+  const T = torches(d), open = (q) => caveRoom(q[0] + q[3] * 2.2 - q[4] * 1.1, q[2] + q[4] * 2.2 + q[3] * 1.1) > 0.8 && caveRoom(q[0] + q[3] * 1.2, q[2] + q[4] * 1.2) > 0.8;
+  const t = T.slice(Math.floor(T.length * 0.4)).find(open) || T.find(open), b = braziers(d).filter((q) => q[3] === undefined)[3];
   if (t) { const [x, y, z, nx, nz] = t; out.push(`${d.key}${tag}_torch:${f(x + nx * 2.2 - nz * 1.1)},${f(y - 0.3)},${f(z + nz * 2.2 + nx * 1.1)}:${f(x)},${f(y - 0.1)},${f(z)}`); }
   if (b) { const [x, y, z] = b; let a = 0; while (caveRoom(x + Math.cos(a) * 3, z + Math.sin(a) * 3) < 0.8 && a < 6) a += 0.5; out.push(`${d.key}${tag}_fire:${f(x + Math.cos(a) * 3)},${f(y + 1.9)},${f(z + Math.sin(a) * 3)}:${f(x)},${f(y + 1.2)},${f(z)}`); }
 }

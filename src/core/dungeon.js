@@ -544,6 +544,15 @@ export function braziers(d = WARRENS) {
     if (r.fires === 0) continue;
     if (r.hx !== undefined) {
       // A room with straight walls: one every ten metres or so along them, two strides in, and none before a door.
+      // (And down the middle of a great room, fires hung from the roof on a grid: 'hang', as in the caverns below.)
+      if (Math.min(r.hx, r.hz) >= 12 && r.roof >= 8 && r.hang !== 0 && !r.tz) {
+        const nx = Math.max(1, Math.round(r.hx * 2 / 13) - 1), nz = Math.max(1, Math.round(r.hz * 2 / 13) - 1);
+        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+          const lx = r.x + ((i + 0.5) / nx * 2 - 1) * (r.hx - 4), lz = r.z + ((j + 0.5) / nz * 2 - 1) * (r.hz - 4), x = d.x + lx, z = d.z + lz;
+          if (BRAZIERS.some((b) => Math.hypot(b[0] - x, b[2] - z) < 6.5) || solids(d).some((b) => blockOut(b, lx, lz) < 1.5)) continue;
+          BRAZIERS.push([x, caveFloorY(x, z), z, Math.min(5.4, r.roof - 2.4), 'hang']);
+        }
+      }
       for (const [lx, lz] of roomEdge(r, r.fires || 10, 2.2)) {
         const x = d.x + lx, z = d.z + lz, ox = Math.abs(lx - r.x) > r.hx - 2.3 ? Math.sign(lx - r.x) : 0, oz = ox ? 0 : Math.sign(lz - r.z);
         if (caveRoom(x + ox * 5, z + oz * 5) > -0.5 || caveRoom(x, z) < 1.6) continue;
@@ -575,8 +584,8 @@ export function braziers(d = WARRENS) {
       for (let i = 0; i < m; i++) {
         const a = (i + 0.6) / m * 6.28 + r.x, x = d.x + r.x + Math.cos(a) * r.r * 0.3, z = d.z + r.z + Math.sin(a) * r.r * 0.3;
         if (caveRoom(x, z) < 2.5 || solids(d).some((b) => blockOut(b, x - d.x, z - d.z) < 0.5)) continue;
-        const y = caveFloorY(x, z), lift = Math.min(8, caveRoofY(x, z) - y - 2.5);
-        if (lift < 4.6) continue;
+        const y = caveFloorY(x, z), lift = Math.min(5.2, caveRoofY(x, z) - y - 2.5);
+        if (lift < 4.2) continue;
         BRAZIERS.push([x, y, z, lift, 'hang']);
       }
     }

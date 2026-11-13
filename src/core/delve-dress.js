@@ -6,7 +6,7 @@
 // the edges: the floors the fights use are as they were. tools/dungeon/check.mjs counts its triangles with the rest.
 
 import { hash2 } from './terrain-noise.js';
-import { caveFloorY, caveRoofY, caveRoom } from './dungeon.js';
+import { caveFloorY, caveRoofY, caveRoom, torches } from './dungeon.js';
 import { PROPS, bar, grad, nearProp, outline, rod } from './delve-build.js';
 
 const TAU = Math.PI * 2;
@@ -63,7 +63,7 @@ function piers(K, d) {
   for (const r of d.rooms) {
     if (r.hx === undefined || r.piers === 0) continue;
     const stone = r.foot || L.foot || 'dark:stone', wood = stone === 'wood';
-    const beams = r.roof <= 12 && !r.tz && Math.min(r.hx, r.hz) <= 14;
+    const beams = r.roof <= 16 && !r.tz && r.beams !== 0;
     // (Along the long walls: the beams cross the short way.)
     const along = r.hz >= r.hx, len = along ? r.hz : r.hx, off = along ? r.hx : r.hz, n = Math.max(1, Math.round((len * 2 - 3) / every));
     const stood = [];
@@ -89,13 +89,36 @@ function piers(K, d) {
       }
       stood.push(pair);
     }
-    if (!beams) continue;
-    for (const [a, b] of stood) {
-      if (!a || !b) continue;
-      const mx = (a[0] + b[0]) / 2, mz = (a[2] + b[2]) / 2, top = Math.min(a[1], b[1]);
-      // (Not through a higher roof's step, a chandelier's chain or a hanging thing.)
-      if (Math.abs(caveRoofY(mx, mz) - top) > 0.2) continue;
-      K.box(wood ? 'wood' : L.beam || 'wood', mx, top - 0.5, mz, along ? off - 0.2 : 0.2, 0.42, along ? 0.2 : off - 0.2, 0, NO);
+    if (!beams && !L.loculi) continue;
+    if (beams) {
+    // A beam (a slab of stone, where the look's beam is stone) from each pier to the one opposite, a lighter one between
+    // each pair, and two purlins the long way over them.
+    const beam = wood ? 'wood' : L.beam || 'wood', top = d.y + r.y + r.roof, deep = beam === 'wood' ? 0.42 : 0.6;
+    const cross = (tt, t, hgt) => {
+      const mx = d.x + r.x + (along ? 0 : tt), mz = d.z + r.z + (along ? tt : 0);
+      if (Math.abs(caveRoofY(mx, mz) - top) > 0.2) return;
+      K.box(beam, mx, top - hgt - 0.02, mz, along ? off - 0.1 : t, hgt, along ? t : off - 0.1, 0, NO);
+    };
+    for (let i = 0; i <= n; i++) {
+      const tt = -len + 1.5 + (len * 2 - 3) * i / n;
+      if (stood[i][0] || stood[i][1]) cross(tt, 0.22, deep);
+      if (i < n) for (const f of [1 / 3, 2 / 3]) cross(tt + (len * 2 - 3) / n * f, 0.13, deep * 0.6);
+    }
+    if (beam === 'wood') for (const u of [-0.45, 0.45]) K.box(beam, d.x + r.x + (along ? u * off : 0), top - deep - 0.26, d.z + r.z + (along ? 0 : u * off), along ? 0.14 : len - 0.3, 0.26, along ? len - 0.3 : 0.14, 0, NO);
+    }
+    // (The Kingsbarrow's dead on shelves between the piers: a slab on two stubs, bones bundled on it, a skull or two.)
+    if (L.loculi && r.loculi !== 0) for (let i = 0; i < n; i++) for (const side of [-1, 1]) {
+      const tt = -len + 1.5 + (len * 2 - 3) * (i + 0.5) / n, lx = r.x + (along ? side * off : tt), lz = r.z + (along ? tt : side * off), nx = along ? -side : 0, nz = along ? 0 : -side;
+      const x = d.x + lx + nx * 0.36, z = d.z + lz + nz * 0.36, hh = hash2(x, z);
+      if (hh < 0.35 || caveRoom(x - nx * 1.5, z - nz * 1.5) > -0.3 || caveRoom(x + nx * 0.6, z + nz * 0.6) < 0.4 || !clear(d, x, z, 0.9)) continue;
+      if (torches(d).some((q) => Math.hypot(q[0] - x, q[2] - z) < 1.6)) continue;
+      const y = caveFloorY(x + nx * 0.4, z + nz * 0.4), yaw = along ? 0 : Math.PI / 2, tx = -nz, tz = nx;
+      for (const lv of hh > 0.7 ? [0.75, 1.75] : [1.0]) {
+        K.box('pale:rubble', x, y + lv, z, 0.36, 0.12, 1.15, yaw, NO);
+        for (const u of [-0.9, 0.9]) K.box('rubble', x + tx * u, y + lv - 0.3, z + tz * u, 0.3, 0.3, 0.14, yaw, NO);
+        for (let k = 0; k < 5; k++) { const u = -0.8 + k * 0.3, w = 0.06 * (k % 2 ? 1 : -1); rod(K, 'pale:stone', x + tx * u + nx * w, y + lv + 0.16 + 0.03 * (k % 3), z + tz * u + nz * w, x + tx * (u + 0.75) - nx * w, y + lv + 0.16, z + tz * (u + 0.75) - nz * w, 0.03); }
+        K.drum('pale:stone', x + tx * 0.75 * (hh > 0.5 ? 1 : -1), y + lv + 0.12, z + tz * 0.75 * (hh > 0.5 ? 1 : -1), 0.11, 0.13, 6, { r2: 0.14, collide: false, lid: 'pale:stone' });
+      }
     }
   }
 }
@@ -105,10 +128,23 @@ function piers(K, d) {
 // Fallen rock along the foot of the walls: small stuff everywhere, a boulder now and then.
 function scree(K, d) {
   const L = d.look;
-  let n = 0;
+  const lit = torches(d);
   outline(d, (ax, az, bx, bz) => {
-    n++;
     const mx = (ax + bx) / 2, mz = (az + bz) / 2, h = hash2(mx * 1.7, mz * 2.3);
+    // A rib of rock standing out of the wall from floor to roof, every so far: leaning, thick at its foot, boulders by it.
+    const hr = hash2(mx * 0.91, mz * 1.13);
+    if (hr < 0.085 && !lit.some((q) => Math.hypot(q[0] - mx, q[2] - mz) < 2.2) && clear(d, mx, mz, 1.5)) {
+      const g = grad(mx, mz), room = roomOf(d, mx - d.x, mz - d.z), rock = room?.rock || L.wall, R = 0.7 + hr * 6, x = mx - g[0] * 0.25, z = mz - g[1] * 0.25;
+      const y = caveFloorY(mx, mz) - 0.4, top = caveRoofY(mx + g[0], mz + g[1]) + 0.8, lean = (hash2(mz, mx) - 0.5) * 1.2, mid = y + (top - y) * 0.45;
+      K.drum(rock, x + g[0] * 0.2, y, z + g[1] * 0.2, R * 1.5, 0.9, 6, { r2: R, open: true, collide: false, turn: mx });
+      bar(K, rock, [x, y + 0.8, z], [x - g[1] * lean * 0.5 + g[0] * 0.25, mid, z + g[0] * lean * 0.5 + g[1] * 0.25], R * 0.72, R * 0.5);
+      bar(K, rock, [x - g[1] * lean * 0.5 + g[0] * 0.25, mid, z + g[0] * lean * 0.5 + g[1] * 0.25], [x - g[1] * lean - g[0] * 0.5, top, z + g[0] * lean - g[1] * 0.5], R * 0.5, R * 0.85);
+    }
+    // (In the cold: icicles along the head of the wall.)
+    if (L.litter === 'snow' && h > 0.5) {
+      const g = grad(mx, mz);
+      for (let k = 0; k < 2; k++) { const o = 0.5 + k * 0.5, x = mx + g[0] * o + g[1] * (k - 0.5) * 0.6, z = mz + g[1] * o - g[0] * (k - 0.5) * 0.6, len2 = 0.3 + hash2(mx + k, mz) * 0.9; K.spike('ice', x, caveRoofY(x, z) + 0.4, z, 0.07 + len2 * 0.05, -len2 - 0.4, 4, k); }
+    }
     if (h > 0.42) return;
     const g = grad(mx, mz), room = roomOf(d, mx - d.x, mz - d.z);
     const rock = h < 0.14 ? room?.rock || L.wall : L.stone || 'dark:rubble';
@@ -214,7 +250,36 @@ function litter(K, d) {
   }
 }
 
+// What lies flat on the open floor, where the fights are: nothing that stands. By the look's litter.
+function underfoot(K, d) {
+  const L = d.look, kind = L.litter;
+  if (!kind) return;
+  const { box } = d, step = 7;
+  for (let gz = box.z0; gz < box.z1; gz += step) for (let gx = box.x0; gx < box.x1; gx += step) {
+    const x = gx + hash2(gx * 1.3, gz) * step, z = gz + hash2(gz * 1.3, gx) * step, dd = caveRoom(x, z);
+    if (dd < 3) continue;
+    const h = hash2(gx * 0.53, gz * 0.29);
+    if (h > 0.6 || !clear(d, x, z, 1.2)) continue;
+    const y = caveFloorY(x, z), a = h * 40;
+    const flat = (layer, r, n, up = 0.03) => { for (let k = 0; k < n; k++) { const b = k * TAU / n, c = (k + 1) * TAU / n, rr = (q) => r * (0.75 + 0.5 * hash2(x + q, z)); const P = (ang, q) => { const px = x + Math.cos(ang) * rr(q), pz = z + Math.sin(ang) * rr(q); return [px, caveFloorY(px, pz) + up, pz]; }; K.tri(layer, [x, y + up, z], P(c, (k + 1) % n), P(b, k)); } };
+    if (kind === 'bones') {
+      // Planks thrown down over the wet, a scatter of gnawed bone, a dropped pick.
+      if (h < 0.25) for (let k = 0; k < 3; k++) K.box('wood', x + Math.sin(a) * k * 0.5, y - 0.02, z + Math.cos(a) * k * 0.5, 0.16, 0.06, 1.1 + 0.3 * hash2(k, x), a + (hash2(k, z) - 0.5) * 0.3, NO);
+      else if (h < 0.45) for (let k = 0; k < 6; k++) { const b = k * 1.1 + a, o = 0.3 + 0.35 * k * hash2(k, x); rod(K, 'pale:stone', x + Math.cos(b) * o, y + 0.04, z + Math.sin(b) * o, x + Math.cos(b + 0.9) * (o + 0.45), y + 0.05, z + Math.sin(b + 0.9) * (o + 0.45), 0.03); }
+      else flat('dark:rubble', 1.2 + h, 7);
+    } else if (kind === 'snow') {
+      if (h < 0.35) flat('ice', 1.5 + h * 3, 9, 0.04); else flat('white', 1.2 + h * 2, 8, 0.05);
+    } else if (kind === 'mire') {
+      if (h < 0.4) flat('lake', 1.4 + h * 4, 9, 0.035); else for (let k = 0; k < 3; k++) K.box('pale:stone', x + Math.cos(a + k * 2) * 0.9, y - 0.14, z + Math.sin(a + k * 2) * 0.9, 0.45, 0.18, 0.3, a + k, NO);
+    } else if (kind === 'spore') {
+      // A ring of small caps, or a mat of pale thread.
+      if (h < 0.35) for (let k = 0; k < 9; k++) { const b = k * TAU / 9, px = x + Math.cos(b) * 1.1, pz = z + Math.sin(b) * 1.1, py = caveFloorY(px, pz), hh = 0.1 + 0.1 * hash2(k, x); K.drum('cloth_oat', px, py - 0.03, pz, 0.025, hh, 4, NO); K.cone('fruit', px, py + hh - 0.02, pz, 0.1, 0.07, 6, b); }
+      else flat('pale:cloth_oat', 1 + h * 2, 8);
+    }
+  }
+}
+
 export function dress(K, d) {
   if (d.style === 'castle') { doorways(K, d); piers(K, d); return; }
-  scree(K, d); spans(K, d); litter(K, d);
+  scree(K, d); spans(K, d); litter(K, d); underfoot(K, d);
 }

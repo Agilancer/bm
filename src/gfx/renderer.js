@@ -511,7 +511,7 @@ export class Renderer {
       const L = d.look, cold = L.cold || L.still ? 0.25 : 1;
       // (glow: a delve's fires burning wider and brighter than the Warrens': the keep's halls are four times the size.)
       const g = L.glow || 1;
-      for (const [x, y, z, nx, nz] of torches(d)) warrens.push({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
+      for (const [x, y, z, nx, nz] of torches(d)) warrens.push({ p: [x + nx * 0.45, y + 0.3, z + nz * 0.45], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
       for (const [x, y, z, lift] of braziers(d)) warrens.push({ p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
     }
     // (The portals' swirl, a cold blue that breathes: in front of the Warrens' doorways, and over every seal: portalModel.)
@@ -2436,7 +2436,7 @@ export class Renderer {
     sp.setPipeline(this.pShStatic);
     sp.setVertexBuffer(0, this.staticVB);
     sp.setIndexBuffer(this.staticIB, 'uint32');
-    sp.drawIndexed(this.staticRuns.land[1]);
+    sp.drawIndexed(this.staticRuns.land[1] + this.staticRuns.under[1]);   // (the delves' rock too: it keeps the day out of them)
     sp.setPipeline(this.pShCut);
     sp.setBindGroup(1, this.shCutBG);
     sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);
@@ -2462,7 +2462,7 @@ export class Renderer {
       sp.setPipeline(this.pShStatic);
       sp.setVertexBuffer(0, this.staticVB);
       sp.setIndexBuffer(this.staticIB, 'uint32');
-      sp.drawIndexed(this.staticRuns.land[1]);
+      sp.drawIndexed(this.staticRuns.land[1] + this.staticRuns.under[1]);   // (the delves' rock too: it keeps the day out of them)
       sp.setPipeline(this.pShCut);
       sp.setBindGroup(1, this.shCutBG);
       sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);

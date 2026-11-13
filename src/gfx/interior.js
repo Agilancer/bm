@@ -55,7 +55,7 @@ struct GO { @location(0) color: vec4f, @location(1) depth: f32 };
     let d = length(in.uv * 2.0 - 1.0);
     let f = max(1.0 - d, 0.0);
     let fl = 0.9 + 0.1 * sin(F.camPos.w * 9.0 + in.pos.x * 0.01);
-    c = in.tint * f * f * f * 0.5 * fl * smoothstep(0.4, 1.6, in.viewZ);
+    c = in.tint * f * f * f * f * 0.34 * fl * smoothstep(0.4, 1.6, in.viewZ);
   } else if (in.layer > 103.5) {
     // A delve's flame, in its own colour (tint): the tongue of fire below, with a white heart, its edges the fire's colour
     // gone deep. A wisp (over 105.5) is rounder, and slower.
@@ -77,7 +77,8 @@ struct GO { @location(0) color: vec4f, @location(1) depth: f32 };
     let body = smoothstep(0.0, 0.2, edge) * tear;
     let core = smoothstep(0.1, 0.42, edge) * smoothstep(0.8, 0.05, v);
     let deep = in.tint * in.tint * vec3f(0.9, 0.6, 0.6);
-    let col = mix(deep, in.tint, smoothstep(0.0, 0.28, edge)) * 1.5 + mix(vec3f(1.0, 0.9, 0.7), in.tint, 0.35) * core * 2.4;
+    // (Deep in its colour at the foot and the edges; the white heart stands a little off the root.)
+    let col = mix(deep, in.tint, smoothstep(0.0, 0.28, edge)) * 1.5 * mix(0.55, 1.0, smoothstep(0.0, 0.3, v)) + mix(vec3f(1.0, 0.9, 0.7), in.tint, 0.55) * core * 2.0 * smoothstep(0.03, 0.22, v);
     c = col * body * (0.88 + 0.12 * sin(T * 13.0 + seed * 9.0));
   } else if (in.layer > 102.5) {
     // A tongue of fire on a card: noise climbing it, pinched in toward the tip and torn off at the top, white-gold at the root
@@ -241,7 +242,7 @@ export function drawOpaque(r, mp, it, vis) {
 }
 
 // The delves' fires as glow quads (src/core/delve-build.js fire()): one buffer, each delve's a run of it. { VB, runs: { key: [first, count] } }.
-const HUES = { 'flame': [1, 0.5, 0.13], 'dark:flame': [1, 0.3, 0.07], 'frost:flame': [0.42, 0.72, 1], 'pale:flame': [0.74, 1, 0.66], 'mire:flame': [0.3, 1, 0.45], 'spore:flame': [0.72, 0.4, 1.25] };
+const HUES = { 'flame': [1, 0.5, 0.13], 'dark:flame': [1, 0.2, 0.045], 'frost:flame': [0.42, 0.72, 1], 'pale:flame': [0.5, 1, 0.6], 'mire:flame': [0.3, 1, 0.45], 'spore:flame': [0.72, 0.4, 1.25] };
 const KINDS = { flame: 104, glow: 105, wisp: 106 };
 export function buildDelveFires(r, fires) {
   const by = new Map();

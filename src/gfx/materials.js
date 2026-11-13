@@ -420,13 +420,13 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       emissive = select(mix(vec3f(2.2, 0.28, 0.02), vec3f(14.0, 7.0, 2.4), heat), mix(vec3f(1.2, 0.36, 0.04), vec3f(2.2, 1.2, 0.3), heat), F.blood.w < 0.5) * f;
       // (A flame in another light, as a painting has one: Velscour's fire in Blackvigil Keep burns redder ('dark:flame'), the
       // Howling Deeps' cold lights burn blue-white ('frost:flame'). src/core/delve-build.js)
-      if (tintK == 1u) { emissive *= vec3f(1.0, 0.5, 0.32); }
+      if (tintK == 1u) { emissive *= vec3f(1.0, 0.36, 0.2); }
       if (tintK == 3u) { emissive = emissive.bgr * vec3f(0.7, 0.9, 1.0); }
       // (And the delves that came after: a grave-lamp's pale flame in the Kingsbarrow ('pale:flame'), the corpse-lights of
       // the Drowned Vaults ('mire:flame'), the Sporehold's gills ('spore:flame').)
       if (tintK == 2u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.8, 1.0, 0.74); }
       if (tintK == 4u) { emissive = emissive.grb * vec3f(0.55, 0.95, 0.6); }
-      if (tintK == 5u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.5, 1.5); }
+      if (tintK == 5u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.5, 0.2, 0.95); }
       albedo = vec3f(0.0);
     }
   } else {
