@@ -15,8 +15,10 @@
 // Then node tools/dungeon/check.mjs walks it: every room joined, every pack and boss on the floor, the portals clear.
 
 //
-// There are three of them now, and this file is the engine for all of them: the Warrens here, Blackvigil Keep
-// (src/core/delve-blackvigil.js) and the Howling Deeps (src/core/delve-deeps.js). Each is a delve: its own place out past
+// There are seven of them now, and this file is the engine for all of them: the Warrens here, Blackvigil Keep
+// (src/core/delve-blackvigil.js), the Howling Deeps (src/core/delve-deeps.js), and the four that came after: the Drowned
+// Vaults, the Sporehold, the Hollow Playhouse and the Kingsbarrow (delve-vaults.js, delve-sporehold.js,
+// delve-playhouse.js, delve-kingsbarrow.js). Each is a delve: its own place out past
 // the edge, its own field, box, rooms, packs, bosses and portals (DELVES). Whatever takes a world point (caveRoom,
 // caveFloorY, caveKeep, roomAt...) finds the delve by where the point is, so the sim and the renderer never ask which.
 // The names without a delve in them (ROOMS, PACKS, ENTRY, PORTAL, DUNGEON_BOX...) are the Warrens' own, as they always were.
@@ -25,6 +27,10 @@ import { hash2, vnoise } from './terrain-noise.js';
 import { STATIONS, hallAt } from './testhall.js';
 import { BLACKVIGIL } from './delve-blackvigil.js';
 import { DEEPS } from './delve-deeps.js';
+import { VAULTS } from './delve-vaults.js';
+import { SPOREHOLD } from './delve-sporehold.js';
+import { PLAYHOUSE } from './delve-playhouse.js';
+import { KINGSBARROW } from './delve-kingsbarrow.js';
 import { WARRENS_PROPS, WARRENS_NICHES } from './delve-warrens.js';
 
 // Where it lies: its entrance, in the world, and the height its rooms are measured from.
@@ -191,7 +197,8 @@ const WARRENS = {
   look: { wall: 'rubble', floor: 'rubble', roof: 'dark:stone', spike: 'dark:rubble', flame: 'flame', light: [1, 0.56, 0.24], fire: [1, 0.6, 0.28], lit: 0.5 },
   words: { enter: 'The Hollowfang Warrens. Kobolds dug it; goblins took it; something old sleeps at the bottom.', clear: 'The Hollowfang Warrens are cleared. Venomaw is dead!', wipe: "Your party falls... and wakes at the Warrens' mouth." },
 };
-export const DELVES = [WARRENS, BLACKVIGIL, DEEPS];
+// (In the order they were made: a delve's place in this list is sent with EV.DELVE and kept, so new ones go on the end.)
+export const DELVES = [WARRENS, BLACKVIGIL, DEEPS, VAULTS, SPOREHOLD, PLAYHOUSE, KINGSBARROW];
 for (const d of DELVES) {
   d.nooks ||= []; d.daises ||= []; d.props ||= []; d.pillars ||= [];
   for (const r of d.rooms.concat(d.nooks)) { r.delve = d; if (r.hx !== undefined) r.r = Math.min(r.hx, r.hz); }
@@ -348,9 +355,11 @@ function build(d) {
   }
   // Floor raised a step or two: a dais, a gallery's alcove.
   for (const s of d.daises) {
-    const i0 = Math.max(0, Math.ceil((s.x - s.hx - x0) / CELL)), i1 = Math.min(W - 1, Math.floor((s.x + s.hx - x0) / CELL));
-    const j0 = Math.max(0, Math.ceil((s.z - s.hz - z0) / CELL)), j1 = Math.min(H - 1, Math.floor((s.z + s.hz - z0) / CELL));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) floor[j * W + i] += s.dy;
+    // (Round, where it says a radius: a rock standing out of water.)
+    const hx = s.r ?? s.hx, hz = s.r ?? s.hz;
+    const i0 = Math.max(0, Math.ceil((s.x - hx - x0) / CELL)), i1 = Math.min(W - 1, Math.floor((s.x + hx - x0) / CELL));
+    const j0 = Math.max(0, Math.ceil((s.z - hz - z0) / CELL)), j1 = Math.min(H - 1, Math.floor((s.z + hz - z0) / CELL));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (s.r === undefined || Math.hypot(x0 + i * CELL - s.x, z0 + j * CELL - s.z) <= s.r) floor[j * W + i] += s.dy;
   }
   // Smooth the floor a few times, so the slopes between levels are walked, not stepped.
   const tmp = new Float32Array(W * H);
@@ -506,7 +515,8 @@ export function torches(d = WARRENS) {
   // (A torch every seven metres or so round each room's wall, and every six down the tunnels.)
   for (const r of d.rooms) for (const [lx, lz] of roomEdge(r, every, 0.6)) place(d.x + lx, d.z + lz);
   for (const t of d.tunnels) {
-    if (t.dead || t.niche) continue;
+    // (Nor a way that's meant dark: a leaf's back door, in the Sporehold.)
+    if (t.dead || t.niche || t.dark) continue;
     for (let q = 1; q < t.pts.length; q++) {
       const a = t.pts[q - 1], b = t.pts[q], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
       const nx = -(b[1] - a[1]) / L, nz = (b[0] - a[0]) / L;
@@ -520,7 +530,7 @@ export function torches(d = WARRENS) {
 }
 
 // The things in a room that burn (props, by kind), and how high over the floor each one's light is (a chandelier's is its own).
-const LIT = { brazier: 1.9, chandelier: null, hearth: 1.2, spit: 1 };
+const LIT = { brazier: 1.9, chandelier: null, hearth: 1.2, spit: 1, footlight: 0.5, greatcap: null, heartroot: 3, musicbox: 1.4 };
 // Braziers standing round the bigger rooms, a couple of strides out from the wall between its torches: fires on posts
 // that light the floor where the fighting is (src/core/delve-build.js builds them, src/gfx/renderer.js lights them). Clear
 // of the portals and the way in. And the ones a room's own things ask for (a prop of kind 'brazier'). [x, floor y, z]

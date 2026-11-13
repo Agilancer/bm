@@ -40,6 +40,8 @@ test('there are plenty of them, and three or more go into each party dungeon', (
   for (const id of IDS) assert.equal(RULES[id], LAND_RULES[id], id);
   const into = (key) => IDS.filter((id) => LAND_RULES[id].steps.some((s) => s.enter === key || s.kill === key || BOSSES.find((b) => b.key === s.boss)?.delve === key));
   for (const d of ['warrens', 'blackvigil', 'deeps']) assert.ok(into(d).length >= 3, `${d}: ${into(d)}`);
+  // (And two or more into each of the four made after them.)
+  for (const d of DELVES) assert.ok(into(d.key).length >= 2, `${d.key}: ${into(d.key)}`);
   assert.ok(IDS.filter((id) => LAND_RULES[id].steps.some((s) => s.kill === 'catacombs' || (s.bring && !s.at))).length >= 2, 'the catacombs');
   // Each dungeon's first boss and its last have a quest.
   for (const d of DELVES) {
@@ -177,9 +179,9 @@ test('a boss that fell before its quest was taken still counts, and is remembere
 });
 
 test('the trail has somewhere to lead for every step out in the land', () => {
-  for (const d of ['warrens', 'blackvigil', 'deeps']) { const p = delvePortal(d); assert.ok(p && Number.isFinite(p.x) && Number.isFinite(p.z), d); }
+  for (const d of DELVES.map((q) => q.key)) { const p = delvePortal(d); assert.ok(p && Number.isFinite(p.x) && Number.isFinite(p.z), d); }
   // (A dungeon's portal stands out in the land, not down in the dungeon.)
-  for (const d of ['warrens', 'blackvigil', 'deeps']) assert.ok(!areaAt(d, delvePortal(d).x, 0, delvePortal(d).z), `${d}'s portal is inside it`);
+  for (const d of DELVES.map((q) => q.key)) assert.ok(!areaAt(d, delvePortal(d).x, 0, delvePortal(d).z), `${d}'s portal is inside it`);
   for (const id of IDS) for (const st of LAND_RULES[id].steps) {
     for (const k of [st.enter, st.kill, st.at, ...(st.visit || [])].filter((x) => x && x !== 'catacombs' && x !== 'waste')) assert.ok(placeSpot(k), `${id}: nowhere to lead to for ${k}`);
   }
@@ -316,10 +318,10 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
     assert.ok(first.some((id) => !RULES[id].needs || !RULES[RULES[id].needs].needs), `${site}: a long chain before its first quest`);
   }
   // The lesser places with work at them, and each dungeon, are where some step sends you.
-  for (const k of ['wayhouse', 'oldtoll', 'quarry', 'cairnfield', 'causeway', 'charmill', 'khel', 'tor', 'warrens', 'blackvigil', 'deeps']) {
+  for (const k of ['wayhouse', 'oldtoll', 'quarry', 'cairnfield', 'causeway', 'charmill', 'khel', 'tor', ...DELVES.map((q) => q.key)]) {
     assert.ok(steps.some(([, st]) => st.enter === k), `no quest sends you to ${k}`);
   }
   // And each dungeon's portal is led to from the hub nearest it.
-  const from = { warrens: town, blackvigil: new Set(['hasket']), deeps: new Set(['garrick']) };
+  const from = { warrens: town, blackvigil: new Set(['hasket']), deeps: new Set(['garrick']), vaults: town, sporehold: town, playhouse: new Set(['dorcas', 'osric', 'wymond']), kingsbarrow: town };
   for (const [k, givers] of Object.entries(from)) assert.ok(steps.some(([id, st]) => st.enter === k && givers.has(QUESTS[id].giver)), `${k}: not led to from its nearest hub`);
 });

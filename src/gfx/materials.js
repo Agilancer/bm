@@ -421,6 +421,11 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       // Howling Deeps' cold lights burn blue-white ('frost:flame'). src/core/delve-build.js)
       if (tintK == 1u) { emissive *= vec3f(1.0, 0.5, 0.32); }
       if (tintK == 3u) { emissive = emissive.bgr * vec3f(0.7, 0.9, 1.0); }
+      // (And the delves that came after: a grave-lamp's pale flame in the Kingsbarrow ('pale:flame'), the corpse-lights of
+      // the Drowned Vaults ('mire:flame'), the Sporehold's gills ('spore:flame').)
+      if (tintK == 2u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.8, 1.0, 0.74); }
+      if (tintK == 4u) { emissive = emissive.grb * vec3f(0.55, 0.95, 0.6); }
+      if (tintK == 5u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.95, 0.5, 1.5); }
       albedo = vec3f(0.0);
     }
   } else {
@@ -433,6 +438,9 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 1u) { albedo = vec3f(lum) * vec3f(0.27, 0.22, 0.22); rough = rough * 0.8; }
       if (tintK == 2u) { albedo = mix(albedo, vec3f(lum * 1.25 + 0.16) * vec3f(1.0, 0.97, 0.9), 0.8); }
       if (tintK == 3u) { albedo = mix(vec3f(lum) * vec3f(0.85, 0.92, 1.05), vec3f(0.82, 0.86, 0.92), smoothstep(0.2, 0.8, n0.y) * 0.8 + 0.12); }
+      // Rock that's stood in fen water: green-black, and slick. And rock the Sporehold's growth has got into: violet in it.
+      if (tintK == 4u) { albedo = mix(albedo, vec3f(lum) * vec3f(0.42, 0.62, 0.46), 0.82); rough = rough * 0.55; }
+      if (tintK == 5u) { albedo = mix(albedo, vec3f(lum * 1.1) * vec3f(0.74, 0.52, 0.92), 0.78); }
     }
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
     if (params.z < 0.0) {

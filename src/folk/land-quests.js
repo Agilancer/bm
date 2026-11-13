@@ -1,5 +1,6 @@
-// The quests of the land beyond Bellmourn: the roads out to the small towns, what besets each of them, and the three party
-// dungeons (the Hollowfang Warrens, Blackvigil Keep, the Howling Deeps) and the cathedral's catacombs. Their workings only:
+// The quests of the land beyond Bellmourn: the roads out to the small towns, what besets each of them, and the party
+// dungeons (the Hollowfang Warrens, Blackvigil Keep, the Howling Deeps, and the four made after them: the Drowned Vaults,
+// the Sporehold, the Hollow Playhouse, the Kingsbarrow) and the cathedral's catacombs. Their workings only:
 // every word of them is in src/folk/lines/land.js, and how a step is finished is src/folk/quests.js (which spreads these
 // into RULES). Givers: Bellmourn's own (the ones Lisandra sends you round), the people posted in the small towns
 // (src/folk/people.js POSTED), and the two at the Bell Tower (src/folk/lines/beyond.js BEYOND).
@@ -59,4 +60,17 @@ export const LAND_RULES = {
   first_lord: { needs: 'gate_of_blackvigil', steps: [{ boss: 'maldrec' }, { back: true, say: 'Maldrec is dead.' }], gold: 250, xp: 2000, item: 'staff' },
   lords_of_the_keep: { needs: 'first_lord', steps: [{ boss: 'sorvane' }, { boss: 'brothers' }, { back: true, say: 'Sorvane is dead, and the Brothers.' }], gold: 350, xp: 3000, item: 'robe' },
   the_castellan: { needs: 'lords_of_the_keep', steps: [{ boss: 'castellan' }, { back: true, say: 'The Castellan of Blackvigil is dead.' }], gold: 600, xp: 5000, item: 'skull', rarity: 4 },
+  // ---- the four delves made after those: two quests each, the first to its door and its first boss, the second to its last ----
+  // The Drowned Vaults, under the Sunken Mile (Sabine's, after she's had the Mile cleared).
+  under_the_mile: { needs: 'sunken_mile', steps: [{ enter: 'vaults' }, { boss: 'bloat' }, { back: true, say: 'What wallowed under the Mile is dead.' }], gold: 220, xp: 1700, item: 'robe' },
+  what_sank_the_mile: { needs: 'under_the_mile', steps: [{ boss: 'sallow' }, { boss: 'leviathan' }, { back: true, say: 'The thing that sank the causeway is dead.' }], gold: 380, xp: 3200, item: 'staff' },
+  // The Sporehold, under the Fungal Ring (Orrin's, after the quarry).
+  the_ring_below: { needs: 'ossery_quarry', steps: [{ enter: 'fungus' }, { enter: 'sporehold' }, { boss: 'mouldfang' }, { back: true, say: 'I went down under the ring. The wolf is dead.' }], gold: 260, xp: 2200, item: 'scroll' },
+  what_it_fruits_from: { needs: 'the_ring_below', steps: [{ boss: 'morel' }, { boss: 'heart' }, { back: true, say: 'The thing the ring fruits from is dead.' }], gold: 420, xp: 3800, item: 'staff' },
+  // The Hollow Playhouse, in the Twisted Grove (Dorcas Pym's, at Thornwick).
+  the_winter_company: { needs: 'hare_and_harrow', steps: [{ enter: 'grove' }, { enter: 'playhouse' }, { boss: 'seamstress' }, { back: true, say: 'I found your players. Their seamstress is dead.' }], gold: 300, xp: 2800, item: 'robe' },
+  last_night_of_the_run: { needs: 'the_winter_company', steps: [{ boss: 'leadingman' }, { boss: 'dollmaker' }, { back: true, say: 'The play is over. The Dollmaker is dead.' }], gold: 480, xp: 4400, item: 'skull' },
+  // The Kingsbarrow, in the great mound of the Barrows (Jory's, after the wayhouse).
+  sung_open: { needs: 'moor_wayhouse', steps: [{ enter: 'barrows' }, { enter: 'kingsbarrow' }, { boss: 'gravewarden' }, { back: true, say: 'The great mound is open. Its warden is down.' }], gold: 360, xp: 3400, item: 'robe' },
+  king_under_the_moor: { needs: 'sung_open', steps: [{ boss: 'golem' }, { boss: 'wyrm' }, { back: true, say: 'What the king rode is dead. The moor is dark.' }], gold: 650, xp: 5600, item: 'skull', rarity: 4 },
 };

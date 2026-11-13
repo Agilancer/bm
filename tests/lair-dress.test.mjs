@@ -42,7 +42,7 @@ test('the dressing is for the eye: no collider, nothing on a road, no cloth', ()
 test('every painting a place or a dungeon asks for is in the game', () => {
   const have = new Set(manifest.layers.map((l) => l.name));
   for (const layer of buildSites().parts.keys()) {
-    const m = /^(dark|pale|frost):(.*)$/.exec(layer), base = m ? m[2] : layer;
+    const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(layer), base = m ? m[2] : layer;
     assert.ok(have.has(base) || FLAT.has(base), `no painting called ${base}`);
   }
   for (const n of ['block', 'flags', 'ashlar', 'course']) {
@@ -67,7 +67,7 @@ test('no one painting is most of a dungeon any more', () => {
       m.set(layer, (m.get(layer) || 0) + ar);
     }
   }
-  assert.equal(area.size, 3);
+  assert.equal(area.size, 7);
   for (const [key, m] of area) {
     const all = [...m.values()].reduce((s, v) => s + v, 0), [top, most] = [...m].sort((p, q) => q[1] - p[1])[0];
     assert.ok(most / all < 0.56, `${top} is ${Math.round(most / all * 100)}% of the dungeon at ${key}`);

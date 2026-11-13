@@ -143,7 +143,9 @@ const PLAN = [
   ['up_from_the_gallowswood', 9], ['ash_on_the_wind', 9], ['black_ram', 10], ['old_toll', 11], ['red_scouts', 11], ['salt_for_the_hanged', 12],
   ['charcoal_for_khel', 12], ['charred_mill', 12], ['mouth_guard', 13], ['ravens_tor', 13], ['vigil_patrols', 14], ['arch_before_the_gate', 14],
   ['into_the_deeps', 14], ['the_howling', 14], ['gate_of_blackvigil', 14], ['broodmother', 15], ['red_cloth', 15], ['first_lord', 15], ['the_sleeper',
-  16], ['lords_of_the_keep', 17], ['the_castellan', 18],
+  16], ['lords_of_the_keep', 17], ['the_castellan', 18],  // The four delves made after those, each at its own level and a little over for its last boss.
+  ['under_the_mile', 10], ['what_sank_the_mile', 11], ['the_ring_below', 12], ['what_it_fruits_from', 13], ['the_winter_company', 14], ['last_night_of_the_run', 15],
+  ['sung_open', 17], ['king_under_the_moor', 18],
 ];
 // (Taken on in the order of the levels they want.)
 PLAN.sort((a, b) => a[1] - b[1]);
@@ -1119,6 +1121,8 @@ export class Brain {
     const t = tactics(this, m, foes);
     if (t.why === 'Out of the circle!' || t.wipe) this.o.log?.cast?.('dodge');
     if (!t.to) return false;
+    // (Told not to take a step: stood where it is, hands down, till the fight says otherwise.)
+    if (t.still) { this.halt(); this.face = t.target ? Math.atan2(t.target.x - m.x, t.target.z - m.z) : null; this.say(t.why); return true; }
     const d = dist(m.x, m.z, t.to[0], t.to[1]);
     const T = t.target;
     if (T) {

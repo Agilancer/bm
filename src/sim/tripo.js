@@ -28,9 +28,9 @@ function dungeonLairs(roster) {
     const d = delveByKey(p.delve), [x, , z] = roomSpot(p.room, p.at?.[0] || 0, p.at?.[1] || 0), elite = have(p.elite);
     const at = (q) => [d.x + q[0], d.z + q[1]];
     out.push({ key: p.key, x, z, r: p.r ?? 6, pick: have(p.pick), boss: elite.length ? elite : undefined, n: p.n - (elite.length ? 1 : 0), pal: p.pal, wake: p.wake || 34, dungeon: true, delve: p.delve,
-      state: 'asleep', at: -1e9, tough: d.tough, tricks: true, spots: p.spots?.map(at), walk: p.walk?.map(at), more: p.more });
+      state: 'asleep', at: -1e9, tough: p.tough || d.tough, ai: p.ai, tricks: true, spots: p.spots?.map(at), walk: p.walk?.map(at), more: p.more });
   }
-  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room); out.push({ key: b.key, isBoss: true, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
+  for (const b of BOSSES) { const [x, , z] = roomSpot(b.room, b.at?.[0] || 0, b.at?.[1] || 0); out.push({ key: b.key, isBoss: true, x, z, r: 4, boss: [b.models[0]], pick: b.models.slice(1), n: b.models.length - 1, pal: b.pal || ['Base'], wake: -1, dungeon: true, delve: b.delve, state: 'asleep', at: -1e9, bossLair: true }); }
   return out;
 }
 
@@ -218,7 +218,7 @@ export class TripoMonster extends FieldCreature {
 
   update(dt, sim) {
     // (Frozen stiff still dies: a spell's freeze runs the update at no time at all.)
-    if (dt <= 0) { if (this.hp <= 0 && !this.dead) this.die(sim); return; }
+    if (dt <= 0) { if (this.hp <= 0 && !this.dead && !(this.lastStand && this.lastStand(this, sim))) this.die(sim); return; }
     const p = foeOf(this, sim), o = this.opts, rig = this.rig, ai = o.ai;
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.breathCd -= dt; this.castCd -= dt; this.trickCd -= dt;
@@ -227,7 +227,8 @@ export class TripoMonster extends FieldCreature {
     this.fade = Math.min(1, this.fade + dt * 5);
     this.heart += dt;
     if (this.bleeds.length && !this.dead) this.hp -= dt * this.bleeds.reduce((sum, b) => sum + b.rate, 0) * 3;
-    if (this.hp <= 0 && !this.dead) this.die(sim);
+    // (lastStand: a fight's own say in whether this is the end of it: the Ossuary Golem falls apart instead. src/sim/delve-fights.js)
+    if (this.hp <= 0 && !this.dead && !(this.lastStand && this.lastStand(this, sim))) this.die(sim);
     // A boss's own fight (src/sim/dungeon.js): it may take the body over for a while (a flight, a spin, a run to its master).
     if (this.script && !this.dead && this.script(this, dt, sim, p)) { this.settle(dt, sim, false); return; }
     const distance = Math.hypot(p.x - this.x, p.z - this.z);
@@ -555,11 +556,13 @@ export class TripoWorld {
     const H = meta.height;
     const pal = lair.pal[Math.floor(Math.random() * lair.pal.length)];
     const breath = meta.breath;
+    // (What its kind is called down a delve that has its own names for them: the drowned, the sporelings. src/core/dungeon.js)
+    const called = lair.delve && !lair.bossLair ? delveByKey(lair.delve)?.names?.[meta.group] : null;
     return {
-      name: s.name, model: id, kind: kindOfGroup(meta.group), scale: 1, spawn: [x, z], yaw: Math.random() * Math.PI * 2,
+      name: called || s.name, model: id, kind: kindOfGroup(meta.group), scale: 1, spawn: [x, z], yaw: Math.random() * Math.PI * 2,
       hp: s.hp * (boss ? 1.25 : 1) * (lair.tough?.hp || 1), speed: s.speed, damage: s.damage * (lair.tough?.damage || 1), reach: s.reach,
       // Its kind's tricks, where the lair has them on (src/sim/moves.js).
-      tricks: lair.tricks ? TRICKS[meta.group] || null : null, ai: breath && s.ai !== 'caster' ? 'breather' : s.ai,
+      tricks: lair.tricks ? TRICKS[meta.group] || null : null, ai: lair.ai || (breath && s.ai !== 'caster' ? 'breather' : s.ai),
       radius: clamp(H * (meta.kind === 'dragon' ? 0.22 : meta.kind === 'spider' ? 0.38 : 0.2), 0.35, 1.8), height: H,
       lootKind: s.loot, knock: H > 3 ? 4 : H > 2 ? 2.5 : 1.5, pause: s.ai === 'melee' && H < 1.5 ? 0.7 : 1,
       sight: meta.kind === 'dragon' ? 48 : s.ai === 'stalker' ? 34 : 24, leash: meta.kind === 'dragon' ? 120 : 70, roam: lair.r * 0.6 + 2,

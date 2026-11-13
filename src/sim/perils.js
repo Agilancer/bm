@@ -71,7 +71,8 @@ export class Perils {
   // its radius spreads (band: how wide the ring stays). ride: a body it stays on, pointing where that points (turn: off its
   // facing; ahead: metres in front). follow: a body it stays under until `lock` of the fuse has run. aim: a body it keeps
   // pointing at until then. from: who made it (the blow comes from there). spare(body): true for one it leaves alone.
-  // then(mark, perils): called as it lands.
+  // then(mark, perils, inside): called as it lands, with who was in it. soak: one to stand in, not to be out of (nobody
+  // is steered out of it; a fight says who goes in). share: its dmg is split among those in it.
 
   mark(o) {
     const sim = this.sim;
@@ -79,7 +80,7 @@ export class Perils {
       shape: 'circle', x: 0, z: 0, r: 2, r0: 0, yaw: 0, half: 0.5, w: 1, arms: 4,
       fuse: 1.2, dmg: 0, knock: 0, life: 0, dps: 0, touch: 0, again: 1, jump: false, elem: ELEM.FIRE,
       spin: 0, vx: 0, vz: 0, grow: 0, band: 1.2, turn: 0, ahead: 0, lock: 0.7,
-      ride: null, follow: null, aim: null, from: null, then: null, tag: '', quiet: false,
+      ride: null, follow: null, aim: null, from: null, then: null, tag: '', quiet: false, soak: false, share: false,
       t: 0, tick: 0, seed: Math.random(), landed: false, bit: null, ...o,
     };
     if (m.ride) this.carry(m);
@@ -113,9 +114,11 @@ export class Perils {
       const fx = m.from ? m.from.x : m.x, fz = m.from ? m.from.z : m.z;
       if (!m.landed) {
         m.landed = true;
-        if (m.dmg > 0) for (const v of vs) if (covers(m, v.x, v.z, 0.25) && !(m.jump && this.airborne(v)) && !m.spare?.(v)) this.hurt(v, m.dmg, fx, fz, m.knock, false, m.tag);
+        const inside = vs.filter((v) => covers(m, v.x, v.z, 0.25) && !(m.jump && this.airborne(v)) && !m.spare?.(v));
+        const dmg = m.share ? m.dmg / Math.max(1, inside.length) : m.dmg;
+        if (dmg > 0) for (const v of inside) this.hurt(v, dmg, fx, fz, m.knock, false, m.tag);
         if (!m.quiet) this.land(m);
-        m.then?.(m, this);
+        m.then?.(m, this, inside);
       }
       if (m.t >= m.fuse + m.life) { if (m.t >= m.fuse + m.life + 0.3) { m.dead = true; gone = true; } continue; }
       if (m.spin) m.yaw += m.spin * dt;
@@ -398,11 +401,11 @@ export class Perils {
   /** Where a body at (x, z) should step to, out of every mark it's in or within pad of; null if it's clear. */
   danger(x, z, pad = 0.8) {
     if (!this.marks.length) return null;
-    return wayOut(this.marks.filter((m) => !m.jump), x, z, pad, (qx, qz) => !this.sim.world.inside(qx, qz, 0.7));
+    return wayOut(this.marks.filter((m) => !m.jump && !m.soak), x, z, pad, (qx, qz) => !this.sim.world.inside(qx, qz, 0.7));
   }
 
   /** Whether (x, z) is clear of every mark. */
-  safe(x, z, pad = 0.4) { for (const m of this.marks) if (!m.jump && edge(m, x, z) < pad) return false; return true; }
+  safe(x, z, pad = 0.4) { for (const m of this.marks) if (!m.jump && !m.soak && edge(m, x, z) < pad) return false; return true; }
 
   /** A wave about to reach (x, z): something to jump. */
   waveAt(x, z, within = 1.6) { for (const m of this.marks) if (m.jump && m.t >= m.fuse && Math.abs(edge(m, x, z)) < within) return m; return null; }

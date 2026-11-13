@@ -2,15 +2,17 @@
 // level over it for the player and them: the Warrens at 8, the Deeps at 11, the keep at 15), a player who shoots what the
 // party's on and walks out of whatever's marked on the ground, and each pack and boss of the delve fought in turn.
 //   node tools/dungeon/fight.mjs                 every pack and boss of every delve (a process for each delve)
-//   node tools/dungeon/fight.mjs deeps           one delve's (warrens, blackvigil, deeps)
+//   node tools/dungeon/fight.mjs deeps           one delve's (warrens, blackvigil, deeps, vaults, sporehold, playhouse, kingsbarrow)
 //   node tools/dungeon/fight.mjs venomaw 3       one fight (a boss's key, or a pack's), so many times over
 //   node tools/dungeon/fight.mjs --still twins   the player stands where they are and never steps out of anything
 //   node tools/dungeon/fight.mjs --slow          the player sees each mark and shot half a second late, as a person does
+// The player also does what a fight orders of it (src/sim/dungeon.js order: somewhere to be, or not a step), as the hired
+// party does: the later four delves' bosses each have such a rule. --still ignores those too.
 // It says how long each took, who fell, how much of the player's life went, and what was thrown at them. It fails on an
 // error in a tick, or a shape with a bad number in it.
 import fs from 'node:fs';
 import { FX_FLOATS, INPUT } from '../../src/core/layout.js';
-import { ALL_PACKS, BOSSES, DELVES, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
+import { ALL_PACKS, BOSSES, DELVES, caveClear, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
 import { spawnSync } from 'node:child_process';
 import { makeCast } from '../../src/core/heroes.js';
 import { wayOut } from '../../src/core/perils.js';
@@ -68,9 +70,16 @@ function play(target) {
   const s = Math.sin(p.yaw), c = Math.cos(p.yaw);
   let wx = 0, wz = 0, run = false;
   if (!still) {
+    // What the fight itself wants of it (src/sim/dungeon.js order): not a step; or somewhere to be, at once (urgent) or
+    // when it's clear of what's marked.
+    const told = W.order(p), go = told?.to && Math.hypot(told.to[0] - p.x, told.to[1] - p.z) > 0.6 ? told.to : null;
     // (What it's seen: a mark is a moment old before it's noticed.)
-    const out = wayOut(P.marks.filter((m) => !m.jump && m.t > react), p.x, p.z, 1, (x, z) => !sim.world.inside(x, z, 0.7));
-    if (out) { wx = out[0] - p.x; wz = out[1] - p.z; run = true; }
+    const out = told?.still || (go && told.urgent) ? null : wayOut(P.marks.filter((m) => !m.jump && !m.soak && m.t > react), p.x, p.z, 1, (x, z) => !sim.world.inside(x, z, 0.7));
+    if (told?.still) { /* stood where it is */ }
+    else if (go && told.urgent) { wx = go[0] - p.x; wz = go[1] - p.z; run = true; }
+    else if (out) { wx = out[0] - p.x; wz = out[1] - p.z; run = true; }
+    else if (go) { wx = go[0] - p.x; wz = go[1] - p.z; run = true; }
+    else if (told?.to) { /* there: stood on it */ }
     else {
       // A shot about to pass through where it stands: a step across its way.
       for (const q of P.shots) {
@@ -138,7 +147,8 @@ async function fight(key) {
     let best = [rx, rz], bd = Infinity;
     for (let a = 0; a < 6.28; a += 0.2) for (const far of [16, 12, 8]) {
       const qx = rx + Math.sin(a) * far, qz = rz + Math.cos(a) * far;
-      if (caveRoom(qx, qz) < 1.5) continue;
+      // (In sight of it: not the near side of a wall with the pack on the far one.)
+      if (caveRoom(qx, qz) < 1.5 || !caveClear(qx, qz, rx, rz, 0.3)) continue;
       const dd = nav.walkDist(qx, qz, ex, ez, sim.time) - far * 2;
       if (dd < bd) { bd = dd; best = [qx, qz]; }
     }

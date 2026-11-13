@@ -337,7 +337,15 @@ What stands at each place in `SITES` (`src/core/lands.js`) is plain geometry mad
 
 **Quests.** Forty more (`src/folk/land-quests.js`, every word in `src/folk/lines/land.js`): four that send you out of Bellmourn to the new people (every hub is led to by a quest: a `talk` step to its giver, with the trail and the mark across the land), four that pass you on from one person of a hub to the next and end with them (`end: true` on a `talk` step: paid where it's said), four troubles out in the land given in Bellmourn, the troubles round each small town and the fort (their own lairs, by key), two more in the catacombs, four in the Hollowfang Warrens, four in the Howling Deeps, and six in Blackvigil Keep (Sergeant Hasket's to its portal, then Ser Hale's five, ending with the Castellan). New kinds of step (`src/folk/quests.js`): `enter`, `kill` and `visit` take any of the land's places by its key, a party dungeon by its (`warrens`, `blackvigil`, `deeps`: down inside it) or `lair:<key>`, the ground round a lair; `kill` takes `foe`, the monsters' groups that count; `boss` is done when that dungeon boss dies (the sim's `DELVE.BOSS_DOWN`, handed on in `src/main.js`; one that fell before the quest was taken counts, and is kept in the save as a flag); `bring` takes `at`. The trail leads to a lair's glade, a place, or a dungeon's portal out in the land (`placeSpot`); down in a dungeon it leads nowhere, and the chart does.
 
-Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the forty with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, runs the posted through a day and a night on the town's own brain, and checks that every posted person, hub and dungeon is where some quest that can be come by from Bellmourn sends you. In the headless game the posted people stand at their posts with their marks over them (one seen, at Thornwick's inn; the townsfolk's bodies load nearest you first, so a small town's are there when you arrive). Auto-play knows all of it (see "Auto-play"). Nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
+**And eight more for the four later delves** (see "Four more delves"), two each: one to the place, in at its portal and
+to its first boss, and one for the rest of it down to its last. Sabine Moss's, after the Sunken Mile, for the Drowned
+Vaults (Under the Mile, What Sank the Mile); Orrin Vey's, after the quarry, for the Sporehold (The Ring Below, What It
+Fruits From); Dorcas Pym's at Thornwick for the Hollow Playhouse, whose players took her six rooms three winters back
+and owe her for eleven suppers (The Winter Company, Last Night of the Run); and Jory Pell's, after the wayhouse, for
+the Kingsbarrow (Sung Open, The King Under the Moor). Each second one tells you its bosses' rules in the giver's own
+words before you go.
+
+Checked: `node --test tests/quests-beyond.test.mjs` takes, walks and hands in every one of the forty-eight with made-up reports, checks every giver, place, lair, monster group and boss they name, the lines' lengths, that neither letter is named beside the other in any line, that no lair is in a place, on a road or in water or crowds the slots, runs the posted through a day and a night on the town's own brain, and checks that every posted person, hub and dungeon is where some quest that can be come by from Bellmourn sends you. In the headless game the posted people stand at their posts with their marks over them (one seen, at Thornwick's inn; the townsfolk's bodies load nearest you first, so a small town's are there when you arrive). Auto-play knows all of it (see "Auto-play"). Nobody has played a quest through by hand in the browser; the risen in the woods have no ground at the Cairnfield or the barrows (their graveyards are the town's own); the map shows no quest marks.
 
 ### The cathedral and the catacombs
 
@@ -1256,8 +1264,8 @@ ninjas as a dark quilted coat; inside a helm as shadow. The inside of a plate is
 
 ### The Hollowfang Warrens
 
-The first party dungeon of three (`src/core/dungeon.js`, `src/sim/dungeon.js`; the others are "Blackvigil Keep" and "The
-Howling Deeps", below, and "Party dungeons: one engine" says how the three share the code): a cave system the kobolds dug and the goblins took,
+The first party dungeon of seven (`src/core/dungeon.js`, `src/sim/dungeon.js`; the others are "Blackvigil Keep", "The
+Howling Deeps" and "Four more delves", below, and "Party dungeons: one engine" says how they share the code): a cave system the kobolds dug and the goblins took,
 with Venomaw, the green dragon, asleep on her hoard at the bottom. Its portal stands in a heap of rock in the woods
 north-east of the town, near the kobolds' den (`PORTAL`), with Captain Vale beside it. Its terrace is dug into the hillside, and
 you can walk onto it from every side but the wall's: a wide flight of sixteen steps comes down its front to meet the hill
@@ -1392,12 +1400,14 @@ a letter (the V and T rule). Test: `node --test tests/lancer-shields.test.mjs`. 
 
 ### Party dungeons: one engine
 
-There are three party dungeons now, and one engine for them. A dungeon is a *delve* (`DELVES` in `src/core/dungeon.js`):
-a key (`warrens`, `blackvigil`, `deeps`), its own place out past the world's edge and under it, its own field, box,
+There are seven party dungeons now, and one engine for them. A dungeon is a *delve* (`DELVES` in `src/core/dungeon.js`):
+a key (`warrens`, `blackvigil`, `deeps`, and `vaults`, `sporehold`, `playhouse`, `kingsbarrow`: see "Four more delves"), its own place out past the world's edge and under it, its own field, box,
 rooms, tunnels, pillars, props, packs, bosses, way in, two portals inside, portal out on the land, last boss, level,
 packs' toughness and pay. The Warrens' layout is in `dungeon.js` itself, as it was; the keep's is
-`src/core/delve-blackvigil.js` and the Deeps' `src/core/delve-deeps.js`, plain data. To add a fourth: a file like those,
-a line in `DELVES`, its bosses' bodies in `VARIANTS`, its fights in `src/sim/delve-fights.js`.
+`src/core/delve-blackvigil.js` and the Deeps' `src/core/delve-deeps.js`, plain data. To add another: a file like those
+(`src/core/delve-lay.js` has the pieces a layout is written with), a line on the end of `DELVES`, its bosses' bodies in
+`VARIANTS`, its fights in `src/sim/delve-fights.js`, its way through in `WAYS` and its packs and bosses in `KNOWN`
+(`src/ui/autowarrens.js`), and a quest for its first boss and its last (`tests/quests-beyond.test.mjs` wants them).
 
 - **By where you are.** Everything that takes a world point (`caveRoom`, `caveFloorY`, `caveRoofY`, `caveKeep`,
   `caveClear`, `caveRay`, `roomAt`, `inDungeon`) finds the delve by its box, so the sim, the player, the heroes and the
@@ -1428,6 +1438,17 @@ a line in `DELVES`, its bosses' bodies in `VARIANTS`, its fights in `src/sim/del
   own colour (`look`: the keep's burn redder and wider, the Deeps' are blue-white and don't flicker; a flame can be
   tinted as a painting can, `dark:flame` and `frost:flame`), the map has a chart for each, the party's words at the door
   are the delve's (`words`), and clearing one pays its own (`pay`).
+- **What the later four added to it** (see "Four more delves"): a boss that keeps away until others are dead (`needs`,
+  and `shut`, what its empty room says); a boss stood somewhere in its room other than the middle (`at`); a pack's own
+  toughness and way of fighting (`tough`, `ai`), and a delve's own names for its rank and file (`names`); a fight's
+  `order` (where a body should be, or that it mustn't move), which the hired party obeys and auto-play is sent; marks
+  to stand in and blows shared (`soak`, `share` in `src/sim/perils.js`); a body's own say in whether it dies
+  (`lastStand` in `src/sim/tripo.js`); a tunnel left dark (`dark`); three more kinds of lamp (`look.lamp`: a bracket
+  of fungus, a corpse-light, a stone bowl), two more tints for the paintings (`mire:`, `spore:`), a castle's banners in
+  the delve's own cloth or none (`look.banner`).
+- **A plan of each as a picture**: `node tools/dungeon/chart.mjs [delve ...] [--out dir]` draws the floor as the field
+  has it, every room with its walk from the way in, the packs, the bosses, what's solid, and the doors a fight's adds
+  come through (into `tools/build/delves/`; needs Playwright's Chromium).
 - **For looking**: `bm.warrens('enter', { delve: 'blackvigil' })`, `bm.warrens('boss', { boss: 'sorvane' })` (its door,
   the bosses before it down), `bm.warrens('room', { room: 'bv_hall' })`, `bm.warrens('reset', { delve })`.
 
@@ -1540,6 +1561,233 @@ and now have 88, 46 and 66. `tools/dungeon/check.mjs` passes for all three delve
 Not done: no quartermaster stands at either new portal (hire in town or at the Warrens' and walk your party there); the
 keep's braziers don't really go out in the Castellan's last phase (only the words say so); auto-play knows neither (see
 `node tools/autoplay/check.mjs`, which says so and fails until it does).
+
+### Four more delves
+
+Four more party dungeons on the same engine, one for each country that had none: the Drowned Vaults (the Weeping Fen),
+the Sporehold (the Rustwood), the Hollow Playhouse (the Gallowswood) and the Kingsbarrow (the Barrow Moor). None of them
+is either letter's: no red of his, no gilt of the other's, nobody's mark (README "The two sides"). Each has its own
+shape, its own look and light, its own names for what lives in it, three bosses, and a portal standing at a place that
+was already on the land. Their monsters are the roster's, recoloured, resized and renamed (five new palettes in
+`palettes.json`: Drowned, Sporebloom, Porcelain, Verdigris, Gravegilt; the bosses and the smaller things as `VARIANTS`).
+
+**What's new about their bosses** is that each has one thing that isn't a mark to be out of. A mark is still drawn for
+it where there's something to draw, but the answer is somewhere to *be*, or not moving, and the fight says so as it
+goes (`order` in `src/sim/delve-fights.js`: `{ to: [x, z], urgent }` or `{ still: true }`). The hired party does as it's
+told (`companion` in `src/sim/hero.js`), auto-play is sent the same with the fight (`tactics` in
+`src/ui/autowarrens.js`), and the player in `tools/dungeon/fight.mjs` obeys it too, so the fights can be played out
+headless. Every one is called out on the screen in words, as the Warrens' are.
+
+| | Level | Shape | Way in to way out | Pays |
+| --- | --- | --- | --- | --- |
+| The Drowned Vaults (`vaults`) | 9 | a coil of caves round a sump | 426 m | 2,300 xp, 380 gold |
+| The Sporehold (`sporehold`) | 11 | a trefoil of caves off a hub | 307 m by the short way; about 620 m walked | 3,000 xp, 480 gold |
+| The Hollow Playhouse (`playhouse`) | 13 | a theatre, front of house to attic | 341 m | 3,800 xp, 620 gold |
+| The Kingsbarrow (`kingsbarrow`) | 16 | a ring of walks round a vault | 164 m by the stair; about 560 m walked | 5,200 xp, 860 gold |
+
+#### The Drowned Vaults
+
+Under the Sunken Mile (`src/core/delve-vaults.js`; its portal by the causeway's broken arch, -430, -2717). The old
+causeway's toll had a strongroom cut into the one hard rock in the fen, and when the causeway sank the fen came in after
+it. Wet green-black rock, standing water in every room (set toward the Sump's side), corpse-lights for torches.
+
+- **The rooms** wind once round the Sump and down into it: the Sunken Stair, the Drowned Toll, the one long gallery
+  (round and smooth: something bored it), the Reed Galleries, the Bloat's Wallow, the Great Cistern (and off it the
+  Strongroom, a dead end worth its pack), the Tidehall, the Sluice, and the Sump, which is two caverns run together
+  with the causeway's piers standing in a line down it. All the way round there are signs of what's at the bottom
+  before it's met: its bores, falling steeply away, and the holes it has left in the floors, which look as the holes
+  in its own fight do.
+- **The packs**: the drowned (the possessed, in the fen's colours), drowned children, mudlarks (kobolds) who work the
+  gallery on a beat, bog drakes, and the Vault-Keeper in the Strongroom.
+- **The Bloat** (a plague giant, 4.4 m). Bile in pools, a gout of it along the floor, a cone, a stamp. As he's cut down
+  he swells for five seconds, four times in all, and bursts on everyone he can see: be behind one of his wallow's four
+  rocks. What runs down the back of a rock that sheltered anyone fouls it for a minute and a half, so each burst wants
+  another rock, and the party is sent behind one clean one together.
+- **Mother Sallow, the Tidecaller.** At every fifth of her life she walks to the north wall of her hall and calls the
+  tide: everything but the high rock (eight metres across, off to one side) is under for seven seconds, and from where
+  she stands she cuts the rock in two, and then again to one side. Between: hands out of the water that hold, lines,
+  a wave with a gap, eddies that walk across the floor, a wail. The drowned climb out of two drains.
+- **The Leviathan of the Mile** (a worm, 6.4 m). Every forty seconds or so it goes under and comes up beneath one of
+  you three times, four, five, and every place but the last is a hole in the floor for a minute and a half (six at
+  most), so there's less and less of the Sump to stand on; where it comes up last it sticks, and takes more. It draws
+  breath and drags everyone toward a bite round its head (run: the pull is slower than you are, and never across a
+  hole). Its spawn come up at under half its life.
+
+#### The Sporehold
+
+Under the Fungal Ring (`src/core/delve-sporehold.js`; its portal on the hill beside the ring, 2861, -4290). The ring on
+the hill is the fruit; this is what it fruits from. Rock with violet in it, caps for lamps with their gills alight,
+bracket fungus on the walls where a torch would be.
+
+- **The rooms** are a trefoil: the Sinkhole and the Root Stair down to the Ring Below, a great cavern with caps the
+  height of a house, and three ways off it, each dressed at its mouth for what's down it. West, wide and lit: the Mould
+  Kennels and down to Mouldfang's den, and back to the hub by the den's own run (narrow, dark, with hounds in it).
+  East: the Pod Gardens and up to Mother Morel's bower, and back the same way about (sporelings). North, narrow and
+  off to one side: the Veil, and the Heart of the Ring, which stays shut until both the others are dead.
+- **The packs**: sporelings (kobolds), cap spiders, rooted husks (mannequins: the ones in the hub stand still while
+  you look at them, as their kind does; the rest come on), mould hounds (small werewolves).
+- **Mouldfang** (a werewolf, 3.3 m). He howls his pack down one of his den's two runs, by name (north or west), and
+  puts the bloom on one of you: a circle that rides them five seconds and bursts, and what it leaves spreads. Carried
+  into the mouth of that run, the pack comes through it and only two get out; burst anywhere else, four come, and it's
+  only more floor gone. Between: a pounce down a line, a rake, a cone bite, a slow ring of spores from his coat.
+- **Mother Morel.** Her pods: three at a time (four once she's hurt), ripening seven seconds, on clean floor. One with
+  somebody stood on it as it ripens is trodden flat; one left bursts into spores, a cloud that stays, and sporelings.
+  The pod nearest you is yours and the party takes the rest, worked out afresh each second. Nothing new is thrown
+  while they ripen. Between: rot that spreads, roots in rows, rings, spit, spores that follow.
+- **The Heart of the Ring** (5 m) stands where it grew. While any of its rooted husks stand (three of six places
+  round the room, then four, then five, then all six) it takes a tenth of every blow; they lash out with threads at whoever's
+  cutting them down. With all of them down it's bare for sixteen seconds and takes double. Threads sweep the middle of
+  the room throughout, short of the husks' places.
+
+#### The Hollow Playhouse
+
+In the Twisted Grove (`src/core/delve-playhouse.js`; its portal by the stone table, 3087, 4493). A company of players
+wintered in the wood and gave one play to whoever came; nobody went home. A castle's shell in plaster and board, not
+stone: wooden floors, plum cloth, candles and chandeliers.
+
+- **The rooms**, as a theatre is used: the Foyer (the doors of the House are chained), round by the Cloakroom, up the
+  Gallery of Faces (the company on their plinths), into the House (the audience seated in the stalls, prompters in the
+  corners by the stage) with the Wardrobe off its cross-aisle one side and the Property Store the other; the Stage,
+  across the whole front of the House; and behind, the green room (reached from the wing or through the back of the
+  Store), the fly stair, the nursery, and the Dollmaker's attic, a long roof-space. The Leading Man won't come on
+  until the Seamstress is dead, nor the Dollmaker until he is (`needs`), so the stage is passed dark first and come
+  back to lit.
+- **The Seamstress** (2.9 m). Every half minute she goes to the middle of her ring of six dress forms and ties a thread
+  to each of two of you: it burns and pulls for seven seconds and then reels you in, unless a dress form stands in
+  its line. Between: three flights of needles, stitches across the floor and again between, shears, pins, a hem of
+  blades with a gap.
+- **The Leading Man** (3.1 m). At three quarters, a half and a quarter of his life the house lights go down (an act
+  each): the only light is his own, five and a half metres of it, and he walks his marks on the boards in it for
+  twelve seconds while roses come down inside it. Between: a bow, a speech that follows you, an exit down a line,
+  and the curtain, whose hem comes down the stage from the back wall and is jumped. Understudies come on from the
+  wings.
+- **The Dollmaker.** Every half minute her music box slows (a chime under each of you to get out of) and stops: for
+  four seconds the whole room is still (she, her dolls, everything on the floor), she takes a third of a blow, and
+  whoever takes a step is hurt for it, and again for the next. Under four tenths of her life it sometimes only slows
+  and picks up. Between: strings that sweep, tin soldiers in rows, a look, chimes. Dolls out of the cupboards at each
+  quarter of her life.
+
+#### The Kingsbarrow
+
+In the great mound of the Barrows (`src/core/delve-kingsbarrow.js`; its portal at the mound's foot, -2910, 3439). A king
+older than either letter, shut in with his guard standing, his hounds, his queens and what he rode, and sung awake.
+Drystone bleached pale, lintels, stone lamps with a pale flame; no banners.
+
+- **The rooms** are a ring. The dromos comes out on the South Walk at the head of the king's stair, with the seal's
+  four singers stood round it. Four walks twelve metres wide go round the vault, a chamber at each corner with that
+  corner's pack (the Cup-Bearers' Rest, the Queens' Chamber, the Hound-Grave, the Shield-Hall): the east walk has the
+  guard's dead standing in their niches, the west is stacked with bone, so they're told apart coming home. Off the
+  far side of the North Walk, past the Crossing, are the two halls that hold the seal: the Warden's and the Ossuary.
+  So it's right round to the back of the mound by one walk and home by the other, and down the stair to a vault that
+  was seen empty on the way in.
+- **The Gravewarden** (4.3 m). His plate turns three fifths of every blow. He lowers his head along a line that
+  follows one of you for two and a half seconds and then comes down it: with a standing stone anywhere in the strip
+  (six in a ring in his hall) he strikes it, is stunned five seconds, and his plate is cracked a step (four steps to
+  none). It knits a step every forty seconds he isn't made to. Between: a sweep, his shield shoved, a ring to jump,
+  bone in rows. The barrow guard come through two doors at half his life.
+- **The Ossuary Golem** (4.7 m). It refuses to die twice. It falls apart, and three of its bones (then four) get up in
+  the bays at the two ends of its hall, by turns, and walk back to where it fell, fighting nobody; each takes twenty
+  seconds over the walk, and each that arrives gives it back an eighth of its life and makes it hit a tenth harder.
+  All of them put down, it drags itself up with nothing and takes half as much again. Between: a stamp, splits in the
+  floor, turning bars, and a cage of ribs round one of you whose middle is the one safe place, and then isn't.
+- **Ossivar, the Barrow Wyrm** (an undead dragon, 6.4 m). Only the tank before its breath. Turn about: the grave, a
+  circle on one of you, which lands on every one of you wherever you are, shared by however many stood in it (stand
+  together); and the pyre, a fire riding each of you that burns whoever's in it as it goes out (stand apart). At
+  fifty-five hundredths of its life it takes to the air for three strafing passes and a dive, tomb drakes come out
+  of the walls, and after that the rite is both at once: a fire on one of you, the grave for the rest.
+
+#### Played out, and looked at
+
+`node tools/dungeon/fight.mjs` on all four (`fight.mjs vaults`, or a boss's or a pack's key), a party of lancer, paladin,
+archer and rogue a level over the delve's, the player doing what each fight orders of it as the hired party does. One
+fight of each unless it says more:
+
+| | Seeing it at once | Half a second late | Standing still |
+| --- | --- | --- | --- |
+| The Bloat | 98 to 104 s, down to 61% | 96 to 101 s, down to 14% | dead in 46 s |
+| Mother Sallow | 117 s, down to 70% | 107 s, down to 60% | dead in 11 s |
+| The Leviathan | 113 and 132 s, down to 70% | 120 s, down to 78% | dead in 33 s |
+| Mouldfang | 91 and 124 s, down to 34%; the archer fell once | 109 s, down to 71% (fell once before his cloud was eased) | dead in 24 s |
+| Mother Morel | 80 s, untouched | 82 s, down to 26% | dead in 21 s |
+| The Heart of the Ring | 119 s, down to 40% | 120 s, down to 44% | dead in 7 s |
+| The Seamstress | 86 s, down to 53% | 84 s, untouched | dead in 70 s |
+| The Leading Man | 101 s, down to 44% | 101 s, down to 65% | dead in 35 s |
+| The Dollmaker | 132 s, down to 74% | 133 s, down to 48% | dead in 44 s |
+| The Gravewarden | 79 s, untouched | 90 s, down to 46% | dead in 8 s |
+| The Ossuary Golem | 109 s, untouched | 105 s, down to 65% | alive, on 27% |
+| Ossivar | 119 and 121 s, down to 36% | 127 s, down to 51% | dead in 69 s |
+| The thirty-one packs | 11 to 35 s (the Queens' Chamber 62 s), never under 41% | not played | not played |
+
+How it got there: the first numbers had the party killing each in 40 to 115 s (it does about 150 a second to a boss
+that stands still at these levels, twice what the Deeps' table assumed), so their lives went up by half to double. Then
+a fault of the fights' own: a special asked for on a clock was only asked while the boss stood idle, so the clock only
+ran while it stood idle, and Mouldfang bloomed once in 97 seconds. The later twelve's clocks now run whatever the body
+is doing and are answered when it's free (`due` in `src/sim/delve-fights.js`; the keep's and the Deeps' are as they
+were). With that right, the Leviathan killed a player who dodged everything (its eruptions were eased), and rows of
+marks from the Dollmaker and the Gravewarden took a late player from full to nothing in two (those three bite at 1.15
+to 1.2 where the rest bite at 1.45: `BITE`). **The table is from the runs after those changes, but not all of it from
+after the very last** (Mouldfang's cloud, the Bloat's gout and the quickest packs' toughness were changed and only
+those played again): play them again before trusting a number. The player in it aims perfectly, never tires, and is
+told where to stand; a person isn't. **Nobody has played any of the four by hand.**
+
+Looked at, headless, on a software GPU (`tools/world/views.mjs`, which draws here: it didn't on the machine the first
+three were made on): the Tidehall with its rock, the Sump from the sluice's race, the Ring Below, the House looking to
+the stage, the Wardrobe, the head of the king's stair, and the vault. The corpse-lights, the violet light and the pale
+grave-lamps draw as meant, the two tints take, the plum cloth hangs. Two things were wrong and were put right from the
+pictures: the tide rock was a striped disc with a square of floor through it (round now, and cobbled), and the great
+caps' whole undersides were white (a lit rim and collar now). **Not looked at:** any of the bosses or their marks drawn,
+the Kennels, the bower, the Heart, the attic, the Warden's hall, the Ossuary, or anything on a phone.
+
+**Auto-play** has the four in its ways through (`WAYS`, `KNOWN` in `src/ui/autowarrens.js`), their eight quests in its
+plan, and one rule for all twelve bosses: it does what the fight orders (`tactics`). Watched headless with drawing
+stubbed and nothing able to hurt it (`tools/autoplay/watch.mjs`, as the head of that file says): at level 12 with a
+hired party and Under the Mile in hand it went in at the Vaults' portal, through the Toll, the gallery and the Reeds,
+killed the Bloat (going where the fight sent it when he swelled), the Cistern's pack, Mother Sallow (onto the rock for
+her tide), the Sluice's pack and the Leviathan, and left by the far portal, in about eight and a half minutes.
+The other three the same way, each with its first quest in hand and set down at its portal (the Playhouse's and the
+Kingsbarrow's quests put on to the step that wants the dungeon, since they begin with a walk to the Grove and the
+Barrows): the Sporehold at level 13 (Mouldfang, Mother Morel, the Heart of the Ring; out by the far portal in under
+eleven minutes), the Hollow Playhouse at 15 (the Seamstress, the Leading Man, the Dollmaker, standing still when her
+music stopped; ten minutes) and the Kingsbarrow at 18 (the Gravewarden, the Ossuary Golem, Ossivar; a little over ten).
+In every one it took the rooms in the order `WAYS` gives, waited for the party at each boss's door and went where the
+fights sent it. What these runs don't show is whether it lives: nothing could hurt it. And one thing seen that isn't
+the delves': with a party hired and no quest in hand that wants a dungeon it goes down whichever it's fit for, the
+Warrens first, however far off (it left the Grove for them, five kilometres, with the Playhouse's portal beside it),
+and in that run, coming at the Warrens from the north-east at level 16, it stood five minutes at about (280, -165)
+changing its mind between dungeons before the run was stopped.
+
+#### Three passes at the design, with two critics
+
+The four were laid out three times over. After each pass two reviewers, briefed separately and working only from the
+plans (`tools/dungeon/chart.mjs`), the layout files and the fights' code, took them apart: one for flow and space
+(walks, sightlines, what's skippable, what repeats), one for the encounters (does the room suit the fight, is the rule
+fair, what's a copy of something the game already has). What changed because of them:
+
+- **After the first pass.** The Vaults went from a 647 m string of caves to a 407 m coil close round the Sump, with one
+  deliberately long gallery and the rest short. The Sporehold went from a mirrored wheel, where one wing was always
+  entered by its back door, to a trefoil of loops, lopsided on purpose. The Playhouse got its side cloakroom, a longer
+  House so its two seated packs can't be pulled together, and the players' way round through the Store and the green
+  room. The Kingsbarrow's stair moved from the far side of the ring to opposite the way in, its vault grew to 48 by
+  56 m, its walks to twelve metres, and its packs into corner chambers. Among the fights: Mouldfang was called the
+  weakest (Hrymgar's deck again) and was rewritten round aiming the bloom at a run; the Leading Man's light became
+  his own, walking with him, so it isn't Sallow's rock again; Ossivar lost wings, tail and stamp (Venomaw's) for the
+  grave and the pyre; the Golem's hidden sixteen-second clock became bones that visibly walk back; the Gravewarden's
+  charge follows a called target instead of whoever is furthest, and his plate knits. Packs were given their own
+  toughness (a pack of dead children was paper beside a pack of drakes at one multiplier).
+- **After the second.** The Sporehold's two returns were re-cut so neither boss room is a hairpin, and the way north
+  was moved off the entry's line. The Kingsbarrow's two halls went to the back of the mound, off the North Walk: with
+  the stair at the south they had made half the ring skippable. The Dollmaker was made to wait for the Leading Man,
+  or the stage was a spur. Rules that didn't bind were found by reading the code: the Bloat's fouled rocks came clean
+  before he could swell again (thirty seconds against thirty-six); the Leviathan's holes never gathered; its inhale
+  pulled nobody who was in its bite and couldn't pull anyone else in; the Dollmaker's stop was four seconds of free
+  blows; the grave hurt nobody who simply left it; pods could land in a pool. The stock filler moves the twelve shared
+  (a boulder at the farthest was in six of them) were cut down and each given one of its own.
+- **After the third**, what was left is in the list below.
+
+**Not done, and known:** a way to see the Sump before the sluice (the field has no opening too narrow to walk, so the
+cracks toward it are blind); a spent standing stone can't be shown, so any stone cracks the Gravewarden's plate any
+number of times; no quartermaster stands at any of the four portals (hire in town or at the Warrens' and walk your
+party there, as for the keep and the Deeps).
 
 ### Monsters' attacks: marks on the ground, and what flies
 

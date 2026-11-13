@@ -217,6 +217,9 @@ export class Warrens {
       if (!lair) continue;
       const [rx, , rz] = roomSpot(b.room), R = roomOf(b.room).r;
       const dRoom = Math.hypot(p.x - rx, p.z - rz);
+      // (One that keeps away until others are dead: the Heart behind its two shepherds, the Leading Man undressed, the
+      // wyrm under the king's seal. Its room stands empty, and says why.)
+      if (b.needs && !b.needs.every((k) => this.down.has(k))) { if (b.shut && dRoom < R - 3 && !this.fight) this.warn(WARN[b.shut], 40); continue; }
       // Stood up as you come down the way to its room.
       if (lair.state === 'asleep' && dRoom < R + 30) t.wake(lair, true);
       const bodies = this.bossBodies(b.key);
@@ -230,6 +233,8 @@ export class Warrens {
         this.down.add(b.key); lair.state = 'cleared'; lair.clearedOnce = true;
         if (this.fight?.boss === b) { this.fight = null; this.clearGround(); }
         sim.event(EV.DELVE, DELVE.BOSS_DOWN, BOSSES.indexOf(b));
+        // (What its death sets going somewhere else: a curtain going up.)
+        if (b.cue) this.warn(WARN[b.cue]);
         // A boss's hoard: a few more things on the floor where it fell.
         const m = bodies[0];
         // (On top of what its body leaves: rollLoot's 20 and 21 in src/items/items.js. Nothing the Warrens' rank and file
@@ -341,13 +346,14 @@ export class Warrens {
   endFight(b, live) {
     const sim = this.sim, [rx, , rz] = roomSpot(b.room);
     for (const m of live) {
-      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx, rz];
-      m.x = rx + rnd(-2, 2); m.z = rz + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
-      m.ward = 1; m.noTurn = false; m.buried = false;
+      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx + (b.at?.[0] || 0), rz + (b.at?.[1] || 0)];
+      m.x = rx + (b.at?.[0] || 0) + rnd(-2, 2); m.z = rz + (b.at?.[1] || 0) + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
+      m.shrug = 1; m.noTurn = false; m.buried = false; m.lastStand = null;
       if (m.opts.base) { m.opts.damage = m.opts.base.damage; m.opts.pause = m.opts.base.pause; m.opts.speed = m.opts.base.speed; }
     }
     // (Its adds go with it.)
     for (const a of this.adds()) a.hp = 0;
+    this.fight?.spec?.end?.(this, this.fight, live);
     this.fight = null; this.clearGround();
   }
 
@@ -459,6 +465,39 @@ export class Warrens {
   focus() { const f = this.fight; return f?.spec?.focus ? f.spec.focus(this, f) : null; }
   // Where one of yours should stand against m, where the fight says (hero.js stance). Else null.
   stanceFor(h, m) { const f = this.fight; return f?.spec?.stance ? f.spec.stance(this, f, h, m) : null; }
+  // What the fight wants of a body right now, beyond keeping out of what's marked: { to: [x, z] } somewhere to be (the
+  // high rock above a tide, a pod to tread on, the far side of a pillar), { still: true } not a step taken, or null. The
+  // hired party obeys it (src/sim/hero.js companion); the player's is posted to the page for auto-play (and
+  // tools/dungeon/fight.mjs asks). A fight's spec says by `order(W, f, body, live)`.
+  order(b) {
+    const f = this.fight;
+    if (!f?.spec?.order || b.dead) return null;
+    return f.spec.order(this, f, b, this.bossBodies(f.boss.key).filter((m) => !m.dead)) || null;
+  }
+  // The far side of the nearest thing that stands between a body and (sx, sz): a pillar of the delve's rock or something
+  // round and solid in the room (list: [x, z, r] in the world, or the delve's own). Null if there's nothing near enough.
+  shelter(b, sx, sz, list = null, reach = 40) {
+    const d = this.delve;
+    const all = list || (d.shelters ||= d.pillars.map(([x, z, r]) => [d.x + x, d.z + z, r]).concat(d.props.filter((q) => q.solid && q.r && q.hx === undefined).map((q) => [d.x + q.x, d.z + q.z, q.r])));
+    let best = null, bd = Infinity;
+    for (const [qx, qz, r] of all) {
+      const ax = qx - sx, az = qz - sz, L = Math.hypot(ax, az) || 1;
+      if (L < 3 || L > reach) continue;
+      const hx = qx + ax / L * (r + 1.4), hz = qz + az / L * (r + 1.4);
+      if (caveRoom(hx, hz) < 0.6 || caveClear(sx, sz, hx, hz, 0.05)) continue;
+      const dd = Math.hypot(hx - b.x, hz - b.z);
+      if (dd < bd) { bd = dd; best = [hx, hz]; }
+    }
+    return best;
+  }
+  // A body carried a little way toward (or, below zero, away from) a point this tick, whatever else it's doing.
+  drag(b, x, z, speed, dt) {
+    const dx = x - b.x, dz = z - b.z, L = Math.hypot(dx, dz);
+    if (L < 0.4) return;
+    const nx = b.x + dx / L * speed * dt, nz = b.z + dz / L * speed * dt;
+    if (this.sim.world.inside(nx, nz, 0.5)) return;
+    b.x = nx; b.z = nz;
+  }
 
   // ---- Grubnash: the cave-in, the split floor, the boulder, the stamp, his diggers ----------------------------------------
 
@@ -923,7 +962,9 @@ export class Warrens {
     const f = this.fight;
     self.postMessage({
       type: 'warrens', inside: true, delve: this.delve.key, down: [...this.down],
-      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, perch: !!m.flying && !!f.perch, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m, ward: m.ward ?? 1 })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })) } : null,
+      fight: f ? { boss: f.boss.key, t: f.t, phase: f.phase, bodies: this.bossBodies(f.boss.key).filter((m) => !m.dead && !m.buried).map((m) => ({ id: m.id, x: m.x, z: m.z, yaw: m.yaw, hp: m.hp / m.maxHp, flying: !!m.flying, perch: !!m.flying && !!f.perch, breathing: !!m.breathing, spin: m.spin > 0, turning: f.turn?.m === m, ward: m.shrug ?? 1 })), adds: this.adds().map((a) => ({ id: a.id, x: a.x, z: a.z })),
+        // (What the fight wants of you just now: somewhere to be, or not a step. order(), above.)
+        order: this.order(this.sim.player) } : null,
       hazards: this.sim.perils.marks.map(markOut),
     });
   }

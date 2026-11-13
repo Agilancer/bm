@@ -98,7 +98,7 @@ const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
 const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
-const TINTS = { dark: 1, pale: 2, frost: 3 };
+const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5 };
 const MAX_GROUND = 160;
 // The portals (portalModel): the Warrens' three in their walls, at these spots (src/core/sites.js portalWall), and a seal's at
 // every seal (seal_*). How big each is drawn is PORTAL_MODELS's. SWIRL: each one's whirl for the shader (src/gfx/materials.js
@@ -508,7 +508,7 @@ export class Renderer {
     // doesn't flicker as a flame does. A fire that says how high it hangs, a chandelier, is lit from there.)
     const warrens = [];
     for (const d of DELVES) {
-      const L = d.look, cold = L.cold ? 0.25 : 1;
+      const L = d.look, cold = L.cold || L.still ? 0.25 : 1;
       // (glow: a delve's fires burning wider and brighter than the Warrens': the keep's halls are four times the size.)
       const g = L.glow || 1;
       for (const [x, y, z, nx, nz] of torches(d)) warrens.push({ p: [x + nx * 0.25, y + 0.25, z + nz * 0.25], c: L.light, r: 12 * g, i: 3.8 * g, flicker: 0.8 * cold });
@@ -680,7 +680,7 @@ export class Renderer {
     }
     // And everything out in the countries.
     for (const [name, part] of buildSites().parts) {
-      const m = /^(dark|pale|frost):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       const cutout = layer < 100 && layers[layer].cutout;

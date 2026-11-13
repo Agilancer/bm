@@ -1,5 +1,6 @@
 // What stands in the land against what has to stay clear: no collider on a road (ROUTES, to its worn width), on a seal's
 // dais, or on a spot where somebody stands (K.spots); and how many triangles the places are. node tools/lands/check-sites.mjs
+import { DELVES } from '../../src/core/dungeon.js';
 import { ROUTES, SITES } from '../../src/core/lands.js';
 import { SEALS, buildSites } from '../../src/core/sites.js';
 import { terrainHeight } from '../../src/core/terrain.js';
@@ -36,6 +37,14 @@ for (const [k, p] of Object.entries(B.spots)) {
 // The middles kept for a dungeon's portal: 7 m round the Howling Mouth's, and the ground before Blackvigil's gate.
 for (const [what, x, z, r] of [['the Howling Mouth', SITES.deepsmouth.x, SITES.deepsmouth.z, 7], ["Blackvigil's gate", SITES.keep.x + 86, SITES.keep.z, 9]]) {
   for (const c of near(x, z, r)) say(`the portal's ground at ${what}`, x, z, c);
+}
+// And where each of the later delves' portals stands (src/core/dungeon.js DELVES): nothing of the place it's at within
+// eight metres of it, and the ground under its terrace near enough level.
+for (const d of DELVES.slice(3)) {
+  for (const c of near(d.portal.x, d.portal.z, 8)) say(`the portal's ground for ${d.name}`, d.portal.x, d.portal.z, c);
+  const g = terrainHeight(d.portal.x, d.portal.z); let slope = 0;
+  for (let i = -6; i <= 6; i += 3) for (let j = -6; j <= 6; j += 3) slope = Math.max(slope, Math.abs(terrainHeight(d.portal.x + i, d.portal.z + j) - g));
+  if (slope > 2) { bad++; console.log(`SLOPE: the portal of ${d.name} at (${d.portal.x}, ${d.portal.z}): ${slope.toFixed(2)} m in 6 m`); }
 }
 let tris = 0; for (const p of B.parts.values()) tris += p.idx.length / 3;
 if (process.argv.includes('--spots')) for (const [k, p] of Object.entries(B.spots)) if (!k.startsWith('seal_')) console.log(k.padEnd(18), p.map((v) => +v.toFixed(2)).join(', '));
