@@ -15,8 +15,14 @@ export const TIERS = {
   // GPU pays dearly for. Also the Low setting on a PC.
   // Start without MSAA: dropping it after warmup rebuilds pipelines, shadows,
   // particles and grass while the original GPU resources are still resident.
-  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
+  mobile: { name: 'Mobile', lean: true, scaleMax: 1.0, maxPixels: 750000, shadowSize: 1024, cascades: 2, splits: [20, 80, 80], msaa: 1, grassSpacing: 0.2, grassRadius: 20, grassCap: 16000, particles: 18000, ao: false, shafts: false, pom: 0, texScale: 0.25, mapScale: 0.5, texCap: 512, terrainN: 128, bloom: 3, sim: 90, aniso: 2, lights: 2, bloodSize: 1024, emit: 0.4 },
 };
+
+// A phone's tier made lighter still, for one whose browser has closed the game for want of memory (src/core/lastrun.js):
+// level 1 and up, no model's picture over 256 a side (its normals 128).
+export function lighten(tier, level) {
+  return level > 0 ? { ...tier, texCap: Math.min(tier.texCap || 256, 256) } : tier;
+}
 
 export function isMobileDevice() {
   if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') return navigator.userAgentData.mobile;
@@ -138,10 +144,12 @@ export async function loadTextureArray(device, mipgen, names, decode, format, ru
   return tex;
 }
 
-export async function decodeScaledBitmap(blob, scale) {
+// (cap: no side of what comes back is longer than this, whatever scale says. 0: no cap.)
+export async function decodeScaledBitmap(blob, scale, cap = 0) {
   const opts = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
   const bmp = await createImageBitmap(blob, opts);
-  if (scale === 1) return bmp;
+  if (cap) scale = Math.min(scale, cap / Math.max(bmp.width, bmp.height));
+  if (scale >= 1) return bmp;
   try {
     // Resize the decoded pixels instead of decoding the compressed source twice.
     return await createImageBitmap(bmp, { ...opts, resizeWidth: Math.max(1, Math.round(bmp.width * scale)),

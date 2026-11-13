@@ -255,11 +255,15 @@ export function makeCast(roster, kit, names, n, seed, only = null) {
 }
 
 // The quartermasters, after the cast (so the cast keeps its slots).
-export function withBrokers(cast, roster, kit) {
+// lean (a phone): they wear two bodies between them, a man's and a woman's, the first two quartermasters' own. A body is
+// some 7 MB on the GPU, its pictures with it, and there are seven of these, each at a portal of its own: the renderer
+// builds a body once for all who wear it (Renderer.load).
+export function withBrokers(cast, roster, kit, lean = false) {
   const out = cast.slice();
   for (const b of BROKERS) {
-    const h = roster.find((x) => x.id === b.body) || roster.find((x) => x.cls === 'bard');
+    let h = roster.find((x) => x.id === b.body) || roster.find((x) => x.cls === 'bard');
     if (!h) continue;
+    if (lean) h = roster.find((x) => x.id === (h.sex === 'f' ? 'bard_f1' : 'bard_m2')) || h;
     // (They wear bards' bodies, but they keep the Company's books, not a lute.)
     const k = { ...(kit.heroes[h.id] || {}), lute: null };
     out.push({ slot: out.length, body: h.id, cls: h.cls, sex: h.sex, height: h.height, name: b.name, full: b.name, guild: b.guild || 'The Free Company', persona: 'kind', level: 30,

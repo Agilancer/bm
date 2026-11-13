@@ -120,7 +120,8 @@ export class Knight {
       const c = bank.clips[name];
       if (c?.travel) this.gaits[slot] = { clip: c, speed: c.travel[c.travel.length - 1] / c.dur * rig.motionScale };
     }
-    this.bvh = rig.pieces.map((p) => (p.kind === 'mail' ? null : new PlateBVH(rig.bindPos, rig.tris, p.tstart, p.tcount)));
+    // (One set of trees for a suit, shared by everyone in it: they're over the suit as it was made, and nothing changes them.)
+    this.bvh = rig.plateTrees ||= rig.pieces.map((p) => (p.kind === 'mail' ? null : new PlateBVH(rig.bindPos, rig.tris, p.tstart, p.tcount)));
     this.inv = rig.pieces.map(() => ({ q: new Float32Array(4), t: new Float32Array(3), r: new Float32Array(4) }));
     this.invTick = -1;
     // Where a sword and a shield sit in the fists, on this model's proportions. Each has two holds: a

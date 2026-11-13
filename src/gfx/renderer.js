@@ -8,7 +8,7 @@ import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
-import { PORTAL_MODELS, buildSites } from '../core/sites.js';
+import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { DELVES, PORTAL_SPOTS, braziers, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
@@ -346,7 +346,16 @@ export class Renderer {
     const undead = BODIES.map((b, i) => crabs(15 + i, b.count, b.scale, addStumps));
     const creatures = FIELD_CREATURES.map((c, i) => crabs(15 + BODIES.length + LISANDRA_FORMS.length + i, 1, c.scale));
     const townKnights = TOWN_KNIGHTS.map((k, i) => character(15 + BODIES.length + LISANDRA_FORMS.length + FIELD_CREATURES.length + i));
-    const heroes = cast.map((p) => model(`assets/game/heroes/${p.body}.glb`, (glb) => this.buildCharacter(glb)));
+    // (A body built once for all who wear it: the second and later are its pose buffers and its paint again, over the
+    // same mesh and pictures. cloneCharacter.)
+    const bodies = new Map();
+    const heroes = cast.map((p) => {
+      const first = bodies.get(p.body);
+      if (first) return first.then((base) => this.cloneCharacter(base));
+      const made = model(`assets/game/heroes/${p.body}.glb`, (glb) => this.buildCharacter(glb));
+      bodies.set(p.body, made);
+      return made;
+    });
     const forms = LISANDRA_FORMS.map(({ skirtCenter }, i) => model(models[15 + BODIES.length + i], async (glb) => {
       const [form] = await this.buildCrabs(glb, 1, LISANDRA_SCALE, (prim, glb, scale) => {
         // A form with no skirt (Pretty in her leathers) has no _SKIRT mask: nothing of her sways as a dress.
@@ -673,16 +682,81 @@ export class Renderer {
   // Which of the scenery that comes and goes is the other way from how it began (the keys: a standing stone broken, its
   // rubble lying). Anything not named is put back as it was built. (src/sim/dungeon.js flip, by way of the party's post.)
   setScenery(flipped) {
-    if (!this.scenery?.size || !this.staticVB) return;
-    const want = new Set(flipped || []);
+    this.flipped = new Set(flipped || []);
+    const U = this.under;
+    if (!U?.scenery.size) return;
     let changed = false;
-    for (const [key, g] of this.scenery) {
-      const on = g.first !== want.has(key);
+    for (const [key, g] of U.scenery) {
+      const on = g.first !== this.flipped.has(key);
       if (on === g.on) continue;
       g.on = on; changed = true;
-      for (const r of g.runs) this.device.queue.writeBuffer(this.staticVB, r.at, on ? r.shown : r.gone);
+      for (const r of g.runs) this.device.queue.writeBuffer(U.VB, r.at, on ? r.shown : r.gone);
     }
     if (changed) this.shadowEpoch = (this.shadowEpoch || 0) + 1;
+  }
+
+  // What's under the world is on the GPU a delve at a time (or the Test Dungeon's hall): key is the one the eye is down, or
+  // null on the land. All seven delves' corners in the one buffer with the land's were 62 MB that a phone held for good
+  // and drew into every shadow map, for the one delve it might go down. The last one's kept while you're up, so coming
+  // back to it (a death, the way out and in again) builds nothing. Building one is 60 to 190 ms on a PC.
+  useUnder(key) {
+    this.underOn = !!key;
+    if (!key || this.under?.key === key) return;
+    const old = this.under;
+    this.under = this.buildUnderSet(key);
+    this.shadowEpoch = (this.shadowEpoch || 0) + 1;
+    // (Gone once this frame's work that drew them is done: nothing new is recorded with them.)
+    if (old) setTimeout(() => { old.VB.destroy(); old.IB.destroy(); }, 500);
+  }
+
+  buildUnderSet(key) {
+    const { layerNames, layers } = this.staticLayers;
+    const { parts, groups } = buildUnder(key);
+    const prims = [];
+    for (const [name, part] of parts) {
+      const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(name), base = m ? m[2] : name;
+      let layer = layerNames.indexOf(base);
+      if (layer < 0) layer = FLAT[base] ?? 100;
+      prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
+    }
+    // Opaque first, so the cutouts are one range at the end.
+    prims.sort((a, b) => a.cutout - b.cutout);
+    let nv = 0, ni = 0;
+    for (const p of prims) { nv += p.pos.length / 3; ni += p.idx.length; }
+    const verts = new ArrayBuffer(nv * 36), f = new Float32Array(verts), u = new Uint32Array(verts), indices = new Uint32Array(ni);
+    const baseOf = new Map(), runs = [0, 0];
+    let vo = 0, io = 0;
+    for (const p of prims) {
+      runs[p.cutout] += p.idx.length;
+      baseOf.set(p.name, vo);
+      const base = vo, n = p.pos.length / 3;
+      for (let i = 0; i < n; i++) {
+        const o = vo * 9;
+        f[o] = p.pos[i * 3]; f[o + 1] = p.pos[i * 3 + 1]; f[o + 2] = p.pos[i * 3 + 2];
+        f[o + 3] = p.nrm[i * 3]; f[o + 4] = p.nrm[i * 3 + 1]; f[o + 5] = p.nrm[i * 3 + 2];
+        f[o + 6] = p.uv[i * 2]; f[o + 7] = p.uv[i * 2 + 1];
+        u[o + 8] = p.layer;
+        vo++;
+      }
+      for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
+    }
+    // Scenery that comes and goes (src/core/sites.js Kit.group): each group's corners as built, and the same folded to a
+    // point, which draws nothing. Those that aren't there now (not there from the start, or flipped since: setScenery)
+    // go into the buffer folded.
+    const scenery = new Map(), flipped = this.flipped || new Set();
+    for (const [k, g] of groups) {
+      const on = g.on !== flipped.has(k);
+      const made = g.ranges.map(({ layer, v0, v1 }) => {
+        const at = (baseOf.get(layer) + v0) * 36, n = (v1 - v0) * 9;
+        const shown = f.slice(at / 4, at / 4 + n), gone = shown.slice();
+        for (let i = 0; i < n; i += 9) { gone[i] = shown[0]; gone[i + 1] = shown[1]; gone[i + 2] = shown[2]; }
+        if (!on) f.set(gone, at / 4);
+        return { at, shown, gone };
+      });
+      scenery.set(k, { first: g.on, on, runs: made });
+    }
+    return { key, scenery, opaque: runs[0], cut: runs[1],
+      VB: makeBuffer(this.device, new Float32Array(verts), GPUBufferUsage.VERTEX), IB: makeBuffer(this.device, indices, GPUBufferUsage.INDEX) };
   }
 
   buildStatics(glb, layerNames, layers, oaks) {
@@ -699,18 +773,18 @@ export class Renderer {
         prims.push({ layer, cutout, pos: accessor(glb, pr.attributes.POSITION), nrm: accessor(glb, pr.attributes.NORMAL), uv: accessor(glb, pr.attributes.TEXCOORD_0), idx: accessor(glb, pr.indices) });
       }
     }
-    // And everything out in the countries.
-    // (And the delves and the Test Dungeon, a run of their own: drawn instead of the land, never with it. under: 1.)
-    const sites = buildSites();
-    for (const [parts, under] of [[sites.parts, 0], [sites.under, 1]]) for (const [name, part] of parts) {
+    // And everything out in the countries. (Not the delves or the Test Dungeon: a buffer of their own, one at a time, when
+    // you're down one. useUnder.)
+    this.staticLayers = { layerNames, layers };
+    for (const [name, part] of buildSites(true).parts) {
       const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       const cutout = layer < 100 && layers[layer].cutout;
-      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, under, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx, site: (under ? 'under|' : '') + name });
+      prims.push({ layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout, pos: part.pos, nrm: part.nrm, uv: part.uv, idx: part.idx });
     }
-    // The land's opaque, the delves' opaque, the delves' cutouts, the land's cutouts.
-    const rank = (p) => (p.cutout ? 3 - (p.under || 0) : p.under || 0);
+    // The opaque, then the cutouts.
+    const rank = (p) => (p.cutout ? 1 : 0);
     prims.sort((a, b) => rank(a) - rank(b));
     let nv = 0, ni = 0;
     for (const p of prims) { nv += p.pos.length / 3; ni += p.idx.length; }
@@ -726,15 +800,12 @@ export class Renderer {
     };
     const verts = new ArrayBuffer(nv * 36);
     const f = new Float32Array(verts), u = new Uint32Array(verts);
-    // (Where each of the countries' paintings begins in the one buffer: for the scenery that comes and goes, below.)
-    const siteBase = new Map();
     const indices = new Uint32Array(ni);
     let vo = 0, io = 0;
-    const runs = [0, 0, 0, 0];
+    const runs = [0, 0];
     for (const p of prims) {
       runs[rank(p)] += p.idx.length;
       const base = vo;
-      if (p.site) siteBase.set(p.site, base);
       const n = p.pos.length / 3;
       for (let i = 0; i < n; i++) {
         const o = vo * 9;
@@ -746,23 +817,12 @@ export class Renderer {
       }
       for (let i = 0; i < p.idx.length; i++) indices[io++] = p.idx[i] + base;
     }
-    // Scenery that comes and goes (src/core/sites.js Kit.group): each group's corners as built, and the same folded to a
-    // point, which draws nothing. Those not there from the start go into the buffer folded.
-    this.scenery = new Map();
-    for (const [key, g] of buildSites().groups) {
-      const runs = g.ranges.map(({ layer, v0, v1, under }) => {
-        const at = (siteBase.get((under ? 'under|' : '') + layer) + v0) * 36, n = (v1 - v0) * 9;
-        const shown = f.slice(at / 4, at / 4 + n), gone = shown.slice();
-        for (let i = 0; i < n; i += 9) { gone[i] = shown[0]; gone[i + 1] = shown[1]; gone[i + 2] = shown[2]; }
-        if (!g.on) f.set(gone, at / 4);
-        return { at, shown, gone };
-      });
-      this.scenery.set(key, { first: g.on, on: g.on, runs });
-    }
     this.staticVB = makeBuffer(device, new Float32Array(verts), GPUBufferUsage.VERTEX);
     this.staticIB = makeBuffer(device, indices, GPUBufferUsage.INDEX);
-    // [first, count] of each: land (what's seen from the land, and throws its shadows) and under, opaque and cut.
-    this.staticRuns = { land: [0, runs[0]], under: [runs[0], runs[1]], underCut: [runs[0] + runs[1], runs[2]], landCut: [runs[0] + runs[1] + runs[2], runs[3]] };
+    // (The countries' corners are on the GPU now: the lists they were built in are let go.)
+    dropSiteGeometry();
+    // [first, count] of each: the land's opaque and its cutouts.
+    this.staticRuns = { land: [0, runs[0]], landCut: [runs[0], runs[1]] };
     this.shadowEpoch = (this.shadowEpoch || 0) + 1;
     // Per-layer parameters: cutout, parallax depth in uv, has windows, foliage.
     const params = new Float32Array(64 * 4);
@@ -782,12 +842,18 @@ export class Renderer {
     this.stats.staticTris = ni / 3;
   }
 
-  async imageTexture(glb, imageIndex, format, scale = 1) {
-    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale);
+  async imageTexture(glb, imageIndex, format, scale = 1, full = false) {
+    return this.bitmapTexture(imageBytes(glb, imageIndex), format, scale, full);
   }
 
-  async bitmapTexture(blob, format, scale) {
-    const bmp = await decodeScaledBitmap(blob, scale);
+  // A picture as a texture, shrunk by scale. On a phone, of a model's pictures (those given a scale under 1): none is over
+  // tier.texCap a side (some bodies' colours came 4096 across, 1024 after the shrink: 5 MB apiece), and its normals and its
+  // metal and roughness, the two that aren't colours, are tier.mapScale of that again: there are two of them to every
+  // colour picture, uncompressed, and at a phone's size they were a third of all its textures. full: as scale says.
+  async bitmapTexture(blob, format, scale, full = false) {
+    const lean = this.tier.lean && scale < 1 && !full && this.tier.texCap;
+    const k = lean && format === 'rgba8unorm' ? this.tier.mapScale : 1;
+    const bmp = await decodeScaledBitmap(blob, scale * k, lean ? this.tier.texCap * k : 0);
     const mips = mipCountFor(bmp.width, bmp.height);
     const tex = this.device.createTexture({ size: [bmp.width, bmp.height], format, mipLevelCount: mips, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
     try {
@@ -941,7 +1007,17 @@ export class Renderer {
     const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
     ] });
-    return { ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4) };
+    return { ...sk, ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4), maps: [alb, nrm, mr] };
+  }
+
+  // Another character in a body already built (buildCharacter): the same mesh and pictures, its own pose and its own paint.
+  cloneCharacter(base) {
+    const ubo = this.device.createBuffer({ size: CHAR_UBO, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    const [alb, nrm, mr] = base.maps;
+    const bg = this.device.createBindGroup({ layout: this.bglArmor, entries: [
+      { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
+    ] });
+    return { ...this.cloneSkinned(base), ubo, matBG: bg, gashData: new Float32Array(CHAR_UBO / 4) };
   }
 
   async buildViewModel(glb) {
@@ -970,9 +1046,10 @@ export class Renderer {
       const { mat, name } = texOf[i];
       const srcOf = (t) => glb.json.textures[t.index].source;
       const texScale = this.tier.texScale;
-      const alb = await this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale);
-      const nrm = mat.normalTexture ? await this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale) : flatNormal;
-      const mr = mat.pbrMetallicRoughness.metallicRoughnessTexture ? await this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale) : flatMR;
+      // (full: the arms are a hand's breadth from the eye, and keep their pictures as the tier's scale gives them.)
+      const alb = await this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', texScale, true);
+      const nrm = mat.normalTexture ? await this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', texScale, true) : flatNormal;
+      const mr = mat.pbrMetallicRoughness.metallicRoughnessTexture ? await this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', texScale, true) : flatMR;
       const ubo = device.createBuffer({ size: 64 + 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       const bg = device.createBindGroup({ layout: this.bglArmor, entries: [
         { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: alb.createView() }, { binding: 2, resource: nrm.createView() }, { binding: 3, resource: mr.createView() },
@@ -1029,10 +1106,10 @@ export class Renderer {
     const mat = glb.json.materials[pr.material];
     const srcOf = (t) => glb.json.textures[t.index].source;
     const scale = this.tier.texScale;
-    const [alb, nrm, mr] = await Promise.all([
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
-      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+    const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
     ]);
     const prim = { pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
     s.lying = this.lyingModel(prim, alb, nrm, mr, [0, 0, 0, 0]);
@@ -1194,10 +1271,10 @@ export class Renderer {
     const mat = glb.json.materials[0];
     const srcOf = (t) => glb.json.textures[t.index].source;
     const scale = this.tier.texScale;
-    const [alb, nrm, mr] = await Promise.all([
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
-      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
-      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+    const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
     ]);
     const rigs = { arms_1h: this.vms[1], arms_2h: this.vms[2], arms_staff: this.vms[3], spell_attack: this.spellVMs[1], spell_raise: this.spellVMs[2] };
     for (const m of glb.json.meshes) {
@@ -1456,10 +1533,10 @@ export class Renderer {
       const body = prim('chest_body'), lid = prim('chest_lid');
       const mat = glb.json.materials[body.pr.material], scale = this.tier.texScale;
       const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
-      const [alb, nrm, mr] = await Promise.all([
-        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
-        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
-        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+      const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
+        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
       ]);
       this.chestModels = { body: this.lyingModel(body, alb, nrm, mr, [0, 0, 0, 0]), lid: this.lyingModel(lid, alb, nrm, mr, [0, 0, 0, 0]) };
     })().catch((e) => console.error('chest', e));
@@ -1508,10 +1585,10 @@ export class Renderer {
       });
       const mat = glb.json.materials[prims[0].pr.material], scale = this.tier.texScale;
       const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
-      const [alb, nrm, mr] = await Promise.all([
-        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
-        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
-        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+      const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
+        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
+        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
       ]);
       const models = {};
       for (const p of prims) models[p.name] = this.lyingModel(p, alb, nrm, mr, [0, 0, 0, 0]);
@@ -1535,10 +1612,10 @@ export class Renderer {
         const stone = prim('stone'), swirl = prim('swirl');
         const mat = glb.json.materials[stone.pr.material], scale = this.tier.texScale;
         const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
-        const [alb, nrm, mr] = await Promise.all([
-          this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale),
-          this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale),
-          this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale),
+        const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
+          this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
+          this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
+          this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
         ]);
         return { [`${kind}_stone`]: this.lyingModel(stone, alb, nrm, mr, [0, 0, 0, 3]), [`${kind}_swirl`]: this.lyingModel(swirl, alb, nrm, mr, SWIRL[kind]) };
       };
@@ -2268,6 +2345,7 @@ export class Renderer {
       prev = far;
     }
     this.camNow = cam;
+    this.useUnder(inDungeon(cam.x, cam.z) ? delveAt(cam.x, cam.z) : inHall(cam.x, cam.z) ? 'hall' : null);
     d[O.CAM] = cam.x; d[O.CAM + 1] = cam.y; d[O.CAM + 2] = cam.z; d[O.CAM + 3] = snap[H.TIME] + (this.renderTimeOffset || 0);
     d[O.SUN] = sun[0]; d[O.SUN + 1] = sun[1]; d[O.SUN + 2] = sun[2]; d[O.SUN + 3] = 2.4 / this.tier.shadowSize;
     const day = this.light;
@@ -2464,6 +2542,15 @@ export class Renderer {
 
   // What never moves, into cascade c's map: the ground (in the far cascade only), the buildings, the trees, the rocks, the
   // cathedral's floor. (The cathedral's shell shades the green. What's under the ground has no sun to shade.)
+  // The rock of the delve you're down, into a shadow map (pShStatic set): it keeps the day out of it.
+  drawUnderShadow(sp) {
+    const U = this.underOn && this.under;
+    if (!U || !U.opaque) return;
+    sp.setVertexBuffer(0, U.VB);
+    sp.setIndexBuffer(U.IB, 'uint32');
+    sp.drawIndexed(U.opaque);
+  }
+
   drawStillShadows(sp, c, last) {
     sp.setPipeline(this.pShTerrain);
     if (c === 2) {
@@ -2472,9 +2559,10 @@ export class Renderer {
       sp.drawIndexed(this.terrainCount);
     }
     sp.setPipeline(this.pShStatic);
+    this.drawUnderShadow(sp);
     sp.setVertexBuffer(0, this.staticVB);
     sp.setIndexBuffer(this.staticIB, 'uint32');
-    sp.drawIndexed(this.staticRuns.land[1] + this.staticRuns.under[1]);   // (the delves' rock too: it keeps the day out of them)
+    sp.drawIndexed(this.staticRuns.land[1]);
     sp.setPipeline(this.pShCut);
     sp.setBindGroup(1, this.shCutBG);
     sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);
@@ -2498,9 +2586,10 @@ export class Renderer {
         sp.drawIndexed(this.terrainCount);
       }
       sp.setPipeline(this.pShStatic);
+      this.drawUnderShadow(sp);
       sp.setVertexBuffer(0, this.staticVB);
       sp.setIndexBuffer(this.staticIB, 'uint32');
-      sp.drawIndexed(this.staticRuns.land[1] + this.staticRuns.under[1]);   // (the delves' rock too: it keeps the day out of them)
+      sp.drawIndexed(this.staticRuns.land[1]);
       sp.setPipeline(this.pShCut);
       sp.setBindGroup(1, this.shCutBG);
       sp.drawIndexed(this.staticRuns.landCut[1], 1, this.staticRuns.landCut[0]);
@@ -3127,10 +3216,11 @@ export class Renderer {
     if (vis.world) {
     mp.setPipeline(this.pStatic);
     mp.setBindGroup(1, this.staticBG);
-    mp.setVertexBuffer(0, this.staticVB);
-    mp.setIndexBuffer(this.staticIB, 'uint32');
-    // (Down a delve or in the Test Dungeon, their own run of it and none of the land's; on the land, the land's.)
-    const [so, sc] = vis.warrens ? [this.staticRuns.under, this.staticRuns.underCut] : [this.staticRuns.land, this.staticRuns.landCut];
+    // (Down a delve or in the Test Dungeon, its own corners and none of the land's; on the land, the land's.)
+    const U = vis.warrens ? (this.underOn && this.under) || { opaque: 0, cut: 0, VB: this.staticVB, IB: this.staticIB } : null;
+    mp.setVertexBuffer(0, U ? U.VB : this.staticVB);
+    mp.setIndexBuffer(U ? U.IB : this.staticIB, 'uint32');
+    const [so, sc] = U ? [[0, U.opaque], [U.opaque, U.cut]] : [this.staticRuns.land, this.staticRuns.landCut];
     mp.drawIndexed(so[1], 1, so[0]);
     if (sc[1]) {
       mp.setPipeline(this.pStaticCut);
