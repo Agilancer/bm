@@ -117,6 +117,14 @@ const BOARD_CLIPS = new Set(['L_ShieldJab', 'L_ShieldCross', 'Shield_OneShot', '
 const SOFT_CLIPS = { Sword_Regular_C: 0.55, OverhandThrow: 0.75, L_ShieldJab: 0.6, L_Slash: 0.7, Sword_Attack: 0.8 };
 // Whose hands their own hold shuts (lanceHold).
 const HOLD_STYLES = new Set(['lance', 'spear', 'two_hand']);
+// A lance at ease (Hero.carryAim, poseLance), in a 1.8 m body's metres, as [forward, to his right, up]. ground: standing,
+// where its butt rests by his right foot and where his hand is on the shaft (up: from the ground). slope: walking, his fist
+// from his shoulder ([forward, right, down]), the way the lance lies from it back over that shoulder, and how far from
+// its butt his hand is.
+const CARRY = {
+  ground: { butt: [0.25, 0.35], fist: [0.17, 0.28, 1.24] },
+  slope: { fist: [0.3, 0.05, 0.37], aim: norm([-0.3, 0.05, 0.5]), hand: 0.14 },
+};
 // How far each joint of a finger turns in, knuckle to tip, to shut a half-open hand on a haft.
 const FIST = [0.75, 0.95, 0.6];
 // What a lancer puts his lance on his back for: what wants both hands, or the whole body.
@@ -380,6 +388,9 @@ export class Hero extends Knight {
       if (this.jump) this.updateJump(dt, sim);
     }
     this.combat = damp(this.combat, this.foe ? 1 : 0, 4, dt);
+    // (Between blows in a fight, what the clips leave out: poseReady.)
+    const ready = (this.style === 'bow' || (this.style === 'blade' && !this.offP)) && !!this.foe && !this.swing && !this.jump && !this.tossing && !this.point && !this.gesture && !(this.luteW > 0.01) && this.stow < 0.5;
+    this.readyW = damp(this.readyW || 0, ready ? 1 : 0, ready ? 5 : 12, dt);
     this.shieldUp = damp(this.shieldUp, this.shieldTarget, 8, dt);
     // (Arms in hand for a fight and a while after; put away for the road and the town: src/core/stow.js.)
     stepStow(this, dt, !!(this.foe || this.swing || this.jump || this.charge || this.tossing || this.point || this.flight || (this.aim && this.aim !== this.heldAim) || this.bowW > 0.01 || this.shieldTarget > 0), this.x, this.z);
@@ -560,8 +571,8 @@ export class Hero extends Knight {
       }
       if (this.shotCd <= 0 && Math.abs(wrapAngle(to - this.yaw)) < 0.7) this.blow(sim, m);
     }
-    // The lancer raises the tower board between blows.
-    this.shieldTarget = this.style === 'lance' && d < 4 ? 1 : 0;
+    // The lancer raises the tower board between blows; a mace and a board keep the board before them (short of a block).
+    this.shieldTarget = d < 4 ? (this.style === 'lance' ? 1 : this.shieldStyle ? 0.58 : 0) : 0;
   }
 
   // Two who shoot, shoulder to shoulder: the one with the higher number takes a stride and a half off from the other.
@@ -1156,7 +1167,7 @@ export class Hero extends Knight {
   fightFrom(sim, world, m, d, R, to) {
     const [px, pz] = this.post, dp = Math.hypot(px - this.x, pz - this.z);
     this.goal = dp > 0.7 ? { x: px, z: pz, speed: dp > 5 ? 7 : 3.2, stop: 0.35, face: to } : null;
-    this.shieldTarget = this.style === 'lance' && d < 4 ? 1 : 0;
+    this.shieldTarget = d < 4 ? (this.style === 'lance' ? 1 : this.shieldStyle ? 0.58 : 0) : 0;
     const line = this.lineTo(sim, m, d);
     // (Any move that doesn't take him off the place he was given.)
     if (this.gcd <= 0) {
@@ -1296,7 +1307,8 @@ export class Hero extends Knight {
     if (this.aim && out[off + 15] !== 0) {
       const y = norm(this.aim), x = norm(cross(y, Math.abs(y[1]) > 0.95 ? [1, 0, 0] : [0, 1, 0])), z = cross(x, y);
       out.set([x[0], x[1], x[2], 0, y[0], y[1], y[2], 0, z[0], z[1], z[2], 0], off);
-      if (this.aimBack) { out[off + 12] -= y[0] * this.aimBack; out[off + 13] -= y[1] * this.aimBack; out[off + 14] -= y[2] * this.aimBack; }
+      const slid = this.aimBack + (this.carryBack || 0);
+      if (slid) { out[off + 12] -= y[0] * slid; out[off + 13] -= y[1] * slid; out[off + 14] -= y[2] * slid; }
     }
     // A bard's lute: across the back, or in the hands (afterPose put it there), or on its way round his right side between.
     // The sword is at the left hip while the hands are on the lute.
@@ -1369,7 +1381,7 @@ export class Hero extends Knight {
       // (A lancer's kept so through his whole hold and as a run ends, so nothing jumps when the run's clip lets go.)
       if ((this.swing || this.charge || this.tossing || this.lanceW > 0.01) && !this.jump && !this.surf) this.capPitch(this.charge || this.rushW > 0.05 ? 0.45 : 0.72);
       if (this.swing && this.swing.clip.name === 'Sword_Attack') this.guardArm();
-      if (this.lanceW > 0.01) this.poseLance();
+      if (this.lanceW > 0.01 || (this.style === 'lance' && this.carryW > 0.01)) this.poseLance();
       // Hands shut on what's in them: a sword's grip, a knife in each fist, a bow's, a board's. (A lancer's, a dragoon's and a
       // maul's are their hold's own, poseLance. A hand that's thrown what it held is open till it's back.)
       if (!HOLD_STYLES.has(this.style)) {
@@ -1378,6 +1390,7 @@ export class Hero extends Knight {
         if ((this.offP || this.style === 'bow') && !this.free[1] && !this.flight?.some((f) => f.hand)) this.shutHand('l', armed);
       }
       if (this.luteP && this.luteW > 0.01) this.poseLute();
+      if (this.readyW > 0.01) this.poseReady();
       if (this.bowW > 0.01) this.poseBow();
       if (this.spread > 0.01) this.poseSpread();
       if (this.tossing) this.poseToss();
@@ -1403,10 +1416,14 @@ export class Hero extends Knight {
     // down, a maul's swing) has the arm to itself.
     const armOn = on && (!sw || (!maul && (!!sw.aimed || !!sw.stab || !!this.charge || !!sw.bash)));
     this.armW = damp(this.armW, armOn ? 1 : 0, 14, dt);
-    // (A lancer out of a fight carries his lance upright in his fist at his side: there's nowhere on a man to put one away.
-    // On his back only for what needs both hands or the whole body: sitting, a dance, the ride down the Fall.)
-    const carry = lance && !on && !this.dead && !this.jump && !this.surf && !this.sitting && !this.below && !this.tossing && !this.point && !(this.gesture && AWAY_GESTURES.has(this.gesture));
+    // (A lancer out of a fight has his lance in his hand: there's nowhere on a man to put one away. Standing, its butt is on
+    // the ground by his right foot and his hand's on the shaft at his chest, as a guard stands with a spear; walking, it's
+    // sloped on his right shoulder, his hand low on it before him and its point up behind. carryAim, poseLance. On his back
+    // only for what needs both hands or the whole body: sitting, a dance, the ride down the Fall.)
+    const carry = lance && !on && !this.dead && !this.jump && !this.surf && !this.sitting && !this.below && !this.tossing && !this.point && !(this.gesture && AWAY_GESTURES.has(this.gesture) && !this.reviewMove);
     this.carryW = damp(this.carryW, carry ? 1 : 0, 8, dt);
+    this.carryMove = damp(this.carryMove || 0, this.speed > 0.5 || this.reviewMove ? 1 : 0, 4.5, dt);
+    this.carryBack = 0;
     this.lanceAway = damp(this.lanceAway, lance && !on && !carry ? 1 : 0, 4, dt);
     // The other hand's part: a board up before a lancer (but for the board's own moves, and one that's out of his hand); a
     // hand on the shaft for a dragoon; on the haft for a maul, between blows and through its own.
@@ -1427,16 +1444,33 @@ export class Hero extends Knight {
     this.sweepW = damp(this.sweepW, sw && typeof sw.aimed === 'function' ? 1 : 0, 12, dt);
     // The weapon: level at what he faces, a little up at rest so its point's at a man's chest and not in the grass.
     // (And up out of the way, over its head, when what he's fighting is inside its point, or his board's going out: a lance
-    // can't be shortened. A maul's carried head up before him. A lance at ease stands upright.)
+    // can't be shortened. A maul's carried head up before him. A lance at ease is grounded, or on his shoulder: carryAim.)
     const f = this.foe, inside = !!f && !rush && !sw?.stab && (!!sw?.bash || Math.hypot(f.x - this.x, f.z - this.z) - radiusOf(f) < (this.mainP?.reach ?? 2.4) - 0.15);
     this.lanceUp = damp(this.lanceUp || 0, inside ? 1 : 0, sw?.bash ? 12 : inside ? 5 : rush ? 20 : sw?.stab ? 18 : 4.5, dt);
     // (His own hold's aim is made anew each tick; one a move has set is the move's.)
     if ((armOn || this.carryW > 0.01 || (lance && this.lanceW > 0.01 && !busy)) && (!this.aim || this.aim === this.heldAim)) {
       const L = lance ? ease(this.lanceW) * (armOn || this.carryW > 0.01 ? 1 : 0) + (armOn || this.carryW > 0.01 ? 0 : 1) : 1;
       const level = maul ? 1.0 : ((spear ? 0.2 : 0.07) - (spear ? 0.26 : 0.13) * Math.max(0, this.jab)) * (1 - this.rushW) - 0.03 + (spear ? 0.75 : 0.95) * ease(this.lanceUp) * (1 - this.rushW);
-      const a = level * L + 1.49 * (1 - L), co = Math.cos(a);
-      this.aim = this.heldAim = [Math.sin(this.yaw) * co, Math.sin(a), Math.cos(this.yaw) * co];
+      const co = Math.cos(level), A = [Math.sin(this.yaw) * co, Math.sin(level), Math.cos(this.yaw) * co];
+      if (L < 0.999) {
+        const C = this.carryAim();
+        for (let i = 0; i < 3; i++) A[i] = A[i] * L + C[i] * (1 - L);
+        this.carryBack = C[3] * (1 - L);
+      }
+      this.aim = this.heldAim = norm(A);
     } else if (this.aim && this.aim === this.heldAim) this.aim = null;      // (his hold's own aim doesn't outlast his hold)
+  }
+
+  // A lance at ease: the way it lies, and how far it's slid through his fist from its grip (toward its butt: [x, y, z, slide]).
+  // Standing (CARRY.ground): from its butt on the ground by his right foot up to his hand on the shaft. Walking
+  // (CARRY.slope): from his hand, low before him near its butt, back over his right shoulder. carryMove goes between.
+  carryAim() {
+    const u = this.rig.height / 1.8, m = ease(this.carryMove || 0), s = Math.sin(this.yaw), c = Math.cos(this.yaw), butt = this.mainP?.butt ?? 0.6;
+    const G = CARRY.ground, S = CARRY.slope;
+    const g = [G.fist[0] - G.butt[0], G.fist[1] - G.butt[1], G.fist[2]], gl = Math.hypot(g[0], g[1], g[2]);
+    const a = norm([g[0] / gl * (1 - m) + S.aim[0] * m, g[1] / gl * (1 - m) + S.aim[1] * m, g[2] / gl * (1 - m) + S.aim[2] * m]);
+    // ([forward, to his right, up] to the world: his forward [s, 0, c], his right [-c, 0, s].)
+    return [s * a[0] - c * a[1], a[2], c * a[0] + s * a[1], (gl * u - butt) * (1 - m) + (S.hand - butt) * m];
   }
 
   poseLance() {
@@ -1470,11 +1504,17 @@ export class Hero extends Knight {
     // before his right hip, its head up.)
     const [G, B, O, R] = maul ? [[0.2, -0.04, 0.44], [0.2, -0.04, 0.44], [0.2, -0.04, 0.44], [0.2, -0.04, 0.44]]
       : spear ? [[-0.06, 0.1, 0.4], [-0.42, 0.17, 0.35], [0.3, 0.03, 0.3], [-0.02, 0.09, 0.4]] : [[0.13, 0.12, 0.29], [-0.25, 0.16, 0.27], [0.52, 0.04, 0.2], [0.15, 0.12, 0.26]];
-    // (At ease, a lance upright: the fist at his side, a little before the hip.)
-    const C = [0.1, 0.13, 0.46];
+    // (At ease: his hand on the shaft at his chest, the lance stood on the ground beside him; or, walking, low before his
+    // chest, the lance on his shoulder. The first is by where he stands, so its butt stays on the ground as he breathes.)
+    const UR = this.arms.r.u * 3, C = [0, 0, 0];
+    if (lance && hold < 0.999) {
+      const m = ease(this.carryMove || 0), F = CARRY.ground.fist, S = CARRY.slope.fist;
+      const dx = this.x + (s * F[0] - c * F[1]) * u - wt[UR], dz = this.z + (c * F[0] + s * F[1]) * u - wt[UR + 2];
+      const Cg = [dx * s + dz * c, -dx * c + dz * s, wt[UR + 1] - (this.y + F[2] * u)];
+      for (let i = 0; i < 3; i++) C[i] = Cg[i] * (1 - m) + S[i] * u * m;
+    }
     const p = [0, 0, 0];
-    for (let i = 0; i < 3; i++) { const g = G[i] + (R[i] - G[i]) * r, at = g + (B[i] - g) * back + (O[i] - g) * out; p[i] = (lance ? C[i] + (at - C[i]) * hold : at) * u; }
-    const UR = this.arms.r.u * 3;
+    for (let i = 0; i < 3; i++) { const g = G[i] + (R[i] - G[i]) * r, at = (g + (B[i] - g) * back + (O[i] - g) * out) * u; p[i] = lance ? C[i] + (at - C[i]) * hold : at; }
     // (In a run the fist keeps one height off the ground, so the point doesn't nod with his stride.)
     const fy = wt[UR + 1] - p[2], fistY = lance ? fy + (this.y + 1.03 * u - fy) * r : fy;
     this.reachTo('r', wt[UR] + s * p[0] - c * p[1], fistY, wt[UR + 2] + c * p[0] + s * p[1], [-s * 0.8 - c * 0.45, -0.5, -c * 0.8 + s * 0.45], w * arm);
@@ -1609,6 +1649,18 @@ export class Hero extends Knight {
   // The bow drawn by the arms themselves: the body side-on behind it, the bow arm out straight at the mark (or up, for an
   // arrow meant to fall), the head left looking down the arrow, and the string hand back along the line to the cheek, as far
   // as it's drawn.
+  // Between blows in a fight, where the fight's own stance (one clip for everyone, its off arm held straight out) doesn't suit
+  // what's in the hands. An archer: the bow low before her on a bent arm, not out at arm's length. A swordsman with nothing
+  // in the other hand (a bard): that hand in by his hip, not held out open.
+  poseReady() {
+    const { wt } = this.pose, w = ease(this.readyW) * (1 - Math.min(1, this.bowW * 1.5)), s = Math.sin(this.yaw), c = Math.cos(this.yaw), u = this.rig.height / 1.8;
+    if (w < 0.01) return;
+    const U = this.arms.l.u * 3;
+    // ([forward, to his left, down] from the left shoulder.)
+    const q = this.style === 'bow' ? [0.25, 0.01, 0.31] : [0.1, 0.1, 0.52];
+    this.reachTo('l', wt[U] + (s * q[0] + c * q[1]) * u, wt[U + 1] - q[2] * u, wt[U + 2] + (c * q[0] - s * q[1]) * u, [c * 0.6 - s * 0.4, -0.7, -s * 0.6 - c * 0.4], w);
+  }
+
   poseBow() {
     const { wt } = this.pose, w = this.bowW, s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     this.twistTorso(-0.8 * w);
@@ -3442,6 +3494,8 @@ export class HeroWorld {
       // (A clip held at a point in it, for looking a body over: pose({ slot, clip, at: 0-1 }); clip null lets go.)
       case 'pose': hs.forEach((h) => {
         const c = m.clip && h.bank.clips[m.clip];
+        // (carry: held in a walk or a run as if going along, what's in the hands carried as it is on the road.)
+        h.reviewMove = !!(c && m.carry);
         if (!c) { h.gesture = null; h.stopAction(0.1); return; }
         h.play(m.clip, 0, 'full', 0); h.actT = (m.at ?? 0.5) * c.dur; h.gesture = 'review'; h.gestureT = 1e9;
       }); break;

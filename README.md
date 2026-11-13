@@ -1161,9 +1161,18 @@ on top of whatever the legs are doing:
   plants, drives the point out, and what it's driven into is thrown back down the lance. He used to run on through them.
   The Phalanx Rush is three of these. The light on it is a spark on the point and the air torn behind him: the lance is
   seen.
-- **At ease** he carries the lance upright in his right fist at his side, the board on his back: there's nowhere on a
-  man to put a three-metre lance away, and it used to be jammed under the board. It goes to his back, beside the board,
-  only for what needs both hands or the whole body (sitting, a dance, the ride down the Fall).
+- **At ease** the lance is in his hand, the board on his back: there's nowhere on a man to put a three-metre lance away.
+  Standing, it's grounded: its butt by his right foot, his hand on the shaft at his chest, as a guard stands with a
+  spear. Walking, it's sloped on his right shoulder, his hand low on it before him and its point up behind
+  (`carryAim`, `CARRY`, and the at-ease part of `poseLance`; the lance slides through his fist between the two,
+  `carryBack`). It used to hang upright from a fist at his hip, held by nothing: the arm's at-ease pose was written
+  and never run. It goes to his back, beside the board, only for what needs both hands or the whole body (sitting, a
+  dance, the ride down the Fall).
+- **Between blows** (`poseReady`, `node --test tests/hero-poses.test.mjs`) the fight's one stance for everyone, its off arm
+  held straight out, is mended where it doesn't suit what's in the hands. An archer holds her bow upright before her on
+  a bent arm, not out at arm's length. A bard, a sword in one hand and nothing in the other, keeps the empty hand in by
+  his hip, not held out open. A paladin with a mace and a board keeps the board up before his chest in reach of a foe
+  (short of a block: it turns no blows), where it used to hang at his side.
 - **A dragoon** holds his spear in both hands, the rear one at his hip and the other a forearm's length up the shaft,
   thrusts with both, and sweeps its head across before him. The lead hand never lets go: it slides up the shaft as the
   rear fist draws back and back down it as the thrust goes out (it used to come off the spear, open, for the whole of the

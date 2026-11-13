@@ -61,7 +61,7 @@ for (const cls of CLASS_NAMES) {
       step(9);
       assert.ok(!hero.jump && !hero.charge, `${cls}: ${s.key} left the hero in the air or on the run`);
       assert.ok(Math.abs(hero.bodyFlip) < 1e-6 && Math.abs(hero.bodyRoll) < 1e-6, `${cls}: ${s.key} left the hero turned over`);
-      // (Pointed by nothing but its own hold: a lancer's lance, carried upright at ease, is his hold's.)
+      // (Pointed by nothing but its own hold: a lancer's lance, in his hand at ease, is his hold's.)
       assert.ok(hero.free.every((m) => !m) && (!hero.aim || hero.aim === hero.heldAim), `${cls}: ${s.key} left something out of the hero's hands (free ${hero.free.map((m) => !!m)}, aim ${hero.aim})`);
       assert.ok(!hero.orbiting, `${cls}: ${s.key} left something turning round the hero`);
       assert.equal(w.shots.filter((q) => q.kind === 'x').length, 0, `${cls}: ${s.key} left something in the air`);
