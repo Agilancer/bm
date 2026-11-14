@@ -24,7 +24,7 @@ import { floorAt, homeFloor, inPit } from '../core/interior.js';
 import { FOE, stepFoeWorks } from './foespells.js';
 import { addUndead, corpsesNear, raiseZombie, resetCatacombs, stepCatacombs, stepGraves, stepWoods, Zombie } from './undead.js';
 import { POOL } from '../core/lands.js';
-import { CHURCH_GUARD, churchAt } from '../core/church.js';
+import { CHURCH_GUARD, churchAt, inChurch } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { ATTACKS, Knight, S } from './knight.js';
 import { struck } from './ragdoll.js';
@@ -210,10 +210,15 @@ class Sim {
     const reach = THIRD.side + THIRD.skin, hitSide = w.rayBoxes(ex, ey, ez, rx, 0, rz, reach);
     const side = hitSide >= 0 ? Math.max(0, hitSide - THIRD.skin) / THIRD.side : 1;
     const px = ex + rx * THIRD.side * side, py = ey + THIRD.up, pz = ez + rz * THIRD.side * side;
-    let dist = c.trace(this, px, py, pz, -fx, -fy, -fz, THIRD.dist + THIRD.skin) - THIRD.skin;
-    // (Under a roof the camera keeps low: the rooms' ceilings aren't in the walls it's tested against.)
-    if (fy < 0 && (floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null) && -fy * dist > THIRD.indoors) dist = THIRD.indoors / -fy;
-    snap[H.TP_DIST] = Math.max(THIRD.near, Math.min(THIRD.dist, dist));
+    // (As far back as the wheel can take it (src/ui/view.js), and the drawing thread keeps to what it's asked for. Not under a
+    // roof, nor down below: there it's V's own, as ever, since the ceilings aren't in the walls it's tested against.)
+    const house = floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null;
+    const roofed = house || p.y < -6 || inChurch(p.x, p.y + 1, p.z) || inDungeon(p.x, p.z) || inHall(p.x, p.z);
+    const most = roofed ? THIRD.dist : THIRD.far;
+    let dist = c.trace(this, px, py, pz, -fx, -fy, -fz, most + THIRD.skin) - THIRD.skin;
+    // (Under a roof the camera keeps low too.)
+    if (fy < 0 && house && -fy * dist > THIRD.indoors) dist = THIRD.indoors / -fy;
+    snap[H.TP_DIST] = Math.max(THIRD.near, Math.min(most, dist));
     snap[H.TP_SIDE] = side; snap[H.TP_DROP] = drop;
     this.sight = this.sight || [0, 0, 0];
     this.sight[0] = px; this.sight[1] = py; this.sight[2] = pz;

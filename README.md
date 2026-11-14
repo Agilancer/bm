@@ -111,6 +111,15 @@ You start on the road south of town with a common staff of a random kind (a diff
 back. The controls don't change: you look, move, shoot, cast, guard and ride as before, and the X in the middle of the
 screen is still what you hit. Which view you left it in is kept with the settings.
 
+The **mouse wheel** does it too, with the mouse held by the game (`ViewSwitch.wheel` in `src/ui/view.js`): a notch out of
+first person stands the camera just behind you (`THIRD.close`, 1.5 m), and each notch out takes it 1.22 times further
+back, up to 12 m (`THIRD.far`, three times V's 4 m). Each notch in brings it nearer, and one more once it's as near as it
+goes is first person again (only once the wheel's been still a moment with it there, so a spin in stops at your back).
+How far back you left it is kept with the settings (`zoom`) and V goes back to it; after the wheel's taken you into
+first person, V's own 4 m. Coming in it glides; walls and the ground still bring it in at once. Under a roof, in the
+church, a delve, the test hall or anywhere down below it goes no further back than 4 m, since the ceilings aren't in
+what the camera's tested against. **Shift** and the wheel turn the spell bar.
+
 - **Not in Lisandra's cave.** The switch isn't shown until you're out and the walk down has begun (`thirdAllowed` in
   `src/core/third.js`), and `V` only says so. Your staff and spells wait for the same moment (`Sim.unarmed` in
   `src/sim/sim.worker.js`): from giving your name until the cave has fallen in, a click or a cast does nothing. The waking
@@ -2759,7 +2768,7 @@ from Bellmourn2, and the two-hander's original swing keys from Bellmourn (kept f
 
 ## Spells
 
-Sixty spells in six schools, on hands of their own. **F** or the **middle mouse button** casts; hold it to gather a Firebolt or keep up a held spell. The **number keys** or the **wheel** pick from the bar, **B** opens the spellbook. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
+Sixty spells in six schools, on hands of their own. **F** or the **middle mouse button** casts; hold it to gather a Firebolt or keep up a held spell. The **number keys** or **Shift** and the **wheel** pick from the bar, **B** opens the spellbook. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
 
 The bar has six numbered slots. The spellbook (**B**) is where you learn spells and put them on the bar. With a shield up your right hand does the casting: the sword goes away, the hand comes out and casts, and the sword comes back.
 
