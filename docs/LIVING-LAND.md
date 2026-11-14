@@ -71,8 +71,12 @@ serves this worktree; open `/?auto&noopening&timer`.
   59 frames a second. So no cost that shows (the newer build has other changes in it; it isn't a like-for-like). The
   land is 739,000 corners on a PC and 313,000 on a phone, which leaves the outposts' fences, tents and stones out
   (`buildSites(true, true)`; `tests/sites-lean.test.mjs` holds a phone's under 600,000).
-- **Not seen by anyone:** a coven, a spiders' hollow, a roost, a den and a drake's bed up close; the map's marks; a
-  ritual's circle; a colossus on screen; the rewards landing; a raid fought through on screen; a real phone.
+- **Auto-play watched in the browser, nothing able to hurt it:** a tear found, walked into and fought to its bonus wave
+  and its lord; a raid on Thornwick held from the square, the villagers' words over their heads; a bounty walked to,
+  fought and paid; a tear above its level left alone; and after each, back to what it was set to.
+- **Seen since:** a spiders' hollow in the snow, a storm roost with its queen in the air, a whelps' scorch.
+- **Not seen by anyone:** a coven and a den up close; the map's marks; a ritual's circle; a colossus on screen; a real
+  phone.
   **Nobody has played it by hand.**
 - **One test fails on a fresh Windows checkout and did before this:** `tests/touch-hud.test.mjs` (spec.json), from line
   endings.
@@ -92,14 +96,17 @@ serves this worktree; open `/?auto&noopening&timer`.
 1. **Play it and tune it.** Every number is a first guess: how often a meeting comes (`MEET.every`), how hard a tear's
    waves hit (`tough` in `nextStage`), what things pay (`src/ui/wilds.js`), how long a battle lasts (`rivalTake`), how
    soon a town is raided (`RAID`). A duel takes about 80 seconds to end by itself.
-2. **Look at the outpost kinds nobody has** (`bm.wild(3, n)`) and mend what's ugly in `src/core/wild-dress.js`. Things
-   on slopes are the likeliest to look wrong; the barrow's mound reads low.
-3. **The posted villagers don't react to a raid.** They stand at their posts through it (`posted` in
-   `src/folk/brain.js` never runs). Raiders can't hurt them. A word from them when it starts and ends would be cheap.
-4. **Auto-play** fights what comes at it but doesn't seek tears, outposts or bounties out. Its check passes.
-5. **Bounties aren't quests.** They live in `src/ui/wilds.js`, not the quest log, and have no trail on the ground or
+2. **Auto-play has only been watched with nothing able to hurt it.** Whether it lives through a tear at its own level
+   isn't known. It walks into one at a level under the tear's (`WILD_UNDER` in `src/ui/autobrain.js`); raise that if
+   it dies. Hiring a party outranks everything the land calls it to, so from level 8 or so it walks home to hire
+   first. It doesn't go looking for tears or outposts across the land: it takes what's in sight, and the Lairs grind
+   takes it round the outposts it's up to.
+3. **Look at a coven, a den and the map's marks**, the last things nobody has (`bm.wild(3, n)`), and mend what's ugly
+   in `src/core/wild-dress.js`. Things on slopes are the likeliest to look wrong; the barrow's mound reads low; a
+   roost's crags are hard to pick out.
+4. **Bounties aren't quests.** They live in `src/ui/wilds.js`, not the quest log, and have no trail on the ground or
    mark on the map: the tracker's distance and direction are all there is.
-6. **A phone's land** has the towers and crags and nothing else at an outpost: its monsters stand on bare ground with a
+5. **A phone's land** has the towers and crags and nothing else at an outpost: its monsters stand on bare ground with a
    fire. If a real phone has memory to spare, `K.lean` in `src/core/wild-dress.js` is where to give some back.
-7. **Sound.** A tear, a raid and a meeting use sounds the game has (a roar); none has its own. The music's `stinger`
-   (`src/main.js`) would suit a sealed tear and a held town.
+6. **Sound.** The music's stings are the only sound that's the land's own; a tear has no hum and a meeting no call. The
+   villagers' raid lines have no voice.

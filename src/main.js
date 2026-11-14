@@ -545,7 +545,10 @@ async function boot(plan, poolSize) {
   arm();
   // The living land: what's happening out there, told and paid for (src/ui/wilds.js; the sim's side is src/sim/wilds.js).
   game.wilds = new WildsUI({ touch: input.touch, xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t),
-    pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; } });
+    pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; },
+    // (A sting of the music's for what's begun and what's won; a word over a posted villager's head: src/ui/folk.js event.)
+    stinger: (k) => game.music?.stinger(k),
+    folkSay: (id, text) => { const t = game.townUI, i = t?.people.findIndex((q) => q.id === id) ?? -1; if (i >= 0) t.event({ type: 'say', i, text, dur: 6 }); } });
   hud.wildName = (model) => renderer.tripo?.wildName(model);
   addPart('wilds', { save: () => game.wilds.save(), load: (d) => game.wilds.load(d) });
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {

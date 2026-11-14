@@ -16,6 +16,24 @@ const BOARDS = RAID_TOWNS.map((k) => ({ name: SITES[k].name, x: SITES[k].x, z: S
 const WAYS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
 // (+x is east, +z is south: src/core/lands.js.)
 const wayTo = (dx, dz) => WAYS[Math.round(Math.atan2(dx, -dz) / (Math.PI / 4) + 8) % 8];
+// What the people posted in a town say over their heads when it's raided (POSTED in src/folk/people.js, by id): as it
+// begins, at the second band, and when it's held. They keep their posts through it; these are all they do. Nobody's
+// voice has them, and neither letter is named in any.
+const RAID_WORDS = {
+  thornwick: {
+    dorcas: ['Raiders on the road! Not my windows, not again!', 'More of them? Mind the barrels!', 'Is that the last of them? Then the first one is on the house.'],
+    osric: ['To the gate! They are through the hedge!', 'The east side now! Watch the east side!', 'Held. I will be mending that hedge till midsummer.'],
+    wymond: ['Stand behind me, child. Well. Behind somebody.', 'Again? Have they no homes to go to?', 'Thank you. I shall say so where it counts.'],
+  },
+  cinderford: {
+    hasket: ['Watch, to me! They are coming down the road!', 'Second band! Hold the line where you stand!', 'Held. Count heads, then count them again.'],
+    colm: ['Not the clamps! A month of burning in those!', 'More? I have only the one shovel.', 'Still standing. So is the charcoal, thank you.'],
+    ysolt: ['I ran from this once already.', 'They keep coming. They always keep coming.', 'It held. I did not think it would hold.'],
+  },
+  frostwatch: {
+    garrick: ['To the wall! Something is on the road!', 'Another band, from the other side. To the wall!', 'The fort stands. It has stood through worse, but not by much.'],
+  },
+};
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 export class WildsUI {
@@ -34,6 +52,8 @@ export class WildsUI {
     (stack || document.getElementById('hud') || document.body).append(this.track, this.banner);
     this.state = null;      // { title, sub, until (ms, or 0), of (seconds the bar is out of) }
     this.tearNear = null;
+    this.tearAt = null;     // { kind, x, z, fight }: the open tear in sight, for whoever asks (calls)
+    this.raidOn = null;     // { n }: the town being raided
     setInterval(() => this.tick(), 250);
   }
 
@@ -53,6 +73,22 @@ export class WildsUI {
     this.state = s;
     this.track.classList.toggle('on', !!s);
     if (s) { this.track.children[0].textContent = s.title; this.tick(); }
+  }
+
+  // What the land is calling anyone at p ([x, z]) to, most pressing first (WILD_CALLS in src/core/wilds.js): a town being
+  // raided, an open tear in sight (fight: it's begun), a small thing to find close by, the bounty in hand. Each with where
+  // it is, how hard (lvl) and what it's called. Auto-play asks (src/ui/autobrain.js wildJob).
+  calls(p) {
+    const out = [];
+    if (this.raidOn) { const T = SITES[RAID_TOWNS[this.raidOn.n]]; out.push({ why: 'raid', x: T.x, z: T.z, lvl: level(T.x, T.z), name: T.name }); }
+    const t = this.tearAt;
+    if (t) out.push({ why: 'tear', x: t.x, z: t.z, lvl: level(t.x, t.z), fight: t.fight, name: TEARS_KINDS[t.kind].name });
+    let best = -1, bd = 60;
+    for (let i = 0; i < FINDS.length; i++) { if (this.taken.has(i)) continue; const d = Math.hypot(FINDS[i][0] - p[0], FINDS[i][1] - p[1]); if (d < bd) { bd = d; best = i; } }
+    if (best >= 0) out.push({ why: 'find', x: FINDS[best][0], z: FINDS[best][1], lvl: 0, name: FOUND[FIND_KINDS[FINDS[best][2]]] || 'something' });
+    const O = this.bounty && OUTPOSTS.find((o) => o.key === this.bounty.key);
+    if (O) out.push({ why: 'bounty', x: O.x, z: O.z, lvl: FACTIONS[O.faction].lvl, name: O.name, key: O.key });
+    return out;
   }
 
   // A bounty: come into a town with none in hand and its people name a chief they want dead, at an outpost some way off.
@@ -97,24 +133,26 @@ export class WildsUI {
     switch (code | 0) {
       case WILD.TEAR_NEAR: {
         const K = TEARS_KINDS[a | 0];
-        this.tearNear = K;
+        this.tearNear = K; this.tearAt = { kind: a | 0, x: b, z: c, fight: false };
         this.say(K.name, 'The world is torn open near here. Walk into it to face what is behind it.', 5);
         this.show({ title: K.name, sub: 'Walk into it' });
         break;
       }
-      case WILD.TEAR_GONE: this.tearNear = null; if (this.state && !this.state.fight) this.show(null); break;
+      case WILD.TEAR_GONE: this.tearNear = null; this.tearAt = null; if (this.state && !this.state.fight) this.show(null); break;
       case WILD.TEAR_STAGE: {
         const K = TEARS_KINDS[a | 0], stage = b | 0;
+        if (this.tearAt) this.tearAt.fight = true;
         const sub = stage === 1 ? 'The first through' : stage === 2 ? 'The second wave, and who leads it' : stage === 3 ? 'Bonus: kill them before the clock runs out' : e ? 'A COLOSSUS comes through' : 'Its lord comes through';
         this.show({ title: K.name, sub, fight: true, done: 0, of: c | 0, secs: d, until: d ? performance.now() + d * 1000 : 0, base: sub });
         if (stage === 3) this.say('BONUS WAVE', `Kill them all in ${TEAR.bonusFor} seconds.`, 3);
-        else if (stage === 4) this.say(e ? 'A COLOSSUS' : 'ITS LORD', e ? 'Three tears sealed, and something vast has noticed.' : 'What tore the world open comes through itself.', 3.5);
+        else if (stage === 4) { if (e) o.stinger?.('fell'); this.say(e ? 'A COLOSSUS' : 'ITS LORD', e ? 'Three tears sealed, and something vast has noticed.' : 'What tore the world open comes through itself.', 3.5); }
         break;
       }
       case WILD.TEAR_COUNT: if (this.state?.fight) { this.state.done = a | 0; this.state.of = b | 0; this.state.sub = `${this.state.base} · ${a | 0} of ${b | 0}`; this.tick(); } break;
       case WILD.TEAR_SEALED: {
         const K = TEARS_KINDS[a | 0], lvl = e | 0, bonus = f | 0;
-        this.counts.tears++;
+        this.counts.tears++; this.tearAt = null; this.tearNear = null;
+        o.stinger?.('triumph');
         const xp = Math.round((250 + lvl * 45) * (bonus ? 1.5 : 1));
         o.xp(xp);
         o.drop(b, c, d, lvl >= 14 ? 21 : 20);
@@ -123,11 +161,12 @@ export class WildsUI {
         this.show(null);
         break;
       }
-      case WILD.TEAR_LOST: this.say('THE TEAR HOLDS', 'You left it open. It will be there when you come back.', 4); this.show(null); break;
+      case WILD.TEAR_LOST: this.tearAt = null; this.tearNear = null; this.say('THE TEAR HOLDS', 'You left it open. It will be there when you come back.', 4); this.show(null); break;
       case WILD.FOUND: {
         const O = OUTPOSTS[a | 0];
         if (!O || this.found.has(O.key)) break;
         this.found.add(O.key);
+        o.stinger?.('found');
         const xp = 20 + FACTIONS[O.faction].lvl * 3;
         o.xp(xp);
         this.say(O.name.replace(/^(an?|the) /, '').toUpperCase(), `Found. It is held by ${SIDES[FACTIONS[O.faction].side] || 'something'}.`, 4);
@@ -144,6 +183,7 @@ export class WildsUI {
           const pay = xp * 3;
           this.counts.bounties++; this.lastBounty = O.key;
           o.xp(pay); o.drop(b, c, d, 20);
+          o.stinger?.('triumph');
           this.say('BOUNTY PAID', `${this.bounty.town} pays what it promised. ${xp + pay} experience in all.`, 6);
           this.bounty = null; this.bountyNext = performance.now() + 45000;
           break;
@@ -192,6 +232,9 @@ export class WildsUI {
       case WILD.RAID: {
         const T = SITES[RAID_TOWNS[a | 0]], A = FACTIONS[FACTION_KEYS[b | 0]], who = SIDES[A?.side] || 'Something', wave = c | 0;
         const title = `${T.name.toUpperCase()} IS RAIDED`;
+        this.raidOn = { n: a | 0 };
+        if (wave === 1) o.stinger?.('fell');
+        for (const [id, lines] of Object.entries(RAID_WORDS[RAID_TOWNS[a | 0]] || {})) o.folkSay?.(id, lines[wave - 1]);
         const sub = wave === 1 ? `${who.charAt(0).toUpperCase() + who.slice(1)} are coming down on it` : 'A second band, from another side';
         if (wave === 1) this.say(title, `${sub}.${(e | 0) > 0 ? ` ${e | 0} of the other Tessariels have come out of its seal to hold it with you.` : ''}`, 6);
         else this.say('A SECOND BAND', 'They are not done with it. From another side.', 3.5);
@@ -201,6 +244,8 @@ export class WildsUI {
       case WILD.RAID_COUNT: if (this.state?.fight) { this.state.done = a | 0; this.state.of = b | 0; this.state.sub = `${this.state.base} · ${a | 0} of ${b | 0}`; this.tick(); } break;
       case WILD.RAID_DONE: {
         const T = SITES[RAID_TOWNS[a | 0]], lvl = e | 0, won = f | 0;
+        this.raidOn = null;
+        if (won) { for (const [id, lines] of Object.entries(RAID_WORDS[RAID_TOWNS[a | 0]] || {})) o.folkSay?.(id, lines[2]); o.stinger?.('triumph'); }
         if (won === 1) {
           this.counts.raids++;
           const xp = 200 + lvl * 35;
