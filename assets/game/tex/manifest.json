@@ -287,6 +287,13 @@
   "pinefloor_1",
   "fen_1",
   "ash_1",
-  "rust_1"
+  "rust_1",
+  "road_flag",
+  "road_sett",
+  "road_gravel",
+  "road_stones",
+  "road_dirt",
+  "road_ash",
+  "road_plank"
  ]
 }

@@ -8,6 +8,7 @@ import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
+import { roadSegments } from '../core/roads.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { DELVES, PORTAL_SPOTS, braziers, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
@@ -401,10 +402,13 @@ export class Renderer {
     this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.farTint = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.farKind = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    // The roads close round you, finely (src/gfx/rocks.js followRoads): where it lies (x, z), one over its size, and whether it's laid.
-    this.nearRoad = device.createTexture({ size: [512, 512], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    this.nearRoadU = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-    device.queue.writeBuffer(this.nearRoadU, 0, new Float32Array([0, 0, 0, 0]));
+    // Every road and path in the land, for the ground's shader to draw sharp at any distance: the stretches, and which lie in each
+    // 64 m square (src/core/roads.js roadSegments).
+    {
+      const rs = roadSegments(this.openingEnabled);
+      this.roadIdx = makeBuffer(device, rs.idx, GPUBufferUsage.STORAGE);
+      this.roadSeg = makeBuffer(device, rs.seg.length ? rs.seg : new Float32Array(8), GPUBufferUsage.STORAGE);
+    }
     for (const row of farRows) {
       const rowsN = row.data.length / 4 / this.farSize;
       device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
@@ -547,7 +551,8 @@ export class Renderer {
     }
     // (And the Test Dungeon's panels of light, white, steady and wide: src/core/testhall.js.)
     const hall = hallLights().map(([x, y, z]) => ({ p: [x, y - 0.5, z], c: [1, 0.98, 0.95], r: 15, i: 2.4, flicker: 0 }));
-    this.lights = village.lights.concat(this.interior.data.lights, warrens, hall);
+    // (And the lanterns along the roads out in the land, and the odd waystop fire left burning: src/core/roadside.js.)
+    this.lights = village.lights.concat(this.interior.data.lights, warrens, hall, buildSites().lamps);
     this.homeLights = new HomeLights(device, this.interior, this.interior.data.lights);
     tick();
     if (openingStage) this.openingStage = (await openingStage)();
@@ -617,8 +622,8 @@ export class Renderer {
       { binding: 2, visibility: VF, texture: { sampleType: 'float' } },
       { binding: 3, visibility: VF, texture: { sampleType: 'float' } },
       { binding: 4, visibility: VF, texture: { sampleType: 'float' } },
-      { binding: 5, visibility: VF, texture: { sampleType: 'float' } },
-      { binding: 6, visibility: VF, buffer: { type: 'uniform' } },
+      { binding: 5, visibility: VF, buffer: { type: 'read-only-storage' } },
+      { binding: 6, visibility: VF, buffer: { type: 'read-only-storage' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -655,8 +660,8 @@ export class Renderer {
       { binding: 2, resource: this.farMap.createView() },
       { binding: 3, resource: this.farTint.createView() },
       { binding: 4, resource: this.farKind.createView() },
-      { binding: 5, resource: this.nearRoad.createView() },
-      { binding: 6, resource: { buffer: this.nearRoadU } },
+      { binding: 5, resource: { buffer: this.roadIdx } },
+      { binding: 6, resource: { buffer: this.roadSeg } },
     ] });
   }
 

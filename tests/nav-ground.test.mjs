@@ -39,6 +39,8 @@ test('open ground among the pines is open, and a trunk is solid', () => {
       const near = trunksNear(x, z);
       const gap = Math.min(...near.map(([tx, tz, r, top]) => (y <= top ? Math.hypot(x - tx, z - tz) - r : Infinity)), Infinity);
       if (world.inside(x, z, 1.5) && gap > 1.5) continue;   // (a wall or a place's box: not this test's)
+      // (Nor a post or a stone by a road out of town: src/core/roadside.js.)
+      if (gap > 1.5 && (world.sitesNear(x, z) || []).some((c) => Math.abs(x - c.x) < c.hx + 1.5 && Math.abs(z - c.z) < c.hz + 1.5)) continue;
       if (gap > 0.6) { assert.equal(nav.solidAt(x, z, 0.45, y), false, `open ground at ${x}, ${z} (${gap.toFixed(1)} m from the nearest trunk) read as solid`); open++; }
     }
     for (const [tx, tz, r, top] of trunksNear(sx, sz).slice(0, 12)) {

@@ -210,7 +210,8 @@ function buildFarRows({ size, half, rowStart, rowEnd }) {
       if (Math.abs(x) > 280 || Math.abs(z) > 280) {
         const wob = (fbm(x * 0.13, z * 0.13, 2) - 0.5) * 3;
         const rd = routeDist(x, z);
-        if (rd.road) dirt = Math.max(dirt, 1 - sstep(rd.road.w * 0.6, rd.road.w * 1.25, rd.d + wob));
+        // (Only a worn halo here: the ways themselves are drawn sharp by the ground's shader, src/core/roads.js.)
+        if (rd.road) dirt = Math.max(dirt, 0.42 * (1 - sstep(rd.road.w * 0.6, rd.road.w * 1.6 + 3, rd.d + wob)));
         for (const key of SITE_KEYS) {
           const s = SITES[key];
           if (!s.pad) continue;
