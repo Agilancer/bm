@@ -5,7 +5,7 @@ import { ROUTES, SITES } from '../../src/core/lands.js';
 import { SEALS, buildSites } from '../../src/core/sites.js';
 import { terrainHeight } from '../../src/core/terrain.js';
 
-const B = buildSites();
+const B = buildSites(true);
 // Is (x, z) within r of collider c's box?
 const hits = (c, x, z, r) => {
   const dx = x - c.x, dz = z - c.z, cs = Math.cos(c.yaw || 0), sn = Math.sin(c.yaw || 0);

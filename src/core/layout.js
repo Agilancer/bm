@@ -68,7 +68,9 @@ export const H = {
   // The road's fight in the opening: how many of its dead are still to be put down (0: no fight on). src/sim/opening.js.
   OPENING_FIGHT: 179,
   // Your staff, skull and shield put away, out of a fight: 0 (in hand) to 1 (on your back and hip). Sim.stepStow.
-  STOW: 180, SIZE: 181,
+  STOW: 180,
+  // How many are awake and at you, near (STOW.near): for the music's fights (src/music.js). Sim.stepStow.
+  THREAT: 181, SIZE: 182,
 };
 
 // Per-character block
@@ -151,6 +153,8 @@ export const EV = {
   // Something one of the other Tessariels' moves does that only the render thread can (src/sim/heroskills.js HFX): (code,
   // x, y, z, a, b, c). Blood thrown from a cut, a lute's string, sparks off steel.
   HERO_FX: 56,
+  // The living land (src/sim/wilds.js): code (WILD in src/core/wilds.js), and what goes with it.
+  WILD: 57,
 };
 
 // What can be in the hands: an index is what crosses between the threads, and 0 is nothing. hands says which rig swings it: 3 is the staff's, one arm.

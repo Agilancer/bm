@@ -7,10 +7,12 @@ import { OpeningHUD } from './ui/opening.js';
 import { ChatLog } from './ui/chatlog.js';
 import { QuestTrail } from './ui/trail.js';
 import { Audio } from './audio.js';
+import { Music } from './music.js';
+import { inTown } from './core/town.js';
 import { C, C_BLEEDS, C_SIZE, CHARS_START, CTRL, EV, EV_CAPACITY, EV_FLOATS, H, INPUT, MAX_CHARS, SNAP_FLOATS, STATE_NAMES, TACTICS, TOTAL_BYTES, WEAPONS, mapShared } from './core/layout.js';
 import { clamp, damp, lerp, smoothstep, wrapAngle } from './core/math.js';
 import { FileWatch, getFile, watchFiles } from './core/files.js';
-import { initGPU, isMobileDevice } from './gfx/gpu.js';
+import { initGPU, isMobileDevice, lighten } from './gfx/gpu.js';
 import { Governor } from './gfx/governor.js';
 import { STEPS as DESK_STEPS, deskStep } from './gfx/deskscale.js';
 import { RenderDiagnostics } from './gfx/render-diagnostics.js';
@@ -38,6 +40,7 @@ import { TIER_LEVEL, TIER_OF } from './sim/skills.js';
 import { Inventory } from './ui/inventory.js';
 import { SpellBar } from './ui/spellbar.js';
 import { WorldMap } from './ui/map.js';
+import { WildsUI } from './ui/wilds.js';
 import { SpellSound } from './spellsound.js';
 import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
@@ -53,11 +56,14 @@ import { Arrange } from './ui/arrange.js';
 import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
+import { beginRun, deathWords, noteRun } from './core/lastrun.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
+// How the last run ended, and how light to load (src/core/lastrun.js). (Tests under ?auto are killed, not left: not judged.)
+const RUN = AUTO && !params.has('light') ? { died: null, light: 0 } : beginRun(params);
 const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
 // Every new game begins with the witch in the cave.
 const OPENING_ENABLED = !params.has('noopening');   // (?noopening starts in the town, for tests)
@@ -324,6 +330,9 @@ async function boot(plan, poolSize) {
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
   try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
+  // (A phone whose browser closed the game last time loads lighter: src/core/lastrun.js.)
+  if (gpu.mobile && RUN.light) gpu.tier = lighten(gpu.tier, RUN.light);
+  noteRun({ stage: 'loading' });
   // A lost GPU: a phone or tablet takes its graphics back (its memory, a GPU that hung, the app put away), and Safari calls
   // that 'destroyed' too, so it's any loss (the game never destroys its own). Where you are is kept, and the page comes back
   // to the menu with Continue offered (gpuLostOffer, below). Not if it went the same way within the last minute: then it
@@ -339,6 +348,7 @@ async function boot(plan, poolSize) {
       sessionStorage.setItem(GPU_LOST_AT, String(Date.now())); sessionStorage.setItem(GPU_LOST_OFFER, '1'); sessionStorage.setItem('velscour.skipSplash', '1');
       sessionStorage.setItem(GPU_LOST_NOTE, gpuNote?.() || '');
     } catch { /* no storage */ }
+    noteRun({ ended: 'gpu', gpu: gpuNote?.() || '' });
     failOnTitle('The graphics reset. Keeping your game, and starting again...');
     await Promise.race([keepForReset?.(), new Promise((r) => setTimeout(r, 3000))]).catch(() => {});
     leaving = true;
@@ -369,6 +379,8 @@ async function boot(plan, poolSize) {
   town.onReady = (m) => renderer.folk.setBeds(m.beds);
   if (town.buffer) simWorker.postMessage({ type: 'folk', buffer: town.buffer });
   const audio = new Audio(BASE, title.ctx, title.out, settings.ambience);
+  // The music of where you are, and a fight's (src/music.js), down the title's music line: the Music setting is its volume.
+  const music = new Music(BASE, title.ctx, title.musicBus, () => settings.music);
   let latestSnap = null;
   // Saves and loads are asked of the simulation thread, and answered by id.
   const calls = new Map();
@@ -406,7 +418,10 @@ async function boot(plan, poolSize) {
   // The other Tessariels this session (src/core/heroes.js): who they are is kept, so the same people are about next time.
   // How many: by the tier, the setting, or ?heroes=N for tests.
   const heroCount = params.has('heroes') ? Number(params.get('heroes')) : settings.heroes === 'off' ? 0
-    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop']);
+    : Math.min(settings.heroes === 'few' ? 8 : 99, HERO_SLOTS[gpu.tier.lean ? 'lean' : 'desktop'],
+      // (Each is a body, its pictures and its rig, some 10 MB: a phone that's been killed once has four, twice two. Not
+      // none: the quartermasters come with the cast, and they're how a party is hired.)
+      gpu.mobile && RUN.light ? (RUN.light > 1 ? 2 : 4) : 99);
   let cast = [];
   if (heroCount > 0) {
     try {
@@ -415,7 +430,7 @@ async function boot(plan, poolSize) {
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
       try { localStorage.setItem('bm.heroes', JSON.stringify({ ...(kept || {}), seed })); } catch { /* full */ }
-      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit);
+      cast = withBrokers(makeCast(roster, kit, names, Math.min(heroCount, 16), seed, params.get('bodies')?.split(',') || null), roster, kit, !!gpu.tier.lean);
     } catch (e) { console.warn('heroes', e); cast = []; }
   }
   renderer.heroCast = cast;
@@ -513,7 +528,11 @@ async function boot(plan, poolSize) {
   game.gainXp = (kind, what = 0) => {
     renderer.skullEyes?.feel('glee', 3);
     const g = what - 1 >= TRIPO_KIND ? GROUPS[GROUP_KEYS[what - 1 - TRIPO_KIND]] : null;
-    if (!stepXp(pack, Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0))) { showLevel(); return; }
+    game.addXp(Math.max(XP_OF[kind | 0] ?? 10, g ? Math.round(g.hp * 0.35) : 0));
+  };
+  // So much experience, for whatever earned it (a kill above; a tear sealed, an outpost cleared: src/ui/wilds.js).
+  game.addXp = (amount) => {
+    if (!stepXp(pack, amount)) { showLevel(); return; }
     arm();
     game.party?.levelled();
     // A new level fills you up, as it should.
@@ -524,6 +543,11 @@ async function boot(plan, poolSize) {
     hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook${input.touch ? '' : ' (B)'}.`, 5);
   };
   arm();
+  // The living land: what's happening out there, told and paid for (src/ui/wilds.js; the sim's side is src/sim/wilds.js).
+  game.wilds = new WildsUI({ touch: input.touch, xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t),
+    pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; } });
+  hud.wildName = (model) => renderer.tripo?.wildName(model);
+  addPart('wilds', { save: () => game.wilds.save(), load: (d) => game.wilds.load(d) });
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
     change: arm,
     drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); },
@@ -569,6 +593,7 @@ async function boot(plan, poolSize) {
     town, renderer, pack, input, hud, inventory, spellbar: null,
     act: {
       sound: (k) => audio.play(k, null, 0, 0, 0.7, 1, false),
+      triumph: () => music.stinger('triumph'),
       // What Lisandra says to you, into the chat log (src/ui/folk.js speak).
       log: (who, text) => chatLog.line('her', who, text),
       heal: (n) => { shared.input[INPUT.HEAL] += n; },
@@ -600,12 +625,14 @@ async function boot(plan, poolSize) {
     },
   });
   game.townUI = townUI;
+  game.music = music;
   // The gold trail on the ground to the quest you follow (or, in the opening, down the road after Lisandra).
   game.questTrail = new QuestTrail({ renderer, townUI, town });
   addPart('folk', { save: () => townUI.save(), load: (d) => townUI.load(d) });
   // Out past the town: the seals, the charms, the countries' sounds, and Velscour's Skull (src/ui/lands.js).
   const lands = new Lands({
     shared, input, hud, audio, pack, worldMap,
+    found: () => music.stinger('found'),
     cmd: (code, a = 0, b = 0, c = 0) => { shared.input[INPUT.ASPECT] = code; shared.input[INPUT.CMD_A] = a; shared.input[INPUT.CMD_B] = b; shared.input[INPUT.CMD_C] = c; shared.input[INPUT.CMD] += 1; },
     snap: () => game.currentSnap(),
     hour: () => renderer.hour,
@@ -682,6 +709,7 @@ async function boot(plan, poolSize) {
     if (!input.touch && !AUTO) input.lock();
   }, { audio, renderer, log: chatLog, onSkip: () => simWorker.postMessage({ type: 'openingSkip' }) }) : null;
   const enter = async (fresh = true) => {
+    noteRun({ stage: 'playing' });
     title.hide();
     game.idle = false;
     state.paused = false;
@@ -695,6 +723,7 @@ async function boot(plan, poolSize) {
     input.enabled = true;
     document.body.classList.add('playing');
     audio.start();
+    music.unlock(); music.play();
     if (!openingHUD || (!fresh && openingHUD.name)) input.lock();
     if (input.touch && document.documentElement.requestFullscreen) {
       try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); await screen.orientation?.lock?.('landscape'); } catch { /* optional on this device */ }
@@ -706,7 +735,7 @@ async function boot(plan, poolSize) {
 
   // What a save holds, part by part (saves.js): where you stand and which way you face, the time played, and the pack and
   // what's on the body. Quests will be a part of their own. What's lying on the ground isn't kept: a load starts the world fresh.
-  let played = 0, playT = 0;
+  let played = 0, playT = 0, runT = 0, noteT = 0;   // (runT: played this run of the page; noteT: since the run's note was last written)
   addPart('player', {
     save: () => {
       const s = game.currentSnap();
@@ -766,8 +795,14 @@ async function boot(plan, poolSize) {
       if (townUI.quests.wantsWarden(renderer.hour) && townUI.wardenAsked !== night) { townUI.wardenAsked = night; simWorker.postMessage({ type: 'warden' }); }
     }
     if (!input.enabled || state.paused) return;
-    played += dt; playT += dt;
+    played += dt; playT += dt; runT += dt; noteT += dt;
     if (playT > AUTOSAVE_EVERY) { playT = 0; autosave(); }
+    // The run's note (src/core/lastrun.js): how long it's been played and where you stand, for the start after a death.
+    if (noteT > 8) {
+      noteT = 0;
+      const s = game.currentSnap();
+      noteRun({ stage: 'playing', mins: runT / 60, where: s ? `at (${Math.round(s[H.PX])}, ${Math.round(s[H.PZ])})` : '', gpu: gpuNote?.() || '' });
+    }
   };
   const loadInto = async (data) => {
     leaveTest();
@@ -781,6 +816,20 @@ async function boot(plan, poolSize) {
   const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
   // Back after the GPU was lost (above): Continue, offered once, with a word on why. (A tap, which also lets the sound back
   // on in a browser that wants one first.)
+  // Back after the browser closed the game (src/core/lastrun.js): said, with Continue if there's a game kept.
+  const diedOffer = async () => {
+    if (!RUN.died || AUTO) return;
+    console.warn('the last run was ended by the browser', RUN.died);
+    await new Promise((r) => setTimeout(r, 700));
+    const kept = !!saves.newest();
+    const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
+      + `${gpu.mobile && RUN.light ? ` This time the game is using less: ${RUN.light > 1 ? 'only two' : 'fewer'} of the other heroes are about, and bodies are painted smaller.` : ''}`
+      + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
+    if (await title.confirm({ title: 'The game was closed', text, yes: kept ? 'Continue' : 'Back', no: kept ? 'Main Menu' : false }) && kept) {
+      const d = saves.newest();
+      if (d) startFrom(d);
+    }
+  };
   const gpuLostOffer = async () => {
     let ask = false, note = '';
     try { ask = sessionStorage.getItem(GPU_LOST_OFFER) === '1'; note = sessionStorage.getItem(GPU_LOST_NOTE) || ''; sessionStorage.removeItem(GPU_LOST_OFFER); } catch { /* no storage */ }
@@ -808,6 +857,8 @@ async function boot(plan, poolSize) {
     game.idle = true;
     audio.setAmbience(0);
     audio.surf(0, false);
+    music.stop();
+    noteRun({ stage: 'title' });
     title.toMenu();
   };
   title.onMenu = async (a) => {
@@ -1053,8 +1104,10 @@ async function boot(plan, poolSize) {
   files.last = '';
   setProgress(1, `Ready in ${(loadMs / 1000).toFixed(1)} s.`, true);
   title.ready(() => ({ continue: !!saves.newest(), load: saves.any() }));
+  noteRun({ stage: AUTO ? 'playing' : 'title' });
   gpuLostOffer();
-  if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
+  diedOffer();
+  if (AUTO) { $('gate').classList.add('gone'); $('hud').style.display = 'block'; input.enabled = true; audio.start(); music.play(); if (input.touch) { $('touch').style.display = 'block'; shared.input[INPUT.TOUCH] = 1; } }
 }
 
 // ---- HUD --------------------------------------------------------------------------------------------------------------
@@ -1144,7 +1197,8 @@ class Hud {
     }
     const hpf = clamp(snap[co + C.HP] / snap[co + C.MAX_HP], 0, 1);
     $('foe').style.opacity = near < BOSS_FAR && !this.dungeonBoss?.() ? 1 : 0;
-    const foeName = FOE_NAMES[snap[co + C.KIND]] || '';
+    // (One of the land's new kinds says its own name: src/core/wilds.js.)
+    const foeName = this.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || '';
     if (foeName !== this.foeNameShown) { this.foeNameShown = foeName; $('foeName').textContent = foeName; }
     this.setBar(this.foeHp, hpf);
     this.setBar(this.foeArm, clamp(snap[co + C.ARMOR], 0, 1));
@@ -1426,6 +1480,8 @@ class GameView {
       this.drawOpening?.(snap, c);
       this.townUI?.frame(dt, c, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw, !!this.shared.input[INPUT.PAUSE] || !!this.idle, snap);
       this.lands?.frame(snap);
+      // (Nothing of the music's begins in the opening, which has its own sound, till you're on the road with her.)
+      this.music?.frame(dt, snap, !!this.shared.input[INPUT.PAUSE] || !!this.idle, snap[H.OPENING] > 0 && snap[H.OPENING] < OPENING.ESCORT);
       this.audio.listener(c.x, c.y, c.z, c.fx, c.fy, c.fz, c.ux, c.uy, c.uz);
       if (!this.idle) this.govern(dt);
       const r = this.renderer, hs = this.hudStats;
@@ -1685,7 +1741,8 @@ class GameView {
       case EV.HERO: this.heroTalk?.onEvent(a, b, c, d, e, f); break;
       case EV.HERO_FX: this.heroFx(a | 0, b, c, d, e, f, g); break;
       // (A boss down is told to the quests too: src/folk/quests.js QuestBook.boss.)
-      case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); break;
+      case EV.WILD: this.wilds?.on(a, b, c, d, e, f, g); break;
+      case EV.DELVE: this.party?.onDelve(a, b, c, d); if ((a | 0) === DELVE_CODE.BOSS_DOWN) { this.townUI?.quests.boss(DELVE_BOSSES[b | 0]?.key); this.music?.stinger('triumph'); } break;
       case EV.HERO_LEVEL: case EV.HERO_DUEL: break;
       case EV.SPELL_CAST:
         this.heroTalk?.onSpell(b);
@@ -1813,6 +1870,8 @@ class GameView {
         r.emit(3, 50, a, b, c, 0, 0.6, 0, 1.6, 0.5, 2.4, 0.1, 0.25, 0.9, 2);
         break;
       case EV.DEATH:
+        // (Now and then a man goes down the way they do in the pictures.)
+        if (Math.random() < 0.04) au.play('wilhelm', a, b, c, 1.1);
         au.play('armorLand', a, b, c, 1.4, 0.75);
         au.play('impact', a, b, c, 1.3, 0.5);
         au.gore(a, b, c, 1, 0.9, 500);
@@ -1890,7 +1949,11 @@ class GameView {
         au.play('crunch', a, b, c, 1.1, 0.85);
         r.emit(3, 26, a, b, c, 0, 0.6, 0, 1.4, 0.4, 1.6, 0.08, 0.2, 0.7, 1.5);
         break;
-      case EV.LOSE: au.play('armorLand', null, 0, 0, 1, 0.7); break;
+      case EV.LOSE:
+        au.play('armorLand', null, 0, 0, 1, 0.7); this.music?.stinger('fell');
+        // (Cut down in Bellmourn's streets, with the town looking on.)
+        if (inTown(a, c, 10)) { au.play('crowdGasp', a, b, c, 1.6); au.play('crowdPanic', a, b, c, 1.2); }
+        break;
       case EV.LAND: au.play(`land_${this.underfoot}`, null, 0, 0, 0.25 + d * 0.4, 1, false); break;
       case EV.ALERT: au.play('unsheath', a, b, c, 1.2); break;
       case EV.SHIELD_BREAK:
@@ -1931,6 +1994,9 @@ class GameView {
       },
       snap: () => view.currentSnap(),
       cmd,
+      // The living land's own (src/sim/wilds.js debug): bm.wild(1, n) a meeting of the nth kind ahead of you; bm.wild(2) to the
+      // nearest open tear; bm.wild(3, n) to the nth outpost; bm.wild(4, n) to the nth standing battle; bm.wild(6, n) a raid on the nth town.
+      wild: (a, b = 0, c = 0) => cmd(50, a, b, c),
       look: (yaw, pitch) => { view.input.yaw = yaw; view.input.pitch = pitch; },
       attack: () => { shared.input[INPUT.ATTACK] += 1; },
       // Starts the run over (with the opening on, from the first breath in the cave).

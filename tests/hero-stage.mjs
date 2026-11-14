@@ -16,7 +16,8 @@ const rigs = new Map();
 const rigOf = (id) => { if (!rigs.has(id)) rigs.set(id, new Rig(parseGLB(bytes(`../assets/game/heroes/${id}.glb`)), bank)); return rigs.get(id); };
 
 // A bare land (no boxes, no pines), a sim that counts what's drawn and what's heard, and foes that only stand and take it.
-export function stage(cls, level = 30, nFoes = 6) {
+// (more: other classes, for a party: heroes 1 and up, stood in a row beside the first.)
+export function stage(cls, level = 30, nFoes = 6, more = []) {
   const world = Object.assign(Object.create(World.prototype), { colliders: [], trunks: new Map(), siteBoxes: new Map(), height: () => 0,
     clearance: (x, z, dx, dz, dist) => dist, rayBoxes: () => -1, sees: () => true, inside: () => false, resolve: () => {}, updateField() {}, flow(out) { out[0] = 0; out[1] = 1; } });
   const fx = { n: 0, bursts: 0, kinds: new Set(), events: [] };
@@ -28,7 +29,9 @@ export function stage(cls, level = 30, nFoes = 6) {
     // (Nothing marked on this ground for anyone to step out of: src/sim/perils.js.)
     perils: { marks: [], danger: () => null, safe: () => true } };
   const cast = makeCast(roster, kit, names, 16, 7);
-  const person = { ...cast.find((p) => p.cls === cls), slot: 0, level };
+  // ("paladin:sword_board": the first of that class who fights that way.)
+  const [c0, st] = cls.split(':');
+  const person = { ...cast.find((p) => p.cls === c0 && (!st || p.kit.style === st)), slot: 0, level };
   const props = kit.props;
   const hero = new Hero(0, rigOf(person.body), bank, person, props);
   // (Its arms in hand, as in a fight and a while after: src/core/stow.js puts them away otherwise.)
@@ -38,8 +41,10 @@ export function stage(cls, level = 30, nFoes = 6) {
     const a = i / nFoes * Math.PI * 2, r = i === 0 ? 0 : 2.2;
     foes.push({ id: i, x: 6 + Math.sin(a) * r, y: 0, z: Math.cos(a) * r, yaw: Math.PI, hp: 1e6, maxHp: 1e6, dead: false, dormant: false, aggro: true, hits: 0, onHit() { this.hits++; } });
   }
-  sim.knights = foes; sim.heroes = [hero];
-  const w = new HeroWorld(sim, [hero]);
+  const heroes = [hero, ...more.map((c, i) => { const q = { ...cast.find((p) => p.cls === c && p !== person), slot: i + 1, level }, o = new Hero(i + 1, rigOf(q.body), bank, q, props);
+    o.x = o.lastX = 0; o.z = o.lastZ = 2 * (i + 1); o.y = 0; o.task = { kind: 'town', peace: true }; o.simRef = sim; return o; })];
+  sim.knights = foes; sim.heroes = heroes;
+  const w = new HeroWorld(sim, heroes);
   sim.heroWorld = w;
   hero.x = hero.lastX = 0; hero.z = hero.lastZ = 0; hero.y = 0; hero.yaw = hero.faceYaw = Math.PI / 2;
   hero.task = { kind: 'hunt', peace: false, there: false };
@@ -57,6 +62,6 @@ export function stage(cls, level = 30, nFoes = 6) {
       each?.();
     }
   };
-  return { sim, w, hero, foes, fx, step, ctx };
+  return { sim, w, hero, heroes, foes, fx, step, ctx };
 }
 

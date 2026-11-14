@@ -6,6 +6,9 @@
 // on the sim thread, src/gfx/tripo-slots.js on the render thread). Each one wears a palette from palettes.json, baked into its
 // colour map when it's built.
 
+import { WILD_VARIANTS, battleLairs, outpostLair } from './wilds.js';
+import { BATTLES, OUTPOSTS } from './wilds-data.js';
+
 export const TRIPO_BASE = 'assets/monsters/tripo/';
 export const TRIPO_SLOTS = 12;
 // C.KIND of the first group; the rest follow in GROUPS' order (the HUD's FOE_NAMES in src/main.js).
@@ -104,6 +107,8 @@ export const VARIANTS = {
   kb_hound: { src: 'werewolf_brown', height: 1.9, name: 'BARROW HOUND' },
   kb_wyrm: { src: 'dragon_undead', height: 6.4, name: 'OSSIVAR' },
 };
+// And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
+Object.assign(VARIANTS, WILD_VARIANTS);
 export function withVariants(roster) {
   for (const [id, v] of Object.entries(VARIANTS)) {
     const src = roster[v.src] ? v.src : v.alt;
@@ -269,6 +274,11 @@ export const LAIRS = [
   { key: 'gibbet_possessed', x: 4393, z: 2504, r: 7, pick: POSSESSED, n: 4, pal: ['Blighted', 'Ashen'] },
   { key: 'gallows_giant', x: 3707, z: 3796, r: 8, boss: ['plague_giant_1', 'plague_giant_2'], pick: ['plague_knight_black', 'plague_knight_red'], n: 2, pal: ['Base', 'Blighted'], tricks: true },
 ];
+
+// The outposts out in the land and the standing battles (src/core/wilds.js, laid by tools/wilds/place.mjs): lairs like any
+// other, with a side (who they'll fight where two sides meet), a level, and a quicker return.
+for (const o of OUTPOSTS) LAIRS.push(outpostLair(o));
+for (const b of BATTLES) LAIRS.push(...battleLairs(b));
 
 // A lair as it can be stood up from this roster: its lists thinned to the models there are (a boss list left empty is no
 // boss; a pick list left empty, nobody).

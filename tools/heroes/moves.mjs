@@ -8,7 +8,7 @@
 // plan.json: { "size": [w, h], "hour": 17, "level": 30, "at": [x, z], "strips": [ strip, ... ] }, a strip being
 //   { "name", "cls" (which class does it), "key" (the move; or "tune": 0-2 for a bard at the lute, or "clip" for a clip of the
 //     bank held on the body), "dist" (metres to the foes), "foes" (how many), "frames", "every" (ticks between frames),
-//     "lead" (ticks before the first), "cam": [side, back, up] (metres from the middle of the two), "also": [more moves cast with it] }
+//     "carry" (with "clip": what's in the hands carried as on the road, not put away for the pose), "lead" (ticks before the first), "cam": [side, back, up] (metres from the middle of the two), "also": [more moves cast with it] }
 // Frames go to tools/build/shots/mv_<name>_<n>.png (the server keeps shots in one folder); tools/heroes/sheet.py lays a
 // strip's frames side by side.
 import { createRequire } from 'node:module';
@@ -163,7 +163,7 @@ for (const s of plan.strips || []) {
     // (Someone only playing is held where he stands: let go, he'd be off to whatever he was about.)
     bm.heroes('freeze', { slot, seconds: s.tune !== undefined || (s.turn && !s.stance) ? 1e9 : 0, face });
     if (s.tune !== undefined) bm.heroes('tune', { slot, v: s.tune, seconds: 30, rainbow: !!s.rainbow, bare: !!s.bare });
-    else if (s.clip) bm.heroes('pose', { slot, clip: s.clip, at: s.at ?? 0 });
+    else if (s.clip) bm.heroes('pose', { slot, clip: s.clip, at: s.at ?? 0, carry: !!s.carry });
     // ("stance": stood to a foe, arms in hand, and no blow struck: how it holds itself in a fight.)
     else if (s.stance) { bm.heroes('mute', { slot, still: true }); bm.heroes('attack', { slot, still: true }); }
     else if (s.turn) { /* standing as it would */ }

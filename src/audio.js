@@ -7,6 +7,10 @@ const PHONE = isMobileDevice();
 const PANNING = PHONE ? 'equalpower' : 'HRTF';
 // Under this at the ear (50 dB down), a sound isn't played at all: play, sound.
 const UNHEARD = 0.003;
+// How much decoded sound a phone keeps beyond what's decoded at load and what's playing as a loop (Audio.trim). 0: all of it.
+const KEPT_BYTES = PHONE ? 24e6 : 0;
+// A loop silent this long (seconds) is stopped and let go (Audio.bed, Audio.spot): it comes back the moment it's wanted.
+const QUIET = 10;
 
 const n = (base, k) => Array.from({ length: k }, (_, i) => `${base}_${i + 1}`);
 // Decoded at load, before the game starts: what a fight and a walk on the dirt need the instant they happen.
@@ -45,6 +49,9 @@ Object.assign(BANKS, {
   iceThrow: n('ice_throw', 2), iceFreeze: n('ice_freeze', 2), iceBarrage: n('ice_barrage', 2), iceWall: n('ice_wall', 2),
   rockThrow: n('rock_meteor_throw', 2), rockSwarm: n('rock_meteor_swarm', 2), rockWall: n('rock_wall', 2),
   spellImpact: n('spell_impact', 3), splash: n('waterspray', 2), wave: n('wave_attack', 2), thunk: n('bow_impact_hit', 3),
+  // From the first Bellmourn: a man's scream as he goes down (the Wilhelm scream, BigSoundBank.com 0477), and a crowd's
+  // gasp and panic ("Crowd Gasp", Free Sounds Library, CC BY 4.0, and a city crowd's scream), for the town seeing you fall.
+  wilhelm: ['wilhelm_scream'], crowdGasp: ['crowd_gasp'], crowdPanic: ['crowd_panic'],
 });
 // From two general packs (tools/audio/build_extra_sfx.py): what's picked up, the book and the map, bone and gore, the panels' clicks.
 Object.assign(BANKS, {
@@ -59,6 +66,10 @@ Object.assign(BANKS, {
 // The least time between two of a bank, so a volley or a line of spikes doesn't stack up into one roar.
 const GAP = { spellImpact: 0.07, torchImpact: 0.1, iceFreeze: 0.1, thunk: 0.08, rockWall: 0.3, splash: 0.2, rockThrow: 0.12, fireball: 0.08, anvil: 0.2, chop: 0.2,
   coin: 0.06, coinLand: 0.05, gem: 0.08, gemLand: 0.05, orb: 0.1, squelch: 0.1, splat: 0.08, crunch: 0.1, uiHover: 0.05 };
+
+// Beds played with their low end cut, in Hz. The calm wind is on wherever you're out of doors, all the time, and two
+// thirds of the recording is under 250 Hz: left in, the whole game had a low hum under it.
+const BED_CUT = { wind_calm: 500 };
 
 export class Audio {
   // ctx and dest: the title's context and its Volume, so the title and the game share one line out.
@@ -82,7 +93,11 @@ export class Audio {
     comp.connect(this.dest || ctx.destination);
     this.amb = ctx.createGain();
     this.amb.gain.value = this.ambienceLevel;
-    this.amb.connect(this.master);
+    // The beds' recordings carry a rumble under 70 Hz that nothing in them needs: with a loop always on, it's a hum.
+    const rumble = ctx.createBiquadFilter();
+    rumble.type = 'highpass'; rumble.frequency.value = 70; rumble.Q.value = 0.7;
+    this.amb.connect(rumble);
+    rumble.connect(this.master);
     // A short slap of space, so steel rings off the houses.
     const len = Math.floor(ctx.sampleRate * 0.7);
     const ir = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -130,17 +145,33 @@ export class Audio {
     if (!this.ready) return;
     this.beds = this.beds || {};
     let b = this.beds[name];
+    const t = this.ctx.currentTime;
     if (!b) {
       if (gain < 0.005) return;
-      b = this.beds[name] = { g: this.ctx.createGain() };
+      b = this.beds[name] = { name, g: this.ctx.createGain(), quiet: null };
       b.g.gain.value = 0;
       b.g.connect(this.amb);
       this.fetchBuffer(name).then((buf) => {
-        const s = this.ctx.createBufferSource();
-        s.buffer = buf; s.loop = true; s.connect(b.g); s.start(this.ctx.currentTime, Math.random() * buf.duration);
+        if (b.gone) return;
+        const s = b.src = this.ctx.createBufferSource();
+        s.buffer = buf; s.loop = true;
+        // (Only the bed's air, where most of it is low drone: two filters, so it falls away fast below the cut.)
+        let end = b.g;
+        for (let i = 0; i < (BED_CUT[name] ? 2 : 0); i++) {
+          const f = this.ctx.createBiquadFilter();
+          f.type = 'highpass'; f.frequency.value = BED_CUT[name]; f.Q.value = 0.7;
+          f.connect(end); end = f;
+        }
+        s.connect(end); s.start(this.ctx.currentTime, Math.random() * buf.duration);
       }).catch(() => {});
     }
-    b.g.gain.setTargetAtTime(gain, this.ctx.currentTime, 0.9);
+    // (Every bed there's ever been used to play on in silence for good, each holding its 17 MB: the woods by day and by
+    // night, in rain and in storm, the houses, the caves, the sea. An hour's walking was 300 MB of it.)
+    if (gain < 0.005) {
+      b.quiet ??= t;
+      if (t - b.quiet > QUIET) { this.release(this.beds, name); return; }
+    } else b.quiet = null;
+    b.g.gain.setTargetAtTime(gain, t, 0.9);
   }
 
   // A sound heard once, wherever you are, fetched the first time it's wanted.
@@ -153,9 +184,50 @@ export class Audio {
   }
 
   fetchBuffer(name) {
-    if (this.buffers[name]) return Promise.resolve(this.buffers[name]);
+    if (this.buffers[name]) { this.touched(name); return Promise.resolve(this.buffers[name]); }
     this.pending = this.pending || {};
-    return this.pending[name] || (this.pending[name] = fetch(`${this.base}assets/game/audio/${name}.mp3`).then((r) => r.arrayBuffer()).then((a) => this.ctx.decodeAudioData(a)).then((buf) => (this.buffers[name] = buf)));
+    return this.pending[name] || (this.pending[name] = fetch(`${this.base}assets/game/audio/${name}.mp3`).then((r) => r.arrayBuffer()).then((a) => this.ctx.decodeAudioData(a))
+      .then((buf) => { this.buffers[name] = buf; this.touched(name); this.trim(name); return buf; })
+      // (The promise isn't kept once it's answered: it would hold the sound after the sound's been let go.)
+      .finally(() => { delete this.pending[name]; }));
+  }
+
+  // Decoded sound is big: four bytes a sample a channel, so a 45 s loop is 17 MB and the whole pack some 500 MB. What's
+  // decoded at load (CORE) stays. Of the rest a phone keeps KEPT_BYTES, letting go of what's gone longest unheard; a loop
+  // playing as a bed or from a spot isn't counted or let go until it's been silent a while (bed, spot).
+  touched(name) { (this.heardAt ||= {})[name] = performance.now(); }
+
+  inUse(name) {
+    for (const b of Object.values(this.beds || {})) if (b.name === name) return true;
+    for (const sp of Object.values(this.spots || {})) if (sp.name === name) return true;
+    return false;
+  }
+
+  forget(name) { if (!CORE.has(name) && !this.inUse(name)) delete this.buffers[name]; }
+
+  trim(keep) {
+    if (!KEPT_BYTES) return;
+    const size = (b) => b.length * b.numberOfChannels * 4;
+    const loose = Object.keys(this.buffers).filter((k) => !CORE.has(k) && !this.inUse(k));
+    let total = loose.reduce((t, k) => t + size(this.buffers[k]), 0);
+    if (total <= KEPT_BYTES) return;
+    loose.sort((a, b) => (this.heardAt[a] || 0) - (this.heardAt[b] || 0));
+    for (const k of loose) {
+      if (total <= KEPT_BYTES) break;
+      if (k === keep) continue;
+      total -= size(this.buffers[k]);
+      delete this.buffers[k];
+    }
+  }
+
+  // A loop that's stopped being heard: its source stopped and unhooked, and its sound let go.
+  release(set, key) {
+    const b = set[key];
+    delete set[key];
+    b.gone = true;
+    try { b.src?.stop(); } catch { /* never started */ }
+    b.src?.disconnect(); b.g.disconnect(); b.p?.disconnect();
+    this.forget(b.name);
   }
 
   // The shield's scrape, its rumble, and the wind when you're fast. Bellmourn's board loop. speed 0 is silence; in the air only the wind's left.
@@ -208,13 +280,18 @@ export class Audio {
       p.panningModel = PANNING; p.distanceModel = 'inverse'; p.refDistance = 1.5; p.rolloffFactor = 1.2;
       const g = this.ctx.createGain(); g.gain.value = 0;
       g.connect(p); p.connect(this.amb);
-      s = this.spots[key] = { p, g };
+      s = this.spots[key] = { name, p, g, quiet: null };
       this.fetchBuffer(name).then((buf) => {
-        const src = this.ctx.createBufferSource();
+        if (s.gone) return;
+        const src = s.src = this.ctx.createBufferSource();
         src.buffer = buf; src.loop = true; src.connect(g); src.start(this.ctx.currentTime, Math.random() * buf.duration);
       }).catch(() => {});
     }
     const t = this.ctx.currentTime, { p } = s;
+    if (gain < 0.005) {
+      s.quiet ??= t;
+      if (t - s.quiet > QUIET) { this.release(this.spots, key); return; }
+    } else s.quiet = null;
     if (p.positionX) { p.positionX.setTargetAtTime(x, t, 0.1); p.positionY.setTargetAtTime(y, t, 0.1); p.positionZ.setTargetAtTime(z, t, 0.1); } else p.setPosition(x, y, z);
     s.g.gain.setTargetAtTime(gain, t, 0.4);
   }
@@ -254,6 +331,7 @@ export class Audio {
     }
     const src = this.ctx.createBufferSource();
     src.buffer = this.buffers[name];
+    this.touched(name);
     src.playbackRate.value = rate * (0.94 + Math.random() * 0.12);
     const g = this.ctx.createGain();
     g.gain.value = gain;

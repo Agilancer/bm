@@ -17,6 +17,7 @@ import { buildDelves } from './delve-build.js';
 import { buildHall } from './testhall.js';
 import { PIECES, cinderford, lesser, street, thornwick, way } from './places.js';
 import { dressLairs } from './lair-dress.js';
+import { dressWilds } from './wild-dress.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -29,10 +30,26 @@ export const tileOf = (layer) => {
   return n.startsWith('wall') || n === 'door_wall' ? TILE.wall : n.startsWith('roof') ? TILE.roof : n.startsWith('door') ? TILE.door : TILE[n] || TILE.cloth;
 };
 
+// A list of numbers that grows, as a typed array: what a part's corners are kept in while they're built. (They were plain
+// lists, eight bytes a number and more: 150 MB of them for the lands and the delves, on each thread that built them.)
+class Grow {
+  constructor(Type) { this.a = new Type(3072); this.length = 0; }
+  push() {
+    const n = arguments.length;
+    if (this.length + n > this.a.length) { const b = new this.a.constructor(Math.max(this.a.length * 2, this.length + n)); b.set(this.a); this.a = b; }
+    for (let i = 0; i < n; i++) this.a[this.length++] = arguments[i];
+  }
+  done() { return this.a.slice(0, this.length); }
+}
+// (And where they aren't wanted at all: the simulation, which takes the colliders, the floors and the fires.)
+const NOTHING = { length: 0, push() {} }, NO_PART = { pos: NOTHING, nrm: NOTHING, uv: NOTHING, idx: NOTHING };
+
 export class Kit {
+  // (geometry: false builds nothing to draw, only what stops a body and what's stood on. It can be turned off and on
+  // while a kit's in use: buildSites does, for the delves.)
   // (under: what's built while deep is set, kept apart: the delves and the Test Dungeon, out past the world's edge and under
   // it, which are never seen from the land nor the land from them. The renderer draws one or the other.)
-  constructor() { this.parts = new Map(); this.under = new Map(); this.deep = false; this.colliders = []; this.spots = {}; this.floors = []; this.fires = []; this.groups = new Map(); }
+  constructor(geometry = true) { this.geometry = geometry; this.parts = new Map(); this.under = new Map(); this.deep = false; this.colliders = []; this.spots = {}; this.floors = []; this.fires = []; this.groups = new Map(); }
 
   // Scenery that can be taken away and put back while the game runs: whatever fn builds is one group under key, there from
   // the start (on) or not. Everything else out here is built once and never changes; a group's corners are remembered
@@ -47,15 +64,23 @@ export class Kit {
     for (const [layer, q] of parts) { const v0 = before.get(layer) || 0, v1 = q.pos.length / 3; if (v1 > v0) g.ranges.push({ layer, v0, v1, under }); }
   }
 
+  /** Building's over: each part's corners as typed arrays of just their length (pos, nrm, uv: Float32Array; idx: Uint32Array). */
+  finish() {
+    for (const parts of [this.parts, this.under]) for (const p of parts.values()) if (p.pos instanceof Grow) { p.pos = p.pos.done(); p.nrm = p.nrm.done(); p.uv = p.uv.done(); p.idx = p.idx.done(); }
+    return this;
+  }
+
   part(layer) {
     const parts = this.deep ? this.under : this.parts;
+    if (!this.geometry) return NO_PART;
     let p = parts.get(layer);
-    if (!p) { p = { pos: [], nrm: [], uv: [], idx: [] }; parts.set(layer, p); }
+    if (!p) { p = { pos: new Grow(Float32Array), nrm: new Grow(Float32Array), uv: new Grow(Float32Array), idx: new Grow(Uint32Array) }; parts.set(layer, p); }
     return p;
   }
 
   // A flat four-cornered face, a b c d going round; uv by the painting's own scale, from the face's own across and up.
   quad(layer, a, b, c, d, nrm = null, uvs = null) {
+    if (!this.geometry) return;
     const p = this.part(layer), base = p.pos.length / 3;
     if (!nrm) {
       const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
@@ -76,6 +101,7 @@ export class Kit {
   }
 
   tri(layer, a, b, c) {
+    if (!this.geometry) return;
     const p = this.part(layer), base = p.pos.length / 3;
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
     let n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
@@ -1415,22 +1441,62 @@ function flattest(x0, z0) {
 }
 
 let built = null;
-// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), under: the same for the delves and the hall, colliders, spots, floors, fires, groups (Kit.group) }.
-export function buildSites() {
-  if (built) return built;
-  const K = new Kit();
+// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots, floors, fires, groups (Kit.group) }.
+// geometry: the land's parts to draw as well (typed arrays), which only the renderer wants, and only until they're on the
+// GPU (dropSiteGeometry). Without it parts is empty and the rest is the same: tests/sites-lean.test.mjs.
+// The delves' and the Test Dungeon's parts aren't here either way: a million and a half corners, of which one delve's are
+// ever drawn at a time. They're built a delve at a time, when you go down it (buildUnder).
+// lean: a phone's land (the renderer's tier). The outposts out in the land (src/core/wild-dress.js) keep only what's solid
+// there (towers, crags, boulders) and the small things to find; their fences, tents, stones and litter are half the land's
+// corners, and a phone holds every one on its GPU. What stops a body is the same either way.
+export function buildSites(geometry = false, lean = false) {
+  if (built && (!geometry || (built.geometry && built.lean === lean))) return built;
+  const K = new Kit(geometry);
+  K.lean = lean;
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
   warrensMouth(K);
-  // (The delves, and the Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js. Kept apart.)
-  K.deep = true;
+  // (The delves, and the Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js. What stops a
+  // body and what's stood on, not their corners.)
+  K.deep = true; K.geometry = false;
   buildDelves(K, portalWall);
   buildHall(K);
-  K.deep = false;
+  K.deep = false; K.geometry = geometry;
   for (const s of SEALS) K.seal(s.key, s.x, s.z, Math.atan2(-s.z, -s.x));
   // (What lies about the lairs, last, so it keeps clear of everything above: src/core/lair-dress.js.)
   dressLairs(K, SEALS);
+  // (And what's built at the land's outposts, its tear spots and the small things to find: src/core/wild-dress.js.)
+  dressWilds(K);
+  K.finish();
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
-  built = { parts: K.parts, under: K.under, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups };
+  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups };
   return built;
+}
+
+// What's under the world, by the key the renderer asks for it by: each delve's, and the Test Dungeon's hall.
+export const UNDER_KEYS = [...DELVES.map((d) => d.key), 'hall'];
+
+/**
+ * One delve's corners (or the hall's, 'hall'; or with no key all of them in one, as they used to be built, for the tests):
+ * { parts: Map(layer -> {pos, nrm, uv, idx}), groups: Map(key -> { on, ranges }) } with the ranges in these parts.
+ * Built afresh each time it's asked for: the renderer keeps what it's put on the GPU, not this.
+ */
+export function buildUnder(key) {
+  const K = new Kit(true);
+  K.deep = true;
+  if (key === 'hall') buildHall(K);
+  else if (key === undefined) { buildDelves(K, portalWall); buildHall(K); }
+  else {
+    const d = DELVES.find((q) => q.key === key);
+    if (!d) throw new Error(`no delve is called ${key}`);
+    buildDelves(K, portalWall, [d]);
+  }
+  K.finish();
+  return { parts: K.under, groups: K.groups };
+}
+
+/** The parts let go, once they're in the renderer's buffer. Everything else stays. */
+export function dropSiteGeometry() {
+  if (!built) return;
+  built.parts = new Map(); built.geometry = false;
 }

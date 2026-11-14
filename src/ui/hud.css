@@ -64,7 +64,9 @@ html.art-icons #charmRow .ch img[src$=".webp"] { image-rendering: auto; }
 
 /* ============================================================ a phone ============================================================ */
 #touch { position: fixed; inset: 0; z-index: 6; display: none; }
-body.touch { --u: clamp(.8px, calc(100vh / 390), 1.3px); --medal: calc(var(--t-medal, 44) * var(--u)); --bars: calc(var(--t-bars, 150) * var(--u)); }
+/* The buttons, bars and map on a phone sit by the screen's own edges, not the safe area's (src/ui/thumbs.js): the thumbs
+   are in the corners, where a notch or an island isn't. Panels and menus keep the safe area (--sl, --sr, --sb). */
+body.touch { --hl: 0px; --hr: 0px; --hb: 0px; --u: clamp(.8px, calc(100vh / 390), 1.3px); --medal: calc(var(--t-medal, 44) * var(--u)); --bars: calc(var(--t-bars, 150) * var(--u)); }
 @supports (height: 100dvh) { body.touch { --u: clamp(.8px, calc(100dvh / 390), 1.3px); } }
 
 /* What a thumb presses: a dark boss with a gold rim. */
@@ -78,8 +80,8 @@ body.touch { --u: clamp(.8px, calc(100vh / 390), 1.3px); --medal: calc(var(--t-m
 
 /* The right thumb: each from the middle of the staff's button (--dx to its left, --dy above it, --s across). */
 .arc, body.touch #spells .spell.arc { --dx: 0; --dy: 0; --s: 56; width: calc(var(--s) * var(--u)); height: calc(var(--s) * var(--u));
-  right: calc(var(--sr) + (var(--t-home-r, 66) + var(--dx) - var(--s) / 2) * var(--u));
-  bottom: calc(var(--sb) + (var(--t-home-b, 62) + var(--dy) - var(--s) / 2) * var(--u)); }
+  right: calc(var(--hr) + (var(--t-home-r, 48) + var(--dx) - var(--s) / 2) * var(--u));
+  bottom: calc(var(--hb) + (var(--t-home-b, 48) + var(--dy) - var(--s) / 2) * var(--u)); }
 #bAttack, #bCast { box-shadow: inset 0 0 0 2px var(--rim), inset 0 0 0 6px rgba(8, 6, 4, .6), inset 0 0 0 7.500px var(--rim-dim), 0 3px 10px rgba(0, 0, 0, .6); }
 #bAttack > svg, #bCast > svg { width: 50%; height: 50%; }
 #bWide { display: none; }
@@ -107,14 +109,14 @@ body.touch #spells .spell.up, body.touch #spells .spell.down { transform: scale(
 body.touch #spells .spell.empty { background: rgba(10, 8, 6, .35); box-shadow: inset 0 0 0 1.5px rgba(201, 163, 92, .28); border: 0; }
 body.touch #spells .spell .cd { font: 700 calc(17 * var(--u)) Georgia, serif; border-radius: 50%; }
 body.touch #spellOpen, body.touch #viewBtn { display: none !important; }
-body.touch #spellName { left: auto; right: calc(var(--sr) + 264 * var(--u)); bottom: calc(var(--sb) + 10 * var(--u)); transform: none; margin: 0; font-size: calc(11.5 * var(--u)); text-align: right; opacity: .85; }
-body.touch #buffs { position: absolute; left: calc(var(--sl) + (var(--t-side, 10) + var(--t-medal, 44) + 8) * var(--u)); top: calc(var(--st) + 46 * var(--u)); bottom: auto; margin: 0; gap: calc(3 * var(--u)); }
+body.touch #spellName { left: auto; right: calc(var(--hr) + 300 * var(--u)); bottom: calc(var(--hb) + 10 * var(--u)); transform: none; margin: 0; font-size: calc(11.5 * var(--u)); text-align: right; opacity: .85; }
+body.touch #buffs { position: absolute; left: calc(var(--hl) + (var(--t-side, 5) + var(--t-medal, 44) + 8) * var(--u)); top: calc(var(--st) + 46 * var(--u)); bottom: auto; margin: 0; gap: calc(3 * var(--u)); }
 body.touch #buffs span { width: calc(22 * var(--u)); height: calc(22 * var(--u)); padding: calc(3 * var(--u)); }
 body.cinematic #touch #spells { visibility: hidden; }
 
-/* The left thumb: the stick itself where the thumb lands, and the run. Where the stick's ring waits isn't drawn: nothing
+/* The left thumb: the stick itself where the thumb lands. (The run is the right thumb's, over spell six.) Where the stick's ring waits isn't drawn: nothing
    of the stick is on the screen until a thumb is on it (its place is shown only while Move Buttons is up: src/ui/arrange.js). */
-#stickHome { position: absolute; left: calc(var(--sl) + var(--t-stick-l, 34) * var(--u)); bottom: calc(var(--sb) + var(--t-stick-b, 26) * var(--u)); width: calc(var(--t-stick-s, 112) * var(--u)); height: calc(var(--t-stick-s, 112) * var(--u));
+#stickHome { position: absolute; left: calc(var(--hl) + var(--t-stick-l, 86) * var(--u)); bottom: calc(var(--hb) + var(--t-stick-b, 42) * var(--u)); width: calc(var(--t-stick-s, 112) * var(--u)); height: calc(var(--t-stick-s, 112) * var(--u));
   border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .2s;
   background: radial-gradient(circle, rgba(233, 223, 201, .16) 0 21%, transparent 22%), radial-gradient(circle, transparent 0 62%, rgba(10, 8, 6, .22) 63%);
   box-shadow: inset 0 0 0 1.5px rgba(233, 223, 201, .26); }
@@ -123,20 +125,19 @@ body.cinematic #touch #spells { visibility: hidden; }
   background: radial-gradient(circle, transparent 0 60%, rgba(10, 8, 6, .3) 61%); box-shadow: inset 0 0 0 1.5px var(--rim), inset 0 0 0 4px rgba(8, 6, 4, .4); }
 #nub { position: absolute; left: 39px; top: 39px; width: 52px; height: 52px; border-radius: 50%;
   background: radial-gradient(circle at 50% 34%, #f3e6c4, #b99a5c 70%); box-shadow: 0 2px 6px rgba(0, 0, 0, .6), inset 0 0 0 1.5px rgba(255, 244, 210, .7); }
-#bSprint { left: calc(var(--sl) + var(--t-sprint-l, 18) * var(--u)); bottom: calc(var(--sb) + var(--t-sprint-b, 152) * var(--u)); width: calc(var(--t-sprint-s, 50) * var(--u)); height: calc(var(--t-sprint-s, 50) * var(--u)); }
 
 /* Along the top: your frame on the left; on the right the corner map, and beside it the row of small buttons. */
-body.touch #levelBox { left: calc(var(--sl) + var(--t-side, 10) * var(--u)); top: calc(var(--st) + var(--t-pad, 8) * var(--u)); bottom: auto; }
-body.touch #vitals { left: calc(var(--sl) + (var(--t-side, 10) + var(--t-medal, 44) + 7) * var(--u)); top: calc(var(--st) + (var(--t-pad, 8) + 5) * var(--u)); bottom: auto; width: var(--bars); gap: calc(3 * var(--u)); }
+body.touch #levelBox { left: calc(var(--hl) + var(--t-side, 5) * var(--u)); top: calc(var(--st) + var(--t-pad, 8) * var(--u)); bottom: auto; }
+body.touch #vitals { left: calc(var(--hl) + (var(--t-side, 5) + var(--t-medal, 44) + 7) * var(--u)); top: calc(var(--st) + (var(--t-pad, 8) + 5) * var(--u)); bottom: auto; width: var(--bars); gap: calc(3 * var(--u)); }
 body.touch #hp { height: calc(13 * var(--u)); } body.touch #mana { height: calc(8 * var(--u)); } body.touch #stam { height: calc(4.500 * var(--u)); }
 body.touch #hpNum { font-size: calc(9.5 * var(--u)); }
-body.touch #mapMini, body.touch #mapRing, #bMap { right: calc(var(--sr) + var(--t-side, 10) * var(--u)); top: calc(var(--st) + var(--t-pad, 8) * var(--u)); width: calc(var(--t-mini, 92) * var(--u)); height: calc(var(--t-mini, 92) * var(--u)); }
+body.touch #mapMini, body.touch #mapRing, #bMap { right: calc(var(--hr) + var(--t-side, 5) * var(--u)); top: calc(var(--st) + var(--t-pad, 8) * var(--u)); width: calc(var(--t-mini, 92) * var(--u)); height: calc(var(--t-mini, 92) * var(--u)); }
 #bMap { background: none; box-shadow: none; border-radius: 6px; }
 #bMap.down { transform: none; filter: none; box-shadow: inset 0 0 0 3px #f1d68a; }
-body.touch #clock { left: auto; right: calc(var(--sr) + (var(--t-side, 10) + var(--t-mini, 92) - 20) * var(--u)); top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) - 30) * var(--u)); width: calc(34 * var(--u)); z-index: 2; }
+body.touch #clock { left: auto; right: calc(var(--hr) + (var(--t-side, 5) + var(--t-mini, 92) - 20) * var(--u)); top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) - 30) * var(--u)); width: calc(34 * var(--u)); z-index: 2; }
 body.touch #clock .phase { display: none; }
-#dock { position: absolute; top: calc(var(--st) + var(--t-pad, 8) * var(--u)); display: flex; flex-direction: row-reverse; gap: calc(var(--t-gap, 5) * var(--u));
-  right: calc(var(--sr) + (var(--t-side, 10) + var(--t-mini, 92) + var(--t-pad, 8) + var(--t-dock, 38) + var(--t-gap, 5)) * var(--u)); }
+#dock { position: absolute; top: calc(var(--st) + var(--t-pad, 8) * var(--u)); display: flex; flex-direction: row-reverse; gap: calc(var(--t-gap, 3) * var(--u));
+  right: calc(var(--hr) + (var(--t-side, 5) + var(--t-mini, 92) + var(--t-pad, 8)) * var(--u)); }
 #dock .tbtn { position: relative; width: calc(var(--t-dock, 38) * var(--u)); height: calc(var(--t-dock, 38) * var(--u)); flex: none; }
 #dock .tbtn > svg { width: 56%; height: 56%; }
 #bView { display: none; }
@@ -161,19 +162,19 @@ body.touch #topStack #folkNotes { display: flex; }
 body.touch #topStack .fn { font-size: calc(13 * var(--u)); padding: calc(3 * var(--u)) calc(12 * var(--u)); }
 body.touch #topStack #tip { max-width: 100%; font-size: calc(13 * var(--u)); padding: calc(5 * var(--u)) calc(12 * var(--u)); border-radius: 3px; box-shadow: 0 0 0 1px var(--rim-dim); }
 /* What's in reach, said beside the button that takes it. */
-body.touch #take { left: auto; top: auto; transform: none; right: calc(var(--sr) + (var(--t-home-r, 66) + 228 - 29) * var(--u)); bottom: calc(var(--sb) + (var(--t-home-b, 62) + 46 + 33) * var(--u)); max-width: 40vw; text-align: right; font-size: calc(12.5 * var(--u)); padding: calc(3 * var(--u)) calc(9 * var(--u)); border-radius: 3px; }
+body.touch #take { left: auto; top: auto; transform: none; right: calc(var(--hr) + (var(--t-home-r, 48) + 196 - 29) * var(--u)); bottom: calc(var(--hb) + (var(--t-home-b, 48) + 28 + 33) * var(--u)); max-width: 40vw; text-align: right; font-size: calc(12.5 * var(--u)); padding: calc(3 * var(--u)) calc(9 * var(--u)); border-radius: 3px; }
 body.touch #debug { top: calc(var(--st) + 60 * var(--u)); left: calc(var(--sl) + 12 * var(--u)); right: auto; text-align: left; font-size: 10px; }
 body.touch #msg { font-size: clamp(26px, 6vw, 54px); }
 
 /* The game's other pieces, on a phone (their own rules are in src/ui/*.js). */
-body.touch #partyFrames { left: calc(var(--sl) + 10 * var(--u)); top: calc(var(--st) + 78 * var(--u)); transform: scale(.82); transform-origin: 0 0; }
+body.touch #partyFrames { left: calc(var(--hl) + var(--t-side, 5) * var(--u)); top: calc(var(--st) + 78 * var(--u)); transform: scale(.82); transform-origin: 0 0; }
 body.touch #raidWarn { font-size: calc(16 * var(--u)); top: 34%; }
-body.touch #heroChat { left: calc(var(--sl) + 10 * var(--u)); bottom: 44%; width: 40vw; font-size: calc(11.5 * var(--u)); }
-body.touch #vskull { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) - 12) * var(--u)); right: calc(var(--sr) + 2 * var(--u)); width: calc(30 * var(--u)); height: calc(30 * var(--u)); }
-body.touch #vskullTag { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) + 20) * var(--u)); right: calc(var(--sr) - 2 * var(--u)); width: calc(44 * var(--u)); font-size: calc(7.5 * var(--u)); }
-body.touch #autoBtn { top: calc(var(--st) + var(--t-pad, 8) * var(--u)); right: calc(var(--sr) + (var(--t-side, 10) + var(--t-mini, 92) + var(--t-pad, 8)) * var(--u)); width: calc(var(--t-dock, 38) * var(--u)); height: calc(var(--t-dock, 38) * var(--u)); }
+body.touch #heroChat { left: calc(var(--hl) + 32 * var(--u)); bottom: calc(var(--hb) + 12 * var(--u)); width: 40vw; font-size: calc(11.5 * var(--u)); }
+body.touch #vskull { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) - 12) * var(--u)); right: calc(var(--hr) + 2 * var(--u)); width: calc(30 * var(--u)); height: calc(30 * var(--u)); }
+body.touch #vskullTag { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) + 20) * var(--u)); right: calc(var(--hr) - 2 * var(--u)); width: calc(44 * var(--u)); font-size: calc(7.5 * var(--u)); }
+body.touch #autoBtn { top: calc(var(--st) + (var(--t-pad, 8) + var(--t-mini, 92) - 12) * var(--u)); right: calc(var(--hr) + var(--t-auto-r, 40) * var(--u)); width: calc(var(--t-auto, 32) * var(--u)); height: calc(var(--t-auto, 32) * var(--u)); }
 body.touch #autoBtn img { object-fit: contain; }
-body.touch #autoStatus { top: auto; right: auto; left: calc(var(--sl) + 12 * var(--u)); bottom: calc(var(--sb) + 8 * var(--u)); text-align: left; max-width: 38vw; }
+body.touch #autoStatus { top: calc(var(--st) + 121 * var(--u)); right: calc(var(--hr) + 73 * var(--u)); left: auto; bottom: auto; text-align: right; max-width: 34vw; }
 body.touch #autoStatus b { font-size: calc(10.5 * var(--u)); }
 body.touch #autoStatus small { font-size: calc(10 * var(--u)); }
 body.touch #autoStatus u { margin: 0 6px 0 0; }
@@ -348,3 +349,21 @@ html.art-rule .t-rule::after { display: none; }
 
 /* (the upright notice's own picture and words) */
 #rotate > .lb { position: static; transform: none; font: inherit; letter-spacing: inherit; text-transform: none; white-space: normal; text-shadow: none; }
+
+/* The living land (src/ui/wilds.js): a banner for what's begun or done, a tracker under it while something's on. */
+#wildBanner { position: absolute; left: 50%; top: 21%; transform: translate(-50%, -8px); max-width: min(620px, 86vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s, transform .5s; z-index: 6; }
+#wildBanner.on { opacity: 1; transform: translate(-50%, 0); }
+#wildBanner b { display: block; font: 600 26px/1.15 Cinzel, 'Trajan Pro', Georgia, serif; letter-spacing: .2em; color: #f0dca6; text-shadow: 0 0 14px rgba(0, 0, 0, .95), 0 2px 3px #000; }
+#wildBanner i { display: block; margin-top: 6px; font: italic 15px/1.3 Georgia, serif; color: #e6dcc6; text-shadow: 0 0 8px #000, 0 1px 2px #000; }
+#wildTrack { position: absolute; left: 50%; top: 13.5%; transform: translateX(-50%); min-width: 230px; max-width: min(460px, 80vw); padding: 6px 14px 8px; text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s;
+  background: rgba(8, 6, 4, .58); box-shadow: 0 0 0 1px rgba(200, 170, 110, .35); border-radius: 3px; z-index: 6; }
+#wildTrack.on { opacity: 1; }
+#wildTrack b { display: block; font: 600 12.5px/1.2 Cinzel, Georgia, serif; letter-spacing: .18em; color: #e9cf8f; }
+#wildTrack i { display: block; margin-top: 3px; font: 13px/1.25 Georgia, serif; font-style: normal; color: #ddd3bd; }
+#wildTrack u { display: block; height: 3px; margin-top: 6px; background: rgba(255, 255, 255, .12); text-decoration: none; }
+#wildTrack u s { display: block; height: 100%; width: 0; background: #c9a24e; transition: width .25s linear; }
+body.touch #wildBanner b { font-size: calc(15 * var(--u)); } body.touch #wildBanner i { font-size: calc(11.5 * var(--u)); margin-top: 2px; }
+body.touch #wildTrack { min-width: 0; max-width: 100%; padding: calc(3 * var(--u)) calc(10 * var(--u)) calc(4 * var(--u)); } body.touch #wildTrack b { font-size: calc(10.5 * var(--u)); } body.touch #wildTrack i { font-size: calc(11 * var(--u)); margin-top: 1px; }
+/* (In the stack they take room only while they're up.) */
+body.touch #topStack #wildTrack:not(.on), body.touch #topStack #wildBanner:not(.on) { display: none; }
+body.touch #topStack #wildBanner { max-width: 100%; }

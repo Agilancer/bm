@@ -144,13 +144,17 @@ export const giverOf = (id) => describe(QUESTS[id].giver);
 // ---- what to do, when nothing's asked of you ---------------------------------------------------------------------------------
 
 // The hint under the log while you've no quest taken on: { title, text, items: [{ text, spot }] }, or null while you have one.
-// ctx: { Q, stage (the opening's, src/core/opening.js OPENING), lisHere (she's at the town's edge), level, person(id), px, pz }
+// ctx: { Q, stage (the opening's, src/core/opening.js OPENING), fight (how many of the road's dead are left, while they're up), lisHere (she's at the town's edge), level, person(id), px, pz }
 export function hintOf(ctx) {
-  const { Q, stage = OPENING.ARRIVED, lisHere = false, level = 1, person, px = 0, pz = 0 } = ctx;
+  const { Q, stage = OPENING.ARRIVED, fight = 0, lisHere = false, level = 1, person, px = 0, pz = 0 } = ctx;
   if (Q.active().length) return null;
   // On the way down.
   if (stage > 0 && stage < OPENING.ESCORT) {
     return { title: "Lisandra's cave", text: "You've woken in Lisandra's cave. Hear her out and do as she says: she'll see you out of it, and down to the town.", items: [] };
+  }
+  // The dead up on the road: that's the work now, until every one of them is down.
+  if (stage === OPENING.ESCORT && fight > 0) {
+    return { title: 'Kill the zombies and the necromancers', text: "The dead have come up out of the ground either side of the Long Road. Kill the zombies and the necromancers who raise them: Lisandra stands with you, and nobody goes on down to Bellmourn until every one of them is down.", items: [] };
   }
   if (stage === OPENING.ESCORT) {
     return { title: 'The Long Road', text: "Follow Lisandra down the Long Road to Bellmourn: the gold dots on the ground go after her. When the dead come up out of the pines, she'll stand with you, and on the way down you can't die.", items: [{ text: 'Bellmourn, at the foot of the hill', spot: TOWN }] };

@@ -226,7 +226,7 @@ export class TownUI {
     this.quests = new QuestBook({
       change: () => { this.marksStale = true; this.town.setFlags(this.quests.flags); if (this.book) this.drawBook(); },
       toast: (t, kind) => this.note(t, kind),
-      done: () => {},
+      done: (id) => this.act.triumph?.(id),
       // (Silas hands over the Sexton's Door's key with this one: src/main.js locked.)
       begun: (id) => { if (id === 'dead_cant_wait') this.act.sound?.('keys'); },
     });
@@ -361,6 +361,9 @@ export class TownUI {
   frame(dt, cam, px, py, pz, yaw, paused, snap = null) {
     this.snap = snap;
     // The quest log open: drawn again if auto-play has moved on to something else.
+    // (The dead up on the road down, and put down again: the opening's work changes, and the hint in the log with it.)
+    const roadFight = !!snap && snap[H.OPENING] === OPENING.ESCORT && snap[H.OPENING_FIGHT] > 0;
+    if (snap && roadFight !== !!this.roadFight) { this.roadFight = roadFight; if (this.book) this.drawBook(); }
     if (this.book && (this.bookT = (this.bookT || 0) - dt) <= 0) { this.bookT = 0.5; if (autoKey(this.autoNow()) !== this.autoSeen) this.drawBook(); }
     const now = performance.now();
     const ph = this.houseOf(px, py, pz);
@@ -946,7 +949,7 @@ export class TownUI {
         : `<div class="ql-auto"><b>AUTO-PLAY</b><span>${auto.mode && !auto.offer ? `${esc(auto.mode)}: ` : ''}${auto.offer ? 'is off to take on new work: ' : ''}${esc(auto.say || 'Looking for what to do.')}</span></div>`;
     // Nothing taken on: what you should be doing instead.
     const stage = snap ? snap[H.OPENING] : OPENING.ARRIVED;
-    const hint = live.length ? null : hintOf({ Q, stage, lisHere: !!this.whereOf(this.lisI), level: lvl, person, px: snap ? snap[H.PX] : 0, pz: snap ? snap[H.PZ] : 0 });
+    const hint = live.length ? null : hintOf({ Q, stage, fight: snap ? snap[H.OPENING_FIGHT] : 0, lisHere: !!this.whereOf(this.lisI), level: lvl, person, px: snap ? snap[H.PX] : 0, pz: snap ? snap[H.PZ] : 0 });
     const arrived = !(stage > 0 && stage < OPENING.ARRIVED);
     const hintBox = hint ? `<h4>Hint</h4><div class="ql-hint"><div class="qt">${esc(hint.title)}</div><div class="qs">${esc(hint.text)}</div>
       ${hint.items.length ? `<ul>${hint.items.map((it, k) => `<li><span>${esc(it.text)}</span>${mapBtn(`data-hint="${k}"`, finite(it.spot) && (arrived || stage === OPENING.ESCORT))}</li>`).join('')}</ul>` : ''}

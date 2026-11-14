@@ -92,8 +92,9 @@ export class AutoCam {
     this.vx = 0; this.vz = 1;
   }
 
-  /** Whether auto-play's view should be the one behind him (it is for a shot to be taken at all). */
-  get third() { return this.o.settings?.autocam !== 'off'; }
+  /** Auto-play's view: 'third', the one behind him (it is for a shot to be taken at all); 'first', through his eyes; or null,
+   * as the player left it. */
+  get view() { const c = this.o.settings?.autocam; return c === 'off' ? null : c === 'first' ? 'first' : 'third'; }
 
   // Every frame, after the game's own camera is set (GameView.updateCamera): ap is the AutoPlay.
   frame(dt, snap, ap) {

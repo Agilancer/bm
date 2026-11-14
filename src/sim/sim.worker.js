@@ -44,6 +44,7 @@ import { delveAt, delveOf, inDungeon } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 import { TestHall } from './testhall.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
+import { Wilds } from './wilds.js';
 
 // (shieldHit: how large a blade finds the shield. The swords and shields themselves are in Renderer.init: V for the black knight, T for the silver.)
 // Velscour's knight, who keeps the church. He'll fight you if you come near, and when he's down the world goes on. He won't follow you
@@ -132,15 +133,19 @@ class Sim {
       || (!p.surfing && (!!p.queued || p.clip !== p.stance.idle || p.shieldUp > 0.02 || input[INPUT.BLOCK] > 0.5))
       || p.hp < (this.stowHp ?? p.hp) - 0.01 || p.dead;
     this.stowHp = p.hp;
-    if (!out) {
-      for (const k of this.foes) {
-        if (k.dead || k.dormant || k.hostile === false) continue;
-        const d = Math.hypot(k.x - p.x, k.z - p.z);
-        if (d > STOW.near) continue;
-        // (Awake and at you: the dead and the beasts say so themselves, a knight by having his guard up, living stone by its glow.)
-        if (k.aggro === true || (k.aggro === undefined && (k.combatTarget > 0 || k.glow > 0.05 || (k.combatTarget === undefined && k.glow === undefined && d < STOW.close)))) { out = true; break; }
-      }
+    // (Counted whether or not yours are out already: the music's fights go by it, src/music.js. Up to four is all it asks.)
+    let threat = 0;
+    for (const k of this.foes) {
+      if (k.dead || k.dormant || k.hostile === false) continue;
+      const dx = k.x - p.x, dz = k.z - p.z;
+      if (dx > STOW.near || dx < -STOW.near || dz > STOW.near || dz < -STOW.near) continue;
+      const d = Math.hypot(dx, dz);
+      if (d > STOW.near) continue;
+      // (Awake and at you: the dead and the beasts say so themselves, a knight by having his guard up, living stone by its glow.)
+      if (k.aggro === true || (k.aggro === undefined && (k.combatTarget > 0 || k.glow > 0.05 || (k.combatTarget === undefined && k.glow === undefined && d < STOW.close)))) { if (++threat >= 4) break; }
     }
+    if (threat) out = true;
+    this.scratch[H.THREAT] = p.dead ? 0 : threat;
     this.calmT = out ? 0 : (this.calmT ?? STOW.after) + dt;
     const to = this.calmT < STOW.after ? 0 : 1;
     this.stow = this.stow === undefined ? to : Math.max(0, Math.min(1, this.stow + (to ? dt / STOW.away : -dt / STOW.draw)));
@@ -274,6 +279,7 @@ class Sim {
     this.casting.reset();
     this.knights.forEach((k, i) => k.reset(k.opts));
     this.tripo?.reset();
+    this.wilds?.reset();
     this.villagers.forEach((v) => v.reset());
     if (this.heroWorld) this.heroWorld.killed = [];
     this.opening?.reset();
@@ -353,6 +359,8 @@ class Sim {
       if (k.dead && !k.looted && k.heroKill) k.looted = true;
       // (Nor does a guard of the town's who falls, or what the guard cut down with no hand of yours in it: src/sim/town-watch.js.)
       if (k.dead && !k.looted && (k.opts?.guard || (this.time - (k.guardHitT ?? -1e9) < 30 && this.time - (k.playerHitT ?? -1e9) > 30 && !k.heroFoe))) k.looted = true;
+      // (Nor what another monster killed with no hand of yours in it: src/sim/wilds.js, the sides at war.)
+      if (k.dead && !k.looted && this.time - (k.rivalHitT ?? -1e9) < 30 && this.time - (k.playerHitT ?? -1e9) > 30 && !k.heroFoe) k.looted = true;
       // You took one a hero was fighting: a kill stolen, or a life saved.
       if (k.dead && !k.looted && k.heroFoe && !k.heroFoe.dead && !k.heroFoe.hired && this.time - (k.heroFoeT ?? -1e9) < 6) {
         const h = k.heroFoe;
@@ -383,6 +391,7 @@ class Sim {
     stepCatacombs(this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) { stepWoods(this); stepGraves(this); }
     this.tripo?.step();
+    this.wilds?.step(this.frozen ? 0 : tdt);
     const snap = this.scratch;
     player.write(snap, this);
     this.casting.write(snap);
@@ -523,6 +532,7 @@ class Sim {
       case 5: k.startRoll(this, p, false); break;
       case 6: k.startAttack(this, Object.values(ATTACKS)[b | 0]); break;
       case 7: k.x = b; k.z = c; k.y = this.world.height(k.x, k.z); break;
+      case 50: this.wilds?.debug(a, b, c); break;   // (the living land's own: src/sim/wilds.js)
       case 19: p.x = b; p.z = c; p.y = this.world.height(p.x, p.z); break;
       case 8: p.hp = p.maxHp; break;
       case 9: k.hp = 1; break;
@@ -679,6 +689,8 @@ async function boot(msg) {
   const firstTripo = sim.knights.length;
   for (let i = 0; i < TRIPO_SLOTS; i++) sim.knights.push(new TripoEmpty(sim.knights.length));
   sim.tripo = new TripoWorld(sim, base, withVariants(tripoRoster), tripoPalettes, firstTripo, TRIPO_SLOTS);
+  // The living land: tears, meetings on the way, the sides at war, the outposts' falls (src/sim/wilds.js).
+  sim.wilds = new Wilds(sim);
   // Tessariel's knights keep the town: src/sim/town-watch.js.
   sim.watch = new TownWatch(sim);
   // The other Tessariels: the render thread chose who's in the world this session (src/core/heroes.js makeCast).

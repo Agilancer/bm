@@ -486,6 +486,17 @@ export class TripoMonster extends FieldCreature {
 
   rayPlates(...a) { return this.buried ? false : super.rayPlates(...a); }
 
+  // Struck by another monster (one of another side: src/sim/wilds.js rivals, src/sim/foes.js). What the player's own
+  // blows do goes through the spells and the blade as ever; this is only tooth on hide.
+  damage(sim, amount) {
+    if (this.dead || this.buried) return false;
+    this.hp -= amount * (this.opts.rivalTake ?? 1);
+    this.rivalHitT = sim.time;
+    if (!(this.flinchCd > 0)) { this.flinch = 0.14; this.flinchCd = 0.9; }
+    this.aggro = true;
+    return true;
+  }
+
   die() {
     this.dead = true; this.hp = 0; this.state = STATE.DEAD; this.deadT = 0;
     this.vx = this.vz = 0; this.blobs.length = 0;
@@ -552,9 +563,11 @@ export class TripoWorld {
   // Stats for one model at one lair.
   optsFor(id, lair, x, z, boss) {
     const meta = this.roster[id], g = GROUPS[meta.group] || GROUPS.Goblins, own = MODEL_STATS[id] || {};
-    const s = { ...g, ...own };
+    // (One of the land's new kinds, src/core/wilds.js: its own name, numbers, palette, tricks and spell over its group's.)
+    const s = { ...g, ...own, ...(meta.wild ? { name: meta.name, ...meta.stat } : null) };
+    if (meta.ai) s.ai = meta.ai;
     const H = meta.height;
-    const pal = lair.pal[Math.floor(Math.random() * lair.pal.length)];
+    const pal = meta.pal || lair.pal[Math.floor(Math.random() * lair.pal.length)];
     const breath = meta.breath;
     // (What its kind is called down a delve that has its own names for them: the drowned, the sporelings. src/core/dungeon.js)
     const called = lair.delve && !lair.bossLair ? delveByKey(lair.delve)?.names?.[meta.group] : null;
@@ -562,13 +575,13 @@ export class TripoWorld {
       name: called || s.name, model: id, kind: kindOfGroup(meta.group), scale: 1, spawn: [x, z], yaw: Math.random() * Math.PI * 2,
       hp: s.hp * (boss ? 1.25 : 1) * (lair.tough?.hp || 1), speed: s.speed, damage: s.damage * (lair.tough?.damage || 1), reach: s.reach,
       // Its kind's tricks, where the lair has them on (src/sim/moves.js).
-      tricks: lair.tricks ? TRICKS[meta.group] || null : null, ai: lair.ai || (breath && s.ai !== 'caster' ? 'breather' : s.ai),
+      tricks: lair.tricks ? meta.tricks || TRICKS[meta.group] || null : null, ai: lair.ai || (breath && s.ai !== 'caster' ? 'breather' : s.ai),
       radius: clamp(H * (meta.kind === 'dragon' ? 0.22 : meta.kind === 'spider' ? 0.38 : 0.2), 0.35, 1.8), height: H,
       lootKind: s.loot, knock: H > 3 ? 4 : H > 2 ? 2.5 : 1.5, pause: s.ai === 'melee' && H < 1.5 ? 0.7 : 1,
       sight: meta.kind === 'dragon' ? 48 : s.ai === 'stalker' ? 34 : 24, leash: meta.kind === 'dragon' ? 120 : 70, roam: lair.r * 0.6 + 2,
       breathRange: s.breathRange || 7, breathDps: s.breathDps || 12, breathElem: BREATH_ELEM[breath] ?? ELEM.FIRE,
       breathSpeed: 9 + H * 1.6, breathSize: 0.5 + H * 0.12,
-      boltElem: /lord/.test(id) ? ELEM.VOID : pick([ELEM.DRAIN, ELEM.BONE, ELEM.POISON]),
+      boltElem: meta.bolt ?? /lord/.test(id) ? ELEM.VOID : pick([ELEM.DRAIN, ELEM.BONE, ELEM.POISON]),
       pal: Math.max(0, this.palNames.indexOf(pal)), modelIndex: this.ids.indexOf(id),
       // A weapon from its list for the right hand, a shield for the left (the bestiary's arm(): roster.json arms).
       armR: meta.arms?.right?.length ? this.arms.indexOf(pick(meta.arms.right)) + 1 : 0,
@@ -586,7 +599,7 @@ export class TripoWorld {
     for (const lair of this.lairs) {
       const d = Math.hypot(p.x - lair.x, p.z - lair.z);
       // (The Warrens' packs stay dead till the Warrens say otherwise: src/sim/dungeon.js.)
-      if (lair.state === 'cleared' && !lair.dungeon && sim.time - lair.at > 600 && d > lair.wake * 2) lair.state = 'asleep';
+      if (lair.state === 'cleared' && !lair.dungeon && sim.time - lair.at > (lair.respawn || 600) && d > lair.wake * 2) lair.state = 'asleep';
       if (lair.state === 'awake') {
         const mine = this.slots().filter((k) => k instanceof TripoMonster && k.lair === lair);
         if (lair.spawned && lair.killed >= lair.spawned && !this.loading.has(lair)) { lair.state = 'cleared'; lair.at = sim.time; }
@@ -656,6 +669,8 @@ export class TripoWorld {
         if (!must && old instanceof TripoMonster && (old.aggro || (!old.dead && Math.hypot(old.x - sim.player.x, old.z - sim.player.z) < 150))) return;
         const m = new TripoMonster(slot, rig, this.optsFor(id, lair, x, z, boss));
         m.lair = lair; m.boss = boss;
+        // (A standing battle's own: they wear each other down slowly, so it's still on when you get there. src/core/wilds.js)
+        if (lair.rivalTake) m.opts.rivalTake = lair.rivalTake;
         if (lair.face !== undefined) { m.yaw = lair.face; m.idleT = 1e9; }
         if (spot) { m.yaw = Math.atan2(lair.x - x, lair.z - z); m.idleT = 1e9; }
         lair.spawned++;

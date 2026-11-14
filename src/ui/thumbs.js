@@ -3,32 +3,42 @@
 //
 // Everything is measured in units: a unit is a pixel on a phone 390 high, and shrinks or grows with the height of the screen
 // (unitOf). The right thumb's buttons are placed from the middle of the biggest of them, the staff: so many units to its left
-// (dx) and above it (dy). The staff is in the corner, what you press most is in a ring round it, and the six spells are in a
-// wider ring round that, one to six from the bottom up.
+// (dx) and above it (dy). The staff is in the corner, dodge, shield and jump are in a ring round it, the six spells are in a
+// wider ring round that, one to six from the bottom up, each the same way from the next, and the run is over spell six.
+//
+// A phone's own edges are used (hud.css --hl, --hr, --hb): the thumbs sit in the corners, past the safe area a phone keeps
+// for its notch and its home bar, as the owner laid them out on one.
 export const UNIT_AT = 390;
 /** A unit, in pixels, on a screen so high. */
 export const unitOf = (h) => Math.min(1.3, Math.max(0.8, h / UNIT_AT));
 
 // The staff's middle, from the right and the bottom edges (inside the safe area).
-export const HOME = { right: 66, bottom: 62 };
+export const HOME = { right: 48, bottom: 48 };
 const at = (r, deg, s) => { const a = (deg * Math.PI) / 180; return { dx: +(r * Math.cos(a)).toFixed(1), dy: +(r * Math.sin(a)).toFixed(1), s }; };
-const INNER = 94, OUTER = 166;
-// deg: 0 is straight left of the staff, 90 straight above it.
+const INNER = 74, OUTER = 132;
+// deg: 0 is straight left of the staff, 90 straight above it. Both rings are even about 45 degrees, so the corner's the same
+// from the bottom and from the side.
+const SPELL_FROM = -8, SPELL_STEP = 21.2;
+export const SLOT_SIZE = 46;
+export const SLOTS = [0, 1, 2, 3, 4, 5].map((k) => at(OUTER, SPELL_FROM + k * SPELL_STEP, SLOT_SIZE));
+const RUN = 54;
 export const ARC = {
   bAttack: { dx: 0, dy: 0, s: 84 },
   bCast: { dx: 0, dy: 0, s: 84 },          // (the opening's own cast, in the cave: nothing else is there then)
-  bDodge: at(INNER, 0, 56),
+  bDodge: at(INNER, -4, 56),
   bWide: at(INNER, 45, 56),
-  bJump: at(INNER, 90, 56),
-  bTake: { dx: 228, dy: 46, s: 58 },
+  bJump: at(INNER, 94, 56),
+  bSprint: { dx: SLOTS[5].dx, dy: +(SLOTS[5].dy + SLOT_SIZE / 2 + 4 + RUN / 2).toFixed(1), s: RUN },   // (straight over spell six)
+  bTake: { dx: 196, dy: 28, s: 58 },
 };
-export const SLOT_SIZE = 46;
-export const SLOTS = [0, 18, 36, 54, 72, 90].map((deg) => at(OUTER, deg, SLOT_SIZE));
 
-// The top of the screen: your life on the left, the corner map on the right, and the row of small buttons beside it.
-export const TOP = { pad: 8, side: 10, medal: 44, bars: 150, mini: 92, dock: 38, gap: 5 };
-// The left thumb: the run button, and where the stick's ring waits.
-export const LEFT = { sprint: { left: 18, bottom: 152, s: 50 }, stick: { left: 34, bottom: 26, s: 112 } };
+// The top of the screen: your life on the left, the corner map on the right, and the row of small buttons beside it, each the
+// same gap from the next. Auto sits under the map, beside the skull.
+export const TOP = { pad: 8, side: 5, medal: 44, bars: 150, mini: 92, dock: 38, gap: 3, auto: 32 };
+// Auto's place: so far from the right edge, its top level with the skull's.
+export const AUTO = { right: 40, top: TOP.pad + TOP.mini - 12 };
+// The left thumb: where the stick's ring waits.
+export const LEFT = { stick: { left: 86, bottom: 42, s: 112 } };
 
 /** Each button's box on a screen w by h (CSS pixels, no safe area): { id, x, y, r } with x, y its middle (square: a square of
  * side 2r, not a round). For the test. */
@@ -37,12 +47,13 @@ export function boxes(w, h) {
   const cx = w - HOME.right * u, cy = h - HOME.bottom * u;
   for (const [id, p] of Object.entries(ARC)) out.push({ id, x: cx - p.dx * u, y: cy - p.dy * u, r: (p.s / 2) * u });
   SLOTS.forEach((p, k) => out.push({ id: `slot${k + 1}`, x: cx - p.dx * u, y: cy - p.dy * u, r: (p.s / 2) * u }));
-  const s = LEFT.sprint;
-  out.push({ id: 'bSprint', x: (s.left + s.s / 2) * u, y: h - (s.bottom + s.s / 2) * u, r: (s.s / 2) * u });
   const m = TOP;
   out.push({ id: 'mapMini', x: w - (m.side + m.mini / 2) * u, y: (m.pad + m.mini / 2) * u, r: (m.mini / 2) * u, square: true });     // (the corner map is a square: r is half its side)
-  // The dock, right to left from the map: Auto, then the menu, the pack, the book, the journal, the view.
-  ['autoBtn', 'bPause', 'bPack', 'bBook', 'bQuests', 'bView'].forEach((id, k) => {
+  out.push({ id: 'autoBtn', x: w - (AUTO.right + m.auto / 2) * u, y: (AUTO.top + m.auto / 2) * u, r: (m.auto / 2) * u });
+  // The skull, beside Auto under the map (src/ui/lands.js; its place is hud.css's #vskull).
+  out.push({ id: 'vskull', x: w - (2 + 15) * u, y: (m.pad + m.mini - 12 + 15) * u, r: 15 * u });
+  // The dock, right to left from the map: the menu, the pack, the book, the journal, the view.
+  ['bPause', 'bPack', 'bBook', 'bQuests', 'bView'].forEach((id, k) => {
     out.push({ id, x: w - (m.side + m.mini + m.pad + m.dock / 2 + k * (m.dock + m.gap)) * u, y: (m.pad + m.dock / 2) * u, r: (m.dock / 2) * u });
   });
   return out;
@@ -53,8 +64,8 @@ export function boxes(w, h) {
 export const VARS = {
   'home-r': HOME.right, 'home-b': HOME.bottom,
   pad: TOP.pad, side: TOP.side, medal: TOP.medal, bars: TOP.bars, mini: TOP.mini, dock: TOP.dock, gap: TOP.gap,
+  auto: TOP.auto, 'auto-r': AUTO.right,
   'stick-l': LEFT.stick.left, 'stick-b': LEFT.stick.bottom, 'stick-s': LEFT.stick.s,
-  'sprint-l': LEFT.sprint.left, 'sprint-b': LEFT.sprint.bottom, 'sprint-s': LEFT.sprint.s,
 };
 
 /** Hands the page the table, and each button its place (--dx, --dy, --s). */
