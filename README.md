@@ -2239,7 +2239,8 @@ ground is laid again in the pool's threads once you're 32 m (36 on a PC) from it
 `src/gfx/renderer.js`), with the great grid's triangles less what it takes, and both are put in in the same frame
 (`setLand`); 40 to 120 ms of a desktop's thread for a phone's, 180 to 390 ms for a PC's, and it costs a phone about 40,000
 triangles and a PC about 120,000, less the great grid's it takes. It's drawn wherever the land is, the shadows too
-(`drawLand`).
+(`drawLand`). On a phone it's about a megabyte more of buffers on the GPU in the town (`tools/phone_memory.mjs`: 244 MB
+before it, 245 after; textures and the page's process the same), and the threads keep nothing of it once it's sent.
 
 Within 60 m of you the drawn ground is now within a few centimetres of where you walk in most places, at worst 0.3 m on a
 PC and 0.55 m on a phone, out to 120 m within half a metre or so; out past 250 m, a metre or more on a phone where the land
