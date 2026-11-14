@@ -599,8 +599,9 @@ export class Brain {
     for (let i = 0; i < nh; i++) {
       const co = CHARS_START + (nk + i) * C_SIZE, o = co + C_HERO;
       if (snap[o + 12] < 0.5) continue;
+      // (lead: wanting by, to take the lead: src/sim/hero.js boardLeads and heel. letPass.)
       out.push({ idx: nk + i, x: snap[o + 2], y: snap[o + 3], z: snap[o + 4], hpf: snap[o + 5], dead: snap[o + 9] > 0.5,
-        role: ROLE[snap[o + 13] | 0], foe: snap[co + C.AFTER] | 0 });
+        role: ROLE[snap[o + 13] | 0], foe: snap[co + C.AFTER] | 0, lead: snap[o + 12] > 1.5 });
     }
     return out;
   }
@@ -726,11 +727,27 @@ export class Brain {
     if (this.rideHold) this.auto.jumpHeld = true;
     else if (!this.boardFrame) this.auto.jumpHeld = false;
     if (!this.fighting && this.auto.block) { this.auto.block = false; this.guardT = 0; }
+    this.letPassFor(dt, m);
     this.motor(dt, m);
     if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); this.learn(); this.bar(); }
     // A light underfoot down among the dead, for whoever's watching.
     if (m.below && !this.fighting && (this.wispT -= dt) <= 0 && m.mana > 40) { this.wispT = this.cast(SP.wisp, 0.3) ? 85 : 2; }
     void g;
+  }
+
+  // One of its party wanting by, to take the lead for a while (src/sim/hero.js boardLeads, heel): it eases off and lets them,
+  // as you would, for a few seconds at most and not again straight away (motor: a walk for a run, and on the shield a heel
+  // dragged now and then). Not in a fight, in town or below.
+  letPassFor(dt, m) {
+    this.letPassCd = (this.letPassCd || 0) - dt;
+    const wants = !this.fighting && !m.town && !m.below && !!this.snap && this.party(this.snap).some((h) => h.lead && !h.dead && dist(h.x, h.z, m.x, m.z) < 30);
+    if (this.letPass > 0) {
+      this.letPass -= dt;
+      // (Done when they're by: nobody wanting by for a moment, not a single thought that missed them.)
+      this.letPassNone = wants ? 0 : (this.letPassNone || 0) + dt;
+      if (this.letPassNone > 0.6 && this.letPass < 6.4) this.letPass = 0;
+      if (this.letPass <= 0) { this.letPass = 0; this.letPassCd = 5; }
+    } else if (wants && this.letPassCd <= 0) { this.letPass = 7; this.letPassNone = 0; this.letPassV = Math.hypot(m.vx, m.vz); this.say('Easing off: one of the party is taking the lead.'); }
   }
 
   // Stand still. (A cast under way is let go when its time is up, not here.)
@@ -2799,8 +2816,15 @@ export class Brain {
     // (Shift held for the run while there's breath for it: let go when it's short, taken up again once it's back, so it
     // runs in long stretches and doesn't flicker between a run and a walk.)
     // (The run-up to a ride on the shield is a few strides: it takes it on whatever breath it has.)
-    this.running = w.run && a.mz > 0.6 && m.stam > (this.running ? 10 : this.ride ? 12 : 38);
+    this.running = w.run && a.mz > 0.6 && m.stam > (this.running ? 10 : this.ride ? 12 : 38) && !(this.letPass > 0 && !surf);
     a.run = this.running;
+    // Easing off to let one of the party by (letPassFor): on foot a walk (above); on the shield a heel dragged for a moment
+    // now and then, straight back against the way it's going so it doesn't turn the board, while it's still going faster
+    // than about three quarters of what it was when it began to (letPassV): down a steep pitch, more of the time.
+    const sp = Math.hypot(m.vx, m.vz);
+    if (this.letPass > 0 && surf && sp > Math.max(5, (this.letPassV || 0) * 0.72) && (this.t * 1.4) % 1 < (sp > (this.letPassV || 0) ? 0.6 : 0.4)) {
+      const bx = -m.vx / sp, bz = -m.vz / sp; a.mx = -c * bx + s * bz; a.mz = s * bx + c * bz;
+    }
     // (Turning on the spot before a step isn't being stuck: only wanting to go and not going is.)
     this.unstick(dt, m, !surf && (a.mx !== 0 || a.mz !== 0 || this.turnT > 2.5));
     if (this.stuck.act > 0) {
@@ -2833,6 +2857,9 @@ export class Brain {
     const h0 = terrainHeight(m.x, m.z), drop = (k) => { const [x, z] = along ? along(k) : [m.x + hx * k, m.z + hz * k]; return (h0 - terrainHeight(x, z)) / k; };
     const speed = Math.hypot(m.vx, m.vz);
     this.surfCool -= dt;
+    // (Off it, however that came about, it isn't straight back on: a stall on a rise used to put it off and on again every second.)
+    if (this.wasSurf && !m.surf) this.surfCool = Math.max(this.surfCool, 3);
+    this.wasSurf = m.surf;
     if (m.surf) {
       // A rise ahead at speed (the short ones at the foot of the Fall's pitches): a hop over it, as you'd do it, Space let go
       // for a moment and pressed again (src/sim/surf.js: let go for longer and you're off).
@@ -2847,7 +2874,8 @@ export class Brain {
       if (m.ground && speed > 4.5 && this.hopCool <= 0 && (rise(3) > 0.1 || rise(6) > 0.09)) { this.hopPhase = 0.06; a.jumpHeld = false; this.say('Hopping a rise on the shield.'); return; }
       // Kept on while it's quick, or the slope will make it so: through a flat or a rise with more slope beyond, since what's
       // coming matters more than where it is. Slower than a run on gentle ground, it steps off and runs.
-      const keep = can && left > 18 && (speed > 7.5 || drop(25) > 0.06 || (speed > 4.5 && (drop(25) > 0.025 || drop(60) > 0.04)));
+      // (And off at a crawl, before it stalls: stepped off, not stopped dead.)
+      const keep = can && left > 18 && (speed > 2.2 || !m.ground) && (speed > 7.5 || drop(25) > 0.06 || (speed > 4.5 && (drop(25) > 0.025 || drop(60) > 0.04)));
       a.jumpHeld = keep;
       if (!keep) this.surfCool = 2;
       this.say(`Riding the shield down (${speed.toFixed(0)} m/s).`);

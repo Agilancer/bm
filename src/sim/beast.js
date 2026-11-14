@@ -270,6 +270,11 @@ export class Beast {
       this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw;
       this.carried = null;
     } else if (this.posedYaw === undefined || !gap || this.clip !== this.posedClip || sim.time - this.posedAt >= gap - 1e-6) {
+      // Running, the hands are fists, as anyone's are (ArmsRig.closeFists: a body with no fingers has none to shut), eased
+      // in and out over the poses as they come.
+      const now = sim?.time ?? 0, ft = now - (this.posedAt ?? now);
+      this.fistW = (this.fistW ?? 0) + ((/^run/.test(this.clip || '') ? 1 : 0) - (this.fistW ?? 0)) * Math.min(1, ft * 8);
+      rig.fistK = this.fistW;
       rig.solve(clip, this.t, this.fade, pal, 0);
       this.posedAt = sim?.time ?? 0; this.posedClip = this.clip;
       this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw;

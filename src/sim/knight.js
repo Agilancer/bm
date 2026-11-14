@@ -310,6 +310,8 @@ export class Knight {
     if (wounded > 0.01) { bank.sample(clips.Zombie_Idle_Loop, sim.time, rA, null); blend(rot, rot, rA, wounded * 0.7, rig.count); }
     // (A hero's legs are walking from the first step: a slow walk is a slow walk, never a slide on standing legs.)
     const moveW = hero ? smoothstep(0.02, 0.16, sp) : smoothstep(0.06, 0.7, sp);
+    // (How far a hero is running, past a brisk walk: their empty hands are fists for it, src/sim/hero.js afterPose.)
+    if (hero) this.runK = heroJog * moveW;
     if (moveW > 0.001) {
       bank.sample(clips.Walk_Formal_Loop, ph * clips.Walk_Formal_Loop.dur, rA, pA);
       if (inFight > 0.005) {
@@ -350,6 +352,8 @@ export class Knight {
         if (crossed && !this.action) sim.event(EV.STEP, this.x, this.y, this.z, clamp(sp / 5, 0.2, 1), 1, this.id);
       }
     }
+    // (On a board, a hero riding a shield, the legs are left standing here: src/sim/hero.js poseRide puts them on it in a
+    // rider's stance. A crouch clip was a sneak, knees together and the head down.)
     // Guard stance on the upper body while moving.
     const guard = this.shieldUp * moveW;
     if (guard > 0.001) {
@@ -731,7 +735,7 @@ export class Knight {
   }
 
   move(dt, sim) {
-    const ox = this.x, oz = this.z;
+    const ox = this.x, oz = this.z, was = Math.hypot(this.vx, this.vz);
     // Substeps keep charges and knockbacks from tunnelling through thin geometry.
     const steps = Math.max(1, Math.ceil(Math.hypot(this.vx, this.vz) * dt / 0.2));
     for (let i = 0; i < steps; i++) {
@@ -741,6 +745,10 @@ export class Knight {
     }
     if (dt > 0) {
       this.vx = (this.x - ox) / dt; this.vz = (this.z - oz) / dt;
+      // (Pushed out of something it was standing in, say a rock it rode a board over, it's moved out, but the push isn't a
+      // speed it keeps: one was a fling of 400 m/s across the hillside.)
+      const got = Math.hypot(this.vx, this.vz);
+      if (got > was + 0.5) { const k = (was + 0.5) / got; this.vx *= k; this.vz *= k; }
       if (!this.action) this.speed = Math.hypot(this.vx, this.vz);
     }
     this.y = sim.world.groundFor(this.x, this.z, this.y);
