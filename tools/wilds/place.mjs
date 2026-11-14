@@ -115,8 +115,7 @@ for (const r of ROADS) for (let i = 0; i + 1 < r.pts.length; i++) {
 const TEAR_SPOTS = [];
 for (let cx = -EDGE; cx <= EDGE; cx += 560) for (let cz = -EDGE; cz <= EDGE; cz += 560) for (let tries = 0; tries < 6; tries++) {
   const x = round(cx + (rnd() - 0.5) * 420), z = round(cz + (rnd() - 0.5) * 420);
-  // (Not by a standing battle: its two sides hold eight of the twelve slots, and a tear's waves would come short.)
-  if (bad(x, z, 12, { off: 30, gap: 95, town: 520, site: 120, steep: 0.18 }) || BATTLES.some((b) => Math.hypot(b.x - x, b.z - z) < 330)) continue;
+  if (bad(x, z, 12, { off: 30, gap: 95, town: 520, site: 120, steep: 0.18 })) continue;
   TEAR_SPOTS.push([x, z, COUNTRY_TEARS[countryAt(x, z)][rnd() < 0.6 ? 0 : 1]]); taken.push([x, z, 12]); keepOff.push([x, z, 12]);
   break;
 }
