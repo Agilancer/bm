@@ -19,7 +19,8 @@ import { C, CHARS_START, C_SIZE, H } from '../core/layout.js';
 import { forestAmount, forestTrees } from '../core/forest.js';
 import { LAND_EDGE, PATHS, PLOTS, ROADS, SUMMIT, openingTerrain, terrainHeight } from '../core/terrain.js';
 import { CHURCH_SITE, churchAt } from '../core/church.js';
-import { COUNTRIES, COUNTRY_KEYS, ROUTES, SITES, WATERS, countryWeights } from '../core/lands.js';
+import { COUNTRIES, COUNTRY_KEYS, SITES, WATERS, countryWeights } from '../core/lands.js';
+import { allWays } from '../core/roads.js';
 import { FACTIONS } from '../core/wilds.js';
 import { OUTPOSTS } from '../core/wilds-data.js';
 import { CHARTS, chartAt, setInterior } from './undermap.js';
@@ -47,6 +48,18 @@ const toWorld = (x, z) => [(WORLD - x) / WMPP, (WORLD - z) / WMPP];
 // Where the town's paper lies on the land's.
 const TOWN_AT = (WORLD - EDGE) / WMPP, TOWN_SIZE = (2 * EDGE) / WMPP;
 
+// The roads and paths, drawn over the papers as lines (sharp at any nearness, not a picture made bigger): by their class, a
+// dark edge and a pale middle, wider the bigger the way, never thinner than so many pixels; a footpath broken unless you're
+// close. min: the narrowest the middle is drawn (CSS pixels); w: the way's own half-width in metres; faint: the colour it's
+// shown in where you haven't been yet (the roads, lanes and highways are common knowledge; the footpaths aren't).
+const WAY_STYLE = {
+  path: { min: 1.3, w: 1.1, fill: 'rgba(206, 178, 124, 0.95)', edge: null },
+  lane: { min: 1.7, w: 1.7, fill: 'rgb(214, 190, 140)', edge: 'rgba(40, 28, 16, 0.75)', faint: 'rgba(200, 176, 126, 0.30)' },
+  road: { min: 2.2, w: 2.4, fill: 'rgb(226, 204, 152)', edge: 'rgba(40, 28, 16, 0.85)', faint: 'rgba(214, 190, 140, 0.36)' },
+  great: { min: 2.8, w: 3, fill: 'rgb(238, 218, 166)', edge: 'rgba(46, 30, 16, 0.9)', faint: 'rgba(226, 204, 152, 0.42)' },
+};
+const WAY_ORDER = ['path', 'lane', 'road', 'great'];
+
 export class WorldMap {
   // pool: a thread pool to make the papers' samples on (rows), if there's one free of the fight's planning.
   constructor(base, touch, pool = null) {
@@ -56,6 +69,17 @@ export class WorldMap {
     this.paper = document.createElement('canvas'); this.paper.width = this.paper.height = PX;
     this.land = document.createElement('canvas'); this.land.width = this.land.height = WPX;
     this.portals = [];                // the seals you've woken: [x, z] (src/ui/portals.js)
+    // Every way as a line on the land's paper, with its box in the land (src/core/roads.js allWays), and each class's all in one.
+    this.ways = []; this.wayAll = {};
+    for (const c of WAY_ORDER) this.wayAll[c] = new Path2D();
+    for (const w of allWays(false)) {
+      const path = new Path2D();
+      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      w.pts.forEach(([x, z], n) => { const [px, py] = toWorld(x, z); if (n) path.lineTo(px, py); else path.moveTo(px, py); x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); });
+      const cls = WAY_STYLE[w.cls] ? w.cls : 'lane';
+      this.ways.push({ cls, path, x0, x1, z0, z1 });
+      this.wayAll[cls].addPath(path);
+    }
     this.fog = document.createElement('canvas'); this.fog.width = this.fog.height = FOG;
     this.fogCtx = this.fog.getContext('2d');
     this.seen = new Uint8Array(FOG * FOG);
@@ -325,15 +349,7 @@ export class WorldMap {
     g.drawImage(small, 0, 0, WPX, WPX);
     g.fillStyle = 'rgba(70, 104, 128, 0.95)';
     for (const wt of WATERS) { const [px, py] = toWorld(wt.x, wt.z); g.beginPath(); g.arc(px, py, Math.max(2, wt.r / WMPP), 0, 6.2832); g.fill(); }
-    for (const r of ROUTES) {
-      g.strokeStyle = r.trail ? 'rgba(196, 170, 120, 0.75)' : 'rgba(214, 192, 142, 0.9)'; g.lineWidth = r.trail ? 1 : Math.max(1.5, (2 * r.w) / WMPP); g.lineJoin = g.lineCap = 'round';
-      // (A trail to an outpost, src/core/wilds.js: thin and broken, so the roads still read as roads.)
-      g.setLineDash(r.trail ? [3, 2.5] : []);
-      g.beginPath();
-      r.pts.forEach(([x, z], n) => { const [px, py] = toWorld(x, z); if (n) g.lineTo(px, py); else g.moveTo(px, py); });
-      g.stroke();
-    }
-    g.setLineDash([]);
+    // (The roads aren't on this paper: they're drawn over it as lines, drawWays.)
     // The outposts out in the land (src/core/wilds.js): a small lozenge each, Velscour's forts and towers in his red.
     for (const o of OUTPOSTS) {
       const [px, py] = toWorld(o.x, o.z), v = FACTIONS[o.faction].v;
@@ -350,11 +366,42 @@ export class WorldMap {
     g.strokeStyle = 'rgba(0, 0, 0, 0.8)'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, WPX - 3, WPX - 3);
   }
 
-  // Both papers and the fog, drawn into g as it's set up for the land's paper.
-  drawPapers(g) {
+  // Both papers, the roads and the fog, drawn into g as it's set up for the land's paper. s: screen pixels to a paper pixel;
+  // d: screen pixels to a CSS pixel; box: what of the land's in view ({ x0, x1, z0, z1 }), if not all of it.
+  drawPapers(g, s = 1, d = 1, box = null) {
     g.drawImage(this.land, 0, 0);
     g.drawImage(this.paper, TOWN_AT, TOWN_AT, TOWN_SIZE, TOWN_SIZE);
+    this.drawWays(g, s, d, box, false);
     g.drawImage(this.fog, 0, 0, FOG, FOG, 0, 0, WPX, WPX);
+    // (And the bigger ways faintly through the dark, where you haven't been: you know there's a road, not what's on it.)
+    this.drawWays(g, s, d, box, true);
+  }
+
+  // The roads and paths in view: all the edges, then all the middles, so where two meet they run into one.
+  drawWays(g, s, d, box, faint) {
+    const k = s / WMPP, whole = !box || box.x1 - box.x0 > 2600;
+    const lists = {};
+    for (const c of WAY_ORDER) {
+      if (faint && !WAY_STYLE[c].faint) continue;
+      lists[c] = whole ? [this.wayAll[c]] : this.ways.filter((w) => w.cls === c && w.x1 > box.x0 && w.x0 < box.x1 && w.z1 > box.z0 && w.z0 < box.z1).map((w) => w.path);
+    }
+    g.save();
+    g.lineJoin = g.lineCap = 'round';
+    const width = (st) => Math.max(st.min * d, 2 * st.w * k);
+    if (!faint) for (const c of WAY_ORDER) {
+      const st = WAY_STYLE[c];
+      if (!st.edge || !lists[c].length) continue;
+      g.strokeStyle = st.edge; g.lineWidth = (width(st) + 1.6 * d) / s;
+      for (const p of lists[c]) g.stroke(p);
+    }
+    for (const c of WAY_ORDER) {
+      const st = WAY_STYLE[c];
+      if (!lists[c] || !lists[c].length) continue;
+      g.strokeStyle = faint ? st.faint : st.fill; g.lineWidth = (faint ? st.min * d : width(st)) / s;
+      g.setLineDash(c === 'path' && k < 2.5 ? [4.5 * d / s, 3.5 * d / s] : []);
+      for (const p of lists[c]) g.stroke(p);
+    }
+    g.restore();
   }
 
   isSeen(x, z) {
@@ -566,7 +613,8 @@ export class WorldMap {
     g.translate(-ppx, -ppy);
     if (this.ready && !place) {
       g.imageSmoothingEnabled = true;
-      this.drawPapers(g);
+      const m = reach * 1.5;
+      this.drawPapers(g, k * WMPP, dpr, { x0: px - m, x1: px + m, z0: pz - m, z1: pz + m });
     }
     g.restore();
     // The others, on the same turn.
@@ -633,7 +681,7 @@ export class WorldMap {
       title = snap && place.title ? place.title(snap[H.PY]) : place.name;
     } else if (this.ready) {
       g.imageSmoothingEnabled = true;
-      g.save(); g.translate(W / 2 + (cx - WORLD) * k, Hh / 2 + (cz - WORLD) * k); g.scale(k * WMPP, k * WMPP); this.drawPapers(g); g.restore();
+      g.save(); g.translate(W / 2 + (cx - WORLD) * k, Hh / 2 + (cz - WORLD) * k); g.scale(k * WMPP, k * WMPP); this.drawPapers(g, k * WMPP, dpr, { x0: cx - hw, x1: cx + hw, z0: cz - hh, z1: cz + hh }); g.restore();
       const far = this.span > 2600, mid = this.span > 900;
       if (!far) {
         label('The Cathedral', ...churchAt(90, 0), 12, 26);

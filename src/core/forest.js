@@ -81,8 +81,8 @@ export function forestAmount(x, z) {
   if (huntPathEdge(x, z) < HUNT_LANE) return 0;
   // Out past the near woods it comes in stands, with the hillsides' grass between them.
   if (r > 240) a *= sstep(0.36, 0.5, fbm(x * 0.0072 + 20, z * 0.0072 - 8, 3)) * (1 - 0.35 * sstep(240, 420, r));
-  // Nothing grows on the roads out to the countries, nor right up to their edges.
-  if (r > 250 && a > 0) {
+  // Nothing grows on the roads out to the countries and the ways through the woods, nor right up to their edges.
+  if (r > 90 && a > 0) {
     const rd = routeDist(x, z);
     if (rd.road) a *= sstep(rd.road.w + 2.5, rd.road.w + 8, rd.d);
     if (a <= 0) return 0;

@@ -49,7 +49,8 @@ export function roadEdge(x, z) {
       if (e < d) { d = e; w = road.w; }
     }
   }
-  if (r > 250) {
+  // (The roads out to the countries and the ways laid between everything, from the town's edge on: src/core/roads.js.)
+  if (r > 70) {
     const rd = routeDist(x, z);
     if (rd.road && rd.d - rd.road.w < d) { d = rd.d - rd.road.w; w = rd.road.w; }
   }

@@ -23,6 +23,7 @@
 import { ROADS, SUMMIT } from './terrain.js';
 import { CHURCH_DOOR, churchAt } from './church.js';
 import { POSTS } from './dungeon.js';
+import { SITES } from './lands.js';
 
 // How many hero bodies the world holds at once: each is a slot in the snapshot and a skinned model on the GPU. (And the
 // Free Company's quartermasters and the Test Dungeon's keeper besides, BROKERS below.)
@@ -135,6 +136,10 @@ export const PLACES = [
   { id: 'hill_road_den', name: 'the kobolds\' den off the hill road', kind: 'hunt', spot: [741, 86], r: 20, mobs: ['kobold'] },
   { id: 'fen_way_camp', name: 'the goblins\' camp on the Fen Way', kind: 'hunt', spot: [70, -480], r: 20, mobs: ['goblin'] },
   { id: 'spider_wood', name: 'the spiders\' wood', kind: 'hunt', spot: [472, -509], r: 22, mobs: ['spider'] },
+  // Further still, down the land's roads (src/core/roads.js): the towns and the places between, walked to for the walk, a
+  // while there and home again, so the roads have people on them (src/sim/hero.js journey). None of Velscour's. (Last, again.)
+  ...['cairnfield', 'farm', 'mill', 'hamlet', 'cinderford', 'hermit', 'belltower', 'falls', 'causeway', 'wayhouse', 'thornwick', 'sallow']
+    .filter((k) => SITES[k]).map((k) => ({ id: `to_${k}`, name: SITES[k].name.replace(/^The /, 'the '), kind: 'journey', spot: [SITES[k].x, SITES[k].z], r: Math.min(SITES[k].r, 40) })),
 ];
 export const PLACE_IDS = PLACES.map((p) => p.id);
 export const placeOf = (id) => PLACES.find((p) => p.id === id);
@@ -155,6 +160,7 @@ export const ACTIVITIES = {
   social: [1.1, 0.6, 0.45, 1],
   perform: [0.6, 0.2, 0.3, 0.8],
   rest: [1.6, 0.3, 0.05, 0.3],
+  journey: [0.1, 0.55, 0.75, 0.35],
 };
 export const hourBand = (h) => (h >= 21 || h < 5 ? 0 : h < 8 ? 1 : h < 17 ? 2 : 3);
 
