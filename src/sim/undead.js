@@ -3,7 +3,7 @@
 // with no head goes by ear. Only running out of body stops them. Over them are the casters, who think: see Caster below, and foespells.js
 // for what they throw.
 import { C, EV } from '../core/layout.js';
-import { churchAt, churchSite, toChurch } from '../core/church.js';
+import { churchAt, churchSite, inChurch, toChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
 import { inTown } from '../core/town.js';
 import { clamp, damp, quatYaw, wrapAngle, quatRotate } from '../core/math.js';
@@ -88,7 +88,7 @@ export class Zombie extends Beast {
     const S = this.scale;
     Object.assign(this, {
       x: opts.spawn[0], z: opts.spawn[1], y: 0, yaw: opts.yaw, vx: 0, vz: 0, speed: 0, stam: 100, armor: 1, hp: opts.hp, maxHp: opts.hp, seenHp: opts.hp, rayPiece: -1,
-      dead: false, deadT: 0, hostile: false, iframes: false, shieldUp: 0, gashes: [], bleeds: [], heart: Math.random(), gashVersion: (this.gashVersion || 0) + 1, bites: 0, below: false,
+      dead: false, deadT: 0, hostile: false, iframes: false, shieldUp: 0, gashes: [], bleeds: [], heart: Math.random(), gashVersion: (this.gashVersion || 0) + 1, bites: 0, below: false, stoodAt: -1,
       chunks: [], jets: [], alive: new Array(15).fill(true), bit: new Array(15).fill(0), cutMask: 0, limb: { ...LIMB_HP }, crawling: false, headless: false, hobble: false,
       state: STATE.MOVE, stateT: 0, goal: GOAL.WANDER, aggro: false, attack: null, used: false, activeOn: -1, cool: rnd(0.5, 2), pounceCool: rnd(2, 6), senseT: Math.random() * 0.25,
       lastX: opts.spawn[0], lastZ: opts.spawn[1], lastSense: -99, wx: opts.spawn[0], wz: opts.spawn[1], wanderT: rnd(0, 5), moving: false, searchT: 0, rush: 0, orbit: 0, stuckT: 1, stuckX: opts.spawn[0], stuckZ: opts.spawn[1], sideT: 0, sideA: 0,
@@ -1240,7 +1240,11 @@ function graveSpot(i, world) {
 
 // Below ground there are more places to stand than there are bodies, so bodies with nothing better to do are stood ahead of you as
 // you go down: first the ones nobody's using, then the long dead, then whoever's still in the fields, a long way above. Each place is
-// filled once, so what you've cleared stays clear. The big ones and the casters have rooms of their own, when you get near them.
+// filled once, so what you've cleared stays clear for as long as you're down there. Up out of them for RISE_AGAIN seconds, the
+// places whose dead you put down are filled again when you next come by: the Sexton's and the tailor's work wants more of
+// the dead than there are places (twenty-eight to put down, and silk, iron and wax off them besides), and a second run of
+// the catacombs used to find nobody. The big ones and the casters have rooms of their own, when you get near them, and
+// come the once.
 // (Where, in the church's own frame, and moved with it: src/core/church.js.)
 const along = (p) => toChurch(p.x, p.z)[0];
 const LORDS = [
@@ -1250,12 +1254,21 @@ const LORDS = [
   { model: 'zombie_ogre', when: (p) => p.y < -20 && along(p) > 200, near: churchAt(236, -86) },
   { model: 'evil_wizard', when: (p) => p.y < -20 && along(p) > 200, near: churchAt(250, -86) },
 ];
-const NEAR = 12, FAR = 32, OUT_OF_SIGHT = 20;
-const used = new Set();
+const NEAR = 12, FAR = 32, OUT_OF_SIGHT = 20, RISE_AGAIN = 240;
+const used = new Map();   // place -> the body stood there (null: one of the lords)
 const lordsDone = new Set();
-let nextLook = 0;
+let nextLook = 0, leftAt = null;
 // A new game, a death or a load: the catacombs are stood again from nothing (sim.time starts over too).
-export function resetCatacombs() { used.clear(); lordsDone.clear(); nextLook = 0; }
+export function resetCatacombs() { used.clear(); lordsDone.clear(); nextLook = 0; leftAt = null; }
+// Out of the catacombs since `leftAt` (null while you're down there): back down after long enough, every place whose body
+// is dead, or has been stood somewhere else since, is free again. One whose body still stands there is left as it is.
+export function catacombsAway(sim, down) {
+  if (!down) { if (leftAt === null) leftAt = sim.time; return; }
+  if (leftAt !== null && sim.time - leftAt > RISE_AGAIN) {
+    for (const [i, body] of used) if (body && (body.dead || body.dormant || body.stoodAt !== i)) used.delete(i);
+  }
+  leftAt = null;
+}
 
 function standAt(sim, body, s) {
   const r = Math.random();
@@ -1266,8 +1279,10 @@ function standAt(sim, body, s) {
 
 export function stepCatacombs(sim) {
   const p = sim.player;
-  if (along(p) < 125 || sim.time < nextLook) return;   // (Past the office, at the head of the stair down.)
+  if (sim.time < nextLook) return;
   nextLook = sim.time + 0.5;
+  catacombsAway(sim, p.y < -6 && inChurch(p.x, p.y + 1, p.z));
+  if (along(p) < 125) return;   // (Past the office, at the head of the stair down.)
   const spawns = sim.world.spawns;
   const idle = (k) => k instanceof Zombie && !k.opts.role && !k.opts.reserve && k.opts.model !== 'zombie_ogre' && !heroBusy(k, sim) && (k.dormant || (k.dead && k.deadT > 4) || (!k.dead && !k.aggro && Math.hypot(k.x - p.x, k.z - p.z) > 70));
   LORDS.forEach((l, n) => {
@@ -1279,7 +1294,7 @@ export function stepCatacombs(sim) {
     if (best === null) return;
     // (Only once the lord is found and placed: one out fighting, or dead, is looked for again next time.)
     lordsDone.add(n);
-    used.add(best);
+    used.set(best, null);
     body.below = true;
     standAt(sim, body, spawns[best]);
   });
@@ -1303,8 +1318,9 @@ export function stepCatacombs(sim) {
     // The ground's own dead first; then any that have lain long enough; then the fields.
     const body = sim.knights.find((k) => idle(k) && k.dormant) || sim.knights.find((k) => idle(k) && k.dead) || sim.knights.find(idle);
     if (!body) return;
-    used.add(i);
+    used.set(i, body);
     standAt(sim, body, s);
+    body.stoodAt = i;
     room--;
   }
 }
