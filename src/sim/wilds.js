@@ -78,7 +78,11 @@ export class Wilds {
   // ---- the sides at war ---------------------------------------------------------------------------------------------
   rivals() {
     const list = this.monsters().filter((m) => m.lair?.side && !m.buried);
+    const p = this.sim.player;
     for (const m of list) {
+      // (Left far behind, a fight stands down: nobody's there to see it, and while its bodies say they're hunting their
+      // lair never sleeps and they keep their slots from whatever you walk up to next. src/sim/tripo.js step.)
+      if (Math.hypot(m.x - p.x, m.z - p.z) > 190) { if (m.rival) m.aggro = false; m.rival = null; continue; }
       let best = null, bd = 36;
       for (const o of list) {
         if (o === m || !atWar(m.lair.side, o.lair.side)) continue;
@@ -277,7 +281,7 @@ export class Wilds {
     R.from = best[2];
     R.gate = [R.x + Math.sin(best[3]) * (R.r * 0.55), R.z + Math.cos(best[3]) * (R.r * 0.55)];
     const tough = { hp: 0.8 + R.lvl * 0.03, damage: 0.8 + R.lvl * 0.02 };
-    const set = (m) => { m.opts.sight = 40; m.opts.leash = 600; m.opts.roam = 2; m.idleT = 0; };
+    const set = (m) => { m.opts.sight = 40; m.opts.leash = 600; m.opts.roam = 2; m.opts.march = 0.7; m.idleT = 0; };
     R.lair = this.stand({ tag: 'raid', x: best[0], z: best[1], r: 5, boss: R.wave === 1 ? F.chief : F.elite, pick: F.rank.concat(F.elite), n: R.wave === 1 ? 4 : 3, pal: F.pal, side: F.side, tricks: true, tough, set });
     R.shown = -1;
     sim.event(EV.WILD, WILD.RAID, R.n, FACTION_KEYS.indexOf(R.a), R.wave, R.lair.want, R.help.length);
@@ -291,7 +295,7 @@ export class Wilds {
     for (const m of mine) {
       if (m.dead) continue;
       const dx = R.gate[0] - m.home[0], dz = R.gate[1] - m.home[1], d = Math.hypot(dx, dz);
-      if (d > 3) { m.home[0] += dx / d * 2.2 * dt; m.home[1] += dz / d * 2.2 * dt; }
+      if (d > 3) { m.home[0] += dx / d * 3.4 * dt; m.home[1] += dz / d * 3.4 * dt; m.idleT = 0; }
       // (In among the houses, they go for whoever's there: you, if you are.)
       else if (!m.aggro && !p.dead && Math.hypot(p.x - m.x, p.z - m.z) < 75 && Math.hypot(m.x - m.home[0], m.z - m.home[1]) < 12) m.aggro = true;
     }
@@ -376,7 +380,7 @@ export class Wilds {
       const marchers = list.filter((k) => ['goblin', 'kobold', 'velscour', 'plague', 'dead', 'herd'].includes(FACTIONS[k].side));
       const F = FACTIONS[M.a = marchers.length ? pick(marchers) : fa];
       M.march = [p.x, p.z];
-      M.lairs.push(this.stand(base(F, { boss: F.chief, n: 3, r: 4, tricks: true, set: (m) => { m.opts.sight = 34; m.opts.leash = 400; m.opts.roam = 2; m.idleT = 0; } })));
+      M.lairs.push(this.stand(base(F, { boss: F.chief, n: 3, r: 4, tricks: true, set: (m) => { m.opts.sight = 34; m.opts.leash = 400; m.opts.roam = 2; m.opts.march = 0.6; m.idleT = 0; } })));
     } else if (key === 'bounty') {
       M.lairs.push(this.stand(base(A, { boss: A.chief, n: 2, tricks: true, tough: { hp: tough.hp * 1.35, damage: tough.damage * 1.1 } })));
     } else if (key === 'ritual') {
@@ -410,7 +414,7 @@ export class Wilds {
     // A warband walks the road to where you were when it set out.
     if (M.march) for (const m of mine) {
       const dx = M.march[0] - m.home[0], dz = M.march[1] - m.home[1], d = Math.hypot(dx, dz);
-      if (d > 3) { m.home[0] += dx / d * 1.7 * dt; m.home[1] += dz / d * 1.7 * dt; }
+      if (d > 3) { m.home[0] += dx / d * 2.8 * dt; m.home[1] += dz / d * 2.8 * dt; m.idleT = 0; }
     }
     // A ritual: done before you stopped it, and what they called stands up among them.
     if (M.key === 'ritual' && !M.risen) {

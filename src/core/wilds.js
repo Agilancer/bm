@@ -207,8 +207,8 @@ export const COUNTRY_TEARS = { darkwood: [2, 4], downs: [5, 2], fen: [3, 4], rus
 export const TEAR = {
   see: 170,        // metres off that an open tear is drawn and told of
   start: 13,       // metres off that walking up to it starts it
-  leave: 90,       // further than this from it for `lost` seconds and it's given up
-  lost: 14,
+  leave: 130,      // further than this from it for `lost` seconds and it's given up (room to back off and ride round)
+  lost: 25,
   bonus: 80,       // seconds for the first two waves that earn the bonus wave
   bonusFor: 45,    // seconds the bonus wave has to be killed in
   turn: 780,       // seconds a tear stays as it is (open or shut) before the land's tears turn over
@@ -240,6 +240,10 @@ export const MEET = {
 // out: how far off the raiders start, on a road where there is one; help: how many Tessariels answer.
 export const RAID_TOWNS = ['thornwick', 'cinderford', 'frostwatch', 'hamlet', 'farm'];
 export const RAID = { near: 230, first: [50, 140], every: [540, 900], out: 95, help: 3 };
+
+// What the living land can call anyone to (src/ui/wilds.js calls): auto-play answers each (src/ui/autobrain.js WILD_SAY,
+// and `node tools/autoplay/check.mjs` fails while it doesn't).
+export const WILD_CALLS = ['raid', 'tear', 'find', 'bounty'];
 
 // What the sim tells the page (EV.WILD's first number), and what goes with it.
 export const WILD = {
