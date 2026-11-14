@@ -23,6 +23,7 @@ import { Gravehart } from './gravehart.js';
 import { Hydra } from './hydra.js';
 import { FieldCreature } from './field-creature.js';
 import { Pose, solveFK } from './anim.js';
+import { struck } from './ragdoll.js';
 import { BROKER_SPOTS, PORTAL, delveAt, delveOf, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
 import { cleanLine } from './sight.js';
@@ -818,6 +819,7 @@ export class Hero extends Knight {
     }
     const w = sim.heroWorld, was = m.hp;
     m.hp -= dmg;
+    struck(m, sim, this.x, this.z, poise);
     if (m instanceof Zombie) m.seenHp = m.hp;
     if (!o.dot) m.onHit?.(sim, kind, this.x, this.z, poise, this);
     if (o.stun) w.stun(m, o.stun, this);

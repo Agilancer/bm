@@ -3,6 +3,7 @@
 import { C, C_BLEEDS, C_GASH, C_MASKS, C_PALETTE, EV, GASH_FLOATS, MAX_BLEEDS, MAX_GASH } from '../core/layout.js';
 import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
 import { clamp, quatMul, quatNormalize, quatRotate } from '../core/math.js';
+import { fall, paletteOut } from './ragdoll.js';
 
 const GRAVITY = 15;
 const tv = new Float32Array(3), tv2 = new Float32Array(3), out3 = new Float32Array(3), tq = new Float32Array(4), tq2 = new Float32Array(4);
@@ -257,7 +258,18 @@ export class Beast {
     // between the last one, carried to where the body's got to (src/core/carry.js). this.carried is that carry, or null.
     const pal = this.posePal || (this.posePal = new Float32Array(rig.count * 8));
     const gap = sim?.poseGap ? sim.poseGap(this, this.lodSlot) : 0;
-    if (this.posedYaw === undefined || !gap || this.clip !== this.posedClip || sim.time - this.posedAt >= gap - 1e-6) {
+    // Dead, it's limp (src/sim/ragdoll.js): it falls from the pose it died in and lies as it lands, and the body is where it lies.
+    const limp = this.dead && !this.dormant && !!sim;
+    if (!limp) this.ragdoll = null;
+    if (limp) {
+      let rd = this.ragdoll;
+      if (!rd) { rig.solve(clip, this.t, this.fade, pal, 0); rd = this.ragdoll = fall(this, sim, rig, rig.wq, rig.wt); }
+      const dy = Math.min(0, this.sink || 0);
+      if (rd.step(sim.time) || rd.dy !== dy) { rd.pose(rig.wq, rig.wt, dy); paletteOut(rig, pal, 0); this.x = rd.x; this.z = rd.z; }
+      this.posedAt = sim.time; this.posedClip = this.clip;
+      this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw;
+      this.carried = null;
+    } else if (this.posedYaw === undefined || !gap || this.clip !== this.posedClip || sim.time - this.posedAt >= gap - 1e-6) {
       rig.solve(clip, this.t, this.fade, pal, 0);
       this.posedAt = sim?.time ?? 0; this.posedClip = this.clip;
       this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw;
