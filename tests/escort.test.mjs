@@ -93,9 +93,10 @@ test('walk past her while she waits and she comes after you and takes the lead a
 });
 
 test('go off the road and she stops where she is and waits for you', () => {
-  // Down the road a way, then off into the trees beside it, and back.
-  const { log, op } = play((t) => (t < 10 ? 5.6 : t < 30 ? 0 : 5.6), () => false, 240, (t) => (t < 10 ? 0 : t < 30 ? Math.min(30, (t - 10) * 5) : Math.max(0, 30 - (t - 30) * 5)));
-  const off = log.filter((e) => e.t > 17 && e.t < 30);
+  // Down the steps and onto the path below them, then off into the trees beside it, and back. (Not off the steps: they
+  // double back on themselves, so thirty metres to one side of a flight is further down the way.)
+  const { log, op } = play((t) => (t < 20 ? 5.6 : t < 40 ? 0 : 5.6), () => false, 300, (t) => (t < 20 ? 0 : t < 40 ? Math.min(30, (t - 20) * 5) : Math.max(0, 30 - (t - 40) * 5)));
+  const off = log.filter((e) => e.t > 27 && e.t < 40);
   assert.ok(Math.max(...off.map((e) => e.her)) - Math.min(...off.map((e) => e.her)) < 0.3, 'she waits rather than going on without you');
   assert.ok(off.every((e) => e.clip === 'idle' || e.clip === 'wait'), 'stood, turned to you');
   assert.equal(op.stage, OPENING.ARRIVED, 'and leads on once you are back');

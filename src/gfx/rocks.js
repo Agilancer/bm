@@ -686,22 +686,6 @@ export class Rocks {
     });
   }
 
-  // The fine map of the roads round you (the ground's shader draws their edges, ruts and crown from it), made again in the pool's
-  // threads once you've gone 40 m. (Not on a phone: its ground has no use for it.)
-  followRoads(cam) {
-    if (this.lean || this.roadBusy) return;
-    const pool = this.r.landPool || this.r.pool;
-    if (!pool || Math.hypot(cam.x - this.roadAt[0], cam.z - this.roadAt[1]) < 40) return;
-    this.roadBusy = true;
-    const cx = Math.round(cam.x), cz = Math.round(cam.z);
-    pool.run('roadmap', { opening: this.r.openingEnabled, cx, cz }).then((res) => {
-      const { device } = this.r;
-      device.queue.writeTexture({ texture: this.r.nearRoad }, res.data, { bytesPerRow: 512 * 4 }, [512, 512]);
-      device.queue.writeBuffer(this.r.nearRoadU, 0, new Float32Array([res.x0, res.z0, 1 / 256, 1]));
-      this.roadAt = [cx, cz];
-    }).catch((e) => console.warn('roadmap', e)).finally(() => { this.roadBusy = false; });
-  }
-
   // Lay the stones and boulders again round the camera, in the pool's threads, if it's gone far enough from where they were laid.
   follow(cam) {
     if (this.busy) return;
@@ -809,7 +793,6 @@ export class Rocks {
 
   update(cam, aspect, tanHalf) {
     this.follow(cam);
-    this.followRoads(cam);
     if (!this.chunks.length) return;
     const moved = Math.hypot(cam.x - this.lastX, cam.z - this.lastZ) > 1.5;
     const fl = Math.hypot(cam.fx, cam.fz) || 1, fx = cam.fx / fl, fz = cam.fz / fl;

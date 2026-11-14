@@ -5,6 +5,7 @@ import { clamp, damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatR
 import { inTown } from '../core/town.js';
 import { stepStow } from '../core/stow.js';
 import { Pose, solveFK, writePalette } from './anim.js';
+import { fall, struck } from './ragdoll.js';
 import { PlateBVH } from './world.js';
 
 export const S = { PATROL: 0, ALERT: 1, APPROACH: 2, CIRCLE: 3, ATTACK: 4, BLOCK: 5, ROLL: 6, STAGGER: 7, RETREAT: 8, BREAK: 9, DEAD: 10, TAUNT: 11, FEINT: 12, IDLE: 13 };
@@ -832,6 +833,7 @@ export class Knight {
     }
     this.hurt = damp(this.hurt, clamp((1 - this.hp / this.maxHp - 0.45) * 2 + blood * 0.05, 0, 1), 1.5, dt);
     if (this.hp <= 0 && !this.dead) this.die(sim);
+    if (!this.dead) this.ragdoll = null;
 
     const target = this.selectTarget(sim);
     if (!this.dead && target !== this.target) {
@@ -852,6 +854,7 @@ export class Knight {
     if (this.dead) {
       this.vx = damp(this.vx, 0, 6, dt); this.vz = damp(this.vz, 0, 6, dt); this.speed = 0;
       this.deadT += dt;
+      if (this.limp(sim)) return;
       this.move(dt, sim);
       this.animateDue(dt, sim);
       return;
@@ -872,6 +875,20 @@ export class Knight {
     stepStow(this, dt, this.combatTarget > 0 || !!this.action || this.shieldTarget > 0, this.x, this.z);
     this.move(dt, sim);
     this.animateDue(dt, sim);
+  }
+
+  // Dead, he's limp (src/sim/ragdoll.js): he falls from the pose he died in, sword and board still in his hands, and lies as
+  // he lands. (Not the heroes: they have their own way of dying, and of coming back.)
+  limp(sim) {
+    if (this.opts.hero) return false;
+    const pose = this.pose;
+    const rd = this.ragdoll || (this.ragdoll = fall(this, sim, this.rig, pose.wq, pose.wt));
+    if (!rd.step(sim.time)) return true;
+    rd.pose(pose.wq, pose.wt);
+    this.x = rd.x; this.z = rd.z;
+    this.posedX = this.x; this.posedY = this.y; this.posedZ = this.z; this.posedYaw = this.yaw; this.poseVer = (this.poseVer || 0) + 1;
+    this.writeProps(this.propMatrices, 0);
+    return true;
   }
 
   // A full pose when one's due (Sim.poseGap), with all the time since the last; write carries that one along in between. Every
@@ -1583,6 +1600,7 @@ export class Knight {
   hitBeast(sim, m, a) {
     const dmg = a.dmg * GUARD_BITE;
     m.hp -= dmg;
+    struck(m, sim, this.x, this.z, dmg);
     if (m.seenHp !== undefined) m.seenHp = m.hp;
     m.guardHitT = sim.time;
     m.onHit?.(sim, a.limb ? 'kick' : 'gash', this.x, this.z, a.dmg + (a.knock || 0) * 4, null);
@@ -1606,6 +1624,7 @@ export class Knight {
     }
     this.hp -= amount;
     if (knock > 0) { const dx = this.x - fromX, dz = this.z - fromZ, L = Math.hypot(dx, dz) || 1; this.knockX = dx / L; this.knockZ = dz / L; this.knock = Math.min(knock, 5); }
+    struck(this, sim, fromX, fromZ, amount * 1.5);
     this.onHit(sim, 'cut', fromX, fromZ, amount * 1.5, null);
     if (this.hp <= 0 && !this.dead) this.die(sim);
     return true;

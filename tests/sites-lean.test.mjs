@@ -24,8 +24,9 @@ test('the land\'s corners are typed arrays of just their length, and can be let 
   const full = buildSites(true);
   let verts = 0;
   for (const p of full.parts.values()) { assert.ok(typed(p) && whole(p)); verts += p.pos.length / 3; }
-  // (A PC's land has the outposts' fences, tents and stones as well, src/core/wild-dress.js; a phone's, below, hasn't.)
-  assert.ok(verts > 150000 && verts < 800000, `${verts} corners: the land's, and none of the delves'`);
+  // (A PC's land has the outposts' fences, tents and stones as well, src/core/wild-dress.js, and the roads' carts, stumps and
+  // cold fires, src/core/roadside.js; a phone's, below, hasn't.)
+  assert.ok(verts > 150000 && verts < 900000, `${verts} corners: the land's, and none of the delves'`);
   const phone = buildSites(true, true);
   let pv = 0;
   for (const p of phone.parts.values()) { assert.ok(typed(p) && whole(p)); pv += p.pos.length / 3; }

@@ -151,6 +151,23 @@ export class Warrens {
     }
   }
 
+  // Velscour's Skull's Teleport to Dungeon (src/ui/lands.js): you and your party in front of delve i's portal on the land,
+  // facing away from it, as walking out of it leaves you. From inside a delve too: a fight there is called off and its
+  // packs and bosses stand again, and step() sees you've left.
+  toPortal(i) {
+    const d = DELVES[i | 0];
+    if (!d) return;
+    if (this.inside) {
+      const was = this.delve;
+      if (this.fight) this.resetAll(was);
+      this.inside = false; this.leftAt[was.key] = this.sim.time;
+      this.sim.event(EV.DELVE, DELVE.LEAVE, this.downIn(was), DELVES.indexOf(was));
+    }
+    this.portalCd = 3;
+    const o = d.portal;
+    this.carry(o.x + Math.sin(o.yaw) * 4, o.z + Math.cos(o.yaw) * 4, o.yaw);
+  }
+
   // Stood at a delve's way in, with your party.
   enter(d) {
     const [x, z] = toWorld(d.entry.x, d.entry.z, d);

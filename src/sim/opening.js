@@ -3,7 +3,7 @@
 import { CUES, CUE_IDS } from '../core/opening-script.js';
 import {
   CAST_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CHAMBER_AXIS, COLLAPSE_END, DOOR_SPOT, DUST_AT, FALL, FALL_FROM, FOLD_SPOT, HEARTH, HEARTH_SPOT, HERD, KNEEL_UP,
-  LANTERN, LEAN_SPOT, LECTERN, OFFER_SPOT, PORTAL, ROUND_R, SEEN_SPOT, SNAP_AT, SNAP_SPOT, SPARK_AT, WAY, WRITE_SPOT, collapseEye, wakeEyeBack, wakeEyeH,
+  LANTERN, LEAN_SPOT, LECTERN, OFFER_SPOT, PORTAL, ROUND_R, SEEN_SPOT, SNAP_AT, SNAP_SPOT, SPARK_AT, WAY, WAY_FOOT, WAY_HALF, WAY_HEAD, WRITE_SPOT, collapseEye, wakeEyeBack, wakeEyeH,
   HERD_END, NAME_AT, OPENING, OPENING_SPAWN, OPENING_YAW, SWAP_AT, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP,
   caveNearest, chamberPoint, storyHolds,
 } from '../core/opening.js';
@@ -36,8 +36,8 @@ const LANTERN_SPOT = (() => { const d = [HEARTH_SPOT[0] - HEARTH[0], HEARTH_SPOT
 
 // Where on the way down (src/core/escort.js) things happen, as distances along it: the shelf, the head of the steps, a
 // landing partway down them, the road, the pines, the dead, and the town in sight.
-const MARKS = { shelf: 9, steps: routeNear(WAY[4][0], WAY[4][1]) - 4, speech: routeNear(WAY[6][0], WAY[6][1]), foot: routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) - 8,
-  stepsEnd: routeNear(WAY[8][0], WAY[8][1]), ambush: routeNear(-161.5, 134.3), sight: routeNear(-84, 63) };
+const MARKS = { shelf: 9, steps: routeNear(WAY[WAY_HEAD][0], WAY[WAY_HEAD][1]) - 4, speech: routeNear(WAY[WAY_HALF][0], WAY[WAY_HALF][1]), foot: routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) - 8,
+  stepsEnd: routeNear(WAY[WAY_FOOT][0], WAY[WAY_FOOT][1]), ambush: routeNear(-161.5, 134.3), sight: routeNear(-84, 63) };
 MARKS.woods = MARKS.ambush - 34;
 // (How far down the way the dead come up: auto-play is off its shield and on its feet well before it. src/ui/autobrain.js.)
 export const AMBUSH_AT = MARKS.ambush;
@@ -545,7 +545,8 @@ export class Opening {
         if ((this.stillT > (this.prog < MARKS.stepsEnd + 4 ? STEPS_STILL : 0.7) && gap > HALT) || gap > FAR || (far > WANDER && gap > -4 && this.time > 0.6)) { this.halted = true; this.haltT = 0; }
       } else {
         this.haltT += dt;
-        if (this.haltT > 0.5 && (far < NEAR || gap < 0.6) && far < WANDER) { this.halted = false; this.turnT = 0.45; }
+        // (Gone by her and on down the way, however far off: she comes after you, not waits on for you where you were.)
+        if (this.haltT > 0.5 && (far < NEAR || gap < 0.6) && (far < WANDER || gap < -4)) { this.halted = false; this.turnT = 0.45; }
       }
     }
     // Her lead kept on you at your own pace; stopped, she slows to a stand in a couple of steps.

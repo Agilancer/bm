@@ -3,6 +3,7 @@
 import { EV, FX_FLOATS, FX_START, H, INPUT, MAX_FX, SPELL_PALETTE, WEAPONS } from '../core/layout.js';
 import { SHIELD_FACE_POINT, shieldRise, shieldX, shieldY } from '../core/shield-pose.js';
 import { EYE } from './player.js';
+import { struck } from './ragdoll.js';
 import { ELEM, FX, MANA_REGEN, MAX_MANA, SPELLS } from './spells.js';
 import { DMG_FIELDS, effectiveAll } from './skills.js';
 import { STAFFS2 } from '../items/staffs2.js';
@@ -528,6 +529,7 @@ export class Casting {
     k.playerHitT = sim.time;     // (The player had a hand in it: src/sim/sim.worker.js, whose kill it is.)
     // Leech: a drink for each hit, but a held spell's ticks don't add up to a fountain.
     if (sim.time > this.leechT) { this.leechT = sim.time + 0.25; sim.player.drink(); }
+    struck(k, sim, fromX, fromZ, poise);
     k.onHit(sim, kind, fromX, fromZ, poise);
     sim.event(EV.SPELL_HIT, elem, x, y, z, dmg, sim.mobIndex ? sim.mobIndex(k) : -1);
     // Lightning into something that bears a Storm Seed, or stands on one, leaps on from it (src/sim/treespells.js).

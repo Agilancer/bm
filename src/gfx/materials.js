@@ -1,6 +1,7 @@
 // WGSL for everything drawn in the world pass.
 import { COMMON } from './shaders.js';
 import { CHURCH_Z } from '../core/church.js';
+import { RD_CELL, RD_HALF, RD_MAX, RD_N } from '../core/roads.js';
 
 export const TERRAIN = COMMON + /* wgsl */ `
 @group(1) @binding(0) var groundColor: texture_2d_array<f32>;
@@ -8,8 +9,35 @@ export const TERRAIN = COMMON + /* wgsl */ `
 @group(1) @binding(2) var farMap: texture_2d<f32>;
 @group(1) @binding(3) var farTint: texture_2d<f32>;
 @group(1) @binding(4) var farKind: texture_2d<f32>;
-@group(1) @binding(5) var nearRoad: texture_2d<f32>;
-@group(1) @binding(6) var<uniform> NR: vec4f;
+// Every road and path in the land (src/core/roads.js roadSegments): per 64 m square its first stretch and how many, then the
+// lists; and each stretch as two vec4: (ax, az, bx, bz), (half-width, what it's laid with, how far along its way a is, length).
+@group(1) @binding(5) var<storage, read> roadIdx: array<u32>;
+@group(1) @binding(6) var<storage, read> roadSeg: array<vec4f>;
+const RD_HALF = ${RD_HALF.toFixed(1)}; const RD_CELL = ${RD_CELL.toFixed(1)}; const RD_N = ${RD_N}; const RD_MAX = ${RD_MAX}u;
+
+// The nearest way to q: how far outside its edge (less than nothing: on it), its half-width, what it's laid with, how far
+// along and across it q is, and which way it runs.
+struct RoadHit { e: f32, w: f32, kind: f32, along: f32, across: f32, dir: vec2f };
+fn roadAt(q: vec2f) -> RoadHit {
+  var h = RoadHit(99.0, 0.0, 0.0, 0.0, 0.0, vec2f(1.0, 0.0));
+  let c = vec2i(floor((q + RD_HALF) / RD_CELL));
+  if (c.x < 0 || c.y < 0 || c.x >= RD_N || c.y >= RD_N) { return h; }
+  let k = u32(c.y * RD_N + c.x) * 2u;
+  let first = roadIdx[k];
+  let n = min(roadIdx[k + 1u], RD_MAX);
+  for (var i = 0u; i < n; i++) {
+    let s = roadIdx[first + i] * 2u;
+    let A = roadSeg[s]; let B = roadSeg[s + 1u];
+    let ab = A.zw - A.xy; let ap = q - A.xy;
+    let t = clamp(dot(ap, ab) / (B.w * B.w), 0.0, 1.0);
+    let e = length(ap - ab * t) - B.x;
+    if (e < h.e) {
+      let dir = ab / B.w;
+      h = RoadHit(e, B.x, B.y, B.z + t * B.w, dir.x * ap.y - dir.y * ap.x, dir);
+    }
+  }
+  return h;
+}
 
 struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n: vec3f, @location(2) viewZ: f32 };
 @vertex fn vs(@location(0) p: vec3f, @location(1) n: vec3f) -> V {
@@ -37,18 +65,21 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let ft = textureSampleLevel(farTint, clampSmp, fuv, 0.0);
   let fk = textureSampleLevel(farKind, clampSmp, fuv, 0.0);
   let macro2 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.043 + 0.31, 0.0);
-  // Close round you, the roads from their fine map (src/gfx/rocks.js followRoads): a hard, ragged edge where the far map's is a
-  // blur, and how far across the road this is, for its ruts and crown.
-  var roadFine = 0.0; var nearIn = 0.0; var dc = 99.0; var rw = 0.0;
-  if (!LEAN && NR.w > 0.5) {
-    let nuv = (p.xz - NR.xy) * NR.z;
-    let nr = textureSampleLevel(nearRoad, clampSmp, nuv, 0.0);
-    nearIn = smoothstep(0.0, 0.08, min(min(nuv.x, 1.0 - nuv.x), min(nuv.y, 1.0 - nuv.y)));
-    dc = nr.r * 12.0; rw = nr.g * 8.0;
-    let wob = (macro2.a - 0.5) * 0.9 + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.9, 0.0).r - 0.5) * 0.6;
-    roadFine = (1.0 - smoothstep(rw - 0.3, rw + 0.3, dc + wob)) * step(0.2, rw);
-  }
-  let dirtBase = mix(mix(fm.r, roadFine, nearIn), max(gm.r, roadFine * nearIn), inMap);
+  // The roads and paths, wherever they are (src/core/roads.js): a hard edge, ragged on the earth ones and near straight on the
+  // paved; how far across the way this is, for its ruts and crown; and what it's laid with. A far way is drawn a little wider,
+  // so it still reads from a hilltop as a line across the land.
+  let rh = roadAt(p.xz);
+  let grow = clamp((dist - 40.0) * 0.004, 0.0, 2.2);
+  let paved = rh.kind > 0.5 && rh.kind < 2.5;
+  let wob = ((macro2.a - 0.5) * 0.8 + (textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.9, 0.0).r - 0.5) * 0.5) * select(1.0, 0.3, paved);
+  let soft = 0.14 + dist * 0.0022;
+  let roadIn = (1.0 - smoothstep(-soft, soft, rh.e - grow + wob)) * step(0.2, rh.w);
+  let pave = roadIn * step(0.5, rh.kind);
+  let dc = abs(rh.across); let rw = rh.w; let nearIn = 1.0;
+  let dirtBase = max(mix(fm.r, gm.r, inMap), roadIn * select(1.0, 0.75, rh.kind > 0.5));
+  // (The worn rim just outside a way's edge.)
+  let verge = (1.0 - smoothstep(0.0, 1.4 + grow, rh.e - grow + wob)) * (1.0 - roadIn) * step(0.2, rh.w);
+  let dpx = dpdx(p.xz); let dpy = dpdy(p.xz);
   let steep = 1.0 - in.n.y;
 
   let uvA = p.xz * 0.2;
@@ -62,12 +93,13 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   let roadAmt = smoothstep(0.42, 0.78, dirtBase + (macro2.g - 0.5) * 0.25);
   let rock0 = max(fm.a, smoothstep(0.2, 0.42, steep));
   let rockAmt = rock0 * smoothstep(0.1, 0.4, rock0 + (macro2.b - 0.5) * 0.3) * (1.0 - roadAmt * 0.8);
-  let snowAmt = smoothstep(0.25, 0.6, fm.b + (macro2.r - 0.5) * 0.3) * smoothstep(0.55, 0.8, in.n.y);
+  let snowAmt = smoothstep(0.25, 0.6, fm.b + (macro2.r - 0.5) * 0.3) * smoothstep(0.55, 0.8, in.n.y) * (1.0 - 0.7 * roadIn);
   var grassCol: vec4f; var grassDet: vec4f; var dirtCol: vec4f; var dirtDet: vec4f;
   var rockCol = vec3f(0.0); var rockDet = vec4f(0.5, 0.5, 0.9, 0.5); var haveRock = false;
   var snowTex = vec4f(0.0); var haveSnow = false;
   var floorCol = vec3f(0.0); var haveFloor = false;
   var fenCol = vec3f(0.0); var ashCol = vec3f(0.0);
+  var paveCol = vec3f(0.0); var paveDet = vec4f(0.5, 0.5, 0.9, 0.5);
   if (LEAN) {
     // One painting of each ground and one detail map on a phone (the paintings nearest the average of their kind, and
     // the relief of whichever ground this mostly is): the ground covers half the screen, so these three reads in place of
@@ -76,7 +108,8 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
     // The patchwork the other paintings gave: warmer and cooler stretches, and dry ones.
     grassCol = vec4f(grassCol.rgb * mix(vec3f(1.2, 1.02, 0.85), vec3f(0.88, 1.0, 1.08), smoothstep(0.3, 0.7, macro2.g)), grassCol.a);
     grassCol = vec4f(mix(grassCol.rgb, vec3f(0.24, 0.2, 0.09), smoothstep(0.52, 0.78, macro2.r) * 0.38), grassCol.a);
-    dirtCol = textureSample(groundColor, repeatSmp, uvA, select(1, 6, dirtBase > 0.5));
+    // (On a laid way, its own ground in the dirt's place: still the one read.)
+    dirtCol = textureSample(groundColor, repeatSmp, uvA, select(select(1, 6, dirtBase > 0.5), 17 + i32(rh.kind + 0.5), pave > 0.3));
     grassDet = textureSample(groundDetail, repeatSmp, uvA, select(3, 1, dirtBase > 0.5));
     dirtDet = vec4f(grassDet.rgb, 1.0 - grassDet.a);
   } else {
@@ -127,6 +160,21 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
       snowTex = vec4f(mix(sn.rgb, sr.rgb, stony), stony);
       haveSnow = true;
     }
+    // A laid way's own ground: setts, flags and planks laid square to it, the rest by the land's own turn.
+    if (pave > 0.002) {
+      let layer = 17 + i32(rh.kind + 0.5);
+      let nrm = vec2f(-rh.dir.y, rh.dir.x);
+      var sc = vec2f(0.38);
+      if (rh.kind < 1.5) { sc = vec2f(1.0 / 3.6); } else if (rh.kind < 2.5) { sc = vec2f(1.0 / 2.4); } else if (rh.kind > 6.5) { sc = vec2f(1.0 / 2.2, 1.0 / 1.9); }
+      var uvP = rot(p.xz, 0.6 + rh.kind) * 0.38;
+      var gx = rot(dpx, 0.6 + rh.kind) * 0.38; var gy = rot(dpy, 0.6 + rh.kind) * 0.38;
+      if (rh.kind < 2.5 || rh.kind > 6.5) {
+        uvP = vec2f(rh.across, rh.along) * sc;
+        gx = vec2f(dot(dpx, nrm), dot(dpx, rh.dir)) * sc; gy = vec2f(dot(dpy, nrm), dot(dpy, rh.dir)) * sc;
+      }
+      paveCol = textureSampleGrad(groundColor, repeatSmp, uvP, layer, gx, gy).rgb;
+      paveDet = textureSampleGrad(groundDetail, repeatSmp, uvP, layer, gx, gy);
+    }
     // Under the pines, a floor of old needles and cones, not plain dark.
     if (fm.g > 0.02) { floorCol = textureSampleGrad(groundColor, repeatSmp, uvA * 0.8, 14, dxA * 0.8, dyA * 0.8).rgb; haveFloor = true; }
     // Fen and ash, in the countries that have them.
@@ -152,14 +200,20 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   }
   // The fen's reeds and black water; the Ashen Waste's grey cinders.
   if (!LEAN) {
-    let fenAmt = smoothstep(0.25, 0.6, ft.a + (macro2.g - 0.5) * 0.3) * (1.0 - dirt * 0.6);
+    let fenAmt = smoothstep(0.25, 0.6, ft.a + (macro2.g - 0.5) * 0.3) * (1.0 - dirt * 0.6) * (1.0 - roadIn);
     albedo = mix(albedo, fenCol * 0.85, fenAmt);
-    let ashAmt = smoothstep(0.2, 0.55, fk.r + (macro2.b - 0.5) * 0.3) * (1.0 - roadAmt * 0.5);
+    let ashAmt = smoothstep(0.2, 0.55, fk.r + (macro2.b - 0.5) * 0.3) * (1.0 - roadAmt * 0.5) * (1.0 - roadIn);
     albedo = mix(albedo, ashCol * 0.9, ashAmt);
+    // A laid way over all of it, a little darker at its very edge where the stones are set in.
+    let rim = smoothstep(-0.55, 0.0, rh.e - grow) * pave;
+    albedo = mix(albedo, paveCol * (1.0 - 0.22 * rim), pave);
+    det = mix(det, paveDet, pave);
   }
+  // The verge: trodden, darker, a little bare.
+  albedo = mix(albedo, albedo * vec3f(0.8, 0.76, 0.7), verge * 0.55);
   // The road's two ruts, darker and, in the wet, holding water; the crown between them greening over; its dust lighter than the dirt.
   var rut = 0.0;
-  if (!LEAN && nearIn > 0.0 && rw > 1.3) {
+  if (!LEAN && rw > 1.3 && !paved && rh.kind < 6.5 && abs(rh.kind - 4.0) > 0.5) {
     let rc = rw * 0.42;
     rut = (1.0 - smoothstep(0.1, 0.32, abs(dc - rc))) * nearIn * roadAmt;
     let crown = (1.0 - smoothstep(rc * 0.3, rc * 0.68, dc)) * nearIn * roadAmt * step(1.9, rw);
@@ -182,7 +236,7 @@ fn rot(p: vec2f, a: f32) -> vec2f { let c = cos(a); let s = sin(a); return vec2f
   albedo = mix(albedo, snowCol, snowAmt);
   // Under the pines, old needles in the dark (less where the snow's got in).
   // (Where the stand's thick, the whole floor is needles, its edge wandering out into the grass.)
-  let floorAmt = select(fm.g, smoothstep(0.12, 0.55, fm.g + (macro2.g - 0.5) * 0.3), haveFloor) * (1.0 - dirt * 0.7) * (1.0 - snowAmt * 0.6);
+  let floorAmt = select(fm.g, smoothstep(0.12, 0.55, fm.g + (macro2.g - 0.5) * 0.3), haveFloor) * (1.0 - dirt * 0.7) * (1.0 - snowAmt * 0.6) * (1.0 - roadIn);
   albedo = mix(albedo, select(vec3f(0.045, 0.034, 0.022), floorCol * 0.62, haveFloor), floorAmt * 0.85);
   // Under the blades the soil sits in shade.
   let grassCover = gm.g * inMap * (1.0 - smoothstep(F.counts.w * 0.75, F.counts.w, dist));

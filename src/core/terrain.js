@@ -1,7 +1,7 @@
 // The land. One deterministic height function shared by every thread: the sim walks on it, the GPU
 // draws it. Flat where the village stands, rolling meadow beyond, big hills at the horizon.
 
-import { CAVE_MOUTH, CAVE_OUT, LEDGE, LEDGE_Y, WAY, wayLevel } from './opening.js';
+import { CAVE_MOUTH, CAVE_OUT, LANDINGS, LEDGE, LEDGE_Y, WAY, landingEdge, wayLevel } from './opening.js';
 import { fbm, hash2, sstep } from './terrain-noise.js';
 import { WORLD_EDGE, landHeight, setLandBase } from './lands.js';
 import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
@@ -172,7 +172,7 @@ export const LAND_EDGE = WORLD_EDGE;
 
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.
 // (The worn way off Lisandra's ledge: the shelf, the steps and the path down onto the road. src/core/opening.js WAY.)
-export const CAVE_PATH = { pts: [LEDGE, ...WAY.map((p) => [p[0], p[1]])], w: 1.3 };
+export const CAVE_PATH = { pts: [LEDGE, ...WAY.map((p) => [p[0], p[1]])], w: 1.5 };
 export const PATHS = [
   CAVE_PATH,
   { pts: [[-1, -14.5], [-1.2, -8], [-1.5, -2], [-1.5, 1]], w: 2.0 },
@@ -239,6 +239,8 @@ export function pathAmount(x, z) {
     const d = Math.sqrt(segDist2(x, z, s.ax, s.az, s.bx, s.bz));
     best = Math.max(best, 1 - sstep(s.lo, s.hi, d + wob));
   }
+  // (Her landings are flagged, and nothing grows up through them: src/core/opening.js LANDINGS.)
+  if (openingTerrain && x < -280) for (const L of LANDINGS) best = Math.max(best, 1 - sstep(-0.2, 0.4, landingEdge(L, x, z) + wob * 0.2));
   const square = Math.hypot((x + 1.5) * 0.9, z - 1) + wob * 1.8;
   return Math.max(best, 1 - sstep(4.5, 10.5, square));
 }

@@ -19,16 +19,17 @@
 //   grinding      for levels, and once every quest is done, where the menu says
 //
 // Where it walks: in the town, the woods round it and the catacombs, by paths from src/sim/nav.worker.js; out in the countries,
-// by the roads (src/core/lands.js ROUTES) and across country, the pines stepped round by the same worker, and the woken seals.
+// by the roads (src/core/roads.js: every road, lane and path in the land) and across country, the pines stepped round by the same worker, and the woken seals.
 // On the nav ground it never walks at where it's going without a path: it waits for one, and with no way there it leaves it.
 // Through a door it goes square on, by a place a pace before its middle and one a pace beyond; and it never talks to anyone,
 // opens a chest or takes anything up with a wall between (within()).
 import * as LAYOUT from '../core/layout.js';
 import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
-import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY } from '../core/opening.js';
+import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY, WAY_FOOT } from '../core/opening.js';
 import { ROUTE, cornerAhead, routeAt, routeDir, routeNear } from '../core/escort.js';
-import { ROADS, terrainHeight } from '../core/terrain.js';
-import { ROUTES, SITES } from '../core/lands.js';
+import { terrainHeight } from '../core/terrain.js';
+import { SITES } from '../core/lands.js';
+import { roadGraph } from '../core/roads.js';
 import { SEALS } from '../core/sites.js';
 import { inTown, townDist } from '../core/town.js';
 import { CHURCH_GUARD, churchAt, inChurch } from '../core/church.js';
@@ -455,28 +456,13 @@ class Nav {
 
 // ---------------------------------------------------------------- the long way: roads, country, seals
 
-let ROAD_NODES = null;
-function roadNodes() {
-  if (ROAD_NODES) return ROAD_NODES;
-  const nodes = [], edges = [];
-  const add = (x, z) => { nodes.push({ x, z }); edges.push([]); return nodes.length - 1; };
-  const link = (a, b, k = 1) => { const d = dist(nodes[a].x, nodes[a].z, nodes[b].x, nodes[b].z) * k; edges[a].push([b, d]); edges[b].push([a, d]); };
-  for (const r of ROUTES) {
-    let prev = -1;
-    for (const [x, z] of r.pts) { const i = add(x, z); if (prev >= 0) link(prev, i); prev = i; }
-  }
-  for (const r of ROADS) {
-    let prev = -1;
-    r.line.forEach(([x, z], j) => { if (j % 6 && j !== r.line.length - 1) return; const i = add(x, z); if (prev >= 0) link(prev, i); prev = i; });
-  }
-  // (Where one road leaves another, and the town's own ways between them: across country, a little dearer than a road.)
-  for (let a = 0; a < nodes.length; a++) for (let b = a + 1; b < nodes.length; b++) {
-    const d = dist(nodes[a].x, nodes[a].z, nodes[b].x, nodes[b].z);
-    if (d < 700) link(a, b, 1.3);
-  }
-  ROAD_NODES = { nodes, edges };
-  return ROAD_NODES;
-}
+// (The roads are the land's own graph, src/core/roads.js roadGraph: a node every 20 m down every road, lane and path, joined
+// where they meet. A metre across country costs ACROSS of them, so it keeps to the roads unless leaving them is shorter by
+// more than that.)
+const ACROSS = 1.6, ONTO = 260;
+// (And ground it's keeping off costs KEEP a metre walked through it, by road or not: a road that runs through a lair for
+// 200 m is as dear as a line across it for 200 m.)
+const KEEP = 25;
 const segNear = (ax, az, bx, bz, cx, cz) => {
   const dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz || 1;
   const t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cz - az) * dz) / L));
@@ -487,7 +473,7 @@ const segNear = (ax, az, bx, bz, cx, cz) => {
 
 // On the way down with Lisandra: where it gets on its shield (just past the foot of her steps) and where it's off it again
 // (in the flat at the foot of that last hill, a little way along), as distances along the way (src/core/escort.js).
-const RIDE_FROM = routeNear(WAY[8][0], WAY[8][1]) + 2.5, RIDE_TO = routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 16;
+const RIDE_FROM = routeNear(WAY[WAY_FOOT][0], WAY[WAY_FOOT][1]) + 2.5, RIDE_TO = routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 16;
 
 export class Brain {
   // o: { game, shared, input, pack, inventory, townUI, lands, spellbar, renderer, town, heroCount, base, opening, say(text), menu(), done() }
@@ -2497,45 +2483,79 @@ export class Brain {
   longWay(m, g) {
     const end = g;
     if (this.nav.inGrid(m.x, m.z, m.below) && this.nav.inGrid(g.x, g.z, !!g.below)) return [end];
-    const direct = dist(m.x, m.z, g.x, g.z);
-    const { nodes, edges } = roadNodes();
+    const { X, Z, start, nbr, wt, N, around } = roadGraph();
     const avoid = this.avoid(m);
     const lands = this.o.lands;
     const seals = SEALS.filter((s) => lands.awake.has(s.key));
-    // The graph: the roads, here, there, and the woken seals, all on one list.
-    const P = nodes.map((n) => ({ x: n.x, z: n.z })).concat([{ x: m.x, z: m.z }, end], seals.map((s) => ({ x: s.x, z: s.z, seal: s })));
-    const me = nodes.length, to = me + 1, s0 = to + 1;
-    const E = edges.map((l) => l.slice());
-    for (let i = nodes.length; i < P.length; i++) E.push([]);
-    const cost = (a, b, k) => {
-      const A = P[a], B = P[b];
-      let c = dist(A.x, A.z, B.x, B.z) * k;
-      for (const [x, z, r] of avoid) if (dist(A.x, A.z, x, z) > r && dist(B.x, B.z, x, z) > r && segNear(A.x, A.z, B.x, B.z, x, z) < r) c += 5000;
+    // The graph: the roads, then here, there, and the woken seals after them.
+    const me = N, to = N + 1, s0 = N + 2, NP = s0 + seals.length;
+    const px = (i) => (i < N ? X[i] : i === me ? m.x : i === to ? end.x : seals[i - s0].x);
+    const pz = (i) => (i < N ? Z[i] : i === me ? m.z : i === to ? end.z : seals[i - s0].z);
+    // Across country: a little dearer than a road, and through ground it's keeping off (that neither end is in) dearer still.
+    const across = (a, b) => {
+      const ax = px(a), az = pz(a), bx = px(b), bz = pz(b);
+      let c = dist(ax, az, bx, bz) * ACROSS;
+      for (const [x, z, r] of avoid) {
+        if (dist(ax, az, x, z) <= r || dist(bx, bz, x, z) <= r) continue;
+        const d = segNear(ax, az, bx, bz, x, z);
+        if (d < r) c += KEEP * 2 * Math.sqrt(r * r - d * d);
+      }
       return c;
     };
-    const join = (a, b, k) => { const c = cost(a, b, k); E[a].push([b, c]); E[b].push([a, c]); };
-    for (const i of [me, to, ...seals.map((_, k) => s0 + k)]) {
-      for (let j = 0; j < P.length; j++) {
-        if (j === i) continue;
-        const d = dist(P[i].x, P[i].z, P[j].x, P[j].z);
-        if (d < 900 || (i === me && j === to)) join(i, j, 1.3);
-      }
+    // (The road nodes near ground it's keeping off, so a stretch of road through it is priced too.)
+    const hot = new Map();
+    avoid.forEach(([x, z, r], k) => around(x, z, r + 25, (i) => { if (!hot.has(i)) hot.set(i, []); hot.get(i).push(k); }));
+    // Onto the roads and off them, from here, to there and at the seals; and between those across country.
+    const extra = new Map();
+    const join = (a, b, c) => { for (const [p, q] of [[a, b], [b, a]]) { if (!extra.has(p)) extra.set(p, []); extra.get(p).push(q, c); } };
+    const ends = [me, to, ...seals.map((_, k) => s0 + k)];
+    for (const i of ends) around(px(i), pz(i), ONTO, (j) => { if (dist(px(i), pz(i), X[j], Z[j]) < ONTO) join(i, j, across(i, j)); });
+    for (let a = 0; a < ends.length; a++) for (let b = a + 1; b < ends.length; b++) {
+      const i = ends[a], j = ends[b];
+      if (dist(px(i), pz(i), px(j), pz(j)) < 900 || (i === me && j === to)) join(i, j, across(i, j));
     }
     // Seal to seal: a step through.
-    for (let a = 0; a < seals.length; a++) for (let b = 0; b < seals.length; b++) if (a !== b) E[s0 + a].push([s0 + b, 30]);
-    // Avoided ground on the roads themselves.
-    const D = new Float64Array(P.length).fill(Infinity), prev = new Int32Array(P.length).fill(-1), done = new Uint8Array(P.length);
-    D[me] = 0;
-    for (;;) {
-      let u = -1, best = Infinity;
-      for (let i = 0; i < P.length; i++) if (!done[i] && D[i] < best) { best = D[i]; u = i; }
-      if (u < 0 || u === to) break;
-      done[u] = 1;
-      for (const [v, c0] of E[u]) {
-        let c = c0;
-        if (u < nodes.length && v < nodes.length) for (const [x, z, r] of avoid) if (segNear(P[u].x, P[u].z, P[v].x, P[v].z, x, z) < r) c += 5000;
-        if (D[u] + c < D[v]) { D[v] = D[u] + c; prev[v] = u; }
+    for (let a = 0; a < seals.length; a++) for (let b = a + 1; b < seals.length; b++) join(s0 + a, s0 + b, 30);
+    // The cheapest way (with no seals to step through, aimed: never cheaper than a metre a metre the rest of the way).
+    const aim = seals.length ? 0 : 1;
+    const D = new Float64Array(NP).fill(Infinity), prev = new Int32Array(NP).fill(-1), done = new Uint8Array(NP);
+    const heap = [], hn = [];
+    const push = (n, f) => {
+      heap.push(f); hn.push(n);
+      for (let i = heap.length - 1; i > 0;) { const p = (i - 1) >> 1; if (heap[p] <= heap[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; [hn[p], hn[i]] = [hn[i], hn[p]]; i = p; }
+    };
+    const pop = () => {
+      const n = hn[0], lf = heap.pop(), ln = hn.pop();
+      if (heap.length) {
+        heap[0] = lf; hn[0] = ln;
+        for (let i = 0; ;) {
+          const l = 2 * i + 1, r = l + 1; let k = i;
+          if (l < heap.length && heap[l] < heap[k]) k = l;
+          if (r < heap.length && heap[r] < heap[k]) k = r;
+          if (k === i) break;
+          [heap[k], heap[i]] = [heap[i], heap[k]]; [hn[k], hn[i]] = [hn[i], hn[k]]; i = k;
+        }
       }
+      return n;
+    };
+    const relax = (u, v, c) => { if (D[u] + c < D[v]) { D[v] = D[u] + c; prev[v] = u; push(v, D[v] + aim * dist(px(v), pz(v), end.x, end.z)); } };
+    D[me] = 0; push(me, 0);
+    while (heap.length) {
+      const u = pop();
+      if (done[u]) continue;
+      done[u] = 1;
+      if (u === to) break;
+      if (u < N) {
+        const hl = hot.get(u);
+        for (let q = start[u]; q < start[u + 1]; q++) {
+          const v = nbr[q];
+          let c = wt[q];
+          if (hl) for (const k of hl) { const [x, z, r] = avoid[k]; if (segNear(X[u], Z[u], X[v], Z[v], x, z) < r) { c += KEEP * wt[q]; break; } }
+          relax(u, v, c);
+        }
+      }
+      const e = extra.get(u);
+      if (e) for (let i = 0; i < e.length; i += 2) relax(u, e[i], e[i + 1]);
     }
     if (!Number.isFinite(D[to])) return [end];
     const chain = [];
@@ -2543,12 +2563,14 @@ export class Brain {
     chain.reverse();
     const out = [];
     for (let k = 0; k < chain.length; k++) {
-      const i = chain[k], p = P[i];
+      const i = chain[k], x = px(i), z = pz(i), seal = i >= s0 ? seals[i - s0] : null, next = chain[k + 1];
       // A seal stepped through: stand on it, and the next point is where it lets out.
-      if (p.seal && k + 1 < chain.length && P[chain[k + 1]].seal) { out.push({ x: p.x, z: p.z, seal: p.seal, to: P[chain[k + 1]].seal }); continue; }
-      out.push({ x: p.x, z: p.z });
+      if (seal && next >= s0) { out.push({ x, z, seal, to: seals[next - s0] }); continue; }
+      // (Down a road, a point every 25 m or so is plenty to walk to; the turns off it and the end, always.)
+      const last = out.at(-1);
+      if (i < N && next !== undefined && next < N && last && !last.seal && dist(last.x, last.z, x, z) < 25) continue;
+      out.push({ x, z });
     }
-    void direct;
     return out.length ? out : [end];
   }
 

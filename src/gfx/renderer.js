@@ -8,13 +8,14 @@ import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
+import { roadSegments } from '../core/roads.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
 import { DELVES, PORTAL_SPOTS, braziers, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
-import { groundPatches } from '../core/ground-patches.js';
+import { HERE_STEP, groundPatches } from '../core/ground-patches.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
@@ -315,9 +316,10 @@ export class Renderer {
     const groundColliders = village.colliders.concat(village.footprints || [], [CHURCH_FOOTPRINT, CHURCH_WING]);
     // Finer patches of the land where the coarse grid won't do: the hill and its roads, round the church, the woods round the
     // town and the Warrens' portal's hillside (src/core/ground-patches.js).
-    const patches = groundPatches(tier.lean ? 4 : 2);
+    this.terrainCell = tier.lean ? 4 : 2;
+    const patches = groundPatches(this.terrainCell);
     this.terrainArgs = { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patches };
-    this.landAt = [0, 0]; this.landBusy = false;
+    this.landAt = [0, 0]; this.landHere = null; this.landBusy = false;
     const terrainJob = land('terrain', this.terrainArgs), forestJob = land('forest', { opening: this.openingEnabled, reach: FOREST_REACH });
     for (let r = 0; r < GROUND_SIZE; r += BAND) groundJobs.push(land('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: groundColliders, rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + BAND) }));
     for (let r = 0; r < this.farSize; r += BAND) farJobs.push(land('farground', { opening: this.openingEnabled, size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + BAND) }));
@@ -400,10 +402,13 @@ export class Renderer {
     this.farMap = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.farTint = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.farKind = device.createTexture({ size: [this.farSize, this.farSize], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    // The roads close round you, finely (src/gfx/rocks.js followRoads): where it lies (x, z), one over its size, and whether it's laid.
-    this.nearRoad = device.createTexture({ size: [512, 512], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
-    this.nearRoadU = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-    device.queue.writeBuffer(this.nearRoadU, 0, new Float32Array([0, 0, 0, 0]));
+    // Every road and path in the land, for the ground's shader to draw sharp at any distance: the stretches, and which lie in each
+    // 64 m square (src/core/roads.js roadSegments).
+    {
+      const rs = roadSegments(this.openingEnabled);
+      this.roadIdx = makeBuffer(device, rs.idx, GPUBufferUsage.STORAGE);
+      this.roadSeg = makeBuffer(device, rs.seg.length ? rs.seg : new Float32Array(8), GPUBufferUsage.STORAGE);
+    }
     for (const row of farRows) {
       const rowsN = row.data.length / 4 / this.farSize;
       device.queue.writeTexture({ texture: this.farMap, origin: [0, row.rowStart] }, row.data, { bytesPerRow: this.farSize * 4 }, [this.farSize, rowsN]);
@@ -546,7 +551,8 @@ export class Renderer {
     }
     // (And the Test Dungeon's panels of light, white, steady and wide: src/core/testhall.js.)
     const hall = hallLights().map(([x, y, z]) => ({ p: [x, y - 0.5, z], c: [1, 0.98, 0.95], r: 15, i: 2.4, flicker: 0 }));
-    this.lights = village.lights.concat(this.interior.data.lights, warrens, hall);
+    // (And the lanterns along the roads out in the land, and the odd waystop fire left burning: src/core/roadside.js.)
+    this.lights = village.lights.concat(this.interior.data.lights, warrens, hall, buildSites().lamps);
     this.homeLights = new HomeLights(device, this.interior, this.interior.data.lights);
     tick();
     if (openingStage) this.openingStage = (await openingStage)();
@@ -616,8 +622,8 @@ export class Renderer {
       { binding: 2, visibility: VF, texture: { sampleType: 'float' } },
       { binding: 3, visibility: VF, texture: { sampleType: 'float' } },
       { binding: 4, visibility: VF, texture: { sampleType: 'float' } },
-      { binding: 5, visibility: VF, texture: { sampleType: 'float' } },
-      { binding: 6, visibility: VF, buffer: { type: 'uniform' } },
+      { binding: 5, visibility: VF, buffer: { type: 'read-only-storage' } },
+      { binding: 6, visibility: VF, buffer: { type: 'read-only-storage' } },
     ] });
     this.bglStatic = device.createBindGroupLayout({ entries: [
       { binding: 0, visibility: VF, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -654,29 +660,40 @@ export class Renderer {
       { binding: 2, resource: this.farMap.createView() },
       { binding: 3, resource: this.farTint.createView() },
       { binding: 4, resource: this.farKind.createView() },
-      { binding: 5, resource: this.nearRoad.createView() },
-      { binding: 6, resource: { buffer: this.nearRoadU } },
+      { binding: 5, resource: { buffer: this.roadIdx } },
+      { binding: 6, resource: { buffer: this.roadSeg } },
     ] });
   }
 
   // Out in the countries the land's grid and the pines are laid again round you, a few hundred metres at a time, in the pool's
   // threads; the old ones are drawn till the new are ready. Near the town both stay as they were laid at the start.
+  // Everywhere, the fine ground round you goes with you.
   followLand(cam) {
     const pool = this.landPool || this.pool;
     if (this.landBusy || !pool) return;
     const near = Math.abs(cam.x) < 700 && Math.abs(cam.z) < 700;
-    const cx = near ? 0 : Math.round(cam.x / 128) * 128, cz = near ? 0 : Math.round(cam.z / 128) * 128;
-    if (cx === this.landAt[0] && cz === this.landAt[1]) return;
-    if (!near && Math.hypot(cam.x - this.landAt[0], cam.z - this.landAt[1]) < FOLLOW_AT) return;
+    let cx = near ? 0 : Math.round(cam.x / 128) * 128, cz = near ? 0 : Math.round(cam.z / 128) * 128;
+    const laid = cx !== this.landAt[0] || cz !== this.landAt[1];
+    const again = laid && (near || Math.hypot(cam.x - this.landAt[0], cam.z - this.landAt[1]) >= FOLLOW_AT);
+    if (!again) [cx, cz] = this.landAt;
+    // And the fine ground that goes with you (src/core/ground-patches.js), wherever you are: laid again once you're a cell
+    // and a half of its lines from its middle, which leaves it a hundred metres and more to be ready in.
+    const here = this.landHere, hx = Math.round(cam.x / HERE_STEP) * HERE_STEP, hz = Math.round(cam.z / HERE_STEP) * HERE_STEP;
+    const moved = !here || Math.max(Math.abs(cam.x - here[0]), Math.abs(cam.z - here[1])) > HERE_STEP * 1.5;
+    if (!again && !moved) return;
     this.landBusy = true;
-    Promise.all([pool.run('terrain', { ...this.terrainArgs, cx, cz }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH, cx, cz })]).then(([terrain, forest]) => {
+    const patches = groundPatches(this.terrainCell, [hx, hz]);
+    const jobs = [pool.run('terrain', { ...this.terrainArgs, patches, cx, cz })];
+    // (The pines go by the great grid's middle: only when that moves.)
+    if (again) jobs.push(pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH, cx, cz }));
+    Promise.all(jobs).then(([terrain, forest]) => {
       const old = [this.terrainVB, this.terrainIB];
       this.terrainVB = makeBuffer(this.device, terrain.verts, GPUBufferUsage.VERTEX);
       this.terrainIB = makeBuffer(this.device, terrain.idx, GPUBufferUsage.INDEX);
       this.terrainCount = terrain.idx.length;
-      this.pines.setTrees(forest.trees);
+      if (forest) this.pines.setTrees(forest.trees);
       this.shadowEpoch = (this.shadowEpoch || 0) + 1;
-      this.landAt = [cx, cz];
+      this.landAt = [cx, cz]; this.landHere = [hx, hz];
       // (Gone once this frame's work that drew them is done: nothing new is recorded with them.)
       setTimeout(() => { for (const b of old) b.destroy(); }, 500);
     }).catch((e) => console.warn('followLand', e)).finally(() => { this.landBusy = false; });

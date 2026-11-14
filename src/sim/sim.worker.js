@@ -4,7 +4,7 @@ import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { mapFolk } from '../folk/layout.js';
 import { FieldCreature } from './field-creature.js';
 import { setOpeningTerrain } from '../core/terrain.js';
-import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW, clutterBoxes } from '../core/opening.js';
+import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW, clutterBoxes, wayColliders } from '../core/opening.js';
 import { Opening } from './opening.js';
 import { PlayerBody } from './playerbody.js';
 import { THIRD, thirdAllowed } from '../core/third.js';
@@ -27,6 +27,7 @@ import { POOL } from '../core/lands.js';
 import { CHURCH_GUARD, churchAt } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { ATTACKS, Knight, S } from './knight.js';
+import { struck } from './ragdoll.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { TownWatch } from './town-watch.js';
 import { Player } from './player.js';
@@ -534,7 +535,14 @@ class Sim {
       case 7: k.x = b; k.z = c; k.y = this.world.height(k.x, k.z); break;
       case 50: this.wilds?.debug(a, b, c); break;   // (the living land's own: src/sim/wilds.js)
       case 19: p.x = b; p.z = c; p.y = this.world.height(p.x, p.z); break;
+      case 26: this.warrens?.toPortal(a); break;   // you and your party to delve a's portal (src/sim/dungeon.js toPortal)
       case 8: p.hp = p.maxHp; break;
+      case 27: { // a knight (or whatever's in its place; the nearest thing alive, with a under 0) killed outright, as by a blow from where you stand with weight b: to see it fall (tools/ragdoll/shots.mjs)
+        let m = k;
+        if (a < 0) { m = null; for (const q of this.knights) if (!q.dead && !q.dormant && q.rig && (!m || Math.hypot(q.x - p.x, q.z - p.z) < Math.hypot(m.x - p.x, m.z - p.z))) m = q; }
+        if (m) { struck(m, this, p.x, p.z, b || 30); m.hp = 0; if (m.seenHp !== undefined) m.seenHp = 0; }
+        break;
+      }
       case 9: k.hp = 1; break;
       case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
       case 18: if (k.force) k.force(this, b | 0); break;
@@ -643,12 +651,13 @@ async function boot(msg) {
   ]);
   if (msg.opening) {
     // Lisandra's cave (src/core/opening.js): her clutter, the rock either side of its mouth, and the rubble that fills the
-    // mouth when it falls in (out of the way until then: src/sim/world.js setCaveSealed).
+    // mouth when it falls in (out of the way until then: src/sim/world.js setCaveSealed); and the benches, troughs and
+    // lantern posts on the landings of her steps.
     const w = CAVE_LINE[0][6], yaw = Math.atan2(CAVE_OUT[0], CAVE_OUT[1]), side = [CAVE_OUT[1], -CAVE_OUT[0]];
     const at = (q, o) => [CAVE_MOUTH[0] + side[0] * q + CAVE_OUT[0] * o, CAVE_MOUTH[1] + side[1] * q + CAVE_OUT[1] * o];
     const box = ([x, z], hx, hz, h, more) => ({ x, z, hx, hz, yaw, h, ...more });
     village.colliders.push(...clutterBoxes(), box(at(w + 1.4, 0), 1.2, 1.2, 6), box(at(-w - 1.4, 0), 1.2, 1.2, 6),
-      box(at(0, -0.5), w + 0.8, 1.4, 3.5, { rubble: true }));
+      box(at(0, -0.5), w + 0.8, 1.4, 3.5, { rubble: true }), ...wayColliders());
   }
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village, await fetchJSON(`${base}assets/game/interior/interior.json`));
