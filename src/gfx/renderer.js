@@ -14,7 +14,7 @@ import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
 import { CHURCH_FOOTPRINT, CHURCH_WING } from '../core/church.js';
-import { groundPatches } from '../core/ground-patches.js';
+import { HERE_STEP, groundPatches } from '../core/ground-patches.js';
 import { loadOpeningStage } from './opening.js';
 import { DAWN_HOUR, DUSK_HOUR, secondsPerHour, daylight } from './daylight.js';
 import { Pines } from './pines.js';
@@ -315,9 +315,10 @@ export class Renderer {
     const groundColliders = village.colliders.concat(village.footprints || [], [CHURCH_FOOTPRINT, CHURCH_WING]);
     // Finer patches of the land where the coarse grid won't do: the hill and its roads, round the church, the woods round the
     // town and the Warrens' portal's hillside (src/core/ground-patches.js).
-    const patches = groundPatches(tier.lean ? 4 : 2);
+    this.terrainCell = tier.lean ? 4 : 2;
+    const patches = groundPatches(this.terrainCell);
     this.terrainArgs = { opening: this.openingEnabled, n: tier.terrainN, extent: 2400, patches };
-    this.landAt = [0, 0]; this.landBusy = false;
+    this.landAt = [0, 0]; this.landHere = null; this.landBusy = false;
     const terrainJob = land('terrain', this.terrainArgs), forestJob = land('forest', { opening: this.openingEnabled, reach: FOREST_REACH });
     for (let r = 0; r < GROUND_SIZE; r += BAND) groundJobs.push(land('ground', { opening: this.openingEnabled, size: GROUND_SIZE, half: GROUND_HALF, colliders: groundColliders, rowStart: r, rowEnd: Math.min(GROUND_SIZE, r + BAND) }));
     for (let r = 0; r < this.farSize; r += BAND) farJobs.push(land('farground', { opening: this.openingEnabled, size: this.farSize, half: FAR_HALF, rowStart: r, rowEnd: Math.min(this.farSize, r + BAND) }));
@@ -661,22 +662,33 @@ export class Renderer {
 
   // Out in the countries the land's grid and the pines are laid again round you, a few hundred metres at a time, in the pool's
   // threads; the old ones are drawn till the new are ready. Near the town both stay as they were laid at the start.
+  // Everywhere, the fine ground round you goes with you.
   followLand(cam) {
     const pool = this.landPool || this.pool;
     if (this.landBusy || !pool) return;
     const near = Math.abs(cam.x) < 700 && Math.abs(cam.z) < 700;
-    const cx = near ? 0 : Math.round(cam.x / 128) * 128, cz = near ? 0 : Math.round(cam.z / 128) * 128;
-    if (cx === this.landAt[0] && cz === this.landAt[1]) return;
-    if (!near && Math.hypot(cam.x - this.landAt[0], cam.z - this.landAt[1]) < FOLLOW_AT) return;
+    let cx = near ? 0 : Math.round(cam.x / 128) * 128, cz = near ? 0 : Math.round(cam.z / 128) * 128;
+    const laid = cx !== this.landAt[0] || cz !== this.landAt[1];
+    const again = laid && (near || Math.hypot(cam.x - this.landAt[0], cam.z - this.landAt[1]) >= FOLLOW_AT);
+    if (!again) [cx, cz] = this.landAt;
+    // And the fine ground that goes with you (src/core/ground-patches.js), wherever you are: laid again once you're a cell
+    // and a half of its lines from its middle, which leaves it a hundred metres and more to be ready in.
+    const here = this.landHere, hx = Math.round(cam.x / HERE_STEP) * HERE_STEP, hz = Math.round(cam.z / HERE_STEP) * HERE_STEP;
+    const moved = !here || Math.max(Math.abs(cam.x - here[0]), Math.abs(cam.z - here[1])) > HERE_STEP * 1.5;
+    if (!again && !moved) return;
     this.landBusy = true;
-    Promise.all([pool.run('terrain', { ...this.terrainArgs, cx, cz }), pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH, cx, cz })]).then(([terrain, forest]) => {
+    const patches = groundPatches(this.terrainCell, [hx, hz]);
+    const jobs = [pool.run('terrain', { ...this.terrainArgs, patches, cx, cz })];
+    // (The pines go by the great grid's middle: only when that moves.)
+    if (again) jobs.push(pool.run('forest', { opening: this.openingEnabled, reach: FOREST_REACH, cx, cz }));
+    Promise.all(jobs).then(([terrain, forest]) => {
       const old = [this.terrainVB, this.terrainIB];
       this.terrainVB = makeBuffer(this.device, terrain.verts, GPUBufferUsage.VERTEX);
       this.terrainIB = makeBuffer(this.device, terrain.idx, GPUBufferUsage.INDEX);
       this.terrainCount = terrain.idx.length;
-      this.pines.setTrees(forest.trees);
+      if (forest) this.pines.setTrees(forest.trees);
       this.shadowEpoch = (this.shadowEpoch || 0) + 1;
-      this.landAt = [cx, cz];
+      this.landAt = [cx, cz]; this.landHere = [hx, hz];
       // (Gone once this frame's work that drew them is done: nothing new is recorded with them.)
       setTimeout(() => { for (const b of old) b.destroy(); }, 500);
     }).catch((e) => console.warn('followLand', e)).finally(() => { this.landBusy = false; });

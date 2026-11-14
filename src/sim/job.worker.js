@@ -21,7 +21,8 @@ async function decode(url, flags) {
 function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   // The hill and its roads have a finer grid of their own: this one's cells are ten metres across out there, which a road can't be cut
   // into. So has the ground round the church, which has a hole in it (src/core/church.js LAND_HOLE).
-  // And the woods round the town and the Warrens' portal's hillside (src/gfx/renderer.js, where the patches are named).
+  // And the woods round the town and the Warrens' portal's hillside, and wherever you are, two that go with you
+  // (src/core/ground-patches.js, where the patches are named).
   const dims = patches.map((p) => [Math.round((p.x1 - p.x0) / p.cell), Math.round((p.z1 - p.z0) / p.cell)]);
   const fineVerts = dims.reduce((m, [px, pz]) => m + (px + 1) * (pz + 1), 0), fineCells = dims.reduce((m, [px, pz]) => m + px * pz, 0);
   // And Lisandra's cave mouth one finer still, on whole cells of the hill's (the first patch), with the hillside left open where the
@@ -57,8 +58,11 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   }
   // (A cell's left out only well inside it: the two overlap at the edge, and the ground's colour goes by where it is, so nothing shows.)
   // (Nor where a patch leaves the ground to this grid: its open skips, and twelve metres round them.)
-  const under = (x, z) => patches.some((p) => x > p.x0 + 12 && x < p.x1 - 12 && z > p.z0 + 12 && z < p.z1 - 12
-    && !(p.skip || []).some((r) => r.open && x > r.x0 - 12 && x < r.x1 + 12 && z > r.z0 - 12 && z < r.z1 + 12));
+  // (lap: how far in from a patch's edge this grid's cells are still drawn, twelve metres unless it says. The ones that go with
+  // you say none: this grid's cells are ten and twenty metres across out there, and wherever one lies over a patch it's the
+  // higher of the two that shows.)
+  const under = (x, z) => patches.some((p) => { const m = p.lap ?? 12; return x > p.x0 + m && x < p.x1 - m && z > p.z0 + m && z < p.z1 - m
+    && !(p.skip || []).some((r) => r.open && x > r.x0 - 12 && x < r.x1 + 12 && z > r.z0 - 12 && z < r.z1 + 12); });
   const idx = new Uint32Array((n * n + fineCells + fnx * fnz) * 6);
   let o = 0;
   for (let j = 0; j < n; j++) {
@@ -78,10 +82,16 @@ function buildTerrain({ n, extent, patches, cx = 0, cz = 0 }) {
   let first = (n + 1) * (n + 1);
   patches.forEach((patch, q) => {
     const [px, pz] = dims[q], e = patch.cell, hole = patch.hole, skip = patch.skip || [];
+    // (Its heights worked out once each, with a row more all round for the slopes: the same sums as vertex(), a fifth of the
+    // work. The patches that go with you are laid again every few dozen metres.)
+    const W = px + 3, hp = new Float64Array(W * (pz + 3));
+    for (let j = 0; j < pz + 3; j++) for (let i = 0; i < W; i++) hp[j * W + i] = terrainHeight(patch.x0 + (i - 1) * e, patch.z0 + (j - 1) * e);
     for (let j = 0; j <= pz; j++) {
       for (let i = 0; i <= px; i++) {
-        const x = patch.x0 + i * e, z = patch.z0 + j * e;
-        vertex((first + j * (px + 1) + i) * 6, x, z, terrainHeight(x, z), e);
+        const k = (first + j * (px + 1) + i) * 6, h = (j + 1) * W + i + 1;
+        const dx = (hp[h + 1] - hp[h - 1]) / (2 * e), dz = (hp[h + W] - hp[h - W]) / (2 * e), l = 1 / Math.hypot(dx, 1, dz);
+        verts[k] = patch.x0 + i * e; verts[k + 1] = hp[h]; verts[k + 2] = patch.z0 + j * e;
+        verts[k + 3] = -dx * l; verts[k + 4] = l; verts[k + 5] = -dz * l;
       }
     }
     for (let j = 0; j < pz; j++) {
