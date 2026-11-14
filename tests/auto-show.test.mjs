@@ -129,7 +129,7 @@ test('the view is only lent to auto-play: your own is as it was after, and V cho
   assert.ok(view.includes('this.third && allowed') && auto.includes('vs.auto = this.on ? this.cam.view : null') && auto.includes('viewSwitch.auto = null'));
   assert.ok(read('../src/title.js').includes('<option value="first">'), 'first person is a choice in Settings');
   // The switch itself, with no page: a stub for the two elements it makes and finds.
-  const el = () => ({ style: {}, classList: { toggle() {} }, addEventListener() {}, appendChild() {} });
+  const el = () => ({ style: {}, dataset: {}, classList: { toggle() {} }, addEventListener() {}, appendChild() {} });
   const was = { document: globalThis.document, window: globalThis.window };
   globalThis.document = { createElement: el, getElementById: (id) => (id === 'spells' ? el() : null), body: el() };
   globalThis.window = { addEventListener() {} };
