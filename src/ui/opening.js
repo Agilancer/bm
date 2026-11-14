@@ -128,7 +128,11 @@ export class OpeningHUD {
     const her = this.her(snap);
     const show = active && stage > 0;
     this.root.hidden = !show;
-    if (!show) { this.namePanel.hidden = true; this.lastStage = stage; this.lastT = t; return; }
+    if (!show) {
+      // The story's over: nothing of its sound is left running under the game. (Paused, it holds.)
+      if (stage <= 0 && this.lastStage > 0 && this.sound?.ok) this.sound.stopAll();
+      this.namePanel.hidden = true; this.lastStage = stage; this.lastT = t; return;
+    }
     const cine = this.cinematic(snap);
     this.root.classList.toggle('bars', cine);
     document.body.classList.toggle('cinematic', cine);
