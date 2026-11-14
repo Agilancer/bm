@@ -128,7 +128,7 @@ class Sim {
   stepStow(dt) {
     const p = this.player, c = this.casting, input = this.input, st = this.opening ? this.opening.stage : OPENING.OFF;
     let out = (st > OPENING.OFF && st < OPENING.ESCORT) || armedGround(p.x, p.z)
-      || c.state !== 'idle' || p.swinging || p.queued === 'L' || p.staffSurfT !== null || input[INPUT.CAST] > 0.5
+      || c.state !== 'idle' || p.swinging || p.queued === 'L' || input[INPUT.CAST] > 0.5
       // (A ride on the shield isn't a fight: the board's under your feet, and the staff stays where it was.)
       || (!p.surfing && (!!p.queued || p.clip !== p.stance.idle || p.shieldUp > 0.02 || input[INPUT.BLOCK] > 0.5))
       || p.hp < (this.stowHp ?? p.hp) - 0.01 || p.dead;
@@ -187,7 +187,7 @@ class Sim {
       t = c.state === 'gather' ? info.wind : c.state === 'hold' ? info.hit : c.state === 'wind' ? Math.min(c.t, info.hit) : Math.max(c.t, info.hit);
       k.shake = c.state === 'gather' ? 1 : c.state === 'hold' ? 0.7 : 0;
     } else {
-      t = p.staffSurf ? p.staffSurfT : p.clip === 'staff_cast' ? p.t : null;
+      t = p.clip === 'staff_cast' ? p.t : null;
       if (t !== null) { info = p.rigs[3].clips.staff_cast; k.kind = 'shot'; k.hands = 1; k.shake = 0; }
     }
     if (t !== null && info) {

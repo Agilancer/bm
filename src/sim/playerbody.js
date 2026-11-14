@@ -113,6 +113,8 @@ const HOLD = {
 // The casts: for each arm, where the hand is drawn back to (wind) and where it is as the spell leaves (hit). `staff`
 // is the hand with the staff in it, `open` an empty hand, `skull` the hand with the skull, `shield` the arm with the
 // shield on it. lean and twist: how the chest goes with it (rad: back is negative; twist turns the casting shoulder back).
+// (RUN_FIST: an empty hand on the run, shut a little looser than on the staff, the thumb in beside the first finger.)
+const RUN_FIST = { curl: 1.15, thumb: 0.5, tuck: 0.15 };
 const fist = { curl: 1.25, thumb: 0.55 }, flat = { curl: 0.12, thumb: 0.1, spread: 0.25 }, claw = { curl: 0.62, thumb: 0.5, spread: 0.2 };
 const CASTS = {
   // The staff's own shot: it dips, lifts straight up and inward, and tips forward as it fires.
@@ -408,7 +410,8 @@ export class PlayerBody {
     let hold = null;
     // (Put away, the hands are empty: they swing as the clip has them, or go out for balance on the board.)
     const away = (s.stow || 0) > 0.5;
-    if (right) hold = riding ? (s.staff && !away ? HOLD.rideStaff : HOLD.rideBack) : s.staff && !away ? HOLD.staff : null;
+    // (On the board the right hand is always as it carries the staff, low at his hip, whether the staff's in it or on his back.)
+    if (right) hold = riding ? HOLD.rideStaff : s.staff && !away ? HOLD.staff : null;
     else hold = riding ? (s.skull && !away ? HOLD.rideSkull : HOLD.rideFront) : away ? null : s.skull ? HOLD.skull : s.shield ? HOLD.shield : null;
     if (!hold && this.wAir > 0.5 && !riding) hold = HOLD.air;
     const to = T1;
@@ -556,8 +559,17 @@ export class PlayerBody {
       if (Math.abs(back) > 1e-4) { quatAxisAngle(Q5, 0, 0, 1, 0, back); this.turn(rot, j.head, Q5); }
     }
     // ---- the arms ----
+    // Running, a hand with nothing in it is a loose fist, as anyone's is (the clips' hands are open): under whatever a hold
+    // or a cast makes of it, so it's the fist they ease from.
+    const fistK = this.wMove * this.wRun * (1 - this.wRide) * alive;
     for (const side of SIDES) {
       const A = this.arms[side];
+      if (fistK > 0.002) {
+        A.digits.forEach((d, i) => { for (let k = 0; k < 4; k++) DIG[i * 4 + k] = rot[d.j * 4 + k]; });
+        this.shut(rot, A, RUN_FIST.curl, RUN_FIST.thumb, 0, 0, RUN_FIST.tuck);
+        A.digits.forEach((d, i) => { quatNlerp(rot, d.j * 4, DIG, i * 4, rot, d.j * 4, fistK); for (let k = 0; k < 4; k++) this.baseR[d.j * 4 + k] = rot[d.j * 4 + k]; });
+        this.fk(rot, tr, A.hand, this.end[A.hand]);
+      }
       let w = A.w * alive, h = A.pose;
       const c = cw > 0.001 ? this.castHold(A, T5) : null;
       if (c) {
@@ -750,7 +762,7 @@ function put(m, o, x, y, z, at, k) {
 }
 
 const BACK_NOW = [0, 0, 0], Q6 = new Float32Array(4);
-const Q1 = new Float32Array(4), Q2 = new Float32Array(4), Q3 = new Float32Array(4), Q4 = new Float32Array(4), Q5 = new Float32Array(4), KEEP = new Float32Array(12);
+const Q1 = new Float32Array(4), Q2 = new Float32Array(4), Q3 = new Float32Array(4), Q4 = new Float32Array(4), Q5 = new Float32Array(4), KEEP = new Float32Array(12), DIG = new Float32Array(25 * 4);
 const P1 = v3(), P2 = v3(), P3 = v3(), P4 = v3(), P5 = v3(), P6 = v3(), P7 = v3(), P8 = v3(), P9 = v3(), P10 = v3(), P11 = v3(), P12 = v3(), P13 = v3(), P14 = v3(), P15 = v3(), P16 = v3(), P17 = v3();
 const hold0 = () => ({ at: v3(), f: v3(), t: v3(), pole: v3(), curl: 0, thumb: 0, spread: 0, fall: 0, tuck: 0, flat: 0, along: 0 });
 const T1 = hold0(), T2 = hold0(), T3 = hold0(), T4 = hold0(), T5 = hold0(), T6 = hold0();

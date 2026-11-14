@@ -12,6 +12,12 @@ import { readSkeleton } from '../core/glb.js';
 import { quatFromMat3, quatMul, quatNormalize, quatRotate, quatYaw } from '../core/math.js';
 
 const I = [0, 0, 0, 1];
+// On the run (these clips), the hands are fists, as anyone's are: her clips' hands are open. How far each finger's three
+// joints turn in at a full fist, thumb first: her own fist (src/sim/village-walker.js grip), the same rig her clips are
+// from, so the same turns: a finger about its joint's own z, a thumb about its y, the other way and a little less.
+const RUN_CLIPS = new Set(['run', 'jog', 'flee']);
+const FIST = [[0.5, 0.35, 0.2], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9], [1.2, 1.3, 0.9]];
+const FQ = new Float32Array(4);
 const conj = (q, i = 0) => [-q[i], -q[i + 1], -q[i + 2], q[i + 3]];
 
 // Parents-first forward kinematics of a rest pose: world rotations and positions.
@@ -40,6 +46,14 @@ export class FolkClips {
     this.restR = new Float32Array(this.count * 4);
     sk.forEach((j, i) => { this.restT.set(j.t, i * 3); this.restR.set(j.r, i * 4); });
     for (let j = 0; j < this.count; j++) if (this.parent[j] >= j) throw new Error('clips: joints must come parents first');
+    // The fingers' joints, for that fist (FolkPose.solve): joint, its turn at a full fist, 1 for a thumb's.
+    this.fist = [];
+    for (const side of ['Left', 'Right']) {
+      ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'].forEach((f, fi) => [1, 2, 3].forEach((i) => {
+        const j = this.index.get(`mixamorig:${side}Hand${f}${i}`);
+        if (j !== undefined) this.fist.push(j, FIST[fi][i - 1], fi === 0 ? 1 : 0);
+      }));
+    }
     this.hips = this.index.get('mixamorig:Hips');
     this.rest = restWorld(this.parent, this.restT, this.restR);
     const rot = new Int16Array(bin, 0, meta.hipsByteOffset >> 1);
@@ -260,6 +274,17 @@ export class FolkPose {
       C.sample(o.clip, o.t, this.so, this.ho);
       const w = smooth(o.w), m = o.mask;
       for (let j = 0; j < n; j++) if (m[j] > 0) nlerp(sa, j * 4, sa, this.so, j * 4, w * m[j]);
+    }
+    // Running, fists (eased across a change of clip, as the clips are).
+    const runA = RUN_CLIPS.has(this.a.clip?.name) ? 1 : 0, runB = this.w < 1 && RUN_CLIPS.has(this.b.clip?.name) ? 1 : 0;
+    const run = this.w < 1 ? runB + (runA - runB) * smooth(this.w) : runA;
+    if (run > 0.01) {
+      const F = C.fist;
+      for (let i = 0; i < F.length; i += 3) {
+        const a = F[i + 1] * run * (F[i + 2] ? -0.8 : 1) * 0.5;
+        FQ[0] = 0; FQ[1] = F[i + 2] ? Math.sin(a) : 0; FQ[2] = F[i + 2] ? 0 : Math.sin(a); FQ[3] = Math.cos(a);
+        quatMul(sa, F[i] * 4, sa, F[i] * 4, FQ, 0);
+      }
     }
     this.fk(x, y, z, yaw);
     writePalette(this, out, off);

@@ -190,6 +190,60 @@ function sameHemisphere(values) {
 
 const FIST_RAISE = 0.65;
 
+// Fists, for any body on an ArmsRig whose owner asks for them (rig.fistK, 0 to 1: Beast.write, for anything running): each
+// finger's three joints turned in toward the palm by FIST_TURN at a full fist. The way each turns is found once per model
+// from its rest pose: the palm's way from the knuckles (index to little finger) and the line of the hand (wrist to the
+// middle finger), so it's right whichever way the hand was modelled. Mixamo's names and Unreal's both. (No thumbs: half the
+// models have none bound.) Kept by the model's rest rotations, which every body on that model shares.
+const FIST_TURN = [1.1, 1.25, 0.85];
+const FISTS = new WeakMap(), FQ = new Float32Array(4), FQ2 = new Float32Array(4);
+function fistAxes(rig) {
+  let out = FISTS.get(rig.restR);
+  if (out) return out;
+  const n = rig.count, wq = new Float32Array(n * 4), wt = new Float32Array(n * 3);
+  for (let j = 0; j < n; j++) {
+    const p = rig.parent[j];
+    if (p < 0) { wq.set(rig.restR.subarray(j * 4, j * 4 + 4), j * 4); wt.set(rig.restT.subarray(j * 3, j * 3 + 3), j * 3); continue; }
+    quatMul(wq, j * 4, wq, p * 4, rig.restR, j * 4);
+    quatRotate(wt, j * 3, wq, p * 4, rig.restT, j * 3);
+    wt[j * 3] += wt[p * 3]; wt[j * 3 + 1] += wt[p * 3 + 1]; wt[j * 3 + 2] += wt[p * 3 + 2];
+  }
+  const hands = {};
+  rig.names.forEach((name, j) => {
+    let m = /(Left|Right)Hand(Index|Middle|Ring|Pinky)(\d)$/.exec(name), side, f, k;
+    if (m) { side = m[1][0]; f = m[2].toLowerCase(); k = +m[3]; } else if ((m = /^(index|middle|ring|pinky)_0(\d)_(l|r)$/.exec(name))) { side = m[3].toUpperCase(); f = m[1]; k = +m[2]; }
+    if (!m || k < 1 || k > 3) return;
+    ((hands[side] ||= {})[f] ||= [])[k - 1] = j;
+  });
+  const P = (j) => [wt[j * 3], wt[j * 3 + 1], wt[j * 3 + 2]], sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const unit = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  out = [];
+  for (const side of ['L', 'R']) {
+    const H = hands[side];
+    const first = (f) => H?.[f]?.find((j) => j !== undefined);
+    const ix = first('index'), pk = first('pinky') ?? first('ring'), md = first('middle') ?? ix;
+    if (ix === undefined || pk === undefined || ix === pk) continue;
+    const hand = rig.parent[md];
+    if (hand < 0) continue;
+    // (For a left hand the palm is the hand's line crossed with the knuckles' from little finger to first; a right is its mirror.)
+    const c = cross(sub(P(md), P(hand)), sub(P(ix), P(pk))), palm = unit(side === 'L' ? c : [-c[0], -c[1], -c[2]]);
+    for (const f of ['index', 'middle', 'ring', 'pinky']) {
+      const chain = (H[f] || []).filter((j) => j !== undefined);
+      chain.forEach((j, i) => {
+        // The bone's line: to the next joint of the finger, or (the last) the line of the one before it.
+        const d = i + 1 < chain.length ? sub(P(chain[i + 1]), P(j)) : i ? sub(P(j), P(chain[i - 1])) : null;
+        if (!d) return;
+        const a = unit(cross(d, palm)), q = wq.subarray(j * 4, j * 4 + 4), local = [0, 0, 0];
+        quatRotate(local, 0, [-q[0], -q[1], -q[2], q[3]], 0, a, 0);
+        out.push(j, local[0], local[1], local[2], FIST_TURN[Math.min(2, i)]);
+      });
+    }
+  }
+  FISTS.set(rig.restR, out);
+  return out;
+}
+
 export class ArmsRig {
   constructor(buffer, scale = 1, clipNames) {
     const glb = parseGLB(buffer);
@@ -292,6 +346,20 @@ export class ArmsRig {
     }
   }
 
+  // The hands eased by k (0 to 1) into fists: each finger's joints to the rest pose turned in (see fistAxes), whatever the
+  // clip had them doing, so a hand its clip already curls isn't shut twice over.
+  closeFists(rot, k) {
+    const F = fistAxes(this), R = this.restR;
+    for (let i = 0; i < F.length; i += 5) {
+      const j = F[i] * 4, h = F[i + 4] * 0.5, s = Math.sin(h);
+      FQ[0] = F[i + 1] * s; FQ[1] = F[i + 2] * s; FQ[2] = F[i + 3] * s; FQ[3] = Math.cos(h);
+      quatMul(FQ2, 0, R, j, FQ, 0);
+      const d = rot[j] * FQ2[0] + rot[j + 1] * FQ2[1] + rot[j + 2] * FQ2[2] + rot[j + 3] * FQ2[3], sg = d < 0 ? -1 : 1;
+      for (let c = 0; c < 4; c++) rot[j + c] += (FQ2[c] * sg - rot[j + c]) * k;
+      quatNormalize(rot, j);
+    }
+  }
+
   // Crossfades from a previous pose (rot2, tr2) by fade (0 = previous, 1 = current).
   solve(clip, t, fade, out, off) {
     this.sampleInto(clip, t, this.rot, this.tr);
@@ -313,6 +381,7 @@ export class ArmsRig {
       }
     }
     this.poseModifier?.(rot, tr);
+    if (this.fistK > 0.01) this.closeFists(rot, this.fistK);
     for (let j = 0; j < count; j++) {
       const p = parent[j];
       if (p < 0) {

@@ -2734,6 +2734,8 @@ export class Renderer {
     this.vm = this.vms[weapon ? weapon.hands : 1];
     const held = weapon && weapon.id !== 'greatsword' ? this.sword(weapon.id) : null;
     this.held = held && held.ready ? held : null;
+    // (On the shield the staff's arm rides as it holds it, the staff itself left out: src/sim/player.js poseForSurf.)
+    if (snap[H.SURF] > 0.5 && weapon?.hands === 3) this.held = null;
     this.holdingOld = !!weapon && weapon.id === 'greatsword';
     // The skull in the left hand, on the staff's arms, which have no left of their own.
     this.skullParts = this.skullParts || [];
@@ -2756,7 +2758,8 @@ export class Renderer {
     this.shieldParts.length = 0;
     const surf = snap[H.SURF], shieldUp = snap[H.SHIELD_UP];
     const shield = this.offHand ? this.sword(this.offHand) : null;
-    if (shield && surf < 0.5 && (!weapon || weapon.hands === 3 || shieldUp > 0)) {
+    // (A staff's arms have no left of their own, so with one the shield stays on this arm through the jump onto it, until it's the board.)
+    if (shield && (surf < 0.5 || (surf < 1.5 && weapon?.hands === 3)) && (!weapon || weapon.hands === 3 || shieldUp > 0)) {
       const arm = this.sword('shield_arm');
       if (arm.ready && shield.up?.ready) this.shieldParts.push(arm, shield.up);
     }
