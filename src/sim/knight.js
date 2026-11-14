@@ -309,6 +309,8 @@ export class Knight {
     if (wounded > 0.01) { bank.sample(clips.Zombie_Idle_Loop, sim.time, rA, null); blend(rot, rot, rA, wounded * 0.7, rig.count); }
     // (A hero's legs are walking from the first step: a slow walk is a slow walk, never a slide on standing legs.)
     const moveW = hero ? smoothstep(0.02, 0.16, sp) : smoothstep(0.06, 0.7, sp);
+    // (How far a hero is running, past a brisk walk: their empty hands are fists for it, src/sim/hero.js afterPose.)
+    if (hero) this.runK = heroJog * moveW;
     if (moveW > 0.001) {
       bank.sample(clips.Walk_Formal_Loop, ph * clips.Walk_Formal_Loop.dur, rA, pA);
       if (inFight > 0.005) {
@@ -348,6 +350,12 @@ export class Knight {
         const crossed = a <= b ? a < mark && b >= mark : a < mark || b >= mark;
         if (crossed && !this.action) sim.event(EV.STEP, this.x, this.y, this.z, clamp(sp / 5, 0.2, 1), 1, this.id);
       }
+    }
+    // On a board (a hero riding a shield, src/sim/hero.js): crouched on it, under whatever the arms are doing.
+    if (this.rideW > 0.001 && clips.Crouch_Idle_Loop) {
+      bank.sample(clips.Crouch_Idle_Loop, sim.time, rA, pA);
+      blend(rot, rot, rA, this.rideW, rig.count);
+      lerp3(pel, pel, pA, this.rideW);
     }
     // Guard stance on the upper body while moving.
     const guard = this.shieldUp * moveW;

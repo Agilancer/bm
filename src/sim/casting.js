@@ -215,12 +215,12 @@ export class Casting {
   stepHands(dt, want, held, sim) {
     const p = sim.player;
     if (this.state === 'idle') {
-      if (p.stance.shoots || p.staffSurf) this.stepStaff(sim);
+      if (p.stance.shoots) this.stepStaff(sim);
       this.lower = Math.max(0, this.lower - dt * 3.2);
       this.skullLower = Math.max(0, (this.skullLower || 0) - dt * 3.2);
       this.armLower = Math.max(0, this.armLower - dt * 3.2);
       if (sim.unarmed) this.asked = 0;      // (No spells in Lisandra's cave, until you're out of it.)
-      else if (want && !p.dead && !p.swinging && !p.guard && p.staffSurfT === null && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
+      else if (want && !p.dead && !p.swinging && !p.guard && p.clip === p.stance.idle && sim.gameState === 0) this.begin(sim);
       if (this.state === 'idle') return;
     }
     const def = this.def;
@@ -312,7 +312,7 @@ export class Casting {
   // In the third-person view a spell leaves the body you can see: the staff's head (it's what the right hand casts with), the
   // left palm, or between them for one that takes both.
   bodyPalm(side, sim, out) {
-    const b = sim.body, R = sim.player.stance.shoots || sim.player.staffSurf ? b.staffTip : b.palmR, L = b.palmL;
+    const b = sim.body, R = sim.player.stance.shoots ? b.staffTip : b.palmR, L = b.palmL;
     if (side === 'both') { out[0] = (R[0] + L[0]) / 2; out[1] = (R[1] + L[1]) / 2; out[2] = (R[2] + L[2]) / 2; }
     else { const h = side === 'L' ? L : R; out[0] = h[0]; out[1] = h[1]; out[2] = h[2]; }
     return out;
@@ -350,7 +350,7 @@ export class Casting {
   // A cast in the staff's arm: the head gathers light on the lift, and on the hit a bolt leaves it for what's under the crosshair.
   stepStaff(sim) {
     const p = sim.player;
-    const t = p.staffSurf ? p.staffSurfT : p.clip === 'staff_cast' ? p.t : null;
+    const t = p.clip === 'staff_cast' ? p.t : null;
     if (t === null) return;
     const id = WEAPONS[p.weapon].id, def = staffShot(id), info = p.rigs[3].clips.staff_cast;
     const from = this.staffOrigin(p, sim.input[INPUT.VIEW_ASPECT] || 16 / 9, out3, sim);

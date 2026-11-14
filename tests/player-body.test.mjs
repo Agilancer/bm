@@ -99,36 +99,32 @@ function arm(body, side) {
 }
 const DEG = 180 / Math.PI;
 
-test('on the board: the arms out for balance, neither locked nor folded, each hand in its forearm\'s line', () => {
-  const head = 0.7, h = [Math.sin(head), 0, Math.cos(head)], heel = [h[2], 0, -h[0]];
+test('on the board: the leading arm out for balance, the right hand as it carries the staff whether the staff is in it or not', () => {
+  const head = 0.7, h = [Math.sin(head), 0, Math.cos(head)];
   const along = (p, s, d) => (p[0] - s.x) * d[0] + (p[2] - s.z) * d[2];
   const board = (o) => ({ hx: h[0], hz: h[2], nx: 0, ny: 1, nz: 0, tilt: 0, air: false, ...o });
   const ways = { level: {}, 'onto his toes': { tilt: 1 }, 'onto his heels': { tilt: -1 }, 'in the air': { air: true } };
-  // With nothing in his hands (put away, as they are on a ride out of a fight).
+  // With nothing in his hands (put away, as they are on a ride out of a fight), and with the staff out.
   const seen = {};
   for (const [name, o] of Object.entries(ways)) {
-    const body = make(), s = state({ vx: h[0] * 9, vz: h[2] * 9, stow: 1, onGround: !o.air, surf: board(o) });
-    settle(body, s);
-    const L = arm(body, 'L'), R = arm(body, 'R');
-    for (const [side, a] of [['leading', L], ['trailing', R]]) {
-      assert.ok(a.elbow * DEG > 25 && a.elbow * DEG < 100, `${name}: the ${side} elbow is bent ${(a.elbow * DEG).toFixed(0)} degrees`);
-      assert.ok(a.bend * DEG < 12, `${name}: the ${side} hand is ${(a.bend * DEG).toFixed(0)} degrees off its forearm`);
-      assert.ok(a.wring * DEG < 35, `${name}: the ${side} wrist is wrung ${(a.wring * DEG).toFixed(0)} degrees`);
-      assert.ok(a.wrist[1] - s.y > 0.6, `${name}: the ${side} hand is up off his knees (${(a.wrist[1] - s.y).toFixed(2)})`);
-    }
+    const ride = (stow) => { const body = make(), s = state({ vx: h[0] * 9, vz: h[2] * 9, stow, onGround: !o.air, surf: board(o) }); settle(body, s); return { body, s, L: arm(body, 'L'), R: arm(body, 'R') }; };
+    const away = ride(1), out = ride(0), { L, R, s } = away;
+    assert.ok(L.elbow * DEG > 25 && L.elbow * DEG < 100, `${name}: the leading elbow is bent ${(L.elbow * DEG).toFixed(0)} degrees`);
+    assert.ok(L.bend * DEG < 12, `${name}: the leading hand is ${(L.bend * DEG).toFixed(0)} degrees off its forearm`);
+    assert.ok(L.wring * DEG < 35, `${name}: the leading wrist is wrung ${(L.wring * DEG).toFixed(0)} degrees`);
+    assert.ok(L.wrist[1] - s.y > 0.6, `${name}: the leading hand is up off his knees (${(L.wrist[1] - s.y).toFixed(2)})`);
     assert.ok(along(L.wrist, s, h) > 0.3, `${name}: the leading hand is out over the nose`);
-    assert.ok(along(R.wrist, s, h) < -0.3, `${name}: the trailing hand is out over the tail`);
-    seen[name] = { L, R, s };
+    // The right hand: the staff's hold, at his hip, with or without the staff (the owner's ask, 2026-11-13).
+    assert.ok(dist(R.wrist, out.R.wrist) < 0.03, `${name}: the empty right hand is ${(dist(R.wrist, out.R.wrist) * 100).toFixed(1)} cm from where it carries the staff`);
+    assert.ok(R.elbow * DEG > 40 && R.elbow * DEG < 100, `${name}: the right elbow is bent ${(R.elbow * DEG).toFixed(0)} degrees`);
+    assert.ok(R.bend * DEG < 32 && R.wring * DEG < 35, `${name}: the right wrist is bent ${(R.bend * DEG).toFixed(0)} and wrung ${(R.wring * DEG).toFixed(0)} degrees`);
+    assert.ok(away.body.arms.R.pose.curl > 1.1, `${name}: the right hand is shut as on the staff (${away.body.arms.R.pose.curl.toFixed(2)})`);
+    seen[name] = { L, s };
   }
-  // They don't match: the leading hand's lower, to his toes; the trailing one's up behind, to his heels.
-  const { L, R, s } = seen.level;
-  assert.ok(R.wrist[1] - L.wrist[1] > 0.08, 'the trailing hand is carried higher than the leading one');
-  assert.ok(Math.abs(R.elbow - L.elbow) * DEG > 8, 'and the two elbows aren\'t bent alike');
-  assert.ok(along(L.wrist, s, heel) < along(R.wrist, s, heel) - 0.1, 'the leading hand to his toes of the trailing one');
-  // A lean moves them: onto his toes the leading hand goes down and the trailing one up; onto his heels the other way.
-  assert.ok(seen['onto his toes'].L.wrist[1] < L.wrist[1] - 0.08 && seen['onto his toes'].R.wrist[1] > R.wrist[1] + 0.08, 'onto his toes: leading hand down, trailing up');
-  assert.ok(seen['onto his heels'].R.wrist[1] < R.wrist[1] - 0.08 && seen['onto his heels'].L.wrist[1] > L.wrist[1] + 0.04, 'onto his heels: trailing hand down, leading up');
-  assert.ok(seen['in the air'].R.wrist[1] > R.wrist[1] + 0.08, 'in the air the trailing hand goes up');
+  // A lean moves the leading hand: onto his toes it goes down, onto his heels up.
+  const { L } = seen.level;
+  assert.ok(seen['onto his toes'].L.wrist[1] < L.wrist[1] - 0.08, 'onto his toes: leading hand down');
+  assert.ok(seen['onto his heels'].L.wrist[1] > L.wrist[1] + 0.04, 'onto his heels: leading hand up');
 });
 
 test('on the board with the staff and the skull: a level grip, the staff\'s foot clear of the hill, the skull held out ahead', () => {
