@@ -2,7 +2,7 @@
 import { openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, pathStretches, segDist2, sstep, terrainHeight } from './terrain.js';
 import { churchSite } from './church.js';
 import { oldChurchGround } from './town.js';
-import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, inCaveBox } from './opening.js';
+import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, inCaveBox, onWay } from './opening.js';
 import { landTrees, routeDist, treeCode } from './lands.js';
 import { huntEdge, huntPathEdge, huntTrimmed } from './hunts.js';
 
@@ -51,6 +51,8 @@ export function forestAmount(x, z) {
   }
   // (Nothing grows over Lisandra's cave: a trunk stands in the way at any height, and the ledge is bare rock.)
   if (openingTerrain && inCaveBox(x, z, 7)) return 0;
+  // (Nor on her steps and landings, nor so near them a trunk would stand in a wall: src/core/opening.js onWay.)
+  if (openingTerrain && onWay(x, z, 3.5)) return 0;
   if (openingTerrain) { a *= viewLane(x, z); if (a <= 0) return 0; }
   if (r < 260) {
     for (let i = 0; i < LONG_PATHS.length; i++) {

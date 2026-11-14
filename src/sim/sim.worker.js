@@ -4,7 +4,7 @@ import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { mapFolk } from '../folk/layout.js';
 import { FieldCreature } from './field-creature.js';
 import { setOpeningTerrain } from '../core/terrain.js';
-import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW, clutterBoxes } from '../core/opening.js';
+import { CAVE_LINE, CAVE_MOUTH, CAVE_OUT, OPENING, OPENING_REVISION, OPENING_YAW, clutterBoxes, wayColliders } from '../core/opening.js';
 import { Opening } from './opening.js';
 import { PlayerBody } from './playerbody.js';
 import { THIRD, thirdAllowed } from '../core/third.js';
@@ -644,12 +644,13 @@ async function boot(msg) {
   ]);
   if (msg.opening) {
     // Lisandra's cave (src/core/opening.js): her clutter, the rock either side of its mouth, and the rubble that fills the
-    // mouth when it falls in (out of the way until then: src/sim/world.js setCaveSealed).
+    // mouth when it falls in (out of the way until then: src/sim/world.js setCaveSealed); and the benches, troughs and
+    // lantern posts on the landings of her steps.
     const w = CAVE_LINE[0][6], yaw = Math.atan2(CAVE_OUT[0], CAVE_OUT[1]), side = [CAVE_OUT[1], -CAVE_OUT[0]];
     const at = (q, o) => [CAVE_MOUTH[0] + side[0] * q + CAVE_OUT[0] * o, CAVE_MOUTH[1] + side[1] * q + CAVE_OUT[1] * o];
     const box = ([x, z], hx, hz, h, more) => ({ x, z, hx, hz, yaw, h, ...more });
     village.colliders.push(...clutterBoxes(), box(at(w + 1.4, 0), 1.2, 1.2, 6), box(at(-w - 1.4, 0), 1.2, 1.2, 6),
-      box(at(0, -0.5), w + 0.8, 1.4, 3.5, { rubble: true }));
+      box(at(0, -0.5), w + 0.8, 1.4, 3.5, { rubble: true }), ...wayColliders());
   }
   const bank = new ClipBank(clipsMeta, clipsBin);
   sim.world = new World(village, await fetchJSON(`${base}assets/game/interior/interior.json`));

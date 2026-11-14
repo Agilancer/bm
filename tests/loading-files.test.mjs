@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { FileWatch, fileName, getFile, lanes, watchFiles, watched } from '../src/core/files.js';
 import { loadTextureArray } from '../src/gfx/gpu.js';
 import { CAVE_PATH, PATHS, fbm, pathAmount, pathStretches, setOpeningTerrain, sstep } from '../src/core/terrain.js';
+import { LANDINGS, landingEdge } from '../src/core/opening.js';
 
 globalThis.GPUTextureUsage = { TEXTURE_BINDING: 1, COPY_DST: 2, RENDER_ATTACHMENT: 4 };
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -120,6 +121,8 @@ function plainPathAmount(x, z, opening) {
       best = Math.max(best, 1 - sstep(p.w * 0.45, p.w * 1.2, Math.sqrt(segDist2(x, z, ax, az, bx, bz)) + wob));
     }
   }
+  // (Lisandra's landings on the way down are worn too: src/core/opening.js LANDINGS.)
+  if (opening) for (const L of LANDINGS) best = Math.max(best, 1 - sstep(-0.2, 0.4, landingEdge(L, x, z) + wob * 0.2));
   return Math.max(best, 1 - sstep(4.5, 10.5, Math.hypot((x + 1.5) * 0.9, z - 1) + wob * 1.8));
 }
 

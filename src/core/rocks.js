@@ -8,7 +8,7 @@
 import { oldChurchGround } from './town.js';
 import { CAVE_PATH, PATHS, PLOTS, ROADS, fbm, hash2, nearest, openingTerrain, segDist2, sstep, terrainHeight } from './terrain.js';
 import { forestAmount } from './forest.js';
-import { inCaveBox } from './opening.js';
+import { inCaveBox, onWay } from './opening.js';
 import { CLIFF, COUNTRY_KEYS, MOUNT, WATERS, countryWeights, groundCover, routeDist, siteAt } from './lands.js';
 import { churchSite } from './church.js';
 import { PORTAL } from './dungeon.js';
@@ -66,6 +66,7 @@ function barred(x, z) {
   if (churchSite(x, z) < 10) return true;
   for (const p of PLOTS) if (Math.max(Math.abs(x - p[0]) - p[2], Math.abs(z - p[1]) - p[3]) < 5) return true;
   if (openingTerrain && inCaveBox(x, z, 9)) return true;
+  if (openingTerrain && onWay(x, z, 1.2)) return true;
   if (siteAt(x, z, 6)) return true;
   // (The Warrens' portal, its platform and the steps down from it, on the hillside: src/core/sites.js portalWall.)
   if ((x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < 18 ** 2) return true;

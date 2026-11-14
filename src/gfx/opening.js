@@ -7,7 +7,7 @@ import { C, C_PROPS, C_SIZE, CHARS_START, H } from '../core/layout.js';
 import { damp, lerp, mat4FromQT, quatAxisAngle, quatMul, quatYaw, smoothstep, wrapAngle } from '../core/math.js';
 import {
   BURST_CANDLE, CANDLES, CANDLES_AT, CAVE_LINE, CAVE_MOUTH, CAVE_OUT, CHAMBER_LEN, CHAMBER_YAW, CIRCLE, CIRCLE_Y, CLUTTER, DUST_AT, HEARTH, LANTERN, OPENING,
-  PORTAL, PORTAL_YAW, REVEAL_AT, SNAP_AT, SPARK_AT, SWAP_AT, WAY, WAY_SEGS, STAIR_FLAT, caveNearest, chamberPoint, chamberShape, wayY,
+  PORTAL, PORTAL_YAW, REVEAL_AT, SNAP_AT, SPARK_AT, SWAP_AT, WAY, caveNearest, chamberPoint, chamberShape, WAY_PROPS,
 } from '../core/opening.js';
 
 const bump = (t, a, b, c, d) => smoothstep(a, b, t) * (1 - smoothstep(c, d, t));
@@ -16,6 +16,7 @@ import { routeDir } from '../core/escort.js';
 import { groundAt } from '../core/interior.js';
 import { boardPose } from '../items/drops.js';
 import { makeBuffer } from './gpu.js';
+import { foliageTexture, gardenTexture, wayModels } from './opening-way.js';
 
 const BOOK_ASSET = 'assets/game/lisandra/spellbook.glb';
 const BOOK_SCALE = 0.95;
@@ -38,7 +39,7 @@ const rnd = (a = 0, b = 1) => { seed = (seed * 16807) % 2147483647; return a + (
 
 // A mesh being built: positions, normals, uv, triangles. done() winds every triangle to face the way its normals point (the
 // item shader turns the normal round for a face seen from behind, so the winding has to agree with it).
-class Geo {
+export class Geo {
   constructor() { this.p = []; this.n = []; this.t = []; this.i = []; }
   get count() { return this.p.length / 3; }
   v(p, n, u, w) { this.p.push(p[0], p[1], p[2]); this.n.push(n[0], n[1], n[2]); this.t.push(u, w); return this.p.length / 3 - 1; }
@@ -72,14 +73,14 @@ class Geo {
 }
 
 // A thing's own space (x across, y up, z ahead) to the world's: turned by pitch about x, then yaw about y, scaled by k.
-function frame(x0, y0, z0, yaw = 0, pitch = 0, k = 1) {
+export function frame(x0, y0, z0, yaw = 0, pitch = 0, k = 1) {
   const c = Math.cos(yaw), s = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
   const R = (x, y, z) => { const y1 = y * cp - z * sp, z1 = y * sp + z * cp; return [x * c + z1 * s, y1, -x * s + z1 * c]; };
   return { R, P: (x, y, z) => { const r = R(x * k, y * k, z * k); return [x0 + r[0], y0 + r[1], z0 + r[2]]; } };
 }
 
 // A box from (x0, y0, z0) to (x1, y1, z1) in a frame; its uv in metres over `tile`.
-function box(g, F, x0, y0, z0, x1, y1, z1, tile = 0.6, uv = null) {
+export function box(g, F, x0, y0, z0, x1, y1, z1, tile = 0.6, uv = null) {
   const faces = [
     [[1, 0, 0], [[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]]], [[-1, 0, 0], [[x0, y0, z1], [x0, y0, z0], [x0, y1, z0], [x0, y1, z1]]],
     [[0, 1, 0], [[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]]], [[0, -1, 0], [[x0, y0, z1], [x1, y0, z1], [x1, y0, z0], [x0, y0, z0]]],
@@ -101,7 +102,7 @@ function box(g, F, x0, y0, z0, x1, y1, z1, tile = 0.6, uv = null) {
 }
 
 // Turned on a lathe about the frame's y: profile [[radius, y], ...], n sides, an optional bump(angle, y) on the radius.
-function lathe(g, F, profile, n, tile = 0.6, bump = null, uv = null) {
+export function lathe(g, F, profile, n, tile = 0.6, bump = null, uv = null) {
   const base = g.count;
   for (let j = 0; j < profile.length; j++) {
     const [r, y] = profile[j], a = profile[Math.max(0, j - 1)], b = profile[Math.min(profile.length - 1, j + 1)];
@@ -577,61 +578,9 @@ function clutter() {
   return out;
 }
 
-// How far a slab of the flight sg reaches from (x, z) on its middle toward (px, pz), a unit vector across it: its half
-// width, or less where another flight's middle is nearer than this one's.
-function stairReach(sg, x, z, px, pz, hw) {
-  let u = 0.2;
-  for (; u < hw; u += 0.04) {
-    const qx = x + px * u, qz = z + pz * u;
-    let near = false;
-    for (const o of WAY_SEGS) {
-      if (o === sg || !o.stairs) continue;
-      const t = Math.max(0, Math.min(1, ((qx - o.ax) * o.dx + (qz - o.az) * o.dz) / (o.len * o.len)));
-      if (Math.hypot(o.ax + o.dx * t - qx, o.az + o.dz * t - qz) < u) { near = true; break; }
-    }
-    if (near) break;
-  }
-  return Math.min(u, hw);
-}
-
-// ---- the way down: her steps ----------------------------------------------------------------------------------------------
-// Four flights of split stone, one slab to a step, laid on the slope the land's cut to (src/core/opening.js WAY: you walk
-// the slope, and the slabs sit across it); stones set along both edges of each flight; and stones along the lip of the
-// shelf and the ledge, where the ground falls away.
-function waySteps() {
-  const g = new Geo();
+// Stones round the ledge's lip, where the ground falls away (with the walls of her way down: src/gfx/opening-way.js).
+function ledgeLip(g) {
   seed = 97;
-  for (const sg of WAY_SEGS) {
-    const ux = sg.dx / sg.len, uz = sg.dz / sg.len, yaw = Math.atan2(ux, uz);
-    if (sg.stairs) {
-      const run = sg.len - 2 * STAIR_FLAT, n = Math.max(1, Math.round((sg.ay - sg.by) / 0.165)), d = run / n;
-      for (let i = 0; i < n; i++) {
-        const t = (STAIR_FLAT + (i + 0.5) * d) / sg.len, top = wayY(sg, t) + 0.02;
-        const F = frame(sg.ax + sg.dx * t, top, sg.az + sg.dz * t, yaw + rnd(-0.03, 0.03));
-        const hw = 1.22 + rnd(-0.08, 0.1);
-        // (Near a turn the flight beside this one is close, and a good deal higher or lower: each slab stops where the
-        // other flight's ground begins, so neither flight's stone stands in the other's way. Cut short like that it goes
-        // deeper, a wall down to the lower flight.)
-        const cx = sg.ax + sg.dx * t, cz = sg.az + sg.dz * t, l = stairReach(sg, cx, cz, -uz, ux, hw), r = stairReach(sg, cx, cz, uz, -ux, hw);
-        box(g, F, -l, l < hw || r < hw ? -2.4 : -0.5, -d / 2 - 0.05, r, rnd(-0.008, 0.008), d / 2 + 0.03, 1.3);
-      }
-      // A flagged landing at each turn, flush with the ground.
-      for (const [t, yy] of [[STAIR_FLAT * 0.45 / sg.len, sg.ay], [1 - STAIR_FLAT * 0.45 / sg.len, sg.by]]) {
-        const F = frame(sg.ax + sg.dx * t, yy + 0.015, sg.az + sg.dz * t, yaw + rnd(-0.2, 0.2));
-        box(g, F, -1.15, -0.3, -0.52, 1.15, 0, 0.52, 1.3);
-      }
-    }
-    // Stones along the edges: both, down a flight; the low side only, along the shelf and the path (the way's lip).
-    for (let at = 0.6; at < sg.len - 0.3; at += sg.stairs ? rnd(0.7, 1.2) : rnd(1.3, 2.6)) {
-      const t = at / sg.len, cx = sg.ax + sg.dx * t, cz = sg.az + sg.dz * t;
-      for (const side of [-1, 1]) {
-        const off = (sg.stairs ? 1.42 : 1.55) + rnd(0, 0.25), x = cx - uz * off * side, z = cz + ux * off * side, y = terrainHeight(x, z);
-        if (!sg.stairs && y > wayY(sg, t) - 0.25) continue;
-        boulder(g, x, y + 0.02, z, sg.stairs ? rnd(0.22, 0.4) : rnd(0.25, 0.5), 0.6);
-      }
-    }
-  }
-  // Round the ledge's lip.
   const m = STATIONS[0];
   for (let i = 0; i < 16; i++) {
     const a = -1.5 + i / 15 * 3.0 + rnd(-0.05, 0.05), r = 6.4 + rnd(-0.4, 0.5);
@@ -639,9 +588,8 @@ function waySteps() {
     const dx = CAVE_OUT[0] * Math.cos(a) - CAVE_OUT[1] * Math.sin(a), dz = CAVE_OUT[1] * Math.cos(a) + CAVE_OUT[0] * Math.sin(a);
     const x = cx + dx * r, z = cz + dz * r, y = terrainHeight(x, z);
     if (Math.hypot(x - WAY[1][0], z - WAY[1][1]) < 3.2 || y > m[5] - 0.3) continue;
-    boulder(g, x, y + 0.05, z, rnd(0.35, 0.75), 0.6);
+    boulder(g, x, y + 0.05, z, rnd(0.35, 0.75), 1 / ROCK_UV);
   }
-  return g.done();
 }
 
 // The paper: the ledger's two leaves above (a column of names, all but the last struck through), book cloth below.
@@ -757,13 +705,18 @@ export async function loadOpeningStage(renderer, base) {
   book.catch(() => {});
   const land = async (name, srgb) => renderer.bitmapTexture(await getFile(base + LAND_TEX + name + '.webp', 'blob'), srgb ? 'rgba8unorm-srgb' : 'rgba8unorm', scale);
   const pair = (name, from = tex) => Promise.all([from(name + '_c', true), from(name + '_d')]);
-  // The rock is the hill's own granite, inside and out; the floor trodden earth; her steps split limestone. Her things are
+  // The rock is the hill's own granite, inside and out; the floor trodden earth; her steps split limestone, her walls
+  // fieldstone. Her things are
   // of the houses' woods and cloths (assets/game/interior), each cloth cut from the middle of its picture.
-  const [rock, earth, lime, woodT, darkT, linenT, woolT, wool2T, hideT, rugT, paperC] = await Promise.all([
+  const [rock, earth, lime, woodT, darkT, linenT, woolT, wool2T, hideT, rugT, paperC, gardenC, field, leafC] = await Promise.all([
     pair('granite_1', land), pair('dirt_1', land), pair('limestone_1', land), pair('wood_b1'), pair('beam'), pair('linen'), pair('wool_red'), pair('wool_green'),
     pair('hide'), pair('rag_rug'),
     paperTexture().then((b) => renderer.bitmapTexture(b, 'rgba8unorm-srgb', 1)),
+    gardenTexture().then((b) => renderer.bitmapTexture(b, 'rgba8unorm-srgb', 1)),
+    pair('stone', land),
+    foliageTexture().then((b) => renderer.bitmapTexture(b, 'rgba8unorm-srgb', 1)),
   ]);
+  const way = wayModels(ledgeLip, !!renderer.tier.lean);
   const pages = await book;
   const props = clutter();
   const model = (prim, alb, nrm, mr, glow = [0, 0, 0, 0]) => renderer.lyingModel(prim, alb, nrm, mr, glow);
@@ -771,7 +724,13 @@ export async function loadOpeningStage(renderer, base) {
     rock: item(model(caveRock(), rock[0], rock[1], rough(236)), false),
     floor: item(model(caveFloor(), earth[0], earth[1], rough(245))),
     rubble: item(model(caveRubble(), rock[0], rock[1], rough(240)), false),
-    steps: item(model(waySteps(), lime[0], lime[1], rough(232)), false),
+    steps: item(model(way.lime, lime[0], lime[1], rough(232)), false),
+    wayWall: item(model(way.wall, field[0], field[1], rough(236)), false),
+    wayWood: item(model(way.wood, woodT[0], woodT[1], rough(215)), false),
+    wayGarden: item(model(way.garden, gardenC, flat, rough(242))),
+    wayLeaf: item(model(way.leaf, leafC, flat, rough(236))),
+    wayIron: item(model(way.iron, renderer.pixel('rgba8unorm-srgb', [40, 37, 35, 255]), flat, rough(140, 170)), false),
+    wayGlass: item(model(way.glass, renderer.pixel('rgba8unorm-srgb', [235, 196, 120, 255]), flat, rough(90), [1.1, 0.62, 0.26, 0])),
     stone: item(model(props.stone, rock[0], rock[1], rough(236))),
     wood: item(model(props.wood, woodT[0], woodT[1], rough(200))),
     dark: item(model(props.dark, darkT[0], darkT[1], rough(190))),
@@ -790,7 +749,8 @@ export async function loadOpeningStage(renderer, base) {
 
 // Her things, drawn while you're in the cave; and what's always there once the game has an opening at all.
 const INSIDE = ['stone', 'wood', 'dark', 'iron', 'linen', 'wool', 'wool2', 'hide', 'ragrug', 'burlap', 'paper', 'wax'];
-const STILL = ['rock', 'floor', 'rubble', 'steps', ...INSIDE];
+const WAY_ITEMS = ['steps', 'wayWall', 'wayWood', 'wayGarden', 'wayLeaf', 'wayIron', 'wayGlass'];
+const STILL = ['rock', 'floor', 'rubble', ...WAY_ITEMS, ...INSIDE];
 
 // ---- each frame -------------------------------------------------------------------------------------------------------
 // The floating candles, gathered into a few lights between them (one light each would be far too many).
@@ -833,6 +793,8 @@ class OpeningStage {
       return { list, c, light: L([1, 0.62, 0.3], list[0].ledge ? 3.6 : 10.5, 0, 0.45) };
     });
     r.lights.push(...Object.values(this.lights), ...this.groups.map((g) => g.light));
+    // (And her lanterns down the way below the ledge, lit always, small and warm: by day the sun drowns them.)
+    for (const p of WAY_PROPS) if (p.kind === 'lantern') r.lights.push({ p: frame(p.x, p.y, p.z, p.yaw).P(0, 1.66, -0.55), c: [1, 0.62, 0.28], r: 6.5, i: 2.4, flicker: 0.3 });
     // Light quads, written each frame and drawn added over the world (src/gfx/interior.js's glow pipeline).
     this.glow = new Float32Array(MAX_GLOW * 6 * 9);
     this.glowVB = makeBuffer(r.device, this.glow, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST);
@@ -895,7 +857,8 @@ class OpeningStage {
     if (!stage) { this.park(); r.caveAmb = null; return; }
     const t = snap[H.OPENING_TIME], time = snap[H.TIME];
     const m = this.moment(stage, t);
-    items.push(this.rock, this.floor, this.steps);
+    items.push(this.rock, this.floor);
+    for (const k of WAY_ITEMS) items.push(this[k]);
     if (m.rubble) {
       const k = m.drop || 0;
       mat4FromQT(this.rubble.mat, [0, 0, 0, 1], 0, [-CAVE_OUT[0] * 1.8 * k, 0.6 * k, -CAVE_OUT[1] * 1.8 * k], 0);
