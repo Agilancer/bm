@@ -25,7 +25,7 @@
 // opens a chest or takes anything up with a wall between (within()).
 import * as LAYOUT from '../core/layout.js';
 import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
-import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY } from '../core/opening.js';
+import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY, WAY_FOOT } from '../core/opening.js';
 import { ROUTE, cornerAhead, routeAt, routeDir, routeNear } from '../core/escort.js';
 import { ROADS, terrainHeight } from '../core/terrain.js';
 import { ROUTES, SITES } from '../core/lands.js';
@@ -487,7 +487,7 @@ const segNear = (ax, az, bx, bz, cx, cz) => {
 
 // On the way down with Lisandra: where it gets on its shield (just past the foot of her steps) and where it's off it again
 // (in the flat at the foot of that last hill, a little way along), as distances along the way (src/core/escort.js).
-const RIDE_FROM = routeNear(WAY[8][0], WAY[8][1]) + 2.5, RIDE_TO = routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 16;
+const RIDE_FROM = routeNear(WAY[WAY_FOOT][0], WAY[WAY_FOOT][1]) + 2.5, RIDE_TO = routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 16;
 
 export class Brain {
   // o: { game, shared, input, pack, inventory, townUI, lands, spellbar, renderer, town, heroCount, base, opening, say(text), menu(), done() }
