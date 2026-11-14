@@ -2133,6 +2133,12 @@ is lost while the game loads, with or without these changes), so the marks, the 
 not been seen in the game, by anyone. The sounds are the game's existing ones (a whoosh, a thud, a roar, a spell let
 go). The catacombs' dead and the beasts that aren't Tripo monsters have none of this yet beyond the facing.
 
+### Dead bodies fall
+
+Whatever dies goes limp where it stands and falls (`src/sim/ragdoll.js`): no death clip. The joints that matter become points with weight, held at the lengths they had and kept from folding flat; they fall, land on the ground, are eased out of walls and trees, and lie as they landed, thrown a little the way the killing blow came from (`struck`, called wherever a blow lands). The skeleton is read back off the points, so it works for any rig with no table of its bones: knights, the dead, casters, every Tripo monster, the crab, the Gravehart, the Hydra. Fingers and twist bones ride their parents; a two-legged body's knees (found by name) only bend the right way. A body is where it lies (`x`, `z` follow it), so loot, corpse spells and raising find it there; raised, it gets up as before. A fallen body stops costing anything within seven seconds. Not the other Tessariels or you: they keep their own deaths.
+
+`node tools/ragdoll/check.mjs` kills one of every kind in the sim with no page (and `tripo 80` for the whole roster) and fails if a body doesn't go limp, goes through the ground, flies off, comes apart or never rests. `node tools/ragdoll/shots.mjs` photographs eleven of them falling in the game (`bm.cmd(27, knight, weight)` kills one outright, the nearest with -1), and `python tools/ragdoll/sheet.py` puts the pictures on one sheet. Seen so far only in those pictures, on open ground: not in a fight, down a delve, on stairs, or on a phone. The dragon ends up rather folded.
+
 ### The Test Dungeon
 
 **Test Dungeon** on the main menu is a place for trying out the monsters. You're stood at the south end of a bright white
