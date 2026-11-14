@@ -282,6 +282,9 @@ export class OpeningSound {
     const atFire = stage === OPENING.WAKE ? 0.1 * smoothstep(CAVE.toHearth + 2, CAVE.toHearth + 6, t) * (1 - smoothstep(CAVE.ledger, CAVE.toYou, t)) : 0;
     this.loop('fire_medium', lit ? (0.12 + atFire) * cave : 0);
     const book = [her[0], her[1] + 1.1, her[2]];
+    // The summons' drone is only under her reading, up to her snap: if the story's gone past that any other way (a skip,
+    // a jump), it's cut here, or it hummed under the whole game.
+    if (this.drone && (stage !== OPENING.WAKE || t >= SNAP_AT)) this.cutDrone();
     switch (stage) {
       case OPENING.WAKE:
         if (t < SNAP_AT && !this.drone && prev < 0.5) this.startDrone();
