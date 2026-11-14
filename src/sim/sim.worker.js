@@ -534,6 +534,7 @@ class Sim {
       case 7: k.x = b; k.z = c; k.y = this.world.height(k.x, k.z); break;
       case 50: this.wilds?.debug(a, b, c); break;   // (the living land's own: src/sim/wilds.js)
       case 19: p.x = b; p.z = c; p.y = this.world.height(p.x, p.z); break;
+      case 26: this.warrens?.toPortal(a); break;   // you and your party to delve a's portal (src/sim/dungeon.js toPortal)
       case 8: p.hp = p.maxHp; break;
       case 9: k.hp = 1; break;
       case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
