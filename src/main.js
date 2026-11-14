@@ -30,7 +30,7 @@ import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
 import { saveSettings, settings, Title } from './title.js';
 import { ViewSwitch } from './ui/view.js';
-import { paintIcons, setIcon } from './ui/icons.js';
+import { icon, paintIcons, setIcon } from './ui/icons.js';
 import { place as placeThumbs } from './ui/thumbs.js';
 import { loadSkin } from './ui/skin.js';
 import { SKIN_PARTS, pickSets } from './gfx/bodyskin.js';
@@ -545,7 +545,10 @@ async function boot(plan, poolSize) {
   arm();
   // The living land: what's happening out there, told and paid for (src/ui/wilds.js; the sim's side is src/sim/wilds.js).
   game.wilds = new WildsUI({ touch: input.touch, xp: (n) => game.addXp(n), drop: (x, y, z, kind) => game.drops?.fromKill(x, y, z, kind), log: (t) => game.chatLog?.system(t),
-    pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; } });
+    pos: () => { const s = game.currentSnap?.(); return s ? [s[H.PX], s[H.PZ]] : null; },
+    // (A sting of the music's for what's begun and what's won; a word over a posted villager's head: src/ui/folk.js event.)
+    stinger: (k) => game.music?.stinger(k),
+    folkSay: (id, text) => { const t = game.townUI, i = t?.people.findIndex((q) => q.id === id) ?? -1; if (i >= 0) t.event({ type: 'say', i, text, dur: 6 }); } });
   hud.wildName = (model) => renderer.tripo?.wildName(model);
   addPart('wilds', { save: () => game.wilds.save(), load: (d) => game.wilds.load(d) });
   const inventory = new Inventory(pack, swordList, BASE, input.touch, {
@@ -1015,7 +1018,8 @@ async function boot(plan, poolSize) {
   const questBtn = document.createElement('div');
   questBtn.id = 'questOpen';
   questBtn.title = 'Quest log (J)';
-  questBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8"/><path d="M6 4a2 2 0 0 0-2 2v1h4V6a2 2 0 0 0-2-2z"/><path d="M8 20a2 2 0 0 1-2-2V7"/><path d="M10 9h6M10 12.5h6M10 16h4"/></svg><kbd>J</kbd>';
+  questBtn.dataset.ic = 'journal';     // (the painted journal goes over it: src/ui/skin.js)
+  questBtn.innerHTML = `${icon('journal')}<kbd>J</kbd>`;
   const questLog = (e) => { e.preventDefault(); e.stopPropagation(); if (townUI.book) townUI.closeBook(); else if (townUI.act.canMenu()) townUI.openBook(); };
   questBtn.addEventListener('mousedown', questLog);
   questBtn.addEventListener('touchstart', questLog, { passive: false });

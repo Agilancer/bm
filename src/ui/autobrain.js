@@ -35,6 +35,7 @@ import { inTown, townDist } from '../core/town.js';
 import { CHURCH_GUARD, churchAt, inChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
 import { GROUP_KEYS, GROUPS, LAIRS, TRIPO_KIND } from '../core/tripo-monsters.js';
+import { WILD_CALLS } from '../core/wilds.js';
 import { CAMPS } from '../sim/slimes.js';
 import { SPELLS } from '../sim/spells.js';
 import { AMBUSH_AT } from '../sim/opening.js';
@@ -105,6 +106,15 @@ const POSTS = [
 // again once it's been out of them four minutes).
 const DRY_LOOK = 40, DRY_FOR = 300, HUNT_DRY_FOR = 600;   // (seconds. The first: how long a round of looking has to have gone on. The last: any other quest's hunt that finds its grounds empty)
 // The lairs out in the land (src/core/tripo-monsters.js), by the level it wants before it goes near one.
+// What it says of each thing the living land calls it to (WILD_CALLS in src/core/wilds.js; src/ui/wilds.js calls), and
+// how many levels under the thing's own it'll still go: a raid has the other Tessariels in it, a tear nobody but itself.
+const WILD_SAY = {
+  raid: (c) => `${c.name} is raided: holding it with whoever's come.`,
+  tear: (c) => (c.fight ? `Fighting what comes through ${c.name.toLowerCase()}.` : `${c.name.charAt(0)}${c.name.slice(1).toLowerCase()} is open near here: walking into it.`),
+  find: (c) => `Something's been left over there (${c.name.toLowerCase()}): a look.`,
+  bounty: (c) => `The bounty: to ${c.name.replace(/^an? /, 'the ')}, for its chief.`,
+};
+const WILD_UNDER = { raid: 3, tear: 1, find: 99, bounty: 0 };
 // (The land's outposts and standing battles carry their own, from their faction's: src/core/wilds.js.)
 const lairLevel = (l) => l.lvl ?? LAIR_LEVEL[l.key];
 const LAIR_LEVEL = {
@@ -399,6 +409,7 @@ export function coverage(foeNames = null) {
       if (st.talk && !people.has(st.talk)) out.push(`quest ${id}: a word with "${st.talk}", who isn't anyone it can find`);
     }
   }
+  for (const k of WILD_CALLS) if (!WILD_SAY[k] || !(k in WILD_UNDER)) out.push(`the living land's ${k}: it doesn't know what to do when it's called to one (WILD_SAY)`);
   for (const l of LAIRS) if (!(lairLevel(l) > 0)) out.push(`lair ${l.key}: no level in LAIR_LEVEL, so it keeps clear of it till level 10`);
   for (const g of GROUP_KEYS) if (!(GROUPS[g].hp > 0)) out.push(`monster group ${g}: no hp to measure it by`);
   for (const k of Object.keys(LAYOUT)) if (k.endsWith('_START') && !BLOCKS.has(k)) out.push(`snapshot block ${k}: something new in the world it can't see (foes())`);
@@ -1688,8 +1699,11 @@ export class Brain {
     const errand = this.errand(m, m.town || wantsTown || townDist(m.x, m.z) < 60, questing);
     if (errand) return errand;
     if (wantsTown && !m.town && !this.skipping('town')) return { kind: 'go', why: 'town', x: 2, z: 3, r: 6, say: room < 10 ? 'Back to Bellmourn: the pack is full.' : 'Back to Bellmourn to sell.' };
+    // What the land's calling it to, close by and now: a raid, a tear, something left lying.
+    const wild = this.wildJob(m);
+    if (wild) return wild;
     // Set to grinding: only that. Set to dungeon runs: the next dungeon round, or grinding while there's none it can run.
-    if (this.mode === 'grind') return this.grindJob(m, this.grind, 'grind');
+    if (this.mode === 'grind') return this.wildJob(m, true) || this.grindJob(m, this.grind, 'grind');
     if (this.mode === 'dungeons') return this.dungeonJob(m) || this.grindJob(m, this.grind, 'grind', 'No dungeon it can run just now: grinding meanwhile.');
     // By night, what can only be done by night.
     if (isNight(m.hour) || m.hour >= 19.5) {
@@ -1746,11 +1760,37 @@ export class Brain {
     const all = Object.keys(RULES).every((id) => Q.done(id));
     if (all) {
       if (!this.allDone) { this.allDone = true; this.o.allDone(); }
-      return this.grindJob(m, this.grind, 'grind');
+      return this.wildJob(m, true) || this.grindJob(m, this.grind, 'grind');
     }
     // Nothing it can do yet: levels.
     void pack; void near;
+    // (A bounty it's up to, before the woods again.)
+    const bounty = this.wildJob(m, true);
+    if (bounty) return bounty;
     return this.grindJob(m, m.lvl >= 6 && Q.state('dead_cant_wait') ? 'catacombs' : 'woods', 'level');
+  }
+
+  // What the living land's calling it to, if it's up to it (src/ui/wilds.js calls): a town that's raided, an open tear in
+  // sight, something left lying close by. bounty: the bounty in hand instead, which waits for when there's nothing nearer.
+  // It walks into a tear only when it's whole, and gives one up for ten minutes once it's had to run from it.
+  wildJob(m, bounty = false) {
+    const W = this.o.game?.wilds;
+    if (!W?.calls || m.below || inDungeon(m.x, m.z)) return null;
+    for (const c of W.calls([m.x, m.z])) {
+      const why = `wild:${c.why}:${Math.round(c.x)},${Math.round(c.z)}`;
+      if ((c.why === 'bounty') !== bounty || this.skipping(why) || m.lvl < c.lvl - WILD_UNDER[c.why]) continue;
+      // (Not through ground it's keeping clear of: an outpost it isn't ready for.)
+      if (c.why !== 'bounty' && this.avoid(m).some(([x, z, r]) => dist(c.x, c.z, x, z) < r)) continue;
+      const say = WILD_SAY[c.why](c);
+      if (c.why === 'find') return { kind: 'go', why, x: c.x, z: c.z, r: 2.4, say };
+      if (c.why === 'tear') {
+        if (c.fight) { if (m.hpf < 0.3) { this.giveUp(why, 600); continue; } return { kind: 'hunt', why, spots: [[c.x, c.z]], say }; }
+        if (m.hpf < 0.7) continue;
+        return { kind: 'go', why, x: c.x, z: c.z, r: 6, say };
+      }
+      return { kind: 'hunt', why, spots: [[c.x, c.z]], say };
+    }
+    return null;
   }
 
   freeCells() {

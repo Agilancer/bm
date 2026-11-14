@@ -411,6 +411,16 @@ rifts and invasions are what it's after.
 - **A bounty.** Walk into Bellmourn or one of those towns with none in hand and its people name the chief of an outpost
   some way off. The tracker shows how far and which way whenever nothing else is on; emptying that outpost pays three
   times over and a hoard. Kept in the save.
+- **Auto-play does all of it** (`wildJob` in `src/ui/autobrain.js`, from what `calls` in `src/ui/wilds.js` says is
+  on): it holds a town that's raided, walks into an open tear it's within a level of (only when it's whole, and gives one
+  up for ten minutes once it's had to run), goes over to anything left lying within sixty metres, and when it has
+  nothing nearer to do goes after the bounty in hand if it's up to it. Hiring a party, its quests and its errands still
+  come first. `node tools/autoplay/check.mjs` fails if the land calls it to something it has no answer for
+  (`WILD_CALLS`). Watched in the browser with nothing able to hurt it: a tear found, walked into and sealed; a raid on
+  Thornwick held; a bounty walked to, fought and paid; a tear above its level left alone.
+- **The posted villagers say something** over their heads when their town is raided, at the second band and when it's
+  held (`RAID_WORDS` in `src/ui/wilds.js`); they keep their posts. The music stings when a raid begins, a colossus
+  comes, a tear is sealed, a town is held, a bounty is paid and an outpost is found.
 - **247 small things to find**: a broken cart, a lonely grave, a cairn, a cold camp, a hide, a well. Each glints, and
   pays the first time you walk up to it.
 

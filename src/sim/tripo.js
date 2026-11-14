@@ -328,7 +328,8 @@ export class TripoMonster extends FieldCreature {
           walk = true;
           if (Math.hypot(tx - this.x, tz - this.z) < 0.8) { this.waypoint = (this.waypoint + 1) % 4; this.idleT = rnd(2, 6); this.idleClip = pick(rig.idles) || 'idle'; }
         }
-        if (walk) { want = rig.clips.walk ? 'walk' : 'run'; speed = o.speed * 0.3; }
+        // (march: a warband or a raid on its way somewhere, src/sim/wilds.js: at a trot, not a stroll.)
+        if (walk) { want = o.march && rig.clips.run ? 'run' : rig.clips.walk ? 'walk' : 'run'; speed = o.speed * (o.march || 0.3); }
         if (this.buried) { want = null; speed = 0; }
       }
       if (want) {
