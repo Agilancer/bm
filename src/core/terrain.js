@@ -189,6 +189,8 @@ export const PATHS = [
   // wing over the stair (the Sexton's Door, tools/interior/build_interior.py). It keeps well out of the knight's reach.
   { pts: [[112, 0.3], [126, 24], [150, 34], [190, 34], [212, 22], [216.9, 10.2]], w: 1.2 },
   { pts: [[-6, 36], [2.5, 34]], w: 1.4 }, { pts: [[12, 37], [3.5, 38]], w: 1.4 },
+  // The smith's yard: in off the south road, and worn bare from the grindstone to the fire (src/folk/smithy.js STATIONS).
+  { pts: [[-0.6, 27], [-4.2, 28.05], [-5.4, 28.22], [-7.6, 28.45], [-9.2, 28.45]], w: 2.4 },
   { pts: [[38, -31.6], [37, -25.4]], w: 1.4 }, { pts: [[44.3, -20], [43, -28.5]], w: 1.4 },
   { pts: [[-37, -14.4], [-33, -14], [-26, -8], [-14, -7], [-13, 0.5]], w: 1.4 }, { pts: [[-38.5, 18.4], [-36, 17.8], [-26, 9.5], [-12, 9.5], [-12, 0.5]], w: 1.4 },
   { pts: [[8, -32.6], [13, -28], [22, -19.5]], w: 1.4 }, { pts: [[-30, -29.6], [-22, -27], [-10, -26], [13, -28]], w: 1.4 },

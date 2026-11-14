@@ -987,6 +987,24 @@ function trueShader(src) {
 }
 export const ARMOR_TRUE = trueShader(ARMOR);
 
+// The smith's kit (src/gfx/folktools.js): his tools, the iron in the tongs, the coals, the axe on its rack. The bodies' own
+// shading, but what the metal/rough map's alpha marks as lit of itself is lit in its own paint's colour and not the possessed
+// knights' red, by as much as info.x says (0 to 1): cold, it's as dark as iron black from the fire; coming up, it's a dull
+// deep shade of its paint, and at the top its paint's own colour and bright enough to bloom. So the one sum does iron in
+// the fire (dull red to yellow) and the runes cut in the axe (a low green to the colour of ice).
+export const ARMOR_KIT = (() => {
+  let out = ARMOR;
+  for (const [from, to] of [
+    ['  var rough = mr.g;\n  var metal = mr.b;\n', '  var rough = mr.g;\n  var metal = mr.b;\n  let kitLit = 1.0 - mr.a;\n  let kitPaint = albedo;\n  albedo = mix(albedo, vec3f(0.022, 0.02, 0.019), kitLit);\n'],
+    ['  c += vec3f(5.2, 0.13, 0.035) * (1.0 - mr.a) * (0.85 + 0.15 * sin(F.camPos.w * 5.0));\n', '  c += kitPaint * mix(vec3f(1.0, 0.3, 0.1), vec3f(1.0), C.info.x) * (kitLit * C.info.x * C.info.x * 7.0);\n'],
+  ]) {
+    const next = out.replace(from, to);
+    if (next === out) throw new Error(`ARMOR_KIT: no match for ${from.slice(0, 50)}`);
+    out = next;
+  }
+  return out;
+})();
+
 // Swords and shields in hand: instanced rigid meshes.
 export const PROP = COMMON + /* wgsl */ `
 struct PU { glint: vec4f };

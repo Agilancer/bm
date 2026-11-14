@@ -1435,14 +1435,12 @@ def compose():
     box(S.b, f, "rubble", 5.6, 0.45, -1.1, 1.0, 0.6, 0.85, uv_scale=(0.42, 0.42))
     box(S.b, f, "flame", 5.6, 1.06, -1.1, 0.55, 0.03, 0.42, uv_scale=(1, 1))
     S.lights.append({"p": [round(v, 3) for v in f.p(5.9, 1.5, -1.1)], "c": [1.0, 0.4, 0.13], "r": 8.0, "i": 7.0, "flicker": 0.9})
-    box(S.b, f, "bark", 6.2, 0.33, 1.3, 0.27, 0.33, 0.27, uv_scale=(0.6, 0.6))
-    box(S.b, f, "iron", 6.2, 0.72, 1.3, 0.13, 0.06, 0.38, uv_scale=(0.2, 0.2))
-    box(S.b, f, "iron", 6.2, 0.8, 1.72, 0.04, 0.03, 0.12, uv_scale=(0.2, 0.2))
     x, z = xz(f, 5.6, -1.1)
     S.collider(x, z, (1.0) * f.k, (0.85) * f.k, f.yaw, 1.05)
-    x, z = xz(f, 6.2, 1.3)
-    S.collider(x, z, (0.3) * f.k, (0.42) * f.k, f.yaw, 0.8)
-    barrel(S, *xz(f, 7.2, 2.2), 0.4)
+    # (Everything else under the lean-to and out in front of it is the smith's yard: the anvil, the bellows, the tub, the bench,
+    # the grindstone, the rack the great axe hangs from, the lights. Built by the game itself, src/core/smithyard.js, from where
+    # the smith works, src/folk/smithy.js; its colliders and lights are put into village.json by `node tools/village/smithyard.mjs`,
+    # which has to be run after this. A block-and-iron anvil and a barrel used to be built here.)
     # 6. The alewife's: two gables over the street, side by side.
     f = house(S, 16.0, 37.0, Wt, 10.0, 7.0, {
         "jetty": 0.5, "ground": [W(17), W(18), W(15, True), W(15, True)], "upper": U(11, 7, 12),

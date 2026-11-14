@@ -90,6 +90,8 @@ export class TownClient {
   }
 
   talkTo(i) { this.worker.postMessage({ type: 'talk', i }); }
+  // The town run on by that many seconds at once, unheard (bm.townRun, for looking at what someone's doing an hour into their work).
+  runOn(seconds) { this.worker.postMessage({ type: 'runOn', seconds }); }
   // A way on foot across the town from (ax, az) to (bx, bz), round the houses: a list of [x, z], or null.
   route(ax, az, bx, bz) {
     if (!this.ready) return Promise.resolve(null);

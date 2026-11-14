@@ -49,7 +49,7 @@ export const DAYS = {
 
 // Where each trade is plied, and how. house: whose house it's in (src/folk/town.js HOUSES); near: the piece of furniture they
 // stand at (off: how far off it; faceRoom: facing into the room rather than at it); hearth: at the house's hearth; oven: at
-// the bread oven's mouth; forge: the smith's own work at his anvil (forge in src/folk/brain.js); seat:
+// the bread oven's mouth; forge: the smith's own work, out in his yard (forge in src/folk/brain.js); seat:
 // sitting at the table nearest that furniture; place: somewhere outdoors (town.js PLACES). clips: what they do there, in turn.
 export const WORK = {
   inn_bar: { house: 'inn', near: 'barrel', off: 1.0, faceRoom: true, clips: ['interact', 'idle', 'fold_arms', 'wait', 'interact'], serve: 0.25 },
@@ -59,8 +59,8 @@ export const WORK = {
   chandler_vats: { house: 'chandler', near: 'vat', off: 0.5, clips: ['interact', 'pick_up', 'idle_ual', 'interact'] },
   reeve_desk: { house: 'reeve', seat: 'table', read: true },
   forge: { house: 'smith', forge: true },
-  bellows: { house: 'smith', hearth: true, clips: ['interact', 'crouch', 'interact', 'pick_up', 'idle'] },
-  forge_watch: { house: 'smith', near: 'anvil', off: 2.0, watch: 'homunculus', clips: ['idle', 'fold_arms', 'crouch', 'look_around'] },
+  bellows: { place: 'smithy_coal', clips: ['shovel', 'pick_up', 'interact', 'crouch', 'idle'] },
+  forge_watch: { place: 'smithy_watch', watch: 'homunculus', clips: ['fold_arms', 'idle', 'look_around', 'crouch'] },
   alewife_vats: { house: 'alewife', near: 'barrel', off: 0.9, clips: ['interact', 'pick_up', 'idle', 'interact'] },
   barn: { house: 'barn', near: 'sacks', off: 0.8, clips: ['pick_up', 'interact', 'idle_ual', 'interact'], carry: 'barn' },
   tannery_vats: { house: 'tannery', near: 'vat', off: 0.5, clips: ['interact', 'pick_up', 'interact', 'idle_ual'] },

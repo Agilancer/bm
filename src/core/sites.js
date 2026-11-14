@@ -18,6 +18,7 @@ import { buildHall } from './testhall.js';
 import { PIECES, cinderford, lesser, street, thornwick, way } from './places.js';
 import { dressLairs } from './lair-dress.js';
 import { dressWilds } from './wild-dress.js';
+import { smithYard } from './smithyard.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -1456,6 +1457,7 @@ export function buildSites(geometry = false, lean = false) {
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
   warrensMouth(K);
+  smithYard(K);   // (what's built in the smith's yard in Bellmourn: src/core/smithyard.js)
   // (The delves, and the Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js. What stops a
   // body and what's stood on, not their corners.)
   K.deep = true; K.geometry = false;
