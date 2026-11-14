@@ -6,6 +6,7 @@ import { SCROLLS, STARTERS } from '../sim/skills.js';
 import { BUFFS } from '../sim/treespells.js';
 import { SkillBook } from '../items/skillbook.js';
 import { COLOURS, glyph } from './spellglyphs.js';
+import { icon } from './icons.js';
 import { SkillTree } from './skilltree.js';
 import { placeSlot } from './thumbs.js';
 
@@ -61,7 +62,9 @@ export class SpellBar {
     }
     const open = document.createElement('div');
     open.id = 'spellOpen';
-    open.textContent = 'B';
+    open.title = 'Spellbook (B)';
+    open.dataset.ic = 'book';     // (the painted book goes over it: src/ui/skin.js)
+    open.innerHTML = `${icon('book')}<kbd>B</kbd>`;
     const opening = (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !input.menu) openBook(); };
     open.addEventListener('touchstart', opening, { passive: false });
     open.addEventListener('mousedown', opening);
