@@ -166,14 +166,20 @@ export class OpeningHUD {
     document.body.classList.toggle('op-cast', asked);
     this.castHint.style.opacity = asked ? '1' : '0';
     if (asked && !this.castHint.textContent) this.castHint.innerHTML = this.touched ? 'Tap <kbd>CAST</kbd>' : 'Press <kbd>F</kbd> to cast';
-    // The quest.
-    const q = stage === OPENING.ESCORT ? bump(t, 0.2, 0.8, 5.0, 5.8) : stage === OPENING.ARRIVED ? bump(t, 0.1, 0.6, 4.6, 5.4) : 0;
+    // The quest: down to Bellmourn with her; when the dead come up on the road (you reach the place, src/sim/opening.js),
+    // putting them all down; then on down with her again.
+    const fight = stage === OPENING.ESCORT && snap[H.OPENING_FIGHT] > 0;
+    if (stage === OPENING.ESCORT && fight !== !!this.fightOn) { this.fightOn = fight; this.questT = t; }
+    if (stage !== OPENING.ESCORT) { this.fightOn = false; this.questT = undefined; }
+    const since = this.questT !== undefined ? t - this.questT : -1;
+    const q = stage === OPENING.ESCORT ? Math.max(bump(t, 0.2, 0.8, 5.0, 5.8), since >= 0 ? bump(since, 0, 0.6, 4.8, 5.6) : 0) : stage === OPENING.ARRIVED ? bump(t, 0.1, 0.6, 4.6, 5.4) : 0;
+    const goal = fight ? 'Kill the zombies and the necromancers' : 'Go to Bellmourn with Lisandra';
     this.quest.style.opacity = q.toFixed(3);
     if (q > 0) {
-      this.quest.querySelector('small').textContent = stage === OPENING.ARRIVED ? 'Quest complete' : 'Quest';
-      this.quest.querySelector('span').textContent = 'Go to Bellmourn with Lisandra';
+      this.quest.querySelector('small').textContent = stage === OPENING.ARRIVED ? 'Quest complete' : fight ? 'New quest' : 'Quest';
+      this.quest.querySelector('span').textContent = goal;
     }
-    this.track.textContent = stage === OPENING.ESCORT && t > 5 ? 'Go to Bellmourn with Lisandra' : '';
+    this.track.textContent = stage === OPENING.ESCORT && (t > 5 || fight) ? goal : '';
     // Her words.
     this.words(snap, stage, t);
     // Holding to skip.

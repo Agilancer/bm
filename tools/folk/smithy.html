@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The smith's yard</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #20242a; color: #ddd; font: 13px system-ui, sans-serif; overflow: hidden; }
+  #ui { position: fixed; left: 10px; top: 10px; background: #0009; padding: 8px 10px; border-radius: 6px; line-height: 1.9; }
+  #ui select, #ui input { font: inherit; }
+  canvas { display: block; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="ui">
+  <label>Clip <select id="clip"></select></label>
+  <label>at <select id="at"></select></label>
+  <label>Speed <input id="speed" type="range" min="0" max="2" step="0.05" value="1"></label>
+  <label><input id="live" type="checkbox"> his day (the town's own thread)</label>
+  <div id="info"></div>
+</div>
+<script type="module">
+// The smith in his yard, for looking at: the yard as the game builds it (src/core/smithyard.js), a stand-in for the hearth,
+// the house's wall and the lean-to's roof, his kit (src/folk/smithkit.js) where the game would put it (SmithKit in
+// src/folk/smithy.js), and Homunculus himself through the game's own pose code. Drawn plainly with three.js: no textures
+// but his own, and each of the town's paintings a flat colour.
+//
+//   tools/folk/smithy.html?clip=hammer&at=anvil     one clip, over and over, at one of his stations
+//   tools/folk/smithy.html?live                     his day as the town's thread lives it (src/folk/brain.js), from ?hour=9
+//
+// Served by tools/serve.py. window.smithView drives it from a script: view(), set(), step(), state().
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { accessor, parseGLB } from '../../src/core/glb.js';
+import { FolkClips, FolkRig, FolkPose } from '../../src/folk/rig.js';
+import { PEOPLE } from '../../src/folk/people.js';
+import { KD, KIT, SMITH_CLIPS as C, STATIONS, SmithKit, YARD_Y, dqOrigin, newKitState, pumpAt } from '../../src/folk/smithy.js';
+import { PAINT, barMesh, coalMesh, kitMesh } from '../../src/folk/smithkit.js';
+import { Kit } from '../../src/core/sites.js';
+import { smithYard, YARD_LIGHTS } from '../../src/core/smithyard.js';
+
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+const base = '../../assets/game/';
+const [meta, bin, folkJson] = await Promise.all([fetch(base + 'folk/clips.json').then((r) => r.json()), fetch(base + 'folk/clips.bin').then((r) => r.arrayBuffer()), fetch(base + 'folk/folk.json').then((r) => r.json())]);
+const clips = new FolkClips(meta, bin);
+for (const name of Object.keys(clips.clips)) $('clip').add(new Option(name, name));
+for (const name of Object.keys(STATIONS)) $('at').add(new Option(name, name));
+$('clip').value = q.get('clip') || 'hammer';
+$('at').value = q.get('at') || 'anvil';
+$('live').checked = q.has('live');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const night = q.has('night');
+scene.background = new THREE.Color(night ? 0x0a0c12 : 0x8aa0b4);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 300);
+camera.position.set(-4, 3.4, 22);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(-8.5, 1.1, 28);
+scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x4a4030, night ? 0.08 : 1.1));
+const sun = new THREE.DirectionalLight(0xfff2e0, night ? 0.05 : 2.0); sun.position.set(6, 12, -8); scene.add(sun);
+for (const L of YARD_LIGHTS.concat([{ p: [-12.2, 1.6, 29.0], c: [1.0, 0.4, 0.13], r: 8, i: 7 }])) {
+  const l = new THREE.PointLight(new THREE.Color(...L.c), L.i * (night ? 3 : 1), L.r * 1.5, 1.6); l.position.set(...L.p); scene.add(l);
+}
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshLambertMaterial({ color: 0x4f5e37 }));
+ground.rotation.x = -Math.PI / 2; ground.position.set(-8, YARD_Y, 28); scene.add(ground);
+
+// The yard, each painting a colour.
+const LAYER = { wall_07: [0x6a4a2c, 0.85, 0], iron: [0x2a2a2e, 0.45, 0.8], bark: [0x3c2c1e, 0.95, 0], wood: [0xa07a4c, 0.9, 0], water: [0x10262c, 0.08, 0], 'dark:stone': [0x191818, 0.95, 0], 'frost:stone': [0xb9c6cc, 0.8, 0], ice: [0x9cc4d6, 0.15, 0], flame: [0xffa040, 1, 0] };
+{
+  const K = new Kit(true);
+  smithYard(K);
+  K.finish();
+  for (const [layer, p] of K.parts) {
+    const g = new THREE.BufferGeometry(), [col, rough, metal] = LAYER[layer] || [0xff00ff, 1, 0];
+    g.setAttribute('position', new THREE.BufferAttribute(p.pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(p.nrm, 3)); g.setIndex(new THREE.BufferAttribute(p.idx, 1));
+    const m = layer === 'flame' ? new THREE.MeshBasicMaterial({ color: col }) : new THREE.MeshStandardMaterial({ color: col, roughness: rough, metalness: metal });
+    scene.add(new THREE.Mesh(g, m));
+  }
+  // What the village builds there (tools/village/build_village.py): the hearth, the chimney, the house's wall, the roof and its posts.
+  const stone = new THREE.MeshStandardMaterial({ color: 0x77726a, roughness: 0.95 }), oak = new THREE.MeshStandardMaterial({ color: 0x6a4a2c, roughness: 0.85 });
+  const block = (m, x0, y0, z0, x1, y1, z1) => { const b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m); b.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); scene.add(b); return b; };
+  block(stone, -13.26, -0.15, 27.75, -11.14, 1.05, 30.25);
+  block(stone, -14.1, 0, 28.9, -12.8, 8, 30.2);
+  block(new THREE.MeshStandardMaterial({ color: 0xcfc3a8, roughness: 0.95 }), -15.1, 0, 30.24, -6.56, 6, 30.6);
+  for (const x of [-13.5, -6.5]) block(oak, x - 0.09, 0, 26.01, x + 0.09, 2.5, 26.19);
+  if (!q.has('noroof')) {
+    const roof = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 4.9), new THREE.MeshStandardMaterial({ color: 0x5a4636, roughness: 0.95, side: THREE.DoubleSide }));
+    roof.position.set(-10, 3.52, 28.05); roof.rotation.x = -Math.PI / 2 - Math.atan2(2.06, 4.4); scene.add(roof);
+  }
+}
+
+// The kit: each mesh's corners moved by its joint's frame, on the CPU.
+const paint = (m, names) => {
+  const col = new Float32Array(m.pos.length), glow = new Float32Array(m.pos.length / 3);
+  for (let i = 0; i < m.pos.length / 3; i++) {
+    const u = m.uv[i * 2] * names.length - 0.5, a = Math.max(0, Math.min(names.length - 1, Math.floor(u))), b = Math.min(names.length - 1, a + 1), t = u - a;
+    for (let k = 0; k < 3; k++) col[i * 3 + k] = ((PAINT[names[a]][k] * (1 - t) + PAINT[names[b]][k] * t) / 255) ** 2.2;
+    glow[i] = PAINT[names[a]][5] * (1 - t) + PAINT[names[b]][5] * t;
+  }
+  return { col, glow };
+};
+const NAMES = Object.keys(PAINT);
+function rigid(m) {
+  const g = new THREE.BufferGeometry(), P = new Float32Array(m.pos.length), N = new Float32Array(m.nrm.length), { col, glow } = paint(m, NAMES), shown = new Float32Array(col);
+  g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); g.setAttribute('color', new THREE.BufferAttribute(shown, 3));
+  g.setIndex(new THREE.BufferAttribute(m.idx, 1));
+  const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }));
+  mesh.frustumCulled = false; scene.add(mesh);
+  return { m, g, P, N, col, glow, shown, level: -1 };
+}
+const parts = { kit: rigid(kitMesh()), bar: rigid(barMesh()), coal: rigid(coalMesh()) };
+const pal = new Float32Array(KIT.length * 8); pal[3] = 1;
+function place(part, level) {
+  const { m, P, N } = part, n = m.pos.length / 3, v = [0, 0, 0];
+  for (let i = 0; i < n; i++) {
+    const o = m.joints[i * 4] * 8, rx = pal[o], ry = pal[o + 1], rz = pal[o + 2], rw = pal[o + 3];
+    dqOrigin(pal, o, v);
+    for (const [src, dst, add] of [[m.pos, P, 1], [m.nrm, N, 0]]) {
+      const vx = src[i * 3], vy = src[i * 3 + 1], vz = src[i * 3 + 2];
+      const cx = ry * vz - rz * vy + rw * vx, cy = rz * vx - rx * vz + rw * vy, cz = rx * vy - ry * vx + rw * vz;
+      dst[i * 3] = vx + 2 * (ry * cz - rz * cy) + (add ? v[0] : 0);
+      dst[i * 3 + 1] = vy + 2 * (rz * cx - rx * cz) + (add ? v[1] : 0);
+      dst[i * 3 + 2] = vz + 2 * (rx * cy - ry * cx) + (add ? v[2] : 0);
+    }
+  }
+  part.g.attributes.position.needsUpdate = true; part.g.attributes.normal.needsUpdate = true;
+  // What's lit of itself, as the game's shader has it (src/gfx/folktools.js): dark when it's cold, its own colour and more as it comes up.
+  if (Math.abs(level - part.level) > 0.004) {
+    part.level = level;
+    for (let i = 0; i < n; i++) {
+      const gl = part.glow[i];
+      if (!gl) continue;
+      const ramp = [1, 0.35 + 0.65 * level, 0.15 + 0.85 * level];
+      for (let k = 0; k < 3; k++) part.shown[i * 3 + k] = part.col[i * 3 + k] * (1 - gl) + gl * (0.002 + part.col[i * 3 + k] * ramp[k] * level * level * 5);
+    }
+    part.g.attributes.color.needsUpdate = true;
+  }
+}
+
+// Homunculus.
+const who = PEOPLE.find((p) => p.id === 'homunculus');
+const glb = parseGLB(await fetch(base + 'folk/smith.glb').then((r) => r.arrayBuffer()));
+const rig = new FolkRig(glb, clips, { armOut: who.armOut });
+let pose = new FolkPose(rig);
+const pr = glb.json.meshes[0].primitives[0], A = pr.attributes;
+const body = { pos: accessor(glb, A.POSITION), nrm: accessor(glb, A.NORMAL), joints: accessor(glb, A.JOINTS_0), weights: accessor(glb, A.WEIGHTS_0), pal: new Float32Array(rig.count * 8) };
+{
+  const g = new THREE.BufferGeometry();
+  body.P = new Float32Array(body.pos.length); body.N = new Float32Array(body.nrm.length);
+  g.setAttribute('position', new THREE.BufferAttribute(body.P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(body.N, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(accessor(glb, A.TEXCOORD_0)), 2));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(accessor(glb, pr.indices)), 1));
+  const mat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.85 });
+  new THREE.TextureLoader().load(base + 'folk/' + folkJson.models.smith.c, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; mat.map = t; mat.color.set(0xffffff); mat.needsUpdate = true; });
+  const mesh = new THREE.Mesh(g, mat); mesh.frustumCulled = false; scene.add(mesh);
+  body.g = g;
+}
+// Dual-quaternion skinning, as the SKIN compute shader does it.
+function skin(b) {
+  const { pos, nrm, joints, weights, P, N, pal: bp } = b, n = pos.length / 3;
+  for (let i = 0; i < n; i++) {
+    const q0 = joints[i * 4] * 8;
+    let rx = 0, ry = 0, rz = 0, rw = 0, dx = 0, dy = 0, dz = 0, dw = 0;
+    for (let k = 0; k < 4; k++) {
+      const w = weights[i * 4 + k];
+      if (!w) continue;
+      const o = joints[i * 4 + k] * 8;
+      const s = bp[o] * bp[q0] + bp[o + 1] * bp[q0 + 1] + bp[o + 2] * bp[q0 + 2] + bp[o + 3] * bp[q0 + 3] < 0 ? -w : w;
+      rx += bp[o] * s; ry += bp[o + 1] * s; rz += bp[o + 2] * s; rw += bp[o + 3] * s;
+      dx += bp[o + 4] * s; dy += bp[o + 5] * s; dz += bp[o + 6] * s; dw += bp[o + 7] * s;
+    }
+    const il = 1 / Math.hypot(rx, ry, rz, rw);
+    rx *= il; ry *= il; rz *= il; rw *= il; dx *= il; dy *= il; dz *= il; dw *= il;
+    const tx = 2 * (rw * dx - dw * rx + (ry * dz - rz * dy)), ty = 2 * (rw * dy - dw * ry + (rz * dx - rx * dz)), tz = 2 * (rw * dz - dw * rz + (rx * dy - ry * dx));
+    for (const [src, dst, add] of [[pos, P, 1], [nrm, N, 0]]) {
+      const vx = src[i * 3], vy = src[i * 3 + 1], vz = src[i * 3 + 2];
+      const cx = ry * vz - rz * vy + rw * vx, cy = rz * vx - rx * vz + rw * vy, cz = rx * vy - ry * vx + rw * vz;
+      dst[i * 3] = vx + 2 * (ry * cz - rz * cy) + (add ? tx : 0);
+      dst[i * 3 + 1] = vy + 2 * (rz * cx - rx * cz) + (add ? ty : 0);
+      dst[i * 3 + 2] = vz + 2 * (rx * cy - ry * cx) + (add ? tz : 0);
+    }
+  }
+  b.g.attributes.position.needsUpdate = true; b.g.attributes.normal.needsUpdate = true; b.g.computeBoundingSphere();
+}
+
+const kit = new SmithKit(rig);
+let k = newKitState(), me = null, life = null, hour = +(q.get('hour') || 9);
+
+// One clip at a station: what's in his hands while it plays, as his day would have it (src/folk/brain.js forge).
+function kitFor(name, t) {
+  const s = newKitState();
+  const right = { [C.blow]: 'hammer', [C.hold]: 'hammer', [C.file]: 'file', [C.grind]: 'blade', [C.polish]: 'rag' }[name];
+  if (right) s.tool = right;
+  if (name === C.take && t >= C.takeAt) s.tool = 'hammer';
+  if (name === C.fileTake && t >= C.takeAt) s.tool = 'file';
+  if (name === C.bladeTake && t >= C.takeAt) s.tool = 'blade';
+  if (name === C.ragTake && t >= C.takeAt) s.tool = 'rag';
+  s.tongs = [C.blow, C.hold, C.take, C.pump, C.draw, C.carry, C.set, C.quench].includes(name) || (name === C.tongs && t >= C.tongsAt);
+  s.inFire = name === C.pump || name === C.tongs || (name === C.draw && t < 0.3);
+  if (name === C.pump) s.pump = pumpAt(t);
+  s.grind = name === C.grind; s.polish = name === C.polish;
+  s.quench = name === C.quench && t >= C.quenchAt && t < C.quenchAt + 1.3;
+  return s;
+}
+
+async function goLive() {
+  const [{ Ground }, { Town }, { Life }] = await Promise.all([import('../../src/folk/ground.js'), import('../../src/folk/town.js'), import('../../src/folk/brain.js')]);
+  const [village, interior, spots] = await Promise.all(['village.json', 'interior/interior.json', 'folk/spots.json'].map((f) => fetch(base + f).then((r) => r.json())));
+  const town = new Town(village, interior, spots);
+  life = new Life({ ground: new Ground(village, interior, [-80, -75, 110, 80]), town, clips, emit: (e) => { if (e.type === 'work') events.push(e.kind); } });
+  const rigs = new Map();
+  for (const f of life.folk) {
+    let m = f.p.body;
+    if (!folkJson.models[m]) m = folkJson.swaps?.[m]?.base || (f.child ? 'boy_1' : 'worker');
+    if (f.p.id === 'homunculus') { life.setRig(f.i, rig); continue; }
+    if (!rigs.has(m)) rigs.set(m, new FolkRig(parseGLB(await fetch(base + 'folk/' + folkJson.models[m].glb).then((r) => r.arrayBuffer())), clips, {}));
+    life.setRig(f.i, rigs.get(m));
+  }
+  me = life.byId.homunculus;
+  pose = me.pose;
+}
+const events = [];
+if ($('live').checked) await goLive();
+
+let last = performance.now(), clipT = 0;
+function step(dt) {
+  if (life) {
+    hour += dt / 240;
+    life.update(dt, { hour, day: 0, player: [-200, 0, -200], dangers: [] });
+    k = me.kit || k;
+    kit.step(dt, k, true);
+    pose.solve(me.x, me.y, me.z, me.yaw, body.pal, 0);
+  } else {
+    const st = STATIONS[$('at').value], name = $('clip').value;
+    if (pose.a.clip?.name !== name) { pose.play(name, { fade: 0 }); clipT = 0; }
+    pose.step(dt); clipT = pose.a.clip.loop ? pose.a.t : Math.min(pose.a.t, pose.a.clip.dur);
+    if (!pose.a.clip.loop && pose.a.t > pose.a.clip.dur + 0.8) pose.a.t = 0;
+    k = kitFor(name, clipT);
+    kit.step(dt, k, true);
+    pose.solve(st.x, YARD_Y, st.z, st.yaw, body.pal, 0);
+  }
+  kit.write(pose, k, life ? me.yaw : STATIONS[$('at').value].yaw, null, null);
+  pal.set(kit.pal.subarray(0, (KIT.length - 1) * 8), 8);
+}
+function draw() {
+  skin(body);
+  const d = (KIT.length - 1) * 8;
+  place(parts.kit, kit.pal[d + KD.GLOW]); place(parts.bar, kit.pal[d + KD.HEAT]); place(parts.coal, kit.pal[d + KD.FIRE]);
+  renderer.render(scene, camera);
+  $('info').textContent = life ? `${Math.floor(hour)}:${String(Math.floor(hour % 1 * 60)).padStart(2, '0')}  ${me.pose.a.clip?.name}  ${JSON.stringify(k)}` : `${$('clip').value} ${clipT.toFixed(2)} s   fire ${kit.fire.toFixed(2)} heat ${kit.heat.toFixed(2)} glow ${kit.glow.toFixed(2)}`;
+}
+let hold = false;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000) * +$('speed').value; last = now;
+  if (!hold) { step(dt); draw(); }
+}
+window.smithView = {
+  ready: true, kit, events,
+  view(x, y, z, tx, ty, tz) { camera.position.set(x, y, z); controls.target.set(tx, ty, tz); controls.update(); },
+  // Stop the clock, and move it on by hand: set a clip at a station at time t, or step the live day.
+  set(clip, at, t) { hold = true; $('clip').value = clip; $('at').value = at; pose.play(clip, { fade: 0, restart: true }); step(0); for (let u = 0; u < t - 1e-6; u += 1 / 60) step(1 / 60); draw(); },
+  step(sec, each = 1 / 30) { hold = true; for (let u = 0; u < sec - 1e-6; u += each) step(each); draw(); },
+  state() { return { hour, clip: pose.a.clip?.name, t: pose.a.t, k, at: me ? [me.x, me.z, me.yaw] : null, fire: kit.fire, heat: kit.heat, glow: kit.glow, events: events.splice(0) }; },
+  fire(v) { kit.fire = v; kit.heat = v; },
+};
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

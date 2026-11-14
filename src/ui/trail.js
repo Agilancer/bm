@@ -1,17 +1,18 @@
 // The quest trail: a line of gold dots on the ground, from your feet toward what the quest you follow wants of you (picked in
 // the journal: src/folk/quests.js followed), drifting the way you're to go. In the opening it's the road down to Bellmourn,
 // after Lisandra. The way there: in town, round the houses by the townsfolk's own walking grid (its worker's A*:
-// src/folk/ground.js); out past it, along the roads and paths where they help (ROUTES, PATHS, the Long Road), straight
-// over the land for the rest; and into the cathedral, its own way down to the dead (the way tools/interior/check.mjs walks).
+// src/folk/ground.js); out past it, along the roads and paths where they help (overLand in src/core/roads.js: every way
+// there is, the same one the other Tessariels and auto-play walk), straight over the land for the rest; and into the
+// cathedral, its own way down to the dead (the way tools/interior/check.mjs walks).
 // Drawn by src/gfx/trail.js.
 import { CHURCH_DOOR, churchAt, inChurch } from '../core/church.js';
 import { ROUTE, routeNear } from '../core/escort.js';
 import { groundAt } from '../core/interior.js';
 import { H } from '../core/layout.js';
-import { ROUTES, SITES } from '../core/lands.js';
+import { SITES } from '../core/lands.js';
 import { clamp, smoothstep } from '../core/math.js';
 import { OPENING } from '../core/opening.js';
-import { PATHS, ROADS } from '../core/terrain.js';
+import { overLand as roadsOverLand } from '../core/roads.js';
 import { inTown } from '../core/town.js';
 import { RULES, areaAt, placeSpot } from '../folk/quests.js';
 import { BOSSES } from '../core/dungeon.js';
@@ -39,115 +40,11 @@ const CRYPT = churchAt(186, 0);
 // The pines, where Corran's dead walk: off the Long Road, west of town.
 const PINES = [-214, 180];
 
-// ---- the roads, as a graph -----------------------------------------------------------------------------------------------
-// Every road and path cut into nodes no more than 12 m apart; where two come within 8 m of each other they join, and each
-// one's ends are joined over open ground to the nearest of any other within 300 m.
-const GRAPH = (() => {
-  const lines = [ROADS[0].line, ...PATHS.map((p) => p.pts), ...ROUTES.map((r) => r.pts)];
-  const X = [], Z = [], L = [], adj = [];
-  const node = (x, z, l) => { X.push(x); Z.push(z); L.push(l); adj.push([]); return X.length - 1; };
-  const link = (a, b, w) => { adj[a].push(b, w); adj[b].push(a, w); };
-  const ends = [];
-  lines.forEach((line, l) => {
-    let prev = node(line[0][0], line[0][1], l);
-    ends.push(prev);
-    for (let i = 1; i < line.length; i++) {
-      const px = X[prev], pz = Z[prev], [x, z] = line[i], d = Math.hypot(x - px, z - pz);
-      if (d < 0.01) continue;
-      const n = Math.max(1, Math.ceil(d / 12));
-      for (let j = 1; j <= n; j++) { const k = node(px + (x - px) * j / n, pz + (z - pz) * j / n, l); link(prev, k, d / n); prev = k; }
-    }
-    ends.push(prev);
-  });
-  const N = X.length, CELL = 20, grid = new Map(), key = (i, j) => i * 100003 + j;
-  for (let a = 0; a < N; a++) {
-    const k = key(Math.floor(X[a] / CELL), Math.floor(Z[a] / CELL));
-    if (!grid.has(k)) grid.set(k, []);
-    grid.get(k).push(a);
-  }
-  for (let a = 0; a < N; a++) {
-    const ci = Math.floor(X[a] / CELL), cj = Math.floor(Z[a] / CELL);
-    for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
-      for (const b of grid.get(key(i, j)) || []) {
-        if (b <= a || L[b] === L[a]) continue;
-        const d = Math.hypot(X[a] - X[b], Z[a] - Z[b]);
-        if (d < 8) link(a, b, d);
-      }
-    }
-  }
-  for (const a of ends) {
-    const best = new Map();
-    for (let b = 0; b < N; b++) {
-      if (L[b] === L[a]) continue;
-      const d = Math.hypot(X[a] - X[b], Z[a] - Z[b]);
-      if (d < 300 && d < (best.get(L[b])?.[1] ?? Infinity)) best.set(L[b], [b, d]);
-    }
-    for (const [b, d] of best.values()) if (d >= 8) link(a, b, d * OFF);
-  }
-  return { X, Z, adj, N };
-})();
-
-// The way from (ax, az) to (bx, bz): along the roads where that's shorter, counting open ground at OFF; a list of [x, z].
-const dist = new Float64Array(GRAPH.N + 2), from = new Int32Array(GRAPH.N + 2), done = new Uint8Array(GRAPH.N + 2);
-function overLand(ax, az, bx, bz) {
-  const { X, Z, adj, N } = GRAPH, S = N, T = N + 1;
-  dist.fill(Infinity); from.fill(-1); done.fill(0);
-  dist[S] = 0;
-  dist[T] = Math.hypot(bx - ax, bz - az) * OFF; from[T] = S;
-  // (Onto the roads from where you are, and off them to where you're going: any node within reach, and the nearest.)
-  const near = (x, z) => {
-    let k = -1, kd = Infinity;
-    const out = [];
-    for (let i = 0; i < N; i++) {
-      const d = Math.hypot(X[i] - x, Z[i] - z);
-      if (d < 150) out.push(i, d);
-      if (d < kd) { kd = d; k = i; }
-    }
-    if (kd >= 150) out.push(k, kd);
-    return out;
-  };
-  const toT = new Map();
-  const tn = near(bx, bz);
-  for (let i = 0; i < tn.length; i += 2) toT.set(tn[i], tn[i + 1] * OFF);
-  const heap = [];
-  const push = (n, d) => {
-    heap.push([d, n]);
-    for (let i = heap.length - 1; i > 0;) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; }
-  };
-  const pop = () => {
-    const top = heap[0], last = heap.pop();
-    if (heap.length) {
-      heap[0] = last;
-      for (let i = 0; ;) {
-        let c = 2 * i + 1;
-        if (c >= heap.length) break;
-        if (c + 1 < heap.length && heap[c + 1][0] < heap[c][0]) c++;
-        if (heap[c][0] >= heap[i][0]) break;
-        [heap[c], heap[i]] = [heap[i], heap[c]]; i = c;
-      }
-    }
-    return top;
-  };
-  const sn = near(ax, az);
-  for (let i = 0; i < sn.length; i += 2) { const n = sn[i], d = sn[i + 1] * OFF; if (d < dist[n]) { dist[n] = d; from[n] = S; push(n, d); } }
-  while (heap.length) {
-    const [d, n] = pop();
-    if (done[n] || d > dist[n]) continue;
-    done[n] = 1;
-    if (d >= dist[T]) break;
-    const w = toT.get(n);
-    if (w !== undefined && d + w < dist[T]) { dist[T] = d + w; from[T] = n; }
-    const a = adj[n];
-    for (let i = 0; i < a.length; i += 2) {
-      const m = a[i], e = d + a[i + 1];
-      if (e < dist[m]) { dist[m] = e; from[m] = n; push(m, e); }
-    }
-  }
-  const out = [[bx, bz]];
-  for (let n = from[T]; n !== S && n >= 0; n = from[n]) out.push([X[n], Z[n]]);
-  out.push([ax, az]);
-  return out.reverse();
-}
+// ---- the roads -----------------------------------------------------------------------------------------------------------
+// The way from (ax, az) to (bx, bz): along the land's roads and paths where that's shorter (src/core/roads.js, the graph the
+// other Tessariels and auto-play walk too), counting open ground at OFF and looking 150 m for a road to get onto; a list of
+// [x, z].
+const overLand = (ax, az, bx, bz) => roadsOverLand(ax, az, bx, bz, OFF, 150);
 
 // The nearest point of a polyline to (x, z): which segment, and the point.
 function nearestOn(line, x, z) {

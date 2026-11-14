@@ -299,24 +299,122 @@ const nearestCandle = ([x, z], y) => {
 export const BURST_CANDLE = nearestCandle([lerp(OPENING_SPAWN[0], FOLD_SPOT[0], 1.6), lerp(OPENING_SPAWN[1], FOLD_SPOT[1], 1.6)], CIRCLE_Y + 2.0);
 
 // ---- the way down from the ledge ---------------------------------------------------------------------------------------
-// Off the ledge along a shelf cut across the hillside; down four flights of stone steps that double back on each other;
-// then a path along the foot of the hill, down onto the Long Road. Each point: x, z, its height, and what the stretch to
-// it is. The land is cut and banked to it (src/core/terrain.js), the steps are laid on it (src/gfx/opening.js), and she
-// leads you down it (src/core/escort.js).
+// Off the ledge along a shelf cut across the hillside; down four broad flights of stone steps that double back on each other,
+// a flagged landing at each turn, wide enough to take the foot of one flight and the head of the next side by side; then a
+// path along the foot of the hill, down onto the Long Road. Each point: x, z, its height, and what the stretch to it is
+// ('landing': level, across a turn, from one flight's foot to the next one's head). The land is cut and banked to it
+// (src/core/terrain.js), the steps, landings and her garden are laid on it (src/gfx/opening.js), and she leads you down it
+// (src/core/escort.js). The flights lie on the hill's own lie, a landing at each height it gives, so none is steeper than an
+// old woman likes.
 const OUT5 = [MOUTH[0] - CAVE_LINE[0][2] * 5.6, MOUTH[1] - CAVE_LINE[0][3] * 5.6];
 export const WAY = [
   [OUT5[0], OUT5[1], MOUTH[2] - 0.04, 'ledge'],
   [-310.5, 272.5, 78.5, 'path'], [-316.5, 267.5, 78.3, 'path'], [-320.5, 261.5, 78.0, 'path'], [-323, 256.5, 77.5, 'path'],
-  [-311.5, 258.3, 72.3, 'stairs'], [-318, 247.2, 66.4, 'stairs'], [-305.5, 244.8, 60.5, 'stairs'], [-316, 236.7, 54.6, 'stairs'],
-  [-304, 233.5, 50.8, 'path'], [-290, 229.5, 45.6, 'path'], [-276, 226, 41.9, 'path'], [-264, 219, 39.2, 'path'], [-256, 213.5, 37.8, 'path'],
+  [-311.3, 262.1, 71.8, 'stairs'], [-308.7, 258.2, 71.8, 'landing'],
+  [-321.2, 249.7, 66.0, 'stairs'], [-320.8, 245.2, 66.0, 'landing'],
+  [-306.8, 246.0, 60.3, 'stairs'], [-305.2, 241.8, 60.3, 'landing'],
+  [-320.0, 237.7, 54.6, 'stairs'],
+  [-311, 232.0, 51.8, 'path'], [-300, 230.5, 48.2, 'path'], [-290, 229.5, 45.6, 'path'], [-276, 226, 41.9, 'path'], [-264, 219, 39.2, 'path'], [-256, 213.5, 37.8, 'path'],
 ];
-export const WAY_W = 1.35, WAY_BLEND = 2.6, STAIR_FLAT = 0.9, WAY_OWN = 7;
-// Its stretches: ends, length, and whether it's a flight (level for STAIR_FLAT at each end: the landings at the turns).
+// The head of the steps, the landing halfway down (where she has her say), and their foot: indices into WAY.
+export const WAY_HEAD = 4, WAY_HALF = 7, WAY_FOOT = 11;
+// Half widths: a flight, a landing's run across, and the shelf and path. (STAIR_FLAT: the least a flight is level at each end.)
+const HALF = { ledge: 1.5, path: 1.5, stairs: 1.8, landing: 0.5 };   // (a landing's floor is its own: LANDINGS)
+export const WAY_W = 1.8, WAY_BLEND = 2.6, STAIR_FLAT = 0.9, WAY_OWN = 7;
+// Its stretches: ends, length, half width, and whether it's a flight (level for flat0 / flat1 at its ends).
 export const WAY_SEGS = WAY.slice(1).map((b, i) => {
-  const a = WAY[i], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
-  return { ax: a[0], az: a[1], ay: a[2], bx: b[0], bz: b[1], by: b[2], dx, dz, len, stairs: b[3] === 'stairs',
-    x0: Math.min(a[0], b[0]) - WAY_W - WAY_BLEND, x1: Math.max(a[0], b[0]) + WAY_W + WAY_BLEND, z0: Math.min(a[1], b[1]) - WAY_W - WAY_BLEND, z1: Math.max(a[1], b[1]) + WAY_W + WAY_BLEND };
+  const a = WAY[i], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), w = HALF[b[3]];
+  return { ax: a[0], az: a[1], ay: a[2], bx: b[0], bz: b[1], by: b[2], dx, dz, len, w, kind: b[3], stairs: b[3] === 'stairs', flat0: STAIR_FLAT, flat1: STAIR_FLAT,
+    x0: Math.min(a[0], b[0]) - w - WAY_BLEND, x1: Math.max(a[0], b[0]) + w + WAY_BLEND, z0: Math.min(a[1], b[1]) - w - WAY_BLEND, z1: Math.max(a[1], b[1]) + w + WAY_BLEND };
 });
+// The landings: a broad flagged floor at each turn, pushed out past the turn (away from the flights), dead level, its edge a
+// drop to the hill below held up by a wall, or a low wall holding the hill back above it. At the head and the foot of the
+// steps it's a turn at a point; between flights it's round the stretch across. x, z: the middle of its round; r: how far
+// that reaches; y: its level; out: which way is out (away from the flights); at: the WAY point it's at (or the one the
+// stretch across ends at); ends: the flights' ends it takes ({ g, end: 'flat0' | 'flat1' }); poly: its floor, a convex
+// outline round its round and the level ends of those flights; edges: that outline's sides, each [x, z, nx, nz] (n out).
+export const LANDINGS = (() => {
+  const unit = (x, z) => { const l = Math.hypot(x, z) || 1; return [x / l, z / l]; };
+  const out = [];
+  const turn = (i, r, push) => {
+    const p = WAY[i], a = WAY[i - 1], b = WAY[i + 1];
+    const ui = unit(p[0] - a[0], p[1] - a[1]), uo = unit(b[0] - p[0], b[1] - p[1]), o = unit(ui[0] - uo[0], ui[1] - uo[1]);
+    out.push({ x: p[0] + o[0] * push, z: p[1] + o[1] * push, y: p[2], r, out: o, at: i, seg: null, ends: [] });
+  };
+  turn(WAY_HEAD, 2.9, 1.0);
+  WAY_SEGS.forEach((g, k) => {
+    if (g.kind !== 'landing') return;
+    const up = WAY_SEGS[k - 1], down = WAY_SEGS[k + 1];
+    const o = unit(up.dx / up.len - down.dx / down.len, up.dz / up.len - down.dz / down.len);
+    out.push({ x: (g.ax + g.bx) / 2 + o[0] * 0.75, z: (g.az + g.bz) / 2 + o[1] * 0.75, y: g.ay, r: 2.85, out: o, at: k + 1, seg: g, ends: [] });
+  });
+  turn(WAY_FOOT, 2.7, 0.8);
+  for (const L of out) {
+    // The flights' ends it takes, and how far each flight is level there: until it's clear of the round.
+    for (const g of WAY_SEGS) {
+      if (!g.stairs) continue;
+      for (const [end, x, z] of [['flat0', g.ax, g.az], ['flat1', g.bx, g.bz]]) if (Math.hypot(x - L.x, z - L.z) < L.r + 0.5) L.ends.push({ g, end });
+    }
+    for (const { g, end } of L.ends) {
+      const ux = g.dx / g.len, uz = g.dz / g.len, sgn = end === 'flat0' ? 1 : -1, x = end === 'flat0' ? g.ax : g.bx, z = end === 'flat0' ? g.az : g.bz;
+      let s = STAIR_FLAT;
+      // (Clear right across it: its outline's edge there then runs square across the flight, where the first step is.)
+      const inside = (s) => [-1, 0, 1].some((q) => Math.hypot(x + ux * s * sgn - uz * g.w * q - L.x, z + uz * s * sgn + ux * g.w * q - L.z) < L.r + 0.25);
+      while (s < g.len / 3 && inside(s)) s += 0.05;
+      g[end] = s;
+    }
+    // Its floor: the hull of its round and the corners of those level ends.
+    const pts = [];
+    for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; pts.push([L.x + Math.cos(a) * L.r, L.z + Math.sin(a) * L.r]); }
+    for (const { g, end } of L.ends) {
+      const ux = g.dx / g.len, uz = g.dz / g.len, sgn = end === 'flat0' ? 1 : -1, s = g[end];
+      const x = (end === 'flat0' ? g.ax : g.bx) + ux * s * sgn, z = (end === 'flat0' ? g.az : g.bz) + uz * s * sgn;
+      for (const side of [-1, 1]) pts.push([x - uz * (g.w + 0.05) * side, z + ux * (g.w + 0.05) * side]);
+    }
+    pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+    const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const lo = [], hi = [];
+    for (const p of pts) { while (lo.length > 1 && cross(lo.at(-2), lo.at(-1), p) <= 0) lo.pop(); lo.push(p); }
+    for (const p of pts.slice().reverse()) { while (hi.length > 1 && cross(hi.at(-2), hi.at(-1), p) <= 0) hi.pop(); hi.push(p); }
+    L.poly = lo.slice(0, -1).concat(hi.slice(0, -1));   // (anticlockwise, x right and z up)
+    L.edges = L.poly.map((p, i) => { const q = L.poly[(i + 1) % L.poly.length], [nx, nz] = unit(q[1] - p[1], p[0] - q[0]); return [p[0], p[1], nx, nz]; });
+    L.reach = Math.max(...L.poly.map((p) => Math.hypot(p[0] - L.x, p[1] - L.z)));
+  }
+  return out;
+})();
+// How far (x, z) is outside a landing's floor (negative: on it). (Past a corner it's a little under the truth, which only
+// squares the land off a touch there.)
+export function landingEdge(L, x, z) {
+  let e = -Infinity;
+  for (const [ex, ez, nx, nz] of L.edges) e = Math.max(e, (x - ex) * nx + (z - ez) * nz);
+  return e;
+}
+// What she's set out on her landings: a lantern on a post on every one, a bench where the view is (the head of the steps,
+// looking out over the valley, and the landing halfway, where she stops to have her say), and a stone trough of flowers on
+// the others. Each: kind, x, z, its floor's height, yaw (its front looks out), and its size for walking into (hx along, hz
+// across, h tall; src/sim/sim.worker.js makes them solid). Drawn in src/gfx/opening-way.js.
+const PROP_SIZE = { bench: [0.78, 0.26, 0.5], trough: [0.62, 0.24, 0.48], lantern: [0.09, 0.09, 2.3] };
+export const WAY_PROPS = (() => {
+  const out = [];
+  // (Where on its floor, off its middle toward a, comes to `inset` short of its edge.)
+  const toward = (L, a, inset) => {
+    const c = Math.cos(a), s = Math.sin(a), dx = L.out[0] * c - L.out[1] * s, dz = L.out[1] * c + L.out[0] * s;
+    let t = 0;
+    while (t < L.reach && landingEdge(L, L.x + dx * (t + 0.05), L.z + dz * (t + 0.05)) < -inset) t += 0.05;
+    return [L.x + dx * t, L.z + dz * t, Math.atan2(dx, dz)];
+  };
+  const put = (kind, L, [x, z, yaw]) => { const [hx, hz, h] = PROP_SIZE[kind]; out.push({ kind, x, z, y: L.y, yaw, hx, hz, h }); };
+  LANDINGS.forEach((L, i) => {
+    put('lantern', L, toward(L, i % 2 ? 1.25 : -1.25, 0.32));
+    if (i === 0 || L.at === WAY_HALF + 1) put('bench', L, toward(L, i === 0 ? 0.15 : -0.1, 0.62));
+    else put('trough', L, toward(L, i % 2 ? -0.45 : 0.45, 0.55));
+  });
+  return out;
+})();
+export function wayColliders() {
+  return WAY_PROPS.map((p) => ({ x: p.x, z: p.z, hx: p.hx, hz: p.hz, yaw: p.yaw, h: p.h, t: p.y + p.h, b: p.y - 1 }));
+}
+
 export const WAY_BOX = {
   x0: Math.min(MOUTH[0] - 12, ...WAY.map((p) => p[0] - 7)), x1: Math.max(MOUTH[0] + 12, ...WAY.map((p) => p[0] + 7)),
   z0: Math.min(MOUTH[1] - 12, ...WAY.map((p) => p[1] - 7)), z1: Math.max(MOUTH[1] + 12, ...WAY.map((p) => p[1] + 7)),
@@ -324,28 +422,44 @@ export const WAY_BOX = {
 // The height of a stretch t of the way along it.
 export function wayY(g, t) {
   if (!g.stairs) return g.ay + (g.by - g.ay) * t;
-  const f = STAIR_FLAT / g.len;
-  return g.ay + (g.by - g.ay) * clamp((t - f) / (1 - 2 * f), 0, 1);
+  const f0 = g.flat0 / g.len, f1 = g.flat1 / g.len;
+  return g.ay + (g.by - g.ay) * clamp((t - f0) / (1 - f0 - f1), 0, 1);
 }
 // The land brought to the way: level where it runs, banked back to the hill's own lie either side. Where two flights are
-// close (at a turn) each has its say by how near it is, so the ground between them has no step in it.
+// close (at a turn) each has its say by how near it is, so the ground between them has no step in it. A landing has the say
+// over all its floor. The flights and the landings are walled: the hill comes back to its own lie just past the wall (WALL_IN,
+// then WALL_BLEND), which hides the drop or holds the bank; only the shelf and the path are banked back gently.
+export const WALL_IN = 0.05, WALL_BLEND = 0.4;
 export function wayLevel(x, z, level) {
   if (x < WAY_BOX.x0 || x > WAY_BOX.x1 || z < WAY_BOX.z0 || z > WAY_BOX.z1) return level;
-  let A = 0, B = 0, M = 0;
+  // (Two sums: the shelf and the path, banked; then the steps and the landings over them, walled, which have the last word
+  // wherever they reach, so a bank of the shelf's never comes up through a flight beside it.)
+  const A = [0, 0], B = [0, 0], M = [0, 0];
   for (let i = 0; i < WAY_SEGS.length; i++) {
     const g = WAY_SEGS[i];
     if (x < g.x0 || x > g.x1 || z < g.z0 || z > g.z1) continue;
     const t = clamp(((x - g.ax) * g.dx + (z - g.az) * g.dz) / (g.len * g.len), 0, 1);
     const d = Math.hypot(g.ax + g.dx * t - x, g.az + g.dz * t - z);
-    if (d >= WAY_W + WAY_BLEND) continue;
-    // (The stretch you're on has nearly all the say: at a turn of the steps the flight beside this one is a good deal higher
-    // or lower, and a share of it under your feet would sink you into these slabs or stand you over them.)
-    const k = 1 - smoothstep(WAY_W, WAY_W + WAY_BLEND, d), k2 = k * k * k * k * Math.exp(-WAY_OWN * d);
-    A += k2 * wayY(g, t); B += k2; if (k > M) M = k;
+    const walled = g.stairs || g.kind === 'landing' ? 1 : 0, w0 = walled ? g.w + WALL_IN : g.w, bl = walled ? WALL_BLEND : WAY_BLEND;
+    if (d >= w0 + bl) continue;
+    // (The stretch you're on has nearly all the say: the flight beside this one is a good deal higher or lower, and a share of
+    // it under your feet would sink you into these slabs or stand you over them. A flight's say is whole across its width.)
+    const k = 1 - smoothstep(w0, w0 + bl, d), k2 = k * k * k * k * Math.exp(-WAY_OWN * (walled ? Math.max(0, d - g.w) : d));
+    A[walled] += k2 * wayY(g, t); B[walled] += k2; if (k > M[walled]) M[walled] = k;
   }
-  return B > 0 ? level + (A / B - level) * M : level;
+  for (const L of LANDINGS) {
+    if (Math.abs(x - L.x) > L.reach + 1 || Math.abs(z - L.z) > L.reach + 1) continue;
+    const e = landingEdge(L, x, z);
+    if (e > WALL_IN + WALL_BLEND) continue;
+    // (Where a flight leaves it, the flight has the say: its first step is a step down off the floor. Well in on it, it has.)
+    const d = Math.max(0, e), k = 1 - smoothstep(WALL_IN, WALL_IN + WALL_BLEND, d), k2 = k * k * k * k * Math.exp(-WAY_OWN * Math.max(0, e + 0.5));
+    A[1] += k2 * L.y; B[1] += k2; if (k > M[1]) M[1] = k;
+  }
+  if (B[0] > 0) level += (A[0] / B[0] - level) * M[0];
+  return B[1] > 0 ? level + (A[1] / B[1] - level) * M[1] : level;
 }
-// How far the drawn ground is sunk under the steps, which lie over it (the sim walks the slope they're laid on).
+// How far the drawn ground is sunk under the steps and the landings' flags, which lie over it (the sim walks the slope
+// they're laid on).
 export function wayDip(x, z) {
   if (x < WAY_BOX.x0 || x > WAY_BOX.x1 || z < WAY_BOX.z0 || z > WAY_BOX.z1) return 0;
   let dip = 0;
@@ -354,9 +468,21 @@ export function wayDip(x, z) {
     if (!g.stairs || x < g.x0 || x > g.x1 || z < g.z0 || z > g.z1) continue;
     const t = clamp(((x - g.ax) * g.dx + (z - g.az) * g.dz) / (g.len * g.len), 0, 1);
     const d = Math.hypot(g.ax + g.dx * t - x, g.az + g.dz * t - z);
-    dip = Math.max(dip, 0.45 * (1 - smoothstep(0.95, 1.5, d)));
+    dip = Math.max(dip, 0.45 * (1 - smoothstep(g.w - 0.3, g.w + 0.25, d)));
   }
+  for (const L of LANDINGS) dip = Math.max(dip, 0.12 * (1 - smoothstep(-0.2, 0.15, landingEdge(L, x, z))));
   return dip;
+}
+// Whether (x, z) is on the way's stone, or within m of it: nothing grows or lies there (src/core/forest.js, rocks.js).
+export function onWay(x, z, m = 0) {
+  if (x < WAY_BOX.x0 || x > WAY_BOX.x1 || z < WAY_BOX.z0 || z > WAY_BOX.z1) return false;
+  for (const L of LANDINGS) if (landingEdge(L, x, z) < m) return true;
+  for (const g of WAY_SEGS) {
+    if (g.kind === 'path' || g.kind === 'ledge' || x < g.x0 || x > g.x1 || z < g.z0 || z > g.z1) continue;
+    const t = clamp(((x - g.ax) * g.dx + (z - g.az) * g.dz) / (g.len * g.len), 0, 1);
+    if (Math.hypot(g.ax + g.dx * t - x, g.az + g.dz * t - z) < g.w + 0.3 + m) return true;
+  }
+  return false;
 }
 
 // Out of the chamber and down the tunnel, clear of her things (auto-play's way out: src/ui/autobrain.js).

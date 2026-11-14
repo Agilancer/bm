@@ -15,12 +15,15 @@ import { Knight, S, matToQuat, norm, orth, cross, restHold, turn } from './knigh
 import { stepStow } from '../core/stow.js';
 import { Caster, Zombie } from './undead.js';
 import { townDist } from '../core/town.js';
+import { nearestRoad, overLand } from '../core/roads.js';
+import { inChurch } from '../core/church.js';
 
 import { Crab } from './crab.js';
 import { Gravehart } from './gravehart.js';
 import { Hydra } from './hydra.js';
 import { FieldCreature } from './field-creature.js';
 import { Pose, solveFK } from './anim.js';
+import { struck } from './ragdoll.js';
 import { BROKER_SPOTS, PORTAL, delveAt, delveOf, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
 import { cleanLine } from './sight.js';
@@ -49,10 +52,15 @@ export function mobKind(m) {
 }
 
 // Standing, outdoors, and something a hero can reach.
+// (Indoors is Velscour's church and what lies under it, and the houses: the other Tessariels keep out of those. Your own
+// party goes down with you, though, and what's on a floor of the church is theirs to fight while you and they are in it:
+// `below`, set each tick by HeroWorld.stepCompany. They used to walk the catacombs at your heels and never lift a hand.)
+let below = false;
+const outdoors = (m) => floorAt(m.x, m.z) === null;
 function fightable(m) {
   if (!m || m.dead || m.dormant || m.hp <= 0 || m instanceof Hydra || m instanceof Hero) return false;
   if (m instanceof Knight) return m.kind === 0;
-  return floorAt(m.x, m.z) === null && !inPit(m.x, m.z);
+  return (outdoors(m) || (below && inChurch(m.x, m.y + 1, m.z))) && !inPit(m.x, m.z);
 }
 
 // (A Tripo monster has its own girth: a dragon's is far past a goblin's.)
@@ -811,6 +819,7 @@ export class Hero extends Knight {
     }
     const w = sim.heroWorld, was = m.hp;
     m.hp -= dmg;
+    struck(m, sim, this.x, this.z, poise);
     if (m instanceof Zombie) m.seenHp = m.hp;
     if (!o.dot) m.onHit?.(sim, kind, this.x, this.z, poise, this);
     if (o.stun) w.stun(m, o.stun, this);
@@ -1919,6 +1928,8 @@ export class HeroWorld {
       h.yaw = h.faceYaw = Math.random() * 6.28;
       h.meetT = rand(4, 30);
     }
+    // And a few already out on the roads, somewhere along the way to a town or a place.
+    for (const h of heroes) if (!h.broker && Math.random() < 0.3) { try { this.setOut(h, rand(0.15, 0.85)); } catch { h.task = null; } }
   }
 
   later(t, fn) { this.timers.push({ t, fn }); }
@@ -2398,7 +2409,7 @@ export class HeroWorld {
     if (!h.foe && !h.surf && !h.task?.peace) {
       let best = null, bd = h.cls.ranged ? 20 : 14;
       for (const m of this.targets) {
-        if (!fightable(m)) continue;
+        if (!fightable(m) || !outdoors(m)) continue;
         const d = Math.hypot(m.x - h.x, m.z - h.z);
         const onUs = m.heroFoe && (m.heroFoe === h || (h.party && m.heroFoe.party === h.party)) && sim.time - m.heroFoeT < 6;
         const onPlayer = !p.dead && m.aggro && Math.hypot(m.x - p.x, m.z - p.z) < 10 && Math.hypot(p.x - h.x, p.z - h.z) < 26;
@@ -2449,6 +2460,7 @@ export class HeroWorld {
       case 'delve': return this.delve(h, t, dt);
       case 'summit': return this.climb(h, t, dt);
       case 'return': return this.returning(h, t, dt);
+      case 'journey': return this.journey(h, t, dt);
       case 'duel': return this.duel(h, t, dt);
       default: h.task = null;
     }
@@ -2531,6 +2543,7 @@ export class HeroWorld {
     for (const [k, v] of Object.entries(ACTIVITIES)) w[k] = v[band];
     w.hunt *= L.fight * (band === 0 ? L.night : 1); w.delve *= L.fight * L.roam; w.summit *= L.roam; w.social *= L.talk; w.errands *= h.bag > 3 ? 4 : 1;
     w.perform = h.person.cls === 'bard' ? w.perform * 3 : 0;
+    w.journey *= L.roam * (h.bag > 8 ? 0.3 : 1);
     if (h.bag > 8) { w.hunt = 0; w.delve = 0; w.summit *= 0.3; }
     // The duel: two in town, one of them wanting it.
     w.duel = band === 2 || band === 3 ? 0.15 * L.show : 0;
@@ -2539,6 +2552,7 @@ export class HeroWorld {
     let r = Math.random() * sum, kind = 'social';
     for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) { kind = k; break; } }
     if (kind === 'hunt' || kind === 'delve' || kind === 'summit') return this.plan(h, kind);
+    if (kind === 'journey') return this.setOut(h);
     if (kind === 'duel') {
       const other = this.idleNear(h, 40, (o) => o.person.level >= h.person.level - 6);
       if (other) return this.startDuel(h, other);
@@ -2674,21 +2688,42 @@ export class HeroWorld {
     return true;
   }
 
-  // A way there: the road up the hill, the gate road east, or straight over the fields.
+  // A way there: the road up the hill; or out of the town by its streets and down the roads and paths (src/core/roads.js),
+  // leaving them only where going straight is shorter by half.
   route(h, place) {
     if (place.kind === 'summit') return LONG_ROAD.line.filter((_, i) => i % 3 === 0).map(([x, z]) => [x, z]).concat([place.spot]);
-    const out = Math.hypot(place.spot[0], place.spot[1]);
-    // Leave the town by the nearest gap in its ring, then across.
-    const a = Math.atan2(place.spot[0], place.spot[1]);
-    // (Out of town: first to a point well inside its edge on the way, so they leave by the streets, not through the houses.)
-    // (And that point on open ground: 52 m out toward the north-east is inside a house, and the parties bound that way
-    // stood against its wall for as long as anyone watched. The nearest clear one round the ring, or a little in or out.)
     if (townDist(place.spot[0], place.spot[1]) <= 0) return [place.spot];
+    const g = townDist(h.x, h.z) < 30 ? this.gate(place.spot[0], place.spot[1]) : null;
+    const [fx, fz] = g || [h.x, h.z], end = this.arrival(place);
+    return [...(g ? [g] : []), ...this.byRoad(fx, fz, end[0], end[1]), ...(end === place.spot ? [] : [place.spot])];
+  }
+
+  // The town's edge on the way to (x, z): a point well inside it, so they leave by the streets, not through the houses; and
+  // on open ground (52 m out toward the north-east is inside a house, and the parties bound that way stood against its wall
+  // for as long as anyone watched): the nearest clear one round the ring, or a little in or out.
+  gate(x, z) {
+    const a = Math.atan2(x, z);
     for (const [da, r] of [[0, 52], [0.12, 52], [-0.12, 52], [0.24, 52], [-0.24, 52], [0, 46], [0, 58], [0.4, 52], [-0.4, 52], [0.6, 52], [-0.6, 52]]) {
-      const x = Math.sin(a + da) * r, z = Math.cos(a + da) * r;
-      if (this.openAt(x, z)) return [[x, z], place.spot];
+      const gx = Math.sin(a + da) * r, gz = Math.cos(a + da) * r;
+      if (this.openAt(gx, gz)) return [gx, gz];
     }
-    return [place.spot];
+    return null;
+  }
+
+  // Where a walk to a place ends: a journey's on the road into it (its middle's often a house), a hunt's at its middle.
+  arrival(place) {
+    if (place.kind !== 'journey') return place.spot;
+    if (!place.arrive) { const q = nearestRoad(place.spot[0], place.spot[1], place.r + 90); place.arrive = q.i >= 0 ? [q.x, q.z] : place.spot; }
+    return place.arrive;
+  }
+
+  // Along the roads from a to b, a point every 10 m or so, ending at b.
+  byRoad(ax, az, bx, bz) {
+    const out = [];
+    let lx = ax, lz = az;
+    for (const [x, z] of overLand(ax, az, bx, bz)) if (Math.hypot(x - lx, z - lz) >= 10) { out.push([x, z]); lx = x; lz = z; }
+    if (!out.length || Math.hypot(out.at(-1)[0] - bx, out.at(-1)[1] - bz) > 0.5) out.push([bx, bz]);
+    return out;
   }
 
   // Somewhere a body can stand out of doors: not in a wall, a trunk or a house.
@@ -2705,7 +2740,48 @@ export class HeroWorld {
     h.goal = { x, z, speed, stop: 2 };
     if (Math.hypot(x - h.x, z - h.z) < 4 && t.leg < t.path.length - 1) t.leg++;
     if (Math.random() < dt * 0.01 * h.lean.talk) h.say(this.sim, 'travel_chatter', -1, PLACE_IDS.indexOf(t.place.id));
-    return Math.hypot(t.place.spot[0] - h.x, t.place.spot[1] - h.z) < t.place.r + 4;
+    const last = t.path.at(-1);
+    return Math.hypot(t.place.spot[0] - h.x, t.place.spot[1] - h.z) < t.place.r + 4 || (t.leg >= t.path.length - 1 && Math.hypot(last[0] - h.x, last[1] - h.z) < 5);
+  }
+
+  // ---- down the roads ----
+
+  // A walk to one of the land's towns or places (the nearer the likelier), a while there, and home again by the roads:
+  // alone, or with whoever's idle beside them. along: begun already, so far down the way (0 to 1): how some start the day.
+  setOut(h, along = 0) {
+    const far = PLACES.filter((p) => p.kind === 'journey');
+    let sum = 0;
+    const w = far.map((p) => { const v = 1 / Math.max(800, Math.hypot(p.spot[0], p.spot[1])); sum += v; return v; });
+    let r = Math.random() * sum, place = far[0];
+    for (let i = 0; i < far.length; i++) { r -= w[i]; if (r <= 0) { place = far[i]; break; } }
+    const pace = rand(1.6, 2.3);
+    h.task = { kind: 'journey', place, t: 0, pace };
+    h.goal = null;
+    if (along > 0) {
+      const t = h.task;
+      t.path = this.route(h, place);
+      t.leg = Math.max(0, Math.min(t.path.length - 2, Math.floor(t.path.length * along)));
+      if (t.leg > 0) { const [x, z] = t.path[t.leg]; h.x = h.lastX = x; h.z = h.lastZ = z; h.y = this.sim.world.height(x, z); }
+      return;
+    }
+    const o = Math.random() < 0.45 ? this.idleNear(h, 25) : null;
+    if (o) { o.task = { kind: 'journey', place, t: 0, pace }; o.goal = null; if (Math.random() < 0.6) this.later(rand(1, 3), () => o.say(this.sim, 'travel_chatter', h.slot, PLACE_IDS.indexOf(place.id))); }
+  }
+
+  journey(h, t, dt) {
+    t.t += dt;
+    if (!t.there) {
+      if (this.travel(h, t, dt, t.pace)) { t.there = true; t.t = 0; t.stay = rand(30, 100); t.at = t.path?.at(-1) || t.place.spot; }
+      return;
+    }
+    if (t.t > t.stay) return this.goHome(h);
+    // There a while: a look about, a stand on the road, a few steps this way and that.
+    if (!h.goal || Math.hypot(h.goal.x - h.x, h.goal.z - h.z) < 1) {
+      if (Math.random() < 0.4) { h.hold = rand(4, 12); h.goal = null; return; }
+      const a = Math.random() * 6.28, r = 3 + Math.random() * 7, gx = t.at[0] + Math.sin(a) * r, gz = t.at[1] + Math.cos(a) * r;
+      h.goal = this.openAt(gx, gz) ? { x: gx, z: gz, speed: 1.3, stop: 0.6 } : null;
+      if (!h.goal) h.hold = 2;
+    }
   }
 
   hunt(h, t, dt) {
@@ -2797,7 +2873,7 @@ export class HeroWorld {
   }
 
   goHome(h, flee = false) {
-    h.task = { kind: 'return', place: placeOf(Math.random() < 0.6 ? 'market' : 'well'), t: 0, flee };
+    h.task = { kind: 'return', place: placeOf(Math.random() < 0.6 ? 'market' : 'well'), t: 0, flee, pace: h.task?.kind === 'journey' ? h.task.pace : undefined };
     h.goal = null;
   }
 
@@ -2805,8 +2881,18 @@ export class HeroWorld {
     const sim = this.sim;
     t.t += dt;
     if (!this.follow(h, t)) {
-      const s = t.place.spot;
-      h.goal = { x: s[0], z: s[1], speed: t.flee ? 5 : 3.2, stop: 3 };
+      const s = t.place.spot, speed = t.flee ? 5 : t.pace || 3.2;
+      // From out in the land, home by the roads to the town's edge, then in by its streets.
+      if (t.path === undefined) {
+        t.path = null;
+        const g = townDist(h.x, h.z) > 60 ? this.gate(h.x, h.z) : null;
+        if (g) { t.path = [...this.byRoad(h.x, h.z, g[0], g[1]), s]; t.leg = 0; }
+      }
+      if (t.path) {
+        const [x, z] = t.path[Math.min(t.leg, t.path.length - 1)];
+        h.goal = { x, z, speed, stop: t.leg >= t.path.length - 1 ? 3 : 2 };
+        if (Math.hypot(x - h.x, z - h.z) < 4 && t.leg < t.path.length - 1) t.leg++;
+      } else h.goal = { x: s[0], z: s[1], speed, stop: 3 };
     }
     const lead = !h.party || h.party.leader === h;
     if (Math.hypot(h.x - t.place.spot[0], h.z - t.place.spot[1]) < 8 || (h.party && !lead && Math.hypot(h.x, h.z) < 20)) {
@@ -3474,6 +3560,7 @@ export class HeroWorld {
   // The player's way, kept for the party to follow round corners; and getting the fallen up once a fight's done.
   stepCompany(dt) {
     const sim = this.sim, p = sim.player, t = this.trail;
+    below = this.company.members.size > 0 && floorAt(p.x, p.z) !== null && inChurch(p.x, p.y + 1, p.z);
     const last = t[t.length - 1];
     if (!last || Math.hypot(p.x - last[0], p.z - last[1]) > 25) { t.length = 0; t.push([p.x, p.z]); }
     else if (Math.hypot(p.x - last[0], p.z - last[1]) > 0.8) { t.push([p.x, p.z]); if (t.length > 60) t.shift(); }

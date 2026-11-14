@@ -20,11 +20,9 @@ import { LINES as LB } from './lines/town_b.js';
 import { LINES as LC } from './lines/town_c.js';
 import { LINES as LLAND } from './lines/land.js';
 import { SCENES, SMALLTALK } from './lines/scenes.js';
-import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
+import { F, F_PALETTE, FCTRL, FIN, FOLK_BYTES, FOLK_JOINTS, FOLK_MAX, FOLK_STRIDE, SH, SLOT_HEAD, freeSlot, mapFolk, publish } from './layout.js';
 import { carryFrame, carryPalette, carryPoint } from '../core/carry.js';
-import { quatMul, quatRotate } from '../core/math.js';
-import { forgeSpot } from './brain.js';
-import { SMITH_CLIPS, gripOf, hammerAtRest, writeDQ } from './smithy.js';
+import { FORGE, KIT_SLOT, SMITH_CLIPS, STATIONS, SmithKit, inYard, newKitState } from './smithy.js';
 
 const HZ = 60;
 // Seconds between full poses: for someone drawn (body or shadow) within near metres of the eye (every frame), within mid, and past
@@ -72,13 +70,12 @@ async function boot({ buffer, base, lean }) {
     me.posedAt = -1;
   }));
   glbs.clear();
-  // The smith's hammer: one more joint after his own in the slot, for the renderer to hang it on (src/gfx/folktools.js).
-  // In his hand as his rig holds one, or where it's left on the anvil.
-  const smith = life.byId.homunculus, at = forgeSpot(town);
-  if (smith && at && smith.joints === smith.rig.count) {
-    const rest = hammerAtRest(at.x, at.y, at.z, at.yaw), laid = new Float32Array(8);
-    writeDQ(laid, 0, rest.q, 0, rest.t, 0);
-    hammer = { me: smith, grip: gripOf(smith.rig), laid, held: new Float32Array(8), q: [0, 0, 0, 1], t: [0, 0, 0] };
+  // The smith's kit (his tools, the bellows, the grindstone, the axe on its rack): more joints after his own in the slot, for
+  // the renderer to hang them on (src/gfx/folktools.js). Each in his hand as his rig holds it, or where it lies.
+  const smith = life.byId.homunculus;
+  if (smith && smith.joints === smith.rig.count && smith.joints + KIT_SLOT <= FOLK_JOINTS) {
+    smith.kit = smith.kit || newKitState();
+    kit = { me: smith, state: new SmithKit(smith.rig) };
   }
   // Every bed in town and every bedroll laid on a floor, for the renderer to put a blanket over whoever's in one.
   for (const h of town.houses) {
@@ -105,7 +102,7 @@ export const modelOf = (folk, body) => (folk.models[body] ? body : folk.swaps?.[
 
 // ---- the loop ----
 
-let tick = 0, last = 0, clock = 0;
+let tick = 0, last = 0, clock = 0, dtNow = 0;
 const head = [0, 0, 0];
 
 // One frame of the town, timed for the Frame rate readout. A bug in one is told once and the town carries on.
@@ -169,22 +166,24 @@ function frame(dt) {
   life.update(dt, { hour: inb[FIN.HOUR], day: inb[FIN.DAY] | 0, player, dangers });
   talk.update(dt, { player, cast: inb[FIN.CAST] | 0 });
   blows(player);
-  tick++; clock += dt;
+  tick++; clock += dt; dtNow = dt;
   write(inb[FIN.CAMX], inb[FIN.CAMY], inb[FIN.CAMZ]);
   if (events.length) { self.postMessage({ type: 'events', list: events.splice(0) }); }
 }
 
 // The work you can hear: the axe at the woodpile and the smith's hammer, the moment each lands (seconds into its clip, read off
-// the right hand stopping dead; the smith's is where his clip was made to land it, tools/folk/smith_clips.mjs), told to the main thread to sound (src/main.js townEvent). Only within earshot.
+// the right hand stopping dead; the smith's is where his clip was made to land it, tools/folk/smith_clips.mjs), told to the main
+// thread to sound (src/main.js townEvent). Only within earshot. (hot: how hot the iron was that the hammer came down on, for the sparks.)
 const BLOWS = { chop_wood: { at: 0.21, kind: 'chop' }, [SMITH_CLIPS.blow]: { at: SMITH_CLIPS.blowAt, kind: 'anvil' } };
-let hammer = null;
+let kit = null;
+const strikeAt = inYard(STATIONS.anvil, FORGE.strike);
 function blows(player) {
   for (const me of life.folk) {
     const c = me.pose.clip, b = c && BLOWS[c.name];
     if (!b) { me.blowT = -1; continue; }
     const t = c.loop ? me.pose.time % c.dur : me.pose.time;
     if (me.blowT >= 0 && me.blowT < b.at && t >= b.at && Math.hypot(me.x - player[0], me.z - player[2]) < 45) {
-      emit({ type: 'work', kind: b.kind, at: [me.x, me.y + 0.6, me.z] });
+      emit({ type: 'work', kind: b.kind, at: b.kind === 'anvil' ? strikeAt : [me.x, me.y + 0.6, me.z], hot: b.kind === 'anvil' && kit ? kit.state.heat : 0 });
     }
     me.blowT = t;
   }
@@ -250,17 +249,11 @@ function write(cx, cy, cz) {
         slot[p + s + 24] = me.yaw;
       }
     }
-    if (hammer && hammer.me === me) {
-      const h = me.rig.hands[1], at = o + F_PALETTE + me.rig.count * 8;
-      if (posed) {
-        quatMul(hammer.q, 0, me.pose.wq, h * 4, hammer.grip.q, 0);
-        quatRotate(hammer.t, 0, me.pose.wq, h * 4, hammer.grip.t, 0);
-        for (let k = 0; k < 3; k++) hammer.t[k] += me.pose.wt[h * 3 + k];
-        writeDQ(hammer.held, 0, hammer.q, 0, hammer.t, 0);
-      }
-      if (!me.tool) slot.set(hammer.laid, at);
-      else if (moved) carryPalette(hammer.held, 0, slot, at, 1, carry);
-      else slot.set(hammer.held, at);
+    if (kit && kit.me === me) {
+      // (Posed or not, the fire burns and the stone turns: what's in his hands goes with him between poses.)
+      const k = me.kit, there = me.act === ACT.WORK && Math.hypot(me.x - STATIONS.anvil.x, me.z - STATIONS.anvil.z) < 9;
+      kit.state.step(dtNow, k, there);
+      slot.set(kit.state.write(posed ? me.pose : null, k, me.yaw, moved ? carry : null, carryPalette), o + F_PALETTE + me.rig.count * 8);
     }
     // For the player to bump into: not when they're lying down, or sat (the furniture's in the way already).
     const b = me.i * 4;
@@ -276,6 +269,8 @@ self.addEventListener('message', (e) => {
   const m = e.data;
   if (m.type === 'boot') { boot(m).catch((err) => self.postMessage({ type: 'error', message: `${err.message}\n${err.stack}` })); return; }
   if (m.type === 'inbox' && map) { map.inbox.set(m.inbox); return; }
+  // (For a review: the town run on by so many seconds at once, a thirtieth at a time, with nothing of it said or sounded.)
+  if (m.type === 'runOn' && life) { for (let t = 0; t < m.seconds; t += 1 / 30) { tickTown(1 / 30); events.length = 0; } return; }
   // A way across the town on foot for the player, for the quest trail (src/ui/trail.js): the folk's own walking grid.
   if (m.type === 'route') { self.postMessage({ type: 'route', id: m.id, pts: life ? life.ground.find(0, m.ax, m.az, m.bx, m.bz, 60000, true) : null }); return; }
   if (!talk) return;

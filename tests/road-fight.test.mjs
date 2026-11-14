@@ -120,3 +120,32 @@ test('a wizard or a necromancer with no pane of light up still takes a spell: it
   k.hp -= 10; k.takeBlow({ casting: { burst() {} } }, 10);
   assert.ok(k.hp < 60, `it took the blow (${k.hp})`);
 });
+
+test('the dead come up when you reach the place on the road, not when she does; the hint is then to kill them', async () => {
+  const { hintOf } = await import('../src/ui/questlog.js');
+  const height = { height: () => 0, groundFor: () => 0, groundBy: () => 0, setCaveSealed() {}, inside: () => false };
+  const body = () => ({ x: 0, z: 0, y: 0, yaw: 0, act(dt, w, b) { if (b.to && b.speed > 0) { const dx = b.to[0] - this.x, dz = b.to[1] - this.z, d = Math.hypot(dx, dz); if (d > 0.02) { const s = Math.min(d, b.speed * dt); this.x += dx / d * s; this.z += dz / d * s; } } } });
+  const player = { x: 0, z: 0, y: 0, vx: 0, vz: 0, surfing: false, maxHp: 100, hp: 100 };
+  const sim = { player, world: height, villagers: [body(), body()], knights: world(), time: 0, event() {} };
+  const op = new Opening(sim);
+  op.setStage(OPENING.COLLAPSE); op.time = COLLAPSE_END - 0.01; op.update(1 / 60);
+  const at = routeNear(-161.5, 134.3), dt = 1 / 30;
+  const put = (s, v) => { const [x, z] = routeAt(s), [dx, dz] = routeDir(s); Object.assign(player, { x, z, vx: dx * v, vz: dz * v }); };
+  const Q = { active: () => [] };
+  // Walked down to a few steps short of it, and stood there a good while (her a little way on, waiting): nothing.
+  let s = 0;
+  for (; s < at - 3; s += 5.6 * dt) { put(s, 5.6); op.update(dt); }
+  for (let t = 0; t < 30; t += dt) { put(s, 0); op.update(dt); }
+  assert.equal(op.fightS, null, 'nothing comes up before you get there');
+  const snap = [];
+  op.write(snap, { OPENING: 0, OPENING_TIME: 1, OPENING_NEXT: 2, OPENING_CUE: 3, OPENING_CUE_T: 4, OPENING_FELL: 5, OPENING_RIDE: 6, OPENING_FIGHT: 7 });
+  assert.equal(hintOf({ Q, stage: snap[0], fight: snap[7] }).title, 'The Long Road');
+  // A few steps on, past it: they're up, and the work is to put them down.
+  for (let t = 0; t < 1.5; t += dt) { s += 4 * dt; put(s, 4); op.update(dt); }
+  assert.ok(op.fightS && !op.ambushDone, 'they come up once you reach it');
+  op.write(snap, { OPENING: 0, OPENING_TIME: 1, OPENING_NEXT: 2, OPENING_CUE: 3, OPENING_CUE_T: 4, OPENING_FELL: 5, OPENING_RIDE: 6, OPENING_FIGHT: 7 });
+  assert.ok(snap[7] > 0);
+  assert.equal(hintOf({ Q, stage: snap[0], fight: snap[7] }).title, 'Kill the zombies and the necromancers');
+  // Done with them: back to following her down.
+  assert.equal(hintOf({ Q, stage: snap[0], fight: 0 }).title, 'The Long Road');
+});

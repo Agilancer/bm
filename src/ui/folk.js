@@ -325,6 +325,18 @@ export class TownUI {
   event(e) {
     if (e.type !== 'say') return;
     if (this.open && e.i === this.with) return;
+    // (Something that speaks and isn't anybody: `who` it is and `at` where. The axe on the smith's rack.)
+    if (e.at) {
+      const key = `at:${e.who}`;
+      this.balloons.get(key)?.el.remove();
+      const el = document.createElement('div');
+      el.className = 'fb small';
+      el.innerHTML = `<span class="who">${e.who}</span>`;
+      el.appendChild(document.createTextNode(e.text));
+      this.sayEl.appendChild(el);
+      this.balloons.set(key, { el, at: e.at, until: performance.now() + e.dur * 1000 });
+      return;
+    }
     let b = this.balloons.get(e.i);
     if (!b) {
       const el = document.createElement('div');
@@ -361,13 +373,16 @@ export class TownUI {
   frame(dt, cam, px, py, pz, yaw, paused, snap = null) {
     this.snap = snap;
     // The quest log open: drawn again if auto-play has moved on to something else.
+    // (The dead up on the road down, and put down again: the opening's work changes, and the hint in the log with it.)
+    const roadFight = !!snap && snap[H.OPENING] === OPENING.ESCORT && snap[H.OPENING_FIGHT] > 0;
+    if (snap && roadFight !== !!this.roadFight) { this.roadFight = roadFight; if (this.book) this.drawBook(); }
     if (this.book && (this.bookT = (this.bookT || 0) - dt) <= 0) { this.bookT = 0.5; if (autoKey(this.autoNow()) !== this.autoSeen) this.drawBook(); }
     const now = performance.now();
     const ph = this.houseOf(px, py, pz);
     this.drawMarks(cam, px, pz, ph);
     for (const [i, b] of this.balloons) {
       // (Whoever it is: the townsfolk, those out past the town, and Lisandra.)
-      const w = this.whereOf(i);
+      const w = b.at ? { x: b.at[0], z: b.at[2], hx: b.at[0], hy: b.at[1] - 0.36, hz: b.at[2], house: -1 } : this.whereOf(i);
       if (!w || now > b.until) { b.el.remove(); this.balloons.delete(i); continue; }
       const d = Math.hypot(w.x - px, w.z - pz);
       const there = d < 4 || w.house === ph || (w.house < 0 && ph < 0);
@@ -946,7 +961,7 @@ export class TownUI {
         : `<div class="ql-auto"><b>AUTO-PLAY</b><span>${auto.mode && !auto.offer ? `${esc(auto.mode)}: ` : ''}${auto.offer ? 'is off to take on new work: ' : ''}${esc(auto.say || 'Looking for what to do.')}</span></div>`;
     // Nothing taken on: what you should be doing instead.
     const stage = snap ? snap[H.OPENING] : OPENING.ARRIVED;
-    const hint = live.length ? null : hintOf({ Q, stage, lisHere: !!this.whereOf(this.lisI), level: lvl, person, px: snap ? snap[H.PX] : 0, pz: snap ? snap[H.PZ] : 0 });
+    const hint = live.length ? null : hintOf({ Q, stage, fight: snap ? snap[H.OPENING_FIGHT] : 0, lisHere: !!this.whereOf(this.lisI), level: lvl, person, px: snap ? snap[H.PX] : 0, pz: snap ? snap[H.PZ] : 0 });
     const arrived = !(stage > 0 && stage < OPENING.ARRIVED);
     const hintBox = hint ? `<h4>Hint</h4><div class="ql-hint"><div class="qt">${esc(hint.title)}</div><div class="qs">${esc(hint.text)}</div>
       ${hint.items.length ? `<ul>${hint.items.map((it, k) => `<li><span>${esc(it.text)}</span>${mapBtn(`data-hint="${k}"`, finite(it.spot) && (arrived || stage === OPENING.ESCORT))}</li>`).join('')}</ul>` : ''}

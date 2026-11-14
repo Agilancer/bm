@@ -183,6 +183,15 @@ toward the church.
   and lately insists that *he* is the true Tessariel, and the beautiful woman never came for him because she knew she couldn't
   fool him. Speaks in grand pronouncements; refers to his hammer and anvil by name; tender with children and horses. A very
   good smith. **Sells staffs, and forges new ones** from Grave Iron and Bone Shards brought up from the catacombs.
+  He is the Homunculus of VELSCOUR (Agilancer/velscour, `src/data/homunculus.js`): he kept the forge at Herrington Hollow two
+  hundred years ago, and has not aged a day since, which he puts down to clean living. It's the axe. On the wall of that forge
+  he found a great axe under seven chains and a note that said DO NOT; he took the note down. Shut in it is **Varrow the
+  Rimebound**, Knight of the Pale Rune, a death knight, whose voice he took for the Light and then for a saint ("Saint
+  Varrow"), and whose borrowed power, green and cold, he takes for a paladin's. Varrow could have had him any night of those
+  two hundred years, and hasn't, because he says good morning to it every morning. Here the axe hangs on a rack in his yard,
+  out under the lean-to on the north side of his house, where he works all day: the fire and its bellows, the anvil
+  (Patience; Gertrude was the Hollow's), the slack tub, the bench, the grindstone. First thing every day he takes the rag
+  from his belt to the axe; it answers him (`src/folk/lines/smithy.js`). The owner's friend in life: he has his own model.
 - **Dunstan "Dusty" Bray**, 14, his apprentice (`boy_3`). Deadpan, sooty, unimpressed, loyal. Translates Homunculus for strangers.
 
 ### The alehouse [5]: the Brewers
@@ -449,7 +458,7 @@ Ser Hale: 43. **The Howling** and 44. **The Sleeper** (the Deeps); 45. **The Gat
 - The square around the well: the market stalls (Magda's curios, Hilde and Ivy's ale, Agnes's bread, Tamsin's cloth, Orrin's
   books on fair days), benches, the children's games, gossip.
 - The inn: breakfast and supper, songs in the evening (Maudie sings, Wenna sings, Hilde dances, Nell rolls her eyes), the Tally.
-- Work: the forge (Homunculus, Dusty, Wren), the fields south (Hob, Bess, Dob), the tannery vats (Wes), the looms (Tamsin, Wenna),
+- Work: the smith's yard (Homunculus at his work, Dusty at the coal, Wren watching), the fields south (Hob, Bess, Dob), the tannery vats (Wes), the looms (Tamsin, Wenna),
   the coffin yard (Silas), the bakehouse oven (Agnes), the tithe barn (Garth), the herb garden (Sabine, Bryony), the woods' edge
   (Corran), the watch (Aldric by day at the tower and the two posts on the west side, Edric at the gate of an afternoon,
   Jory at night with his lantern, all the way round to the east end).

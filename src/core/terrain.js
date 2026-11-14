@@ -1,7 +1,7 @@
 // The land. One deterministic height function shared by every thread: the sim walks on it, the GPU
 // draws it. Flat where the village stands, rolling meadow beyond, big hills at the horizon.
 
-import { CAVE_MOUTH, CAVE_OUT, LEDGE, LEDGE_Y, WAY, wayLevel } from './opening.js';
+import { CAVE_MOUTH, CAVE_OUT, LANDINGS, LEDGE, LEDGE_Y, WAY, landingEdge, wayLevel } from './opening.js';
 import { fbm, hash2, sstep } from './terrain-noise.js';
 import { WORLD_EDGE, landHeight, setLandBase } from './lands.js';
 import { CHURCH_GUARD, CHURCH_SITE, churchSite } from './church.js';
@@ -172,7 +172,7 @@ export const LAND_EDGE = WORLD_EDGE;
 
 // Paths, as (x, z) polylines with half-widths. Door steps to the well and a road out to the south-west.
 // (The worn way off Lisandra's ledge: the shelf, the steps and the path down onto the road. src/core/opening.js WAY.)
-export const CAVE_PATH = { pts: [LEDGE, ...WAY.map((p) => [p[0], p[1]])], w: 1.3 };
+export const CAVE_PATH = { pts: [LEDGE, ...WAY.map((p) => [p[0], p[1]])], w: 1.5 };
 export const PATHS = [
   CAVE_PATH,
   { pts: [[-1, -14.5], [-1.2, -8], [-1.5, -2], [-1.5, 1]], w: 2.0 },
@@ -189,6 +189,8 @@ export const PATHS = [
   // wing over the stair (the Sexton's Door, tools/interior/build_interior.py). It keeps well out of the knight's reach.
   { pts: [[112, 0.3], [126, 24], [150, 34], [190, 34], [212, 22], [216.9, 10.2]], w: 1.2 },
   { pts: [[-6, 36], [2.5, 34]], w: 1.4 }, { pts: [[12, 37], [3.5, 38]], w: 1.4 },
+  // The smith's yard: in off the south road, and worn bare from the grindstone to the fire (src/folk/smithy.js STATIONS).
+  { pts: [[-0.6, 27], [-4.2, 28.05], [-5.4, 28.22], [-7.6, 28.45], [-9.2, 28.45]], w: 2.4 },
   { pts: [[38, -31.6], [37, -25.4]], w: 1.4 }, { pts: [[44.3, -20], [43, -28.5]], w: 1.4 },
   { pts: [[-37, -14.4], [-33, -14], [-26, -8], [-14, -7], [-13, 0.5]], w: 1.4 }, { pts: [[-38.5, 18.4], [-36, 17.8], [-26, 9.5], [-12, 9.5], [-12, 0.5]], w: 1.4 },
   { pts: [[8, -32.6], [13, -28], [22, -19.5]], w: 1.4 }, { pts: [[-30, -29.6], [-22, -27], [-10, -26], [13, -28]], w: 1.4 },
@@ -237,6 +239,8 @@ export function pathAmount(x, z) {
     const d = Math.sqrt(segDist2(x, z, s.ax, s.az, s.bx, s.bz));
     best = Math.max(best, 1 - sstep(s.lo, s.hi, d + wob));
   }
+  // (Her landings are flagged, and nothing grows up through them: src/core/opening.js LANDINGS.)
+  if (openingTerrain && x < -280) for (const L of LANDINGS) best = Math.max(best, 1 - sstep(-0.2, 0.4, landingEdge(L, x, z) + wob * 0.2));
   const square = Math.hypot((x + 1.5) * 0.9, z - 1) + wob * 1.8;
   return Math.max(best, 1 - sstep(4.5, 10.5, square));
 }

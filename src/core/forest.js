@@ -2,7 +2,7 @@
 import { openingTerrain, PATHS, PLOTS, ROADS, SUMMIT, fbm, hash2, nearest, pathStretches, segDist2, sstep, terrainHeight } from './terrain.js';
 import { churchSite } from './church.js';
 import { oldChurchGround } from './town.js';
-import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, inCaveBox } from './opening.js';
+import { CAVE_MOUTH, CAVE_OUT, ESCORT_TO, inCaveBox, onWay } from './opening.js';
 import { landTrees, routeDist, treeCode } from './lands.js';
 import { huntEdge, huntPathEdge, huntTrimmed } from './hunts.js';
 
@@ -51,6 +51,8 @@ export function forestAmount(x, z) {
   }
   // (Nothing grows over Lisandra's cave: a trunk stands in the way at any height, and the ledge is bare rock.)
   if (openingTerrain && inCaveBox(x, z, 7)) return 0;
+  // (Nor on her steps and landings, nor so near them a trunk would stand in a wall: src/core/opening.js onWay.)
+  if (openingTerrain && onWay(x, z, 3.5)) return 0;
   if (openingTerrain) { a *= viewLane(x, z); if (a <= 0) return 0; }
   if (r < 260) {
     for (let i = 0; i < LONG_PATHS.length; i++) {
@@ -79,8 +81,8 @@ export function forestAmount(x, z) {
   if (huntPathEdge(x, z) < HUNT_LANE) return 0;
   // Out past the near woods it comes in stands, with the hillsides' grass between them.
   if (r > 240) a *= sstep(0.36, 0.5, fbm(x * 0.0072 + 20, z * 0.0072 - 8, 3)) * (1 - 0.35 * sstep(240, 420, r));
-  // Nothing grows on the roads out to the countries, nor right up to their edges.
-  if (r > 250 && a > 0) {
+  // Nothing grows on the roads out to the countries and the ways through the woods, nor right up to their edges.
+  if (r > 90 && a > 0) {
     const rd = routeDist(x, z);
     if (rd.road) a *= sstep(rd.road.w + 2.5, rd.road.w + 8, rd.d);
     if (a <= 0) return 0;

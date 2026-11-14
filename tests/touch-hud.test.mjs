@@ -28,6 +28,8 @@ test('nothing under a thumb overlaps anything else, on any phone', () => {
       // (the corner map is a square: how far the other's edge is from its nearest side or corner)
       const sq = a.square ? a : b.square ? b : null, o = sq === a ? b : a;
       const gap = sq ? Math.hypot(Math.max(0, Math.abs(o.x - sq.x) - sq.r), Math.max(0, Math.abs(o.y - sq.y) - sq.r)) - o.r : Math.hypot(a.x - b.x, a.y - b.y) - a.r - b.r;
+      // (Auto and the skull sit on the map's lower edge, over its frame: never so far that their middles are on it.)
+      if (sq && (o.id === 'autoBtn' || o.id === 'vskull')) { assert.ok(o.y >= sq.y + sq.r, `${w}x${h}: ${o.id} is too far over the map`); continue; }
       assert.ok(gap >= 2, `${w}x${h}: ${a.id} and ${b.id} are ${gap.toFixed(1)} px apart`);
     }
     for (const b of all) assert.ok(b.x - b.r >= 0 && b.x + b.r <= w && b.y - b.r >= 0 && b.y + b.r <= h, `${w}x${h}: ${b.id} is off the screen`);

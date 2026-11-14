@@ -74,10 +74,20 @@ await page.goto(`http://localhost:${port}/?auto&noopening&timer`, { waitUntil: '
 await page.waitForFunction(() => window.bm && bm.snap && bm.snap(), null, { polling: 1000 });
 await page.evaluate(() => { bm.fixScale(1); bm.renderer.hideVM = true; });
 await page.waitForTimeout(3000);
+// (WARM=seconds lets the game run that long first, at the hour of the first shot: for the town to get to its work.)
+// (RUN=seconds runs the town on by that many seconds at once before each place's pictures: bm.townRun.)
+if (process.env.WARM && shots.length) { await page.evaluate(([cm, h]) => { bm.setTime(h); bm.setCam(cm); }, [shots[0][1], shots[0][2]]); await page.waitForTimeout(+process.env.WARM * 1000); }
+// (FRAMES=n takes n pictures at each place, one after another, as name_0, name_1...: something moving, as far as a
+// software GPU's frames show it.)
+const frames = +(process.env.FRAMES || 1);
 for (const [name, c, hour] of shots) {
   await page.evaluate(([cm, h]) => { bm.setTime(h); bm.setCam(cm); }, [c, hour]);
+  if (process.env.RUN) await page.evaluate((s) => bm.townRun(s), +process.env.RUN);
   await page.waitForTimeout(1500);
-  await page.evaluate((n) => bm.shot(n), name);
+  for (let f = 0; f < frames; f++) {
+    await page.evaluate((n) => bm.shot(n), frames > 1 ? `${name}_${f}` : name);
+    if (frames > 1) await page.waitForTimeout(+(process.env.GAP || 250));
+  }
   console.log('shot', name);
 }
 await browser.close();

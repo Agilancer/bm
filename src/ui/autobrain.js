@@ -19,16 +19,17 @@
 //   grinding      for levels, and once every quest is done, where the menu says
 //
 // Where it walks: in the town, the woods round it and the catacombs, by paths from src/sim/nav.worker.js; out in the countries,
-// by the roads (src/core/lands.js ROUTES) and across country, the pines stepped round by the same worker, and the woken seals.
+// by the roads (src/core/roads.js: every road, lane and path in the land) and across country, the pines stepped round by the same worker, and the woken seals.
 // On the nav ground it never walks at where it's going without a path: it waits for one, and with no way there it leaves it.
 // Through a door it goes square on, by a place a pace before its middle and one a pace beyond; and it never talks to anyone,
 // opens a chest or takes anything up with a wall between (within()).
 import * as LAYOUT from '../core/layout.js';
 import { C, C_HERO, C_SIZE, CHARS_START, H, INPUT, MAX_SLIMES, MAX_TUMBLERS, SLIME_FLOATS, SLIMES_START, TUMBLER_FLOATS, TUMBLERS_START } from '../core/layout.js';
-import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY } from '../core/opening.js';
+import { CAVE_MOUTH, CAVE_OUT, HERD_CONTROL, OPENING, RUN_OUT, WAY, WAY_FOOT } from '../core/opening.js';
 import { ROUTE, cornerAhead, routeAt, routeDir, routeNear } from '../core/escort.js';
-import { ROADS, terrainHeight } from '../core/terrain.js';
-import { ROUTES, SITES } from '../core/lands.js';
+import { terrainHeight } from '../core/terrain.js';
+import { SITES } from '../core/lands.js';
+import { roadGraph } from '../core/roads.js';
 import { SEALS } from '../core/sites.js';
 import { inTown, townDist } from '../core/town.js';
 import { CHURCH_GUARD, churchAt, inChurch } from '../core/church.js';
@@ -91,11 +92,19 @@ const CATHEDRAL_GUARD = { x: CHURCH_GUARD[0], z: CHURCH_GUARD[1] };
 // The black knight: his post, his leash (BLACK.leash in src/sim/sim.worker.js), where it stands to work on him, and the level it
 // goes for him at (raised two each time he sends it back to the town).
 const BLACK_POST = CHURCH_GUARD, BLACK_LEASH = 20, SIEGE_RING = 29, BOSS_LEVEL = 11;   // (11 since the six trees: the level its build has a Thunderbolt at)
-const HYDRA_AT = churchAt(208, -128);
+// The Mourning Rift, where the Hydra lives: the one way to it is the passage north out of the Founders' Hall, and the bridge
+// over it has a gap in it. Kept out of for good, as a circle on the passage and the bridge: nothing past the hall's north
+// wall. (It used to be 46 m round the Hydra itself, straight through the rock: the Hydra is twenty metres under the halls
+// and can't come up, and that circle shut the way to the Abbots' Gallery and the Tomb and took in most of the Founders'
+// Hall, so it never went below the Reliquary.)
+const RIFT_AT = churchAt(186, -128), RIFT_R = 23, RIFT_Z = churchAt(0, -104)[1];
 const POSTS = [
   [-78, -3, 30, 18], [CATHEDRAL_GUARD.x, CATHEDRAL_GUARD.z, 28, 99], [-40, -150, 44, 14], [150, 110, 26, 8],
-  [-72, -78, 22, 4], [118, -64, 22, 4], [HYDRA_AT[0], HYDRA_AT[1], 46, 99],
+  [-72, -78, 22, 4], [118, -64, 22, 4], [RIFT_AT[0], RIFT_AT[1], RIFT_R, 99],
 ];
+// How long the catacombs are left once a round of them finds nobody (src/sim/undead.js RISE_AGAIN: their dead are up
+// again once it's been out of them four minutes).
+const DRY_LOOK = 40, DRY_FOR = 300, HUNT_DRY_FOR = 600;   // (seconds. The first: how long a round of looking has to have gone on. The last: any other quest's hunt that finds its grounds empty)
 // The lairs out in the land (src/core/tripo-monsters.js), by the level it wants before it goes near one.
 // What it says of each thing the living land calls it to (WILD_CALLS in src/core/wilds.js; src/ui/wilds.js calls), and
 // how many levels under the thing's own it'll still go: a raid has the other Tessariels in it, a tear nobody but itself.
@@ -458,28 +467,13 @@ class Nav {
 
 // ---------------------------------------------------------------- the long way: roads, country, seals
 
-let ROAD_NODES = null;
-function roadNodes() {
-  if (ROAD_NODES) return ROAD_NODES;
-  const nodes = [], edges = [];
-  const add = (x, z) => { nodes.push({ x, z }); edges.push([]); return nodes.length - 1; };
-  const link = (a, b, k = 1) => { const d = dist(nodes[a].x, nodes[a].z, nodes[b].x, nodes[b].z) * k; edges[a].push([b, d]); edges[b].push([a, d]); };
-  for (const r of ROUTES) {
-    let prev = -1;
-    for (const [x, z] of r.pts) { const i = add(x, z); if (prev >= 0) link(prev, i); prev = i; }
-  }
-  for (const r of ROADS) {
-    let prev = -1;
-    r.line.forEach(([x, z], j) => { if (j % 6 && j !== r.line.length - 1) return; const i = add(x, z); if (prev >= 0) link(prev, i); prev = i; });
-  }
-  // (Where one road leaves another, and the town's own ways between them: across country, a little dearer than a road.)
-  for (let a = 0; a < nodes.length; a++) for (let b = a + 1; b < nodes.length; b++) {
-    const d = dist(nodes[a].x, nodes[a].z, nodes[b].x, nodes[b].z);
-    if (d < 700) link(a, b, 1.3);
-  }
-  ROAD_NODES = { nodes, edges };
-  return ROAD_NODES;
-}
+// (The roads are the land's own graph, src/core/roads.js roadGraph: a node every 20 m down every road, lane and path, joined
+// where they meet. A metre across country costs ACROSS of them, so it keeps to the roads unless leaving them is shorter by
+// more than that.)
+const ACROSS = 1.6, ONTO = 260;
+// (And ground it's keeping off costs KEEP a metre walked through it, by road or not: a road that runs through a lair for
+// 200 m is as dear as a line across it for 200 m.)
+const KEEP = 25;
 const segNear = (ax, az, bx, bz, cx, cz) => {
   const dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz || 1;
   const t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cz - az) * dz) / L));
@@ -490,7 +484,7 @@ const segNear = (ax, az, bx, bz, cx, cz) => {
 
 // On the way down with Lisandra: where it gets on its shield (just past the foot of her steps) and where it's off it again
 // (in the flat at the foot of that last hill, a little way along), as distances along the way (src/core/escort.js).
-const RIDE_FROM = routeNear(WAY[8][0], WAY[8][1]) + 2.5, RIDE_TO = routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 16;
+const RIDE_FROM = routeNear(WAY[WAY_FOOT][0], WAY[WAY_FOOT][1]) + 2.5, RIDE_TO = routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) + 16;
 
 export class Brain {
   // o: { game, shared, input, pack, inventory, townUI, lands, spellbar, renderer, town, heroCount, base, opening, say(text), menu(), done() }
@@ -2002,10 +1996,13 @@ export class Brain {
 
   grindJob(m, where, why, say) {
     if (where === 'catacombs') {
-      if (!this.o.townUI.quests.state('dead_cant_wait')) where = 'woods';
+      // (Nobody left down there: hunt()'s round found none. A quest's work there waits; grinding goes to the woods meanwhile.)
+      const dry = this.skipping('dry:catacombs');
+      if (dry && /^(q|farm):/.test(why)) return null;
+      if (!this.o.townUI.quests.state('dead_cant_wait') || dry) where = 'woods';
       else {
         const sp = this.catacombSpots(m);
-        if (sp.length) return { kind: 'hunt', why, spots: sp, below: true, say: say || 'Grinding in the catacombs.' };
+        if (sp.length) return { kind: 'hunt', why, spots: sp, below: true, dries: true, say: say || 'Grinding in the catacombs.' };
         where = 'woods';
       }
     }
@@ -2025,10 +2022,11 @@ export class Brain {
     return { kind: 'hunt', why, spots, say: say || 'Grinding in the woods round Bellmourn.' };
   }
 
-  // The catacombs' spawn points it'll walk, deeper as it grows: never near the rift's Hydra.
+  // The catacombs' spawn points it'll walk, deeper as it grows: the Bell Crypt and the Reliquary, then down the second stair
+  // to the Founders' Hall, the Abbots' Gallery and the Tomb. Never the rift, nor the room across it.
   catacombSpots(m) {
     const from = churchAt(172, 0), n = 6 + m.lvl * 2;
-    return this.nav.spawns.filter(([x, z]) => dist(x, z, HYDRA_AT[0], HYDRA_AT[1]) > 60).sort((a, b) => dist(a[0], a[1], from[0], from[1]) - dist(b[0], b[1], from[0], from[1])).slice(0, n);
+    return this.nav.spawns.filter(([, z]) => z > RIFT_Z).sort((a, b) => dist(a[0], a[1], from[0], from[1]) - dist(b[0], b[1], from[0], from[1])).slice(0, n);
   }
 
   // ---- doing it
@@ -2105,7 +2103,9 @@ export class Brain {
       return;
     }
     this.say(`${j.say} (${R.n - left.length} of ${R.n}).`);
-    const p = left.reduce((a, b) => (dist(m.x, m.z, a[0], a[1]) <= dist(m.x, m.z, b[0], b[1]) ? a : b));
+    // (The nearest by the stairs, as hunt() takes them: this floor's before the one above or below.)
+    const far = (q) => dist(m.x, m.z, q[0], q[1]) + Math.abs((floorAt(q[0], q[1]) ?? m.y) - m.y) * 8;
+    const p = left.reduce((a, b) => (far(a) <= far(b) ? a : b));
     const k = `${p[0]},${p[1]}`;
     if (R.at !== k) { R.at = k; R.atT = R.t; R.since = this.t; R.look = 0; }
     // (A spot it can't get to, or can't get to in time: left. Only a "no way" that came for this spot counts.)
@@ -2165,7 +2165,10 @@ export class Brain {
       // The nearest first, then round the rest.
       const fresh = spots.filter((p) => !(this.lastSpots || []).includes(`${p[0]},${p[1]}`));
       const from = fresh.length ? fresh : spots;
-      this.patrol = j.roam ? from[Math.floor(Math.random() * from.length)] : from.reduce((a, b) => (dist(m.x, m.z, a[0], a[1]) <= dist(m.x, m.z, b[0], b[1]) ? a : b));
+      // (Below, the nearest by the stairs: a spot on the floor above is a long walk, however near it lies through the rock.
+      // From the far end of the Tomb it used to go back up to the Reliquary for one spot and down again for the next.)
+      const far = (p) => dist(m.x, m.z, p[0], p[1]) + (j.below ? Math.abs((floorAt(p[0], p[1]) ?? m.y) - m.y) * 8 : 0);
+      this.patrol = j.roam ? from[Math.floor(Math.random() * from.length)] : from.reduce((a, b) => (far(a) <= far(b) ? a : b));
       this.patrolT = 0;
     }
     const [px, pz] = this.patrol;
@@ -2177,6 +2180,24 @@ export class Brain {
         (this.lastSpots ||= []).push(`${px},${pz}`);
         if (this.lastSpots.length > Math.max(1, j.spots.length - 1)) this.lastSpots.shift();
         this.patrol = null;
+        // Every spot looked round and not a fight since the round began: there's nobody left here for now. Down in the
+        // catacombs each place's dead come the once till it's been away a while (src/sim/undead.js), a jelly camp fills
+        // again ten minutes after it's wiped (src/sim/slimes.js), and a lair in its own time. It leaves that work for a
+        // while and does something else. (It used to go round and round the Bell Crypt and the Reliquary for as long
+        // as it was watched, with twenty more to put down for the Sexton and nobody there; and to stand at the
+        // millpond ten minutes, five jellies down of the miller's eight, till the pond filled.)
+        if (j.dries || j.why.startsWith('q:')) {
+          const R = this.dryRun && this.dryRun.why === j.why && (this.foughtT ?? -99) < this.dryRun.t ? this.dryRun : (this.dryRun = { why: j.why, t: this.t, seen: new Set() });
+          R.seen.add(`${px},${pz}`);
+          // (And most of a minute of looking at the least: a hunt with one spot has seen it all at the first look, and
+          // a lair it has just come to may not have its bodies up yet. src/sim/tripo.js loads them as it wakes.)
+          if (this.t - R.t > DRY_LOOK && spots.every(([x, z]) => R.seen.has(`${x},${z}`))) {
+            this.dryRun = null; this.lastSpots = [];
+            if (j.dries) { this.giveUp('dry:catacombs', DRY_FOR); this.o.note?.('Auto-play: nobody left in the catacombs. Other work, till they rise again.'); }
+            else { this.giveUp(j.why, HUNT_DRY_FOR); this.o.note?.('Auto-play: nothing left to hunt here for now. Other work meanwhile.'); }
+            this.job = null; this.jobKey = '';
+          }
+        }
       }
       return;
     }
@@ -2439,6 +2460,13 @@ export class Brain {
       let hx = tx - m.x, hz = tz - m.z;
       const L = Math.hypot(hx, hz) || 1;
       hx /= L; hz /= L;
+      // Walking, and no nearer for half a minute: it's going to and fro before something (unstick() only knows standing
+      // still). Left, as anything it can't get to is. (On the hill over the catacombs it paced six minutes this way,
+      // turned back and forth by walls buried under it, till it was stopped: src/sim/world.js `under`.)
+      const pr = this.progress;
+      // (Half a minute of walking: a fight or a word on the way isn't counted.)
+      if (!pr || pr.leg !== W || L < pr.best - 6) this.progress = { leg: W, best: L, walked: 0 };
+      else if ((pr.walked += dt) > 30) { this.progress = null; this.lost(); return; }
       const sx = hx, sz = hz, far = Math.min(L, 45), aim = [m.x + hx * far, m.z + hz * far];
       const lp = this.loc;
       if (!lp || (!lp.pending && (lp.leg !== W || this.t - lp.t > 6 || dist(m.x, m.z, lp.to[0], lp.to[1]) < 5))) {
@@ -2495,45 +2523,79 @@ export class Brain {
   longWay(m, g) {
     const end = g;
     if (this.nav.inGrid(m.x, m.z, m.below) && this.nav.inGrid(g.x, g.z, !!g.below)) return [end];
-    const direct = dist(m.x, m.z, g.x, g.z);
-    const { nodes, edges } = roadNodes();
+    const { X, Z, start, nbr, wt, N, around } = roadGraph();
     const avoid = this.avoid(m);
     const lands = this.o.lands;
     const seals = SEALS.filter((s) => lands.awake.has(s.key));
-    // The graph: the roads, here, there, and the woken seals, all on one list.
-    const P = nodes.map((n) => ({ x: n.x, z: n.z })).concat([{ x: m.x, z: m.z }, end], seals.map((s) => ({ x: s.x, z: s.z, seal: s })));
-    const me = nodes.length, to = me + 1, s0 = to + 1;
-    const E = edges.map((l) => l.slice());
-    for (let i = nodes.length; i < P.length; i++) E.push([]);
-    const cost = (a, b, k) => {
-      const A = P[a], B = P[b];
-      let c = dist(A.x, A.z, B.x, B.z) * k;
-      for (const [x, z, r] of avoid) if (dist(A.x, A.z, x, z) > r && dist(B.x, B.z, x, z) > r && segNear(A.x, A.z, B.x, B.z, x, z) < r) c += 5000;
+    // The graph: the roads, then here, there, and the woken seals after them.
+    const me = N, to = N + 1, s0 = N + 2, NP = s0 + seals.length;
+    const px = (i) => (i < N ? X[i] : i === me ? m.x : i === to ? end.x : seals[i - s0].x);
+    const pz = (i) => (i < N ? Z[i] : i === me ? m.z : i === to ? end.z : seals[i - s0].z);
+    // Across country: a little dearer than a road, and through ground it's keeping off (that neither end is in) dearer still.
+    const across = (a, b) => {
+      const ax = px(a), az = pz(a), bx = px(b), bz = pz(b);
+      let c = dist(ax, az, bx, bz) * ACROSS;
+      for (const [x, z, r] of avoid) {
+        if (dist(ax, az, x, z) <= r || dist(bx, bz, x, z) <= r) continue;
+        const d = segNear(ax, az, bx, bz, x, z);
+        if (d < r) c += KEEP * 2 * Math.sqrt(r * r - d * d);
+      }
       return c;
     };
-    const join = (a, b, k) => { const c = cost(a, b, k); E[a].push([b, c]); E[b].push([a, c]); };
-    for (const i of [me, to, ...seals.map((_, k) => s0 + k)]) {
-      for (let j = 0; j < P.length; j++) {
-        if (j === i) continue;
-        const d = dist(P[i].x, P[i].z, P[j].x, P[j].z);
-        if (d < 900 || (i === me && j === to)) join(i, j, 1.3);
-      }
+    // (The road nodes near ground it's keeping off, so a stretch of road through it is priced too.)
+    const hot = new Map();
+    avoid.forEach(([x, z, r], k) => around(x, z, r + 25, (i) => { if (!hot.has(i)) hot.set(i, []); hot.get(i).push(k); }));
+    // Onto the roads and off them, from here, to there and at the seals; and between those across country.
+    const extra = new Map();
+    const join = (a, b, c) => { for (const [p, q] of [[a, b], [b, a]]) { if (!extra.has(p)) extra.set(p, []); extra.get(p).push(q, c); } };
+    const ends = [me, to, ...seals.map((_, k) => s0 + k)];
+    for (const i of ends) around(px(i), pz(i), ONTO, (j) => { if (dist(px(i), pz(i), X[j], Z[j]) < ONTO) join(i, j, across(i, j)); });
+    for (let a = 0; a < ends.length; a++) for (let b = a + 1; b < ends.length; b++) {
+      const i = ends[a], j = ends[b];
+      if (dist(px(i), pz(i), px(j), pz(j)) < 900 || (i === me && j === to)) join(i, j, across(i, j));
     }
     // Seal to seal: a step through.
-    for (let a = 0; a < seals.length; a++) for (let b = 0; b < seals.length; b++) if (a !== b) E[s0 + a].push([s0 + b, 30]);
-    // Avoided ground on the roads themselves.
-    const D = new Float64Array(P.length).fill(Infinity), prev = new Int32Array(P.length).fill(-1), done = new Uint8Array(P.length);
-    D[me] = 0;
-    for (;;) {
-      let u = -1, best = Infinity;
-      for (let i = 0; i < P.length; i++) if (!done[i] && D[i] < best) { best = D[i]; u = i; }
-      if (u < 0 || u === to) break;
-      done[u] = 1;
-      for (const [v, c0] of E[u]) {
-        let c = c0;
-        if (u < nodes.length && v < nodes.length) for (const [x, z, r] of avoid) if (segNear(P[u].x, P[u].z, P[v].x, P[v].z, x, z) < r) c += 5000;
-        if (D[u] + c < D[v]) { D[v] = D[u] + c; prev[v] = u; }
+    for (let a = 0; a < seals.length; a++) for (let b = a + 1; b < seals.length; b++) join(s0 + a, s0 + b, 30);
+    // The cheapest way (with no seals to step through, aimed: never cheaper than a metre a metre the rest of the way).
+    const aim = seals.length ? 0 : 1;
+    const D = new Float64Array(NP).fill(Infinity), prev = new Int32Array(NP).fill(-1), done = new Uint8Array(NP);
+    const heap = [], hn = [];
+    const push = (n, f) => {
+      heap.push(f); hn.push(n);
+      for (let i = heap.length - 1; i > 0;) { const p = (i - 1) >> 1; if (heap[p] <= heap[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; [hn[p], hn[i]] = [hn[i], hn[p]]; i = p; }
+    };
+    const pop = () => {
+      const n = hn[0], lf = heap.pop(), ln = hn.pop();
+      if (heap.length) {
+        heap[0] = lf; hn[0] = ln;
+        for (let i = 0; ;) {
+          const l = 2 * i + 1, r = l + 1; let k = i;
+          if (l < heap.length && heap[l] < heap[k]) k = l;
+          if (r < heap.length && heap[r] < heap[k]) k = r;
+          if (k === i) break;
+          [heap[k], heap[i]] = [heap[i], heap[k]]; [hn[k], hn[i]] = [hn[i], hn[k]]; i = k;
+        }
       }
+      return n;
+    };
+    const relax = (u, v, c) => { if (D[u] + c < D[v]) { D[v] = D[u] + c; prev[v] = u; push(v, D[v] + aim * dist(px(v), pz(v), end.x, end.z)); } };
+    D[me] = 0; push(me, 0);
+    while (heap.length) {
+      const u = pop();
+      if (done[u]) continue;
+      done[u] = 1;
+      if (u === to) break;
+      if (u < N) {
+        const hl = hot.get(u);
+        for (let q = start[u]; q < start[u + 1]; q++) {
+          const v = nbr[q];
+          let c = wt[q];
+          if (hl) for (const k of hl) { const [x, z, r] = avoid[k]; if (segNear(X[u], Z[u], X[v], Z[v], x, z) < r) { c += KEEP * wt[q]; break; } }
+          relax(u, v, c);
+        }
+      }
+      const e = extra.get(u);
+      if (e) for (let i = 0; i < e.length; i += 2) relax(u, e[i], e[i + 1]);
     }
     if (!Number.isFinite(D[to])) return [end];
     const chain = [];
@@ -2541,12 +2603,14 @@ export class Brain {
     chain.reverse();
     const out = [];
     for (let k = 0; k < chain.length; k++) {
-      const i = chain[k], p = P[i];
+      const i = chain[k], x = px(i), z = pz(i), seal = i >= s0 ? seals[i - s0] : null, next = chain[k + 1];
       // A seal stepped through: stand on it, and the next point is where it lets out.
-      if (p.seal && k + 1 < chain.length && P[chain[k + 1]].seal) { out.push({ x: p.x, z: p.z, seal: p.seal, to: P[chain[k + 1]].seal }); continue; }
-      out.push({ x: p.x, z: p.z });
+      if (seal && next >= s0) { out.push({ x, z, seal, to: seals[next - s0] }); continue; }
+      // (Down a road, a point every 25 m or so is plenty to walk to; the turns off it and the end, always.)
+      const last = out.at(-1);
+      if (i < N && next !== undefined && next < N && last && !last.seal && dist(last.x, last.z, x, z) < 25) continue;
+      out.push({ x, z });
     }
-    void direct;
     return out.length ? out : [end];
   }
 

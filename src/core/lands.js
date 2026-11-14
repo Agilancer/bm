@@ -11,6 +11,7 @@
 
 import { fbm, hash2, sstep } from './terrain-noise.js';
 import { OUTPOSTS } from './wilds-data.js';
+import { WAYS } from './roads-data.js';
 
 export const WORLD_EDGE = 5600;
 
@@ -125,9 +126,17 @@ export const ROUTES = [
   { name: 'the Cairn Path', w: 1.4, pts: [[1250, 90], [1210, -150], [1240, -372]] },
   { name: 'the Mill Track', w: 1.6, pts: [[-3020, -453], [-3100, -700], [-3135, -962]] },
 ];
+// What each is, for how it's drawn and laid (src/core/roads.js SURFACES): the great roads, paved once and worn back to gravel
+// in stretches; the plain roads between the towns; lanes to the lesser places; and footpaths.
+const CLASS_OF = { 'the Hill Road': 'great', 'the Vigil Road': 'great', 'the Frost Road': 'great', 'the Gallows Road': 'great', 'the Abbey Road': 'great',
+  "the Pilgrims' Road": 'road', 'the Fen Way': 'road', 'the Barrow Track': 'road' };
+for (const r of ROUTES) r.cls = CLASS_OF[r.name] || 'lane';
+// The roads, lanes and footpaths laid over the land between everything else (tools/roads/lay.mjs, src/core/roads-data.js), so
+// every place and most of what's out in the land can be walked to by a way you can see. (Left out while that tool lays them.)
+if (!globalThis.__bmNoWays) for (const w of WAYS) ROUTES.push({ ...w, way: true });
 // And the trails off them to the outposts out in the land (src/core/wilds.js; laid by tools/wilds/place.mjs): narrow, worn
 // ways like any other, so nothing grows on them, the map draws them and the trail to a place follows them.
-for (const o of OUTPOSTS) if (o.trail) ROUTES.push({ name: `the trail to ${o.name}`, w: 1.2, pts: o.trail, trail: true });
+for (const o of OUTPOSTS) if (o.trail) ROUTES.push({ name: `the trail to ${o.name}`, w: 1.2, pts: o.trail, trail: true, cls: 'path' });
 for (const r of ROUTES) {
   r.x0 = Math.min(...r.pts.map((p) => p[0])) - r.w - 40; r.x1 = Math.max(...r.pts.map((p) => p[0])) + r.w + 40;
   r.z0 = Math.min(...r.pts.map((p) => p[1])) - r.w - 40; r.z1 = Math.max(...r.pts.map((p) => p[1])) + r.w + 40;

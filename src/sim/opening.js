@@ -3,7 +3,7 @@
 import { CUES, CUE_IDS } from '../core/opening-script.js';
 import {
   CAST_AT, CAVE, CAVE_LINE, CAVE_MOUTH, CHAMBER_AXIS, COLLAPSE_END, DOOR_SPOT, DUST_AT, FALL, FALL_FROM, FOLD_SPOT, HEARTH, HEARTH_SPOT, HERD, KNEEL_UP,
-  LANTERN, LEAN_SPOT, LECTERN, OFFER_SPOT, PORTAL, ROUND_R, SEEN_SPOT, SNAP_AT, SNAP_SPOT, SPARK_AT, WAY, WRITE_SPOT, collapseEye, wakeEyeBack, wakeEyeH,
+  LANTERN, LEAN_SPOT, LECTERN, OFFER_SPOT, PORTAL, ROUND_R, SEEN_SPOT, SNAP_AT, SNAP_SPOT, SPARK_AT, WAY, WAY_FOOT, WAY_HALF, WAY_HEAD, WRITE_SPOT, collapseEye, wakeEyeBack, wakeEyeH,
   HERD_END, NAME_AT, OPENING, OPENING_SPAWN, OPENING_YAW, SWAP_AT, TUNNEL_LEN, WEAVE, WITCH_MARK, WITCH_STOP,
   caveNearest, chamberPoint, storyHolds,
 } from '../core/opening.js';
@@ -36,11 +36,13 @@ const LANTERN_SPOT = (() => { const d = [HEARTH_SPOT[0] - HEARTH[0], HEARTH_SPOT
 
 // Where on the way down (src/core/escort.js) things happen, as distances along it: the shelf, the head of the steps, a
 // landing partway down them, the road, the pines, the dead, and the town in sight.
-const MARKS = { shelf: 9, steps: routeNear(WAY[4][0], WAY[4][1]) - 4, speech: routeNear(WAY[6][0], WAY[6][1]), foot: routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) - 8,
-  stepsEnd: routeNear(WAY[8][0], WAY[8][1]), ambush: routeNear(-161.5, 134.3), sight: routeNear(-84, 63) };
+const MARKS = { shelf: 9, steps: routeNear(WAY[WAY_HEAD][0], WAY[WAY_HEAD][1]) - 4, speech: routeNear(WAY[WAY_HALF][0], WAY[WAY_HALF][1]), foot: routeNear(WAY.at(-1)[0], WAY.at(-1)[1]) - 8,
+  stepsEnd: routeNear(WAY[WAY_FOOT][0], WAY[WAY_FOOT][1]), ambush: routeNear(-161.5, 134.3), sight: routeNear(-84, 63) };
 MARKS.woods = MARKS.ambush - 34;
 // (How far down the way the dead come up: auto-play is off its shield and on its feet well before it. src/ui/autobrain.js.)
 export const AMBUSH_AT = MARKS.ambush;
+// (How near the road you have to be, going by that mark, for them to come up: a little way off it to either side.)
+const AMBUSH_NEAR = 30;
 MARKS.star = MARKS.sight - 45;
 
 // How she leads you down: this far ahead of you on foot, and further on a shield, where it's fast. Come up on her back and
@@ -116,7 +118,7 @@ export class Opening {
     // (Beat 8: the cast you're asked for, counted from the presses seen as it comes up.)
     this.castSeen = undefined;
     this.back = 0; this.deepest = 1e9; this.towardT = 0;
-    this.prog = 0; this.pace = 0; this.ambushed = null; this.ambushDone = false; this.aheadT = 0; this.slowAt = undefined;
+    this.prog = 0; this.pace = 0; this.ambushed = null; this.ambushDone = false; this.sprung = false; this.aheadT = 0; this.slowAt = undefined;
     this.endT = -1; this.fellT = undefined;
     // On the road: what she's yet to say, how long till she can say the next, and how long she's stood waiting for you.
     this.queued = []; this.talkLeft = 0; this.waitT = 0; this.keepAt = -99; this.keepN = 0;
@@ -513,8 +515,10 @@ export class Opening {
     const healing = !this.arrived && (HEAL.some((id) => this.queued.includes(id)) || (HEAL.includes(said) && this.cueT < CUES[said].dur));
     this.sim.paceCap = healing ? HEAL_PACE : mine < MARKS.stepsEnd && !player.surfing ? STEPS_PACE : undefined;
     this.stepBolts(dt);
-    // The dead, in the pines: she stands with you and fights it out.
-    if (!this.ambushDone && this.prog >= MARKS.ambush) {
+    // The dead, in the pines: they come up when you come down onto the bare ground below them (wherever she's got to, and
+    // whatever she's in the middle of saying), and she stands with you and fights it out.
+    if (!this.ambushDone && !this.fightS && this.youPassed(MARKS.ambush)) this.sprung = true;
+    if (!this.ambushDone && this.sprung) {
       const b = this.fight(dt, w, you, eye, far, mine);
       if (b) return b;
     }
@@ -541,7 +545,8 @@ export class Opening {
         if ((this.stillT > (this.prog < MARKS.stepsEnd + 4 ? STEPS_STILL : 0.7) && gap > HALT) || gap > FAR || (far > WANDER && gap > -4 && this.time > 0.6)) { this.halted = true; this.haltT = 0; }
       } else {
         this.haltT += dt;
-        if (this.haltT > 0.5 && (far < NEAR || gap < 0.6) && far < WANDER) { this.halted = false; this.turnT = 0.45; }
+        // (Gone by her and on down the way, however far off: she comes after you, not waits on for you where you were.)
+        if (this.haltT > 0.5 && (far < NEAR || gap < 0.6) && (far < WANDER || gap < -4)) { this.halted = false; this.turnT = 0.45; }
       }
     }
     // Her lead kept on you at your own pace; stopped, she slows to a stand in a couple of steps.
@@ -609,6 +614,12 @@ export class Opening {
     }
     // (Put on the way outright: she follows it, the trees stand clear of it, and nothing turns her aside.)
     return { to, speed: Math.max(this.pace, Math.hypot(to[0] - w.x, to[1] - w.z) / Math.max(dt, 1e-3)), pace: this.pace, look, gaits: GAITS, lift: this.hopLift() };
+  }
+
+  // Whether you've come down the road as far as s along it (or past it), and are on it or near it, not off up the hillside.
+  youPassed(s) {
+    const { player } = this.sim, at = routeNear(player.x, player.z), [x, z] = routeAt(at);
+    return at >= s && Math.hypot(player.x - x, player.z - z) < AMBUSH_NEAR;
   }
 
   // ---- the dead on the road -------------------------------------------------------------------------------------------------

@@ -47,6 +47,11 @@ export const PLACES = [
   { id: 'watch_gate', kind: 'post', at: [-34, 3.2], yaw: -Math.PI / 2, cap: 1 },
   { id: 'lesson', kind: 'lesson', at: [-10, 12], yaw: 0, r: 2.5, cap: 10 },
   { id: 'yard', kind: 'work', at: [-30, -26], yaw: 0, cap: 2 },
+  // The smith's yard, out under his lean-to (src/folk/smithy.js STATIONS has where he works in it): his own; the boy at the
+  // coal and the iron; the girl by the staffs, watching him.
+  { id: 'smithy', kind: 'work', at: [-9.3, 27.6], cap: 1 },
+  { id: 'smithy_coal', kind: 'work', at: [-12.1, 26.35], yaw: 0.3, r: 0.5, cap: 1 },
+  { id: 'smithy_watch', kind: 'work', at: [-7.2, 27.55], yaw: -1.9, r: 0.45, cap: 1 },
   { id: 'woods_edge', kind: 'work', at: [-60, 14], r: 6, cap: 1 },
 ];
 // A stall's keeper stands under the awning just behind the counter, 0.18 m in from its middle and facing out; customers 1.45 m out the

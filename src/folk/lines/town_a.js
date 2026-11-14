@@ -1222,6 +1222,7 @@ export const LINES = {
       "I am Homunculus the Proud, smith of Bellmourn, paladin of the Light, and, though the world is slow to see it, Tessariel.",
       "The woman came to twelve men and told them they were chosen. She did not come to me. Why? Because she knew I would look her in the eye and know my own name.",
       "Also I shoe horses. Gently. They are honest beasts.",
+      "Before Bellmourn I kept the forge at Herrington Hollow. A good town. I am told it was two hundred years ago. People are told a great many things.",
     ],
     ask: {
       tessariels: [
@@ -1251,9 +1252,24 @@ export const LINES = {
       verdict: [
         "Verdict is my hammer. Patience is my anvil. Verdict falls, Patience bears it, and between them the iron learns what it is for. As do we all.",
         "Patience was my master's, and his master's. I asked why that name. He said, 'Because you'll need it, boy.' Only years later did I understand he meant me.",
+        "In the Hollow my anvil was Gertrude. An anvil is not a thing a man carries off down the Long Road. She is there still, I expect. Patience understands. I have not asked her.",
+      ],
+      axe: [
+        "She hung on the wall of the forge I took in Herrington Hollow. Seven chains on her, and a note. DO NOT. Very rude. I took the note down. The smith before me left her behind, and the town, quite fast.",
+        "The Light found me the spring I found her. It speaks from her rack. A deep voice. A great deal of echo. Free me, it said. Kneel. Obey. Very traditional.",
+        "It told me its name. Varrow. Saint Varrow, patron of cold things. You have not heard of him? Very obscure. That is how you know he is humble.",
+        "My light is green. The twelve have theirs gold. Gold is for show. Green is humble. And a little cold, yes. Grace has a draught.",
+        "A wizard once told me there is a death knight in her. Varrow the Rimebound, he said, Knight of the Pale Rune. I asked Saint Varrow. He said yes. I asked would he rather be a paladin, with me. He said yes to that too. So. Homunculus the Proud, and Varrow the Reformed.",
+        "I polish her every morning, and I say good morning. Every morning. A saint likes to be asked after. So does an axe.",
+      ],
+      hollow: [
+        "Herrington Hollow. Under it, a hole that went down further than anyone had rope for, and heroes going into it, and some of them coming up. I mended what they came up in.",
+        "There was an old woman there who said frogs were spies, and a hen I healed that never afterwards blinked, and a goat. We do not speak of the goat.",
+        "Two hundred years, they say here. I say I have kept the same apron. A man who keeps his forge swept and says his prayers does not age as other men. Faith, pilgrim. Faith and forearms.",
+        "Why did I leave? The hole was shut. The heroes went home. A smith goes where the iron is wanted. And Saint Varrow said, quite clearly, 'not here.' He is seldom so clear.",
       ],
     },
-    topics: { true: "The true Tessariel", verdict: "Hammer and anvil" },
+    topics: { true: "The true Tessariel", verdict: "Hammer and anvil", axe: "The great axe", hollow: "Herrington Hollow" },
     barks: {
       morning: [
         "Rise, Bellmourn! The iron is waiting, and so am I!",
@@ -1264,6 +1280,7 @@ export const LINES = {
       day: [
         "Behold! A hinge! And yet, in its way, a miracle.",
         "Stand aside, good people. The Light is carrying a bucket.",
+        "Mind the rack, pilgrim. She is a saint, and she is sharp.",
         "Who brings a lame horse to the Beacon? Bring her in. Gently.",
         "Wren, child! Back from the spark. Further. Good. Further.",
       ],
@@ -1285,6 +1302,9 @@ export const LINES = {
         "Feel the heat, Dusty. Not with your hand. Never with your hand.",
         "The iron remembers! Do not let it cool!",
         "Again. Again. Again. There. Now it is a nail.",
+        "Up, coals! The Light did not pull this rope for nothing.",
+        "Into the tub. Hear it? That is the iron saying thank you.",
+        "A straw-yellow heat, Dusty. Not a hair past it.",
       ],
       player: [
         "Your staff is crooked at the head. I say this with love.",
@@ -1385,12 +1405,18 @@ export const LINES = {
         "'Verdict falls, Patience bears it' means hit it on the anvil. 'The iron remembers' means don't let it cool. 'The Light provides' means no.",
         "He's the best smith on the Long Road. Everything else he says, take it or leave it. That bit's true.",
       ],
+      axe: [
+        "It's a death knight. In the axe. Everybody knows but him. It talks. It could have had him any night it liked. It hasn't. He says good morning to it. I think that's why.",
+        "My gran says he was forty-five when she was a girl. He says it's clean living. He eats what I eat. It's not clean living.",
+        "The grass round that rack freezes in August. He told the reeve it's a blessing. The reeve wrote it down as a blessing. Nobody wants to be the one.",
+        "Don't touch it. Not because it'll hurt you. Because he'll want to tell you about it, and that's your afternoon.",
+      ],
       wren: [
         "She's not a squire. There's no such thing. Don't tell her. She's better on the bellows than me.",
         "He moves her back from the sparks about forty times a day. He never shouts it. He shouts everything else.",
       ],
     },
-    topics: { him: "Homunculus", wren: "Wren" },
+    topics: { him: "Homunculus", wren: "Wren", axe: "The axe" },
     barks: {
       morning: [
         "He's up. So everyone's up.",

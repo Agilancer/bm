@@ -18,6 +18,8 @@ import { buildHall } from './testhall.js';
 import { PIECES, cinderford, lesser, street, thornwick, way } from './places.js';
 import { dressLairs } from './lair-dress.js';
 import { dressWilds } from './wild-dress.js';
+import { dressRoads } from './roadside.js';
+import { smithYard } from './smithyard.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -1456,6 +1458,7 @@ export function buildSites(geometry = false, lean = false) {
   downs(K); fen(K); rustwood(K); ashen(K); barrow(K); rimeholt(K); gallows(K); deepwood(K); sorrowhorn(K);
   thornwick(K); cinderford(K); lesser(K);   // (the small towns and the lesser places: src/core/places.js)
   warrensMouth(K);
+  smithYard(K);   // (what's built in the smith's yard in Bellmourn: src/core/smithyard.js)
   // (The delves, and the Test Dungeon's white hall, out past the world's west edge: src/core/testhall.js. What stops a
   // body and what's stood on, not their corners.)
   K.deep = true; K.geometry = false;
@@ -1467,9 +1470,11 @@ export function buildSites(geometry = false, lean = false) {
   dressLairs(K, SEALS);
   // (And what's built at the land's outposts, its tear spots and the small things to find: src/core/wild-dress.js.)
   dressWilds(K);
+  // (And what lines the roads out in the land, last of all, clear of everything: src/core/roadside.js.)
+  dressRoads(K);
   K.finish();
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
-  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups };
+  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups, lamps: K.lamps || [] };
   return built;
 }
 

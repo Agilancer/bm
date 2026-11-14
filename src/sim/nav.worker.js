@@ -342,6 +342,8 @@ function boxHit(c, x, z, r, y) {
   const dx = x - c.x, dz = z - c.z;
   if (Math.abs(dx) + Math.abs(dz) > c.hx + c.hz + r + 1) return false;
   if (y > topOf(c) || y < (c.b || -1e9) - 1) return false;
+  // (Buried under the land, and the feet on the land: World.onLand. The catacombs' walls stood up through the hill.)
+  if (c.under && world.onLand(x, z, y)) return false;
   return Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r;
 }
 // The boxes by the 16 m cell they reach into, so a point only looks at its own few.
@@ -402,7 +404,7 @@ function probe(x, z, y, hx, hz, look) {
 }
 
 // Out in the land, a short way: A* on a half-metre grid laid round both ends just for this, each cell solid or not at the land's
-// own height there (so the catacombs' walls under it don't count, and their light wells, which stand up through it, do).
+// own height there (so the catacombs' walls under it don't count: World marks them `under`).
 // (On a portal's terrace, at the terrace's height, and no step between two cells of more than a stride's rise: up by its stairs.)
 const lY = new Float32Array(280 * 280);
 const LW = 280, LN = LW * LW, lSolid = new Uint8Array(LN), lG = new Float32Array(LN), lPar = new Int32Array(LN), lSeen = new Uint16Array(LN), lShut = new Uint16Array(LN);
