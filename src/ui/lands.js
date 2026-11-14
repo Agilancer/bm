@@ -11,7 +11,7 @@
 import { SEALS } from '../core/sites.js';
 import { CLIFF, POOL, SITES, WATERS, countryAt } from '../core/lands.js';
 import { roomAt } from './places.js';
-import { inDungeon } from '../core/dungeon.js';
+import { DELVES, inDungeon } from '../core/dungeon.js';
 import { art } from './skin.js';
 import { ABIL, H, INPUT } from '../core/layout.js';
 
@@ -212,7 +212,9 @@ export class Lands {
     bells.onclick = () => { this.o.audio.once('title_bells', 0.9); this.act('The bells ring out over the downs.'); };
     const travel = el('button', 'row', '<span><b>Travel</b><em>To any seal, woken or not, from wherever you stand</em></span>');
     travel.onclick = () => { this.menu.classList.remove('on'); this.listSeals(true); };
-    M.append(port, bells, travel);
+    const dun = el('button', 'row', `<span><b>Teleport to Dungeon</b><em>To the portal of any of the ${DELVES.length} dungeons, your party with you</em></span>`);
+    dun.onclick = () => { this.menu.classList.remove('on'); this.listDungeons(); };
+    M.append(port, bells, travel, dun);
     M.append(el('h3', null, 'Gear'));
     const pair = el('div', 'pair');
     const god = el('button', null, '<b>GEAR GOD</b><em style="display:block;font-size:12px;color:#a89878">Epic, Legendary, Mythical: skulls, staffs, shields, robes, gems, and gold</em>');
@@ -279,6 +281,35 @@ export class Lands {
     this.awake.add(s.key);
     this.o.audio.once('lock_unlock', 0.7);
     this.o.hud.tip(s.name, 3);
+  }
+
+  // ---- the dungeons (the skull's Teleport to Dungeon)
+
+  // Every delve (src/core/dungeon.js DELVES), easiest first: who it's for, and how far its portal is from you.
+  listDungeons() {
+    const T = this.travel;
+    T.innerHTML = '<h2>Teleport to Dungeon</h2><div style="color:#a89878">Every dungeon in the land. You arrive at its portal, your party with you.</div>';
+    const snap = this.o.snap(), px = snap[H.PX], pz = snap[H.PZ];
+    const list = DELVES.map((d, i) => ({ d, i })).sort((a, b) => a.d.level - b.d.level);
+    for (const { d, i } of list) {
+      const km = (Math.hypot(d.portal.x - px, d.portal.z - pz) / 1000).toFixed(1);
+      const b = el('button', 'seal', `<b>${esc(d.name)}</b> <em>level ${d.level} &middot; ${km} km</em>`);
+      b.onclick = () => this.goDungeon(i);
+      T.append(b);
+    }
+    const foot = el('div', 'foot');
+    const back = el('button', null, 'Back'); back.onclick = () => { T.classList.remove('on'); this.act(''); this.menu.classList.add('on'); };
+    const x = el('button', null, 'Stay'); x.onclick = () => this.close();
+    foot.append(back, x); T.append(foot);
+    T.classList.add('on');
+  }
+
+  goDungeon(i) {
+    const d = DELVES[i];
+    this.close();
+    this.o.cmd(26, i);
+    this.o.audio.once('lock_unlock', 0.7);
+    this.o.hud.tip(`${d.name}: its portal lets in a full party, a tank and a healer among them.`, 4);
   }
 
   // ---- charms
