@@ -27,6 +27,7 @@ import { POOL } from '../core/lands.js';
 import { CHURCH_GUARD, churchAt } from '../core/church.js';
 import { inTown } from '../core/town.js';
 import { ATTACKS, Knight, S } from './knight.js';
+import { struck } from './ragdoll.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { TownWatch } from './town-watch.js';
 import { Player } from './player.js';
@@ -536,6 +537,12 @@ class Sim {
       case 19: p.x = b; p.z = c; p.y = this.world.height(p.x, p.z); break;
       case 26: this.warrens?.toPortal(a); break;   // you and your party to delve a's portal (src/sim/dungeon.js toPortal)
       case 8: p.hp = p.maxHp; break;
+      case 27: { // a knight (or whatever's in its place; the nearest thing alive, with a under 0) killed outright, as by a blow from where you stand with weight b: to see it fall (tools/ragdoll/shots.mjs)
+        let m = k;
+        if (a < 0) { m = null; for (const q of this.knights) if (!q.dead && !q.dormant && q.rig && (!m || Math.hypot(q.x - p.x, q.z - p.z) < Math.hypot(m.x - p.x, m.z - p.z))) m = q; }
+        if (m) { struck(m, this, p.x, p.z, b || 30); m.hp = 0; if (m.seenHp !== undefined) m.seenHp = 0; }
+        break;
+      }
       case 9: k.hp = 1; break;
       case 16: if (k.cutNeck) k.cutNeck(this, ['l', 'm', 'r'][b | 0], c ? 'up' : 'head'); break;
       case 18: if (k.force) k.force(this, b | 0); break;

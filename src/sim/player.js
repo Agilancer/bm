@@ -10,6 +10,7 @@ import { clamp, damp, wrapAngle } from '../core/math.js';
 import { S } from './knight.js';
 import { leanAmount } from './anim.js';
 import { stepSurf } from './surf.js';
+import { struck } from './ragdoll.js';
 import { inDungeon } from '../core/dungeon.js';
 import { inHall } from '../core/testhall.js';
 
@@ -387,6 +388,7 @@ export class Player {
       if (sim.world.rayBoxes(this.x, this.y + EYE - 0.4, this.z, dx / d, 0, dz / d, Math.max(d - 0.4, 0.01)) > 0) continue;
       met = true;
       k.hp -= BASH_DMG * this.bite() * (1 + this.poise); k.playerHitT = sim.time;
+      struck(k, sim, this.x, this.z, BASH_POISE * 1.5);
       if (k.reel) k.reel(sim, 1.1);
       else k.onHit(sim, 'gash', this.x, this.z, BASH_POISE * (1 + this.poise));
       // (The Gravehart and the Hydra are far too big to shift.)
@@ -846,6 +848,7 @@ export class Player {
       g.a = [hit.lx - tx * half, hit.ly - ty * half, hit.lz - tz * half];
       g.b = [hit.lx + tx * half, hit.ly + ty * half, hit.lz + tz * half];
       k.hp -= tag.dmg * MELEE * this.bite() * (k.kind === 0 ? PLATE : 1); k.playerHitT = sim.time;
+      struck(k, sim, this.x, this.z, tag.poise);
       this.drink();
       this.hits++;
       sim.event(EV.GASH, wx, wy, wz, -dx, -dy, -dz, k.id);
@@ -885,6 +888,7 @@ export class Player {
     sim.event(EV.PUNCTURE, wx, wy, wz, nx, ny, nz, k.id, wasOpen ? 1 : 0);
     sim.hitStop(0.09);
     this.trauma = Math.min(1, this.trauma + 0.45);
+    struck(k, sim, this.x, this.z, 45);
     k.onHit(sim, wasOpen ? 'reopen' : 'puncture', this.x, this.z, 45 * (1 + this.poise));
   }
 
