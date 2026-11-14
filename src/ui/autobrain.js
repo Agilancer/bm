@@ -102,7 +102,7 @@ const POSTS = [
 ];
 // How long the catacombs are left once a round of them finds nobody (src/sim/undead.js RISE_AGAIN: their dead are up
 // again once it's been out of them four minutes).
-const DRY_FOR = 300, HUNT_DRY_FOR = 600;   // (the second: any other quest's hunt that finds its grounds empty)
+const DRY_LOOK = 40, DRY_FOR = 300, HUNT_DRY_FOR = 600;   // (seconds. The first: how long a round of looking has to have gone on. The last: any other quest's hunt that finds its grounds empty)
 // The lairs out in the land (src/core/tripo-monsters.js), by the level it wants before it goes near one.
 const LAIR_LEVEL = {
   werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 5,
@@ -2161,8 +2161,9 @@ export class Brain {
         if (j.dries || j.why.startsWith('q:')) {
           const R = this.dryRun && this.dryRun.why === j.why && (this.foughtT ?? -99) < this.dryRun.t ? this.dryRun : (this.dryRun = { why: j.why, t: this.t, seen: new Set() });
           R.seen.add(`${px},${pz}`);
-          // (And a quarter of a minute of looking at the least: a hunt with one spot has seen it all at the first look.)
-          if (this.t - R.t > 15 && spots.every(([x, z]) => R.seen.has(`${x},${z}`))) {
+          // (And most of a minute of looking at the least: a hunt with one spot has seen it all at the first look, and
+          // a lair it has just come to may not have its bodies up yet. src/sim/tripo.js loads them as it wakes.)
+          if (this.t - R.t > DRY_LOOK && spots.every(([x, z]) => R.seen.has(`${x},${z}`))) {
             this.dryRun = null; this.lastSpots = [];
             if (j.dries) { this.giveUp('dry:catacombs', DRY_FOR); this.o.note?.('Auto-play: nobody left in the catacombs. Other work, till they rise again.'); }
             else { this.giveUp(j.why, HUNT_DRY_FOR); this.o.note?.('Auto-play: nothing left to hunt here for now. Other work meanwhile.'); }
