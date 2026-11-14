@@ -1,5 +1,6 @@
 // Your party out of a fight (HeroWorld.heel in src/sim/hero.js), run with no page: on the road they face the way they go and
-// some run on ahead; standing, each does something of their own, and turning your head moves nobody.
+// now and then one takes the lead, not by running out in front but going by as you ease off for them (as auto-play does:
+// src/ui/autobrain.js letPassFor); standing, each does something of their own, and turning your head moves nobody.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { stage } from './hero-stage.mjs';
@@ -21,22 +22,31 @@ function party() {
   return { ...s, p, walk, stand };
 }
 
-test('on the road your party keeps up, faces the way it walks, and some of them run on ahead of you', () => {
-  const { heroes, p, walk } = party();
+test('on the road your party keeps up, faces the way it walks, and one takes the lead as you ease off for them', () => {
+  const { heroes, p, step } = party();
   const ahead = new Set();
-  let off = 0, n = 0, most = 0, worst = 0;
+  let off = 0, n = 0, most = 0, worst = 0, fast = 0, ease = 0, cd = 0, eased = 0;
   // (East, the way nobody's looking: the player's look stays north the whole way.)
-  const yaw = Math.PI / 2;
-  walk(90, yaw, 4.2, () => {
+  const yaw = Math.PI / 2, dt = 1 / 120;
+  step(90, () => {
+    // At a run; down to a walk for a few seconds when one of them wants by, and not again straight away.
+    const wants = heroes.some((h) => h.wantsLead);
+    if (ease > 0) { ease -= dt; if (ease <= 0) cd = 5; } else if ((cd -= dt) <= 0 && wants) { ease = 7; eased++; }
+    const v = ease > 0 ? 2.6 : 4.2;
+    p.vx = Math.sin(yaw) * v; p.vz = Math.cos(yaw) * v; p.x += p.vx * dt; p.z += p.vz * dt;
     for (const h of heroes) {
       const along = (h.x - p.x) * Math.sin(yaw) + (h.z - p.z) * Math.cos(yaw);
       if (along > 3) ahead.add(h.slot);
       worst = Math.max(worst, Math.hypot(h.x - p.x, h.z - p.z));
       if (h.speed > 2) { off += Math.abs(wrap(h.yaw - Math.atan2(h.vx, h.vz))); n++; }
+      // (Going by, a leader keeps to about the pace you had: never off at a sprint.)
+      if (h.own?.lead && h.speed > 4.2 * 1.35) fast++;
     }
     most = Math.max(most, heroes.filter((h) => h.own?.lead).length);
   });
-  assert.ok(ahead.size >= 1, 'in a minute and a half on the road, someone ran on ahead');
+  assert.ok(eased >= 1, 'one of them wanted by');
+  assert.ok(ahead.size >= 1, 'in a minute and a half on the road, with you easing off for them, one took the lead');
+  assert.equal(fast, 0, 'nobody ran out in front at a sprint');
   assert.ok(most <= 2, `no more than two ahead at once (${most})`);
   assert.ok(worst < 25, `nobody was left behind or ran off (${worst.toFixed(1)} m)`);
   assert.ok(off / n < 0.35, `they face the way they walk (${(off / n).toFixed(2)} rad off, on average)`);

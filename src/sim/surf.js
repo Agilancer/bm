@@ -10,8 +10,8 @@ const G = 14;           // the player's own gravity
 const HOLD = 0.12;      // Space held this long, off the ground: on the shield
 const RETAP = 0.2;     // Space let go this long and you step off; pressed again sooner, a hop
 const COOL = 0.25;      // off it this long before getting on again
-const VMAX = 26;
-const DRAG = 0.011;     // the air against you (x speed squared)
+const VMAX = 30;        // the fastest it goes
+const DRAG = 0.0091;    // the air against you (x speed squared): a long steep run settles about a tenth faster than at 0.011
 const GRIP = 0.12, GRIP_STONE = 0.2;   // how much the ground holds it back, a share of its weight
 const BRAKE = 5;        // S, against the way you go
 const CARVE = 17, TURN = 2.6, AIR_TURN = 0.8;   // A and D: the sideways grip (m/s/s) and the fastest turn (rad/s)
@@ -64,6 +64,9 @@ function move(p, dt, sim) {
     return false;
   }
   p.vx = mx / dt; p.vz = mz / dt;
+  // (Slid along something, or pushed out of it: never faster for it.)
+  const got = Math.hypot(p.vx, p.vz);
+  if (got > hs) { p.vx *= hs / got; p.vz *= hs / got; }
   return true;
 }
 
