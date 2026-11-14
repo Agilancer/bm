@@ -3,7 +3,7 @@
 // (H.TP: src/sim/sim.worker.js stepBody, src/core/third.js). Not in Lisandra's cave: the switch isn't there until you're out.
 import { H, INPUT } from '../core/layout.js';
 import { thirdAllowed } from '../core/third.js';
-import { setIcon } from './icons.js';
+import { icon, setIcon } from './icons.js';
 
 export class ViewSwitch {
   // o: { input, shared, settings, save(), tip(text, secs), busy(): a panel or the pause is up }
@@ -18,7 +18,6 @@ export class ViewSwitch {
     this.btn = document.createElement('div');
     this.btn.id = 'viewBtn';
     this.btn.title = 'First or third person (V)';
-    this.btn.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg><kbd>V</kbd>';
     document.getElementById('spells').appendChild(this.btn);
     this.touchBtn = document.getElementById('bView');
     const press = (e) => { e.preventDefault(); e.stopPropagation(); this.toggle(); };
@@ -61,8 +60,10 @@ export class ViewSwitch {
     const shown = this.allowed ? '' : 'none', third = this.third && this.allowed;
     this.btn.style.display = shown;
     this.btn.classList.toggle('on', third);
-    // (The button shows the view it would give you.)
-    if (this.touchBtn) { this.touchBtn.style.display = this.allowed ? 'flex' : 'none'; setIcon(this.touchBtn, third ? 'view1' : 'view3'); }
+    // (The eye on the bar and the phone's VIEW show the view it would give you.)
+    const ic = third ? 'view1' : 'view3';
+    if (this.btn.dataset.ic !== ic) { this.btn.dataset.ic = ic; this.btn.innerHTML = `${icon(ic)}<kbd>V</kbd>`; }
+    if (this.touchBtn) { this.touchBtn.style.display = this.allowed ? 'flex' : 'none'; setIcon(this.touchBtn, ic); }
     document.body.classList.toggle('third', third);
   }
 
