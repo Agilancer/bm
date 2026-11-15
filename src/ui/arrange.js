@@ -21,7 +21,8 @@ const FAR = 4000;   // (no shift is further than this, in units: anything more i
 export const TOUCH_PLACES = 2;
 
 // What can be moved. touch / desk: the elements that make it on that screen (none: it isn't there).
-const slot = (k) => ({ key: `slot${k + 1}`, name: `Spell ${k + 1}`, touch: [`#spells .spell[data-k="${k}"]`] });
+// (The twelve slots of src/ui/spellbar.js: 1 to 9, then the Utility three on 0, - and +.)
+const slot = (k) => ({ key: `slot${k + 1}`, name: k < 9 ? `Spell ${k + 1}` : `Utility spell ${['0', '−', '+'][k - 9]}`, touch: [`#spells .spell[data-k="${k}"]`] });
 export const PIECES = [
   { key: 'frame', name: 'Level and bars', touch: ['#levelBox', '#vitals'], desk: ['#levelBox', '#vitals'] },
   { key: 'buffs', name: "What's on you", touch: ['#buffs'], desk: ['#buffs'] },
@@ -41,7 +42,7 @@ export const PIECES = [
   { key: 'take', name: 'Take and talk', touch: ['#bTake', '#take'] },
   { key: 'run', name: 'Run', touch: ['#bSprint'] },
   { key: 'stick', name: 'Stick', touch: ['#stickHome'] },
-  ...[0, 1, 2, 3, 4, 5].map(slot),
+  ...Array.from({ length: 12 }, (_, k) => slot(k)),
   { key: 'spellName', name: "Spell's name", touch: ['#spellName'] },
   { key: 'menu', name: 'Menu', touch: ['#bPause'] },
   { key: 'pack', name: 'Pack', touch: ['#bPack'] },

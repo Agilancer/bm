@@ -5,7 +5,7 @@
 //
 // What it does, most pressing first:
 //   the opening   waits out the cave, answers to a name, walks out, and follows Lisandra down the Long Road to Bellmourn
-//   a fight       anything that means it harm, or what it's hunting: the staff and all six spells on its bar, each for what
+//   a fight       anything that means it harm, or what it's hunting: the staff and all twelve spells on its bar, each for what
 //                 it's good at, and only down a clean line (never through a wall or round a corner: it steps out for the
 //                 shot); it backs off and keeps its distance, takes a blow on its shield when it has breath to, and now and
 //                 then rides the shield away from them or across them, shooting as it goes
@@ -39,7 +39,7 @@ import { WILD_CALLS } from '../core/wilds.js';
 import { CAMPS } from '../sim/slimes.js';
 import { SPELLS } from '../sim/spells.js';
 import { AMBUSH_AT } from '../sim/opening.js';
-import { NODES, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
+import { NODES, UTILITY, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
 import { RULES, isNight, placeSpot } from '../folk/quests.js';
 import { QUESTS } from '../folk/lines/quests.js';
 import { PEOPLE, POSTED } from '../folk/people.js';
@@ -339,13 +339,16 @@ const BOLTS = new Set(['firebolt', 'frost', 'lightning', 'missiles', 'lance', 'c
 const PANIC = ['nova', 'thunderclap', 'turn'], SKY = ['meteor', 'thunder'];
 const CORE = ['firebolt', 'mend'], CORE_ALL = [...CORE, ...PANIC, ...SKY];
 const coreOf = (known) => [...CORE, PANIC.find(known), SKY.find(known)].filter(Boolean);
-// What the two slots past those are for, so the six between them cover a fight: one for a crowd or a line of them, one to
-// pour on a single mark or to get it out of trouble. Each slot's spells take their turn in it (bar()).
+// What the slots of 1 to 9 past those are for, so the nine between them cover a fight: for a crowd or a line of them, and to
+// pour on a single mark or to get it out of trouble, one of each in turn. Each list's spells take their turn on it (bar()).
 const SLOT_A = ['chain', 'well', 'lightning', 'blizzard', 'lance', 'plague', 'wallfire', 'spikes',
   'comet', 'firenova', 'phoenix', 'inferno', 'coldcone', 'prism', 'orb', 'shatter', 'zero', 'thorns', 'boulder', 'vine', 'quake', 'rune', 'crescent', 'stasis', 'starfall',
-  'disintegrate', 'fork', 'seed', 'thunderclap', 'staticfield', 'tempest', 'turn', 'sanctuary'];
-const SLOT_B = ['arcaneblast', 'drain', 'frost', 'missiles', 'firebeam', 'blades', 'blink',
-  'wyrm', 'bomb', 'rime', 'frostray', 'stone', 'stoneskin', 'monolith', 'spark', 'thunder', 'fleet', 'renew', 'aegis', 'empower', 'stillness'];
+  'disintegrate', 'fork', 'seed', 'thunderclap', 'staticfield', 'tempest'];
+const SLOT_B = ['arcaneblast', 'frost', 'missiles', 'firebeam', 'blades', 'blink',
+  'wyrm', 'bomb', 'rime', 'frostray', 'stone', 'stoneskin', 'monolith', 'spark', 'thunder'];
+// The Utility school's (UTILITY: src/sim/skills.js), which alone go in the bar's last three slots, on 0, - and +: Mend (in
+// CORE) and Turn the Dead first, when it knows them, then these in their turn, so in time each has been in its hands.
+const UTIL_TURN = ['turn', 'renew', 'aegis', 'sanctuary', 'stillness', 'empower', 'fleet', 'drain'];
 // What's never on its bar: cast when it's wanted, by the book (a light underfoot down among the dead), or never.
 const OFF_BAR = new Set(['wisp', 'stormstep']);
 // Its own cold, after which a Shatter pays; the big slow casts it waits a moment after; its lightning.
@@ -418,8 +421,11 @@ export function coverage(foeNames = null) {
   for (const k of Object.keys(USE)) if (!(k in SP)) out.push(`spell ${k}: a use for it in USE, and it's gone from SPELLS`);
   for (const sp of SPELLS) if (!NODES[sp.key]) out.push(`spell ${sp.key}: in no tree, so it can never be learned`);
   out.push(...buildGaps());
-  for (const sp of SPELLS) if (!CORE_ALL.includes(sp.key) && !SLOT_A.includes(sp.key) && !SLOT_B.includes(sp.key) && !OFF_BAR.has(sp.key)) out.push(`spell ${sp.key}: in neither of its bar's turning slots (SLOT_A for a crowd, SLOT_B for one mark), so it's only ever a stopgap on its bar`);
-  for (const k of [...CORE_ALL, ...SLOT_A, ...SLOT_B]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
+  for (const sp of SPELLS) if (!CORE_ALL.includes(sp.key) && !SLOT_A.includes(sp.key) && !SLOT_B.includes(sp.key) && !UTIL_TURN.includes(sp.key) && !OFF_BAR.has(sp.key)) out.push(`spell ${sp.key}: in none of its bar's turning lists (SLOT_A for a crowd, SLOT_B for one mark, UTIL_TURN for 0, - and +), so it's only ever a stopgap on its bar`);
+  for (const k of [...CORE_ALL, ...SLOT_A, ...SLOT_B, ...UTIL_TURN]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
+  // (0, - and + take the Utility school's alone: UTIL_TURN is that school's, and SLOT_A and SLOT_B, for 1 to 9, have none of it.)
+  for (const k of UTIL_TURN) if (k in SP && !UTILITY.has(SP[k])) out.push(`spell ${k}: in UTIL_TURN, and not a Utility spell, so 0, - and + won't take it`);
+  for (const k of [...SLOT_A, ...SLOT_B]) if (k in SP && UTILITY.has(SP[k])) out.push(`spell ${k}: a Utility spell in SLOT_A or SLOT_B; it belongs in UTIL_TURN, for 0, - and +`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
   out.push(...warrensCoverage());
   // (Every place below ground a quest sends it into is a dungeon it can run again: DUNGEONS.)
@@ -826,36 +832,53 @@ export class Brain {
     if (S.spend(id)) { this.o.log?.learned?.(id, S.rank(id), this.o.pack.level); this.say(first ? `Learning ${SPELLS[NODES[id].spell].name}.` : 'A point spent in the book.'); if (first) this.o.event?.('spell', { name: SPELLS[NODES[id].spell].name }); }
   }
 
-  // Its bar, set in the book as a player sets theirs from what it's learned, so the six between them cover a fight: what it
-  // leans on (Firebolt to open and from range; Mend; the first it knows of a Frost Nova, a Thunderclap or Turn the Dead,
-  // for when they're on it; the first it knows of a Meteor or a Thunderbolt, for a crowd, something big or a raised
-  // shield), one more for a crowd or a line of them (SLOT_A) and one to pour on a single mark or get it out of trouble
-  // (SLOT_B). Those two change every four minutes among what it knows, so that in time every spell has been in its hands
-  // (and in the log). With a healer at its back, Mend's place goes to another of them, and with a tank holding them still,
-  // to something for the crowd.
+  // Its bar, set in the book as a player sets theirs from what it's learned: the nine of 1 to 9 between them cover a fight,
+  // and the three of 0, - and + (the Utility school's alone: src/ui/spellbar.js) keep it standing. The nine: what it leans on
+  // (Firebolt to open and from range; the first it knows of a Frost Nova or a Thunderclap, for when they're on it; the first
+  // it knows of a Meteor or a Thunderbolt, for a crowd, something big or a raised shield), then one for a crowd or a line of
+  // them (SLOT_A) and one to pour on a single mark or get it out of trouble (SLOT_B), turn about till they're full. The
+  // three: Mend and Turn the Dead when it knows them, then the rest of the school (UTIL_TURN). What's on in turn changes
+  // every four minutes among what it knows, so that in time every spell has been in its hands (and in the log). With a
+  // healer at its back, Mend's place goes to another, and with a tank holding them still, the nine lean to the crowd.
   bar() {
     const sb = this.o.spellbar, known = [...sb.known].sort((a, b) => a - b);
     const party = this.snap ? this.party(this.snap).filter((h) => !h.dead) : [];
     const healer = party.some((h) => h.role === 'heal'), tank = party.some((h) => h.role === 'tank');
     const usable = (i) => i !== undefined && sb.known.has(i) && !SPELLS[i].noBar && USE[SPELLS[i].key];
-    const want = coreOf((k) => sb.known.has(SP[k])).filter((k) => !(k === 'mend' && healer)).map((k) => SP[k]).filter(usable);
+    // (A bar with no Utility slots, as an older one: everything goes in its one row.)
+    const ALL = sb.loadout.length, MAIN = Math.min(ALL, sb.main ?? ALL), ROOM = ALL - MAIN;
+    const util = (i) => ROOM > 0 && UTILITY.has(i), fight = (i) => !util(i);
+    const core = coreOf((k) => sb.known.has(SP[k])).filter((k) => !(k === 'mend' && healer)).map((k) => SP[k]).filter(usable);
+    const nine = core.filter(fight), three = core.filter(util).slice(0, ROOM);
     this.stormOnBar = STORM.some((k) => sb.loadout.includes(SP[k]));
     const turn = Math.floor((this.o.log?.d.t ?? this.t) / 240);
-    const take = (list, n) => {
-      const have = list.map((k) => SP[k]).filter((i) => usable(i) && !want.includes(i));
-      for (let k = 0; k < have.length && n > 0; k++) { const i = have[(turn + k) % have.length]; if (!want.includes(i)) { want.push(i); n--; } }
+    const taken = (i) => nine.includes(i) || three.includes(i);
+    // (n more of the list into the row, those it knows of it taking their turn: from this four minutes' place in it on.)
+    const take = (list, n, row, ok) => {
+      const have = list.map((k) => SP[k]).filter((i) => usable(i) && ok(i) && !taken(i));
+      for (let k = 0; k < have.length && n > 0; k++) { const i = have[(turn + k) % have.length]; if (!taken(i)) { row.push(i); n--; } }
     };
-    // (A tank holding them in a knot: two for the crowd. Otherwise one of each kind.)
-    take(SLOT_A, tank && healer ? 2 : 1);
-    take(SLOT_B, 1);
-    take(SLOT_A, 6 - want.length);
-    take(SLOT_B, 6 - want.length);
-    // (Anything else it knows, to fill what's left.)
-    for (const i of known) if (want.length < 6 && usable(i) && !want.includes(i)) want.push(i);
-    want.slice(0, 6).forEach((i, k) => { if (sb.loadout[k] !== i) sb.assign(k, i); });
+    // (A tank holding them in a knot: two for the crowd first. Then one of each kind, turn about, till the nine are full.)
+    take(SLOT_A, tank && healer ? 2 : 1, nine, fight);
+    take(SLOT_B, 1, nine, fight);
+    for (let was = -1; nine.length < MAIN && nine.length !== was;) {
+      was = nine.length;
+      take(SLOT_A, 1, nine, fight);
+      if (nine.length < MAIN) take(SLOT_B, 1, nine, fight);
+    }
+    // (Anything else it knows, to fill what's left of the nine.)
+    for (const i of known) if (nine.length < MAIN && usable(i) && fight(i) && !taken(i)) nine.push(i);
+    // The three: Turn the Dead when it has it, then the rest of the school in turn. (A bar with no three: they're in the
+    // row, after the rest.) And a Utility spell the three have no room for goes in the nine, if there's room there.
+    take(['turn'], ROOM - three.length, three, util);
+    take(UTIL_TURN, ROOM - three.length, three, util);
+    take(UTIL_TURN, MAIN - nine.length, nine, (i) => i >= 0);
+    nine.slice(0, MAIN).forEach((i, k) => { if (sb.loadout[k] !== i) sb.assign(k, i); });
+    three.forEach((i, k) => { if (sb.loadout[MAIN + k] !== i) sb.assign(MAIN + k, i); });
   }
 
-  // A cast: from its slot on the bar if it's there (the slot's key, as 1 to 6 do), else chosen in the book and cast with F.
+  // A cast: from its slot on the bar if it's there (the slot's key, as 1 to 9, 0, - and + do), else chosen in the book and
+  // cast with F.
   // What's held is held for `hold` seconds: a Firebolt gathering, a channel pouring. Anything else is a tap, the key down
   // and up again, as a player hits it: held, a key casts again the moment the first is done, and a hitch in the frames
   // while it's down casts the spell over and over till the mana's gone. True if it went.

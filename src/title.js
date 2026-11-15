@@ -87,14 +87,14 @@ const SETTINGS = `
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 
 const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],
-  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['V', 'first or third person, once you\'re out of the cave'], ['Wheel', 'out of first person and further back, or in again'], ['Shift + wheel', 'turn the spell bar'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
+  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['1 to 9', 'cast the spell in that slot'], ['0  −  +', 'cast the Utility spell in that slot'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['V', 'first or third person, once you\'re out of the cave'], ['Wheel', 'out of first person and further back, or in again'], ['Shift + wheel', 'turn the spell bar'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
 const HOWTO = `
   <h2>How to Play</h2><div class="t-rule"></div>
   <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
   <div class="t-touchkeys">
     <p><b>Left thumb</b> moves: push it right out to run, or press the <b>run</b> button to keep running. <b>Right thumb</b> looks, on or off the buttons.</p>
     <p>The big button fires your <b>staff</b>. Round it: <b>dodge</b>, <b>jump</b> (hold it to ride your shield), and <b>guard</b> when a shield is on your arm.</p>
-    <p>Your six <b>spells</b> stand in a ring round those. Tap one to cast it; hold it to keep casting.</p>
+    <p>Your <b>spells</b> stand in rings round those: one to six, seven to nine further out, and outermost the three <b>Utility</b> slots, 0, − and +. Tap one to cast it; hold it to keep casting.</p>
     <p>When something is in reach a gold button comes up beside them: <b>take</b>, <b>talk</b> or <b>open</b>.</p>
     <p>Along the top: the <b>menu</b> (save, load, settings), your <b>pack</b>, your <b>spellbook</b>, your <b>quest log</b>, and the view from behind. Tap the <b>map in the corner</b> for the big one. <b>Move Buttons</b> on the menu puts any button where your thumbs want it.</p>
     <p>In the pack: tap to lift and set down, double tap to equip or stow, tap outside to drop.</p>
