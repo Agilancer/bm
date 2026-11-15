@@ -111,6 +111,15 @@ You start on the road south of town with a common staff of a random kind (a diff
 back. The controls don't change: you look, move, shoot, cast, guard and ride as before, and the X in the middle of the
 screen is still what you hit. Which view you left it in is kept with the settings.
 
+The **mouse wheel** does it too, with the mouse held by the game (`ViewSwitch.wheel` in `src/ui/view.js`): a notch out of
+first person stands the camera just behind you (`THIRD.close`, 1.5 m), and each notch out takes it 1.22 times further
+back, up to 12 m (`THIRD.far`, three times V's 4 m). Each notch in brings it nearer, and one more once it's as near as it
+goes is first person again (only once the wheel's been still a moment with it there, so a spin in stops at your back).
+How far back you left it is kept with the settings (`zoom`) and V goes back to it; after the wheel's taken you into
+first person, V's own 4 m. Coming in it glides; walls and the ground still bring it in at once. Under a roof, in the
+church, a delve, the test hall or anywhere down below it goes no further back than 4 m, since the ceilings aren't in
+what the camera's tested against. **Shift** and the wheel turn the spell bar.
+
 - **Not in Lisandra's cave.** The switch isn't shown until you're out and the walk down has begun (`thirdAllowed` in
   `src/core/third.js`), and `V` only says so. Your staff and spells wait for the same moment (`Sim.unarmed` in
   `src/sim/sim.worker.js`): from giving your name until the cave has fallen in, a click or a cast does nothing. The waking
@@ -333,7 +342,7 @@ What stands at each place in `SITES` (`src/core/lands.js`) is plain geometry mad
 
 The land has one road system now (`src/core/roads.js`), and everything uses it: the ground's shader draws it, both maps draw it, the other Tessariels walk it, and so do auto-play and the quest trail.
 
-- **The ways.** The old ones stay (the town's paths and the Long Road in `src/core/terrain.js`, the named roads and outpost trails in `ROUTES`, `src/core/lands.js`). On top of them, `node tools/roads/lay.mjs` lays about 1,000 more, some 237 km of roads, lanes and footpaths, into `src/core/roads-data.js`. It links every place, every delve's portal, the standing battles, the hunting grounds, the lairs and camps in the woods round Bellmourn, a ring of waymarks round the town and a lattice over the open country. It also lays footpaths out to the outposts and the things to find. Each way is the cheapest walk over an 8 m grid: slopes cost more, water and anything built can't be crossed, and a square already on a road costs a third, so the new ways join the old ones instead of running beside them. No way crosses a lair out in the land (no closer than its width plus the lair's plus 8 m), a tear's spot (8 m clear) or a thing to find (4 m clear). Each way is cut short of anything built it would run into. **Never edit `roads-data.js` by hand.** After moving a place, a lair, an outpost or a road, run the tool again, then `node tools/lands/check-sites.mjs` and `node --test tests/roads.test.mjs`.
+- **The ways.** The old ones stay (the town's paths and the Long Road in `src/core/terrain.js`, the named roads and outpost trails in `ROUTES`, `src/core/lands.js`). On top of them, `node tools/roads/lay.mjs` lays about 1,000 more, some 237 km of roads, lanes and footpaths, into `src/core/roads-data.js`. It links every place, every delve's portal, the standing battles, the hunting grounds, the lairs and camps in the woods round Bellmourn, a ring of waymarks round the town and a lattice over the open country. It also lays footpaths out to the outposts and the things to find. Each way is the cheapest walk over an 8 m grid: slopes cost more, water and anything built can't be crossed, and a square already on a road costs a third, so the new ways join the old ones instead of running beside them. No way crosses a lair out in the land (no closer than its width plus the lair's plus 8 m), a tear's spot (8 m clear) or a thing to find (4 m clear). Nor does a way cross a delve's terrace or the flight up it (`portalStair(d).boxes` in `src/core/sites.js`): they're walked on, so they were never among the walls the tool kept off, and four ways ran over them. A way to a portal ends a few strides out in front of the foot of its steps. Each way is cut short of anything built it would run into. **Never edit `roads-data.js` by hand.** After moving a place, a lair, an outpost or a road, run the tool again, then `node tools/lands/check-sites.mjs` and `node --test tests/roads.test.mjs`.
 - **What they're laid with.** Each way's class (`great`, `road`, `lane`, `path`) and where it runs decide its surface (`surfaceOf`): flagstones on the great roads near the towns and in stretches along them, setts on the roads and lanes coming into a town, gravel and stones between, earth on the footpaths, black cinders in the Ashen Waste and planks on the fen's lanes and paths. The seven surfaces are desert tiles from `assets/desert`, palette-swapped to this country's greys and browns by `python tools/roads/build_tex.py`. They are ground layers 18 to 24 in `assets/game/tex/manifest.json`. On a PC they add about 78 MB of texture, on a phone about 5 MB.
 - **Drawn sharp at any distance.** The ground's shader no longer reads the roads from the far ground map (5.5 m to a texel, so they blurred into nothing) or from a 128 m patch round you. It works each way out per pixel from two storage buffers (`roadSegments`: every stretch, filed in 64 m squares, at most `RD_MAX` per square). A way has a hard edge, ragged on earth and nearly straight on stone, a darker worn verge, ruts down the earth ones, and its own ground. Setts, flags and planks are laid square to the way. A far way is drawn a little wider, so from a hilltop it still reads as a line across the land. Trees are cleared from the new ways, and kerb stones line them, as they did the old roads (`src/core/forest.js`, `src/core/rocks.js`).
 - **What lines them.** `src/core/roadside.js` (`dressRoads`, called last by `buildSites`) adds:
@@ -347,7 +356,7 @@ The land has one road system now (`src/core/roads.js`), and everything uses it: 
 - **On the maps.** `src/ui/map.js` draws every way as a line over the papers (`drawWays`), sharp at any zoom, styled by class: great roads wide with a dark edge, roads and lanes narrower, footpaths broken until you're close. Where you haven't been yet, the great roads, roads and lanes show faintly through the dark (you know there's a road, not what's on it). The town's paper never drew the roads out of town; the cathedral's paths on the map were the hunters' paths drawn as faint dirt.
 - **Walked.** `roadGraph` (a node every 20 m along every road and path, joined where they meet; not the Fall) and `overLand` (A*, a metre over open ground costing `off` metres of road) are shared by:
   - **The other Tessariels** (`src/sim/hero.js`). They leave town by its streets and go down the roads to their hunts, and come home by the roads too. A new pastime, the **journey** (`ACTIVITIES`, and the `journey` places in `PLACES`), walks one or two of them at a stroll to a town or place down the roads (Millhaven, Thornwick, Cinderford, Sallowmere, the Moor Wayhouse and others; none of Velscour's), keeps them there a while, and brings them home. About a third start the session already out on a road somewhere. They talk on the road with `travel_chatter` only; `script.json` is unchanged.
-  - **Auto-play** (`longWay` in `src/ui/autobrain.js`). Its long way is worked out on the same graph: across country costs 1.6 metres of road a metre, and ground it's keeping off (a lair it isn't ready for, a knight's post) costs 25 a metre walked through it, by road or not. It goes through the woken seals as before, in a few milliseconds.
+  - **Auto-play** (`planWay` in `src/ui/autobrain.js`). Its long way is worked out on the same graph: onto the nearest point of a road (`onRoad`, a point along a stretch, not only a node), along the roads, and off at the point nearest where it's going. Across country costs 4 metres of road a metre (it was 1.6, and it went straight across country most of the time). Ground it's keeping off (a lair it isn't ready for, as far as its monsters would see it pass; a knight's post) costs 25 a metre walked through it, by road or not. It goes through the woken seals as before, in a few milliseconds (about 6 at level 1, with hundreds of lairs to keep clear of: it was 19, and over 100 with every seal awake). See "Getting about" under Auto-play.
   - **The quest trail** (`src/ui/trail.js`). It uses the same `overLand` instead of its own copy of the roads.
 
 Checked: `node --test tests/roads.test.mjs` covers the laid ways, the shader's squares, that from Bellmourn the roads reach every town (at most 1.45 times the straight line, at least 85% of it on a road), that the roadside dressing is the same each time and a phone is stopped by what a PC is, and the journeys. Seen in headless Chrome shots (`node tools/roads/shoot.mjs <views.json> <port>`), with the heroes run headless (every sample of a hero on the road out or home was within 30 m of a road). The road lights are checked there too (a light in every lantern, each on a way, a few hundred, no fires on a phone) and were seen in night shots. **Not yet:** walked by a person; seen on a phone; the heroes' journeys watched in the game; the extra textures and buffers measured with `tools/phone_memory.mjs`; whether the lanterns are bright enough, or too many, for the owner's taste (their light: `lantern` in `src/core/roadside.js`).
@@ -742,9 +751,36 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. Down there
   it walks every room but the Mourning Rift and the room across it (`RIFT_AT`, `catacombSpots`), this floor's spots
   before the next floor's, and when a whole round of them finds nobody it leaves them for five minutes (`DRY_FOR`) and
-  does other work till their dead have risen again (see "What a watched run found"). The countries
-  are reached by the roads and across country, through the seals it has woken (it steps onto each one it passes near).
-  It works its way round walls and stands of pines by short paths a stretch at a time.
+  does other work till their dead have risen again (see "What a watched run found"). It works its way round walls and
+  stands of pines by short paths a stretch at a time.
+  - **By the roads, as a person goes** (`planWay` in `src/ui/autobrain.js`). Off somewhere that isn't a few strides
+    off, in the town or under it, it walks to the nearest point of a road, goes down the roads, lanes and footpaths, and
+    leaves them where they come nearest to where it's going. It goes through the seals it has woken when that's shorter
+    (it steps onto each one it passes near). A metre across country costs it four of road (`ACROSS`), so it only leaves
+    the roads where they go four times as far, or where there's no road at all. The Sorrowhorn's crown is the one place
+    like that: a kilometre from the head of its stair. In the woods round the town it walks their paths, a short path from
+    the nav thread to each point down them, the next one asked for as it comes up to this one, so it doesn't stop at each.
+    Down a road it walks to a point at each bend (`BEND`) and every 30 m along a straight. Dragged 40 m off its road by a
+    fight, it works its way out again from where it stands. It used to go straight across country whenever the roads were
+    half as long again as the line: over the Sorrowhorn from the Bone Fields to the chapel, and through the woods to every
+    lair.
+  - **Lairs on the way.** A lair it isn't ready for it keeps clear of by as far as its monsters would see it go by (their
+    wander and their sight, and ten metres: `lairPass`), not by the whole of its wake. The roadside lairs stand 45 to
+    110 m off their roads so a traveller can pass, and when it kept out of every wake it left nearly every road out of
+    the town for the country: at level 1 under a quarter of its way was on a road, now it's 97%. (The wake still decides
+    where it hunts and which chests it goes for.)
+  - **Up a delve's steps** (`stairsOf`, from `portalStair` in `src/core/sites.js`). To a portal, or anyone on a terrace,
+    it goes to a few strides out in front of the foot of the flight, then walks square on up the middle of it. Leaving,
+    it goes down the middle and out from the foot first, whichever way it's then going. It used to come at a terrace from
+    wherever its way left the road. On the town's ground (the Warrens') its path took no notice of the terrace at all:
+    it walked into the parapet, hopped, and scrambled up the side. Its short paths across country go round a terrace
+    when they're bound somewhere off it (`OVER` in `src/sim/nav.worker.js`). Before, from beside one it went up the
+    steps at the terrace's end, over it, down the front, and turned to go up them again.
+  - Watched headless (drawing stubbed, nothing able to hurt it but once at level 3): the town to the Warrens and back,
+    to Millhaven farm at level 3 (97% of 1.9 km on the road, no fight), Thornwick (96% of 3.4 km), and up to the
+    portals of Blackvigil, the Deeps, the Vaults, the Playhouse and the Kingsbarrow and back down. On every flight it was
+    within 0.25 m of the middle. A hired party behind it is taken in with it before it's on the steps; going out, they
+    follow its trail down. `node --test tests/auto-roads.test.mjs`.
   - **It doesn't walk into walls.** In the town, the woods round it and the catacombs it goes by a path and nothing
     else (`path` in `src/sim/nav.worker.js`). It used to walk straight at where it was going until its path came, and
     whenever there was no path at all; now it waits a moment for one, and with no way there it leaves that errand for
@@ -2770,7 +2806,7 @@ from Bellmourn2, and the two-hander's original swing keys from Bellmourn (kept f
 
 ## Spells
 
-Sixty spells in six schools, on hands of their own. **F** or the **middle mouse button** casts; hold it to gather a Firebolt or keep up a held spell. The **number keys** or the **wheel** pick from the bar, **B** opens the spellbook. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
+Sixty spells in six schools, on hands of their own. **F** or the **middle mouse button** casts; hold it to gather a Firebolt or keep up a held spell. The **number keys** or **Shift** and the **wheel** pick from the bar, **B** opens the spellbook. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
 
 The bar has six numbered slots. The spellbook (**B**) is where you learn spells and put them on the bar. With a shield up your right hand does the casting: the sword goes away, the hand comes out and casts, and the sword comes back.
 
