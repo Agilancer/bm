@@ -315,7 +315,10 @@ export class World {
     return h;
   }
 
-  inside(x, z, r) {
+  // Is a circle of radius r at x, z in anything? A box's corners are square to it, which keeps a walker a little further off
+  // them than it need be. `round`: its corners round, as resolve() pushes a body out of them, so a gap between two corners a
+  // body fits through diagonally (the way in behind the partition in the house at 10.75, 17.76) is open to it.
+  inside(x, z, r, round = false) {
     if (inDungeon(x, z)) return caveRoom(x, z) < r;
     if (inHall(x, z)) return hallRoom(x, z) < r;
     const boxes = this.boxesNear(x, z, r);
@@ -323,7 +326,10 @@ export class World {
       const c = boxes[n];
       if (c.b || c.t !== undefined) continue;   // (Upstairs, or down in the rift: nobody who goes by this is there.)
       const dx = x - c.x, dz = z - c.z;
-      if (Math.abs(dx * c.co - dz * c.s) < c.hx + r && Math.abs(dx * c.s + dz * c.co) < c.hz + r) return true;
+      const qx = Math.abs(dx * c.co - dz * c.s) - c.hx;
+      if (qx >= r) continue;
+      const qz = Math.abs(dx * c.s + dz * c.co) - c.hz;
+      if (qz < r && (!round || qx <= 0 || qz <= 0 || qx * qx + qz * qz < r * r)) return true;
     }
     if (Math.abs(x) > TOWN || Math.abs(z) > TOWN) {
       const ci = Math.floor(x / TRUNK_CELL), cj = Math.floor(z / TRUNK_CELL);

@@ -1,8 +1,9 @@
-// Six numbered spell slots along the bottom of the screen, the mana beside the life, what's on you and what's cooling, and the
+// Twelve spell slots along the bottom of the screen, the mana beside the life, what's on you and what's cooling, and the
 // book that fills the slots from the spells you've learned in the six trees (src/ui/skilltree.js draws the trees in it).
+// Slots 1 to 9 take any spell; the last three, on 0, - and +, take the Utility school's alone (UTILITY: src/sim/skills.js).
 import { H, INPUT } from '../core/layout.js';
 import { SPELLS } from '../sim/spells.js';
-import { SCROLLS, STARTERS } from '../sim/skills.js';
+import { SCROLLS, STARTERS, UTILITY } from '../sim/skills.js';
 import { BUFFS } from '../sim/treespells.js';
 import { SkillBook } from '../items/skillbook.js';
 import { COLOURS, glyph } from './spellglyphs.js';
@@ -14,7 +15,22 @@ const $ = (id) => document.getElementById(id);
 // The spell that puts each of BUFFS on you, for its picture over the bar.
 const BUFF_SPELL = { haste: 'fleet', stone: 'stoneskin', aegis: 'aegis', renew: 'renew', might: 'empower', inferno: 'inferno', static: 'staticfield', still: 'stillness', guard: 'nova' };
 
-const SLOTS = 6;
+/** Every slot on the bar; the first MAIN of them take any spell, the rest the Utility school's alone. */
+export const SLOTS = 12, MAIN = 9;
+/** What's written on each slot: its key. */
+export const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '−', '+'];
+// The keys, by the code a browser gives them (the number pad's as well), to the slot each casts. (+ is the = key's, unshifted.)
+const CODES = { Digit0: 9, Minus: 10, Equal: 11, Numpad0: 9, NumpadSubtract: 10, NumpadAdd: 11 };
+for (let k = 0; k < MAIN; k++) { CODES[`Digit${k + 1}`] = k; CODES[`Numpad${k + 1}`] = k; }
+/** Whether spell sp may go in slot k (-1, nothing, goes anywhere). */
+export const fits = (k, sp) => sp < 0 || k < MAIN || UTILITY.has(sp);
+/** A new game's bar: the first spell of each school, Utility's (Wisp Light) on 0 and the other five on 1 to 5. */
+export const startLoadout = () => {
+  const out = Array(SLOTS).fill(-1);
+  for (const i of STARTERS) { const k = UTILITY.has(i) ? out.indexOf(-1, MAIN) : out.indexOf(-1); if (k >= 0 && (UTILITY.has(i) || k < MAIN)) out[k] = i; }
+  return out;
+};
+const UTIL_NOTE = '0, − and + take Utility spells only.';
 
 export class SpellBar {
   // openBook and closeBook stop and start the game around the book, as the pack does. level: () => your level; gold: { have(),
@@ -23,7 +39,8 @@ export class SpellBar {
     this.shared = shared; this.input = input; this.tip = tip;
     // What you've learned (src/items/skillbook.js). A new game knows the first spell of each school, and has them on the bar.
     this.skills = new SkillBook(level);
-    this.loadout = STARTERS.slice(0, SLOTS);   // what's in each slot: a spell, or -1
+    this.loadout = startLoadout();       // what's in each slot: a spell, or -1
+    this.main = MAIN;                    // (for auto-play: src/ui/autobrain.js)
     this.now = 0;                        // the slot F and the middle button cast
     this.i = 0;                          // and the spell in it
     this.armed = -1;                     // in the menu: the spell picked up, waiting for a slot
@@ -42,7 +59,7 @@ export class SpellBar {
     window.addEventListener('mouseup', lift);
     for (let k = 0; k < SLOTS; k++) {
       const s = document.createElement('div');
-      s.className = 'spell';
+      s.className = k >= MAIN ? 'spell util' : 'spell';
       s.dataset.k = k;     // (which slot, for Move Buttons: src/ui/arrange.js)
       const press = (e) => {
         e.preventDefault();
@@ -73,10 +90,10 @@ export class SpellBar {
     this.nameEl.id = 'spellName';
     this.el.appendChild(this.nameEl);
 
-    // The book: the six slots across the top, and under them the six trees (src/ui/skilltree.js). Pick a spell you know and
-    // put it in a slot, or drag it there, or press 1 to 6 over it.
+    // The book: the twelve slots across the top, and under them the six trees (src/ui/skilltree.js). Pick a spell you know
+    // and put it in a slot, or drag it there, or press its key over it.
     this.loadEl = $('spellSlots');
-    this.loadEl.innerHTML = this.slots.map((_, k) => `<button class="lslot" data-k="${k}"></button>`).join('');
+    this.loadEl.innerHTML = this.slots.map((_, k) => `<button class="lslot${k >= MAIN ? ' util' : ''}" data-k="${k}"></button>`).join('');
     this.hintEl = $('spellHint');
     this.tree = new SkillTree(this, { tip, gold, sound });
     this.skills.onChange = () => this.refresh();
@@ -84,24 +101,29 @@ export class SpellBar {
       const b = e.target.closest('.lslot');
       if (!b || this.dragged) return;
       const k = +b.dataset.k;
-      this.assign(k, this.armed >= 0 ? this.armed : -1);
-      this.armed = -1;
+      if (this.assign(k, this.armed >= 0 ? this.armed : -1)) this.armed = -1;
       this.drawMenu();
     });
     this.bindDrag();
     $('spellClose').onclick = () => closeBook();
+    // Shift and the wheel turn the bar. (The wheel on its own stands the camera back or brings it in: src/ui/view.js. With
+    // Shift held a browser may send the turn as a sideways one, deltaX.)
     window.addEventListener('wheel', (e) => {
-      if (!input.enabled || input.menu || !document.pointerLockElement) return;
-      this.turn(e.deltaY > 0 ? 1 : -1);
+      if (!e.shiftKey || !input.enabled || input.menu || !document.pointerLockElement) return;
+      const d = e.deltaY || e.deltaX;
+      if (d) this.turn(d > 0 ? 1 : -1);
     }, { passive: true });
     window.addEventListener('keydown', (e) => {
       if (!input.enabled || e.repeat) return;
-      const m = /^Digit([1-6])$/.exec(e.code);
-      if (!m) return;
+      const k = CODES[e.code];
+      if (k === undefined) return;
+      // (Ctrl or Cmd with 0, - or + is the browser's zoom, and on the big map - and + are its own: src/ui/map.js.)
+      if (k >= MAIN && (e.ctrlKey || e.metaKey || (input.mapUp && k > MAIN))) return;
       if ($('spellbook').classList.contains('open')) {
         const sp = this.armed >= 0 ? this.armed : this.hover;
-        if (sp >= 0) { this.assign(+m[1] - 1, sp); this.armed = -1; this.drawMenu(); }
-      } else this.press(+m[1] - 1, e.code);
+        if (sp >= 0 && this.assign(k, sp)) this.armed = -1;
+        this.drawMenu();
+      } else this.press(k, e.code);
     });
     window.addEventListener('keyup', (e) => this.release(e.code));
     window.addEventListener('blur', () => this.release(this.heldBy));
@@ -142,7 +164,10 @@ export class SpellBar {
   // The slot's button or key: its spell, cast at once, and for as long as it's held.
   press(k, by) {
     if (!this.input.enabled || this.input.menu) return;
-    if (this.loadout[k] < 0) { this.tip?.(this.input.touch ? 'Nothing in that slot. Your spellbook, in the top row, fills it.' : 'Nothing in that slot. B to fill it.'); return; }
+    if (!(this.loadout[k] >= 0)) {
+      this.tip?.((this.input.touch ? 'Nothing in that slot. Your spellbook, in the top row, fills it.' : 'Nothing in that slot. B to fill it.') + (k >= MAIN ? ` ${UTIL_NOTE}` : ''));
+      return;
+    }
     this.select(k);
     this.heldBy = by;
     this.input.castSlot = true;
@@ -184,7 +209,7 @@ export class SpellBar {
   draw() {
     this.slots.forEach((s, k) => {
       const d = SPELLS[this.loadout[k]];
-      s.innerHTML = `<b>${k + 1}</b>${d ? glyph(d) : ''}<i class="cd"></i>`;
+      s.innerHTML = `<b>${KEYS[k]}</b>${d ? glyph(d) : ''}<i class="cd"></i>`;
       s.classList.toggle('now', k === this.now && !!d);
       s.classList.toggle('empty', !d);
       if (d) s.style.setProperty('--c', COLOURS[d.elem]);
@@ -228,10 +253,14 @@ export class SpellBar {
 
   // ---- the equip menu ----
 
-  // A spell goes in one slot only: if it's already in another, the two change places.
+  // A spell goes in one slot only: if it's already in another, the two change places (or, if what's in this one can't go
+  // in that one, that one's left empty). Not in 0, - or + unless it's a Utility spell: false, and the book says why.
   assign(k, sp) {
+    if (!(k >= 0 && k < SLOTS)) return false;
+    if (!fits(k, sp)) { this.refused = { text: `${SPELLS[sp].name} isn't a Utility spell. ${UTIL_NOTE}`, at: performance.now() }; this.drawMenu(); return false; }
+    this.refused = null;
     const other = sp >= 0 ? this.loadout.indexOf(sp) : -1;
-    if (other >= 0 && other !== k) this.loadout[other] = this.loadout[k];
+    if (other >= 0 && other !== k) this.loadout[other] = fits(other, this.loadout[k]) ? this.loadout[k] : -1;
     this.loadout[k] = sp;
     if (this.loadout[this.now] < 0) {
       const filled = this.loadout.findIndex((v) => v >= 0);
@@ -239,18 +268,38 @@ export class SpellBar {
     }
     if (this.loadout[this.now] >= 0) this.setSpell(this.loadout[this.now]); else this.draw();
     this.drawMenu();
+    return true;
+  }
+
+  /** Whether spell sp may go in slot k, and what's written on slot k. (For the book's trees: src/ui/skilltree.js.) */
+  fits(k, sp) { return fits(k, sp); }
+  keyOf(k) { return KEYS[k]; }
+
+  /** The slot a spell just learned goes in: a Utility spell the first empty one of 0, - and +, else the first empty of 1 to
+   * 9, as any other spell. -1: they're full. */
+  freeSlot(sp) {
+    const empty = (k) => this.loadout[k] < 0;
+    if (UTILITY.has(sp)) for (let k = MAIN; k < SLOTS; k++) if (empty(k)) return k;
+    for (let k = 0; k < MAIN; k++) if (empty(k)) return k;
+    return -1;
   }
 
   drawMenu() {
+    const armed = this.armed;
     [...this.loadEl.children].forEach((b, k) => {
       const d = SPELLS[this.loadout[k]];
-      b.innerHTML = `<b>${k + 1}</b>${d ? `<span class="ic">${glyph(d)}</span><span class="nm">${d.name}</span>` : '<span class="nm">empty</span>'}`;
+      b.innerHTML = `<b>${KEYS[k]}</b>${d ? `<span class="ic">${glyph(d)}</span><span class="nm">${d.name}</span>` : `<span class="nm">${k >= MAIN ? 'utility' : 'empty'}</span>`}`;
       b.classList.toggle('empty', !d);
+      // (A spell in hand that can't go in this one: the slot's dimmed.)
+      b.classList.toggle('no', armed >= 0 && !fits(k, armed));
       if (d) b.style.setProperty('--c', COLOURS[d.elem]);
     });
-    this.hintEl.textContent = this.armed >= 0
-      ? `${SPELLS[this.armed].name}: now choose its slot.`
-      : (this.input.touch ? 'Tap a spell you know, then a slot. Tap a slot on its own to empty it.' : 'Click a spell you know, then a slot, or drag it there, or press 1 to 6 over it. Click a slot on its own to empty it.');
+    // (A slot that just turned a spell away says why, for a few seconds' worth of whatever's done in the book next.)
+    const no = this.refused && performance.now() - this.refused.at < 3000 ? this.refused.text : '';
+    this.hintEl.textContent = no || (armed >= 0
+      ? `${SPELLS[armed].name}: now choose its slot.${UTILITY.has(armed) ? '' : ` (${UTIL_NOTE})`}`
+      : (this.input.touch ? `Tap a spell you know, then a slot. Tap a slot on its own to empty it. ${UTIL_NOTE}` : `Click a spell you know, then a slot, or drag it there, or press its key over it. Click a slot on its own to empty it. ${UTIL_NOTE}`));
+    this.hintEl.classList.toggle('no', !!no);
     this.tree?.draw();
   }
 
@@ -295,20 +344,21 @@ export class SpellBar {
   save() { return { loadout: this.loadout.slice(), now: this.now, skills: this.skills.save() }; }
 
   // (A save from before the trees has no `skills`: it starts with the six first spells, and every point its level has
-  // earned waiting to be spent. What was on its bar and isn't known any more comes off it.)
+  // earned waiting to be spent. What was on its bar and isn't known any more comes off it. A bar from before the twelve
+  // slots has six: they're 1 to 6, and the rest start empty. Anything in 0, - or + that isn't a Utility spell comes off.)
   load(d) {
-    const ok = Array.isArray(d?.loadout) && d.loadout.length === SLOTS && d.loadout.every((v) => Number.isInteger(v) && v >= -1 && v < SPELLS.length);
-    this.loadout = ok ? d.loadout.slice() : STARTERS.slice(0, SLOTS);
+    const ok = Array.isArray(d?.loadout) && d.loadout.length >= 1 && d.loadout.length <= SLOTS && d.loadout.every((v) => Number.isInteger(v) && v >= -1 && v < SPELLS.length);
+    this.loadout = ok ? Array.from({ length: SLOTS }, (_, k) => (fits(k, d.loadout[k] ?? -1) ? d.loadout[k] ?? -1 : -1)) : startLoadout();
     this.now = ok && Number.isInteger(d.now) && d.now >= 0 && d.now < SLOTS ? d.now : 0;
     this.skills.load(d?.skills ?? null);       // (refresh() comes of it: the bar's drawn and the sim's told)
-    if (this.loadout.every((v) => v < 0)) { this.loadout = STARTERS.slice(0, SLOTS); this.now = 0; this.refresh(); }
+    if (this.loadout.every((v) => v < 0)) { this.loadout = startLoadout(); this.now = 0; this.refresh(); }
   }
 
-  // Read a scroll: the spell's first rank, for nothing, and into the first empty slot if there is one. False if you knew it
-  // already, or aren't yet of a level to make sense of it (canRead).
+  // Read a scroll: the spell's first rank, for nothing, and into an empty slot if there is one (freeSlot). False if you knew
+  // it already, or aren't yet of a level to make sense of it (canRead).
   learn(i) {
     if (!this.skills.teach(i)) return false;
-    const k = this.loadout.indexOf(-1);
+    const k = this.freeSlot(i);
     if (k >= 0) { this.loadout[k] = i; if (this.loadout[this.now] < 0) this.now = k; this.setSpell(this.loadout[this.now]); this.drawMenu(); }
     return true;
   }

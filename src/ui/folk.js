@@ -741,6 +741,11 @@ export class TownUI {
         const c = offerFor(p.trade, e.item);
         if (c) add(this.inventory.iconOf(e.item), nameOf(e.item), colorOf(e.item), `They'll give ${priceText(c)}`, true, () => this.sell(e, c), e.item);
       }
+      // (What your party carry in their own bags, sold through you: src/ui/party.js bagged.)
+      for (const b of this.party?.()?.bagged?.() || []) {
+        const c = offerFor(p.trade, b.item);
+        if (c) add(this.inventory.iconOf(b.item), nameOf(b.item), colorOf(b.item), `From ${b.entry.name}'s bag: they'll give ${priceText(c)}`, true, () => this.sellBag(b, c), b.item);
+      }
       for (const [k, c] of Object.entries(t.buysMats || {})) {
         const n = this.pack.mats[k] || 0;
         if (n) add(matSvg(k), `${n} ${matName(k, n)}`, MATS[k].color, `${priceText(c)} each: all for ${priceText(c * n)}`, true, () => this.sellMat(k, c));
@@ -805,6 +810,15 @@ export class TownUI {
 
   sell(entry, copper) {
     this.pack.remove(entry);
+    this.pack.earn(copper);
+    this.inventory.showTip(null);
+    this.act.saved();
+    this.show(this.say('sell'), this.person(this.with).id, this.shopOpts());
+  }
+
+  // A piece out of one of your party's bags (b: { entry, item }, src/ui/party.js bagged).
+  sellBag(b, copper) {
+    if (!this.party?.()?.unbag(b.entry, b.item)) return;
     this.pack.earn(copper);
     this.inventory.showTip(null);
     this.act.saved();

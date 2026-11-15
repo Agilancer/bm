@@ -3,7 +3,7 @@
 // moving yourself (the keys or the stick) takes the controls back for a moment. The head is src/ui/autobrain.js.
 //
 // The button (or P) brings up a menu first: Complete Quests, Grind monsters for XP (and where: GRINDS) or Dungeon Runs (round
-// every dungeon the player has finished, until it's stopped: DUNGEONS). Clicking the status line while it plays brings the menu
+// every party dungeon whose portal the player has found, easiest first, until it's stopped: DUNGEONS). Clicking the status line while it plays brings the menu
 // back, to change what it's at. While it's on, the mouse is left free (no pointer lock), so the button and its menu can be
 // clicked; Esc pauses and resumes. On the quests with every quest done, a menu asks where to grind (GRINDS), and keeps the last
 // choice if nobody answers.
@@ -160,6 +160,11 @@ export class AutoPlay {
       heroCount: () => o.renderer.heroCast?.length || 0, foeNames: o.foeNames,
       say: (t) => this.status(t), note: (t) => o.townUI.note(t, 'hint'), allDone: () => this.askGrind(), log: this.log,
       settings: o.settings, event: (k, d) => this.show.event(k, d),
+      // (The party's own upkeep, every few seconds out of a fight: their gear and their points, as Settings allow. src/ui/party.js.)
+      party: (b) => {
+        const got = o.game.party?.upkeep?.({ gear: b.allow('aiPartyGear'), skills: b.allow('aiPartySkills') }) || [];
+        for (const t of got) o.townUI.note(`Auto-play: ${t}`, 'hint');
+      },
     });
     this.brain.bold = this.bold;
   }
@@ -318,7 +323,7 @@ export class AutoPlay {
     this.hold();
     const { townUI, game } = this.o;
     const done = finishedDungeons(townUI, game);
-    const runs = done.length ? `Round and round: ${done.map((d) => lower(d.name)).join(', ')}.` : `Nothing finished yet: ${DUNGEONS.map((d) => lower(d.name)).join(', ')} count once they're done.`;
+    const runs = done.length ? `In this order, round and round: ${done.map((d) => lower(d.name)).join(', ')}.` : `No dungeon portal found yet: ${DUNGEONS.length} of them lie out in the land, and each counts once you've come upon its portal.`;
     const cards = Object.entries(MODES).map(([k, v]) => {
       const off = k === 'dungeons' && !done.length;
       return `<button type="button" class="card${k === this.mode ? ' sel' : ''}" data-m="${k}"${off ? ' disabled' : ''}><b>${v.name}</b><span>${v.line}</span>${k === 'dungeons' ? `<i>${runs}</i>` : ''}</button>`;

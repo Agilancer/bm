@@ -188,3 +188,86 @@ test('out of a snug corner: a way a body can take, ending where the grid is free
   // (Never through the partition, which is the nearest free ground as the crow flies.)
   assert.ok(pts.every(([, z]) => z < -39.4), 'not through the partition');
 });
+
+// Behind the partition in the house with door 6 (10.75, 17.76) there's a closet. Its way in, between the partition's end and
+// the corner of a crate, is a gap a body takes on the slant (the sim pushes a body out of a box's corner as a round one),
+// and the walking grid calls it shut (its boxes' corners are square). Put in there (bm.cmd(19, 0, 4, 18) does it), auto-play
+// had no path to anywhere, and its way out (escape) ended half a metre on inside the closet: "Wedged in a corner: working its
+// way out", for as long as it was watched. A way out now ends on ground the rest of the grid is joined to, and a path from
+// in there begins with it.
+// (Where it stood, and round the closet; the last snug against the shelf at its far end, where the grid's own cell is solid.)
+const CLOSET = [[4.4, 18.4], [4.0, 18.19], [4.9, 18.9], [4.25, 22.0], [4.1, 23.6]];
+const far = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+// A body walked straight at each point in turn, pushed out of whatever it meets as the sim pushes the player
+// (src/sim/player.js): where it got to.
+function walked(from, pts, T = 40) {
+  const o = [from[0], 0, from[1]];
+  let i = 0;
+  for (let t = 0; i < pts.length && t < T; t += 1 / 60) {
+    const dx = pts[i][0] - o[0], dz = pts[i][1] - o[2], d = Math.hypot(dx, dz);
+    if (d < 0.1) { i++; continue; }
+    const s = Math.min(d, 5.6 / 60);
+    o[0] += dx / d * s; o[2] += dz / d * s;
+    world.resolve(o, 0.36, world.height(o[0], o[2]) + 0.2);
+  }
+  return [o[0], o[2]];
+}
+
+test('a body gets into the closet behind the partition, and the grid calls it a pocket', () => {
+  for (const at of CLOSET) assert.ok(!world.inside(at[0], at[1], 0.36, true), `a body can stand at ${at}`);
+  for (const at of CLOSET.slice(0, -1)) assert.ok(nav.pocket(at[0], at[1]), `${at}: the walking grid has it shut in`);
+  // (From the room, straight at the gap and on: in.)
+  assert.ok(far(walked([6.6, 19.7], [[5.33, 19.12], CLOSET[0]]), CLOSET[0]) < 0.2, 'walked at the gap from the room, a body is in');
+});
+
+test('out of a pocket: a way to ground the grid is joined to, and a path on from inside it', () => {
+  for (const from of CLOSET) {
+    const pts = nav.escape(from[0], from[1]);
+    assert.ok(pts?.length > 2, `a way out from ${from}`);
+    const end = pts.at(-1);
+    assert.ok(!nav.pocket(end[0], end[1]), `the way out from ${from} ends at ${end.map((v) => v.toFixed(2))}, still shut in`);
+    for (const [x, z] of pts.slice(1, -1)) assert.ok(!world.inside(x, z, 0.33, true), `the way out from ${from} goes through something at ${x.toFixed(2)}, ${z.toFixed(2)}`);
+    assert.ok(far(walked(from, pts), end) < 0.2, `walked, the way out from ${from} gets out`);
+    // A path from in there: out by the gap, walked, and on to the square.
+    const p = nav.path(from, SQUARE);
+    assert.ok(p?.length, `a path from ${from} to the square`);
+    assert.ok(p.slice(0, 3).every((q) => q[2]), 'the way out is walked, not run');
+    assert.ok(far(walked(from, p), SQUARE) < 0.5, `walked, the path from ${from} gets to the square`);
+  }
+  // The chest it went for from in there (6, 25.26): out, round, and to a place a hand reaches it from.
+  const c = interior.things.find((t) => t.type === 'chest' && Math.abs(t.x - 6) < 0.1 && Math.abs(t.z - 25.26) < 0.1);
+  const p = nav.path(CLOSET[0], [c.x, c.z], null, c.y + 0.5), e = p?.at(-1);
+  assert.ok(e, 'a path to the chest from the closet');
+  assert.ok(far(e, [c.x, c.z]) < 2 && !nav.pocket(e[0], e[1]), `it ends ${far(e, [c.x, c.z]).toFixed(2)} m off the chest`);
+  assert.ok(lineClear(world, e[0], world.height(e[0], e[1]) + 1.5, e[1], c.x, c.y + 0.5, c.z), 'with nothing between it and the chest');
+  // (And the way to that chest from the square never goes into the closet: it ends out in the room.)
+  const q = nav.path(SQUARE, [c.x, c.z], null, c.y + 0.5);
+  assert.ok(q && !q.some(([x, z]) => nav.pocket(x, z)), 'from the square, nowhere near the closet');
+});
+
+test('from every pocket in the town a body can walk out of, a path out', () => {
+  const seen = new Set(), pockets = [];
+  for (let x = -69.75; x < 70; x += 0.5) for (let z = -69.75; z < 70; z += 0.5) {
+    if (seen.has(`${x},${z}`) || !nav.pocket(x, z)) continue;
+    pockets.push([x, z]);
+    // (Its other cells, so each pocket is tried once.)
+    const q = [[x, z]];
+    seen.add(`${x},${z}`);
+    while (q.length) {
+      const [a, b] = q.pop();
+      for (const [u, v] of [[a + 0.5, b], [a - 0.5, b], [a, b + 0.5], [a, b - 0.5]]) if (!seen.has(`${u},${v}`) && nav.pocket(u, v)) { seen.add(`${u},${v}`); q.push([u, v]); }
+    }
+  }
+  assert.ok(pockets.length >= 10, `only ${pockets.length} pockets found`);
+  let out = 0;
+  for (const at of pockets) {
+    const p = nav.path(at, SQUARE);
+    if (p) { out++; assert.ok(far(walked(at, p), SQUARE) < 0.5, `walked, the path out of the pocket at ${at} doesn't get to the square`); continue; }
+    // No path: then no body gets out of it either, pushed straight off every way.
+    for (let a = 0; a < 24; a++) for (const L of [1.5, 3, 5]) {
+      const got = walked(at, [[at[0] + Math.sin(a / 24 * 2 * Math.PI) * L, at[1] + Math.cos(a / 24 * 2 * Math.PI) * L]], 3);
+      assert.ok(world.inside(got[0], got[1], 0.42) || nav.pocket(got[0], got[1]) || !nav.path(got, SQUARE), `no path out of the pocket at ${at}, but a body walks out of it to ${got.map((v) => v.toFixed(2))}`);
+    }
+  }
+  assert.ok(out >= pockets.length - 3, `a path out of only ${out} of ${pockets.length} pockets`);
+});

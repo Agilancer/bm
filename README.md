@@ -7,7 +7,7 @@ Bellmourn v2.
 The game is now ranged spell combat. Everything below about swords and armour describes files and code kept on the repo but out of play.
 
 - **Out of play:** one and two-handed swords (`BASES` rows with grade `retired`, never rolled) and the armour suits and gauntlets (`GEAR`, `rollArmor`, `assets/fp/gauntlets_*`). Hands are bare. An old save's swords and armour are removed on load.
-- **Right hand:** staffs. Left click fires the staff's bolt. Spells are on `1`-`6`, six at a time, chosen in the spellbook from the ones you've learned.
+- **Right hand:** staffs. Left click fires the staff's bolt. Spells are on `1`-`9`, nine at a time, and three of the Utility school on `0`, `-` and `+`, chosen in the spellbook from the ones you've learned.
 - **Six schools:** Fire, Ice, Earth, Arcane, Lightning and Utility, ten spells each (sixty in all), in skill trees in the spellbook (`B`). You start with the first spell of each, and every level brings a point to spend. See "Spells" below.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
@@ -51,7 +51,8 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | Dodge | `Q` | The dash, left of the staff's button |
 | Fire your staff | Left click | The big button, bottom right |
 | Raise the shield and bash, hold to block, let go and it drops at once. With no shield, a wide swing | Right click | The shield, between the dodge and the jump |
-| Cast the spell in a slot | `1` to `6`, or click its button | Tap it, in the ring round those; hold to keep casting |
+| Cast the spell in a slot | `1` to `9`, or click its button | Tap it, in the two rings round those; hold to keep casting |
+| Cast the Utility spell in one of the last three slots (Utility spells only) | `0`, `-` and `+` (the `=` key), or click its button | Tap it, in the outermost ring |
 | Spellbook: the six trees, your points, and what's on the bar | `B` | The book, in the top row |
 | Pack: staffs, skulls, robes and gems | `I` | The pack, in the top row |
 | Take up what's on the ground, open a chest or a door, or talk | `E` | The gold button that comes up beside the ring |
@@ -110,6 +111,15 @@ You start on the road south of town with a common staff of a random kind (a diff
 `V` (or the eye at the end of the spell bar, or the figure at the end of a phone's top row) stands the camera behind you, and the same again brings it
 back. The controls don't change: you look, move, shoot, cast, guard and ride as before, and the X in the middle of the
 screen is still what you hit. Which view you left it in is kept with the settings.
+
+The **mouse wheel** does it too, with the mouse held by the game (`ViewSwitch.wheel` in `src/ui/view.js`): a notch out of
+first person stands the camera just behind you (`THIRD.close`, 1.5 m), and each notch out takes it 1.22 times further
+back, up to 12 m (`THIRD.far`, three times V's 4 m). Each notch in brings it nearer, and one more once it's as near as it
+goes is first person again (only once the wheel's been still a moment with it there, so a spin in stops at your back).
+How far back you left it is kept with the settings (`zoom`) and V goes back to it; after the wheel's taken you into
+first person, V's own 4 m. Coming in it glides; walls and the ground still bring it in at once. Under a roof, in the
+church, a delve, the test hall or anywhere down below it goes no further back than 4 m, since the ceilings aren't in
+what the camera's tested against. **Shift** and the wheel turn the spell bar.
 
 - **Not in Lisandra's cave.** The switch isn't shown until you're out and the walk down has begun (`thirdAllowed` in
   `src/core/third.js`), and `V` only says so. Your staff and spells wait for the same moment (`Sim.unarmed` in
@@ -335,7 +345,7 @@ What stands at each place in `SITES` (`src/core/lands.js`) is plain geometry mad
 
 The land has one road system now (`src/core/roads.js`), and everything uses it: the ground's shader draws it, both maps draw it, the other Tessariels walk it, and so do auto-play and the quest trail.
 
-- **The ways.** The old ones stay (the town's paths and the Long Road in `src/core/terrain.js`, the named roads and outpost trails in `ROUTES`, `src/core/lands.js`). On top of them, `node tools/roads/lay.mjs` lays about 1,000 more, some 237 km of roads, lanes and footpaths, into `src/core/roads-data.js`. It links every place, every delve's portal, the standing battles, the hunting grounds, the lairs and camps in the woods round Bellmourn, a ring of waymarks round the town and a lattice over the open country. It also lays footpaths out to the outposts and the things to find. Each way is the cheapest walk over an 8 m grid: slopes cost more, water and anything built can't be crossed, and a square already on a road costs a third, so the new ways join the old ones instead of running beside them. No way crosses a lair out in the land (no closer than its width plus the lair's plus 8 m), a tear's spot (8 m clear) or a thing to find (4 m clear). Each way is cut short of anything built it would run into. **Never edit `roads-data.js` by hand.** After moving a place, a lair, an outpost or a road, run the tool again, then `node tools/lands/check-sites.mjs` and `node --test tests/roads.test.mjs`.
+- **The ways.** The old ones stay (the town's paths and the Long Road in `src/core/terrain.js`, the named roads and outpost trails in `ROUTES`, `src/core/lands.js`). On top of them, `node tools/roads/lay.mjs` lays about 1,000 more, some 237 km of roads, lanes and footpaths, into `src/core/roads-data.js`. It links every place, every delve's portal, the standing battles, the hunting grounds, the lairs and camps in the woods round Bellmourn, a ring of waymarks round the town and a lattice over the open country. It also lays footpaths out to the outposts and the things to find. Each way is the cheapest walk over an 8 m grid: slopes cost more, water and anything built can't be crossed, and a square already on a road costs a third, so the new ways join the old ones instead of running beside them. No way crosses a lair out in the land (no closer than its width plus the lair's plus 8 m), a tear's spot (8 m clear) or a thing to find (4 m clear). Nor does a way cross a delve's terrace or the flight up it (`portalStair(d).boxes` in `src/core/sites.js`): they're walked on, so they were never among the walls the tool kept off, and four ways ran over them. A way to a portal ends a few strides out in front of the foot of its steps. Each way is cut short of anything built it would run into. **Never edit `roads-data.js` by hand.** After moving a place, a lair, an outpost or a road, run the tool again, then `node tools/lands/check-sites.mjs` and `node --test tests/roads.test.mjs`.
 - **What they're laid with.** Each way's class (`great`, `road`, `lane`, `path`) and where it runs decide its surface (`surfaceOf`): flagstones on the great roads near the towns and in stretches along them, setts on the roads and lanes coming into a town, gravel and stones between, earth on the footpaths, black cinders in the Ashen Waste and planks on the fen's lanes and paths. The seven surfaces are desert tiles from `assets/desert`, palette-swapped to this country's greys and browns by `python tools/roads/build_tex.py`. They are ground layers 18 to 24 in `assets/game/tex/manifest.json`. On a PC they add about 78 MB of texture, on a phone about 5 MB.
 - **Drawn sharp at any distance.** The ground's shader no longer reads the roads from the far ground map (5.5 m to a texel, so they blurred into nothing) or from a 128 m patch round you. It works each way out per pixel from two storage buffers (`roadSegments`: every stretch, filed in 64 m squares, at most `RD_MAX` per square). A way has a hard edge, ragged on earth and nearly straight on stone, a darker worn verge, ruts down the earth ones, and its own ground. Setts, flags and planks are laid square to the way. A far way is drawn a little wider, so from a hilltop it still reads as a line across the land. Trees are cleared from the new ways, and kerb stones line them, as they did the old roads (`src/core/forest.js`, `src/core/rocks.js`).
 - **What lines them.** `src/core/roadside.js` (`dressRoads`, called last by `buildSites`) adds:
@@ -349,7 +359,7 @@ The land has one road system now (`src/core/roads.js`), and everything uses it: 
 - **On the maps.** `src/ui/map.js` draws every way as a line over the papers (`drawWays`), sharp at any zoom, styled by class: great roads wide with a dark edge, roads and lanes narrower, footpaths broken until you're close. Where you haven't been yet, the great roads, roads and lanes show faintly through the dark (you know there's a road, not what's on it). The town's paper never drew the roads out of town; the cathedral's paths on the map were the hunters' paths drawn as faint dirt.
 - **Walked.** `roadGraph` (a node every 20 m along every road and path, joined where they meet; not the Fall) and `overLand` (A*, a metre over open ground costing `off` metres of road) are shared by:
   - **The other Tessariels** (`src/sim/hero.js`). They leave town by its streets and go down the roads to their hunts, and come home by the roads too. A new pastime, the **journey** (`ACTIVITIES`, and the `journey` places in `PLACES`), walks one or two of them at a stroll to a town or place down the roads (Millhaven, Thornwick, Cinderford, Sallowmere, the Moor Wayhouse and others; none of Velscour's), keeps them there a while, and brings them home. About a third start the session already out on a road somewhere. They talk on the road with `travel_chatter` only; `script.json` is unchanged.
-  - **Auto-play** (`longWay` in `src/ui/autobrain.js`). Its long way is worked out on the same graph: across country costs 1.6 metres of road a metre, and ground it's keeping off (a lair it isn't ready for, a knight's post) costs 25 a metre walked through it, by road or not. It goes through the woken seals as before, in a few milliseconds.
+  - **Auto-play** (`planWay` in `src/ui/autobrain.js`). Its long way is worked out on the same graph: onto the nearest point of a road (`onRoad`, a point along a stretch, not only a node), along the roads, and off at the point nearest where it's going. Across country costs 4 metres of road a metre (it was 1.6, and it went straight across country most of the time). Ground it's keeping off (a lair it isn't ready for, as far as its monsters would see it pass; a knight's post) costs 25 a metre walked through it, by road or not. It goes through the woken seals as before, in a few milliseconds (about 6 at level 1, with hundreds of lairs to keep clear of: it was 19, and over 100 with every seal awake). See "Getting about" under Auto-play.
   - **The quest trail** (`src/ui/trail.js`). It uses the same `overLand` instead of its own copy of the roads.
 
 Checked: `node --test tests/roads.test.mjs` covers the laid ways, the shader's squares, that from Bellmourn the roads reach every town (at most 1.45 times the straight line, at least 85% of it on a road), that the roadside dressing is the same each time and a phone is stopped by what a PC is, and the journeys. Seen in headless Chrome shots (`node tools/roads/shoot.mjs <views.json> <port>`), with the heroes run headless (every sample of a hero on the road out or home was within 30 m of a road). The road lights are checked there too (a light in every lantern, each on a way, a few hundred, no fires on a phone) and were seen in night shots. **Not yet:** walked by a person; seen on a phone; the heroes' journeys watched in the game; the extra textures and buffers measured with `tools/phone_memory.mjs`; whether the lanterns are bright enough, or too many, for the owner's taste (their light: `lantern` in `src/core/roadside.js`).
@@ -586,10 +596,11 @@ the screen's height, so a small phone and a tablet get the same picture:
 
 - **Bottom right, the right thumb.** The staff's button is the big one in the corner. Round it, in reach without
   stretching: dodge to its left, jump above it, and between them the shield, when there's one on your arm and no skull in
-  your hand. Round those, in a wider ring, the six spells, one to six from the bottom up: **a tap casts, a hold keeps
-  casting**, as a key does on a desk (there's no separate cast button any more, but for the one cast the opening asks
-  of you in the cave). Each spell is as far from the next as every other, and both rings are even about the corner. Over
-  spell six, the run. Every button steers too: a thumb that lands on one can go on to look about.
+  your hand. Round those, in a wider ring, spells one to six from the bottom up; further out, seven to nine; and
+  outermost, a little smaller and edged in pale bone, the three Utility slots, 0, − and + (`SLOTS` in
+  `src/ui/thumbs.js`): **a tap casts, a hold keeps casting**, as a key does on a desk (there's no separate cast button any
+  more, but for the one cast the opening asks of you in the cave). The spells of each ring are evenly spaced. Over spell
+  six, the run. Every button steers too: a thumb that lands on one can go on to look about.
 - **Beside the ring**, only when there's something in reach: a gold button that takes, talks, opens, shuts or tries the
   door, with a picture and a word for which, and what it is said just above it.
 - **Bottom left, the left thumb.** The stick comes up wherever the thumb lands, and nothing of it is drawn until a thumb is
@@ -616,7 +627,7 @@ stick's side of the screen, that every button has a picture and something listen
 fall-back numbers are the table's. To move something, change the table.
 
 **Move Buttons** (on the pause screen, a desk's or a phone's) lets the player put any of it where they like: every button
-of both thumbs, each of the six spells, the stick, the top row one by one, the map, the skull, Auto and its line, the medal
+of both thumbs, each of the twelve spell slots, the stick, the top row one by one, the map, the skull, Auto and its line, the medal
 and its bars, what's on you, the party, the chat and the foe's bar on a phone; on a desk the spell bar, the medal and bars,
 the map, the clock, the skull, Auto, the party, the chat and the foe's bar. Drag a piece's dashed box to move it; tap one and
 Bigger or Smaller grows it about its middle (60% to 180%); Reset this, Reset all, Cancel, Save. The box of buttons can be
@@ -744,9 +755,36 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
 - **Getting about.** The catacombs are reached by the Sexton's door, kept well clear of the black knight's post. Down there
   it walks every room but the Mourning Rift and the room across it (`RIFT_AT`, `catacombSpots`), this floor's spots
   before the next floor's, and when a whole round of them finds nobody it leaves them for five minutes (`DRY_FOR`) and
-  does other work till their dead have risen again (see "What a watched run found"). The countries
-  are reached by the roads and across country, through the seals it has woken (it steps onto each one it passes near).
-  It works its way round walls and stands of pines by short paths a stretch at a time.
+  does other work till their dead have risen again (see "What a watched run found"). It works its way round walls and
+  stands of pines by short paths a stretch at a time.
+  - **By the roads, as a person goes** (`planWay` in `src/ui/autobrain.js`). Off somewhere that isn't a few strides
+    off, in the town or under it, it walks to the nearest point of a road, goes down the roads, lanes and footpaths, and
+    leaves them where they come nearest to where it's going. It goes through the seals it has woken when that's shorter
+    (it steps onto each one it passes near). A metre across country costs it four of road (`ACROSS`), so it only leaves
+    the roads where they go four times as far, or where there's no road at all. The Sorrowhorn's crown is the one place
+    like that: a kilometre from the head of its stair. In the woods round the town it walks their paths, a short path from
+    the nav thread to each point down them, the next one asked for as it comes up to this one, so it doesn't stop at each.
+    Down a road it walks to a point at each bend (`BEND`) and every 30 m along a straight. Dragged 40 m off its road by a
+    fight, it works its way out again from where it stands. It used to go straight across country whenever the roads were
+    half as long again as the line: over the Sorrowhorn from the Bone Fields to the chapel, and through the woods to every
+    lair.
+  - **Lairs on the way.** A lair it isn't ready for it keeps clear of by as far as its monsters would see it go by (their
+    wander and their sight, and ten metres: `lairPass`), not by the whole of its wake. The roadside lairs stand 45 to
+    110 m off their roads so a traveller can pass, and when it kept out of every wake it left nearly every road out of
+    the town for the country: at level 1 under a quarter of its way was on a road, now it's 97%. (The wake still decides
+    where it hunts and which chests it goes for.)
+  - **Up a delve's steps** (`stairsOf`, from `portalStair` in `src/core/sites.js`). To a portal, or anyone on a terrace,
+    it goes to a few strides out in front of the foot of the flight, then walks square on up the middle of it. Leaving,
+    it goes down the middle and out from the foot first, whichever way it's then going. It used to come at a terrace from
+    wherever its way left the road. On the town's ground (the Warrens') its path took no notice of the terrace at all:
+    it walked into the parapet, hopped, and scrambled up the side. Its short paths across country go round a terrace
+    when they're bound somewhere off it (`OVER` in `src/sim/nav.worker.js`). Before, from beside one it went up the
+    steps at the terrace's end, over it, down the front, and turned to go up them again.
+  - Watched headless (drawing stubbed, nothing able to hurt it but once at level 3): the town to the Warrens and back,
+    to Millhaven farm at level 3 (97% of 1.9 km on the road, no fight), Thornwick (96% of 3.4 km), and up to the
+    portals of Blackvigil, the Deeps, the Vaults, the Playhouse and the Kingsbarrow and back down. On every flight it was
+    within 0.25 m of the middle. A hired party behind it is taken in with it before it's on the steps; going out, they
+    follow its trail down. `node --test tests/auto-roads.test.mjs`.
   - **It doesn't walk into walls.** In the town, the woods round it and the catacombs it goes by a path and nothing
     else (`path` in `src/sim/nav.worker.js`). It used to walk straight at where it was going until its path came, and
     whenever there was no path at all; now it waits a moment for one, and with no way there it leaves that errand for
@@ -765,6 +803,16 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     hand to or have a word with (a chest, a thing on the ground, someone), the path ends where nothing stands between
     it and that, so it isn't sent to the far side of a wall from it. One house chest stands behind a screen with a way
     in too narrow for its half-metre grid: that one it leaves at once.
+  - **Out of a pocket.** A pocket the grid calls shut in can be got into all the same. Behind the partition in the house
+    with door 6 (10.75, 17.76) is a closet whose way in, between the partition's end and the corner of a crate, a body
+    takes on the slant: the sim pushes a body off a box's corner as a round one (`resolve` in `src/sim/world.js`), and the
+    grid's boxes have square corners (`inside`), so to the grid the gap is shut. Its paths never go in there, but a body
+    can be put there (`bm.cmd(19, 0, 4, 18)` does it), walked in by hand, or shoved in. In there it used to have no path
+    to anywhere, gave up every errand, and its way out (below) stopped half a metre on, still inside. A path from a pocket
+    now begins with the way out of it, on the nav thread's finer grid with the corners round (`outOf` and `escape` in
+    `src/sim/nav.worker.js`), walked, not run, and goes on from where that comes out. Of the forty pockets on the nav
+    ground, every one a body can walk out of now has a path out; the three it hasn't, no body gets out of either
+    (`tests/nav-ground.test.mjs`).
   - **One errand at a time.** Sent somewhere new, it goes there, even when that's a stride or two from where it was
     going: it used to carry on to whoever stood outside a door when it meant the chest just inside it.
   - **Its eyes are on the way it's going.** With an errand to talk to someone in hand and a chest to fetch first, its
@@ -808,12 +856,12 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
       among them.
     - Only under the sky, with breath for the run and the jump, never uphill, and only where the nav thread says the way
       is open for a dozen metres. It steps off as it slows, at anything in its way, or after five seconds.
-  - **The staff between spells, and all six spells on its bar.** The staff is what it fights with while a spell cools. A
+  - **The staff between spells, and all twelve spells on its bar.** The staff is what it fights with while a spell cools. A
     spell comes as often as its mana allows: every second or two with its mana full, every several with it low, and at
     once when it's in trouble (a Mend when it's low; a Frost Nova, a Thunderclap or Turn the Dead, whichever it knows and
     has ready, when it's surrounded). It won't cast a spell that isn't ready again yet. It keeps mana back for a Mend
     when it's been hurt, doesn't spend a Meteor on something nearly dead, and takes up sooner a spell that hasn't been in
-    its hands for a while, so all six get used.
+    its hands for a while, so all twelve get used.
   - **It presses the keys as a player does.** A Firebolt is held while it gathers and a channel while it pours (never
     past the mana it has for it). Everything else is a tap, and only with its hands free of the last spell and the last
     staff shot. A key held on casts again the moment the first cast is done, and a hitch in the frames while it was down
@@ -824,21 +872,26 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     for when they're on it; Turn the Dead for the packs; a Thunderbolt at 11, which is what it takes to the black knight's
     shield; then Fire, to a Meteor at 18; then masteries, more ranks, and Ice to a Frost Nova. Past the end of the build a
     point goes into the known spell with the fewest ranks. Every point it spends is in the balance log.
-  - **It sets its own spell bar** from what it has learned, and casts from it as the 1 to 6 keys do, so the six between
-    them cover a fight (`bar`):
+  - **It sets its own spell bar** from what it has learned, and casts from it as the keys 1 to 9, 0, - and + do, so the
+    nine between them cover a fight and the three on 0, - and + hold its Utility spells (`bar`):
     - What it always keeps, once it knows them: Firebolt (the opener, and from range); Mend; the first it has of a Frost
       Nova, a Thunderclap or Turn the Dead (when they're on it); and the first it has of a Meteor or a Thunderbolt (a
-      crowd, something big, or a raised shield).
-    - One for a crowd or a line of them (`SLOT_A`): Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance,
+      crowd, something big, or a raised shield). Mend, and Turn the Dead, go in the three.
+    - Then the rest of the nine, one of each kind in turn till they're full. For a crowd or a line of them (`SLOT_A`): Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance,
       Plague Flask, Wall of Fire, Earthsplitter, and of the new ones Cinderburst, Ring of Fire, Phoenix, Cone of Cold,
       Frozen Orb, Deadwinter, Rolling Boulder, Grasping Vines, Earthquake, Starfall, Forked Lightning, Thunderstorm and
       the rest of their kind.
-    - One to pour on a single mark or get it out of trouble (`SLOT_B`): Arcane Blast, Life Drain, Frost Shards, Magic
-      Missiles, Fire Beam, Spirit Blades, Blink, and of the new ones Flame Wyrm, Cinder Brand, Rime Lance, Stone Shard,
-      Monolith, Spark, Stoneskin, Renew, Aegis, Empower and the rest of their kind.
-    - Those last two change every four minutes, so in time every spell it knows has been in its hands and in the log.
+    - To pour on a single mark or get it out of trouble (`SLOT_B`): Arcane Blast, Frost Shards, Magic Missiles, Fire
+      Beam, Spirit Blades, Blink, and of the new ones Flame Wyrm, Cinder Brand, Rime Lance, Stone Shard, Monolith, Spark,
+      Stoneskin and the rest of their kind. What's still empty takes anything else it knows that isn't Utility.
+    - The three, on 0, - and + (`UTIL_TURN`): Mend and Turn the Dead when it knows them, then Renew, Aegis, Sanctuary,
+      Stillness, Empower, Fleetfoot and Life Drain in their turn. Nothing but a Utility spell goes there, as for you; a
+      Utility spell they've no room for goes in the nine if any of those is still empty. Wisp Light it never slots: it's
+      cast from the book, down among the dead.
+    - The lists change every four minutes, so in time every spell it knows has been in its hands and in the log.
     - Stormstep it never slots: it would carry it in among them, and it fights from a distance.
-    - With a healer hired, Mend's slot goes to a second crowd spell: the healer mends it, and the tank holds them in a knot.
+    - With a healer hired, Mend comes off and another Utility spell has its slot: the healer mends it. With a tank as well,
+      the nine start with two crowd spells, as the tank holds them in a knot.
   - It picks the spell that suits the moment from what's on its bar (`USE` in `src/ui/autobrain.js`, a rule for each of
     the sixty). Some of them:
     - The first Firebolt of a fight is gathered a second and a half, as you'd hold it on something that hasn't seen you.
@@ -998,6 +1051,7 @@ has watched the shots themselves drawn, or the desk's layout of the feed: look a
 - It kept its record of a foe by id for ever, so the next body with a dead one's id was "not being hurt" at first sight and left alone for 45 s (`engage` in `combat`).
 - Across country its short paths could not end on a dungeon portal's terrace and its probe turned it aside at the step, so it paced before Blackvigil's portal and the Howling Mouth's (`solidAt`, `local` and `clearFor` in `src/sim/nav.worker.js`; `tests/portal-approach.test.mjs`).
 - Wedged in the nook behind Silas Crane's hearth, its way out began through the partition. From a snug corner a path starts toward ground it can walk to in a straight line (`freeNear`), and stopped twice in one place it asks the nav thread for a way out on a finer grid (`escape`; `lost` and `motor` in the brain).
+- Put in the closet behind the partition in the house with door 6 (by `bm.cmd(19, 0, 4, 18)`, which stands it at 4, 18.2, inside it), it said "Wedged in a corner: working its way out." for several minutes. The chest it went for first (6, 25.26) wasn't what took it there: that chest's path ends out in the room. The way out stopped at the first free place on the walking grid, which from inside a pocket is the pocket, so it walked half a metre, stopped, and asked again. The way out now goes to ground the rest of the grid is joined to, through gaps a body fits on the slant (a box's corners round, as the sim has them), and a path from inside a pocket starts with it (see "Out of a pocket" above).
 - It went down a dungeon ahead of the quests that send it there (see Complete Quests above).
 
 **Stuck in the catacombs.** Run headless again, set to grind the catacombs at level 14 with a hired party, and at level 6 alone with the Sexton's second quest and the tailor's in hand (`tools/autoplay/watch.mjs`). It went round the Bell Crypt and the Reliquary, eighteen empty spots, for as long as it was watched. Three things made that, and a fourth showed beside them:
@@ -1239,6 +1293,46 @@ where they began (`keepPace`): they used to stay the level they were made at.
   for the ninja, gold for the boomerang knight. A rogue's cuts, and anything else that bleeds a foe, throw its blood out
   along the blow: the render thread's own blood, which falls and soaks into the ground (`EV.HERO_FX`, `heroFx` in
   `src/main.js`). Rupture goes on throwing it for three seconds.
+
+### Their gear, their book, and old companions
+
+- **The dead drop gear for your party** (`src/items/partygear.js`). Now and then a kill leaves a piece for one of the
+  party you have with you, and every boss's hoard in a delve has two (the last boss's, three, rare or better: `partyDrops`,
+  and `bonus` in `src/items/chests.js`). Nothing of theirs ever drops in Velscour's church: it's Tessariel's own. A weapon or
+  shield is one of the heroes' own models (`assets/game/heroes/kit`) in a dye of its own (`PROP_PALS`); a piece of armour
+  is plate, mail or light (who wears which: `WEIGHT_OF`), cut from one hero body (`shape`) and dyed in one of your own
+  gear sets' colours (`look`, a set of `assets/game/player/skins` as `tools/heroes/looks.py` boils them into
+  `assets/game/heroes/looks.json`).
+- **On them** (`src/gfx/herolook.js`). A piece cut from a body of the wearer's own class and sex puts its shape on them as
+  well as its colours: the group is lifted off that body, fitted to theirs by the two bodies' bind poses, and its picture
+  laid beside theirs (never more than three bodies borrowed at once). On anyone else of its weight, only its colours show.
+  What they wear is dyed as one outfit (`outfitRamps`): every piece in their coat's colour, with its own set's light and
+  dark, and the rarer the richer. The dye keeps each texel's own light and dark against the rest of the piece, keeps gold
+  trim gold and skin skin (`src/gfx/recolour.js`). Their weapon and shield are whatever they've been given of their own
+  kinds; a painted one more often than not goes with their coat.
+- **The pictures** in the pack and the book are drawn in Blender by `tools/heroes/icons.py` (into
+  `assets/game/heroes/icons`, from the GLBs' own arrays: no glTF import) and dyed in the page as the bodies are
+  (`src/ui/hgicons.js`). After changing a hero body or the kit, run it again.
+- **Their bags** (`bag` on each roster entry in `src/ui/party.js`, 24 pieces). Party gear you pick up never goes in your
+  pack: it goes in the bag of one of your party it's for (whoever it's an upgrade for first, then whoever has most room;
+  failing them, an old companion who can use it, kept for them with the Company). If nobody who can use it has room, it
+  stays on the ground and you're told why. A shop buys what's in the bags of those with you, through you; auto-play
+  sells what nobody would be the better for. A save from before the bags hands the party gear in your pack to them.
+- **The party's book: K** (or PARTY in the pack; `src/ui/partybook.js`). Each of your party and old companions: their eight
+  slots (a piece out of their bag, or a bag of the party's with you, goes on with a click, better and worse marked; "Put
+  on their best from their bag"), their bag (wear or drop each piece), the sets they're wearing more than one piece of,
+  what their gear and tree come to, and their tree.
+- **Their trees** (`src/core/partytree.js`). Three branches a class, each of its moves (the first ones learned already,
+  the rest opening at their level), two passives and a capstone; a point a level. They spend their own (`autoSpend`, by
+  role) unless you switch that off, and every point back costs gold. A move's rank in the tree is its rank in the fight
+  (`moveRank` in `src/sim/heroskills.js`), and a move not learned isn't used.
+- **Old companions** (`roster` in `src/ui/party.js`). Everyone you've had along stays on your books with their gear, and
+  the quartermasters offer them again. They level with you while they're away, and for every four levels you've gone past
+  where you last had them, they come by a moderate piece of their own (`catchUp`).
+- **Auto-play** puts their best on them and spends their points unless Settings say otherwise (the AI parts in
+  `src/title.js`: your gear, gems, skill points and spell bar, your party's gear and points, hiring, looting, chests,
+  selling, sleeping, raids, riding and teleporting each turn off on their own).
+- **Levels go to 200** (`MAX_LEVEL` in `src/items/levels.js`). Monsters don't yet keep pace past the twenties.
 
 ### The bards' lutes
 
@@ -2761,7 +2855,7 @@ from Bellmourn2, and the two-hander's original swing keys from Bellmourn (kept f
 
 ## Spells
 
-Sixty spells in six schools, on hands of their own. **F** or the **middle mouse button** casts; hold it to gather a Firebolt or keep up a held spell. The **number keys** or the **wheel** pick from the bar, **B** opens the spellbook. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
+Sixty spells in six schools, on hands of their own. **F** or the **middle mouse button** casts; hold it to gather a Firebolt or keep up a held spell. The **number keys** or **Shift** and the **wheel** pick from the bar, **B** opens the spellbook. With a one-handed sword the free hand casts and the sword stays up, otherwise whatever's held goes down for the cast. Spells that want two hands always take both.
 
 The bar has six numbered slots. The spellbook (**B**) is where you learn spells and put them on the bar. With a shield up your right hand does the casting: the sword goes away, the hand comes out and casts, and the sword comes back.
 
@@ -2798,7 +2892,7 @@ What each school is for:
 - **Unlearning** gives every point back for gold (20 and 12 a level). What a scroll taught stays known.
 - **Cooldowns.** Most spells are limited only by mana. The spells that stay on you (Stoneskin, Aegis, Fleetfoot and the rest), the great ones and a few others can't be cast again for some seconds; a spell that lasts counts from when it ends. The slot shows the seconds, and what's on you shows over the bar.
 
-In the book, a tab is a school. Its spells stand left to right by tier with their branches under them. A gold edge marks what a point can go into now. Click a node to read it, with its numbers now and at the next rank; the button, or a double click, spends the point. A spell you know goes on the bar by clicking a slot, dragging it there, or pressing 1 to 6 over it.
+In the book, a tab is a school. Its spells stand left to right by tier with their branches under them. A gold edge marks what a point can go into now. Click a node to read it, with its numbers now and at the next rank; the button, or a double click, spends the point. A spell you know goes on the bar by clicking a slot, dragging it there, or pressing the slot's key over it. The bar has twelve: 1 to 9 take any spell, and the last three, on 0, - and +, take the Utility school's alone (Wisp Light, Mend, Fleetfoot, Turn the Dead, Renew, Life Drain, Aegis, Sanctuary, Empower, Stillness; `UTILITY` in `src/sim/skills.js`). A spell learned goes into the first empty slot it may: a Utility spell into 0, - or + first. A bar saved with six slots loads into 1 to 6.
 
 ### How spells meet each other
 

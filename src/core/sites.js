@@ -371,16 +371,69 @@ const PLAT = { lift: 0.3, edge: 0.14, rise: 0.19, tread: 0.42, stair: 1.7, ends:
 // level and the step at its front, and the frame's posts (across and through). The wall's height over the floor, in metres.
 const ARCH = { face: 0.11, hole: 0.345, mid: 0.36, back: 0.42, deck: 0.107, deckR: 0.45, step: 0.044, frame: [0.28, 0.46], frameZ: [-0.16, 0.02], high: 7.2 };
 
+// A terrace's frame: its middle, behind the portal by PORTAL_PAD.at, and P(u, w), a point across it (u) and through it
+// (w, + out the front); G(u, w), the ground there.
+function terraceFrame(x, z, yaw, ground = terrainHeight) {
+  const c = Math.cos(yaw), s = Math.sin(yaw), ox = x - PORTAL_PAD.at * s, oz = z - PORTAL_PAD.at * c;
+  const P = (u, w) => [ox + u * c + w * s, oz - u * s + w * c];
+  return { c, s, ox, oz, P, G: (u, w) => { const [px, pz] = P(u, w); return ground(px, pz); } };
+}
+// Its floor (top), and the ground under it, high and low. At the Warrens' mouth, the cut's (which is the hill a little in
+// front of the wall); anywhere else on the land, and down in a dungeon, a little over the highest ground under it, so it
+// stands on whatever's there with nothing dug.
+function terraceTop(G, key, land) {
+  const { hu, hw } = PORTAL_PAD, { lift, edge } = PLAT;
+  let hi = -Infinity, lo = Infinity;
+  for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) {
+    const g = G((i / 4 - 1) * (hu + edge), (j / 4 - 1) * (hw + edge));
+    hi = Math.max(hi, g); lo = Math.min(lo, g);
+  }
+  return { top: land && key === 'hf_portal' ? portalFloor() : hi + lift, hi, lo };
+}
+// A flight down from an edge of a terrace whose floor is at top: pt(q, b) is the point q along that edge and b out from it,
+// and the flight is hs wide either side of m. Its steps (none, where the ground's level with the floor there), or null if
+// count of them never reach the ground.
+function stepsDown(G, top, pt, m, hs, count) {
+  const { edge, rise, tread, cheek } = PLAT;
+  const steps = [];
+  for (let k = 0; k < count; k++) {
+    const b = edge + k * tread + tread / 2, y = top - (k + 1) * rise;
+    const under = [-hs - cheek, 0, hs + cheek].map((q) => G(...pt(m + q, b)));
+    // (Done where its middle meets the ground: across a slope its high side runs into the hill.)
+    if (y < under[1] + 0.05) return steps;
+    steps.push({ b, y, base: Math.min(...under) - 0.5 });
+  }
+  return null;
+}
+// The way up to a delve's portal out in the land, as portalWall lays it: its terrace's floor (top), the flight down the
+// front (n steps, half as wide as `half`; none when the floor's level with the ground there, and null steps when it never
+// meets it), and on the line through the middle of it: the head of the flight on the terrace (head), its foot (foot), and a
+// few strides out in front of that (out), and the way it faces (out the front: fx, fz). `on(x, z)`: whether a point is on
+// the terrace or its flight. Auto-play walks up by these (src/ui/autobrain.js stairs), square on and up the middle.
+export function portalStair(d) {
+  const p = d.portal, { hu, hw } = PORTAL_PAD, { edge, tread, stair, far } = PLAT;
+  const F = terraceFrame(p.x, p.z, p.yaw), { top } = terraceTop(F.G, `${d.tag}_portal`, true);
+  const steps = stepsDown(F.G, top, (q, b) => [-q, hw + b], 0, stair, far);
+  const n = steps ? steps.length : 0, front = hw + edge, foot = front + n * tread;
+  const toLocal = (x, z) => { const dx = x - F.ox, dz = z - F.oz; return [dx * F.c - dz * F.s, dx * F.s + dz * F.c]; };
+  // (What it stands on, as boxes in the land's own frame: the terrace, and its flight with the cheeks either side. Nothing laid
+  // across the land, a road or a path, runs over them: tools/roads/lay.mjs.)
+  const box = (u, w, hx, hz) => { const [x, z] = F.P(u, w); return { x, z, hx, hz, yaw: p.yaw }; };
+  const boxes = [box(0, 0, hu + edge, hw + edge), ...(n ? [box(0, (front + foot) / 2, stair + PLAT.cheek, (foot - front) / 2)] : [])];
+  return {
+    key: d.key, top, n, steps, half: stair, fx: F.s, fz: F.c, boxes,
+    head: F.P(0, front - 0.9), foot: F.P(0, foot + 0.7), out: F.P(0, foot + 4.5),
+    on: (x, z) => { const [u, w] = toLocal(x, z); return (Math.abs(u) < hu + edge + 0.3 && w > -hw - edge - 0.3 && w < front + 0.3) || (Math.abs(u) < stair + 0.3 && w >= front && w < foot + 0.3); },
+  };
+}
+
 function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
-  const { lift, edge, rise, tread, stair, ends, cheek, most, far, drop, rail } = PLAT;
+  const { edge, rise, tread, stair, ends, cheek, most, far, drop, rail } = PLAT;
   const { hu, hw, at } = PORTAL_PAD;
   const { scale: S, sink } = PORTAL_MODELS.dungeon;
   const land = ground === terrainHeight;
-  const c = Math.cos(yaw), s = Math.sin(yaw);
   // The terrace's middle, behind the portal by at; P is a point across it (u) and through it (w, + out the front).
-  const ox = x - at * s, oz = z - at * c;
-  const P = (u, w) => [ox + u * c + w * s, oz - u * s + w * c];
-  const G = (u, w) => { const [px, pz] = P(u, w); return ground(px, pz); };
+  const { c, s, ox, oz, P, G } = terraceFrame(x, z, yaw, ground);
   const plat = { x: ox, z: oz, r: 0, rects: [] };
   K.floors.push(plat);
   // A box in the terrace's own frame: its middle, its half sizes, from y0 to y1.
@@ -396,15 +449,8 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
     const [px, pz] = P(u, w);
     K.colliders.push({ x: px, z: pz, hx: fu, hz: fw, yaw, h: y - terrainHeight(px, pz), t: y - 0.45 });
   };
-  // The ground under it, high and low. Its floor: at the Warrens' mouth, the cut's (which is the hill a little in front of
-  // the wall); anywhere else on the land, and down in a dungeon, a little over the highest ground under it, so it stands
-  // on whatever's there with nothing dug.
-  let hi = -Infinity, lo = Infinity;
-  for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) {
-    const g = G((i / 4 - 1) * (hu + edge), (j / 4 - 1) * (hw + edge));
-    hi = Math.max(hi, g); lo = Math.min(lo, g);
-  }
-  const top = land && key === 'hf_portal' ? portalFloor() : hi + lift, foot = Math.min(lo, top) - 0.7;
+  // The ground under it, high and low, and its floor (terraceTop).
+  const { top, lo } = terraceTop(G, key, land), foot = Math.min(lo, top) - 0.7;
   // The body, its plinth, and the coping round its top with the paving set in it.
   block('dark:block', 0, 0, hu, hw, foot, top - 0.2, { top: false });
   block('dark:course', 0, 0, hu + 0.2, hw + 0.2, foot, Math.min(lo, top - 0.5) + 0.3);
@@ -464,19 +510,8 @@ function portalWall(K, x, z, yaw, key, ground = terrainHeight) {
   const stop = (sd, q, b, fa, fb, y) => { const [u, w] = on(sd, q, b); if (sd.n[0]) wall(u, w, fb, fa, y); else wall(u, w, fa, fb, y); };
   // Where along an edge is clear of the wall (along an end, the wall's where w < wf).
   const clear = (sd) => (sd.n[0] > 0 ? [wf, sd.half + edge] : sd.n[0] < 0 ? [-sd.half - edge, -wf] : [-sd.half - edge, sd.half + edge]);
-  // A flight down from an edge, hs wide either side of m: its steps (none, where the ground's level with the floor there), or
-  // null if count of them never reach the ground.
-  const flight = (sd, m, hs, count = most) => {
-    const steps = [];
-    for (let k = 0; k < count; k++) {
-      const b = edge + k * tread + tread / 2, y = top - (k + 1) * rise;
-      const under = [-hs - cheek, 0, hs + cheek].map((q) => G(...on(sd, m + q, b)));
-      // (Done where its middle meets the ground: across a slope its high side runs into the hill.)
-      if (y < under[1] + 0.05) return steps;
-      steps.push({ b, y, base: Math.min(...under) - 0.5 });
-    }
-    return null;
-  };
+  // A flight down from an edge, hs wide either side of m (stepsDown).
+  const flight = (sd, m, hs, count = most) => stepsDown(G, top, (q, b) => on(sd, q, b), m, hs, count);
   // A wall along an edge whose top slopes (a stair's cheek): q0..q1 along the edge, b0..b1 out from it, from y0 up to yt0 at b0
   // and yt1 at b1; its sides in layer, its top in cap. (Faced the way Kit.box faces its sides.)
   const ramp = (layer, cap, sd, q0, q1, b0, b1, y0, yt0, yt1) => {
