@@ -763,6 +763,16 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     hand to or have a word with (a chest, a thing on the ground, someone), the path ends where nothing stands between
     it and that, so it isn't sent to the far side of a wall from it. One house chest stands behind a screen with a way
     in too narrow for its half-metre grid: that one it leaves at once.
+  - **Out of a pocket.** A pocket the grid calls shut in can be got into all the same. Behind the partition in the house
+    with door 6 (10.75, 17.76) is a closet whose way in, between the partition's end and the corner of a crate, a body
+    takes on the slant: the sim pushes a body off a box's corner as a round one (`resolve` in `src/sim/world.js`), and the
+    grid's boxes have square corners (`inside`), so to the grid the gap is shut. Its paths never go in there, but a body
+    can be put there (`bm.cmd(19, 0, 4, 18)` does it), walked in by hand, or shoved in. In there it used to have no path
+    to anywhere, gave up every errand, and its way out (below) stopped half a metre on, still inside. A path from a pocket
+    now begins with the way out of it, on the nav thread's finer grid with the corners round (`outOf` and `escape` in
+    `src/sim/nav.worker.js`), walked, not run, and goes on from where that comes out. Of the forty pockets on the nav
+    ground, every one a body can walk out of now has a path out; the three it hasn't, no body gets out of either
+    (`tests/nav-ground.test.mjs`).
   - **One errand at a time.** Sent somewhere new, it goes there, even when that's a stride or two from where it was
     going: it used to carry on to whoever stood outside a door when it meant the chest just inside it.
   - **Its eyes are on the way it's going.** With an errand to talk to someone in hand and a chest to fetch first, its
@@ -996,6 +1006,7 @@ has watched the shots themselves drawn, or the desk's layout of the feed: look a
 - It kept its record of a foe by id for ever, so the next body with a dead one's id was "not being hurt" at first sight and left alone for 45 s (`engage` in `combat`).
 - Across country its short paths could not end on a dungeon portal's terrace and its probe turned it aside at the step, so it paced before Blackvigil's portal and the Howling Mouth's (`solidAt`, `local` and `clearFor` in `src/sim/nav.worker.js`; `tests/portal-approach.test.mjs`).
 - Wedged in the nook behind Silas Crane's hearth, its way out began through the partition. From a snug corner a path starts toward ground it can walk to in a straight line (`freeNear`), and stopped twice in one place it asks the nav thread for a way out on a finer grid (`escape`; `lost` and `motor` in the brain).
+- Put in the closet behind the partition in the house with door 6 (by `bm.cmd(19, 0, 4, 18)`, which stands it at 4, 18.2, inside it), it said "Wedged in a corner: working its way out." for several minutes. The chest it went for first (6, 25.26) wasn't what took it there: that chest's path ends out in the room. The way out stopped at the first free place on the walking grid, which from inside a pocket is the pocket, so it walked half a metre, stopped, and asked again. The way out now goes to ground the rest of the grid is joined to, through gaps a body fits on the slant (a box's corners round, as the sim has them), and a path from inside a pocket starts with it (see "Out of a pocket" above).
 - It went down a dungeon ahead of the quests that send it there (see Complete Quests above).
 
 **Stuck in the catacombs.** Run headless again, set to grind the catacombs at level 14 with a hired party, and at level 6 alone with the Sexton's second quest and the tailor's in hand (`tools/autoplay/watch.mjs`). It went round the Bell Crypt and the Reliquary, eighteen empty spots, for as long as it was watched. Three things made that, and a fourth showed beside them:
