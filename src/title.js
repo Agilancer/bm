@@ -108,7 +108,7 @@ const SETTINGS = `
   <div class="t-dbtns"><button class="t-btn" data-close><span>Done</span></button></div>`;
 
 const KEYS = [['W A S D', 'move'], ['Mouse', 'look'], ['Shift', 'run'], ['Space', 'jump'], ['Q', 'dodge'],
-  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['1 to 9', 'cast the spell in that slot'], ['0  −  +', 'cast the Utility spell in that slot'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['V', 'first or third person, once you\'re out of the cave'], ['Wheel', 'out of first person and further back, or in again'], ['Shift + wheel', 'turn the spell bar'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
+  ['Left click', 'cut: two cuts, then a slam'], ['Right click', 'wide swing'], ['1 to 9', 'cast the spell in that slot'], ['0  −  +', 'cast the Utility spell in that slot'], ['I', 'pack: swords and gems'], ['E', 'take up what\'s on the ground'], ['V', 'first or third person, once you\'re out of the cave'], ['Wheel', 'out of first person and further back, or in again'], ['Shift + wheel', 'turn the spell bar'], ['Tab', 'free the mouse to click the map, the skull or Auto; Tab again to look'], ['Esc', 'pause: save, load, settings'], ['F3', 'frame time and the thinking']];
 const HOWTO = `
   <h2>How to Play</h2><div class="t-rule"></div>
   <div class="t-keys">${KEYS.map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('')}</div>
