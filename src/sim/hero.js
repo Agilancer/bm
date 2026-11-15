@@ -3693,13 +3693,17 @@ export class HeroWorld {
       if (o.bit) this.endBit(h);
       o.rest = null; o.wait = rand(0.6, 3.5);
       const ux = this.head[0], uz = this.head[1];
-      // Running on ahead: for a while, out in the open, two of you at most, and given up when you turn off another way.
+      // Running on ahead: for a while, out in the open, two of you at most, and given up when you turn off another way. (The
+      // while is counted from when they're out at their place ahead of you, not from when they set off for it: going by takes
+      // as long as you take to ease off for them, and counted from the start a short lead ran out before they were by, so you
+      // eased off for nothing. Not by in twenty seconds, they give it up.)
       o.leadCd -= dt;
-      if (o.lead && ((o.lead.t -= dt) <= 0 || !open || ux * o.lead.ux + uz * o.lead.uz < 0.4)) { o.lead = null; o.leadCd = rand(8, 26); }
+      if (o.lead) { if (o.lead.there) o.lead.t -= dt; else o.lead.by += dt; }
+      if (o.lead && (o.lead.t <= 0 || o.lead.by > 20 || !open || ux * o.lead.ux + uz * o.lead.uz < 0.4)) { o.lead = null; o.leadCd = rand(8, 26); }
       else if (!o.lead && open && this.moveT > 2.5 && o.leadCd <= 0) {
         o.leadCd = rand(2, 5);
         const eager = (LEAD_EAGER[h.person.cls] ?? 1) * (h.lean.roam || 1) * (h.role === 'heal' ? 0.4 : 1);
-        if (mates.filter((m) => m.own?.lead).length < 2 && Math.random() < 0.3 * eager) o.lead = { t: rand(6, 16), ahead: rand(4.5, 9), side: (Math.random() < 0.5 ? -1 : 1) * rand(0.8, 3.2), ux, uz };
+        if (mates.filter((m) => m.own?.lead).length < 2 && Math.random() < 0.3 * eager) o.lead = { t: rand(6, 16), by: 0, there: false, ahead: rand(4.5, 9), side: (Math.random() < 0.5 ? -1 : 1) * rand(0.8, 3.2), ux, uz };
       }
       if (o.lead) {
         const L = o.lead;
@@ -3713,6 +3717,7 @@ export class HeroWorld {
           const along = (h.x - p.x) * ux + (h.z - p.z) * uz;
           if (along < -8) { o.lead = null; o.leadCd = rand(6, 14); }
           else {
+            if (along >= L.ahead - 1) L.there = true;
             h.wantsLead = along < 1;
             const speed = along < L.ahead - 1 ? Math.max(pv * 1.08, (this.pace || 0) * 0.95) : pv * clamp(1 + (L.ahead - along) * 0.12, 0.85, 1.1);
             h.goal = { x: sx + ux * 3, z: sz + uz * 3, speed: Math.max(1.4, speed), stop: 0.5 };
@@ -3733,6 +3738,16 @@ export class HeroWorld {
       }
       const side = (i % 2 ? 1 : -1) * (0.9 + 0.5 * Math.sin(o.drift));
       x += p.vz / pv * side; z -= p.vx / pv * side;
+      // (Out in front of it, as when a lead's given back out there or you've turned back the way you came: they ease off and
+      // let it come up to them, still going your way and edging over to its side (a stride in three at most, not cutting
+      // across), slower than you (whoever walks fastest included), and stand facing your way if that's slower than a walk:
+      // never turned round to walk back to it against you.)
+      const over = (h.x - x) * ux + (h.z - z) * uz;
+      if (over > 0.5) {
+        const v = pv * clamp(0.85 - over * 0.1, 0.45, 0.85), lat = clamp((x - h.x) * uz - (z - h.z) * ux, -1.2, 1.2);
+        h.goal = v < 1 ? { x: h.x, z: h.z, speed: 1, stop: 0.5, face: Math.atan2(ux, uz) } : { x: h.x + ux * 3 + uz * lat, z: h.z + uz * 3 - ux * lat, speed: v, stop: 0.5 };
+        return;
+      }
       const far = Math.hypot(x - h.x, z - h.z);
       h.goal = { x, z, speed: far > 9 ? Math.max(9.8, pv * 1.25) : far > 3 ? Math.max(2.2, pv * 1.15) : Math.max(1.3, pv), stop: 0.7 };
       return;
