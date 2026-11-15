@@ -25,6 +25,7 @@
   border: calc(var(--medal) * .075) solid transparent; box-shadow: 0 0 0 1.5px var(--rim), 0 2px 8px rgba(0, 0, 0, .7); }
 #levelNum { font: 700 calc(var(--medal) * .42)/1 Cinzel, Georgia, serif; }
 #levelNum em { display: none; }
+#levelNum.three { font-size: calc(var(--medal) * .31); letter-spacing: -.02em; }
 #xpBar { display: none; }
 #vitals { position: absolute; left: calc(20px + var(--sl) + var(--medal) + 8px); bottom: calc(24px + var(--sb)); width: var(--bars); display: grid; gap: 3px; }
 .meter, #mana, #stam { position: relative; background: rgba(6, 5, 4, .72); overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8), 0 0 0 2px var(--rim-dim); border: 0; margin: 0; }
@@ -102,11 +103,14 @@ body.touch #spells { position: absolute; inset: 0; left: 0; bottom: 0; transform
 body.touch #spells .spell { position: absolute; padding: 0; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; pointer-events: auto; touch-action: none;
   background: radial-gradient(circle at 50% 34%, rgba(46, 38, 30, .84), rgba(10, 8, 6, .84) 70%);
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 62%, #000), inset 0 0 0 3.500px rgba(8, 6, 4, .6), 0 2px 6px rgba(0, 0, 0, .55); }
+/* (The Utility three, 0, - and +, in the outermost ring: edged in pale bone, so they read as their own.) */
+body.touch #spells .spell.util { box-shadow: inset 0 0 0 1.5px rgba(233, 223, 201, .6), inset 0 0 0 3.500px rgba(8, 6, 4, .6), 0 2px 6px rgba(0, 0, 0, .55); }
 body.touch #spells .spell svg { width: 56%; height: 56%; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .9)); }
 body.touch #spells .spell b { left: auto; right: 50%; top: auto; bottom: -1px; transform: translateX(50%); font: 700 calc(8 * var(--u))/1 Georgia, serif; color: #cdbf9f; opacity: .8; }
 body.touch #spells .spell.now { box-shadow: inset 0 0 0 2px var(--c), inset 0 0 0 3.500px rgba(8, 6, 4, .6), inset 0 0 calc(12 * var(--u)) -2px var(--c), 0 0 calc(10 * var(--u)) -2px var(--c); }
 body.touch #spells .spell.up, body.touch #spells .spell.down { transform: scale(.93); filter: brightness(1.3); box-shadow: inset 0 0 0 2px var(--c), inset 0 0 calc(16 * var(--u)) var(--c), 0 0 calc(16 * var(--u)) var(--c); }
 body.touch #spells .spell.empty { background: rgba(10, 8, 6, .35); box-shadow: inset 0 0 0 1.5px rgba(201, 163, 92, .28); border: 0; }
+body.touch #spells .spell.util.empty { box-shadow: inset 0 0 0 1.5px rgba(233, 223, 201, .3); }
 body.touch #spells .spell .cd { font: 700 calc(17 * var(--u)) Georgia, serif; border-radius: 50%; }
 body.touch #spellOpen, body.touch #viewBtn { display: none !important; }
 body.touch #spellName { left: auto; right: calc(var(--hr) + 300 * var(--u)); bottom: calc(var(--hb) + 10 * var(--u)); transform: none; margin: 0; font-size: calc(11.5 * var(--u)); text-align: right; opacity: .85; }
@@ -250,9 +254,8 @@ body.touch #invTip, body.touch #invTip2 { max-width: min(300px, 44vw); font-size
 /* The book. */
 body.touch #spellClose { min-width: 44px; height: 40px; }
 body.touch .tspend { min-height: 42px; }
-body.touch .tslots { gap: 4px; flex-wrap: nowrap; }
-body.touch .tslots span { flex: none; }
-body.touch .tslots button { flex: 1 1 0; min-width: 0; max-width: 38px; width: auto; height: 36px; padding: 0; }
+body.touch .tslots { gap: 4px; }
+body.touch .tslots button { max-width: 38px; height: 36px; }
 body.touch .tbranch { padding: 8px 10px; }
 body.touch #treeTabs button { min-height: 36px; }
 
@@ -290,13 +293,15 @@ html.art-btn_round #bTake { background: var(--art-btn_round_on, var(--art-btn_ro
 html.art-slot_spell #spells .spell { background: var(--art-slot_spell) center / 100% 100% no-repeat; border: 0; border-radius: 50%; box-shadow: none; }
 html.art-slot_spell #spells .spell.empty { opacity: .6; }
 html.art-slot_spell_on #spells .spell.now { background-image: var(--art-slot_spell_on); box-shadow: 0 0 12px -3px var(--c); }
+/* (The Utility three over the painted frame: a thin ring of pale bone round it.) */
+html.art-slot_spell #spells .spell.util:not(.now):not(.up):not(.down) { box-shadow: 0 0 0 1.5px rgba(233, 223, 201, .42); }
 html.art-spells #spells .spell svg { width: 74%; height: 74%; }
 /* (On a desk a painted spell fills its own square and the frame's well is about three quarters of the slot: the picture is
    drawn at two thirds, in the middle of it. The slot is a grid, so it's the middle whatever its size.) */
 html.art-spells body:not(.touch) #spells .spell svg { width: 66%; height: 66%; filter: none; }
 html.art-slot_spell body:not(.touch) #spells .spell .cd { inset: 12%; }
 /* (the book, the quest log and the view beside the bar: the painted round button, lit while it's on) */
-html.art-btn_round body:not(.touch) :is(#spellOpen, #questOpen, #viewBtn) { background: var(--art-btn_round) center / 100% 100% no-repeat; box-shadow: 0 2px 8px rgba(0, 0, 0, .7); }
+html.art-btn_round body:not(.touch) :is(#spellOpen, #questOpen, #partyOpen, #viewBtn) { background: var(--art-btn_round) center / 100% 100% no-repeat; box-shadow: 0 2px 8px rgba(0, 0, 0, .7); }
 html.art-btn_round body:not(.touch) #spellOpen.pts { box-shadow: 0 0 0 2px #f1d68a, 0 0 16px 2px rgba(241, 214, 138, .7); }
 html.art-btn_round_on body:not(.touch) #viewBtn.on { background-image: var(--art-btn_round_on); box-shadow: 0 0 10px rgba(241, 214, 138, .45); }
 /* (the painted frame's band is a ninth of its width on each side: the frame is let out a little past the map's place and

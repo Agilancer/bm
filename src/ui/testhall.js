@@ -13,10 +13,11 @@ import { FAMILIES, hallFoes } from '../core/testhall-foes.js';
 import { TRIPO_BASE, withVariants } from '../core/tripo-monsters.js';
 import { BASES, GEMS, GEM_GRADES, RARITIES, ROBES, ROBE_PALETTES, ROBE_SETS, SET_PARTS, SHIELDS, SKULLS, makeRng, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon } from '../items/items.js';
 import { CLOSE_X } from './menu-x.js';
+import { MAX_LEVEL } from '../items/levels.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const TABS = [['staff', 'Staffs'], ['skull', 'Skulls'], ['shield', 'Shields'], ['robe', 'Robes'], ['set', 'Gear sets'], ['gem', 'Gems'], ['you', 'Yourself']];
-const LEVELS = [1, 5, 10, 15, 20, 30, 40, 50];
+const LEVELS = [1, 5, 10, 15, 20, 30, 50, 100, 150, 200];
 // (No V's and no T's in the stores: those shields are the knights' own, and never anyone else's. See CLAUDE.md.)
 const STAFFS = Object.keys(BASES).filter((b) => BASES[b].grade === 'common' || BASES[b].grade === 'staff').sort((a, b) => (BASES[a].tier ?? 0) - (BASES[b].tier ?? 0) || BASES[a].name.localeCompare(BASES[b].name));
 const PLAIN_SHIELDS = Object.keys(SHIELDS).filter((b) => !SHIELDS[b].side).sort((a, b) => SHIELDS[a].rarity - SHIELDS[b].rarity || SHIELDS[a].name.localeCompare(SHIELDS[b].name));
@@ -260,7 +261,7 @@ export class HallUI {
 
   setLevel(l) {
     const P = this.pack;
-    this.level?.(Math.max(1, Math.min(50, l)) - P.level);
+    this.level?.(Math.max(1, Math.min(MAX_LEVEL, l)) - P.level);
     this.fill?.();
     this.showGear();
   }

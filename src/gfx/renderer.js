@@ -4,6 +4,7 @@ import { FIELD_CREATURES } from '../core/field-creatures.js';
 import { TRIPO_BASE, TRIPO_SLOTS, withVariants } from '../core/tripo-monsters.js';
 import { TripoSlots } from './tripo-slots.js';
 import { BodySkin } from './bodyskin.js';
+import { HeroLooks } from './herolook.js';
 import { TOWN_KNIGHTS } from '../core/knights.js';
 import { LISANDRA_FORMS, LISANDRA_SCALE, SKIRT_PALETTE_JOINTS } from '../core/lisandra.js';
 import { FOREST_REACH } from '../core/forest.js';
@@ -259,6 +260,7 @@ export class Renderer {
     this.gauntletSets = new Map();
     this.chests = [];
     this.doorItems = [];
+    this.bellItems = [];
     this.portalItems = null;              // the portals, each its stone and its swirl (portalModel), made the first time they're drawn
     this.stallItems = null;               // the market's wares and their tarps (src/gfx/wares.js), made the first time they're drawn
     this.stallsOpen = new Set();          // which stalls have their wares out (src/folk/brain.js, stall)
@@ -491,6 +493,8 @@ export class Renderer {
       this.selfItems = [0, 1, 2].map(() => ({ mat: new Float32Array(16), sword: null, slot: -1, model: null }));
       // The gear you wear, painted onto it (src/gfx/bodyskin.js): main.js says what's worn.
       this.bodySkin = new BodySkin(this, base, body, colour);
+      // (And your party's, as their gear says: src/gfx/herolook.js.)
+      this.heroLooks = new HeroLooks(this, base);
     }
     // The arms by how many hands they have on the sword. Which is on screen comes with each snapshot, along with its pose.
     this.vms = { 1: await vms[0], 2: await vms[1], 3: await vms[2] };
@@ -1117,6 +1121,9 @@ export class Renderer {
   }
 
   async buildSword(id, s) {
+    // (A weapon or shield of your party's, on the ground: src/gfx/herolook.js.)
+    if (id.startsWith('kit/')) { await this.heroLooks.lyingProp(id, s); return; }
+    if (id.startsWith('dye/')) { await this.heroLooks.lyingDyed(id, s); return; }
     const { device } = this;
     const w = WEAPONS.find((x) => x && x.id === id);
     const buf = await fetch(`${this.base}assets/game/items/${id}.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
@@ -1259,17 +1266,19 @@ export class Renderer {
   }
 
   // The same model, glowing a colour: its rarity's, when it's dropped.
-  tinted(model, hex) {
-    let t = model.tints.get(hex);
+  // k: how strong (a party's gear: less, so its own colours show under it).
+  tinted(model, hex, k = 1) {
+    const key = k === 1 ? hex : `${hex}|${k}`;
+    let t = model.tints.get(key);
     if (t) return t;
     const { device } = this;
-    const glow = [1, 3, 5].map((i) => (parseInt(hex.slice(i, i + 2), 16) / 255) ** 2.2);
+    const glow = [1, 3, 5].map((i) => (parseInt(hex.slice(i, i + 2), 16) / 255) ** 2.2 * k);
     const ubo = device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     device.queue.writeBuffer(ubo, 0, new Float32Array([...glow, 1]));
     t = { ...model, bg: device.createBindGroup({ layout: this.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, ...model.maps.map((m, i) => ({ binding: i + 1, resource: m.createView() })),
     ] }) };
-    model.tints.set(hex, t);
+    model.tints.set(key, t);
     return t;
   }
 
@@ -1596,24 +1605,34 @@ export class Renderer {
   // The doors, the first time one comes near: every leaf from one glb, on one set of maps. See src/items/doors.js and tools/doors/model.py.
   doorModel() {
     this.doorModels = {};
-    (async () => {
-      const buf = await fetch(`${this.base}assets/game/items/doors.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
-      const glb = parseGLB(buf);
-      const prims = glb.json.nodes.filter((n) => n.mesh !== undefined).map((n) => {
-        const pr = glb.json.meshes[n.mesh].primitives[0], a = pr.attributes;
-        return { name: n.name, pr, pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
-      });
-      const mat = glb.json.materials[prims[0].pr.material], scale = this.tier.texScale;
-      const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
-      const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
-        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
-        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
-        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
-      ]);
-      const models = {};
-      for (const p of prims) models[p.name] = this.lyingModel(p, alb, nrm, mr, [0, 0, 0, 0]);
-      this.doorModels = models;
-    })().catch((e) => console.error('doors', e));
+    this.glbModels('doors').then((m) => { this.doorModels = m; }).catch((e) => console.error('doors', e));
+  }
+
+  // The bell tower's bells, the first time you're near: each bell on its headstock and wheel, its clapper, a rope and its
+  // grip. See src/items/bells.js and tools/belltower/bells.py.
+  bellModel() {
+    this.bellModels = {};
+    this.glbModels('bells').then((m) => { this.bellModels = m; }).catch((e) => console.error('bells', e));
+  }
+
+  // Every mesh in assets/game/items/<name>.glb, by its name, on the one material they share.
+  async glbModels(name) {
+    const buf = await fetch(`${this.base}assets/game/items/${name}.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+    const glb = parseGLB(buf);
+    const prims = glb.json.nodes.filter((n) => n.mesh !== undefined).map((n) => {
+      const pr = glb.json.meshes[n.mesh].primitives[0], a = pr.attributes;
+      return { name: n.name, pr, pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+    });
+    const mat = glb.json.materials[prims[0].pr.material], scale = this.tier.texScale;
+    const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
+    const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
+    ]);
+    const models = {};
+    for (const p of prims) models[p.name] = this.lyingModel(p, alb, nrm, mr, [0, 0, 0, 0]);
+    return models;
   }
 
   // The portals, the first time one comes near: the owner's two models (tools/portal/pack.py), each in two, its stone and the
@@ -2925,6 +2944,8 @@ export class Renderer {
     for (const g of this.chests) drawn.push(g);
     if (this.doorItems.length && !this.doorModels) this.doorModel();
     for (const g of this.doorItems) drawn.push(g);
+    if (this.bellItems.length && !this.bellModels) this.bellModel();
+    for (const g of this.bellItems) drawn.push(g);
     this.portalItems ||= this.makePortals();
     if (this.portalItems.length && !this.portalModels) this.portalModel();
     for (const g of this.portalItems) if ((g.at.x - cam.x) ** 2 + (g.at.z - cam.z) ** 2 < 600 ** 2) drawn.push(g);
@@ -2949,8 +2970,8 @@ export class Renderer {
       }
     }
     for (const g of drawn) {
-      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.portal] : g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
-      if (model && g.glow) model = this.tinted(model, g.glow);
+      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
+      if (model && g.glow) model = this.tinted(model, g.glow, g.glowK ?? 1);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }
       g.slot = nGround;

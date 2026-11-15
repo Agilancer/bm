@@ -10,6 +10,8 @@ import { INPUT } from '../core/layout.js';
 // The level it goes down at, the first time (raised two each time the Warrens beat it three times over), and the level it
 // hires a party at (a little before, so it has them for the woods too).
 export const WARRENS_LEVEL = 7, HIRE_LEVEL = 6;
+// (How far off a portal has to be before Dungeon Runs take the skull's teleport to it rather than walk.)
+const TELEPORT_FAR = 260;
 // The way through each party dungeon (src/core/dungeon.js DELVES), room by room, in the order they're walked from the way
 // in. (Each pack and boss is in one of these: coverage() below checks every one is.) Blackvigil's barracks, armoury and
 // gallery open off its inner ward; it looks into each on its way up.
@@ -76,7 +78,7 @@ const caveNav = (x, z) => { const d = delveOf(x, z) || DELVES[0]; let n = navs.g
 // A job to go and hire, if it wants a party and can pay for one: to the nearer quartermaster.
 export function hireJob(b, m) {
   const P = b.o.game.party;
-  if (!P || P.fit() || m.lvl < HIRE_LEVEL || b.skipping('hire')) return null;
+  if (!P || P.fit() || m.lvl < HIRE_LEVEL || b.skipping('hire') || !b.allow('aiHire')) return null;
   // (What's still to hire, and what it costs: it keeps a little back.)
   const r = P.roles(), want = PARTY.size - P.members.length;
   const cost = hirePrice(m.lvl + 1) * want;
@@ -114,8 +116,10 @@ export function hiring(b) {
   if ((b.hireT = (b.hireT || 0) + 0.12) < 0.8) return;
   b.hireT = 0;
   const r = P.roles();
-  const offers = (P.offers || []).filter((o) => o.price <= b.o.pack.purse());
-  const best = (role) => offers.filter((o) => roleOf(o.cls) === role).sort((x, y) => y.level - x.level)[0];
+  // (Old companions too, with the gear they have: src/ui/party.js companionOffers. The better kitted, the likelier.)
+  const offers = (P.allOffers?.() || P.offers || []).filter((o) => o.price <= b.o.pack.purse() && (!o.entry || P.slotFor(o.entry) >= 0));
+  const worth = (o) => o.level + (o.gearScore || 0) / 25;
+  const best = (role) => offers.filter((o) => roleOf(o.cls) === role).sort((x, y) => worth(y) - worth(x))[0];
   let o = null;
   if (!r.tank) o = best('tank');
   if (!o && !r.heal) o = best('heal');
@@ -157,8 +161,18 @@ export function doWarrens(b, m, foes) {
     const d = delveByKey(b.job?.delve) || DELVES[0];
     // (Out again with it done: no more till it's had a rest from it.)
     if (b.warrensDone) { const key = b.warrensDone; b.warrensDone = false; b.giveUp(whyOf(key), 2400); b.job = null; b.ranDungeon(key); return; }
-    b.say(`To ${d.name}, with the party.`);
     b.room = 0;
+    // On Dungeon Runs, a portal a long way off is gone to as a player would: the skull's Teleport to Dungeon (src/ui/lands.js
+    // goDungeon), which carries the party too. (Once a half minute at most, in case the sim's still to move it.)
+    const far = dist(m.x, m.z, d.portal.x, d.portal.z);
+    if (b.mode === 'dungeons' && b.allow('aiTeleport') && far > TELEPORT_FAR && P?.fit() && b.t - (b.teleT ?? -99) > 30 && b.o.lands?.goDungeon) {
+      b.teleT = b.t;
+      b.halt();
+      b.say(`Dungeon runs: by the skull to ${d.name}.`);
+      b.o.lands.goDungeon(DELVES.indexOf(d));
+      return;
+    }
+    b.say(`To ${d.name}, with the party.`);
     b.goTo(d.portal.x, d.portal.z, 0.6, true);
     return;
   }

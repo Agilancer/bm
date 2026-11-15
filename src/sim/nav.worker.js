@@ -10,9 +10,11 @@
 //          point is [x, z, close, door]: close to a wall there (walk, don't run), and which doorway it's a side of, or -1.
 //          It ends at the nearest place to where it was asked for that a body can stand and get to (not a gap shut in
 //          behind a bed), and, asked for something to put a hand to (`touch`), one with nothing between it and that.
+//          From inside such a gap (a body can get into one the grid calls shut), it starts with the way out (outOf).
 //          Null: there's no way there.
 //   probe  out past the grid, where only the pines and the places' walls stand in the way: which way to step, nearest the way
 //          wanted, that's clear for a few metres.
+//   escape out of a snug corner or a pocket, on a finer grid, to ground the rest of the walking grid is joined to.
 //   sight  from its eye to each of a list of marks: is there a clean line for a shot, clear of walls, corners, pines and the
 //          rise of the ground by a hand's width either side; and if not, which way to step (and how far) to open one
 //          (src/sim/sight.js).
@@ -257,12 +259,14 @@ function sameFill(a, b) {
 }
 const point = (x, z, door = -1) => { const k = cellOf(x, z); return [x, z, door >= 0 || (k >= 0 && closeCell(k)) ? 1 : 0, door]; };
 
-function path(from, to, avoid, touch = null) {
+// (again: this is the way on from the end of a way out of a pocket, so not out of one again.)
+function path(from, to, avoid, touch = null, again = false) {
   if (++stamp > 65000) { stamp = 1; seen.fill(0); shut.fill(0); avoidMark.fill(0); }
   markAvoid(avoid, from, to);
   // (Where it's going: the nearest place to it a body can stand that isn't a pocket shut in on itself, unless that's the
   // very pocket it's standing in.)
   const s = freeNear(from[0], from[1]), t = s < 0 ? -1 : standNear(to[0], to[1], s, touch);
+  if (s < 0 && !again && cellOf(from[0], from[1]) >= 0) return outOf(s, from, to, avoid, touch);
   if (s < 0 || t < 0) return null;
   // (Where it ends: the place asked for if that's where it's going, else the nearest it can stand. Never a place in a
   // wall, or behind a counter, to be walked at.)
@@ -296,7 +300,7 @@ function path(from, to, avoid, touch = null) {
       }
     }
   }
-  if (!found) return null;
+  if (!found) return again ? null : outOf(s, from, to, avoid, touch);
   const cells = [];
   for (let k = t; k >= 0; k = parent[k]) cells.push(k);
   cells.reverse();
@@ -405,9 +409,13 @@ function probe(x, z, y, hx, hz, look) {
 
 // Out in the land, a short way: A* on a half-metre grid laid round both ends just for this, each cell solid or not at the land's
 // own height there (so the catacombs' walls under it don't count: World marks them `under`).
-// (On a portal's terrace, at the terrace's height, and no step between two cells of more than a stride's rise: up by its stairs.)
+// (On a portal's terrace, at the terrace's height, and no step between two cells of more than a stride's rise: up by its stairs.
+// And over a terrace only to get onto it: to somewhere off it, round, at OVER the cost a metre on it. Auto-play, making for
+// the foot of a portal's steps from beside its terrace, went up the steps at its end, over it, down the front, and turned
+// round to go up them again.)
 const lY = new Float32Array(280 * 280);
 const LW = 280, LN = LW * LW, lSolid = new Uint8Array(LN), lG = new Float32Array(LN), lPar = new Int32Array(LN), lSeen = new Uint16Array(LN), lShut = new Uint16Array(LN);
+const OVER = 5;
 let lStamp = 1;
 function local(from, to) {
   if (++lStamp > 65000) { lStamp = 1; lSeen.fill(0); lShut.fill(0); }
@@ -425,6 +433,7 @@ function local(from, to) {
   const clear = (k0) => { if (!solid(k0)) return k0; const i0 = k0 % LW, j0 = (k0 / LW) | 0; for (let r = 1; r < 8; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < LW && j < LW && !solid(j * LW + i)) return j * LW + i; } return -1; };
   s = clear(s); t = clear(t);
   if (s < 0 || t < 0) return null;
+  const onto = lSolid[t] === 3;
   const tx = px(t), tz = pz(t), h = (k) => { const dx = Math.abs(px(k) - tx), dz = Math.abs(pz(k) - tz); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
   heapN = 0; lG[s] = 0; lPar[s] = -1; lSeen[s] = lStamp; push(s, h(s));
   let found = false, budget = 60000;
@@ -441,7 +450,7 @@ function local(from, to) {
       const nk = nj * LW + ni;
       if (lShut[nk] === lStamp || solid(nk) || cliff(k, nk)) continue;
       if (di && dj && (solid(j * LW + ni) || solid(nj * LW + i))) continue;
-      const ng = lG[k] + (di && dj ? 1.414 : 1) * C;
+      const ng = lG[k] + (di && dj ? 1.414 : 1) * C * (!onto && lSolid[nk] === 3 ? OVER : 1);
       if (lSeen[nk] === lStamp && ng >= lG[nk]) continue;
       lSeen[nk] = lStamp; lG[nk] = ng; lPar[nk] = k;
       push(nk, ng + h(nk));
@@ -452,7 +461,19 @@ function local(from, to) {
   for (let k = t; k >= 0; k = lPar[k]) cells.push(k);
   cells.reverse();
   const pts = [[from[0], from[1]]].concat(cells.map((k) => [px(k), pz(k)]));
-  const see = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25); let was = cell(a[0], a[1]); if (was >= 0) solid(was); for (let q = 1; q <= n; q++) { const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n); if (k < 0 || solid(k) || (was >= 0 && cliff(was, k))) return false; was = k; } return true; };
+  // (Pulled straight, not over a terrace it went round: only from on one, getting off it.)
+  const see = (a, b) => {
+    const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25);
+    let was = cell(a[0], a[1]);
+    if (was >= 0) solid(was);
+    const off = !onto && !(was >= 0 && lSolid[was] === 3);
+    for (let q = 1; q <= n; q++) {
+      const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n);
+      if (k < 0 || solid(k) || (was >= 0 && cliff(was, k)) || (off && lSolid[k] === 3)) return false;
+      was = k;
+    }
+    return true;
+  };
   const out = [];
   let a = 0;
   while (a < pts.length - 1) {
@@ -464,17 +485,27 @@ function local(from, to) {
   return out;
 }
 
-// Out of somewhere snug the grid has no way from (a nook a body fits with a finger's room, between a hearth and a
-// partition): by a finer grid of its own, a tenth of a metre, over wherever a body can be, to the nearest place the walking
-// grid calls free. The points of the way, or null. Auto-play asks when it's been stopped twice in the same place.
-function escape(x, z) {
-  const C = 0.1, N = 81, half = (N - 1) / 2, R = 0.345;
+// Out of somewhere the grid has no way from: a nook a body fits with a finger's room (between Silas Crane's hearth and his
+// partition), or a pocket a body got into all the same (behind the partition in the house at 10.75, 17.76: between the
+// partition's end and the corner of a crate there's a gap a body takes on the slant, and the grid, whose boxes have square
+// corners, calls it shut). By a finer grid of its own, a tenth of a metre, over wherever a body can be as the sim pushes it
+// (World.inside with round corners, as World.resolve has them), to the nearest place the walking grid calls free that isn't
+// a pocket itself: ground the rest of the grid is joined to. (It used to stop at the first free place, and from inside a
+// pocket that was the pocket: it walked half a metre, stopped, asked again, and did that for as long as it was watched.)
+// The points of the way, from where it stands, or null. Auto-play asks when it's been stopped twice in the same place, and
+// a path from inside a pocket begins with it (outOf). keep: out of the circles that path is keeping clear of, too (a door
+// it can't open yet: the walking grid takes every door as open).
+const ESCAPE_R = 0.345;
+const fitsLine = (ax, az, bx, bz) => { const d = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(d / 0.1)); for (let q = 1; q <= n; q++) if (world.inside(ax + (bx - ax) * q / n, az + (bz - az) * q / n, ESCAPE_R, true)) return false; return true; };
+function escape(x, z, keep = false) {
+  const C = 0.1, N = 121, half = (N - 1) / 2;
+  const kept = (k) => keep && avoidMark[k] === stamp;
   const at = (i, j) => [x + (i - half) * C, z + (j - half) * C];
   const seen = new Int32Array(N * N).fill(-2), q = [half * N + half];
   seen[q[0]] = -1;
   for (let h = 0; h < q.length; h++) {
     const k = q[h], i = k % N, j = (k / N) | 0, [px, pz] = at(i, j), cell = cellOf(px, pz);
-    if (h > 0 && cell >= 0 && !blocked(cell) && Math.hypot(px - x, pz - z) > 0.5 && bodyLine(px, pz, cx(cell), cz(cell))) {
+    if (h > 0 && cell >= 0 && !solidCell(cell) && !kept(cell) && Math.hypot(px - x, pz - z) > 0.5 && !inPocket(cell) && fitsLine(px, pz, cx(cell), cz(cell))) {
       const out = [[cx(cell), cz(cell)]];
       for (let c = k; c >= 0; c = seen[c]) out.push(at(c % N, (c / N) | 0));
       out.reverse();
@@ -485,18 +516,30 @@ function escape(x, z) {
       const ni = i + di, nj = j + dj;
       if (ni < 0 || nj < 0 || ni >= N || nj >= N || seen[nj * N + ni] !== -2) continue;
       const [qx, qz] = at(ni, nj);
-      if (world.inside(qx, qz, R)) { seen[nj * N + ni] = -3; continue; }
+      if (world.inside(qx, qz, ESCAPE_R, true) || kept(cellOf(qx, qz))) { seen[nj * N + ni] = -3; continue; }
       seen[nj * N + ni] = k; q.push(nj * N + ni);
     }
   }
   return null;
+}
+// A path from inside a pocket (cell s; or from somewhere solid with no free cell near): the way out on the finer grid, then
+// on from where it comes out. Every point of the way out is walked, not run: it's snug. Null if there's no way out, or no
+// way on from it. (Before, every path from in there was null, every errand was given up, and the escape went round inside it.)
+function outOf(s, from, to, avoid, touch) {
+  if (s >= 0 && !inPocket(s)) return null;
+  const way = escape(from[0], from[1], true);
+  if (!way) return null;
+  const on = path(way.at(-1), to, avoid, touch, true);
+  return on ? way.slice(1).map(([x, z]) => [x, z, 1, -1]).concat(on) : null;
 }
 
 // For tests (tests/nav-ground.test.mjs): the same questions asked of a World built there, with no thread.
 export function navFor(w, interior = null) {
   world = w; boxIndex = null; ground.fill(0); room.fill(0); pocket.clear();
   setDoorways(interior?.things);
-  return { solidAt, clearFor, probe, local, path, straight, escape, doorways: () => DOORWAYS, SNUG };
+  // (pocket: is (x, z) on a free cell of the walking grid that's shut in a pocket?)
+  const pocketAt = (x, z) => { const k = cellOf(x, z); return k >= 0 && !solidCell(k) && inPocket(k); };
+  return { solidAt, clearFor, probe, local, path, straight, escape, pocket: pocketAt, doorways: () => DOORWAYS, SNUG };
 }
 
 // (A worker's own scope: not there when a test imports this file.)

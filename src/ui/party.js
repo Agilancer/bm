@@ -4,7 +4,15 @@
 // Who can be hired is whoever of the other Tessariels isn't hired already (src/core/heroes.js makeCast): the quartermaster
 // gives each a name of the Company's and a level near yours, and the sim takes the body into your party (HeroWorld.hire).
 // Lancers take the blows, paladins heal, everyone else does the damage (roleOf in src/core/dungeon.js).
+//
+// Everyone you've had along stays on your roster, as an old companion: the quartermaster offers them again, with the gear
+// you gave them (src/items/partygear.js) and the skill tree you or they spent (src/core/partytree.js). They go on levelling
+// as you do, and for every four levels you've gone past where you last had them along they come by a piece of middling
+// gear of their own (catchUp), so one you haven't asked for in twenty levels is still fit to stand beside you.
 import { art } from './skin.js';
+import { CAPS, HG_STATS, SHIELD_PLACE, catchUp, fits, gearStats, kindsOf, score } from '../items/partygear.js';
+import { autoSpend, freshTree, treeMods } from '../core/partytree.js';
+import { makeRng } from '../items/items.js';
 import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
 import { movesOf } from '../sim/heroskills.js';
 import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
@@ -21,13 +29,19 @@ const movesAt = (cls, level) => movesOf(cls, level);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 // What a sword-arm costs, in copper, for as long as you keep them: by their level.
 export const hirePrice = (level) => (6 + level * 2) * 10;
+const ROSTER_MAX = 40;   // old companions kept: past it the longest gone are forgotten, those with gear last
+const CATCH_STEP = 4;    // levels of yours, past where you last had one along, for each piece they come by
+export const BAG_MAX = 24;   // pieces of gear a companion carries in their own bag, beside what they wear
 
 export class PartyUI {
   // o: { base, cast, sim (the worker), pack, level () => the player's level, firstHero () => the first hero's char index,
   //      tip (text, secs), opened, closed, click, heroTalk }
   constructor(o) {
     Object.assign(this, o);
-    this.members = [];         // { slot, name, level, off, cls }
+    this.members = [];         // { slot, name, level, off, cls, rid }
+    this.roster = [];          // everyone you've had along: { id, body, cls, sex, kit, name, off, level, lastWith, caught, gear, tree, got, seen }
+    this.nextId = 1;
+    this.rng = makeRng((Math.random() * 2 ** 32) >>> 0);
     this.open = null;          // the quartermaster whose panel is up
     this.offers = null; this.offersFor = -1;
     this.boss = null;          // { key, ids, name }
@@ -96,10 +110,10 @@ export class PartyUI {
   // Fit for the Warrens: four, with a tank and a healer among them.
   fit() { const r = this.roles(); return this.full() && r.tank >= 1 && r.heal >= 1; }
 
-  // A name of the Company's for someone new: not one already about.
-  freshName(sex) {
+  // A name of the Company's for someone new: not one already about (taken: names given out just now, not yet on the roster).
+  freshName(sex, taken) {
     const pool = (sex === 'f' ? this.names?.female : this.names?.male) || ['Bren', 'Talla', 'Osric', 'Mira', 'Corvin', 'Elsa', 'Dain', 'Hesk'];
-    const used = new Set(this.cast.map((c) => c.name));
+    const used = new Set([...this.cast.map((c) => c.name), ...this.roster.map((e) => e.name), ...(taken || [])]);
     for (let t = 0; t < 30; t++) { const n = pool[Math.floor(Math.random() * pool.length)]; if (!used.has(n)) return n; }
     return pool[Math.floor(Math.random() * pool.length)];
   }
@@ -117,36 +131,229 @@ export class PartyUI {
     const more = [...by.tank, ...by.heal].filter((c) => !seen.has(c)).slice(0, 2);
     const order = { tank: 0, heal: 1, dps: 2 };
     const pickN = [...one, ...more].sort((a, b) => order[roleOf(a.cls)] - order[roleOf(b.cls)] || CLASS_NAMES.indexOf(a.cls) - CLASS_NAMES.indexOf(b.cls));
+    const taken = new Set();
     this.offers = pickN.map((c) => {
       const off = Math.floor(Math.random() * 4) - 2;
-      const level = Math.max(1, L + off);
-      return { slot: c.slot, cls: c.cls, sex: c.sex, name: this.freshName(c.sex), level, off, price: hirePrice(level) };
+      const level = Math.max(1, L + off), name = this.freshName(c.sex, taken);
+      taken.add(name);
+      return { slot: c.slot, cls: c.cls, sex: c.sex, name, level, off, price: hirePrice(level) };
     });
     this.offersAt = performance.now();
   }
 
+  // o: an offer (makeOffers), or an old companion's (companionOffers: o.entry).
   hire(o, free = false) {
     if (this.full()) { this.tip('Your party is full: four is as many as the Company will send with you.', 3); return false; }
-    if (this.member(o.slot)) return false;
+    const e0 = o.entry || null;
+    if (e0 && this.members.some((m) => m.rid === e0.id)) return false;
+    const slot = e0 ? this.slotFor(e0) : o.slot;
+    if (slot == null || slot < 0 || this.member(slot)) { if (e0) this.tip(`${e0.name} can't be found about just now.`, 3); return false; }
     // (Nobody's paid in the Test Dungeon: src/ui/testhall.js.)
     if (!free && !this.freeHire?.() && !this.pack.pay(o.price)) { this.tip(`You can't pay ${priceText(o.price)}.`, 2.5); return false; }
-    const c = this.cast[o.slot];
-    c.name = o.name; c.full = o.name; c.guild = 'The Free Company'; c.level = o.level;
-    this.members.push({ slot: o.slot, name: o.name, level: o.level, off: o.off ?? 0, cls: c.cls });
-    this.sim.postMessage({ type: 'hire', slot: o.slot, name: o.name, level: o.level, stay: !!o.stay });
-    this.heroTalk?.renamed?.(o.slot);
-    if (this.offers) this.offers = this.offers.filter((x) => x.slot !== o.slot);
+    const c = this.cast[slot], L = this.level();
+    const e = e0 || this.enrol(c, o);
+    e.level = e0 ? Math.max(1, L + e.off) : o.level;
+    if (e0 && o.level) e.level = o.level;   // (a save's own word on it)
+    e.lastWith = L; e.caught = 0; e.got = 0; e.seen = Date.now();
+    c.name = e.name; c.full = e.name; c.guild = 'The Free Company'; c.level = e.level;
+    this.members.push({ slot, name: e.name, level: e.level, off: e.off ?? 0, cls: c.cls, rid: e.id });
+    this.sim.postMessage({ type: 'hire', slot, name: e.name, level: e.level, stay: !!o.stay });
+    this.heroTalk?.renamed?.(slot);
+    if (this.offers) this.offers = this.offers.filter((x) => x.slot !== slot);
+    this.dress(this.members.at(-1));
     this.changed();
     return true;
+  }
+
+  // Someone newly hired, onto the roster.
+  enrol(c, o) {
+    const e = { id: this.nextId++, body: c.body, cls: c.cls, sex: c.sex, kit: { ...(c.kit || {}) }, name: o.name, off: o.off ?? 0, level: o.level, lastWith: this.level(), caught: 0, gear: {}, bag: [], tree: freshTree(), got: 0, seen: Date.now() };
+    this.roster.push(e);
+    this.trimRoster();
+    return e;
+  }
+
+  trimRoster() {
+    if (this.roster.length <= ROSTER_MAX) return;
+    const away = this.roster.filter((e) => !this.members.some((m) => m.rid === e.id));
+    const has = (e) => (Object.keys(e.gear).length || e.bag?.length ? 1 : 0);
+    away.sort((a, b) => has(a) - has(b) || a.seen - b.seen);
+    const drop = new Set(away.slice(0, this.roster.length - ROSTER_MAX).map((e) => e.id));
+    this.roster = this.roster.filter((e) => !drop.has(e.id));
+  }
+
+  // Which body in the world an old companion comes back in: their own, if it's about and free; else another of their class
+  // and sex, of the same fighting style; else of their class. (The world holds only so many bodies at once: src/core/heroes.js.)
+  slotFor(e) {
+    const free = this.cast.filter((c) => !c.broker && !this.member(c.slot));
+    const pickBy = (f) => free.find(f)?.slot;
+    return pickBy((c) => c.body === e.body) ?? pickBy((c) => c.cls === e.cls && c.sex === e.sex && c.kit?.style === e.kit?.style)
+      ?? pickBy((c) => c.cls === e.cls && c.kit?.style === e.kit?.style) ?? pickBy((c) => c.cls === e.cls) ?? -1;
+  }
+
+  entryOf(m) { return m ? this.roster.find((e) => e.id === m.rid) || null : null; }
+  // A member as gear sees them (src/items/partygear.js fits): their class, sex and what they fight with in the body they're in.
+  whoOf(m) {
+    const e = this.entryOf(m), c = this.cast[m.slot];
+    return { cls: m.cls, sex: e?.sex ?? c?.sex, body: e?.body ?? c?.body, kit: c?.kit || e?.kit, level: m.level, name: m.name, gear: e?.gear };
+  }
+  whoOfEntry(e) {
+    const m = this.members.find((x) => x.rid === e.id);
+    return m ? this.whoOf(m) : { cls: e.cls, sex: e.sex, body: e.body, kit: e.kit, level: e.level, name: e.name, gear: e.gear };
+  }
+
+  // What they hold: the body's own, with their gear's weapon and shield where its kind fits. { kit, pal } for the
+  // renderer and the sim.
+  kitFor(m) {
+    const e = this.entryOf(m), base = { ...(this.cast[m.slot]?.kit || {}) }, pal = {};
+    const kinds = kindsOf(base);
+    const w = e?.gear.weapon, sh = e?.gear.off, place = SHIELD_PLACE(base);
+    if (w && w.kind === kinds.weapon) { base.main = w.prop; pal.main = w.pal; }
+    if (sh && sh.kind === kinds.off) { base[place] = sh.prop; pal[place] = sh.pal; }
+    return { kit: base, pal };
+  }
+
+  // Their tree and gear, to the sim (src/sim/hero.js setMods).
+  modsFor(m) {
+    const e = this.entryOf(m);
+    if (!e) return null;
+    const t = treeMods(e.cls, e.tree), g = gearStats(e.gear), out = { ...t };
+    for (const k of HG_STATS) out[k] = (t[k] || 0) + (g[k] || 0);
+    for (const [k, cap] of Object.entries(CAPS)) out[k] = Math.min(cap, out[k]);
+    out.kit = this.kitFor(m).kit;
+    return out;
+  }
+
+  // Their tree spent if they spend their own, their numbers to the sim, and their looks to the renderer (looks: main.js).
+  dress(m) {
+    const e = this.entryOf(m);
+    if (!e) return;
+    if (e.tree.auto) autoSpend(e.cls, e.tree, e.level, roleOf(e.cls));
+    this.sim.postMessage({ type: 'heroMods', slot: m.slot, mods: this.modsFor(m) });
+    this.looks?.(m.slot, e, this.kitFor(m));
+  }
+
+  // Gear given in their book (src/ui/partybook.js): on, now. Hands back what it took the place of.
+  equip(m, item) {
+    const e = this.entryOf(m);
+    if (!e || !fits(item, this.whoOf(m))) return null;
+    const was = e.gear[item.slot] || null;
+    e.gear[item.slot] = item;
+    this.dress(m);
+    this.onChange?.();
+    return was;
+  }
+  unequip(m, slot) {
+    const e = this.entryOf(m);
+    const was = e?.gear[slot] || null;
+    if (!was) return null;
+    delete e.gear[slot];
+    this.dress(m);
+    this.onChange?.();
+    return was;
+  }
+  // The best for them of what's given, slot by slot: { slot: item } of those that beat what they have on.
+  bestFor(m, items) {
+    const e = this.entryOf(m), who = this.whoOf(m), out = {};
+    if (!e) return out;
+    for (const it of items) { if (!fits(it, who)) continue; const cur = out[it.slot] || e.gear[it.slot]; if (score(it) > score(cur)) out[it.slot] = it; }
+    return out;
+  }
+
+  // Whether anyone on the roster would be the better for a piece: auto-play keeps it for them, and sells it if not.
+  wantedBy(item) {
+    return this.roster.some((e) => fits(item, this.whoOfEntry(e)) && score(item) > score(e.gear[item.slot]));
+  }
+
+  // ---- their bags ------------------------------------------------------------------------------------------------------
+  // Party gear you pick up isn't yours to carry: it goes in the bag of one of your party it's for (who it would be an
+  // upgrade for first, then whoever has the most room), or, if none of them can use it, of an old companion who can, kept
+  // for them with the Company. Null: nobody who can use it has room.
+  homeFor(item) {
+    const here = this.members.map((m) => this.entryOf(m)).filter(Boolean);
+    const away = this.roster.filter((e) => !here.includes(e)).sort((a, b) => b.seen - a.seen);
+    for (const list of [here, away]) {
+      const ok = list.filter((e) => fits(item, this.whoOfEntry(e)) && (e.bag ||= []).length < BAG_MAX);
+      if (!ok.length) continue;
+      const up = (e) => (score(item) > score(e.gear[item.slot]) ? 1 : 0);
+      return ok.sort((a, b) => up(b) - up(a) || a.bag.length - b.bag.length)[0];
+    }
+    return null;
+  }
+  // Into that bag: hands back whose it went in, or null. (with: true if they're with you.)
+  stow(item) {
+    const e = this.homeFor(item);
+    if (!e) return null;
+    e.bag.push(item);
+    this.onChange?.();
+    return { entry: e, with: this.members.some((m) => m.rid === e.id) };
+  }
+  // Why a piece can't be stowed, to say.
+  noRoom(item) {
+    const can = this.roster.filter((e) => fits(item, this.whoOfEntry(e)));
+    if (!can.length) return `None of your companions can use the ${item.name}.`;
+    return `${can.slice(0, 3).map((e) => e.name).join(' and ')}${can.length > 3 ? ' and the rest' : ''} ${can.length > 1 ? 'have' : 'has'} no room in their bag${can.length > 1 ? 's' : ''} for the ${item.name}.`;
+  }
+  // What the party with you carry, for a shop to buy through you: [{ entry, item }].
+  bagged() {
+    const out = [];
+    for (const m of this.members) { const e = this.entryOf(m); for (const item of e?.bag || []) out.push({ entry: e, item }); }
+    return out;
+  }
+  // Of that, what nobody on the roster would be the better for: auto-play sells it.
+  bagJunk() { return this.bagged().filter((x) => !this.wantedBy(x.item)); }
+  // Out of a bag (sold, worn, thrown down). True if it was there.
+  unbag(e, item) {
+    const i = e?.bag?.indexOf(item) ?? -1;
+    if (i < 0) return false;
+    e.bag.splice(i, 1);
+    this.onChange?.();
+    return true;
+  }
+
+  // Auto-play's care of the party (src/ui/autoplay.js): o.gear puts their best from their own bags on them, o.skills
+  // spends every point they have by their class. Hands back what it did, as lines.
+  upkeep(o) {
+    const said = [];
+    for (const m of this.members) {
+      const e = this.entryOf(m);
+      if (!e) continue;
+      let changed = false;
+      if (o.skills && autoSpend(e.cls, e.tree, e.level, roleOf(e.cls))) changed = true;
+      if (o.gear) {
+        const best = this.bestFor(m, e.bag || []);
+        for (const it of Object.values(best)) {
+          if (!this.unbag(e, it)) continue;
+          const was = e.gear[it.slot];
+          e.gear[it.slot] = it;
+          if (was) e.bag.push(was);
+          said.push(`${m.name} put on the ${it.name}.`);
+          changed = true;
+        }
+      }
+      if (changed) this.dress(m);
+    }
+    if (said.length) this.onChange?.();
+    return said;
   }
 
   dismiss(slot) {
     const i = this.members.findIndex((m) => m.slot === slot);
     if (i < 0) return;
-    this.members.splice(i, 1);
+    const [m] = this.members.splice(i, 1);
+    const e = this.entryOf(m);
+    if (e) { e.lastWith = this.level(); e.caught = 0; e.got = 0; e.seen = Date.now(); }
     this.sim.postMessage({ type: 'dismiss', slot });
+    this.looks?.(slot, null, null);
     this.changed();
   }
+
+  // Old companions not with you now, as the quartermaster offers them.
+  companionOffers() {
+    return this.roster.filter((e) => !this.members.some((m) => m.rid === e.id)).sort((a, b) => b.seen - a.seen)
+      .map((e) => ({ entry: e, old: true, cls: e.cls, sex: e.sex, name: e.name, level: e.level, price: hirePrice(e.level), pieces: Object.keys(e.gear).length, gearScore: Object.values(e.gear).reduce((s, it) => s + score(it), 0) }));
+  }
+  allOffers() { return [...this.companionOffers(), ...(this.offers || [])]; }
 
   // A new level of yours: theirs go with it.
   levelled() {
@@ -156,9 +363,19 @@ export class PartyUI {
       m.level = Math.max(1, L + m.off);
       this.cast[m.slot].level = m.level;
       this.sim.postMessage({ type: 'hireLevel', slot: m.slot, level: m.level });
+      const e = this.entryOf(m);
+      if (e) { e.level = m.level; e.lastWith = L; e.caught = 0; this.dress(m); }
       // (What they've come by with it: their moves are by level too. src/sim/heroskills.js.)
       const got = movesAt(m.cls, m.level).filter((q) => q.lvl > was);
       if (got.length && m.level > was) this.tip(`${m.name} is level ${m.level}, and has learned ${got.map((q) => q.name).join(' and ')}.`, 5);
+    }
+    // Those away: their level with yours, and a piece of their own for every four of yours since you last had them.
+    for (const e of this.roster) {
+      if (this.members.some((m) => m.rid === e.id)) continue;
+      e.level = Math.max(1, L + e.off);
+      const steps = Math.floor((L - e.lastWith) / CATCH_STEP) - (e.caught || 0);
+      if (steps > 0) { e.caught = (e.caught || 0) + steps; e.got = (e.got || 0) + catchUp(this.rng, this.whoOfEntry(e), e.gear, steps).length; }
+      if (e.tree.auto) autoSpend(e.cls, e.tree, e.level, roleOf(e.cls));
     }
     this.paceSent = -1;
   }
@@ -208,10 +425,24 @@ export class PartyUI {
       }
       html += '</ol>';
     }
+    // Those you've had along before, with what you gave them and what they've come by since.
+    const olds = this.companionOffers();
+    if (olds.length) {
+      html += `<h4>Old companions</h4><ol>`;
+      for (const of of olds) {
+        const role = roleOf(of.cls), e = of.entry;
+        const note = `${of.pieces ? `${of.pieces} piece${of.pieces > 1 ? 's' : ''} of gear` : 'no gear'}${e.got ? `, ${e.got} new since` : ''}`;
+        const o = li({ role, price: of.price, dim: this.full() || this.slotFor(e) < 0, label: `${of.name}, level ${of.level} ${CLASSES[of.cls].title} (${ROLE[role][0].toLowerCase()})`, note,
+          title: this.slotFor(e) < 0 ? `No ${CLASSES[of.cls].title.toLowerCase()} is about to come back in just now.` : `Last with you at your level ${e.lastWith}.`,
+          run: () => { if (this.hire(of)) this.showPanel(`${of.name}! Good to have them back.`); } });
+        html += row(o, this.opts.length - 1);
+      }
+      html += '</ol>';
+    }
     html += `<h4>On the Company's books</h4><ol>`;
     for (const of of this.offers || []) {
       const role = roleOf(of.cls);
-      const o = li({ role, price: of.price, dim: this.full(), label: `${of.name}, level ${of.level} ${CLASSES[of.cls].title} (${ROLE[role][0].toLowerCase()})`, note: `${movesAt(of.cls, of.level).length} moves`, title: movesAt(of.cls, of.level).map((q) => q.name).join(', '),
+      const o = li({ role, price: of.price, dim: this.full(), label: `${of.name}, level ${of.level} ${CLASSES[of.cls].title} (${ROLE[role][0].toLowerCase()})`, note: ((n) => (n ? `${n} new move${n === 1 ? '' : 's'}` : 'first moves only'))(movesAt(of.cls, of.level).length), title: movesAt(of.cls, of.level).map((q) => q.name).join(', '),
         run: () => { if (this.hire(of)) this.showPanel(`${of.name} it is. They'll keep at your back.`); } });
       html += row(o, this.opts.length - 1);
     }
@@ -323,7 +554,10 @@ export class PartyUI {
 
   // ---- kept in the save ----------------------------------------------------------------------------------------------
 
-  save() { return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off })), clears: this.clears, clearsBy: { ...this.clearsBy } }; }
+  save() {
+    return { members: this.members.map((m) => ({ body: this.cast[m.slot].body, cls: m.cls, name: m.name, level: m.level, off: m.off, rid: m.rid })),
+      roster: structuredClone(this.roster), nextId: this.nextId, clears: this.clears, clearsBy: { ...this.clearsBy } };
+  }
 
   load(d) {
     this.clears = d?.clears || 0;
@@ -331,10 +565,19 @@ export class PartyUI {
     this.clearsBy = { ...(d?.clearsBy || (this.clears ? { warrens: this.clears } : {})) };
     for (const m of this.members.slice()) this.dismiss(m.slot);
     this.offers = null;
+    this.roster = structuredClone(d?.roster || []);
+    for (const e of this.roster) { e.gear ||= {}; e.bag ||= []; e.tree ||= freshTree(); e.tree.ranks ||= {}; e.kit ||= {}; e.seen ||= 0; }
+    this.nextId = Math.max(d?.nextId || 1, ...this.roster.map((e) => e.id + 1));
     for (const s of d?.members || []) {
-      // (The same body if it's about this time, else another of its class.)
-      const c = this.cast.find((x) => !x.broker && x.body === s.body && !this.member(x.slot)) || this.cast.find((x) => !x.broker && x.cls === s.cls && !this.member(x.slot));
-      if (c) this.hire({ slot: c.slot, name: s.name, level: s.level, off: s.off ?? 0 }, true);
+      // (Someone off the roster, back in their own body if it's about this time, else another of their class. A save from
+      // before the roster: they go on it now, as they were.)
+      let e = this.roster.find((x) => x.id === s.rid);
+      if (!e) {
+        const c = this.cast.find((x) => !x.broker && x.body === s.body && !this.member(x.slot)) || this.cast.find((x) => !x.broker && x.cls === s.cls && !this.member(x.slot));
+        if (!c) continue;
+        e = this.enrol(c, { name: s.name, off: s.off ?? 0, level: s.level });
+      }
+      this.hire({ entry: e, level: s.level }, true);
     }
   }
 }

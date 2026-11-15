@@ -8,6 +8,7 @@ import { SCROLLS } from '../sim/skills.js';
 import { STAFFS2 } from './staffs2.js';
 import { SHIELDS2 } from './shields2.js';
 import { ROBE_SETS } from './robesets.js';
+import { hgLines } from './partygear.js';
 
 export { ROBE_SETS };
 
@@ -455,8 +456,31 @@ export function rollSpell(rng) { return { type: 'spell', spell: SCROLLS[Math.flo
 
 const CHEST_ROBE = [0.25, 0.5, 0.7];
 
-// What's in a chest: tier 0 a house's, 1 the priest's, 2 what the dead keep.
+// A boss's chest: a staff, a skull and a shield or a robe at Rare or finer (half of them Epic), gems, scrolls and a heap of
+// gold; the last boss's at Epic or finer, a robe besides, one Legendary more and a chance at a Mythical.
+function bossChest(rng, last) {
+  setFind(last ? 3.4 : 2.8);
+  const min = last ? 3 : 2, up = () => (rng() < 0.5 ? min + 1 : min);
+  const [lo, hi] = last ? [600, 1000] : [250, 450];
+  const out = [{ type: 'gold', amount: lo + Math.floor(rng() * (hi - lo + 1)) }];
+  out.push(rollWeapon(rng, { minRarity: up() }), rollSkull(rng, { minRarity: up() }));
+  out.push(rng() < 0.5 ? rollShield(rng, { minRarity: up() }) : rollRobe(rng, { minRarity: up() }));
+  if (last) {
+    out.push(rollRobe(rng, { minRarity: min }));
+    const r = rng();
+    out.push(r < 0.34 ? rollWeapon(rng, { minRarity: 4 }) : r < 0.67 ? rollSkull(rng, { minRarity: 4 }) : rollRobe(rng, { minRarity: 4 }));
+  } else if (rng() < 0.5) out.push(rollRobe(rng, { minRarity: min }));
+  for (let i = last ? 3 : 2; i > 0; i--) out.push(rollGem(rng));
+  for (let i = last ? 2 : 1; i > 0; i--) out.push(rollSpell(rng));
+  return out;
+}
+
+// What's in a chest: tier 0 a house's, 1 the priest's, 2 what the dead keep, 3 a dungeon boss's, 4 the last boss of one.
+// (The bosses' are left where they fall, src/items/chests.js add: the best there is, with something for your party in it
+// as well, src/ui/party.js chestGear.)
+export const BOSS_CHEST = 3, LAST_CHEST = 4;
 export function rollChest(rng, tier) {
+  if (tier >= BOSS_CHEST) return bossChest(rng, tier >= LAST_CHEST);
   setFind(1 + tier * 0.6);
   const [lo, hi] = [[6, 24], [25, 60], [60, 140]][tier] || [6, 24];
   const out = [{ type: 'gold', amount: lo + Math.floor(rng() * (hi - lo + 1)) }];
@@ -486,6 +510,7 @@ export const MATS = {
 export const matName = (kind, n = 1) => (n === 1 ? MATS[kind].name : MATS[kind].plural);
 
 export function nameOf(item) {
+  if (item.type === 'hgear') return item.name;   // (gear for your party: src/items/partygear.js)
   if (item.type === 'spell') return `Scroll of ${SPELLS[item.spell].name}`;
   if (item.type === 'gold') return `${item.amount} gold`;
   if (item.type === 'mat') return `${item.n > 1 ? `${item.n} ` : ''}${matName(item.kind, item.n || 1)}`;
@@ -527,6 +552,7 @@ export function statsOf(item) {
 // The lines of a tooltip, in order: { text, kind } with kind one of title, sub, stat, gem, open. slots: what's worn, for
 // how much of a piece's set is on.
 export function linesOf(item, slots) {
+  if (item.type === 'hgear') return hgLines(item);
   if (item.type === 'gem') {
     return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: GEM_LOOK[item.kind], kind: 'sub' }, { text: 'Goes in an open socket on a staff, a skull or a shield, and stays there.', kind: 'sub' }];
   }

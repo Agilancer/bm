@@ -3,8 +3,10 @@
 //
 // Everything is measured in units: a unit is a pixel on a phone 390 high, and shrinks or grows with the height of the screen
 // (unitOf). The right thumb's buttons are placed from the middle of the biggest of them, the staff: so many units to its left
-// (dx) and above it (dy). The staff is in the corner, dodge, shield and jump are in a ring round it, the six spells are in a
-// wider ring round that, one to six from the bottom up, each the same way from the next, and the run is over spell six.
+// (dx) and above it (dy). The staff is in the corner, dodge, shield and jump are in a ring round it, the first six spells are
+// in a wider ring round that, one to six from the bottom up, each the same way from the next, and the run is over spell six.
+// Seven to nine are in a third ring, between the word over the gold Take button and the run; and the three Utility slots (0,
+// - and +: src/ui/spellbar.js) in a fourth ring round that. (Not out along the bottom: a phone's left 42% is the stick's.)
 //
 // A phone's own edges are used (hud.css --hl, --hr, --hb): the thumbs sit in the corners, past the safe area a phone keeps
 // for its notch and its home bar, as the owner laid them out on one.
@@ -20,7 +22,15 @@ const INNER = 74, OUTER = 132;
 // from the bottom and from the side.
 const SPELL_FROM = -8, SPELL_STEP = 21.2;
 export const SLOT_SIZE = 46;
-export const SLOTS = [0, 1, 2, 3, 4, 5].map((k) => at(OUTER, SPELL_FROM + k * SPELL_STEP, SLOT_SIZE));
+// (Seven to nine: from clear over the Take button's word, #take in hud.css, round to clear of the run. The Utility ring the
+// same, a slot further out.)
+const THIRD = 186, MORE_FROM = 36, MORE_STEP = 20;
+const FOURTH = 236, UTIL_FROM = 28, UTIL_STEP = 18;
+export const SLOTS = [
+  ...[0, 1, 2, 3, 4, 5].map((k) => at(OUTER, SPELL_FROM + k * SPELL_STEP, SLOT_SIZE)),
+  ...[0, 1, 2].map((k) => at(THIRD, MORE_FROM + k * MORE_STEP, SLOT_SIZE)),
+  ...[0, 1, 2].map((k) => at(FOURTH, UTIL_FROM + k * UTIL_STEP, SLOT_SIZE)),
+];
 const RUN = 54;
 export const ARC = {
   bAttack: { dx: 0, dy: 0, s: 84 },

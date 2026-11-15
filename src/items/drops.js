@@ -3,6 +3,11 @@
 import { groundAt as terrainHeight } from '../core/interior.js';
 import { GEMS, MATS, RARITIES, hands, makeRng, rollLoot, setFind } from './items.js';
 import { inChurch } from '../core/church.js';
+import { caveFloorY, inDungeon } from '../core/dungeon.js';
+import { groundModelOf, partyDrops } from './partygear.js';
+// The floor under a point: down a party dungeon its own (the land's height there is the hills a long way over it, and what
+// fell there used to come to rest up in the air, out of reach), else the land's, a house's or the cathedral's.
+export const floorUnder = (x, z, y) => (inDungeon(x, z) ? caveFloorY(x, z) : terrainHeight(x, z, y));
 
 const MAX = 64;
 const GRAB = 1.9;   // coins and orbs come to you, for walking near them: there's no stopping in a fight
@@ -16,6 +21,7 @@ const SCALE = { weapon: 0.5, shield: 0.55, armor: 0.72, robe: 0.8, skull: 1.5 };
 const BOARD_LIFT = 0.09;                   // a ridden shield's face stands this far off its grip
 
 function groundNormal(x, z) {
+  if (inDungeon(x, z)) return [0, 1, 0];
   const e = 0.3;
   const nx = terrainHeight(x - e, z) - terrainHeight(x + e, z), nz = terrainHeight(x, z - e) - terrainHeight(x, z + e), ny = 2 * e;
   const l = 1 / Math.hypot(nx, ny, nz);
@@ -69,7 +75,7 @@ export class Drops {
     if (this.list.length >= MAX) this.list.shift();
     const gem = item.type === 'gem';
     const d = {
-      item, x, z, y: terrainHeight(x, z, from?.[1]), from, t: 0, glintT: Math.random(), spin: Math.random() * 6.28, mat: new Float32Array(16),
+      item, x, z, y: floorUnder(x, z, from?.[1]), from, t: 0, glintT: Math.random(), spin: Math.random() * 6.28, mat: new Float32Array(16),
       n: groundNormal(x, z), turn: 2.5 + Math.random() * 2.5,
     };
     if (gem) d.gem = GEMS[item.kind].color;
@@ -77,6 +83,7 @@ export class Drops {
     else if (item.type === 'spell') d.gem = (GEMS.amethyst || GEMS.ruby).color;
     else if (item.type === 'gold') { d.coins = true; d.auto = true; }
     else if (item.type === 'mat') { d.stuff = item.kind; d.gem = MATS[item.kind].color; d.auto = true; }
+    else if (item.type === 'hgear') Object.assign(d, groundModelOf(item), { glow: RARITIES[item.rarity].color });
     else {
       d.sword = item.base;
       d.glow = RARITIES[item.rarity].color;
@@ -95,7 +102,10 @@ export class Drops {
     const orbs = [];
     if ((kind | 0) >= 2 && Math.random() < (this.low ? 0.45 : 0.2)) orbs.push({ type: 'orb', kind: 'life', rarity: 0 });
     if ((kind | 0) >= 2 && Math.random() < 0.1) orbs.push({ type: 'orb', kind: 'mana', rarity: 0 });
-    for (const item of [...rollLoot(this.rng, kind | 0), ...orbs, ...matsOf(this.rng, kind | 0, y < -6 && inChurch(x, y + 1, z))]) {
+    // (And now and then something for your party, if you've one: src/items/partygear.js. party: main.js.)
+    // (Never in Velscour's church: their gear is Tessariel's own. CLAUDE.md.)
+    const theirs = inChurch(x, y + 1, z) ? [] : partyDrops(this.rng, kind | 0, this.party?.() || [], y < -2 ? 1.6 : 1);
+    for (const item of [...rollLoot(this.rng, kind | 0), ...orbs, ...matsOf(this.rng, kind | 0, y < -6 && inChurch(x, y + 1, z)), ...theirs]) {
       // (A boss's hoard is a heap: it's thrown wider, so each thing in it can be seen and taken.)
       const a = Math.random() * 6.28, r = (kind | 0) >= 20 ? 1 + Math.random() * 2.6 : 0.7 + Math.random() * 0.8;
       this.spawn(item, x + Math.cos(a) * r, z + Math.sin(a) * r, [x, y + 1.1, z]);

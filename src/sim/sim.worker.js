@@ -21,6 +21,7 @@ import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { floorAt, homeFloor, inPit } from '../core/interior.js';
+import { underRoof } from '../core/belltower.js';
 import { FOE, stepFoeWorks } from './foespells.js';
 import { addUndead, corpsesNear, raiseZombie, resetCatacombs, stepCatacombs, stepGraves, stepWoods, Zombie } from './undead.js';
 import { POOL } from '../core/lands.js';
@@ -212,11 +213,11 @@ class Sim {
     const px = ex + rx * THIRD.side * side, py = ey + THIRD.up, pz = ez + rz * THIRD.side * side;
     // (As far back as the wheel can take it (src/ui/view.js), and the drawing thread keeps to what it's asked for. Not under a
     // roof, nor down below: there it's V's own, as ever, since the ceilings aren't in the walls it's tested against.)
-    const house = floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null;
+    const house = floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null || underRoof(p.x, p.z, p.y);
     const roofed = house || p.y < -6 || inChurch(p.x, p.y + 1, p.z) || inDungeon(p.x, p.z) || inHall(p.x, p.z);
     const most = roofed ? THIRD.dist : THIRD.far;
     let dist = c.trace(this, px, py, pz, -fx, -fy, -fz, most + THIRD.skin) - THIRD.skin;
-    // (Under a roof the camera keeps low too.)
+    // (Under a roof the camera keeps low too; and in the bell tower's well and the Bellwright's room: src/core/belltower.js.)
     if (fy < 0 && house && -fy * dist > THIRD.indoors) dist = THIRD.indoors / -fy;
     snap[H.TP_DIST] = Math.max(THIRD.near, Math.min(most, dist));
     snap[H.TP_SIDE] = side; snap[H.TP_DROP] = drop;
@@ -756,6 +757,8 @@ async function boot(msg) {
     if (m.type === 'hire') { const ok = sim.heroWorld?.hire(m.slot, m) || false; self.postMessage({ type: 'hired', slot: m.slot, ok, id: m.id }); }
     if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
     if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
+    // What their book and their gear add, for one of yours (src/ui/party.js modsFor): kept on them till they're let go.
+    if (m.type === 'heroMods') { const h = sim.heroes[m.slot]; if (h) sim.heroWorld?.setMods(h, m.mods); }
     // (Your own level: the other Tessariels out in the world keep pace with it.)
     if (m.type === 'playerLevel') sim.heroWorld?.keepPace(m.level);
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);

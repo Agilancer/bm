@@ -388,6 +388,52 @@ export class Audio {
     src.start();
   }
 
+  // A struck bell, made here (the bell tower's four: src/items/bells.js): a bell's partials over the note it's tuned to,
+  // the hum an octave under it ringing longest and the high ones dying first, each a close pair that beats, so it warbles
+  // as bronze does; and the clapper's knock on top. One buffer a note, kept. It carries: a bell's heard across the hills.
+  bell(x, y, z, hz, gain = 1) {
+    if (!this.ready || this.ctx.state !== 'running') return;
+    const { ctx } = this, ref = 12;
+    if (this.earX !== undefined && gain * ref / (ref + Math.max(0, Math.hypot(x - this.earX, y - this.earY, z - this.earZ) - ref)) < UNHEARD) return;
+    const cache = this.bells || (this.bells = {});
+    let buf = cache[hz];
+    if (!buf) {
+      const sr = ctx.sampleRate, len = Math.floor(sr * 9);
+      buf = ctx.createBuffer(1, len, sr);
+      const d = buf.getChannelData(0);
+      // (ratio to the strike note, loudness, seconds to fall to a third)
+      const PARTIALS = [[0.5, 0.5, 8], [1, 0.42, 5.5], [1.188, 0.36, 4.2], [1.5, 0.2, 3.2], [2, 0.55, 3], [2.52, 0.16, 2], [2.66, 0.18, 1.8], [3.01, 0.14, 1.4], [4.07, 0.09, 0.9], [5.2, 0.05, 0.5], [6.4, 0.035, 0.3]];
+      for (const [r, a, t] of PARTIALS) {
+        for (const sd of [-1, 1]) {
+          // (Each partial as two a hair apart, by a sine kept turning: c, s step round by the one angle.)
+          const w = 2 * Math.PI * hz * r * (1 + sd * (0.0006 + 0.0009 * Math.random())) / sr, cw = Math.cos(w), sw = Math.sin(w), k = Math.exp(-1 / (t * sr)), amp = a * (sd > 0 ? 0.55 : 0.45);
+          let c = Math.cos(Math.random() * 6.283), s = Math.sqrt(1 - c * c), e = amp;
+          for (let i = 0; i < len; i++) {
+            d[i] += s * e;
+            const c2 = c * cw - s * sw; s = s * cw + c * sw; c = c2; e *= k;
+          }
+        }
+      }
+      // The knock: noise, its lows taken off, gone in a few hundredths; and the first few samples eased in.
+      let lp = 0;
+      for (let i = 0, n = Math.floor(sr * 0.08); i < n; i++) { const v = Math.random() * 2 - 1; lp += (v - lp) * 0.3; d[i] += (v - lp) * 0.35 * Math.exp(-i / (sr * 0.012)); }
+      let peak = 0;
+      for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(d[i]));
+      for (let i = 0; i < len; i++) d[i] *= (0.9 / peak) * Math.min(1, i / 24) * (i > len - sr ? (len - i) / sr : 1);
+      cache[hz] = buf;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = 0.997 + Math.random() * 0.006;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    const p = ctx.createPanner();
+    p.panningModel = PANNING; p.distanceModel = 'inverse'; p.refDistance = ref; p.rolloffFactor = 1;
+    if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z);
+    src.connect(g); g.connect(p); p.connect(this.master); p.connect(this.reverb);
+    src.start();
+  }
+
   // A close aspirated inhale: filtered air with a brief, quiet throat onset.
   // Synthesized locally so scene cues need no external voice service.
   breath(kind, x, y, z) {
