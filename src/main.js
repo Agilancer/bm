@@ -1621,6 +1621,7 @@ class GameView {
       if (this.town) this.town.frame(snap, c, this.renderer.hour, !!this.shared.input[INPUT.PAUSE] || !!this.idle);
       this.questTrail?.frame(dt, snap);
       renderDiagnostics.stage = 'renderer';
+      this.renderer.delveState = this.party?.warrens;   // (which bosses are down: a delve's way out lights when its last is)
       this.renderer.frame(c, snap, this.sway, dt);
       // Who's drawn, body or shadow: the world poses them every tick (if near) and everyone else less often.
       { const seen = this.shared.input, rc = this.renderer.chars; for (let i = 0; i < MAX_CHARS; i++) seen[INPUT.SEEN + i] = rc[i]?.casts ? 1 : 0; }
