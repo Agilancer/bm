@@ -57,8 +57,9 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | Pack: staffs, skulls, robes and gems | `I` | The pack, in the top row |
 | Take up what's on the ground, open a chest or a door, or talk | `E` | The gold button that comes up beside the ring |
 | Quest log | `J` | The page, in the top row |
-| The big map | `M` | Tap the small one in the corner |
-| Pause: save, load, settings | `Esc` | The bars, in the top row |
+| The big map | `M`, or click the small one in the corner with the mouse free | Tap the small one in the corner |
+| Free the mouse to click what's on the screen (the corner map, the skull, Auto, a spell), the keys still moving you and the game going on; again and the mouse looks about | `Tab` | (A thumb's free already) |
+| Pause: save, load, settings | `Esc` (the only key that pauses: with the mouse free too) | The bars, in the top row |
 | First person or third, once you're out of Lisandra's cave | `V`, or the eye by the spell bar (hold `Alt` to free the mouse for it) | The figure (or the eye), at the end of the top row |
 
 Moving backward while cutting gives a rising backhand, running gives an overhead chop, and cutting in the air gives a slam.
@@ -711,7 +712,7 @@ Under a roof both maps show the place's own chart instead, as Bellmourn's map do
 
 The **Auto** button sits under Velscour's Skull whenever you're playing, taken from Velscour (`assets/ui/btn_auto.webp`,
 and its blue glow from Velscour's `css/style.css`). The button, or **P**, brings up a menu asking what it should do, and
-stops it once it's on; it needs no word. With the mouse held by the game, press P, or free the mouse (Esc or Alt) and click
+stops it once it's on; it needs no word. With the mouse held by the game, press P, or free the mouse (Tab, or hold Alt) and click
 it. Its nav thread takes a few seconds to come up, so it isn't started until auto-play is first wanted (the pointer over the
 button is enough to start it).
 
