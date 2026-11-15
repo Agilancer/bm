@@ -58,3 +58,27 @@ test('the game\'s own reload for a lost GPU is not a death; ?light sets the leve
   store.set('velscour.lastRun', JSON.stringify({ at: Date.now() - 9 * 86400e3, stage: 'playing', ended: false }));
   assert.equal(beginRun().died, null);
 });
+
+test('on a PC only a run that went soon after it loaded counts, and a GPU lost then counts too', () => {
+  const pc = { pc: true };
+  heard.win.pagehide();
+  assert.deepEqual(beginRun(new URLSearchParams('light=0')), { died: null, light: 0 });
+  // Killed forty minutes into play: said, but no lighter (that's not the game not fitting).
+  noteRun({ stage: 'playing', mins: 40 });
+  const a = beginRun(undefined, pc);
+  assert.equal(a.died.mins, 40);
+  assert.equal(a.light, 0);
+  // Killed a minute into play: lighter.
+  noteRun({ stage: 'playing', mins: 1 });
+  assert.equal(beginRun(undefined, pc).light, 1);
+  // The GPU lost while it loaded (the game's own reload): not a death, but lighter again.
+  noteRun({ stage: 'loading', ended: 'gpu' });
+  const c = beginRun(undefined, pc);
+  assert.equal(c.died, null);
+  assert.equal(c.light, 2);
+  // Left in the ordinary way: as it was.
+  heard.win.pagehide();
+  assert.equal(beginRun(undefined, pc).light, 2);
+  heard.win.pagehide();
+  beginRun(new URLSearchParams('light=0'));
+});
