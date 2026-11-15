@@ -878,7 +878,8 @@ async function boot(plan, poolSize) {
   };
   const slotOptions = () => ({ canSave: canSave(), snapshot, restore: (d) => (input.enabled ? loadInGame(d) : startFrom(d)) });
   const loadInGame = async (d) => { if (await loadInto(d)) resume(); };
-  const resume = () => { if (input.touch || AUTO || input.free) input.onPauseChange(false); else input.lock(); };
+  // (With the mouse free, Tab's or auto-play's, there's no lock to take again: straight back.)
+  const resume = () => { if (input.touch || AUTO || input.loose) input.onPauseChange(false); else input.lock(); };
   const toTitle = async () => {
     game.autoplay?.toggle(false);
     await autosave();
@@ -886,6 +887,7 @@ async function boot(plan, poolSize) {
     input.enabled = false;
     state.paused = false;
     shared.input[INPUT.PAUSE] = 1;
+    input.cursor = false;     // (the next game starts with the mouse looking)
     if (document.pointerLockElement) document.exitPointerLock();
     $('pause').style.display = 'none'; $('hud').style.display = 'none'; $('touch').style.display = 'none';
     document.body.classList.remove('playing', 'paused');
@@ -988,6 +990,8 @@ async function boot(plan, poolSize) {
     state.paused = paused;
     document.body.classList.toggle('paused', paused);
     $('pause').style.display = paused ? 'flex' : 'none';
+    // (Back in play, no button keeps the focus that Tab walked it to on the pause screen: Enter would press it.)
+    if (!paused && document.activeElement?.closest?.('button, #pause')) document.activeElement.blur();
     shared.input[INPUT.PAUSE] = paused ? 1 : 0;
   };
   input.onLockRefused = () => input.onPauseChange(true);
@@ -1015,7 +1019,7 @@ async function boot(plan, poolSize) {
     bookOpen = false;
     $('spellbook').classList.remove('open');
     input.menu = false;
-    if (viaEsc === true && !input.touch && !AUTO) input.onPauseChange(true); else resume();
+    if (viaEsc === true && !input.touch && !AUTO && !input.loose) input.onPauseChange(true); else resume();
   };
   let bookOpen = false;
   game.spellbar = new SpellBar(shared, input, { openBook, closeBook, tip: (t) => hud.tip(t, 2.5), level: () => pack.level,
@@ -1061,7 +1065,7 @@ async function boot(plan, poolSize) {
     inventory.hide();
     input.menu = false;
     autosave();
-    if (viaEsc && !input.touch && !AUTO) input.onPauseChange(true); else resume();
+    if (viaEsc && !input.touch && !AUTO && !input.loose) input.onPauseChange(true); else resume();
   };
   $('invClose').onclick = () => closePack(false);
   $('invX').onclick = () => closePack(false);
@@ -1110,6 +1114,52 @@ async function boot(plan, poolSize) {
     if (now !== was) audio.play(now ? 'mapOpen' : 'mapClose', null, 0, 0, 0.6, 1, false);
   };
   worldMap.onClose = toggleMap;
+  // With the mouse free (Tab, or auto-play's), a click on the corner map opens the big one, as M does. (On a phone, PMAP's
+  // over it: src/ui/thumbs.js.)
+  $('mapMini').addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || input.touch || !input.enabled || input.menu || state.paused || naming || document.pointerLockElement) return;
+    e.preventDefault(); e.stopPropagation();
+    toggleMap();
+  });
+  // Tab: the mouse let go, to click what's on the screen (the corner map, the skull, Auto, the spell bar and the rest), the
+  // keys still walking you and the game going on. Tab again and the mouse looks about again. A browser's Tab walks its focus
+  // off the page, which takes the pointer lock with it, and that was the pause: now only Esc pauses (input.loose).
+  const freeTip = 'The mouse is free: click the map, the skull, Auto or a spell. Tab again to look about.';
+  const mouseFree = (on) => {
+    if (input.touch || AUTO || on === input.cursor) return;
+    input.cursor = on;
+    if (on) {
+      input.softOn(false);
+      if (document.pointerLockElement) document.exitPointerLock();
+      hud.tip(freeTip, 4);
+    } else if (input.free) hud.tip('Auto-play has the mouse while it plays. It looks about again once auto-play stops.', 4);
+    else {
+      if ($('tip').textContent === freeTip) hud.tip(freeTip, 0);     // (its word goes with it, not anyone else's)
+      // (A browser that won't take the mouse back this once: it stays free, and Tab tries again.)
+      input.lock(() => { input.cursor = true; hud.tip('The browser kept the mouse free that time. Tab again to look about.', 3.5); });
+    }
+  };
+  input.onLooseClick = () => { if (!input.menu && !state.paused) hud.tip(freeTip, 3); };
+  // (For tests: bm.mouseFree() says whether Tab's free mouse is on; bm.mouseFree(true or false) sets it as Tab would.)
+  if (window.bm) window.bm.mouseFree = (on) => { if (on !== undefined) mouseFree(!!on); return input.cursor; };
+  // A panel or a window that Esc shuts is up (its own keys see to it), or a name's being written.
+  const panelUp = () => input.menu || naming || inventory.open || bookOpen || townUI.open || townUI.book || !!game.heroTalk?.open
+    || !!game.party?.open || !!game.hallUI?.open || lands.isOpen || !!game.partyBook?.open || game.arrange.isOpen || !!title.top();
+  // (Caught before the panels' own keys, so it's the panels as they were before this key that count.)
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat || e.defaultPrevented || !input.enabled || input.touch || AUTO) return;
+    // (Not while writing in a box on the screen: a word for the skull, a name. One that's gone but kept the focus doesn't count.)
+    const box = e.target?.closest?.('input, textarea, select');
+    if (box && (box.checkVisibility ? box.checkVisibility() : box.getClientRects().length > 0)) return;
+    if (e.code === 'Tab' && !state.paused) {
+      e.preventDefault();
+      if (!panelUp()) mouseFree(!input.cursor);
+    } else if (e.code === 'Escape' && input.cursor && !input.free && !panelUp()) {
+      // With the mouse free there's no lock for the browser to let go of: Esc is the pause, and Esc again is back.
+      e.preventDefault();
+      input.onPauseChange(!state.paused);
+    }
+  }, true);
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyR' && input.enabled && !input.menu && shared.snaps && game.gameState() !== 0) shared.input[INPUT.RESTART] += 1;
     if (!input.enabled || e.repeat || naming) return;
@@ -1141,7 +1191,7 @@ async function boot(plan, poolSize) {
   game.run();
   $('controls').innerHTML = input.touch
     ? 'Left thumb moves. Right thumb looks, on or off the buttons. The big button fires your <b>staff</b>; round it are <b>dodge</b>, <b>jump</b> and, with a shield on and no skull, <b>guard</b>. The six <b>spells</b> stand in a ring round those: tap one to cast it, hold to keep casting. Along the top: the <b>menu</b>, your <b>pack</b>, your <b>spellbook</b> and your <b>quest log</b>; tap the map in the corner to open the big one. <b>Auto</b>, beside the map, lets the game play itself.'
-    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
+    : '<kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> move &nbsp; <kbd>Space</kbd> jump, hold it to ride your shield &nbsp; <kbd>Shift</kbd> run &nbsp; <kbd>Q</kbd> dodge &nbsp; <kbd>1</kbd>-<kbd>6</kbd> cast, hold to keep casting &nbsp; <kbd>F</kbd> cast the last again &nbsp; <kbd>Wheel</kbd> choose &nbsp; <kbd>B</kbd> spellbook: learn spells and set your bar &nbsp; <kbd>Alt</kbd> cursor, to click a spell &nbsp; <kbd>Tab</kbd> free the mouse to click the map, the skull or Auto, Tab again to look &nbsp; <kbd>Left click</kbd> fire your staff &nbsp; <kbd>Right click</kbd> shield up with a shove, hold to keep it up (not with a skull in hand) &nbsp; <kbd>I</kbd> pack &nbsp; <kbd>M</kbd> map &nbsp; <kbd>E</kbd> take, open, shut or talk &nbsp; <kbd>J</kbd> quest log: what each quest is, where on the map, what auto-play is on &nbsp; <kbd>P</kbd> auto-play: the game plays itself';
   // Loaded: the title's menu comes up (once Bellmourn's logo is in).
   game.idle = !AUTO;
   watchFiles(null);
