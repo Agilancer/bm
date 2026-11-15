@@ -59,17 +59,7 @@ export class World {
     // Marked, so whoever has their feet on the land goes over them (onLand below, heightFor's own rule).
     for (const c of this.colliders.slice(data.colliders.length)) if (c.x > CHURCH_BOUNDS.x0 && churchSite(c.x, c.z) > 2) c.under = true;
     this.siteBoxes = new Map();
-    for (const c0 of buildSites().colliders) {
-      const c = { ...c0, s: Math.sin(c0.yaw), co: Math.cos(c0.yaw) }, R = Math.hypot(c.hx, c.hz);
-      for (let j = Math.floor((c.z - R) / SITE_CELL); j <= Math.floor((c.z + R) / SITE_CELL); j++) {
-        for (let i = Math.floor((c.x - R) / SITE_CELL); i <= Math.floor((c.x + R) / SITE_CELL); i++) {
-          const k = siteKey(i, j);
-          let list = this.siteBoxes.get(k);
-          if (!list) this.siteBoxes.set(k, list = []);
-          list.push(c);
-        }
-      }
-    }
+    for (const c0 of buildSites().colliders) this.addSiteBox({ ...c0, s: Math.sin(c0.yaw), co: Math.cos(c0.yaw) });
     this.lightsData = data.lights;
     this.grid = new Uint8Array(NAV_W * NAV_H);
     this.slots = new Map();
@@ -100,6 +90,11 @@ export class World {
       const box = (c) => { const o = { ...c, s: 0, co: 1 }; this.colliders.push(o); return o; };
       return { id: t.id, shut: box(t.shut), ajar: box(t.ajar) };
     });
+    // (And the land's, the bell tower's and the Bellwright's, with the land's own boxes: src/core/belltower.js.)
+    for (const t of buildSites().doors || []) {
+      const box = (c) => { const o = { ...c, s: 0, co: 1 }; this.addSiteBox(o); return o; };
+      this.doors.push({ id: t.id, shut: box(t.shut), ajar: box(t.ajar) });
+    }
     this.setDoors(-1);
     // Lisandra's cave: open until it falls in, and then its mouth is rubble (src/sim/opening.js).
     this.caveSealed = false;
@@ -197,6 +192,19 @@ export class World {
     return this.boxGrid.get(boxKey(Math.floor(x / BOX_CELL), Math.floor(z / BOX_CELL))) || NO_BOXES;
   }
 
+  // A box of the places out in the land, into every 64 m cell its footprint reaches.
+  addSiteBox(c) {
+    const R = Math.hypot(c.hx, c.hz);
+    for (let j = Math.floor((c.z - R) / SITE_CELL); j <= Math.floor((c.z + R) / SITE_CELL); j++) {
+      for (let i = Math.floor((c.x - R) / SITE_CELL); i <= Math.floor((c.x + R) / SITE_CELL); i++) {
+        const k = siteKey(i, j);
+        let list = this.siteBoxes.get(k);
+        if (!list) this.siteBoxes.set(k, list = []);
+        list.push(c);
+      }
+    }
+  }
+
   // The trunks standing in one of the trunk grid's cells, and the boulders lying in it: [x, z, radius, ...], or null.
   trunkCell(i, j) {
     const key = trunkKey(i, j);
@@ -238,23 +246,29 @@ export class World {
     }
   }
 
-  // On a portal's platform, its floor or the step you're on; null off them all.
-  platformAt(x, z) {
+  // On a portal's platform, its floor or the step you're on; null off them all. A platform of floors one over another (the
+  // bell tower's stair: stack) is stood on at the highest of them within a step of y, the feet's height; without y (anyone
+  // but the player, who all stay on the ground floor) at its lowest.
+  platformAt(x, z, y) {
     for (let i = 0; i < this.platforms.length; i++) {
       const p = this.platforms[i];
       if (Math.abs(x - p.x) > p.r || Math.abs(z - p.z) > p.r) continue;
-      let best = null;
+      let best = null, low = null;
       for (const f of p.rects) {
         const dx = x - f.x, dz = z - f.z;
-        if (Math.abs(dx * f.c - dz * f.s) <= f.hu && Math.abs(dx * f.s + dz * f.c) <= f.hw && (best === null || f.y > best)) best = f.y;
+        if (Math.abs(dx * f.c - dz * f.s) > f.hu || Math.abs(dx * f.s + dz * f.c) > f.hw) continue;
+        if (!p.stack) { if (best === null || f.y > best) best = f.y; continue; }
+        if (low === null || f.y < low) low = f.y;
+        if (y !== undefined && f.y <= y + 0.7 && (best === null || f.y > best)) best = f.y;
       }
       if (best !== null) return best;
+      if (low !== null) return low;
     }
     return null;
   }
 
-  height(x, z) {
-    const plat = this.platformAt(x, z);
+  height(x, z, y) {
+    const plat = this.platformAt(x, z, y);
     if (plat !== null) return plat;
     // (The Hollowfang Warrens lie out past the edge of the world, under it: src/core/dungeon.js.)
     if (inDungeon(x, z)) return caveFloorY(x, z);
@@ -295,7 +309,7 @@ export class World {
   // a floor there used to be everyone's floor whatever height they were at, so walking over the hill on the way to the Hill
   // Road dropped you through the ground into the crypt. With your feet on the land, or over it, you stay on the land.)
   heightFor(x, z, y) {
-    const home = homeFloor(x, z, y), h = home ?? this.height(x, z);
+    const home = homeFloor(x, z, y), h = home ?? this.height(x, z, y);
     // (The rift's bridge and landings are kept as a house's floors are, so they come by either way.)
     if (x > 140 && (home !== null || floorAt(x, z) === h)) { const land = this.landAt(x, z); if (land - h > 5 && y > land - 2.5) return land; }
     return h;
@@ -444,7 +458,9 @@ export class World {
           return t0 <= t1;
         };
         if (!slab(lox, ldx, c.hx) || !slab(loz, ldz, c.hz)) continue;
-        if (oy + dy * t0 > c.h + terrainHeight(c.x, c.z)) continue;
+        // (A box with a foot, the bell tower's floors' and doors', only from its foot up.)
+        const yAt = oy + dy * t0;
+        if (yAt > c.h + terrainHeight(c.x, c.z) || yAt < c.b) continue;
         if (best < 0 || t0 < best) best = t0;
       }
     }

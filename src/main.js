@@ -28,6 +28,8 @@ import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
 import { Chests } from './items/chests.js';
 import { Doors } from './items/doors.js';
+import { Bells } from './items/bells.js';
+import { buildSites } from './core/sites.js';
 import { saveSettings, settings, Title } from './title.js';
 import { ViewSwitch } from './ui/view.js';
 import { icon, paintIcons, setIcon } from './ui/icons.js';
@@ -1247,8 +1249,12 @@ class GameView {
     this.clock = new Clock($('clock'));
     this.chests = new Chests(renderer, audio, this.drops, renderer.things);
     this.nearChest = null;
-    this.doors = new Doors(renderer, audio, renderer.things, { set value(m) { shared.input[INPUT.DOORS] = m; } });
+    // (The town's doors, and the land's: the bell tower's and the Bellwright's, src/core/belltower.js.)
+    this.doors = new Doors(renderer, audio, renderer.things.concat(buildSites().doors), { set value(m) { shared.input[INPUT.DOORS] = m; } });
     this.nearDoor = null;
+    // (The bell tower's bells, that you ring from its belfry floor.)
+    this.bells = new Bells(renderer, audio);
+    this.nearRope = null;
     setHomes(renderer.interior.data.homes);
     this.underfoot = 'dirt';
     // A house's lamps lit again as someone comes home or wakes: heard if you're near.
@@ -1352,6 +1358,7 @@ class GameView {
       if (this.nearChest) this.chests.open(this.nearChest);
       else if (this.nearFolk) { if (!this.nearFolk.busy) { this.townUI.talk(this.nearFolk.i); this.takeShown = undefined; } }
       else if (this.nearHero) { if (!this.nearHero.busy) { this.heroTalk.talkTo(this.nearHero.h); this.takeShown = undefined; } }
+      else if (this.nearRope) this.bells.pull(this.nearRope);
       else if (this.nearDoor) {
         if (this.locked(this.nearDoor)) { this.hud.tip('Locked, and solid. Silas Crane at the coffin yard keeps the key.', 3); return; }
         this.doors.toggle(this.nearDoor); this.takeShown = undefined;
@@ -1384,6 +1391,7 @@ class GameView {
     this.nearChest = this.input.enabled && !this.input.menu ? ch : null;
     const door = this.doors.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     this.nearDoor = this.input.enabled && !this.input.menu ? door : null;
+    const rope = this.bells.update(dt, snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw);
     // Someone to talk to, if there's nothing to take or open first.
     const free = this.input.enabled && !this.input.menu && !d && !this.nearChest;
     let folk = free && this.townUI ? this.townUI.nearest(snap[H.PX], snap[H.PY], snap[H.PZ], this.input.yaw) : null;
@@ -1398,16 +1406,17 @@ class GameView {
     if (station || (hero?.h.p.broker && this.hallUI?.on)) { folk = null; hero = null; }
     this.nearStation = station;
     this.nearFolk = folk; this.nearHero = hero;
-    const near = d || this.nearChest || station?.label || (folk && folk.label) || hero?.label || this.nearDoor;
+    this.nearRope = free && !station && !folk && !hero ? rope : null;
+    const near = d || this.nearChest || station?.label || (folk && folk.label) || hero?.label || this.nearRope?.label || this.nearDoor;
     if (near === this.takeShown) return;
     this.takeShown = near;
     $('take').style.display = near ? 'block' : 'none';
     $('bTake').style.display = near && this.input.touch ? 'flex' : 'none';
-    const shuts = !d && !this.nearChest && !station && !folk && !hero && this.nearDoor?.open;
-    const locked = !d && !this.nearChest && !station && !folk && !hero && this.nearDoor && this.locked(this.nearDoor);
-    const [pic, word] = d || !near ? ['take', 'Take'] : station || folk || hero ? ['talk', 'Talk'] : shuts ? ['shut', 'Shut'] : locked ? ['locked', 'Try'] : ['open', 'Open'];
+    const shuts = !d && !this.nearChest && !station && !folk && !hero && !this.nearRope && this.nearDoor?.open;
+    const locked = !d && !this.nearChest && !station && !folk && !hero && !this.nearRope && this.nearDoor && this.locked(this.nearDoor);
+    const [pic, word] = d || !near ? ['take', 'Take'] : station || folk || hero ? ['talk', 'Talk'] : this.nearRope ? ['take', 'Pull'] : shuts ? ['shut', 'Shut'] : locked ? ['locked', 'Try'] : ['open', 'Open'];
     setIcon($('bTake'), pic, word);
-    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy || hero?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : station ? station.label : folk ? folk.label : hero ? hero.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
+    if (near) $('take').innerHTML = `${this.input.touch || folk?.busy || hero?.busy ? '' : '<kbd>E</kbd> '}${d ? `<span style="color:${colorOf(d.item)}">${nameOf(d.item)}</span>` : this.nearChest ? 'Open the chest' : station ? station.label : folk ? folk.label : hero ? hero.label : this.nearRope ? this.nearRope.label : shuts ? 'Shut the door' : locked ? 'Try the door' : 'Open the door'}`;
   }
 
   gameState() { const s = this.currentSnap(); return s ? s[H.GAME] : 0; }

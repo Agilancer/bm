@@ -2,6 +2,7 @@
 import { CHURCH_X, CHURCH_Z, SEXTON } from '../core/church.js';
 import { DELVES } from '../core/dungeon.js';
 import { HALL_BOX } from '../core/testhall.js';
+import { INDOORS as BELL_INDOORS } from '../core/belltower.js';
 
 const f32 = (v) => v.toFixed(2);   // (a number into WGSL, as a float)
 import { CAVE_BOX, CAVE_LINE, CHAMBER_FIRST } from '../core/opening.js';
@@ -192,6 +193,8 @@ fn indoorAt(p: vec3f) -> f32 {
 ${DELVES.map((d) => `  if (p.x > ${f32(d.box.x0)} && p.x < ${f32(d.box.x1)} && p.z > ${f32(d.box.z0)} && p.z < ${f32(d.box.z1)} && p.y < -20.0) { return ${d.look.lit === true ? '2.25' : d.look.lit ? '2.12' : '2.0'}; }`).join('\n')}
   // The Test Dungeon, out past the other edge and as deep (src/core/testhall.js).
   if (p.x > ${f32(HALL_BOX.x0)} && p.x < ${f32(HALL_BOX.x1)} && p.z > ${f32(HALL_BOX.z0)} && p.z < ${f32(HALL_BOX.z1)} && p.y < ${f32(HALL_BOX.y1)}) { return 3.0; }
+  // The bell tower's well under its belfry and the Bellwright's room, out on Bell Knoll (src/core/belltower.js), lit as a house is.
+${BELL_INDOORS.map((b) => `  if (abs(p.x - ${f32(b.x)}) < ${f32(b.hx)} && abs(p.z - ${f32(b.z)}) < ${f32(b.hz)} && p.y > ${f32(b.y0)} && p.y < ${f32(b.y1)}) { return 1.25; }`).join('\n')}
   if (p.x < ${f32(CHURCH_X + 65.9)}) {
     // The houses, to the inside of their walls, with the overhang upstairs. Written by tools/village/build_village.py, which is the one that knows.
     if (p.y < 0.0) { return 0.0; }

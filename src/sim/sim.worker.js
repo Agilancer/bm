@@ -21,6 +21,7 @@ import { CRAB_SCALE, Crab } from './crab.js';
 import { GRAVEHART_SCALE, Gravehart } from './gravehart.js';
 import { HYDRA_SCALE, Hydra } from './hydra.js';
 import { floorAt, homeFloor, inPit } from '../core/interior.js';
+import { underRoof } from '../core/belltower.js';
 import { FOE, stepFoeWorks } from './foespells.js';
 import { addUndead, corpsesNear, raiseZombie, resetCatacombs, stepCatacombs, stepGraves, stepWoods, Zombie } from './undead.js';
 import { POOL } from '../core/lands.js';
@@ -212,7 +213,8 @@ class Sim {
     const px = ex + rx * THIRD.side * side, py = ey + THIRD.up, pz = ez + rz * THIRD.side * side;
     let dist = c.trace(this, px, py, pz, -fx, -fy, -fz, THIRD.dist + THIRD.skin) - THIRD.skin;
     // (Under a roof the camera keeps low: the rooms' ceilings aren't in the walls it's tested against.)
-    if (fy < 0 && (floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null) && -fy * dist > THIRD.indoors) dist = THIRD.indoors / -fy;
+    // (And in the bell tower's well and the Bellwright's room: src/core/belltower.js.)
+    if (fy < 0 && (floorAt(p.x, p.z) !== null || homeFloor(p.x, p.z, p.y) !== null || underRoof(p.x, p.z, p.y)) && -fy * dist > THIRD.indoors) dist = THIRD.indoors / -fy;
     snap[H.TP_DIST] = Math.max(THIRD.near, Math.min(THIRD.dist, dist));
     snap[H.TP_SIDE] = side; snap[H.TP_DROP] = drop;
     this.sight = this.sight || [0, 0, 0];

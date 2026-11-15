@@ -259,6 +259,7 @@ export class Renderer {
     this.gauntletSets = new Map();
     this.chests = [];
     this.doorItems = [];
+    this.bellItems = [];
     this.portalItems = null;              // the portals, each its stone and its swirl (portalModel), made the first time they're drawn
     this.stallItems = null;               // the market's wares and their tarps (src/gfx/wares.js), made the first time they're drawn
     this.stallsOpen = new Set();          // which stalls have their wares out (src/folk/brain.js, stall)
@@ -1596,24 +1597,34 @@ export class Renderer {
   // The doors, the first time one comes near: every leaf from one glb, on one set of maps. See src/items/doors.js and tools/doors/model.py.
   doorModel() {
     this.doorModels = {};
-    (async () => {
-      const buf = await fetch(`${this.base}assets/game/items/doors.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
-      const glb = parseGLB(buf);
-      const prims = glb.json.nodes.filter((n) => n.mesh !== undefined).map((n) => {
-        const pr = glb.json.meshes[n.mesh].primitives[0], a = pr.attributes;
-        return { name: n.name, pr, pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
-      });
-      const mat = glb.json.materials[prims[0].pr.material], scale = this.tier.texScale;
-      const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
-      const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
-        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
-        this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
-        this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
-      ]);
-      const models = {};
-      for (const p of prims) models[p.name] = this.lyingModel(p, alb, nrm, mr, [0, 0, 0, 0]);
-      this.doorModels = models;
-    })().catch((e) => console.error('doors', e));
+    this.glbModels('doors').then((m) => { this.doorModels = m; }).catch((e) => console.error('doors', e));
+  }
+
+  // The bell tower's bells, the first time you're near: each bell on its headstock and wheel, its clapper, a rope and its
+  // grip. See src/items/bells.js and tools/belltower/bells.py.
+  bellModel() {
+    this.bellModels = {};
+    this.glbModels('bells').then((m) => { this.bellModels = m; }).catch((e) => console.error('bells', e));
+  }
+
+  // Every mesh in assets/game/items/<name>.glb, by its name, on the one material they share.
+  async glbModels(name) {
+    const buf = await fetch(`${this.base}assets/game/items/${name}.glb`).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+    const glb = parseGLB(buf);
+    const prims = glb.json.nodes.filter((n) => n.mesh !== undefined).map((n) => {
+      const pr = glb.json.meshes[n.mesh].primitives[0], a = pr.attributes;
+      return { name: n.name, pr, pos: accessor(glb, a.POSITION), nrm: accessor(glb, a.NORMAL), uv: accessor(glb, a.TEXCOORD_0), idx: accessor(glb, pr.indices) };
+    });
+    const mat = glb.json.materials[prims[0].pr.material], scale = this.tier.texScale;
+    const srcOf = (t) => { const x = glb.json.textures[t.index]; return x.source ?? x.extensions.EXT_texture_webp.source; };
+    const [alb, nrm, mr] = await Promise.all([   // (full: held before the eye, as the arms are)
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.baseColorTexture), 'rgba8unorm-srgb', scale, true),
+      this.imageTexture(glb, srcOf(mat.normalTexture), 'rgba8unorm', scale, true),
+      this.imageTexture(glb, srcOf(mat.pbrMetallicRoughness.metallicRoughnessTexture), 'rgba8unorm', scale, true),
+    ]);
+    const models = {};
+    for (const p of prims) models[p.name] = this.lyingModel(p, alb, nrm, mr, [0, 0, 0, 0]);
+    return models;
   }
 
   // The portals, the first time one comes near: the owner's two models (tools/portal/pack.py), each in two, its stone and the
@@ -2925,6 +2936,8 @@ export class Renderer {
     for (const g of this.chests) drawn.push(g);
     if (this.doorItems.length && !this.doorModels) this.doorModel();
     for (const g of this.doorItems) drawn.push(g);
+    if (this.bellItems.length && !this.bellModels) this.bellModel();
+    for (const g of this.bellItems) drawn.push(g);
     this.portalItems ||= this.makePortals();
     if (this.portalItems.length && !this.portalModels) this.portalModel();
     for (const g of this.portalItems) if ((g.at.x - cam.x) ** 2 + (g.at.z - cam.z) ** 2 < 600 ** 2) drawn.push(g);
@@ -2949,7 +2962,7 @@ export class Renderer {
       }
     }
     for (const g of drawn) {
-      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.portal] : g.door ? this.doorModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
+      let model = g.openingModel ?? g.mesh ?? (g.portal ? this.portalModels?.[g.portal] : g.door ? this.doorModels?.[g.piece] : g.bell ? this.bellModels?.[g.piece] : g.ware ? this.ware(g.ware) : g.piece ? this.chestModels?.[g.piece] : g.coins ? this.coins() : g.stuff ? this.stuff(g.stuff) : g.gem ? this.gem(g.gem) : this.sword(g.sword).lying);
       if (model && g.glow) model = this.tinted(model, g.glow);
       g.model = model;
       if (!model || nGround >= MAX_GROUND) { g.slot = -1; continue; }

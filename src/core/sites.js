@@ -20,6 +20,7 @@ import { dressLairs } from './lair-dress.js';
 import { dressWilds } from './wild-dress.js';
 import { dressRoads } from './roadside.js';
 import { smithYard } from './smithyard.js';
+import { buildHouse, buildTower } from './belltower.js';
 
 const TAU = Math.PI * 2;
 // World metres to one repeat of each kind of painting, across and up.
@@ -703,99 +704,15 @@ function downs(K) {
 // The Bell Tower of the Four Watches, Tessariel's, on Bell Knoll: a pale shaft on a battered plinth, buttressed at its
 // corners, three stages of slits under string courses; a belfry of paired arches with the four bells in their frame over the
 // louvres; a parapet with pinnacles, the copper spire and its gilt finial. Steps and a porch to the door on its south, his
-// sunburst over it. Round it the Bellwright's yard: his house, wood and oil store, the well, the ladder he oils the bells
+// sunburst over it; inside, a stair round the walls up to the belfry, where you ring the bells. Round it the Bellwright's yard: his house, wood and oil store, the well, the ladder he oils the bells
 // from, an old cracked bell; the gate to the Knoll Path; and out on the knoll a ring of watch-stones.
 function belltower(K) {
-  const b = at('belltower'), x = b.x, z = b.z, by = Y(x, z), S = 'pale:stone', G = 'pale:rubble', SP = 'frost:roof_2', Q = Math.PI / 4, R2 = Math.SQRT2;
-  K.drum(G, x, by - 1, z, 6.0 * R2, 4, 4, { r2: 5.0 * R2, turn: Q, collide: false, lid: S });
-  K.box('pale:ashlar', x, by + 3, z, 4.6, 24.5, 4.6, 0, { top: 'wood', collide: false });
-  K.collide(x, z, 5.6, 5.6, 0, by + 27);
-  for (const [yy, hw, hh] of [[10.6, 4.9, 0.4], [18.6, 4.9, 0.4], [26.9, 4.85, 0.3], [27.2, 5.1, 0.5]]) K.box(S, x, by + yy, z, hw, hh, hw, 0, { collide: false });
-  // Each face: its way out, and a point u along it, d out from the tower's middle, v up.
-  const faces = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-  faces.forEach(([nx, nz], fi) => {
-    const F = (u, d, v) => [x + nx * d - nz * u, by + v, z + nz * d + nx * u];
-    // The buttresses, a pair to a corner, stepping in at each string course under a sloped head.
-    for (const u of [-3.95, 3.95]) for (const [y0, y1, pr] of [[-1, 10.6, 1.5], [10.6, 18.6, 1.0], [18.6, 26.2, 0.55]]) {
-      const c = F(u, 4.6 + pr / 2, 0);
-      K.box(S, c[0], by + y0, c[2], nz ? 0.55 : pr / 2, y1 - y0, nz ? pr / 2 : 0.55, 0, { collide: false });
-      K.quad(S, F(u - 0.6, 4.6 + pr + 0.05, y1), F(u + 0.6, 4.6 + pr + 0.05, y1), F(u + 0.6, 4.6, y1 + 1.0), F(u - 0.6, 4.6, y1 + 1.0));
-      for (const sd of [-1, 1]) K.tri(S, F(u + sd * 0.56, 4.6 + pr, y1), F(u + sd * 0.56, 4.6, y1), F(u + sd * 0.56, 4.6, y1 + 1.0));
-    }
-    // The slits: dark, under a little hood, a sill under them. (The south face's first stage has the door and the sunburst.)
-    for (const [v, hh, uu] of [[5.6, 2.0, [0]], [13.0, 2.4, [0]], [21.0, 2.6, [-1.3, 1.3]]]) {
-      if (fi === 0 && v < 6) continue;
-      for (const u of uu) {
-        K.quad('water', F(u - 0.2, 4.63, v), F(u + 0.2, 4.63, v), F(u + 0.2, 4.63, v + hh), F(u - 0.2, 4.63, v + hh), [nx, 0, nz]);
-        K.tri('water', F(u - 0.2, 4.63, v + hh), F(u + 0.2, 4.63, v + hh), F(u, 4.63, v + hh + 0.4));
-        const hd = F(u, 4.72, v + hh + 0.45), sl = F(u, 4.72, v - 0.2);
-        K.box(S, hd[0], hd[1], hd[2], nz ? 0.5 : 0.14, 0.18, nz ? 0.14 : 0.5, 0, { collide: false });
-        K.box(S, sl[0], sl[1], sl[2], nz ? 0.4 : 0.12, 0.16, nz ? 0.12 : 0.4, 0, { collide: false });
-      }
-    }
-    // The belfry's face: two arches side by side, louvres across their lower half.
-    const yaw = Math.atan2(nx, nz);
-    for (const u of [-1.6, 1.6]) {
-      const c = F(u, 4.2, 0);
-      K.arch(S, c[0], c[2], yaw, { a: 1.25, pw: 0.35, hs: 4.4, top: 8.2, t: 0.8, y: by + 27.7, collide: false });
-      for (const v of [0.5, 1.3, 2.1, 2.9]) K.quad('wood', F(u - 1.25, 4.5, 27.7 + v), F(u + 1.25, 4.5, 27.7 + v), F(u + 1.25, 3.95, 28.25 + v), F(u - 1.25, 3.95, 28.25 + v));
-    }
-    // The parapet over it, a pinnacle at the corner.
-    const p = F(0, 4.8, 0);
-    K.box(S, p[0], by + 36.35, p[2], nz ? 4.6 : 0.2, 1.15, nz ? 0.2 : 4.6, 0, { collide: false });
-    for (let k = -3; k <= 3; k++) { const q = F(k * 1.25, 4.8, 0); K.box(S, q[0], by + 37.5, q[2], nz ? 0.32 : 0.2, 0.5, nz ? 0.2 : 0.32, 0, { collide: false }); }
-    const cn = F(4.8, 4.8, 0);
-    K.box(S, cn[0], by + 35.9, cn[2], 0.5, 2.9, 0.5, 0, { collide: false }); K.cone(S, cn[0], by + 38.8, cn[2], 0.75, 2.4, 4, Q);
-    K.drum('fruit2', cn[0], by + 41.15, cn[2], 0.14, 0.28, 5, { collide: false });
-  });
-  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.box(S, x + sx * 3.9, by + 27.7, z + sz * 3.9, 0.7, 8.2, 0.7, 0, { collide: false });
-  K.box(S, x, by + 35.9, z, 5.1, 0.45, 5.1, 0, { collide: false });
-  // The bells in their frame: bronze, a great one, two middling and a small, each under its headstock on the cage's beams.
-  for (const s of [-1, 1]) { K.beam('wood', [x - 3.5, by + 33.6, z + s * 1.0], [x + 3.5, by + 33.6, z + s * 1.0], 0.28); K.beam('wood', [x + s * 1.0, by + 33.9, z - 3.5], [x + s * 1.0, by + 33.9, z + 3.5], 0.28); }
-  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) K.beam('wood', [x + sx * 2.9, by + 27.7, z + sz * 2.9], [x + sx * 1.0, by + 33.6, z + sz * 1.0], 0.2);
-  for (const [sx, sz, D] of [[0, 1, 1.2], [0, -1, 1.0], [1, 0, 0.9], [-1, 0, 0.78]]) {
-    const bx = x + sx * 2.15, bz = z + sz * 2.15;
-    K.drum('fruit2', bx, by + 33.2 - D * 1.25, bz, D, D * 0.45, 12, { r2: D * 0.72, collide: false, open: true });
-    K.drum('fruit2', bx, by + 33.2 - D * 0.8, bz, D * 0.72, D * 0.8, 12, { r2: D * 0.4, collide: false });
-    K.drum('iron', bx, by + 33.2 - D * 1.45, bz, 0.09, D * 0.6, 5, { collide: false });
-    K.box('wood', bx, by + 33.2, bz, sx ? 0.18 : D * 0.9, 0.36, sx ? D * 0.9 : 0.18, 0, { collide: false });
-  }
-  // The spire: copper on an eight-sided drum, a ball and a rod, his sunburst in gilt at the very top, looking four ways.
-  K.drum(SP, x, by + 36.35, z, 4.35, 1.3, 8, { turn: Q / 2, collide: false, open: true });
-  K.cone(SP, x, by + 37.6, z, 4.6, 5.2, 8, Q / 2); K.drum(SP, x, by + 37.6, z, 3.35, 3.6, 8, { r2: 2.35, turn: Q / 2, collide: false, open: true });
-  K.cone(SP, x, by + 41.2, z, 2.35, 11.2, 8, Q / 2);
-  // (Pass two: the spire broached in two pitches, a gilt band where they meet, a lucarne on each face.)
-  K.drum('fruit2', x, by + 41.0, z, 2.5, 0.3, 8, { r2: 2.45, turn: Q / 2, collide: false, open: true });
-  for (const [nx, nz] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
-    const F = (u, d, v) => [x + nx * d - nz * u, by + v, z + nz * d + nx * u];
-    K.quad('water', F(-0.45, 3.42, 38.0), F(0.45, 3.42, 38.0), F(0.45, 3.42, 39.3), F(-0.45, 3.42, 39.3), [nx, 0, nz]);
-    K.quad(SP, F(-0.8, 3.5, 39.3), F(0, 3.5, 40.2), F(0, 2.4, 40.2), F(-0.8, 2.6, 39.3)); K.quad(SP, F(0.8, 3.5, 39.3), F(0, 3.5, 40.2), F(0, 2.4, 40.2), F(0.8, 2.6, 39.3));
-    for (const sd of [-1, 1]) K.quad(S, F(sd * 0.45, 3.45, 37.9), F(sd * 0.62, 3.45, 37.9), F(sd * 0.62, 3.45, 39.3), F(sd * 0.45, 3.45, 39.3), [nx, 0, nz]);
-  }
-  // (And the watch lamp hung in the belfry's middle, that's seen from the road by night.)
-  K.drum('iron', x, by + 30.2, z, 0.3, 0.9, 6, { r2: 0.38, open: true, collide: false }); K.cone('flame', x, by + 30.25, z, 0.26, 0.8, 6); K.beam('iron', [x, by + 31.1, z], [x, by + 33.6, z], 0.05);
-  K.drum('fruit2', x, by + 52.2, z, 0.34, 0.6, 6, { r2: 0.2, collide: false }); K.box('fruit2', x, by + 52.7, z, 0.05, 1.9, 0.05, 0, { collide: false });
-  K.sunburst('fruit2', x, by + 54.8, z, [0, 1], 1.05); K.sunburst('fruit2', x, by + 54.8, z, [1, 0], 1.05);
-  // The door, in a block that stands out of the plinth's batter; a porch before it under its own little roof; five steps.
-  const dy = by + 0.95;
-  K.box(S, x, by - 1, z + 5.05, 2.05, 5.9, 0.47, 0, { collide: false });
-  K.quad('door_4', [x - 1, dy, z + 5.54], [x + 1, dy, z + 5.54], [x + 1, dy + 2.9, z + 5.54], [x - 1, dy + 2.9, z + 5.54], [0, 0, 1], [[0, 1], [1, 1], [1, 0], [0, 0]]);
-  K.box(G, x, by - 0.5, z + 6.2, 2.05, 1.45, 0.7, 0, { collide: false });
-  K.deck([[x, z + 6.2, 1.2, 0.7, 0, dy]]);
-  for (const s of [-1, 1]) K.box(S, x + s * 1.75, by - 0.5, z + 5.95, 0.3, 4.95, 0.45, 0);
-  K.arch(S, x, z + 6.65, 0, { a: 1.2, pw: 0.55, hs: 2.3, top: 3.5, t: 0.5, y: dy });
-  K.gable('roof_2', S, x, dy + 3.5, z + 6.0, 0.95, 2.05, 1.5, Math.PI / 2, 0.25);
-  K.steps(G, x, z + 6.9, 0, 1.2, 5, { rise: 0.19, tread: 0.36, y: by });
-  for (const s of [-1, 1]) { K.box(S, x + s * 1.47, by - 0.4, z + 7.8, 0.25, 1.0, 0.92, 0); K.wallLamp(x + s * 1.48, dy + 2.5, z + 6.92, [0, 1]); }
-  K.sunburst('fruit2', x, by + 8.5, z + 4.64, [0, 1], 1.6);
-  // (Pass two's small things. Pale cloth with his sunburst down the two buttresses by the door; the stair's slits lit on the
-  // sides you come from; a dial for the four watches; the old bellwrights' slabs in the yard's corner; a rail down the steps.)
-  for (const s of [-1, 1]) { K.hanging('white', x + s * 3.95, by + 9.6, z + 6.1, [0, 1], 0.9, 3.6, 2); K.sunburst('fruit2', x + s * 3.95, by + 8.3, z + 6.2, [0, 1], 0.36); }
-  for (const [fx, fz, yy] of [[0, 1, 13.0], [-1, 0, 5.6], [1, 0, 13.0]]) K.quad('flame', [x + fx * 4.64 - fz * 0.12, by + yy + 0.3, z + fz * 4.64 + fx * 0.12], [x + fx * 4.64 + fz * 0.12, by + yy + 0.3, z + fz * 4.64 - fx * 0.12], [x + fx * 4.64 + fz * 0.12, by + yy + 1.5, z + fz * 4.64 - fx * 0.12], [x + fx * 4.64 - fz * 0.12, by + yy + 1.5, z + fz * 4.64 + fx * 0.12], [fx, 0, fz]);
+  const b = at('belltower'), x = b.x, z = b.z, by = Y(x, z), S = 'pale:stone', Q = Math.PI / 4;
+  // The tower itself, inside and out, its door, its stair and its bells' frame: src/core/belltower.js.
+  buildTower(K);
+  // (A dial for the four watches by the gate; the old bellwrights' slabs in the yard's corner.)
   K.drum(S, x - 6.5, by - 0.3, z + 12.5, 0.55, 1.4, 8, { r2: 0.42 }); K.drum(S, x - 6.5, by + 1.1, z + 12.5, 0.62, 0.1, 8, { collide: false }); K.tri('fruit2', [x - 6.5, by + 1.2, z + 12.2], [x - 6.5, by + 1.2, z + 12.8], [x - 6.5, by + 1.65, z + 12.2]);
   K.graves(x - 13, z - 11.6, 0, 2.6, 0.9, S, 1.7);
-  for (const s of [-1, 1]) { K.beam('iron', [x + s * 1.47, by + 1.5, z + 6.95], [x + s * 1.47, by + 1.05, z + 8.7], 0.05); K.cone('flame', x + s * 1.88, dy + 2.05, z + 6.92, 0.1, 0.34, 4); }
-  K.windowAt(x + 9.98, by + 1.2, z + 6, [-1, 0], 0.35, 0.6, true);
   // The yard: a low wall of pale rubble, the gate on the south between two piers with a lantern by each.
   const W = 17, N = -14, So = 18;
   K.wall('pale:rubble', x - W, z + N, x + W, z + N, 0.7, 1.5); K.wall('pale:rubble', x + W, z + N, x + W, z + So, 0.7, 1.5); K.wall('pale:rubble', x - W, z + So, x - W, z + N, 0.7, 1.5);
@@ -808,7 +725,7 @@ function belltower(K) {
   K.paving('flags', x, z + 13.3, 8.5, 4.6);
   // The Bellwright's house against the east wall, his wood and his chopping block; the oil store under a lean-to on the
   // north wall; the well; a bench in the sun; the ladder up the west face; and the old first bell, cracked, on its baulks.
-  K.house(x + 12.6, z + 4, 3.4, 2.6, 2.9, -Math.PI / 2, 'wall_12', 'roof_2', { chimney: -2.2, lamp: 1 });
+  buildHouse(K);   // (src/core/belltower.js: his room behind a door that opens)
   K.woodpile(x + 13.2, z + 9.6, 0, 1.7, 1.15, 0.5); K.stump(x + 10.4, z + 10.2, 0.32, 0.55);
   K.leanTo(x + 9, z - 12.4, 0, 2.6, 1.2, 2.4, 'roof_2');
   K.barrel(x + 7.6, z - 12.3); K.barrel(x + 8.5, z - 12.6); K.crate(x + 10.3, z - 12.4, 0.4, 0.2);
@@ -1443,7 +1360,8 @@ function flattest(x0, z0) {
 }
 
 let built = null;
-// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots, floors, fires, groups (Kit.group) }.
+// Everything, once: { parts: Map(layer -> {pos, nrm, uv, idx}), colliders, spots, floors, fires, groups (Kit.group), lamps,
+// doors (the land's that open, as the town's are: src/items/doors.js) }.
 // geometry: the land's parts to draw as well (typed arrays), which only the renderer wants, and only until they're on the
 // GPU (dropSiteGeometry). Without it parts is empty and the rest is the same: tests/sites-lean.test.mjs.
 // The delves' and the Test Dungeon's parts aren't here either way: a million and a half corners, of which one delve's are
@@ -1474,7 +1392,7 @@ export function buildSites(geometry = false, lean = false) {
   dressRoads(K);
   K.finish();
   // (fires: the flames and glows the renderer draws facing you, down the delves: src/core/delve-build.js fire().)
-  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups, lamps: K.lamps || [] };
+  built = { geometry, lean, parts: K.parts, colliders: K.colliders, spots: K.spots, floors: K.floors, fires: K.fires, groups: K.groups, lamps: K.lamps || [], doors: K.doors || [] };
   return built;
 }
 
