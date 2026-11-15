@@ -91,8 +91,11 @@ export function prepareRig(id, meta, buffer) {
   for (let j = 0; j < rig.count; j++) if (loco?.trs[j] && (root < 0 || depth(j) < depth(root))) root = j;
   const human = Math.sqrt(H / 1.8);
   for (const clip of Object.values(rig.clips)) {
-    clip.loop = /^(idle|walk|run|fly)/.test(clip.name);
-    const track = root >= 0 ? clip.trs[root] : null;
+    clip.loop = !!clip.info?.loop || /^(idle|walk|run|fly)/.test(clip.name);
+    if (clip.of) continue;      // (another name for a clip: its frames are that one's, and come out of the travel there)
+    // (keep: a clip that moves the body somewhere and leaves it there on purpose, as the dragons' knockdown throws it onto
+    // its side a few metres over: its travel is the pose, not a walk, and stays.)
+    const track = root >= 0 && !clip.info?.keep ? clip.trs[root] : null;
     let travel = 0;
     if (track) {
       const x = track[0], z = track[2];
@@ -107,6 +110,7 @@ export function prepareRig(id, meta, buffer) {
     const still = /^run/.test(clip.name) ? 4 * human : /^fly/.test(clip.name) ? 6 * human : 1.4 * human;
     clip.speed = travel / clip.dur > 0.4 ? travel / clip.dur : still;
   }
+  for (const clip of Object.values(rig.clips)) if (clip.of) clip.speed = rig.clips[clip.of].speed;
   rig.attacks = Object.keys(rig.clips).filter((n) => /^atk\d$/.test(n) && rig.clips[n].dur <= LONGEST_BLOW);
   if (!rig.attacks.length) rig.attacks = Object.keys(rig.clips).filter((n) => /^atk\d$/.test(n));
   rig.idles = Object.keys(rig.clips).filter((n) => /^idle\d?$/.test(n));
@@ -116,6 +120,30 @@ export function prepareRig(id, meta, buffer) {
   rig.handL = handL >= 0 ? handL : null;
   const mouth = meta.mouth ? rig.index.get(meta.mouth) : rig.names.findIndex((n) => /Head$/.test(n));
   rig.mouth = mouth >= 0 ? mouth : null;
+  // (meta.mouthTip: where the mouth is from that joint, in its own frame, in the model's units: the joint is the head's, back
+  // at the skull, and fire from there would come out of the dragon's ears.)
+  rig.mouthTip = rig.mouth !== null && meta.mouthTip ? Float32Array.from(meta.mouthTip, (v) => v * scale) : null;
+  // The dragons' look (ArmsRig.aimHead): the last three joints of the neck and the head, parent first, that the mouth's
+  // turned on toward what it breathes or bites at; more of it in the head. Null where the chain isn't all there.
+  const look = ['neck4', 'neck5', 'neck6', 'head'].map((n) => rig.index.get(n) ?? -1);
+  rig.lookChain = rig.mouthTip && look.every((j, i) => j >= 0 && (!i || rig.parent[j] === look[i - 1])) ? look : null;
+  // The dragons of art/dragons (tools/dragons/clips.py): their flights carry their own height (the root goes up off the
+  // ground in the clip, so roster.json gives them no hover), they take off and land, and they were made for a beast twenty
+  // metres long. A smaller one moves quicker, as small animals do: by the root of the size, as a pendulum swings.
+  rig.flies = !!(rig.clips.takeoff && rig.clips.land);
+  rig.liftRoot = rig.flies ? root : -1;
+  rig.pace = rig.flies ? clamp(Math.sqrt(20 * top / H), 0.8, 2) : 1;
+  // (When each one that comes down out of the air touches the ground: clip time, seconds.)
+  if (rig.flies) {
+    for (const clip of Object.values(rig.clips)) {
+      const tr = clip.trs[root], air = clip.info?.air;
+      if (clip.of || !tr || !air || !(air[0] > air[1])) continue;
+      const y0 = tr[1], y1 = tr[tr.length - 2];
+      let f = 0;
+      while (f < clip.frames - 1 && tr[f * 3 + 1] - y1 > 0.04 * (y0 - y1)) f++;
+      clip.touch = f / (clip.frames - 1) * clip.dur;
+    }
+  }
   return rig;
 }
 
@@ -182,6 +210,9 @@ export class TripoEmpty {
 // ---- a monster ---------------------------------------------------------------------------------------------------
 
 let gashSeries = 1;
+// The look (TripoMonster.look): how it's shared along the chain; the mouth's aim, in radians below level, kept between LOOK_LO
+// (a little above level) and LOOK_HI (steeply down); the most the look adds to the clip's own angle; and how quick it eases.
+const LOOK_SHARE = [0.15, 0.2, 0.25, 0.4], LOOK_LO = -6 * Math.PI / 180, LOOK_HI = 58 * Math.PI / 180, LOOK_MOST = 42 * Math.PI / 180, LOOK_EASE = 5;
 const handM = new Float32Array(16);
 
 export class TripoMonster extends FieldCreature {
@@ -195,6 +226,9 @@ export class TripoMonster extends FieldCreature {
     this.gashVersion = (gashSeries += 1000);
     this.home = [opts.spawn[0], opts.spawn[1]];
     this.hover = 0;
+    this.pace = rig.pace || 1;
+    this.aloft = false;          // (up on its wings: the dragons that take off and land, rig.flies)
+    this.bridge = null; this.bridgeT = 0;
     this.buried = this.meta.kind === 'worm';
     this.idleClip = pick(rig.idles) || 'idle';
     this.idleT = rnd(1, 4);
@@ -204,6 +238,9 @@ export class TripoMonster extends FieldCreature {
     this.act = null;
     this.burn = 0;
     this.blobs = [];
+    // (Its own look, ArmsRig.aimHead: the weight eases in and out with the clip's info.aim, [from, to] in clip seconds.)
+    if (rig.lookChain) this.rig.aim = { joints: rig.lookChain, share: LOOK_SHARE, tip: rig.mouthTip, to: [0, 0, 0], w: 0,
+      lo: LOOK_LO, hi: LOOK_HI, most: LOOK_MOST, applied: 0 };
     this.setClip(this.idleClip);
     this.chunks = null;
   }
@@ -251,15 +288,18 @@ export class TripoMonster extends FieldCreature {
     } else if (frozen) {
       // (Caught mid-step: nothing moves, not even the clip.)
     } else if (this.state === STATE.ROAR) {
-      this.t += dt;
+      this.t += dt * this.pace;
       if (this.t >= this.roarFor) { this.state = STATE.MOVE; this.buried = false; }
     } else if (this.state === STATE.ATTACK) {
       this.t += dt * (this.flinch > 0 ? 0.35 : 1) * this.rate;
-      const f = frac();
+      const f = frac(), c = clipOf(this.clip), th = Array.isArray(c.through) ? c.through : null;
+      // (When it lands: a clip that says (the dragons': `through`, from just before the claws meet you to just after), or the middle third.)
+      const w0 = th ? (th[0] - 0.06) / c.dur : 0.32, w1 = th ? (th[1] + 0.08) / c.dur : 0.66;
       // Square on to whoever the blow's for, all through the wind-up, and still following a little as it falls: it never
       // swings at the air beside them.
-      this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * (f < 0.34 ? 9 : f < 0.66 ? 2.5 : 0), dt * (f < 0.34 ? 9 : f < 0.66 ? 2.5 : 0));
-      if (f >= 0.32 && f <= 0.66 && !this.used && canHunt) {
+      const turn = f < w0 + 0.02 ? 9 : f < w1 ? 2.5 : 0;
+      this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * turn, dt * turn);
+      if (f >= w0 && f <= w1 && !this.used && canHunt) {
         const reach = o.reach + (p.bodyRadius || 0.4);
         if (distance < reach && Math.abs(p.y - this.y - this.hover) < 1.6 + this.meta.height * 0.3
           && Math.abs(wrapAngle(yaw - this.yaw)) < 1.2 && sim.world.sees(this.x, this.y + 1, this.z, p.x, p.y + 1, p.z)) {
@@ -269,12 +309,12 @@ export class TripoMonster extends FieldCreature {
       }
       if (f >= 1) { this.state = STATE.MOVE; this.cooldown = rnd(0.6, 1.4) * o.pause; this.setClip(this.idleClip); }
     } else if (this.state === STATE.BREATH) {
-      this.t += dt;
+      this.t += dt * this.pace;
       // (A boss's breath is aimed before it starts and holds its line, so you can get out of it: src/sim/dungeon.js.)
       if (!this.breathHeld) this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 1.2, dt * 1.2);
-      const f = frac(), w = this.meta.breathWin || [0.25, 0.8];
+      const f = frac(), w = clipOf(this.clip).info?.breathWin || this.meta.breathWin || [0.25, 0.8];
       if (f > w[0] && f < w[1]) this.breathe(dt, sim, p);
-      if (f >= 1) { this.state = STATE.MOVE; this.breathCd = rnd(5, 9); this.cooldown = 0.6; this.setClip(this.idleClip); }
+      if (f >= 1) { this.state = STATE.MOVE; this.breathCd = rnd(5, 9); this.cooldown = 0.6; this.setClip(this.rested()); }
     } else if (this.state === STATE.TRICK) {
       // One of its tricks, or a boss's move (perform): turned to whoever it's for, the move let go part way through.
       const a = this.act, clip = clipOf(this.clip);
@@ -282,7 +322,7 @@ export class TripoMonster extends FieldCreature {
       if (!a.done && a.face && !a.face.dead) this.yaw += clamp(wrapAngle(Math.atan2(a.face.x - this.x, a.face.z - this.z) - this.yaw), -dt * 7, dt * 7);
       this.t = clip.loop ? this.t + dt : Math.min(clip.dur, this.t + dt * a.rate);
       if (!a.done && a.t >= a.at) { a.done = true; a.fn?.(this, sim); }
-      if (a.t >= a.secs && this.state === STATE.TRICK) { this.state = STATE.MOVE; this.act = null; this.cooldown = Math.max(this.cooldown, 0.35); this.setClip(this.idleClip); }
+      if (a.t >= a.secs && this.state === STATE.TRICK) { this.state = STATE.MOVE; this.act = null; this.cooldown = Math.max(this.cooldown, 0.35); this.setClip(this.rested()); }
     } else if (this.state === STATE.CAST) {
       this.t += dt;
       this.yaw += clamp(wrapAngle(yaw - this.yaw), -dt * 6, dt * 6);
@@ -299,23 +339,35 @@ export class TripoMonster extends FieldCreature {
         const canBreathe = ai === 'breather' && rig.clips.breath && this.breathCd <= 0 && (distance > o.reach || !reachable) && distance < o.breathRange
           && sim.world.sees(this.x, this.y + this.meta.height * 0.6, this.z, p.x, p.y + 1, p.z);
         const canCast = ai === 'caster' && this.castCd <= 0 && distance > 3.5 && distance < 22 && sim.world.sees(this.x, this.y + 1.5, this.z, p.x, p.y + 1, p.z);
-        if (o.tricks && this.trickCd <= 0 && canHunt && tryTrick(this, sim, p)) { /* (it's acting one out: perform) */ }
-        else if (canBreathe) { this.state = STATE.BREATH; this.setClip(rig.clips.breath2 && Math.random() < 0.4 ? 'breath2' : 'breath'); }
+        if (o.tricks && !this.aloft && this.trickCd <= 0 && canHunt && tryTrick(this, sim, p)) { /* (it's acting one out: perform) */ }
+        else if (canBreathe) {
+          this.state = STATE.BREATH;
+          this.setClip(this.aloft ? (rig.clips.hover_breath ? 'hover_breath' : 'breath') : rig.clips.breath2 && Math.random() < 0.4 ? 'breath2' : 'breath');
+        }
         else if (canCast) { this.state = STATE.CAST; this.used = false; this.setClip(pick(rig.attacks)); sim.event(EV.CHANT, this.x, this.y + 1.5, this.z); }
-        else if (distance < reachNow && reachable && this.cooldown <= 0 && rig.attacks.length && Math.abs(wrapAngle(yaw - this.yaw)) < 0.9) {
+        else if (distance < reachNow && reachable && !this.aloft && this.cooldown <= 0 && rig.attacks.length && Math.abs(wrapAngle(yaw - this.yaw)) < 0.9) {
           this.state = STATE.ATTACK; this.used = false;
           this.setClip(pick(rig.attacks));
-          this.rate = clamp(clipOf(this.clip).dur / 1.6, 1, 1.8);
+          // (The dragons' blows take as long as a beast their size takes: rig.pace. The rest are squeezed toward a second and a half.)
+          this.rate = rig.flies ? clamp(this.pace, 0.85, 1.9) : clamp(clipOf(this.clip).dur / 1.6, 1, 1.8);
           sim.event(EV.GRUNT, this.x, this.y + 1.1, this.z, 2);
         } else if (ai === 'caster' && distance < 8) {
           // Back off to a spell's distance.
           tx = this.x - (p.x - this.x); tz = this.z - (p.z - this.z); this.fleeing = true;
         } else if (distance < reachNow * 0.8) { tx = this.x; tz = this.z; }
         if (this.state === STATE.MOVE) {
-          const flying = (ai === 'flyer' || this.meta.kind === 'dragon') && rig.clips.fly && distance > (this.meta.kind === 'dragon' ? 22 : o.reach * 2.5);
-          want = flying ? 'fly' : rig.clips.run ? 'run' : 'walk';
-          speed = this.flinch > 0 ? 0 : o.speed * (flying ? 1.25 : 1);
-          if (Math.hypot(tx - this.x, tz - this.z) < 0.3) { speed = 0; want = this.idleClip; }
+          let flying = (ai === 'flyer' || this.meta.kind === 'dragon') && rig.clips.fly && distance > (this.meta.kind === 'dragon' ? 22 : o.reach * 2.5);
+          // The dragons that take off and land: up past 22 m off, and down again only inside 13, so it isn't up and down all
+          // the time; never in the middle of a flinch.
+          if (rig.flies) {
+            if (this.aloft) flying = distance > 13;
+            if (flying !== this.aloft && this.flinch <= 0) this.upOrDown(flying, p);
+          }
+          if (this.state === STATE.MOVE) {
+            want = flying ? 'fly' : rig.clips.run ? 'run' : 'walk';
+            speed = this.flinch > 0 ? 0 : o.speed * (flying ? 1.25 : 1);
+            if (Math.hypot(tx - this.x, tz - this.z) < 0.3) { speed = 0; want = flying ? this.rested() : this.idleClip; }
+          }
         }
       } else {
         // Wander about home: stand a while, then walk to the next corner of a small square round it.
@@ -331,6 +383,8 @@ export class TripoMonster extends FieldCreature {
         // (march: a warband or a raid on its way somewhere, src/sim/wilds.js: at a trot, not a stroll.)
         if (walk) { want = o.march && rig.clips.run ? 'run' : rig.clips.walk ? 'walk' : 'run'; speed = o.speed * (o.march || 0.3); }
         if (this.buried) { want = null; speed = 0; }
+        // (Up on its wings with nobody to hunt: down first, then about its business.)
+        if (this.aloft && this.upOrDown(false, null)) { want = null; speed = 0; }
       }
       if (want) {
         if (speed > 0) {
@@ -354,7 +408,9 @@ export class TripoMonster extends FieldCreature {
         }
         this.setClip(want);
         const clip = clipOf(this.clip);
-        this.t += dt * (speed > 0 ? clamp(speed / clip.speed, 0.4, 1.8) : 1);
+        // (Its feet keep up with the ground going by. A dragon's wings beat at their own time, however fast it goes.)
+        const beat = rig.flies && /^fly/.test(this.clip);
+        this.t += dt * (speed > 0 && !beat ? clamp(speed / clip.speed, 0.4, rig.flies ? 3.5 : 1.8) : this.pace);
       }
     }
     this.settle(dt, sim, this.dead || this.state !== STATE.MOVE || frozen);
@@ -377,7 +433,52 @@ export class TripoMonster extends FieldCreature {
     this.hover += (lift - this.hover) * Math.min(1, dt * 2.5);
     this.stepBlobs(dt, sim);
     quatYaw(this.rig.rootQ, 0, this.yaw);
-    this.rig.rootT[0] = this.x; this.rig.rootT[1] = this.y + this.rig.lift + this.hover; this.rig.rootT[2] = this.z;
+    if (this.rig.aim) this.look(dt, sim);
+    this.bridgeT += dt;
+    this.rig.rootT[0] = this.x; this.rig.rootT[1] = this.y + this.rig.lift + this.hover + this.lifted(); this.rig.rootT[2] = this.z;
+  }
+
+  // A clip that starts higher or lower than the body is (a flight's own height, against standing on the ground): it doesn't
+  // jump there in the crossfade's fifth of a second, it's carried at the height it was and eased to the new one. bridge is
+  // [what was being carried, the new gap]; the carry and the crossfade trade places as the fade goes.
+  setClip(name) {
+    if (this.clip === name) return;
+    const rig = this.rig, r = rig.liftRoot;
+    if (r >= 0 && this.clip && rig.clips[name]) {
+      const now = this.lifted(), tr = rig.clips[name].trs[r], to = tr ? tr[1] : rig.restT[r * 3 + 1];
+      const gap = rig.tr[r * 3 + 1] + now - to;
+      this.bridge = [now, Math.abs(gap) > 0.05 * this.meta.height ? gap : 0];
+      this.bridgeT = 0;
+    }
+    super.setClip(name);
+  }
+
+  // The mouth on what it's after, while the clip says (info.aim): a breath at your feet near by and out level far off, a bite
+  // at you and not the air over you. Eased, so it doesn't snap on as the window opens; none at all dead, or not after anything.
+  look(dt, sim) {
+    const a = this.rig.aim, c = this.rig.clips[this.clip], win = c?.info?.aim;
+    const p = this.dead ? null : foeOf(this, sim);
+    const on = !!(p && win && this.t >= win[0] && this.t <= win[1]);
+    a.w += ((on ? 1 : 0) - a.w) * Math.min(1, dt * LOOK_EASE);
+    if (p) { a.to[0] = p.x; a.to[1] = p.y + 0.9; a.to[2] = p.z; }
+  }
+
+  lifted() {
+    const b = this.bridge;
+    if (!b) return 0;
+    const f = Math.min(1, this.fade), u = Math.min(1, this.bridgeT / 0.9);
+    return (b[0] * (1 - f) + b[1] * f) * (1 - u * u * (3 - 2 * u));
+  }
+
+  // What it goes back to between moves: standing, or (up on its wings) hanging in the air.
+  rested() { return this.aloft && this.rig.clips.fly_hover ? 'fly_hover' : this.aloft && this.rig.clips.fly ? 'fly' : this.idleClip; }
+
+  // Up into the air (takeoff) or down out of it (land): the whole clip, stood where it is, at its own pace. False if it can't now.
+  upOrDown(up, face) {
+    const clip = up ? 'takeoff' : 'land', c = this.rig.clips[clip];
+    if (!c || this.aloft === up) return false;
+    const secs = c.dur / this.pace;
+    return this.perform({ clip, face, secs, at: secs * 0.97, fn: (m) => { m.aloft = up; } });
   }
 
   // A move acted out with the whole body: stood still, turned to `face`, playing `clip` (a roar, or a blow, if it hasn't
@@ -388,10 +489,20 @@ export class TripoMonster extends FieldCreature {
     this.state = STATE.TRICK;
     this.vx = this.vz = 0;
     this.setClip(clip);
-    this.t = 0;
+    this.t = a.from || 0;
     const secs = a.secs ?? 1.4;
-    this.act = { face: null, at: 0.45, fn: null, ...a, secs, t: 0, done: false, rate: clamp(rig.clips[clip].dur / secs, 0.7, 2.2) };
+    // (rate, from: a move that goes on with a clip already playing, at its own pace: a landing a flight began.)
+    this.act = { face: null, at: 0.45, fn: null, ...a, secs, t: 0, done: false, rate: a.rate || clamp(rig.clips[clip].dur / secs, 0.7, 2.2) };
     return true;
+  }
+
+  // Down from a flight a boss's fight flew (src/sim/dungeon.js, delve-fights.js): the rest of its landing played out, where it
+  // came down, as a move. False if it hasn't one, or isn't landing.
+  landed() {
+    const c = this.rig.clips.land;
+    if (!this.rig.flies || !c || this.clip !== 'land') return false;
+    const from = Math.min(this.t, c.dur);
+    return this.perform({ clip: 'land', secs: Math.max(0.05, (c.dur - from) / this.pace), rate: this.pace, from, at: 1e9 });
   }
 
   notice(sim) {
@@ -414,6 +525,7 @@ export class TripoMonster extends FieldCreature {
   mouthAt(out, p) {
     const { wt } = this.rig, m = this.rig.mouth;
     if (m === null) { out[0] = this.x; out[1] = this.y + this.meta.height * 0.8; out[2] = this.z; }
+    else if (this.rig.mouthTip) { quatRotate(out, 0, this.rig.wq, m * 4, this.rig.mouthTip, 0); out[0] += wt[m * 3]; out[1] += wt[m * 3 + 1]; out[2] += wt[m * 3 + 2]; }
     else { out[0] = wt[m * 3]; out[1] = wt[m * 3 + 1]; out[2] = wt[m * 3 + 2]; }
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
     const d = Math.max(1, Math.hypot(p.x - out[0], p.z - out[2]));

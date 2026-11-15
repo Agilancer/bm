@@ -371,7 +371,7 @@ export class Warrens {
   endFight(b, live) {
     const sim = this.sim, [rx, , rz] = roomSpot(b.room);
     for (const m of live) {
-      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx + (b.at?.[0] || 0), rz + (b.at?.[1] || 0)];
+      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.aloft = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx + (b.at?.[0] || 0), rz + (b.at?.[1] || 0)];
       m.x = rx + (b.at?.[0] || 0) + rnd(-2, 2); m.z = rz + (b.at?.[1] || 0) + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
       m.shrug = 1; m.noTurn = false; m.buried = false; m.lastStand = null;
       if (m.opts.base) { m.opts.damage = m.opts.base.damage; m.opts.pause = m.opts.base.pause; m.opts.speed = m.opts.base.speed; }
@@ -731,7 +731,7 @@ export class Warrens {
     if (!m.rig.clips[clip] || f.turn?.on) return false;
     this.warn(8, 20);
     m.breathing = true; m.breathHeld = true; m.state = 4; m.setClip(clip); m.t = 0;
-    const w = m.meta.breathWin || [0.25, 0.8], dur = m.rig.clips[clip].dur, tank = foeOf(m, sim);
+    const w = m.rig.clips[clip].info?.breathWin || m.meta.breathWin || [0.25, 0.8], dur = m.rig.clips[clip].dur / (m.pace || 1), tank = foeOf(m, sim);
     sim.perils.mark({ shape: 'cone', ride: m, r: 16, half: 0.6, fuse: w[0] * dur, life: (w[1] - w[0]) * dur, dps: 69, elem: ELEM.POISON, from: m, tag: 'breath',
       spare: (b) => b === tank && b.role === 'tank' });
   }
@@ -775,9 +775,12 @@ export class Warrens {
 
   // A stamp: three rings out from her, one after another.
   vStomp(f, m) {
-    if (!m.perform({ clip: m.rig.clips.land ? 'land' : 'jump', secs: 1.6 })) return false;
+    // (The new dragons rear and bring their forefeet down: the rings go out as they land. src/sim/tripo.js rig.flies)
+    const slam = m.rig.flies && m.rig.clips.claw_slam, rings = () => MOVES.stompRings(this.sim.perils, m, null, 38, { r: 5.5, elem: ELEM.POISON });
+    if (slam && !m.perform({ clip: 'claw_slam', secs: slam.dur / m.pace, at: slam.hit / m.pace, fn: rings })) return false;
+    if (!slam && !m.perform({ clip: m.rig.clips.land ? 'land' : 'jump', secs: 1.6 })) return false;
     this.warn(32, 25);
-    MOVES.stompRings(this.sim.perils, m, null, 38, { r: 5.5, elem: ELEM.POISON });
+    if (!slam) rings();
   }
 
   // Frenzied: venom from the roof, all over where you stand.
@@ -811,7 +814,10 @@ export class Warrens {
   fly(k, dt, sim, f) {
     const a = f.air, P = sim.perils, [cx, , cz] = roomSpot('lair'), R = roomOf('lair').r - 5;
     a.t += dt;
-    const clips = k.rig.clips, set = (n, loop = true) => { const c = clips[n] ? n : clips.fly ? 'fly' : k.idleClip; if (k.clip !== c) k.setClip(c); k.t = loop ? (k.t + dt) % clips[c].dur : Math.min(clips[c].dur, k.t + dt); };
+    const clips = k.rig.clips, set = (n, loop = true, rate = k.pace || 1) => { const c = clips[n] ? n : clips.fly ? 'fly' : k.idleClip; if (k.clip !== c) k.setClip(c); k.t = loop ? (k.t + dt * rate) % clips[c].dur : Math.min(clips[c].dur, k.t + dt * rate); };
+    // (The new dragons, src/sim/tripo.js rig.flies: up with the whole of their takeoff, and down with their landing, begun so they touch
+    // down as the dive does. `up`: how long the takeoff takes; `touch`: how long the landing takes to reach the ground.)
+    const wings = !!k.rig.flies, up = wings ? clips.takeoff.dur / k.pace : 0.9, touch = wings ? clips.land.touch / k.pace : 0.7;
     const turnTo = (yaw, rate) => { k.yaw += clamp(wrapAngle(yaw - k.yaw), -dt * rate, dt * rate); };
     // To (x, z), to be there in `left` seconds, no faster than top.
     const goTo = (x, z, left, top = 30) => { const dx = x - k.x, dz = z - k.z, d = Math.hypot(dx, dz), v = Math.min(top, d / Math.max(left, dt)); k.vx = d > 0.05 ? dx / d * v : 0; k.vz = d > 0.05 ? dz / d * v : 0; return d; };
@@ -821,9 +827,10 @@ export class Warrens {
     switch (a.stage) {
       case 'rise': {
         k.vx = k.vz = 0;
-        set(a.t < 0.9 && clips.jump ? 'jump' : 'fly', a.t >= 0.9);
-        lift(5, 3.5);
-        if (a.t > 1.8) next('aim');
+        if (wings && k.aloft) { set('fly'); lift(5, 3.5); if (a.t > 1.2) next('aim'); break; }
+        set(a.t < up && clips.jump ? 'jump' : 'fly', a.t >= up);
+        if (!wings || a.t > up * 0.4) lift(5, 3.5);
+        if (a.t > Math.max(1.8, up + 0.3)) next('aim');
         break;
       }
       case 'aim': {
@@ -848,7 +855,7 @@ export class Warrens {
       case 'swoop': {
         // Low and fast down the strip, her breath under her.
         const secs = 1.5, L = a.line;
-        set(clips.fly2 ? 'fly2' : 'fly');
+        set(wings && clips.fly_glide ? 'fly_glide' : clips.fly2 ? 'fly2' : 'fly');
         lift(2.6, 6);
         pitch = 0.3;
         goTo(L.to[0], L.to[1], secs - a.t, 40);
@@ -863,7 +870,9 @@ export class Warrens {
       }
       case 'perch': {
         const [px, pz] = toWorld(PERCH.x, PERCH.z);
-        set('fly');
+        // (Hanging over her perch; her breath drawn as the flame gathers, to let go as it's loosed.)
+        if (a.flame && wings && clips.hover_breath) set('hover_breath', false, clips.hover_breath.dur * 0.5 / 2.4);
+        else set(wings && clips.fly_hover ? 'fly_hover' : 'fly');
         lift(PERCH.up + 2, 3);
         const d = goTo(px, pz, 0.1, 13);
         turnTo(d > 1.5 ? Math.atan2(px - k.x, pz - k.z) : Math.atan2(cx - k.x, cz - k.z), 3);
@@ -872,7 +881,7 @@ export class Warrens {
           a.flame -= dt;
           pitch = 0.25;
           if (a.flame <= 0) {
-            const mouth = [k.x, k.y + k.meta.height * 0.6 + k.hover, k.z];
+            const mouth = wings ? k.mouthAt(new Float32Array(6), sim.player) : [k.x, k.y + k.meta.height * 0.6 + k.hover, k.z];
             for (const b of this.bodies()) {
               if (!caveClear(mouth[0], mouth[2], b.x, b.z, 0.05)) continue;
               P.hurt(b, 110, k.x, k.z, 1, false, 'hoardBreath');
@@ -898,15 +907,17 @@ export class Warrens {
             then: (q) => P.wave(q.x, q.z, { speed: 11, reach: 26, touch: 45, knock: 3, elem: ELEM.POISON, r: 7.5, tag: 'diveWave' }) });
           this.warn(30);
         }
-        const left = fuse - a.t, s = a.spot;
-        set(left < 0.7 && clips.land ? 'land' : 'fly', !(left < 0.7 && clips.land));
+        const left = fuse - a.t, s = a.spot, landing = left < touch && clips.land;
+        set(landing ? 'land' : 'fly', !landing);
         goTo(s.x, s.z, Math.max(left - 0.25, 0.05), 30);
         turnTo(Math.hypot(k.vx, k.vz) > 2 ? Math.atan2(k.vx, k.vz) : k.yaw, 5);
-        lift(left < 0.6 ? 0 : 6, left < 0.6 ? 14 : 3);
-        pitch = left < 0.9 ? 0.45 : 0.15;
+        if (wings) lift(landing ? 0 : 6, landing ? 7 / Math.max(touch, 0.3) : 3);
+        else lift(left < 0.6 ? 0 : 6, left < 0.6 ? 14 : 3);
+        pitch = wings ? (landing ? 0.05 : 0.3) : left < 0.9 ? 0.45 : 0.15;
         if (left <= 0) {
           // Down, and frenzied.
-          k.flying = false; k.liftExtra = 0; k.script = null; k.rig.poseModifier = null; k.vx = k.vz = 0; k.state = 0; k.setClip(k.idleClip);
+          k.flying = false; k.liftExtra = 0; k.script = null; k.rig.poseModifier = null; k.vx = k.vz = 0; k.state = 0; k.aloft = false;
+          if (!wings || !k.landed()) k.setClip(k.idleClip);
           f.phase = 2; f.air = null;
           this.warn(13);
           k.opts.damage *= 1.25;
