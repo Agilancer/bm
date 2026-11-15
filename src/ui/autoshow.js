@@ -3,7 +3,7 @@
 // src/ui/autoplay.js.)
 //
 //   the line      under what it's doing (#autoStatus b), what that amounts to (#autoStatus em): how many are on him and how much
-//                 life he has left in a fight, how far there is to go on a walk, that the road is being hurried
+//                 life he has left in a fight, how far there is to go on a walk
 //   the feed      the last few things worth telling (#autoStatus ol): a level, a quest done, a spell learned, something big
 //                 put down, a close call, a fall. Not on a phone, where there isn't the room
 //   the banners   the same things, large, over the middle of the picture for a few seconds (#autoBanner), one after another;
@@ -193,8 +193,7 @@ export class AutoShow {
     if (m.hpf > 0.5) this.close = false;
     const g = brain.goal, togo = g && brain.useGoal ? Math.hypot(g.x - m.x, g.z - m.z) : 0;
     const stakes = fight ? `${sc.n > 1 ? `${sc.n} on him` : sc.who} · ${Math.max(1, Math.round(m.hpf * 100))}% life${sc.early ? ' · before his level' : ''}`
-      : brain.hurry ? `Hurrying the long road · ${Math.round(togo / 10) * 10} m to go`
-        : togo > 80 ? `${Math.round(togo / 10) * 10} m to go` : '';
+      : togo > 80 ? `${Math.round(togo / 10) * 10} m to go` : '';
     if (stakes !== this.stakes) { this.stakes = stakes; this.em.textContent = stakes; }
     // The banners, one at a time.
     if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0.5) this.bannerEl.classList.remove('on'); }

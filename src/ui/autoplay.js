@@ -11,13 +11,13 @@
 // It's made to be watched (Settings' Auto-play): the camera stands behind him and is directed (src/ui/autocam.js; or it's first
 // person, through his eyes: V while it plays), what he's at
 // is narrated, with banners for what's worth one and a recap of what he got done (src/ui/autoshow.js), a line said to him is
-// left up to be read, and a long walk with nothing about is hurried (the world's clock at HASTE: CTRL.HASTE, src/sim/sim.worker.js).
+// left up to be read. The world's clock is never run faster for it: he walks and rides at the pace anyone does.
 // The menu also sets his temperament, Careful or Bold (Brain.bold in src/ui/autobrain.js).
 //
 // Settings' Interface in auto-play, Hidden until you tap: while it plays and nobody's touched anything for a few seconds, the
 // interface is put away (body.ui-bare, src/ui/hud.css), all but the map and the chat if those are kept (Map in auto-play, Chat
 // in auto-play: body.bare-map, body.bare-chat). A tap, a click, a key or the mouse moved brings it all back at once.
-import { CTRL, INPUT } from '../core/layout.js';
+import { INPUT } from '../core/layout.js';
 import { RULES } from '../folk/quests.js';
 import { Brain, DUNGEONS, GRINDS, MODES, finishedDungeons } from './autobrain.js';
 import { AutoLog } from './autolog.js';
@@ -26,7 +26,6 @@ import { AutoCam } from './autocam.js';
 
 const BTN = 'assets/ui/btn_auto.webp';
 const MENU_WAIT = 12;   // seconds the menu waits for a choice before it keeps the last one
-const HASTE = 2;        // how fast the world runs while a long walk is hurried (Settings' Long walks in auto-play)
 const BARE_AFTER = 4;   // seconds left be before the interface is put away, with Settings' Interface in auto-play: Hidden until you tap
 
 const CSS = `
@@ -227,7 +226,6 @@ export class AutoPlay {
       if (this.mode === 'quests' && this.brain.allQuestsDone()) this.askGrind();
     } else {
       this.brain?.stop();
-      this.haste(false);
       if (this.o.game.viewSwitch) this.o.game.viewSwitch.auto = null;
       this.since = 0; this.setBare(false);
       this.show.stop();
@@ -269,25 +267,17 @@ export class AutoPlay {
     if (snap) this.cam.frame(dt, snap, this);
     if (!this.on || !snap) return;
     if (!input.enabled) { this.toggle(false); return; }
-    if (this.o.shared.input[INPUT.PAUSE]) { this.haste(false); this.brain.halt(); return; }
+    if (this.o.shared.input[INPUT.PAUSE]) { this.brain.halt(); return; }
     // Hands on the keys: theirs, for a moment.
     if (input.handsOn) {
       if (this.yieldT <= 0) this.status('You have the controls.');
       this.yieldT = 1.5;
       input.auto = null;
-      this.haste(false);
       return;
     }
     if (this.yieldT > 0) { this.yieldT -= dt; if (this.yieldT > 0) return; input.auto = this.brain.auto; this.brain.goal = null; this.brain.sub = null; }
     try { this.brain.step(dt, snap); } catch (err) { console.error('auto-play', err); this.brain.halt(); }
-    this.haste(this.brain.hurry && this.o.settings?.autohaste !== 'off');
     this.show.frame(dt, snap, this.brain, this.brain.me(snap));
-  }
-
-  // The world's clock hurried, or as ever (CTRL.HASTE, in hundredths: src/sim/sim.worker.js).
-  haste(on) {
-    const c = this.o.shared?.ctrl, v = on ? HASTE * 100 : 100;
-    if (c && this.hasted !== v) { this.hasted = v; Atomics.store(c, CTRL.HASTE, v); }
   }
 
   // ---- the menu: what it should do

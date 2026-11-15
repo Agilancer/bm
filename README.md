@@ -1017,17 +1017,14 @@ That menu keeps the last choice after 12 seconds.
   ground. In third person the X is the camera's, a step to his right, so the head turns its look that much
   (`thirdLead`) to put the X on its mark.
 - **The narrator** (`src/ui/autoshow.js`; Banners in auto-play). Under its line, what that amounts to: how many are on
-  him and how much life he has left, how far there is to go, that the road's being hurried. Below that, the last few
+  him and how much life he has left, how far there is to go. Below that, the last few
   things worth telling (not on a phone). The same things come large over the picture for a few seconds: a level, a
   quest done, a spell learned, something big put down, a new country, a fall. The banners stay when the interface is
   put away.
 - **Talk** (Talk in auto-play). A line said to him is left up as long as it takes to read (`readTime`, by its length)
   before he answers it; at a counter, a moment. It used to answer every line inside a second.
-- **Long walks** (Long walks in auto-play). Out in the open with more than `HURRY_FAR` metres to go and nothing alive
-  within `HURRY_CLEAR`, the world's clock runs at twice its pace (`CTRL.HASTE`: the sim steps through twice the time in
-  ticks no longer than ever, `src/sim/sim.worker.js`), and at its own again the moment anything's near, he's in the
-  town, or you touch the controls. Everything on the sim's clock goes with it; the townsfolk and the hour of the day
-  keep their own.
+- **Long walks.** At his own pace, always: the world's clock is never run faster for him (it used to be, at twice its
+  pace, with a setting to turn it off; both are gone).
 - **The recap.** A card of what a stretch came to: the time, the levels, the quests done, what was put down, the closest
   call, the best thing put on, the gold. It comes when auto-play is stopped after a minute or more, when you touch
   anything after leaving it be for three minutes (While you were away), and from **Recap** in the menu.
@@ -1040,7 +1037,7 @@ That menu keeps the last choice after 12 seconds.
 
 `node --test tests/auto-show.test.mjs` checks the shots (he's in every one), the turn of the look, the reading time, the
 recap, the settings and the clock. Run headless, drawing stubbed (as below): the view behind him, a talk framed, the
-ride, the walk's and the arrival's shots, the road hurried and let go, the banners, the tally, and a chest in the town
+ride, the walk's and the arrival's shots, the banners, the tally, and a chest in the town
 no longer holding him. Seen on a phone's screen: the banner, the narrator's line, the recap card and the menu. Nobody
 has watched the shots themselves drawn, or the desk's layout of the feed: look at those first.
 
