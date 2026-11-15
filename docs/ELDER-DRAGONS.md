@@ -48,7 +48,7 @@ land instead: the Galeward's islets, the shelf Morvekh's beside, the Maw's hand 
 ## 1. Thyrraxis, the Gale Eternal (green)
 
 The Galeward: a stone disc 60 m across with four storm pylons at its quarters, 19 m from the middle; three islets 18-21 m
-below its western rim, 48 m out; a gust stone on each islet (an updraft back up) and between the islets. 96,000 life.
+below its western rim, 48 m out; a gust stone on each islet (an updraft back up) and between the islets. 185,000 life.
 
 **Phase 1 (100-70%).** Deck: breath, claw rake, squall, gale, spark, conduit.
 - *Gale* (Raszageth's Hurricane Wing): wing_buffet twice, and while the wings beat, everyone in the open is driven away
@@ -79,7 +79,7 @@ A fall comes down on the nearest islet. Enrage at 9 minutes.
 ## 2. Kaldurra, the Hearth of the World (red)
 
 The Cinderwell: a ring of black rock 80 m across round a magma vent 7 m wide; 32 basalt pillars a step and a half high
-in three rings, 8.5-10 m between their middles. 104,000 life.
+in three rings, 8.5-10 m between their middles. 145,000 life.
 
 **Throughout.** Deck: Claw Smash, wildfire, living meteor, breath (leaves fire 5 s), claw rake, Flamefall run, and below
 a third, tail spin.
@@ -109,7 +109,7 @@ Enrage at 9 m 20 s.
 
 The Rimespire: a spire of ice, a ramp round its south and west sides at 27 m past four shelves (the Foot, the First, the
 Second, the Last), to a summit 30 m up; rime crystals on every shelf and round the summit; three claw islets out east of
-the summit, reached by gust stones. 112,000 life.
+the summit, reached by gust stones. 150,000 life.
 
 **The climb (100-40%)** (Sennarth). He hangs off the spire beside the First Shelf, 8.5 m out from its middle and low,
 his chest over its edge: a blade can reach him from the shelf. At 80% and 60% he climbs to the next shelf, and 12 s
@@ -180,8 +180,18 @@ the cosmos.
 ## Tuning
 
 Played by the sim itself (tools/dungeon/fight.mjs: a level-101 player with no gear, Firebolt only, and a hired party of
-lancer, paladin, archer, rogue at 101). Round 2 of tuning: Thyrraxis won 1 of 2 (289 s), Kaldurra won 1 of 2 (373 s);
-Morvekh and Nihvaroth lost both. Under level 100 none is meant to be won.
+lancer, paladin, archer, rogue at 101), three tries a god on the numbers in src/core/delve-elder.js:
+
+| God | Life | Blow | Won | Notes |
+|---|---|---|---|---|
+| Thyrraxis | 185,000 | 385 | 1 of 3 (430 s) | losses at 58 s and 94 s |
+| Kaldurra | 145,000 | 350 | 1 of 3 (437 s) | losses with 31% and 3% left |
+| Morvekh | 150,000 | 380 | 1 of 3 (496 s) | losses with 78% and 24% left |
+| Nihvaroth | 126,000 | 340 | 1 of 3 (466 s) | one loss with 4% left, one out of time at 9% |
+
+The sim's player is a poor dodger of breath cones: most of its deaths are from standing in one. Under level 100 none is
+meant to be won: Morvekh at 92 (on weaker numbers) lost both tries with over half his life left. No run with a geared
+player and a full spell bar has been made yet; the numbers want one before they're called final.
 
 ## Lines
 

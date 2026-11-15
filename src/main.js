@@ -1245,7 +1245,7 @@ class Hud {
     // (One of the land's new kinds says its own name: src/core/wilds.js.)
     let foeName = this.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || '';
     // (Down a delve that has its own names for its kinds, by those: the Elder Gods' voidwhelps. src/core/dungeon.js names.)
-    const names = this.deepWas ? delveOf(snap[H.PX], snap[H.PZ])?.names : null;
+    const names = delveOf(snap[H.PX], snap[H.PZ])?.names;
     if (names) for (const g in names) if (GROUPS[g]?.name === foeName) foeName = names[g];
     if (foeName !== this.foeNameShown) { this.foeNameShown = foeName; $('foeName').textContent = foeName; }
     this.setBar(this.foeHp, hpf);

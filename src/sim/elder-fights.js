@@ -958,7 +958,7 @@ export const ELDER_FIGHTS = {
           for (const mk of d.wells) mk.r = Math.max(0, 3.4 * (1 - (now - f.last) / 55));
           // (Two seconds' word first: it gutters, its well goes red.)
           if (f.doom && now > f.doom.at) { putOut(W, f, m, f.doom.sa); f.doom = null; }
-          if (!f.doom && f.starA.length > 2 && W.every(f, 'lastStar', 6)) { f.doom = { sa: pickOne(f.starA), at: now + 2 }; W.warn(WARN.nih_star, 5); }
+          if (!f.doom && f.starA.length > 2 && W.every(f, 'lastStar', 6)) { f.doom = { sa: pickOne(f.starA), at: now + (f.starA.length <= 4 ? 3 : 2) }; W.warn(WARN.nih_star, 5); }
         }
         if (now > d.until) { f.devour = null; for (const mk of d.wells) mk.life = 0; }
         else if (now > d.at) {

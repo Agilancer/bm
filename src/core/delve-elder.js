@@ -39,7 +39,7 @@ export const MAW_DIR = (() => { const v = [0.12, -0.34, -1], L = Math.hypot(...v
 // an ember underlight, the Rimespire ice blue, the Lip near-black, its violet drained.
 export const ELDER_AT = { x: 6400, z: 6500 };
 export const VOID_TINTS = [
-  { x: GALE.x, z: GALE.z + 6, r: 52, key: [0.42, 1.12, 1.22], amb: [0.42, 1.15, 1.2] },
+  { x: GALE.x, z: GALE.z + 6, r: 52, key: [0.4, 1.3, 1.12], amb: [0.5, 1.35, 1.2] },
   { x: CINDER.x, z: CINDER.z, r: 44, key: [1.75, 0.82, 0.42], amb: [1.6, 0.7, 0.36] },
   { x: RIME.x + 6, z: RIME.z - 4, r: 42, key: [0.45, 0.9, 1.95], amb: [0.42, 0.92, 1.9] },
   { x: MAW.x, z: MAW.z, r: 50, key: [0.34, 0.27, 0.44], amb: [0.24, 0.2, 0.32] },
@@ -278,9 +278,9 @@ const warnings = {
   mor_grip: 'A claw lets go!',
   mor_fall: 'His last grip breaks: Morvekh falls onto the summit. Burn him.',
   mor_zero_fail: 'Too slow: the cold takes everyone. Morvekh comes down onto the summit whole.',
-  nih_star: 'A star gutters: its well goes with it in two seconds. Move to another.',
+  nih_star: 'A star gutters: its well goes with it in a moment. Move to another.',
   mor_shards: 'Ice comes down off the spire beside the grips! Step round the ring.',
-  kal_sink: 'Her breath melts a pillar: its top is molten for the rest of the fight. One fewer to stand on.',
+  kal_sink: 'Her breath melts a pillar and the two beside it: their tops are molten for the rest of the fight.',
   nih_echo_gale: 'The Echo of Thyrraxis beats its wings! Onto the star core, or be blown off the hand.',
   nih_echo_rings: 'The Echo of Thyrraxis: rings of wind! Jump each one.',
   nih_echo_smash: 'The Echo of Kaldurra smashes the hand! Jump the lava waves.',
