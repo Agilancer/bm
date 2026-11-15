@@ -11,9 +11,10 @@
 // Each picture has a name the game knows it by (src/ui/skin.js), which group it's listed under in the manifest (pieces,
 // icons, spells, goods), and the size it's kept at.
 import { SPELLS } from '../../src/sim/spells.js';
-import { STARTERS, TREES } from '../../src/sim/skills.js';
+import { TREES } from '../../src/sim/skills.js';
 import { COLOURS } from '../../src/ui/spellglyphs.js';
 import { boxes, TOP } from '../../src/ui/thumbs.js';
+import { startLoadout } from '../../src/ui/spellbar.js';
 
 const ICON = 192;      // an icon as kept (shown at 20 to 60 px, on screens up to three pixels to one)
 const SPELL = 224;
@@ -198,12 +199,13 @@ export const FORMAT = 'bm-ui-kit/1';
 // phone's screen together from whatever has been painted.
 export const PHONE = [844, 390];
 export function hudLayout() {
-  const first = STARTERS.slice(0, 6).map((i) => SPELLS[i].key);
+  // (A new game's bar: the first spells on 1 to 5, Wisp Light on 0, the rest empty.)
+  const first = startLoadout().map((i) => SPELLS[i]?.key ?? null);
   const ICON_OF = { bAttack: ['btn_main', 'staff', 0.5], bDodge: ['btn_round', 'dodge'], bWide: ['btn_round', 'guard'], bJump: ['btn_round', 'jump'], bTake: ['btn_round_on', 'take'],
     bSprint: ['btn_round', 'sprint'], bPause: ['btn_round', 'menu'], bPack: ['btn_round', 'pack'], bBook: ['btn_round', 'book'], bQuests: ['btn_round', 'journal'], bView: ['btn_round', 'view3'], mapMini: ['frame_map', null] };
   const out = [];
   for (const b of boxes(...PHONE)) {
-    const slot = /^slot(\d)$/.exec(b.id);
+    const slot = /^slot(\d+)$/.exec(b.id);
     const [base, icon, scale] = slot ? ['slot_spell', first[+slot[1] - 1], 0.72] : ICON_OF[b.id] || [];
     if (base) out.push({ id: b.id, x: +b.x.toFixed(1), y: +b.y.toFixed(1), r: +b.r.toFixed(1), base, icon, ...(scale ? { scale } : {}), ...(b.square ? { square: true, inset: 0.84 } : {}) });
   }

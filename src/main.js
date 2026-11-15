@@ -1818,7 +1818,7 @@ class GameView {
         if (!this.spellSound) this.spellSound = new SpellSound(au);
         this.spellSound.gather(a);
         if (this.town) this.town.cast++;   // (The town's never seen real magic: src/folk/talk.js.)
-        this.hud.once('cast', this.input.touch ? 'Tap a spell to cast it, and hold to keep casting. Your spellbook is in the top row.' : '1 to 6 cast what is in each slot: hold to keep casting. B is your spellbook. Alt gives you a cursor to click them with.', 5);
+        this.hud.once('cast', this.input.touch ? 'Tap a spell to cast it, and hold to keep casting. Your spellbook is in the top row.' : '1 to 9 cast what is in each slot, and 0, − and + the Utility spells in the last three: hold to keep casting. B is your spellbook. Alt gives you a cursor to click them with.', 5);
         break;
       case EV.SPELL_LOOSE:
         if (!this.spellSound) this.spellSound = new SpellSound(au);
@@ -2074,6 +2074,13 @@ class GameView {
       pose: (b) => sim.postMessage({ type: 'openingPose', b }),
       wide: () => { shared.input[INPUT.WIDE] += 1; },
       spell: (i) => { const n = typeof i === 'number' ? i : SPELLS.findIndex((s) => s.key === i); view.spellbar.pick(n); return n; },
+      // Puts a spell in a slot of the bar, as the book does (0 to 11: keys 1 to 9, then 0, - and +, which take Utility spells
+      // only): bm.slot(9, 'mend'). False if it won't go there. bm.slot() is what's on the bar, by key.
+      slot: (k, i) => {
+        const sb = view.spellbar;
+        if (k === undefined) return sb.loadout.map((s) => SPELLS[s]?.key ?? null);
+        return sb.assign(k, typeof i === 'number' ? i : SPELLS.findIndex((s) => s.key === i));
+      },
       cast: (held = 0) => { shared.input[INPUT.CAST_N] += 1; shared.input[INPUT.CAST] = held; },
       castKey: () => shared.input[INPUT.CAST],
       book: () => $('spellbook').classList.toggle('open'),

@@ -343,6 +343,9 @@ export const STARTERS = TREES.map((t) => t.spells.find((n) => n.tier === 0).spel
 /** The tree a spell stands in, by its place in SPELLS. */
 export const TREE_OF = SPELLS.map((d) => NODES[d.key]?.tree ?? -1);
 export const TIER_OF = SPELLS.map((d) => NODES[d.key]?.tier ?? 0);
+/** The Utility school's spells, by their place in SPELLS: what the spell bar's last three slots (0, - and +) take, and
+ * nothing else (src/ui/spellbar.js). */
+export const UTILITY = new Set(SPELLS.map((_, i) => i).filter((i) => TREES[TREE_OF[i]]?.key === 'utility'));
 
 // ---- what's been bought, and what may be ----
 //

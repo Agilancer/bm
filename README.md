@@ -7,7 +7,7 @@ Bellmourn v2.
 The game is now ranged spell combat. Everything below about swords and armour describes files and code kept on the repo but out of play.
 
 - **Out of play:** one and two-handed swords (`BASES` rows with grade `retired`, never rolled) and the armour suits and gauntlets (`GEAR`, `rollArmor`, `assets/fp/gauntlets_*`). Hands are bare. An old save's swords and armour are removed on load.
-- **Right hand:** staffs. Left click fires the staff's bolt. Spells are on `1`-`6`, six at a time, chosen in the spellbook from the ones you've learned.
+- **Right hand:** staffs. Left click fires the staff's bolt. Spells are on `1`-`9`, nine at a time, and three of the Utility school on `0`, `-` and `+`, chosen in the spellbook from the ones you've learned.
 - **Six schools:** Fire, Ice, Earth, Arcane, Lightning and Utility, ten spells each (sixty in all), in skill trees in the spellbook (`B`). You start with the first spell of each, and every level brings a point to spend. See "Spells" below.
 - **Left hand:** skulls, the catacomb models (`tools/wizard/build_items.py`, `skull_hold.py`, `fix_arm.py`), in the same five rarities with rolled stats and sockets. Held in a claw: the hand over the crown, the skull hanging under it.
 - **Shield:** riding it (hold Space as you jump) is a core mechanic. With a skull equipped the shield still goes under your feet, but the skull is what you hold, you can't guard, and the shield's gems give no stats. With no skull, the right button raises it with a shove, staff still in the other hand. Each blow it takes comes out of your breath, and with none left the guard breaks: the screen says **Your guard is broken: out of breath.** (A knight's guard breaking beside you says **His guard is broken!**; both used to say the same thing, so it read as yours every time.) **Not enough mana.** is only ever about your own casts now: it used to come up whenever a blow broke one of the dead's workings, too.
@@ -51,7 +51,8 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | Dodge | `Q` | The dash, left of the staff's button |
 | Fire your staff | Left click | The big button, bottom right |
 | Raise the shield and bash, hold to block, let go and it drops at once. With no shield, a wide swing | Right click | The shield, between the dodge and the jump |
-| Cast the spell in a slot | `1` to `6`, or click its button | Tap it, in the ring round those; hold to keep casting |
+| Cast the spell in a slot | `1` to `9`, or click its button | Tap it, in the two rings round those; hold to keep casting |
+| Cast the Utility spell in one of the last three slots (Utility spells only) | `0`, `-` and `+` (the `=` key), or click its button | Tap it, in the outermost ring |
 | Spellbook: the six trees, your points, and what's on the bar | `B` | The book, in the top row |
 | Pack: staffs, skulls, robes and gems | `I` | The pack, in the top row |
 | Take up what's on the ground, open a chest or a door, or talk | `E` | The gold button that comes up beside the ring |
@@ -593,10 +594,11 @@ the screen's height, so a small phone and a tablet get the same picture:
 
 - **Bottom right, the right thumb.** The staff's button is the big one in the corner. Round it, in reach without
   stretching: dodge to its left, jump above it, and between them the shield, when there's one on your arm and no skull in
-  your hand. Round those, in a wider ring, the six spells, one to six from the bottom up: **a tap casts, a hold keeps
-  casting**, as a key does on a desk (there's no separate cast button any more, but for the one cast the opening asks
-  of you in the cave). Each spell is as far from the next as every other, and both rings are even about the corner. Over
-  spell six, the run. Every button steers too: a thumb that lands on one can go on to look about.
+  your hand. Round those, in a wider ring, spells one to six from the bottom up; further out, seven to nine; and
+  outermost, a little smaller and edged in pale bone, the three Utility slots, 0, − and + (`SLOTS` in
+  `src/ui/thumbs.js`): **a tap casts, a hold keeps casting**, as a key does on a desk (there's no separate cast button any
+  more, but for the one cast the opening asks of you in the cave). The spells of each ring are evenly spaced. Over spell
+  six, the run. Every button steers too: a thumb that lands on one can go on to look about.
 - **Beside the ring**, only when there's something in reach: a gold button that takes, talks, opens, shuts or tries the
   door, with a picture and a word for which, and what it is said just above it.
 - **Bottom left, the left thumb.** The stick comes up wherever the thumb lands, and nothing of it is drawn until a thumb is
@@ -623,7 +625,7 @@ stick's side of the screen, that every button has a picture and something listen
 fall-back numbers are the table's. To move something, change the table.
 
 **Move Buttons** (on the pause screen, a desk's or a phone's) lets the player put any of it where they like: every button
-of both thumbs, each of the six spells, the stick, the top row one by one, the map, the skull, Auto and its line, the medal
+of both thumbs, each of the twelve spell slots, the stick, the top row one by one, the map, the skull, Auto and its line, the medal
 and its bars, what's on you, the party, the chat and the foe's bar on a phone; on a desk the spell bar, the medal and bars,
 the map, the clock, the skull, Auto, the party, the chat and the foe's bar. Drag a piece's dashed box to move it; tap one and
 Bigger or Smaller grows it about its middle (60% to 180%); Reset this, Reset all, Cancel, Save. The box of buttons can be
@@ -852,12 +854,12 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
       among them.
     - Only under the sky, with breath for the run and the jump, never uphill, and only where the nav thread says the way
       is open for a dozen metres. It steps off as it slows, at anything in its way, or after five seconds.
-  - **The staff between spells, and all six spells on its bar.** The staff is what it fights with while a spell cools. A
+  - **The staff between spells, and all twelve spells on its bar.** The staff is what it fights with while a spell cools. A
     spell comes as often as its mana allows: every second or two with its mana full, every several with it low, and at
     once when it's in trouble (a Mend when it's low; a Frost Nova, a Thunderclap or Turn the Dead, whichever it knows and
     has ready, when it's surrounded). It won't cast a spell that isn't ready again yet. It keeps mana back for a Mend
     when it's been hurt, doesn't spend a Meteor on something nearly dead, and takes up sooner a spell that hasn't been in
-    its hands for a while, so all six get used.
+    its hands for a while, so all twelve get used.
   - **It presses the keys as a player does.** A Firebolt is held while it gathers and a channel while it pours (never
     past the mana it has for it). Everything else is a tap, and only with its hands free of the last spell and the last
     staff shot. A key held on casts again the moment the first cast is done, and a hitch in the frames while it was down
@@ -868,21 +870,26 @@ the casts, jump, dodge and E. Nothing is moved or handed to it.
     for when they're on it; Turn the Dead for the packs; a Thunderbolt at 11, which is what it takes to the black knight's
     shield; then Fire, to a Meteor at 18; then masteries, more ranks, and Ice to a Frost Nova. Past the end of the build a
     point goes into the known spell with the fewest ranks. Every point it spends is in the balance log.
-  - **It sets its own spell bar** from what it has learned, and casts from it as the 1 to 6 keys do, so the six between
-    them cover a fight (`bar`):
+  - **It sets its own spell bar** from what it has learned, and casts from it as the keys 1 to 9, 0, - and + do, so the
+    nine between them cover a fight and the three on 0, - and + hold its Utility spells (`bar`):
     - What it always keeps, once it knows them: Firebolt (the opener, and from range); Mend; the first it has of a Frost
       Nova, a Thunderclap or Turn the Dead (when they're on it); and the first it has of a Meteor or a Thunderbolt (a
-      crowd, something big, or a raised shield).
-    - One for a crowd or a line of them (`SLOT_A`): Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance,
+      crowd, something big, or a raised shield). Mend, and Turn the Dead, go in the three.
+    - Then the rest of the nine, one of each kind in turn till they're full. For a crowd or a line of them (`SLOT_A`): Chain Lightning, Gravity Well, Ball Lightning, Blizzard, Bone Lance,
       Plague Flask, Wall of Fire, Earthsplitter, and of the new ones Cinderburst, Ring of Fire, Phoenix, Cone of Cold,
       Frozen Orb, Deadwinter, Rolling Boulder, Grasping Vines, Earthquake, Starfall, Forked Lightning, Thunderstorm and
       the rest of their kind.
-    - One to pour on a single mark or get it out of trouble (`SLOT_B`): Arcane Blast, Life Drain, Frost Shards, Magic
-      Missiles, Fire Beam, Spirit Blades, Blink, and of the new ones Flame Wyrm, Cinder Brand, Rime Lance, Stone Shard,
-      Monolith, Spark, Stoneskin, Renew, Aegis, Empower and the rest of their kind.
-    - Those last two change every four minutes, so in time every spell it knows has been in its hands and in the log.
+    - To pour on a single mark or get it out of trouble (`SLOT_B`): Arcane Blast, Frost Shards, Magic Missiles, Fire
+      Beam, Spirit Blades, Blink, and of the new ones Flame Wyrm, Cinder Brand, Rime Lance, Stone Shard, Monolith, Spark,
+      Stoneskin and the rest of their kind. What's still empty takes anything else it knows that isn't Utility.
+    - The three, on 0, - and + (`UTIL_TURN`): Mend and Turn the Dead when it knows them, then Renew, Aegis, Sanctuary,
+      Stillness, Empower, Fleetfoot and Life Drain in their turn. Nothing but a Utility spell goes there, as for you; a
+      Utility spell they've no room for goes in the nine if any of those is still empty. Wisp Light it never slots: it's
+      cast from the book, down among the dead.
+    - The lists change every four minutes, so in time every spell it knows has been in its hands and in the log.
     - Stormstep it never slots: it would carry it in among them, and it fights from a distance.
-    - With a healer hired, Mend's slot goes to a second crowd spell: the healer mends it, and the tank holds them in a knot.
+    - With a healer hired, Mend comes off and another Utility spell has its slot: the healer mends it. With a tank as well,
+      the nine start with two crowd spells, as the tank holds them in a knot.
   - It picks the spell that suits the moment from what's on its bar (`USE` in `src/ui/autobrain.js`, a rule for each of
     the sixty). Some of them:
     - The first Firebolt of a fight is gathered a second and a half, as you'd hold it on something that hasn't seen you.
@@ -2883,7 +2890,7 @@ What each school is for:
 - **Unlearning** gives every point back for gold (20 and 12 a level). What a scroll taught stays known.
 - **Cooldowns.** Most spells are limited only by mana. The spells that stay on you (Stoneskin, Aegis, Fleetfoot and the rest), the great ones and a few others can't be cast again for some seconds; a spell that lasts counts from when it ends. The slot shows the seconds, and what's on you shows over the bar.
 
-In the book, a tab is a school. Its spells stand left to right by tier with their branches under them. A gold edge marks what a point can go into now. Click a node to read it, with its numbers now and at the next rank; the button, or a double click, spends the point. A spell you know goes on the bar by clicking a slot, dragging it there, or pressing 1 to 6 over it.
+In the book, a tab is a school. Its spells stand left to right by tier with their branches under them. A gold edge marks what a point can go into now. Click a node to read it, with its numbers now and at the next rank; the button, or a double click, spends the point. A spell you know goes on the bar by clicking a slot, dragging it there, or pressing the slot's key over it. The bar has twelve: 1 to 9 take any spell, and the last three, on 0, - and +, take the Utility school's alone (Wisp Light, Mend, Fleetfoot, Turn the Dead, Renew, Life Drain, Aegis, Sanctuary, Empower, Stillness; `UTILITY` in `src/sim/skills.js`). A spell learned goes into the first empty slot it may: a Utility spell into 0, - or + first. A bar saved with six slots loads into 1 to 6.
 
 ### How spells meet each other
 
