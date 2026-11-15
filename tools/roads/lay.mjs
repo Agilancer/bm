@@ -13,7 +13,7 @@ import fs from 'node:fs';
 globalThis.__bmNoWays = true;   // (lands.js leaves out the ways laid last time: this lays them again from nothing)
 const { terrainHeight, PATHS, ROADS } = await import('../../src/core/terrain.js');
 const { SITES, ROUTES, WATERS, MOUNT, countryAt, siteAt } = await import('../../src/core/lands.js');
-const { buildSites } = await import('../../src/core/sites.js');
+const { buildSites, portalStair } = await import('../../src/core/sites.js');
 const { LAIRS } = await import('../../src/core/tripo-monsters.js');
 const { OUTPOSTS, BATTLES, FINDS, FIND_KINDS, TEAR_SPOTS } = await import('../../src/core/wilds-data.js');
 const { DELVES } = await import('../../src/core/dungeon.js');
@@ -54,7 +54,10 @@ const boxHit = (c, x, z, m) => {
   const u = dx * cs - dz * sn, w = dx * sn + dz * cs;
   return Math.abs(u) < c.hx + m && Math.abs(w) < c.hz + m;
 };
-const solid = [...B.colliders.filter((c) => Math.abs(c.x) < HALF && Math.abs(c.z) < HALF && c.t === undefined), CHURCH_FOOTPRINT, CHURCH_WING];
+// (And the delves' terraces and the flights up them, which are walked on (their walls stop you only below their tops, so
+// they're not among the boxes taken here): a way comes to the foot of a portal's steps, never over its terrace.)
+const STAIRS = DELVES.filter((d) => d.portal && Math.abs(d.portal.x) < HALF && Math.abs(d.portal.z) < HALF).map(portalStair);
+const solid = [...B.colliders.filter((c) => Math.abs(c.x) < HALF && Math.abs(c.z) < HALF && c.t === undefined), CHURCH_FOOTPRINT, CHURCH_WING, ...STAIRS.flatMap((s) => s.boxes)];
 for (const c of solid) {
   const m = c === CHURCH_FOOTPRINT || c === CHURCH_WING ? 5 : 2.6, r = Math.hypot(c.hx, c.hz) + m;
   each(c.x, c.z, r, (k, x, z) => { if (boxHit(c, x, z, m)) block(k); });
@@ -219,7 +222,13 @@ const TOWNS = new Set(['hamlet', 'farm', 'thornwick', 'cinderford', 'frostwatch'
 const nodes = [];
 const node = (x, z, o) => { nodes.push({ x, z, ...o }); return nodes.length - 1; };
 for (const [k, s] of Object.entries(SITES)) node(s.x, s.z, { key: k, name: shortName(s.name), kind: TOWNS.has(k) ? 'town' : 'site', r: s.r });
-for (const d of DELVES) if (d.portal && Math.abs(d.portal.x) < HALF && Math.abs(d.portal.z) < HALF && !nodes.some((n) => Math.hypot(n.x - d.portal.x, n.z - d.portal.z) < 120)) node(d.portal.x, d.portal.z, { key: d.key, name: shortName(d.name), kind: 'site', r: 6 });
+// (A delve's portal stands on its terrace: its way ends out in front of the foot of its steps, whose square is kept open.)
+for (const d of DELVES) {
+  if (!d.portal || Math.abs(d.portal.x) >= HALF || Math.abs(d.portal.z) >= HALF || nodes.some((n) => Math.hypot(n.x - d.portal.x, n.z - d.portal.z) < 120)) continue;
+  const [x, z] = STAIRS.find((s) => s.key === d.key).out;
+  C[ci(z) * N + ci(x)] = 1;
+  node(x, z, { key: d.key, name: shortName(d.name), kind: 'site', r: 0, own: true });
+}
 for (const b of BATTLES) node((b.x + b.x2) / 2 + 40, (b.z + b.z2) / 2 + 40, { key: b.key, name: 'the battlefield', kind: 'battle', r: 0 });
 // The woods round Bellmourn: the hunting grounds, the lairs and camps there, so the woods are walked between.
 const NEAR = 1300;
@@ -288,6 +297,7 @@ const nameFor = (A, Bn, cls) => {
 // last shut one within reach (a lair is ringed with what lies about it, a walled place shut in; the way ends at its edge and its
 // own streets take you on in). If that line's shut all the way, a little to either side.
 function squareOf(n, toward = null) {
+  if (n.own) return ci(n.z) * N + ci(n.x);   // (a portal's: the foot of its steps, whichever way the other end lies)
   const reach = (n.r || 6) + 44, a0 = toward ? Math.atan2(toward.z - n.z, toward.x - n.x) : 0;
   for (const da of [0, 0.35, -0.35, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6, 2.2, -2.2, 3.1]) {
     const a = a0 + da, c = Math.cos(a), sn = Math.sin(a);

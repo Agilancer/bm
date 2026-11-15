@@ -405,9 +405,13 @@ function probe(x, z, y, hx, hz, look) {
 
 // Out in the land, a short way: A* on a half-metre grid laid round both ends just for this, each cell solid or not at the land's
 // own height there (so the catacombs' walls under it don't count: World marks them `under`).
-// (On a portal's terrace, at the terrace's height, and no step between two cells of more than a stride's rise: up by its stairs.)
+// (On a portal's terrace, at the terrace's height, and no step between two cells of more than a stride's rise: up by its stairs.
+// And over a terrace only to get onto it: to somewhere off it, round, at OVER the cost a metre on it. Auto-play, making for
+// the foot of a portal's steps from beside its terrace, went up the steps at its end, over it, down the front, and turned
+// round to go up them again.)
 const lY = new Float32Array(280 * 280);
 const LW = 280, LN = LW * LW, lSolid = new Uint8Array(LN), lG = new Float32Array(LN), lPar = new Int32Array(LN), lSeen = new Uint16Array(LN), lShut = new Uint16Array(LN);
+const OVER = 5;
 let lStamp = 1;
 function local(from, to) {
   if (++lStamp > 65000) { lStamp = 1; lSeen.fill(0); lShut.fill(0); }
@@ -425,6 +429,7 @@ function local(from, to) {
   const clear = (k0) => { if (!solid(k0)) return k0; const i0 = k0 % LW, j0 = (k0 / LW) | 0; for (let r = 1; r < 8; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { const i = i0 + di, j = j0 + dj; if (i >= 0 && j >= 0 && i < LW && j < LW && !solid(j * LW + i)) return j * LW + i; } return -1; };
   s = clear(s); t = clear(t);
   if (s < 0 || t < 0) return null;
+  const onto = lSolid[t] === 3;
   const tx = px(t), tz = pz(t), h = (k) => { const dx = Math.abs(px(k) - tx), dz = Math.abs(pz(k) - tz); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
   heapN = 0; lG[s] = 0; lPar[s] = -1; lSeen[s] = lStamp; push(s, h(s));
   let found = false, budget = 60000;
@@ -441,7 +446,7 @@ function local(from, to) {
       const nk = nj * LW + ni;
       if (lShut[nk] === lStamp || solid(nk) || cliff(k, nk)) continue;
       if (di && dj && (solid(j * LW + ni) || solid(nj * LW + i))) continue;
-      const ng = lG[k] + (di && dj ? 1.414 : 1) * C;
+      const ng = lG[k] + (di && dj ? 1.414 : 1) * C * (!onto && lSolid[nk] === 3 ? OVER : 1);
       if (lSeen[nk] === lStamp && ng >= lG[nk]) continue;
       lSeen[nk] = lStamp; lG[nk] = ng; lPar[nk] = k;
       push(nk, ng + h(nk));
@@ -452,7 +457,19 @@ function local(from, to) {
   for (let k = t; k >= 0; k = lPar[k]) cells.push(k);
   cells.reverse();
   const pts = [[from[0], from[1]]].concat(cells.map((k) => [px(k), pz(k)]));
-  const see = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25); let was = cell(a[0], a[1]); if (was >= 0) solid(was); for (let q = 1; q <= n; q++) { const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n); if (k < 0 || solid(k) || (was >= 0 && cliff(was, k))) return false; was = k; } return true; };
+  // (Pulled straight, not over a terrace it went round: only from on one, getting off it.)
+  const see = (a, b) => {
+    const d = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.ceil(d / 0.25);
+    let was = cell(a[0], a[1]);
+    if (was >= 0) solid(was);
+    const off = !onto && !(was >= 0 && lSolid[was] === 3);
+    for (let q = 1; q <= n; q++) {
+      const k = cell(a[0] + (b[0] - a[0]) * q / n, a[1] + (b[1] - a[1]) * q / n);
+      if (k < 0 || solid(k) || (was >= 0 && cliff(was, k)) || (off && lSolid[k] === 3)) return false;
+      was = k;
+    }
+    return true;
+  };
   const out = [];
   let a = 0;
   while (a < pts.length - 1) {

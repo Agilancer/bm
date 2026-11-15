@@ -1660,14 +1660,17 @@ class GameView {
     // What's under your own feet, for their sound (onEvent STEP), looked up a few times a second.
     if (!(this.groundT-- > 0)) { this.groundT = 8; this.underfoot = groundAt(snap[H.PX], snap[H.PY], snap[H.PZ]); }
     // Third person (src/core/third.js): from a step to the right of the eye and a little over it, back along the same line
-    // you look along, as far as the sim found room for. Coming up to a wall it closes in at once, and eases back out after.
+    // you look along, as far as the sim found room for and the wheel asks (src/ui/view.js). Coming up to a wall it closes in
+    // at once, and eases back out after; the wheel's nearer glides in.
     let cx = eyeX, cy = eyeY, cz = eyeZ;
     if (third) {
-      const room = clamp(snap[H.TP_DIST], THIRD.near, THIRD.dist), side = THIRD.side * snap[H.TP_SIDE];
+      const ask = this.viewSwitch ? this.viewSwitch.zoom : THIRD.dist;
+      this.zoomed = this.zoomed === undefined || ask >= this.zoomed ? ask : this.zoomed * (ask / this.zoomed) ** (1 - Math.exp(-10 * dt));
+      const room = Math.min(clamp(snap[H.TP_DIST], THIRD.near, THIRD.far), this.zoomed), side = THIRD.side * snap[H.TP_SIDE];
       this.boom = this.boom === undefined ? THIRD.near : room < this.boom ? room : Math.min(room, this.boom + (room - this.boom) * (1 - Math.exp(-6 * dt)) + 0.4 * dt);
       const px = snap[H.PX] + rx * side, py = snap[H.PY] + 1.62 - snap[H.TP_DROP] + THIRD.up, pz = snap[H.PZ] + rz * side;
       cx = px - fx * this.boom; cy = py - fy * this.boom; cz = pz - fz * this.boom;
-    } else this.boom = undefined;
+    } else this.boom = this.zoomed = undefined;
     this.renderer.third = third;
     this.renderer.thirdNear = third && this.boom < THIRD.hide;
     if (snap[H.SURF] > 0.5 && !third) {

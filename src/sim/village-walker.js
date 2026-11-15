@@ -520,7 +520,8 @@ export class VillageWalker {
       this.pointDir = [bx / l, dy / l, bz / l];
     }
     this.pointW += ((b.point ? 1 : 0) - this.pointW) * Math.min(1, dt * 9);
-    this.fistW += ((b.fists ? 1 : 0) - this.fistW) * Math.min(1, dt * 10);
+    // (And on the run her hands are fists, as anyone's are: her clip's are open.)
+    this.fistW += ((b.fists || this.clip === OPENING_RUN ? 1 : 0) - this.fistW) * Math.min(1, dt * 10);
     this.leanNow += ((b.lean || 0) - this.leanNow) * Math.min(1, dt * 6);
     const k = Math.min(1, dt * (b.whip ? 18 : 5));
     this.lookW += ((b.look ? 1 : 0) - this.lookW) * Math.min(1, dt * 4);

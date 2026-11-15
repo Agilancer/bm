@@ -125,6 +125,41 @@ const BOARD_CLIPS = new Set(['L_ShieldJab', 'L_ShieldCross', 'Shield_OneShot', '
 const SOFT_CLIPS = { Sword_Regular_C: 0.55, OverhandThrow: 0.75, L_ShieldJab: 0.6, L_Slash: 0.7, Sword_Attack: 0.8 };
 // Whose hands their own hold shuts (lanceHold).
 const HOLD_STYLES = new Set(['lance', 'spear', 'two_hand']);
+// On the board (Hero.boardFight): how fast the heading may turn (rad/s), and how far a rider beside you carves off your way
+// to reach their place (rad).
+const BOARD_TURN = 2.6, BOARD_OFF = 0.45;
+// The most a rider does on it (m/s): a little past your own most (src/sim/surf.js VMAX), to catch up to you from behind.
+const BOARD_TOP = 34;
+// How hard a rider can slow themselves on it, and gather speed, beyond what the slope does (m/s/s): a heel dragged, a pump.
+// (Your own heel, S, is 5: brake harder than they can and they come by you. src/sim/surf.js BRAKE.)
+const BOARD_CTL = [3.5, 3];
+// The most a rider is pushed aside by what it meets, however deep in it was (m/s): a sidestep, not a pop (updateFreeSurf).
+const BOARD_SHOVE = 7;
+// Getting on: how long the hop up onto it takes, and how high it goes (s, m). The turn side on to it is eased over about the same.
+const BOARD_HOP = 0.32, BOARD_HOP_UP = 0.28, BOARD_RIDE_Y = 0.26;
+// How a rider stands on the board (Hero.poseRide), in a 1.8 m body's metres and in radians. stance: the feet apart down its
+// length; toes: how far the feet are toward the toes' edge from its middle; top: its top under the boots, from where he rides
+// (Hero.y); drop: how far down into the knees; over: the hips out over the toes; bend: forward at the waist; head: how much of
+// the bend the head takes back up, to keep the eyes on the way; chest, look: the chest, and the head on from it, turned down
+// the line to the nose; toeF, toeB: the front foot turned toward the nose, the back one a little toward the tail. armF, armB:
+// each hand from its shoulder, [out along the board its own way, toward the toes, up]: the leading one out over the nose,
+// the trailing one back over the tail, both a little low, for balance.
+const RIDE = { stance: 0.62, toes: 0.03, top: -0.06, drop: 0.15, over: 0.04, bend: 0.2, head: 0.7, chest: 0.42, look: 0.55, toeF: 0.32, toeB: 0.1,
+  armF: [0.36, 0.2, -0.24], armB: [0.32, 0.06, -0.32] };
+// And what each class does from it, to what's between near and far metres off (to its edge): every few seconds (cd), with
+// the arms alone. inHand: the bow or the rang has to be out first. Long reach for all: a paladin's hammer of light, a
+// lancer's spear of light, a dragoon's spiralling lance, the archer's arrows, a ninja's stars, a rogue's steel stars, a
+// boomerang knight's rang, a bard's note.
+const BOARD_SHOTS = {
+  paladin: { near: 3, far: 16, cd: [2.2, 3.4], fire: (h, sim, m) => castSkill(h, sim, 'hammer_throw', m) },
+  lancer: { near: 4, far: 18, cd: [2.4, 3.6], fire: (h, sim, m) => castSkill(h, sim, 'sunspear', m) },
+  dragoon: { near: 3, far: 16, cd: [2.2, 3.4], fire: (h, sim, m) => castSkill(h, sim, 'spiral_lance', m) },
+  archer: { near: 3, far: 24, cd: [1.1, 1.9], inHand: true, fire: (h, sim, m) => h.shoot(sim, m) },
+  ninja: { near: 3, far: 16, cd: [1.4, 2.4], fire: (h, sim, m) => castSkill(h, sim, pick(['throwing_stars', 'fire_star', 'frost_star', 'storm_star']), m) },
+  rogue: { near: 3, far: 14, cd: [1.6, 2.6], fire: (h, sim, m) => castSkill(h, sim, 'throwing_stars', m) },
+  boomerang: { near: 2.5, far: 10, cd: [1.4, 2.2], inHand: true, fire: (h, sim, m) => h.throwBoomerang(sim, m, h.flight?.length ? 1 : 0) },
+  bard: { near: 3, far: 14, cd: [1.4, 2.2], fire: (h, sim, m) => h.pluck(sim, m, true) },
+};
 // A lance at ease (Hero.carryAim, poseLance), in a 1.8 m body's metres, as [forward, to his right, up]. ground: standing,
 // where its butt rests by his right foot and where his hand is on the shaft (up: from the ground). slope: walking, his fist
 // from his shoulder ([forward, right, down]), the way the lance lies from it back over that shoulder, and how far from
@@ -187,6 +222,7 @@ export class Hero extends Knight {
     // open hand it was modelled as (tools/heroes/fingers.py binds the fingers to their joints; the clips' fingers are for
     // another hand), so its fingers are kept as they stand in the rig, and turned in from there.
     for (const j of this.fingerJoints) for (let k = 0; k < 4; k++) this.fist[j * 4 + k] = rig.restR[j * 4 + k];
+    this.shutNow = { l: 0, r: 0 };
     this.fingerChains = Object.fromEntries(['l', 'r'].map((sd) => [sd, ['index', 'middle', 'ring', 'pinky'].map((f) => [1, 2, 3].map((n) => rig.index.get(`${f}_0${n}_${sd}`)).filter((x) => x !== undefined)).filter((c) => c.length === 3)]));
     // The joints of each arm, for the hands' own work (afterPose): shoulder, elbow, wrist, and the fingers that go with the wrist.
     const ji = (n) => rig.index.get(n);
@@ -194,6 +230,13 @@ export class Hero extends Knight {
     this.arms = { l: { u: ji('upperarm_l'), f: ji('lowerarm_l'), h: ji('hand_l'), fingers: under(ji('hand_l')) }, r: { u: ji('upperarm_r'), f: ji('lowerarm_r'), h: ji('hand_r'), fingers: under(ji('hand_r')) } };
     this.upperBody = [ji('spine_01'), ...under(ji('spine_01'))];
     this.headBits = [this.J.head, ...under(this.J.head)];
+    // The legs, for the board (poseRide): hip, knee and ankle as an arm's are, the ball of the foot, and how high the ankle
+    // and the ball stand off the sole as modelled (Knight's this.ground has them).
+    const footH = (j) => this.ground.find((g) => g[0] === j)?.[1] ?? 0.08;
+    this.legs = Object.fromEntries(['l', 'r'].map((sd) => {
+      const f = ji(`foot_${sd}`), b = ji(`ball_${sd}`);
+      return [sd, { u: ji(`thigh_${sd}`), f: ji(`calf_${sd}`), h: f, b, fingers: under(f), ankleH: footH(f), ballH: b === undefined ? 0 : footH(b) }];
+    }));
     // A bard's lute, the fourth thing carried: across the back, over the board, till it's played; then before the belly, its
     // neck up to the left, the left hand on the neck and the right at the strings. Both places are found once on this body
     // at rest, and kept by the chest. The sword goes to the left hip while both hands are on the lute.
@@ -397,12 +440,14 @@ export class Hero extends Knight {
       if (this.jump) this.updateJump(dt, sim);
     }
     this.combat = damp(this.combat, this.foe ? 1 : 0, 4, dt);
+    // (On the board: the crouch under whatever the arms do, Knight.animate. Thrown off it, the fall is the whole body's.)
+    this.rideW = damp(this.rideW || 0, this.surf && !this.surf.crash ? 1 : 0, 7, dt);
     // (Between blows in a fight, what the clips leave out: poseReady.)
     const ready = (this.style === 'bow' || (this.style === 'blade' && !this.offP)) && !!this.foe && !this.swing && !this.jump && !this.tossing && !this.point && !this.gesture && !(this.luteW > 0.01) && this.stow < 0.5;
     this.readyW = damp(this.readyW || 0, ready ? 1 : 0, ready ? 5 : 12, dt);
     this.shieldUp = damp(this.shieldUp, this.shieldTarget, 8, dt);
     // (Arms in hand for a fight and a while after; put away for the road and the town: src/core/stow.js.)
-    stepStow(this, dt, !!(this.foe || this.swing || this.jump || this.charge || this.tossing || this.point || this.flight || (this.aim && this.aim !== this.heldAim) || this.bowW > 0.01 || this.shieldTarget > 0), this.x, this.z);
+    stepStow(this, dt, !!(this.foe || this.surf?.foe || this.swing || this.jump || this.charge || this.tossing || this.point || this.flight || (this.aim && this.aim !== this.heldAim) || this.bowW > 0.01 || this.shieldTarget > 0), this.x, this.z);
     // Anything that moves the body moves the feet: turning on the spot, or being shouldered aside, is walked, never slid.
     const turned = Math.abs(wrapAngle(this.yaw - (this.prevYaw ?? this.yaw))) / Math.max(dt, 1e-4);
     this.prevYaw = this.yaw;
@@ -952,9 +997,9 @@ export class Hero extends Knight {
   }
 
   // A bard's note: plucked, and off after the foe, bending toward it as it flies.
-  pluck(sim, m) {
-    // (With a lute: a few bars on it, and the note comes off the strings. src/sim/heroskills.js.)
-    if (this.luteP) { pluckNote(this, sim, m); this.shotCd = rand(0.8, 1.3); return; }
+  pluck(sim, m, bare = false) {
+    // (With a lute: a few bars on it, and the note comes off the strings. src/sim/heroskills.js. bare: off the hand anyway.)
+    if (this.luteP && !bare) { pluckNote(this, sim, m); this.shotCd = rand(0.8, 1.3); return; }
     this.startSwing('Spell_Simple_Shoot', 0.9, [0.5], () => {
       const h = this.handPos('r'), a = Math.atan2(m.x - h[0], m.z - h[2]);
       sim.heroWorld.shots.push({ kind: 'note', owner: this, x: h[0], y: h[1], z: h[2], vx: Math.sin(a) * 11, vy: 0, vz: Math.cos(a) * 11, t: 0, dmg: 7 * this.power(), foe: m, elem: ELEM.ARCANE });
@@ -1138,7 +1183,8 @@ export class Hero extends Knight {
     const a = line[i - 1], b = line[i];
     const seg = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
     const drop = (THE_FALL.y[i] - THE_FALL.y[i - 1]) / seg;     // how far it falls per metre ridden (the line runs foot to top)
-    s.v = clamp(s.v + (9.8 * drop * 0.9 - 0.02 * s.v * s.v - 0.4) * dt, 3, 21);
+    s.v = clamp(s.v + (9.8 * drop * 0.9 - 0.017 * s.v * s.v - 0.4) * dt, 3, 24);
+    s.age = (s.age || 0) + dt;
     s.d -= s.v * dt;                 // distance from the foot, going down
     while (s.i > 1 && THE_FALL.s[s.i - 1] > s.d) s.i--;
     const k = s.i, p0 = line[k - 1], p1 = line[k];
@@ -1150,13 +1196,13 @@ export class Hero extends Knight {
     this.vx = (x - this.x) / dt; this.vz = (z - this.z) / dt;
     this.x = x; this.z = z;
     // (Riding high enough that the board shows over the drawn ground, which can sit a hand above the sampled height.)
-    this.y = sim.world.height(x, z) + 0.26;
+    this.y = sim.world.height(x, z) + boardLift(s.age);
     this.speed = 0;
+    // (The road's a line of straight pitches: its heading, eased round each bend, so neither he nor the board turns in a tick.)
     const travel = Math.atan2(dirx, dirz);
-    s.travel = travel;
-    // Side-on, leading foot downhill, leaning into the line.
-    this.yaw = this.faceYaw = wrapAngle(travel + Math.PI / 2 * s.foot);
-    if (this.action?.name !== 'Crouch_Idle_Loop' && !s.crash) this.play('Crouch_Idle_Loop', 1, 'full', 0.25);
+    s.travel = s.travel === undefined ? travel : wrapAngle(s.travel + clamp(wrapAngle(travel - s.travel), -BOARD_TURN * dt, BOARD_TURN * dt));
+    // Side-on, leading foot downhill, leaning into the line (turned to it as they hop on: sideOn).
+    this.yaw = this.faceYaw = sideOn(this.yaw, s, dt);
     // Through anything on the road.
     for (const m of world.targets) {
       if (!fightable(m) || s.hitSet.has(m) || Math.hypot(m.x - x, m.z - z) > radiusOf(m) + 1.1) continue;
@@ -1168,11 +1214,43 @@ export class Hero extends Knight {
       s.crash = 1.4; this.play('LP_fall', 1, 'full', 0.08); this.say(sim, 'surf_crash');
       s.v *= 0.4;
     }
-    if (s.crash) { s.crash -= dt; s.v *= 1 - dt * 2; if (s.crash <= 0) { s.crash = 0; } }
+    if (s.crash) { s.crash -= dt; s.v *= 1 - dt * 2; if (s.crash <= 0) { s.crash = 0; this.stopAction(0.3); } }
+    this.boardFight(dt, sim, world);
     if (s.d <= 20 || townDist(x, z) < -10) world.surfDone(this);
-    this.animT += dt;
-    if (this.visible) { this.animate(this.animT, sim); this.animT = 0; }
   }
+
+  // From the board: whatever's in reach and in sight is shot, thrown at, or struck by a spell from where they ride, of their
+  // own accord. The legs stay on the board (the crouch is under everything, Knight.animate's rideW) and the arms do it:
+  // play() makes any whole-body clip the arms' and the chest's alone while riding. A move that turns the body to its foe
+  // is let turn the chest only: the board keeps the hips side-on.
+  boardFight(dt, sim, world) {
+    const s = this.surf;
+    this.runSwing(dt, sim);
+    const kit = BOARD_SHOTS[this.person.cls];
+    s.fireCd = (s.fireCd ?? rand(0.6, 1.6)) - dt;
+    if (!kit || s.crash || this.dead) { s.foe = null; return; }
+    let m = null, best = kit.far;
+    for (const k of world.targets) {
+      if (!fightable(k)) continue;
+      const d = Math.hypot(k.x - this.x, k.z - this.z) - radiusOf(k);
+      if (d >= kit.near && d < best) { best = d; m = k; }
+    }
+    s.foe = m;
+    if (!m) return;
+    this.faceYaw = Math.atan2(m.x - this.x, m.z - this.z);
+    if (s.fireCd > 0 || this.swing || this.tossing || this.flight?.length >= 2) return;
+    // (A bow or a rang has to be out of its place on his back first: stepStow brings it while there's something to shoot.)
+    if (kit.inHand && this.stow > 0.2) return;
+    if (!this.lineTo(sim, m, best)) return;
+    const yaw = this.yaw, face = this.faceYaw;
+    kit.fire(this, sim, m);
+    this.yaw = yaw; this.faceYaw = face;
+    s.fireCd = rand(kit.cd[0], kit.cd[1]);
+  }
+
+  // (On the board the legs are the board's: a move that would take the whole body takes the arms and the chest alone. A fall
+  // off it is the whole body's.)
+  play(name, rate, mask = 'full', fade) { super.play(name, rate, this.surf && !this.surf.crash && mask === 'full' ? 'upper' : mask, fade); }
 
   // ---- your party's ways of fighting ----------------------------------------------------------------------------------
 
@@ -1202,37 +1280,128 @@ export class Hero extends Knight {
     if (d - R < this.blows[0].reach - 0.1 && Math.abs(wrapAngle(to - this.yaw)) < 0.8) this.blow(sim, m);
   }
 
-  // On the board beside you, wherever you ride yours: a place behind you and to one side, kept at your pace, and off it
-  // when you step off.
+  // On the board with you, wherever you ride yours. Each has a place in a loose wedge behind you, out to either side of you
+  // where they're seen and not in your way: the first two a little behind your shoulders, the others further back and wider.
+  // It drifts a little (nobody rides on a rail). Now and then one has a place out ahead instead (s.lead: HeroWorld.boardLeads)
+  // and takes the lead, mostly when you ease off and let them by: they keep the pace you had and ride on past, never a burst
+  // of speed out in front of you. Kept at the place by pace and by a carve, and both eased as a board has them (it gathers
+  // speed and sheds it over seconds, and a turn builds and dies away), so nobody twitches from one heading to another. Off it
+  // a little after you step off yours, each in their own time; and not straight back on (HeroWorld.companion).
   updateFreeSurf(dt, sim, world) {
     const s = this.surf, p = sim.player;
+    s.age = (s.age || 0) + dt;
     const pv = Math.hypot(p.vx || 0, p.vz || 0);
-    let ux = pv > 0.8 ? p.vx / pv : Math.sin(p.yaw), uz = pv > 0.8 ? p.vz / pv : Math.cos(p.yaw);
-    const back = 3.2 + Math.floor(s.i / 2) * 2.6, side = (s.i % 2 ? 1 : -1) * (1.6 + 0.3 * Math.floor(s.i / 2));
+    // (Your way, as the party has it: the way you're going, eased. Not where you look, which swings about.)
+    const ux = world.head[0], uz = world.head[1];
+    s.drift = (s.drift ?? Math.random() * 6.28) + dt * (0.3 + 0.05 * s.i);
+    const L = s.lead, row = Math.floor(s.i / 2), sd = s.i % 2 ? 1 : -1;
+    const back = L ? -L.ahead : 3.4 + row * 4 + Math.sin(s.drift * 0.8) * 1.1;
+    const side = L ? L.side : sd * (2.9 + row * 1.9 + Math.sin(s.drift) * 0.6);
     const tx = p.x - ux * back + uz * side, tz = p.z - uz * back - ux * side;
-    const dx = tx - this.x, dz = tz - this.z, d = Math.hypot(dx, dz);
-    if (d > 45) { this.x = this.lastX = tx; this.z = this.lastZ = tz; }
-    s.v = damp(s.v, clamp(pv + d * 1.4 - 0.5, 0, 30), 4, dt);
-    if (d > 0.3) { const k = clamp(d / 6, 0.15, 0.9); ux = ux * (1 - k) + dx / d * k; uz = uz * (1 - k) + dz / d * k; const L = Math.hypot(ux, uz) || 1; ux /= L; uz /= L; }
-    const out = surfPos;
-    out[0] = this.x + ux * s.v * dt; out[1] = this.y; out[2] = this.z + uz * s.v * dt;
+    let dx = tx - this.x, dz = tz - this.z;
+    // (Left far behind, stuck on something, it's brought up, but only from out of sight behind you, and only as far as a
+    // way back down your line, to ride up from there: never put down beside you out of nowhere.)
+    if (Math.hypot(dx, dz) > 45 && (this.x - p.x) * ux + (this.z - p.z) * uz < -30) {
+      this.x = this.lastX = p.x - ux * 22 + uz * side; this.z = this.lastZ = p.z - uz * 22 - ux * side;
+      s.v = Math.max(s.v, pv); s.travel = Math.atan2(ux, uz); s.turnV = 0; s.avoid = 0;
+      dx = tx - this.x; dz = tz - this.z;
+    }
+    const along = dx * ux + dz * uz, across = dx * uz - dz * ux;
+    // Pace: the slope under the board carries them as yours carries you (src/sim/surf.js: gravity down it, the ground and
+    // the air against it), and they ride it to keep their place, pumping or dragging a heel, never harder than BOARD_CTL: up
+    // to it a little faster than you (much faster only from far behind), past it a little slower; a leader not yet ahead
+    // keeps the pace you had before you eased off (HeroWorld.pace). Slow sharper than they can and they come by you.
+    const gain = along > 0 ? Math.min(along * 0.5, along > 10 ? 6 : L ? Math.max(1.4, (world.pace || 0) - pv) : 3) : Math.max(along * 0.6, -4);
+    const want = clamp(pv + gain, Math.min(2, pv * 0.5), BOARD_TOP);
+    const fx = Math.sin(s.travel), fz = Math.cos(s.travel), H = sim.world;
+    const grade = (H.height(this.x - fx * 1.5, this.z - fz * 1.5) - H.height(this.x + fx * 1.5, this.z + fz * 1.5)) / 3, gl = Math.hypot(1, grade);
+    const slope = 14 * grade / gl - 1.68 / gl - 0.0091 * s.v * s.v;
+    // (Well behind its place, after a knock off something, it works harder at it.)
+    const pump = BOARD_CTL[1] * (along > 12 ? 1.6 : 1);
+    s.v = clamp(s.v + (slope + clamp((want - s.v) * 1.6 - slope, -BOARD_CTL[0], pump)) * dt, Math.min(2, pv * 0.5), BOARD_TOP);
+    // The carve: toward the place, never more than BOARD_OFF off your way; the turn eased in and out. And round what's on
+    // its line ahead, a trunk or a rock, as you'd carve round it (boardLook): it used to ride into them and pop out a stride.
+    this.boardLook(dt, sim, s, across);
+    const wantH = Math.atan2(ux, uz) + clamp(Math.atan2(across, 6 + Math.max(0, along)), -BOARD_OFF, BOARD_OFF) + s.avoid;
+    const rate = clamp(wrapAngle(wantH - s.travel) * 2.2, -BOARD_TURN, BOARD_TURN);
+    s.turnV = (s.turnV || 0) + clamp(rate - (s.turnV || 0), -5 * dt, 5 * dt);
+    s.travel = wrapAngle(s.travel + s.turnV * dt);
+    const out = surfPos, mx = Math.sin(s.travel), mz = Math.cos(s.travel);
+    out[0] = this.x + mx * s.v * dt; out[1] = this.y; out[2] = this.z + mz * s.v * dt;
     sim.world.resolve(out, 0.4, this.y + 0.2);
-    this.vx = (out[0] - this.x) / dt; this.vz = (out[2] - this.z) / dt;
-    this.x = out[0]; this.z = out[2];
-    this.y = sim.world.height(this.x, this.z) + 0.26;
+    // (Into a trunk or a rock it's slowed by what of the way it lost; pushed aside, it slides, never faster for it. And the
+    // push itself is a sidestep at most, BOARD_SHOVE a second, however deep in it was: a low rock on a slope is under the
+    // board from above it and round it from below, and pushed straight out a rider jumped four metres in a tick.)
+    const wx = mx * s.v * dt, wz = mz * s.v * dt, fx0 = out[0] - this.x, fz0 = out[2] - this.z;
+    const got = (fx0 * mx + fz0 * mz) / Math.max(1e-4, s.v * dt);
+    let ex = fx0 - wx, ez = fz0 - wz;
+    const el = Math.hypot(ex, ez);
+    if (el > BOARD_SHOVE * dt) { ex *= BOARD_SHOVE * dt / el; ez *= BOARD_SHOVE * dt / el; }
+    const gx = wx + ex, gz = wz + ez;
+    if (got < 0.8) s.v = Math.max(Math.min(2, s.v), s.v * (got < 0.25 ? Math.max(0, got) : 0.4 + 0.6 * got));
+    const gs = Math.hypot(gx, gz) / dt, gk = gs > s.v ? s.v / gs : 1;
+    this.vx = gx / dt * gk; this.vz = gz / dt * gk;
+    this.x += gx; this.z += gz;
+    this.y = sim.world.height(this.x, this.z) + boardLift(s.age);
     this.speed = 0;
-    s.travel = Math.atan2(ux, uz);
-    this.yaw = this.faceYaw = wrapAngle(s.travel + Math.PI / 2 * s.foot);
-    if (this.action?.name !== 'Crouch_Idle_Loop') this.play('Crouch_Idle_Loop', 1, 'full', 0.25);
-    // Off it a moment after you are.
+    this.yaw = this.faceYaw = sideOn(this.yaw, s, dt);
+    // (Wanting by: a leader not yet well out ahead of you. Auto-play eases off for them: src/ui/autobrain.js letPass.)
+    this.wantsLead = !!L && (this.x - p.x) * ux + (this.z - p.z) * uz < Math.max(1.5, L.ahead * 0.6);
+    this.boardFight(dt, sim, world);
+    // Off it a while after you are, each in their own time (sooner if you've stopped): a step off yours for a moment, or a
+    // hop, isn't the end of the ride.
     s.off = p.surfing ? 0 : (s.off || 0) + dt;
-    if (s.off > 0.3 || p.dead) {
-      this.surf = null; this.stopAction(0.2);
-      this.y = sim.world.height(this.x, this.z);
+    s.offAfter ??= rand(0.45, 1.1);
+    // (Never off it onto a rock it's riding over: on along a little till the ground's clear, or the body is put out of the rock.)
+    if (p.dead || ((s.off > s.offAfter || (s.off > 0.2 && pv < 2)) && (this.clearUnder(sim) || s.off > s.offAfter + 1.5))) {
+      this.surf = null; this.stopAction(0.2); this.wantsLead = false;
+      const g = sim.world.height(this.x, this.z);
+      this.stepOffY = Math.max(0, this.y - g); this.y = g;
+      this.boardCool = sim.time + 2.2;
       sim.event(EV.LAND, this.x, this.y, this.z, 0.4);
     }
-    this.animT += dt;
-    if (this.visible) { this.animate(this.animT, sim); this.animT = 0; }
+  }
+
+  // Room to stand where it is: nothing there that would push a body on its feet aside (a rock under the board).
+  clearUnder(sim) {
+    const q = surfLook;
+    q[0] = this.x; q[1] = this.y; q[2] = this.z;
+    sim.world.resolve(q, 0.4, sim.world.height(this.x, this.z) + 0.2);
+    return Math.hypot(q[0] - this.x, q[2] - this.z) < 0.2;
+  }
+
+  // What's on a rider's line ahead: two looks down it, near and far (further the faster it goes), ten times a second; a body
+  // that would be pushed aside there is a thing to carve round, to the side the push is (dead ahead, the side it's going
+  // to anyway), harder the nearer it is. Eased in and out of: s.avoid, off the way it would otherwise go.
+  boardLook(dt, sim, s, across) {
+    s.lookT = (s.lookT || 0) - dt;
+    if (s.lookT <= 0) {
+      s.lookT = 0.08;
+      const fx = Math.sin(s.travel), fz = Math.cos(s.travel), look = clamp(s.v * 0.55, 3, 11);
+      let best = 0;
+      for (const k of [0.45, 1]) {
+        const q = surfLook, ox = this.x + fx * look * k, oz = this.z + fz * look * k;
+        q[0] = ox; q[1] = this.y; q[2] = oz;
+        sim.world.resolve(q, 0.95, this.y + 0.2);
+        const px = q[0] - ox, pz = q[2] - oz, pl = Math.hypot(px, pz);
+        if (pl < 0.02) continue;
+        const sideP = px * fz - pz * fx;
+        const dir = Math.abs(sideP) > pl * 0.2 ? Math.sign(sideP) : across !== 0 ? Math.sign(across) : (s.i % 2 ? 1 : -1);
+        const a = dir * Math.min(0.9, Math.atan2(pl + 0.8, look * k) * 1.6);
+        if (Math.abs(a) > Math.abs(best)) best = a;
+      }
+      s.avoidTo = best;
+    }
+    s.avoid = damp(s.avoid || 0, s.avoidTo || 0, s.avoidTo ? 9 : 3, dt);
+  }
+
+  // (On the board the feet are on it where poseRide put them: the ground under it isn't theirs to find. Back to none, eased.)
+  solveGround(dt, sim) {
+    if (!(this.surf && !this.surf.crash && this.rideW > 0.01)) { super.solveGround(dt, sim); return; }
+    this.groundLift = damp(this.groundLift, 0, 9, dt);
+    if (Math.abs(this.groundLift) < 1e-4) return;
+    const { wt } = this.pose;
+    for (let j = 0; j < this.rig.count; j++) wt[j * 3 + 1] += this.groundLift;
   }
 
   // (Where the hips are now, for what's kept at them: putAway.)
@@ -1367,18 +1536,18 @@ export class Hero extends Knight {
       }
     }
     // Put away, out of a fight: each to its place on him, and the board on his back stood off for what's under it.
-    if (this.stow > 0.001 && !this.surf && !(this.dead && this.deadT > 1.5)) {
+    if (this.stow > 0.001 && !(this.dead && this.deadT > 1.5)) {
       // (A lancer's lance goes to his back only for what needs his hands, lanceHold: by its own measure, not the calm's.)
       // (Whatever the lute's doing: a sword left part-way between the hand and the hip while the lute came off or went back
       // hung in the air beside an open hand.)
       if (this.stowMain && this.style !== 'lance') this.putAway(out, off, this.stowMain, 1);
-      if (this.stowOff) this.putAway(out, off + 16, this.stowOff, this.shieldStyle ? this.opts.shieldScale : 1);
-      if (this.stowPush && out[bo + 15] !== 0) {
+      if (this.stowOff && !(this.surf && this.shieldStyle)) this.putAway(out, off + 16, this.stowOff, this.shieldStyle ? this.opts.shieldScale : 1);
+      if (this.stowPush && !this.surf && out[bo + 15] !== 0) {
         const j = J.spine3 * 3, dx = out[bo + 12] - wt[j], dz = out[bo + 14] - wt[j + 2], l = Math.hypot(dx, dz) || 1, k = this.stowPush * this.stow;
         out[bo + 12] += dx / l * k; out[bo + 14] += dz / l * k;
       }
     }
-    if (this.style === 'lance' && this.lanceAway > 0.001 && this.stowMain && !this.surf && !(this.dead && this.deadT > 1.5)) { const st = this.stow; this.stow = this.lanceAway; this.putAway(out, off, this.stowMain, 1); this.stow = st; }
+    if (this.style === 'lance' && this.lanceAway > 0.001 && this.stowMain && !(this.dead && this.deadT > 1.5)) { const st = this.stow; this.stow = this.lanceAway; this.putAway(out, off, this.stowMain, 1); this.stow = st; }
     // (The bow's tips, for its string, where the bow is now: in the hand, or on the back.)
     if (this.style === 'bow' && this.mainP?.tips && out[off + 15] !== 0) this.bowTips = this.mainP.tips.map((t) => [out[off] * t[0] + out[off + 4] * t[1] + out[off + 8] * t[2] + out[off + 12], out[off + 1] * t[0] + out[off + 5] * t[1] + out[off + 9] * t[2] + out[off + 13], out[off + 2] * t[0] + out[off + 6] * t[1] + out[off + 10] * t[2] + out[off + 14]]);
     // Out of its hand altogether: a board thrown, a spear standing in the ground.
@@ -1390,6 +1559,14 @@ export class Hero extends Knight {
   // After the pose is made and before the ground and the hands' things are worked out from it (Knight.animate).
   afterPose(dt, sim) {
     this.luteLive = false;
+    this.shutNow.l = 0; this.shutNow.r = 0;
+    // Just off the board: the body comes down off its height over a moment, not in a tick (updateFreeSurf, surfDone).
+    if (this.stepOffY > 1e-3) {
+      const { wt } = this.pose;
+      for (let j = 0; j < this.rig.count; j++) wt[j * 3 + 1] += this.stepOffY;
+      this.stepOffY = damp(this.stepOffY, 0, 11, dt);
+    }
+    if (!this.dead && this.rideW > 0.01) this.poseRide(dt, sim);
     if (!this.dead) {
       // (Some clips end a blow folded face down, or wind it up with the off arm straight out: a fighter does neither.)
       // (A lancer's kept so through his whole hold and as a run ends, so nothing jumps when the run's clip lets go.)
@@ -1403,6 +1580,15 @@ export class Hero extends Knight {
         if (this.mainP && this.style !== 'bow' && !this.free[0] && !this.flight?.some((f) => !f.hand)) this.shutHand('r', armed);
         if ((this.offP || this.style === 'bow') && !this.free[1] && !this.flight?.some((f) => f.hand)) this.shutHand('l', armed);
       }
+      // Running, a hand with nothing in it is a loose fist, as anyone's is (a hero's hands are modelled open): whatever's still
+      // open of each is shut that far. (Not a hand at the lute, nor one throwing, pointing or reaching for something.)
+      const runK = (this.runK || 0) * (1 - (this.rideW || 0));
+      if (runK > 0.01 && !(this.luteW > 0.01)) {
+        for (const sd of ['l', 'r']) {
+          if (this.tossing?.side === sd || (sd === 'r' && (this.point || this.gripAt))) continue;
+          if (runK - this.shutNow[sd] > 0.01) this.shutHand(sd, runK - this.shutNow[sd]);
+        }
+      }
       if (this.luteP && this.luteW > 0.01) this.poseLute();
       if (this.readyW > 0.01) this.poseReady();
       if (this.bowW > 0.01) this.poseBow();
@@ -1412,6 +1598,83 @@ export class Hero extends Knight {
       if (this.gripAt) this.reachTo('r', this.gripAt[0], this.gripAt[1], this.gripAt[2], [-Math.cos(this.yaw) * 0.4, -1, Math.sin(this.yaw) * 0.4], 1);
     }
     if (this.bodyFlip || this.bodyRoll) this.tumble();
+  }
+
+  // ---- on the board ----
+  // How a rider stands on it, in the way a player's body does (src/sim/playerbody.js ride): side on, the feet a stride apart
+  // down its length and the toes across it, the front foot turned a little toward the nose; down in the knees with the hips
+  // out over the toes; bent a little at the waist with the head kept up; the chest and the eyes turned down the line to where
+  // it's going; the hands out for balance, the leading one over the nose and the trailing one back over the tail. A carve
+  // leans the body in, onto the toes or back on the heels, and the hands go with the lean; and nobody stands on one dead
+  // still. Over whatever the clips had (Knight.animate leaves a rider's legs standing, and a shot from the board the arms'),
+  // by rideW, eased in and out as they get on and off. The arms are left to a shot, a throw or a bow while it lasts.
+  poseRide(dt, sim) {
+    const w = ease(this.rideW), s = this.surf, { wt } = this.pose, u = this.rig.height / 1.8, R = RIDE;
+    if (s && s.travel !== undefined) this.rideHead = s.travel;
+    if (this.rideHead === undefined) return;
+    const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
+    const F = [sy, 0, cy], Lf = [cy, 0, -sy];                                        // his front, his left
+    const T = [Math.sin(this.rideHead), 0, Math.cos(this.rideHead)];                // the way the board's going
+    const lead = T[0] * Lf[0] + T[2] * Lf[2] > 0 ? 'l' : 'r', sg = lead === 'l' ? 1 : -1;
+    // The carve: the board's turn, at its speed, as a lean into it (onto the toes for a turn to the toes' side).
+    const turnV = wrapAngle(this.rideHead - (this.rideHead0 ?? this.rideHead)) / Math.max(dt, 1e-3);
+    this.rideHead0 = this.rideHead;
+    const inside = Math.cos(this.rideHead) * F[0] - Math.sin(this.rideHead) * F[2];     // (the turn's inside, dir(travel + 90deg), against his front)
+    const lean0 = s ? clamp(Math.atan2(Math.abs(s.v || 0) * turnV, 9.8) * 0.8, -0.32, 0.32) * Math.sign(inside) : 0;
+    this.rideLean = damp(this.rideLean || 0, lean0, 4, dt);
+    const lean = this.rideLean, t = sim.time + this.slot * 1.37;
+    // (Never quite still: the knees give a little, the hands drift.)
+    const give = Math.sin(t * 2.1) * 0.012 + Math.sin(t * 3.3 + 1) * 0.006;
+    // Down into the knees and out over the toes (further onto them in a toe-side carve, back over the heels in the other).
+    const drop = (R.drop + give + Math.abs(lean) * 0.06) * u * w, over = (R.over + Math.sin(lean) * 0.3) * u * w;
+    for (let j = 0; j < this.rig.count; j++) { wt[j * 3] += F[0] * over; wt[j * 3 + 1] -= drop; wt[j * 3 + 2] += F[2] * over; }
+    // Bent at the waist (more into a toe-side carve, less on the heels), the head up again; then the chest round toward the nose
+    // and the head further on, to look down the line.
+    const sj = this.upperBody[0] * 3, hj = this.J.head * 3;
+    const bend = (R.bend + lean * 0.45) * w;
+    quatAxisAngle(rideQ, 0, Lf[0], 0, Lf[2], bend);
+    this.rigid(this.upperBody, rideQ, wt[sj], wt[sj + 1], wt[sj + 2]);
+    quatAxisAngle(rideQ, 0, Lf[0], 0, Lf[2], -bend * R.head);
+    this.rigid(this.headBits, rideQ, wt[hj], wt[hj + 1], wt[hj + 2]);
+    quatAxisAngle(rideQ, 0, 0, 1, 0, sg * R.chest * w);
+    this.rigid(this.upperBody, rideQ, wt[sj], wt[sj + 1], wt[sj + 2]);
+    quatAxisAngle(rideQ, 0, 0, 1, 0, sg * R.look * w);
+    this.rigid(this.headBits, rideQ, wt[hj], wt[hj + 1], wt[hj + 2]);
+    // The feet on the board: the leading one toward the nose, the other toward the tail, the knees out over the toes.
+    const top = this.y + R.top;
+    for (const side of ['l', 'r']) {
+      const L = this.legs[side];
+      if (L.u === undefined || L.f === undefined || L.h === undefined) continue;
+      const f = side === lead ? 1 : -1, half = R.stance * 0.5 * u;
+      const ax = this.x + T[0] * f * half + F[0] * R.toes * u, az = this.z + T[2] * f * half + F[2] * R.toes * u;
+      this.reachLimb(L, ax, top + L.ankleH, az, [F[0] + T[0] * f * 0.35, 0.15, F[2] + T[2] * f * 0.35], w);
+      // Flat on it, the toes across it: the ball of the foot as far below the ankle as it's modelled, the way the foot points.
+      if (L.b === undefined) continue;
+      const a = f > 0 ? R.toeF : R.toeB, ca = Math.cos(a), sa = Math.sin(a);
+      const H = L.h * 3, B = L.b * 3;
+      const cur = [wt[B] - wt[H], wt[B + 1] - wt[H + 1], wt[B + 2] - wt[H + 2]], len = Math.hypot(...cur) || 1;
+      const dy = clamp(L.ballH - L.ankleH, -len * 0.95, 0), hl = Math.sqrt(Math.max(0, len * len - dy * dy));
+      const want = [(F[0] * ca + T[0] * f * sa) * hl, dy, (F[2] * ca + T[2] * f * sa) * hl];
+      fromTo(rideQ, norm(cur), norm(want));
+      quatNlerp(rideQ, 0, IDQ, 0, rideQ, 0, w);
+      this.rigid([L.h, ...L.fingers], rideQ, wt[H], wt[H + 1], wt[H + 2]);
+    }
+    // The arms out for balance, unless a shot, a throw or a bow has them.
+    const busy = !!(this.swing || this.tossing || this.point || this.gripAt || this.bowW > 0.01 || this.spread > 0.01 || this.luteW > 0.01 || (this.action && this.actMask === 'upper'));
+    this.rideArmW = damp(this.rideArmW || 0, busy ? 0 : 1, busy ? 16 : 4, dt);
+    const aw = this.rideArmW * w;
+    if (aw < 0.01) return;
+    for (const side of ['l', 'r']) {
+      const A = this.arms[side], U = A.u * 3, f = side === lead ? 1 : -1, P = f > 0 ? R.armF : R.armB;
+      // Onto the toes the leading hand goes down toward them and the trailing one up and back; on the heels, the other way.
+      const toe = Math.max(0, lean) / 0.32, heel = Math.max(0, -lean) / 0.32;
+      const out = P[0] + (f > 0 ? -0.05 * toe + 0.04 * heel : 0.08 * toe), fw = P[1] + (f > 0 ? 0.08 * toe - 0.06 * heel : -0.04 * toe - 0.08 * heel);
+      const up = P[2] + (f > 0 ? -0.08 * toe + 0.07 * heel : 0.1 * toe - 0.08 * heel) + Math.sin(t * 1.6 + f) * 0.02;
+      const tx = wt[U] + (T[0] * f * out + F[0] * fw) * u, ty = wt[U + 1] + up * u, tz = wt[U + 2] + (T[2] * f * out + F[2] * fw) * u;
+      // (The elbow down, a little out along the board and back toward the heels: an arm held out to balance, not a wing.)
+      this.reachTo(side, tx, ty, tz, [T[0] * f * 0.45 - F[0] * 0.35, -1, T[2] * f * 0.45 - F[2] * 0.35], aw);
+      this.shutHand(side, 0.35 * aw);
+    }
   }
 
   // ---- the lancer's hold ----
@@ -1577,6 +1840,7 @@ export class Hero extends Knight {
   // (The clips' fingers are one half-open hand, whatever's in it.) k: how far, 0 to 1.
   shutHand(side, k) {
     if (k < 0.01) return;
+    this.shutNow[side] += k;     // (how far each is shut this pose: afterPose's fist on the run shuts only what's left)
     const { wq, wt } = this.pose, hand = this.arms[side].h;
     quatRotate(ikV2, 0, wq, hand * 4, this.bank.grip[side].palm, 0);
     const n = [ikV2[0], ikV2[1], ikV2[2]];
@@ -1710,8 +1974,11 @@ export class Hero extends Knight {
 
   // One arm's hand put at a point: shoulder where it is, the elbow out toward `pole`, upper arm and forearm turned to
   // reach, and the hand and its fingers carried with the forearm. w: how far from where the clip had it (0) to there (1).
-  reachTo(side, tx, ty, tz, pole, w = 1) {
-    const { wq, wt } = this.pose, A = this.arms[side], U = A.u * 3, F = A.f * 3, H = A.h * 3;
+  reachTo(side, tx, ty, tz, pole, w = 1) { this.reachLimb(this.arms[side], tx, ty, tz, pole, w); }
+
+  // The same for any limb of three joints (A: u, f, h, and the fingers, or toes, that go with h): a leg's hip, knee and ankle.
+  reachLimb(A, tx, ty, tz, pole, w = 1) {
+    const { wq, wt } = this.pose, U = A.u * 3, F = A.f * 3, H = A.h * 3;
     const sx = wt[U], sy = wt[U + 1], sz = wt[U + 2];
     const e0 = [wt[F] - sx, wt[F + 1] - sy, wt[F + 2] - sz], h0 = [wt[H] - wt[F], wt[H + 1] - wt[F + 1], wt[H + 2] - wt[F + 2]];
     const L1 = Math.hypot(...e0), L2 = Math.hypot(...h0);
@@ -1875,7 +2142,8 @@ export class Hero extends Knight {
     snap[o + 10] = this.below > 0 ? 1 : 0;
     snap[o + 11] = this.foe ? 1 : 0;
     // Your party: hired, what they're for (1 tank, 2 healer, 3 damage); and a quartermaster's post (1 town, 2 a portal's).
-    snap[o + 12] = this.hired ? 1 : 0;
+    // (2: one of yours who wants by, to take the lead: auto-play eases off for them, src/ui/autobrain.js letPass.)
+    snap[o + 12] = this.hired ? (this.wantsLead ? 2 : 1) : 0;
     snap[o + 13] = this.hired ? { tank: 1, heal: 2, dps: 3 }[this.role] : 0;
     snap[o + 14] = this.broker ? (this.broker === 'town' ? 1 : 2) : 0;
     snap[o + 15] = this.hp;
@@ -1893,9 +2161,22 @@ function hipFrame(pose, J, outQ, outT) {
   outQ.set(matToQuat(left, up, fwd));
   outT[0] = wt[p]; outT[1] = wt[p + 1]; outT[2] = wt[p + 2];
 }
-const propQ = new Float32Array(4), propT = new Float32Array(3), propM = new Float32Array(16), flowDir = new Float32Array(2), surfPos = new Float32Array(3);
+const propQ = new Float32Array(4), propT = new Float32Array(3), propM = new Float32Array(16), flowDir = new Float32Array(2), surfPos = new Float32Array(3), surfLook = new Float32Array(3);
 const ikQ = new Float32Array(4), ikQ2 = new Float32Array(4), ikQ3 = new Float32Array(4), ikV = new Float32Array(3), ikV2 = new Float32Array(3);
+const rideQ = new Float32Array(4), IDQ = new Float32Array([0, 0, 0, 1]);
 const ease = (k) => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
+// Up onto the board, age seconds into the ride: a small hop to its height (BOARD_HOP), then its height.
+const boardLift = (age = 1) => BOARD_RIDE_Y * ease((age ?? 1) / (BOARD_HOP * 0.6)) + (age < BOARD_HOP ? BOARD_HOP_UP * Math.sin(Math.PI * age / BOARD_HOP) : 0);
+// Side on to the board's way (s.foot: which foot leads): a quarter turn over the hop, eased in and out (s.yaw0: how far off
+// it the body was at the start), then held to it. (Chased exponentially it was most of the turn in the first tenth of a
+// second, a snap round.)
+const SIDE_ON = 0.45;
+function sideOn(yaw, s, dt) {
+  const want = wrapAngle(s.travel + Math.PI / 2 * s.foot), age = s.age ?? 1;
+  if (age >= SIDE_ON) return want;
+  s.yaw0 ??= wrapAngle(yaw - want);
+  return wrapAngle(want + s.yaw0 * (1 - ease(age / SIDE_ON)));
+}
 // The least turn that takes one unit direction onto another.
 function fromTo(out, a, b) {
   const d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -2977,7 +3258,7 @@ export class HeroWorld {
     if (h.dead || !h.active) return;
     const F = THE_FALL, n = F.line.length;
     h.task = { kind: 'surf', place: placeOf('summit'), t: 0, race, peace: true };
-    h.surf = { i: n - 1, d: F.s[n - 1] - 26, v: 4, lane: (i - 1.5) * 1.6, wob: Math.random() * 6, foot: Math.random() < 0.7 ? 1 : -1, hitSet: new Set(), crash: 0, t0: this.sim.time };
+    h.surf = { i: n - 1, d: F.s[n - 1] - 26, v: 4, lane: (i - 1.5) * 1.6, wob: Math.random() * 6, foot: Math.random() < 0.7 ? 1 : -1, hitSet: new Set(), crash: 0, t0: this.sim.time, age: 0 };
     h.foe = null; h.goal = null;
     h.say(this.sim, 'surf_start');
     this.sim.event(EV.JUMP, h.x, h.y, h.z);
@@ -2986,7 +3267,8 @@ export class HeroWorld {
   surfDone(h) {
     const sim = this.sim, race = h.task?.race, party = h.party;
     h.surf = null; h.stopAction(0.2);
-    h.y = sim.world.height(h.x, h.z);
+    const g = sim.world.height(h.x, h.z);
+    h.stepOffY = Math.max(0, h.y - g); h.y = g;
     if (race && party) {
       party.finish ||= [];
       party.finish.push(h);
@@ -3263,6 +3545,7 @@ export class HeroWorld {
     const d = Math.hypot(h.x - p.x, h.z - p.z);
     const fight = this.companyFight();
     h.post = null;
+    if (!h.surf) h.wantsLead = false;
     // A word with you: stand and listen, unless something needs killing.
     if (h.talkUntil && !fight.length) {
       if (sim.time > h.talkUntil || p.dead || h.near > 9) { h.talkUntil = 0; h.hold = 0.5; }
@@ -3271,8 +3554,10 @@ export class HeroWorld {
     // Lost: through a portal without them, or left far behind out of a fight.
     if (!p.dead && !fight.length && !h.swing && (d > 60 || delveAt(p.x, p.z) !== delveAt(h.x, h.z))) { this.bringTo(h); return; }
     if (h.surf) return;
-    // On the board when you are.
-    if (p.surfing && !fight.length && Math.hypot(p.vx || 0, p.vz || 0) > 2.5 && !h.swing && !h.jump) { this.endBit(h); this.freeSurf(h); return; }
+    // On the board when you are: once you're well on it (one after another, not all in the same tick), and not straight back
+    // on after stepping off (updateFreeSurf).
+    const mi = [...this.company.members].indexOf(h);
+    if (p.surfing && !fight.length && Math.hypot(p.vx || 0, p.vz || 0) > 2.5 && !h.swing && !h.jump && this.rideT > 0.25 + 0.18 * mi && sim.time > (h.boardCool || 0)) { this.endBit(h); this.freeSurf(h); return; }
     // Out of whatever's marked on the ground under them (src/sim/perils.js), wherever they are: the circles, the strips, the
     // cones, the burning.
     // What the fight itself wants of them (src/sim/dungeon.js order): not a step taken while the music's stopped; or
@@ -3421,7 +3706,8 @@ export class HeroWorld {
   }
 
   // Out of a fight: with you, but each their own. On the road most keep a few strides back along the way you came, and now
-  // and then one runs on ahead for a while; all of them face the way they're going, not the way you look. When you stop they
+  // and then one takes the lead for a while: mostly as you slow, when they keep the pace you had and go on by (auto-play
+  // eases off for them), never in a sprint out in front of you. All of them face the way they're going, not the way you look. When you stop they
   // stop about where they are, and each finds something to do: keeps watch some way, turns to you or to one of the others for
   // a word, strolls a few steps, goes to look at something, stretches, sits down, plays (a bard). Turning your head moves nobody.
   heel(h, dt = 0) {
@@ -3447,11 +3733,17 @@ export class HeroWorld {
         const sx = p.x + ux * L.ahead + uz * L.side, sz = p.z + uz * L.ahead - ux * L.side;
         if (sim.world.inside(sx, sz, 0.5)) { o.lead = null; o.leadCd = rand(4, 10); }
         else {
-          // (Toward a mark a little past the place, at your pace and a little over or under it by how far off the place is: no
-          // stopping and starting as it moves on with you.)
+          // (Toward a mark a little past the place. Short of it, at the pace you had (HeroWorld.pace), or a touch over yours if
+          // you haven't slowed: so they go by as you ease off. There, at your pace and a little over or under it by how far off
+          // the place is: no stopping and starting as it moves on with you. Fallen well back, it's given up.)
           const along = (h.x - p.x) * ux + (h.z - p.z) * uz;
-          h.goal = { x: sx + ux * 3, z: sz + uz * 3, speed: Math.max(1.4, pv * clamp(1 + (L.ahead - along) * 0.22, 0.7, 1.7) + (along < L.ahead - 2 ? 1.5 : 0)), stop: 0.5 };
-          return;
+          if (along < -8) { o.lead = null; o.leadCd = rand(6, 14); }
+          else {
+            h.wantsLead = along < 1;
+            const speed = along < L.ahead - 1 ? Math.max(pv * 1.08, (this.pace || 0) * 0.95) : pv * clamp(1 + (L.ahead - along) * 0.12, 0.85, 1.1);
+            h.goal = { x: sx + ux * 3, z: sz + uz * 3, speed: Math.max(1.4, speed), stop: 0.5 };
+            return;
+          }
         }
       }
       // Back along the trail so far, then out to the side (which drifts a little: nobody marches on a rail).
@@ -3576,8 +3868,11 @@ export class HeroWorld {
   }
 
   freeSurf(h) {
-    const i = [...this.company.members].indexOf(h), p = this.sim.player;
-    h.surf = { free: true, i, v: Math.hypot(p.vx || 0, p.vz || 0), foot: i % 2 ? 1 : -1, travel: h.yaw, off: 0, hitSet: new Set() };
+    const i = [...this.company.members].indexOf(h), p = this.sim.player, hv = Math.hypot(h.vx || 0, h.vz || 0);
+    // (Headed the way they were running, or yours: begun facing anywhere else, they'd be seen carving round to it. At the
+    // speed they had, gathering more from there.)
+    h.surf = { free: true, i, v: Math.max(3, hv), foot: i % 2 ? 1 : -1, travel: hv > 1.5 ? Math.atan2(h.vx, h.vz) : Math.atan2(this.head[0], this.head[1]), off: 0, age: 0, hitSet: new Set() };
+    h.wantsLead = false;
     h.goal = null; h.foe = null;
     if (h.gesture) { h.gesture = null; }
     this.sim.event(EV.JUMP, h.x, h.y, h.z);
@@ -3601,13 +3896,42 @@ export class HeroWorld {
       if (!(this.stillT > 0)) this.restYaw = this.moveT > 0 ? Math.atan2(hd[0], hd[1]) : p.yaw;
       this.stillT += dt; this.moveT = 0;
     }
+    // (The pace you had: kept up a few seconds after you slow, for whoever's taking the lead as you do: heel, updateFreeSurf.)
+    this.pace = pv > (this.pace || 0) ? pv : damp(this.pace || 0, pv, 0.15, dt);
+    this.rideT = p.surfing ? (this.rideT || 0) + dt : 0;
     if (!this.company.members.size) return;
+    this.boardLeads(dt);
     const fighting = this.companyFight().length > 0 || !!sim.warrens?.fight;
     for (const h of this.company.members) {
       if (!h.dead) continue;
       h.reviveT = fighting || p.dead ? 0 : h.reviveT + dt;
       if (h.reviveT > 4) { this.revive(h, 0.5); h.say(sim, 'hero_return'); }
     }
+  }
+
+  // On the board, now and then one of yours takes the lead (updateFreeSurf): two at most, each for a while and then given
+  // back. Most of all when you ease off and one comes up level with you: they ride on ahead rather than braking in behind.
+  boardLeads(dt) {
+    const p = this.sim.player, ux = this.head[0], uz = this.head[1];
+    const riders = [...this.company.members].filter((h) => h.surf?.free && !h.dead);
+    if (!riders.length) return;
+    let leads = riders.filter((h) => h.surf.lead).length;
+    const lead = (h) => { const s = h.surf; s.lead = { ahead: rand(5, 9), side: (s.i % 2 ? 1 : -1) * rand(2.4, 4.2), t: rand(8, 16) }; leads++; };
+    for (const h of riders) {
+      const s = h.surf, L = s.lead;
+      if (L) { L.t -= dt; if (L.t <= 0 || !p.surfing) { s.lead = null; leads--; } continue; }
+      const ahead = (h.x - p.x) * ux + (h.z - p.z) * uz;
+      if (ahead < -1) s.passed = false;
+      else if (ahead > 0.3 && !s.passed && s.age > 1.5) { s.passed = true; if (leads < 2 && Math.random() < 0.75) lead(h); }
+    }
+    this.leadCd = (this.leadCd ?? rand(4, 9)) - dt;
+    if (leads >= 2 || this.leadCd > 0 || this.rideT < 3) return;
+    this.leadCd = rand(7, 15);
+    const free = riders.filter((h) => !h.surf.lead && h.surf.age > 2);
+    const wts = free.map((h) => (LEAD_EAGER[h.person.cls] ?? 1) * (h.role === 'heal' ? 0.4 : 1));
+    let r = Math.random() * wts.reduce((a, b) => a + b, 0);
+    const h = free.find((_, k) => (r -= wts[k]) <= 0);
+    if (h && Math.random() < 0.65) lead(h);
   }
 
   // Keep the town's hours with the render thread's clock (it owns the sun).
@@ -3675,7 +3999,7 @@ export class HeroWorld {
         break;
       }
       case 'undead': self.postMessage({ type: 'heroState', id: m.id, heroes: [], undead: sim.knights.filter((k) => k instanceof Zombie).map((k) => ({ id: k.id, model: k.opts.model, role: k.opts.role || null, x: +k.x.toFixed(1), z: +k.z.toFixed(1), sink: +k.sink.toFixed(2), state: k.state, dead: k.dead, dormant: k.dormant, grave: k.opts.grave || null, up: k.graveUp, aggro: k.aggro, clip: k.clip, hostile: k.hostile, hp: Math.round(k.hp), owned: !!k.owner, y: +k.y.toFixed(1) })), others: sim.knights.filter((k) => !(k instanceof Zombie)).map((k) => ({ id: k.id, kind: k.kind, name: k.opts?.name || k.constructor.name, x: +k.x.toFixed(0), z: +k.z.toFixed(0) })) }); break;
-      case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), stuck: +(h.stuckT || 0).toFixed(1), follow: h.party?.leader && h.party.leader !== h ? h.party.leader.slot : null, hired: !!h.hired, own: h.own?.lead ? 'lead' : h.own?.bit?.kind || null, gesture: h.gesture || null, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting, leaps: h.leaps, guard: h.guardT > 0, iframes: h.iframesT > 0, charge: !!h.charge, jump: !!h.jump, flight: h.flight?.length || 0, stow: +h.stow.toFixed(2), calm: Math.round(h.calmT), busy: [h.foe && 'foe', h.swing && 'swing', h.tossing && 'toss', h.point && 'point', h.flight && 'flight', h.aim && h.aim !== h.heldAim && 'aim', h.bowW > 0.01 && 'bow', h.shieldTarget > 0 && 'shield', h.tune && 'tune', h.luteW > 0.01 && 'lute', h.onArmed && 'armedGround'].filter(Boolean).join(',') })), zones: this.zones.map((z) => z.kind), shots: this.shots.map((q) => q.kind + (q.rain ? ':rain' : q.up ? ':up' : '')), dots: this.dots.length }); break;
+      case 'dump': self.postMessage({ type: 'heroState', id: m.id, heroes: this.heroes.map((h) => ({ slot: h.slot, name: h.person.name, cls: h.person.cls, x: +h.x.toFixed(2), y: +h.y.toFixed(2), z: +h.z.toFixed(2), yaw: +h.yaw.toFixed(2), hp: Math.round(h.hp), task: h.task?.kind || null, there: !!h.task?.there, party: h.party?.id ?? null, foe: h.foe ? mobKind(h.foe) : null, foeAt: h.foe ? [+h.foe.x.toFixed(1), +(h.foe.y || 0).toFixed(1), +h.foe.z.toFixed(1)] : null, dead: h.dead, below: h.below > 0, surf: !!h.surf, kills: h.kills, bag: h.bag, level: h.person.level, near: Math.round(h.near || 0), action: h.action?.name || null, goal: h.goal ? [Math.round(h.goal.x), Math.round(h.goal.z)] : null, leg: h.task?.leg ?? null, legs: h.task?.path?.length ?? null, tt: Math.round(h.task?.t || 0), place: h.task?.place?.id || null, spd: +Math.hypot(h.vx || 0, h.vz || 0).toFixed(1), sv: h.surf ? +h.surf.v.toFixed(1) : null, av: h.surf ? +(h.surf.avoid || 0).toFixed(2) : null, lead: h.surf?.lead ? 1 : 0, stuck: +(h.stuckT || 0).toFixed(1), follow: h.party?.leader && h.party.leader !== h ? h.party.leader.slot : null, hired: !!h.hired, own: h.own?.lead ? 'lead' : h.own?.bit?.kind || null, gesture: h.gesture || null, walk: h.walkWith?.mode || null, hold: +Math.max(0, h.hold).toFixed(1), sit: h.sitting, leaps: h.leaps, guard: h.guardT > 0, iframes: h.iframesT > 0, charge: !!h.charge, jump: !!h.jump, flight: h.flight?.length || 0, stow: +h.stow.toFixed(2), calm: Math.round(h.calmT), busy: [h.foe && 'foe', h.swing && 'swing', h.tossing && 'toss', h.point && 'point', h.flight && 'flight', h.aim && h.aim !== h.heldAim && 'aim', h.bowW > 0.01 && 'bow', h.shieldTarget > 0 && 'shield', h.tune && 'tune', h.luteW > 0.01 && 'lute', h.onArmed && 'armedGround'].filter(Boolean).join(',') })), zones: this.zones.map((z) => z.kind), shots: this.shots.map((q) => q.kind + (q.rain ? ':rain' : q.up ? ':up' : '')), dots: this.dots.length }); break;
       default: break;
     }
   }
