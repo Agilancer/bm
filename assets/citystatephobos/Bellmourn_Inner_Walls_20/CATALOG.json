@@ -1,0 +1,222 @@
+[
+  {
+    "number": 51,
+    "id": "cream_limewash",
+    "name": "cream limewash",
+    "description": "soft warm cream limewash with restrained cloudy mineral variations",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. soft warm cream limewash with restrained cloudy mineral variations. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_051_cream_limewash_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "e9017ecb70b89cd1408ce75bd870870b573ee35ceede05203576969db62c33ee"
+  },
+  {
+    "number": 52,
+    "id": "aged_ochre_plaster",
+    "name": "aged ochre plaster",
+    "description": "muted pale ochre aged lime plaster with fine subtle hand-trowelled texture",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. muted pale ochre aged lime plaster with fine subtle hand-trowelled texture. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_052_aged_ochre_plaster_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "cb38c68db369d7a9ffb2aa20b3b3ddf5de09b5447f2f92358c447fa8167c9f19"
+  },
+  {
+    "number": 53,
+    "id": "warm_grey_plaster",
+    "name": "warm grey plaster",
+    "description": "warm dove grey interior plaster with gentle irregular trowel work",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. warm dove grey interior plaster with gentle irregular trowel work. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_053_warm_grey_plaster_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "6dfe402887fa52fd7bc27ab14163af0bf60791da834cf6a6353f6a1d417cf088"
+  },
+  {
+    "number": 54,
+    "id": "rose_plaster",
+    "name": "rose plaster",
+    "description": "desaturated dusty rose lime plaster with faint mineral mottling",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. desaturated dusty rose lime plaster with faint mineral mottling. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_054_rose_plaster_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "247a4f0a83f746c592d2e5a3756fe9271ed0879423c6aea372886031f66e0be6"
+  },
+  {
+    "number": 55,
+    "id": "sage_plaster",
+    "name": "sage plaster",
+    "description": "muted sage grey painted lime plaster, softly worn matte finish",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. muted sage grey painted lime plaster, softly worn matte finish. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_055_sage_plaster_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "0c253a8df0b9a1e57a5f2a83686bc24fa5549ceb4c862b7184e9c4b09ca26801"
+  },
+  {
+    "number": 56,
+    "id": "linen_wallcloth",
+    "name": "linen wallcloth",
+    "description": "natural oatmeal linen wall covering, fine woven textile grain, unobtrusive",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. natural oatmeal linen wall covering, fine woven textile grain, unobtrusive. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_056_linen_wallcloth_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "9abc2ebbb85639805b04c7e4fee06e9ec8730a48a263d352d8063781df22539a"
+  },
+  {
+    "number": 57,
+    "id": "brown_oak",
+    "name": "brown oak",
+    "description": "warm smoked brown oak vertical plank panelling with narrow fine moulded joints",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. warm smoked brown oak vertical plank panelling with narrow fine moulded joints. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_057_brown_oak_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "c1483c5021eb8a8628970f1962fefdbc9a833e978914a91a895869aeecc53dd1"
+  },
+  {
+    "number": 58,
+    "id": "dark_walnut",
+    "name": "dark walnut",
+    "description": "dark walnut vertical wood panelling with understated carved parallel borders",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. dark walnut vertical wood panelling with understated carved parallel borders. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_058_dark_walnut_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "fa31864f549857cac53e3847ddb209cb7327d5d3935f5e625f3de4b8d6c5b4b4"
+  },
+  {
+    "number": 59,
+    "id": "honey_oak",
+    "name": "honey oak",
+    "description": "aged honey oak vertical wooden panelling, restrained subtle grain and narrow seams",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. aged honey oak vertical wooden panelling, restrained subtle grain and narrow seams. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_059_honey_oak_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "6ffa7dfab5288d9eb533ada2b6dc1e62d51c08146d253e6aa3b77f1626725c0e"
+  },
+  {
+    "number": 60,
+    "id": "painted_panelling",
+    "name": "painted panelling",
+    "description": "muted sage green painted timber panelling with narrow vertical recessed mouldings and worn paint",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. muted sage green painted timber panelling with narrow vertical recessed mouldings and worn paint. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_060_painted_panelling_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "e9117d1beef7ead09ec5f3e6a274a725a66f7a1da195b92347a8fcd817bf103f"
+  },
+  {
+    "number": 61,
+    "id": "carved_wood",
+    "name": "carved wood",
+    "description": "dark brown medieval wood panelling with a regular low-relief carved vine ornament",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. dark brown medieval wood panelling with a regular low-relief carved vine ornament. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_061_carved_wood_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "f9872a6ca931ede13c0f9fce1da48f8729b9e009a352ef0c690037395c6980a8"
+  },
+  {
+    "number": 62,
+    "id": "linen_panels",
+    "name": "linen panels",
+    "description": "warm cream plaster infill alternating regularly spaced dark oak vertical studs",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. warm cream plaster infill alternating regularly spaced dark oak vertical studs. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_062_linen_panels_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "be780923e59397d80aeabb296d9f74bde6120d81ba2bbaff60fe1469fbc00472"
+  },
+  {
+    "number": 63,
+    "id": "ochre_panels",
+    "name": "ochre panels",
+    "description": "muted ochre plaster infill alternating regularly spaced weathered oak vertical studs",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. muted ochre plaster infill alternating regularly spaced weathered oak vertical studs. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_063_ochre_panels_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "4fa4511f8a5872c881dec5f3e2b6feaea98b5ff9670432816a89a4e68e8570c3"
+  },
+  {
+    "number": 64,
+    "id": "red_damask",
+    "name": "red damask",
+    "description": "muted wine red woven damask wall fabric with small repeating floral motifs",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. muted wine red woven damask wall fabric with small repeating floral motifs. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_064_red_damask_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "b81b4913b125a9f1b74d4637d64900a97608e0641294c06bcbdb05129fe4e597"
+  },
+  {
+    "number": 65,
+    "id": "green_damask",
+    "name": "green damask",
+    "description": "deep subdued forest green woven damask wall fabric with small repeating floral motifs",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. deep subdued forest green woven damask wall fabric with small repeating floral motifs. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_065_green_damask_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "cadad2649d1e12135aea363dbb9245e1c34847e719774381c0c4790667315ac9"
+  },
+  {
+    "number": 66,
+    "id": "gold_damask",
+    "name": "gold damask",
+    "description": "aged dull golden brown woven damask wall fabric with restrained repeating botanical motifs",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. aged dull golden brown woven damask wall fabric with restrained repeating botanical motifs. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_066_gold_damask_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "b27fe351de1f8ab6abf4540e5c2ed902ba634d031c9c8cf81e4b438fd5342d42"
+  },
+  {
+    "number": 67,
+    "id": "blue_tapestry",
+    "name": "blue tapestry",
+    "description": "dusty slate blue woven wallcloth with subtle repeating medieval leaf motif",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. dusty slate blue woven wallcloth with subtle repeating medieval leaf motif. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_067_blue_tapestry_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "4bb329d3950f6c41e846640822bb912c9826d7690007a598489c6d6781812da4"
+  },
+  {
+    "number": 68,
+    "id": "plum_fabric",
+    "name": "plum fabric",
+    "description": "dusty plum woven wallcloth with a fine small diamond woven pattern",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. dusty plum woven wallcloth with a fine small diamond woven pattern. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_068_plum_fabric_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "fa0ce3157a857dfed78f3c352f3172c7600ac6e1368b9055730367d407cb0bc8"
+  },
+  {
+    "number": 69,
+    "id": "embossed_leather",
+    "name": "embossed leather",
+    "description": "dark brown aged leather wall covering with a small repeating embossed floral pattern, soft matte finish",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. dark brown aged leather wall covering with a small repeating embossed floral pattern, soft matte finish. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_069_embossed_leather_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "18264e614cae61c8cc4259b7f2456a86111e30bc5ce645155cf950c1ab7772ea"
+  },
+  {
+    "number": 70,
+    "id": "textured_velvet",
+    "name": "textured velvet",
+    "description": "muted deep rust woven velvet wall covering with fine restrained repeating vertical floral motif, matte diffuse surface",
+    "prompt": "Use case: photorealistic-natural. ONE square wall color texture for a cozy lived-in medieval dark fantasy castle chamber in Bellmourn. muted deep rust woven velvet wall covering with fine restrained repeating vertical floral motif, matte diffuse surface. Full frame flat wall material, orthographic perpendicular view, realistic detailed surface and uniform diffuse lighting. Intended to repeat seamlessly on both axes: matching opposite-edge patterns and material grain. Request 2048x2048 high resolution. No bricks, no stone blocks, no masonry, no mortar, no furniture, no objects, no room scene, no image border, no text, no collage.",
+    "file": "textures/BM_PV_070_textured_velvet_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "2c83cb325a7e10999d45e97f232eca4c7cae2832e5d99415657b8e617f4371e4"
+  }
+]
