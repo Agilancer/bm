@@ -1,5 +1,10 @@
 // The chests about the world, shut until you open them. Like what's lying on the ground, these are the render thread's: the sim only
 // knows a box to walk round. Which are open goes in a save; they stay open through a new fight, and only New Game shuts them again.
+//
+// And the bosses': every boss of a party dungeon leaves a chest where it fell (add, from src/main.js on its hoard), tier 3 or
+// the last boss's 4 (src/items/items.js rollChest). Those come after the fixed ones in the list, so the fixed ones' places in
+// a save never move; a boss's chest still shut is kept in the save by where it stands, and one opened is gone with the
+// next load. (No box for the sim: you walk through one, as you would a heap of coin.)
 import { groundAt } from '../core/interior.js';
 import { makeRng, rollChest } from './items.js';
 
@@ -19,6 +24,7 @@ const SEEN = 30;                       // drawn from this near
 const OPENING = 0.8, OPEN_DEG = 72;    // (the same opening as tools/chest/separate.py keys)
 const SPILL_AT = 0.35;                 // how far up the lid is when what's in it comes out
 const HINGE_Y = 0.399, HINGE_Z = -0.276;
+const BOSS_CHESTS = 16;                // at most, still shut, about the dungeons
 
 export class Chests {
   constructor(renderer, audio, drops, things) {
@@ -26,15 +32,29 @@ export class Chests {
     this.audio = audio;
     this.drops = drops;
     this.rng = makeRng((Math.random() * 4294967296) >>> 0);
-    this.list = things.filter((t) => t.type === 'chest').concat(woodsChests()).map((t) => {
-      const s = Math.sin(t.yaw), c = Math.cos(t.yaw);
-      const body = new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, t.x, t.y, t.z, 1]);
-      const ch = { ...t, s, c, open: false, spilled: false, k: 0, lidK: -1, body: { piece: 'body', mat: body }, lid: { piece: 'lid', mat: new Float32Array(16) } };
-      this.pose(ch);
-      return ch;
-    });
+    this.list = things.filter((t) => t.type === 'chest').concat(woodsChests()).map((t) => this.make(t));
+    this.fixed = this.list.length;
     this.near = [];
     renderer.chests = this.near;
+  }
+
+  make(t) {
+    const s = Math.sin(t.yaw), c = Math.cos(t.yaw);
+    const body = new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, t.x, t.y, t.z, 1]);
+    const ch = { ...t, s, c, open: false, spilled: false, k: 0, lidK: -1, body: { piece: 'body', mat: body }, lid: { piece: 'lid', mat: new Float32Array(16) } };
+    this.pose(ch);
+    return ch;
+  }
+
+  // A boss's chest, where it fell: { x, y (its floor), z, yaw (the way its front faces), loot (3 or 4), key (the boss's) }.
+  add(t) {
+    const ch = this.make({ type: 'chest', boss: true, ...t });
+    this.list.push(ch);
+    // (Not without end: the oldest shut one goes, and every open one once there are too many.)
+    const extra = this.list.slice(this.fixed);
+    if (extra.length > BOSS_CHESTS) { const old = extra.find((q) => q.open) || extra[0]; this.list.splice(this.list.indexOf(old), 1); }
+    this.audio.play('land', t.x, t.y + 0.3, t.z, 0.9, 0.55);
+    return ch;
   }
 
   // The lid, about its hinge at the back of the box.
@@ -73,19 +93,26 @@ export class Chests {
   // Out over the front, a pace or so.
   spill(ch) {
     ch.spilled = true;
-    for (const item of rollChest(this.rng, ch.loot | 0)) {
+    // (A boss's has something for your party in it as well: src/ui/party.js chestGear, through src/main.js.)
+    for (const item of [...rollChest(this.rng, ch.loot | 0), ...(this.bonus?.(ch) || [])]) {
       const a = ch.yaw + (Math.random() - 0.5) * 1.3, r = 0.85 + Math.random() * 0.55;
       this.drops.spawn(item, ch.x + Math.sin(a) * r, ch.z + Math.cos(a) * r, [ch.x, ch.y + 0.65, ch.z]);
     }
   }
 
-  // What goes in a save: which are open, by their place in the list.
-  save() { return this.list.flatMap((ch, i) => (ch.open ? [i] : [])); }
+  // What goes in a save: which are open, by their place in the list; and the bosses' still shut, by where they stand.
+  save() {
+    const open = this.list.slice(0, this.fixed).flatMap((ch, i) => (ch.open ? [i] : []));
+    const boss = this.list.slice(this.fixed).filter((ch) => !ch.open).map(({ x, y, z, yaw, loot, key }) => ({ x, y, z, yaw, loot, key }));
+    return boss.length ? { open, boss } : open;
+  }
 
-  // (They come back open, and what was in them has been had. Null: all of them shut.)
+  // (They come back open, and what was in them has been had. Null: all of them shut, and no boss's.)
   load(d) {
-    const open = new Set(Array.isArray(d) ? d : []);
-    this.list.forEach((ch, i) => {
+    const open = new Set(Array.isArray(d) ? d : Array.isArray(d?.open) ? d.open : []);
+    this.list.length = this.fixed;
+    for (const t of d?.boss || []) if (Number.isFinite(t.x) && Number.isFinite(t.y) && Number.isFinite(t.z)) this.list.push(this.make({ type: 'chest', boss: true, ...t }));
+    this.list.slice(0, this.fixed).forEach((ch, i) => {
       ch.open = ch.spilled = open.has(i);
       ch.k = ch.open ? 1 : 0;
       this.pose(ch);

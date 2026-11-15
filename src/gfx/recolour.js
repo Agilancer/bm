@@ -1,0 +1,164 @@
+// The party's colours, on pixels: the same sums for a hero's colour map (src/gfx/herolook.js) and for the pictures of their
+// gear in the pack and their book (src/ui/hgicons.js), so a piece looks in the hand as it does on them.
+//
+// rampMap: a piece of armour dyed in one of your own gear sets' colours (assets/game/heroes/looks.json). Each texel keeps
+// its own light and dark against the rest of the piece, so folds, grime, rivets and edges stay as they were; the piece as a
+// whole is made about as light as the set is (an ivory set comes out pale, a black one dark), and its colour is the set's,
+// taken off the set's ramp by how light the texel is and held to the ramp's middle, so a few lighter flecks don't come out
+// another colour. Gold trim stays gold and skin stays skin.
+// harmonize: a set's ramp turned to another's colour, so the pieces someone wears go together (partygear.js outfitRamps).
+// paintProp: a weapon or shield in a palette (src/items/partygear.js PROP_PALS): what's painted turned to the palette's hue,
+// wood and leather left their own, bare steel only touched with it.
+
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+// Whether a texel is someone's skin (the same test as the heroes' shading, src/gfx/materials.js heroLook).
+export function isSkin(r, g, b) {
+  const hi = Math.max(r, g, b) / 255, lo = Math.min(r, g, b) / 255, sat = (hi - lo) / Math.max(hi, 1e-3);
+  return sat > 0.12 && sat < 0.62 && hi > 0.24 && b <= g && g <= r && (r - b) / 255 > 0.06;
+}
+
+export const lumOf = (r, g, b) => (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+// Skin, as a dye sees it: the same test, held to skin's own reds and oranges, so khaki and tan leather are dyed.
+const isSkinTight = (r, g, b) => isSkin(r, g, b) && (g - b) < 0.5 * (r - b);
+
+// A colour ([r, g, b], 0 to 255) as [hue 0-1, colourfulness 0-1, brightness 0-1], and back.
+export function hsvOf(c) {
+  const r = c[0] / 255, g = c[1] / 255, b = c[2] / 255, max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d > 1e-6) h = (max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4) / 6;
+  return [h, max > 1e-6 ? d / max : 0, max];
+}
+export function fromHsv(h, s, v) {
+  const f = (n) => { const x = (n + h * 6) % 6; return (v - v * s * Math.max(0, Math.min(x, 4 - x, 1))) * 255; };
+  return [f(5), f(3), f(1)];
+}
+
+// The darkest and lightest of the texels where keep(i) says, as the 4th and 96th of every hundred: what a ramp is laid over.
+export function lumRange(px, keep) {
+  const hist = new Uint32Array(256);
+  let n = 0;
+  for (let i = 0, k = 0; k < px.length; i++, k += 4) {
+    if (keep && !keep(i)) continue;
+    hist[Math.round(lumOf(px[k], px[k + 1], px[k + 2]) * 255)]++; n++;
+  }
+  if (!n) return [0, 1];
+  const at = (q) => { let c = 0; for (let v = 0; v < 256; v++) { c += hist[v]; if (c >= q * n) return v / 255; } return 1; };
+  const lo = at(0.04), hi = at(0.96);
+  return hi - lo < 0.08 ? [Math.max(0, lo - 0.1), Math.min(1, hi + 0.1)] : [lo, hi];
+}
+
+// One colour off a ramp of stops ([[r, g, b], ...], darkest first), at t from 0 to 1.
+export function rampAt(ramp, t, out) {
+  const n = ramp.length - 1, x = Math.min(n, Math.max(0, t * n)), i = Math.min(n - 1, Math.floor(x)), f = x - i;
+  const a = ramp[i], b = ramp[i + 1];
+  out[0] = a[0] + (b[0] - a[0]) * f; out[1] = a[1] + (b[1] - a[1]) * f; out[2] = a[2] + (b[2] - a[2]) * f;
+  return out;
+}
+
+// How much of a texel's light the ramp's own may move it (the rest is the piece's), how far its colour may wander from the
+// ramp's middle with its light, the most colourful a dyed texel comes out, and how far a piece is made lighter or darker
+// as a whole to be as light as its set.
+const VALUE_PULL = 0.2, CHROMA_FOLLOW = 0.3, MAX_SAT = 0.5, GAIN = [0.65, 1.6];
+
+// How much a texel is gold trim (a yellow, bright enough and coloured enough, not a leather's red-brown): 0 to 1. Gold
+// keeps its own colour under any dye, as the owner's suits' trim does on the body it was made for.
+export function goldOf(r, g, b) {
+  const [h, s, v] = hsvOf([r, g, b]);
+  return smooth(0.085, 0.11, h) * (1 - smooth(0.16, 0.19, h)) * smooth(0.3, 0.45, s) * smooth(0.2, 0.38, v);
+}
+
+// px: RGBA bytes, changed in place. ramp: the set's stops. range: [lo, hi] (lumRange). amount(i, k): how much of the dye
+// goes on texel i (k = i * 4), 0 to 1, or 0 to leave it.
+export function rampMap(px, ramp, range, amount) {
+  const [lo, hi] = range, span = Math.max(0.02, hi - lo), c = [0, 0, 0];
+  // (The ramp's colour at its middle, at a brightness of one: what every texel's colour leans to.)
+  rampAt(ramp, 0.5, c);
+  const ml = Math.max(0.03, lumOf(c[0], c[1], c[2])), mid = [c[0] / 255 / ml, c[1] / 255 / ml, c[2] / 255 / ml];
+  const gain = Math.min(GAIN[1], Math.max(GAIN[0], ml / Math.max(0.05, (lo + hi) / 2)));
+  for (let i = 0, k = 0; k < px.length; i++, k += 4) {
+    let a = amount(i, k);
+    if (a <= 0) continue;
+    const r = px[k], g = px[k + 1], b = px[k + 2];
+    if (isSkinTight(r, g, b)) continue;
+    a *= 1 - 0.9 * goldOf(r, g, b);
+    const l = lumOf(r, g, b), t = Math.min(1, Math.max(0, (l - lo) / span));
+    rampAt(ramp, t, c);
+    const lc = Math.max(0.03, lumOf(c[0], c[1], c[2]));
+    // Its light: its own, the piece made as light as the set, a little the ramp's here. Its colour: the ramp's here, at a
+    // brightness of one, held near the ramp's middle.
+    const L0 = Math.min(0.95, l * gain), L = L0 + (lc - L0) * VALUE_PULL;
+    let R = (mid[0] + (c[0] / 255 / lc - mid[0]) * CHROMA_FOLLOW) * L - L;
+    let G = (mid[1] + (c[1] / 255 / lc - mid[1]) * CHROMA_FOLLOW) * L - L;
+    let B = (mid[2] + (c[2] / 255 / lc - mid[2]) * CHROMA_FOLLOW) * L - L;
+    // (R, G, B: how far from a grey of that light. Never garish: past MAX_SAT, drawn back toward the grey; and never past
+    // white or black, which would turn its colour: drawn back too, so a light texel of a dark set is a pale one of it.)
+    const mx = Math.max(R, G, B), mn = Math.min(R, G, B), sat = mx + L > 1e-4 ? (mx - mn) / (mx + L) : 0;
+    let q = sat > MAX_SAT ? MAX_SAT / sat : 1;
+    if (mx * q > 1 - L) q = (1 - L) / mx;
+    if (mn * q < -L) q = L / -mn;
+    R = (L + R * q) * 255; G = (L + G * q) * 255; B = (L + B * q) * 255;
+    px[k] = r + (R - r) * a; px[k + 1] = g + (G - g) * a; px[k + 2] = b + (B - b) * a;
+  }
+}
+
+// Whether a ramp is a grey, white or black: hardly any colour at its middle stops.
+export function plainRamp(ramp) {
+  let s = 0;
+  for (const i of [1, 2, 3]) s += hsvOf(ramp[Math.min(i, ramp.length - 1)])[1];
+  return s / 3 < 0.1;
+}
+
+// A ramp turned to an outfit's colour: its hue the anchor's middle one (with a breath of its own lean, and its stops'
+// own spread, both held small), its colourfulness half way to the anchor's, its own light and dark kept. A grey, white or
+// black ramp goes with anything and is left; against a plain outfit, a colourful one is muted.
+export function harmonize(ramp, anchor) {
+  if (plainRamp(ramp)) return ramp;
+  const wrap = (x) => x - Math.round(x);
+  const am = hsvOf(anchor[Math.floor(anchor.length / 2)]), om = hsvOf(ramp[Math.floor(ramp.length / 2)]);
+  if (plainRamp(anchor)) return ramp.map((c) => { const [h, s, v] = hsvOf(c); return fromHsv(h, s * 0.4, v); });
+  const lean = Math.max(-0.03, Math.min(0.03, wrap(om[0] - am[0]) * 0.15));
+  return ramp.map((c, i) => {
+    const [h, s, v] = hsvOf(c);
+    const spread = Math.max(-0.02, Math.min(0.02, wrap(h - om[0]) * 0.3));
+    const sa = hsvOf(anchor[i] || anchor[anchor.length - 1])[1];
+    return fromHsv((am[0] + lean + spread + 2) % 1, s + (sa - s) * 0.5, v);
+  });
+}
+
+// A ramp as rich as a piece's rarity: a common one worn and dull, the rarer the fuller its colour (0 common to 5 mythical).
+const RICH = [0.55, 0.68, 0.8, 0.9, 1, 1.08];
+export function richer(ramp, rarity) {
+  const q = RICH[Math.max(0, Math.min(5, rarity | 0))];
+  return ramp.map((c) => { const [h, s, v] = hsvOf(c); return fromHsv(h, Math.min(1, s * q), v); });
+}
+
+// px: RGBA bytes, changed in place. pal: { hue (degrees, or null to keep each texel's own), sat, val, metal }.
+export function paintProp(px, pal) {
+  if (!pal || (pal.hue == null && (pal.sat ?? 1) === 1 && (pal.val ?? 1) === 1)) return;
+  const H = pal.hue == null ? null : (((pal.hue % 360) + 360) % 360) / 360, S = pal.sat ?? 1, V = pal.val ?? 1, M = pal.metal ?? 0.08;
+  for (let k = 0; k < px.length; k += 4) {
+    if (px[k + 3] === 0) continue;
+    let [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]);
+    if (H != null) {
+      // (Painted: turned to the palette's hue, the more the more it's coloured. Wood and leather, browns: their own.
+      // Bare steel, grey: only a breath of it.)
+      // (Its painted colour and its steel's tint are made whole and mixed in by how much it is each, as colours, not by
+      // turning its hue part way: a tan wrap half turned to azure would pass through green.)
+      const brown = smooth(0.02, 0.05, h) * (1 - smooth(0.14, 0.17, h)) * smooth(0.06, 0.14, s) * (1 - smooth(0.8, 0.9, v));
+      const w = smooth(0.14, 0.34, s) * smooth(0.08, 0.2, v) * (1 - brown);
+      const steel = (1 - smooth(0.1, 0.18, s)) * smooth(0.25, 0.4, v) * (1 - brown);
+      const painted = fromHsv(H, Math.min(0.65, s * S), Math.min(1, v * V));
+      const tinted = fromHsv(H, Math.min(MAX_SAT, s + M), Math.min(1, v * (1 + (V - 1) * 0.4)));
+      const r0 = px[k], g0 = px[k + 1], b0 = px[k + 2], ws = steel * (1 - w);
+      px[k] = r0 + (painted[0] - r0) * w + (tinted[0] - r0) * ws;
+      px[k + 1] = g0 + (painted[1] - g0) * w + (tinted[1] - g0) * ws;
+      px[k + 2] = b0 + (painted[2] - b0) * w + (tinted[2] - b0) * ws;
+      continue;
+    }
+    s = Math.min(1, s * S); v = Math.min(1, v * V);
+    const c = fromHsv(h, s, v);
+    px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
+  }
+}

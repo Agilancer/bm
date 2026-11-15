@@ -2,6 +2,7 @@
 // (main.js), and it stays with you through a new fight; only New Game starts it over.
 import { WEAPONS } from '../core/layout.js';
 import { settleSkull } from './skins.js';
+import { sizeOfHG } from './partygear.js';
 import { GEMS, MAX_SOCKETS, ROBES, SKULLS, makeRng, robeSize, rollGem, rollRobe, rollShield, rollSkull, rollStarterStaff, rollWeapon } from './items.js';
 
 const freshRng = () => makeRng((Math.random() * 2 ** 32) >>> 0);
@@ -12,7 +13,7 @@ export const SLOTS = ['head', 'neck', 'main', 'chest', 'off', 'shoulders', 'skul
 // A bit of everything and a pouch of gems, to try it all out. The game proper starts with a common staff and shield and nothing else: leave this false.
 const TEST_KIT = false;
 
-export const sizeOf = (item) => (item.type === 'weapon' ? { w: 1, h: 4 } : item.type === 'shield' ? { w: 2, h: 3 } : item.type === 'robe' ? robeSize(item.base) : item.type === 'skull' ? { w: 2, h: 2 } : { w: 1, h: 1 });
+export const sizeOf = (item) => (item.type === 'hgear' ? sizeOfHG(item) : item.type === 'weapon' ? { w: 1, h: 4 } : item.type === 'shield' ? { w: 2, h: 3 } : item.type === 'robe' ? robeSize(item.base) : item.type === 'skull' ? { w: 2, h: 2 } : { w: 1, h: 1 });
 
 const SOCKETED = new Set(['weapon', 'skull', 'shield']);
 // From before Tessariel put away his swords and his plate: neither comes back out of a save.
@@ -80,10 +81,11 @@ export class Pack {
   // won't all fit that way, biggest first; if not even that, it stays as it was. False then.
   sort() {
     const was = this.entries, items = was.map((e) => e.item);
-    const KIND = { weapon: 0, skull: 1, shield: 2, robe: 3, gem: 5 };
+    const KIND = { weapon: 0, skull: 1, shield: 2, robe: 3, hgear: 4, gem: 5 };
     const ROBE_ORDER = ['head', 'shoulders', 'chest', 'legs', 'feet'];
-    const rank = (it) => (KIND[it.type] ?? 4) * 10 + (it.type === 'robe' ? ROBE_ORDER.indexOf(ROBES[it.base]?.slot) : 0);
-    const name = (it) => `${it.base || ''}${it.kind || ''}`;
+    const HG = ['weapon', 'off', 'helm', 'shoulders', 'chest', 'arms', 'legs', 'boots'];
+    const rank = (it) => (KIND[it.type] ?? 4.5) * 10 + (it.type === 'robe' ? ROBE_ORDER.indexOf(ROBES[it.base]?.slot) : it.type === 'hgear' ? HG.indexOf(it.slot) : 0);
+    const name = (it) => `${it.base || it.name || ''}${it.kind || ''}`;
     const byKind = (a, b) => rank(a) - rank(b) || (b.rarity ?? b.grade ?? 0) - (a.rarity ?? a.grade ?? 0) || name(a).localeCompare(name(b));
     const area = (it) => { const { w, h } = sizeOf(it); return w * h * 10 + h; };
     const bySize = (a, b) => area(b) - area(a) || byKind(a, b);

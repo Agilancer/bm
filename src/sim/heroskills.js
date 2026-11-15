@@ -31,6 +31,8 @@ export const HFX = { BLOOD: 1, PLUCK: 2, SPARKS: 3, CHIME: 4, THUD: 5 };
 
 // A hero's rank: one at first, another every five levels, six at most.
 export const rank = (h) => clamp(1 + Math.floor(h.person.level / 5), 1, 6);
+// A move's rank for one of yours: its rank in their book, and one more from level 30 (src/core/partytree.js). Else rank().
+export const moveRank = (h, key) => { const r = h.mods?.moves?.[key]?.rank; return r ? clamp(r + (h.person.level >= 30 ? 1 : 0), 1, 6) : rank(h); };
 // The colour a boomerang knight's rangs burn, by the pair they carry; a dragoon's spear the same.
 const TINT = { fire: FIRE, blue: FROST, verdant: HEAL, lion: LIGHT, spiked: SPIRIT, wooden: STORM, red: FIRE, frost: FROST, icefang: FROST, goldcross: LIGHT, whitegold: LIGHT, crimson: DRAIN, pennon: STORM };
 export const tintOf = (h) => { const id = h.person.kit.main || ''; for (const k in TINT) if (id.startsWith(k)) return TINT[k]; return SPIRIT; };
@@ -519,6 +521,8 @@ export function chooseSkill(h, sim, w, m, d, R, line, _env, posted = false) {
   let best = null, bs = 0.55;
   for (const s of h.skills) {
     if (s.t > 0 || s.song || s.heal || (s.lvl || 1) > lvl) continue;
+    // (One of yours uses what their book has: src/core/partytree.js. The rest, what their level's come by.)
+    if (h.mods?.known && !h.mods.known.has(s.key)) continue;
     const f = FIRST[s.key], q = f ? { ...s, ...f } : s;
     if (q.range && (gap < q.range[0] || gap > q.range[1])) continue;
     if (!line && (q.line || E.LINE_SKILLS.has(q.key))) continue;
@@ -724,7 +728,7 @@ const BARK = { lance_barrage: 'lance_thrust', lance_of_light: 'lance_thrust', ph
 export function castSkill(h, sim, key, m) {
   const fn = CAST[key];
   if (!fn) return false;
-  fn(h, sim, m, { w: sim.heroWorld, c: sim.casting, P: h.power(), rk: rank(h), yaw: dirTo(h, m) });
+  fn(h, sim, m, { w: sim.heroWorld, c: sim.casting, P: h.power(), rk: moveRank(h, key), yaw: dirTo(h, m) });
   sayMove(h, sim, BARK[key] || key, 0.3);
   return true;
 }

@@ -6,6 +6,7 @@ import { skinFilter } from '../items/skins.js';
 import { art } from './skin.js';
 import { GEMS, colorOf, compareLines, linesOf, nameOf, statsOf, wornSlot } from '../items/items.js';
 import { PACK_H, PACK_W, SLOTS, sizeOf } from '../items/pack.js';
+import { hgIcon } from './hgicons.js';
 
 const $ = (id) => document.getElementById(id);
 const SLOT_LABEL = { head: 'Head', neck: 'Neck', main: 'Staff', chest: 'Chest', off: 'Shield', shoulders: 'Shoulders', skull: 'Skull', ring1: 'Ring', legs: 'Legs', feet: 'Feet', ring2: 'Ring' };
@@ -94,6 +95,11 @@ export class Inventory {
 
   iconOf(item) {
     if (item.type === 'gem') return this.gemSvg(item);
+    // (Gear for your party: src/ui/hgicons.js. Drawn again once its own colours are made.)
+    if (item.type === 'hgear') {
+      const h = hgIcon(item, this.base, (this.hgAgain ||= () => { if (this.open) this.render(); }));
+      return this.hgWearable?.(item) === false ? h.replace('style="', 'style="opacity:.4;filter:grayscale(.85);') : h;
+    }
     if (item.type === 'shield' || item.type === 'skull' || item.type === 'robe') {
       const { w, h } = sizeOf(item);
       const dots = (item.gems || []).map((g, i) => `<i style="position:absolute;right:${4 + i * 11}%;bottom:4%;width:12%;aspect-ratio:1;border-radius:50%;background:${GEMS[g.kind].color};box-shadow:0 0 5px ${GEMS[g.kind].color}"></i>`).join('');

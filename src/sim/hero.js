@@ -151,6 +151,7 @@ export class Hero extends Knight {
     this.bodyRadius = 0.42;
     this.propMatrices = new Float32Array(64);
     const P = (id) => (id ? { id, ...props[id] } : null);
+    this.kitProps = props;   // (for gear that changes what's held: setKit)
     this.mainP = P(person.kit.main); this.offP = P(person.kit.off); this.backP = P(person.kit.back);
     this.shieldStyle = this.style === 'lance' || this.style === 'sword_board';
     this.stringElem = STRING_ELEM[person.kit.string] ?? ELEM.LIGHT;
@@ -317,7 +318,7 @@ export class Hero extends Knight {
     // What falls from the roof or burns on the floor no board stops.)
     const guard = unblockable ? 1 : this.hired ? (this.shieldUp > 0.6 && front ? 0.65 : 1) * (this.guardT > 0 ? 0.6 : 1)
       : (this.shieldUp > 0.6 && front ? 0.25 : 1) * (this.guardT > 0 ? 0.4 : 1);
-    let hurt = amount * armor * guard * (this.party && !this.hired ? 0.8 : 1);
+    let hurt = amount * armor * guard * (this.party && !this.hired ? 0.8 : 1) * (1 - (this.mods?.ward || 0));
     // (A ward of light, a paladin's or a bard's, takes what it can first.)
     if (this.ward > 0) { const took = Math.min(this.ward, hurt); this.ward -= took; hurt -= took; if (this.fxOk()) sim.casting.burst(FX.SHOCK, ELEM.LIGHT, this.x, this.y + 1.1, this.z, 0.5, 1.1, 0.25); }
     this.hp -= hurt;
@@ -527,7 +528,7 @@ export class Hero extends Knight {
     // between two of them so the ordinary blows are still most of a fight.
     if (this.gcd <= 0) {
       const pickS = chooseSkill(this, sim, world, m, d, R, line);
-      if (pickS) { pickS.t = pickS.cd * rand(0.9, 1.3); this.gcd = pickS.gcd ?? rand(0.9, 1.7); this.used[pickS.key] = sim.time; this.skill(sim, pickS.key, m); return; }
+      if (pickS) { pickS.t = pickS.cd * rand(0.9, 1.3) * (1 - (this.mods?.tempo || 0)); this.gcd = pickS.gcd ?? rand(0.9, 1.7); this.used[pickS.key] = sim.time; this.skill(sim, pickS.key, m); return; }
       this.gcd = 0.25;
     }
     // What the class does between its blows: a rogue in and out, a ninja round and round (classRoutine). True if it has the body.
@@ -819,6 +820,7 @@ export class Hero extends Knight {
     }
     const w = sim.heroWorld, was = m.hp;
     m.hp -= dmg;
+    if (this.mods?.thirst && !this.dead) this.hp = Math.min(this.maxHp, this.hp + Math.min(dmg, Math.max(0, was)) * this.mods.thirst);
     struck(m, sim, this.x, this.z, poise);
     if (m instanceof Zombie) m.seenHp = m.hp;
     if (!o.dot) m.onHit?.(sim, kind, this.x, this.z, poise, this);
@@ -855,6 +857,8 @@ export class Hero extends Knight {
 
   skill(sim, key, m) {
     const w = sim.heroWorld;
+    // (A move raised in their book hits the harder for it, for as long as it's being made: power() reads it.)
+    this.moveKey = key;
     const say = () => { if (this.r() < 0.35) this.say(sim, 'class_skill', -1, -1, -1, MOVE_KEYS.indexOf(key)); };
     // (Most of them are in src/sim/heroskills.js; the few here are the ones whose look is drawn by HeroWorld.)
     if (castSkill(this, sim, key, m)) return;
@@ -902,7 +906,8 @@ export class Hero extends Knight {
   }
 
   // (Your party keeps pace with you, level for level: src/items/levels.js gives you 7% a level.)
-  power() { return (1 + this.person.level * (this.hired ? 0.065 : 0.035)) * (this.buff?.dmg || 1); }
+  // (And for one of yours, what their book and their gear add: src/core/partytree.js treeMods, src/items/partygear.js.)
+  power() { return (1 + this.person.level * (this.hired ? 0.065 : 0.035)) * (this.buff?.dmg || 1) * (1 + (this.mods?.dmg || 0)) * (this.mods?.moves?.[this.moveKey]?.power || 1); }
 
   // The ninja's finisher: the kick, then seven strokes of gold across a circle round the foe, point to point in a
   // seven-pointed star, and everything inside it reels.
@@ -1181,7 +1186,7 @@ export class Hero extends Knight {
     // (Any move that doesn't take him off the place he was given.)
     if (this.gcd <= 0) {
       const pickS = chooseSkill(this, sim, world, m, d, R, line, null, true);
-      if (pickS) { pickS.t = pickS.cd * rand(0.9, 1.3); this.gcd = pickS.gcd ?? rand(1.1, 2); this.used[pickS.key] = sim.time; this.skill(sim, pickS.key, m); return; }
+      if (pickS) { pickS.t = pickS.cd * rand(0.9, 1.3) * (1 - (this.mods?.tempo || 0)); this.gcd = pickS.gcd ?? rand(1.1, 2); this.used[pickS.key] = sim.time; this.skill(sim, pickS.key, m); return; }
       this.gcd = 0.3;
     }
     if (this.shotCd > 0) return;
@@ -2301,7 +2306,7 @@ export class HeroWorld {
         }
       } else if (z.kind === 'song') {
         z.x = z.owner.x; z.z = z.owner.z;
-        if (z.heal) for (const h of z.members) if (!h.dead) h.hp = Math.min(h.maxHp, h.hp + dt * 6);
+        if (z.heal) for (const h of z.members) if (!h.dead) h.hp = Math.min(h.maxHp, h.hp + dt * 6 * (1 + (z.owner?.mods?.grace || 0)));
       }
     }
     this.zones = this.zones.filter((z) => { const keep = z.t < z.life && !z.owner.dead && !z.done; if (!keep) z.end?.(z); return keep; });
@@ -3145,7 +3150,8 @@ export class HeroWorld {
     if (!h || !h.hired) return;
     if (h.dead) this.revive(h, 1);
     this.endBit(h); h.own = null;
-    h.hired = false; h.role = null; h.post = null;
+    h.hired = false; h.role = null; h.post = null; h.mods = null;
+    this.setKit(h, null);
     this.company.members.delete(h);
     h.baseLevel = Math.min(h.baseLevel ?? h.person.level, h.person.level);
     h.party = null; h.task = null; h.foe = null;
@@ -3164,8 +3170,28 @@ export class HeroWorld {
     for (const h of this.heroes) {
       if (h.hired || h.broker) continue;
       h.baseLevel ??= h.person.level;
-      const want = Math.max(h.baseLevel, Math.min(50, level + ((h.slot * 5) % 7) - 3));
+      const want = Math.max(h.baseLevel, Math.min(200, level + ((h.slot * 5) % 7) - 3));
       if (want !== h.person.level) { const up = want > h.person.level; this.setLevel(h, want); if (up && h.active && !h.dead && Math.random() < 0.25) h.say(this.sim, 'level_up'); }
+    }
+  }
+
+  // What their book (src/core/partytree.js treeMods) and their gear (src/items/partygear.js) add, for one of yours:
+  // { dmg, hp, ward, tempo, grace, thirst, moves: { key: { rank, power } }, known: [keys] }. Null: none (let go).
+  setMods(h, mods) {
+    h.mods = mods ? { ...mods, known: mods.known ? new Set(mods.known) : null } : null;
+    this.setKit(h, mods?.kit || null);
+    this.setLevel(h, h.person.level);
+  }
+
+  // What a hero holds: their own kit, or what their gear puts in its place (src/ui/party.js kitFor). Only a weapon or
+  // shield of the same kind takes another's place, so the hands and the board ride as they did.
+  setKit(h, kit) {
+    const P = (id) => (id && h.kitProps?.[id] ? { id, ...h.kitProps[id] } : null);
+    const own = h.person.kit, k = kit || own;
+    const same = (a, b) => (a && b ? a.kind === b.kind : !a && !b);
+    for (const [key, field] of [['main', 'mainP'], ['off', 'offP'], ['back', 'backP']]) {
+      const want = P(k[key]) || P(own[key]);
+      if (same(want, P(own[key]))) h[field] = want;
     }
   }
 
@@ -3173,7 +3199,7 @@ export class HeroWorld {
   setLevel(h, level) {
     h.person.level = Math.max(1, Math.round(level));
     const was = h.maxHp || 1;
-    h.maxHp = Math.round(h.cls.hp * (1 + 0.05 * (h.person.level - 1)));
+    h.maxHp = Math.round(h.cls.hp * (1 + 0.05 * (h.person.level - 1)) * (1 + (h.mods?.hp || 0)));
     h.opts.hp = h.maxHp;
     h.hp = Math.min(h.maxHp, h.hp * h.maxHp / was);
     this.sim.event(EV.HERO_LEVEL, h.slot, h.person.level);
@@ -3385,7 +3411,7 @@ export class HeroWorld {
     h.yaw = h.faceYaw = Math.atan2(who.x - h.x, who.z - h.z);
     h.startSwing('Spell_Simple_Shoot', big ? 1.0 : 1.5, [0.45], () => {
       if (who.dead) return;
-      const amt = (big ? 0.38 : 0.15) * who.maxHp + (big ? 14 : 7) * lvl;
+      const amt = ((big ? 0.38 : 0.15) * who.maxHp + (big ? 14 : 7) * lvl) * (1 + (h.mods?.grace || 0));
       who.hp = Math.min(who.maxHp, who.hp + amt);
       sim.casting.burst(FX.COLUMN, ELEM.LIGHT, who.x, who.y, who.z, 0.6, 1.1, big ? 1.1 : 0.7, { light: big ? 14 : 8, lightR: 6, len: 3 });
       sim.casting.burst(FX.RING, ELEM.LIGHT, who.x, who.y + 0.05, who.z, 0.3, 1.3, 0.6);

@@ -751,6 +751,8 @@ async function boot(msg) {
     if (m.type === 'hire') { const ok = sim.heroWorld?.hire(m.slot, m) || false; self.postMessage({ type: 'hired', slot: m.slot, ok, id: m.id }); }
     if (m.type === 'dismiss') sim.heroWorld?.dismiss(m.slot);
     if (m.type === 'hireLevel') { const h = sim.heroes[m.slot]; if (h?.hired) sim.heroWorld.setLevel(h, m.level); }
+    // What their book and their gear add, for one of yours (src/ui/party.js modsFor): kept on them till they're let go.
+    if (m.type === 'heroMods') { const h = sim.heroes[m.slot]; if (h) sim.heroWorld?.setMods(h, m.mods); }
     // (Your own level: the other Tessariels out in the world keep pace with it.)
     if (m.type === 'playerLevel') sim.heroWorld?.keepPace(m.level);
     if (m.type === 'warrensDebug') sim.warrens?.debug?.(m);
