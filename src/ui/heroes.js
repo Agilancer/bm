@@ -761,12 +761,13 @@ export class HeroTalk {
     const near = h.dist < EARSHOT && h.shown;
     if (channel === 'say' || channel === 'party') {
       if (!h.shown) return;
+      if (this.deep) { if (near) this.logLine(channel, h.p.name, text); return; }
       h.bub.textContent = text;
       h.bub.className = 'bub' + (channel === 'party' ? ' party' : '');
       h.bubW = h.bub.offsetWidth; h.bubH = h.bub.offsetHeight;   // (Measured once per line, for the stacking in update.)
       h.bubbleT = Math.min(8, 2.4 + text.length * 0.055);
       if (near) this.logLine(channel, h.p.name, text);
-    } else this.logLine(channel, h.p.name, text);
+    } else if (!this.deep) this.logLine(channel, h.p.name, text);   // (Trade and Shout: not down a delve.)
     if (emote) this.emote(h, emote);
     if (anim) this.act(h, anim);
   }

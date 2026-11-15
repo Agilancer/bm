@@ -26,17 +26,23 @@ were its teeth.
 ## The way through
 
 1. **Threshold** (portal in, the broker, the first view of the whole chain and the Maw below).
-2. **The Whelp Bridge**: a long stone span; dragonling packs come up over its sides.
+2. **The Whelp Bridge**: a long stone span. Its dragonlings wait out of sight under the Span's two sides, and come up
+   over its edges when you reach its middle (src/sim/voidland.js spanWhelps).
 3. **The Shard Garden**: an islet of purple crystal; two dragonling packs and a drake (a green dragon a third of a god's
    size) that fights from the air and the ground.
 4. **The Scale Altar**: the hub. Four bridges, one to each god's island, sealed but the first; a seal breaks with each
-   god. A drake guards each bridge's far end (green, red, undead, black in turn).
+   god. The altar's four scales are lit in their gods' colours, and each goes out when its god dies. A drake guards
+   each bridge's far end (green, red, undead, black in turn), and each has a small piece of its god's fight: the green
+   one beats its wings and drives you toward the edge, the red one sends out a lava wave to jump, the undead one's grasp
+   drags you to the edge unless you hold to the rime crystal there, and the black one pulls you toward the Maw unless
+   you stand in its well of light. As you come onto a god's stair it says its first words.
 
 ## Falling
 
 The void doesn't kill. Fall off an island and the Rift throws you back up onto the nearest safe ground with a heavy
 hit (a fifth of your health) and three seconds of void-sickness (slowed). Allies too. The only exceptions: a fight's
-last phase on the hardest setting (not in the first build), and Nihvaroth's soft enrage. A fight may say where its falls
+last phase on the hardest setting (not in the first build), and Nihvaroth's last Devour (below 8%), where a fall is
+into the Maw and kills. A fight may say where its falls
 land instead: the Galeward's islets, the shelf Morvekh's beside, the Maw's hand you're on.
 
 ## 1. Thyrraxis, the Gale Eternal (green)
@@ -79,16 +85,19 @@ in three rings, 8.5-10 m between their middles. 104,000 life.
 a third, tail spin.
 - *Claw Smash* (Ragnaros's Sulfuras Smash): claw_slam, a blow in front of her, and three lava waves rolling out from it
   in a fan, each to be jumped.
-- *Wildfire* (Fyrakk): a front of fire from the vent to the rim, walking round the ring for 15 s at 0.11 rad/s (4.6 m/s
-  at the rim, 1.6 by the vent: slower than a walk). Keep ahead of it.
+- *Wildfire* (Fyrakk): a front of fire from the vent to the rim, walking round the ring for 15 s at 0.14 rad/s (5.6 m/s
+  at the rim, 2 by the vent: keep inside of it, or get behind it).
 - *Living Meteor* (Ragnaros): spat at whoever's furthest, it rolls after them at 4.6 m/s and gets faster; it bursts on
   reaching them, or after 15 s where it is. Lead it round the ring, away from the others.
 - *Flamefall*: she lifts, glides the length of the ring through the vent's middle and lands, a strip of fire where
   she went, for 4 s.
 
-**Molten Flood (66% and 33%)** (Nefarian, Smolderon). She hovers over the vent and the caldera floods: everything but the
-pillar tops burns for 11 s. Up onto a pillar, one to a pillar; her breath comes down on a pillar every 4 s. Then the lava
-falls, rings of fire roll out from the vent (three, then four) to be jumped, and she lands. After the second flood she
+**Molten Flood (66%, 33% and 10%)** (Nefarian, Smolderon). She hovers over the vent and the caldera floods: everything but the
+pillar tops burns for 11 s (drawn as a dark crust with fire in its cracks). Up onto a pillar, one to a pillar; her
+breath comes down on a pillar every 4.6 s (two pillars at once from the second flood), and each pillar breathed on
+melts, and its two nearest neighbours with it: once the flood ebbs their tops are molten for the rest of the fight,
+so each flood has far fewer to stand on (seven are always left). Then the lava
+falls, rings of fire roll out from the vent (three, then four) to be jumped, and she lands. After the second and third floods she
 crash-lands (crash_land): sprawled for 7 s, everything hits her twice as hard.
 
 **Apocalypse Roar (40% and 15%)** (Fyrakk). Four ember flowers open about the ring; 11 s later she roars, and whoever
@@ -117,8 +126,9 @@ perch, only what needs no claws:
 Breath*: a 9 m white line across the whole summit.
 
 **Absolute Zero (25%)** (Madness of Deathwing). He lifts off and hangs from the spire; the mist takes the summit too. A
-grip in each of the three claw islets: stand in it 4 s to break it (each break takes 3% of his life). He shrugs off
-nearly everything meanwhile. All three broken inside 45 s: he crashes onto the summit (crash_land), 9 s at double
+grip in each of the three claw islets: two of you in it break it in 4 s, one alone in 7 (each break takes 3% of his
+life). A rime whelp is on each claw, his frost bombs go on (two of you at a time), and ice comes down off the spire
+beside every grip that's held. He shrugs off nearly everything meanwhile. All three broken inside 32 s: he crashes onto the summit (crash_land), 9 s at double
 damage, then the end. Any left: a blow on everyone for 3.4-5.4 of his, and he comes down anyway, at full strength.
 
 A fall comes down on the shelf he's beside, or the summit. Enrage at 10 minutes.
@@ -126,7 +136,8 @@ A fall comes down on the shelf he's beside, or the summit. Enrage at 10 minutes.
 ## 4. Nihvaroth, the Hollow Star (black)
 
 The Lip of the Maw: the biggest island, 92 m across, on the black hole's rim; eight stars go round over it 30 m from its
-middle; an accretion ring of debris round its edge; its two hands, islets out over the Maw. 150,000 life.
+middle (their sockets show dimly on the ground at all times); an accretion belt of rock going round outside its edge;
+violet cracks across its flags running north to the Maw; its two hands, islets out over the Maw. 126,000 life.
 
 **Phase 1 (100-60%).** Deck: Devour, Reverse Gravity, void spheres, breath, claw rake, tail.
 - *Devour* (Dimensius): it inhales for 1.6 s and then for 7 s everything is pulled north toward the Maw at 3.1 m/s, and
@@ -141,13 +152,18 @@ middle; an accretion ring of debris round its edge; its two hands, islets out ov
 reach, and the party is thrown onto its left hand. An echo of Thyrraxis stands there, shielded (8% of what it's hit
 with) but for 11 s after someone stands on the hand's star core (one every 16 s). From 24 s on the hand, *Devouring
 Cosmos* eats in across it from its outer side. The echo down or 46 s gone: the hand closes and you're flung to the right
-hand, the echo of Kaldurra, and the same again. Then back to the Lip; if both echoes were broken in time, it's
-destabilized: 10 s stunned, at 180% damage taken.
+hand, the echo of Kaldurra, and the same again. Each echo fights as its god did: Thyrraxis's blows a gale out from
+itself while each star core is up (the core's ring is the one place that holds) and sends out rings of wind to jump;
+Kaldurra's does her Claw Smash with its three lava waves and looses a living meteor. Nihvaroth breathes a strip down
+the hand every 12 s. Then back to the Lip, where a third echo, Morvekh's, comes up and drops frost on two of you every
+9 s till it's killed; if both echoes were broken in time, Nihvaroth is destabilized: 10 s stunned, at 180% damage taken.
 
 **Phase 3 (below 30%).** The accretion ring closes in from the edge (to 21 m from the middle, 0.16 m a second), burning,
-and the stars are drawn in ahead of it (their wells never in its fire); every 26 s a supernova puts out a star, eight
-down to three, and wells with them; Devour comes round more often. At 8%, a Devour that doesn't end: kill it before it
-has you.
+and the stars are drawn in ahead of it (their wells never in its fire); every 26 s, never during a Devour, a supernova
+puts out a star, eight down to three; each well stays under its own star. Devour comes round more often. At 8%, the last
+Devour: it doesn't end, its wells close from 3.4 m to nothing over 55 s, a star goes out every 6 s (it gutters red for 2 s first), he takes
+half again as much from every blow, his breath and claws go on, and a fall is into the Maw. Kill him before the wells are gone. When he dies the Maw drags him back across the
+Lip and over its north edge. (Thyrraxis, dying, staggers back off his disc.)
 
 A fall comes down on the hand you're on, during the Swallow; else on the Lip's south half. Enrage at 11 minutes.
 

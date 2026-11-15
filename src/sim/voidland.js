@@ -334,27 +334,37 @@ export function voidDraw(W) {
     for (const [a, b, back] of [[l.from, l.to, false], [l.to, l.from, true]]) {
       if (back && l.one) continue;
       const x = d.x + a[0], z = d.z + a[1];
-      if (!near(x, z, 110)) continue;
+      if (!near(x, z, 160)) continue;
       const y = caveFloorY(x, z);
       if (f?.spec?.gust && !f.spec.gust(W, f, l, back)) { c.fx(FX.RUNE, ELEM.FIRE, x, y + 0.05, z, 1.25, 0, 1, 0, 0, 0.32, 0, 0, 0.9, n); continue; }
-      c.fx(FX.COLUMN, ELEM.STORM, x, y - 0.2, z, 7, 0, 1, 0, 0.85, 0.45, 0, 0, 0, n + (back ? 0.5 : 0));
+      c.fx(FX.COLUMN, ELEM.SPIRIT, x, y - 0.2, z, 12, 0, 1, 0, 1.1, 0.95, 0, 0, 0, n + (back ? 0.5 : 0));
+      c.fx(FX.RUNE, ELEM.SPIRIT, x, y + 0.05, z, 1.5, 0, 1, 0, 0, 0.8, 0, 0, 0.9, n);
       const tx = d.x + b[0], tz = d.z + b[1], L = Math.hypot(tx - x, tz - z) || 1, ux = (tx - x) / L, uz = (tz - z) / L;
       // (Its point walking out from the stone's rim along the way it throws, over and over.)
       const k = (T * 0.8 + n * 0.37) % 1, at = 1.5 + k * 1.2, px = x + ux * at, pz = z + uz * at, al = 0.85 * Math.sin(k * Math.PI);
       for (const s of [-1, 1]) {
         const ca = Math.cos(2.45 * s), sa = Math.sin(2.45 * s), dx = ux * ca - uz * sa, dz = ux * sa + uz * ca;
-        c.fx(FX.MARK, ELEM.STORM, px, caveFloorY(px, pz) + 0.06, pz, 1, dx, 0.14, dz, 0.8, al, 0, 0, 1.5, n, 3);
+        c.fx(FX.MARK, ELEM.SPIRIT, px, caveFloorY(px, pz) + 0.06, pz, 1, dx, 0.14, dz, 0.8, al, 0, 0, 1.5, n, 3);
       }
     }
   });
+  // A beacon over each god's island in its colour, seen from the Threshold; out when that god is dead.
+  for (const [k, [god, e]] of Object.entries(SCALE_GOD)) {
+    const b = BOSSES.find((q) => q.key === god && q.delve === d.key), room = b && roomOf(b.room);
+    if (!room || W.down.has(god)) continue;
+    const x = d.x + room.x, z = d.z + room.z, y = d.y + (room.y || 0), fl = 0.85 + 0.15 * Math.sin(T * 1.3 + x);
+    c.fx(FX.COLUMN, e, x, y + 30, z, 150, 0, 1, 0, 5, 0.9 * fl, 0, 0, 0, x * 0.01);
+    c.fx(FX.ORB, e, x, y + 62, z, 7, 0, 1, 0, 0, 0.8 * fl, 0, 0, 0, z * 0.01);
+    void k;
+  }
   for (const q of d.props) {
     if (q.kind !== 'scalestone' || !q.god) continue;
     const x = d.x + q.x, z = d.z + q.z, [god, e] = SCALE_GOD[q.god];
     if (W.down.has(god) || !near(x, z, 150)) continue;
     const y = caveFloorY(x, z), fl = 0.85 + 0.15 * Math.sin(T * 1.9 + q.x);
-    c.fx(FX.ORB, e, x, y + q.h * 1.22, z, 0.6, 0, 1, 0, 0, 0.95 * fl, 0, 0, 0, q.x);
-    c.fx(FX.COLUMN, e, x, y - 0.1, z, q.h * 1.15, 0, 1, 0, 0.7, 0.3 * fl, 0, 0, 0, q.z);
-    c.fx(FX.RUNE, e, x, y + 0.05, z, 2, 0, 1, 0, 0, 0.6, 0, 0, 0.9, q.x + q.z);
+    c.fx(FX.ORB, e, x, y + q.h * 1.22, z, 1.1, 0, 1, 0, 0, 0.95 * fl, 0, 0, 0, q.x);
+    c.fx(FX.COLUMN, e, x, y - 0.1, z, q.h * 2.2, 0, 1, 0, 1, 0.6 * fl, 0, 0, 0, q.z);
+    c.fx(FX.RUNE, e, x, y + 0.05, z, 3.6, 0, 1, 0, 0, 0.8, 5, 7, 0.9, q.x + q.z);
   }
   const lip = roomOf('ed_maw');
   if (lip && near(d.x + lip.x, d.z + lip.z, 130)) {

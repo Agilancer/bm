@@ -186,7 +186,7 @@ export class Perils {
       }
       if (alpha <= 0 || m.hide) continue;
       // (dim: a mark that covers a whole floor once it's live, drawn faint so what's on it still shows: a fight draws the rest.)
-      if (live && m.dim) { alpha *= m.dim; light *= m.dim; }
+      if (m.dim) { const k = live ? m.dim : Math.max(0.4, m.dim); alpha *= k; light *= live ? m.dim * 0.3 : k; }
       const k = SHAPE[m.shape] ?? 0;
       const A = k === 1 ? (m.r0 || 0) / R : k === 2 ? m.half : k >= 3 ? m.w / R : 0, B = k >= 3 ? m.r / R : 0;
       c.fx(FX.MARK, m.elem, m.x, m.y + 0.06, m.z, R, Math.sin(m.yaw), A, Math.cos(m.yaw), B, alpha, light, R * 1.4, fill, m.seed, k === 4 ? 4 + (m.arms || 4) / 100 : k);

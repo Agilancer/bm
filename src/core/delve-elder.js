@@ -39,10 +39,10 @@ export const MAW_DIR = (() => { const v = [0.12, -0.34, -1], L = Math.hypot(...v
 // an ember underlight, the Rimespire ice blue, the Lip near-black, its violet drained.
 export const ELDER_AT = { x: 6400, z: 6500 };
 export const VOID_TINTS = [
-  { x: GALE.x, z: GALE.z + 6, r: 52, key: [0.62, 1.02, 1.12], amb: [0.6, 1.05, 1.1] },
+  { x: GALE.x, z: GALE.z + 6, r: 52, key: [0.42, 1.12, 1.22], amb: [0.42, 1.15, 1.2] },
   { x: CINDER.x, z: CINDER.z, r: 44, key: [1.75, 0.82, 0.42], amb: [1.6, 0.7, 0.36] },
-  { x: RIME.x + 6, z: RIME.z - 4, r: 42, key: [0.72, 0.98, 1.5], amb: [0.7, 1.0, 1.5] },
-  { x: MAW.x, z: MAW.z, r: 50, key: [0.78, 0.6, 0.86], amb: [0.42, 0.36, 0.52] },
+  { x: RIME.x + 6, z: RIME.z - 4, r: 42, key: [0.45, 0.9, 1.95], amb: [0.42, 0.92, 1.9] },
+  { x: MAW.x, z: MAW.z, r: 50, key: [0.34, 0.27, 0.44], amb: [0.24, 0.2, 0.32] },
 ].map((t) => ({ ...t, x: ELDER_AT.x + t.x, z: ELDER_AT.z + t.z }));
 
 // The Galeward's four pylons, at its quarters (what the gale can't reach behind: their lee).
@@ -218,10 +218,10 @@ const packs = [
 const bosses = [
   // (arena: how far from its room's middle the fight goes on, its islets with it. pull: how near you come before it wakes.
   // Morvekh is met perched on the ramp's first shelf: the fight's a climb from there to the summit.)
-  { key: 'thyrraxis', room: 'ed_galeward', name: 'Thyrraxis, the Gale Eternal', models: ['ed_thyrraxis'], pal: ['Base'], hp: 122000, damage: 330, reach: 11, loot: 8, at: [0, -6], arena: 95 },
-  { key: 'kaldurra', room: 'ed_cinderwell', name: 'Kaldurra, the Hearth of the World', models: ['ed_kaldurra'], pal: ['Base'], hp: 120000, damage: 335, reach: 11.5, loot: 8, needs: ['thyrraxis'], shut: 'kal_shut', at: [12, 0], arena: 52 },
-  { key: 'morvekh', room: 'ed_rime1', name: 'Morvekh, Who Remembers the Cold', models: ['ed_morvekh'], pal: ['Base'], hp: 112000, damage: 330, reach: 11, loot: 8, needs: ['kaldurra'], shut: 'mor_shut', at: [0, 0], arena: 72, pull: 24 },
-  { key: 'nihvaroth', room: 'ed_maw', name: 'Nihvaroth, the Hollow Star', models: ['ed_nihvaroth'], pal: ['Base'], hp: 150000, damage: 350, reach: 13.5, loot: 0, needs: ['morvekh'], shut: 'nih_shut', at: [0, -14], arena: 84 },
+  { key: 'thyrraxis', room: 'ed_galeward', name: 'Thyrraxis, the Gale Eternal', models: ['ed_thyrraxis'], pal: ['Base'], hp: 185000, damage: 385, reach: 11, loot: 8, at: [0, -6], arena: 95 },
+  { key: 'kaldurra', room: 'ed_cinderwell', name: 'Kaldurra, the Hearth of the World', models: ['ed_kaldurra'], pal: ['Base'], hp: 145000, damage: 350, reach: 11.5, loot: 8, needs: ['thyrraxis'], shut: 'kal_shut', at: [12, 0], arena: 52 },
+  { key: 'morvekh', room: 'ed_rime1', name: 'Morvekh, Who Remembers the Cold', models: ['ed_morvekh'], pal: ['Base'], hp: 150000, damage: 380, reach: 11, loot: 8, needs: ['kaldurra'], shut: 'mor_shut', at: [0, 0], arena: 72, pull: 24 },
+  { key: 'nihvaroth', room: 'ed_maw', name: 'Nihvaroth, the Hollow Star', models: ['ed_nihvaroth'], pal: ['Base'], hp: 126000, damage: 340, reach: 13.5, loot: 0, needs: ['morvekh'], shut: 'nih_shut', at: [0, -14], arena: 84 },
 ];
 // What the fights call out (src/sim/elder-fights.js). A god's own words are its lines, said as subtitles: LINES below.
 const warnings = {
@@ -278,6 +278,7 @@ const warnings = {
   mor_grip: 'A claw lets go!',
   mor_fall: 'His last grip breaks: Morvekh falls onto the summit. Burn him.',
   mor_zero_fail: 'Too slow: the cold takes everyone. Morvekh comes down onto the summit whole.',
+  nih_star: 'A star gutters: its well goes with it in two seconds. Move to another.',
   mor_shards: 'Ice comes down off the spire beside the grips! Step round the ring.',
   kal_sink: 'Her breath melts a pillar: its top is molten for the rest of the fight. One fewer to stand on.',
   nih_echo_gale: 'The Echo of Thyrraxis beats its wings! Onto the star core, or be blown off the hand.',
