@@ -24,6 +24,7 @@ const ctx = await chromium.launchPersistentContext(profile, {
 });
 const page = ctx.pages()[0] || await ctx.newPage();
 page.on('pageerror', (e) => console.log('PAGE ERROR', String(e)));
+page.on('response', (r) => { if (r.status() >= 400) console.log('HTTP', r.status(), r.url()); });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log(m.type(), m.text().slice(0, 300)); });
 await page.goto(`http://localhost:${port}/?auto&noopening${extra}`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.bm && bm.snap && bm.snap(), null, { timeout: 240000, polling: 1000 });

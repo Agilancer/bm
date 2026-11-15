@@ -14,6 +14,7 @@ import { roomAt } from './places.js';
 import { DELVES, inDungeon } from '../core/dungeon.js';
 import { art } from './skin.js';
 import { ABIL, H, INPUT } from '../core/layout.js';
+import { MAX_LEVEL } from '../items/levels.js';
 
 const PASSWORD = '6669';
 // The countries thick with trees, where the woods' own sounds are heard.
@@ -230,9 +231,9 @@ export class Lands {
     M.append(el('h3', null, 'Level'));
     const lv = el('div', 'lvl');
     const dn = el('button', null, '&minus;'), up = el('button', null, '+');
-    dn.disabled = P.level <= 1; up.disabled = P.level >= 50;
+    dn.disabled = P.level <= 1; up.disabled = P.level >= MAX_LEVEL;
     dn.onclick = () => this.act(this.o.level(-1)); up.onclick = () => this.act(this.o.level(1));
-    lv.append(dn, el('div', null, `<b>Level ${P.level}</b> <span style="color:#a89878">of 50</span>`), up);
+    lv.append(dn, el('div', null, `<b>Level ${P.level}</b> <span style="color:#a89878">of ${MAX_LEVEL}</span>`), up);
     M.append(lv);
     const note = el('div', 'note'); note.textContent = this.note;
     const foot = el('div', 'foot'); const done = el('button', null, 'Close'); done.onclick = () => this.close(); foot.append(done);

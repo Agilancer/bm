@@ -49,6 +49,25 @@ const store = {
 const SETTINGS_KEY = 'velscour.settings';
 // keep: whether the game's files are kept on this device (coi-sw.js), asked once before the title ('ask' until then).
 export const settings = { volume: 0.8, music: 0.7, ambience: 0.8, look: 1, res: 'auto', gfx: 'auto', perf: 'off', tags: 'full', bubbles: 'on', chatlog: 'on', heroes: 'auto', keep: 'ask', autohide: 'off', autohideMap: 'on', autohideChat: 'on', autocam: 'director', autoread: 'on', autohaste: 'on', autotell: 'on' };
+// What auto-play sees to by itself (src/ui/autobrain.js allow()): each 'on' or 'off'. Off, it's left for you to do.
+// [key, what it is, on, off]
+export const AI_PARTS = [
+  ['aiGear', 'Your gear', 'Puts on the best it finds', 'Left to you'],
+  ['aiGems', 'Your gems', 'Set in open sockets', 'Left to you'],
+  ['aiSkills', 'Your skill points', 'Spent by its build', 'Left to you'],
+  ['aiBar', 'Your spell bar', 'Set from what it knows', 'Left as you set it'],
+  ['aiPartyGear', "Your party's gear", 'Puts their best on them', 'Left to you'],
+  ['aiPartySkills', "Your party's skill points", 'Spent for each by their class', 'Left to you and them'],
+  ['aiHire', 'Hiring a party', 'Hires one when it needs one', 'Only the party you hired'],
+  ['aiLoot', 'Gear on the ground', 'Taken up', 'Only coin, orbs and stuff'],
+  ['aiChests', 'Chests', 'Opened as it passes', 'Left shut'],
+  ['aiSell', 'Selling and buying', 'Sells what it won\'t wear, buys mending', 'Left to you'],
+  ['aiSleep', 'Nights at the inn', 'Sleeps when a quest waits on morning', 'Never'],
+  ['aiWild', 'Raids, tears and bounties', 'Answered when it can', 'Left alone'],
+  ['aiSurf', 'Shield riding in a fight', 'Rides away or across them', 'Keeps its feet'],
+  ['aiTeleport', 'Getting to a dungeon', 'By the skull\'s teleport', 'Walks there'],
+];
+for (const [k] of AI_PARTS) settings[k] = 'on';
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }
 export const saveSettings = () => store.set(SETTINGS_KEY, JSON.stringify(settings));
 
@@ -79,6 +98,9 @@ const SETTINGS = `
     <label><span>Interface in auto-play</span><select data-k="autohide"><option value="off">Always shown</option><option value="on">Hidden until you tap</option></select></label>
     <label><span>Map in auto-play</span><select data-k="autohideMap"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>
     <label><span>Chat in auto-play</span><select data-k="autohideChat"><option value="on">Stays on screen</option><option value="off">Hidden with the rest</option></select></label>
+    <div class="t-sub">What auto-play sees to by itself</div>
+    ${AI_PARTS.map(([k, name, on, off]) => `<label><span>${name}</span><select data-k="${k}"><option value="on">${on}</option><option value="off">${off}</option></select></label>`).join('')}
+    <div class="t-sub">Everything else</div>
     <label><span>Other Tessariels</span><select data-k="heroes"><option value="auto">As many as the graphics allow</option><option value="few">A few</option><option value="off">None</option></select></label>
     <label><span>Frame rate readout</span><select data-k="perf"><option value="off">Off</option><option value="on">On</option></select></label>
     <label><span>Game files</span><select data-k="keep"><option value="yes">Kept on this device</option><option value="no">Downloaded each time</option><option value="ask" hidden>Not asked yet</option></select></label>

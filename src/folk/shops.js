@@ -6,6 +6,7 @@
 // what's brought up from the dead (items.js MATS), and only once their own quest has shown them the stuff is good.
 import { MATS, RARITIES, ROBES, makeRng, rollGem, rollRobe, rollShield, rollSkull, rollWeapon } from '../items/items.js';
 import { SPELLS } from '../sim/spells.js';
+import { hgWorth } from '../items/partygear.js';
 
 // What a thing's worth, in gold, by its rarity, before its sockets and gems.
 const WORTH = [24, 60, 150, 400, 950, 2500];
@@ -14,6 +15,7 @@ const ROBE_PART = { head: 0.7, chest: 1.2, shoulders: 0.7, legs: 0.9, feet: 0.7 
 export const SCROLL_PRICE = 120;
 
 export function worth(item) {
+  if (item.type === 'hgear') return hgWorth(item);   // (gear for your party: src/items/partygear.js)
   if (item.type === 'gem') return GEM_WORTH[item.grade] || 15;
   if (item.type === 'spell') return SCROLL_PRICE;
   let g = WORTH[item.rarity] || 24;

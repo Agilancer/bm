@@ -225,20 +225,23 @@ export const GRINDS = {
 export const MODES = {
   quests: { name: 'Complete Quests', line: 'Every quest the town has, in an order that suits its level: taken, worked through and handed in.' },
   grind: { name: 'Grind monsters for XP', line: 'No quests: only levels, wherever you send it.' },
-  dungeons: { name: 'Dungeon Runs', line: 'Through every dungeon you have finished, one after another, until you stop it.' },
+  dungeons: { name: 'Dungeon Runs', line: 'Through every dungeon whose portal you have found, easiest first, one after another and round again, until you stop it.' },
 };
 
-// The dungeons it runs, and when one counts as finished: the catacombs once the Sexton's eight are at rest, the Bell Crypt once
-// its warden's down, the Warrens once Venomaw has died (src/ui/party.js clears, kept in the save). A run of the catacombs or
-// the crypt is every spot in them walked and what's there put down; a run of the Warrens is the way through to Venomaw and out.
-export const DUNGEONS = [
-  { key: 'catacombs', name: 'The catacombs', quest: 'dead_cant_wait' },
-  { key: 'bellcrypt', name: 'The Bell Crypt', quest: 'toll_of_bell' },
-  ...DELVES.map((d) => ({ key: d.key, name: d.name, delve: true, cleared: (game) => (game.party?.clearsBy?.[d.key] || 0) > 0 })),
-];
-export const finishedDungeons = (townUI, game) => DUNGEONS.filter((d) => (d.quest ? townUI.quests.done(d.quest) : d.cleared(game)));
+// The dungeons it runs: the party dungeons, each behind a portal out in the land (src/core/dungeon.js DELVES), easiest first,
+// and only those whose portal the player has found: seen on the map (its fog cleared there, src/ui/map.js isSeen), or been
+// through already (src/ui/party.js clears, kept in the save). The catacombs and the Bell Crypt aren't among them: they're
+// under the cathedral, with no portal, and a run of them was a wander round spots it often couldn't reach. A run is the
+// way through to the delve's last boss and out by its far portal; then the next, and after the last, the first again.
+export const DUNGEONS = DELVES.map((d, i) => ({ key: d.key, name: d.name, delve: true, i, level: d.level, portal: d.portal }))
+  .sort((a, b) => a.level - b.level || a.i - b.i);
+const portalFound = (game, d) => {
+  if ((game.party?.clearsBy?.[d.key] || 0) > 0) return true;
+  const M = game.worldMap, p = d.portal;
+  return !!M?.isSeen && [[0, 0], [6, 0], [-6, 0], [0, 6], [0, -6]].some(([dx, dz]) => M.isSeen(p.x + dx, p.z + dz));
+};
+export const finishedDungeons = (townUI, game) => DUNGEONS.filter((d) => portalFound(game, d));
 const lower = (s) => s[0].toLowerCase() + s.slice(1);
-const RUN_TIME = 900, SPOT_TIME = 90;   // (seconds: a run of spots at most, one spot at most, before it's left)
 
 const SLOT_OF = (it) => (it.type === 'weapon' ? 'main' : it.type === 'shield' ? 'off' : it.type === 'skull' ? 'skull' : it.type === 'robe' ? ROBES[it.base]?.slot : null);
 // What a set of gear is worth to a wizard: spell power first.
@@ -427,8 +430,8 @@ export function coverage(foeNames = null) {
   for (const k of [...CORE_ALL, ...SLOT_A, ...SLOT_B]) if (!(k in SP)) out.push(`spell ${k}: on its bar's lists, and gone from SPELLS`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
   out.push(...warrensCoverage());
-  // (Every place below ground a quest sends it into is a dungeon it can run again: DUNGEONS.)
-  for (const [id, r] of Object.entries(RULES)) for (const st of r.steps) if ((st.enter === 'catacombs' || st.enter === 'bellcrypt') && !DUNGEONS.some((d) => d.key === st.enter)) out.push(`quest ${id}: ${st.enter} isn't in DUNGEONS, so Dungeon Runs never go back there`);
+  // (Every party dungeon is one Dungeon Runs can go round, once its portal's found: DUNGEONS.)
+  for (const d of DELVES) if (!DUNGEONS.some((q) => q.key === d.key)) out.push(`dungeon ${d.key}: not in DUNGEONS, so Dungeon Runs never go down it`);
   for (const st of STATIONS) if (!(st.key in HALL_COUNTERS)) out.push(`Test Dungeon counter ${st.key}: nothing in HALL_COUNTERS says what auto-play does with it`);
   if (foeNames) foeNames.slice(0, TRIPO_KIND).forEach((n, k) => { if (n && !KNOWN_KINDS.has(k)) out.push(`foe kind ${k} (${n}): no rule in fightable(), so it's judged by its life alone`); });
   return out;
@@ -946,7 +949,14 @@ export class Brain {
     if (!this.fighting && this.auto.block) { this.auto.block = false; this.guardT = 0; }
     this.letPassFor(dt, m);
     this.motor(dt, m);
-    if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); this.learn(); this.bar(); }
+    // (Each as Settings allows: What auto-play sees to by itself, src/title.js AI_PARTS.)
+    if ((this.gearT -= dt) <= 0 && !this.fighting) {
+      this.gearT = 4;
+      this.dress();
+      if (this.allow('aiSkills')) this.learn();
+      if (this.allow('aiBar')) this.bar();
+      this.o.party?.(this);
+    }
     // A light underfoot down among the dead, for whoever's watching.
     if (m.below && !this.fighting && (this.wispT -= dt) <= 0 && m.mana > 40) { this.wispT = this.cast(SP.wisp, 0.3) ? 85 : 2; }
     void g;
@@ -1020,6 +1030,9 @@ export class Brain {
   }
 
   known(i) { return this.o.spellbar.known.has(i); }
+
+  // Whether Settings leave this to it (src/title.js AI_PARTS: aiGear, aiGems, aiSkills, ...). Anything not set is allowed.
+  allow(k) { return this.o.settings?.[k] !== 'off'; }
 
   // ---- spells and the staff
 
@@ -1628,7 +1641,7 @@ export class Brain {
   // for the run and the jump, and not too soon after the last.
   canRide(m) {
     // (Not on the walk down with Lisandra: it keeps by her there.)
-    return this.rideCool <= 0 && !!this.o.pack.slots.off && !m.below && !m.town && m.ground && !m.surf && m.stam >= 46 && !(m.opening > 0 && m.opening < OPENING.ARRIVED)
+    return this.allow('aiSurf') && this.rideCool <= 0 && !!this.o.pack.slots.off && !m.below && !m.town && m.ground && !m.surf && m.stam >= 46 && !(m.opening > 0 && m.opening < OPENING.ARRIVED)
       && !inDungeon(m.x, m.z) && !inHall(m.x, m.z) && !inChurch(m.x, m.y + 1, m.z) && floorAt(m.x, m.z) === null;
   }
 
@@ -1755,7 +1768,7 @@ export class Brain {
     let best = null, bd = hunting ? 22 : 10;
     for (const d of g.drops.list) {
       if (Math.abs(d.y - m.y) > 3 || this.skipping(d) || this.kept(m, d.x, d.z)) continue;
-      if (!d.auto && !d.coins && !this.roomFor(d.item)) continue;
+      if (!d.auto && !d.coins && (!this.allow('aiLoot') || !this.roomFor(d.item))) continue;
       const k = dist(m.x, m.z, d.x, d.z);
       if (k < bd) { bd = k; best = d; }
     }
@@ -1782,6 +1795,7 @@ export class Brain {
     }
     // A chest near by that it hasn't opened: every one, out in the land and in the town's houses (in at the door, and what's
     // in it picked up as it spills). On its own floor only: it doesn't take stairs.
+    if (!this.allow('aiChests')) return false;
     let ch = null, cd = hunting ? 40 : m.town ? TOWN_CHEST : 14;
     // (The one it's already going for, it keeps going for: the way to a chest in a house starts by walking away from it, round
     // to the door, and with two about the same way off it would turn from one to the other and back for ever.)
@@ -1822,6 +1836,8 @@ export class Brain {
 
   roomFor(item) {
     if (item.type === 'spell') return true;
+    // (Gear for the party goes in their bags, not the pack: src/ui/party.js homeFor.)
+    if (item.type === 'hgear') return !!this.o.game.party?.homeFor?.(item);
     const p = this.o.pack, at = p.entries.length;
     if (!p.add(item)) return false;
     p.entries.splice(at, 1);
@@ -1834,7 +1850,7 @@ export class Brain {
   dress() {
     const { pack, inventory } = this.o;
     let changed = false;
-    for (let pass = 0; pass < 3; pass++) {
+    for (let pass = 0; pass < (this.allow('aiGear') ? 3 : 0); pass++) {
       const base = gearScore(pack.slots);
       let best = null, gain = 0.5;
       for (const e of pack.entries) {
@@ -1849,7 +1865,7 @@ export class Brain {
       changed = true;
     }
     // Gems: the best into whatever's worn with an open socket.
-    for (const e of [...pack.entries].filter((q) => q.item.type === 'gem').sort((a, b) => this.gemWorth(b.item) - this.gemWorth(a.item))) {
+    if (this.allow('aiGems')) for (const e of [...pack.entries].filter((q) => q.item.type === 'gem').sort((a, b) => this.gemWorth(b.item) - this.gemWorth(a.item))) {
       const into = ['skull', 'main', 'off'].map((s) => pack.slots[s]).find((it) => it && !(it.type === 'shield' && pack.slots.skull) && (it.gems || []).length < Math.min(it.sockets || 0, it.type === 'skull' ? 6 : 4));
       if (!into || !pack.socket(into, e.item)) continue;
       pack.remove(e);
@@ -1864,6 +1880,8 @@ export class Brain {
   junk() {
     const { pack } = this.o, base = gearScore(pack.slots), sockets = ['skull', 'main', 'off'].some((s) => { const it = pack.slots[s]; return it && (it.gems || []).length < Math.min(it.sockets || 0, it.type === 'skull' ? 6 : 4); });
     return pack.entries.filter((e) => {
+      // (Gear for the party: kept while anyone on the roster would be the better for it. src/ui/party.js wantedBy.)
+      if (e.item.type === 'hgear') return !this.o.game.party?.wantedBy?.(e.item);
       const slot = SLOT_OF(e.item);
       if (slot) return gearScore({ ...pack.slots, [slot]: e.item }) <= base + 0.5;
       return e.item.type === 'gem' && !sockets;
@@ -1897,7 +1915,7 @@ export class Brain {
       if (dist(m.x, m.z, sl.x, sl.z) < 90) { if (!this.job || this.job.why !== `seal:${sl.key}`) this.sealSince = this.t; if (this.t - (this.sealSince || this.t) > 40) { this.giveUp(`seal:${sl.key}`, 900); break; } return { kind: 'go', why: `seal:${sl.key}`, x: sl.x, z: sl.z, r: 1.6, say: `Waking the seal of ${sl.name}.` }; }
     }
     // A full pack, or a deal of things to sell: to the town.
-    const junk = this.junk();
+    const junk = this.allow('aiSell') ? [...this.junk(), ...(this.o.game.party?.bagJunk?.() || [])] : [];
     const room = this.freeCells();
     // (Only while there's someone open to buy it: at night the town's counters are shut, and it keeps at its work.)
     const buyer = junk.length > 0 && PEOPLE.some((p, i) => TRADES[p.trade]?.buys && this.o.townUI.isOpen(i));
@@ -1992,7 +2010,7 @@ export class Brain {
   // It walks into a tear only when it's whole, and gives one up for ten minutes once it's had to run from it.
   wildJob(m, bounty = false) {
     const W = this.o.game?.wilds;
-    if (!W?.calls || m.below || inDungeon(m.x, m.z)) return null;
+    if (!this.allow('aiWild') || !W?.calls || m.below || inDungeon(m.x, m.z)) return null;
     for (const c of W.calls([m.x, m.z])) {
       const why = `wild:${c.why}:${Math.round(c.x)},${Math.round(c.z)}`;
       if ((c.why === 'bounty') !== bounty || this.skipping(why) || m.lvl < c.lvl - WILD_UNDER[c.why]) continue;
@@ -2178,7 +2196,8 @@ export class Brain {
     // on doing so, ten minutes and four levels of the dead that came up round it, for as long as it was watched.)
     if (offer && dist(m.x, m.z, 0, 0) < 140 && this.jobDist(offer, m) < 320) return offer;
     // Selling: to whoever gives most for the most of it, while they're open.
-    const junk = this.junk();
+    const trading = this.allow('aiSell');
+    const junk = trading ? [...this.junk(), ...(this.o.game.party?.bagJunk?.() || [])] : [];
     if (junk.length >= 2 || (this.freeCells() < 16 && junk.length)) {
       let best = null, most = 0;
       for (let i = 0; i < PEOPLE.length; i++) {
@@ -2190,10 +2209,10 @@ export class Brain {
       if (best !== null) return { kind: 'talk', why: 'sell', who: best, say: `Selling to ${PEOPLE[best].name}.` };
     }
     // Buying: whatever an open counter has that's better than what it wears, or a spell it doesn't know, with coin to spare.
-    const buy = this.shopping(m);
+    const buy = trading && this.shopping(m);
     if (buy) return buy;
     // Mended at the herbalist's, if it's hurt and has the coin.
-    if (m.hpf < 0.7 && pack.purse() >= 12) {
+    if (trading && m.hpf < 0.7 && pack.purse() >= 12) {
       const i = PEOPLE.findIndex((p) => p.trade === 'healing');
       if (i >= 0 && townUI.isOpen(i) && !this.skipping(`p:${i}`) && this.reachable(i)) return { kind: 'talk', why: 'mend', who: i, say: `To ${PEOPLE[i].name}, to be mended.` };
     }
@@ -2201,7 +2220,7 @@ export class Brain {
     const h = m.hour;
     const making = Object.keys(RULES).some((id) => Q.state(id)?.stage === 'making' && this.o.town.day >= 0 && this.o.town.day < Q.state(id).ready);
     const nightWork = quests && PLAN_ALL.some(([id, lvl]) => { const st = Q.step(id); return st && (st.night || st.warden || (st.kill === 'barrows')) && m.lvl >= lvl; });
-    if (h >= 18.3 && h < 23.5 && (making || (m.hpf < 0.5)) && !nightWork && pack.purse() >= 4) {
+    if (this.allow('aiSleep') && h >= 18.3 && h < 23.5 && (making || (m.hpf < 0.5)) && !nightWork && pack.purse() >= 4) {
       const i = PEOPLE.findIndex((p) => p.trade === 'inn');
       if (i >= 0 && !this.skipping(`p:${i}`) && this.reachable(i)) return { kind: 'talk', why: 'bed', who: i, say: `A bed at the Tolling Bell${making ? ': a quest waits on the morning' : ''}.` };
     }
@@ -2286,7 +2305,7 @@ export class Brain {
     if (j.kind === 'boss') { this.siege(snap, m); return; }
     if (j.kind === 'hire') { doHire(this, m, j); return; }
     if (j.kind === 'warrens') { this.warrensRun(m, foes); return; }
-    if (j.kind === 'hunt') { if (j.run) this.sweep(m, j); else this.hunt(m, j, foes); return; }
+    if (j.kind === 'hunt') { this.hunt(m, j, foes); return; }
     this.halt();
   }
 
@@ -2296,6 +2315,9 @@ export class Brain {
   dungeonJob(m) {
     const list = finishedDungeons(this.o.townUI, this.o.game);
     if (!list.length) return null;
+    // (Down one of them already, as it's set to runs: that one's the run, before any other.)
+    const here = delveOf(m.x, m.z);
+    if (here && list.some((d) => d.key === here.key) && this.runKey !== here.key) { this.runKey = here.key; this.runState = null; }
     let at = list.findIndex((d) => d.key === this.runKey);
     if (at < 0) { at = 0; this.runKey = list[0].key; this.runState = null; }
     for (let i = 0; i < list.length; i++) {
@@ -2308,49 +2330,11 @@ export class Brain {
 
   runJob(m, d) {
     const lap = `lap ${this.laps + 1}`;
-    if (d.delve) {
-      // (With a party fit to go down: hireJob, before this, sees to one if it can pay.)
-      const P = this.o.game.party;
-      if (!inDungeon(m.x, m.z) && !P?.fit()) return null;
-      return { kind: 'warrens', why: `run:${d.key}`, delve: d.key, say: `Dungeon runs, ${lap}: ${inDungeon(m.x, m.z) ? `down ${lower(d.name)}` : `to ${lower(d.name)}, with the party`}.` };
-    }
-    // (Both are below the cathedral, in by the Sexton's door, which opens with his quest. A dungeon it couldn't reach a single
-    // spot of last time is left a while.)
-    if (!this.o.townUI.quests.state('dead_cant_wait') || this.skipping(`run:${d.key}`)) return null;
-    const spots = d.key === 'bellcrypt' ? HUNTS.bellcrypt : this.catacombSpots(m);
-    if (!spots.length) return null;
-    return { kind: 'hunt', why: `run:${d.key}`, run: d.key, spots, below: true, say: `Dungeon runs, ${lap}: ${lower(d.name)}` };
-  }
-
-  // A run through a dungeon's spots: each walked to and looked round once, what's there put down (the fight comes first, as it
-  // does anywhere), and then on to the next dungeon.
-  sweep(m, j) {
-    let R = this.runState;
-    // (Its clocks run only while it's at the run itself, not while it fights, loots or goes to town.)
-    if (!R || R.key !== j.run) R = this.runState = { key: j.run, left: new Set(j.spots.map(([x, z]) => `${x},${z}`)), n: j.spots.length, t: 0, at: null, atT: 0, seen: 0 };
-    R.t += 0.12;
-    const left = j.spots.filter(([x, z]) => R.left.has(`${x},${z}`));
-    if (!left.length || R.t > RUN_TIME) {
-      // (Not one spot reached: no way in just now. Grinding meanwhile, and another go in ten minutes.)
-      if (!R.seen) this.giveUp(`run:${j.run}`, 600);
-      this.ranDungeon(j.run, false, !R.seen);
-      return;
-    }
-    this.say(`${j.say} (${R.n - left.length} of ${R.n}).`);
-    // (The nearest by the stairs, as hunt() takes them: this floor's before the one above or below.)
-    const far = (q) => dist(m.x, m.z, q[0], q[1]) + Math.abs((floorAt(q[0], q[1]) ?? m.y) - m.y) * 8;
-    const p = left.reduce((a, b) => (far(a) <= far(b) ? a : b));
-    const k = `${p[0]},${p[1]}`;
-    if (R.at !== k) { R.at = k; R.atT = R.t; R.since = this.t; R.look = 0; }
-    // (A spot it can't get to, or can't get to in time: left. Only a "no way" that came for this spot counts.)
-    if ((this.noWay && this.noWay.t >= R.since) || R.t - R.atT > SPOT_TIME) { this.noWay = null; R.left.delete(k); R.at = null; return; }
-    if (dist(m.x, m.z, p[0], p[1]) < 4) {
-      this.halt();
-      this.face = this.o.input.yaw + 0.9;
-      if ((R.look += 0.12) > 2.5) { R.left.delete(k); R.at = null; R.seen++; }
-      return;
-    }
-    this.goTo(p[0], p[1], 2.5, true, false, true);
+    // (With a party fit to go down: hireJob, before this, sees to one if it can pay. Down one already, that one.)
+    const P = this.o.game.party, here = delveOf(m.x, m.z);
+    if (here && here.key !== d.key) return null;
+    if (!here && !P?.fit()) return null;
+    return { kind: 'warrens', why: `run:${d.key}`, delve: d.key, run: d.key, say: `Dungeon runs, ${lap}: ${here ? `down ${lower(d.name)}` : `to ${lower(d.name)}, with the party`}.` };
   }
 
   // Through one (or beaten back by it): on to the next dungeon, and once round them all, another lap.
@@ -2520,6 +2504,9 @@ export class Brain {
       if (T.why === 'sell') {
         const e = this.junk().find((q) => offerFor(p.trade, q.item) > 0);
         if (e && T.sold < 30) { T.sold++; townUI.sell(e, offerFor(p.trade, e.item)); return; }
+        // (And what the party carry that nobody would be the better for: src/ui/party.js bagJunk.)
+        const b = this.o.game.party?.bagJunk?.().find((q) => offerFor(p.trade, q.item) > 0);
+        if (b && T.sold < 30) { T.sold++; townUI.sellBag(b, offerFor(p.trade, b.item)); return; }
         // The satchel's bone, what no quest still wants.
         const keep = Object.keys(RULES).some((qid) => townUI.quests.state(qid)?.stage !== 'done' && RULES[qid].steps.some((s) => s.bring === 'bone'));
         if (trade.buysMats?.bone && !keep && (pack.mats.bone || 0) > 0) { townUI.sellMat('bone', trade.buysMats.bone); return; }

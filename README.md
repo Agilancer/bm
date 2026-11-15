@@ -1285,6 +1285,46 @@ where they began (`keepPace`): they used to stay the level they were made at.
   along the blow: the render thread's own blood, which falls and soaks into the ground (`EV.HERO_FX`, `heroFx` in
   `src/main.js`). Rupture goes on throwing it for three seconds.
 
+### Their gear, their book, and old companions
+
+- **The dead drop gear for your party** (`src/items/partygear.js`). Now and then a kill leaves a piece for one of the
+  party you have with you, and every boss's hoard in a delve has two (the last boss's, three, rare or better: `partyDrops`,
+  and `bonus` in `src/items/chests.js`). Nothing of theirs ever drops in Velscour's church: it's Tessariel's own. A weapon or
+  shield is one of the heroes' own models (`assets/game/heroes/kit`) in a dye of its own (`PROP_PALS`); a piece of armour
+  is plate, mail or light (who wears which: `WEIGHT_OF`), cut from one hero body (`shape`) and dyed in one of your own
+  gear sets' colours (`look`, a set of `assets/game/player/skins` as `tools/heroes/looks.py` boils them into
+  `assets/game/heroes/looks.json`).
+- **On them** (`src/gfx/herolook.js`). A piece cut from a body of the wearer's own class and sex puts its shape on them as
+  well as its colours: the group is lifted off that body, fitted to theirs by the two bodies' bind poses, and its picture
+  laid beside theirs (never more than three bodies borrowed at once). On anyone else of its weight, only its colours show.
+  What they wear is dyed as one outfit (`outfitRamps`): every piece in their coat's colour, with its own set's light and
+  dark, and the rarer the richer. The dye keeps each texel's own light and dark against the rest of the piece, keeps gold
+  trim gold and skin skin (`src/gfx/recolour.js`). Their weapon and shield are whatever they've been given of their own
+  kinds; a painted one more often than not goes with their coat.
+- **The pictures** in the pack and the book are drawn in Blender by `tools/heroes/icons.py` (into
+  `assets/game/heroes/icons`, from the GLBs' own arrays: no glTF import) and dyed in the page as the bodies are
+  (`src/ui/hgicons.js`). After changing a hero body or the kit, run it again.
+- **Their bags** (`bag` on each roster entry in `src/ui/party.js`, 24 pieces). Party gear you pick up never goes in your
+  pack: it goes in the bag of one of your party it's for (whoever it's an upgrade for first, then whoever has most room;
+  failing them, an old companion who can use it, kept for them with the Company). If nobody who can use it has room, it
+  stays on the ground and you're told why. A shop buys what's in the bags of those with you, through you; auto-play
+  sells what nobody would be the better for. A save from before the bags hands the party gear in your pack to them.
+- **The party's book: K** (or PARTY in the pack; `src/ui/partybook.js`). Each of your party and old companions: their eight
+  slots (a piece out of their bag, or a bag of the party's with you, goes on with a click, better and worse marked; "Put
+  on their best from their bag"), their bag (wear or drop each piece), the sets they're wearing more than one piece of,
+  what their gear and tree come to, and their tree.
+- **Their trees** (`src/core/partytree.js`). Three branches a class, each of its moves (the first ones learned already,
+  the rest opening at their level), two passives and a capstone; a point a level. They spend their own (`autoSpend`, by
+  role) unless you switch that off, and every point back costs gold. A move's rank in the tree is its rank in the fight
+  (`moveRank` in `src/sim/heroskills.js`), and a move not learned isn't used.
+- **Old companions** (`roster` in `src/ui/party.js`). Everyone you've had along stays on your books with their gear, and
+  the quartermasters offer them again. They level with you while they're away, and for every four levels you've gone past
+  where you last had them, they come by a moderate piece of their own (`catchUp`).
+- **Auto-play** puts their best on them and spends their points unless Settings say otherwise (the AI parts in
+  `src/title.js`: your gear, gems, skill points and spell bar, your party's gear and points, hiring, looting, chests,
+  selling, sleeping, raids, riding and teleporting each turn off on their own).
+- **Levels go to 200** (`MAX_LEVEL` in `src/items/levels.js`). Monsters don't yet keep pace past the twenties.
+
 ### The bards' lutes
 
 Each of the six bards has one of the owner's six lutes (`tools/heroes/lutes.py` cuts them from the sheet, finds which

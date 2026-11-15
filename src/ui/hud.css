@@ -25,6 +25,7 @@
   border: calc(var(--medal) * .075) solid transparent; box-shadow: 0 0 0 1.5px var(--rim), 0 2px 8px rgba(0, 0, 0, .7); }
 #levelNum { font: 700 calc(var(--medal) * .42)/1 Cinzel, Georgia, serif; }
 #levelNum em { display: none; }
+#levelNum.three { font-size: calc(var(--medal) * .31); letter-spacing: -.02em; }
 #xpBar { display: none; }
 #vitals { position: absolute; left: calc(20px + var(--sl) + var(--medal) + 8px); bottom: calc(24px + var(--sb)); width: var(--bars); display: grid; gap: 3px; }
 .meter, #mana, #stam { position: relative; background: rgba(6, 5, 4, .72); overflow: hidden; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .8), 0 0 0 2px var(--rim-dim); border: 0; margin: 0; }
@@ -296,7 +297,7 @@ html.art-spells #spells .spell svg { width: 74%; height: 74%; }
 html.art-spells body:not(.touch) #spells .spell svg { width: 66%; height: 66%; filter: none; }
 html.art-slot_spell body:not(.touch) #spells .spell .cd { inset: 12%; }
 /* (the book, the quest log and the view beside the bar: the painted round button, lit while it's on) */
-html.art-btn_round body:not(.touch) :is(#spellOpen, #questOpen, #viewBtn) { background: var(--art-btn_round) center / 100% 100% no-repeat; box-shadow: 0 2px 8px rgba(0, 0, 0, .7); }
+html.art-btn_round body:not(.touch) :is(#spellOpen, #questOpen, #partyOpen, #viewBtn) { background: var(--art-btn_round) center / 100% 100% no-repeat; box-shadow: 0 2px 8px rgba(0, 0, 0, .7); }
 html.art-btn_round body:not(.touch) #spellOpen.pts { box-shadow: 0 0 0 2px #f1d68a, 0 0 16px 2px rgba(241, 214, 138, .7); }
 html.art-btn_round_on body:not(.touch) #viewBtn.on { background-image: var(--art-btn_round_on); box-shadow: 0 0 10px rgba(241, 214, 138, .45); }
 /* (the painted frame's band is a ninth of its width on each side: the frame is let out a little past the map's place and

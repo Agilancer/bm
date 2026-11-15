@@ -104,8 +104,8 @@
   #inv .inv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   #inv .inv-head .menu-x { margin: -3px -4px 0 0; }
   #inv .inv-head-btns { display: flex; align-items: center; gap: 8px; }
-  #invSort { font: inherit; font-size: 11px; letter-spacing: .12em; height: 28px; margin-top: -3px; padding: 0 10px; color: var(--bone); background: rgba(8,6,4,.6); border: 1px solid var(--gold-dim); cursor: pointer; }
-  #invSort:hover { background: rgba(201,163,92,.2); color: #fff4da; }
+  #invSort, #invParty { font: inherit; font-size: 11px; letter-spacing: .12em; height: 28px; margin-top: -3px; padding: 0 10px; color: var(--bone); background: rgba(8,6,4,.6); border: 1px solid var(--gold-dim); cursor: pointer; }
+  #invSort:hover, #invParty:hover { background: rgba(201,163,92,.2); color: #fff4da; }
   #inv .inv-head .menu-x::after { bottom: 0; }
   #inv .panel { background: rgba(11,9,7,.93); border: 1px solid var(--gold-dim); padding: 8px 10px 10px; }
   #inv .label { color: var(--gold); margin-bottom: 7px; opacity: 1; }
@@ -172,14 +172,14 @@
   #spells .spell.empty { background: rgba(8,6,4,.3); border-style: dashed; }
   #spells .spell.up { box-shadow: 0 0 26px -2px var(--c), inset 0 0 18px -5px var(--c); transform: translateY(-3px); }
   /* The book, the quest log and the view, beside the slots on a desk: round, gold-rimmed, with their key on a little cap. */
-  body:not(.touch) :is(#spellOpen, #questOpen, #viewBtn) { position: relative; display: grid; place-items: center; flex: none; width: var(--hbtn); height: var(--hbtn); margin: 0; padding: 0; box-sizing: border-box; color: #ecd9a8; background: radial-gradient(circle at 50% 35%, #2c2318, #0d0b08 72%); border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(201,163,92,.75), inset 0 0 0 3.5px rgba(8,6,4,.85), inset 0 0 0 4.5px rgba(201,163,92,.3), 0 2px 8px rgba(0,0,0,.75); cursor: pointer; transition: filter .12s, transform .12s; --ic-size: 60%; }
+  body:not(.touch) :is(#spellOpen, #questOpen, #partyOpen, #viewBtn) { position: relative; display: grid; place-items: center; flex: none; width: var(--hbtn); height: var(--hbtn); margin: 0; padding: 0; box-sizing: border-box; color: #ecd9a8; background: radial-gradient(circle at 50% 35%, #2c2318, #0d0b08 72%); border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(201,163,92,.75), inset 0 0 0 3.5px rgba(8,6,4,.85), inset 0 0 0 4.5px rgba(201,163,92,.3), 0 2px 8px rgba(0,0,0,.75); cursor: pointer; transition: filter .12s, transform .12s; --ic-size: 60%; }
   body:not(.touch) #spellOpen { margin-left: calc(var(--slot) * .14); }
-  body:not(.touch) :is(#spellOpen, #questOpen, #viewBtn):hover { filter: brightness(1.3); }
-  body:not(.touch) :is(#spellOpen, #questOpen, #viewBtn):active { transform: scale(.93); }
-  body:not(.touch) :is(#spellOpen, #questOpen, #viewBtn) > svg { width: 50%; height: 50%; }
+  body:not(.touch) :is(#spellOpen, #questOpen, #partyOpen, #viewBtn):hover { filter: brightness(1.3); }
+  body:not(.touch) :is(#spellOpen, #questOpen, #partyOpen, #viewBtn):active { transform: scale(.93); }
+  body:not(.touch) :is(#spellOpen, #questOpen, #partyOpen, #viewBtn) > svg { width: 50%; height: 50%; }
   body:not(.touch) #viewBtn.on { color: #fff6dc; box-shadow: inset 0 0 0 1.5px #f1d68a, inset 0 0 0 3.5px rgba(8,6,4,.85), inset 0 0 12px rgba(241,214,138,.45), 0 0 10px rgba(241,214,138,.35); }
-  :is(#spellOpen, #questOpen, #viewBtn) kbd { position: absolute; right: -4%; bottom: -4%; z-index: 1; min-width: calc(var(--hbtn) * .34); padding: 0 2px; box-sizing: border-box; font: 700 calc(var(--hbtn) * .22)/1.5 Georgia, serif; text-align: center; color: #14100a; background: linear-gradient(#f3e6c4, #cdb07a); border-radius: 3px; box-shadow: 0 1px 2px #000, inset 0 -1px 0 rgba(0,0,0,.25); pointer-events: none; }
-  body.touch #questOpen { display: none; }
+  :is(#spellOpen, #questOpen, #partyOpen, #viewBtn) kbd { position: absolute; right: -4%; bottom: -4%; z-index: 1; min-width: calc(var(--hbtn) * .34); padding: 0 2px; box-sizing: border-box; font: 700 calc(var(--hbtn) * .22)/1.5 Georgia, serif; text-align: center; color: #14100a; background: linear-gradient(#f3e6c4, #cdb07a); border-radius: 3px; box-shadow: 0 1px 2px #000, inset 0 -1px 0 rgba(0,0,0,.25); pointer-events: none; }
+  body.touch #questOpen, body.touch #partyOpen { display: none; }
   #spellName { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 6px; white-space: nowrap; font-size: 12px; letter-spacing: .1em; color: #e7dcc4; text-shadow: 0 1px 3px #000; }
   #softCursor { position: fixed; left: 0; top: 0; width: 16px; height: 16px; margin: -2px 0 0 -2px; display: none; z-index: 40; pointer-events: none; }
   #softCursor::before { content: ''; display: block; width: 0; height: 0; border-left: 11px solid #e7cf9a; border-bottom: 16px solid transparent; filter: drop-shadow(0 1px 2px #000); }

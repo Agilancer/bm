@@ -1,7 +1,8 @@
 // Experience and levels. A kill pays by what it was; each level makes every spell bite harder, and deepens life and mana.
 // It's kept in the pack's save, and worked out on the render thread: the sim only gets what it comes to (writeWeapon).
 
-export const MAX_LEVEL = 50;
+// (Two hundred: every level's spell power, life and mana, and a point for the six trees and one for each of your party's.)
+export const MAX_LEVEL = 200;
 
 // By the kind the sim reports for a kill: 0 the black knight, 1 the silver knight, 2 a crab, 3 the Gravehart, 4 the Hydra, 5 a zombie, 6 the ogre, 7 a caster, 8 a champion.
 // (20 and 21: the hoard of one of the Warrens' bosses, and of their dragon: src/sim/dungeon.js.)
