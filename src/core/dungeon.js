@@ -215,9 +215,13 @@ for (const d of DELVES) {
 carryEnds(ROOMS, TUNNELS, true);
 // (The new delves' bosses after the Warrens', so a boss's number in BOSSES never changes; and their calls after its calls.)
 export const WARN = {};
+// Which calls are said, not shouted: a boss's opening words on how its fight goes, and a sealed door's word on which boss
+// comes first. Those stay as words on the screen; every other call runs along the emergency ticker (src/ui/ticker.js).
+const CALM = /_(open|shut)$|^ed_(under|sealed)$/;
+export const WARN_CALM = new Set([3, 7]);
 for (const d of DELVES.slice(1)) {
   for (const b of d.bosses) BOSSES.push({ ...b, delve: d.key });
-  for (const [k, text] of Object.entries(d.warnings || {})) { WARN[k] = WARNINGS.length; WARNINGS.push(text); }
+  for (const [k, text] of Object.entries(d.warnings || {})) { WARN[k] = WARNINGS.length; WARNINGS.push(text); if (CALM.test(k)) WARN_CALM.add(WARN[k]); }
   for (const [k, name] of Object.entries(d.turnWarn || {})) TURN_WARN[k] = WARN[name];
 }
 BOSS_KEYS.push(...BOSSES.slice(BOSS_KEYS.length).map((b) => b.key));
