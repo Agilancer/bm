@@ -25,6 +25,8 @@ import { floorAt, inPit } from '../core/interior.js';
 import { setOpeningTerrain, terrainHeight } from '../core/terrain.js';
 import { setHallDoor } from '../core/testhall.js';
 import { lineClear, sight } from './sight.js';
+import { allWays } from '../core/roads.js';
+import { TOWN } from '../core/town.js';
 
 let world = null;
 const CELL = 0.5, BODY = 0.42, EDGE = 250;
@@ -86,6 +88,75 @@ function closeCell(k) {
   let v = room[k];
   if (!v) v = room[k] = world.inside(cx(k), cz(k), ROOMY) ? 2 : 1;
   return v === 2;
+}
+
+// Keeping off the grass. In the town and just round it (POLITE metres out from TOWN), a walk asked for politely (auto-play
+// going about its errands: `polite` in the ask) keeps to the streets, the lanes, the paths to the doors and the worn square
+// by the well, as the townsfolk do (GRASS in src/folk/ground.js): a step over grass costs GRASS more than one on a worn way,
+// so it goes most of twice as far round to stay on one, and only crosses the grass where there's no way round (up to a
+// stall, or someone stood in their yard). Indoors every step costs the same. It used to take the straight line between any
+// two places in the town, round the sides of the houses and over their gardens.
+const GRASS = 0.8, POLITE = 24, SQUARE = [-1.5, 1, 8];
+const PB = { x0: TOWN.x0 - POLITE, x1: TOWN.x1 + POLITE, z0: TOWN.z0 - POLITE, z1: TOWN.z1 + POLITE };
+let polite = false;
+// How worn each cell is, worked out the first time it's asked: 0 not yet, else 1 + 254 times how worn (0 grass, 1 a way's middle).
+const wear = new Uint8Array(N);
+const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+// The ways' stretches by the 8 m square they come within reach of, inside PB.
+let wayIndex = null;
+function waysNear(x, z) {
+  if (!wayIndex) {
+    wayIndex = new Map();
+    for (const w of allWays()) {
+      for (let i = 0; i + 1 < w.pts.length; i++) {
+        const [ax, az] = w.pts[i], [bx, bz] = w.pts[i + 1], m = w.w * 1.1 + 1;
+        if (Math.max(ax, bx) + m < PB.x0 || Math.min(ax, bx) - m > PB.x1 || Math.max(az, bz) + m < PB.z0 || Math.min(az, bz) - m > PB.z1) continue;
+        const s = [ax, az, bx - ax, bz - az, (bx - ax) ** 2 + (bz - az) ** 2 || 1, w.w];
+        for (let jj = Math.floor((Math.min(az, bz) - m) / 8); jj <= Math.floor((Math.max(az, bz) + m) / 8); jj++) {
+          for (let ii = Math.floor((Math.min(ax, bx) - m) / 8); ii <= Math.floor((Math.max(ax, bx) + m) / 8); ii++) {
+            const key = (ii + 500) * 1000 + jj + 500;
+            let l = wayIndex.get(key);
+            if (!l) wayIndex.set(key, l = []);
+            l.push(s);
+          }
+        }
+      }
+    }
+  }
+  return wayIndex.get((Math.floor(x / 8) + 500) * 1000 + Math.floor(z / 8) + 500) || [];
+}
+// How worn the ground is at (x, z): 0 grass, 1 the middle of a way or the square (without the ragged edge the paint has).
+export function wornAt(x, z) {
+  let best = 1 - sstep(SQUARE[2] - 2, SQUARE[2] + 1.5, Math.hypot(x - SQUARE[0], z - SQUARE[1]));
+  for (const [ax, az, dx, dz, L2, w] of waysNear(x, z)) {
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2));
+    const d = Math.hypot(ax + dx * t - x, az + dz * t - z);
+    if (d < w * 1.1) best = Math.max(best, 1 - sstep(w * 0.5, w * 1.1, d));
+  }
+  return best;
+}
+// What more a step onto this cell costs for being grass: nothing on a way, indoors, off in the country, or asked plainly.
+function grassCost(k) {
+  if (!polite) return 0;
+  let v = wear[k];
+  if (!v) {
+    const x = cx(k), z = cz(k);
+    v = wear[k] = x < PB.x0 || x > PB.x1 || z < PB.z0 || z > PB.z1 || floorAt(x, z) !== null ? 255 : 1 + Math.round(254 * wornAt(x, z));
+  }
+  return GRASS * (255 - v) / 254;
+}
+// A step's whole price onto a cell, as A* pays it: 1 down the middle of a way, more by a wall, more on grass.
+const stepCost = (k) => (closeCell(k) ? CLOSE_COST : 1) + grassCost(k);
+// What walking straight from a to b costs in the same coin, so a way that keeps to the road isn't pulled straight off it
+// across the grass.
+function toll(ax, az, bx, bz) {
+  const L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / (CELL * 0.5)));
+  let sum = 0;
+  for (let q = 0; q <= n; q++) {
+    const k = cellOf(ax + (bx - ax) * q / n, az + (bz - az) * q / n);
+    if (k >= 0) sum += stepCost(k) * (q === 0 || q === n ? 0.5 : 1);
+  }
+  return sum * L / n;
 }
 
 // The doorways (interior.json's doors, a leaf or two to each): the middle of each, the way through it (nx, nz), and half its
@@ -170,13 +241,19 @@ function straight(ax, az, bx, bz) {
   }
   return true;
 }
-// Pulled straight: from each point, on to the furthest one it can see. Returns the points after the first.
+// Pulled straight: from each point, on to the furthest one it can see. Returns the points after the first. Asked politely,
+// only as far as it can walk straight for no more than the way round costs (each point's `c`, what A* paid to get there),
+// so a way that keeps to a street isn't pulled off it across the grass; and by halves, since each look along it is a walk
+// of its own.
 function pull(pts) {
   const out = [];
   let a = 0;
+  const ok = (a, b) => straight(pts[a][0], pts[a][1], pts[b][0], pts[b][1])
+    && (!polite || pts[a].c === undefined || pts[b].c === undefined || toll(pts[a][0], pts[a][1], pts[b][0], pts[b][1]) <= (pts[b].c - pts[a].c) * 1.02 + 0.5);
   while (a < pts.length - 1) {
     let b = pts.length - 1;
-    while (b > a + 1 && !straight(pts[a][0], pts[a][1], pts[b][0], pts[b][1])) b--;
+    if (polite) { b = Math.min(b, a + 160); while (b > a + 1 && !ok(a, b)) b = a + Math.max(1, (b - a) >> 1); }
+    else while (b > a + 1 && !ok(a, b)) b--;
     out.push(pts[b]);
     a = b;
   }
@@ -292,8 +369,8 @@ function path(from, to, avoid, touch = null, again = false) {
         const nk = nj * W + ni;
         if (shut[nk] === stamp || blocked(nk)) continue;
         if (di && dj && (blocked(j * W + ni) || blocked(nj * W + i))) continue;
-        // (By a wall costs more than down the middle.)
-        const ng = g[k] + (di && dj ? 1.414 : 1) * CELL * (closeCell(nk) ? CLOSE_COST : 1);
+        // (By a wall costs more than down the middle; and asked politely, over the town's grass more than on its ways.)
+        const ng = g[k] + (di && dj ? 1.414 : 1) * CELL * stepCost(nk);
         if (seen[nk] === stamp && ng >= g[nk]) continue;
         seen[nk] = stamp; g[nk] = ng; parent[nk] = k;
         push(nk, ng + h(nk));
@@ -304,10 +381,12 @@ function path(from, to, avoid, touch = null, again = false) {
   const cells = [];
   for (let k = t; k >= 0; k = parent[k]) cells.push(k);
   cells.reverse();
-  const mid = cells.map((k) => [cx(k), cz(k)]);
+  // (Each with what it cost to get there, `c`, for pull's toll.)
+  const at = (x, z, c) => Object.assign([x, z], { c });
+  const mid = cells.map((k) => at(cx(k), cz(k), g[k]));
   // The doorways on the way, in order: each cuts the way in two, a place before its middle and a place beyond.
   const out = [];
-  let leg = [[from[0], from[1]]];
+  let leg = [at(from[0], from[1], 0)];
   for (let i = 0; i + 1 < mid.length; i++) {
     const through = doorwayBetween(mid[i][0], mid[i][1], mid[i + 1][0], mid[i + 1][1]);
     leg.push(mid[i]);
@@ -328,12 +407,13 @@ function path(from, to, avoid, touch = null, again = false) {
     const before = stand(-dir, !out.length && beside(from[0], from[1], -dir) ? Math.max(0.4, depth(from[0], from[1])) : STAND);
     const after = stand(dir, beside(end[0], end[1], dir) ? Math.max(0.4, depth(end[0], end[1])) : STAND);
     if (!before || !after) continue;
+    before.c = mid[i].c; after.c = mid[i + 1].c;
     leg.push(before);
     for (const q of pull(leg)) out.push(point(q[0], q[1], q === before ? d.id : -1));
     out.push(point(after[0], after[1], d.id));
     leg = [after];
   }
-  leg.push(mid[mid.length - 1], end);
+  leg.push(mid[mid.length - 1], at(end[0], end[1], g[t]));
   for (const q of pull(leg)) out.push(point(q[0], q[1]));
   return out;
 }
@@ -539,7 +619,9 @@ export function navFor(w, interior = null) {
   setDoorways(interior?.things);
   // (pocket: is (x, z) on a free cell of the walking grid that's shut in a pocket?)
   const pocketAt = (x, z) => { const k = cellOf(x, z); return k >= 0 && !solidCell(k) && inPocket(k); };
-  return { solidAt, clearFor, probe, local, path, straight, escape, pocket: pocketAt, doorways: () => DOORWAYS, SNUG };
+  // (politePath: path as auto-play asks for it going about its errands, keeping to the town's ways.)
+  const politePath = (...a) => { polite = true; try { return path(...a); } finally { polite = false; } };
+  return { solidAt, clearFor, probe, local, path, politePath, straight, escape, pocket: pocketAt, doorways: () => DOORWAYS, SNUG, wornAt };
 }
 
 // (A worker's own scope: not there when a test imports this file.)
@@ -555,7 +637,10 @@ if (typeof self !== 'undefined') self.onmessage = async (e) => {
     } else if (!world) {
       self.postMessage({ type: m.type, id: m.id, result: null });
     } else if (m.type === 'path') {
-      self.postMessage({ type: 'path', id: m.id, result: path(m.from, m.to, m.avoid, m.touch ?? null) });
+      polite = !!m.polite;
+      const result = path(m.from, m.to, m.avoid, m.touch ?? null);
+      polite = false;
+      self.postMessage({ type: 'path', id: m.id, result });
     } else if (m.type === 'escape') {
       self.postMessage({ type: 'escape', id: m.id, result: escape(m.x, m.z) });
     } else if (m.type === 'local') {

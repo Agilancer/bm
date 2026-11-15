@@ -7,7 +7,9 @@ import { RAMP } from './spellfx.js';
 // it is. Its vel holds the middle it goes round. 8: up out of a seal's swirl, round and in and up, opening out over it (pad: the
 // radius it starts at). 10: low round over the Warrens' portal's dais (pad likewise). 9: round the Warrens' portal's doorway,
 // in from out in front of it and back down its funnel into the wall (pad: the way the portal faces; the doorway 1.86 m round
-// its middle, the funnel a metre deep, the dais 1.45 under).
+// its middle, the funnel a metre deep, the dais 1.45 under). 11: the beacon stone's light round a body (src/ui/beacon.js), its
+// feet the middle: pad is how far the stone's fifteen seconds had gone when it was let go, 0 to 1, and the later it is, the
+// higher round the body it climbs and the closer it holds, till it has them whole.
 const ORBIT = /* wgsl */ `
 fn portalOrbit(c: vec3f, kind: u32, seed: f32, pad: f32, age: f32, maxLife: f32) -> vec3f {
   let k = clamp(age / maxLife, 0.0, 1.0);
@@ -23,6 +25,13 @@ fn portalOrbit(c: vec3f, kind: u32, seed: f32, pad: f32, age: f32, maxLife: f32)
     let eu = vec3f(cos(pad), 0.0, -sin(pad));
     let ew = vec3f(sin(pad), 0.0, cos(pad));
     return c + eu * x + vec3f(0.0, y, 0.0) + ew * w;
+  }
+  if (kind == 11u) {
+    let e = clamp(pad, 0.0, 1.0);
+    let r = (0.4 + 0.32 * s2) * mix(1.2, 0.5, e) * (1.0 - 0.3 * k);
+    let h = 0.04 + s1 * (0.3 + 1.75 * e) + age * (0.25 + 0.55 * s3);
+    let th = a0 + age * (2.0 + 3.4 * e) * select(1.0, -1.0, s3 > 0.5);
+    return c + vec3f(cos(th) * r, h, sin(th) * r);
   }
   let tall = select(0.5, 3.6, kind == 8u) * (0.75 + 0.5 * s1);
   let r0 = pad * (0.6 + 0.4 * s2);
@@ -57,7 +66,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
   if (p.life <= 0.0) { particles[i].life = 0.0; return; }
   let dt = S.dt;
   // A portal's motes go where their age puts them.
-  if (p.kind >= 8u && p.kind <= 10u) {
+  if (p.kind >= 8u && p.kind <= 11u) {
     p.pos = portalOrbit(p.vel, p.kind, p.seed, p.pad, p.maxLife - p.life, p.maxLife);
     particles[i] = p;
     let at = atomicAdd(&drawArgs.instanceCount, 1u);
@@ -207,7 +216,7 @@ struct V {
       col = vec4f(vec3f(1.0, 0.86, 0.6) * (sun * 0.45 + amb * 0.2) * (0.5 + tw), 0.0);
       col *= smoothstep(0.0, 0.2, a) * (1.0 - smoothstep(0.85, 1.0, a));
     }
-    case 8u, 9u, 10u: {
+    case 8u, 9u, 10u, 11u: {
       // A portal's motes: drawn out along the way they're going round, the small ones bright and the big ones a soft blue haze.
       let back = portalOrbit(pt.vel, pt.kind, pt.seed, pt.pad, max(pt.maxLife - pt.life - 0.05, 0.0), pt.maxLife);
       let vv = (F.view * vec4f(pt.pos - back, 0.0)).xy;

@@ -61,6 +61,7 @@ import { groundAt, setHomes } from './ui/places.js';
 import { HallUI } from './ui/testhall.js';
 import { HALL, SPAWN, hallAt } from './core/testhall.js';
 import { beginRun, deathWords, noteRun } from './core/lastrun.js';
+import { Beacon } from './ui/beacon.js';
 
 const BASE = new URL('..', import.meta.url).href;
 const $ = (id) => document.getElementById(id);
@@ -565,6 +566,8 @@ async function boot(plan, poolSize) {
     change: arm,
     drop: (item) => { const snap = game.currentSnap(); game.drops.fromPlayer(item, snap[H.PX], snap[H.PY], snap[H.PZ], input.yaw); },
     sound: (k) => audio.play({ open: 'packOpen', close: 'packClose', socket: 'gemLand' }[k] || k, null, 0, 0, 0.55, 1, false),
+    // (The beacon stone, right-clicked or double-clicked: src/ui/beacon.js. It begins once the pack's shut.)
+    useBeacon: () => game.beacon?.use(),
   });
   Object.assign(game, { pack, inventory });
   // The chat log (src/ui/chatlog.js): the other Tessariels' words, and Lisandra's.
@@ -641,6 +644,10 @@ async function boot(plan, poolSize) {
       opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
       closed: () => { input.menu = false; resume(); },
       saved: () => autosave(),
+      // Lisandra's unbinding (src/ui/folk.js unbind): every point spent, back. game.respecs is each kind of point there is
+      // ({ spent(), reset() }): the spellbook's now, and the Pinnacle points' when they're made (docs/PHOBOS.md, chunk 15).
+      spentPoints: () => (game.respecs || []).reduce((n, r) => n + r.spent(), 0),
+      respec: () => { for (const r of game.respecs || []) if (r.spent() > 0) r.reset(); },
       canMenu: () => input.enabled && !input.menu && !state.paused && !naming,
       click: () => title.chime?.(),
       // A charm for a quest (src/ui/lands.js), into the pouch.
@@ -712,6 +719,9 @@ async function boot(plan, poolSize) {
   });
   if (game.party) game.party.freeHire = () => !!game.hallUI?.on;
   addPart('lands', { save: () => lands.save(), load: (d) => lands.load(d) });
+  // The beacon stone: H, fifteen seconds standing still, and you and your party are home at Bellmourn's seal (src/ui/beacon.js).
+  game.beacon = new Beacon({ pack, shared, input, hud, renderer, audio, cmd: (...a) => lands.o.cmd(...a), party: () => game.party,
+    firstHero: () => renderer.firstHero, gameState: () => game.gameState(), snap: () => game.currentSnap(), testing: () => testMode, saved: () => autosave() });
   window.bm = game.api(shared, simWorker, buffer, pool);
   // How long the start took, part by part (tools/load_time.mjs).
   window.bm.loadLaps = [['the simulation ready', Math.round(simMs)], ...renderer.loadLaps];
@@ -777,7 +787,7 @@ async function boot(plan, poolSize) {
   });
   addPart('pack', {
     save: () => pack.save(),
-    load: (d) => { pack.load(d); arm(); game.drops.clear(); },
+    load: (d) => { game.beacon?.stop(''); pack.load(d); arm(); game.drops.clear(); },
   });
   // (A save from before the party had bags of their own: the party gear in your pack goes to theirs, where it fits anyone.)
   addPart('partyBags', {
@@ -903,6 +913,7 @@ async function boot(plan, poolSize) {
       openingHUD?.reset();
       shared.input[INPUT.RESTART] += 1;   // (taken up on the first step after the world is let go)
       played = 0; playT = 0;
+      game.beacon?.stop('');
       pack.load(null);
       arm();
       game.drops.clear();
@@ -929,6 +940,7 @@ async function boot(plan, poolSize) {
     testMode = true;
     game.hallUI.setOn(true); hud.testHall = true; game.questTrail.off = true;
     played = 0; playT = 0;
+    game.beacon?.stop('');
     pack.load(null); arm(); game.drops.clear();
     game.chests.load(null); game.spellbar.load(null); game.doors.load(null);
     townUI.load(null); town.load(null);
@@ -1022,6 +1034,8 @@ async function boot(plan, poolSize) {
     gold: { have: () => pack.gold, pay: (n) => { pack.gold -= n; } }, sound: (k) => audio.play(k, null, 0, 0, 0.6, 1, false) });
   // What's learned in the six trees goes to the sim, which casts the spells with it (Casting.setSkills).
   game.spellbar.onSkills = (ranks) => simWorker.postMessage({ type: 'skills', ranks });
+  // (What Lisandra can unbind: see townUI's act.respec. Free spells, the ones you start with and read from scrolls, aren't spent.)
+  game.respecs = [{ spent: () => game.spellbar.skills.spent, reset: () => game.spellbar.skills.unlearn() }];
   game.spellbar.refresh();
   addPart('spells', {
     save: () => game.spellbar.save(),
@@ -1119,6 +1133,7 @@ async function boot(plan, poolSize) {
     if (e.code === 'Escape' && inventory.open) closePack(true);
     if (e.code === 'KeyE' && !input.menu && !state.paused) game.takeNearest();
     if (e.code === 'KeyM' && !input.menu && !state.paused) toggleMap();
+    if (e.code === 'KeyH' && !input.menu && !state.paused) game.beacon?.use();
     if (e.code === 'F3') { e.preventDefault(); hud.toggleDebug(); }
   });
   $('bPack').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); if (input.enabled && !state.paused && !naming) openPack(); }, { passive: false });
@@ -1536,6 +1551,7 @@ class GameView {
       this.updateCamera(dt, snap);
       this.emitAmbient(dt, snap);
       this.emitBleeds(dt, snap);
+      this.beacon?.frame(dt, snap);
       this.updateTrail(dt, snap);
       this.updateDrops(dt, snap);
       this.autoplay?.frame(dt, snap);

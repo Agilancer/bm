@@ -66,6 +66,7 @@ export const AI_PARTS = [
   ['aiWild', 'Raids, tears and bounties', 'Answered when it can', 'Left alone'],
   ['aiSurf', 'Shield riding in a fight', 'Rides away or across them', 'Keeps its feet'],
   ['aiTeleport', 'Getting to a dungeon', 'By the skull\'s teleport', 'Walks there'],
+  ['aiBeacon', 'Getting home', 'By the beacon stone', 'Walks back'],
 ];
 for (const [k] of AI_PARTS) settings[k] = 'on';
 try { Object.assign(settings, JSON.parse(store.get(SETTINGS_KEY) || '{}')); } catch { /* defaults */ }

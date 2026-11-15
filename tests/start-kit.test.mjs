@@ -22,7 +22,7 @@ test('a new game holds one common staff and a kite shield, and no skull, gems or
     assert.ok(SHIELDS[shield.base] && (SHIELDS[shield.base].kind || 'kite') === 'kite' && !SHIELDS[shield.base].side, 'a plain kite shield');
     assert.deepEqual(shield.gems, []);
     assert.equal(p.slots.skull, null, 'no skull in hand');
-    assert.deepEqual(p.entries, [], 'nothing in the pack');
+    assert.deepEqual(p.entries.map((e) => e.item.type), ['beacon'], 'nothing in the pack but the beacon stone');
     for (const [slot, it] of Object.entries(p.slots)) if (slot !== 'main' && slot !== 'off') assert.equal(it, null, slot);
   }
 });
@@ -47,12 +47,13 @@ test('the staff is a different kind from game to game, every kind about as often
 test('a save keeps what it has, and is given no test skull, gems or staffs', () => {
   const p = new Pack();
   p.load({ kite: true, slots: { main: { type: 'weapon', base: 'oakroot_staff', rarity: 0, dmg: [11, 17], affixes: [], sockets: 0, gems: [] } }, entries: [] });
-  assert.deepEqual(p.entries, []);
+  assert.deepEqual(p.entries.map((e) => e.item.type), ['beacon'], 'only the beacon stone every pack has');
   assert.equal(p.slots.skull, null);
   const kept = new Pack();
   const aurora = { type: 'skull', base: 'skull_03', rarity: 5, skin: 'aurora', pattern: 50, affixes: [], sockets: 6, gems: [] };
   kept.load({ kite: true, aurora: true, elementals: true, slots: { main: p.slots.main }, entries: [{ item: aurora, x: 0, y: 0 }, { item: { type: 'gem', kind: 'ruby', grade: 2 }, x: 2, y: 0 }] });
-  assert.equal(kept.entries.length, 2, 'what it had stays');
+  assert.equal(kept.entries.filter((e) => e.item.type !== 'beacon').length, 2, 'what it had stays');
+  assert.equal(kept.entries.filter((e) => e.item.type === 'beacon').length, 1, 'and a beacon stone besides');
   // A save with no staff at all is handed a common one.
   const bare = new Pack();
   bare.load({ kite: true, slots: {}, entries: [] });

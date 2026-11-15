@@ -54,6 +54,13 @@ import { BOSSES, DELVES, delveByKey, delveOf, inDungeon, toWorld as caveWorld } 
 import { caveStep, doHire, doWarrens, hireJob, hiring, perilsNear, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
 import { HallNav, STATIONS, hallAt, inArena, inHall } from '../core/testhall.js';
 import { thirdLead } from './autocam.js';
+import { LET_OUT, ONE_MORE, PACK_MAKER } from './folk.js';
+import { MAX_EXTRA, slotPrice } from '../items/pack.js';
+import { CHANNEL } from '../items/beacon.js';
+
+// The beacon stone (src/ui/beacon.js): used when the work's in Bellmourn and further off than BEACON_FAR, with nothing
+// within BEACON_CLEAR to break it off; while it's at work, it stands still for it unless something's within BEACON_HOLD.
+const BEACON_FAR = 300, BEACON_CLEAR = 20, BEACON_HOLD = 14;
 
 const TAU = Math.PI * 2;
 const wrap = (a) => { a %= TAU; return a > Math.PI ? a - TAU : a < -Math.PI ? a + TAU : a; };
@@ -909,7 +916,9 @@ export class Brain {
     // Something came between, a long way at once: a fall caught (back at the town's edge), a seal, a sleep. Plan afresh.
     if (this.lastPos && dist(this.lastPos[0], this.lastPos[1], m.x, m.z) > 25) {
       // Caught falling, and set down by the town: whatever it was at was too much for it yet. Two levels more first.
-      if (this.lastHpf < 0.35 && townDist(m.x, m.z) < 40 && this.job) {
+      // (Not the beacon stone setting it down by the seal: that's on purpose, however hurt it was.)
+      const beaconed = performance.now() - (g.beacon?.arrivedAt ?? -1e9) < 4000;
+      if (this.lastHpf < 0.35 && townDist(m.x, m.z) < 40 && this.job && !beaconed) {
         const why = this.job.why;
         this.o.log?.fell(m, m.own, this.job.say, why.startsWith('q:') ? why.slice(2) : null);
         this.bump[why] = (this.bump[why] || 0) + (this.bold ? 1 : 2);
@@ -988,6 +997,12 @@ export class Brain {
     if (m.opening > 0 && m.opening < OPENING.ARRIVED) { this.opening(snap, m); return; }
     const foes = this.foes(snap, m);
     this.nearFoe = foes.reduce((a, f) => Math.min(a, f.d), 1e9);
+    // The beacon stone at work: still for it, unless something's on it (then the fight comes first, and the stone goes quiet).
+    if (g.beacon?.busy && this.nearFoe > BEACON_HOLD) {
+      this.halt();
+      this.say(`The beacon stone: home to Bellmourn in ${Math.max(0, Math.ceil(CHANNEL - (g.beacon.on?.t || 0)))} s.`);
+      return;
+    }
     // Down the Warrens, a boss's calls come first: out of the circles, at the dragon's side, behind a pillar.
     // (And anywhere, out of what a monster has marked on the ground or thrown: src/ui/autowarrens.js perilStep.)
     if ((inDungeon(m.x, m.z) || perilsNear(this)) && this.delve(snap, m, foes)) { this.fighting = true; return; }
@@ -1905,7 +1920,7 @@ export class Brain {
 
   plan(m) {
     const prev = this.jobKey;
-    const job = this.choose(m);
+    const chosen = this.choose(m), job = this.homeBy(chosen, m) || chosen;
     const key = job ? `${job.kind}:${job.why}:${job.who ?? ''}:${job.x ?? ''}` : '';
     if (key !== prev || !this.job) { this.job = job; this.jobKey = key; this.patrol = null; this.jobT = this.t; }
     else if (job && this.job) { delete this.job.quest; delete this.job.offer; Object.assign(this.job, job); }
@@ -2045,7 +2060,7 @@ export class Brain {
     const p = this.o.pack;
     let used = 0;
     for (const e of p.entries) { const s = e.item.type === 'weapon' ? 4 : e.item.type === 'shield' ? 6 : e.item.type === 'skull' ? 4 : e.item.type === 'robe' ? 4 : 1; used += s; }
-    return 96 - used;
+    return p.cells - used;
   }
 
   // The giver of a quest, or whoever a step's to be said to: their place in the town's list.
@@ -2224,6 +2239,9 @@ export class Brain {
     // Buying: whatever an open counter has that's better than what it wears, or a spell it doesn't know, with coin to spare.
     const buy = trading && this.shopping(m);
     if (buy) return buy;
+    // More room in the pack from Wes Harrow, with coin to spare for it (src/ui/folk.js letOut).
+    const room = trading && this.roomJob();
+    if (room) return room;
     // Mended at the herbalist's, if it's hurt and has the coin.
     if (trading && m.hpf < 0.7 && pack.purse() >= 12) {
       const i = PEOPLE.findIndex((p) => p.trade === 'healing');
@@ -2295,6 +2313,44 @@ export class Brain {
     return this.nav.spawns.filter(([, z]) => z > RIFT_Z).sort((a, b) => dist(a[0], a[1], from[0], from[1]) - dist(b[0], b[1], from[0], from[1])).slice(0, n);
   }
 
+  // ---- the beacon stone, and room in the pack
+
+  // Home by the beacon stone (src/ui/beacon.js), in place of the long walk: when the job's work is in Bellmourn (to sell, to
+  // mend, a quest to hand in there) and it's further off than BEACON_FAR, the stone's lit, and there's nothing near enough
+  // to break it off. Not down a delve or in the Test Dungeon (their own ways out are theirs), nor if Settings has it walk.
+  homeBy(job, m) {
+    const b = this.o.game.beacon;
+    if (!job || !b || (job.kind !== 'talk' && job.kind !== 'go') || m.town || !this.allow('aiBeacon') || this.skipping('beacon')) return null;
+    if (inDungeon(m.x, m.z) || inHall(m.x, m.z) || this.nearFoe < BEACON_CLEAR) return null;
+    const w = job.kind === 'talk' ? this.o.townUI.whereOf(job.who) : Number.isFinite(job.x) ? { x: job.x, z: job.z } : null;
+    if (!w || townDist(w.x, w.z) > 40 || dist(m.x, m.z, w.x, w.z) < BEACON_FAR || !b.ready(this.snap)) return null;
+    return { kind: 'beacon', why: 'beacon', say: `The beacon stone, home to Bellmourn. (${job.say || 'To the town.'})` };
+  }
+
+  beaconUse(snap) {
+    const b = this.o.game.beacon;
+    this.halt();
+    this.say(this.job.say);
+    if (b.busy) return;
+    if (b.ready(snap)) b.use(snap);
+    // (Once it's begun, think() keeps it still. Broken off, it isn't tried again for a while: the walk instead.)
+    this.giveUp('beacon', 25);
+    this.job = null;
+  }
+
+  // Worth another pocket from Wes Harrow: there's room still to be had, and it costs no more than a tenth of the purse.
+  wantsRoom() {
+    const p = this.o.pack;
+    return p.extra < MAX_EXTRA && slotPrice(p.extra) * 10 <= p.purse() * 0.1;
+  }
+
+  roomJob() {
+    if (!this.wantsRoom() || this.skipping('room')) return null;
+    const i = this.personIndex(PACK_MAKER), W = this.o.townUI;
+    if (i < 0 || this.skipping(`p:${i}`) || !W.whereOf(i) || !this.reachable(i)) return null;
+    return { kind: 'talk', why: 'room', who: i, say: `To ${W.people[i].name}, to have the pack let out.` };
+  }
+
   // ---- doing it
 
   doJob(snap, m, foes) {
@@ -2315,6 +2371,7 @@ export class Brain {
       return;
     }
     if (j.kind === 'talk') { this.approach(m, j); return; }
+    if (j.kind === 'beacon') { this.beaconUse(snap); return; }
     if (j.kind === 'boss') { this.siege(snap, m); return; }
     if (j.kind === 'hire') { doHire(this, m, j); return; }
     if (j.kind === 'warrens') { this.warrensRun(m, foes); return; }
@@ -2502,6 +2559,16 @@ export class Brain {
       k = at((o) => want.has(label(o)) || o.cls === 'offer');
     }
     if (k >= 0) { townUI.choose(k); return; }
+    // Wes Harrow letting the pack out: asked, then a pocket at a time while it's still worth the coin (wantsRoom).
+    if (T.why === 'room') {
+      const one = at((o) => label(o).startsWith(ONE_MORE));
+      if (one >= 0 && T.sold < 6 && this.wantsRoom()) { T.sold++; townUI.choose(one); return; }
+      const ask = at((o) => label(o) === LET_OUT);
+      if (ask >= 0 && !T.asked && this.wantsRoom()) { T.asked = true; townUI.choose(ask); return; }
+      townUI.close(true);
+      this.giveUp('room', 300);
+      return;
+    }
     // The counter.
     if (T.why === 'sell' || T.why === 'mend' || T.why === 'bed' || T.why === 'buy') {
       const p = townUI.people[T.who], trade = TRADES[p.trade];
@@ -2642,7 +2709,7 @@ export class Brain {
       if (!this.subAsk && this.nav.ready && (fresh || this.t - this.subT > 12 || (this.subTo && dist(this.subTo[0], this.subTo[1], leg.x, leg.z) > 2.5))) {
         this.subFor = leg; this.subT = this.t; this.subTo = [leg.x, leg.z]; this.subAsk = true;
         const want = leg, avoid = this.avoid(this.me(this.o.game.currentSnap()), true).concat(this.lockedDoors());
-        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid, touch: leg === g ? g.touch : null }).then((pts) => {
+        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid, touch: leg === g ? g.touch : null, polite: true }).then((pts) => {
           this.subAsk = false;
           if (this.subFor !== want) return;
           this.subT = this.t;
@@ -2710,7 +2777,7 @@ export class Brain {
       if (!edge && N && !N.seal && !this.preAsk && this.pre?.for !== N && dist(m.x, m.z, W.x, W.z) < 10 && this.nav.inGrid(W.x, W.z, !!W.below) && this.nav.inGrid(N.x, N.z, !!N.below)) {
         const ask = this.pre = { for: N, pts: null };
         this.preAsk = true;
-        this.nav.ask('path', { from: [W.x, W.z], to: [N.x, N.z], avoid: this.avoid(m, true).concat(this.lockedDoors()), touch: N === g ? g.touch : null }).then((pts) => { this.preAsk = false; ask.pts = pts; });
+        this.nav.ask('path', { from: [W.x, W.z], to: [N.x, N.z], avoid: this.avoid(m, true).concat(this.lockedDoors()), touch: N === g ? g.touch : null, polite: true }).then((pts) => { this.preAsk = false; ask.pts = pts; });
       }
     } else {
       // Across country: a stretch at a time, by a short path round whatever stands in the way (a wall, a light well, a stand of

@@ -55,6 +55,7 @@ shrinks them to a quarter; and the far land's map is 15 s of one thread's work o
 | Cast the Utility spell in one of the last three slots (Utility spells only) | `0`, `-` and `+` (the `=` key), or click its button | Tap it, in the outermost ring |
 | Spellbook: the six trees, your points, and what's on the bar | `B` | The book, in the top row |
 | Pack: staffs, skulls, robes and gems | `I` | The pack, in the top row |
+| Beacon stone: stand still for fifteen seconds and you and your party are home by Bellmourn's seal. Once every ten minutes | `H`, or right-click the stone in the pack | Double tap the stone in the pack |
 | Take up what's on the ground, open a chest or a door, or talk | `E` | The gold button that comes up beside the ring |
 | Quest log | `J` | The page, in the top row |
 | The big map | `M` | Tap the small one in the corner |
@@ -1148,6 +1149,21 @@ bought as written (it's played through from level 1 to 50), and a new block of m
   when it had someone to talk to next, and it walked to whoever stood outside a door when it meant the chest inside.
   Not watched: a quest handed in indoors, the shops, and the catacombs' doors since. Nobody has watched it with their
   own eyes.
+- **It keeps to the paths in town.** When it walks to an errand in or near Bellmourn (a shop, someone with a quest, its bed), it asks the nav
+  worker for a polite way (`politePath`, `src/sim/nav.worker.js`). Inside Bellmourn and 24 m round it, grass costs 0.8 more
+  per metre, less where the ground is worn. The roads, lanes and the square are free (the same `PATHS` and `allWays()` the
+  townsfolk keep to). When the path is straightened, a shortcut is only taken if it crosses no more grass than the path it
+  replaces, so it doesn't cut round the sides of houses. Indoors and out in the land nothing changes, and neither do
+  its lines on a foe. `tests/town-polite.test.mjs` walks eight trips across the town: 41 m on grass in all, where the
+  shortest ways had 317 m, and none of them more than a few metres longer.
+  `node tools/autoplay/polite-sweep.mjs` checks the polite way against the plain one on 4,085 trips across the town
+  (14 s). The polite way reached every place the plain one did, none was much further round, and none took over 60 ms.
+- **The beacon stone.** When the job it has picked is in Bellmourn (to sell, to be mended, a quest to hand in) and is
+  more than 300 m off, the stone is lit, and nothing is within 20 m, it uses the stone instead of walking. It stands
+  still for the fifteen seconds unless something comes within 14 m, and then it fights. Settings' auto-play "Getting
+  home" can set it to walk back instead (`aiBeacon`).
+- **Pack room.** In town, with coin to spare, it has Wes Harrow let the pack out, a cell at a time, up to six on a
+  visit, while the next cell costs no more than a tenth of its purse. It never asks Lisandra to unbind it.
 
 ### The Free Company: a party of your own
 
@@ -2352,7 +2368,7 @@ is his) and nothing else: the Test Dungeon's book reads the roster.
 
 ### Swords, gems and the pack
 
-You start with a common staff in hand and a kite shield on the arm, and nothing in the pack (`startingKit` in `src/items/pack.js`). `I` (or the pack in a phone's top row) opens it and holds the fight. Click or drag to
+You start with a common staff in hand, a kite shield on the arm, and only the beacon stone in the pack (`startingKit` in `src/items/pack.js`; see "The beacon stone, pack room and unbinding"). `I` (or the pack in a phone's top row) opens it and holds the fight. Click or drag to
 move things, right-click or double tap to equip or stow, and click outside the panels to drop. A gem set on a sword goes in an
 open socket, for good. Only the Sword slot does anything yet; the others wait for items. The pack stays with you through a new
 fight, and only New Game starts it over.
@@ -2372,6 +2388,36 @@ swords, add the sheet to `tools/swords/sheets.py`, run `separate.py` and `render
 Five suits of armour come apart into six pieces each: helm, cuirass, pauldrons, gauntlets, tassets and greaves, in slots of their own. A piece rolls the same five rarities, with its
 suit's armour value and affixes, and lies on the ground as a small copy of itself, hovering, slowly turning, and glowing its rarity's colour. Knights and crabs sometimes drop one. Velscour's
 side only ever drops the plain Knight's suit: see "The two sides". A chest can hold a piece too: a house's any suit, the priest's and what the dead keep only the Knight's, since those are in Velscour's church. Breakable boxes and pots aren't in the game yet.
+
+### The beacon stone, pack room and unbinding
+
+Every game starts with a **beacon stone** in the top-left cell of the pack. A save made before it existed is given one when
+it loads, or as soon as there is a free cell. Press `H`, right-click the stone in the pack, or double tap it on a phone,
+and it takes fifteen seconds. Blue light gathers at the feet of you and of everyone alive in your party. It climbs and
+closes in until it covers you all at fifteen seconds. Then you are all set down together 5.5 m from Bellmourn's seal, on
+the town side, and the light fades off you there. Anyone in your party who had fallen is brought back. A bar under the
+middle of the screen counts the seconds down.
+
+You have to stand still for it. Walking more than 0.8 m, jumping, dodging, the staff, a spell or the shield stops it, and
+that costs nothing. A blow doesn't stop it unless it knocks you off your spot. While the pack or the pause menu is open,
+it waits and carries on afterwards. It won't start in the Test Dungeon, while you lie fallen, or before Lisandra has
+brought you down to the town. Used from a delve, it ends the run the way leaving does.
+
+After it is used, the stone is dark for ten minutes of play. Its card in the pack says how long is left. The time is kept
+in the pack, so a save keeps it. Nobody will buy the stone and it can't be dropped. The stone is
+`src/items/beacon.js`, the channel and its light are `src/ui/beacon.js`, the light's motes are orbit kind 11 in
+`src/gfx/post.js`, and the move is sim command 28 (`src/sim/dungeon.js` `home`).
+
+**Pack room.** Wes Harrow the tanner lets your pack out: "Could you let my pack out?" buys one more cell at a time, or
+five at once. The cells are added as new rows under the pack's eight rows, filled from the left; cells not bought yet
+are drawn hatched. The first cell costs 30 gold, and each one after costs a tenth more than the last, up to 48 more
+cells (about 2,650 gold for the last one, 28,800 for all of them; `slotPrice` and `MAX_EXTRA` in `src/items/pack.js`).
+What you've bought is kept in the save. Pinnacle points' bag space can add to `pack.extra` the same way.
+
+**Unbinding.** Lisandra will undo everything you've learned: "Could you undo what I've learned?" takes back every point
+in the six trees for 5 gold plus 2 per level (25 gold at level 10). The option only shows once you've spent a point. The
+spellbook's own Unlearn button still works, anywhere, at its higher price. Pinnacle points, once they're in, add
+themselves to `game.respecs` in `src/main.js`, and her unbinding resets them too.
 
 ### Gauntlets over the hands
 

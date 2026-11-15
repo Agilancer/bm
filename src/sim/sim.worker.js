@@ -542,6 +542,8 @@ class Sim {
       case 50: this.wilds?.debug(a, b, c); break;   // (the living land's own: src/sim/wilds.js)
       case 19: p.x = b; p.z = c; p.y = this.world.height(p.x, p.z); break;
       case 26: this.warrens?.toPortal(a); break;   // you and your party to delve a's portal (src/sim/dungeon.js toPortal)
+      // The beacon stone: you and your party home to (b, c) facing a, by Bellmourn's seal (src/ui/beacon.js, src/sim/dungeon.js home).
+      case 28: if (this.warrens) this.warrens.home(b, c, a); else { p.x = b; p.z = c; p.y = this.world.height(b, c); } break;
       case 8: p.hp = p.maxHp; break;
       case 27: { // a knight (or whatever's in its place; the nearest thing alive, with a under 0) killed outright, as by a blow from where you stand with weight b: to see it fall (tools/ragdoll/shots.mjs)
         let m = k;
