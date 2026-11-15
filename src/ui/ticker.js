@@ -5,7 +5,7 @@
 // A call is cut in two where it turns from what's happening to what to do ("A squall line sweeps the disc" » "Find the
 // gap in it"): the first half in white, the second in pale gold. Calls that come while one is still crawling join the end
 // of the line, and the belt runs faster while one is waiting to come on, so a new call is never long off the screen.
-// (src/ui/party.js sends the fight's calls here; the delves' calm lines, a boss's opening words, stay where they were.)
+// (src/ui/party.js sends the fight's calls here; a god's own words and the delves' calm lines stay where they were.)
 
 const SPEED = 13.5; // em a second, about eighteen letters a second in Cinzel's capitals
 const GAP = 3.4; // em between the end of one call and the start of the next

@@ -3,6 +3,7 @@
 // its clock, a meeting, a ritual's time), and the rewards: experience and what's left on the ground (src/items/drops.js).
 // What you've found and the caches you've opened are kept in the save, so neither pays twice.
 import { SITES } from '../core/lands.js';
+import { inDungeon } from '../core/dungeon.js';
 import { FACTIONS, FACTION_KEYS, MEETINGS, RAID_TOWNS, TEARS_KINDS, TEAR, WILD } from '../core/wilds.js';
 import { FIND_KINDS, FINDS, OUTPOSTS } from '../core/wilds-data.js';
 
@@ -115,8 +116,10 @@ export class WildsUI {
   tick() {
     let s = this.state;
     if (!s) {
-      // (Nothing on: the bounty in hand, if there is one.)
+      // (Nothing on: the bounty in hand, if there is one. Not down a delve: it's the land's.)
       s = this.bountyTick();
+      const p = this.o.pos?.();
+      if (s && p && inDungeon(p[0], p[1])) s = null;
       this.track.classList.toggle('on', !!s);
       if (!s) return;
       this.track.children[0].textContent = s.title;

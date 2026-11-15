@@ -8,3 +8,6 @@ tools/build/
 
 # The game files list for a static host (tools/files.py), made when the game is put up: never committed.
 files.json
+
+# The dragons' baked clips (tools/dragons/clips.py): install.py copies them into assets/monsters/tripo.
+art/dragons/anim/

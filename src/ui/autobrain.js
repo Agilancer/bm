@@ -176,6 +176,8 @@ const PLAN = [
   16], ['lords_of_the_keep', 17], ['the_castellan', 18],  // The four delves made after those, each at its own level and a little over for its last boss.
   ['under_the_mile', 10], ['what_sank_the_mile', 11], ['the_ring_below', 12], ['what_it_fruits_from', 13], ['the_winter_company', 14], ['last_night_of_the_run', 15],
   ['sung_open', 17], ['king_under_the_moor', 18],
+  // The Elder Dragon Gods: a party of the hundredth winter.
+  ['storm_over_the_horn', 100], ['the_hollow_star', 102],
 ];
 // (Taken on in the order of the levels they want.)
 PLAN.sort((a, b) => a[1] - b[1]);

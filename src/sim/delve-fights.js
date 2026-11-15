@@ -25,6 +25,7 @@ import { EV } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
 import { MOVES, tipBody } from './moves.js';
 import { ELEM, FX } from './spells.js';
+import { ELDER_FIGHTS } from './elder-fights.js';
 
 const { FIRE, FROST, ARCANE, STORM, DRAIN, BONE, VOID, POISON, SPIRIT, STONE, LIGHT } = ELEM;
 const TAU = Math.PI * 2;
@@ -128,15 +129,20 @@ function soar(W, f, m, o) {
   m.rig.poseModifier = (rot) => tipBody(m.rig, rot, a.pitch, a.roll);
   m.script = (k, dt) => {
     a.t += dt;
-    const clips = k.rig.clips, set = (n, loop = true) => { const c = clips[n] ? n : clips.fly ? 'fly' : k.idleClip; if (k.clip !== c) k.setClip(c); k.t = loop ? (k.t + dt) % clips[c].dur : Math.min(clips[c].dur, k.t + dt); };
+    const clips = k.rig.clips, set = (n, loop = true, rate = k.pace || 1) => { const c = clips[n] ? n : clips.fly ? 'fly' : k.idleClip; if (k.clip !== c) k.setClip(c); k.t = loop ? (k.t + dt * rate) % clips[c].dur : Math.min(clips[c].dur, k.t + dt * rate); };
+    // (The new dragons, src/sim/tripo.js rig.flies: up with the whole of their takeoff, and down with their landing, begun so they touch
+    // down as the dive does. `up`: how long the takeoff takes; `touch`: how long the landing takes to reach the ground.)
+    const wings = !!k.rig.flies, up = wings ? clips.takeoff.dur / k.pace : 0.9, touch = wings ? clips.land.touch / k.pace : 0.7;
     const turnTo = (yaw, rate) => { k.yaw += clamp(wrapAngle(yaw - k.yaw), -dt * rate, dt * rate); };
     const goTo = (x, z, left, top = 30) => { const dx = x - k.x, dz = z - k.z, d = Math.hypot(dx, dz), v = Math.min(top, d / Math.max(left, dt)); k.vx = d > 0.05 ? dx / d * v : 0; k.vz = d > 0.05 ? dz / d * v : 0; return d; };
     const lift = (to, rate) => { k.liftExtra = (k.liftExtra || 0) + clamp(to - (k.liftExtra || 0), -dt * rate, dt * rate); };
     const next = (stage) => { a.stage = stage; a.t = 0; };
     let pitch = 0;
     if (a.stage === 'rise') {
-      k.vx = k.vz = 0; set(a.t < 0.9 && clips.jump ? 'jump' : 'fly', a.t >= 0.9); lift(5, 3.5);
-      if (a.t > 1.8) next('aim');
+      k.vx = k.vz = 0;
+      if (wings && k.aloft) { set('fly'); lift(5, 3.5); if (a.t > 1.2) next('aim'); return true; }
+      set(a.t < up && clips.jump ? 'jump' : 'fly', a.t >= up); if (!wings || a.t > up * 0.4) lift(5, 3.5);
+      if (a.t > Math.max(1.8, up + 0.3)) next('aim');
     } else if (a.stage === 'aim') {
       if (!a.line) {
         // The strip: through one of you, as far each way as the room goes.
@@ -155,7 +161,7 @@ function soar(W, f, m, o) {
       if (a.t >= 2) { next('swoop'); sim.event(EV.ROAR, k.x, k.y + 4, k.z, 1.4); }
     } else if (a.stage === 'swoop') {
       const secs = 1.4;
-      set(clips.fly2 ? 'fly2' : 'fly'); lift(2.6, 6); pitch = 0.3;
+      set(wings && clips.fly_glide ? 'fly_glide' : clips.fly2 ? 'fly2' : 'fly'); lift(2.6, 6); pitch = 0.3;
       goTo(a.line.to[0], a.line.to[1], secs - a.t, 40); turnTo(a.line.yaw, 8);
       if ((sim.tick & 3) === 0) sim.casting.burst(FX.FLAME, o.elem, k.x, sim.world.height(k.x, k.z) + 0.2, k.z, 1.4, 3, 0.7, { alpha: 0.8, len: 2, light: 5, lightR: 8 });
       if (a.t >= secs) { a.line = null; a.n++; next(a.n < o.passes ? 'aim' : 'dive'); }
@@ -167,14 +173,16 @@ function soar(W, f, m, o) {
           then: (q) => P.wave(q.x, q.z, { speed: 11, reach: 26, touch: K(m, o.k * 0.55), knock: 3, elem: o.elem, r: 7, tag: 'diveWave' }) });
         W.warn(WARN[o.dive]);
       }
-      const left = fuse - a.t;
-      set(left < 0.7 && clips.land ? 'land' : 'fly', !(left < 0.7 && clips.land));
+      const left = fuse - a.t, landing = left < touch && clips.land;
+      set(landing ? 'land' : 'fly', !landing);
       goTo(a.spot.x, a.spot.z, Math.max(left - 0.25, 0.05), 30);
       turnTo(Math.hypot(k.vx, k.vz) > 2 ? Math.atan2(k.vx, k.vz) : k.yaw, 5);
-      lift(left < 0.6 ? 0 : 6, left < 0.6 ? 14 : 3);
-      pitch = left < 0.9 ? 0.45 : 0.15;
+      if (wings) lift(landing ? 0 : 6, landing ? 7 / Math.max(touch, 0.3) : 3);
+      else lift(left < 0.6 ? 0 : 6, left < 0.6 ? 14 : 3);
+      pitch = wings ? (landing ? 0.05 : 0.3) : left < 0.9 ? 0.45 : 0.15;
       if (left <= 0) {
-        k.flying = false; k.liftExtra = 0; k.script = null; k.rig.poseModifier = null; k.vx = k.vz = 0; k.state = 0; k.noTurn = false; k.setClip(k.idleClip);
+        k.flying = false; k.liftExtra = 0; k.script = null; k.rig.poseModifier = null; k.vx = k.vz = 0; k.state = 0; k.noTurn = false; k.aloft = false;
+        if (!wings || !k.landed()) k.setClip(k.idleClip);
         sim.event(EV.GROUND, k.x, k.y, k.z); sim.event(EV.ROAR, k.x, k.y + 3, k.z, 1.6);
         o.land?.();
         return true;
@@ -1212,7 +1220,7 @@ export const FIGHTS = {
       breath: { who: 'none', clip: null, warn: 'wyr_breath', gap: 20, when: (W, f, m) => !!m.rig.clips.breath && !f.turn?.on, go(W, f, m, t, P) {
         const clip = m.rig.clips.breath2 && Math.random() < 0.4 ? 'breath2' : 'breath';
         m.breathing = true; m.breathHeld = true; m.state = 4; m.setClip(clip); m.t = 0;
-        const w = m.meta.breathWin || [0.25, 0.8], dur = m.rig.clips[clip].dur, tank = W.tank(m);
+        const w = m.rig.clips[clip].info?.breathWin || m.meta.breathWin || [0.25, 0.8], dur = m.rig.clips[clip].dur / (m.pace || 1), tank = W.tank(m);
         P.mark({ shape: 'cone', ride: m, r: 16, half: 0.6, fuse: w[0] * dur, life: (w[1] - w[0]) * dur, dps: K(m, 0.5), elem: DRAIN, from: m, tag: 'breath', spare: (b) => b === tank });
       } },
       rake: { clip: 'atk1', face: false, at: 0.9, secs: 1.5, warn: 'wyr_rake', go(W, f, m, t, P) { const yaw = yawTo(m, t); for (const a of [-0.4, 0, 0.4]) P.mark({ shape: 'line', x: m.x, z: m.z, yaw: yaw + a, r: 16, w: 1, fuse: 1.1, dmg: K(m, 0.45), knock: 3, elem: BONE, from: m, tag: 'rake' }); } },
@@ -1280,4 +1288,6 @@ export const FIGHTS = {
     },
   },
 };
+// (The Elder Dragon Gods' four, in a file of their own.)
+Object.assign(FIGHTS, ELDER_FIGHTS);
 void rnd; void gap; void POISON; void DEMONS; void STORM;

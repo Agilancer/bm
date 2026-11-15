@@ -2024,4 +2024,72 @@ export const QUESTS = {
       silas: ["Jory says the moor's gone dark. I've carved him a little light to hang in the watch-house. He says he won't light it. He'll light it."],
     },
   },
+
+  // ---- the Elder Dragon Gods, through the door in the Sorrowhorn's caldera ----
+  storm_over_the_horn: {
+    title: 'A Storm Over the Horn',
+    giver: 'hasket',
+    needs: 'the_castellan',
+    hint: DELVE_HINT,
+    offer: [
+      "Look north. The Sorrowhorn. Every night this month there's been a storm sat on its crown, and it doesn't move off, and it doesn't rain. My lookout says it lights up purple from underneath.",
+      "There's a door down in the caldera, on the lake shore. The old maps had a word by it I had to ask a priest for. He said it means the place where the gods are kept. He didn't want to say which gods.",
+    ],
+    accept: "I'll go up the Horn.",
+    acceptLine: "North, up the old track into the caldera. The door's on the south shore of the lake. The Company keeps a man there who'll tell you you're not ready. Listen to him, then go anyway.",
+    decline: 'Not the Horn.',
+    declineLine: "No. Nobody sane would. I'll keep a man on the wall watching it, and I'll pay him extra not to tell me what he sees.",
+    journal: [
+      "A storm sits on the crown of the Sorrowhorn, north of Cinderford, and lights up purple from below. There is a door in its caldera, on the south shore of the lake: the Elder Dragon Gods. Go in, with a company.",
+      "Past the Scale Altar, across the western bridge, the Galeward: a storm god keeps it. Kill Thyrraxis, the Gale Eternal.",
+      "Go back to Sergeant Hasket at Cinderford.",
+    ],
+    progress: [
+      "The south shore of the lake, in the caldera. Take four with you, and the best four you can pay for.",
+    ],
+    done: [
+      "Islands. Hanging over a hole in the sky, and a dragon the size of the watchtower throwing people off them. You'll forgive me if I write in the log that you went up the Horn and came back. That's all I can make true.",
+      "The storm's off the crown. First clear night in a month. Here. The Watch never paid for anything this far past the ford, so this is from the captain's chest, and he can ask me about it.",
+    ],
+    after: [
+      "The Horn's quiet. My lookout says the lake's still lit from under at night. Three more, you said. He's stopped looking.",
+    ],
+    others: {
+      colm: ["The sergeant says you went up the Horn and in. My father sold charcoal to a man who did that. He came back down. Never sold him anything again: he didn't want for fire after."],
+    },
+  },
+
+  the_hollow_star: {
+    title: 'The Hollow Star',
+    giver: 'hasket',
+    needs: 'storm_over_the_horn',
+    hint: DELVE_HINT,
+    offer: [
+      "Three more, you said, and one of them the one the others answer to. I asked the priest again. He said the old word for it was the hole where a star used to be. He said that's not a figure of speech.",
+      "I can't send the Watch. I wouldn't if I could. But if that thing ever gets tired of its islands, the first wall it comes over is mine.",
+    ],
+    accept: "I'll finish it.",
+    acceptLine: "The fire one first, then the cold one, the seals won't let you past in any other order, you said. Then the last bridge. Come back and tell me it's done. Don't tell me how.",
+    decline: 'Not yet.',
+    declineLine: "No. Get your strength. It has had a long time. It can have a little longer.",
+    journal: [
+      "Three gods are left on the islands under the Sorrowhorn. The eastern bridge first: kill Kaldurra, the Hearth of the World.",
+      "The north-west bridge, up the Rimespire. Kill Morvekh, Who Remembers the Cold.",
+      "The last bridge, to the Lip of the Maw. Kill Nihvaroth, the Hollow Star.",
+      "Go back to Sergeant Hasket at Cinderford.",
+    ],
+    progress: [
+      "Fire, then cold, then the last bridge. I've written it on the wall by the gate so I don't forget what I'm waiting for.",
+    ],
+    done: [
+      "The lake's dark. My lookout came down off the wall at dawn and didn't say anything, just sat on the step. I sat with him. That's the whole report.",
+      "This came up the track from the caldera yesterday on its own, rolling, and stopped at the gate. Nobody would touch it. I think it's yours.",
+    ],
+    after: [
+      "Clear nights on the Horn. The whole Watch sleeps sounder for it, and none of them knows why. I'd keep it that way.",
+    ],
+    others: {
+      colm: ["Lake's dark up the Horn. Sold more charcoal this week than all summer. People want a fire of their own, after a thing like that."],
+    },
+  },
 };
