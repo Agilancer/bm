@@ -2,26 +2,26 @@
 // Casting's bolts and zones: a bolt's flight is fly_<key>, its landing hit_<key>; a shot that isn't a bolt is loose_<key>; what stays
 // in the world is zone_<kind>. dmg and the fields in `scaled` are multiplied by the staff's roll when it fires (Casting.stepStaff).
 import { EV } from '../core/layout.js';
-import { ELEM, FX } from './spells.js';
+import { ELEM, FX, REACH } from './spells.js';
 
 const { FIRE, FROST, ARCANE, STORM, LIGHT, DRAIN, BONE, VOID, POISON, SPIRIT } = ELEM;
 const TAU = Math.PI * 2;
 
 export const STAFF_SHOTS = {
   sunburst: { key: 'sunburst', elem: LIGHT, mana: 8, speed: 34, size: 0.36, dmg: 36, radius: 2.2, rays: 4, rayDmg: 16, reach: 9, scaled: ['rayDmg'] },
-  crescent: { key: 'crescent', elem: SPIRIT, mana: 8, loose: true, speed: 24, size: 0.8, dmg: 26, out: 17 },
+  crescent: { key: 'crescent', elem: SPIRIT, mana: 8, loose: true, speed: 24, size: 0.8, dmg: 26, out: REACH },
   stasis: { key: 'stasis', elem: ARCANE, mana: 12, speed: 26, size: 0.3, dmg: 34, zoneR: 4.2, hold: 2.6 },
   singularity: { key: 'singularity', elem: VOID, mana: 11, speed: 9, size: 0.55, dmg: 58, radius: 2.5, drag: 6.5, pull: 32, life: 2.8 },
   prism: { key: 'prism', elem: FROST, mana: 7, speed: 46, size: 0.24, dmg: 26, beams: 3, beamDmg: 24, reach: 15, fan: 0.55, scaled: ['beamDmg'] },
   leech: { key: 'leech', elem: DRAIN, mana: 8, speed: 32, size: 0.34, dmg: 22, reach: 8, ties: 3, drain: 20, heal: 0.4, hold: 2.2, scaled: ['drain'] },
-  wyrm: { key: 'wyrm', elem: FIRE, mana: 10, speed: 19, size: 0.38, dmg: 34, radius: 2.4, turn: 3.2, life: 3.2, seek: 28 },
+  wyrm: { key: 'wyrm', elem: FIRE, mana: 10, speed: 19, size: 0.38, dmg: 34, radius: 2.4, turn: 3.2, life: 3.2, seek: REACH },
   phoenix: { key: 'phoenix', elem: FIRE, mana: 12, speed: 23, size: 0.6, dmg: 30, pierce: true, radius: 2.5, ring: 5.5, ringDmg: 55, heal: 6, life: 1.5, scaled: ['ringDmg'] },
   tesla: { key: 'tesla', elem: STORM, mana: 10, speed: 30, size: 0.32, dmg: 8, reach: 7, hold: 3, every: 0.45 },
-  souls: { key: 'souls', elem: BONE, mana: 9, loose: true, speed: 15, size: 0.17, dmg: 17, count: 5, reach: 22, life: 3.5 },
+  souls: { key: 'souls', elem: BONE, mana: 9, loose: true, speed: 15, size: 0.17, dmg: 17, count: 5, reach: REACH, life: 3.5 },
   thorns: { key: 'thorns', elem: POISON, mana: 8, speed: 46, size: 0.2, dmg: 11, shards: 5, spread: 0.075, bleed: 3 },
-  starfall: { key: 'starfall', elem: ARCANE, mana: 12, loose: true, dmg: 30, radius: 2.2, count: 6, range: 55, spread: 2.6, delay: 0.3 },
+  starfall: { key: 'starfall', elem: ARCANE, mana: 12, loose: true, dmg: 30, radius: 2.2, count: 6, range: REACH, spread: 2.6, delay: 0.3 },
   // Seraph's Coil's alone: a sword of light called down where you look, that blinds what it doesn't kill.
-  judgement: { key: 'judgement', elem: LIGHT, mana: 13, loose: true, dmg: 70, radius: 3.4, range: 60, delay: 0.45, daze: 1.2 },
+  judgement: { key: 'judgement', elem: LIGHT, mana: 13, loose: true, dmg: 70, radius: 3.4, range: REACH, delay: 0.45, daze: 1.2 },
 };
 
 // The legendaries fire a grander kind of what lesser staffs fire, so each is its own the moment it's loosed.
@@ -340,7 +340,7 @@ export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, cl
       const vx = f[0] * c - f[2] * s, vz = f[0] * s + f[2] * c;
       const k = this.nearestFoe(sim, from[0], from[1], from[2], def.reach, claimed);
       if (k) claimed.add(k);
-      this.zones.push({ kind: 'soul', def, x: from[0], y: from[1], z: from[2], vx: vx * def.speed * 0.6, vy: 3 + i % 2 * 2, vz: vz * def.speed * 0.6, k, t: 0, life: def.life, seed: Math.random() });
+      this.zones.push({ kind: 'soul', def, x: from[0], y: from[1], z: from[2], vx: vx * def.speed * 0.6, vy: 3 + i % 2 * 2, vz: vz * def.speed * 0.6, k, t: 0, life: def.life, seed: Math.random(), leash: [p.x, p.y + EYE, p.z] });
     }
     this.burst(FX.FLARE, def.elem, from[0], from[1], from[2], 0.08, 0.22, 0.14, { alpha: -0.55 });
   };
@@ -359,6 +359,8 @@ export function installStaffShots(Casting, { chestOf, radiusOf, hash, smooth, cl
       z.vx += (tx / d * def.speed - z.vx) * t; z.vy += (ty / d * def.speed - z.vy) * t; z.vz += (tz / d * def.speed - z.vz) * t;
     } else { z.vy += (1.5 - z.vy) * dt; }
     z.x += z.vx * dt; z.y += z.vy * dt; z.z += z.vz * dt;
+    // (No further than you reach: there it fades, having caught no one.)
+    if (Math.hypot(z.x - z.leash[0], z.y - z.leash[1], z.z - z.leash[2]) > REACH) { this.burst(FX.PUFF, e, z.x, z.y, z.z, 0.15, 0.6, 0.3, { alpha: 0.5 }); return false; }
     const sp = Math.hypot(z.vx, z.vy, z.vz) || 1, w = Math.sin(z.t * 13 + z.seed * 20) * 0.08, g = smooth(z.t / 0.35);
     this.fx(FX.ORB, e, z.x, z.y + w, z.z, def.size * (0.3 + 0.7 * g), 0, 1, 0, 0, 0.4 + 0.6 * g, 4 * g, 3, 0, z.seed);
     this.fx(FX.TRAIL, e, z.x, z.y + w, z.z, def.size * 0.8 * g, -z.vx / sp, -z.vy / sp, -z.vz / sp, 0.9 * g, 0.6 * g, 0, 0, 0, z.seed);
