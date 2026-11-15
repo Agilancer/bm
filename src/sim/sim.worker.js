@@ -797,12 +797,10 @@ ${err.stack}` }); }
   const hz = msg.hz, dt = 1 / hz;
   let next = performance.now();
   let lastPublish = 0;
-  // (The clock hurried: CTRL.HASTE, in hundredths. More ticks of the same length, never longer ones.)
-  const haste = () => { const h = sim.shared ? Atomics.load(sim.shared.ctrl, CTRL.HASTE) : 0; return h > 100 ? Math.min(4, h / 100) : 1; };
   const iterate = () => {
-    const now = performance.now(), f = haste();
+    const now = performance.now();
     let steps = 0;
-    while (now >= next && steps < 6 * f) { tickOf(dt); next += 1000 / hz / f; steps++; }
+    while (now >= next && steps < 6) { tickOf(dt); next += 1000 / hz; steps++; }
     if (now - next > 250) next = now;
     if (steps) {
       if (sim.shared || now - lastPublish > 7) { sim.publish(); lastPublish = now; }
@@ -841,7 +839,7 @@ ${err.stack}` }); }
         const owed = ((want - done) | 0) / 1000;
         if (owed >= SHORTEST) {
           // (A stall longer than MOST is let go, as the fixed step lets go of one.)
-          const t = Math.min(owed, MOST) * haste(), n = Math.max(1, Math.ceil(t / TICK_MS - 0.05));
+          const t = Math.min(owed, MOST), n = Math.max(1, Math.ceil(t / TICK_MS - 0.05));
           for (let i = 0; i < n; i++) tickOf(t / n / 1000);
           done = want;
           sim.publish(done);
