@@ -12,7 +12,7 @@
 //     was cut from, its shape shows as well as its colours (src/gfx/herolook.js); on anyone else of its weight, its colours.
 // stats: what it adds to its wearer (src/sim/hero.js applies them, with their skill tree's: src/core/partytree.js).
 import { RARITIES } from './items.js';
-import { harmonize, hsvOf, plainRamp, richer } from '../gfx/recolour.js';
+import { fromHsv, goldRamp, harmonize, hsvOf, plainRamp, richer } from '../gfx/recolour.js';
 
 export const HG_SLOTS = ['weapon', 'off', 'helm', 'shoulders', 'chest', 'arms', 'legs', 'boots'];
 export const HG_ARMOUR = ['helm', 'shoulders', 'chest', 'arms', 'legs', 'boots'];
@@ -147,15 +147,20 @@ function propName(id, pal) {
 // A gear set's colours for a piece of this rarity: the sets that are gear of a rarity (sets.json rarity) at about it, else
 // any of the wizard's plain ones.
 // Each class leans to colours of its own (hue in degrees, colourfulness, brightness of a set's coat at its middle), so a
-// party reads at a glance: a paladin's pale and gold, a lancer's steel blue, an archer's woods, a rogue's dark red...
-const TONE = { paladin: [45, 0.25, 0.72], lancer: [220, 0.4, 0.42], archer: [95, 0.38, 0.4], rogue: [355, 0.45, 0.3], ninja: [270, 0.3, 0.24], dragoon: [355, 0.55, 0.42], boomerang: [180, 0.4, 0.45], bard: [295, 0.45, 0.5] };
-export function toneWeight(set, cls) {
-  const t = TONE[cls], mid = set?.ramps?.chest?.[2];
+// party reads at a glance: a paladin's ivory and silver (the gold is the trim's: recolour.js goldOf keeps it), a lancer's
+// steel blue, an archer's woods, a rogue's dark red...
+const TONE = { paladin: [45, 0.1, 0.62], lancer: [220, 0.4, 0.42], archer: [95, 0.38, 0.4], rogue: [355, 0.45, 0.3], ninja: [270, 0.3, 0.24], dragoon: [355, 0.55, 0.42], boomerang: [180, 0.4, 0.45], bard: [295, 0.45, 0.5] };
+// (slot: by the set's colours for that part, as a piece for it is dyed: a set with a pale coat and navy pauldrons is no pale
+// one for pauldrons. Any but the coat has its hue turned to the coat's (outfitRamps), so for those it's their light that
+// counts the most.)
+export function toneWeight(set, cls, slot = 'chest') {
+  const t = TONE[cls], mid = (set?.ramps?.[SKIN_PART[slot]] || set?.ramps?.chest)?.[2];
   if (!t || !mid) return 1;
   const [h, s, v] = hsvOf(mid);
   let dh = Math.abs(h * 360 - t[0]) % 360; dh = Math.min(dh, 360 - dh);
-  if (s < 0.12) dh = 80;   // (a grey's hue is no hue)
-  return 0.05 + Math.exp(-((dh / 45) ** 2 + ((s - t[1]) / 0.3) ** 2 + ((v - t[2]) / 0.25) ** 2) / 2);
+  if (s < 0.12) dh = t[1] < 0.15 ? 0 : 80;   // (a grey's hue is no hue: far from a coloured class's, and nothing to a pale one's)
+  const hw = slot === 'chest' ? 45 : 120;
+  return 0.05 + Math.exp(-((dh / hw) ** 2 + ((s - t[1]) / 0.3) ** 2 + ((v - t[2]) / 0.25) ** 2) / 2);
 }
 // worn: the sets they wear already. Now and then one of those again, to finish a set; otherwise one their class leans to,
 // a coat (the colour all they wear is dyed toward: outfitRamps) the more so.
@@ -165,7 +170,9 @@ function pickLook(rng, rarity, cls, worn = [], slot) {
   const near = LOOKS.filter((s) => s.rarity != null && Math.abs(s.rarity - rarity) <= 1);
   const pool = near.length ? near : LOOKS;
   if (!pool.length) return null;
-  const w = pool.map((s) => toneWeight(s, cls) ** (slot === 'chest' ? 3 : 1));
+  // (The coat the most, as all they wear is dyed toward it; the rest too, as each keeps its own set's light and dark: a paladin's
+  // ivory coat over black cuisses is no paladin's.)
+  const w = pool.map((s) => toneWeight(s, cls, slot || 'chest') ** (slot === 'chest' ? 3 : 2));
   let t = rng() * w.reduce((a, b) => a + b, 0);
   for (let i = 0; i < pool.length; i++) if ((t -= w[i]) < 0) return pool[i];
   return pool[pool.length - 1];
@@ -179,26 +186,53 @@ export function rampFor(set, slot, rarity) {
   if (slot === 'helm') ramp = ramp.map((c, i) => (i === ramp.length - 1 ? ramp[i - 1].map((x, j) => (x + c[j]) / 2) : c));
   return rarity == null ? ramp : richer(ramp, rarity);
 }
+// A paladin's is pale, whatever its set: a breath of the set's colour, its light lifted toward ivory and silver, as a
+// paladin's own plate is (the gold is the trim's: recolour.js goldOf keeps it). Dyed as the set is, a paladin in a tan set
+// over the purple-and-brass caped suit was brass from helm to boots. cls: the wearer's class, or, off them, the class of the
+// body the piece was cut from (its shape).
+// (Its light is lifted by a curve, the dark more than the light (recolour.js rampMap): by a straight gain, a dark cape under
+// pale plate came out slate and the plate's highs went white in flecks. And it leans to ivory, so its cloth is cream; its
+// metal, its colour mostly taken off (herolook.js), is silver.)
+const PALE = { paladin: [0.3, 0.38, 3.2, 0.6] };   // colour kept, light lifted toward white by, the most lift, how ivory
+const IVORY = [0.115, 0.17];   // an ivory's hue and colourfulness
+export const shapeClass = (shape) => /^([a-z]+)_[fm]\d+$/.exec(shape || '')?.[1] || null;
+export function paled(ramp, cls) {
+  const p = PALE[cls];
+  return p && ramp ? ramp.map((c) => {
+    const [h, s, v] = hsvOf(c), V = v + (1 - v) * p[1], a = fromHsv(h, s * p[0], V), w = fromHsv(IVORY[0], IVORY[1], V);
+    return a.map((x, j) => x + (w[j] - x) * p[3]);
+  }) : ramp;
+}
+export const paleLift = (cls) => PALE[cls]?.[2];
+// A piece's own colours, off anyone: its set's, as rich as its rarity, and pale if it's a paladin's.
+export const pieceRamp = (item) => paled(rampFor(lookOf(item.look), item.slot, item.rarity | 0), shapeClass(item.shape));
+
 // What a wearer's armour is dyed, piece by piece, on them: each its own set's light and dark in their coat's colour (or,
-// with no coat, their rarest piece's), so what they wear goes together, each as rich as its own rarity. A piece of the
-// coat's own set is the set's own.
-export function outfitRamps(gear) {
+// with no coat, their rarest piece's), so what they wear goes together, each as rich as its own rarity. Of the coat's own
+// set, what's dyed as the coat is (a sleeve) is the coat's, and its gold is kept gold; its other colours are turned to the
+// coat's as anyone else's are (a teal hood of a navy set's is navy), till all six of the set are worn: then it's worn
+// whole, every piece in the set's own colours (setsWorn tells it).
+export function outfitRamps(gear, cls) {
   const worn = HG_ARMOUR.filter((s) => gear?.[s]?.look && lookOf(gear[s].look));
   if (!worn.length) return {};
   const first = gear.chest?.look && lookOf(gear.chest.look) ? 'chest' : [...worn].sort((a, b) => (gear[b].rarity | 0) - (gear[a].rarity | 0))[0];
   const anchor = gear[first].look, aRamp = rampFor(lookOf(anchor), 'chest');
+  const whole = worn.length === HG_ARMOUR.length && worn.every((s) => gear[s].look === anchor);
   const out = {};
   for (const s of worn) {
-    const own = rampFor(lookOf(gear[s].look), s);
-    out[s] = richer(gear[s].look === anchor || !aRamp ? own : harmonize(own, aRamp), gear[s].rarity | 0);
+    const own = rampFor(lookOf(gear[s].look), s), mine = gear[s].look === anchor;
+    const keep = !aRamp || whole || (mine && (SKIN_PART[s] === 'chest' || goldRamp(own)));
+    out[s] = paled(richer(keep ? own : harmonize(own, aRamp), gear[s].rarity | 0), cls);
   }
   return out;
 }
-// The sets they wear two pieces or more of, most first: [{ set, n, of }] (of: the armour pieces a set could be, six).
+// The sets they wear two pieces or more of, most first: [{ set, n, of, missing }] (of: the armour pieces a set could be,
+// six; missing: the slots it's still to be found for). All six worn is the set worn whole (outfitRamps).
 export function setsWorn(gear) {
   const n = {};
   for (const s of HG_ARMOUR) { const l = gear?.[s]?.look; if (l && lookOf(l)) n[l] = (n[l] || 0) + 1; }
-  return Object.entries(n).filter(([, k]) => k >= 2).sort((a, b) => b[1] - a[1]).map(([id, k]) => ({ set: lookOf(id), name: lookWord(lookOf(id)), n: k, of: HG_ARMOUR.length }));
+  return Object.entries(n).filter(([, k]) => k >= 2).sort((a, b) => b[1] - a[1])
+    .map(([id, k]) => ({ set: lookOf(id), name: lookWord(lookOf(id)), n: k, of: HG_ARMOUR.length, missing: HG_ARMOUR.filter((s) => gear[s]?.look !== id) }));
 }
 // The palette nearest a coat's colour, of the painted ones: for a weapon or shield that goes with what they wear.
 function palNear(gear) {
@@ -228,10 +262,13 @@ export function rollPartyGear(rng, o) {
   if (slot === 'weapon' || slot === 'off') {
     item.kind = kinds[slot];
     item.prop = pick(rng, BY_KIND[item.kind]);
-    // (A common one is as it was made; the rarer, the likelier a colour of its own, and that more often than not one that
-    // goes with their coat.)
+    // (A common weapon is as it was made; the rarer, the likelier a colour of its own, and that more often than not one that
+    // goes with their coat. A shield is most of them seen from behind: it's in their coat's colours more often than not,
+    // whatever its rarity.)
     const near = palNear(who.gear);
-    item.pal = rng() < 0.25 + rarity * 0.15 ? (near && rng() < 0.6 ? near : pick(rng, PAL_KEYS)) : 'own';
+    // (And a shield that isn't in their coat's colour is plain steel, light or dark, not another strong colour of its own.)
+    if (slot === 'off' && near) item.pal = rng() < 0.85 ? near : rng() < 0.5 ? 'bleached' : 'blackened';
+    else item.pal = rng() < 0.25 + rarity * 0.15 ? (near && rng() < 0.6 ? near : pick(rng, PAL_KEYS)) : 'own';
     item.name = propName(item.prop, item.pal);
   } else {
     item.weight = WEIGHT_OF[who.cls];
@@ -332,7 +369,8 @@ export const hgWorth = (item) => Math.round(((12 + item.ilvl * 1.5) * RQ[item.ra
 // robe's for light armour: tools/gear, tools/wizard/robes.py. sword: the model's id; scale; center: how far its middle is
 // over its origin, once scaled.
 // (How strongly a piece on the ground glows its rarity's colour: faint for a common one, plain to see for a rare one and up.)
-const GLOW_K = [0.1, 0.12, 0.2, 0.28, 0.36, 0.42];
+const GLOW_K = [0.1, 0.13, 0.24, 0.34, 0.44, 0.52];
+const CHEST_TILT = 0.38;   // radians
 const SUIT_SLOT = { helm: 'head', shoulders: 'shoulders', chest: 'chest', arms: 'hands', legs: 'legs', boots: 'feet' };
 // (Never one of Tessariel's suits on the ground: plate and mail lie as the plain knight's. CLAUDE.md, the V and T rule.)
 const LIGHT_GROUND = { helm: 'moss_hood_head', shoulders: 'moss_mantle_shoulders', chest: 'moss_jacket_chest', arms: 'knight_hands', legs: 'moss_pants_legs', boots: 'moss_boots_feet' };
@@ -344,5 +382,6 @@ export function groundModelOf(item) {
   }
   // (In its own dye: src/gfx/herolook.js lyingDyed. glowK: its rarity's glow, faint, so the dye shows under it.)
   const base = item.weight === 'light' ? LIGHT_GROUND[item.slot] : `knight_${SUIT_SLOT[item.slot]}`;
-  return { sword: item.look ? `dye/${base}|${item.look}|${item.slot}|${item.rarity | 0}` : base, plain: base, scale: item.weight === 'light' && item.slot !== 'arms' ? 0.8 : 0.72, center: 0, glowK: GLOW_K[item.rarity | 0] };
+  // (A coat stood upright and turning shows its sides and its collar, a bell: tipped back a little, its front is seen.)
+  return { sword: item.look ? `dye/${base}|${item.look}|${item.slot}|${item.rarity | 0}|${shapeClass(item.shape) || ''}` : base, plain: base, scale: item.weight === 'light' && item.slot !== 'arms' ? 0.8 : 0.72, center: 0, glowK: GLOW_K[item.rarity | 0], tilt: item.slot === 'chest' ? CHEST_TILT : 0 };
 }

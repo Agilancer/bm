@@ -48,10 +48,11 @@ export class PartyBook {
       #partyBook .pb-slot:hover, #partyBook .pb-slot.on { background: rgba(201,163,92,.15); border-color: #c9a35c; }
       #partyBook .pb-slot .pic { flex: none; width: 60px; height: 64px; display: flex; align-items: center; justify-content: center; }
       #partyBook .pb-slot .pic .ico { width: 100%; height: 100%; background-size: contain; background-position: center; background-repeat: no-repeat; }
-      #partyBook .pb-slot .tx { font-size: 12px; line-height: 1.25; } #partyBook .pb-slot .tx em { display: block; font-style: normal; opacity: .6; font-size: 11px; }
+      #partyBook .pb-slot .tx { font-size: 12px; line-height: 1.25; } #partyBook .pb-slot .tx em { display: block; font-style: normal; opacity: .6; font-size: 11px; } #partyBook .pb-slot .tx em .setof { color: #6fd36f; }
       #partyBook .pb-sum { margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: #cfc2a0; }
       #partyBook .pb-sets { margin: 4px 0 2px; font-size: 13px; opacity: .92; }
       #partyBook .pb-sets .set { color: #6fd36f; font-weight: 600; }
+      #partyBook .pb-sets .miss { opacity: .75; } #partyBook .pb-sets .whole { display: block; font-size: 12px; opacity: .7; margin-top: 1px; }
       #partyBook .pb-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
       #partyBook button:not(.menu-x) { font: 13px Georgia, serif; color: #f1e4c4; background: rgba(60,44,22,.85); border: 1px solid #8c7344; border-radius: 3px; padding: 4px 10px; cursor: pointer; }
       #partyBook button:not(.menu-x):hover { background: rgba(110,80,36,.9); } #partyBook button:disabled { opacity: .45; cursor: default; }
@@ -262,16 +263,23 @@ export class PartyBook {
     let left = `<div class="pb-who"><b>${esc(e.name)}</b>, level ${e.level} ${esc(CLASSES[e.cls].title)} (${ROLE[roleOf(e.cls)].toLowerCase()})${here ? '' : `<br><span style="opacity:.7;font-size:13px">On the roster: last with you at your level ${e.lastWith}${e.got ? `. Came by ${e.got} piece${e.got > 1 ? 's' : ''} of their own since` : ''}.</span>`}</div>`;
     left += '<h4>Gear</h4><div class="pb-gear">';
     // (Each piece they wear drawn in the colours it has on them: the outfit's, not the set's alone.)
-    const worn = outfitRamps(e.gear);
+    const worn = outfitRamps(e.gear, e.cls);
+    // (A piece of a set they wear more of is marked with the set's name, in the set lines' green.)
+    const inSet = {};
+    for (const x of setsWorn(e.gear)) for (const s of HG_SLOTS) if (e.gear[s]?.look === x.set.id) inSet[s] = x.name;
     for (const slot of HG_SLOTS) {
       const it = e.gear[slot];
       const shape = it?.shape ? (shapeShows(it, who) ? '' : ' (colours only)') : '';
-      left += `<div class="pb-slot${this.pick === slot ? ' on' : ''}" data-do="slot" data-slot="${slot}" title="${esc(it ? hgLines(it, who).map((l) => l.text).join('\n') : `${HG_SLOT_NAME[slot]}: nothing`)}"><div class="pic">${it ? hgIcon(it, this.base, again, worn[slot]) : ''}</div><div class="tx">${it ? `<span style="color:${RARITIES[it.rarity].color}">${esc(it.name)}</span>${shape}` : '<span style="opacity:.5">Nothing</span>'}<em>${HG_SLOT_NAME[slot]}</em></div></div>`;
+      left += `<div class="pb-slot${this.pick === slot ? ' on' : ''}" data-do="slot" data-slot="${slot}" title="${esc(it ? hgLines(it, who).map((l) => l.text).join('\n') : `${HG_SLOT_NAME[slot]}: nothing`)}"><div class="pic">${it ? hgIcon(it, this.base, again, worn[slot]) : ''}</div><div class="tx">${it ? `<span style="color:${RARITIES[it.rarity].color}">${esc(it.name)}</span>${shape}` : '<span style="opacity:.5">Nothing</span>'}<em>${HG_SLOT_NAME[slot]}${inSet[slot] ? ` · <span class="setof">${esc(inSet[slot])}</span>` : ''}</em></div></div>`;
     }
     left += '</div>';
     // (The sets they're wearing more than one piece of: what the repeat drops are for.)
     const sets = setsWorn(e.gear);
-    if (sets.length) left += `<div class="pb-sets">${sets.map((x) => `<span class="set">${esc(x.name)}</span> ${x.n} of ${x.of}`).join('<span style="opacity:.4"> · </span>')}</div>`;
+    // (What's still to be found of each, and what the whole of one is: partygear.js outfitRamps.)
+    if (sets.length) {
+      left += `<div class="pb-sets">${sets.map((x) => `<span class="set">${esc(x.name)}</span> ${x.n} of ${x.of}${x.missing.length ? ` <span class="miss">· still to find: ${x.missing.map((s) => HG_SLOT_NAME[s].toLowerCase()).join(', ')}</span>` : ' <span class="miss">· the whole set</span>'}`).join('<br>')}`;
+      left += `<span class="whole">${sets[0].missing.length ? 'All six of a set: worn whole, every piece in its own colours, its accents and all.' : 'Worn whole: every piece in the set\'s own colours, its accents and all.'}</span></div>`;
+    }
     if (this.pick) left += this.pickHtml(e, who, this.pick, again);
     // (Their bag next, where it's seen: the party's loot is only ever in their bags.)
     left += this.bagHtml(e, who, again);

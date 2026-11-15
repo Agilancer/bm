@@ -14,8 +14,8 @@
 // Nothing is done to a hero who wears nothing: their body is the one the renderer built for them, untouched.
 import { accessor, imageBytes, parseGLB } from '../core/glb.js';
 import { mipCountFor } from './gpu.js';
-import { PROP_PALS, bareHead, bodyClass, lookOf, outfitRamps, rampFor, shapeShows } from '../items/partygear.js';
-import { lumRange, paintProp, rampMap } from './recolour.js';
+import { PROP_PALS, bareHead, bodyClass, lookOf, outfitRamps, paleLift, paled, rampFor, shapeShows } from '../items/partygear.js';
+import { goldOf, hsvOf, fromHsv, lumOf, lumRange, paintProp, rampMap, wideOf } from './recolour.js';
 
 const GROUPS = ['helm', 'chest', 'shoulders', 'arms', 'legs', 'boots'];
 const MAX_DONORS = 3;          // bodies borrowed from at once, beside the wearer's own: a picture of 2 x 2 cells at most
@@ -108,6 +108,15 @@ function groupMask(prim, tris, W, H) {
   return mask;
 }
 
+// The padded coat under a dyed hero's clothes, in their coat's colour, as a fraction for their look's number (materials.js:
+// 0.01 and up, in steps of 0.0015): its hue in 32, colourful or not, and one of four lights by the coat's own. 0 for none.
+export function coverCode(ramp) {
+  if (!ramp) return 0;
+  const [h, s] = hsvOf(ramp[1]), m = ramp[Math.floor(ramp.length / 2)], l = lumOf(m[0], m[1], m[2]);
+  const code = (Math.round(h * 32) % 32) * 8 + (s > 0.22 ? 4 : 0) + (l < 0.3 ? 0 : l < 0.45 ? 1 : l < 0.6 ? 2 : 3);
+  return 0.01 + code * 0.0015;
+}
+
 export class HeroLooks {
   // r: the renderer. base: where the game's files are.
   constructor(r, base) {
@@ -145,7 +154,7 @@ export class HeroLooks {
     // (An old companion back in another body than their own, of their class and sex: their own body's shape, still.)
     const own = entry.body && entry.body !== cast.body && shapeShows({ shape: entry.body }, me) ? entry.body : cast.body;
     // (Each piece in its own set's colours, drawn toward their coat's, so it all goes together: partygear.js outfitRamps.)
-    const groups = {}, colours = outfitRamps(entry.gear);
+    const groups = {}, colours = outfitRamps(entry.gear, cast.cls);
     for (const g of GROUPS) {
       const it = entry.gear?.[g];
       groups[g] = it?.shape && shapeShows(it, me) ? it.shape : own;
@@ -158,7 +167,7 @@ export class HeroLooks {
     const mail = groups.chest;
     const plain = GROUPS.every((g) => groups[g] === cast.body) && !Object.keys(colours).length;
     if (plain) return null;
-    return { wearer: cast.body, groups, mail, colours, key: JSON.stringify([cast.body, groups, mail, Object.fromEntries(Object.entries(entry.gear || {}).map(([k, v]) => [k, v?.look || '']))]) };
+    return { wearer: cast.body, groups, mail, colours, lift: paleLift(cast.cls), key: JSON.stringify([cast.body, groups, mail, Object.fromEntries(Object.entries(entry.gear || {}).map(([k, v]) => [k, v?.look || '']))]) };
   }
 
   // entry: their roster entry (src/ui/party.js), or null when they've gone. kp: { kit, pal } of what they hold.
@@ -177,6 +186,8 @@ export class HeroLooks {
       const made = await this.compose(rec);
       if (this.turns.get(slot) !== turn) { this.free(made); return; }
       const c = { ...st.orig, ...made };
+      // (Their padded coat in their coat's colour: materials.js reads it off the fraction of their look's number.)
+      if (made.cover && st.orig.heroLook) c.heroLook = Math.trunc(st.orig.heroLook) - made.cover;
       this.put(ci, c, st);
       st.key = rec.key;
     } catch (e) { console.warn('hero look', e); }
@@ -289,15 +300,38 @@ export class HeroLooks {
       const mask = groupMask(prim, tris, alb.W, alb.H);
       const img = alb.ctx.getImageData(0, 0, alb.W, alb.H), px = img.data;
       const metal = mr.ctx.getImageData(0, 0, mr.W, mr.H).data, mw = mr.W, sx = mr.W / alb.W;
+      const metalAt = (i) => { const x = i % alb.W, y = (i / alb.W) | 0; return metal[((y * sx | 0) * mw + (x * sx | 0)) * 4 + 2] / 255; };
+      const dyed = (i) => mask[i] >= 1 && mask[i] <= GROUPS.length;
+      if (rec.lift) {
+        // (A pale outfit's gold is its trim, not its plate: a suit whose plates are brass under the trim, weathered, came out
+        // gold and silver in flecks, the brighter brass kept and the darker dyed. Gold wider than a trim line, plate, is made
+        // plain first, to be dyed whole as plate is; gold lines stay gold.)
+        const n = px.length / 4, g = new Uint8Array(n);
+        for (let i = 0, k = 0; i < n; i++, k += 4) g[i] = dyed(i) && goldOf(px[k], px[k + 1], px[k + 2]) > 0.2 ? 1 : 0;
+        const wide = wideOf(g, alb.W, alb.H, Math.max(1, Math.round(4 * S / 1024)));
+        for (let i = 0, k = 0; i < n; i++, k += 4) {
+          if (!wide[i]) continue;
+          const [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]), c = fromHsv(h, s * 0.35, v);
+          px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
+        }
+      }
+      // (Its gilt, as it was: kept gold by the dye, and left gold below.)
+      const gilt = new Uint8Array(px.length / 4);
+      for (let i = 0, k = 0; k < px.length; i++, k += 4) if (dyed(i) && goldOf(px[k], px[k + 1], px[k + 2]) > 0.3) gilt[i] = 1;
       for (const g of want) {
         const n = groupNo[g];
         const range = lumRange(px, (i) => mask[i] === n);
         // (Cloth and leather take the set's colours whole; steel most of them, so it's still steel, coloured.)
-        rampMap(px, rec.colours[g], range, (i) => {
-          if (mask[i] !== n) return 0;
-          const x = i % alb.W, y = (i / alb.W) | 0, m = metal[((y * sx | 0) * mw + (x * sx | 0)) * 4 + 2] / 255;
-          return 0.92 - 0.3 * m;
-        });
+        rampMap(px, rec.colours[g], range, (i) => (mask[i] !== n ? 0 : 0.92 - 0.3 * metalAt(i)), rec.lift);
+      }
+      // (Dyed steel is steel with a colour to it, not a gilt or a bronze: in a tan set, a paladin's plate was gold under its
+      // gold trim, gold on gold. On metal, the dye's colour half as strong; its light and the trim's gold as they are.)
+      for (let i = 0, k = 0; k < px.length; i++, k += 4) {
+        if (!dyed(i) || gilt[i]) continue;
+        const m = metalAt(i);
+        if (m <= 0.2) continue;
+        const [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]), c = fromHsv(h, s * (1 - 0.55 * m), v);
+        px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
       }
       alb.ctx.putImageData(img, 0, 0);
     }
@@ -317,7 +351,7 @@ export class HeroLooks {
     const matBG = device.createBindGroup({ layout: r.bglArmor, entries: [
       { binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: maps[0].createView() }, { binding: 2, resource: maps[1].createView() }, { binding: 3, resource: maps[2].createView() },
     ] });
-    return { ...sk, ubo, matBG, gashData: new Float32Array(CHAR_UBO / 4), maps };
+    return { ...sk, ubo, matBG, gashData: new Float32Array(CHAR_UBO / 4), maps, cover: coverCode(rec.colours.chest || Object.values(rec.colours)[0]) };
   }
 
   // ---- what's in their hands -------------------------------------------------------------------------------------------
@@ -335,17 +369,33 @@ export class HeroLooks {
   }
 
   // A piece of a party's armour on the ground: the plain piece it lies as (partygear.js groundModelOf), in its own dye.
-  // id: dye/<item model>|<look>|<slot>|<rarity>.
+  // id: dye/<item model>|<look>|<slot>|<rarity>|<the class of the body it was cut from>.
   async lyingDyed(id, s) {
-    const [base, look, slot, rarity] = id.slice(4).split('|');
+    const [base, look, slot, rarity, cls] = id.slice(4).split('|');
     const buf = await fetch(`${this.base}assets/game/items/${base}.glb`).then((res) => { if (!res.ok) throw new Error(`${base}: ${res.status}`); return res.arrayBuffer(); });
     const glb = parseGLB(buf), pr = glb.json.meshes[0].primitives[0], a = pr.attributes, mat = glb.json.materials[pr.material];
     const srcOf = (t) => glb.json.textures[t.index].source, k = this.r.tier.texScale;
     const pic = await this.propPicture(glb, null);
-    const ramp = rampFor(lookOf(look), slot, rarity === undefined ? 2 : +rarity);
+    const ramp = paled(rampFor(lookOf(look), slot, rarity === undefined ? 2 : +rarity), cls);
     if (ramp) {
       const ctx = pic.cv.getContext('2d', { willReadFrequently: true }), d = ctx.getImageData(0, 0, pic.W, pic.H), px = d.data;
-      rampMap(px, ramp, lumRange(px, (i) => px[i * 4 + 3] > 128), (i) => (px[i * 4 + 3] > 8 ? 0.85 : 0));
+      // (The old knight's pieces it lies as are banded in gilt: kept gold over a dyed plate, the bands are stripes, and a
+      // pair of cuisses a pair of striped socks. On the ground their bands are plain steel.)
+      const steel = base.startsWith('knight_') ? new Float32Array(px.length / 4) : null;
+      if (steel) for (let i = 0, k = 0; k < px.length; i++, k += 4) steel[i] = goldOf(px[k], px[k + 1], px[k + 2]);
+      rampMap(px, ramp, lumRange(px, (i) => px[i * 4 + 3] > 128), (i) => (px[i * 4 + 3] > 8 ? 0.85 : 0), paleLift(cls));
+      let sum = 0, n = 0;
+      for (let i = 0, k = 0; k < px.length; i++, k += 4) {
+        if (px[k + 3] <= 128) continue;
+        if (steel && steel[i] > 0.05) {
+          const [h, s, v] = hsvOf([px[k], px[k + 1], px[k + 2]]), c = fromHsv(h, s * 0.15, v * 0.82), w = steel[i];
+          px[k] += (c[0] - px[k]) * w; px[k + 1] += (c[1] - px[k + 1]) * w; px[k + 2] += (c[2] - px[k + 2]) * w;
+        }
+        sum += lumOf(px[k], px[k + 1], px[k + 2]); n++;
+      }
+      // (A dark dye on the ground is lost in the dirt: lifted, as the pack's dark pictures are, to be seen lying there.)
+      const lift = n ? Math.min(1.8, Math.max(1, 0.3 / Math.max(0.02, sum / n))) : 1;
+      if (lift > 1) for (let k = 0; k < px.length; k += 4) { px[k] *= lift; px[k + 1] *= lift; px[k + 2] *= lift; }
       ctx.putImageData(d, 0, 0);
     }
     const [nrm, mr] = await Promise.all([
