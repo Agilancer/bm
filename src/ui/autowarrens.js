@@ -27,6 +27,11 @@ export const WAYS = {
   sporehold: ['sh_sink', 'sh_stair', 'sh_ring', 'sh_kennel', 'sh_den', 'sh_ring', 'sh_garden', 'sh_bower', 'sh_ring', 'sh_veil', 'sh_heart'],
   playhouse: ['ph_foyer', 'ph_cloak', 'ph_gallery', 'ph_house', 'ph_wardrobe', 'ph_house', 'ph_props', 'ph_green', 'ph_stage', 'ph_green', 'ph_stair', 'ph_nursery', 'ph_attic'],
   kingsbarrow: ['kb_door', 'kb_dromos', 'kb_south', 'kb_cups', 'kb_east', 'kb_queens', 'kb_warden', 'kb_queens', 'kb_north', 'kb_cross', 'kb_hounds', 'kb_ossuary', 'kb_hounds', 'kb_west', 'kb_shields', 'kb_south', 'kb_stair', 'kb_vault'],
+  // The Elder Dragon Gods: over the Span and the Shards to the Scale Altar, then out along each god's bridge in the order
+  // the seals let you, and back to the altar between: the Galeward, the Cinderwell, up the Rimespire, the Lip of the Maw.
+  // (Their islets are reached in the fights, by a leap or a god's blow: not walked to, so not on the way.)
+  elder: ['ed_threshold', 'ed_span', 'ed_shards', 'ed_altar', 'ed_galegate', 'ed_galeward', 'ed_galegate', 'ed_altar', 'ed_cindergate', 'ed_cinderwell', 'ed_cindergate', 'ed_altar',
+    'ed_rimegate', 'ed_rime0', 'ed_rime1', 'ed_rime2', 'ed_rime3', 'ed_summit', 'ed_rime3', 'ed_rime2', 'ed_rime1', 'ed_rime0', 'ed_rimegate', 'ed_altar', 'ed_mawgate', 'ed_maw'],
 };
 export const WAY = WAYS.warrens;
 // The level it wants before it goes down each the first time (its own, from the delve: the Warrens 7, the Deeps 10,
@@ -47,6 +52,8 @@ export const KNOWN = new Set([
   'sh_stair', 'sh_ring_west', 'sh_ring_east', 'sh_kennel', 'sh_garden', 'sh_veil', 'sh_den_run', 'sh_bower_run', 'mouldfang', 'morel', 'heart',
   'ph_cloak', 'ph_gallery', 'ph_house_back', 'ph_house_front', 'ph_props', 'ph_green', 'ph_stair', 'ph_nursery', 'seamstress', 'leadingman', 'dollmaker',
   'kb_dromos', 'kb_seal', 'kb_cups', 'kb_east', 'kb_queens', 'kb_cross', 'kb_hounds', 'kb_west', 'kb_shields', 'gravewarden', 'golem', 'wyrm',
+  // (The Elder Gods' four likewise: where to stand is all in their orders, a gust stone's way to it among them.)
+  'ed_span', 'ed_shards_west', 'ed_shards_east', 'ed_shards_drake', 'ed_galegate', 'ed_cindergate', 'ed_rimegate', 'ed_mawgate', 'thyrraxis', 'kaldurra', 'morvekh', 'nihvaroth',
 ]);
 export function warrensCoverage() {
   const out = [];
@@ -61,7 +68,7 @@ export function warrensCoverage() {
       if (!KNOWN.has(b.key)) out.push(`${d.name}, boss ${b.key}: no fight taught for it (src/ui/autowarrens.js tactics)`);
       if (!way.includes(b.room)) out.push(`${d.name}, boss ${b.key}: its room ${b.room} isn't on the way through`);
     }
-    for (const r of d.rooms) if (!way.includes(r.id)) out.push(`${d.name}, room ${r.id}: not on the way through, so it never goes there`);
+    for (const r of d.rooms) if (!way.includes(r.id) && !r.leap) out.push(`${d.name}, room ${r.id}: not on the way through, so it never goes there`);
     for (const id of way) if (!d.rooms.some((r) => r.id === id)) out.push(`${d.name}: its way through names a room, ${id}, that isn't there`);
     if (!BOSSES.some((b) => b.key === d.last && b.delve === d.key)) out.push(`${d.name}: no last boss, so it never knows it's done`);
   }
@@ -236,6 +243,13 @@ export function tactics(b, m, foes) {
   // stopped; a pyre's on it and it's clear of everyone); or somewhere to be at once, whatever's under it (the high rock
   // above the tide, the far side of a pillar, his spotlight, the grave's circle).
   const told = f?.order || null;
+  // (Held to a place, or sent somewhere at once, and burning where it is: a step out of the fire first, as a player would.
+  // Not if where it's sent is in the same fire.)
+  if (told?.still || (told?.to && told.urgent)) {
+    const G = b.o.game.perils, burning = (G?.marks || []).filter((h) => h.burn && h.live && !h.soak && edge(h, m.x, m.z) < 0 && !(told.to && edge(h, told.to[0], told.to[1]) < 0));
+    const out = burning.length ? wayOut(burning, m.x, m.z, 0.6, (x, z) => caveRoom(x, z) > 0.8) : null;
+    if (out) return { to: out, run: true, target: pickTarget(live, f, b, m), why: 'Out of the fire.' };
+  }
   if (told?.still) return { to: [m.x, m.z], still: true, target: pickTarget(live, f, b, m), why: 'Not a step.' };
   if (told?.to && told.urgent && dist(m.x, m.z, told.to[0], told.to[1]) > 0.7) return { to: told.to, run: true, target: pickTarget(live, f, b, m), why: 'Where the fight wants me, now.' };
   // Out of whatever's marked, falling, burning or flying at it, first.

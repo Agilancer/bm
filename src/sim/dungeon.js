@@ -23,6 +23,7 @@ import { terrainHeight } from '../core/terrain.js';
 import { ELEM, FX } from './spells.js';
 import { TripoMonster } from './tripo.js';
 import { foeOf } from './foes.js';
+import { route, voidDraw, voidStep } from './voidland.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -72,7 +73,7 @@ export class Warrens {
   // Stood somewhere, still, facing yaw: the player (with the view turned to match) or a hero.
   put(b, x, z, yaw) {
     const sim = this.sim, y = sim.world.height(x, z);
-    b.x = x; b.z = z; b.y = y; b.vx = 0; b.vz = 0;
+    b.x = x; b.z = z; b.y = y; b.vx = 0; b.vz = 0; b.leaping = null;
     if (b === sim.player) {
       b.vy = 0; b.onGround = true; b.yaw = yaw; b.surfing = false;
       sim.input[INPUT.YAW] = yaw;
@@ -118,7 +119,18 @@ export class Warrens {
     this.dt = dt;
     this.stepPacks(dt);
     this.stepBosses(dt);
+    // (The Elder Gods' islands: falls, leaps, gust stones, seals, and the party across gaps: src/sim/voidland.js.)
+    if (this.delve.style === 'void') voidStep(this, dt);
     this.post(dt);
+  }
+
+  // What's drawn of a delve each tick (src/sim/sim.worker.js, after the spells' update has cleared the frame's shapes):
+  // its fight's own (spec.draw: a god's light, the set pieces it uses), and the void's.
+  drawFx() {
+    if (!this.inside || !this.delve) return;
+    const f = this.fight;
+    if (f?.spec?.draw) f.spec.draw(this, f, this.bossBodies(f.boss.key).filter((m) => !m.dead));
+    if (this.delve.style === 'void') voidDraw(this);
   }
 
   anyCleared(d) { return BOSSES.some((b) => b.delve === d.key && this.down.has(b.key)) || this.sim.tripo?.lairs.some((l) => l.delve === d.key && l.state === 'cleared'); }
@@ -266,7 +278,7 @@ export class Warrens {
       for (const m of bodies) if (!m.setUp) this.setUp(m, b);
       if (lair.state === 'cleared' || (bodies.length && bodies.every((m) => m.dead) && lair.spawned >= b.models.length)) {
         this.down.add(b.key); lair.state = 'cleared'; lair.clearedOnce = true;
-        if (this.fight?.boss === b) { this.fight = null; this.clearGround(); }
+        if (this.fight?.boss === b) { this.fight.spec?.died?.(this, this.fight, bodies); this.fight = null; this.clearGround(); }
         sim.event(EV.DELVE, DELVE.BOSS_DOWN, BOSSES.indexOf(b));
         // (What its death sets going somewhere else: a curtain going up.)
         if (b.cue) this.warn(WARN[b.cue]);
@@ -274,7 +286,9 @@ export class Warrens {
         const m = bodies[0];
         // (On top of what its body leaves: rollLoot's 20 and 21 in src/items/items.js. Nothing the Warrens' rank and file
         // drop comes near it.)
-        if (m) sim.event(EV.LOOT, m.x, sim.world.height(m.x, m.z), m.z, b.key === this.delve.last ? 21 : 20, 0);
+        // (Where a fight says, if its body went where nobody can follow: an Elder God over its island's edge.)
+        const [lx, lz] = m?.lootAt || [m?.x, m?.z];
+        if (m) sim.event(EV.LOOT, lx, sim.world.height(lx, lz), lz, b.key === this.delve.last ? 21 : 20, 0);
         continue;
       }
       const live = bodies.filter((m) => !m.dead);
@@ -284,14 +298,15 @@ export class Warrens {
       if (this.fight?.boss === b) {
         // (Who's still in it: anyone in the room or a few strides out of its door. A long room's corners are further
         // from its middle than its short side says: the Dollmaker's attic, the Ossuary.)
-        const rm = roomOf(b.room), reach = Math.max(R + 14, rm.hx !== undefined ? Math.hypot(rm.hx, rm.hz) + 4 : 0);
+        // (And a god's whole arena, its islets with it: b.arena.)
+        const rm = roomOf(b.room), reach = Math.max(R + 14, rm.hx !== undefined ? Math.hypot(rm.hx, rm.hz) + 4 : 0, b.arena || 0);
         const party = this.bodies().filter((x) => Math.hypot(x.x - rx, x.z - rz) < reach);
         if (!party.length || p.dead) { this.endFight(b, live); continue; }
         this.fight.t += dt;
-        for (const m of live) { m.aggro = true; if (Math.hypot(m.x - rx, m.z - rz) > R + 6 && !m.flying) { m.vx = (rx - m.x) * 0.3; } }
+        for (const m of live) { m.aggro = true; if (Math.hypot(m.x - rx, m.z - rz) > (b.arena || R + 6) && !m.flying && !m.script) { m.vx = (rx - m.x) * 0.3; } }
         if (this.fight.spec) this.run(this.fight.spec, dt, this.fight, live); else this[b.key](dt, this.fight, live);
         this.turnOn(this.fight, live);
-      } else if (!this.fight && dRoom < R - BOSS_ROOM_PAD && live.some((m) => !m.aggro)) for (const m of live) m.notice(sim);
+      } else if (!this.fight && dRoom < (b.pull ?? R - BOSS_ROOM_PAD) && live.some((m) => !m.aggro)) for (const m of live) m.notice(sim);
     }
   }
 
@@ -384,7 +399,7 @@ export class Warrens {
   endFight(b, live) {
     const sim = this.sim, [rx, , rz] = roomSpot(b.room);
     for (const m of live) {
-      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx + (b.at?.[0] || 0), rz + (b.at?.[1] || 0)];
+      m.aggro = false; m.hp = m.maxHp; m.flying = false; m.aloft = false; m.liftExtra = 0; m.script = null; m.rig.poseModifier = null; m.spin = 0; m.breathing = false; m.breathHeld = false; m.act = null; m.state = 0; m.home = [rx + (b.at?.[0] || 0), rz + (b.at?.[1] || 0)];
       m.x = rx + (b.at?.[0] || 0) + rnd(-2, 2); m.z = rz + (b.at?.[1] || 0) + rnd(-2, 2); m.y = sim.world.height(m.x, m.z); m.heroFoe = null; m.tauntBy = null; m.fixOn = null;
       m.shrug = 1; m.noTurn = false; m.buried = false; m.lastStand = null;
       if (m.opts.base) { m.opts.damage = m.opts.base.damage; m.opts.pause = m.opts.base.pause; m.opts.speed = m.opts.base.speed; }
@@ -433,7 +448,10 @@ export class Warrens {
   deck(f, m, secs, list) {
     const d = (f.decks ||= {})[m.id] ||= { t: secs * rnd(0.5, 0.8), bag: [], last: null };
     d.t -= this.dt;
-    if (d.t > 0 || m.script || m.breathing || m.state !== 0 || f.turn?.m === m) return;
+    // (A god hanging in the air by its fight's flight goes on with what it can do from there: src/sim/elder-fights.js.)
+    if (d.t > 0 || (m.script && !m.airDeck) || m.breathing || m.state !== 0 || f.turn?.m === m) return;
+    // (What's left in the bag from a phase whose list was another: not drawn now.)
+    if (d.bag.some((n) => !list.includes(n))) d.bag = d.bag.filter((n) => list.includes(n));
     if (!d.bag.length) { d.bag = list.filter((n) => n !== d.last).sort(() => Math.random() - 0.5); }
     const name = d.bag.pop(), mv = f.spec?.moves[name];
     if ((mv ? this.play(f, m, mv) : this[name](f, m)) === false) return;
@@ -510,7 +528,10 @@ export class Warrens {
   order(b) {
     const f = this.fight;
     if (!f?.spec?.order || b.dead) return null;
-    return f.spec.order(this, f, b, this.bossBodies(f.boss.key).filter((m) => !m.dead)) || null;
+    const o = f.spec.order(this, f, b, this.bossBodies(f.boss.key).filter((m) => !m.dead)) || null;
+    // (In the Elder Gods' void, somewhere on another island is by way of the gust stone that goes there: the player can't
+    // jump the gap as the party does. src/sim/voidland.js route.)
+    return o && this.delve.style === 'void' && b === this.sim.player ? route(this, b, o) : o;
   }
   // The far side of the nearest thing that stands between a body and (sx, sz): a pillar of the delve's rock or something
   // round and solid in the room (list: [x, z, r] in the world, or the delve's own). Null if there's nothing near enough.
@@ -744,7 +765,7 @@ export class Warrens {
     if (!m.rig.clips[clip] || f.turn?.on) return false;
     this.warn(8, 20);
     m.breathing = true; m.breathHeld = true; m.state = 4; m.setClip(clip); m.t = 0;
-    const w = m.meta.breathWin || [0.25, 0.8], dur = m.rig.clips[clip].dur, tank = foeOf(m, sim);
+    const w = m.rig.clips[clip].info?.breathWin || m.meta.breathWin || [0.25, 0.8], dur = m.rig.clips[clip].dur / (m.pace || 1), tank = foeOf(m, sim);
     sim.perils.mark({ shape: 'cone', ride: m, r: 16, half: 0.6, fuse: w[0] * dur, life: (w[1] - w[0]) * dur, dps: 69, elem: ELEM.POISON, from: m, tag: 'breath',
       spare: (b) => b === tank && b.role === 'tank' });
   }
@@ -788,9 +809,12 @@ export class Warrens {
 
   // A stamp: three rings out from her, one after another.
   vStomp(f, m) {
-    if (!m.perform({ clip: m.rig.clips.land ? 'land' : 'jump', secs: 1.6 })) return false;
+    // (The new dragons rear and bring their forefeet down: the rings go out as they land. src/sim/tripo.js rig.flies)
+    const slam = m.rig.flies && m.rig.clips.claw_slam, rings = () => MOVES.stompRings(this.sim.perils, m, null, 38, { r: 5.5, elem: ELEM.POISON });
+    if (slam && !m.perform({ clip: 'claw_slam', secs: slam.dur / m.pace, at: slam.hit / m.pace, fn: rings })) return false;
+    if (!slam && !m.perform({ clip: m.rig.clips.land ? 'land' : 'jump', secs: 1.6 })) return false;
     this.warn(32, 25);
-    MOVES.stompRings(this.sim.perils, m, null, 38, { r: 5.5, elem: ELEM.POISON });
+    if (!slam) rings();
   }
 
   // Frenzied: venom from the roof, all over where you stand.
@@ -824,7 +848,10 @@ export class Warrens {
   fly(k, dt, sim, f) {
     const a = f.air, P = sim.perils, [cx, , cz] = roomSpot('lair'), R = roomOf('lair').r - 5;
     a.t += dt;
-    const clips = k.rig.clips, set = (n, loop = true) => { const c = clips[n] ? n : clips.fly ? 'fly' : k.idleClip; if (k.clip !== c) k.setClip(c); k.t = loop ? (k.t + dt) % clips[c].dur : Math.min(clips[c].dur, k.t + dt); };
+    const clips = k.rig.clips, set = (n, loop = true, rate = k.pace || 1) => { const c = clips[n] ? n : clips.fly ? 'fly' : k.idleClip; if (k.clip !== c) k.setClip(c); k.t = loop ? (k.t + dt * rate) % clips[c].dur : Math.min(clips[c].dur, k.t + dt * rate); };
+    // (The new dragons, src/sim/tripo.js rig.flies: up with the whole of their takeoff, and down with their landing, begun so they touch
+    // down as the dive does. `up`: how long the takeoff takes; `touch`: how long the landing takes to reach the ground.)
+    const wings = !!k.rig.flies, up = wings ? clips.takeoff.dur / k.pace : 0.9, touch = wings ? clips.land.touch / k.pace : 0.7;
     const turnTo = (yaw, rate) => { k.yaw += clamp(wrapAngle(yaw - k.yaw), -dt * rate, dt * rate); };
     // To (x, z), to be there in `left` seconds, no faster than top.
     const goTo = (x, z, left, top = 30) => { const dx = x - k.x, dz = z - k.z, d = Math.hypot(dx, dz), v = Math.min(top, d / Math.max(left, dt)); k.vx = d > 0.05 ? dx / d * v : 0; k.vz = d > 0.05 ? dz / d * v : 0; return d; };
@@ -834,9 +861,10 @@ export class Warrens {
     switch (a.stage) {
       case 'rise': {
         k.vx = k.vz = 0;
-        set(a.t < 0.9 && clips.jump ? 'jump' : 'fly', a.t >= 0.9);
-        lift(5, 3.5);
-        if (a.t > 1.8) next('aim');
+        if (wings && k.aloft) { set('fly'); lift(5, 3.5); if (a.t > 1.2) next('aim'); break; }
+        set(a.t < up && clips.jump ? 'jump' : 'fly', a.t >= up);
+        if (!wings || a.t > up * 0.4) lift(5, 3.5);
+        if (a.t > Math.max(1.8, up + 0.3)) next('aim');
         break;
       }
       case 'aim': {
@@ -861,7 +889,7 @@ export class Warrens {
       case 'swoop': {
         // Low and fast down the strip, her breath under her.
         const secs = 1.5, L = a.line;
-        set(clips.fly2 ? 'fly2' : 'fly');
+        set(wings && clips.fly_glide ? 'fly_glide' : clips.fly2 ? 'fly2' : 'fly');
         lift(2.6, 6);
         pitch = 0.3;
         goTo(L.to[0], L.to[1], secs - a.t, 40);
@@ -876,7 +904,9 @@ export class Warrens {
       }
       case 'perch': {
         const [px, pz] = toWorld(PERCH.x, PERCH.z);
-        set('fly');
+        // (Hanging over her perch; her breath drawn as the flame gathers, to let go as it's loosed.)
+        if (a.flame && wings && clips.hover_breath) set('hover_breath', false, clips.hover_breath.dur * 0.5 / 2.4);
+        else set(wings && clips.fly_hover ? 'fly_hover' : 'fly');
         lift(PERCH.up + 2, 3);
         const d = goTo(px, pz, 0.1, 13);
         turnTo(d > 1.5 ? Math.atan2(px - k.x, pz - k.z) : Math.atan2(cx - k.x, cz - k.z), 3);
@@ -885,7 +915,7 @@ export class Warrens {
           a.flame -= dt;
           pitch = 0.25;
           if (a.flame <= 0) {
-            const mouth = [k.x, k.y + k.meta.height * 0.6 + k.hover, k.z];
+            const mouth = wings ? k.mouthAt(new Float32Array(6), sim.player) : [k.x, k.y + k.meta.height * 0.6 + k.hover, k.z];
             for (const b of this.bodies()) {
               if (!caveClear(mouth[0], mouth[2], b.x, b.z, 0.05)) continue;
               P.hurt(b, 110, k.x, k.z, 1, false, 'hoardBreath');
@@ -911,15 +941,17 @@ export class Warrens {
             then: (q) => P.wave(q.x, q.z, { speed: 11, reach: 26, touch: 45, knock: 3, elem: ELEM.POISON, r: 7.5, tag: 'diveWave' }) });
           this.warn(30);
         }
-        const left = fuse - a.t, s = a.spot;
-        set(left < 0.7 && clips.land ? 'land' : 'fly', !(left < 0.7 && clips.land));
+        const left = fuse - a.t, s = a.spot, landing = left < touch && clips.land;
+        set(landing ? 'land' : 'fly', !landing);
         goTo(s.x, s.z, Math.max(left - 0.25, 0.05), 30);
         turnTo(Math.hypot(k.vx, k.vz) > 2 ? Math.atan2(k.vx, k.vz) : k.yaw, 5);
-        lift(left < 0.6 ? 0 : 6, left < 0.6 ? 14 : 3);
-        pitch = left < 0.9 ? 0.45 : 0.15;
+        if (wings) lift(landing ? 0 : 6, landing ? 7 / Math.max(touch, 0.3) : 3);
+        else lift(left < 0.6 ? 0 : 6, left < 0.6 ? 14 : 3);
+        pitch = wings ? (landing ? 0.05 : 0.3) : left < 0.9 ? 0.45 : 0.15;
         if (left <= 0) {
           // Down, and frenzied.
-          k.flying = false; k.liftExtra = 0; k.script = null; k.rig.poseModifier = null; k.vx = k.vz = 0; k.state = 0; k.setClip(k.idleClip);
+          k.flying = false; k.liftExtra = 0; k.script = null; k.rig.poseModifier = null; k.vx = k.vz = 0; k.state = 0; k.aloft = false;
+          if (!wings || !k.landed()) k.setClip(k.idleClip);
           f.phase = 2; f.air = null;
           this.warn(13);
           k.opts.damage *= 1.25;
@@ -970,6 +1002,8 @@ export class Warrens {
     const d = delveByKey(boss?.delve || (m.room && roomOf(m.room)?.delve.key) || m.delve || 'warrens') || DELVES[0];
     const mine = BOSSES.filter((b) => b.delve === d.key), b = boss || mine[m.n | 0];
     if (m.cmd === 'enter' || m.cmd === 'boss' || m.cmd === 'room') {
+      // (A fight going on is let go first: the bosses before this one are about to be counted down, and theirs would never end.)
+      if (this.fight) this.endFight(this.fight.boss, this.bossBodies(this.fight.boss.key).filter((k) => !k.dead));
       let [x, z] = toWorld(d.entry.x, d.entry.z, d), yaw = d.entry.yaw;
       if (m.cmd === 'room' && roomOf(m.room)) { const [rx, , rz] = roomSpot(m.room, m.dx || 0, m.dz || 0); yaw = Math.atan2(rx - x, rz - z); x = rx; z = rz; }
       if (m.cmd === 'boss' && b) {

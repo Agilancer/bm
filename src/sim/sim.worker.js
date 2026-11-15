@@ -329,6 +329,7 @@ class Sim {
     this.time += tdt;
     this.tick++;
     this.gameT += dt;
+    this.level = input[INPUT.LEVEL] || 0;
     this.casting.power = input[INPUT.POWER] || 1; this.casting.maxMana = MAX_MANA + input[INPUT.MANA_MAX]; this.casting.regen = input[INPUT.REGEN] || 1; this.casting.thrift = input[INPUT.THRIFT];
     if (input[INPUT.HEAL] !== this.healSeen) { const g = input[INPUT.HEAL] - this.healSeen; this.healSeen = input[INPUT.HEAL]; if (g > 0 && !player.dead) player.hp = Math.min(player.maxHp, player.hp + g); }
     if (input[INPUT.MANA_UP] !== this.manaSeen) { const g = input[INPUT.MANA_UP] - this.manaSeen; this.manaSeen = input[INPUT.MANA_UP]; if (g > 0) this.casting.mana = Math.min(this.casting.maxMana, this.casting.mana + g); }
@@ -392,6 +393,8 @@ class Sim {
     // (After the spells' update, which clears the frame's shapes.)
     this.heroWorld?.drawFx();
     this.perils.draw(this.frozen ? 0 : tdt);
+    // (A delve's own lights and set pieces: after the marks, so a full frame drops these and never a warning.)
+    this.warrens?.drawFx();
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.tumblers.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);

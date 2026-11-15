@@ -305,6 +305,9 @@ export const TRICKS = {
 
 // One of a monster's tricks, if it's time for one and there's someone to play it on. Half the time that's you, if you're in
 // reach of it, whoever it's fighting; else whoever it's on. (m: a TripoMonster; foe: who it's on.)
+// A trick's own clip, where the body has one (the dragons'): the whip on the tail's, the spiral on a spin, the fissures on a slam.
+const TRICK_CLIPS = { tailWhip: 'tail_whip', spiral: 'tail_spin', fissures: 'claw_slam', spitRain: 'roar' };
+
 export function tryTrick(m, sim, foe) {
   const list = m.opts.tricks, P = sim.perils;
   if (!list || !P || P.marks.length > 48 || P.shots.length > 150) return false;
@@ -316,9 +319,13 @@ export function tryTrick(m, sim, foe) {
     const d = gap(m, t);
     const fit = list.filter((q) => MOVES[q.move] && d >= q.near && d <= q.far && (q.move !== 'tailWhip' || hasTail(m)));
     if (!fit.length || !sim.world.sees(m.x, m.y + tall(m) * 0.6, m.z, t.x, t.y + 1, t.z)) continue;
-    const q = pick(fit), k = m.opts.damage;
-    const clip = q.clip && m.rig.clips[q.clip] ? q.clip : m.rig.clips.roar ? 'roar' : null;
-    if (!m.perform({ clip, face: t, at: q.at ?? 0.45, secs: 1.3, fn: () => { if (!t.dead) MOVES[q.move](P, m, t, k, q.o); } })) return false;
+    const q = pick(fit), k = m.opts.damage, own = TRICK_CLIPS[q.move];
+    const clip = own && m.rig.clips[own] ? own : q.clip && m.rig.clips[q.clip] ? q.clip : m.rig.clips.roar ? 'roar' : null;
+    // (The dragons that take off and land, src/sim/tripo.js rig.flies, play a trick's clip whole, at their own pace, and the
+    // trick goes off as the blow lands, or most of the way into a roar.)
+    const c = clip && m.rig.flies ? m.rig.clips[clip] : null;
+    const secs = c ? c.dur / m.pace : 1.3, at = c ? (c.hit ?? c.dur * 0.45) / m.pace : q.at ?? 0.45;
+    if (!m.perform({ clip, face: t, at, secs, fn: () => { if (!t.dead) MOVES[q.move](P, m, t, k, q.o); } })) return false;
     m.trickCd = rnd(q.cd[0], q.cd[1]);
     return true;
   }

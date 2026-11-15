@@ -1,7 +1,7 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
 import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
-import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, inDungeon as inDelve } from './core/dungeon.js';
+import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, delveOf, inDungeon as inDelve } from './core/dungeon.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { ChatLog } from './ui/chatlog.js';
@@ -503,6 +503,7 @@ async function boot(plan, poolSize) {
   game.wearSkin = (id) => { forcedSkin = id || null; wearSkins(); };
   const arm = () => {
     writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots), levelPerks(pack.level));
+    shared.input[INPUT.LEVEL] = pack.level;
     // (GOD MODE, from the skull: everything dies at one blow.)
     if (game.lands?.cheats.god) for (const k of [INPUT.POWER, INPUT.W_MIN, INPUT.W_MAX]) shared.input[k] *= 1000;
     // (Bare hands: the gauntlet code is still in the renderer, nothing asks for it.)
@@ -1315,7 +1316,10 @@ class Hud {
     const hpf = clamp(snap[co + C.HP] / snap[co + C.MAX_HP], 0, 1);
     $('foe').style.opacity = near < BOSS_FAR && !this.dungeonBoss?.() ? 1 : 0;
     // (One of the land's new kinds says its own name: src/core/wilds.js.)
-    const foeName = this.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || '';
+    let foeName = this.wildName?.(snap[co + C.MODEL]) || FOE_NAMES[snap[co + C.KIND]] || '';
+    // (Down a delve that has its own names for its kinds, by those: the Elder Gods' voidwhelps. src/core/dungeon.js names.)
+    const names = delveOf(snap[H.PX], snap[H.PZ])?.names;
+    if (names) for (const g in names) if (GROUPS[g]?.name === foeName) foeName = names[g];
     if (foeName !== this.foeNameShown) { this.foeNameShown = foeName; $('foeName').textContent = foeName; }
     this.setBar(this.foeHp, hpf);
     this.setBar(this.foeArm, clamp(snap[co + C.ARMOR], 0, 1));
@@ -1638,6 +1642,9 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
       this.clock.set(r.hour);
+      // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
+      const deep = inDelve(snap[H.PX], snap[H.PZ]);
+      if (deep !== this.deepWas) { this.deepWas = deep; this.clock.el.style.display = deep ? 'none' : ''; }
       this.chatLog?.update(dt, !this.idle && (!this.input.menu || !!this.heroTalk?.open));
       if (this.heroTalk) {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)
@@ -2030,7 +2037,7 @@ class GameView {
         break;
       case EV.GLINT:
         r.emit(2, 3, a, b, c, 0, 1, 0, 2, 0.1, 0.5, 0.004, 0.008, 0.1, 0.2);
-        this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
+        if (!this.deepWas) this.hud.once('glint', this.input.touch ? 'A blade flashes before it falls. Dodge, or swing into it to parry.' : 'A blade flashes before it falls. Q to dodge, or swing into it to parry.');
         break;
       case EV.JUMP: au.play(`jump_${this.underfoot}`, null, 0, 0, 0.32, 1, false); break;
       case EV.DODGE: au.play(`run_${this.underfoot}`, null, 0, 0, 0.5, 1.15, false); break;
@@ -2070,7 +2077,7 @@ class GameView {
         au.play('armorLand', a, b, c, 0.5 + d * 0.9, 0.5);
         r.emit(3, Math.ceil(30 * d), a, b + 0.05, c, 0, 1, 0, 1.3, 0.4, 2.2, 0.08, 0.2, 0.5, 1.2);
         break;
-      case EV.BEAST_NOTICE: this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
+      case EV.BEAST_NOTICE: if (!this.deepWas) this.hud.once('gravehart', 'Something in the trees has noticed you. Leave its ground and it may let you go.', 5); break;
       case EV.ROAR:
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);

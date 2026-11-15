@@ -322,6 +322,6 @@ test('every hub is led to: a quest from somewhere you already are sends you to e
     assert.ok(steps.some(([, st]) => st.enter === k), `no quest sends you to ${k}`);
   }
   // And each dungeon's portal is led to from the hub nearest it.
-  const from = { warrens: town, blackvigil: new Set(['hasket']), deeps: new Set(['garrick']), vaults: town, sporehold: town, playhouse: new Set(['dorcas', 'osric', 'wymond']), kingsbarrow: town };
+  const from = { warrens: town, blackvigil: new Set(['hasket']), deeps: new Set(['garrick']), vaults: town, sporehold: town, playhouse: new Set(['dorcas', 'osric', 'wymond']), kingsbarrow: town, elder: new Set(['hasket']) };
   for (const [k, givers] of Object.entries(from)) assert.ok(steps.some(([id, st]) => st.enter === k && givers.has(QUESTS[id].giver)), `${k}: not led to from its nearest hub`);
 });

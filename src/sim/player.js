@@ -274,6 +274,7 @@ export class Player {
     this.jumpSeen = input[INPUT.JUMP];
     // Floatier than it was: lighter on the way up while jump's held, and a gentler fall.
     this.vy -= (this.vy > 0 && input[INPUT.JUMP_HELD] > 0.5 ? 8.5 : 12) * dt;
+    const ox = this.x, oz = this.z;
     this.x += this.vx * dt; this.z += this.vz * dt; this.y += this.vy * dt;
     // The townsfolk: stepped round, not walked through.
     const fb = globalThis.folkBodies;
@@ -286,8 +287,14 @@ export class Player {
       }
     }
     tmp[0] = this.x; tmp[2] = this.z;
-    sim.world.resolve(tmp, 0.36, this.y + 0.2);
+    sim.world.resolve(tmp, 0.36, this.y + 0.2, true);
     this.x = tmp[0]; this.z = tmp[2];
+    // In the Elder Gods' void a pillar's top is a step, not a slope: what stands out of the floor more steeply than that is
+    // jumped onto, not walked up. (src/core/delve-elder.js BASALT.)
+    if (this.onGround && sim.world.voidAt(this.x, this.z)) {
+      const step = Math.hypot(this.x - ox, this.z - oz), up = sim.world.heightFor(this.x, this.z, this.y) - this.y;
+      if (up > 0.06 && up > step * 1.4) { this.x = ox; this.z = oz; this.vx *= 0.2; this.vz *= 0.2; }
+    }
     this.keepToLand();
     this.keepUnder(sim, (abil & ABIL.FLY) !== 0);
     const g = sim.world.heightFor(this.x, this.z, this.y);

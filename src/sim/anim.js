@@ -1,7 +1,7 @@
 // Skeletons, clip sampling and forward kinematics. Everything here runs on the sim thread at 120 Hz with
 // no allocation per tick.
 import { accessor, parseGLB, readClips, readSkeleton } from '../core/glb.js';
-import { quatFromMat3, quatMul, quatNormalize, quatRotate, quatYaw } from '../core/math.js';
+import { clamp, quatFromMat3, quatMul, quatNormalize, quatRotate, quatYaw } from '../core/math.js';
 
 // The UAL clips, decoded from assets/game/clips.bin into float tracks.
 export class ClipBank {
@@ -171,7 +171,8 @@ export function writePalette(pose, out, off) {
   }
 }
 
-// The first-person arms: their own GLB, skeleton and swing clips, resampled to a 60 Hz grid.
+// The first-person arms: their own GLB, skeleton and swing clips, resampled to a 60 Hz grid (or the rate the file says it was
+// baked at, scenes[0].extras.fps: the dragons are baked at 30, and twice the frames would be twice the memory for nothing).
 const smooth = (x) => { const u = Math.min(1, Math.max(0, x)); return u * u * (3 - 2 * u); };
 /** How far the body has gone with a blow, at time t of its clip: against it in the wind-up, with it through the cut, back by the end. */
 export function leanAmount(t, wind, through, dur) {
@@ -244,6 +245,9 @@ function fistAxes(rig) {
   return out;
 }
 
+const AIM_V = new Float32Array(3), AIM_A = new Float32Array(3), AIM_P = new Float32Array(3), AIM_C = new Float32Array(4), AIM_Q = new Float32Array(4);
+const AIM_CQ = new Float32Array(32), AIM_CT = new Float32Array(24);
+
 export class ArmsRig {
   constructor(buffer, scale = 1, clipNames) {
     const glb = parseGLB(buffer);
@@ -267,7 +271,7 @@ export class ArmsRig {
     this.clips = {};
     const clips = readClips(glb, skel, clipNames);
     for (const [name, c] of Object.entries(clips)) {
-      const n = Math.max(2, Math.round(c.dur * 60) + 1);
+      const n = Math.max(2, Math.round(c.dur * (this.extras.fps || 60)) + 1);
       const rots = new Array(this.count).fill(null), trs = new Array(this.count).fill(null);
       const resample = (track, size) => {
         const out = new Float32Array(n * size);
@@ -291,8 +295,11 @@ export class ArmsRig {
         if (trs[j] && scale !== 1) for (let i = 0; i < trs[j].length; i++) trs[j][i] *= scale;
       }
       const info = (this.extras.clips || {})[name] || {};
-      this.clips[name] = { name, frames: n, dur: c.dur, rots, trs, loop: !!info.loop || /^((walk|run)_|idle$)/.test(name), hit: info.hit, wind: info.wind, through: info.through, lean: info.lean };
+      this.clips[name] = { name, frames: n, dur: c.dur, rots, trs, loop: !!info.loop || /^((walk|run)_|idle$)/.test(name), hit: info.hit, wind: info.wind, through: info.through, lean: info.lean, info };
     }
+    // Other names for clips that are there (extras.alias: the dragons' atk1 is their bite): the same frames, not a copy. `of` says
+    // whose they are, so what's done to a clip's frames (src/sim/tripo.js takes the travel out) is done once.
+    for (const [as, of] of Object.entries(this.extras.alias || {})) if (this.clips[of] && !this.clips[as]) this.clips[as] = { ...this.clips[of], name: as, of };
     this.rot = new Float32Array(this.count * 4);
     this.tr = new Float32Array(this.count * 3);
     this.wq = new Float32Array(this.count * 4);
@@ -382,8 +389,10 @@ export class ArmsRig {
     }
     this.poseModifier?.(rot, tr);
     if (this.fistK > 0.01) this.closeFists(rot, this.fistK);
+    const aim = this.aim && this.aim.w > 0.001 ? this.aim : null;
     for (let j = 0; j < count; j++) {
       const p = parent[j];
+      if (aim && j === aim.joints[0]) this.aimHead(aim, rot, tr, p);
       if (p < 0) {
         if (this.rootQ) {
           quatMul(wq, j * 4, this.rootQ, 0, rot, j * 4);
@@ -410,6 +419,42 @@ export class ArmsRig {
       out[o + 5] = 0.5 * (-tx * z + ty * w + tz * x);
       out[o + 6] = 0.5 * (tx * y - ty * x + tz * w);
       out[o + 7] = -0.5 * (tx * x + ty * y + tz * z);
+    }
+  }
+
+  // The dragons' look (src/sim/tripo.js): the mouth turned up or down toward aim.to, by aim.w (0 to 1), so a breath or a bite
+  // comes out of the jaw at whoever it's for and they see into the mouth. It's a turn about the level line across the body
+  // only, shared out along the last joints of the neck and the head (aim.joints, a chain, parent first; aim.share) so the
+  // neck bends into it rather than the head nodding on its own. Called as the solve reaches the chain's first joint, with
+  // the joint above it already placed this frame: the chain is placed as the clip has it, the mouth found, and the turn it
+  // takes put into the chain's own turns before they're placed for real. (Frame-true, and nothing kept between frames, so a
+  // rig two dragons share is fine.)
+  aimHead(a, rot, tr, p) {
+    const { wq, wt } = this, n = a.joints.length;
+    const cq = AIM_CQ, ct = AIM_CT;
+    for (let i = 0; i < n; i++) {
+      const j = a.joints[i], qs = i ? cq : wq, ts = i ? ct : wt, pi = i ? (i - 1) : p;
+      quatRotate(ct, i * 3, qs, pi * 4, tr, j * 3);
+      ct[i * 3] += ts[pi * 3]; ct[i * 3 + 1] += ts[pi * 3 + 1]; ct[i * 3 + 2] += ts[pi * 3 + 2];
+      quatMul(cq, i * 4, qs, pi * 4, rot, j * 4);
+    }
+    const h = n - 1;
+    quatRotate(AIM_V, 0, cq, h * 4, a.tip, 0);
+    const mx = ct[h * 3] + AIM_V[0], my = ct[h * 3 + 1] + AIM_V[1], mz = ct[h * 3 + 2] + AIM_V[2];
+    const hl = Math.hypot(AIM_V[0], AIM_V[2]) || 1e-6;
+    const now = Math.atan2(-AIM_V[1], hl);                 // below level, radians, as the clip has it
+    const want = clamp(Math.atan2(my - a.to[1], Math.max(1, Math.hypot(a.to[0] - mx, a.to[2] - mz))), a.lo, a.hi);
+    const turn = clamp((want - now) * a.w, -a.most, a.most);
+    a.applied = turn;
+    // About the level line across the body: a turn of +θ about it lifts the mouth, so down by `turn` is -turn.
+    AIM_A[0] = -AIM_V[2] / hl; AIM_A[1] = 0; AIM_A[2] = AIM_V[0] / hl;
+    for (let i = 0; i < n; i++) {
+      const j = a.joints[i], qs = i ? cq : wq, pi = i ? (i - 1) : p, th = -turn * a.share[i];
+      AIM_C[0] = -qs[pi * 4]; AIM_C[1] = -qs[pi * 4 + 1]; AIM_C[2] = -qs[pi * 4 + 2]; AIM_C[3] = qs[pi * 4 + 3];
+      quatRotate(AIM_P, 0, AIM_C, 0, AIM_A, 0);
+      const sn = Math.sin(th / 2);
+      AIM_Q[0] = AIM_P[0] * sn; AIM_Q[1] = AIM_P[1] * sn; AIM_Q[2] = AIM_P[2] * sn; AIM_Q[3] = Math.cos(th / 2);
+      quatMul(rot, j * 4, AIM_Q, 0, rot, j * 4);
     }
   }
 
