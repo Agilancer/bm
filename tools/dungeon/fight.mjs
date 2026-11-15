@@ -2,7 +2,7 @@
 // level over it for the player and them: the Warrens at 8, the Deeps at 11, the keep at 15), a player who shoots what the
 // party's on and walks out of whatever's marked on the ground, and each pack and boss of the delve fought in turn.
 //   node tools/dungeon/fight.mjs                 every pack and boss of every delve (a process for each delve)
-//   node tools/dungeon/fight.mjs deeps           one delve's (warrens, blackvigil, deeps, vaults, sporehold, playhouse, kingsbarrow)
+//   node tools/dungeon/fight.mjs deeps           one delve's (warrens, blackvigil, deeps, vaults, sporehold, playhouse, kingsbarrow, elder)
 //   node tools/dungeon/fight.mjs venomaw 3       one fight (a boss's key, or a pack's), so many times over
 //   node tools/dungeon/fight.mjs --still twins   the player stands where they are and never steps out of anything
 //   node tools/dungeon/fight.mjs --slow          the player sees each mark and shot half a second late, as a person does
@@ -12,10 +12,10 @@
 // error in a tick, or a shape with a bad number in it.
 import fs from 'node:fs';
 import { FX_FLOATS, INPUT } from '../../src/core/layout.js';
-import { ALL_PACKS, BOSSES, DELVES, caveClear, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
+import { ALL_PACKS, BOSSES, DELVES, WARNINGS, caveClear, caveRoom, roomOf, roomSpot, toWorld } from '../../src/core/dungeon.js';
 import { spawnSync } from 'node:child_process';
 import { makeCast } from '../../src/core/heroes.js';
-import { wayOut } from '../../src/core/perils.js';
+import { edge, wayOut } from '../../src/core/perils.js';
 import { SPELLS } from '../../src/sim/spells.js';
 
 const root = new URL('../../', import.meta.url);
@@ -32,7 +32,8 @@ if (!delve) {
   for (const d of DELVES) { console.log(`\n==== ${d.name} ====`); code |= spawnSync(process.execPath, [process.argv[1], d.key, ...args.filter((a) => a !== 'all')], { stdio: 'inherit' }).status; }
   process.exit(code);
 }
-const LEVEL = delve.level + 1;
+// (LEVEL=90 to see how it goes for a party under the delve's own level.)
+const LEVEL = +(process.env.LEVEL || 0) || delve.level + 1;
 const PACKS = delve.packs, MINE = BOSSES.filter((b) => b.delve === delve.key);
 
 // ---- the sim, booted as its worker boots it --------------------------------------------------------------------------------
@@ -53,7 +54,7 @@ const send = (m) => { for (const f of listeners) f({ data: m }); };
 // ---- a level 8 player and a party of four -----------------------------------------------------------------------------------
 const inp = sim.input, p = sim.player, W = sim.warrens, P = sim.perils;
 inp[INPUT.VIEW_ASPECT] = 16 / 9;
-inp[INPUT.POWER] = 1 + (LEVEL - 1) * 0.07; inp[INPUT.W_LIFE] = (LEVEL - 1) * 8; inp[INPUT.MANA_MAX] = (LEVEL - 1) * 6; inp[INPUT.REGEN] = 1 + (LEVEL - 1) * 0.04;
+inp[INPUT.LEVEL] = LEVEL; inp[INPUT.POWER] = 1 + (LEVEL - 1) * 0.07; inp[INPUT.W_LIFE] = (LEVEL - 1) * 8; inp[INPUT.MANA_MAX] = (LEVEL - 1) * 6; inp[INPUT.REGEN] = 1 + (LEVEL - 1) * 0.04;
 const tick = () => { sim.step(DT); if (sim.reported) throw new Error('a tick threw'); };
 const breathe = () => new Promise((r) => setImmediate(r));
 for (let i = 0; i < 10; i++) tick();
@@ -62,6 +63,18 @@ for (const cls of ['lancer', 'paladin', 'archer', 'rogue']) {
   if (!h || !sim.heroWorld.hire(h.slot, { level: LEVEL })) throw new Error(`nobody to hire as ${cls}`);
 }
 const party = sim.heroes.filter((h) => h.hired);
+// (TRACE: each call the fight makes, as it's made: a god's words among them.)
+if (process.env.TRACE) { const w0 = W.warn.bind(W); W.warn = (id, gap = 0) => { const was = W.warnT.get(id); w0(id, gap); if (W.warnT.get(id) !== was) console.log(`  [${sim.time.toFixed(1)}] ${WARNINGS[id]}`); }; }
+
+// (TRACE: the player's last blows, said when it falls.)
+const blows = [];
+let seen = 0;
+if (process.env.TRACE) {
+  const h0 = P.hurt.bind(P), d0 = p.damage.bind(p);
+  let tag = '';
+  P.hurt = (v, dmg, x, z, knock, blockable, t) => { tag = t || ''; try { return h0(v, dmg, x, z, knock, blockable, t); } finally { tag = ''; } };
+  p.damage = (...a) => { const was = p.hp, r = d0(...a); if (p.hp < was) { blows.push(`${sim.time.toFixed(1)} ${tag || 'blow'} ${(was - p.hp).toFixed(0)}`); if (blows.length > 6) blows.shift(); seen += was - p.hp; } return r; };
+}
 
 // ---- the player: shoots what the fight's on, and (unless --still) keeps out of what's marked and thrown ----------------------
 const FIREBOLT = SPELLS.findIndex((x) => x.key === 'firebolt');
@@ -75,7 +88,12 @@ function play(target) {
     const told = W.order(p), go = told?.to && Math.hypot(told.to[0] - p.x, told.to[1] - p.z) > 0.6 ? told.to : null;
     // (What it's seen: a mark is a moment old before it's noticed.)
     const out = told?.still || (go && told.urgent) ? null : wayOut(P.marks.filter((m) => !m.jump && !m.soak && m.t > react), p.x, p.z, 1, (x, z) => !sim.world.inside(x, z, 0.7));
-    if (told?.still) { /* stood where it is */ }
+    // (Told to hold a place or to be somewhere at once, and burning where it is: a step out of the fire first, as a player
+    // would. Not if where it's sent is in the same fire.)
+    const burning = told?.still || (go && told.urgent) ? P.marks.filter((m) => m.dps > 0 && !m.soak && m.t > m.fuse + react && edge(m, p.x, p.z) < 0 && !(go && edge(m, go[0], go[1]) < 0)) : [];
+    const stepOut = burning.length ? wayOut(burning, p.x, p.z, 0.6, (x, z) => !sim.world.inside(x, z, 0.7)) : null;
+    if (stepOut) { wx = stepOut[0] - p.x; wz = stepOut[1] - p.z; run = true; }
+    else if (told?.still) { /* stood where it is */ }
     else if (go && told.urgent) { wx = go[0] - p.x; wz = go[1] - p.z; run = true; }
     else if (out) { wx = out[0] - p.x; wz = out[1] - p.z; run = true; }
     else if (go) { wx = go[0] - p.x; wz = go[1] - p.z; run = true; }
@@ -91,6 +109,9 @@ function play(target) {
         if (sim.world.inside(p.x + side[0] * 2, p.z + side[1] * 2, 0.6)) { side[0] = -side[0]; side[1] = -side[1]; }
         wx += side[0]; wz += side[1]; run = true;
       }
+      // A boss turned on it (src/sim/dungeon.js turnOn): back out of its reach, as a player does, till it lets go.
+      const turned = W.fight?.turn;
+      if (!run && turned && !turned.m.dead && Math.hypot(turned.m.x - p.x, turned.m.z - p.z) < (turned.m.opts.reach || 3) + (turned.m.opts.radius || 1) + 4) { wx = p.x - turned.m.x; wz = p.z - turned.m.z; run = true; }
       if (!run && target) {
         const d = Math.hypot(target.x - p.x, target.z - p.z);
         if (d > 19) { wx = target.x - p.x; wz = target.z - p.z; } else if (d < 9) { wx = p.x - target.x; wz = p.z - target.z; }
@@ -101,7 +122,11 @@ function play(target) {
     // A ring coming along the ground: over it.
     if (P.waveAt(p.x, p.z, 1.5) && p.onGround) { inp[INPUT.JUMP]++; jumps++; }
   }
-  const L = Math.hypot(wx, wz);
+  let L = Math.hypot(wx, wz);
+  // (Never off an edge of its own accord, but where the fight sends it: in the Elder Gods' void nothing's under it. Looked
+  // ahead no further than where it's going: a step out of a breath along a narrow ramp is a step, not a stride.)
+  const ahead = Math.min(2.2, L + 0.3);
+  if (L > 0.05 && !still && !W.order(p)?.urgent && sim.world.inside(p.x + wx / L * ahead, p.z + wz / L * ahead, 0.5)) { wx = 0; wz = 0; L = 0; }
   if (L > 0.05) { wx /= L; wz /= L; inp[INPUT.MOVE_Z] = wx * s + wz * c; inp[INPUT.MOVE_X] = -wx * c + wz * s; } else { inp[INPUT.MOVE_X] = 0; inp[INPUT.MOVE_Z] = 0; }
   inp[INPUT.SPRINT] = run ? 1 : 0;
   if (target) {
@@ -134,7 +159,7 @@ async function fight(key) {
   W.resetAll(); P.clear();
   for (const h of party) { if (h.dead) sim.heroWorld.revive(h, 1); h.hp = h.maxHp; }
   p.hp = p.maxHp; sim.casting.mana = sim.casting.maxMana;
-  P.tally = { hits: 0, dmg: 0, by: {} }; jumps = 0;
+  P.tally = { hits: 0, dmg: 0, by: {} }; jumps = 0; blows.length = 0;
   // (What's on the way to a boss is dead by the time you're at its door.)
   if (boss) for (const l of sim.tripo.lairs) if (l.dungeon && !l.bossLair) { sim.tripo.sleep(l); l.state = 'cleared'; }
   const room = roomOf(boss ? boss.room : pack.room), [rx, , rz] = boss ? roomSpot(room.id) : roomSpot(room.id, pack.at?.[0] || 0, pack.at?.[1] || 0);
@@ -165,7 +190,10 @@ async function fight(key) {
       const dx = rx - p.x, dz = rz - p.z;
       inp[INPUT.YAW] = Math.atan2(dx, dz); inp[INPUT.MOVE_Z] = Math.hypot(dx, dz) > (boss ? room.r * 0.45 : 5) ? 1 : 0; inp[INPUT.MOVE_X] = 0; inp[INPUT.CAST] = 0;
     } else { if (began < 0) began = t; play(target); }
+    const hp0 = p.hp; seen = 0;
     tick(); t += DT;
+    // (TRACE: life lost that no blow accounts for: a fall, or something that takes it straight off.)
+    if (process.env.TRACE && hp0 - p.hp - seen > 1) { blows.push(`${sim.time.toFixed(1)} unseen ${(hp0 - p.hp - seen).toFixed(0)}`); if (blows.length > 6) blows.shift(); }
     if ((sim.tick & 7) === 0) await breathe();
     const c = sim.casting;
     maxFx = Math.max(maxFx, c.n);
@@ -173,7 +201,7 @@ async function fight(key) {
     low.player = Math.min(low.player, p.hp / p.maxHp); if (tank) low.tank = Math.min(low.tank, tank.hp / tank.maxHp);
     for (const h of party) if (h.dead) fell.add(h.person.cls);
     if (process.env.TRACE && (sim.tick % 600) === 0) { const f = W.fight, b = boss && W.bossBodies(boss.key)[0]; console.log(`  t ${t.toFixed(0)} phase ${f?.phase} stage ${f?.air?.stage || ''} boss ${b ? `${(b.hp / b.maxHp * 100).toFixed(0)}% st ${b.state} ${b.clip} lift ${(b.hover || 0).toFixed(1)} at ${(b.x - rx).toFixed(0)},${(b.z - rz).toFixed(0)}` : ''} p ${(p.hp / p.maxHp * 100).toFixed(0)}% at ${(p.x - rx).toFixed(0)},${(p.z - rz).toFixed(0)} marks ${P.marks.length} shots ${P.shots.length} party ${party.map((h) => (h.dead ? 'x' : (h.hp / h.maxHp * 100).toFixed(0))).join(' ')}`); }
-    if (p.dead) { end = 'the player fell'; break; }
+    if (p.dead) { end = 'the player fell'; if (process.env.TRACE) console.log(`  last blows (of ${p.maxHp.toFixed(0)}): ${blows.join(', ')}`); break; }
     if (boss ? W.down.has(boss.key) : began >= 0 && lair()?.state === 'cleared' && !W.adds().length) { end = 'won'; break; }
     if (!boss && began < 0 && t > 40) { end = 'nothing came'; break; }
     if (began >= 0 && t - began > 20 && boss && !W.fight) { end = 'the fight was let go'; if (process.env.TRACE) console.log(`  let go: inside ${W.inside} player ${Math.hypot(p.x - rx, p.z - rz).toFixed(0)} m from the middle of a room of ${room.r}, party ${party.map((h) => `${h.dead ? 'x' : ''}${Math.hypot(h.x - rx, h.z - rz).toFixed(0)}`).join(' ')}, bosses ${W.bossBodies(boss.key).map((m) => `${m.aggro ? 'on' : 'off'} ${Math.hypot(m.x - rx, m.z - rz).toFixed(0)}`).join(' ')}`); break; }

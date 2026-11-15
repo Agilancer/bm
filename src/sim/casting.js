@@ -642,7 +642,9 @@ export class Casting {
     for (const [k, a] of this.aff) {
       // (A body that's dead and still: forgotten, or every slime and lair monster ever touched stays in here for good.)
       if (k.dead && !(a.h > 0) && Math.abs(a.vx) + Math.abs(a.vz) <= 0.02) { this.aff.delete(k); continue; }
-      // Thrown about: a slide on the ground and a flight off it.
+      // Thrown about: a slide on the ground and a flight off it. (Not an Elder God its fight is flying over the void: the
+      // ground would take it back to the edge it flew from. src/sim/elder-fights.js.)
+      if (k.free) { a.vx = 0; a.vz = 0; }
       if (Math.abs(a.vx) + Math.abs(a.vz) > 0.02) {
         out3[0] = k.x + a.vx * dt; out3[1] = 0; out3[2] = k.z + a.vz * dt;
         sim.world.resolve(out3, radiusOf(k), k.y + 0.2);

@@ -14,19 +14,20 @@ import { Perils } from '../src/sim/perils.js';
 import { ELEM } from '../src/sim/spells.js';
 import { KNOWN, WAYS } from '../src/ui/autowarrens.js';
 
-const LATER = ['vaults', 'sporehold', 'playhouse', 'kingsbarrow'];
+const LATER = ['vaults', 'sporehold', 'playhouse', 'kingsbarrow', 'elder'];
 const json = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
-test('there are seven delves, the first three where they were, and the later four each with three bosses', () => {
+test('there are eight delves, the first three where they were, the later four each with three bosses, and the Elder Gods with four', () => {
   assert.deepEqual(DELVES.map((d) => d.key), ['warrens', 'blackvigil', 'deeps', ...LATER]);
   // (A boss's number is sent from the sim and kept: the old ten keep theirs.)
   assert.deepEqual(BOSSES.slice(0, 10).map((b) => b.key), ['grubnash', 'twins', 'venomaw', 'maldrec', 'sorvane', 'brothers', 'castellan', 'hrymgar', 'broodmother', 'sleeper']);
   assert.equal(WARNINGS[32], 'Venomaw stamps! Step in behind each ring as it lands.');
   for (const k of LATER) {
     const d = delveByKey(k), mine = BOSSES.filter((b) => b.delve === k);
-    assert.equal(mine.length, 3, k);
-    assert.equal(mine[2].key, d.last, `${k}: its last boss is its third`);
-    assert.ok(d.names && Object.keys(d.names).length >= 3, `${k}: its own names for what lives in it`);
+    assert.equal(mine.length, k === 'elder' ? 4 : 3, k);
+    assert.equal(mine[mine.length - 1].key, d.last, `${k}: its last boss is its last`);
+    // (The Elder Gods' is dragons and their whelps, and nothing else.)
+    assert.ok(d.names && Object.keys(d.names).length >= (k === 'elder' ? 2 : 3), `${k}: its own names for what lives in it`);
     assert.ok(d.level >= 9 && d.pay.xp > 0 && d.words.enter && d.words.clear && d.words.wipe, k);
   }
 });
@@ -39,7 +40,7 @@ test('a boss that waits waits on bosses of its own delve that come before it, an
     assert.ok(b.shut && WARN[b.shut] !== undefined, `${b.key}: nothing said in its empty room`);
   }
   // (The Vaults has none: its three are met in the order they lie.)
-  assert.deepEqual(BOSSES.filter((b) => b.needs).map((b) => b.key), ['heart', 'leadingman', 'dollmaker', 'wyrm']);
+  assert.deepEqual(BOSSES.filter((b) => b.needs).map((b) => b.key), ['heart', 'leadingman', 'dollmaker', 'wyrm', 'kaldurra', 'morvekh', 'nihvaroth']);
 });
 
 test('every later boss has a body, a fight, calls that exist, and one thing of its own to do about', () => {
@@ -62,11 +63,12 @@ test('every later boss has a body, a fight, calls that exist, and one thing of i
 });
 
 test('every warning a later delve names is used by its fights or its bosses, and every one used is named', () => {
-  const src = readFileSync(new URL('../src/sim/delve-fights.js', import.meta.url), 'utf8');
+  // (The Elder Gods' four are in a file of their own, and their own words are warnings of their own: `<god>_say_<when>_<n>`.)
+  const src = ['delve-fights.js', 'elder-fights.js', 'voidland.js'].map((f) => readFileSync(new URL(`../src/sim/${f}`, import.meta.url), 'utf8')).join('\n');
   for (const k of LATER) {
     const d = delveByKey(k);
     for (const w of Object.keys(d.warnings)) {
-      const used = src.includes(`WARN.${w}`) || src.includes(`'${w}'`) || Object.values(d.turnWarn).includes(w) || d.bosses.some((b) => b.shut === w || b.cue === w) || /_run_/.test(w);
+      const used = src.includes(`WARN.${w}`) || src.includes(`'${w}'`) || Object.values(d.turnWarn).includes(w) || d.bosses.some((b) => b.shut === w || b.cue === w) || /_run_/.test(w) || /_say_/.test(w);
       assert.ok(used, `${k}: ${w} is never called`);
     }
   }
@@ -95,7 +97,8 @@ test('auto-play has a way through each, every room on it, and knows every pack a
   for (const k of LATER) {
     const d = delveByKey(k), way = WAYS[k];
     assert.ok(way, k);
-    for (const r of d.rooms) assert.ok(way.includes(r.id), `${r.id} isn't on the way`);
+    // (But the Elder Gods' islets, reached in their fights by a leap or a god's blow.)
+    for (const r of d.rooms) assert.ok(way.includes(r.id) || r.leap, `${r.id} isn't on the way`);
     for (const p of d.packs) assert.ok(KNOWN.has(p.key), p.key);
     for (const b of d.bosses) { assert.ok(KNOWN.has(b.key), b.key); for (const n of b.needs || []) assert.ok(way.indexOf(roomOf(d.bosses.find((q) => q.key === n).room).id) < way.lastIndexOf(b.room), `${b.key} is walked to before ${n}`); }
   }
@@ -161,9 +164,9 @@ test('each later delve has a quartermaster of its own, standing on open ground b
     assert.ok(far > d.portal.r + 1 && far < 7, `${q.broker}: ${far.toFixed(1)} m from its portal`);
     assert.ok(Number.isFinite(face));
   }
-  // (The town's, the Warrens', the Test Dungeon's keeper and these four; and room in the snapshot for them.)
-  assert.equal(BROKERS.length, 7);
-  assert.ok(MAX_CHARS >= 104);
+  // (The town's, the Warrens', the Test Dungeon's keeper and these five; and room in the snapshot for them.)
+  assert.equal(BROKERS.length, 8);
+  assert.ok(MAX_CHARS >= 105);
 });
 
 test('the Warden\'s stones are scenery that goes, their rubble scenery that comes, and the fight spends them', async () => {

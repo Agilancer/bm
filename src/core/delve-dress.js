@@ -164,8 +164,9 @@ function scree(K, d) {
   outline(d, (ax, az, bx, bz) => {
     const mx = (ax + bx) / 2, mz = (az + bz) / 2, h = hash2(mx * 1.7, mz * 2.3);
     // A rib of rock standing out of the wall from floor to roof, every so far: leaning, thick at its foot, boulders by it.
+    // (Not in the Elder Gods' void: it has no roof, and a rib would stand up into its sky.)
     const hr = hash2(mx * 0.91, mz * 1.13);
-    if (hr < 0.085 && !lit.some((q) => Math.hypot(q[0] - mx, q[2] - mz) < 2.2) && clear(d, mx, mz, 1.5)) {
+    if (d.style !== 'void' && hr < 0.085 && !lit.some((q) => Math.hypot(q[0] - mx, q[2] - mz) < 2.2) && clear(d, mx, mz, 1.5)) {
       const g = grad(mx, mz), room = roomOf(d, mx - d.x, mz - d.z), rock = room?.rock || L.wall, R = 0.7 + hr * 6, x = mx - g[0] * 0.25, z = mz - g[1] * 0.25;
       const y = caveFloorY(mx, mz) - 0.4, top = caveRoofY(mx + g[0], mz + g[1]) + 0.8, lean = (hash2(mz, mx) - 0.5) * 1.2, mid = y + (top - y) * 0.45;
       // (Three lengths of it, each stepped a little off the last, thick at the foot and where it joins the roof.)
@@ -340,5 +341,7 @@ function underfoot(K, d) {
 
 export function dress(K, d) {
   if (d.style === 'castle') { doorways(K, d); piers(K, d); return; }
+  // (The Elder Gods' void has no roof for anything to hold up: its edges' scree and its litter, nothing across its ways.)
+  if (d.style === 'void') { scree(K, d); litter(K, d); underfoot(K, d); return; }
   scree(K, d); spans(K, d); litter(K, d); underfoot(K, d);
 }

@@ -11,7 +11,7 @@ import { FOREST_REACH } from '../core/forest.js';
 import { WORLD_EDGE } from '../core/lands.js';
 import { roadSegments } from '../core/roads.js';
 import { PORTAL_MODELS, buildSites, buildUnder, dropSiteGeometry } from '../core/sites.js';
-import { DELVES, PORTAL_SPOTS, braziers, delveAt, inDungeon, torches } from '../core/dungeon.js';
+import { DELVES, PORTAL_SPOTS, braziers, caveFloorY, delveAt, inDungeon, torches } from '../core/dungeon.js';
 import { DOOR, HALL, hallLights, inHall } from '../core/testhall.js';
 import { SlimeBodies } from './slimes.js';
 import { DUST_AT, OPENING, SWAP_AT, prettyShown } from '../core/opening.js';
@@ -101,9 +101,9 @@ const FOLLOW_AT = 420;
 const GROUND_SIZE = 1024, GROUND_HALF = 128, BLOOD_HALF = 64;
 const LINEAR_DEPTH = 'r16float';
 const DEPTH = 'depth32float';
-const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115 };
+const FLAT = { iron: 100, flame: 101, water: 102, fruit: 103, fruit2: 104, white: 106, tile: 107, glow: 108, lake: 110, falls: 111, ice: 112, seal: 113, obsidian: 114, gold: 115, voidglass: 116, magma: 117, rune: 118, storm: 119 };
 // A painting in another light (src/core/sites.js): its layer plus a thousand times which (materials.js STATIC).
-const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5 };
+const TINTS = { dark: 1, pale: 2, frost: 3, mire: 4, spore: 5, void: 6 };
 const MAX_GROUND = 160;
 // The portals (portalModel): the Warrens' three in their walls, at these spots (src/core/sites.js portalWall), and a seal's at
 // every seal (seal_*). How big each is drawn is PORTAL_MODELS's. SWIRL: each one's whirl for the shader (src/gfx/materials.js
@@ -540,6 +540,14 @@ export class Renderer {
       for (const [x, y, z, lift, how] of braziers(d)) warrens.push(how === 'hang'
         ? { p: [x, y + lift - 1.6, z], c: L.fire, r: 17 * Math.min(g, 1.4), i: 30 * g, flicker: 0.5 * cold }
         : { p: [x, y + (lift ?? 1.9), z], c: L.fire, r: (lift > 4 ? 22 : 15) * g, i: (lift > 4 ? 6.5 : 5.2) * g, flicker: 0.9 * cold });
+      // (The Elder Gods' islands: the Galeward's pylons, the Cinderwell's vent, the altar, the Rimespire's claws. src/core/delve-build.js)
+      if (d.style === 'void') for (const p of d.props) {
+        const x = d.x + p.x, z = d.z + p.z, y = caveFloorY(x, z);
+        if (p.kind === 'pylon') warrens.push({ p: [x, y + p.h - 0.8, z], c: [0.55, 0.75, 1.1], r: 24, i: 8, flicker: 0.7 });
+        if (p.kind === 'vent') warrens.push({ p: [x, y - 2, z], c: [1, 0.42, 0.1], r: 30, i: 16, flicker: 0.35 });
+        if (p.kind === 'scalealtar') warrens.push({ p: [x, y + 2, z], c: [0.7, 0.4, 1], r: 18, i: 6, flicker: 0.2 });
+        if (p.kind === 'rime' && p.claw) warrens.push({ p: [x, y + 2.5, z], c: [0.5, 0.75, 1], r: 12, i: 4, flicker: 0.15 });
+      }
     }
     // (The portals' swirl, a cold blue that breathes: in front of the Warrens' doorways, and over every seal: portalModel.)
     const portalSpots = buildSites().spots;
@@ -738,7 +746,7 @@ export class Renderer {
     const { parts, groups } = buildUnder(key);
     const prims = [];
     for (const [name, part] of parts) {
-      const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       prims.push({ name, layer: layer + (m ? TINTS[m[1]] * 1000 : 0), cutout: layer < 100 && layers[layer].cutout ? 1 : 0, ...part });
@@ -801,7 +809,7 @@ export class Renderer {
     // you're down one. useUnder.)
     this.staticLayers = { layerNames, layers };
     for (const [name, part] of buildSites(true, !!this.tier.lean).parts) {
-      const m = /^(dark|pale|frost|mire|spore):(.*)$/.exec(name), base = m ? m[2] : name;
+      const m = /^(dark|pale|frost|mire|spore|void):(.*)$/.exec(name), base = m ? m[2] : name;
       let layer = layerNames.indexOf(base);
       if (layer < 0) layer = FLAT[base] ?? 100;
       const cutout = layer < 100 && layers[layer].cutout;
@@ -3302,7 +3310,7 @@ export class Renderer {
     mp.drawIndexed(this.terrainCount);
     }
     }
-    if (!vis.warrens) { mp.setPipeline(this.pSky); mp.draw(3); }
+    if (!vis.warrens || vis.void) { mp.setPipeline(this.pSky); mp.draw(3); }
     drawGlow(this, mp, this.interior, vis.hall || vis.deep);
     // (Down a delve, its fires: flames that face you. src/core/delve-build.js fire().)
     if (vis.warrens && !vis.testHall) drawDelveFires(this, mp, this.interior, this.delveFires ||= buildDelveFires(this, buildSites().fires), delveAt(cam.x, cam.z));

@@ -106,6 +106,19 @@ export const VARIANTS = {
   kb_thrall: { src: 'bone_golem', height: 2, name: 'BONE THRALL' },
   kb_hound: { src: 'werewolf_brown', height: 1.9, name: 'BARROW HOUND' },
   kb_wyrm: { src: 'dragon_undead', height: 6.4, name: 'OSSIVAR' },
+  // The Elder Dragon Gods (src/core/delve-elder.js): the four gods, twice a man's height at the shoulder and more; the
+  // drakes that keep their bridges; and the echoes of the three dead ones the Hollow Star calls up at the Maw.
+  ed_thyrraxis: { src: 'dragon_green', height: 11, name: 'THYRRAXIS, THE GALE ETERNAL' },
+  ed_kaldurra: { src: 'dragon_red', height: 11.5, name: 'KALDURRA, THE HEARTH OF THE WORLD' },
+  ed_morvekh: { src: 'dragon_undead', height: 11.5, name: 'MORVEKH, WHO REMEMBERS THE COLD' },
+  ed_nihvaroth: { src: 'dragon_black', height: 13.5, name: 'NIHVAROTH, THE HOLLOW STAR' },
+  ed_drake_green: { src: 'dragon_green', height: 3.6, name: 'GALE DRAKE' },
+  ed_drake_red: { src: 'dragon_red', height: 3.6, name: 'CINDER DRAKE' },
+  ed_drake_undead: { src: 'dragon_undead', height: 3.6, name: 'RIME DRAKE' },
+  ed_drake_black: { src: 'dragon_black', height: 3.8, name: 'HOLLOW DRAKE' },
+  ed_echo_green: { src: 'dragon_green', height: 5.6, name: 'ECHO OF THYRRAXIS' },
+  ed_echo_red: { src: 'dragon_red', height: 5.6, name: 'ECHO OF KALDURRA' },
+  ed_echo_undead: { src: 'dragon_undead', height: 5.6, name: 'ECHO OF MORVEKH' },
 };
 // And the land's new kinds (src/core/wilds.js): a palette, a size, a name and tricks of their own on the old bodies.
 Object.assign(VARIANTS, WILD_VARIANTS);

@@ -333,6 +333,11 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
   if (id == 113u) { return vec4f(0.04, 0.06, 0.1, 0.25); }     // a seal's face
   if (id == 114u) { return vec4f(0.014, 0.012, 0.018, 0.07); }  // black glass (the Crown of Teeth)
   if (id == 115u) { return vec4f(0.95, 0.6, 0.16, 0.3); }      // gold (a hoard's coin: src/core/delve-build.js)
+  // The Elder Gods' void (src/core/delve-build.js): its black-violet glass, the Cinderwell's magma, runes alight, stormglass.
+  if (id == 116u) { return vec4f(0.03, 0.012, 0.05, 0.06); }
+  if (id == 117u) { return vec4f(0.06, 0.012, 0.004, 0.7); }
+  if (id == 118u) { return vec4f(0.02, 0.012, 0.03, 0.5); }
+  if (id == 119u) { return vec4f(0.5, 0.62, 0.8, 0.15); }
   // rgb + roughness for the few materials with no painting.
   if (id == 100u) { return vec4f(0.035, 0.034, 0.036, 0.42); }  // iron
   if (id == 101u) { return vec4f(1.0, 0.6, 0.2, 1.0); }         // flame (emissive below)
@@ -446,6 +451,25 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       let rune = smoothstep(0.47, 0.5, abs(s.r - 0.5) + 0.47) * (1.0 - smoothstep(0.5, 0.56, abs(s.g - 0.5) + 0.5));
       emissive = vec3f(0.25, 0.55, 1.3) * (0.35 + 0.25 * sin(t * 1.3) + rune * 1.6);
     }
+    if (lay >= 116u && lay <= 119u) {
+      let fres = pow(1.0 - clamp(abs(dot(n0, v)), 0.0, 1.0), 2.0);
+      // Void glass: dark where you look into it, its violet heart at the edges, breathing slowly.
+      if (lay == 116u) { emissive = vec3f(0.42, 0.13, 0.95) * (0.18 + 0.9 * fres) * (0.85 + 0.15 * sin(t * 0.9 + p.x * 0.3 + p.z * 0.2)); }
+      // Magma: a crust drifting over it, white-orange in the cracks.
+      if (lay == 117u) {
+        let s = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.06 + vec2f(t * 0.008, -t * 0.005), 0.0);
+        let s2 = textureSampleLevel(noiseTex, repeatSmp, p.xz * 0.21 - vec2f(t * 0.013, t * 0.011), 0.0);
+        let crack = 1.0 - smoothstep(0.03, 0.14, abs(s.r - 0.5) + (s2.g - 0.5) * 0.12);
+        emissive = select(mix(vec3f(0.9, 0.12, 0.01), vec3f(9.0, 3.2, 0.5), crack), mix(vec3f(0.6, 0.1, 0.01), vec3f(2.4, 1.0, 0.2), crack), F.blood.w < 0.5);
+        albedo *= 1.0 - crack;
+      }
+      if (lay == 118u) { emissive = vec3f(0.85, 0.36, 1.9) * (0.75 + 0.25 * sin(t * 1.7 + p.x + p.z)); }
+      // Stormglass: white-blue, flickering as lightning does.
+      if (lay == 119u) {
+        let fl = step(0.82, fract(sin(floor(t * 9.0 + p.y) * 12.9898) * 43758.5)) * 1.6 + 0.6;
+        emissive = vec3f(0.9, 1.3, 2.6) * fl * (0.6 + 0.4 * fres);
+      }
+    }
     if (lay >= 120u && lay < 130u) {
       // Jelly: dark and clear where you look straight through it, lit at the rim, its own glow in it; white for a moment when struck.
       let L = SLIME_LOOK[lay - 120u];
@@ -481,6 +505,7 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       if (tintK == 2u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.8, 1.0, 0.74); }
       if (tintK == 4u) { emissive = emissive.grb * vec3f(0.55, 0.95, 0.6); }
       if (tintK == 5u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.5, 0.2, 0.95); }
+      if (tintK == 6u) { emissive = vec3f(dot(emissive, vec3f(0.3, 0.5, 0.2))) * vec3f(0.62, 0.3, 1.0); }
       albedo = vec3f(0.0);
     }
   } else {
@@ -496,6 +521,8 @@ fn flatMaterial(id: u32, p: vec3f, t: f32) -> vec4f {
       // Rock that's stood in fen water: green-black, and slick. And rock the Sporehold's growth has got into: violet in it.
       if (tintK == 4u) { albedo = mix(albedo, vec3f(lum) * vec3f(0.42, 0.62, 0.46), 0.82); rough = rough * 0.55; }
       if (tintK == 5u) { albedo = mix(albedo, vec3f(lum * 1.1) * vec3f(0.74, 0.52, 0.92), 0.78); }
+      // The void's stone: black, with violet in it, a little glassy.
+      if (tintK == 6u) { albedo = mix(albedo, vec3f(lum * 0.8) * vec3f(0.47, 0.41, 0.58), 0.86); rough = rough * 0.85; }
     }
     n = perturbD(n0, dp1, dp2, dx, dy, det.rg, select(1.0, mix(1.4, 0.7, smoothstep(5.0, 20.0, dist)), params.z < 0.0));
     if (params.z < 0.0) {
@@ -917,7 +944,7 @@ fn evalWounds(p: vec3f, nb: vec3f, piece: u32, time: f32, pxSize: f32) -> Wound 
   // (Below there's no sky: firelight, on bare flesh as much as plate, so a body comes off a dark wall.)
   let rimIn = indoorAt(p);
   // (Outdoors it's a faint edge on cloth and skin, which is what keeps them from looking wet; more on plate.)
-  c += select(select(F.skyAmb.rgb * 0.24 * (0.15 + 0.85 * metal), vec3f(0.5, 0.31, 0.17), rimIn > 1.5), vec3f(0.3, 0.31, 0.33), rimIn > 2.5) * rimT * C.info.y * rimK;
+  c += select(select(select(F.skyAmb.rgb * 0.24 * (0.15 + 0.85 * metal), vec3f(0.5, 0.31, 0.17), rimIn > 1.5), vec3f(0.3, 0.31, 0.33), rimIn > 2.5), vec3f(0.44, 0.3, 0.66), rimIn > 3.5) * rimT * C.info.y * rimK;
   // (A hero's painted plate is all metal to the light, so its shaded side had only what it mirrored, which in a wood is
   // dark: a black shape with no plates in it. A share of the sky's and the ground's light on its paint, as a worn, rough
   // surface scatters it.)
@@ -987,9 +1014,11 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   let cave = caveAt(p);
   var c = vec3f(0.0);
   if (indoor < 0.5 && cave < 0.99) { c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow * (1.0 - cave); }
+  if (indoor > 3.5) { c = voidKeys(n, v, albedo, f0, rough, metal); }
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
-  if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
+  if (indoor > 3.5) { ambient = voidAmbient(up); }
+  else if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
   else if (indoor > 1.5) { ambient = select(select(vec3f(0.044, 0.044, 0.048), vec3f(0.095, 0.078, 0.064), indoor > 2.1), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }
   ambient = mix(ambient, F.caveAmb.rgb * mix(0.7, 1.15, up), cave);
@@ -1003,7 +1032,8 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   var reflected = mix(F.groundAmb.rgb * 0.8, env, horizon);
   // (In the keep's lit halls, 2.25, plate takes a warm sheen off the fires: Velscour's knights are blackened steel, which
   // takes no other light, and against dark stone they were shapes cut out of the room.)
-  if (indoor > 0.5) { reflected *= select(select(vec3f(0.22), select(vec3f(0.05), vec3f(0.17, 0.11, 0.075), indoor > 2.2), indoor > 1.5), vec3f(0.5), indoor > 2.5); }
+  if (indoor > 3.5) { reflected = mix(vec3f(0.02, 0.012, 0.035), voidEnv(refl), horizon); }
+  else if (indoor > 0.5) { reflected *= select(select(vec3f(0.22), select(vec3f(0.05), vec3f(0.17, 0.11, 0.075), indoor > 2.2), indoor > 1.5), vec3f(0.5), indoor > 2.5); }
   reflected *= mix(1.0, 0.06, cave);
   let dfg = envDFG(rough, nv);
   let fss = f0 * dfg.x + dfg.y;
@@ -1515,9 +1545,52 @@ fn fbm(p0: vec2f) -> f32 {
   }
   return select(s, s * 1.25, LEAN);
 }
+// The Elder Gods' void (src/core/delve-elder.js): no day and no night. A nebula wrapped round the whole of it, violet and
+// rose, brightest along a band; stars, more than the land's and some of them coloured; and low in the north the Maw, a
+// black hole: the dark of its horizon, the ring of light bent round its edge, and its burning disc, tilted, the near side
+// across the hole and the far side's light bent up over it.
+fn voidSky(d: vec3f) -> vec3f {
+  let t = F.camPos.w;
+  let w = abs(d) / (abs(d.x) + abs(d.y) + abs(d.z));
+  let n1 = fbm(d.yz * 0.8 + vec2f(t * 0.0012, 0.0)) * w.x + fbm(d.xz * 0.8 + vec2f(0.0, t * 0.001)) * w.y + fbm(d.xy * 0.8 + vec2f(0.31, 0.77)) * w.z;
+  let n2 = fbm(d.yz * 2.1 + vec2f(0.5, 0.2)) * w.x + fbm(d.xz * 2.1 + vec2f(0.13, 0.6)) * w.y + fbm(d.xy * 2.1 + vec2f(0.9, 0.4)) * w.z;
+  let band = exp(-pow(dot(d, vec3f(0.29, 0.91, -0.29)) * 2.4, 2.0));
+  let cloud = smoothstep(0.36, 0.82, n1);
+  var c = vec3f(0.006, 0.003, 0.012);
+  c += mix(vec3f(0.11, 0.03, 0.2), vec3f(0.3, 0.07, 0.2), smoothstep(0.4, 0.72, n2)) * cloud * (0.3 + 0.95 * band);
+  c += vec3f(0.04, 0.07, 0.15) * smoothstep(0.56, 0.9, n2) * band;
+  let g = d * 240.0;
+  let cell = floor(g);
+  let pick = fract(sin(dot(cell, vec3f(12.9898, 78.233, 37.719))) * 43758.5453);
+  let glint = smoothstep(0.42, 0.1, length(fract(g) - 0.5)) * step(0.993, pick) * (pick - 0.993) * 160.0;
+  c += mix(vec3f(0.7, 0.75, 1.0), vec3f(1.0, 0.6, 0.8), fract(pick * 97.0)) * glint * (1.0 - cloud * 0.5);
+  // The Maw.
+  let M = VOID_MAW;
+  let cm = dot(d, M);
+  let ang = acos(clamp(cm, -1.0, 1.0));
+  let R = 0.16;
+  let u = normalize(cross(M, vec3f(0.0, 1.0, 0.0)));
+  let up = cross(u, M);
+  let px = dot(d, u);
+  let py = dot(d, up);
+  let re = length(vec2f(px, py / 0.24));
+  let a = atan2(py, px);
+  let swirl = textureSampleLevel(noiseTex, repeatSmp, vec2f(a * 0.35 + t * 0.025, re * 2.2 - t * 0.015), 0.0).r;
+  c += vec3f(0.32, 0.1, 0.26) * exp(-ang * 5.0);
+  let disc = smoothstep(R * 1.1, R * 1.45, re) * (1.0 - smoothstep(R * 2.0, R * 3.6, re)) * step(0.0, cm);
+  let hot = mix(vec3f(4.2, 1.5, 0.6), vec3f(1.1, 0.25, 1.4), smoothstep(R * 1.45, R * 3.2, re));
+  let arc = exp(-pow((ang - R * 1.3) / (R * 0.16), 2.0)) * smoothstep(0.0, 0.5, py / max(ang, 1e-4));
+  if (ang < R) { c = vec3f(0.0); }
+  // (The near half of the disc is in front of the hole; the far half is behind it, and only its bent light shows.)
+  c += hot * disc * (0.5 + 0.9 * swirl) * select(1.0, 0.0, ang < R && py > 0.0);
+  c += vec3f(3.6, 1.7, 1.1) * exp(-pow((ang - R * 1.04) / (R * 0.045), 2.0));
+  c += vec3f(2.0, 0.75, 1.15) * arc * (0.45 + 0.8 * swirl);
+  return c;
+}
 @fragment fn fs(in: V) -> Out {
   let q = F.invViewProj * vec4f(in.ndc, 1e-4, 1.0);
   let d = normalize(q.xyz / q.w - F.camPos.xyz);
+  if (indoorAt(F.camPos.xyz) > 3.5) { var ov: Out; ov.color = vec4f(voidSky(d), 1.0); ov.depth = 4000.0; return ov; }
   var c = envDir(d, 0.0);
   let cs = dot(d, F.sunDir.xyz);
   let day = F.skyAmb.a;

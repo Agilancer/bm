@@ -499,6 +499,7 @@ async function boot(plan, poolSize) {
   game.wearSkin = (id) => { forcedSkin = id || null; wearSkins(); };
   const arm = () => {
     writeWeapon(shared.input, pack.slots.main, gearTotals(pack.slots), levelPerks(pack.level));
+    shared.input[INPUT.LEVEL] = pack.level;
     // (GOD MODE, from the skull: everything dies at one blow.)
     if (game.lands?.cheats.god) for (const k of [INPUT.POWER, INPUT.W_MIN, INPUT.W_MAX]) shared.input[k] *= 1000;
     // (Bare hands: the gauntlet code is still in the renderer, nothing asks for it.)

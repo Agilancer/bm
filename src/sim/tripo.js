@@ -356,10 +356,11 @@ export class TripoMonster extends FieldCreature {
           tx = this.x - (p.x - this.x); tz = this.z - (p.z - this.z); this.fleeing = true;
         } else if (distance < reachNow * 0.8) { tx = this.x; tz = this.z; }
         if (this.state === STATE.MOVE) {
-          let flying = (ai === 'flyer' || this.meta.kind === 'dragon') && rig.clips.fly && distance > (this.meta.kind === 'dragon' ? 22 : o.reach * 2.5);
+          // (o.ground: never of its own accord. An Elder God flies when its fight says: src/sim/elder-fights.js.)
+          let flying = !o.ground && (ai === 'flyer' || this.meta.kind === 'dragon') && rig.clips.fly && distance > (this.meta.kind === 'dragon' ? 22 : o.reach * 2.5);
           // The dragons that take off and land: up past 22 m off, and down again only inside 13, so it isn't up and down all
           // the time; never in the middle of a flinch.
-          if (rig.flies) {
+          if (rig.flies && !o.ground) {
             if (this.aloft) flying = distance > 13;
             if (flying !== this.aloft && this.flinch <= 0) this.upOrDown(flying, p);
           }
@@ -423,7 +424,8 @@ export class TripoMonster extends FieldCreature {
     if (!this.dead) {
       const pos = this.position;
       pos[0] = this.x + this.vx * dt; pos[1] = this.y; pos[2] = this.z + this.vz * dt;
-      sim.world.resolve(pos, o.radius, this.y + 0.2);
+      // (An Elder God on the wing goes where its fight flies it, over the void between the islands: src/sim/elder-fights.js.)
+      if (!this.free) sim.world.resolve(pos, o.radius, this.y + 0.2);
       this.x = pos[0]; this.z = pos[2];
     }
     this.speed = Math.hypot(this.vx, this.vz);

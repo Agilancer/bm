@@ -36,108 +36,136 @@ were its teeth.
 
 The void doesn't kill. Fall off an island and the Rift throws you back up onto the nearest safe ground with a heavy
 hit (a fifth of your health) and three seconds of void-sickness (slowed). Allies too. The only exceptions: a fight's
-last phase on the hardest setting (not in the first build), and Nihvaroth's soft enrage. Every jump the fights ask for
-has a landing glow where you should come down.
+last phase on the hardest setting (not in the first build), and Nihvaroth's soft enrage. A fight may say where its falls
+land instead: the Galeward's islets, the shelf Morvekh's beside, the Maw's hand you're on.
 
 ## 1. Thyrraxis, the Gale Eternal (green)
 
-The Galeward: a stone disc 70 m across with four lightning pylons at its quarters; three islets 25 m below it and out
-from its rim; a wall of storm all round, beyond reach.
+The Galeward: a stone disc 60 m across with four storm pylons at its quarters, 19 m from the middle; three islets 18-21 m
+below its western rim, 48 m out; a gust stone on each islet (an updraft back up) and between the islets. 96,000 life.
 
-**Phase 1 (100-65%).**
-- *Gale* (Raszageth's Hurricane Wing): wing_buffet, then three seconds of wind toward the rim. The lee of a pylon (a
-  wedge behind it, marked on the ground as the wind starts) holds you. Outside it you're blown off: see Falling.
-- *Squall Line* (Raszageth, Al'Akir): a wall of tornadoes sweeps across the disc with one gap in it. Go through the gap.
-- *Breath*: breath_sweep across a third of the disc.
-- *Conduit* (Lei Shen): Thyrraxis lands by a pylon and charges it. Stand in its ring to drain it, or let it overload:
-  that quarter stays electrified to the end of the fight. Let more than one go and the whole disc pays.
+**Phase 1 (100-70%).** Deck: breath, claw rake, squall, gale, spark, conduit.
+- *Gale* (Raszageth's Hurricane Wing): wing_buffet twice, and while the wings beat, everyone in the open is driven away
+  from him at 4.6 m/s and thrown off the edge when they reach it. Behind a pylon from him (its lee) you're held.
+- *Squall Line* (Raszageth, Al'Akir): two lengths of storm sweep the disc from one side to the other at 9 m/s, a 5 m gap
+  between them somewhere along the line. Stand in the gap.
+- *Lightning breath*: a cone held where it's aimed; the tank in front is spared.
+- *Fulminating Spark* (Raszageth): a ring on one of you that follows them for 7 s, then bursts on everyone in it. Carry
+  it to the rim, away from the party.
+- *Conduit* (Lei Shen): a pylon charges; someone into its ring within 8 s drains it. Unsoaked, it overloads: that
+  quarter of the disc burns for the rest of the fight. Three can be live at once.
 
-**Intermission (65%), about 60 s.**
-- *Storm Nova* (Raszageth): it takes wing, roars, and a nova throws the party off the disc. You come down on the
-  islets below (glows show where). Storm elementals come; it strafes an islet with breath (strafe_breath).
-- At the end an *updraft* rises on each islet (Raszageth's second intermission). Step in and it throws you back up.
+**Storm Nova (70%).** Enrage roar, a nova, and everyone is thrown off the disc onto the islets below. Three storm whelps
+come down after you, one to each islet. He takes wing and comes down on the islet with the most of you on it.
 
-**Phase 2 (65-30%).**
-- *Tempest Wing*: rings of wind roll out from it; jump each one.
-- *Fulminating Charge*: a spark on one of you. Carry it to the rim, away from the others, before it goes off.
-- On the ground: claws, bite, tail.
+**Phase 2, the islets (70-40%).** The updrafts are still while he's down among the islets; the gust stones between
+islets work. Deck: breath, claw rake, Tempest Wing, clouds, tail.
+- He fights on one islet for 21-25 s, then flies to the next: a strafe of lightning is laid down the length of the one
+  he's going to (2.8 s to get out of the strip), and he lands on it.
+- *Tempest Wing* (Raszageth): three rings of wind roll out from him along the ground. Jump each.
+- *Lightning clouds* (Al'Akir): a storm over the islet with the most of you on it, 5 s to leave by its gust stone.
 
-**Phase 3 (30-0%).** *The disc breaks* (Al'Akir): five pieces drift apart at different heights. It circles and lands on
-the biggest piece in turn: that's where you hurt it. *Lightning clouds* gather at your height: change pieces to get out
-from under them.
+**Phase 3 (40-0%).** The updrafts open; he flies back to the disc and lands on its north side. *The disc breaks*: its
+middle (7 m round) is live to the end. His blows are 12% harder. Deck: phase 1's and Tempest Wing.
+
+A fall comes down on the nearest islet. Enrage at 9 minutes.
 
 ## 2. Kaldurra, the Hearth of the World (red)
 
-The Cinderwell: a ring of black rock 80 m across round a magma vent, six basalt pillars standing out of the ring.
+The Cinderwell: a ring of black rock 80 m across round a magma vent 7 m wide; 32 basalt pillars a step and a half high
+in three rings, 8.5-10 m between their middles. 104,000 life.
 
-**Phase 1.**
-- *Claw Smash* (Ragnaros's Sulfuras Smash): claw_slam, then three lava waves rolling out from the blow. Jump them.
-- *Wildfire* (Fyrakk): a line of fire advances across the ring each cast and leaves it burning, the safe ground
-  shrinking.
-- *Living Meteor* (Ragnaros): spat (spit), it fixes on one of you and rolls after them; spells knock it back.
+**Throughout.** Deck: Claw Smash, wildfire, living meteor, breath (leaves fire 5 s), claw rake, Flamefall run, and below
+a third, tail spin.
+- *Claw Smash* (Ragnaros's Sulfuras Smash): claw_slam, a blow in front of her, and three lava waves rolling out from it
+  in a fan, each to be jumped.
+- *Wildfire* (Fyrakk): a front of fire from the vent to the rim, walking round the ring for 15 s at 0.11 rad/s (4.6 m/s
+  at the rim, 1.6 by the vent: slower than a walk). Keep ahead of it.
+- *Living Meteor* (Ragnaros): spat at whoever's furthest, it rolls after them at 4.6 m/s and gets faster; it bursts on
+  reaching them, or after 15 s where it is. Lead it round the ring, away from the others.
+- *Flamefall*: she lifts, glides the length of the ring through the vent's middle and lands, a strip of fire where
+  she went, for 4 s.
 
-**Intermission (60%).** *Molten Flood* (Nefarian): she takes wing and the caldera floods. The lava rises till only the
-pillar tops stand out: hop between them while she rains fire and fire adds land on them. When she comes back down the
-lava falls, leaving *rings of fire* (Smolderon) to cross.
+**Molten Flood (66% and 33%)** (Nefarian, Smolderon). She hovers over the vent and the caldera floods: everything but the
+pillar tops burns for 11 s. Up onto a pillar, one to a pillar; her breath comes down on a pillar every 4 s. Then the lava
+falls, rings of fire roll out from the vent (three, then four) to be jumped, and she lands. After the second flood she
+crash-lands (crash_land): sprawled for 7 s, everything hits her twice as hard.
 
-**Phase 2.**
-- *Seeds* (Fyrakk): ember-proof seeds lie about the ring. Carry one (you or an ally). At *Apocalypse Roar* (a long roar,
-  a countdown) a carrier blooms it into a shelter flower. Everyone outside a flower burns.
-- *Flamefall*: she runs the length of the ring breathing (strafe_breath), and crash-lands at the end (crash_land). While
-  she's down, winded, she takes double damage.
+**Apocalypse Roar (40% and 15%)** (Fyrakk). Four ember flowers open about the ring; 11 s later she roars, and whoever
+isn't in a flower takes more than three of her blows at once. Two to a flower.
 
-**Phase 3, Rebirth (Belo'ren).** At 0% she falls into an ember egg for 30 s. Crack it. If you don't, she rises again at
-30% with a stacking burn.
+Enrage at 9 m 20 s.
 
 ## 3. Morvekh, Who Remembers the Cold (undead)
 
-The Rimespire: a spire of ice, a ramp spiralling up it past three ledges to a summit, little islets drifting round.
+The Rimespire: a spire of ice, a ramp round its south and west sides at 27 m past four shelves (the Foot, the First, the
+Second, the Last), to a summit 30 m up; rime crystals on every shelf and round the summit; three claw islets out east of
+the summit, reached by gust stones. 112,000 life.
 
-**Phase 1, the climb** (Sennarth). He perches on the first ledge. At 85% and 70% he flies to the next one up and the party
-follows up the ramp, slippery, with a freezing mist rising behind (it slows, then hurts).
-- *Frost breath* leaves ice patches you slide on.
-- *Grasp of the Grave*: chains pull everyone toward the edge; rime crystals hold you if you stand by one.
+**The climb (100-40%)** (Sennarth). He hangs off the spire beside the First Shelf, 8.5 m out from its middle and low,
+his chest over its edge: a blade can reach him from the shelf. At 80% and 60% he climbs to the next shelf, and 12 s
+later the freezing mist takes the shelf he's left and the ramp up to it: it stays to the end. He does nothing else for
+10 s after a climb (time to follow him up the ramp). At 40% he lands on the summit. Whelps at 80% and 40%. From his
+perch, only what needs no claws:
+- *Frost breath*: a narrow cone onto the shelf at one of you (24 m, 17° each side), held where it's aimed (he turns it
+  slowly), leaving frozen ground for 4 s. Never while the Grasp has you.
+- *Grasp of the Grave*: for 5 s everyone is dragged toward the nearest edge at 2.6 m/s, over it if they reach it, unless
+  they're within 3.4 m of a rime crystal. Never while his breath, or the ground it froze, is about.
+- *Frost bombs* (Sindragosa): one on each of you in turn, 0.7 s apart, a moment's warning each.
 
-**Phase 2, the summit (55-25%)** (Sindragosa).
-- *Frost Bombs* from the air: before each one, allies are entombed in ice, and the tombs are cover. Hide behind one, then
-  break them open.
-- *Deep Breath* (Onyxia): he flies straight across the summit, leaving a line of frost.
-- Undead dragonlings come out of the ice caves below the summit.
+**The summit (40-25%)** (Sindragosa, Onyxia). On the ground: claw rake, tail slam, breath, grasp, bombs, and *Deep
+Breath*: a 9 m white line across the whole summit.
 
-**Phase 3, Absolute Zero (25-0%)** (Madness of Deathwing). He hangs off the spire with his claws in three islets round it
-and begins a long cast. On each islet an ally stands and gives one power (one slows his ice bolts, one burns frost
-tentacles away, one shields). Jump islet to islet and break each claw's grip; with the last one gone he falls onto the
-summit, and that's the burn.
+**Absolute Zero (25%)** (Madness of Deathwing). He lifts off and hangs from the spire; the mist takes the summit too. A
+grip in each of the three claw islets: stand in it 4 s to break it (each break takes 3% of his life). He shrugs off
+nearly everything meanwhile. All three broken inside 45 s: he crashes onto the summit (crash_land), 9 s at double
+damage, then the end. Any left: a blow on everyone for 3.4-5.4 of his, and he comes down anyway, at full strength.
+
+A fall comes down on the shelf he's beside, or the summit. Enrage at 10 minutes.
 
 ## 4. Nihvaroth, the Hollow Star (black)
 
-The Lip of the Maw: the biggest island, on the black hole's rim; eight star-crystals orbit it close over its ground; a
-ring of debris (the accretion ring) round its edge; two islets hang beside it.
+The Lip of the Maw: the biggest island, 92 m across, on the black hole's rim; eight stars go round over it 30 m from its
+middle; an accretion ring of debris round its edge; its two hands, islets out over the Maw. 150,000 life.
 
-**Phase 1.**
-- *Devour* (Dimensius): it rears and inhales toward the Maw, everything pulled to the edge. Only a star's well (a ring
-  round each orbiting star) holds you.
-- *Reverse Gravity* (Dimensius): an ally floats up and drifts toward the Maw. Stand under them to pull them down.
-- *Shattered Space*: void spheres land; stand in them to drain them before they burst.
+**Phase 1 (100-60%).** Deck: Devour, Reverse Gravity, void spheres, breath, claw rake, tail.
+- *Devour* (Dimensius): it inhales for 1.6 s and then for 7 s everything is pulled north toward the Maw at 3.1 m/s, and
+  over the edge. A star's well (a ring under each star, moving with it) holds you.
+- *Reverse Gravity* (Dimensius): one of you floats. Someone else under them within 6.5 s pulls them down (a little hurt to
+  each); nobody, and they take two of its blows and are thrown toward the Maw.
+- *Void spheres* (Dimensius's Shattered Space): two land (three later), a few strides from one of you, 7.5 s each, never
+  during a Devour. Stand in one to drain it: its blow (about two of its blows) is split among whoever's in it; whoever's
+  low is let off if there are enough without them. Unsoaked, it bursts on everyone for most of a blow.
 
-**Transition (60%), the swallow** (Dimensius's space chase). It swallows the island's light and the party falls into
-the nebula: surf through void gates (each keeps you aloft), dodge drifting rocks and black holes, pick up star cores.
-You come out on the first islet.
+**The Swallow (60%)** (Crown of the Cosmos). The Lip goes dark (it burns to stand on), it hangs out over the Maw out of
+reach, and the party is thrown onto its left hand. An echo of Thyrraxis stands there, shielded (8% of what it's hit
+with) but for 11 s after someone stands on the hand's star core (one every 16 s). From 24 s on the hand, *Devouring
+Cosmos* eats in across it from its outer side. The echo down or 46 s gone: the hand closes and you're flung to the right
+hand, the echo of Kaldurra, and the same again. Then back to the Lip; if both echoes were broken in time, it's
+destabilized: 10 s stunned, at 180% damage taken.
 
-**Phase 2, the echoes** (Crown of the Cosmos). On each islet, an echo of a god it ate (a green, then a red dragon, small
-and dark). Throw a star core at the echo to break its shield. *Devouring Cosmos* eats the islet from one side: pick up
-a feather (speed) and leap to the next one.
+**Phase 3 (below 30%).** The accretion ring closes in from the edge (to 21 m from the middle, 0.16 m a second), burning,
+and the stars are drawn in ahead of it (their wells never in its fire); every 26 s a supernova puts out a star, eight
+down to three, and wells with them; Devour comes round more often. At 8%, a Devour that doesn't end: kill it before it
+has you.
 
-**Phase 3 (30-0%).** Back on the Lip.
-- *Destabilized*: the cores you carried out, thrown into it, stun it for 15 s.
-- *Supernova*: stars turn into black holes; there are fewer wells each Devour.
-- The accretion ring closes in a step each Devour. The third Devour is the end (soft enrage).
+A fall comes down on the hand you're on, during the Swallow; else on the Lip's south half. Enrage at 11 minutes.
 
 ## What the party does
 
-Each fight gives the allies jobs the player can see: the tank holds it facing away; a healer stands in a conduit or under
-a floated friend; allies carry seeds, stand on the Absolute Zero islets, break open tombs. They call out what's coming
-("Behind the pylons", "Updraft's up, get in", "Rings, jump them", "Into a flower"), as subtitles.
+Every rule above is also an order the fight gives (src/sim/elder-fights.js `order`): where to be, or not a step. The
+hired party obeys it and jumps the gaps between islands of its own accord (src/sim/voidland.js); auto-play and the
+headless test player are given the same orders, routed by way of the gust stone that goes where they're sent (the
+player can't jump the gaps). Into the pylon's lee, the spark to the rim, the conduit's ring, off the clouded islet,
+one to a pillar, two to a flower, around the ring ahead of the meteor, to the next shelf ahead of the mist, to a rime
+crystal, one or two to each grip, into a star well, under the floater, into the spheres, onto the star core, ahead of
+the cosmos.
+
+## Tuning
+
+Played by the sim itself (tools/dungeon/fight.mjs: a level-101 player with no gear, Firebolt only, and a hired party of
+lancer, paladin, archer, rogue at 101). Round 2 of tuning: Thyrraxis won 1 of 2 (289 s), Kaldurra won 1 of 2 (373 s);
+Morvekh and Nihvaroth lost both. Under level 100 none is meant to be won.
 
 ## Lines
 
@@ -182,8 +210,6 @@ anchor method, docs/VOICES.md; no lone words, no "!"). About 18 a god.
 | roar | Now the world ends. Hide, if you have somewhere to hide. |
 | run | Down the length of you, all in one breath. |
 | crash | The ground came up to meet me. |
-| egg | Do you think fire stays dead? |
-| hatch | Hotter. I always come back hotter. |
 | kill | Ash, and then nothing. |
 | kill | One less cold hand in the world. |
 | low | The hearth is going out. Not yet. Not yet. |

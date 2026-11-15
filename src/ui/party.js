@@ -16,6 +16,8 @@ import { makeRng } from '../items/items.js';
 import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
 import { movesOf } from '../sim/heroskills.js';
 import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
+import { SAY_NAME } from '../core/delve-elder.js';
+const GOD_SAY = new RegExp(`^(${Object.values(SAY_NAME).join('|')}): (.*)$`);
 import { C, CHARS_START, C_HERO, C_SIZE } from '../core/layout.js';
 import { priceText } from '../folk/shops.js';
 import { CLOSE_X } from './menu-x.js';
@@ -72,6 +74,9 @@ export class PartyUI {
       #raidWarn { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 7; width: min(760px, 92vw); text-align: center; pointer-events: none;
         font: 700 22px/1.3 Georgia, serif; color: #ffcf6a; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 14px rgba(120,30,0,.8); }
       #raidWarn div { animation: rwIn .25s ease-out; transition: opacity .6s; margin-bottom: 6px; }
+      #raidWarn div.godSay { font: italic 400 21px/1.35 Georgia, serif; color: #e6d6ff; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 18px rgba(110,40,190,.9); animation: rwSay .6s ease-out; }
+      #raidWarn div.godSay b { display: block; font: 700 12px/1.4 Georgia, serif; letter-spacing: .32em; font-style: normal; color: #b993ff; }
+      @keyframes rwSay { from { opacity: 0; letter-spacing: .04em; } to { opacity: 1; } }
       @keyframes rwIn { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }
       #hirePanel { position: fixed; z-index: 12; left: 50%; bottom: max(3vh, 14px); transform: translateX(-50%); width: min(720px, 95vw); max-height: 78vh; overflow-y: auto; padding: 13px 18px 12px; display: none; flex-direction: column;
         background: rgba(11,9,7,.96); border: 1px solid var(--gold-dim, #8c7344); box-shadow: 0 10px 34px #000b; color: var(--bone, #e9dfc8); font-family: Georgia, serif; }
@@ -504,7 +509,10 @@ export class PartyUI {
 
   warn(text, secs = 5) {
     const d = document.createElement('div');
-    d.textContent = text;
+    // (An Elder God speaking, not a call: its name over its words, in its own voice's colour, and held a little longer.)
+    const god = GOD_SAY.exec(text);
+    if (god) { d.className = 'godSay'; d.append(Object.assign(document.createElement('b'), { textContent: god[1] }), god[2]); secs = Math.max(secs, 6); }
+    else d.textContent = text;
     this.warnEl.appendChild(d);
     while (this.warnEl.children.length > 3) this.warnEl.firstChild.remove();
     setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 700); }, secs * 1000);

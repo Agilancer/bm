@@ -23,6 +23,7 @@ import { terrainHeight } from '../core/terrain.js';
 import { ELEM, FX } from './spells.js';
 import { TripoMonster } from './tripo.js';
 import { foeOf } from './foes.js';
+import { route, voidStep } from './voidland.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -72,7 +73,7 @@ export class Warrens {
   // Stood somewhere, still, facing yaw: the player (with the view turned to match) or a hero.
   put(b, x, z, yaw) {
     const sim = this.sim, y = sim.world.height(x, z);
-    b.x = x; b.z = z; b.y = y; b.vx = 0; b.vz = 0;
+    b.x = x; b.z = z; b.y = y; b.vx = 0; b.vz = 0; b.leaping = null;
     if (b === sim.player) {
       b.vy = 0; b.onGround = true; b.yaw = yaw; b.surfing = false;
       sim.input[INPUT.YAW] = yaw;
@@ -118,6 +119,8 @@ export class Warrens {
     this.dt = dt;
     this.stepPacks(dt);
     this.stepBosses(dt);
+    // (The Elder Gods' islands: falls, leaps, gust stones, seals, and the party across gaps: src/sim/voidland.js.)
+    if (this.delve.style === 'void') voidStep(this, dt);
     this.post(dt);
   }
 
@@ -253,7 +256,7 @@ export class Warrens {
       for (const m of bodies) if (!m.setUp) this.setUp(m, b);
       if (lair.state === 'cleared' || (bodies.length && bodies.every((m) => m.dead) && lair.spawned >= b.models.length)) {
         this.down.add(b.key); lair.state = 'cleared'; lair.clearedOnce = true;
-        if (this.fight?.boss === b) { this.fight = null; this.clearGround(); }
+        if (this.fight?.boss === b) { this.fight.spec?.died?.(this, this.fight, bodies); this.fight = null; this.clearGround(); }
         sim.event(EV.DELVE, DELVE.BOSS_DOWN, BOSSES.indexOf(b));
         // (What its death sets going somewhere else: a curtain going up.)
         if (b.cue) this.warn(WARN[b.cue]);
@@ -271,14 +274,15 @@ export class Warrens {
       if (this.fight?.boss === b) {
         // (Who's still in it: anyone in the room or a few strides out of its door. A long room's corners are further
         // from its middle than its short side says: the Dollmaker's attic, the Ossuary.)
-        const rm = roomOf(b.room), reach = Math.max(R + 14, rm.hx !== undefined ? Math.hypot(rm.hx, rm.hz) + 4 : 0);
+        // (And a god's whole arena, its islets with it: b.arena.)
+        const rm = roomOf(b.room), reach = Math.max(R + 14, rm.hx !== undefined ? Math.hypot(rm.hx, rm.hz) + 4 : 0, b.arena || 0);
         const party = this.bodies().filter((x) => Math.hypot(x.x - rx, x.z - rz) < reach);
         if (!party.length || p.dead) { this.endFight(b, live); continue; }
         this.fight.t += dt;
-        for (const m of live) { m.aggro = true; if (Math.hypot(m.x - rx, m.z - rz) > R + 6 && !m.flying) { m.vx = (rx - m.x) * 0.3; } }
+        for (const m of live) { m.aggro = true; if (Math.hypot(m.x - rx, m.z - rz) > (b.arena || R + 6) && !m.flying && !m.script) { m.vx = (rx - m.x) * 0.3; } }
         if (this.fight.spec) this.run(this.fight.spec, dt, this.fight, live); else this[b.key](dt, this.fight, live);
         this.turnOn(this.fight, live);
-      } else if (!this.fight && dRoom < R - BOSS_ROOM_PAD && live.some((m) => !m.aggro)) for (const m of live) m.notice(sim);
+      } else if (!this.fight && dRoom < (b.pull ?? R - BOSS_ROOM_PAD) && live.some((m) => !m.aggro)) for (const m of live) m.notice(sim);
     }
   }
 
@@ -420,7 +424,10 @@ export class Warrens {
   deck(f, m, secs, list) {
     const d = (f.decks ||= {})[m.id] ||= { t: secs * rnd(0.5, 0.8), bag: [], last: null };
     d.t -= this.dt;
-    if (d.t > 0 || m.script || m.breathing || m.state !== 0 || f.turn?.m === m) return;
+    // (A god hanging in the air by its fight's flight goes on with what it can do from there: src/sim/elder-fights.js.)
+    if (d.t > 0 || (m.script && !m.airDeck) || m.breathing || m.state !== 0 || f.turn?.m === m) return;
+    // (What's left in the bag from a phase whose list was another: not drawn now.)
+    if (d.bag.some((n) => !list.includes(n))) d.bag = d.bag.filter((n) => list.includes(n));
     if (!d.bag.length) { d.bag = list.filter((n) => n !== d.last).sort(() => Math.random() - 0.5); }
     const name = d.bag.pop(), mv = f.spec?.moves[name];
     if ((mv ? this.play(f, m, mv) : this[name](f, m)) === false) return;
@@ -497,7 +504,10 @@ export class Warrens {
   order(b) {
     const f = this.fight;
     if (!f?.spec?.order || b.dead) return null;
-    return f.spec.order(this, f, b, this.bossBodies(f.boss.key).filter((m) => !m.dead)) || null;
+    const o = f.spec.order(this, f, b, this.bossBodies(f.boss.key).filter((m) => !m.dead)) || null;
+    // (In the Elder Gods' void, somewhere on another island is by way of the gust stone that goes there: the player can't
+    // jump the gap as the party does. src/sim/voidland.js route.)
+    return o && this.delve.style === 'void' && b === this.sim.player ? route(this, b, o) : o;
   }
   // The far side of the nearest thing that stands between a body and (sx, sz): a pillar of the delve's rock or something
   // round and solid in the room (list: [x, z, r] in the world, or the delve's own). Null if there's nothing near enough.
@@ -968,6 +978,8 @@ export class Warrens {
     const d = delveByKey(boss?.delve || (m.room && roomOf(m.room)?.delve.key) || m.delve || 'warrens') || DELVES[0];
     const mine = BOSSES.filter((b) => b.delve === d.key), b = boss || mine[m.n | 0];
     if (m.cmd === 'enter' || m.cmd === 'boss' || m.cmd === 'room') {
+      // (A fight going on is let go first: the bosses before this one are about to be counted down, and theirs would never end.)
+      if (this.fight) this.endFight(this.fight.boss, this.bossBodies(this.fight.boss.key).filter((k) => !k.dead));
       let [x, z] = toWorld(d.entry.x, d.entry.z, d), yaw = d.entry.yaw;
       if (m.cmd === 'room' && roomOf(m.room)) { const [rx, , rz] = roomSpot(m.room, m.dx || 0, m.dz || 0); yaw = Math.atan2(rx - x, rz - z); x = rx; z = rz; }
       if (m.cmd === 'boss' && b) {
