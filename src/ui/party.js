@@ -15,7 +15,8 @@ import { autoSpend, freshTree, treeMods } from '../core/partytree.js';
 import { makeRng } from '../items/items.js';
 import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
 import { movesOf } from '../sim/heroskills.js';
-import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, roleOf } from '../core/dungeon.js';
+import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, WARN_CALM, roleOf } from '../core/dungeon.js';
+import { Ticker } from './ticker.js';
 import { C, CHARS_START, C_HERO, C_SIZE } from '../core/layout.js';
 import { priceText } from '../folk/shops.js';
 import { CLOSE_X } from './menu-x.js';
@@ -98,6 +99,7 @@ export class PartyUI {
     this.warnEl = document.createElement('div'); this.warnEl.id = 'raidWarn';
     this.panel = document.createElement('div'); this.panel.id = 'hirePanel';
     document.body.append(this.frames, this.bossEl, this.warnEl, this.panel);
+    this.ticker = new Ticker();
     this.frameEls = [];
   }
 
@@ -511,6 +513,15 @@ export class PartyUI {
     this.warned?.(text);
   }
 
+  // A fight's call: shouted along the emergency ticker, unless it's a calm word on how the fight goes.
+  call(i) {
+    const text = WARNINGS[i] || '';
+    if (!text) return;
+    if (WARN_CALM.has(i)) { this.warn(text, 5); return; }
+    this.ticker.push(text);
+    this.warned?.(text);
+  }
+
   showBoss(i, ids) {
     const b = BOSSES[i];
     if (!b) return;
@@ -536,12 +547,12 @@ export class PartyUI {
         break;
       }
       case DELVE.ENTER: this.warn(a ? `${d.name}. Your dead foes are as you left them.` : d.words.enter, 6); break;
-      case DELVE.LEAVE: this.hideBoss(); break;
+      case DELVE.LEAVE: this.hideBoss(); this.ticker.clear(); break;
       case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clearsBy[d.key] = (this.clearsBy[d.key] || 0) + 1; if (d.key === 'warrens') this.clears++; this.cleared?.(d); break;
-      case DELVE.WARN: this.warn(WARNINGS[a | 0] || '', 5); break;
+      case DELVE.WARN: this.call(a | 0); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;
       case DELVE.BOSS_DOWN: this.hideBoss(); this.warn(`${BOSSES[a | 0]?.name || 'The boss'} is dead!`, 5); this.bossDown?.(BOSSES[a | 0]?.key); break;
-      case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.warn(d.words.wipe, 5); break;
+      case DELVE.WIPE: this.wipes = (this.wipes || 0) + 1; this.hideBoss(); this.ticker.clear(); this.warn(d.words.wipe, 5); break;
       default: break;
     }
   }
