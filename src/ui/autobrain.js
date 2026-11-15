@@ -77,11 +77,8 @@ const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
 // Bold (the Auto menu's temperament, src/ui/autoplay.js): it takes on what it would have left two levels more, is beaten back
 // one level instead of two, and stays in a fight it's hurt in while there's a kill to finish.
 const BOLD_LEVELS = 2;
-// A long walk hurried (Settings' Long walks in auto-play, the sim's clock run at HASTE: src/sim/sim.worker.js): only out in the
-// open with this far still to go and nothing alive this near.
 // In the town it opens a chest only when it's passing one (it used to go round every house for them before it took a quest).
 const TOWN_CHEST = 9, TOWN_CHEST_GAP = 90;
-const HURRY_FAR = 140, HURRY_CLEAR = 48, HURRY_AFTER = 2.5;
 // How long a line is left up to be read before it's answered (Settings' Talk in auto-play): by its length, as a reader takes it.
 // (A brisk reader's: slower, and a quest-giver with a lot to say held him the best part of a minute.)
 export const readTime = (line) => clamp(0.6 + String(line || '').replace(/<[^>]*>/g, '').length / 34, 1.2, 5);
@@ -746,7 +743,7 @@ export class Brain {
     this.skip = new Map();     // things it's given up on for a while: key -> until
     this.patrol = null; this.wispT = 0; this.gearT = 0; this.strafe = 1; this.strafeT = 0;
     this.lastPos = null; this.lastHpf = 1;
-    this.hurry = false; this.hurryT = 0; this.nearFoe = 1e9; this.scene0 = null;
+    this.nearFoe = 1e9; this.scene0 = null;
     this.bump = this.bump || {};
     this.runState = null;
   }
@@ -902,8 +899,6 @@ export class Brain {
     this.snap = snap;
     const m = this.me(snap);
     const g = this.o.game;
-    const hurried = this.hurry;
-    this.hurry = false;
     // Fallen, with no opening to catch it (?noopening): up again, as R does.
     if (snap[H.GAME] === 2) {
       this.halt();
@@ -941,11 +936,6 @@ export class Brain {
     if (this.thinkT <= 0) { this.thinkT = 0.12; this.think(snap, m); }
     this.boardFrame = false;
     this.walk(dt, m);
-    // A long walk with nothing about: hurried, for whoever's watching (src/ui/autoplay.js gives it to the sim's clock).
-    const g0 = this.goal, far = !!g0 && this.useGoal && !this.fighting && !this.talk && !m.town && !m.below && !(m.opening > 0 && m.opening < OPENING.ARRIVED)
-      && !inDungeon(m.x, m.z) && !inHall(m.x, m.z) && this.nearFoe > HURRY_CLEAR && dist(m.x, m.z, g0.x, g0.z) > (hurried ? HURRY_FAR * 0.6 : HURRY_FAR);
-    this.hurryT = far ? this.hurryT + dt : 0;
-    this.hurry = hurried ? far : this.hurryT > HURRY_AFTER;
     // (The ride down behind Lisandra, asked for by the opening's thinking: src/ui/autobrain.js opening.)
     if (this.wayRide) { const r = this.wayRide; this.board(dt, m, r.rx, r.rz, r.left, (k) => routeAt(Math.min(ROUTE.len, r.mine + k))); }
     // (Space is only held while it's on the shield, or getting on it: on its way somewhere, or riding it through a fight.)
