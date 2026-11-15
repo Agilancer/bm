@@ -68,7 +68,8 @@ const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const AUTO = params.has('auto');
 // How the last run ended, and how light to load (src/core/lastrun.js). (Tests under ?auto are killed, not left: not judged.)
-const RUN = AUTO && !params.has('light') ? { died: null, light: 0 } : beginRun(params);
+// (On a PC the level steps Auto's graphics down, and only a run that went soon after it loaded counts: src/gfx/gpu.js lighterPC.)
+const RUN = AUTO && !params.has('light') ? { died: null, light: 0 } : beginRun(params, { pc: !isMobileDevice() });
 const renderDiagnostics = new RenderDiagnostics(params.has('diagnose'));
 // Every new game begins with the witch in the cave.
 const OPENING_ENABLED = !params.has('noopening');   // (?noopening starts in the town, for tests)
@@ -334,7 +335,9 @@ async function boot(plan, poolSize) {
   watchFiles(fileNoted);
   setProgress(0.02, 'Waking the GPU...');
   let gpu;
-  try { gpu = await initGPU(settings.gfx); } catch (e) { failOnTitle(''); showFail(e.message); return; }
+  // (A PC whose browser closed the game, or lost its GPU, soon after it loaded last time starts Auto a step lighter or two.)
+  try { gpu = await initGPU(settings.gfx, { light: RUN.light }); } catch (e) { failOnTitle(''); showFail(e.message); return; }
+  console.info(`graphics: ${gpu.tier.name} (${settings.gfx === 'auto' ? 'auto' : 'set'}) on ${gpu.name || gpu.info?.vendor || 'an unnamed GPU'}${gpu.shared ? ', which shares the computer\'s memory' : gpu.laptop ? ', a laptop\'s card' : ''}${gpu.mem ? `; ${gpu.mem} GB of RAM` : ''}${gpu.lightened ? '; lighter for the last run' : ''}`);
   // (A phone whose browser closed the game last time loads lighter: src/core/lastrun.js.)
   if (gpu.mobile && RUN.light) gpu.tier = lighten(gpu.tier, RUN.light);
   noteRun({ stage: 'loading' });
@@ -861,6 +864,10 @@ async function boot(plan, poolSize) {
   const startFrom = async (data) => { if (await loadInto(data)) enter(false); };
   // Back after the GPU was lost (above): Continue, offered once, with a word on why. (A tap, which also lets the sound back
   // on in a browser that wants one first.)
+  // On a PC, what the graphics are doing about it: a step lighter on Auto (initGPU light), or, set by hand, a word on the setting.
+  const lighterWords = () => (gpu.mobile ? '' : gpu.lightened
+    ? ` This time the graphics are on ${gpu.tierName === 'mobile' ? 'Low' : gpu.tier.name}, which needs less memory. Settings, Graphics sets them back.`
+    : settings.gfx !== 'auto' && settings.gfx !== 'mobile' ? ' Graphics are set by hand in Settings: Auto, or a lower setting, needs less memory.' : '');
   // Back after the browser closed the game (src/core/lastrun.js): said, with Continue if there's a game kept.
   const diedOffer = async () => {
     if (!RUN.died || AUTO) return;
@@ -869,6 +876,7 @@ async function boot(plan, poolSize) {
     const kept = !!saves.newest();
     const text = `The browser closed the game last time, ${deathWords(RUN.died)}. It does that when a page wants more memory than the device has to give.`
       + `${gpu.mobile && RUN.light ? ` This time the game is using less: ${RUN.light > 1 ? 'only two' : 'fewer'} of the other heroes are about, and bodies are painted smaller.` : ''}`
+      + `${lighterWords()}`
       + `${kept ? ' Continue picks up from where the game was last kept.' : ''}`;
     if (await title.confirm({ title: 'The game was closed', text, yes: kept ? 'Continue' : 'Back', no: kept ? 'Main Menu' : false }) && kept) {
       const d = saves.newest();
@@ -880,7 +888,7 @@ async function boot(plan, poolSize) {
     try { ask = sessionStorage.getItem(GPU_LOST_OFFER) === '1'; note = sessionStorage.getItem(GPU_LOST_NOTE) || ''; sessionStorage.removeItem(GPU_LOST_OFFER); } catch { /* no storage */ }
     if (!ask || AUTO || !saves.newest()) return;
     await new Promise((r) => setTimeout(r, 700));
-    const text = `The game was kept as it was a moment before. Continue picks up from there.${note ? ` (${note})` : ''}`;
+    const text = `The game was kept as it was a moment before. Continue picks up from there.${lighterWords()}${note ? ` (${note})` : ''}`;
     if (await title.confirm({ title: 'The graphics reset', text, yes: 'Continue', no: 'Main Menu' })) {
       const d = saves.newest();
       if (d) startFrom(d);

@@ -13,19 +13,26 @@ const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 // (What each level does is where it's used: the other heroes' number in src/main.js, the models' pictures in
 // src/gfx/gpu.js lighten.) ?light=N sets it by hand, and keeps it.
 export const LIGHT_MOST = 2;
+// On a PC, how soon into play a death or a lost GPU says the game didn't fit (beginRun pc).
+export const PC_EARLY_MINS = 5;
 
 let note = null;
 
 /**
  * At a start, before anything else: the last run's note, taken and judged, and a new one begun.
  * Returns { died, light }: died is null, or { stage, mins, where, gpu } of a run the browser ended; light is the level to load at.
+ * pc: on a PC (where the level steps Auto's graphics down: src/gfx/gpu.js lighterPC) only a run that went while it loaded or
+ * in its first few minutes of play counts, the way a page that wants more memory than there is goes; and so does a GPU lost
+ * then, which a laptop's GPU on the processor does when the game's pictures don't fit in the memory it shares.
  */
-export function beginRun(params = new URLSearchParams()) {
+export function beginRun(params = new URLSearchParams(), { pc = false } = {}) {
   const last = read(KEY);
   let light = Math.max(0, Math.min(LIGHT_MOST, Number(read(LIGHT_KEY)) || 0));
   // (A note a week old is no news. One that says the GPU was lost was the game's own reload: src/main.js device.lost.)
-  const died = last && last.ended === false && Date.now() - last.at < 7 * 86400e3 ? { stage: last.stage, mins: last.mins || 0, where: last.where || '', gpu: last.gpu || '' } : null;
-  if (died) light = Math.min(LIGHT_MOST, light + 1);
+  const recent = last && Date.now() - last.at < 7 * 86400e3;
+  const died = recent && last.ended === false ? { stage: last.stage, mins: last.mins || 0, where: last.where || '', gpu: last.gpu || '' } : null;
+  const early = recent && (last.stage !== 'playing' || (last.mins || 0) < PC_EARLY_MINS);
+  if (pc ? early && (died || last.ended === 'gpu') : died) light = Math.min(LIGHT_MOST, light + 1);
   if (params.has('light')) light = Math.max(0, Math.min(LIGHT_MOST, Number(params.get('light')) || 0));
   write(LIGHT_KEY, light);
   note = { at: Date.now(), stage: 'starting', ended: false, mins: 0, where: '', gpu: '', deaths: (last?.deaths || 0) + (died ? 1 : 0) };

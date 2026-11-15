@@ -88,7 +88,7 @@ const SETTINGS = `
     <label><span>Ambience</span><input data-k="ambience" type="range" min="0" max="1" step="0.05"></label>
     <label><span>Look speed</span><input data-k="look" type="range" min="0.4" max="2.5" step="0.1"></label>
     <label><span>Resolution</span><select data-k="res"><option value="auto">Auto (holds the frame rate)</option><option value="1">Full</option><option value="0.75">75%</option><option value="0.5">Half</option></select></label>
-    <label><span>Graphics</span><select data-k="gfx"><option value="auto">Auto (from your GPU)</option><option value="ultra">Ultra</option><option value="high">High</option><option value="mobile">Low</option></select></label>
+    <label><span>Graphics</span><select data-k="gfx"><option value="auto">Auto (from your GPU)</option><option value="ultra">Ultra</option><option value="high">High</option><option value="medium">Medium (laptops)</option><option value="mobile">Low</option></select></label>
     <label><span>Names over heads</span><select data-k="tags"><option value="full">Names and guilds</option><option value="names">Names only</option><option value="off">Off</option></select></label>
     <label><span>Speech bubbles</span><select data-k="bubbles"><option value="on">On</option><option value="off">Off</option></select></label>
     <label><span>Chat log</span><select data-k="chatlog"><option value="on">On</option><option value="off">Off</option></select></label>

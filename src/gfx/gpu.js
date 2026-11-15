@@ -10,6 +10,11 @@ const WANTED_FEATURES = [
 export const TIERS = {
   ultra: { name: 'Ultra', scaleMax: 1.0, shadowSize: 4096, cascades: 3, msaa: 4, grassSpacing: 0.062, grassRadius: 58, grassCap: 1400000, particles: 400000, ao: true, shafts: true, pom: 1, texScale: 1, terrainN: 512, bloom: 6, sim: 120, aniso: 8, lights: 12, bloodSize: 1536, emit: 1 },
   high: { name: 'High', scaleMax: 1.0, shadowSize: 2048, cascades: 3, msaa: 4, grassSpacing: 0.1, grassRadius: 42, grassCap: 400000, particles: 150000, ao: true, shafts: true, pom: 0.5, texScale: 1, terrainN: 384, bloom: 5, sim: 120, aniso: 8, lights: 12, bloodSize: 1536, emit: 1 },
+  // A PC whose GPU is on the processor (most laptops, as the browser uses them) has no memory of its own: every picture the
+  // game puts on it comes out of the computer's RAM. At Ultra and High that was some 6 GB on top of the page's 2 (an AMD
+  // processor's GPU, November 2026), and a laptop's browser closed the game as it came in. So: High, with every picture half
+  // a side, a quarter of the memory, and a little less grass. Also the Medium setting.
+  medium: { name: 'Medium', scaleMax: 1.0, shadowSize: 2048, cascades: 3, msaa: 4, grassSpacing: 0.12, grassRadius: 38, grassCap: 260000, particles: 100000, ao: true, shafts: true, pom: 0.5, texScale: 0.5, terrainN: 384, bloom: 5, sim: 120, aniso: 8, lights: 12, bloodSize: 1536, emit: 1 },
   // A phone has a fraction of a PC's GPU, and loses more of it to heat within minutes. So: a set number of pixels whatever
   // the screen (the browser stretches them, which costs nothing), the shaders' LEAN paths, and few passes, which a tiled
   // GPU pays dearly for. Also the Low setting on a PC.
@@ -24,12 +29,67 @@ export function lighten(tier, level) {
   return level > 0 ? { ...tier, texCap: Math.min(tier.texCap || 256, 256) } : tier;
 }
 
+// The PC tiers by what they ask of memory: Ultra and High the same pictures, Medium a quarter of them, Low less again.
+const BY_MEMORY = { ultra: 0, high: 0, medium: 1, mobile: 2 };
+
+// A PC's tier made lighter for one whose browser closed the game, or lost its GPU, soon after it loaded
+// (src/core/lastrun.js): a step a level, Ultra or High to Medium, Medium to Low.
+export function lighterPC(name, level) {
+  const was = BY_MEMORY[name] ?? 0, r = Math.min(2, was + Math.max(0, level || 0));
+  return r === was ? name : r >= 2 ? 'mobile' : 'medium';
+}
+
+// The GPU's name, which WebGPU won't give but WebGL will: "ANGLE (AMD, AMD Radeon(TM) Graphics (0x0000164E) Direct3D11 ...)".
+// (On Windows the browser draws both with the same GPU.) '' if it can't be had.
+export function gpuName() {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+    const name = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '') : '';
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return name;
+  } catch { return ''; }
+}
+
+// Whether the GPU is on the processor and shares the computer's memory: Intel's (but its Arc cards, A770, B580), AMD's that
+// aren't a Radeon RX or Pro card ("Radeon(TM) Graphics", "Radeon 780M", "Vega 8"), Apple's, a phone maker's, and the
+// software ones. Without a name, by the vendor and architecture WebGPU gives, which can't tell AMD's apart: a card, then.
+export function sharesMemory(name = '', info = {}) {
+  const n = name.toLowerCase();
+  if (n) {
+    if (/nvidia|geforce|quadro|tesla/.test(n)) return false;
+    if (/radeon.*\b(rx|pro|vii|r9|r7)\b|firepro/.test(n)) return false;
+    if (/\barc\b.*\b[ab]\d{3}\b/.test(n)) return false;
+    return /intel|radeon|vega|apple|adreno|qualcomm|mali|powervr|microsoft basic|swiftshader|llvmpipe/.test(n);
+  }
+  const v = (info.vendor || '').toLowerCase(), a = (info.architecture || '').toLowerCase();
+  if (v.includes('intel')) return !a.includes('hpg');
+  return /apple|qualcomm|arm|imagination|microsoft|google/.test(v);
+}
+
+// A laptop's own graphics card: "NVIDIA GeForce RTX 4060 Laptop GPU", a Max-Q, AMD's "Radeon RX 6800M". Most have 4 to 8 GB,
+// and the game at Ultra filled 6 GB of a desktop card's.
+export const laptopCard = (name = '') => /laptop gpu|max-q|\brx\s*\d{4}m\b/i.test(name);
+
+// The tier Auto picks: Ultra on a card of NVIDIA's or AMD's, High on any other GPU with memory of its own; Medium on a
+// laptop's card, on a computer with 8 GB of RAM or less, and on a GPU that shares the computer's memory, where 8 GB or less
+// is Low. Low on any PC with 4 GB or less. mem: GB of RAM, as navigator.deviceMemory has it (0 when the browser won't say).
+// light: how many steps lighter (lighterPC).
+export function autoTier({ mobile = false, shared = false, discrete = false, laptop = false, mem = 0, light = 0 } = {}) {
+  if (mobile) return 'mobile';
+  if (mem && mem <= 4) return 'mobile';
+  const small = mem && mem <= 8;
+  return lighterPC(shared ? (small ? 'mobile' : 'medium') : laptop || small ? 'medium' : discrete ? 'ultra' : 'high', light);
+}
+
 export function isMobileDevice() {
   if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') return navigator.userAgentData.mobile;
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
 }
 
-export async function initGPU(tierOverride = 'auto') {
+// light: on a PC, how many steps lighter Auto loads, after the browser closed the game or lost its GPU just after it loaded
+// (src/core/lastrun.js). A tier the Graphics setting names is kept as it is.
+export async function initGPU(tierOverride = 'auto', { light = 0 } = {}) {
   if (!navigator.gpu) throw new Error('This browser has no WebGPU.');
   let adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) adapter = await navigator.gpu.requestAdapter();
@@ -49,13 +109,21 @@ export async function initGPU(tierOverride = 'auto') {
   const info = adapter.info || {};
   const vendor = (info.vendor || '').toLowerCase();
   const mobile = isMobileDevice();
-  // Browsers won't say whether a GPU is integrated. Start high on anything that might be a discrete card, and
-  // let the renderer step down at runtime when the timings say so (Renderer.demote).
-  const discrete = /nvidia|amd|ati/.test(vendor);
+  // WebGPU won't say whether a GPU is integrated, but its name does (gpuName). Start high on a card, and let the renderer
+  // step down at runtime when the timings say so (Renderer.demote); on a GPU that shares the computer's memory, start where
+  // its pictures fit in that memory (autoTier).
+  const name = mobile ? '' : gpuName();
+  const shared = !mobile && sharesMemory(name, info);
+  const discrete = !shared && /nvidia|amd|ati/.test(vendor);
+  const laptop = !shared && laptopCard(name);
+  const mem = Number(navigator.deviceMemory) || 0;
   // The Graphics setting can name a tier outright.
-  const tierName = TIERS[tierOverride] ? tierOverride : mobile ? 'mobile' : discrete ? 'ultra' : 'high';
+  const picked = autoTier({ mobile, shared, discrete, laptop, mem });
+  const tierName = TIERS[tierOverride] ? tierOverride : autoTier({ mobile, shared, discrete, laptop, mem, light: mobile ? 0 : light });
   return {
-    adapter, device, info, mobile, tierName,
+    adapter, device, info, mobile, tierName, name, shared, laptop, mem,
+    // (Lighter than Auto would have picked, for the browser's closing the game last time: said on the title, src/main.js.)
+    lightened: tierName !== picked && !TIERS[tierOverride],
     tier: { ...TIERS[tierName] },
     format: navigator.gpu.getPreferredCanvasFormat(),
     hdrFormat: device.features.has('rg11b10ufloat-renderable') ? 'rg11b10ufloat' : 'rgba16float',
