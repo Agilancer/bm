@@ -1,7 +1,7 @@
 // Boot: the permission gate, threads, GPU, assets, and the render thread's loop.
 import { setOpeningTerrain } from './core/terrain.js';
 import { GROUPS, GROUP_KEYS, TRIPO_KIND } from './core/tripo-monsters.js';
-import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE } from './core/dungeon.js';
+import { BOSSES as DELVE_BOSSES, DELVE as DELVE_CODE, inDungeon as inDelve } from './core/dungeon.js';
 import { OPENING, OPENING_REVISION } from './core/opening.js';
 import { OpeningHUD } from './ui/opening.js';
 import { ChatLog } from './ui/chatlog.js';
@@ -22,7 +22,7 @@ import { Input } from './input.js';
 import { Drops, boardPose } from './items/drops.js';
 import { settleSkull } from './items/skins.js';
 import { ROBES, ROBE_SETS, SET_PARTS, SHIELDS, SKULLS, colorOf, gearTotals, nameOf, rollGem, rollRobe, rollShield, rollSkull, rollWeapon, makeRng, writeWeapon } from './items/items.js';
-import { levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
+import { MAX_LEVEL, levelPerks, stepXp, xpFor, XP_OF } from './items/levels.js';
 import { GemFx } from './gfx/gemfx.js';
 import { Pack } from './items/pack.js';
 import { addPart, capture, restore, saves } from './saves.js';
@@ -45,10 +45,12 @@ import { SpellSound } from './spellsound.js';
 import { HERO_SLOTS, makeCast, withBrokers } from './core/heroes.js';
 import { HeroTalk } from './ui/heroes.js';
 import { PartyUI } from './ui/party.js';
+import { PartyBook } from './ui/partybook.js';
+import { fits, partyDrops, useKit } from './items/partygear.js';
 import { TownClient } from './folk/client.js';
 import { FolkBodies } from './gfx/folk.js';
 import { TownUI } from './ui/folk.js';
-import { hands, matName, RARITIES } from './items/items.js';
+import { BOSS_CHEST, LAST_CHEST, hands, matName, RARITIES } from './items/items.js';
 import { Lands } from './ui/lands.js';
 import { AutoPlay } from './ui/autoplay.js';
 import { FoeBars, isBoss } from './ui/foebars.js';
@@ -426,6 +428,9 @@ async function boot(plan, poolSize) {
   if (heroCount > 0) {
     try {
       const [roster, kit, names] = await Promise.all(['roster', 'kit', 'names'].map((n) => getFile(`${BASE}assets/game/heroes/${n}.json`, 'json')));
+      // (What the party's gear is rolled from: their weapons and shields, your own gear sets' colours, the bodies. src/items/partygear.js.)
+      const looks = await getFile(`${BASE}assets/game/heroes/looks.json`, 'json').catch(() => ({ sets: [] }));
+      useKit(kit, looks, roster);
       let kept = null;
       try { kept = JSON.parse(localStorage.getItem('bm.heroes') || 'null'); } catch { /* none */ }
       const seed = kept?.seed || Math.floor(Math.random() * 2 ** 31);
@@ -517,8 +522,11 @@ async function boot(plan, poolSize) {
   };
   const showLevel = () => {
     // (The level in its medal, and round it how far to the next: src/ui/hud.css #levelBox.)
+    // (Three figures sit smaller in it, so 100 to 200 fit the medal; at the top there's no next, and the ring is full.)
     $('levelNum').innerHTML = `<em>Level </em>${pack.level}`;
-    const lo = xpFor(pack.level), hi = xpFor(pack.level + 1), far = Math.max(0, Math.min(100, (pack.xp - lo) / (hi - lo) * 100));
+    $('levelNum').classList.toggle('three', pack.level >= 100);
+    const top = pack.level >= MAX_LEVEL;
+    const lo = xpFor(pack.level), hi = xpFor(pack.level + 1), far = top ? 100 : Math.max(0, Math.min(100, (pack.xp - lo) / (hi - lo) * 100));
     $('xpBar').firstElementChild.style.width = `${far}%`;
     $('levelBox').style.setProperty('--xpf', far.toFixed(1));
   };
@@ -583,6 +591,19 @@ async function boot(plan, poolSize) {
       cleared: (d) => { const pay = d?.pay || { xp: 1500, gold: 250 }; giveXp?.(pay.xp); pack.gold += pay.gold; hud.tip(`The Free Company pays out ${pay.gold} gold for ${d?.short || 'the Warrens'}, and the tale is worth more.`, 5); autosave(); },
     });
     addPart('party', { save: () => game.party.save(), load: (d) => game.party.load(d) });
+    // Their gear: on their bodies and in their hands (src/gfx/herolook.js), dropped for them by the dead and in the bosses'
+    // chests (src/items/partygear.js), and their book, K (src/ui/partybook.js).
+    game.party.looks = (slot, entry, kp) => renderer.heroLooks?.apply(slot, entry, kp);
+    game.party.drop = (item) => { const s = game.currentSnap(); game.drops.fromPlayer(item, s[H.PX], s[H.PY], s[H.PZ], input.yaw); };
+    game.drops.party = () => game.party.members.map((m) => game.party.whoOf(m));
+    game.chests.bonus = (ch) => ((ch.loot | 0) >= BOSS_CHEST ? partyDrops(game.drops.rng, (ch.loot | 0) >= LAST_CHEST ? 21 : 20, game.drops.party(), 1.6) : []);
+    // (In the pack, a piece none of your party nor your old companions can wear is greyed: src/ui/inventory.js.)
+    inventory.hgWearable = (item) => { const P = game.party, all = [...P.members.map((m) => P.whoOf(m)), ...P.roster.map((e) => P.whoOfEntry(e))]; return !all.length || all.some((w) => fits(item, w)); };
+    game.partyBook = new PartyBook({ party: game.party, pack, inventory, base: BASE, touch: input.touch, tip: (t, s) => hud.tip(t, s),
+      canOpen: () => townUI.act?.canMenu?.() ?? true,
+      opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
+      closed: () => { input.menu = false; autosave(); resume(); },
+      click: () => title.chime?.(), gold: { have: () => pack.purse(), pay: (n) => pack.pay(n) } });
   }
   // A word with the town (src/ui/folk.js): E to someone, J for the quest log.
   const giveXp = (n) => {
@@ -593,7 +614,7 @@ async function boot(plan, poolSize) {
     hud.tip(`Level ${pack.level}. Your spells bite harder, your well runs deeper, and there's a point to spend in your spellbook${input.touch ? '' : ' (B)'}.`, 5);
   };
   const townUI = new TownUI({
-    town, renderer, pack, input, hud, inventory, spellbar: null,
+    town, renderer, pack, input, hud, inventory, spellbar: null, party: () => game.party,
     act: {
       sound: (k) => audio.play(k, null, 0, 0, 0.7, 1, false),
       triumph: () => music.stinger('triumph'),
@@ -646,7 +667,7 @@ async function boot(plan, poolSize) {
     canMenu: () => input.enabled && !input.menu && !naming,
     arm: () => arm(),
     level: (d) => {
-      pack.level = Math.max(1, Math.min(50, pack.level + d));
+      pack.level = Math.max(1, Math.min(MAX_LEVEL, pack.level + d));
       pack.xp = xpFor(pack.level);
       arm();
       return `Level ${pack.level}.`;
@@ -681,7 +702,7 @@ async function boot(plan, poolSize) {
       hud.tip('Your pack is full: it is on the ground at your feet.', 2.5);
     },
     fill: () => { shared.input[INPUT.HEAL] += 9999; shared.input[INPUT.MANA_UP] += 9999; },
-    level: (d) => { pack.level = Math.max(1, Math.min(50, pack.level + d)); pack.xp = xpFor(pack.level); arm(); game.party?.levelled(); },
+    level: (d) => { pack.level = Math.max(1, Math.min(MAX_LEVEL, pack.level + d)); pack.xp = xpFor(pack.level); arm(); game.party?.levelled(); },
     tip: (t, secs) => hud.tip(t, secs),
     opened: () => { input.menu = true; input.releaseControls(); if (document.pointerLockElement) document.exitPointerLock(); },
     closed: () => { input.menu = false; resume(); },
@@ -755,6 +776,15 @@ async function boot(plan, poolSize) {
   addPart('pack', {
     save: () => pack.save(),
     load: (d) => { pack.load(d); arm(); game.drops.clear(); },
+  });
+  // (A save from before the party had bags of their own: the party gear in your pack goes to theirs, where it fits anyone.)
+  addPart('partyBags', {
+    save: () => 1,
+    load: (d) => {
+      if (d || !game.party) return;
+      for (const e of pack.entries.filter((x) => x.item.type === 'hgear')) if (game.party.stow(e.item)) pack.remove(e);
+      arm();
+    },
   });
   addPart('chests', { save: () => game.chests.save(), load: (d) => game.chests.load(d) });
   addPart('doors', { save: () => game.doors.save(), load: (d) => game.doors.load(d) });
@@ -1024,6 +1054,7 @@ async function boot(plan, poolSize) {
   questBtn.addEventListener('mousedown', questLog);
   questBtn.addEventListener('touchstart', questLog, { passive: false });
   $('spellOpen').after(questBtn);
+  game.partyBook?.addButton(questBtn);
   const closePack = (viaEsc) => {
     inventory.hide();
     input.menu = false;
@@ -1032,6 +1063,13 @@ async function boot(plan, poolSize) {
   };
   $('invClose').onclick = () => closePack(false);
   $('invX').onclick = () => closePack(false);
+  // (The party's book from the pack, where their gear is: on a phone the only way to it. src/ui/partybook.js.)
+  if (game.partyBook) {
+    const b = document.createElement('button');
+    b.id = 'invParty'; b.title = "Your party's gear and skills (K)"; b.textContent = 'PARTY';
+    $('invSort').before(b);
+    b.onclick = () => { closePack(false); game.partyBook.show(); };
+  }
   $('bPause').addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); input.onPauseChange(true); }, { passive: false });
   document.addEventListener('visibilitychange', () => {
     const hidden = document.hidden;
@@ -1343,6 +1381,19 @@ class GameView {
     return door.lock === 'sexton' && !door.open && !this.townUI?.quests.state('dead_cant_wait');
   }
 
+  // What a death leaves (EV.LOOT): a scatter on the ground; or, from one of the party dungeons' bosses (its hoard, 20, or the
+  // last boss's, 21: src/sim/dungeon.js), a chest where it fell, its front to you (src/items/chests.js add, rollChest 3 and 4).
+  loot(x, y, z, kind) {
+    if ((kind | 0) >= 20 && inDelve(x, z)) {
+      const s = this.currentSnap();
+      const yaw = s ? Math.atan2(s[H.PX] - x, s[H.PZ] - z) : 0;
+      this.chests.add({ x, y, z, yaw, loot: (kind | 0) >= 21 ? LAST_CHEST : BOSS_CHEST });
+      this.hud?.tip?.('A chest lies where it fell.', 3);
+      return;
+    }
+    this.drops.fromKill(x, y, z, kind);
+  }
+
   // The nearest thing on the ground, into the pack if there's room for it.
   takeNearest() {
     const d = this.nearDrop;
@@ -1364,6 +1415,11 @@ class GameView {
       if (!this.spellbar.known.has(d.item.spell) && !this.spellbar.canRead(d.item.spell)) { this.hud.tip(`${name}: you can't make sense of it yet. Level ${TIER_LEVEL[TIER_OF[d.item.spell]]}.`, 3); return; }
       if (this.spellbar.learn(d.item.spell)) this.hud.tip(`${name} read: its first rank is yours, for no point. B: your spellbook.`, 3.5);
       else { this.pack.gold += 40; this.hud.tip('You know that one already. Sold for 40 gold.', 2.5); }
+    } else if (d.item.type === 'hgear') {
+      // (Gear for your party goes in the bag of whoever it's for, not your pack: src/ui/party.js stow.)
+      const got = this.party?.stow(d.item);
+      if (!got) { this.hud.tip(this.party ? this.party.noRoom(d.item) : 'Nobody to carry it.', 3); return; }
+      this.hud.tip(got.with ? `${d.item.name}: into ${got.entry.name}'s bag.` : `${d.item.name}: kept for ${got.entry.name}, with the Company.`, 2.5);
     } else if (!this.pack.add(d.item)) { this.hud.tip('Your pack is full.', 2); return; }
     this.drops.take(d);
     this.nearDrop = null;
@@ -1936,7 +1992,7 @@ class GameView {
         // A stag's roar, far too big: a groan under a rasp, carrying a long way.
         au.gore(a, b, c, 1.6 * d, 1.7, 130); au.gore(a, b, c, 1.2 * d, 1.4, 240); au.gore(a, b, c, 0.5 * d, 1.1, 620);
         break;
-      case EV.LOOT: this.drops.fromKill(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
+      case EV.LOOT: this.loot(a, b, c, d); this.gainXp?.(d, e); this.heroTalk?.onPlayerKill(e ? e - 1 : d); this.townUI?.kill(a, b, c, d | 0, e > TRIPO_KIND ? GROUP_KEYS[e - 1 - TRIPO_KIND] || null : null); this.autoplay?.kill(e ? FOE_NAMES[e - 1] || 'FOE' : d === 9 ? 'JELLY OR SMALL TUMBLER' : d === 6 ? 'BIG TUMBLER' : d === 8 ? 'CHAMPION' : d >= 20 ? 'HOARD' : 'FOE'); break;
       case EV.CHAMPION: this.renderer.emit(2, 4, a, b, c, 0, 1, 0, 1.6, 0.25, 0.6, 0.01, 0.03, 0.25, 0.5); break;
       case EV.EMPTY_HANDS: this.hud.tip(`Nothing in your hands. ${this.input.touch ? 'Open your pack' : 'Press I'} to take up a staff.`, 3); break;
       case EV.GROAN:
@@ -2036,7 +2092,7 @@ class GameView {
         if (cmd === 'give') S.give(a | 0);
         if (cmd === 'all') S.learnAll();
         if (cmd === 'unlearn') S.unlearn();
-        if (cmd === 'level') { view.pack.level = Math.max(1, Math.min(50, a | 0)); view.pack.xp = xpFor(view.pack.level); view.spellbar.refresh(); }
+        if (cmd === 'level') { view.pack.level = Math.max(1, Math.min(MAX_LEVEL, a | 0)); view.pack.xp = xpFor(view.pack.level); view.spellbar.refresh(); }
         return { level: view.pack.level, points: S.points, spent: S.spent, ranks: { ...S.ranks } };
       },
       jump: () => { shared.input[INPUT.JUMP] += 1; },

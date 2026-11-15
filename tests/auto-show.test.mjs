@@ -128,7 +128,8 @@ test('the view is only lent to auto-play: your own is as it was after, and V cho
   const view = read('../src/ui/view.js'), auto = read('../src/ui/autoplay.js');
   assert.ok(view.includes('this.third && allowed') && auto.includes('vs.auto = this.on ? this.cam.view : null') && auto.includes('viewSwitch.auto = null'));
   assert.ok(read('../src/title.js').includes('<option value="first">'), 'first person is a choice in Settings');
-  // The switch itself, with no page: a stub for the two elements it makes and finds.
+  // The switch itself, with no page: a stub for the two elements it makes and finds. (dataset: the eye on the bar keeps
+  // which picture it's showing there, so it's only drawn again when that changes.)
   const el = () => ({ style: {}, dataset: {}, classList: { toggle() {} }, addEventListener() {}, appendChild() {} });
   const was = { document: globalThis.document, window: globalThis.window };
   globalThis.document = { createElement: el, getElementById: (id) => (id === 'spells' ? el() : null), body: el() };
@@ -144,9 +145,11 @@ test('the view is only lent to auto-play: your own is as it was after, and V cho
     const frame = (on) => { vs.auto = on ? cam.view : null; vs.frame(snap); return shared.input[INPUT.THIRD]; };
     assert.equal(frame(false), 0, 'your own view: first person');
     assert.equal(frame(true), 1, 'auto-play: behind him');
+    assert.equal(vs.btn.dataset.ic, 'view1', 'the eye shows the view V would give: through his eyes');
     vs.toggle();
     assert.equal(settings.autocam, 'first');
     assert.equal(frame(true), 0, 'V while it plays: through his eyes');
+    assert.equal(vs.btn.dataset.ic, 'view3', 'and now the view behind him');
     assert.equal(settings.view, 'first', 'your own view is not touched');
     vs.toggle();
     assert.equal(settings.autocam, 'director', 'and back to the shots it had');

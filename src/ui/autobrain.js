@@ -18,8 +18,10 @@
 //                 Sexton's door), the countries out past the town by the roads and the seals, the night's work by night
 //   grinding      for levels, and once every quest is done, where the menu says
 //
-// Where it walks: in the town, the woods round it and the catacombs, by paths from src/sim/nav.worker.js; out in the countries,
-// by the roads (src/core/roads.js: every road, lane and path in the land) and across country, the pines stepped round by the same worker, and the woken seals.
+// Where it walks: in the town, the woods round it and the catacombs, by paths from src/sim/nav.worker.js. Anywhere further than
+// a few strides, out of the town (the woods too), by the roads as a person goes (planWay: src/core/roads.js has every road,
+// lane and path in the land): to the nearest point of one, down them, and off where they come nearest; the pines stepped
+// round by the same worker, and the woken seals when they're shorter. A delve's portal by the steps up its terrace.
 // On the nav ground it never walks at where it's going without a path: it waits for one, and with no way there it leaves it.
 // Through a door it goes square on, by a place a pace before its middle and one a pace beyond; and it never talks to anyone,
 // opens a chest or takes anything up with a wall between (within()).
@@ -30,7 +32,7 @@ import { ROUTE, cornerAhead, routeAt, routeDir, routeNear } from '../core/escort
 import { terrainHeight } from '../core/terrain.js';
 import { SITES } from '../core/lands.js';
 import { roadGraph } from '../core/roads.js';
-import { SEALS } from '../core/sites.js';
+import { SEALS, portalStair } from '../core/sites.js';
 import { inTown, townDist } from '../core/town.js';
 import { CHURCH_GUARD, churchAt, inChurch } from '../core/church.js';
 import { floorAt } from '../core/interior.js';
@@ -117,6 +119,9 @@ const WILD_SAY = {
 const WILD_UNDER = { raid: 3, tear: 1, find: 99, bounty: 0 };
 // (The land's outposts and standing battles carry their own, from their faction's: src/core/wilds.js.)
 const lairLevel = (l) => l.lvl ?? LAIR_LEVEL[l.key];
+// How near a lair it can go by without being seen: as far as one of them wanders from it (src/sim/tripo.js roam), and their
+// sight (24 m, a stalker's 34, a dragon's 48), and ten metres more.
+const lairPass = (l) => l.r * 0.6 + 2 + ((l.wake || 110) >= 200 || (l.boss || []).some((b) => /dragon|wyrm/.test(b)) ? 48 : 34) + 10;
 const LAIR_LEVEL = {
   werewolf: 6, nest: 4, goblin_camp: 2, kobold_den: 2, lost_children: 1, goat_ring: 6, mill_dolls: 5, falls_drake: 8, sallow_drowned: 5,
   fen_worm: 16, fen_harpies: 8, fen_dragon: 24, cutter_raiders: 6, fungal_brood: 7, abbey_road_goats: 7, vigil_guard: 16, obelisk_guard: 16,
@@ -220,20 +225,23 @@ export const GRINDS = {
 export const MODES = {
   quests: { name: 'Complete Quests', line: 'Every quest the town has, in an order that suits its level: taken, worked through and handed in.' },
   grind: { name: 'Grind monsters for XP', line: 'No quests: only levels, wherever you send it.' },
-  dungeons: { name: 'Dungeon Runs', line: 'Through every dungeon you have finished, one after another, until you stop it.' },
+  dungeons: { name: 'Dungeon Runs', line: 'Through every dungeon whose portal you have found, easiest first, one after another and round again, until you stop it.' },
 };
 
-// The dungeons it runs, and when one counts as finished: the catacombs once the Sexton's eight are at rest, the Bell Crypt once
-// its warden's down, the Warrens once Venomaw has died (src/ui/party.js clears, kept in the save). A run of the catacombs or
-// the crypt is every spot in them walked and what's there put down; a run of the Warrens is the way through to Venomaw and out.
-export const DUNGEONS = [
-  { key: 'catacombs', name: 'The catacombs', quest: 'dead_cant_wait' },
-  { key: 'bellcrypt', name: 'The Bell Crypt', quest: 'toll_of_bell' },
-  ...DELVES.map((d) => ({ key: d.key, name: d.name, delve: true, cleared: (game) => (game.party?.clearsBy?.[d.key] || 0) > 0 })),
-];
-export const finishedDungeons = (townUI, game) => DUNGEONS.filter((d) => (d.quest ? townUI.quests.done(d.quest) : d.cleared(game)));
+// The dungeons it runs: the party dungeons, each behind a portal out in the land (src/core/dungeon.js DELVES), easiest first,
+// and only those whose portal the player has found: seen on the map (its fog cleared there, src/ui/map.js isSeen), or been
+// through already (src/ui/party.js clears, kept in the save). The catacombs and the Bell Crypt aren't among them: they're
+// under the cathedral, with no portal, and a run of them was a wander round spots it often couldn't reach. A run is the
+// way through to the delve's last boss and out by its far portal; then the next, and after the last, the first again.
+export const DUNGEONS = DELVES.map((d, i) => ({ key: d.key, name: d.name, delve: true, i, level: d.level, portal: d.portal }))
+  .sort((a, b) => a.level - b.level || a.i - b.i);
+const portalFound = (game, d) => {
+  if ((game.party?.clearsBy?.[d.key] || 0) > 0) return true;
+  const M = game.worldMap, p = d.portal;
+  return !!M?.isSeen && [[0, 0], [6, 0], [-6, 0], [0, 6], [0, -6]].some(([dx, dz]) => M.isSeen(p.x + dx, p.z + dz));
+};
+export const finishedDungeons = (townUI, game) => DUNGEONS.filter((d) => portalFound(game, d));
 const lower = (s) => s[0].toLowerCase() + s.slice(1);
-const RUN_TIME = 900, SPOT_TIME = 90;   // (seconds: a run of spots at most, one spot at most, before it's left)
 
 const SLOT_OF = (it) => (it.type === 'weapon' ? 'main' : it.type === 'shield' ? 'off' : it.type === 'skull' ? 'skull' : it.type === 'robe' ? ROBES[it.base]?.slot : null);
 // What a set of gear is worth to a wizard: spell power first.
@@ -428,8 +436,8 @@ export function coverage(foeNames = null) {
   for (const k of [...SLOT_A, ...SLOT_B]) if (k in SP && UTILITY.has(SP[k])) out.push(`spell ${k}: a Utility spell in SLOT_A or SLOT_B; it belongs in UTIL_TURN, for 0, - and +`);
   for (const [k, t] of Object.entries(TRADES)) if (t.stock && !STOCKS.has(t.stock)) out.push(`trade ${k}: sells "${t.stock}", which it doesn't shop for`);
   out.push(...warrensCoverage());
-  // (Every place below ground a quest sends it into is a dungeon it can run again: DUNGEONS.)
-  for (const [id, r] of Object.entries(RULES)) for (const st of r.steps) if ((st.enter === 'catacombs' || st.enter === 'bellcrypt') && !DUNGEONS.some((d) => d.key === st.enter)) out.push(`quest ${id}: ${st.enter} isn't in DUNGEONS, so Dungeon Runs never go back there`);
+  // (Every party dungeon is one Dungeon Runs can go round, once its portal's found: DUNGEONS.)
+  for (const d of DELVES) if (!DUNGEONS.some((q) => q.key === d.key)) out.push(`dungeon ${d.key}: not in DUNGEONS, so Dungeon Runs never go down it`);
   for (const st of STATIONS) if (!(st.key in HALL_COUNTERS)) out.push(`Test Dungeon counter ${st.key}: nothing in HALL_COUNTERS says what auto-play does with it`);
   if (foeNames) foeNames.slice(0, TRIPO_KIND).forEach((n, k) => { if (n && !KNOWN_KINDS.has(k)) out.push(`foe kind ${k} (${n}): no rule in fightable(), so it's judged by its life alone`); });
   return out;
@@ -473,18 +481,226 @@ class Nav {
 
 // ---------------------------------------------------------------- the long way: roads, country, seals
 
+// Somewhere off its nav ground (and anywhere in the woods round the town), it goes as a person would: to the nearest point of
+// a road, down the roads, lanes and footpaths to where it's nearest to where it's going, and off the road there. Through the
+// woken seals when that's shorter. (It used to go straight across country whenever the roads were half as long again as
+// the line, which was most of the time: over the Sorrowhorn from the Bone Fields, through the woods to every lair.)
 // (The roads are the land's own graph, src/core/roads.js roadGraph: a node every 20 m down every road, lane and path, joined
-// where they meet. A metre across country costs ACROSS of them, so it keeps to the roads unless leaving them is shorter by
-// more than that.)
-const ACROSS = 1.6, ONTO = 260;
+// where they meet. A metre across country costs ACROSS of them, so it keeps to the roads unless they go four times as far.
+// ONTO: how far off a road it looks for one to get onto, and off it at the far end.)
+export const ACROSS = 4;
+const ONTO = 260;
 // (And ground it's keeping off costs KEEP a metre walked through it, by road or not: a road that runs through a lair for
 // 200 m is as dear as a line across it for 200 m.)
 const KEEP = 25;
+// (A trip on its nav ground shorter than NEAR, or in the town or down under it, is a path straight there: there's no road to
+// keep to. Down a road it walks to a point at each bend, where the road leaves the line between two by more than BEND, and
+// every LEG metres at most down a straight; each point it's at once within ON of it, or past it.)
+const NEAR = 45, BEND = 1, LEG = 30, ON = 2.5;
 const segNear = (ax, az, bx, bz, cx, cz) => {
   const dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz || 1;
   const t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cz - az) * dz) / L));
   return dist(ax + dx * t, az + dz * t, cx, cz);
 };
+
+// The ways up to the delves' portals out in the land (src/core/sites.js portalStair): their terraces, and the flight down the
+// front of each, worked out the first time they're wanted. On or off one it goes by its steps, square on and up the middle:
+// to a few strides out in front of their foot, to the foot, up to their head, and on to the portal (or whoever's on the
+// terrace). It used to come at a terrace from wherever its way left the road, and on the town's ground (the Warrens') its
+// path took no notice of a terrace at all: it walked into the parapet, hopped, and scrambled up the side.
+let STAIRS = null;
+export const stairsOf = (x, z) => (STAIRS ||= DELVES.map(portalStair).filter((s) => s.steps)).find((s) => s.on(x, z)) || null;
+const upStairs = (s) => [{ x: s.out[0], z: s.out[1], r: 1.2, stair: s.key }, { x: s.foot[0], z: s.foot[1], r: 0.8, stair: s.key, walk: true }, { x: s.head[0], z: s.head[1], r: 0.9, stair: s.key, walk: true }];
+const downStairs = (s) => [{ x: s.head[0], z: s.head[1], r: 0.9, stair: s.key, walk: true }, { x: s.foot[0], z: s.foot[1], r: 0.8, stair: s.key, walk: true }, { x: s.out[0], z: s.out[1], r: 1.5, stair: s.key }];
+
+// The nearest point on a road to (x, z) within reach: the stretch it's on (nodes a and b, t of the way from a, its length L)
+// and how far it is (d). (Not a join between two ways' ends over open ground: those cost more than they're long.)
+function onRoad(G, x, z, reach) {
+  const { X, Z, start, nbr, wt, around } = G;
+  let best = null, bd = reach;
+  around(x, z, reach + 20, (a) => {
+    for (let k = start[a]; k < start[a + 1]; k++) {
+      const b = nbr[k], dx = X[b] - X[a], dz = Z[b] - Z[a], L = Math.hypot(dx, dz);
+      if (L < 0.01 || wt[k] > L * 1.01 + 0.01) continue;
+      const t = clamp(((x - X[a]) * dx + (z - Z[a]) * dz) / (L * L), 0, 1), d = dist(X[a] + dx * t, Z[a] + dz * t, x, z);
+      if (d < bd) { bd = d; best = { a, b, t, L, d, x: X[a] + dx * t, z: Z[a] + dz * t }; }
+    }
+  });
+  return best;
+}
+
+// A line with every point dropped that lies within tol of the straight run past it (Ramer-Douglas-Peucker).
+function bends(pts, tol) {
+  if (pts.length < 3) return pts;
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+  const stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop();
+    let k = -1, kd = tol;
+    for (let i = a + 1; i < b; i++) { const d = segNear(pts[a].x, pts[a].z, pts[b].x, pts[b].z, pts[i].x, pts[i].z); if (d > kd) { kd = d; k = i; } }
+    if (k > 0) { keep[k] = 1; stack.push([a, k], [k, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+
+// The way from m to end, as the points to walk to: { x, z } each, with r (how near is there), road (on one), stair (a delve's
+// steps: walked, square on), seal and to (a seal to step through, and where to). The last is end itself. o: seals (the woken
+// ones), avoid (circles to keep out of: [x, z, r]), grid(x, z, below) (on the nav thread's ground), below (m is down under
+// the town).
+export function planWay(m, end, o = {}) {
+  const { seals = [], avoid = [], grid = () => false, below = false } = o;
+  // On a delve's terrace or bound for one: by its steps.
+  const A = stairsOf(m.x, m.z), B = stairsOf(end.x, end.z);
+  if (A && A === B) return [end];
+  // (Down from a terrace: not back to a point of the flight it's already past. Out of a delve it's set down at the head of
+  // its steps, a little out past the point there.)
+  const pre = A ? downStairs(A).filter((q, k, all) => k === all.length - 1 || (q.x - m.x) * A.fx + (q.z - m.z) * A.fz > 0.3) : [], post = B ? upStairs(B) : [];
+  const from = A ? pre.at(-1) : m, to = B ? post[0] : end;
+  const tail = B ? post.concat([end]) : [end];
+  // On the nav ground: a path straight there, if it's near, or in the town, or under it. Else by the roads.
+  if (grid(from.x, from.z, below && !A) && grid(to.x, to.z, !!end.below && !B)
+    && ((below && !A) || (end.below && !B) || dist(from.x, from.z, to.x, to.z) < NEAR || (inTown(from.x, from.z, 4) && inTown(to.x, to.z, 4)))) {
+    return pre.concat(tail);
+  }
+  return pre.concat(overRoads(from, to, seals, avoid), tail);
+}
+
+// From a to b over the roads (planWay): the points from the first after a, to b (not b itself).
+const SEAL_ROAD = new Map();   // (each seal's nearest point of a road: they don't move)
+let HOT = null, DIST = null, PREV = null, DONE = null;   // (kept from one way to the next: the graph's the size of the land)
+function overRoads(a, b, seals, avoid) {
+  const G = roadGraph(), { X, Z, start, nbr, wt, N, around } = G;
+  // The graph: the roads, then the ends (here, there, the woken seals) and the nearest point of a road to each.
+  const ends = [a, b, ...seals], E = ends.length, e0 = N, r0 = N + E, NP = N + 2 * E;
+  // (Far out, with no road that near, the nearest there is: the Sorrowhorn's crown is a kilometre from the stair's head.)
+  const snapOf = (p) => onRoad(G, p.x, p.z, ONTO) || onRoad(G, p.x, p.z, 2000);
+  const snaps = ends.map((p, k) => (k < 2 ? snapOf(p) : SEAL_ROAD.get(p) ?? (SEAL_ROAD.set(p, snapOf(p)), SEAL_ROAD.get(p))));
+  const px = (i) => (i < N ? X[i] : i < r0 ? ends[i - e0].x : snaps[i - r0].x);
+  const pz = (i) => (i < N ? Z[i] : i < r0 ? ends[i - e0].z : snaps[i - r0].z);
+  // Across country: dearer than a road, and through ground it's keeping off (that neither end is in) dearer still. (The
+  // circles by the AC-metre square they reach into: there are hundreds of lairs, and thousands of ways onto the roads.)
+  const cells = new Map(), AC = 128;
+  avoid.forEach(([x, z, r], k) => {
+    for (let i = Math.floor((x - r) / AC); i <= Math.floor((x + r) / AC); i++) for (let j = Math.floor((z - r) / AC); j <= Math.floor((z + r) / AC); j++) {
+      const q = i * 100003 + j; if (!cells.has(q)) cells.set(q, []); cells.get(q).push(k);
+    }
+  });
+  const seen = new Uint32Array(avoid.length);
+  let look = 0;
+  const across = (i, j) => {
+    const ax = px(i), az = pz(i), bx = px(j), bz = pz(j);
+    let c = dist(ax, az, bx, bz) * ACROSS;
+    const i0 = Math.floor(Math.min(ax, bx) / AC), i1 = Math.floor(Math.max(ax, bx) / AC), j0 = Math.floor(Math.min(az, bz) / AC), j1 = Math.floor(Math.max(az, bz) / AC);
+    const each = (k) => {
+      const [x, z, r] = avoid[k];
+      if (dist(ax, az, x, z) <= r || dist(bx, bz, x, z) <= r) return;
+      const d = segNear(ax, az, bx, bz, x, z);
+      if (d < r) c += KEEP * 2 * Math.sqrt(r * r - d * d);
+    };
+    look++;
+    if ((i1 - i0 + 1) * (j1 - j0 + 1) > avoid.length) { for (let k = 0; k < avoid.length; k++) each(k); return c; }
+    for (let ci = i0; ci <= i1; ci++) for (let cj = j0; cj <= j1; cj++) {
+      const l = cells.get(ci * 100003 + cj);
+      if (l) for (const k of l) if (seen[k] !== look) { seen[k] = look; each(k); }
+    }
+    return c;
+  };
+  // (The road nodes near ground it's keeping off, so a stretch of road through it is priced too: each node's circle, and
+  // any more than one in `more`.)
+  if (!HOT || HOT.length < NP) { HOT = new Int32Array(NP); DIST = new Float64Array(NP); PREV = new Int32Array(NP); DONE = new Uint8Array(NP); }
+  const hot = HOT.fill(-1, 0, NP), more = new Map();
+  avoid.forEach(([x, z, r], k) => around(x, z, r + 25, (i) => { if (hot[i] < 0) hot[i] = k; else { if (!more.has(i)) more.set(i, []); more.get(i).push(k); } }));
+  const inside = (u, v, k) => { const [x, z, r] = avoid[k]; return segNear(px(u), pz(u), px(v), pz(v), x, z) < r; };
+  const through = (u, v, c) => {
+    for (const n of [u, v]) {
+      if (n >= N || hot[n] < 0) continue;
+      if (inside(u, v, hot[n])) return c * (1 + KEEP);
+      const l = more.get(n);
+      if (l) for (const k of l) if (inside(u, v, k)) return c * (1 + KEEP);
+    }
+    return c;
+  };
+  const extra = new Map();
+  const join = (i, j, c) => { for (const [p, q] of [[i, j], [j, i]]) { if (!extra.has(p)) extra.set(p, []); extra.get(p).push(q, c); } };
+  for (let k = 0; k < E; k++) {
+    const i = e0 + k, s = snaps[k];
+    // Onto the road at its nearest point, and on along it either way from there.
+    if (s) { join(i, r0 + k, across(i, r0 + k)); join(r0 + k, s.a, through(r0 + k, s.a, s.L * s.t)); join(r0 + k, s.b, through(r0 + k, s.b, s.L * (1 - s.t))); }
+    // (Or onto another a little further off, when that's the better way to go. A seal stands by a road: the roads near it.)
+    const reach = k < 2 ? ONTO : 80;
+    around(px(i), pz(i), reach, (j) => { if (dist(px(i), pz(i), X[j], Z[j]) < reach) join(i, j, across(i, j)); });
+  }
+  // Straight across between the ends: there to there always (but at ACROSS, it's only taken when the roads go far round),
+  // and to and from a seal near by.
+  for (let p = 0; p < E; p++) for (let q = p + 1; q < E; q++) {
+    if ((p === 0 && q === 1) || dist(ends[p].x, ends[p].z, ends[q].x, ends[q].z) < 900) join(e0 + p, e0 + q, across(e0 + p, e0 + q));
+  }
+  // Seal to seal: a step through.
+  for (let p = 2; p < E; p++) for (let q = p + 1; q < E; q++) join(e0 + p, e0 + q, 30);
+  // The cheapest way (with no seals to step through, aimed: never cheaper than a metre a metre the rest of the way).
+  const me = e0, there = e0 + 1, aim = seals.length ? 0 : 1;
+  const D = DIST.fill(Infinity, 0, NP), prev = PREV.fill(-1, 0, NP), done = DONE.fill(0, 0, NP);
+  const heap = [], hn = [];
+  const push = (n, f) => {
+    heap.push(f); hn.push(n);
+    for (let i = heap.length - 1; i > 0;) { const p = (i - 1) >> 1; if (heap[p] <= heap[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; [hn[p], hn[i]] = [hn[i], hn[p]]; i = p; }
+  };
+  const pop = () => {
+    const n = hn[0], lf = heap.pop(), ln = hn.pop();
+    if (heap.length) {
+      heap[0] = lf; hn[0] = ln;
+      for (let i = 0; ;) {
+        const l = 2 * i + 1, r = l + 1; let k = i;
+        if (l < heap.length && heap[l] < heap[k]) k = l;
+        if (r < heap.length && heap[r] < heap[k]) k = r;
+        if (k === i) break;
+        [heap[k], heap[i]] = [heap[i], heap[k]]; [hn[k], hn[i]] = [hn[i], hn[k]]; i = k;
+      }
+    }
+    return n;
+  };
+  const relax = (u, v, c) => { if (D[u] + c < D[v]) { D[v] = D[u] + c; prev[v] = u; push(v, D[v] + aim * dist(px(v), pz(v), b.x, b.z)); } };
+  D[me] = 0; push(me, 0);
+  while (heap.length) {
+    const u = pop();
+    if (done[u]) continue;
+    done[u] = 1;
+    if (u === there) break;
+    if (u < N) for (let q = start[u]; q < start[u + 1]; q++) relax(u, nbr[q], through(u, nbr[q], wt[q]));
+    const e = extra.get(u);
+    if (e) for (let i = 0; i < e.length; i += 2) relax(u, e[i], e[i + 1]);
+  }
+  if (!Number.isFinite(D[there])) return [];
+  const chain = [];
+  for (let k = there; k >= 0 && k !== me; k = prev[k]) chain.push(k);
+  chain.reverse();
+  chain.pop();   // (b: the caller's)
+  // Into points: down a road, a point at each bend and every LEG metres; a seal stepped through, stood on.
+  const out = [];
+  let run = [];
+  const flush = () => {
+    if (!run.length) return;
+    const kept = bends(run, BEND);
+    for (let k = 0; k < kept.length; k++) {
+      const q = kept[k], p = k ? kept[k - 1] : out.at(-1);
+      // (A long straight cut into LEG metres, so each point's in reach of a short path to it.)
+      if (p && k) { const L = dist(p.x, p.z, q.x, q.z), n = Math.ceil(L / LEG); for (let s = 1; s < n; s++) out.push({ x: p.x + (q.x - p.x) * s / n, z: p.z + (q.z - p.z) * s / n, r: ON, road: true }); }
+      out.push(q);
+    }
+    run = [];
+  };
+  for (let k = 0; k < chain.length; k++) {
+    const i = chain[k], next = chain[k + 1];
+    if (i < N || i >= r0) { run.push({ x: px(i), z: pz(i), r: ON, road: true }); continue; }
+    flush();
+    const seal = i - e0 >= 2 ? ends[i - e0] : null;
+    // A seal stepped through: stand on it, and the next point is where it lets out.
+    if (seal && next !== undefined && next >= e0 + 2 && next < r0) { out.push({ x: seal.x, z: seal.z, seal, to: ends[next - e0] }); continue; }
+    out.push({ x: px(i), z: pz(i) });
+  }
+  flush();
+  return out;
+}
 
 // ---------------------------------------------------------------- the head
 
@@ -523,6 +739,7 @@ export class Brain {
     this.sightMap = new Map(); this.sightBusy = false; this.sightT = 0; this.round = null;   // what it has a clean line to
     this.reachMap = new Map(); this.reachBusy = false;                                       // what it could put a hand to
     this.subAsk = false; this.noWay = null; this.wayPoint = null;                            // a path asked for; nowhere to go
+    this.pre = null; this.preAsk = false; this.legFrom = null; this.wayT = 0; this.skipAt = null;   // the next point's path, asked early; the last point passed
     this.ride = null; this.rideHold = false; this.rideCool = 8;                              // on the shield in a fight
     this.used = {}; this.pullWait = 0;
     this.wobble = 0; this.wobbleT = 0; this.yawV = 0; this.pitchV = 0; this.surfCool = 0; this.surfAt = -9;
@@ -652,15 +869,18 @@ export class Brain {
     return t && dist(t.x, t.z, m.x, m.z) < 26 ? t : null;
   }
 
-  // The posts and lairs it should keep clear of at this level, as circles.
-  avoid(m) {
+  // The posts and lairs it should keep clear of at this level, as circles. A lair's is as far as it stands up (its wake): it
+  // looks for nothing to hunt there, and no chest. Going by one (passing: its way, and the paths it walks) it keeps only out
+  // of their sight (lairPass): a roadside lair stands 45 to 110 m off its road so a traveller can go by, and when the whole
+  // wake was kept clear of, nearly every road out of the town was, and it went across country instead.
+  avoid(m, passing = false) {
     const out = [];
     for (const [x, z, r, lvl] of POSTS) {
       // (The black knight's door is open ground once he's down, his loot and all.)
       if (x === CATHEDRAL_GUARD.x && z === CATHEDRAL_GUARD.z && !this.blackKnight(this.snap)) continue;
       if (m.lvl < lvl) out.push([x, z, r]);
     }
-    for (const l of LAIRS) if (m.lvl < (lairLevel(l) || 10)) out.push([l.x, l.z, (l.wake || 110) + 15]);
+    for (const l of LAIRS) if (m.lvl < (lairLevel(l) || 10)) out.push([l.x, l.z, passing ? lairPass(l) : (l.wake || 110) + 15]);
     return out;
   }
 
@@ -735,7 +955,14 @@ export class Brain {
     if (!this.fighting && this.auto.block) { this.auto.block = false; this.guardT = 0; }
     this.letPassFor(dt, m);
     this.motor(dt, m);
-    if ((this.gearT -= dt) <= 0 && !this.fighting) { this.gearT = 4; this.dress(); this.learn(); this.bar(); }
+    // (Each as Settings allows: What auto-play sees to by itself, src/title.js AI_PARTS.)
+    if ((this.gearT -= dt) <= 0 && !this.fighting) {
+      this.gearT = 4;
+      this.dress();
+      if (this.allow('aiSkills')) this.learn();
+      if (this.allow('aiBar')) this.bar();
+      this.o.party?.(this);
+    }
     // A light underfoot down among the dead, for whoever's watching.
     if (m.below && !this.fighting && (this.wispT -= dt) <= 0 && m.mana > 40) { this.wispT = this.cast(SP.wisp, 0.3) ? 85 : 2; }
     void g;
@@ -809,6 +1036,9 @@ export class Brain {
   }
 
   known(i) { return this.o.spellbar.known.has(i); }
+
+  // Whether Settings leave this to it (src/title.js AI_PARTS: aiGear, aiGems, aiSkills, ...). Anything not set is allowed.
+  allow(k) { return this.o.settings?.[k] !== 'off'; }
 
   // ---- spells and the staff
 
@@ -1434,7 +1664,7 @@ export class Brain {
   // for the run and the jump, and not too soon after the last.
   canRide(m) {
     // (Not on the walk down with Lisandra: it keeps by her there.)
-    return this.rideCool <= 0 && !!this.o.pack.slots.off && !m.below && !m.town && m.ground && !m.surf && m.stam >= 46 && !(m.opening > 0 && m.opening < OPENING.ARRIVED)
+    return this.allow('aiSurf') && this.rideCool <= 0 && !!this.o.pack.slots.off && !m.below && !m.town && m.ground && !m.surf && m.stam >= 46 && !(m.opening > 0 && m.opening < OPENING.ARRIVED)
       && !inDungeon(m.x, m.z) && !inHall(m.x, m.z) && !inChurch(m.x, m.y + 1, m.z) && floorAt(m.x, m.z) === null;
   }
 
@@ -1561,7 +1791,7 @@ export class Brain {
     let best = null, bd = hunting ? 22 : 10;
     for (const d of g.drops.list) {
       if (Math.abs(d.y - m.y) > 3 || this.skipping(d) || this.kept(m, d.x, d.z)) continue;
-      if (!d.auto && !d.coins && !this.roomFor(d.item)) continue;
+      if (!d.auto && !d.coins && (!this.allow('aiLoot') || !this.roomFor(d.item))) continue;
       const k = dist(m.x, m.z, d.x, d.z);
       if (k < bd) { bd = k; best = d; }
     }
@@ -1588,6 +1818,7 @@ export class Brain {
     }
     // A chest near by that it hasn't opened: every one, out in the land and in the town's houses (in at the door, and what's
     // in it picked up as it spills). On its own floor only: it doesn't take stairs.
+    if (!this.allow('aiChests')) return false;
     let ch = null, cd = hunting ? 40 : m.town ? TOWN_CHEST : 14;
     // (The one it's already going for, it keeps going for: the way to a chest in a house starts by walking away from it, round
     // to the door, and with two about the same way off it would turn from one to the other and back for ever.)
@@ -1628,6 +1859,8 @@ export class Brain {
 
   roomFor(item) {
     if (item.type === 'spell') return true;
+    // (Gear for the party goes in their bags, not the pack: src/ui/party.js homeFor.)
+    if (item.type === 'hgear') return !!this.o.game.party?.homeFor?.(item);
     const p = this.o.pack, at = p.entries.length;
     if (!p.add(item)) return false;
     p.entries.splice(at, 1);
@@ -1640,7 +1873,7 @@ export class Brain {
   dress() {
     const { pack, inventory } = this.o;
     let changed = false;
-    for (let pass = 0; pass < 3; pass++) {
+    for (let pass = 0; pass < (this.allow('aiGear') ? 3 : 0); pass++) {
       const base = gearScore(pack.slots);
       let best = null, gain = 0.5;
       for (const e of pack.entries) {
@@ -1655,7 +1888,7 @@ export class Brain {
       changed = true;
     }
     // Gems: the best into whatever's worn with an open socket.
-    for (const e of [...pack.entries].filter((q) => q.item.type === 'gem').sort((a, b) => this.gemWorth(b.item) - this.gemWorth(a.item))) {
+    if (this.allow('aiGems')) for (const e of [...pack.entries].filter((q) => q.item.type === 'gem').sort((a, b) => this.gemWorth(b.item) - this.gemWorth(a.item))) {
       const into = ['skull', 'main', 'off'].map((s) => pack.slots[s]).find((it) => it && !(it.type === 'shield' && pack.slots.skull) && (it.gems || []).length < Math.min(it.sockets || 0, it.type === 'skull' ? 6 : 4));
       if (!into || !pack.socket(into, e.item)) continue;
       pack.remove(e);
@@ -1670,6 +1903,8 @@ export class Brain {
   junk() {
     const { pack } = this.o, base = gearScore(pack.slots), sockets = ['skull', 'main', 'off'].some((s) => { const it = pack.slots[s]; return it && (it.gems || []).length < Math.min(it.sockets || 0, it.type === 'skull' ? 6 : 4); });
     return pack.entries.filter((e) => {
+      // (Gear for the party: kept while anyone on the roster would be the better for it. src/ui/party.js wantedBy.)
+      if (e.item.type === 'hgear') return !this.o.game.party?.wantedBy?.(e.item);
       const slot = SLOT_OF(e.item);
       if (slot) return gearScore({ ...pack.slots, [slot]: e.item }) <= base + 0.5;
       return e.item.type === 'gem' && !sockets;
@@ -1703,7 +1938,7 @@ export class Brain {
       if (dist(m.x, m.z, sl.x, sl.z) < 90) { if (!this.job || this.job.why !== `seal:${sl.key}`) this.sealSince = this.t; if (this.t - (this.sealSince || this.t) > 40) { this.giveUp(`seal:${sl.key}`, 900); break; } return { kind: 'go', why: `seal:${sl.key}`, x: sl.x, z: sl.z, r: 1.6, say: `Waking the seal of ${sl.name}.` }; }
     }
     // A full pack, or a deal of things to sell: to the town.
-    const junk = this.junk();
+    const junk = this.allow('aiSell') ? [...this.junk(), ...(this.o.game.party?.bagJunk?.() || [])] : [];
     const room = this.freeCells();
     // (Only while there's someone open to buy it: at night the town's counters are shut, and it keeps at its work.)
     const buyer = junk.length > 0 && PEOPLE.some((p, i) => TRADES[p.trade]?.buys && this.o.townUI.isOpen(i));
@@ -1798,7 +2033,7 @@ export class Brain {
   // It walks into a tear only when it's whole, and gives one up for ten minutes once it's had to run from it.
   wildJob(m, bounty = false) {
     const W = this.o.game?.wilds;
-    if (!W?.calls || m.below || inDungeon(m.x, m.z)) return null;
+    if (!this.allow('aiWild') || !W?.calls || m.below || inDungeon(m.x, m.z)) return null;
     for (const c of W.calls([m.x, m.z])) {
       const why = `wild:${c.why}:${Math.round(c.x)},${Math.round(c.z)}`;
       if ((c.why === 'bounty') !== bounty || this.skipping(why) || m.lvl < c.lvl - WILD_UNDER[c.why]) continue;
@@ -1984,7 +2219,8 @@ export class Brain {
     // on doing so, ten minutes and four levels of the dead that came up round it, for as long as it was watched.)
     if (offer && dist(m.x, m.z, 0, 0) < 140 && this.jobDist(offer, m) < 320) return offer;
     // Selling: to whoever gives most for the most of it, while they're open.
-    const junk = this.junk();
+    const trading = this.allow('aiSell');
+    const junk = trading ? [...this.junk(), ...(this.o.game.party?.bagJunk?.() || [])] : [];
     if (junk.length >= 2 || (this.freeCells() < 16 && junk.length)) {
       let best = null, most = 0;
       for (let i = 0; i < PEOPLE.length; i++) {
@@ -1996,10 +2232,10 @@ export class Brain {
       if (best !== null) return { kind: 'talk', why: 'sell', who: best, say: `Selling to ${PEOPLE[best].name}.` };
     }
     // Buying: whatever an open counter has that's better than what it wears, or a spell it doesn't know, with coin to spare.
-    const buy = this.shopping(m);
+    const buy = trading && this.shopping(m);
     if (buy) return buy;
     // Mended at the herbalist's, if it's hurt and has the coin.
-    if (m.hpf < 0.7 && pack.purse() >= 12) {
+    if (trading && m.hpf < 0.7 && pack.purse() >= 12) {
       const i = PEOPLE.findIndex((p) => p.trade === 'healing');
       if (i >= 0 && townUI.isOpen(i) && !this.skipping(`p:${i}`) && this.reachable(i)) return { kind: 'talk', why: 'mend', who: i, say: `To ${PEOPLE[i].name}, to be mended.` };
     }
@@ -2007,7 +2243,7 @@ export class Brain {
     const h = m.hour;
     const making = Object.keys(RULES).some((id) => Q.state(id)?.stage === 'making' && this.o.town.day >= 0 && this.o.town.day < Q.state(id).ready);
     const nightWork = quests && PLAN_ALL.some(([id, lvl]) => { const st = Q.step(id); return st && (st.night || st.warden || (st.kill === 'barrows')) && m.lvl >= lvl; });
-    if (h >= 18.3 && h < 23.5 && (making || (m.hpf < 0.5)) && !nightWork && pack.purse() >= 4) {
+    if (this.allow('aiSleep') && h >= 18.3 && h < 23.5 && (making || (m.hpf < 0.5)) && !nightWork && pack.purse() >= 4) {
       const i = PEOPLE.findIndex((p) => p.trade === 'inn');
       if (i >= 0 && !this.skipping(`p:${i}`) && this.reachable(i)) return { kind: 'talk', why: 'bed', who: i, say: `A bed at the Tolling Bell${making ? ': a quest waits on the morning' : ''}.` };
     }
@@ -2092,7 +2328,7 @@ export class Brain {
     if (j.kind === 'boss') { this.siege(snap, m); return; }
     if (j.kind === 'hire') { doHire(this, m, j); return; }
     if (j.kind === 'warrens') { this.warrensRun(m, foes); return; }
-    if (j.kind === 'hunt') { if (j.run) this.sweep(m, j); else this.hunt(m, j, foes); return; }
+    if (j.kind === 'hunt') { this.hunt(m, j, foes); return; }
     this.halt();
   }
 
@@ -2102,6 +2338,9 @@ export class Brain {
   dungeonJob(m) {
     const list = finishedDungeons(this.o.townUI, this.o.game);
     if (!list.length) return null;
+    // (Down one of them already, as it's set to runs: that one's the run, before any other.)
+    const here = delveOf(m.x, m.z);
+    if (here && list.some((d) => d.key === here.key) && this.runKey !== here.key) { this.runKey = here.key; this.runState = null; }
     let at = list.findIndex((d) => d.key === this.runKey);
     if (at < 0) { at = 0; this.runKey = list[0].key; this.runState = null; }
     for (let i = 0; i < list.length; i++) {
@@ -2114,49 +2353,11 @@ export class Brain {
 
   runJob(m, d) {
     const lap = `lap ${this.laps + 1}`;
-    if (d.delve) {
-      // (With a party fit to go down: hireJob, before this, sees to one if it can pay.)
-      const P = this.o.game.party;
-      if (!inDungeon(m.x, m.z) && !P?.fit()) return null;
-      return { kind: 'warrens', why: `run:${d.key}`, delve: d.key, say: `Dungeon runs, ${lap}: ${inDungeon(m.x, m.z) ? `down ${lower(d.name)}` : `to ${lower(d.name)}, with the party`}.` };
-    }
-    // (Both are below the cathedral, in by the Sexton's door, which opens with his quest. A dungeon it couldn't reach a single
-    // spot of last time is left a while.)
-    if (!this.o.townUI.quests.state('dead_cant_wait') || this.skipping(`run:${d.key}`)) return null;
-    const spots = d.key === 'bellcrypt' ? HUNTS.bellcrypt : this.catacombSpots(m);
-    if (!spots.length) return null;
-    return { kind: 'hunt', why: `run:${d.key}`, run: d.key, spots, below: true, say: `Dungeon runs, ${lap}: ${lower(d.name)}` };
-  }
-
-  // A run through a dungeon's spots: each walked to and looked round once, what's there put down (the fight comes first, as it
-  // does anywhere), and then on to the next dungeon.
-  sweep(m, j) {
-    let R = this.runState;
-    // (Its clocks run only while it's at the run itself, not while it fights, loots or goes to town.)
-    if (!R || R.key !== j.run) R = this.runState = { key: j.run, left: new Set(j.spots.map(([x, z]) => `${x},${z}`)), n: j.spots.length, t: 0, at: null, atT: 0, seen: 0 };
-    R.t += 0.12;
-    const left = j.spots.filter(([x, z]) => R.left.has(`${x},${z}`));
-    if (!left.length || R.t > RUN_TIME) {
-      // (Not one spot reached: no way in just now. Grinding meanwhile, and another go in ten minutes.)
-      if (!R.seen) this.giveUp(`run:${j.run}`, 600);
-      this.ranDungeon(j.run, false, !R.seen);
-      return;
-    }
-    this.say(`${j.say} (${R.n - left.length} of ${R.n}).`);
-    // (The nearest by the stairs, as hunt() takes them: this floor's before the one above or below.)
-    const far = (q) => dist(m.x, m.z, q[0], q[1]) + Math.abs((floorAt(q[0], q[1]) ?? m.y) - m.y) * 8;
-    const p = left.reduce((a, b) => (far(a) <= far(b) ? a : b));
-    const k = `${p[0]},${p[1]}`;
-    if (R.at !== k) { R.at = k; R.atT = R.t; R.since = this.t; R.look = 0; }
-    // (A spot it can't get to, or can't get to in time: left. Only a "no way" that came for this spot counts.)
-    if ((this.noWay && this.noWay.t >= R.since) || R.t - R.atT > SPOT_TIME) { this.noWay = null; R.left.delete(k); R.at = null; return; }
-    if (dist(m.x, m.z, p[0], p[1]) < 4) {
-      this.halt();
-      this.face = this.o.input.yaw + 0.9;
-      if ((R.look += 0.12) > 2.5) { R.left.delete(k); R.at = null; R.seen++; }
-      return;
-    }
-    this.goTo(p[0], p[1], 2.5, true, false, true);
+    // (With a party fit to go down: hireJob, before this, sees to one if it can pay. Down one already, that one.)
+    const P = this.o.game.party, here = delveOf(m.x, m.z);
+    if (here && here.key !== d.key) return null;
+    if (!here && !P?.fit()) return null;
+    return { kind: 'warrens', why: `run:${d.key}`, delve: d.key, run: d.key, say: `Dungeon runs, ${lap}: ${here ? `down ${lower(d.name)}` : `to ${lower(d.name)}, with the party`}.` };
   }
 
   // Through one (or beaten back by it): on to the next dungeon, and once round them all, another lap.
@@ -2326,6 +2527,9 @@ export class Brain {
       if (T.why === 'sell') {
         const e = this.junk().find((q) => offerFor(p.trade, q.item) > 0);
         if (e && T.sold < 30) { T.sold++; townUI.sell(e, offerFor(p.trade, e.item)); return; }
+        // (And what the party carry that nobody would be the better for: src/ui/party.js bagJunk.)
+        const b = this.o.game.party?.bagJunk?.().find((q) => offerFor(p.trade, q.item) > 0);
+        if (b && T.sold < 30) { T.sold++; townUI.sellBag(b, offerFor(p.trade, b.item)); return; }
         // The satchel's bone, what no quest still wants.
         const keep = Object.keys(RULES).some((qid) => townUI.quests.state(qid)?.stage !== 'done' && RULES[qid].steps.some((s) => s.bring === 'bone'));
         if (trade.buysMats?.bone && !keep && (pack.mats.bone || 0) > 0) { townUI.sellMat('bone', trade.buysMats.bone); return; }
@@ -2406,9 +2610,17 @@ export class Brain {
     }
     // The way: on the grid both ends, a path; otherwise the long way round by the roads. (Used up short of it, as when someone it's
     // walking up to has moved on: worked out again.)
-    if (!this.macro || !this.macro.length) { this.macro = this.longWay(m, g); this.sub = null; this.subFor = null; this.loc = null; }
+    if (!this.macro || !this.macro.length) { this.macro = this.longWay(m, g); this.legFrom = { x: m.x, z: m.z }; this.wayT = this.t; this.sub = null; this.subFor = null; this.loc = null; this.pre = null; }
     let W = this.macro[0];
-    while (W && dist(m.x, m.z, W.x, W.z) < (W.seal ? 2.2 : W === this.macro.at(-1) ? g.near : 3.5) && !W.seal) { this.macro.shift(); this.sub = null; W = this.macro[0]; }
+    // Dragged well off its road (a fight, a run from one): the way worked out again from here, to the nearest road, not back
+    // across country to where it left it.
+    const F = this.legFrom;
+    if (W?.road && F?.road && this.t - this.wayT > 4 && segNear(F.x, F.z, W.x, W.z, m.x, m.z) > 40) { this.macro = null; return; }
+    // At each point once it's within its reach (a point down a road, ON; the steps' tighter, so it's square on to them), or
+    // has gone on past it the way it came.
+    const reach = (q) => (q === this.macro.at(-1) ? g.near : q.r ?? 3.5);
+    const past = (q) => !q.stair && q !== this.macro.at(-1) && F && dist(m.x, m.z, q.x, q.z) < 6 && (m.x - q.x) * (q.x - F.x) + (m.z - q.z) * (q.z - F.z) > 0;
+    while (W && !W.seal && (dist(m.x, m.z, W.x, W.z) < reach(W) || past(W))) { this.legFrom = this.macro.shift(); this.sub = null; W = this.macro[0]; }
     if (!W) { this.halt(); return; }
     if (W.seal) {
       if (dist(m.x, m.z, W.x, W.z) < 2.2) { this.useSeal(W); return; }
@@ -2432,11 +2644,14 @@ export class Brain {
       // A fresh path when the leg changes, when what it's walking to has moved, and now and then anyway. The one it has is
       // kept till the new one's in, and with none yet it stands and waits for it (a moment): it never walks straight at
       // where it's going, which is how it used to end up against a wall.
-      const fresh = this.subFor !== leg;
+      let fresh = this.subFor !== leg;
+      // (The next point's path asked for as it came up to this one, so it walks on down the road without stopping to wait.)
+      const pre = this.pre;
+      if (fresh && pre?.for === leg && pre.pts?.length) { this.sub = pre.pts; this.subFor = leg; this.subT = this.t; this.subTo = [leg.x, leg.z]; this.pre = null; this.noWay = null; fresh = false; }
       if (fresh) { this.sub = null; this.noWay = null; }
       if (!this.subAsk && this.nav.ready && (fresh || this.t - this.subT > 12 || (this.subTo && dist(this.subTo[0], this.subTo[1], leg.x, leg.z) > 2.5))) {
         this.subFor = leg; this.subT = this.t; this.subTo = [leg.x, leg.z]; this.subAsk = true;
-        const want = leg, avoid = this.avoid(this.me(this.o.game.currentSnap())).concat(this.lockedDoors());
+        const want = leg, avoid = this.avoid(this.me(this.o.game.currentSnap()), true).concat(this.lockedDoors());
         this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid, touch: leg === g ? g.touch : null }).then((pts) => {
           this.subAsk = false;
           if (this.subFor !== want) return;
@@ -2447,7 +2662,13 @@ export class Brain {
       }
       if (this.noWay) {
         this.halt();
-        if (this.t - this.noWay.t > 0.6) { this.noWay = null; this.lost(); }
+        // (No way to a point down a road: on to the next, once. Again from where it stands, or no way to where it's going, it's
+        // lost: wedged, it finds its way out of the corner once it's been lost there twice.)
+        if (this.t - this.noWay.t > 0.6) {
+          this.noWay = null;
+          const S = this.skipAt, again = S && dist(S.x, S.z, m.x, m.z) < 1.5 && this.t - S.t < 5;
+          if (W.road && W !== this.macro.at(-1) && !again) { this.skipAt = { x: m.x, z: m.z, t: this.t }; this.legFrom = this.macro.shift(); this.sub = null; } else this.lost();
+        }
         return;
       }
       const P = this.sub;
@@ -2482,7 +2703,7 @@ export class Brain {
       if (this.door(dt, m, tx - m.x, tz - m.z, doors)) return;
       // A run where the way's long and straight; a walk by a wall, through a door, and coming up to a corner (a run takes a
       // corner wide, into the far wall).
-      let run = g.run && d > 8;
+      let run = g.run && d > 8 && !W.walk && !(W.stair && dist(m.x, m.z, W.x, W.z) < 6);
       if (run && k < 5) {
         if (P[0][2]) run = false;
         else if (P.length > 1 && Math.abs(wrap(Math.atan2(P[1][0] - tx, P[1][1] - tz) - Math.atan2(tx - m.x, tz - m.z))) > 0.6) run = false;
@@ -2493,7 +2714,14 @@ export class Brain {
       this.face = null;
       this.steer(tx - m.x, tz - m.z, run);
       this.lookOn(m, P, run);
-      if (!m.town) { const L = dist(m.x, m.z, W.x, W.z) || 1; this.board(dt, m, (W.x - m.x) / L, (W.z - m.z) / L, d); }
+      if (!m.town) { const L = dist(m.x, m.z, W.x, W.z) || 1; this.board(dt, m, (W.x - m.x) / L, (W.z - m.z) / L, W.stair ? 0 : d, (q) => this.alongWay(m, q)); }
+      // Coming up to this point with another after it on the nav ground: that one's path, from this one.
+      const N = this.macro[1];
+      if (!edge && N && !N.seal && !this.preAsk && this.pre?.for !== N && dist(m.x, m.z, W.x, W.z) < 10 && this.nav.inGrid(W.x, W.z, !!W.below) && this.nav.inGrid(N.x, N.z, !!N.below)) {
+        const ask = this.pre = { for: N, pts: null };
+        this.preAsk = true;
+        this.nav.ask('path', { from: [W.x, W.z], to: [N.x, N.z], avoid: this.avoid(m, true).concat(this.lockedDoors()), touch: N === g ? g.touch : null }).then((pts) => { this.preAsk = false; ask.pts = pts; });
+      }
     } else {
       // Across country: a stretch at a time, by a short path round whatever stands in the way (a wall, a light well, a stand of
       // pines), worked out on the nav thread; till it comes, straight on, stepping round what the probe finds.
@@ -2527,10 +2755,25 @@ export class Brain {
       }
       if (this.door(dt, m, hx, hz)) return;
       this.face = null;
-      this.steer(hx, hz, g.run && d > 8);
-      if (pts?.length) this.lookOn(m, pts, g.run && d > 8);
-      this.board(dt, m, sx, sz, d);
+      // (A walk up a delve's steps, and coming up to them: square on, not in at a run.)
+      const run = g.run && d > 8 && !W.walk && !(W.stair && L < 6);
+      this.steer(hx, hz, run);
+      if (pts?.length) this.lookOn(m, pts, run);
+      this.board(dt, m, sx, sz, W.stair ? 0 : d, (q) => this.alongWay(m, q));
     }
+  }
+
+  // The point k metres on down its way from where it stands: to the next point it's walking to, and on past it. (For the
+  // shield: a road falls along itself, not along the line to the next bend.)
+  alongWay(m, k) {
+    let x = m.x, z = m.z;
+    for (const p of this.macro || []) {
+      if (p.seal) break;
+      const L = dist(x, z, p.x, p.z);
+      if (L >= k) return [x + (p.x - x) * k / L, z + (p.z - z) * k / L];
+      k -= L; x = p.x; z = p.z;
+    }
+    return [x, z];
   }
 
   // A shut door on its way (a house's, the Sexton's): it stops, turns to face it, opens it as E does, and gives it a moment to
@@ -2558,100 +2801,12 @@ export class Brain {
     return true;
   }
 
-  // The long way: straight there on the nav ground; past it, a route over the roads and across country, by the seals when
-  // that's shorter, kept off the lairs and posts it isn't ready for.
+  // The long way (planWay): straight there on the nav ground when it's near; else to the nearest road, down the roads and
+  // off them where they're nearest to where it's going, by the seals when that's shorter, kept off the lairs and posts it
+  // isn't ready for; and up a delve's steps to its portal.
   longWay(m, g) {
-    const end = g;
-    if (this.nav.inGrid(m.x, m.z, m.below) && this.nav.inGrid(g.x, g.z, !!g.below)) return [end];
-    const { X, Z, start, nbr, wt, N, around } = roadGraph();
-    const avoid = this.avoid(m);
     const lands = this.o.lands;
-    const seals = SEALS.filter((s) => lands.awake.has(s.key));
-    // The graph: the roads, then here, there, and the woken seals after them.
-    const me = N, to = N + 1, s0 = N + 2, NP = s0 + seals.length;
-    const px = (i) => (i < N ? X[i] : i === me ? m.x : i === to ? end.x : seals[i - s0].x);
-    const pz = (i) => (i < N ? Z[i] : i === me ? m.z : i === to ? end.z : seals[i - s0].z);
-    // Across country: a little dearer than a road, and through ground it's keeping off (that neither end is in) dearer still.
-    const across = (a, b) => {
-      const ax = px(a), az = pz(a), bx = px(b), bz = pz(b);
-      let c = dist(ax, az, bx, bz) * ACROSS;
-      for (const [x, z, r] of avoid) {
-        if (dist(ax, az, x, z) <= r || dist(bx, bz, x, z) <= r) continue;
-        const d = segNear(ax, az, bx, bz, x, z);
-        if (d < r) c += KEEP * 2 * Math.sqrt(r * r - d * d);
-      }
-      return c;
-    };
-    // (The road nodes near ground it's keeping off, so a stretch of road through it is priced too.)
-    const hot = new Map();
-    avoid.forEach(([x, z, r], k) => around(x, z, r + 25, (i) => { if (!hot.has(i)) hot.set(i, []); hot.get(i).push(k); }));
-    // Onto the roads and off them, from here, to there and at the seals; and between those across country.
-    const extra = new Map();
-    const join = (a, b, c) => { for (const [p, q] of [[a, b], [b, a]]) { if (!extra.has(p)) extra.set(p, []); extra.get(p).push(q, c); } };
-    const ends = [me, to, ...seals.map((_, k) => s0 + k)];
-    for (const i of ends) around(px(i), pz(i), ONTO, (j) => { if (dist(px(i), pz(i), X[j], Z[j]) < ONTO) join(i, j, across(i, j)); });
-    for (let a = 0; a < ends.length; a++) for (let b = a + 1; b < ends.length; b++) {
-      const i = ends[a], j = ends[b];
-      if (dist(px(i), pz(i), px(j), pz(j)) < 900 || (i === me && j === to)) join(i, j, across(i, j));
-    }
-    // Seal to seal: a step through.
-    for (let a = 0; a < seals.length; a++) for (let b = a + 1; b < seals.length; b++) join(s0 + a, s0 + b, 30);
-    // The cheapest way (with no seals to step through, aimed: never cheaper than a metre a metre the rest of the way).
-    const aim = seals.length ? 0 : 1;
-    const D = new Float64Array(NP).fill(Infinity), prev = new Int32Array(NP).fill(-1), done = new Uint8Array(NP);
-    const heap = [], hn = [];
-    const push = (n, f) => {
-      heap.push(f); hn.push(n);
-      for (let i = heap.length - 1; i > 0;) { const p = (i - 1) >> 1; if (heap[p] <= heap[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; [hn[p], hn[i]] = [hn[i], hn[p]]; i = p; }
-    };
-    const pop = () => {
-      const n = hn[0], lf = heap.pop(), ln = hn.pop();
-      if (heap.length) {
-        heap[0] = lf; hn[0] = ln;
-        for (let i = 0; ;) {
-          const l = 2 * i + 1, r = l + 1; let k = i;
-          if (l < heap.length && heap[l] < heap[k]) k = l;
-          if (r < heap.length && heap[r] < heap[k]) k = r;
-          if (k === i) break;
-          [heap[k], heap[i]] = [heap[i], heap[k]]; [hn[k], hn[i]] = [hn[i], hn[k]]; i = k;
-        }
-      }
-      return n;
-    };
-    const relax = (u, v, c) => { if (D[u] + c < D[v]) { D[v] = D[u] + c; prev[v] = u; push(v, D[v] + aim * dist(px(v), pz(v), end.x, end.z)); } };
-    D[me] = 0; push(me, 0);
-    while (heap.length) {
-      const u = pop();
-      if (done[u]) continue;
-      done[u] = 1;
-      if (u === to) break;
-      if (u < N) {
-        const hl = hot.get(u);
-        for (let q = start[u]; q < start[u + 1]; q++) {
-          const v = nbr[q];
-          let c = wt[q];
-          if (hl) for (const k of hl) { const [x, z, r] = avoid[k]; if (segNear(X[u], Z[u], X[v], Z[v], x, z) < r) { c += KEEP * wt[q]; break; } }
-          relax(u, v, c);
-        }
-      }
-      const e = extra.get(u);
-      if (e) for (let i = 0; i < e.length; i += 2) relax(u, e[i], e[i + 1]);
-    }
-    if (!Number.isFinite(D[to])) return [end];
-    const chain = [];
-    for (let k = to; k >= 0 && k !== me; k = prev[k]) chain.push(k);
-    chain.reverse();
-    const out = [];
-    for (let k = 0; k < chain.length; k++) {
-      const i = chain[k], x = px(i), z = pz(i), seal = i >= s0 ? seals[i - s0] : null, next = chain[k + 1];
-      // A seal stepped through: stand on it, and the next point is where it lets out.
-      if (seal && next >= s0) { out.push({ x, z, seal, to: seals[next - s0] }); continue; }
-      // (Down a road, a point every 25 m or so is plenty to walk to; the turns off it and the end, always.)
-      const last = out.at(-1);
-      if (i < N && next !== undefined && next < N && last && !last.seal && dist(last.x, last.z, x, z) < 25) continue;
-      out.push({ x, z });
-    }
-    return out.length ? out : [end];
+    return planWay(m, g, { seals: SEALS.filter((s) => lands.awake.has(s.key)), avoid: this.avoid(m, true), grid: (x, z, b) => this.nav.inGrid(x, z, b), below: m.below });
   }
 
   useSeal(W) {
