@@ -99,7 +99,7 @@
   @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
 
   /* The pack */
-  #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; }
+  #inv { --cell: min(calc((100vh - 96px) / var(--rows, 8)), calc((100vw - 300px) / 12), 52px); position: fixed; inset: 0; z-index: 12; display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; background: rgba(6,5,3,.5); padding: 6px; touch-action: none; }
   #invBody { display: flex; gap: 10px; align-items: stretch; margin-top: auto; }
   #inv .inv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   #inv .inv-head .menu-x { margin: -3px -4px 0 0; }
@@ -124,6 +124,8 @@
     background-image: linear-gradient(rgba(140,115,68,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(140,115,68,.2) 1px, transparent 1px); background-size: var(--cell) var(--cell); }
   #packGrid .it, #packHover { position: absolute; left: calc(var(--x) * var(--cell)); top: calc(var(--y) * var(--cell)); width: calc(var(--w) * var(--cell)); height: calc(var(--h) * var(--cell)); }
   #packGrid .it { display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--rc) 9%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 42%, transparent); }
+  #packGrid .shut { position: absolute; left: calc(var(--x) * var(--cell)); top: calc(var(--y) * var(--cell)); width: calc(var(--w) * var(--cell)); height: calc(var(--h) * var(--cell));
+    background: repeating-linear-gradient(135deg, rgba(0,0,0,.55) 0 5px, rgba(40,32,20,.55) 5px 10px); box-shadow: inset 0 0 0 1px rgba(140,115,68,.35); }
   #packGrid .it:hover { background: color-mix(in srgb, var(--rc) 22%, transparent); }
   #packHover { display: none; pointer-events: none; z-index: 2; }
   #packHover.ok { background: rgba(120,190,120,.26); box-shadow: inset 0 0 0 1px rgba(150,220,150,.7); }
@@ -150,12 +152,12 @@
   /* A short screen (a phone on its side, a small tablet): the gear panel is the tall one, so the cells are sized to fit it, with
      its charm pouch put in two rows of ten (src/ui/lands.js) and the panel kept no wider than that. */
   @media (max-height: 640px) {
-    #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vh - 240px) / 6.8), calc((100vw - 300px) / 12), 52px); }
+    #inv { --cell: min(calc((100vh - 96px) / var(--rows, 8)), calc((100vh - 240px) / 6.8), calc((100vw - 300px) / 12), 52px); }
     #invBody > .panel:first-child { width: min-content; }
     #invStats { width: auto; }
     #eqGrid { justify-content: center; } }
   @media (max-height: 460px) { #invBar { font-size: 10.5px; gap: 10px; } #invNote { min-width: 0; } #inv { gap: 3px; padding: 3px; } #inv .panel { padding: 4px 6px 6px; } #inv .label { margin-bottom: 3px; font-size: 10px; } #invStats { font-size: 11.5px; margin-top: 5px; }
-    #inv { --cell: min(calc((100vh - 96px) / 8), calc((100vh - 200px) / 6.8), calc((100vw - 300px) / 12), 52px); } }
+    #inv { --cell: min(calc((100vh - 96px) / var(--rows, 8)), calc((100vh - 200px) / 6.8), calc((100vw - 300px) / 12), 52px); } }
   /* The twelve spell slots (1 to 9, and the Utility three on 0, - and +); the menu that fills them from all sixty. */
   /* (--slot: a spell slot's size, grown with the screen's height; --hbtn: the round buttons beside them. The whole bar is
      15.3 slots across. On a narrow screen a slot is no bigger than lets the bar sit right of the medal and its bars (334px

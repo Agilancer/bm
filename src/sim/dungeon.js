@@ -168,6 +168,19 @@ export class Warrens {
     this.carry(o.x + Math.sin(o.yaw) * 4, o.z + Math.cos(o.yaw) * 4, o.yaw);
   }
 
+  // The beacon stone (src/ui/beacon.js): you and your party set down at (x, z) facing yaw, by Bellmourn's seal, from wherever
+  // you were; out of a delve as toPortal leaves one (a fight there called off, its packs and bosses up again).
+  home(x, z, yaw) {
+    if (this.inside) {
+      const was = this.delve;
+      if (this.fight) this.resetAll(was);
+      this.inside = false; this.leftAt[was.key] = this.sim.time;
+      this.sim.event(EV.DELVE, DELVE.LEAVE, this.downIn(was), DELVES.indexOf(was));
+    }
+    this.portalCd = 3;
+    this.carry(x, z, yaw);
+  }
+
   // Stood at a delve's way in, with your party.
   enter(d) {
     const [x, z] = toWorld(d.entry.x, d.entry.z, d);
