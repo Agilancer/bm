@@ -3729,7 +3729,9 @@ export class HeroWorld {
       else if (!o.lead && open && this.moveT > 2.5 && o.leadCd <= 0) {
         o.leadCd = rand(2, 5);
         const eager = (LEAD_EAGER[h.person.cls] ?? 1) * (h.lean.roam || 1) * (h.role === 'heal' ? 0.4 : 1);
-        if (mates.filter((m) => m.own?.lead).length < 2 && Math.random() < 0.3 * eager) o.lead = { t: rand(6, 16), by: 0, there: false, ahead: rand(4.5, 9), side: (Math.random() < 0.5 ? -1 : 1) * rand(0.8, 3.2), ux, uz };
+        // (On their own side of you, as on the board (boardLeads): given back, they fall in again where they were, never
+        // crossing in front of you to the other side to get there.)
+        if (mates.filter((m) => m.own?.lead).length < 2 && Math.random() < 0.3 * eager) o.lead = { t: rand(6, 16), by: 0, there: false, ahead: rand(4.5, 9), side: (i % 2 ? 1 : -1) * rand(0.8, 3.2), ux, uz };
       }
       if (o.lead) {
         const L = o.lead;
