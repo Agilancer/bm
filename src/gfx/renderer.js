@@ -1687,10 +1687,10 @@ export class Renderer {
 
   makePortals() {
     const { spots } = buildSites(), out = [];
-    const put = (kind, [x, y, z, yaw], out) => {
+    const put = (kind, [x, y, z, yaw], way = null) => {
       const { scale: S, sink } = PORTAL_MODELS[kind], c = Math.cos(yaw), s = Math.sin(yaw);
       const mat = new Float32Array([S * c, 0, -S * s, 0, 0, S, 0, 0, S * s, 0, S * c, 0, x, y - sink, z, 1]);
-      const at = { kind, x, y: y - sink, z, c, s, S, out };
+      const at = { kind, x, y: y - sink, z, c, s, S, out: way };   // (out: the delve whose way out this is. Not named `out` here: that's the list.)
       out.push({ portal: `${kind}_stone`, mat, at }, { portal: `${kind}_swirl`, mat, at });
     };
     for (const key of PORTAL_SPOTS) if (spots[key]) put('dungeon', spots[key], DELVES.find((d) => key === `${d.tag}_out`));

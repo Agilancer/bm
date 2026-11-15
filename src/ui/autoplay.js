@@ -2,8 +2,9 @@
 // taken from Velscour (Agilancer/velscour assets/ui/btn_auto.webp, css/style.css .hbtn). The button or P turns it on and off;
 // moving yourself (the keys or the stick) takes the controls back for a moment. The head is src/ui/autobrain.js.
 //
-// The button (or P) brings up a menu first: Complete Quests, Grind monsters for XP (and where: GRINDS) or Dungeon Runs (round
-// every party dungeon whose portal the player has found, easiest first, until it's stopped: DUNGEONS). Clicking the status line while it plays brings the menu
+// The button (or P) brings up a menu first: Complete Quests, Grind monsters for XP (and where: GRINDS), Dungeon Runs (round
+// every party dungeon whose portal the player has found, easiest first, until it's stopped: DUNGEONS; begun down one, through
+// that one first) or Auto Fight (monster to monster round where he is, waiting for more when none are near). Clicking the status line while it plays brings the menu
 // back, to change what it's at. While it's on, the mouse is left free (no pointer lock), so the button and its menu can be
 // clicked; Esc pauses and resumes. On the quests with every quest done, a menu asks where to grind (GRINDS), and keeps the last
 // choice if nobody answers.
@@ -17,7 +18,8 @@
 // Settings' Interface in auto-play, Hidden until you tap: while it plays and nobody's touched anything for a few seconds, the
 // interface is put away (body.ui-bare, src/ui/hud.css), all but the map and the chat if those are kept (Map in auto-play, Chat
 // in auto-play: body.bare-map, body.bare-chat). A tap, a click, a key or the mouse moved brings it all back at once.
-import { INPUT } from '../core/layout.js';
+import { H, INPUT } from '../core/layout.js';
+import { delveOf } from '../core/dungeon.js';
 import { RULES } from '../folk/quests.js';
 import { Brain, DUNGEONS, GRINDS, MODES, finishedDungeons } from './autobrain.js';
 import { AutoLog } from './autolog.js';
@@ -59,7 +61,7 @@ body.playing #autoStatus.shown { display: block; }
 #autoMenu.on { display: block; }
 #autoMenu h2 { margin: 0 0 4px; font: 700 20px Cinzel, Georgia, serif; color: #8fe0ff; letter-spacing: .05em; }
 #autoMenu p { margin: 0 0 12px; color: #a8c0cc; }
-#autoMenu .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+#autoMenu .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 #autoMenu .card { font: inherit; color: inherit; text-align: left; background: #0e1a22; border: 1px solid #23485a; padding: 10px; cursor: pointer; border-radius: 3px; }
 #autoMenu .card b { display: block; color: #e8f6fc; margin-bottom: 3px; }
 #autoMenu .card span { display: block; font-size: 12px; color: #93acb8; }
@@ -201,6 +203,7 @@ export class AutoPlay {
     const was = b.mode;
     b.mode = mode;
     if (mode !== was || mode === 'dungeons') { b.job = null; b.jobKey = ''; b.runState = null; b.runKey = null; b.laps = 0; }
+    b.fightHere = null; b.seekOn = null;   // (Auto Fight: here, where it's chosen.)
     this.release();
     if (this.on) { this.o.hud.tip(`Auto-play: ${lower(MODES[mode].name)}.`, 3); return; }
     this.toggle(true);
@@ -275,7 +278,7 @@ export class AutoPlay {
       input.auto = null;
       return;
     }
-    if (this.yieldT > 0) { this.yieldT -= dt; if (this.yieldT > 0) return; input.auto = this.brain.auto; this.brain.goal = null; this.brain.sub = null; }
+    if (this.yieldT > 0) { this.yieldT -= dt; if (this.yieldT > 0) return; input.auto = this.brain.auto; this.brain.goal = null; this.brain.sub = null; this.brain.fightHere = null; }
     try { this.brain.step(dt, snap); } catch (err) { console.error('auto-play', err); this.brain.halt(); }
     this.show.frame(dt, snap, this.brain, this.brain.me(snap));
   }
@@ -312,8 +315,12 @@ export class AutoPlay {
     this.wake();
     this.hold();
     const { townUI, game } = this.o;
-    const done = finishedDungeons(townUI, game);
-    const runs = done.length ? `In this order, round and round: ${done.map((d) => lower(d.name)).join(', ')}.` : `No dungeon portal found yet: ${DUNGEONS.length} of them lie out in the land, and each counts once you've come upon its portal.`;
+    // (Down a dungeon now: that one's run first, from where he is, found portal or not: src/ui/autobrain.js dungeonJob.)
+    const snap = game.currentSnap?.(), here = snap ? delveOf(snap[H.PX], snap[H.PZ]) : null;
+    const done = finishedDungeons(townUI, game, here?.key);
+    const rest = done.filter((d) => d.key !== here?.key);
+    const runs = here ? `Through ${lower(here.name)} first, from where he stands${rest.length ? `; then round the rest: ${rest.map((d) => lower(d.name)).join(', ')}` : ''}.`
+      : done.length ? `In this order, round and round: ${done.map((d) => lower(d.name)).join(', ')}.` : `No dungeon portal found yet: ${DUNGEONS.length} of them lie out in the land, and each counts once you've come upon its portal.`;
     const cards = Object.entries(MODES).map(([k, v]) => {
       const off = k === 'dungeons' && !done.length;
       return `<button type="button" class="card${k === this.mode ? ' sel' : ''}" data-m="${k}"${off ? ' disabled' : ''}><b>${v.name}</b><span>${v.line}</span>${k === 'dungeons' ? `<i>${runs}</i>` : ''}</button>`;
