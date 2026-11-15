@@ -38,7 +38,7 @@ export class ViewSwitch {
     this.touchBtn?.addEventListener('touchstart', press, { passive: false });
     window.addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && !e.ctrlKey && !e.metaKey) this.toggle(); });
     window.addEventListener('wheel', (e) => {
-      if (e.shiftKey || e.ctrlKey || e.metaKey || !document.pointerLockElement) return;
+      if (e.shiftKey || e.ctrlKey || e.metaKey || !(this.o.input.wheelOk?.(e) ?? document.pointerLockElement)) return;
       // (A notch is 100 or so of deltaY in pixels, 3 in lines; a trackpad sends it a little at a time.)
       this.wheel(e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1) / 100);
     }, { passive: true });

@@ -1,6 +1,7 @@
 // What can be found: the swords, the words a roll can add to them and the gems that go in their sockets. Tessariel fights with spells: the swords' rows stay here but are never rolled. Tables and dice only,
 // so the node check in tools/items/check.mjs rolls exactly what the game rolls. Every stat a line here can show is one
 // src/sim/player.js really applies.
+import { BEACON_COLOR, beaconLines } from './beacon.js';
 import { SKINS, rollPattern, rollSkin } from './skins.js';
 import { INPUT, WEAPONS } from '../core/layout.js';
 import { SPELLS } from '../sim/spells.js';
@@ -510,6 +511,7 @@ export const MATS = {
 export const matName = (kind, n = 1) => (n === 1 ? MATS[kind].name : MATS[kind].plural);
 
 export function nameOf(item) {
+  if (item.type === 'beacon') return 'Beacon Stone';
   if (item.type === 'hgear') return item.name;   // (gear for your party: src/items/partygear.js)
   if (item.type === 'spell') return `Scroll of ${SPELLS[item.spell].name}`;
   if (item.type === 'gold') return `${item.amount} gold`;
@@ -529,7 +531,7 @@ export function nameOf(item) {
   return [pre?.name, named, suf?.name].filter(Boolean).join(' ');
 }
 
-export const colorOf = (item) => (item.type === 'gold' ? '#e8c15a' : item.type === 'mat' ? MATS[item.kind].color : item.type === 'gem' ? GEMS[item.kind].color : RARITIES[item.rarity].color);
+export const colorOf = (item) => (item.type === 'beacon' ? BEACON_COLOR : item.type === 'gold' ? '#e8c15a' : item.type === 'mat' ? MATS[item.kind].color : item.type === 'gem' ? GEMS[item.kind].color : RARITIES[item.rarity].color);
 
 export function gemLine(gem) {
   const g = GEMS[gem.kind];
@@ -553,6 +555,7 @@ export function statsOf(item) {
 // how much of a piece's set is on.
 export function linesOf(item, slots) {
   if (item.type === 'hgear') return hgLines(item);
+  if (item.type === 'beacon') return beaconLines();
   if (item.type === 'gem') {
     return [{ text: nameOf(item), kind: 'title' }, { text: 'Gem', kind: 'sub' }, { text: gemLine(item), kind: 'stat' }, { text: GEM_LOOK[item.kind], kind: 'sub' }, { text: 'Goes in an open socket on a staff, a skull or a shield, and stays there.', kind: 'sub' }];
   }

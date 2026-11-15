@@ -39,7 +39,7 @@ import { floorAt } from '../core/interior.js';
 import { GROUP_KEYS, GROUPS, LAIRS, TRIPO_KIND } from '../core/tripo-monsters.js';
 import { WILD_CALLS } from '../core/wilds.js';
 import { CAMPS } from '../sim/slimes.js';
-import { SPELLS } from '../sim/spells.js';
+import { REACH, SPELLS } from '../sim/spells.js';
 import { AMBUSH_AT } from '../sim/opening.js';
 import { NODES, UTILITY, blocked, pointsAt, spent, startFree, startRanks } from '../sim/skills.js';
 import { RULES, isNight, placeSpot } from '../folk/quests.js';
@@ -54,6 +54,13 @@ import { BOSSES, DELVES, delveByKey, delveOf, inDungeon, toWorld as caveWorld } 
 import { caveStep, doHire, doWarrens, hireJob, hiring, perilsNear, tactics, warrensCoverage, warrensJob } from './autowarrens.js';
 import { HallNav, STATIONS, hallAt, inArena, inHall } from '../core/testhall.js';
 import { thirdLead } from './autocam.js';
+import { LET_OUT, ONE_MORE, PACK_MAKER } from './folk.js';
+import { MAX_EXTRA, slotPrice } from '../items/pack.js';
+import { CHANNEL } from '../items/beacon.js';
+
+// The beacon stone (src/ui/beacon.js): used when the work's in Bellmourn and further off than BEACON_FAR, with nothing
+// within BEACON_CLEAR to break it off; while it's at work, it stands still for it unless something's within BEACON_HOLD.
+const BEACON_FAR = 300, BEACON_CLEAR = 20, BEACON_HOLD = 14;
 
 const TAU = Math.PI * 2;
 const wrap = (a) => { a %= TAU; return a > Math.PI ? a - TAU : a < -Math.PI ? a + TAU : a; };
@@ -77,11 +84,8 @@ const MAX_SIGHT = 26;   // how far off it'll take on what it's hunting
 // Bold (the Auto menu's temperament, src/ui/autoplay.js): it takes on what it would have left two levels more, is beaten back
 // one level instead of two, and stays in a fight it's hurt in while there's a kill to finish.
 const BOLD_LEVELS = 2;
-// A long walk hurried (Settings' Long walks in auto-play, the sim's clock run at HASTE: src/sim/sim.worker.js): only out in the
-// open with this far still to go and nothing alive this near.
 // In the town it opens a chest only when it's passing one (it used to go round every house for them before it took a quest).
 const TOWN_CHEST = 9, TOWN_CHEST_GAP = 90;
-const HURRY_FAR = 140, HURRY_CLEAR = 48, HURRY_AFTER = 2.5;
 // How long a line is left up to be read before it's answered (Settings' Talk in auto-play): by its length, as a reader takes it.
 // (A brisk reader's: slower, and a quest-giver with a lot to say held him the best part of a minute.)
 export const readTime = (line) => clamp(0.6 + String(line || '').replace(/<[^>]*>/g, '').length / 34, 1.2, 5);
@@ -265,71 +269,74 @@ function gearScore(slots) {
 // SELF: cast on itself, no aim. GROUND: aimed at the feet. BOLTS: what a raised shield stops. A spell added to the game is
 // taught here too. (Bellmourn's twenty first, then the forty the six trees added: src/sim/skills.js.)
 const risen = (c) => !!c.T && (c.T.kind === 5 || c.T.kind === 6);
+// IN: how near its mark has to be for what it throws to get there. Nothing it casts goes past REACH (src/sim/spells.js),
+// measured from its eyes, and a mark's distance here is to its middle along the ground: a little inside that, to be sure.
+const IN = REACH - 0.5;
 const USE = {
-  firebolt: (c) => c.d < 42 && (c.d > 12 ? 3.4 : 2.6) + (c.fresh ? 1.4 : 0),
-  frost: (c) => c.d < 32 && 2.2 + (c.fast ? 2.2 : 0),
-  lightning: (c) => c.d > 6 && c.d < 30 && (c.around >= 2 ? 4.2 : 1.6),
-  missiles: (c) => c.d < 30 && 2.6 + (c.fast ? 0.8 : 0),
+  firebolt: (c) => c.d < IN && (c.d > 6 ? 3.4 : 2.6) + (c.fresh ? 1.4 : 0),
+  frost: (c) => c.d < IN && 2.2 + (c.fast ? 2.2 : 0),
+  lightning: (c) => c.d > 4 && c.d < IN && (c.around >= 2 ? 4.2 : 1.6),
+  missiles: (c) => c.d < IN && 2.6 + (c.fast ? 0.8 : 0),
   arcaneblast: (c) => c.d < 8.5 && (c.close >= 2 ? 5.6 : c.dn < 6 ? 4.4 : 2.6) + (c.frozen ? 1.5 : 0),
-  firebeam: (c) => c.d < 16 && (c.around >= 2 ? 3.6 : 2.7),
-  chain: (c) => c.d < 24 && (c.around >= 2 ? 4.6 : c.n >= 2 ? 3.2 : 2.2),
+  firebeam: (c) => c.d < IN && (c.around >= 2 ? 3.6 : 2.7),
+  chain: (c) => c.d < IN && (c.around >= 2 ? 4.6 : c.n >= 2 ? 3.2 : 2.2),
   nova: (c) => (c.close >= 3 ? 8 : c.close >= 2 ? (c.hpf < 0.6 ? 7.6 : 5.2) : c.near >= 3 ? 6 : c.near >= 2 && c.big ? 4.2 : 0),
-  meteor: (c) => c.d > 9 && c.d < 55 && (c.around >= 3 ? 6.2 : c.around >= 2 && (c.held || c.frozen || c.pulled) ? 5.6 : (c.still || c.held || c.frozen) && c.big ? 4.8 : 0),
-  blizzard: (c) => c.d > 8 && c.d < 36 && (c.around >= 3 ? 5.2 : c.around >= 2 && (c.held || c.pulled) ? 4.6 : (c.still || c.held) && c.big ? 3.2 : 0),
-  drain: (c) => c.d < 16 && c.hpf < 0.8 && 3.5 + (1 - c.hpf) * 4,
-  lance: (c) => c.d < 40 && (c.inLine >= 2 ? 5 : 2.6),
-  well: (c) => c.d > 8 && c.d < 28 && (c.around >= 3 ? 5.6 : c.n >= 3 && !c.pulled ? 4.2 : 0),
-  plague: (c) => c.d > 6 && c.d < 22 && (c.around >= 2 ? 4 : c.held && c.big ? 3.2 : 1.5),
+  meteor: (c) => c.d > 4 && c.d < IN && (c.around >= 3 ? 6.2 : c.around >= 2 && (c.held || c.frozen || c.pulled) ? 5.6 : (c.still || c.held || c.frozen) && c.big ? 4.8 : 0),
+  blizzard: (c) => c.d > 4 && c.d < IN && (c.around >= 3 ? 5.2 : c.around >= 2 && (c.held || c.pulled) ? 4.6 : (c.still || c.held) && c.big ? 3.2 : 0),
+  drain: (c) => c.d < IN && c.hpf < 0.8 && 3.5 + (1 - c.hpf) * 4,
+  lance: (c) => c.d < IN && (c.inLine >= 2 ? 5 : 2.6),
+  well: (c) => c.d > 4 && c.d < IN && (c.around >= 3 ? 5.6 : c.n >= 3 && !c.pulled ? 4.2 : 0),
+  plague: (c) => c.d > 4 && c.d < IN && (c.around >= 2 ? 4 : c.held && c.big ? 3.2 : 1.5),
   blades: (c) => !c.bladesUp && (c.close >= 2 ? 5 : c.n >= 3 && c.dn < 12 ? 3.8 : 0),
-  spikes: (c) => c.d < 14 && (c.inLine >= 2 ? 4.6 : 2.4) + (c.frozen ? 1 : 0),
-  wallfire: (c) => c.d > 6 && c.d < 20 && c.coming && (c.around >= 2 ? 4.2 : c.n >= 2 ? 3 : 0),
+  spikes: (c) => c.d < IN && (c.inLine >= 2 ? 4.6 : 2.4) + (c.frozen ? 1 : 0),
+  wallfire: (c) => c.d > 3 && c.d < IN && c.coming && (c.around >= 2 ? 4.2 : c.n >= 2 ? 3 : 0),
   // (A healer at its back mends it too: its own Mend waits a little longer then.)
   mend: (c) => c.hpf < (c.healer ? 0.3 : 0.4) && c.dn > 6 && 9,
   wisp: () => 0,
   // (Blink is a way out, not a blow: cast from the kite, facing away. See combat().)
   blink: () => 0,
   // ---- Fire
-  comet: (c) => c.d > 6 && c.d < 34 && (c.around >= 2 ? 4.2 : 2.4),
+  comet: (c) => c.d > 3 && c.d < IN && (c.around >= 2 ? 4.2 : 2.4),
   firenova: (c) => (c.close >= 2 ? 6 : c.near >= 3 ? 4.4 : 0),
-  wyrm: (c) => c.d < 28 && 2.8 + (c.fast ? 1.5 : 0),
-  phoenix: (c) => c.d < 22 && (c.inLine >= 2 ? 5.2 : c.hpf < 0.6 ? 3.6 : 2.2),
-  bomb: (c) => c.d < 40 && (c.big ? 4.6 : c.around >= 2 ? 3.6 : 2),
+  wyrm: (c) => c.d < IN && 2.8 + (c.fast ? 1.5 : 0),
+  phoenix: (c) => c.d < IN && (c.inLine >= 2 ? 5.2 : c.hpf < 0.6 ? 3.6 : 2.2),
+  bomb: (c) => c.d < IN && (c.big ? 4.6 : c.around >= 2 ? 3.6 : 2),
   inferno: (c) => c.close >= 3 && 7.2,
   // ---- Ice
   coldcone: (c) => c.d < 7.5 && (c.close >= 2 ? 5.2 : 2.6),
-  rime: (c) => c.d < 34 && 2.9 + (c.fast ? 1.5 : 0),
-  frostray: (c) => c.d < 18 && (c.fast || c.big ? 3.6 : 2.4),
-  prism: (c) => c.d < 36 && (c.inLine >= 2 ? 4.8 : 2.2),
-  orb: (c) => c.d > 5 && c.d < 24 && (c.around >= 3 ? 5 : c.around >= 2 && (c.held || c.pulled) ? 4.2 : 0),
+  rime: (c) => c.d < IN && 2.9 + (c.fast ? 1.5 : 0),
+  frostray: (c) => c.d < IN && (c.fast || c.big ? 3.6 : 2.4),
+  prism: (c) => c.d < IN && (c.inLine >= 2 ? 4.8 : 2.2),
+  orb: (c) => c.d > 3 && c.d < IN && (c.around >= 3 ? 5 : c.around >= 2 && (c.held || c.pulled) ? 4.2 : 0),
   // (Worth it only on what a Nova has frozen, or its own cold has just slowed: ICED below.)
-  shatter: (c, b) => (c.frozen || b.t - (b.iceT ?? -99) < 4) && c.dn < 15 && 6.5,
-  zero: (c) => c.d > 8 && c.d < 38 && (c.around >= 3 ? 6.2 : (c.still || c.held) && c.big ? 4 : 0),
+  shatter: (c, b) => (c.frozen || b.t - (b.iceT ?? -99) < 4) && c.dn < IN && 6.5,
+  zero: (c) => c.d > 4 && c.d < IN && (c.around >= 3 ? 6.2 : (c.still || c.held) && c.big ? 4 : 0),
   // ---- Earth
-  stone: (c) => c.d < 34 && 2.5 + (c.dn < 6 ? 0.8 : 0),
-  thorns: (c) => c.d < 22 && (c.around >= 2 ? 3.4 : 2.2),
-  boulder: (c) => c.d > 5 && c.d < 30 && (c.around >= 2 ? 4.4 : 2.2),
+  stone: (c) => c.d < IN && 2.5 + (c.dn < 6 ? 0.8 : 0),
+  thorns: (c) => c.d < IN && (c.around >= 2 ? 3.4 : 2.2),
+  boulder: (c) => c.d > 3 && c.d < IN && (c.around >= 2 ? 4.4 : 2.2),
   stoneskin: (c) => (c.close >= 2 || c.hpf < 0.6) && c.dn < 9 && 7,
-  vine: (c) => c.d > 5 && c.d < 26 && (c.around >= 3 ? 5.4 : c.n >= 3 && c.coming ? 4 : 0),
-  quake: (c) => c.d > 6 && c.d < 28 && (c.around >= 3 ? 6 : (c.still || c.held || c.frozen) && c.big ? 3.6 : 0),
-  monolith: (c) => c.d < 28 && (c.big ? 5.6 : 2.6),
+  vine: (c) => c.d > 3 && c.d < IN && (c.around >= 3 ? 5.4 : c.n >= 3 && c.coming ? 4 : 0),
+  quake: (c) => c.d > 4 && c.d < IN && (c.around >= 3 ? 6 : (c.still || c.held || c.frozen) && c.big ? 3.6 : 0),
+  monolith: (c) => c.d < IN && (c.big ? 5.6 : 2.6),
   // ---- Arcane
-  rune: (c) => c.coming && c.d > 7 && c.d < 22 && 3.4,
-  crescent: (c) => c.d < 17 && (c.inLine >= 2 ? 4.4 : 2.5),
-  stasis: (c) => c.d > 6 && c.d < 26 && (c.around >= 3 ? 5.2 : c.big ? 3.4 : 0),
-  disintegrate: (c) => c.d < 24 && (c.inLine >= 2 ? 5 : c.big ? 4.2 : 2.4),
-  starfall: (c) => c.d > 10 && c.d < 50 && (c.around >= 3 ? 6 : c.around >= 2 && (c.held || c.frozen || c.pulled) ? 5.4 : (c.still || c.held || c.frozen) && c.big ? 4.2 : 0),
+  rune: (c) => c.coming && c.d > 4 && c.d < IN && 3.4,
+  crescent: (c) => c.d < IN && (c.inLine >= 2 ? 4.4 : 2.5),
+  stasis: (c) => c.d > 3 && c.d < IN && (c.around >= 3 ? 5.2 : c.big ? 3.4 : 0),
+  disintegrate: (c) => c.d < IN && (c.inLine >= 2 ? 5 : c.big ? 4.2 : 2.4),
+  starfall: (c) => c.d > 4 && c.d < IN && (c.around >= 3 ? 6 : c.around >= 2 && (c.held || c.frozen || c.pulled) ? 5.4 : (c.still || c.held || c.frozen) && c.big ? 4.2 : 0),
   // ---- Lightning
-  spark: (c) => c.d < 30 && 2.7 + (c.fast ? 1.2 : 0),
-  fork: (c) => c.d < 20 && (c.around >= 2 ? 4.2 : 2.2),
+  spark: (c) => c.d < IN && 2.7 + (c.fast ? 1.2 : 0),
+  fork: (c) => c.d < IN && (c.around >= 2 ? 4.2 : 2.2),
   // (A seed only pays if there's lightning on the bar to send on from it.)
-  seed: (c, b) => c.d < 26 && c.around >= 2 && b.stormOnBar && 3.6,
+  seed: (c, b) => c.d < IN && c.around >= 2 && b.stormOnBar && 3.6,
   thunderclap: (c) => (c.close >= 3 ? 7.6 : c.close >= 2 && c.hpf < 0.6 ? 7.5 : 0),
   // (Both step it through the fight, and it fights from a distance. Blink it keeps as a way out; Stormstep it never slots.)
   stormstep: () => 0,
-  // (Out of the sky, where a raised shield can't turn it, and from further off than the black knight's reach.)
-  thunder: (c) => c.d > 6 && c.d < 55 && (c.big ? 5 : 3),
+  // (Out of the sky, where a raised shield can't turn it.)
+  thunder: (c) => c.d > 3 && c.d < IN && (c.big ? 5 : 3),
   staticfield: (c) => c.close >= 2 && 5.4,
-  tempest: (c) => c.d > 8 && c.d < 38 && (c.around >= 3 ? 6.2 : (c.still || c.held) && c.big ? 4.4 : 0),
+  tempest: (c) => c.d > 4 && c.d < IN && (c.around >= 3 ? 6.2 : (c.still || c.held) && c.big ? 4.4 : 0),
   // ---- Utility
   fleet: (c) => c.hpf < 0.5 && c.dn < 8 && 5,
   turn: (c) => (risen(c) ? (c.close >= 2 ? 7.8 : c.near >= 3 ? 5 : 0) : c.close >= 3 && 4),
@@ -344,8 +351,7 @@ const GROUND = new Set(['meteor', 'blizzard', 'wallfire', 'zero', 'quake', 'mono
 const BOLTS = new Set(['firebolt', 'frost', 'lightning', 'missiles', 'lance', 'chain', 'firebeam', 'spikes', 'arcaneblast', 'comet', 'wyrm', 'phoenix', 'bomb', 'coldcone', 'rime',
   'frostray', 'prism', 'stone', 'thorns', 'boulder', 'vine', 'crescent', 'stasis', 'disintegrate', 'spark', 'fork', 'seed']);
 // Always on its bar, once it knows them: Firebolt and Mend, and the first it has of each of these two lists. PANIC: what it
-// casts at once with three of them on it. SKY: what comes down on a raised shield from where the board can't turn it, and
-// reaches the thirty paces it stands off the black knight at (a Wall of Fire doesn't: 24).
+// casts at once with three of them on it. SKY: what comes down on a raised shield from where the board can't turn it.
 const PANIC = ['nova', 'thunderclap', 'turn'], SKY = ['meteor', 'thunder'];
 const CORE = ['firebolt', 'mend'], CORE_ALL = [...CORE, ...PANIC, ...SKY];
 const coreOf = (known) => [...CORE, PANIC.find(known), SKY.find(known)].filter(Boolean);
@@ -748,7 +754,7 @@ export class Brain {
     this.skip = new Map();     // things it's given up on for a while: key -> until
     this.patrol = null; this.wispT = 0; this.gearT = 0; this.strafe = 1; this.strafeT = 0;
     this.lastPos = null; this.lastHpf = 1;
-    this.hurry = false; this.hurryT = 0; this.nearFoe = 1e9; this.scene0 = null;
+    this.nearFoe = 1e9; this.scene0 = null;
     this.bump = this.bump || {};
     this.runState = null;
   }
@@ -904,8 +910,6 @@ export class Brain {
     this.snap = snap;
     const m = this.me(snap);
     const g = this.o.game;
-    const hurried = this.hurry;
-    this.hurry = false;
     // Fallen, with no opening to catch it (?noopening): up again, as R does.
     if (snap[H.GAME] === 2) {
       this.halt();
@@ -916,7 +920,9 @@ export class Brain {
     // Something came between, a long way at once: a fall caught (back at the town's edge), a seal, a sleep. Plan afresh.
     if (this.lastPos && dist(this.lastPos[0], this.lastPos[1], m.x, m.z) > 25) {
       // Caught falling, and set down by the town: whatever it was at was too much for it yet. Two levels more first.
-      if (this.lastHpf < 0.35 && townDist(m.x, m.z) < 40 && this.job) {
+      // (Not the beacon stone setting it down by the seal: that's on purpose, however hurt it was.)
+      const beaconed = performance.now() - (g.beacon?.arrivedAt ?? -1e9) < 4000;
+      if (this.lastHpf < 0.35 && townDist(m.x, m.z) < 40 && this.job && !beaconed) {
         const why = this.job.why;
         this.o.log?.fell(m, m.own, this.job.say, why.startsWith('q:') ? why.slice(2) : null);
         this.bump[why] = (this.bump[why] || 0) + (this.bold ? 1 : 2);
@@ -943,11 +949,6 @@ export class Brain {
     if (this.thinkT <= 0) { this.thinkT = 0.12; this.think(snap, m); }
     this.boardFrame = false;
     this.walk(dt, m);
-    // A long walk with nothing about: hurried, for whoever's watching (src/ui/autoplay.js gives it to the sim's clock).
-    const g0 = this.goal, far = !!g0 && this.useGoal && !this.fighting && !this.talk && !m.town && !m.below && !(m.opening > 0 && m.opening < OPENING.ARRIVED)
-      && !inDungeon(m.x, m.z) && !inHall(m.x, m.z) && this.nearFoe > HURRY_CLEAR && dist(m.x, m.z, g0.x, g0.z) > (hurried ? HURRY_FAR * 0.6 : HURRY_FAR);
-    this.hurryT = far ? this.hurryT + dt : 0;
-    this.hurry = hurried ? far : this.hurryT > HURRY_AFTER;
     // (The ride down behind Lisandra, asked for by the opening's thinking: src/ui/autobrain.js opening.)
     if (this.wayRide) { const r = this.wayRide; this.board(dt, m, r.rx, r.rz, r.left, (k) => routeAt(Math.min(ROUTE.len, r.mine + k))); }
     // (Space is only held while it's on the shield, or getting on it: on its way somewhere, or riding it through a fight.)
@@ -1000,6 +1001,12 @@ export class Brain {
     if (m.opening > 0 && m.opening < OPENING.ARRIVED) { this.opening(snap, m); return; }
     const foes = this.foes(snap, m);
     this.nearFoe = foes.reduce((a, f) => Math.min(a, f.d), 1e9);
+    // The beacon stone at work: still for it, unless something's on it (then the fight comes first, and the stone goes quiet).
+    if (g.beacon?.busy && this.nearFoe > BEACON_HOLD) {
+      this.halt();
+      this.say(`The beacon stone: home to Bellmourn in ${Math.max(0, Math.ceil(CHANNEL - (g.beacon.on?.t || 0)))} s.`);
+      return;
+    }
     // Down the Warrens, a boss's calls come first: out of the circles, at the dragon's side, behind a pillar.
     // (And anywhere, out of what a monster has marked on the ground or thrown: src/ui/autowarrens.js perilStep.)
     if ((inDungeon(m.x, m.z) || perilsNear(this)) && this.delve(snap, m, foes)) { this.fighting = true; return; }
@@ -1163,7 +1170,7 @@ export class Brain {
     const reserve = (has('mend') && m.hpf < 0.8 ? 25 : 0) + (PANIC.some(has) && c.n >= 3 && !c.party ? 12 : 0);
     const staff = () => {
       // (A shot costs up to 13 by the staff: with less, the click's wasted on a fizzle.)
-      if (!c.aimed || this.staffCool > 0 || mana < 14 || c.d > 40) return;
+      if (!c.aimed || this.staffCool > 0 || mana < 14 || c.d > IN) return;
       // (The last of its mana is for a Mend, when it's low.)
       if (m.hpf < 0.45 && has('mend') && mana < 31) return;
       // (A spell just asked for and not yet begun: a click now would get in ahead of it, and the spell would be lost.)
@@ -1208,7 +1215,7 @@ export class Brain {
     if (GROUND.has(key)) this.pitch = Math.atan2(c.T.y - (m.y + 1.62), Math.max(1, c.d));
     // (The first Firebolt of a fight is gathered long, as you'd hold it on something that hasn't seen you: it bursts harder.)
     // (A channel is held a second or two, and never past the mana it has for it.)
-    const hold = key === 'firebolt' ? (c.fresh && c.d > 12 ? 1.5 : c.d > 14 ? 0.95 : 0.5)
+    const hold = key === 'firebolt' ? (c.fresh && c.d > 5 ? 1.5 : c.d > 6 ? 0.95 : 0.5)
       : best.channel ? Math.max(0.45, Math.min(1.4 + Math.random() * 0.6, (mana - best.mana - Math.min(reserve, 20)) / (best.drain || 10) - 0.15)) : 0.16;
     if (this.cast(SP[key], hold)) {
       // (How soon the next: by how full its mana is.)
@@ -1606,7 +1613,7 @@ export class Brain {
     // A clean line to it, or none (a wall, a corner, a pine, a rise in the ground between): it never throws through one.
     const sight = this.sees(T), blocked = !!sight && !sight.clear;
     const aimed = this.reactT <= 0 && this.clean(T) && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.035, Math.atan2(0.8, d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.12;
-    // Footwork: back off what's close while it shoots, close in on what's far, step side to side between.
+    // Footwork: back off what's close while it shoots, close in on what's further than it reaches, step side to side between.
     let mx = 0, mz = 0;
     const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1), bx = (m.x - near.x) / (dn || 1), bz = (m.z - near.z) / (dn || 1);
     if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.2 + Math.random() * 2.2; this.strafe = Math.random() < 0.75 ? -this.strafe : this.strafe; }
@@ -1621,19 +1628,19 @@ export class Brain {
       if (dn < 5) { mx += bx * 0.8; mz += bz * 0.8; }
     } else {
       // (Across them on the shield, now and then: the side the ground falls away on.)
-      if (!K && dn > 8 && d > 9 && d < 30 && m.hpf > 0.5 && this.t - this.fightSince > 3 && T.hostile && this.canRide(m) && Math.random() < 0.11) {
+      if (!K && dn > 6 && d > 6 && d < IN + 4 && m.hpf > 0.5 && this.t - this.fightSince > 3 && T.hostile && this.canRide(m) && Math.random() < 0.11) {
         const h0 = terrainHeight(m.x, m.z), drop = (sg) => h0 - terrainHeight(m.x - fz * sg * 10, m.z + fx * sg * 10);
         const sg = drop(1) >= drop(-1) ? 1 : -1, wx = -fz * sg * 0.95 - fx * 0.3, wz = fx * sg * 0.95 - fz * 0.3, L = Math.hypot(wx, wz);
         if (this.rideWay(m, wx / L, wz / L)) { this.startRide(m, wx / L, wz / L, 'across'); return true; }
         this.rideCool = 3;
       }
-      if (dn < 7.5) { mx = bx; mz = bz; } else if (d > 20) { mx = fx; mz = fz; }
+      if (dn < 4.5) { mx = bx; mz = bz; } else if (d > IN - 1.5) { mx = fx; mz = fz; }
       mx += -fz * this.strafe * 0.6; mz += fx * this.strafe * 0.6;
     }
     if (this.dodgeCool > 1.1) { if (this.dodgeDir) [mx, mz] = this.dodgeDir; else { mx = -fz * this.dodgeSide; mz = fx * this.dodgeSide; } }
     this.steer(mx, mz, false, true);
     // (Backing into something: noted, and the next close call turns into a run instead.)
-    this.backedUp = dn < 7.5 && Math.hypot(m.vx, m.vz) < 1 ? (this.backedUp || 0) + 0.12 : 0;
+    this.backedUp = dn < 4.5 && Math.hypot(m.vx, m.vz) < 1 ? (this.backedUp || 0) + 0.12 : 0;
     this.shoot(snap, m, this.scene(m, live, T, near, close, aimed, company));
     const who = live.length > 1 ? `${live.length} foes` : this.foeName(T);
     // (For whoever's watching: what it's up against. src/ui/autoshow.js.)
@@ -1917,7 +1924,7 @@ export class Brain {
 
   plan(m) {
     const prev = this.jobKey;
-    const job = this.choose(m);
+    const chosen = this.choose(m), job = this.homeBy(chosen, m) || chosen;
     const key = job ? `${job.kind}:${job.why}:${job.who ?? ''}:${job.x ?? ''}` : '';
     if (key !== prev || !this.job) { this.job = job; this.jobKey = key; this.patrol = null; this.jobT = this.t; }
     else if (job && this.job) { delete this.job.quest; delete this.job.offer; Object.assign(this.job, job); }
@@ -2057,7 +2064,7 @@ export class Brain {
     const p = this.o.pack;
     let used = 0;
     for (const e of p.entries) { const s = e.item.type === 'weapon' ? 4 : e.item.type === 'shield' ? 6 : e.item.type === 'skull' ? 4 : e.item.type === 'robe' ? 4 : 1; used += s; }
-    return 96 - used;
+    return p.cells - used;
   }
 
   // The giver of a quest, or whoever a step's to be said to: their place in the town's list.
@@ -2236,6 +2243,9 @@ export class Brain {
     // Buying: whatever an open counter has that's better than what it wears, or a spell it doesn't know, with coin to spare.
     const buy = trading && this.shopping(m);
     if (buy) return buy;
+    // More room in the pack from Wes Harrow, with coin to spare for it (src/ui/folk.js letOut).
+    const room = trading && this.roomJob();
+    if (room) return room;
     // Mended at the herbalist's, if it's hurt and has the coin.
     if (trading && m.hpf < 0.7 && pack.purse() >= 12) {
       const i = PEOPLE.findIndex((p) => p.trade === 'healing');
@@ -2307,6 +2317,44 @@ export class Brain {
     return this.nav.spawns.filter(([, z]) => z > RIFT_Z).sort((a, b) => dist(a[0], a[1], from[0], from[1]) - dist(b[0], b[1], from[0], from[1])).slice(0, n);
   }
 
+  // ---- the beacon stone, and room in the pack
+
+  // Home by the beacon stone (src/ui/beacon.js), in place of the long walk: when the job's work is in Bellmourn (to sell, to
+  // mend, a quest to hand in there) and it's further off than BEACON_FAR, the stone's lit, and there's nothing near enough
+  // to break it off. Not down a delve or in the Test Dungeon (their own ways out are theirs), nor if Settings has it walk.
+  homeBy(job, m) {
+    const b = this.o.game.beacon;
+    if (!job || !b || (job.kind !== 'talk' && job.kind !== 'go') || m.town || !this.allow('aiBeacon') || this.skipping('beacon')) return null;
+    if (inDungeon(m.x, m.z) || inHall(m.x, m.z) || this.nearFoe < BEACON_CLEAR) return null;
+    const w = job.kind === 'talk' ? this.o.townUI.whereOf(job.who) : Number.isFinite(job.x) ? { x: job.x, z: job.z } : null;
+    if (!w || townDist(w.x, w.z) > 40 || dist(m.x, m.z, w.x, w.z) < BEACON_FAR || !b.ready(this.snap)) return null;
+    return { kind: 'beacon', why: 'beacon', say: `The beacon stone, home to Bellmourn. (${job.say || 'To the town.'})` };
+  }
+
+  beaconUse(snap) {
+    const b = this.o.game.beacon;
+    this.halt();
+    this.say(this.job.say);
+    if (b.busy) return;
+    if (b.ready(snap)) b.use(snap);
+    // (Once it's begun, think() keeps it still. Broken off, it isn't tried again for a while: the walk instead.)
+    this.giveUp('beacon', 25);
+    this.job = null;
+  }
+
+  // Worth another pocket from Wes Harrow: there's room still to be had, and it costs no more than a tenth of the purse.
+  wantsRoom() {
+    const p = this.o.pack;
+    return p.extra < MAX_EXTRA && slotPrice(p.extra) * 10 <= p.purse() * 0.1;
+  }
+
+  roomJob() {
+    if (!this.wantsRoom() || this.skipping('room')) return null;
+    const i = this.personIndex(PACK_MAKER), W = this.o.townUI;
+    if (i < 0 || this.skipping(`p:${i}`) || !W.whereOf(i) || !this.reachable(i)) return null;
+    return { kind: 'talk', why: 'room', who: i, say: `To ${W.people[i].name}, to have the pack let out.` };
+  }
+
   // ---- doing it
 
   doJob(snap, m, foes) {
@@ -2327,6 +2375,7 @@ export class Brain {
       return;
     }
     if (j.kind === 'talk') { this.approach(m, j); return; }
+    if (j.kind === 'beacon') { this.beaconUse(snap); return; }
     if (j.kind === 'boss') { this.siege(snap, m); return; }
     if (j.kind === 'hire') { doHire(this, m, j); return; }
     if (j.kind === 'warrens') { this.warrensRun(m, foes); return; }
@@ -2514,6 +2563,16 @@ export class Brain {
       k = at((o) => want.has(label(o)) || o.cls === 'offer');
     }
     if (k >= 0) { townUI.choose(k); return; }
+    // Wes Harrow letting the pack out: asked, then a pocket at a time while it's still worth the coin (wantsRoom).
+    if (T.why === 'room') {
+      const one = at((o) => label(o).startsWith(ONE_MORE));
+      if (one >= 0 && T.sold < 6 && this.wantsRoom()) { T.sold++; townUI.choose(one); return; }
+      const ask = at((o) => label(o) === LET_OUT);
+      if (ask >= 0 && !T.asked && this.wantsRoom()) { T.asked = true; townUI.choose(ask); return; }
+      townUI.close(true);
+      this.giveUp('room', 300);
+      return;
+    }
     // The counter.
     if (T.why === 'sell' || T.why === 'mend' || T.why === 'bed' || T.why === 'buy') {
       const p = townUI.people[T.who], trade = TRADES[p.trade];
@@ -2654,7 +2713,7 @@ export class Brain {
       if (!this.subAsk && this.nav.ready && (fresh || this.t - this.subT > 12 || (this.subTo && dist(this.subTo[0], this.subTo[1], leg.x, leg.z) > 2.5))) {
         this.subFor = leg; this.subT = this.t; this.subTo = [leg.x, leg.z]; this.subAsk = true;
         const want = leg, avoid = this.avoid(this.me(this.o.game.currentSnap()), true).concat(this.lockedDoors());
-        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid, touch: leg === g ? g.touch : null }).then((pts) => {
+        this.nav.ask('path', { from: [m.x, m.z], to: [leg.x, leg.z], avoid, touch: leg === g ? g.touch : null, polite: true }).then((pts) => {
           this.subAsk = false;
           if (this.subFor !== want) return;
           this.subT = this.t;
@@ -2722,7 +2781,7 @@ export class Brain {
       if (!edge && N && !N.seal && !this.preAsk && this.pre?.for !== N && dist(m.x, m.z, W.x, W.z) < 10 && this.nav.inGrid(W.x, W.z, !!W.below) && this.nav.inGrid(N.x, N.z, !!N.below)) {
         const ask = this.pre = { for: N, pts: null };
         this.preAsk = true;
-        this.nav.ask('path', { from: [W.x, W.z], to: [N.x, N.z], avoid: this.avoid(m, true).concat(this.lockedDoors()), touch: N === g ? g.touch : null }).then((pts) => { this.preAsk = false; ask.pts = pts; });
+        this.nav.ask('path', { from: [W.x, W.z], to: [N.x, N.z], avoid: this.avoid(m, true).concat(this.lockedDoors()), touch: N === g ? g.touch : null, polite: true }).then((pts) => { this.preAsk = false; ask.pts = pts; });
       }
     } else {
       // Across country: a stretch at a time, by a short path round whatever stands in the way (a wall, a light well, a stand of
@@ -2843,9 +2902,10 @@ export class Brain {
   }
 
   // Putting him down, as a careful player does. He keeps his post: he won't chase past 20 m of it (26 once he's after you), and
-  // he lets anyone in the town go. So it stands on his flank just outside that, and works on him from there: a Meteor (from
-  // above: his shield's no use), Firebolts and Chain Lightning when he's turned from it. If he comes out after it, it backs off
-  // past his leash shooting all the way, and as he walks back to his door it has his back. Hurt, it falls back to the town.
+  // he lets anyone in the town go. Nothing it casts reaches further than REACH, so it can't work on him from outside that: it
+  // comes in on his flank to within its reach and works on him there: a Meteor (from above: his shield's no use), Firebolts
+  // and Chain Lightning when he's turned from it. When he comes at it, it backs off shooting, out past his leash if he keeps
+  // on, and as he walks back to his door it follows him in and has his back. Hurt, it falls back to the town.
   siege(snap, m) {
     const K = this.blackKnight(snap);
     if (!K) {
@@ -2885,15 +2945,15 @@ export class Brain {
     this.watch(m, [mark]);
     const sight = this.sees(mark);
     const aimed = this.clean(mark) && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.03, Math.atan2(0.7, dk));
-    // Footwork: never inside his reach; back off what's coming; along the ring otherwise, a step at a time.
+    // Footwork: never inside his blade's reach, never out of its own; back off what's coming; round him otherwise, a step at a time.
     let mx = 0, mz = 0;
     const ox = (m.x - P[0]) / (fromPost || 1), oz = (m.z - P[1]) / (fromPost || 1);
-    if (dk < 13 || fromPost < BLACK_LEASH + 2) { mx = (m.x - K.x) / (dk || 1) + ox * 0.6; mz = (m.z - K.z) / (dk || 1) + oz * 0.6; }
-    else if (fromPost > SIEGE_RING + 6) { mx = -ox; mz = -oz; }
+    if (dk < 5.5) { mx = (m.x - K.x) / (dk || 1) + ox * 0.6; mz = (m.z - K.z) / (dk || 1) + oz * 0.6; }
+    else if (dk > IN - 1.5) { mx = (K.x - m.x) / (dk || 1); mz = (K.z - m.z) / (dk || 1); }
     else if (sight && !sight.clear && sight.step) { const sg = Math.sign(sight.step), fx = (K.x - m.x) / (dk || 1), fz = (K.z - m.z) / (dk || 1); mx = -fz * sg; mz = fx * sg; }
     else { if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.5 + Math.random() * 2; this.strafe = -this.strafe; } mx = -oz * this.strafe * 0.4; mz = ox * this.strafe * 0.4; }
     // Right on it: turn and run for it (he's slower than its sprint), then turn back.
-    if (dk < 6 && this.kiteCool <= 0) {
+    if (dk < 4 && this.kiteCool <= 0) {
       const away = [(m.x - K.x) / (dk || 1) + ox, (m.z - K.z) / (dk || 1) + oz], L = Math.hypot(away[0], away[1]) || 1;
       this.kite = { x: away[0] / L, z: away[1] / L, t: 1.4 };
       this.kiteCool = 2.5;

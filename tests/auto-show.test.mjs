@@ -1,5 +1,5 @@
 // Auto-play as something to watch: the director's camera (src/ui/autocam.js), the narrator, the banners and the recap
-// (src/ui/autoshow.js), a line left up to be read, a long walk hurried, the temperament and the settings that turn each off.
+// (src/ui/autoshow.js), a line left up to be read, a long walk never hurried, the temperament and the settings that turn each off.
 //   node --test tests/auto-show.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -104,24 +104,22 @@ test('a kill is told by a name you could say', () => {
 
 test('each part of the show can be turned off in the settings, and is on to begin with', () => {
   const title = read('../src/title.js');
-  for (const [k, v] of [['autocam', 'director'], ['autoread', 'on'], ['autohaste', 'on'], ['autotell', 'on']]) {
+  for (const [k, v] of [['autocam', 'director'], ['autoread', 'on'], ['autotell', 'on']]) {
     assert.ok(title.includes(`${k}: '${v}'`), `${k} doesn't start ${v}`);
     assert.ok(title.includes(`data-k="${k}"`), `Settings has no ${k}`);
   }
   const auto = read('../src/ui/autoplay.js'), brain = read('../src/ui/autobrain.js'), cam = read('../src/ui/autocam.js'), show = read('../src/ui/autoshow.js');
-  assert.ok(auto.includes("this.o.settings?.autohaste !== 'off'") && brain.includes("this.o.settings?.autoread !== 'off'"));
+  assert.ok(brain.includes("this.o.settings?.autoread !== 'off'"));
   assert.ok(cam.includes("settings?.autocam ?? 'director'") && show.includes("settings?.autotell === 'off'"));
 });
 
-test('the world\'s clock is only hurried by auto-play, in ticks no longer than ever, and let go when it stops', () => {
-  const taken = Object.entries(CTRL).filter(([k]) => k !== 'SIZE' && k !== 'HASTE').map(([, v]) => v);
-  // (SNAP_US is three words: one for each snapshot slot.)
-  taken.push(CTRL.SNAP_US + 1, CTRL.SNAP_US + 2);
-  assert.ok(!taken.includes(CTRL.HASTE) && CTRL.HASTE < CTRL.SIZE, 'CTRL.HASTE shares a word');
-  const sim = read('../src/sim/sim.worker.js'), auto = read('../src/ui/autoplay.js');
-  assert.ok(sim.includes('Math.min(owed, MOST) * haste()') && sim.includes('next += 1000 / hz / f'), 'the sim doesn\'t step by it');
-  assert.match(auto, /this\.brain\?\.stop\(\);\s*this\.haste\(false\);/, 'stopping auto-play leaves the world hurried');
-  for (const stop of ['INPUT.PAUSE]) { this.haste(false);', 'input.auto = null;\n      this.haste(false);']) assert.ok(auto.includes(stop), 'hands on, or the pause, leaves the world hurried');
+test("auto-play never runs the world's clock faster: he goes at the pace anyone does", () => {
+  assert.equal(CTRL.HASTE, undefined, 'the clock can still be hurried');
+  const title = read('../src/title.js');
+  assert.ok(!title.includes('autohaste') && !title.includes('Long walks in auto-play'), 'Settings still offers a hurried walk');
+  for (const f of ['../src/sim/sim.worker.js', '../src/ui/autoplay.js', '../src/ui/autobrain.js', '../src/ui/autocam.js', '../src/ui/autoshow.js']) {
+    assert.ok(!['CTRL.HASTE', '.hurry', 'haste('].some((w) => read(f).includes(w)), `${f} still hurries the walk`);
+  }
 });
 
 test('the view is only lent to auto-play: your own is as it was after, and V chooses first person or behind him while it plays', async () => {

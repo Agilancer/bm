@@ -11,6 +11,23 @@ export const GIVERS = ['bram', 'silas', 'homunculus', 'tamsin', 'corran', 'orrin
 
 export const LINES = {
   lisandra: {
+    // Undoing what you've learned, for next to nothing (src/ui/folk.js unbind): {fee} is hers, in gold.
+    unbind: {
+      ask: [
+        "Undo it? I can. Everything you've learned, back in your hands to spend again. {fee} gold, for the candle. You'll learn it all over.",
+        "Unpick a spellbook? Easier than unpicking a man. {fee} gold, and every point's yours again. Sure?",
+      ],
+      done: [
+        "There. Empty-handed and full of possibilities. Spend them better this time.",
+        "Done. It always smells of burnt hair. Don't ask me why.",
+      ],
+      no: [
+        "Wise. Or lazy. Either way, keep your gold.",
+      ],
+      poor: [
+        "Coin first. I've been paid in promises before. I'm three hundred.",
+      ],
+    },
     first: [
       "Stop there a moment. I've a word for you before you go in.",
     ],

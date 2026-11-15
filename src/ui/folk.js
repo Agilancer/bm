@@ -19,6 +19,7 @@ import { QuestBook, RULES, sayable } from '../folk/quests.js';
 import { CRAFTS, GOODS, MAX_EMBERS, TRADES, matsText, offerFor, priceText, rollStock, worth } from '../folk/shops.js';
 import { DAYS, partOfDay } from '../folk/days.js';
 import { MATS, colorOf, makeRng, matName, nameOf, rollSkull } from '../items/items.js';
+import { MAX_EXTRA, slotPrice } from '../items/pack.js';
 import { SPELLS } from '../sim/spells.js';
 import { CLOSE_X } from './menu-x.js';
 import { art } from './skin.js';
@@ -35,6 +36,16 @@ const ACT = { SLEEP: 2, WORK: 4, SHOP: 5, FLEE: 12, HIDE: 13 };
 const REACH = 2.3;
 // A keeper behind a stall's counter is further than that from anyone in front of it: the counter's 1.2 m deep, and they stand back of it.
 const STALL_REACH = 3.4;
+
+// Wes Harrow the tanner lets packs out (letOut): room bought a cell at a time, each dearer than the last (src/items/pack.js
+// slotPrice). The words, for auto-play to find them by (src/ui/autobrain.js).
+export const PACK_MAKER = 'wes';
+export const LET_OUT = 'Could you let my pack out?';
+export const ONE_MORE = 'One more pocket';
+// Lisandra unbinds what you've learned (unbind): every point spent back, for a fee that's next to nothing. (The spellbook's own
+// Unlearn button, B, does it anywhere, for more: src/sim/skills.js respecCost.)
+export const UNBIND = "Could you undo what I've learned?";
+export const unbindFee = (level) => 5 + 2 * level;
 const SEEN = 19;               // balloons further off than this aren't shown
 const MARK_SEEN = 70;          // nor quest marks further off than this (the Bellwright's tower, out on its knoll, further)
 const FOV = 64;                // the camera's, top to bottom (src/gfx/renderer.js)
@@ -559,8 +570,65 @@ export class TownUI {
     const about = this.ok(L.about);
     if (about.length) out.push({ label: 'Who are you?', run: () => this.show(pick(about, this.count(id, 'about')), id, this.root()) });
     if (p.trade && TRADES[p.trade]) out.push({ label: TRADES[p.trade].label, run: () => this.shop() });
+    if (id === PACK_MAKER && this.pack.extra < MAX_EXTRA) out.push({ label: LET_OUT, run: () => this.letOut() });
+    if (id === LISANDRA.id && this.act.spentPoints?.() > 0) out.push({ label: `${UNBIND} (${unbindFee(this.pack.level)} gold)`, run: () => this.unbind() });
     out.push({ label: 'Farewell.', run: () => this.close(true) });
     return out;
+  }
+
+  // ---- Wes Harrow's leather: room in the pack ----
+
+  letOut() {
+    const p = this.person(this.with), L = this.lines(this.with);
+    const line = pick(this.ok(L.pack?.offer), this.count(p.id, 'pack')) || 'I can sew a pocket on. Costs.';
+    this.show(line.replace('{price}', slotPrice(this.pack.extra)), p.id, this.letOutOpts());
+  }
+
+  letOutOpts() {
+    const n = this.pack.extra, left = MAX_EXTRA - n, purse = this.pack.purse();
+    const five = Array.from({ length: Math.min(5, left) }, (_, k) => slotPrice(n + k)).reduce((a, b) => a + b, 0);
+    const out = [];
+    if (left > 0) out.push({ label: `${ONE_MORE} · ${slotPrice(n)} gold`, cls: purse >= slotPrice(n) * 10 ? '' : 'dim', run: () => this.buyRoom(1) });
+    if (left >= 5) out.push({ label: `Five more · ${five} gold`, cls: purse >= five * 10 ? '' : 'dim', run: () => this.buyRoom(5) });
+    out.push({ label: 'Back.', run: () => this.show(this.view.line, this.view.speaker, this.root()) });
+    out.push({ label: 'Farewell.', run: () => this.close(true) });
+    return out;
+  }
+
+  // k more cells, each at its own price, as far as the purse goes. How many were bought.
+  buyRoom(k) {
+    const p = this.person(this.with), L = this.lines(this.with);
+    let bought = 0;
+    while (bought < k && this.pack.extra < MAX_EXTRA && this.pack.pay(slotPrice(this.pack.extra) * 10)) { this.pack.extra++; bought++; }
+    if (!bought) { this.show(pick(this.ok(L.pack?.poor), this.count(p.id, 'packPoor')) || "That's short.", p.id, this.letOutOpts()); return 0; }
+    this.inventory.render();
+    this.act.sound?.('takeRobe');
+    this.note(`Your pack is let out: room for ${this.pack.cells} now${this.pack.extra < MAX_EXTRA ? '' : ', and that is as far as it goes'}.`, 'quest');
+    this.act.saved();
+    const done = this.pack.extra >= MAX_EXTRA ? pick(this.ok(L.pack?.full), 0) : pick(this.ok(L.pack?.done), this.count(p.id, 'packDone'));
+    this.show(done || 'Done.', p.id, this.pack.extra >= MAX_EXTRA ? this.root() : this.letOutOpts());
+    return bought;
+  }
+
+  // ---- Lisandra's unbinding: every point back ----
+
+  unbind() {
+    const p = this.person(this.with), L = this.lines(this.with), fee = unbindFee(this.pack.level);
+    const line = pick(this.ok(L.unbind?.ask), this.count(p.id, 'unbind')) || 'I can. Are you sure?';
+    this.show(line.replace('{fee}', fee), p.id, [
+      { label: `Yes. Undo it all. (${fee} gold)`, cls: this.pack.purse() >= fee * 10 ? '' : 'dim', run: () => this.unbound(fee) },
+      { label: 'No. Leave it as it is.', run: () => this.show(pick(this.ok(L.unbind?.no), 0) || 'As you like.', p.id, this.root()) },
+    ]);
+  }
+
+  unbound(fee) {
+    const p = this.person(this.with), L = this.lines(this.with);
+    if (!this.pack.pay(fee * 10)) { this.show(pick(this.ok(L.unbind?.poor), 0) || "You haven't the coin.", p.id, this.root()); return; }
+    this.act.respec?.();
+    this.act.sound?.('scroll');
+    this.note(`Every point is yours to spend again: your spellbook${this.input?.touch ? '' : ', B'}.`, 'quest');
+    this.act.saved();
+    this.show(pick(this.ok(L.unbind?.done), this.count(p.id, 'unbound')) || 'Done.', p.id, this.root());
   }
 
   asks() { this.show(this.view.line, this.view.speaker, this.askOpts()); }

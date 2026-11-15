@@ -1,0 +1,112 @@
+[
+  {
+    "number": 41,
+    "id": "warm_limestone",
+    "name": "warm limestone",
+    "description": "Warm limestone ashlar for bedchambers, pale warm grey hand-dressed stone blocks in staggered horizontal courses, finely grained, soft wear, thin joints",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Warm limestone ashlar for bedchambers, pale warm grey hand-dressed stone blocks in staggered horizontal courses, finely grained, soft wear, thin joints. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_041_warm_limestone_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "bcd2a01943da3f77fe879c255c8ea41e6fa9e581871acac1b4fe70205e700740"
+  },
+  {
+    "number": 42,
+    "id": "hearth_sandstone",
+    "name": "hearth sandstone",
+    "description": "Honey-grey sandstone ashlar for hearth rooms, warm muted taupe, hand-cut rectangular stones in staggered courses, lightly worn and porous",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Honey-grey sandstone ashlar for hearth rooms, warm muted taupe, hand-cut rectangular stones in staggered courses, lightly worn and porous. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_042_hearth_sandstone_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "fd42299b82bfa802be84aed0969ed39df450501a7449b6ffc8b222fe0589a162"
+  },
+  {
+    "number": 43,
+    "id": "aged_lime_plaster",
+    "name": "aged lime plaster",
+    "description": "Soft warm ivory lime plaster for living chambers, subtly hand-trowelled uneven matte surface, small mineral flecks and gentle aging, no bricks",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Soft warm ivory lime plaster for living chambers, subtly hand-trowelled uneven matte surface, small mineral flecks and gentle aging, no bricks. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_043_aged_lime_plaster_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "07e931ee42397de33d235684a1fbf0fb71ffebec84784b91f395929ee46d11ba"
+  },
+  {
+    "number": 44,
+    "id": "smoky_rose_brick",
+    "name": "smoky rose brick",
+    "description": "Muted dusty rose-brown handmade clay brick for cozy interior walls, small fine running bond, soft grey mortar and gently worn faces",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Muted dusty rose-brown handmade clay brick for cozy interior walls, small fine running bond, soft grey mortar and gently worn faces. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_044_smoky_rose_brick_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "a022f92f5972e1c7e0463845ae02e10745cb8b02b2b97bfd4a5b1cc6627942c7"
+  },
+  {
+    "number": 45,
+    "id": "cream_brick",
+    "name": "cream brick",
+    "description": "Pale oatmeal fired clay bricks for warm interior walls, small thin running bond, fine warm-grey lime mortar, subtle handmade irregularities",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Pale oatmeal fired clay bricks for warm interior walls, small thin running bond, fine warm-grey lime mortar, subtle handmade irregularities. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_045_cream_brick_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "01e61a58b50e2d7f638a9d3186a08d52a8a23682b30fcef2a0f953272008acbf"
+  },
+  {
+    "number": 46,
+    "id": "carved_stone",
+    "name": "carved stone",
+    "description": "Pale warm grey limestone ashlar with a quiet repeating shallow medieval carved quatrefoil relief centered on each stone, tasteful elegant craft and fine joints",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Pale warm grey limestone ashlar with a quiet repeating shallow medieval carved quatrefoil relief centered on each stone, tasteful elegant craft and fine joints. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_046_carved_stone_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "dddfac71009fe9e8255d79d647204badb7e03e12e946bf8f65e42b9c98e7ff0a"
+  },
+  {
+    "number": 47,
+    "id": "wood_panelling",
+    "name": "wood panelling",
+    "description": "Dark mellow walnut wooden wall panelling, repeating vertical broad planks, subtle carved edges and fine grain, aged matte finish, no furniture",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Dark mellow walnut wooden wall panelling, repeating vertical broad planks, subtle carved edges and fine grain, aged matte finish, no furniture. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_047_wood_panelling_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "e24d2331977f19f910080ae67036905f13a0685e9601c95dff799b4590dd65cf"
+  },
+  {
+    "number": 48,
+    "id": "wattle_plaster",
+    "name": "wattle plaster",
+    "description": "Warm light taupe lime plaster infill with dark weathered oak narrow vertical timber studs at regular intervals, flat wall surface, medieval castle interiors",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Warm light taupe lime plaster infill with dark weathered oak narrow vertical timber studs at regular intervals, flat wall surface, medieval castle interiors. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_048_wattle_plaster_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "e69c17ddbc45aa2aa4dd8642607e255de79de0f1dd464d9867bceef6f992a26f"
+  },
+  {
+    "number": 49,
+    "id": "chalk_ashlar",
+    "name": "chalk ashlar",
+    "description": "Soft chalk grey finely dressed small ashlar blocks for an intimate chamber, fine staggered courses, delicate chipped corners, subtle matte grain",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Soft chalk grey finely dressed small ashlar blocks for an intimate chamber, fine staggered courses, delicate chipped corners, subtle matte grain. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_049_chalk_ashlar_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "85df9f109de9f68060c8da4ffd0e86ce7443ff99c0505b12cfd35d289ec6978a"
+  },
+  {
+    "number": 50,
+    "id": "hearth_brick",
+    "name": "hearth brick",
+    "description": "Dark smoke brown fired clay fireplace surround bricks, consistent running bond, narrow grey mortar, subtle soot-toned patina evenly spread, no fireplace opening",
+    "prompt": "Use case: photorealistic-natural. Generate ONE square color texture for a comfortable lived-in interior chamber in Bellmourn's dark fantasy Castle Velscour. Dark smoke brown fired clay fireplace surround bricks, consistent running bond, narrow grey mortar, subtle soot-toned patina evenly spread, no fireplace opening. Matches realistic restrained medieval stonework, material detail without dramatic stains. Full-frame flat orthographic perpendicular view, even diffuse lighting. Intended for seamless horizontal and vertical repeating, match opposite edges and continue joints. Request 2048 x 2048 highest available resolution. No objects, furniture, scenes, text, frame, collage, or panels.",
+    "file": "textures/BM_PV_050_hearth_brick_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "035498f6b3b8e1112243b2631ab50986d98ee773f75da97c298f2901840b7289"
+  }
+]

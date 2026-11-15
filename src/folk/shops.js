@@ -102,7 +102,8 @@ export function rollStock(trade, day, known = new Set()) {
 // Whether a trade will buy this, and for how much (copper).
 export function offerFor(trade, item) {
   const t = TRADES[trade];
-  if (!t?.buys) return 0;
+  // (The beacon stone isn't for sale: src/items/beacon.js.)
+  if (!t?.buys || item.type === 'beacon') return 0;
   if (t.buys !== 'any' && !t.buys.includes(item.type)) return 0;
   return Math.max(10, Math.round(worth(item) * (t.share || 0.25)) * 10);
 }

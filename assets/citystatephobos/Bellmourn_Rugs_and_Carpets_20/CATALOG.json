@@ -1,0 +1,222 @@
+[
+  {
+    "number": 71,
+    "id": "red_wool",
+    "name": "red wool",
+    "description": "deep crimson solid woven wool carpet, soft worn pile, subtle fiber variation",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. deep crimson solid woven wool carpet, soft worn pile, subtle fiber variation. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_071_red_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "3e68af9901274ccafa9b1b0acb8ccf707e7629792e82889f9fc61efec5169022"
+  },
+  {
+    "number": 72,
+    "id": "wine_wool",
+    "name": "wine wool",
+    "description": "dark burgundy dense wool carpet, soft low pile and muted worn fibers",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. dark burgundy dense wool carpet, soft low pile and muted worn fibers. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_072_wine_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "b441d96a2f08f0d6af6923cbbf3c7bb191bbc56beb8013a54ce70415c3b32594"
+  },
+  {
+    "number": 73,
+    "id": "red_floral",
+    "name": "red floral",
+    "description": "muted red woven carpet with small repeating dark burgundy medieval floral pattern",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. muted red woven carpet with small repeating dark burgundy medieval floral pattern. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_073_red_floral_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "93c27c4d22d5df48c30fb2b9e6a5587db96a59fd18ee8da9683264a3491ae279"
+  },
+  {
+    "number": 74,
+    "id": "red_diamond",
+    "name": "red diamond",
+    "description": "deep red wool carpet with restrained repeating small gold and burgundy diamond motifs",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. deep red wool carpet with restrained repeating small gold and burgundy diamond motifs. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_074_red_diamond_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "b588c5b7f24deda240704facaf0c997b4cf71b224e98730980a56a7d76ada5b1"
+  },
+  {
+    "number": 75,
+    "id": "red_gothic",
+    "name": "red gothic",
+    "description": "dark crimson patterned carpet with subtle repeating Gothic tracery in muted antique gold",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. dark crimson patterned carpet with subtle repeating Gothic tracery in muted antique gold. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_075_red_gothic_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "c91bf10d04a2cbee6c4d7d57d77b4ea2d93510ad0b0e5ec49354aa7a06632f43"
+  },
+  {
+    "number": 76,
+    "id": "rust_wool",
+    "name": "rust wool",
+    "description": "warm rust red wool carpet with fine woven fibers and gently uneven wear",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. warm rust red wool carpet with fine woven fibers and gently uneven wear. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_076_rust_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "c6a2ff8fdcf6236d5504cd5339cb577e8358c5cf76f0a8f5f1c3052b5824a146"
+  },
+  {
+    "number": 77,
+    "id": "forest_wool",
+    "name": "forest wool",
+    "description": "deep forest green wool carpeting, low worn pile and subtle fibers",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. deep forest green wool carpeting, low worn pile and subtle fibers. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_077_forest_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "04fef416790088b1896468100e982336dfdea350f30e95b00d464cc778526ca7"
+  },
+  {
+    "number": 78,
+    "id": "green_floral",
+    "name": "green floral",
+    "description": "dark olive green carpet with restrained repeating gold botanical motifs",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. dark olive green carpet with restrained repeating gold botanical motifs. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_078_green_floral_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "c33ef58965c3ab11f9b5acd0fc66c76b5125e93d3edd835396455dd32a08f08e"
+  },
+  {
+    "number": 79,
+    "id": "blue_wool",
+    "name": "blue wool",
+    "description": "muted midnight blue wool carpet, soft low worn pile and fine fibers",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. muted midnight blue wool carpet, soft low worn pile and fine fibers. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_079_blue_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "5546cc5f34f0b3c8aa2843c0a07923be441297640e11de5c19dc66024c018b6c"
+  },
+  {
+    "number": 80,
+    "id": "blue_geometric",
+    "name": "blue geometric",
+    "description": "muted slate blue carpet with repeating small charcoal and cream geometric motifs",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. muted slate blue carpet with repeating small charcoal and cream geometric motifs. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_080_blue_geometric_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "6b3d25e9c98f0af3db35e5e6421d91e254bc183d266e9fde25317116a2f4c4d7"
+  },
+  {
+    "number": 81,
+    "id": "plum_wool",
+    "name": "plum wool",
+    "description": "dark dusty plum wool carpeting, short pile with natural fiber variation",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. dark dusty plum wool carpeting, short pile with natural fiber variation. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_081_plum_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "eac0cb43bd69201c5d4a132c6858bcaaef611eb850f21eb5e1dbf0c9f8a5ed12"
+  },
+  {
+    "number": 82,
+    "id": "gold_wool",
+    "name": "gold wool",
+    "description": "aged ochre gold woven wool carpet, restrained matte wear and soft surface",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. aged ochre gold woven wool carpet, restrained matte wear and soft surface. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_082_gold_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "e20e8d32266129d358f0479619781e20afb32073ef826b9d4272c6b7b8146059"
+  },
+  {
+    "number": 83,
+    "id": "brown_wool",
+    "name": "brown wool",
+    "description": "warm dark umber wool carpet, dense worn pile and subtle natural flecking",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. warm dark umber wool carpet, dense worn pile and subtle natural flecking. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_083_brown_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "415b7d66420f493b7970cb30476abd9e62a6554da333905f82d905bb29826b6f"
+  },
+  {
+    "number": 84,
+    "id": "charcoal_wool",
+    "name": "charcoal wool",
+    "description": "charcoal grey wool carpet with subdued fine fiber texture",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. charcoal grey wool carpet with subdued fine fiber texture. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_084_charcoal_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "5f88a6ee6962860705e0fb3b038638497dd66d66aedc5aa7f6fa498990c1740b"
+  },
+  {
+    "number": 85,
+    "id": "ivory_wool",
+    "name": "ivory wool",
+    "description": "weathered warm ivory wool carpet with fine flecked fibers and gentle wear",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. weathered warm ivory wool carpet with fine flecked fibers and gentle wear. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_085_ivory_wool_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "a3759cb7069e818e429c7486e1761f790e64cc082d878139f2c917dbaff5e8e3"
+  },
+  {
+    "number": 86,
+    "id": "tartan_brown",
+    "name": "tartan brown",
+    "description": "muted brown and cream woven plaid wool carpet with small repeating pattern",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. muted brown and cream woven plaid wool carpet with small repeating pattern. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_086_tartan_brown_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "1808333e09fdd473f1009bc3ec46a809783646f1700eae6d755fabefd9eed86d"
+  },
+  {
+    "number": 87,
+    "id": "tartan_red",
+    "name": "tartan red",
+    "description": "muted burgundy and charcoal woven plaid wool carpet with small repeating pattern",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. muted burgundy and charcoal woven plaid wool carpet with small repeating pattern. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_087_tartan_red_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "f97309f059f00df3307b0c4a66c682ef69d47c23254003e2eec2657b6d3bbea4"
+  },
+  {
+    "number": 88,
+    "id": "heraldic",
+    "name": "heraldic",
+    "description": "muted red and charcoal carpet with small repeating abstract heraldic fleur motifs",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. muted red and charcoal carpet with small repeating abstract heraldic fleur motifs. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_088_heraldic_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "6731473f4e7463638c7a91123e50c990342c192f1532db21fc0d010ca0d0cdd7"
+  },
+  {
+    "number": 89,
+    "id": "woven_stripes",
+    "name": "woven stripes",
+    "description": "earthy brown, charcoal and faded red narrow stripes in a woven wool carpet",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. earthy brown, charcoal and faded red narrow stripes in a woven wool carpet. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_089_woven_stripes_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "b9d28e45dfb850d683963a689a2f01d1e507ea0e3c10c99b8e66c95a8a648ba2"
+  },
+  {
+    "number": 90,
+    "id": "geometric_rug",
+    "name": "geometric rug",
+    "description": "deep burgundy, muted tan and charcoal woven rug field with repeating medieval geometric motifs",
+    "prompt": "Use case: photorealistic-natural. ONE square repeating carpet or rug field color texture for the floors of a cozy dark fantasy medieval castle in Bellmourn. deep burgundy, muted tan and charcoal woven rug field with repeating medieval geometric motifs. Orthographic straight-down view; the material fills the entire image. Intricate realistic textile fibers, muted colors, even diffuse illumination. Seamlessly tile in both directions with motifs and fibers continuing across opposite edges. Request 2048x2048 highest resolution. No rug outline, fringe, visible floor, furniture, objects, shadows, image frame, text, scene, or collage.",
+    "file": "textures/BM_PV_090_geometric_rug_Color.png",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "182f8efe8359459437e7f94d4ba9af729ad62eb259091b1e2658ab3dd0d29756"
+  }
+]
