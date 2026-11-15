@@ -1014,10 +1014,10 @@ fn shadeTrue(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32
   let cave = caveAt(p);
   var c = vec3f(0.0);
   if (indoor < 0.5 && cave < 0.99) { c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow * (1.0 - cave); }
-  if (indoor > 3.5) { c = voidKeys(n, v, albedo, f0, rough, metal); }
+  if (indoor > 3.5) { c = voidKeys(n, v, albedo, f0, rough, metal) * voidTint(p, 0.0); }
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
-  if (indoor > 3.5) { ambient = voidAmbient(up); }
+  if (indoor > 3.5) { ambient = voidAmbient(up) * voidTint(p, 1.0); }
   else if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
   else if (indoor > 1.5) { ambient = select(select(vec3f(0.044, 0.044, 0.048), vec3f(0.095, 0.078, 0.064), indoor > 2.1), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   if (indoor > 1.1 && indoor < 1.5) { ambient *= mix(0.25, 1.0, clamp((F.sunColor.a - 0.1) / 0.9, 0.0, 1.0)); }

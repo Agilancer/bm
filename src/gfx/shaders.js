@@ -1,7 +1,7 @@
 // WGSL shared by the world's pipelines: the frame block, lighting, shadows, fog.
 import { CHURCH_X, CHURCH_Z, SEXTON } from '../core/church.js';
 import { DELVES } from '../core/dungeon.js';
-import { MAW_DIR } from '../core/delve-elder.js';
+import { MAW_DIR, VOID_TINTS } from '../core/delve-elder.js';
 import { HALL_BOX } from '../core/testhall.js';
 import { INDOORS as BELL_INDOORS } from '../core/belltower.js';
 
@@ -264,6 +264,13 @@ fn voidKeys(n: vec3f, v: vec3f, albedo: vec3f, f0: vec3f, rough: f32, metal: f32
   let maw = brdf(n, v, normalize(vec3f(VOID_MAW.x, 0.16, VOID_MAW.z)), albedo, f0, rough, metal) * vec3f(1.05, 0.48, 0.72);
   return neb + maw;
 }
+// Over each god's island the void's light is its own (src/core/delve-elder.js VOID_TINTS): a tint on the keys (k 0) or the
+// ambient (k 1), full over the island and gone 30 m out.
+fn voidTint(p: vec3f, k: f32) -> vec3f {
+  var t = vec3f(1.0);
+${VOID_TINTS.map((v) => `  t = mix(t, mix(vec3f(${v.key.map(f32).join(', ')}), vec3f(${v.amb.map(f32).join(', ')}), k), 1.0 - smoothstep(${f32(v.r)}, ${f32(v.r + 30)}, distance(p.xz, vec2f(${f32(v.x)}, ${f32(v.z)}))));`).join('\n')}
+  return t;
+}
 // What a shiny thing sees of the void: its violet, the Maw's glow in the north.
 fn voidEnv(d: vec3f) -> vec3f {
   return vec3f(0.045, 0.025, 0.08) + vec3f(0.08, 0.06, 0.14) * max(d.y, 0.0) + vec3f(0.9, 0.38, 0.6) * pow(max(dot(d, VOID_MAW), 0.0), 7.0);
@@ -275,12 +282,12 @@ fn shadePBR(p: vec3f, n: vec3f, v: vec3f, albedo: vec3f, rough: f32, metal: f32,
   let cave = caveAt(p);
   var c = vec3f(0.0);
   if (indoor < 0.5 && cave < 0.99) { c = brdf(n, v, F.sunDir.xyz, albedo, f0, rough, metal) * F.sunColor.rgb * shadow * (1.0 - cave); }
-  if (indoor > 3.5) { c = voidKeys(n, v, albedo, f0, rough, metal); }
+  if (indoor > 3.5) { c = voidKeys(n, v, albedo, f0, rough, metal) * voidTint(p, 0.0); }
   // Ambient: the sky's hemisphere for diffuse, its picture for reflections.
   let up = n.y * 0.5 + 0.5;
   var ambient = mix(F.groundAmb.rgb, F.skyAmb.rgb, up);
   // (The Test Dungeon is lit white from its ceilings: bright from above, the floor's light thrown back up.)
-  if (indoor > 3.5) { ambient = voidAmbient(up); }
+  if (indoor > 3.5) { ambient = voidAmbient(up) * voidTint(p, 1.0); }
   else if (indoor > 2.5) { ambient = mix(vec3f(0.36, 0.36, 0.38), vec3f(0.82, 0.83, 0.86), up); }
   else if (indoor > 1.5) { ambient = select(select(vec3f(0.044, 0.044, 0.048), vec3f(0.095, 0.078, 0.064), indoor > 2.1), vec3f(0.15, 0.105, 0.085), indoor > 2.2); } else if (indoor > 0.5) { ambient = mix(vec3f(0.12, 0.095, 0.08), vec3f(0.2, 0.19, 0.22), up); }
   // (A house's rooms have only their windows: at night, about a fifth of the day's. F.sunColor.a is the day behind a window.)
@@ -336,7 +343,7 @@ fn applyFog(c: vec3f, p: vec3f, viewDir: vec3f, dist: f32) -> vec3f {
   if (indoor > 3.5) {
     // The void: a violet haze the far islands go into, lit toward the Maw.
     let m = pow(max(dot(viewDir, VOID_MAW), 0.0), 4.0);
-    return mix(c, mix(vec3f(0.05, 0.028, 0.08), vec3f(0.3, 0.12, 0.22), m), clamp(1.0 - exp(-dist * 0.0021), 0.0, 1.0));
+    return mix(c, mix(vec3f(0.05, 0.028, 0.08) * voidTint(p, 1.0), vec3f(0.3, 0.12, 0.22), m), clamp(1.0 - exp(-dist * 0.0021), 0.0, 1.0));
   }
   if (indoor > 2.5) {
     // The Test Dungeon: a faint white haze down the length of the arena, no more.

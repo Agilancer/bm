@@ -23,7 +23,7 @@ import { terrainHeight } from '../core/terrain.js';
 import { ELEM, FX } from './spells.js';
 import { TripoMonster } from './tripo.js';
 import { foeOf } from './foes.js';
-import { route, voidStep } from './voidland.js';
+import { route, voidDraw, voidStep } from './voidland.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -122,6 +122,15 @@ export class Warrens {
     // (The Elder Gods' islands: falls, leaps, gust stones, seals, and the party across gaps: src/sim/voidland.js.)
     if (this.delve.style === 'void') voidStep(this, dt);
     this.post(dt);
+  }
+
+  // What's drawn of a delve each tick (src/sim/sim.worker.js, after the spells' update has cleared the frame's shapes):
+  // its fight's own (spec.draw: a god's light, the set pieces it uses), and the void's.
+  drawFx() {
+    if (!this.inside || !this.delve) return;
+    const f = this.fight;
+    if (f?.spec?.draw) f.spec.draw(this, f, this.bossBodies(f.boss.key).filter((m) => !m.dead));
+    if (this.delve.style === 'void') voidDraw(this);
   }
 
   anyCleared(d) { return BOSSES.some((b) => b.delve === d.key && this.down.has(b.key)) || this.sim.tripo?.lairs.some((l) => l.delve === d.key && l.state === 'cleared'); }
@@ -264,7 +273,9 @@ export class Warrens {
         const m = bodies[0];
         // (On top of what its body leaves: rollLoot's 20 and 21 in src/items/items.js. Nothing the Warrens' rank and file
         // drop comes near it.)
-        if (m) sim.event(EV.LOOT, m.x, sim.world.height(m.x, m.z), m.z, b.key === this.delve.last ? 21 : 20, 0);
+        // (Where a fight says, if its body went where nobody can follow: an Elder God over its island's edge.)
+        const [lx, lz] = m?.lootAt || [m?.x, m?.z];
+        if (m) sim.event(EV.LOOT, lx, sim.world.height(lx, lz), lz, b.key === this.delve.last ? 21 : 20, 0);
         continue;
       }
       const live = bodies.filter((m) => !m.dead);

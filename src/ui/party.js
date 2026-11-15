@@ -74,7 +74,8 @@ export class PartyUI {
       #raidWarn { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 7; width: min(760px, 92vw); text-align: center; pointer-events: none;
         font: 700 22px/1.3 Georgia, serif; color: #ffcf6a; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 14px rgba(120,30,0,.8); }
       #raidWarn div { animation: rwIn .25s ease-out; transition: opacity .6s; margin-bottom: 6px; }
-      #raidWarn div.godSay { font: italic 400 21px/1.35 Georgia, serif; color: #e6d6ff; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 18px rgba(110,40,190,.9); animation: rwSay .6s ease-out; }
+      #raidWarn div.godSay { display: table; margin: 0 auto 6px; max-width: 100%; box-sizing: border-box; padding: 9px 22px 11px; border-radius: 6px; background: linear-gradient(rgba(10,4,20,.86), rgba(4,2,10,.9)); box-shadow: 0 0 0 1px rgba(160,120,230,.28), 0 6px 26px rgba(0,0,0,.6);
+        font: italic 400 21px/1.35 Georgia, serif; color: #ece0ff; text-shadow: 0 0 6px #000, 0 2px 3px #000, 0 0 18px rgba(110,40,190,.9); animation: rwSay .6s ease-out; }
       #raidWarn div.godSay b { display: block; font: 700 12px/1.4 Georgia, serif; letter-spacing: .32em; font-style: normal; color: #b993ff; }
       @keyframes rwSay { from { opacity: 0; letter-spacing: .04em; } to { opacity: 1; } }
       @keyframes rwIn { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }

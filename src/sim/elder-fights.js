@@ -20,6 +20,7 @@ import { BASALT, BASALT_UP, CINDER, GALE, GALE_ISLES, LINES, MAW, MAW_ISLES, PYL
 import { EV } from '../core/layout.js';
 import { clamp, wrapAngle } from '../core/math.js';
 import { tipBody } from './moves.js';
+import { struck } from './ragdoll.js';
 import { ELEM, FX } from './spells.js';
 import { blowOff, islandOf, landing, leap } from './voidland.js';
 
@@ -64,14 +65,67 @@ function say(W, f, when, gap = 7) {
 }
 // Each tick of every god: its first words, a word over each of yours who falls, and a word as it weakens.
 function talk(W, f, m) {
-  if (!f.spoke) { f.spoke = true; say(W, f, 'intro', 0); }
+  // (Its first words, unless it said them a moment ago as you came over its bridge: src/sim/voidland.js gates.)
+  if (!f.spoke) { f.spoke = true; if (W.sim.time - (W.delve.told?.[f.boss.key] ?? -1e9) > 90) say(W, f, 'intro', 0); }
   if (!f.pulled && f.t > 6) { f.pulled = true; say(W, f, 'pull', 0); }
   const down = [W.sim.player, ...W.party()].filter((b) => b.dead).length;
   if (down > (f.downSeen || 0)) say(W, f, 'kill', 4);
   f.downSeen = down;
   if (!f.lowSaid && m.hp < m.maxHp * 0.12) { f.lowSaid = true; say(W, f, 'low', 0); }
 }
-const lastWords = (W, f) => say(W, f, 'death', 0);
+const lastWords = (W, f) => { if (!f.lastSaid) { f.lastSaid = true; say(W, f, 'death', 0); } };
+// Each god lit in its own colour, from above and before it, every tick of its fight (spec.draw): the void's violet would
+// make them all one dark shape. (Thyrraxis storm-green, Kaldurra ember, Morvekh ice, Nihvaroth violet.) A light and
+// nothing drawn: FX.LIGHT.
+const GOD_LIGHT = { thyrraxis: ELEM.HEAL, kaldurra: FIRE, morvekh: FROST, nihvaroth: VOID };
+function godLight(W, f, m) {
+  const e = GOD_LIGHT[f.boss.key];
+  if (e === undefined || !m || m.dead) return;
+  const h = m.meta.height, fx = Math.sin(m.yaw), fz = Math.cos(m.yaw), y = m.y + (m.hover || 0);
+  W.sim.casting.fx(FX.LIGHT, e, m.x + fx * h * 0.6, y + h * 1.1, m.z + fz * h * 0.6, 0, 0, 1, 0, 0, 0, 8, h * 2.6, 0, 0, 0);
+}
+// A god's end over the edge of its island: its life gone, it doesn't drop where it stands but goes out over the edge
+// (o.dir: which way) in `secs`, playing o.clip, and falls into the dark under the islands, limp (src/sim/tripo.js
+// lastStand; src/sim/ragdoll.js fallGround). Its hoard is left on the island, a few strides in from where it went over.
+// Thyrraxis staggers off his disc; Nihvaroth is dragged back into the Maw.
+function overTheEdge(W, f, m, o) {
+  if (!m) return;
+  m.overT = undefined; m.fallGround = null; m.lootAt = null;
+  m.lastStand = (k) => {
+    if (k.overT === -1) return false;
+    if (k.overT !== undefined) return true;
+    const sim = W.sim;
+    k.overT = 0; k.hp = 0; k.shrug = 0; f.hold = true; f.dying = true;
+    lastWords(W, f);
+    W.clearGround();
+    ground(k);
+    let [dx, dz] = o.dir(k);
+    if (Math.hypot(dx, dz) < 0.5) { dx = -Math.sin(k.yaw); dz = -Math.cos(k.yaw); }
+    const L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L;
+    // (Out to where its island ends that way, and its own breadth past that.)
+    let far = 0;
+    while (far < 160 && caveRoom(k.x + ux * far, k.z + uz * far) > -1) far += 1;
+    const x0 = k.x, z0 = k.z, x1 = k.x + ux * (far + k.opts.radius), z1 = k.z + uz * (far + k.opts.radius);
+    k.lootAt = landing(W, x0 + ux * Math.max(0, far - 7), z0 + uz * Math.max(0, far - 7), 2.5);
+    k.free = true; k.noTurn = true; k.state = 0; k.act = null; k.breathing = false;
+    if (k.rig.clips[o.clip]) { k.setClip(o.clip); k.t = 0; }
+    k.script = (q, dt) => {
+      q.overT += dt;
+      const u = Math.min(1, q.overT / o.secs), s = u * u;
+      q.x = x0 + (x1 - x0) * s; q.z = z0 + (z1 - z0) * s; q.vx = 0; q.vz = 0;
+      const c = q.rig.clips[q.clip];
+      if (c) q.t = (q.t + dt * (q.pace || 1)) % c.dur;
+      if ((sim.tick & 3) === 0) o.fx?.(q);
+      if (u < 1) return true;
+      // (Over: limp, and down into the dark.)
+      q.script = null; q.overT = -1;
+      struck(q, sim, q.x - ux * 3, q.z - uz * 3, 120);
+      q.fallGround = (x, z, y) => (caveRoom(x, z) > 0.3 ? sim.world.groundFor(x, z, y) : y - 1e4);
+      return false;
+    };
+    return true;
+  };
+}
 const wipeWords = (W, f) => { if (W.sim.player.dead) say(W, f, 'wipe', 0); };
 
 // ---- flight ----------------------------------------------------------------------------------------------------------------
@@ -193,9 +247,12 @@ function breath(W, m, elem, k, o = {}) {
   if (air) { if (!airMove(m, clip, dur)) return false; m.aimLock = W.sim.time + dur; }
   else { m.breathing = true; m.breathHeld = true; m.state = 4; m.setClip(clip); m.t = 0; }
   // (From the air, the cone is laid on the ground under its mouth: ahead of it by its height.)
-  W.sim.perils.mark({ shape: 'cone', ride: m, ahead: air ? m.meta.height * 0.15 : 0, r: o.r || 20, half: o.half || 0.55, fuse: w[0] * dur, life: (w[1] - w[0]) * dur, dps: K(m, k), elem, from: m, tag: 'breath', spare: air ? null : (b) => b === tank });
+  // (Its reach the longer the bigger it is: twenty metres for a god of eleven and a half, twenty-four for Kaldurra.)
+  const R = o.r || 20 * Math.sqrt(clamp(m.meta.height / 11.5, 1, 1.6));
+  const ahead = o.ahead ?? (air ? m.meta.height * 0.15 : 0);
+  W.sim.perils.mark({ shape: 'cone', ride: m, ahead, r: R, half: o.half || 0.55, fuse: w[0] * dur, life: (w[1] - w[0]) * dur, dps: K(m, k), elem, from: m, tag: 'breath', spare: air ? null : (b) => b === tank });
   // (What it leaves burning on the ground after.)
-  if (o.leave) W.sim.perils.later(w[1] * dur, () => { if (!m.dead) W.sim.perils.mark({ shape: 'cone', x: m.x, z: m.z, yaw: m.yaw, r: (o.r || 20) * 0.85, half: (o.half || 0.55) * 0.8, fuse: 0.2, life: o.leave, dps: K(m, k * 0.45), elem, tag: 'frozen' }); });
+  if (o.leave) W.sim.perils.later(w[1] * dur, () => { if (!m.dead) W.sim.perils.mark({ shape: 'cone', x: m.x + Math.sin(m.yaw) * ahead, z: m.z + Math.cos(m.yaw) * ahead, yaw: m.yaw, r: R * 0.85, half: (o.half || 0.55) * 0.8, fuse: 0.2, life: o.leave, dps: K(m, k * 0.45), elem, tag: 'frozen' }); });
   return true;
 }
 // Three rakes of its claws, fanned toward whoever it's for.
@@ -222,7 +279,7 @@ export const ELDER_FIGHTS = {
   thyrraxis: {
     open: 'thy_open', pace: [5.2, 4.2, 0.4], turn: [24, 4], enrage: [540, 2.5, 'thy_enrage'],
     deck: (f) => (f.phase === 0 ? ['breath', 'rake', 'squall', 'gale', 'spark', 'conduit'] : f.phase === 2 ? ['breath', 'rake', 'rings', 'clouds', 'tail'] : ['breath', 'rake', 'squall', 'gale', 'spark', 'rings', 'conduit']),
-    setUp(W, m) { Object.assign(m.opts, { ground: true, radius: 3.2, breathRange: 20, speed: 5.5 }); },
+    setUp(W, m) { Object.assign(m.opts, { ground: true, radius: 4.4, breathRange: 26, speed: 6 }); },
     moves: {
       breath: { who: 'none', clip: null, warn: 'thy_breath', gap: 20, when: (W, f, m) => !f.turn?.on, go(W, f, m) { breath(W, m, STORM, 0.55); say(W, f, 'breath'); } },
       rake: { clip: 'claw_rake', face: true, at: 0.85, secs: 1.6, go: (W, f, m, t, P) => rake(P, m, t, 0.5, STORM) },
@@ -231,6 +288,8 @@ export const ELDER_FIGHTS = {
       squall: { who: 'none', clip: 'roar', secs: 1.4, warn: 'thy_squall', go(W, f, m, t, P) {
         const [cx, cz] = W2(W, GALE.x, GALE.z), ang = Math.random() * TAU, ux = Math.sin(ang), uz = Math.cos(ang), px = Math.cos(ang), pz = -Math.sin(ang);
         const gap = rnd(-18, 18), half = 34, speed = 9, from = -34;
+        // (Its gap, shown as it walks: draw below.)
+        f.squall = { t0: W.sim.time, cx, cz, ux, uz, px, pz, gap, from, speed, fuse: 2.2, life: 68 / speed };
         // (Two lengths of it either side of the gap, walking on together.)
         for (const [a, b] of [[-half, gap - 2.6], [gap + 2.6, half]]) {
           if (b - a < 1) continue;
@@ -279,9 +338,13 @@ export const ELDER_FIGHTS = {
         say(W, f, 'clouds');
       } },
     },
-    begin(W, f, live) { underHundred(W, f, live); f.phase = 0; f.over = []; },
+    begin(W, f, live) {
+      underHundred(W, f, live); f.phase = 0; f.over = [];
+      // (His end: staggering back off the disc's edge, away from its middle.)
+      overTheEdge(W, f, live[0], { dir: (k) => { const [cx, cz] = W2(W, GALE.x, GALE.z); return [k.x - cx, k.z - cz]; }, secs: 2.8, clip: 'stagger_loop' });
+    },
     step(W, f, [m], dt) {
-      if (!m) return;
+      if (!m || f.dying) return;
       const sim = W.sim, P = sim.perils, now = sim.time;
       stepTimers(m, dt);
       talk(W, f, m);
@@ -314,11 +377,12 @@ export const ELDER_FIGHTS = {
         for (const o of f.over) o.mk.life = 0; f.over = [];
         if (f.conduit) { f.conduit.mk.dead = true; f.conduit = null; }
         if (f.spark) { f.spark.mk.dead = true; f.spark = null; }
+        f.squall = null;
         m.perform({ clip: 'enrage', secs: 2.2, at: 1.6, fn: () => {
           W.warn(WARN.thy_nova); say(W, f, 'nova', 0);
           sim.casting.burst(FX.SHOCK, STORM, m.x, m.y + 2, m.z, 4, 30, 0.8, { light: 30, lightR: 40 });
           W.bodies().forEach((b, i) => { const s = GALE_ISLES[i % 3], [x, z] = W2(W, s.at[0] + rnd(-3, 3), s.at[1] + rnd(-3, 3)); throwTo(W, m, b, x, z, 0.45, 9); });
-          // (Storm elementals down onto the islets after you.)
+          // (Storm whelps down onto the islets after you.)
           P.later(5, () => { if (m.dead) return; W.warn(WARN.thy_elementals); GALE_ISLES.forEach((s, i) => W.spawnAdds(`thy_storm_${i}`, ['dragonling_black'], W2(W, s.at[0], s.at[1]), 1, (k) => { k.hp = k.maxHp = 4500; k.opts.damage = 100; k.opts.name = 'STORM WHELP'; k.aggro = true; k.opts.leash = 200; k.opts.sight = 60; }, ['Stormhide'], true)); });
           fly(W, m, { x: m.x, z: m.z, h: 16, hold: 2.5, face: () => sim.player, then: () => isletHop(W, f, m, true) });
         } });
@@ -349,6 +413,23 @@ export const ELDER_FIGHTS = {
     },
     // Where a fall off the disc comes down: the islet below, nearest to where you went over.
     fallTo(W, f, b) { const n = nearestOf(W, GALE_ISLES, b); return [n.x, n.z]; },
+    // His light; the gap in a squall line, faint green as it walks; and while his wings beat, the lee behind each pylon.
+    draw(W, f, [m]) {
+      godLight(W, f, m);
+      const sim = W.sim, c = sim.casting, now = sim.time, q = f.squall;
+      if (q && now < q.t0 + q.fuse + q.life) {
+        const s = q.from + q.speed * Math.max(0, now - q.t0 - q.fuse), x = q.cx + q.ux * s + q.px * (q.gap - 2.4), z = q.cz + q.uz * s + q.pz * (q.gap - 2.4);
+        c.fx(FX.MARK, ELEM.HEAL, x, caveFloorY(x, z) + 0.06, z, 4.8, q.px, 1.1 / 4.8, q.pz, 1, 0.5, 0, 0, 1.5, 3, 3);
+      }
+      const g = f.gale;
+      if (g && m && now > g.at - 1.4) {
+        for (const [i, [lx, lz]] of PYLONS.entries()) {
+          if ((f.over || []).some((o) => o.i === i)) continue;
+          const [px, pz] = W2(W, lx, lz), ax = px - m.x, az = pz - m.z, L = Math.hypot(ax, az) || 1, ux = ax / L, uz = az / L, x = px + ux * 1.8, z = pz + uz * 1.8;
+          c.fx(FX.MARK, ELEM.HEAL, x, caveFloorY(x, z) + 0.06, z, 6, ux, 1.9 / 6, uz, 1, 0.42, 0, 0, 1.5, i, 3);
+        }
+      }
+    },
     // (The updrafts carry you back up while he's on the disc, not while he's down among the islets: Storm Nova to the updraft.)
     gust: (W, f, l) => !l.one || f.phase === 0 || f.phase === 3,
     order(W, f, b, [m]) {
@@ -416,7 +497,7 @@ export const ELDER_FIGHTS = {
   kaldurra: {
     open: 'kal_open', pace: [5, 4, 0.4], turn: [22, 4], enrage: [560, 2.5, 'kal_enrage'],
     deck: (f) => (f.phase < 2 ? ['smash', 'wildfire', 'meteor', 'breath', 'rake', 'run'] : ['smash', 'wildfire', 'meteor', 'breath', 'rake', 'run', 'tail']),
-    setUp(W, m) { Object.assign(m.opts, { ground: true, radius: 3.4, breathRange: 20, speed: 5 }); },
+    setUp(W, m) { Object.assign(m.opts, { ground: true, radius: 4.7, breathRange: 26, speed: 5.5 }); },
     moves: {
       breath: { who: 'none', clip: null, warn: null, when: (W, f) => !f.turn?.on, go(W, f, m) { breath(W, m, FIRE, 0.6, { leave: 5 }); } },
       rake: { clip: 'claw_rake', face: true, at: 0.85, secs: 1.6, go: (W, f, m, t, P) => rake(P, m, t, 0.5, FIRE) },
@@ -431,11 +512,11 @@ export const ELDER_FIGHTS = {
         }
         say(W, f, 'smash');
       } },
-      // Wildfire: a front of it round the ring from one side, walking on round it. Keep ahead of it.
+      // Wildfire: a front of it round the ring from one side, walking on round it. Keep ahead of it, or get behind it.
       wildfire: { who: 'none', clip: 'roar', secs: 1.5, warn: 'kal_wildfire', gap: 20, when: (W, f) => !f.flooding, go(W, f, m, t, P) {
         const [cx, cz] = W2(W, CINDER.x, CINDER.z), b = W.mark() || W.sim.player, at = Math.atan2(b.x - cx, b.z - cz) + (Math.random() < 0.5 ? 1 : -1) * 1.2;
-        // (Round the ring slower than you walk even at its rim: 4.6 m a second there, 1.6 by the vent.)
-        P.mark({ shape: 'cone', x: cx, z: cz, yaw: at, r: CINDER.r + 1, half: 0.22, fuse: 2.4, life: 15, spin: (Math.random() < 0.5 ? 1 : -1) * 0.11, dps: K(m, 0.55), elem: FIRE, tag: 'wildfire' });
+        // (Round the ring a little slower than a run at its rim, 5.6 m a second there, 2 by the vent: keep inside of it.)
+        P.mark({ shape: 'cone', x: cx, z: cz, yaw: at, r: CINDER.r + 1, half: 0.22, fuse: 2.4, life: 15, spin: (Math.random() < 0.5 ? 1 : -1) * 0.14, dps: K(m, 0.55), elem: FIRE, tag: 'wildfire' });
         say(W, f, 'wildfire');
       } },
       // A living meteor: rolls after one of you, and bursts on whoever it reaches. Lead it round.
@@ -474,8 +555,9 @@ export const ELDER_FIGHTS = {
         if ((sim.tick & 3) === 0) sim.casting.burst(FX.FLAME, FIRE, mk.x, mk.y + 0.8, mk.z, 1, 2.4, 0.5, { alpha: 0.9, len: 1.5, light: 7, lightR: 8 });
       }
       f.meteors = f.meteors.filter((q) => !q.gone);
-      // The floods: at two thirds and a third of her life, up over the vent while the caldera fills; the pillars the only ground.
-      for (const [at, n] of [[0.66, 1], [0.33, 2]]) {
+      // The floods: at two thirds, a third and a tenth of her life, up over the vent while the caldera fills; the pillars the
+      // only ground, and fewer of them each time (her breath melts the ones it's on: sink).
+      for (const [at, n] of [[0.66, 1], [0.33, 2], [0.1, 3]]) {
         // (Never while the flowers are open: the roar comes first, then the flood.)
         if (f.floods >= n || m.hp > m.maxHp * at || busy(m) || f.flowers) continue;
         f.floods = n; f.flooding = true; f.hold = true; f.phase = n;
@@ -483,18 +565,31 @@ export const ELDER_FIGHTS = {
         const spare = (b) => b.y > floor + BASALT_UP * 0.6;
         fly(W, m, { x: cx, z: cz, h: 10, hold: 15, face: () => sim.player, each(k, dt2, a) {
           if (a.stage !== 'hold') return;
-          if (!a.lava) a.lava = P.mark({ shape: 'ring', x: cx, z: cz, r: CINDER.r + 2, r0: CINDER.vent + 0.4, fuse: 3.5, life: 11, dps: K(m, 1.0), elem: FIRE, tag: 'flood', spare });
-          // (And her breath down onto a pillar now and then.)
-          if (a.t > 4 && (a.next = (a.next ?? 4) - dt2) <= 0) { a.next = 4.2; const t = pickOne(W.bodies()); if (t) { k.yaw = yawTo(k, t); breath(W, k, FIRE, 0.5, { r: 26, half: 0.3 }); } }
+          if (!a.lava) f.lava = a.lava = P.mark({ shape: 'ring', x: cx, z: cz, r: CINDER.r + 2, r0: CINDER.vent + 0.4, fuse: 3.5, life: 11, dps: K(m, 1.0), elem: FIRE, tag: 'flood', spare, dim: 0.3 });
+          // (And her breath down onto a pillar now and then: two at once from the second flood on. Each pillar breathed on
+          // melts, its top molten for the rest of the fight.)
+          if (a.t > 4 && (a.next = (a.next ?? 4) - dt2) <= 0) {
+            a.next = 4.6;
+            const picks = [];
+            for (const b of W.bodies().filter((o) => !o.dead).sort(() => Math.random() - 0.5)) { const i = pillarOf(W, b); if (i >= 0 && !picks.some((q) => q.i === i)) picks.push({ b, i }); if (picks.length >= (n >= 2 ? 2 : 1)) break; }
+            if (!picks.length) { const t = pickOne(W.bodies()); if (t) picks.push({ b: t, i: -1 }); }
+            const hc = k.rig.clips.hover_breath, dur = hc ? hc.dur / (k.pace || 1) : 2.5, w = hc?.info?.breathWin || k.meta.breathWin || [0.25, 0.8];
+            picks.forEach(({ b, i }, j) => {
+              const yaw = yawTo(k, b);
+              if (j === 0) { k.yaw = yaw; breath(W, k, FIRE, 0.5, { r: 26, half: 0.3 }); }
+              else P.mark({ shape: 'cone', x: k.x, z: k.z, yaw, r: 26, half: 0.3, fuse: w[0] * dur, life: (w[1] - w[0]) * dur, dps: K(k, 0.5), elem: FIRE, from: k, tag: 'breath' });
+              if (i >= 0) P.later(w[1] * dur, () => sink(W, f, k, i));
+            });
+          }
         }, then: () => {
-          f.flooding = false;
+          f.flooding = false; f.lava = null;
           W.warn(WARN.kal_ebb); say(W, f, 'rings', 0);
           rings(W, cx, cz, 0.55, m, FIRE, n === 1 ? 3 : 4, 1.9, 7, CINDER.r + 2);
           // (After the second, she comes down hard: winded, and everything hits her twice as hard for a while.)
           const a = rnd(0, TAU), R = rnd(CINDER.vent + 9, CINDER.r - 10);
-          fly(W, m, { x: cx + Math.sin(a) * R, z: cz + Math.cos(a) * R, h: 8, hold: 1, face: () => sim.player, land: true, landClip: n === 2 ? 'crash_land' : null, then: () => {
+          fly(W, m, { x: cx + Math.sin(a) * R, z: cz + Math.cos(a) * R, h: 8, hold: 1, face: () => sim.player, land: true, landClip: n >= 2 ? 'crash_land' : null, then: () => {
             f.hold = false;
-            if (n === 2) {
+            if (n >= 2) {
               // (Down hard, sprawled and heaving: everything hits her twice as hard till she's up.)
               W.warn(WARN.kal_crash); say(W, f, 'crash', 0);
               m.shrug = 2; f.hold = true;
@@ -529,6 +624,20 @@ export const ELDER_FIGHTS = {
         return;
       }
     },
+    // Her light; and the flood, once it's up, as a dark crust with fire in its cracks (its mark is drawn faint: dim).
+    draw(W, f, [m]) {
+      godLight(W, f, m);
+      const q = f.lava;
+      if (!q || q.dead || q.t < q.fuse) return;
+      const sim = W.sim, c = sim.casting, [cx, cz] = W2(W, CINDER.x, CINDER.z), k = clamp((q.fuse + q.life - q.t) / 0.7, 0, 1), top = W.delve.y + CINDER.y + BASALT_UP * 0.6;
+      for (let i = 0; i < 34; i++) {
+        const a = i * 2.39996 + 0.3, r = CINDER.vent + 2 + ((i * 7.31) % 1) * (CINDER.r - CINDER.vent - 3), x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r, y = sim.world.height(x, z);
+        if (y > top) continue;
+        const yaw = a * 3.7 + i, L = 2.4 + (i % 4) * 1.3, fl = k * (0.7 + 0.3 * Math.sin(sim.time * 2.3 + i));
+        c.fx(FX.MARK, FIRE, x, y + 0.06, z, L, Math.sin(yaw), 0.2 / L, Math.cos(yaw), 1, fl, 0, 0, 1.5, i, 3);
+        if (i % 2) { const b = yaw + (i % 4 < 2 ? 0.9 : -0.9), mx = x + Math.sin(yaw) * L * 0.5, mz = z + Math.cos(yaw) * L * 0.5; c.fx(FX.MARK, FIRE, mx, y + 0.06, mz, L * 0.6, Math.sin(b), 0.14 / (L * 0.6), Math.cos(b), 1, fl, 0, 0, 1.5, i + 0.5, 3); }
+      }
+    },
     order(W, f, b, [m]) {
       if (!m) return null;
       const [cx, cz] = W2(W, CINDER.x, CINDER.z), D = W.delve;
@@ -536,7 +645,9 @@ export const ELDER_FIGHTS = {
       if (f.flooding) {
         const taken = W.bodies().filter((o) => o !== b).map((o) => [o.x, o.z]);
         let best = null, bd = Infinity;
-        for (const [x, z, r] of BASALT) {
+        for (const [i, [x, z, r]] of BASALT.entries()) {
+          // (Not one that's melted.)
+          if (f.sunk?.has(i)) continue;
           const wx = D.x + x, wz = D.z + z;
           if (taken.some(([ox, oz]) => Math.hypot(ox - wx, oz - wz) < r - 0.3) && dist(b, wx, wz) > r) continue;
           const dd = dist(b, wx, wz);
@@ -576,14 +687,14 @@ export const ELDER_FIGHTS = {
   // ---- Morvekh, Who Remembers the Cold ---------------------------------------------------------------------------------------
   morvekh: {
     open: 'mor_open', pace: [5, 4, 0.3], turn: [24, 4], enrage: [600, 2.5, 'mor_enrage'],
-    deck: (f) => (f.stage < 3 ? ['breath', 'grasp', 'bombs', 'breath'] : f.stage === 3 ? ['breath', 'rake', 'grasp', 'bombs', 'tail', 'deep'] : ['breath', 'rake', 'bombs', 'tail', 'deep']),
-    setUp(W, m) { Object.assign(m.opts, { ground: true, radius: 3, breathRange: 22, speed: 4.5 }); },
+    deck: (f) => (f.stage < 3 ? ['breath', 'grasp', 'bombs', 'breath'] : f.stage === 3 ? ['breath', 'rake', 'grasp', 'bombs', 'tail', 'deep'] : f.stage === 4 ? ['bombs', 'shards', 'shards'] : ['breath', 'rake', 'bombs', 'tail', 'deep']),
+    setUp(W, m) { Object.assign(m.opts, { ground: true, radius: 4.2, breathRange: 26, speed: 5 }); },
     moves: {
       // (Never while the grave has you held to a crystal: you couldn't step out of it.)
       breath: { who: 'mark', clip: null, warn: 'mor_breath', gap: 16, when: (W, f) => !f.turn?.on && !f.zero && !f.grasp && W.sim.time > (f.calm || 0), go(W, f, m, t) {
         if (m.flying && t) m.yaw = yawTo(m, t);
         // (From his perch, a narrow cone onto the shelf, aimed at one of you: the rest of the shelf to step to.)
-        breath(W, m, FROST, 0.7, m.flying ? { leave: 4, r: 24, half: 0.3 } : { leave: 6, r: 20 }); say(W, f, 'breath');
+        breath(W, m, FROST, 0.7, m.flying ? { leave: 4, r: 13, half: 0.32, ahead: 1.6 } : { leave: 6, r: 20 }); say(W, f, 'breath');
       } },
       rake: { clip: 'claw_rake', face: true, at: 0.85, secs: 1.6, when: (W, f, m) => !m.flying, go: (W, f, m, t, P) => rake(P, m, t, 0.5, FROST) },
       tail: { who: 'none', clip: 'tail_slam', at: 0.9, secs: 1.8, when: (W, f, m) => !m.flying, go: (W, f, m, t, P) => tail(P, m, 0.65, FROST) },
@@ -593,11 +704,22 @@ export const ELDER_FIGHTS = {
         f.grasp = { at: W.sim.time + 2.2, until: W.sim.time + 7 };
         say(W, f, 'grasp');
       } },
-      // Frost bombs: one after another onto where you stand, each a moment's shadow first.
-      bombs: { who: 'none', clip: null, warn: 'mor_bombs', gap: 14, when: (W, f) => W.sim.time > (f.calm || 0), go(W, f, m, t, P) {
+      // Frost bombs: one after another onto where you stand, each a moment's shadow first. (Never on top of the Grasp or his
+      // frost: one thing at a time to step out of. On the shelves, three of you; in Absolute Zero, two.)
+      bombs: { who: 'none', clip: null, warn: 'mor_bombs', gap: 14, when: (W, f) => W.sim.time > (f.calm || 0) && !f.grasp && !W.sim.perils.marks.some((q) => q.tag === 'frozen' || q.tag === 'breath'), go(W, f, m, t, P) {
         if (m.flying) airMove(m, 'spit', 1.4); else if (!m.perform({ clip: 'spit', secs: 1.4 })) return false;
-        W.bodies().forEach((b, i) => P.later(i * 0.7, () => { if (!m.dead && !b.dead) P.mark({ x: b.x, z: b.z, r: 3, fuse: 2.3, follow: b, lock: 0.4, dmg: K(m, 0.65), knock: 3, elem: FROST, tag: 'bomb' }); }));
+        const cap = f.stage < 3 ? 3 : f.zero ? 2 : 99;
+        W.bodies().filter((b) => !b.dead).sort(() => Math.random() - 0.5).slice(0, cap).forEach((b, i) => P.later(i * 0.7, () => { if (!m.dead && !b.dead) P.mark({ x: b.x, z: b.z, r: 3, fuse: 2.3, follow: b, lock: 0.4, dmg: K(m, 0.65), knock: 3, elem: FROST, tag: 'bomb' }); }));
         say(W, f, 'bombs');
+      } },
+      // Ice from the spire (in Absolute Zero): shards come down beside each grip someone holds. A step round the grip's ring.
+      shards: { who: 'none', clip: null, warn: 'mor_shards', gap: 7, when: (W, f) => !!f.zero, go(W, f, m, t, P) {
+        if (m.flying) airMove(m, 'spit', 1.2);
+        for (const q of f.zero.grips) {
+          if (q.done || !W.bodies().some((b) => dist(b, q.x, q.z) < 3.6)) continue;
+          const a = rnd(0, TAU), x = q.x + Math.sin(a) * 1.8, z = q.z + Math.cos(a) * 1.8;
+          P.mark({ x, z, r: 2.4, fuse: 1.9, dmg: K(m, 0.45), knock: 2, elem: FROST, tag: 'shard' });
+        }
       } },
       // Deep breath (on the summit): a white line drawn across the whole of it.
       deep: { who: 'mark', clip: 'breath_sweep', at: 0.4, secs: 2.4, warn: 'mor_deep', gap: 18, go(W, f, m, t, P) {
@@ -649,23 +771,26 @@ export const ELDER_FIGHTS = {
         if (st === 1 || st === 3) { W.warn(WARN.mor_whelps); spawnWhelps(W, f, m, st); }
         return;
       }
-      // Absolute Zero at a quarter: up off the summit to hang from the spire; a grip in each claw islet to break.
+      // Absolute Zero at a quarter: up off the summit to hang from the spire; a grip in each claw islet to break, a rime whelp
+      // on each to be killed off it, and twenty-five seconds to do it in. His bombs and the spire's shards go on meanwhile.
       if (f.stage === 3 && m.hp < m.maxHp * 0.25 && !busy(m)) {
-        f.stage = 4; f.hold = true;
+        f.stage = 4; f.hold = false;
         W.warn(WARN.mor_zero); say(W, f, 'zero', 0);
         const [cx, cz] = W2(W, RIME.x, RIME.z);
         mist(W, f, m, 4);
-        f.zero = { until: now + 45, grips: RIME_ISLES.map((s) => { const [x, z] = W2(W, s.at[0], s.at[1]); return { s, x, z, held: 0, done: false, mk: P.mark({ x, z, r: 3.2, fuse: 46, soak: true, elem: FROST, tag: 'grip' }) }; }) };
+        f.zero = { until: now + 25, grips: RIME_ISLES.map((s) => { const [x, z] = W2(W, s.at[0], s.at[1]); return { s, x, z, held: 0, done: false, mk: P.mark({ x, z, r: 3.2, fuse: 26, soak: true, elem: FROST, tag: 'grip' }) }; }) };
+        RIME_ISLES.forEach((s, i) => { const [x, z] = W2(W, s.at[0] + 2.5, s.at[1] + 2.5); W.spawnAdds(`mor_claw_${i}`, ['dragonling_undead'], [x, z], 1, (k) => { k.hp = k.maxHp = 4500; k.opts.damage = 90; k.opts.name = 'RIME WHELP'; k.aggro = true; k.opts.leash = 200; k.opts.sight = 60; }, ['Bone-white'], true); });
         m.shrug = 0.15;
-        fly(W, m, { x: cx + 6, z: cz, h: 18, hold: Infinity, face: () => sim.player });
+        fly(W, m, { x: cx + 6, z: cz, h: 18, hold: Infinity, deck: true, face: () => sim.player });
         return;
       }
       const z = f.zero;
       if (z) {
         for (const q of z.grips) {
           if (q.done) continue;
-          const on = W.bodies().some((b) => dist(b, q.x, q.z) < 3.4 && !b.leaping);
-          q.held = on ? q.held + dt : Math.max(0, q.held - dt * 0.5);
+          // (Two in it break it in four seconds; one alone takes six.)
+          const on = W.bodies().filter((b) => dist(b, q.x, q.z) < 3.4 && !b.leaping && !b.dead).length;
+          q.held = on ? q.held + dt * (on >= 2 ? 1 : 4 / 6) : Math.max(0, q.held - dt * 0.5);
           if (q.held > 4) {
             q.done = true; q.mk.life = 0; q.mk.dead = true;
             W.warn(WARN.mor_grip); say(W, f, 'grip', 3);
@@ -677,14 +802,29 @@ export const ELDER_FIGHTS = {
         if (!left || now > z.until) {
           // (Not broken in time: the cold reaches nothing, and everyone with it.)
           if (left) for (const b of W.bodies()) P.hurt(b, K(m, 2.4 + left), m.x, m.z, 0, false, 'zero');
-          f.zero = null; f.stage = 5; m.shrug = left ? 1 : 2.2;
+          f.zero = null; f.stage = 5; m.shrug = left ? 1 : 2.2; f.hold = true;
+          for (const q of z.grips) if (!q.done) { q.mk.life = 0; q.mk.dead = true; }
           for (const q of f.mists) if (q.stage === 4) q.mk.life = 0;
-          W.warn(WARN.mor_fall); say(W, f, 'death', 99);
+          // (Broken in time: he falls, and lies open. Not: the cold takes everyone, and he comes down whole.)
+          W.warn(left ? WARN.mor_zero_fail : WARN.mor_fall); say(W, f, left ? 'kill' : 'grip', 0);
           const [cx, cz] = W2(W, RIME.x, RIME.z);
           fly(W, m, { x: cx, z: cz, h: 8, hold: 0.2, speed: 30, face: () => sim.player, land: true, landClip: 'crash_land', then: () => {
             P.later(9, () => { m.shrug = 1; f.hold = false; m.opts.damage *= 1.1; });
           } });
         }
+      }
+    },
+    // His light; and while the Grasp is on, a ring of frost round each rime crystal: how near it holds you.
+    draw(W, f, [m]) {
+      godLight(W, f, m);
+      const g = f.grasp;
+      if (!g) return;
+      const sim = W.sim, c = sim.casting, p = sim.player, k = sim.time < g.at ? 0.5 + 0.35 * Math.sin(sim.time * 12) : 0.95;
+      for (const q of W.delve.props) {
+        if (q.kind !== 'rime' || q.claw) continue;
+        const [x, z] = W2(W, q.x, q.z);
+        if (dist(p, x, z) > 45) continue;
+        c.fx(FX.RUNE, FROST, x, caveFloorY(x, z) + 0.06, z, 3.4, 0, 1, 0, 0, k, 0, 0, 0.9, q.x);
       }
     },
     // A fall comes down where he's fighting: the shelf he's beside, or the summit.
@@ -727,9 +867,10 @@ export const ELDER_FIGHTS = {
   nihvaroth: {
     open: 'nih_open', pace: [5, 4, 0.3], turn: [24, 4], enrage: [660, 2.5, 'nih_enrage'],
     deck: (f) => (f.phase === 0 ? ['devour', 'float', 'spheres', 'breath', 'rake', 'tail'] : ['devour', 'float', 'spheres', 'breath', 'rake', 'tail', 'devour']),
-    setUp(W, m) { Object.assign(m.opts, { ground: true, radius: 3.8, breathRange: 22, speed: 4.5 }); },
+    setUp(W, m) { Object.assign(m.opts, { ground: true, radius: 5.6, breathRange: 30, speed: 5 }); },
     moves: {
-      breath: { who: 'none', clip: null, when: (W, f) => !f.turn?.on && !f.devour, go(W, f, m) { breath(W, m, VOID, 0.6, { leave: 4 }); } },
+      // (And in the last Devour, onto the wells: from one to another while they last.)
+      breath: { who: 'none', clip: null, when: (W, f) => !f.turn?.on && (!f.devour || !!f.last), go(W, f, m) { breath(W, m, VOID, 0.6, { leave: 4 }); } },
       rake: { clip: 'claw_rake', face: true, at: 0.85, secs: 1.6, go: (W, f, m, t, P) => rake(P, m, t, 0.55, VOID) },
       tail: { who: 'none', clip: 'tail_whip', at: 0.7, secs: 1.4, go: (W, f, m, t, P) => tail(P, m, 0.65, VOID) },
       // Devour: everything pulled toward the Maw over the Lip's north edge, but those in a star well.
@@ -774,9 +915,18 @@ export const ELDER_FIGHTS = {
         say(W, f, 'spheres');
       } },
     },
-    begin(W, f, live) { underHundred(W, f, live); f.phase = 0; f.stars = STARS.n; f.spheres = []; },
+    // (The stars by where each is round its ring, f.starA: one goes out, its own gap is left, and the rest keep their places.)
+    begin(W, f, live) {
+      underHundred(W, f, live); f.phase = 0; f.starA = Array.from({ length: STARS.n }, (_, i) => i / STARS.n * TAU); f.spheres = [];
+      // (His end: the Maw takes back what it made. Dragged backward across the Lip to its north edge, and over.)
+      overTheEdge(W, f, live[0], { dir: (k) => [MAW_X(W) - k.x, MAW_Z(W) - k.z], secs: 4.6, clip: 'stagger_loop', fx: (k) => {
+        const c = W.sim.casting, h = k.meta.height;
+        c.burst(FX.VORTEX, VOID, k.x, k.y + h * 0.4, k.z, h * 0.3, h * 0.6, 0.5, { alpha: 0.7, light: 10, lightR: h * 2 });
+        for (let i = 0; i < 2; i++) { const a = rnd(0, TAU), r = rnd(2, h * 0.5); c.burst(FX.PUFF, VOID, k.x + Math.sin(a) * r, k.y + rnd(0.3, 2), k.z + Math.cos(a) * r, 0.5, 2.6, 0.7, { alpha: 0.6, len: 3 }); }
+      } });
+    },
     step(W, f, [m], dt) {
-      if (!m) return;
+      if (!m || f.dying) return;
       const sim = W.sim, P = sim.perils, now = sim.time, [cx, cz] = W2(W, MAW.x, MAW.z);
       stepTimers(m, dt);
       talk(W, f, m);
@@ -785,13 +935,20 @@ export const ELDER_FIGHTS = {
       f.spin = (f.spin || 0) + STARS.spin * dt;
       const d = f.devour;
       // (Each star a light hung high over the Lip, a beam down from it to its well while a Devour's on: what to run under.)
-      if ((sim.tick % 6) === 0) for (let i = 0; i < f.stars; i++) {
-        const a = f.spin + i / f.stars * TAU, x = cx + Math.sin(a) * starR(f), z = cz + Math.cos(a) * starR(f), y = sim.world.height(x, z);
+      if ((sim.tick % 6) === 0) for (const [i, sa] of f.starA.entries()) {
+        const a = f.spin + sa, x = cx + Math.sin(a) * starR(f), z = cz + Math.cos(a) * starR(f), y = sim.world.height(x, z);
         sim.casting.burst(FX.ORB, LIGHT, x, y + 16, z, 1.3, 1.5, 0.09, { light: i % 2 ? 0 : 7, lightR: 16 });
         if (d && sim.time > d.at - 1.6) sim.casting.burst(FX.BEAM, LIGHT, x, y + 16, z, 0.25, 0.3, 0.09, { ax: 0, ay: -1, az: 0, len: 16, alpha: 0.55 });
       }
       if (d) {
-        for (let i = 0; i < d.wells.length; i++) { const mk = d.wells[i], a = f.spin + i / f.stars * TAU; mk.x = cx + Math.sin(a) * starR(f); mk.z = cz + Math.cos(a) * starR(f); mk.y = sim.world.height(mk.x, mk.z); }
+        // (Each well under its own star.)
+        for (const mk of d.wells) { const a = f.spin + mk.starA; mk.x = cx + Math.sin(a) * starR(f); mk.z = cz + Math.cos(a) * starR(f); mk.y = sim.world.height(mk.x, mk.z); }
+        // (The last Devour: the wells close, three and a half metres to nothing over forty-five seconds, and a star goes out
+        // every six. It ends with them.)
+        if (f.last) {
+          for (const mk of d.wells) mk.r = Math.max(0, 3.4 * (1 - (now - f.last) / 45));
+          if (f.starA.length > 2 && W.every(f, 'lastStar', 6)) putOut(W, f, m);
+        }
         if (now > d.until) { f.devour = null; for (const mk of d.wells) mk.life = 0; }
         else if (now > d.at) {
           const dir = [MAW_X(W) - cx, MAW_Z(W) - cz], L = Math.hypot(dir[0], dir[1]) || 1;
@@ -818,8 +975,18 @@ export const ELDER_FIGHTS = {
           f.ring = P.mark({ shape: 'ring', x: cx, z: cz, r: MAW.r + 2, r0: MAW.r - 4, fuse: 3, life: 9999, dps: K(m, 0.7), elem: VOID, tag: 'ring' });
         }
         if (f.ringOn && f.ring && f.ring.r0 > 21) { f.ring.r0 = Math.max(21, f.ring.r0 - 0.16 * dt); if ((sim.tick & 127) === 0) W.warn(WARN.nih_ring, 25); }
-        if (f.ringOn && W.every(f, 'nova', 26) && f.stars > 3) { f.stars--; W.warn(WARN.nih_nova); say(W, f, 'nova'); sim.casting.burst(FX.SHOCK, LIGHT, cx, m.y + 12, cz, 6, 30, 1, { light: 30, lightR: 60 }); for (const b of W.bodies()) P.hurt(b, K(m, 0.35), cx, cz, 0, false, 'nova'); }
-        if (m.hp < m.maxHp * 0.08 && !f.last) { f.last = true; f.hold = true; W.warn(WARN.nih_last); devour(W, f, m, 9999); }
+        // (Never mid-Devour: a star going out under you, its well with it, would be no fault of yours.)
+        if (f.ringOn && !f.devour && f.starA.length > 3 && W.every(f, 'nova', 26)) { putOut(W, f, m); W.warn(WARN.nih_nova); say(W, f, 'nova'); sim.casting.burst(FX.SHOCK, LIGHT, cx, m.y + 12, cz, 6, 30, 1, { light: 30, lightR: 60 }); for (const b of W.bodies()) P.hurt(b, K(m, 0.35), cx, cz, 0, false, 'nova'); }
+        // At the last: a Devour that doesn't end but by its wells closing, and his breath and claws on you meanwhile. Pulled
+        // over the edge now, you're gone (lethalFall).
+        if (m.hp < m.maxHp * 0.08 && !f.last && !busy(m)) {
+          f.last = now; W.warn(WARN.nih_last);
+          if (f.devour) { for (const mk of f.devour.wells) mk.life = 0; f.devour = null; }
+          devour(W, f, m, 9999);
+        }
+        // The third echo, up out of the Lip as you came back to it: its frost on two of you now and then till it's broken.
+        const u = f.undeadEcho;
+        if (u && !u.dead && W.every(f, 'echoBombs', 9)) for (const b of W.bodies().filter((o) => !o.dead).sort(() => Math.random() - 0.5).slice(0, 2)) P.mark({ x: b.x, z: b.z, r: 2.8, fuse: 2.2, follow: b, lock: 0.4, dmg: K(m, 0.45), knock: 3, elem: FROST, tag: 'bomb' });
       }
     },
     fallTo(W, f, b) {
@@ -827,8 +994,27 @@ export const ELDER_FIGHTS = {
       const [cx, cz] = W2(W, MAW.x, MAW.z);
       return [cx, cz + MAW.r * 0.5];
     },
-    // While the Swallow's on, the echo on each hand's the one to hit.
-    focus(W, f) { return f.swallow ? null : null; },
+    // His light; and the accretion belt: rock going round outside the Lip's edge, and in over it with the ring as it closes.
+    draw(W, f, [m]) {
+      godLight(W, f, m);
+      const sim = W.sim, c = sim.casting, T = sim.time, [cx, cz] = W2(W, MAW.x, MAW.z), y0 = W.delve.y + MAW.y;
+      const r0 = f.ring ? f.ring.r0 : MAW.r + 1.5, r1 = f.ring ? f.ring.r0 + 7 : MAW.r + 8, n = f.ring ? 64 : 40;
+      for (let i = 0; i < n; i++) {
+        const h1 = (i * 0.6180339) % 1, h2 = (i * 0.4142135) % 1, h3 = (i * 0.7320508) % 1;
+        const a = i / n * TAU + T * (0.1 + h2 * 0.08), r = r0 + h1 * (r1 - r0), x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r;
+        const s = 0.3 + h3 * h3 * 1.4, y = y0 + 0.9 + h2 * 3 + Math.sin(T * 0.9 + i) * 0.35;
+        c.fx(FX.ROCK, VOID, x, y, z, s, Math.cos(a), 0.05, -Math.sin(a), s * 2, 1, 0, 0, 0.5, i);
+      }
+    },
+    // While the Swallow's on, the echo on the hand you're on is the one to hit; back on the Lip, the third echo while it stands.
+    focus(W, f) {
+      const s = f.swallow, k = s && !s.moving ? s.hands[s.at]?.echo : null;
+      if (k && !k.dead) return k;
+      const u = f.undeadEcho;
+      return u && !u.dead ? u : null;
+    },
+    // (In the last Devour, a fall is into the Maw.)
+    lethalFall: (W, f) => !!f.last,
     // (While the Lip is dark, the gust stones between it and its hands are still: the Swallow throws you; you don't walk back.)
     gust: (W, f) => !f.swallow || f.swallow.back,
     order(W, f, b, [m]) {
@@ -857,7 +1043,7 @@ export const ELDER_FIGHTS = {
       if (s) {
         if (s.back || s.moving) return null;
         const hand = s.hands[s.at], [hx, hz] = W2(W, hand.s.at[0], hand.s.at[1]);
-        if (hand.core && !hand.core.landed && !hand.core.dead && b.role !== 'tank') return dist(b, hand.core.x, hand.core.z) < 1.6 ? { still: true } : { to: [hand.core.x, hand.core.z], urgent: true };
+        if (hand.core && !hand.core.landed && !hand.core.dead && (b.role !== 'tank' || hand.gale)) return dist(b, hand.core.x, hand.core.z) < 1.6 ? { still: true } : { to: [hand.core.x, hand.core.z], urgent: true };
         if (hand.cosmos && !hand.cosmos.dead) return { to: [hx - Math.sin(hand.cosmosYaw) * 5, hz - Math.cos(hand.cosmosYaw) * 5], urgent: true };
         if (dist(b, hx, hz) > hand.s.r - 2.5) return { to: [hx + (b.x - hx) * 0.4, hz + (b.z - hz) * 0.4] };
       }
@@ -945,8 +1131,16 @@ const starR = (f) => (f.ring ? Math.min(STARS.r, f.ring.r0 - 5) : STARS.r);
 function devour(W, f, m, secs) {
   const sim = W.sim, P = sim.perils, [cx, cz] = W2(W, MAW.x, MAW.z);
   const wells = [];
-  for (let i = 0; i < f.stars; i++) { const a = (f.spin || 0) + i / f.stars * TAU; wells.push(P.mark({ x: cx + Math.sin(a) * starR(f), z: cz + Math.cos(a) * starR(f), r: 3.4, fuse: 1.6, life: secs + 1, soak: true, elem: LIGHT, tag: 'well' })); }
+  for (const sa of f.starA) { const a = (f.spin || 0) + sa, mk = P.mark({ x: cx + Math.sin(a) * starR(f), z: cz + Math.cos(a) * starR(f), r: 3.4, fuse: 1.6, life: secs + 1, soak: true, elem: LIGHT, tag: 'well' }); mk.starA = sa; wells.push(mk); }
   f.devour = { at: sim.time + 1.6, until: sim.time + 1.6 + secs, wells };
+}
+// A star out: one of those still burning (and its well, if a Devour's on), in a burst where it hung.
+function putOut(W, f, m) {
+  const sim = W.sim, [cx, cz] = W2(W, MAW.x, MAW.z), i = (Math.random() * f.starA.length) | 0, sa = f.starA.splice(i, 1)[0], a = (f.spin || 0) + sa;
+  const x = cx + Math.sin(a) * starR(f), z = cz + Math.cos(a) * starR(f);
+  sim.casting.burst(FX.SHOCK, LIGHT, x, sim.world.height(x, z) + 16, z, 1, 9, 0.8, { light: 14, lightR: 20 });
+  if (f.devour) { for (const mk of f.devour.wells) if (mk.starA === sa) { mk.life = 0; mk.dead = true; } f.devour.wells = f.devour.wells.filter((mk) => mk.starA !== sa); }
+  void m;
 }
 // The Swallow: the Lip dark, and all of you thrown out onto its left hand, where an echo of a god it ate stands, shielded
 // but while someone stands on the hand's star core. Some while after you came down, what eats the hand comes in from its
@@ -962,7 +1156,7 @@ function swallow(W, f, m) {
   if (f.devour) { for (const mk of f.devour.wells) mk.life = 0; f.devour = null; }
   m.perform({ clip: 'enrage', secs: 2.4, at: 1.8, fn: () => {
     sim.casting.burst(FX.SHOCK, VOID, cx, m.y + 2, cz, 6, 46, 1, { light: 30, lightR: 60 });
-    const s = f.swallow = { t: 0, at: 0, handT: 0, moving: true, back: false, failed: false, dark: P.mark({ x: cx, z: cz, r: MAW.r + 2, fuse: 3.5, life: 9999, dps: K(m, 0.7), elem: VOID, tag: 'dark' }), hands: MAW_ISLES.map((q) => ({ s: q, echo: null, core: null, cosmos: null, cosmosYaw: 0 })) };
+    const s = f.swallow = { t: 0, at: 0, handT: 0, moving: true, back: false, failed: false, dark: P.mark({ x: cx, z: cz, r: MAW.r + 2, fuse: 3.5, life: 9999, dps: K(m, 0.7), elem: VOID, tag: 'dark', hide: true }), hands: MAW_ISLES.map((q) => ({ s: q, echo: null, core: null, cosmos: null, cosmosYaw: 0 })) };
     fling(W, f, m, 0, 0.3);
     // (It hangs out over the Maw meanwhile, out of reach.)
     m.shrug = 0.05;
@@ -994,16 +1188,23 @@ function stepSwallow(W, f, m, dt) {
   s.handT += dt;
   const h = s.hands[s.at], k = h.echo, [x, z] = W2(W, h.s.at[0], h.s.at[1]);
   if (!k) return;
-  // A star core on the hand every so often: while it's being stood on, the echo has no shield.
+  // A star core on the hand every so often: while it's being stood on, the echo has no shield. (On Thyrraxis's hand, his
+  // echo's gale blows while it's up: the core the one place to stand against it.)
   if (!k.dead && (!h.core || h.core.dead) && (h.coreT = (h.coreT ?? 4) - dt) <= 0) {
     h.coreT = 16;
     const a = rnd(0, TAU);
-    h.core = P.mark({ x: x + Math.sin(a) * 4, z: z + Math.cos(a) * 4, r: 2.2, fuse: 5, life: 0.5, soak: true, elem: LIGHT, tag: 'core', then: (q, P2, inside) => {
+    if (h.model === 'ed_echo_green') { h.gale = { at: sim.time + 2.2, until: sim.time + 5.4 }; W.warn(WARN.nih_echo_gale, 6); }
+    h.core = P.mark({ x: x + Math.sin(a) * 4, z: z + Math.cos(a) * 4, r: h.model === 'ed_echo_green' ? 2.6 : 2.2, fuse: 5, life: 0.5, soak: true, elem: LIGHT, tag: 'core', then: (q, P2, inside) => {
       if (!inside.length || k.dead) return;
       k.shrug = 1; h.broke = (h.broke || 0) + 1;
       sim.casting.burst(FX.SHOCK, LIGHT, k.x, k.y + 2, k.z, 2, 8, 0.6, { light: 12, lightR: 14 });
       P.later(11, () => { if (!k.dead) k.shrug = 0.08; });
     } });
+  }
+  if (!k.dead) {
+    if (h.model === 'ed_echo_green') echoGreen(W, f, m, h, k, dt); else echoRed(W, f, m, h, k, dt);
+    // (And Nihvaroth's breath down the hand from out over the Maw, every so often.)
+    if ((h.strafeT = (h.strafeT ?? 9) - dt) <= 0) { h.strafeT = 12; strafeHand(W, f, m, h); }
   }
   // Devouring Cosmos: from the hand's outer side, eating in across it.
   if (!h.cosmos && s.handT > 24) {
@@ -1018,6 +1219,8 @@ function stepSwallow(W, f, m, dt) {
   if (!k.dead) { s.failed = true; k.hp = 0; }
   if (h.cosmos) h.cosmos.life = 0;
   if (h.core && !h.core.landed) h.core.dead = true;
+  h.gale = null;
+  if (h.meteor) { h.meteor.mk.life = 0; h.meteor = null; }
   if (s.at === 0) { W.warn(WARN.nih_fling); fling(W, f, m, 1, 0.15); return; }
   s.back = true;
   W.warn(WARN.nih_back);
@@ -1027,11 +1230,93 @@ function stepSwallow(W, f, m, dt) {
   W.bodies().forEach((b) => throwTo(W, m, b, cx + rnd(-8, 8), cz + MAW.r * 0.45 + rnd(-4, 4), 0, 14));
   fly(W, m, { x: cx, z: cz - 14, h: 10, hold: 0.5, face: () => sim.player, land: true, then: () => {
     f.swallow = null; f.phase = 2; m.shrug = 1;
+    // (The third echo, Morvekh's, comes up out of the Lip as you land.)
+    W.warn(WARN.nih_echo_undead, 10);
+    W.spawnAdds('nih_echo_undead', ['ed_echo_undead'], [cx - 9, cz + 8], 1, (k) => { k.hp = k.maxHp = 9000; k.opts.damage = 150; k.aggro = true; k.opts.leash = 200; k.opts.sight = 60; k.opts.ground = true; f.undeadEcho = k; }, ['Base'], false);
     if (!s.failed) {
       W.warn(WARN.nih_stunned); say(W, f, 'stunned', 0);
       m.shrug = 1.8; force(m, { clip: 'stagger_loop', secs: 10, at: 0 });
       P.later(10, () => { m.shrug = 1; f.hold = false; });
     } else f.hold = false;
   } });
+}
+// Thyrraxis's echo: his rings of wind now and then, and (with each star core: stepSwallow) a gale out from it toward the
+// hand's edge, that only the core's ring stands against.
+function echoGreen(W, f, m, h, k, dt) {
+  const sim = W.sim, now = sim.time, g = h.gale;
+  if (g && now > g.until) h.gale = null;
+  else if (g && now > g.at) {
+    const core = h.core && !h.core.dead && !h.core.landed ? h.core : null;
+    for (const b of W.bodies()) {
+      if (b.leaping || b.dead || (core && dist(b, core.x, core.z) < core.r + 0.3)) continue;
+      const dx = b.x - k.x, dz = b.z - k.z, L = Math.hypot(dx, dz) || 1, nx = b.x + dx / L * 3.8 * dt, nz = b.z + dz / L * 3.8 * dt;
+      if (caveRoom(nx, nz) < 1.1) { blowOff(W, b, dx, dz, 10); continue; }
+      b.x = nx; b.z = nz;
+    }
+    if ((sim.tick & 7) === 0) for (let i = 0; i < 2; i++) { const a = k.yaw + rnd(-1.2, 1.2), r = rnd(2, 12); sim.casting.burst(FX.PUFF, STORM, k.x + Math.sin(a) * r, k.y + rnd(0.5, 2.5), k.z + Math.cos(a) * r, 0.4, 2.2, 0.6, { alpha: 0.5, len: 3 }); }
+  }
+  if (!h.gale && (h.ringT = (h.ringT ?? 11) - dt) <= 0) { h.ringT = 14; W.warn(WARN.nih_echo_rings, 8); rings(W, k.x, k.z, 0.35, m, STORM, 2, 1.7, 7, h.s.r + 4); }
+}
+// Kaldurra's echo: her Claw Smash, three lava waves rolling out to be jumped; and a living meteor after one of you.
+function echoRed(W, f, m, h, k, dt) {
+  const sim = W.sim, P = sim.perils;
+  if ((h.smashT = (h.smashT ?? 6) - dt) <= 0 && k.state === 0 && !k.script) {
+    h.smashT = 11;
+    const t = W.bodies().filter((b) => !b.dead).sort((a, b) => dist(a, k.x, k.z) - dist(b, k.x, k.z))[0];
+    if (t) {
+      k.yaw = yawTo(k, t);
+      W.warn(WARN.nih_echo_smash, 8);
+      const yaw = k.yaw, cx = k.x + Math.sin(yaw) * 3, cz = k.z + Math.cos(yaw) * 3;
+      P.mark({ x: cx, z: cz, r: 3.4, fuse: 1.1, dmg: K(m, 0.5), knock: 5, elem: FIRE, tag: 'smash' });
+      for (const a of [-0.55, 0, 0.55]) {
+        const ty = yaw + a, ux = Math.sin(ty), uz = Math.cos(ty), px = Math.cos(ty), pz = -Math.sin(ty);
+        P.mark({ shape: 'line', x: cx - px * 3.5, z: cz - pz * 3.5, yaw: Math.atan2(px, pz), r: 7, w: 1.4, fuse: 1.6, life: 2.6, vx: ux * 8, vz: uz * 8, touch: K(m, 0.4), again: 2, knock: 3, jump: true, elem: FIRE, tag: 'lavawave' });
+      }
+    }
+  }
+  if (!h.meteor && (h.meteorT = (h.meteorT ?? 12) - dt) <= 0) {
+    h.meteorT = 20;
+    const on = pickOne(W.bodies().filter((b) => !b.dead && b.role !== 'tank')) || sim.player;
+    W.warn(WARN.nih_echo_meteor, 8);
+    h.meteor = { t: 0, on, mk: P.mark({ x: k.x, z: k.z, r: 2.2, fuse: 0.6, life: 12, touch: 0, elem: FIRE, tag: 'meteor' }) };
+  }
+  const q = h.meteor;
+  if (q) {
+    q.t += dt;
+    const mk = q.mk, t = q.on, dx = t.x - mk.x, dz = t.z - mk.z, L = Math.hypot(dx, dz) || 1;
+    if (t.dead || q.t > 10 || L < 2.2) { P.mark({ x: mk.x, z: mk.z, r: 4.5, fuse: 0.3, dmg: K(m, L < 2.2 ? 0.9 : 0.6), knock: 6, elem: FIRE, tag: 'meteor' }); mk.life = 0; h.meteor = null; }
+    else {
+      const v = 4.2 + q.t * 0.05, nx = mk.x + dx / L * v * dt, nz = mk.z + dz / L * v * dt;
+      if (caveRoom(nx, nz) > -0.5) { mk.x = nx; mk.z = nz; mk.y = sim.world.height(nx, nz); }
+      if ((sim.tick & 3) === 0) sim.casting.burst(FX.FLAME, FIRE, mk.x, mk.y + 0.8, mk.z, 0.8, 2, 0.5, { alpha: 0.9, len: 1.4, light: 6, lightR: 7 });
+    }
+  }
+}
+// Nihvaroth, from out over the Maw: his breath in a strip down the hand, through one of you.
+function strafeHand(W, f, m, h) {
+  const P = W.sim.perils, t = pickOne(W.bodies().filter((b) => !b.dead && !b.leaping));
+  if (!t || m.dead) return;
+  const yaw = Math.atan2(t.x - m.x, t.z - m.z), L = h.s.r + 4;
+  W.warn(WARN.nih_strafe, 8);
+  P.mark({ shape: 'line', x: t.x - Math.sin(yaw) * L, z: t.z - Math.cos(yaw) * L, yaw, r: L * 2, w: 2.6, fuse: 2.4, dmg: K(m, 0.7), knock: 4, elem: VOID, tag: 'strafe' });
+  if (m.flightA) airMove(m, 'hover_breath', 2.4);
+}
+
+// ---- Kaldurra's pieces --------------------------------------------------------------------------------------------------------
+// Which pillar a body stands on (its place in BASALT), or -1.
+function pillarOf(W, b) {
+  const D = W.delve, top = D.y + CINDER.y + BASALT_UP * 0.6;
+  if (b.y < top) return -1;
+  for (const [i, [x, z, r]] of BASALT.entries()) if (Math.hypot(b.x - D.x - x, b.z - D.z - z) < r + 0.3) return i;
+  return -1;
+}
+// A pillar her breath has been on: its top molten for the rest of the fight, no ground to stand on in a flood.
+function sink(W, f, m, i) {
+  if (i < 0 || m.dead || (f.sunk ||= new Set()).has(i)) return;
+  f.sunk.add(i);
+  const [x, z, r] = BASALT[i], [wx, wz] = W2(W, x, z), y = W.delve.y + CINDER.y + BASALT_UP;
+  W.sim.perils.mark({ x: wx, z: wz, r: r + 0.3, fuse: 1.2, life: 9999, dps: K(m, 0.35), elem: FIRE, tag: 'sunk' });
+  W.sim.casting.burst(FX.FLAME, FIRE, wx, y + 0.3, wz, r, r * 1.6, 1.2, { alpha: 0.9, len: 2.4, light: 10, lightR: 10 });
+  W.warn(WARN.kal_sink, 14);
 }
 void islandOf; void roomOf; void toWorld; void ARCANE; void DRAIN;

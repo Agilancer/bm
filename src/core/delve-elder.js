@@ -34,14 +34,25 @@ export const RIME = { x: -124, z: -374, ring: 27, y: 30 };       // the Rimespir
 export const MAW = { x: 24, z: -384, r: 46, y: 2 };              // the Lip of the Maw
 // Which way the Maw is, from anywhere in here (the black hole in the sky: src/gfx/shaders.js VOID_SKY). Down and north.
 export const MAW_DIR = (() => { const v = [0.12, -0.34, -1], L = Math.hypot(...v); return v.map((q) => q / L); })();
+// Where the delve is in the world (its def below), and each god's island's own light: what the void's violet becomes over
+// it (src/gfx/shaders.js voidTint), full over the island and gone 30 m out. The Galeward a cold storm teal, the Cinderwell
+// an ember underlight, the Rimespire ice blue, the Lip near-black, its violet drained.
+export const ELDER_AT = { x: 6400, z: 6500 };
+export const VOID_TINTS = [
+  { x: GALE.x, z: GALE.z + 6, r: 52, key: [0.62, 1.02, 1.12], amb: [0.6, 1.05, 1.1] },
+  { x: CINDER.x, z: CINDER.z, r: 44, key: [1.75, 0.82, 0.42], amb: [1.6, 0.7, 0.36] },
+  { x: RIME.x + 6, z: RIME.z - 4, r: 42, key: [0.72, 0.98, 1.5], amb: [0.7, 1.0, 1.5] },
+  { x: MAW.x, z: MAW.z, r: 50, key: [0.78, 0.6, 0.86], amb: [0.42, 0.36, 0.52] },
+].map((t) => ({ ...t, x: ELDER_AT.x + t.x, z: ELDER_AT.z + t.z }));
 
 // The Galeward's four pylons, at its quarters (what the gale can't reach behind: their lee).
 export const PYLONS = [45, 135, 225, 315].map((a) => polar(GALE.x, GALE.z, 19, deg(a)));
 // Its islets: three below its western rim, where Storm Nova throws you, and two higher, east and west of the way in.
 export const GALE_ISLES = [
-  { id: 'ed_gale_isle1', a: 200, far: 48, r: 9, y: -14 },
-  { id: 'ed_gale_isle2', a: 262, far: 48, r: 10, y: -12 },
-  { id: 'ed_gale_isle3', a: 324, far: 48, r: 9, y: -15 },
+  // (Wide enough for him to come down on: he's half again the pylons' height.)
+  { id: 'ed_gale_isle1', a: 200, far: 50, r: 12, y: -14 },
+  { id: 'ed_gale_isle2', a: 262, far: 50, r: 13, y: -12 },
+  { id: 'ed_gale_isle3', a: 324, far: 50, r: 12, y: -15 },
 ].map((s) => ({ ...s, at: polar(GALE.x, GALE.z, s.far, deg(s.a)) }));
 // The Cinderwell's basalt pillars: a ring of them each side of the way round, near enough to jump between (8.5 to 10 m
 // between their middles, a running jump between their edges), standing a step and a half out of the floor.
@@ -93,14 +104,17 @@ const rooms = [
   C('ed_rimegate', 'the Rime Stair', ...GATES.morvekh, 9, 2, 0, { rock: 'frost:rubble', ground: 'frost:stone', root: 16 }),
   C('ed_mawgate', 'the Last Stair', ...GATES.nihvaroth, 9, 0, 0, { ...V, root: 16 }),
   // The four.
-  C('ed_galeward', 'the Galeward', GALE.x, GALE.z, GALE.r, GALE.y, 0, { rock: 'pale:rubble', ground: 'pale:flags', root: 60, flat: true }),
-  ...GALE_ISLES.map((s, i) => C(s.id, `the ${['Low', 'Lee', 'Last'][i]} Islet`, s.at[0], s.at[1], s.r, s.y, 0, { rock: 'pale:rubble', ground: 'pale:stone', root: 18, leap: true })),
-  C('ed_cinderwell', 'the Cinderwell', CINDER.x, CINDER.z, CINDER.r, CINDER.y, 0, { rock: 'dark:rubble', ground: 'dark:rubble', root: 70, magma: true, hole: CINDER.vent }),
-  ...RIME_LEDGES.map((l) => C(l.id, l.name, l.at[0], l.at[1], 7, l.y, 0, { rock: 'frost:rubble', ground: 'frost:stone', root: 10 })),
-  C('ed_summit', 'the Rimespire', RIME.x, RIME.z, 12, RIME.y, 0, { rock: 'frost:rubble', ground: 'frost:stone', root: 110, spire: true, flat: true }),
-  ...RIME_ISLES.map((s, i) => C(s.id, `the ${['North', 'East', 'South'][i]} Claw`, s.at[0], s.at[1], s.r, s.y, 0, { rock: 'frost:rubble', ground: 'frost:stone', root: 12, leap: true })),
-  C('ed_maw', 'the Lip of the Maw', MAW.x, MAW.z, MAW.r, MAW.y, 0, { rock: 'void:rubble', ground: 'void:flags', root: 90, flat: true }),
-  ...MAW_ISLES.map((s, i) => C(s.id, `the ${['Left', 'Right'][i]} Hand`, s.at[0], s.at[1], s.r, s.y, 0, { rock: 'void:rubble', ground: 'void:stone', root: 20, leap: true })),
+  // (Each its own stone: the Galeward dark slate, the Cinderwell black basalt, the Rimespire's ice over dark rock, the Lip
+  // black flags; the light over each, VOID_TINTS, does the rest.)
+  C('ed_galeward', 'the Galeward', GALE.x, GALE.z, GALE.r, GALE.y, 0, { rock: 'dark:stone', ground: 'dark:flags', root: 60, flat: true }),
+  ...GALE_ISLES.map((s, i) => C(s.id, `the ${['Low', 'Lee', 'Last'][i]} Islet`, s.at[0], s.at[1], s.r, s.y, 0, { rock: 'dark:stone', ground: 'dark:course', root: 18, leap: true })),
+  C('ed_cinderwell', 'the Cinderwell', CINDER.x, CINDER.z, CINDER.r, CINDER.y, 0, { rock: 'dark:rubble', ground: 'dark:stone', root: 70, magma: true, hole: CINDER.vent }),
+  // (The Rimespire's ground dark slate under its ice-blue light: Morvekh's frost is white, and has to show on it.)
+  ...RIME_LEDGES.map((l) => C(l.id, l.name, l.at[0], l.at[1], 7, l.y, 0, { rock: 'dark:rubble', ground: 'dark:stone', root: 10 })),
+  C('ed_summit', 'the Rimespire', RIME.x, RIME.z, 12, RIME.y, 0, { rock: 'dark:rubble', ground: 'dark:flags', root: 110, spire: true, flat: true }),
+  ...RIME_ISLES.map((s, i) => C(s.id, `the ${['North', 'East', 'South'][i]} Claw`, s.at[0], s.at[1], s.r, s.y, 0, { rock: 'dark:rubble', ground: 'dark:stone', root: 12, leap: true })),
+  C('ed_maw', 'the Lip of the Maw', MAW.x, MAW.z, MAW.r, MAW.y, 0, { rock: 'dark:rubble', ground: 'dark:flags', root: 90, flat: true, cracks: true }),
+  ...MAW_ISLES.map((s, i) => C(s.id, `the ${['Left', 'Right'][i]} Hand`, s.at[0], s.at[1], s.r, s.y, 0, { rock: 'dark:rubble', ground: 'dark:ashlar', root: 20, leap: true })),
 ];
 const byId = (id) => rooms.find((r) => r.id === id);
 // A bridge between two islands: straight, from inside the edge of one to inside the edge of the other (w: half its width).
@@ -175,11 +189,14 @@ PYLONS.forEach(([x, z], n) => add('pylon', x, z, { r: 1.7, h: 11, solid: true, n
 add('vent', CINDER.x, CINDER.z, { r: CINDER.vent });
 BASALT.forEach(([x, z, r], n) => add('basalt', x, z, { r, up: BASALT_UP, n }));
 // The Rimespire: rime crystals on every ledge (what holds you against the Grasp), the spire's ice going up behind.
-for (const l of RIME_LEDGES) { const [x, z] = polar(l.at[0], l.at[1], 3.6, deg(l.a + 90)); add('rime', x, z, { r: 0.7, h: 3.2 }); }
+// (Two to each shelf, either end of it, so a party of five isn't all at one crystal; one by the Rime Stair's drake.)
+for (const l of RIME_LEDGES) for (const s of [90, 270]) { const [x, z] = polar(l.at[0], l.at[1], 3.6, deg(l.a + s)); add('rime', x, z, { r: 0.7, h: 3.2 }); }
+add('rime', GATES.morvekh[0] + 4.5, GATES.morvekh[1] + 2.5, { r: 0.7, h: 3.2 });
 for (const a of [0, 120, 240]) { const [x, z] = polar(RIME.x, RIME.z, 7.5, deg(a + 20)); add('rime', x, z, { r: 0.8, h: 3.8 }); }
 for (const s of RIME_ISLES) add('rime', s.at[0], s.at[1], { r: 0.9, h: 4.2, claw: true });
 // The Lip of the Maw: the accretion ring's rubble round its edge; star-sockets where its stars go round.
 add('accretion', MAW.x, MAW.z, { r: MAW.r });
+add('voidcracks', MAW.x, MAW.z + 6, { n: 6, w: 22, len: MAW.r + 8 });
 // The gust stones, where each leap begins.
 LEAPS.forEach((l, n) => { add('guststone', l.from[0], l.from[1], { r: 1.3, n, gust: !!l.gust }); if (!l.one) add('guststone', l.to[0], l.to[1], { r: 1.3, n, back: true }); });
 
@@ -201,14 +218,19 @@ const packs = [
 const bosses = [
   // (arena: how far from its room's middle the fight goes on, its islets with it. pull: how near you come before it wakes.
   // Morvekh is met perched on the ramp's first shelf: the fight's a climb from there to the summit.)
-  { key: 'thyrraxis', room: 'ed_galeward', name: 'Thyrraxis, the Gale Eternal', models: ['ed_thyrraxis'], pal: ['Base'], hp: 96000, damage: 300, reach: 8.5, loot: 8, at: [0, -6], arena: 95 },
-  { key: 'kaldurra', room: 'ed_cinderwell', name: 'Kaldurra, the Hearth of the World', models: ['ed_kaldurra'], pal: ['Base'], hp: 104000, damage: 320, reach: 8.5, loot: 8, needs: ['thyrraxis'], shut: 'kal_shut', at: [12, 0], arena: 52 },
-  { key: 'morvekh', room: 'ed_rime1', name: 'Morvekh, Who Remembers the Cold', models: ['ed_morvekh'], pal: ['Base'], hp: 112000, damage: 330, reach: 8.5, loot: 8, needs: ['kaldurra'], shut: 'mor_shut', at: [0, 0], arena: 72, pull: 24 },
-  { key: 'nihvaroth', room: 'ed_maw', name: 'Nihvaroth, the Hollow Star', models: ['ed_nihvaroth'], pal: ['Base'], hp: 150000, damage: 350, reach: 9.5, loot: 0, needs: ['morvekh'], shut: 'nih_shut', at: [0, -14], arena: 84 },
+  { key: 'thyrraxis', room: 'ed_galeward', name: 'Thyrraxis, the Gale Eternal', models: ['ed_thyrraxis'], pal: ['Base'], hp: 122000, damage: 330, reach: 11, loot: 8, at: [0, -6], arena: 95 },
+  { key: 'kaldurra', room: 'ed_cinderwell', name: 'Kaldurra, the Hearth of the World', models: ['ed_kaldurra'], pal: ['Base'], hp: 120000, damage: 335, reach: 11.5, loot: 8, needs: ['thyrraxis'], shut: 'kal_shut', at: [12, 0], arena: 52 },
+  { key: 'morvekh', room: 'ed_rime1', name: 'Morvekh, Who Remembers the Cold', models: ['ed_morvekh'], pal: ['Base'], hp: 112000, damage: 330, reach: 11, loot: 8, needs: ['kaldurra'], shut: 'mor_shut', at: [0, 0], arena: 72, pull: 24 },
+  { key: 'nihvaroth', room: 'ed_maw', name: 'Nihvaroth, the Hollow Star', models: ['ed_nihvaroth'], pal: ['Base'], hp: 150000, damage: 350, reach: 13.5, loot: 0, needs: ['morvekh'], shut: 'nih_shut', at: [0, -14], arena: 84 },
 ];
 // What the fights call out (src/sim/elder-fights.js). A god's own words are its lines, said as subtitles: LINES below.
 const warnings = {
   ed_under: 'You are under the hundredth winter. The gods see it: they hit harder, and they are harder to kill.',
+  ed_span: 'Whelps come up over the bridge\'s edges!',
+  ed_drake_gale: 'The drake beats its wings: hold your ground away from the edge, or be blown off!',
+  ed_drake_wave: 'The drake smashes the stair: jump the lava wave!',
+  ed_drake_grasp: 'The drake\'s grasp drags you toward the edge! Hold to the rime.',
+  ed_drake_pull: 'The drake pulls toward the Maw! Into the well of light.',
   // Thyrraxis
   thy_open: 'Thyrraxis, the Gale Eternal. When it beats its wings, get behind a pylon: the gale throws whoever is in the open off the disc.',
   thy_gale: 'GALE! Get in the lee of a pylon, behind it from the dragon!',
@@ -217,7 +239,7 @@ const warnings = {
   thy_conduit: 'Thyrraxis charges a pylon! Stand in its ring to drain it, or that quarter of the disc burns to the end.',
   thy_overload: 'A pylon overloads: its quarter of the disc is live from now on.',
   thy_nova: 'STORM NOVA! It throws you off the disc: you come down on the islets below.',
-  thy_elementals: 'Storm elementals come down onto the islets! Kill them.',
+  thy_elementals: 'Storm whelps come down onto the islets! Kill them.',
   thy_strafe: 'Thyrraxis strafes an islet! Out of the strip.',
   thy_updraft: 'Updrafts on the islets! Step into a gust stone to go back up.',
   thy_rings: 'Tempest Wing: rings of wind roll out! Jump each one.',
@@ -255,6 +277,15 @@ const warnings = {
   mor_zero: 'ABSOLUTE ZERO! Morvekh hangs from the spire: jump out to the claws and stand in each grip to break it.',
   mor_grip: 'A claw lets go!',
   mor_fall: 'His last grip breaks: Morvekh falls onto the summit. Burn him.',
+  mor_zero_fail: 'Too slow: the cold takes everyone. Morvekh comes down onto the summit whole.',
+  mor_shards: 'Ice comes down off the spire beside the grips! Step round the ring.',
+  kal_sink: 'Her breath melts a pillar: its top is molten for the rest of the fight. One fewer to stand on.',
+  nih_echo_gale: 'The Echo of Thyrraxis beats its wings! Onto the star core, or be blown off the hand.',
+  nih_echo_rings: 'The Echo of Thyrraxis: rings of wind! Jump each one.',
+  nih_echo_smash: 'The Echo of Kaldurra smashes the hand! Jump the lava waves.',
+  nih_echo_meteor: 'The Echo of Kaldurra looses a living meteor! Lead it round the hand.',
+  nih_strafe: 'Nihvaroth breathes down the hand! Out of the strip.',
+  nih_echo_undead: 'The Echo of Morvekh rises out of the Lip! Break it: its frost finds you while it stands.',
   mor_turn: 'Morvekh turns on you! Get behind the tank, out of his reach.',
   mor_enrage: 'The cold remembers everything: Morvekh is enraged.',
   // Nihvaroth
@@ -271,7 +302,7 @@ const warnings = {
   nih_stunned: 'Nihvaroth is destabilized! Everything on it.',
   nih_nova: 'Supernova: a star goes out. Fewer wells now.',
   nih_ring: 'The accretion ring closes in!',
-  nih_last: 'The ring has closed. This Devour is the last: kill it before it ends.',
+  nih_last: 'The ring has closed. This Devour is the last: its wells close and its stars go out. Kill it before they do.',
   nih_turn: 'Nihvaroth turns on you! Get behind the tank, out of its reach.',
   nih_enrage: 'Nothing is left but hunger: Nihvaroth is enraged.',
   // Everywhere: the fall.

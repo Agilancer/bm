@@ -106,12 +106,12 @@ export const VARIANTS = {
   kb_thrall: { src: 'bone_golem', height: 2, name: 'BONE THRALL' },
   kb_hound: { src: 'werewolf_brown', height: 1.9, name: 'BARROW HOUND' },
   kb_wyrm: { src: 'dragon_undead', height: 6.4, name: 'OSSIVAR' },
-  // The Elder Dragon Gods (src/core/delve-elder.js): the four gods, twice a man's height at the shoulder and more; the
+  // The Elder Dragon Gods (src/core/delve-elder.js): the four gods, taller than the Galeward's pylons, the Hollow Star the size of a keep; the
   // drakes that keep their bridges; and the echoes of the three dead ones the Hollow Star calls up at the Maw.
-  ed_thyrraxis: { src: 'dragon_green', height: 11, name: 'THYRRAXIS, THE GALE ETERNAL' },
-  ed_kaldurra: { src: 'dragon_red', height: 11.5, name: 'KALDURRA, THE HEARTH OF THE WORLD' },
-  ed_morvekh: { src: 'dragon_undead', height: 11.5, name: 'MORVEKH, WHO REMEMBERS THE COLD' },
-  ed_nihvaroth: { src: 'dragon_black', height: 13.5, name: 'NIHVAROTH, THE HOLLOW STAR' },
+  ed_thyrraxis: { src: 'dragon_green', height: 15.5, name: 'THYRRAXIS, THE GALE ETERNAL' },
+  ed_kaldurra: { src: 'dragon_red', height: 16.5, name: 'KALDURRA, THE HEARTH OF THE WORLD' },
+  ed_morvekh: { src: 'dragon_undead', height: 16, name: 'MORVEKH, WHO REMEMBERS THE COLD' },
+  ed_nihvaroth: { src: 'dragon_black', height: 21, name: 'NIHVAROTH, THE HOLLOW STAR' },
   ed_drake_green: { src: 'dragon_green', height: 3.6, name: 'GALE DRAKE' },
   ed_drake_red: { src: 'dragon_red', height: 3.6, name: 'CINDER DRAKE' },
   ed_drake_undead: { src: 'dragon_undead', height: 3.6, name: 'RIME DRAKE' },

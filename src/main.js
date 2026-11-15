@@ -1565,6 +1565,9 @@ class GameView {
       this.hud.update(dt, snap, hs);
       this.foeBars?.update(snap, !this.idle && !this.input.menu && this.input.enabled);
       this.clock.set(r.hour);
+      // (Down a delve there's no sun to tell the hour by, and nothing of the land's to track: the clock is put away.)
+      const deep = inDelve(snap[H.PX], snap[H.PZ]);
+      if (deep !== this.deepWas) { this.deepWas = deep; this.clock.el.style.display = deep ? 'none' : ''; }
       this.chatLog?.update(dt, !this.idle && (!this.input.menu || !!this.heroTalk?.open));
       if (this.heroTalk) {
         // (Names and bubbles stay up while a hero is talking to you: the panel is theirs.)

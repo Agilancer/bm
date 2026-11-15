@@ -393,6 +393,8 @@ class Sim {
     // (After the spells' update, which clears the frame's shapes.)
     this.heroWorld?.drawFx();
     this.perils.draw(this.frozen ? 0 : tdt);
+    // (A delve's own lights and set pieces: after the marks, so a full frame drops these and never a warning.)
+    this.warrens?.drawFx();
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.slimes.step(this.frozen ? 0 : tdt, this);
     if (!this.opening || this.opening.stage === OPENING.ARRIVED) this.tumblers.step(this.frozen ? 0 : tdt, this);
     stepFoeWorks(tdt, this);

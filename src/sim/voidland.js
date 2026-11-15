@@ -11,7 +11,7 @@
 //   The party on another island than where it means to be (its order, the boss, or you) jumps across, as a hero can.
 import { EV } from '../core/layout.js';
 import { BOSSES, VOID, WARN, caveFloorY, caveRoom, roomOf, toWorld } from '../core/dungeon.js';
-import { SEALS } from '../core/delve-elder.js';
+import { SEALS, STARS } from '../core/delve-elder.js';
 import { clamp } from '../core/math.js';
 import { ELEM, FX } from './spells.js';
 
@@ -105,6 +105,8 @@ export function voidStep(W, dt) {
     if (p.onGround && open > 1.6 && Math.abs(p.y - ground) < 0.3) { p.voidSafe = p.voidSafe || [0, 0]; p.voidSafe[0] = p.x; p.voidSafe[1] = p.z; }
     if (open < -VOID.lip && p.y < ground - 7) {
       const f = W.fight, spec = f?.spec, to = spec?.fallTo?.(W, f, p) || p.voidSafe || [d.x + d.entry.x, d.z + d.entry.z];
+      // (Where a fight says a fall is the end of you: the last Devour's pull into the Maw.)
+      if (spec?.lethalFall?.(W, f, p)) { sim.perils.hurt(p, p.maxHp * 20, p.x, p.z, 0, false, 'maw'); sim.casting.burst(FX.VORTEX, ELEM.VOID, p.x, p.y + 1, p.z, 1, 5, 0.8, { light: 8, lightR: 8 }); return; }
       const [x, z] = landing(W, to[0], to[1], 2);
       sim.event(EV.BLINK, p.x, p.y + 1, p.z);
       W.put(p, x, z, p.yaw);
@@ -151,6 +153,9 @@ export function voidStep(W, dt) {
       if (b === p) W.warn(WARN.ed_sealed, 6);
     }
   }
+  gates(W);
+  spanWhelps(W);
+  if (!W.fight) gateDrakes(W, dt);
   // ---- the party, across to where it means to be ----
   const f = W.fight, boss = f ? W.bossBodies(f.boss.key).find((m) => !m.dead) : null;
   for (const h of party) {
@@ -203,8 +208,160 @@ export function blowOff(W, b, dx, dz, speed = 9) {
     b.vx = dx / L * speed; b.vz = dz / L * speed; b.vy = 4.2; b.onGround = false; b.surfing = false; b.y += 0.6;
     return;
   }
-  const f = W.fight, to = f?.spec?.fallTo?.(W, f, b) || [b.x - dx / L * 4, b.z - dz / L * 4];
+  const f = W.fight;
+  if (f?.spec?.lethalFall?.(W, f, b)) { sim.perils.hurt(b, b.maxHp * 20, b.x, b.z, 0, false, 'maw'); sim.casting.burst(FX.VORTEX, ELEM.VOID, b.x, b.y + 1, b.z, 1, 5, 0.8); return; }
+  const to = f?.spec?.fallTo?.(W, f, b) || [b.x - dx / L * 4, b.z - dz / L * 4];
   const [x, z] = landing(W, to[0], to[1], 2);
   leap(W, b, x, z, { apex: 5, hurt: b.maxHp * 0.15 });
 }
 void BOSSES;
+
+// ---- what's met on the way ----------------------------------------------------------------------------------------------------
+// Each god's first words as you come out onto its stair, its island in sight across the last bridge (once in a while).
+const GATE_OF = { thyrraxis: 'ed_galegate', kaldurra: 'ed_cindergate', morvekh: 'ed_rimegate', nihvaroth: 'ed_mawgate' };
+function gates(W) {
+  const sim = W.sim, p = sim.player, d = W.delve;
+  if (W.fight || p.dead || (sim.tick & 15) !== 0) return;
+  for (const b of BOSSES) {
+    const room = GATE_OF[b.key] && roomOf(GATE_OF[b.key]);
+    if (!room || b.delve !== d.key || W.down.has(b.key) || (b.needs && !b.needs.every((k) => W.down.has(k)))) continue;
+    if (Math.hypot(p.x - d.x - room.x, p.z - d.z - room.z) > room.r) continue;
+    const told = (d.told ||= {});
+    if (sim.time - (told[b.key] ?? -1e9) < 300) continue;
+    told[b.key] = sim.time;
+    const id = WARN[`${b.key}_say_intro_0`];
+    if (id !== undefined) W.warn(id);
+  }
+}
+// The Span's whelps: down under the bridge's two sides, out of sight, till you're out on its middle; then up over its edges.
+function spanWhelps(W) {
+  const sim = W.sim, t = sim.tripo, p = sim.player, d = W.delve, room = roomOf('ed_span');
+  if (!t || !room) return;
+  const l = t.lairs.find((q) => q.dungeon && q.key === 'ed_span' && q.delve === d.key);
+  if (!l) return;
+  const them = t.slots().filter((k) => k.lair === l && !k.dead);
+  if (!them.length) { l.ambush = null; return; }
+  const cx = d.x + room.x, cz = d.z + room.z;
+  // (Either side of the way across, square to it: the bridge runs north and south.)
+  const spot = (i) => [cx + (i % 2 ? 1 : -1) * (room.r + 5), cz + (i >> 1) * 4 - 2];
+  if (l.ambush === 'done') return;
+  l.ambush = 'hid';
+  // (Each as it's stood up, out of sight under the edge: buried, held still, nothing to strike.)
+  them.forEach((k, i) => { if (k.spanHid) return; k.spanHid = true; const [x, z] = spot(i); k.buried = true; k.noTurn = true; k.aggro = false; k.free = true; k.x = x; k.z = z; k.vx = 0; k.vz = 0; k.script = () => true; });
+  if (p.dead || Math.hypot(p.x - cx, p.z - cz) > 5.5) return;
+  l.ambush = 'done';
+  sim.event(EV.ROAR, cx, sim.world.height(cx, cz) + 1, cz, 1);
+  W.warn(WARN.ed_span, 30);
+  them.forEach((k, i) => {
+    const side = i % 2 ? 1 : -1, along = (i >> 1) * 4 - 2, from = spot(i), to = landing(W, cx + side * 2.4, cz + along * 0.6, 1.4);
+    let u = 0;
+    k.buried = false; k.free = true; k.x = from[0]; k.z = from[1]; k.vx = 0; k.vz = 0;
+    if (k.rig.clips.fly) k.setClip('fly');
+    k.script = (q, dt) => {
+      u = Math.min(1, u + dt / 1.3);
+      const s = u * u * (3 - 2 * u);
+      q.x = from[0] + (to[0] - from[0]) * s; q.z = from[1] + (to[1] - from[1]) * s; q.vx = 0; q.vz = 0;
+      q.liftExtra = q.hover = -9 * (1 - u) * (1 - u) + 8 * u * (1 - u);
+      q.yaw = Math.atan2(p.x - q.x, p.z - q.z);
+      if (u < 1) return true;
+      q.script = null; q.free = false; q.noTurn = false; q.liftExtra = 0; q.hover = 0; q.aggro = true; q.state = 0;
+      sim.event(EV.GROUND, q.x, q.y, q.z);
+      return false;
+    };
+  });
+}
+// The drakes at the four stairs, each a small piece of its god's fight, a few times while it lives: Thyrraxis's a beat of
+// its wings that drives you toward the stair's edge; Kaldurra's a lava wave to jump; Morvekh's a grasp toward the edge but
+// beside the rime there; Nihvaroth's a pull toward the Maw but in its well.
+const DRAKE_MOVE = { ed_galegate: 'gale', ed_cindergate: 'wave', ed_rimegate: 'grasp', ed_mawgate: 'pull' };
+function gateDrakes(W, dt) {
+  const sim = W.sim, t = sim.tripo, P = sim.perils, now = sim.time;
+  if (!t) return;
+  for (const k of t.slots()) {
+    const kind = k.lair?.dungeon && k.lair.delve === W.delve.key && DRAKE_MOVE[k.lair.key];
+    if (!kind || k.dead || !k.aggro || !/^ed_drake_/.test(k.opts.model || '')) continue;
+    const g = k.gateMove;
+    if (g) {
+      if (now > g.until) { k.gateMove = null; continue; }
+      if (now < g.at) continue;
+      for (const b of W.bodies()) {
+        if (b.leaping || b.dead || Math.hypot(b.x - k.x, b.z - k.z) > 22) continue;
+        let dx, dz, v;
+        if (kind === 'gale') { dx = b.x - k.x; dz = b.z - k.z; v = 3.4; }
+        else if (kind === 'grasp') {
+          if (W.delve.props.some((q) => q.kind === 'rime' && Math.hypot(W.delve.x + q.x - b.x, W.delve.z + q.z - b.z) < 3.4)) continue;
+          const e = 0.4; dx = -(caveRoom(b.x + e, b.z) - caveRoom(b.x - e, b.z)); dz = -(caveRoom(b.x, b.z + e) - caveRoom(b.x, b.z - e)); v = 2.4;
+        } else {
+          if (g.well && Math.hypot(b.x - g.well.x, b.z - g.well.z) < g.well.r) continue;
+          dx = 0.12; dz = -1; v = 2.8;
+        }
+        const L = Math.hypot(dx, dz) || 1, nx = b.x + dx / L * v * dt, nz = b.z + dz / L * v * dt;
+        if (caveRoom(nx, nz) < 1.0) { blowOff(W, b, dx, dz, 8); continue; }
+        b.x = nx; b.z = nz;
+      }
+      continue;
+    }
+    if ((k.gateCd = (k.gateCd ?? 6) - dt) > 0 || k.state !== 0 || k.script) continue;
+    k.gateCd = 12;
+    const dmg = k.opts.damage || 100;
+    if (kind === 'wave') {
+      if (!k.perform({ clip: 'claw_slam', secs: 1.6, at: 0.9 })) continue;
+      W.warn(WARN.ed_drake_wave, 12);
+      P.later(0.9, () => { if (!k.dead) P.wave(k.x, k.z, { speed: 8, reach: 20, band: 1.1, r: 1.6, touch: dmg * 0.8, knock: 3, elem: ELEM.FIRE, jump: true, tag: 'rings' }); });
+      continue;
+    }
+    if (!k.perform({ clip: kind === 'gale' ? 'wing_buffet' : 'roar', secs: 2.6, at: 0 })) continue;
+    k.gateMove = { at: now + 1.2, until: now + 3.6 };
+    if (kind === 'pull') {
+      // (Its well a few strides off to the south of it, away from the Maw.)
+      const [wx, wz] = landing(W, k.x - 0.12 * 5, k.z + 5, 2);
+      k.gateMove.well = P.mark({ x: wx, z: wz, r: 2.6, fuse: 1.2, life: 2.6, soak: true, elem: ELEM.LIGHT, tag: 'well' });
+    }
+    W.warn({ gale: WARN.ed_drake_gale, grasp: WARN.ed_drake_grasp, pull: WARN.ed_drake_pull }[kind], 12);
+  }
+}
+
+// ---- what's drawn of it each tick (src/sim/dungeon.js drawFx: after the spells' update has cleared the frame) ----------
+// The gust stones: an updraft of pale wind standing over each that will throw you, and a chevron walking out along the
+// ground toward where it throws you; one a fight has stilled shows a dim red ring instead. The four scales round the altar,
+// each alight in its god's colour till that god is dead. The Lip's star sockets, dim, where the wells come down in a Devour.
+const TAU = Math.PI * 2;
+const SCALE_GOD = { green: ['thyrraxis', ELEM.HEAL], red: ['kaldurra', ELEM.FIRE], undead: ['morvekh', ELEM.FROST], black: ['nihvaroth', ELEM.VOID] };
+export function voidDraw(W) {
+  const sim = W.sim, c = sim.casting, p = sim.player, d = W.delve, f = W.fight, T = sim.time;
+  const near = (x, z, r) => Math.hypot(x - p.x, z - p.z) < r;
+  (d.leaps || []).forEach((l, n) => {
+    for (const [a, b, back] of [[l.from, l.to, false], [l.to, l.from, true]]) {
+      if (back && l.one) continue;
+      const x = d.x + a[0], z = d.z + a[1];
+      if (!near(x, z, 110)) continue;
+      const y = caveFloorY(x, z);
+      if (f?.spec?.gust && !f.spec.gust(W, f, l, back)) { c.fx(FX.RUNE, ELEM.FIRE, x, y + 0.05, z, 1.25, 0, 1, 0, 0, 0.32, 0, 0, 0.9, n); continue; }
+      c.fx(FX.COLUMN, ELEM.STORM, x, y - 0.2, z, 7, 0, 1, 0, 0.85, 0.45, 0, 0, 0, n + (back ? 0.5 : 0));
+      const tx = d.x + b[0], tz = d.z + b[1], L = Math.hypot(tx - x, tz - z) || 1, ux = (tx - x) / L, uz = (tz - z) / L;
+      // (Its point walking out from the stone's rim along the way it throws, over and over.)
+      const k = (T * 0.8 + n * 0.37) % 1, at = 1.5 + k * 1.2, px = x + ux * at, pz = z + uz * at, al = 0.85 * Math.sin(k * Math.PI);
+      for (const s of [-1, 1]) {
+        const ca = Math.cos(2.45 * s), sa = Math.sin(2.45 * s), dx = ux * ca - uz * sa, dz = ux * sa + uz * ca;
+        c.fx(FX.MARK, ELEM.STORM, px, caveFloorY(px, pz) + 0.06, pz, 1, dx, 0.14, dz, 0.8, al, 0, 0, 1.5, n, 3);
+      }
+    }
+  });
+  for (const q of d.props) {
+    if (q.kind !== 'scalestone' || !q.god) continue;
+    const x = d.x + q.x, z = d.z + q.z, [god, e] = SCALE_GOD[q.god];
+    if (W.down.has(god) || !near(x, z, 150)) continue;
+    const y = caveFloorY(x, z), fl = 0.85 + 0.15 * Math.sin(T * 1.9 + q.x);
+    c.fx(FX.ORB, e, x, y + q.h * 1.22, z, 0.6, 0, 1, 0, 0, 0.95 * fl, 0, 0, 0, q.x);
+    c.fx(FX.COLUMN, e, x, y - 0.1, z, q.h * 1.15, 0, 1, 0, 0.7, 0.3 * fl, 0, 0, 0, q.z);
+    c.fx(FX.RUNE, e, x, y + 0.05, z, 2, 0, 1, 0, 0, 0.6, 0, 0, 0.9, q.x + q.z);
+  }
+  const lip = roomOf('ed_maw');
+  if (lip && near(d.x + lip.x, d.z + lip.z, 130)) {
+    const cx = d.x + lip.x, cz = d.z + lip.z, nf = f?.boss.key === 'nihvaroth' ? f : null;
+    if (!nf?.devour && !nf?.swallow) {
+      const As = nf?.starA || Array.from({ length: STARS.n }, (_, i) => i / STARS.n * TAU), spin = nf ? nf.spin || 0 : T * STARS.spin, R = nf?.ring ? Math.min(STARS.r, nf.ring.r0 - 5) : STARS.r;
+      for (const [i, sa] of As.entries()) { const a = spin + sa, x = cx + Math.sin(a) * R, z = cz + Math.cos(a) * R; c.fx(FX.RUNE, ELEM.LIGHT, x, caveFloorY(x, z) + 0.05, z, 3.2, 0, 1, 0, 0, 0.3, 0, 0, 0.9, i); }
+    }
+  }
+}

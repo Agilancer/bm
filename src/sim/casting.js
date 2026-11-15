@@ -9,6 +9,8 @@ import { DMG_FIELDS, effectiveAll } from './skills.js';
 import { STAFFS2 } from '../items/staffs2.js';
 import { STAFF_GRAND, STAFF_SHOTS, installStaffShots } from './staffshots.js';
 import { BUFFS, installTreeSpells } from './treespells.js';
+// The frame's shapes kept back from bursts for the marks and what comes after (stepBursts).
+const BURST_SPARE = 160;
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -170,7 +172,9 @@ export class Casting {
       if (k >= 1) continue;
       const grow = 1 - (1 - k) ** b.ease;
       const a = (1 - k) ** 1.5;
-      this.fx(b.shape, b.elem, b.x, b.y, b.z, b.s0 + (b.s1 - b.s0) * grow, b.ax, b.ay, b.az, b.len, b.alpha * a, b.light * a, b.lightR, k, b.seed, b.extra);
+      // (Puffs and sparks never take the last of the frame's room: what's drawn after them is the warnings on the ground,
+      // src/sim/perils.js, and those must show. Past it they go on unseen.)
+      if (this.n < MAX_FX - BURST_SPARE) this.fx(b.shape, b.elem, b.x, b.y, b.z, b.s0 + (b.s1 - b.s0) * grow, b.ax, b.ay, b.az, b.len, b.alpha * a, b.light * a, b.lightR, k, b.seed, b.extra);
       keep.push(b);
     }
     this.bursts = keep;

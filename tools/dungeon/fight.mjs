@@ -197,6 +197,8 @@ async function fight(key) {
     if ((sim.tick & 7) === 0) await breathe();
     const c = sim.casting;
     maxFx = Math.max(maxFx, c.n);
+    // (FXDEBUG: what fills the frame's shapes, the first time it's all but full.)
+    if (process.env.FXDEBUG && c.n >= +(process.env.FXDEBUG) && !globalThis.fxShown) { globalThis.fxShown = true; const h = {}; for (let i = 0; i < c.n; i++) { const k = `${c.data[i * FX_FLOATS + 8]}/${c.data[i * FX_FLOATS + 9]}`; h[k] = (h[k] || 0) + 1; } console.log(`shapes at ${sim.time.toFixed(1)} s (shape/elem): ${JSON.stringify(h)}; bursts ${c.bursts.length}, marks ${P.marks.length}`); }
     for (let k = 0; k < c.n * FX_FLOATS; k++) if (!Number.isFinite(c.data[k])) throw new Error(`a shape with a bad number (shape ${c.data[Math.floor(k / FX_FLOATS) * FX_FLOATS + 8]}, field ${k % FX_FLOATS})`);
     low.player = Math.min(low.player, p.hp / p.maxHp); if (tank) low.tank = Math.min(low.tank, tank.hp / tank.maxHp);
     for (const h of party) if (h.dead) fell.add(h.person.cls);

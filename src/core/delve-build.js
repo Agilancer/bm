@@ -213,6 +213,12 @@ function voidShell(K, d) {
       };
       P.levels = IN.length;
       P.layer = (k) => (k < 2 ? r.rock || L.wall : k < 4 ? r.rock || L.wall : 'dark:rubble');
+      // (Strata stood out of its side under the lip here and there, and points of rock hanging from its root: no island's
+      // underside a smooth cone.)
+      const hh = hash2(Math.round(ax * 2.3) + 11, Math.round(az * 2.3) - 7);
+      if (hh > 0.84) K.box(r.rock || L.wall, ax - ga[0] * 0.45, ya - 1.8 - hash2(ax * 3, az) * 2.6, az - ga[1] * 0.45, 0.8, 0.5 + hash2(az, ax * 3) * 0.6, 0.9 + (hh - 0.84) * 9, Math.atan2(bx - ax, bz - az), NO);
+      if (hh < 0.075) { const q = P(ax, az, ya, ga, 3); hang(K, 'dark:rubble', q[0], q[1] + 0.8, q[2], 0.9 + hh * 22, 3 + hash2(az * 2, ax) * Math.min(16, D * 0.22), 5, hh * 90); }
+      else if (hh > 0.77 && hh < 0.8) { const q = P(ax, az, ya, ga, 5); hang(K, 'dark:rubble', q[0], q[1] + 0.8, q[2], 1.5, 4 + hash2(ax, az * 2) * Math.min(20, D * 0.25), 5, hh * 60); }
     } else {
       // A bridge: a keel a couple of metres deep under its deck, in toward its middle line.
       const t = o.bridge, keel = t.ramp ? 3.4 : 2.2;
@@ -237,6 +243,17 @@ function voidShell(K, d) {
       if (nx * (ga[0] + gb[0]) + nz * (ga[1] + gb[1]) < 0) K.quad(layer, A0, A1, B1, B0); else K.quad(layer, B0, B1, A1, A0);
     }
   });
+  // Rock and void glass adrift between the islands, each at its own height: what the Maw tore off them and let go.
+  for (let n = 0; n < 160; n++) {
+    const r = d.rooms[Math.floor(hash2(n, 1.5) * d.rooms.length)], a = hash2(n, 2.5) * TAU, far = r.r + 7 + hash2(n, 3.5) * 36;
+    const x = d.x + r.x + Math.sin(a) * far, z = d.z + r.z + Math.cos(a) * far;
+    if (caveRoom(x, z) > -5) continue;
+    const y = d.y + r.y - 4 + (hash2(n, 4.5) - 0.62) * 30, s = 0.45 + hash2(n, 5.5) ** 2 * 3.4, t = hash2(n, 6.5) * TAU;
+    const layer = hash2(n, 7.5) > 0.5 ? 'dark:rubble' : r.rock || L.wall;
+    cap(K, layer, x, y, z, s, s * (0.3 + hash2(n, 8.5) * 0.4), 5, t);
+    hang(K, layer, x, y, z, s, s * (1.4 + hash2(n, 9.5) * 1.6), 5, t);
+    if (hash2(n, 10.5) > 0.72) crystal(K, 'voidglass', x, y + s * 0.2, z, s * 0.15, s * 1.1, [0.1, -0.05], t);
+  }
 }
 
 // Blackvigil: straight walls of his black stone, a course of rubble at their foot; a flagged floor; each room's roof level,
@@ -364,6 +381,20 @@ export function bar(K, layer, a, b, t, t2 = t) {
   }
 }
 // A crystal: six sides, leaning, cut to a point at its head.
+// A point of rock hanging down from (x, y, z), h long, its faces turned out; and a low cap the right way up (neither stops
+// anything: they're out over the void or under an island).
+function hang(K, layer, x, y, z, r, h, sides, turn) {
+  for (let i = 0; i < sides; i++) {
+    const a = turn + i / sides * TAU, b = turn + (i + 1) / sides * TAU, w = 0.75 + 0.5 * hash2(i, x);
+    K.tri(layer, [x + Math.cos(a) * r, y, z + Math.sin(a) * r], [x + Math.cos(b) * r, y, z + Math.sin(b) * r], [x + Math.cos(a + 0.5) * r * 0.1 * w, y - h, z + Math.sin(a + 0.5) * r * 0.1 * w]);
+  }
+}
+function cap(K, layer, x, y, z, r, h, sides, turn) {
+  for (let i = 0; i < sides; i++) {
+    const a = turn + i / sides * TAU, b = turn + (i + 1) / sides * TAU;
+    K.tri(layer, [x + Math.cos(a) * r, y, z + Math.sin(a) * r], [x, y + h, z], [x + Math.cos(b) * r, y, z + Math.sin(b) * r]);
+  }
+}
 function crystal(K, layer, x, y, z, r, h, lean, turn) {
   const k = h < 0 ? 0.8 : 0.78, tx = x + lean[0] * h * k, tz = z + lean[1] * h * k, p = K.part(layer);
   void p;
@@ -1477,8 +1508,8 @@ export const PROPS = {
       K.box(layer, x, y + 0.2 + u * h * 0.85, z, w, hh * 0.9, 0.16 + 0.06 * (1 - u), yaw, NO);
     }
     K.spike(layer, x, y + 0.2 + h * 0.85 + h / 4 * 0.8, z, r * 0.3, h * 0.28, 4, yaw + Math.PI / 4);
-    // (Its god's light about its foot.)
-    if (p.god) glow(K, d, x, y + 0.6, z, 1.1, { green: 'mire:flame', red: 'dark:flame', undead: 'frost:flame', black: 'spore:flame' }[p.god]);
+    // (A light about its foot: its god's colour is lit over it while that god lives, src/sim/voidland.js voidDraw.)
+    glow(K, d, x, y + 0.6, z, 1.1);
   },
   // The altar the four scales stand round: two broad steps of old block, a ring of runes alight in the upper, a dish of
   // void glass in its middle.
@@ -1534,9 +1565,10 @@ export const PROPS = {
   // The Cinderwell's vent: the island's middle gone down into the void, magma a long way down it, its light coming up.
   vent(K, d, p, x, y, z) {
     const base = caveFloorY(x + p.r + 4, z);
-    K.disc('magma', x, base - 12, z, p.r * 0.95, 24);
-    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; glow(K, d, x + Math.cos(a) * p.r * 0.5, base - 9, z + Math.sin(a) * p.r * 0.5, 3.2, 'dark:flame'); }
-    glow(K, d, x, base - 2, z, 4.5, 'dark:flame');
+    // (Its magma a few metres down, where it's seen from the ring, and its light up over the rim.)
+    K.disc('magma', x, base - 3.2, z, p.r * 0.97, 24);
+    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; glow(K, d, x + Math.cos(a) * p.r * 0.55, base - 2.6, z + Math.sin(a) * p.r * 0.55, 3.4, 'dark:flame'); }
+    glow(K, d, x, base - 1, z, 6.5, 'dark:flame');
   },
   // A column of basalt: six-sided, standing a step and a half out of the Cinderwell's floor (y is its top), a flared foot,
   // cracks of magma at its foot. The field has it as a dais; this is only how it looks.
@@ -1573,6 +1605,27 @@ export const PROPS = {
       const py = caveFloorY(px, pz), h = 0.5 + hash2(i, 13) * 1.4;
       if (hash2(i, 17) > 0.6) K.spike('obsidian', px, py - 0.2, pz, 0.25 + hash2(i, 19) * 0.25, h * 1.6, 4, a, [Math.cos(a) * 0.5, Math.sin(a) * 0.5]);
       else K.box('void:rubble', px, py - 0.25, pz, 0.35 + hash2(i, 21) * 0.4, h * 0.6, 0.3 + hash2(i, 23) * 0.35, a, NO);
+    }
+  },
+  // Cracks across the Lip's flags, alight with the void's violet, running north to its edge and the Maw past it: n of them
+  // from across w metres of its south half, each a jagged line a metre and a half at a time, narrowing, a branch now and then.
+  voidcracks(K, d, p, x, y, z) {
+    const strip = (ax, az, bx, bz, w) => {
+      const L = Math.hypot(bx - ax, bz - az) || 1, nx = -(bz - az) / L * w, nz = (bx - ax) / L * w;
+      const ya = caveFloorY(ax, az) + 0.025, yb = caveFloorY(bx, bz) + 0.025;
+      K.quad('rune', [ax - nx, ya, az - nz], [bx - nx, yb, bz - nz], [bx + nx, yb, bz + nz], [ax + nx, ya, az + nz], [0, 1, 0]);
+    };
+    for (let n = 0; n < p.n; n++) {
+      let px = x + (hash2(n, 3) - 0.5) * p.w, pz = z + (hash2(n, 4) - 0.5) * 4, a = Math.PI + (hash2(n, 7) - 0.5) * 0.5, w = 0.34;
+      const len = p.len * (0.6 + hash2(n, 11) * 0.4);
+      for (let s = 0; s < len; s += 1.5) {
+        a += (hash2(n * 13 + s, 5) - 0.5) * 0.75;
+        const qx = px + Math.sin(a) * 1.5, qz = pz + Math.cos(a) * 1.5;
+        if (caveRoom(qx, qz) < 0.4) break;
+        strip(px, pz, qx, qz, w);
+        if (hash2(n * 7 + s, 9) > 0.8) { const b = a + (hash2(s, n) > 0.5 ? 0.9 : -0.9), ex = px + Math.sin(b) * 2.2, ez = pz + Math.cos(b) * 2.2; if (caveRoom(ex, ez) > 0.6) strip(px, pz, ex, ez, w * 0.55); }
+        px = qx; pz = qz; w = Math.max(0.1, w * 0.975);
+      }
     }
   },
   // A gust stone: a round flag of old block let into the ground, a ring of runes alight round its rim; an updraft (gust)
