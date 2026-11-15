@@ -17,7 +17,7 @@
 //   at:   { 3: {...} }   added once, from that rank on
 //   set:  { field: v }   set outright, by a branch with any rank in it
 // Fields the cast code reads that no row has until a branch gives them (embers, pierce, twin, ...) are that branch's doing.
-import { ELEM, SPELLS } from './spells.js';
+import { ELEM, REACH, SPELLS } from './spells.js';
 
 export const MAX_RANK = 5;
 // The level each tier of a tree opens at, left to right, and the points that must already be in the school.
@@ -53,7 +53,7 @@ export const TREES = [
         b('searing', 'Searing Core', 3, 'Gathers 15% quicker a rank, and what it strikes burns 2 seconds longer.', { per: { gather: -0.15 }, plus: { burn: 2 } }),
         b('banked', 'Banked', 1, 'A full gather can be held in the hand five seconds more before it is thrown.', { set: { bank: 5 } }),
       ]),
-      s('firebeam', 1, 0, 'firebolt', { plus: { range: 1 } }, [
+      s('firebeam', 1, 0, 'firebolt', {}, [
         b('whiteheat', 'White Heat', 1, 'Held on one foe, the beam burns hotter: 6% more with every bite, up to 60% more. Its core goes white.', { set: { ramp: 0.06, rampMax: 0.6 } }),
         b('sweep', 'Sweeping Flame', 1, 'The jet opens into a short, wide fan that burns everything in it: half as far, and each for a little over half.', { set: { fan: 0.45 }, per: { range: -0.45, dmg: -0.45 } }),
       ]),
@@ -125,7 +125,7 @@ export const TREES = [
       ]),
       s('shatter', 3, 1, ['nova', 'frostray'], {}, [
         b('chainshatter', 'Chain Shatter', 1, 'What it kills breaks open in turn, for half, on those beside it.', { set: { chainShatter: 0.5 } }),
-        b('coldreach', 'Cold Reach', 2, 'Reaches 5 paces further a rank, and slows whatever in reach was not slowed already.', { plus: { range: 5 }, set: { frostbite: 3 } }),
+        b('coldreach', 'Bitter Cold', 2, 'Cracks a fifth harder a rank, and slows whatever in reach was not slowed already.', { per: { dmg: 0.2 }, set: { frostbite: 3 } }),
       ]),
       s('orb', 3, 2, 'prism', {}, [
         b('shardstorm', 'Shard Storm', 2, 'Throws its shards a fifth faster a rank.', { per: { every: -0.2 } }),
@@ -153,7 +153,7 @@ export const TREES = [
         b('venom', 'Venom', 3, 'They rot 2 seconds longer a rank.', { plus: { bleed: 2 } }),
         b('briar', 'Briar', 1, 'What a thorn strikes is snared and slowed for 2 seconds.', { set: { snare: 2 } }),
       ]),
-      s('spikes', 2, 0, 'lance', { plus: { count: 1 } }, [
+      s('spikes', 2, 0, 'lance', {}, [
         b('aftershock', 'Aftershock', 1, 'The spikes burst up a second time a moment later, for half.', { set: { aftershock: 0.5 } }),
         b('jagged', 'Jagged', 2, 'What they throw comes down stunned, half a second a rank.', { plus: { stun: 0.5 } }),
       ]),
@@ -193,7 +193,7 @@ export const TREES = [
       ]),
       s('arcaneblast', 1, 0, 'missiles', {}, [
         b('concussion', 'Concussion', 2, 'Hurls them a third further a rank, and leaves them stunned half a second a rank.', { per: { force: 0.35 }, plus: { stun: 0.5 } }),
-        b('focused', 'Focused Blast', 1, 'A narrower cone that reaches half again as far and bites a quarter harder.', { per: { range: 0.5, angle: -0.3, dmg: 0.25 } }),
+        b('focused', 'Focused Blast', 1, 'A narrower cone that bites a third harder.', { per: { angle: -0.3, dmg: 0.35 } }),
       ]),
       s('blink', 1, 2, 'missiles', { plus: { range: 1.5 } }, [
         b('rift', 'Torn Air', 1, 'Where you left, a rift hangs a moment and then bursts.', { set: { rift: 2.3 } }),
@@ -209,7 +209,7 @@ export const TREES = [
       ]),
       s('crescent', 2, 2, 'blink', {}, [
         b('twomoons', 'Two Moons', 1, 'Two crescents, thrown wide of one another, each for 70%.', { set: { twin: true }, per: { dmg: -0.3 } }),
-        b('orbit', 'Wide Orbit', 2, '5 paces further and a fifth larger, a rank.', { plus: { out: 5 }, per: { size: 0.2 } }),
+        b('orbit', 'Wide Orbit', 2, 'A fifth larger and a tenth harder, a rank.', { per: { size: 0.2, dmg: 0.1 } }),
       ]),
       s('well', 3, 0, ['blades', 'rune'], { per: { radius: 0.05 } }, [
         b('crush', 'Crushing Depth', 2, 'What it drags is crushed as it goes: 8 a second, a rank.', { plus: { crush: 8 } }),
@@ -219,7 +219,7 @@ export const TREES = [
         b('echo', 'Second Toll', 1, 'A second after time comes back, it comes back again for half.', { set: { echo: 0.5 } }),
         b('widefield', 'Wide Field', 2, 'A fifth wider a rank.', { per: { zoneR: 0.2 } }),
       ]),
-      s('disintegrate', 4, 0, 'well', { plus: { range: 2 } }, [
+      s('disintegrate', 4, 0, 'well', {}, [
         b('unmaking', 'Unmaking', 1, 'What it kills comes apart in a burst.', { set: { unmake: 60 } }),
         b('glass', 'Burning Glass', 2, 'Held on, it climbs half as high again a rank.', { plus: { rampMax: 0.75 } }),
       ]),
@@ -238,12 +238,12 @@ export const TREES = [
         b('charged', 'Charged', 1, 'What a Spark strikes is left charged for 4 seconds, and takes a tenth more from every spell.', { set: { shock: 4 } }),
       ]),
       s('chain', 1, 0, 'spark', { at: { 2: { jumps: 1 }, 4: { jumps: 1 } } }, [
-        b('longarc', 'Long Arc', 2, 'Leaps 3 paces further and reaches 4 further, a rank.', { plus: { reach: 3, range: 4 } }),
+        b('longarc', 'Long Arc', 2, 'Leaps 4 paces further a rank.', { plus: { reach: 4 } }),
         b('steady', 'Undiminished', 1, 'It loses nothing as it leaps: the last is struck as hard as the first.', { set: { steady: true } }),
       ]),
       s('fork', 1, 1, 'spark', { at: { 3: { forks: 1 }, 5: { forks: 1 } } }, [
         b('branching', 'Branching', 1, 'Each fork leaps on once to another foe, for half.', { set: { branch: 0.5 } }),
-        b('widefork', 'Wide Fork', 2, 'A quarter wider and 3 paces further, a rank.', { per: { angle: 0.25 }, plus: { range: 3 } }),
+        b('widefork', 'Wide Fork', 2, 'A third wider a rank.', { per: { angle: 0.33 } }),
       ]),
       s('seed', 1, 2, 'spark', { plus: { hold: 1 }, per: { relay: 0.08 } }, [
         b('deeproot', 'Long Root', 2, 'Stays 3 seconds longer and reaches a pace further, a rank.', { plus: { hold: 3, reach: 1 } }),
@@ -401,10 +401,19 @@ function apply(def, mod, n, rank) {
   if (mod.set) Object.assign(def, mod.set);
 }
 
+// Nothing reaches past REACH (src/sim/spells.js), whatever was spent on it: how far it's laid, poured or sought, how far a
+// crescent cuts out. (Blink and Stormstep move you: theirs is how far you go.)
+function reined(def) {
+  if (def.cast !== 'blink' && def.range > REACH) def.range = REACH;
+  if (def.out > REACH) def.out = REACH;
+  if (def.seek > REACH) def.seek = REACH;
+  return def;
+}
+
 /** Spell i as it's cast with these ranks: its row, grown by its rank, its branches and its school's mastery. */
 export function effective(i, ranks = null) {
   const base = SPELLS[i], node = NODES[base.key], def = { ...base, i, tree: node ? node.tree : -1, rank: 1 };
-  if (!node) return def;
+  if (!node) return reined(def);
   const r = Math.max(1, rankOf(ranks, base.key)), n = r - 1;
   def.rank = r;
   // Each rank past the first: more of what it does, and whatever its row above adds.
@@ -420,7 +429,7 @@ export function effective(i, ranks = null) {
   }
   def.mana = Math.max(1, Math.round(def.mana));
   if (def.cd !== undefined) def.cd = Math.max(0, def.cd);
-  return def;
+  return reined(def);
 }
 
 /** Every spell's numbers for these ranks, by its place in SPELLS. */

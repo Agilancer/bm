@@ -265,15 +265,16 @@ export function tactics(b, m, foes) {
       const t = pickTarget(live.filter((q) => q.id !== boss.id), f, b, m);
       return { to: hide, run: true, target: t && caveClear(m.x, m.z, t.x, t.z) ? t : null, why: 'Behind a pillar: Venomaw is in the air.', hide: true };
     }
-    // On the ground: off her shoulder, well out, never before her face, and forward of her flank: her tail takes all behind.
+    // On the ground: off her shoulder, as far out as its spells reach, never before her face, and forward of her flank: her
+    // tail takes all behind.
     const rx = Math.cos(boss.yaw), rz = -Math.sin(boss.yaw), side = (m.x - boss.x) * rx + (m.z - boss.z) * rz >= 0 ? 1 : -1;
-    let tx = boss.x + rx * side * 13 + Math.sin(boss.yaw) * 4, tz = boss.z + rz * side * 13 + Math.cos(boss.yaw) * 4;
-    if (caveRoom(tx, tz) < 1) { tx = boss.x - rx * side * 13; tz = boss.z - rz * side * 13; }
+    let tx = boss.x + rx * side * 7 + Math.sin(boss.yaw) * 2.5, tz = boss.z + rz * side * 7 + Math.cos(boss.yaw) * 2.5;
+    if (caveRoom(tx, tz) < 1) { tx = boss.x - rx * side * 7; tz = boss.z - rz * side * 7; }
     return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 5, target: pickTarget(live, f, b, m), why: 'At Venomaw\'s side.' };
   }
   // Maldrec sets his shield: nothing gets through it from the front, so round behind him, a spell's reach off, till it's down.
   if (f.boss === 'maldrec' && boss && (boss.ward ?? 1) < 1) {
-    let tx = boss.x - Math.sin(boss.yaw) * 11, tz = boss.z - Math.cos(boss.yaw) * 11;
+    let tx = boss.x - Math.sin(boss.yaw) * 7, tz = boss.z - Math.cos(boss.yaw) * 7;
     if (caveRoom(tx, tz) < 1) { tx = boss.x - Math.sin(boss.yaw) * 5; tz = boss.z - Math.cos(boss.yaw) * 5; }
     if (caveRoom(tx, tz) >= 1) return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 4, target: pickTarget(live, f, b, m), why: 'Behind Maldrec\'s shield.' };
   }
