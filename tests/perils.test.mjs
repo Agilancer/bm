@@ -2,7 +2,8 @@
 // way out of one leads out of it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SHAPE, SHAPES, covers, edge, markOut, reachOf, wayOut } from '../src/core/perils.js';
+import { SHAPE, SHAPES, covers, edge, markOut, reachOf, wayOut, wheelSpot } from '../src/core/perils.js';
+import { REACH } from '../src/sim/spells.js';
 import { MOVES, TRICKS } from '../src/sim/moves.js';
 import { GROUPS } from '../src/core/tripo-monsters.js';
 import { FX } from '../src/sim/spells.js';
@@ -89,4 +90,33 @@ test('the ground burning under you hurts from where it burns, and doesn\'t push 
   assert.deepEqual([p.knockX, p.knockZ, p.hp], [0, 0, 90]);
   p.applyHurt(psim, 10, -5, 0, 0);
   assert.ok(p.knockX > 2, 'a blow still puts you back');
+});
+
+// A boss's fire wheel (src/sim/moves.js fireWheel) as auto-play meets it now that nothing it casts goes past REACH: it stands
+// where the wheel turns. Walking round with the gap between two arms (wheelSpot, src/ui/autowarrens.js perilStep), told of the
+// wheel a tenth of a second late and thinking each eighth of one, at a walk slowed by casting, it's never caught, and it stays
+// near enough the boss in the middle to cast at it. (Only stepping out of an arm once it was on one, it was caught one to two
+// times a wheel.)
+test('round with a fire wheel: never caught by an arm, and never out of reach of the boss in its middle', () => {
+  const wheels = [{ r: 11, arms: 4, spin: 0.7, life: 6 }, { r: 11, arms: 5, spin: 0.6, life: 5 }, { r: 13, arms: 4, spin: 0.7, life: 7 },
+    { r: 19, arms: 3, spin: 0.36, life: 9 }, { r: 11, arms: 4, spin: -0.75, life: 6 }];
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (const W of wheels) for (let n = 0; n < 60; n++) {
+    const h = { shape: 'cross', x: 0, z: 0, r: W.r, w: 0.75, arms: W.arms, yaw: rnd() * 6.28, spin: W.spin, live: false };
+    const a0 = rnd() * 6.28, r0 = 4 + rnd() * 4.5;
+    let x = Math.sin(a0) * r0, z = Math.cos(a0) * r0, t = 0, think = 0, goal = null, caught = 0, far = 0;
+    for (; t < 1.2 + W.life; t += 0.02) {
+      h.live = t >= 1.2;
+      if (h.live) h.yaw += h.spin * 0.02;
+      if ((think -= 0.02) <= 0) { think = 0.12; goal = wheelSpot({ ...h, yaw: h.yaw - (h.live ? h.spin * 0.1 : 0) }, x, z, 0.1, { want: REACH - 2.5 }); }
+      if (goal) { const dx = goal[0] - x, dz = goal[1] - z, L = Math.hypot(dx, dz); if (L > 0.6) { const v = Math.min(L, 4.6 * 0.02); x += dx / L * v; z += dz / L * v; } }
+      if (h.live && covers(h, x, z)) caught++;
+      if (h.live && t > 2.4) far = Math.max(far, Math.hypot(x, z));
+    }
+    assert.equal(caught, 0, `caught by a wheel ${JSON.stringify(W)}`);
+    assert.ok(far < REACH - 1, `${far.toFixed(1)} m from the middle of ${JSON.stringify(W)}`);
+  }
+  // (Nowhere near it: nothing to do with it.)
+  assert.equal(wheelSpot({ shape: 'cross', x: 0, z: 0, r: 11, w: 0.75, arms: 4, spin: 0.7, live: true, yaw: 0 }, 20, 0), null);
 });

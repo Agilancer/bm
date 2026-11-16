@@ -4,7 +4,8 @@
 // the adds first, the twins kept even. src/ui/autobrain.js calls in here; this keeps the Warrens' rules in one place.
 import { ALL_PACKS, BOSSES, BOSS_KEYS, BROKER_SPOTS, CaveNav, DELVES, PARTY, PERCH, PILLARS, POSTS, caveClear, caveFloorY, caveRoom, delveByKey, delveOf, inDungeon, roleOf, roomOf, roomSpot, toWorld } from '../core/dungeon.js';
 import { hirePrice } from './party.js';
-import { edge, wayOut } from '../core/perils.js';
+import { edge, wayOut, wheelSpot } from '../core/perils.js';
+import { REACH } from '../sim/spells.js';
 import { INPUT } from '../core/layout.js';
 
 // The level it goes down at, the first time (raised two each time the Warrens beat it three times over), and the level it
@@ -254,19 +255,19 @@ export function tactics(b, m, foes) {
   if (told?.to && told.urgent && dist(m.x, m.z, told.to[0], told.to[1]) > 0.7) return { to: told.to, run: true, target: pickTarget(live, f, b, m), why: 'Where the fight wants me, now.' };
   // Out of whatever's marked, falling, burning or flying at it, first.
   const out = told?.to && told.urgent ? null : perilStep(b, m);
-  if (out) return { to: out, run: true, target: pickTarget(live, f, b, m), why: 'Out of the circle!' };
+  if (out) return { to: out, run: true, target: pickTarget(live, f, b, m), why: out.wheel ? 'Round with the wheel.' : 'Out of the circle!' };
   // (And somewhere to be when it's clear: a pod to tread flat.)
   if (told?.to) return { to: told.to, run: dist(m.x, m.z, told.to[0], told.to[1]) > 3, target: pickTarget(live, f, b, m), why: 'Where the fight wants me.' };
   if (!f) return { to: null, target: pickTarget(live, null, b, m), why: null };
   const bodies = f.bodies || [];
   const boss = bodies[0];
   // A boss turned on it (src/sim/dungeon.js turnOn: called out, then a few seconds when nothing holds it): behind the tank
-  // from it, or well out of its reach with no tank up, shooting it as it comes.
+  // from it, or out of its reach with no tank up, but not out of its own (REACH), shooting it as it comes.
   const turned = bodies.find((q) => q.turning);
   if (turned && !turned.flying) {
     const tank = b.tankNear(m), away = (from, r) => { const dx = m.x - from.x, dz = m.z - from.z, L = Math.hypot(dx, dz) || 1; return [from.x + dx / L * r, from.z + dz / L * r]; };
-    let [tx, tz] = tank ? (() => { const dx = tank.x - turned.x, dz = tank.z - turned.z, L = Math.hypot(dx, dz) || 1; return [tank.x + dx / L * 3.5, tank.z + dz / L * 3.5]; })() : away(turned, 14);
-    if (caveRoom(tx, tz) < 0.8) [tx, tz] = away(turned, 9);
+    let [tx, tz] = tank ? (() => { const dx = tank.x - turned.x, dz = tank.z - turned.z, L = Math.hypot(dx, dz) || 1; return [tank.x + dx / L * 3.5, tank.z + dz / L * 3.5]; })() : away(turned, REACH - 1.5);
+    if (caveRoom(tx, tz) < 0.8) [tx, tz] = away(turned, 6);
     const T = live.find((q) => q.id === turned.id) || pickTarget(live, f, b, m);
     return { to: [tx, tz], run: dist(m.x, m.z, tx, tz) > 3, target: T, why: tank ? 'It turns on me: back behind the tank.' : 'It turns on me: out of its reach.' };
   }
@@ -318,10 +319,22 @@ export function perilStep(b, m) {
   const wave = G.marks.find((h) => h.jump && h.live && Math.abs(edge(h, m.x, m.z)) < 1.9);
   if (wave && b.t - (b.waveJump ?? -9) > 0.7) { b.waveJump = b.t; b.o.shared.input[INPUT.JUMP] += 1; }
   // (Not out of one that's to be stood in: a pod, the grave's circle. soak, src/sim/perils.js.)
-  const to = wayOut(G.marks.filter((h) => !h.jump && !h.soak), m.x, m.z, 1, open);
-  if (to) return to;
-  // (Where each shot is now: they've flown on since they were told of.)
+  // A wheel turning near it (a boss's fire wheel): round with it, in a gap between its arms, near enough the boss in the
+  // middle to keep casting at it (everything it casts stops at REACH: src/sim/spells.js). Stepping out of an arm once it's
+  // on it, as with any other mark, it was caught by every arm that came round, and the next. The rest of the marks it steps
+  // out of as ever, first.
   const late = (performance.now() - G.at) / 1000;
+  const marks = G.marks.filter((h) => !h.jump && !h.soak), turning = (h) => h.shape === 'cross' && h.spin;
+  const to = wayOut(marks.filter((h) => !turning(h)), m.x, m.z, 1, open);
+  if (to) return to;
+  const wheel = marks.filter(turning).map((h) => [h, dist(m.x, m.z, h.x, h.z)]).sort((a, c) => a[1] - c[1])[0]?.[0];
+  if (wheel) {
+    const p = wheelSpot(wheel, m.x, m.z, late, { want: REACH - 2.5 });
+    if (p && (!open || open(p[0], p[1])) && marks.every((h) => h === wheel || edge(h, p[0], p[1]) > 0.5)) { p.wheel = true; return p; }
+  }
+  const out = wayOut(marks, m.x, m.z, 1, open);
+  if (out) return out;
+  // (Where each shot is now: they've flown on since they were told of.)
   let sx = 0, sz = 0;
   for (const q of G.shots) {
     const qx = q.x + q.vx * late, qz = q.z + q.vz * late, rx = m.x - qx, rz = m.z - qz, v2 = q.vx * q.vx + q.vz * q.vz || 1, t = (rx * q.vx + rz * q.vz) / v2;

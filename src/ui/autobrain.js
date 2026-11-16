@@ -1546,7 +1546,8 @@ export class Brain {
       K.t -= 0.12;
       // (Backing into something: round, and a run for it.)
       if (K.back && this.backedUp > 0.5) { const [ex, ez] = this.escape(m, live); K = this.kite = { x: ex, z: ez, t: 1 + Math.random() * 0.5, back: false }; this.backedUp = 0; }
-      if (K.t <= 0 || dn > (K.back ? 9 : 12)) { if (!K.back) this.reactT = 0.3; this.kite = K = null; }
+      // (Over once it has the room it fights from: further, and it would only have to come back in to cast. REACH.)
+      if (K.t <= 0 || dn > (K.back ? IN - 2 : IN - 0.5)) { if (!K.back) this.reactT = 0.3; this.kite = K = null; }
       else if (K.back) { const [ex, ez] = this.escape(m, live); K.x = ex; K.z = ez; }
       else {
         this.face = Math.atan2(K.x, K.z);
@@ -1575,10 +1576,10 @@ export class Brain {
     }
     if (K?.back && !retreat) retreat = [K.x, K.z];
     // Its mark: with a party, what's on the healer or the others, then what the tank's holding (helpPick); else what's
-    // coming for it first, then the nearest, and sooner one it has a clean line to, one nearly down, and the one it's
+    // coming for it first, then the nearest, and sooner one it has a clean line to or can reach, one nearly down, and the one it's
     // already on (it doesn't flit between them). A new one takes a moment to settle on.
     const help = this.helpPick(live, m);
-    const want = (f) => { const v = this.sees(f); return f.d - (f.hostile ? 6 : 0) + (v && !v.clear ? 9 : 0) - (f.id === this.target?.id ? 2.5 : 0) - (f.hostile && f.maxHp > 1 && f.hp < f.maxHp * 0.3 ? 3 : 0); };
+    const want = (f) => { const v = this.sees(f); return f.d - (f.hostile ? 6 : 0) + (v && !v.clear ? 9 : 0) + (f.d > IN ? 4 : 0) - (f.id === this.target?.id ? 2.5 : 0) - (f.hostile && f.maxHp > 1 && f.hp < f.maxHp * 0.3 ? 3 : 0); };
     const pick = help?.T || live.reduce((a, b) => (want(a) <= want(b) ? a : b));
     if (this.target?.id !== pick.id) { this.target = pick; this.reactT = 0.2 + Math.random() * 0.25; } else Object.assign(this.target, pick);
     const T = this.target, d = T.d;
@@ -1614,7 +1615,7 @@ export class Brain {
     const sight = this.sees(T), blocked = !!sight && !sight.clear;
     const aimed = this.reactT <= 0 && this.clean(T) && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.035, Math.atan2(0.8, d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.12;
     // Footwork: back off what's close while it shoots, close in on what's further than it reaches, step side to side between.
-    let mx = 0, mz = 0;
+    let mx = 0, mz = 0, run = false;
     const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1), bx = (m.x - near.x) / (dn || 1), bz = (m.z - near.z) / (dn || 1);
     if ((this.strafeT -= 0.12) <= 0) { this.strafeT = 1.2 + Math.random() * 2.2; this.strafe = Math.random() < 0.75 ? -this.strafe : this.strafe; }
     // Giving ground (kiting, or hurt): straight back along the way it's chosen, its eyes and its staff on its mark.
@@ -1634,11 +1635,16 @@ export class Brain {
         if (this.rideWay(m, wx / L, wz / L)) { this.startRide(m, wx / L, wz / L, 'across'); return true; }
         this.rideCool = 3;
       }
+      // (Well out of its reach, and nothing at it: in at a run, straight, as a player does; there's nothing to cast till it's
+      // there. Not on its last breath: the shield wants that. Walking in, side to side as it went, it was seconds getting
+      // from thirty paces to where its spells reach, giving whatever had seen it free blows all the way.)
+      run = d > IN + 3 && dn > 6 && !K && m.stam > 55;
       if (dn < 4.5) { mx = bx; mz = bz; } else if (d > IN - 1.5) { mx = fx; mz = fz; }
-      mx += -fz * this.strafe * 0.6; mz += fx * this.strafe * 0.6;
+      const side = run ? 0.12 : 0.6;
+      mx += -fz * this.strafe * side; mz += fx * this.strafe * side;
     }
     if (this.dodgeCool > 1.1) { if (this.dodgeDir) [mx, mz] = this.dodgeDir; else { mx = -fz * this.dodgeSide; mz = fx * this.dodgeSide; } }
-    this.steer(mx, mz, false, true);
+    this.steer(mx, mz, run, true);
     // (Backing into something: noted, and the next close call turns into a run instead.)
     this.backedUp = dn < 4.5 && Math.hypot(m.vx, m.vz) < 1 ? (this.backedUp || 0) + 0.12 : 0;
     this.shoot(snap, m, this.scene(m, live, T, near, close, aimed, company));
@@ -1655,7 +1661,7 @@ export class Brain {
     const d = T.d, fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1);
     const around = live.filter((f) => dist(f.x, f.z, T.x, T.z) < 5.5).length;
     // (What's lined up behind its mark, for what goes through.)
-    const inLine = live.filter((f) => { const a = (f.x - m.x) * fx + (f.z - m.z) * fz; return a > 0 && a < 40 && Math.abs((f.x - m.x) * fz - (f.z - m.z) * fx) < 1.5; }).length;
+    const inLine = live.filter((f) => { const a = (f.x - m.x) * fx + (f.z - m.z) * fz; return a > 0 && a < REACH + 1 && Math.abs((f.x - m.x) * fz - (f.z - m.z) * fx) < 1.5; }).length;
     const sp = Math.hypot(T.vx || 0, T.vz || 0), coming = ((T.vx || 0) * -fx + (T.vz || 0) * -fz) > 1;
     // (What its tank is holding stands still for it, the rest of them about him.)
     const tank = company.find((h) => h.role === 'tank'), held = !!tank && tank.foe === T.id && dist(tank.x, tank.z, T.x, T.z) < 5;
@@ -1730,6 +1736,8 @@ export class Brain {
     this.pitch = Math.atan2(T.y + T.h - (m.y + 1.62), Math.max(1, d));
     this.aim = { x: ax, z: az, y: T.y + T.h, w: 0 };
     const aimed = this.clean(T) && Math.abs(wrap(yaw - this.o.input.yaw)) < Math.max(0.05, Math.atan2(0.9, d)) && Math.abs(this.pitch - this.o.input.pitch) < 0.14;
+    // (Carried well past where anything it casts gets to: off, and back in on foot. Clear of a crowd it goes a little further.)
+    if (R.phase === 'ride' && R.t > 1.2 && d > REACH + (R.why === 'away' ? 6 : 4)) return end();
     // Carving: along the way it's going (never against it: that's the heel down), bending round its mark, in toward it when
     // it's getting far and out when it's close; and round whatever stands ahead, or off the shield if that can't be done.
     const vx = sp > 1 ? m.vx / sp : R.x, vz = sp > 1 ? m.vz / sp : R.z;
@@ -1746,7 +1754,7 @@ export class Brain {
     let wx = vx, wz = vz;
     if (R.bend) [wx, wz] = R.bend;
     else {
-      const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1), side = vx * -fz + vz * fx >= 0 ? 1 : -1, k = d < 7 ? -0.5 : d > 16 ? 0.35 : 0;
+      const fx = (T.x - m.x) / (d || 1), fz = (T.z - m.z) / (d || 1), side = vx * -fz + vz * fx >= 0 ? 1 : -1, k = d < 4.5 ? -0.5 : d > IN - 1 ? 0.5 : 0;
       wx = vx - fz * side * 0.35 + fx * k; wz = vz + fx * side * 0.35 + fz * k;
     }
     this.steer(wx, wz, false, true);
