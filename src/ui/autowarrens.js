@@ -325,8 +325,11 @@ export function perilStep(b, m) {
   // out of as ever, first.
   const late = (performance.now() - G.at) / 1000;
   const marks = G.marks.filter((h) => !h.jump && !h.soak), turning = (h) => h.shape === 'cross' && h.spin;
-  const to = wayOut(marks.filter((h) => !turning(h)), m.x, m.z, 1, open);
-  if (to) return to;
+  const still = marks.filter((h) => !turning(h)), to = wayOut(still, m.x, m.z, 1, open);
+  // (Out of one of those, but not into an arm: where the wheels' arms will be by the time it gets there, too.)
+  const soon = marks.filter((h) => turning(h) && h.live && dist(m.x, m.z, h.x, h.z) < h.r + 4).map((h) => ({ ...h, yaw: h.yaw + h.spin * (late + 0.4) }));
+  if (to && soon.every((h) => edge(h, to[0], to[1]) > 0.4)) return to;
+  if (to) return wayOut([...still, ...soon], m.x, m.z, 1, open) || to;
   const wheel = marks.filter(turning).map((h) => [h, dist(m.x, m.z, h.x, h.z)]).sort((a, c) => a[1] - c[1])[0]?.[0];
   if (wheel) {
     const p = wheelSpot(wheel, m.x, m.z, late, { want: REACH - 2.5 });
