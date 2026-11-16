@@ -2560,8 +2560,9 @@ and the woods loaded at the start, where the models themselves would have to be 
 **The note the game leaves** (`src/core/lastrun.js`). Since nothing can catch the kill, the game writes down what it's
 doing as it goes: loading, at the title, playing, for how long and where, every eight seconds of play. Leaving the page or
 putting it away marks the note; one found unmarked at the next start is a page the browser killed. The title then says so
-(when, and where you stood), offers **Continue** from the last autosave, and on a phone loads lighter: after one death
-four of the other heroes instead of eight and no model's picture over 256 a side, after two only two of them. The
+(when, and where you stood), offers **Continue** from the last autosave, and on a phone loads lighter: no model's picture
+over 256 a side. It never has fewer of the other heroes about: a party for the Warrens is
+hired from them (four, with a tank and a healer), so a cast cut down would leave no way into a dungeon. The
 level is kept in this browser (`velscour.light`); `?light=0` puts it back, `?light=2` tries the lightest. If it still
 happens, what the title says is what to pass on: whether it died loading or playing, and after how long.
 
