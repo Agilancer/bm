@@ -488,6 +488,8 @@ export class PartyUI {
       const [rn, col, mark] = ROLE[roleOf(m.cls)];
       el.innerHTML = `<div class="nm"><span style="color:${col}">${mark}</span><span>${esc(m.name)}</span><em>${m.level} ${esc(CLASSES[m.cls].title)}</em></div><div class="bar"><i></i></div>`;
       el.title = rn;
+      // (The ▶ that puts you in their body: src/ui/heroplay.js.)
+      this.playButton?.(el, m);
       this.frames.appendChild(el);
       return { el, bar: el.querySelector('i'), m, w: -1, cls: '' };
     });

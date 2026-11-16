@@ -409,6 +409,44 @@ export class World {
     return hit;
   }
 
+  // The top of whatever's under x, z that feet at this height are up over (as resolve lets them over it: a box's top, a boulder's):
+  // the highest of them, or -Infinity. What the player comes down on is stood on, not slid off. (It used to be no floor at all:
+  // a jump onto a table or a boulder sank into it, and resolve threw you out past its edge in one tick, a metre or more, off a
+  // hillside's boulder into the air, and on the shield the drop that followed became speed: the "rocket".)
+  topUnder(x, z, feet) {
+    if (inDungeon(x, z) || inHall(x, z)) return -Infinity;
+    let best = -Infinity, above;
+    const on = (c) => {
+      if (Math.abs(x - c.x) + Math.abs(z - c.z) > (c.hx + c.hz) * 1.42) return;   // (a turned box reaches that far)
+      const top = c.t ?? c.h + 0.02 + this.height(c.x, c.z);
+      if (top > feet || top <= best || feet < c.b) return;
+      if (c.under && (above ??= this.onLand(x, z, feet))) return;
+      const dx = x - c.x, dz = z - c.z;
+      if (Math.abs(dx * c.co - dz * c.s) > c.hx || Math.abs(dx * c.s + dz * c.co) > c.hz) return;
+      best = top;
+    };
+    const boxes = this.boxesNear(x, z, 0);
+    for (let n = 0; n < boxes.length; n++) on(boxes[n]);
+    const near = this.sitesNear(x, z);
+    if (near) for (const c of near) on(c);
+    if ((Math.abs(x) > TOWN || Math.abs(z) > TOWN) && feet > -2) {
+      const ci = Math.floor(x / TRUNK_CELL), cj = Math.floor(z / TRUNK_CELL);
+      for (let j = cj - 1; j <= cj + 1; j++) {
+        for (let i = ci - 1; i <= ci + 1; i++) {
+          const list = this.trunkCell(i, j);
+          if (!list || farFromCell(x, z, i, j, list.maxR)) continue;
+          for (let k = 0; k < list.length; k += 4) {
+            const top = list[k + 3];
+            if (top > feet || top <= best) continue;
+            const ex = x - list[k], ez = z - list[k + 1], R = list[k + 2];
+            if (ex * ex + ez * ez < R * R) best = top;
+          }
+        }
+      }
+    }
+    return best;
+  }
+
   // Does a ray hit a box tall enough to block it? Returns distance, or -1.
   rayBoxes(ox, oy, oz, dx, dy, dz, maxT) {
     // (In the Warrens the rock goes floor to roof: only the plan matters.)

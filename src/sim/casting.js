@@ -112,7 +112,8 @@ export class Casting {
     this.castSeen = input[INPUT.CAST_N];
     // (A press made mid-swing waits for the swing, a moment.)
     this.asked = tapped ? 0.35 : Math.max(0, this.asked - dt);
-    const none = input[INPUT.SPELL] < 0;   // (No spell learned yet: a staff's bolt is another matter.)
+    // (No spell learned yet: a staff's bolt is another matter. And none of yours while you're one of your party: heroplay.js.)
+    const none = input[INPUT.SPELL] < 0 || !!sim.heroPlay?.on;
     if (none) this.asked = 0;
     const held = input[INPUT.CAST] > 0.5 && !none;
     this.selected = clamp(input[INPUT.SPELL] | 0, 0, SPELLS.length - 1);
