@@ -274,7 +274,7 @@ export class Player {
     this.jumpSeen = input[INPUT.JUMP];
     // Floatier than it was: lighter on the way up while jump's held, and a gentler fall.
     this.vy -= (this.vy > 0 && input[INPUT.JUMP_HELD] > 0.5 ? 8.5 : 12) * dt;
-    const ox = this.x, oz = this.z;
+    const y0 = this.y, ox = this.x, oz = this.z;
     this.x += this.vx * dt; this.z += this.vz * dt; this.y += this.vy * dt;
     // The townsfolk: stepped round, not walked through.
     const fb = globalThis.folkBodies;
@@ -287,7 +287,8 @@ export class Player {
       }
     }
     tmp[0] = this.x; tmp[2] = this.z;
-    sim.world.resolve(tmp, 0.36, this.y + 0.2, true);
+    // (Whatever the feet were up over as the step began they're still over: coming down onto a table or a boulder, you land on it.)
+    sim.world.resolve(tmp, 0.36, Math.max(y0, this.y) + 0.2, true);
     this.x = tmp[0]; this.z = tmp[2];
     // In the Elder Gods' void a pillar's top is a step, not a slope: what stands out of the floor more steeply than that is
     // jumped onto, not walked up. (src/core/delve-elder.js BASALT.)
@@ -297,7 +298,7 @@ export class Player {
     }
     this.keepToLand();
     this.keepUnder(sim, (abil & ABIL.FLY) !== 0);
-    const g = sim.world.heightFor(this.x, this.z, this.y);
+    const g = Math.max(sim.world.heightFor(this.x, this.z, this.y), sim.world.topUnder(this.x, this.z, this.vy > 0 ? this.y : Math.max(y0, this.y) + 0.2));
     if (this.y <= g) {
       if (!this.onGround && this.vy < -2) {
         sim.event(EV.LAND, this.x, this.y, this.z, clamp(-this.vy / 7, 0, 1));
@@ -584,6 +585,9 @@ export class Player {
     // (A dodge is a dodge whatever swung at it: the beasts, the jellies and the stones as much as the knights.)
     if (sim.gameState !== 0 || this.iframes) return false;
     if (sim.input && ((sim.input[INPUT.ABIL] | 0) & (ABIL.NO_DAMAGE | ABIL.GOD | ABIL.FLY))) return false;
+    // (Playing as one of your party, you're where they are and out of sight: what was meant for you lands on them.
+    // src/sim/heroplay.js.)
+    if (sim.heroPlay?.on) return sim.heroPlay.hurt(amount, fromX, fromZ, knock, unblockable);
     // Aegis: this one never lands, whatever it was.
     if (this.shPower === 1 && !this.aegisT) {
       this.aegisT = this.shValue;

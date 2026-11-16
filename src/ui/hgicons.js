@@ -4,7 +4,7 @@
 // kept. Until a picture's made, the plain one; whoever asked is told when it's ready, to draw it again. A piece someone
 // wears can be drawn in the colours it has on them (worn: its ramp in their outfit, partygear.js outfitRamps), so the
 // book shows what the body shows. A dark piece is given a rim of light, so it doesn't sink into a dark cell.
-import { PROP_PALS, groundModelOf, lookOf, rampFor, sizeOfHG } from '../items/partygear.js';
+import { PROP_PALS, groundModelOf, paleLift, pieceRamp, shapeClass, sizeOfHG } from '../items/partygear.js';
 import { lumRange, paintProp, rampMap } from '../gfx/recolour.js';
 
 const made = new Map();      // key -> data URL, or null while it's being made
@@ -53,8 +53,8 @@ function make(item, src, key, worn) {
       ctx.drawImage(img, 0, 0);
       const d = ctx.getImageData(0, 0, W, H), px = d.data;
       if (item.slot === 'weapon' || item.slot === 'off') { if (item.pal && item.pal !== 'own') paintProp(px, PROP_PALS[item.pal]); } else {
-        const ramp = worn || rampFor(lookOf(item.look), item.slot, item.rarity | 0);
-        if (ramp) rampMap(px, ramp, lumRange(px, (i) => px[i * 4 + 3] > 128), (i) => (px[i * 4 + 3] > 8 ? 0.85 : 0));
+        const ramp = worn || pieceRamp(item);
+        if (ramp) rampMap(px, ramp, lumRange(px, (i) => px[i * 4 + 3] > 128), (i) => (px[i * 4 + 3] > 8 ? 0.85 : 0), paleLift(shapeClass(item.shape)));
       }
       rimIfDark(px, W, H);
       ctx.putImageData(d, 0, 0);

@@ -110,6 +110,23 @@ export function roadSegments(opening = false) {
   return { idx, seg, count: segs.length };
 }
 export const RD_MAX = 48;
+
+// The way under (x, z), as the ground's shader finds it (roadAt in src/gfx/materials.js), from what roadSegments made: how far
+// past its edge (below 0 is on it) and what it's laid with. null where there's no way within reach.
+export function wayAt(rs, x, z) {
+  const i = Math.floor((x + RD_HALF) / RD_CELL), j = Math.floor((z + RD_HALF) / RD_CELL);
+  if (i < 0 || j < 0 || i >= RD_N || j >= RD_N) return null;
+  const k = (j * RD_N + i) * 2, first = rs.idx[k], n = Math.min(rs.idx[k + 1], RD_MAX), S = rs.seg;
+  let best = null, be = Infinity;
+  for (let m = 0; m < n; m++) {
+    const o = rs.idx[first + m] * 8, ax = S[o], az = S[o + 1], dx = S[o + 2] - ax, dz = S[o + 3] - az, L = S[o + 7];
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (L * L)));
+    const e = Math.hypot(x - ax - dx * t, z - az - dz * t) - S[o + 4];
+    if (e < be) { be = e; best = S[o + 5]; }
+  }
+  return best === null ? null : { e: be, kind: best };
+}
+
 // A line with every point dropped that lies within tol of the straight run past it (Ramer-Douglas-Peucker).
 function thin(pts, tol) {
   if (pts.length < 3) return pts;

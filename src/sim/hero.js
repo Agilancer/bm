@@ -10,6 +10,7 @@ import { C, C_HERO, C_PROPS, EV } from '../core/layout.js';
 import { clamp, damp, mat4FromQT, quatAxisAngle, quatMul, quatNlerp, quatRotate, wrapAngle } from '../core/math.js';
 import { floorAt, homeFloor, inPit } from '../core/interior.js';
 import { ELEM, FX, FX_CARRIED, SHIELDS } from './spells.js';
+export { SKILLS } from './heroskills.js';
 import { DAWN_HOUR, DUSK_HOUR } from '../gfx/daylight.js';
 import { Knight, S, matToQuat, norm, orth, cross, restHold, turn } from './knight.js';
 import { stepStow } from '../core/stow.js';
@@ -27,7 +28,7 @@ import { struck } from './ragdoll.js';
 import { BROKER_SPOTS, PORTAL, delveAt, delveOf, inDungeon, roleOf } from '../core/dungeon.js';
 import { foeOf } from './foes.js';
 import { cleanLine } from './sight.js';
-import { MORE_SKILLS, arrive, arrow3, castSkill, chooseSkill, classRoutine, cutArc, diveDraw, hammer3, install, pike3, pluckNote, shield3, rank, stepShotX, strumFx, tintOf } from './heroskills.js';
+import { MORE_SKILLS, SKILLS, arrive, arrow3, castSkill, chooseSkill, classRoutine, cutArc, diveDraw, hammer3, install, pike3, pluckNote, shield3, rank, stepShotX, strumFx, tintOf } from './heroskills.js';
 
 const STRING_ELEM = { gold: ELEM.LIGHT, azure: ELEM.FROST, emerald: ELEM.HEAL, violet: ELEM.ARCANE, crimson: ELEM.DRAIN, silver: ELEM.SPIRIT, ember: ELEM.FIRE, rose: ELEM.STORM };
 const GAP = 1.2;                 // hips to hips, hero to anything
@@ -57,14 +58,14 @@ export function mobKind(m) {
 // `below`, set each tick by HeroWorld.stepCompany. They used to walk the catacombs at your heels and never lift a hand.)
 let below = false;
 const outdoors = (m) => floorAt(m.x, m.z) === null;
-function fightable(m) {
+export function fightable(m) {
   if (!m || m.dead || m.dormant || m.hp <= 0 || m instanceof Hydra || m instanceof Hero) return false;
   if (m instanceof Knight) return m.kind === 0;
   return (outdoors(m) || (below && inChurch(m.x, m.y + 1, m.z))) && !inPit(m.x, m.z);
 }
 
 // (A Tripo monster has its own girth: a dragon's is far past a goblin's.)
-const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreature ? Math.max(0.6, m.meta ? m.opts.radius * 1.2 : 1) : m.scale > 1.2 ? 1 : m instanceof Crab ? 1.4 : 0.5);
+export const radiusOf = (m) => (m instanceof Gravehart ? 2.2 : m instanceof FieldCreature ? Math.max(0.6, m.meta ? m.opts.radius * 1.2 : 1) : m.scale > 1.2 ? 1 : m instanceof Crab ? 1.4 : 0.5);
 
 // ---- class moves ----------------------------------------------------------------------------------------------------
 // clip: from the heroes' bank. hit: when in the clip it lands (fractions). dmg: before level. reach: past the hips.
@@ -94,16 +95,6 @@ const BLOW_MOVE = { lancer: 'lance_thrust', archer: 'aimed_shot', rogue: 'flurry
 // dragoon leaps again and again and then plants a ring of spears, the archer keeps her distance and rains arrows.
 // crowd: that many standing near the foe (orUndead: or the foe is one of the dead). after: only once the class's
 // rhythm says so (the dragoon's barrage, after so many leaps).
-export const SKILLS = {
-  paladin: [{ key: 'blessed_hammers', cd: 4, range: [0, 3] }, { key: 'hammer_throw', cd: 7, range: [3, 16] }, { key: 'smite', cd: 6, range: [0, 1.6] }, { key: 'consecration', cd: 15, range: [0, 3.5], crowd: 2, orUndead: true }, { key: 'holy_light', cd: 9, heal: true }],
-  lancer: [{ key: 'charge', cd: 8, range: [5.5, 11] }, { key: 'shield_wall', cd: 16, range: [0, 6], crowd: 3 }, { key: 'shield_bash', cd: 7, range: [0, 1.6] }],
-  archer: [{ key: 'rain_of_arrows', cd: 14, range: [5, 20], crowd: 2 }, { key: 'volley', cd: 9, range: [4, 20], crowd: 2 }, { key: 'strafe', cd: 5, range: [2, 14] }],
-  rogue: [{ key: 'vanish', cd: 13, range: [0, 8] }, { key: 'flurry', cd: 5, range: [0, 1.4] }],
-  ninja: [{ key: 'shadow_step', cd: 9, range: [4, 9.7] }, { key: 'leaping_kick', cd: 7, range: [2.5, 7] }, { key: 'throwing_stars', cd: 6, range: [4, 15] }, { key: 'ninja_flurry', cd: 6, range: [0, 1.5] }],
-  dragoon: [{ key: 'spear_barrage', cd: 8, range: [0, 2.6], after: true }, { key: 'jump', cd: 2.6, range: [0, 12] }],
-  boomerang: [{ key: 'double_throw', cd: 10, range: [3, 8] }],
-  bard: [{ key: 'war_song', cd: 30, song: true }, { key: 'marching_song', cd: 40, song: true, travel: true }, { key: 'mending_song', cd: 26, song: true, heal: true }],
-};
 // Leaps and dashes: how a class flies at its foe (see Hero.leap). T: seconds in the air. apex: metres up. r: the landing's reach.
 const LEAPS = {
   jump: { T: 0.66, apex: 1.9, r: 2, dmg: 14, elem: ELEM.SPIRIT, lance: true, snap: true, air: 'NinjaJump_Idle_Loop', draw: diveDraw(ELEM.SPIRIT) },
@@ -287,6 +278,10 @@ export class Hero extends Knight {
       } else if (M && M.kind === 'boomerang') {
         // (A boomerang's as wide as his hips: flat to the thigh, its elbow up and forward, not across his belly.)
         this.stowMain = hold(pj, [0.1, -0.9, -0.42], [0.25, 0.3, 1], [0.22 * u, hipY - 0.08 * u, -0.02 * u]);
+      } else if (M && M.kind === 'mace') {
+        // (A mace hangs by the haft at his left side, its head down by the thigh, a little forward: hung back, as a sword is,
+        // its head goes through a paladin's cape.)
+        this.stowMain = hold(pj, [0.2, -0.97, 0.12], [1, 0.2, 0], [0.24 * u, hipY + 0.02 * u, 0.04 * u]);
       } else if (M) this.stowMain = hold(pj, [0.12, -0.86, -0.5], [1, 0.1, 0], [0.2 * u, hipY, 0.03 * u]);
       if (this.shieldStyle) this.stowOff = hold(sj, this.boardRest.y, this.boardRest.z, this.boardRest.at);
       else if (this.offP && this.offP.kind === 'boomerang') this.stowOff = hold(pj, [-0.1, -0.9, -0.42], [-0.25, 0.3, 1], [-0.22 * u, hipY - 0.08 * u, -0.02 * u]);
@@ -368,7 +363,17 @@ export class Hero extends Knight {
     // A shield wall (the lancer's) turns most of it from any side, for a few seconds.
     // (A hired tank's board turns about half: enough to hold a boss with a healer behind him, not so much he needs none.
     // What falls from the roof or burns on the floor no board stops.)
-    const guard = unblockable ? 1 : this.hired ? (this.shieldUp > 0.6 && front ? 0.65 : 1) * (this.guardT > 0 ? 0.6 : 1)
+    // (The one you're playing (src/sim/heroplay.js), the board held up with the right button: what comes at its face is
+    // turned, near enough all of it, as TERA's lancer's is, and the counter's offered.)
+    if (this.driven && this.playBlock && front && !unblockable) {
+      const hurt = amount * 0.08 * (this.style === 'lance' ? 1 : 2.5);
+      this.hp -= hurt; this.stam = Math.max(0, (this.stam ?? 100) - 6);
+      this.lastHitBy = { x: fromX, z: fromZ, t: sim.time };
+      sim.heroPlay?.blocked();
+      if (this.hp <= 0) this.die(sim);
+      return true;
+    }
+    const guard = unblockable ? 1 : this.hired ?(this.shieldUp > 0.6 && front ? 0.65 : 1) * (this.guardT > 0 ? 0.6 : 1)
       : (this.shieldUp > 0.6 && front ? 0.25 : 1) * (this.guardT > 0 ? 0.4 : 1);
     let hurt = amount * armor * guard * (this.party && !this.hired ? 0.8 : 1) * (1 - (this.mods?.ward || 0));
     // (A ward of light, a paladin's or a bard's, takes what it can first.)
@@ -438,11 +443,12 @@ export class Hero extends Knight {
     if (!this.foe && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * (this.task?.kind === 'rest' ? 12 : 3));
     if (this.hp > this.maxHp * 0.6) this.hurtSay = false;
 
-    world.think(this, dt);
+    // (The one you're playing has your hands for a brain: src/sim/heroplay.js.)
+    if (this.driven && sim.heroPlay) sim.heroPlay.think(this, dt); else world.think(this, dt);
     this.flyThings(dt, sim);
     if (this.surf) { if (this.surf.free) this.updateFreeSurf(dt, sim, world); else this.updateSurf(dt, sim, world); }
     else {
-      if (this.foe) this.fight(dt, sim, world);
+      if (this.foe && (!this.driven || this.driveAuto)) this.fight(dt, sim, world);
       this.runSwing(dt, sim);
       this.walk(dt, sim);
       this.move(dt, sim);
@@ -467,7 +473,7 @@ export class Hero extends Knight {
     // Head toward the player when near, as the town's knights do; square on while being talked to.
     const pdx = p.x - this.x, pdz = p.z - this.z, to = Math.atan2(pdx, pdz);
     // (Only close by: a street of strangers all turning to stare would be uncanny.)
-    const off = wrapAngle(to - this.faceYaw), near = this.near < (this.talkUntil ? 9 : 4.5) && Math.abs(off) < 1.6 && !this.foe;
+    const off = wrapAngle(to - this.faceYaw), near = !this.driven && this.near < (this.talkUntil ? 9 : 4.5) && Math.abs(off) < 1.6 && !this.foe;
     this.lookYaw = damp(this.lookYaw || 0, near ? clamp(off, -1, 1) : 0, 5, dt);
     const eyeDrop = (p.y + 1.6) - (this.y + this.rig.height * 0.9);
     this.lookPitch = damp(this.lookPitch || 0, near ? clamp(Math.atan2(-eyeDrop, Math.max(this.near, 0.5)), -0.5, 0.5) : 0, 5, dt);
@@ -508,6 +514,13 @@ export class Hero extends Knight {
   walk(dt, sim) {
     if (this.swing?.root || this.knock > 0) {
       if (this.knock > 0) { this.vx = this.knockX * this.knock; this.vz = this.knockZ * this.knock; this.knock = Math.max(0, this.knock - dt * 9); }
+      return;
+    }
+    // The one you're playing goes where the keys say, and faces the crosshair or the way it's going (src/sim/heroplay.js).
+    // Quick to turn and to get going, as a body under a hand is: no AI easing into it.
+    if (this.driven && !this.driveAuto) {
+      if (this.driveFace !== undefined) this.faceYaw = turn(this.faceYaw, this.driveFace, 16 * dt);
+      this.steer(dt, this.driveVX || 0, this.driveVZ || 0, 14, this.driveFace);
       return;
     }
     const g = this.goal;
@@ -3565,6 +3578,29 @@ export class HeroWorld {
     this.sim.casting.burst(FX.COLUMN, ELEM.LIGHT, h.x, h.y, h.z, 0.5, 1, 0.8, { light: 10, lightR: 5, len: 2.5 });
   }
 
+  // Getting one of you up mid-fight: to them at a run, down on a knee beside them a few seconds, and up they come with a
+  // third of their life. True while it's being done. (stepCompany sends someone.)
+  raise(h, dt) {
+    const o = h.raising, sim = this.sim;
+    if (!o || !o.dead || !this.company.members.has(o) || h.dead) {
+      if (h.raiseT && h.swing && !h.dead) { h.swing = null; h.stopAction(0.2); }
+      h.raising = null; h.raiseT = 0; return false;
+    }
+    const d = Math.hypot(o.x - h.x, o.z - h.z);
+    this.endBit(h); h.foe = null;
+    if (d > 1.3) { h.goal = { x: o.x, z: o.z, speed: 7.5, stop: 1.0, face: Math.atan2(o.x - h.x, o.z - h.z) }; h.dodgeT = 0.2; h.raiseT = 0; return true; }
+    h.goal = null; h.faceYaw = Math.atan2(o.x - h.x, o.z - h.z);
+    if (!h.raiseT) { h.startSwing('Fixing_Kneeling', 1, [], () => {}, { still: true, loop: true }); if (h.fxOk()) sim.casting.burst(FX.RING, ELEM.HEAL, o.x, o.y + 0.05, o.z, 0.3, 1.4, 2.6, { alpha: 0.6 }); }
+    h.raiseT += dt;
+    if (h.raiseT > 2.6) {
+      h.raising = null; h.raiseT = 0;
+      if (h.swing) { h.swing = null; h.stopAction(0.2); }
+      this.revive(o, 0.35);
+      o.say(sim, 'hero_return');
+    }
+    return true;
+  }
+
   // What's fighting you and yours: anything awake and at one of you, or that you've hit, within a stone's throw.
   companyFight() {
     const sim = this.sim, p = sim.player;
@@ -3638,9 +3674,27 @@ export class HeroWorld {
         return;
       }
     }
+    // One of you down in the fight: the one sent to them (stepCompany: Dragon's Dogma's pawns) goes and gets them up.
+    if (h.raising && this.raise(h, dt)) return;
+    // Your calls (Z X C G: src/sim/heroplay.js order), as Dragon's Dogma's pawns take theirs.
+    const call = this.call;
+    if (call?.kind === 'come' && d > 3.5) { this.endBit(h); h.foe = null; h.goal = { x: p.x, z: p.z, speed: 7, stop: 2.5 }; h.dodgeT = 0.2; return; }
+    if (call?.kind === 'wait' && h.waitAt) {
+      const close = fight.find((m) => Math.hypot(m.x - h.x, m.z - h.z) < 4.5);
+      if (!close) { this.endBit(h); h.foe = null; h.goal = { x: h.waitAt[0], z: h.waitAt[1], speed: 5, stop: 0.6 }; if (h.role === 'heal') this.mend(h, true); return; }
+    }
     if (h.role === 'heal' && this.mend(h)) { this.endBit(h); return; }
     h.foe = this.pickFoe(h, fight);
+    if (call?.kind === 'go' && call.foe && fightable(call.foe)) h.foe = call.foe;
+    if (call?.kind === 'help' && fight.length) {
+      // (Help: onto whatever's on you, and the tank calls it off you.)
+      let best = null, bd = 12;
+      for (const m of fight) { const dm = Math.hypot(m.x - p.x, m.z - p.z); if (dm < bd) { bd = dm; best = m; } }
+      if (best) { h.foe = best; if (h.role === 'tank') { best.tauntBy = h; best.tauntT = sim.time + 4; } }
+    }
     if (h.foe) { this.endBit(h); this.stance(h, h.foe, fight); this.fallBack(h, fight); return; }
+    // (The one you're playing, on auto-play, walks where auto-play walks you between fights: src/sim/heroplay.js.)
+    if (h.driven) return;
     this.heel(h, dt);
   }
 
@@ -3969,7 +4023,17 @@ export class HeroWorld {
     for (const h of this.company.members) {
       if (!h.dead) continue;
       h.reviveT = fighting || p.dead ? 0 : h.reviveT + dt;
-      if (h.reviveT > 4) { this.revive(h, 0.5); h.say(sim, 'hero_return'); }
+      if (h.reviveT > 4) { this.revive(h, 0.5); h.say(sim, 'hero_return'); continue; }
+      // Down mid-fight: one of the rest goes to them (Dragon's Dogma's pawns do), after a moment, the nearest who isn't
+      // holding the fight (the tank) or the one you're playing. The one you're playing first of all.
+      if (!fighting || h.deadT < 1.5 || [...this.company.members].some((o) => o.raising === h)) continue;
+      let best = null, bd = 40;
+      for (const o of this.company.members) {
+        if (o.dead || o.driven || o.raising || (o.role === 'tank' && this.company.members.size > 2)) continue;
+        const dd = Math.hypot(o.x - h.x, o.z - h.z);
+        if (dd < bd) { bd = dd; best = o; }
+      }
+      if (best && (h.driven || Math.random() < dt * 0.6)) { best.raising = h; best.raiseT = 0; best.say(sim, 'ally_down', h.slot); }
     }
   }
 

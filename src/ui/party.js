@@ -15,7 +15,8 @@ import { autoSpend, freshTree, treeMods } from '../core/partytree.js';
 import { makeRng } from '../items/items.js';
 import { CLASSES, CLASS_NAMES } from '../core/heroes.js';
 import { movesOf } from '../sim/heroskills.js';
-import { BOSSES, DELVE, DELVES, PARTY, WARNINGS, WARN_CALM, roleOf } from '../core/dungeon.js';
+import { BOSSES, DELVE, DELVES, PARTY, WARN, WARNINGS, WARN_CALM, roleOf } from '../core/dungeon.js';
+import { GOD_VOICED } from '../core/god-voiced.js';
 import { Ticker } from './ticker.js';
 import { SAY_NAME } from '../core/delve-elder.js';
 const GOD_SAY = new RegExp(`^(${Object.values(SAY_NAME).join('|')}): (.*)$`);
@@ -487,6 +488,8 @@ export class PartyUI {
       const [rn, col, mark] = ROLE[roleOf(m.cls)];
       el.innerHTML = `<div class="nm"><span style="color:${col}">${mark}</span><span>${esc(m.name)}</span><em>${m.level} ${esc(CLASSES[m.cls].title)}</em></div><div class="bar"><i></i></div>`;
       el.title = rn;
+      // (The ▶ that puts you in their body: src/ui/heroplay.js.)
+      this.playButton?.(el, m);
       this.frames.appendChild(el);
       return { el, bar: el.querySelector('i'), m, w: -1, cls: '' };
     });
@@ -520,11 +523,11 @@ export class PartyUI {
 
   // ---- the Warrens' word -------------------------------------------------------------------------------------------------
 
-  warn(text, secs = 5) {
+  warn(text, secs = 5, id = -1) {
     const d = document.createElement('div');
     // (An Elder God speaking, not a call: a large bubble over its head and a line in the chat log. godSpeak.)
     const god = GOD_SAY.exec(text);
-    if (god) { this.godSpeak(god[1], god[2]); this.warned?.(text); return; }
+    if (god) { this.godSpeak(god[1], god[2], id); this.warned?.(text); return; }
     d.textContent = text;
     this.warnEl.appendChild(d);
     while (this.warnEl.children.length > 3) this.warnEl.firstChild.remove();
@@ -534,11 +537,14 @@ export class PartyUI {
 
   // An Elder Dragon God's words: in a large speech bubble over its head (placed each frame: update), held long enough to
   // read, and in the chat log under its name.
-  godSpeak(name, words) {
+  godSpeak(name, words, id = -1) {
     if (!this.godEl) { this.godEl = document.createElement('div'); this.godEl.id = 'godBubble'; document.body.append(this.godEl); }
     this.godEl.replaceChildren(Object.assign(document.createElement('b'), { textContent: name }), words);
     this.godEl.style.display = 'block'; this.godEl.style.opacity = 1;
     this.godT = Math.max(6, 2.5 + words.length * 0.065);
+    // (Said aloud, where it's been recorded: the bubble stays up as long as the voice runs.)
+    const key = (this.warnKeys ||= Object.fromEntries(Object.entries(WARN).map(([k, v]) => [v, k])))[id], secs = GOD_VOICED[key];
+    if (secs) { this.godVoice?.(key); this.godT = Math.max(this.godT, secs + 1.2); }
     this.placeGod(this.lastSnap);
     this.chatLog?.line('god', name.replace(/(\w)(\w*)/g, (m, a, b) => a + b.toLowerCase()), words);
   }
@@ -569,7 +575,7 @@ export class PartyUI {
   call(i) {
     const text = WARNINGS[i] || '';
     if (!text) return;
-    if (WARN_CALM.has(i) || GOD_SAY.test(text)) { this.warn(text, 5); return; }
+    if (WARN_CALM.has(i) || GOD_SAY.test(text)) { this.warn(text, 5, i); return; }
     this.ticker.push(text);
     this.warned?.(text);
   }
@@ -599,7 +605,7 @@ export class PartyUI {
         break;
       }
       case DELVE.ENTER: this.warn(a ? `${d.name}. Your dead foes are as you left them.` : d.words.enter, 6); break;
-      case DELVE.LEAVE: this.hideBoss(); this.ticker.clear(); if (this.godEl) { this.godT = 0; this.godEl.style.display = 'none'; } break;
+      case DELVE.LEAVE: this.hideBoss(); this.ticker.clear(); if (this.godEl) { this.godT = 0; this.godEl.style.display = 'none'; } this.godVoice?.(null); break;
       case DELVE.CLEAR: this.hideBoss(); this.warn(d.words.clear, 7); this.clearsBy[d.key] = (this.clearsBy[d.key] || 0) + 1; if (d.key === 'warrens') this.clears++; this.cleared?.(d); break;
       case DELVE.WARN: this.call(a | 0); break;
       case DELVE.BOSS: this.showBoss(a | 0, [b | 0, c | 0]); this.warn(`${BOSSES[a | 0]?.name || ''}!`, 3); break;

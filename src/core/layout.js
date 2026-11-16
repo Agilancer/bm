@@ -71,7 +71,11 @@ export const H = {
   // Your staff, skull and shield put away, out of a fight: 0 (in hand) to 1 (on your back and hip). Sim.stepStow.
   STOW: 180,
   // How many are awake and at you, near (STOW.near): for the music's fights (src/music.js). Sim.stepStow.
-  THREAT: 181, SIZE: 182,
+  THREAT: 181,
+  // Playing as one of your party (src/sim/heroplay.js write): 20 floats. Who (slot + 1, 0 none), the crosshair's foe (a
+  // knight's index), the chain offered (bar slot + 1) and how long it's left, blocking, the evade's wait, the party's call,
+  // auto-play on, the bar's ten waits, a chained move off the bar (MOVE_KEYS), and their life.
+  PLAY: 182, SIZE: 202,
 };
 
 // Per-character block

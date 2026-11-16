@@ -136,11 +136,17 @@ export class Drops {
       m.set([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, px, py, pz, 1]);
       return;
     }
-    // Upright, turning about its middle, which rises and falls a little.
+    // Upright, turning about its middle, which rises and falls a little. (tilt: tipped back that far as it turns, so its
+    // front's seen from above, as a coat's must be: partygear.js groundModelOf.)
     const S = d.scale, c = Math.cos(d.spin), sn = Math.sin(d.spin);
     const rest = d.y + HOVER + Math.sin(d.spin * 1.7) * BOB;
     const px = d.from[0] + (d.x - d.from[0]) * k, pz = d.from[2] + (d.z - d.from[2]) * k;
     const py = d.from[1] + (rest - d.from[1]) * k + arc - d.center;
+    if (d.tilt) {
+      const ct = Math.cos(d.tilt) * S, st = Math.sin(d.tilt) * S;
+      m.set([c * S, 0, -sn * S, 0, sn * st, ct, c * st, 0, sn * ct, -st, c * ct, 0, px, py, pz, 1]);
+      return;
+    }
     m.set([c * S, 0, -sn * S, 0, 0, S, 0, 0, sn * S, 0, c * S, 0, px, py, pz, 1]);
   }
 

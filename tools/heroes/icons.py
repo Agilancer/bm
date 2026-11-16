@@ -29,6 +29,7 @@ OUT = os.path.join(HEROES, 'icons')
 CELL = 128                          # pixels a cell of the pack (src/items/partygear.js sizeOfHG)
 GROUPS = ('helm', 'shoulders', 'chest', 'arms', 'legs', 'boots')
 TALL = {'dagger': 2, 'boomerang': 2, 'sword': 3, 'mace': 3}
+LIGHT = ('archer', 'rogue', 'ninja', 'bard')   # the classes in cloth and leather: their shoulders are sleeves and cowls
 
 
 def load_glb(path):
@@ -247,11 +248,11 @@ def armour(stage, ids=None, tmp=None, only=None):
             ob.rotation_euler = (0, a, 0) if axis == 'Y' else (0, 0, a)
             return P @ R.T
 
-        def orient(ob, P, R):
-            # (Any turn at all, as a matrix: Blender's euler angles come in one order only.)
+        def orient(ob, P, R, t=(0, 0, 0)):
+            # (Any turn at all, as a matrix: Blender's euler angles come in one order only. t: then moved by that.)
             from mathutils import Matrix
-            ob.matrix_world = Matrix([[*R[0], 0], [*R[1], 0], [*R[2], 0], [0, 0, 0, 1]])
-            return P @ R.T
+            ob.matrix_world = Matrix([[*R[0], t[0]], [*R[1], t[1]], [*R[2], t[2]], [0, 0, 0, 1]])
+            return P @ R.T + np.array(t)
 
         def Rz(a):
             c, s_ = math.cos(a), math.sin(a)
@@ -260,6 +261,10 @@ def armour(stage, ids=None, tmp=None, only=None):
         def Rx(a):
             c, s_ = math.cos(a), math.sin(a)
             return np.array([[1, 0, 0], [0, c, -s_], [0, s_, c]])
+
+        def Ry(a):
+            c, s_ = math.cos(a), math.sin(a)
+            return np.array([[c, 0, s_], [0, 1, 0], [-s_, 0, c]])
 
         def bulk(ps):
             # (How much room a side's pieces take: a pauldron's a lot, a ribbon or a strap hardly any.)
@@ -274,17 +279,39 @@ def armour(stage, ids=None, tmp=None, only=None):
             mine = [p for p in pieces if p['name'].split('_')[0] == g]
             if not mine:
                 continue
+            if g == 'legs' and len(mine) > 1:
+                # (What hangs off the belt isn't the breeches: a knife standing up past the waist, a small piece reaching well
+                # over the rest, is left out, or it floats beside them in the picture.)
+                tops = [float(pos[p['vstart']:p['vstart'] + p['vcount'], 1].max()) for p in mine]
+                tt = sum(p['tcount'] for p in mine)
+                mine = [p for k, p in enumerate(mine) if not (tops[k] > max(t for q, t in enumerate(tops) if q != k) + 0.12 and p['tcount'] < 0.3 * tt)]
+            span = lambda p, k: float(np.ptp(pos[p['vstart']:p['vstart'] + p['vcount'], k]))
+            if g == 'shoulders' and body.startswith('archer'):
+                # (An archer's mantle is its pads: the quiver that stands on its back, tall, isn't drawn, or the picture is of
+                # a quiver and it's a quiver you think you've found.)
+                mine = [p for p in mine if not (span(p, 1) > 0.35 and pos[p['vstart']:p['vstart'] + p['vcount'], 2].max() < 0)] or mine
             side = [pos[p['vstart']:p['vstart'] + p['vcount'], 0].mean() for p in mine]
             left, right = [p for p, x in zip(mine, side) if x > 0], [p for p, x in zip(mine, side) if x <= 0]
-            # (One shoulder of a pair: the side with the more to it, a pauldron and not a ribbon. A side that's only a
-            # strap is no shoulder to show at all: the group whole, then, as a mantle.)
-            one, flip = None, False
-            if g == 'shoulders' and left and right:
-                one, flip = (left, False) if bulk(left) >= bulk(right) else (right, True)
-                if bulk(one) < 0.25 * bulk(mine):
-                    one = None
+            # (Shoulders as a pair, as they're worn, when both sides have something to them; a group that's one strap or a
+            # baldric is shown whole.)
+            pair = g == 'shoulders' and left and right and min(bulk(left), bulk(right)) >= 0.15 * bulk(mine)
             obs, pts = [], []
-            if g == 'arms' and left and right:
+            if pair:
+                # (Cut from a body in its T, each side let down as it's worn with the arms at the sides, and the two side by
+                # side, front on and tipped toward you a little, so their tops read: a sleeve hangs straight, a pauldron sits
+                # half way. Seen end on from the T, a sleeve is a croissant and a pauldron a lump.)
+                light = body.split('_')[0] in LIGHT
+                down, tip = math.radians(86 if light else 52), math.radians(12 if light else 24)
+                # (An archer's quiver strap, flat down the back, isn't a shoulder: let down with one, it's a blade.)
+                strap = lambda p: body.startswith('archer') and span(p, 2) < 0.04 and span(p, 1) > 2 * span(p, 0)
+                for k, (ps, a) in enumerate(((left, down), (right, -down))):
+                    ps = [p for p in ps if not strap(p)] or ps
+                    ob, P = cut(f'BM_{body}_{g}{k}', ps)
+                    P = orient(ob, P, Rx(tip) @ Ry(a))
+                    dx = 0.015 - P[:, 0].min() if k == 0 else -0.015 - P[:, 0].max()
+                    ob.location = (dx, 0, 0); P = P + np.array([dx, 0, 0])
+                    obs.append(ob); pts.append(P)
+            elif g == 'arms' and left and right:
                 # (Cut from a body standing in its T, the two arms out level a body's breadth apart: each let down straight,
                 # and the pair side by side, as gauntlets lie in a pack.)
                 for k, (ps, a) in enumerate(((left, math.radians(90)), (right, math.radians(-90)))):
@@ -294,23 +321,26 @@ def armour(stage, ids=None, tmp=None, only=None):
                     ob.location = (dx, 0, 0); P = P + np.array([dx, 0, 0])
                     obs.append(ob); pts.append(P)
             else:
-                ps = (one or mine) if g == 'shoulders' else mine
-                ob, P = cut(f'BM_{body}_{g}', ps)
-                if g == 'shoulders' and one:
-                    # (One shoulder, turned to show its outside: seen straight on, a pauldron is an edge.)
-                    P = turn(ob, P, 'Z', math.radians(55 if flip else -55))
+                ob, P = cut(f'BM_{body}_{g}', mine)
+                if g == 'shoulders' and body.startswith('archer'):
+                    # (An archer's is the quiver on its strap, worn on the back: seen from behind, a little turned, it's a
+                    # quiver; from the front it's a stick.)
+                    P = orient(ob, P, Rx(math.radians(14)) @ Rz(math.radians(155)))
                 elif g == 'shoulders':
-                    # (A mantle all of a piece: turned three-quarter and tipped toward you, so its fall over the shoulders and
-                    # round the neck reads. Straight on, a mantle is a lump.)
-                    P = orient(ob, P, Rx(math.radians(32)) @ Rz(math.radians(-35)))
+                    # (A strap, a baldric or a mantle all of a piece: front on, tipped toward you, as it hangs.)
+                    P = orient(ob, P, Rx(math.radians(20)))
                 elif g == 'chest':
                     # (A coat turned three-quarter, so its depth and its folds read: straight on, a cuirass is a shrug.)
                     P = turn(ob, P, 'Z', math.radians(-28))
+                elif g == 'legs':
+                    # (Cuisses and breeches turned three-quarter and seen a little from below, so the legs show past the
+                    # drape before them: straight on, a pair of cuisses was a tabard and a pair of breeches a blouse.)
+                    P = orient(ob, P, Rx(math.radians(-12)) @ Rz(math.radians(-38)))
                 obs.append(ob); pts.append(P)
             w, h = (2 * CELL, 3 * CELL) if g in ('chest', 'legs') else (2 * CELL, 2 * CELL)
             # (Armour's darker than a blade, and a pack's cells are dark: a little more light on it, to be read there.)
             stage.sc.view_settings.exposure = 0.55
-            stage.shoot(obs, np.concatenate(pts), w, h, os.path.join(OUT, f'{body}_{g}{stage.ext}'), pad=1.03 if g == 'shoulders' and not one else 1.08)
+            stage.shoot(obs, np.concatenate(pts), w, h, os.path.join(OUT, f'{body}_{g}{stage.ext}'), pad=1.06 if g == 'shoulders' else 1.08)
             clear(obs, [], [])
             done.append(f'{body}_{g}')
         clear([], [mat], imgs)
