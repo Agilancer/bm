@@ -22,8 +22,9 @@ const R = 0.36;
 const out = new Float32Array(3), n = [0, 1, 0];
 
 function slope(p, world) {
-  const top = p.y + 0.6, low = p.y - 0.6, e = STEP_E;
-  const h = (x, z) => clamp(world.height(x, z), low, top);
+  const top = p.y + 0.6, low = p.y - 0.6, e = STEP_E, feet = p.y + 0.2;
+  // (Up on a boulder or a table it's the top you ride on: level, to its edge.)
+  const h = (x, z) => clamp(Math.max(world.height(x, z), world.topUnder(x, z, feet)), low, top);
   const hx = (h(p.x + e, p.z) - h(p.x - e, p.z)) / (2 * e), hz = (h(p.x, p.z + e) - h(p.x, p.z - e)) / (2 * e);
   const l = 1 / Math.hypot(hx, 1, hz);
   n[0] = -hx * l; n[1] = l; n[2] = -hz * l;
@@ -95,7 +96,8 @@ function ride(p, dt, wx, wz, sim) {
   const oy = p.y;
   if (!move(p, dt, sim)) return;
   // Down the slope with it. A crest that falls away faster than you would throws you into the air.
-  const pred = oy + p.vy * dt, floor = w.heightFor(p.x, p.z, p.y);
+  // (And what move let it over, it rides on: the top of a boulder or a table, as far as its edge.)
+  const pred = oy + p.vy * dt, floor = Math.max(w.heightFor(p.x, p.z, p.y), w.topUnder(p.x, p.z, oy + 0.2));
   if (floor >= pred - 0.5 * G * dt * dt - 0.025) {
     p.y = floor;
     slope(p, w);
@@ -116,8 +118,11 @@ function fly(p, dt, wx, wz, sim) {
   p.vx *= k; p.vy *= k; p.vz *= k;
   carve(p, wx, wz, AIR_TURN, dt);
   if (!move(p, dt, sim)) return;
+  const oy = p.y;
   p.y += p.vy * dt;
-  const floor = sim.world.heightFor(p.x, p.z, p.y);
+  // Coming down on what it was up over as the tick began (move let it over it), it lands there: on the boulder, the table.
+  // (It used to sink into it, and be thrown out past its edge in one tick: off a hillside's boulder, into a long drop.)
+  const floor = Math.max(sim.world.heightFor(p.x, p.z, p.y), sim.world.topUnder(p.x, p.z, p.vy > 0 ? p.y : oy + 0.2));
   if (p.y > floor) return;
   // The landing: what went into the ground is lost, and what went along it is kept.
   p.y = floor;

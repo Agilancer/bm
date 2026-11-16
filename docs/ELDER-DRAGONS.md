@@ -211,20 +211,20 @@ anchor method, docs/VOICES.md; no lone words, no "!"). About 18 a god.
 |---|---|
 | intro | Small things, crossing my sky on a thread of stone. Do you know how far down the bottom is? |
 | pull | I am the wind that broke the mountains flat. Come and be weighed against it. |
-| gale | Hold on to something, if you can find anything to hold. |
+| gale | Hold on to something. There is nothing here to hold. |
 | squall | The storm walks. Find its door or be torn through it. |
 | breath | Burn in the lightning's mouth. |
-| conduit | Feed my pylon, little ones, or I will. |
+| conduit | Feed my pylon, little ones, or I will feed it with you. |
 | nova | Enough standing. Let us see how you fall. |
 | updraft | Back up, then. The sky is not finished with you. |
-| rings | Ring upon ring. Leap, or be swept away. |
+| rings | The rings are coming. Leap them, or be swept from my sky. |
 | spark | A spark for you. Carry it far from your friends. |
 | break | This ground offends me. I will have none of it. |
-| clouds | Rise and the clouds take you. Fall and the void does. |
+| clouds | Rise and the clouds take you. Fall, and the void will have you. |
 | kill | Gone on the wind, like all the rest. |
 | kill | Another leaf, torn from the branch. |
 | kill | Fly, then. You were never built for it. |
-| low | The sky does not bleed. The sky does not bleed. |
+| low | The sky does not bleed. It has never bled. |
 | wipe | Lie still. The wind will scatter what is left. |
 | death | Even the storm must rest, at the last. |
 
@@ -238,15 +238,15 @@ anchor method, docs/VOICES.md; no lone words, no "!"). About 18 a god.
 | wildfire | The fire walks. You will run out of island before it runs out of hunger. |
 | meteor | Catch, little one. It is still warm. |
 | flood | My blood is the sea now. Swim. |
-| rings | Dance in my rings. I always loved the dancing. |
+| rings | Dance in my rings. I have always loved dancing. |
 | seeds | Plant your little seeds. I will see what grows. |
-| roar | Now the world ends. Hide, if you have somewhere to hide. |
+| roar | Now the world will end. Hide, if you have somewhere to hide. |
 | run | Down the length of you, all in one breath. |
 | crash | The ground came up to meet me. |
-| kill | Ash, and then nothing. |
+| kill | Ash first, and then nothing at all. |
 | kill | One less cold hand in the world. |
-| low | The hearth is going out. Not yet. Not yet. |
-| wipe | Sleep in the warm, children. |
+| low | My fire is going out. Not yet. Not yet. |
+| wipe | Sleep now, children, where it is warm. |
 | death | Keep the fire for me. Someone must. |
 
 ### Morvekh
@@ -255,15 +255,15 @@ anchor method, docs/VOICES.md; no lone words, no "!"). About 18 a god.
 |---|---|
 | intro | I died here once. It was quiet. You have come to make it loud. |
 | pull | I remember every warm thing that ever froze. I will remember you. |
-| climb | Up, then. The cold is following you. |
+| climb | Climb while you can. The cold is following you. |
 | breath | Breathe in. It is the last warm breath you take. |
 | grasp | The grave reaches up. Hold fast, or come down to me. |
 | bombs | Stand behind your friends. They are colder than you now. |
 | deep | I will draw a white line across the world. |
 | zero | When it reaches nothing, so will you. |
-| grip | My grip, my grip is gone. |
-| kill | Still now. Good. |
-| kill | You will keep. You will keep a very long time. |
+| grip | My grip is gone. I held so long. |
+| kill | You are still now. That is good. |
+| kill | You will keep. The ice keeps everything a very long time. |
 | kill | Another one for the ice. |
 | low | I remember dying. It was easier than this. |
 | wipe | Quiet again, as it should be. |
@@ -277,16 +277,16 @@ anchor method, docs/VOICES.md; no lone words, no "!"). About 18 a god.
 | pull | I am the hunger under the stars. The other three were only my teeth. |
 | devour | Come closer. Closer. Everything comes to me in the end. |
 | float | One of you is lighter than the others. I will take that one first. |
-| spheres | Pieces of nothing. Hold them, if you dare. |
-| swallow | Into me, then. See what I have eaten. |
+| spheres | These are pieces of nothing. Hold them if you dare. |
+| swallow | Into me. See what I have eaten. |
 | echoes | Meet my brothers again. They are mine now. |
 | cosmos | Your island is a crumb, and I am still hungry. |
-| stunned | What have you put in me. What have you done. |
+| stunned | Something is in me. What have you done to me? |
 | nova | Your little stars. Watch them go out. |
 | ring | The edge comes in. It always comes in. |
-| kill | Taken, and gone. |
+| kill | Taken, and gone where nothing returns. |
 | kill | Nothing ever comes back from me. |
-| kill | Another light, swallowed. |
+| kill | Another light goes into the dark. |
 | low | I have never been empty before. |
 | wipe | Hush now. There is no sound where you are going. |
 | death | So this is what it is, to be filled. |
