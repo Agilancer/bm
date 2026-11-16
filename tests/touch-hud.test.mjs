@@ -182,3 +182,17 @@ print(json.dumps(out))
   assert.equal(o.missing[0], 15); assert.match(o.missing[1][0], /cell 1 \(staff\) is empty/);
   assert.deepEqual(o.panel, [['panel'], [512, 512]]);
 });
+
+test('the party\'s buttons are over the stick\'s layer, so a tap on them never takes up the stick', () => {
+  // (#touch covers the screen and takes any touch on the left as the stick's: src/input.js. What's under it never hears one.)
+  const zOf = (sel) => { const m = css.match(new RegExp(`${sel.replace(/[.#]/g, '\\$&')}[^{]*\\{[^}]*z-index: (\\d+)`)); return m ? +m[1] : -1; };
+  const stick = +css.match(/#touch \{[^}]*z-index: (\d+)/)[1];
+  for (const sel of ['body.touch #partyFrames', 'body.touch.has-party #heroCalls', 'body.touch.hero-play #heroBar']) assert.ok(zOf(sel) > stick, `${sel} is under #touch`);
+  const hp = read('../src/ui/heroplay.js');
+  assert.doesNotMatch(hp, /body\.touch #heroCalls[^{]*\{[^}]*display: none/, 'the calls are hidden on a phone');
+  assert.match(hp, /callsEl\.children[\s\S]{0,600}touchstart/, 'the calls take a tap');
+  // And big enough for a thumb on the smallest phone (the ▶ with the reach round it is scaled with the frames, .82).
+  const u = unitOf(320);
+  assert.ok((VARS['party-play'] + 2 * VARS['party-reach']) * u * 0.82 >= 36, 'the ▶ is too small to hit');
+  assert.ok(VARS['party-call'] * u >= 32, 'a call is too small to hit');
+});

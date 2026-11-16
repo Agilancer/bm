@@ -49,6 +49,11 @@ export const TOP = { pad: 8, side: 5, medal: 44, bars: 150, mini: 92, dock: 38, 
 export const AUTO = { right: 40, top: TOP.pad + TOP.mini - 12 };
 // The left thumb: where the stick's ring waits.
 export const LEFT = { stick: { left: 86, bottom: 42, s: 112 } };
+// Your party's frames on the left (src/ui/party.js; hud.css #partyFrames), so far down from the top. Over the stick's side of
+// the screen, so they're laid over the stick's layer (#touch), and a tap on them is theirs, not the stick's: the ▶ by each
+// that puts you in their body (src/ui/heroplay.js), its picture so big and reaching so far round it for a thumb; and under
+// them the party's four calls (Go, To me, Wait, Help: Z X C G on a keyboard), each a button so big.
+export const PARTY = { top: 78, play: 36, reach: 10, call: 40 };
 
 /** Each button's box on a screen w by h (CSS pixels, no safe area): { id, x, y, r } with x, y its middle (square: a square of
  * side 2r, not a round). For the test. */
@@ -76,6 +81,7 @@ export const VARS = {
   pad: TOP.pad, side: TOP.side, medal: TOP.medal, bars: TOP.bars, mini: TOP.mini, dock: TOP.dock, gap: TOP.gap,
   auto: TOP.auto, 'auto-r': AUTO.right,
   'stick-l': LEFT.stick.left, 'stick-b': LEFT.stick.bottom, 'stick-s': LEFT.stick.s,
+  'party-top': PARTY.top, 'party-play': PARTY.play, 'party-reach': PARTY.reach, 'party-call': PARTY.call,
 };
 
 /** Hands the page the table, and each button its place (--dx, --dy, --s). */
