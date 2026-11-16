@@ -1253,8 +1253,11 @@ struct V { @builtin(position) pos: vec4f, @location(0) p: vec3f, @location(1) n:
   let n = perturb(n0, in.p, in.uv, nm.rg, 1.0);
   let shadow = shadowAt(in.p, n0, in.viewZ, ign(in.pos.xy));
   // A dropped thing's rarity: a little all over, and strongest where it turns from the eye. (A gem's glow is flat: a = 0.)
-  let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), 2.2);
-  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 1.5 * rim * rim, I.glow.a);
+  // (Further off, a few pixels across, its rim is a hairline and its rarity can't be told: the rim's widened and a little
+  // more of it is in its body with distance, so it reads about as wide on the screen near and far. Drops only, a <= 1.)
+  let far = select(0.0, smoothstep(5.0, 22.0, dist), I.glow.a <= 1.0);
+  let rim = pow(1.0 - clamp(dot(n0, v), 0.0, 1.0), mix(2.2, 0.9, far));
+  var c = shadePBR(in.p, n, v, albedo, matteRough(mr.g, mr.b), mr.b, 1.0, shadow) + I.glow.rgb * mix(1.0, 0.05 + 0.3 * far + 1.5 * rim * rim, I.glow.a);
   // A portal's stone (src/gfx/renderer.js portalModels): its runes and gems, painted the whirl's blue, glow of themselves.
   if (I.glow.a > 1.5) {
     let lit = smoothstep(0.22, 0.5, albedo.b) * smoothstep(0.08, 0.3, albedo.b - max(albedo.r, albedo.g * 0.85));

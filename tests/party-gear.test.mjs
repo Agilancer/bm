@@ -4,9 +4,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { goldOf, harmonize, hsvOf, lumOf, lumRange, paintProp, plainRamp, rampMap, richer, wideOf } from '../src/gfx/recolour.js';
+import { fillFrom, goldOf, harmonize, hsvOf, linesOf, lumOf, lumRange, paintProp, plainRamp, rampMap, richer, wideOf } from '../src/gfx/recolour.js';
 import { coverCode } from '../src/gfx/herolook.js';
-import { useKit, outfitRamps, setsWorn, toneWeight, pieceRamp, shapeClass, paleLift, rampFor, lookOf, bareHead, rollPartyGear, partyDrops, catchUp, fits, score, bestOf, gearStats, groundModelOf, sizeOfHG, hgLines, hgWorth, kindsOf, shapeShows, HG_SLOTS, HG_ARMOUR, SHIELD_KINDS, PROP_PALS } from '../src/items/partygear.js';
+import { useKit, outfitRamps, setsWorn, toneWeight, pieceRamp, shapeClass, paleLift, palNear, rampFor, lookOf, bareHead, rollPartyGear, partyDrops, catchUp, fits, score, bestOf, gearStats, groundModelOf, sizeOfHG, hgLines, hgWorth, kindsOf, shapeShows, HG_SLOTS, HG_ARMOUR, SHIELD_KINDS, PROP_PALS } from '../src/items/partygear.js';
 import { makeRng } from '../src/items/items.js';
 
 const root = new URL('../', import.meta.url);
@@ -150,7 +150,8 @@ test("the dye keeps gold gold, a light texel of a dark set its colour, and a wea
 });
 
 test('the sets they wear are counted, and a weapon or shield leans to their coat', () => {
-  const rng = makeRng(37), who = { ...WHO.find((w) => w.cls === 'paladin'), gear: {} };
+  // (Anyone with a shield but a paladin, whose shield in his coat's colour is bleached: a pale outfit's.)
+  const rng = makeRng(37), who = { ...WHO.find((w) => w.cls !== 'paladin' && kindsOf(w.kit).off), gear: {} };
   const a = rollPartyGear(rng, { who, slot: 'chest', ilvl: 20, rarity: 3 });
   who.gear.chest = a;
   who.gear.legs = { ...rollPartyGear(rng, { who, slot: 'legs', ilvl: 20, rarity: 3 }), look: a.look };
@@ -270,6 +271,36 @@ test("a pale outfit is lifted by a curve: a dark cloth comes up further than a l
   assert.ok(capeP > capeS * 1.4, 'a pale cape comes out much lighter than a plain one');
   assert.ok(plateP < 245, 'its plate not driven to white');
   assert.equal(paleLift('lancer'), undefined);
+});
+
+test("a pale outfit keeps only long gold: a trim band stays, a fleck and a curl of embroidery go", () => {
+  const W = 40, H = 12, m = new Uint8Array(W * H);
+  for (let x = 2; x < 38; x++) m[2 * W + x] = 1;                       // a band, 36 long
+  m[8 * W + 5] = m[8 * W + 6] = m[9 * W + 5] = 1;                       // a fleck
+  for (const [x, y] of [[20, 7], [21, 8], [22, 9], [23, 8]]) m[y * W + x] = 1;   // a curl, joined only corner to corner
+  const ln = linesOf(m, W, H, 12);
+  assert.equal(ln[2 * W + 20], 1, 'the band kept');
+  assert.equal(ln[3 * W + 20], 1, 'and a texel either side of it');
+  assert.equal(ln[8 * W + 5], 0, 'the fleck gone');
+  assert.equal(ln[8 * W + 21], 0, 'the curl gone');
+});
+
+test("a fleck of gold on a pale outfit is painted out with the plate round it, not left a darker freckle", () => {
+  const W = 5, H = 5, px = new Uint8ClampedArray(W * H * 4);
+  for (let i = 0; i < W * H; i++) px.set([200, 200, 195, 255], i * 4);
+  px.set([120, 90, 30, 255], 12 * 4);                                   // the fleck, in the middle
+  fillFrom(px, W, H, (i) => i === 12, (j) => j !== 12, 2);
+  assert.deepEqual([...px.slice(48, 51)], [200, 200, 195], 'the plate round it');
+});
+
+test("a paladin's shield in his coat's colour is bleached steel, and bleached lifts its darks", () => {
+  const gear = { chest: { slot: 'chest', look: 'gildmane_regent_legendary', rarity: 4, shape: 'paladin_m1' } };
+  assert.equal(palNear(gear, 'paladin'), 'bleached');
+  assert.notEqual(palNear(gear, 'lancer'), 'bleached');
+  const px = new Uint8ClampedArray([10, 10, 10, 255, 230, 230, 230, 255]);
+  paintProp(px, PROP_PALS.bleached);
+  assert.ok(px[0] > 70, 'black art on the board comes up to a grey');
+  assert.ok(px[4] > 230, 'its white stays white');
 });
 
 test("a pale outfit's gold: a trim line stays gold, a brass field is plate", () => {

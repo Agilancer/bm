@@ -19,7 +19,7 @@ export const HG_ARMOUR = ['helm', 'shoulders', 'chest', 'arms', 'legs', 'boots']
 export const HG_SLOT_NAME = { weapon: 'Weapon', off: 'Shield', helm: 'Head', shoulders: 'Shoulders', chest: 'Chest', arms: 'Arms', legs: 'Legs', boots: 'Feet' };
 export const WEIGHT_OF = { lancer: 'plate', paladin: 'plate', dragoon: 'mail', boomerang: 'mail', archer: 'light', rogue: 'light', ninja: 'light', bard: 'light' };
 const PIECE = {
-  plate: { helm: 'Helm', shoulders: 'Pauldrons', chest: 'Cuirass', arms: 'Vambraces', legs: 'Cuisses', boots: 'Sabatons' },
+  plate: { helm: 'Helm', shoulders: 'Pauldrons', chest: 'Cuirass', arms: 'Vambraces', legs: 'Tassets', boots: 'Sabatons' },
   mail: { helm: 'Helm', shoulders: 'Spaulders', chest: 'Hauberk', arms: 'Bracers', legs: 'Chausses', boots: 'Greaves' },
   light: { helm: 'Helm', shoulders: 'Mantle', chest: 'Jerkin', arms: 'Wraps', legs: 'Breeches', boots: 'Boots' },
 };
@@ -37,8 +37,8 @@ export const PROP_PALS = {
   gilded: { name: 'Gilded', hue: 44, sat: 1.1, val: 1.06, metal: 0.22 }, verdant: { name: 'Verdant', hue: 128, sat: 0.72, val: 0.9, metal: 0.06 },
   sea: { name: 'Sea-Green', hue: 172, sat: 0.72, val: 0.92, metal: 0.06 }, azure: { name: 'Azure', hue: 208, sat: 0.95, val: 1, metal: 0.1 },
   royal: { name: 'Royal', hue: 232, sat: 1, val: 0.9, metal: 0.1 }, violet: { name: 'Violet', hue: 276, sat: 0.9, val: 0.95, metal: 0.08 },
-  rose: { name: 'Rose', hue: 330, sat: 0.85, val: 1.02, metal: 0.08 }, blackened: { name: 'Blackened', hue: null, sat: 0.55, val: 0.55 },
-  bleached: { name: 'Bleached', hue: null, sat: 0.3, val: 1.18 },
+  rose: { name: 'Rose', hue: 330, sat: 0.85, val: 1.02, metal: 0.08 }, blackened: { name: 'Blackened', hue: null, sat: 0.3, val: 0.55 },
+  bleached: { name: 'Bleached', hue: null, sat: 0.12, val: 1.25, floor: 0.5 },
 };
 const PAL_KEYS = Object.keys(PROP_PALS).filter((k) => k !== 'own');
 
@@ -234,10 +234,13 @@ export function setsWorn(gear) {
   return Object.entries(n).filter(([, k]) => k >= 2).sort((a, b) => b[1] - a[1])
     .map(([id, k]) => ({ set: lookOf(id), name: lookWord(lookOf(id)), n: k, of: HG_ARMOUR.length, missing: HG_ARMOUR.filter((s) => gear[s]?.look !== id) }));
 }
-// The palette nearest a coat's colour, of the painted ones: for a weapon or shield that goes with what they wear.
-function palNear(gear) {
+// The palette nearest a coat's colour, of the painted ones: for a weapon or shield that goes with what they wear. A pale
+// outfit's (a paladin's) is bleached steel: gilded, the owner's black-on-white Palewyrm on an ivory paladin's back read as
+// a camouflage.
+export function palNear(gear, cls) {
   const ramp = gear?.chest?.look && rampFor(lookOf(gear.chest.look), 'chest');
   if (!ramp) return null;
+  if (PALE[cls]) return 'bleached';
   if (plainRamp(ramp)) return hsvOf(ramp[2])[2] < 0.3 ? 'blackened' : 'bleached';
   const h = hsvOf(ramp[2])[0] * 360;
   let best = null, bd = 1e9;
@@ -265,7 +268,7 @@ export function rollPartyGear(rng, o) {
     // (A common weapon is as it was made; the rarer, the likelier a colour of its own, and that more often than not one that
     // goes with their coat. A shield is most of them seen from behind: it's in their coat's colours more often than not,
     // whatever its rarity.)
-    const near = palNear(who.gear);
+    const near = palNear(who.gear, who.cls);
     // (And a shield that isn't in their coat's colour is plain steel, light or dark, not another strong colour of its own.)
     if (slot === 'off' && near) item.pal = rng() < 0.85 ? near : rng() < 0.5 ? 'bleached' : 'blackened';
     else item.pal = rng() < 0.25 + rarity * 0.15 ? (near && rng() < 0.6 ? near : pick(rng, PAL_KEYS)) : 'own';

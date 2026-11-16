@@ -49,7 +49,7 @@ export class PartyBook {
       #partyBook .pb-slot .pic { flex: none; width: 60px; height: 64px; display: flex; align-items: center; justify-content: center; }
       #partyBook .pb-slot .pic .ico { width: 100%; height: 100%; background-size: contain; background-position: center; background-repeat: no-repeat; }
       #partyBook .pb-slot .tx { font-size: 12px; line-height: 1.25; } #partyBook .pb-slot .tx em { display: block; font-style: normal; opacity: .6; font-size: 11px; } #partyBook .pb-slot .tx em .setof { color: #6fd36f; }
-      #partyBook .pb-sum { margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: #cfc2a0; }
+      #partyBook .pb-sum { margin: 2px 0 4px; font-size: 12px; line-height: 1.35; color: #cfc2a0; }
       #partyBook .pb-sets { margin: 4px 0 2px; font-size: 13px; opacity: .92; }
       #partyBook .pb-sets .set { color: #6fd36f; font-weight: 600; }
       #partyBook .pb-sets .miss { opacity: .75; } #partyBook .pb-sets .whole { display: block; font-size: 12px; opacity: .7; margin-top: 1px; }
@@ -261,6 +261,10 @@ export class PartyBook {
     const who = P.whoOfEntry(e), here = inParty(e);
     // The gear.
     let left = `<div class="pb-who"><b>${esc(e.name)}</b>, level ${e.level} ${esc(CLASSES[e.cls].title)} (${ROLE[roleOf(e.cls)].toLowerCase()})${here ? '' : `<br><span style="opacity:.7;font-size:13px">On the roster: last with you at your level ${e.lastWith}${e.got ? `. Came by ${e.got} piece${e.got > 1 ? 's' : ''} of their own since` : ''}.</span>`}</div>`;
+    // (What their gear and tree come to, under their name where it's seen: at the foot of the page it was below the fold.)
+    const g = gearStats(e.gear), t = treeMods(e.cls, e.tree);
+    const sums = HG_STATS.map((k) => [k, (g[k] || 0) + (t[k] || 0)]).filter(([, v]) => v > 0.0005).map(([k, v]) => STAT_LINE[k](v));
+    left += `<div class="pb-sum"><b style="color:#c9a35c">From gear and tree:</b> ${sums.length ? sums.join('; ') : 'nothing yet'}.</div>`;
     left += '<h4>Gear</h4><div class="pb-gear">';
     // (Each piece they wear drawn in the colours it has on them: the outfit's, not the set's alone.)
     const worn = outfitRamps(e.gear, e.cls);
@@ -277,15 +281,13 @@ export class PartyBook {
     const sets = setsWorn(e.gear);
     // (What's still to be found of each, and what the whole of one is: partygear.js outfitRamps.)
     if (sets.length) {
-      left += `<div class="pb-sets">${sets.map((x) => `<span class="set">${esc(x.name)}</span> ${x.n} of ${x.of}${x.missing.length ? ` <span class="miss">· still to find: ${x.missing.map((s) => HG_SLOT_NAME[s].toLowerCase()).join(', ')}</span>` : ' <span class="miss">· the whole set</span>'}`).join('<br>')}`;
-      left += `<span class="whole">${sets[0].missing.length ? 'All six of a set: worn whole, every piece in its own colours, its accents and all.' : 'Worn whole: every piece in the set\'s own colours, its accents and all.'}</span></div>`;
+      // (What a whole set is, on the set line's tip: a line of its own under it put their bag below the fold.)
+      const whole = sets[0].missing.length ? 'All six of a set: worn whole, every piece in its own colours, its accents and all.' : 'Worn whole: every piece in the set\'s own colours, its accents and all.';
+      left += `<div class="pb-sets" title="${esc(whole)}">${sets.map((x) => `<span class="set">${esc(x.name)}</span> ${x.n} of ${x.of}${x.missing.length ? ` <span class="miss">· still to find: ${x.missing.map((s) => HG_SLOT_NAME[s].toLowerCase()).join(', ')}</span>` : ' <span class="miss">· the whole set</span>'}`).join('<br>')}</div>`;
     }
     if (this.pick) left += this.pickHtml(e, who, this.pick, again);
     // (Their bag next, where it's seen: the party's loot is only ever in their bags.)
     left += this.bagHtml(e, who, again);
-    const g = gearStats(e.gear), t = treeMods(e.cls, e.tree);
-    const sums = HG_STATS.map((k) => [k, (g[k] || 0) + (t[k] || 0)]).filter(([, v]) => v > 0.0005).map(([k, v]) => STAT_LINE[k](v));
-    left += `<div class="pb-sum"><b style="color:#c9a35c">From gear and tree:</b> ${sums.length ? sums.join('; ') : 'nothing yet'}.</div>`;
     left += `<div class="pb-btns"><button data-do="best">Put on their best from their bag</button></div>`;
     // The tree.
     const left_ = pointsLeft(e.cls, e.tree, e.level), spent = spentIn(e.cls, e.tree), cost = respecCost(e.level, spent) * 10;

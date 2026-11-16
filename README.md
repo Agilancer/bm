@@ -1318,8 +1318,9 @@ where they began (`keepPace`): they used to stay the level they were made at.
   gear sets' colours (`look`, a set of `assets/game/player/skins` as `tools/heroes/looks.py` boils them into
   `assets/game/heroes/looks.json`). Each class leans to colours of its own (`TONE`: a paladin's ivory, a lancer's steel
   blue, an archer's woods...), by the set's colours for the part it's for. On the ground it hovers and turns as every drop
-  does, glowing the more the rarer it is; a coat lies tipped back so its front shows, and a dark one is lifted to be seen
-  on the dirt.
+  does, glowing the more the rarer it is (the glow's rim widens with distance, so it reads far off too); a coat lies tipped
+  back so its front shows, a dark one is lifted to be seen on the dirt, and on the ground a dye keeps half its colour, or
+  a strong one alone is a toy. Plate leg pieces are Tassets: on these bodies they're the plates and tabard off the belt.
 - **On them** (`src/gfx/herolook.js`). A piece cut from a body of the wearer's own class and sex puts its shape on them as
   well as its colours: the group is lifted off that body, fitted to theirs by the two bodies' bind poses, and its picture
   laid beside theirs (never more than three bodies borrowed at once). On anyone else of its weight, only its colours show.
@@ -1329,9 +1330,12 @@ where they began (`keepPace`): they used to stay the level they were made at.
   texel's own light and dark against the rest of the piece (measured without its gold), keeps gold trim gold and skin skin
   (`src/gfx/recolour.js`), and the padded coat under their clothes takes their coat's colour (`coverCode`). A paladin's
   is pale whatever its set (`PALE`: a breath of the set's colour, leaning to ivory, its darks lifted more than its lights,
-  only thin gold kept gold), on them, on the ground and in the pictures: a cream cloth, silver plate, gold trim. Their weapon
-  and shield are whatever they've been given of their own kinds; a painted weapon more often than not goes with their
-  coat, a shield nearly always. A mace, put away, hangs at their side, clear of a cape.
+  only long gold kept gold: flecks and curls painted out with the plate round them, rust not spared as skin), on them, on
+  the ground and in the pictures: a cream cloth, silver plate, gold trim. Anyone else's dyed metal is a little lighter
+  than their dyed cloth, so the plate reads over it. Their weapon and shield are whatever they've been given of their own
+  kinds; a painted weapon more often than not goes with their coat, a shield nearly always (a paladin's is Bleached
+  steel); one that doesn't is plain steel, Bleached (faded: its darks lifted) or Blackened. A mace, put away, hangs at
+  their side, clear of a cape.
 - **The pictures** in the pack and the book are drawn in Blender by `tools/heroes/icons.py` (into
   `assets/game/heroes/icons`, from the GLBs' own arrays: no glTF import) and dyed in the page as the bodies are
   (`src/ui/hgicons.js`). After changing a hero body or the kit, run it again.

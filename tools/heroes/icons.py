@@ -332,6 +332,10 @@ def armour(stage, ids=None, tmp=None, only=None):
                 elif g == 'chest':
                     # (A coat turned three-quarter, so its depth and its folds read: straight on, a cuirass is a shrug.)
                     P = turn(ob, P, 'Z', math.radians(-28))
+                elif g == 'legs':
+                    # (Cuisses and breeches turned three-quarter and seen a little from below, so the legs show past the
+                    # drape before them: straight on, a pair of cuisses was a tabard and a pair of breeches a blouse.)
+                    P = orient(ob, P, Rx(math.radians(-12)) @ Rz(math.radians(-38)))
                 obs.append(ob); pts.append(P)
             w, h = (2 * CELL, 3 * CELL) if g in ('chest', 'legs') else (2 * CELL, 2 * CELL)
             # (Armour's darker than a blade, and a pack's cells are dark: a little more light on it, to be read there.)

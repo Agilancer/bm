@@ -84,6 +84,49 @@ export function wideOf(m, W, H, r) {
   return pass(pass(m, (s, n) => s === n), (s) => s > 0);
 }
 
+// Where a mask (1s and 0s, W x H) runs long: its pieces (joined side to side, not corner to corner) at least L texels long
+// one way or the other, grown out by a texel. A trim band is long; a fleck, a curl of embroidery, a lit knuckle of brass
+// relief isn't.
+export function linesOf(m, W, H, L) {
+  const keep = new Uint8Array(m.length), seen = new Uint8Array(m.length), stack = new Int32Array(m.length), part = [];
+  for (let s = 0; s < m.length; s++) {
+    if (!m[s] || seen[s]) continue;
+    let top = 0, x0 = W, x1 = -1, y0 = H, y1 = -1;
+    part.length = 0; stack[top++] = s; seen[s] = 1;
+    while (top) {
+      const i = stack[--top], x = i % W, y = (i / W) | 0;
+      part.push(i);
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (x > 0 && m[i - 1] && !seen[i - 1]) { seen[i - 1] = 1; stack[top++] = i - 1; }
+      if (x < W - 1 && m[i + 1] && !seen[i + 1]) { seen[i + 1] = 1; stack[top++] = i + 1; }
+      if (y > 0 && m[i - W] && !seen[i - W]) { seen[i - W] = 1; stack[top++] = i - W; }
+      if (y < H - 1 && m[i + W] && !seen[i + W]) { seen[i + W] = 1; stack[top++] = i + W; }
+    }
+    if (Math.max(x1 - x0, y1 - y0) + 1 >= L) for (const i of part) keep[i] = 1;
+  }
+  const out = new Uint8Array(m.length);
+  for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i++) {
+    out[i] = keep[i] || (x > 0 && keep[i - 1]) || (x < W - 1 && keep[i + 1]) || (y > 0 && keep[i - W]) || (y < H - 1 && keep[i + W]) ? 1 : 0;
+  }
+  return out;
+}
+
+// Each texel of px (RGBA, W x H) that's bad(i) made the mean of the good(i) ones within r of it (a square), if there are
+// any: a fleck painted out with what's round it.
+export function fillFrom(px, W, H, bad, good, r) {
+  const src = px.slice();
+  for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i++) {
+    if (!bad(i)) continue;
+    let R = 0, G = 0, B = 0, n = 0;
+    for (let yy = Math.max(0, y - r); yy <= Math.min(H - 1, y + r); yy++) for (let xx = Math.max(0, x - r); xx <= Math.min(W - 1, x + r); xx++) {
+      const j = yy * W + xx;
+      if (!good(j)) continue;
+      R += src[j * 4]; G += src[j * 4 + 1]; B += src[j * 4 + 2]; n++;
+    }
+    if (n) { px[i * 4] = R / n; px[i * 4 + 1] = G / n; px[i * 4 + 2] = B / n; }
+  }
+}
+
 // One colour off a ramp of stops ([[r, g, b], ...], darkest first), at t from 0 to 1.
 export function rampAt(ramp, t, out) {
   const n = ramp.length - 1, x = Math.min(n, Math.max(0, t * n)), i = Math.min(n - 1, Math.floor(x)), f = x - i;
@@ -119,14 +162,18 @@ export function rampMap(px, ramp, range, amount, most = GAIN[1]) {
     let a = amount(i, k);
     if (a <= 0) continue;
     const r = px[k], g = px[k + 1], b = px[k + 2];
-    a *= (1 - skinOf(r, g, b)) * (1 - 0.9 * goldOf(r, g, b));
+    // (Skin is left as it is; but not on a pale outfit, a paladin's plate from head to foot, where what passes for skin is
+    // rust, and was left brown in ivory.)
+    a *= (curve ? 1 : 1 - skinOf(r, g, b)) * (1 - 0.9 * goldOf(r, g, b));
     if (a <= 0) continue;
     const l = lumOf(r, g, b), t = Math.min(1, Math.max(0, (l - lo) / span));
     rampAt(ramp, t, c);
     const lc = Math.max(0.03, lumOf(c[0], c[1], c[2]));
     // Its light: its own, the piece made as light as the set, a little the ramp's here. Its colour: the ramp's here, at a
     // brightness of one, held near the ramp's middle.
-    const L0 = Math.min(0.95, curve ? Math.pow(l, gam) : l * gain), L = L0 + (lc - L0) * VALUE_PULL;
+    // (A pale outfit's own light is pulled further to the ramp's: its grime and the shadows in its torn hem, lifted, were
+    // freckles and holes in ivory.)
+    const L0 = Math.min(0.95, curve ? Math.pow(l, gam) : l * gain), L = L0 + (lc - L0) * (curve ? 0.4 : VALUE_PULL);
     let R = (mid[0] + (c[0] / 255 / lc - mid[0]) * CHROMA_FOLLOW) * L - L;
     let G = (mid[1] + (c[1] / 255 / lc - mid[1]) * CHROMA_FOLLOW) * L - L;
     let B = (mid[2] + (c[2] / 255 / lc - mid[2]) * CHROMA_FOLLOW) * L - L;
@@ -201,6 +248,9 @@ export function paintProp(px, pal) {
       px[k + 2] = b0 + (painted[2] - b0) * w + (tinted[2] - b0) * ws;
       continue;
     }
+    // (Bleached is faded: its darks lifted toward its lights, so black art on a white board is a grey relief, not a
+    // camouflage.)
+    if (pal.floor) v = pal.floor + (1 - pal.floor) * v;
     s = Math.min(1, s * S); v = Math.min(1, v * V);
     const c = fromHsv(h, s, v);
     px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2];
