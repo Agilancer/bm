@@ -16,7 +16,7 @@ import { ALL_PACKS, BOSSES, DELVES, WARNINGS, caveClear, caveRoom, roomOf, roomS
 import { spawnSync } from 'node:child_process';
 import { makeCast } from '../../src/core/heroes.js';
 import { edge, wayOut } from '../../src/core/perils.js';
-import { SPELLS } from '../../src/sim/spells.js';
+import { REACH, SPELLS } from '../../src/sim/spells.js';
 
 const root = new URL('../../', import.meta.url);
 const args = process.argv.slice(2);
@@ -54,7 +54,11 @@ const send = (m) => { for (const f of listeners) f({ data: m }); };
 // ---- a level 8 player and a party of four -----------------------------------------------------------------------------------
 const inp = sim.input, p = sim.player, W = sim.warrens, P = sim.perils;
 inp[INPUT.VIEW_ASPECT] = 16 / 9;
-inp[INPUT.LEVEL] = LEVEL; inp[INPUT.POWER] = 1 + (LEVEL - 1) * 0.07; inp[INPUT.W_LIFE] = (LEVEL - 1) * 8; inp[INPUT.MANA_MAX] = (LEVEL - 1) * 6; inp[INPUT.REGEN] = 1 + (LEVEL - 1) * 0.04;
+// (GEAR=1: as if in good gear for its level, a stand-in for what a kitted player brings: half again the power, two fifths
+// more life, a third more mana back, a quarter off what's taken.)
+const GEAR = !!process.env.GEAR;
+inp[INPUT.LEVEL] = LEVEL; inp[INPUT.POWER] = (1 + (LEVEL - 1) * 0.07) * (GEAR ? 1.5 : 1); inp[INPUT.W_LIFE] = (LEVEL - 1) * 8 * (GEAR ? 1.4 : 1); inp[INPUT.MANA_MAX] = (LEVEL - 1) * 6; inp[INPUT.REGEN] = (1 + (LEVEL - 1) * 0.04) * (GEAR ? 1.33 : 1);
+if (GEAR) inp[INPUT.ARMOR] = 0.25;
 const tick = () => { sim.step(DT); if (sim.reported) throw new Error('a tick threw'); };
 const breathe = () => new Promise((r) => setImmediate(r));
 for (let i = 0; i < 10; i++) tick();
@@ -114,7 +118,10 @@ function play(target) {
       if (!run && turned && !turned.m.dead && Math.hypot(turned.m.x - p.x, turned.m.z - p.z) < (turned.m.opts.reach || 3) + (turned.m.opts.radius || 1) + 4) { wx = p.x - turned.m.x; wz = p.z - turned.m.z; run = true; }
       if (!run && target) {
         const d = Math.hypot(target.x - p.x, target.z - p.z);
-        if (d > 19) { wx = target.x - p.x; wz = target.z - p.z; } else if (d < 9) { wx = p.x - target.x; wz = p.z - target.z; }
+        // (Inside its reach: a spell goes no further than REACH from the eye, src/sim/spells.js, so it fights from there to
+        // its target's hide, and no nearer than it must.)
+        const hide = target.opts?.radius || 0.5;
+        if (d > REACH - 2 + hide * 0.7) { wx = target.x - p.x; wz = target.z - p.z; } else if (d < REACH - 5.5 + hide * 0.7) { wx = p.x - target.x; wz = p.z - target.z; }
       }
       // (Never backed out of the room: a fight walked down the tunnel is let go. Back toward its middle, round whatever's there.)
       if (!run && home && Math.hypot(p.x - home[0], p.z - home[1]) > home[2] - 4) { wx = home[0] - p.x + (target ? (target.z - p.z) * 0.6 : 0); wz = home[1] - p.z - (target ? (target.x - p.x) * 0.6 : 0); }
@@ -132,7 +139,8 @@ function play(target) {
   if (target) {
     const dx = target.x - p.x, dz = target.z - p.z, d = Math.hypot(dx, dz) || 1;
     inp[INPUT.YAW] = Math.atan2(dx, dz);
-    inp[INPUT.PITCH] = Math.atan2(target.y + (target.hover || 0) + (target.meta?.height || 1.6) * 0.5 - (p.y + 1.6), d);
+    // (At what of it is in reach: a god sixteen metres tall is struck in the leg and the belly, not the heart.)
+    inp[INPUT.PITCH] = Math.atan2(target.y + (target.hover || 0) + Math.min((target.meta?.height || 1.6) * 0.5, 3) - (p.y + 1.6), d);
     inp[INPUT.SPELL] = FIREBOLT;
     // Firebolt, gathered half a second, one after another while there's mana for it.
     held += DT;
@@ -202,7 +210,7 @@ async function fight(key) {
     for (let k = 0; k < c.n * FX_FLOATS; k++) if (!Number.isFinite(c.data[k])) throw new Error(`a shape with a bad number (shape ${c.data[Math.floor(k / FX_FLOATS) * FX_FLOATS + 8]}, field ${k % FX_FLOATS})`);
     low.player = Math.min(low.player, p.hp / p.maxHp); if (tank) low.tank = Math.min(low.tank, tank.hp / tank.maxHp);
     for (const h of party) if (h.dead) fell.add(h.person.cls);
-    if (process.env.TRACE && (sim.tick % 600) === 0) { const f = W.fight, b = boss && W.bossBodies(boss.key)[0]; console.log(`  t ${t.toFixed(0)} phase ${f?.phase} stage ${f?.air?.stage || ''} boss ${b ? `${(b.hp / b.maxHp * 100).toFixed(0)}% st ${b.state} ${b.clip} lift ${(b.hover || 0).toFixed(1)} at ${(b.x - rx).toFixed(0)},${(b.z - rz).toFixed(0)}` : ''} p ${(p.hp / p.maxHp * 100).toFixed(0)}% at ${(p.x - rx).toFixed(0)},${(p.z - rz).toFixed(0)} marks ${P.marks.length} shots ${P.shots.length} party ${party.map((h) => (h.dead ? 'x' : (h.hp / h.maxHp * 100).toFixed(0))).join(' ')}`); }
+    if (process.env.TRACE && (sim.tick % 600) === 0) { const f = W.fight, b = boss && W.bossBodies(boss.key)[0]; console.log(`  t ${t.toFixed(0)} phase ${f?.phase} stage ${f?.air?.stage || ''} boss ${b ? `${(b.hp / b.maxHp * 100).toFixed(0)}% hit ${(sim.time - (b.playerHitT ?? -99)).toFixed(0)}s ago, y ${(b.y - p.y).toFixed(1)}, mana ${sim.casting.mana.toFixed(0)} st ${b.state} ${b.clip} lift ${(b.hover || 0).toFixed(1)} at ${(b.x - rx).toFixed(0)},${(b.z - rz).toFixed(0)}` : ''} p ${(p.hp / p.maxHp * 100).toFixed(0)}% at ${(p.x - rx).toFixed(0)},${(p.z - rz).toFixed(0)} marks ${P.marks.length} shots ${P.shots.length} party ${party.map((h) => (h.dead ? 'x' : (h.hp / h.maxHp * 100).toFixed(0))).join(' ')}`); }
     if (p.dead) { end = 'the player fell'; if (process.env.TRACE) console.log(`  last blows (of ${p.maxHp.toFixed(0)}): ${blows.join(', ')}`); break; }
     if (boss ? W.down.has(boss.key) : began >= 0 && lair()?.state === 'cleared' && !W.adds().length) { end = 'won'; break; }
     if (!boss && began < 0 && t > 40) { end = 'nothing came'; break; }

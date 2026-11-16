@@ -4,6 +4,7 @@
     python kit.py prep      strip bowstrings, weld, write tools/build/heroes/kit/src/<id>.npz for Blender
     blender -b --factory-startup -P decimate_props.py -- tools/build/heroes/kit/src tools/build/heroes/kit/dec
     python kit.py pack      grip to the origin, colour map shrunk -> assets/game/heroes/kit/<id>.glb
+    python kit.py shapes    a lance's bell and a board's size, from the packed props -> kit.json (pack does it too)
 
 A prop is one primitive with one colour map (renderer.buildProp reads nothing else). Long weapons keep the catalogue's
 axes: +Y along the haft or blade, the origin moved from the foot to where the fist closes. Bows keep their middle as
@@ -284,7 +285,7 @@ def pack():
             if near.any():
                 o[0], o[2] = P[near, 0].mean(), P[near, 2].mean()
         P = P - o
-        ex = dict(p["extras"], kind=kind, length=float(L), reach=float(hi - o[1]), butt=float(o[1] - lo))
+        ex = dict(p["extras"], kind=kind, length=float(L), reach=float(hi - o[1]), butt=float(o[1] - lo), **shape(kind, P))
         if "tips" in ex:
             ex["tips"] = [(np.array(t) - o).round(4).tolist() for t in ex["tips"]]
         alb = np.array(Image.fromarray(g["maps"][0]).resize((p["tex"], p["tex"]), Image.LANCZOS))
@@ -300,5 +301,38 @@ def pack():
     print(f"{len(plan)} props, {total / 1e6:.2f} MB")
 
 
+# What the game needs to keep a lance and a board on a back together (src/sim/hero.js lanceSlot), from the prop as packed
+# (its fist at the origin, +Y up the haft; a board's middle at the origin, +Z out of the side it's held by):
+#   a lance's bell (its vamplate): [how far up the haft from the fist it's widest, its radius there];
+#   a board's half: [half its width, half its height, half its depth, the bow of its face included].
+def shape(kind, P):
+    if kind == "lance":
+        up = P[:, 1] > -0.05
+        r = np.hypot(P[up, 0], P[up, 2])
+        i = int(np.argmax(r))
+        return {"bell": [round(float(P[up][i, 1]), 4), round(float(r[i]), 4)]}
+    if kind in ("kite", "tower"):
+        return {"half": [round(float(v), 4) for v in np.abs(P).max(0)]}
+    return {}
+
+
+# The same, for props already packed: python kit.py shapes (reads assets/game/heroes/kit/<id>.glb, writes kit.json).
+def shapes():
+    def points(path):
+        raw = open(path, "rb").read()
+        jl = struct.unpack("<I", raw[12:16])[0]
+        j = json.loads(raw[20:20 + jl])
+        a = j["accessors"][j["meshes"][0]["primitives"][0]["attributes"]["POSITION"]]
+        bv = j["bufferViews"][a["bufferView"]]
+        return np.frombuffer(raw[20 + jl + 8:], np.float32, a["count"] * 3, bv.get("byteOffset", 0) + a.get("byteOffset", 0)).reshape(-1, 3).astype(np.float64)
+    kit = json.load(open(KIT))
+    for item, ex in kit["props"].items():
+        got = shape(ex.get("kind"), points(os.path.join(OUT, item + ".glb"))) if ex.get("kind") in ("lance", "kite", "tower") else {}
+        ex.update(got)
+        if got:
+            print(item, got)
+    json.dump(kit, open(KIT, "w"), indent=1)
+
+
 if __name__ == "__main__":
-    {"pick": pick, "prep": prep, "pack": pack}[sys.argv[1]]()
+    {"pick": pick, "prep": prep, "pack": pack, "shapes": shapes}[sys.argv[1]]()

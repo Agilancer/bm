@@ -123,6 +123,8 @@ export function voidStep(W, dt) {
   for (const b of [p]) {
     if (b.dead || b.leaping || (b.gustCd = (b.gustCd || 0) - dt) > 0 || !p.onGround) continue;
     for (const l of d.leaps || []) {
+      // (One that waits on a god's death: still till then.)
+      if (l.after && !W.down.has(l.after)) continue;
       for (const [a, c, back] of [[l.from, l.to, false], [l.to, l.from, true]]) {
         if (back && l.one) continue;
         const ax = d.x + a[0], az = d.z + a[1];
@@ -189,7 +191,7 @@ export function route(W, b, o) {
   const f = W.fight;
   let best = null, bd = Infinity;
   for (const l of d.leaps || []) for (const [a, c, back] of [[l.from, l.to, false], [l.to, l.from, true]]) {
-    if (back && l.one) continue;
+    if ((back && l.one) || (l.after && !W.down.has(l.after))) continue;
     if (f?.spec?.gust && !f.spec.gust(W, f, l, back)) continue;
     const ax = d.x + a[0], az = d.z + a[1], cx = d.x + c[0], cz = d.z + c[1];
     if (islandOf(W, ax, az) !== here) continue;
@@ -331,6 +333,7 @@ export function voidDraw(W) {
   const sim = W.sim, c = sim.casting, p = sim.player, d = W.delve, f = W.fight, T = sim.time;
   const near = (x, z, r) => Math.hypot(x - p.x, z - p.z) < r;
   (d.leaps || []).forEach((l, n) => {
+    if (l.after && !W.down.has(l.after)) return;
     for (const [a, b, back] of [[l.from, l.to, false], [l.to, l.from, true]]) {
       if (back && l.one) continue;
       const x = d.x + a[0], z = d.z + a[1];
