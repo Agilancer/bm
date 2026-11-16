@@ -621,6 +621,10 @@ the screen's height, so a small phone and a tablet get the same picture:
   (`body.menu-up`, `body.paused`, `body.map-open`). A word with someone lays what you can say out as rows a thumb can't
   miss, with no key names; the pack's cells are as big as the height allows, with the charm pouch in its heading and
   what's in your hands said in the bar beneath; the pause and the title's menu are two columns of plates.
+- **Your party**, on the left under your life: each one's frame with the ▶ that puts you in their body, and under the
+  frames the four calls, Go!, To me!, Wait! and Help! (Z X C G on a keyboard), as buttons. They're over the stick's side
+  of the screen, so they're laid over the stick's layer (`#touch`): a tap on them is theirs and never takes up the stick.
+  So is the bar of a hero you're playing, at the top. The chat's lines under the calls grow up only as far as them.
 
 The numbers for all of it are one table, `src/ui/thumbs.js`: where each button is from the staff's, how big, the top
 row, the stick. `place()` hands them to the stylesheet, and `node --test tests/touch-hud.test.mjs` checks with them that
